@@ -130,3 +130,11 @@ void pr40890(void) {
   __asm__ __volatile__("\n#define BEEF abcd%0\n" : : "n"((int*)0xdeadbeeeeeef));
 #endif
 }
+
+void test_W(int i) {
+  __asm__("" : : "Wd"(test_W)); // expected-error{{invalid input constraint 'Wd' in asm}}
+
+  __asm__("" : : "Ws"(test_W(0))); // expected-error{{invalid type 'void' in asm input for constraint 'Ws'}}
+  // Codegen error
+  __asm__("" : : "Ws"(i));
+}

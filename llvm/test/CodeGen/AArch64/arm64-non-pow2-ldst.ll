@@ -8,7 +8,7 @@ define i24 @ldi24(ptr %p) nounwind {
 ; CHECK-NEXT:    ldrh w9, [x0]
 ; CHECK-NEXT:    orr w0, w9, w8, lsl #16
 ; CHECK-NEXT:    ret
-    %r = load i24, i24* %p
+    %r = load i24, ptr %p
     ret i24 %r
 }
 
@@ -21,7 +21,7 @@ define i56 @ldi56(ptr %p) nounwind {
 ; CHECK-NEXT:    ldr w9, [x0]
 ; CHECK-NEXT:    orr x0, x9, x8, lsl #32
 ; CHECK-NEXT:    ret
-    %r = load i56, i56* %p
+    %r = load i56, ptr %p
     ret i56 %r
 }
 
@@ -32,7 +32,7 @@ define i80 @ldi80(ptr %p) nounwind {
 ; CHECK-NEXT:    ldrh w1, [x0, #8]
 ; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    ret
-    %r = load i80, i80* %p
+    %r = load i80, ptr %p
     ret i80 %r
 }
 
@@ -46,7 +46,7 @@ define i120 @ldi120(ptr %p) nounwind {
 ; CHECK-NEXT:    ldr x0, [x0]
 ; CHECK-NEXT:    orr x1, x9, x8, lsl #32
 ; CHECK-NEXT:    ret
-    %r = load i120, i120* %p
+    %r = load i120, ptr %p
     ret i120 %r
 }
 
@@ -60,7 +60,7 @@ define i280 @ldi280(ptr %p) nounwind {
 ; CHECK-NEXT:    orr x4, x10, x9, lsl #16
 ; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    ret
-    %r = load i280, i280* %p
+    %r = load i280, ptr %p
     ret i280 %r
 }
 
@@ -71,7 +71,7 @@ define void @sti24(ptr %p, i24 %a) nounwind {
 ; CHECK-NEXT:    strh w1, [x0]
 ; CHECK-NEXT:    strb w8, [x0, #2]
 ; CHECK-NEXT:    ret
-    store i24 %a, i24* %p
+    store i24 %a, ptr %p
     ret void
 }
 
@@ -84,7 +84,7 @@ define void @sti56(ptr %p, i56 %a) nounwind {
 ; CHECK-NEXT:    strb w8, [x0, #6]
 ; CHECK-NEXT:    strh w9, [x0, #4]
 ; CHECK-NEXT:    ret
-    store i56 %a, i56* %p
+    store i56 %a, ptr %p
     ret void
 }
 
@@ -94,7 +94,7 @@ define void @sti80(ptr %p, i80 %a) nounwind {
 ; CHECK-NEXT:    str x2, [x0]
 ; CHECK-NEXT:    strh w3, [x0, #8]
 ; CHECK-NEXT:    ret
-    store i80 %a, i80* %p
+    store i80 %a, ptr %p
     ret void
 }
 
@@ -108,7 +108,7 @@ define void @sti120(ptr %p, i120 %a) nounwind {
 ; CHECK-NEXT:    strb w8, [x0, #14]
 ; CHECK-NEXT:    strh w9, [x0, #12]
 ; CHECK-NEXT:    ret
-    store i120 %a, i120* %p
+    store i120 %a, ptr %p
     ret void
 }
 
@@ -121,7 +121,7 @@ define void @sti280(ptr %p, i280 %a) nounwind {
 ; CHECK-NEXT:    strh w6, [x0, #32]
 ; CHECK-NEXT:    strb w8, [x0, #34]
 ; CHECK-NEXT:    ret
-    store i280 %a, i280* %p
+    store i280 %a, ptr %p
     ret void
 }
 

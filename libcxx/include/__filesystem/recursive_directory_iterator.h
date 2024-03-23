@@ -28,6 +28,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
@@ -156,5 +159,7 @@ _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY inline constexpr bool
 #  endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___FILESYSTEM_RECURSIVE_DIRECTORY_ITERATOR_H

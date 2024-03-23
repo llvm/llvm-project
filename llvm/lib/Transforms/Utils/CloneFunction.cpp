@@ -232,19 +232,11 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
     // Avoid cloning types, compile units, and (other) subprograms.
     SmallPtrSet<const DISubprogram *, 16> MappedToSelfSPs;
     for (DISubprogram *ISP : DIFinder->subprograms()) {
-      // Don't clone inlined subprograms.
       if (ISP != SPClonedWithinModule) {
         mapToSelfIfNew(ISP);
         MappedToSelfSPs.insert(ISP);
       }
     }
-
-    // Avoid cloning local variables of subprograms that won't be cloned.
-    for (DILocalVariable *DV : DIFinder->local_variables())
-      if (auto *S = dyn_cast_or_null<DILocalScope>(DV->getScope()))
-        if (DISubprogram *SP = S->getSubprogram())
-          if (MappedToSelfSPs.contains(SP))
-            mapToSelfIfNew(DV);
 
     // If a subprogram isn't going to be cloned skip its lexical blocks as well.
     for (DIScope *S : DIFinder->scopes()) {
@@ -257,12 +249,7 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
       mapToSelfIfNew(CU);
 
     for (DIType *Type : DIFinder->types())
-      // Don't skip subprogram's local types.
-      if (!isa_and_present<DILocalScope>(Type->getScope()) ||
-          SPClonedWithinModule == nullptr ||
-          dyn_cast<DILocalScope>(Type->getScope())->getSubprogram() !=
-              SPClonedWithinModule)
-        mapToSelfIfNew(Type);
+      mapToSelfIfNew(Type);
   } else {
     assert(!SPClonedWithinModule &&
            "Subprogram should be in DIFinder->subprogram_count()...");
@@ -289,8 +276,8 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
     // attached debug-info records.
     for (Instruction &II : *BB) {
       RemapInstruction(&II, VMap, RemapFlag, TypeMapper, Materializer);
-      RemapDPValueRange(II.getModule(), II.getDbgValueRange(), VMap, RemapFlag,
-                        TypeMapper, Materializer);
+      RemapDbgVariableRecordRange(II.getModule(), II.getDbgRecordRange(), VMap,
+                                  RemapFlag, TypeMapper, Materializer);
     }
 
   // Only update !llvm.dbg.cu for DifferentModule (not CloneModule). In the
@@ -654,8 +641,8 @@ void PruningFunctionCloner::CloneBlock(
     // Recursively clone any reachable successor blocks.
     append_range(ToClone, successors(BB->getTerminator()));
   } else {
-    // If we didn't create a new terminator, clone DPValues from the old
-    // terminator onto the new terminator.
+    // If we didn't create a new terminator, clone DbgVariableRecords from the
+    // old terminator onto the new terminator.
     Instruction *NewInst = NewBB->getTerminator();
     assert(NewInst);
 
@@ -897,14 +884,15 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
                        TypeMapper, Materializer);
   }
 
-  // Do the same for DPValues, touching all the instructions in the cloned
-  // range of blocks.
+  // Do the same for DbgVariableRecords, touching all the instructions in the
+  // cloned range of blocks.
   Function::iterator Begin = cast<BasicBlock>(VMap[StartingBB])->getIterator();
   for (BasicBlock &BB : make_range(Begin, NewFunc->end())) {
     for (Instruction &I : BB) {
-      RemapDPValueRange(I.getModule(), I.getDbgValueRange(), VMap,
-                        ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
-                        TypeMapper, Materializer);
+      RemapDbgVariableRecordRange(I.getModule(), I.getDbgRecordRange(), VMap,
+                                  ModuleLevelChanges ? RF_None
+                                                     : RF_NoModuleLevelChanges,
+                                  TypeMapper, Materializer);
     }
   }
 
@@ -1003,8 +991,9 @@ void llvm::remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
   // Rewrite the code to refer to itself.
   for (auto *BB : Blocks) {
     for (auto &Inst : *BB) {
-      RemapDPValueRange(Inst.getModule(), Inst.getDbgValueRange(), VMap,
-                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+      RemapDbgVariableRecordRange(
+          Inst.getModule(), Inst.getDbgRecordRange(), VMap,
+          RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
       RemapInstruction(&Inst, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     }

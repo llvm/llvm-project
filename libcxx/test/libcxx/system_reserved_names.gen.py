@@ -7,9 +7,10 @@
 #===----------------------------------------------------------------------===##
 
 # Test that headers are not tripped up by the surrounding code defining various
-# alphabetic macros.
+# alphabetic macros. Also ensure that we don't swallow the definition of user
+# provided macros (in other words, ensure that we push/pop correctly everywhere).
 
-# RUN: %{python} %s %{libcxx}/utils
+# RUN: %{python} %s %{libcxx-dir}/utils
 
 import sys
 sys.path.append(sys.argv[1])
@@ -162,4 +163,13 @@ for header in public_headers:
 #define refresh SYSTEM_RESERVED_NAME
 
 #include <{header}>
+
+// Make sure we don't swallow the definition of the macros we push/pop
+#define STRINGIFY_IMPL(x) #x
+#define STRINGIFY(x) STRINGIFY_IMPL(x)
+static_assert(__builtin_strcmp(STRINGIFY(min), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
+static_assert(__builtin_strcmp(STRINGIFY(max), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
+static_assert(__builtin_strcmp(STRINGIFY(move), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
+static_assert(__builtin_strcmp(STRINGIFY(erase), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
+static_assert(__builtin_strcmp(STRINGIFY(refresh), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
 """)

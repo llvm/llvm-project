@@ -2201,7 +2201,7 @@ static std::string applyEditsToTemp(FileEntryRef FE,
   TmpOut.write(NewText.data(), NewText.size());
   TmpOut.close();
 
-  return std::string(TempPath.str());
+  return std::string(TempPath);
 }
 
 bool arcmt::getFileRemappingsFromFileList(

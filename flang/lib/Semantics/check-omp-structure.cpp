@@ -2264,6 +2264,7 @@ CHECK_SIMPLE_CLAUSE(OmpxAttribute, OMPC_ompx_attribute)
 CHECK_SIMPLE_CLAUSE(OmpxBare, OMPC_ompx_bare)
 CHECK_SIMPLE_CLAUSE(Enter, OMPC_enter)
 CHECK_SIMPLE_CLAUSE(Fail, OMPC_fail)
+CHECK_SIMPLE_CLAUSE(Weak, OMPC_weak)
 
 CHECK_REQ_SCALAR_INT_CLAUSE(Grainsize, OMPC_grainsize)
 CHECK_REQ_SCALAR_INT_CLAUSE(NumTasks, OMPC_num_tasks)
@@ -2299,17 +2300,19 @@ bool OmpStructureChecker::CheckReductionOperators(
           },
           [&](const parser::ProcedureDesignator &procD) {
             const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
-            if (name) {
-              if (name->source == "max" || name->source == "min" ||
-                  name->source == "iand" || name->source == "ior" ||
-                  name->source == "ieor") {
+            if (name && name->symbol) {
+              const SourceName &realName{name->symbol->GetUltimate().name()};
+              if (realName == "max" || realName == "min" ||
+                  realName == "iand" || realName == "ior" ||
+                  realName == "ieor") {
                 ok = true;
-              } else {
-                context_.Say(GetContext().clauseSource,
-                    "Invalid reduction identifier in REDUCTION "
-                    "clause."_err_en_US,
-                    ContextDirectiveAsFortran());
               }
+            }
+            if (!ok) {
+              context_.Say(GetContext().clauseSource,
+                  "Invalid reduction identifier in REDUCTION "
+                  "clause."_err_en_US,
+                  ContextDirectiveAsFortran());
             }
           },
       },
@@ -2812,6 +2815,14 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Device &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_depend);
+  if ((std::holds_alternative<parser::OmpDependClause::Source>(x.v.u) ||
+          std::holds_alternative<parser::OmpDependClause::Sink>(x.v.u)) &&
+      GetContext().directive != llvm::omp::OMPD_ordered) {
+    context_.Say(GetContext().clauseSource,
+        "DEPEND(SOURCE) or DEPEND(SINK : vec) can be used only with the ordered"
+        " directive. Used here in the %s construct."_err_en_US,
+        parser::ToUpperCaseLetters(getDirectiveName(GetContext().directive)));
+  }
   if (const auto *inOut{std::get_if<parser::OmpDependClause::InOut>(&x.v.u)}) {
     const auto &designators{std::get<std::list<parser::Designator>>(inOut->t)};
     for (const auto &ele : designators) {
@@ -2937,7 +2948,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDevicePtr &x) {
         if (name->symbol) {
           if (!(IsBuiltinCPtr(*(name->symbol)))) {
             context_.Say(itr->second->source,
-                "'%s' in USE_DEVICE_PTR clause must be of type C_PTR"_err_en_US,
+                "Use of non-C_PTR type '%s' in USE_DEVICE_PTR is deprecated, use USE_DEVICE_ADDR instead"_warn_en_US,
                 name->ToString());
           } else {
             useDevicePtrNameList.push_back(*name);

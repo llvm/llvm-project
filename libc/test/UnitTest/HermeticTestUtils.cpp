@@ -104,6 +104,8 @@ void *__dso_handle = nullptr;
 
 } // extern "C"
 
+void *operator new(unsigned long size, void *ptr) { return ptr; }
+
 void *operator new(size_t size) { return malloc(size); }
 
 void *operator new[](size_t size) { return malloc(size); }
@@ -113,3 +115,5 @@ void operator delete(void *) {
   // we just trap here to catch any such accidental usages.
   __builtin_trap();
 }
+
+void operator delete(void *ptr, size_t size) { __builtin_trap(); }

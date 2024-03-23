@@ -6,10 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_COPYSIGNTEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_SMOKE_COPYSIGNTEST_H
+
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#include "include/llvm-libc-macros/math-macros.h"
 
 template <typename T>
 class CopySignTest : public LIBC_NAMESPACE::testing::Test {
@@ -52,3 +55,5 @@ public:
   using LlvmLibcCopySignTest = CopySignTest<T>;                                \
   TEST_F(LlvmLibcCopySignTest, SpecialNumbers) { testSpecialNumbers(&func); }  \
   TEST_F(LlvmLibcCopySignTest, Range) { testRange(&func); }
+
+#endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_COPYSIGNTEST_H

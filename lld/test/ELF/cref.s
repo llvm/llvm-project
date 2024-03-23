@@ -3,11 +3,12 @@
 // RUN: echo '.global foo; foo:' | llvm-mc -filetype=obj -triple=x86_64-pc-linux - -o %t1.o
 // RUN: echo '.global foo, bar; bar:' | llvm-mc -filetype=obj -triple=x86_64-pc-linux - -o %t2.o
 // RUN: echo '.global zed; zed:' | llvm-mc -filetype=obj -triple=x86_64-pc-linux - -o %ta.o
+// RUN: echo 'abs1 = 42;' > %t.lds
 // RUN: rm -f %t.a
 // RUN: llvm-ar rcs %t.a %ta.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t3.o
 // RUN: ld.lld -shared -o %t1.so %t1.o
-// RUN: ld.lld -o /dev/null %t1.so %t2.o %t3.o %t.a --gc-sections --cref | FileCheck -strict-whitespace %s
+// RUN: ld.lld -o /dev/null %t1.so %t2.o %t3.o %t.a %t.a %t.lds --defsym abs2=43 --gc-sections --cref | FileCheck -strict-whitespace %s
 
 /// If -Map is specified, print to the map file.
 // RUN: ld.lld -o /dev/null %t1.so %t2.o %t3.o %t.a --gc-sections -Map=%t.map --cref
@@ -25,6 +26,10 @@
 // CHECK-NEXT: _start                                            {{.*}}3.o
 // CHECK-NEXT: baz                                               {{.*}}3.o
 // CHECK-NEXT: zed                                               {{.*}}.a({{.*}}a.o)
+// CHECK-NEXT:                                                   {{.*}}3.o
+// CHECK-NEXT: abs1                                              {{.*}}.lds:1
+// CHECK-NEXT:                                                   {{.*}}3.o
+// CHECK-NEXT: abs2                                              --defsym{{$}}
 // CHECK-NEXT:                                                   {{.*}}3.o
 // CHECK-NOT:  discarded
 
@@ -46,3 +51,7 @@ baz:
 
 .section .text.a,"ax",@progbits
 discarded:
+
+.data
+.quad abs1
+.quad abs2

@@ -13,7 +13,7 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#include "include/llvm-libc-macros/math-macros.h"
 
 template <typename T>
 class HypotTestTemplate : public LIBC_NAMESPACE::testing::Test {
@@ -21,15 +21,17 @@ private:
   using Func = T (*)(T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
-  const T nan = FPBits::build_quiet_nan(1);
-  const T inf = FPBits::inf();
-  const T neg_inf = FPBits::neg_inf();
-  const T zero = FPBits::zero();
-  const T neg_zero = FPBits::neg_zero();
-  const T max_normal = FPBits::max_normal();
-  const T min_normal = FPBits::min_normal();
-  const T max_subnormal = FPBits::max_denormal();
-  const T min_subnormal = FPBits::min_denormal();
+
+  const T nan = FPBits::quiet_nan().get_val();
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
+
+  const T max_normal = FPBits::max_normal().get_val();
+  const T min_normal = FPBits::min_normal().get_val();
+  const T max_subnormal = FPBits::max_subnormal().get_val();
+  const T min_subnormal = FPBits::min_subnormal().get_val();
 
 public:
   void test_special_numbers(Func func) {

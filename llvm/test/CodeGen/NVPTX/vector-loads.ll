@@ -78,11 +78,11 @@ define void @foo_complex(ptr nocapture readonly align 16 dereferenceable(1342177
   %t3 = shl nuw nsw i32 %t1, 9
   %ttile_origin.2 = and i32 %t3, 130560
   %tstart_offset_x_mul = shl nuw nsw i32 %t0, 1
-  %t4 = or i32 %ttile_origin.2, %tstart_offset_x_mul
-  %t6 = or i32 %t4, 1
-  %t8 = or i32 %t4, 128
+  %t4 = or disjoint i32 %ttile_origin.2, %tstart_offset_x_mul
+  %t6 = or disjoint i32 %t4, 1
+  %t8 = or disjoint i32 %t4, 128
   %t9 = zext i32 %t8 to i64
-  %t10 = or i32 %t4, 129
+  %t10 = or disjoint i32 %t4, 129
   %t11 = zext i32 %t10 to i64
   %t20 = zext i32 %t2 to i64
   %t27 = getelementptr inbounds [1024 x [131072 x i8]], ptr %alloc0, i64 0, i64 %t20, i64 %t9

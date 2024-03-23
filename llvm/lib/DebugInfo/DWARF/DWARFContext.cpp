@@ -1353,11 +1353,7 @@ DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,
           DWOUnits.getUnitForIndexEntry(*R));
     return nullptr;
   }
-  const DenseMap<uint64_t, DWARFTypeUnit *> &Map = State->getTypeUnitMap(IsDWO);
-  auto Iter = Map.find(Hash);
-  if (Iter != Map.end())
-    return Iter->second;
-  return nullptr;
+  return State->getTypeUnitMap(IsDWO).lookup(Hash);
 }
 
 DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
@@ -1412,6 +1408,7 @@ bool DWARFContext::verify(raw_ostream &OS, DIDumpOptions DumpOpts) {
   if (DumpOpts.DumpType & DIDT_DebugStrOffsets)
     Success &= verifier.handleDebugStrOffsets();
   Success &= verifier.handleAccelTables();
+  verifier.summarize();
   return Success;
 }
 

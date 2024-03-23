@@ -794,7 +794,7 @@ void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
       }
 #endif
       // Otherwise it's a non-recoverable error. Note it and quit.
-      error_detected(std::error_code(errno, std::generic_category()));
+      error_detected(errnoAsErrorCode());
       break;
     }
 
@@ -824,7 +824,7 @@ uint64_t raw_fd_ostream::seek(uint64_t off) {
   pos = ::lseek(FD, off, SEEK_SET);
 #endif
   if (pos == (uint64_t)-1)
-    error_detected(std::error_code(errno, std::generic_category()));
+    error_detected(errnoAsErrorCode());
   return pos;
 }
 
@@ -946,12 +946,20 @@ ssize_t raw_fd_stream::read(char *Ptr, size_t Size) {
   if (Ret >= 0)
     inc_pos(Ret);
   else
-    error_detected(std::error_code(errno, std::generic_category()));
+    error_detected(errnoAsErrorCode());
   return Ret;
 }
 
 bool raw_fd_stream::classof(const raw_ostream *OS) {
   return OS->get_kind() == OStreamKind::OK_FDStream;
+}
+
+//===----------------------------------------------------------------------===//
+//  raw_string_ostream
+//===----------------------------------------------------------------------===//
+
+void raw_string_ostream::write_impl(const char *Ptr, size_t Size) {
+  OS.append(Ptr, Size);
 }
 
 //===----------------------------------------------------------------------===//

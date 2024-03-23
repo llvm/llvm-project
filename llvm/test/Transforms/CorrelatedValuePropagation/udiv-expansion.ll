@@ -90,6 +90,74 @@ define i8 @constant.divisor.v7(i8 %x) {
   ret i8 %div
 }
 
+define i8 @constant.divisor.v6to8(i8 %x) {
+; CHECK-LABEL: @constant.divisor.v6to8(
+; CHECK-NEXT:    [[CMP_X_LOWER:%.*]] = icmp uge i8 [[X:%.*]], 6
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_LOWER]])
+; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X]], 9
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], 3
+; CHECK-NEXT:    ret i8 2
+;
+  %cmp.x.lower = icmp uge i8 %x, 6
+  call void @llvm.assume(i1 %cmp.x.lower)
+  %cmp.x.upper = icmp ult i8 %x, 9
+  call void @llvm.assume(i1 %cmp.x.upper)
+  %div = udiv i8 %x, 3
+  ret i8 %div
+}
+
+define i8 @constant.divisor.v9to11(i8 %x) {
+; CHECK-LABEL: @constant.divisor.v9to11(
+; CHECK-NEXT:    [[CMP_X_LOWER:%.*]] = icmp uge i8 [[X:%.*]], 9
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_LOWER]])
+; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X]], 12
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], 3
+; CHECK-NEXT:    ret i8 3
+;
+  %cmp.x.lower = icmp uge i8 %x, 9
+  call void @llvm.assume(i1 %cmp.x.lower)
+  %cmp.x.upper = icmp ult i8 %x, 12
+  call void @llvm.assume(i1 %cmp.x.upper)
+  %div = udiv i8 %x, 3
+  ret i8 %div
+}
+
+define i8 @constant.divisor.v12to14(i8 %x) {
+; CHECK-LABEL: @constant.divisor.v12to14(
+; CHECK-NEXT:    [[CMP_X_LOWER:%.*]] = icmp uge i8 [[X:%.*]], 12
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_LOWER]])
+; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X]], 15
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], 3
+; CHECK-NEXT:    ret i8 4
+;
+  %cmp.x.lower = icmp uge i8 %x, 12
+  call void @llvm.assume(i1 %cmp.x.lower)
+  %cmp.x.upper = icmp ult i8 %x, 15
+  call void @llvm.assume(i1 %cmp.x.upper)
+  %div = udiv i8 %x, 3
+  ret i8 %div
+}
+
+define i8 @constant.divisor.v6to11(i8 %x) {
+; CHECK-LABEL: @constant.divisor.v6to11(
+; CHECK-NEXT:    [[CMP_X_LOWER:%.*]] = icmp uge i8 [[X:%.*]], 6
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_LOWER]])
+; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X]], 12
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], 3
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %cmp.x.lower = icmp uge i8 %x, 6
+  call void @llvm.assume(i1 %cmp.x.lower)
+  %cmp.x.upper = icmp ult i8 %x, 12
+  call void @llvm.assume(i1 %cmp.x.upper)
+  %div = udiv i8 %x, 3
+  ret i8 %div
+}
+
 ; Both are variable. Bounds are known
 
 define i8 @variable.v3(i8 %x, i8 %y) {

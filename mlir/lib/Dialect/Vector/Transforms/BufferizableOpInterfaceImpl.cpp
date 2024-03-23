@@ -225,7 +225,7 @@ struct MaskOpInterface
         newReturnValues[it.index()] = it.value();
       }
     }
-    rewriter.updateRootInPlace(yieldOp, [&]() {
+    rewriter.modifyOpInPlace(yieldOp, [&]() {
       yieldOp.getOperandsMutable().assign(newYieldedValues);
     });
 

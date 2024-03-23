@@ -81,8 +81,8 @@ entry:
   ; ENTRY: call void @llvm.instrprof.cover({{.*}})
   %a.addr = alloca i32, align 4
   %i = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  %0 = load i32, i32* %a.addr, align 4
+  store i32 %a, ptr %a.addr, align 4
+  %0 = load i32, ptr %a.addr, align 4
   %rem = srem i32 %0, 2
   %cmp = icmp eq i32 %rem, 0
   br i1 %cmp, label %if.then, label %if.else
@@ -100,20 +100,20 @@ if.else:                                          ; preds = %entry
 
 ; CHECK-LABEL: if.end:
 if.end:                                           ; preds = %if.else, %if.then
-  store i32 1, i32* %i, align 4
+  store i32 1, ptr %i, align 4
   br label %for.cond
 
 ; CHECK-LABEL: for.cond:
 for.cond:                                         ; preds = %for.inc, %if.end
-  %1 = load i32, i32* %i, align 4
-  %2 = load i32, i32* %a.addr, align 4
+  %1 = load i32, ptr %i, align 4
+  %2 = load i32, ptr %a.addr, align 4
   %cmp1 = icmp slt i32 %1, %2
   br i1 %cmp1, label %for.body, label %for.end
   ; USE: br i1 %cmp1, label %for.body, label %for.end, !prof ![[WEIGHTS1]]
 
 ; CHECK-LABEL: for.body:
 for.body:                                         ; preds = %for.cond
-  %3 = load i32, i32* %a.addr, align 4
+  %3 = load i32, ptr %a.addr, align 4
   %rem2 = srem i32 %3, 3
   %cmp3 = icmp eq i32 %rem2, 0
   br i1 %cmp3, label %if.then4, label %if.else5
@@ -126,7 +126,7 @@ if.then4:                                         ; preds = %for.body
 
 ; CHECK-LABEL: if.else5:
 if.else5:                                         ; preds = %for.body
-  %4 = load i32, i32* %a.addr, align 4
+  %4 = load i32, ptr %a.addr, align 4
   %rem6 = srem i32 %4, 1001
   %cmp7 = icmp eq i32 %rem6, 0
   br i1 %cmp7, label %if.then8, label %if.end9
@@ -148,9 +148,9 @@ if.end10:                                         ; preds = %if.end9, %if.then4
 
 ; CHECK-LABEL: for.inc:
 for.inc:                                          ; preds = %if.end10
-  %5 = load i32, i32* %i, align 4
+  %5 = load i32, ptr %i, align 4
   %inc = add nsw i32 %5, 1
-  store i32 %inc, i32* %i, align 4
+  store i32 %inc, ptr %i, align 4
   br label %for.cond
 
 ; CHECK-LABEL: for.end:

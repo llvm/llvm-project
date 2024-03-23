@@ -217,7 +217,6 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 #  error "The iostreams library is not supported since libc++ has been configured without support for localization."
 #endif
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__fwd/ios.h>
 #include <__ios/fpos.h>
 #include <__locale>
@@ -241,6 +240,9 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -357,7 +359,13 @@ public:
   }
 
 protected:
-  _LIBCPP_HIDE_FROM_ABI ios_base() { // purposefully does no initialization
+  _LIBCPP_HIDE_FROM_ABI ios_base() : __loc_(nullptr) {
+    // Purposefully does no initialization
+    //
+    // Except for the locale, this is a sentinel to avoid destroying
+    // an uninitialized object. See
+    // test/libcxx/input.output/iostreams.base/ios.base/ios.base.cons/dtor.uninitialized.pass.cpp
+    // for the details.
   }
 
   void init(void* __sb);
@@ -569,7 +577,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI char_type widen(char __c) const;
 
 protected:
-  _LIBCPP_HIDE_FROM_ABI basic_ios() { // purposefully does no initialization
+  _LIBCPP_HIDE_FROM_ABI basic_ios() {
+    // purposefully does no initialization
+    // since the destructor does nothing this does not have ios_base issues.
   }
   _LIBCPP_HIDE_FROM_ABI void init(basic_streambuf<char_type, traits_type>* __sb);
 
@@ -819,6 +829,8 @@ _LIBCPP_HIDE_FROM_ABI inline ios_base& defaultfloat(ios_base& __str) {
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <atomic>

@@ -271,6 +271,10 @@ CONSTRUCTOR(".ctors") func_t func_ctors = func_constructor;
 CONSTRUCTOR(".dtors") func_t func_dtors = func_constructor;
 CONSTRUCTOR(".init_array") func_t func_init_array = func_constructor;
 CONSTRUCTOR(".fini_array") func_t func_fini_array = func_constructor;
+CONSTRUCTOR(".preinit_array") func_t preinit_array = func_constructor;
+CONSTRUCTOR("array_of_globals") int global1;
+CONSTRUCTOR("array_of_globals") int global2;
+CONSTRUCTOR("array_of_globals") int global_string;
 
 // CHECK-NOT: .memtag func_constructor
 // CHECK-NOT: .memtag func_init
@@ -279,3 +283,7 @@ CONSTRUCTOR(".fini_array") func_t func_fini_array = func_constructor;
 // CHECK-NOT: .memtag func_dtors
 // CHECK-NOT: .memtag func_init_array
 // CHECK-NOT: .memtag func_fini_array
+// CHECK-NOT: .memtag preinit_array
+// CHECK-NOT: .memtag global1
+// CHECK-NOT: .memtag global2
+// CHECK-NOT: .memtag global_string

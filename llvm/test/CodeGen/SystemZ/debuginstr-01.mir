@@ -8,9 +8,9 @@
 
 --- |
   
-  define i32 @f1(i32* %ptr) #1 {
+  define i32 @f1(ptr %ptr) #1 {
   entry:
-    %val = load i32, i32* %ptr
+    %val = load i32, ptr %ptr
     ; Keep the dbg metadata live by referencing it in the IR.
     call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !7, metadata !DIExpression()), !dbg !9
     %cmp = icmp eq i32 %val, 0
@@ -27,7 +27,7 @@
   declare void @llvm.trap() #0
   declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
   
-  declare void @llvm.stackprotector(i8*, i8**) #2
+  declare void @llvm.stackprotector(ptr, ptr) #2
 
   attributes #0 = { cold noreturn nounwind "target-cpu"="zEC12" }
   attributes #1 = { "target-cpu"="zEC12" }

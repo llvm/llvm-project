@@ -1,6 +1,6 @@
-# RUN: llc -march=amdgcn -mcpu=gfx802 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx900 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx802 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: {{^}}lo_to_lo:
 # GCN: v_mov_b32_sdwa v1, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0

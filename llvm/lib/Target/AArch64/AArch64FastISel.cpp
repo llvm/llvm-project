@@ -35,9 +35,9 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -2828,7 +2828,7 @@ bool AArch64FastISel::selectFPToInt(const Instruction *I, bool Signed) {
     return false;
 
   EVT SrcVT = TLI.getValueType(DL, I->getOperand(0)->getType(), true);
-  if (SrcVT == MVT::f128 || SrcVT == MVT::f16)
+  if (SrcVT == MVT::f128 || SrcVT == MVT::f16 || SrcVT == MVT::bf16)
     return false;
 
   unsigned Opc;
@@ -2856,7 +2856,7 @@ bool AArch64FastISel::selectIntToFP(const Instruction *I, bool Signed) {
   if (!isTypeLegal(I->getType(), DestVT) || DestVT.isVector())
     return false;
   // Let regular ISEL handle FP16
-  if (DestVT == MVT::f16)
+  if (DestVT == MVT::f16 || DestVT == MVT::bf16)
     return false;
 
   assert((DestVT == MVT::f32 || DestVT == MVT::f64) &&
@@ -2978,7 +2978,7 @@ bool AArch64FastISel::fastLowerArguments() {
     } else if (VT == MVT::i64) {
       SrcReg = Registers[1][GPRIdx++];
       RC = &AArch64::GPR64RegClass;
-    } else if (VT == MVT::f16) {
+    } else if (VT == MVT::f16 || VT == MVT::bf16) {
       SrcReg = Registers[2][FPRIdx++];
       RC = &AArch64::FPR16RegClass;
     } else if (VT ==  MVT::f32) {
@@ -3172,8 +3172,16 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (CM == CodeModel::Large && !Subtarget->isTargetMachO())
     return false;
 
+  // ELF -fno-plt compiled intrinsic calls do not have the nonlazybind
+  // attribute. Check "RtLibUseGOT" instead.
+  if (MF->getFunction().getParent()->getRtLibUseGOT())
+    return false;
+
   // Let SDISel handle vararg functions.
   if (IsVarArg)
+    return false;
+
+  if (Subtarget->isWindowsArm64EC())
     return false;
 
   for (auto Flag : CLI.OutFlags)
@@ -5176,7 +5184,8 @@ FastISel *AArch64::createFastISel(FunctionLoweringInfo &FuncInfo,
                                         const TargetLibraryInfo *LibInfo) {
 
   SMEAttrs CallerAttrs(*FuncInfo.Fn);
-  if (CallerAttrs.hasZAState() || CallerAttrs.hasStreamingInterfaceOrBody() ||
+  if (CallerAttrs.hasZAState() || CallerAttrs.hasZT0State() ||
+      CallerAttrs.hasStreamingInterfaceOrBody() ||
       CallerAttrs.hasStreamingCompatibleInterface())
     return nullptr;
   return new AArch64FastISel(FuncInfo, LibInfo);

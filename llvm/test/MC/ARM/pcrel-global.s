@@ -7,17 +7,13 @@
 @ CHECK: There are no relocations in this file.
 
 @ DISASM-LABEL: <bar>:
-@ DISASM-NEXT:    ldr     r0, [pc, #0x0]          @ 0x8 <bar+0x4>
+@ DISASM-NEXT:    ldr     r0, [pc, #0x0]          @ 0x4 <bar+0x4>
 @ DISASM-NEXT:    add     r0, pc
 @ DISASM-NEXT:   .word   0xfffffffb
 @@ GNU assembler creates an R_ARM_REL32 referencing bar.
 @ DISASM-NOT:    {{.}}
 
 .syntax unified
-
-.globl foo
-foo:
-vldr d0, foo     @ arm_pcrel_10
 
 .thumb
 .thumb_func

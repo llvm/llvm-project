@@ -7,7 +7,7 @@
 define signext i8 @extractelt_nxv1i8_0(<vscale x 1 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv1i8_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x i8> %v, i32 0
@@ -39,7 +39,7 @@ define signext i8 @extractelt_nxv1i8_idx(<vscale x 1 x i8> %v, i32 zeroext %idx)
 define signext i8 @extractelt_nxv2i8_0(<vscale x 2 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv2i8_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 2 x i8> %v, i32 0
@@ -71,7 +71,7 @@ define signext i8 @extractelt_nxv2i8_idx(<vscale x 2 x i8> %v, i32 zeroext %idx)
 define signext i8 @extractelt_nxv4i8_0(<vscale x 4 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv4i8_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 4 x i8> %v, i32 0
@@ -231,7 +231,7 @@ define signext i8 @extractelt_nxv64i8_idx(<vscale x 64 x i8> %v, i32 zeroext %id
 define signext i16 @extractelt_nxv1i16_0(<vscale x 1 x i16> %v) {
 ; CHECK-LABEL: extractelt_nxv1i16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x i16> %v, i32 0
@@ -263,7 +263,7 @@ define signext i16 @extractelt_nxv1i16_idx(<vscale x 1 x i16> %v, i32 zeroext %i
 define signext i16 @extractelt_nxv2i16_0(<vscale x 2 x i16> %v) {
 ; CHECK-LABEL: extractelt_nxv2i16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 2 x i16> %v, i32 0
@@ -423,7 +423,7 @@ define signext i16 @extractelt_nxv32i16_idx(<vscale x 32 x i16> %v, i32 zeroext 
 define signext i32 @extractelt_nxv1i32_0(<vscale x 1 x i32> %v) {
 ; CHECK-LABEL: extractelt_nxv1i32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x i32> %v, i32 0

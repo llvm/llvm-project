@@ -127,6 +127,8 @@ const EHPersonality
 EHPersonality::GNU_Wasm_CPlusPlus = { "__gxx_wasm_personality_v0", nullptr };
 const EHPersonality EHPersonality::XL_CPlusPlus = {"__xlcxx_personality_v1",
                                                    nullptr};
+const EHPersonality EHPersonality::ZOS_CPlusPlus = {"__zos_cxx_personality_v2",
+                                                    nullptr};
 
 static const EHPersonality &getCPersonality(const TargetInfo &Target,
                                             const LangOptions &L) {
@@ -187,6 +189,8 @@ static const EHPersonality &getCXXPersonality(const TargetInfo &Target,
     return EHPersonality::GNU_CPlusPlus_SEH;
   if (L.hasWasmExceptions())
     return EHPersonality::GNU_Wasm_CPlusPlus;
+  if (T.isOSzOS())
+    return EHPersonality::ZOS_CPlusPlus;
   return EHPersonality::GNU_CPlusPlus;
 }
 

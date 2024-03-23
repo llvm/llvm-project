@@ -142,6 +142,11 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   if (IsThinLTO)
     LldArgs.push_back(Args.MakeArgString("-plugin-opt=-force-import-all"));
 
+  for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
+    LldArgs.push_back(
+        Args.MakeArgString(Twine("-plugin-opt=") + A->getValue(0)));
+  }
+
   if (C.getDriver().isSaveTempsEnabled())
     LldArgs.push_back("-save-temps");
 
@@ -303,6 +308,7 @@ Tool *HIPAMDToolChain::buildLinker() const {
 }
 
 void HIPAMDToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
+  AMDGPUToolChain::addClangWarningOptions(CC1Args);
   HostTC.addClangWarningOptions(CC1Args);
 }
 

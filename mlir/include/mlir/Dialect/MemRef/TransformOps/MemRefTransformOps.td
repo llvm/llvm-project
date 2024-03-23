@@ -10,7 +10,7 @@
 #define MEMREF_TRANSFORM_OPS
 
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
@@ -18,7 +18,8 @@ include "mlir/IR/OpBase.td"
 def MemrefToLLVMTypeConverterOp : Op<Transform_Dialect,
     "apply_conversion_patterns.memref.memref_to_llvm_type_converter",
     [DeclareOpInterfaceMethods<TypeConverterBuilderOpInterface,
-                               ["getTypeConverterType"]>]> {
+                               ["getTypeConverter",
+                                "getTypeConverterType"]>]> {
   let description = [{
     This operation provides an "LLVMTypeConverter" that lowers memref types to
     LLVM types.

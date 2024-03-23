@@ -38,7 +38,45 @@ read packet: +
 read packet: $OK#9a
 send packet: +
 
+//----------------------------------------------------------------------
+// "QSupported"
+//
+// BRIEF
+//  Query the GDB remote server for features it supports
+//
+// PRIORITY TO IMPLEMENT
+//  Optional.
+//----------------------------------------------------------------------
 
+QSupported is a standard GDB Remote Serial Protocol packet, but
+there are several additions to the response that lldb can parse.
+They are not all listed here.
+
+An example exchange:
+
+send packet: qSupported:xmlRegisters=i386,arm,mips,arc;multiprocess+;fork-events+;vfork-events+
+
+read packet: qXfer:features:read+;PacketSize=20000;qEcho+;native-signals+;SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;SupportedWatchpointTypes=aarch64-mask,aarch64-bas;
+
+In the example above, three lldb extensions are shown:
+
+  PacketSize=20000
+    The base 16 maximum packet size that the stub can handle.
+  SupportedCompressions=<item,item,...>
+    A list of compression types that the stub can use to compress packets 
+    when the QEnableCompression packet is used to request one of them.
+  SupportedWatchpointTypes=<item,item,...>
+    A list of watchpoint types that this stub can manage.
+    Currently defined names are:
+        x86_64       64-bit x86-64 watchpoints
+                     (1, 2, 4, 8 byte watchpoints aligned to those amounts)
+        aarch64-bas  AArch64 Byte Address Select watchpoints
+                     (any number of contiguous bytes within a doubleword)
+        aarch64-mask AArch64 MASK watchpoints
+                     (any power-of-2 region of memory from 8 to 2GB, aligned)
+    If nothing is specified, lldb will default to sending power-of-2 
+    watchpoints, up to a pointer size, `sizeof(void*)`, a reasonable 
+    baseline assumption.
 
 //----------------------------------------------------------------------
 // "A" - launch args packet
@@ -594,7 +632,7 @@ read packet: <binary data>/E<error code>;AAAAAAAAA
 
 With LLDB, for register information, remote GDB servers can add
 support for the "qRegisterInfoN" packet where "N" is a zero based
-base16 register number that must start at zero and increase by one
+base 16 register number that must start at zero and increase by one
 for each register that is supported.  The response is done in typical
 GDB remote fashion where a series of "KEY:VALUE;" pairs are returned.
 An example for the x86_64 registers is included below:
@@ -1053,7 +1091,7 @@ Suggested key names:
 //  64-bit slices so it may be impossible to know until you're attached to a real
 //  process to know what you're working with.
 //
-//  All numeric fields return base-16 numbers without any "0x" prefix.
+//  All numeric fields return base 16 numbers without any "0x" prefix.
 //----------------------------------------------------------------------
 
 An i386 process:
@@ -1085,7 +1123,7 @@ main-binary-uuid: is the UUID of a firmware type binary that the gdb stub knows 
 main-binary-address: is the load address of the firmware type binary
 main-binary-slide: is the slide of the firmware type binary, if address isn't known
 
-binary-addresses: A comma-separated list of binary load addresses base16.  
+binary-addresses: A comma-separated list of binary load addresses base 16.  
                   lldb will parse the binaries in memory to get UUIDs, then
                   try to find the binaries & debug info by UUID.  Intended for
                   use with a small number of firmware type binaries where the 
@@ -1302,7 +1340,7 @@ tuples to return are:
 
     dirty-pages:[<hexaddr>][,<hexaddr]; // A list of memory pages within this
                  // region that are "dirty" -- they have been modified.
-                 // Page addresses are in base16.  The size of a page can
+                 // Page addresses are in base 16.  The size of a page can
                  // be found from the qHostInfo's page-size key-value.
                  //
                  // If the stub supports identifying dirty pages within a
@@ -1585,7 +1623,7 @@ for this region.
 //           describe why something stopped.
 //
 //           For "reason:watchpoint", "description" is an ascii-hex
-//           encoded string with between one and three base10 numbers,
+//           encoded string with between one and three base 10 numbers,
 //           space separated.  The three numbers are
 //             1. watchpoint address.  This address should always be within
 //                a memory region lldb has a watchpoint on.  
@@ -1911,7 +1949,7 @@ for this region.
 //
 //  jThreadExtendedInfo:{"thread":612910}
 //
-// Because this is a JSON string, the thread number is provided in base10.
+// Because this is a JSON string, the thread number is provided in base 10.
 // Additional key-value pairs may be provided by lldb to the gdb remote
 // stub.  For instance, on some versions of macOS, lldb can read offset
 // information out of the system libraries.  Using those offsets, debugserver
@@ -1960,16 +1998,12 @@ for this region.
 //  If the debug stub can support compression, it indictes this in the reply of the
 //  "qSupported" packet.  e.g.
 //   LLDB SENDS:    qSupported:xmlRegisters=i386,arm,mips
-//   STUB REPLIES:  qXfer:features:read+;SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;DefaultCompressionMinSize=384
+//   STUB REPLIES:  qXfer:features:read+;SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;
 //
 //  If lldb knows how to use any of these compression algorithms, it can ask that this
-//  compression mode be enabled.  It may optionally change the minimum packet size
-//  where compression is used.  Typically small packets do not benefit from compression,
-//  as well as compression headers -- compression is most beneficial with larger packets.
+//  compression mode be enabled.  
 //
 //  QEnableCompression:type:zlib-deflate;
-//  or
-//  QEnableCompression:type:zlib-deflate;minsize:512;
 //
 //  The debug stub should reply with an uncompressed "OK" packet to indicate that the
 //  request was accepted.  All further packets the stub sends will use this compression.
@@ -1980,13 +2014,13 @@ for this region.
 //
 //   $N<uncompressed payload>#00
 //
-//   $C<size of uncompressed payload in base10>:<compressed payload>#00
+//   $C<size of uncompressed payload in base 10>:<compressed payload>#00
 //
 //  Where "#00" is the actual checksum value if noack mode is not enabled.  The checksum
 //  value is for the "N<uncompressed payload>" or
-//  "C<size of uncompressed payload in base10>:<compressed payload>" bytes in the packet.
+//  "C<size of uncompressed payload in base 10>:<compressed payload>" bytes in the packet.
 //
-//  The size of the uncompressed payload in base10 is provided because it will simplify
+//  The size of the uncompressed payload in base 10 is provided because it will simplify
 //  decompression if the final buffer size needed is known ahead of time.
 //
 //  Compression on low-latency connections is unlikely to be an improvement.  Particularly

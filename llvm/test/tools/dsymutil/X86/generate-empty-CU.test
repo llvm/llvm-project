@@ -1,6 +1,6 @@
 # RUN: dsymutil -f -o - -oso-prepend-path=%p/.. -y %s | llvm-dwarfdump -v - | FileCheck %s
 
-# RUN: dsymutil --linker llvm -f -o - -oso-prepend-path=%p/.. -y %s | llvm-dwarfdump -v - | FileCheck %s
+# RUN: dsymutil --linker parallel -f -o - -oso-prepend-path=%p/.. -y %s | llvm-dwarfdump -v - | FileCheck %s
 
 # This test on links the Dwarf for an LTO binary and on purpose doesn't retain
 # any symbol in the second CU out of 3. To be valid DWARF dsymutil must not

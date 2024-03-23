@@ -1,10 +1,10 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=+sramecc < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-sramecc < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
-; RUN: llc -march=amdgcn -mcpu=gfx902 -mattr=+sramecc < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
-; RUN: llc -march=amdgcn -mcpu=gfx904 -mattr=+sramecc < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
-; RUN: llc -march=amdgcn -mcpu=gfx906 -mattr=+sramecc < %s | FileCheck -check-prefixes=GCN,ECC %s
-; RUN: llc -march=amdgcn -mcpu=gfx906 -mattr=-sramecc < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=+sramecc < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-sramecc < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx902 -mattr=+sramecc < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx904 -mattr=+sramecc < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -mattr=+sramecc < %s | FileCheck -check-prefixes=GCN,ECC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -mattr=-sramecc < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
 
 ; Make sure the correct set of targets are marked with
 ; FeatureDoesNotSupportSRAMECC, and +sramecc is ignored if it's never

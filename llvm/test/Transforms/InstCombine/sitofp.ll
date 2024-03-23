@@ -378,3 +378,40 @@ define i12 @u32_half_u12(i32 %x) {
   %r = fptoui half %h to i12
   ret i12 %r
 }
+
+define <2 x i1> @i8_vec_sitofp_test1(<2 x i8> %A) {
+; CHECK-LABEL: @i8_vec_sitofp_test1(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %B = sitofp <2 x i8> %A to <2 x double>
+  %C = fcmp ult <2 x double> %B, <double 128.0, double 128.0>
+  ret <2 x i1> %C
+}
+
+define <2 x i1> @i8_vec_sitofp_test2(<2 x i8> %A) {
+; CHECK-LABEL: @i8_vec_sitofp_test2(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %B = sitofp <2 x i8> %A to <2 x double>
+  %C = fcmp ugt <2 x double> %B, <double -128.1, double -128.1>
+  ret <2 x i1> %C
+}
+
+define <2 x i1> @i8_vec_sitofp_test3(<2 x i8> %A) {
+; CHECK-LABEL: @i8_vec_sitofp_test3(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %B = sitofp <2 x i8> %A to <2 x double>
+  %C = fcmp ule <2 x double> %B, <double 127.0, double 127.0>
+  ret <2 x i1> %C
+}
+
+define <2 x i1> @i8_vec_sitofp_test4(<2 x i8> %A) {
+; CHECK-LABEL: @i8_vec_sitofp_test4(
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i8> [[A:%.*]], <i8 127, i8 127>
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %B = sitofp <2 x i8> %A to <2 x double>
+  %C = fcmp ult <2 x double> %B, <double 127.0, double 127.0>
+  ret <2 x i1> %C
+}

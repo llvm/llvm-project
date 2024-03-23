@@ -25,6 +25,7 @@
 #include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.h.inc"
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #define GET_TYPEDEF_CLASSES
@@ -130,6 +131,10 @@ static constexpr StringLiteral getDeclareActionAttrName() {
 
 static constexpr StringLiteral getRoutineInfoAttrName() {
   return StringLiteral("acc.routine_info");
+}
+
+static constexpr StringLiteral getCombinedConstructsAttrName() {
+  return CombinedConstructsTypeAttr::name;
 }
 
 struct RuntimeCounters

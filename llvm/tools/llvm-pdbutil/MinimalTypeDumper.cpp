@@ -125,6 +125,7 @@ static std::string formatCallingConvention(CallingConvention Convention) {
     RETURN_CASE(CallingConvention, PpcCall, "ppccall");
     RETURN_CASE(CallingConvention, SHCall, "shcall");
     RETURN_CASE(CallingConvention, SH5Call, "sh5call");
+    RETURN_CASE(CallingConvention, Swift, "swift");
     RETURN_CASE(CallingConvention, ThisCall, "thiscall");
     RETURN_CASE(CallingConvention, TriCall, "tricall");
   }
@@ -307,7 +308,7 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
   if (Indices.empty())
     return Error::success();
 
-  auto Max = std::max_element(Indices.begin(), Indices.end());
+  auto Max = llvm::max_element(Indices);
   uint32_t W = NumDigits(Max->getIndex()) + 2;
 
   for (auto I : Indices)
@@ -322,7 +323,7 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
   if (Indices.empty())
     return Error::success();
 
-  auto Max = std::max_element(Indices.begin(), Indices.end());
+  auto Max = llvm::max_element(Indices);
   uint32_t W = NumDigits(Max->getIndex()) + 2;
 
   for (auto I : Indices)
@@ -492,7 +493,7 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
   if (Indices.empty())
     return Error::success();
 
-  auto Max = std::max_element(Indices.begin(), Indices.end());
+  auto Max = llvm::max_element(Indices);
   uint32_t W = NumDigits(Max->getIndex()) + 2;
 
   for (auto I : Indices)

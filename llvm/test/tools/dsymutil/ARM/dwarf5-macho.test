@@ -22,14 +22,14 @@ RUN: dsymutil -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWA
 RUN: llvm-dwarfdump %t.dir/dwarf5-macho.dSYM -a --verbose | FileCheck %s
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil --linker llvm --no-odr -y %p/dummy-debug-map-amr64.map \
+RUN: dsymutil --linker parallel --no-odr -y %p/dummy-debug-map-amr64.map \
 RUN:   -oso-prepend-path=%p/../Inputs/DWARF5 -o %t.dir/dwarf5-macho.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-macho.dSYM -a --verbose | FileCheck %s
 
 ### Uncomment following when llvm-dwarfdump will print resolved address ranges
 ### for the case mutiplue compile units.
 COM: rm -rf %t.dir && mkdir -p %t.dir
-COM: dsymutil --linker llvm -y %p/dummy-debug-map-amr64.map \
+COM: dsymutil --linker parallel -y %p/dummy-debug-map-amr64.map \
 COM:   -oso-prepend-path=%p/../Inputs/DWARF5 -o %t.dir/dwarf5-macho.dSYM
 COM: llvm-dwarfdump %t.dir/dwarf5-macho.dSYM -a --verbose | FileCheck %s \
 COM: --check-prefixes=CHECK,CHECK-LLVM

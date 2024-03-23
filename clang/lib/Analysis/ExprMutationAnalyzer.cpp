@@ -243,9 +243,16 @@ const Stmt *ExprMutationAnalyzer::findMutationMemoized(
 
 const Stmt *ExprMutationAnalyzer::tryEachDeclRef(const Decl *Dec,
                                                  MutationFinder Finder) {
-  const auto Refs =
-      match(findAll(declRefExpr(to(equalsNode(Dec))).bind(NodeID<Expr>::value)),
-            Stm, Context);
+  const auto Refs = match(
+      findAll(
+          declRefExpr(to(
+                          // `Dec` or a binding if `Dec` is a decomposition.
+                          anyOf(equalsNode(Dec),
+                                bindingDecl(forDecomposition(equalsNode(Dec))))
+                          //
+                          ))
+              .bind(NodeID<Expr>::value)),
+      Stm, Context);
   for (const auto &RefNodes : Refs) {
     const auto *E = RefNodes.getNodeAs<Expr>(NodeID<Expr>::value);
     if ((this->*Finder)(E))
@@ -336,6 +343,10 @@ const Stmt *ExprMutationAnalyzer::findDirectMutation(const Expr *Exp) {
       // in different instantiations of the template.
       binaryOperator(isTypeDependent(),
                      hasEitherOperand(ignoringImpCasts(canResolveToExpr(Exp)))),
+      // A fold expression may contain `Exp` as it's initializer.
+      // We don't know if the operator modifies `Exp` because the
+      // operator is type dependent due to the parameter pack.
+      cxxFoldExpr(hasFoldInit(ignoringImpCasts(canResolveToExpr(Exp)))),
       // Within class templates and member functions the member expression might
       // not be resolved. In that case, the `callExpr` is considered to be a
       // modification.

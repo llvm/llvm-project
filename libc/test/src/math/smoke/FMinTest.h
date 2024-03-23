@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINTEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINTEST_H
+
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <math.h>
 
 template <typename T> class FMinTest : public LIBC_NAMESPACE::testing::Test {
 
@@ -56,11 +57,13 @@ public:
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
          ++i, v += STEP, w -= STEP) {
-      T x = T(FPBits(v)), y = T(FPBits(w));
-      if (isnan(x) || isinf(x))
+      FPBits xbits(v), ybits(w);
+      if (xbits.is_inf_or_nan())
         continue;
-      if (isnan(y) || isinf(y))
+      if (ybits.is_inf_or_nan())
         continue;
+      T x = xbits.get_val();
+      T y = ybits.get_val();
       if ((x == 0) && (y == 0))
         continue;
 
@@ -80,3 +83,5 @@ public:
   TEST_F(LlvmLibcFMinTest, NegInfArg) { testNegInfArg(&func); }                \
   TEST_F(LlvmLibcFMinTest, BothZero) { testBothZero(&func); }                  \
   TEST_F(LlvmLibcFMinTest, Range) { testRange(&func); }
+
+#endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINTEST_H

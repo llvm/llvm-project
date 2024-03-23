@@ -56,6 +56,9 @@ config("cxx_config") {
     "_LIBCPP_BUILDING_LIBRARY",
     "_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER",
   ]
+  if (current_os != "win") {
+    defines += [ "LIBCXX_BUILDING_LIBCXXABI" ]
+  }
   if (target_os == "win") {
     cflags += [ "/Zl" ]
     defines += [
@@ -312,7 +315,13 @@ if (libcxx_enable_experimental) {
     sources = [ "experimental/keep.cpp" ]
     if (libcxx_enable_filesystem && libcxx_enable_time_zone_database) {
       sources += [
-        "tz.cpp",
+        "include/tzdb/time_zone_link_private.h",
+        "include/tzdb/time_zone_private.h",
+        "include/tzdb/types_private.h",
+        "include/tzdb/tzdb_list_private.h",
+        "include/tzdb/tzdb_private.h",
+        "time_zone.cpp",
+        "tzdb.cpp",
         "tzdb_list.cpp",
       ]
     }

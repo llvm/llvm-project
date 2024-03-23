@@ -1337,8 +1337,8 @@ vzeroupper
 # CHECK-NEXT:  1      1     0.33                        vmovups	%ymm0, %ymm2
 # CHECK-NEXT:  2      1     0.50           *            vmovups	%ymm0, (%rax)
 # CHECK-NEXT:  1      7     0.50    *                   vmovups	(%rax), %ymm2
-# CHECK-NEXT:  2      4     2.00                        vmpsadbw	$1, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  3      10    2.00    *                   vmpsadbw	$1, (%rax), %xmm1, %xmm2
+# CHECK-NEXT:  2      4     1.00                        vmpsadbw	$1, %xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  3      10    1.00    *                   vmpsadbw	$1, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      4     0.50                        vmulpd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  2      10    0.50    *                   vmulpd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      4     0.50                        vmulpd	%ymm0, %ymm1, %ymm2
@@ -1401,8 +1401,8 @@ vzeroupper
 # CHECK-NEXT:  2      7     0.50    *                   vpavgw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  2      2     0.67                        vpblendvb	%xmm3, %xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  3      8     0.67    *                   vpblendvb	%xmm3, (%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      1     1.00                        vpblendw	$11, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      7     1.00    *                   vpblendw	$11, (%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      1     0.50                        vpblendw	$11, %xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  2      7     0.50    *                   vpblendw	$11, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      6     1.00                        vpclmulqdq	$11, %xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  2      12    1.00    *                   vpclmulqdq	$11, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.50                        vpcmpeqb	%xmm0, %xmm1, %xmm2
@@ -1738,7 +1738,7 @@ vzeroupper
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -     126.00 322.92 231.92 160.50 160.50 19.00  297.92 6.25   19.00  19.00  19.00
+# CHECK-NEXT:  -     126.00 322.92 233.92 160.50 160.50 19.00  295.92 6.25   19.00  19.00  19.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -2049,8 +2049,8 @@ vzeroupper
 # CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovups	%ymm0, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   vmovups	%ymm0, (%rax)
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -     vmovups	(%rax), %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vmpsadbw	$1, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     2.00    -      -      -      -     vmpsadbw	$1, (%rax), %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -     0.50    -      -      -     1.50    -      -      -      -     vmpsadbw	$1, %xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -     0.50   0.50   0.50    -     1.50    -      -      -      -     vmpsadbw	$1, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -      -      -     vmulpd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -     vmulpd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -      -      -     vmulpd	%ymm0, %ymm1, %ymm2
@@ -2113,8 +2113,8 @@ vzeroupper
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -     vpavgw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -     0.67   0.67    -      -      -     0.67    -      -      -      -     vpblendvb	%xmm3, %xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -     0.67   0.67   0.50   0.50    -     0.67    -      -      -      -     vpblendvb	%xmm3, (%rax), %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vpblendw	$11, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     vpblendw	$11, (%rax), %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -     0.50    -      -      -     0.50    -      -      -      -     vpblendw	$11, %xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -     0.50   0.50   0.50    -     0.50    -      -      -      -     vpblendw	$11, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vpclmulqdq	$11, %xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     vpclmulqdq	$11, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -      -      -     vpcmpeqb	%xmm0, %xmm1, %xmm2

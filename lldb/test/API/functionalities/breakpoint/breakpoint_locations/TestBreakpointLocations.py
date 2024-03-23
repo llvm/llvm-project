@@ -70,7 +70,7 @@ class BreakpointLocationsTestCase(TestBase):
         bkpt_cond = "1 == 0"
         bkpt.SetCondition(bkpt_cond)
         self.assertEqual(bkpt.GetCondition(), bkpt_cond, "Successfully set condition")
-        self.assertEquals(
+        self.assertEqual(
             bkpt.location[0].GetCondition(),
             bkpt.GetCondition(),
             "Conditions are the same",

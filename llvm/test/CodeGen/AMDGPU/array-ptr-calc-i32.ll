@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tahiti -mattr=-promote-alloca < %s | FileCheck -check-prefix=SI-ALLOCA -check-prefix=SI %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tahiti -mattr=+promote-alloca < %s | FileCheck -check-prefix=SI-PROMOTE -check-prefix=SI %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn -mcpu=tahiti -mattr=-promote-alloca < %s | FileCheck -check-prefix=SI-ALLOCA -check-prefix=SI %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn -mcpu=tahiti -mattr=+promote-alloca < %s | FileCheck -check-prefix=SI-PROMOTE -check-prefix=SI %s
 
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
 declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #1
@@ -12,7 +12,7 @@ declare void @llvm.amdgcn.s.barrier() #2
 
 ; SI-LABEL: {{^}}test_private_array_ptr_calc:
 
-; SI-ALLOCA: v_add_i32_e32 [[PTRREG:v[0-9]+]], vcc, 16, v{{[0-9]+}}
+; SI-ALLOCA: v_add_i32_e32 [[PTRREG:v[0-9]+]], vcc, 0, v{{[0-9]+}}
 ; SI-ALLOCA: buffer_store_dword {{v[0-9]+}}, [[PTRREG]], s[{{[0-9]+:[0-9]+}}], 0 offen offset:64
 ; SI-ALLOCA: s_barrier
 ; SI-ALLOCA: buffer_load_dword {{v[0-9]+}}, [[PTRREG]], s[{{[0-9]+:[0-9]+}}], 0 offen offset:64

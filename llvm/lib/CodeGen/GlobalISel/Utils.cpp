@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
@@ -354,18 +355,17 @@ std::optional<ValueAndVReg> getConstantVRegValWithLookThrough(
   if (!MaybeVal)
     return std::nullopt;
   APInt &Val = *MaybeVal;
-  while (!SeenOpcodes.empty()) {
-    std::pair<unsigned, unsigned> OpcodeAndSize = SeenOpcodes.pop_back_val();
-    switch (OpcodeAndSize.first) {
+  for (auto [Opcode, Size] : reverse(SeenOpcodes)) {
+    switch (Opcode) {
     case TargetOpcode::G_TRUNC:
-      Val = Val.trunc(OpcodeAndSize.second);
+      Val = Val.trunc(Size);
       break;
     case TargetOpcode::G_ANYEXT:
     case TargetOpcode::G_SEXT:
-      Val = Val.sext(OpcodeAndSize.second);
+      Val = Val.sext(Size);
       break;
     case TargetOpcode::G_ZEXT:
-      Val = Val.zext(OpcodeAndSize.second);
+      Val = Val.zext(Size);
       break;
     }
   }
@@ -476,6 +476,152 @@ Register llvm::getSrcRegIgnoringCopies(Register Reg,
   return DefSrcReg ? DefSrcReg->Reg : Register();
 }
 
+void llvm::extractParts(Register Reg, LLT Ty, int NumParts,
+                        SmallVectorImpl<Register> &VRegs,
+                        MachineIRBuilder &MIRBuilder,
+                        MachineRegisterInfo &MRI) {
+  for (int i = 0; i < NumParts; ++i)
+    VRegs.push_back(MRI.createGenericVirtualRegister(Ty));
+  MIRBuilder.buildUnmerge(VRegs, Reg);
+}
+
+bool llvm::extractParts(Register Reg, LLT RegTy, LLT MainTy, LLT &LeftoverTy,
+                        SmallVectorImpl<Register> &VRegs,
+                        SmallVectorImpl<Register> &LeftoverRegs,
+                        MachineIRBuilder &MIRBuilder,
+                        MachineRegisterInfo &MRI) {
+  assert(!LeftoverTy.isValid() && "this is an out argument");
+
+  unsigned RegSize = RegTy.getSizeInBits();
+  unsigned MainSize = MainTy.getSizeInBits();
+  unsigned NumParts = RegSize / MainSize;
+  unsigned LeftoverSize = RegSize - NumParts * MainSize;
+
+  // Use an unmerge when possible.
+  if (LeftoverSize == 0) {
+    for (unsigned I = 0; I < NumParts; ++I)
+      VRegs.push_back(MRI.createGenericVirtualRegister(MainTy));
+    MIRBuilder.buildUnmerge(VRegs, Reg);
+    return true;
+  }
+
+  // Try to use unmerge for irregular vector split where possible
+  // For example when splitting a <6 x i32> into <4 x i32> with <2 x i32>
+  // leftover, it becomes:
+  //  <2 x i32> %2, <2 x i32>%3, <2 x i32> %4 = G_UNMERGE_VALUE <6 x i32> %1
+  //  <4 x i32> %5 = G_CONCAT_VECTOR <2 x i32> %2, <2 x i32> %3
+  if (RegTy.isVector() && MainTy.isVector()) {
+    unsigned RegNumElts = RegTy.getNumElements();
+    unsigned MainNumElts = MainTy.getNumElements();
+    unsigned LeftoverNumElts = RegNumElts % MainNumElts;
+    // If can unmerge to LeftoverTy, do it
+    if (MainNumElts % LeftoverNumElts == 0 &&
+        RegNumElts % LeftoverNumElts == 0 &&
+        RegTy.getScalarSizeInBits() == MainTy.getScalarSizeInBits() &&
+        LeftoverNumElts > 1) {
+      LeftoverTy =
+          LLT::fixed_vector(LeftoverNumElts, RegTy.getScalarSizeInBits());
+
+      // Unmerge the SrcReg to LeftoverTy vectors
+      SmallVector<Register, 4> UnmergeValues;
+      extractParts(Reg, LeftoverTy, RegNumElts / LeftoverNumElts, UnmergeValues,
+                   MIRBuilder, MRI);
+
+      // Find how many LeftoverTy makes one MainTy
+      unsigned LeftoverPerMain = MainNumElts / LeftoverNumElts;
+      unsigned NumOfLeftoverVal =
+          ((RegNumElts % MainNumElts) / LeftoverNumElts);
+
+      // Create as many MainTy as possible using unmerged value
+      SmallVector<Register, 4> MergeValues;
+      for (unsigned I = 0; I < UnmergeValues.size() - NumOfLeftoverVal; I++) {
+        MergeValues.push_back(UnmergeValues[I]);
+        if (MergeValues.size() == LeftoverPerMain) {
+          VRegs.push_back(
+              MIRBuilder.buildMergeLikeInstr(MainTy, MergeValues).getReg(0));
+          MergeValues.clear();
+        }
+      }
+      // Populate LeftoverRegs with the leftovers
+      for (unsigned I = UnmergeValues.size() - NumOfLeftoverVal;
+           I < UnmergeValues.size(); I++) {
+        LeftoverRegs.push_back(UnmergeValues[I]);
+      }
+      return true;
+    }
+  }
+  // Perform irregular split. Leftover is last element of RegPieces.
+  if (MainTy.isVector()) {
+    SmallVector<Register, 8> RegPieces;
+    extractVectorParts(Reg, MainTy.getNumElements(), RegPieces, MIRBuilder,
+                       MRI);
+    for (unsigned i = 0; i < RegPieces.size() - 1; ++i)
+      VRegs.push_back(RegPieces[i]);
+    LeftoverRegs.push_back(RegPieces[RegPieces.size() - 1]);
+    LeftoverTy = MRI.getType(LeftoverRegs[0]);
+    return true;
+  }
+
+  LeftoverTy = LLT::scalar(LeftoverSize);
+  // For irregular sizes, extract the individual parts.
+  for (unsigned I = 0; I != NumParts; ++I) {
+    Register NewReg = MRI.createGenericVirtualRegister(MainTy);
+    VRegs.push_back(NewReg);
+    MIRBuilder.buildExtract(NewReg, Reg, MainSize * I);
+  }
+
+  for (unsigned Offset = MainSize * NumParts; Offset < RegSize;
+       Offset += LeftoverSize) {
+    Register NewReg = MRI.createGenericVirtualRegister(LeftoverTy);
+    LeftoverRegs.push_back(NewReg);
+    MIRBuilder.buildExtract(NewReg, Reg, Offset);
+  }
+
+  return true;
+}
+
+void llvm::extractVectorParts(Register Reg, unsigned NumElts,
+                              SmallVectorImpl<Register> &VRegs,
+                              MachineIRBuilder &MIRBuilder,
+                              MachineRegisterInfo &MRI) {
+  LLT RegTy = MRI.getType(Reg);
+  assert(RegTy.isVector() && "Expected a vector type");
+
+  LLT EltTy = RegTy.getElementType();
+  LLT NarrowTy = (NumElts == 1) ? EltTy : LLT::fixed_vector(NumElts, EltTy);
+  unsigned RegNumElts = RegTy.getNumElements();
+  unsigned LeftoverNumElts = RegNumElts % NumElts;
+  unsigned NumNarrowTyPieces = RegNumElts / NumElts;
+
+  // Perfect split without leftover
+  if (LeftoverNumElts == 0)
+    return extractParts(Reg, NarrowTy, NumNarrowTyPieces, VRegs, MIRBuilder,
+                        MRI);
+
+  // Irregular split. Provide direct access to all elements for artifact
+  // combiner using unmerge to elements. Then build vectors with NumElts
+  // elements. Remaining element(s) will be (used to build vector) Leftover.
+  SmallVector<Register, 8> Elts;
+  extractParts(Reg, EltTy, RegNumElts, Elts, MIRBuilder, MRI);
+
+  unsigned Offset = 0;
+  // Requested sub-vectors of NarrowTy.
+  for (unsigned i = 0; i < NumNarrowTyPieces; ++i, Offset += NumElts) {
+    ArrayRef<Register> Pieces(&Elts[Offset], NumElts);
+    VRegs.push_back(MIRBuilder.buildMergeLikeInstr(NarrowTy, Pieces).getReg(0));
+  }
+
+  // Leftover element(s).
+  if (LeftoverNumElts == 1) {
+    VRegs.push_back(Elts[Offset]);
+  } else {
+    LLT LeftoverTy = LLT::fixed_vector(LeftoverNumElts, EltTy);
+    ArrayRef<Register> Pieces(&Elts[Offset], LeftoverNumElts);
+    VRegs.push_back(
+        MIRBuilder.buildMergeLikeInstr(LeftoverTy, Pieces).getReg(0));
+  }
+}
+
 MachineInstr *llvm::getOpcodeDef(unsigned Opcode, Register Reg,
                                  const MachineRegisterInfo &MRI) {
   MachineInstr *DefMI = getDefIgnoringCopies(Reg, MRI);
@@ -513,8 +659,11 @@ std::optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode,
   default:
     break;
   case TargetOpcode::G_ADD:
-  case TargetOpcode::G_PTR_ADD:
     return C1 + C2;
+  case TargetOpcode::G_PTR_ADD:
+    // Types can be of different width here.
+    // Result needs to be the same width as C1, so trunc or sext C2.
+    return C1 + C2.sextOrTrunc(C1.getBitWidth());
   case TargetOpcode::G_AND:
     return C1 & C2;
   case TargetOpcode::G_ASHR:
@@ -924,58 +1073,85 @@ void llvm::getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU) {
 }
 
 LLT llvm::getLCMType(LLT OrigTy, LLT TargetTy) {
-  const unsigned OrigSize = OrigTy.getSizeInBits();
-  const unsigned TargetSize = TargetTy.getSizeInBits();
-
-  if (OrigSize == TargetSize)
+  if (OrigTy.getSizeInBits() == TargetTy.getSizeInBits())
     return OrigTy;
 
-  if (OrigTy.isVector()) {
-    const LLT OrigElt = OrigTy.getElementType();
+  if (OrigTy.isVector() && TargetTy.isVector()) {
+    LLT OrigElt = OrigTy.getElementType();
+    LLT TargetElt = TargetTy.getElementType();
 
-    if (TargetTy.isVector()) {
-      const LLT TargetElt = TargetTy.getElementType();
+    // TODO: The docstring for this function says the intention is to use this
+    // function to build MERGE/UNMERGE instructions. It won't be the case that
+    // we generate a MERGE/UNMERGE between fixed and scalable vector types. We
+    // could implement getLCMType between the two in the future if there was a
+    // need, but it is not worth it now as this function should not be used in
+    // that way.
+    assert(((OrigTy.isScalableVector() && !TargetTy.isFixedVector()) ||
+            (OrigTy.isFixedVector() && !TargetTy.isScalableVector())) &&
+           "getLCMType not implemented between fixed and scalable vectors.");
 
-      if (OrigElt.getSizeInBits() == TargetElt.getSizeInBits()) {
-        int GCDElts =
-            std::gcd(OrigTy.getNumElements(), TargetTy.getNumElements());
-        // Prefer the original element type.
-        ElementCount Mul = OrigTy.getElementCount() * TargetTy.getNumElements();
-        return LLT::vector(Mul.divideCoefficientBy(GCDElts),
-                           OrigTy.getElementType());
-      }
-    } else {
-      if (OrigElt.getSizeInBits() == TargetSize)
-        return OrigTy;
+    if (OrigElt.getSizeInBits() == TargetElt.getSizeInBits()) {
+      int GCDMinElts = std::gcd(OrigTy.getElementCount().getKnownMinValue(),
+                                TargetTy.getElementCount().getKnownMinValue());
+      // Prefer the original element type.
+      ElementCount Mul = OrigTy.getElementCount().multiplyCoefficientBy(
+          TargetTy.getElementCount().getKnownMinValue());
+      return LLT::vector(Mul.divideCoefficientBy(GCDMinElts),
+                         OrigTy.getElementType());
     }
-
-    unsigned LCMSize = std::lcm(OrigSize, TargetSize);
-    return LLT::fixed_vector(LCMSize / OrigElt.getSizeInBits(), OrigElt);
+    unsigned LCM = std::lcm(OrigTy.getSizeInBits().getKnownMinValue(),
+                            TargetTy.getSizeInBits().getKnownMinValue());
+    return LLT::vector(
+        ElementCount::get(LCM / OrigElt.getSizeInBits(), OrigTy.isScalable()),
+        OrigElt);
   }
 
-  if (TargetTy.isVector()) {
-    unsigned LCMSize = std::lcm(OrigSize, TargetSize);
-    return LLT::fixed_vector(LCMSize / OrigSize, OrigTy);
+  // One type is scalar, one type is vector
+  if (OrigTy.isVector() || TargetTy.isVector()) {
+    LLT VecTy = OrigTy.isVector() ? OrigTy : TargetTy;
+    LLT ScalarTy = OrigTy.isVector() ? TargetTy : OrigTy;
+    LLT EltTy = VecTy.getElementType();
+    LLT OrigEltTy = OrigTy.isVector() ? OrigTy.getElementType() : OrigTy;
+
+    // Prefer scalar type from OrigTy.
+    if (EltTy.getSizeInBits() == ScalarTy.getSizeInBits())
+      return LLT::vector(VecTy.getElementCount(), OrigEltTy);
+
+    // Different size scalars. Create vector with the same total size.
+    // LCM will take fixed/scalable from VecTy.
+    unsigned LCM = std::lcm(EltTy.getSizeInBits().getFixedValue() *
+                                VecTy.getElementCount().getKnownMinValue(),
+                            ScalarTy.getSizeInBits().getFixedValue());
+    // Prefer type from OrigTy
+    return LLT::vector(ElementCount::get(LCM / OrigEltTy.getSizeInBits(),
+                                         VecTy.getElementCount().isScalable()),
+                       OrigEltTy);
   }
 
-  unsigned LCMSize = std::lcm(OrigSize, TargetSize);
-
+  // At this point, both types are scalars of different size
+  unsigned LCM = std::lcm(OrigTy.getSizeInBits().getFixedValue(),
+                          TargetTy.getSizeInBits().getFixedValue());
   // Preserve pointer types.
-  if (LCMSize == OrigSize)
+  if (LCM == OrigTy.getSizeInBits())
     return OrigTy;
-  if (LCMSize == TargetSize)
+  if (LCM == TargetTy.getSizeInBits())
     return TargetTy;
-
-  return LLT::scalar(LCMSize);
+  return LLT::scalar(LCM);
 }
 
 LLT llvm::getCoverTy(LLT OrigTy, LLT TargetTy) {
+
+  if ((OrigTy.isScalableVector() && TargetTy.isFixedVector()) ||
+      (OrigTy.isFixedVector() && TargetTy.isScalableVector()))
+    llvm_unreachable(
+        "getCoverTy not implemented between fixed and scalable vectors.");
+
   if (!OrigTy.isVector() || !TargetTy.isVector() || OrigTy == TargetTy ||
       (OrigTy.getScalarSizeInBits() != TargetTy.getScalarSizeInBits()))
     return getLCMType(OrigTy, TargetTy);
 
-  unsigned OrigTyNumElts = OrigTy.getNumElements();
-  unsigned TargetTyNumElts = TargetTy.getNumElements();
+  unsigned OrigTyNumElts = OrigTy.getElementCount().getKnownMinValue();
+  unsigned TargetTyNumElts = TargetTy.getElementCount().getKnownMinValue();
   if (OrigTyNumElts % TargetTyNumElts == 0)
     return OrigTy;
 
@@ -985,45 +1161,56 @@ LLT llvm::getCoverTy(LLT OrigTy, LLT TargetTy) {
 }
 
 LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
-  const unsigned OrigSize = OrigTy.getSizeInBits();
-  const unsigned TargetSize = TargetTy.getSizeInBits();
-
-  if (OrigSize == TargetSize)
+  if (OrigTy.getSizeInBits() == TargetTy.getSizeInBits())
     return OrigTy;
 
-  if (OrigTy.isVector()) {
+  if (OrigTy.isVector() && TargetTy.isVector()) {
     LLT OrigElt = OrigTy.getElementType();
-    if (TargetTy.isVector()) {
-      LLT TargetElt = TargetTy.getElementType();
-      if (OrigElt.getSizeInBits() == TargetElt.getSizeInBits()) {
-        int GCD = std::gcd(OrigTy.getNumElements(), TargetTy.getNumElements());
-        return LLT::scalarOrVector(ElementCount::getFixed(GCD), OrigElt);
-      }
-    } else {
-      // If the source is a vector of pointers, return a pointer element.
-      if (OrigElt.getSizeInBits() == TargetSize)
-        return OrigElt;
-    }
 
-    unsigned GCD = std::gcd(OrigSize, TargetSize);
+    // TODO: The docstring for this function says the intention is to use this
+    // function to build MERGE/UNMERGE instructions. It won't be the case that
+    // we generate a MERGE/UNMERGE between fixed and scalable vector types. We
+    // could implement getGCDType between the two in the future if there was a
+    // need, but it is not worth it now as this function should not be used in
+    // that way.
+    assert(((OrigTy.isScalableVector() && !TargetTy.isFixedVector()) ||
+            (OrigTy.isFixedVector() && !TargetTy.isScalableVector())) &&
+           "getGCDType not implemented between fixed and scalable vectors.");
+
+    unsigned GCD = std::gcd(OrigTy.getSizeInBits().getKnownMinValue(),
+                            TargetTy.getSizeInBits().getKnownMinValue());
     if (GCD == OrigElt.getSizeInBits())
-      return OrigElt;
+      return LLT::scalarOrVector(ElementCount::get(1, OrigTy.isScalable()),
+                                 OrigElt);
 
-    // If we can't produce the original element type, we have to use a smaller
-    // scalar.
+    // Cannot produce original element type, but both have vscale in common.
     if (GCD < OrigElt.getSizeInBits())
-      return LLT::scalar(GCD);
-    return LLT::fixed_vector(GCD / OrigElt.getSizeInBits(), OrigElt);
+      return LLT::scalarOrVector(ElementCount::get(1, OrigTy.isScalable()),
+                                 GCD);
+
+    return LLT::vector(
+        ElementCount::get(GCD / OrigElt.getSizeInBits().getFixedValue(),
+                          OrigTy.isScalable()),
+        OrigElt);
   }
 
-  if (TargetTy.isVector()) {
-    // Try to preserve the original element type.
-    LLT TargetElt = TargetTy.getElementType();
-    if (TargetElt.getSizeInBits() == OrigSize)
-      return OrigTy;
-  }
+  // If one type is vector and the element size matches the scalar size, then
+  // the gcd is the scalar type.
+  if (OrigTy.isVector() &&
+      OrigTy.getElementType().getSizeInBits() == TargetTy.getSizeInBits())
+    return OrigTy.getElementType();
+  if (TargetTy.isVector() &&
+      TargetTy.getElementType().getSizeInBits() == OrigTy.getSizeInBits())
+    return OrigTy;
 
-  unsigned GCD = std::gcd(OrigSize, TargetSize);
+  // At this point, both types are either scalars of different type or one is a
+  // vector and one is a scalar. If both types are scalars, the GCD type is the
+  // GCD between the two scalar sizes. If one is vector and one is scalar, then
+  // the GCD type is the GCD between the scalar and the vector element size.
+  LLT OrigScalar = OrigTy.getScalarType();
+  LLT TargetScalar = TargetTy.getScalarType();
+  unsigned GCD = std::gcd(OrigScalar.getSizeInBits().getFixedValue(),
+                          TargetScalar.getSizeInBits().getFixedValue());
   return LLT::scalar(GCD);
 }
 

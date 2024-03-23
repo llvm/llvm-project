@@ -52,7 +52,8 @@ public:
   Norm2Accumulator(
       const Constant<T> &array, const Constant<T> &maxAbs, Rounding rounding)
       : array_{array}, maxAbs_{maxAbs}, rounding_{rounding} {};
-  void operator()(Scalar<T> &element, const ConstantSubscripts &at) {
+  void operator()(
+      Scalar<T> &element, const ConstantSubscripts &at, bool /*first*/) {
     // Kahan summation of scaled elements:
     // Naively,
     //   NORM2(A(:)) = SQRT(SUM(A(:)**2))
@@ -114,17 +115,18 @@ static Expr<Type<TypeCategory::Real, KIND>> FoldNorm2(FoldingContext &context,
   using T = Type<TypeCategory::Real, KIND>;
   using Element = typename Constant<T>::Element;
   std::optional<int> dim;
-  const Element identity{};
-  if (std::optional<Constant<T>> array{
-          ProcessReductionArgs<T>(context, funcRef.arguments(), dim, identity,
+  if (std::optional<ArrayAndMask<T>> arrayAndMask{
+          ProcessReductionArgs<T>(context, funcRef.arguments(), dim,
               /*X=*/0, /*DIM=*/1)}) {
     MaxvalMinvalAccumulator<T, /*ABS=*/true> maxAbsAccumulator{
-        RelationalOperator::GT, context, *array};
-    Constant<T> maxAbs{
-        DoReduction<T>(*array, dim, identity, maxAbsAccumulator)};
-    Norm2Accumulator norm2Accumulator{
-        *array, maxAbs, context.targetCharacteristics().roundingMode()};
-    Constant<T> result{DoReduction<T>(*array, dim, identity, norm2Accumulator)};
+        RelationalOperator::GT, context, arrayAndMask->array};
+    const Element identity{};
+    Constant<T> maxAbs{DoReduction<T>(arrayAndMask->array, arrayAndMask->mask,
+        dim, identity, maxAbsAccumulator)};
+    Norm2Accumulator norm2Accumulator{arrayAndMask->array, maxAbs,
+        context.targetCharacteristics().roundingMode()};
+    Constant<T> result{DoReduction<T>(arrayAndMask->array, arrayAndMask->mask,
+        dim, identity, norm2Accumulator)};
     if (norm2Accumulator.overflow()) {
       context.messages().Say(
           "NORM2() of REAL(%d) data overflowed"_warn_en_US, KIND);

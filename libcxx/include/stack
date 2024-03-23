@@ -114,7 +114,6 @@ template <class T, class Container>
 */
 
 #include <__algorithm/ranges_copy.h>
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/iterator_traits.h>
@@ -137,6 +136,9 @@ template <class T, class Container>
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -210,7 +212,7 @@ public:
 #endif // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER >= 23
-  template <class _InputIterator, class = __enable_if_t<__has_input_iterator_category<_InputIterator>::value>>
+  template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI stack(_InputIterator __first, _InputIterator __last) : c(__first, __last) {}
 
   template <_ContainerCompatibleRange<_Tp> _Range>
@@ -218,14 +220,14 @@ public:
 
   template <class _InputIterator,
             class _Alloc,
-            class = __enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-            class = __enable_if_t<uses_allocator<container_type, _Alloc>::value>>
+            __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0,
+            __enable_if_t<uses_allocator<container_type, _Alloc>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI stack(_InputIterator __first, _InputIterator __last, const _Alloc& __alloc)
       : c(__first, __last, __alloc) {}
 
   template <_ContainerCompatibleRange<_Tp> _Range,
             class _Alloc,
-            class = __enable_if_t<uses_allocator<container_type, _Alloc>::value>>
+            __enable_if_t<uses_allocator<container_type, _Alloc>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI stack(from_range_t, _Range&& __range, const _Alloc& __alloc)
       : c(from_range, std::forward<_Range>(__range), __alloc) {}
 
@@ -294,7 +296,7 @@ stack(_Container, _Alloc) -> stack<typename _Container::value_type, _Container>;
 #endif
 
 #if _LIBCPP_STD_VER >= 23
-template <class _InputIterator, class = __enable_if_t<__has_input_iterator_category<_InputIterator>::value>>
+template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0>
 stack(_InputIterator, _InputIterator) -> stack<__iter_value_type<_InputIterator>>;
 
 template <ranges::input_range _Range>
@@ -302,12 +304,12 @@ stack(from_range_t, _Range&&) -> stack<ranges::range_value_t<_Range>>;
 
 template <class _InputIterator,
           class _Alloc,
-          class = __enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-          class = __enable_if_t<__is_allocator<_Alloc>::value>>
+          __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0,
+          __enable_if_t<__is_allocator<_Alloc>::value, int> = 0>
 stack(_InputIterator, _InputIterator, _Alloc)
     -> stack<__iter_value_type<_InputIterator>, deque<__iter_value_type<_InputIterator>, _Alloc>>;
 
-template <ranges::input_range _Range, class _Alloc, class = __enable_if_t<__is_allocator<_Alloc>::value>>
+template <ranges::input_range _Range, class _Alloc, __enable_if_t<__is_allocator<_Alloc>::value, int> = 0>
 stack(from_range_t, _Range&&, _Alloc)
     -> stack<ranges::range_value_t<_Range>, deque<ranges::range_value_t<_Range>, _Alloc>>;
 
@@ -365,6 +367,8 @@ struct _LIBCPP_TEMPLATE_VIS uses_allocator<stack<_Tp, _Container>, _Alloc> : pub
 };
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <concepts>

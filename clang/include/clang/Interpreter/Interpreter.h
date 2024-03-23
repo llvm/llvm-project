@@ -18,6 +18,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Interpreter/Value.h"
+#include "clang/Sema/Ownership.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
@@ -48,6 +49,8 @@ public:
     UserArgs = Args;
   }
 
+  void SetTargetTriple(std::string TT) { TargetTriple = TT; }
+
   // General C++
   llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCpp();
 
@@ -62,14 +65,25 @@ public:
 
 private:
   static llvm::Expected<std::unique_ptr<CompilerInstance>>
-  create(std::vector<const char *> &ClangArgv);
+  create(std::string TT, std::vector<const char *> &ClangArgv);
 
   llvm::Expected<std::unique_ptr<CompilerInstance>> createCuda(bool device);
 
   std::vector<const char *> UserArgs;
+  std::optional<std::string> TargetTriple;
 
   llvm::StringRef OffloadArch;
   llvm::StringRef CudaSDKPath;
+};
+
+/// Generate glue code between the Interpreter's built-in runtime and user code.
+class RuntimeInterfaceBuilder {
+public:
+  virtual ~RuntimeInterfaceBuilder() = default;
+
+  using TransformExprFunction = ExprResult(RuntimeInterfaceBuilder *Builder,
+                                           Expr *, ArrayRef<Expr *>);
+  virtual TransformExprFunction *getPrintValueTransformer() = 0;
 };
 
 /// Provides top-level interfaces for incremental compilation and execution.
@@ -77,13 +91,11 @@ class Interpreter {
   std::unique_ptr<llvm::orc::ThreadSafeContext> TSCtx;
   std::unique_ptr<IncrementalParser> IncrParser;
   std::unique_ptr<IncrementalExecutor> IncrExecutor;
+  std::unique_ptr<RuntimeInterfaceBuilder> RuntimeIB;
 
   // An optional parser for CUDA offloading
   std::unique_ptr<IncrementalParser> DeviceParser;
 
-  Interpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err);
-
-  llvm::Error CreateExecutor();
   unsigned InitPTUSize = 0;
 
   // This member holds the last result of the value printing. It's a class
@@ -91,8 +103,33 @@ class Interpreter {
   // printing happens, it's in an invalid state.
   Value LastValue;
 
+  // Add a call to an Expr to report its result. We query the function from
+  // RuntimeInterfaceBuilder once and store it as a function pointer to avoid
+  // frequent virtual function calls.
+  RuntimeInterfaceBuilder::TransformExprFunction *AddPrintValueCall = nullptr;
+
+protected:
+  // Derived classes can make use an extended interface of the Interpreter.
+  // That's useful for testing and out-of-tree clients.
+  Interpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err);
+
+  // Create the internal IncrementalExecutor, or re-create it after calling
+  // ResetExecutor().
+  llvm::Error CreateExecutor();
+
+  // Delete the internal IncrementalExecutor. This causes a hard shutdown of the
+  // JIT engine. In particular, it doesn't run cleanup or destructors.
+  void ResetExecutor();
+
+  // Lazily construct the RuntimeInterfaceBuilder. The provided instance will be
+  // used for the entire lifetime of the interpreter. The default implementation
+  // targets the in-process __clang_Interpreter runtime. Override this to use a
+  // custom runtime.
+  virtual std::unique_ptr<RuntimeInterfaceBuilder> FindRuntimeInterface();
+
 public:
-  ~Interpreter();
+  virtual ~Interpreter();
+
   static llvm::Expected<std::unique_ptr<Interpreter>>
   create(std::unique_ptr<CompilerInstance> CI);
   static llvm::Expected<std::unique_ptr<Interpreter>>
@@ -129,7 +166,7 @@ public:
   llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddressFromLinkerName(llvm::StringRef LinkerName) const;
 
-  enum InterfaceKind { NoAlloc, WithAlloc, CopyArray };
+  enum InterfaceKind { NoAlloc, WithAlloc, CopyArray, NewTag };
 
   const llvm::SmallVectorImpl<Expr *> &getValuePrintingInfo() const {
     return ValuePrintingInfo;
@@ -139,12 +176,11 @@ public:
 
 private:
   size_t getEffectivePTUSize() const;
-
-  bool FindRuntimeInterface();
+  void markUserCodeStart();
 
   llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
 
-  llvm::SmallVector<Expr *, 3> ValuePrintingInfo;
+  llvm::SmallVector<Expr *, 4> ValuePrintingInfo;
 };
 } // namespace clang
 

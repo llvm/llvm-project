@@ -81,7 +81,7 @@ void SubtargetFeatureInfo::emitNameTable(
   uint64_t IndexUB = 0;
   for (const auto &SF : SubtargetFeatures)
     if (IndexUB <= SF.second.Index)
-      IndexUB = SF.second.Index+1;
+      IndexUB = SF.second.Index + 1;
 
   std::vector<std::string> Names;
   if (IndexUB > 0)

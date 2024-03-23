@@ -160,8 +160,8 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
   partialIteration.getInitArgsMutable().assign(forOp->getResults());
 
   // Set new upper loop bound.
-  b.updateRootInPlace(
-      forOp, [&]() { forOp.getUpperBoundMutable().assign(splitBound); });
+  b.modifyOpInPlace(forOp,
+                    [&]() { forOp.getUpperBoundMutable().assign(splitBound); });
 
   return success();
 }
@@ -239,7 +239,7 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
   firstIteration = cast<ForOp>(b.clone(*forOp.getOperation(), map));
 
   // Update main loop with new lower bound.
-  b.updateRootInPlace(forOp, [&]() {
+  b.modifyOpInPlace(forOp, [&]() {
     forOp.getInitArgsMutable().assign(firstIteration->getResults());
     forOp.getLowerBoundMutable().assign(splitBound);
   });
@@ -286,11 +286,11 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
     }
 
     // Apply label, so that the same loop is not rewritten a second time.
-    rewriter.updateRootInPlace(partialIteration, [&]() {
+    rewriter.modifyOpInPlace(partialIteration, [&]() {
       partialIteration->setAttr(kPeeledLoopLabel, rewriter.getUnitAttr());
       partialIteration->setAttr(kPartialIterationLabel, rewriter.getUnitAttr());
     });
-    rewriter.updateRootInPlace(forOp, [&]() {
+    rewriter.modifyOpInPlace(forOp, [&]() {
       forOp->setAttr(kPeeledLoopLabel, rewriter.getUnitAttr());
     });
     return success();

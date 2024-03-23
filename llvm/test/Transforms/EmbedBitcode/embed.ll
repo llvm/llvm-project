@@ -1,4 +1,7 @@
 ; RUN: opt --mtriple x86_64-unknown-linux-gnu < %s -passes="embed-bitcode" -S | FileCheck %s
+; RUN: opt --mtriple x86_64-unknown-linux-gnu < %s -passes="embed-bitcode<thinlto>" -S | FileCheck %s
+; RUN: opt --mtriple x86_64-unknown-linux-gnu < %s -passes="embed-bitcode<emit-summary>" -S | FileCheck %s
+; RUN: opt --mtriple x86_64-unknown-linux-gnu < %s -passes="embed-bitcode<thinlto;emit-summary>" -S | FileCheck %s
 
 @a = global i32 1
 

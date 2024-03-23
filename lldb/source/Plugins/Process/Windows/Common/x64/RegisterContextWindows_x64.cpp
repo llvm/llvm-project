@@ -192,6 +192,7 @@ RegisterInfo g_register_infos[] = {
          LLDB_INVALID_REGNUM, lldb_rflags_x86_64},
         nullptr,
         nullptr,
+        nullptr,
     },
     DEFINE_GPR_PSEUDO_32(eax),
     DEFINE_GPR_PSEUDO_32(ebx),

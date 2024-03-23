@@ -240,15 +240,19 @@ namespace {
     /// True if the subobject was named in a manner not supported by C++11. Such
     /// lvalues can still be folded, but they are not core constant expressions
     /// and we cannot perform lvalue-to-rvalue conversions on them.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned Invalid : 1;
 
     /// Is this a pointer one past the end of an object?
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsOnePastTheEnd : 1;
 
     /// Indicator of whether the first entry is an unsized array.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned FirstEntryIsAnUnsizedArray : 1;
 
     /// Indicator of whether the most-derived object is an array element.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned MostDerivedIsArrayElement : 1;
 
     /// The length of the path to the most-derived object of which this is a
@@ -2774,7 +2778,9 @@ static bool CheckedIntArithmetic(EvalInfo &Info, const Expr *E,
     if (Info.checkingForUndefinedBehavior())
       Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                        diag::warn_integer_constant_overflow)
-          << toString(Result, 10) << E->getType() << E->getSourceRange();
+          << toString(Result, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
+                      /*UpperCase=*/true, /*InsertSeparators=*/true)
+          << E->getType() << E->getSourceRange();
     return HandleOverflow(Info, E, Value, E->getType());
   }
   return true;
@@ -4127,6 +4133,10 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     }
 
     bool IsConstant = BaseType.isConstant(Info.Ctx);
+    bool ConstexprVar = false;
+    if (const auto *VD = dyn_cast_if_present<VarDecl>(
+            Info.EvaluatingDecl.dyn_cast<const ValueDecl *>()))
+      ConstexprVar = VD->isConstexpr();
 
     // Unless we're looking at a local variable or argument in a constexpr call,
     // the variable we're reading must be const.
@@ -4146,6 +4156,9 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         return CompleteObject();
       } else if (VD->isConstexpr()) {
         // OK, we can read this variable.
+      } else if (Info.getLangOpts().C23 && ConstexprVar) {
+        Info.FFDiag(E);
+        return CompleteObject();
       } else if (BaseType->isIntegralOrEnumerationType()) {
         if (!IsConstant) {
           if (!IsAccess)
@@ -5569,6 +5582,32 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
     MSConstexprContextRAII ConstexprContext(
         *Info.CurrentCall, hasSpecificAttr<MSConstexprAttr>(AS->getAttrs()) &&
                                isa<ReturnStmt>(SS));
+
+    auto LO = Info.getCtx().getLangOpts();
+    if (LO.CXXAssumptions && !LO.MSVCCompat) {
+      for (auto *Attr : AS->getAttrs()) {
+        auto *AA = dyn_cast<CXXAssumeAttr>(Attr);
+        if (!AA)
+          continue;
+
+        auto *Assumption = AA->getAssumption();
+        if (Assumption->isValueDependent())
+          return ESR_Failed;
+
+        if (Assumption->HasSideEffects(Info.getCtx()))
+          continue;
+
+        bool Value;
+        if (!EvaluateAsBooleanCondition(Assumption, Value, Info))
+          return ESR_Failed;
+        if (!Value) {
+          Info.CCEDiag(Assumption->getExprLoc(),
+                       diag::note_constexpr_assumption_failed);
+          return ESR_Failed;
+        }
+      }
+    }
+
     return EvaluateStmt(Result, Info, SS, Case);
   }
 
@@ -5839,7 +5878,7 @@ static const CXXMethodDecl *HandleVirtualDispatch(
   // C++2a [class.abstract]p6:
   //   the effect of making a virtual call to a pure virtual function [...] is
   //   undefined
-  if (Callee->isPure()) {
+  if (Callee->isPureVirtual()) {
     Info.FFDiag(E, diag::note_constexpr_pure_virtual_call, 1) << Callee;
     Info.Note(Callee->getLocation(), diag::note_declared_at);
     return nullptr;
@@ -7308,9 +7347,6 @@ class BufferToAPValueConverter {
       for (size_t I = 0, E = CXXRD->getNumBases(); I != E; ++I) {
         const CXXBaseSpecifier &BS = CXXRD->bases_begin()[I];
         CXXRecordDecl *BaseDecl = BS.getType()->getAsCXXRecordDecl();
-        if (BaseDecl->isEmpty() ||
-            Info.Ctx.getASTRecordLayout(BaseDecl).getNonVirtualSize().isZero())
-          continue;
 
         std::optional<APValue> SubObj = visitType(
             BS.getType(), Layout.getBaseClassOffset(BaseDecl) + Offset);
@@ -7951,7 +7987,8 @@ public:
       // Overloaded operator calls to member functions are represented as normal
       // calls with '*this' as the first argument.
       const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
-      if (MD && MD->isImplicitObjectMemberFunction()) {
+      if (MD &&
+          (MD->isImplicitObjectMemberFunction() || (OCE && MD->isStatic()))) {
         // FIXME: When selecting an implicit conversion for an overloaded
         // operator delete, we sometimes try to evaluate calls to conversion
         // operators without a 'this' parameter!
@@ -7960,7 +7997,11 @@ public:
 
         if (!EvaluateObjectArgument(Info, Args[0], ThisVal))
           return false;
-        This = &ThisVal;
+
+        // If we are calling a static operator, the 'this' argument needs to be
+        // ignored after being evaluated.
+        if (MD->isInstance())
+          This = &ThisVal;
 
         // If this is syntactically a simple assignment using a trivial
         // assignment operator, start the lifetimes of union members as needed,
@@ -8001,7 +8042,8 @@ public:
           assert(CorrespondingCallOpSpecialization &&
                  "We must always have a function call operator specialization "
                  "that corresponds to our static invoker specialization");
-          FD = cast<CXXMethodDecl>(CorrespondingCallOpSpecialization);
+          assert(isa<CXXMethodDecl>(CorrespondingCallOpSpecialization));
+          FD = CorrespondingCallOpSpecialization;
         } else
           FD = LambdaCallOp;
       } else if (FD->isReplaceableGlobalAllocationFunction()) {
@@ -8254,6 +8296,10 @@ public:
     llvm_unreachable("Return from function from the loop above.");
   }
 
+  bool VisitPackIndexingExpr(const PackIndexingExpr *E) {
+    return StmtVisitorTy::Visit(E->getSelectedExpr());
+  }
+
   /// Visit a value which is evaluated, but whose value is ignored.
   void VisitIgnoredValue(const Expr *E) {
     EvaluateIgnoredValue(Info, E);
@@ -8471,6 +8517,53 @@ public:
 };
 } // end anonymous namespace
 
+/// Get an lvalue to a field of a lambda's closure type.
+static bool HandleLambdaCapture(EvalInfo &Info, const Expr *E, LValue &Result,
+                                const CXXMethodDecl *MD, const FieldDecl *FD,
+                                bool LValueToRValueConversion) {
+  // Static lambda function call operators can't have captures. We already
+  // diagnosed this, so bail out here.
+  if (MD->isStatic()) {
+    assert(Info.CurrentCall->This == nullptr &&
+           "This should not be set for a static call operator");
+    return false;
+  }
+
+  // Start with 'Result' referring to the complete closure object...
+  if (MD->isExplicitObjectMemberFunction()) {
+    // Self may be passed by reference or by value.
+    const ParmVarDecl *Self = MD->getParamDecl(0);
+    if (Self->getType()->isReferenceType()) {
+      APValue *RefValue = Info.getParamSlot(Info.CurrentCall->Arguments, Self);
+      Result.setFrom(Info.Ctx, *RefValue);
+    } else {
+      const ParmVarDecl *VD = Info.CurrentCall->Arguments.getOrigParam(Self);
+      CallStackFrame *Frame =
+          Info.getCallFrameAndDepth(Info.CurrentCall->Arguments.CallIndex)
+              .first;
+      unsigned Version = Info.CurrentCall->Arguments.Version;
+      Result.set({VD, Frame->Index, Version});
+    }
+  } else
+    Result = *Info.CurrentCall->This;
+
+  // ... then update it to refer to the field of the closure object
+  // that represents the capture.
+  if (!HandleLValueMember(Info, E, Result, FD))
+    return false;
+
+  // And if the field is of reference type (or if we captured '*this' by
+  // reference), update 'Result' to refer to what
+  // the field refers to.
+  if (LValueToRValueConversion) {
+    APValue RVal;
+    if (!handleLValueToRValueConversion(Info, E, FD->getType(), Result, RVal))
+      return false;
+    Result.setFrom(Info.Ctx, RVal);
+  }
+  return true;
+}
+
 /// Evaluate an expression as an lvalue. This can be legitimately called on
 /// expressions which are not glvalues, in three cases:
 ///  * function designators in C, and
@@ -8515,37 +8608,8 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
 
     if (auto *FD = Info.CurrentCall->LambdaCaptureFields.lookup(VD)) {
       const auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
-
-      // Static lambda function call operators can't have captures. We already
-      // diagnosed this, so bail out here.
-      if (MD->isStatic()) {
-        assert(Info.CurrentCall->This == nullptr &&
-               "This should not be set for a static call operator");
-        return false;
-      }
-
-      // Start with 'Result' referring to the complete closure object...
-      if (MD->isExplicitObjectMemberFunction()) {
-        APValue *RefValue =
-            Info.getParamSlot(Info.CurrentCall->Arguments, MD->getParamDecl(0));
-        Result.setFrom(Info.Ctx, *RefValue);
-      } else
-        Result = *Info.CurrentCall->This;
-
-      // ... then update it to refer to the field of the closure object
-      // that represents the capture.
-      if (!HandleLValueMember(Info, E, Result, FD))
-        return false;
-      // And if the field is of reference type, update 'Result' to refer to what
-      // the field refers to.
-      if (FD->getType()->isReferenceType()) {
-        APValue RVal;
-        if (!handleLValueToRValueConversion(Info, E, FD->getType(), Result,
-                                            RVal))
-          return false;
-        Result.setFrom(Info.Ctx, RVal);
-      }
-      return true;
+      return HandleLambdaCapture(Info, E, Result, MD, FD,
+                                 FD->getType()->isReferenceType());
     }
   }
 
@@ -9023,45 +9087,46 @@ public:
     return Error(E);
   }
   bool VisitCXXThisExpr(const CXXThisExpr *E) {
-    // Can't look at 'this' when checking a potential constant expression.
-    if (Info.checkingPotentialConstantExpression())
-      return false;
-    if (!Info.CurrentCall->This) {
+    auto DiagnoseInvalidUseOfThis = [&] {
       if (Info.getLangOpts().CPlusPlus11)
         Info.FFDiag(E, diag::note_constexpr_this) << E->isImplicit();
       else
         Info.FFDiag(E);
+    };
+
+    // Can't look at 'this' when checking a potential constant expression.
+    if (Info.checkingPotentialConstantExpression())
       return false;
+
+    bool IsExplicitLambda =
+        isLambdaCallWithExplicitObjectParameter(Info.CurrentCall->Callee);
+    if (!IsExplicitLambda) {
+      if (!Info.CurrentCall->This) {
+        DiagnoseInvalidUseOfThis();
+        return false;
+      }
+
+      Result = *Info.CurrentCall->This;
     }
-    Result = *Info.CurrentCall->This;
 
     if (isLambdaCallOperator(Info.CurrentCall->Callee)) {
       // Ensure we actually have captured 'this'. If something was wrong with
       // 'this' capture, the error would have been previously reported.
       // Otherwise we can be inside of a default initialization of an object
       // declared by lambda's body, so no need to return false.
-      if (!Info.CurrentCall->LambdaThisCaptureField)
-        return true;
-
-      // If we have captured 'this',  the 'this' expression refers
-      // to the enclosing '*this' object (either by value or reference) which is
-      // either copied into the closure object's field that represents the
-      // '*this' or refers to '*this'.
-      // Update 'Result' to refer to the data member/field of the closure object
-      // that represents the '*this' capture.
-      if (!HandleLValueMember(Info, E, Result,
-                             Info.CurrentCall->LambdaThisCaptureField))
-        return false;
-      // If we captured '*this' by reference, replace the field with its referent.
-      if (Info.CurrentCall->LambdaThisCaptureField->getType()
-              ->isPointerType()) {
-        APValue RVal;
-        if (!handleLValueToRValueConversion(Info, E, E->getType(), Result,
-                                            RVal))
+      if (!Info.CurrentCall->LambdaThisCaptureField) {
+        if (IsExplicitLambda && !Info.CurrentCall->This) {
+          DiagnoseInvalidUseOfThis();
           return false;
+        }
 
-        Result.setFrom(Info.Ctx, RVal);
+        return true;
       }
+
+      const auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
+      return HandleLambdaCapture(
+          Info, E, Result, MD, Info.CurrentCall->LambdaThisCaptureField,
+          Info.CurrentCall->LambdaThisCaptureField->getType()->isPointerType());
     }
     return true;
   }
@@ -9188,7 +9253,8 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
            Info.getLangOpts().CPlusPlus26)) {
         // Permitted.
       } else {
-        if (SubExpr->getType()->isVoidPointerType()) {
+        if (SubExpr->getType()->isVoidPointerType() &&
+            Info.getLangOpts().CPlusPlus) {
           if (HasValidResult)
             CCEDiag(E, diag::note_constexpr_invalid_void_star_cast)
                 << SubExpr->getType() << Info.getLangOpts().CPlusPlus26
@@ -11418,6 +11484,10 @@ class FixedPointExprEvaluator
     return true;
   }
 
+  bool ZeroInitialization(const Expr *E) {
+    return Success(0, E);
+  }
+
   //===--------------------------------------------------------------------===//
   //                            Visitor Methods
   //===--------------------------------------------------------------------===//
@@ -11789,8 +11859,8 @@ static QualType getObjectType(APValue::LValueBase B) {
 static const Expr *ignorePointerCastsAndParens(const Expr *E) {
   assert(E->isPRValue() && E->getType()->hasPointerRepresentation());
 
-  auto *NoParens = E->IgnoreParens();
-  auto *Cast = dyn_cast<CastExpr>(NoParens);
+  const Expr *NoParens = E->IgnoreParens();
+  const auto *Cast = dyn_cast<CastExpr>(NoParens);
   if (Cast == nullptr)
     return NoParens;
 
@@ -11801,7 +11871,7 @@ static const Expr *ignorePointerCastsAndParens(const Expr *E) {
       CastKind != CK_AddressSpaceConversion)
     return NoParens;
 
-  auto *SubExpr = Cast->getSubExpr();
+  const auto *SubExpr = Cast->getSubExpr();
   if (!SubExpr->getType()->hasPointerRepresentation() || !SubExpr->isPRValue())
     return NoParens;
   return ignorePointerCastsAndParens(SubExpr);
@@ -12456,6 +12526,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_popcount:
   case Builtin::BI__builtin_popcountl:
   case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__builtin_popcountg:
   case Builtin::BI__popcnt16: // Microsoft variants of popcount
   case Builtin::BI__popcnt:
   case Builtin::BI__popcnt64: {
@@ -12678,6 +12749,59 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return BuiltinOp == Builtin::BI__atomic_always_lock_free ?
         Success(0, E) : Error(E);
   }
+  case Builtin::BI__builtin_addcb:
+  case Builtin::BI__builtin_addcs:
+  case Builtin::BI__builtin_addc:
+  case Builtin::BI__builtin_addcl:
+  case Builtin::BI__builtin_addcll:
+  case Builtin::BI__builtin_subcb:
+  case Builtin::BI__builtin_subcs:
+  case Builtin::BI__builtin_subc:
+  case Builtin::BI__builtin_subcl:
+  case Builtin::BI__builtin_subcll: {
+    LValue CarryOutLValue;
+    APSInt LHS, RHS, CarryIn, CarryOut, Result;
+    QualType ResultType = E->getArg(0)->getType();
+    if (!EvaluateInteger(E->getArg(0), LHS, Info) ||
+        !EvaluateInteger(E->getArg(1), RHS, Info) ||
+        !EvaluateInteger(E->getArg(2), CarryIn, Info) ||
+        !EvaluatePointer(E->getArg(3), CarryOutLValue, Info))
+      return false;
+    // Copy the number of bits and sign.
+    Result = LHS;
+    CarryOut = LHS;
+
+    bool FirstOverflowed = false;
+    bool SecondOverflowed = false;
+    switch (BuiltinOp) {
+    default:
+      llvm_unreachable("Invalid value for BuiltinOp");
+    case Builtin::BI__builtin_addcb:
+    case Builtin::BI__builtin_addcs:
+    case Builtin::BI__builtin_addc:
+    case Builtin::BI__builtin_addcl:
+    case Builtin::BI__builtin_addcll:
+      Result =
+          LHS.uadd_ov(RHS, FirstOverflowed).uadd_ov(CarryIn, SecondOverflowed);
+      break;
+    case Builtin::BI__builtin_subcb:
+    case Builtin::BI__builtin_subcs:
+    case Builtin::BI__builtin_subc:
+    case Builtin::BI__builtin_subcl:
+    case Builtin::BI__builtin_subcll:
+      Result =
+          LHS.usub_ov(RHS, FirstOverflowed).usub_ov(CarryIn, SecondOverflowed);
+      break;
+    }
+
+    // It is possible for both overflows to happen but CGBuiltin uses an OR so
+    // this is consistent.
+    CarryOut = (uint64_t)(FirstOverflowed | SecondOverflowed);
+    APValue APV{CarryOut};
+    if (!handleAssignment(Info, E, CarryOutLValue, ResultType, APV))
+      return false;
+    return Success(Result, E);
+  }
   case Builtin::BI__builtin_add_overflow:
   case Builtin::BI__builtin_sub_overflow:
   case Builtin::BI__builtin_mul_overflow:
@@ -12818,6 +12942,10 @@ static bool isOnePastTheEndOfCompleteObject(const ASTContext &Ctx,
   QualType Ty = getType(LV.getLValueBase());
   if (Ty->isIncompleteType())
     return true;
+
+  // Can't be past the end of an invalid object.
+  if (LV.getLValueDesignator().Invalid)
+    return false;
 
   // We're a past-the-end pointer if we point to the byte after the object,
   // no matter what our type or path is.
@@ -13839,7 +13967,9 @@ bool IntExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
       if (Info.checkingForUndefinedBehavior())
         Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                          diag::warn_integer_constant_overflow)
-            << toString(Value, 10) << E->getType() << E->getSourceRange();
+            << toString(Value, 10, Value.isSigned(), /*formatAsCLiteral=*/false,
+                        /*UpperCase=*/true, /*InsertSeparators=*/true)
+            << E->getType() << E->getSourceRange();
 
       if (!HandleOverflow(Info, E, -Value.extend(Value.getBitWidth() + 1),
                           E->getType()))
@@ -13909,6 +14039,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_FixedPointCast:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_HLSLVectorTruncation:
     llvm_unreachable("invalid cast kind for integral value");
 
   case CK_BitCast:
@@ -14747,6 +14878,7 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_HLSLVectorTruncation:
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_LValueToRValue:
@@ -15439,10 +15571,12 @@ static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result) {
   if (Info.EnableNewConstInterp) {
     if (!Info.Ctx.getInterpContext().evaluateAsRValue(Info, E, Result))
       return false;
-  } else {
-    if (!::Evaluate(Result, Info, E))
-      return false;
+    return CheckConstantExpression(Info, E->getExprLoc(), E->getType(), Result,
+                                   ConstantExprKind::Normal);
   }
+
+  if (!::Evaluate(Result, Info, E))
+    return false;
 
   // Implicit lvalue-to-rvalue cast.
   if (E->isGLValue()) {
@@ -15671,6 +15805,13 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   EvalInfo Info(Ctx, Result, EM);
   Info.InConstantContext = true;
 
+  if (Info.EnableNewConstInterp) {
+    if (!Info.Ctx.getInterpContext().evaluate(Info, this, Result.Val))
+      return false;
+    return CheckConstantExpression(Info, getExprLoc(),
+                                   getStorageType(Ctx, this), Result.Val, Kind);
+  }
+
   // The type of the object we're initializing is 'const T' for a class NTTP.
   QualType T = getType();
   if (Kind == ConstantExprKind::ClassTemplateArgument)
@@ -15740,24 +15881,43 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
   EStatus.Diag = &Notes;
 
   EvalInfo Info(Ctx, EStatus,
-                (IsConstantInitialization && Ctx.getLangOpts().CPlusPlus)
+                (IsConstantInitialization &&
+                 (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
                     ? EvalInfo::EM_ConstantExpression
                     : EvalInfo::EM_ConstantFold);
   Info.setEvaluatingDecl(VD, Value);
   Info.InConstantContext = IsConstantInitialization;
 
+  SourceLocation DeclLoc = VD->getLocation();
+  QualType DeclTy = VD->getType();
+
   if (Info.EnableNewConstInterp) {
     auto &InterpCtx = const_cast<ASTContext &>(Ctx).getInterpContext();
     if (!InterpCtx.evaluateAsInitializer(Info, VD, Value))
       return false;
+
+    return CheckConstantExpression(Info, DeclLoc, DeclTy, Value,
+                                   ConstantExprKind::Normal);
   } else {
     LValue LVal;
     LVal.set(VD);
 
-    if (!EvaluateInPlace(Value, Info, LVal, this,
-                         /*AllowNonLiteralTypes=*/true) ||
-        EStatus.HasSideEffects)
-      return false;
+    {
+      // C++23 [intro.execution]/p5
+      // A full-expression is ... an init-declarator ([dcl.decl]) or a
+      // mem-initializer.
+      // So we need to make sure temporary objects are destroyed after having
+      // evaluated the expression (per C++23 [class.temporary]/p4).
+      //
+      // FIXME: Otherwise this may break test/Modules/pr68702.cpp because the
+      // serialization code calls ParmVarDecl::getDefaultArg() which strips the
+      // outermost FullExpr, such as ExprWithCleanups.
+      FullExpressionRAII Scope(Info);
+      if (!EvaluateInPlace(Value, Info, LVal, this,
+                           /*AllowNonLiteralTypes=*/true) ||
+          EStatus.HasSideEffects)
+        return false;
+    }
 
     // At this point, any lifetime-extended temporaries are completely
     // initialized.
@@ -15767,8 +15927,6 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
       llvm_unreachable("Unhandled cleanup; missing full expression marker?");
   }
 
-  SourceLocation DeclLoc = VD->getLocation();
-  QualType DeclTy = VD->getType();
   return CheckConstantExpression(Info, DeclLoc, DeclTy, Value,
                                  ConstantExprKind::Normal) &&
          CheckMemoryLeaks(Info);
@@ -16036,6 +16194,9 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::GNUNullExprClass:
   case Expr::SourceLocExprClass:
     return NoDiag();
+
+  case Expr::PackIndexingExprClass:
+    return CheckICE(cast<PackIndexingExpr>(E)->getSelectedExpr(), Ctx);
 
   case Expr::SubstNonTypeTemplateParmExprClass:
     return

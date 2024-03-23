@@ -18,7 +18,7 @@
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "WasmAddressSpaces.h"
 #include "llvm/BinaryFormat/Wasm.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCSymbolWasm.h"
 
@@ -60,7 +60,7 @@ wasm::ValType toValType(MVT Type);
 
 /// Sets a Wasm Symbol Type.
 void wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,
-                       const ArrayRef<MVT> &VTs);
+                       ArrayRef<MVT> VTs);
 
 } // end namespace WebAssembly
 } // end namespace llvm

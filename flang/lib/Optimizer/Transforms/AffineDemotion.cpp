@@ -114,9 +114,9 @@ public:
                                                       op.getValue());
           return success();
         }
-      rewriter.startRootUpdate(op->getParentOp());
+      rewriter.startOpModification(op->getParentOp());
       op.getResult().replaceAllUsesWith(op.getValue());
-      rewriter.finalizeRootUpdate(op->getParentOp());
+      rewriter.finalizeOpModification(op->getParentOp());
       rewriter.eraseOp(op);
     }
     return success();

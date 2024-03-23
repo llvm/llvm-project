@@ -42,12 +42,7 @@ public:
 
   bool AddBreakpointID(BreakpointID bp_id);
 
-  bool AddBreakpointID(const char *bp_id);
-
-  // TODO: This should take a const BreakpointID.
-  bool FindBreakpointID(BreakpointID &bp_id, size_t *position) const;
-
-  bool FindBreakpointID(const char *bp_id, size_t *position) const;
+  bool Contains(BreakpointID bp_id) const;
 
   // Returns a pair consisting of the beginning and end of a breakpoint
   // ID range expression.  If the input string is not a valid specification,

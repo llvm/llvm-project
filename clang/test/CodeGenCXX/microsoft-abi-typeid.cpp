@@ -31,7 +31,7 @@ const std::type_info* test3_typeid() { return &typeid(*fn()); }
 // CHECK:        call ptr @__RTtypeid(ptr null)
 // CHECK-NEXT:   unreachable
 // CHECK:        [[VBTBL:%.*]] = load ptr, ptr [[CALL]], align 4
-// CHECK-NEXT:   [[VBSLOT:%.*]] = getelementptr inbounds i32, ptr [[VBTBL]], i32 1
+// CHECK-NEXT:   [[VBSLOT:%.*]] = getelementptr inbounds i8, ptr [[VBTBL]], i32 4
 // CHECK-NEXT:   [[VBASE_OFFS:%.*]] = load i32, ptr [[VBSLOT]], align 4
 // CHECK-NEXT:   [[ADJ:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i32 [[VBASE_OFFS]]
 // CHECK-NEXT:   [[RT:%.*]] = tail call ptr @__RTtypeid(ptr nonnull [[ADJ]])

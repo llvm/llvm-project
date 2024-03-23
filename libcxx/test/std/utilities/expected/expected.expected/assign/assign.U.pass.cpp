@@ -310,6 +310,20 @@ constexpr bool test() {
     assert(e.value().j == 8);
   }
 
+  // CheckForInvalidWrites
+  {
+    {
+      CheckForInvalidWrites<true> e1(std::unexpect);
+      e1 = 42;
+      assert(e1.check());
+    }
+    {
+      CheckForInvalidWrites<false> e1(std::unexpect);
+      e1 = true;
+      assert(e1.check());
+    }
+  }
+
   return true;
 }
 

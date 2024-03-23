@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=amdgcn -verify-machineinstrs | FileCheck -check-prefixes=SI %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck -check-prefixes=VI %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs | FileCheck -check-prefixes=GFX9 %s
-; RUN: llc < %s -march=r600 -mcpu=redwood -verify-machineinstrs | FileCheck -check-prefixes=EGCM,EG %s
-; RUN: llc < %s -march=r600 -mcpu=cayman -verify-machineinstrs | FileCheck -check-prefixes=EGCM,CM %s
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood -verify-machineinstrs | FileCheck -check-prefixes=EGCM,EG %s
+; RUN: llc < %s -mtriple=r600 -mcpu=cayman -verify-machineinstrs | FileCheck -check-prefixes=EGCM,CM %s
 
 define amdgpu_kernel void @i8_arg(ptr addrspace(1) nocapture %out, i8 %in) nounwind {
 ; SI-LABEL: i8_arg:

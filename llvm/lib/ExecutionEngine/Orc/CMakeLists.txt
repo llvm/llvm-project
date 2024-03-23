@@ -41,6 +41,7 @@ add_llvm_component_library(LLVMOrcJIT
   OrcABISupport.cpp
   OrcV2CBindings.cpp
   RTDyldObjectLinkingLayer.cpp
+  SectCreate.cpp
   SimpleRemoteEPC.cpp
   Speculation.cpp
   SpeculateAnalyses.cpp

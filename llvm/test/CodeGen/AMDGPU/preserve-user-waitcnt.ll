@@ -1,4 +1,4 @@
-; RUN: llc -O3 -march=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -O3 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK %s
 
 ; SIInsertWaitcnts should preserve waitcnt instructions coming from the user
 

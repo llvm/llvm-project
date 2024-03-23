@@ -32,11 +32,8 @@ namespace llvm {
 
 class ThreadPoolTaskGroup;
 
-/// A ThreadPool for asynchronous parallel execution on a defined number of
-/// threads.
-///
-/// The pool keeps a vector of threads alive, waiting on a condition variable
-/// for some work to become available.
+/// This defines the abstract base interface for a ThreadPool allowing
+/// asynchronous parallel execution on a defined number of threads.
 ///
 /// It is possible to reuse one thread pool for different groups of tasks
 /// by grouping tasks using ThreadPoolTaskGroup. All tasks are processed using
@@ -49,16 +46,31 @@ class ThreadPoolTaskGroup;
 /// available threads are used up by tasks waiting for a task that has no thread
 /// left to run on (this includes waiting on the returned future). It should be
 /// generally safe to wait() for a group as long as groups do not form a cycle.
-class ThreadPool {
-public:
-  /// Construct a pool using the hardware strategy \p S for mapping hardware
-  /// execution resources (threads, cores, CPUs)
-  /// Defaults to using the maximum execution resources in the system, but
-  /// accounting for the affinity mask.
-  ThreadPool(ThreadPoolStrategy S = hardware_concurrency());
+class ThreadPoolInterface {
+  /// The actual method to enqueue a task to be defined by the concrete
+  /// implementation.
+  virtual void asyncEnqueue(std::function<void()> Task,
+                            ThreadPoolTaskGroup *Group) = 0;
 
-  /// Blocking destructor: the pool will wait for all the threads to complete.
-  ~ThreadPool();
+public:
+  /// Destroying the pool will drain the pending tasks and wait. The current
+  /// thread may participate in the execution of the pending tasks.
+  virtual ~ThreadPoolInterface();
+
+  /// Blocking wait for all the threads to complete and the queue to be empty.
+  /// It is an error to try to add new tasks while blocking on this call.
+  /// Calling wait() from a task would deadlock waiting for itself.
+  virtual void wait() = 0;
+
+  /// Blocking wait for only all the threads in the given group to complete.
+  /// It is possible to wait even inside a task, but waiting (directly or
+  /// indirectly) on itself will deadlock. If called from a task running on a
+  /// worker thread, the call may process pending tasks while waiting in order
+  /// not to waste the thread.
+  virtual void wait(ThreadPoolTaskGroup &Group) = 0;
+
+  /// Returns the maximum number of worker this pool can eventually grow to.
+  virtual unsigned getMaxConcurrency() const = 0;
 
   /// Asynchronous submission of a task to the pool. The returned future can be
   /// used to wait for the task to finish and is *non-blocking* on destruction.
@@ -92,67 +104,66 @@ public:
                      &Group);
   }
 
+private:
+  /// Asynchronous submission of a task to the pool. The returned future can be
+  /// used to wait for the task to finish and is *non-blocking* on destruction.
+  template <typename ResTy>
+  std::shared_future<ResTy> asyncImpl(std::function<ResTy()> Task,
+                                      ThreadPoolTaskGroup *Group) {
+    auto Future = std::async(std::launch::deferred, std::move(Task)).share();
+    asyncEnqueue([Future]() { Future.wait(); }, Group);
+    return Future;
+  }
+};
+
+#if LLVM_ENABLE_THREADS
+/// A ThreadPool implementation using std::threads.
+///
+/// The pool keeps a vector of threads alive, waiting on a condition variable
+/// for some work to become available.
+class StdThreadPool : public ThreadPoolInterface {
+public:
+  /// Construct a pool using the hardware strategy \p S for mapping hardware
+  /// execution resources (threads, cores, CPUs)
+  /// Defaults to using the maximum execution resources in the system, but
+  /// accounting for the affinity mask.
+  StdThreadPool(ThreadPoolStrategy S = hardware_concurrency());
+
+  /// Blocking destructor: the pool will wait for all the threads to complete.
+  ~StdThreadPool() override;
+
   /// Blocking wait for all the threads to complete and the queue to be empty.
   /// It is an error to try to add new tasks while blocking on this call.
   /// Calling wait() from a task would deadlock waiting for itself.
-  void wait();
+  void wait() override;
 
   /// Blocking wait for only all the threads in the given group to complete.
   /// It is possible to wait even inside a task, but waiting (directly or
   /// indirectly) on itself will deadlock. If called from a task running on a
   /// worker thread, the call may process pending tasks while waiting in order
   /// not to waste the thread.
-  void wait(ThreadPoolTaskGroup &Group);
+  void wait(ThreadPoolTaskGroup &Group) override;
 
-  // TODO: misleading legacy name warning!
-  // Returns the maximum number of worker threads in the pool, not the current
-  // number of threads!
+  /// Returns the maximum number of worker threads in the pool, not the current
+  /// number of threads!
+  unsigned getMaxConcurrency() const override { return MaxThreadCount; }
+
+  // TODO: Remove, misleading legacy name warning!
+  LLVM_DEPRECATED("Use getMaxConcurrency instead", "getMaxConcurrency")
   unsigned getThreadCount() const { return MaxThreadCount; }
 
   /// Returns true if the current thread is a worker thread of this thread pool.
   bool isWorkerThread() const;
 
 private:
-  /// Helpers to create a promise and a callable wrapper of \p Task that sets
-  /// the result of the promise. Returns the callable and a future to access the
-  /// result.
-  template <typename ResTy>
-  static std::pair<std::function<void()>, std::future<ResTy>>
-  createTaskAndFuture(std::function<ResTy()> Task) {
-    std::shared_ptr<std::promise<ResTy>> Promise =
-        std::make_shared<std::promise<ResTy>>();
-    auto F = Promise->get_future();
-    return {
-        [Promise = std::move(Promise), Task]() { Promise->set_value(Task()); },
-        std::move(F)};
-  }
-  static std::pair<std::function<void()>, std::future<void>>
-  createTaskAndFuture(std::function<void()> Task) {
-    std::shared_ptr<std::promise<void>> Promise =
-        std::make_shared<std::promise<void>>();
-    auto F = Promise->get_future();
-    return {[Promise = std::move(Promise), Task]() {
-              Task();
-              Promise->set_value();
-            },
-            std::move(F)};
-  }
-
   /// Returns true if all tasks in the given group have finished (nullptr means
   /// all tasks regardless of their group). QueueLock must be locked.
   bool workCompletedUnlocked(ThreadPoolTaskGroup *Group) const;
 
   /// Asynchronous submission of a task to the pool. The returned future can be
   /// used to wait for the task to finish and is *non-blocking* on destruction.
-  template <typename ResTy>
-  std::shared_future<ResTy> asyncImpl(std::function<ResTy()> Task,
-                                      ThreadPoolTaskGroup *Group) {
-
-#if LLVM_ENABLE_THREADS
-    /// Wrap the Task in a std::function<void()> that sets the result of the
-    /// corresponding future.
-    auto R = createTaskAndFuture(Task);
-
+  void asyncEnqueue(std::function<void()> Task,
+                    ThreadPoolTaskGroup *Group) override {
     int requestedThreads;
     {
       // Lock the queue and push the new task
@@ -160,31 +171,18 @@ private:
 
       // Don't allow enqueueing after disabling the pool
       assert(EnableFlag && "Queuing a thread during ThreadPool destruction");
-      Tasks.emplace_back(std::make_pair(std::move(R.first), Group));
+      Tasks.emplace_back(std::make_pair(std::move(Task), Group));
       requestedThreads = ActiveThreads + Tasks.size();
     }
     QueueCondition.notify_one();
     grow(requestedThreads);
-    return R.second.share();
-
-#else // LLVM_ENABLE_THREADS Disabled
-
-    // Get a Future with launch::deferred execution using std::async
-    auto Future = std::async(std::launch::deferred, std::move(Task)).share();
-    // Wrap the future so that both ThreadPool::wait() can operate and the
-    // returned future can be sync'ed on.
-    Tasks.emplace_back(std::make_pair([Future]() { Future.get(); }, Group));
-    return Future;
-#endif
   }
 
-#if LLVM_ENABLE_THREADS
-  // Grow to ensure that we have at least `requested` Threads, but do not go
-  // over MaxThreadCount.
+  /// Grow to ensure that we have at least `requested` Threads, but do not go
+  /// over MaxThreadCount.
   void grow(int requested);
 
   void processTasks(ThreadPoolTaskGroup *WaitingForGroup);
-#endif
 
   /// Threads in flight
   std::vector<llvm::thread> Threads;
@@ -206,16 +204,58 @@ private:
   /// Number of threads active for tasks in the given group (only non-zero).
   DenseMap<ThreadPoolTaskGroup *, unsigned> ActiveGroups;
 
-#if LLVM_ENABLE_THREADS // avoids warning for unused variable
   /// Signal for the destruction of the pool, asking thread to exit.
   bool EnableFlag = true;
-#endif
 
   const ThreadPoolStrategy Strategy;
 
   /// Maximum number of threads to potentially grow this pool to.
   const unsigned MaxThreadCount;
 };
+#endif // LLVM_ENABLE_THREADS
+
+/// A non-threaded implementation.
+class SingleThreadExecutor : public ThreadPoolInterface {
+public:
+  /// Construct a non-threaded pool, ignoring using the hardware strategy.
+  SingleThreadExecutor(ThreadPoolStrategy ignored = {});
+
+  /// Blocking destructor: the pool will first execute the pending tasks.
+  ~SingleThreadExecutor() override;
+
+  /// Blocking wait for all the tasks to execute first
+  void wait() override;
+
+  /// Blocking wait for only all the tasks in the given group to complete.
+  void wait(ThreadPoolTaskGroup &Group) override;
+
+  /// Returns always 1: there is no concurrency.
+  unsigned getMaxConcurrency() const override { return 1; }
+
+  // TODO: Remove, misleading legacy name warning!
+  LLVM_DEPRECATED("Use getMaxConcurrency instead", "getMaxConcurrency")
+  unsigned getThreadCount() const { return 1; }
+
+  /// Returns true if the current thread is a worker thread of this thread pool.
+  bool isWorkerThread() const;
+
+private:
+  /// Asynchronous submission of a task to the pool. The returned future can be
+  /// used to wait for the task to finish and is *non-blocking* on destruction.
+  void asyncEnqueue(std::function<void()> Task,
+                    ThreadPoolTaskGroup *Group) override {
+    Tasks.emplace_back(std::make_pair(std::move(Task), Group));
+  }
+
+  /// Tasks waiting for execution in the pool.
+  std::deque<std::pair<std::function<void()>, ThreadPoolTaskGroup *>> Tasks;
+};
+
+#if LLVM_ENABLE_THREADS
+using DefaultThreadPool = StdThreadPool;
+#else
+using DefaultThreadPool = SingleThreadExecutor;
+#endif
 
 /// A group of tasks to be run on a thread pool. Thread pool tasks in different
 /// groups can run on the same threadpool but can be waited for separately.
@@ -224,7 +264,7 @@ private:
 class ThreadPoolTaskGroup {
 public:
   /// The ThreadPool argument is the thread pool to forward calls to.
-  ThreadPoolTaskGroup(ThreadPool &Pool) : Pool(Pool) {}
+  ThreadPoolTaskGroup(ThreadPoolInterface &Pool) : Pool(Pool) {}
 
   /// Blocking destructor: will wait for all the tasks in the group to complete
   /// by calling ThreadPool::wait().
@@ -241,7 +281,7 @@ public:
   void wait() { Pool.wait(*this); }
 
 private:
-  ThreadPool &Pool;
+  ThreadPoolInterface &Pool;
 };
 
 } // namespace llvm

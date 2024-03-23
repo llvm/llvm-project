@@ -47,8 +47,7 @@ DAP::DAP()
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
-      reverse_request_seq(0), repl_mode(ReplMode::Auto),
-      auto_repl_mode_collision_warning(false) {
+      reverse_request_seq(0), repl_mode(ReplMode::Auto) {
   const char *log_file_path = getenv("LLDBDAP_LOG");
 #if defined(_WIN32)
   // Windows opens stdout and stdin in text mode which converts \n to 13,10
@@ -380,12 +379,12 @@ llvm::json::Value DAP::CreateTopLevelScopes() {
   return llvm::json::Value(std::move(scopes));
 }
 
-ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame &frame,
-                                               std::string &text) {
+ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame frame,
+                                               std::string &expression) {
   // Include the escape hatch prefix.
-  if (!text.empty() &&
-      llvm::StringRef(text).starts_with(g_dap.command_escape_prefix)) {
-    text = text.substr(g_dap.command_escape_prefix.size());
+  if (!expression.empty() &&
+      llvm::StringRef(expression).starts_with(g_dap.command_escape_prefix)) {
+    expression = expression.substr(g_dap.command_escape_prefix.size());
     return ExpressionContext::Command;
   }
 
@@ -395,43 +394,40 @@ ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame &frame,
   case ReplMode::Command:
     return ExpressionContext::Command;
   case ReplMode::Auto:
-    // If the frame is invalid then there is no variables to complete, assume
-    // this is an lldb command instead.
-    if (!frame.IsValid()) {
-      return ExpressionContext::Command;
-    }
-
+    // To determine if the expression is a command or not, check if the first
+    // term is a variable or command. If it's a variable in scope we will prefer
+    // that behavior and give a warning to the user if they meant to invoke the
+    // operation as a command.
+    //
+    // Example use case:
+    //   int p and expression "p + 1" > variable
+    //   int i and expression "i" > variable
+    //   int var and expression "va" > command
+    std::pair<llvm::StringRef, llvm::StringRef> token =
+        llvm::getToken(expression);
+    std::string term = token.first.str();
     lldb::SBCommandReturnObject result;
-    debugger.GetCommandInterpreter().ResolveCommand(text.data(), result);
+    debugger.GetCommandInterpreter().ResolveCommand(term.c_str(), result);
+    bool term_is_command = result.Succeeded();
+    bool term_is_variable = frame.FindVariable(term.c_str()).IsValid();
 
-    // If this command is a simple expression like `var + 1` check if there is
-    // a local variable name that is in the current expression. If so, ensure
-    // the expression runs in the variable context.
-    lldb::SBValueList variables = frame.GetVariables(true, true, true, true);
-    llvm::StringRef input = text;
-    for (uint32_t i = 0; i < variables.GetSize(); i++) {
-      llvm::StringRef name = variables.GetValueAtIndex(i).GetName();
-      // Check both directions in case the input is a partial of a variable
-      // (e.g. input = `va` and local variable = `var1`).
-      if (input.contains(name) || name.contains(input)) {
-        if (!auto_repl_mode_collision_warning) {
-          llvm::errs() << "Variable expression '" << text
-                       << "' is hiding an lldb command, prefix an expression "
-                          "with '"
-                       << g_dap.command_escape_prefix
-                       << "' to ensure it runs as a lldb command.\n";
-          auto_repl_mode_collision_warning = true;
-        }
-        return ExpressionContext::Variable;
-      }
+    // If we have both a variable and command, warn the user about the conflict.
+    if (term_is_command && term_is_variable) {
+      llvm::errs()
+          << "Warning: Expression '" << term
+          << "' is both an LLDB command and variable. It will be evaluated as "
+             "a variable. To evaluate the expression as an LLDB command, use '"
+          << g_dap.command_escape_prefix << "' as a prefix.\n";
     }
 
-    if (result.Succeeded()) {
-      return ExpressionContext::Command;
-    }
+    // Variables take preference to commands in auto, since commands can always
+    // be called using the command_escape_prefix
+    return term_is_variable  ? ExpressionContext::Variable
+           : term_is_command ? ExpressionContext::Command
+                             : ExpressionContext::Variable;
   }
 
-  return ExpressionContext::Variable;
+  llvm_unreachable("enum cases exhausted.");
 }
 
 bool DAP::RunLLDBCommands(llvm::StringRef prefix,

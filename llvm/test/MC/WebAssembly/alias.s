@@ -10,6 +10,6 @@ sym_a:
 
 .set sym_b, sym_a
 
-# CHECK: 00000000 l     O DATA foo
-# CHECK: 00000004 l     O DATA sym_a
-# CHECK: 00000004 l     O DATA sym_b
+# CHECK: 00000000 l     O DATA 00000004 foo
+# CHECK: 00000004 l     O DATA 00000004 sym_a
+# CHECK: 00000004 l     O DATA 00000004 sym_b

@@ -9,6 +9,7 @@
 #include "edit-output.h"
 #include "emit-encoded.h"
 #include "utf.h"
+#include "flang/Common/real.h"
 #include "flang/Common/uint128.h"
 #include <algorithm>
 
@@ -334,6 +335,11 @@ bool RealOutputEditing<KIND>::EditEorDOutput(const DataEdit &edit) {
     }
     ++significantDigits;
     scale = std::min(scale, significantDigits + 1);
+  } else if (edit.digits.value_or(1) == 0 && !edit.variation) {
+    // F'2023 13.7.2.3.3 p5; does not apply to Gw.0(Ee) or E0(no d)
+    io_.GetIoErrorHandler().SignalError(IostatErrorInFormat,
+        "Output edit descriptor %cw.d must have d>0", edit.descriptor);
+    return false;
   }
   // In EN editing, multiple attempts may be necessary, so this is a loop.
   while (true) {
@@ -549,6 +555,7 @@ bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
 template <int KIND>
 DataEdit RealOutputEditing<KIND>::EditForGOutput(DataEdit edit) {
   edit.descriptor = 'E';
+  edit.variation = 'G'; // to suppress error for Ew.0
   int editWidth{edit.width.value_or(0)};
   int significantDigits{
       edit.digits.value_or(BinaryFloatingPoint::decimalPrecision)}; // 'd'
@@ -594,7 +601,9 @@ bool RealOutputEditing<KIND>::EditListDirectedOutput(const DataEdit &edit) {
   decimal::ConversionToDecimalResult converted{
       ConvertToDecimal(1, edit.modes.round)};
   if (IsInfOrNaN(converted.str, static_cast<int>(converted.length))) {
-    return EditEorDOutput(edit);
+    DataEdit copy{edit};
+    copy.variation = DataEdit::ListDirected;
+    return EditEorDOutput(copy);
   }
   int expo{converted.decimalExponent};
   // The decimal precision of 16-bit floating-point types is very low,
@@ -604,10 +613,12 @@ bool RealOutputEditing<KIND>::EditListDirectedOutput(const DataEdit &edit) {
       std::max(6, BinaryFloatingPoint::decimalPrecision)};
   if (expo < 0 || expo > maxExpo) {
     DataEdit copy{edit};
+    copy.variation = DataEdit::ListDirected;
     copy.modes.scale = 1; // 1P
     return EditEorDOutput(copy);
+  } else {
+    return EditFOutput(edit);
   }
-  return EditFOutput(edit);
 }
 
 // 13.7.2.3.6 in F'2023
@@ -690,7 +701,9 @@ bool RealOutputEditing<KIND>::EditEXOutput(const DataEdit &edit) {
   if ((editWidth == 0 && !edit.digits) || editDigits == 0) {
     // EX0 or EXw.0
     flags |= decimal::Minimize;
-    significantDigits = 28; // enough for 128-bit F.P.
+    static constexpr int maxSigHexDigits{
+        (common::PrecisionOfRealKind(16) + 3) / 4};
+    significantDigits = maxSigHexDigits;
   }
   auto converted{
       ConvertToHexadecimal(significantDigits, edit.modes.round, flags)};

@@ -432,7 +432,7 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getEffectiveWavesPerEU(
   std::pair<unsigned, unsigned> Default(1, getMaxWavesPerEU());
 
   // If minimum/maximum flat work group sizes were explicitly requested using
-  // "amdgpu-flat-work-group-size" attribute, then set default minimum/maximum
+  // "amdgpu-flat-workgroup-size" attribute, then set default minimum/maximum
   // number of waves per execution unit to values implied by requested
   // minimum/maximum flat work group sizes.
   unsigned MinImpliedByFlatWorkGroupSize =
@@ -571,7 +571,7 @@ unsigned AMDGPUSubtarget::getImplicitArgNumBytes(const Function &F) const {
   // Assume all implicit inputs are used by default
   const Module *M = F.getParent();
   unsigned NBytes =
-      AMDGPU::getCodeObjectVersion(*M) >= AMDGPU::AMDHSA_COV5 ? 256 : 56;
+      AMDGPU::getAMDHSACodeObjectVersion(*M) >= AMDGPU::AMDHSA_COV5 ? 256 : 56;
   return F.getFnAttributeAsParsedInteger("amdgpu-implicitarg-num-bytes",
                                          NBytes);
 }
@@ -1107,4 +1107,9 @@ void GCNUserSGPRUsageInfo::allocKernargPreloadSGPRs(unsigned NumSGPRs) {
 
 unsigned GCNUserSGPRUsageInfo::getNumFreeUserSGPRs() {
   return AMDGPU::getMaxNumUserSGPRs(ST) - NumUsedUserSGPRs;
+}
+
+SmallVector<unsigned>
+AMDGPUSubtarget::getMaxNumWorkGroups(const Function &F) const {
+  return AMDGPU::getIntegerVecAttribute(F, "amdgpu-max-num-workgroups", 3);
 }

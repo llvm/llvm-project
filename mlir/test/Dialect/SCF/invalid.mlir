@@ -32,18 +32,6 @@ func.func @loop_for_mismatch(%arg0: i32, %arg1: index) {
 
 // -----
 
-func.func @loop_for_step_positive(%arg0: index) {
-  // expected-error@+2 {{constant step operand must be positive}}
-  %c0 = arith.constant 0 : index
-  "scf.for"(%arg0, %arg0, %c0) ({
-    ^bb0(%arg1: index):
-      scf.yield
-  }) : (index, index, index) -> ()
-  return
-}
-
-// -----
-
 func.func @loop_for_one_region(%arg0: index) {
   // expected-error@+1 {{requires one region}}
   "scf.for"(%arg0, %arg0, %arg0) (

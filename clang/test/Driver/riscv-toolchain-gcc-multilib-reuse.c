@@ -66,7 +66,7 @@
 // RUN:   -target riscv64-unknown-elf \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk \
 // RUN:   --print-multi-directory \
-// RUN:   -march=rv32i_zvkb -mabi=ilp32 \
+// RUN:   -march=rv32iv_zvkb -mabi=ilp32 \
 // RUN:   | FileCheck -check-prefix=GCC-MULTI-LIB-REUSE-RV32I_ZVKB-ILP32 %s
 // GCC-MULTI-LIB-REUSE-RV32I_ZVKB-ILP32: rv32i/ilp32
 // GCC-MULTI-LIB-REUSE-RV32I_ZVKB-ILP32-NOT: {{^.+$}}

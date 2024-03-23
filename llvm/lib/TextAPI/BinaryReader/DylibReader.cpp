@@ -17,6 +17,7 @@
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/TextAPI/InterfaceFile.h"
 #include "llvm/TextAPI/RecordsSlice.h"
 #include "llvm/TextAPI/TextAPIError.h"
 #include <iomanip>
@@ -292,8 +293,11 @@ static Error readSymbols(MachOObjectFile *Obj, RecordsSlice &Slice,
     RecordLinkage Linkage = RecordLinkage::Unknown;
     SymbolFlags RecordFlags = SymbolFlags::None;
 
-    if (Opt.Undefineds && (Flags & SymbolRef::SF_Undefined)) {
-      Linkage = RecordLinkage::Undefined;
+    if (Flags & SymbolRef::SF_Undefined) {
+      if (Opt.Undefineds)
+        Linkage = RecordLinkage::Undefined;
+      else
+        continue;
       if (Flags & SymbolRef::SF_Weak)
         RecordFlags |= SymbolFlags::WeakReferenced;
     } else if (Flags & SymbolRef::SF_Exported) {
@@ -408,6 +412,7 @@ Expected<Records> DylibReader::readFile(MemoryBufferRef Buffer,
         Results.emplace_back(std::make_shared<RecordsSlice>(RecordsSlice({T})));
         if (auto Err = load(&Obj, *Results.back(), Opt, Arch))
           return std::move(Err);
+        Results.back()->getBinaryAttrs().Path = Buffer.getBufferIdentifier();
       }
       break;
     }

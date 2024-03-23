@@ -206,6 +206,23 @@ Pattern {
 // -----
 
 Pattern {
+  // CHECK: expected native constraint
+  not attr<"0 : i1">
+  erase _;
+}
+
+// -----
+
+Pattern {
+  let tuple = (attr<"3 : i34">);
+  // CHECK: expected `(` after function name
+  not tuple.0;
+  erase _;
+}
+
+// -----
+
+Pattern {
   // CHECK: expected expression
   let tuple = (10 = _: Value);
   erase op<>;

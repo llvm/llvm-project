@@ -25,6 +25,10 @@ def Test_Dialect : Dialect {
   let useDefaultAttributePrinterParser = 1;
   let isExtensible = 1;
   let dependentDialects = ["::mlir::DLTIDialect"];
+  let discardableAttrs = (ins
+     "mlir::IntegerAttr":$discardable_attr_key,
+     "SimpleAAttr":$other_discardable_attr_key
+  );
 
   let extraClassDeclaration = [{
     void registerAttributes();

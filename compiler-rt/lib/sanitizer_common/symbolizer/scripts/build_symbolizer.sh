@@ -104,6 +104,7 @@ if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
     -DCMAKE_CXX_FLAGS_RELEASE="${LIBCXX_FLAGS}" \
     -DLIBCXXABI_ENABLE_ASSERTIONS=OFF \
     -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
+    -DLIBCXXABI_USE_LLVM_UNWINDER=OFF \
     -DLIBCXX_ENABLE_ASSERTIONS=OFF \
     -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
     -DLIBCXX_ENABLE_RTTI=OFF \
@@ -190,8 +191,10 @@ $OPT -passes=internalize -internalize-public-api-list=${SYMBOLIZER_API_LIST} all
 $CC $FLAGS -fno-lto -c opt.bc -o symbolizer.o
 
 echo "Checking undefined symbols..."
-nm -f posix -g symbolizer.o | cut -f 1,2 -d \  | LC_COLLATE=C sort -u > undefined.new
-(diff -u $SCRIPT_DIR/global_symbols.txt undefined.new | grep -E "^\+[^+]") && \
+export LC_ALL=C
+nm -f posix -g symbolizer.o | cut -f 1,2 -d \  | sort -u > undefined.new
+grep -Ev "^#|^$" $SCRIPT_DIR/global_symbols.txt | sort -u > expected.new
+(diff -u expected.new undefined.new | grep -E "^\+[^+]") && \
   (echo "Failed: unexpected symbols"; exit 1)
 
 cp -f symbolizer.o $OUTPUT

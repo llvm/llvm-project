@@ -1,5 +1,5 @@
-# RUN: dsymutil --linker=llvm -f -o - -oso-prepend-path=%p/../ -y %s | llvm-dwarfdump --verify - | FileCheck -check-prefixes=VERIFY %s
-# RUN: dsymutil --linker=llvm -f -o - -oso-prepend-path=%p/../ -y %s | llvm-dwarfdump -a - | FileCheck %s
+# RUN: dsymutil --linker=parallel -f -o - -oso-prepend-path=%p/../ -y %s | llvm-dwarfdump --verify - | FileCheck -check-prefixes=VERIFY %s
+# RUN: dsymutil --linker=parallel -f -o - -oso-prepend-path=%p/../ -y %s | llvm-dwarfdump -a - | FileCheck %s
 
 # This test checks that types from several object files are
 # uniqued(moved into the artificial compile unit for types).

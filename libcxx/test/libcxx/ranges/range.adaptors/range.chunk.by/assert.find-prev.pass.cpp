@@ -10,7 +10,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: no-exceptions
 // UNSUPPORTED: !libcpp-hardening-mode=debug
-// XFAIL: availability-verbose_abort-missing
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <ranges>
 

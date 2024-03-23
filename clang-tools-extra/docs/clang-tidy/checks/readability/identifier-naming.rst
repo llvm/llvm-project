@@ -11,14 +11,14 @@ another if a mismatch is detected
 
 Casing types include:
 
- - ``lower_case``,
- - ``UPPER_CASE``,
- - ``camelBack``,
- - ``CamelCase``,
- - ``camel_Snake_Back``,
- - ``Camel_Snake_Case``,
- - ``aNy_CasE``,
- - ``Leading_upper_snake_case``.
+ - ``lower_case``
+ - ``UPPER_CASE``
+ - ``camelBack``
+ - ``CamelCase``
+ - ``camel_Snake_Back``
+ - ``Camel_Snake_Case``
+ - ``aNy_CasE``
+ - ``Leading_upper_snake_case``
 
 It also supports a fixed prefix and suffix that will be prepended or appended
 to the identifiers, regardless of the casing.
@@ -32,8 +32,16 @@ but not where they are overridden, as it can't be fixed locally there.
 This also applies for pseudo-override patterns like CRTP.
 
 ``Leading_upper_snake_case`` is a naming convention where the first word is capitalized
-followed by lower case word(s) seperated by underscore(s) '_'. Examples include:
-Cap_snake_case, Cobra_case, Foo_bar_baz, and Master_copy_8gb.
+followed by lower case word(s) separated by underscore(s) '_'. Examples include:
+`Cap_snake_case`, `Cobra_case`, `Foo_bar_baz`, and `Master_copy_8gb`.
+
+Hungarian notation can be customized using different *HungarianPrefix* settings.
+The options and their corresponding values are:
+
+ - ``Off`` - the default setting
+ - ``On`` - example: ``int iVariable``
+ - ``LowerCase`` - example: ``int i_Variable``
+ - ``CamelCase`` - example: ``int IVariable``
 
 Options
 -------

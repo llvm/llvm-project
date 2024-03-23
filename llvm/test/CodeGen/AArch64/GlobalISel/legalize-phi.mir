@@ -125,7 +125,6 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(p0) = G_PHI [[COPY]](p0), %bb.0, [[COPY1]](p0), %bb.1
   ; CHECK-NEXT:   $x0 = COPY [[PHI]](p0)
@@ -859,21 +858,24 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
   ; CHECK-NEXT:   liveins: $x0, $x1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %cond:_(s1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   %val_1:_(<32 x s8>) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_BRCOND %cond(s1), %bb.2
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8)
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[DEF1]], [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[AND]](s32), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %val_2:_(<32 x s8>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[DEF2]](s8), [[DEF2]](s8), [[DEF2]](s8), [[DEF2]](s8), [[DEF2]](s8), [[DEF2]](s8), [[DEF2]](s8), [[DEF2]](s8), [[DEF2]](s8), [[DEF2]](s8), [[DEF2]](s8), [[DEF2]](s8), [[DEF2]](s8), [[DEF2]](s8), [[DEF2]](s8), [[DEF2]](s8)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   %phi:_(<32 x s8>) = G_PHI %val_2(<32 x s8>), %bb.1, %val_1(<32 x s8>), %bb.0
-  ; CHECK-NEXT:   %one:_(s8) = G_CONSTANT i8 1
-  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT %one(s8)
-  ; CHECK-NEXT:   %extract:_(s8) = G_EXTRACT_VECTOR_ELT %phi(<32 x s8>), [[SEXT]](s64)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(<16 x s8>) = G_PHI [[BUILD_VECTOR1]](<16 x s8>), %bb.1, [[BUILD_VECTOR]](<16 x s8>), %bb.0
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; CHECK-NEXT:   %extract:_(s8) = G_EXTRACT_VECTOR_ELT [[PHI]](<16 x s8>), [[C1]](s64)
   ; CHECK-NEXT:   $b0 = COPY %extract(s8)
   ; CHECK-NEXT:   RET_ReallyLR implicit $b0
   bb.0:

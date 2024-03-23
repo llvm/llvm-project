@@ -21,6 +21,7 @@ struct file_magic {
   enum Impl {
     unknown = 0,       ///< Unrecognized file
     bitcode,           ///< Bitcode file
+    clang_ast,         ///< Clang PCH or PCM
     archive,           ///< ar style archive file
     elf,               ///< ELF Unknown type
     elf_relocatable,   ///< ELF Relocatable object file

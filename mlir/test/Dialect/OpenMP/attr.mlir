@@ -181,11 +181,3 @@ llvm.mlir.global external @omp_decl_tar_data_any_enter() {omp.declare_target = #
   %0 = llvm.mlir.constant(1 : i32) : i32
   llvm.return %0 : i32
 }
-
-// ----
-
-// CHECK-LABEL: func @_QPwriteindex_omp_outline_0
-// CHECK-SAME: {{.*}} attributes {omp.outline_parent_name = "QPwriteindex"} {
-func.func @_QPwriteindex_omp_outline_0() attributes {omp.outline_parent_name = "QPwriteindex"} {
-   return
-}

@@ -345,7 +345,7 @@ define <8 x i32> @widen_ctpop_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32
 define <4 x i32> @widen_ctlz_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
 ; SSE42-LABEL: widen_ctlz_v2i32_v4i32:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa {{.*#+}} xmm3 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; SSE42-NEXT:    movq {{.*#+}} xmm3 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; SSE42-NEXT:    movdqa %xmm3, %xmm6
 ; SSE42-NEXT:    pshufb %xmm0, %xmm6
 ; SSE42-NEXT:    movdqa %xmm0, %xmm5
@@ -394,7 +394,7 @@ define <4 x i32> @widen_ctlz_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
 ;
 ; AVX2-LABEL: widen_ctlz_v2i32_v4i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX2-NEXT:    vmovq {{.*#+}} xmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX2-NEXT:    vpshufb %xmm0, %xmm2, %xmm3
 ; AVX2-NEXT:    vpsrlw $4, %xmm0, %xmm4
 ; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm5 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
@@ -448,7 +448,7 @@ define <4 x i32> @widen_ctlz_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
 define <8 x i32> @widen_ctlz_v4i32_v8i32(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE42-LABEL: widen_ctlz_v4i32_v8i32:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa {{.*#+}} xmm3 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; SSE42-NEXT:    movq {{.*#+}} xmm3 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; SSE42-NEXT:    movdqa %xmm3, %xmm6
 ; SSE42-NEXT:    pshufb %xmm0, %xmm6
 ; SSE42-NEXT:    movdqa %xmm0, %xmm5
@@ -535,7 +535,7 @@ define <8 x i32> @widen_ctlz_v4i32_v8i32(<4 x i32> %a0, <4 x i32> %a1) {
 define <8 x i32> @widen_ctlz_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32> %a2, <2 x i32> %a3) {
 ; SSE42-LABEL: widen_ctlz_v2i32_v8i32:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa {{.*#+}} xmm5 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; SSE42-NEXT:    movq {{.*#+}} xmm5 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; SSE42-NEXT:    movdqa %xmm5, %xmm8
 ; SSE42-NEXT:    pshufb %xmm0, %xmm8
 ; SSE42-NEXT:    movdqa %xmm0, %xmm7
@@ -629,7 +629,7 @@ define <8 x i32> @widen_ctlz_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32>
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm5 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX2-NEXT:    vmovq {{.*#+}} xmm5 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX2-NEXT:    vpshufb %xmm0, %xmm5, %xmm4
 ; AVX2-NEXT:    vpsrlw $4, %xmm0, %xmm6
 ; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm7 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
@@ -724,7 +724,7 @@ define <8 x i32> @widen_ctlz_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32>
 define <4 x i32> @widen_ctlz_undef_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
 ; SSE42-LABEL: widen_ctlz_undef_v2i32_v4i32:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa {{.*#+}} xmm3 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; SSE42-NEXT:    movq {{.*#+}} xmm3 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; SSE42-NEXT:    movdqa %xmm3, %xmm6
 ; SSE42-NEXT:    pshufb %xmm0, %xmm6
 ; SSE42-NEXT:    movdqa %xmm0, %xmm5
@@ -773,7 +773,7 @@ define <4 x i32> @widen_ctlz_undef_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
 ;
 ; AVX2-LABEL: widen_ctlz_undef_v2i32_v4i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX2-NEXT:    vmovq {{.*#+}} xmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX2-NEXT:    vpshufb %xmm0, %xmm2, %xmm3
 ; AVX2-NEXT:    vpsrlw $4, %xmm0, %xmm4
 ; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm5 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
@@ -827,7 +827,7 @@ define <4 x i32> @widen_ctlz_undef_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
 define <8 x i32> @widen_ctlz_undef_v4i32_v8i32(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE42-LABEL: widen_ctlz_undef_v4i32_v8i32:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa {{.*#+}} xmm3 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; SSE42-NEXT:    movq {{.*#+}} xmm3 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; SSE42-NEXT:    movdqa %xmm3, %xmm6
 ; SSE42-NEXT:    pshufb %xmm0, %xmm6
 ; SSE42-NEXT:    movdqa %xmm0, %xmm5
@@ -914,7 +914,7 @@ define <8 x i32> @widen_ctlz_undef_v4i32_v8i32(<4 x i32> %a0, <4 x i32> %a1) {
 define <8 x i32> @widen_ctlz_undef_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32> %a2, <2 x i32> %a3) {
 ; SSE42-LABEL: widen_ctlz_undef_v2i32_v8i32:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa {{.*#+}} xmm5 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; SSE42-NEXT:    movq {{.*#+}} xmm5 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; SSE42-NEXT:    movdqa %xmm5, %xmm8
 ; SSE42-NEXT:    pshufb %xmm0, %xmm8
 ; SSE42-NEXT:    movdqa %xmm0, %xmm7
@@ -1008,7 +1008,7 @@ define <8 x i32> @widen_ctlz_undef_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm5 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX2-NEXT:    vmovq {{.*#+}} xmm5 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX2-NEXT:    vpshufb %xmm0, %xmm5, %xmm4
 ; AVX2-NEXT:    vpsrlw $4, %xmm0, %xmm6
 ; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm7 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]

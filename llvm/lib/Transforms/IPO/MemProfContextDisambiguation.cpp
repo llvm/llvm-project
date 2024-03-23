@@ -122,6 +122,10 @@ static cl::opt<unsigned>
                                  "frames through tail calls."));
 
 namespace llvm {
+cl::opt<bool> EnableMemProfContextDisambiguation(
+    "enable-memprof-context-disambiguation", cl::init(false), cl::Hidden,
+    cl::ZeroOrMore, cl::desc("Enable MemProf context disambiguation"));
+
 // Indicate we are linking with an allocator that supports hot/cold operator
 // new interfaces.
 cl::opt<bool> SupportsHotColdNew(
@@ -578,7 +582,7 @@ class ModuleCallsiteContextGraph
 public:
   ModuleCallsiteContextGraph(
       Module &M,
-      function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter);
+      llvm::function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter);
 
 private:
   friend CallsiteContextGraph<ModuleCallsiteContextGraph, Function,
@@ -606,7 +610,7 @@ private:
                        unsigned CloneNo) const;
 
   const Module &Mod;
-  function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter;
+  llvm::function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter;
 };
 
 /// Represents a call in the summary index graph, which can either be an
@@ -641,7 +645,7 @@ class IndexCallsiteContextGraph
 public:
   IndexCallsiteContextGraph(
       ModuleSummaryIndex &Index,
-      function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+      llvm::function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
           isPrevailing);
 
   ~IndexCallsiteContextGraph() {
@@ -687,7 +691,7 @@ private:
   std::map<const FunctionSummary *, ValueInfo> FSToVIMap;
 
   const ModuleSummaryIndex &Index;
-  function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+  llvm::function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
       isPrevailing;
 
   // Saves/owns the callsite info structures synthesized for missing tail call
@@ -1381,7 +1385,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       // not fully matching stack contexts. To do this, subtract any context ids
       // found in caller nodes of the last node found above.
       if (Ids.back() != getLastStackId(Call)) {
-        for (const auto &PE : CurNode->CallerEdges) {
+        for (const auto &PE : LastNode->CallerEdges) {
           set_subtract(StackSequenceContextIds, PE->getContextIds());
           if (StackSequenceContextIds.empty())
             break;
@@ -1524,7 +1528,8 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::getStackIdsWithContextNodes(
 }
 
 ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
-    Module &M, function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter)
+    Module &M,
+    llvm::function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter)
     : Mod(M), OREGetter(OREGetter) {
   for (auto &F : M) {
     std::vector<CallInfo> CallsWithMetadata;
@@ -1583,7 +1588,7 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
 
 IndexCallsiteContextGraph::IndexCallsiteContextGraph(
     ModuleSummaryIndex &Index,
-    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+    llvm::function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing)
     : Index(Index), isPrevailing(isPrevailing) {
   for (auto &I : Index) {
@@ -3374,10 +3379,22 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
 
     auto *GVSummary =
         ImportSummary->findSummaryInModule(TheFnVI, M.getModuleIdentifier());
-    if (!GVSummary)
-      // Must have been imported, use the first summary (might be multiple if
-      // this was a linkonce_odr).
-      GVSummary = TheFnVI.getSummaryList().front().get();
+    if (!GVSummary) {
+      // Must have been imported, use the summary which matches the definition。
+      // (might be multiple if this was a linkonce_odr).
+      auto SrcModuleMD = F.getMetadata("thinlto_src_module");
+      assert(SrcModuleMD &&
+             "enable-import-metadata is needed to emit thinlto_src_module");
+      StringRef SrcModule =
+          dyn_cast<MDString>(SrcModuleMD->getOperand(0))->getString();
+      for (auto &GVS : TheFnVI.getSummaryList()) {
+        if (GVS->modulePath() == SrcModule) {
+          GVSummary = GVS.get();
+          break;
+        }
+      }
+      assert(GVSummary && GVSummary->modulePath() == SrcModule);
+    }
 
     // If this was an imported alias skip it as we won't have the function
     // summary, and it should be cloned in the original module.
@@ -3470,17 +3487,23 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             auto *MIBMD = cast<const MDNode>(MDOp);
             MDNode *StackMDNode = getMIBStackNode(MIBMD);
             assert(StackMDNode);
-            SmallVector<unsigned> StackIdsFromMetadata;
             CallStack<MDNode, MDNode::op_iterator> StackContext(StackMDNode);
-            for (auto ContextIter =
-                     StackContext.beginAfterSharedPrefix(CallsiteContext);
+            auto ContextIterBegin =
+                StackContext.beginAfterSharedPrefix(CallsiteContext);
+            // Skip the checking on the first iteration.
+            uint64_t LastStackContextId =
+                (ContextIterBegin != StackContext.end() &&
+                 *ContextIterBegin == 0)
+                    ? 1
+                    : 0;
+            for (auto ContextIter = ContextIterBegin;
                  ContextIter != StackContext.end(); ++ContextIter) {
               // If this is a direct recursion, simply skip the duplicate
               // entries, to be consistent with how the summary ids were
               // generated during ModuleSummaryAnalysis.
-              if (!StackIdsFromMetadata.empty() &&
-                  StackIdsFromMetadata.back() == *ContextIter)
+              if (LastStackContextId == *ContextIter)
                 continue;
+              LastStackContextId = *ContextIter;
               assert(StackIdIndexIter != MIBIter->StackIdIndices.end());
               assert(ImportSummary->getStackIdAtIndex(*StackIdIndexIter) ==
                      *ContextIter);
@@ -3623,7 +3646,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::process() {
 
 bool MemProfContextDisambiguation::processModule(
     Module &M,
-    function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter) {
+    llvm::function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter) {
 
   // If we have an import summary, then the cloning decisions were made during
   // the thin link on the index. Apply them and return.
@@ -3690,7 +3713,7 @@ PreservedAnalyses MemProfContextDisambiguation::run(Module &M,
 
 void MemProfContextDisambiguation::run(
     ModuleSummaryIndex &Index,
-    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+    llvm::function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing) {
   // TODO: If/when other types of memprof cloning are enabled beyond just for
   // hot and cold, we will need to change this to individually control the

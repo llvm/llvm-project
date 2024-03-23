@@ -113,10 +113,10 @@ static hlfir::EntityWithAttributes designateProcedurePointerComponent(
   auto recordType =
       hlfir::getFortranElementType(base.getType()).cast<fir::RecordType>();
   mlir::Type fieldType = recordType.getType(fieldName);
-  // FIXME: semantics is not expanding intermediate parent components in:
-  // call x%p() where p is a component of a parent type of x type.
+  // Note: semantics turns x%p() into x%t%p() when the procedure pointer
+  // component is part of parent component t.
   if (!fieldType)
-    TODO(loc, "reference to procedure pointer component from parent type");
+    TODO(loc, "passing type bound procedure (extension)");
   mlir::Type designatorType = fir::ReferenceType::get(fieldType);
   mlir::Value compRef = builder.create<hlfir::DesignateOp>(
       loc, designatorType, base, fieldName,

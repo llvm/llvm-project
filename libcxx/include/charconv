@@ -69,7 +69,6 @@ namespace std {
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__charconv/chars_format.h>
 #include <__charconv/from_chars_integral.h>
 #include <__charconv/from_chars_result.h>

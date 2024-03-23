@@ -52,6 +52,8 @@ add_entrypoint_object(
     ../sched_setparam.h
   DEPENDS
     libc.include.sys_syscall
+    libc.include.time
+    libc.include.sched
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -64,6 +66,8 @@ add_entrypoint_object(
     ../sched_getparam.h
   DEPENDS
     libc.include.sys_syscall
+    libc.include.time
+    libc.include.sched
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -76,6 +80,8 @@ add_entrypoint_object(
     ../sched_setscheduler.h
   DEPENDS
     libc.include.sys_syscall
+    libc.include.time
+    libc.include.sched
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -87,6 +93,7 @@ add_entrypoint_object(
   HDRS
     ../sched_getscheduler.h
   DEPENDS
+    libc.include.sched
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
@@ -124,6 +131,7 @@ add_entrypoint_object(
     ../sched_rr_get_interval.h
   DEPENDS
     libc.include.sys_syscall
+    libc.include.sched
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )

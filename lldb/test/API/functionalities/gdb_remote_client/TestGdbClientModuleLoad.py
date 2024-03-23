@@ -150,4 +150,4 @@ class TestGdbClientModuleLoad(GDBRemoteTestBase):
         self.filecheck("image list", __file__, "-check-prefix=VDSO")
         # VDSO: [  0] {{.*}} 0x0000000000ee0000 {{.*}}module_load
         # VDSO: [  1] {{.*}} 0x0000000000ef0000 {{.*}}[vdso]
-        self.assertEquals(self.target().GetNumModules(), 2)
+        self.assertEqual(self.target().GetNumModules(), 2)

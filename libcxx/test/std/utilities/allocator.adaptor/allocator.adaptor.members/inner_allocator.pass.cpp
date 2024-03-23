@@ -22,25 +22,22 @@
 #include "test_macros.h"
 #include "allocators.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::scoped_allocator_adaptor<A1<int>> A;
-        A a(A1<int>(5));
-        assert(a.inner_allocator() == a);
-    }
-    {
-        typedef std::scoped_allocator_adaptor<A1<int>, A2<int>> A;
-        A a(A1<int>(5), A2<int>(6));
-        assert(a.inner_allocator() == std::scoped_allocator_adaptor<A2<int>>(A2<int>(6)));
-    }
-    {
-        typedef std::scoped_allocator_adaptor<A1<int>, A2<int>, A3<int>> A;
-        A a(A1<int>(5), A2<int>(6), A3<int>(8));
-        assert((a.inner_allocator() ==
-            std::scoped_allocator_adaptor<A2<int>, A3<int>>(A2<int>(6), A3<int>(8))));
-    }
-
+int main(int, char**) {
+  {
+    typedef std::scoped_allocator_adaptor<A1<int>> A;
+    A a(A1<int>(5));
+    assert(a.inner_allocator() == a);
+  }
+  {
+    typedef std::scoped_allocator_adaptor<A1<int>, A2<int>> A;
+    A a(A1<int>(5), A2<int>(6));
+    assert(a.inner_allocator() == std::scoped_allocator_adaptor<A2<int>>(A2<int>(6)));
+  }
+  {
+    typedef std::scoped_allocator_adaptor<A1<int>, A2<int>, A3<int>> A;
+    A a(A1<int>(5), A2<int>(6), A3<int>(8));
+    assert((a.inner_allocator() == std::scoped_allocator_adaptor<A2<int>, A3<int>>(A2<int>(6), A3<int>(8))));
+  }
 
   return 0;
 }

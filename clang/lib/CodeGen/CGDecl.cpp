@@ -284,6 +284,7 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
     setTLSMode(GV, D);
 
   setGVProperties(GV, &D);
+  getTargetCodeGenInfo().setTargetAttributes(cast<Decl>(&D), GV, *this);
 
   // Make sure the result is of the correct type.
   LangAS ExpectedAS = Ty.getAddressSpace();
@@ -1241,27 +1242,38 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
     return;
   }
 
-  // If the initializer is small, use a handful of stores.
+  // If the initializer is small or trivialAutoVarInit is set, use a handful of
+  // stores.
+  bool IsTrivialAutoVarInitPattern =
+      CGM.getContext().getLangOpts().getTrivialAutoVarInit() ==
+      LangOptions::TrivialAutoVarInitKind::Pattern;
   if (shouldSplitConstantStore(CGM, ConstantSize)) {
     if (auto *STy = dyn_cast<llvm::StructType>(Ty)) {
-      const llvm::StructLayout *Layout =
-          CGM.getDataLayout().getStructLayout(STy);
-      for (unsigned i = 0; i != constant->getNumOperands(); i++) {
-        CharUnits CurOff = CharUnits::fromQuantity(Layout->getElementOffset(i));
-        Address EltPtr = Builder.CreateConstInBoundsByteGEP(
-            Loc.withElementType(CGM.Int8Ty), CurOff);
-        emitStoresForConstant(CGM, D, EltPtr, isVolatile, Builder,
-                              constant->getAggregateElement(i), IsAutoInit);
+      if (STy == Loc.getElementType() ||
+          (STy != Loc.getElementType() && IsTrivialAutoVarInitPattern)) {
+        const llvm::StructLayout *Layout =
+            CGM.getDataLayout().getStructLayout(STy);
+        for (unsigned i = 0; i != constant->getNumOperands(); i++) {
+          CharUnits CurOff =
+              CharUnits::fromQuantity(Layout->getElementOffset(i));
+          Address EltPtr = Builder.CreateConstInBoundsByteGEP(
+              Loc.withElementType(CGM.Int8Ty), CurOff);
+          emitStoresForConstant(CGM, D, EltPtr, isVolatile, Builder,
+                                constant->getAggregateElement(i), IsAutoInit);
+        }
+        return;
       }
-      return;
     } else if (auto *ATy = dyn_cast<llvm::ArrayType>(Ty)) {
-      for (unsigned i = 0; i != ATy->getNumElements(); i++) {
-        Address EltPtr = Builder.CreateConstGEP(
-            Loc.withElementType(ATy->getElementType()), i);
-        emitStoresForConstant(CGM, D, EltPtr, isVolatile, Builder,
-                              constant->getAggregateElement(i), IsAutoInit);
+      if (ATy == Loc.getElementType() ||
+          (ATy != Loc.getElementType() && IsTrivialAutoVarInitPattern)) {
+        for (unsigned i = 0; i != ATy->getNumElements(); i++) {
+          Address EltPtr = Builder.CreateConstGEP(
+              Loc.withElementType(ATy->getElementType()), i);
+          emitStoresForConstant(CGM, D, EltPtr, isVolatile, Builder,
+                                constant->getAggregateElement(i), IsAutoInit);
+        }
+        return;
       }
-      return;
     }
   }
 
@@ -1759,19 +1771,33 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
                                                       const VarDecl &D,
                                                       Address Loc) {
   auto trivialAutoVarInit = getContext().getLangOpts().getTrivialAutoVarInit();
+  auto trivialAutoVarInitMaxSize =
+      getContext().getLangOpts().TrivialAutoVarInitMaxSize;
   CharUnits Size = getContext().getTypeSizeInChars(type);
   bool isVolatile = type.isVolatileQualified();
   if (!Size.isZero()) {
+    // We skip auto-init variables by their alloc size. Take this as an example:
+    // "struct Foo {int x; char buff[1024];}" Assume the max-size flag is 1023.
+    // All Foo type variables will be skipped. Ideally, we only skip the buff
+    // array and still auto-init X in this example.
+    // TODO: Improve the size filtering to by member size.
+    auto allocSize = CGM.getDataLayout().getTypeAllocSize(Loc.getElementType());
     switch (trivialAutoVarInit) {
     case LangOptions::TrivialAutoVarInitKind::Uninitialized:
       llvm_unreachable("Uninitialized handled by caller");
     case LangOptions::TrivialAutoVarInitKind::Zero:
       if (CGM.stopAutoInit())
         return;
+      if (trivialAutoVarInitMaxSize > 0 &&
+          allocSize > trivialAutoVarInitMaxSize)
+        return;
       emitStoresForZeroInit(CGM, D, Loc, isVolatile, Builder);
       break;
     case LangOptions::TrivialAutoVarInitKind::Pattern:
       if (CGM.stopAutoInit())
+        return;
+      if (trivialAutoVarInitMaxSize > 0 &&
+          allocSize > trivialAutoVarInitMaxSize)
         return;
       emitStoresForPatternInit(CGM, D, Loc, isVolatile, Builder);
       break;

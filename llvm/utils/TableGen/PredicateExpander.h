@@ -61,6 +61,10 @@ public:
                              StringRef FunctionMapperer);
   void expandCheckImmOperandSimple(raw_ostream &OS, int OpIndex,
                                    StringRef FunctionMapper);
+  void expandCheckImmOperandLT(raw_ostream &OS, int OpIndex, int ImmVal,
+                               StringRef FunctionMapper);
+  void expandCheckImmOperandGT(raw_ostream &OS, int OpIndex, int ImmVal,
+                               StringRef FunctionMapper);
   void expandCheckRegOperand(raw_ostream &OS, int OpIndex, const Record *Reg,
                              StringRef FunctionMapper);
   void expandCheckRegOperandSimple(raw_ostream &OS, int OpIndex,

@@ -13,7 +13,7 @@ from lldbsuite.test.lldbtest import *
 
 class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
     def assertEvaluate(self, expression, regex):
-        self.assertRegexpMatches(
+        self.assertRegex(
             self.dap_server.request_evaluate(expression, context=self.context)["body"][
                 "result"
             ],
@@ -78,16 +78,24 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         else:
             self.assertEvaluate(
                 "struct1",
-                re.escape("{foo:15}")
-                if enableAutoVariableSummaries
-                else "my_struct @ 0x",
+                (
+                    re.escape("{foo:15}")
+                    if enableAutoVariableSummaries
+                    else "my_struct @ 0x"
+                ),
             )
             self.assertEvaluate(
                 "struct2", "0x.* {foo:16}" if enableAutoVariableSummaries else "0x.*"
             )
             self.assertEvaluate("struct3", "0x.*0")
 
-        self.assertEvaluateFailure("var")  # local variable of a_function
+        if context == "repl":
+            # In the repl context expressions may be interpreted as lldb
+            # commands since no variables have the same name as the command.
+            self.assertEvaluate("var", r"\(lldb\) var\n.*")
+        else:
+            self.assertEvaluateFailure("var")  # local variable of a_function
+
         self.assertEvaluateFailure("my_struct")  # type name
         self.assertEvaluateFailure("int")  # type name
         self.assertEvaluateFailure("foo")  # member of my_struct
@@ -121,9 +129,11 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         else:
             self.assertEvaluate(
                 "struct1",
-                re.escape("{foo:15}")
-                if enableAutoVariableSummaries
-                else "my_struct @ 0x",
+                (
+                    re.escape("{foo:15}")
+                    if enableAutoVariableSummaries
+                    else "my_struct @ 0x"
+                ),
             )
         self.assertEvaluate("struct1.foo", "15")
         self.assertEvaluate("struct2->foo", "16")

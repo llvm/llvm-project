@@ -157,7 +157,7 @@ main_body:
   %25 = getelementptr [0 x <8 x i32>], ptr addrspace(4) %1, i32 0, i32 %24, !amdgpu.uniform !0
   %26 = load <8 x i32>, ptr addrspace(4) %25, align 32, !invariant.load !0
   %27 = shl i32 %23, 2
-  %28 = or i32 %27, 3
+  %28 = or disjoint i32 %27, 3
   %29 = getelementptr [0 x <4 x i32>], ptr addrspace(4) %1, i32 0, i32 %28, !amdgpu.uniform !0
   %30 = load <4 x i32>, ptr addrspace(4) %29, align 16, !invariant.load !0
   %31 = call nsz <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float> zeroinitializer, <8 x i32> %26, <4 x i32> %30, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false) #8

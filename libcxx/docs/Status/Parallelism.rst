@@ -1,4 +1,4 @@
-.. parallelism-status:
+.. _parallelism-status:
 
 ====================================
 libc++ Parallelism TS Status (N4808)

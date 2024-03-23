@@ -18,7 +18,7 @@ char *t0(char *base, int a, int b) {
   // CHECK-NOTES-CXX:                  static_cast<ptrdiff_t>( )
   // CHECK-NOTES-ALL: :[[@LINE-5]]:17: note: perform multiplication in a wider type
   // CHECK-NOTES-C:                    (ptrdiff_t)
-  // CHECK-NOTES-CXX:                  static_cast<ptrdiff_t>()
+  // CHECK-NOTES-CXX:                  static_cast<ptrdiff_t>( )
 }
 char *t1(char *base, int a, int b) {
   return a * b + base;
@@ -35,7 +35,7 @@ char *t2(char *base, unsigned int a, int b) {
   // CHECK-NOTES-CXX:                  static_cast<size_t>( )
   // CHECK-NOTES-ALL: :[[@LINE-5]]:17: note: perform multiplication in a wider type
   // CHECK-NOTES-C:                    (size_t)
-  // CHECK-NOTES-CXX:                  static_cast<size_t>()
+  // CHECK-NOTES-CXX:                  static_cast<size_t>( )
 }
 
 char *t3(char *base, int a, unsigned int b) {

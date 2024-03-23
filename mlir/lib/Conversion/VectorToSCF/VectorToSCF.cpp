@@ -645,13 +645,13 @@ struct PrepareTransferWriteConversion
     rewriter.create<memref::StoreOp>(loc, xferOp.getVector(),
                                      buffers.dataBuffer);
     auto loadedVec = rewriter.create<memref::LoadOp>(loc, buffers.dataBuffer);
-    rewriter.updateRootInPlace(xferOp, [&]() {
+    rewriter.modifyOpInPlace(xferOp, [&]() {
       xferOp.getVectorMutable().assign(loadedVec);
       xferOp->setAttr(kPassLabel, rewriter.getUnitAttr());
     });
 
     if (xferOp.getMask()) {
-      rewriter.updateRootInPlace(xferOp, [&]() {
+      rewriter.modifyOpInPlace(xferOp, [&]() {
         xferOp.getMaskMutable().assign(buffers.maskBuffer);
       });
     }
@@ -966,7 +966,7 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
                                            loadIndices, iv);
                   auto mask = b.create<memref::LoadOp>(loc, castedMaskBuffer,
                                                        loadIndices);
-                  rewriter.updateRootInPlace(newXfer, [&]() {
+                  rewriter.modifyOpInPlace(newXfer, [&]() {
                     newXfer.getMaskMutable().assign(mask);
                   });
                 }

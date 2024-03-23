@@ -16,8 +16,15 @@
 #define MLIR_DIALECT_ARMSME_UTILS_UTILS_H_
 
 #include "mlir/Dialect/ArmSME/IR/ArmSMEEnums.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include <optional>
+
+namespace mlir {
+class Location;
+class PatternRewriter;
+class Value;
+} // namespace mlir
 
 namespace mlir::arm_sme {
 
@@ -41,6 +48,20 @@ std::optional<ArmSMETileType> getSMETileType(VectorType);
 
 /// Verifies the tile ID (if set) on this tile operation is valid.
 LogicalResult verifyOperationHasValidTileId(Operation *);
+
+/// Generates a for loop over ZA tile slices where the induction variable is
+/// the tile slice index and each iteration yields a new tile. Loop body is
+/// built via `makeLoopBody`, which returns the next tile value.
+scf::ForOp createLoopOverTileSlices(
+    PatternRewriter &rewriter, Location loc, Value initTile,
+    std::function<Value(OpBuilder &, Location, Value, Value)> makeLoopBody);
+
+/// Returns true if `vType` is a multiple of an SME tile size. Returns false if
+/// the `vType` exactly matches the size of an SME tile.
+bool isMultipleOfSMETileVectorType(VectorType vType);
+
+/// Creates a vector type for the SME tile of `elementType`.
+VectorType getSMETileTypeForElement(Type elementType);
 
 } // namespace mlir::arm_sme
 

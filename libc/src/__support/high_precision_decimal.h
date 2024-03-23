@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_HIGH_PRECISION_DECIMAL_H
 #define LLVM_LIBC_SRC___SUPPORT_HIGH_PRECISION_DECIMAL_H
 
+#include "src/__support/CPP/limits.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/str_to_integer.h"
 #include <stdint.h>
@@ -115,9 +116,10 @@ class HighPrecisionDecimal {
   uint8_t digits[MAX_NUM_DIGITS];
 
 private:
-  bool should_round_up(int32_t roundToDigit, RoundDirection round) {
-    if (roundToDigit < 0 ||
-        static_cast<uint32_t>(roundToDigit) >= this->num_digits) {
+  LIBC_INLINE bool should_round_up(int32_t round_to_digit,
+                                   RoundDirection round) {
+    if (round_to_digit < 0 ||
+        static_cast<uint32_t>(round_to_digit) >= this->num_digits) {
       return false;
     }
 
@@ -133,8 +135,8 @@ private:
     // Else round to nearest.
 
     // If we're right in the middle and there are no extra digits
-    if (this->digits[roundToDigit] == 5 &&
-        static_cast<uint32_t>(roundToDigit + 1) == this->num_digits) {
+    if (this->digits[round_to_digit] == 5 &&
+        static_cast<uint32_t>(round_to_digit + 1) == this->num_digits) {
 
       // Round up if we've truncated (since that means the result is slightly
       // higher than what's represented.)
@@ -143,22 +145,22 @@ private:
       }
 
       // If this exactly halfway, round to even.
-      if (roundToDigit == 0)
+      if (round_to_digit == 0)
         // When the input is ".5".
         return false;
-      return this->digits[roundToDigit - 1] % 2 != 0;
+      return this->digits[round_to_digit - 1] % 2 != 0;
     }
-    // If there are digits after roundToDigit, they must be non-zero since we
+    // If there are digits after round_to_digit, they must be non-zero since we
     // trim trailing zeroes after all operations that change digits.
-    return this->digits[roundToDigit] >= 5;
+    return this->digits[round_to_digit] >= 5;
   }
 
   // Takes an amount to left shift and returns the number of new digits needed
   // to store the result based on LEFT_SHIFT_DIGIT_TABLE.
-  uint32_t get_num_new_digits(uint32_t lShiftAmount) {
+  LIBC_INLINE uint32_t get_num_new_digits(uint32_t lshift_amount) {
     const char *power_of_five =
-        LEFT_SHIFT_DIGIT_TABLE[lShiftAmount].power_of_five;
-    uint32_t new_digits = LEFT_SHIFT_DIGIT_TABLE[lShiftAmount].new_digits;
+        LEFT_SHIFT_DIGIT_TABLE[lshift_amount].power_of_five;
+    uint32_t new_digits = LEFT_SHIFT_DIGIT_TABLE[lshift_amount].new_digits;
     uint32_t digit_index = 0;
     while (power_of_five[digit_index] != 0) {
       if (digit_index >= this->num_digits) {
@@ -176,7 +178,7 @@ private:
   }
 
   // Trim all trailing 0s
-  void trim_trailing_zeroes() {
+  LIBC_INLINE void trim_trailing_zeroes() {
     while (this->num_digits > 0 && this->digits[this->num_digits - 1] == 0) {
       --this->num_digits;
     }
@@ -186,19 +188,19 @@ private:
   }
 
   // Perform a digitwise binary non-rounding right shift on this value by
-  // shiftAmount. The shiftAmount can't be more than MAX_SHIFT_AMOUNT to prevent
-  // overflow.
-  void right_shift(uint32_t shiftAmount) {
+  // shift_amount. The shift_amount can't be more than MAX_SHIFT_AMOUNT to
+  // prevent overflow.
+  LIBC_INLINE void right_shift(uint32_t shift_amount) {
     uint32_t read_index = 0;
     uint32_t write_index = 0;
 
     uint64_t accumulator = 0;
 
-    const uint64_t shift_mask = (uint64_t(1) << shiftAmount) - 1;
+    const uint64_t shift_mask = (uint64_t(1) << shift_amount) - 1;
 
     // Warm Up phase: we don't have enough digits to start writing, so just
     // read them into the accumulator.
-    while (accumulator >> shiftAmount == 0) {
+    while (accumulator >> shift_amount == 0) {
       uint64_t read_digit = 0;
       // If there are still digits to read, read the next one, else the digit is
       // assumed to be 0.
@@ -217,7 +219,7 @@ private:
     // read. Keep reading until we run out of digits.
     while (read_index < this->num_digits) {
       uint64_t read_digit = this->digits[read_index];
-      uint64_t write_digit = accumulator >> shiftAmount;
+      uint64_t write_digit = accumulator >> shift_amount;
       accumulator &= shift_mask;
       this->digits[write_index] = static_cast<uint8_t>(write_digit);
       accumulator = accumulator * 10 + read_digit;
@@ -228,7 +230,7 @@ private:
     // Cool Down phase: All of the readable digits have been read, so just write
     // the remainder, while treating any more digits as 0.
     while (accumulator > 0) {
-      uint64_t write_digit = accumulator >> shiftAmount;
+      uint64_t write_digit = accumulator >> shift_amount;
       accumulator &= shift_mask;
       if (write_index < MAX_NUM_DIGITS) {
         this->digits[write_index] = static_cast<uint8_t>(write_digit);
@@ -243,10 +245,10 @@ private:
   }
 
   // Perform a digitwise binary non-rounding left shift on this value by
-  // shiftAmount. The shiftAmount can't be more than MAX_SHIFT_AMOUNT to prevent
-  // overflow.
-  void left_shift(uint32_t shiftAmount) {
-    uint32_t new_digits = this->get_num_new_digits(shiftAmount);
+  // shift_amount. The shift_amount can't be more than MAX_SHIFT_AMOUNT to
+  // prevent overflow.
+  LIBC_INLINE void left_shift(uint32_t shift_amount) {
+    uint32_t new_digits = this->get_num_new_digits(shift_amount);
 
     int32_t read_index = this->num_digits - 1;
     uint32_t write_index = this->num_digits + new_digits;
@@ -260,7 +262,7 @@ private:
     // writing.
     while (read_index >= 0) {
       accumulator += static_cast<uint64_t>(this->digits[read_index])
-                     << shiftAmount;
+                     << shift_amount;
       uint64_t next_accumulator = accumulator / 10;
       uint64_t write_digit = accumulator - (10 * next_accumulator);
       --write_index;
@@ -296,45 +298,52 @@ private:
   }
 
 public:
-  // numString is assumed to be a string of numeric characters. It doesn't
+  // num_string is assumed to be a string of numeric characters. It doesn't
   // handle leading spaces.
-  HighPrecisionDecimal(const char *__restrict numString) {
+  LIBC_INLINE
+  HighPrecisionDecimal(
+      const char *__restrict num_string,
+      const size_t num_len = cpp::numeric_limits<size_t>::max()) {
     bool saw_dot = false;
+    size_t num_cur = 0;
     // This counts the digits in the number, even if there isn't space to store
     // them all.
     uint32_t total_digits = 0;
-    while (isdigit(*numString) || *numString == '.') {
-      if (*numString == '.') {
+    while (num_cur < num_len &&
+           (isdigit(num_string[num_cur]) || num_string[num_cur] == '.')) {
+      if (num_string[num_cur] == '.') {
         if (saw_dot) {
           break;
         }
         this->decimal_point = total_digits;
         saw_dot = true;
       } else {
-        if (*numString == '0' && this->num_digits == 0) {
+        if (num_string[num_cur] == '0' && this->num_digits == 0) {
           --this->decimal_point;
-          ++numString;
+          ++num_cur;
           continue;
         }
         ++total_digits;
         if (this->num_digits < MAX_NUM_DIGITS) {
           this->digits[this->num_digits] =
-              static_cast<uint8_t>(*numString - '0');
+              static_cast<uint8_t>(num_string[num_cur] - '0');
           ++this->num_digits;
-        } else if (*numString != '0') {
+        } else if (num_string[num_cur] != '0') {
           this->truncated = true;
         }
       }
-      ++numString;
+      ++num_cur;
     }
 
     if (!saw_dot)
       this->decimal_point = total_digits;
 
-    if ((*numString | 32) == 'e') {
-      ++numString;
-      if (isdigit(*numString) || *numString == '+' || *numString == '-') {
-        auto result = strtointeger<int32_t>(numString, 10);
+    if (num_cur < num_len && ((num_string[num_cur] | 32) == 'e')) {
+      ++num_cur;
+      if (isdigit(num_string[num_cur]) || num_string[num_cur] == '+' ||
+          num_string[num_cur] == '-') {
+        auto result =
+            strtointeger<int32_t>(num_string + num_cur, 10, num_len - num_cur);
         if (result.has_error()) {
           // TODO: handle error
         }
@@ -358,33 +367,34 @@ public:
     this->trim_trailing_zeroes();
   }
 
-  // Binary shift left (shiftAmount > 0) or right (shiftAmount < 0)
-  void shift(int shiftAmount) {
-    if (shiftAmount == 0) {
+  // Binary shift left (shift_amount > 0) or right (shift_amount < 0)
+  LIBC_INLINE void shift(int shift_amount) {
+    if (shift_amount == 0) {
       return;
     }
     // Left
-    else if (shiftAmount > 0) {
-      while (static_cast<uint32_t>(shiftAmount) > MAX_SHIFT_AMOUNT) {
+    else if (shift_amount > 0) {
+      while (static_cast<uint32_t>(shift_amount) > MAX_SHIFT_AMOUNT) {
         this->left_shift(MAX_SHIFT_AMOUNT);
-        shiftAmount -= MAX_SHIFT_AMOUNT;
+        shift_amount -= MAX_SHIFT_AMOUNT;
       }
-      this->left_shift(shiftAmount);
+      this->left_shift(shift_amount);
     }
     // Right
     else {
-      while (static_cast<uint32_t>(shiftAmount) < -MAX_SHIFT_AMOUNT) {
+      while (static_cast<uint32_t>(shift_amount) < -MAX_SHIFT_AMOUNT) {
         this->right_shift(MAX_SHIFT_AMOUNT);
-        shiftAmount += MAX_SHIFT_AMOUNT;
+        shift_amount += MAX_SHIFT_AMOUNT;
       }
-      this->right_shift(-shiftAmount);
+      this->right_shift(-shift_amount);
     }
   }
 
   // Round the number represented to the closest value of unsigned int type T.
   // This is done ignoring overflow.
   template <class T>
-  T round_to_integer_type(RoundDirection round = RoundDirection::Nearest) {
+  LIBC_INLINE T
+  round_to_integer_type(RoundDirection round = RoundDirection::Nearest) {
     T result = 0;
     uint32_t cur_digit = 0;
 
@@ -404,10 +414,10 @@ public:
 
   // Extra functions for testing.
 
-  uint8_t *get_digits() { return this->digits; }
-  uint32_t get_num_digits() { return this->num_digits; }
-  int32_t get_decimal_point() { return this->decimal_point; }
-  void set_truncated(bool trunc) { this->truncated = trunc; }
+  LIBC_INLINE uint8_t *get_digits() { return this->digits; }
+  LIBC_INLINE uint32_t get_num_digits() { return this->num_digits; }
+  LIBC_INLINE int32_t get_decimal_point() { return this->decimal_point; }
+  LIBC_INLINE void set_truncated(bool trunc) { this->truncated = trunc; }
 };
 
 } // namespace internal

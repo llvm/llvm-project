@@ -32,7 +32,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
@@ -48,6 +47,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
@@ -81,6 +81,22 @@ cl::opt<bool> ForceTopDown("misched-topdown", cl::Hidden,
                            cl::desc("Force top-down list scheduling"));
 cl::opt<bool> ForceBottomUp("misched-bottomup", cl::Hidden,
                             cl::desc("Force bottom-up list scheduling"));
+namespace MISchedPostRASched {
+enum Direction {
+  TopDown,
+  BottomUp,
+};
+} // end namespace MISchedPostRASched
+cl::opt<MISchedPostRASched::Direction> PostRADirection(
+    "misched-postra-direction", cl::Hidden,
+    cl::desc("Post reg-alloc list scheduling direction"),
+    // Default to top-down because it was implemented first and existing targets
+    // expect that behavior by default.
+    cl::init(MISchedPostRASched::TopDown),
+    cl::values(clEnumValN(MISchedPostRASched::TopDown, "topdown",
+                          "Force top-down post reg-alloc list scheduling"),
+               clEnumValN(MISchedPostRASched::BottomUp, "bottomup",
+                          "Force bottom-up post reg-alloc list scheduling")));
 cl::opt<bool>
 DumpCriticalPathLength("misched-dcpl", cl::Hidden,
                        cl::desc("Print critical path length to stdout"));
@@ -440,6 +456,14 @@ bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
   // Instantiate the selected scheduler for this target, function, and
   // optimization level.
   std::unique_ptr<ScheduleDAGInstrs> Scheduler(createMachineScheduler());
+  ScheduleDAGMI::DumpDirection D;
+  if (ForceTopDown)
+    D = ScheduleDAGMI::DumpDirection::TopDown;
+  else if (ForceBottomUp)
+    D = ScheduleDAGMI::DumpDirection::BottomUp;
+  else
+    D = ScheduleDAGMI::DumpDirection::Bidirectional;
+  Scheduler->setDumpDirection(D);
   scheduleRegions(*Scheduler, false);
 
   LLVM_DEBUG(LIS->dump());
@@ -473,6 +497,12 @@ bool PostMachineScheduler::runOnMachineFunction(MachineFunction &mf) {
   // Instantiate the selected scheduler for this target, function, and
   // optimization level.
   std::unique_ptr<ScheduleDAGInstrs> Scheduler(createPostMachineScheduler());
+  ScheduleDAGMI::DumpDirection D;
+  if (PostRADirection == MISchedPostRASched::TopDown)
+    D = ScheduleDAGMI::DumpDirection::TopDown;
+  else
+    D = ScheduleDAGMI::DumpDirection::BottomUp;
+  Scheduler->setDumpDirection(D);
   scheduleRegions(*Scheduler, true);
 
   if (VerifyScheduling)
@@ -1125,12 +1155,14 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceBottomUp() const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ScheduleDAGMI::dumpSchedule() const {
   if (MISchedDumpScheduleTrace) {
-    if (ForceTopDown)
+    if (DumpDir == DumpDirection::TopDown)
       dumpScheduleTraceTopDown();
-    else if (ForceBottomUp)
+    else if (DumpDir == DumpDirection::BottomUp)
       dumpScheduleTraceBottomUp();
-    else {
+    else if (DumpDir == DumpDirection::Bidirectional) {
       dbgs() << "* Schedule table (Bidirectional): not implemented\n";
+    } else {
+      dbgs() << "* Schedule table: DumpDirection not set.\n";
     }
   }
 
@@ -1697,11 +1729,11 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
     SUnit *SU;
     SmallVector<const MachineOperand *, 4> BaseOps;
     int64_t Offset;
-    unsigned Width;
+    LocationSize Width;
     bool OffsetIsScalable;
 
     MemOpInfo(SUnit *SU, ArrayRef<const MachineOperand *> BaseOps,
-              int64_t Offset, bool OffsetIsScalable, unsigned Width)
+              int64_t Offset, bool OffsetIsScalable, LocationSize Width)
         : SU(SU), BaseOps(BaseOps.begin(), BaseOps.end()), Offset(Offset),
           Width(Width), OffsetIsScalable(OffsetIsScalable) {}
 
@@ -1743,11 +1775,14 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   bool IsLoad;
+  bool ReorderWhileClustering;
 
 public:
   BaseMemOpClusterMutation(const TargetInstrInfo *tii,
-                           const TargetRegisterInfo *tri, bool IsLoad)
-      : TII(tii), TRI(tri), IsLoad(IsLoad) {}
+                           const TargetRegisterInfo *tri, bool IsLoad,
+                           bool ReorderWhileClustering)
+      : TII(tii), TRI(tri), IsLoad(IsLoad),
+        ReorderWhileClustering(ReorderWhileClustering) {}
 
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
 
@@ -1763,14 +1798,16 @@ protected:
 class StoreClusterMutation : public BaseMemOpClusterMutation {
 public:
   StoreClusterMutation(const TargetInstrInfo *tii,
-                       const TargetRegisterInfo *tri)
-      : BaseMemOpClusterMutation(tii, tri, false) {}
+                       const TargetRegisterInfo *tri,
+                       bool ReorderWhileClustering)
+      : BaseMemOpClusterMutation(tii, tri, false, ReorderWhileClustering) {}
 };
 
 class LoadClusterMutation : public BaseMemOpClusterMutation {
 public:
-  LoadClusterMutation(const TargetInstrInfo *tii, const TargetRegisterInfo *tri)
-      : BaseMemOpClusterMutation(tii, tri, true) {}
+  LoadClusterMutation(const TargetInstrInfo *tii, const TargetRegisterInfo *tri,
+                      bool ReorderWhileClustering)
+      : BaseMemOpClusterMutation(tii, tri, true, ReorderWhileClustering) {}
 };
 
 } // end anonymous namespace
@@ -1779,15 +1816,19 @@ namespace llvm {
 
 std::unique_ptr<ScheduleDAGMutation>
 createLoadClusterDAGMutation(const TargetInstrInfo *TII,
-                             const TargetRegisterInfo *TRI) {
-  return EnableMemOpCluster ? std::make_unique<LoadClusterMutation>(TII, TRI)
+                             const TargetRegisterInfo *TRI,
+                             bool ReorderWhileClustering) {
+  return EnableMemOpCluster ? std::make_unique<LoadClusterMutation>(
+                                  TII, TRI, ReorderWhileClustering)
                             : nullptr;
 }
 
 std::unique_ptr<ScheduleDAGMutation>
 createStoreClusterDAGMutation(const TargetInstrInfo *TII,
-                              const TargetRegisterInfo *TRI) {
-  return EnableMemOpCluster ? std::make_unique<StoreClusterMutation>(TII, TRI)
+                              const TargetRegisterInfo *TRI,
+                              bool ReorderWhileClustering) {
+  return EnableMemOpCluster ? std::make_unique<StoreClusterMutation>(
+                                  TII, TRI, ReorderWhileClustering)
                             : nullptr;
 }
 
@@ -1825,11 +1866,12 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
 
     auto MemOpb = MemOpRecords[NextIdx];
     unsigned ClusterLength = 2;
-    unsigned CurrentClusterBytes = MemOpa.Width + MemOpb.Width;
+    unsigned CurrentClusterBytes = MemOpa.Width.getValue().getKnownMinValue() +
+                                   MemOpb.Width.getValue().getKnownMinValue();
     if (SUnit2ClusterInfo.count(MemOpa.SU->NodeNum)) {
       ClusterLength = SUnit2ClusterInfo[MemOpa.SU->NodeNum].first + 1;
-      CurrentClusterBytes =
-          SUnit2ClusterInfo[MemOpa.SU->NodeNum].second + MemOpb.Width;
+      CurrentClusterBytes = SUnit2ClusterInfo[MemOpa.SU->NodeNum].second +
+                            MemOpb.Width.getValue().getKnownMinValue();
     }
 
     if (!TII->shouldClusterMemOps(MemOpa.BaseOps, MemOpa.Offset,
@@ -1840,7 +1882,7 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
 
     SUnit *SUa = MemOpa.SU;
     SUnit *SUb = MemOpb.SU;
-    if (SUa->NodeNum > SUb->NodeNum)
+    if (!ReorderWhileClustering && SUa->NodeNum > SUb->NodeNum)
       std::swap(SUa, SUb);
 
     // FIXME: Is this check really required?
@@ -1899,7 +1941,7 @@ void BaseMemOpClusterMutation::collectMemOpRecords(
     SmallVector<const MachineOperand *, 4> BaseOps;
     int64_t Offset;
     bool OffsetIsScalable;
-    unsigned Width;
+    LocationSize Width = 0;
     if (TII->getMemOperandsWithOffsetWidth(MI, BaseOps, Offset,
                                            OffsetIsScalable, Width, TRI)) {
       MemOpRecords.push_back(
@@ -3795,6 +3837,12 @@ ScheduleDAGMILive *llvm::createGenericSchedLive(MachineSchedContext *C) {
   // data and pass it to later mutations. Have a single mutation that gathers
   // the interesting nodes in one pass.
   DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
+
+  const TargetSubtargetInfo &STI = C->MF->getSubtarget();
+  // Add MacroFusion mutation if fusions are not empty.
+  const auto &MacroFusions = STI.getMacroFusions();
+  if (!MacroFusions.empty())
+    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
   return DAG;
 }
 
@@ -3817,7 +3865,7 @@ void PostGenericScheduler::initialize(ScheduleDAGMI *Dag) {
 
   Rem.init(DAG, SchedModel);
   Top.init(DAG, SchedModel, &Rem);
-  BotRoots.clear();
+  Bot.init(DAG, SchedModel, &Rem);
 
   // Initialize the HazardRecognizers. If itineraries don't exist, are empty,
   // or are disabled, then these HazardRecs will be disabled.
@@ -3827,13 +3875,30 @@ void PostGenericScheduler::initialize(ScheduleDAGMI *Dag) {
         DAG->MF.getSubtarget().getInstrInfo()->CreateTargetMIHazardRecognizer(
             Itin, DAG);
   }
+  if (!Bot.HazardRec) {
+    Bot.HazardRec =
+        DAG->MF.getSubtarget().getInstrInfo()->CreateTargetMIHazardRecognizer(
+            Itin, DAG);
+  }
+}
+
+void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
+                                      MachineBasicBlock::iterator End,
+                                      unsigned NumRegionInstrs) {
+  if (PostRADirection == MISchedPostRASched::TopDown) {
+    RegionPolicy.OnlyTopDown = true;
+    RegionPolicy.OnlyBottomUp = false;
+  } else if (PostRADirection == MISchedPostRASched::BottomUp) {
+    RegionPolicy.OnlyTopDown = false;
+    RegionPolicy.OnlyBottomUp = true;
+  }
 }
 
 void PostGenericScheduler::registerRoots() {
   Rem.CriticalPath = DAG->ExitSU.getDepth();
 
   // Some roots may not feed into ExitSU. Check all of them in case.
-  for (const SUnit *SU : BotRoots) {
+  for (const SUnit *SU : Bot.Available) {
     if (SU->getDepth() > Rem.CriticalPath)
       Rem.CriticalPath = SU->getDepth();
   }
@@ -3890,12 +3955,13 @@ bool PostGenericScheduler::tryCandidate(SchedCandidate &Cand,
   return false;
 }
 
-void PostGenericScheduler::pickNodeFromQueue(SchedCandidate &Cand) {
-  ReadyQueue &Q = Top.Available;
+void PostGenericScheduler::pickNodeFromQueue(SchedBoundary &Zone,
+                                             SchedCandidate &Cand) {
+  ReadyQueue &Q = Zone.Available;
   for (SUnit *SU : Q) {
     SchedCandidate TryCand(Cand.Policy);
     TryCand.SU = SU;
-    TryCand.AtTop = true;
+    TryCand.AtTop = Zone.isTop();
     TryCand.initResourceDelta(DAG, SchedModel);
     if (tryCandidate(Cand, TryCand)) {
       Cand.setBest(TryCand);
@@ -3907,29 +3973,54 @@ void PostGenericScheduler::pickNodeFromQueue(SchedCandidate &Cand) {
 /// Pick the next node to schedule.
 SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
   if (DAG->top() == DAG->bottom()) {
-    assert(Top.Available.empty() && Top.Pending.empty() && "ReadyQ garbage");
+    assert(Top.Available.empty() && Top.Pending.empty() &&
+           Bot.Available.empty() && Bot.Pending.empty() && "ReadyQ garbage");
     return nullptr;
   }
   SUnit *SU;
   do {
-    SU = Top.pickOnlyChoice();
-    if (SU) {
-      tracePick(Only1, true);
+    if (RegionPolicy.OnlyBottomUp) {
+      assert(!RegionPolicy.OnlyTopDown);
+      SU = Bot.pickOnlyChoice();
+      if (SU) {
+        tracePick(Only1, true);
+      } else {
+        CandPolicy NoPolicy;
+        SchedCandidate BotCand(NoPolicy);
+        // Set the bottom-up policy based on the state of the current bottom
+        // zone and the instructions outside the zone, including the top zone.
+        setPolicy(BotCand.Policy, /*IsPostRA=*/true, Bot, nullptr);
+        pickNodeFromQueue(Bot, BotCand);
+        assert(BotCand.Reason != NoCand && "failed to find a candidate");
+        tracePick(BotCand);
+        SU = BotCand.SU;
+      }
+      IsTopNode = false;
     } else {
-      CandPolicy NoPolicy;
-      SchedCandidate TopCand(NoPolicy);
-      // Set the top-down policy based on the state of the current top zone and
-      // the instructions outside the zone, including the bottom zone.
-      setPolicy(TopCand.Policy, /*IsPostRA=*/true, Top, nullptr);
-      pickNodeFromQueue(TopCand);
-      assert(TopCand.Reason != NoCand && "failed to find a candidate");
-      tracePick(TopCand);
-      SU = TopCand.SU;
+
+      assert(RegionPolicy.OnlyTopDown);
+      SU = Top.pickOnlyChoice();
+      if (SU) {
+        tracePick(Only1, true);
+      } else {
+        CandPolicy NoPolicy;
+        SchedCandidate TopCand(NoPolicy);
+        // Set the top-down policy based on the state of the current top zone
+        // and the instructions outside the zone, including the bottom zone.
+        setPolicy(TopCand.Policy, /*IsPostRA=*/true, Top, nullptr);
+        pickNodeFromQueue(Top, TopCand);
+        assert(TopCand.Reason != NoCand && "failed to find a candidate");
+        tracePick(TopCand);
+        SU = TopCand.SU;
+      }
+      IsTopNode = true;
     }
   } while (SU->isScheduled);
 
-  IsTopNode = true;
-  Top.removeReady(SU);
+  if (SU->isTopReady())
+    Top.removeReady(SU);
+  if (SU->isBottomReady())
+    Bot.removeReady(SU);
 
   LLVM_DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
                     << *SU->getInstr());
@@ -3939,13 +4030,25 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
 /// Called after ScheduleDAGMI has scheduled an instruction and updated
 /// scheduled/remaining flags in the DAG nodes.
 void PostGenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
-  SU->TopReadyCycle = std::max(SU->TopReadyCycle, Top.getCurrCycle());
-  Top.bumpNode(SU);
+  if (IsTopNode) {
+    SU->TopReadyCycle = std::max(SU->TopReadyCycle, Top.getCurrCycle());
+    Top.bumpNode(SU);
+  } else {
+    SU->BotReadyCycle = std::max(SU->BotReadyCycle, Bot.getCurrCycle());
+    Bot.bumpNode(SU);
+  }
 }
 
 ScheduleDAGMI *llvm::createGenericSchedPostRA(MachineSchedContext *C) {
-  return new ScheduleDAGMI(C, std::make_unique<PostGenericScheduler>(C),
-                           /*RemoveKillFlags=*/true);
+  ScheduleDAGMI *DAG =
+      new ScheduleDAGMI(C, std::make_unique<PostGenericScheduler>(C),
+                        /*RemoveKillFlags=*/true);
+  const TargetSubtargetInfo &STI = C->MF->getSubtarget();
+  // Add MacroFusion mutation if fusions are not empty.
+  const auto &MacroFusions = STI.getMacroFusions();
+  if (!MacroFusions.empty())
+    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
+  return DAG;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4260,15 +4363,21 @@ static bool sortIntervals(const ResourceSegments::IntervalTy &A,
 }
 
 unsigned ResourceSegments::getFirstAvailableAt(
-    unsigned CurrCycle, unsigned AcquireAtCycle, unsigned Cycle,
+    unsigned CurrCycle, unsigned AcquireAtCycle, unsigned ReleaseAtCycle,
     std::function<ResourceSegments::IntervalTy(unsigned, unsigned, unsigned)>
         IntervalBuilder) const {
   assert(std::is_sorted(std::begin(_Intervals), std::end(_Intervals),
                         sortIntervals) &&
          "Cannot execute on an un-sorted set of intervals.");
+
+  // Zero resource usage is allowed by TargetSchedule.td but we do not construct
+  // a ResourceSegment interval for that situation.
+  if (AcquireAtCycle == ReleaseAtCycle)
+    return CurrCycle;
+
   unsigned RetCycle = CurrCycle;
   ResourceSegments::IntervalTy NewInterval =
-      IntervalBuilder(RetCycle, AcquireAtCycle, Cycle);
+      IntervalBuilder(RetCycle, AcquireAtCycle, ReleaseAtCycle);
   for (auto &Interval : _Intervals) {
     if (!intersects(NewInterval, Interval))
       continue;
@@ -4278,15 +4387,23 @@ unsigned ResourceSegments::getFirstAvailableAt(
     assert(Interval.second > NewInterval.first &&
            "Invalid intervals configuration.");
     RetCycle += (unsigned)Interval.second - (unsigned)NewInterval.first;
-    NewInterval = IntervalBuilder(RetCycle, AcquireAtCycle, Cycle);
+    NewInterval = IntervalBuilder(RetCycle, AcquireAtCycle, ReleaseAtCycle);
   }
   return RetCycle;
 }
 
 void ResourceSegments::add(ResourceSegments::IntervalTy A,
                            const unsigned CutOff) {
-  assert(A.first < A.second && "Cannot add empty resource usage");
+  assert(A.first <= A.second && "Cannot add negative resource usage");
   assert(CutOff > 0 && "0-size interval history has no use.");
+  // Zero resource usage is allowed by TargetSchedule.td, in the case that the
+  // instruction needed the resource to be available but does not use it.
+  // However, ResourceSegment represents an interval that is closed on the left
+  // and open on the right. It is impossible to represent an empty interval when
+  // the left is closed. Do not add it to Intervals.
+  if (A.first == A.second)
+    return;
+
   assert(all_of(_Intervals,
                 [&A](const ResourceSegments::IntervalTy &Interval) -> bool {
                   return !intersects(A, Interval);

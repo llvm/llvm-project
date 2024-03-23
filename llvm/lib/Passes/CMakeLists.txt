@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMPasses
+  CodeGenPassBuilder.cpp
   OptimizationLevel.cpp
   PassBuilder.cpp
   PassBuilderBindings.cpp

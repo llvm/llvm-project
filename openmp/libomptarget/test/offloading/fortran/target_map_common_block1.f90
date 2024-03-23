@@ -20,9 +20,9 @@ program main
     devices(2) = omp_get_device_num()
   !$omp end target
   print *, "var1 after target = ", var1
-  print *, "devices: ", devices
+  print *, "devices are different? ", (devices(1) /= devices(2))
 end program
 
 ! CHECK: var1 before target =  10
 ! CHECK: var1 after target =  20
-! CHECK: devices:  1 0
+! CHECK: devices are different? T

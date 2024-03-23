@@ -6,10 +6,10 @@
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-apple-ios"
   
-  @bb1 = global i8* blockaddress(@foo, %final)
-  @bb2 = global i8* inttoptr (i32 1 to i8*)
+  @bb1 = global ptr blockaddress(@foo, %final)
+  @bb2 = global ptr inttoptr (i32 1 to ptr)
   
-  define void @foo(i1 %tst, i32* %ptr) {
+  define void @foo(i1 %tst, ptr %ptr) {
     br i1 %tst, label %left, label %right
   
   left:                                             ; preds = %0
@@ -22,7 +22,7 @@
   
   next:                                             ; preds = %right, %left
     %val = phi i32 [ %val.left, %left ], [ %val.right, %right ]
-    store i32 %val, i32* %ptr, align 4
+    store i32 %val, ptr %ptr, align 4
     br label %final
   
   final:                                            ; preds = %next

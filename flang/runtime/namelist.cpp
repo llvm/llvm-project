@@ -30,16 +30,15 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
   IoStatementState &io{*cookie};
   io.CheckFormattedStmtType<Direction::Output>("OutputNamelist");
   io.mutableModes().inNamelist = true;
-  char comma{static_cast<char>(GetComma(io))};
   ConnectionState &connection{io.GetConnectionState()};
-  // Internal functions to advance records and convert case
-  const auto EmitWithAdvance{[&](char ch) -> bool {
-    return (!connection.NeedAdvance(1) || io.AdvanceRecord()) &&
-        EmitAscii(io, &ch, 1);
-  }};
-  const auto EmitUpperCase{[&](const char *str) -> bool {
-    if (connection.NeedAdvance(std::strlen(str)) &&
-        !(io.AdvanceRecord() && EmitAscii(io, " ", 1))) {
+  // Internal function to advance records and convert case
+  const auto EmitUpperCase{[&](const char *prefix, std::size_t prefixLen,
+                               const char *str, char suffix) -> bool {
+    if ((connection.NeedAdvance(prefixLen) &&
+            !(io.AdvanceRecord() && EmitAscii(io, " ", 1))) ||
+        !EmitAscii(io, prefix, prefixLen) ||
+        (connection.NeedAdvance(std::strlen(str) + (suffix != ' ')) &&
+            !(io.AdvanceRecord() && EmitAscii(io, " ", 1)))) {
       return false;
     }
     for (; *str; ++str) {
@@ -49,23 +48,25 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
         return false;
       }
     }
-    return true;
+    return suffix == ' ' || EmitAscii(io, &suffix, 1);
   }};
   // &GROUP
-  if (!(EmitWithAdvance('&') && EmitUpperCase(group.groupName))) {
+  if (!EmitUpperCase(" &", 2, group.groupName, ' ')) {
     return false;
   }
   auto *listOutput{io.get_if<ListDirectedStatementState<Direction::Output>>()};
+  char comma{static_cast<char>(GetComma(io))};
+  char prefix{' '};
   for (std::size_t j{0}; j < group.items; ++j) {
     // [,]ITEM=...
     const NamelistGroup::Item &item{group.item[j]};
     if (listOutput) {
       listOutput->set_lastWasUndelimitedCharacter(false);
     }
-    if (!EmitWithAdvance(j == 0 ? ' ' : comma) || !EmitUpperCase(item.name) ||
-        !EmitWithAdvance('=')) {
+    if (!EmitUpperCase(&prefix, 1, item.name, '=')) {
       return false;
     }
+    prefix = comma;
     if (const auto *addendum{item.descriptor.Addendum()};
         addendum && addendum->derivedType()) {
       const NonTbpDefinedIoTable *table{group.nonTbpDefinedIo};
@@ -77,7 +78,7 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
     }
   }
   // terminal /
-  return EmitWithAdvance('/');
+  return EmitUpperCase("/", 1, "", ' ');
 }
 
 static constexpr bool IsLegalIdStart(char32_t ch) {
@@ -115,10 +116,11 @@ static bool GetLowerCaseName(
   return false;
 }
 
-static std::optional<SubscriptValue> GetSubscriptValue(IoStatementState &io) {
-  std::optional<SubscriptValue> value;
+static Fortran::common::optional<SubscriptValue> GetSubscriptValue(
+    IoStatementState &io) {
+  Fortran::common::optional<SubscriptValue> value;
   std::size_t byteCount{0};
-  std::optional<char32_t> ch{io.GetCurrentChar(byteCount)};
+  Fortran::common::optional<char32_t> ch{io.GetCurrentChar(byteCount)};
   bool negate{ch && *ch == '-'};
   if ((ch && *ch == '+') || negate) {
     io.HandleRelativePosition(byteCount);
@@ -135,7 +137,7 @@ static std::optional<SubscriptValue> GetSubscriptValue(IoStatementState &io) {
   if (overflow) {
     io.GetIoErrorHandler().SignalError(
         "NAMELIST input subscript value overflow");
-    return std::nullopt;
+    return Fortran::common::nullopt;
   }
   if (negate) {
     if (value) {
@@ -157,7 +159,7 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
   std::size_t contiguousStride{source.ElementBytes()};
   bool ok{true};
   std::size_t byteCount{0};
-  std::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
+  Fortran::common::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
   char32_t comma{GetComma(io)};
   for (; ch && *ch != ')'; ++j) {
     SubscriptValue dimLower{0}, dimUpper{0}, dimStride{0};
@@ -281,9 +283,9 @@ static bool HandleSubstring(
   SubscriptValue chars{static_cast<SubscriptValue>(desc.ElementBytes()) / kind};
   // Allow for blanks in substring bounds; they're nonstandard, but not
   // ambiguous within the parentheses.
-  std::optional<SubscriptValue> lower, upper;
+  Fortran::common::optional<SubscriptValue> lower, upper;
   std::size_t byteCount{0};
-  std::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
+  Fortran::common::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
   if (ch) {
     if (*ch == ':') {
       lower = 1;
@@ -312,7 +314,7 @@ static bool HandleSubstring(
         desc.raw().elem_len = 0;
         return true;
       }
-      if (*lower >= 1 || *upper <= chars) {
+      if (*lower >= 1 && *upper <= chars) {
         // Offset the base address & adjust the element byte length
         desc.raw().elem_len = (*upper - *lower + 1) * kind;
         desc.set_base_addr(reinterpret_cast<void *>(
@@ -345,7 +347,8 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
           // If base and component are both arrays, the component name
           // must be followed by subscripts; process them now.
           std::size_t byteCount{0};
-          if (std::optional<char32_t> next{io.GetNextNonBlank(byteCount)};
+          if (Fortran::common::optional<char32_t> next{
+                  io.GetNextNonBlank(byteCount)};
               next && *next == '(') {
             io.HandleRelativePosition(byteCount); // skip over '('
             StaticDescriptor<maxRank, true, 16> staticDesc;
@@ -434,7 +437,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   RUNTIME_CHECK(handler, listInput != nullptr);
   // Find this namelist group's header in the input
   io.BeginReadingRecord();
-  std::optional<char32_t> next;
+  Fortran::common::optional<char32_t> next;
   char name[nameBufferSize];
   RUNTIME_CHECK(handler, group.groupName != nullptr);
   char32_t comma{GetComma(io)};

@@ -1,0 +1,41 @@
+add_entrypoint_object(
+  epoll_wait
+  SRCS
+    epoll_wait.cpp
+  HDRS
+    ../epoll_wait.h
+  DEPENDS
+    libc.include.sys_epoll
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  epoll_pwait
+  SRCS
+    epoll_pwait.cpp
+  HDRS
+    ../epoll_pwait.h
+  DEPENDS
+    libc.include.sys_epoll
+    libc.include.signal
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  epoll_pwait2
+  SRCS
+    epoll_pwait2.cpp
+  HDRS
+    ../epoll_pwait2.h
+  DEPENDS
+    libc.include.sys_epoll
+    libc.include.signal
+    libc.include.time
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)

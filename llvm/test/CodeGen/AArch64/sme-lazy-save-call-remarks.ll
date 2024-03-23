@@ -2,31 +2,24 @@
 ; RUN: llc -mtriple=aarch64 -mattr=+sme --pass-remarks-analysis=sme -o /dev/null < %s 2>&1 | FileCheck %s
 
 declare void @private_za_callee()
-declare void @private_za_preserved_callee() "aarch64_pstate_za_preserved"
 declare float @llvm.cos.f32(float)
 
-define void @test_lazy_save_1_callee() nounwind "aarch64_pstate_za_shared" {
-; CHECK: remark: <unknown>:0:0: call from 'test_lazy_save_1_callee' to 'private_za_callee' sets up a lazy save for ZA, and we request that all slices be saved
+define void @test_lazy_save_1_callee() nounwind "aarch64_inout_za" {
+; CHECK: remark: <unknown>:0:0: call from 'test_lazy_save_1_callee' to 'private_za_callee' sets up a lazy save for ZA
   call void @private_za_callee()
   ret void
 }
 
-define void @test_lazy_save_2_callees() nounwind "aarch64_pstate_za_shared" {
-; CHECK: remark: <unknown>:0:0: call from 'test_lazy_save_2_callees' to 'private_za_callee' sets up a lazy save for ZA, and we request that all slices be saved
+define void @test_lazy_save_2_callees() nounwind "aarch64_inout_za" {
+; CHECK: remark: <unknown>:0:0: call from 'test_lazy_save_2_callees' to 'private_za_callee' sets up a lazy save for ZA
   call void @private_za_callee()
-; CHECK: remark: <unknown>:0:0: call from 'test_lazy_save_2_callees' to 'private_za_callee' sets up a lazy save for ZA, and we request that all slices be saved
+; CHECK: remark: <unknown>:0:0: call from 'test_lazy_save_2_callees' to 'private_za_callee' sets up a lazy save for ZA
   call void @private_za_callee()
   ret void
 }
 
-define void @test_lazy_save_preserved_callee() nounwind "aarch64_pstate_za_shared" {
-; CHECK: remark: <unknown>:0:0: call from 'test_lazy_save_preserved_callee' to 'private_za_preserved_callee' sets up a lazy save for ZA, but callee preserves ZA, so we request 0 slices to be saved
-  call void @private_za_preserved_callee()
-  ret void
-}
-
-define float @test_lazy_save_expanded_intrinsic(float %a) nounwind "aarch64_pstate_za_shared" {
-; CHECK: remark: <unknown>:0:0: call from 'test_lazy_save_expanded_intrinsic' to 'cosf' sets up a lazy save for ZA, and we request that all slices be saved
+define float @test_lazy_save_expanded_intrinsic(float %a) nounwind "aarch64_inout_za" {
+; CHECK: remark: <unknown>:0:0: call from 'test_lazy_save_expanded_intrinsic' to 'cosf' sets up a lazy save for ZA
   %res = call float @llvm.cos.f32(float %a)
   ret float %res
 }

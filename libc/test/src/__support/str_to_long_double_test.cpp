@@ -1,16 +1,19 @@
 #include "str_to_fp_test.h"
 
+#include "src/__support/integer_literals.h"
+
 namespace LIBC_NAMESPACE {
 
 using LlvmLibcStrToLongDblTest = LlvmLibcStrToFloatTest<long double>;
+using LIBC_NAMESPACE::operator""_u128;
 
-#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
 
 TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat64AsLongDouble) {
   eisel_lemire_test(123, 0, 0x1EC00000000000, 1029);
 }
 
-#elif defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 
 TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat80Simple) {
   eisel_lemire_test(123, 0, 0xf600000000000000, 16389);
@@ -18,15 +21,12 @@ TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat80Simple) {
 }
 
 TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat80LongerMantissa) {
-  eisel_lemire_test((UInt128(0x1234567812345678) << 64) +
-                        UInt128(0x1234567812345678),
-                    0, 0x91a2b3c091a2b3c1, 16507);
-  eisel_lemire_test((UInt128(0x1234567812345678) << 64) +
-                        UInt128(0x1234567812345678),
-                    300, 0xd97757de56adb65c, 17503);
-  eisel_lemire_test((UInt128(0x1234567812345678) << 64) +
-                        UInt128(0x1234567812345678),
-                    -300, 0xc30feb9a7618457d, 15510);
+  eisel_lemire_test(0x12345678'12345678'12345678'12345678_u128, 0,
+                    0x91a2b3c091a2b3c1, 16507);
+  eisel_lemire_test(0x12345678'12345678'12345678'12345678_u128, 300,
+                    0xd97757de56adb65c, 17503);
+  eisel_lemire_test(0x12345678'12345678'12345678'12345678_u128, -300,
+                    0xc30feb9a7618457d, 15510);
 }
 
 // These tests check numbers at the edge of the DETAILED_POWERS_OF_TEN table.
@@ -54,35 +54,31 @@ TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat80Fallback) {
   ASSERT_FALSE(internal::eisel_lemire<long double>({1, -1000}).has_value());
 }
 
-#else // Quad precision long double
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
 
 TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat128Simple) {
-  eisel_lemire_test(123, 0, (UInt128(0x1ec0000000000) << 64), 16389);
-  eisel_lemire_test(
-      12345678901234568192u, 0,
-      (UInt128(0x156a95319d63e) << 64) + UInt128(0x1800000000000000), 16446);
+  eisel_lemire_test(123, 0, 0x1ec00'00000000'00000000'00000000_u128, 16389);
+  eisel_lemire_test(12345678901234568192u, 0,
+                    0x156a9'5319d63e'18000000'00000000_u128, 16446);
 }
 
 TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat128LongerMantissa) {
-  eisel_lemire_test(
-      (UInt128(0x1234567812345678) << 64) + UInt128(0x1234567812345678), 0,
-      (UInt128(0x1234567812345) << 64) + UInt128(0x6781234567812345), 16507);
-  eisel_lemire_test(
-      (UInt128(0x1234567812345678) << 64) + UInt128(0x1234567812345678), 300,
-      (UInt128(0x1b2eeafbcad5b) << 64) + UInt128(0x6cb8b4451dfcde19), 17503);
-  eisel_lemire_test(
-      (UInt128(0x1234567812345678) << 64) + UInt128(0x1234567812345678), -300,
-      (UInt128(0x1861fd734ec30) << 64) + UInt128(0x8afa7189f0f7595f), 15510);
+  eisel_lemire_test(0x12345678'12345678'12345678'12345678_u128, 0,
+                    0x12345'67812345'67812345'67812345_u128, 16507);
+  eisel_lemire_test(0x12345678'12345678'12345678'12345678_u128, 300,
+                    0x1b2ee'afbcad5b'6cb8b445'1dfcde19_u128, 17503);
+  eisel_lemire_test(0x12345678'12345678'12345678'12345678_u128, -300,
+                    0x1861f'd734ec30'8afa7189'f0f7595f_u128, 15510);
 }
 
 TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat128Fallback) {
-  ASSERT_FALSE(
-      internal::eisel_lemire<long double>(
-          {(UInt128(0x5ce0e9a56015fec5) << 64) + UInt128(0xaadfa328ae39b333),
-           1})
-          .has_value());
+  ASSERT_FALSE(internal::eisel_lemire<long double>(
+                   {0x5ce0e9a5'6015fec5'aadfa328'ae39b333_u128, 1})
+                   .has_value());
 }
 
+#else
+#error "Unknown long double type"
 #endif
 
 } // namespace LIBC_NAMESPACE

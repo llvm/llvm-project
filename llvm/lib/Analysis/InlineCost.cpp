@@ -336,8 +336,8 @@ protected:
 
   /// Called at the end of processing a switch instruction, with the given
   /// number of case clusters.
-  virtual void onFinalizeSwitch(unsigned JumpTableSize,
-                                unsigned NumCaseCluster) {}
+  virtual void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
+                                bool DefaultDestUndefined) {}
 
   /// Called to account for any other instruction not specifically accounted
   /// for.
@@ -699,15 +699,16 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
                                        CallPenalty));
   }
 
-  void onFinalizeSwitch(unsigned JumpTableSize,
-                        unsigned NumCaseCluster) override {
+  void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
+                        bool DefaultDestUndefined) override {
+    if (!DefaultDestUndefined)
+      addCost(2 * InstrCost);
     // If suitable for a jump table, consider the cost for the table size and
     // branch to destination.
     // Maximum valid cost increased in this function.
     if (JumpTableSize) {
       int64_t JTCost =
           static_cast<int64_t>(JumpTableSize) * InstrCost + 4 * InstrCost;
-
       addCost(JTCost);
       return;
     }
@@ -1153,6 +1154,7 @@ private:
   // heuristics in the ML inliner.
   static constexpr int JTCostMultiplier = 4;
   static constexpr int CaseClusterCostMultiplier = 2;
+  static constexpr int SwitchDefaultDestCostMultiplier = 2;
   static constexpr int SwitchCostMultiplier = 2;
 
   // FIXME: These are taken from the heuristic-based cost visitor: we should
@@ -1231,8 +1233,11 @@ private:
     }
   }
 
-  void onFinalizeSwitch(unsigned JumpTableSize,
-                        unsigned NumCaseCluster) override {
+  void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
+                        bool DefaultDestUndefined) override {
+    if (!DefaultDestUndefined)
+      increment(InlineCostFeatureIndex::switch_default_dest_penalty,
+                SwitchDefaultDestCostMultiplier * InstrCost);
 
     if (JumpTableSize) {
       int64_t JTCost = static_cast<int64_t>(JumpTableSize) * InstrCost +
@@ -2461,7 +2466,7 @@ bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {
   unsigned NumCaseCluster =
       TTI.getEstimatedNumberOfCaseClusters(SI, JumpTableSize, PSI, BFI);
 
-  onFinalizeSwitch(JumpTableSize, NumCaseCluster);
+  onFinalizeSwitch(JumpTableSize, NumCaseCluster, SI.defaultDestUndefined());
   return false;
 }
 
@@ -2819,9 +2824,8 @@ InlineResult CallAnalyzer::analyze() {
 
     // If we're unable to select a particular successor, just count all of
     // them.
-    for (unsigned TIdx = 0, TSize = TI->getNumSuccessors(); TIdx != TSize;
-         ++TIdx)
-      BBWorklist.insert(TI->getSuccessor(TIdx));
+    for (BasicBlock *Succ : successors(BB))
+      BBWorklist.insert(Succ);
 
     onBlockAnalyzed(BB);
   }

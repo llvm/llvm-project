@@ -286,6 +286,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::PackExpansion:
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
+    case Type::CountAttributed:
       CanPrefixQualifiers = false;
       break;
 
@@ -295,6 +296,11 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
       const auto *AttrTy = cast<AttributedType>(UnderlyingType);
       CanPrefixQualifiers = AttrTy->getAttrKind() == attr::AddressSpace;
       break;
+    }
+    case Type::PackIndexing: {
+      return canPrefixQualifiers(
+          cast<PackIndexingType>(UnderlyingType)->getPattern().getTypePtr(),
+          NeedARCStrongQualifier);
     }
   }
 
@@ -694,6 +700,7 @@ void TypePrinter::printVectorBefore(const VectorType *T, raw_ostream &OS) {
     printBefore(T->getElementType(), OS);
     break;
   case VectorKind::RVVFixedLengthData:
+  case VectorKind::RVVFixedLengthMask:
     // FIXME: We prefer to print the size directly here, but have no way
     // to get the size of the type.
     OS << "__attribute__((__riscv_rvv_vector_bits__(";
@@ -773,6 +780,7 @@ void TypePrinter::printDependentVectorBefore(
     printBefore(T->getElementType(), OS);
     break;
   case VectorKind::RVVFixedLengthData:
+  case VectorKind::RVVFixedLengthMask:
     // FIXME: We prefer to print the size directly here, but have no way
     // to get the size of the type.
     OS << "__attribute__((__riscv_rvv_vector_bits__(";
@@ -937,15 +945,28 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
   OS << ')';
 
   FunctionType::ExtInfo Info = T->getExtInfo();
+  unsigned SMEBits = T->getAArch64SMEAttributes();
 
-  if ((T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMCompatibleMask))
+  if (SMEBits & FunctionType::SME_PStateSMCompatibleMask)
     OS << " __arm_streaming_compatible";
-  if ((T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask))
+  if (SMEBits & FunctionType::SME_PStateSMEnabledMask)
     OS << " __arm_streaming";
-  if ((T->getAArch64SMEAttributes() & FunctionType::SME_PStateZASharedMask))
-    OS << " __arm_shared_za";
-  if ((T->getAArch64SMEAttributes() & FunctionType::SME_PStateZAPreservedMask))
-    OS << " __arm_preserves_za";
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_Preserves)
+    OS << " __arm_preserves(\"za\")";
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_In)
+    OS << " __arm_in(\"za\")";
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_Out)
+    OS << " __arm_out(\"za\")";
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_InOut)
+    OS << " __arm_inout(\"za\")";
+  if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_Preserves)
+    OS << " __arm_preserves(\"zt0\")";
+  if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_In)
+    OS << " __arm_in(\"zt0\")";
+  if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_Out)
+    OS << " __arm_out(\"zt0\")";
+  if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_InOut)
+    OS << " __arm_inout(\"zt0\")";
 
   printFunctionAfter(Info, OS);
 
@@ -1046,6 +1067,9 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
       break;
     case CC_M68kRTD:
       OS << " __attribute__((m68k_rtd))";
+      break;
+    case CC_PreserveNone:
+      OS << " __attribute__((preserve_none))";
       break;
     }
   }
@@ -1172,6 +1196,18 @@ void TypePrinter::printDecltypeBefore(const DecltypeType *T, raw_ostream &OS) {
   OS << ')';
   spaceBeforePlaceHolder(OS);
 }
+
+void TypePrinter::printPackIndexingBefore(const PackIndexingType *T,
+                                          raw_ostream &OS) {
+  if (T->hasSelectedType())
+    OS << T->getSelectedType();
+  else
+    OS << T->getPattern() << "...[" << T->getIndexExpr() << "]";
+  spaceBeforePlaceHolder(OS);
+}
+
+void TypePrinter::printPackIndexingAfter(const PackIndexingType *T,
+                                         raw_ostream &OS) {}
 
 void TypePrinter::printDecltypeAfter(const DecltypeType *T, raw_ostream &OS) {}
 
@@ -1600,6 +1636,17 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
     if (T->getKeyword() != ElaboratedTypeKeyword::None)
       OS << " ";
     NestedNameSpecifier *Qualifier = T->getQualifier();
+    if (!Policy.SuppressTagKeyword && Policy.SuppressScope &&
+        !Policy.SuppressUnwrittenScope) {
+      bool OldTagKeyword = Policy.SuppressTagKeyword;
+      bool OldSupressScope = Policy.SuppressScope;
+      Policy.SuppressTagKeyword = true;
+      Policy.SuppressScope = false;
+      printBefore(T->getNamedType(), OS);
+      Policy.SuppressTagKeyword = OldTagKeyword;
+      Policy.SuppressScope = OldSupressScope;
+      return;
+    }
     if (Qualifier)
       Qualifier->print(OS, Policy);
   }
@@ -1680,6 +1727,36 @@ void TypePrinter::printPackExpansionAfter(const PackExpansionType *T,
                                           raw_ostream &OS) {
   printAfter(T->getPattern(), OS);
   OS << "...";
+}
+
+static void printCountAttributedImpl(const CountAttributedType *T,
+                                     raw_ostream &OS,
+                                     const PrintingPolicy &Policy) {
+  if (T->isCountInBytes() && T->isOrNull())
+    OS << " __sized_by_or_null(";
+  else if (T->isCountInBytes())
+    OS << " __sized_by(";
+  else if (T->isOrNull())
+    OS << " __counted_by_or_null(";
+  else
+    OS << " __counted_by(";
+  if (T->getCountExpr())
+    T->getCountExpr()->printPretty(OS, nullptr, Policy);
+  OS << ')';
+}
+
+void TypePrinter::printCountAttributedBefore(const CountAttributedType *T,
+                                             raw_ostream &OS) {
+  printBefore(T->desugar(), OS);
+  if (!T->desugar()->isArrayType())
+    printCountAttributedImpl(T, OS, Policy);
+}
+
+void TypePrinter::printCountAttributedAfter(const CountAttributedType *T,
+                                            raw_ostream &OS) {
+  printAfter(T->desugar(), OS);
+  if (T->desugar()->isArrayType())
+    printCountAttributedImpl(T, OS, Policy);
 }
 
 void TypePrinter::printAttributedBefore(const AttributedType *T,
@@ -1788,14 +1865,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     OS << "__arm_streaming_compatible";
     return;
   }
-  if (T->getAttrKind() == attr::ArmSharedZA) {
-    OS << "__arm_shared_za";
-    return;
-  }
-  if (T->getAttrKind() == attr::ArmPreservesZA) {
-    OS << "__arm_preserves_za";
-    return;
-  }
 
   OS << " __attribute__((";
   switch (T->getAttrKind()) {
@@ -1820,6 +1889,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     // AttributedType nodes for them.
     break;
 
+  case attr::CountedBy:
   case attr::LifetimeBound:
   case attr::TypeNonNull:
   case attr::TypeNullable:
@@ -1839,8 +1909,10 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::WebAssemblyFuncref:
   case attr::ArmStreaming:
   case attr::ArmStreamingCompatible:
-  case attr::ArmSharedZA:
-  case attr::ArmPreservesZA:
+  case attr::ArmIn:
+  case attr::ArmOut:
+  case attr::ArmInOut:
+  case attr::ArmPreserves:
     llvm_unreachable("This attribute should have been handled already");
 
   case attr::NSReturnsRetained:
@@ -1884,6 +1956,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
   case attr::M68kRTD:
     OS << "m68k_rtd";
+    break;
+  case attr::PreserveNone:
+    OS << "preserve_none";
     break;
   case attr::NoDeref:
     OS << "noderef";
@@ -2228,17 +2303,22 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     } else {
       if (!FirstArg)
         OS << Comma;
-      // Tries to print the argument with location info if exists.
-      printArgument(Arg, Policy, ArgOS,
-                    TemplateParameterList::shouldIncludeTypeForArgument(
-                        Policy, TPL, ParmIndex));
+      if (!Policy.SuppressTagKeyword &&
+          Argument.getKind() == TemplateArgument::Type &&
+          isa<TagType>(Argument.getAsType()))
+        OS << Argument.getAsType().getAsString();
+      else
+        // Tries to print the argument with location info if exists.
+        printArgument(Arg, Policy, ArgOS,
+                      TemplateParameterList::shouldIncludeTypeForArgument(
+                          Policy, TPL, ParmIndex));
     }
     StringRef ArgString = ArgOS.str();
 
     // If this is the first argument and its string representation
     // begins with the global scope specifier ('::foo'), add a space
     // to avoid printing the diagraph '<:'.
-    if (FirstArg && !ArgString.empty() && ArgString[0] == ':')
+    if (FirstArg && ArgString.starts_with(":"))
       OS << ' ';
 
     OS << ArgString;

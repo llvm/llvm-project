@@ -12,34 +12,35 @@ define i32 @invokeLandingpad() personality ptr @__gxx_personality_v0 {
   ; CHECK: %[[a1:[0-9]+]] = llvm.mlir.addressof @_ZTIii : !llvm.ptr
   ; CHECK: %[[a3:[0-9]+]] = llvm.alloca %{{[0-9]+}} x i8 {alignment = 1 : i64} : (i32) -> !llvm.ptr
   %1 = alloca i8
-  ; CHECK: llvm.invoke @foo(%[[a3]]) to ^bb2 unwind ^bb1 : (!llvm.ptr) -> ()
-  invoke void @foo(ptr %1) to label %4 unwind label %2
+  ; CHECK: llvm.invoke @foo(%[[a3]]) to ^[[bb1:.*]] unwind ^[[bb4:.*]] : (!llvm.ptr) -> ()
+  invoke void @foo(ptr %1) to label %bb1 unwind label %bb4
 
-; CHECK: ^bb1:
+; CHECK: ^[[bb1]]:
+bb1:
+  ; CHECK: %{{[0-9]+}} = llvm.invoke @bar(%[[a3]]) to ^[[bb2:.*]] unwind ^[[bb4]] : (!llvm.ptr) -> !llvm.ptr
+  %2 = invoke ptr @bar(ptr %1) to label %bb2 unwind label %bb4
+
+; CHECK: ^[[bb2]]:
+bb2:
+  ; CHECK: llvm.invoke @vararg_foo(%[[a3]], %{{.*}}) to ^[[bb3:.*]] unwind ^[[bb4]] vararg(!llvm.func<void (ptr, ...)>) : (!llvm.ptr, i32) -> ()
+  invoke void (ptr, ...) @vararg_foo(ptr %1, i32 0) to label %bb3 unwind label %bb4
+
+; CHECK: ^[[bb3]]:
+bb3:
+  ; CHECK: llvm.invoke %{{.*}}(%[[a3]], %{{.*}}) to ^[[bb5:.*]] unwind ^[[bb4]] vararg(!llvm.func<void (ptr, ...)>) : !llvm.ptr, (!llvm.ptr, i32) -> ()
+  invoke void (ptr, ...) undef(ptr %1, i32 0) to label %bb5 unwind label %bb4
+
+; CHECK: ^[[bb4]]:
+bb4:
   ; CHECK: %{{[0-9]+}} = llvm.landingpad (catch %{{[0-9]+}} : !llvm.ptr) (catch %[[a1]] : !llvm.ptr) (filter %{{[0-9]+}} : !llvm.array<1 x i1>) : !llvm.struct<(ptr, i32)>
   %3 = landingpad { ptr, i32 } catch ptr @_ZTIi catch ptr @_ZTIii
           filter [1 x i1] [i1 1]
   resume { ptr, i32 } %3
 
-; CHECK: ^bb2:
+; CHECK: ^[[bb5]]:
+bb5:
   ; CHECK: llvm.return %{{[0-9]+}} : i32
   ret i32 1
-
-; CHECK: ^bb3:
-  ; CHECK: %{{[0-9]+}} = llvm.invoke @bar(%[[a3]]) to ^bb2 unwind ^bb1 : (!llvm.ptr) -> !llvm.ptr
-  %6 = invoke ptr @bar(ptr %1) to label %4 unwind label %2
-
-; CHECK: ^bb4:
-  ; CHECK: llvm.invoke @vararg_foo(%[[a3]], %{{.*}}) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (ptr, ...)>) : (!llvm.ptr, i32) -> ()
-  invoke void (ptr, ...) @vararg_foo(ptr %1, i32 0) to label %4 unwind label %2
-
-; CHECK: ^bb5:
-  ; CHECK: llvm.invoke %{{.*}}(%[[a3]], %{{.*}}) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (ptr, ...)>) : !llvm.ptr, (!llvm.ptr, i32) -> ()
-  invoke void (ptr, ...) undef(ptr %1, i32 0) to label %4 unwind label %2
-
-; CHECK: ^bb6:
-  ; CHECK: llvm.return %{{[0-9]+}} : i32
-  ret i32 0
 }
 
 declare i32 @foo2()
