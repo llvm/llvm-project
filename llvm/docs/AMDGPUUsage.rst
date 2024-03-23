@@ -1454,6 +1454,11 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                              CLANG attribute [CLANG-ATTR]_. Clang only emits this attribute when all
                                              the three numbers are >= 1.
 
+     "amdgpu-no-agpr"                        Indicates the function will not require allocating AGPRs. This is only
+                                             relevant on subtargets with AGPRs. The behavior is undefined if a
+                                             function which requires AGPRs is reached through any function marked
+                                             with this attribute.
+
      ======================================= ==========================================================
 
 Calling Conventions

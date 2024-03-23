@@ -1,7 +1,7 @@
 ! RUN: bbc -emit-hlfir -fopenmp --force-byref-reduction %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --force-byref-reduction %s -o - | FileCheck %s
 
-! CHECK-LABEL:   omp.reduction.declare @ieor_i_32_byref : !fir.ref<i32>
+! CHECK-LABEL:   omp.declare_reduction @ieor_byref_i32 : !fir.ref<i32>
 ! CHECK-SAME:    init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
 ! CHECK:            %[[C0_1:.*]] = arith.constant 0 : i32
@@ -28,7 +28,7 @@
 !CHECK: omp.parallel
 !CHECK: %[[I_REF:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 !CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I_REF]] {uniq_name = "_QFreduction_ieorEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: omp.wsloop byref reduction(@ieor_i_32_byref %[[X_DECL]]#0 -> %[[PRV:.+]] : !fir.ref<i32>) for
+!CHECK: omp.wsloop byref reduction(@ieor_byref_i32 %[[X_DECL]]#0 -> %[[PRV:.+]] : !fir.ref<i32>) for
 !CHECK: fir.store %{{.*}} to %[[I_DECL]]#1 : !fir.ref<i32>
 !CHECK: %[[PRV_DECL:.+]]:2 = hlfir.declare %[[PRV]] {{.*}} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[I_32:.*]] = fir.load %[[I_DECL]]#0 : !fir.ref<i32>

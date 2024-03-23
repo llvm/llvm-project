@@ -48,7 +48,7 @@ constexpr uint32_t MAX_BLOCK = 999999999;
 constexpr char DECIMAL_POINT = '.';
 
 LIBC_INLINE RoundDirection get_round_direction(int last_digit, bool truncated,
-                                               fputil::Sign sign) {
+                                               Sign sign) {
   switch (fputil::quick_get_round()) {
   case FE_TONEAREST:
     // Round to nearest, if it's exactly halfway then round to even.

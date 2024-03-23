@@ -37,7 +37,6 @@ log_range_reduction(double m_x, const LogRR &log_table,
                     fputil::DyadicFloat<128> &sum) {
   using Float128 = typename fputil::DyadicFloat<128>;
   using MType = typename Float128::MantissaType;
-  using Sign = fputil::Sign;
 
   int64_t v = static_cast<int64_t>(m_x * 0x1.0p60); // ulp = 2^-60
 

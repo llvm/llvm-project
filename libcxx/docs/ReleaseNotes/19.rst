@@ -49,6 +49,8 @@ Improvements and New Features
 -----------------------------
 
 - The performance of growing ``std::vector`` has been improved for trivially relocatable types.
+- The performance of ``ranges::fill`` and ``ranges::fill_n`` has been improved for ``vector<bool>::iterator``\s,
+  resulting in a performance increase of up to 1400x.
 
 Deprecations and Removals
 -------------------------
@@ -68,7 +70,8 @@ Deprecations and Removals
 - The ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` macro that changed the behavior for narrowing conversions
   in ``std::variant`` has been removed in LLVM 19.
 
-- TODO: The ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS`` macro has been removed in LLVM 19.
+- The ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS`` and ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_VOID_SPECIALIZATION``
+  macros have been removed in LLVM 19.
 
 - TODO: The ``_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES`` and ``_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES`` macros have
   been removed in LLVM 19. C++17 and C++20 removed features can still be re-enabled individually.
