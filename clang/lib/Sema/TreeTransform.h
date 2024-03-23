@@ -13817,6 +13817,10 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       continue;
     }
 
+    if (auto *PVD = dyn_cast<VarDecl>(CapturedVar);
+        PVD && !C->isPackExpansion())
+      LSI->ContainsUnexpandedParameterPack |= PVD->isParameterPack();
+
     // Capture the transformed variable.
     getSema().tryCaptureVariable(CapturedVar, C->getLocation(), Kind,
                                  EllipsisLoc);

@@ -344,8 +344,8 @@ Bug Fixes to C++ Support
   when one of the function had more specialized templates.
   Fixes (`#82509 <https://github.com/llvm/llvm-project/issues/82509>`_)
   and (`#74494 <https://github.com/llvm/llvm-project/issues/74494>`_)
-- Fixed a crash where template parameter packs were not expanded correctly in a lambda being
-  used as a pattern of a folded expression. (#GH56852), (#GH85667)
+- Fixed a crash where template parameter packs were not expanded correctly in a lambda used
+  as the pattern of a folded expression. (#GH56852), (#GH85667), and partially fixes (#GH18873).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
