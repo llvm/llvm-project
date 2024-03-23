@@ -200,35 +200,11 @@ DependencyScanningCASFilesystem::getOriginal(cas::CASID InputDataID) {
   return Blob.takeError();
 }
 
-/// Whitelist file extensions that should be minimized, treating no extension as
-/// a source file that should be minimized.
-///
-/// This is kinda hacky, it would be better if we knew what kind of file Clang
-/// was expecting instead.
-static bool shouldScanForDirectivesBasedOnExtension(StringRef Filename) {
-  StringRef Ext = llvm::sys::path::extension(Filename);
-  if (Ext.empty())
-    return true; // C++ standard library
-  return llvm::StringSwitch<bool>(Ext)
-      .CasesLower(".c", ".cc", ".cpp", ".c++", ".cxx", true)
-      .CasesLower(".h", ".hh", ".hpp", ".h++", ".hxx", true)
-      .CasesLower(".m", ".mm", true)
-      .CasesLower(".i", ".ii", ".mi", ".mmi", true)
-      .CasesLower(".def", ".inc", true)
-      .Default(false);
-}
-
 static bool shouldCacheStatFailures(StringRef Filename) {
   StringRef Ext = llvm::sys::path::extension(Filename);
   if (Ext.empty())
     return false; // This may be the module cache directory.
-  return shouldScanForDirectivesBasedOnExtension(
-      Filename); // Only cache stat failures on source files.
-}
-
-bool DependencyScanningCASFilesystem::shouldScanForDirectives(
-    StringRef RawFilename) {
-  return shouldScanForDirectivesBasedOnExtension(RawFilename);
+  return true;
 }
 
 llvm::cas::CachingOnDiskFileSystem &
@@ -273,10 +249,6 @@ DependencyScanningCASFilesystem::lookupPath(const Twine &Path) {
     Entry.EC = Buffer.getError();
     return LookupPathResult{&Entry, std::error_code()};
   }
-
-  if (shouldScanForDirectives(PathRef))
-    scanForDirectives(*CAS.getReference(*FileID), PathRef, Entry.DepTokens,
-                      Entry.DepDirectives);
 
   Entry.Buffer = std::move(*Buffer);
   Entry.Status = llvm::vfs::Status(
@@ -362,7 +334,18 @@ DependencyScanningCASFilesystem::openFileForRead(const Twine &Path) {
 std::optional<ArrayRef<dependency_directives_scan::Directive>>
 DependencyScanningCASFilesystem::getDirectiveTokens(const Twine &Path) {
   LookupPathResult Result = lookupPath(Path);
-  if (Result.Entry && !Result.Entry->DepDirectives.empty())
-    return ArrayRef(Result.Entry->DepDirectives);
+
+  if (Result.Entry) {
+    if (Result.Entry->DepDirectives.empty()) {
+      SmallString<256> PathStorage;
+      StringRef PathRef = Path.toStringRef(PathStorage);
+      FileEntry &Entry = const_cast<FileEntry &>(*Result.Entry);
+      scanForDirectives(*Entry.CASContents, PathRef, Entry.DepTokens,
+                        Entry.DepDirectives);
+    }
+
+    if (!Result.Entry->DepDirectives.empty())
+      return ArrayRef(Result.Entry->DepDirectives);
+  }
   return std::nullopt;
 }
