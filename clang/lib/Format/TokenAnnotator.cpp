@@ -2753,10 +2753,9 @@ private:
     }
 
     // Heuristically try to determine whether the parentheses contain a type.
-    auto IsQualifiedPointerOrReference = [this](FormatToken *T) {
+    auto IsQualifiedPointerOrReference = [](FormatToken *T, bool IsCpp) {
       // This is used to handle cases such as x = (foo *const)&y;
       assert(!T->isTypeName(IsCpp) && "Should have already been checked");
-      (void)IsCpp; // Avoid -Wunused-lambda-capture when assertion is disabled.
       // Strip trailing qualifiers such as const or volatile when checking
       // whether the parens could be a cast to a pointer/reference type.
       while (T) {
@@ -2789,7 +2788,7 @@ private:
         !Tok.Previous ||
         Tok.Previous->isOneOf(TT_TemplateCloser, TT_TypeDeclarationParen) ||
         Tok.Previous->isTypeName(IsCpp) ||
-        IsQualifiedPointerOrReference(Tok.Previous);
+        IsQualifiedPointerOrReference(Tok.Previous, IsCpp);
     bool ParensCouldEndDecl =
         Tok.Next->isOneOf(tok::equal, tok::semi, tok::l_brace, tok::greater);
     if (ParensAreType && !ParensCouldEndDecl)
