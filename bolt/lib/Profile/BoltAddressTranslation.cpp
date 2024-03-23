@@ -232,10 +232,10 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
       if (Index++ >= EqualElems)
         encodeSLEB128(KeyVal.second - InOffset, OS);
       InOffset = KeyVal.second; // Keeping InOffset as if BRANCHENTRY is encoded
-      if ((InOffset & BRANCHENTRY) == 0 &&
-          BBHashMap.isInputBlock(InOffset >> 1)) {
-        unsigned BBIndex = BBHashMap.getBBIndex(InOffset >> 1);
-        size_t BBHash = BBHashMap.getBBHash(InOffset >> 1);
+      if ((InOffset & BRANCHENTRY) == 0) {
+        const bool IsBlock = BBHashMap.isInputBlock(InOffset >> 1);
+        unsigned BBIndex = IsBlock ? BBHashMap.getBBIndex(InOffset >> 1) : 0;
+        size_t BBHash = IsBlock ? BBHashMap.getBBHash(InOffset >> 1) : 0;
         OS.write(reinterpret_cast<char *>(&BBHash), 8);
         // Basic block index in the input binary
         encodeULEB128(BBIndex - PrevBBIndex, OS);
