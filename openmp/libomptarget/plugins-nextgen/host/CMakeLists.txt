@@ -31,11 +31,6 @@ else()
   target_include_directories(omptarget.rtl.${machine} PRIVATE dynamic_ffi)
 endif()
 
-if(LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-  target_link_libraries(omptarget.rtl.${machine} PRIVATE
-    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports")
-endif()
-
 # Install plugin under the lib destination folder.
 install(TARGETS omptarget.rtl.${machine}
         LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
