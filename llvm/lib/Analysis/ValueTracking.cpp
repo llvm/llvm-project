@@ -8566,6 +8566,18 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
   if (L0 == R0 && L1 == R1)
     return isImpliedCondMatchingOperands(LPred, RPred);
 
+  // Take SGT as an example:  x > y and C <= 0 ==> x -nsw y < C is false
+  Value *X, *Y;
+  if (((LPred == ICmpInst::ICMP_SGT || LPred == ICmpInst::ICMP_SGE) &&
+       match(R0, m_NSWSub(m_Value(X), m_Value(Y)))) ||
+      ((LPred == ICmpInst::ICMP_UGT || LPred == ICmpInst::ICMP_UGE) &&
+       match(R0, m_NUWSub(m_Value(X), m_Value(Y))))) {
+    if (match(R1, m_NonPositive()) &&
+        areMatchingOperands(L0, L1, X, Y, AreSwappedOps) &&
+        isImpliedCondMatchingOperands(LPred, RPred, AreSwappedOps) == false)
+      return false;
+  }
+
   // L0 = R0 = L1 + R1, L0 >=u L1 implies R0 >=u R1, L0 <u L1 implies R0 <u R1
   if (L0 == R0 &&
       (LPred == ICmpInst::ICMP_ULT || LPred == ICmpInst::ICMP_UGE) &&
