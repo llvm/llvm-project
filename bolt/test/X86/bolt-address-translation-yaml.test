@@ -1,0 +1,40 @@
+# Check new BAT format containing hashes for YAML profile.
+
+RUN: yaml2obj %p/Inputs/blarge_new.yaml &> %t.exe
+RUN: llvm-bolt %t.exe -o %t.out --pa -p %p/Inputs/blarge_new.preagg.txt \
+RUN:   --reorder-blocks=ext-tsp --split-functions --split-strategy=cdsplit \
+RUN:   --reorder-functions=cdsort --enable-bat --dyno-stats --skip-funcs=main \
+RUN:   2>&1 | FileCheck --check-prefix WRITE-BAT-CHECK %s
+RUN: perf2bolt %t.out --pa -p %p/Inputs/blarge_new_bat.preagg.txt -w %t.yaml -o %t.fdata \
+RUN:   2>&1 | FileCheck --check-prefix READ-BAT-CHECK %s
+RUN: FileCheck --input-file %t.yaml --check-prefix YAML-BAT-CHECK %s
+# Check that YAML converted from fdata matches YAML created directly with BAT.
+RUN: llvm-bolt %t.exe -data %t.fdata -w %t.yaml-fdata -o /dev/null
+RUN: FileCheck --input-file %t.yaml-fdata --check-prefix YAML-BAT-CHECK %s
+
+# Test resulting YAML profile with the original binary (no-stale mode)
+RUN: llvm-bolt %t.exe -data %t.yaml -o %t.null -dyno-stats \
+RUN:   | FileCheck --check-prefix CHECK-BOLT-YAML %s
+
+WRITE-BAT-CHECK: BOLT-INFO: Wrote 5 BAT maps
+WRITE-BAT-CHECK: BOLT-INFO: Wrote 4 function and 22 basic block hashes
+WRITE-BAT-CHECK: BOLT-INFO: BAT section size (bytes): 380
+
+READ-BAT-CHECK-NOT: BOLT-ERROR: unable to save profile in YAML format for input file processed by BOLT
+READ-BAT-CHECK: BOLT-INFO: Parsed 5 BAT entries
+READ-BAT-CHECK: PERF2BOLT: read 79 aggregated LBR entries
+
+YAML-BAT-CHECK:      functions:
+YAML-BAT-CHECK:      - name:    main
+YAML-BAT-CHECK-NEXT:   fid:     2
+YAML-BAT-CHECK-NEXT:   hash:    0x9895746D48B2C876
+YAML-BAT-CHECK-NEXT:   exec:    0
+YAML-BAT-CHECK-NEXT:   nblocks: 46
+YAML-BAT-CHECK-NEXT:   blocks:
+YAML-BAT-CHECK-NEXT:   - bid:   0
+YAML-BAT-CHECK-NEXT:     insns: 26
+YAML-BAT-CHECK-NEXT:     hash:  0xA900AE79CFD40000
+YAML-BAT-CHECK-NEXT:     succ:  [ { bid: 3, cnt: 0 }, { bid: 1, cnt: 0 } ]
+
+CHECK-BOLT-YAML:      pre-processing profile using YAML profile reader
+CHECK-BOLT-YAML-NEXT: 1 out of 16 functions in the binary (6.2%) have non-empty execution profile

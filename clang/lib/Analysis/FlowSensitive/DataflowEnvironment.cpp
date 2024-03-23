@@ -771,6 +771,7 @@ static bool isOriginalRecordConstructor(const Expr &RecordPRValue) {
     return !Init->isSemanticForm() || !Init->isTransparent();
   return isa<CXXConstructExpr>(RecordPRValue) || isa<CallExpr>(RecordPRValue) ||
          isa<LambdaExpr>(RecordPRValue) ||
+         isa<CXXDefaultArgExpr>(RecordPRValue) ||
          isa<CXXDefaultInitExpr>(RecordPRValue) ||
          // The framework currently does not propagate the objects created in
          // the two branches of a `ConditionalOperator` because there is no way

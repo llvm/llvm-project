@@ -24,14 +24,14 @@ static_assert((uint64_t)dxbc::FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
 
 DXContainerYAML::ShaderFeatureFlags::ShaderFeatureFlags(uint64_t FlagData) {
-#define SHADER_FEATURE_FLAG(Num, Val, Str)                                     \
+#define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str)                      \
   Val = (FlagData & (uint64_t)dxbc::FeatureFlags::Val) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
 uint64_t DXContainerYAML::ShaderFeatureFlags::getEncodedFlags() {
   uint64_t Flag = 0;
-#define SHADER_FEATURE_FLAG(Num, Val, Str)                                     \
+#define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str)                      \
   if (Val)                                                                     \
     Flag |= (uint64_t)dxbc::FeatureFlags::Val;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
@@ -105,7 +105,8 @@ void MappingTraits<DXContainerYAML::DXILProgram>::mapping(
 
 void MappingTraits<DXContainerYAML::ShaderFeatureFlags>::mapping(
     IO &IO, DXContainerYAML::ShaderFeatureFlags &Flags) {
-#define SHADER_FEATURE_FLAG(Num, Val, Str) IO.mapRequired(#Val, Flags.Val);
+#define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str)                      \
+  IO.mapRequired(#Val, Flags.Val);
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 

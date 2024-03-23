@@ -325,7 +325,9 @@ static void ParseConstraint(StringRef CStr, CGIOperandList &Ops, Record *Rec) {
 
   // Only other constraint is "TIED_TO" for now.
   StringRef::size_type pos = CStr.find_first_of('=');
-  if (pos == StringRef::npos)
+  if (pos == StringRef::npos || pos == 0 ||
+      CStr.find_first_of(" \t", pos) != (pos + 1) ||
+      CStr.find_last_of(" \t", pos) != (pos - 1))
     PrintFatalError(Rec->getLoc(), "Unrecognized constraint '" + CStr +
                                        "' in '" + Rec->getName() + "'");
   start = CStr.find_first_not_of(" \t");

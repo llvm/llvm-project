@@ -1402,19 +1402,9 @@ extern void __kmp_query_cpuid(kmp_cpuinfo_t *p);
 // subleaf is only needed for cache and topology discovery and can be set to
 // zero in most cases
 static inline void __kmp_x86_cpuid(int leaf, int subleaf, struct kmp_cpuid *p) {
-#if KMP_ARCH_X86 && (defined(__pic__) || defined(__PIC__))
-  // on i386 arch, the ebx reg. is used by pic, thus we need to preserve from
-  // being trashed beforehand
-  __asm__ __volatile__("mov %%ebx, %%edi\n"
-                       "cpuid\n"
-                       "xchg %%edi, %%ebx\n"
-                       : "=a"(p->eax), "=b"(p->ebx), "=c"(p->ecx), "=d"(p->edx)
-                       : "a"(leaf), "c"(subleaf));
-#else
   __asm__ __volatile__("cpuid"
                        : "=a"(p->eax), "=b"(p->ebx), "=c"(p->ecx), "=d"(p->edx)
                        : "a"(leaf), "c"(subleaf));
-#endif
 }
 // Load p into FPU control word
 static inline void __kmp_load_x87_fpu_control_word(const kmp_int16 *p) {
