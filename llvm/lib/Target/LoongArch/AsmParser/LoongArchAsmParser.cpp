@@ -453,6 +453,14 @@ public:
   }
 
   bool isImm32() const { return isSImm<32>() || isUImm<32>(); }
+  bool isImm64() const {
+    if (!isImm())
+      return false;
+    int64_t Imm;
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && VK == LoongArchMCExpr::VK_LoongArch_None;
+  }
 
   /// Gets location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
@@ -1513,6 +1521,10 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm32: {
     SMLoc ErrorLoc = ((LoongArchOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, "operand must be a 32 bit immediate");
+  }
+  case Match_InvalidImm64: {
+    SMLoc ErrorLoc = ((LoongArchOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, "operand must be a 64 bit immediate");
   }
   case Match_InvalidBareSymbol: {
     SMLoc ErrorLoc = ((LoongArchOperand &)*Operands[ErrorInfo]).getStartLoc();

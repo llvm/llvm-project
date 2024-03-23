@@ -4185,7 +4185,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -4394,7 +4394,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -4565,7 +4565,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -4708,7 +4708,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -4879,7 +4879,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -5022,7 +5022,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -5193,7 +5193,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -5336,7 +5336,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -5486,7 +5486,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP8]], align 4
+// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP8]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP9]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -5571,7 +5571,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -5695,7 +5695,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -5760,7 +5760,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2

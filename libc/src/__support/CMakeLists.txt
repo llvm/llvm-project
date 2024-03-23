@@ -42,6 +42,14 @@ add_header_library(
 )
 
 add_header_library(
+  sign
+  HDRS
+    sign.h
+  DEPENDS
+    libc.src.__support.macros.attributes
+)
+
+add_header_library(
   error_or
   HDRS
     error_or.h

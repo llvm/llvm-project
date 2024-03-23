@@ -1285,13 +1285,7 @@ static uint64_t addRelaSz(const RelocationBaseSection &relaDyn) {
 // output section. When this occurs we cannot just use the OutputSection
 // Size. Moreover the [DT_JMPREL, DT_JMPREL + DT_PLTRELSZ) is permitted to
 // overlap with the [DT_RELA, DT_RELA + DT_RELASZ).
-static uint64_t addPltRelSz() {
-  size_t size = in.relaPlt->getSize();
-  if (in.relaIplt->getParent() == in.relaPlt->getParent() &&
-      in.relaIplt->name == in.relaPlt->name)
-    size += in.relaIplt->getSize();
-  return size;
-}
+static uint64_t addPltRelSz() { return in.relaPlt->getSize(); }
 
 // Add remaining entries to complete .dynamic contents.
 template <class ELFT>
@@ -1407,13 +1401,7 @@ DynamicSection<ELFT>::computeContents() {
     addInt(config->useAndroidRelrTags ? DT_ANDROID_RELRENT : DT_RELRENT,
            sizeof(Elf_Relr));
   }
-  // .rel[a].plt section usually consists of two parts, containing plt and
-  // iplt relocations. It is possible to have only iplt relocations in the
-  // output. In that case relaPlt is empty and have zero offset, the same offset
-  // as relaIplt has. And we still want to emit proper dynamic tags for that
-  // case, so here we always use relaPlt as marker for the beginning of
-  // .rel[a].plt section.
-  if (isMain && (in.relaPlt->isNeeded() || in.relaIplt->isNeeded())) {
+  if (isMain && in.relaPlt->isNeeded()) {
     addInSec(DT_JMPREL, *in.relaPlt);
     entries.emplace_back(DT_PLTRELSZ, addPltRelSz());
     switch (config->emachine) {
@@ -1600,7 +1588,7 @@ uint32_t DynamicReloc::getSymIndex(SymbolTableBaseSection *symTab) const {
   if (!needsDynSymIndex())
     return 0;
 
-  size_t index = symTab->getSymbolIndex(sym);
+  size_t index = symTab->getSymbolIndex(*sym);
   assert((index != 0 || (type != target->gotRel && type != target->pltRel) ||
           !mainPart->dynSymTab->getParent()) &&
          "GOT or PLT relocation must refer to symbol in dynamic symbol table");
@@ -2172,9 +2160,9 @@ void SymbolTableBaseSection::addSymbol(Symbol *b) {
   symbols.push_back({b, strTabSec.addString(b->getName(), false)});
 }
 
-size_t SymbolTableBaseSection::getSymbolIndex(Symbol *sym) {
+size_t SymbolTableBaseSection::getSymbolIndex(const Symbol &sym) {
   if (this == mainPart->dynSymTab.get())
-    return sym->dynsymIndex;
+    return sym.dynsymIndex;
 
   // Initializes symbol lookup tables lazily. This is used only for -r,
   // --emit-relocs and dynsyms in partitions other than the main one.
@@ -2191,9 +2179,9 @@ size_t SymbolTableBaseSection::getSymbolIndex(Symbol *sym) {
 
   // Section symbols are mapped based on their output sections
   // to maintain their semantics.
-  if (sym->type == STT_SECTION)
-    return sectionIndexMap.lookup(sym->getOutputSection());
-  return symbolIndexMap.lookup(sym);
+  if (sym.type == STT_SECTION)
+    return sectionIndexMap.lookup(sym.getOutputSection());
+  return symbolIndexMap.lookup(&sym);
 }
 
 template <class ELFT>
@@ -2427,7 +2415,7 @@ void GnuHashTableSection::writeTo(uint8_t *buf) {
     // Write a hash bucket. Hash buckets contain indices in the following hash
     // value table.
     write32(buckets + i->bucketIdx,
-            getPartition().dynSymTab->getSymbolIndex(i->sym));
+            getPartition().dynSymTab->getSymbolIndex(*i->sym));
     oldBucket = i->bucketIdx;
   }
 }

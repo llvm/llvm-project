@@ -2857,12 +2857,13 @@ SDValue SITargetLowering::LowerFormalArguments(
   } else if (!IsGraphics) {
     // For the fixed ABI, pass workitem IDs in the last argument register.
     allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
+  }
 
-    // FIXME: Sink this into allocateSpecialInputSGPRs
+  if (!IsEntryFunc) {
     if (!Subtarget->enableFlatScratch())
       CCInfo.AllocateReg(Info->getScratchRSrcReg());
-
-    allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
+    if (!IsGraphics)
+      allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
   }
 
   if (!IsKernel) {

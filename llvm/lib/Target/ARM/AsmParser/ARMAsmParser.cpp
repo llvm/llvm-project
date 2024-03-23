@@ -63,6 +63,7 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -457,6 +458,7 @@ class ARMAsmParser : public MCTargetAsmParser {
   int tryParseRegister(bool AllowOutofBoundReg = false);
   bool tryParseRegisterWithWriteBack(OperandVector &);
   int tryParseShiftRegister(OperandVector &);
+  std::optional<ARM_AM::ShiftOpc> tryParseShiftToken();
   bool parseRegisterList(OperandVector &, bool EnforceOrder = true,
                          bool AllowRAAC = false,
                          bool AllowOutOfBoundReg = false);
@@ -647,12 +649,13 @@ class ARMAsmParser : public MCTargetAsmParser {
   ParseStatus parseProcIFlagsOperand(OperandVector &);
   ParseStatus parseMSRMaskOperand(OperandVector &);
   ParseStatus parseBankedRegOperand(OperandVector &);
-  ParseStatus parsePKHImm(OperandVector &O, StringRef Op, int Low, int High);
+  ParseStatus parsePKHImm(OperandVector &O, ARM_AM::ShiftOpc, int Low,
+                          int High);
   ParseStatus parsePKHLSLImm(OperandVector &O) {
-    return parsePKHImm(O, "lsl", 0, 31);
+    return parsePKHImm(O, ARM_AM::lsl, 0, 31);
   }
   ParseStatus parsePKHASRImm(OperandVector &O) {
-    return parsePKHImm(O, "asr", 1, 32);
+    return parsePKHImm(O, ARM_AM::asr, 1, 32);
   }
   ParseStatus parseSetEndImm(OperandVector &);
   ParseStatus parseShifterImm(OperandVector &);
@@ -4228,6 +4231,23 @@ int ARMAsmParser::tryParseRegister(bool AllowOutOfBoundReg) {
   return RegNum;
 }
 
+std::optional<ARM_AM::ShiftOpc> ARMAsmParser::tryParseShiftToken() {
+  MCAsmParser &Parser = getParser();
+  const AsmToken &Tok = Parser.getTok();
+  if (Tok.isNot(AsmToken::Identifier))
+    return std::nullopt;
+
+  std::string lowerCase = Tok.getString().lower();
+  return StringSwitch<std::optional<ARM_AM::ShiftOpc>>(lowerCase)
+      .Case("asl", ARM_AM::lsl)
+      .Case("lsl", ARM_AM::lsl)
+      .Case("lsr", ARM_AM::lsr)
+      .Case("asr", ARM_AM::asr)
+      .Case("ror", ARM_AM::ror)
+      .Case("rrx", ARM_AM::rrx)
+      .Default(std::nullopt);
+}
+
 // Try to parse a shifter  (e.g., "lsl <amt>"). On success, return 0.
 // If a recoverable error occurs, return 1. If an irrecoverable error
 // occurs, return -1. An irrecoverable error is one where tokens have been
@@ -4236,22 +4256,11 @@ int ARMAsmParser::tryParseRegister(bool AllowOutOfBoundReg) {
 int ARMAsmParser::tryParseShiftRegister(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
-  const AsmToken &Tok = Parser.getTok();
-  if (Tok.isNot(AsmToken::Identifier))
-    return -1;
 
-  std::string lowerCase = Tok.getString().lower();
-  ARM_AM::ShiftOpc ShiftTy = StringSwitch<ARM_AM::ShiftOpc>(lowerCase)
-      .Case("asl", ARM_AM::lsl)
-      .Case("lsl", ARM_AM::lsl)
-      .Case("lsr", ARM_AM::lsr)
-      .Case("asr", ARM_AM::asr)
-      .Case("ror", ARM_AM::ror)
-      .Case("rrx", ARM_AM::rrx)
-      .Default(ARM_AM::no_shift);
-
-  if (ShiftTy == ARM_AM::no_shift)
+  auto ShiftTyOpt = tryParseShiftToken();
+  if (ShiftTyOpt == std::nullopt)
     return 1;
+  auto ShiftTy = ShiftTyOpt.value();
 
   Parser.Lex(); // Eat the operator.
 
@@ -5284,17 +5293,24 @@ ParseStatus ARMAsmParser::parseBankedRegOperand(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-ParseStatus ARMAsmParser::parsePKHImm(OperandVector &Operands, StringRef Op,
-                                      int Low, int High) {
+// FIXME: Unify the different methods for handling shift operators
+// and use TableGen matching mechanisms to do the validation rather than
+// separate parsing paths.
+ParseStatus ARMAsmParser::parsePKHImm(OperandVector &Operands,
+                                      ARM_AM::ShiftOpc Op, int Low, int High) {
   MCAsmParser &Parser = getParser();
-  const AsmToken &Tok = Parser.getTok();
-  if (Tok.isNot(AsmToken::Identifier))
-    return Error(Parser.getTok().getLoc(), Op + " operand expected.");
-  StringRef ShiftName = Tok.getString();
-  std::string LowerOp = Op.lower();
-  std::string UpperOp = Op.upper();
-  if (ShiftName != LowerOp && ShiftName != UpperOp)
-    return Error(Parser.getTok().getLoc(), Op + " operand expected.");
+  auto ShiftCodeOpt = tryParseShiftToken();
+
+  if (!ShiftCodeOpt.has_value())
+    return ParseStatus::NoMatch;
+  auto ShiftCode = ShiftCodeOpt.value();
+
+  // The wrong shift code has been provided. Can error here as has matched the
+  // correct operand in this case.
+  if (ShiftCode != Op)
+    return Error(Parser.getTok().getLoc(),
+                 ARM_AM::getShiftOpcStr(Op) + " operand expected.");
+
   Parser.Lex(); // Eat shift type token.
 
   // There must be a '#' and a shift amount.

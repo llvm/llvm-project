@@ -2031,7 +2031,8 @@ SDValue SelectionDAG::getStepVector(const SDLoc &DL, EVT ResVT) {
   return getStepVector(DL, ResVT, One);
 }
 
-SDValue SelectionDAG::getStepVector(const SDLoc &DL, EVT ResVT, APInt StepVal) {
+SDValue SelectionDAG::getStepVector(const SDLoc &DL, EVT ResVT,
+                                    const APInt &StepVal) {
   assert(ResVT.getScalarSizeInBits() == StepVal.getBitWidth());
   if (ResVT.isScalableVector())
     return getNode(
@@ -4070,6 +4071,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     if (Op.getResNo() == 0) {
       if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
         Known.Zero.setBitsFrom(MemBits);
+      else if (Op->getOpcode() == ISD::ATOMIC_LOAD &&
+               cast<AtomicSDNode>(Op)->getExtensionType() == ISD::ZEXTLOAD)
+        Known.Zero.setBitsFrom(MemBits);
     }
     break;
   }
@@ -4875,6 +4879,13 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
         return VTBits - Tmp + 1;
       if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
         return VTBits - Tmp;
+      if (Op->getOpcode() == ISD::ATOMIC_LOAD) {
+        ISD::LoadExtType ETy = cast<AtomicSDNode>(Op)->getExtensionType();
+        if (ETy == ISD::SEXTLOAD)
+          return VTBits - Tmp + 1;
+        if (ETy == ISD::ZEXTLOAD)
+          return VTBits - Tmp;
+      }
     }
     break;
   }
@@ -5032,8 +5043,9 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
 
   // If Op can't create undef/poison and none of its operands are undef/poison
   // then Op is never undef/poison.
-  // NOTE: TargetNodes should handle this in themselves in
-  // isGuaranteedNotToBeUndefOrPoisonForTargetNode.
+  // NOTE: TargetNodes can handle this in themselves in
+  // isGuaranteedNotToBeUndefOrPoisonForTargetNode or let
+  // TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode handle it.
   return !canCreateUndefOrPoison(Op, PoisonOnly, /*ConsiderFlags*/ true,
                                  Depth) &&
          all_of(Op->ops(), [&](SDValue V) {
@@ -8395,7 +8407,7 @@ SDValue SelectionDAG::getMemIntrinsicNode(
     MachineMemOperand::Flags Flags, LocationSize Size,
     const AAMDNodes &AAInfo) {
   if (Size.hasValue() && MemVT.isScalableVector())
-    Size = MemoryLocation::UnknownSize;
+    Size = LocationSize::beforeOrAfterPointer();
   else if (Size.hasValue() && !Size.getValue())
     Size = LocationSize::precise(MemVT.getStoreSize());
 
@@ -9584,6 +9596,10 @@ SDValue SelectionDAG::simplifyShift(SDValue X, SDValue Y) {
   };
   if (ISD::matchUnaryPredicate(Y, isShiftTooBig, true))
     return getUNDEF(X.getValueType());
+
+  // shift i1/vXi1 X, Y --> X (any non-zero shift amount is undefined).
+  if (X.getValueType().getScalarType() == MVT::i1)
+    return X;
 
   return SDValue();
 }
