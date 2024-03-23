@@ -1087,7 +1087,6 @@ void BitcodeFile::parse() {
     if (objSym.isUsed())
       ctx.config.gcroot.push_back(sym);
   }
-//  directives.push_back(saver.save(obj->getCOFFLinkerOpts()).str());
   directives.push_back(obj->getCOFFLinkerOpts());
 }
 
