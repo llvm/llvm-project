@@ -22,12 +22,10 @@ const char *BoltAddressTranslation::SECTION_NAME = ".note.bolt_bat";
 
 void BoltAddressTranslation::writeEntriesForBB(MapTy &Map,
                                                const BinaryBasicBlock &BB,
-                                               uint64_t FuncAddress) {
-  uint64_t HotFuncAddress = ColdPartSource.count(FuncAddress)
-                                ? ColdPartSource[FuncAddress]
-                                : FuncAddress;
+                                               uint64_t FuncInputAddress,
+                                               uint64_t FuncOutputAddress) {
   const uint64_t BBOutputOffset =
-      BB.getOutputAddressRange().first - FuncAddress;
+      BB.getOutputAddressRange().first - FuncOutputAddress;
   const uint32_t BBInputOffset = BB.getInputOffset();
 
   // Every output BB must track back to an input BB for profile collection
@@ -42,11 +40,14 @@ void BoltAddressTranslation::writeEntriesForBB(MapTy &Map,
   LLVM_DEBUG(dbgs() << "BB " << BB.getName() << "\n");
   LLVM_DEBUG(dbgs() << "  Key: " << Twine::utohexstr(BBOutputOffset)
                     << " Val: " << Twine::utohexstr(BBInputOffset) << "\n");
-  LLVM_DEBUG(dbgs() << formatv(" Hash: {0:x}\n",
-                               getBBHash(HotFuncAddress, BBInputOffset)));
-  (void)HotFuncAddress;
-  LLVM_DEBUG(dbgs() << formatv(" Index: {0}\n",
-                               getBBIndex(HotFuncAddress, BBInputOffset)));
+  // NB: in `writeEntriesForBB` we use the input address because hashes are
+  // saved early in `saveMetadata` before output addresses are assigned.
+  const BBHashMapTy &BBHashMap = getBBHashMap(FuncInputAddress);
+  (void)BBHashMap;
+  LLVM_DEBUG(
+      dbgs() << formatv(" Hash: {0:x}\n", BBHashMap.getBBHash(BBInputOffset)));
+  LLVM_DEBUG(
+      dbgs() << formatv(" Index: {0}\n", BBHashMap.getBBIndex(BBInputOffset)));
   // In case of conflicts (same Key mapping to different Vals), the last
   // update takes precedence. Of course it is not ideal to have conflicts and
   // those happen when we have an empty BB that either contained only
@@ -63,7 +64,7 @@ void BoltAddressTranslation::writeEntriesForBB(MapTy &Map,
     const auto InputAddress = BB.getFunction()->getAddress() + InputOffset;
     const auto OutputAddress = IOAddressMap.lookup(InputAddress);
     assert(OutputAddress && "Unknown instruction address");
-    const auto OutputOffset = *OutputAddress - FuncAddress;
+    const auto OutputOffset = *OutputAddress - FuncOutputAddress;
 
     // Is this the first instruction in the BB? No need to duplicate the entry.
     if (OutputOffset == BBOutputOffset)
@@ -99,7 +100,7 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
     MapTy Map;
     for (const BinaryBasicBlock *const BB :
          Function.getLayout().getMainFragment())
-      writeEntriesForBB(Map, *BB, Function.getOutputAddress());
+      writeEntriesForBB(Map, *BB, InputAddress, OutputAddress);
     Maps.emplace(Function.getOutputAddress(), std::move(Map));
     ReverseMap.emplace(OutputAddress, InputAddress);
 
@@ -113,7 +114,7 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
       ColdPartSource.emplace(FF.getAddress(), Function.getOutputAddress());
       Map.clear();
       for (const BinaryBasicBlock *const BB : FF)
-        writeEntriesForBB(Map, *BB, FF.getAddress());
+        writeEntriesForBB(Map, *BB, InputAddress, FF.getAddress());
 
       Maps.emplace(FF.getAddress(), std::move(Map));
     }
@@ -383,6 +384,8 @@ void BoltAddressTranslation::dump(raw_ostream &OS) {
       OS << formatv(", hash: {0:x}", getBFHash(Address));
     OS << "\n";
     OS << "BB mappings:\n";
+    const BBHashMapTy &BBHashMap =
+        getBBHashMap(HotAddress ? HotAddress : Address);
     for (const auto &Entry : MapEntry.second) {
       const bool IsBranch = Entry.second & BRANCHENTRY;
       const uint32_t Val = Entry.second >> 1; // dropping BRANCHENTRY bit
@@ -391,8 +394,7 @@ void BoltAddressTranslation::dump(raw_ostream &OS) {
       if (IsBranch)
         OS << " (branch)";
       else
-        OS << formatv(" hash: {0:x}",
-                      getBBHash(HotAddress ? HotAddress : Address, Val));
+        OS << formatv(" hash: {0:x}", BBHashMap.getBBHash(Val));
       OS << "\n";
     }
     OS << "\n";

@@ -124,7 +124,7 @@ private:
   /// emitted for the start of the BB. More entries may be emitted to cover
   /// the location of calls or any instruction that may change control flow.
   void writeEntriesForBB(MapTy &Map, const BinaryBasicBlock &BB,
-                         uint64_t FuncAddress);
+                         uint64_t FuncInputAddress, uint64_t FuncOutputAddress);
 
   /// Write the serialized address translation table for a function.
   template <bool Cold>
@@ -160,21 +160,21 @@ private:
   /// translation map entry
   const static uint32_t BRANCHENTRY = 0x1;
 
-  class BBHashMapEntryTy {
-    unsigned Index;
-    size_t Hash;
-
-  public:
-    unsigned getBBIndex() const { return Index; }
-    size_t getBBHash() const { return Hash; }
-    BBHashMapEntryTy(unsigned Index, size_t Hash) : Index(Index), Hash(Hash) {}
-  };
-
 public:
   /// Map basic block input offset to a basic block index and hash pair.
   class BBHashMapTy {
-    std::unordered_map<uint32_t, BBHashMapEntryTy> Map;
-    const BBHashMapEntryTy &getEntry(uint32_t BBInputOffset) const {
+    class EntryTy {
+      unsigned Index;
+      size_t Hash;
+
+    public:
+      unsigned getBBIndex() const { return Index; }
+      size_t getBBHash() const { return Hash; }
+      EntryTy(unsigned Index, size_t Hash) : Index(Index), Hash(Hash) {}
+    };
+
+    std::unordered_map<uint32_t, EntryTy> Map;
+    const EntryTy &getEntry(uint32_t BBInputOffset) const {
       auto It = Map.find(BBInputOffset);
       assert(It != Map.end());
       return It->second;
@@ -194,28 +194,26 @@ public:
     }
 
     void addEntry(uint32_t BBInputOffset, unsigned BBIndex, size_t BBHash) {
-      Map.emplace(BBInputOffset, BBHashMapEntryTy(BBIndex, BBHash));
+      Map.emplace(BBInputOffset, EntryTy(BBIndex, BBHash));
     }
 
     size_t getNumBasicBlocks() const { return Map.size(); }
   };
 
-private:
-  class FuncHashEntryTy {
-    size_t Hash;
-    BBHashMapTy BBHashMap;
-
-  public:
-    size_t getBFHash() const { return Hash; }
-    const BBHashMapTy &getBBHashMap() const { return BBHashMap; }
-    FuncHashEntryTy(size_t Hash) : Hash(Hash) {}
-  };
-
-public:
   /// Map function output address to its hash and basic blocks hash map.
   class FuncHashesTy {
-    std::unordered_map<uint64_t, FuncHashEntryTy> Map;
-    const FuncHashEntryTy &getEntry(uint64_t FuncOutputAddress) const {
+    class EntryTy {
+      size_t Hash;
+      BBHashMapTy BBHashMap;
+
+    public:
+      size_t getBFHash() const { return Hash; }
+      const BBHashMapTy &getBBHashMap() const { return BBHashMap; }
+      EntryTy(size_t Hash) : Hash(Hash) {}
+    };
+
+    std::unordered_map<uint64_t, EntryTy> Map;
+    const EntryTy &getEntry(uint64_t FuncOutputAddress) const {
       auto It = Map.find(FuncOutputAddress);
       assert(It != Map.end());
       return It->second;
@@ -231,7 +229,7 @@ public:
     }
 
     void addEntry(uint64_t FuncOutputAddress, size_t BFHash) {
-      Map.emplace(FuncOutputAddress, FuncHashEntryTy(BFHash));
+      Map.emplace(FuncOutputAddress, EntryTy(BFHash));
     }
 
     size_t getNumFunctions() const { return Map.size(); };
@@ -257,19 +255,6 @@ public:
   BBHashMapTy &getBBHashMap(uint64_t FuncOutputAddress) {
     return const_cast<BBHashMapTy &>(
         std::as_const(*this).getBBHashMap(FuncOutputAddress));
-  }
-
-  /// Returns BB index by function output address (after BOLT) and basic block
-  /// input offset.
-  unsigned getBBIndex(uint64_t FuncOutputAddress,
-                      uint32_t BBInputOffset) const {
-    return getBBHashMap(FuncOutputAddress).getBBIndex(BBInputOffset);
-  }
-
-  /// Returns BB hash by function output address (after BOLT) and basic block
-  /// input offset.
-  size_t getBBHash(uint64_t FuncOutputAddress, uint32_t BBInputOffset) const {
-    return getBBHashMap(FuncOutputAddress).getBBHash(BBInputOffset);
   }
 
 private:
