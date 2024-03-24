@@ -804,7 +804,7 @@ Check for performance anti-patterns when using Grand Central Dispatch.
 
 .. _optin-performance-Padding:
 
-optin.performance.Padding (C, C++, objC)
+optin.performance.Padding (C, C++, ObjC)
 """"""""""""""""""""""""""""""""""""""""
 Check for excessively padded structs.
 
@@ -826,11 +826,11 @@ This checker detects structs with excessive padding, which can lead to wasted me
        return 0;
    }
    
-Total memory used is 8 bytes due to structure padding. In this case, padding is of 2 bytes. Padding is done to decrease the number of CPU cycles needed to access data members of the structure; it increases the performance of the processor but at the penalty of memory.
+Total memory used is 8 bytes due to structure padding. In this case, padding is of 2 bytes. Padding is done to decrease the number of CPU cycles needed to access data members of the structure, it increases the performance of the processor but at the penalty of memory.
 Padding can be disabled by using the pragma directive.
 Padding can also be decreased by putting data members of the structure in descending order of their size.
 
-Reports are only generated if the excessive padding exceeds 'AllowedPad' in bytes. AllowedPad is the threshold value of padding.
+Reports are only generated if the excessive padding exceeds ``AllowedPad`` in bytes. AllowedPad is the threshold value of padding.
 
 AllowedPad Option:
 - Default Value: 24 bytes
