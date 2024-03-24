@@ -1098,6 +1098,95 @@ def : InstAlias<"vl8r.v $vd, (${rs1})", (VL8RE8_V VRM8:$vd, GPR:$rs1)>;
 } // Predicates = [HasVInstructions]
 
 let Predicates = [HasVInstructions] in {
+  foreach nf=2-8 in {
+    foreach eew = [8, 16, 32] in {
+      defvar w = !cast<RISCVWidth>("LSWidth"#eew);
+
+      // Vector Unit-strided Segment Instructions
+      def VLSEG#nf#E#eew#_V :
+        VUnitStrideSegmentLoad<!add(nf, -1), w, "vlseg"#nf#"e"#eew#".v">,
+        VLSEGSchedMC<nf, eew>;
+      def VLSEG#nf#E#eew#FF_V :
+        VUnitStrideSegmentLoadFF<!add(nf, -1), w, "vlseg"#nf#"e"#eew#"ff.v">,
+        VLSEGFFSchedMC<nf, eew>;
+      def VSSEG#nf#E#eew#_V :
+        VUnitStrideSegmentStore<!add(nf, -1), w, "vsseg"#nf#"e"#eew#".v">,
+        VSSEGSchedMC<nf, eew>;
+
+      // Vector Strided Segment Instructions
+      def VLSSEG#nf#E#eew#_V :
+        VStridedSegmentLoad<!add(nf, -1), w, "vlsseg"#nf#"e"#eew#".v">,
+        VLSSEGSchedMC<nf, eew>;
+      def VSSSEG#nf#E#eew#_V :
+        VStridedSegmentStore<!add(nf, -1), w, "vssseg"#nf#"e"#eew#".v">,
+        VSSSEGSchedMC<nf, eew>;
+
+      // Vector Indexed Segment Instructions
+      def VLUXSEG#nf#EI#eew#_V :
+        VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedUnord, w,
+                            "vluxseg"#nf#"ei"#eew#".v">,
+        VLXSEGSchedMC<nf, eew, isOrdered=0>;
+      def VLOXSEG#nf#EI#eew#_V :
+        VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedOrder, w,
+                            "vloxseg"#nf#"ei"#eew#".v">,
+        VLXSEGSchedMC<nf, eew, isOrdered=1>;
+      def VSUXSEG#nf#EI#eew#_V :
+        VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedUnord, w,
+                             "vsuxseg"#nf#"ei"#eew#".v">,
+        VSXSEGSchedMC<nf, eew, isOrdered=0>;
+      def VSOXSEG#nf#EI#eew#_V :
+        VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedOrder, w,
+                             "vsoxseg"#nf#"ei"#eew#".v">,
+        VSXSEGSchedMC<nf, eew, isOrdered=1>;
+    }
+  }
+} // Predicates = [HasVInstructions]
+
+let Predicates = [HasVInstructionsI64] in {
+  foreach nf=2-8 in {
+    // Vector Unit-strided Segment Instructions
+    def VLSEG#nf#E64_V :
+      VUnitStrideSegmentLoad<!add(nf, -1), LSWidth64, "vlseg"#nf#"e64.v">,
+      VLSEGSchedMC<nf, 64>;
+    def VLSEG#nf#E64FF_V :
+      VUnitStrideSegmentLoadFF<!add(nf, -1), LSWidth64, "vlseg"#nf#"e64ff.v">,
+      VLSEGFFSchedMC<nf, 64>;
+    def VSSEG#nf#E64_V :
+      VUnitStrideSegmentStore<!add(nf, -1), LSWidth64, "vsseg"#nf#"e64.v">,
+      VSSEGSchedMC<nf, 64>;
+
+    // Vector Strided Segment Instructions
+    def VLSSEG#nf#E64_V :
+      VStridedSegmentLoad<!add(nf, -1), LSWidth64, "vlsseg"#nf#"e64.v">,
+      VLSSEGSchedMC<nf, 64>;
+    def VSSSEG#nf#E64_V :
+      VStridedSegmentStore<!add(nf, -1), LSWidth64, "vssseg"#nf#"e64.v">,
+      VSSSEGSchedMC<nf, 64>;
+  }
+} // Predicates = [HasVInstructionsI64]
+let Predicates = [HasVInstructionsI64, IsRV64] in {
+  foreach nf = 2 - 8 in {
+    // Vector Indexed Segment Instructions
+    def VLUXSEG #nf #EI64_V
+        : VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedUnord, LSWidth64,
+                              "vluxseg" #nf #"ei64.v">,
+          VLXSEGSchedMC<nf, 64, isOrdered=0>;
+    def VLOXSEG #nf #EI64_V
+        : VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedOrder, LSWidth64,
+                              "vloxseg" #nf #"ei64.v">,
+          VLXSEGSchedMC<nf, 64, isOrdered=1>;
+    def VSUXSEG #nf #EI64_V
+        : VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedUnord, LSWidth64,
+                               "vsuxseg" #nf #"ei64.v">,
+          VSXSEGSchedMC<nf, 64, isOrdered=0>;
+    def VSOXSEG #nf #EI64_V
+        : VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedOrder, LSWidth64,
+                               "vsoxseg" #nf #"ei64.v">,
+          VSXSEGSchedMC<nf, 64, isOrdered=1>;
+  }
+} // Predicates = [HasVInstructionsI64, IsRV64]
+
+let Predicates = [HasVInstructions] in {
 // Vector Single-Width Integer Add and Subtract
 defm VADD_V : VALU_IV_V_X_I<"vadd", 0b000000>;
 defm VSUB_V : VALU_IV_V_X<"vsub", 0b000010>;
@@ -1710,93 +1799,6 @@ foreach n = [1, 2, 4, 8] in {
 }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 } // Predicates = [HasVInstructions]
-
-let Predicates = [HasVInstructions] in {
-  foreach nf=2-8 in {
-    foreach eew = [8, 16, 32] in {
-      defvar w = !cast<RISCVWidth>("LSWidth"#eew);
-
-      def VLSEG#nf#E#eew#_V :
-        VUnitStrideSegmentLoad<!add(nf, -1), w, "vlseg"#nf#"e"#eew#".v">,
-        VLSEGSchedMC<nf, eew>;
-      def VLSEG#nf#E#eew#FF_V :
-        VUnitStrideSegmentLoadFF<!add(nf, -1), w, "vlseg"#nf#"e"#eew#"ff.v">,
-        VLSEGFFSchedMC<nf, eew>;
-      def VSSEG#nf#E#eew#_V :
-        VUnitStrideSegmentStore<!add(nf, -1), w, "vsseg"#nf#"e"#eew#".v">,
-        VSSEGSchedMC<nf, eew>;
-      // Vector Strided Instructions
-      def VLSSEG#nf#E#eew#_V :
-        VStridedSegmentLoad<!add(nf, -1), w, "vlsseg"#nf#"e"#eew#".v">,
-        VLSSEGSchedMC<nf, eew>;
-      def VSSSEG#nf#E#eew#_V :
-        VStridedSegmentStore<!add(nf, -1), w, "vssseg"#nf#"e"#eew#".v">,
-        VSSSEGSchedMC<nf, eew>;
-
-      // Vector Indexed Instructions
-      def VLUXSEG#nf#EI#eew#_V :
-        VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedUnord, w,
-                            "vluxseg"#nf#"ei"#eew#".v">,
-        VLXSEGSchedMC<nf, eew, isOrdered=0>;
-      def VLOXSEG#nf#EI#eew#_V :
-        VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedOrder, w,
-                            "vloxseg"#nf#"ei"#eew#".v">,
-        VLXSEGSchedMC<nf, eew, isOrdered=1>;
-      def VSUXSEG#nf#EI#eew#_V :
-        VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedUnord, w,
-                             "vsuxseg"#nf#"ei"#eew#".v">,
-        VSXSEGSchedMC<nf, eew, isOrdered=0>;
-      def VSOXSEG#nf#EI#eew#_V :
-        VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedOrder, w,
-                             "vsoxseg"#nf#"ei"#eew#".v">,
-        VSXSEGSchedMC<nf, eew, isOrdered=1>;
-    }
-  }
-} // Predicates = [HasVInstructions]
-
-let Predicates = [HasVInstructionsI64] in {
-  foreach nf=2-8 in {
-    // Vector Unit-strided Segment Instructions
-    def VLSEG#nf#E64_V :
-      VUnitStrideSegmentLoad<!add(nf, -1), LSWidth64, "vlseg"#nf#"e64.v">,
-      VLSEGSchedMC<nf, 64>;
-    def VLSEG#nf#E64FF_V :
-      VUnitStrideSegmentLoadFF<!add(nf, -1), LSWidth64, "vlseg"#nf#"e64ff.v">,
-      VLSEGFFSchedMC<nf, 64>;
-    def VSSEG#nf#E64_V :
-      VUnitStrideSegmentStore<!add(nf, -1), LSWidth64, "vsseg"#nf#"e64.v">,
-      VSSEGSchedMC<nf, 64>;
-
-    // Vector Strided Segment Instructions
-    def VLSSEG#nf#E64_V :
-      VStridedSegmentLoad<!add(nf, -1), LSWidth64, "vlsseg"#nf#"e64.v">,
-      VLSSEGSchedMC<nf, 64>;
-    def VSSSEG#nf#E64_V :
-      VStridedSegmentStore<!add(nf, -1), LSWidth64, "vssseg"#nf#"e64.v">,
-      VSSSEGSchedMC<nf, 64>;
-  }
-} // Predicates = [HasVInstructionsI64]
-let Predicates = [HasVInstructionsI64, IsRV64] in {
-  foreach nf = 2 - 8 in {
-    // Vector Indexed Segment Instructions
-    def VLUXSEG #nf #EI64_V
-        : VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedUnord, LSWidth64,
-                              "vluxseg" #nf #"ei64.v">,
-          VLXSEGSchedMC<nf, 64, isOrdered=0>;
-    def VLOXSEG #nf #EI64_V
-        : VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedOrder, LSWidth64,
-                              "vloxseg" #nf #"ei64.v">,
-          VLXSEGSchedMC<nf, 64, isOrdered=1>;
-    def VSUXSEG #nf #EI64_V
-        : VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedUnord, LSWidth64,
-                               "vsuxseg" #nf #"ei64.v">,
-          VSXSEGSchedMC<nf, 64, isOrdered=0>;
-    def VSOXSEG #nf #EI64_V
-        : VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedOrder, LSWidth64,
-                               "vsoxseg" #nf #"ei64.v">,
-          VSXSEGSchedMC<nf, 64, isOrdered=1>;
-  }
-} // Predicates = [HasVInstructionsI64, IsRV64]
 
 include "RISCVInstrInfoZvfbf.td"
 include "RISCVInstrInfoVPseudos.td"
