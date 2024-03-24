@@ -317,9 +317,13 @@ static bool isCommutative(Instruction *I) {
                             m_ICmp(Pred, m_Specific(U.get()), m_Zero())) &&
                       (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE))
                     return true;
-                  // Commutative, if abs(sub, true).
-                  return match(U.getUser(), m_Intrinsic<Intrinsic::abs>(
-                                                m_Specific(U.get()), m_One()));
+                  // Commutative, if abs(sub nsw, true) or abs(sub, false).
+                  ConstantInt *Flag;
+                  return match(U.getUser(),
+                               m_Intrinsic<Intrinsic::abs>(
+                                   m_Specific(U.get()), m_ConstantInt(Flag))) &&
+                         (!cast<Instruction>(U.get())->hasNoSignedWrap() ||
+                          Flag->isOne());
                 })) ||
            (BO->getOpcode() == Instruction::FSub &&
             !BO->hasNUsesOrMore(UsesLimit) &&
@@ -16004,7 +16008,7 @@ public:
         LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                           << " for reduction\n");
         if (!Cost.isValid())
-          return nullptr;
+          break;
         if (Cost >= -SLPCostThreshold) {
           V.getORE()->emit([&]() {
             return OptimizationRemarkMissed(
