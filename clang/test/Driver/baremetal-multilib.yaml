@@ -119,6 +119,18 @@ Variants:
   Flags: [--target=thumbv8.1m.main-none-unknown-eabihf, -march=thumbv8.1m.main+mve, -mfpu=none]
 
 
+- Dir: rv32imafc/except
+  Flags: [--target=riscv32-unknown-unknown-elf, +m, +a, +f, +c]
+- Dir: rv32imafc/noexcept
+  Flags: [--target=riscv32-unknown-unknown-elf, +m, +a, +f, +c, +no-except]
+
+- Dir: rv32imafdc/except
+  Flags: [--target=riscv32-unknown-unknown-elf, +m, +a, +f, +d, +c]
+- Dir: rv32imafdc/noexcept
+  Flags: [--target=riscv32-unknown-unknown-elf, +m, +a, +f, +d, +c, +no-except]
+
+
+
 # The second section of the file is a map from auto-detected flags
 # to custom flags. The auto-detected flags can be printed out
 # by running clang with `-print-multi-flags-experimental`.

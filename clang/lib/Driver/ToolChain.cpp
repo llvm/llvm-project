@@ -9,6 +9,7 @@
 #include "clang/Driver/ToolChain.h"
 #include "ToolChains/Arch/AArch64.h"
 #include "ToolChains/Arch/ARM.h"
+#include "ToolChains/Arch/RISCV.h"
 #include "ToolChains/Clang.h"
 #include "ToolChains/CommonArgs.h"
 #include "ToolChains/Flang.h"
@@ -254,6 +255,30 @@ static void getARMMultilibFlags(const Driver &D,
   }
 }
 
+
+static void getRISCVMultilibFlags(const Driver &D,
+                                      const llvm::Triple &Triple,
+                                      const llvm::opt::ArgList &Args,
+                                      Multilib::flags_list &Result) {
+  std::vector<StringRef> Features;
+  tools::riscv::getRISCVTargetFeatures(D, Triple, Args, Features);
+  const auto UnifiedFeatures = tools::unifyTargetFeatures(Features);
+  llvm::DenseSet<StringRef> FeatureSet(UnifiedFeatures.begin(),
+                                       UnifiedFeatures.end());
+  llvm::dbgs() << "Getting RISCV multilib flags!\n";
+  // std::vector<std::string> MArch;
+  for (const auto &F : UnifiedFeatures)
+    Result.push_back(F.str());
+
+  Result.push_back(("-march=" + Triple.getArchName()).str());
+
+  bool Exceptions =
+      Args.hasFlag(options::OPT_fexceptions, options::OPT_fno_exceptions, true);
+  if (!Exceptions)
+    Result.push_back("+no-except");
+}
+
+
 Multilib::flags_list
 ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   using namespace clang::driver::options;
@@ -273,6 +298,10 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb:
     getARMMultilibFlags(D, Triple, Args, Result);
+    break;
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    getRISCVMultilibFlags(D, Triple, Args, Result);
     break;
   default:
     break;
