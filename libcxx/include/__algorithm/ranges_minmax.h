@@ -146,9 +146,7 @@ struct __fn {
 };
 } // namespace __minmax
 
-inline namespace __cpo {
 inline constexpr auto minmax = __minmax::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

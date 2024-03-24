@@ -89,9 +89,7 @@ struct __fn {
 };
 } // namespace __max
 
-inline namespace __cpo {
 inline constexpr auto max = __max::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

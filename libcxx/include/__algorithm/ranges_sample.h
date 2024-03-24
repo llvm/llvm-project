@@ -60,9 +60,7 @@ struct __fn {
 
 } // namespace __sample
 
-inline namespace __cpo {
 inline constexpr auto sample = __sample::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

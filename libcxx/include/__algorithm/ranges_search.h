@@ -122,9 +122,7 @@ struct __fn {
 };
 } // namespace __search
 
-inline namespace __cpo {
 inline constexpr auto search = __search::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
