@@ -22,6 +22,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 
 using namespace llvm;
@@ -117,7 +118,13 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
 
   const Module *M = MF.getMMI().getModule();
   // Check that the cf-protection-branch is enabled.
-  Metadata *isCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
+  uint64_t CFProtectionLevel = 0;
+  if (Metadata *isCFProtectionSupported =
+          M->getModuleFlag("cf-protection-branch"))
+    CFProtectionLevel = cast<ConstantAsMetadata>(isCFProtectionSupported)
+                            ->getValue()
+                            ->getUniqueInteger()
+                            .getLimitedValue();
 
   //  NB: We need to enable IBT in jitted code if JIT compiler is CET
   //  enabled.
@@ -128,7 +135,7 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
 #else
   bool isJITwithCET = false;
 #endif
-  if (!isCFProtectionSupported && !IndirectBranchTracking && !isJITwithCET)
+  if (!CFProtectionLevel && !IndirectBranchTracking && !isJITwithCET)
     return false;
 
   // True if the current MF was changed and false otherwise.
@@ -186,5 +193,15 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
       }
     }
   }
+
+  // If strong CF protections are enabled (Level > 1), then add ENDBRs to all
+  // jump table BBs, since jump table branches will not have the 'notrack'
+  // prefix.
+  if (CFProtectionLevel > 1)
+    if (const MachineJumpTableInfo *JTI = MF.getJumpTableInfo())
+      for (const MachineJumpTableEntry &JTE : JTI->getJumpTables())
+        for (MachineBasicBlock *MBB : JTE.MBBs)
+          Changed |= addENDBR(*MBB, MBB->begin());
+
   return Changed;
 }
