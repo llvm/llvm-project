@@ -1,3 +1,8 @@
+ClangIR:
+  - clang/include/clang/CIR/**/*
+  - clang/lib/CIR/**/*
+  - clang/tools/cir-*/**/*
+
 clang:dataflow:
   - clang/include/clang/Analysis/FlowSensitive/**/*
   - clang/lib/Analysis/FlowSensitive/**/*
