@@ -166,6 +166,9 @@ C23 Feature Support
 - Clang now supports `N3018 The constexpr specifier for object definitions`
   <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3018.htm>`_.
 
+- Clang now diagnoses `N3006 Underspecified object declarations
+  <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm>`_.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
