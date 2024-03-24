@@ -1447,6 +1447,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Parse command line options.
   ArgParser parser(ctx);
   opt::InputArgList args = parser.parse(argsArr);
+  ctx.storeCmdArgs(args);
 
   // Initialize time trace profiler.
   config->timeTraceEnabled = args.hasArg(OPT_time_trace_eq);
