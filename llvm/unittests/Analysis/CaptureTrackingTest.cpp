@@ -105,11 +105,10 @@ TEST(CaptureTracking, MultipleUsesInSameInstruction) {
   BasicBlock *BB = &F->getEntryBlock();
   Instruction *Call = &*BB->begin();
   Instruction *CmpXChg = Call->getNextNode();
-  Instruction *ICmp = CmpXChg->getNextNode();
 
   CollectingCaptureTracker CT;
   PointerMayBeCaptured(Arg, &CT);
-  EXPECT_EQ(7u, CT.Captures.size());
+  EXPECT_EQ(5u, CT.Captures.size());
   // Call arg 1
   EXPECT_EQ(Call, CT.Captures[0]->getUser());
   EXPECT_EQ(0u, CT.Captures[0]->getOperandNo());
@@ -125,10 +124,4 @@ TEST(CaptureTracking, MultipleUsesInSameInstruction) {
   // Cmpxchg new value operand
   EXPECT_EQ(CmpXChg, CT.Captures[4]->getUser());
   EXPECT_EQ(2u, CT.Captures[4]->getOperandNo());
-  // ICmp first operand
-  EXPECT_EQ(ICmp, CT.Captures[5]->getUser());
-  EXPECT_EQ(0u, CT.Captures[5]->getOperandNo());
-  // ICmp second operand
-  EXPECT_EQ(ICmp, CT.Captures[6]->getUser());
-  EXPECT_EQ(1u, CT.Captures[6]->getOperandNo());
 }
