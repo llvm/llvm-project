@@ -117,55 +117,45 @@ ret <4 x i16> %v2
 define dso_local <8 x i16> @test8x24(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6, i32 %i7, i32 %i8) {
 ; CHECK-LABEL: test8x24:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mtvsrd v2, r3
-; CHECK-NEXT:    mtvsrd v3, r4
-; CHECK-NEXT:    mtvsrd v4, r5
-; CHECK-NEXT:    mtvsrd v5, r6
-; CHECK-NEXT:    mtvsrd v0, r7
-; CHECK-NEXT:    vmrghh v2, v3, v2
-; CHECK-NEXT:    mtvsrd v3, r8
-; CHECK-NEXT:    vmrghh v4, v5, v4
-; CHECK-NEXT:    mtvsrd v5, r9
-; CHECK-NEXT:    xxmrglw vs0, v4, v2
-; CHECK-NEXT:    vmrghh v3, v3, v0
-; CHECK-NEXT:    mtvsrd v0, r10
-; CHECK-NEXT:    vmrghh v5, v0, v5
-; CHECK-NEXT:    xxmrglw vs1, v5, v3
-; CHECK-NEXT:    xxmrgld v2, vs1, vs0
+; CHECK-NEXT:    slwi r6, r6, 16
+; CHECK-NEXT:    slwi r4, r4, 16
+; CHECK-NEXT:    or r5, r6, r5
+; CHECK-NEXT:    or r3, r4, r3
+; CHECK-NEXT:    slwi r4, r8, 16
+; CHECK-NEXT:    rldimi r3, r5, 32, 0
+; CHECK-NEXT:    or r4, r4, r7
+; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    slwi r3, r10, 16
+; CHECK-NEXT:    or r3, r3, r9
+; CHECK-NEXT:    rldimi r4, r3, 32, 0
+; CHECK-NEXT:    mtfprd f1, r4
+; CHECK-NEXT:    xxmrghd v2, vs1, vs0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test8x24:
 ; CHECK-BE:       # %bb.0:
-; CHECK-BE-NEXT:    sth r10, -16(r1)
-; CHECK-BE-NEXT:    sth r9, -32(r1)
-; CHECK-BE-NEXT:    sth r8, -48(r1)
-; CHECK-BE-NEXT:    sth r7, -64(r1)
-; CHECK-BE-NEXT:    sth r6, -80(r1)
-; CHECK-BE-NEXT:    sth r5, -96(r1)
-; CHECK-BE-NEXT:    sth r4, -112(r1)
-; CHECK-BE-NEXT:    sth r3, -128(r1)
+; CHECK-BE-NEXT:    slwi r9, r9, 16
+; CHECK-BE-NEXT:    slwi r7, r7, 16
+; CHECK-BE-NEXT:    slwi r5, r5, 16
+; CHECK-BE-NEXT:    slwi r3, r3, 16
+; CHECK-BE-NEXT:    or r9, r9, r10
+; CHECK-BE-NEXT:    or r7, r7, r8
+; CHECK-BE-NEXT:    or r5, r5, r6
+; CHECK-BE-NEXT:    or r3, r3, r4
+; CHECK-BE-NEXT:    stw r9, -16(r1)
+; CHECK-BE-NEXT:    stw r7, -32(r1)
+; CHECK-BE-NEXT:    stw r5, -48(r1)
+; CHECK-BE-NEXT:    stw r3, -64(r1)
 ; CHECK-BE-NEXT:    addi r3, r1, -16
-; CHECK-BE-NEXT:    lxvw4x v2, 0, r3
+; CHECK-BE-NEXT:    lxvw4x vs0, 0, r3
 ; CHECK-BE-NEXT:    addi r3, r1, -32
-; CHECK-BE-NEXT:    lxvw4x v3, 0, r3
+; CHECK-BE-NEXT:    lxvw4x vs1, 0, r3
 ; CHECK-BE-NEXT:    addi r3, r1, -48
-; CHECK-BE-NEXT:    lxvw4x v4, 0, r3
+; CHECK-BE-NEXT:    lxvw4x vs2, 0, r3
 ; CHECK-BE-NEXT:    addi r3, r1, -64
-; CHECK-BE-NEXT:    lxvw4x v5, 0, r3
-; CHECK-BE-NEXT:    addi r3, r1, -80
-; CHECK-BE-NEXT:    lxvw4x v0, 0, r3
-; CHECK-BE-NEXT:    addi r3, r1, -96
-; CHECK-BE-NEXT:    lxvw4x v1, 0, r3
-; CHECK-BE-NEXT:    addi r3, r1, -112
-; CHECK-BE-NEXT:    lxvw4x v6, 0, r3
-; CHECK-BE-NEXT:    addi r3, r1, -128
-; CHECK-BE-NEXT:    lxvw4x v7, 0, r3
-; CHECK-BE-NEXT:    vmrghh v2, v3, v2
-; CHECK-BE-NEXT:    vmrghh v3, v5, v4
-; CHECK-BE-NEXT:    vmrghh v4, v1, v0
-; CHECK-BE-NEXT:    xxmrghw vs0, v3, v2
-; CHECK-BE-NEXT:    vmrghh v5, v7, v6
-; CHECK-BE-NEXT:    xxmrghw vs1, v5, v4
+; CHECK-BE-NEXT:    lxvw4x vs3, 0, r3
+; CHECK-BE-NEXT:    xxmrghw vs0, vs1, vs0
+; CHECK-BE-NEXT:    xxmrghw vs1, vs3, vs2
 ; CHECK-BE-NEXT:    xxmrghd v2, vs1, vs0
 ; CHECK-BE-NEXT:    blr
 %i11 = trunc i32 %i1 to i24
