@@ -463,6 +463,13 @@ static void checkOptions() {
       error("-z bti-report only supported on AArch64");
   }
 
+  if (config->emachine != EM_RISCV) {
+    if (config->zZicfilpReport != "none")
+      error("-z zicfilip-report only support on RISCV32/RISCV64");
+    if (config->zZicfissReport != "none")
+      error("-z zicfiss-report only support on RISCV32/RISCV64");
+  }
+
   if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
       config->zCetReport != "none")
     error("-z cet-report only supported on X86 and X86_64");
@@ -1459,6 +1466,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->zWxneeded = hasZOption(args, "wxneeded");
   setUnresolvedSymbolPolicy(args);
   config->power10Stubs = args.getLastArgValue(OPT_power10_stubs_eq) != "no";
+  config->zForceZicfilp = hasZOption(args, "force-zicfilp");
+  config->zForceZicfiss = hasZOption(args, "force-zicfiss");
 
   if (opt::Arg *arg = args.getLastArg(OPT_eb, OPT_el)) {
     if (arg->getOption().matches(OPT_eb))
@@ -1501,7 +1510,9 @@ static void readConfigs(opt::InputArgList &args) {
   }
 
   auto reports = {std::make_pair("bti-report", &config->zBtiReport),
-                  std::make_pair("cet-report", &config->zCetReport)};
+                  std::make_pair("cet-report", &config->zCetReport),
+                  std::make_pair("zicfilp-report", &config->zZicfilpReport),
+                  std::make_pair("zicfiss-report", &config->zZicfissReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
@@ -2622,7 +2633,7 @@ static void checkAndReportMissingFeature(StringRef config, uint32_t features,
 // GNU_PROPERTY_AARCH64_FEATURE_1_AND mechanism.
 static uint32_t getAndFeatures() {
   if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
-      config->emachine != EM_AARCH64)
+      config->emachine != EM_AARCH64 && config->emachine != EM_RISCV)
     return 0;
 
   uint32_t ret = -1;
@@ -2644,6 +2655,16 @@ static uint32_t getAndFeatures() {
         toString(f) + ": -z cet-report: file does not have "
                       "GNU_PROPERTY_X86_FEATURE_1_SHSTK property");
 
+    checkAndReportMissingFeature(
+        config->zZicfilpReport, features, GNU_PROPERTY_RISCV_FEATURE_1_ZICFILP,
+        toString(f) + ": -z zicfilp-report: file does not have "
+                      "GNU_PROPERTY_RISCV_FEATURE_1_ZICFILP property");
+
+    checkAndReportMissingFeature(
+        config->zZicfissReport, features, GNU_PROPERTY_RISCV_FEATURE_1_ZICFISS,
+        toString(f) + ": -z zicfiss-report: file does not have "
+                      "GNU_PROPERTY_RISCV_FEATURE_1_ZICFISS property");
+
     if (config->zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
       if (config->zBtiReport == "none")
@@ -2656,6 +2677,23 @@ static uint32_t getAndFeatures() {
                            "GNU_PROPERTY_X86_FEATURE_1_IBT property");
       features |= GNU_PROPERTY_X86_FEATURE_1_IBT;
     }
+
+    if (config->zForceZicfilp &&
+        !(features & GNU_PROPERTY_RISCV_FEATURE_1_ZICFILP)) {
+      features |= GNU_PROPERTY_RISCV_FEATURE_1_ZICFILP;
+      if (config->zZicfilpReport == "none")
+        warn(toString(f) + ": -z force-zicfilp: file does not have "
+                           "GNU_PROPERTY_RISCV_FEATURE_1_ZICFILP property");
+    }
+
+    if (config->zForceZicfiss &&
+        !(features & GNU_PROPERTY_RISCV_FEATURE_1_ZICFISS)) {
+      features |= GNU_PROPERTY_RISCV_FEATURE_1_ZICFISS;
+      if (config->zZicfissReport == "none")
+        warn(toString(f) + ": -z force-zicfiss: file does not have "
+                           "GNU_PROPERTY_RISCV_FEATURE_1_ZICFISS property");
+    }
+
     if (config->zPacPlt && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_PAC)) {
       warn(toString(f) + ": -z pac-plt: file does not have "
                          "GNU_PROPERTY_AARCH64_FEATURE_1_PAC property");
