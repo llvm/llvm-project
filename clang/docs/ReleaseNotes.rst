@@ -440,6 +440,9 @@ Bug Fixes to C++ Support
 - Fix an issue where a namespace alias could be defined using a qualified name (all name components
   following the first `::` were ignored).
 
+- Fix crash when inheriting from a cv-qualified type. Fixes:
+  (`#35603 <https://github.com/llvm/llvm-project/issues/35603>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Clang now properly preserves ``FoundDecls`` within a ``ConceptReference``. (#GH82628)
