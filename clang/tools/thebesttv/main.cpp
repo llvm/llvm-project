@@ -103,7 +103,7 @@ struct VarLocResult {
 };
 
 VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
-                            int line, int column) {
+                            int line, int column, bool isStmt) {
     FindVarVisitor visitor;
 
     for (const FunctionInfo *fi : functionsInFile.at(file)) {
@@ -114,14 +114,29 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
         // search all CFG stmts in function for matching variable
         ASTContext *Context = &fi->D->getASTContext();
         for (const auto &[stmt, block] : fi->stmtBlockPairs) {
+            if (isStmt) {
+                // search for stmt
+                auto bLoc =
+                    Location::fromSourceLocation(*Context, stmt->getBeginLoc());
+                if (bLoc && bLoc->file == file && bLoc->line == line &&
+                    bLoc->column == column) {
+                    int id = block->getBlockID();
+                    llvm::errs()
+                        << "Found stmt in " << fi->signature << " at " << line
+                        << ":" << column << " in block " << id << "\n";
+                    return VarLocResult(fi, block);
+                }
+            } else {
+                // search for var within stmt
             const std::string var =
                 visitor.findVarInStmt(Context, stmt, file, line, column);
             if (!var.empty()) {
                 int id = block->getBlockID();
-                llvm::errs() << "Found var '" << var << "' in " << fi->signature
-                             << " at " << line << ":" << column << " in block "
-                             << id << "\n";
+                    llvm::errs() << "Found var '" << var << "' in "
+                                 << fi->signature << " at " << line << ":"
+                                 << column << " in block " << id << "\n";
                 return VarLocResult(fi, block);
+                }
             }
         }
     }
@@ -160,8 +175,8 @@ struct FunctionLocator {
     }
 };
 
-VarLocResult locateVariable(const FunctionLocator &locator,
-                            const Location &loc) {
+VarLocResult locateVariable(const FunctionLocator &locator, const Location &loc,
+                            bool isStmt) {
     int fid = locator.getFid(loc);
     if (fid == -1) {
         return VarLocResult();
@@ -183,7 +198,8 @@ VarLocResult locateVariable(const FunctionLocator &locator,
         FunctionAccumulator(functionsInFile).TraverseDecl(TUD);
     }
 
-    return locateVariable(functionsInFile, loc.file, loc.line, loc.column);
+    return locateVariable(functionsInFile, loc.file, loc.line, loc.column,
+                          isStmt);
 }
 
 std::string getSourceCode(SourceManager &SM, const SourceRange &range) {
