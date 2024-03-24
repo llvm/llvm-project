@@ -22,6 +22,11 @@
 #include <thread>
 
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#include <synchapi.h>
+
 inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
     Fortran::runtime::Terminator terminator) {
   int error{ctime_s(buffer, bufsize, &cur_time)};
@@ -135,7 +140,11 @@ void RTNAME(Sleep)(std::int64_t seconds) {
   if (seconds < 1) {
     return;
   }
-  std::this_thread::sleep_for(std::chrono::seconds(seconds));
+#if _WIN32
+  Sleep(seconds * 1000);
+#else
+  sleep(seconds);
+#endif
 }
 
 } // namespace Fortran::runtime
