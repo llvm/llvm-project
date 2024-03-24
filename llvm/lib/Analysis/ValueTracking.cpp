@@ -35,6 +35,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Analysis/WithCache.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -88,6 +89,10 @@ using namespace llvm::PatternMatch;
 static cl::opt<unsigned> DomConditionsMaxUses("dom-conditions-max-uses",
                                               cl::Hidden, cl::init(20));
 
+// Controls the maximum memory allocation to 32-bit or 4GB.
+static cl::opt<bool> PointerAllocationsLimitedto32bit(
+    "alloc-limit-32bit", cl::init(false),
+    cl::desc("A Pointer with max 32bit allocs"));
 
 /// Returns the bitwidth of the given scalar or pointer type. For vector types,
 /// returns the element type's bitwidth.
@@ -2585,7 +2590,80 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
   case Instruction::ZExt:
     // ext X != 0 if X != 0.
     return isKnownNonZero(I->getOperand(0), Depth, Q);
+  case Instruction::Trunc:
+    // trunc(operand) is KnownNonZero if lower order bits of operand is a
+    // KnownNonZero. Handle scenarios like trunc i64 (sub(ptr2int, ptr2int)) to
+    // i32 / trunc i64 (lshr(sub(ptr2int, ptr2int))) to i32, where the ptrs are
+    // from same object and one of the pointers is a recursive GEP. And either
+    // the objectSize is known OR is indicative via a compiler flag, which
+    // suggests objectSize<4G.
+    Value *A, *B;
+    if (match(I->getOperand(0), m_Sub(m_PtrToIntSameSize(Q.DL, m_Value(A)),
+                                      m_PtrToIntSameSize(Q.DL, m_Value(B)))) ||
+        match(I->getOperand(0),
+              m_LShr(m_Sub(m_PtrToIntSameSize(Q.DL, m_Value(A)),
+                           m_PtrToIntSameSize(Q.DL, m_Value(B))),
+                     m_ConstantInt()))) {
+      // Check for a specific pattern where A is recursive GEP with a PHI ptr
+      // with incoming values as (Start,Step) and Start==B.
+      auto *GEPA = dyn_cast<GEPOperator>(A);
+      if (!GEPA) {
+        GEPA = dyn_cast<GEPOperator>(B);
+        std::swap(A, B);
+      }
+      if (!GEPA || GEPA->getNumIndices() != 1 ||
+          !isa<Constant>(GEPA->idx_begin()))
+        return false;
 
+      // Handle 2 incoming PHI values with one being a recursive GEP.
+      auto *PN = dyn_cast<PHINode>(GEPA->getPointerOperand());
+      if (!PN || PN->getNumIncomingValues() != 2)
+        return false;
+
+      // Search for the recursive GEP as an incoming operand, and record that as
+      // Step.
+      Value *Start = nullptr;
+      Value *Step = const_cast<Value *>(A);
+      if (PN->getIncomingValue(0) == Step)
+        Start = PN->getIncomingValue(1);
+      else if (PN->getIncomingValue(1) == Step)
+        Start = PN->getIncomingValue(0);
+      else
+        return false;
+
+      // Check if the pointers Start and B are same and ObjectSize can be
+      // determined/PointerAllocationsLimitedto32bit flag set.
+      if (Start == B) {
+        ObjectSizeOpts Opts;
+        Opts.RoundToAlign = false;
+        Opts.NullIsUnknownSize = true;
+        uint64_t ObjSize = 0;
+        // Can we get the ObjectSize and ObjectSize is within range.
+        // There is possibly more that we can do when ObjSize if known, and
+        // extend the same for other truncates. Restricting it for a 32bit
+        // truncate result.
+        if (getObjectSize(Start, ObjSize, Q.DL, Q.TLI, Opts)) {
+          if (ObjSize == 0 || ObjSize > (uint64_t)0xFFFFFFFF)
+            return false;
+        }
+        // Does the compiler flag specify Object allocs within 4G.
+        else if (!PointerAllocationsLimitedto32bit)
+          return false;
+      } else
+        return false;
+
+      // Check if trunc src type is same as Ptr type and dest is a 32bit.
+      // If objectSize<4G or PointerAllocationsLimitedto32bit flag set, check if
+      // the trunc operand is a KnownNonZero.
+      LLVMContext &Ctx = I->getContext();
+      Type *SrcTy = I->getOperand(0)->getType();
+      Type *DstTy = I->getType();
+      unsigned IntPtrWidth = Q.DL.getPointerSizeInBits();
+      unsigned TruncSrcBits = Q.DL.getTypeSizeInBits(SrcTy);
+      if (TruncSrcBits == IntPtrWidth && DstTy == Type::getInt32Ty(Ctx))
+        return isKnownNonZero(I->getOperand(0), Depth, Q);
+    }
+    break;
   case Instruction::Shl: {
     // shl nsw/nuw can't remove any non-zero bits.
     const OverflowingBinaryOperator *BO = cast<OverflowingBinaryOperator>(I);
