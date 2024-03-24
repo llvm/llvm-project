@@ -60,7 +60,7 @@ outside catch blocks to prevent unintended program termination.
 
 Above program will be terminated with:
 
-.. code:: text
+.. code-block:: text
 
   terminate called without an active exception
   Aborted (core dumped)
