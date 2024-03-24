@@ -2235,14 +2235,14 @@ def fmemory_profile_use_EQ : Joined<["-"], "fmemory-profile-use=">,
     HelpText<"Use memory profile for profile-guided memory optimization">,
     MarshallingInfoString<CodeGenOpts<"MemoryProfileUsePath">>;
 
+def fsanitize_EQ : CommaJoined<["-"], "fsanitize=">, Group<f_clang_Group>,
+                   MetaVarName<"<check>">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+                   HelpText<"Turn on runtime checks for various forms of undefined "
+                            "or suspicious behavior. See user manual for available checks">;
 // Begin sanitizer flags. These should all be core options exposed in all driver
 // modes.
 let Visibility = [ClangOption, CC1Option, CLOption] in {
 
-def fsanitize_EQ : CommaJoined<["-"], "fsanitize=">, Group<f_clang_Group>,
-                   MetaVarName<"<check>">,
-                   HelpText<"Turn on runtime checks for various forms of undefined "
-                            "or suspicious behavior. See user manual for available checks">;
 def fno_sanitize_EQ : CommaJoined<["-"], "fno-sanitize=">, Group<f_clang_Group>,
                       Visibility<[ClangOption, CLOption]>;
 

@@ -1,3 +1,7 @@
+set(LLVM_LINK_COMPONENTS
+  Instrumentation
+)
+
 add_flang_library(FIRCodeGen
   BoxedProcedure.cpp
   CGOps.cpp

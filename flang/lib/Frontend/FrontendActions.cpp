@@ -69,6 +69,9 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include "llvm/Transforms/Instrumentation.h"
+#include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
+
 #include <memory>
 #include <system_error>
 
@@ -979,6 +982,11 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   else
     mpm = pb.buildPerModuleDefaultPipeline(level);
 
+  if (this->getInstance().getInvocation().getFrontendOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::TSan)) {
+    mpm.addPass(llvm::ModuleThreadSanitizerPass());
+    mpm.addPass(llvm::createModuleToFunctionPassAdaptor(llvm::ThreadSanitizerPass()));
+  }
   if (action == BackendActionTy::Backend_EmitBC)
     mpm.addPass(llvm::BitcodeWriterPass(os));
 

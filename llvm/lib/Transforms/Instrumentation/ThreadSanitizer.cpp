@@ -510,7 +510,7 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   SmallVector<Instruction*, 8> MemIntrinCalls;
   bool Res = false;
   bool HasCalls = false;
-  bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeThread);
+  bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeThread) || true;
   const DataLayout &DL = F.getParent()->getDataLayout();
 
   // Traverse all instructions, collect loads/stores/returns, check for calls.

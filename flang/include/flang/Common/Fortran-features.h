@@ -35,7 +35,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     ProgramReturn, ImplicitNoneTypeNever, ImplicitNoneTypeAlways,
     ForwardRefImplicitNone, OpenAccessAppend, BOZAsDefaultInteger,
     DistinguishableSpecifics, DefaultSave, PointerInSeqType, NonCharacterFormat,
-    SaveMainProgram, SaveBigMainProgramVariables,
+    SaveMainProgram, SaveBigMainProgramVariables, TSan,
     DistinctArrayConstructorLengths, PPCVector, RelaxedIntentInChecking,
     ForwardRefImplicitNoneData, NullActualForAllocatable,
     ActualIntegerConvertedToSmallerKind, HollerithOrCharacterAsBOZ,
@@ -66,6 +66,7 @@ public:
     disable_.set(LanguageFeature::OldDebugLines);
     disable_.set(LanguageFeature::OpenACC);
     disable_.set(LanguageFeature::OpenMP);
+    disable_.set(LanguageFeature::TSan);
     disable_.set(LanguageFeature::CUDA); // !@cuf
     disable_.set(LanguageFeature::ImplicitNoneTypeNever);
     disable_.set(LanguageFeature::ImplicitNoneTypeAlways);
