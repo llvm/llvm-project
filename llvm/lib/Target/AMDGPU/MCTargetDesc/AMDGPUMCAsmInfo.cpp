@@ -41,8 +41,6 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
   SupportsDebugInformation = true;
   UsesCFIWithoutEH = true;
   DwarfRegNumForCFI = true;
-
-  UseIntegratedAssembler = false;
 }
 
 bool AMDGPUMCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
