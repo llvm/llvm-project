@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -1598,15 +1599,42 @@ MachineBasicBlock::getProbabilityIterator(MachineBasicBlock::succ_iterator I) {
   return Probs.begin() + index;
 }
 
+MachineBasicBlock::LivenessQueryResult
+MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
+                                           MCRegister Reg,
+                                           const_iterator Before) const {
+  LiveRegUnits UsedRegs(*TRI);
+  UsedRegs.addLiveOuts(*this);
+
+  const MachineFunction *MF = getParent();
+  const MCPhysReg *CSRegs = TRI->getCalleeSavedRegs(MF);
+  for (unsigned i = 0; CSRegs[i]; ++i)
+    UsedRegs.addReg(CSRegs[i]);
+
+  auto InstUpToBefore = end();
+
+  while (InstUpToBefore != Before)
+    // The pre-decrement is on purpose here.
+    // We want to have the liveness right before Before.
+    UsedRegs.stepBackward(*--InstUpToBefore);
+
+  if (UsedRegs.available(Reg))
+    return LQR_Dead;
+
+  return LQR_Live;
+}
+
 /// Return whether (physical) register "Reg" has been <def>ined and not <kill>ed
 /// as of just before "MI".
 ///
 /// Search is localised to a neighborhood of
 /// Neighborhood instructions before (searching for defs or kills) and N
 /// instructions after (searching just for defs) MI.
+
 MachineBasicBlock::LivenessQueryResult
 MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
-                                           MCRegister Reg, const_iterator Before,
+                                           MCRegister Reg,
+                                           const_iterator Before,
                                            unsigned Neighborhood) const {
   unsigned N = Neighborhood;
 
@@ -1640,7 +1668,6 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
 
     return LQR_Dead;
   }
-
 
   N = Neighborhood;
 
