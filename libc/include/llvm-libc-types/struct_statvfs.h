@@ -8,8 +8,10 @@
 
 #ifndef LLVM_LIBC_TYPES_STRUCT_STATVFS_H
 #define LLVM_LIBC_TYPES_STRUCT_STATVFS_H
+
 #include <llvm-libc-types/fsblkcnt_t.h>
 #include <llvm-libc-types/fsfilcnt_t.h>
+
 struct statvfs {
   unsigned long f_bsize;   /* Filesystem block size */
   unsigned long f_frsize;  /* Fragment size */
@@ -23,4 +25,5 @@ struct statvfs {
   unsigned long f_flag;    /* Mount flags */
   unsigned long f_namemax; /* Maximum filename length */
 };
+
 #endif // LLVM_LIBC_TYPES_STRUCT_STATVFS_H
