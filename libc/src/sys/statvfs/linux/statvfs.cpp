@@ -18,7 +18,7 @@ LLVM_LIBC_FUNCTION(int, statvfs,
   using namespace statfs_utils;
   cpp::optional<LinuxStatFs> result = linux_statfs(path);
   if (result)
-    statfs_to_statvfs(*result, *buf);
+    *buf = statfs_to_statvfs(*result);
   return result ? 0 : -1;
 }
 

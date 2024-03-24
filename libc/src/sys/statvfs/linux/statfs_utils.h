@@ -73,8 +73,8 @@ LIBC_INLINE cpp::optional<LinuxStatFs> linux_fstatfs(int fd) {
 // must use 'struct' tag to refer to type 'statvfs' in this scope. There will be
 // a function in the same namespace with the same name. For consistency, we use
 // struct prefix for all statvfs/statfs related types.
-LIBC_INLINE void statfs_to_statvfs(const LinuxStatFs &__restrict in,
-                                   struct statvfs &__restrict out) {
+LIBC_INLINE struct statvfs statfs_to_statvfs(const LinuxStatFs &in) {
+  struct statvfs out;
   out.f_bsize = in.f_bsize;
   out.f_frsize = in.f_frsize;
   out.f_blocks = in.f_blocks;
@@ -87,6 +87,7 @@ LIBC_INLINE void statfs_to_statvfs(const LinuxStatFs &__restrict in,
                static_cast<decltype(out.f_fsid)>(in.f_fsid.val[1]) << 32;
   out.f_flag = in.f_flags;
   out.f_namemax = in.f_namelen;
+  return out;
 }
 } // namespace statfs_utils
 } // namespace LIBC_NAMESPACE
