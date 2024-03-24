@@ -81,7 +81,7 @@ void SymbolTable::addFile(InputFile *file) {
     return;
   }
 
-  ctx.driver.parseDirectives(file);
+  ctx.driver.processDrectveSections(file);
 }
 
 static void errorOrWarn(const Twine &s, bool forceUnresolved) {

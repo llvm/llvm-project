@@ -1,4 +1,4 @@
-# RUN: lld-link /dll %p/Inputs/directive-multiple.obj /out:%t.dll
+# RUN: lld-link /dll %p/Inputs/directives-multiple.obj /out:%t.dll
 # RUN: llvm-readobj --coff-exports %t.dll | FileCheck -check-prefix=EXPORTS %s
 
 EXPORTS: Format: COFF-x86-64

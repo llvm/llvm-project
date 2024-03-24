@@ -213,7 +213,7 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
     ArrayRef<uint8_t> data;
     cantFail(coffObj->getSectionContents(sec, data));
     // MS link accumulates the directive sections in order of appearance
-    directives.push_back(StringRef(reinterpret_cast<const char*>(data.data()), data.size()));
+    drectves.push_back(StringRef(reinterpret_cast<const char*>(data.data()), data.size()));
     return nullptr;
   }
 
@@ -1087,7 +1087,7 @@ void BitcodeFile::parse() {
     if (objSym.isUsed())
       ctx.config.gcroot.push_back(sym);
   }
-  directives.push_back(saver.save(obj->getCOFFLinkerOpts()));
+  drectves.push_back(saver.save(obj->getCOFFLinkerOpts()));
 }
 
 void BitcodeFile::parseLazy() {
