@@ -1601,6 +1601,7 @@ findmust(struct parse *p, struct re_guts *g)
 	sop s;
 	char *cp;
 	sopno i;
+	unsigned int skipsize;
 
 	/* avoid making error situations worse */
 	if (p->error != 0)
@@ -1625,7 +1626,16 @@ findmust(struct parse *p, struct re_guts *g)
 		case OCH_:
 			scan--;
 			do {
-				scan += OPND(s);
+				/* Ensure end is not skipped */
+				skipsize = OPND(s);
+				while (skipsize > 0) {
+					if (OP(*scan) == OEND) {
+						g->iflags |= REGEX_BAD;
+						return;
+					}
+					scan++;
+					skipsize--;
+				}
 				s = *scan;
 				/* assert() interferes w debug printouts */
 				if (OP(s) != O_QUEST && OP(s) != O_CH &&
