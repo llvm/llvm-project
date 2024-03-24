@@ -86,7 +86,7 @@ add_header_library(
     libc.src.__support.CPP.type_traits
     libc.src.__support.uint128
     libc.src.__support.common
-    libc.src.__support.macros.optimization.h
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
