@@ -629,13 +629,20 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   // Add 'include' in the resource directory, which is similar to
   // GCC_INCLUDE_DIR (private headers) in GCC. Note: the include directory
-  // contains some files conflicting with system /usr/include. musl systems
-  // prefer the /usr/include copies which are more relevant.
-  SmallString<128> ResourceDirInclude(D.ResourceDir);
-  llvm::sys::path::append(ResourceDirInclude, "include");
-  if (!DriverArgs.hasArg(options::OPT_nobuiltininc) &&
-      (!getTriple().isMusl() || DriverArgs.hasArg(options::OPT_nostdlibinc)))
+  // contains some files conflicting with system /usr/include.
+  //
+  // Note: the include order used to be different on musl systems because
+  // of the expectation that that users of that C library would use the
+  // C library's copies of the "built-in" headers.  This was a mistake;
+  // it's better to adapt the built-in headers to fall through in that case
+  // (using #include_next), since otherwise if they get pulled in through
+  // some other mechanism, __has_include_next(<header>) will fail and then
+  // they'll try to redefine things, which causes errors.
+  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    SmallString<128> ResourceDirInclude(D.ResourceDir);
+    llvm::sys::path::append(ResourceDirInclude, "include");
     addSystemInclude(DriverArgs, CC1Args, ResourceDirInclude);
+  }
 
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
@@ -676,9 +683,6 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   addExternCSystemInclude(DriverArgs, CC1Args, concat(SysRoot, "/include"));
 
   addExternCSystemInclude(DriverArgs, CC1Args, concat(SysRoot, "/usr/include"));
-
-  if (!DriverArgs.hasArg(options::OPT_nobuiltininc) && getTriple().isMusl())
-    addSystemInclude(DriverArgs, CC1Args, ResourceDirInclude);
 }
 
 void Linux::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,

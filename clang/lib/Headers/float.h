@@ -10,15 +10,11 @@
 #ifndef __CLANG_FLOAT_H
 #define __CLANG_FLOAT_H
 
-/* If we're on MinGW, fall back to the system's float.h, which might have
- * additional definitions provided for Windows.
- * For more details see http://msdn.microsoft.com/en-us/library/y0ybw9fy.aspx
- *
- * Also fall back on Darwin and AIX to allow additional definitions and
- * implementation-defined values.
+/* On various platforms, fall back to the system's float.h, which might have
+ * additional definitions and/or implementation-defined values.
  */
 #if (defined(__APPLE__) || defined(__MINGW32__) || defined(_MSC_VER) ||        \
-     defined(_AIX)) &&                                                         \
+     defined(_AIX) || defined(__musl__)) &&                                    \
     __STDC_HOSTED__ && __has_include_next(<float.h>)
 
 /* Prior to Apple's 10.7 SDK, float.h SDK header used to apply an extra level
