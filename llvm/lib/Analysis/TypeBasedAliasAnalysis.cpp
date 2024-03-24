@@ -121,6 +121,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
+#include <stack>
 
 using namespace llvm;
 
@@ -299,9 +300,10 @@ public:
     return TBAAStructTypeNode(TypeNode);
   }
 
-  /// Get this TBAAStructTypeNode's field in the type DAG with
+  /// Get this TBAAStructTypeNode's fields in the type DAG with
   /// given offset. Update the offset to be relative to the field type.
-  TBAAStructTypeNode getField(uint64_t &Offset) const {
+  /// There could be multiple fields with same offset.
+  std::vector<TBAAStructTypeNode> getField(uint64_t &Offset) const {
     bool NewFormat = isNewFormat();
     const ArrayRef<MDOperand> Operands = Node->operands();
     const unsigned NumOperands = Operands.size();
@@ -309,11 +311,11 @@ public:
     if (NewFormat) {
       // New-format root and scalar type nodes have no fields.
       if (NumOperands < 6)
-        return TBAAStructTypeNode();
+        return {TBAAStructTypeNode()};
     } else {
       // Parent can be omitted for the root node.
       if (NumOperands < 2)
-        return TBAAStructTypeNode();
+        return {TBAAStructTypeNode()};
 
       // Fast path for a scalar type node and a struct type node with a single
       // field.
@@ -325,8 +327,8 @@ public:
         Offset -= Cur;
         MDNode *P = dyn_cast_or_null<MDNode>(Operands[1]);
         if (!P)
-          return TBAAStructTypeNode();
-        return TBAAStructTypeNode(P);
+          return {TBAAStructTypeNode()};
+        return {TBAAStructTypeNode(P)};
       }
     }
 
@@ -335,6 +337,8 @@ public:
     unsigned FirstFieldOpNo = NewFormat ? 3 : 1;
     unsigned NumOpsPerField = NewFormat ? 3 : 2;
     unsigned TheIdx = 0;
+
+    std::vector<TBAAStructTypeNode> Ret;
 
     for (unsigned Idx = FirstFieldOpNo; Idx < NumOperands;
          Idx += NumOpsPerField) {
@@ -353,10 +357,20 @@ public:
     uint64_t Cur =
         mdconst::extract<ConstantInt>(Operands[TheIdx + 1])->getZExtValue();
     Offset -= Cur;
+
+    // Collect all fields that have right offset.
     MDNode *P = dyn_cast_or_null<MDNode>(Operands[TheIdx]);
-    if (!P)
-      return TBAAStructTypeNode();
-    return TBAAStructTypeNode(P);
+    Ret.emplace_back(P ? TBAAStructTypeNode(P) : TBAAStructTypeNode());
+
+    while (TheIdx > FirstFieldOpNo) {
+      TheIdx -= NumOpsPerField;
+      auto Val = mdconst::extract<ConstantInt>(Operands[TheIdx + 1]);
+      if (Cur != Val->getZExtValue())
+        break;
+      MDNode *P = dyn_cast_or_null<MDNode>(Operands[TheIdx]);
+      P ? Ret.emplace_back(P) : Ret.emplace_back();
+    }
+    return Ret;
   }
 };
 
@@ -572,6 +586,39 @@ static bool hasField(TBAAStructTypeNode BaseType,
   return false;
 }
 
+static bool rangeOverlap(std::pair<size_t, size_t> Range1,
+                         std::pair<size_t, size_t> Range2) {
+  return Range1.first < Range2.first + Range2.second &&
+         Range1.first + Range1.second > Range2.first;
+}
+
+/// Return true if two accessess to given \p BaseType at \p Offset1 and
+/// at \p Offset2 may alias. This check does not account for NewStructType
+/// parameters such as size and may be more conservative.
+static bool mayFieldAccessesAlias(TBAAStructTypeNode BaseType, uint64_t Offset1,
+                                  uint64_t Offset2) {
+  if (!BaseType.getNode())
+    return true;
+
+  auto PrevDiff = (long long)(Offset1) - (long long)(Offset2);
+  auto Fields1 = BaseType.getField(Offset1);
+  auto Fields2 = BaseType.getField(Offset2);
+  auto CurrentDiff = (long long)(Offset1) - (long long)(Offset2);
+
+  // If distance between offsets is not same that mean accesses are
+  // to different fields.
+  if (PrevDiff != CurrentDiff)
+    return false;
+
+  // Fields that share same offset may have various internal structure. For
+  // some of them - same field may be accessed while for others - different
+  // ones. To be conservative we report MayAlias if any of fields report
+  // MayAlias.
+  return llvm::any_of(Fields1, [&](auto &FieldType) {
+    return mayFieldAccessesAlias(FieldType, Offset1, Offset2);
+  });
+}
+
 /// Return true if for two given accesses, one of the accessed objects may be a
 /// subobject of the other. The \p BaseTag and \p SubobjectTag parameters
 /// describe the accesses to the base object and the subobject respectively.
@@ -599,20 +646,38 @@ static bool mayBeAccessToSubobjectOf(TBAAStructTagNode BaseTag,
   // from the base type, follow the edge with the correct offset in the type DAG
   // and adjust the offset until we reach the field type or until we reach the
   // access type.
+  // If multiple fields have same offset in some base type, then scan each such
+  // field.
   bool NewFormat = BaseTag.isNewFormat();
   TBAAStructTypeNode BaseType(BaseTag.getBaseType());
   uint64_t OffsetInBase = BaseTag.getOffset();
 
-  for (;;) {
-    // In the old format there is no distinction between fields and parent
-    // types, so in this case we consider all nodes up to the root.
-    if (!BaseType.getNode()) {
-      assert(!NewFormat && "Did not see access type in access path!");
-      break;
-    }
+  SmallVector<std::pair<TBAAStructTypeNode, uint64_t>, 4> ToCheck;
+  ToCheck.emplace_back(BaseType, OffsetInBase);
+  while (!ToCheck.empty()) {
+    std::tie(BaseType, OffsetInBase) = ToCheck.back();
+    ToCheck.pop_back();
+
+    // In case if root is reached, still check the remaining candidates.
+    // For new format it is always expected for access type to be found.
+    // For old format all nodes up to the root are considered from all
+    // candidates.
+    if (!BaseType.getNode())
+      continue;
 
     if (BaseType.getNode() == SubobjectTag.getBaseType()) {
-      bool SameMemberAccess = OffsetInBase == SubobjectTag.getOffset();
+      bool SameMemberAccess;
+      uint64_t SubobjectOffset = SubobjectTag.getOffset();
+      if (NewFormat)
+        // If size information is available, check if their access locations
+        // overlap.
+        SameMemberAccess = rangeOverlap(
+            std::make_pair(OffsetInBase, BaseTag.getSize()),
+            std::make_pair(SubobjectOffset, SubobjectTag.getSize()));
+      else
+        // Else do a more conservative check.
+        SameMemberAccess =
+            mayFieldAccessesAlias(BaseType, OffsetInBase, SubobjectOffset);
       if (GenericTag) {
         *GenericTag = SameMemberAccess ? SubobjectTag.getNode() :
                                          createAccessTag(CommonType);
@@ -627,13 +692,15 @@ static bool mayBeAccessToSubobjectOf(TBAAStructTagNode BaseTag,
 
     // Follow the edge with the correct offset. Offset will be adjusted to
     // be relative to the field type.
-    BaseType = BaseType.getField(OffsetInBase);
+    for (auto &&F : BaseType.getField(OffsetInBase))
+      ToCheck.emplace_back(F, OffsetInBase);
   }
 
   // If the base object has a direct or indirect field of the subobject's type,
   // then this may be an access to that field. We need this to check now that
   // we support aggregates as access types.
   if (NewFormat) {
+    assert(BaseType.getNode() && "Did not see access type in access path!");
     // TBAAStructTypeNode BaseAccessType(BaseTag.getAccessType());
     TBAAStructTypeNode FieldType(SubobjectTag.getBaseType());
     if (hasField(BaseType, FieldType)) {

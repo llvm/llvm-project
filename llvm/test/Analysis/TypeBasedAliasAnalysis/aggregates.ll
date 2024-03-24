@@ -105,6 +105,22 @@ entry:
   ret i32 %0
 }
 
+; C vs. D  =>  MayAlias.
+define i32 @f7(ptr %c, ptr %d) {
+entry:
+; CHECK-LABEL: f7
+; CHECK: MayAlias: store i16 7, {{.*}} <-> store i32 5,
+; OPT-LABEL: f7
+; OPT: store i32 5,
+; OPT: store i16 7,
+; OPT: load i32
+; OPT: ret i32
+  store i32 5, ptr %c, align 4, !tbaa !18  ; TAG_Union_int
+  store i16 7, ptr %d, align 4, !tbaa !17  ; TAG_Union_short
+  %0 = load i32, ptr %c, align 4, !tbaa !18  ; TAG_Union_int
+  ret i32 %0
+}
+
 !0 = !{!"root"}
 !1 = !{!0, i64 1, !"char"}
 !2 = !{!1, i64 4, !"int"}
@@ -128,3 +144,7 @@ entry:
 
 !14 = !{!4, i64 2, !"D", !11, i64 0, i64 2}
 !15 = !{!14, !14, i64 0, i64 2}  ; TAG_D
+
+!16 = !{!1, i64 2, !"Union", !11, i64 0, i64 2, !2, i64 0, i64 4}
+!17 = !{!16, !11, i64 0, i64 2}  ; TAG_Union_short
+!18 = !{!16, !2, i64 0, i64 4}  ; TAG_Union_int
