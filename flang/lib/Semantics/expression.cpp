@@ -416,12 +416,11 @@ void ExpressionAnalyzer::CheckConstantSubscripts(ArrayRef &ref) {
           msg =
               "Subscript %jd is greater than upper bound %jd for dimension %d of array"_err_en_US;
           bound = *dimUB;
-          if (dim + 1 == arraySymbol.Rank() && IsDummy(arraySymbol) &&
-              *bound == 1) {
-            // Old-school overindexing of a dummy array isn't fatal when
-            // it's on the last dimension and the extent is 1.
-            msg->set_severity(parser::Severity::Warning);
-          }
+          // Even though this constitudes a violation of the Fortran
+          // standard, we should use a warning instead of a fatal error.
+          // This is in line with other compilers and can be turned
+          // into a fatal error using -Werror.
+          msg->set_severity(parser::Severity::Warning);
         }
         if (msg) {
           AttachDeclaration(
