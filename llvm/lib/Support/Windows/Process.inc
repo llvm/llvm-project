@@ -50,19 +50,6 @@ Process::Pid Process::getProcessId() {
   return Pid(::GetCurrentProcessId());
 }
 
-// This function retrieves the page size using GetNativeSystemInfo() and is
-// present solely so it can be called once to initialize the self_process member
-// below.
-static unsigned computePageSize() {
-  // GetNativeSystemInfo() provides the physical page size which may differ
-  // from GetSystemInfo() in 32-bit applications running under WOW64.
-  SYSTEM_INFO info;
-  GetNativeSystemInfo(&info);
-  // FIXME: FileOffset in MapViewOfFile() should be aligned to not dwPageSize,
-  // but dwAllocationGranularity.
-  return static_cast<unsigned>(info.dwPageSize);
-}
-
 Expected<unsigned> Process::getPageSize() {
   static unsigned Ret = computePageSize();
   return Ret;

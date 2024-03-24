@@ -78,7 +78,9 @@ Process::Pid Process::getProcessId() {
 // On Cygwin, getpagesize() returns 64k(AllocationGranularity) and
 // offset in mmap(3) should be aligned to the AllocationGranularity.
 Expected<unsigned> Process::getPageSize() {
-#if defined(HAVE_GETPAGESIZE)
+#if defined(__CYGWIN__)
+  static const int page_size = computePageSize();
+#elif defined(HAVE_GETPAGESIZE)
   static const int page_size = ::getpagesize();
 #elif defined(HAVE_SYSCONF)
   static long page_size = ::sysconf(_SC_PAGE_SIZE);

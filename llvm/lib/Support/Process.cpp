@@ -118,10 +118,31 @@ bool Process::AreCoreFilesPrevented() { return coreFilesPrevented; }
     ::exit(RetCode);
 }
 
+#if defined(_WIN32) || defined(__CYGWIN__)
+static unsigned computePageSize();
+#endif
+
 // Include the platform-specific parts of this class.
 #ifdef LLVM_ON_UNIX
 #include "Unix/Process.inc"
 #endif
 #ifdef _WIN32
 #include "Windows/Process.inc"
+#endif
+
+#if defined(_WIN32) || defined(__CYGWIN__)
+#include <windows.h>
+
+// This function retrieves the page size using GetNativeSystemInfo() and is
+// present solely so it can be called once to initialize the self_process member
+// below.
+static unsigned computePageSize() {
+  // GetNativeSystemInfo() provides the physical page size which may differ
+  // from GetSystemInfo() in 32-bit applications running under WOW64.
+  SYSTEM_INFO info;
+  GetNativeSystemInfo(&info);
+  // FIXME: FileOffset in MapViewOfFile() should be aligned to not dwPageSize,
+  // but dwAllocationGranularity.
+  return static_cast<unsigned>(info.dwPageSize);
+}
 #endif
