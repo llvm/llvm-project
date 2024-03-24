@@ -135,7 +135,7 @@ jobs:
                 -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
                 $extra_cmake_args \
                 ${{ inputs.extra_cmake_args }}
-          ninja -C "$builddir" '${{ inputs.build_target }}'
+          ninja -C "$builddir" ${{ inputs.build_target }}
 
       - name: Build and Test libclc
         if: "!startsWith(matrix.os, 'windows') && contains(inputs.projects, 'libclc')"
