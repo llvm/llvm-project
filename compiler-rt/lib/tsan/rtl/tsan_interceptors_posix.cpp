@@ -126,7 +126,6 @@ const int SIGFPE = 8;
 const int SIGSEGV = 11;
 const int SIGPIPE = 13;
 const int SIGTERM = 15;
-const int SIGPROF = 27;
 #if defined(__mips__) || SANITIZER_FREEBSD || SANITIZER_APPLE || SANITIZER_NETBSD
 const int SIGBUS = 10;
 const int SIGSYS = 12;
@@ -2180,8 +2179,7 @@ void sighandler(int sig, __sanitizer_siginfo *info, void *ctx) {
     return;
   }
   // Don't mess with synchronous signals.
-  const bool sync = is_sync_signal(sctx, sig, info) ||
-                    (sig == SIGPROF && thr->is_inited && !thr->is_dead);
+  const bool sync = is_sync_signal(sctx, sig, info);
   if (sync ||
       // If we are in blocking function, we can safely process it now
       // (but check if we are in a recursive interceptor,
