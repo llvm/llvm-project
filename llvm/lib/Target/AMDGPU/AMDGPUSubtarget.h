@@ -68,6 +68,7 @@ protected:
   unsigned MaxWavesPerEU = 10;
   unsigned LocalMemorySize = 0;
   unsigned AddressableLocalMemorySize = 0;
+  unsigned MaxWaveScratchSize = 0;
   char WavefrontSizeLog2 = 0;
 
 public:
@@ -233,6 +234,8 @@ public:
   unsigned getAddressableLocalMemorySize() const {
     return AddressableLocalMemorySize;
   }
+
+  unsigned getMaxWaveScratchSize() const { return MaxWaveScratchSize; }
 
   /// Number of SIMDs/EUs (execution units) per "CU" ("compute unit"), where the
   /// "CU" is the unit onto which workgroups are mapped. This takes WGP mode vs.
