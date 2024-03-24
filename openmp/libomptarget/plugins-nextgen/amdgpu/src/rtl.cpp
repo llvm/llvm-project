@@ -2172,13 +2172,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       break;
     }
 
-    if (!MemoryPool) {
-      REPORT("No memory pool for the specified allocation kind\n");
+    if (!MemoryPool)
       return OFFLOAD_FAIL;
-    }
 
     if (Error Err = MemoryPool->deallocate(TgtPtr)) {
-      REPORT("%s\n", toString(std::move(Err)).data());
+      consumeError(std::move(Err));
       return OFFLOAD_FAIL;
     }
 
@@ -3368,7 +3366,8 @@ Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   const char *Desc = "Unknown error";
   hsa_status_t Ret = hsa_status_string(ResultCode, &Desc);
   if (Ret != HSA_STATUS_SUCCESS)
-    REPORT("Unrecognized " GETNAME(TARGET_NAME) " error code %d\n", Code);
+    return createStringError(inconvertibleErrorCode(),
+                             "Unrecognized HSA error code %d\n", Code);
 
   return createStringError<ArgsTy..., const char *>(inconvertibleErrorCode(),
                                                     ErrFmt, Args..., Desc);
@@ -3388,7 +3387,7 @@ void *AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
 
   // Allow all kernel agents to access the allocation.
   if (auto Err = MemoryPool->enableAccess(Ptr, Size, KernelAgents)) {
-    REPORT("%s\n", toString(std::move(Err)).data());
+    consumeError(std::move(Err));
     return nullptr;
   }
   return Ptr;
@@ -3414,15 +3413,13 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
     break;
   }
 
-  if (!MemoryPool) {
-    REPORT("No memory pool for the specified allocation kind\n");
+  if (!MemoryPool)
     return nullptr;
-  }
 
   // Allocate from the corresponding memory pool.
   void *Alloc = nullptr;
   if (Error Err = MemoryPool->allocate(Size, &Alloc)) {
-    REPORT("%s\n", toString(std::move(Err)).data());
+    consumeError(std::move(Err));
     return nullptr;
   }
 
@@ -3433,7 +3430,7 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
 
     // Enable all kernel agents to access the buffer.
     if (auto Err = MemoryPool->enableAccess(Alloc, Size, KernelAgents)) {
-      REPORT("%s\n", toString(std::move(Err)).data());
+      consumeError(std::move(Err));
       return nullptr;
     }
   }

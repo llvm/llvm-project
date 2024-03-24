@@ -138,7 +138,7 @@ private:
     } else if (MemoryOffset) {
       // If we are off and in a situation we cannot just "waste" memory to force
       // a match, we hope adjusting the arguments is sufficient.
-      REPORT(
+      FAILURE_MESSAGE(
           "WARNING Failed to allocate replay memory at required location %p, "
           "got %p, trying to offset argument pointers by %" PRIi64 "\n",
           VAddr, MemoryStart, MemoryOffset);
@@ -155,9 +155,9 @@ private:
     if (Device->supportVAManagement()) {
       auto Err = preAllocateVAMemory(DeviceMemorySize, ReqVAddr);
       if (Err) {
-        REPORT("WARNING VA mapping failed, fallback to heuristic: "
-               "(Error: %s)\n",
-               toString(std::move(Err)).data());
+        FAILURE_MESSAGE("WARNING VA mapping failed, fallback to heuristic: "
+                        "(Error: %s)\n",
+                        toString(std::move(Err)).data());
       }
     }
 
@@ -864,12 +864,8 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   DP("Load data from image " DPxMOD "\n", DPxPTR(InputTgtImage->ImageStart));
 
   auto PostJITImageOrErr = Plugin.getJIT().process(*InputTgtImage, *this);
-  if (!PostJITImageOrErr) {
-    auto Err = PostJITImageOrErr.takeError();
-    REPORT("Failure to jit IR image %p on device %d: %s\n", InputTgtImage,
-           DeviceId, toString(std::move(Err)).data());
-    return nullptr;
-  }
+  if (!PostJITImageOrErr)
+    return PostJITImageOrErr.takeError();
 
   // Load the binary and allocate the image object. Use the next available id
   // for the image id, which is the number of previously loaded images.
@@ -895,8 +891,8 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
     uint64_t HeapSize;
     auto SizeOrErr = getDeviceHeapSize(HeapSize);
     if (SizeOrErr) {
-      REPORT("No global device memory pool due to error: %s\n",
-             toString(std::move(SizeOrErr)).data());
+      return Plugin::error("No global device memory pool due to error: %s\n",
+                           toString(std::move(SizeOrErr)).data());
     } else if (auto Err = setupDeviceMemoryPool(Plugin, *Image, HeapSize))
       return std::move(Err);
   }
@@ -964,26 +960,6 @@ Error GenericDeviceTy::setupDeviceEnvironment(GenericPluginTy &Plugin,
 Error GenericDeviceTy::setupDeviceMemoryPool(GenericPluginTy &Plugin,
                                              DeviceImageTy &Image,
                                              uint64_t PoolSize) {
-  // Free the old pool, if any.
-  if (DeviceMemoryPool.Ptr) {
-    if (auto Err = dataDelete(DeviceMemoryPool.Ptr,
-                              TargetAllocTy::TARGET_ALLOC_DEVICE))
-      return Err;
-  }
-
-  DeviceMemoryPool.Size = PoolSize;
-  auto AllocOrErr = dataAlloc(PoolSize, /*HostPtr=*/nullptr,
-                              TargetAllocTy::TARGET_ALLOC_DEVICE);
-  if (AllocOrErr) {
-    DeviceMemoryPool.Ptr = *AllocOrErr;
-  } else {
-    auto Err = AllocOrErr.takeError();
-    REPORT("Failure to allocate device memory for global memory pool: %s\n",
-           toString(std::move(Err)).data());
-    DeviceMemoryPool.Ptr = nullptr;
-    DeviceMemoryPool.Size = 0;
-  }
-
   // Create the metainfo of the device environment global.
   GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
   if (!GHandler.isSymbolInImage(*this, Image,
@@ -997,6 +973,21 @@ Error GenericDeviceTy::setupDeviceMemoryPool(GenericPluginTy &Plugin,
                          &DeviceMemoryPoolTracking);
   if (auto Err = GHandler.writeGlobalToDevice(*this, Image, TrackerGlobal))
     return Err;
+
+  // Free the old pool, if any.
+  if (DeviceMemoryPool.Ptr) {
+    if (auto Err = dataDelete(DeviceMemoryPool.Ptr,
+                              TargetAllocTy::TARGET_ALLOC_DEVICE))
+      return Err;
+  }
+
+  DeviceMemoryPool.Size = PoolSize;
+  auto AllocOrErr = dataAlloc(PoolSize, /*HostPtr=*/nullptr,
+                              TargetAllocTy::TARGET_ALLOC_DEVICE);
+  if (!AllocOrErr)
+    return AllocOrErr.takeError();
+
+  DeviceMemoryPool = {*AllocOrErr, 0};
 
   // Create the metainfo of the device environment global.
   GlobalTy DevEnvGlobal("__omp_rtl_device_memory_pool",
