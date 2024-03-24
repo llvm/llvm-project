@@ -5405,7 +5405,14 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
       if (isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
           isKnownNeverZero(Op.getOperand(0), Depth + 1))
         return true;
-    // TODO: There are a lot more cases we can prove for add.
+    if (KnownBits::computeForAddSub(
+            true, Op->getFlags().hasNoSignedWrap(),
+            Op->getFlags().hasNoUnsignedWrap(),
+            computeKnownBits(Op.getOperand(0), Depth + 1),
+            computeKnownBits(Op.getOperand(1), Depth + 1))
+            .isNonZero())
+      return true;
+    // TODO: Are there more cases we can prove for add not covered by the above?
     break;
 
   case ISD::SUB: {
