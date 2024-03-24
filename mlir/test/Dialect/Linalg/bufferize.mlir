@@ -217,3 +217,45 @@ func.func public @main(%arg0: tensor<2x3xi1>) -> tensor<6xi64> {
   %3 = func.call @csum(%2) : (tensor<6xi64>) -> tensor<6xi64>
   return %3 : tensor<6xi64>
 }
+
+// -----
+
+// CHECK-LABEL:   func @gen_depthwise_3D_channel_first_tensor(
+// CHECK-SAME:                                   %[[ARG0_TENSOR:.*]]: tensor<64x16x26x26x26xf32>,
+// CHECK-SAME:                                   %[[ARG1_TENSOR:.*]]: tensor<16x2x3x3x3xf32>,
+// CHECK-SAME:                                   %[[ARG2_TENSOR:.*]]: tensor<64x16x2x8x8x8xf32>) -> tensor<64x16x2x8x8x8xf32> {
+// CHECK-DAG:       %[[ARG0_MEMREF:.*]] = bufferization.to_memref %[[ARG0_TENSOR]] : memref<64x16x26x26x26xf32>
+// CHECK-DAG:       %[[ARG1_MEMREF:.*]] = bufferization.to_memref %[[ARG1_TENSOR]] : memref<16x2x3x3x3xf32>
+// CHECK-DAG:       %[[ARG2_MEMREF:.*]] = bufferization.to_memref %[[ARG2_TENSOR]] : memref<64x16x2x8x8x8xf32>
+// CHECK-DAG:       %[[INIT_BUFFER:.*]] = memref.alloc() {{.*}} : memref<64x16x2x8x8x8xf32>
+// CHECK:           memref.copy %[[ARG2_MEMREF]], %[[INIT_BUFFER]] : memref<64x16x2x8x8x8xf32> to memref<64x16x2x8x8x8xf32>
+// CHECK:           linalg.depthwise_conv_nd
+// CHECK-SAME:      {channel_first = true, dilations = dense<2> : tensor<3xi64>, strides = dense<3> : tensor<3xi64>}
+// CHECK-SAME:      ins(%[[ARG0_MEMREF]], %[[ARG1_MEMREF]] : memref<64x16x26x26x26xf32>, memref<16x2x3x3x3xf32>)
+// CHECK-SAME:      outs(%[[INIT_BUFFER]] : memref<64x16x2x8x8x8xf32>)
+func.func @gen_depthwise_3D_channel_first_tensor(%arg0: tensor<64x16x26x26x26xf32>, %arg1: tensor<16x2x3x3x3xf32>, %arg2: tensor<64x16x2x8x8x8xf32>) -> tensor<64x16x2x8x8x8xf32> {
+    %0 = linalg.depthwise_conv_nd {channel_first = true, strides = dense<3> : tensor<3xi64>, dilations = dense<2> : tensor<3xi64>} ins(%arg0, %arg1: tensor<64x16x26x26x26xf32>, tensor<16x2x3x3x3xf32>) outs(%arg2: tensor<64x16x2x8x8x8xf32>) -> tensor<64x16x2x8x8x8xf32>
+    return %0 : tensor<64x16x2x8x8x8xf32> 
+}
+
+// -----
+
+// CHECK-LABEL:   func @gen_depthwise_3D_channel_first_quantized_tensor(
+// CHECK-SAME:                                   %[[ARG0_TENSOR:.*]]: tensor<64x16x26x26x26xi8>,
+// CHECK-SAME:                                   %[[ARG1_TENSOR:.*]]: tensor<16x2x3x3x3xi8>,
+// CHECK-SAME:                                   %[[ARG2_TENSOR:.*]]: tensor<64x16x2x8x8x8xi64>,
+// CHECK-SAME:                                   %[[ARG3:.*]]: i32,
+// CHECK-SAME:                                   %[[ARG4:.*]]: i32) -> tensor<64x16x2x8x8x8xi64> {
+// CHECK-DAG:       %[[ARG0_MEMREF:.*]] = bufferization.to_memref %[[ARG0_TENSOR]] : memref<64x16x26x26x26xi8>
+// CHECK-DAG:       %[[ARG1_MEMREF:.*]] = bufferization.to_memref %[[ARG1_TENSOR]] : memref<16x2x3x3x3xi8>
+// CHECK-DAG:       %[[ARG2_MEMREF:.*]] = bufferization.to_memref %[[ARG2_TENSOR]] : memref<64x16x2x8x8x8xi64>
+// CHECK-DAG:       %[[INIT_BUFFER:.*]] = memref.alloc() {{.*}} : memref<64x16x2x8x8x8xi64>
+// CHECK:           memref.copy %[[ARG2_MEMREF]], %[[INIT_BUFFER]] : memref<64x16x2x8x8x8xi64> to memref<64x16x2x8x8x8xi64>
+// CHECK:           linalg.depthwise_conv_nd_q
+// CHECK-SAME:      {channel_first = true, dilations = dense<2> : tensor<3xi64>, strides = dense<3> : tensor<3xi64>}
+// CHECK-SAME:      ins(%[[ARG0_MEMREF]], %[[ARG1_MEMREF]], %[[ARG3]], %[[ARG4]] : memref<64x16x26x26x26xi8>, memref<16x2x3x3x3xi8>, i32, i32)
+// CHECK-SAME:      outs(%[[INIT_BUFFER]] : memref<64x16x2x8x8x8xi64>)
+func.func @gen_depthwise_3D_channel_first_quantized_tensor(%arg0: tensor<64x16x26x26x26xi8>, %arg1: tensor<16x2x3x3x3xi8>, %arg2: tensor<64x16x2x8x8x8xi64>, %arg3: i32, %arg4: i32) -> tensor<64x16x2x8x8x8xi64> {
+    %0 = linalg.depthwise_conv_nd_q {channel_first = true, strides = dense<3> : tensor<3xi64>, dilations = dense<2> : tensor<3xi64>} ins(%arg0, %arg1, %arg3, %arg4: tensor<64x16x26x26x26xi8>, tensor<16x2x3x3x3xi8>, i32, i32) outs(%arg2: tensor<64x16x2x8x8x8xi64>) -> tensor<64x16x2x8x8x8xi64>
+    return %0 : tensor<64x16x2x8x8x8xi64> 
+}

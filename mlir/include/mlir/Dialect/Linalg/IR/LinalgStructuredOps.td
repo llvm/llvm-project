@@ -384,6 +384,258 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// DepthwiseConvNDOp ops.
+//===----------------------------------------------------------------------===//
+
+def DepthwiseConvNDOp : LinalgStructuredBase_Op<"depthwise_conv_nd",
+  [LinalgDepthwiseConvolutionOpInterface]> {
+    
+  let summary = [{
+    Performs N-D depthwise convolution with switchable channel position; either first or last.
+  }];
+  let description = [{
+    Allows any number of spatial dimensions but treats all of them as contiguous.  Throughout, `S`,
+    will represent all spatial dimensions.  Operand layouts are determined by the `channel_first`
+    `bool` attritbute.  When placing the channel dim first or last, the batch dim is excluded.  In
+    any case, the channel and spatial dims are in the same relative order for all operands.
+    
+    Domain: N, S, C, M, KS
+
+    Layouts:
+      `channel_first == true`:
+        Input: `NCS`
+        Kernel: `CMS`
+        Output: `NCMS`
+
+      `channel_first == false`:
+        Input: `NSC`
+        Kernel: `SCM`
+        Output: `NSCM`
+
+  }];
+
+    let arguments = (ins
+      TensorOrMemref:$input,
+      TensorOrMemref:$filter,
+      TensorOrMemref:$init,
+      DefaultValuedAttr<BoolAttr, "true">:$channel_first,
+      OptionalAttr<I64ElementsAttr>:$strides,
+      OptionalAttr<I64ElementsAttr>:$dilations
+    );
+    let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
+    let regions = (region AnyRegion:$region);
+
+    let skipDefaultBuilders = 1;
+    let builders = [
+      OpBuilder<
+      (ins "Value":$input, "Value":$filter, "Value":$init, CArg<"bool", "true">:$channel_first,
+            CArg<"ArrayRef<int64_t>", "{}">:$strides, CArg<"ArrayRef<int64_t>", "{}">:$dilations,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        $_state.addAttribute(getChannelFirstAttrName($_state.name), $_builder.getBoolAttr(channel_first));
+        int64_t numSpatialDims = input.getType().cast<ShapedType>().getRank() - 2;
+        if (strides.empty())
+          strides = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        if (dilations.empty())
+          dilations = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        $_state.addAttribute(getStridesAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), strides));
+        $_state.addAttribute(getDilationsAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), dilations));
+        buildStructuredOp($_builder, $_state, std::nullopt, {input, filter}, init,
+          attributes, DepthwiseConvNDOp::getRegionBuilder());
+      }]>,
+      OpBuilder<
+      (ins "TypeRange":$resultTensorTypes, "Value":$input, "Value":$filter, 
+            "Value":$init, CArg<"bool", "true">:$channel_first,
+            CArg<"ArrayRef<int64_t>", "{}">:$strides, CArg<"ArrayRef<int64_t>", "{}">:$dilations,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        $_state.addAttribute(getChannelFirstAttrName($_state.name), $_builder.getBoolAttr(channel_first));
+        int64_t numSpatialDims = input.getType().cast<ShapedType>().getRank() - 2;
+        if (strides.empty())
+          strides = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        if (dilations.empty())
+          dilations = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        $_state.addAttribute(getStridesAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), strides));
+        $_state.addAttribute(getDilationsAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), dilations));
+        buildStructuredOp($_builder, $_state, resultTensorTypes,
+          {input, filter}, init, attributes, DepthwiseConvNDOp::getRegionBuilder());
+      }]>,
+      OpBuilder<
+      (ins "TypeRange":$resultTensorTypes, "Value":$input, "Value":$filter, 
+      "Value":$init, "Attribute":$channel_first, "Attribute":$strides, "Attribute":$dilations,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        $_state.addAttribute(getChannelFirstAttrName($_state.name), channel_first);
+        $_state.addAttribute(getStridesAttrName($_state.name), strides);
+        $_state.addAttribute(getDilationsAttrName($_state.name), dilations);
+        buildStructuredOp($_builder, $_state, resultTensorTypes, {input, filter}, init,
+          attributes, DepthwiseConvNDOp::getRegionBuilder());
+      }]>
+    ];
+
+    // TODO: Figure out how to move this to the interface
+    let extraClassDeclaration = structuredOpsBaseDecls # [{
+      void print(::mlir::OpAsmPrinter &printer) {
+        return detail::depthwise_convolution_impl::print(*this, printer);
+      }
+      static ::mlir::ParseResult parse(::mlir::OpAsmParser &parser,
+                                        ::mlir::OperationState &result) {
+        return detail::depthwise_convolution_impl::parse(parser, result);
+      }
+      static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
+                                mlir::ArrayRef<mlir::NamedAttribute>)>
+      getRegionBuilder() {
+        return detail::depthwise_convolution_impl::regionBuilder;
+      }
+      // Implement functions necessary for DestinationStyleOpInterface.
+      MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
+
+      // Implement functions necessary for LinalgOp.
+      ArrayAttr getIndexingMaps();
+
+      // Implement functions necessary for DepthwiseConvolutionOpInterface
+      int64_t getChannelPosition() {
+          return (getChannelFirstAttr().getValue()) ? 1 : getNumSpatialDims() + 1;
+      }
+    }];
+}
+
+def DepthwiseConvNDQOp : LinalgStructuredBase_Op<"depthwise_conv_nd_q",
+  [LinalgDepthwiseConvolutionOpInterface]> {
+    
+  let summary = [{
+    Performs quantized N-D depthwise convolution with switchable channel position; either first or last.
+  }];
+  let description = [{
+    Allows any number of spatial dimensions but treats all of them as contiguous.  Throughout, `S`,
+    will represent all spatial dimensions.  Operand layouts are determined by the `channel_first`
+    `bool` attritbute.  When placing the channel dim first or last, the batch dim is excluded.  In
+    any case, the channel and spatial dims are in the same relative order for all operands.
+    
+    Domain: N, S, C, M, KS
+
+    Layouts:
+      `channel_first == true`:
+        Input: `NCS`
+        Kernel: `CMS`
+        Output: `NCMS`
+
+      `channel_first == false`:
+        Input: `NSC`
+        Kernel: `SCM`
+        Output: `NSCM`
+
+  }];
+
+    let arguments = (ins
+      TensorOrMemref:$input,
+      TensorOrMemref:$filter,
+      Variadic<AnyType>:$zero_points,
+      TensorOrMemref:$init,
+      DefaultValuedAttr<BoolAttr, "true">:$channel_first,
+      OptionalAttr<I64ElementsAttr>:$strides,
+      OptionalAttr<I64ElementsAttr>:$dilations
+    );
+    let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
+    let regions = (region AnyRegion:$region);
+
+    let skipDefaultBuilders = 1;
+    let builders = [
+      OpBuilder<
+      (ins "Value":$input, "Value":$filter, "Value":$init, "ValueRange":$zero_points, CArg<"bool", "true">:$channel_first,
+            CArg<"ArrayRef<int64_t>", "{}">:$strides, CArg<"ArrayRef<int64_t>", "{}">:$dilations,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        $_state.addAttribute(getChannelFirstAttrName($_state.name), $_builder.getBoolAttr(channel_first));
+        int64_t numSpatialDims = input.getType().cast<ShapedType>().getRank() - 2;
+        if (strides.empty())
+          strides = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        if (dilations.empty())
+          dilations = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        $_state.addAttribute(getStridesAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), strides));
+        $_state.addAttribute(getDilationsAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), dilations));
+        SmallVector<Value> inputs({input, filter});
+        inputs.insert(inputs.end(), zero_points.begin(), zero_points.end());
+        buildStructuredOp($_builder, $_state, std::nullopt, inputs, init,
+          attributes, DepthwiseConvNDQOp::getRegionBuilder());
+      }]>,
+      OpBuilder<
+      (ins "TypeRange":$resultTensorTypes, "Value":$input, "Value":$filter, 
+            "ValueRange":$zero_points, "Value":$init, CArg<"bool", "true">:$channel_first,
+            CArg<"ArrayRef<int64_t>", "{}">:$strides, CArg<"ArrayRef<int64_t>", "{}">:$dilations,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        $_state.addAttribute(getChannelFirstAttrName($_state.name), $_builder.getBoolAttr(channel_first));
+        int64_t numSpatialDims = input.getType().cast<ShapedType>().getRank() - 2;
+        if (strides.empty())
+          strides = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        if (dilations.empty())
+          dilations = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        $_state.addAttribute(getStridesAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), strides));
+        $_state.addAttribute(getDilationsAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), dilations));
+        SmallVector<Value> inputs({input, filter});
+        inputs.insert(inputs.end(), zero_points.begin(), zero_points.end());
+        buildStructuredOp($_builder, $_state, resultTensorTypes,
+          inputs, init, attributes, DepthwiseConvNDQOp::getRegionBuilder());
+      }]>,
+      OpBuilder<
+      (ins "TypeRange":$resultTensorTypes, "Value":$input, "Value":$filter, "ValueRange":$zero_points,
+      "Value":$init, "Attribute":$channel_first, "Attribute":$strides, "Attribute":$dilations,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        $_state.addAttribute(getChannelFirstAttrName($_state.name), channel_first);
+        $_state.addAttribute(getStridesAttrName($_state.name), strides);
+        $_state.addAttribute(getDilationsAttrName($_state.name), dilations);
+        SmallVector<Value> inputs({input, filter});
+        inputs.insert(inputs.end(), zero_points.begin(), zero_points.end());
+        buildStructuredOp($_builder, $_state, resultTensorTypes, inputs, init,
+          attributes, DepthwiseConvNDQOp::getRegionBuilder());
+      }]>
+    ];
+
+    // TODO: Figure out how to move this to the interface
+    let extraClassDeclaration = structuredOpsBaseDecls # [{
+      void print(::mlir::OpAsmPrinter &printer) {
+        return detail::depthwise_convolution_impl::print(*this, printer);
+      }
+      static ::mlir::ParseResult parse(::mlir::OpAsmParser &parser,
+                                        ::mlir::OperationState &result) {
+        return detail::depthwise_convolution_impl::parse(parser, result, true);
+      }
+      static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
+                                mlir::ArrayRef<mlir::NamedAttribute>)>
+      getRegionBuilder() {
+        return detail::depthwise_convolution_impl::quantizedRegionBuilder;
+      }
+      // Implement functions necessary for DestinationStyleOpInterface.
+      MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
+
+      // Implement functions necessary for LinalgOp.
+      ArrayAttr getIndexingMaps();
+
+      // Implement functions necessary for DepthwiseConvolutionOpInterface
+      int64_t getChannelPosition() {
+          return (getChannelFirstAttr().getValue()) ? 1 : getNumSpatialDims() + 1;
+      }
+    }];
+}
 
 //===----------------------------------------------------------------------===//
 // Transpose op.
