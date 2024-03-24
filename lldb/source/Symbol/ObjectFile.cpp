@@ -764,6 +764,39 @@ uint32_t ObjectFile::GetCacheHash() {
   return *m_cache_hash;
 }
 
+bool ObjectFile::CanBeTargetModule(Status *status) {
+  switch (GetType()) {
+  case ObjectFile::eTypeCoreFile:      /// A core file that has a checkpoint of
+                                       /// a program's execution state
+  case ObjectFile::eTypeExecutable:    /// A normal executable
+  case ObjectFile::eTypeDynamicLinker: /// The platform's dynamic linker
+                                       /// executable
+  case ObjectFile::eTypeObjectFile:    /// An intermediate object file
+  case ObjectFile::eTypeSharedLibrary: /// A shared library that can be
+                                       /// used during execution
+    return true;
+  case ObjectFile::eTypeDebugInfo: /// An object file that contains only
+                                   /// debug information
+    if (status)
+      status->SetErrorString("debug info files aren't valid target "
+                             "modules, please specify an executable");
+    return false;
+  case ObjectFile::eTypeStubLibrary: /// A library that can be linked
+                                     /// against but not used for
+                                     /// execution
+    if (status)
+      status->SetErrorString("stub libraries aren't valid target "
+                             "modules, please specify an executable");
+    return false;
+  default:
+    if (status)
+      status->SetErrorString(
+          "unsupported file type, please specify an executable");
+    return false;
+  }
+  llvm_unreachable("Fully covered switch above!");
+}
+
 namespace llvm {
 namespace json {
 
