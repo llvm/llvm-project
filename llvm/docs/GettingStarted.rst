@@ -1139,11 +1139,8 @@ following options with cmake:
    should improve your build time slightly.
 
  * -DLLVM_USE_SPLIT_DWARF
-   Consider setting this to ON if you require a debug build, as this will ease
-   memory pressure on the linker. This will make linking much faster, as the
-   binaries will not contain any of the debug information; however, this will
-   generate the debug information in the form of a DWARF object file (with the
-   extension .dwo). This only applies to host platforms using ELF, such as Linux.
+   Consider setting this to OFF on Linux if you are using old debugger that doesn’t
+   support split dwarf.
 
 .. _links:
 
