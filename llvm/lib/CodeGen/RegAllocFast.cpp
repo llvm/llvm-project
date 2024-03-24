@@ -405,6 +405,11 @@ private:
   bool mayLiveOut(Register VirtReg);
   bool mayLiveIn(Register VirtReg);
 
+  // For each register operand marked spillable, spill then memory fold the
+  // operand.
+  void preemptivelySpillInlineAsmOperands(MachineInstr *MI);
+  void preemptivelySpillInlineAsmOperands(MachineBasicBlock *MBB);
+
   void dumpState() const;
 };
 
@@ -1684,6 +1689,12 @@ void RegAllocFast::allocateBasicBlock(MachineBasicBlock &MBB) {
 
   Coalesced.clear();
 
+  // If an operand can be folded just fold it immediately so that we don't
+  // have to later try to deal with register exhaustion if there's register
+  // pressure. Do this before useVirtReg which will attempt to allocate a
+  // physreg and may fail under register pressure.
+  preemptivelySpillInlineAsmOperands(&MBB);
+
   // Traverse block in reverse order allocating instructions one by one.
   for (MachineInstr &MI : reverse(MBB)) {
     LLVM_DEBUG(dbgs() << "\n>> " << MI << "Regs:"; dumpState());
@@ -1730,6 +1741,69 @@ void RegAllocFast::allocateBasicBlock(MachineBasicBlock &MBB) {
   DanglingDbgValues.clear();
 
   LLVM_DEBUG(MBB.dump());
+}
+
+void RegAllocFast::preemptivelySpillInlineAsmOperands(MachineInstr *MI) {
+  assert(MI->isInlineAsm() && "should only be used by inline asm");
+  // BOTH MI and its number of operands may change in this loop; cache neither.
+  for (unsigned I = InlineAsm::MIOp_FirstOperand; I < MI->getNumOperands();
+       ++I) {
+    MachineOperand &MO = MI->getOperand(I);
+    if (!(MO.isReg() && MI->mayFoldInlineAsmRegOp(I)))
+      continue;
+
+    const bool IsDef = MO.isDef();
+    const bool IsUse = MO.isUse();
+    const bool IsKill = MO.isKill();
+    const MachineOperand *TiedOp = nullptr;
+
+    if (MO.isTied())
+      if (MachineOperand *T = &MI->getOperand(MI->findTiedOperandIdx(I)))
+        if (T->isUse())
+          TiedOp = T;
+
+    Register Reg = MO.getReg();
+    const bool IsVirt = Reg.isVirtual();
+    const TargetRegisterClass *RC =
+        IsVirt ? MRI->getRegClass(Reg) : TRI->getMinimalPhysRegClass(Reg);
+    int FrameIndex = IsVirt
+                         ? getStackSpaceFor(Reg)
+                         : MFI->CreateSpillStackObject(TRI->getSpillSize(*RC),
+                                                       TRI->getSpillAlign(*RC));
+
+    MachineInstr *NewMI = TII->foldMemoryOperand(*MI, {I}, FrameIndex);
+    // foldMemoryOperand always puts the new instruction before its first param.
+    // Here, we want the newly created replacement to go after the old one, so
+    // that we don't attempt to regalloc it again.
+    MI->getParent()->splice(std::next(MI->getIterator()), NewMI->getParent(),
+                            NewMI->getIterator());
+
+    if (IsDef) {
+      // TODO: asm goto
+      TII->loadRegFromStackSlot(*MBB, std::next(NewMI->getIterator()), Reg,
+                                FrameIndex, RC, TRI, {});
+      ++NumStores;
+    }
+
+    if (IsUse || TiedOp) {
+      if (TiedOp)
+        Reg = TiedOp->getReg();
+      TII->storeRegToStackSlot(*MBB, MI, Reg, IsKill, FrameIndex, RC, TRI, {});
+      ++NumStores;
+    }
+
+    MI->removeFromParent();
+    MI = NewMI;
+  }
+}
+
+void RegAllocFast::preemptivelySpillInlineAsmOperands(MachineBasicBlock *MBB) {
+  SmallVector<MachineInstr *> InlineAsms;
+  for (MachineInstr &MI : *MBB)
+    if (MI.isInlineAsm())
+      InlineAsms.push_back(&MI);
+  for (MachineInstr *MI : InlineAsms)
+    preemptivelySpillInlineAsmOperands(MI);
 }
 
 bool RegAllocFast::runOnMachineFunction(MachineFunction &MF) {
