@@ -101,3 +101,86 @@ module attributes {gpu.container_module} {
     llvm.return
   }
 }
+
+// -----
+
+// Test the `offload_embedding<cuda>` attribute.
+module attributes {gpu.container_module} {
+  // CHECK: @__begin_offload_kernel_module = internal constant [1 x %{{.*}}] [%{{.*}} { ptr @[[KERNEL_SYMBOL:.*]], ptr @[[ENTRY_NAME:.*]], i64 0, i32 0, i32 0 }]
+  // CHECK: @__end_offload_kernel_module = internal constant ptr getelementptr inbounds (%{{.*}}, ptr @__begin_offload_kernel_module, i64 1)
+  // CHECK: @[[FATBIN:.*]] = internal constant [4 x i8] c"BLOB", section ".nv_fatbin"
+  // CHECK: @[[FATBIN_HANDLE:.*]] = internal constant %{{.*}} { i32 1180844977, i32 1, ptr @[[FATBIN]]
+  // CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @[[REGISTRATION_CTOR:.*]], ptr null }]
+  // CHECK: @[[KERNEL_SYMBOL]] = internal constant i8 0
+  // CHECK-NEXT: @[[ENTRY_NAME]] = internal unnamed_addr constant [7 x i8] c"kernel\00"
+  gpu.binary @kernel_module <#gpu.offload_embedding<cuda>> [#gpu.object<#nvvm.target, bin = "BLOB">]
+  llvm.func @foo() {
+    // CHECK: [[ARGS:%.*]] = alloca %{{.*}}, align 8
+    // CHECK-NEXT: [[ARGS_ARRAY:%.*]] = alloca ptr, i64 2, align 8
+    // CHECK-NEXT: [[ARG0:%.*]] = getelementptr inbounds [[ARGS_TY]], ptr [[ARGS]], i32 0, i32 0
+    // CHECK-NEXT: store i32 32, ptr [[ARG0]], align 4
+    // CHECK-NEXT: %{{.*}} = getelementptr ptr, ptr [[ARGS_ARRAY]], i32 0
+    // CHECK-NEXT: store ptr [[ARG0]], ptr %{{.*}}, align 8
+    // CHECK-NEXT: [[ARG1:%.*]] = getelementptr inbounds [[ARGS_TY]], ptr [[ARGS]], i32 0, i32 1
+    // CHECK-NEXT: store i32 32, ptr [[ARG1]], align 4
+    // CHECK-NEXT: %{{.*}} = getelementptr ptr, ptr [[ARGS_ARRAY]], i32 1
+    // CHECK-NEXT: store ptr [[ARG1]], ptr %{{.*}}, align 8
+    // CHECK-NEXT: [[STREAM:%.*]] = call ptr @mgpuStreamCreate()
+    // CHECK-NEXT: call void @mgpuLaunchKernelRT(ptr @[[KERNEL_SYMBOL]], i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i32 256, ptr [[STREAM]], ptr [[ARGS_ARRAY]], ptr null, i64 2)
+    // CHECK-NEXT: call void @mgpuStreamSynchronize(ptr [[STREAM]])
+    // CHECK-NEXT: call void @mgpuStreamDestroy(ptr [[STREAM]])
+    %0 = llvm.mlir.constant(8 : index) : i64
+    %1 = llvm.mlir.constant(32 : i32) : i32
+    %2 = llvm.mlir.constant(256 : i32) : i32
+    gpu.launch_func @kernel_module::@kernel blocks in (%0, %0, %0) threads in (%0, %0, %0) : i64 dynamic_shared_memory_size %2 args(%1 : i32, %1 : i32)
+    llvm.return
+  }
+  // CHECK: define internal void @[[REGISTRATION_CTOR]]
+  // CHECK: %{{.*}} = call ptr @__cudaRegisterFatBinary(ptr @[[FATBIN_HANDLE]])
+}
+
+// -----
+
+// Test the `offload_embedding<hip>` attribute.
+module attributes {gpu.container_module} {
+  // CHECK: @__begin_offload_kernel_module = internal constant [2 x %{{.*}}] [
+  // CHECK: %{{.*}} { ptr @[[KERNEL_1_SYMBOL:.*]], ptr @[[ENTRY_NAME_1:.*]], i64 0, i32 0, i32 0 },
+  // CHECK: %{{.*}} { ptr @[[KERNEL_2_SYMBOL:.*]], ptr @[[ENTRY_NAME_2:.*]], i64 0, i32 0, i32 0 }]
+  // CHECK: @__end_offload_kernel_module = internal constant ptr getelementptr inbounds (%{{.*}}, ptr @__begin_offload_kernel_module, i64 2)
+  // CHECK: @[[FATBIN:.*]] = internal constant [4 x i8] c"BLOB", section ".hip_fatbin"
+  // CHECK: @[[FATBIN_HANDLE:.*]] = internal constant %{{.*}} { i32 1212764230, i32 1, ptr @[[FATBIN]]
+  // CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @[[REGISTRATION_CTOR:.*]], ptr null }]
+  // CHECK: @[[KERNEL_1_SYMBOL]] = internal constant i8 0
+  // CHECK-NEXT: @[[ENTRY_NAME_1]] = internal unnamed_addr constant [9 x i8] c"kernel_1\00"
+  // CHECK: @[[KERNEL_2_SYMBOL]] = internal constant i8 0
+  // CHECK-NEXT: @[[ENTRY_NAME_2]] = internal unnamed_addr constant [9 x i8] c"kernel_2\00"
+  gpu.binary @kernel_module <#gpu.offload_embedding<hip>> [#gpu.object<#rocdl.target, bin = "BLOB">]
+  llvm.func @foo() {
+    %0 = llvm.mlir.constant(8 : index) : i64
+    %1 = llvm.mlir.constant(32 : i32) : i32
+    %2 = llvm.mlir.constant(256 : i32) : i32
+    gpu.launch_func @kernel_module::@kernel_1 blocks in (%0, %0, %0) threads in (%0, %0, %0) : i64 dynamic_shared_memory_size %2 args(%1 : i32, %1 : i32)
+    gpu.launch_func @kernel_module::@kernel_2 blocks in (%0, %0, %0) threads in (%0, %0, %0) : i64 dynamic_shared_memory_size %2 args(%1 : i32, %1 : i32)
+    llvm.return
+  }
+  // CHECK: define internal void @[[REGISTRATION_CTOR]]
+  // CHECK: %{{.*}} = call ptr @__hipRegisterFatBinary(ptr @[[FATBIN_HANDLE]])
+}
+
+// -----
+
+// Test the `offload_embedding<omp>` attribute.
+module attributes {gpu.container_module} {
+  // CHECK: @__begin_offload_kernel_module = internal constant [0 x %{{.*}}] zeroinitializer
+  // CHECK: @__end_offload_kernel_module = internal constant ptr @__begin_offload_kernel_module
+  // CHECK: @[[BINARY:.*]] = internal unnamed_addr constant [{{.*}} x i8] c"{{.*}}", section ".llvm.offloading", align 8
+  // CHECK: @[[BINARIES:.*]] = internal unnamed_addr constant [1 x %{{.*}}] [%{{.*}} { ptr getelementptr inbounds ([{{.*}} x i8], ptr @[[BINARY]], i64 0, i64 {{.*}}), ptr getelementptr inbounds ([{{.*}} x i8], ptr @[[BINARY]], i64 0, i64 {{.*}}), ptr @__begin_offload_kernel_module, ptr @__end_offload_kernel_module }]
+  // CHECK: @[[DESCRIPTOR:.*]] = internal constant %{{.*}} { i32 1, ptr @[[BINARIES]], ptr @__begin_offload_kernel_module, ptr @__end_offload_kernel_module }
+  // CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @[[REGISTRATION_CTOR:.*]], ptr null }]
+  // CHECK: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @[[REGISTRATION_DTOR:.*]], ptr null }]
+  gpu.binary @kernel_module <#gpu.offload_embedding<omp>> [#gpu.object<#rocdl.target, bin = "BLOB">]
+  // CHECK: define internal void @[[REGISTRATION_CTOR]]
+  // CHECK: call {{.*}} @__tgt_register_lib(ptr @[[DESCRIPTOR]])
+  // CHECK: define internal void @[[REGISTRATION_DTOR]]
+  // CHECK: call {{.*}} @__tgt_unregister_lib(ptr @[[DESCRIPTOR]])
+}
