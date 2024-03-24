@@ -4194,16 +4194,21 @@ static void handleDeclareVariantConstructTrait(DSAStackTy *Stack,
 }
 
 void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
+  if (isCombinedConstruct(DKind)) {
+    for (OpenMPDirectiveKind Leaf : getLeafConstructs(DKind))
+      ActOnOpenMPRegionStart(Leaf, CurScope);
+    return;
+  }
   switch (DKind) {
   case OMPD_parallel:
-  case OMPD_parallel_for:
+  // case OMPD_parallel_for:
   case OMPD_parallel_for_simd:
-  case OMPD_parallel_sections:
-  case OMPD_parallel_master:
-  case OMPD_parallel_masked:
-  case OMPD_parallel_loop:
+  // case OMPD_parallel_sections:
+  // case OMPD_parallel_master:
+  // case OMPD_parallel_masked:
+  // case OMPD_parallel_loop:
   case OMPD_teams:
-  case OMPD_teams_distribute:
+  // case OMPD_teams_distribute:
   case OMPD_teams_distribute_simd: {
     QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1).withConst();
     QualType KmpInt32PtrTy =
@@ -4217,12 +4222,12 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
                              Params);
     break;
   }
-  case OMPD_target_teams:
-  case OMPD_target_parallel:
-  case OMPD_target_parallel_for:
+  // case OMPD_target_teams:
+  // case OMPD_target_parallel:
+  // case OMPD_target_parallel_for:
   case OMPD_target_parallel_for_simd:
-  case OMPD_target_parallel_loop:
-  case OMPD_target_teams_distribute:
+  // case OMPD_target_parallel_loop:
+  // case OMPD_target_teams_distribute:
   case OMPD_target_teams_distribute_simd: {
     QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1).withConst();
     QualType VoidPtrTy = Context.VoidPtrTy.withConst().withRestrict();
@@ -4269,8 +4274,8 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
                              ParamsTeamsOrParallel, /*OpenMPCaptureLevel=*/2);
     break;
   }
-  case OMPD_target:
-  case OMPD_target_simd: {
+  case OMPD_target: {
+  // case OMPD_target_simd: {
     QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1).withConst();
     QualType VoidPtrTy = Context.VoidPtrTy.withConst().withRestrict();
     QualType KmpInt32PtrTy =
@@ -4366,8 +4371,8 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   }
   case OMPD_taskloop:
   case OMPD_taskloop_simd:
-  case OMPD_master_taskloop:
-  case OMPD_masked_taskloop:
+  // case OMPD_master_taskloop:
+  // case OMPD_masked_taskloop:
   case OMPD_masked_taskloop_simd:
   case OMPD_master_taskloop_simd: {
     QualType KmpInt32Ty =
@@ -4410,9 +4415,9 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
             Context, {}, AlwaysInlineAttr::Keyword_forceinline));
     break;
   }
-  case OMPD_parallel_masked_taskloop:
+  // case OMPD_parallel_masked_taskloop:
   case OMPD_parallel_masked_taskloop_simd:
-  case OMPD_parallel_master_taskloop:
+  // case OMPD_parallel_master_taskloop:
   case OMPD_parallel_master_taskloop_simd: {
     QualType KmpInt32Ty =
         Context.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1)
@@ -4478,7 +4483,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
                              Params);
     break;
   }
-  case OMPD_target_teams_loop:
+  // case OMPD_target_teams_loop:
   case OMPD_target_teams_distribute_parallel_for:
   case OMPD_target_teams_distribute_parallel_for_simd: {
     QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1).withConst();
@@ -4539,7 +4544,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     break;
   }
 
-  case OMPD_teams_loop:
+  // case OMPD_teams_loop:
   case OMPD_teams_distribute_parallel_for:
   case OMPD_teams_distribute_parallel_for_simd: {
     QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1).withConst();
@@ -4802,8 +4807,14 @@ static bool checkOrderedOrderSpecified(Sema &S,
   return false;
 }
 
-StmtResult Sema::ActOnOpenMPRegionEnd(StmtResult S,
-                                      ArrayRef<OMPClause *> Clauses) {
+StmtResult
+Sema::ActOnOpenMPRegionEnd(StmtResult S, ArrayRef<OMPClause *> Clauses) {
+  return ActOnOpenMPRegionEnd(S, Clauses, [](StmtResult S) { return S; });
+}
+
+StmtResult
+Sema::ActOnOpenMPRegionEnd(StmtResult S, ArrayRef<OMPClause *> Clauses,
+                           std::function<StmtResult(StmtResult)> callback) {
   handleDeclareVariantConstructTrait(DSAStack, DSAStack->getCurrentDirective(),
                                      /* ScopeEntry */ false);
   if (DSAStack->getCurrentDirective() == OMPD_atomic ||
@@ -4974,6 +4985,7 @@ StmtResult Sema::ActOnOpenMPRegionEnd(StmtResult S,
     if (++CompletedRegions == CaptureRegions.size())
       DSAStack->setBodyComplete();
     SR = ActOnCapturedRegionEnd(SR.get());
+    SR = callback(SR);
   }
   return SR;
 }
