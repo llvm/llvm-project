@@ -528,12 +528,12 @@ int main() {
 
 #endif
 //.
-// CHECK1: @.gomp_critical_user_.reduction.var = common global [8 x i32] zeroinitializer, align 8
-// CHECK1: @.gomp_critical_user_.atomic_reduction.var = common global [8 x i32] zeroinitializer, align 8
+// CHECK1: @.gomp_critical_user_.reduction.var = common dso_local global [8 x i32] zeroinitializer, align 8
+// CHECK1: @.gomp_critical_user_.atomic_reduction.var = common dso_local global [8 x i32] zeroinitializer, align 8
 //.
-// CHECK3: @.gomp_critical_user_.reduction.var = common global [8 x i32] zeroinitializer, align 8
+// CHECK3: @.gomp_critical_user_.reduction.var = common dso_local global [8 x i32] zeroinitializer, align 8
 //.
-// CHECK4: @.gomp_critical_user_.reduction.var = common global [8 x i32] zeroinitializer, align 8
+// CHECK4: @.gomp_critical_user_.reduction.var = common dso_local global [8 x i32] zeroinitializer, align 8
 //.
 // CHECK1-LABEL: define {{[^@]+}}@main
 // CHECK1-SAME: () #[[ATTR0:[0-9]+]] {

@@ -2224,7 +2224,7 @@ llvm.func @single_copyprivate(%ip: !llvm.ptr, %fp: !llvm.ptr) {
 // -----
 
 // CHECK: @_QFsubEx = internal global i32 undef
-// CHECK: @_QFsubEx.cache = common global ptr null
+// CHECK: @_QFsubEx.cache = common dso_local global ptr null
 
 // CHECK-LABEL: @omp_threadprivate
 llvm.func @omp_threadprivate() {

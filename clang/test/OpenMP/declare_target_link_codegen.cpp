@@ -19,11 +19,11 @@
 #define HEADER
 
 // HOST-DAG: @c = external global i32,
-// HOST-DAG: @c_decl_tgt_ref_ptr = weak global ptr @c
+// HOST-DAG: @c_decl_tgt_ref_ptr = weak dso_local global ptr @c
 // HOST-DAG: @[[D:.+]] = internal global i32 2
-// HOST-DAG: @[[D_PTR:.+]] = weak global ptr @[[D]]
+// HOST-DAG: @[[D_PTR:.+]] = weak dso_local global ptr @[[D]]
 // DEVICE-NOT: @c =
-// DEVICE: @c_decl_tgt_ref_ptr = weak global ptr null
+// DEVICE: @c_decl_tgt_ref_ptr = weak dso_local global ptr null
 // HOST: [[SIZES:@.+]] = private unnamed_addr constant [3 x i64] [i64 4, i64 4, i64 4]
 // HOST: [[MAPTYPES:@.+]] = private unnamed_addr constant [3 x i64] [i64 35, i64 531, i64 531]
 // HOST: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [{{[0-9]+}} x i8] c"c_decl_tgt_ref_ptr\00"

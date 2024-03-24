@@ -4,8 +4,8 @@
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
 
-// CHECK: [[RED_SIZE1:@reduction_size[.].+]] = common thread_local global i64 0
-// CHECK: [[RED_SIZE2:@reduction_size[.].+]] = common thread_local global i64 0
+// CHECK: [[RED_SIZE1:@reduction_size[.].+]] = common dso_local thread_local global i64 0
+// CHECK: [[RED_SIZE2:@reduction_size[.].+]] = common dso_local thread_local global i64 0
 
 struct S {
   float a;
