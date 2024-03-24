@@ -1470,6 +1470,29 @@ void InterleavedAccessInfo::invalidateGroupsRequiringScalarEpilogue() {
   RequiresScalarEpilogue = false;
 }
 
+Value *InterleavedAccessInfo::hasMatchedLoadGroupForStore(Instruction *Inst,
+                                                          BasicBlock *BB,
+                                                          Value *Ptr) const {
+  if (isa<PHINode>(Inst) || Inst->getParent() != BB)
+    return nullptr;
+
+  if (isa<LoadInst>(Inst)) {
+    Value *V = getUnderlyingObject(Inst->getOperand(0));
+    auto Group = getInterleaveGroup(Inst);
+    if (Group && (V == Ptr))
+      return Group->getInsertPos();
+  }
+
+  for (unsigned It = 0; It < Inst->getNumOperands(); It++) {
+    if (Instruction *I = dyn_cast<Instruction>(Inst->getOperand(It)))
+      if (Value *MatchedLoadGroupEntry =
+              hasMatchedLoadGroupForStore(I, BB, Ptr))
+        return MatchedLoadGroupEntry;
+  }
+
+  return nullptr;
+}
+
 template <typename InstT>
 void InterleaveGroup<InstT>::addMetadata(InstT *NewInst) const {
   llvm_unreachable("addMetadata can only be used for Instruction");

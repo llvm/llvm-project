@@ -649,6 +649,13 @@ public:
   /// Returns true if we have any interleave groups.
   bool hasGroups() const { return !InterleaveGroups.empty(); }
 
+  /// Check if the interleaved store group has matched load group, which means
+  /// the store should be satisfied with some restrictions,
+  /// 1. The value operand of StoreInst should comes from LoadInst.
+  /// 2. The store group and the load group accesses the same memory.
+  Value *hasMatchedLoadGroupForStore(Instruction *Inst, BasicBlock *BB,
+                                     Value *Ptr) const;
+
 private:
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks.
   /// Simplifies SCEV expressions in the context of existing SCEV assumptions.
