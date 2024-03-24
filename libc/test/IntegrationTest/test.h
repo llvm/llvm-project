@@ -12,6 +12,18 @@
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/OSUtil/quick_exit.h"
 
+inline static bool streq(const char *lhs, const char *rhs) {
+  if (lhs == rhs)
+    return true;
+  if ((!lhs && rhs) || (lhs && !rhs))
+    return false;
+  const char *l, *r;
+  for (l = lhs, r = rhs; *l != '\0' && *r != '\0'; ++l, ++r)
+    if (*l != *r)
+      return false;
+  return *l == '\0' && *r == '\0';
+}
+
 #define __AS_STRING(val) #val
 #define __CHECK_TRUE(file, line, val, should_exit)                             \
   if (!(val)) {                                                                \
@@ -45,9 +57,24 @@
       LIBC_NAMESPACE::quick_exit(127);                                         \
   }
 
+#define __CHECK_STREQ(file, line, val1, val2, should_exit)                     \
+  if (streq((val1), (val2)) == false) {                                        \
+    LIBC_NAMESPACE::write_to_stderr(file ":" __AS_STRING(                      \
+        line) ": Expected '" #val1 "' to be equal to '" #val2 "'\n");          \
+    if (should_exit)                                                           \
+      LIBC_NAMESPACE::quick_exit(127);                                         \
+  }
+
+#define __CHECK_STRNE(file, line, val1, val2, should_exit)                     \
+  if (streq((val1), (val2)) == true) {                                         \
+    LIBC_NAMESPACE::write_to_stderr(file ":" __AS_STRING(                      \
+        line) ": Expected '" #val1 "' to not be equal to '" #val2 "'\n");      \
+    if (should_exit)                                                           \
+      LIBC_NAMESPACE::quick_exit(127);                                         \
+  }
+
 ////////////////////////////////////////////////////////////////////////////////
 // Boolean checks are handled as comparison to the true / false values.
-
 #define EXPECT_TRUE(val) __CHECK_TRUE(__FILE__, __LINE__, val, false)
 #define ASSERT_TRUE(val) __CHECK_TRUE(__FILE__, __LINE__, val, true)
 #define EXPECT_FALSE(val) __CHECK_FALSE(__FILE__, __LINE__, val, false)
@@ -66,14 +93,23 @@
   __CHECK_NE(__FILE__, __LINE__, (val1), (val2), true)
 
 ////////////////////////////////////////////////////////////////////////////////
+// String equality / inequality.
+
+#define EXPECT_STREQ(val1, val2)                                               \
+  __CHECK_STREQ(__FILE__, __LINE__, (val1), (val2), false)
+#define ASSERT_STREQ(val1, val2)                                               \
+  __CHECK_STREQ(__FILE__, __LINE__, (val1), (val2), true)
+#define EXPECT_STRNE(val1, val2)                                               \
+  __CHECK_STRNE(__FILE__, __LINE__, (val1), (val2), false)
+#define ASSERT_STRNE(val1, val2)                                               \
+  __CHECK_STRNE(__FILE__, __LINE__, (val1), (val2), true)
+
+////////////////////////////////////////////////////////////////////////////////
 // Errno checks.
 
-#define ASSERT_ERRNO_EQ(VAL)                                                   \
-  ASSERT_EQ(VAL, static_cast<int>(LIBC_NAMESPACE::libc_errno))
-#define ASSERT_ERRNO_SUCCESS()                                                 \
-  ASSERT_EQ(0, static_cast<int>(LIBC_NAMESPACE::libc_errno))
-#define ASSERT_ERRNO_FAILURE()                                                 \
-  ASSERT_NE(0, static_cast<int>(LIBC_NAMESPACE::libc_errno))
+#define ASSERT_ERRNO_EQ(VAL) ASSERT_EQ(VAL, errno)
+#define ASSERT_ERRNO_SUCCESS() ASSERT_EQ(0, errno)
+#define ASSERT_ERRNO_FAILURE() ASSERT_NE(0, errno)
 
 // Integration tests are compiled with -ffreestanding which stops treating
 // the main function as a non-overloadable special function. Hence, we use a

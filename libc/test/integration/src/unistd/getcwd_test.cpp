@@ -6,35 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/string_view.h"
-#include "src/errno/libc_errno.h"
-#include "src/stdlib/getenv.h"
-#include "src/unistd/getcwd.h"
-
 #include "test/IntegrationTest/test.h"
 
-#include <stdlib.h> // For malloc and free
-
-using LIBC_NAMESPACE::cpp::string_view;
+#include <errno.h>  // errno
+#include <stdlib.h> // getenv
+#include <unistd.h> // getcwd
 
 TEST_MAIN(int argc, char **argv, char **envp) {
   char buffer[1024];
-  ASSERT_TRUE(string_view(LIBC_NAMESPACE::getenv("PWD")) ==
-              LIBC_NAMESPACE::getcwd(buffer, 1024));
+  ASSERT_STREQ(getenv("PWD"), getcwd(buffer, 1024));
 
   // nullptr buffer
-  char *cwd = LIBC_NAMESPACE::getcwd(nullptr, 0);
-  ASSERT_TRUE(string_view(LIBC_NAMESPACE::getenv("PWD")) == cwd);
+  char *cwd = getcwd(nullptr, 0);
+  ASSERT_STREQ(getenv("PWD"), cwd);
   free(cwd);
 
   // Bad size
-  cwd = LIBC_NAMESPACE::getcwd(buffer, 0);
+  cwd = getcwd(buffer, 0);
   ASSERT_TRUE(cwd == nullptr);
   ASSERT_ERRNO_EQ(EINVAL);
   LIBC_NAMESPACE::libc_errno = 0;
 
   // Insufficient size
-  cwd = LIBC_NAMESPACE::getcwd(buffer, 2);
+  cwd = getcwd(buffer, 2);
   ASSERT_TRUE(cwd == nullptr);
   int err = LIBC_NAMESPACE::libc_errno;
   ASSERT_EQ(err, ERANGE);
