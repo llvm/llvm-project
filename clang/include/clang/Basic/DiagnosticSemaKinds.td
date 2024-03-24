@@ -2045,6 +2045,10 @@ def warn_frame_address : Warning<
   "calling '%0' with a nonzero argument is unsafe">,
   InGroup<FrameAddress>, DefaultIgnore;
 
+def warn_frame_address_missing_noinline: Warning<
+  "calling '%0' in function not marked __attribute__((noinline)) may return a caller's %1 address">,
+  InGroup<FrameAddress>, DefaultIgnore;
+
 def warn_cxx98_compat_nontrivial_union_or_anon_struct_member : Warning<
   "%select{anonymous struct|union}0 member %1 with a non-trivial "
   "%sub{select_special_member_kind}2 is incompatible with C++98">,
