@@ -25,6 +25,7 @@ READ-BAT-CHECK: BOLT-INFO: Parsed 5 BAT entries
 READ-BAT-CHECK: PERF2BOLT: read 79 aggregated LBR entries
 
 YAML-BAT-CHECK:      functions:
+# Function not covered by BAT - has insns in basic block
 YAML-BAT-CHECK:      - name:    main
 YAML-BAT-CHECK-NEXT:   fid:     2
 YAML-BAT-CHECK-NEXT:   hash:    0x9895746D48B2C876
@@ -35,6 +36,17 @@ YAML-BAT-CHECK-NEXT:   - bid:   0
 YAML-BAT-CHECK-NEXT:     insns: 26
 YAML-BAT-CHECK-NEXT:     hash:  0xA900AE79CFD40000
 YAML-BAT-CHECK-NEXT:     succ:  [ { bid: 3, cnt: 0 }, { bid: 1, cnt: 0 } ]
+# Function covered by BAT - doesn't have insns in basic block
+YAML-BAT-CHECK:      - name:    usqrt
+YAML-BAT-CHECK-NEXT:   fid:     [[#]]
+YAML-BAT-CHECK-NEXT:   hash:    0x99E67ED32A203023
+YAML-BAT-CHECK-NEXT:   exec:    21
+YAML-BAT-CHECK-NEXT:   nblocks: 5
+YAML-BAT-CHECK-NEXT:   blocks:
+YAML-BAT-CHECK:        - bid:   1
+YAML-BAT-CHECK-NEXT:       insns: [[#]]
+YAML-BAT-CHECK-NEXT:       hash:  0xD70DC695320E0010
+YAML-BAT-CHECK-NEXT:       succ:  {{.*}} { bid: 2, cnt: [[#]] }
 
 CHECK-BOLT-YAML:      pre-processing profile using YAML profile reader
-CHECK-BOLT-YAML-NEXT: 1 out of 16 functions in the binary (6.2%) have non-empty execution profile
+CHECK-BOLT-YAML-NEXT: 5 out of 16 functions in the binary (31.2%) have non-empty execution profile

@@ -2310,6 +2310,52 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       BP.Functions.emplace_back(
           YAMLProfileWriter::convert(Function, /*UseDFS=*/false));
     }
+
+    for (const auto &KV : NamesToBranches) {
+      const StringRef FuncName = KV.first;
+      const FuncBranchData &Branches = KV.second;
+      yaml::bolt::BinaryFunctionProfile YamlBF;
+      BinaryData *BD = BC.getBinaryDataByName(FuncName);
+      assert(BD);
+      uint64_t FuncAddress = BD->getAddress();
+      if (!BAT->isBATFunction(FuncAddress))
+        continue;
+      // Filter out cold fragments
+      if (!BD->getSectionName().equals(BC.getMainCodeSectionName()))
+        continue;
+      BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncAddress);
+      assert(BF);
+      YamlBF.Name = FuncName.str();
+      YamlBF.Id = BF->getFunctionNumber();
+      YamlBF.Hash = BAT->getBFHash(FuncAddress);
+      YamlBF.ExecCount = BF->getKnownExecutionCount();
+      YamlBF.NumBasicBlocks = BAT->getNumBasicBlocks(FuncAddress);
+      const BoltAddressTranslation::BBHashMapTy &BlockMap =
+          BAT->getBBHashMap(FuncAddress);
+
+      auto addSuccProfile = [&](yaml::bolt::BinaryBasicBlockProfile &YamlBB,
+                                uint64_t SuccOffset, unsigned SuccDataIdx) {
+        const llvm::bolt::BranchInfo &BI = Branches.Data.at(SuccDataIdx);
+        yaml::bolt::SuccessorInfo SI;
+        SI.Index = BlockMap.getBBIndex(SuccOffset);
+        SI.Count = BI.Branches;
+        SI.Mispreds = BI.Mispreds;
+        YamlBB.Successors.emplace_back(SI);
+      };
+
+      for (const auto &[FromOffset, SuccKV] : Branches.IntraIndex) {
+        yaml::bolt::BinaryBasicBlockProfile YamlBB;
+        if (!BlockMap.isInputBlock(FromOffset))
+          continue;
+        YamlBB.Index = BlockMap.getBBIndex(FromOffset);
+        YamlBB.Hash = BlockMap.getBBHash(FromOffset);
+        for (const auto &[SuccOffset, SuccDataIdx] : SuccKV)
+          addSuccProfile(YamlBB, SuccOffset, SuccDataIdx);
+        if (YamlBB.ExecCount || !YamlBB.Successors.empty())
+          YamlBF.Blocks.emplace_back(YamlBB);
+      }
+      BP.Functions.emplace_back(YamlBF);
+    }
   }
 
   // Write the profile.
