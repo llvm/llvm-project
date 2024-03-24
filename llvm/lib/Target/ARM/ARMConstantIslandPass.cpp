@@ -27,7 +27,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -990,7 +990,7 @@ MachineBasicBlock *ARMConstantIslands::splitBlockBeforeInstr(MachineInstr *MI) {
   MachineBasicBlock *OrigBB = MI->getParent();
 
   // Collect liveness information at MI.
-  LivePhysRegs LRs(*MF->getSubtarget().getRegisterInfo());
+  LiveRegUnits LRs(*MF->getSubtarget().getRegisterInfo());
   LRs.addLiveOuts(*OrigBB);
   auto LivenessEnd = ++MachineBasicBlock::iterator(MI).getReverse();
   for (MachineInstr &LiveMI : make_range(OrigBB->rbegin(), LivenessEnd))
@@ -1026,9 +1026,10 @@ MachineBasicBlock *ARMConstantIslands::splitBlockBeforeInstr(MachineInstr *MI) {
 
   // Update live-in information in the new block.
   MachineRegisterInfo &MRI = MF->getRegInfo();
-  for (MCPhysReg L : LRs)
-    if (!MRI.isReserved(L))
-      NewBB->addLiveIn(L);
+  const llvm::BitVector &bitVector = LRs.getBitVector();
+  for (unsigned RegUnit = 0; RegUnit < bitVector.size(); ++RegUnit)
+    if (bitVector.test(RegUnit) && !MRI.isReserved(RegUnit))
+      NewBB->addLiveIn(RegUnit);
 
   // Update internal data structures to account for the newly inserted MBB.
   // This is almost the same as updateForInsertedWaterBlock, except that
