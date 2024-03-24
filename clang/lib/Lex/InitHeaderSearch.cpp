@@ -77,11 +77,6 @@ public:
     SystemHeaderPrefixes.emplace_back(std::string(Prefix), IsSystemHeader);
   }
 
-  /// Add the necessary paths to support a MinGW libstdc++.
-  void AddMinGWCPlusPlusIncludePaths(StringRef Base,
-                                     StringRef Arch,
-                                     StringRef Version);
-
   /// Add paths that should always be searched.
   void AddDefaultCIncludePaths(const llvm::Triple &triple,
                                const HeaderSearchOptions &HSOpts);
@@ -184,17 +179,6 @@ bool InitHeaderSearch::AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
   return false;
 }
 
-void InitHeaderSearch::AddMinGWCPlusPlusIncludePaths(StringRef Base,
-                                                     StringRef Arch,
-                                                     StringRef Version) {
-  AddPath(Base + "/" + Arch + "/" + Version + "/include/c++",
-          CXXSystem, false);
-  AddPath(Base + "/" + Arch + "/" + Version + "/include/c++/" + Arch,
-          CXXSystem, false);
-  AddPath(Base + "/" + Arch + "/" + Version + "/include/c++/backward",
-          CXXSystem, false);
-}
-
 void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
                                             const HeaderSearchOptions &HSOpts) {
   if (!ShouldAddDefaultIncludePaths(triple))
@@ -204,10 +188,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
 
   if (HSOpts.UseStandardSystemIncludes) {
     switch (os) {
-    case llvm::Triple::Win32:
-      if (triple.getEnvironment() != llvm::Triple::Cygnus)
-        break;
-      [[fallthrough]];
     default:
       // FIXME: temporary hack: hard-coded paths.
       AddPath("/usr/local/include", System, false);
@@ -240,21 +220,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
     return;
   }
 
-  switch (os) {
-  case llvm::Triple::Win32:
-    switch (triple.getEnvironment()) {
-    default: llvm_unreachable("Include management is handled in the driver.");
-    case llvm::Triple::Cygnus:
-      AddPath("/usr/include/w32api", System, false);
-      break;
-    case llvm::Triple::GNU:
-      break;
-    }
-    break;
-  default:
-    break;
-  }
-
   AddPath("/usr/include", ExternCSystem, false);
 }
 
@@ -268,17 +233,7 @@ void InitHeaderSearch::AddDefaultCPlusPlusIncludePaths(
   llvm::Triple::OSType os = triple.getOS();
   switch (os) {
   case llvm::Triple::Win32:
-    switch (triple.getEnvironment()) {
-    default: llvm_unreachable("Include management is handled in the driver.");
-    case llvm::Triple::Cygnus:
-      // Cygwin-1.7
-      AddMinGWCPlusPlusIncludePaths("/usr/lib/gcc", "i686-pc-cygwin", "4.7.3");
-      AddMinGWCPlusPlusIncludePaths("/usr/lib/gcc", "i686-pc-cygwin", "4.5.3");
-      AddMinGWCPlusPlusIncludePaths("/usr/lib/gcc", "i686-pc-cygwin", "4.3.4");
-      // g++-4 / Cygwin-1.5
-      AddMinGWCPlusPlusIncludePaths("/usr/lib/gcc", "i686-pc-cygwin", "4.3.2");
-      break;
-    }
+    llvm_unreachable("Include management is handled in the driver.");
     break;
   default:
     break;
@@ -307,13 +262,8 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
   case llvm::Triple::Solaris:
   case llvm::Triple::WASI:
   case llvm::Triple::ZOS:
-    return false;
-
   case llvm::Triple::Win32:
-    if (triple.getEnvironment() != llvm::Triple::Cygnus ||
-        triple.isOSBinFormatMachO())
-      return false;
-    break;
+    return false;
 
   case llvm::Triple::UnknownOS:
     if (triple.isWasm())
