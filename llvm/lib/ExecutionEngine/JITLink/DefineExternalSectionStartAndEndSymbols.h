@@ -108,6 +108,25 @@ createDefineExternalSectionStartAndEndSymbolsPass(
       std::forward<SymbolIdentifierFunction>(F));
 }
 
+/// ELF section start/end symbol detection.
+inline SectionRangeSymbolDesc
+identifyELFSectionStartAndEndSymbols(LinkGraph &G, Symbol &Sym) {
+  constexpr StringRef StartSymbolPrefix = "__start_";
+  constexpr StringRef EndSymbolPrefix = "__stop_";
+
+  auto SymName = Sym.getName();
+  if (SymName.starts_with(StartSymbolPrefix)) {
+    if (auto *Sec =
+            G.findSectionByName(SymName.drop_front(StartSymbolPrefix.size())))
+      return {*Sec, true};
+  } else if (SymName.starts_with(EndSymbolPrefix)) {
+    if (auto *Sec =
+            G.findSectionByName(SymName.drop_front(EndSymbolPrefix.size())))
+      return {*Sec, false};
+  }
+  return {};
+}
+
 } // end namespace jitlink
 } // end namespace llvm
 
