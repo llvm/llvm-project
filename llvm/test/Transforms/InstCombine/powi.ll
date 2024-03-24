@@ -313,7 +313,7 @@ define double @fdiv_pow_powi(double %x) {
 ; CHECK-NEXT:    [[DIV:%.*]] = fmul reassoc nnan double [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret double [[DIV]]
 ;
-  %p1 = call double @llvm.powi.f64.i32(double %x, i32 3)
+  %p1 = call reassoc double @llvm.powi.f64.i32(double %x, i32 3)
   %div = fdiv reassoc nnan double %p1, %x
   ret double %div
 }
@@ -323,7 +323,7 @@ define float @fdiv_powf_powi(float %x) {
 ; CHECK-NEXT:    [[DIV:%.*]] = call reassoc nnan float @llvm.powi.f32.i32(float [[X:%.*]], i32 99)
 ; CHECK-NEXT:    ret float [[DIV]]
 ;
-  %p1 = call float @llvm.powi.f32.i32(float %x, i32 100)
+  %p1 = call reassoc float @llvm.powi.f32.i32(float %x, i32 100)
   %div = fdiv reassoc nnan float %p1, %x
   ret float %div
 }
@@ -347,10 +347,21 @@ define double @fdiv_pow_powi_multi_use(double %x) {
 define float @fdiv_powf_powi_missing_reassoc(float %x) {
 ; CHECK-LABEL: @fdiv_powf_powi_missing_reassoc(
 ; CHECK-NEXT:    [[P1:%.*]] = call float @llvm.powi.f32.i32(float [[X:%.*]], i32 100)
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan float [[P1]], [[X]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc nnan float [[P1]], [[X]]
 ; CHECK-NEXT:    ret float [[DIV]]
 ;
   %p1 = call float @llvm.powi.f32.i32(float %x, i32 100)
+  %div = fdiv reassoc nnan float %p1, %x
+  ret float %div
+}
+
+define float @fdiv_powf_powi_missing_reassoc1(float %x) {
+; CHECK-LABEL: @fdiv_powf_powi_missing_reassoc1(
+; CHECK-NEXT:    [[P1:%.*]] = call reassoc float @llvm.powi.f32.i32(float [[X:%.*]], i32 100)
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan float [[P1]], [[X]]
+; CHECK-NEXT:    ret float [[DIV]]
+;
+  %p1 = call reassoc float @llvm.powi.f32.i32(float %x, i32 100)
   %div = fdiv nnan float %p1, %x
   ret float %div
 }
