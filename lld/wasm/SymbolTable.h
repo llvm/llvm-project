@@ -50,6 +50,8 @@ public:
 
   void trace(StringRef name);
 
+  bool isTraced(StringRef name);
+
   Symbol *addDefinedFunction(StringRef name, uint32_t flags, InputFile *file,
                              InputFunction *function);
   Symbol *addDefinedData(StringRef name, uint32_t flags, InputFile *file,
