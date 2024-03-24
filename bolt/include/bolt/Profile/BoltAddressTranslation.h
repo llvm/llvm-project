@@ -257,6 +257,11 @@ public:
         std::as_const(*this).getBBHashMap(FuncOutputAddress));
   }
 
+  /// Returns the number of basic blocks in a function.
+  size_t getNumBasicBlocks(uint64_t OutputAddress) const {
+    return NumBasicBlocksMap.at(OutputAddress);
+  }
+
 private:
   FuncHashesTy FuncHashes;
 };
