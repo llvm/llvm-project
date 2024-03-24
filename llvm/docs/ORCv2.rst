@@ -972,3 +972,32 @@ Further Future Work
        multiple dylibs provide a weak definition of a symbol then each will end
        up with its own definition (similar to how weak definitions are handled
        in Windows DLLs). This will be fixed in the future.
+
+Frequently Asked Questions (FAQ)
+================================
+
+Here are some frequently asked questions about Orc's JIT API.
+
+Why can't I find this symbol defined in my LLVM IR?
+---------------------------------------------------
+
+If you are faced with a ``MissingSymbolsDefinitions`` error for a symbol you have defined in your LLVM IR, it may be a symbol that Orc does not map into a ``Materialization Unit``. Symbols with linkage types such as  ``linkonce_odr`` are common cases of this issue. This is the intended behaviour from the perspective of the linker interface, which is the goal of Orc-oriented JITs. 
+
+While this is the standard behaviour for symbol mapping on the ``IRLayer``, you are free to provide your own custom symbol mapping function to map symbols in the way that suits your necessities:
+
+.. code-block:: c++
+
+  static void
+  mySymbolMapper(ArrayRef<GlobalValue *> GVs, ExecutionSession &ES,
+                 const ManglingOptions &MO, SymbolFlagsMap &SymbolFlags,
+                 SymbolNameToDefinitionMap *SymbolToDefinition = nullptr) {
+    // decide which symbols you want to map to a possible MaterializationUnit
+  }
+
+  // ...
+
+  auto RT = JD.getDefaultResourceTracker();
+  // Add a ThreadSafeModule to an IRLayer
+  MyLayer.add(RT, TSM, mySymbolMapper);
+
+More info on how symbol mapping is usually done can be seen on ``defaultSymbolMapper`` at ``llvm/lib/ExecutionEngine/Orc/Mangling.cpp``.

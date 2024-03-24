@@ -28,18 +28,20 @@ SymbolStringPtr MangleAndInterner::operator()(StringRef Name) {
   return ES.intern(MangledName);
 }
 
-void IRSymbolMapper::add(ExecutionSession &ES, const ManglingOptions &MO,
-                         ArrayRef<GlobalValue *> GVs,
-                         SymbolFlagsMap &SymbolFlags,
-                         SymbolNameToDefinitionMap *SymbolToDefinition) {
+void IRSymbolMapper::defaultSymbolMapper(
+    ArrayRef<GlobalValue *> GVs, ExecutionSession &ES,
+    const ManglingOptions &MO, SymbolFlagsMap &SymbolFlags,
+    SymbolNameToDefinitionMap *SymbolToDefinition) {
   if (GVs.empty())
     return;
 
   MangleAndInterner Mangle(ES, GVs[0]->getParent()->getDataLayout());
   for (auto *G : GVs) {
     assert(G && "GVs cannot contain null elements");
+    // Follow static linkage behaviour to decide which GVs get a named symbol
     if (!G->hasName() || G->isDeclaration() || G->hasLocalLinkage() ||
-        G->hasAvailableExternallyLinkage() || G->hasAppendingLinkage())
+        G->hasAvailableExternallyLinkage() || G->hasAppendingLinkage() ||
+        G->hasLinkOnceODRLinkage())
       continue;
 
     if (G->isThreadLocal() && MO.EmulatedTLS) {
@@ -75,10 +77,12 @@ void IRSymbolMapper::add(ExecutionSession &ES, const ManglingOptions &MO,
     // Otherwise we just need a normal linker mangling.
     auto MangledName = Mangle(G->getName());
     SymbolFlags[MangledName] = JITSymbolFlags::fromGlobalValue(*G);
+    if (G->getComdat() &&
+        G->getComdat()->getSelectionKind() != Comdat::NoDeduplicate)
+      SymbolFlags[MangledName] |= JITSymbolFlags::Weak;
     if (SymbolToDefinition)
       (*SymbolToDefinition)[MangledName] = G;
   }
 }
-
 } // End namespace orc.
 } // End namespace llvm.
