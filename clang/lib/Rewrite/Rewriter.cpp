@@ -55,19 +55,34 @@ static inline bool isWhitespaceExceptNL(unsigned char c) {
 }
 
 void RewriteBuffer::RemoveText(unsigned OrigOffset, unsigned Size,
-                               bool removeLineIfEmpty) {
+                               bool removeLineIfEmpty, bool AfterInserts) {
   // Nothing to remove, exit early.
   if (Size == 0) return;
 
-  unsigned RealOffset = getMappedOffset(OrigOffset, true);
+  unsigned RealOffset = getMappedOffset(OrigOffset, AfterInserts);
   assert(RealOffset+Size <= Buffer.size() && "Invalid location");
 
   // Remove the dead characters.
   Buffer.erase(RealOffset, Size);
 
   // Add a delta so that future changes are offset correctly.
-  AddReplaceDelta(OrigOffset, -Size);
-
+  if (!AfterInserts) {
+    // In this case, we must adjust two deltas:
+    //   * The one that corresponds to text inserted at the RealOffset
+    //     location. We must thus compute the size of the text inserted there.
+    //
+    //   * The one that corresponds to the rest of the range, excluding the
+    //     text inserted at the RealOffset location.
+    unsigned OffsetBeforeInserts = RealOffset;
+    unsigned OffsetAfterInserts = getMappedOffset(OrigOffset, true);
+    unsigned InsertedTextSize = OffsetAfterInserts - OffsetBeforeInserts;
+    if (InsertedTextSize != 0)
+      AddInsertDelta(OrigOffset, -InsertedTextSize);
+    if (InsertedTextSize != Size)
+      AddReplaceDelta(OrigOffset, -(Size - InsertedTextSize));
+  } else {
+    AddReplaceDelta(OrigOffset, -Size);
+  }
   if (removeLineIfEmpty) {
     // Find the line that the remove occurred and if it is completely empty
     // remove the line as well.
@@ -303,11 +318,12 @@ bool Rewriter::InsertTextAfterToken(SourceLocation Loc, StringRef Str) {
 
 /// RemoveText - Remove the specified text region.
 bool Rewriter::RemoveText(SourceLocation Start, unsigned Length,
-                          RewriteOptions opts) {
+                          RewriteOptions opts, bool AfterInserts) {
   if (!isRewritable(Start)) return true;
   FileID FID;
   unsigned StartOffs = getLocationOffsetAndFileID(Start, FID);
-  getEditBuffer(FID).RemoveText(StartOffs, Length, opts.RemoveLineIfEmpty);
+  getEditBuffer(FID).RemoveText(StartOffs, Length, opts.RemoveLineIfEmpty,
+                                AfterInserts);
   return false;
 }
 
