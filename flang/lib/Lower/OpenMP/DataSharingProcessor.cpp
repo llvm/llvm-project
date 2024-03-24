@@ -379,8 +379,31 @@ void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
           &allocRegion, /*insertPt=*/{}, symType, symLoc);
 
       firOpBuilder.setInsertionPointToEnd(allocEntryBlock);
-      symTable->addSymbol(*sym,
-                          fir::substBase(symExV, allocRegion.getArgument(0)));
+
+      fir::ExtendedValue localExV = symExV.match(
+          [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
+            auto idxTy = firOpBuilder.getIndexType();
+            llvm::SmallVector<mlir::Value> extents;
+            llvm::SmallVector<mlir::Value> lBounds;
+
+            for (unsigned dim = 0; dim < box.getExtents().size(); ++dim) {
+              mlir::Value dimVal =
+                  firOpBuilder.createIntegerConstant(symLoc, idxTy, dim);
+              fir::BoxDimsOp dimInfo = firOpBuilder.create<fir::BoxDimsOp>(
+                  symLoc, idxTy, idxTy, idxTy, allocRegion.getArgument(0),
+                  dimVal);
+              extents.push_back(dimInfo.getExtent());
+              lBounds.push_back(dimInfo.getLowerBound());
+            }
+
+            return fir::ArrayBoxValue(allocRegion.getArgument(0), extents,
+                                      lBounds);
+          },
+          [&](const auto &box) -> fir::ExtendedValue {
+            return fir::substBase(symExV, allocRegion.getArgument(0));
+          });
+
+      symTable->addSymbol(*sym, localExV);
       symTable->pushScope();
       cloneSymbol(sym);
       firOpBuilder.create<mlir::omp::YieldOp>(
