@@ -1747,6 +1747,48 @@ TEST_F(CommentParserTest, ThrowsCommandHasArg13) {
   }
 }
 
+TEST_F(CommentParserTest, ThrowsCommandHasArg14) {
+  const char *Sources[] = {
+      "/// @throws unsigned long at least a 32-bit integer",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "unsigned long");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ThrowsCommandHasArg15) {
+  const char *Sources[] = {
+      "/// @throws unsigned long long at least a 64-bit integer",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "unsigned long long");
+    }
+  }
+}
+
 } // unnamed namespace
 
 } // end namespace comments

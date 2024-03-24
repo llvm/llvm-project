@@ -108,69 +108,112 @@ class TextTokenRetokenizer {
     }
   }
 
+  bool continueInt(SmallString<32> &NextToken) {
+    return NextToken.ends_with(StringRef("char")) ||
+           NextToken.ends_with(StringRef("int")) ||
+           NextToken.ends_with(StringRef("char*")) ||
+           NextToken.ends_with(StringRef("int*")) ||
+           NextToken.ends_with(StringRef("char&")) ||
+           NextToken.ends_with(StringRef("int&"));
+  }
+
+  bool lexInt(SmallString<32> &WordText, SmallString<32> &NextToken) {
+    unsigned LongCounter = (WordText.ends_with(StringRef("long"))) ? 1 : 0;
+    bool complete = false;
+
+    while (!isEnd()) {
+      const char C = peek();
+      if (!isWhitespace(C)) {
+        WordText.push_back(C);
+        consumeChar();
+      } else {
+
+        NextToken.clear();
+        peekNextToken(NextToken);
+
+        if (WordText.ends_with(StringRef("long"))) {
+          LongCounter++;
+          if (continueInt(NextToken)) {
+            WordText.push_back(C);
+            consumeChar();
+            complete = true;
+            continue;
+          } else {
+            if (LongCounter == 2) {
+              return true;
+            }
+          }
+        } else {
+
+          if (complete || continueInt(WordText)) {
+            return true;
+          }
+        }
+
+        if (NextToken.ends_with(StringRef("long"))) {
+          WordText.push_back(C);
+          consumeChar();
+        } else {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   /// Extract a template type
-  bool lexTemplateType(SmallString<32> &WordText) {
+  bool lexTemplate(SmallString<32> &WordText) {
     unsigned IncrementCounter = 0;
     while (!isEnd()) {
       const char C = peek();
       WordText.push_back(C);
       consumeChar();
       switch (C) {
-      default:
-        break;
       case '<': {
         IncrementCounter++;
-      } break;
+        break;
+      }
       case '>': {
         IncrementCounter--;
         if (!IncrementCounter)
           return true;
-      } break;
+        break;
+      }
+      default:
+        break;
       }
     }
     return false;
   }
 
-  bool isDataTypeQualifier(SmallString<32> &WordText) {
-    if (WordText.ends_with(StringRef("const")))
-      return true;
-    if (WordText.ends_with(StringRef("volatile")))
-      return true;
-    if (WordText.ends_with(StringRef("unsigned")))
-      return true;
-    if (WordText.ends_with(StringRef("signed")))
-      return true;
-    if (WordText.ends_with(StringRef("long")))
-      return true;
-    if (WordText.ends_with(StringRef("short")))
-      return true;
-    if (WordText.ends_with(StringRef("restrict")))
-      return true;
-    if (WordText.ends_with(StringRef("auto")))
-      return true;
-    if (WordText.ends_with(StringRef("register")))
-      return true;
-    if (WordText.ends_with(StringRef("static")))
-      return true;
-    if (WordText.ends_with(StringRef("extern")))
-      return true;
-    if (WordText.ends_with(StringRef("struct")))
-      return true;
-    if (WordText.ends_with(StringRef("typedef")))
-      return true;
-    if (WordText.ends_with(StringRef("union")))
-      return true;
-    if (WordText.ends_with(StringRef("void")))
-      return true;
-    return false;
+  bool isTypeQualifier(SmallString<32> &WordText) {
+    return WordText.ends_with(StringRef("const")) ||
+           WordText.ends_with(StringRef("volatile")) ||
+           WordText.ends_with(StringRef("short")) ||
+           WordText.ends_with(StringRef("restrict")) ||
+           WordText.ends_with(StringRef("auto")) ||
+           WordText.ends_with(StringRef("register")) ||
+           WordText.ends_with(StringRef("static")) ||
+           WordText.ends_with(StringRef("extern")) ||
+           WordText.ends_with(StringRef("struct")) ||
+           WordText.ends_with(StringRef("typedef")) ||
+           WordText.ends_with(StringRef("union")) ||
+           WordText.ends_with(StringRef("void"));
   }
 
   bool isScopeResolutionOperator(SmallString<32> &WordText) {
     return WordText.ends_with(StringRef("::"));
   }
 
+  bool isInt(SmallString<32> &WordText) {
+    return WordText.ends_with(StringRef("unsigned")) ||
+           WordText.ends_with(StringRef("long")) ||
+           WordText.ends_with(StringRef("signed"));
+  }
+
   bool continueParsing(SmallString<32> &WordText) {
-    return isDataTypeQualifier(WordText) || isScopeResolutionOperator(WordText);
+    return isTypeQualifier(WordText) || isScopeResolutionOperator(WordText);
   }
 
   /// Add a token.
@@ -252,7 +295,7 @@ public:
       const char C = peek();
       if (!isWhitespace(C)) {
         if (C == '<') {
-          if (!lexTemplateType(WordText))
+          if (!lexTemplate(WordText))
             return false;
         } else {
           WordText.push_back(C);
@@ -263,6 +306,12 @@ public:
           consumeChar();
           break;
         } else {
+          if (isInt(WordText)) {
+            WordText.push_back(C);
+            consumeChar();
+            if (!lexInt(WordText, NextToken))
+              return false;
+          }
           if (continueParsing(WordText)) {
             WordText.push_back(C);
             consumeChar();
