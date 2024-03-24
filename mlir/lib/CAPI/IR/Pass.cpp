@@ -138,7 +138,7 @@ public:
 protected:
   LogicalResult initialize(MLIRContext *ctx) override {
     if (callbacks.initialize)
-      return unwrap(callbacks.initialize(wrap(ctx), userData));
+      return unwrap(callbacks.initialize(userData, wrap(ctx)));
     return success();
   }
 
@@ -149,7 +149,7 @@ protected:
   }
 
   void runOnOperation() override {
-    callbacks.run(wrap(getOperation()), wrap(this), userData);
+    callbacks.run(userData, wrap(getOperation()), wrap(this));
   }
 
   std::unique_ptr<Pass> clonePass() const override {

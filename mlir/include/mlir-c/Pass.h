@@ -153,7 +153,7 @@ struct MlirExternalPassCallbacks {
   /// The callback is called before the pass is run, allowing a chance to
   /// initialize any complex state necessary for running the pass.
   /// See Pass::initialize(MLIRContext *).
-  MlirLogicalResult (*initialize)(MlirContext ctx, void *userData);
+  MlirLogicalResult (*initialize)(void *userData, MlirContext ctx);
 
   /// This callback is called when the pass is cloned.
   /// See Pass::clonePass().
@@ -161,7 +161,7 @@ struct MlirExternalPassCallbacks {
 
   /// This callback is called when the pass is run.
   /// See Pass::runOnOperation().
-  void (*run)(MlirOperation op, MlirExternalPass pass, void *userData);
+  void (*run)(void *userData, MlirOperation op, MlirExternalPass pass);
 };
 typedef struct MlirExternalPassCallbacks MlirExternalPassCallbacks;
 
