@@ -12,6 +12,18 @@
                     "column": 8
                 },
                 {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "line": 21,
+                    "column": 5
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.cpp",
+                    "line": 6,
+                    "column": 5
+                },
+                {
                     "type": "sink",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
                     "line": 5,

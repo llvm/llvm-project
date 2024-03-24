@@ -18,6 +18,7 @@ int *getPtr() {
 
 void modifyPointer(A *&ptr) {
     // ptr->data = getPtr(); // source
+    getPtr();
     ASSIGN_NULL(ptr);
     return;
 }

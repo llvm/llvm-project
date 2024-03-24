@@ -4,11 +4,9 @@ class A {
   public:
     int *data;
 
-    A(int *val) : data(val) {}
+    A(int *val);
 
-    int getValue() const {
-        return *data; // sink
-    }
+    int getValue() const;
 };
 
 void modifyPointer(A *&ptr);
