@@ -89,16 +89,20 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T fmaximum_num(T x, T y) {
   FPBits<T> bitx(x), bity(y);
 
+  if (bitx.is_nan() && bity.is_signaling_nan()) {
+    fputil::raise_except_if_required(FE_INVALID);
+    return FPBits<T>::quiet_nan().get_val();
+  }
+  if (bitx.is_signaling_nan() && bity.is_nan()) {
+    fputil::raise_except_if_required(FE_INVALID);
+    return FPBits<T>::quiet_nan().get_val();
+  }
   if (bitx.is_quiet_nan() || bitx.is_signaling_nan())
     return y;
   if (bity.is_nan() || bity.is_signaling_nan())
     return x;
   if (bitx.is_nan() && bity.is_nan())
     return FPBits<T>::quiet_nan().get_val();
-  if (bitx.is_nan() && bity.is_signaling_nan())
-    fputil::raise_except_if_required(FE_INVALID);
-  if (bitx.is_signaling_nan() && bity.is_nan())
-    fputil::raise_except_if_required(FE_INVALID);
   if (bitx.sign() != bity.sign())
     return (bitx.is_neg() ? y : x);
   return x > y ? x : y;
@@ -108,16 +112,20 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T fminimum_num(T x, T y) {
   const FPBits<T> bitx(x), bity(y);
 
+  if (bitx.is_nan() && bity.is_signaling_nan()) {
+    fputil::raise_except_if_required(FE_INVALID);
+    return FPBits<T>::quiet_nan().get_val();
+  }
+  if (bitx.is_signaling_nan() && bity.is_nan()) {
+    fputil::raise_except_if_required(FE_INVALID);
+    return FPBits<T>::quiet_nan().get_val();
+  }
   if (bitx.is_quiet_nan() || bitx.is_signaling_nan())
     return y;
   if (bity.is_nan() || bity.is_signaling_nan())
     return x;
   if (bitx.is_nan() && bity.is_nan())
     return FPBits<T>::quiet_nan().get_val();
-  if (bitx.is_nan() && bity.is_signaling_nan())
-    fputil::raise_except_if_required(FE_INVALID);
-  if (bitx.is_signaling_nan() && bity.is_nan())
-    fputil::raise_except_if_required(FE_INVALID);
   if (bitx.sign() != bity.sign())
     return (bitx.is_neg() ? x : y);
   return x < y ? x : y;
