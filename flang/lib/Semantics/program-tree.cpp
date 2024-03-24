@@ -111,6 +111,9 @@ static ProgramTree BuildModuleTree(const parser::Name &name, const T &x) {
   if (subps) {
     for (const auto &subp :
         std::get<std::list<parser::ModuleSubprogram>>(subps->t)) {
+      if (std::holds_alternative<
+              common::Indirection<parser::CompilerDirective>>(subp.u))
+        continue;
       common::visit(
           [&](const auto &y) { node.AddChild(ProgramTree::Build(y.value())); },
           subp.u);
