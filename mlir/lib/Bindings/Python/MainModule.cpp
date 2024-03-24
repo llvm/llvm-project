@@ -12,6 +12,32 @@
 #include "IRModule.h"
 #include "Pass.h"
 
+#include "mlir-c/Dialect/AMDGPU.h"
+#include "mlir-c/Dialect/Arith.h"
+#include "mlir-c/Dialect/Async.h"
+#include "mlir-c/Dialect/ControlFlow.h"
+#include "mlir-c/Dialect/Func.h"
+#include "mlir-c/Dialect/GPU.h"
+#include "mlir-c/Dialect/LLVM.h"
+#include "mlir-c/Dialect/Linalg.h"
+#include "mlir-c/Dialect/MLProgram.h"
+#include "mlir-c/Dialect/Math.h"
+#include "mlir-c/Dialect/MemRef.h"
+#include "mlir-c/Dialect/NVGPU.h"
+#include "mlir-c/Dialect/NVVM.h"
+#include "mlir-c/Dialect/OpenMP.h"
+#include "mlir-c/Dialect/PDL.h"
+#include "mlir-c/Dialect/Quant.h"
+#include "mlir-c/Dialect/ROCDL.h"
+#include "mlir-c/Dialect/SCF.h"
+#include "mlir-c/Dialect/Shape.h"
+#include "mlir-c/Dialect/SparseTensor.h"
+#include "mlir-c/Dialect/Tensor.h"
+#include "mlir-c/Dialect/Transform.h"
+#include "mlir-c/Dialect/Vector.h"
+
+#include "mlir-c/Dialect/RemainingDialects.h"
+
 namespace py = pybind11;
 using namespace mlir;
 using namespace py::literals;
@@ -65,6 +91,63 @@ PYBIND11_MODULE(_mlir, m) {
       },
       "dialect_class"_a,
       "Class decorator for registering a custom Dialect wrapper");
+  m.def(
+      "add_dialect_to_dialect_registry",
+      [](MlirDialectRegistry registry, const std::string &dialectNamespace) {
+
+#define MLIR_DEFINE_CAPI_DIALECT_REGISTRATION_(NAMESPACE)                      \
+  if (dialectNamespace == #NAMESPACE) {                                        \
+    mlirDialectHandleInsertDialect(mlirGetDialectHandle__##NAMESPACE##__(),    \
+                                   registry);                                  \
+    return;                                                                    \
+  }
+
+#define FORALL_DIALECTS(_)                                                     \
+  _(acc)                                                                       \
+  _(affine)                                                                    \
+  _(amdgpu)                                                                    \
+  _(amx)                                                                       \
+  _(arith)                                                                     \
+  _(arm_neon)                                                                  \
+  _(arm_sme)                                                                   \
+  _(arm_sve)                                                                   \
+  _(async)                                                                     \
+  _(bufferization)                                                             \
+  _(cf)                                                                        \
+  _(complex)                                                                   \
+  _(emitc)                                                                     \
+  _(func)                                                                      \
+  _(gpu)                                                                       \
+  _(index)                                                                     \
+  _(irdl)                                                                      \
+  _(linalg)                                                                    \
+  _(llvm)                                                                      \
+  _(math)                                                                      \
+  _(memref)                                                                    \
+  _(mesh)                                                                      \
+  _(ml_program)                                                                \
+  _(nvgpu)                                                                     \
+  _(nvvm)                                                                      \
+  _(omp)                                                                       \
+  _(pdl)                                                                       \
+  _(quant)                                                                     \
+  _(rocdl)                                                                     \
+  _(scf)                                                                       \
+  _(shape)                                                                     \
+  _(spirv)                                                                     \
+  _(tensor)                                                                    \
+  _(tosa)                                                                      \
+  _(ub)                                                                        \
+  _(vector)                                                                    \
+  _(x86vector)
+        FORALL_DIALECTS(MLIR_DEFINE_CAPI_DIALECT_REGISTRATION_)
+
+#undef MLIR_DEFINE_CAPI_DIALECT_REGISTRATION_
+#undef FORALL_DIALECTS
+        throw std::runtime_error("unknown dialect namespace: " +
+                                 dialectNamespace);
+      },
+      "dialect_registry"_a, "dialect_namespace"_a);
   m.def(
       "register_operation",
       [](const py::object &dialectClass, bool replace) -> py::cpp_function {
