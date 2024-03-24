@@ -30,10 +30,12 @@
 INTERCEPT_WRAP_V_W(free)
 INTERCEPT_WRAP_V_W(_free_base)
 INTERCEPT_WRAP_V_WW(_free_dbg)
+INTERCEPT_WRAP_V_W(_aligned_free)
 
 INTERCEPT_WRAP_W_W(malloc)
 INTERCEPT_WRAP_W_W(_malloc_base)
 INTERCEPT_WRAP_W_WWWW(_malloc_dbg)
+INTERCEPT_WRAP_W_WW(_aligned_malloc)
 
 INTERCEPT_WRAP_W_WW(calloc)
 INTERCEPT_WRAP_W_WW(_calloc_base)

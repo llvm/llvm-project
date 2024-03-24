@@ -172,6 +172,17 @@ void *_recalloc_base(void *p, size_t n, size_t elem_size) {
 }
 
 ALLOCATION_FUNCTION_ATTRIBUTE
+void *_aligned_malloc(size_t alignment, size_t size) {
+  GET_STACK_TRACE_MALLOC;
+  return asan_aligned_alloc(alignment, size, &stack);
+}
+
+ALLOCATION_FUNCTION_ATTRIBUTE
+void *_aligned_free(void *p) {
+  free(p);
+}
+
+ALLOCATION_FUNCTION_ATTRIBUTE
 void *_expand(void *memblock, size_t size) {
   // _expand is used in realloc-like functions to resize the buffer if possible.
   // We don't want memory to stand still while resizing buffers, so return 0.
