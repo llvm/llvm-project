@@ -804,27 +804,37 @@ Check for performance anti-patterns when using Grand Central Dispatch.
 
 .. _optin-performance-Padding:
 
-optin.performance.Padding (PaddingChecker)
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+optin.performance.Padding (C, C++, objC)
+""""""""""""""""""""""""""""""""""""""""
 Check for excessively padded structs.
 
-.. code-block:: objc
+This checker detects structs with excessive padding, which can lead to wasted memory and decreased performance. Padding bytes are added by compilers to align data within the struct for performance optimization or memory alignment purposes. However, excessive padding can significantly increase the size of the struct without adding useful data, leading to inefficient memory usage, cache misses, and decreased performance.
 
- struct TestStruct {
-      int data1;   // 4 bytes
-      char data2;  // 1 byte
-      char padding[27];  // 27 bytes of padding
-    };  // Total size: 32 bytes 
-  
-  void TestFunction() {
-      struct TestStruct struct1;  // Warning is generated due to excessive padding.
-    }
+.. code-block:: C
 
-   // Reports are only generated if the excessive padding exceeds 'AllowedPad' in bytes.
+   #include <stdio.h>
+   // #pragma pack(1) // Uncomment it to disable structure padding
+   struct TestStruct {
+       char data1;  // 1 byte
+       char data2;  // 1 byte
+       int data3;   // 4 bytes
+   };             // Total size: 6 bytes
+   
+   int main () {
+       struct TestStruct struct1;
+       print("Structure size: %d",sizeof(struct1)); // Structure size: 8
+       return 0;
+   }
+   
+Total memory used is 8 bytes due to structure padding. In this case, padding is of 2 bytes. Padding is done to decrease the number of CPU cycles needed to access data members of the structure; it increases the performance of the processor but at the penalty of memory.
+Padding can be disabled by using the pragma directive.
+Padding can also be decreased by putting data members of the structure in descending order of their size.
 
-  // AllowedPad: Default Value: 24 bytes
+Reports are only generated if the excessive padding exceeds 'AllowedPad' in bytes. AllowedPad is the threshold value of padding.
 
-   Usage: `AllowedPad=<value>`
+AllowedPad Option:
+- Default Value: 24 bytes
+- Usage: ``AllowedPad=<value>``
 
 .. _optin-portability-UnixAPI:
 
