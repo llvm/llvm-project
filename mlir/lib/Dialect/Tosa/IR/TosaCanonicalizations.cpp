@@ -507,7 +507,7 @@ OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
                                                             resultTy);
 }
 
-OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
+OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
   auto lhsTy = llvm::dyn_cast<RankedTensorType>(getInput1().getType());
   auto rhsTy = llvm::dyn_cast<RankedTensorType>(getInput2().getType());
   auto resultTy = llvm::dyn_cast<RankedTensorType>(getType());
