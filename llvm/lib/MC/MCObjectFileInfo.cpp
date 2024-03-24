@@ -320,6 +320,9 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
   RemarksSection = Ctx->getMachOSection(
       "__LLVM", "__remarks", MachO::S_ATTR_DEBUG, SectionKind::getMetadata());
 
+  StackSizesSection = Ctx->getMachOSection("__STACK_SIZES", "__stack_sizes", 0,
+                                           SectionKind::getData());
+
   // The architecture of dsymutil makes it very difficult to copy the Swift
   // reflection metadata sections into the __TEXT segment, so dsymutil creates
   // these sections in the __DWARF segment instead.
