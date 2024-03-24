@@ -2129,7 +2129,7 @@ void CodeGenRegBank::computeRegUnitLaneMasks() {
     // Create an initial lane mask for all register units.
     const auto &RegUnits = Register.getRegUnits();
     CodeGenRegister::RegUnitLaneMaskList RegUnitLaneMasks(
-        RegUnits.count(), LaneBitmask::getAll());
+        RegUnits.count(), LaneBitmask::getNone());
     // Iterate through SubRegisters.
     typedef CodeGenRegister::SubRegMap SubRegMap;
     const SubRegMap &SubRegs = Register.getSubRegs();
@@ -2148,7 +2148,7 @@ void CodeGenRegBank::computeRegUnitLaneMasks() {
         unsigned u = 0;
         for (unsigned RU : RegUnits) {
           if (SUI == RU) {
-            RegUnitLaneMasks[u] &= LaneMask;
+            RegUnitLaneMasks[u] |= LaneMask;
             assert(!Found);
             Found = true;
           }
@@ -2157,6 +2157,10 @@ void CodeGenRegBank::computeRegUnitLaneMasks() {
         (void)Found;
         assert(Found);
       }
+    }
+    for (auto &Mask : RegUnitLaneMasks) {
+      if (Mask.none())
+        Mask = LaneBitmask::getAll();
     }
     Register.setRegUnitLaneMasks(RegUnitLaneMasks);
   }
