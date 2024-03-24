@@ -457,6 +457,52 @@ struct BinaryOpc_match {
   }
 };
 
+template <typename LHS_t, typename RHS_t, bool Commutable = false>
+struct AnyBinaryOp_match {
+  LHS_t L;
+  RHS_t R;
+
+  AnyBinaryOp_match(const LHS_t &LHS, const RHS_t &RHS) : L(LHS), R(RHS) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *I = dyn_cast<BinaryOperator>(V))
+      return (L.match(I->getOperand(0)) && R.match(I->getOperand(1))) ||
+             (Commutable && L.match(I->getOperand(1)) &&
+              R.match(I->getOperand(0)));
+    return false;
+  }
+};
+
+template <typename LHS, typename RHS>
+inline AnyBinaryOp_match<LHS, RHS, false> m_AnyBinOp(const LHS &L,
+                                                     const RHS &R) {
+  return AnyBinaryOp_match<LHS, RHS, false>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, false> m_AnyBinOp(unsigned Opc, const LHS &L,
+                                                   const RHS &R) {
+  if (TLI.isBinOP(Opc))
+    return AnyBinaryOp_match<LHS, RHS, false>(L, R);
+  else
+    return false;
+}
+
+template <typename LHS, typename RHS>
+inline AnyBinaryOp_match<LHS, RHS, true> m_c_AnyBinOp(const LHS &L,
+                                                      const RHS &R) {
+  return AnyBinaryOp_match<LHS, RHS, true>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, true> m_c_AnyBinOp(unsigned Opc, const LHS &L,
+                                                    const RHS &R) {
+  if (TLI.isCommutativeBinOp(Opc))
+    return AnyBinaryOp_match<LHS, RHS, true>(L, R);
+  else
+    return false;
+}
+
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, false> m_BinOp(unsigned Opc, const LHS &L,
                                                 const RHS &R) {
