@@ -428,7 +428,7 @@ define <vscale x 4 x float> @llvm_sin_vscale_f32(<vscale x 4 x float> %in) #0 {
 define <2 x double> @frem_f64(<2 x double> %in) {
 ; CHECK-LABEL: define <2 x double> @frem_f64
 ; CHECK-SAME: (<2 x double> [[IN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @armpl_vfmodq_f64(<2 x double> [[IN]], <2 x double> [[IN]])
+; CHECK-NEXT:    [[TMP1:%.*]] = frem <2 x double> [[IN]], [[IN]]
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1= frem <2 x double> %in, %in
