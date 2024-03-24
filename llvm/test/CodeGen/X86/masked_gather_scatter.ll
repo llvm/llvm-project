@@ -547,9 +547,9 @@ define <8 x i32> @test9(ptr %base, <8 x i64> %ind1, <8 x i32>%ind5) {
 ; SKX_LARGE-NEXT:    vpbroadcastq %rdi, %zmm2
 ; SKX_LARGE-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero
 ; SKX_LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; SKX_LARGE-NEXT:    vpmuldq (%rax){1to8}, %zmm1, %zmm1
+; SKX_LARGE-NEXT:    vpmuldq (%rax), %zmm1, %zmm1
 ; SKX_LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; SKX_LARGE-NEXT:    vpmullq (%rax){1to8}, %zmm0, %zmm0
+; SKX_LARGE-NEXT:    vpmullq (%rax), %zmm0, %zmm0
 ; SKX_LARGE-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
 ; SKX_LARGE-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
 ; SKX_LARGE-NEXT:    kxnorw %k0, %k0, %k1
@@ -631,9 +631,9 @@ define <8 x i32> @test10(ptr %base, <8 x i64> %i1, <8 x i32>%ind5) {
 ; SKX_LARGE-NEXT:    vpbroadcastq %rdi, %zmm2
 ; SKX_LARGE-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero
 ; SKX_LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; SKX_LARGE-NEXT:    vpmuldq (%rax){1to8}, %zmm1, %zmm1
+; SKX_LARGE-NEXT:    vpmuldq (%rax), %zmm1, %zmm1
 ; SKX_LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; SKX_LARGE-NEXT:    vpmullq (%rax){1to8}, %zmm0, %zmm0
+; SKX_LARGE-NEXT:    vpmullq (%rax), %zmm0, %zmm0
 ; SKX_LARGE-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
 ; SKX_LARGE-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
 ; SKX_LARGE-NEXT:    kxnorw %k0, %k0, %k1
@@ -4147,7 +4147,7 @@ define <16 x float> @zext_index(ptr %base, <16 x i32> %ind) {
 ; SKX_LARGE-LABEL: zext_index:
 ; SKX_LARGE:       # %bb.0:
 ; SKX_LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; SKX_LARGE-NEXT:    vandps (%rax){1to16}, %zmm0, %zmm1
+; SKX_LARGE-NEXT:    vandps (%rax), %zmm0, %zmm1
 ; SKX_LARGE-NEXT:    kxnorw %k0, %k0, %k1
 ; SKX_LARGE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; SKX_LARGE-NEXT:    vgatherdps (%rdi,%zmm1,4), %zmm0 {%k1}

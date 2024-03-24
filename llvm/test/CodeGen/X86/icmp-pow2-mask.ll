@@ -130,7 +130,7 @@ define i64 @pow2_mask_v8i8(i8 zeroext %0) {
 ; AVX512-LABEL: pow2_mask_v8i8:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpbroadcastb %edi, %xmm0
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [128,64,32,16,8,4,2,1,128,64,32,16,8,4,2,1]
+; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = [128,64,32,16,8,4,2,1,0,0,0,0,0,0,0,0]
 ; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovq %xmm0, %rax

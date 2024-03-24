@@ -324,8 +324,7 @@ define <32 x half> @build_vec(ptr %p, <32 x i1> %mask) {
 ; CHECK-NEXT:    jne .LBB1_4
 ; CHECK-NEXT:    jmp .LBB1_5
 ; CHECK-NEXT:  .LBB1_1:
-; CHECK-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
-; CHECK-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
 ; CHECK-NEXT:    testb $2, %al
 ; CHECK-NEXT:    je .LBB1_5
 ; CHECK-NEXT:  .LBB1_4: # %cond.load1
