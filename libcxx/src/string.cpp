@@ -10,6 +10,7 @@
 #include <cerrno>
 #include <charconv>
 #include <cstdlib>
+#include <format>
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -247,6 +248,36 @@ long double stold(const wstring& str, size_t* idx) { return as_float<long double
 
 // to_string
 
+#if _LIBCPP_STD_VER >= 26
+
+string to_string(int val) { return std::format("{}", val); }
+string to_string(long val) { return std::format("{}", val); }
+string to_string(long long val) { return std::format("{}", val); }
+string to_string(unsigned val) { return std::format("{}", val); }
+string to_string(unsigned long val) { return std::format("{}", val); }
+string to_string(unsigned long long val) { return std::format("{}", val); }
+
+#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+wstring to_wstring(int val) { return std::format(L"{}", val); }
+wstring to_wstring(long val) { return std::format(L"{}", val); }
+wstring to_wstring(long long val) { return std::format(L"{}", val); }
+wstring to_wstring(unsigned val) { return std::format(L"{}", val); }
+wstring to_wstring(unsigned long val) { return std::format(L"{}", val); }
+wstring to_wstring(unsigned long long val) { return std::format(L"{}", val); }
+#  endif
+
+string to_string(float val) { return std::format("{}", val); }
+string to_string(double val) { return std::format("{}", val); }
+string to_string(long double val) { return std::format("{}", val); }
+
+#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+wstring to_wstring(float val) { return std::format(L"{}", val); }
+wstring to_wstring(double val) { return std::format(L"{}", val); }
+wstring to_wstring(long double val) { return std::format(L"{}", val); }
+#  endif
+
+#else
+
 namespace {
 
 // as_string
@@ -283,7 +314,7 @@ struct initial_string<string> {
   }
 };
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 struct initial_string<wstring> {
   wstring operator()() const {
@@ -296,13 +327,13 @@ struct initial_string<wstring> {
 typedef int (*wide_printf)(wchar_t* __restrict, size_t, const wchar_t* __restrict, ...);
 
 inline wide_printf get_swprintf() {
-#  ifndef _LIBCPP_MSVCRT
+#    ifndef _LIBCPP_MSVCRT
   return swprintf;
-#  else
+#    else
   return static_cast<int(__cdecl*)(wchar_t* __restrict, size_t, const wchar_t* __restrict, ...)>(_snwprintf);
-#  endif
+#    endif
 }
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 template <typename S, typename V>
 S i_to_string(V v) {
@@ -325,23 +356,25 @@ string to_string(unsigned val) { return i_to_string< string>(val); }
 string to_string(unsigned long val) { return i_to_string< string>(val); }
 string to_string(unsigned long long val) { return i_to_string< string>(val); }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 wstring to_wstring(int val) { return i_to_string<wstring>(val); }
 wstring to_wstring(long val) { return i_to_string<wstring>(val); }
 wstring to_wstring(long long val) { return i_to_string<wstring>(val); }
 wstring to_wstring(unsigned val) { return i_to_string<wstring>(val); }
 wstring to_wstring(unsigned long val) { return i_to_string<wstring>(val); }
 wstring to_wstring(unsigned long long val) { return i_to_string<wstring>(val); }
-#endif
+#  endif
 
 string to_string(float val) { return as_string(snprintf, initial_string< string>()(), "%f", val); }
 string to_string(double val) { return as_string(snprintf, initial_string< string>()(), "%f", val); }
 string to_string(long double val) { return as_string(snprintf, initial_string< string>()(), "%Lf", val); }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 wstring to_wstring(float val) { return as_string(get_swprintf(), initial_string<wstring>()(), L"%f", val); }
 wstring to_wstring(double val) { return as_string(get_swprintf(), initial_string<wstring>()(), L"%f", val); }
 wstring to_wstring(long double val) { return as_string(get_swprintf(), initial_string<wstring>()(), L"%Lf", val); }
-#endif
+#  endif
+
+#endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD

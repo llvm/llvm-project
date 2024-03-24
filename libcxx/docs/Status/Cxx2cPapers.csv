@@ -1,7 +1,7 @@
 "Paper #","Group","Paper Name","Meeting","Status","First released version","Labels"
 "`P2497R0 <https://wg21.link/P2497R0>`__","LWG","Testing for success or failure of ``<charconv>`` functions","Varna June 2023","|Complete|","18.0",""
 "`P2592R3 <https://wg21.link/P2592R3>`__","LWG","Hashing support for ``std::chrono`` value classes","Varna June 2023","","",""
-"`P2587R3 <https://wg21.link/P2587R3>`__","LWG","``to_string`` or not ``to_string``","Varna June 2023","","","|format|"
+"`P2587R3 <https://wg21.link/P2587R3>`__","LWG","``to_string`` or not ``to_string``","Varna June 2023","|Complete|","18.0","|format|"
 "`P2562R1 <https://wg21.link/P2562R1>`__","LWG","``constexpr`` Stable Sorting","Varna June 2023","","",""
 "`P2545R4 <https://wg21.link/P2545R4>`__","LWG","Read-Copy Update (RCU)","Varna June 2023","","",""
 "`P2530R3 <https://wg21.link/P2530R3>`__","LWG","Hazard Pointers for C++26","Varna June 2023","","",""

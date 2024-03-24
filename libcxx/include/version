@@ -478,7 +478,7 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 # define __cpp_lib_stdatomic_h                          202011L
 # define __cpp_lib_string_contains                      202011L
 # define __cpp_lib_string_resize_and_overwrite          202110L
-// # define __cpp_lib_to_string                            202306L
+# define __cpp_lib_to_string                            202306L
 # define __cpp_lib_to_underlying                        202102L
 // # define __cpp_lib_tuple_like                           202207L
 # define __cpp_lib_unreachable                          202202L
