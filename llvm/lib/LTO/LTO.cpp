@@ -1570,7 +1570,7 @@ StringLiteral lto::getThinLTODefaultCPU(const Triple &TheTriple) {
     return "apple-a12";
   if (TheTriple.getArch() == Triple::aarch64 ||
       TheTriple.getArch() == Triple::aarch64_32)
-    return "cyclone";
+    return "apple-a7";
   return "";
 }
 
