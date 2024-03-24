@@ -1412,25 +1412,16 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_USING_IF_EXISTS
 #  endif
 
-#  if __has_cpp_attribute(nodiscard)
-#    define _LIBCPP_NODISCARD [[__nodiscard__]]
-#  else
-// We can't use GCC's [[gnu::warn_unused_result]] and
-// __attribute__((warn_unused_result)), because GCC does not silence them via
-// (void) cast.
-#    define _LIBCPP_NODISCARD
-#  endif
-
 // _LIBCPP_NODISCARD_EXT may be used to apply [[nodiscard]] to entities not
 // specified as such as an extension.
 #  if !defined(_LIBCPP_DISABLE_NODISCARD_EXT)
-#    define _LIBCPP_NODISCARD_EXT _LIBCPP_NODISCARD
+#    define _LIBCPP_NODISCARD_EXT [[__nodiscard__]]
 #  else
 #    define _LIBCPP_NODISCARD_EXT
 #  endif
 
 #  if _LIBCPP_STD_VER >= 20 || !defined(_LIBCPP_DISABLE_NODISCARD_EXT)
-#    define _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_NODISCARD
+#    define _LIBCPP_NODISCARD_AFTER_CXX17 [[__nodiscard__]]
 #  else
 #    define _LIBCPP_NODISCARD_AFTER_CXX17
 #  endif
