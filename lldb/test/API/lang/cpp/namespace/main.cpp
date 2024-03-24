@@ -34,7 +34,7 @@ namespace A {
         int myfunc (int a);
         int myfunc2(int a)
         {
-             return a + 2;
+                return a + 2; //just changing tab not much
         }
         float myfunc (float f)
         {
@@ -56,10 +56,10 @@ namespace Foo = A::B;   // namespace alias
 
 using Foo::myfunc;      // using declaration
 
-using namespace Foo;    // using directive
+//removing namespace foo; for quality naming 
 
-namespace A {
-    namespace B {
+namespace fo::A {
+    namespace foo::B {
         using namespace Y;
         int k;
     }
@@ -140,5 +140,5 @@ main (int argc, char const *argv[])
     ::B::Bar bb;
     A::B::Bar ab;
     return Foo::myfunc(12) + bb.x() + ab.y() + NS1::NS2::Foo{}.bar() +
-           NS2::Foo{}.bar();
+            NS2::Foo{}.bar();
 }
