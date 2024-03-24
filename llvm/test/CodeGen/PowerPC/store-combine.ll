@@ -280,6 +280,50 @@ entry:
   ret void
 }
 
+; One of the stores is atomic unordered
+; ptr p;
+; p0 = _Atomic *p;
+; p[3] = (m >> 0) & 0xFF;
+; p[2] = (m >> 8) & 0xFF;
+; p[1] = (m >> 16) & 0xFF;
+; *p0 = (m >> 24) & 0xFF;
+define void @store_i32_by_i8_bswap_atomic(i32 signext %m, ptr %p) {
+; CHECK-PPC64LE-LABEL: store_i32_by_i8_bswap_atomic:
+; CHECK-PPC64LE:       # %bb.0: # %entry
+; CHECK-PPC64LE-NEXT:    li 5, 2
+; CHECK-PPC64LE-NEXT:    sthbrx 3, 4, 5
+; CHECK-PPC64LE-NEXT:    srwi 5, 3, 16
+; CHECK-PPC64LE-NEXT:    srwi 3, 3, 24
+; CHECK-PPC64LE-NEXT:    stb 5, 1(4)
+; CHECK-PPC64LE-NEXT:    stb 3, 0(4)
+; CHECK-PPC64LE-NEXT:    blr
+;
+; CHECK-PPC64-LABEL: store_i32_by_i8_bswap_atomic:
+; CHECK-PPC64:       # %bb.0: # %entry
+; CHECK-PPC64-NEXT:    sth 3, 2(4)
+; CHECK-PPC64-NEXT:    srwi 5, 3, 16
+; CHECK-PPC64-NEXT:    srwi 3, 3, 24
+; CHECK-PPC64-NEXT:    stb 5, 1(4)
+; CHECK-PPC64-NEXT:    stb 3, 0(4)
+; CHECK-PPC64-NEXT:    blr
+entry:
+  %conv = trunc i32 %m to i8
+  %arrayidx = getelementptr inbounds i8, ptr %p, i64 3
+  store i8 %conv, ptr %arrayidx, align 1
+  %0 = lshr i32 %m, 8
+  %conv3 = trunc i32 %0 to i8
+  %arrayidx4 = getelementptr inbounds i8, ptr %p, i64 2
+  store i8 %conv3, ptr %arrayidx4, align 1
+  %1 = lshr i32 %m, 16
+  %conv7 = trunc i32 %1 to i8
+  %arrayidx8 = getelementptr inbounds i8, ptr %p, i64 1
+  store i8 %conv7, ptr %arrayidx8, align 1
+  %2 = lshr i32 %m, 24
+  %conv11 = trunc i32 %2 to i8
+  store atomic i8 %conv11, ptr %p unordered, align 1
+  ret void
+}
+
 ; There is a store in between individual stores
 ; ptr p, q;
 ; p[3] = (m >> 0) & 0xFF;
