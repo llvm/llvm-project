@@ -172,7 +172,7 @@ void normalizeAffineParallel(AffineParallelOp op);
 /// loop has been normalized (or is already in the normal form). If
 /// `promoteSingleIter` is true, the loop is simply promoted if it has a single
 /// iteration.
-LogicalResult normalizeAffineFor(AffineForOp op,
+LogicalResult normalizeAffineFor(Region &region, AffineForOp op,
                                  bool promoteSingleIter = false);
 
 /// Traverse `e` and return an AffineExpr where all occurrences of `dim` have

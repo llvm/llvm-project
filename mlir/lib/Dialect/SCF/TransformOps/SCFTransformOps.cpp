@@ -308,10 +308,13 @@ transform::LoopUnrollOp::applyToOne(transform::TransformRewriter &rewriter,
                                     transform::ApplyToEachResultList &results,
                                     transform::TransformState &state) {
   LogicalResult result(failure());
-  if (scf::ForOp scfFor = dyn_cast<scf::ForOp>(op))
+  if (scf::ForOp scfFor = dyn_cast<scf::ForOp>(op)) {
     result = loopUnrollByFactor(scfFor, getFactor());
-  else if (AffineForOp affineFor = dyn_cast<AffineForOp>(op))
-    result = loopUnrollByFactor(affineFor, getFactor());
+  }
+  else if (AffineForOp affineFor = dyn_cast<AffineForOp>(op)) {
+    auto &topRegion = affineFor->getParentOfType<func::FuncOp>().getBody();
+    result = loopUnrollByFactor(topRegion, affineFor, getFactor());
+  }
 
   if (failed(result)) {
     DiagnosedSilenceableFailure diag = emitSilenceableError()

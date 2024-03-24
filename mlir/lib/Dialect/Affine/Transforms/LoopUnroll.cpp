@@ -108,7 +108,7 @@ void LoopUnroll::runOnOperation() {
         loops.push_back(forOp);
     });
     for (auto forOp : loops)
-      (void)loopUnrollFull(forOp);
+      (void)loopUnrollFull(func.getBody(), forOp);
     return;
   }
 
@@ -131,18 +131,20 @@ void LoopUnroll::runOnOperation() {
 /// Unrolls a 'affine.for' op. Returns success if the loop was unrolled,
 /// failure otherwise. The default unroll factor is 4.
 LogicalResult LoopUnroll::runOnAffineForOp(AffineForOp forOp) {
+  auto &topRegion = forOp->getParentOfType<func::FuncOp>().getBody();
+
   // Use the function callback if one was provided.
   if (getUnrollFactor)
-    return loopUnrollByFactor(forOp, getUnrollFactor(forOp),
+    return loopUnrollByFactor(topRegion, forOp, getUnrollFactor(forOp),
                               /*annotateFn=*/nullptr, cleanUpUnroll);
   // Unroll completely if full loop unroll was specified.
   if (unrollFull)
-    return loopUnrollFull(forOp);
+    return loopUnrollFull(topRegion, forOp);
   // Otherwise, unroll by the given unroll factor.
   if (unrollUpToFactor)
-    return loopUnrollUpToFactor(forOp, unrollFactor);
-  return loopUnrollByFactor(forOp, unrollFactor, /*annotateFn=*/nullptr,
-                            cleanUpUnroll);
+    return loopUnrollUpToFactor(topRegion, forOp, unrollFactor);
+  return loopUnrollByFactor(topRegion, forOp, unrollFactor,
+                            /*annotateFn=*/nullptr, cleanUpUnroll);
 }
 
 std::unique_ptr<OperationPass<func::FuncOp>> mlir::affine::createLoopUnrollPass(

@@ -116,6 +116,8 @@ void AffineDataCopyGeneration::runOnBlock(Block *block,
   AffineCopyOptions copyOptions = {generateDma, slowMemorySpace,
                                    fastMemorySpace, tagMemorySpace,
                                    fastMemCapacityBytes};
+  auto &topRegion =
+      block->getParent()->getParentOfType<func::FuncOp>().getBody();
 
   // Every affine.for op in the block starts and ends a block range for copying;
   // in addition, a contiguous sequence of operations starting with a
@@ -139,8 +141,9 @@ void AffineDataCopyGeneration::runOnBlock(Block *block,
     // If you hit a non-copy for loop, we will split there.
     if ((forOp = dyn_cast<AffineForOp>(&*it)) && copyNests.count(forOp) == 0) {
       // Perform the copying up unti this 'for' op first.
-      (void)affineDataCopyGenerate(/*begin=*/curBegin, /*end=*/it, copyOptions,
-                                   /*filterMemRef=*/std::nullopt, copyNests);
+      (void)affineDataCopyGenerate(topRegion, /*begin=*/curBegin, /*end=*/it,
+                                   copyOptions, /*filterMemRef=*/std::nullopt,
+                                   copyNests);
 
       // Returns true if the footprint is known to exceed capacity.
       auto exceedsCapacity = [&](AffineForOp forOp) {
@@ -172,8 +175,8 @@ void AffineDataCopyGeneration::runOnBlock(Block *block,
         // Inner loop copies have their own scope - we don't thus update
         // consumed capacity. The footprint check above guarantees this inner
         // loop's footprint fits.
-        (void)affineDataCopyGenerate(/*begin=*/it, /*end=*/std::next(it),
-                                     copyOptions,
+        (void)affineDataCopyGenerate(topRegion, /*begin=*/it,
+                                     /*end=*/std::next(it), copyOptions,
                                      /*filterMemRef=*/std::nullopt, copyNests);
       }
       // Get to the next load or store op after 'forOp'.
@@ -196,7 +199,7 @@ void AffineDataCopyGeneration::runOnBlock(Block *block,
     assert(!curBegin->hasTrait<OpTrait::IsTerminator>() &&
            "can't be a terminator");
     // Exclude the affine.yield - hence, the std::prev.
-    (void)affineDataCopyGenerate(/*begin=*/curBegin,
+    (void)affineDataCopyGenerate(topRegion, /*begin=*/curBegin,
                                  /*end=*/std::prev(block->end()), copyOptions,
                                  /*filterMemRef=*/std::nullopt, copyNests);
   }
@@ -225,7 +228,7 @@ void AffineDataCopyGeneration::runOnOperation() {
     // continuation of the walk or the collection of load/store ops.
     nest->walk([&](Operation *op) {
       if (auto forOp = dyn_cast<AffineForOp>(op))
-        (void)promoteIfSingleIteration(forOp);
+        (void)promoteIfSingleIteration(f.getBody(), forOp);
       else if (isa<AffineLoadOp, AffineStoreOp>(op))
         copyOps.push_back(op);
     });

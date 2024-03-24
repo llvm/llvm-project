@@ -238,7 +238,7 @@ void LoopTiling::getTileSizes(ArrayRef<AffineForOp> band,
 void LoopTiling::runOnOperation() {
   // Bands of loops to tile.
   std::vector<SmallVector<AffineForOp, 6>> bands;
-  getTileableBands(getOperation(), &bands);
+  getTileableBands(getOperation().getBody(), &bands);
 
   // Tile each band.
   for (auto &band : bands) {

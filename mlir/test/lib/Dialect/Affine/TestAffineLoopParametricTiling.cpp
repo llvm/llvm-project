@@ -76,7 +76,7 @@ getTilingParameters(ArrayRef<AffineForOp> band,
 void TestAffineLoopParametricTiling::runOnOperation() {
   // Bands of loops to tile.
   std::vector<SmallVector<AffineForOp, 6>> bands;
-  getTileableBands(getOperation(), &bands);
+  getTileableBands(getOperation().getBody(), &bands);
 
   // Tile each band.
   for (MutableArrayRef<AffineForOp> band : bands) {

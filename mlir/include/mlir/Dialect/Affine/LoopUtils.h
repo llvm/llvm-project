@@ -43,7 +43,7 @@ struct MemRefRegion;
 
 /// Unrolls this for operation completely if the trip count is known to be
 /// constant. Returns failure otherwise.
-LogicalResult loopUnrollFull(AffineForOp forOp);
+LogicalResult loopUnrollFull(Region &topRegion, AffineForOp forOp);
 
 /// Unrolls this for operation by the specified unroll factor. Returns failure
 /// if the loop cannot be unrolled either due to restrictions or due to invalid
@@ -52,13 +52,14 @@ LogicalResult loopUnrollFull(AffineForOp forOp);
 /// When `cleanUpUnroll` is true, we can ensure the cleanup loop is unrolled
 /// regardless of the unroll factor.
 LogicalResult loopUnrollByFactor(
-    AffineForOp forOp, uint64_t unrollFactor,
+    Region &topRegion, AffineForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr,
     bool cleanUpUnroll = false);
 
 /// Unrolls this loop by the specified unroll factor or its trip count,
 /// whichever is lower.
-LogicalResult loopUnrollUpToFactor(AffineForOp forOp, uint64_t unrollFactor);
+LogicalResult loopUnrollUpToFactor(Region &topRegion, AffineForOp forOp,
+                                   uint64_t unrollFactor);
 
 /// Returns true if `loops` is a perfectly nested loop nest, where loops appear
 /// in it from outermost to innermost.
@@ -75,34 +76,35 @@ void getPerfectlyNestedLoops(SmallVectorImpl<AffineForOp> &nestedLoops,
 /// with iteration arguments performing supported reductions and its inner loops
 /// can have iteration arguments. Returns success if the loop is successfully
 /// unroll-jammed.
-LogicalResult loopUnrollJamByFactor(AffineForOp forOp,
+LogicalResult loopUnrollJamByFactor(Region &topRegion, AffineForOp forOp,
                                     uint64_t unrollJamFactor);
 
 /// Unrolls and jams this loop by the specified factor or by the trip count (if
 /// constant), whichever is lower.
-LogicalResult loopUnrollJamUpToFactor(AffineForOp forOp,
+LogicalResult loopUnrollJamUpToFactor(Region &topRegion, AffineForOp forOp,
                                       uint64_t unrollJamFactor);
 
 /// Promotes the loop body of a AffineForOp to its containing block if the loop
 /// was known to have a single iteration.
-LogicalResult promoteIfSingleIteration(AffineForOp forOp);
+LogicalResult promoteIfSingleIteration(Region &topRegion, AffineForOp forOp);
 
 /// Promotes all single iteration AffineForOp's in the Function, i.e., moves
 /// their body into the containing Block.
-void promoteSingleIterationLoops(func::FuncOp f);
+void promoteSingleIterationLoops(Region &region);
 
 /// Skew the operations in an affine.for's body with the specified
 /// operation-wise shifts. The shifts are with respect to the original execution
 /// order, and are multiplied by the loop 'step' before being applied. If
 /// `unrollPrologueEpilogue` is set, fully unroll the prologue and epilogue
 /// loops when possible.
-LogicalResult affineForOpBodySkew(AffineForOp forOp, ArrayRef<uint64_t> shifts,
+LogicalResult affineForOpBodySkew(Region &topRegion, AffineForOp forOp,
+                                  ArrayRef<uint64_t> shifts,
                                   bool unrollPrologueEpilogue = false);
 
 /// Identify valid and profitable bands of loops to tile. This is currently just
 /// a temporary placeholder to test the mechanics of tiled code generation.
 /// Returns all maximal outermost perfect loop nests to tile.
-void getTileableBands(func::FuncOp f,
+void getTileableBands(Region &region,
                       std::vector<SmallVector<AffineForOp, 6>> *bands);
 
 /// Tiles the specified band of perfectly nested loops creating tile-space loops
@@ -190,14 +192,15 @@ struct AffineCopyOptions {
 /// encountered. For memrefs for whose element types a size in bytes can't be
 /// computed (`index` type), their capacity is not accounted for and the
 /// `fastMemCapacityBytes` copy option would be non-functional in such cases.
-LogicalResult affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
+LogicalResult affineDataCopyGenerate(Region &topRegion, Block::iterator begin,
+                                     Block::iterator end,
                                      const AffineCopyOptions &copyOptions,
                                      std::optional<Value> filterMemRef,
                                      DenseSet<Operation *> &copyNests);
 
 /// A convenience version of affineDataCopyGenerate for all ops in the body of
 /// an AffineForOp.
-LogicalResult affineDataCopyGenerate(AffineForOp forOp,
+LogicalResult affineDataCopyGenerate(Region &topRegion, AffineForOp forOp,
                                      const AffineCopyOptions &copyOptions,
                                      std::optional<Value> filterMemRef,
                                      DenseSet<Operation *> &copyNests);
@@ -225,7 +228,8 @@ struct CopyGenerateResult {
 ///
 /// Also note that certain options in `copyOptions` aren't looked at anymore,
 /// like slowMemorySpace.
-LogicalResult generateCopyForMemRegion(const MemRefRegion &memrefRegion,
+LogicalResult generateCopyForMemRegion(Region &topRegion,
+                                       const MemRefRegion &memrefRegion,
                                        Operation *analyzedOp,
                                        const AffineCopyOptions &copyOptions,
                                        CopyGenerateResult &result);
@@ -273,7 +277,7 @@ void mapLoopToProcessorIds(scf::ForOp forOp, ArrayRef<Value> processorId,
                            ArrayRef<Value> numProcessors);
 
 /// Gathers all AffineForOps in 'func.func' grouped by loop depth.
-void gatherLoops(func::FuncOp func,
+void gatherLoops(Region &region,
                  std::vector<SmallVector<AffineForOp, 2>> &depthToLoops);
 
 /// Creates an AffineForOp while ensuring that the lower and upper bounds are

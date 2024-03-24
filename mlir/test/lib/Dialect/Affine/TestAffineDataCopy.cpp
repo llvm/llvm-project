@@ -60,7 +60,8 @@ private:
 void TestAffineDataCopy::runOnOperation() {
   // Gather all AffineForOps by loop depth.
   std::vector<SmallVector<AffineForOp, 2>> depthToLoops;
-  gatherLoops(getOperation(), depthToLoops);
+  auto &topRegion = getOperation().getBody();
+  gatherLoops(topRegion, depthToLoops);
   if (depthToLoops.empty())
     return;
 
@@ -93,15 +94,16 @@ void TestAffineDataCopy::runOnOperation() {
                                    /*fastMemCapacityBytes=*/32 * 1024 * 1024UL};
   DenseSet<Operation *> copyNests;
   if (clMemRefFilter) {
-    if (failed(affineDataCopyGenerate(loopNest, copyOptions, load.getMemRef(),
-                                      copyNests)))
+    if (failed(affineDataCopyGenerate(topRegion, loopNest, copyOptions,
+                                      load.getMemRef(), copyNests)))
       return;
   } else if (clTestGenerateCopyForMemRegion) {
     CopyGenerateResult result;
     MemRefRegion region(loopNest.getLoc());
     if (failed(region.compute(load, /*loopDepth=*/0)))
       return;
-    if (failed(generateCopyForMemRegion(region, loopNest, copyOptions, result)))
+    if (failed(generateCopyForMemRegion(topRegion, region, loopNest,
+                                        copyOptions, result)))
       return;
   }
 
@@ -112,12 +114,15 @@ void TestAffineDataCopy::runOnOperation() {
     // With a post order walk, the erasure of loops does not affect
     // continuation of the walk or the collection of load/store ops.
     nest->walk([&](Operation *op) {
-      if (auto forOp = dyn_cast<AffineForOp>(op))
-        (void)promoteIfSingleIteration(forOp);
-      else if (auto loadOp = dyn_cast<AffineLoadOp>(op))
+      if (auto forOp = dyn_cast<AffineForOp>(op)) {
+        auto &topRegion = forOp->getParentOfType<func::FuncOp>().getBody();
+        (void)promoteIfSingleIteration(topRegion, forOp);
+      } else if (auto loadOp = dyn_cast<AffineLoadOp>(op)) {
         copyOps.push_back(loadOp);
-      else if (auto storeOp = dyn_cast<AffineStoreOp>(op))
+      }
+      else if (auto storeOp = dyn_cast<AffineStoreOp>(op)) {
         copyOps.push_back(storeOp);
+      }
     });
   }
 
