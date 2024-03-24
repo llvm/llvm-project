@@ -2978,9 +2978,9 @@ static bool isRemovableWrite(CallBase &CB, Value *UsedV,
   return Dest && Dest->Ptr == UsedV;
 }
 
-static bool isAllocSiteRemovable(Instruction *AI,
-                                 SmallVectorImpl<WeakTrackingVH> &Users,
-                                 const TargetLibraryInfo &TLI) {
+bool InstCombinerImpl::isAllocSiteRemovable(
+    Instruction *AI, SmallVectorImpl<WeakTrackingVH> &Users,
+    const TargetLibraryInfo &TLI) {
   SmallVector<Instruction*, 4> Worklist;
   const std::optional<StringRef> Family = getAllocationFamily(AI, &TLI);
   Worklist.push_back(AI);

@@ -158,6 +158,9 @@ public:
   Instruction *visitGEPOfGEP(GetElementPtrInst &GEP, GEPOperator *Src);
   Instruction *visitAllocaInst(AllocaInst &AI);
   Instruction *visitAllocSite(Instruction &FI);
+  bool isAllocSiteRemovable(Instruction *AI,
+                            SmallVectorImpl<WeakTrackingVH> &Users,
+                            const TargetLibraryInfo &TLI);
   Instruction *visitFree(CallInst &FI, Value *FreedOp);
   Instruction *visitLoadInst(LoadInst &LI);
   Instruction *visitStoreInst(StoreInst &SI);

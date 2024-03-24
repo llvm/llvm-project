@@ -345,6 +345,57 @@ define void @store_to_readonly_noalias(ptr readonly noalias %0) {
   ret void
 }
 
+; if we know Ptr of store can be remove then remove it.
+define ptr @src_store_oneuse_addrspaceast_alloca_has_one_chained_users(ptr %arg) {
+; CHECK-LABEL: @src_store_oneuse_addrspaceast_alloca_has_one_chained_users(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    ret ptr [[ARG:%.*]]
+;
+bb:
+  %i = alloca ptr, addrspace(5)
+  %gep = getelementptr i8, ptr addrspace(5) %i, i8 1
+  %i1 = addrspacecast ptr addrspace(5) %gep to ptr
+  store ptr %arg, ptr %i1
+  %i2 = load ptr, ptr %i1
+  ret ptr %i2
+}
+
+define ptr @src_store_oneuse_addrspaceast_alloca_has_two_chained_users(ptr %arg, i32 %t) {
+; CHECK-LABEL: @src_store_oneuse_addrspaceast_alloca_has_two_chained_users(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[T:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[FIN:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[FIN]]
+; CHECK:       fin:
+; CHECK-NEXT:    ret ptr [[ARG:%.*]]
+;
+bb:
+  %i = alloca ptr, addrspace(5)
+  %gep = getelementptr i8, ptr addrspace(5) %i, i8 1
+  %i1 = addrspacecast ptr addrspace(5) %gep to ptr
+  %gep2 = getelementptr i8, ptr addrspace(5) %i, i8 1
+  %i2 = addrspacecast ptr addrspace(5) %gep2 to ptr
+  %cmp = icmp eq i32 %t, 0
+  br i1 %cmp, label %bb1, label %bb2
+
+bb1:
+  store ptr %arg, ptr %i1
+  %bb1_load = load ptr, ptr %i1
+  br label %fin
+
+bb2:
+  store ptr %arg, ptr %i2
+  %bb2_load = load ptr, ptr %i2
+  br label %fin
+
+fin:
+  %res = phi ptr [%bb1_load, %bb1], [%bb2_load, %bb2]
+  ret ptr %res
+}
+
 !0 = !{!4, !4, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
