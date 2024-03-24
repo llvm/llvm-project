@@ -29,8 +29,11 @@ void doSomething() noexcept;
 // CHECK: define{{.*}} i32 @_Z1fv(
 int f() {
   // CHECK: %[[RetVal:.+]] = alloca i32
+  // CHECK: %[[ParamMoveCleanupActive:.+]] = alloca i1
   // CHECK: %[[GroActive:.+]] = alloca i1
   // CHECK: %[[CoroGro:.+]] = alloca %struct.GroType, {{.*}} !coro.outside.frame ![[OutFrameMetadata:.+]]
+  // CHECK: %[[CoroAlloc:.+]] = call i1 @llvm.coro.alloc
+  // CHECK-NEXT: store i1 %[[CoroAlloc:.+]], ptr %[[ParamMoveCleanupActive:.+]]
 
   // CHECK: %[[Size:.+]] = call i64 @llvm.coro.size.i64()
   // CHECK: call noalias noundef nonnull ptr @_Znwm(i64 noundef %[[Size]])
@@ -94,6 +97,7 @@ public:
 // CHECK: define{{.*}} void @_Z1gv({{.*}} %[[AggRes:.+]])
 invoker g() {
   // CHECK: %[[ResultPtr:.+]] = alloca ptr
+  // CHECK-NEXT: %[[ParamMoveCleanupActive:.+]] = alloca i1
   // CHECK-NEXT: %[[Promise:.+]] = alloca %"class.invoker::invoker_promise"
 
   // CHECK: store ptr %[[AggRes]], ptr %[[ResultPtr]]

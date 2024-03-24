@@ -64,22 +64,36 @@ void consume(int,int,int) noexcept;
 // TODO: Add support for CopyOnly params
 // CHECK: define{{.*}} void @_Z1fi8MoveOnly11MoveAndCopy(i32 noundef %val, ptr noundef %[[MoParam:.+]], ptr noundef %[[McParam:.+]]) #0 personality ptr @__gxx_personality_v0
 void f(int val, MoveOnly moParam, MoveAndCopy mcParam) {
+  // CHECK: %[[ValCopy:.+]] = alloca i32,
   // CHECK: %[[MoCopy:.+]] = alloca %struct.MoveOnly,
   // CHECK: %[[McCopy:.+]] = alloca %struct.MoveAndCopy,
   // CHECK: store i32 %val, ptr %[[ValAddr:.+]]
+  // CHECK: %[[AllocFlag:.+]] = call i1 @llvm.coro.alloc
+  // CHECK-NEXT: store i1 %[[AllocFlag:.+]] %[[CleanupActiveMem:.+]]
 
   // CHECK: call ptr @llvm.coro.begin(
-  // CHECK: call void @_ZN8MoveOnlyC1EOS_(ptr {{[^,]*}} %[[MoCopy]], ptr noundef nonnull align 4 dereferenceable(4) %[[MoParam]])
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(
-  // CHECK-NEXT: call void @_ZN11MoveAndCopyC1EOS_(ptr {{[^,]*}} %[[McCopy]], ptr noundef nonnull align 4 dereferenceable(4) %[[McParam]]) #
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(
-  // CHECK-NEXT: invoke void @_ZNSt16coroutine_traitsIJvi8MoveOnly11MoveAndCopyEE12promise_typeC1Ev(
+  // CHECK: br i1 %[[CoroAlloc:.+]], label %coro.param.move, label %coro.after.param.move
+  // CHECK: coro.param.move:
+  // CHECK: call void @llvm.lifetime.start.p0(i64 4, ptr %[[ValCopy:.+]])
+  // CHECK-NEXT: %[[Temp:.+]] = load i32, ptr %val.addr, align 4
+  // CHECK-NEXT: store i32 %[[Temp:.+]], ptr %val1, align 4
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 4, ptr %[[MoCopy:.+]]) #2
+  // CHECK-NEXT: call void @_ZN8MoveOnlyC1EOS_(ptr noundef nonnull align 4 dereferenceable(4) %[[MoCopy:.+]], ptr noundef nonnull align 4 dereferenceable(4) %[[MoParam:.+]]) #2
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 4, ptr %[[McCopy:.+]]) #2
+  // CHECK-NEXT: call void @_ZN11MoveAndCopyC1EOS_(ptr noundef nonnull align 4 dereferenceable(4) %[[McCopy:.+]], ptr noundef nonnull align 4 dereferenceable(4) %[[McParam:.+]]) #2
+  // CHECK-NEXT: br label %coro.after.param.move
+  //
+  // CHECK: %[[ValPhi:.+]] = phi ptr [ %[[ValCopy:.+]], %coro.param.move ], [ %[[ValAddr:.+]], %coro.init ]
+  // CHECK-NEXT: %[[MoPhi:.+]] = phi ptr [ %[[MoCopy:.+]], %coro.param.move ], [ %[[MoParam:.+]], %coro.init ]
+  // CHECK-NEXT: %[[McPhi:.+]] = phi ptr [ %[[McCopy:.+]], %coro.param.move ], [ %[[McParam:.+]], %coro.init ]
+  // CHECK: invoke void @_ZNSt16coroutine_traitsIJvi8MoveOnly11MoveAndCopyEE12promise_typeC1Ev(
 
+  // CHECK: init.ready
   // CHECK: call void @_ZN14suspend_always12await_resumeEv(
   // CHECK: %[[IntParam:.+]] = load i32, ptr %{{.*}}
-  // CHECK: %[[MoGep:.+]] = getelementptr inbounds %struct.MoveOnly, ptr %[[MoCopy]], i32 0, i32 0
+  // CHECK: %[[MoGep:.+]] = getelementptr inbounds %struct.MoveOnly, ptr %[[MoPhi]], i32 0, i32 0
   // CHECK: %[[MoVal:.+]] = load i32, ptr %[[MoGep]]
-  // CHECK: %[[McGep:.+]] =  getelementptr inbounds %struct.MoveAndCopy, ptr %[[McCopy]], i32 0, i32 0
+  // CHECK: %[[McGep:.+]] =  getelementptr inbounds %struct.MoveAndCopy, ptr %[[McPhi]], i32 0, i32 0
   // CHECK: %[[McVal:.+]] = load i32, ptr %[[McGep]]
   // CHECK: call void @_Z7consumeiii(i32 noundef %[[IntParam]], i32 noundef %[[MoVal]], i32 noundef %[[McVal]])
 
@@ -90,13 +104,17 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam) {
   // CHECK: call void @_ZNSt16coroutine_traitsIJvi8MoveOnly11MoveAndCopyEE12promise_type13final_suspendEv(
   // CHECK: call void @_ZN14suspend_always12await_resumeEv(
 
-  // Destroy promise, then parameter copies:
+  // Destroy promise, then test the cleanup flag for parameter copies (if exist):
   // CHECK: call void @_ZNSt16coroutine_traitsIJvi8MoveOnly11MoveAndCopyEE12promise_typeD1Ev(ptr {{[^,]*}} %__promise)
   // CHECK-NEXT: call void @llvm.lifetime.end.p0(
-  // CHECK-NEXT: call void @_ZN11MoveAndCopyD1Ev(ptr {{[^,]*}} %[[McCopy]])
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(
-  // CHECK-NEXT: call void @_ZN8MoveOnlyD1Ev(ptr {{[^,]*}} %[[MoCopy]]
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(
+  // CHECK-NEXT: %[[TempCleanupActive:.+]] = load i1, ptr %[[CleanupActiveMem:.+]]
+  // CHECK-NEXT: br i1 %[[TempCleanupActive]]
+
+  // The next two may be in different cleanup blocks:
+  // CHECK: call void @_ZN11MoveAndCopyD1Ev(ptr {{[^,]*}} %[[McCopy]])
+  // CHECK: call void @_ZN8MoveOnlyD1Ev(ptr {{[^,]*}} %[[MoCopy]]
+
+  // CHECK: call void @llvm.lifetime.end.p0(
   // CHECK-NEXT: call void @llvm.lifetime.end.p0(
   // CHECK-NEXT: call ptr @llvm.coro.free(
 }
@@ -109,13 +127,13 @@ void dependent_params(T x, U, U y) {
   // CHECK-NEXT: %[[y_copy:.+]] = alloca %struct.B
 
   // CHECK: call ptr @llvm.coro.begin
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(
+  // CHECK: call void @llvm.lifetime.start.p0(
   // CHECK-NEXT: call void @_ZN1AC1EOS_(ptr {{[^,]*}} %[[x_copy]], ptr noundef nonnull align 4 dereferenceable(512) %x)
   // CHECK-NEXT: call void @llvm.lifetime.start.p0(
   // CHECK-NEXT: call void @_ZN1BC1EOS_(ptr {{[^,]*}} %[[unnamed_copy]], ptr noundef nonnull align 4 dereferenceable(512) %0)
   // CHECK-NEXT: call void @llvm.lifetime.start.p0(
   // CHECK-NEXT: call void @_ZN1BC1EOS_(ptr {{[^,]*}} %[[y_copy]], ptr noundef nonnull align 4 dereferenceable(512) %y)
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(
+  // CHECK: call void @llvm.lifetime.start.p0(
   // CHECK-NEXT: invoke void @_ZNSt16coroutine_traitsIJv1A1BS1_EE12promise_typeC1Ev(
 
   co_return;
