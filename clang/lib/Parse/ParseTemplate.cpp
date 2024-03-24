@@ -1651,10 +1651,6 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
   // Recreate the containing function DeclContext.
   Sema::ContextRAII FunctionSavedContext(Actions, FunD->getLexicalParent());
 
-  // Some function attributes (like OptimizeNoneAttr) affect FP options.
-  Sema::FPFeaturesStateRAII SaveFPFeatures(Actions);
-  Actions.applyFunctionAttributesBeforeParsingBody(LPT.D);
-
   Actions.ActOnStartOfFunctionDef(getCurScope(), FunD);
 
   if (Tok.is(tok::kw_try)) {

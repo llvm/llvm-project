@@ -1497,9 +1497,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     return Actions.ActOnFinishFunctionBody(Res, nullptr, false);
   }
 
-  // Some function attributes (like OptimizeNoneAttr) affect FP options.
   Sema::FPFeaturesStateRAII SaveFPFeatures(Actions);
-  Actions.applyFunctionAttributesBeforeParsingBody(Res);
 
   if (Tok.is(tok::kw_try))
     return ParseFunctionTryBlock(Res, BodyScope);
