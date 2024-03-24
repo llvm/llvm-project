@@ -643,6 +643,9 @@ public:
                                  unsigned Opcode, bool Op0IsDef) const;
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
 
+  MachineBasicBlock *EmitPAuthInstr(MachineInstr &MI,
+                                    MachineBasicBlock *BB) const;
+
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;

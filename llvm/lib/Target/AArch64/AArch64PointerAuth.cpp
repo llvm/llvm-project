@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Intrinsics.h"
 
 using namespace llvm;
 using namespace llvm::AArch64PAuth;
@@ -57,8 +58,72 @@ private:
   /// Expands PAUTH_BLEND pseudo instruction.
   void expandPAuthBlend(MachineBasicBlock::iterator MBBI) const;
 
+  /// Stores the discriminator value to the Result register.
+  ///
+  /// This is an utility function used when expanding several PAUTH_*
+  /// pseudo instructions that follow the same conventions on expressing
+  /// the requested signing schema.
+  void storeDiscriminator(MachineBasicBlock::iterator MBBI, Register Result,
+                          bool IsBlended, Register RegDisc, unsigned IntDisc,
+                          bool ShouldStoreZero) const;
+
+  /// Emits discriminator computation followed by AUT* or PAC* instruction.
+  ///
+  /// By encoding the common cases of discriminator computation right in
+  /// the instruction's operands, this pass strives to emit blend operation
+  /// or move-immediate as close to AUT* or PAC* instruction as possible.
+  ///
+  /// The instruction is expected to have operand list starting with
+  /// - def $dst_ptr
+  /// - def $scratch
+  /// - use $src_ptr (tied to $dst_ptr)
+  /// and a contiguous sequence of operands describing the signing schema:
+  /// - use $reg_disc
+  /// - use $int_disc
+  /// - use $is_blended
+  /// - use $key_id
+  ///
+  /// As tying $scratch operand to (one of) $reg_disc is beneficial for
+  /// eliminating excessive register moves, it is allowed as an exception to
+  /// express immediate-only discriminator as $reg_disc (and thus $scratch)
+  /// being XZR. In that case, custom inserter should provide the actual
+  /// scratch register as an implicit def.
+  void expandAutOrSignWithDiscriminator(
+      MachineBasicBlock::iterator MBBI, unsigned RegDiscOpIndex,
+      unsigned (*GetHintOpcode)(Register, Register, AArch64PACKey::ID),
+      unsigned (*GetOpcode)(AArch64PACKey::ID, bool)) const;
+
+  /// Checks pointer that was authenticated.
+  ///
+  /// The instruction is expected to have operand list starting with
+  /// - def $dst_ptr
+  /// - def $scratch
+  /// as well as $key_id and optional implicit def
+  /// (see expandAutOrSignWithDiscriminator for explanation).
+  void expandAddressCheck(MachineBasicBlock::iterator MBBI,
+                          unsigned KeyIdOpIndex,
+                          Intrinsic::ID IntrinsicId) const;
+
+  /// Expands PAUTH_AUTH pseudo instruction.
+  void expandPAuthAuth(MachineBasicBlock::iterator MBBI) const;
+
   bool checkAuthenticatedLR(MachineBasicBlock::iterator TI) const;
 };
+
+unsigned getHintAUTOpcode(Register Pointer, Register Discriminator,
+                          AArch64PACKey::ID KeyId) {
+  if (Pointer != AArch64::X17 || Discriminator != AArch64::X16)
+    return 0;
+
+  switch (KeyId) {
+  case AArch64PACKey::IA:
+    return AArch64::AUTIA1716;
+  case AArch64PACKey::IB:
+    return AArch64::AUTIB1716;
+  default:
+    return 0;
+  }
+}
 
 } // end anonymous namespace
 
@@ -305,6 +370,22 @@ MachineBasicBlock &llvm::AArch64PAuth::checkAuthenticatedRegister(
         .addImm(AArch64CC::NE)
         .addMBB(BreakBlock);
     return *SuccessBlock;
+  case AuthCheckMethod::XPAC:
+    BuildMI(CheckBlock, DL, TII->get(AArch64::ORRXrs), TmpReg)
+        .addReg(AArch64::XZR)
+        .addReg(AuthenticatedReg)
+        .addImm(0);
+    BuildMI(CheckBlock, DL, TII->get(UseIKey ? AArch64::XPACI : AArch64::XPACD),
+            TmpReg)
+        .addReg(TmpReg);
+    BuildMI(CheckBlock, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
+        .addReg(TmpReg)
+        .addReg(AuthenticatedReg)
+        .addImm(0);
+    BuildMI(CheckBlock, DL, TII->get(AArch64::Bcc))
+        .addImm(AArch64CC::NE)
+        .addMBB(BreakBlock);
+    return *SuccessBlock;
   }
   llvm_unreachable("Unknown AuthCheckMethod enum");
 }
@@ -318,6 +399,8 @@ unsigned llvm::AArch64PAuth::getCheckerSizeInBytes(AuthCheckMethod Method) {
   case AuthCheckMethod::HighBitsNoTBI:
     return 12;
   case AuthCheckMethod::XPACHint:
+    return 20;
+  case AuthCheckMethod::XPAC:
     return 20;
   }
   llvm_unreachable("Unknown AuthCheckMethod enum");
@@ -400,6 +483,105 @@ void AArch64PointerAuth::expandPAuthBlend(
   emitBlend(MBBI, ResultReg, AddrDisc, IntDisc);
 }
 
+void AArch64PointerAuth::storeDiscriminator(MachineBasicBlock::iterator MBBI,
+                                            Register Result, bool IsBlended,
+                                            Register RegDisc, unsigned IntDisc,
+                                            bool ShouldStoreZero) const {
+  MachineBasicBlock &MBB = *MBBI->getParent();
+  DebugLoc DL = MBBI->getDebugLoc();
+
+  if (IsBlended) {
+    // Discriminator is blend(RegDisc, IntDisc).
+    emitBlend(MBBI, Result, RegDisc, IntDisc);
+  } else if (RegDisc != AArch64::XZR) {
+    // Discriminator is RegDisc.
+    assert(IntDisc == 0 &&
+           "Cannot use both reg and int discriminators without blending");
+    if (Result != RegDisc)
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), Result)
+          .addReg(AArch64::XZR)
+          .addReg(RegDisc)
+          .addImm(0);
+  } else {
+    // Discriminator is IntDisc (possibly, zero at all).
+    assert(RegDisc == AArch64::XZR &&
+           "Cannot use both reg and int discriminators without blending");
+    if (IntDisc != 0 || ShouldStoreZero)
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVZXi), Result)
+          .addImm(IntDisc)
+          .addImm(0);
+  }
+}
+
+void AArch64PointerAuth::expandAutOrSignWithDiscriminator(
+    MachineBasicBlock::iterator MBBI, unsigned RegDiscOpIndex,
+    unsigned (*GetHintOpcode)(Register, Register, AArch64PACKey::ID),
+    unsigned (*GetOpcode)(AArch64PACKey::ID, bool)) const {
+  MachineBasicBlock &MBB = *MBBI->getParent();
+  DebugLoc DL = MBBI->getDebugLoc();
+
+  Register PointerReg = MBBI->getOperand(0).getReg();
+  Register ScratchReg = MBBI->getOperand(1).getReg();
+  if (ScratchReg == AArch64::XZR)
+    ScratchReg = MBBI->getOperand(MBBI->getNumOperands() - 1).getReg();
+
+  Register RegDisc = MBBI->getOperand(RegDiscOpIndex).getReg();
+  unsigned IntDisc = MBBI->getOperand(RegDiscOpIndex + 1).getImm();
+  bool IsBlended = MBBI->getOperand(RegDiscOpIndex + 2).getImm();
+  auto KeyId = (AArch64PACKey::ID)MBBI->getOperand(RegDiscOpIndex + 3).getImm();
+
+  // Try using an instruction encoded as HINT, if possible.
+  unsigned HintOpcode = GetHintOpcode(PointerReg, ScratchReg, KeyId);
+  assert(HintOpcode || Subtarget->hasPAuth());
+
+  // Compute discriminator value.
+  storeDiscriminator(MBBI, ScratchReg, IsBlended, RegDisc, IntDisc,
+                     /*ShouldStoreZero=*/HintOpcode != 0);
+
+  // Now, the discriminator value is in the ScratchReg register,
+  // if not using zero-discriminator opcode variant.
+
+  if (HintOpcode) {
+    // All other opcodes require FEAT_PAuth, so check this first.
+    BuildMI(MBB, MBBI, DL, TII->get(HintOpcode));
+  } else {
+    bool IsZeroDisc = RegDisc == AArch64::XZR && IntDisc == 0;
+    unsigned RegularOpcode = GetOpcode(KeyId, IsZeroDisc);
+
+    if (IsZeroDisc) {
+      BuildMI(MBB, MBBI, DL, TII->get(RegularOpcode), PointerReg)
+          .addReg(PointerReg);
+    } else {
+      BuildMI(MBB, MBBI, DL, TII->get(RegularOpcode), PointerReg)
+          .addReg(PointerReg)
+          .addReg(ScratchReg);
+    }
+  }
+}
+
+void AArch64PointerAuth::expandAddressCheck(MachineBasicBlock::iterator MBBI,
+                                            unsigned KeyIdOpIndex,
+                                            Intrinsic::ID IntrinsicId) const {
+  Register PointerReg = MBBI->getOperand(0).getReg();
+  Register ScratchReg = MBBI->getOperand(1).getReg();
+  if (ScratchReg == AArch64::XZR)
+    ScratchReg = MBBI->getOperand(MBBI->getNumOperands() - 1).getReg();
+  auto KeyId = (AArch64PACKey::ID)MBBI->getOperand(KeyIdOpIndex).getImm();
+
+  bool UseIKey = KeyId == AArch64PACKey::IA || KeyId == AArch64PACKey::IB;
+  AuthCheckMethod Method =
+      Subtarget->getPAuthIntrinsicCheckMethod(IntrinsicId, KeyId);
+  checkAuthenticatedRegister(MBBI, Method, PointerReg, ScratchReg, UseIKey,
+                             BrkOperandForKey(KeyId));
+}
+
+void AArch64PointerAuth::expandPAuthAuth(
+    MachineBasicBlock::iterator MBBI) const {
+  expandAutOrSignWithDiscriminator(MBBI, /*RegDiscOpIndex=*/3, getHintAUTOpcode,
+                                   getAUTOpcodeForKey);
+  expandAddressCheck(MBBI, /*KeyIdOpIndex=*/6, Intrinsic::ptrauth_auth);
+}
+
 bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
   const auto *MFnI = MF.getInfo<AArch64FunctionInfo>();
 
@@ -431,6 +613,7 @@ bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
         break;
       case AArch64::PAUTH_PROLOGUE:
       case AArch64::PAUTH_EPILOGUE:
+      case AArch64::PAUTH_AUTH:
       case AArch64::PAUTH_BLEND:
         assert(!MI.isBundled());
         PAuthPseudoInstrs.push_back(MI.getIterator());
@@ -447,6 +630,9 @@ bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
     case AArch64::PAUTH_EPILOGUE:
       authenticateLR(MF, It);
       HasAuthenticationInstrs = true;
+      break;
+    case AArch64::PAUTH_AUTH:
+      expandPAuthAuth(It);
       break;
     case AArch64::PAUTH_BLEND:
       expandPAuthBlend(It);
