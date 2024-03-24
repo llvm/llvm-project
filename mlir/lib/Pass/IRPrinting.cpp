@@ -9,8 +9,12 @@
 #include "PassDetail.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Support/FileUtilities.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/ToolOutputFile.h"
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -200,6 +204,133 @@ struct BasicIRPrinterConfig : public PassManager::IRPrinterConfig {
 };
 } // namespace
 
+/// Return pairs of (sanitized op name, symbol name) for `op` and all parent
+/// operations. Op names are sanitized by replacing periods with underscores.
+/// The pairs are returned in order of outer-most to inner-most (ancestors of
+/// `op` first, `op` last). This information is used to construct the directory
+/// tree for the `FileTreeIRPrinterConfig` below.
+static SmallVector<std::pair<std::string, StringRef>>
+getOpAndSymbolNames(Operation *op) {
+  SmallVector<std::pair<std::string, StringRef>> pathElements;
+  while (true) {
+    if (!op)
+      break;
+    StringAttr symbolName =
+        op->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName());
+    std::string opName =
+        llvm::join(llvm::split(op->getName().getStringRef().str(), '.'), "_");
+    pathElements.emplace_back(opName, symbolName ? symbolName.strref()
+                                                 : "no-symbol-name");
+    op = op->getParentOp();
+  }
+  // Return in the order of top level (module) down to `op`.
+  std::reverse(pathElements.begin(), pathElements.end());
+  return pathElements;
+}
+
+static LogicalResult createDirectoryOrPrintErr(llvm::StringRef dirPath) {
+  if (std::error_code ec =
+          llvm::sys::fs::create_directory(dirPath, /*IgnoreExisting=*/true)) {
+    llvm::errs() << "Error while creating directory " << dirPath << ": "
+                 << ec.message() << "\n";
+    return failure();
+  }
+  return success();
+}
+
+/// Create the directories and file given by
+/// "[rootDir]/([ancestor_op_name]_[ancestor_symbol]/).../[counter]_[passName].mlir".
+std::unique_ptr<llvm::ToolOutputFile>
+createTreePrinterOutputPath(Operation *op, llvm::StringRef passArgument,
+                            llvm::StringRef rootDir,
+                            std::atomic<unsigned> &counter) {
+  // Create the path. We will create a tree rooted at the given dump
+  // directory. The root directory will contain folders with the names of
+  // modules. Sub-directories within those folders mirror the nesting
+  // structure of the pass manager, using symbol names for directory names.
+  std::string fileName = llvm::formatv("{0}_{1}.mlir", counter++, passArgument);
+  SmallVector<std::pair<std::string, StringRef>> opAndSymbolNames =
+      getOpAndSymbolNames(op);
+
+  // Create all the directories, starting at the root. Abort early if we fail to
+  // create any directory.
+  std::string path = rootDir.str();
+  if (failed(createDirectoryOrPrintErr(path)))
+    return nullptr;
+
+  for (auto [opName, symbolName] : opAndSymbolNames) {
+    path = llvm::join_items("/", path, (opName + "_" + symbolName).str());
+    if (failed(createDirectoryOrPrintErr(path)))
+      return nullptr;
+  }
+
+  // Open file, print, and tell LLVM to keep the file if successful.
+  path = llvm::join_items("/", path, fileName);
+  std::string error;
+  std::unique_ptr<llvm::ToolOutputFile> file = openOutputFile(path, &error);
+  if (!file) {
+    llvm::errs() << "Error opening output file " << path << ": " << error
+                 << "\n";
+    return nullptr;
+  }
+  return file;
+}
+
+namespace {
+/// A configuration that prints the IR before/after each pass to a set of files
+/// in the specified directory. The files are organized into subdirectories that
+/// mirror the nesting structure of the IR.
+struct FileTreeIRPrinterConfig : public PassManager::IRPrinterConfig {
+  FileTreeIRPrinterConfig(
+      std::function<bool(Pass *, Operation *)> shouldPrintBeforePass,
+      std::function<bool(Pass *, Operation *)> shouldPrintAfterPass,
+      bool printModuleScope, bool printAfterOnlyOnChange,
+      bool printAfterOnlyOnFailure, OpPrintingFlags opPrintingFlags,
+      llvm::StringRef treeDir)
+      : IRPrinterConfig(printModuleScope, printAfterOnlyOnChange,
+                        printAfterOnlyOnFailure, opPrintingFlags),
+        shouldPrintBeforePass(std::move(shouldPrintBeforePass)),
+        shouldPrintAfterPass(std::move(shouldPrintAfterPass)),
+        treeDir(treeDir) {
+    assert((this->shouldPrintBeforePass || this->shouldPrintAfterPass) &&
+           "expected at least one valid filter function");
+  }
+
+  void printBeforeIfEnabled(Pass *pass, Operation *operation,
+                            PrintCallbackFn printCallback) final {
+    if (!shouldPrintBeforePass || !shouldPrintBeforePass(pass, operation))
+      return;
+    std::unique_ptr<llvm::ToolOutputFile> file = createTreePrinterOutputPath(
+        operation, pass->getArgument(), treeDir, counter);
+    if (!file)
+      return;
+    printCallback(file->os());
+    file->keep();
+  }
+
+  void printAfterIfEnabled(Pass *pass, Operation *operation,
+                           PrintCallbackFn printCallback) final {
+    if (!shouldPrintAfterPass || !shouldPrintAfterPass(pass, operation))
+      return;
+    std::unique_ptr<llvm::ToolOutputFile> file = createTreePrinterOutputPath(
+        operation, pass->getArgument(), treeDir, counter);
+    if (!file)
+      return;
+    printCallback(file->os());
+    file->keep();
+  }
+
+  /// Filter functions for before and after pass execution.
+  std::function<bool(Pass *, Operation *)> shouldPrintBeforePass;
+  std::function<bool(Pass *, Operation *)> shouldPrintAfterPass;
+
+  /// The stream to output to.
+  std::string treeDir;
+  std::atomic<unsigned> counter = 0;
+};
+
+} // namespace
+
 /// Add an instrumentation to print the IR before and after pass execution,
 /// using the provided configuration.
 void PassManager::enableIRPrinting(std::unique_ptr<IRPrinterConfig> config) {
@@ -222,4 +353,17 @@ void PassManager::enableIRPrinting(
       std::move(shouldPrintBeforePass), std::move(shouldPrintAfterPass),
       printModuleScope, printAfterOnlyOnChange, printAfterOnlyOnFailure,
       opPrintingFlags, out));
+}
+
+/// Add an instrumentation to print the IR before and after pass execution.
+void PassManager::enableIRPrintingToFileTree(
+    std::function<bool(Pass *, Operation *)> shouldPrintBeforePass,
+    std::function<bool(Pass *, Operation *)> shouldPrintAfterPass,
+    bool printModuleScope, bool printAfterOnlyOnChange,
+    bool printAfterOnlyOnFailure, StringRef printTreeDir,
+    OpPrintingFlags opPrintingFlags) {
+  enableIRPrinting(std::make_unique<FileTreeIRPrinterConfig>(
+      std::move(shouldPrintBeforePass), std::move(shouldPrintAfterPass),
+      printModuleScope, printAfterOnlyOnChange, printAfterOnlyOnFailure,
+      opPrintingFlags, printTreeDir));
 }

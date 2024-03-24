@@ -18,8 +18,8 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <functional>
-#include <vector>
 #include <optional>
+#include <vector>
 
 namespace mlir {
 class AnalysisManager;
@@ -385,6 +385,42 @@ public:
           [](Pass *, Operation *) { return true; },
       bool printModuleScope = true, bool printAfterOnlyOnChange = true,
       bool printAfterOnlyOnFailure = false, raw_ostream &out = llvm::errs(),
+      OpPrintingFlags opPrintingFlags = OpPrintingFlags());
+
+  /// Similar to `enableIRPrinting` above, except that instead of printing
+  /// the IR to a single output stream, the instrumentation will print the
+  /// output of each pass to a separate file. The files will be organized into a
+  /// directory tree rooted at `printTreeDir`. The directories mirror the
+  /// nesting structure of the IR. For example, if the IR is congruent to the
+  /// pass-pipeline "builtin.module(pass1,pass2,func.func(pass3,pass4)))", and
+  /// `printTreeDir=/tmp/pipeline_output`, then then the tree file tree created
+  /// will look like:
+  ///
+  /// ```
+  /// /tmp/pass_output
+  /// ├── builtin_module_the_symbol_name
+  /// │   ├── 0_pass1.mlir
+  /// │   ├── 1_pass2.mlir
+  /// │   ├── func_func_my_func_name
+  /// │   │   ├── 2_pass3.mlir
+  /// │   │   ├── 3_pass4.mlir
+  /// │   ├── func_func_my_other_func_name
+  /// │   │   ├── 4_pass3.mlir
+  /// │   │   ├── 5_pass4.mlir
+  /// ```
+  ///
+  /// The subdirectories are given names that reflect the parent operation name
+  /// and symbol name (if present). The output MLIR files are prefixed using an
+  /// atomic counter to indicate the order the passes were printed in and to
+  /// prevent any potential name collisions.
+  void enableIRPrintingToFileTree(
+      std::function<bool(Pass *, Operation *)> shouldPrintBeforePass =
+          [](Pass *, Operation *) { return true; },
+      std::function<bool(Pass *, Operation *)> shouldPrintAfterPass =
+          [](Pass *, Operation *) { return true; },
+      bool printModuleScope = true, bool printAfterOnlyOnChange = true,
+      bool printAfterOnlyOnFailure = false,
+      llvm::StringRef printTreeDir = ".pass_manager_output",
       OpPrintingFlags opPrintingFlags = OpPrintingFlags());
 
   //===--------------------------------------------------------------------===//
