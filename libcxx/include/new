@@ -86,7 +86,6 @@ void  operator delete[](void* ptr, void*) noexcept;
 
 */
 
-#include <__availability>
 #include <__config>
 #include <__exception/exception.h>
 #include <__type_traits/is_function.h>
