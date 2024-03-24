@@ -33,7 +33,7 @@ __declspec(dllexport)
 }
 @end
 
-// CHECK-IR-DAG: @"OBJC_IVAR_$_J._ivar" = global i32
+// CHECK-IR-DAG: @"OBJC_IVAR_$_J._ivar" = hidden global i32 0, align 4 
 
 // CHECK-NF-DAG: @"__objc_ivar_offset_J._ivar.@" = hidden global i32
 
@@ -54,7 +54,7 @@ __declspec(dllexport)
 }
 @end
 
-// CHECK-IR-DAG: @"OBJC_IVAR_$_K._ivar" = global i32
+// CHECK-IR-DAG: @"OBJC_IVAR_$_K._ivar" = hidden global i32
 
 // CHECK-NF-DAG: @"__objc_ivar_offset_K._ivar.@" = hidden global i32
 
@@ -88,11 +88,11 @@ __declspec(dllexport)
 }
 @end
 
-// CHECK-IR-DAG: @"OBJC_IVAR_$_L._none" = global i32
+// CHECK-IR-DAG: @"OBJC_IVAR_$_L._none" = hidden global i32
 // CHECK-IR-DAG: @"OBJC_IVAR_$_L._public" = dllexport global i32
 // CHECK-IR-DAG: @"OBJC_IVAR_$_L._protected" = dllexport global i32
-// CHECK-IR-DAG: @"OBJC_IVAR_$_L._package" = global i32
-// CHECK-IR-DAG: @"OBJC_IVAR_$_L._private" = global i32
+// CHECK-IR-DAG: @"OBJC_IVAR_$_L._package" = hidden global i32
+// CHECK-IR-DAG: @"OBJC_IVAR_$_L._private" = hidden global i32
 
 // CHECK-NF-DAG: @"__objc_ivar_offset_L._none.@" = hidden global i32
 // CHECK-NF-DAG: @"__objc_ivar_offset_L._public.@" = dso_local dllexport global i32
