@@ -77,6 +77,11 @@ void foo(void) {
                                : parallel) default(nothing)
   for (int i = 0; i < 16; i++)
     ;
+
+  int non_const_val = 1;
+#pragma omp metadirective when(user = {condition(non_const_val > 0)} \
+                               : parallel) default(nothing)
+  bar();
 }
 
 // CHECK: void bar(void);
@@ -107,5 +112,8 @@ void foo(void) {
 // CHECK-AMDGCN-NEXT: for (int i = 0; i < 100; i++)
 // CHECK: for (int i = 0; i < 16; i++)
 // CHECK: for (int i = 0; i < 16; i++)
+// CHECK: int non_const_val = 1;
+// CHECK-NEXT: #pragma omp parallel
+// CHECK-NEXT: bar()
 
 #endif
