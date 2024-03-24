@@ -20,7 +20,7 @@ end module md
 program mm
  !REF: /md
  use :: md
- !DEF: /mm/c CommonBlockDetails
+ !DEF: /mm/c (OmpCommonBlock) CommonBlockDetails
  !DEF: /mm/x ObjectEntity REAL(4)
  !DEF: /mm/y ObjectEntity REAL(4)
  common /c/x, y
