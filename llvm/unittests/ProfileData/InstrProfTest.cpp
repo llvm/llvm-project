@@ -366,7 +366,8 @@ IndexedMemProfRecord makeRecord(
     const MemInfoBlock &Block = MemInfoBlock()) {
   llvm::memprof::IndexedMemProfRecord MR;
   for (const auto &Frames : AllocFrames)
-    MR.AllocSites.emplace_back(Frames, Block);
+    MR.AllocSites.emplace_back(Frames, llvm::memprof::hashCallStack(Frames),
+                               Block);
   for (const auto &Frames : CallSiteFrames)
     MR.CallSites.push_back(Frames);
   return MR;
