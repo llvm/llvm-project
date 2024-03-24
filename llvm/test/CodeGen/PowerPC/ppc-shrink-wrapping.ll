@@ -31,7 +31,7 @@
 ; After the prologue is set.
 ; DISABLE: cmpw 3, 4
 ; DISABLE-32: stw 0,
-; DISABLE-64-AIX: std 0, 
+; DISABLE-64: std 0,
 ; DISABLE-NEXT: bge 0, {{.*}}[[EXIT_LABEL:BB[0-9_]+]]
 ;
 ; Store %a on the stack
@@ -57,7 +57,7 @@
 ; DISABLE-NEXT: blr
 ;
 
-define i32 @foo(i32 %a, i32 %b) {
+define i32 @foo(i32 %a, i32 %b) #0 {
   %tmp = alloca i32, align 4
   %tmp2 = icmp slt i32 %a, %b
   br i1 %tmp2, label %true, label %false
@@ -187,7 +187,7 @@ declare i32 @something(...)
 ; CHECK: %for.exit
 ; CHECK: mtlr {{[0-9]+}}
 ; CHECK: blr
-define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) {
+define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) #0 {
 entry:
   br label %for.preheader
 
@@ -276,7 +276,7 @@ for.end:                                          ; preds = %for.body
 ; Shift second argument by one and store into returned register.
 ; ENABLE: slwi 3, 4, 1
 ; ENABLE-NEXT: blr
-define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) {
+define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) #0 {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %for.preheader
@@ -421,14 +421,14 @@ entry:
 ; ENABLE-NEXT: beq 0, {{.*}}[[ELSE_LABEL:BB[0-9_]+]]
 ;
 ; Prologue code.
-; Make sure we save the CSR used in the inline asm: r14
+; Make sure we save the CSR used in the inline asm: r31
 ; ENABLE-DAG: li [[IV:[0-9]+]], 10
-; ENABLE-64-DAG: std 14, -[[STACK_OFFSET:[0-9]+]](1) # 8-byte Folded Spill
-; ENABLE-32-DAG: stw 14, -[[STACK_OFFSET:[0-9]+]](1) # 4-byte Folded Spill
+; ENABLE-64-DAG: std 31, -[[STACK_OFFSET:[0-9]+]](1) # 8-byte Folded Spill
+; ENABLE-32-DAG: stw 31, -[[STACK_OFFSET:[0-9]+]](1) # 4-byte Folded Spill
 ;
 ; DISABLE: cmplwi 3, 0
-; DISABLE-64-NEXT: std 14, -[[STACK_OFFSET:[0-9]+]](1) # 8-byte Folded Spill
-; DISABLE-32-NEXT: stw 14, -[[STACK_OFFSET:[0-9]+]](1) # 4-byte Folded Spill
+; DISABLE-64-NEXT: std 31, -[[STACK_OFFSET:[0-9]+]](1) # 8-byte Folded Spill
+; DISABLE-32-NEXT: stw 31, -[[STACK_OFFSET:[0-9]+]](1) # 4-byte Folded Spill
 ; DISABLE-NEXT: beq 0, {{.*}}[[ELSE_LABEL:BB[0-9_]+]]
 ; DISABLE: li [[IV:[0-9]+]], 10
 ;
@@ -437,22 +437,22 @@ entry:
 ;
 ; CHECK: {{.*}}[[LOOP_LABEL:BB[0-9_]+]]: # %for.body
 ; Inline asm statement.
-; CHECK: addi 14, 14, 1
+; CHECK: addi 31, 14, 1
 ; CHECK: bdnz {{.*}}[[LOOP_LABEL]]
 ;
 ; Epilogue code.
 ; CHECK: li 3, 0
-; CHECK-64-DAG: ld 14, -[[STACK_OFFSET]](1) # 8-byte Folded Reload
-; CHECK-32-DAG: lwz 14, -[[STACK_OFFSET]](1) # 4-byte Folded Reload
+; CHECK-64-DAG: ld 31, -[[STACK_OFFSET]](1) # 8-byte Folded Reload
+; CHECK-32-DAG: lwz 31, -[[STACK_OFFSET]](1) # 4-byte Folded Reload
 ; CHECK-DAG: nop
 ; CHECK: blr
 ;
 ; CHECK: [[ELSE_LABEL]]
 ; CHECK-NEXT: slwi 3, 4, 1
-; DISABLE-64-NEXT: ld 14, -[[STACK_OFFSET]](1) # 8-byte Folded Reload
-; DISABLE-32-NEXT: lwz 14, -[[STACK_OFFSET]](1) # 4-byte Folded Reload
+; DISABLE-64-NEXT: ld 31, -[[STACK_OFFSET]](1) # 8-byte Folded Reload
+; DISABLE-32-NEXT: lwz 31, -[[STACK_OFFSET]](1) # 4-byte Folded Reload
 ; CHECK-NEXT: blr
-define i32 @inlineAsm(i32 %cond, i32 %N) {
+define i32 @inlineAsm(i32 %cond, i32 %N) #0 {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %for.preheader
@@ -463,7 +463,7 @@ for.preheader:
 
 for.body:                                         ; preds = %entry, %for.body
   %i.03 = phi i32 [ %inc, %for.body ], [ 0, %for.preheader ]
-  tail call void asm "addi 14, 14, 1", "~{r14}"()
+  tail call void asm "addi 31, 14, 1", "~{r31}"()
   %inc = add nuw nsw i32 %i.03, 1
   %exitcond = icmp eq i32 %inc, 10
   br i1 %exitcond, label %for.exit, label %for.body
@@ -698,7 +698,7 @@ end:
 ; Ensure no subsequent uses of callee-save register before end of function
 ; CHECKXX-NOT: {{[a-z]+}} [[CSR]]
 ; CHECK: blr
-define signext i32 @transpose() {
+define signext i32 @transpose() #0 {
 entry:
   %0 = load i32, ptr getelementptr inbounds ([0 x i32], ptr @columns, i64 0, i64 1), align 4
   %shl.i = shl i32 %0, 7
@@ -843,3 +843,5 @@ if.end.6:
   %cmp1.7 = icmp eq i32 %18, %conv18.i
   br i1 %cmp1.7, label %if.then, label %cleanup
 }
+
+attributes #0 = { nounwind }
