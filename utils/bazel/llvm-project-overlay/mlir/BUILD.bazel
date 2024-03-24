@@ -10829,6 +10829,36 @@ gentbl_cc_library(
 )
 
 td_library(
+    name = "BufferViewFlowOpInterfaceTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Bufferization/IR/BufferViewFlowOpInterface.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "BufferViewFlowOpInterfaceIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/Bufferization/IR/BufferViewFlowOpInterface.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/Bufferization/IR/BufferViewFlowOpInterface.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Bufferization/IR/BufferViewFlowOpInterface.td",
+    deps = [
+        ":BufferViewFlowOpInterfaceTdFiles",
+    ],
+)
+
+td_library(
     name = "SubsetOpInterfaceTdFiles",
     srcs = [
         "include/mlir/Interfaces/SubsetOpInterface.td",
@@ -12977,6 +13007,8 @@ cc_library(
         ":ArithTransforms",
         ":ArithUtils",
         ":BufferizationDialect",
+        ":BufferizationInterfaces",
+        ":BufferizationTransforms",
         ":ControlFlowDialect",
         ":DialectUtils",
         ":FuncDialect",
@@ -13369,6 +13401,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":AllocationOpInterfaceTdFiles",
+        ":BufferViewFlowOpInterfaceTdFiles",
         ":BufferizableOpInterfaceTdFiles",
         ":CopyOpInterfaceTdFiles",
         ":DestinationStyleOpInterfaceTdFiles",
@@ -13515,11 +13548,13 @@ cc_library(
     ],
     hdrs = [
         "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h",
+        "include/mlir/Dialect/Bufferization/IR/BufferViewFlowOpInterface.h",
         "include/mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h",
     ],
     includes = ["include"],
     deps = [
         ":BufferDeallocationOpInterfaceIncGen",
+        ":BufferViewFlowOpInterfaceIncGen",
         ":BufferizableOpInterfaceIncGen",
         ":BufferizationEnumsIncGen",
         ":IR",
@@ -13532,6 +13567,7 @@ cc_library(
     name = "BufferizationDialect",
     srcs = [
         "lib/Dialect/Bufferization/IR/BufferDeallocationOpInterface.cpp",
+        "lib/Dialect/Bufferization/IR/BufferViewFlowOpInterface.cpp",
         "lib/Dialect/Bufferization/IR/BufferizableOpInterface.cpp",
         "lib/Dialect/Bufferization/IR/BufferizationDialect.cpp",
         "lib/Dialect/Bufferization/IR/BufferizationOps.cpp",
@@ -13549,10 +13585,12 @@ cc_library(
         ":Analysis",
         ":ArithDialect",
         ":BufferDeallocationOpInterfaceIncGen",
+        ":BufferViewFlowOpInterfaceIncGen",
         ":BufferizableOpInterfaceIncGen",
         ":BufferizationBaseIncGen",
         ":BufferizationInterfaces",
         ":BufferizationOpsIncGen",
+        ":CallOpInterfaces",
         ":ControlFlowInterfaces",
         ":CopyOpInterface",
         ":DestinationStyleOpInterface",
@@ -13602,9 +13640,11 @@ cc_library(
         ":BufferizationDialect",
         ":BufferizationInterfaces",
         ":BufferizationPassIncGen",
+        ":CallOpInterfaces",
         ":ControlFlowDialect",
         ":ControlFlowInterfaces",
         ":FuncDialect",
+        ":FunctionInterfaces",
         ":IR",
         ":LoopLikeInterface",
         ":MemRefDialect",
