@@ -460,6 +460,9 @@ def FeatureMatMulFP32 : SubtargetFeature<"f32mm", "HasMatMulFP32",
 def FeatureMatMulFP64 : SubtargetFeature<"f64mm", "HasMatMulFP64",
     "true", "Enable Matrix Multiply FP64 Extension (FEAT_F64MM)", [FeatureSVE]>;
 
+def FeatureFPAC : SubtargetFeature<"fpac", "HasFPAC",
+    "true", "Enable Armv8.6-A Pointer Authentication Faulting enhancement">;
+
 def FeatureXS : SubtargetFeature<"xs", "HasXS",
     "true", "Enable Armv8.7-A limited-TLB-maintenance instruction (FEAT_XS)">;
 
