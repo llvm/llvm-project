@@ -2073,6 +2073,12 @@ public:
     return Assignor.assign(CoS, NewConstraint);
   }
 
+  /// Check if using an equivalent operand alternative would lead to
+  /// contradiction.
+  /// If a contradiction is witnessed, returns false; otherwise returns true.
+  bool handleEquivalentAlternativeSymOperands(const SymSymExpr *SymSym,
+                                              RangeSet Constraint);
+
   /// Handle expressions like: a % b != 0.
   template <typename SymT>
   bool handleRemainderOp(const SymT *Sym, RangeSet Constraint) {
@@ -2224,10 +2230,67 @@ bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
   return true;
 }
 
+bool ConstraintAssignor::handleEquivalentAlternativeSymOperands(
+    const SymSymExpr *SymSym, RangeSet Constraint) {
+  SymbolRef LHS = SymSym->getLHS();
+  SymbolRef RHS = SymSym->getRHS();
+  EquivalenceClass LHSClass = EquivalenceClass::find(State, LHS);
+  EquivalenceClass RHSClass = EquivalenceClass::find(State, RHS);
+  SymbolSet SymbolsEqWithLHS = LHSClass.getClassMembers(State);
+  SymbolSet SymbolsEqWithRHS = RHSClass.getClassMembers(State);
+  llvm::SmallVector<SymSymExpr, 10> AlternativeSymSyms;
+
+  // FIXME: We don't do a full cross-product (leftAlts x rightAlts) to try all
+  // possible combinations, instead what we do is:
+  // (LHS OP rightAlts) union (leftAlts OP RHS)
+
+  // We don't do it, because it still wouldn't be enough. For example, if a
+  // sub-symbol of an operand should be substituted to discover the
+  // contradiction. Doing a cross-product of the operand alternatives is likely
+  // too expensive for the practical gain, let alone doing the cross-product
+  // with all possible equivalent sub-symbols - but I haven't measured.
+
+  // Gather left alternatives.
+  for (SymbolRef AlternativeLHS : SymbolsEqWithLHS) {
+    if (AlternativeLHS == LHS)
+      continue;
+    AlternativeSymSyms.emplace_back(AlternativeLHS, SymSym->getOpcode(), RHS,
+                                    SymSym->getType());
+  }
+
+  // Gather right alternatives.
+  for (SymbolRef AlternativeRHS : SymbolsEqWithRHS) {
+    if (AlternativeRHS == RHS)
+      continue;
+    AlternativeSymSyms.emplace_back(LHS, SymSym->getOpcode(), AlternativeRHS,
+                                    SymSym->getType());
+  }
+
+  // Crosscheck the inferred ranges.
+  for (SymSymExpr AltSymSym : AlternativeSymSyms) {
+    RangeSet AltSymSymConstraint =
+        SymbolicRangeInferrer::inferRange(RangeFactory, State, &AltSymSym);
+    Constraint = intersect(RangeFactory, Constraint, AltSymSymConstraint);
+
+    // Check if we witnessed a contradiction with the equivalent alternative
+    // operand.
+    if (Constraint.isEmpty()) {
+      State = nullptr;
+      return false;
+    }
+  }
+  return true;
+}
+
 bool ConstraintAssignor::assignSymSymExprToRangeSet(const SymSymExpr *Sym,
                                                     RangeSet Constraint) {
   if (!handleRemainderOp(Sym, Constraint))
     return false;
+
+  if (const auto *SymSym = dyn_cast<SymSymExpr>(Sym);
+      SymSym && !handleEquivalentAlternativeSymOperands(SymSym, Constraint)) {
+    return false;
+  }
 
   std::optional<bool> ConstraintAsBool = interpreteAsBool(Constraint);
 
