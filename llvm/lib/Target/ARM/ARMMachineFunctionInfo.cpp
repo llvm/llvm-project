@@ -30,12 +30,8 @@ static bool GetBranchTargetEnforcement(const Function &F,
   if (!Subtarget->isMClass() || !Subtarget->hasV7Ops())
     return false;
 
-  if (!F.hasFnAttribute("branch-target-enforcement")) {
-    if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
-            F.getParent()->getModuleFlag("branch-target-enforcement")))
-      return BTE->getZExtValue();
+  if (!F.hasFnAttribute("branch-target-enforcement"))
     return false;
-  }
 
   const StringRef BTIEnable =
       F.getFnAttribute("branch-target-enforcement").getValueAsString();

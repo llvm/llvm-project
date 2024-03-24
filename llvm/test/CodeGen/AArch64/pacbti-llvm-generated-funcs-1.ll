@@ -14,7 +14,7 @@ entry:
 declare void @__asan_init()
 declare void @__asan_version_mismatch_check_v8()
 
-define internal void @asan.module_ctor() {
+define internal void @asan.module_ctor() #0 {
   call void @__asan_init()
   call void @__asan_version_mismatch_check_v8()
   ret void
