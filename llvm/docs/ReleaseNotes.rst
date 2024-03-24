@@ -146,6 +146,9 @@ Changes to the C API
   * ``LLVMGetPrologueData``
   * ``LLVMSetPrologueData``
 
+* Added ``LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision`` for creating
+  debugging metadata of enumerators larger than 64 bits.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
