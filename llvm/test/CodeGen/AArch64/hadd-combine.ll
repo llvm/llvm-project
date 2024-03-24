@@ -341,8 +341,8 @@ define <8 x i16> @sub_fixedwidth_v4i32(<8 x i16> %a0, <8 x i16> %a1)  {
   ret <8 x i16> %res
 }
 
-define <8 x i16> @shsub_fixedwidth_v4i32(<8 x i16> %a0, <8 x i16> %a1)  {
-; CHECK-LABEL: shsub_fixedwidth_v4i32:
+define <8 x i16> @srhadd_fixedwidth_v8i16(<8 x i16> %a0, <8 x i16> %a1)  {
+; CHECK-LABEL: srhadd_fixedwidth_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    srhadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
@@ -891,8 +891,8 @@ define <8 x i16> @uhadd_fixedwidth_v4i32(<8 x i16> %a0, <8 x i16> %a1)  {
   ret <8 x i16> %res
 }
 
-define <8 x i16> @shadd_fixedwidth_v4i32(<8 x i16> %a0, <8 x i16> %a1)  {
-; CHECK-LABEL: shadd_fixedwidth_v4i32:
+define <8 x i16> @shadd_fixedwidth_v8i16(<8 x i16> %a0, <8 x i16> %a1)  {
+; CHECK-LABEL: shadd_fixedwidth_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
