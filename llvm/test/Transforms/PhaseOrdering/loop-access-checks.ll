@@ -24,7 +24,7 @@ define void @test_fill_with_foreach([2 x i64] %elems.coerce) {
 ; CHECK-NEXT:    [[ELEMS_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x i64] [[ELEMS_COERCE]], 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[ELEMS_COERCE_FCA_0_EXTRACT]] to ptr
 ; CHECK-NEXT:    [[ELEMS_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x i64] [[ELEMS_COERCE]], 1
-; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 [[ELEMS_COERCE_FCA_1_EXTRACT]]
+; CHECK-NEXT:    [[ADD_PTR_I_IDX:%.*]] = shl nsw i64 [[ELEMS_COERCE_FCA_1_EXTRACT]], 2
 ; CHECK-NEXT:    [[CMP_NOT_I_I_I_I:%.*]] = icmp slt i64 [[ELEMS_COERCE_FCA_1_EXTRACT]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT_I_I_I_I]], label [[ERROR:%.*]], label [[FOR_COND_PREHEADER_SPLIT:%.*]]
 ; CHECK:       for.cond.preheader.split:
@@ -36,10 +36,11 @@ define void @test_fill_with_foreach([2 x i64] %elems.coerce) {
 ; CHECK-NEXT:    tail call void @error()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[__BEGIN1_SROA_0_03:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], [[FOR_BODY]] ], [ [[TMP0]], [[FOR_COND_PREHEADER_SPLIT]] ]
-; CHECK-NEXT:    tail call void @use(ptr noundef nonnull align 4 dereferenceable(4) [[__BEGIN1_SROA_0_03]])
-; CHECK-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[__BEGIN1_SROA_0_03]], i64 4
-; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq ptr [[INCDEC_PTR_I]], [[ADD_PTR_I]]
+; CHECK-NEXT:    [[__BEGIN1_SROA_0_0_IDX3:%.*]] = phi i64 [ [[__BEGIN1_SROA_0_0_ADD:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_COND_PREHEADER_SPLIT]] ]
+; CHECK-NEXT:    [[__BEGIN1_SROA_0_0_PTR4:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[__BEGIN1_SROA_0_0_IDX3]]
+; CHECK-NEXT:    tail call void @use(ptr noundef nonnull align 4 dereferenceable(4) [[__BEGIN1_SROA_0_0_PTR4]])
+; CHECK-NEXT:    [[__BEGIN1_SROA_0_0_ADD]] = add nuw nsw i64 [[__BEGIN1_SROA_0_0_IDX3]], 4
+; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq i64 [[__BEGIN1_SROA_0_0_ADD]], [[ADD_PTR_I_IDX]]
 ; CHECK-NEXT:    br i1 [[CMP_I_NOT]], label [[COMMON_RET]], label [[FOR_BODY]]
 ;
 entry:
