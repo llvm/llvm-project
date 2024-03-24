@@ -119,6 +119,10 @@ public:
     return order() < Other.order();
   }
 
+  bool operator==(const AccelTableData &Other) const {
+    return order() == Other.order();
+  }
+
     // Subclasses should implement:
     // static uint32_t hash(StringRef Name);
 
