@@ -446,7 +446,7 @@ INTERCEPTOR(char*, textdomain, const char *domainname) {
 #define INIT_TEXTDOMAIN
 #endif
 
-#if SANITIZER_INTERCEPT_STRCMP || SANITIZER_INTERCEPT_MEMCMP
+#if SANITIZER_INTERCEPT_STRCMP || SANITIZER_INTERCEPT_MEMCMP || SANITIZER_INTERCEPT_TIMINGSAFE
 static inline int CharCmpX(unsigned char c1, unsigned char c2) {
   return (c1 == c2) ? 0 : (c1 < c2) ? -1 : 1;
 }
@@ -862,6 +862,30 @@ INTERCEPTOR(int, bcmp, const void *a1, const void *a2, uptr size) {
 #define INIT_BCMP COMMON_INTERCEPT_FUNCTION(bcmp)
 #else
 #define INIT_BCMP
+#endif
+
+#if SANITIZER_INTERCEPT_TIMINGSAFE
+INTERCEPTOR(int, timingsafe_memcmp, const void *a1, const void *a2, uptr size) {
+  if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
+    return internal_memcmp(a1, a2, size);
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, memcmp, a1, a2, size);
+  return MemcmpInterceptorCommon(ctx, REAL(memcmp), a1, a2, size);
+}
+
+INTERCEPTOR(int, timingsafe_bcmp, const void *a1, const void *a2, uptr size) {
+  if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
+    return internal_memcmp(a1, a2, size);
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, bcmp, a1, a2, size);
+  return MemcmpInterceptorCommon(ctx, REAL(bcmp), a1, a2, size);
+}
+
+#define INIT_TIMINGSAFE                            \
+  COMMON_INTERCEPT_FUNCTION(timingsafe_memcmp);    \
+  COMMON_INTERCEPT_FUNCTION(timingsafe_bcmp)
+#else
+#define INIT_TIMINGSAFE
 #endif
 
 #if SANITIZER_INTERCEPT_MEMCHR
@@ -10297,6 +10321,7 @@ static void InitializeCommonInterceptors() {
   INIT_MEMCHR;
   INIT_MEMCMP;
   INIT_BCMP;
+  INIT_TIMINGSAFE;
   INIT_MEMRCHR;
   INIT_MEMMEM;
   INIT_READ;
