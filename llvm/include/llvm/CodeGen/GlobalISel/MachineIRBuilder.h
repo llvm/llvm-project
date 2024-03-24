@@ -1063,8 +1063,7 @@ public:
 
   /// Build and insert \p Res = G_BUILD_VECTOR with \p Src replicated to fill
   /// the number of elements
-  MachineInstrBuilder buildSplatVector(const DstOp &Res,
-                                       const SrcOp &Src);
+  MachineInstrBuilder buildSplatBuildVector(const DstOp &Res, const SrcOp &Src);
 
   /// Build and insert \p Res = G_BUILD_VECTOR_TRUNC \p Op0, ...
   ///
@@ -1099,6 +1098,15 @@ public:
   MachineInstrBuilder buildShuffleVector(const DstOp &Res, const SrcOp &Src1,
                                          const SrcOp &Src2, ArrayRef<int> Mask);
 
+  /// Build and insert \p Res = G_SPLAT_VECTOR \p Val
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with vector type.
+  /// \pre \p Val must be a generic virtual register with scalar type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildSplatVector(const DstOp &Res, const SrcOp &Val);
+
   /// Build and insert \p Res = G_CONCAT_VECTORS \p Op0, ...
   ///
   /// G_CONCAT_VECTORS creates a vector from the concatenation of 2 or more
@@ -1113,8 +1121,49 @@ public:
   MachineInstrBuilder buildConcatVectors(const DstOp &Res,
                                          ArrayRef<Register> Ops);
 
+  /// Build and insert `Res = G_INSERT_SUBVECTOR Src0, Src1, Idx`.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res, \p Src0, and \p Src1 must be generic virtual registers with
+  /// vector type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildInsertSubvector(const DstOp &Res, const SrcOp &Src0,
+                                           const SrcOp &Src1, unsigned Index);
+
+  /// Build and insert `Res = G_EXTRACT_SUBVECTOR Src, Idx0`.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res and \p Src must be generic virtual registers with vector type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildExtractSubvector(const DstOp &Res, const SrcOp &Src,
+                                            unsigned Index);
+
   MachineInstrBuilder buildInsert(const DstOp &Res, const SrcOp &Src,
                                   const SrcOp &Op, unsigned Index);
+
+  /// Build and insert \p Res = G_VSCALE \p MinElts
+  ///
+  /// G_VSCALE puts the value of the runtime vscale multiplied by \p MinElts
+  /// into \p Res.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with scalar type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildVScale(const DstOp &Res, unsigned MinElts);
+
+  /// Build and insert \p Res = G_VSCALE \p MinElts
+  ///
+  /// G_VSCALE puts the value of the runtime vscale multiplied by \p MinElts
+  /// into \p Res.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with scalar type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildVScale(const DstOp &Res, const ConstantInt &MinElts);
 
   /// Build and insert a G_INTRINSIC instruction.
   ///
@@ -2062,6 +2111,11 @@ public:
                                   MachineMemOperand &SrcMMO) {
     return buildMemTransferInst(TargetOpcode::G_MEMCPY, DstPtr, SrcPtr, Size,
                                 DstMMO, SrcMMO);
+  }
+
+  /// Build and insert G_TRAP or G_DEBUGTRAP
+  MachineInstrBuilder buildTrap(bool Debug = false) {
+    return buildInstr(Debug ? TargetOpcode::G_DEBUGTRAP : TargetOpcode::G_TRAP);
   }
 
   /// Build and insert \p Dst = G_SBFX \p Src, \p LSB, \p Width.

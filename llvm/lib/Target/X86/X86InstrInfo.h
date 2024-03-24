@@ -42,7 +42,8 @@ enum AsmComments {
 std::pair<CondCode, bool> getX86ConditionCode(CmpInst::Predicate Predicate);
 
 /// Return a cmov opcode for the given register size in bytes, and operand type.
-unsigned getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand = false);
+unsigned getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand = false,
+                       bool HasNDD = false);
 
 /// Return the source operand # for condition code by \p MCID. If the
 /// instruction doesn't have a condition code, return -1.
@@ -61,6 +62,9 @@ CondCode getCondFromSETCC(const MachineInstr &MI);
 // Turn CMOV instruction into condition code.
 CondCode getCondFromCMov(const MachineInstr &MI);
 
+// Turn CFCMOV instruction into condition code.
+CondCode getCondFromCFCMov(const MachineInstr &MI);
+
 /// GetOppositeBranchCondition - Return the inverse of the specified cond,
 /// e.g. turning COND_E to COND_NE.
 CondCode GetOppositeBranchCondition(CondCode CC);
@@ -76,6 +80,9 @@ unsigned getSwappedVPCOMImm(unsigned Imm);
 
 /// Get the VCMP immediate if the opcodes are swapped.
 unsigned getSwappedVCMPImm(unsigned Imm);
+
+/// Get the width of the vector register operand.
+unsigned getVectorRegisterWidth(const MCOperandInfo &Info);
 
 /// Check if the instruction is X87 instruction.
 bool isX87Instruction(MachineInstr &MI);
@@ -372,7 +379,7 @@ public:
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, unsigned &Width,
+      bool &OffsetIsScalable, LocationSize &Width,
       const TargetRegisterInfo *TRI) const override;
   bool analyzeBranchPredicate(MachineBasicBlock &MBB,
                               TargetInstrInfo::MachineBranchPredicate &MBP,

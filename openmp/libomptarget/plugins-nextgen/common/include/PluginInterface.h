@@ -289,7 +289,7 @@ struct GenericKernelTy {
 
   /// Return a device pointer to a new kernel launch environment.
   Expected<KernelLaunchEnvironmentTy *>
-  getKernelLaunchEnvironment(GenericDeviceTy &GenericDevice,
+  getKernelLaunchEnvironment(GenericDeviceTy &GenericDevice, uint32_t Version,
                              AsyncInfoWrapperTy &AsyncInfo) const;
 
   /// Indicate whether an execution mode is valid.
@@ -1048,9 +1048,6 @@ struct GenericPluginTy {
   /// we could not move this function into GenericDeviceTy.
   virtual Expected<bool> isELFCompatible(StringRef Image) const = 0;
 
-  /// Indicate whether the plugin supports empty images.
-  virtual bool supportsEmptyImages() const { return false; }
-
 protected:
   /// Indicate whether a device id is valid.
   bool isValidDeviceId(int32_t DeviceId) const {
@@ -1396,7 +1393,7 @@ protected:
 };
 
 /// A static check on whether or not we support RPC in libomptarget.
-const bool libomptargetSupportsRPC();
+bool libomptargetSupportsRPC();
 
 } // namespace plugin
 } // namespace target

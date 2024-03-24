@@ -12,14 +12,14 @@ import os
 import traceback
 
 # Third-party modules
-import unittest2
+import unittest
 
 # LLDB Modules
 from . import configuration
 from lldbsuite.test_event import build_exception
 
 
-class LLDBTestResult(unittest2.TextTestResult):
+class LLDBTestResult(unittest.TextTestResult):
     """
     Enforce a singleton pattern to allow introspection of test progress.
 
@@ -148,9 +148,11 @@ class LLDBTestResult(unittest2.TextTestResult):
         Gets all the categories for the currently running test method in test case
         """
         test_categories = []
+        test_categories.extend(getattr(test, "categories", []))
+
         test_method = getattr(test, test._testMethodName)
-        if test_method is not None and hasattr(test_method, "categories"):
-            test_categories.extend(test_method.categories)
+        if test_method is not None:
+            test_categories.extend(getattr(test_method, "categories", []))
 
         test_categories.extend(self._getFileBasedCategories(test))
 
@@ -243,7 +245,7 @@ class LLDBTestResult(unittest2.TextTestResult):
         if self.checkExclusion(
             configuration.xfail_tests, test.id()
         ) or self.checkCategoryExclusion(configuration.xfail_categories, test):
-            self.addExpectedFailure(test, err, None)
+            self.addExpectedFailure(test, err)
             return
 
         configuration.sdir_has_content = True
@@ -264,12 +266,12 @@ class LLDBTestResult(unittest2.TextTestResult):
                 else:
                     configuration.failures_per_category[category] = 1
 
-    def addExpectedFailure(self, test, err, bugnumber):
+    def addExpectedFailure(self, test, err):
         configuration.sdir_has_content = True
-        super(LLDBTestResult, self).addExpectedFailure(test, err, bugnumber)
+        super(LLDBTestResult, self).addExpectedFailure(test, err)
         method = getattr(test, "markExpectedFailure", None)
         if method:
-            method(err, bugnumber)
+            method(err)
         self.stream.write(
             "XFAIL: LLDB (%s) :: %s\n" % (self._config_string(test), str(test))
         )
@@ -285,12 +287,12 @@ class LLDBTestResult(unittest2.TextTestResult):
             % (self._config_string(test), str(test), reason)
         )
 
-    def addUnexpectedSuccess(self, test, bugnumber):
+    def addUnexpectedSuccess(self, test):
         configuration.sdir_has_content = True
-        super(LLDBTestResult, self).addUnexpectedSuccess(test, bugnumber)
+        super(LLDBTestResult, self).addUnexpectedSuccess(test)
         method = getattr(test, "markUnexpectedSuccess", None)
         if method:
-            method(bugnumber)
+            method()
         self.stream.write(
             "XPASS: LLDB (%s) :: %s\n" % (self._config_string(test), str(test))
         )

@@ -202,7 +202,7 @@ define <8 x i1> @ugt_v8i16_splat(<8 x i16> %x) {
 ;
 ; SSE41-LABEL: ugt_v8i16_splat:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [243,243,243,243,243,243,243,243]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm1 = [243,243,243,243,243,243,243,243]
 ; SSE41-NEXT:    pmaxuw %xmm0, %xmm1
 ; SSE41-NEXT:    pcmpeqw %xmm1, %xmm0
 ; SSE41-NEXT:    retq
@@ -271,7 +271,7 @@ define <8 x i1> @uge_v8i16_splat(<8 x i16> %x) {
 ;
 ; SSE41-LABEL: uge_v8i16_splat:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [242,242,242,242,242,242,242,242]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm1 = [242,242,242,242,242,242,242,242]
 ; SSE41-NEXT:    pmaxuw %xmm0, %xmm1
 ; SSE41-NEXT:    pcmpeqw %xmm1, %xmm0
 ; SSE41-NEXT:    retq
@@ -345,7 +345,7 @@ define <8 x i1> @ult_v8i16_splat(<8 x i16> %x) {
 ;
 ; SSE41-LABEL: ult_v8i16_splat:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [241,241,241,241,241,241,241,241]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm1 = [241,241,241,241,241,241,241,241]
 ; SSE41-NEXT:    pminuw %xmm0, %xmm1
 ; SSE41-NEXT:    pcmpeqw %xmm1, %xmm0
 ; SSE41-NEXT:    retq
@@ -415,7 +415,7 @@ define <8 x i1> @ule_v8i16_splat(<8 x i16> %x) {
 ;
 ; SSE41-LABEL: ule_v8i16_splat:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [242,242,242,242,242,242,242,242]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm1 = [242,242,242,242,242,242,242,242]
 ; SSE41-NEXT:    pminuw %xmm0, %xmm1
 ; SSE41-NEXT:    pcmpeqw %xmm1, %xmm0
 ; SSE41-NEXT:    retq

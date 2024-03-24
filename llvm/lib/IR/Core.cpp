@@ -404,6 +404,14 @@ void LLVMAddModuleFlag(LLVMModuleRef M, LLVMModuleFlagBehavior Behavior,
                            {Key, KeyLen}, unwrap(Val));
 }
 
+LLVMBool LLVMIsNewDbgInfoFormat(LLVMModuleRef M) {
+  return unwrap(M)->IsNewDbgInfoFormat;
+}
+
+void LLVMSetIsNewDbgInfoFormat(LLVMModuleRef M, LLVMBool UseNewFormat) {
+  unwrap(M)->setIsNewDbgInfoFormat(UseNewFormat);
+}
+
 /*--.. Printing modules ....................................................--*/
 
 void LLVMDumpModule(LLVMModuleRef M) {
@@ -1522,6 +1530,15 @@ LLVMValueRef LLVMConstStringInContext(LLVMContextRef C, const char *Str,
                                            DontNullTerminate == 0));
 }
 
+LLVMValueRef LLVMConstStringInContext2(LLVMContextRef C, const char *Str,
+                                       size_t Length,
+                                       LLVMBool DontNullTerminate) {
+  /* Inverted the sense of AddNull because ', 0)' is a
+     better mnemonic for null termination than ', 1)'. */
+  return wrap(ConstantDataArray::getString(*unwrap(C), StringRef(Str, Length),
+                                           DontNullTerminate == 0));
+}
+
 LLVMValueRef LLVMConstString(const char *Str, unsigned Length,
                              LLVMBool DontNullTerminate) {
   return LLVMConstStringInContext(LLVMGetGlobalContext(), Str, Length,
@@ -1803,6 +1820,14 @@ LLVMValueRef LLVMConstInlineAsm(LLVMTypeRef Ty, const char *AsmString,
 
 LLVMValueRef LLVMBlockAddress(LLVMValueRef F, LLVMBasicBlockRef BB) {
   return wrap(BlockAddress::get(unwrap<Function>(F), unwrap(BB)));
+}
+
+LLVMValueRef LLVMGetBlockAddressFunction(LLVMValueRef BlockAddr) {
+  return wrap(unwrap<BlockAddress>(BlockAddr)->getFunction());
+}
+
+LLVMBasicBlockRef LLVMGetBlockAddressBasicBlock(LLVMValueRef BlockAddr) {
+  return wrap(unwrap<BlockAddress>(BlockAddr)->getBasicBlock());
 }
 
 /*--.. Operations on global variables, functions, and aliases (globals) ....--*/
@@ -2395,6 +2420,38 @@ void LLVMSetGC(LLVMValueRef Fn, const char *GC) {
     F->setGC(GC);
   else
     F->clearGC();
+}
+
+LLVMValueRef LLVMGetPrefixData(LLVMValueRef Fn) {
+  Function *F = unwrap<Function>(Fn);
+  return wrap(F->getPrefixData());
+}
+
+LLVMBool LLVMHasPrefixData(LLVMValueRef Fn) {
+  Function *F = unwrap<Function>(Fn);
+  return F->hasPrefixData();
+}
+
+void LLVMSetPrefixData(LLVMValueRef Fn, LLVMValueRef prefixData) {
+  Function *F = unwrap<Function>(Fn);
+  Constant *prefix = unwrap<Constant>(prefixData);
+  F->setPrefixData(prefix);
+}
+
+LLVMValueRef LLVMGetPrologueData(LLVMValueRef Fn) {
+  Function *F = unwrap<Function>(Fn);
+  return wrap(F->getPrologueData());
+}
+
+LLVMBool LLVMHasPrologueData(LLVMValueRef Fn) {
+  Function *F = unwrap<Function>(Fn);
+  return F->hasPrologueData();
+}
+
+void LLVMSetPrologueData(LLVMValueRef Fn, LLVMValueRef prologueData) {
+  Function *F = unwrap<Function>(Fn);
+  Constant *prologue = unwrap<Constant>(prologueData);
+  F->setPrologueData(prologue);
 }
 
 void LLVMAddAttributeAtIndex(LLVMValueRef F, LLVMAttributeIndex Idx,

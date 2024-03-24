@@ -332,7 +332,15 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   bool typesCompatible{typesCompatibleWithIgnoreTKR ||
       dummy.type.type().IsTkCompatibleWith(actualType.type())};
   int dummyRank{dummy.type.Rank()};
-  if (!typesCompatible && dummyRank == 0 && allowActualArgumentConversions) {
+  if (typesCompatible) {
+    if (const auto *constantChar{
+            evaluate::UnwrapConstantValue<evaluate::Ascii>(actual)};
+        constantChar && constantChar->wasHollerith() &&
+        dummy.type.type().IsUnlimitedPolymorphic()) {
+      messages.Say(
+          "passing Hollerith to unlimited polymorphic as if it were CHARACTER"_port_en_US);
+    }
+  } else if (dummyRank == 0 && allowActualArgumentConversions) {
     // Extension: pass Hollerith literal to scalar as if it had been BOZ
     if (auto converted{evaluate::HollerithToBOZ(
             foldingContext, actual, dummy.type.type())}) {
@@ -674,7 +682,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           !(dummyIsAssumedShape || dummyIsAssumedRank ||
               (actualIsPointer && dummyIsPointer))) { // C1539 & C1540
         messages.Say(
-            "ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous %s"_err_en_US,
+            "ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous ASYNCHRONOUS or VOLATILE %s"_err_en_US,
             dummyName);
       }
     }
@@ -912,7 +920,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
 static void CheckProcedureArg(evaluate::ActualArgument &arg,
     const characteristics::Procedure &proc,
     const characteristics::DummyProcedure &dummy, const std::string &dummyName,
-    SemanticsContext &context) {
+    SemanticsContext &context, bool ignoreImplicitVsExplicit) {
   evaluate::FoldingContext &foldingContext{context.foldingContext()};
   parser::ContextualMessages &messages{foldingContext.messages()};
   auto restorer{
@@ -975,7 +983,8 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
           if (interface.HasExplicitInterface()) {
             std::string whyNot;
             std::optional<std::string> warning;
-            if (!interface.IsCompatibleWith(argInterface, &whyNot,
+            if (!interface.IsCompatibleWith(argInterface,
+                    ignoreImplicitVsExplicit, &whyNot,
                     /*specificIntrinsic=*/nullptr, &warning)) {
               // 15.5.2.9(1): Explicit interfaces must match
               if (argInterface.HasExplicitInterface()) {
@@ -1081,7 +1090,8 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
     const characteristics::DummyArgument &dummy,
     const characteristics::Procedure &proc, SemanticsContext &context,
     const Scope *scope, const evaluate::SpecificIntrinsic *intrinsic,
-    bool allowActualArgumentConversions, bool extentErrors) {
+    bool allowActualArgumentConversions, bool extentErrors,
+    bool ignoreImplicitVsExplicit) {
   evaluate::FoldingContext &foldingContext{context.foldingContext()};
   auto &messages{foldingContext.messages()};
   std::string dummyName{"dummy argument"};
@@ -1185,7 +1195,8 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
           },
           [&](const characteristics::DummyProcedure &dummy) {
             if (!checkActualArgForLabel(arg)) {
-              CheckProcedureArg(arg, proc, dummy, dummyName, context);
+              CheckProcedureArg(arg, proc, dummy, dummyName, context,
+                  ignoreImplicitVsExplicit);
             }
           },
           [&](const characteristics::AlternateReturn &) {
@@ -1371,7 +1382,8 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
                           : nullptr};
                   std::optional<parser::MessageFixedText> msg{
                       CheckProcCompatibility(isCall, pointerProc, &*targetProc,
-                          specificIntrinsic, whyNot, warning)};
+                          specificIntrinsic, whyNot, warning,
+                          /*ignoreImplicitVsExplicit=*/false)};
                   if (!msg && warning &&
                       semanticsContext.ShouldWarn(
                           common::UsageWarning::ProcDummyArgShapes)) {
@@ -1740,7 +1752,8 @@ static parser::Messages CheckExplicitInterface(
     const characteristics::Procedure &proc, evaluate::ActualArguments &actuals,
     SemanticsContext &context, const Scope *scope,
     const evaluate::SpecificIntrinsic *intrinsic,
-    bool allowActualArgumentConversions, bool extentErrors) {
+    bool allowActualArgumentConversions, bool extentErrors,
+    bool ignoreImplicitVsExplicit) {
   evaluate::FoldingContext &foldingContext{context.foldingContext()};
   parser::ContextualMessages &messages{foldingContext.messages()};
   parser::Messages buffer;
@@ -1754,7 +1767,8 @@ static parser::Messages CheckExplicitInterface(
     const auto &dummy{proc.dummyArguments.at(index++)};
     if (actual) {
       CheckExplicitInterfaceArg(*actual, dummy, proc, context, scope, intrinsic,
-          allowActualArgumentConversions, extentErrors);
+          allowActualArgumentConversions, extentErrors,
+          ignoreImplicitVsExplicit);
     } else if (!dummy.IsOptional()) {
       if (dummy.name.empty()) {
         messages.Say(
@@ -1783,7 +1797,8 @@ bool CheckInterfaceForGeneric(const characteristics::Procedure &proc,
     bool allowActualArgumentConversions) {
   return proc.HasExplicitInterface() &&
       !CheckExplicitInterface(proc, actuals, context, nullptr, nullptr,
-          allowActualArgumentConversions, false /*extentErrors*/)
+          allowActualArgumentConversions, /*extentErrors=*/false,
+          /*ignoreImplicitVsExplicit=*/false)
            .AnyFatalError();
 }
 
@@ -1876,6 +1891,7 @@ bool CheckPPCIntrinsic(const Symbol &generic, const Symbol &specific,
 bool CheckArguments(const characteristics::Procedure &proc,
     evaluate::ActualArguments &actuals, SemanticsContext &context,
     const Scope &scope, bool treatingExternalAsImplicit,
+    bool ignoreImplicitVsExplicit,
     const evaluate::SpecificIntrinsic *intrinsic) {
   bool explicitInterface{proc.HasExplicitInterface()};
   evaluate::FoldingContext foldingContext{context.foldingContext()};
@@ -1898,8 +1914,9 @@ bool CheckArguments(const characteristics::Procedure &proc,
     }
   }
   if (explicitInterface) {
-    auto buffer{CheckExplicitInterface(
-        proc, actuals, context, &scope, intrinsic, true, true)};
+    auto buffer{CheckExplicitInterface(proc, actuals, context, &scope,
+        intrinsic, /*allowArgumentConversions=*/true, /*extentErrors=*/true,
+        ignoreImplicitVsExplicit)};
     if (!buffer.empty()) {
       if (treatingExternalAsImplicit) {
         if (auto *msg{messages.Say(

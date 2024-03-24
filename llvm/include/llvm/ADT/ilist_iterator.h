@@ -202,17 +202,12 @@ private:
 
   node_pointer NodePtr = nullptr;
 
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
-  // (Default: Off) Allow extra position-information flags to be stored
-  // in iterators, in aid of removing debug-info intrinsics from LLVM.
-
   /// Is this position intended to contain any debug-info immediately before
   /// the position?
   mutable bool HeadInclusiveBit = false;
   /// Is this position intended to contain any debug-info immediately after
   /// the position?
   mutable bool TailInclusiveBit = false;
-#endif
 
 public:
   /// Create from an ilist_node.
@@ -231,10 +226,8 @@ public:
       const ilist_iterator_w_bits<OptionsT, IsReverse, RHSIsConst> &RHS,
       std::enable_if_t<IsConst || !RHSIsConst, void *> = nullptr)
       : NodePtr(RHS.NodePtr) {
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
     HeadInclusiveBit = RHS.HeadInclusiveBit;
     TailInclusiveBit = RHS.TailInclusiveBit;
-#endif
   }
 
   // This is templated so that we can allow assigning to a const iterator from
@@ -243,10 +236,8 @@ public:
   std::enable_if_t<IsConst || !RHSIsConst, ilist_iterator_w_bits &>
   operator=(const ilist_iterator_w_bits<OptionsT, IsReverse, RHSIsConst> &RHS) {
     NodePtr = RHS.NodePtr;
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
     HeadInclusiveBit = RHS.HeadInclusiveBit;
     TailInclusiveBit = RHS.TailInclusiveBit;
-#endif
     return *this;
   }
 
@@ -280,10 +271,8 @@ public:
           const_cast<typename ilist_iterator_w_bits<OptionsT, IsReverse,
                                                     false>::node_reference>(
               *NodePtr));
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
       New.HeadInclusiveBit = HeadInclusiveBit;
       New.TailInclusiveBit = TailInclusiveBit;
-#endif
       return New;
     }
     return ilist_iterator_w_bits<OptionsT, IsReverse, false>();
@@ -309,18 +298,14 @@ public:
   // Increment and decrement operators...
   ilist_iterator_w_bits &operator--() {
     NodePtr = IsReverse ? NodePtr->getNext() : NodePtr->getPrev();
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
     HeadInclusiveBit = false;
     TailInclusiveBit = false;
-#endif
     return *this;
   }
   ilist_iterator_w_bits &operator++() {
     NodePtr = IsReverse ? NodePtr->getPrev() : NodePtr->getNext();
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
     HeadInclusiveBit = false;
     TailInclusiveBit = false;
-#endif
     return *this;
   }
   ilist_iterator_w_bits operator--(int) {
@@ -340,18 +325,10 @@ public:
   /// Check for end.  Only valid if ilist_sentinel_tracking<true>.
   bool isEnd() const { return NodePtr ? NodePtr->isSentinel() : false; }
 
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
   bool getHeadBit() const { return HeadInclusiveBit; }
   bool getTailBit() const { return TailInclusiveBit; }
   void setHeadBit(bool SetBit) const { HeadInclusiveBit = SetBit; }
   void setTailBit(bool SetBit) const { TailInclusiveBit = SetBit; }
-#else
-  // Store and return no information if we're not using this feature.
-  bool getHeadBit() const { return false; }
-  bool getTailBit() const { return false; }
-  void setHeadBit(bool SetBit) const { (void)SetBit; }
-  void setTailBit(bool SetBit) const { (void)SetBit; }
-#endif
 };
 
 template <typename From> struct simplify_type;

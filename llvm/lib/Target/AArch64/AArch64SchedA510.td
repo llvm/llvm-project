@@ -1198,24 +1198,24 @@ def : InstRW<[CortexA510Write<3, CortexA510UnitLdSt>], (instregex "^LDNT1[BHWD]_
 def : InstRW<[CortexA510Write<3, CortexA510UnitLdSt>], (instregex "^LDNT1[BHWD]_ZRR$")>;
 
 // Non temporal gather load, vector + scalar 32-bit element size
-def : InstRW<[CortexA510MCWrite<9, 9, CortexA510UnitLdSt>], (instregex "^LDNT1[BHW]_ZZR_S_REAL$",
-                                              "^LDNT1S[BH]_ZZR_S_REAL$")>;
+def : InstRW<[CortexA510MCWrite<9, 9, CortexA510UnitLdSt>], (instregex "^LDNT1[BHW]_ZZR_S$",
+                                              "^LDNT1S[BH]_ZZR_S$")>;
 
 // Non temporal gather load, vector + scalar 64-bit element size
-def : InstRW<[CortexA510MCWrite<7, 7, CortexA510UnitLdSt>], (instregex "^LDNT1S?[BHW]_ZZR_D_REAL$")>;
-def : InstRW<[CortexA510MCWrite<7, 7, CortexA510UnitLdSt>], (instrs LDNT1D_ZZR_D_REAL)>;
+def : InstRW<[CortexA510MCWrite<7, 7, CortexA510UnitLdSt>], (instregex "^LDNT1S?[BHW]_ZZR_D$")>;
+def : InstRW<[CortexA510MCWrite<7, 7, CortexA510UnitLdSt>], (instrs LDNT1D_ZZR_D)>;
 
 // Contiguous first faulting load, scalar + scalar
-def : InstRW<[CortexA510Write<3, CortexA510UnitLd>], (instregex "^LDFF1[BHWD]_REAL$",
-                                              "^LDFF1S?B_[HSD]_REAL$",
-                                              "^LDFF1S?H_[SD]_REAL$",
-                                              "^LDFF1S?W_D_REAL$")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitLd>], (instregex "^LDFF1[BHWD]$",
+                                              "^LDFF1S?B_[HSD]$",
+                                              "^LDFF1S?H_[SD]$",
+                                              "^LDFF1S?W_D$")>;
 
 // Contiguous non faulting load, scalar + imm
-def : InstRW<[CortexA510Write<3, CortexA510UnitLd>], (instregex "^LDNF1[BHWD]_IMM_REAL$",
-                                           "^LDNF1S?B_[HSD]_IMM_REAL$",
-                                           "^LDNF1S?H_[SD]_IMM_REAL$",
-                                           "^LDNF1S?W_D_IMM_REAL$")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitLd>], (instregex "^LDNF1[BHWD]_IMM$",
+                                           "^LDNF1S?B_[HSD]_IMM$",
+                                           "^LDNF1S?H_[SD]_IMM$",
+                                           "^LDNF1S?W_D_IMM$")>;
 
 // Contiguous Load two structures to two vectors, scalar + imm
 def : InstRW<[CortexA510MCWrite<3, 1, CortexA510UnitLdSt>], (instregex "^LD2[BHWD]_IMM$")>;
@@ -1236,28 +1236,28 @@ def : InstRW<[CortexA510MCWrite<5, 3, CortexA510UnitLdSt>], (instregex "^LD4[BHW
 def : InstRW<[CortexA510MCWrite<5, 3, CortexA510UnitLdSt>], (instregex "^LD4[BHWD]$")>;
 
 // Gather load, vector + imm, 32-bit element size
-def : InstRW<[CortexA510MCWrite<9, 9, CortexA510UnitLdSt>], (instregex "^GLD(FF)?1S?[BH]_S_IMM_REAL$",
-                                              "^GLD(FF)?1W_IMM_REAL$")>;
+def : InstRW<[CortexA510MCWrite<9, 9, CortexA510UnitLdSt>], (instregex "^GLD(FF)?1S?[BH]_S_IMM$",
+                                              "^GLD(FF)?1W_IMM$")>;
 
 // Gather load, vector + imm, 64-bit element size
-def : InstRW<[CortexA510MCWrite<7, 7, CortexA510UnitLdSt>], (instregex "^GLD(FF)?1S?[BHW]_D_IMM_REAL$",
-                                              "^GLD(FF)?1D_IMM_REAL$")>;
+def : InstRW<[CortexA510MCWrite<7, 7, CortexA510UnitLdSt>], (instregex "^GLD(FF)?1S?[BHW]_D_IMM$",
+                                              "^GLD(FF)?1D_IMM$")>;
 
 // Gather load, 64-bit element size
 def : InstRW<[CortexA510MCWrite<7, 7, CortexA510UnitLdSt>],
-             (instregex "^GLD(FF)?1S?[BHW]_D_[SU]XTW_(SCALED_)?REAL$",
-                        "^GLD(FF)?1S?[BHW]_D_(SCALED_)?REAL$",
-                        "^GLD(FF)?1D_[SU]XTW_(SCALED_)?REAL$",
-                        "^GLD(FF)?1D_(SCALED_)?REAL$")>;
+             (instregex "^GLD(FF)?1S?[BHW]_D_[SU]XTW(_SCALED)?$",
+                        "^GLD(FF)?1S?[BHW]_D(_SCALED)?$",
+                        "^GLD(FF)?1D_[SU]XTW(_SCALED)?$",
+                        "^GLD(FF)?1D(_SCALED)?$")>;
 
 // Gather load, 32-bit scaled offset
 def : InstRW<[CortexA510MCWrite<9, 9, CortexA510UnitLd>],
-             (instregex "^GLD(FF)?1S?[HW]_S_[SU]XTW_SCALED_REAL$",
-                        "^GLD(FF)?1W_[SU]XTW_SCALED_REAL")>;
+             (instregex "^GLD(FF)?1S?[HW]_S_[SU]XTW_SCALED$",
+                        "^GLD(FF)?1W_[SU]XTW_SCALED")>;
 
 // Gather load, 32-bit unpacked unscaled offset
-def : InstRW<[CortexA510MCWrite<9, 9, CortexA510UnitLd>], (instregex "^GLD(FF)?1S?[BH]_S_[SU]XTW_REAL$",
-                                              "^GLD(FF)?1W_[SU]XTW_REAL$")>;
+def : InstRW<[CortexA510MCWrite<9, 9, CortexA510UnitLd>], (instregex "^GLD(FF)?1S?[BH]_S_[SU]XTW$",
+                                              "^GLD(FF)?1W_[SU]XTW$")>;
 
 def : InstRW<[CortexA510Write<0, CortexA510UnitVALU>], (instregex "^PRF(B|H|W|D).*")>;
 // SVE Store instructions
@@ -1357,10 +1357,10 @@ def : InstRW<[CortexA510VSt<8>], (instregex "^SST1[BHW]_D$",
 // -----------------------------------------------------------------------------
 
 // Read first fault register, unpredicated
-def : InstRW<[CortexA510Write<1, CortexA510UnitALU>], (instrs RDFFR_P_REAL)>;
+def : InstRW<[CortexA510Write<1, CortexA510UnitALU>], (instrs RDFFR_P)>;
 
 // Read first fault register, predicated
-def : InstRW<[CortexA510Write<3, CortexA510UnitALU0>], (instrs RDFFR_PPz_REAL)>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitALU0>], (instrs RDFFR_PPz)>;
 
 // Read first fault register and set flags
 def : InstRW<[CortexA510Write<3, CortexA510UnitALU0>], (instrs RDFFRS_PPz)>;

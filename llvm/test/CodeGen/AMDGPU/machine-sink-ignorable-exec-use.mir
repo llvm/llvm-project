@@ -32,12 +32,12 @@ body:             |
   ; GFX9-NEXT: bb.1:
   ; GFX9-NEXT:   successors: %bb.2(0x80000000)
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT:   %9:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-  ; GFX9-NEXT:   %10:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, %9, 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-  ; GFX9-NEXT:   %12:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-  ; GFX9-NEXT:   %13:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, %12, 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-  ; GFX9-NEXT:   [[V_ADD_F32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 %9, %10, implicit $mode, implicit $exec
-  ; GFX9-NEXT:   [[V_ADD_F32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 %12, %13, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_1:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[V_FMAC_F32_e64_]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_2:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_3:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[V_FMAC_F32_e64_2]], 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_ADD_F32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 [[V_FMAC_F32_e64_]], [[V_FMAC_F32_e64_1]], implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_ADD_F32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 [[V_FMAC_F32_e64_2]], [[V_FMAC_F32_e64_3]], implicit $mode, implicit $exec
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT: bb.2:
   ; GFX9-NEXT:   successors: %bb.3(0x80000000)
@@ -104,11 +104,11 @@ body:             |
   ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:vreg_64 = COPY [[S_MOV_B64_]]
   ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[S_MOV_B64_1]]
   ; GFX9-NEXT:   [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD killed [[COPY2]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
-  ; GFX9-NEXT:   %9:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-  ; GFX9-NEXT:   %10:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, %9, 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_1:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[V_FMAC_F32_e64_]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
   ; GFX9-NEXT:   [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD killed [[COPY3]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
-  ; GFX9-NEXT:   %12:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-  ; GFX9-NEXT:   %13:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, %12, 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_2:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_3:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[V_FMAC_F32_e64_2]], 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
   ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX9-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; GFX9-NEXT:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_I32_e64 [[COPY4]](s32), [[S_MOV_B32_]], implicit $exec
@@ -118,8 +118,8 @@ body:             |
   ; GFX9-NEXT: bb.1:
   ; GFX9-NEXT:   successors: %bb.2(0x80000000)
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT:   [[V_ADD_F32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 %9, %10, implicit $mode, implicit $exec
-  ; GFX9-NEXT:   [[V_ADD_F32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 %12, %13, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_ADD_F32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 [[V_FMAC_F32_e64_]], [[V_FMAC_F32_e64_1]], implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_ADD_F32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 [[V_FMAC_F32_e64_2]], [[V_FMAC_F32_e64_3]], implicit $mode, implicit $exec
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT: bb.2:
   ; GFX9-NEXT:   successors: %bb.3(0x80000000)
@@ -129,7 +129,7 @@ body:             |
   ; GFX9-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT: bb.3:
-  ; GFX9-NEXT:   [[V_ADD_F32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 %13, %10, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_ADD_F32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 [[V_FMAC_F32_e64_3]], [[V_FMAC_F32_e64_1]], implicit $mode, implicit $exec
   ; GFX9-NEXT:   S_ENDPGM 0, implicit [[PHI]], implicit [[PHI1]]
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -189,11 +189,11 @@ body:             |
   ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:vreg_64 = COPY [[S_MOV_B64_]]
   ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[S_MOV_B64_1]]
   ; GFX9-NEXT:   [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD killed [[COPY2]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
-  ; GFX9-NEXT:   %9:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-  ; GFX9-NEXT:   %10:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, %9, 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_1:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[V_FMAC_F32_e64_]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
   ; GFX9-NEXT:   [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD killed [[COPY3]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
-  ; GFX9-NEXT:   %12:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-  ; GFX9-NEXT:   %13:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, %12, 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_2:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_3:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[V_FMAC_F32_e64_2]], 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
   ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX9-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; GFX9-NEXT:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_I32_e64 [[COPY4]](s32), [[S_MOV_B32_]], implicit $exec
@@ -203,8 +203,8 @@ body:             |
   ; GFX9-NEXT: bb.1:
   ; GFX9-NEXT:   successors: %bb.2(0x80000000)
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT:   [[V_ADD_F32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 %9, %10, implicit $mode, implicit $exec
-  ; GFX9-NEXT:   [[V_ADD_F32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 %12, %13, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_ADD_F32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 [[V_FMAC_F32_e64_]], [[V_FMAC_F32_e64_1]], implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_ADD_F32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 [[V_FMAC_F32_e64_2]], [[V_FMAC_F32_e64_3]], implicit $mode, implicit $exec
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT: bb.2:
   ; GFX9-NEXT:   successors: %bb.3(0x80000000)
@@ -268,8 +268,8 @@ body:             |
   ; GFX9-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
   ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:vreg_64 = COPY [[S_MOV_B64_]]
   ; GFX9-NEXT:   [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD killed [[COPY2]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
-  ; GFX9-NEXT:   %5:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-  ; GFX9-NEXT:   early-clobber %6:vgpr_32 = STRICT_WWM %5, implicit $exec
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   early-clobber %6:vgpr_32 = STRICT_WWM [[V_FMAC_F32_e64_]], implicit $exec
   ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX9-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; GFX9-NEXT:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_I32_e64 [[COPY3]](s32), [[S_MOV_B32_]], implicit $exec
@@ -282,7 +282,7 @@ body:             |
   ; GFX9-NEXT: bb.2:
   ; GFX9-NEXT:   successors: %bb.3(0x80000000)
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT:   S_NOP 0, implicit %5
+  ; GFX9-NEXT:   S_NOP 0, implicit [[V_FMAC_F32_e64_]]
   ; GFX9-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT: bb.3:
@@ -353,9 +353,9 @@ body:             |
   ; GFX9-NEXT:   successors: %bb.4(0x40000000), %bb.6(0x40000000)
   ; GFX9-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vcc
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT:   %6:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-  ; GFX9-NEXT:   %8:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-  ; GFX9-NEXT:   S_NOP 0, implicit %6, implicit %8
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_1:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   S_NOP 0, implicit [[V_FMAC_F32_e64_]], implicit [[V_FMAC_F32_e64_1]]
   ; GFX9-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX9-NEXT:   S_CBRANCH_EXECZ %bb.6, implicit $exec
   ; GFX9-NEXT: {{  $}}
@@ -461,15 +461,15 @@ body:             |
   ; GFX9-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
   ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[S_MOV_B64_]]
   ; GFX9-NEXT:   [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD killed [[COPY3]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
-  ; GFX9-NEXT:   %6:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
   ; GFX9-NEXT:   [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD killed [[COPY2]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
-  ; GFX9-NEXT:   %8:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_1:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT: bb.1:
   ; GFX9-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; GFX9-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vcc
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT:   S_NOP 0, implicit %6, implicit %8
+  ; GFX9-NEXT:   S_NOP 0, implicit [[V_FMAC_F32_e64_]], implicit [[V_FMAC_F32_e64_1]]
   ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX9-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; GFX9-NEXT:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_I32_e64 [[COPY4]](s32), [[S_MOV_B32_]], implicit $exec
@@ -591,9 +591,9 @@ body:             |
   ; GFX9-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
   ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[S_MOV_B64_]]
   ; GFX9-NEXT:   [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD killed [[COPY3]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
-  ; GFX9-NEXT:   %6:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
   ; GFX9-NEXT:   [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD killed [[COPY2]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
-  ; GFX9-NEXT:   %8:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+  ; GFX9-NEXT:   [[V_FMAC_F32_e64_1:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
   ; GFX9-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; GFX9-NEXT:   S_BRANCH %bb.1
   ; GFX9-NEXT: {{  $}}
@@ -608,7 +608,7 @@ body:             |
   ; GFX9-NEXT:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
   ; GFX9-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vcc
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT:   S_NOP 0, implicit %6, implicit %8
+  ; GFX9-NEXT:   S_NOP 0, implicit [[V_FMAC_F32_e64_]], implicit [[V_FMAC_F32_e64_1]]
   ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX9-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; GFX9-NEXT:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_I32_e64 [[COPY4]](s32), [[S_MOV_B32_]], implicit $exec

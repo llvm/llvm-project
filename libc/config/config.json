@@ -15,6 +15,10 @@
     "LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE": {
       "value": false,
       "doc": "Use large table for better printf long double performance."
+    },
+    "LIBC_CONF_PRINTF_DISABLE_FIXED_POINT": {
+      "value": false,
+      "doc": "Disable printing fixed point values in printf and friends."
     }
   },
   "string": {

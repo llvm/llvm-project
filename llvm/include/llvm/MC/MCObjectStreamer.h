@@ -202,7 +202,7 @@ public:
   void emitNops(int64_t NumBytes, int64_t ControlledNopLength, SMLoc Loc,
                 const MCSubtargetInfo &STI) override;
   void emitFileDirective(StringRef Filename) override;
-  void emitFileDirective(StringRef Filename, StringRef CompilerVerion,
+  void emitFileDirective(StringRef Filename, StringRef CompilerVersion,
                          StringRef TimeStamp, StringRef Description) override;
 
   void emitAddrsig() override;

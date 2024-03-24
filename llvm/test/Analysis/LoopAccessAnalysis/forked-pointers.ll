@@ -934,7 +934,7 @@ for.body:                                         ; preds = %entry, %for.body
 ;;;; Derived from forked_ptrs_same_base_different_offset with a manually
 ;;;; added uniform offset and a mul to provide a stride
 
-define dso_local void @forked_ptrs_uniform_and_strided_forks(float* nocapture readonly %Base, float* nocapture %Dest, i32* nocapture readonly %Preds) {
+define dso_local void @forked_ptrs_uniform_and_strided_forks(ptr nocapture readonly %Base, ptr nocapture %Dest, ptr nocapture readonly %Preds) {
 ; CHECK-LABEL: 'forked_ptrs_uniform_and_strided_forks'
 ; CHECK-NEXT:    for.body:
 ; CHECK-NEXT:      Report: cannot identify array bounds
@@ -1073,7 +1073,7 @@ for.cond.cleanup:
 
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %Preds, i64 %indvars.iv
+  %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
   %cmp1.not = icmp eq i32 %0, 0
   %spec.select = select i1 %cmp1.not, ptr %Base2, ptr %Base1

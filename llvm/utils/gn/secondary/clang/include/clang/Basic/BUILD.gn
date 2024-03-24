@@ -25,6 +25,7 @@ diag_groups = [
   "CrossTU",
   "Driver",
   "Frontend",
+  "InstallAPI",
   "Lex",
   "Parse",
   "Refactoring",
@@ -97,6 +98,10 @@ clang_tablegen("Builtins") {
 }
 
 clang_tablegen("BuiltinsBPF") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsRISCV") {
   args = [ "-gen-clang-builtins" ]
 }
 

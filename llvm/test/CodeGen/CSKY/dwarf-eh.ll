@@ -12,7 +12,7 @@ declare void @throw_exception()
 
 declare i32 @__gxx_personality_v0(...)
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
 
@@ -22,7 +22,7 @@ declare void @__cxa_end_catch()
 ; LSDAEncoding = DW_EH_PE_pcrel | DW_EH_PE_sdata4
 ; CHECK-NEXT:	.cfi_lsda 27, .Lexception0
 
-define void @test1() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test1() personality ptr @__gxx_personality_v0 {
 ; SMALL:       # %bb.0: # %entry
 ; SMALL-NEXT:    subi16 sp, sp, 4
 ; SMALL-NEXT:    .cfi_def_cfa_offset 4
@@ -162,10 +162,10 @@ entry:
   invoke void @throw_exception() to label %try.cont unwind label %lpad
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
-  %1 = extractvalue { i8*, i32 } %0, 0
-  %2 = tail call i8* @__cxa_begin_catch(i8* %1)
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
+  %1 = extractvalue { ptr, i32 } %0, 0
+  %2 = tail call ptr @__cxa_begin_catch(ptr %1)
   tail call void @__cxa_end_catch()
   br label %try.cont
 

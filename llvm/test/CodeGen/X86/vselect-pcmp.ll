@@ -1182,7 +1182,7 @@ define <4 x i64> @blend_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %z
 ; AVX512F-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
 ; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512F-NEXT:    vpmovsxdq {{.*#+}} ymm3 = [2,4,32768,1]
+; AVX512F-NEXT:    vpmovzxwq {{.*#+}} ymm3 = [2,4,32768,1]
 ; AVX512F-NEXT:    vptestnmq %zmm3, %zmm0, %k1
 ; AVX512F-NEXT:    vpblendmq %zmm1, %zmm2, %zmm0 {%k1}
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0

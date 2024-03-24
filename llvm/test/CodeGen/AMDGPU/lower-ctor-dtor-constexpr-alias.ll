@@ -6,13 +6,13 @@
 
 ; Check a constructor that's an alias, and an integer literal.
 @llvm.global_ctors = appending addrspace(1) global [2 x { i32, ptr, ptr }] [
-  { i32, ptr, ptr } { i32 1, ptr @foo.alias, i8* null },
-  { i32, ptr, ptr } { i32 1, ptr inttoptr (i64 4096 to ptr), i8* null }
+  { i32, ptr, ptr } { i32 1, ptr @foo.alias, ptr null },
+  { i32, ptr, ptr } { i32 1, ptr inttoptr (i64 4096 to ptr), ptr null }
 ]
 
 ; Check a constantexpr addrspacecast
 @llvm.global_dtors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [
-  { i32, ptr, ptr } { i32 1, ptr addrspacecast (ptr addrspace(1) @bar to ptr), i8* null }
+  { i32, ptr, ptr } { i32 1, ptr addrspacecast (ptr addrspace(1) @bar to ptr), ptr null }
 ]
 
 @foo.alias = hidden alias void (), ptr @foo

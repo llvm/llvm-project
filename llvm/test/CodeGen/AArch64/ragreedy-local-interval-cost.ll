@@ -273,14 +273,14 @@ for.cond1.preheader:                              ; preds = %for.cond1.preheader
   %28 = phi <2 x i64> [ undef, %entry ], [ %41, %for.cond1.preheader ]
   %29 = phi <2 x i64> [ undef, %entry ], [ %39, %for.cond1.preheader ]
   %indvars.iv40 = phi i64 [ 0, %entry ], [ %indvars.iv.next41, %for.cond1.preheader ]
-  %30 = load <2 x i64>, <2 x i64>* null, align 8
-  %31 = load <2 x i64>, <2 x i64>* undef, align 8
-  %arrayidx14.4.phi.trans.insert = getelementptr inbounds [8 x [8 x i64]], [8 x [8 x i64]]* @B, i64 0, i64 %indvars.iv40, i64 4
-  %32 = load <2 x i64>, <2 x i64>* null, align 8
-  %arrayidx14.6.phi.trans.insert = getelementptr inbounds [8 x [8 x i64]], [8 x [8 x i64]]* @B, i64 0, i64 %indvars.iv40, i64 6
-  %33 = bitcast i64* %arrayidx14.6.phi.trans.insert to <2 x i64>*
-  %34 = load <2 x i64>, <2 x i64>* %33, align 8
-  %35 = load i64, i64* null, align 8
+  %30 = load <2 x i64>, ptr null, align 8
+  %31 = load <2 x i64>, ptr undef, align 8
+  %arrayidx14.4.phi.trans.insert = getelementptr inbounds [8 x [8 x i64]], ptr @B, i64 0, i64 %indvars.iv40, i64 4
+  %32 = load <2 x i64>, ptr null, align 8
+  %arrayidx14.6.phi.trans.insert = getelementptr inbounds [8 x [8 x i64]], ptr @B, i64 0, i64 %indvars.iv40, i64 6
+  %33 = bitcast ptr %arrayidx14.6.phi.trans.insert to ptr
+  %34 = load <2 x i64>, ptr %33, align 8
+  %35 = load i64, ptr null, align 8
   %36 = insertelement <2 x i64> undef, i64 %35, i32 0
   %37 = shufflevector <2 x i64> %36, <2 x i64> undef, <2 x i32> zeroinitializer
   %38 = mul nsw <2 x i64> %30, %37
@@ -291,7 +291,7 @@ for.cond1.preheader:                              ; preds = %for.cond1.preheader
   %43 = add nsw <2 x i64> %27, %42
   %44 = mul nsw <2 x i64> %34, %37
   %45 = add nsw <2 x i64> %26, %44
-  %46 = load i64, i64* undef, align 8
+  %46 = load i64, ptr undef, align 8
   %47 = insertelement <2 x i64> undef, i64 %46, i32 0
   %48 = shufflevector <2 x i64> %47, <2 x i64> undef, <2 x i32> zeroinitializer
   %49 = mul nsw <2 x i64> %30, %48
@@ -302,8 +302,8 @@ for.cond1.preheader:                              ; preds = %for.cond1.preheader
   %54 = add nsw <2 x i64> %23, %53
   %55 = mul nsw <2 x i64> %34, %48
   %56 = add nsw <2 x i64> %22, %55
-  %arrayidx10.2 = getelementptr inbounds [8 x [8 x i64]], [8 x [8 x i64]]* @A, i64 0, i64 2, i64 %indvars.iv40
-  %57 = load i64, i64* %arrayidx10.2, align 8
+  %arrayidx10.2 = getelementptr inbounds [8 x [8 x i64]], ptr @A, i64 0, i64 2, i64 %indvars.iv40
+  %57 = load i64, ptr %arrayidx10.2, align 8
   %58 = insertelement <2 x i64> undef, i64 %57, i32 0
   %59 = shufflevector <2 x i64> %58, <2 x i64> undef, <2 x i32> zeroinitializer
   %60 = mul nsw <2 x i64> %31, %59
@@ -312,7 +312,7 @@ for.cond1.preheader:                              ; preds = %for.cond1.preheader
   %63 = add nsw <2 x i64> %20, %62
   %64 = mul nsw <2 x i64> %34, %59
   %65 = add nsw <2 x i64> %19, %64
-  %66 = load i64, i64* undef, align 8
+  %66 = load i64, ptr undef, align 8
   %67 = insertelement <2 x i64> undef, i64 %66, i32 0
   %68 = shufflevector <2 x i64> %67, <2 x i64> undef, <2 x i32> zeroinitializer
   %69 = mul nsw <2 x i64> %30, %68
@@ -321,7 +321,7 @@ for.cond1.preheader:                              ; preds = %for.cond1.preheader
   %72 = add nsw <2 x i64> %17, %71
   %73 = mul nsw <2 x i64> %34, %68
   %74 = add nsw <2 x i64> %16, %73
-  %75 = load i64, i64* undef, align 8
+  %75 = load i64, ptr undef, align 8
   %76 = insertelement <2 x i64> undef, i64 %75, i32 0
   %77 = shufflevector <2 x i64> %76, <2 x i64> undef, <2 x i32> zeroinitializer
   %78 = mul nsw <2 x i64> %30, %77
@@ -332,7 +332,7 @@ for.cond1.preheader:                              ; preds = %for.cond1.preheader
   %83 = add nsw <2 x i64> %13, %82
   %84 = mul nsw <2 x i64> %34, %77
   %85 = add nsw <2 x i64> %12, %84
-  %86 = load i64, i64* undef, align 8
+  %86 = load i64, ptr undef, align 8
   %87 = insertelement <2 x i64> undef, i64 %86, i32 0
   %88 = shufflevector <2 x i64> %87, <2 x i64> undef, <2 x i32> zeroinitializer
   %89 = mul nsw <2 x i64> %30, %88
@@ -343,7 +343,7 @@ for.cond1.preheader:                              ; preds = %for.cond1.preheader
   %94 = add nsw <2 x i64> %9, %93
   %95 = mul nsw <2 x i64> %34, %88
   %96 = add nsw <2 x i64> %8, %95
-  %97 = load i64, i64* undef, align 8
+  %97 = load i64, ptr undef, align 8
   %98 = insertelement <2 x i64> undef, i64 %97, i32 0
   %99 = shufflevector <2 x i64> %98, <2 x i64> undef, <2 x i32> zeroinitializer
   %100 = mul nsw <2 x i64> %30, %99
@@ -354,7 +354,7 @@ for.cond1.preheader:                              ; preds = %for.cond1.preheader
   %105 = add nsw <2 x i64> %5, %104
   %106 = mul nsw <2 x i64> %34, %99
   %107 = add nsw <2 x i64> %4, %106
-  %108 = load i64, i64* undef, align 8
+  %108 = load i64, ptr undef, align 8
   %109 = insertelement <2 x i64> undef, i64 %108, i32 0
   %110 = shufflevector <2 x i64> %109, <2 x i64> undef, <2 x i32> zeroinitializer
   %111 = mul nsw <2 x i64> %30, %110
@@ -370,35 +370,35 @@ for.cond1.preheader:                              ; preds = %for.cond1.preheader
   br i1 %exitcond42, label %for.cond.cleanup, label %for.cond1.preheader
 
 for.cond.cleanup:                                 ; preds = %for.cond1.preheader
-  store <2 x i64> %39, <2 x i64>* bitcast ([8 x [8 x i64]]* @C to <2 x i64>*), align 8
-  store <2 x i64> %41, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 0, i64 2) to <2 x i64>*), align 8
-  store <2 x i64> %43, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 0, i64 4) to <2 x i64>*), align 8
-  store <2 x i64> %45, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 0, i64 6) to <2 x i64>*), align 8
-  store <2 x i64> %50, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 1, i64 0) to <2 x i64>*), align 8
-  store <2 x i64> %52, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 1, i64 2) to <2 x i64>*), align 8
-  store <2 x i64> %54, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 1, i64 4) to <2 x i64>*), align 8
-  store <2 x i64> %56, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 1, i64 6) to <2 x i64>*), align 8
-  store <2 x i64> %61, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 2, i64 2) to <2 x i64>*), align 8
-  store <2 x i64> %63, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 2, i64 4) to <2 x i64>*), align 8
-  store <2 x i64> %65, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 2, i64 6) to <2 x i64>*), align 8
-  store <2 x i64> %70, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 3, i64 0) to <2 x i64>*), align 8
-  store <2 x i64> %72, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 3, i64 2) to <2 x i64>*), align 8
-  store <2 x i64> %74, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 3, i64 6) to <2 x i64>*), align 8
-  store <2 x i64> %79, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 4, i64 0) to <2 x i64>*), align 8
-  store <2 x i64> %81, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 4, i64 2) to <2 x i64>*), align 8
-  store <2 x i64> %83, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 4, i64 4) to <2 x i64>*), align 8
-  store <2 x i64> %85, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 4, i64 6) to <2 x i64>*), align 8
-  store <2 x i64> %90, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 5, i64 0) to <2 x i64>*), align 8
-  store <2 x i64> %92, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 5, i64 2) to <2 x i64>*), align 8
-  store <2 x i64> %94, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 5, i64 4) to <2 x i64>*), align 8
-  store <2 x i64> %96, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 5, i64 6) to <2 x i64>*), align 8
-  store <2 x i64> %101, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 6, i64 0) to <2 x i64>*), align 8
-  store <2 x i64> %103, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 6, i64 2) to <2 x i64>*), align 8
-  store <2 x i64> %105, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 6, i64 4) to <2 x i64>*), align 8
-  store <2 x i64> %107, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 6, i64 6) to <2 x i64>*), align 8
-  store <2 x i64> %112, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 7, i64 0) to <2 x i64>*), align 8
-  store <2 x i64> %114, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 7, i64 2) to <2 x i64>*), align 8
-  store <2 x i64> %116, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 7, i64 4) to <2 x i64>*), align 8
-  store <2 x i64> %118, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x [8 x i64]], [8 x [8 x i64]]* @C, i64 0, i64 7, i64 6) to <2 x i64>*), align 8
+  store <2 x i64> %39, ptr @C, align 8
+  store <2 x i64> %41, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 0, i64 2), align 8
+  store <2 x i64> %43, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 0, i64 4), align 8
+  store <2 x i64> %45, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 0, i64 6), align 8
+  store <2 x i64> %50, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 1, i64 0), align 8
+  store <2 x i64> %52, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 1, i64 2), align 8
+  store <2 x i64> %54, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 1, i64 4), align 8
+  store <2 x i64> %56, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 1, i64 6), align 8
+  store <2 x i64> %61, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 2, i64 2), align 8
+  store <2 x i64> %63, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 2, i64 4), align 8
+  store <2 x i64> %65, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 2, i64 6), align 8
+  store <2 x i64> %70, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 3, i64 0), align 8
+  store <2 x i64> %72, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 3, i64 2), align 8
+  store <2 x i64> %74, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 3, i64 6), align 8
+  store <2 x i64> %79, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 4, i64 0), align 8
+  store <2 x i64> %81, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 4, i64 2), align 8
+  store <2 x i64> %83, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 4, i64 4), align 8
+  store <2 x i64> %85, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 4, i64 6), align 8
+  store <2 x i64> %90, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 5, i64 0), align 8
+  store <2 x i64> %92, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 5, i64 2), align 8
+  store <2 x i64> %94, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 5, i64 4), align 8
+  store <2 x i64> %96, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 5, i64 6), align 8
+  store <2 x i64> %101, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 6, i64 0), align 8
+  store <2 x i64> %103, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 6, i64 2), align 8
+  store <2 x i64> %105, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 6, i64 4), align 8
+  store <2 x i64> %107, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 6, i64 6), align 8
+  store <2 x i64> %112, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 7, i64 0), align 8
+  store <2 x i64> %114, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 7, i64 2), align 8
+  store <2 x i64> %116, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 7, i64 4), align 8
+  store <2 x i64> %118, ptr getelementptr inbounds ([8 x [8 x i64]], ptr @C, i64 0, i64 7, i64 6), align 8
   ret void
 }

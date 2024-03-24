@@ -171,7 +171,7 @@ TargetPassConfig *M68kTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void M68kPassConfig::addIRPasses() {
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
   TargetPassConfig::addIRPasses();
 }
 

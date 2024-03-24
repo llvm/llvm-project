@@ -14,25 +14,25 @@
   target triple = "x86_64-apple-macosx10.9.0"
 
   %swift.opaque = type opaque
-  %swift.metadata_response = type { %swift.type*, i64 }
+  %swift.metadata_response = type { ptr, i64 }
   %swift.type = type { i64 }
 
   define hidden swiftcc void @"$S4main1fyyF"() !dbg !5 {
   entry:
-    %s1.addr = alloca i8*, align 8
-    %0 = bitcast i8** %s1.addr to %swift.opaque**
-    store %swift.opaque* null, %swift.opaque** %0, align 8
+    %s1.addr = alloca ptr, align 8
+    %0 = bitcast ptr %s1.addr to ptr
+    store ptr null, ptr %0, align 8
     %1 = call swiftcc %swift.metadata_response @"$S16resilient_struct4SizeVMa"(i64 0) #1, !dbg !10
     %2 = extractvalue %swift.metadata_response %1, 0, !dbg !10
-    %3 = bitcast %swift.type* %2 to i8***, !dbg !10
-    %4 = getelementptr inbounds i8**, i8*** %3, i64 -1, !dbg !10
+    %3 = bitcast ptr %2 to ptr, !dbg !10
+    %4 = getelementptr inbounds ptr, ptr %3, i64 -1, !dbg !10
     ret void, !dbg !12
   }
 
   declare swiftcc %swift.metadata_response @"$S16resilient_struct4SizeVMa"(i64)
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #0
+  declare void @llvm.stackprotector(ptr, ptr) #0
 
   attributes #0 = { nounwind }
   attributes #1 = { nounwind readnone }
@@ -75,7 +75,7 @@ frameInfo:
   stackSize:       0
   offsetAdjustment: 0
   maxAlignment:    8
-  adjustsStack:    false
+  adjustsStack:    true
   hasCalls:        true
   stackProtector:  ''
   maxCallFrameSize: 4294967295

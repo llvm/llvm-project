@@ -3225,6 +3225,79 @@ define void @PR43024() {
   ret void
 }
 
+declare <4 x float> @llvm.experimental.constrained.fadd.v4f32(<4 x float>, <4 x float>, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.fmul.v4f32(<4 x float>, <4 x float>, metadata, metadata)
+
+define void @PR43024_strictfp() strictfp {
+; SSE2-LABEL: PR43024_strictfp:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movsd {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
+; SSE2-NEXT:    movaps %xmm0, (%rax)
+; SSE2-NEXT:    xorps %xmm1, %xmm1
+; SSE2-NEXT:    mulps %xmm1, %xmm0
+; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm0[1,1]
+; SSE2-NEXT:    addps %xmm0, %xmm2
+; SSE2-NEXT:    addps %xmm1, %xmm2
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; SSE2-NEXT:    addps %xmm2, %xmm0
+; SSE2-NEXT:    movss %xmm0, (%rax)
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: PR43024_strictfp:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movsd {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
+; SSSE3-NEXT:    movaps %xmm0, (%rax)
+; SSSE3-NEXT:    xorps %xmm1, %xmm1
+; SSSE3-NEXT:    mulps %xmm1, %xmm0
+; SSSE3-NEXT:    movshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; SSSE3-NEXT:    addps %xmm0, %xmm2
+; SSSE3-NEXT:    addps %xmm1, %xmm2
+; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; SSSE3-NEXT:    addps %xmm2, %xmm0
+; SSSE3-NEXT:    movss %xmm0, (%rax)
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: PR43024_strictfp:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movsd {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
+; SSE41-NEXT:    movaps %xmm0, (%rax)
+; SSE41-NEXT:    xorps %xmm1, %xmm1
+; SSE41-NEXT:    mulps %xmm1, %xmm0
+; SSE41-NEXT:    movshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; SSE41-NEXT:    addps %xmm0, %xmm2
+; SSE41-NEXT:    addps %xmm1, %xmm2
+; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; SSE41-NEXT:    addps %xmm2, %xmm0
+; SSE41-NEXT:    movss %xmm0, (%rax)
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: PR43024_strictfp:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
+; AVX-NEXT:    vmovaps %xmm0, (%rax)
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; AVX-NEXT:    vaddps %xmm2, %xmm0, %xmm2
+; AVX-NEXT:    vaddps %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovss %xmm0, (%rax)
+; AVX-NEXT:    retq
+  store <4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x0, float 0x0>, ptr undef, align 16
+  %1 = load <4 x float>, ptr undef, align 16
+  %2 = call <4 x float> @llvm.experimental.constrained.fmul.v4f32(<4 x float> %1, <4 x float> zeroinitializer, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %3 = shufflevector <4 x float> %2, <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %4 = call <4 x float> @llvm.experimental.constrained.fadd.v4f32(<4 x float> %2, <4 x float> %3, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %5 = call <4 x float> @llvm.experimental.constrained.fadd.v4f32(<4 x float> zeroinitializer, <4 x float> %4, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %6 = shufflevector <4 x float> %2, <4 x float> undef, <4 x i32> <i32 3, i32 undef, i32 undef, i32 undef>
+  %7 = call <4 x float> @llvm.experimental.constrained.fadd.v4f32(<4 x float> %6, <4 x float> %5, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %8 = extractelement <4 x float> %7, i32 0
+  store float %8, ptr undef, align 8
+  ret void
+}
+
 define void @PR45604(ptr %dst, ptr %src) {
 ; SSE2-LABEL: PR45604:
 ; SSE2:       # %bb.0:
@@ -3568,9 +3641,9 @@ define void @autogen_SD25931() {
 ; CHECK-LABEL: autogen_SD25931:
 ; CHECK:       # %bb.0: # %BB
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB140_1: # %CF242
+; CHECK-NEXT:  .LBB141_1: # %CF242
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    jmp .LBB140_1
+; CHECK-NEXT:    jmp .LBB141_1
 BB:
   %Cmp16 = icmp uge <2 x i1> zeroinitializer, zeroinitializer
   %Shuff19 = shufflevector <2 x i1> zeroinitializer, <2 x i1> %Cmp16, <2 x i32> <i32 3, i32 1>

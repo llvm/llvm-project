@@ -26,7 +26,7 @@ define <16 x i8> @mul_v16i8c(<16 x i8> %i) nounwind  {
 ; SSE41-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm2 = [117,117,117,117,117,117,117,117]
 ; SSE41-NEXT:    pmullw %xmm2, %xmm0
-; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm3, %xmm0
 ; SSE41-NEXT:    pmullw %xmm2, %xmm1
 ; SSE41-NEXT:    pand %xmm3, %xmm1
@@ -169,7 +169,7 @@ define <16 x i8> @mul_v16i8(<16 x i8> %i, <16 x i8> %j) nounwind  {
 ; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SSE41-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE41-NEXT:    pmullw %xmm1, %xmm0
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm1, %xmm0
 ; SSE41-NEXT:    pmullw %xmm3, %xmm2
 ; SSE41-NEXT:    pand %xmm1, %xmm2
@@ -409,7 +409,7 @@ define <32 x i8> @mul_v32i8c(<32 x i8> %i) nounwind  {
 ; SSE41-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm4 = [117,117,117,117,117,117,117,117]
 ; SSE41-NEXT:    pmullw %xmm4, %xmm0
-; SSE41-NEXT:    movdqa {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm5, %xmm0
 ; SSE41-NEXT:    pmullw %xmm4, %xmm2
 ; SSE41-NEXT:    pand %xmm5, %xmm2
@@ -605,7 +605,7 @@ define <32 x i8> @mul_v32i8(<32 x i8> %i, <32 x i8> %j) nounwind  {
 ; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm4 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SSE41-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE41-NEXT:    pmullw %xmm2, %xmm0
-; SSE41-NEXT:    movdqa {{.*#+}} xmm6 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm6 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm6, %xmm0
 ; SSE41-NEXT:    pmullw %xmm5, %xmm4
 ; SSE41-NEXT:    pand %xmm6, %xmm4
@@ -801,7 +801,7 @@ define <64 x i8> @mul_v64i8c(<64 x i8> %i) nounwind  {
 ; SSE41-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm6 = [117,117,117,117,117,117,117,117]
 ; SSE41-NEXT:    pmullw %xmm6, %xmm1
-; SSE41-NEXT:    movdqa {{.*#+}} xmm7 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm7 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm7, %xmm1
 ; SSE41-NEXT:    pmullw %xmm6, %xmm0
 ; SSE41-NEXT:    pand %xmm7, %xmm0
@@ -949,7 +949,7 @@ define <64 x i8> @mul_v64i8(<64 x i8> %i, <64 x i8> %j) nounwind  {
 ; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SSE41-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE41-NEXT:    pmullw %xmm4, %xmm1
-; SSE41-NEXT:    movdqa {{.*#+}} xmm9 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm9 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm9, %xmm1
 ; SSE41-NEXT:    pmullw %xmm10, %xmm0
 ; SSE41-NEXT:    pand %xmm9, %xmm0

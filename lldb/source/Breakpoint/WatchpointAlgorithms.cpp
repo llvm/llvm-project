@@ -27,8 +27,7 @@ WatchpointAlgorithms::AtomizeWatchpointRequest(
 
   std::vector<Region> entries;
 
-  if (supported_features &
-      WatchpointHardwareFeature::eWatchpointHardwareArmMASK) {
+  if (supported_features & eWatchpointHardwareArmMASK) {
     entries =
         PowerOf2Watchpoints(addr, size,
                             /*min_byte_size*/ 1,

@@ -209,7 +209,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
   }
 
   // Try to find relative to the compiler binary.
-  const char *InstallDir = D.getInstalledDir();
+  StringRef InstallDir = D.Dir;
 
   // Check both a normal Unix prefix position of the clang binary, as well as
   // the Windows-esque layout the ROCm packages use with the host architecture
@@ -625,6 +625,7 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   addLinkerCompressDebugSectionsOption(getToolChain(), Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, options::OPT_L);
+  getToolChain().AddFilePathLibArgs(Args, CmdArgs);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
   if (C.getDriver().isUsingLTO())
     addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
@@ -827,6 +828,12 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("-fvisibility=hidden");
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
+}
+
+void AMDGPUToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
+  // AMDGPU does not support atomic lib call. Treat atomic alignment
+  // warnings as errors.
+  CC1Args.push_back("-Werror=atomic-alignment");
 }
 
 StringRef

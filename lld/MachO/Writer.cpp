@@ -66,7 +66,7 @@ public:
 
   template <class LP> void run();
 
-  ThreadPool threadPool;
+  DefaultThreadPool threadPool;
   std::unique_ptr<FileOutputBuffer> &buffer;
   uint64_t addr = 0;
   uint64_t fileOff = 0;
@@ -720,7 +720,7 @@ static void addNonWeakDefinition(const Defined *defined) {
 
 void Writer::scanSymbols() {
   TimeTraceScope timeScope("Scan symbols");
-  in.objcStubs->initialize();
+  in.objcSelRefs->initialize();
   for (Symbol *sym : symtab->getSymbols()) {
     if (auto *defined = dyn_cast<Defined>(sym)) {
       if (!defined->isLive())
@@ -1359,6 +1359,7 @@ void macho::createSyntheticSections() {
   in.got = make<GotSection>();
   in.tlvPointers = make<TlvPointerSection>();
   in.stubs = make<StubsSection>();
+  in.objcSelRefs = make<ObjCSelRefsSection>();
   in.objcStubs = make<ObjCStubsSection>();
   in.unwindInfo = makeUnwindInfoSection();
   in.objCImageInfo = make<ObjCImageInfoSection>();

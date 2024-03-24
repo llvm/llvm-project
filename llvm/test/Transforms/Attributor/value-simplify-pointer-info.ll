@@ -787,7 +787,7 @@ define i32 @test_range_merge1() {
 ;
   store <2 x i32> <i32 1, i32 1>, ptr @Vs1
   store float 2.000000e+00, ptr getelementptr inbounds (%struct.S, ptr @Vs1, i64 0, i32 4)
-  %l0 = load i32, ptr getelementptr inbounds (%struct.S, ptr @Vs1, i64 0, i32 0)
+  %l0 = load i32, ptr @Vs1
   %l1 = load i32, ptr getelementptr inbounds (%struct.S, ptr @Vs1, i64 0, i32 1)
   %add = add i32 %l0, %l1
   ret i32 %add
@@ -814,7 +814,7 @@ define i32 @test_range_merge2() {
 ;
   store <2 x i32> <i32 3, i32 4>, ptr @Vs2
   store float 2.000000e+00, ptr getelementptr inbounds (%struct.S, ptr @Vs2, i64 0, i32 4)
-  %l0 = load i32, ptr getelementptr inbounds (%struct.S, ptr @Vs2, i64 0, i32 0)
+  %l0 = load i32, ptr @Vs2
   %l1 = load i32, ptr getelementptr inbounds (%struct.S, ptr @Vs2, i64 0, i32 1)
   %add = add i32 %l0, %l1
   ret i32 %add

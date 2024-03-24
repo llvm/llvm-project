@@ -1173,18 +1173,27 @@ define <4 x i32> @constant_rotate_v4i32(<4 x i32> %a) nounwind {
 }
 
 define <8 x i16> @constant_rotate_v8i16(<8 x i16> %a) nounwind {
-; SSE-LABEL: constant_rotate_v8i16:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
-; SSE-NEXT:    movdqa %xmm0, %xmm2
-; SSE-NEXT:    pmulhuw %xmm1, %xmm2
-; SSE-NEXT:    pmullw %xmm1, %xmm0
-; SSE-NEXT:    por %xmm2, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: constant_rotate_v8i16:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    pmulhuw %xmm1, %xmm2
+; SSE2-NEXT:    pmullw %xmm1, %xmm0
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: constant_rotate_v8i16:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pmulhuw %xmm1, %xmm2
+; SSE41-NEXT:    pmullw %xmm1, %xmm0
+; SSE41-NEXT:    por %xmm2, %xmm0
+; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: constant_rotate_v8i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
+; AVX-NEXT:    vpmovzxbw {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
 ; AVX-NEXT:    vpmulhuw %xmm1, %xmm0, %xmm2
 ; AVX-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpor %xmm2, %xmm0, %xmm0
@@ -1192,7 +1201,7 @@ define <8 x i16> @constant_rotate_v8i16(<8 x i16> %a) nounwind {
 ;
 ; AVX512F-LABEL: constant_rotate_v8i16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
 ; AVX512F-NEXT:    vpmulhuw %xmm1, %xmm0, %xmm2
 ; AVX512F-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpor %xmm2, %xmm0, %xmm0

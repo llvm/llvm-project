@@ -20,7 +20,7 @@
 using namespace llvm;
 
 static void insertCall(Function &CurFn, StringRef Func,
-                       Instruction *InsertionPt, DebugLoc DL) {
+                       BasicBlock::iterator InsertionPt, DebugLoc DL) {
   Module &M = *InsertionPt->getParent()->getParent()->getParent();
   LLVMContext &C = InsertionPt->getParent()->getContext();
 
@@ -105,7 +105,7 @@ static bool runOnFunction(Function &F, bool PostInlining) {
     if (auto SP = F.getSubprogram())
       DL = DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP);
 
-    insertCall(F, EntryFunc, &*F.begin()->getFirstInsertionPt(), DL);
+    insertCall(F, EntryFunc, F.begin()->getFirstInsertionPt(), DL);
     Changed = true;
     F.removeFnAttr(EntryAttr);
   }
@@ -126,7 +126,7 @@ static bool runOnFunction(Function &F, bool PostInlining) {
       else if (auto SP = F.getSubprogram())
         DL = DILocation::get(SP->getContext(), 0, 0, SP);
 
-      insertCall(F, ExitFunc, T, DL);
+      insertCall(F, ExitFunc, T->getIterator(), DL);
       Changed = true;
     }
     F.removeFnAttr(ExitAttr);

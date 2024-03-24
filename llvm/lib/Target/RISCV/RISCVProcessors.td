@@ -245,7 +245,7 @@ def SIFIVE_P450 : RISCVProcessorModel<"sifive-p450", SiFiveP400Model,
                                        TuneLUIADDIFusion,
                                        TuneAUIPCADDIFusion]>;
 
-def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", NoSchedModel,
+def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
                                       [Feature64Bit,
                                        FeatureStdExtZifencei,
                                        FeatureStdExtM,
@@ -330,7 +330,7 @@ def VENTANA_VEYRON_V1 : RISCVProcessorModel<"veyron-v1",
                                               TuneLDADDFusion]>;
 
 def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
-                                          NoSchedModel,
+                                          XiangShanNanHuModel,
                                           [Feature64Bit,
                                            FeatureStdExtZicsr,
                                            FeatureStdExtZifencei,
@@ -348,4 +348,8 @@ def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                            FeatureStdExtZksh,
                                            FeatureStdExtSvinval,
                                            FeatureStdExtZicbom,
-                                           FeatureStdExtZicboz]>;
+                                           FeatureStdExtZicboz],
+                                           [TuneNoDefaultUnroll,
+                                            TuneZExtHFusion,
+                                            TuneZExtWFusion,
+                                            TuneShiftedZExtWFusion]>;

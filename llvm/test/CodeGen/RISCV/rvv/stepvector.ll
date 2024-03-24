@@ -733,3 +733,45 @@ entry:
   %3 = shl <vscale x 16 x i64> %2, %1
   ret <vscale x 16 x i64> %3
 }
+
+; maximum step is 4 * 2 = 8, so maximum step value is 7, so hi 61 bits are known
+; zero
+define <vscale x 2 x i64> @hi_bits_known_zero() vscale_range(2, 4) {
+; CHECK-LABEL: hi_bits_known_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    ret
+  %step = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
+  %and = and <vscale x 2 x i64> %step, splat (i64 u0xfffffffffffffff8)
+  ret <vscale x 2 x i64> %and
+}
+
+; the maximum step here overflows so don't set the known hi bits
+define <vscale x 2 x i64> @hi_bits_known_zero_overflow() vscale_range(2, 4) {
+; CHECK-LABEL: hi_bits_known_zero_overflow:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    vmul.vx v8, v8, a0
+; CHECK-NEXT:    vand.vi v8, v8, -8
+; CHECK-NEXT:    ret
+  %step = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
+  %step.mul = mul <vscale x 2 x i64> %step, splat (i64 u0xffffffffffffffff)
+  %and = and <vscale x 2 x i64> %step.mul, splat (i64 u0xfffffffffffffff8)
+  ret <vscale x 2 x i64> %and
+}
+
+; step values are multiple of 8, so lo 3 bits are known zero
+define <vscale x 2 x i64> @lo_bits_known_zero() {
+; CHECK-LABEL: lo_bits_known_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    ret
+  %step = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
+  %step.mul = mul <vscale x 2 x i64> %step, splat (i64 8)
+  %and = and <vscale x 2 x i64> %step.mul, splat (i64 7)
+  ret <vscale x 2 x i64> %and
+}

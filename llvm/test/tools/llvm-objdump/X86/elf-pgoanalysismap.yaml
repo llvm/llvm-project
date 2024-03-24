@@ -47,7 +47,9 @@ Symbols:
 
 # RUN: yaml2obj %s --docnum=2 -o %t2
 # RUN: llvm-objdump %t2 -d --symbolize-operands --no-show-raw-insn --no-leading-addr | \
-# RUN:   FileCheck %s --check-prefix=ENTRYCOUNT-BLOCKFREQ
+# RUN:   FileCheck --match-full-lines --strict-whitespace %s --check-prefix=ENTRYCOUNT-BLOCKFREQ
+# RUN: llvm-objdump %t2 -d --symbolize-operands --pretty-pgo-analysis-map --no-show-raw-insn --no-leading-addr | \
+# RUN:   FileCheck --match-full-lines --strict-whitespace %s --check-prefix=ENTRYCOUNT-BLOCKFREQ-PRETTY
 
 --- !ELF
 FileHeader:
@@ -98,18 +100,28 @@ Symbols:
     Section: .text.foo
     Value:   0x0
 
-# ENTRYCOUNT-BLOCKFREQ: <foo>:
-# ENTRYCOUNT-BLOCKFREQ: <BB3> (Entry count: 1000, Frequency: 1000):
-# ENTRYCOUNT-BLOCKFREQ: <BB1> (Frequency: 133):
-# ENTRYCOUNT-BLOCKFREQ: <BB2> (Frequency: 18):
-# ENTRYCOUNT-BLOCKFREQ: <BB5> (Frequency: 1000):
+# ENTRYCOUNT-BLOCKFREQ:<foo>:
+# ENTRYCOUNT-BLOCKFREQ:<BB3> (Entry count: 1000, Frequency: 1000):
+# ENTRYCOUNT-BLOCKFREQ:<BB1> (Frequency: 133):
+# ENTRYCOUNT-BLOCKFREQ:<BB2> (Frequency: 18):
+# ENTRYCOUNT-BLOCKFREQ:<BB5> (Frequency: 1000):
+
+# ENTRYCOUNT-BLOCKFREQ-PRETTY:<foo>:
+# ENTRYCOUNT-BLOCKFREQ-PRETTY:<BB3> (Entry count: 1000, Frequency: 1.0):
+# ENTRYCOUNT-BLOCKFREQ-PRETTY:<BB1> (Frequency: 0.133):
+# ENTRYCOUNT-BLOCKFREQ-PRETTY:<BB2> (Frequency: 0.018):
+# ENTRYCOUNT-BLOCKFREQ-PRETTY:<BB5> (Frequency: 1.0):
 
 ## Check the case where we have entry points, block frequency, and branch
 ## proabability information.
 
 # RUN: yaml2obj %s --docnum=3 -o %t3
 # RUN: llvm-objdump %t3 -d --symbolize-operands --no-show-raw-insn --no-leading-addr | \
-# RUN:   FileCheck %s --check-prefix=ENTRY-FREQ-PROB
+# RUN:   FileCheck --match-full-lines --strict-whitespace %s --check-prefix=ENTRY-FREQ-PROB
+# RUN: llvm-objdump %t3 -d --symbolize-operands --pretty-pgo-analysis-map --no-show-raw-insn --no-leading-addr | \
+# RUN:   FileCheck --match-full-lines --strict-whitespace %s --check-prefix=ENTRY-FREQ-PROB-PRETTY
+# RUN: llvm-objdump %t3 -d --pretty-pgo-analysis-map --no-show-raw-insn --no-leading-addr 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=MISSING-SYMBOLIZE-OPERANDS
 
 --- !ELF
 FileHeader:
@@ -154,21 +166,21 @@ Sections:
           - BBFreq: 1000
             Successors:
             - ID:          1
-              BrProb:      0x22222222
+              BrProb:      0x10000000
             - ID:          2
-              BrProb:      0x33333333
+              BrProb:      0x15000000
             - ID:          3
-              BrProb:      0xaaaaaaaa
+              BrProb:      0x50000000
           - BBFreq: 133
             Successors:
             - ID:          2
-              BrProb:      0x11111111
+              BrProb:      0x10000000
             - ID:          3
-              BrProb:      0xeeeeeeee
+              BrProb:      0x70000000
           - BBFreq: 18
             Successors:
             - ID:          3
-              BrProb:      0xffffffff
+              BrProb:      0x80000000
           - BBFreq: 1000
             Successors:    []
 Symbols:
@@ -176,8 +188,16 @@ Symbols:
     Section: .text.foo
     Value:   0x0
 
-# ENTRY-FREQ-PROB: <foo>:
-# ENTRY-FREQ-PROB: <BB3> (Entry count: 1000, Frequency: 1000, Successors: BB1:22222222, BB2:33333333, BB3:aaaaaaaa):
-# ENTRY-FREQ-PROB: <BB1> (Frequency: 133, Successors: BB2:11111111, BB3:eeeeeeee):
-# ENTRY-FREQ-PROB: <BB2> (Frequency: 18, Successors: BB3:ffffffff):
-# ENTRY-FREQ-PROB: <BB5> (Frequency: 1000):
+# ENTRY-FREQ-PROB:<foo>:
+# ENTRY-FREQ-PROB:<BB3> (Entry count: 1000, Frequency: 1000, Successors: BB1:10000000, BB2:15000000, BB3:50000000):
+# ENTRY-FREQ-PROB:<BB1> (Frequency: 133, Successors: BB2:10000000, BB3:70000000):
+# ENTRY-FREQ-PROB:<BB2> (Frequency: 18, Successors: BB3:80000000):
+# ENTRY-FREQ-PROB:<BB5> (Frequency: 1000):
+
+# ENTRY-FREQ-PROB-PRETTY:<foo>:
+# ENTRY-FREQ-PROB-PRETTY:<BB3> (Entry count: 1000, Frequency: 1.0, Successors: BB1:[0x10000000 / 0x80000000 = 12.50%], BB2:[0x15000000 / 0x80000000 = 16.41%], BB3:[0x50000000 / 0x80000000 = 62.50%]):
+# ENTRY-FREQ-PROB-PRETTY:<BB1> (Frequency: 0.133, Successors: BB2:[0x10000000 / 0x80000000 = 12.50%], BB3:[0x70000000 / 0x80000000 = 87.50%]):
+# ENTRY-FREQ-PROB-PRETTY:<BB2> (Frequency: 0.018, Successors: BB3:[0x80000000 / 0x80000000 = 100.00%]):
+# ENTRY-FREQ-PROB-PRETTY:<BB5> (Frequency: 1.0):
+
+# MISSING-SYMBOLIZE-OPERANDS: warning: --symbolize-operands must be enabled for --pretty-pgo-analysis-map to have an effect

@@ -373,13 +373,13 @@ define arm_aapcs_vfpcc void @mul_i32(ptr %A, ptr %B, i64 %C, ptr %D) {
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    ldr.w lr, [sp, #20]
-; CHECK-NEXT:    vmov.f32 s10, s1
 ; CHECK-NEXT:    vmov.f32 s14, s5
+; CHECK-NEXT:    vmov.f32 s10, s1
 ; CHECK-NEXT:    vmov r5, s4
 ; CHECK-NEXT:    vmov.f32 s4, s6
 ; CHECK-NEXT:    vmov.f32 s6, s7
-; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    smull r12, r3, r1, r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vmov.f32 s0, s2

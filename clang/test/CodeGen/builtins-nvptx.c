@@ -44,6 +44,14 @@ __device__ int read_tid() {
 
 }
 
+__device__ bool reflect() {
+
+// CHECK: call i32 @llvm.nvvm.reflect(ptr {{.*}})
+
+  unsigned x = __nvvm_reflect("__CUDA_ARCH");
+  return x >= 700;
+}
+
 __device__ int read_ntid() {
 
 // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()

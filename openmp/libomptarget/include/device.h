@@ -43,8 +43,6 @@ struct DeviceTy {
   PluginAdaptorTy *RTL;
   int32_t RTLDeviceID;
 
-  bool HasMappedGlobalData = false;
-
   DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;

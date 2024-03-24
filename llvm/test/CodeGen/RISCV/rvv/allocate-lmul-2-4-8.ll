@@ -253,9 +253,8 @@ define void @lmul4_and_2_x2_1() nounwind {
 ; NOMUL-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
 ; NOMUL-NEXT:    addi s0, sp, 48
 ; NOMUL-NEXT:    csrr a0, vlenb
-; NOMUL-NEXT:    li a1, 0
 ; NOMUL-NEXT:    slli a0, a0, 2
-; NOMUL-NEXT:    add a1, a1, a0
+; NOMUL-NEXT:    mv a1, a0
 ; NOMUL-NEXT:    slli a0, a0, 1
 ; NOMUL-NEXT:    add a0, a0, a1
 ; NOMUL-NEXT:    sub sp, sp, a0
@@ -455,9 +454,8 @@ define void @lmul_8_x5() nounwind {
 ; NOMUL-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
 ; NOMUL-NEXT:    addi s0, sp, 80
 ; NOMUL-NEXT:    csrr a0, vlenb
-; NOMUL-NEXT:    li a1, 0
 ; NOMUL-NEXT:    slli a0, a0, 3
-; NOMUL-NEXT:    add a1, a1, a0
+; NOMUL-NEXT:    mv a1, a0
 ; NOMUL-NEXT:    slli a0, a0, 2
 ; NOMUL-NEXT:    add a0, a0, a1
 ; NOMUL-NEXT:    sub sp, sp, a0
@@ -517,9 +515,8 @@ define void @lmul_8_x9() nounwind {
 ; NOMUL-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
 ; NOMUL-NEXT:    addi s0, sp, 80
 ; NOMUL-NEXT:    csrr a0, vlenb
-; NOMUL-NEXT:    li a1, 0
 ; NOMUL-NEXT:    slli a0, a0, 3
-; NOMUL-NEXT:    add a1, a1, a0
+; NOMUL-NEXT:    mv a1, a0
 ; NOMUL-NEXT:    slli a0, a0, 3
 ; NOMUL-NEXT:    add a0, a0, a1
 ; NOMUL-NEXT:    sub sp, sp, a0

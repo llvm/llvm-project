@@ -36,6 +36,7 @@ enum Kind {
   exclaim, // !
   bar,     // |
   colon,   // :
+  hash,    // #
 
   kw_vscale,
   kw_x,
@@ -160,6 +161,7 @@ enum Kind {
   kw_swifttailcc,
   kw_preserve_mostcc,
   kw_preserve_allcc,
+  kw_preserve_nonecc,
   kw_ghccc,
   kw_x86_intrcc,
   kw_hhvmcc,
@@ -478,6 +480,7 @@ enum Kind {
   DISPFlag,         // DISPFlagFoo
   DwarfMacinfo,     // DW_MACINFO_foo
   ChecksumKind,     // CSK_foo
+  DbgRecordType,    // dbg_foo
 
   // Type valued tokens (TyVal).
   Type,

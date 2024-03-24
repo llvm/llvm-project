@@ -203,6 +203,7 @@ void PreferMemberInitializerCheck::check(
     SourceLocation InsertPos;
     SourceRange ReplaceRange;
     bool AddComma = false;
+    bool AddBrace = false;
     bool InvalidFix = false;
     unsigned Index = Field->getFieldIndex();
     const CXXCtorInitializer *LastInListInit = nullptr;
@@ -215,6 +216,7 @@ void PreferMemberInitializerCheck::check(
           InsertPos = Init->getRParenLoc();
         else {
           ReplaceRange = Init->getInit()->getSourceRange();
+          AddBrace = isa<InitListExpr>(Init->getInit());
         }
         break;
       }
@@ -279,6 +281,9 @@ void PreferMemberInitializerCheck::check(
     if (HasInitAlready) {
       if (InsertPos.isValid())
         Diag << FixItHint::CreateInsertion(InsertPos, NewInit);
+      else if (AddBrace)
+        Diag << FixItHint::CreateReplacement(ReplaceRange,
+                                             ("{" + NewInit + "}").str());
       else
         Diag << FixItHint::CreateReplacement(ReplaceRange, NewInit);
     } else {

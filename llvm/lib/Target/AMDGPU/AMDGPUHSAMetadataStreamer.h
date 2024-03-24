@@ -135,7 +135,7 @@ public:
                   const SIProgramInfo &ProgramInfo) override;
 };
 
-class MetadataStreamerMsgPackV5 final : public MetadataStreamerMsgPackV4 {
+class MetadataStreamerMsgPackV5 : public MetadataStreamerMsgPackV4 {
 protected:
   void emitVersion() override;
   void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
@@ -145,6 +145,15 @@ protected:
 public:
   MetadataStreamerMsgPackV5() = default;
   ~MetadataStreamerMsgPackV5() = default;
+};
+
+class MetadataStreamerMsgPackV6 final : public MetadataStreamerMsgPackV5 {
+protected:
+  void emitVersion() override;
+
+public:
+  MetadataStreamerMsgPackV6() = default;
+  ~MetadataStreamerMsgPackV6() = default;
 };
 
 } // end namespace HSAMD

@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GFX11
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GFX11
 
-declare float @llvm.amdgcn.fdot2.f32.bf16(<2 x i16> %a, <2 x i16> %b, float %c, i1 %clamp)
+declare float @llvm.amdgcn.fdot2.f32.bf16(<2 x bfloat> %a, <2 x bfloat> %b, float %c, i1 %clamp)
 
 define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f32_bf16_clamp(
 ; GFX11-LABEL: test_llvm_amdgcn_fdot2_f32_bf16_clamp:
@@ -25,10 +25,10 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f32_bf16_clamp(
     ptr addrspace(1) %b,
     ptr addrspace(1) %c) {
 entry:
-  %a.val = load <2 x i16>, ptr addrspace(1) %a
-  %b.val = load <2 x i16>, ptr addrspace(1) %b
+  %a.val = load <2 x bfloat>, ptr addrspace(1) %a
+  %b.val = load <2 x bfloat>, ptr addrspace(1) %b
   %c.val = load float, ptr addrspace(1) %c
-  %r.val = call float @llvm.amdgcn.fdot2.f32.bf16(<2 x i16> %a.val, <2 x i16> %b.val, float %c.val, i1 1)
+  %r.val = call float @llvm.amdgcn.fdot2.f32.bf16(<2 x bfloat> %a.val, <2 x bfloat> %b.val, float %c.val, i1 1)
   store float %r.val, ptr addrspace(1) %r
   ret void
 }
@@ -55,10 +55,10 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f32_bf16_no_clamp(
     ptr addrspace(1) %b,
     ptr addrspace(1) %c) {
 entry:
-  %a.val = load <2 x i16>, ptr addrspace(1) %a
-  %b.val = load <2 x i16>, ptr addrspace(1) %b
+  %a.val = load <2 x bfloat>, ptr addrspace(1) %a
+  %b.val = load <2 x bfloat>, ptr addrspace(1) %b
   %c.val = load float, ptr addrspace(1) %c
-  %r.val = call float @llvm.amdgcn.fdot2.f32.bf16(<2 x i16> %a.val, <2 x i16> %b.val, float %c.val, i1 0)
+  %r.val = call float @llvm.amdgcn.fdot2.f32.bf16(<2 x bfloat> %a.val, <2 x bfloat> %b.val, float %c.val, i1 0)
   store float %r.val, ptr addrspace(1) %r
   ret void
 }

@@ -366,7 +366,8 @@ IndexedMemProfRecord makeRecord(
     const MemInfoBlock &Block = MemInfoBlock()) {
   llvm::memprof::IndexedMemProfRecord MR;
   for (const auto &Frames : AllocFrames)
-    MR.AllocSites.emplace_back(Frames, Block);
+    MR.AllocSites.emplace_back(Frames, llvm::memprof::hashCallStack(Frames),
+                               Block);
   for (const auto &Frames : CallSiteFrames)
     MR.CallSites.push_back(Frames);
   return MR;
@@ -561,8 +562,7 @@ TEST_F(InstrProfTest, test_irpgo_function_name) {
     auto IRPGOFuncName = getIRPGOFuncName(*F);
     EXPECT_EQ(IRPGOFuncName, ExpectedIRPGOFuncName);
 
-    auto [Filename, ParsedIRPGOFuncName] =
-        getParsedIRPGOFuncName(IRPGOFuncName);
+    auto [Filename, ParsedIRPGOFuncName] = getParsedIRPGOName(IRPGOFuncName);
     StringRef ExpectedParsedIRPGOFuncName = IRPGOFuncName;
     if (ExpectedParsedIRPGOFuncName.consume_front("MyModule.cpp;")) {
       EXPECT_EQ(Filename, "MyModule.cpp");
@@ -1279,8 +1279,7 @@ TEST(SymtabTest, instr_prof_symtab_module_test) {
     auto IRPGOFuncName =
         ProfSymtab.getFuncOrVarName(IndexedInstrProf::ComputeHash(IRPGOName));
     EXPECT_EQ(StringRef(IRPGOName), IRPGOFuncName);
-    EXPECT_EQ(StringRef(Funcs[I]),
-              getParsedIRPGOFuncName(IRPGOFuncName).second);
+    EXPECT_EQ(StringRef(Funcs[I]), getParsedIRPGOName(IRPGOFuncName).second);
     // Ensure we can still read this old record name.
     std::string PGOName = getPGOFuncName(*F);
     auto PGOFuncName =

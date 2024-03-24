@@ -164,7 +164,8 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
   void Ident(SourceLocation Loc, StringRef str) override;
   void PragmaMessage(SourceLocation Loc, StringRef Namespace,
@@ -483,8 +484,8 @@ void PrintPPOutputPPCallbacks::EmbedDirective(
 void PrintPPOutputPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
   // In -dI mode, dump #include directives prior to dumping their content or
   // interpretation. Similar for -fkeep-system-includes.
   if (DumpIncludeDirectives || (KeepSystemIncludes && isSystem(FileType))) {
@@ -500,14 +501,14 @@ void PrintPPOutputPPCallbacks::InclusionDirective(
   }
 
   // When preprocessing, turn implicit imports into module import pragmas.
-  if (Imported) {
+  if (ModuleImported) {
     switch (IncludeTok.getIdentifierInfo()->getPPKeywordID()) {
     case tok::pp_include:
     case tok::pp_import:
     case tok::pp_include_next:
       MoveToLine(HashLoc, /*RequireStartOfLine=*/true);
       *OS << "#pragma clang module import "
-          << Imported->getFullModuleName(true)
+          << SuggestedModule->getFullModuleName(true)
           << " /* clang -E: implicit import for "
           << "#" << PP.getSpelling(IncludeTok) << " "
           << (IsAngled ? '<' : '"') << FileName << (IsAngled ? '>' : '"')

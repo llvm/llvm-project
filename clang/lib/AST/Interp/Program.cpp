@@ -102,7 +102,7 @@ unsigned Program::createGlobalString(const StringLiteral *S) {
   return I;
 }
 
-Pointer Program::getPtrGlobal(unsigned Idx) {
+Pointer Program::getPtrGlobal(unsigned Idx) const {
   assert(Idx < Globals.size());
   return Pointer(Globals[Idx]->block());
 }
@@ -145,11 +145,20 @@ std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
 
 std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
   // Dedup blocks since they are immutable and pointers cannot be compared.
-  if (auto It = DummyParams.find(VD); It != DummyParams.end())
+  if (auto It = DummyVariables.find(VD); It != DummyVariables.end())
     return It->second;
 
   // Create dummy descriptor.
-  Descriptor *Desc = allocateDescriptor(VD, std::nullopt);
+  // We create desriptors of 'array of unknown size' if the type is an array
+  // type _and_ the size isn't known (it's not a ConstantArrayType). If the size
+  // is known however, we create a regular dummy pointer.
+  Descriptor *Desc;
+  if (const auto *AT = VD->getType()->getAsArrayTypeUnsafe();
+      AT && !isa<ConstantArrayType>(AT))
+    Desc = allocateDescriptor(VD, Descriptor::UnknownSize{});
+  else
+    Desc = allocateDescriptor(VD);
+
   // Allocate a block for storage.
   unsigned I = Globals.size();
 
@@ -158,7 +167,7 @@ std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
   G->block()->invokeCtor();
 
   Globals.push_back(G);
-  DummyParams[VD] = I;
+  DummyVariables[VD] = I;
   return I;
 }
 
@@ -169,7 +178,7 @@ std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
   if (const auto *Var = dyn_cast<VarDecl>(VD)) {
     IsStatic = Context::shouldBeGloballyIndexed(VD);
     IsExtern = !Var->getAnyInitializer();
-  } else if (isa<UnnamedGlobalConstantDecl>(VD)) {
+  } else if (isa<UnnamedGlobalConstantDecl, MSGuidDecl>(VD)) {
     IsStatic = true;
     IsExtern = false;
   } else {
@@ -232,6 +241,9 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   if (!RD)
     return nullptr;
 
+  if (!RD->isCompleteDefinition())
+    return nullptr;
+
   // Deduplicate records.
   if (auto It = Records.find(RD); It != Records.end())
     return It->second;
@@ -247,7 +259,8 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   unsigned VirtSize = 0;
 
   // Helper to get a base descriptor.
-  auto GetBaseDesc = [this](const RecordDecl *BD, Record *BR) -> Descriptor * {
+  auto GetBaseDesc = [this](const RecordDecl *BD,
+                            const Record *BR) -> const Descriptor * {
     if (!BR)
       return nullptr;
     return allocateDescriptor(BD, BR, std::nullopt, /*isConst=*/false,
@@ -258,31 +271,39 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   // Reserve space for base classes.
   Record::BaseList Bases;
   Record::VirtualBaseList VirtBases;
-  if (auto *CD = dyn_cast<CXXRecordDecl>(RD)) {
+  if (const auto *CD = dyn_cast<CXXRecordDecl>(RD)) {
+
     for (const CXXBaseSpecifier &Spec : CD->bases()) {
       if (Spec.isVirtual())
         continue;
 
-      const RecordDecl *BD = Spec.getType()->castAs<RecordType>()->getDecl();
-      Record *BR = getOrCreateRecord(BD);
-      if (Descriptor *Desc = GetBaseDesc(BD, BR)) {
-        BaseSize += align(sizeof(InlineDescriptor));
-        Bases.push_back({BD, BaseSize, Desc, BR});
-        BaseSize += align(BR->getSize());
-        continue;
+      // In error cases, the base might not be a RecordType.
+      if (const auto *RT = Spec.getType()->getAs<RecordType>()) {
+        const RecordDecl *BD = RT->getDecl();
+        const Record *BR = getOrCreateRecord(BD);
+
+        if (const Descriptor *Desc = GetBaseDesc(BD, BR)) {
+          BaseSize += align(sizeof(InlineDescriptor));
+          Bases.push_back({BD, BaseSize, Desc, BR});
+          BaseSize += align(BR->getSize());
+          continue;
+        }
       }
       return nullptr;
     }
 
     for (const CXXBaseSpecifier &Spec : CD->vbases()) {
-      const RecordDecl *BD = Spec.getType()->castAs<RecordType>()->getDecl();
-      Record *BR = getOrCreateRecord(BD);
 
-      if (Descriptor *Desc = GetBaseDesc(BD, BR)) {
-        VirtSize += align(sizeof(InlineDescriptor));
-        VirtBases.push_back({BD, VirtSize, Desc, BR});
-        VirtSize += align(BR->getSize());
-        continue;
+      if (const auto *RT = Spec.getType()->getAs<RecordType>()) {
+        const RecordDecl *BD = RT->getDecl();
+        const Record *BR = getOrCreateRecord(BD);
+
+        if (const Descriptor *Desc = GetBaseDesc(BD, BR)) {
+          VirtSize += align(sizeof(InlineDescriptor));
+          VirtBases.push_back({BD, VirtSize, Desc, BR});
+          VirtSize += align(BR->getSize());
+          continue;
+        }
       }
       return nullptr;
     }
@@ -298,7 +319,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     QualType FT = FD->getType();
     const bool IsConst = FT.isConstQualified();
     const bool IsMutable = FD->isMutable();
-    Descriptor *Desc;
+    const Descriptor *Desc;
     if (std::optional<PrimType> T = Ctx.classify(FT)) {
       Desc = createDescriptor(FD, *T, std::nullopt, IsConst,
                               /*isTemporary=*/false, IsMutable);

@@ -34,6 +34,6 @@ enum SDNP {
 
 unsigned parseSDPatternOperatorProperties(Record *R);
 
-}
+} // namespace llvm
 
 #endif

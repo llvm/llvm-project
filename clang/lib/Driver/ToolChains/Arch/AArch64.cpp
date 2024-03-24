@@ -165,11 +165,14 @@ getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
   // Handle CPU name is 'native'.
   if (MtuneLowerCase == "native")
     MtuneLowerCase = std::string(llvm::sys::getHostCPUName());
+
+  // 'cyclone' and later have zero-cycle register moves and zeroing.
   if (MtuneLowerCase == "cyclone" ||
       StringRef(MtuneLowerCase).starts_with("apple")) {
     Features.push_back("+zcm");
     Features.push_back("+zcz");
   }
+
   return true;
 }
 
@@ -318,9 +321,11 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     }
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
-                               options::OPT_munaligned_access)) {
-    if (A->getOption().matches(options::OPT_mno_unaligned_access))
+  if (Arg *A = Args.getLastArg(
+          options::OPT_mstrict_align, options::OPT_mno_strict_align,
+          options::OPT_mno_unaligned_access, options::OPT_munaligned_access)) {
+    if (A->getOption().matches(options::OPT_mstrict_align) ||
+        A->getOption().matches(options::OPT_mno_unaligned_access))
       Features.push_back("+strict-align");
   } else if (Triple.isOSOpenBSD())
     Features.push_back("+strict-align");

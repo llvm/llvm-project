@@ -61,7 +61,7 @@ __advance(_RandIter& __i, typename iterator_traits<_RandIter>::difference_type _
 template < class _InputIter,
            class _Distance,
            class _IntegralDistance = decltype(std::__convert_to_integral(std::declval<_Distance>())),
-           class                   = __enable_if_t<is_integral<_IntegralDistance>::value> >
+           __enable_if_t<is_integral<_IntegralDistance>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 void advance(_InputIter& __i, _Distance __orig_n) {
   typedef typename iterator_traits<_InputIter>::difference_type _Difference;
   _Difference __n = static_cast<_Difference>(std::__convert_to_integral(__orig_n));

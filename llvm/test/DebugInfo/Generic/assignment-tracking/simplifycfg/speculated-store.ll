@@ -34,7 +34,7 @@ define dso_local void @b() !dbg !11 {
 entry:
   %c = alloca i32, align 4
   %0 = bitcast ptr %c to ptr, !dbg !16
-  call void @llvm.lifetime.start.p0i8(i64 4, ptr %0), !dbg !16
+  call void @llvm.lifetime.start.p0(i64 4, ptr %0), !dbg !16
   store i32 0, ptr %c, align 4, !dbg !17, !DIAssignID !36
   call void @llvm.dbg.assign(metadata i32 0, metadata !15, metadata !DIExpression(), metadata !36, metadata ptr %c, metadata !DIExpression()), !dbg !17
   %1 = load i32, ptr @a, align 4, !dbg !22
@@ -48,13 +48,13 @@ if.then:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.then, %entry
   %2 = bitcast ptr %c to ptr, !dbg !27
-  call void @llvm.lifetime.end.p0i8(i64 4, ptr %2), !dbg !27
+  call void @llvm.lifetime.end.p0(i64 4, ptr %2), !dbg !27
   ret void, !dbg !27
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!7, !8, !9, !1000}

@@ -115,3 +115,34 @@ loop:
 exit:
   ret void
 }
+
+define void @cast_induction_tail_folding(ptr %A) {
+; VF4-LABEL: @cast_induction_tail_folding(
+; VF4:       [[INDEX:%.+]] = phi i32 [ 0, %vector.ph ]
+; VF4-NEXT:  [[VEC_IND:%.+]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %vector.ph ]
+; VF4-NEXT:  = icmp ule <4 x i32> [[VEC_IND]], <i32 2, i32 2, i32 2, i32 2>
+; VF4-NEXT:  = sext <4 x i32> [[VEC_IND]] to <4 x i64>
+
+; IC2-LABEL: @cast_induction_tail_folding(
+; IC2:      [[INDEX:%.+]] = phi i32 [ 0, %vector.ph ]
+; IC2-NEXT: [[INDEX0:%.+]] = add i32 [[INDEX]], 0
+; IC2-NEXT: [[INDEX1:%.+]] = add i32 [[INDEX]], 1
+; IC2-NEXT: = icmp ule i32 [[INDEX0]], 2
+; IC2-NEXT: = icmp ule i32 [[INDEX1]], 2
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.ext = sext i32 %iv to i64
+  %iv.trunc  = trunc i64 %iv.ext to i32
+  %gep = getelementptr inbounds i32, ptr %A, i64 %iv.ext
+  store i32 %iv.trunc, ptr %gep
+  %iv.next = add i32 %iv, 1
+  %c = icmp slt i32 %iv.next, 3
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}

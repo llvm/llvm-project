@@ -21,6 +21,7 @@ add_subdirectory(Math)
 add_subdirectory(MemRef)
 add_subdirectory(Mesh)
 add_subdirectory(MLProgram)
+add_subdirectory(MPI)
 add_subdirectory(NVGPU)
 add_subdirectory(OpenACC)
 add_subdirectory(OpenACCMPCommon)
@@ -39,6 +40,7 @@ add_subdirectory(UB)
 add_subdirectory(Utils)
 add_subdirectory(Vector)
 add_subdirectory(X86Vector)
+add_subdirectory(XeGPU)
 
 set(LLVM_OPTIONAL_SOURCES
   Traits.cpp

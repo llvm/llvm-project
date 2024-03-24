@@ -171,8 +171,8 @@ class X86FoldTablesEmitter {
       assert(LHS && RHS && "LHS and RHS shouldn't be nullptr");
       const auto &D1 = *LHS->TheDef;
       const auto &D2 = *RHS->TheDef;
-      return std::make_tuple(!D1.getValueAsBit("isPseudo"), D1.getName()) <
-             std::make_tuple(!D2.getValueAsBit("isPseudo"), D2.getName());
+      return std::tuple(!D1.getValueAsBit("isPseudo"), D1.getName()) <
+             std::tuple(!D2.getValueAsBit("isPseudo"), D2.getName());
     }
   };
 
@@ -372,22 +372,20 @@ public:
       return false;
 
     // Return false if any of the following fields of does not match.
-    if (std::make_tuple(RegRI.Encoding, RegRI.Opcode, RegRI.OpPrefix,
-                        RegRI.OpMap, RegRI.OpSize, RegRI.AdSize, RegRI.HasREX_W,
-                        RegRI.HasVEX_4V, RegRI.HasVEX_L, RegRI.IgnoresVEX_L,
-                        RegRI.IgnoresW, RegRI.HasEVEX_K, RegRI.HasEVEX_KZ,
-                        RegRI.HasEVEX_L2, RegRI.HasEVEX_NF,
-                        RegRec->getValueAsBit("hasEVEX_RC"),
-                        RegRec->getValueAsBit("hasLockPrefix"),
-                        RegRec->getValueAsBit("hasNoTrackPrefix")) !=
-        std::make_tuple(MemRI.Encoding, MemRI.Opcode, MemRI.OpPrefix,
-                        MemRI.OpMap, MemRI.OpSize, MemRI.AdSize, MemRI.HasREX_W,
-                        MemRI.HasVEX_4V, MemRI.HasVEX_L, MemRI.IgnoresVEX_L,
-                        MemRI.IgnoresW, MemRI.HasEVEX_K, MemRI.HasEVEX_KZ,
-                        MemRI.HasEVEX_L2, MemRI.HasEVEX_NF,
-                        MemRec->getValueAsBit("hasEVEX_RC"),
-                        MemRec->getValueAsBit("hasLockPrefix"),
-                        MemRec->getValueAsBit("hasNoTrackPrefix")))
+    if (std::tuple(RegRI.Encoding, RegRI.Opcode, RegRI.OpPrefix, RegRI.OpMap,
+                   RegRI.OpSize, RegRI.AdSize, RegRI.HasREX_W, RegRI.HasVEX_4V,
+                   RegRI.HasVEX_L, RegRI.IgnoresVEX_L, RegRI.IgnoresW,
+                   RegRI.HasEVEX_K, RegRI.HasEVEX_KZ, RegRI.HasEVEX_L2,
+                   RegRI.HasEVEX_NF, RegRec->getValueAsBit("hasEVEX_RC"),
+                   RegRec->getValueAsBit("hasLockPrefix"),
+                   RegRec->getValueAsBit("hasNoTrackPrefix")) !=
+        std::tuple(MemRI.Encoding, MemRI.Opcode, MemRI.OpPrefix, MemRI.OpMap,
+                   MemRI.OpSize, MemRI.AdSize, MemRI.HasREX_W, MemRI.HasVEX_4V,
+                   MemRI.HasVEX_L, MemRI.IgnoresVEX_L, MemRI.IgnoresW,
+                   MemRI.HasEVEX_K, MemRI.HasEVEX_KZ, MemRI.HasEVEX_L2,
+                   MemRI.HasEVEX_NF, MemRec->getValueAsBit("hasEVEX_RC"),
+                   MemRec->getValueAsBit("hasLockPrefix"),
+                   MemRec->getValueAsBit("hasNoTrackPrefix")))
       return false;
 
     // Make sure the sizes of the operands of both instructions suit each other.

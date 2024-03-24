@@ -4,7 +4,7 @@
 ; RUN: echo '!!0 2' >> %t
 ; RUN: llc < %s -mtriple=x86_64 -basic-block-address-map -basic-block-sections=%t | FileCheck %s
 
-define void @_Z3bazb(i1 zeroext) personality i32 (...)* @__gxx_personality_v0 {
+define void @_Z3bazb(i1 zeroext) personality ptr @__gxx_personality_v0 {
   br i1 %0, label %2, label %7
 
 2:
@@ -13,8 +13,8 @@ define void @_Z3bazb(i1 zeroext) personality i32 (...)* @__gxx_personality_v0 {
   br label %9
 
 5:
-  landingpad { i8*, i32 }
-          catch i8* null
+  landingpad { ptr, i32 }
+          catch ptr null
   br label %9
 
 7:

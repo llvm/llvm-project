@@ -581,3 +581,21 @@ void S<T>::test(T target, U... value)
   }
 {}
 } // namespace GH74447
+
+namespace GH72557 {
+
+template <typename...>
+concept IsAnyOf = true;
+
+template <class... DerTs> struct DerivedCollection {
+  template <class DerT>
+    requires IsAnyOf<DerTs...>
+  unsigned long index();
+};
+
+template <class... DerTs>
+template <class DerT>
+  requires IsAnyOf<DerTs...>
+unsigned long DerivedCollection<DerTs...>::index() {}
+
+} // namespace GH72557

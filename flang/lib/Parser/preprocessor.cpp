@@ -252,7 +252,7 @@ void Preprocessor::DefineStandardMacros() {
   Define("__LINE__"s, "__LINE__"s);
 }
 
-void Preprocessor::Define(std::string macro, std::string value) {
+void Preprocessor::Define(const std::string &macro, const std::string &value) {
   definitions_.emplace(SaveTokenAsName(macro), Definition{value, allSources_});
 }
 
@@ -669,7 +669,7 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
       TokenSequence braced{path, 1, k - 1};
       include = braced.ToString();
     } else if ((include.substr(0, 1) == "\"" || include.substr(0, 1) == "'") &&
-        include.substr(include.size() - 1, 1) == include.substr(0, 1)) {
+        include.front() == include.back()) {
       // #include "foo" and #include 'foo'
       include = include.substr(1, include.size() - 2);
       // Start search in directory of file containing the directive

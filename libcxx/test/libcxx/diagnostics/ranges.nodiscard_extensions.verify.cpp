@@ -95,6 +95,10 @@ void test() {
   // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
   std::ranges::contains(iter, iter, 1);
   // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::contains_subrange(range, range);
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::contains_subrange(iter, iter, iter, iter);
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::ranges::fold_left(range, 0, std::plus());
   // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
   std::ranges::fold_left(iter, iter, 0, std::plus());

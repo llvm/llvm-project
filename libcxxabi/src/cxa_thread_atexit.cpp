@@ -8,12 +8,7 @@
 
 #include "abort_message.h"
 #include "cxxabi.h"
-// TODO: Temporary workaround, see https://github.com/llvm/llvm-project/pull/79654#issuecomment-1919397302
-#if __has_include(<__thread/support.h>)
-#  include <__thread/support.h>
-#else
-#  include <__threading_support>
-#endif
+#include <__thread/support.h>
 #ifndef _LIBCXXABI_HAS_NO_THREADS
 #if defined(__ELF__) && defined(_LIBCXXABI_LINK_PTHREAD_LIB)
 #pragma comment(lib, "pthread")

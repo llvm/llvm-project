@@ -26,6 +26,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -729,9 +730,7 @@ bool IntegerRelation::isEmpty() const {
 }
 
 bool IntegerRelation::isObviouslyEmpty() const {
-  if (isEmptyByGCDTest() || hasInvalidConstraint())
-    return true;
-  return false;
+  return isEmptyByGCDTest() || hasInvalidConstraint();
 }
 
 // Runs the GCD test on all equality constraints. Returns 'true' if this test
@@ -2496,6 +2495,31 @@ void IntegerRelation::applyRange(const IntegerRelation &rel) { compose(rel); }
 void IntegerRelation::printSpace(raw_ostream &os) const {
   space.print(os);
   os << getNumConstraints() << " constraints\n";
+}
+
+void IntegerRelation::removeTrivialEqualities() {
+  for (int i = getNumEqualities() - 1; i >= 0; --i)
+    if (rangeIsZero(getEquality(i)))
+      removeEquality(i);
+}
+
+bool IntegerRelation::isFullDim() {
+  if (getNumVars() == 0)
+    return true;
+  if (isEmpty())
+    return false;
+
+  // If there is a non-trivial equality, the space cannot be full-dimensional.
+  removeTrivialEqualities();
+  if (getNumEqualities() > 0)
+    return false;
+
+  // The polytope is full-dimensional iff it is not flat along any of the
+  // inequality directions.
+  Simplex simplex(*this);
+  return llvm::none_of(llvm::seq<int>(getNumInequalities()), [&](int i) {
+    return simplex.isFlatAlong(getInequality(i));
+  });
 }
 
 void IntegerRelation::print(raw_ostream &os) const {

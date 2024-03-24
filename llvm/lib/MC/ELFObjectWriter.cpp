@@ -875,11 +875,10 @@ void ELFWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
                                  const MCAsmLayout &Layout) {
   MCSectionELF &Section = static_cast<MCSectionELF &>(Sec);
   StringRef SectionName = Section.getName();
-
-  auto &MC = Asm.getContext();
-  const auto &MAI = MC.getAsmInfo();
-
-  const DebugCompressionType CompressionType = MAI->compressDebugSections();
+  auto &Ctx = Asm.getContext();
+  const DebugCompressionType CompressionType =
+      Ctx.getTargetOptions() ? Ctx.getTargetOptions()->CompressDebugSections
+                             : DebugCompressionType::None;
   if (CompressionType == DebugCompressionType::None ||
       !SectionName.starts_with(".debug_")) {
     Asm.writeSectionData(W.OS, &Section, Layout);
@@ -940,51 +939,32 @@ void ELFWriter::writeRelocations(const MCAssembler &Asm,
                                        const MCSectionELF &Sec) {
   std::vector<ELFRelocationEntry> &Relocs = OWriter.Relocations[&Sec];
 
-  // We record relocations by pushing to the end of a vector. Reverse the vector
-  // to get the relocations in the order they were created.
-  // In most cases that is not important, but it can be for special sections
-  // (.eh_frame) or specific relocations (TLS optimizations on SystemZ).
-  std::reverse(Relocs.begin(), Relocs.end());
-
   // Sort the relocation entries. MIPS needs this.
   OWriter.TargetObjectWriter->sortRelocs(Asm, Relocs);
 
   const bool Rela = usesRela(Sec);
-  for (unsigned i = 0, e = Relocs.size(); i != e; ++i) {
-    const ELFRelocationEntry &Entry = Relocs[e - i - 1];
-    unsigned Index = Entry.Symbol ? Entry.Symbol->getIndex() : 0;
-
-    if (is64Bit()) {
-      write(Entry.Offset);
-      if (OWriter.TargetObjectWriter->getEMachine() == ELF::EM_MIPS) {
-        write(uint32_t(Index));
-
+  if (OWriter.TargetObjectWriter->getEMachine() == ELF::EM_MIPS) {
+    for (const ELFRelocationEntry &Entry : Relocs) {
+      uint32_t Symidx = Entry.Symbol ? Entry.Symbol->getIndex() : 0;
+      if (is64Bit()) {
+        write(Entry.Offset);
+        write(uint32_t(Symidx));
         write(OWriter.TargetObjectWriter->getRSsym(Entry.Type));
         write(OWriter.TargetObjectWriter->getRType3(Entry.Type));
         write(OWriter.TargetObjectWriter->getRType2(Entry.Type));
         write(OWriter.TargetObjectWriter->getRType(Entry.Type));
+        if (Rela)
+          write(Entry.Addend);
       } else {
-        struct ELF::Elf64_Rela ERE64;
-        ERE64.setSymbolAndType(Index, Entry.Type);
-        write(ERE64.r_info);
-      }
-      if (Rela)
-        write(Entry.Addend);
-    } else {
-      write(uint32_t(Entry.Offset));
-
-      struct ELF::Elf32_Rela ERE32;
-      ERE32.setSymbolAndType(Index, Entry.Type);
-      write(ERE32.r_info);
-
-      if (Rela)
-        write(uint32_t(Entry.Addend));
-
-      if (OWriter.TargetObjectWriter->getEMachine() == ELF::EM_MIPS) {
+        write(uint32_t(Entry.Offset));
+        ELF::Elf32_Rela ERE32;
+        ERE32.setSymbolAndType(Symidx, Entry.Type);
+        write(ERE32.r_info);
+        if (Rela)
+          write(uint32_t(Entry.Addend));
         if (uint32_t RType =
                 OWriter.TargetObjectWriter->getRType2(Entry.Type)) {
           write(uint32_t(Entry.Offset));
-
           ERE32.setSymbolAndType(0, RType);
           write(ERE32.r_info);
           write(uint32_t(0));
@@ -992,12 +972,30 @@ void ELFWriter::writeRelocations(const MCAssembler &Asm,
         if (uint32_t RType =
                 OWriter.TargetObjectWriter->getRType3(Entry.Type)) {
           write(uint32_t(Entry.Offset));
-
           ERE32.setSymbolAndType(0, RType);
           write(ERE32.r_info);
           write(uint32_t(0));
         }
       }
+    }
+    return;
+  }
+  for (const ELFRelocationEntry &Entry : Relocs) {
+    uint32_t Symidx = Entry.Symbol ? Entry.Symbol->getIndex() : 0;
+    if (is64Bit()) {
+      write(Entry.Offset);
+      ELF::Elf64_Rela ERE;
+      ERE.setSymbolAndType(Symidx, Entry.Type);
+      write(ERE.r_info);
+      if (Rela)
+        write(Entry.Addend);
+    } else {
+      write(uint32_t(Entry.Offset));
+      ELF::Elf32_Rela ERE;
+      ERE.setSymbolAndType(Symidx, Entry.Type);
+      write(ERE.r_info);
+      if (Rela)
+        write(uint32_t(Entry.Addend));
     }
   }
 }

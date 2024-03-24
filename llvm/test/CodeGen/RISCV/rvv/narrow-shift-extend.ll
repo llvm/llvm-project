@@ -3,11 +3,11 @@
 
 declare <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
   <vscale x 4 x i32>,
-  <vscale x 4 x i32>*,
+  ptr,
   <vscale x 4 x i64>,
   i64);
 
-define <vscale x 4 x i32> @test_vloxei(<vscale x 4 x i32>* %ptr, <vscale x 4 x i8> %offset, i64 %vl) {
+define <vscale x 4 x i32> @test_vloxei(ptr %ptr, <vscale x 4 x i8> %offset, i64 %vl) {
 ; CHECK-LABEL: test_vloxei:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
@@ -23,13 +23,13 @@ entry:
   %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
     <vscale x 4 x i32> undef,
-    <vscale x 4 x i32>* %ptr,
+    ptr %ptr,
     <vscale x 4 x i64> %shl,
     i64 %vl)
   ret <vscale x 4 x i32> %res
 }
 
-define <vscale x 4 x i32> @test_vloxei2(<vscale x 4 x i32>* %ptr, <vscale x 4 x i8> %offset, i64 %vl) {
+define <vscale x 4 x i32> @test_vloxei2(ptr %ptr, <vscale x 4 x i8> %offset, i64 %vl) {
 ; CHECK-LABEL: test_vloxei2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
@@ -45,13 +45,13 @@ entry:
   %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
     <vscale x 4 x i32> undef,
-    <vscale x 4 x i32>* %ptr,
+    ptr %ptr,
     <vscale x 4 x i64> %shl,
     i64 %vl)
   ret <vscale x 4 x i32> %res
 }
 
-define <vscale x 4 x i32> @test_vloxei3(<vscale x 4 x i32>* %ptr, <vscale x 4 x i8> %offset, i64 %vl) {
+define <vscale x 4 x i32> @test_vloxei3(ptr %ptr, <vscale x 4 x i8> %offset, i64 %vl) {
 ; CHECK-LABEL: test_vloxei3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
@@ -67,7 +67,7 @@ entry:
   %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
     <vscale x 4 x i32> undef,
-    <vscale x 4 x i32>* %ptr,
+    ptr %ptr,
     <vscale x 4 x i64> %shl,
     i64 %vl)
   ret <vscale x 4 x i32> %res
@@ -75,7 +75,7 @@ entry:
 
 ; Test use vp.zext to extend.
 declare <vscale x 4 x i64> @llvm.vp.zext.nxvi64.nxv1i8(<vscale x 4 x i8>, <vscale x 4 x i1>, i32)
-define <vscale x 4 x i32> @test_vloxei4(<vscale x 4 x i32>* %ptr, <vscale x 4 x i8> %offset, <vscale x 4 x i1> %m, i32 zeroext %vl) {
+define <vscale x 4 x i32> @test_vloxei4(ptr %ptr, <vscale x 4 x i8> %offset, <vscale x 4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: test_vloxei4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
@@ -93,7 +93,7 @@ entry:
   %vl.i64 = zext i32 %vl to i64
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
     <vscale x 4 x i32> undef,
-    <vscale x 4 x i32>* %ptr,
+    ptr %ptr,
     <vscale x 4 x i64> %shl,
     i64 %vl.i64)
   ret <vscale x 4 x i32> %res
@@ -102,10 +102,10 @@ entry:
 ; Test orignal extnened type is enough narrow.
 declare <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i16(
   <vscale x 4 x i32>,
-  <vscale x 4 x i32>*,
+  ptr,
   <vscale x 4 x i16>,
   i64);
-define <vscale x 4 x i32> @test_vloxei5(<vscale x 4 x i32>* %ptr, <vscale x 4 x i8> %offset, i64 %vl) {
+define <vscale x 4 x i32> @test_vloxei5(ptr %ptr, <vscale x 4 x i8> %offset, i64 %vl) {
 ; CHECK-LABEL: test_vloxei5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
@@ -121,13 +121,13 @@ entry:
   %shl = shl <vscale x 4 x i16> %offset.ext, %shamt.vec
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i16(
     <vscale x 4 x i32> undef,
-    <vscale x 4 x i32>* %ptr,
+    ptr %ptr,
     <vscale x 4 x i16> %shl,
     i64 %vl)
   ret <vscale x 4 x i32> %res
 }
 
-define <vscale x 4 x i32> @test_vloxei6(<vscale x 4 x i32>* %ptr, <vscale x 4 x i7> %offset, i64 %vl) {
+define <vscale x 4 x i32> @test_vloxei6(ptr %ptr, <vscale x 4 x i7> %offset, i64 %vl) {
 ; CHECK-LABEL: test_vloxei6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 127
@@ -146,13 +146,13 @@ entry:
   %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
     <vscale x 4 x i32> undef,
-    <vscale x 4 x i32>* %ptr,
+    ptr %ptr,
     <vscale x 4 x i64> %shl,
     i64 %vl)
   ret <vscale x 4 x i32> %res
 }
 
-define <vscale x 4 x i32> @test_vloxei7(<vscale x 4 x i32>* %ptr, <vscale x 4 x i1> %offset, i64 %vl) {
+define <vscale x 4 x i32> @test_vloxei7(ptr %ptr, <vscale x 4 x i1> %offset, i64 %vl) {
 ; CHECK-LABEL: test_vloxei7:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
@@ -169,7 +169,7 @@ entry:
   %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
     <vscale x 4 x i32> undef,
-    <vscale x 4 x i32>* %ptr,
+    ptr %ptr,
     <vscale x 4 x i64> %shl,
     i64 %vl)
   ret <vscale x 4 x i32> %res
@@ -177,13 +177,13 @@ entry:
 
 declare <vscale x 4 x i32> @llvm.riscv.vloxei.mask.nxv4i32.nxv4i64(
   <vscale x 4 x i32>,
-  <vscale x 4 x i32>*,
+  ptr,
   <vscale x 4 x i64>,
   <vscale x 4 x i1>,
   i64,
   i64);
 
-define <vscale x 4 x i32> @test_vloxei_mask(<vscale x 4 x i32>* %ptr, <vscale x 4 x i8> %offset, <vscale x 4 x i1> %m, i64 %vl) {
+define <vscale x 4 x i32> @test_vloxei_mask(ptr %ptr, <vscale x 4 x i8> %offset, <vscale x 4 x i1> %m, i64 %vl) {
 ; CHECK-LABEL: test_vloxei_mask:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
@@ -199,7 +199,7 @@ entry:
   %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.mask.nxv4i32.nxv4i64(
     <vscale x 4 x i32> undef,
-    <vscale x 4 x i32>* %ptr,
+    ptr %ptr,
     <vscale x 4 x i64> %shl,
     <vscale x 4 x i1> %m,
     i64 %vl, i64 1)
@@ -208,11 +208,11 @@ entry:
 
 declare <vscale x 4 x i32> @llvm.riscv.vluxei.nxv4i32.nxv4i64(
   <vscale x 4 x i32>,
-  <vscale x 4 x i32>*,
+  ptr,
   <vscale x 4 x i64>,
   i64);
 
-define <vscale x 4 x i32> @test_vluxei(<vscale x 4 x i32>* %ptr, <vscale x 4 x i8> %offset, i64 %vl) {
+define <vscale x 4 x i32> @test_vluxei(ptr %ptr, <vscale x 4 x i8> %offset, i64 %vl) {
 ; CHECK-LABEL: test_vluxei:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
@@ -228,7 +228,7 @@ entry:
   %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
   %res = call <vscale x 4 x i32> @llvm.riscv.vluxei.nxv4i32.nxv4i64(
     <vscale x 4 x i32> undef,
-    <vscale x 4 x i32>* %ptr,
+    ptr %ptr,
     <vscale x 4 x i64> %shl,
     i64 %vl)
   ret <vscale x 4 x i32> %res
@@ -236,13 +236,13 @@ entry:
 
 declare <vscale x 4 x i32> @llvm.riscv.vluxei.mask.nxv4i32.nxv4i64(
   <vscale x 4 x i32>,
-  <vscale x 4 x i32>*,
+  ptr,
   <vscale x 4 x i64>,
   <vscale x 4 x i1>,
   i64,
   i64);
 
-define <vscale x 4 x i32> @test_vluxei_mask(<vscale x 4 x i32>* %ptr, <vscale x 4 x i8> %offset, <vscale x 4 x i1> %m, i64 %vl) {
+define <vscale x 4 x i32> @test_vluxei_mask(ptr %ptr, <vscale x 4 x i8> %offset, <vscale x 4 x i1> %m, i64 %vl) {
 ; CHECK-LABEL: test_vluxei_mask:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
@@ -258,7 +258,7 @@ entry:
   %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
   %res = call <vscale x 4 x i32> @llvm.riscv.vluxei.mask.nxv4i32.nxv4i64(
     <vscale x 4 x i32> undef,
-    <vscale x 4 x i32>* %ptr,
+    ptr %ptr,
     <vscale x 4 x i64> %shl,
     <vscale x 4 x i1> %m,
     i64 %vl, i64 1)
@@ -267,11 +267,11 @@ entry:
 
 declare void @llvm.riscv.vsoxei.nxv4i32.nxv4i64(
   <vscale x 4 x i32>,
-  <vscale x 4 x i32>*,
+  ptr,
   <vscale x 4 x i64>,
   i64);
 
-define void @test_vsoxei(<vscale x 4 x i32> %val, <vscale x 4 x i32>* %ptr, <vscale x 4 x i8> %offset, i64 %vl) {
+define void @test_vsoxei(<vscale x 4 x i32> %val, ptr %ptr, <vscale x 4 x i8> %offset, i64 %vl) {
 ; CHECK-LABEL: test_vsoxei:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
@@ -287,7 +287,7 @@ entry:
   %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
   call void @llvm.riscv.vsoxei.nxv4i32.nxv4i64(
     <vscale x 4 x i32> %val,
-    <vscale x 4 x i32>* %ptr,
+    ptr %ptr,
     <vscale x 4 x i64> %shl,
     i64 %vl)
   ret void
@@ -295,12 +295,12 @@ entry:
 
 declare void @llvm.riscv.vsoxei.mask.nxv4i32.nxv4i64(
   <vscale x 4 x i32>,
-  <vscale x 4 x i32>*,
+  ptr,
   <vscale x 4 x i64>,
   <vscale x 4 x i1>,
   i64);
 
-define void @test_vsoxei_mask(<vscale x 4 x i32> %val, <vscale x 4 x i32>* %ptr, <vscale x 4 x i8> %offset, <vscale x 4 x i1> %m, i64 %vl) {
+define void @test_vsoxei_mask(<vscale x 4 x i32> %val, ptr %ptr, <vscale x 4 x i8> %offset, <vscale x 4 x i1> %m, i64 %vl) {
 ; CHECK-LABEL: test_vsoxei_mask:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
@@ -316,7 +316,7 @@ entry:
   %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
   call void @llvm.riscv.vsoxei.mask.nxv4i32.nxv4i64(
     <vscale x 4 x i32> %val,
-    <vscale x 4 x i32>* %ptr,
+    ptr %ptr,
     <vscale x 4 x i64> %shl,
     <vscale x 4 x i1> %m,
     i64 %vl)
@@ -325,11 +325,11 @@ entry:
 
 declare void @llvm.riscv.vsuxei.nxv4i32.nxv4i64(
   <vscale x 4 x i32>,
-  <vscale x 4 x i32>*,
+  ptr,
   <vscale x 4 x i64>,
   i64);
 
-define void @test_vsuxei(<vscale x 4 x i32> %val, <vscale x 4 x i32>* %ptr, <vscale x 4 x i8> %offset, i64 %vl) {
+define void @test_vsuxei(<vscale x 4 x i32> %val, ptr %ptr, <vscale x 4 x i8> %offset, i64 %vl) {
 ; CHECK-LABEL: test_vsuxei:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
@@ -345,7 +345,7 @@ entry:
   %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
   call void @llvm.riscv.vsuxei.nxv4i32.nxv4i64(
     <vscale x 4 x i32> %val,
-    <vscale x 4 x i32>* %ptr,
+    ptr %ptr,
     <vscale x 4 x i64> %shl,
     i64 %vl)
   ret void
@@ -353,12 +353,12 @@ entry:
 
 declare void @llvm.riscv.vsuxei.mask.nxv4i32.nxv4i64(
   <vscale x 4 x i32>,
-  <vscale x 4 x i32>*,
+  ptr,
   <vscale x 4 x i64>,
   <vscale x 4 x i1>,
   i64);
 
-define void @test_vsuxei_mask(<vscale x 4 x i32> %val, <vscale x 4 x i32>* %ptr, <vscale x 4 x i8> %offset, <vscale x 4 x i1> %m, i64 %vl) {
+define void @test_vsuxei_mask(<vscale x 4 x i32> %val, ptr %ptr, <vscale x 4 x i8> %offset, <vscale x 4 x i1> %m, i64 %vl) {
 ; CHECK-LABEL: test_vsuxei_mask:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
@@ -374,7 +374,7 @@ entry:
   %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
   call void @llvm.riscv.vsuxei.mask.nxv4i32.nxv4i64(
     <vscale x 4 x i32> %val,
-    <vscale x 4 x i32>* %ptr,
+    ptr %ptr,
     <vscale x 4 x i64> %shl,
     <vscale x 4 x i1> %m,
     i64 %vl)

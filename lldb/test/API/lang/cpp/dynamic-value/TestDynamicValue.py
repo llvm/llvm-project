@@ -62,7 +62,7 @@ class DynamicValueTestCase(TestBase):
         self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, first_call_bpt)
-        self.assertEquals(len(threads), 1)
+        self.assertEqual(len(threads), 1)
         thread = threads[0]
 
         frame = thread.GetFrameAtIndex(0)
@@ -84,7 +84,7 @@ class DynamicValueTestCase(TestBase):
         # Okay now run to doSomething:
 
         threads = lldbutil.continue_to_breakpoint(process, do_something_bpt)
-        self.assertEquals(len(threads), 1)
+        self.assertEqual(len(threads), 1)
         thread = threads[0]
 
         frame = thread.GetFrameAtIndex(0)
@@ -144,14 +144,14 @@ class DynamicValueTestCase(TestBase):
         anotherA_dynamic_typename = anotherA_dynamic.GetTypeName()
         self.assertNotEqual(anotherA_dynamic_typename.find("B"), -1)
 
-        self.assertTrue(anotherA_dynamic_addr < anotherA_static_addr)
+        self.assertLess(anotherA_dynamic_addr, anotherA_static_addr)
 
         anotherA_m_b_value_dynamic = anotherA_dynamic.GetChildMemberWithName(
             "m_b_value", True
         )
         self.assertTrue(anotherA_m_b_value_dynamic)
         anotherA_m_b_val = int(anotherA_m_b_value_dynamic.GetValue(), 10)
-        self.assertEquals(anotherA_m_b_val, 300)
+        self.assertEqual(anotherA_m_b_val, 300)
 
         anotherA_m_b_value_static = anotherA_static.GetChildMemberWithName(
             "m_b_value", True
@@ -162,7 +162,7 @@ class DynamicValueTestCase(TestBase):
         # main
 
         threads = lldbutil.continue_to_breakpoint(process, second_call_bpt)
-        self.assertEquals(len(threads), 1)
+        self.assertEqual(len(threads), 1)
         thread = threads[0]
 
         frame = thread.GetFrameAtIndex(0)
@@ -174,15 +174,15 @@ class DynamicValueTestCase(TestBase):
         # which this time around is just an "A".
 
         threads = lldbutil.continue_to_breakpoint(process, do_something_bpt)
-        self.assertEquals(len(threads), 1)
+        self.assertEqual(len(threads), 1)
         thread = threads[0]
 
         frame = thread.GetFrameAtIndex(0)
         anotherA_value = frame.FindVariable("anotherA", True)
         self.assertTrue(anotherA_value)
         anotherA_loc = int(anotherA_value.GetValue(), 16)
-        self.assertEquals(anotherA_loc, reallyA_loc)
-        self.assertEquals(anotherA_value.GetTypeName().find("B"), -1)
+        self.assertEqual(anotherA_loc, reallyA_loc)
+        self.assertEqual(anotherA_value.GetTypeName().find("B"), -1)
 
     def examine_value_object_of_this_ptr(
         self, this_static, this_dynamic, dynamic_location
@@ -200,11 +200,11 @@ class DynamicValueTestCase(TestBase):
 
         # Make sure we got the right address for "this"
 
-        self.assertEquals(this_dynamic_loc, dynamic_location)
+        self.assertEqual(this_dynamic_loc, dynamic_location)
 
         # And that the static address is greater than the dynamic one
 
-        self.assertTrue(this_static_loc > this_dynamic_loc)
+        self.assertGreater(this_static_loc, this_dynamic_loc)
 
         # Now read m_b_value which is only in the dynamic value:
 
@@ -217,7 +217,7 @@ class DynamicValueTestCase(TestBase):
         self.assertTrue(this_dynamic_m_b_value)
 
         m_b_value = int(this_dynamic_m_b_value.GetValue(), 0)
-        self.assertEquals(m_b_value, 10)
+        self.assertEqual(m_b_value, 10)
 
         # Make sure it is not in the static version
 
@@ -252,4 +252,4 @@ class DynamicValueTestCase(TestBase):
         contained_b_addr = int(contained_b.GetValue(), 16)
         contained_b_static_addr = int(contained_b_static.GetValue(), 16)
 
-        self.assertTrue(contained_b_addr < contained_b_static_addr)
+        self.assertLess(contained_b_addr, contained_b_static_addr)

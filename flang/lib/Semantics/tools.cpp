@@ -403,6 +403,18 @@ const Symbol &BypassGeneric(const Symbol &symbol) {
   return symbol;
 }
 
+const Symbol &GetCrayPointer(const Symbol &crayPointee) {
+  const Symbol *found{nullptr};
+  for (const auto &[pointee, pointer] :
+      crayPointee.GetUltimate().owner().crayPointers()) {
+    if (pointee == crayPointee.name()) {
+      found = &pointer.get();
+      break;
+    }
+  }
+  return DEREF(found);
+}
+
 bool ExprHasTypeCategory(
     const SomeExpr &expr, const common::TypeCategory &type) {
   auto dynamicType{expr.GetType()};
@@ -465,9 +477,7 @@ const Symbol *FindInterface(const Symbol &symbol) {
   return common::visit(
       common::visitors{
           [](const ProcEntityDetails &details) {
-            const Symbol *interface {
-              details.procInterface()
-            };
+            const Symbol *interface{details.procInterface()};
             return interface ? FindInterface(*interface) : nullptr;
           },
           [](const ProcBindingDetails &details) {
@@ -829,15 +839,18 @@ static const Symbol *HasImpureFinal(
   return IsFinalizable(derived, nullptr, /*withImpureFinalizer=*/true, rank);
 }
 
-const Symbol *HasImpureFinal(const Symbol &original) {
+const Symbol *HasImpureFinal(const Symbol &original, std::optional<int> rank) {
   const Symbol &symbol{ResolveAssociations(original)};
   if (symbol.has<ObjectEntityDetails>()) {
     if (const DeclTypeSpec * symType{symbol.GetType()}) {
       if (const DerivedTypeSpec * derived{symType->AsDerived()}) {
-        // finalizable assumed-rank not allowed (C839)
-        return evaluate::IsAssumedRank(symbol)
-            ? nullptr
-            : HasImpureFinal(*derived, symbol.Rank());
+        if (evaluate::IsAssumedRank(symbol)) {
+          // finalizable assumed-rank not allowed (C839)
+          return nullptr;
+        } else {
+          int actualRank{rank.value_or(symbol.Rank())};
+          return HasImpureFinal(*derived, actualRank);
+        }
       }
     }
   }
