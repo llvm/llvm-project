@@ -245,6 +245,17 @@ public:
     return *this;
   }
 
+  const MachineInstrBuilder &addMetadata(const Metadata *MD) const {
+    MI->addOperand(*MF, MachineOperand::CreateMetadata(MD));
+    assert((MI->isDebugValueLike() ? static_cast<bool>(MI->getDebugVariable())
+                                   : true) &&
+           "first MDNode argument of a DBG_VALUE not a variable");
+    assert((MI->isDebugLabel() ? static_cast<bool>(MI->getDebugLabel())
+                               : true) &&
+           "first MDNode argument of a DBG_LABEL not a label");
+    return *this;
+  }
+
   const MachineInstrBuilder &addCFIIndex(unsigned CFIIndex) const {
     MI->addOperand(*MF, MachineOperand::CreateCFIIndex(CFIIndex));
     return *this;
@@ -488,14 +499,14 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock *BB,
 MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
                             const MCInstrDesc &MCID, bool IsIndirect,
                             Register Reg, const MDNode *Variable,
-                            const MDNode *Expr);
+                            const Metadata *Expr);
 
 /// This version of the builder builds a DBG_VALUE or DBG_VALUE_LIST intrinsic
 /// for a MachineOperand.
 MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
                             const MCInstrDesc &MCID, bool IsIndirect,
                             ArrayRef<MachineOperand> MOs,
-                            const MDNode *Variable, const MDNode *Expr);
+                            const MDNode *Variable, const Metadata *Expr);
 
 /// This version of the builder builds a DBG_VALUE intrinsic
 /// for either a value in a register or a register-indirect
@@ -504,7 +515,7 @@ MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
                             MachineBasicBlock::iterator I, const DebugLoc &DL,
                             const MCInstrDesc &MCID, bool IsIndirect,
                             Register Reg, const MDNode *Variable,
-                            const MDNode *Expr);
+                            const Metadata *Expr);
 
 /// This version of the builder builds a DBG_VALUE, DBG_INSTR_REF, or
 /// DBG_VALUE_LIST intrinsic for a machine operand and inserts it at position I.
@@ -512,7 +523,7 @@ MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
                             MachineBasicBlock::iterator I, const DebugLoc &DL,
                             const MCInstrDesc &MCID, bool IsIndirect,
                             ArrayRef<MachineOperand> MOs,
-                            const MDNode *Variable, const MDNode *Expr);
+                            const MDNode *Variable, const Metadata *Expr);
 
 /// Clone a DBG_VALUE whose value has been spilled to FrameIndex.
 MachineInstr *buildDbgValueForSpill(MachineBasicBlock &BB,

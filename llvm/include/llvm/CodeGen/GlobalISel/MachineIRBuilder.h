@@ -410,26 +410,26 @@ public:
   /// Build and insert a DBG_VALUE instruction expressing the fact that the
   /// associated \p Variable lives in \p Reg (suitably modified by \p Expr).
   MachineInstrBuilder buildDirectDbgValue(Register Reg, const MDNode *Variable,
-                                          const MDNode *Expr);
+                                          const Metadata *Expr);
 
   /// Build and insert a DBG_VALUE instruction expressing the fact that the
   /// associated \p Variable lives in memory at \p Reg (suitably modified by \p
   /// Expr).
   MachineInstrBuilder buildIndirectDbgValue(Register Reg,
                                             const MDNode *Variable,
-                                            const MDNode *Expr);
+                                            const Metadata *Expr);
 
   /// Build and insert a DBG_VALUE instruction expressing the fact that the
   /// associated \p Variable lives in the stack slot specified by \p FI
   /// (suitably modified by \p Expr).
   MachineInstrBuilder buildFIDbgValue(int FI, const MDNode *Variable,
-                                      const MDNode *Expr);
+                                      const Metadata *Expr);
 
   /// Build and insert a DBG_VALUE instructions specifying that \p Variable is
   /// given by \p C (suitably modified by \p Expr).
   MachineInstrBuilder buildConstDbgValue(const Constant &C,
                                          const MDNode *Variable,
-                                         const MDNode *Expr);
+                                         const Metadata *Expr);
 
   /// Build and insert a DBG_LABEL instructions specifying that \p Label is
   /// given. Convert "llvm.dbg.label Label" to "DBG_LABEL Label".

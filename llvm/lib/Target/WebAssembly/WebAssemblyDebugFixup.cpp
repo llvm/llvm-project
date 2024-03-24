@@ -140,7 +140,7 @@ bool WebAssemblyDebugFixup::runOnMachineFunction(MachineFunction &MF) {
                       Prev.DebugValue->getDebugLoc(),
                       TII->get(WebAssembly::DBG_VALUE), false, Register(),
                       Prev.DebugValue->getOperand(2).getMetadata(),
-                      Prev.DebugValue->getOperand(3).getMetadata());
+                      Prev.DebugValue->getOperand(3).getMetadataDI());
             }
           }
         }

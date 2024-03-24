@@ -510,6 +510,7 @@ private:
   void visitMetadataAsValue(const MetadataAsValue &MD, Function *F);
   void visitValueAsMetadata(const ValueAsMetadata &MD, Function *F);
   void visitDIArgList(const DIArgList &AL, Function *F);
+  void visitDIExpression(const DIExpression &DI);
   void visitComdat(const Comdat &C);
   void visitModuleIdents();
   void visitModuleCommandLines();

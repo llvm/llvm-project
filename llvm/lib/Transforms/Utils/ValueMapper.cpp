@@ -622,7 +622,7 @@ std::optional<Metadata *> MDNodeMapper::tryToMapOperand(const Metadata *Op) {
               M.getVM().getMappedMD(Op)) &&
              "Expected Value to be memoized");
     else
-      assert((isa<MDString>(Op) || M.getVM().getMappedMD(Op)) &&
+      assert((isa<DIExpression>(Op) || isa<MDString>(Op) || M.getVM().getMappedMD(Op)) &&
              "Expected result to be memoized");
 #endif
     return *MappedOp;
@@ -814,7 +814,12 @@ void MDNodeMapper::mapNodesInPOT(UniquedGraph &G) {
         return *MappedOp;
       (void)D;
       assert(G.Info[Old].ID > D.ID && "Expected a forward reference");
-      return &G.getFwdReference(*cast<MDNode>(Old));
+      if (auto *MDN = dyn_cast<MDNode>(Old)) {
+        // Handle MDNode
+        return &G.getFwdReference(*MDN);
+      } else if (isa<DIExpression>(Old)) {
+            return Old;
+          }
     });
 
     auto *NewN = MDNode::replaceWithUniqued(std::move(ClonedN));
@@ -884,6 +889,9 @@ std::optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
     return *NewMD;
 
   if (isa<MDString>(MD))
+    return const_cast<Metadata *>(MD);
+  
+  if(isa<DIExpression>(MD))
     return const_cast<Metadata *>(MD);
 
   // This is a module-level metadata.  If nothing at the module level is

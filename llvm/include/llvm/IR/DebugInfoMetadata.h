@@ -2708,31 +2708,27 @@ public:
 /// DW_OP_stack_value) is the constant variable value.
 ///
 /// TODO: Co-allocate the expression elements.
-/// TODO: Separate from MDNode, or otherwise drop Distinct and Temporary
-/// storage types.
-class DIExpression : public MDNode {
+class DIExpression : public Metadata, ReplaceableMetadataImpl {
+  friend class ReplaceableMetadataImpl;
   friend class LLVMContextImpl;
-  friend class MDNode;
 
   std::vector<uint64_t> Elements;
 
-  DIExpression(LLVMContext &C, StorageType Storage, ArrayRef<uint64_t> Elements)
-      : MDNode(C, DIExpressionKind, Storage, std::nullopt),
+  DIExpression(LLVMContext &C, ArrayRef<uint64_t> Elements)
+      : Metadata(DIExpressionKind, Uniqued), ReplaceableMetadataImpl(C),
         Elements(Elements.begin(), Elements.end()) {}
   ~DIExpression() = default;
 
   static DIExpression *getImpl(LLVMContext &Context,
-                               ArrayRef<uint64_t> Elements, StorageType Storage,
-                               bool ShouldCreate = true);
-
-  TempDIExpression cloneImpl() const {
-    return getTemporary(getContext(), getElements());
-  }
+                               ArrayRef<uint64_t> Elements);
 
 public:
-  DEFINE_MDNODE_GET(DIExpression, (ArrayRef<uint64_t> Elements), (Elements))
-
-  TempDIExpression clone() const { return cloneImpl(); }
+    LLVMContext &getContext() const {
+        return ReplaceableMetadataImpl::getContext();
+    }
+    static inline DIExpression *get(LLVMContext &Context, ArrayRef<uint64_t> Elements) {
+        return getImpl(Context, Elements);
+    }
 
   ArrayRef<uint64_t> getElements() const { return Elements; }
 

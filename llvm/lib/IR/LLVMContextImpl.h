@@ -1356,6 +1356,51 @@ struct DIArgListInfo {
   }
 };
 
+struct DIExpressionKeyInfo {
+  ArrayRef<uint64_t> Elements;
+
+  DIExpressionKeyInfo(ArrayRef<uint64_t> Elements) : Elements(Elements) {}
+  DIExpressionKeyInfo(const DIExpression *Expr) : Elements(Expr->getElements()) {}
+
+  bool isKeyOf(const DIExpression *RHS) const {
+    return Elements == RHS->getElements();
+  }
+
+  unsigned getHashValue() const {
+    return hash_combine_range(Elements.begin(), Elements.end());
+  }
+};
+
+struct DIExpressionInfo {
+  using KeyTy = DIExpressionKeyInfo;
+
+  static inline DIExpression *getEmptyKey() {
+    return DenseMapInfo<DIExpression *>::getEmptyKey();
+  }
+
+  static inline DIExpression *getTombstoneKey() {
+    return DenseMapInfo<DIExpression *>::getTombstoneKey();
+  }
+
+  static unsigned getHashValue(const KeyTy &Key) {
+    return Key.getHashValue();
+  }
+
+  static unsigned getHashValue(const DIExpression *Expr) {
+    return KeyTy(Expr).getHashValue();
+  }
+
+  static bool isEqual(const KeyTy &LHS, const DIExpression *RHS) {
+    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
+      return false;
+    return LHS.isKeyOf(RHS);
+  }
+
+  static bool isEqual(const DIExpression *LHS, const DIExpression *RHS) {
+    return LHS == RHS;
+  }
+};
+
 /// DenseMapInfo for MDNode subclasses.
 template <class NodeTy> struct MDNodeInfo {
   using KeyTy = MDNodeKeyImpl<NodeTy>;
@@ -1509,6 +1554,7 @@ public:
   DenseMap<Value *, ValueAsMetadata *> ValuesAsMetadata;
   DenseMap<Metadata *, MetadataAsValue *> MetadataAsValues;
   DenseSet<DIArgList *, DIArgListInfo> DIArgLists;
+  DenseSet<DIExpression *, DIExpressionInfo> DIExpressions;
 
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   DenseSet<CLASS *, CLASS##Info> CLASS##s;
