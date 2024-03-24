@@ -897,6 +897,7 @@ translateVariableToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
     return fir::CharArrayBoxValue{
         base, genCharacterVariableLength(loc, builder, variable), extents,
         nonDefaultLbounds};
+
   return fir::ArrayBoxValue{base, extents, nonDefaultLbounds};
 }
 
