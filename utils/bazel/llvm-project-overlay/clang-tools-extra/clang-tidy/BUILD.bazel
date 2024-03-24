@@ -370,6 +370,7 @@ cc_library(
 cc_binary(
     name = "clang-tidy",
     srcs = ["tool/ClangTidyToolMain.cpp"],
+    data = ["//clang-tools-extra:builtin_headers"],
     stamp = 0,
     deps = [":tool"],
 )
