@@ -65,6 +65,16 @@ public:
   // is used to uniquify them.
   llvm::DenseMap<llvm::CachedHashStringRef, const InputFile *> comdatGroups;
 
+  // Map from a section name for a comdat section to its contents. These
+  // sections are the ones not discarded.
+  llvm::DenseMap<llvm::CachedHashStringRef, ArrayRef<uint8_t>>
+      comdatGroupSectionContents;
+
+  // Map from a comdat group signature to the names of sections part of the
+  // group.
+  llvm::DenseMap<llvm::CachedHashStringRef, llvm::StringSet<>>
+      comdatGroupSectionNames;
+
   // The Map of __acle_se_<sym>, <sym> pairs found in the input objects.
   // Key is the <sym> name.
   llvm::SmallMapVector<StringRef, ArmCmseEntryFunction, 1> cmseSymMap;
