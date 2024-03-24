@@ -1267,15 +1267,12 @@ DynamicSection<ELFT>::DynamicSection()
 // The output section .rela.dyn may include these synthetic sections:
 //
 // - part.relaDyn
-// - in.relaIplt: this is included if in.relaIplt is named .rela.dyn
 // - in.relaPlt: this is included if a linker script places .rela.plt inside
 //   .rela.dyn
 //
 // DT_RELASZ is the total size of the included sections.
 static uint64_t addRelaSz(const RelocationBaseSection &relaDyn) {
   size_t size = relaDyn.getSize();
-  if (in.relaIplt->getParent() == relaDyn.getParent())
-    size += in.relaIplt->getSize();
   if (in.relaPlt->getParent() == relaDyn.getParent())
     size += in.relaPlt->getSize();
   return size;
@@ -1372,9 +1369,7 @@ DynamicSection<ELFT>::computeContents() {
   if (!config->shared && !config->relocatable && !config->zRodynamic)
     addInt(DT_DEBUG, 0);
 
-  if (part.relaDyn->isNeeded() ||
-      (in.relaIplt->isNeeded() &&
-       part.relaDyn->getParent() == in.relaIplt->getParent())) {
+  if (part.relaDyn->isNeeded()) {
     addInSec(part.relaDyn->dynamicTag, *part.relaDyn);
     entries.emplace_back(part.relaDyn->sizeDynamicTag,
                          addRelaSz(*part.relaDyn));
@@ -1657,10 +1652,6 @@ void RelocationBaseSection::finalizeContents() {
     getParent()->flags |= ELF::SHF_INFO_LINK;
     getParent()->info = in.gotPlt->getParent()->sectionIndex;
   }
-  if (in.relaIplt.get() == this && in.igotPlt->getParent()) {
-    getParent()->flags |= ELF::SHF_INFO_LINK;
-    getParent()->info = in.igotPlt->getParent()->sectionIndex;
-  }
 }
 
 void DynamicReloc::computeRaw(SymbolTableBaseSection *symtab) {
@@ -1674,6 +1665,11 @@ void RelocationBaseSection::computeRels() {
   SymbolTableBaseSection *symTab = getPartition().dynSymTab.get();
   parallelForEach(relocs,
                   [symTab](DynamicReloc &rel) { rel.computeRaw(symTab); });
+
+  auto irelative = std::partition(
+      relocs.begin() + numRelativeRelocs, relocs.end(),
+      [t = target->iRelativeRel](auto &r) { return r.type != t; });
+
   // Sort by (!IsRelative,SymIndex,r_offset). DT_REL[A]COUNT requires us to
   // place R_*_RELATIVE first. SymIndex is to improve locality, while r_offset
   // is to make results easier to read.
@@ -1682,7 +1678,7 @@ void RelocationBaseSection::computeRels() {
     parallelSort(relocs.begin(), nonRelative,
                  [&](auto &a, auto &b) { return a.r_offset < b.r_offset; });
     // Non-relative relocations are few, so don't bother with parallelSort.
-    llvm::sort(nonRelative, relocs.end(), [&](auto &a, auto &b) {
+    llvm::sort(nonRelative, irelative, [&](auto &a, auto &b) {
       return std::tie(a.r_sym, a.r_offset) < std::tie(b.r_sym, b.r_offset);
     });
   }
@@ -3843,7 +3839,6 @@ void InStruct::reset() {
   ppc32Got2.reset();
   ibtPlt.reset();
   relaPlt.reset();
-  relaIplt.reset();
   shStrTab.reset();
   strTab.reset();
   symTab.reset();
