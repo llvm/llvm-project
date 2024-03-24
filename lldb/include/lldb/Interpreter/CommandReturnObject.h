@@ -162,6 +162,7 @@ private:
   StreamTee m_err_stream;
 
   lldb::ReturnStatus m_status = lldb::eReturnStatusStarted;
+  Status m_error_status;
 
   bool m_did_change_process_state = false;
   bool m_suppress_immediate_output = false;

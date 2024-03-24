@@ -10,6 +10,7 @@
 #define LLDB_EXPRESSION_DIAGNOSTICMANAGER_H
 
 #include "lldb/lldb-defines.h"
+#include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -19,20 +20,6 @@
 #include <vector>
 
 namespace lldb_private {
-
-enum DiagnosticOrigin {
-  eDiagnosticOriginUnknown = 0,
-  eDiagnosticOriginLLDB,
-  eDiagnosticOriginClang,
-  eDiagnosticOriginSwift,
-  eDiagnosticOriginLLVM
-};
-
-enum DiagnosticSeverity {
-  eDiagnosticSeverityError,
-  eDiagnosticSeverityWarning,
-  eDiagnosticSeverityRemark
-};
 
 const uint32_t LLDB_INVALID_COMPILER_ID = UINT32_MAX;
 
