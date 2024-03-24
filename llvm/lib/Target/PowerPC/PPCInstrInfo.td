@@ -193,6 +193,8 @@ def PPCany_faddrtz: PatFrags<(ops node:$lhs, node:$rhs),
                              [(PPCfaddrtz node:$lhs, node:$rhs),
                               (PPCstrict_faddrtz node:$lhs, node:$rhs)]>;
 
+def PPCvsx_cmpsel : SDNode<"PPCISD::VSX_CMPSEL", SDTSelectCC, []>;
+
 def PPCfsel   : SDNode<"PPCISD::FSEL",
    // Type constraint for fsel.
    SDTypeProfile<1, 3, [SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>,

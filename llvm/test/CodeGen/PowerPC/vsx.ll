@@ -2465,18 +2465,24 @@ define <2 x double> @test81(<4 x float> %b) {
 define double @test82(double %a, double %b, double %c, double %d) {
 ; CHECK-LABEL: test82:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xscmpudp cr0, f3, f4
-; CHECK-NEXT:    beqlr cr0
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    fmr f1, f2
+; CHECK-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; CHECK-NEXT:    # kill: def $f3 killed $f3 def $vsl3
+; CHECK-NEXT:    xvcmpeqdp vs0, vs3, vs4
+; CHECK-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
+; CHECK-NEXT:    xxsel vs1, vs1, vs2, vs0
+; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-REG-LABEL: test82:
 ; CHECK-REG:       # %bb.0: # %entry
-; CHECK-REG-NEXT:    xscmpudp cr0, f3, f4
-; CHECK-REG-NEXT:    beqlr cr0
-; CHECK-REG-NEXT:  # %bb.1: # %entry
-; CHECK-REG-NEXT:    fmr f1, f2
+; CHECK-REG-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; CHECK-REG-NEXT:    # kill: def $f3 killed $f3 def $vsl3
+; CHECK-REG-NEXT:    xvcmpeqdp vs0, vs3, vs4
+; CHECK-REG-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; CHECK-REG-NEXT:    # kill: def $f1 killed $f1 def $vsl1
+; CHECK-REG-NEXT:    xxsel vs1, vs1, vs2, vs0
+; CHECK-REG-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-REG-NEXT:    blr
 ;
 ; CHECK-FISL-LABEL: test82:
@@ -2495,10 +2501,13 @@ define double @test82(double %a, double %b, double %c, double %d) {
 ;
 ; CHECK-LE-LABEL: test82:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    xscmpudp cr0, f3, f4
-; CHECK-LE-NEXT:    beqlr cr0
-; CHECK-LE-NEXT:  # %bb.1: # %entry
-; CHECK-LE-NEXT:    fmr f1, f2
+; CHECK-LE-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; CHECK-LE-NEXT:    # kill: def $f3 killed $f3 def $vsl3
+; CHECK-LE-NEXT:    xvcmpeqdp vs0, vs3, vs4
+; CHECK-LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; CHECK-LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
+; CHECK-LE-NEXT:    xxsel vs1, vs1, vs2, vs0
+; CHECK-LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-LE-NEXT:    blr
 entry:
   %m = fcmp oeq double %c, %d
