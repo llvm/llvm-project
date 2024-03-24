@@ -113,6 +113,8 @@ STATISTIC(NumFPAssociationsHoisted, "Number of invariant FP expressions "
 STATISTIC(NumIntAssociationsHoisted,
           "Number of invariant int expressions "
           "reassociated and hoisted out of the loop");
+STATISTIC(NumBOAssociationsHoisted, "Number of invariant BinaryOp expressions "
+                                    "reassociated and hoisted out of the loop");
 
 /// Memory promotion is enabled by default.
 static cl::opt<bool>
@@ -2764,6 +2766,75 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
   return true;
 }
 
+/// Reassociate general associative binary expressions of the form
+///
+/// 1. "(LV op C1) op C2" ==> "LV op (C1 op C2)"
+///
+/// where op is an associative binary op, LV is a loop variant, and C1 and C2
+/// are loop invariants.
+///
+/// TODO: This can be extended to more cases such as
+/// 2. "C1 op (C2 op LV)" ==> "(C1 op C2) op LV"
+/// 3. "(C1 op LV) op C2" ==> "LV op (C1 op C2)" if op is commutative
+/// 4. "C1 op (LV op C2)" ==> "(C1 op C2) op LV" if op is commutative
+static bool hoistBOAssociation(Instruction &I, Loop &L,
+                               ICFLoopSafetyInfo &SafetyInfo,
+                               MemorySSAUpdater &MSSAU, AssumptionCache *AC,
+                               DominatorTree *DT) {
+  if (!isa<BinaryOperator>(I))
+    return false;
+
+  Instruction::BinaryOps Opcode = dyn_cast<BinaryOperator>(&I)->getOpcode();
+  BinaryOperator *Op0 = dyn_cast<BinaryOperator>(I.getOperand(0));
+
+  auto ClearSubclassDataAfterReassociation = [](Instruction &I) {
+    FPMathOperator *FPMO = dyn_cast<FPMathOperator>(&I);
+    if (!FPMO) {
+      I.clearSubclassOptionalData();
+      return;
+    }
+
+    FastMathFlags FMF = I.getFastMathFlags();
+    I.clearSubclassOptionalData();
+    I.setFastMathFlags(FMF);
+  };
+
+  if (I.isAssociative()) {
+    // Transform: "(LV op C1) op C2" ==> "LV op (C1 op C2)"
+    if (Op0 && Op0->getOpcode() == Opcode) {
+      Value *LV = Op0->getOperand(0);
+      Value *C1 = Op0->getOperand(1);
+      Value *C2 = I.getOperand(1);
+
+      if (L.isLoopInvariant(LV) || !L.isLoopInvariant(C1) ||
+          !L.isLoopInvariant(C2))
+        return false;
+
+      bool singleUseOp0 = Op0->hasOneUse();
+
+      // Conservatively clear all optional flags since they may not be
+      // preserved by the reassociation, but preserve fast-math flags where
+      // applicable,
+      ClearSubclassDataAfterReassociation(I);
+
+      auto *Preheader = L.getLoopPreheader();
+      assert(Preheader && "Loop is not in simplify form?");
+      IRBuilder<> Builder(Preheader->getTerminator());
+      Value *V = Builder.CreateBinOp(Opcode, C1, C2, "invariant.op");
+      I.setOperand(0, LV);
+      I.setOperand(1, V);
+
+      // Note: (LV op CV1) might not be erased if it has more than one use.
+      if (singleUseOp0)
+        eraseInstruction(cast<Instruction>(*Op0), SafetyInfo, MSSAU);
+
+      return true;
+    }
+  }
+
+  return false;
+}
+
 static bool hoistArithmetics(Instruction &I, Loop &L,
                              ICFLoopSafetyInfo &SafetyInfo,
                              MemorySSAUpdater &MSSAU, AssumptionCache *AC,
@@ -2798,6 +2869,12 @@ static bool hoistArithmetics(Instruction &I, Loop &L,
       ++NumIntAssociationsHoisted;
     else
       ++NumFPAssociationsHoisted;
+    return true;
+  }
+
+  if (hoistBOAssociation(I, L, SafetyInfo, MSSAU, AC, DT)) {
+    ++NumHoisted;
+    ++NumBOAssociationsHoisted;
     return true;
   }
 
