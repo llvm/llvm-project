@@ -1621,6 +1621,26 @@ Currently, only the following parameter attributes are defined:
     ``readonly`` or a ``memory`` attribute that does not contain
     ``argmem: write``.
 
+``initialized((Lo1,Hi1),...)``
+    This attribute is a list of const ranges in ascending order with no
+    overlapping or continuous. It indicates that the function initializes the
+    memory through the pointer argument, [%p+LoN, %p+HiN): there are no reads,
+    and no special accesses (such as volatile access or untrackable capture)
+    before the initialization in the function. LoN/HiN are 64-bit ints;
+    negative values are allowed in case a pointer to partway through the
+    allocation is passed to.
+
+    Similarly to ``writeonly`` or ``readonly``, this attribute implies that
+    the function initializes and does not read before initialization through
+    this pointer argument, even though it may read the memory before
+    initialization that the pointer points to, such as through other arguments.
+   
+    The ``writable`` or ``dereferenceable`` attribute does not imply
+    ``initialized`` attribute, however the ``initialized`` attribute does imply
+    ``dereferenceable`` in the specified spaces.
+
+    Note that this attribute does not apply to the unwind edge.
+
 ``dead_on_unwind``
     At a high level, this attribute indicates that the pointer argument is dead
     if the call unwinds, in the sense that the caller will not depend on the
