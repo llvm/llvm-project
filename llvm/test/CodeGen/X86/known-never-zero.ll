@@ -452,9 +452,7 @@ define i32 @smin_known_zero(i32 %x, i32 %y) {
 ; X86-NEXT:    cmpl $-54, %eax
 ; X86-NEXT:    movl $-54, %ecx
 ; X86-NEXT:    cmovll %eax, %ecx
-; X86-NEXT:    bsfl %ecx, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: smin_known_zero:
@@ -462,9 +460,7 @@ define i32 @smin_known_zero(i32 %x, i32 %y) {
 ; X64-NEXT:    cmpl $-54, %edi
 ; X64-NEXT:    movl $-54, %eax
 ; X64-NEXT:    cmovll %edi, %eax
-; X64-NEXT:    bsfl %eax, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    cmovnel %ecx, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %z = call i32 @llvm.smin.i32(i32 %x, i32 -54)
   %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
@@ -482,9 +478,9 @@ define <4 x i32> @smin_known_zero_vec(<4 x i32> %x, <4 x i32> %y) {
 ; X86-NEXT:    por %xmm2, %xmm0
 ; X86-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X86-NEXT:    paddd %xmm0, %xmm1
-; X86-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-NEXT:    pxor %xmm1, %xmm0
-; X86-NEXT:    pcmpgtd %xmm1, %xmm0
+; X86-NEXT:    pand %xmm1, %xmm0
+; X86-NEXT:    pxor %xmm1, %xmm1
+; X86-NEXT:    pcmpeqd %xmm1, %xmm0
 ; X86-NEXT:    psrld $31, %xmm0
 ; X86-NEXT:    retl
 ;
@@ -493,10 +489,10 @@ define <4 x i32> @smin_known_zero_vec(<4 x i32> %x, <4 x i32> %y) {
 ; X64-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
-; X64-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vpminud %xmm1, %xmm0, %xmm1
+; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %z = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %x, <4 x i32> <i32 -54, i32 -23, i32 -12, i32 -1>)
   %r = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %z)
@@ -577,9 +573,7 @@ define i32 @smax_maybe_zero(i32 %x, i32 %y) {
 ; X86-NEXT:    cmpl $55, %eax
 ; X86-NEXT:    movl $54, %ecx
 ; X86-NEXT:    cmovgel %eax, %ecx
-; X86-NEXT:    bsfl %ecx, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: smax_maybe_zero:
@@ -587,9 +581,7 @@ define i32 @smax_maybe_zero(i32 %x, i32 %y) {
 ; X64-NEXT:    cmpl $55, %edi
 ; X64-NEXT:    movl $54, %eax
 ; X64-NEXT:    cmovgel %edi, %eax
-; X64-NEXT:    bsfl %eax, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    cmovnel %ecx, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %z = call i32 @llvm.smax.i32(i32 %x, i32 54)
   %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
