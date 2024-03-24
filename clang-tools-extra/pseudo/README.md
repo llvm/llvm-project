@@ -1,3 +1,10 @@
+# Removed
+
+This was never completed and most of the implementation has been removed.
+This document remains for historical interest, for now.
+
+See https://docs.google.com/document/d/1eGkTOsFja63wsv8v0vd5JdoTonj-NlN3ujGF0T7xDbM/edit
+
 # clang pseudoparser
 
 This directory implements an approximate heuristic parser for C++, based on the
