@@ -8949,6 +8949,12 @@ def err_cuda_ovl_target : Error<
   "cannot overload %select{__device__|__global__|__host__|__host__ __device__}2 function %3">;
 def note_cuda_ovl_candidate_target_mismatch : Note<
     "candidate template ignored: target attributes do not match">;
+def warn_offload_incompatible_redeclare : Warning<
+  "incompatible host/device attribute with redeclaration: "
+  "new declaration is %select{__device__|__global__|__host__|__host__ __device__}0 function, "
+  "old declaration is %select{__device__|__global__|__host__|__host__ __device__}1 function. "
+  "It will cause warning with nvcc">,
+  InGroup<DiagGroup<"offload-incompatible-redeclare">>, DefaultIgnore;
 
 def err_cuda_device_builtin_surftex_cls_template : Error<
     "illegal device builtin %select{surface|texture}0 reference "

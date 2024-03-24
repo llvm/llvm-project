@@ -995,22 +995,29 @@ void Sema::checkCUDATargetOverload(FunctionDecl *NewFD,
     // HD/global functions "exist" in some sense on both the host and device, so
     // should have the same implementation on both sides.
     if (NewTarget != OldTarget &&
-        ((NewTarget == CFT_HostDevice &&
-          !(LangOpts.OffloadImplicitHostDeviceTemplates &&
-            isCUDAImplicitHostDeviceFunction(NewFD) &&
-            OldTarget == CFT_Device)) ||
-         (OldTarget == CFT_HostDevice &&
-          !(LangOpts.OffloadImplicitHostDeviceTemplates &&
-            isCUDAImplicitHostDeviceFunction(OldFD) &&
-            NewTarget == CFT_Device)) ||
-         (NewTarget == CFT_Global) || (OldTarget == CFT_Global)) &&
         !IsOverload(NewFD, OldFD, /* UseMemberUsingDeclRules = */ false,
                     /* ConsiderCudaAttrs = */ false)) {
-      Diag(NewFD->getLocation(), diag::err_cuda_ovl_target)
-          << NewTarget << NewFD->getDeclName() << OldTarget << OldFD;
-      Diag(OldFD->getLocation(), diag::note_previous_declaration);
-      NewFD->setInvalidDecl();
-      break;
+      if ((NewTarget == CFT_HostDevice &&
+           !(LangOpts.OffloadImplicitHostDeviceTemplates &&
+             isCUDAImplicitHostDeviceFunction(NewFD) &&
+             OldTarget == CFT_Device)) ||
+          (OldTarget == CFT_HostDevice &&
+           !(LangOpts.OffloadImplicitHostDeviceTemplates &&
+             isCUDAImplicitHostDeviceFunction(OldFD) &&
+             NewTarget == CFT_Device)) ||
+          (NewTarget == CFT_Global) || (OldTarget == CFT_Global)) {
+        Diag(NewFD->getLocation(), diag::err_cuda_ovl_target)
+            << NewTarget << NewFD->getDeclName() << OldTarget << OldFD;
+        Diag(OldFD->getLocation(), diag::note_previous_declaration);
+        NewFD->setInvalidDecl();
+        break;
+      }
+      if ((NewTarget == CFT_Host && OldTarget == CFT_Device) ||
+          (NewTarget == CFT_Device && OldTarget == CFT_Host)) {
+        Diag(NewFD->getLocation(), diag::warn_offload_incompatible_redeclare)
+            << NewTarget << OldTarget;
+        Diag(OldFD->getLocation(), diag::note_previous_declaration);
+      }
     }
   }
 }
