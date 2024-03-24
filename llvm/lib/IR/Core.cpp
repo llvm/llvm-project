@@ -934,6 +934,49 @@ LLVMTypeRef LLVMTargetExtTypeInContext(LLVMContextRef C, const char *Name,
       TargetExtType::get(*unwrap(C), Name, TypeParamArray, IntParamArray));
 }
 
+const char *LLVMGetTargetExtTypeName(LLVMTypeRef TargetExtTy) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+  return Type->getName().data();
+}
+
+unsigned LLVMCountTargetExtTypeTypeParams(LLVMTypeRef TargetExtTy) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+  return Type->getNumTypeParameters();
+}
+
+void LLVMGetTargetExtTypeTypeParams(LLVMTypeRef TargetExtTy,
+                                    LLVMTypeRef *Dest) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+
+  for (unsigned int i = 0; i < Type->getNumTypeParameters(); i++) {
+    Dest[i] = wrap(Type->getTypeParameter(i));
+  }
+}
+
+LLVMTypeRef LLVMGetTargetExtTypeTypeParam(LLVMTypeRef TargetExtTy,
+                                          unsigned Idx) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+  return wrap(Type->getTypeParameter(Idx));
+}
+
+unsigned LLVMCountTargetExtTypeIntParams(LLVMTypeRef TargetExtTy) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+  return Type->getNumIntParameters();
+}
+
+void LLVMGetTargetExtTypeIntParams(LLVMTypeRef TargetExtTy, unsigned *Dest) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+
+  for (unsigned int i = 0; i < Type->getNumIntParameters(); i++) {
+    Dest[i] = Type->getIntParameter(i);
+  }
+}
+
+unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy, unsigned Idx) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+  return Type->getIntParameter(Idx);
+}
+
 /*===-- Operations on values ----------------------------------------------===*/
 
 /*--.. Operations on all values ............................................--*/

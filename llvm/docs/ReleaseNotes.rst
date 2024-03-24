@@ -146,6 +146,18 @@ Changes to the C API
   * ``LLVMGetPrologueData``
   * ``LLVMSetPrologueData``
 
+* Added the following getters for accessing the name, type parameters, and
+  integer parameters of Target Extension Types:
+
+  * ``LLVMGetTargetExtTypeName``
+  * ``LLVMCountTargetExtTypeTypeParams``
+  * ``LLVMGetTargetExtTypeTypeParams``
+  * ``LLVMGetTargetExtTypeTypeParam``
+  * ``LLVMCountTargetExtTypeIntParams``
+  * ``LLVMGetTargetExtTypeIntParams``
+  * ``LLVMGetTargetExtTypeIntParam``
+
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
