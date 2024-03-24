@@ -13,8 +13,8 @@
 
 namespace clang::tidy::readability {
 
-/// Checks for mathematical expressions that involve operators of different
-/// priorities.
+/// Check for mising parantheses in mathematical expressions that involve
+/// operators of different priorities.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability/math-missing-parentheses.html

@@ -28,7 +28,7 @@ void f(){
     int c = 1 * 2 * 3; // No warning
 
     //CHECK-MESSAGES: :[[@LINE+2]]:13: warning: add parantheses to clarify the precedence of operations [readability-math-missing-parentheses]
-    //CHECK-FIXES: int d = (1 + (2 * 3)) - (4 / 5);
+    //CHECK-FIXES: int d = 1 + (2 * 3) - (4 / 5);
     int d = 1 + 2 * 3 - 4 / 5;
 
     //CHECK-MESSAGES: :[[@LINE+2]]:13: warning: add parantheses to clarify the precedence of operations [readability-math-missing-parentheses]
@@ -40,7 +40,7 @@ void f(){
     int f = 1 * -2 + 4;
 
     //CHECK-MESSAGES: :[[@LINE+2]]:13: warning: add parantheses to clarify the precedence of operations [readability-math-missing-parentheses]
-    //CHECK-FIXES: int g = (((1 * 2) * 3) + 4) + 5;
+    //CHECK-FIXES: int g = (1 * 2 * 3) + 4 + 5;
     int g = 1 * 2 * 3 + 4 + 5;
 
     // CHECK-MESSAGES: :[[@LINE+2]]:13: warning: add parantheses to clarify the precedence of operations [readability-math-missing-parentheses]
@@ -66,7 +66,7 @@ void f(){
     int n = 1.05 * foo() + double(bar());
 
     // CHECK-MESSAGES: :[[@LINE+3]]:13: warning: add parantheses to clarify the precedence of operations [readability-math-missing-parentheses]
-    // CHECK-FIXES: int o = (1 + (obj.A * 3)) + obj.B;
+    // CHECK-FIXES: int o = 1 + (obj.A * 3) + obj.B; 
     fun obj;
     int o = 1 + obj.A * 3 + obj.B; 
 
