@@ -100,6 +100,7 @@ RUN sudo apt-get update \
         wget \
         unzip \
         software-properties-common \
+        jq \
     && sudo rm -rf /var/lib/apt/lists/*
 
 
@@ -138,6 +139,10 @@ RUN <<EOF
   sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 1)) all  # latest release
   sudo /tmp/llvm.sh $LLVM_HEAD_VERSION          all  # current ToT
   sudo apt-get install -y libomp5-$LLVM_HEAD_VERSION
+
+  # Install the latest git-clang-format
+  sudo ln -s $(which git-clang-format-$LLVM_HEAD_VERSION) /usr/bin/clang-format
+
   sudo rm -rf /var/lib/apt/lists/*
 EOF
 

@@ -9,16 +9,29 @@ permissions:
 
 jobs:
   check_generated_files:
-    runs-on: ubuntu-latest
+    runs-on:
+      group: libcxx-runners-1
     steps:
       - name: Fetch LLVM sources
         uses: actions/checkout@v4
-
-      - name: Install dependencies
-        uses: aminya/setup-cpp@v1
         with:
-          clangformat: 17.0.1
-          ninja: true
+          fetch-depth: 0
+          show-progress: true
+
+
+      - name: Install Precommit Hooks
+        run: bash ./libcxx/utils/formatting/install-formatting-hooks.sh --force
+
+      - name: Setup the paths to check for formatting
+        run: git config --local llvmPrecommit.formatPaths "libcxx"
+
+      # Reset the git branch to have all of the modified files staged but not committed.
+      - name: Reset git state
+        run: git reset --soft origin/main
+
+      - name: Check generated files
+        run: bash ./libcxx/utils/formatting/pre-commit-formatting-hook.sh
+
 
       - name: Check generated files
         run: libcxx/utils/ci/run-buildbot check-generated-output
