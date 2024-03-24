@@ -266,6 +266,16 @@ void INTERFACE_ATTRIBUTE AnnotateBenignRace(
   BenignRaceImpl(f, l, mem, 1, desc);
 }
 
+void INTERFACE_ATTRIBUTE AnnotateAllAtomicBegin(char *f, int l) {
+  SCOPED_ANNOTATION(AnnotateAllAtomicBegin);
+  ThreadAtomicBegin(thr, pc);
+}
+
+void INTERFACE_ATTRIBUTE AnnotateAllAtomicEnd(char *f, int l) {
+  SCOPED_ANNOTATION(AnnotateAllAtomicEnd);
+  ThreadAtomicEnd(thr);
+}
+
 void INTERFACE_ATTRIBUTE AnnotateIgnoreReadsBegin(char *f, int l) {
   SCOPED_ANNOTATION(AnnotateIgnoreReadsBegin);
   ThreadIgnoreBegin(thr, pc);

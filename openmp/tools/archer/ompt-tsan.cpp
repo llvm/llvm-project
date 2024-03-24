@@ -149,7 +149,7 @@ static ArcherFlags *archer_flags;
 // Thread Sanitizer is a tool that finds races in code.
 // See http://code.google.com/p/data-race-test/wiki/DynamicAnnotations .
 // tsan detects these exact functions by name.
-extern "C" {
+// extern "C" {
 static void (*AnnotateHappensAfter)(const char *, int, const volatile void *);
 static void (*AnnotateHappensBefore)(const char *, int, const volatile void *);
 static void (*AnnotateIgnoreWritesBegin)(const char *, int);
@@ -159,7 +159,9 @@ static void (*AnnotateNewMemory)(const char *, int, const volatile void *,
 static void (*__tsan_func_entry)(const void *);
 static void (*__tsan_func_exit)(void);
 static int (*RunningOnValgrind)(void);
-}
+static void (*AnnotateReductionBegin)(const char *, int);
+static void (*AnnotateReductionEnd)(const char *, int);
+//}
 
 // This marker is used to define a happens-before arc. The race detector will
 // infer an arc from the begin to the end when they share the same pointer
@@ -174,6 +176,10 @@ static int (*RunningOnValgrind)(void);
 
 // Resume checking for racy writes.
 #define TsanIgnoreWritesEnd() AnnotateIgnoreWritesEnd(__FILE__, __LINE__)
+
+// Maps to either AnnotateAllAtomics or AnnotateIgnoreWrites
+#define TsanReductionBegin() AnnotateReductionBegin(__FILE__, __LINE__)
+#define TsanReductionEnd() AnnotateReductionEnd(__FILE__, __LINE__)
 
 // We don't really delete the clock for now
 #define TsanDeleteClock(cv)
@@ -718,7 +724,7 @@ static void ompt_tsan_sync_region(ompt_sync_region_t kind,
         // 2. execution of another task.
         // For the latter case we will re-enable tracking in task_switch.
         Data->InBarrier = true;
-        TsanIgnoreWritesBegin();
+        TsanReductionBegin();
       }
 
       break;
@@ -751,7 +757,7 @@ static void ompt_tsan_sync_region(ompt_sync_region_t kind,
       if (hasReductionCallback < ompt_set_always) {
         // We want to track writes after the barrier again.
         Data->InBarrier = false;
-        TsanIgnoreWritesEnd();
+        TsanReductionEnd();
       }
 
       char BarrierIndex = Data->BarrierIndex;
@@ -806,7 +812,7 @@ static void ompt_tsan_reduction(ompt_sync_region_t kind,
   case ompt_scope_begin:
     switch (kind) {
     case ompt_sync_region_reduction:
-      TsanIgnoreWritesBegin();
+      TsanReductionBegin();
       break;
     default:
       break;
@@ -815,7 +821,7 @@ static void ompt_tsan_reduction(ompt_sync_region_t kind,
   case ompt_scope_end:
     switch (kind) {
     case ompt_sync_region_reduction:
-      TsanIgnoreWritesEnd();
+      TsanReductionEnd();
       break;
     default:
       break;
@@ -942,12 +948,12 @@ static void switchTasks(TaskData *FromTask, TaskData *ToTask) {
     if (FromTask && FromTask->InBarrier) {
       // We want to ignore writes in the runtime code during barriers,
       // but not when executing tasks with user code!
-      TsanIgnoreWritesEnd();
+      TsanReductionEnd();
     }
     if (ToTask && ToTask->InBarrier) {
       // We want to ignore writes in the runtime code during barriers,
       // but not when executing tasks with user code!
-      TsanIgnoreWritesBegin();
+      TsanReductionBegin();
     }
   }
   //// Not yet used
@@ -1147,6 +1153,7 @@ static void ompt_tsan_mutex_released(ompt_mutex_t kind, ompt_wait_id_t wait_id,
   } while (0)
 
 #define findTsanFunctionSilent(f, fSig) f = fSig dlsym(RTLD_DEFAULT, #f)
+#define findTsanFunctionName(f, name, fSig) f = fSig dlsym(RTLD_DEFAULT, #name)
 
 static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
                                 ompt_data_t *tool_data) {
@@ -1180,6 +1187,18 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
       (void (*)(const char *, int, const volatile void *, size_t)));
   findTsanFunction(__tsan_func_entry, (void (*)(const void *)));
   findTsanFunction(__tsan_func_exit, (void (*)(void)));
+  findTsanFunctionName(AnnotateReductionBegin, AnnotateAllAtomicBegin,
+                       (void (*)(const char *, int)));
+  findTsanFunctionName(AnnotateReductionEnd, AnnotateAllAtomicEnd,
+                       (void (*)(const char *, int)));
+  if (!AnnotateReductionBegin) {
+    AnnotateReductionBegin = AnnotateIgnoreWritesBegin;
+    AnnotateReductionEnd = AnnotateIgnoreWritesEnd;
+    if (archer_flags->verbose)
+      std::cout << "Archer uses fallback solution for reductions: might miss "
+                   "some race"
+                << std::endl;
+  }
 
   SET_CALLBACK(thread_begin);
   SET_CALLBACK(thread_end);

@@ -9,6 +9,7 @@
 #ifndef TSAN_SHADOW_H
 #define TSAN_SHADOW_H
 
+#include "sanitizer_common/sanitizer_common.h"
 #include "tsan_defs.h"
 
 namespace __tsan {
@@ -21,8 +22,8 @@ class FastState {
     part_.unused0_ = 0;
     part_.sid_ = static_cast<u8>(kFreeSid);
     part_.epoch_ = static_cast<u16>(kEpochLast);
-    part_.unused1_ = 0;
     part_.ignore_accesses_ = false;
+    part_.all_atomic_ = false;
   }
 
   void SetSid(Sid sid) { part_.sid_ = static_cast<u8>(sid); }
@@ -37,14 +38,18 @@ class FastState {
   void ClearIgnoreBit() { part_.ignore_accesses_ = 0; }
   bool GetIgnoreBit() const { return part_.ignore_accesses_; }
 
+  void SetAtomicBit() { part_.all_atomic_ = 1; }
+  void ClearAtomicBit() { part_.all_atomic_ = 0; }
+  bool GetAtomicBit() const { return part_.all_atomic_; }
+
  private:
   friend class Shadow;
   struct Parts {
     u32 unused0_ : 8;
     u32 sid_ : 8;
     u32 epoch_ : kEpochBits;
-    u32 unused1_ : 1;
     u32 ignore_accesses_ : 1;
+    u32 all_atomic_ : 1;
   };
   union {
     Parts part_;
