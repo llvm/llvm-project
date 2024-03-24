@@ -15,6 +15,7 @@
 #define MLIR_TARGET_LLVM_MODULETOOBJECT_H
 
 #include "mlir/IR/Operation.h"
+#include "mlir/Target/LLVM/Options.h"
 #include "llvm/IR/Module.h"
 
 namespace llvm {
@@ -30,7 +31,8 @@ class ModuleTranslation;
 class ModuleToObject {
 public:
   ModuleToObject(Operation &module, StringRef triple, StringRef chip,
-                 StringRef features = {}, int optLevel = 3);
+                 StringRef features = {}, int optLevel = 3,
+                 LinkingFlags linkingFlags = LinkingFlags::onlyNeeded);
   virtual ~ModuleToObject();
 
   /// Returns the operation being serialized.
@@ -113,6 +115,9 @@ protected:
 
   /// Optimization level.
   int optLevel;
+
+  /// Linker flags.
+  LinkingFlags linkingFlags;
 
 private:
   /// The TargetMachine created for the given Triple, if available.

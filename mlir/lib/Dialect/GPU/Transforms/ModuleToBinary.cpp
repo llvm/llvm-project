@@ -21,6 +21,7 @@
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/Target/LLVM/Options.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -70,6 +71,17 @@ void GpuModuleToBinaryPass::runOnOperation() {
   if (!targetFormat)
     getOperation()->emitError() << "Invalid format specified.";
 
+  auto lFlags =
+      llvm::StringSwitch<std::optional<LLVM::LinkingFlags>>(linkingFlags)
+          .Case("only-needed", LLVM::LinkingFlags::onlyNeeded)
+          .Case("override", LLVM::LinkingFlags::overrideFromSrc)
+          .Cases("none", "", LLVM::LinkingFlags::none)
+          .Case("override-only-needed", LLVM::LinkingFlags::overrideFromSrc |
+                                            LLVM::LinkingFlags::onlyNeeded)
+          .Default(std::nullopt);
+  if (!lFlags)
+    getOperation()->emitError() << "Invalid linking options specified.";
+
   // Lazy symbol table builder callback.
   std::optional<SymbolTable> parentTable;
   auto lazyTableBuilder = [&]() -> SymbolTable * {
@@ -86,7 +98,7 @@ void GpuModuleToBinaryPass::runOnOperation() {
   };
 
   TargetOptions targetOptions(toolkitPath, linkFiles, cmdOptions, *targetFormat,
-                              lazyTableBuilder);
+                              *lFlags, lazyTableBuilder);
   if (failed(transformGpuModulesToBinaries(
           getOperation(),
           offloadingHandler ? dyn_cast<OffloadingLLVMTranslationAttrInterface>(

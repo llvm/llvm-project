@@ -30,6 +30,7 @@
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Target/LLVM/Options.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -2237,16 +2238,20 @@ LogicalResult gpu::DynamicSharedMemoryOp::verify() {
 TargetOptions::TargetOptions(
     StringRef toolkitPath, ArrayRef<std::string> linkFiles,
     StringRef cmdOptions, CompilationTarget compilationTarget,
+    LLVM::LinkingFlags llvmLinkingFlags,
     function_ref<SymbolTable *()> getSymbolTableCallback)
     : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, linkFiles,
-                    cmdOptions, compilationTarget, getSymbolTableCallback) {}
+                    cmdOptions, compilationTarget, llvmLinkingFlags,
+                    getSymbolTableCallback) {}
 
 TargetOptions::TargetOptions(
     TypeID typeID, StringRef toolkitPath, ArrayRef<std::string> linkFiles,
     StringRef cmdOptions, CompilationTarget compilationTarget,
+    LLVM::LinkingFlags llvmLinkingFlags,
     function_ref<SymbolTable *()> getSymbolTableCallback)
     : toolkitPath(toolkitPath.str()), linkFiles(linkFiles),
       cmdOptions(cmdOptions.str()), compilationTarget(compilationTarget),
+      llvmLinkingFlags(llvmLinkingFlags),
       getSymbolTableCallback(getSymbolTableCallback), typeID(typeID) {}
 
 TypeID TargetOptions::getTypeID() const { return typeID; }
@@ -2267,6 +2272,14 @@ CompilationTarget TargetOptions::getCompilationTarget() const {
 
 CompilationTarget TargetOptions::getDefaultCompilationTarget() {
   return CompilationTarget::Fatbin;
+}
+
+LLVM::LinkingFlags TargetOptions::getLinkingFlags() const {
+  return llvmLinkingFlags;
+}
+
+LLVM::LinkingFlags TargetOptions::getDefaultLinkingFlags() {
+  return LLVM::LinkingFlags::onlyNeeded;
 }
 
 std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
