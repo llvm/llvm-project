@@ -119,8 +119,16 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   auto &TC = getToolChain();
   auto &D = TC.getDriver();
   assert(!Inputs.empty() && "Must have at least one input.");
+  // Find the first filename InputInfo object.
+  auto Input = llvm::find_if(
+      Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
+  if (Input == Inputs.end())
+    // For a very rare case, all of the inputs to the linker are
+    // InputArg. If that happens, just use the first InputInfo.
+    Input = Inputs.begin();
+
   bool IsThinLTO = D.getLTOMode(/*IsOffload=*/true) == LTOK_Thin;
-  addLTOOptions(TC, Args, LldArgs, Output, Inputs[0], IsThinLTO);
+  addLTOOptions(TC, Args, LldArgs, Output, *Input, IsThinLTO);
 
   // Extract all the -m options
   std::vector<llvm::StringRef> Features;
