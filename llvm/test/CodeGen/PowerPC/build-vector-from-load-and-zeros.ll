@@ -17,11 +17,7 @@ define  <2 x i64> @build_v2i64_extload_0(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-BE-LABEL: build_v2i64_extload_0:
 ; PWR8-BE:       # %bb.0: # %entry
-; PWR8-BE-NEXT:    lwz 3, 0(3)
-; PWR8-BE-NEXT:    li 4, 0
-; PWR8-BE-NEXT:    mtfprd 0, 4
-; PWR8-BE-NEXT:    mtfprd 1, 3
-; PWR8-BE-NEXT:    xxmrghd 34, 1, 0
+; PWR8-BE-NEXT:    lxsiwzx 34, 0, 3
 ; PWR8-BE-NEXT:    blr
 ;
 ; PWR7-LE-LABEL: build_v2i64_extload_0:
@@ -45,13 +41,8 @@ define  <2 x i64> @build_v2i64_extload_0(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-LE-LABEL: build_v2i64_extload_0:
 ; PWR8-LE:       # %bb.0: # %entry
-; PWR8-LE-NEXT:    lwz 3, 0(3)
-; PWR8-LE-NEXT:    li 4, 0
-; PWR8-LE-NEXT:    rldimi 3, 4, 32, 0
-; PWR8-LE-NEXT:    rldimi 4, 4, 32, 0
-; PWR8-LE-NEXT:    mtfprd 0, 3
-; PWR8-LE-NEXT:    mtfprd 1, 4
-; PWR8-LE-NEXT:    xxmrghd 34, 1, 0
+; PWR8-LE-NEXT:    lxsiwzx 0, 0, 3
+; PWR8-LE-NEXT:    xxsldwi 34, 0, 0, 2
 ; PWR8-LE-NEXT:    blr
 entry:
   %0 = load i32, ptr %p, align 4
@@ -73,11 +64,8 @@ define  <2 x i64> @build_v2i64_extload_1(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-BE-LABEL: build_v2i64_extload_1:
 ; PWR8-BE:       # %bb.0: # %entry
-; PWR8-BE-NEXT:    lwz 3, 0(3)
-; PWR8-BE-NEXT:    li 4, 0
-; PWR8-BE-NEXT:    mtfprd 0, 4
-; PWR8-BE-NEXT:    mtfprd 1, 3
-; PWR8-BE-NEXT:    xxmrghd 34, 0, 1
+; PWR8-BE-NEXT:    lxsiwzx 0, 0, 3
+; PWR8-BE-NEXT:    xxswapd 34, 0
 ; PWR8-BE-NEXT:    blr
 ;
 ; PWR7-LE-LABEL: build_v2i64_extload_1:
@@ -93,11 +81,7 @@ define  <2 x i64> @build_v2i64_extload_1(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-LE-LABEL: build_v2i64_extload_1:
 ; PWR8-LE:       # %bb.0: # %entry
-; PWR8-LE-NEXT:    lwz 3, 0(3)
-; PWR8-LE-NEXT:    li 4, 0
-; PWR8-LE-NEXT:    mtfprd 0, 4
-; PWR8-LE-NEXT:    mtfprd 1, 3
-; PWR8-LE-NEXT:    xxmrghd 34, 1, 0
+; PWR8-LE-NEXT:    lxsiwzx 34, 0, 3
 ; PWR8-LE-NEXT:    blr
 entry:
   %0 = load i32, ptr %p, align 4
@@ -116,9 +100,7 @@ define <2 x double> @build_v2f64_extload_0(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-BE-LABEL: build_v2f64_extload_0:
 ; PWR8-BE:       # %bb.0: # %entry
-; PWR8-BE-NEXT:    lfs 0, 0(3)
-; PWR8-BE-NEXT:    xxlxor 1, 1, 1
-; PWR8-BE-NEXT:    xxmrghd 34, 0, 1
+; PWR8-BE-NEXT:    lxsspx 34, 0, 3
 ; PWR8-BE-NEXT:    blr
 ;
 ; PWR7-LE-LABEL: build_v2f64_extload_0:
@@ -130,9 +112,8 @@ define <2 x double> @build_v2f64_extload_0(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-LE-LABEL: build_v2f64_extload_0:
 ; PWR8-LE:       # %bb.0: # %entry
-; PWR8-LE-NEXT:    lfs 0, 0(3)
-; PWR8-LE-NEXT:    xxlxor 1, 1, 1
-; PWR8-LE-NEXT:    xxmrghd 34, 1, 0
+; PWR8-LE-NEXT:    lxsspx 0, 0, 3
+; PWR8-LE-NEXT:    xxswapd 34, 0
 ; PWR8-LE-NEXT:    blr
 entry:
   %0 = load float, ptr %p, align 4
@@ -151,9 +132,8 @@ define <2 x double> @build_v2f64_extload_1(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-BE-LABEL: build_v2f64_extload_1:
 ; PWR8-BE:       # %bb.0: # %entry
-; PWR8-BE-NEXT:    lfs 0, 0(3)
-; PWR8-BE-NEXT:    xxlxor 1, 1, 1
-; PWR8-BE-NEXT:    xxmrghd 34, 1, 0
+; PWR8-BE-NEXT:    lxsspx 0, 0, 3
+; PWR8-BE-NEXT:    xxswapd 34, 0
 ; PWR8-BE-NEXT:    blr
 ;
 ; PWR7-LE-LABEL: build_v2f64_extload_1:
@@ -165,9 +145,7 @@ define <2 x double> @build_v2f64_extload_1(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-LE-LABEL: build_v2f64_extload_1:
 ; PWR8-LE:       # %bb.0: # %entry
-; PWR8-LE-NEXT:    lfs 0, 0(3)
-; PWR8-LE-NEXT:    xxlxor 1, 1, 1
-; PWR8-LE-NEXT:    xxmrghd 34, 0, 1
+; PWR8-LE-NEXT:    lxsspx 34, 0, 3
 ; PWR8-LE-NEXT:    blr
 entry:
   %0 = load float, ptr %p, align 4
@@ -186,9 +164,7 @@ define <2 x double> @build_v2f64_load_0(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-BE-LABEL: build_v2f64_load_0:
 ; PWR8-BE:       # %bb.0: # %entry
-; PWR8-BE-NEXT:    lfd 0, 0(3)
-; PWR8-BE-NEXT:    xxlxor 1, 1, 1
-; PWR8-BE-NEXT:    xxmrghd 34, 0, 1
+; PWR8-BE-NEXT:    lxsdx 34, 0, 3
 ; PWR8-BE-NEXT:    blr
 ;
 ; PWR7-LE-LABEL: build_v2f64_load_0:
@@ -200,9 +176,8 @@ define <2 x double> @build_v2f64_load_0(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-LE-LABEL: build_v2f64_load_0:
 ; PWR8-LE:       # %bb.0: # %entry
-; PWR8-LE-NEXT:    lfd 0, 0(3)
-; PWR8-LE-NEXT:    xxlxor 1, 1, 1
-; PWR8-LE-NEXT:    xxmrghd 34, 1, 0
+; PWR8-LE-NEXT:    lxsdx 0, 0, 3
+; PWR8-LE-NEXT:    xxswapd 34, 0
 ; PWR8-LE-NEXT:    blr
 entry:
   %0 = load double, ptr %p, align 8
@@ -220,9 +195,8 @@ define <2 x double> @build_v2f64_load_1(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-BE-LABEL: build_v2f64_load_1:
 ; PWR8-BE:       # %bb.0: # %entry
-; PWR8-BE-NEXT:    lfd 0, 0(3)
-; PWR8-BE-NEXT:    xxlxor 1, 1, 1
-; PWR8-BE-NEXT:    xxmrghd 34, 1, 0
+; PWR8-BE-NEXT:    lxsdx 0, 0, 3
+; PWR8-BE-NEXT:    xxswapd 34, 0
 ; PWR8-BE-NEXT:    blr
 ;
 ; PWR7-LE-LABEL: build_v2f64_load_1:
@@ -234,9 +208,7 @@ define <2 x double> @build_v2f64_load_1(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-LE-LABEL: build_v2f64_load_1:
 ; PWR8-LE:       # %bb.0: # %entry
-; PWR8-LE-NEXT:    lfd 0, 0(3)
-; PWR8-LE-NEXT:    xxlxor 1, 1, 1
-; PWR8-LE-NEXT:    xxmrghd 34, 0, 1
+; PWR8-LE-NEXT:    lxsdx 34, 0, 3
 ; PWR8-LE-NEXT:    blr
 entry:
   %0 = load double, ptr %p, align 8
@@ -257,11 +229,7 @@ define <2 x i64> @build_v2i64_load_0(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-BE-LABEL: build_v2i64_load_0:
 ; PWR8-BE:       # %bb.0: # %entry
-; PWR8-BE-NEXT:    ld 3, 0(3)
-; PWR8-BE-NEXT:    li 4, 0
-; PWR8-BE-NEXT:    mtfprd 0, 4
-; PWR8-BE-NEXT:    mtfprd 1, 3
-; PWR8-BE-NEXT:    xxmrghd 34, 1, 0
+; PWR8-BE-NEXT:    lxsdx 34, 0, 3
 ; PWR8-BE-NEXT:    blr
 ;
 ; PWR7-LE-LABEL: build_v2i64_load_0:
@@ -277,11 +245,8 @@ define <2 x i64> @build_v2i64_load_0(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-LE-LABEL: build_v2i64_load_0:
 ; PWR8-LE:       # %bb.0: # %entry
-; PWR8-LE-NEXT:    ld 3, 0(3)
-; PWR8-LE-NEXT:    li 4, 0
-; PWR8-LE-NEXT:    mtfprd 0, 4
-; PWR8-LE-NEXT:    mtfprd 1, 3
-; PWR8-LE-NEXT:    xxmrghd 34, 0, 1
+; PWR8-LE-NEXT:    lxsdx 0, 0, 3
+; PWR8-LE-NEXT:    xxswapd 34, 0
 ; PWR8-LE-NEXT:    blr
 entry:
   %0 = load i64, ptr %p, align 8
@@ -302,11 +267,8 @@ define <2 x i64> @build_v2i64_load_1(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-BE-LABEL: build_v2i64_load_1:
 ; PWR8-BE:       # %bb.0: # %entry
-; PWR8-BE-NEXT:    ld 3, 0(3)
-; PWR8-BE-NEXT:    li 4, 0
-; PWR8-BE-NEXT:    mtfprd 0, 4
-; PWR8-BE-NEXT:    mtfprd 1, 3
-; PWR8-BE-NEXT:    xxmrghd 34, 0, 1
+; PWR8-BE-NEXT:    lxsdx 0, 0, 3
+; PWR8-BE-NEXT:    xxswapd 34, 0
 ; PWR8-BE-NEXT:    blr
 ;
 ; PWR7-LE-LABEL: build_v2i64_load_1:
@@ -322,11 +284,7 @@ define <2 x i64> @build_v2i64_load_1(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-LE-LABEL: build_v2i64_load_1:
 ; PWR8-LE:       # %bb.0: # %entry
-; PWR8-LE-NEXT:    ld 3, 0(3)
-; PWR8-LE-NEXT:    li 4, 0
-; PWR8-LE-NEXT:    mtfprd 0, 4
-; PWR8-LE-NEXT:    mtfprd 1, 3
-; PWR8-LE-NEXT:    xxmrghd 34, 1, 0
+; PWR8-LE-NEXT:    lxsdx 34, 0, 3
 ; PWR8-LE-NEXT:    blr
 entry:
   %0 = load i64, ptr %p, align 8
@@ -353,14 +311,8 @@ define <4 x i32> @build_v4i32_load_0(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-BE-LABEL: build_v4i32_load_0:
 ; PWR8-BE:       # %bb.0: # %entry
-; PWR8-BE-NEXT:    lwz 3, 0(3)
-; PWR8-BE-NEXT:    li 4, 0
-; PWR8-BE-NEXT:    li 5, 0
-; PWR8-BE-NEXT:    rldimi 4, 4, 32, 0
-; PWR8-BE-NEXT:    rldimi 5, 3, 32, 0
-; PWR8-BE-NEXT:    mtfprd 1, 4
-; PWR8-BE-NEXT:    mtfprd 0, 5
-; PWR8-BE-NEXT:    xxmrghd 34, 0, 1
+; PWR8-BE-NEXT:    lxsiwzx 0, 0, 3
+; PWR8-BE-NEXT:    xxsldwi 34, 0, 0, 1
 ; PWR8-BE-NEXT:    blr
 ;
 ; PWR7-LE-LABEL: build_v4i32_load_0:
@@ -384,13 +336,8 @@ define <4 x i32> @build_v4i32_load_0(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-LE-LABEL: build_v4i32_load_0:
 ; PWR8-LE:       # %bb.0: # %entry
-; PWR8-LE-NEXT:    lwz 3, 0(3)
-; PWR8-LE-NEXT:    li 4, 0
-; PWR8-LE-NEXT:    rldimi 3, 4, 32, 0
-; PWR8-LE-NEXT:    rldimi 4, 4, 32, 0
-; PWR8-LE-NEXT:    mtfprd 0, 3
-; PWR8-LE-NEXT:    mtfprd 1, 4
-; PWR8-LE-NEXT:    xxmrghd 34, 1, 0
+; PWR8-LE-NEXT:    lxsiwzx 0, 0, 3
+; PWR8-LE-NEXT:    xxsldwi 34, 0, 0, 2
 ; PWR8-LE-NEXT:    blr
 entry:
   %0 = load i32, ptr %p, align 4
@@ -417,13 +364,7 @@ define <4 x i32> @build_v4i32_load_1(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-BE-LABEL: build_v4i32_load_1:
 ; PWR8-BE:       # %bb.0: # %entry
-; PWR8-BE-NEXT:    lwz 3, 0(3)
-; PWR8-BE-NEXT:    li 4, 0
-; PWR8-BE-NEXT:    rldimi 3, 4, 32, 0
-; PWR8-BE-NEXT:    rldimi 4, 4, 32, 0
-; PWR8-BE-NEXT:    mtfprd 0, 3
-; PWR8-BE-NEXT:    mtfprd 1, 4
-; PWR8-BE-NEXT:    xxmrghd 34, 0, 1
+; PWR8-BE-NEXT:    lxsiwzx 34, 0, 3
 ; PWR8-BE-NEXT:    blr
 ;
 ; PWR7-LE-LABEL: build_v4i32_load_1:
@@ -447,14 +388,8 @@ define <4 x i32> @build_v4i32_load_1(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-LE-LABEL: build_v4i32_load_1:
 ; PWR8-LE:       # %bb.0: # %entry
-; PWR8-LE-NEXT:    lwz 3, 0(3)
-; PWR8-LE-NEXT:    li 4, 0
-; PWR8-LE-NEXT:    li 5, 0
-; PWR8-LE-NEXT:    rldimi 4, 4, 32, 0
-; PWR8-LE-NEXT:    rldimi 5, 3, 32, 0
-; PWR8-LE-NEXT:    mtfprd 1, 4
-; PWR8-LE-NEXT:    mtfprd 0, 5
-; PWR8-LE-NEXT:    xxmrghd 34, 1, 0
+; PWR8-LE-NEXT:    lxsiwzx 0, 0, 3
+; PWR8-LE-NEXT:    xxsldwi 34, 0, 0, 3
 ; PWR8-LE-NEXT:    blr
 entry:
   %0 = load i32, ptr %p, align 4
@@ -481,14 +416,8 @@ define <4 x i32> @build_v4i32_load_2(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-BE-LABEL: build_v4i32_load_2:
 ; PWR8-BE:       # %bb.0: # %entry
-; PWR8-BE-NEXT:    lwz 3, 0(3)
-; PWR8-BE-NEXT:    li 4, 0
-; PWR8-BE-NEXT:    li 5, 0
-; PWR8-BE-NEXT:    rldimi 4, 4, 32, 0
-; PWR8-BE-NEXT:    rldimi 5, 3, 32, 0
-; PWR8-BE-NEXT:    mtfprd 1, 4
-; PWR8-BE-NEXT:    mtfprd 0, 5
-; PWR8-BE-NEXT:    xxmrghd 34, 1, 0
+; PWR8-BE-NEXT:    lxsiwzx 0, 0, 3
+; PWR8-BE-NEXT:    xxsldwi 34, 0, 0, 3
 ; PWR8-BE-NEXT:    blr
 ;
 ; PWR7-LE-LABEL: build_v4i32_load_2:
@@ -512,13 +441,7 @@ define <4 x i32> @build_v4i32_load_2(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-LE-LABEL: build_v4i32_load_2:
 ; PWR8-LE:       # %bb.0: # %entry
-; PWR8-LE-NEXT:    lwz 3, 0(3)
-; PWR8-LE-NEXT:    li 4, 0
-; PWR8-LE-NEXT:    rldimi 3, 4, 32, 0
-; PWR8-LE-NEXT:    rldimi 4, 4, 32, 0
-; PWR8-LE-NEXT:    mtfprd 0, 3
-; PWR8-LE-NEXT:    mtfprd 1, 4
-; PWR8-LE-NEXT:    xxmrghd 34, 0, 1
+; PWR8-LE-NEXT:    lxsiwzx 34, 0, 3
 ; PWR8-LE-NEXT:    blr
 entry:
   %0 = load i32, ptr %p, align 4
@@ -545,13 +468,8 @@ define <4 x i32> @build_v4i32_load_3(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-BE-LABEL: build_v4i32_load_3:
 ; PWR8-BE:       # %bb.0: # %entry
-; PWR8-BE-NEXT:    lwz 3, 0(3)
-; PWR8-BE-NEXT:    li 4, 0
-; PWR8-BE-NEXT:    rldimi 3, 4, 32, 0
-; PWR8-BE-NEXT:    rldimi 4, 4, 32, 0
-; PWR8-BE-NEXT:    mtfprd 0, 3
-; PWR8-BE-NEXT:    mtfprd 1, 4
-; PWR8-BE-NEXT:    xxmrghd 34, 1, 0
+; PWR8-BE-NEXT:    lxsiwzx 0, 0, 3
+; PWR8-BE-NEXT:    xxsldwi 34, 0, 0, 2
 ; PWR8-BE-NEXT:    blr
 ;
 ; PWR7-LE-LABEL: build_v4i32_load_3:
@@ -575,14 +493,8 @@ define <4 x i32> @build_v4i32_load_3(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-LE-LABEL: build_v4i32_load_3:
 ; PWR8-LE:       # %bb.0: # %entry
-; PWR8-LE-NEXT:    lwz 3, 0(3)
-; PWR8-LE-NEXT:    li 4, 0
-; PWR8-LE-NEXT:    li 5, 0
-; PWR8-LE-NEXT:    rldimi 4, 4, 32, 0
-; PWR8-LE-NEXT:    rldimi 5, 3, 32, 0
-; PWR8-LE-NEXT:    mtfprd 1, 4
-; PWR8-LE-NEXT:    mtfprd 0, 5
-; PWR8-LE-NEXT:    xxmrghd 34, 0, 1
+; PWR8-LE-NEXT:    lxsiwzx 0, 0, 3
+; PWR8-LE-NEXT:    xxsldwi 34, 0, 0, 1
 ; PWR8-LE-NEXT:    blr
 entry:
   %0 = load i32, ptr %p, align 4
@@ -609,13 +521,8 @@ define <4 x float> @build_v4f32_load_0(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-BE-LABEL: build_v4f32_load_0:
 ; PWR8-BE:       # %bb.0: # %entry
-; PWR8-BE-NEXT:    lfs 0, 0(3)
-; PWR8-BE-NEXT:    xxlxor 1, 1, 1
-; PWR8-BE-NEXT:    xxmrghd 0, 0, 1
-; PWR8-BE-NEXT:    xxspltd 1, 1, 0
-; PWR8-BE-NEXT:    xvcvdpsp 34, 0
-; PWR8-BE-NEXT:    xvcvdpsp 35, 1
-; PWR8-BE-NEXT:    vmrgew 2, 2, 3
+; PWR8-BE-NEXT:    lxsiwzx 0, 0, 3
+; PWR8-BE-NEXT:    xxsldwi 34, 0, 0, 1
 ; PWR8-BE-NEXT:    blr
 ;
 ; PWR7-LE-LABEL: build_v4f32_load_0:
@@ -639,13 +546,8 @@ define <4 x float> @build_v4f32_load_0(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-LE-LABEL: build_v4f32_load_0:
 ; PWR8-LE:       # %bb.0: # %entry
-; PWR8-LE-NEXT:    lfs 0, 0(3)
-; PWR8-LE-NEXT:    xxlxor 1, 1, 1
-; PWR8-LE-NEXT:    xxmrghd 0, 1, 0
-; PWR8-LE-NEXT:    xxspltd 1, 1, 0
-; PWR8-LE-NEXT:    xvcvdpsp 34, 0
-; PWR8-LE-NEXT:    xvcvdpsp 35, 1
-; PWR8-LE-NEXT:    vmrgew 2, 3, 2
+; PWR8-LE-NEXT:    lxsiwzx 0, 0, 3
+; PWR8-LE-NEXT:    xxsldwi 34, 0, 0, 2
 ; PWR8-LE-NEXT:    blr
 entry:
   %0 = load float, ptr %p, align 4
@@ -672,13 +574,7 @@ define <4 x float> @build_v4f32_load_1(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-BE-LABEL: build_v4f32_load_1:
 ; PWR8-BE:       # %bb.0: # %entry
-; PWR8-BE-NEXT:    lfs 0, 0(3)
-; PWR8-BE-NEXT:    xxlxor 1, 1, 1
-; PWR8-BE-NEXT:    xxmrghd 0, 0, 1
-; PWR8-BE-NEXT:    xxspltd 1, 1, 0
-; PWR8-BE-NEXT:    xvcvdpsp 34, 0
-; PWR8-BE-NEXT:    xvcvdpsp 35, 1
-; PWR8-BE-NEXT:    vmrgew 2, 3, 2
+; PWR8-BE-NEXT:    lxsiwzx 34, 0, 3
 ; PWR8-BE-NEXT:    blr
 ;
 ; PWR7-LE-LABEL: build_v4f32_load_1:
@@ -702,13 +598,8 @@ define <4 x float> @build_v4f32_load_1(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-LE-LABEL: build_v4f32_load_1:
 ; PWR8-LE:       # %bb.0: # %entry
-; PWR8-LE-NEXT:    lfs 0, 0(3)
-; PWR8-LE-NEXT:    xxlxor 1, 1, 1
-; PWR8-LE-NEXT:    xxmrghd 0, 1, 0
-; PWR8-LE-NEXT:    xxspltd 1, 1, 0
-; PWR8-LE-NEXT:    xvcvdpsp 34, 0
-; PWR8-LE-NEXT:    xvcvdpsp 35, 1
-; PWR8-LE-NEXT:    vmrgew 2, 2, 3
+; PWR8-LE-NEXT:    lxsiwzx 0, 0, 3
+; PWR8-LE-NEXT:    xxsldwi 34, 0, 0, 3
 ; PWR8-LE-NEXT:    blr
 entry:
   %0 = load float, ptr %p, align 4
@@ -735,13 +626,8 @@ define <4 x float> @build_v4f32_load_2(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-BE-LABEL: build_v4f32_load_2:
 ; PWR8-BE:       # %bb.0: # %entry
-; PWR8-BE-NEXT:    lfs 0, 0(3)
-; PWR8-BE-NEXT:    xxlxor 1, 1, 1
-; PWR8-BE-NEXT:    xxmrghd 0, 1, 0
-; PWR8-BE-NEXT:    xxspltd 1, 1, 0
-; PWR8-BE-NEXT:    xvcvdpsp 34, 0
-; PWR8-BE-NEXT:    xvcvdpsp 35, 1
-; PWR8-BE-NEXT:    vmrgew 2, 2, 3
+; PWR8-BE-NEXT:    lxsiwzx 0, 0, 3
+; PWR8-BE-NEXT:    xxsldwi 34, 0, 0, 3
 ; PWR8-BE-NEXT:    blr
 ;
 ; PWR7-LE-LABEL: build_v4f32_load_2:
@@ -765,13 +651,7 @@ define <4 x float> @build_v4f32_load_2(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-LE-LABEL: build_v4f32_load_2:
 ; PWR8-LE:       # %bb.0: # %entry
-; PWR8-LE-NEXT:    lfs 0, 0(3)
-; PWR8-LE-NEXT:    xxlxor 1, 1, 1
-; PWR8-LE-NEXT:    xxmrghd 0, 0, 1
-; PWR8-LE-NEXT:    xxspltd 1, 1, 0
-; PWR8-LE-NEXT:    xvcvdpsp 34, 0
-; PWR8-LE-NEXT:    xvcvdpsp 35, 1
-; PWR8-LE-NEXT:    vmrgew 2, 3, 2
+; PWR8-LE-NEXT:    lxsiwzx 34, 0, 3
 ; PWR8-LE-NEXT:    blr
 entry:
   %0 = load float, ptr %p, align 4
@@ -798,13 +678,8 @@ define <4 x float> @build_v4f32_load_3(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-BE-LABEL: build_v4f32_load_3:
 ; PWR8-BE:       # %bb.0: # %entry
-; PWR8-BE-NEXT:    lfs 0, 0(3)
-; PWR8-BE-NEXT:    xxlxor 1, 1, 1
-; PWR8-BE-NEXT:    xxmrghd 0, 1, 0
-; PWR8-BE-NEXT:    xxspltd 1, 1, 0
-; PWR8-BE-NEXT:    xvcvdpsp 34, 0
-; PWR8-BE-NEXT:    xvcvdpsp 35, 1
-; PWR8-BE-NEXT:    vmrgew 2, 3, 2
+; PWR8-BE-NEXT:    lxsiwzx 0, 0, 3
+; PWR8-BE-NEXT:    xxsldwi 34, 0, 0, 2
 ; PWR8-BE-NEXT:    blr
 ;
 ; PWR7-LE-LABEL: build_v4f32_load_3:
@@ -828,13 +703,8 @@ define <4 x float> @build_v4f32_load_3(ptr nocapture noundef readonly %p) {
 ;
 ; PWR8-LE-LABEL: build_v4f32_load_3:
 ; PWR8-LE:       # %bb.0: # %entry
-; PWR8-LE-NEXT:    lfs 0, 0(3)
-; PWR8-LE-NEXT:    xxlxor 1, 1, 1
-; PWR8-LE-NEXT:    xxmrghd 0, 0, 1
-; PWR8-LE-NEXT:    xxspltd 1, 1, 0
-; PWR8-LE-NEXT:    xvcvdpsp 34, 0
-; PWR8-LE-NEXT:    xvcvdpsp 35, 1
-; PWR8-LE-NEXT:    vmrgew 2, 2, 3
+; PWR8-LE-NEXT:    lxsiwzx 0, 0, 3
+; PWR8-LE-NEXT:    xxsldwi 34, 0, 0, 1
 ; PWR8-LE-NEXT:    blr
 entry:
   %0 = load float, ptr %p, align 4
