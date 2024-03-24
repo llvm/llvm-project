@@ -1356,7 +1356,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
     MIB.add(MO);
 
   // Transfer memoperands.
-  MIB.setMemRefs(MI->memoperands());
+  MIB.cloneMemRefs(*MI);
 
   LLVM_DEBUG(dbgs() << "  Added new load/store: " << *MIB);
   MBB.erase(MBBI);
@@ -1366,6 +1366,10 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
 static unsigned getPreIndexedLoadStoreOpcode(unsigned Opc,
                                              ARM_AM::AddrOpc Mode) {
   switch (Opc) {
+  case ARM::tLDRi:
+    return ARM::tLDMIA_UPD;
+  case ARM::tSTRi:
+    return ARM::tSTMIA_UPD;
   case ARM::LDRi12:
     return ARM::LDR_PRE_IMM;
   case ARM::STRi12:
@@ -1391,6 +1395,10 @@ static unsigned getPreIndexedLoadStoreOpcode(unsigned Opc,
 static unsigned getPostIndexedLoadStoreOpcode(unsigned Opc,
                                               ARM_AM::AddrOpc Mode) {
   switch (Opc) {
+  case ARM::tLDRi:
+    return ARM::tLDMIA_UPD;
+  case ARM::tSTRi:
+    return ARM::tSTMIA_UPD;
   case ARM::LDRi12:
     return ARM::LDR_POST_IMM;
   case ARM::STRi12:
@@ -1466,9 +1474,6 @@ static unsigned getPostIndexedLoadStoreOpcode(unsigned Opc,
 /// Fold proceeding/trailing inc/dec of base register into the
 /// LDR/STR/FLD{D|S}/FST{D|S} op when possible:
 bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
-  // Thumb1 doesn't have updating LDR/STR.
-  // FIXME: Use LDM/STM with single register instead.
-  if (isThumb1) return false;
   LLVM_DEBUG(dbgs() << "Attempting to merge update of: " << *MI);
 
   Register Base = getLoadStoreBaseOp(*MI).getReg();
@@ -1478,6 +1483,11 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
   bool isAM5 = (Opcode == ARM::VLDRD || Opcode == ARM::VLDRS ||
                 Opcode == ARM::VSTRD || Opcode == ARM::VSTRS);
   bool isAM2 = (Opcode == ARM::LDRi12 || Opcode == ARM::STRi12);
+  bool isAM2Thumb = (Opcode == ARM::tLDRi || Opcode == ARM::tSTRi);
+
+  // stm and ldm can only be used with whole words in Thumb1
+  if (isThumb1 && !isAM2Thumb)
+    return false;
   if (isi32Load(Opcode) || isi32Store(Opcode))
     if (MI->getOperand(2).getImm() != 0)
       return false;
@@ -1495,8 +1505,8 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
   MachineBasicBlock &MBB = *MI->getParent();
   MachineBasicBlock::iterator MBBI(MI);
   int Offset;
-  MachineBasicBlock::iterator MergeInstr
-    = findIncDecBefore(MBBI, Base, Pred, PredReg, Offset);
+  MachineBasicBlock::iterator MergeInstr =
+      findIncDecBefore(MBBI, Base, Pred, PredReg, Offset);
   unsigned NewOpc;
   if (!isAM5 && Offset == Bytes) {
     NewOpc = getPreIndexedLoadStoreOpcode(Opcode, ARM_AM::add);
@@ -1504,14 +1514,13 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
     NewOpc = getPreIndexedLoadStoreOpcode(Opcode, ARM_AM::sub);
   } else {
     MergeInstr = findIncDecAfter(MBBI, Base, Pred, PredReg, Offset, TRI);
-    if (MergeInstr == MBB.end())
+    if (MergeInstr == MBB.end() || (isAM5 && Offset != Bytes))
       return false;
 
     NewOpc = getPostIndexedLoadStoreOpcode(Opcode, ARM_AM::add);
-    if ((isAM5 && Offset != Bytes) ||
-        (!isAM5 && !isLegalAddressImm(NewOpc, Offset, TII))) {
+    if (!isAM5 && !isLegalAddressImm(NewOpc, Offset, TII)) {
       NewOpc = getPostIndexedLoadStoreOpcode(Opcode, ARM_AM::sub);
-      if (isAM5 || !isLegalAddressImm(NewOpc, Offset, TII))
+      if (!isLegalAddressImm(NewOpc, Offset, TII))
         return false;
     }
   }
@@ -1521,15 +1530,16 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
   ARM_AM::AddrOpc AddSub = Offset < 0 ? ARM_AM::sub : ARM_AM::add;
 
   bool isLd = isLoadSingle(Opcode);
-  if (isAM5) {
+  if (isAM5 || isAM2Thumb) {
+    // Thumb1 doesn't have updating LDR/STR.
     // VLDM[SD]_UPD, VSTM[SD]_UPD
     // (There are no base-updating versions of VLDR/VSTR instructions, but the
     // updating load/store-multiple instructions can be used with only one
     // register.)
-    MachineOperand &MO = MI->getOperand(0);
+    const MachineOperand &MO = getLoadStoreRegOp(*MI);
     auto MIB = BuildMI(MBB, MBBI, DL, TII->get(NewOpc))
                    .addReg(Base, getDefRegState(true)) // WB base register
-                   .addReg(Base, getKillRegState(isLd ? BaseKill : false))
+                   .addReg(Base, getKillRegState(isLd && BaseKill))
                    .addImm(Pred)
                    .addReg(PredReg)
                    .addReg(MO.getReg(), (isLd ? getDefRegState(true)
