@@ -74,7 +74,7 @@ def Linux : StandardSpec<"Linux"> {
       []  // Functions
   >;
 
-  HeaderSpec SysMMan = HeaderSpec<
+  HeaderSpec SysIoctl = HeaderSpec<
       "sys/ioctl.h",
       [Macro<"MAP_ANONYMOUS">],
       [], // Types

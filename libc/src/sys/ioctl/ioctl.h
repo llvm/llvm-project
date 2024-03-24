@@ -17,4 +17,4 @@ int ioctl(int fd, unsigned long request, ...);
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SYS_MMAN_MMAP_H
+#endif // LLVM_LIBC_SRC_SYS_IOCTL_IOCTL_H

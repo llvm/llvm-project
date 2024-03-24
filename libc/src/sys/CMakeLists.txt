@@ -1,3 +1,4 @@
+add_subdirectory(ioctl)
 add_subdirectory(mman)
 add_subdirectory(random)
 add_subdirectory(resource)
