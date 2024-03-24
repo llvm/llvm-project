@@ -1675,7 +1675,7 @@ enum CXCursorKind {
   CXCursor_ConceptSpecializationExpr = 153,
 
   /**
-   * Expression that references a C++20 concept.
+   * Expression that references a C++20 requires expression.
    */
   CXCursor_RequiresExpr = 154,
 

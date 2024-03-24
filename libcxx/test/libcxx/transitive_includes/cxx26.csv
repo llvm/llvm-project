@@ -142,7 +142,6 @@ coroutine version
 cstddef version
 ctgmath ccomplex
 ctgmath cmath
-cwchar cstddef
 cwchar cwctype
 cwctype cctype
 deque compare
@@ -161,7 +160,6 @@ exception cstdlib
 exception new
 exception typeinfo
 exception version
-execution cstddef
 execution version
 expected cstddef
 expected initializer_list

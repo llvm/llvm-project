@@ -9,11 +9,11 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_ILOGBTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_ILOGBTEST_H
 
+#include "include/llvm-libc-macros/math-macros.h"
 #include "src/__support/CPP/limits.h" // INT_MAX
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
 class LlvmLibcILogbTest : public LIBC_NAMESPACE::testing::Test {
 public:
@@ -24,7 +24,7 @@ public:
   template <typename T>
   void test_special_numbers(typename ILogbFunc<T>::Func func) {
     using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-    using Sign = LIBC_NAMESPACE::fputil::Sign;
+
     EXPECT_EQ(FP_ILOGB0, func(FPBits::zero(Sign::POS).get_val()));
     EXPECT_EQ(FP_ILOGB0, func(FPBits::zero(Sign::NEG).get_val()));
     EXPECT_EQ(FP_ILOGBNAN, func(FPBits::quiet_nan().get_val()));

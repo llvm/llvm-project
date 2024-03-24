@@ -50,6 +50,7 @@ void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
 }
 
 void DataSharingProcessor::insertDeallocs() {
+  // TODO Extend delayed privatization to include a `dealloc` region.
   for (const Fortran::semantics::Symbol *sym : privatizedSymbols)
     if (Fortran::semantics::IsAllocatable(sym->GetUltimate())) {
       converter.createHostAssociateVarCloneDealloc(*sym);
@@ -207,7 +208,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
           firOpBuilder.restoreInsertionPoint(unstructuredSectionsIP);
         }
       }
-    } else if (mlir::isa<mlir::omp::WsLoopOp>(op)) {
+    } else if (mlir::isa<mlir::omp::WsloopOp>(op)) {
       // Update the original variable just before exiting the worksharing
       // loop. Conversion as follows:
       //
@@ -236,8 +237,8 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
 
       mlir::Value iv = op->getRegion(0).front().getArguments()[0];
       mlir::Value ub =
-          mlir::dyn_cast<mlir::omp::WsLoopOp>(op).getUpperBound()[0];
-      mlir::Value step = mlir::dyn_cast<mlir::omp::WsLoopOp>(op).getStep()[0];
+          mlir::dyn_cast<mlir::omp::WsloopOp>(op).getUpperBound()[0];
+      mlir::Value step = mlir::dyn_cast<mlir::omp::WsloopOp>(op).getStep()[0];
 
       // v = iv + step
       // cmp = step < 0 ? v < ub : v > ub
@@ -367,6 +368,7 @@ void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
         symLoc, uniquePrivatizerName, symType,
         isFirstPrivate ? mlir::omp::DataSharingClauseType::FirstPrivate
                        : mlir::omp::DataSharingClauseType::Private);
+    fir::ExtendedValue symExV = converter.getSymbolExtendedValue(*sym);
 
     symTable->pushScope();
 
@@ -377,7 +379,8 @@ void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
           &allocRegion, /*insertPt=*/{}, symType, symLoc);
 
       firOpBuilder.setInsertionPointToEnd(allocEntryBlock);
-      symTable->addSymbol(*sym, allocRegion.getArgument(0));
+      symTable->addSymbol(*sym,
+                          fir::substBase(symExV, allocRegion.getArgument(0)));
       symTable->pushScope();
       cloneSymbol(sym);
       firOpBuilder.create<mlir::omp::YieldOp>(
@@ -394,10 +397,12 @@ void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
       mlir::Block *copyEntryBlock = firOpBuilder.createBlock(
           &copyRegion, /*insertPt=*/{}, {symType, symType}, {symLoc, symLoc});
       firOpBuilder.setInsertionPointToEnd(copyEntryBlock);
-      symTable->addSymbol(*sym, copyRegion.getArgument(0),
+      symTable->addSymbol(*sym,
+                          fir::substBase(symExV, copyRegion.getArgument(0)),
                           /*force=*/true);
       symTable->pushScope();
-      symTable->addSymbol(*sym, copyRegion.getArgument(1));
+      symTable->addSymbol(*sym,
+                          fir::substBase(symExV, copyRegion.getArgument(1)));
       auto ip = firOpBuilder.saveInsertionPoint();
       copyFirstPrivateSymbol(sym, &ip);
 

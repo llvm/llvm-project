@@ -16,7 +16,10 @@
 #include "Macros.h"
 
 #include "UnwrappedLineParser.h"
+#include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Debug.h"
+#include <cassert>
 
 #define DEBUG_TYPE "format-reconstruct"
 
