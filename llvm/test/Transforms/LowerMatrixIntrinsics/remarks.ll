@@ -4,7 +4,7 @@
 
 ; RUN: opt -passes=lower-matrix-intrinsics -pass-remarks=lower-matrix-intrinsics -mtriple=arm64-apple-iphoneos < %s 2>&1 | FileCheck %s
 
-; CHECK-LABEL: remark: test.h:40:20: Lowered with 6 stores, 6 loads, 24 compute ops
+; CHECK-LABEL: remark: {{.*}}test.h:40:20: Lowered with 6 stores, 6 loads, 24 compute ops
 ; CHECK-NEXT: store(
 ; CHECK-NEXT:  transpose.2x6.double(load(addr %A)),
 ; CHECK-NEXT:  addr %B)
@@ -15,7 +15,7 @@ define void @transpose(ptr %A, ptr %B) !dbg !23 {
   ret void
 }
 
-; CHECK-LABEL: remark: test.h:50:20: Lowered with 2 stores, 12 loads, 22 compute ops
+; CHECK-LABEL: remark: {{.*}}test.h:50:20: Lowered with 2 stores, 12 loads, 22 compute ops
 ; CHECK-NEXT:  store(
 ; CHECK-NEXT:   multiply.2x6.6x2.double(
 ; CHECK-NEXT:    load(addr %A),
@@ -29,7 +29,7 @@ define void @multiply(ptr %A, ptr %B, ptr %C) !dbg !25 {
   ret void
 }
 
-; CHECK-LABEL: remark: test.h:60:20: Lowered with 6 stores, 6 loads, 0 compute ops
+; CHECK-LABEL: remark: {{.*}}test.h:60:20: Lowered with 6 stores, 6 loads, 0 compute ops
 ; CHECK-NEXT:  store(
 ; CHECK-NEXT:   column.major.load.3x3.double(addr %A, 5),
 ; CHECK-NEXT:   addr %B)
@@ -39,7 +39,7 @@ define void @column.major.load(ptr %A, ptr %B) !dbg !27 {
   ret void
 }
 
-; CHECK-LABEL: remark: test.h:70:20: Lowered with 6 stores, 6 loads, 0 compute ops
+; CHECK-LABEL: remark: {{.*}}test.h:70:20: Lowered with 6 stores, 6 loads, 0 compute ops
 ; CHECK-NEXT:  column.major.store.3x3.double(
 ; CHECK-NEXT:   column.major.load.3x3.double(addr %A, 5),
 ; CHECK-NEXT:   addr %B,
@@ -50,7 +50,7 @@ define void @column.major.store(ptr %A, ptr %B) !dbg !29 {
   ret void
 }
 
-; CHECK-LABEL: remark: test.h:80:20: Lowered with 6 stores, 6 loads, 12 compute ops
+; CHECK-LABEL: remark: {{.*}}test.h:80:20: Lowered with 6 stores, 6 loads, 12 compute ops
 ; CHECK-NEXT:  column.major.store.3x3.double(
 ; CHECK-NEXT:   fmul(
 ; CHECK-NEXT:    fadd(
@@ -68,7 +68,7 @@ define void @binaryops(ptr %A, ptr %B) !dbg !31 {
   ret void
 }
 
-; CHECK-LABEL: remark: test.h:90:20: Lowered with 6 stores, 6 loads, 12 compute ops
+; CHECK-LABEL: remark: {{.*}}test.h:90:20: Lowered with 6 stores, 6 loads, 12 compute ops
 ; CHECK-NEXT:  column.major.store.3x3.double(
 ; CHECK-NEXT:   fmul(
 ; CHECK-NEXT:    fadd(
@@ -77,7 +77,7 @@ define void @binaryops(ptr %A, ptr %B) !dbg !31 {
 ; CHECK-NEXT:    (reused) column.major.load.3x3.double(addr %A, 5)),
 ; CHECK-NEXT:   addr %B,
 ; CHECK-NEXT:   10)
-; CHECK-NEXT:  remark: test.h:90:20: Lowered with 2 stores, 12 loads, 22 compute ops
+; CHECK-NEXT:  remark: {{.*}}test.h:90:20: Lowered with 2 stores, 12 loads, 22 compute ops
 ; CHECK-NEXT:  store(
 ; CHECK-NEXT:   multiply.2x6.6x2.double(
 ; CHECK-NEXT:    load(addr %C),
@@ -98,7 +98,7 @@ define void @multiple_expressions(ptr %A, ptr %B, ptr %C, ptr %D, ptr %E) !dbg !
   ret void
 }
 
-; CHECK-LABEL: remark: test.h:100:20: Lowered with 6 stores, 6 loads, 12 compute ops
+; CHECK-LABEL: remark: {{.*}}test.h:100:20: Lowered with 6 stores, 6 loads, 12 compute ops
 ; CHECK-NEXT:  column.major.store.3x3.double(
 ; CHECK-NEXT:   fmul(
 ; CHECK-NEXT:    fadd(
@@ -115,7 +115,7 @@ define void @stackaddresses(ptr %A, ptr %B) !dbg !35 {
   ret void
 }
 
-; CHECK-LABEL: remark: test.h:30:20: Lowered with 10 stores, 9 loads, 30 compute ops
+; CHECK-LABEL: remark: {{.*}}test.h:30:20: Lowered with 10 stores, 9 loads, 30 compute ops
 ; CHECK-NEXT:  store(
 ; CHECK-NEXT:   transpose.5x3.double(load(addr %A)),
 ; CHECK-NEXT:   stack addr %s1)

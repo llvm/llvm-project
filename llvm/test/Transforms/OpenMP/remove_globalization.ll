@@ -12,11 +12,11 @@ target triple = "nvptx64"
 
 
 ; UTC_ARGS: --disable
-; CHECK-REMARKS: remark: remove_globalization.c:4:2: Could not move globalized variable to the stack. Variable is potentially captured in call. Mark parameter as `__attribute__((noescape))` to override.
-; CHECK-REMARKS: remark: remove_globalization.c:2:2: Moving globalized variable to the stack.
-; CHECK-REMARKS: remark: remove_globalization.c:4:2: Moving globalized variable to the stack.
-; CHECK-REMARKS: remark: remove_globalization.c:10:2: Moving globalized variable to the stack.
-; CHECK-REMARKS: remark: remove_globalization.c:6:2: Moving globalized variable to the stack.
+; CHECK-REMARKS: remark: {{.*}}remove_globalization.c:4:2: Could not move globalized variable to the stack. Variable is potentially captured in call. Mark parameter as `__attribute__((noescape))` to override.
+; CHECK-REMARKS: remark: {{.*}}remove_globalization.c:2:2: Moving globalized variable to the stack.
+; CHECK-REMARKS: remark: {{.*}}remove_globalization.c:4:2: Moving globalized variable to the stack.
+; CHECK-REMARKS: remark: {{.*}}remove_globalization.c:10:2: Moving globalized variable to the stack.
+; CHECK-REMARKS: remark: {{.*}}remove_globalization.c:6:2: Moving globalized variable to the stack.
 ; UTC_ARGS: --enable
 
 ; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.

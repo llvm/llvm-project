@@ -1,10 +1,10 @@
 ; RUN: opt -passes=openmp-opt -pass-remarks=openmp-opt -pass-remarks-missed=openmp-opt -pass-remarks-analysis=openmp-opt -disable-output < %s 2>&1 | FileCheck %s
 target triple = "nvptx64"
 
-; CHECK: remark: llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c:11:1: Generic-mode kernel is executed with a customized state machine that requires a fallback.
-; CHECK: remark: llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c:13:5: Call may contain unknown parallel regions. Use `__attribute__((assume("omp_no_parallelism")))` to override.
-; CHECK: remark: llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c:15:5: Call may contain unknown parallel regions. Use `__attribute__((assume("omp_no_parallelism")))` to override.
-; CHECK: remark: llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c:20:1: Rewriting generic-mode kernel with a customized state machine.
+; CHECK: remark: {{.*}}custom_state_machines_remarks.c:11:1: Generic-mode kernel is executed with a customized state machine that requires a fallback.
+; CHECK: remark: {{.*}}custom_state_machines_remarks.c:13:5: Call may contain unknown parallel regions. Use `__attribute__((assume("omp_no_parallelism")))` to override.
+; CHECK: remark: {{.*}}custom_state_machines_remarks.c:15:5: Call may contain unknown parallel regions. Use `__attribute__((assume("omp_no_parallelism")))` to override.
+; CHECK: remark: {{.*}}custom_state_machines_remarks.c:20:1: Rewriting generic-mode kernel with a customized state machine.
 
 
 ;; void unknown(void);

@@ -1,6 +1,6 @@
 ; RUN: not llc -march=bpfel < %s 2>&1 >/dev/null | FileCheck %s
 
-; CHECK: error: warn_call.c
+; CHECK: error: {{.*}}warn_call.c
 ; CHECK: built-in function 'memcpy'
 define ptr @warn(ptr returned, ptr, i64) local_unnamed_addr #0 !dbg !6 {
   tail call void @llvm.dbg.value(metadata ptr %0, i64 0, metadata !14, metadata !17), !dbg !18

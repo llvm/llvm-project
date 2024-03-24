@@ -29,11 +29,11 @@
 ;   return 0;
 ; }
 
-; WARNING-DAG: warning: test.cc:9:14: 20.06%
-; WARNING-DAG: warning: test.cc:11:24: 92.74%
+; WARNING-DAG: warning: {{.*}}test.cc:9:14: 20.06%
+; WARNING-DAG: warning: {{.*}}test.cc:11:24: 92.74%
 
-; NONE-NOT: warning: test.cc:9:14: 20.06%
-; NONE-NOT: warning: test.cc:11:24: 92.74%
+; NONE-NOT: warning: {{.*}}test.cc:9:14: 20.06%
+; NONE-NOT: warning: {{.*}}test.cc:11:24: 92.74%
 
 @.str = private unnamed_addr constant [15 x i8] c"result is %lf\0A\00", align 1
 

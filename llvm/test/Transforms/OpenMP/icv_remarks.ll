@@ -11,9 +11,9 @@ target triple = "x86_64-unknown-linux-gnu"
 @0 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @.str }, align 8
 @1 = private unnamed_addr constant [26 x i8] c";icv_remarks.c;foo;18;1;;\00", align 1
 
-; CHECK-DAG: remark: icv_remarks.c:12:0: OpenMP ICV nthreads Value: IMPLEMENTATION_DEFINED
-; CHECK-DAG: remark: icv_remarks.c:12:0: OpenMP ICV active_levels Value: 0
-; CHECK-DAG: remark: icv_remarks.c:12:0: OpenMP ICV cancel Value: 0
+; CHECK-DAG: remark: {{.*}}icv_remarks.c:12:0: OpenMP ICV nthreads Value: IMPLEMENTATION_DEFINED
+; CHECK-DAG: remark: {{.*}}icv_remarks.c:12:0: OpenMP ICV active_levels Value: 0
+; CHECK-DAG: remark: {{.*}}icv_remarks.c:12:0: OpenMP ICV cancel Value: 0
 define dso_local void @foo(i32 %a) local_unnamed_addr #0 !dbg !17 {
 entry:
   %.kmpc_loc.addr = alloca %struct.ident_t, align 8
@@ -35,9 +35,9 @@ declare !dbg !9 dso_local i32 @omp_get_max_threads() local_unnamed_addr #1
 
 declare !dbg !12 dso_local void @use(i32) local_unnamed_addr #2
 
-; CHECK-DAG: remark: icv_remarks.c:18:0: OpenMP ICV nthreads Value: IMPLEMENTATION_DEFINED
-; CHECK-DAG: remark: icv_remarks.c:18:0: OpenMP ICV active_levels Value: 0
-; CHECK-DAG: remark: icv_remarks.c:18:0: OpenMP ICV cancel Value: 0
+; CHECK-DAG: remark: {{.*}}icv_remarks.c:18:0: OpenMP ICV nthreads Value: IMPLEMENTATION_DEFINED
+; CHECK-DAG: remark: {{.*}}icv_remarks.c:18:0: OpenMP ICV active_levels Value: 0
+; CHECK-DAG: remark: {{.*}}icv_remarks.c:18:0: OpenMP ICV cancel Value: 0
 define internal void @.omp_outlined.(ptr noalias nocapture readnone %.global_tid., ptr noalias nocapture readnone %.bound_tid.) #3 !dbg !33 {
 entry:
   call void @llvm.dbg.value(metadata ptr %.global_tid., metadata !41, metadata !DIExpression()), !dbg !43

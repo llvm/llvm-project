@@ -1,6 +1,6 @@
 ; RUN: opt -force-vector-interleave=2 -force-vector-width=4 -passes=loop-vectorize -pass-remarks-analysis=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s
 
-; CHECK: remark: mixed-precision.c:3:26: floating point conversion changes vector width. Mixed floating point precision requires an up/down cast that will negatively impact performance.
+; CHECK: remark: {{.*}}mixed-precision.c:3:26: floating point conversion changes vector width. Mixed floating point precision requires an up/down cast that will negatively impact performance.
 define void @f(ptr noalias nocapture %X, i64 %N) {
 entry:
   br label %for.body
@@ -21,9 +21,9 @@ for.body:
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-; CHECK: remark: mixed-precision.c:8:8: floating point conversion changes vector width. Mixed floating point precision requires an up/down cast that will negatively impact performance.
-; CHECK: remark: mixed-precision.c:7:16: floating point conversion changes vector width. Mixed floating point precision requires an up/down cast that will negatively impact performance.
-; CHECK-NOT: remark: mixed-precision.c:7:16: floating point conversion changes vector width. Mixed floating point precision requires an up/down cast that will negatively impact performance.
+; CHECK: remark: {{.*}}mixed-precision.c:8:8: floating point conversion changes vector width. Mixed floating point precision requires an up/down cast that will negatively impact performance.
+; CHECK: remark: {{.*}}mixed-precision.c:7:16: floating point conversion changes vector width. Mixed floating point precision requires an up/down cast that will negatively impact performance.
+; CHECK-NOT: remark: {{.*}}mixed-precision.c:7:16: floating point conversion changes vector width. Mixed floating point precision requires an up/down cast that will negatively impact performance.
 define void @g(ptr noalias nocapture %X, ptr noalias nocapture %Y, i64 %N) {
 entry:
   %pi = alloca double

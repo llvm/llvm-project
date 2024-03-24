@@ -22,9 +22,9 @@ target triple = "x86_64-pc-linux-gnu"
 ;
 ; This will delete all but the first parallel region
 
-; CHECK: remark: parallel_deletion_remarks.c:10:1: Removing parallel region with no side-effects.
-; CHECK: remark: parallel_deletion_remarks.c:12:1: Removing parallel region with no side-effects.
-; CHECK: remark: parallel_deletion_remarks.c:14:1: Removing parallel region with no side-effects.
+; CHECK: remark: {{.*}}parallel_deletion_remarks.c:10:1: Removing parallel region with no side-effects.
+; CHECK: remark: {{.*}}parallel_deletion_remarks.c:12:1: Removing parallel region with no side-effects.
+; CHECK: remark: {{.*}}parallel_deletion_remarks.c:14:1: Removing parallel region with no side-effects.
 define dso_local void @delete_parallel() local_unnamed_addr !dbg !15 {
   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @0, i32 0, ptr @.omp_outlined.), !dbg !18
   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @0, i32 0, ptr @.omp_outlined..2), !dbg !19

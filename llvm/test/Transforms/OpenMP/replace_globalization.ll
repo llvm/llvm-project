@@ -6,11 +6,11 @@ target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64"
 
 ; UTC_ARGS: --disable
-; CHECK-REMARKS: remark: replace_globalization.c:5:7: Replaced globalized variable with 16 bytes of shared memory
-; CHECK-REMARKS: remark: replace_globalization.c:5:14: Replaced globalized variable with 4 bytes of shared memory
+; CHECK-REMARKS: remark: {{.*}}replace_globalization.c:5:7: Replaced globalized variable with 16 bytes of shared memory
+; CHECK-REMARKS: remark: {{.*}}replace_globalization.c:5:14: Replaced globalized variable with 4 bytes of shared memory
 ; CHECK-REMARKS-NOT: 6 bytes
-; CHECK-LIMIT: remark: replace_globalization.c:5:14: Replaced globalized variable with 4 bytes of shared memory
-; CHECK-LIMIT: remark: replace_globalization.c:5:7: Found thread data sharing on the GPU. Expect degraded performance due to data globalization
+; CHECK-LIMIT: remark: {{.*}}replace_globalization.c:5:14: Replaced globalized variable with 4 bytes of shared memory
+; CHECK-LIMIT: remark: {{.*}}replace_globalization.c:5:7: Found thread data sharing on the GPU. Expect degraded performance due to data globalization
 ; UTC_ARGS: --enable
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
