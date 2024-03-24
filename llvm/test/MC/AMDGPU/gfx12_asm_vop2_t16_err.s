@@ -224,3 +224,6 @@ v_sub_f16_dpp v5, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
 
 v_subrev_f16_dpp v5, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+v_pk_fmac_f16_dpp v5, v1, v2 quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x3
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
