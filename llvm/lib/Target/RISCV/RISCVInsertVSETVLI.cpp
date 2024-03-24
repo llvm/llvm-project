@@ -858,13 +858,14 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
 
   if (RISCVII::hasVLOp(TSFlags)) {
     const MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
+    const unsigned VLMAX = computeVLMAX(ST.getRealMaxVLen(), SEW, VLMul);
+
     if (VLOp.isImm()) {
       int64_t Imm = VLOp.getImm();
       // Conver the VLMax sentintel to X0 register.
       if (Imm == RISCV::VLMaxSentinel) {
         // If we know the exact VLEN, see if we can use the constant encoding
         // for the VLMAX instead.  This reduces register pressure slightly.
-        const unsigned VLMAX = computeVLMAX(ST.getRealMaxVLen(), SEW, VLMul);
         if (ST.getRealMinVLen() == ST.getRealMaxVLen() && VLMAX <= 31)
           InstrInfo.setAVLImm(VLMAX);
         else
@@ -873,7 +874,18 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
       else
         InstrInfo.setAVLImm(Imm);
     } else {
-      InstrInfo.setAVLReg(VLOp.getReg());
+      Register Reg = VLOp.getReg();
+      // If VL is a register, it may be a materialized constant that didn't fit
+      // into an uimm5. If we also know the exact VLEN, and the VL is equal to
+      // the exact VLEN, use the X0 encoding so we don't need the ADDI.
+      // doLocalPostpass will remove the ADDI if it's dead.
+      if (ST.getRealMinVLen() == ST.getRealMaxVLen() &&
+          VLOp.getReg().isVirtual())
+        if (auto *VLDef = MRI->getVRegDef(VLOp.getReg());
+            VLDef && isNonZeroLoadImmediate(*VLDef) &&
+            VLDef->getOperand(2).getImm() == VLMAX)
+          Reg = RISCV::X0;
+      InstrInfo.setAVLReg(Reg);
     }
   } else {
     assert(isScalarExtractInstr(MI));
