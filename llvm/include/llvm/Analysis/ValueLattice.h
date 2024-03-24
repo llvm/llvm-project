@@ -406,6 +406,7 @@ public:
     if (isUnknown()) {
       assert(!RHS.isUnknown() && "Unknow RHS should be handled earlier");
       *this = RHS;
+      NumRangeExtensions = 0;
       return true;
     }
 
