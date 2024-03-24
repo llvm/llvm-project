@@ -669,9 +669,9 @@ unsigned X86RegisterInfo::getNumSupportedRegs(const MachineFunction &MF) const {
 bool X86RegisterInfo::isArgumentRegister(const MachineFunction &MF,
                                          MCRegister Reg) const {
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
-  const TargetRegisterInfo &TRI = *ST.getRegisterInfo();
+  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
   auto IsSubReg = [&](MCRegister RegA, MCRegister RegB) {
-    return TRI.isSuperOrSubRegisterEq(RegA, RegB);
+    return TRI->isSuperOrSubRegisterEq(RegA, RegB);
   };
 
   if (!ST.is64Bit())
@@ -708,15 +708,15 @@ bool X86RegisterInfo::isArgumentRegister(const MachineFunction &MF,
 bool X86RegisterInfo::isFixedRegister(const MachineFunction &MF,
                                       MCRegister PhysReg) const {
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
-  const TargetRegisterInfo &TRI = *ST.getRegisterInfo();
+  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
 
   // Stack pointer.
-  if (TRI.isSuperOrSubRegisterEq(X86::RSP, PhysReg))
+  if (TRI->isSuperOrSubRegisterEq(X86::RSP, PhysReg))
     return true;
 
   // Don't use the frame pointer if it's being used.
-  const X86FrameLowering &TFI = *getFrameLowering(MF);
-  if (TFI.hasFP(MF) && TRI.isSuperOrSubRegisterEq(X86::RBP, PhysReg))
+  const X86FrameLowering *TFI = getFrameLowering(MF);
+  if (TFI->hasFP(MF) && TRI->isSuperOrSubRegisterEq(X86::RBP, PhysReg))
     return true;
 
   return X86GenRegisterInfo::isFixedRegister(MF, PhysReg);
