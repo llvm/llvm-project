@@ -370,6 +370,7 @@ void saveAsJson(const std::set<std::vector<int>> &results,
             break;
         ordered_json jPath;
         jPath["type"] = type;
+        jPath["nodes"] = path;
         for (int x : path) {
             dumpICFGNode(x, jPath["locations"]);
         }
