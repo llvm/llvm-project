@@ -478,6 +478,11 @@ inline AnyBinaryOp_match<LHS, RHS, false> m_AnyBinOp(const LHS &L,
                                                      const RHS &R) {
   return AnyBinaryOp_match<LHS, RHS, false>(L, R);
 }
+template <typename LHS, typename RHS>
+inline AnyBinaryOp_match<LHS, RHS, true> m_c_AnyBinOp(const LHS &L,
+                                                      const RHS &R) {
+  return AnyBinaryOp_match<LHS, RHS, true>(L, R);
+}
 
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, false> m_AnyBinOp(unsigned Opc, const LHS &L,
@@ -487,13 +492,6 @@ inline BinaryOpc_match<LHS, RHS, false> m_AnyBinOp(unsigned Opc, const LHS &L,
   else
     return false;
 }
-
-template <typename LHS, typename RHS>
-inline AnyBinaryOp_match<LHS, RHS, true> m_c_AnyBinOp(const LHS &L,
-                                                      const RHS &R) {
-  return AnyBinaryOp_match<LHS, RHS, true>(L, R);
-}
-
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_c_AnyBinOp(unsigned Opc, const LHS &L,
                                                     const RHS &R) {
@@ -508,7 +506,6 @@ inline BinaryOpc_match<LHS, RHS, false> m_BinOp(unsigned Opc, const LHS &L,
                                                 const RHS &R) {
   return BinaryOpc_match<LHS, RHS, false>(Opc, L, R);
 }
-
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_c_BinOp(unsigned Opc, const LHS &L,
                                                  const RHS &R) {
