@@ -3131,8 +3131,26 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 
     // Now emit the command error text from the command we just executed
     if (!result.GetImmediateErrorStream()) {
-      llvm::StringRef error = result.GetErrorData();
-      PrintCommandOutput(io_handler, error, false);
+      auto prompt_size = GetDebugger().GetPrompt().size();
+      auto command = line.empty() ? m_repeat_command : line;
+      auto detail_string =
+          result.DetailStringForPromptCommand(prompt_size, command);
+      if (detail_string.empty()) {
+        llvm::StringRef error = result.GetErrorData();
+        PrintCommandOutput(io_handler, error, false);
+      } else {
+        // Check whether the developer just hit [Return] to repeat a command.
+        if (line.empty()) {
+          // Build a recreation of the prompt and the last command.
+          std::string prompt_and_command(GetDebugger().GetPrompt());
+          prompt_and_command += m_repeat_command;
+
+          // Print the last command the developer entered for the caret line.
+          PrintCommandOutput(io_handler, prompt_and_command, false);
+        }
+
+        PrintCommandOutput(io_handler, detail_string, false);
+      }
     }
   }
 
