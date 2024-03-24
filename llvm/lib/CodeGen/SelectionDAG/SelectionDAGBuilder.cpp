@@ -3454,7 +3454,9 @@ void SelectionDAGBuilder::visitLandingPad(const LandingPadInst &LP) {
   SmallVector<EVT, 2> ValueVTs;
   SDLoc dl = getCurSDLoc();
   ComputeValueVTs(TLI, DAG.getDataLayout(), LP.getType(), ValueVTs);
-  assert(ValueVTs.size() == 2 && "Only two-valued landingpads are supported");
+  if (ValueVTs.size() != 2) {
+    report_fatal_error("Only two-valued landingpads are supported");
+  }
 
   // Get the two live-in registers as SDValues. The physregs have already been
   // copied into virtual registers.
