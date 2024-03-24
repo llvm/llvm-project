@@ -945,8 +945,12 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
 
   // Determine the length of the dynamic dimension.
   for (auto &val : newShapeValue) {
-    if (ShapedType::isDynamic(val))
+    if (ShapedType::isDynamic(val)) {
+      if (staticMul == 0) {
+        return failure();
+      }
       val = numElements / staticMul;
+    }
   }
 
   inferredReturnShapes.push_back(
