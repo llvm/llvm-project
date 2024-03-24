@@ -8,12 +8,16 @@
 
 #include "mlir/Dialect/Bufferization/Transforms/BufferViewFlowAnalysis.h"
 
+#include "mlir/Dialect/Bufferization/IR/BufferViewFlowOpInterface.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 
 using namespace mlir;
+using namespace mlir::bufferization;
 
 /// Constructs a new alias analysis using the op provided.
 BufferViewFlowAnalysis::BufferViewFlowAnalysis(Operation *op) { build(op); }
@@ -65,18 +69,44 @@ void BufferViewFlowAnalysis::rename(Value from, Value to) {
 void BufferViewFlowAnalysis::build(Operation *op) {
   // Registers all dependencies of the given values.
   auto registerDependencies = [&](ValueRange values, ValueRange dependencies) {
-    for (auto [value, dep] : llvm::zip(values, dependencies))
+    for (auto [value, dep] : llvm::zip_equal(values, dependencies))
       this->dependencies[value].insert(dep);
   };
 
+  // Mark all buffer results and buffer region entry block arguments of the
+  // given op as terminals.
+  auto populateTerminalValues = [&](Operation *op) {
+    for (Value v : op->getResults())
+      if (isa<BaseMemRefType>(v.getType()))
+        this->terminals.insert(v);
+    for (Region &r : op->getRegions())
+      for (BlockArgument v : r.getArguments())
+        if (isa<BaseMemRefType>(v.getType()))
+          this->terminals.insert(v);
+  };
+
   op->walk([&](Operation *op) {
-    // TODO: We should have an op interface instead of a hard-coded list of
-    // interfaces/ops.
+    // Query BufferViewFlowOpInterface. If the op does not implement that
+    // interface, try to infer the dependencies from other interfaces that the
+    // op may implement.
+    if (auto bufferViewFlowOp = dyn_cast<BufferViewFlowOpInterface>(op)) {
+      bufferViewFlowOp.populateDependencies(registerDependencies);
+      for (Value v : op->getResults())
+        if (isa<BaseMemRefType>(v.getType()) &&
+            bufferViewFlowOp.mayBeTerminalBuffer(v))
+          this->terminals.insert(v);
+      for (Region &r : op->getRegions())
+        for (BlockArgument v : r.getArguments())
+          if (isa<BaseMemRefType>(v.getType()) &&
+              bufferViewFlowOp.mayBeTerminalBuffer(v))
+            this->terminals.insert(v);
+      return WalkResult::advance();
+    }
 
     // Add additional dependencies created by view changes to the alias list.
     if (auto viewInterface = dyn_cast<ViewLikeOpInterface>(op)) {
-      dependencies[viewInterface.getViewSource()].insert(
-          viewInterface->getResult(0));
+      registerDependencies(viewInterface.getViewSource(),
+                           viewInterface->getResult(0));
       return WalkResult::advance();
     }
 
@@ -131,16 +161,30 @@ void BufferViewFlowAnalysis::build(Operation *op) {
       return WalkResult::advance();
     }
 
-    // Unknown op: Assume that all operands alias with all results.
-    for (Value operand : op->getOperands()) {
-      if (!isa<BaseMemRefType>(operand.getType()))
-        continue;
-      for (Value result : op->getResults()) {
-        if (!isa<BaseMemRefType>(result.getType()))
-          continue;
-        registerDependencies({operand}, {result});
-      }
+    // Region terminators are handled together with RegionBranchOpInterface.
+    if (isa<RegionBranchTerminatorOpInterface>(op))
+      return WalkResult::advance();
+
+    if (isa<CallOpInterface>(op)) {
+      // This is an intra-function analysis. We have no information about other
+      // functions. Conservatively assume that each operand may alias with each
+      // result. Also mark the results are terminals because the function could
+      // return newly allocated buffers.
+      populateTerminalValues(op);
+      for (Value operand : op->getOperands())
+        for (Value result : op->getResults())
+          registerDependencies({operand}, {result});
+      return WalkResult::advance();
     }
+
+    // We have no information about unknown ops.
+    populateTerminalValues(op);
+
     return WalkResult::advance();
   });
+}
+
+bool BufferViewFlowAnalysis::mayBeTerminalBuffer(Value value) const {
+  assert(isa<BaseMemRefType>(value.getType()) && "expected memref");
+  return terminals.contains(value);
 }
