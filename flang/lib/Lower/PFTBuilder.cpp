@@ -259,6 +259,12 @@ public:
           lower::pft::CompilerDirectiveUnit(directive, pftParentStack.back()));
       return false;
     }
+    if (auto *mod = pftParentStack.back().getIf<lower::pft::ModuleLikeUnit>()) {
+      assert(nestedUnitList && "Modules have a nested units list");
+      lower::pft::CompilerDirectiveUnit unit{directive, pftParentStack.back()};
+      addNestedUnit(std::move(unit));
+      return false;
+    }
     return enterConstructOrDirective(directive);
   }
 
@@ -279,7 +285,7 @@ private:
   bool enterModule(const A &mod) {
     Fortran::lower::pft::ModuleLikeUnit &unit =
         addUnit(lower::pft::ModuleLikeUnit{mod, pftParentStack.back()});
-    functionList = &unit.nestedFunctions;
+    nestedUnitList = &unit.nestedUnits;
     pushEvaluationList(&unit.evaluationList);
     pftParentStack.emplace_back(unit);
     LLVM_DEBUG(dumpScope(&unit.getScope()));
@@ -349,7 +355,7 @@ private:
                                                  semanticsContext});
     labelEvaluationMap = &unit.labelEvaluationMap;
     assignSymbolLabelMap = &unit.assignSymbolLabelMap;
-    functionList = &unit.nestedFunctions;
+    nestedUnitList = &unit.nestedUnits;
     pushEvaluationList(&unit.evaluationList);
     pftParentStack.emplace_back(unit);
     LLVM_DEBUG(dumpScope(&unit.getScope()));
@@ -414,14 +420,14 @@ private:
     if (!pftParentStack.empty()) {
       pftParentStack.back().visit(common::visitors{
           [&](lower::pft::FunctionLikeUnit &p) {
-            functionList = &p.nestedFunctions;
+            nestedUnitList = &p.nestedUnits;
             labelEvaluationMap = &p.labelEvaluationMap;
             assignSymbolLabelMap = &p.assignSymbolLabelMap;
           },
           [&](lower::pft::ModuleLikeUnit &p) {
-            functionList = &p.nestedFunctions;
+            nestedUnitList = &p.nestedUnits;
           },
-          [&](auto &) { functionList = nullptr; },
+          [&](auto &) { nestedUnitList = nullptr; },
       });
     }
   }
@@ -433,10 +439,15 @@ private:
   }
 
   template <typename A>
+  void addNestedUnit(A &&source) {
+    nestedUnitList->emplace_back(lower::pft::NestedUnit{std::move(source)});
+  }
+
+  template <typename A>
   A &addFunction(A &&func) {
-    if (functionList) {
-      functionList->emplace_back(std::move(func));
-      return functionList->back();
+    if (nestedUnitList) {
+      addNestedUnit(func);
+      return std::get<A>(nestedUnitList->back());
     }
     return addUnit(std::move(func));
   }
@@ -459,7 +470,7 @@ private:
 
   /// Append an Evaluation to the end of the current list.
   lower::pft::Evaluation &addEvaluation(lower::pft::Evaluation &&eval) {
-    assert(functionList && "not in a function");
+    assert(nestedUnitList && "not in a function");
     assert(!evaluationListStack.empty() && "empty evaluation list stack");
     if (!constructAndDirectiveStack.empty())
       eval.parentConstruct = constructAndDirectiveStack.back();
@@ -499,7 +510,7 @@ private:
 
   /// push a new list on the stack of Evaluation lists
   void pushEvaluationList(lower::pft::EvaluationList *evaluationList) {
-    assert(functionList && "not in a function");
+    assert(nestedUnitList && "not in a function");
     assert(evaluationList && evaluationList->empty() &&
            "evaluation list isn't correct");
     evaluationListStack.emplace_back(evaluationList);
@@ -507,7 +518,7 @@ private:
 
   /// pop the current list and return to the last Evaluation list
   void popEvaluationList() {
-    assert(functionList && "not in a function");
+    assert(nestedUnitList && "not in a function");
     evaluationListStack.pop_back();
   }
 
@@ -1089,9 +1100,9 @@ private:
   std::vector<lower::pft::PftNode> pftParentStack;
   const semantics::SemanticsContext &semanticsContext;
 
-  /// functionList points to the internal or module procedure function list
-  /// of a FunctionLikeUnit or a ModuleLikeUnit. It may be null.
-  std::list<lower::pft::FunctionLikeUnit> *functionList{};
+  /// nestedUnitList points to the internal or module procedure unit list
+  /// of nested units (e.g. functions). It may be null.
+  std::list<lower::pft::NestedUnit> *nestedUnitList{};
   std::vector<lower::pft::Evaluation *> constructAndDirectiveStack{};
   std::vector<lower::pft::Evaluation *> doConstructStack{};
   /// evaluationListStack is the current nested construct evaluationList state.
@@ -1265,11 +1276,17 @@ public:
       outputStream << ": " << header;
     outputStream << '\n';
     dumpEvaluationList(outputStream, functionLikeUnit.evaluationList);
-    if (!functionLikeUnit.nestedFunctions.empty()) {
+    if (!functionLikeUnit.nestedUnits.empty()) {
       outputStream << "\nContains\n";
-      for (const lower::pft::FunctionLikeUnit &func :
-           functionLikeUnit.nestedFunctions)
-        dumpFunctionLikeUnit(outputStream, func);
+      for (const lower::pft::NestedUnit &nested :
+           functionLikeUnit.nestedUnits) {
+        if (const auto *func =
+                std::get_if<lower::pft::FunctionLikeUnit>(&nested))
+          dumpFunctionLikeUnit(outputStream, *func);
+        if (const auto *directive =
+                std::get_if<lower::pft::CompilerDirectiveUnit>(&nested))
+          dumpCompilerDirectiveUnit(outputStream, *directive);
+      }
       outputStream << "End Contains\n";
     }
     outputStream << "End " << unitKind << ' ' << name << "\n\n";
@@ -1299,9 +1316,13 @@ public:
     outputStream << unitKind << ' ' << name << ": " << header << '\n';
     dumpEvaluationList(outputStream, moduleLikeUnit.evaluationList);
     outputStream << "Contains\n";
-    for (const lower::pft::FunctionLikeUnit &func :
-         moduleLikeUnit.nestedFunctions)
-      dumpFunctionLikeUnit(outputStream, func);
+    for (const lower::pft::NestedUnit &nested : moduleLikeUnit.nestedUnits) {
+      if (const auto *func = std::get_if<lower::pft::FunctionLikeUnit>(&nested))
+        dumpFunctionLikeUnit(outputStream, *func);
+      if (const auto *directive =
+              std::get_if<lower::pft::CompilerDirectiveUnit>(&nested))
+        dumpCompilerDirectiveUnit(outputStream, *directive);
+    }
     outputStream << "End Contains\nEnd " << unitKind << ' ' << name << "\n\n";
   }
 

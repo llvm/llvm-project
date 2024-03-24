@@ -23,4 +23,12 @@ module m
   !dir$ optimize : 1
   !dir$ loop count (10000)
   !dir$ loop count (1, 500, 5000, 10000)
+contains
+  !dir$ noinline
+  subroutine sb1()
+  end subroutine
+
+  !dir$ noinline
+  subroutine sb2()
+  end subroutine
 end
