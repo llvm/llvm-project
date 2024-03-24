@@ -1091,13 +1091,49 @@ void State::addInfoFor(BasicBlock &BB) {
   }
 
   if (auto *Switch = dyn_cast<SwitchInst>(BB.getTerminator())) {
-    for (auto &Case : Switch->cases()) {
-      BasicBlock *Succ = Case.getCaseSuccessor();
-      Value *V = Case.getCaseValue();
-      if (!canAddSuccessor(BB, Succ))
+    DenseMap<BasicBlock *, SmallVector<ConstantInt *>> BBMap;
+    for (auto &Case : Switch->cases())
+      BBMap[Case.getCaseSuccessor()].push_back(Case.getCaseValue());
+    // TODO: handle default dest
+    BBMap.erase(Switch->getDefaultDest());
+    Value *Cond = Switch->getCondition();
+    Type *Ty = Switch->getCondition()->getType();
+    unsigned BitWidth = Ty->getScalarSizeInBits();
+    for (auto &[Succ, Values] : BBMap) {
+      if (Succ->getUniquePredecessor() != &BB)
         continue;
-      WorkList.emplace_back(FactOrCheck::getConditionFact(
-          DT.getNode(Succ), CmpInst::ICMP_EQ, Switch->getCondition(), V));
+      DomTreeNode *Node = DT.getNode(Succ);
+      if (Values.size() == 1)
+        WorkList.emplace_back(FactOrCheck::getConditionFact(
+            Node, CmpInst::ICMP_EQ, Cond, Values.back()));
+      else {
+        APInt SignedMin = APInt::getSignedMaxValue(BitWidth);
+        APInt SignedMax = APInt::getSignedMinValue(BitWidth);
+        APInt UnsignedMin = APInt::getMaxValue(BitWidth);
+        APInt UnsignedMax = APInt::getMinValue(BitWidth);
+
+        for (ConstantInt *V : Values) {
+          const APInt &C = V->getValue();
+          SignedMin = APIntOps::smin(SignedMin, C);
+          SignedMax = APIntOps::smax(SignedMax, C);
+          UnsignedMin = APIntOps::umin(UnsignedMin, C);
+          UnsignedMax = APIntOps::umax(UnsignedMax, C);
+        }
+        if (!SignedMin.isMinSignedValue())
+          WorkList.emplace_back(FactOrCheck::getConditionFact(
+              Node, CmpInst::ICMP_SGE, Cond, ConstantInt::get(Ty, SignedMin)));
+        if (!SignedMax.isMaxSignedValue())
+          WorkList.emplace_back(FactOrCheck::getConditionFact(
+              Node, CmpInst::ICMP_SLE, Cond, ConstantInt::get(Ty, SignedMax)));
+        if (!UnsignedMin.isMinValue())
+          WorkList.emplace_back(
+              FactOrCheck::getConditionFact(Node, CmpInst::ICMP_UGE, Cond,
+                                            ConstantInt::get(Ty, UnsignedMin)));
+        if (!UnsignedMax.isMaxValue())
+          WorkList.emplace_back(
+              FactOrCheck::getConditionFact(Node, CmpInst::ICMP_ULE, Cond,
+                                            ConstantInt::get(Ty, UnsignedMax)));
+      }
     }
     return;
   }
