@@ -418,6 +418,18 @@ public:
   virtual unsigned getAddressSpaceForPseudoSourceKind(unsigned Kind) const {
     return 0;
   }
+
+  /// Entry point for module splitting. Targets can implement custom module
+  /// splitting logic, mainly used by LTO for --lto-partitions.
+  ///
+  /// \returns `true` if the module was split, `false` otherwise. When  `false`
+  /// is returned, it is assumed that \p ModuleCallback has never been called
+  /// and \p M has not been modified.
+  virtual bool splitModule(
+      Module &M, unsigned NumParts,
+      function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback) const {
+    return false;
+  }
 };
 
 /// This class describes a target machine that is implemented with the LLVM
