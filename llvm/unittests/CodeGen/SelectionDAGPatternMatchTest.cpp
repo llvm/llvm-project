@@ -153,14 +153,22 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
                                      m_SpecificVT(Float32VT))));
 
   EXPECT_TRUE(sd_match(And, m_AnyBinOp(ISD::AND, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(And, m_And(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Or, m_AnyBinOp(ISD::OR, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(Or, m_Or(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Xor, m_AnyBinOp(ISD::XOR, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(Xor, m_Xor(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Add, m_AnyBinOp(ISD::ADD, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(Add, m_Add(m_Value(), m_Value())));
 
   EXPECT_TRUE(sd_match(And, m_c_AnyBinOp(ISD::AND, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(And, m_c_And(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Or, m_c_AnyBinOp(ISD::OR, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(Or, m_c_Or(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Xor, m_c_AnyBinOp(ISD::XOR, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(Xor, m_c_Xor(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Add, m_c_AnyBinOp(ISD::ADD, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(Add, m_c_Add(m_Value(), m_Value())));
 
   EXPECT_TRUE(sd_match(And, m_c_BinOp(ISD::AND, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(And, m_And(m_Value(), m_Value())));
