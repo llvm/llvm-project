@@ -61,6 +61,7 @@ public:
   const llvm::DataLayout &getDataLayout() const;
   const TargetInfo &getTarget() const;
   const CodeGenOptions &getCodeGenOpts() const;
+  CodeGen::CodeGenTypes &getCodeGenTypes() const;
 
   /// Return the calling convention to use for system runtime
   /// functions.
