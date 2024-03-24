@@ -21,12 +21,19 @@
 
 namespace clang {
 
+class ASTContext;
+class DiagnosticEngine;
+class LangOptions;
 class Sema;
 
 class SemaOpenACC {
 public:
   SemaOpenACC(Sema &S);
 
+  ASTContext &getASTContext() const;
+  DiagnosticsEngine &getDiagnostics() const;
+  const LangOptions &getLangOpts() const;
+  
   Sema &SemaRef;
 
   /// Called after parsing an OpenACC Clause so that it can be checked.

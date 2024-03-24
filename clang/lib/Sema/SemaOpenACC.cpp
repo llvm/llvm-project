@@ -41,6 +41,10 @@ bool diagnoseConstructAppertainment(SemaOpenACC &S, OpenACCDirectiveKind K,
 
 SemaOpenACC::SemaOpenACC(Sema &S) : SemaRef(S) {}
 
+ASTContext &SemaOpenACC::getASTContext() const { return SemaRef.Context; }
+DiagnosticsEngine &SemaOpenACC::getDiagnostics() const { return SemaRef.Diags; }
+const LangOptions &SemaOpenACC::getLangOpts() const { return SemaRef.LangOpts; }
+
 bool SemaOpenACC::ActOnClause(OpenACCClauseKind ClauseKind,
                               SourceLocation StartLoc) {
   if (ClauseKind == OpenACCClauseKind::Invalid)
@@ -91,7 +95,7 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Serial:
   case OpenACCDirectiveKind::Kernels:
     return OpenACCComputeConstruct::Create(
-        SemaRef.getASTContext(), K, StartLoc, EndLoc,
+        getASTContext(), K, StartLoc, EndLoc,
         AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
   }
   llvm_unreachable("Unhandled case in directive handling?");
