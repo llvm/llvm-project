@@ -285,6 +285,7 @@ LANGOPT(OffloadingNewDriver, 1, 0, "use the new driver for generating offloading
 LANGOPT(SYCLIsDevice      , 1, 0, "Generate code for SYCL device")
 LANGOPT(SYCLIsHost        , 1, 0, "SYCL host compilation")
 ENUM_LANGOPT(SYCLVersion  , SYCLMajorVersion, 2, SYCL_None, "Version of the SYCL standard used")
+ENUM_LANGOPT(StdlibHardeningMode, StdlibHardeningModeKind, 3, STDLIB_HARDENING_MODE_NOT_SPECIFIED, "standard library harderning mode")
 
 LANGOPT(HIPUseNewLaunchAPI, 1, 0, "Use new kernel launching API for HIP")
 LANGOPT(OffloadUniformBlock, 1, 0, "Assume that kernels are launched with uniform block sizes (default true for CUDA/HIP and false otherwise)")
