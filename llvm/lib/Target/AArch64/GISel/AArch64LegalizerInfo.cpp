@@ -60,6 +60,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   const LLT v4s32 = LLT::fixed_vector(4, 32);
   const LLT v2s64 = LLT::fixed_vector(2, 64);
   const LLT v2p0 = LLT::fixed_vector(2, p0);
+  const LLT nxv8s16 = LLT::scalable_vector(8, 16);
+  const LLT nxv4s32 = LLT::scalable_vector(4, 32);
+  const LLT nxv2s64 = LLT::scalable_vector(2, 64);
 
   std::initializer_list<LLT> PackedVectorAllTypeList = {/* Begin 128bit types */
                                                         v16s8, v8s16, v4s32,
@@ -245,7 +248,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                                G_FMAXIMUM, G_FMINIMUM, G_FCEIL, G_FFLOOR,
                                G_FRINT, G_FNEARBYINT, G_INTRINSIC_TRUNC,
                                G_INTRINSIC_ROUND, G_INTRINSIC_ROUNDEVEN})
-      .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
+      .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64, nxv8s16, nxv4s32,
+                 nxv2s64})
       .legalIf([=](const LegalityQuery &Query) {
         const auto &Ty = Query.Types[0];
         return (Ty == v8s16 || Ty == v4s16) && HasFP16;

@@ -51,6 +51,8 @@
 
 using namespace llvm;
 
+extern cl::opt<bool> DisableSVEGISel;
+
 AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
   : CallLowering(&TLI) {}
 
@@ -387,8 +389,8 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
       // i1 is a special case because SDAG i1 true is naturally zero extended
       // when widened using ANYEXT. We need to do it explicitly here.
       auto &Flags = CurArgInfo.Flags[0];
-      if (MRI.getType(CurVReg).getSizeInBits() == 1 && !Flags.isSExt() &&
-          !Flags.isZExt()) {
+      if (MRI.getType(CurVReg).getSizeInBits() == TypeSize::getFixed(1) &&
+          !Flags.isSExt() && !Flags.isZExt()) {
         CurVReg = MIRBuilder.buildZExt(LLT::scalar(8), CurVReg).getReg(0);
       } else if (TLI.getNumRegistersForCallingConv(Ctx, CC, SplitEVTs[i]) ==
                  1) {
@@ -523,10 +525,10 @@ static void handleMustTailForwardedRegisters(MachineIRBuilder &MIRBuilder,
 
 bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
   auto &F = MF.getFunction();
-  if (F.getReturnType()->isScalableTy() ||
-      llvm::any_of(F.args(), [](const Argument &A) {
-        return A.getType()->isScalableTy();
-      }))
+  if (DisableSVEGISel && (F.getReturnType()->isScalableTy() ||
+                          llvm::any_of(F.args(), [](const Argument &A) {
+                            return A.getType()->isScalableTy();
+                          })))
     return true;
   const auto &ST = MF.getSubtarget<AArch64Subtarget>();
   if (!ST.hasNEON() || !ST.hasFPARMv8()) {
