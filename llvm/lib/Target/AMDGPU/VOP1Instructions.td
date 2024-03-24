@@ -353,22 +353,36 @@ defm V_FREXP_MANT_F32 : VOP1Inst <"v_frexp_mant_f32", VOP_F32_F32, int_amdgcn_fr
 defm V_CLREXCP : VOP1Inst <"v_clrexcp", VOP_NO_EXT<VOP_NONE>>;
 
 // Restrict src0 to be VGPR
-def VOP_MOVRELS : VOPProfile<[i32, i32, untyped, untyped]> {
+def VOP_PERMLANE : VOPProfile<[i32, i32, untyped, untyped]> {
   let Src0RC32 = VRegSrc_32;
   let Src0RC64 = VRegSrc_32;
 }
+
+class VOP_MOVRELS_CLASS : VOPProfile<[i32, i32, untyped, untyped]> {
+  let Src0RC32 = VRegSrc_32;
+  let Src0RC64 = VRegSrc_32;
+
+  let HasModifiers = 1;
+  let Src0Mod = FPVRegInputMods;
+  let Src0ModVOP3DPP = FPVRegInputMods;
+  let Src0ModDPP = FPVRegInputMods;
+
+  let InsVOP3Base = (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0);
+}
+
+def VOP_MOVRELS : VOP_MOVRELS_CLASS;
 
 // Special case because there are no true output operands.  Hack vdst
 // to be a src operand. The custom inserter must add a tied implicit
 // def and use of the super register since there seems to be no way to
 // add an implicit def of a virtual register in tablegen.
-class VOP_MOVREL<RegisterOperand Src1RC> : VOPProfile<[untyped, i32, untyped, untyped]> {
+class VOP_MOVREL<RegisterOperand Src1RC, InputMods SrcModRC> : VOPProfile<[untyped, i32, untyped, untyped]> {
   let Src0RC32 = VOPDstOperand<VGPR_32>;
   let Src0RC64 = VOPDstOperand<VGPR_32>;
 
   let Outs = (outs);
   let Ins32 = (ins Src0RC32:$vdst, Src1RC:$src0);
-  let Ins64 = (ins Src0RC64:$vdst, Src1RC:$src0);
+  let Ins64 = (ins Src0RC64:$vdst, SrcModRC:$src0_modifiers, Src1RC:$src0);
   let Asm32 = getAsm32<1, 1>.ret;
 
   let OutsSDWA = (outs Src0RC32:$vdst);
@@ -378,12 +392,24 @@ class VOP_MOVREL<RegisterOperand Src1RC> : VOPProfile<[untyped, i32, untyped, un
   let AsmSDWA9 = getAsmSDWA9<1, 0, 1>.ret;
 
   let OutsDPP = (outs Src0RC32:$vdst);
-  let InsDPP16 = (ins Src0RC32:$old, Src0RC32:$src0,
+
+  let InsDPP = (ins Src0RC32:$old,
+                    FPVRegInputMods:$src0_modifiers, Src0RC32:$src0,
+                    dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                    DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
+  let InsDPP16 = (ins Src0RC32:$old, FPVRegInputMods:$src0_modifiers, Src0RC32:$src0,
                       dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
                       DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl, Dpp16FI:$fi);
   let AsmDPP16 = getAsmDPP16<1, 1, 0>.ret;
-  let InsDPP8 = (ins Src0RC32:$old, Src0RC32:$src0, dpp8:$dpp8, Dpp8FI:$fi);
+  let InsDPP8 = (ins Src0RC32:$old, FPVRegInputMods:$src0_modifiers, Src0RC32:$src0, dpp8:$dpp8, Dpp16FI:$fi);
+
   let AsmDPP8 = getAsmDPP8<1, 1, 0>.ret;
+
+  let HasModifiers = 1;
+  let Src0Mod = SrcModRC;
+  let Src0ModVOP3DPP = FPVRegInputMods;
+
+  let InsVOP3Base = (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0);
 
   let OutsVOP3DPP = (outs Src0RC64:$vdst);
   let InsVOP3DPP = getInsVOP3DPP<InsVOP3Base, Src0RC64, NumSrcArgs>.ret;
@@ -399,8 +425,8 @@ class VOP_MOVREL<RegisterOperand Src1RC> : VOPProfile<[untyped, i32, untyped, un
   let EmitDst = 1; // force vdst emission
 }
 
-def VOP_MOVRELD : VOP_MOVREL<VSrc_b32>;
-def VOP_MOVRELSD : VOP_MOVREL<VRegSrc_32>;
+def VOP_MOVRELD : VOP_MOVREL<VSrc_b32, FP32InputMods>;
+def VOP_MOVRELSD : VOP_MOVREL<VRegSrc_32, FPVRegInputMods>;
 
 let SubtargetPredicate = HasMovrel, Uses = [M0, EXEC] in {
  // v_movreld_b32 is a special case because the destination output
@@ -709,9 +735,9 @@ def V_ACCVGPR_MOV_B32 : VOP1_Pseudo<"v_accvgpr_mov_b32", VOPProfileAccMov, [], 1
 
 let SubtargetPredicate = isGFX11Plus in {
   // Restrict src0 to be VGPR
-  def V_PERMLANE64_B32 : VOP1_Pseudo<"v_permlane64_b32", VOP_MOVRELS,
+  def V_PERMLANE64_B32 : VOP1_Pseudo<"v_permlane64_b32", VOP_PERMLANE,
                                       getVOP1Pat<int_amdgcn_permlane64,
-                                                 VOP_MOVRELS>.ret,
+                                                   VOP_PERMLANE>.ret,
                                       /*VOP1Only=*/ 1>;
   defm V_MOV_B16_t16    : VOP1Inst<"v_mov_b16_t16", VOPProfile_True16<VOP_I16_I16>>;
   defm V_NOT_B16        : VOP1Inst_t16<"v_not_b16", VOP_I16_I16>;
