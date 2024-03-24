@@ -616,8 +616,8 @@ Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
   // are required.
   // TODO: Multi-use may be also better off creating Powi(x,y-1)
   if (I.hasAllowReassoc() && I.hasNoNaNs() &&
-      match(Op0, m_OneUse(m_Intrinsic<Intrinsic::powi>(m_Specific(Op1),
-                                                       m_Value(Y)))) &&
+      match(Op0, m_OneUse(m_AllowReassoc(m_Intrinsic<Intrinsic::powi>(
+                     m_Specific(Op1), m_Value(Y))))) &&
       willNotOverflowSignedSub(Y, ConstantInt::get(Y->getType(), 1), I)) {
     Constant *NegOne = ConstantInt::getAllOnesValue(Y->getType());
     return createPowiExpr(I, *this, Op1, Y, NegOne);
