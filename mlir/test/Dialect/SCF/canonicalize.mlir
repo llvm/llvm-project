@@ -1022,10 +1022,10 @@ func.func @while_loop_invariant_argument_different_order(%arg : tensor<i32>) -> 
 // CHECK-SAME: (%[[ARG:.+]]: tensor<i32>)
 // CHECK:    %[[ZERO:.*]] = arith.constant dense<0>
 // CHECK:    %[[ONE:.*]] = arith.constant dense<1>
+// CHECK:    %[[COND:.*]] = arith.cmpi sgt, %[[ARG]], %[[ZERO]]
+// CHECK:    %[[COND1:.*]] = tensor.extract %[[COND]][]
 // CHECK:    %[[WHILE:.*]]:2 = scf.while (%[[ARG1:.*]] = %[[ONE]], %[[ARG4:.*]] = %[[ZERO]])
-// CHECK:       arith.cmpi sgt, %[[ARG]], %[[ZERO]]
-// CHECK:       tensor.extract %{{.*}}[]
-// CHECK:       scf.condition(%{{.*}}) %[[ARG1]], %[[ARG4]]
+// CHECK:       scf.condition(%[[COND1]]) %[[ARG1]], %[[ARG4]]
 // CHECK:    } do {
 // CHECK:     ^{{.*}}(%{{.*}}: tensor<i32>, %{{.*}}: tensor<i32>):
 // CHECK:       scf.yield %[[ZERO]], %[[ONE]]
@@ -1143,6 +1143,29 @@ func.func @while_duplicated_res() -> (i32, i32) {
 // CHECK:           scf.yield
 // CHECK:         }
 // CHECK:         return %[[RES]], %[[RES]] : i32, i32
+
+// -----
+
+func.func @while_licm(%arg1: i32, %arg2: i32, %arg3: i32) {
+  scf.while () : () -> () {
+    %val0 = arith.addi %arg1, %arg2 : i32
+    %val = arith.addi %val0, %arg3 : i32
+    %condition = "test.condition"(%val) : (i32) -> i1
+    scf.condition(%condition)
+  } do {
+  ^bb0():
+    "test.test"() : () -> ()
+    scf.yield
+  }
+  return
+}
+// CHECK-LABEL: @while_licm
+//  CHECK-SAME:  (%[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32, %[[ARG3:.*]]: i32)
+//       CHECK:  %[[VAL0:.*]] = arith.addi %[[ARG1]], %[[ARG2]] : i32
+//       CHECK:  %[[VAL1:.*]] = arith.addi %[[VAL0]], %[[ARG3]] : i32
+//       CHECK:  scf.while
+//  CHECK-NEXT:  %[[COND:.*]] = "test.condition"(%[[VAL1]]) : (i32) -> i1
+//  CHECK-NEXT:  scf.condition(%[[COND]])
 
 
 // -----
