@@ -810,7 +810,7 @@ Check for excessively padded structs.
 
 This checker detects structs with excessive padding, which can lead to wasted memory and decreased performance. Padding bytes are added by compilers to align data within the struct for performance optimization or memory alignment purposes. However, excessive padding can significantly increase the size of the struct without adding useful data, leading to inefficient memory usage, cache misses, and decreased performance.
 
-.. code-block:: C
+.. code-block:: c
 
    #include <stdio.h>
    // #pragma pack(1) // Uncomment it to disable structure padding
@@ -822,7 +822,7 @@ This checker detects structs with excessive padding, which can lead to wasted me
    
    int main () {
        struct TestStruct struct1;
-       print("Structure size: %d",sizeof(struct1)); // Structure size: 8
+       printf("Structure size: %d",sizeof(struct1)); // Structure size: 8
        return 0;
    }
    
