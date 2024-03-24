@@ -282,3 +282,199 @@ header:
   call void @hold(i32 %v1)
   br label %header
 }
+
+
+; In block C there is no load we can reuse from the entry block,
+; requiring the insertion of a critical edge to add the load.
+; Whereas other 2 predecessors go back to block A which already
+; has the loads.
+define i8 @test7a(i1 %c1, ptr %p, i8 %i, i8 %j) {
+; CHECK-LABEL: @test7a(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[A:%.*]], label [[ENTRY_C_CRIT_EDGE:%.*]]
+; CHECK:       entry.C_crit_edge:
+; CHECK-NEXT:    [[PK_PHI_TRANS_INSERT:%.*]] = getelementptr i8, ptr [[P:%.*]], i8 [[I:%.*]]
+; CHECK-NEXT:    [[Z_PRE:%.*]] = load i8, ptr [[PK_PHI_TRANS_INSERT]], align 1
+; CHECK-NEXT:    br label [[C:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    [[PI:%.*]] = getelementptr i8, ptr [[P]], i8 [[I]]
+; CHECK-NEXT:    [[PJ:%.*]] = getelementptr i8, ptr [[P]], i8 [[J:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[PI]], align 1
+; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[PJ]], align 1
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt i8 [[X]], [[Y]]
+; CHECK-NEXT:    br i1 [[C2]], label [[C]], label [[B:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br label [[C]]
+; CHECK:       C:
+; CHECK-NEXT:    [[Z:%.*]] = phi i8 [ [[Z_PRE]], [[ENTRY_C_CRIT_EDGE]] ], [ [[X]], [[A]] ], [ [[Y]], [[B]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i8 [ [[I]], [[ENTRY_C_CRIT_EDGE]] ], [ [[I]], [[A]] ], [ [[J]], [[B]] ]
+; CHECK-NEXT:    [[PK:%.*]] = getelementptr i8, ptr [[P]], i8 [[K]]
+; CHECK-NEXT:    ret i8 [[Z]]
+;
+entry:
+  br i1 %c1, label %A, label %C
+
+A:
+  %pi = getelementptr i8, ptr %p, i8 %i
+  %pj = getelementptr i8, ptr %p, i8 %j
+  %x = load i8, ptr %pi
+  %y = load i8, ptr %pj
+  %c2 = icmp slt i8 %x, %y
+  br i1 %c2, label %C, label %B
+
+B:
+  br label %C
+
+C:
+  %k = phi i8 [ %i, %entry ], [%i, %A], [ %j, %B ]
+  %pk = getelementptr i8, ptr %p, i8 %k
+  %z = load i8, ptr %pk
+  ret i8 %z
+}
+
+
+; In block Z two loads are missing (via entry and B blocks), which will
+; require 2 critical edges. Whereas via other predecessor (A) the
+; pre-existing load could potentially be reused.
+define i8 @test7b(i1 %c1, ptr %p, i8 %i, i8 %j) {
+; CHECK-LABEL: @test7b(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[A:%.*]], label [[C:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    [[PI:%.*]] = getelementptr i8, ptr [[P:%.*]], i8 [[I:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[PI]], align 1
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt i8 [[X]], 3
+; CHECK-NEXT:    br i1 [[C2]], label [[C]], label [[B:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br label [[C]]
+; CHECK:       C:
+; CHECK-NEXT:    [[K:%.*]] = phi i8 [ [[I]], [[ENTRY:%.*]] ], [ [[I]], [[A]] ], [ [[J:%.*]], [[B]] ]
+; CHECK-NEXT:    [[PK:%.*]] = getelementptr i8, ptr [[P]], i8 [[K]]
+; CHECK-NEXT:    [[Z:%.*]] = load i8, ptr [[PK]], align 1
+; CHECK-NEXT:    ret i8 [[Z]]
+;
+entry:
+  br i1 %c1, label %A, label %C
+
+A:
+  %pi = getelementptr i8, ptr %p, i8 %i
+  %x = load i8, ptr %pi
+  %c2 = icmp slt i8 %x, 3
+  br i1 %c2, label %C, label %B
+
+B:
+  br label %C
+
+C:
+  %k = phi i8 [ %i, %entry ], [%i, %A], [ %j, %B ]
+  %pk = getelementptr i8, ptr %p, i8 %k
+  %z = load i8, ptr %pk
+  ret i8 %z
+}
+
+
+; In block D there is no load we can reuse from the entry block,
+; requiring the insertion of a critical edge to add the load.
+; Whereas other 2 predecessors go back to block A which already
+; has the loads. In the case of the incoming value from C we
+; have to walk back two blocks to get to A.
+define i8 @test7c(i1 %c1, i1 %c2, ptr %p, i8 %i, i8 %j) {
+; CHECK-LABEL: @test7c(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[A:%.*]], label [[ENTRY_D_CRIT_EDGE:%.*]]
+; CHECK:       entry.D_crit_edge:
+; CHECK-NEXT:    [[PK_PHI_TRANS_INSERT:%.*]] = getelementptr i8, ptr [[P:%.*]], i8 [[I:%.*]]
+; CHECK-NEXT:    [[Z_PRE:%.*]] = load i8, ptr [[PK_PHI_TRANS_INSERT]], align 1
+; CHECK-NEXT:    br label [[D:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    [[PI:%.*]] = getelementptr i8, ptr [[P]], i8 [[I]]
+; CHECK-NEXT:    [[PJ:%.*]] = getelementptr i8, ptr [[P]], i8 [[J:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[PI]], align 1
+; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[PJ]], align 1
+; CHECK-NEXT:    [[C3:%.*]] = icmp slt i8 [[X]], [[Y]]
+; CHECK-NEXT:    br i1 [[C3]], label [[D]], label [[B:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[C:%.*]], label [[D]]
+; CHECK:       C:
+; CHECK-NEXT:    br label [[D]]
+; CHECK:       D:
+; CHECK-NEXT:    [[Z:%.*]] = phi i8 [ [[Z_PRE]], [[ENTRY_D_CRIT_EDGE]] ], [ [[X]], [[A]] ], [ [[X]], [[B]] ], [ [[Y]], [[C]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i8 [ [[I]], [[ENTRY_D_CRIT_EDGE]] ], [ [[I]], [[A]] ], [ [[I]], [[B]] ], [ [[J]], [[C]] ]
+; CHECK-NEXT:    [[PK:%.*]] = getelementptr i8, ptr [[P]], i8 [[K]]
+; CHECK-NEXT:    ret i8 [[Z]]
+;
+entry:
+  br i1 %c1, label %A, label %D
+
+A:
+  %pi = getelementptr i8, ptr %p, i8 %i
+  %pj = getelementptr i8, ptr %p, i8 %j
+  %x = load i8, ptr %pi
+  %y = load i8, ptr %pj
+  %c3 = icmp slt i8 %x, %y
+  br i1 %c3, label %D, label %B
+
+B:
+  br i1 %c2, label %C, label %D
+
+C:
+  br label %D
+
+D:
+  %k = phi i8 [ %i, %entry ], [ %i, %A ], [ %i, %B ], [ %j, %C ]
+  %pk = getelementptr i8, ptr %p, i8 %k
+  %z = load i8, ptr %pk
+  ret i8 %z
+}
+
+
+; Similar to test7a except there is a volatile load in block B from an
+; address that may overlap with %pj. We should still be able to
+; perform load PRE since the volatile load does not clobber anything.
+define i8 @test7d(i1 %c1, ptr %p, i8 %i, i8 %j, i32 %v) {
+; CHECK-LABEL: @test7d(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[A:%.*]], label [[ENTRY_C_CRIT_EDGE:%.*]]
+; CHECK:       entry.C_crit_edge:
+; CHECK-NEXT:    [[PK_PHI_TRANS_INSERT:%.*]] = getelementptr i8, ptr [[P:%.*]], i8 [[I:%.*]]
+; CHECK-NEXT:    [[Z_PRE:%.*]] = load i8, ptr [[PK_PHI_TRANS_INSERT]], align 1
+; CHECK-NEXT:    br label [[C:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    [[PI:%.*]] = getelementptr i8, ptr [[P]], i8 [[I]]
+; CHECK-NEXT:    [[PJ:%.*]] = getelementptr i8, ptr [[P]], i8 [[J:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[PI]], align 1
+; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[PJ]], align 1
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt i8 [[X]], [[Y]]
+; CHECK-NEXT:    br i1 [[C2]], label [[C]], label [[B:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    [[PJ2:%.*]] = getelementptr i8, ptr [[PJ]], i32 [[V:%.*]]
+; CHECK-NEXT:    [[Y2:%.*]] = load volatile i32, ptr [[PJ2]], align 4
+; CHECK-NEXT:    br label [[C]]
+; CHECK:       C:
+; CHECK-NEXT:    [[Z:%.*]] = phi i8 [ [[Z_PRE]], [[ENTRY_C_CRIT_EDGE]] ], [ [[X]], [[A]] ], [ [[Y]], [[B]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i8 [ [[I]], [[ENTRY_C_CRIT_EDGE]] ], [ [[I]], [[A]] ], [ [[J]], [[B]] ]
+; CHECK-NEXT:    [[PK:%.*]] = getelementptr i8, ptr [[P]], i8 [[K]]
+; CHECK-NEXT:    ret i8 [[Z]]
+;
+entry:
+  br i1 %c1, label %A, label %C
+
+A:
+  %pi = getelementptr i8, ptr %p, i8 %i
+  %pj = getelementptr i8, ptr %p, i8 %j
+  %x = load i8, ptr %pi
+  %y = load i8, ptr %pj
+  %c2 = icmp slt i8 %x, %y
+  br i1 %c2, label %C, label %B
+
+B:
+  %pj2 = getelementptr i8, ptr %pj, i32 %v
+  %y2 = load volatile i32, ptr %pj2
+  br label %C
+
+C:
+  %k = phi i8 [ %i, %entry ], [%i, %A], [ %j, %B ]
+  %pk = getelementptr i8, ptr %p, i8 %k
+  %z = load i8, ptr %pk
+  ret i8 %z
+}
