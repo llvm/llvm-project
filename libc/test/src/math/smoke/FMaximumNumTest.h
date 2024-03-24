@@ -11,6 +11,7 @@
 
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
+#include "src/__support/FPUtil/FPBits.h"
 
 template <typename T>
 class FMaximumNumTest : public LIBC_NAMESPACE::testing::Test {
@@ -21,13 +22,19 @@ public:
   typedef T (*FMaximumNumFunc)(T, T);
 
   void testNaN(FMaximumNumFunc func) {
-    EXPECT_FP_EQ(inf, func(aNaN, inf));
-    EXPECT_FP_EQ(neg_inf, func(neg_inf, aNaN));
-    EXPECT_FP_EQ(0.0, func(aNaN, 0.0));
-    EXPECT_FP_EQ(-0.0, func(-0.0, aNaN));
-    EXPECT_FP_EQ(T(-1.2345), func(aNaN, T(-1.2345)));
-    EXPECT_FP_EQ(T(1.2345), func(T(1.2345), aNaN));
-    EXPECT_FP_EQ(aNaN, func(aNaN, aNaN));
+    EXPECT_FP_EQ(inf, func(FPBits::quiet_nan().get_val(), inf));
+    EXPECT_FP_EQ(inf, func(FPBits::signaling_nan().get_val(), inf));
+    EXPECT_FP_EQ(neg_inf, func(neg_inf, FPBits::quiet_nan().get_val()));
+    EXPECT_FP_EQ(neg_inf, func(neg_inf, FPBits::signaling_nan().get_val()));
+    EXPECT_FP_EQ(FPBits::quiet_nan().get_val(), func(aNaN, aNaN));
+    EXPECT_FP_EQ(0.0, func(FPBits::quiet_nan().get_val(), 0.0));
+    EXPECT_FP_EQ(-0.0, func(-0.0, FPBits::quiet_nan().get_val()));
+    EXPECT_FP_EQ(0.0, func(FPBits::signaling_nan().get_val(), 0.0));
+    EXPECT_FP_EQ(-0.0, func(-0.0, FPBits::signaling_nan().get_val()));
+    EXPECT_FP_EQ(T(-1.2345), func(FPBits::quiet_nan().get_val(), T(-1.2345)));
+    EXPECT_FP_EQ(T(1.2345), func(T(1.2345), FPBits::quiet_nan().get_val()));
+    EXPECT_FP_EQ(T(-1.2345), func(FPBits::signaling_nan().get_val(), T(-1.2345)));
+    EXPECT_FP_EQ(T(1.2345), func(T(1.2345), FPBits::signaling_nan().get_val()));									      
   }
 
   void testInfArg(FMaximumNumFunc func) {
