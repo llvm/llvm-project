@@ -829,8 +829,8 @@ def err_unexpected_template_in_destructor_name : Error<
   "'template' keyword not permitted in destructor name">;
 def err_unexpected_template_after_using : Error<
   "'template' keyword not permitted after 'using' keyword">;
-def err_two_right_angle_brackets_need_space : Error<
-  "a space is required between consecutive right angle brackets (use '> >')">;
+def err_two_right_angle_brackets_need_space : ExtWarn<
+  "two consecutive right angle brackets without a space is a C++11 extension">, InGroup<CXX11>;
 def err_right_angle_bracket_equal_needs_space : Error<
   "a space is required between a right angle bracket and an equals sign "
   "(use '> =')">;
