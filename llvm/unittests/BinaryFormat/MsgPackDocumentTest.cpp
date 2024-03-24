@@ -24,7 +24,7 @@ TEST(MsgPackDocument, DocNodeTest) {
 
 TEST(MsgPackDocument, TestReadInt) {
   Document Doc;
-  bool Ok = Doc.readFromBlob(StringRef("\xd0\x00", 2), /*Multi=*/false);
+  bool Ok = !Doc.readFromBlob(StringRef("\xd0\x00", 2), /*Multi=*/false);
   ASSERT_TRUE(Ok);
   ASSERT_EQ(Doc.getRoot().getKind(), Type::Int);
   ASSERT_EQ(Doc.getRoot().getInt(), 0);
@@ -33,8 +33,8 @@ TEST(MsgPackDocument, TestReadInt) {
 TEST(MsgPackDocument, TestReadBinary) {
   Document Doc;
   uint8_t data[] = {1, 2, 3, 4};
-  bool Ok =
-      Doc.readFromBlob(StringRef("\xC4\x4\x1\x2\x3\x4", 6), /*Multi=*/false);
+  bool Ok = !Doc.readFromBlob(StringRef("\xC4\x4\x1\x2\x3\x4", 6),
+                              /*Multi=*/false);
   ASSERT_TRUE(Ok);
   ASSERT_EQ(Doc.getRoot().getKind(), Type::Binary);
   ASSERT_EQ(Doc.getRoot().getBinary().getBuffer(),
@@ -43,7 +43,7 @@ TEST(MsgPackDocument, TestReadBinary) {
 
 TEST(MsgPackDocument, TestReadMergeArray) {
   Document Doc;
-  bool Ok = Doc.readFromBlob(StringRef("\x92\xd0\x01\xc0"), /*Multi=*/false);
+  bool Ok = !Doc.readFromBlob(StringRef("\x92\xd0\x01\xc0"), /*Multi=*/false);
   ASSERT_TRUE(Ok);
   ASSERT_EQ(Doc.getRoot().getKind(), Type::Array);
   auto A = Doc.getRoot().getArray();
@@ -54,19 +54,19 @@ TEST(MsgPackDocument, TestReadMergeArray) {
   auto SN = A[1];
   ASSERT_EQ(SN.getKind(), Type::Nil);
 
-  Ok = Doc.readFromBlob(StringRef("\x91\xd0\x2a"), /*Multi=*/false,
-                        [](DocNode *DestNode, DocNode SrcNode, DocNode MapKey) {
-                          // Allow array, merging into existing elements, ORing
-                          // ints.
-                          if (DestNode->getKind() == Type::Int &&
-                              SrcNode.getKind() == Type::Int) {
-                            *DestNode = DestNode->getDocument()->getNode(
-                                DestNode->getInt() | SrcNode.getInt());
-                            return 0;
-                          }
-                          return DestNode->isArray() && SrcNode.isArray() ? 0
-                                                                          : -1;
-                        });
+  Ok = !Doc.readFromBlob(
+      StringRef("\x91\xd0\x2a"), /*Multi=*/false,
+      [](DocNode *DestNode, DocNode SrcNode, DocNode MapKey) {
+        // Allow array, merging into existing elements, ORing
+        // ints.
+        if (DestNode->getKind() == Type::Int &&
+            SrcNode.getKind() == Type::Int) {
+          *DestNode = DestNode->getDocument()->getNode(DestNode->getInt() |
+                                                       SrcNode.getInt());
+          return 0;
+        }
+        return DestNode->isArray() && SrcNode.isArray() ? 0 : -1;
+      });
   ASSERT_TRUE(Ok);
   A = Doc.getRoot().getArray();
   ASSERT_EQ(A.size(), 2u);
@@ -79,7 +79,7 @@ TEST(MsgPackDocument, TestReadMergeArray) {
 
 TEST(MsgPackDocument, TestReadAppendArray) {
   Document Doc;
-  bool Ok = Doc.readFromBlob(StringRef("\x92\xd0\x01\xc0"), /*Multi=*/false);
+  bool Ok = !Doc.readFromBlob(StringRef("\x92\xd0\x01\xc0"), /*Multi=*/false);
   ASSERT_TRUE(Ok);
   ASSERT_EQ(Doc.getRoot().getKind(), Type::Array);
   auto A = Doc.getRoot().getArray();
@@ -90,7 +90,8 @@ TEST(MsgPackDocument, TestReadAppendArray) {
   auto SN = A[1];
   ASSERT_EQ(SN.getKind(), Type::Nil);
 
-  Ok = Doc.readFromBlob(StringRef("\x91\xd0\x2a"), /*Multi=*/false,
+  Ok =
+      !Doc.readFromBlob(StringRef("\x91\xd0\x2a"), /*Multi=*/false,
                         [](DocNode *DestNode, DocNode SrcNode, DocNode MapKey) {
                           // Allow array, appending after existing elements
                           return DestNode->isArray() && SrcNode.isArray()
@@ -112,12 +113,12 @@ TEST(MsgPackDocument, TestReadAppendArray) {
 
 TEST(MsgPackDocument, TestReadMergeMap) {
   Document Doc;
-  bool Ok = Doc.readFromBlob(StringRef("\x82\xa3"
-                                       "foo"
-                                       "\xd0\x01\xa3"
-                                       "bar"
-                                       "\xd0\x02"),
-                             /*Multi=*/false);
+  bool Ok = !Doc.readFromBlob(StringRef("\x82\xa3"
+                                        "foo"
+                                        "\xd0\x01\xa3"
+                                        "bar"
+                                        "\xd0\x02"),
+                              /*Multi=*/false);
   ASSERT_TRUE(Ok);
   ASSERT_EQ(Doc.getRoot().getKind(), Type::Map);
   auto M = Doc.getRoot().getMap();
@@ -129,15 +130,15 @@ TEST(MsgPackDocument, TestReadMergeMap) {
   ASSERT_EQ(BarS.getKind(), Type::Int);
   ASSERT_EQ(BarS.getInt(), 2);
 
-  Ok = Doc.readFromBlob(StringRef("\x82\xa3"
-                                  "foz"
-                                  "\xd0\x03\xa3"
-                                  "baz"
-                                  "\xd0\x04"),
-                        /*Multi=*/false,
-                        [](DocNode *DestNode, DocNode SrcNode, DocNode MapKey) {
-                          return DestNode->isMap() && SrcNode.isMap() ? 0 : -1;
-                        });
+  Ok = !Doc.readFromBlob(
+      StringRef("\x82\xa3"
+                "foz"
+                "\xd0\x03\xa3"
+                "baz"
+                "\xd0\x04"),
+      /*Multi=*/false, [](DocNode *DestNode, DocNode SrcNode, DocNode MapKey) {
+        return DestNode->isMap() && SrcNode.isMap() ? 0 : -1;
+      });
   ASSERT_TRUE(Ok);
   ASSERT_EQ(M.size(), 4u);
   FooS = M["foo"];
@@ -153,7 +154,7 @@ TEST(MsgPackDocument, TestReadMergeMap) {
   ASSERT_EQ(BazS.getKind(), Type::Int);
   ASSERT_EQ(BazS.getInt(), 4);
 
-  Ok = Doc.readFromBlob(
+  Ok = !Doc.readFromBlob(
       StringRef("\x82\xa3"
                 "foz"
                 "\xd0\x06\xa3"
@@ -190,6 +191,13 @@ TEST(MsgPackDocument, TestReadMergeMap) {
   auto BayS = M["bay"];
   ASSERT_EQ(BayS.getKind(), Type::Int);
   ASSERT_EQ(BayS.getInt(), 8);
+}
+
+TEST(MsgPackDocument, TestReadInvalid) {
+  Document Doc;
+  Error E = Doc.readFromBlob(StringRef(), /*Multi=*/false);
+  ASSERT_TRUE((bool)E);
+  consumeError(std::move(E));
 }
 
 TEST(MsgPackDocument, TestWriteInt) {

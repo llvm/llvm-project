@@ -63,27 +63,27 @@ void AMDGPUPALMetadata::readFromIR(Module &M) {
   }
 }
 
-// Set PAL metadata from a binary blob from the applicable .note record.
-// Returns false if bad format.  Blob must remain valid for the lifetime of the
-// Metadata.
-bool AMDGPUPALMetadata::setFromBlob(unsigned Type, StringRef Blob) {
+// Set PAL metadata from a binary blob from the applicable .note record. Blob
+// must remain valid for the lifetime of the Metadata.
+void AMDGPUPALMetadata::setFromBlob(unsigned Type, StringRef Blob) {
   BlobType = Type;
   if (Type == ELF::NT_AMD_PAL_METADATA)
-    return setFromLegacyBlob(Blob);
-  return setFromMsgPackBlob(Blob);
+    setFromLegacyBlob(Blob);
+  else
+    setFromMsgPackBlob(Blob);
 }
 
 // Set PAL metadata from legacy (array of key=value pairs) blob.
-bool AMDGPUPALMetadata::setFromLegacyBlob(StringRef Blob) {
+void AMDGPUPALMetadata::setFromLegacyBlob(StringRef Blob) {
   auto Data = reinterpret_cast<const uint32_t *>(Blob.data());
   for (unsigned I = 0; I != Blob.size() / sizeof(uint32_t) / 2; ++I)
     setRegister(Data[I * 2], Data[I * 2 + 1]);
-  return true;
 }
 
 // Set PAL metadata from msgpack blob.
-bool AMDGPUPALMetadata::setFromMsgPackBlob(StringRef Blob) {
-  return MsgPackDoc.readFromBlob(Blob, /*Multi=*/false);
+void AMDGPUPALMetadata::setFromMsgPackBlob(StringRef Blob) {
+  if (!Blob.empty())
+    handleAllErrors(MsgPackDoc.readFromBlob(Blob, /*Multi=*/false));
 }
 
 // Given the calling convention, calculate the register number for rsrc1. In

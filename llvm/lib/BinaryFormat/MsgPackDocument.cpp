@@ -126,9 +126,9 @@ struct StackLevel {
 // If Multi, then this sets root to an array and adds top-level objects to it.
 // If !Multi, then it only reads a single top-level object, even if there are
 // more, and sets root to that.
-// Returns false if failed due to illegal format or merge error.
-
-bool Document::readFromBlob(
+// Returns an error if failed due to illegal format or merge error, or
+// Error::success() if succeeded.
+Error Document::readFromBlob(
     StringRef Blob, bool Multi,
     function_ref<int(DocNode *DestNode, DocNode SrcNode, DocNode MapKey)>
         Merger) {
@@ -144,17 +144,16 @@ bool Document::readFromBlob(
     // Read the value.
     Object Obj;
     Expected<bool> ReadObj = MPReader.read(Obj);
-    if (!ReadObj) {
-      // FIXME: Propagate the Error to the caller.
-      consumeError(ReadObj.takeError());
-      return false;
-    }
+    if (!ReadObj)
+      return ReadObj.takeError();
     if (!ReadObj.get()) {
       if (Multi && Stack.size() == 1) {
         // OK to finish here as we've just done a top-level element with Multi
         break;
       }
-      return false; // Finished too early
+      return make_error<StringError>(
+          "Unexpected end of document",
+          std::make_error_code(std::errc::invalid_argument));
     }
     // Convert it into a DocNode.
     DocNode Node;
@@ -187,7 +186,9 @@ bool Document::readFromBlob(
       Node = getArrayNode();
       break;
     default:
-      return false; // Raw and Extension not supported
+      return make_error<StringError>(
+          "Unsupported msgpack object type",
+          std::make_error_code(std::errc::invalid_argument));
     }
 
     // Store it.
@@ -220,8 +221,11 @@ bool Document::readFromBlob(
                            ? Stack.back().MapKey
                            : getNode();
       MergeResult = Merger(DestNode, Node, MapKey);
-      if (MergeResult < 0)
-        return false; // Merge conflict resolution failed
+      if (MergeResult < 0) {
+        return make_error<StringError>(
+            "Merge conflict resolution failed",
+            std::make_error_code(std::errc::invalid_argument));
+      }
       assert(!((Node.isMap() && !DestNode->isMap()) ||
                (Node.isArray() && !DestNode->isArray())));
     } else
@@ -246,7 +250,7 @@ bool Document::readFromBlob(
       Stack.pop_back();
     }
   } while (!Stack.empty());
-  return true;
+  return Error::success();
 }
 
 struct WriterStackLevel {
