@@ -602,6 +602,18 @@ union __sanitizer_siginfo {
   };
   __sanitizer_siginfo_pad pad;
 };
+#elif SANITIZER_APPLE
+# define SANITIZER_HAS_SIGINFO 1
+struct __sanitizer_siginfo {
+  int si_signo;
+  int si_errno;
+  int si_code;
+  pid_t si_pid;
+  u32 si_uid;
+  int si_status;
+  void *si_addr;
+  unsigned long opaque[9];
+};
 #else
 # define SANITIZER_HAS_SIGINFO 0
 typedef __sanitizer_siginfo_pad __sanitizer_siginfo;
