@@ -2940,6 +2940,38 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     }
   }
 
+  // Try to replace GEP p, (x + C1), C2 with GEP p, x, C2+C1*S
+  if (GEP.getNumIndices() > 1) {
+    gep_type_iterator GTI = gep_type_begin(GEP);
+    for (User::op_iterator I = GEP.op_begin() + 1, E = GEP.op_end() - 1; I != E;
+         ++I, ++GTI) {
+      if (!GTI.isSequential())
+        break;
+      Value *X;
+      const APInt *C1, *C2;
+      User::op_iterator Next = std::next(I);
+      if (match(I->get(), m_Add(m_Value(X), m_APInt(C1))) &&
+          match(Next->get(), m_APInt(C2))) {
+        TypeSize Scale1 = GTI.getSequentialElementStride(DL);
+        if (Scale1.isScalable() || !(++GTI).isSequential())
+          break;
+        TypeSize Scale2 = GTI.getSequentialElementStride(DL);
+        if (Scale2.isScalable())
+          break;
+
+        // Update the GEP instruction indices, and add Add to the worklist
+        // so that it can be DCEd.
+        Instruction *Add = cast<Instruction>(*I);
+        *I = X;
+        *Next =
+            ConstantInt::get((*Next)->getType(), *C2 + *C1 * (Scale1 / Scale2));
+        addToWorklist(Add);
+        GEP.setIsInBounds(false);
+        return &GEP;
+      }
+    }
+  }
+
   if (Instruction *R = foldSelectGEP(GEP, Builder))
     return R;
 
