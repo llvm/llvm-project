@@ -519,8 +519,10 @@ public:
         TM.getCodeModel() == CodeModel::Large)
       return false;
 
+    // Currently we permit relative lookup table entries on 64-bit targets,
+    // and on 32-bit Arm. TODO: better comment explaining why just these
     Triple TargetTriple = TM.getTargetTriple();
-    if (!TargetTriple.isArch64Bit())
+    if (!TargetTriple.isArch64Bit() && TargetTriple.getArch() != Triple::arm)
       return false;
 
     // TODO: Triggers issues on aarch64 on darwin, so temporarily disable it
