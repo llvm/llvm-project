@@ -33,12 +33,12 @@ bool ConstraintSystem::eliminateUsingFM() {
 
   // First, either remove the variable in place if it is 0 or add the row to
   // RemainingRows and remove it from the system.
-  SmallVector<SmallVector<Entry, 8>, 4> RemainingRows;
+  SmallVector<ConstraintRow, 4> RemainingRows;
   for (unsigned R1 = 0; R1 < Constraints.size();) {
-    SmallVector<Entry, 8> &Row1 = Constraints[R1];
+    ConstraintRow &Row1 = Constraints[R1];
     if (getLastCoefficient(Row1, LastIdx) == 0) {
-      if (Row1.size() > 0 && Row1.back().Id == LastIdx)
-        Row1.pop_back();
+      if (Row1.Entries.size() > 0 && Row1.Entries.back().Id == LastIdx)
+        Row1.Entries.pop_back();
       R1++;
     } else {
       std::swap(Constraints[R1], Constraints.back());
@@ -74,8 +74,8 @@ bool ConstraintSystem::eliminateUsingFM() {
       SmallVector<Entry, 8> NR;
       unsigned IdxUpper = 0;
       unsigned IdxLower = 0;
-      auto &LowerRow = RemainingRows[LowerR];
-      auto &UpperRow = RemainingRows[UpperR];
+      auto &LowerRow = RemainingRows[LowerR].Entries;
+      auto &UpperRow = RemainingRows[UpperR].Entries;
       while (true) {
         if (IdxUpper >= UpperRow.size() || IdxLower >= LowerRow.size())
           break;
@@ -112,7 +112,7 @@ bool ConstraintSystem::eliminateUsingFM() {
       }
       if (NR.empty())
         continue;
-      Constraints.push_back(std::move(NR));
+      Constraints.emplace_back(std::move(NR), /*IsWellDefined*/ true);
       // Give up if the new system gets too big.
       if (Constraints.size() > 500)
         return false;
@@ -124,6 +124,10 @@ bool ConstraintSystem::eliminateUsingFM() {
 }
 
 bool ConstraintSystem::mayHaveSolutionImpl() {
+  // Make sure that all variables in the system are well defined.
+  assert(all_of(Constraints,
+                [](const ConstraintRow &Row) { return Row.IsWellDefined; }));
+
   while (!Constraints.empty() && NumVariables > 1) {
     if (!eliminateUsingFM())
       return true;
@@ -133,10 +137,10 @@ bool ConstraintSystem::mayHaveSolutionImpl() {
     return true;
 
   return all_of(Constraints, [](auto &R) {
-    if (R.empty())
+    if (R.Entries.empty())
       return true;
-    if (R[0].Id == 0)
-      return R[0].Coefficient >= 0;
+    if (R.Entries[0].Id == 0)
+      return R.Entries[0].Coefficient >= 0;
     return true;
   });
 }
@@ -161,7 +165,7 @@ void ConstraintSystem::dump() const {
   if (Constraints.empty())
     return;
   SmallVector<std::string> Names = getVarNamesList();
-  for (const auto &Row : Constraints) {
+  for (const auto &[Row, IsWellDefined] : Constraints) {
     SmallVector<std::string, 16> Parts;
     for (unsigned I = 0, S = Row.size(); I < S; ++I) {
       if (Row[I].Id >= NumVariables)
@@ -204,6 +208,15 @@ bool ConstraintSystem::isConditionImplied(SmallVector<int64_t, 8> R) const {
     return false;
 
   auto NewSystem = *this;
-  NewSystem.addVariableRow(R);
+  NewSystem.addVariableRow(R, /*IsWellDefined*/ true);
+  // Remove invalid constraints whose variables may be poison.
+  erase_if(NewSystem.Constraints, [&](ConstraintRow &R) {
+    if (!R.IsWellDefined) {
+      R.IsWellDefined = all_of(R.Entries, [&](const Entry &E) {
+        return E.Id == 0 || NewSystem.WellDefinedVariableRefCount[E.Id] > 0;
+      });
+    }
+    return !R.IsWellDefined;
+  });
   return !NewSystem.mayHaveSolution();
 }

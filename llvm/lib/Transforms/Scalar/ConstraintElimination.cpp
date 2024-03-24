@@ -306,7 +306,8 @@ public:
   bool doesHold(CmpInst::Predicate Pred, Value *A, Value *B) const;
 
   void addFact(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
-               unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
+               unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack,
+               bool IsWellDefined);
 
   /// Turn a comparison of the form \p Op0 \p Pred \p Op1 into a vector of
   /// constraints, using indices from the corresponding constraint system.
@@ -329,7 +330,8 @@ public:
   /// system if \p Pred is signed/unsigned.
   void transferToOtherSystem(CmpInst::Predicate Pred, Value *A, Value *B,
                              unsigned NumIn, unsigned NumOut,
-                             SmallVectorImpl<StackEntry> &DFSInStack);
+                             SmallVectorImpl<StackEntry> &DFSInStack,
+                             bool IsWellDefined);
 };
 
 /// Represents a (Coefficient * Variable) entry after IR decomposition.
@@ -828,7 +830,8 @@ bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A,
 
 void ConstraintInfo::transferToOtherSystem(
     CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
-    unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack) {
+    unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack,
+    bool IsWellDefined) {
   auto IsKnownNonNegative = [this](Value *V) {
     return doesHold(CmpInst::ICMP_SGE, V, ConstantInt::get(V->getType(), 0)) ||
            isKnownNonNegative(V, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1);
@@ -848,9 +851,9 @@ void ConstraintInfo::transferToOtherSystem(
     //  If B is a signed positive constant, then A >=s 0 and A <s (or <=s) B.
     if (IsKnownNonNegative(B)) {
       addFact(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0), NumIn,
-              NumOut, DFSInStack);
+              NumOut, DFSInStack, IsWellDefined);
       addFact(CmpInst::getSignedPredicate(Pred), A, B, NumIn, NumOut,
-              DFSInStack);
+              DFSInStack, IsWellDefined);
     }
     break;
   case CmpInst::ICMP_UGE:
@@ -858,27 +861,30 @@ void ConstraintInfo::transferToOtherSystem(
     //  If A is a signed positive constant, then B >=s 0 and A >s (or >=s) B.
     if (IsKnownNonNegative(A)) {
       addFact(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), 0), NumIn,
-              NumOut, DFSInStack);
+              NumOut, DFSInStack, IsWellDefined);
       addFact(CmpInst::getSignedPredicate(Pred), A, B, NumIn, NumOut,
-              DFSInStack);
+              DFSInStack, IsWellDefined);
     }
     break;
   case CmpInst::ICMP_SLT:
     if (IsKnownNonNegative(A))
-      addFact(CmpInst::ICMP_ULT, A, B, NumIn, NumOut, DFSInStack);
+      addFact(CmpInst::ICMP_ULT, A, B, NumIn, NumOut, DFSInStack,
+              IsWellDefined);
     break;
   case CmpInst::ICMP_SGT: {
     if (doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), -1)))
       addFact(CmpInst::ICMP_UGE, A, ConstantInt::get(B->getType(), 0), NumIn,
-              NumOut, DFSInStack);
+              NumOut, DFSInStack, IsWellDefined);
     if (IsKnownNonNegative(B))
-      addFact(CmpInst::ICMP_UGT, A, B, NumIn, NumOut, DFSInStack);
+      addFact(CmpInst::ICMP_UGT, A, B, NumIn, NumOut, DFSInStack,
+              IsWellDefined);
 
     break;
   }
   case CmpInst::ICMP_SGE:
     if (IsKnownNonNegative(B))
-      addFact(CmpInst::ICMP_UGE, A, B, NumIn, NumOut, DFSInStack);
+      addFact(CmpInst::ICMP_UGE, A, B, NumIn, NumOut, DFSInStack,
+              IsWellDefined);
     break;
   }
 }
@@ -1077,10 +1083,6 @@ void State::addInfoFor(BasicBlock &BB) {
       // TODO: handle llvm.abs as well
       WorkList.push_back(
           FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
-      // TODO: Check if it is possible to instead only added the min/max facts
-      // when simplifying uses of the min/max intrinsics.
-      if (!isGuaranteedNotToBePoison(&I))
-        break;
       [[fallthrough]];
     case Intrinsic::abs:
       WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), &I));
@@ -1473,7 +1475,8 @@ static bool checkOrAndOpImpliedByOther(
 
   // Optimistically add fact from first condition.
   unsigned OldSize = DFSInStack.size();
-  Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
+  Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack,
+               /*IsWellDefined*/ true);
   if (OldSize == DFSInStack.size())
     return false;
 
@@ -1505,7 +1508,8 @@ static bool checkOrAndOpImpliedByOther(
 
 void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
                              unsigned NumIn, unsigned NumOut,
-                             SmallVectorImpl<StackEntry> &DFSInStack) {
+                             SmallVectorImpl<StackEntry> &DFSInStack,
+                             bool IsWellDefined) {
   // If the constraint has a pre-condition, skip the constraint if it does not
   // hold.
   SmallVector<Value *> NewVariables;
@@ -1522,7 +1526,7 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
   if (R.Coefficients.empty())
     return;
 
-  Added |= CSToUse.addVariableRowFill(R.Coefficients);
+  Added |= CSToUse.addVariableRowFill(R.Coefficients, IsWellDefined);
 
   // If R has been added to the system, add the new variables and queue it for
   // removal once it goes out-of-scope.
@@ -1548,7 +1552,7 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
         ConstraintTy VarPos(SmallVector<int64_t, 8>(Value2Index.size() + 1, 0),
                             false, false, false);
         VarPos.Coefficients[Value2Index[V]] = -1;
-        CSToUse.addVariableRow(VarPos.Coefficients);
+        CSToUse.addVariableRow(VarPos.Coefficients, IsWellDefined);
         DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
                                 SmallVector<Value *, 2>());
       }
@@ -1558,7 +1562,7 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
       // Also add the inverted constraint for equality constraints.
       for (auto &Coeff : R.Coefficients)
         Coeff *= -1;
-      CSToUse.addVariableRowFill(R.Coefficients);
+      CSToUse.addVariableRowFill(R.Coefficients, IsWellDefined);
 
       DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
                               SmallVector<Value *, 2>());
@@ -1733,7 +1737,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       continue;
     }
 
-    auto AddFact = [&](CmpInst::Predicate Pred, Value *A, Value *B) {
+    auto AddFact = [&](CmpInst::Predicate Pred, Value *A, Value *B,
+                       bool IsWellDefined) {
       LLVM_DEBUG(dbgs() << "Processing fact to add to the system: ";
                  dumpUnpackedICmp(dbgs(), Pred, A, B); dbgs() << "\n");
       if (Info.getCS(CmpInst::isSigned(Pred)).size() > MaxRows) {
@@ -1743,11 +1748,12 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         return;
       }
 
-      Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
+      Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack, IsWellDefined);
       if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size())
         ReproducerCondStack.emplace_back(Pred, A, B);
 
-      Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
+      Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack,
+                                 IsWellDefined);
       if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size()) {
         // Add dummy entries to ReproducerCondStack to keep it in sync with
         // DFSInStack.
@@ -1764,18 +1770,20 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
     if (!CB.isConditionFact()) {
       Value *X;
       if (match(CB.Inst, m_Intrinsic<Intrinsic::abs>(m_Value(X)))) {
+        bool IsWellDefined = isGuaranteedNotToBePoison(CB.Inst);
         // If is_int_min_poison is true then we may assume llvm.abs >= 0.
         if (cast<ConstantInt>(CB.Inst->getOperand(1))->isOne())
           AddFact(CmpInst::ICMP_SGE, CB.Inst,
-                  ConstantInt::get(CB.Inst->getType(), 0));
-        AddFact(CmpInst::ICMP_SGE, CB.Inst, X);
+                  ConstantInt::get(CB.Inst->getType(), 0), IsWellDefined);
+        AddFact(CmpInst::ICMP_SGE, CB.Inst, X, IsWellDefined);
         continue;
       }
 
       if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(CB.Inst)) {
         Pred = ICmpInst::getNonStrictPredicate(MinMax->getPredicate());
-        AddFact(Pred, MinMax, MinMax->getLHS());
-        AddFact(Pred, MinMax, MinMax->getRHS());
+        bool IsWellDefined = isGuaranteedNotToBePoison(CB.Inst);
+        AddFact(Pred, MinMax, MinMax->getLHS(), IsWellDefined);
+        AddFact(Pred, MinMax, MinMax->getRHS(), IsWellDefined);
         continue;
       }
     }
@@ -1803,7 +1811,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       (void)Matched;
       assert(Matched && "Must have an assume intrinsic with a icmp operand");
     }
-    AddFact(Pred, A, B);
+    AddFact(Pred, A, B, /*IsWellDefined*/ true);
   }
 
   if (ReproducerModule && !ReproducerModule->functions().empty()) {
