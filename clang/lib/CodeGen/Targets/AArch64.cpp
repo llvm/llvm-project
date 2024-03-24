@@ -553,7 +553,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
   llvm::Type *BaseTy = CGF.ConvertType(Ty);
   if (IsIndirect)
     BaseTy = llvm::PointerType::getUnqual(BaseTy);
-  else if (AI.getCoerceToType())
+  else if (AI.canHaveCoerceToType() && AI.getCoerceToType())
     BaseTy = AI.getCoerceToType();
 
   unsigned NumRegs = 1;
@@ -622,7 +622,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
   // Integer arguments may need to correct register alignment (for example a
   // "struct { __int128 a; };" gets passed in x_2N, x_{2N+1}). In this case we
   // align __gr_offs to calculate the potential address.
-  if (!IsFPR && !IsIndirect && TyAlign.getQuantity() > 8) {
+  if (!IsFPR && !IsIndirect && TyAlign.getQuantity() > 8 && !TySize.isZero()) {
     int Align = TyAlign.getQuantity();
 
     reg_offs = CGF.Builder.CreateAdd(
