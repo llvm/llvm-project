@@ -13,6 +13,13 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(CLANG_BUILT_STANDALONE TRUE)
 endif()
 
+# Make sure that our source directory is on the current cmake module path so that
+# we can include cmake files from this directory.
+list(INSERT CMAKE_MODULE_PATH 0
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
+  )
+
 # Must go below project(..)
 include(GNUInstallDirs)
 include(GetDarwinLinkerVersion)
@@ -140,13 +147,6 @@ if(CLANG_BUILT_STANDALONE)
     umbrella_lit_testsuite_begin(check-all)
   endif() # LLVM_INCLUDE_TESTS
 endif() # standalone
-
-# Make sure that our source directory is on the current cmake module path so that
-# we can include cmake files from this directory.
-list(INSERT CMAKE_MODULE_PATH 0
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
-  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
-  )
 
 # This allows disabling clang's XML dependency even if LLVM finds libxml2.
 # By default, clang depends on libxml2 if LLVM does.
