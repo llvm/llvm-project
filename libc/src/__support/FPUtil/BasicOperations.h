@@ -62,11 +62,11 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T fmaximum(T x, T y) {
   FPBits<T> bitx(x), bity(y);
 
-  if (bitx.is_nan()) 
+  if (bitx.is_nan())
     return x;
-  if (bity.is_nan()) 
+  if (bity.is_nan())
     return y;
-  if (bitx.sign() != bity.sign()) 
+  if (bitx.sign() != bity.sign())
     return (bitx.is_neg() ? y : x);
   return x > y ? x : y;
 }
@@ -75,11 +75,11 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T fminimum(T x, T y) {
   const FPBits<T> bitx(x), bity(y);
 
-  if (bitx.is_nan()) 
+  if (bitx.is_nan())
     return x;
   if (bity.is_nan())
     return y;
-  if (bitx.sign() != bity.sign()) 
+  if (bitx.sign() != bity.sign())
     return (bitx.is_neg()) ? x : y;
   return x < y ? x : y;
 }
@@ -88,11 +88,11 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T fmaximum_num(T x, T y) {
   FPBits<T> bitx(x), bity(y);
 
-  if (bitx.is_nan()) 
+  if (bitx.is_nan())
     return y;
   if (bity.is_nan())
     return x;
-  if (bitx.sign() != bity.sign()) 
+  if (bitx.sign() != bity.sign())
     return (bitx.is_neg() ? y : x);
   return x > y ? x : y;
 }
@@ -101,11 +101,11 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T fminimum_num(T x, T y) {
   const FPBits<T> bitx(x), bity(y);
 
-  if (bitx.is_nan()) 
+  if (bitx.is_nan())
     return y;
-  if (bity.is_nan()) 
+  if (bity.is_nan())
     return x;
-  if (bitx.sign() != bity.sign()) 
+  if (bitx.sign() != bity.sign())
     return (bitx.is_neg() ? x : y);
   return x < y ? x : y;
 }
@@ -114,9 +114,9 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T fmaximum_mag(T x, T y) {
   FPBits<T> bitx(x), bity(y);
 
-  if (abs(x) > abs(y)) 
+  if (abs(x) > abs(y))
     return x;
-  if (abs(y) > abs(x)) 
+  if (abs(y) > abs(x))
     return y;
   return fmaximum(x, y);
 }
@@ -125,9 +125,9 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T fminimum_mag(T x, T y) {
   FPBits<T> bitx(x), bity(y);
 
-  if (abs(x) < abs(y)) 
+  if (abs(x) < abs(y))
     return x;
-  if (abs(y) < abs(x)) 
+  if (abs(y) < abs(x))
     return y;
   return fminimum(x, y);
 }
@@ -136,9 +136,9 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T fmaximum_mag_num(T x, T y) {
   FPBits<T> bitx(x), bity(y);
 
-  if (abs(x) > abs(y)) 
+  if (abs(x) > abs(y))
     return x;
-  if (abs(y) > abs(x)) 
+  if (abs(y) > abs(x))
     return y;
   return fmaximum_num(x, y);
 }
@@ -147,7 +147,7 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T fminimum_mag_num(T x, T y) {
   FPBits<T> bitx(x), bity(y);
 
-  if (abs(x) < abs(y)) 
+  if (abs(x) < abs(y))
     return x;
   if (abs(y) < abs(x))
     return y;
