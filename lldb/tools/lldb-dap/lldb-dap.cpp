@@ -1582,17 +1582,13 @@ void request_modules(const llvm::json::Object &request) {
 //   }]
 // }
 void request_initialize(const llvm::json::Object &request) {
-  auto log_cb = [](const char *buf, void *baton) -> void {
-    g_dap.SendOutput(OutputType::Console, llvm::StringRef{buf});
-  };
-
   auto arguments = request.getObject("arguments");
   // sourceInitFile option is not from formal DAP specification. It is only
   // used by unit tests to prevent sourcing .lldbinit files from environment
   // which may affect the outcome of tests.
   bool source_init_file = GetBoolean(arguments, "sourceInitFile", true);
 
-  g_dap.debugger = lldb::SBDebugger::Create(source_init_file, log_cb, nullptr);
+  g_dap.debugger = lldb::SBDebugger::Create(source_init_file);
   auto cmd = g_dap.debugger.GetCommandInterpreter().AddMultiwordCommand(
       "lldb-dap", "Commands for managing lldb-dap.");
   if (GetBoolean(arguments, "supportsStartDebuggingRequest", false)) {
