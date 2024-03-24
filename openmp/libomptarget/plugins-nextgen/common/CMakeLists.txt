@@ -19,6 +19,7 @@ add_library(PluginCommon OBJECT
   src/RPC.cpp
   src/Utils/ELF.cpp
 )
+add_dependencies(PluginCommon intrinsics_gen)
 
 # Only enable JIT for those targets that LLVM can support.
 string(TOUPPER "${LLVM_TARGETS_TO_BUILD}" TargetsSupported)
