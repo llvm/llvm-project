@@ -56,8 +56,10 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZE_H
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZE_H
 
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include <functional>
 
 namespace llvm {
@@ -107,6 +109,40 @@ struct ExtraVectorPassManager : public FunctionPassManager {
     if (AM.getCachedResult<ShouldRunExtraVectorPasses>(F))
       PA.intersect(FunctionPassManager::run(F, AM));
     PA.abandon<ShouldRunExtraVectorPasses>();
+    return PA;
+  }
+};
+
+struct ShouldRunExtraUnrollPasses
+    : public AnalysisInfoMixin<ShouldRunExtraUnrollPasses> {
+  static AnalysisKey Key;
+  struct Result {
+    SmallPtrSet<Loop *, 4> Loops;
+    bool invalidate(Function &F, const PreservedAnalyses &PA,
+                    FunctionAnalysisManager::Invalidator &) {
+      // Check whether the analysis has been explicitly invalidated. Otherwise,
+      // it remains preserved.
+      auto PAC = PA.getChecker<ShouldRunExtraUnrollPasses>();
+      return !PAC.preservedWhenStateless();
+    }
+  };
+
+  Result run(Function &F, FunctionAnalysisManager &FAM) { return Result(); }
+};
+
+template <typename MarkerT>
+struct ExtraLoopPassManager : public LoopPassManager {
+  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                        LoopStandardAnalysisResults &AR, LPMUpdater &U) {
+    auto PA = PreservedAnalyses::all();
+    if (auto *Extra = AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR)
+                          .getCachedResult<ShouldRunExtraUnrollPasses>(
+                              *L.getHeader()->getParent()))
+      if (Extra->Loops.contains(&L)) {
+        PA.intersect(LoopPassManager::run(L, AM, AR, U));
+        Extra->Loops.erase(&L);
+      }
+
     return PA;
   }
 };

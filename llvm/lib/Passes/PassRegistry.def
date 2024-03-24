@@ -271,6 +271,9 @@ FUNCTION_ANALYSIS("should-not-run-function-passes",
                   ShouldNotRunFunctionPassesAnalysis())
 FUNCTION_ANALYSIS("should-run-extra-vector-passes",
                   ShouldRunExtraVectorPasses())
+FUNCTION_ANALYSIS("should-run-extra-unroll-passes",
+                  ShouldRunExtraUnrollPasses())
+
 FUNCTION_ANALYSIS("ssp-layout", SSPLayoutAnalysis())
 FUNCTION_ANALYSIS("stack-safety-local", StackSafetyAnalysis())
 FUNCTION_ANALYSIS("target-ir",
