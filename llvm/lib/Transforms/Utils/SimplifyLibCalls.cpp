@@ -483,8 +483,7 @@ Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilderBase &B) {
     Type *SizeTTy = IntegerType::get(CI->getContext(), SizeTBits);
     return copyFlags(*CI,
                      emitMemChr(SrcStr, CharVal, // include nul.
-                                ConstantInt::get(SizeTTy, Len), B,
-                                DL, TLI));
+                                ConstantInt::get(SizeTTy, Len), B, DL, TLI));
   }
 
   if (CharC->isZero()) {
@@ -523,22 +522,57 @@ Value *LibCallSimplifier::optimizeStrRChr(CallInst *CI, IRBuilderBase &B) {
   ConstantInt *CharC = dyn_cast<ConstantInt>(CharVal);
   annotateNonNullNoUndefBasedOnAccess(CI, 0);
 
+  if (!CharC) {
+    uint64_t Len = GetStringLength(SrcStr);
+    if (Len)
+      annotateDereferenceableBytes(CI, 0, Len);
+    else
+      return nullptr;
+
+    Function *Callee = CI->getCalledFunction();
+    FunctionType *FT = Callee->getFunctionType();
+    unsigned IntBits = TLI->getIntSize();
+    if (!FT->getParamType(1)->isIntegerTy(IntBits)) // memrchr needs 'int'.
+      return nullptr;
+
+    unsigned SizeTBits = TLI->getSizeTSize(*CI->getModule());
+    Type *SizeTTy = IntegerType::get(CI->getContext(), SizeTBits);
+
+    // Try to expand strrchr to the memrchr nonstandard extension if it's
+    // available, or simply fail otherwise.
+    return copyFlags(*CI,
+                     emitMemRChr(SrcStr, CharVal, // include nul.
+                                 ConstantInt::get(SizeTTy, Len), B, DL, TLI));
+  }
+
+  if (CharC->isZero()) {
+    Value *NullPtr = Constant::getNullValue(CI->getType());
+    if (isOnlyUsedInEqualityComparison(CI, NullPtr))
+      // Pre-empt the transformation to strlen below and fold
+      // strrchr(A, '\0') == null to false.
+      return B.CreateIntToPtr(B.getTrue(), CI->getType());
+  }
+
+  // Otherwise, the character is a constant, see if the first argument is
+  // a string literal.  If so, we can constant fold.
   StringRef Str;
   if (!getConstantStringInfo(SrcStr, Str)) {
-    // strrchr(s, 0) -> strchr(s, 0)
-    if (CharC && CharC->isZero())
-      return copyFlags(*CI, emitStrChr(SrcStr, '\0', B, TLI));
+    if (CharC->isZero()) // strrchr(p, 0) -> p + strlen(p)
+      if (Value *StrLen = emitStrLen(SrcStr, B, DL, TLI))
+        return B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr, StrLen, "strrchr");
     return nullptr;
   }
 
-  unsigned SizeTBits = TLI->getSizeTSize(*CI->getModule());
-  Type *SizeTTy = IntegerType::get(CI->getContext(), SizeTBits);
+  // Compute the offset, make sure to handle the case when we're searching for
+  // zero (a weird way to spell strlen).
+  size_t I = (0xFF & CharC->getSExtValue()) == 0
+                 ? Str.size()
+                 : Str.rfind(CharC->getSExtValue());
+  if (I == StringRef::npos) // Didn't find the char.  strrchr returns null.
+    return Constant::getNullValue(CI->getType());
 
-  // Try to expand strrchr to the memrchr nonstandard extension if it's
-  // available, or simply fail otherwise.
-  uint64_t NBytes = Str.size() + 1;   // Include the terminating nul.
-  Value *Size = ConstantInt::get(SizeTTy, NBytes);
-  return copyFlags(*CI, emitMemRChr(SrcStr, CharVal, Size, B, DL, TLI));
+  // strrchr(s+n,c)  -> gep(s+n+i,c)
+  return B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr, B.getInt64(I), "strrchr");
 }
 
 Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilderBase &B) {
