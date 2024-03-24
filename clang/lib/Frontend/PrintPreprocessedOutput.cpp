@@ -887,6 +887,10 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       *Callbacks->OS << II->getName();
     } else if (Tok.isLiteral() && !Tok.needsCleaning() &&
                Tok.getLiteralData()) {
+      if (tok::isStringLiteral(Tok.getKind())) {
+        // Raw string literal may contain newlines
+        Callbacks->HandleNewlinesInToken(Tok.getLiteralData(), Tok.getLength());
+      }
       Callbacks->OS->write(Tok.getLiteralData(), Tok.getLength());
     } else if (Tok.getLength() < std::size(Buffer)) {
       const char *TokPtr = Buffer;
