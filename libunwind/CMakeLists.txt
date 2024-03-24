@@ -46,6 +46,7 @@ option(LIBUNWIND_ENABLE_ARM_WMMX "Enable unwinding support for ARM WMMX register
 option(LIBUNWIND_ENABLE_THREADS "Build libunwind with threading support." ON)
 option(LIBUNWIND_WEAK_PTHREAD_LIB "Use weak references to refer to pthread functions." OFF)
 option(LIBUNWIND_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
+option(LIBUNWIND_USE_LLVM_LIBC "Build libunwind with LLVM's libc headers" OFF)
 option(LIBUNWIND_INCLUDE_DOCS "Build the libunwind documentation." ${LLVM_INCLUDE_DOCS})
 option(LIBUNWIND_INCLUDE_TESTS "Build the libunwind tests." ${LLVM_INCLUDE_TESTS})
 option(LIBUNWIND_IS_BAREMETAL "Build libunwind for baremetal targets." OFF)
@@ -63,6 +64,10 @@ cmake_dependent_option(LIBUNWIND_INSTALL_STATIC_LIBRARY
 cmake_dependent_option(LIBUNWIND_INSTALL_SHARED_LIBRARY
   "Install the shared libunwind library." ON
   "LIBUNWIND_ENABLE_SHARED;LIBUNWIND_INSTALL_LIBRARY" OFF)
+
+if (LIBUNWIND_USE_LLVM_LIBC AND LIBUNWIND_ENABLE_SHARED)
+  message(FATAL_ERROR "Cannot build libunwind as a shared library with LLVM's libc headers.")
+endif()
 
 if(MINGW)
   set(LIBUNWIND_DEFAULT_TEST_CONFIG "llvm-libunwind-mingw.cfg.in")
@@ -171,6 +176,11 @@ include(config-ix)
 
 if (LIBUNWIND_USE_COMPILER_RT AND NOT LIBUNWIND_HAS_NODEFAULTLIBS_FLAG)
   list(APPEND LIBUNWIND_LINK_FLAGS "-rtlib=compiler-rt")
+endif()
+
+if (LIBUNWIND_USE_LLVM_LIBC)
+  include_directories(SYSTEM ${LIBUNWIND_BINARY_DIR}/../libc/include/)
+  add_compile_flags_if_supported(-ffreestanding)
 endif()
 
 add_compile_flags_if_supported(-Werror=return-type)
@@ -284,7 +294,8 @@ if (LIBUNWIND_ENABLE_ARM_WMMX)
   add_compile_flags(-D__ARM_WMMX)
 endif()
 
-if(LIBUNWIND_IS_BAREMETAL)
+# for now, libc does not have dlsym; enable baremetal mode to avoid using dlsym
+if(LIBUNWIND_IS_BAREMETAL OR LIBUNWIND_USE_LLVM_LIBC)
   add_compile_definitions(_LIBUNWIND_IS_BAREMETAL)
 endif()
 
