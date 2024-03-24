@@ -49,7 +49,8 @@ public:
   }
 
   void testX64_80SpecialNumbers(CanonicalizeFunc f) {
-    if constexpr (LIBC_NAMESPACE::fputil::get_fp_type() == FPType::X86_Binary80) {
+    if constexpr (LIBC_NAMESPACE::fputil::get_fp_type() ==
+                  FPType::X86_Binary80) {
       T cx;
       // Exponent   |       Significand      | Meaning
       //            | Bits 63-62 | Bits 61-0 |
