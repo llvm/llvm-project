@@ -283,6 +283,10 @@ option(COMPILER_RT_USE_BUILTINS_LIBRARY
 
 include(config-ix)
 
+configure_file(
+  ${COMPILER_RT_SOURCE_DIR}/include/config/config.h.cmake
+  ${COMPILER_RT_BINARY_DIR}/include/config/config.h)
+
 #================================
 # Setup Compiler Flags
 #================================

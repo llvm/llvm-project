@@ -168,6 +168,7 @@ check_cxx_compiler_flag("-Werror -Wsizeof-pointer-div" COMPILER_RT_HAS_SIZEOF_PO
 
 # Symbols.
 check_symbol_exists(__func__ "" COMPILER_RT_HAS_FUNC_SYMBOL)
+check_symbol_exists(sysconf unistd.h COMPILER_RT_HAS_SYSCONF)
 
 # Includes.
 check_cxx_compiler_flag(-nostdinc++ COMPILER_RT_HAS_NOSTDINCXX_FLAG)
