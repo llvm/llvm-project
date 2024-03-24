@@ -316,13 +316,12 @@ pushTemporaryCleanup(CodeGenFunction &CGF, const MaterializeTemporaryExpr *M,
           Destroy = &CodeGenFunction::destroyARCWeak;
         }
         if (Duration == SD_FullExpression)
-          CGF.pushDestroy(CleanupKind, ReferenceTemporary,
-                          M->getType(), *Destroy,
-                          CleanupKind & EHCleanup);
+          CGF.pushDestroy(CleanupKind, ReferenceTemporary, E->getType(),
+                          *Destroy, CleanupKind & EHCleanup);
         else
           CGF.pushLifetimeExtendedDestroy(CleanupKind, ReferenceTemporary,
-                                          M->getType(),
-                                          *Destroy, CleanupKind & EHCleanup);
+                                          E->getType(), *Destroy,
+                                          CleanupKind & EHCleanup);
         return;
 
       case SD_Dynamic:
