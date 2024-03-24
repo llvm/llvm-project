@@ -5,7 +5,7 @@
 # RUN: echo "SECTIONS { . = . + SIZEOF_HEADERS; foo = bar; }" > %t.script
 # RUN: not ld.lld %t.o %t2.so --script %t.script -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
 
-# CHECK-COUNT-2: error: {{.*}}.script:1: symbol not found: bar
+# CHECK: error: {{.*}}.script:1: symbol not found: bar
 
 .global _start
 _start:

@@ -28,7 +28,7 @@
 # CHECK-NEXT: 0000000000001000 A newsym
 
 # RUN: not ld.lld -T chain2.t a.o 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
-# ERR-COUNT-3: error: chain2.t:1: symbol not found: undef
+# ERR-COUNT-2: error: chain2.t:1: symbol not found: undef
 
 #--- a.s
 .global _start

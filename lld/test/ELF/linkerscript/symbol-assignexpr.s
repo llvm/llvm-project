@@ -8,7 +8,7 @@
 # RUN: not ld.lld -o /dev/null --noinhibit-exec -T %t2.script %t.o 2>&1 \
 # RUN:   | FileCheck --check-prefix=ERR %s --implicit-check-not=error:
 
-# ERR-COUNT-3: {{.*}}.script:1: symbol not found: symbol
+# ERR-COUNT-2: {{.*}}.script:1: symbol not found: symbol
 
 # MAP:      VMA              LMA     Size Align Out     In      Symbol
 # MAP-NEXT:   0                0        0     1 symbol2 = symbol
