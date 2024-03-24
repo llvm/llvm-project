@@ -937,10 +937,16 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
   // dimension.
   int64_t numElements = inputShape.getNumElements();
   int64_t staticMul = 1;
-  for (auto val : newShapeValue) {
+  int i = 0;
+  for (auto &val : newShapeValue) {
+    if (val == 0) {
+      // Swap 0 dim with corresponding input dim
+      val = inputShape.getDimSize(i);
+    }
     if (!ShapedType::isDynamic(val)) {
       staticMul *= val;
     }
+    i++;
   }
 
   // Determine the length of the dynamic dimension.
