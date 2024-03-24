@@ -13785,6 +13785,14 @@ static SDValue PerformADDVecReduce(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+const MCPhysReg *ARMTargetLowering::getScratchRegisters(CallingConv::ID) const {
+  // LR is a not a scratch register, but we must treat it as clobbered by any
+  // call site. Hence we include LR in the scratch registers, which are in turn
+  // added as implicit-defs for stackmaps and patchpoints.
+  static const MCPhysReg ScratchRegs[] = {ARM::R12, ARM::LR, 0};
+  return ScratchRegs;
+}
+
 bool
 ARMTargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
                                                  CombineLevel Level) const {
