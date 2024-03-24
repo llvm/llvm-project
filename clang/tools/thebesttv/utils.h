@@ -130,4 +130,9 @@ struct GlobalStat {
 
 SourceLocation getEndOfMacroExpansion(SourceLocation loc, ASTContext &Context);
 
+/**
+ * 打印指定范围内的源码
+ */
+void printSourceWithinRange(ASTContext &Context, SourceRange range);
+
 #endif

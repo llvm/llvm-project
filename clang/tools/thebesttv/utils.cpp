@@ -127,3 +127,31 @@ SourceLocation getEndOfMacroExpansion(SourceLocation loc, ASTContext &Context) {
     requireTrue(end.isValid() && !end.isMacroID());
     return end;
 }
+
+void printSourceWithinRange(ASTContext &Context, SourceRange range) {
+    auto &SM = Context.getSourceManager();
+    auto &LO = Context.getLangOpts();
+
+    SourceLocation b = range.getBegin();
+    SourceLocation e = range.getEnd();
+
+    if (b.isMacroID() && e.isMacroID()) {
+        llvm::errs() << "!!! both beg & end are macro !!!\n";
+
+        // b = SM.getExpansionLoc(b);
+        // e = SM.getExpansionLoc(e);
+
+        // b = SM.getSpellingLoc(b);
+        // e = SM.getSpellingLoc(e);
+
+        e = getEndOfMacroExpansion(b, Context);
+        e = Lexer::getLocForEndOfToken(e, 0, SM, LO);
+        requireTrue(e.isValid(), "End is invalid");
+
+        b = SM.getExpansionLoc(b);
+
+        auto CharRange = CharSourceRange::getCharRange(b, e);
+        auto StringRep = Lexer::getSourceText(CharRange, SM, LO);
+        llvm::errs() << "> " << StringRep << "\n";
+    }
+}
