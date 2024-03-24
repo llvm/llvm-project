@@ -25,6 +25,5 @@ add_libc_unittest(
     libc.src.sys.statvfs.fstatvfs
     libc.src.fcntl.open
     libc.src.unistd.close
-    libc.src.__support.CPP.string_view
     libc.test.UnitTest.ErrnoSetterMatcher
 )

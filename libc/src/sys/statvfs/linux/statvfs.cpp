@@ -16,11 +16,10 @@ LLVM_LIBC_FUNCTION(int, statvfs,
                    (const char *__restrict path,
                     struct statvfs *__restrict buf)) {
   using namespace statfs_utils;
-  if (cpp::optional<LinuxStatFs> result = linux_statfs(path)) {
-    *buf = statfs_to_statvfs(*result);
-    return 0;
-  }
-  return -1;
+  cpp::optional<LinuxStatFs> result = linux_statfs(path);
+  if (result)
+    statfs_to_statvfs(*result, *buf);
+  return result ? 0 : -1;
 }
 
 } // namespace LIBC_NAMESPACE

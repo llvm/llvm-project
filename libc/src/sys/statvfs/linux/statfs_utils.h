@@ -25,6 +25,9 @@ using LinuxStatFs = statfs64;
 using LinuxStatFs = statfs;
 #endif
 
+// Linux kernel set an additional flag to f_flags. Libc should mask it out.
+LIBC_INLINE_VAR constexpr decltype(LinuxStatFs::f_flags) ST_VALID = 0x0020;
+
 LIBC_INLINE cpp::optional<LinuxStatFs> linux_statfs(const char *path) {
   // The kernel syscall routine checks the validity of the path before filling
   // the statfs structure. So, it is possible that the result is not initialized
@@ -42,6 +45,7 @@ LIBC_INLINE cpp::optional<LinuxStatFs> linux_statfs(const char *path) {
     libc_errno = -ret;
     return cpp::nullopt;
   }
+  result.f_flags &= ~ST_VALID;
   return result;
 }
 
@@ -62,12 +66,15 @@ LIBC_INLINE cpp::optional<LinuxStatFs> linux_fstatfs(int fd) {
     libc_errno = -ret;
     return cpp::nullopt;
   }
+  result.f_flags &= ~ST_VALID;
   return result;
 }
 
-// use struct stat(v)fs to avoid conflicts with the function names.
-LIBC_INLINE struct statvfs statfs_to_statvfs(const LinuxStatFs &in) {
-  struct statvfs out;
+// must use 'struct' tag to refer to type 'statvfs' in this scope. There will be
+// a function in the same namespace with the same name. For consistency, we use
+// struct prefix for all statvfs/statfs related types.
+LIBC_INLINE void statfs_to_statvfs(const LinuxStatFs &__restrict in,
+                                   struct statvfs &__restrict out) {
   out.f_bsize = in.f_bsize;
   out.f_frsize = in.f_frsize;
   out.f_blocks = in.f_blocks;
@@ -80,7 +87,6 @@ LIBC_INLINE struct statvfs statfs_to_statvfs(const LinuxStatFs &in) {
                static_cast<decltype(out.f_fsid)>(in.f_fsid.val[1]) << 32;
   out.f_flag = in.f_flags;
   out.f_namemax = in.f_namelen;
-  return out;
 }
 } // namespace statfs_utils
 } // namespace LIBC_NAMESPACE

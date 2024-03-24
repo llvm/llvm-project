@@ -6,7 +6,7 @@
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
 namespace LIBC_NAMESPACE {
-static int statfs(const char *path, struct statfs *buf) {
+static int statfs(const char *path, statfs *buf) {
   using namespace statfs_utils;
   if (cpp::optional<LinuxStatFs> result = linux_statfs(path)) {
     *buf = *result;
@@ -17,7 +17,7 @@ static int statfs(const char *path, struct statfs *buf) {
 } // namespace LIBC_NAMESPACE
 
 TEST(LlvmLibcSysStatfsTest, StatfsBasic) {
-  statfs buf[1];
+  struct statfs buf[1];
   ASSERT_THAT(LIBC_NAMESPACE::statfs("/", buf), Succeeds());
   ASSERT_THAT(LIBC_NAMESPACE::statfs("/proc", buf), Succeeds());
   ASSERT_EQ(buf->f_type, static_cast<decltype(buf->f_type)>(PROC_SUPER_MAGIC));
@@ -26,7 +26,7 @@ TEST(LlvmLibcSysStatfsTest, StatfsBasic) {
 }
 
 TEST(LlvmLibcSysStatfsTest, StatvfsInvalidPath) {
-  statvfs buf[1];
+  struct statvfs buf[1];
   ASSERT_THAT(LIBC_NAMESPACE::statvfs("", buf), Fails(ENOENT));
   ASSERT_THAT(LIBC_NAMESPACE::statvfs("/nonexistent", buf), Fails(ENOENT));
   ASSERT_THAT(LIBC_NAMESPACE::statvfs("/dev/null/whatever", buf),
@@ -35,7 +35,7 @@ TEST(LlvmLibcSysStatfsTest, StatvfsInvalidPath) {
 }
 
 TEST(LlvmLibcSysStatfsTest, StatvfsNameTooLong) {
-  statvfs buf[1];
+  struct statvfs buf[1];
   ASSERT_THAT(LIBC_NAMESPACE::statvfs("/", buf), Succeeds());
   char *name = static_cast<char *>(__builtin_alloca(buf->f_namemax + 3));
   name[0] = '/';
