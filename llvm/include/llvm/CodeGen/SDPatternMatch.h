@@ -457,15 +457,16 @@ struct BinaryOpc_match {
   }
 };
 
-template <typename LHS_t, typename RHS_t, bool Commutable = false,
-          typename PredFuncT>
+template <typename LHS_t, typename RHS_t, typename PredFuncT>
 struct AnyBinaryOp_match {
   LHS_t L;
   RHS_t R;
   PredFuncT PredFunc;
+  bool Commutable;
 
-  AnyBinaryOp_match(const PredFuncT &Pred, const LHS_t &LHS, const RHS_t &RHS)
-      : PredFunc(Pred), L(LHS), R(RHS) {}
+  AnyBinaryOp_match(const PredFuncT &Pred, const LHS_t &LHS, const RHS_t &RHS,
+                    const bool Commutable)
+      : PredFunc(Pred), L(LHS), R(RHS), Commutable(Commutable) {}
 
   template <typename OpTy, typename MatchContext>
   bool match(OpTy *V, const MatchContext &Ctx) {
@@ -480,30 +481,26 @@ struct AnyBinaryOp_match {
 };
 
 template <typename LHS, typename RHS>
-inline AnyBinaryOp_match<LHS, RHS, false> m_AnyBinOp(const LHS &L,
-                                                     const RHS &R) {
-  return AnyBinaryOp_match<LHS, RHS, false>{
-      [](const TargetLowering &TLI) { return true }, L, R};
+inline auto m_AnyBinOp(const LHS &L, const RHS &R) {
+  return AnyBinaryOp_match{[](const TargetLowering &TLI) { return true }, L, R,
+                           false};
 }
 template <typename LHS, typename RHS>
-inline AnyBinaryOp_match<LHS, RHS, true> m_c_AnyBinOp(const LHS &L,
-                                                      const RHS &R) {
-  return AnyBinaryOp_match<LHS, RHS, true>{
-      [](const TargetLowering &TLI) { return true }, L, R};
+inline auto m_c_AnyBinOp(const LHS &L, const RHS &R) {
+  return AnyBinaryOp_match{[](const TargetLowering &TLI) { return true }, L, R,
+                           true};
 }
 
 template <typename LHS, typename RHS>
-inline BinaryOpc_match<LHS, RHS, false> m_AnyBinOp(unsigned Opc, const LHS &L,
-                                                   const RHS &R) {
-  return AnyBinaryOp_match<LHS, RHS, false>{
-      [](const TargetLowering &TLI) { return TLI.isBinOp(Opc) }, L, R};
+inline auto m_AnyBinOp(unsigned Opc, const LHS &L, const RHS &R) {
+  return AnyBinaryOp_match{
+      [](const TargetLowering &TLI) { return TLI.isBinOp(Opc) }, L, R, false};
 }
 template <typename LHS, typename RHS>
-inline BinaryOpc_match<LHS, RHS, true> m_c_AnyBinOp(unsigned Opc, const LHS &L,
-                                                    const RHS &R) {
-  return AnyBinaryOp_match<LHS, RHS, true>{
+inline auto m_c_AnyBinOp(unsigned Opc, const LHS &L, const RHS &R) {
+  return AnyBinaryOp_match{
       [](const TargetLowering &TLI) { return TLI.isCommutativeBinOp(Opc) }, L,
-      R};
+      R, true};
 }
 
 template <typename LHS, typename RHS>
