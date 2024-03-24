@@ -1769,7 +1769,7 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
 
   // After this many iterations store-to-load forwarding conflicts should not
   // cause any slowdowns.
-  const uint64_t NumItersForStoreLoadThroughMemory = 8 * TypeByteSize;
+  const uint64_t NumItersForStoreLoadThroughMemory = 8;
   // Maximum vector factor.
   uint64_t MaxVFWithoutSLForwardIssues = std::min(
       VectorizerParams::MaxVectorWidth * TypeByteSize, MinDepDistBytes);
