@@ -11,9 +11,11 @@
 
 #include <wchar.h>
 
+#include "src/__support/common.h"
+
 namespace LIBC_NAMESPACE {
 
-int wctob(wint_t c);
+LIBC_FUNCTION_DECL int wctob(wint_t c);
 
 } // namespace LIBC_NAMESPACE
 

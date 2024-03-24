@@ -13,10 +13,8 @@
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(void *, bsearch,
-                   (const void *key, const void *array, size_t array_size,
-                    size_t elem_size,
-                    int (*compare)(const void *, const void *))) {
+void *bsearch(const void *key, const void *array, size_t array_size,
+              size_t elem_size, int (*compare)(const void *, const void *)) {
   if (key == nullptr || array == nullptr || array_size == 0 || elem_size == 0)
     return nullptr;
 

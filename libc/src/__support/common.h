@@ -20,6 +20,12 @@
 #define LLVM_LIBC_FUNCTION_ATTR
 #endif
 
+#if defined(LIBC_COPT_PUBLIC_PACKAGING)
+#define LIBC_FUNCTION_DECL extern "C"
+#else
+#define LIBC_FUNCTION_DECL
+#endif
+
 // MacOS needs to be excluded because it does not support aliasing.
 #if defined(LIBC_COPT_PUBLIC_PACKAGING) && (!defined(__APPLE__))
 #define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)                           \

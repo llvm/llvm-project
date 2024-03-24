@@ -13,7 +13,7 @@
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(double, atof, (const char *str)) {
+double atof(const char *str) {
   auto result = internal::strtofloatingpoint<double>(str);
   if (result.has_error())
     libc_errno = result.error;

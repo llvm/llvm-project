@@ -23,8 +23,7 @@
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(int, vprintf,
-                   (const char *__restrict format, va_list vlist)) {
+int vprintf(const char *__restrict format, va_list vlist) {
   internal::ArgList args(vlist); // This holder class allows for easier copying
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
