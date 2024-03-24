@@ -10259,6 +10259,24 @@ INTERCEPTOR(int, cpuset_getaffinity, int level, int which, __int64_t id, SIZE_T 
 #define INIT_CPUSET_GETAFFINITY
 #endif
 
+#if SANITIZER_INTERCEPT_FREADLINK
+INTERCEPTOR(SSIZE_T, freadlink, int fd, char *buf, SIZE_T bufsiz) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, freadlink, fd, buf, bufsiz);
+  COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
+  SSIZE_T res = REAL(freadlink)(fd, buf, bufsiz);
+  if (res > 0)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, res);
+  if (res >= 0 && fd > 0)
+    COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
+  return res;
+}
+
+#  define INIT_FREADLINK COMMON_INTERCEPT_FUNCTION(freadlink)
+#else
+#  define INIT_FREADLINK
+#endif
+
 #include "sanitizer_common_interceptors_netbsd_compat.inc"
 
 namespace __sanitizer {
@@ -10578,6 +10596,7 @@ static void InitializeCommonInterceptors() {
   INIT___XUNAME;
   INIT_ARGP_PARSE;
   INIT_CPUSET_GETAFFINITY;
+  INIT_FREADLINK;
 
   INIT___PRINTF_CHK;
 }
