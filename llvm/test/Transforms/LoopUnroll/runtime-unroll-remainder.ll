@@ -94,7 +94,7 @@ define i32 @unroll(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 %N)
 ; CHECK-NEXT:    [[MUL_3:%.*]] = mul nsw i32 [[TMP14]], [[TMP13]]
 ; CHECK-NEXT:    [[ADD_3]] = add nsw i32 [[MUL_3]], [[ADD_2]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_3]] = add nuw nsw i64 [[INDVARS_IV]], 4
-; CHECK-NEXT:    [[NITER_NEXT_3]] = add i64 [[NITER]], 4
+; CHECK-NEXT:    [[NITER_NEXT_3]] = add nuw i64 [[NITER]], 4
 ; CHECK-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i64 [[NITER_NEXT_3]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_3]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ;
