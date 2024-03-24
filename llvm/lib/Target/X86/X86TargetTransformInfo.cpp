@@ -4538,8 +4538,7 @@ X86TTIImpl::getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
       // For types we can insert directly, insertion into 128-bit sub vectors is
       // cheap, followed by a cheap chain of concatenations.
       if (LegalVectorBitWidth <= LaneBitWidth) {
-        Cost += BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert,
-                                                /*Extract*/ false, CostKind);
+        Cost += BaseT::getBuildVectorCost(Ty, DemandedElts, CostKind);
       } else {
         // In each 128-lane, if at least one index is demanded but not all
         // indices are demanded and this 128-lane is not the first 128-lane of
@@ -4578,8 +4577,7 @@ X86TTIImpl::getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
           if (!LaneEltMask.isAllOnes())
             Cost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, std::nullopt,
                                    CostKind, I * NumEltsPerLane, LaneTy);
-          Cost += BaseT::getScalarizationOverhead(LaneTy, LaneEltMask, Insert,
-                                                  /*Extract*/ false, CostKind);
+          Cost += BaseT::getBuildVectorCost(LaneTy, LaneEltMask, CostKind);
         }
 
         APInt AffectedLanes =
@@ -4656,8 +4654,7 @@ X86TTIImpl::getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
             continue;
           Cost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, std::nullopt,
                                  CostKind, I * NumEltsPerLane, LaneTy);
-          Cost += BaseT::getScalarizationOverhead(
-              LaneTy, LaneEltMask, /*Insert*/ false, Extract, CostKind);
+          Cost += BaseT::getExplodeVectorCost(LaneTy, LaneEltMask, CostKind);
         }
 
         return Cost;
@@ -4665,8 +4662,7 @@ X86TTIImpl::getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
     }
 
     // Fallback to default extraction.
-    Cost += BaseT::getScalarizationOverhead(Ty, DemandedElts, /*Insert*/ false,
-                                            Extract, CostKind);
+    Cost += BaseT::getExplodeVectorCost(Ty, DemandedElts, CostKind);
   }
 
   return Cost;
