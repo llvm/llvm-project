@@ -397,19 +397,22 @@ public:
   // Access the path to this entry in the cache.
   StringRef getEntryPath() { return EntryPath; }
 
-  // Try loading the buffer for this cache entry.
-  ErrorOr<std::unique_ptr<MemoryBuffer>> tryLoadingBuffer() {
-    if (EntryPath.empty())
-      return std::error_code();
+  /// Try loading the buffer for this cache entry.
+  ///
+  /// \returns The buffer on cache hit, null on cache miss, or an error when
+  /// unable to load the cache contents.
+  Expected<std::unique_ptr<MemoryBuffer>> tryLoadingBuffer() {
+    if (EntryPath.empty() || !sys::fs::exists(EntryPath))
+      return nullptr;
     SmallString<64> ResultPath;
     Expected<sys::fs::file_t> FDOrErr = sys::fs::openNativeFileForRead(
-        Twine(EntryPath), sys::fs::OF_UpdateAtime, &ResultPath);
+        EntryPath, sys::fs::OF_UpdateAtime, &ResultPath);
     if (!FDOrErr)
-      return errorToErrorCode(FDOrErr.takeError());
+      return FDOrErr.takeError();
     ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr = MemoryBuffer::getOpenFile(
         *FDOrErr, EntryPath, /*FileSize=*/-1, /*RequiresNullTerminator=*/false);
     sys::fs::closeFile(*FDOrErr);
-    return MBOrErr;
+    return errorOrToExpected(std::move(MBOrErr));
   }
 
   // Cache the Produced object file
@@ -1144,18 +1147,22 @@ void ThinLTOCodeGenerator::run() {
         auto CacheEntryPath = CacheEntry.getEntryPath();
 
         {
-          auto ErrOrBuffer = CacheEntry.tryLoadingBuffer();
-          LLVM_DEBUG(dbgs() << "Cache " << (ErrOrBuffer ? "hit" : "miss")
+          std::unique_ptr<MemoryBuffer> MaybeBuffer;
+          if (auto E = CacheEntry.tryLoadingBuffer().moveInto(MaybeBuffer)) {
+            errs() << "remark: can't read cached file '" << CacheEntryPath
+                   << "': " << toString(std::move(E)) << "\n";
+          }
+          LLVM_DEBUG(dbgs() << "Cache " << (MaybeBuffer ? "hit" : "miss")
                             << " '" << CacheEntryPath << "' for buffer "
                             << count << " " << ModuleIdentifier << "\n");
 
-          if (ErrOrBuffer) {
+          if (MaybeBuffer) {
             // Cache Hit!
             if (SavedObjectsDirectoryPath.empty())
-              ProducedBinaries[count] = std::move(ErrOrBuffer.get());
+              ProducedBinaries[count] = std::move(MaybeBuffer);
             else
-              ProducedBinaryFiles[count] = writeGeneratedObject(
-                  count, CacheEntryPath, *ErrOrBuffer.get());
+              ProducedBinaryFiles[count] =
+                  writeGeneratedObject(count, CacheEntryPath, *MaybeBuffer);
             return;
           }
         }
@@ -1192,7 +1199,7 @@ void ThinLTOCodeGenerator::run() {
         CacheEntry.write(*OutputBuffer);
 
         if (SavedObjectsDirectoryPath.empty()) {
-          // We need to generated a memory buffer for the linker.
+          // We need to generate a memory buffer for the linker.
           if (!CacheEntryPath.empty()) {
             // When cache is enabled, reload from the cache if possible.
             // Releasing the buffer from the heap and reloading it from the
@@ -1200,13 +1207,13 @@ void ThinLTOCodeGenerator::run() {
             // The freed memory can be used for the next input file.
             // The final binary link will read from the VFS cache (hopefully!)
             // or from disk (if the memory pressure was too high).
-            auto ReloadedBufferOrErr = CacheEntry.tryLoadingBuffer();
-            if (auto EC = ReloadedBufferOrErr.getError()) {
+            std::unique_ptr<MemoryBuffer> MaybeBuffer;
+            if (auto E = CacheEntry.tryLoadingBuffer().moveInto(MaybeBuffer)) {
               // On error, keep the preexisting buffer and print a diagnostic.
               errs() << "remark: can't reload cached file '" << CacheEntryPath
-                     << "': " << EC.message() << "\n";
+                     << "': " << toString(std::move(E)) << "\n";
             } else {
-              OutputBuffer = std::move(*ReloadedBufferOrErr);
+              OutputBuffer = std::move(MaybeBuffer);
             }
           }
           ProducedBinaries[count] = std::move(OutputBuffer);
