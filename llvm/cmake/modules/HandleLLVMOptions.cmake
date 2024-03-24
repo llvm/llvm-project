@@ -1084,6 +1084,17 @@ if (LLVM_USE_SPLIT_DWARF AND
   endif()
 endif()
 
+if (BUILD_SHARED_LIBS AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND
+    ((uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG") OR
+     (uppercase_CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO")))
+  # When using a shared libraries build, tune the debug info output for LLDB
+  # (which enables standalone debug info) since otherwise LLDB users will not be
+  # able to print types from other shared libraries (e.g. SmallVector printing
+  # will only work inside libLLVMSupport).
+  # See https://github.com/llvm/llvm-project/issues/60994#issuecomment-1447337360
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:-glldb>)
+endif()
+
 add_compile_definitions(__STDC_CONSTANT_MACROS)
 add_compile_definitions(__STDC_FORMAT_MACROS)
 add_compile_definitions(__STDC_LIMIT_MACROS)
