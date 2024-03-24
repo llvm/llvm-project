@@ -9,14 +9,14 @@ void foo() {
   for (i = 0; i < 10; ++i) {  // this is OK
     a[i] = b[i] = 0;
   }
-  // expected-error@+1{{'code_align' attribute only applies to 'for', 'while', and 'do' statements}}
+  // expected-error@+1{{'code_align' attribute only applies to 'for', 'while', 'do' statements and functions}}
   [[clang::code_align(4)]]
   i = 7;
   for (i = 0; i < 10; ++i) {
     a[i] = b[i] = 0;
   }
 
-  // expected-error@+1{{'code_align' attribute cannot be applied to a declaration}}
+  // expected-error@+1{{'code_align' attribute only applies to 'for', 'while', 'do' statements and functions}}
   [[clang::code_align(12)]] int n[10];
 }
 
@@ -121,6 +121,11 @@ void check_code_align_expression() {
 #endif
 }
 
+[[clang::code_align(32)]] int function_attribute();
+
+// expected-error@+1{{'code_align' attribute requires an integer argument which is a constant power of two}}
+[[clang::code_align(31)]] int function_attribute_misaligned();
+
 #if __cplusplus >= 201103L
 template <int A, int B, int C, int D, int E>
 void code_align_dependent() {
@@ -160,6 +165,11 @@ void bar4() {
 	                       // cpp-local-note@#temp-instantiation1{{in instantiation of function template specialization 'bar4<64>' requested here}}
   for(int I=0; I<128; ++I) { bar(I); }
 }
+
+struct S {
+  template <int A>
+  [[clang::code_align(32)]] int foo();
+};
 
 int main() {
   code_align_dependent<8, 23, 32, -10, 64>(); // #neg-instantiation

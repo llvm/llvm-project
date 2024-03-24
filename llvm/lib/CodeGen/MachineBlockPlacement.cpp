@@ -2940,8 +2940,12 @@ void MachineBlockPlacement::alignBlocks() {
       }
     }
 
-    // Use max of the TLIAlign and MDAlign
-    const Align LoopAlign = std::max(TLIAlign, Align(MDAlign));
+    unsigned FunctionMBBAlign =
+        F->getFunction().getFnAttributeAsParsedInteger("align-basic-blocks", 1);
+
+    // Use max of the TLIAlign, MDAlign or the function-level alignment.
+    const Align LoopAlign =
+        std::max(std::max(TLIAlign, Align(MDAlign)), Align(FunctionMBBAlign));
     if (LoopAlign == 1)
       continue; // Don't care about loop alignment.
 
@@ -3475,27 +3479,39 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   bool HasMaxBytesOverride =
       MaxBytesForAlignmentOverride.getNumOccurrences() > 0;
 
+  unsigned long long MBBAlignment =
+      MF.getFunction().getFnAttributeAsParsedInteger("align-basic-blocks", 1);
+
+  // Respect BB alignment that could already be set by llvm.loop.align in
+  // alignBlocks() above.
   if (AlignAllBlock)
     // Align all of the blocks in the function to a specific alignment.
     for (MachineBasicBlock &MBB : MF) {
+      unsigned MaxAlignment = std::max(1ULL << AlignAllBlock, MBBAlignment);
       if (HasMaxBytesOverride)
-        MBB.setAlignment(Align(1ULL << AlignAllBlock),
+        MBB.setAlignment(std::max(Align(MaxAlignment), MBB.getAlignment()),
                          MaxBytesForAlignmentOverride);
       else
-        MBB.setAlignment(Align(1ULL << AlignAllBlock));
+        MBB.setAlignment(std::max(Align(MaxAlignment), MBB.getAlignment()));
     }
   else if (AlignAllNonFallThruBlocks) {
     // Align all of the blocks that have no fall-through predecessors to a
     // specific alignment.
     for (auto MBI = std::next(MF.begin()), MBE = MF.end(); MBI != MBE; ++MBI) {
       auto LayoutPred = std::prev(MBI);
+      unsigned MaxAlignment =
+          std::max(1ULL << AlignAllNonFallThruBlocks, MBBAlignment);
       if (!LayoutPred->isSuccessor(&*MBI)) {
         if (HasMaxBytesOverride)
-          MBI->setAlignment(Align(1ULL << AlignAllNonFallThruBlocks),
+          MBI->setAlignment(std::max(Align(MaxAlignment), MBI->getAlignment()),
                             MaxBytesForAlignmentOverride);
         else
-          MBI->setAlignment(Align(1ULL << AlignAllNonFallThruBlocks));
+          MBI->setAlignment(std::max(Align(MaxAlignment), MBI->getAlignment()));
       }
+    }
+  } else if (MBBAlignment != 1) {
+    for (MachineBasicBlock &MBB : MF) {
+      MBB.setAlignment(std::max(Align(MBBAlignment), MBB.getAlignment()));
     }
   }
   if (ViewBlockLayoutWithBFI != GVDT_None &&
