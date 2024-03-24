@@ -188,6 +188,9 @@ New Compiler Flags
 - ``-Wmissing-designated-field-initializers``, grouped under ``-Wmissing-field-initializers``.
   This diagnostic can be disabled to make ``-Wmissing-field-initializers`` behave
   like it did before Clang 18.x. Fixes (`#56628 <https://github.com/llvm/llvm-project/issues/68933>`_)
+- ``-fms-define-stdc`` and its clang-cl counterpart ``/Zc:__STDC__``.
+  Matches MSVC behaviour by defining ``__STDC__`` to ``1`` when
+  MSVC compatibility mode is used. It has no effect for C++ code.
 
 Deprecated Compiler Flags
 -------------------------
