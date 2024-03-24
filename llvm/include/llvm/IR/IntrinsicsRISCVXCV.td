@@ -18,6 +18,18 @@ class ScalarCoreVBitManipGprIntrinsic
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty],
                             [IntrNoMem, IntrSpeculatable]>;
 
+class ScalarCoreVMacGprGprGprIntrinsic
+  : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [IntrNoMem, IntrWillReturn, IntrSpeculatable]>;
+
+class ScalarCoreVMacGprGPRImmIntrinsic
+    : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+                [IntrNoMem, IntrWillReturn, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
+
+class ScalarCoreVMacGprGprGprImmIntrinsic
+  : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [IntrNoMem, IntrWillReturn, IntrSpeculatable, ImmArg<ArgIndex<3>>]>;
+
 let TargetPrefix = "riscv" in {
   def int_riscv_cv_bitmanip_extract : ScalarCoreVBitManipGprGprIntrinsic;
   def int_riscv_cv_bitmanip_extractu : ScalarCoreVBitManipGprGprIntrinsic;
@@ -34,4 +46,25 @@ let TargetPrefix = "riscv" in {
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
                             [IntrNoMem, IntrWillReturn, IntrSpeculatable,
                             ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+
+  def int_riscv_cv_mac_mac : ScalarCoreVMacGprGprGprIntrinsic;
+  def int_riscv_cv_mac_msu : ScalarCoreVMacGprGprGprIntrinsic;
+
+  def int_riscv_cv_mac_muluN    : ScalarCoreVMacGprGPRImmIntrinsic;
+  def int_riscv_cv_mac_mulhhuN  : ScalarCoreVMacGprGPRImmIntrinsic;
+  def int_riscv_cv_mac_mulsN    : ScalarCoreVMacGprGPRImmIntrinsic;
+  def int_riscv_cv_mac_mulhhsN  : ScalarCoreVMacGprGPRImmIntrinsic;
+  def int_riscv_cv_mac_muluRN   : ScalarCoreVMacGprGPRImmIntrinsic;
+  def int_riscv_cv_mac_mulhhuRN : ScalarCoreVMacGprGPRImmIntrinsic;
+  def int_riscv_cv_mac_mulsRN   : ScalarCoreVMacGprGPRImmIntrinsic;
+  def int_riscv_cv_mac_mulhhsRN : ScalarCoreVMacGprGPRImmIntrinsic;
+
+  def int_riscv_cv_mac_macuN    : ScalarCoreVMacGprGprGprImmIntrinsic;
+  def int_riscv_cv_mac_machhuN  : ScalarCoreVMacGprGprGprImmIntrinsic;
+  def int_riscv_cv_mac_macsN    : ScalarCoreVMacGprGprGprImmIntrinsic;
+  def int_riscv_cv_mac_machhsN  : ScalarCoreVMacGprGprGprImmIntrinsic;
+  def int_riscv_cv_mac_macuRN   : ScalarCoreVMacGprGprGprImmIntrinsic;
+  def int_riscv_cv_mac_machhuRN : ScalarCoreVMacGprGprGprImmIntrinsic;
+  def int_riscv_cv_mac_macsRN   : ScalarCoreVMacGprGprGprImmIntrinsic;
+  def int_riscv_cv_mac_machhsRN : ScalarCoreVMacGprGprGprImmIntrinsic;
 } // TargetPrefix = "riscv"
