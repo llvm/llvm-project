@@ -750,6 +750,177 @@ public:
     }
     return RetT(result.uintval());
   }
+
+  // 'Number' represents a finite (non-inf, non-NaN) floating point number. It
+  // is independant of the underlying encoding and allows for easy manipulation
+  // of sign, exponent and significand. This format's precision is larger than
+  // the encoded form. There is no notion of subnormal for a 'Number'.
+  struct Number {
+    // The number of extra bits for the significand compared to the normal
+    // encoded form.
+    // When the encoded form is subnormal we have (EXTRA_PRECISION + 1) bit of
+    // extra precision.
+    LIBC_INLINE_VAR static constexpr int EXTRA_PRECISION =
+        UP::STORAGE_LEN - UP::FRACTION_LEN - 1;
+
+    Sign sign = Sign::POS;
+    int32_t exponent = 0;
+    StorageType significand = 0;
+
+    // Whether this Number represents the zero value.
+    LIBC_INLINE constexpr bool is_zero() const { return significand == 0; }
+
+    // Moves the leading one of the significand to StorageType's MSB position
+    // and changes the exponent accordingly. This changes the internal
+    // representation to maximize the precision of the Number but it doesn't
+    // change its value.
+    LIBC_INLINE constexpr Number maximize_precision() const {
+      if (is_zero())
+        return *this;
+      return get_scaled(-cpp::countl_zero(significand));
+    }
+
+    // Moves the trailing one of the significand to StorageType's LSB position
+    // and changes the exponent accordingly. This changes the internal
+    // representation to minimize the precision of the Number but it doesn't
+    // change its value.
+    LIBC_INLINE constexpr Number minimize_precision() const {
+      if (is_zero())
+        return *this;
+      return get_scaled(cpp::countr_zero(significand));
+    }
+
+    // If non-zero, normalizes this number by moving the leading bit of the
+    // significand to StorageType's MSB position (maximize_precision). If zero
+    // also makes the exponent 0.
+    LIBC_INLINE constexpr Number normalize() const {
+      if (is_zero())
+        return {sign, 0, significand};
+      return maximize_precision();
+    }
+
+    // The rounding mode to use when materializing a Number (see below).
+    enum Rounding { TOWARDZERO, AWAYZERO, TONEAREST };
+
+    // The precision to use when materializing a Number (see below).
+    // - EXACT means this Number contains all the information,
+    // - TRUNCATED means that the significand was truncated.
+    enum Precision { TRUNCATED, EXACT };
+
+    // Creates a 'RetT' from the number representation.
+    //  - When this 'Number' is too large to be represented 'infinity' or
+    //    'max_normal' is returned depending on the rounding mode.
+    //  - When this 'Number' is too small to be represented 'zero' or
+    //    'min_subnormal' is returned depending on the rounding mode.
+    LIBC_INLINE constexpr RetT materialize(Rounding rounding = TOWARDZERO,
+                                           Precision precision = EXACT) const {
+      if (is_zero())
+        return precision == TRUNCATED && rounding == AWAYZERO
+                   ? RetT::min_subnormal(sign)
+                   : RetT::zero(sign);
+
+      const auto underflow = [=]() -> RetT {
+        return rounding == AWAYZERO ? RetT::min_subnormal(sign)
+                                    : RetT::zero(sign);
+      };
+      const auto overflow = [=]() -> RetT {
+        return rounding == TOWARDZERO ? RetT::max_normal(sign)
+                                      : RetT::inf(sign);
+      };
+
+      const int leading_zeroes = cpp::countl_zero(significand);
+      LIBC_ASSERT(leading_zeroes <= UP::STORAGE_LEN);
+      // If 'exponent' is too small 'exponent - leading_zeroes' below can
+      // overflow which is undefined behavior for signed integers. If exponent
+      // is too close from INT32_MIN we bail out and return the appropriate
+      // underflow value.
+      constexpr int32_t smallest_exponent = INT32_MIN + UP::STORAGE_LEN;
+      if (exponent <= smallest_exponent)
+        return underflow();
+
+      // The exponent when the leading bit is at its final position.
+      int32_t rep_exponent = exponent - leading_zeroes;
+
+      constexpr int32_t EXP_MAX(Exponent::MAX());
+      constexpr int32_t EXP_MIN(Exponent::MIN());
+      constexpr int32_t EXP_SUBNORMAL(Exponent::SUBNORMAL());
+
+      int lshift = leading_zeroes - EXTRA_PRECISION;
+
+      // Adjust shift and exponent when the number is subnormal.
+      if (rep_exponent < EXP_MIN) {
+        lshift -= EXP_MIN - rep_exponent;
+        rep_exponent = EXP_SUBNORMAL;
+      }
+
+      // The final significand shifted accordingly.
+      StorageType rep_significand = significand;
+      if (lshift > 0)
+        rep_significand <<= lshift;
+      else if (lshift < 0)
+        rep_significand >>= -lshift;
+
+      // The number of extra precision bits we have in 'significand'.
+      const int extra_len = -lshift;
+
+      if (extra_len > UP::STORAGE_LEN)
+        return underflow();
+
+      if (rep_exponent > EXP_MAX)
+        return overflow();
+
+      // When rounding is AWAYZERO or TONEAREST we need to consider extra
+      // precision bits.
+      LIBC_ASSERT(extra_len <= UP::STORAGE_LEN);
+      const bool has_extra_len = extra_len > 0;
+      StorageType extra_bits_mask{};
+      StorageType extra_bits_midpoint{};
+      if (has_extra_len) {
+        if (extra_len == UP::STORAGE_LEN)
+          extra_bits_mask = StorageType(~(StorageType(0))); // subnormals
+        else
+          extra_bits_mask = (StorageType(1) << extra_len) - StorageType(1);
+        extra_bits_midpoint = (extra_bits_mask >> 1) + StorageType(1);
+      }
+      const StorageType extra_bits = significand & extra_bits_mask;
+      const bool round_toward_inf =
+          (rounding == AWAYZERO &&
+           ((extra_bits > 0) || (precision == TRUNCATED))) ||
+          (rounding == TONEAREST &&
+           ((extra_bits > extra_bits_midpoint) ||
+            ((extra_bits == extra_bits_midpoint) && (precision == TRUNCATED))));
+      const RetT rep(
+          encode(sign, Exponent(rep_exponent), Significand(rep_significand)));
+      return round_toward_inf ? rep.next_toward_inf() : rep;
+    }
+
+  private:
+    // This operation changes the scale of the Number by offsetting the exponent
+    // and shift the significand.
+    LIBC_INLINE constexpr Number get_scaled(int offset) const {
+      if (offset == 0)
+        return *this;
+      Number num;
+      num.sign = sign;
+      num.exponent = exponent + offset;
+      num.significand = offset == 0 ? significand
+                                    : (offset > 0 ? significand >> offset
+                                                  : significand << -offset);
+      return num;
+    }
+  };
+
+  // Returns a 'Number' representation of the number, the returned number
+  // may or may not be normalized (leading bit of the significant at MSB
+  // position). Only valid to call when is_finite().
+  LIBC_INLINE constexpr Number get_number() const {
+    LIBC_ASSERT(is_finite());
+    Number num;
+    num.sign = sign();
+    num.exponent = get_explicit_exponent() + Number::EXTRA_PRECISION;
+    num.significand = get_explicit_mantissa();
+    return num;
+  }
 };
 
 // A generic class to manipulate floating point formats.
