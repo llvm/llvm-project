@@ -800,6 +800,8 @@ ArrayRef<const char *> PPCTargetInfo::getGCCRegNames() const {
 const TargetInfo::GCCRegAlias PPCTargetInfo::GCCRegAliases[] = {
     // While some of these aliases do map to different registers
     // they still share the same register name.
+    // Strictly speaking, "ca" is a subregister of "xer". However currently we
+    // don't model other bit fields of "xer", so treat "ca" aliased to "xer".
     {{"0"}, "r0"},     {{"1", "sp"}, "r1"}, {{"2"}, "r2"},
     {{"3"}, "r3"},     {{"4"}, "r4"},       {{"5"}, "r5"},
     {{"6"}, "r6"},     {{"7"}, "r7"},       {{"8"}, "r8"},
@@ -821,7 +823,7 @@ const TargetInfo::GCCRegAlias PPCTargetInfo::GCCRegAliases[] = {
     {{"fr22"}, "f22"}, {{"fr23"}, "f23"},   {{"fr24"}, "f24"},
     {{"fr25"}, "f25"}, {{"fr26"}, "f26"},   {{"fr27"}, "f27"},
     {{"fr28"}, "f28"}, {{"fr29"}, "f29"},   {{"fr30"}, "f30"},
-    {{"fr31"}, "f31"}, {{"cc"}, "cr0"},
+    {{"fr31"}, "f31"}, {{"cc"}, "cr0"},     {{"ca"}, "xer"},
 };
 
 ArrayRef<TargetInfo::GCCRegAlias> PPCTargetInfo::getGCCRegAliases() const {

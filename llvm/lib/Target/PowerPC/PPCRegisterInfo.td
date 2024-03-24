@@ -288,9 +288,9 @@ def SPEFSCR: SPR<512, "spefscr">, DwarfRegNum<[612, 112]>;
 
 def XER: SPR<1, "xer">, DwarfRegNum<[76]>;
 
-// Carry bit.  In the architecture this is really bit 0 of the XER register
-// (which really is SPR register 1);  this is the only bit interesting to a
-// compiler.
+// Carry bit. In the architecture this is really bit 2 of the 32-bit XER
+// register (which really is SPR register 1);  this is the only bit interesting
+// to a compiler.
 def CARRY: SPR<1, "xer">, DwarfRegNum<[76]> {
   let Aliases = [XER];
 }
@@ -473,6 +473,7 @@ def LR8RC : RegisterClass<"PPC", [i64], 64, (add LR8)> {
 }
 
 def VRSAVERC : RegisterClass<"PPC", [i32], 32, (add VRSAVE)>;
+
 def CARRYRC : RegisterClass<"PPC", [i32], 32, (add CARRY, XER)> {
   let CopyCost = -1;
 }
