@@ -205,7 +205,7 @@ public:
       basic_ostringstream(const T& t, const Allocator& a);                                // Since C++26
     template<class T>
       basic_ostringstream(const T& t, ios_base::openmode which, const Allocator& a);      // Since C++26
-    basic_ostringstream(const basic_ostringstream&) = delete;                             
+    basic_ostringstream(const basic_ostringstream&) = delete;
     basic_ostringstream(basic_ostringstream&& rhs);
 
     // [ostringstream.assign] Assign and swap:
@@ -315,10 +315,10 @@ typedef basic_stringstream<wchar_t> wstringstream;
 #include <__availability>
 #include <__config>
 #include <__fwd/sstream.h>
+#include <__ostream/basic_ostream.h>
 #include <__type_traits/is_convertible.h>
 #include <__utility/swap.h>
 #include <istream>
-#include <ostream>
 #include <string>
 #include <string_view>
 #include <version>
@@ -1278,6 +1278,7 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_POP_MACROS
 
 #if _LIBCPP_STD_VER <= 20 && !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
+#  include <ostream>
 #  include <type_traits>
 #endif
 
