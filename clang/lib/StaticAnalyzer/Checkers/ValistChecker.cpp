@@ -25,10 +25,13 @@ using namespace ento;
 REGISTER_SET_WITH_PROGRAMSTATE(InitializedVALists, const MemRegion *)
 
 namespace {
+const StringRef Valist = "va_list";
+
 typedef SmallVector<const MemRegion *, 2> RegionVector;
 
-class ValistChecker : public Checker<check::PreCall, check::PreStmt<VAArgExpr>,
-                                     check::DeadSymbols> {
+class ValistChecker
+    : public Checker<eval::Call, check::PreStmt<VAArgExpr>,
+                     check::PreStmt<DeclStmt>, check::DeadSymbols> {
   mutable std::unique_ptr<BugType> BT_leakedvalist, BT_uninitaccess;
 
   struct VAListAccepter {
@@ -49,11 +52,13 @@ public:
   bool ChecksEnabled[CK_NumCheckKinds] = {false};
   CheckerNameRef CheckNames[CK_NumCheckKinds];
 
+  void checkPreStmt(const DeclStmt *DS, CheckerContext &C) const;
   void checkPreStmt(const VAArgExpr *VAA, CheckerContext &C) const;
-  void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
+  bool evalCall(const CallEvent &Call, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const;
 
 private:
+  bool isWinValistType(const VarDecl *VD) const;
   const MemRegion *getVAListAsRegion(SVal SV, const Expr *VAExpr,
                                      bool &IsSymbolic, CheckerContext &C) const;
   const ExplodedNode *getStartCallSite(const ExplodedNode *N,
@@ -122,10 +127,9 @@ const CallDescription ValistChecker::VaStart({"__builtin_va_start"}, /*Args=*/2,
     ValistChecker::VaEnd({"__builtin_va_end"}, 1);
 } // end anonymous namespace
 
-void ValistChecker::checkPreCall(const CallEvent &Call,
-                                 CheckerContext &C) const {
+bool ValistChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
   if (!Call.isGlobalCFunction())
-    return;
+    return false;
   if (VaStart.matches(Call))
     checkVAListStartCall(Call, C, false);
   else if (VaCopy.matches(Call))
@@ -141,15 +145,15 @@ void ValistChecker::checkPreCall(const CallEvent &Call,
           getVAListAsRegion(Call.getArgSVal(FuncInfo.VAListPos),
                             Call.getArgExpr(FuncInfo.VAListPos), Symbolic, C);
       if (!VAList)
-        return;
+        return false;
 
       if (C.getState()->contains<InitializedVALists>(VAList))
-        return;
+        return false;
 
       // We did not see va_start call, but the source of the region is unknown.
       // Be conservative and assume the best.
       if (Symbolic)
-        return;
+        return false;
 
       SmallString<80> Errmsg("Function '");
       Errmsg += FuncInfo.Func.getFunctionName();
@@ -157,6 +161,35 @@ void ValistChecker::checkPreCall(const CallEvent &Call,
       reportUninitializedAccess(VAList, Errmsg.c_str(), C);
       break;
     }
+  }
+  return C.isDifferent();
+}
+
+bool ValistChecker::isWinValistType(const VarDecl *VD) const {
+  ASTContext &Ctx = VD->getASTContext();
+  QualType T = VD->getType();
+  if (T.isNull()) {
+    return false;
+  }
+  if (!Valist.equals(T.getAsString())) {
+    return false;
+  }
+  return T.getDesugaredType(Ctx)->isPointerType() &&
+         T.getDesugaredType(Ctx)->getPointeeType()->isCharType();
+}
+
+void ValistChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
+  for (const auto *I : DS->decls()) {
+    const auto *VD = dyn_cast<VarDecl>(I);
+    if (nullptr == VD || !isWinValistType(VD)) {
+      continue;
+    }
+    ProgramStateRef State = C.getState();
+    const VarRegion *VR = State->getRegion(VD, C.getLocationContext());
+    SValBuilder &SVB = C.getSValBuilder();
+    State = State->bindLoc(State->getLValue(VD, C.getLocationContext()),
+                           SVB.makeLoc(VR), C.getLocationContext());
+    C.addTransition(State);
   }
 }
 
