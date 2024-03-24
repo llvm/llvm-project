@@ -111,6 +111,27 @@ func.func @fold_subview_with_transfer_read(%arg0 : memref<12x32xf32>, %arg1 : in
 
 // -----
 
+func.func @fold_subview_with_oob_transfer_read(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index) -> vector<32xf32> {
+  %f1 = arith.constant 1.0 : f32
+
+  %0 = memref.subview %arg0[%arg1, %arg2][8, 8][1, 1] : memref<12x32xf32> to memref<8x8xf32, strided<[256, 1], offset: ?>>
+  %1 = vector.transfer_read %0[%arg3, %arg4], %f1 {in_bounds = [false]} : memref<8x8xf32, strided<[256, 1], offset: ?>>, vector<32xf32>
+  return %1 : vector<32xf32>
+}
+
+//      CHECK: #[[MAP:[a-zA-Z0-9]+]] = affine_map<()[s0, s1] -> (s0 + s1)>
+//      CHECK: func @fold_subview_with_oob_transfer_read
+// CHECK-SAME:   %[[MEM:[a-zA-Z0-9_]+]]: memref<12x32xf32>
+// CHECK-SAME:   %[[SZ0:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[SZ1:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[IDX0:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[IDX1:[a-zA-Z0-9_]+]]: index
+//      CHECK:   %[[M0:[a-zA-Z0-9_]+]] = affine.apply #[[MAP]]()[%[[SZ0]], %[[IDX0]]]
+//      CHECK:   %[[M1:[a-zA-Z0-9_]+]] = affine.apply #[[MAP]]()[%[[SZ1]], %[[IDX1]]]
+//      CHECK:   vector.transfer_read %[[MEM]][%[[M0]], %[[M1]]], %{{[a-zA-Z0-9]+}} : memref<12x32xf32>, vector<32xf32>
+
+// -----
+
 func.func @fold_static_stride_subview_with_transfer_write_0d(
     %arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index,
     %v : vector<f32>) {
@@ -138,6 +159,25 @@ func.func @fold_static_stride_subview_with_transfer_write(%arg0 : memref<12x32xf
 //      CHECK: func @fold_static_stride_subview_with_transfer_write
 // Can't fold this atm since we don't emit the proper vector.extract_strided_slice.
 //   CHECK: memref.subview
+
+// -----
+
+func.func @fold_subview_with_oob_transfer_write(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : vector<32xf32>) {
+  %0 = memref.subview %arg0[%arg1, %arg2][8, 8][1, 1] : memref<12x32xf32> to memref<8x8xf32, strided<[256, 1], offset: ?>>
+  vector.transfer_write %arg5, %0[%arg3, %arg4] {in_bounds = [false]} : vector<32xf32>, memref<8x8xf32, strided<[256, 1], offset: ?>>
+  return
+}
+//      CHECK: #[[MAP:[a-zA-Z0-9]+]] = affine_map<()[s0, s1] -> (s0 + s1)>
+//      CHECK: func @fold_subview_with_oob_transfer_write
+// CHECK-SAME:   %[[MEM:[a-zA-Z0-9_]+]]: memref<12x32xf32>
+// CHECK-SAME:   %[[SZ0:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[SZ1:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[IDX0:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[IDX1:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[ST1:[a-zA-Z0-9_]+]]: vector<32xf32>
+//      CHECK:   %[[M0:[a-zA-Z0-9_]+]] = affine.apply #[[MAP]]()[%[[SZ0]], %[[IDX0]]]
+//      CHECK:   %[[M1:[a-zA-Z0-9_]+]] = affine.apply #[[MAP]]()[%[[SZ1]], %[[IDX1]]]
+//      CHECK:   vector.transfer_write %[[ST1]], %[[MEM]][%[[M0]], %[[M1]]] : vector<32xf32>, memref<12x32xf32>
 
 // -----
 
@@ -633,7 +673,7 @@ func.func @fold_load_keep_nontemporal(%arg0 : memref<12x32xf32>, %arg1 : index, 
 // -----
 
 // CHECK-LABEL: func @fold_store_keep_nontemporal(
-//      CHECK:   memref.store %{{.+}}, %{{.+}}[%{{.+}}, %{{.+}}]  {nontemporal = true} : memref<12x32xf32> 
+//      CHECK:   memref.store %{{.+}}, %{{.+}}[%{{.+}}, %{{.+}}]  {nontemporal = true} : memref<12x32xf32>
 func.func @fold_store_keep_nontemporal(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : f32) {
   %0 = memref.subview %arg0[%arg1, %arg2][4, 4][2, 3] :
     memref<12x32xf32> to memref<4x4xf32, strided<[64, 3], offset: ?>>

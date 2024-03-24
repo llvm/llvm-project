@@ -348,8 +348,6 @@ preconditionsFoldSubViewOpImpl(RewriterBase &rewriter, XferOp xferOp,
   static_assert(
       !llvm::is_one_of<vector::TransferReadOp, vector::TransferWriteOp>::value,
       "must be a vector transfer op");
-  if (xferOp.hasOutOfBoundsDim())
-    return rewriter.notifyMatchFailure(xferOp, "out of bounds transfer dim");
   if (!subviewOp.hasUnitStride()) {
     return rewriter.notifyMatchFailure(
         xferOp, "non-1 stride subview, need to track strides in folded memref");
