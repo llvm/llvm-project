@@ -52,6 +52,18 @@ define <vscale x 3 x i8> @vpload_nxv3i8(ptr %ptr, <vscale x 3 x i1> %m, i32 zero
   ret <vscale x 3 x i8> %load
 }
 
+declare <vscale x 4 x i6> @llvm.vp.load.nxv4i6.nxv4i6.p0(<vscale x 4 x i6>*, <vscale x 4 x i1>, i32)
+
+define <vscale x 4 x i6> @vpload_nxv4i6(<vscale x 4 x i6>* %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpload_nxv4i6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %load = call <vscale x 4 x i6> @llvm.vp.load.nxv4i6.nxv4i6.p0(<vscale x 4 x i6>* %ptr, <vscale x 4 x i1> %m, i32 %evl)
+  ret <vscale x 4 x i6> %load
+}
+
 declare <vscale x 4 x i8> @llvm.vp.load.nxv4i8.p0(ptr, <vscale x 4 x i1>, i32)
 
 define <vscale x 4 x i8> @vpload_nxv4i8(ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
@@ -466,10 +478,10 @@ define <vscale x 16 x double> @vpload_nxv16f64(ptr %ptr, <vscale x 16 x i1> %m, 
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a5
 ; CHECK-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v16, (a4), v0.t
-; CHECK-NEXT:    bltu a1, a2, .LBB37_2
+; CHECK-NEXT:    bltu a1, a2, .LBB38_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a2
-; CHECK-NEXT:  .LBB37_2:
+; CHECK-NEXT:  .LBB38_2:
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
@@ -496,10 +508,10 @@ define <vscale x 16 x double> @vpload_nxv17f64(ptr %ptr, ptr %out, <vscale x 17 
 ; CHECK-NEXT:    slli a5, a3, 1
 ; CHECK-NEXT:    vmv1r.v v8, v0
 ; CHECK-NEXT:    mv a4, a2
-; CHECK-NEXT:    bltu a2, a5, .LBB38_2
+; CHECK-NEXT:    bltu a2, a5, .LBB39_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a4, a5
-; CHECK-NEXT:  .LBB38_2:
+; CHECK-NEXT:  .LBB39_2:
 ; CHECK-NEXT:    sub a6, a4, a3
 ; CHECK-NEXT:    sltu a7, a4, a6
 ; CHECK-NEXT:    addi a7, a7, -1
@@ -515,10 +527,10 @@ define <vscale x 16 x double> @vpload_nxv17f64(ptr %ptr, ptr %out, <vscale x 17 
 ; CHECK-NEXT:    sltu a2, a2, a5
 ; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    and a2, a2, a5
-; CHECK-NEXT:    bltu a2, a3, .LBB38_4
+; CHECK-NEXT:    bltu a2, a3, .LBB39_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a2, a3
-; CHECK-NEXT:  .LBB38_4:
+; CHECK-NEXT:  .LBB39_4:
 ; CHECK-NEXT:    slli a5, a3, 4
 ; CHECK-NEXT:    add a5, a0, a5
 ; CHECK-NEXT:    srli a6, a3, 2
@@ -526,10 +538,10 @@ define <vscale x 16 x double> @vpload_nxv17f64(ptr %ptr, ptr %out, <vscale x 17 
 ; CHECK-NEXT:    vslidedown.vx v0, v8, a6
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a5), v0.t
-; CHECK-NEXT:    bltu a4, a3, .LBB38_6
+; CHECK-NEXT:    bltu a4, a3, .LBB39_6
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    mv a4, a3
-; CHECK-NEXT:  .LBB38_6:
+; CHECK-NEXT:  .LBB39_6:
 ; CHECK-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
