@@ -38,7 +38,7 @@
 "`3974 <https://wg21.link/LWG3974>`__","``mdspan::operator[]`` should not copy ``OtherIndexTypes``","Kona November 2023","","",""
 "`3987 <https://wg21.link/LWG3987>`__","Including ``<flat_foo>`` doesn't provide ``std::begin``/``end``","Kona November 2023","","","|flat_containers|"
 "`3990 <https://wg21.link/LWG3990>`__","Program-defined specializations of ``std::tuple`` and ``std::variant`` can't be properly supported","Kona November 2023","","",""
-"`4001 <https://wg21.link/LWG4001>`__","``iota_view`` should provide ``empty``","Kona November 2023","","","|ranges|"
+"`4001 <https://wg21.link/LWG4001>`__","``iota_view`` should provide ``empty``","Kona November 2023","|Complete|","19.0","|ranges|"
 "","","","","",""
 "`3343 <https://wg21.link/LWG3343>`__","Ordering of calls to ``unlock()`` and ``notify_all()`` in Effects element of ``notify_all_at_thread_exit()`` should be reversed","Not Yet Adopted","|Complete|","16.0",""
 "","","","","",""
