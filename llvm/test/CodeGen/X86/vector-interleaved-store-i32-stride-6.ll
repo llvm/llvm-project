@@ -697,76 +697,73 @@ define void @store_i32_stride6_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 define void @store_i32_stride6_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecptr2, ptr %in.vecptr3, ptr %in.vecptr4, ptr %in.vecptr5, ptr %out.vec) nounwind {
 ; SSE-LABEL: store_i32_stride6_vf8:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps (%rdi), %xmm4
+; SSE-NEXT:    movaps (%rdi), %xmm0
 ; SSE-NEXT:    movaps 16(%rdi), %xmm1
-; SSE-NEXT:    movaps (%rsi), %xmm0
-; SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps 16(%rsi), %xmm10
-; SSE-NEXT:    movaps (%rdx), %xmm8
+; SSE-NEXT:    movaps (%rsi), %xmm10
+; SSE-NEXT:    movaps 16(%rsi), %xmm12
+; SSE-NEXT:    movaps (%rdx), %xmm9
 ; SSE-NEXT:    movaps 16(%rdx), %xmm2
-; SSE-NEXT:    movaps (%rcx), %xmm6
-; SSE-NEXT:    movaps 16(%rcx), %xmm9
+; SSE-NEXT:    movaps (%rcx), %xmm8
+; SSE-NEXT:    movaps 16(%rcx), %xmm15
 ; SSE-NEXT:    movaps (%r8), %xmm5
-; SSE-NEXT:    movaps 16(%r8), %xmm11
+; SSE-NEXT:    movaps 16(%r8), %xmm13
 ; SSE-NEXT:    movaps (%r9), %xmm7
-; SSE-NEXT:    movaps 16(%r9), %xmm3
-; SSE-NEXT:    movaps %xmm9, %xmm14
+; SSE-NEXT:    movaps 16(%r9), %xmm4
+; SSE-NEXT:    movaps %xmm15, %xmm14
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm14 = xmm14[1],xmm2[1]
-; SSE-NEXT:    movaps %xmm1, %xmm12
-; SSE-NEXT:    unpckhps {{.*#+}} xmm12 = xmm12[2],xmm10[2],xmm12[3],xmm10[3]
-; SSE-NEXT:    movaps %xmm11, %xmm13
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm13 = xmm13[1],xmm3[1]
-; SSE-NEXT:    shufps {{.*#+}} xmm13 = xmm13[0,2],xmm12[2,3]
-; SSE-NEXT:    shufps {{.*#+}} xmm12 = xmm12[0,1],xmm14[2,0]
-; SSE-NEXT:    movaps %xmm11, %xmm14
-; SSE-NEXT:    shufps {{.*#+}} xmm14 = xmm14[1,1],xmm3[1,1]
-; SSE-NEXT:    movaps %xmm2, %xmm15
-; SSE-NEXT:    unpcklps {{.*#+}} xmm15 = xmm15[0],xmm9[0],xmm15[1],xmm9[1]
-; SSE-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm10[0],xmm1[1],xmm10[1]
-; SSE-NEXT:    movaps %xmm11, %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3],xmm3[3,3]
-; SSE-NEXT:    movlhps {{.*#+}} xmm3 = xmm3[0],xmm11[0]
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[2,0],xmm1[2,3]
-; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm15[0]
-; SSE-NEXT:    movaps %xmm15, %xmm10
-; SSE-NEXT:    shufps {{.*#+}} xmm10 = xmm10[2,3],xmm14[0,2]
-; SSE-NEXT:    movaps %xmm5, %xmm14
-; SSE-NEXT:    shufps {{.*#+}} xmm14 = xmm14[3,3],xmm7[3,3]
-; SSE-NEXT:    movaps %xmm8, %xmm11
-; SSE-NEXT:    unpckhps {{.*#+}} xmm11 = xmm11[2],xmm6[2],xmm11[3],xmm6[3]
-; SSE-NEXT:    shufps {{.*#+}} xmm11 = xmm11[2,3],xmm14[0,2]
-; SSE-NEXT:    movaps %xmm4, %xmm14
-; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
-; SSE-NEXT:    unpckhps {{.*#+}} xmm14 = xmm14[2],xmm15[2],xmm14[3],xmm15[3]
-; SSE-NEXT:    unpcklps {{.*#+}} xmm4 = xmm4[0],xmm15[0],xmm4[1],xmm15[1]
-; SSE-NEXT:    unpckhps {{.*#+}} xmm2 = xmm2[2],xmm9[2],xmm2[3],xmm9[3]
-; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,3],xmm0[0,2]
-; SSE-NEXT:    movaps %xmm8, %xmm0
-; SSE-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm6[0],xmm0[1],xmm6[1]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm6 = xmm6[1],xmm8[1]
-; SSE-NEXT:    movaps %xmm5, %xmm8
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm8 = xmm8[1],xmm7[1]
-; SSE-NEXT:    shufps {{.*#+}} xmm8 = xmm8[0,2],xmm14[2,3]
-; SSE-NEXT:    shufps {{.*#+}} xmm14 = xmm14[0,1],xmm6[2,0]
-; SSE-NEXT:    movaps %xmm7, %xmm6
-; SSE-NEXT:    movlhps {{.*#+}} xmm6 = xmm6[0],xmm5[0]
+; SSE-NEXT:    movaps %xmm1, %xmm3
+; SSE-NEXT:    unpckhps {{.*#+}} xmm3 = xmm3[2],xmm12[2],xmm3[3],xmm12[3]
+; SSE-NEXT:    movaps %xmm5, %xmm11
+; SSE-NEXT:    shufps {{.*#+}} xmm11 = xmm11[3,3],xmm7[3,3]
+; SSE-NEXT:    movaps %xmm9, %xmm6
+; SSE-NEXT:    unpckhps {{.*#+}} xmm6 = xmm6[2],xmm8[2],xmm6[3],xmm8[3]
+; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[2,3],xmm11[0,2]
+; SSE-NEXT:    movaps %xmm0, %xmm11
+; SSE-NEXT:    unpckhps {{.*#+}} xmm11 = xmm11[2],xmm10[2],xmm11[3],xmm10[3]
+; SSE-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm10[0],xmm0[1],xmm10[1]
+; SSE-NEXT:    movaps %xmm2, %xmm10
+; SSE-NEXT:    unpcklps {{.*#+}} xmm10 = xmm10[0],xmm15[0],xmm10[1],xmm15[1]
+; SSE-NEXT:    unpckhps {{.*#+}} xmm2 = xmm2[2],xmm15[2],xmm2[3],xmm15[3]
+; SSE-NEXT:    movaps %xmm13, %xmm15
+; SSE-NEXT:    shufps {{.*#+}} xmm15 = xmm15[3,3],xmm4[3,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,3],xmm15[0,2]
+; SSE-NEXT:    movaps %xmm13, %xmm15
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm15 = xmm15[1],xmm4[1]
+; SSE-NEXT:    shufps {{.*#+}} xmm15 = xmm15[0,2],xmm3[2,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,1],xmm14[2,0]
+; SSE-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm12[0],xmm1[1],xmm12[1]
+; SSE-NEXT:    movaps %xmm13, %xmm12
+; SSE-NEXT:    shufps {{.*#+}} xmm12 = xmm12[1,1],xmm4[1,1]
+; SSE-NEXT:    movlhps {{.*#+}} xmm4 = xmm4[0],xmm13[0]
+; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[2,0],xmm1[2,3]
+; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm10[0]
+; SSE-NEXT:    shufps {{.*#+}} xmm10 = xmm10[2,3],xmm12[0,2]
+; SSE-NEXT:    movaps %xmm9, %xmm12
+; SSE-NEXT:    unpcklps {{.*#+}} xmm12 = xmm12[0],xmm8[0],xmm12[1],xmm8[1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm8 = xmm8[1],xmm9[1]
+; SSE-NEXT:    movaps %xmm5, %xmm9
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm9 = xmm9[1],xmm7[1]
+; SSE-NEXT:    shufps {{.*#+}} xmm9 = xmm9[0,2],xmm11[2,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm11 = xmm11[0,1],xmm8[2,0]
+; SSE-NEXT:    movaps %xmm7, %xmm8
+; SSE-NEXT:    movlhps {{.*#+}} xmm8 = xmm8[0],xmm5[0]
 ; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,1],xmm7[1,1]
-; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[2,0],xmm4[2,3]
-; SSE-NEXT:    movlhps {{.*#+}} xmm4 = xmm4[0],xmm0[0]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,3],xmm5[0,2]
+; SSE-NEXT:    shufps {{.*#+}} xmm8 = xmm8[2,0],xmm0[2,3]
+; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm12[0]
+; SSE-NEXT:    shufps {{.*#+}} xmm12 = xmm12[2,3],xmm5[0,2]
 ; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; SSE-NEXT:    movaps %xmm0, 32(%rax)
-; SSE-NEXT:    movaps %xmm14, 48(%rax)
+; SSE-NEXT:    movaps %xmm12, 32(%rax)
+; SSE-NEXT:    movaps %xmm11, 48(%rax)
 ; SSE-NEXT:    movaps %xmm1, 96(%rax)
-; SSE-NEXT:    movaps %xmm3, 112(%rax)
-; SSE-NEXT:    movaps %xmm13, 160(%rax)
+; SSE-NEXT:    movaps %xmm4, 112(%rax)
+; SSE-NEXT:    movaps %xmm15, 160(%rax)
 ; SSE-NEXT:    movaps %xmm2, 176(%rax)
-; SSE-NEXT:    movaps %xmm4, (%rax)
-; SSE-NEXT:    movaps %xmm6, 16(%rax)
-; SSE-NEXT:    movaps %xmm8, 64(%rax)
-; SSE-NEXT:    movaps %xmm11, 80(%rax)
+; SSE-NEXT:    movaps %xmm0, (%rax)
+; SSE-NEXT:    movaps %xmm8, 16(%rax)
+; SSE-NEXT:    movaps %xmm9, 64(%rax)
+; SSE-NEXT:    movaps %xmm6, 80(%rax)
 ; SSE-NEXT:    movaps %xmm10, 128(%rax)
-; SSE-NEXT:    movaps %xmm12, 144(%rax)
+; SSE-NEXT:    movaps %xmm3, 144(%rax)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: store_i32_stride6_vf8:
