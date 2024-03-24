@@ -19656,6 +19656,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &RISCV::GPRPairRegClass);
       return std::make_pair(0U, &RISCV::GPRNoX0RegClass);
     case 'f':
+      if (Subtarget.hasStdExtZfbfmin() && VT == MVT::bf16)
+        return std::make_pair(0U, &RISCV::FPR16RegClass);
       if (Subtarget.hasStdExtZfhmin() && VT == MVT::f16)
         return std::make_pair(0U, &RISCV::FPR16RegClass);
       if (Subtarget.hasStdExtF() && VT == MVT::f32)
@@ -19769,7 +19771,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       }
       if (VT == MVT::f32 || VT == MVT::Other)
         return std::make_pair(FReg, &RISCV::FPR32RegClass);
-      if (Subtarget.hasStdExtZfhmin() && VT == MVT::f16) {
+      if ((Subtarget.hasStdExtZfhmin() && VT == MVT::f16) ||
+          (Subtarget.hasStdExtZfbfmin() && VT == MVT::bf16)) {
         unsigned RegNo = FReg - RISCV::F0_F;
         unsigned HReg = RISCV::F0_H + RegNo;
         return std::make_pair(HReg, &RISCV::FPR16RegClass);
@@ -19839,6 +19842,18 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     return std::make_pair(Res.first, &RISCV::GPRRegClass);
 
   return Res;
+}
+
+MVT RISCVTargetLowering::getRegVTFromInlineAsmConstraint(
+    const TargetRegisterInfo *TRI, const TargetRegisterClass *RC,
+    const MVT ConstraintVT) const {
+  // FPR16RegClass contains [f16, bf16], and when the ConstraintVT is bf16, we
+  // should choose the bf16 instead of the first type, which is f16.
+  if (ConstraintVT == MVT::bf16 && RC == &RISCV::FPR16RegClass) {
+    return MVT::bf16;
+  }
+
+  return TargetLowering::getRegVTFromInlineAsmConstraint(TRI, RC, ConstraintVT);
 }
 
 InlineAsm::ConstraintCode

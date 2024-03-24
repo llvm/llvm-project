@@ -4939,6 +4939,15 @@ public:
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const;
 
+  /// Given the TargetRegisterClass and the ConstraintValueType, make each
+  /// target choose its own proper value type for inline asm; otherwise, use
+  /// the first type in the TargetRegisterClass.
+  virtual MVT getRegVTFromInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                                              const TargetRegisterClass *RC,
+                                              const MVT ConstraintVT) const {
+    return *TRI->legalclasstypes_begin(*RC);
+  }
+
   virtual InlineAsm::ConstraintCode
   getInlineAsmMemConstraint(StringRef ConstraintCode) const {
     if (ConstraintCode == "m")
