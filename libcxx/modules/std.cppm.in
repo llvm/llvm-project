@@ -133,6 +133,9 @@ module;
 #include <source_location>
 #include <span>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <spanstream>
+#endif
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #  include <sstream>
 #endif
 #include <stack>
@@ -197,9 +200,6 @@ module;
 #  if __has_include(<rcu>)
 #    error "please update the header information for <rcu> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<rcu>)
-#  if __has_include(<spanstream>)
-#    error "please update the header information for <spanstream> in headers_not_available in utils/libcxx/header_information.py"
-#  endif // __has_include(<spanstream>)
 #  if __has_include(<stacktrace>)
 #    error "please update the header information for <stacktrace> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<stacktrace>)

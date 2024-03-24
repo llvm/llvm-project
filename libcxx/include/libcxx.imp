@@ -435,6 +435,7 @@
   { include: [ "<__fwd/ostream.h>", "private", "<iosfwd>", "public" ] },
   { include: [ "<__fwd/pair.h>", "private", "<utility>", "public" ] },
   { include: [ "<__fwd/span.h>", "private", "<span>", "public" ] },
+  { include: [ "<__fwd/spanstream.h>", "private", "<iosfwd>", "public" ] },
   { include: [ "<__fwd/sstream.h>", "private", "<iosfwd>", "public" ] },
   { include: [ "<__fwd/streambuf.h>", "private", "<iosfwd>", "public" ] },
   { include: [ "<__fwd/string.h>", "private", "<string>", "public" ] },

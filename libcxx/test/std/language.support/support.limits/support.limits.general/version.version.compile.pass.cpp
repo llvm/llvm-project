@@ -5626,17 +5626,11 @@
 #   error "__cpp_lib_span_initializer_list should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_spanstream
-#     error "__cpp_lib_spanstream should be defined in c++23"
-#   endif
-#   if __cpp_lib_spanstream != 202106L
-#     error "__cpp_lib_spanstream should have the value 202106L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_spanstream
-#     error "__cpp_lib_spanstream should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_spanstream
+#   error "__cpp_lib_spanstream should be defined in c++23"
+# endif
+# if __cpp_lib_spanstream != 202106L
+#   error "__cpp_lib_spanstream should have the value 202106L in c++23"
 # endif
 
 # ifndef __cpp_lib_ssize
@@ -7374,17 +7368,11 @@
 #   error "__cpp_lib_span_initializer_list should have the value 202311L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_spanstream
-#     error "__cpp_lib_spanstream should be defined in c++26"
-#   endif
-#   if __cpp_lib_spanstream != 202106L
-#     error "__cpp_lib_spanstream should have the value 202106L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_spanstream
-#     error "__cpp_lib_spanstream should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_spanstream
+#   error "__cpp_lib_spanstream should be defined in c++26"
+# endif
+# if __cpp_lib_spanstream != 202106L
+#   error "__cpp_lib_spanstream should have the value 202106L in c++26"
 # endif
 
 # ifndef __cpp_lib_ssize

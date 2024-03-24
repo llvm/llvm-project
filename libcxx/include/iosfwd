@@ -42,6 +42,15 @@ template <class charT, class traits = char_traits<charT>, class Allocator = allo
 template <class charT, class traits = char_traits<charT>, class Allocator = allocator<charT> >
     class basic_stringstream;
 
+  template<class charT, class traits = char_traits<charT>>
+    class basic_spanbuf;                                                             // Since C++23
+  template<class charT, class traits = char_traits<charT>>
+    class basic_ispanstream;                                                         // Since C++23
+  template<class charT, class traits = char_traits<charT>>
+    class basic_ospanstream;                                                         // Since C++23
+  template<class charT, class traits = char_traits<charT>>
+    class basic_spanstream;                                                          // Since C++23
+
 template <class charT, class traits = char_traits<charT> > class basic_filebuf;
 template <class charT, class traits = char_traits<charT> > class basic_ifstream;
 template <class charT, class traits = char_traits<charT> > class basic_ofstream;
@@ -63,6 +72,11 @@ typedef basic_istringstream<char>    istringstream;
 typedef basic_ostringstream<char>    ostringstream;
 typedef basic_stringstream<char>     stringstream;
 
+using spanbuf     = basic_spanbuf<char>;                                             // Since C++23
+using ispanstream = basic_ispanstream<char>;                                         // Since C++23
+using ospanstream = basic_ospanstream<char>;                                         // Since C++23
+using spanstream  = basic_spanstream<char>;                                          // Since C++23
+
 typedef basic_filebuf<char>          filebuf;
 typedef basic_ifstream<char>         ifstream;
 typedef basic_ofstream<char>         ofstream;
@@ -77,6 +91,11 @@ typedef basic_stringbuf<wchar_t>     wstringbuf;
 typedef basic_istringstream<wchar_t> wistringstream;
 typedef basic_ostringstream<wchar_t> wostringstream;
 typedef basic_stringstream<wchar_t>  wstringstream;
+
+using wspanbuf     = basic_spanbuf<wchar_t>;                                         // Since C++23
+using wispanstream = basic_ispanstream<wchar_t>;                                     // Since C++23
+using wospanstream = basic_ospanstream<wchar_t>;                                     // Since C++23
+using wspanstream  = basic_spanstream<wchar_t>;                                      // Since C++23
 
 typedef basic_filebuf<wchar_t>       wfilebuf;
 typedef basic_ifstream<wchar_t>      wifstream;
@@ -111,6 +130,7 @@ using wosyncstream = basic_osyncstream<wchar_t>;  // C++20
 #include <__fwd/ios.h>
 #include <__fwd/istream.h>
 #include <__fwd/ostream.h>
+#include <__fwd/spanstream.h>
 #include <__fwd/sstream.h>
 #include <__fwd/streambuf.h>
 #include <__fwd/string.h>

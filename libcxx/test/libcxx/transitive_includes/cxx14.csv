@@ -754,6 +754,14 @@ span limits
 span stdexcept
 span type_traits
 span version
+spanstream cstddef
+spanstream initializer_list
+spanstream iostream
+spanstream limits
+spanstream span
+spanstream streambuf
+spanstream type_traits
+spanstream version
 sstream cstddef
 sstream istream
 sstream ostream
