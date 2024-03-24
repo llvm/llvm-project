@@ -611,6 +611,11 @@ public:
   /// an object of type 'OperationName'. Otherwise, failure is returned.
   FailureOr<OperationName> parseCustomOperationName();
 
+  /// Store the identifier names for the current operation as attrs for debug
+  /// purposes.
+  void storeIdentifierNames(Operation *&op, ArrayRef<ResultRecord> resultIDs);
+  DenseMap<Value, StringRef> argNames;
+
   //===--------------------------------------------------------------------===//
   // Region Parsing
   //===--------------------------------------------------------------------===//
@@ -1268,6 +1273,70 @@ OperationParser::parseSuccessors(SmallVectorImpl<Block *> &destinations) {
                                       /*allowEmptyList=*/false);
 }
 
+/// Store the SSA names for the current operation as attrs for debug purposes.
+void OperationParser::storeIdentifierNames(Operation *&op,
+                                           ArrayRef<ResultRecord> resultIDs) {
+
+  // Store the name(s) of the result(s) of this operation.
+  if (op->getNumResults() > 0) {
+    llvm::SmallVector<llvm::StringRef, 1> resultNames;
+    for (const ResultRecord &resIt : resultIDs) {
+      resultNames.push_back(std::get<0>(resIt).drop_front(1));
+      // Insert empty string for sub-results/result groups
+      for (unsigned int i = 1; i < std::get<1>(resIt); ++i)
+        resultNames.push_back(llvm::StringRef());
+    }
+    op->setDiscardableAttr("mlir.resultNames",
+                           builder.getStrArrayAttr(resultNames));
+  }
+
+  // Store the name information of the arguments of this operation.
+  if (op->getNumOperands() > 0) {
+    llvm::SmallVector<llvm::StringRef, 1> opArgNames;
+    for (auto &operand : op->getOpOperands()) {
+      auto it = argNames.find(operand.get());
+      if (it != argNames.end())
+        opArgNames.push_back(it->second.drop_front(1));
+    }
+    op->setDiscardableAttr("mlir.opArgNames",
+                           builder.getStrArrayAttr(opArgNames));
+  }
+
+  // Store the name information of the block that contains this operation.
+  Block *blockPtr = op->getBlock();
+  for (const auto &map : blocksByName) {
+    for (const auto &entry : map) {
+      if (entry.second.block == blockPtr) {
+        op->setDiscardableAttr("mlir.blockName",
+                               StringAttr::get(getContext(), entry.first));
+
+        // Store block arguments, if present
+        llvm::SmallVector<llvm::StringRef, 1> blockArgNames;
+
+        for (BlockArgument arg : blockPtr->getArguments()) {
+          auto it = argNames.find(arg);
+          if (it != argNames.end())
+            blockArgNames.push_back(it->second.drop_front(1));
+        }
+        op->setAttr("mlir.blockArgNames",
+                    builder.getStrArrayAttr(blockArgNames));
+      }
+    }
+  }
+
+  // Store names of region arguments (e.g., for FuncOps)
+  if (op->getNumRegions() > 0 && op->getRegion(0).getNumArguments() > 0) {
+    llvm::SmallVector<llvm::StringRef, 1> regionArgNames;
+    for (BlockArgument arg : op->getRegion(0).getArguments()) {
+      auto it = argNames.find(arg);
+      if (it != argNames.end()) {
+        regionArgNames.push_back(it->second.drop_front(1));
+      }
+    }
+    op->setAttr("mlir.regionArgNames", builder.getStrArrayAttr(regionArgNames));
+  }
+}
+
 namespace {
 // RAII-style guard for cleaning up the regions in the operation state before
 // deleting them.  Within the parser, regions may get deleted if parsing failed,
@@ -1672,6 +1741,11 @@ public:
                              SmallVectorImpl<Value> &result) override {
     if (auto value = parser.resolveSSAUse(operand, type)) {
       result.push_back(value);
+
+      // Optionally store argument name for debug purposes
+      if (parser.getState().config.shouldRetainIdentifierNames())
+        parser.argNames.insert({value, operand.name});
+
       return success();
     }
     return failure();
@@ -2031,6 +2105,11 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
 
   // Otherwise, create the operation and try to parse a location for it.
   Operation *op = opBuilder.create(opState);
+
+  // If enabled, store the original identifier name(s) for the operation
+  if (state.config.shouldRetainIdentifierNames())
+    storeIdentifierNames(op, resultIDs);
+
   if (parseTrailingLocationSpecifier(op))
     return nullptr;
 
@@ -2179,6 +2258,9 @@ ParseResult OperationParser::parseRegionBody(Region &region, SMLoc startLoc,
       // Add a definition of this arg to the assembly state if provided.
       if (state.asmState)
         state.asmState->addDefinition(arg, argInfo.location);
+
+      if (state.config.shouldRetainIdentifierNames())
+        argNames.insert({arg, argInfo.name});
 
       // Record the definition for this argument.
       if (addDefinition(argInfo, arg))
@@ -2355,6 +2437,10 @@ ParseResult OperationParser::parseOptionalBlockArgList(Block *owner) {
           } else {
             auto loc = getEncodedSourceLocation(useInfo.location);
             arg = owner->addArgument(type, loc);
+
+            // Optionally store argument name for debug purposes
+            if (state.config.shouldRetainIdentifierNames())
+              argNames.insert({arg, useInfo.name});
           }
 
           // If the argument has an explicit loc(...) specifier, parse and apply
