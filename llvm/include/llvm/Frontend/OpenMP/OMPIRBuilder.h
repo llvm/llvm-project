@@ -307,9 +307,10 @@ public:
   void initializeTargetRegionEntryInfo(const TargetRegionEntryInfo &EntryInfo,
                                        unsigned Order);
   /// Register target region entry.
-  void registerTargetRegionEntryInfo(TargetRegionEntryInfo EntryInfo,
-                                     Constant *Addr, Constant *ID,
-                                     OMPTargetRegionEntryKind Flags);
+  void registerTargetRegionEntryInfo(
+      TargetRegionEntryInfo EntryInfo, Constant *Addr, Constant *ID,
+      OMPTargetRegionEntryKind Flags,
+      OffloadEntryInfoTargetRegion *EntryInfoStorage = nullptr);
   /// Return true if a target region entry with the provided information
   /// exists.
   bool hasTargetRegionEntryInfo(TargetRegionEntryInfo EntryInfo,
@@ -2159,10 +2160,14 @@ public:
   /// \param GenerateFunctionCallback The callback function to generate the code
   /// \param OutlinedFunction Pointer to the outlined function
   /// \param EntryFnIDName Name of the ID o be created
-  void emitTargetRegionFunction(TargetRegionEntryInfo &EntryInfo,
-                                FunctionGenCallback &GenerateFunctionCallback,
-                                bool IsOffloadEntry, Function *&OutlinedFn,
-                                Constant *&OutlinedFnID);
+  /// \param EntryInfoStorage Optional storage location for the offload target
+  /// region entry.
+  void emitTargetRegionFunction(
+      TargetRegionEntryInfo &EntryInfo,
+      FunctionGenCallback &GenerateFunctionCallback, bool IsOffloadEntry,
+      Function *&OutlinedFn, Constant *&OutlinedFnID,
+      OffloadEntriesInfoManager::OffloadEntryInfoTargetRegion
+          *EntryInfoStorage = nullptr);
 
   /// Registers the given function and sets up the attribtues of the function
   /// Returns the FunctionID.
@@ -2172,10 +2177,13 @@ public:
   /// \param OutlinedFunction Pointer to the outlined function
   /// \param EntryFnName Name of the outlined function
   /// \param EntryFnIDName Name of the ID o be created
-  Constant *registerTargetRegionFunction(TargetRegionEntryInfo &EntryInfo,
-                                         Function *OutlinedFunction,
-                                         StringRef EntryFnName,
-                                         StringRef EntryFnIDName);
+  /// \param EntryInfoStorage Optional storage location for the offload target
+  /// region entry.
+  Constant *registerTargetRegionFunction(
+      TargetRegionEntryInfo &EntryInfo, Function *OutlinedFunction,
+      StringRef EntryFnName, StringRef EntryFnIDName,
+      OffloadEntriesInfoManager::OffloadEntryInfoTargetRegion
+          *EntryInfoStorage = nullptr);
 
   /// Type of BodyGen to use for region codegen
   ///
@@ -2245,15 +2253,20 @@ public:
   /// \param BodyGenCB Callback that will generate the region code.
   /// \param ArgAccessorFuncCB Callback that will generate accessors
   /// instructions for passed in target arguments where neccessary
-  InsertPointTy createTarget(const LocationDescription &Loc,
-                             OpenMPIRBuilder::InsertPointTy AllocaIP,
-                             OpenMPIRBuilder::InsertPointTy CodeGenIP,
-                             TargetRegionEntryInfo &EntryInfo, int32_t NumTeams,
-                             int32_t NumThreads,
-                             SmallVectorImpl<Value *> &Inputs,
-                             GenMapInfoCallbackTy GenMapInfoCB,
-                             TargetBodyGenCallbackTy BodyGenCB,
-                             TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB);
+  /// \param EntryInfoStorage Optional storage location for the offload target
+  /// region entry. If the pointer is null the entry gets registered in the
+  /// `OffloadEntriesInfoManager`, otherwise it gets stored in
+  /// `EntryInfoStorage` and doesn't get registered in
+  /// `OffloadEntriesInfoManager`.
+  InsertPointTy createTarget(
+      const LocationDescription &Loc, OpenMPIRBuilder::InsertPointTy AllocaIP,
+      OpenMPIRBuilder::InsertPointTy CodeGenIP,
+      TargetRegionEntryInfo &EntryInfo, int32_t NumTeams, int32_t NumThreads,
+      SmallVectorImpl<Value *> &Inputs, GenMapInfoCallbackTy GenMapInfoCB,
+      TargetBodyGenCallbackTy BodyGenCB,
+      TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
+      OffloadEntriesInfoManager::OffloadEntryInfoTargetRegion
+          *EntryInfoStorage = nullptr);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call
