@@ -173,7 +173,7 @@
 // CHECK-NOPIE-GLD-NOT: "-pie"
 
 // -r suppresses default -l and crt*.o, values-*.o like -nostdlib.
-// RUN: %clang -### %s --target=sparc-sun-solaris2.11 -r 2>&1 \
+// RUN: %clang -### %s --target=sparc-sun-solaris2.11 --sysroot="" -r 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-RELOCATABLE
 // CHECK-RELOCATABLE:     "-L
 // CHECK-RELOCATABLE:     "-r"

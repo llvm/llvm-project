@@ -151,7 +151,7 @@
 // RUN: %clang -### %s --target=aarch64_be-none-elf -mlittle-endian --sysroot=%S/Inputs/baremetal_arm 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-AARCH64LE %s
 
-// RUN: %clang -no-canonical-prefixes %s -### --target=aarch64-none-elf 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s -### --sysroot="" --target=aarch64-none-elf 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-AARCH64-NO-HOST-INC %s
 // Verify that the bare metal driver does not include any host system paths:
 // CHECK-AARCH64-NO-HOST-INC: InstalledDir: [[INSTALLEDDIR:.+]]
@@ -365,7 +365,7 @@
 // CHECK-RV32IMAFC-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-RV32IMAFC-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}rv32imafc{{[/\\]+}}ilp32f{{[/\\]+}}lib"
 
-// RUN: %clang -no-canonical-prefixes %s -### --target=powerpc-unknown-eabi 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s -### --sysroot="" --target=powerpc-unknown-eabi 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPCEABI %s
 // CHECK-PPCEABI: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-PPCEABI: "-nostdsysteminc"
@@ -377,7 +377,7 @@
 // CHECK-PPCEABI-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
 // CHECK-PPCEABI-SAME: "-lc" "-lm" "{{[^"]*}}libclang_rt.builtins.a" "-o" "a.out"
 
-// RUN: %clang -no-canonical-prefixes %s -### --target=powerpc64-unknown-eabi 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s -### --sysroot="" --target=powerpc64-unknown-eabi 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64EABI %s
 // CHECK-PPC64EABI: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-PPC64EABI: "-nostdsysteminc"
@@ -389,7 +389,7 @@
 // CHECK-PPC64EABI-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
 // CHECK-PPC64EABI-SAME: "-lc" "-lm" "{{[^"]*}}libclang_rt.builtins.a" "-o" "a.out"
 
-// RUN: %clang -no-canonical-prefixes %s -### --target=powerpcle-unknown-eabi 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s -### --sysroot="" --target=powerpcle-unknown-eabi 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPCLEEABI %s
 // CHECK-PPCLEEABI: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-PPCLEEABI: "-nostdsysteminc"
@@ -401,7 +401,7 @@
 // CHECK-PPCLEEABI-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
 // CHECK-PPCLEEABI-SAME: "-lc" "-lm" "{{[^"]*}}libclang_rt.builtins.a" "-o" "a.out"
 
-// RUN: %clang -no-canonical-prefixes %s -### --target=powerpc64le-unknown-eabi 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s -### --sysroot="" --target=powerpc64le-unknown-eabi 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64LEEABI %s
 // CHECK-PPC64LEEABI: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-PPC64LEEABI: "-nostdsysteminc"

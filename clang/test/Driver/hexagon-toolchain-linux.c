@@ -96,6 +96,7 @@
 // -----------------------------------------------------------------------------
 // RUN: %clang -### --target=hexagon-unknown-linux-musl \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   --sysroot="" \
 // RUN:   -resource-dir=%S/Inputs/resource_dir %s 2>&1 | FileCheck -check-prefix=CHECK008 %s
 // CHECK008:   InstalledDir: [[INSTALLED_DIR:.+]]
 // CHECK008:   "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -104,6 +105,7 @@
 
 // RUN: %clang -### --target=hexagon-unknown-linux \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   --sysroot="" \
 // RUN:   -resource-dir=%S/Inputs/resource_dir %s 2>&1 | FileCheck -check-prefix=CHECK009 %s
 // CHECK009:   InstalledDir: [[INSTALLED_DIR:.+]]
 // CHECK009:   "-resource-dir" "[[RESOURCE:[^"]+]]"
