@@ -80,6 +80,8 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   ToDisk.Key.RegisterInitialValues = {
       RegisterValue{X86::AL, APInt(8, "-1", 10)},
       RegisterValue{X86::AH, APInt(8, "123", 10)}};
+  ToDisk.Key.MemoryValues = {{"test1", {APInt(64, 0xff), 4096, 0}}};
+  ToDisk.Key.MemoryMappings = {{0x4000, "test1"}};
   ToDisk.Mode = Benchmark::Latency;
   ToDisk.CpuName = "cpu_name";
   ToDisk.LLVMTriple = "llvm_triple";
