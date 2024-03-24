@@ -587,6 +587,14 @@ public:
 
   virtual bool IsSynthetic() { return false; }
 
+  void SetSyntheticFrontend(SyntheticChildrenFrontEnd *synth_front) {
+    m_synthetic_frontend = synth_front;
+  }
+
+  SyntheticChildrenFrontEnd *GetSyntheticFrontend() const {
+    return m_synthetic_frontend;
+  }
+
   lldb::ValueObjectSP
   GetQualifiedRepresentationIfAvailable(lldb::DynamicValueType dynValue,
                                         bool synthValue);
@@ -898,6 +906,9 @@ protected:
 
   /// Unique identifier for every value object.
   UserID m_id;
+
+  // If frontend exist - we may try to update our value through it
+  SyntheticChildrenFrontEnd *m_synthetic_frontend = nullptr;
 
   // Utility class for initializing all bitfields in ValueObject's constructors.
   // FIXME: This could be done via default initializers once we have C++20.

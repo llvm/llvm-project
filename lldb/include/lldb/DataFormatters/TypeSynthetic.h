@@ -34,9 +34,13 @@ protected:
 
 public:
   SyntheticChildrenFrontEnd(ValueObject &backend)
-      : m_backend(backend), m_valid(true) {}
+      : m_backend(backend), m_valid(true) {
+    m_backend.SetSyntheticFrontend(this);
+  }
 
-  virtual ~SyntheticChildrenFrontEnd() = default;
+  virtual ~SyntheticChildrenFrontEnd() {
+    m_backend.SetSyntheticFrontend(nullptr);
+  }
 
   virtual llvm::Expected<uint32_t> CalculateNumChildren() = 0;
 
@@ -79,6 +83,10 @@ public:
   // expected to use the return as the name of the type of this ValueObject for
   // display purposes
   virtual ConstString GetSyntheticTypeName() { return ConstString(); }
+
+  virtual bool SetValueFromCString(const char *value_str, Status &error) {
+    return false;
+  }
 
   typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
   typedef std::unique_ptr<SyntheticChildrenFrontEnd> AutoPointer;
