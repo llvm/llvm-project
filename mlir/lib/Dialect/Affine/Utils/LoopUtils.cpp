@@ -110,68 +110,6 @@ getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
     lb.erase();
 }
 
-/// Helper to replace uses of loop carried values (iter_args) and loop
-/// yield values while promoting single iteration affine.for ops.
-static void replaceIterArgsAndYieldResults(AffineForOp forOp) {
-  // Replace uses of iter arguments with iter operands (initial values).
-  auto iterOperands = forOp.getInits();
-  auto iterArgs = forOp.getRegionIterArgs();
-  for (auto e : llvm::zip(iterOperands, iterArgs))
-    std::get<1>(e).replaceAllUsesWith(std::get<0>(e));
-
-  // Replace uses of loop results with the values yielded by the loop.
-  auto outerResults = forOp.getResults();
-  auto innerResults = forOp.getBody()->getTerminator()->getOperands();
-  for (auto e : llvm::zip(outerResults, innerResults))
-    std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
-}
-
-/// Promotes the loop body of a forOp to its containing block if the forOp
-/// was known to have a single iteration.
-LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
-  std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
-  if (!tripCount || *tripCount != 1)
-    return failure();
-
-  // TODO: extend this for arbitrary affine bounds.
-  if (forOp.getLowerBoundMap().getNumResults() != 1)
-    return failure();
-
-  // Replaces all IV uses to its single iteration value.
-  auto iv = forOp.getInductionVar();
-  auto *parentBlock = forOp->getBlock();
-  if (!iv.use_empty()) {
-    if (forOp.hasConstantLowerBound()) {
-      OpBuilder topBuilder(forOp->getParentOfType<func::FuncOp>().getBody());
-      auto constOp = topBuilder.create<arith::ConstantIndexOp>(
-          forOp.getLoc(), forOp.getConstantLowerBound());
-      iv.replaceAllUsesWith(constOp);
-    } else {
-      auto lbOperands = forOp.getLowerBoundOperands();
-      auto lbMap = forOp.getLowerBoundMap();
-      OpBuilder builder(forOp);
-      if (lbMap == builder.getDimIdentityMap()) {
-        // No need of generating an affine.apply.
-        iv.replaceAllUsesWith(lbOperands[0]);
-      } else {
-        auto affineApplyOp =
-            builder.create<AffineApplyOp>(forOp.getLoc(), lbMap, lbOperands);
-        iv.replaceAllUsesWith(affineApplyOp);
-      }
-    }
-  }
-
-  replaceIterArgsAndYieldResults(forOp);
-
-  // Move the loop body operations, except for its terminator, to the loop's
-  // containing block.
-  forOp.getBody()->back().erase();
-  parentBlock->getOperations().splice(Block::iterator(forOp),
-                                      forOp.getBody()->getOperations());
-  forOp.erase();
-  return success();
-}
-
 /// Generates an affine.for op with the specified lower and upper bounds
 /// while generating the right IV remappings to realize shifts for operations in
 /// its body. The operations that go into the loop body are specified in
@@ -218,7 +156,9 @@ static AffineForOp generateShiftedLoop(
     for (auto *op : ops)
       bodyBuilder.clone(*op, operandMap);
   };
-  if (succeeded(promoteIfSingleIteration(loopChunk)))
+
+  IRRewriter rewriter(loopChunk.getContext());
+  if (succeeded(loopChunk.promoteIfSingleIteration(rewriter)))
     return AffineForOp();
   return loopChunk;
 }
@@ -892,12 +832,13 @@ void mlir::affine::getTileableBands(
 /// Unrolls this loop completely.
 LogicalResult mlir::affine::loopUnrollFull(AffineForOp forOp) {
   std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  IRRewriter rewriter(forOp.getContext());
   if (mayBeConstantTripCount.has_value()) {
     uint64_t tripCount = *mayBeConstantTripCount;
     if (tripCount == 0)
       return success();
     if (tripCount == 1)
-      return promoteIfSingleIteration(forOp);
+      return forOp.promoteIfSingleIteration(rewriter);
     return loopUnrollByFactor(forOp, tripCount);
   }
   return failure();
@@ -1003,7 +944,8 @@ static LogicalResult generateCleanupLoopForUnroll(AffineForOp forOp,
 
   cleanupForOp.setLowerBound(cleanupOperands, cleanupMap);
   // Promote the loop body up if this has turned into a single iteration loop.
-  (void)promoteIfSingleIteration(cleanupForOp);
+  IRRewriter rewriter(cleanupForOp.getContext());
+  (void)cleanupForOp.promoteIfSingleIteration(rewriter);
 
   // Adjust upper bound of the original loop; this is the same as the lower
   // bound of the cleanup loop.
@@ -1019,10 +961,11 @@ LogicalResult mlir::affine::loopUnrollByFactor(
     bool cleanUpUnroll) {
   assert(unrollFactor > 0 && "unroll factor should be positive");
 
+  IRRewriter rewriter(forOp.getContext());
   std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (unrollFactor == 1) {
     if (mayBeConstantTripCount && *mayBeConstantTripCount == 1 &&
-        failed(promoteIfSingleIteration(forOp)))
+        failed(forOp.promoteIfSingleIteration(rewriter)))
       return failure();
     return success();
   }
@@ -1076,7 +1019,7 @@ LogicalResult mlir::affine::loopUnrollByFactor(
       /*iterArgs=*/iterArgs, /*yieldedValues=*/yieldedValues);
 
   // Promote the loop body up if this has turned into a single iteration loop.
-  (void)promoteIfSingleIteration(forOp);
+  (void)forOp.promoteIfSingleIteration(rewriter);
   return success();
 }
 
@@ -1135,10 +1078,11 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
                                                   uint64_t unrollJamFactor) {
   assert(unrollJamFactor > 0 && "unroll jam factor should be positive");
 
+  IRRewriter rewriter(forOp.getContext());
   std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (unrollJamFactor == 1) {
     if (mayBeConstantTripCount && *mayBeConstantTripCount == 1 &&
-        failed(promoteIfSingleIteration(forOp)))
+        failed(forOp.promoteIfSingleIteration(rewriter)))
       return failure();
     return success();
   }
@@ -1198,7 +1142,6 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
   // `unrollJamFactor` copies of its iterOperands, iter_args and yield
   // operands.
   SmallVector<AffineForOp, 4> newLoopsWithIterArgs;
-  IRRewriter rewriter(forOp.getContext());
   for (AffineForOp oldForOp : loopsWithIterArgs) {
     SmallVector<Value> dupIterOperands, dupYieldOperands;
     ValueRange oldIterOperands = oldForOp.getInits();
@@ -1321,7 +1264,7 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
   }
 
   // Promote the loop body up if this has turned into a single iteration loop.
-  (void)promoteIfSingleIteration(forOp);
+  (void)forOp.promoteIfSingleIteration(rewriter);
   return success();
 }
 
