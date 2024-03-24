@@ -1117,7 +1117,6 @@ TEST(CommandLineTest, BadResponseFile) {
   ASSERT_STREQ(Argv[0], "clang");
   ASSERT_STREQ(Argv[1], AFileExp.c_str());
 
-#if !defined(_AIX) && !defined(__MVS__)
   std::string ADirExp = std::string("@") + std::string(ADir.path());
   Argv = {"clang", ADirExp.c_str()};
   Res = cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv);
@@ -1125,7 +1124,6 @@ TEST(CommandLineTest, BadResponseFile) {
   ASSERT_EQ(2U, Argv.size());
   ASSERT_STREQ(Argv[0], "clang");
   ASSERT_STREQ(Argv[1], ADirExp.c_str());
-#endif
 }
 
 TEST(CommandLineTest, SetDefaultValue) {

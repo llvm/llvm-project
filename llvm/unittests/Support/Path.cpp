@@ -1296,6 +1296,22 @@ TEST_F(FileSystemTest, UTF8ToUTF16DirectoryIteration) {
 }
 #endif
 
+TEST_F(FileSystemTest, OpenDirectoryAsFile) {
+  ASSERT_NO_ERROR(fs::create_directory(Twine(TestDirectory)));
+  ASSERT_EQ(fs::create_directory(Twine(TestDirectory), false),
+            errc::file_exists);
+
+  int FD;
+  std::error_code EC;
+  EC = fs::openFileForRead(Twine(TestDirectory), FD);
+  ASSERT_EQ(EC, errc::is_a_directory);
+  EC = fs::openFileForWrite(Twine(TestDirectory), FD);
+  ASSERT_EQ(EC, errc::is_a_directory);
+
+  ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory)));
+  ::close(FD);
+}
+
 TEST_F(FileSystemTest, Remove) {
   SmallString<64> BaseDir;
   SmallString<64> Paths[4];
