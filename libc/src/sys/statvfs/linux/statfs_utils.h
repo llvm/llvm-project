@@ -26,11 +26,10 @@ using LinuxStatFs = statfs;
 #endif
 
 LIBC_INLINE cpp::optional<LinuxStatFs> linux_statfs(const char *path) {
-#ifdef __clang__
-  // Disable pattern filling for result buffer: this struct is to be populated
-  // by the syscall.
-  [[clang::uninitialized]]
-#endif
+  // The kernel syscall routine checks the validity of the path before filling
+  // the statfs structure. So, it is possible that the result is not initialized
+  // after the syscall. Since the struct is trvial, the compiler will generate
+  // pattern filling for the struct.
   LinuxStatFs result;
   // On 32-bit platforms, original statfs cannot handle large file systems.
   // In such cases, SYS_statfs64 is defined and should be used.
@@ -47,6 +46,10 @@ LIBC_INLINE cpp::optional<LinuxStatFs> linux_statfs(const char *path) {
 }
 
 LIBC_INLINE cpp::optional<LinuxStatFs> linux_fstatfs(int fd) {
+  // The kernel syscall routine checks the validity of the path before filling
+  // the statfs structure. So, it is possible that the result is not initialized
+  // after the syscall. Since the struct is trvial, the compiler will generate
+  // pattern filling for the struct.
   LinuxStatFs result;
   // On 32-bit platforms, original fstatfs cannot handle large file systems.
   // In such cases, SYS_fstatfs64 is defined and should be used.
