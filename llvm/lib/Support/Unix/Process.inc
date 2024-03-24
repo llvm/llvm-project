@@ -258,6 +258,25 @@ std::error_code Process::FixupStandardFileDescriptors() {
   return std::error_code();
 }
 
+// Close a file descriptor while being mindful of EINTR.
+//
+// On Unix systems closing a file descriptor usually starts with removing it
+// from the fd table (or an equivalent structure). This means any error
+// generated past that point will still result in the entry being cleared.
+//
+// Make sure to not bubble up EINTR as there is nothing to do in that case.
+// XXX what about other errors?
+#if defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__) || \
+    defined(__NetBSD__) || defined(__OpenBSD__)
+std::error_code Process::SafelyCloseFileDescriptor(int FD) {
+  int EC = 0;
+  if (::close(FD) < 0) {
+    if (errno != EINTR)
+      EC = errno;
+  }
+  return std::error_code(EC, std::generic_category());
+}
+#else
 std::error_code Process::SafelyCloseFileDescriptor(int FD) {
   // Create a signal set filled with *all* signals.
   sigset_t FullSet, SavedSet;
@@ -292,6 +311,7 @@ std::error_code Process::SafelyCloseFileDescriptor(int FD) {
     return std::error_code(ErrnoFromClose, std::generic_category());
   return std::error_code(EC, std::generic_category());
 }
+#endif
 
 bool Process::StandardInIsUserInput() {
   return FileDescriptorIsDisplayed(STDIN_FILENO);
