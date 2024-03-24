@@ -1722,6 +1722,12 @@ namespace {
         Designator.setInvalid();
         return;
       }
+      if (!Base) {
+        // Can not perform cast if there is no underlying type.
+        Info.CCEDiag(E, diag::err_cast_selector_expr);
+        Designator.setInvalid();
+        return;
+      }
       if (checkSubobject(Info, E, CSK_ArrayToPointer)) {
         assert(getType(Base)->isPointerType() || getType(Base)->isArrayType());
         Designator.FirstEntryIsAnUnsizedArray = true;
