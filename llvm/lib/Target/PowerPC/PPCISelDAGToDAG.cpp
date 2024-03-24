@@ -5466,7 +5466,8 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     // generate secure plt code for TLS symbols.
     getGlobalBaseReg();
   } break;
-  case PPCISD::CALL: {
+  case PPCISD::CALL:
+  case PPCISD::CALL_RM: {
     if (PPCLowering->getPointerTy(CurDAG->getDataLayout()) != MVT::i32 ||
         !TM.isPositionIndependent() || !Subtarget->isSecurePlt() ||
         !Subtarget->isTargetELF())
@@ -5482,8 +5483,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       if (ES->getTargetFlags() == PPCII::MO_PLT)
         getGlobalBaseReg();
     }
-  }
-    break;
+  } break;
 
   case PPCISD::GlobalBaseReg:
     ReplaceNode(N, getGlobalBaseReg());
