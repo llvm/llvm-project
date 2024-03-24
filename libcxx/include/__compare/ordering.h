@@ -47,10 +47,6 @@ class partial_ordering {
 
   _LIBCPP_HIDE_FROM_ABI explicit constexpr partial_ordering(_NCmpResult __v) noexcept : __value_(_ValueT(__v)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __is_ordered() const noexcept {
-    return __value_ != _ValueT(_NCmpResult::__unordered);
-  }
-
 public:
   // valid values
   static const partial_ordering less;
@@ -62,39 +58,39 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(partial_ordering, partial_ordering) noexcept = default;
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(partial_ordering __v, _CmpUnspecifiedParam) noexcept {
-    return __v.__is_ordered() && __v.__value_ == 0;
+    return __v.__value_ == 0;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(partial_ordering __v, _CmpUnspecifiedParam) noexcept {
-    return __v.__is_ordered() && __v.__value_ < 0;
+    return __v.__value_ == -1;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(partial_ordering __v, _CmpUnspecifiedParam) noexcept {
-    return __v.__is_ordered() && __v.__value_ <= 0;
+    return __v.__value_ == 0 || __v.__value_ == -1;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(partial_ordering __v, _CmpUnspecifiedParam) noexcept {
-    return __v.__is_ordered() && __v.__value_ > 0;
+    return __v.__value_ == 1;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(partial_ordering __v, _CmpUnspecifiedParam) noexcept {
-    return __v.__is_ordered() && __v.__value_ >= 0;
+    return __v.__value_ == 0 || __v.__value_ == 1;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(_CmpUnspecifiedParam, partial_ordering __v) noexcept {
-    return __v.__is_ordered() && 0 < __v.__value_;
+    return __v.__value_ == 1;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(_CmpUnspecifiedParam, partial_ordering __v) noexcept {
-    return __v.__is_ordered() && 0 <= __v.__value_;
+    return __v.__value_ == 0 || __v.__value_ == 1;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(_CmpUnspecifiedParam, partial_ordering __v) noexcept {
-    return __v.__is_ordered() && 0 > __v.__value_;
+    return __v.__value_ == -1;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(_CmpUnspecifiedParam, partial_ordering __v) noexcept {
-    return __v.__is_ordered() && 0 >= __v.__value_;
+    return __v.__value_ == 0 || __v.__value_ == -1;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr partial_ordering
