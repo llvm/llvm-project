@@ -18,6 +18,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassTimingInfo.h"
@@ -33,6 +35,7 @@ namespace llvm {
 
 class Module;
 class Function;
+class MachineFunction;
 class PassInstrumentationCallbacks;
 
 /// Instrumentation to print IR before/after passes.
@@ -313,6 +316,11 @@ public:
     B.print(SS, nullptr, true, true);
   }
 
+  BlockDataT(const MachineBasicBlock &B) : Label(B.getName().str()), Data(B) {
+    raw_string_ostream SS(Body);
+    B.print(SS);
+  }
+
   bool operator==(const BlockDataT &That) const { return Body == That.Body; }
   bool operator!=(const BlockDataT &That) const { return Body != That.Body; }
 
@@ -364,6 +372,7 @@ protected:
 class EmptyData {
 public:
   EmptyData(const BasicBlock &) {}
+  EmptyData(const MachineBasicBlock &) {}
 };
 
 // The data saved for comparing functions.
@@ -405,7 +414,8 @@ public:
 
 protected:
   // Generate the data for \p F into \p Data.
-  static bool generateFunctionData(IRDataT<T> &Data, const Function &F);
+  template <typename FunctionT>
+  static bool generateFunctionData(IRDataT<T> &Data, const FunctionT &F);
 
   const IRDataT<T> &Before;
   const IRDataT<T> &After;
@@ -475,6 +485,7 @@ class DCData {
 public:
   // Fill the map with the transitions from basic block \p B.
   DCData(const BasicBlock &B);
+  DCData(const MachineBasicBlock &B);
 
   // Return an iterator to the names of the successor blocks.
   StringMap<std::string>::const_iterator begin() const {
