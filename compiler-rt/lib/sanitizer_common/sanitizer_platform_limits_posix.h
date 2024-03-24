@@ -406,6 +406,18 @@ struct __sanitizer_timeb {
   short dstflag;
 };
 
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
+struct __sanitizer_timespec {
+  __sanitizer_time_t tv_sec;
+  long tv_nsec;
+};
+
+struct __sanitizer_itimerspec {
+  struct __sanitizer_timespec it_interval;
+  struct __sanitizer_timespec it_value;
+};
+#endif
+
 struct __sanitizer_ether_addr {
   u8 octet[6];
 };

@@ -6382,8 +6382,8 @@ INTERCEPTOR(char *, getpass, const char *prompt) {
 #endif
 
 #if SANITIZER_INTERCEPT_TIMERFD
-INTERCEPTOR(int, timerfd_settime, int fd, int flags, void *new_value,
-            void *old_value) {
+INTERCEPTOR(int, timerfd_settime, int fd, int flags, __sanitizer_itimerspec *new_value,
+            __sanitizer_itimerspec *old_value) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, timerfd_settime, fd, flags, new_value,
                            old_value);
@@ -6394,7 +6394,7 @@ INTERCEPTOR(int, timerfd_settime, int fd, int flags, void *new_value,
   return res;
 }
 
-INTERCEPTOR(int, timerfd_gettime, int fd, void *curr_value) {
+INTERCEPTOR(int, timerfd_gettime, int fd, __sanitizer_itimerspec *curr_value) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, timerfd_gettime, fd, curr_value);
   int res = REAL(timerfd_gettime)(fd, curr_value);
