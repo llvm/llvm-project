@@ -140,8 +140,9 @@ LIBC_INLINE T round(T x) {
   }
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE constexpr T round_using_specific_rounding_mode(T x, int rnd) {
+template <typename T>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
+round_using_specific_rounding_mode(T x, int rnd) {
   using StorageType = typename FPBits<T>::StorageType;
   FPBits<T> bits(x);
 
@@ -224,8 +225,9 @@ LIBC_INLINE constexpr T round_using_specific_rounding_mode(T x, int rnd) {
   }
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T round_using_current_rounding_mode(T x) {
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
+round_using_current_rounding_mode(T x) {
   int rounding_mode = quick_get_round();
 
   switch (rounding_mode) {
@@ -242,9 +244,9 @@ LIBC_INLINE T round_using_current_rounding_mode(T x) {
   }
 }
 
-template <bool IsSigned, typename T,
-          cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE constexpr T fromfp(T x, int rnd, unsigned int width) {
+template <bool IsSigned, typename T>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
+fromfp(T x, int rnd, unsigned int width) {
   if (width == 0U)
     return FPBits<T>::quiet_nan().get_val();
 
@@ -269,9 +271,9 @@ LIBC_INLINE constexpr T fromfp(T x, int rnd, unsigned int width) {
   return rounded_value;
 }
 
-template <bool IsSigned, typename T,
-          cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE constexpr T fromfpx(T x, int rnd, unsigned int width) {
+template <bool IsSigned, typename T>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
+fromfpx(T x, int rnd, unsigned int width) {
   T rounded_value = fromfp<IsSigned>(x, rnd, width);
   FPBits<T> bits(rounded_value);
 
