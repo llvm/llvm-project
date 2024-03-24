@@ -660,8 +660,7 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
     Value *Arg = cast<CallInst>(Inst)->getArgOperand(0);
     Value *OrigArg = Arg;
 
-    // TODO: Change this to a do-while.
-    for (;;) {
+    do {
       ReplaceArgUses(Arg);
 
       // If Arg is a no-op casted pointer, strip one level of casts and iterate.
@@ -684,7 +683,7 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
         }
         break;
       }
-    }
+    } while (true);
 
     // Replace bitcast users of Arg that are dominated by Inst.
     SmallVector<BitCastInst *, 2> BitCastUsers;
