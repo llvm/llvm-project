@@ -36,8 +36,10 @@ public:
     EXPECT_FP_EQ(T(-1.2345),
                  func(FPBits::signaling_nan().get_val(), T(-1.2345)));
     EXPECT_FP_EQ(T(1.2345), func(T(1.2345), FPBits::signaling_nan().get_val()));
-    EXPECT_FP_IS_NAN_WITH_EXCEPTION(func(aNaN, FPBits::signaling_nan().get_val()), FE_INVALID);
-    EXPECT_FP_IS_NAN_WITH_EXCEPTION(func(FPBits::signaling_nan().get_val(),aNaN), FE_INVALID);
+    EXPECT_FP_IS_NAN_WITH_EXCEPTION(
+        func(aNaN, FPBits::signaling_nan().get_val()), FE_INVALID);
+    EXPECT_FP_IS_NAN_WITH_EXCEPTION(
+        func(FPBits::signaling_nan().get_val(), aNaN), FE_INVALID);
   }
 
   void testInfArg(FMaximumNumFunc func) {
