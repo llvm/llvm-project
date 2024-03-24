@@ -46,6 +46,7 @@ void IncDecInConditionsCheck::registerMatchers(MatchFinder *Finder) {
                          cxxOperatorCallExpr(
                              isPrePostOperator(),
                              hasUnaryOperand(expr().bind("operand")))),
+                   unless(IsInUnevaluatedContext),
                    hasAncestor(
                        expr(equalsBoundNode("parent"),
                             hasDescendant(

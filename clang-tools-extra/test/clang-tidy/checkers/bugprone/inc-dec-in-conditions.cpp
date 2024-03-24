@@ -75,5 +75,6 @@ namespace PR85838 {
     auto foo = 0;
     auto bar = 0;
     if (++foo < static_cast<decltype(foo)>(bar)) {}
+    if (static_cast<decltype(++foo)>(bar) < foo) {}
   }
 }
