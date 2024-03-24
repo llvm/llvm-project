@@ -584,7 +584,8 @@ CallInst *IRBuilderBase::CreateMaskedLoad(Type *Ty, Value *Ptr, Align Alignment,
   if (!PassThru)
     PassThru = PoisonValue::get(Ty);
   Type *OverloadedTypes[] = { Ty, PtrTy };
-  Value *Ops[] = {Ptr, getInt32(Alignment.value()), Mask, PassThru};
+  unsigned Align32 = std::min<uint64_t>(Alignment.value(), 0x80000000ULL);
+  Value *Ops[] = {Ptr, getInt32(Align32), Mask, PassThru};
   return CreateMaskedIntrinsic(Intrinsic::masked_load, Ops,
                                OverloadedTypes, Name);
 }
@@ -602,7 +603,8 @@ CallInst *IRBuilderBase::CreateMaskedStore(Value *Val, Value *Ptr,
   assert(DataTy->isVectorTy() && "Val should be a vector");
   assert(Mask && "Mask should not be all-ones (null)");
   Type *OverloadedTypes[] = { DataTy, PtrTy };
-  Value *Ops[] = {Val, Ptr, getInt32(Alignment.value()), Mask};
+  unsigned Align32 = std::min<uint64_t>(Alignment.value(), 0x80000000ULL);
+  Value *Ops[] = {Val, Ptr, getInt32(Align32), Mask};
   return CreateMaskedIntrinsic(Intrinsic::masked_store, Ops, OverloadedTypes);
 }
 
@@ -643,7 +645,8 @@ CallInst *IRBuilderBase::CreateMaskedGather(Type *Ty, Value *Ptrs,
     PassThru = PoisonValue::get(Ty);
 
   Type *OverloadedTypes[] = {Ty, PtrsTy};
-  Value *Ops[] = {Ptrs, getInt32(Alignment.value()), Mask, PassThru};
+  unsigned Align32 = std::min<uint64_t>(Alignment.value(), 0x80000000ULL);
+  Value *Ops[] = {Ptrs, getInt32(Align32), Mask, PassThru};
 
   // We specify only one type when we create this intrinsic. Types of other
   // arguments are derived from this type.
@@ -668,7 +671,8 @@ CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
     Mask = getAllOnesMask(NumElts);
 
   Type *OverloadedTypes[] = {DataTy, PtrsTy};
-  Value *Ops[] = {Data, Ptrs, getInt32(Alignment.value()), Mask};
+  unsigned Align32 = std::min<uint64_t>(Alignment.value(), 0x80000000ULL);
+  Value *Ops[] = {Data, Ptrs, getInt32(Align32), Mask};
 
   // We specify only one type when we create this intrinsic. Types of other
   // arguments are derived from this type.
