@@ -34,7 +34,8 @@ public:
     EXPECT_FP_EQ(-0.0, func(-0.0, FPBits::signaling_nan().get_val()));
     EXPECT_FP_EQ(T(-1.2345), func(FPBits::quiet_nan().get_val(), T(-1.2345)));
     EXPECT_FP_EQ(T(1.2345), func(T(1.2345), FPBits::quiet_nan().get_val()));
-    EXPECT_FP_EQ(T(-1.2345), func(FPBits::signaling_nan().get_val(), T(-1.2345)));
+    EXPECT_FP_EQ(T(-1.2345),
+                 func(FPBits::signaling_nan().get_val(), T(-1.2345)));
     EXPECT_FP_EQ(T(1.2345), func(T(1.2345), FPBits::signaling_nan().get_val()));
   }
 

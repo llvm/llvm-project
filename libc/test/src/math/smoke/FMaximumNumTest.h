@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMAXIMUMNUMTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMAXIMUMNUMTEST_H
 
+#include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "src/__support/FPUtil/FPBits.h"
 
 template <typename T>
 class FMaximumNumTest : public LIBC_NAMESPACE::testing::Test {
@@ -33,8 +33,9 @@ public:
     EXPECT_FP_EQ(-0.0, func(-0.0, FPBits::signaling_nan().get_val()));
     EXPECT_FP_EQ(T(-1.2345), func(FPBits::quiet_nan().get_val(), T(-1.2345)));
     EXPECT_FP_EQ(T(1.2345), func(T(1.2345), FPBits::quiet_nan().get_val()));
-    EXPECT_FP_EQ(T(-1.2345), func(FPBits::signaling_nan().get_val(), T(-1.2345)));
-    EXPECT_FP_EQ(T(1.2345), func(T(1.2345), FPBits::signaling_nan().get_val()));									      
+    EXPECT_FP_EQ(T(-1.2345),
+                 func(FPBits::signaling_nan().get_val(), T(-1.2345)));
+    EXPECT_FP_EQ(T(1.2345), func(T(1.2345), FPBits::signaling_nan().get_val()));
   }
 
   void testInfArg(FMaximumNumFunc func) {
