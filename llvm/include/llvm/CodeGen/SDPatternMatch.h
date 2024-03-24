@@ -482,24 +482,24 @@ struct AnyBinaryOp_match {
 
 template <typename LHS, typename RHS>
 inline auto m_AnyBinOp(const LHS &L, const RHS &R) {
-  return AnyBinaryOp_match{[](const TargetLowering &TLI) { return true }, L, R,
+  return AnyBinaryOp_match{[](const TargetLowering &TLI) { return true; }, L, R,
                            false};
 }
 template <typename LHS, typename RHS>
 inline auto m_c_AnyBinOp(const LHS &L, const RHS &R) {
-  return AnyBinaryOp_match{[](const TargetLowering &TLI) { return true }, L, R,
+  return AnyBinaryOp_match{[](const TargetLowering &TLI) { return true; }, L, R,
                            true};
 }
 
 template <typename LHS, typename RHS>
 inline auto m_AnyBinOp(unsigned Opc, const LHS &L, const RHS &R) {
   return AnyBinaryOp_match{
-      [](const TargetLowering &TLI) { return TLI.isBinOp(Opc) }, L, R, false};
+      [](const TargetLowering &TLI) { return TLI.isBinOp(Opc); }, L, R, false};
 }
 template <typename LHS, typename RHS>
 inline auto m_c_AnyBinOp(unsigned Opc, const LHS &L, const RHS &R) {
   return AnyBinaryOp_match{
-      [](const TargetLowering &TLI) { return TLI.isCommutativeBinOp(Opc) }, L,
+      [](const TargetLowering &TLI) { return TLI.isCommutativeBinOp(Opc); }, L,
       R, true};
 }
 
