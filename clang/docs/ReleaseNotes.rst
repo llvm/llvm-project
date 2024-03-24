@@ -440,6 +440,9 @@ Bug Fixes to C++ Support
 - Fix an issue where a namespace alias could be defined using a qualified name (all name components
   following the first `::` were ignored).
 
+- Fixed a crash when substituting into constraint expressions for invalid variable templates.
+  Fixes: (`#73885 <https://github.com/llvm/llvm-project/issues/73885>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Clang now properly preserves ``FoundDecls`` within a ``ConceptReference``. (#GH82628)
