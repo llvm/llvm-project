@@ -233,6 +233,10 @@ defm fatal_warnings: B<"fatal-warnings",
     "Treat warnings as errors",
     "Do not treat warnings as errors (default)">;
 
+defm check_format: B<"check-format",
+    "Please check the file format(default)",
+    "Please not check the file format">;
+
 defm filter: Eq<"filter", "Set DT_FILTER field to the specified name">;
 
 defm fini: Eq<"fini", "Specify a finalizer function">, MetaVarName<"<symbol>">;

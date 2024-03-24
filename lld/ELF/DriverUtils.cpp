@@ -225,7 +225,8 @@ static std::optional<std::string> findFile(StringRef path1,
 std::optional<std::string> elf::findFromSearchPaths(StringRef path) {
   for (StringRef dir : config->searchPaths)
     if (std::optional<std::string> s = findFile(dir, path))
-      return s;
+      if (ctx.driver.checkFile(*s))
+        return s;
   return std::nullopt;
 }
 
@@ -235,9 +236,11 @@ std::optional<std::string> elf::searchLibraryBaseName(StringRef name) {
   for (StringRef dir : config->searchPaths) {
     if (!config->isStatic)
       if (std::optional<std::string> s = findFile(dir, "lib" + name + ".so"))
-        return s;
+        if (ctx.driver.checkFile(*s))
+          return s;
     if (std::optional<std::string> s = findFile(dir, "lib" + name + ".a"))
-      return s;
+      if (ctx.driver.checkFile(*s))
+        return s;
   }
   return std::nullopt;
 }
