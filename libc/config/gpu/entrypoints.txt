@@ -213,7 +213,19 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.gpu.rpc_host_call
 )
 
+if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
+  set(extra_entrypoints
+      # fenv.h entrypoints
+      libc.src.fenv.fegetenv
+      libc.src.fenv.fegetround
+      libc.src.fenv.fesetenv
+      libc.src.fenv.fesetround
+  )
+endif()
+
 set(TARGET_LIBM_ENTRYPOINTS
+    ${extra_entrypoints}
+
     # math.h entrypoints
     libc.src.math.acos
     libc.src.math.acosf
