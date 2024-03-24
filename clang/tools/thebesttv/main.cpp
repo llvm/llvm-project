@@ -92,7 +92,7 @@ getCompilationDatabase(fs::path buildPath) {
 }
 
 struct VarLocResult {
-    const int fid, bid;
+    int fid, bid;
 
     VarLocResult() : fid(-1), bid(-1) {}
     VarLocResult(const FunctionInfo *fi, const CFGBlock *block)
