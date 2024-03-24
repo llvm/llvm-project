@@ -78,6 +78,8 @@ static constexpr CategorySet AnyType{IntrinsicType | DerivedType};
 ENUM_CLASS(KindCode, none, defaultIntegerKind,
     defaultRealKind, // is also the default COMPLEX kind
     doublePrecision, defaultCharKind, defaultLogicalKind,
+    greaterOrEqualToKind, // match kind value greater than or equal to a single
+                          // explicit kind value
     any, // matches any kind value; each instance is independent
     // match any kind, but all "same" kinds must be equal. For characters, also
     // implies that lengths must be equal.
@@ -104,7 +106,7 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
 struct TypePattern {
   CategorySet categorySet;
   KindCode kindCode{KindCode::none};
-  int exactKindValue{0}; // for KindCode::exactKind
+  int kindValue{0}; // for KindCode::exactKind and greaterOrEqualToKind
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 };
 
@@ -333,11 +335,14 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
                 common::Intent::In, {ArgFlag::canBeNull}}},
         DefaultLogical, Rank::elemental, IntrinsicClass::inquiryFunction},
     {"atan", {{"x", SameFloating}}, SameFloating},
-    {"atand", {{"x", SameFloating}}, SameFloating},
     {"atan", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
+    {"atand", {{"x", SameFloating}}, SameFloating},
     {"atand", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
     {"atan2", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
     {"atan2d", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
+    {"atanpi", {{"x", SameFloating}}, SameFloating},
+    {"atanpi", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
+    {"atan2pi", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
     {"atanh", {{"x", SameFloating}}, SameFloating},
     {"bessel_j0", {{"x", SameReal}}, SameReal},
     {"bessel_j1", {{"x", SameReal}}, SameReal},
@@ -529,6 +534,17 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"ieor", {{"i", OperandInt}, {"j", OperandInt, Rank::elementalOrBOZ}},
         OperandInt},
     {"ieor", {{"i", BOZ}, {"j", SameInt}}, SameInt},
+    {"image_index",
+        {{"coarray", AnyData, Rank::coarray}, {"sub", AnyInt, Rank::vector}},
+        DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"image_index",
+        {{"coarray", AnyData, Rank::coarray}, {"sub", AnyInt, Rank::vector},
+            {"team", TeamType, Rank::scalar}},
+        DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"image_index",
+        {{"coarray", AnyData, Rank::coarray}, {"sub", AnyInt, Rank::vector},
+            {"team_number", AnyInt, Rank::scalar}},
+        DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"image_status", {{"image", SameInt}, OptionalTEAM}, DefaultInt},
     {"index",
         {{"string", SameCharNoLen}, {"substring", SameCharNoLen},
@@ -930,7 +946,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 };
 
 // TODO: Coarray intrinsic functions
-//  IMAGE_INDEX, COSHAPE
+//  COSHAPE
 // TODO: Non-standard intrinsic functions
 //  SHIFT,
 //  COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT,
@@ -1104,6 +1120,12 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
     {{"iiabs", {{"a", TypePattern{IntType, KindCode::exactKind, 2}}},
          TypePattern{IntType, KindCode::exactKind, 2}},
         "abs"},
+    // The definition of the unrestricted specific intrinsic function INDEX
+    // in F'77 and F'90 has only two arguments; later standards omit the
+    // argument information for all unrestricted specific intrinsic
+    // procedures.  No compiler supports an implementation that allows
+    // INDEX with BACK= to work when associated as an actual procedure or
+    // procedure pointer target.
     {{"index", {{"string", DefaultChar}, {"substring", DefaultChar}},
         DefaultInt}},
     {{"isign", {{"a", DefaultInt}, {"b", DefaultInt}}, DefaultInt}, "sign"},
@@ -1320,10 +1342,11 @@ static const IntrinsicInterface intrinsicSubroutine[]{
     {"execute_command_line",
         {{"command", DefaultChar, Rank::scalar},
             {"wait", AnyLogical, Rank::scalar, Optionality::optional},
-            {"exitstat", AnyInt, Rank::scalar, Optionality::optional,
-                common::Intent::InOut},
-            {"cmdstat", AnyInt, Rank::scalar, Optionality::optional,
-                common::Intent::Out},
+            {"exitstat",
+                TypePattern{IntType, KindCode::greaterOrEqualToKind, 4},
+                Rank::scalar, Optionality::optional, common::Intent::InOut},
+            {"cmdstat", TypePattern{IntType, KindCode::greaterOrEqualToKind, 2},
+                Rank::scalar, Optionality::optional, common::Intent::Out},
             {"cmdmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
@@ -1391,6 +1414,11 @@ static const IntrinsicInterface intrinsicSubroutine[]{
              common::Intent::Out},
             {"put", DefaultInt, Rank::vector, Optionality::optional},
             {"get", DefaultInt, Rank::vector, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"system",
+        {{"command", DefaultChar, Rank::scalar},
+            {"exitstat", DefaultInt, Rank::scalar, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"system_clock",
@@ -1856,7 +1884,10 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       argOk = true;
       break;
     case KindCode::exactKind:
-      argOk = type->kind() == d.typePattern.exactKindValue;
+      argOk = type->kind() == d.typePattern.kindValue;
+      break;
+    case KindCode::greaterOrEqualToKind:
+      argOk = type->kind() >= d.typePattern.kindValue;
       break;
     case KindCode::sameAtom:
       if (!sameArg) {
@@ -2199,8 +2230,9 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       resultType = DynamicType{
           GetBuiltinDerivedType(builtinsScope, "__builtin_team_type")};
       break;
+    case KindCode::greaterOrEqualToKind:
     case KindCode::exactKind:
-      resultType = DynamicType{*category, result.exactKindValue};
+      resultType = DynamicType{*category, result.kindValue};
       break;
     case KindCode::typeless:
     case KindCode::any:
@@ -2479,6 +2511,8 @@ private:
   std::multimap<std::string, const IntrinsicInterface *> subroutines_;
   const semantics::Scope *builtinsScope_{nullptr};
   std::map<std::string, std::string> aliases_;
+  semantics::ParamValue assumedLen_{
+      semantics::ParamValue::Assumed(common::TypeParamAttr::Len)};
 };
 
 bool IntrinsicProcTable::Implementation::IsIntrinsicFunction(
@@ -2601,19 +2635,30 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
   static const char *const keywords[]{"mold", nullptr};
   if (CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1) &&
       arguments[0]) {
-    if (Expr<SomeType> * mold{arguments[0]->UnwrapExpr()}) {
-      bool isProcPtrTarget{IsProcedurePointerTarget(*mold)};
+    Expr<SomeType> *mold{arguments[0]->UnwrapExpr()};
+    bool isBareNull{IsBareNullPointer(mold)};
+    if (isBareNull) {
+      // NULL(NULL()), NULL(NULL(NULL())), &c. are all just NULL()
+      mold = nullptr;
+    }
+    if (mold) {
+      bool isProcPtrTarget{
+          IsProcedurePointerTarget(*mold) && !IsNullObjectPointer(*mold)};
       if (isProcPtrTarget || IsAllocatableOrPointerObject(*mold)) {
         characteristics::DummyArguments args;
         std::optional<characteristics::FunctionResult> fResult;
         if (isProcPtrTarget) {
           // MOLD= procedure pointer
-          const Symbol *last{GetLastSymbol(*mold)};
-          CHECK(last);
-          auto procPointer{IsProcedure(*last)
-                  ? characteristics::Procedure::Characterize(*last, context)
-                  : std::nullopt};
-          // procPointer is null if there was an error with the analysis
+          std::optional<characteristics::Procedure> procPointer;
+          if (IsNullProcedurePointer(*mold)) {
+            procPointer =
+                characteristics::Procedure::Characterize(*mold, context);
+          } else {
+            const Symbol *last{GetLastSymbol(*mold)};
+            procPointer =
+                characteristics::Procedure::Characterize(DEREF(last), context);
+          }
+          // procPointer is vacant if there was an error with the analysis
           // associated with the procedure pointer
           if (procPointer) {
             args.emplace_back("mold"s,
@@ -2642,8 +2687,10 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
         }
       }
     }
-    context.messages().Say(arguments[0]->sourceLocation(),
-        "MOLD= argument to NULL() must be a pointer or allocatable"_err_en_US);
+    if (!isBareNull) {
+      context.messages().Say(arguments[0]->sourceLocation(),
+          "MOLD= argument to NULL() must be a pointer or allocatable"_err_en_US);
+    }
   }
   characteristics::Procedure::Attrs attrs;
   attrs.set(characteristics::Procedure::Attr::NullPointer);
@@ -3215,6 +3262,10 @@ DynamicType IntrinsicProcTable::Implementation::GetSpecificType(
   TypeCategory category{set.LeastElement().value()};
   if (pattern.kindCode == KindCode::doublePrecision) {
     return DynamicType{category, defaults_.doublePrecisionKind()};
+  } else if (category == TypeCategory::Character) {
+    // All character arguments to specific intrinsic functions are
+    // assumed-length.
+    return DynamicType{defaults_.GetDefaultKind(category), assumedLen_};
   } else {
     return DynamicType{category, defaults_.GetDefaultKind(category)};
   }

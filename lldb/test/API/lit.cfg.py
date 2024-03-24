@@ -309,3 +309,6 @@ if "FREEBSD_LEGACY_PLUGIN" in os.environ:
 # Propagate XDG_CACHE_HOME
 if "XDG_CACHE_HOME" in os.environ:
     config.environment["XDG_CACHE_HOME"] = os.environ["XDG_CACHE_HOME"]
+
+if is_configured("use_vendor_packages"):
+    config.environment["LLDB_TEST_USE_VENDOR_PACKAGES"] = "1"

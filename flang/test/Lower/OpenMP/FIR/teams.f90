@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 ! RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPteams_simple
@@ -104,8 +106,9 @@ end subroutine teams_threadlimit
 subroutine teams_allocate()
    use omp_lib
    integer :: x
+   integer :: y
    ! CHECK: omp.teams
-   ! CHECK-SAME: allocate(%{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>)
+   ! CHECK-SAME: allocate(%{{.+}} : i64 -> %{{.+}} : !fir.ref<i32>)
    !$omp teams allocate(omp_high_bw_mem_alloc: x) private(x)
    ! CHECK: arith.addi
    x = x + 12

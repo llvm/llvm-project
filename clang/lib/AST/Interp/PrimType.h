@@ -1,4 +1,4 @@
-//===--- PrimType.h - Types for the constexpr VM --------------------*- C++ -*-===//
+//===--- PrimType.h - Types for the constexpr VM ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -48,12 +48,16 @@ enum PrimType : unsigned {
 
 enum class CastKind : uint8_t {
   Reinterpret,
+  Atomic,
 };
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      interp::CastKind CK) {
   switch (CK) {
   case interp::CastKind::Reinterpret:
     OS << "reinterpret_cast";
+    break;
+  case interp::CastKind::Atomic:
+    OS << "atomic";
     break;
   }
   return OS;
@@ -140,6 +144,24 @@ static inline bool aligned(const void *P) {
       TYPE_SWITCH_CASE(PT_IntAP, B)                                            \
       TYPE_SWITCH_CASE(PT_IntAPS, B)                                           \
       TYPE_SWITCH_CASE(PT_Bool, B)                                             \
+    default:                                                                   \
+      llvm_unreachable("Not an integer value");                                \
+    }                                                                          \
+  } while (0)
+
+#define INT_TYPE_SWITCH_NO_BOOL(Expr, B)                                       \
+  do {                                                                         \
+    switch (Expr) {                                                            \
+      TYPE_SWITCH_CASE(PT_Sint8, B)                                            \
+      TYPE_SWITCH_CASE(PT_Uint8, B)                                            \
+      TYPE_SWITCH_CASE(PT_Sint16, B)                                           \
+      TYPE_SWITCH_CASE(PT_Uint16, B)                                           \
+      TYPE_SWITCH_CASE(PT_Sint32, B)                                           \
+      TYPE_SWITCH_CASE(PT_Uint32, B)                                           \
+      TYPE_SWITCH_CASE(PT_Sint64, B)                                           \
+      TYPE_SWITCH_CASE(PT_Uint64, B)                                           \
+      TYPE_SWITCH_CASE(PT_IntAP, B)                                            \
+      TYPE_SWITCH_CASE(PT_IntAPS, B)                                           \
     default:                                                                   \
       llvm_unreachable("Not an integer value");                                \
     }                                                                          \

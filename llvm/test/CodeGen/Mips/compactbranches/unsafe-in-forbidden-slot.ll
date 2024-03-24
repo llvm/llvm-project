@@ -18,7 +18,7 @@ sw.bb:                                            ; preds = %entry
   br label %sw.epilog
 ; CHECK: beqzc
 ; CHECK-NEXT: nop
-; CHECK-NEXT: .LBB
+; CHECK-NEXT: # %bb.1
 ; CHECK-NEXT: j
 
 sw.bb1:                                           ; preds = %entry, %entry
@@ -26,7 +26,7 @@ sw.bb1:                                           ; preds = %entry, %entry
   br label %sw.epilog
 ; CHECK: bnezc
 ; CHECK-NEXT: nop
-; CHECK-NEXT: .LBB
+; CHECK-NEXT: # %bb.3
 ; CHECK-NEXT: j
 
 sw.epilog:                                        ; preds = %entry, %sw.bb1, %sw.bb

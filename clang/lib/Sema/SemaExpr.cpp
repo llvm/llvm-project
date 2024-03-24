@@ -1099,12 +1099,13 @@ ExprResult Sema::DefaultVariadicArgumentPromotion(Expr *E, VariadicCallType CT,
   return E;
 }
 
-/// Converts an integer to complex float type.  Helper function of
+/// Convert complex integers to complex floats and real integers to
+/// real floats as required for complex arithmetic. Helper function of
 /// UsualArithmeticConversions()
 ///
 /// \return false if the integer expression is an integer type and is
-/// successfully converted to the complex type.
-static bool handleIntegerToComplexFloatConversion(Sema &S, ExprResult &IntExpr,
+/// successfully converted to the (complex) float type.
+static bool handleComplexIntegerToFloatConversion(Sema &S, ExprResult &IntExpr,
                                                   ExprResult &ComplexExpr,
                                                   QualType IntTy,
                                                   QualType ComplexTy,
@@ -1114,8 +1115,6 @@ static bool handleIntegerToComplexFloatConversion(Sema &S, ExprResult &IntExpr,
   if (IntTy->isIntegerType()) {
     QualType fpTy = ComplexTy->castAs<ComplexType>()->getElementType();
     IntExpr = S.ImpCastExprToType(IntExpr.get(), fpTy, CK_IntegralToFloating);
-    IntExpr = S.ImpCastExprToType(IntExpr.get(), ComplexTy,
-                                  CK_FloatingRealToComplex);
   } else {
     assert(IntTy->isComplexIntegerType());
     IntExpr = S.ImpCastExprToType(IntExpr.get(), ComplexTy,
@@ -1160,11 +1159,11 @@ static QualType handleComplexFloatConversion(Sema &S, ExprResult &Shorter,
 static QualType handleComplexConversion(Sema &S, ExprResult &LHS,
                                         ExprResult &RHS, QualType LHSType,
                                         QualType RHSType, bool IsCompAssign) {
-  // if we have an integer operand, the result is the complex type.
-  if (!handleIntegerToComplexFloatConversion(S, RHS, LHS, RHSType, LHSType,
+  // Handle (complex) integer types.
+  if (!handleComplexIntegerToFloatConversion(S, RHS, LHS, RHSType, LHSType,
                                              /*SkipCast=*/false))
     return LHSType;
-  if (!handleIntegerToComplexFloatConversion(S, LHS, RHS, LHSType, RHSType,
+  if (!handleComplexIntegerToFloatConversion(S, LHS, RHS, LHSType, RHSType,
                                              /*SkipCast=*/IsCompAssign))
     return RHSType;
 
@@ -1497,7 +1496,8 @@ static void checkEnumArithmeticConversions(Sema &S, Expr *LHS, Expr *RHS,
   //
   // Warn on this in all language modes. Produce a deprecation warning in C++20.
   // Eventually we will presumably reject these cases (in C++23 onwards?).
-  QualType L = LHS->getType(), R = RHS->getType();
+  QualType L = LHS->getEnumCoercedType(S.Context),
+           R = RHS->getEnumCoercedType(S.Context);
   bool LEnum = L->isUnscopedEnumerationType(),
        REnum = R->isUnscopedEnumerationType();
   bool IsCompAssign = ACK == Sema::ACK_CompAssign;
@@ -2653,7 +2653,7 @@ recoverFromMSUnqualifiedLookup(Sema &S, ASTContext &Context,
     RD = ThisType->getPointeeType()->getAsCXXRecordDecl();
   else if (auto *MD = dyn_cast<CXXMethodDecl>(S.CurContext))
     RD = MD->getParent();
-  if (!RD || !RD->hasAnyDependentBases())
+  if (!RD || !RD->hasDefinition() || !RD->hasAnyDependentBases())
     return nullptr;
 
   // Diagnose this as unqualified lookup into a dependent base class.  If 'this'
@@ -2736,6 +2736,24 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   if (DependentID)
     return ActOnDependentIdExpression(SS, TemplateKWLoc, NameInfo,
                                       IsAddressOfOperand, TemplateArgs);
+
+  // BoundsSafety: This specially handles arguments of bounds attributes
+  // appertains to a type of C struct field such that the name lookup
+  // within a struct finds the member name, which is not the case for other
+  // contexts in C.
+  if (isBoundsAttrContext() && !getLangOpts().CPlusPlus && S->isClassScope()) {
+    // See if this is reference to a field of struct.
+    LookupResult R(*this, NameInfo, LookupMemberName);
+    // LookupParsedName handles a name lookup from within anonymous struct.
+    if (LookupParsedName(R, S, &SS)) {
+      if (auto *VD = dyn_cast<ValueDecl>(R.getFoundDecl())) {
+        QualType type = VD->getType().getNonReferenceType();
+        // This will eventually be translated into MemberExpr upon
+        // the use of instantiated struct fields.
+        return BuildDeclRefExpr(VD, type, VK_PRValue, NameLoc);
+      }
+    }
+  }
 
   // Perform the required lookup.
   LookupResult R(*this, NameInfo,
@@ -2893,7 +2911,8 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   // to get this right here so that we don't end up making a
   // spuriously dependent expression if we're inside a dependent
   // instance method.
-  if (!R.empty() && (*R.begin())->isCXXClassMember()) {
+  if (getLangOpts().CPlusPlus && !R.empty() &&
+      (*R.begin())->isCXXClassMember()) {
     bool MightBeImplicitMember;
     if (!IsAddressOfOperand)
       MightBeImplicitMember = true;
@@ -3549,7 +3568,8 @@ ExprResult Sema::BuildDeclarationNameExpr(
   case Decl::Field:
   case Decl::IndirectField:
   case Decl::ObjCIvar:
-    assert(getLangOpts().CPlusPlus && "building reference to field in C?");
+    assert((getLangOpts().CPlusPlus || isBoundsAttrContext()) &&
+           "building reference to field in C?");
 
     // These can't have reference type in well-formed programs, but
     // for internal consistency we do this anyway.
@@ -3740,7 +3760,10 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
   else {
     // Pre-defined identifiers are of type char[x], where x is the length of
     // the string.
-    auto Str = PredefinedExpr::ComputeName(IK, currentDecl);
+    bool ForceElaboratedPrinting =
+        IK == PredefinedIdentKind::Function && getLangOpts().MSVCCompat;
+    auto Str =
+        PredefinedExpr::ComputeName(IK, currentDecl, ForceElaboratedPrinting);
     unsigned Length = Str.length();
 
     llvm::APInt LengthI(32, Length + 1);
@@ -4706,6 +4729,7 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::BTFTagAttributed:
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
+    case Type::CountAttributed:
       // Keep walking after single level desugaring.
       T = T.getSingleStepDesugaredType(Context);
       break;
@@ -6201,6 +6225,12 @@ struct ImmediateCallVisitor : public RecursiveASTVisitor<ImmediateCallVisitor> {
     return RecursiveASTVisitor<ImmediateCallVisitor>::VisitStmt(E);
   }
 
+  bool VisitCXXConstructExpr(CXXConstructExpr *E) {
+    if (const FunctionDecl *FD = E->getConstructor())
+      HasImmediateCalls |= FD->isImmediateFunction();
+    return RecursiveASTVisitor<ImmediateCallVisitor>::VisitStmt(E);
+  }
+
   // SourceLocExpr are not immediate invocations
   // but CXXDefaultInitExpr/CXXDefaultArgExpr containing a SourceLocExpr
   // need to be rebuilt so that they refer to the correct SourceLocation and
@@ -6219,12 +6249,6 @@ struct ImmediateCallVisitor : public RecursiveASTVisitor<ImmediateCallVisitor> {
   bool VisitLambdaExpr(LambdaExpr *E) {
     return VisitCXXMethodDecl(E->getCallOperator());
   }
-
-  // Blocks don't support default parameters, and, as for lambdas,
-  // we don't consider their body a subexpression.
-  bool VisitBlockDecl(BlockDecl *B) { return false; }
-
-  bool VisitCompoundStmt(CompoundStmt *B) { return false; }
 
   bool VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
     return TraverseStmt(E->getExpr());
@@ -6259,7 +6283,7 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
   assert(Param->hasDefaultArg() && "can't build nonexistent default arg");
 
   bool NestedDefaultChecking = isCheckingDefaultArgumentOrInitializer();
-
+  bool InLifetimeExtendingContext = isInLifetimeExtendingContext();
   std::optional<ExpressionEvaluationContextRecord::InitializationContext>
       InitializationContext =
           OutermostDeclarationWithDelayedImmediateInvocations();
@@ -6292,9 +6316,17 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
     ImmediateCallVisitor V(getASTContext());
     if (!NestedDefaultChecking)
       V.TraverseDecl(Param);
-    if (V.HasImmediateCalls) {
-      ExprEvalContexts.back().DelayedDefaultInitializationContext = {
-          CallLoc, Param, CurContext};
+
+    // Rewrite the call argument that was created from the corresponding
+    // parameter's default argument.
+    if (V.HasImmediateCalls || InLifetimeExtendingContext) {
+      if (V.HasImmediateCalls)
+        ExprEvalContexts.back().DelayedDefaultInitializationContext = {
+            CallLoc, Param, CurContext};
+      // Pass down lifetime extending flag, and collect temporaries in
+      // CreateMaterializeTemporaryExpr when we rewrite the call argument.
+      keepInLifetimeExtendingContext();
+      keepInMaterializeTemporaryObjectContext();
       EnsureImmediateInvocationInDefaultArgs Immediate(*this);
       ExprResult Res;
       runWithSufficientStackSpace(CallLoc, [&] {
@@ -14065,7 +14097,7 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
     Expr::EvalResult EVResult;
     if (RHS.get()->EvaluateAsInt(EVResult, Context)) {
       llvm::APSInt Result = EVResult.Val.getInt();
-      if ((getLangOpts().Bool && !RHS.get()->getType()->isBooleanType() &&
+      if ((getLangOpts().CPlusPlus && !RHS.get()->getType()->isBooleanType() &&
            !RHS.get()->getExprLoc().isMacroID()) ||
           (Result != 0 && Result != 1)) {
         Diag(Loc, diag::warn_logical_instead_of_bitwise)
@@ -17757,7 +17789,6 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     if (lhq.getAddressSpace() != rhq.getAddressSpace()) {
       DiagKind = diag::err_typecheck_incompatible_address_space;
       break;
-
     } else if (lhq.getObjCLifetime() != rhq.getObjCLifetime()) {
       DiagKind = diag::err_typecheck_incompatible_ownership;
       break;
@@ -18297,7 +18328,6 @@ void Sema::CheckUnusedVolatileAssignment(Expr *E) {
 }
 
 void Sema::MarkExpressionAsImmediateEscalating(Expr *E) {
-  assert(!FunctionScopes.empty() && "Expected a function scope");
   assert(getLangOpts().CPlusPlus20 &&
          ExprEvalContexts.back().InImmediateEscalatingFunctionContext &&
          "Cannot mark an immediate escalating expression outside of an "
@@ -18314,7 +18344,8 @@ void Sema::MarkExpressionAsImmediateEscalating(Expr *E) {
   } else {
     assert(false && "expected an immediately escalating expression");
   }
-  getCurFunction()->FoundImmediateEscalatingExpression = true;
+  if (FunctionScopeInfo *FI = getCurFunction())
+    FI->FoundImmediateEscalatingExpression = true;
 }
 
 ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {
@@ -18653,6 +18684,16 @@ void Sema::PopExpressionEvaluationContext() {
       for (const auto *L : Rec.Lambdas)
         Diag(L->getBeginLoc(), D);
     }
+  }
+
+  // Append the collected materialized temporaries into previous context before
+  // exit if the previous also is a lifetime extending context.
+  auto &PrevRecord = ExprEvalContexts[ExprEvalContexts.size() - 2];
+  if (getLangOpts().CPlusPlus23 && isInLifetimeExtendingContext() &&
+      PrevRecord.InLifetimeExtendingContext && !ExprEvalContexts.empty()) {
+    auto &PrevRecord = ExprEvalContexts[ExprEvalContexts.size() - 2];
+    PrevRecord.ForRangeLifetimeExtendTemps.append(
+        Rec.ForRangeLifetimeExtendTemps);
   }
 
   WarnOnPendingNoDerefs(Rec);
@@ -19200,7 +19241,10 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
       // externalize the static device side variable ODR-used by host code.
       if (!Var->hasExternalStorage())
         SemaRef.getASTContext().CUDADeviceVarODRUsedByHost.insert(Var);
-      else if (SemaRef.LangOpts.GPURelocatableDeviceCode)
+      else if (SemaRef.LangOpts.GPURelocatableDeviceCode &&
+               (!FD || (!FD->getDescribedFunctionTemplate() &&
+                        SemaRef.getASTContext().GetGVALinkageForFunction(FD) ==
+                            GVA_StrongExternal)))
         SemaRef.getASTContext().CUDAExternalDeviceDeclODRUsedByHost.insert(Var);
     }
   }
@@ -19508,16 +19552,6 @@ static bool captureInLambda(LambdaScopeInfo *LSI, ValueDecl *Var,
     ByRef = (Kind == Sema::TryCapture_ExplicitByRef);
   } else {
     ByRef = (LSI->ImpCaptureStyle == LambdaScopeInfo::ImpCap_LambdaByref);
-  }
-
-  BindingDecl *BD = dyn_cast<BindingDecl>(Var);
-  // FIXME: We should support capturing structured bindings in OpenMP.
-  if (!Invalid && BD && S.LangOpts.OpenMP) {
-    if (BuildAndDiagnose) {
-      S.Diag(Loc, diag::err_capture_binding_openmp) << Var;
-      S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
-    }
-    Invalid = true;
   }
 
   if (BuildAndDiagnose && S.Context.getTargetInfo().getTriple().isWasm() &&
@@ -19861,6 +19895,14 @@ bool Sema::tryCaptureVariable(
         // just break here. Similarly, global variables that are captured in a
         // target region should not be captured outside the scope of the region.
         if (RSI->CapRegionKind == CR_OpenMP) {
+          // FIXME: We should support capturing structured bindings in OpenMP.
+          if (isa<BindingDecl>(Var)) {
+            if (BuildAndDiagnose) {
+              Diag(ExprLoc, diag::err_capture_binding_openmp) << Var;
+              Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
+            }
+            return true;
+          }
           OpenMPClauseKind IsOpenMPPrivateDecl = isOpenMPPrivateDecl(
               Var, RSI->OpenMPLevel, RSI->OpenMPCaptureLevel);
           // If the variable is private (i.e. not captured) and has variably

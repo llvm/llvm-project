@@ -511,7 +511,6 @@ Sections:
   - Type: SHT_LLVM_BB_ADDR_MAP
     Name: .llvm_bb_addr_map
     Entries:
-      - Address: 0x11111
 )");
 
   auto DoCheck = [&](StringRef YamlString, const char *ErrMsg) {
@@ -531,11 +530,13 @@ Sections:
   // Check that we can detect unsupported versions.
   SmallString<128> UnsupportedVersionYamlString(CommonYamlString);
   UnsupportedVersionYamlString += R"(
-        Version: 3
-        BBEntries:
-          - AddressOffset: 0x0
-            Size:          0x1
-            Metadata:      0x2
+      - Version: 3
+        BBRanges:
+          - BaseAddress: 0x11111
+            BBEntries:
+              - AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x2
 )";
 
   {
@@ -544,14 +545,28 @@ Sections:
             "unsupported SHT_LLVM_BB_ADDR_MAP version: 3");
   }
 
+  SmallString<128> ZeroBBRangesYamlString(CommonYamlString);
+  ZeroBBRangesYamlString += R"(
+      - Version: 2
+        Feature: 0x8
+        BBRanges: []
+)";
+  {
+    SCOPED_TRACE("zero bb ranges");
+    DoCheck(ZeroBBRangesYamlString,
+            "invalid zero number of BB ranges at offset 3 in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
+  }
+
   SmallString<128> CommonVersionedYamlString(CommonYamlString);
   CommonVersionedYamlString += R"(
-        Version: 2
-        BBEntries:
-          - ID:            1
-            AddressOffset: 0x0
-            Size:          0x1
-            Metadata:      0x2
+      - Version: 2
+        BBRanges:
+          - BaseAddress: 0x11111
+            BBEntries:
+              - AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x2
 )";
 
   // Check that we can detect the malformed encoding when the section is
@@ -572,24 +587,24 @@ Sections:
   SmallVector<SmallString<128>, 3> OverInt32LimitYamlStrings(
       3, CommonVersionedYamlString);
   OverInt32LimitYamlStrings[0] += R"(
-          - ID:            1
-            AddressOffset: 0x100000000
-            Size:          0xFFFFFFFF
-            Metadata:      0xFFFFFFFF
+              - ID:            1
+                AddressOffset: 0x100000000
+                Size:          0xFFFFFFFF
+                Metadata:      0xFFFFFFFF
 )";
 
   OverInt32LimitYamlStrings[1] += R"(
-          - ID:            2
-            AddressOffset: 0xFFFFFFFF
-            Size:          0x100000000
-            Metadata:      0xFFFFFFFF
+              - ID:            2
+                AddressOffset: 0xFFFFFFFF
+                Size:          0x100000000
+                Metadata:      0xFFFFFFFF
 )";
 
   OverInt32LimitYamlStrings[2] += R"(
-          - ID:            3
-            AddressOffset: 0xFFFFFFFF
-            Size:          0xFFFFFFFF
-            Metadata:      0x100000000
+              - ID:            3
+                AddressOffset: 0xFFFFFFFF
+                Size:          0xFFFFFFFF
+                Metadata:      0x100000000
 )";
 
   {
@@ -635,7 +650,7 @@ Sections:
   // with an out-of-range value.
   SmallString<128> OverLimitNumBlocks(CommonVersionedYamlString);
   OverLimitNumBlocks += R"(
-        NumBlocks: 0x100000000
+            NumBlocks: 0x100000000
 )";
 
   {
@@ -643,6 +658,16 @@ Sections:
     DoCheck(OverLimitNumBlocks,
             "ULEB128 value at offset 0xa exceeds UINT32_MAX (0x100000000)");
   }
+
+  // Check for proper error handling when the 'NumBBRanges' field is overridden
+  // with an out-of-range value.
+  SmallString<128> OverLimitNumBBRanges(CommonVersionedYamlString);
+  OverLimitNumBBRanges += R"(
+        NumBBRanges: 0x100000000
+        Feature:     0x8
+)";
+  DoCheck(OverLimitNumBBRanges,
+          "ULEB128 value at offset 0x2 exceeds UINT32_MAX (0x100000000)");
 }
 
 // Test for the ELFObjectFile::readBBAddrMap API.
@@ -659,51 +684,67 @@ Sections:
     Link: 1
     Entries:
       - Version: 2
-        Address: 0x11111
-        BBEntries:
-          - ID:            1
-            AddressOffset: 0x0
-            Size:          0x1
-            Metadata:      0x2
+        BBRanges:
+          - BaseAddress: 0x11111
+            BBEntries:
+              - ID:            1
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x2
   - Name: .llvm_bb_addr_map_2
     Type: SHT_LLVM_BB_ADDR_MAP
     Link: 1
     Entries:
       - Version: 2
-        Address: 0x22222
-        BBEntries:
-          - ID:            2
-            AddressOffset: 0x0
-            Size:          0x2
-            Metadata:      0x4
+        Feature: 0x8
+        BBRanges:
+          - BaseAddress: 0x22222
+            BBEntries:
+              - ID:            2
+                AddressOffset: 0x0
+                Size:          0x2
+                Metadata:      0x4
+          - BaseAddress: 0xFFFFF
+            BBEntries:
+              - ID:            15
+                AddressOffset: 0xF0
+                Size:          0xF1
+                Metadata:      0x1F
   - Name: .llvm_bb_addr_map_3
     Type: SHT_LLVM_BB_ADDR_MAP
     Link: 2
     Entries:
       - Version: 1
-        Address: 0x33333
-        BBEntries:
-          - ID:            0
-            AddressOffset: 0x0
-            Size:          0x3
-            Metadata:      0x6
+        BBRanges:
+          - BaseAddress: 0x33333
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x0
+                Size:          0x3
+                Metadata:      0x6
   - Name: .llvm_bb_addr_map_4
-    Type: SHT_LLVM_BB_ADDR_MAP_V0
+    Type: SHT_LLVM_BB_ADDR_MAP
   # Link: 0 (by default, can be overriden)
     Entries:
-      - Version: 0
-        Address: 0x44444
-        BBEntries:
-          - ID:            0
-            AddressOffset: 0x0
-            Size:          0x4
-            Metadata:      0x18
+      - Version: 2
+        BBRanges:
+          - BaseAddress: 0x44444
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x0
+                Size:          0x4
+                Metadata:      0x18
 )");
 
-  BBAddrMap E1(0x11111, {{1, 0x0, 0x1, {false, true, false, false, false}}});
-  BBAddrMap E2(0x22222, {{2, 0x0, 0x2, {false, false, true, false, false}}});
-  BBAddrMap E3(0x33333, {{0, 0x0, 0x3, {false, true, true, false, false}}});
-  BBAddrMap E4(0x44444, {{0, 0x0, 0x4, {false, false, false, true, true}}});
+  BBAddrMap E1 = {
+      {{0x11111, {{1, 0x0, 0x1, {false, true, false, false, false}}}}}};
+  BBAddrMap E2 = {
+      {{0x22222, {{2, 0x0, 0x2, {false, false, true, false, false}}}},
+       {0xFFFFF, {{15, 0xF0, 0xF1, {true, true, true, true, true}}}}}};
+  BBAddrMap E3 = {
+      {{0x33333, {{0, 0x0, 0x3, {false, true, true, false, false}}}}}};
+  BBAddrMap E4 = {
+      {{0x44444, {{0, 0x0, 0x4, {false, false, false, true, true}}}}}};
 
   std::vector<BBAddrMap> Section0BBAddrMaps = {E4};
   std::vector<BBAddrMap> Section1BBAddrMaps = {E3};
@@ -767,13 +808,13 @@ Sections:
   // (not present) section.
   SmallString<128> InvalidLinkedYamlString(CommonYamlString);
   InvalidLinkedYamlString += R"(
-    Link: 10
+    Link: 121
 )";
 
   DoCheckFails(InvalidLinkedYamlString, /*TextSectionIndex=*/4,
                "unable to get the linked-to section for "
-               "SHT_LLVM_BB_ADDR_MAP_V0 section with index 4: invalid section "
-               "index: 10");
+               "SHT_LLVM_BB_ADDR_MAP section with index 4: invalid section "
+               "index: 121");
   {
     SCOPED_TRACE("invalid linked section");
     // Linked sections are not checked when we don't target a specific text
@@ -785,14 +826,14 @@ Sections:
   // Check that we can detect when bb-address-map decoding fails.
   SmallString<128> TruncatedYamlString(CommonYamlString);
   TruncatedYamlString += R"(
-    ShSize: 0x8
+    ShSize: 0xa
 )";
 
   {
     SCOPED_TRACE("truncated section");
     DoCheckFails(TruncatedYamlString, /*TextSectionIndex=*/std::nullopt,
-                 "unable to read SHT_LLVM_BB_ADDR_MAP_V0 section with index 4: "
-                 "unable to decode LEB128 at offset 0x00000008: malformed "
+                 "unable to read SHT_LLVM_BB_ADDR_MAP section with index 4: "
+                 "unable to decode LEB128 at offset 0x0000000a: malformed "
                  "uleb128, extends past end");
 
     // Check that we can read the other section's bb-address-maps which are
@@ -815,7 +856,6 @@ Sections:
   - Type: SHT_LLVM_BB_ADDR_MAP
     Name: .llvm_bb_addr_map
     Entries:
-      - Address: 0x11111
 )");
 
   auto DoCheck = [&](StringRef YamlString, const char *ErrMsg) {
@@ -839,12 +879,13 @@ Sections:
   // Check that we can detect unsupported versions that are too old.
   SmallString<128> UnsupportedLowVersionYamlString(CommonYamlString);
   UnsupportedLowVersionYamlString += R"(
-        Version: 1
+      - Version: 1
         Feature: 0x4
-        BBEntries:
-          - AddressOffset: 0x0
-            Size:          0x1
-            Metadata:      0x2
+        BBRanges:
+          - BBEntries:
+              - AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x2
 )";
 
   {
@@ -856,38 +897,39 @@ Sections:
 
   SmallString<128> CommonVersionedYamlString(CommonYamlString);
   CommonVersionedYamlString += R"(
-        Version: 2
-        BBEntries:
-          - ID:            1
-            AddressOffset: 0x0
-            Size:          0x1
-            Metadata:      0x2
+      - Version: 2
+        BBRanges:
+          - BBEntries:
+              - ID:            1
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x2
 )";
 
   // Check that we fail when function entry count is enabled but not provided.
   SmallString<128> MissingFuncEntryCount(CommonYamlString);
   MissingFuncEntryCount += R"(
-        Version: 2
+      - Version: 2
         Feature: 0x01
 )";
 
   {
     SCOPED_TRACE("missing function entry count");
     DoCheck(MissingFuncEntryCount,
-            "unable to decode LEB128 at offset 0x0000000b: malformed uleb128, "
-            "extends past end");
+            "unexpected end of data at offset 0x2 while reading [0x2, 0xa)");
   }
 
   // Check that we fail when basic block frequency is enabled but not provided.
   SmallString<128> MissingBBFreq(CommonYamlString);
   MissingBBFreq += R"(
-        Version: 2
+      - Version: 2
         Feature: 0x02
-        BBEntries:
-          - ID:            1
-            AddressOffset: 0x0
-            Size:          0x1
-            Metadata:      0x2
+        BBRanges:
+          - BBEntries:
+              - ID:            1
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x2
 )";
 
   {
@@ -899,21 +941,22 @@ Sections:
   // Check that we fail when branch probability is enabled but not provided.
   SmallString<128> MissingBrProb(CommonYamlString);
   MissingBrProb += R"(
-        Version: 2
+      - Version: 2
         Feature: 0x04
-        BBEntries:
-          - ID:            1
-            AddressOffset: 0x0
-            Size:          0x1
-            Metadata:      0x6
-          - ID:            2
-            AddressOffset: 0x1
-            Size:          0x1
-            Metadata:      0x2
-          - ID:            3
-            AddressOffset: 0x2
-            Size:          0x1
-            Metadata:      0x2
+        BBRanges:
+          - BBEntries:
+              - ID:            1
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x6
+              - ID:            2
+                AddressOffset: 0x1
+                Size:          0x1
+                Metadata:      0x2
+              - ID:            3
+                AddressOffset: 0x2
+                Size:          0x1
+                Metadata:      0x2
     PGOAnalyses:
       - PGOBBEntries:
          - Successors:
@@ -947,13 +990,14 @@ Sections:
     Link: 1
     Entries:
       - Version: 2
-        Address: 0x11111
         Feature: 0x1
-        BBEntries:
-          - ID:            1
-            AddressOffset: 0x0
-            Size:          0x1
-            Metadata:      0x2
+        BBRanges:
+          - BaseAddress: 0x11111
+            BBEntries:
+              - ID:            1
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x2
     PGOAnalyses:
       - FuncEntryCount: 892
   - Name: .llvm_bb_addr_map_2
@@ -961,13 +1005,14 @@ Sections:
     Link: 1
     Entries:
       - Version: 2
-        Address: 0x22222
         Feature: 0x2
-        BBEntries:
-          - ID:            2
-            AddressOffset: 0x0
-            Size:          0x2
-            Metadata:      0x4
+        BBRanges:
+          - BaseAddress: 0x22222
+            BBEntries:
+              - ID:            2
+                AddressOffset: 0x0
+                Size:          0x2
+                Metadata:      0x4
     PGOAnalyses:
       - PGOBBEntries:
          - BBFreq:         343
@@ -976,21 +1021,22 @@ Sections:
     Link: 2
     Entries:
       - Version: 2
-        Address: 0x33333
         Feature: 0x4
-        BBEntries:
-          - ID:            0
-            AddressOffset: 0x0
-            Size:          0x3
-            Metadata:      0x6
-          - ID:            1
-            AddressOffset: 0x0
-            Size:          0x3
-            Metadata:      0x4
-          - ID:            2
-            AddressOffset: 0x0
-            Size:          0x3
-            Metadata:      0x0
+        BBRanges:
+          - BaseAddress: 0x33333
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x0
+                Size:          0x3
+                Metadata:      0x6
+              - ID:            1
+                AddressOffset: 0x0
+                Size:          0x3
+                Metadata:      0x4
+              - ID:            2
+                AddressOffset: 0x0
+                Size:          0x3
+                Metadata:      0x0
     PGOAnalyses:
       - PGOBBEntries:
          - Successors:
@@ -1007,25 +1053,26 @@ Sections:
   # Link: 0 (by default, can be overriden)
     Entries:
       - Version: 2
-        Address: 0x44444
         Feature: 0x7
-        BBEntries:
-          - ID:            0
-            AddressOffset: 0x0
-            Size:          0x4
-            Metadata:      0x18
-          - ID:            1
-            AddressOffset: 0x0
-            Size:          0x4
-            Metadata:      0x0
-          - ID:            2
-            AddressOffset: 0x0
-            Size:          0x4
-            Metadata:      0x0
-          - ID:            3
-            AddressOffset: 0x0
-            Size:          0x4
-            Metadata:      0x0
+        BBRanges:
+          - BaseAddress: 0x44444
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x0
+                Size:          0x4
+                Metadata:      0x18
+              - ID:            1
+                AddressOffset: 0x0
+                Size:          0x4
+                Metadata:      0x0
+              - ID:            2
+                AddressOffset: 0x0
+                Size:          0x4
+                Metadata:      0x0
+              - ID:            3
+                AddressOffset: 0x0
+                Size:          0x4
+                Metadata:      0x0
     PGOAnalyses:
       - FuncEntryCount: 1000
         PGOBBEntries:
@@ -1054,34 +1101,74 @@ Sections:
   # Link: 0 (by default, can be overriden)
     Entries:
       - Version: 2
-        Address: 0x55555
         Feature: 0x0
-        BBEntries:
-          - ID:            2
-            AddressOffset: 0x0
-            Size:          0x2
-            Metadata:      0x4
+        BBRanges:
+          - BaseAddress: 0x55555
+            BBEntries:
+              - ID:            2
+                AddressOffset: 0x0
+                Size:          0x2
+                Metadata:      0x4
     PGOAnalyses: [{}]
- )");
+  - Name: .llvm_bb_addr_map_6
+    Type: SHT_LLVM_BB_ADDR_MAP
+  # Link: 0 (by default, can be overriden)
+    Entries:
+      - Version: 2
+        Feature: 0xc
+        BBRanges:
+          - BaseAddress: 0x66666
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x0
+                Size:          0x6
+                Metadata:      0x6
+              - ID:            1
+                AddressOffset: 0x0
+                Size:          0x6
+                Metadata:      0x4
+          - BaseAddress: 0x666661
+            BBEntries:
+              - ID:            2
+                AddressOffset: 0x0
+                Size:          0x6
+                Metadata:      0x0
+    PGOAnalyses:
+      - PGOBBEntries:
+         - Successors:
+            - ID:          1
+              BrProb:      0x22222222
+            - ID:          2
+              BrProb:      0xcccccccc
+         - Successors:
+            - ID:          2
+              BrProb:      0x88888888
+         - Successors:     []
+)");
 
-  BBAddrMap E1(0x11111, {{1, 0x0, 0x1, {false, true, false, false, false}}});
-  PGOAnalysisMap P1 = {892, {}, {true, false, false}};
-  BBAddrMap E2(0x22222, {{2, 0x0, 0x2, {false, false, true, false, false}}});
-  PGOAnalysisMap P2 = {{}, {{BlockFrequency(343), {}}}, {false, true, false}};
-  BBAddrMap E3(0x33333, {{0, 0x0, 0x3, {false, true, true, false, false}},
-                         {1, 0x3, 0x3, {false, false, true, false, false}},
-                         {2, 0x6, 0x3, {false, false, false, false, false}}});
+  BBAddrMap E1 = {
+      {{0x11111, {{1, 0x0, 0x1, {false, true, false, false, false}}}}}};
+  PGOAnalysisMap P1 = {892, {}, {true, false, false, false}};
+  BBAddrMap E2 = {
+      {{0x22222, {{2, 0x0, 0x2, {false, false, true, false, false}}}}}};
+  PGOAnalysisMap P2 = {
+      {}, {{BlockFrequency(343), {}}}, {false, true, false, false}};
+  BBAddrMap E3 = {{{0x33333,
+                    {{0, 0x0, 0x3, {false, true, true, false, false}},
+                     {1, 0x3, 0x3, {false, false, true, false, false}},
+                     {2, 0x6, 0x3, {false, false, false, false, false}}}}}};
   PGOAnalysisMap P3 = {{},
                        {{{},
                          {{1, BranchProbability::getRaw(0x1111'1111)},
                           {2, BranchProbability::getRaw(0xeeee'eeee)}}},
                         {{}, {{2, BranchProbability::getRaw(0xffff'ffff)}}},
                         {{}, {}}},
-                       {false, false, true}};
-  BBAddrMap E4(0x44444, {{0, 0x0, 0x4, {false, false, false, true, true}},
-                         {1, 0x4, 0x4, {false, false, false, false, false}},
-                         {2, 0x8, 0x4, {false, false, false, false, false}},
-                         {3, 0xc, 0x4, {false, false, false, false, false}}});
+                       {false, false, true, false}};
+  BBAddrMap E4 = {{{0x44444,
+                    {{0, 0x0, 0x4, {false, false, false, true, true}},
+                     {1, 0x4, 0x4, {false, false, false, false, false}},
+                     {2, 0x8, 0x4, {false, false, false, false, false}},
+                     {3, 0xc, 0x4, {false, false, false, false, false}}}}}};
   PGOAnalysisMap P4 = {
       1000,
       {{BlockFrequency(1000),
@@ -1093,19 +1180,32 @@ Sections:
          {3, BranchProbability::getRaw(0xeeee'eeee)}}},
        {BlockFrequency(18), {{3, BranchProbability::getRaw(0xffff'ffff)}}},
        {BlockFrequency(1000), {}}},
-      {true, true, true}};
-  BBAddrMap E5(0x55555, {{2, 0x0, 0x2, {false, false, true, false, false}}});
-  PGOAnalysisMap P5 = {{}, {}, {false, false, false}};
+      {true, true, true, false}};
+  BBAddrMap E5 = {
+      {{0x55555, {{2, 0x0, 0x2, {false, false, true, false, false}}}}}};
+  PGOAnalysisMap P5 = {{}, {}, {false, false, false, false}};
+  BBAddrMap E6 = {
+      {{0x66666,
+        {{0, 0x0, 0x6, {false, true, true, false, false}},
+         {1, 0x6, 0x6, {false, false, true, false, false}}}},
+       {0x666661, {{2, 0x0, 0x6, {false, false, false, false, false}}}}}};
+  PGOAnalysisMap P6 = {{},
+                       {{{},
+                         {{1, BranchProbability::getRaw(0x2222'2222)},
+                          {2, BranchProbability::getRaw(0xcccc'cccc)}}},
+                        {{}, {{2, BranchProbability::getRaw(0x8888'8888)}}},
+                        {{}, {}}},
+                       {false, false, true, true}};
 
-  std::vector<BBAddrMap> Section0BBAddrMaps = {E4, E5};
+  std::vector<BBAddrMap> Section0BBAddrMaps = {E4, E5, E6};
   std::vector<BBAddrMap> Section1BBAddrMaps = {E3};
   std::vector<BBAddrMap> Section2BBAddrMaps = {E1, E2};
-  std::vector<BBAddrMap> AllBBAddrMaps = {E1, E2, E3, E4, E5};
+  std::vector<BBAddrMap> AllBBAddrMaps = {E1, E2, E3, E4, E5, E6};
 
-  std::vector<PGOAnalysisMap> Section0PGOAnalysisMaps = {P4, P5};
+  std::vector<PGOAnalysisMap> Section0PGOAnalysisMaps = {P4, P5, P6};
   std::vector<PGOAnalysisMap> Section1PGOAnalysisMaps = {P3};
   std::vector<PGOAnalysisMap> Section2PGOAnalysisMaps = {P1, P2};
-  std::vector<PGOAnalysisMap> AllPGOAnalysisMaps = {P1, P2, P3, P4, P5};
+  std::vector<PGOAnalysisMap> AllPGOAnalysisMaps = {P1, P2, P3, P4, P5, P6};
 
   auto DoCheckSucceeds =
       [&](StringRef YamlString, std::optional<unsigned> TextSectionIndex,
@@ -1131,10 +1231,21 @@ Sections:
         EXPECT_EQ(*BBAddrMaps, ExpectedResult);
         if (ExpectedPGO) {
           EXPECT_EQ(BBAddrMaps->size(), PGOAnalyses.size());
+          for (const auto &PGO : PGOAnalyses) {
+            errs() << "FuncEntryCount: " << PGO.FuncEntryCount << "\n";
+            for (const auto &PGOBB : PGO.BBEntries)
+              errs() << "\tBB: " << PGOBB.BlockFreq.getFrequency() << "\n";
+          }
+          errs() << " To expected:\n";
+          for (const auto &PGO : *ExpectedPGO) {
+            errs() << "FuncEntryCount: " << PGO.FuncEntryCount << "\n";
+            for (const auto &PGOBB : PGO.BBEntries)
+              errs() << "\tBB: " << PGOBB.BlockFreq.getFrequency() << "\n";
+          }
           EXPECT_EQ(PGOAnalyses, *ExpectedPGO);
           for (auto &&[BB, PGO] : llvm::zip(*BBAddrMaps, PGOAnalyses)) {
             if (PGO.FeatEnable.BBFreq || PGO.FeatEnable.BrProb)
-              EXPECT_EQ(BB.getBBEntries().size(), PGO.BBEntries.size());
+              EXPECT_EQ(BB.getNumBBEntries(), PGO.BBEntries.size());
           }
         }
       };
@@ -1190,15 +1301,15 @@ Sections:
   // (not present) section.
   SmallString<128> InvalidLinkedYamlString(CommonYamlString);
   InvalidLinkedYamlString += R"(
-    Link: 10
+    Link: 121
 )";
 
   {
     SCOPED_TRACE("invalid linked section");
     DoCheckFails(InvalidLinkedYamlString, /*TextSectionIndex=*/5,
                  "unable to get the linked-to section for "
-                 "SHT_LLVM_BB_ADDR_MAP section with index 5: invalid section "
-                 "index: 10");
+                 "SHT_LLVM_BB_ADDR_MAP section with index 6: invalid section "
+                 "index: 121");
 
     // Linked sections are not checked when we don't target a specific text
     // section.
@@ -1216,10 +1327,10 @@ Sections:
 
   {
     SCOPED_TRACE("truncated section");
-    DoCheckFails(TruncatedYamlString, /*TextSectionIndex=*/std::nullopt,
-                 "unable to read SHT_LLVM_BB_ADDR_MAP section with index 5: "
-                 "unable to decode LEB128 at offset 0x0000000a: malformed "
-                 "uleb128, extends past end");
+    DoCheckFails(
+        TruncatedYamlString, /*TextSectionIndex=*/std::nullopt,
+        "unable to read SHT_LLVM_BB_ADDR_MAP section with index 6: "
+        "unexpected end of data at offset 0xa while reading [0x3, 0xb)");
     // Check that we can read the other section's bb-address-maps which are
     // valid.
     DoCheckSucceeds(TruncatedYamlString, /*TextSectionIndex=*/2,

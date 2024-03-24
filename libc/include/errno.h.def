@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_ERRNO_H
 #define LLVM_LIBC_ERRNO_H
 
-#include <__llvm-libc-common.h>
+#include "__llvm-libc-common.h"
 
 #ifdef __linux__
 
@@ -40,11 +40,19 @@
 #endif // ENOTRECOVERABLE
 
 #else // __linux__
-#include <llvm-libc-macros/generic-error-number-macros.h>
+#include "llvm-libc-macros/generic-error-number-macros.h"
 #endif
 
 #if !defined(__AMDGPU__) && !defined(__NVPTX__)
+
+#ifdef __cplusplus
+extern "C" {
+extern thread_local int __llvmlibc_errno;
+}
+#else
 extern _Thread_local int __llvmlibc_errno;
+#endif // __cplusplus
+
 #define errno __llvmlibc_errno
 #endif
 

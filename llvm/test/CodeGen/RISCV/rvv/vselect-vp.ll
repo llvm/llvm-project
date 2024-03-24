@@ -745,3 +745,83 @@ define <vscale x 16 x double> @select_nxv16f64(<vscale x 16 x i1> %a, <vscale x 
   %v = call <vscale x 16 x double> @llvm.vp.select.nxv16f64(<vscale x 16 x i1> %a, <vscale x 16 x double> %b, <vscale x 16 x double> %c, i32 %evl)
   ret <vscale x 16 x double> %v
 }
+
+define <vscale x 2 x i1> @select_zero(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, <vscale x 2 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: select_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vmand.mm v0, v0, v8
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, <vscale x 2 x i1> zeroinitializer, i32 %evl)
+  ret <vscale x 2 x i1> %a
+}
+
+define <vscale x 2 x i1> @select_one(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, <vscale x 2 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: select_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vmorn.mm v0, v8, v0
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 2 x i1> %a
+}
+
+define <vscale x 2 x i1> @select_x_zero(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, i32 zeroext %evl) {
+; CHECK-LABEL: select_x_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vmand.mm v0, v0, v8
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, <vscale x 2 x i1> zeroinitializer, i32 %evl)
+  ret <vscale x 2 x i1> %a
+}
+
+define <vscale x 2 x i1> @select_x_one(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, i32 zeroext %evl) {
+; CHECK-LABEL: select_x_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vmorn.mm v0, v8, v0
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 2 x i1> %a
+}
+
+define <vscale x 2 x i1> @select_zero_x(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, i32 zeroext %evl) {
+; CHECK-LABEL: select_zero_x:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vmandn.mm v0, v8, v0
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> %y, i32 %evl)
+ ret <vscale x 2 x i1> %a
+}
+
+define <vscale x 2 x i1> @select_one_x(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, i32 zeroext %evl) {
+; CHECK-LABEL: select_one_x:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vmor.mm v0, v0, v8
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i1> %y, i32 %evl)
+ ret <vscale x 2 x i1> %a
+}
+
+define <vscale x 2 x i1> @select_cond_cond_x(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, <vscale x 2 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: select_cond_cond_x:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vmor.mm v0, v0, v8
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> %x, <vscale x 2 x i1> %y, i32 %evl)
+  ret <vscale x 2 x i1> %a
+}
+
+define <vscale x 2 x i1> @select_cond_x_cond(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, <vscale x 2 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: select_cond_x_cond:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vmand.mm v0, v0, v8
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, <vscale x 2 x i1> %x, i32 %evl)
+  ret <vscale x 2 x i1> %a
+}

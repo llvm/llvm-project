@@ -8,6 +8,7 @@
 
 #include "Patterns.h"
 #include "../CodeGenInstruction.h"
+#include "../CodeGenIntrinsics.h"
 #include "CXXPredicates.h"
 #include "CodeExpander.h"
 #include "CodeExpansions.h"
@@ -331,7 +332,7 @@ bool CodeGenInstructionPattern::is(StringRef OpcodeName) const {
 }
 
 bool CodeGenInstructionPattern::isVariadic() const {
-  return I.Operands.isVariadic;
+  return !isIntrinsic() && I.Operands.isVariadic;
 }
 
 bool CodeGenInstructionPattern::hasVariadicDefs() const {
@@ -352,6 +353,9 @@ bool CodeGenInstructionPattern::hasVariadicDefs() const {
 }
 
 unsigned CodeGenInstructionPattern::getNumInstDefs() const {
+  if (isIntrinsic())
+    return IntrinInfo->IS.RetTys.size();
+
   if (!isVariadic() || !hasVariadicDefs())
     return I.Operands.NumDefs;
   unsigned NumOuts = I.Operands.size() - I.Operands.NumDefs;
@@ -360,6 +364,9 @@ unsigned CodeGenInstructionPattern::getNumInstDefs() const {
 }
 
 unsigned CodeGenInstructionPattern::getNumInstOperands() const {
+  if (isIntrinsic())
+    return IntrinInfo->IS.RetTys.size() + IntrinInfo->IS.ParamTys.size();
+
   unsigned NumCGIOps = I.Operands.size();
   return isVariadic() ? std::max<unsigned>(NumCGIOps, Operands.size())
                       : NumCGIOps;
@@ -376,6 +383,9 @@ StringRef CodeGenInstructionPattern::getInstName() const {
 }
 
 void CodeGenInstructionPattern::printExtras(raw_ostream &OS) const {
+  if (isIntrinsic())
+    OS << " intrinsic(@" << IntrinInfo->Name << ")";
+
   if (!FI)
     return;
 

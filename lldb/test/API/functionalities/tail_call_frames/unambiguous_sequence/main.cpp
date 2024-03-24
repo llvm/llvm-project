@@ -18,7 +18,7 @@ void __attribute__((noinline)) sink() {
   //% last_insn = func3_insns.GetInstructionAtIndex(func3_insns.GetSize()-1)
   //% addr = last_insn.GetAddress()
   //% if "GNU" in self.name: addr.OffsetAddress(last_insn.GetByteSize())
-  //% self.assertEquals(frame1.GetPCAddress(), addr)
+  //% self.assertEqual(frame1.GetPCAddress(), addr)
 }
 
 void __attribute__((noinline)) func3() {

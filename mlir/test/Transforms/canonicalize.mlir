@@ -424,15 +424,14 @@ func.func @write_only_alloca_fold(%v: f32) {
 // CHECK-LABEL: func @dead_block_elim
 func.func @dead_block_elim() {
   // CHECK-NOT: ^bb
-  func.func @nested() {
-    return
+  builtin.module {
+    func.func @nested() {
+      return
 
-  ^bb1:
-    return
+    ^bb1:
+      return
+    }
   }
-  return
-
-^bb1:
   return
 }
 
@@ -988,6 +987,15 @@ func.func @tensor_arith.floordivsi_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5x
   %res = arith.floordivsi %arg0, %c1 : tensor<4x5xi32>
   // CHECK: return %[[ARG]]
   return %res : tensor<4x5xi32>
+}
+
+// CHECK-LABEL: func @arith.floordivsi_by_one_overflow
+func.func @arith.floordivsi_by_one_overflow() -> i64 {
+  %neg_one = arith.constant -1 : i64
+  %min_int = arith.constant -9223372036854775808 : i64
+  // CHECK: arith.floordivsi
+  %poision = arith.floordivsi %min_int, %neg_one : i64
+  return %poision : i64
 }
 
 // -----

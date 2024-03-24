@@ -86,7 +86,8 @@ public:
   static char ID;
   PPCMergeStringPool() : ModulePass(ID) {}
 
-  bool runOnModule(Module &M) override { return mergeModuleStringPool(M); }
+  bool doInitialization(Module &M) override { return mergeModuleStringPool(M); }
+  bool runOnModule(Module &M) override { return false; }
 
   StringRef getPassName() const override { return "PPC Merge String Pool"; }
 

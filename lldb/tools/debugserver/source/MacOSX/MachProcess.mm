@@ -472,6 +472,8 @@ FBSCreateOptionsDictionary(const char *app_bundle_path,
   // And there are some other options at the top level in this dictionary:
   [options setObject:[NSNumber numberWithBool:YES]
               forKey:FBSOpenApplicationOptionKeyUnlockDevice];
+  [options setObject:[NSNumber numberWithBool:YES]
+              forKey:FBSOpenApplicationOptionKeyPromptUnlockDevice];
 
   // We have to get the "sequence ID & UUID" for this app bundle path and send
   // them to FBS:
@@ -1109,6 +1111,23 @@ MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid,
     }
   }
   return FormatDynamicLibrariesIntoJSON(image_infos, report_load_commands);
+}
+
+std::optional<std::pair<cpu_type_t, cpu_subtype_t>>
+MachProcess::GetMainBinaryCPUTypes(nub_process_t pid) {
+  int pointer_size = GetInferiorAddrSize(pid);
+  std::vector<struct binary_image_information> image_infos;
+  GetAllLoadedBinariesViaDYLDSPI(image_infos);
+  uint32_t platform = GetPlatform();
+  for (auto &image_info : image_infos)
+    if (GetMachOInformationFromMemory(platform, image_info.load_address,
+                                      pointer_size, image_info.macho_info))
+      if (image_info.macho_info.mach_header.filetype == MH_EXECUTE)
+        return {
+            {static_cast<cpu_type_t>(image_info.macho_info.mach_header.cputype),
+             static_cast<cpu_subtype_t>(
+                 image_info.macho_info.mach_header.cpusubtype)}};
+  return {};
 }
 
 // Fetch information about the shared libraries at the given load addresses

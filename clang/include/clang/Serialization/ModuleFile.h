@@ -189,6 +189,9 @@ public:
   /// The bit vector denoting usage of each header search entry (true = used).
   llvm::BitVector SearchPathUsage;
 
+  /// The bit vector denoting usage of each VFS entry (true = used).
+  llvm::BitVector VFSUsage;
+
   /// Whether this module has been directly imported by the
   /// user.
   bool DirectlyImported = false;

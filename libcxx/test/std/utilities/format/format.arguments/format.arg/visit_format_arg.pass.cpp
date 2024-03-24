@@ -11,7 +11,7 @@
 // <format>
 
 // template<class Visitor, class Context>
-//   see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg);
+//   see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg); // Deprecated in C++26
 
 #include <algorithm>
 #include <format>
@@ -22,6 +22,10 @@
 #include "test_macros.h"
 #include "make_string.h"
 #include "min_allocator.h"
+
+#if TEST_STD_VER >= 26 && defined(TEST_HAS_EXPLICIT_THIS_PARAMETER)
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
+#endif
 
 template <class Context, class To, class From>
 void test(From value) {

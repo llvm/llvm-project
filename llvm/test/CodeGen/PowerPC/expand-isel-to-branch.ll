@@ -6,13 +6,13 @@ define noundef signext i32 @ham(ptr nocapture noundef %arg) #0 {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    lwz 4, 0(3)
 ; CHECK-NEXT:    cmpwi 4, 750
-; CHECK-NEXT:    addi 5, 4, 1
+; CHECK-NEXT:    blt 0, L..BB0_2
+; CHECK-NEXT:  # %bb.1: # %bb
 ; CHECK-NEXT:    li 4, 1
-; CHECK-NEXT:    bc 12, 0, L..BB0_1
-; CHECK-NEXT:    b L..BB0_2
-; CHECK-NEXT:  L..BB0_1: # %bb
-; CHECK-NEXT:    addi 4, 5, 0
-; CHECK-NEXT:  L..BB0_2: # %bb
+; CHECK-NEXT:    b L..BB0_3
+; CHECK-NEXT:  L..BB0_2:
+; CHECK-NEXT:    addi 4, 4, 1
+; CHECK-NEXT:  L..BB0_3: # %bb
 ; CHECK-NEXT:    stw 4, 0(3)
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr

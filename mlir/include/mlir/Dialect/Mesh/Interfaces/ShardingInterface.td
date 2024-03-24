@@ -26,16 +26,35 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
           output tensors.
 
           Example 1: A gemm op has 3 loops, M, N and K. Their loop iterator
-          types are parallel, parallel, reduction-sum. This indicates that M and
+          types are parallel, parallel, reduction. This indicates that M and
           N are traversed in parallel, while the K dimension is used for
           reduction.
-
-          Example 2: A softmax op's loop iterator types are parallel and
-          invalid. The second dimension is considered as invalid because it is
-          neither parallel nor any kind of reduction. 
         }],
-        /*retType=*/"SmallVector<::mlir::mesh::IteratorType>",
+        /*retType=*/"SmallVector<mlir::utils::IteratorType>",
         /*methodName=*/"getLoopIteratorTypes",
+        /*args=*/(ins),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/"return {};"
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return the kind of all reduction loop iterators.
+          The order is the same as the same as the result from
+          `getLoopIteratorTypes`.
+
+          Example 1:
+          iterator types =  (parallel, reduction, parallel, reduction)
+                                             ||                   ||
+          reduction kinds = (                sum,                 max)
+
+          Example 2:
+          A softmax op's loop iterator types are parallel and
+          reduction.
+          The reduction iterator will be of kind `generic`, since it is non of
+          the available presets.
+        }],
+        /*retType=*/"SmallVector<ReductionKind>",
+        /*methodName=*/"getReductionLoopIteratorKinds",
         /*args=*/(ins),
         /*methodBody=*/"",
         /*defaultImplementation=*/"return {};"
@@ -88,7 +107,52 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
           return detail::defaultAddShardingAnnotations(
             $_op.getOperation(), b, shardingOption);
         }]
-      >
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Convert self to SPMD form.
+          This method is used during the spmdization pass of a program fully
+          annotated with shardings.
+
+          The spmdization algorithm would read the surrounding sharding
+          annotations from the IR for each argument/result and prepare
+          `operandShardings` and `resultShardings`.
+          Values that are not ranked tensors do not have sharding annotations.
+          In this case their corresponding MeshShardingAttr is null.
+
+          For convenience it will also prepare `spmdizedOperands`, although
+          they can be retrieved from the `spmdizationMap`.
+
+          The `spmdizationMap` contains a mapping from unsharded to
+          sharded/spmdized values that are constructed during the spmdization
+          pass. The interface implementation must populate `spmdizationMap`
+          with the mapping for this op's results.
+
+          `builder` is set to insert new operations in the appropriate point.
+          The implementation should not return the builder to the original
+          insertion point.
+          It should leave it as is after all insertions are done.
+
+          The default implementation does full replication.
+          This assumes that all sharding annotations are for full replication.
+        }],
+        /*retTy=*/"LogicalResult",
+        /*methodName=*/"spmdize",
+        /*args=*/(ins
+          "ArrayRef<Value>": $spmdizedOperands,
+          "ArrayRef<MeshShardingAttr>": $operandShardings,
+          "ArrayRef<MeshShardingAttr>": $resultShardings,
+          "IRMapping&": $spmdizationMap,
+          "SymbolTableCollection &": $symbolTableCollection,
+          "OpBuilder &":$builder
+        ),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          spmdizeFullyReplicatedOperation(
+            *$_op.getOperation(), spmdizedOperands, operandShardings,
+              resultShardings, spmdizationMap, symbolTableCollection, builder);
+          return success();
+        }]>
     ];
 
     let extraClassDeclaration = [{

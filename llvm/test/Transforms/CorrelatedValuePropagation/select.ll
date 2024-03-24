@@ -204,7 +204,7 @@ define i1 @test1(ptr %p, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p
+  %pval = load i32, ptr %p
   %cmp1 = icmp slt i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -231,7 +231,7 @@ define i1 @test2(ptr %p, i32 %qval, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p
+  %pval = load i32, ptr %p
   %cmp1 = icmp slt i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -258,7 +258,7 @@ define i1 @test3(ptr %p, i32 %qval, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p
+  %pval = load i32, ptr %p
   %cmp1 = icmp slt i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -288,7 +288,7 @@ define i1 @test4(ptr %p, i32 %qval, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p
+  %pval = load i32, ptr %p
   %cmp1 = icmp slt i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -317,7 +317,7 @@ define i1 @test5(ptr %p, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p, !noundef !0
+  %pval = load i32, ptr %p, !noundef !0
   %cmp1 = icmp slt i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -344,7 +344,7 @@ define i1 @test6(ptr %p, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p, !noundef !0
+  %pval = load i32, ptr %p, !noundef !0
   %cmp1 = icmp ult i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 

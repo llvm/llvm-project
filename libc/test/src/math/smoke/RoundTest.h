@@ -6,10 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTEST_H
+
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#include "include/llvm-libc-macros/math-macros.h"
 
 template <typename T> class RoundTest : public LIBC_NAMESPACE::testing::Test {
 
@@ -66,3 +69,5 @@ public:
   TEST_F(LlvmLibcRoundTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
   TEST_F(LlvmLibcRoundTest, RoundedNubmers) { testRoundedNumbers(&func); }     \
   TEST_F(LlvmLibcRoundTest, Fractions) { testFractions(&func); }
+
+#endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTEST_H

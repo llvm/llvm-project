@@ -13,8 +13,8 @@ entry:
 ; CHECK-NEXT: jhs     .LBB0_3
   %retval = alloca i16, align 2
   %i.addr = alloca i16, align 2
-  store i16 %i, i16* %i.addr, align 2
-  %0 = load i16, i16* %i.addr, align 2
+  store i16 %i, ptr %i.addr, align 2
+  %0 = load i16, ptr %i.addr, align 2
 ; CHECK:      add   r12, r12
 ; CHECK-NEXT: br .LJTI0_0(r12)
   switch i16 %0, label %sw.default [
@@ -25,27 +25,27 @@ entry:
   ]
 
 sw.bb:                                            ; preds = %entry
-  store i16 0, i16* %retval
+  store i16 0, ptr %retval
   br label %return
 
 sw.bb1:                                           ; preds = %entry
-  store i16 1, i16* %retval
+  store i16 1, ptr %retval
   br label %return
 
 sw.bb2:                                           ; preds = %entry
-  store i16 2, i16* %retval
+  store i16 2, ptr %retval
   br label %return
 
 sw.bb3:                                           ; preds = %entry
-  store i16 3, i16* %retval
+  store i16 3, ptr %retval
   br label %return
 
 sw.default:                                       ; preds = %entry
-  store i16 2, i16* %retval
+  store i16 2, ptr %retval
   br label %return
 
 return:                                           ; preds = %sw.default, %sw.bb3, %sw.bb2, %sw.bb1, %sw.bb
-  %1 = load i16, i16* %retval
+  %1 = load i16, ptr %retval
   ret i16 %1
 ; CHECK: ret
 }

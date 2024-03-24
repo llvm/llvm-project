@@ -4,10 +4,10 @@
 define void @EntryModule(ptr %buffer_table) {
 ; CHECK-LABEL: EntryModule:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    movq (%rdi), %rax
 ; CHECK-NEXT:    movq 24(%rdi), %rcx
-; CHECK-NEXT:    vcmpneqps (%rax), %ymm0, %ymm0
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vcmpneqps (%rax), %xmm0, %xmm0
 ; CHECK-NEXT:    vpsrld $31, %xmm0, %xmm1
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,1,1]
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
@@ -16,7 +16,6 @@ define void @EntryModule(ptr %buffer_table) {
 ; CHECK-NEXT:    vpsubd %xmm0, %xmm2, %xmm0
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovd %xmm0, (%rcx)
-; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:
   %i1 = load ptr, ptr %buffer_table, align 8

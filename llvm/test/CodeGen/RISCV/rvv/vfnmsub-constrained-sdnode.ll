@@ -284,7 +284,7 @@ define <vscale x 16 x half> @vfnmsub_vv_nxv16f16(<vscale x 16 x half> %va, <vsca
 ; ZVFHMIN-NEXT:    slli a0, a0, 2
 ; ZVFHMIN-NEXT:    sub sp, sp, a0
 ; ZVFHMIN-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
-; ZVFHMIN-NEXT:    vmv4r.v v0, v12
+; ZVFHMIN-NEXT:    vmv4r.v v4, v12
 ; ZVFHMIN-NEXT:    addi a0, sp, 16
 ; ZVFHMIN-NEXT:    vs4r.v v8, (a0) # Unknown-size Folded Spill
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
@@ -293,7 +293,7 @@ define <vscale x 16 x half> @vfnmsub_vv_nxv16f16(<vscale x 16 x half> %va, <vsca
 ; ZVFHMIN-NEXT:    vfneg.v v16, v24
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v24, v16
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v0
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v4
 ; ZVFHMIN-NEXT:    addi a0, sp, 16
 ; ZVFHMIN-NEXT:    vl4r.v v16, (a0) # Unknown-size Folded Reload
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v0, v16
@@ -490,8 +490,8 @@ define <vscale x 32 x half> @vfnmsub_vf_nxv32f16(<vscale x 32 x half> %va, <vsca
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfmv.v.f v8, fa5
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v0, v8
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v0
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v4, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v4
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfneg.v v0, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma

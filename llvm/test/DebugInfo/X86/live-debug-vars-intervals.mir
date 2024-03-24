@@ -44,33 +44,33 @@
 
   @global = external global i32, align 4
   declare void @llvm.dbg.value(metadata, metadata, metadata)
-  declare void @escape(i32*)
+  declare void @escape(ptr)
 
   define void @f1(i32 %x) !dbg !6 {
   entry:
     %x.addr = alloca i32, align 4
-    store i32 %x, i32* %x.addr, align 4
-    call void @llvm.dbg.value(metadata i32* %x.addr, metadata !11, metadata !DIExpression(DW_OP_deref)), !dbg !12
-    call void @escape(i32* %x.addr), !dbg !12
-    call void @llvm.dbg.value(metadata i32* %x.addr, metadata !11, metadata !DIExpression()), !dbg !12
-    store i32 1, i32* @global, align 4, !dbg !12
-    call void @llvm.dbg.value(metadata i32* %x.addr, metadata !11, metadata !DIExpression(DW_OP_deref)), !dbg !12
-    store i32 2, i32* %x.addr, align 4, !dbg !12
-    call void @escape(i32* %x.addr), !dbg !12
+    store i32 %x, ptr %x.addr, align 4
+    call void @llvm.dbg.value(metadata ptr %x.addr, metadata !11, metadata !DIExpression(DW_OP_deref)), !dbg !12
+    call void @escape(ptr %x.addr), !dbg !12
+    call void @llvm.dbg.value(metadata ptr %x.addr, metadata !11, metadata !DIExpression()), !dbg !12
+    store i32 1, ptr @global, align 4, !dbg !12
+    call void @llvm.dbg.value(metadata ptr %x.addr, metadata !11, metadata !DIExpression(DW_OP_deref)), !dbg !12
+    store i32 2, ptr %x.addr, align 4, !dbg !12
+    call void @escape(ptr %x.addr), !dbg !12
     ret void, !dbg !12
   }
 
   define void @f2(i32 %x) !dbg !13 {
   entry:
     %x.addr = alloca i32, align 4
-    store i32 %x, i32* %x.addr, align 4
-    call void @llvm.dbg.value(metadata i32* %x.addr, metadata !14, metadata !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 16)), !dbg !15
-    call void @escape(i32* %x.addr)
-    call void @llvm.dbg.value(metadata i32* %x.addr, metadata !14, metadata !DIExpression(DW_OP_LLVM_fragment, 16, 16)), !dbg !15
-    store i32 1, i32* @global, align 4
-    call void @llvm.dbg.value(metadata i32* %x.addr, metadata !14, metadata !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 16)), !dbg !15
-    store i32 2, i32* %x.addr, align 4
-    call void @escape(i32* %x.addr)
+    store i32 %x, ptr %x.addr, align 4
+    call void @llvm.dbg.value(metadata ptr %x.addr, metadata !14, metadata !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 16)), !dbg !15
+    call void @escape(ptr %x.addr)
+    call void @llvm.dbg.value(metadata ptr %x.addr, metadata !14, metadata !DIExpression(DW_OP_LLVM_fragment, 16, 16)), !dbg !15
+    store i32 1, ptr @global, align 4
+    call void @llvm.dbg.value(metadata ptr %x.addr, metadata !14, metadata !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 16)), !dbg !15
+    store i32 2, ptr %x.addr, align 4
+    call void @escape(ptr %x.addr)
     ret void
   }
 
@@ -99,6 +99,8 @@
 ---
 name:            f1
 tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
 stack:
   - { id: 0, name: x.addr, type: default, offset: 0, size: 4, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -127,6 +129,8 @@ body:             |
 ---
 name:            f2
 tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
 stack:
   - { id: 0, name: x.addr, type: default, offset: 0, size: 4, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,

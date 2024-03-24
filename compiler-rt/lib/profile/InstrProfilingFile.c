@@ -137,15 +137,18 @@ static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
              DataBegin, PageSize);
     return 1;
   }
+
   int Fileno = fileno(File);
   /* Determine how much padding is needed before/after the counters and
    * after the names. */
   uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
-      PaddingBytesAfterNames, PaddingBytesAfterBitmapBytes;
+      PaddingBytesAfterNames, PaddingBytesAfterBitmapBytes,
+      PaddingBytesAfterVTable, PaddingBytesAfterVNames;
   __llvm_profile_get_padding_sizes_for_counters(
-      DataSize, CountersSize, NumBitmapBytes, NamesSize,
-      &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
-      &PaddingBytesAfterBitmapBytes, &PaddingBytesAfterNames);
+      DataSize, CountersSize, NumBitmapBytes, NamesSize, /*VTableSize=*/0,
+      /*VNameSize=*/0, &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
+      &PaddingBytesAfterBitmapBytes, &PaddingBytesAfterNames,
+      &PaddingBytesAfterVTable, &PaddingBytesAfterVNames);
 
   uint64_t PageAlignedCountersLength = CountersSize + PaddingBytesAfterCounters;
   uint64_t FileOffsetToCounters = CurrentFileOffset +
@@ -677,6 +680,7 @@ static void initializeProfileForContinuousMode(void) {
       PROF_ERR("Continuous counter sync mode is enabled, but raw profile is not"
                "page-aligned. CurrentFileOffset = %" PRIu64 ", pagesz = %u.\n",
                (uint64_t)CurrentFileOffset, PageSize);
+      fclose(File);
       return;
     }
     if (writeProfileWithFileObject(Filename, File) != 0) {
@@ -692,6 +696,8 @@ static void initializeProfileForContinuousMode(void) {
 
   if (doMerging()) {
     lprofUnlockFileHandle(File);
+  }
+  if (File != NULL) {
     fclose(File);
   }
 }

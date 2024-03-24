@@ -166,6 +166,10 @@ private:
   /// Indicates that the AST contained compiler errors.
   bool ASTHasCompilerErrors = false;
 
+  /// Indicates that we're going to generate the reduced BMI for C++20
+  /// named modules.
+  bool GeneratingReducedBMI = false;
+
   /// Mapping from input file entries to the index into the
   /// offset table where information about that input file is stored.
   llvm::DenseMap<const FileEntry *, uint32_t> InputFileIDs;
@@ -467,10 +471,10 @@ private:
   std::vector<SourceRange> NonAffectingRanges;
   std::vector<SourceLocation::UIntTy> NonAffectingOffsetAdjustments;
 
-  /// Collects input files that didn't affect compilation of the current module,
+  /// Computes input files that didn't affect compilation of the current module,
   /// and initializes data structures necessary for leaving those files out
   /// during \c SourceManager serialization.
-  void collectNonAffectingInputFiles();
+  void computeNonAffectingInputFiles();
 
   /// Returns an adjusted \c FileID, accounting for any non-affecting input
   /// files.
@@ -596,7 +600,8 @@ public:
   ASTWriter(llvm::BitstreamWriter &Stream, SmallVectorImpl<char> &Buffer,
             InMemoryModuleCache &ModuleCache,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
-            bool IncludeTimestamps = true, bool BuildingImplicitModule = false);
+            bool IncludeTimestamps = true, bool BuildingImplicitModule = false,
+            bool GeneratingReducedBMI = false);
   ~ASTWriter() override;
 
   ASTContext &getASTContext() const {
@@ -856,6 +861,15 @@ protected:
   const ASTWriter &getWriter() const { return Writer; }
   SmallVectorImpl<char> &getPCH() const { return Buffer->Data; }
 
+  bool isComplete() const { return Buffer->IsComplete; }
+  PCHBuffer *getBufferPtr() { return Buffer.get(); }
+  StringRef getOutputFile() const { return OutputFile; }
+  DiagnosticsEngine &getDiagnostics() const {
+    return SemaPtr->getDiagnostics();
+  }
+
+  virtual Module *getEmittingModule(ASTContext &Ctx);
+
 public:
   PCHGenerator(const Preprocessor &PP, InMemoryModuleCache &ModuleCache,
                StringRef OutputFile, StringRef isysroot,
@@ -863,7 +877,8 @@ public:
                ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                bool AllowASTWithErrors = false, bool IncludeTimestamps = true,
                bool BuildingImplicitModule = false,
-               bool ShouldCacheASTInMemory = false);
+               bool ShouldCacheASTInMemory = false,
+               bool GeneratingReducedBMI = false);
   ~PCHGenerator() override;
 
   void InitializeSema(Sema &S) override { SemaPtr = &S; }
@@ -872,6 +887,23 @@ public:
   ASTDeserializationListener *GetASTDeserializationListener() override;
   bool hasEmittedPCH() const { return Buffer->IsComplete; }
 };
+
+class ReducedBMIGenerator : public PCHGenerator {
+protected:
+  virtual Module *getEmittingModule(ASTContext &Ctx) override;
+
+public:
+  ReducedBMIGenerator(const Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+                      StringRef OutputFile);
+
+  void HandleTranslationUnit(ASTContext &Ctx) override;
+};
+
+/// If we can elide the definition of \param D in reduced BMI.
+///
+/// Generally, we can elide the definition of a declaration if it won't affect
+/// the ABI. e.g., the non-inline function bodies.
+bool CanElideDeclDef(const Decl *D);
 
 /// A simple helper class to pack several bits in order into (a) 32 bit
 /// integer(s).

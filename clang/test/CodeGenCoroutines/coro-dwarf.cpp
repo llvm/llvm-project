@@ -70,3 +70,15 @@ void f_coro(int val, MoveOnly moParam, MoveAndCopy mcParam) {
 // CHECK: !{{[0-9]+}} = !DILocalVariable(name: "moParam", arg: 2, scope: ![[SP]], file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
 // CHECK: !{{[0-9]+}} = !DILocalVariable(name: "mcParam", arg: 3, scope: ![[SP]], file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
 // CHECK: !{{[0-9]+}} = !DILocalVariable(name: "__promise",
+
+// CHECK: !{{[0-9]+}} = distinct !DISubprogram(linkageName: "__await_suspend_wrapper__Z6f_coroi8MoveOnly11MoveAndCopy_init"
+// CHECK-NEXT: !{{[0-9]+}} = !DIFile
+// CHECK-NEXT: !{{[0-9]+}} = !DISubroutineType
+// CHECK-NEXT: !{{[0-9]+}} = !DILocalVariable(arg: 1,
+// CHECK-NEXT: !{{[0-9]+}} = !DILocation
+// CHECK-NEXT: !{{[0-9]+}} = !DILocalVariable(arg: 2,
+
+// CHECK: !{{[0-9]+}} = distinct !DISubprogram(linkageName: "__await_suspend_wrapper__Z6f_coroi8MoveOnly11MoveAndCopy_final"
+// CHECK-NEXT: !{{[0-9]+}} = !DILocalVariable(arg: 1,
+// CHECK-NEXT: !{{[0-9]+}} = !DILocation
+// CHECK-NEXT: !{{[0-9]+}} = !DILocalVariable(arg: 2,

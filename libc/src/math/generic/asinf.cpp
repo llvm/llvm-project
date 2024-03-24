@@ -44,7 +44,7 @@ static constexpr fputil::ExceptValues<float, N_EXCEPTS> ASINF_EXCEPTS_HI = {{
 
 LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
-  using Sign = fputil::Sign;
+
   FPBits xbits(x);
   uint32_t x_uint = xbits.uintval();
   uint32_t x_abs = xbits.uintval() & 0x7fff'ffffU;
@@ -109,7 +109,7 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
     }
-    return x + FPBits::build_nan(Sign::POS, FPBits::FRACTION_MASK).get_val();
+    return FPBits::quiet_nan().get_val();
   }
 
   // Check for exceptional values

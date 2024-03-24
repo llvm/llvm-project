@@ -9,7 +9,7 @@
 
 # RUN: llc -mtriple powerpc-ibm-aix-xcoff -code-model=small -data-sections=false -mcpu=pwr4 -mattr=-altivec -O0 \
 # RUN:     -filetype=obj -o %t.o < %t.ll
-# RUN: llvm-objdump --no-print-imm-hex -D -r --symbol-description %t.o | FileCheck --check-prefix=DIS32 %s
+# RUN: llvm-objdump --no-print-imm-hex -D -r --symbol-description %t.o | FileCheck -D#NFA=2 --check-prefix=DIS32 %s
 
 ## FIXME: currently only fileHeader and sectionHeaders are supported in XCOFF64.
 
@@ -48,18 +48,18 @@ print("}")
 # ASM64:  ld 4, L..C12289-131072(2) # @a12289
 
 # DIS32:   0: 80 82 00 00   lwz 4, 0(2)
-# DIS32:  00000002:  R_TOC  (idx: 24591) a0[TC]
+# DIS32:  00000002:  R_TOC  (idx: [[#NFA+24591]]) a0[TC]
 # DIS32:   c: 80 82 00 04   lwz 4, 4(2)
-# DIS32:  0000000e:  R_TOC  (idx: 24593) a1[TC]
+# DIS32:  0000000e:  R_TOC  (idx: [[#NFA+24593]]) a1[TC]
 
 # DIS32:    fffc: 80 82 7f fc   lwz 4, 32764(2)
-# DIS32:      0000fffe:  R_TOC  (idx: 40973) a8191[TC]
+# DIS32:      0000fffe:  R_TOC  (idx: [[#NFA+40973]]) a8191[TC]
 # DIS32:   10004: 80 82 80 00   lwz 4, -32768(2)
-# DIS32:      00010006:  R_TOC  (idx: 40975) a8192[TC]
+# DIS32:      00010006:  R_TOC  (idx: [[#NFA+40975]]) a8192[TC]
 # DIS32:   1000c: 80 82 80 04   lwz 4, -32764(2)
-# DIS32:      0001000e:  R_TOC  (idx: 40977) a8193[TC]
+# DIS32:      0001000e:  R_TOC  (idx: [[#NFA+40977]]) a8193[TC]
 
 # DIS32:   18004: 80 82 c0 00   lwz 4, -16384(2)
-# DIS32:      00018006:  R_TOC  (idx: 49167) a12288[TC]
+# DIS32:      00018006:  R_TOC  (idx: [[#NFA+49167]]) a12288[TC]
 # DIS32:   1800c: 80 82 c0 04   lwz 4, -16380(2)
-# DIS32:      0001800e:  R_TOC  (idx: 49169) a12289[TC]
+# DIS32:      0001800e:  R_TOC  (idx: [[#NFA+49169]]) a12289[TC]

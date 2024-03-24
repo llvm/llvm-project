@@ -6,11 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_TEST_SRC_MATH_FABSTEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_FABSTEST_H
+
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <math.h>
+#include "include/llvm-libc-macros/math-macros.h"
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
@@ -47,3 +50,5 @@ public:
   using LlvmLibcFAbsTest = FAbsTest<T>;                                        \
   TEST_F(LlvmLibcFAbsTest, SpecialNumbers) { testSpecialNumbers(&func); }      \
   TEST_F(LlvmLibcFAbsTest, Range) { testRange(&func); }
+
+#endif // LLVM_LIBC_TEST_SRC_MATH_FABSTEST_H

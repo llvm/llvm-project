@@ -1450,6 +1450,8 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_LLVM_X86RegCall;
   case CC_M68kRTD:
     return llvm::dwarf::DW_CC_LLVM_M68kRTD;
+  case CC_PreserveNone:
+    return llvm::dwarf::DW_CC_LLVM_PreserveNone;
   }
   return 0;
 }
@@ -3461,6 +3463,9 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
     case Type::BTFTagAttributed:
       T = cast<BTFTagAttributedType>(T)->getWrappedType();
       break;
+    case Type::CountAttributed:
+      T = cast<CountAttributedType>(T)->desugar();
+      break;
     case Type::Elaborated:
       T = cast<ElaboratedType>(T)->getNamedType();
       break;
@@ -3656,6 +3661,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::TemplateSpecialization:
     return CreateType(cast<TemplateSpecializationType>(Ty), Unit);
 
+  case Type::CountAttributed:
   case Type::Auto:
   case Type::Attributed:
   case Type::BTFTagAttributed:

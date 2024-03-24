@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRSparseTensorTransforms
   # Rewriting.
   BufferizableOpInterfaceImpl.cpp
+  SparseAssembler.cpp
   SparseBufferRewriting.cpp
   SparseGPUCodegen.cpp
   SparseReinterpretMap.cpp

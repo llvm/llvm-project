@@ -362,7 +362,8 @@ bool PointerAssignmentChecker::Check(parser::CharBlock rhsName, bool isCall,
   std::optional<std::string> warning;
   CharacterizeProcedure();
   if (std::optional<MessageFixedText> msg{evaluate::CheckProcCompatibility(
-          isCall, procedure_, rhsProcedure, specific, whyNot, warning)}) {
+          isCall, procedure_, rhsProcedure, specific, whyNot, warning,
+          /*ignoreImplicitVsExplicit=*/isCall)}) {
     Say(std::move(*msg), description_, rhsName, whyNot);
     return false;
   }

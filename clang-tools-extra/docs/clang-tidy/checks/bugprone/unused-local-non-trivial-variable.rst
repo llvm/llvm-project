@@ -11,6 +11,7 @@ The following types of variables are excluded from this check:
 * exception variables in catch clauses
 * static or thread local
 * structured bindings
+* variables with ``[[maybe_unused]]`` attribute
 
 This check can be configured to warn on all non-trivial variables by setting
 `IncludeTypes` to `.*`, and excluding specific types using `ExcludeTypes`.

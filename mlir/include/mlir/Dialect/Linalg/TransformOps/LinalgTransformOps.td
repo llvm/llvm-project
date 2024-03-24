@@ -12,7 +12,7 @@
 include "mlir/Dialect/Linalg/TransformOps/LinalgTransformEnums.td"
 include "mlir/Dialect/Transform/IR/TransformAttrs.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Dialect/SCF/IR/DeviceMappingInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -21,10 +21,10 @@ include "mlir/IR/RegionKindInterface.td"
 
 // This is roughly similar to OpFoldResult assuming the handle produces a single
 // value in the payload IR.
-def TransformParamTypeOrAnyHandle : Type<
+def TransformAnyParamTypeOrAnyHandle : Type<
     Or<[TransformHandleTypeInterface.predicate,
-        Transform_ParamType.predicate]>,
-    "transform 'param' type or any handle type">;
+        TransformParamTypeInterface.predicate]>,
+    "transform any param type or any handle type">;
 
 //===----------------------------------------------------------------------===//
 // Apply...PatternsOp
@@ -691,9 +691,9 @@ def MultiTileSizesOp : Op<Transform_Dialect, "structured.multitile_sizes",
                        I64Attr:$dimension,
                        I64Attr:$target_size,
                        DefaultValuedAttr<I64Attr, "1">:$divisor);
-  let results = (outs TransformParamTypeOrAnyHandle:$low_size,
-                      TransformParamTypeOrAnyHandle:$high_size,
-                      TransformParamTypeOrAnyHandle:$split_point);
+  let results = (outs TransformAnyParamTypeOrAnyHandle:$low_size,
+                      TransformAnyParamTypeOrAnyHandle:$high_size,
+                      TransformAnyParamTypeOrAnyHandle:$split_point);
   let hasVerifier = 1;
   let assemblyFormat =
     "$target attr-dict `:` custom<MultitileSizesTypes>("
@@ -1274,32 +1274,28 @@ def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// ConvertToLoopsOp
+//===----------------------------------------------------------------------===//
+
 def ConvertToLoopsOp : Op<Transform_Dialect, "structured.convert_to_loops",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
-     TransformOpInterface, TransformEachOpTrait,
+     DeclareOpInterfaceMethods<TransformOpInterface>,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
     For operations that implement the `TilingInterface`, and implement
     the `generateScalarImplementation` method, lowers the operation to
-    loops. This operation does not return any handles.
+    loops. The return handle points to all generated loops.
+    Fails if the payload ops cannot be lowered to loops.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target);
-  let results = (outs);
+  let results = (outs TransformHandleTypeInterface:$result);
 
   let assemblyFormat = [{
-    $target attr-dict `:` type($target)
-  }];
-
-  let extraClassDeclaration = [{
-    ::mlir::DiagnosedSilenceableFailure applyToOne(
-        ::mlir::transform::TransformRewriter &rewriter,
-        ::mlir::TilingInterface target,
-        ::mlir::transform::ApplyToEachResultList &results,
-        ::mlir::transform::TransformState &state);
+    $target attr-dict `:` functional-type(operands, results)
   }];
 }
-
 
 //===----------------------------------------------------------------------===//
 // DecomposeInterfaceOp
@@ -1408,7 +1404,7 @@ def SplitOp : Op<Transform_Dialect, "structured.split",
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                        I64Attr:$dimension,
-                       Optional<TransformParamTypeOrAnyHandle>:$dynamic_split_point,
+                       Optional<TransformAnyParamTypeOrAnyHandle>:$dynamic_split_point,
                        I64Attr:$static_split_point);
   let results = (outs TransformHandleTypeInterface:$first,
                       TransformHandleTypeInterface:$second);
@@ -1857,7 +1853,7 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
-                   Variadic<TransformParamTypeOrAnyHandle>:$dynamic_sizes,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$dynamic_sizes,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sizes,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$interchange,
                    DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:$scalable_sizes);
@@ -1922,7 +1918,9 @@ def TileUsingForallOp :
 
     It is the user's responsibility to ensure that `num_threads/tile_sizes` is
     a valid tiling specification (i.e. that only tiles parallel dimensions,
-    e.g. in the Linalg case).
+    e.g. in the Linalg case). If the dimension is not parallelizable, a warning
+    is issued to notify the user that the generated code is not safe to
+    parallelize.
 
     If non-empty, the `mapping` is added as an attribute to the
     resulting `scf.forall`.
@@ -1968,10 +1966,10 @@ def TileUsingForallOp :
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
-                   Variadic<TransformHandleTypeInterface>:$num_threads,
-                   Variadic<TransformHandleTypeInterface>:$tile_sizes,
-                   Optional<TransformHandleTypeInterface>:$packed_num_threads,
-                   Optional<TransformHandleTypeInterface>:$packed_tile_sizes,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$num_threads,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$tile_sizes,
+                   Optional<TransformAnyParamTypeOrAnyHandle>:$packed_num_threads,
+                   Optional<TransformAnyParamTypeOrAnyHandle>:$packed_tile_sizes,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_num_threads,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_tile_sizes,
                    OptionalAttr<DeviceMappingArrayAttr>:$mapping);
@@ -2278,6 +2276,49 @@ def ConvertConv2DToImg2ColOp : Op<Transform_Dialect,
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$img2col_tensor,
                       TransformHandleTypeInterface:$transformed);
+
+  let assemblyFormat =
+    "$target attr-dict `:` functional-type($target, results)";
+
+  let builders = [
+    OpBuilder<(ins "Value":$target)>
+  ];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::linalg::LinalgOp target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// FlattenElementwiseLinalgOp
+//===----------------------------------------------------------------------===//
+
+def FlattenElementwiseLinalgOp : Op<Transform_Dialect,
+    "structured.flatten_elementwise",
+    [FunctionalStyleTransformOpTrait,
+     MemoryEffectsOpInterface,
+     TransformOpInterface,
+     TransformEachOpTrait,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Flattens the iteration space and (applicable) operands of elementwise
+    linalg ops to a single dimension.
+
+    Returns one handle:
+    - Flattened linalg operation.
+
+    #### Return modes:
+
+    Returns a definite failure if target is not isolated from above.
+    Returns a silenceable failure if the pattern application failed.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat =
     "$target attr-dict `:` functional-type($target, results)";

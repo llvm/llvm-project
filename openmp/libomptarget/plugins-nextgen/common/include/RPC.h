@@ -18,7 +18,7 @@
 
 #include "llvm/Support/Error.h"
 
-#include <stdint.h>
+#include <cstdint>
 
 namespace llvm::omp::target {
 namespace plugin {

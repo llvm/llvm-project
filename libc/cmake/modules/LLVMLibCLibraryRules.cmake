@@ -50,31 +50,9 @@ function(collect_object_file_deps target result)
   endif()
 endfunction(collect_object_file_deps)
 
-# A rule to build a library from a collection of entrypoint objects.
-# Usage:
-#     add_entrypoint_library(
-#       DEPENDS <list of add_entrypoint_object targets>
-#     )
-#
-# NOTE: If one wants an entrypoint to be available in a library, then they will
-# have to list the entrypoint target explicitly in the DEPENDS list. Implicit
-# entrypoint dependencies will not be added to the library.
-function(add_entrypoint_library target_name)
-  cmake_parse_arguments(
-    "ENTRYPOINT_LIBRARY"
-    "" # No optional arguments
-    "" # No single value arguments
-    "DEPENDS" # Multi-value arguments
-    ${ARGN}
-  )
-  if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
-    message(FATAL_ERROR "'add_entrypoint_library' target requires a DEPENDS list "
-                        "of 'add_entrypoint_object' targets.")
-  endif()
-
-  get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
+function(get_all_object_file_deps result fq_deps_list)
   set(all_deps "")
-  foreach(dep IN LISTS fq_deps_list)
+  foreach(dep ${fq_deps_list})
     get_target_property(dep_type ${dep} "TARGET_TYPE")
     if(NOT ((${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}) OR
             (${dep_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE}) OR
@@ -102,6 +80,162 @@ function(add_entrypoint_library target_name)
     list(APPEND all_deps ${entrypoint_target})
   endforeach(dep)
   list(REMOVE_DUPLICATES all_deps)
+  set(${result} ${all_deps} PARENT_SCOPE)
+endfunction()
+
+# A rule to build a library from a collection of entrypoint objects and bundle
+# it into a GPU fatbinary. Usage is the same as 'add_entrypoint_library'.
+# Usage:
+#     add_gpu_entrypoint_library(
+#       DEPENDS <list of add_entrypoint_object targets>
+#     )
+function(add_gpu_entrypoint_library target_name base_target_name)
+  cmake_parse_arguments(
+    "ENTRYPOINT_LIBRARY"
+    "" # No optional arguments
+    "" # No single value arguments
+    "DEPENDS" # Multi-value arguments
+    ${ARGN}
+  )
+  if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
+    message(FATAL_ERROR "'add_entrypoint_library' target requires a DEPENDS list "
+                        "of 'add_entrypoint_object' targets.")
+  endif()
+
+  get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
+  get_all_object_file_deps(all_deps "${fq_deps_list}")
+
+  # The GPU 'libc' needs to be exported in a format that can be linked with
+  # offloading langauges like OpenMP or CUDA. This wraps every GPU object into a
+  # fat binary and adds them to a static library.
+  set(objects "")
+  foreach(dep IN LISTS all_deps)
+    set(object $<$<STREQUAL:$<TARGET_NAME_IF_EXISTS:${dep}>,${dep}>:$<TARGET_OBJECTS:${dep}>>)
+    string(FIND ${dep} "." last_dot_loc REVERSE)
+    math(EXPR name_loc "${last_dot_loc} + 1")
+    string(SUBSTRING ${dep} ${name_loc} -1 name)
+    if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+      set(prefix --image=arch=generic,triple=nvptx64-nvidia-cuda,feature=+ptx63)
+    elseif(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
+      set(prefix --image=arch=generic,triple=amdgcn-amd-amdhsa)
+    endif()
+
+    # Use the 'clang-offload-packager' to merge these files into a binary blob.
+    add_custom_command(
+      OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/binary/${name}.gpubin"
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/binary
+      COMMAND ${LIBC_CLANG_OFFLOAD_PACKAGER}
+              "${prefix},file=$<JOIN:${object},,file=>" -o
+              ${CMAKE_CURRENT_BINARY_DIR}/binary/${name}.gpubin
+      DEPENDS ${dep} ${base_target_name}
+      COMMENT "Packaging LLVM offloading binary for '${object}'"
+    )
+    add_custom_target(${dep}.__gpubin__ DEPENDS ${dep}
+                      "${CMAKE_CURRENT_BINARY_DIR}/binary/${name}.gpubin")
+
+    # CMake does not permit setting the name on object files. In order to have
+    # human readable names we create an empty stub file with the entrypoint
+    # name. This empty file will then have the created binary blob embedded.
+    add_custom_command(
+      OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/stubs/${name}.cpp"
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/stubs
+      COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/stubs/${name}.cpp
+      DEPENDS ${dep} ${dep}.__gpubin__ ${base_target_name}
+    )
+    add_custom_target(${dep}.__stub__
+                      DEPENDS ${dep}.__gpubin__ "${CMAKE_CURRENT_BINARY_DIR}/stubs/${name}.cpp")
+
+    add_library(${dep}.__fatbin__
+      EXCLUDE_FROM_ALL OBJECT
+      "${CMAKE_CURRENT_BINARY_DIR}/stubs/${name}.cpp"
+    )
+
+    # This is always compiled for the LLVM host triple instead of the native GPU
+    # triple that is used by default in the build.
+    target_compile_options(${dep}.__fatbin__ BEFORE PRIVATE -nostdlib)
+    target_compile_options(${dep}.__fatbin__ PRIVATE
+      --target=${LLVM_HOST_TRIPLE}
+      "SHELL:-Xclang -fembed-offload-object=${CMAKE_CURRENT_BINARY_DIR}/binary/${name}.gpubin")
+    add_dependencies(${dep}.__fatbin__
+                     ${dep} ${dep}.__stub__ ${dep}.__gpubin__ ${base_target_name})
+
+    # Set the list of newly create fat binaries containing embedded device code.
+    list(APPEND objects $<TARGET_OBJECTS:${dep}.__fatbin__>)
+  endforeach()
+
+  add_library(
+    ${target_name}
+    STATIC
+      ${objects}
+  )
+  set_target_properties(${target_name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
+endfunction(add_gpu_entrypoint_library)
+
+# A rule to build a library from a collection of entrypoint objects and bundle
+# it in a single LLVM-IR bitcode file.
+# Usage:
+#     add_gpu_entrypoint_library(
+#       DEPENDS <list of add_entrypoint_object targets>
+#     )
+function(add_bitcode_entrypoint_library target_name base_target_name)
+  cmake_parse_arguments(
+    "ENTRYPOINT_LIBRARY"
+    "" # No optional arguments
+    "" # No single value arguments
+    "DEPENDS" # Multi-value arguments
+    ${ARGN}
+  )
+  if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
+    message(FATAL_ERROR "'add_entrypoint_library' target requires a DEPENDS list "
+                        "of 'add_entrypoint_object' targets.")
+  endif()
+
+  get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
+  get_all_object_file_deps(all_deps "${fq_deps_list}")
+
+  set(objects "")
+  foreach(dep IN LISTS all_deps)
+    set(object $<$<STREQUAL:$<TARGET_NAME_IF_EXISTS:${dep}>,${dep}>:$<TARGET_OBJECTS:${dep}>>)
+    list(APPEND objects ${object})
+  endforeach()
+
+  set(output ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.bc)
+  add_custom_command(
+    OUTPUT ${output}
+    COMMAND ${LIBC_LLVM_LINK} ${objects} -o ${output}
+    DEPENDS ${all_deps} ${base_target_name}
+    COMMENT "Linking LLVM-IR bitcode for ${base_target_name}"
+    COMMAND_EXPAND_LISTS
+  )
+  add_custom_target(${target_name} DEPENDS ${output} ${all_deps})
+  set_target_properties(${target_name} PROPERTIES TARGET_OBJECT ${output})
+endfunction(add_bitcode_entrypoint_library)
+
+# A rule to build a library from a collection of entrypoint objects.
+# Usage:
+#     add_entrypoint_library(
+#       DEPENDS <list of add_entrypoint_object targets>
+#     )
+#
+# NOTE: If one wants an entrypoint to be available in a library, then they will
+# have to list the entrypoint target explicitly in the DEPENDS list. Implicit
+# entrypoint dependencies will not be added to the library.
+function(add_entrypoint_library target_name)
+  cmake_parse_arguments(
+    "ENTRYPOINT_LIBRARY"
+    "" # No optional arguments
+    "" # No single value arguments
+    "DEPENDS" # Multi-value arguments
+    ${ARGN}
+  )
+  if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
+    message(FATAL_ERROR "'add_entrypoint_library' target requires a DEPENDS list "
+                        "of 'add_entrypoint_object' targets.")
+  endif()
+
+  get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
+  get_all_object_file_deps(all_deps "${fq_deps_list}")
+
   set(objects "")
   foreach(dep IN LISTS all_deps)
     list(APPEND objects $<$<STREQUAL:$<TARGET_NAME_IF_EXISTS:${dep}>,${dep}>:$<TARGET_OBJECTS:${dep}>>)
@@ -207,97 +341,10 @@ endfunction(create_header_library)
 #      FLAGS <list of flags>
 #    )
 
-# Internal function, used by `add_header_library`.
-function(expand_flags_for_header_library target_name flags)
-  cmake_parse_arguments(
-    "EXPAND_FLAGS"
-    "IGNORE_MARKER" # Optional arguments
-    "" # Single-value arguments
-    "DEPENDS;FLAGS" # Multi-value arguments
-    ${ARGN}
-  )
-
-  list(LENGTH flags nflags)
-  if(NOT ${nflags})
-    create_header_library(
-      ${target_name}
-      DEPENDS ${EXPAND_FLAGS_DEPENDS}
-      FLAGS ${EXPAND_FLAGS_FLAGS}
-      ${EXPAND_FLAGS_UNPARSED_ARGUMENTS}
-    )
-    return()
-  endif()
-
-  list(GET flags 0 flag)
-  list(REMOVE_AT flags 0)
-  extract_flag_modifier(${flag} real_flag modifier)
-
-  if(NOT "${modifier}" STREQUAL "NO")
-    expand_flags_for_header_library(
-      ${target_name}
-      "${flags}"
-      DEPENDS ${EXPAND_FLAGS_DEPENDS} IGNORE_MARKER
-      FLAGS ${EXPAND_FLAGS_FLAGS} IGNORE_MARKER
-      ${EXPAND_FLAGS_UNPARSED_ARGUMENTS}
-    )
-  endif()
-
-  if("${real_flag}" STREQUAL "" OR "${modifier}" STREQUAL "ONLY")
-    return()
-  endif()
-
-  set(NEW_FLAGS ${EXPAND_FLAGS_FLAGS})
-  list(REMOVE_ITEM NEW_FLAGS ${flag})
-  get_fq_dep_list_without_flag(NEW_DEPS ${real_flag} ${EXPAND_FLAGS_DEPENDS})
-
-  # Only target with `flag` has `.__NO_flag` target, `flag__NO` and
-  # `flag__ONLY` do not.
-  if("${modifier}" STREQUAL "")
-    set(TARGET_NAME "${target_name}.__NO_${flag}")
-  else()
-    set(TARGET_NAME "${target_name}")
-  endif()
-
-  expand_flags_for_header_library(
-    ${TARGET_NAME}
-    "${flags}"
-    DEPENDS ${NEW_DEPS} IGNORE_MARKER
-    FLAGS ${NEW_FLAGS} IGNORE_MARKER
-    ${EXPAND_FLAGS_UNPARSED_ARGUMENTS}
-  )
-endfunction(expand_flags_for_header_library)
-
 function(add_header_library target_name)
-  cmake_parse_arguments(
-    "ADD_TO_EXPAND"
-    "" # Optional arguments
-    "" # Single value arguments
-    "DEPENDS;FLAGS" # Multi-value arguments
+  add_target_with_flags(
+    ${target_name}
+    CREATE_TARGET create_header_library
     ${ARGN}
-  )
-
-  get_fq_target_name(${target_name} fq_target_name)
-
-  if(ADD_TO_EXPAND_DEPENDS AND ("${SHOW_INTERMEDIATE_OBJECTS}" STREQUAL "DEPS"))
-    message(STATUS "Gathering FLAGS from dependencies for ${fq_target_name}")
-  endif()
-
-  get_fq_deps_list(fq_deps_list ${ADD_TO_EXPAND_DEPENDS})
-  get_flags_from_dep_list(deps_flag_list ${fq_deps_list})
-  
-  list(APPEND ADD_TO_EXPAND_FLAGS ${deps_flag_list})
-  remove_duplicated_flags("${ADD_TO_EXPAND_FLAGS}" flags)
-  list(SORT flags)
-
-  if(SHOW_INTERMEDIATE_OBJECTS AND flags)
-    message(STATUS "Header library ${fq_target_name} has FLAGS: ${flags}")
-  endif()
-
-  expand_flags_for_header_library(
-    ${fq_target_name}
-    "${flags}"
-    DEPENDS ${fq_deps_list} IGNORE_MARKER
-    FLAGS ${flags} IGNORE_MARKER
-    ${ADD_TO_EXPAND_UNPARSED_ARGUMENTS}
   )
 endfunction(add_header_library)

@@ -30,6 +30,7 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Object/ObjectFile.h"
 
 #include <cassert>
@@ -132,24 +133,18 @@ static uint64_t getPartialStructRequiredAlignment(void *HstPtrBase) {
 
 /// Map global data and execute pending ctors
 static int initLibrary(DeviceTy &Device) {
-  if (Device.HasMappedGlobalData)
-    return OFFLOAD_SUCCESS;
-
   /*
    * Map global data
    */
   int32_t DeviceId = Device.DeviceID;
   int Rc = OFFLOAD_SUCCESS;
-  bool SupportsEmptyImages = Device.RTL->supports_empty_images &&
-                             Device.RTL->supports_empty_images() > 0;
   {
     std::lock_guard<decltype(PM->TrlTblMtx)> LG(PM->TrlTblMtx);
     for (auto *HostEntriesBegin : PM->HostEntriesBeginRegistrationOrder) {
       TranslationTable *TransTable =
           &PM->HostEntriesBeginToTransTable[HostEntriesBegin];
       if (TransTable->HostTable.EntriesBegin ==
-              TransTable->HostTable.EntriesEnd &&
-          !SupportsEmptyImages) {
+          TransTable->HostTable.EntriesEnd) {
         // No host entry so no need to proceed
         continue;
       }
@@ -194,12 +189,13 @@ static int initLibrary(DeviceTy &Device) {
           // If unified memory is active, the corresponding global is a device
           // reference to the host global. We need to initialize the pointer on
           // the deive to point to the memory on the host.
-          if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+          if ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
+              (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)) {
             if (Device.RTL->data_submit(DeviceId, DeviceEntry.addr, Entry.addr,
                                         Entry.size) != OFFLOAD_SUCCESS)
               REPORT("Failed to write symbol for USM %s\n", Entry.name);
           }
-        } else {
+        } else if (Entry.addr) {
           if (Device.RTL->get_function(Binary, Entry.name, &DeviceEntry.addr) !=
               OFFLOAD_SUCCESS)
             REPORT("Failed to load kernel %s\n", Entry.name);
@@ -291,37 +287,8 @@ static int initLibrary(DeviceTy &Device) {
     }
   }
 
-  if (Rc != OFFLOAD_SUCCESS) {
+  if (Rc != OFFLOAD_SUCCESS)
     return Rc;
-  }
-
-  /*
-   * Run ctors for static objects
-   */
-  if (!Device.PendingCtorsDtors.empty()) {
-    AsyncInfoTy AsyncInfo(Device);
-    // Call all ctors for all libraries registered so far
-    for (auto &Lib : Device.PendingCtorsDtors) {
-      if (!Lib.second.PendingCtors.empty()) {
-        DP("Has pending ctors... call now\n");
-        for (auto &Entry : Lib.second.PendingCtors) {
-          void *Ctor = Entry;
-          int Rc = target(nullptr, Device, Ctor, CTorDTorKernelArgs, AsyncInfo);
-          if (Rc != OFFLOAD_SUCCESS) {
-            REPORT("Running ctor " DPxMOD " failed.\n", DPxPTR(Ctor));
-            return OFFLOAD_FAIL;
-          }
-        }
-        // Clear the list to indicate that this device has been used
-        Lib.second.PendingCtors.clear();
-        DP("Done with pending ctors for lib " DPxMOD "\n", DPxPTR(Lib.first));
-      }
-    }
-    // All constructors have been issued, wait for them now.
-    if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
-      return OFFLOAD_FAIL;
-  }
-  Device.HasMappedGlobalData = true;
 
   static Int32Envar DumpOffloadEntries =
       Int32Envar("OMPTARGET_DUMP_OFFLOAD_ENTRIES", -1);
@@ -435,14 +402,10 @@ bool checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc) {
     FATAL_MESSAGE(DeviceID, "%s", toString(DeviceOrErr.takeError()).data());
 
   // Check whether global data has been mapped for this device
-  {
-    std::lock_guard<decltype(DeviceOrErr->PendingGlobalsMtx)> LG(
-        DeviceOrErr->PendingGlobalsMtx);
-    if (initLibrary(*DeviceOrErr) != OFFLOAD_SUCCESS) {
-      REPORT("Failed to init globals on device %" PRId64 "\n", DeviceID);
-      handleTargetOutcome(false, Loc);
-      return true;
-    }
+  if (initLibrary(*DeviceOrErr) != OFFLOAD_SUCCESS) {
+    REPORT("Failed to init globals on device %" PRId64 "\n", DeviceID);
+    handleTargetOutcome(false, Loc);
+    return true;
   }
 
   return false;
@@ -1790,7 +1753,7 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   Device.submitData(TgtPtr, DeviceMemory, DeviceMemorySize, AsyncInfo);
 
   KernelArgsTy KernelArgs = {0};
-  KernelArgs.Version = 2;
+  KernelArgs.Version = OMP_KERNEL_ARG_VERSION;
   KernelArgs.NumArgs = NumArgs;
   KernelArgs.Tripcount = LoopTripCount;
   KernelArgs.NumTeams[0] = NumTeams;

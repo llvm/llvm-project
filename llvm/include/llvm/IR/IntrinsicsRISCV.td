@@ -109,6 +109,22 @@ let TargetPrefix = "riscv" in {
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//
+// May-Be-Operations
+
+let TargetPrefix = "riscv" in {
+
+  // Zimop
+  def int_riscv_mopr
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [LLVMMatchType<0>, LLVMMatchType<0>],
+                              [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
+  def int_riscv_moprr
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+                              [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
+} // TargetPrefix = "riscv"
+
+//===----------------------------------------------------------------------===//
 // Vectors
 
 // The intrinsic does not have any operand that must be extended.

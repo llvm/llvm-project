@@ -16,6 +16,7 @@
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Profile/Heatmap.h"
+#include "bolt/Profile/YAMLProfileWriter.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
@@ -85,6 +86,7 @@ MaxSamples("max-samples",
   cl::cat(AggregatorCategory));
 
 extern cl::opt<opts::ProfileFormatKind> ProfileFormat;
+extern cl::opt<std::string> SaveProfile;
 
 cl::opt<bool> ReadPreAggregated(
     "pa", cl::desc("skip perf and read data from a pre-aggregated file format"),
@@ -524,7 +526,7 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
       ErrorCallback(ReturnCode, ErrBuf);
   };
 
-  if (opts::LinuxKernelMode) {
+  if (BC.IsLinuxKernel) {
     // Current MMap parsing logic does not work with linux kernel.
     // MMap entries for linux kernel uses PERF_RECORD_MMAP
     // format instead of typical PERF_RECORD_MMAP2 format.
@@ -594,10 +596,21 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
     convertBranchData(Function);
   }
 
-  if (opts::AggregateOnly &&
-      opts::ProfileFormat == opts::ProfileFormatKind::PF_Fdata) {
-    if (std::error_code EC = writeAggregatedFile(opts::OutputFilename))
-      report_error("cannot create output data file", EC);
+  if (opts::AggregateOnly) {
+    if (opts::ProfileFormat == opts::ProfileFormatKind::PF_Fdata)
+      if (std::error_code EC = writeAggregatedFile(opts::OutputFilename))
+        report_error("cannot create output data file", EC);
+
+    // BAT YAML is handled by DataAggregator since normal YAML output requires
+    // CFG which is not available in BAT mode.
+    if (usesBAT()) {
+      if (opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML)
+        if (std::error_code EC = writeBATYAML(BC, opts::OutputFilename))
+          report_error("cannot create output data file", EC);
+      if (!opts::SaveProfile.empty())
+        if (std::error_code EC = writeBATYAML(BC, opts::SaveProfile))
+          report_error("cannot create output data file", EC);
+    }
   }
 
   return Error::success();
@@ -1056,7 +1069,7 @@ ErrorOr<DataAggregator::PerfBranchSample> DataAggregator::parseBranchSample() {
   if (std::error_code EC = PIDRes.getError())
     return EC;
   auto MMapInfoIter = BinaryMMapInfo.find(*PIDRes);
-  if (!opts::LinuxKernelMode && MMapInfoIter == BinaryMMapInfo.end()) {
+  if (!BC->IsLinuxKernel && MMapInfoIter == BinaryMMapInfo.end()) {
     consumeRestOfLine();
     return make_error_code(errc::no_such_process);
   }
@@ -1277,7 +1290,7 @@ std::error_code DataAggregator::printLBRHeatMap() {
   NamedRegionTimer T("parseBranch", "Parsing branch events", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
 
-  if (opts::LinuxKernelMode) {
+  if (BC->IsLinuxKernel) {
     opts::HeatmapMaxAddress = 0xffffffffffffffff;
     opts::HeatmapMinAddress = KernelBaseAddr;
   }
@@ -2255,6 +2268,99 @@ DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
   outs() << "PERF2BOLT: wrote " << BranchValues << " objects and " << MemValues
          << " memory objects to " << OutputFilename << "\n";
 
+  return std::error_code();
+}
+
+std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
+                                             StringRef OutputFilename) const {
+  std::error_code EC;
+  raw_fd_ostream OutFile(OutputFilename, EC, sys::fs::OpenFlags::OF_None);
+  if (EC)
+    return EC;
+
+  yaml::bolt::BinaryProfile BP;
+
+  // Fill out the header info.
+  BP.Header.Version = 1;
+  BP.Header.FileName = std::string(BC.getFilename());
+  std::optional<StringRef> BuildID = BC.getFileBuildID();
+  BP.Header.Id = BuildID ? std::string(*BuildID) : "<unknown>";
+  BP.Header.Origin = std::string(getReaderName());
+  // Only the input binary layout order is supported.
+  BP.Header.IsDFSOrder = false;
+  // FIXME: Need to match hash function used to produce BAT hashes.
+  BP.Header.HashFunction = HashFunction::Default;
+
+  ListSeparator LS(",");
+  raw_string_ostream EventNamesOS(BP.Header.EventNames);
+  for (const StringMapEntry<std::nullopt_t> &EventEntry : EventNames)
+    EventNamesOS << LS << EventEntry.first().str();
+
+  BP.Header.Flags = opts::BasicAggregation ? BinaryFunction::PF_SAMPLE
+                                           : BinaryFunction::PF_LBR;
+
+  if (!opts::BasicAggregation) {
+    // Convert profile for functions not covered by BAT
+    for (auto &BFI : BC.getBinaryFunctions()) {
+      BinaryFunction &Function = BFI.second;
+      if (!Function.hasProfile())
+        continue;
+      if (BAT->isBATFunction(Function.getAddress()))
+        continue;
+      BP.Functions.emplace_back(
+          YAMLProfileWriter::convert(Function, /*UseDFS=*/false));
+    }
+
+    for (const auto &KV : NamesToBranches) {
+      const StringRef FuncName = KV.first;
+      const FuncBranchData &Branches = KV.second;
+      yaml::bolt::BinaryFunctionProfile YamlBF;
+      BinaryData *BD = BC.getBinaryDataByName(FuncName);
+      assert(BD);
+      uint64_t FuncAddress = BD->getAddress();
+      if (!BAT->isBATFunction(FuncAddress))
+        continue;
+      // Filter out cold fragments
+      if (!BD->getSectionName().equals(BC.getMainCodeSectionName()))
+        continue;
+      BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncAddress);
+      assert(BF);
+      YamlBF.Name = FuncName.str();
+      YamlBF.Id = BF->getFunctionNumber();
+      YamlBF.Hash = BAT->getBFHash(FuncAddress);
+      YamlBF.ExecCount = BF->getKnownExecutionCount();
+      YamlBF.NumBasicBlocks = BAT->getNumBasicBlocks(FuncAddress);
+      const BoltAddressTranslation::BBHashMapTy &BlockMap =
+          BAT->getBBHashMap(FuncAddress);
+
+      auto addSuccProfile = [&](yaml::bolt::BinaryBasicBlockProfile &YamlBB,
+                                uint64_t SuccOffset, unsigned SuccDataIdx) {
+        const llvm::bolt::BranchInfo &BI = Branches.Data.at(SuccDataIdx);
+        yaml::bolt::SuccessorInfo SI;
+        SI.Index = BlockMap.getBBIndex(SuccOffset);
+        SI.Count = BI.Branches;
+        SI.Mispreds = BI.Mispreds;
+        YamlBB.Successors.emplace_back(SI);
+      };
+
+      for (const auto &[FromOffset, SuccKV] : Branches.IntraIndex) {
+        yaml::bolt::BinaryBasicBlockProfile YamlBB;
+        if (!BlockMap.isInputBlock(FromOffset))
+          continue;
+        YamlBB.Index = BlockMap.getBBIndex(FromOffset);
+        YamlBB.Hash = BlockMap.getBBHash(FromOffset);
+        for (const auto &[SuccOffset, SuccDataIdx] : SuccKV)
+          addSuccProfile(YamlBB, SuccOffset, SuccDataIdx);
+        if (YamlBB.ExecCount || !YamlBB.Successors.empty())
+          YamlBF.Blocks.emplace_back(YamlBB);
+      }
+      BP.Functions.emplace_back(YamlBF);
+    }
+  }
+
+  // Write the profile.
+  yaml::Output Out(OutFile, nullptr, 0);
+  Out << BP;
   return std::error_code();
 }
 

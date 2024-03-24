@@ -77,8 +77,6 @@ private:
                     MachineRegisterInfo &MRI) const;
   bool selectFPCompare(MachineInstr &MI, MachineIRBuilder &MIB,
                        MachineRegisterInfo &MRI) const;
-  bool selectIntrinsicWithSideEffects(MachineInstr &MI, MachineIRBuilder &MIB,
-                                      MachineRegisterInfo &MRI) const;
   void emitFence(AtomicOrdering FenceOrdering, SyncScope::ID FenceSSID,
                  MachineIRBuilder &MIB) const;
   bool selectMergeValues(MachineInstr &MI, MachineIRBuilder &MIB,
@@ -686,8 +684,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectSelect(MI, MIB, MRI);
   case TargetOpcode::G_FCMP:
     return selectFPCompare(MI, MIB, MRI);
-  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
-    return selectIntrinsicWithSideEffects(MI, MIB, MRI);
   case TargetOpcode::G_FENCE: {
     AtomicOrdering FenceOrdering =
         static_cast<AtomicOrdering>(MI.getOperand(0).getImm());
@@ -844,7 +840,20 @@ const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
       return &RISCV::FPR64RegClass;
   }
 
-  // TODO: Non-GPR register classes.
+  if (RB.getID() == RISCV::VRBRegBankID) {
+    if (Ty.getSizeInBits().getKnownMinValue() <= 64)
+      return &RISCV::VRRegClass;
+
+    if (Ty.getSizeInBits().getKnownMinValue() == 128)
+      return &RISCV::VRM2RegClass;
+
+    if (Ty.getSizeInBits().getKnownMinValue() == 256)
+      return &RISCV::VRM4RegClass;
+
+    if (Ty.getSizeInBits().getKnownMinValue() == 512)
+      return &RISCV::VRM8RegClass;
+  }
+
   return nullptr;
 }
 
@@ -1236,29 +1245,6 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI,
     auto Xor = MIB.buildInstr(RISCV::XORI, {DstReg}, {TmpReg}).addImm(1);
     if (!Xor.constrainAllUses(TII, TRI, RBI))
       return false;
-  }
-
-  MI.eraseFromParent();
-  return true;
-}
-
-bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
-    MachineInstr &MI, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS &&
-         "Unexpected opcode");
-  // Find the intrinsic ID.
-  unsigned IntrinID = cast<GIntrinsic>(MI).getIntrinsicID();
-
-  // Select the instruction.
-  switch (IntrinID) {
-  default:
-    return false;
-  case Intrinsic::trap:
-    MIB.buildInstr(RISCV::UNIMP, {}, {});
-    break;
-  case Intrinsic::debugtrap:
-    MIB.buildInstr(RISCV::EBREAK, {}, {});
-    break;
   }
 
   MI.eraseFromParent();

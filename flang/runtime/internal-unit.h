@@ -28,7 +28,6 @@ public:
       std::conditional_t<DIR == Direction::Input, const char *, char *>;
   InternalDescriptorUnit(Scalar, std::size_t chars, int kind);
   InternalDescriptorUnit(const Descriptor &, const Terminator &);
-  void EndIoStatement();
 
   bool Emit(const char *, std::size_t, IoErrorHandler &);
   std::size_t GetNextInputBytes(const char *&, IoErrorHandler &);

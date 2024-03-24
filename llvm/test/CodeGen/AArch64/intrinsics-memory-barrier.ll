@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-eabi -O=3 | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64 -O=3 | FileCheck %s
 
 define void @test() {
   ; CHECK: dmb sy

@@ -633,6 +633,17 @@ class LinuxCoreTestCase(TestBase):
 
         self.expect("register read --all")
 
+    def test_get_core_file_api(self):
+        """
+        Test SBProcess::GetCoreFile() API can successfully get the core file.
+        """
+        core_file_name = "linux-x86_64.core"
+        target = self.dbg.CreateTarget("linux-x86_64.out")
+        process = target.LoadCore(core_file_name)
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertEqual(process.GetCoreFile().GetFilename(), core_file_name)
+        self.dbg.DeleteTarget(target)
+
     def check_memory_regions(self, process, region_count):
         region_list = process.GetMemoryRegions()
         self.assertEqual(region_list.GetSize(), region_count)

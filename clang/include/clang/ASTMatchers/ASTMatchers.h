@@ -4580,8 +4580,7 @@ AST_POLYMORPHIC_MATCHER_P2(hasArgument,
 ///       return (args * ... * 1);
 ///   }
 /// \endcode
-AST_MATCHER_P(CXXFoldExpr, hasFoldInit, ast_matchers::internal::Matcher<Expr>,
-              InnerMacher) {
+AST_MATCHER_P(CXXFoldExpr, hasFoldInit, internal::Matcher<Expr>, InnerMacher) {
   const auto *const Init = Node.getInit();
   return Init && InnerMacher.matches(*Init, Finder, Builder);
 }
@@ -4603,8 +4602,7 @@ AST_MATCHER_P(CXXFoldExpr, hasFoldInit, ast_matchers::internal::Matcher<Expr>,
 ///       return (args * ... * 1);
 ///   }
 /// \endcode
-AST_MATCHER_P(CXXFoldExpr, hasPattern, ast_matchers::internal::Matcher<Expr>,
-              InnerMacher) {
+AST_MATCHER_P(CXXFoldExpr, hasPattern, internal::Matcher<Expr>, InnerMacher) {
   const Expr *const Pattern = Node.getPattern();
   return Pattern && InnerMacher.matches(*Pattern, Finder, Builder);
 }
@@ -4685,8 +4683,8 @@ AST_MATCHER(CXXFoldExpr, isBinaryFold) { return Node.getInit() != nullptr; }
 /// \code
 ///   int x{y}.
 /// \endcode
-AST_MATCHER_P2(InitListExpr, hasInit, unsigned, N,
-               ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+AST_MATCHER_P2(InitListExpr, hasInit, unsigned, N, internal::Matcher<Expr>,
+               InnerMatcher) {
   return N < Node.getNumInits() &&
           InnerMatcher.matches(*Node.getInit(N), Finder, Builder);
 }
@@ -5034,6 +5032,25 @@ AST_POLYMORPHIC_MATCHER_P2(hasParameter,
           && InnerMatcher.matches(*Node.parameters()[N], Finder, Builder));
 }
 
+/// Matches if the given method declaration declares a member function with an
+/// explicit object parameter.
+///
+/// Given
+/// \code
+/// struct A {
+///  int operator-(this A, int);
+///  void fun(this A &&self);
+///  static int operator()(int);
+///  int operator+(int);
+/// };
+/// \endcode
+///
+/// cxxMethodDecl(isExplicitObjectMemberFunction()) matches the first two
+/// methods but not the last two.
+AST_MATCHER(CXXMethodDecl, isExplicitObjectMemberFunction) {
+  return Node.isExplicitObjectMemberFunction();
+}
+
 /// Matches all arguments and their respective ParmVarDecl.
 ///
 /// Given
@@ -5062,10 +5079,12 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParam,
   // argument of the method which should not be matched against a parameter, so
   // we skip over it here.
   BoundNodesTreeBuilder Matches;
-  unsigned ArgIndex = cxxOperatorCallExpr(callee(cxxMethodDecl()))
-                              .matches(Node, Finder, &Matches)
-                          ? 1
-                          : 0;
+  unsigned ArgIndex =
+      cxxOperatorCallExpr(
+          callee(cxxMethodDecl(unless(isExplicitObjectMemberFunction()))))
+              .matches(Node, Finder, &Matches)
+          ? 1
+          : 0;
   int ParamIndex = 0;
   bool Matched = false;
   for (; ArgIndex < Node.getNumArgs(); ++ArgIndex) {
@@ -5123,11 +5142,12 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParamType,
   // argument of the method which should not be matched against a parameter, so
   // we skip over it here.
   BoundNodesTreeBuilder Matches;
-  unsigned ArgIndex = cxxOperatorCallExpr(callee(cxxMethodDecl()))
-                              .matches(Node, Finder, &Matches)
-                          ? 1
-                          : 0;
-
+  unsigned ArgIndex =
+      cxxOperatorCallExpr(
+          callee(cxxMethodDecl(unless(isExplicitObjectMemberFunction()))))
+              .matches(Node, Finder, &Matches)
+          ? 1
+          : 0;
   const FunctionProtoType *FProto = nullptr;
 
   if (const auto *Call = dyn_cast<CallExpr>(&Node)) {
@@ -5309,7 +5329,7 @@ AST_POLYMORPHIC_MATCHER_P(
     forEachTemplateArgument,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
                                     TemplateSpecializationType, FunctionDecl),
-    clang::ast_matchers::internal::Matcher<TemplateArgument>, InnerMatcher) {
+    internal::Matcher<TemplateArgument>, InnerMatcher) {
   ArrayRef<TemplateArgument> TemplateArgs =
       clang::ast_matchers::internal::getTemplateSpecializationArgs(Node);
   clang::ast_matchers::internal::BoundNodesTreeBuilder Result;
@@ -8525,8 +8545,8 @@ AST_MATCHER(FunctionDecl, hasTrailingReturn) {
 ///
 /// ``varDecl(hasInitializer(ignoringElidableConstructorCall(callExpr())))``
 /// matches ``H D = G()`` in C++11 through C++17 (and beyond).
-AST_MATCHER_P(Expr, ignoringElidableConstructorCall,
-              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+AST_MATCHER_P(Expr, ignoringElidableConstructorCall, internal::Matcher<Expr>,
+              InnerMatcher) {
   // E tracks the node that we are examining.
   const Expr *E = &Node;
   // If present, remove an outer `ExprWithCleanups` corresponding to the

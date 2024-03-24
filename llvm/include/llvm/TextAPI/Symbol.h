@@ -65,6 +65,19 @@ constexpr StringLiteral ObjC2MetaClassNamePrefix = "_OBJC_METACLASS_$_";
 constexpr StringLiteral ObjC2EHTypePrefix = "_OBJC_EHTYPE_$_";
 constexpr StringLiteral ObjC2IVarPrefix = "_OBJC_IVAR_$_";
 
+/// ObjC Interface symbol mappings.
+enum class ObjCIFSymbolKind : uint8_t {
+  None = 0,
+  /// Is OBJC_CLASS* symbol.
+  Class = 1U << 0,
+  /// Is OBJC_METACLASS* symbol.
+  MetaClass = 1U << 1,
+  /// Is OBJC_EHTYPE* symbol.
+  EHType = 1U << 2,
+
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/EHType),
+};
+
 using TargetList = SmallVector<Target, 5>;
 
 // Keep containers that hold Targets in sorted order and uniqued.
@@ -165,18 +178,18 @@ private:
 struct SimpleSymbol {
   StringRef Name;
   EncodeKind Kind;
+  ObjCIFSymbolKind ObjCInterfaceType;
 
   bool operator<(const SimpleSymbol &O) const {
-    return std::tie(Name, Kind) < std::tie(O.Name, O.Kind);
+    return std::tie(Name, Kind, ObjCInterfaceType) <
+           std::tie(O.Name, O.Kind, O.ObjCInterfaceType);
   }
 };
 
-/// Determine EncodeKind from Flags and parsing Name.
+/// Get symbol classification by parsing the name of a symbol.
 ///
-/// \param Name The name of symbol.
-/// \param Flags The flags pre-determined for the symbol.
-SimpleSymbol parseSymbol(StringRef SymName,
-                         const SymbolFlags Flags = SymbolFlags::None);
+/// \param SymName The name of symbol.
+SimpleSymbol parseSymbol(StringRef SymName);
 
 } // end namespace MachO.
 } // end namespace llvm.

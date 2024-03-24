@@ -14,7 +14,7 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <math.h>
+#include "include/llvm-libc-macros/math-macros.h"
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
@@ -23,9 +23,9 @@ class HypotTestTemplate : public LIBC_NAMESPACE::testing::Test {
 private:
   using Func = T (*)(T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using Sign = LIBC_NAMESPACE::fputil::Sign;
+
   using StorageType = typename FPBits::StorageType;
-  const T nan = FPBits::build_quiet_nan().get_val();
+  const T nan = FPBits::quiet_nan().get_val();
   const T inf = FPBits::inf().get_val();
   const T neg_inf = FPBits::inf(Sign::NEG).get_val();
   const T zero = FPBits::zero().get_val();

@@ -34,7 +34,8 @@
 # CHECK32-NEXT:       - Type:            AUX_CSECT
 # CHECK32-NEXT:         ParameterHashIndex: 1
 # CHECK32-NEXT:         TypeChkSectNum:  2
-# CHECK32-NEXT:         SymbolAlignmentAndType: 41
+# CHECK32-NEXT:         SymbolType: XTY_SD
+# CHECK32-NEXT:         SymbolAlignment: 5
 # CHECK32-NEXT:         StorageMappingClass: XMC_PR
 # CHECK32-NEXT:         SectionOrLength: 3
 # CHECK32-NEXT:         StabInfoIndex:   4
@@ -54,7 +55,8 @@
 # CHECK32-NEXT:       - Type:            AUX_CSECT
 # CHECK32-NEXT:         ParameterHashIndex: 1
 # CHECK32-NEXT:         TypeChkSectNum:  2
-# CHECK32-NEXT:         SymbolAlignmentAndType: 17
+# CHECK32-NEXT:         SymbolType: XTY_SD
+# CHECK32-NEXT:         SymbolAlignment: 2
 # CHECK32-NEXT:         StorageMappingClass: XMC_PR
 # CHECK32-NEXT:         SectionOrLength: 4
 # CHECK32-NEXT:         StabInfoIndex:   5
@@ -174,7 +176,8 @@ Symbols:
 # CHECK64-NEXT:       - Type:            AUX_CSECT
 # CHECK64-NEXT:         ParameterHashIndex: 1
 # CHECK64-NEXT:         TypeChkSectNum:  2
-# CHECK64-NEXT:         SymbolAlignmentAndType: 41
+# CHECK64-NEXT:         SymbolType: XTY_SD
+# CHECK64-NEXT:         SymbolAlignment: 5
 # CHECK64-NEXT:         StorageMappingClass: XMC_PR
 # CHECK64-NEXT:         SectionOrLengthLo: 3
 # CHECK64-NEXT:         SectionOrLengthHi: 4
@@ -196,7 +199,8 @@ Symbols:
 # CHECK64-NEXT:       - Type:            AUX_CSECT
 # CHECK64-NEXT:         ParameterHashIndex: 1
 # CHECK64-NEXT:         TypeChkSectNum:  2
-# CHECK64-NEXT:         SymbolAlignmentAndType: 17
+# CHECK64-NEXT:         SymbolType: XTY_SD
+# CHECK64-NEXT:         SymbolAlignment: 2
 # CHECK64-NEXT:         StorageMappingClass: XMC_PR
 # CHECK64-NEXT:         SectionOrLengthLo: 3
 # CHECK64-NEXT:         SectionOrLengthHi: 4

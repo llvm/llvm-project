@@ -171,6 +171,14 @@ public:
 
     ZArg, // MS extension
 
+    // ISO/IEC TR 18037 (fixed-point) specific specifiers.
+    kArg, // %k for signed accum types
+    KArg, // %K for unsigned accum types
+    rArg, // %r for signed fract types
+    RArg, // %R for unsigned fract types
+    FixedPointArgBeg = kArg,
+    FixedPointArgEnd = RArg,
+
     // Objective-C specific specifiers.
     ObjCObjArg, // '@'
     ObjCBeg = ObjCObjArg,
@@ -236,6 +244,9 @@ public:
   bool isAnyIntArg() const { return kind >= IntArgBeg && kind <= UIntArgEnd; }
   bool isDoubleArg() const {
     return kind >= DoubleArgBeg && kind <= DoubleArgEnd;
+  }
+  bool isFixedPointArg() const {
+    return kind >= FixedPointArgBeg && kind <= FixedPointArgEnd;
   }
 
   const char *toString() const;

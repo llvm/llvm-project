@@ -31,6 +31,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/Timing.h"
 #include "mlir/Support/ToolUtilities.h"
 #include "mlir/Tools/ParseUtilities.h"
@@ -54,14 +55,14 @@ using namespace llvm;
 namespace {
 class BytecodeVersionParser : public cl::parser<std::optional<int64_t>> {
 public:
-  BytecodeVersionParser(cl::Option &O)
-      : cl::parser<std::optional<int64_t>>(O) {}
+  BytecodeVersionParser(cl::Option &o)
+      : cl::parser<std::optional<int64_t>>(o) {}
 
-  bool parse(cl::Option &O, StringRef /*argName*/, StringRef arg,
+  bool parse(cl::Option &o, StringRef /*argName*/, StringRef arg,
              std::optional<int64_t> &v) {
     long long w;
     if (getAsSignedInteger(arg, 10, w))
-      return O.error("Invalid argument '" + arg +
+      return o.error("Invalid argument '" + arg +
                      "', only integer is supported.");
     v = w;
     return false;
@@ -127,11 +128,21 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         cl::desc("Print the list of registered dialects and exit"),
         cl::location(showDialectsFlag), cl::init(false));
 
-    static cl::opt<bool, /*ExternalStorage=*/true> splitInputFile(
-        "split-input-file",
-        cl::desc("Split the input file into pieces and process each "
-                 "chunk independently"),
-        cl::location(splitInputFileFlag), cl::init(false));
+    static cl::opt<std::string, /*ExternalStorage=*/true> splitInputFile{
+        "split-input-file", llvm::cl::ValueOptional,
+        cl::callback([&](const std::string &str) {
+          // Implicit value: use default marker if flag was used without value.
+          if (str.empty())
+            splitInputFile.setValue(kDefaultSplitMarker);
+        }),
+        cl::desc("Split the input file into chunks using the given or "
+                 "default marker and process each chunk independently"),
+        cl::location(splitInputFileFlag), cl::init("")};
+
+    static cl::opt<std::string, /*ExternalStorage=*/true> outputSplitMarker(
+        "output-split-marker",
+        cl::desc("Split marker to use for merging the ouput"),
+        cl::location(outputSplitMarkerFlag), cl::init(kDefaultSplitMarker));
 
     static cl::opt<bool, /*ExternalStorage=*/true> verifyDiagnostics(
         "verify-diagnostics",
@@ -276,6 +287,7 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
   if (!irdlFile.empty() && failed(loadIRDLDialects(irdlFile, roundtripContext)))
     return failure();
 
+  std::string testType = (useBytecode) ? "bytecode" : "textual";
   // Print a first time with custom format (or bytecode) and parse it back to
   // the roundtripModule.
   {
@@ -289,7 +301,7 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
       }
     } else {
       op->print(ostream,
-                OpPrintingFlags().printGenericOpForm(false).enableDebugInfo());
+                OpPrintingFlags().printGenericOpForm().enableDebugInfo());
     }
     FallbackAsmResourceMap fallbackResourceMap;
     ParserConfig parseConfig(&roundtripContext, /*verifyAfterParse=*/true,
@@ -297,8 +309,8 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
     roundtripModule =
         parseSourceString<Operation *>(ostream.str(), parseConfig);
     if (!roundtripModule) {
-      op->emitOpError()
-          << "failed to parse bytecode back, cannot verify round-trip.\n";
+      op->emitOpError() << "failed to parse " << testType
+                        << " content back, cannot verify round-trip.\n";
       return failure();
     }
   }
@@ -317,10 +329,12 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
   }
   if (reference != roundtrip) {
     // TODO implement a diff.
-    return op->emitOpError() << "roundTrip testing roundtripped module differs "
-                                "from reference:\n<<<<<<Reference\n"
-                             << reference << "\n=====\n"
-                             << roundtrip << "\n>>>>>roundtripped\n";
+    return op->emitOpError()
+           << testType
+           << " roundTrip testing roundtripped module differs "
+              "from reference:\n<<<<<<Reference\n"
+           << reference << "\n=====\n"
+           << roundtrip << "\n>>>>>roundtripped\n";
   }
 
   return success();
@@ -328,10 +342,9 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
 
 static LogicalResult doVerifyRoundTrip(Operation *op,
                                        const MlirOptMainConfig &config) {
-  // Textual round-trip isn't fully robust at the moment (for example implicit
-  // terminator are losing location informations).
-
-  return doVerifyRoundTrip(op, config, /*useBytecode=*/true);
+  auto txtStatus = doVerifyRoundTrip(op, config, /*useBytecode=*/false);
+  auto bcStatus = doVerifyRoundTrip(op, config, /*useBytecode=*/true);
+  return success(succeeded(txtStatus) && succeeded(bcStatus));
 }
 
 /// Perform the actions on the input file indicated by the command line flags
@@ -429,7 +442,7 @@ static LogicalResult processBuffer(raw_ostream &os,
                                    std::unique_ptr<MemoryBuffer> ownedBuffer,
                                    const MlirOptMainConfig &config,
                                    DialectRegistry &registry,
-                                   llvm::ThreadPool *threadPool) {
+                                   llvm::ThreadPoolInterface *threadPool) {
   // Tell sourceMgr about this buffer, which is what the parser will pick up.
   auto sourceMgr = std::make_shared<SourceMgr>();
   sourceMgr->AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
@@ -501,21 +514,25 @@ mlir::registerAndParseCLIOptions(int argc, char **argv,
   return std::make_pair(inputFilename.getValue(), outputFilename.getValue());
 }
 
+static LogicalResult printRegisteredDialects(DialectRegistry &registry) {
+  llvm::outs() << "Available Dialects: ";
+  interleave(registry.getDialectNames(), llvm::outs(), ",");
+  llvm::outs() << "\n";
+  return success();
+}
+
 LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
                                 std::unique_ptr<llvm::MemoryBuffer> buffer,
                                 DialectRegistry &registry,
                                 const MlirOptMainConfig &config) {
-  if (config.shouldShowDialects()) {
-    llvm::outs() << "Available Dialects: ";
-    interleave(registry.getDialectNames(), llvm::outs(), ",");
-    llvm::outs() << "\n";
-  }
+  if (config.shouldShowDialects())
+    return printRegisteredDialects(registry);
 
   // The split-input-file mode is a very specific mode that slices the file
   // up into small pieces and checks each independently.
   // We use an explicit threadpool to avoid creating and joining/destroying
   // threads for each of the split.
-  ThreadPool *threadPool = nullptr;
+  ThreadPoolInterface *threadPool = nullptr;
 
   // Create a temporary context for the sake of checking if
   // --mlir-disable-threading was passed on the command line.
@@ -531,8 +548,8 @@ LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
                          threadPool);
   };
   return splitAndProcessBuffer(std::move(buffer), chunkFn, outputStream,
-                               config.shouldSplitInputFile(),
-                               /*insertMarkerInOutput=*/true);
+                               config.inputSplitMarker(),
+                               config.outputSplitMarker());
 }
 
 LogicalResult mlir::MlirOptMain(int argc, char **argv,
@@ -543,6 +560,9 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv,
   InitLLVM y(argc, argv);
 
   MlirOptMainConfig config = MlirOptMainConfig::createFromCLOptions();
+
+  if (config.shouldShowDialects())
+    return printRegisteredDialects(registry);
 
   // When reading from stdin and the input is a tty, it is often a user mistake
   // and the process "appears to be stuck". Print a message to let the user know

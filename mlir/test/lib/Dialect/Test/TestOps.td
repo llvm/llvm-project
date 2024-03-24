@@ -396,11 +396,9 @@ def OpWithEnum : TEST_Op<"op_with_enum"> {
 }
 
 // Define a pattern that matches and creates an enum attribute.
-def : Pat<(OpWithEnum ConstantAttr<TestEnumAttr,
-                                   "::test::TestEnum::First">:$value,
+def : Pat<(OpWithEnum ConstantEnumCase<TestEnumAttr, "first">:$value,
                       ConstantAttr<I32Attr, "0">:$tag),
-          (OpWithEnum ConstantAttr<TestEnumAttr,
-                                   "::test::TestEnum::Second">,
+          (OpWithEnum ConstantEnumCase<TestEnumAttr, "second">,
                       ConstantAttr<I32Attr, "1">)>;
 
 //===----------------------------------------------------------------------===//
@@ -429,6 +427,12 @@ def OpWithBitEnumVerticalBar : TEST_Op<"op_with_bit_enum_vbar"> {
                    OptionalAttr<AnyAttr>:$tag);
   let assemblyFormat = "$value (`tag` $tag^)? attr-dict";
 }
+
+// Define a pattern that matches and creates a bit enum attribute.
+def : Pat<(OpWithBitEnum ConstantEnumCase<TestBitEnumAttr, "write|execute">,
+                         ConstantAttr<I32Attr, "0">),
+          (OpWithBitEnum ConstantEnumCase<TestBitEnumAttr, "execute|read">,
+                         ConstantAttr<I32Attr, "1">)>;
 
 //===----------------------------------------------------------------------===//
 // Test Regions
@@ -1266,8 +1270,8 @@ def TestOpWithRegionFoldNoMemoryEffect : TEST_Op<
 
 // Op for testing folding of outer op with inner ops.
 def TestOpWithRegionFold : TEST_Op<"op_with_region_fold"> {
-  let arguments = (ins I32:$operand);
-  let results = (outs I32);
+  let arguments = (ins AnyType:$operand);
+  let results = (outs AnyType);
   let regions = (region SizedRegion<1>:$region);
   let hasFolder = 1;
 }
@@ -2041,6 +2045,17 @@ def CustomDimensionListAttrOp : TEST_Op<"custom_dimension_list_attr"> {
   let assemblyFormat = [{
     `dimension_list` `=` custom<DimensionList>($dimension_list)
     attr-dict
+  }];
+}
+
+def OptionalCustomAttrOp : TEST_Op<"optional_custom_attr"> {
+  let description = [{
+    Test using a custom directive as the optional group anchor and the first
+    element to parse. It is expected to return an `OptionalParseResult`.
+  }];
+  let arguments = (ins OptionalAttr<I1Attr>:$attr);
+  let assemblyFormat = [{
+    attr-dict (custom<OptionalCustomParser>($attr)^) : (`bar`)?
   }];
 }
 

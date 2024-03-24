@@ -1825,7 +1825,15 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     }
   } else {
     config->repro = false;
-    config->timestamp = time(nullptr);
+    if (std::optional<std::string> epoch =
+            Process::GetEnv("SOURCE_DATE_EPOCH")) {
+      StringRef value(*epoch);
+      if (value.getAsInteger(0, config->timestamp))
+        fatal(Twine("invalid SOURCE_DATE_EPOCH timestamp: ") + value +
+              ".  Expected 32-bit integer");
+    } else {
+      config->timestamp = time(nullptr);
+    }
   }
 
   // Handle /alternatename
@@ -2020,6 +2028,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path);
   config->ltoCSProfileGenerate = args.hasArg(OPT_lto_cs_profile_generate);
   config->ltoCSProfileFile = args.getLastArgValue(OPT_lto_cs_profile_file);
+  config->ltoSampleProfileName = args.getLastArgValue(OPT_lto_sample_profile);
   // Handle miscellaneous boolean flags.
   config->ltoPGOWarnMismatch = args.hasFlag(OPT_lto_pgo_warn_mismatch,
                                             OPT_lto_pgo_warn_mismatch_no, true);

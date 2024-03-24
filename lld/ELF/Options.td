@@ -67,6 +67,10 @@ defm compress_debug_sections:
   Eq<"compress-debug-sections", "Compress DWARF debug sections">,
   MetaVarName<"[none,zlib,zstd]">;
 
+defm compress_sections: EEq<"compress-sections",
+  "Compress non-SHF_ALLOC output sections matching <section-glob>">,
+  MetaVarName<"<section-glob>=[none|zlib|zstd]">;
+
 defm defsym: Eq<"defsym", "Define a symbol alias">, MetaVarName<"<symbol>=<value>">;
 
 defm optimize_bb_jumps: BB<"optimize-bb-jumps",
@@ -307,6 +311,9 @@ def no_dynamic_linker: F<"no-dynamic-linker">,
 
 def noinhibit_exec: F<"noinhibit-exec">,
   HelpText<"Retain the executable output file whenever it is still usable">;
+
+def no_warn_mismatch: F<"no-warn-mismatch">,
+  HelpText<"Suppress errors for certain unknown seciton types">;
 
 def no_nmagic: F<"no-nmagic">, MetaVarName<"<magic>">,
   HelpText<"Page align sections (default)">;
@@ -637,6 +644,9 @@ def save_temps_eq: JJ<"save-temps=">, HelpText<"Save select intermediate LTO com
   Values<"resolution,preopt,promote,internalize,import,opt,precodegen,prelink,combinedindex">;
 def lto_basic_block_sections: JJ<"lto-basic-block-sections=">,
   HelpText<"Enable basic block sections for LTO">;
+defm lto_basic_block_address_map: BB<"lto-basic-block-address-map",
+  "Emit basic block address map for LTO",
+  "Do not emit basic block address map for LTO (default)">;
 defm lto_unique_basic_block_section_names: BB<"lto-unique-basic-block-section-names",
     "Give unique names to every basic block section for LTO",
     "Do not give unique names to every basic block section for LTO (default)">;
@@ -746,7 +756,6 @@ def: FF<"no-add-needed">;
 def: F<"no-copy-dt-needed-entries">;
 def: F<"no-ctors-in-init-array">;
 def: F<"no-keep-memory">;
-def: F<"no-warn-mismatch">;
 def: Separate<["--", "-"], "rpath-link">;
 def: J<"rpath-link=">;
 def: F<"secure-plt">;

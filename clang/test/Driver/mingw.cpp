@@ -80,3 +80,7 @@
 
 // RUN: %clang -target i686-windows-gnu -### %s 2>&1 | FileCheck -check-prefix=CHECK_NO_INIT_ARRAY %s
 // CHECK_NO_INIT_ARRAY: "-fno-use-init-array"
+
+// RUN: %clang -target arm64ec-windows-gnu -### -o /dev/null %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix CHECK_MINGW_EC_LINK
+// CHECK_MINGW_EC_LINK: "-m" "arm64ecpe"

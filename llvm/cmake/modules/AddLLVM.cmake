@@ -108,7 +108,7 @@ function(add_llvm_symbol_exports target_name export_file)
       COMMAND "${Python3_EXECUTABLE}" "-c"
       "import sys; \
        lines = ['    ' + l.rstrip() for l in sys.stdin] + ['  local: *;']; \
-       print('LLVM_${LLVM_VERSION_MAJOR} {'); \
+       print('LLVM_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR} {'); \
        print('  global:') if len(lines) > 1 else None; \
        print(';\\n'.join(lines) + '\\n};')"
       < ${export_file} > ${native_export_file}
@@ -257,6 +257,17 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
       message(STATUS "Linker detection: unknown")
     endif()
   endif()
+
+  # Apple's linker complains about duplicate libraries, which CMake likes to do
+  # to support ELF platforms. To silence that warning, we can use
+  # -no_warn_duplicate_libraries, but only in versions of the linker that
+  # support that flag.
+  if(NOT LLVM_USE_LINKER AND ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    include(CheckLinkerFlag)
+    check_linker_flag(C "-Wl,-no_warn_duplicate_libraries" LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES)
+  else()
+    set(LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES OFF CACHE INTERNAL "")
+  endif()
 endif()
 
 function(add_link_opts target_name)
@@ -308,6 +319,11 @@ function(add_link_opts target_name)
                      LINK_FLAGS " -Wl,-bnogc")
       endif()
     endif()
+  endif()
+
+  if(LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES)
+    set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                 LINK_FLAGS " -Wl,-no_warn_duplicate_libraries")
   endif()
 
   if(ARG_SUPPORT_PLUGINS AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
@@ -646,9 +662,9 @@ function(llvm_add_library name)
     if(UNIX AND NOT APPLE AND NOT ARG_SONAME)
       set_target_properties(${name}
         PROPERTIES
-        # Since 4.0.0, the ABI version is indicated by the major version
-        SOVERSION ${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX}
-        VERSION ${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX})
+        # Since 18.1.0, the ABI version is indicated by the major and minor version.
+        SOVERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}
+        VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX})
     endif()
   endif()
 
@@ -1621,8 +1637,14 @@ function(add_unittest test_suite test_name)
   # The runtime benefits of LTO don't outweight the compile time costs for tests.
   if(LLVM_ENABLE_LTO)
     if((UNIX OR MINGW) AND LINKER_IS_LLD)
-      set_property(TARGET ${test_name} APPEND_STRING PROPERTY
-                    LINK_FLAGS " -Wl,--lto-O0")
+      if(LLVM_ENABLE_FATLTO AND NOT APPLE)
+        # When using FatLTO, just use relocatable linking.
+        set_property(TARGET ${test_name} APPEND_STRING PROPERTY
+                      LINK_FLAGS " -Wl,--no-fat-lto-objects")
+      else()
+        set_property(TARGET ${test_name} APPEND_STRING PROPERTY
+                      LINK_FLAGS " -Wl,--lto-O0")
+      endif()
     elseif(LINKER_IS_LLD_LINK)
       set_property(TARGET ${test_name} APPEND_STRING PROPERTY
                     LINK_FLAGS " /opt:lldlto=0")
@@ -2074,7 +2096,7 @@ function(add_lit_testsuites project directory)
 endfunction()
 
 function(llvm_install_library_symlink name dest type)
-  cmake_parse_arguments(ARG "" "COMPONENT" "" ${ARGN})
+  cmake_parse_arguments(ARG "FULL_DEST" "COMPONENT" "" ${ARGN})
   foreach(path ${CMAKE_MODULE_PATH})
     if(EXISTS ${path}/LLVMInstallSymlink.cmake)
       set(INSTALL_SYMLINK ${path}/LLVMInstallSymlink.cmake)
@@ -2088,7 +2110,11 @@ function(llvm_install_library_symlink name dest type)
   endif()
 
   set(full_name ${CMAKE_${type}_LIBRARY_PREFIX}${name}${CMAKE_${type}_LIBRARY_SUFFIX})
-  set(full_dest ${CMAKE_${type}_LIBRARY_PREFIX}${dest}${CMAKE_${type}_LIBRARY_SUFFIX})
+  if (ARG_FULL_DEST)
+    set(full_dest ${dest})
+  else()
+    set(full_dest ${CMAKE_${type}_LIBRARY_PREFIX}${dest}${CMAKE_${type}_LIBRARY_SUFFIX})
+  endif()
 
   if(LLVM_USE_SYMLINKS)
     set(LLVM_LINK_OR_COPY create_symlink)
@@ -2496,15 +2522,5 @@ function(setup_host_tool tool_name setting_name exe_var_name target_var_name)
   if(LLVM_USE_HOST_TOOLS AND NOT ${setting_name})
     build_native_tool(${tool_name} exe_name DEPENDS ${tool_name})
     add_custom_target(${target_var_name} DEPENDS ${exe_name})
-  endif()
-endfunction()
-
-# Adds the unittests folder if gtest is available.
-function(llvm_add_unittests tests_added)
-  if (EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest/googletest/include/gtest/gtest.h)
-    add_subdirectory(unittests)
-    set(${tests_added} ON PARENT_SCOPE)
-  else()
-    message(WARNING "gtest not found, unittests will not be available")
   endif()
 endfunction()

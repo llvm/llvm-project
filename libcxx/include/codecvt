@@ -54,7 +54,6 @@ class codecvt_utf8_utf16
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__locale>
 #include <version>

@@ -78,7 +78,7 @@ class ComparisonCategoryInfo {
   friend class Sema;
 
 public:
-  ComparisonCategoryInfo(const ASTContext &Ctx, CXXRecordDecl *RD,
+  ComparisonCategoryInfo(const ASTContext &Ctx, const CXXRecordDecl *RD,
                          ComparisonCategoryType Kind)
       : Ctx(Ctx), Record(RD), Kind(Kind) {}
 

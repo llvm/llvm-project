@@ -4889,14 +4889,12 @@ struct OSEnv {
     case llvm::MachO::PLATFORM_WATCHOS:
       os_type = llvm::Triple::getOSTypeName(llvm::Triple::WatchOS);
       return;
-    // TODO: add BridgeOS & DriverKit once in llvm/lib/Support/Triple.cpp
-    // NEED_BRIDGEOS_TRIPLE
-    // case llvm::MachO::PLATFORM_BRIDGEOS:
-    //   os_type = llvm::Triple::getOSTypeName(llvm::Triple::BridgeOS);
-    //   return;
-    // case llvm::MachO::PLATFORM_DRIVERKIT:
-    //   os_type = llvm::Triple::getOSTypeName(llvm::Triple::DriverKit);
-    //   return;
+    case llvm::MachO::PLATFORM_BRIDGEOS:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::BridgeOS);
+      return;
+    case llvm::MachO::PLATFORM_DRIVERKIT:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::DriverKit);
+      return;
     case llvm::MachO::PLATFORM_MACCATALYST:
       os_type = llvm::Triple::getOSTypeName(llvm::Triple::IOS);
       environment = llvm::Triple::getEnvironmentTypeName(llvm::Triple::MacABI);
@@ -6622,7 +6620,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         // Bits will be set to indicate which bits are NOT used in
         // addressing in this process or 0 for unknown.
         uint64_t address_mask = process_sp->GetCodeAddressMask();
-        if (address_mask != 0) {
+        if (address_mask != LLDB_INVALID_ADDRESS_MASK) {
           // LC_NOTE "addrable bits"
           mach_header.ncmds++;
           mach_header.sizeofcmds += sizeof(llvm::MachO::note_command);
@@ -6656,7 +6654,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         std::vector<std::unique_ptr<LCNoteEntry>> lc_notes;
 
         // Add "addrable bits" LC_NOTE when an address mask is available
-        if (address_mask != 0) {
+        if (address_mask != LLDB_INVALID_ADDRESS_MASK) {
           std::unique_ptr<LCNoteEntry> addrable_bits_lcnote_up(
               new LCNoteEntry(addr_byte_size, byte_order));
           addrable_bits_lcnote_up->name = "addrable bits";

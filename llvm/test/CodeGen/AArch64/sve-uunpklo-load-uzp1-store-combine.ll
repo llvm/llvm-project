@@ -205,12 +205,12 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.uzp1.nxv16i8(<vscale x 16 x i8>, <v
 declare <vscale x 8 x i16> @llvm.aarch64.sve.uzp1.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.uzp1.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>)
 
-declare <vscale x 16 x i8> @llvm.masked.load.nxv16i8(<vscale x 16 x i8>*, i32, <vscale x 16 x i1>, <vscale x 16 x i8>)
-declare <vscale x 8 x i16> @llvm.masked.load.nxv8i16(<vscale x 8 x i16>*, i32, <vscale x 8 x i1>, <vscale x 8 x i16>)
-declare <vscale x 4 x i32> @llvm.masked.load.nxv4i32(<vscale x 4 x i32>*, i32, <vscale x 4 x i1>, <vscale x 4 x i32>)
+declare <vscale x 16 x i8> @llvm.masked.load.nxv16i8(ptr, i32, <vscale x 16 x i1>, <vscale x 16 x i8>)
+declare <vscale x 8 x i16> @llvm.masked.load.nxv8i16(ptr, i32, <vscale x 8 x i1>, <vscale x 8 x i16>)
+declare <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr, i32, <vscale x 4 x i1>, <vscale x 4 x i32>)
 
-declare void @llvm.masked.store.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>*, i32, <vscale x 16 x i1>)
-declare void @llvm.masked.store.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>*, i32, <vscale x 8 x i1>)
-declare void @llvm.masked.store.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>*, i32, <vscale x 4 x i1>)
+declare void @llvm.masked.store.nxv16i8(<vscale x 16 x i8>, ptr, i32, <vscale x 16 x i1>)
+declare void @llvm.masked.store.nxv8i16(<vscale x 8 x i16>, ptr, i32, <vscale x 8 x i1>)
+declare void @llvm.masked.store.nxv4i32(<vscale x 4 x i32>, ptr, i32, <vscale x 4 x i1>)
 
 attributes #0 = { "target-features"="+sve" vscale_range(8,0) }

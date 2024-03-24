@@ -16,7 +16,7 @@
 # forever, however we do try to group removals for a couple of releases
 # to avoid breaking users at every release.
 
-# RUN: %{python} %s %{libcxx}/utils
+# RUN: %{python} %s %{libcxx-dir}/utils
 
 import sys
 sys.path.append(sys.argv[1])
@@ -48,7 +48,7 @@ if regenerate_expected_results:
     all_traces.append(f'%t/trace-includes.{normalized_header}.txt')
 
   print(f"""\
-// RUN{BLOCKLIT}: %{{python}} %{{libcxx}}/test/libcxx/transitive_includes_to_csv.py {' '.join(all_traces)} > %{{libcxx}}/test/libcxx/transitive_includes/%{{cxx_std}}.csv
+// RUN{BLOCKLIT}: %{{python}} %{{libcxx-dir}}/test/libcxx/transitive_includes_to_csv.py {' '.join(all_traces)} > %{{libcxx-dir}}/test/libcxx/transitive_includes/%{{cxx_std}}.csv
 """)
 
 else:
@@ -83,8 +83,8 @@ else:
 
 // RUN{BLOCKLIT}: mkdir %t
 // RUN{BLOCKLIT}: %{{cxx}} %s %{{flags}} %{{compile_flags}} --trace-includes -fshow-skipped-includes --preprocess > /dev/null 2> %t/trace-includes.txt
-// RUN{BLOCKLIT}: %{{python}} %{{libcxx}}/test/libcxx/transitive_includes_to_csv.py %t/trace-includes.txt > %t/actual_transitive_includes.csv
-// RUN{BLOCKLIT}: cat %{{libcxx}}/test/libcxx/transitive_includes/%{{cxx_std}}.csv | awk '/^{escaped_header} / {{ print }}' > %t/expected_transitive_includes.csv
+// RUN{BLOCKLIT}: %{{python}} %{{libcxx-dir}}/test/libcxx/transitive_includes_to_csv.py %t/trace-includes.txt > %t/actual_transitive_includes.csv
+// RUN{BLOCKLIT}: cat %{{libcxx-dir}}/test/libcxx/transitive_includes/%{{cxx_std}}.csv | awk '/^{escaped_header} / {{ print }}' > %t/expected_transitive_includes.csv
 // RUN{BLOCKLIT}: diff -w %t/expected_transitive_includes.csv %t/actual_transitive_includes.csv
 #include <{header}>
 """)

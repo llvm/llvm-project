@@ -39,6 +39,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Statepoint.h"
 #include "llvm/Support/KnownBits.h"
 #include <algorithm>
 #include <optional>
@@ -1852,39 +1853,37 @@ static Value *simplifyAndOrOfFCmps(const SimplifyQuery &Q, FCmpInst *LHS,
   if (LHS0->getType() != RHS0->getType())
     return nullptr;
 
-  const DataLayout &DL = Q.DL;
-  const TargetLibraryInfo *TLI = Q.TLI;
-
   FCmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
-  if ((PredL == FCmpInst::FCMP_ORD && PredR == FCmpInst::FCMP_ORD && IsAnd) ||
-      (PredL == FCmpInst::FCMP_UNO && PredR == FCmpInst::FCMP_UNO && !IsAnd)) {
-    // (fcmp ord NNAN, X) & (fcmp ord X, Y) --> fcmp ord X, Y
-    // (fcmp ord NNAN, X) & (fcmp ord Y, X) --> fcmp ord Y, X
-    // (fcmp ord X, NNAN) & (fcmp ord X, Y) --> fcmp ord X, Y
-    // (fcmp ord X, NNAN) & (fcmp ord Y, X) --> fcmp ord Y, X
-    // (fcmp uno NNAN, X) | (fcmp uno X, Y) --> fcmp uno X, Y
-    // (fcmp uno NNAN, X) | (fcmp uno Y, X) --> fcmp uno Y, X
-    // (fcmp uno X, NNAN) | (fcmp uno X, Y) --> fcmp uno X, Y
-    // (fcmp uno X, NNAN) | (fcmp uno Y, X) --> fcmp uno Y, X
+  if ((PredL == FCmpInst::FCMP_ORD || PredL == FCmpInst::FCMP_UNO) &&
+      ((FCmpInst::isOrdered(PredR) && IsAnd) ||
+       (FCmpInst::isUnordered(PredR) && !IsAnd))) {
+    // (fcmp ord X, NNAN) & (fcmp o** X, Y) --> fcmp o** X, Y
+    // (fcmp uno X, NNAN) & (fcmp o** X, Y) --> false
+    // (fcmp uno X, NNAN) | (fcmp u** X, Y) --> fcmp u** X, Y
+    // (fcmp ord X, NNAN) | (fcmp u** X, Y) --> true
     if (((LHS1 == RHS0 || LHS1 == RHS1) &&
-         isKnownNeverNaN(LHS0, DL, TLI, 0, Q.AC, Q.CxtI, Q.DT)) ||
+         isKnownNeverNaN(LHS0, /*Depth=*/0, Q)) ||
         ((LHS0 == RHS0 || LHS0 == RHS1) &&
-         isKnownNeverNaN(LHS1, DL, TLI, 0, Q.AC, Q.CxtI, Q.DT)))
-      return RHS;
+         isKnownNeverNaN(LHS1, /*Depth=*/0, Q)))
+      return FCmpInst::isOrdered(PredL) == FCmpInst::isOrdered(PredR)
+                 ? static_cast<Value *>(RHS)
+                 : ConstantInt::getBool(LHS->getType(), !IsAnd);
+  }
 
-    // (fcmp ord X, Y) & (fcmp ord NNAN, X) --> fcmp ord X, Y
-    // (fcmp ord Y, X) & (fcmp ord NNAN, X) --> fcmp ord Y, X
-    // (fcmp ord X, Y) & (fcmp ord X, NNAN) --> fcmp ord X, Y
-    // (fcmp ord Y, X) & (fcmp ord X, NNAN) --> fcmp ord Y, X
-    // (fcmp uno X, Y) | (fcmp uno NNAN, X) --> fcmp uno X, Y
-    // (fcmp uno Y, X) | (fcmp uno NNAN, X) --> fcmp uno Y, X
-    // (fcmp uno X, Y) | (fcmp uno X, NNAN) --> fcmp uno X, Y
-    // (fcmp uno Y, X) | (fcmp uno X, NNAN) --> fcmp uno Y, X
+  if ((PredR == FCmpInst::FCMP_ORD || PredR == FCmpInst::FCMP_UNO) &&
+      ((FCmpInst::isOrdered(PredL) && IsAnd) ||
+       (FCmpInst::isUnordered(PredL) && !IsAnd))) {
+    // (fcmp o** X, Y) & (fcmp ord X, NNAN) --> fcmp o** X, Y
+    // (fcmp o** X, Y) & (fcmp uno X, NNAN) --> false
+    // (fcmp u** X, Y) | (fcmp uno X, NNAN) --> fcmp u** X, Y
+    // (fcmp u** X, Y) | (fcmp ord X, NNAN) --> true
     if (((RHS1 == LHS0 || RHS1 == LHS1) &&
-         isKnownNeverNaN(RHS0, DL, TLI, 0, Q.AC, Q.CxtI, Q.DT)) ||
+         isKnownNeverNaN(RHS0, /*Depth=*/0, Q)) ||
         ((RHS0 == LHS0 || RHS0 == LHS1) &&
-         isKnownNeverNaN(RHS1, DL, TLI, 0, Q.AC, Q.CxtI, Q.DT)))
-      return LHS;
+         isKnownNeverNaN(RHS1, /*Depth=*/0, Q)))
+      return FCmpInst::isOrdered(PredL) == FCmpInst::isOrdered(PredR)
+                 ? static_cast<Value *>(LHS)
+                 : ConstantInt::getBool(LHS->getType(), !IsAnd);
   }
 
   return nullptr;
@@ -3033,20 +3032,19 @@ static Value *simplifyICmpWithConstant(CmpInst::Predicate Pred, Value *LHS,
   Type *ITy = getCompareTy(RHS); // The return type.
 
   Value *X;
+  const APInt *C;
+  if (!match(RHS, m_APIntAllowUndef(C)))
+    return nullptr;
+
   // Sign-bit checks can be optimized to true/false after unsigned
   // floating-point casts:
   // icmp slt (bitcast (uitofp X)),  0 --> false
   // icmp sgt (bitcast (uitofp X)), -1 --> true
-  if (match(LHS, m_BitCast(m_UIToFP(m_Value(X))))) {
-    if (Pred == ICmpInst::ICMP_SLT && match(RHS, m_Zero()))
-      return ConstantInt::getFalse(ITy);
-    if (Pred == ICmpInst::ICMP_SGT && match(RHS, m_AllOnes()))
-      return ConstantInt::getTrue(ITy);
+  if (match(LHS, m_ElementWiseBitCast(m_UIToFP(m_Value(X))))) {
+    bool TrueIfSigned;
+    if (isSignBitCheck(Pred, *C, TrueIfSigned))
+      return ConstantInt::getBool(ITy, !TrueIfSigned);
   }
-
-  const APInt *C;
-  if (!match(RHS, m_APIntAllowUndef(C)))
-    return nullptr;
 
   // Rule out tautological comparisons (eg., ult 0 or uge 0).
   ConstantRange RHS_CR = ConstantRange::makeExactICmpRegion(Pred, *C);
@@ -3248,8 +3246,8 @@ static bool trySimplifyICmpWithAdds(CmpInst::Predicate Pred, Value *LHS,
 
   Value *X;
   const APInt *C1, *C2;
-  if (!match(LHS, m_c_Add(m_Value(X), m_APInt(C1))) ||
-      !match(RHS, m_c_Add(m_Specific(X), m_APInt(C2))))
+  if (!match(LHS, m_Add(m_Value(X), m_APInt(C1))) ||
+      !match(RHS, m_Add(m_Specific(X), m_APInt(C2))))
     return false;
 
   return (C1->slt(*C2) && C1->isNonNegative()) ||
@@ -3731,6 +3729,21 @@ static Value *simplifyICmpWithIntrinsicOnLHS(CmpInst::Predicate Pred,
   }
 }
 
+/// Helper method to get range from metadata or attribute.
+static std::optional<ConstantRange> getRange(Value *V,
+                                             const InstrInfoQuery &IIQ) {
+  if (Instruction *I = dyn_cast<Instruction>(V))
+    if (MDNode *MD = IIQ.getMetadata(I, LLVMContext::MD_range))
+      return getConstantRangeFromMetadata(*MD);
+
+  if (const Argument *A = dyn_cast<Argument>(V))
+    return A->getRange();
+  else if (const CallBase *CB = dyn_cast<CallBase>(V))
+    return CB->getRange();
+
+  return std::nullopt;
+}
+
 /// Given operands for an ICmpInst, see if we can fold the result.
 /// If not, this returns null.
 static Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
@@ -3778,24 +3791,14 @@ static Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
 
   // If both operands have range metadata, use the metadata
   // to simplify the comparison.
-  if (isa<Instruction>(RHS) && isa<Instruction>(LHS)) {
-    auto RHS_Instr = cast<Instruction>(RHS);
-    auto LHS_Instr = cast<Instruction>(LHS);
+  if (std::optional<ConstantRange> RhsCr = getRange(RHS, Q.IIQ))
+    if (std::optional<ConstantRange> LhsCr = getRange(LHS, Q.IIQ)) {
+      if (LhsCr->icmp(Pred, *RhsCr))
+        return ConstantInt::getTrue(ITy);
 
-    if (Q.IIQ.getMetadata(RHS_Instr, LLVMContext::MD_range) &&
-        Q.IIQ.getMetadata(LHS_Instr, LLVMContext::MD_range)) {
-      auto RHS_CR = getConstantRangeFromMetadata(
-          *RHS_Instr->getMetadata(LLVMContext::MD_range));
-      auto LHS_CR = getConstantRangeFromMetadata(
-          *LHS_Instr->getMetadata(LLVMContext::MD_range));
-
-      if (LHS_CR.icmp(Pred, RHS_CR))
-        return ConstantInt::getTrue(RHS->getContext());
-
-      if (LHS_CR.icmp(CmpInst::getInversePredicate(Pred), RHS_CR))
-        return ConstantInt::getFalse(RHS->getContext());
+      if (LhsCr->icmp(CmpInst::getInversePredicate(Pred), *RhsCr))
+        return ConstantInt::getFalse(ITy);
     }
-  }
 
   // Compare of cast, for example (zext X) != 0 -> X != 0
   if (isa<CastInst>(LHS) && (isa<Constant>(RHS) || isa<CastInst>(RHS))) {
@@ -4106,9 +4109,8 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   // This catches the 2 variable input case, constants are handled below as a
   // class-like compare.
   if (Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) {
-    if (FMF.noNaNs() ||
-        (isKnownNeverNaN(RHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT) &&
-         isKnownNeverNaN(LHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT)))
+    if (FMF.noNaNs() || (isKnownNeverNaN(RHS, /*Depth=*/0, Q) &&
+                         isKnownNeverNaN(LHS, /*Depth=*/0, Q)))
       return ConstantInt::get(RetTy, Pred == FCmpInst::FCMP_ORD);
   }
 
@@ -4122,8 +4124,7 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
                                                      fcAllFlags) {
     if (FullKnownClassLHS)
       return *FullKnownClassLHS;
-    return computeKnownFPClass(LHS, FMF, Q.DL, InterestedFlags, 0, Q.TLI, Q.AC,
-                               Q.CxtI, Q.DT, Q.IIQ.UseInstrInfo);
+    return computeKnownFPClass(LHS, FMF, InterestedFlags, 0, Q);
   };
 
   if (C && Q.CxtI) {
@@ -5631,7 +5632,7 @@ simplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // fadd X, 0 ==> X, when we know X is not -0
   if (canIgnoreSNaN(ExBehavior, FMF))
     if (match(Op1, m_PosZeroFP()) &&
-        (FMF.noSignedZeros() || cannotBeNegativeZero(Op0, Q.DL, Q.TLI)))
+        (FMF.noSignedZeros() || cannotBeNegativeZero(Op0, /*Depth=*/0, Q)))
       return Op0;
 
   if (!isDefaultFPEnvironment(ExBehavior, Rounding))
@@ -5693,7 +5694,7 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // fsub X, -0 ==> X, when we know X is not -0
   if (canIgnoreSNaN(ExBehavior, FMF))
     if (match(Op1, m_NegZeroFP()) &&
-        (FMF.noSignedZeros() || cannotBeNegativeZero(Op0, Q.DL, Q.TLI)))
+        (FMF.noSignedZeros() || cannotBeNegativeZero(Op0, /*Depth=*/0, Q)))
       return Op0;
 
   // fsub -0.0, (fsub -0.0, X) ==> X
@@ -5761,11 +5762,16 @@ static Value *simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
     if (FMF.noNaNs() && FMF.noSignedZeros())
       return ConstantFP::getZero(Op0->getType());
 
-    // +normal number * (-)0.0 --> (-)0.0
-    if (isKnownNeverInfOrNaN(Op0, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT) &&
-        // TODO: Check SignBit from computeKnownFPClass when it's more complete.
-        SignBitMustBeZero(Op0, Q.DL, Q.TLI))
-      return Op1;
+    KnownFPClass Known =
+        computeKnownFPClass(Op0, FMF, fcInf | fcNan, /*Depth=*/0, Q);
+    if (Known.isKnownNever(fcInf | fcNan)) {
+      // +normal number * (-)0.0 --> (-)0.0
+      if (Known.SignBit == false)
+        return Op1;
+      // -normal number * (-)0.0 --> -(-)0.0
+      if (Known.SignBit == true)
+        return foldConstant(Instruction::FNeg, Op1, Q);
+    }
   }
 
   // sqrt(X) * sqrt(X) --> X, if we can:
@@ -6109,7 +6115,8 @@ static Value *simplifyRelativeLoad(Constant *Ptr, Constant *Offset,
   if (OffsetInt.srem(4) != 0)
     return nullptr;
 
-  Constant *Loaded = ConstantFoldLoadFromConstPtr(Ptr, Int32Ty, OffsetInt, DL);
+  Constant *Loaded =
+      ConstantFoldLoadFromConstPtr(Ptr, Int32Ty, std::move(OffsetInt), DL);
   if (!Loaded)
     return nullptr;
 
@@ -6217,7 +6224,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   Value *X;
   switch (IID) {
   case Intrinsic::fabs:
-    if (SignBitMustBeZero(Op0, Q.DL, Q.TLI))
+    if (computeKnownFPSignBit(Op0, /*Depth=*/0, Q) == false)
       return Op0;
     break;
   case Intrinsic::bswap:
@@ -6378,11 +6385,10 @@ static Value *foldMinimumMaximumSharedOp(Intrinsic::ID IID, Value *Op0,
   return nullptr;
 }
 
-static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
-                                      const SimplifyQuery &Q,
-                                      const CallBase *Call) {
-  Intrinsic::ID IID = F->getIntrinsicID();
-  Type *ReturnType = F->getReturnType();
+Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
+                                     Value *Op0, Value *Op1,
+                                     const SimplifyQuery &Q,
+                                     const CallBase *Call) {
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
   case Intrinsic::abs:
@@ -6640,19 +6646,21 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     // float, if the ninf flag is set.
     const APFloat *C;
     if (match(Op1, m_APFloat(C)) &&
-        (C->isInfinity() || (Call->hasNoInfs() && C->isLargest()))) {
+        (C->isInfinity() || (Call && Call->hasNoInfs() && C->isLargest()))) {
       // minnum(X, -inf) -> -inf
       // maxnum(X, +inf) -> +inf
       // minimum(X, -inf) -> -inf if nnan
       // maximum(X, +inf) -> +inf if nnan
-      if (C->isNegative() == IsMin && (!PropagateNaN || Call->hasNoNaNs()))
+      if (C->isNegative() == IsMin &&
+          (!PropagateNaN || (Call && Call->hasNoNaNs())))
         return ConstantFP::get(ReturnType, *C);
 
       // minnum(X, +inf) -> X if nnan
       // maxnum(X, -inf) -> X if nnan
       // minimum(X, +inf) -> X
       // maximum(X, -inf) -> X
-      if (C->isNegative() != IsMin && (PropagateNaN || Call->hasNoNaNs()))
+      if (C->isNegative() != IsMin &&
+          (PropagateNaN || (Call && Call->hasNoNaNs())))
         return Op0;
     }
 
@@ -6666,8 +6674,6 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     break;
   }
   case Intrinsic::vector_extract: {
-    Type *ReturnType = F->getReturnType();
-
     // (extract_vector (insert_vector _, X, 0), 0) -> X
     unsigned IdxN = cast<ConstantInt>(Op1)->getZExtValue();
     Value *X = nullptr;
@@ -6714,7 +6720,8 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
     return simplifyUnaryIntrinsic(F, Args[0], Q, Call);
 
   if (NumOperands == 2)
-    return simplifyBinaryIntrinsic(F, Args[0], Args[1], Q, Call);
+    return simplifyBinaryIntrinsic(IID, F->getReturnType(), Args[0], Args[1], Q,
+                                   Call);
 
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {
@@ -6851,6 +6858,27 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   }
   case Intrinsic::experimental_constrained_ldexp:
     return simplifyLdexp(Args[0], Args[1], Q, true);
+  case Intrinsic::experimental_gc_relocate: {
+    GCRelocateInst &GCR = *cast<GCRelocateInst>(Call);
+    Value *DerivedPtr = GCR.getDerivedPtr();
+    Value *BasePtr = GCR.getBasePtr();
+
+    // Undef is undef, even after relocation.
+    if (isa<UndefValue>(DerivedPtr) || isa<UndefValue>(BasePtr)) {
+      return UndefValue::get(GCR.getType());
+    }
+
+    if (auto *PT = dyn_cast<PointerType>(GCR.getType())) {
+      // For now, the assumption is that the relocation of null will be null
+      // for most any collector. If this ever changes, a corresponding hook
+      // should be added to GCStrategy and this code should check it first.
+      if (isa<ConstantPointerNull>(DerivedPtr)) {
+        // Use null-pointer of gc_relocate's type to replace it.
+        return ConstantPointerNull::get(PT);
+      }
+    }
+    return nullptr;
+  }
   default:
     return nullptr;
   }
@@ -6943,8 +6971,8 @@ Value *llvm::simplifyLoadInst(LoadInst *LI, Value *PtrOp,
 
   // If GlobalVariable's initializer is uniform, then return the constant
   // regardless of its offset.
-  if (Constant *C =
-          ConstantFoldLoadFromUniformValue(GV->getInitializer(), LI->getType()))
+  if (Constant *C = ConstantFoldLoadFromUniformValue(GV->getInitializer(),
+                                                     LI->getType(), Q.DL))
     return C;
 
   // Try to convert operand into a constant by stripping offsets while looking
@@ -6956,7 +6984,8 @@ Value *llvm::simplifyLoadInst(LoadInst *LI, Value *PtrOp,
   if (PtrOp == GV) {
     // Index size may have changed due to address space casts.
     Offset = Offset.sextOrTrunc(Q.DL.getIndexTypeSizeInBits(PtrOp->getType()));
-    return ConstantFoldLoadFromConstPtr(GV, LI->getType(), Offset, Q.DL);
+    return ConstantFoldLoadFromConstPtr(GV, LI->getType(), std::move(Offset),
+                                        Q.DL);
   }
 
   return nullptr;

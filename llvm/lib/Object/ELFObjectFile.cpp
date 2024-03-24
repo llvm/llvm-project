@@ -20,6 +20,7 @@
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/HexagonAttributeParser.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
@@ -287,12 +288,87 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   return Features;
 }
 
+static std::optional<std::string> hexagonAttrToFeatureString(unsigned Attr) {
+  switch (Attr) {
+  case 5:
+    return "v5";
+  case 55:
+    return "v55";
+  case 60:
+    return "v60";
+  case 62:
+    return "v62";
+  case 65:
+    return "v65";
+  case 67:
+    return "v67";
+  case 68:
+    return "v68";
+  case 69:
+    return "v69";
+  case 71:
+    return "v71";
+  case 73:
+    return "v73";
+  default:
+    return {};
+  }
+}
+
+SubtargetFeatures ELFObjectFileBase::getHexagonFeatures() const {
+  SubtargetFeatures Features;
+  HexagonAttributeParser Parser;
+  if (Error E = getBuildAttributes(Parser)) {
+    // Return no attributes if none can be read.
+    // This behavior is important for backwards compatibility.
+    consumeError(std::move(E));
+    return Features;
+  }
+  std::optional<unsigned> Attr;
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::ARCH))) {
+    if (std::optional<std::string> FeatureString =
+            hexagonAttrToFeatureString(*Attr))
+      Features.AddFeature(*FeatureString);
+  }
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::HVXARCH))) {
+    std::optional<std::string> FeatureString =
+        hexagonAttrToFeatureString(*Attr);
+    // There is no corresponding hvx arch for v5 and v55.
+    if (FeatureString && *Attr >= 60)
+      Features.AddFeature("hvx" + *FeatureString);
+  }
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::HVXIEEEFP)))
+    if (*Attr)
+      Features.AddFeature("hvx-ieee-fp");
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::HVXQFLOAT)))
+    if (*Attr)
+      Features.AddFeature("hvx-qfloat");
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::ZREG)))
+    if (*Attr)
+      Features.AddFeature("zreg");
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::AUDIO)))
+    if (*Attr)
+      Features.AddFeature("audio");
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::CABAC)))
+    if (*Attr)
+      Features.AddFeature("cabac");
+
+  return Features;
+}
+
 Expected<SubtargetFeatures> ELFObjectFileBase::getRISCVFeatures() const {
   SubtargetFeatures Features;
   unsigned PlatformFlags = getPlatformFlags();
 
   if (PlatformFlags & ELF::EF_RISCV_RVC) {
-    Features.AddFeature("c");
+    Features.AddFeature("zca");
   }
 
   RISCVAttributeParser Attributes;
@@ -349,6 +425,8 @@ Expected<SubtargetFeatures> ELFObjectFileBase::getFeatures() const {
     return getRISCVFeatures();
   case ELF::EM_LOONGARCH:
     return getLoongArchFeatures();
+  case ELF::EM_HEXAGON:
+    return getHexagonFeatures();
   default:
     return SubtargetFeatures();
   }
@@ -514,6 +592,16 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1200";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201:
     return "gfx1201";
+
+  // Generic AMDGCN targets
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:
+    return "gfx9-generic";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC:
+    return "gfx10-1-generic";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC:
+    return "gfx10-3-generic";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC:
+    return "gfx11-generic";
   default:
     llvm_unreachable("Unknown EF_AMDGPU_MACH value");
   }

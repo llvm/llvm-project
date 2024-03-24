@@ -1419,6 +1419,44 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
     }
   }
 
+  // Canonicalize the range check idiom:
+  // and (fcmp olt/ole/ult/ule x, C), (fcmp ogt/oge/ugt/uge x, -C)
+  // --> fabs(x) olt/ole/ult/ule C
+  // or  (fcmp ogt/oge/ugt/uge x, C), (fcmp olt/ole/ult/ule x, -C)
+  // --> fabs(x) ogt/oge/ugt/uge C
+  // TODO: Generalize to handle a negated variable operand?
+  const APFloat *LHSC, *RHSC;
+  if (LHS0 == RHS0 && LHS->hasOneUse() && RHS->hasOneUse() &&
+      FCmpInst::getSwappedPredicate(PredL) == PredR &&
+      match(LHS1, m_APFloatAllowUndef(LHSC)) &&
+      match(RHS1, m_APFloatAllowUndef(RHSC)) &&
+      LHSC->bitwiseIsEqual(neg(*RHSC))) {
+    auto IsLessThanOrLessEqual = [](FCmpInst::Predicate Pred) {
+      switch (Pred) {
+      case FCmpInst::FCMP_OLT:
+      case FCmpInst::FCMP_OLE:
+      case FCmpInst::FCMP_ULT:
+      case FCmpInst::FCMP_ULE:
+        return true;
+      default:
+        return false;
+      }
+    };
+    if (IsLessThanOrLessEqual(IsAnd ? PredR : PredL)) {
+      std::swap(LHSC, RHSC);
+      std::swap(PredL, PredR);
+    }
+    if (IsLessThanOrLessEqual(IsAnd ? PredL : PredR)) {
+      BuilderTy::FastMathFlagGuard Guard(Builder);
+      Builder.setFastMathFlags(LHS->getFastMathFlags() |
+                               RHS->getFastMathFlags());
+
+      Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, LHS0);
+      return Builder.CreateFCmp(PredL, FAbs,
+                                ConstantFP::get(LHS0->getType(), *LHSC));
+    }
+  }
+
   return nullptr;
 }
 
@@ -1647,7 +1685,7 @@ static Instruction *foldLogicCastConstant(BinaryOperator &Logic, CastInst *Cast,
     }
   }
 
-  if (match(Cast, m_OneUse(m_SExt(m_Value(X))))) {
+  if (match(Cast, m_OneUse(m_SExtLike(m_Value(X))))) {
     if (Constant *TruncC = IC.getLosslessSignedTrunc(C, SrcTy)) {
       // LogicOpc (sext X), C --> sext (LogicOpc X, C)
       Value *NewOp = IC.Builder.CreateBinOp(LogicOpc, X, TruncC);
@@ -2179,6 +2217,49 @@ foldBitwiseLogicWithIntrinsics(BinaryOperator &I,
   }
 }
 
+// Try to simplify V by replacing occurrences of Op with RepOp, but only look
+// through bitwise operations. In particular, for X | Y we try to replace Y with
+// 0 inside X and for X & Y we try to replace Y with -1 inside X.
+// Return the simplified result of X if successful, and nullptr otherwise.
+// If SimplifyOnly is true, no new instructions will be created.
+static Value *simplifyAndOrWithOpReplaced(Value *V, Value *Op, Value *RepOp,
+                                          bool SimplifyOnly,
+                                          InstCombinerImpl &IC,
+                                          unsigned Depth = 0) {
+  if (Op == RepOp)
+    return nullptr;
+
+  if (V == Op)
+    return RepOp;
+
+  auto *I = dyn_cast<BinaryOperator>(V);
+  if (!I || !I->isBitwiseLogicOp() || Depth >= 3)
+    return nullptr;
+
+  if (!I->hasOneUse())
+    SimplifyOnly = true;
+
+  Value *NewOp0 = simplifyAndOrWithOpReplaced(I->getOperand(0), Op, RepOp,
+                                              SimplifyOnly, IC, Depth + 1);
+  Value *NewOp1 = simplifyAndOrWithOpReplaced(I->getOperand(1), Op, RepOp,
+                                              SimplifyOnly, IC, Depth + 1);
+  if (!NewOp0 && !NewOp1)
+    return nullptr;
+
+  if (!NewOp0)
+    NewOp0 = I->getOperand(0);
+  if (!NewOp1)
+    NewOp1 = I->getOperand(1);
+
+  if (Value *Res = simplifyBinOp(I->getOpcode(), NewOp0, NewOp1,
+                                 IC.getSimplifyQuery().getWithInstruction(I)))
+    return Res;
+
+  if (SimplifyOnly)
+    return nullptr;
+  return IC.Builder.CreateBinOp(I->getOpcode(), NewOp0, NewOp1);
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -2220,10 +2301,12 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   Value *X, *Y;
-  if (match(Op0, m_OneUse(m_LogicalShift(m_One(), m_Value(X)))) &&
+  const APInt *C;
+  if ((match(Op0, m_OneUse(m_LogicalShift(m_One(), m_Value(X)))) ||
+       (match(Op0, m_OneUse(m_Shl(m_APInt(C), m_Value(X)))) && (*C)[0])) &&
       match(Op1, m_One())) {
-    // (1 << X) & 1 --> zext(X == 0)
     // (1 >> X) & 1 --> zext(X == 0)
+    // (C << X) & 1 --> zext(X == 0), when C is odd
     Value *IsZero = Builder.CreateICmpEQ(X, ConstantInt::get(Ty, 0));
     return new ZExtInst(IsZero, Ty);
   }
@@ -2246,7 +2329,6 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       isKnownToBeAPowerOfTwo(Y, /*OrZero*/ true, /*Depth*/ 0, &I))
     return BinaryOperator::CreateAnd(Builder.CreateNot(X), Y);
 
-  const APInt *C;
   if (match(Op1, m_APInt(C))) {
     const APInt *XorC;
     if (match(Op0, m_OneUse(m_Xor(m_Value(X), m_APInt(XorC))))) {
@@ -2449,14 +2531,12 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   // Assumes any IEEE-represented type has the sign bit in the high bit.
   // TODO: Unify with APInt matcher. This version allows undef unlike m_APInt
   Value *CastOp;
-  if (match(Op0, m_BitCast(m_Value(CastOp))) &&
+  if (match(Op0, m_ElementWiseBitCast(m_Value(CastOp))) &&
       match(Op1, m_MaxSignedValue()) &&
       !Builder.GetInsertBlock()->getParent()->hasFnAttribute(
-        Attribute::NoImplicitFloat)) {
+          Attribute::NoImplicitFloat)) {
     Type *EltTy = CastOp->getType()->getScalarType();
-    if (EltTy->isFloatingPointTy() && EltTy->isIEEE() &&
-        EltTy->getPrimitiveSizeInBits() ==
-        I.getType()->getScalarType()->getPrimitiveSizeInBits()) {
+    if (EltTy->isFloatingPointTy() && EltTy->isIEEE()) {
       Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, CastOp);
       return new BitCastInst(FAbs, I.getType());
     }
@@ -2505,13 +2585,6 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
   {
     Value *A, *B, *C;
-    // A & (A ^ B) --> A & ~B
-    if (match(Op1, m_OneUse(m_c_Xor(m_Specific(Op0), m_Value(B)))))
-      return BinaryOperator::CreateAnd(Op0, Builder.CreateNot(B));
-    // (A ^ B) & A --> A & ~B
-    if (match(Op0, m_OneUse(m_c_Xor(m_Specific(Op1), m_Value(B)))))
-      return BinaryOperator::CreateAnd(Op1, Builder.CreateNot(B));
-
     // A & ~(A ^ B) --> A & B
     if (match(Op1, m_Not(m_c_Xor(m_Specific(Op0), m_Value(B)))))
       return BinaryOperator::CreateAnd(Op0, B);
@@ -2637,7 +2710,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   //       arm may not be reversible due to poison semantics. Is that a good
   //       canonicalization?
   Value *A, *B;
-  if (match(&I, m_c_And(m_OneUse(m_SExt(m_Value(A))), m_Value(B))) &&
+  if (match(&I, m_c_And(m_SExt(m_Value(A)), m_Value(B))) &&
       A->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(A, B, Constant::getNullValue(Ty));
 
@@ -2708,6 +2781,15 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   if (Instruction *Res = foldBitwiseLogicWithIntrinsics(I, Builder))
     return Res;
 
+  if (Value *V =
+          simplifyAndOrWithOpReplaced(Op0, Op1, Constant::getAllOnesValue(Ty),
+                                      /*SimplifyOnly*/ false, *this))
+    return BinaryOperator::CreateAnd(V, Op1);
+  if (Value *V =
+          simplifyAndOrWithOpReplaced(Op1, Op0, Constant::getAllOnesValue(Ty),
+                                      /*SimplifyOnly*/ false, *this))
+    return BinaryOperator::CreateAnd(Op0, V);
+
   return nullptr;
 }
 
@@ -2726,17 +2808,18 @@ Instruction *InstCombinerImpl::matchBSwapOrBitReverse(Instruction &I,
   return LastInst;
 }
 
-/// Match UB-safe variants of the funnel shift intrinsic.
-static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
-                                     const DominatorTree &DT) {
+std::optional<std::pair<Intrinsic::ID, SmallVector<Value *, 3>>>
+InstCombinerImpl::convertOrOfShiftsToFunnelShift(Instruction &Or) {
   // TODO: Can we reduce the code duplication between this and the related
   // rotate matching code under visitSelect and visitTrunc?
+  assert(Or.getOpcode() == BinaryOperator::Or && "Expecting or instruction");
+
   unsigned Width = Or.getType()->getScalarSizeInBits();
 
   Instruction *Or0, *Or1;
   if (!match(Or.getOperand(0), m_Instruction(Or0)) ||
       !match(Or.getOperand(1), m_Instruction(Or1)))
-    return nullptr;
+    return std::nullopt;
 
   bool IsFshl = true; // Sub on LSHR.
   SmallVector<Value *, 3> FShiftArgs;
@@ -2750,7 +2833,7 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
         !match(Or1,
                m_OneUse(m_LogicalShift(m_Value(ShVal1), m_Value(ShAmt1)))) ||
         Or0->getOpcode() == Or1->getOpcode())
-      return nullptr;
+      return std::nullopt;
 
     // Canonicalize to or(shl(ShVal0, ShAmt0), lshr(ShVal1, ShAmt1)).
     if (Or0->getOpcode() == BinaryOperator::LShr) {
@@ -2786,7 +2869,7 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
       // might remove it after this fold). This still doesn't guarantee that the
       // final codegen will match this original pattern.
       if (match(R, m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(L))))) {
-        KnownBits KnownL = IC.computeKnownBits(L, /*Depth*/ 0, &Or);
+        KnownBits KnownL = computeKnownBits(L, /*Depth*/ 0, &Or);
         return KnownL.getMaxValue().ult(Width) ? L : nullptr;
       }
 
@@ -2834,7 +2917,7 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
       IsFshl = false; // Sub on SHL.
     }
     if (!ShAmt)
-      return nullptr;
+      return std::nullopt;
 
     FShiftArgs = {ShVal0, ShVal1, ShAmt};
   } else if (isa<ZExtInst>(Or0) || isa<ZExtInst>(Or1)) {
@@ -2856,18 +2939,18 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
     const APInt *ZextHighShlAmt;
     if (!match(Or0,
                m_OneUse(m_Shl(m_Value(ZextHigh), m_APInt(ZextHighShlAmt)))))
-      return nullptr;
+      return std::nullopt;
 
     if (!match(Or1, m_ZExt(m_Value(Low))) ||
         !match(ZextHigh, m_ZExt(m_Value(High))))
-      return nullptr;
+      return std::nullopt;
 
     unsigned HighSize = High->getType()->getScalarSizeInBits();
     unsigned LowSize = Low->getType()->getScalarSizeInBits();
     // Make sure High does not overlap with Low and most significant bits of
     // High aren't shifted out.
     if (ZextHighShlAmt->ult(LowSize) || ZextHighShlAmt->ugt(Width - HighSize))
-      return nullptr;
+      return std::nullopt;
 
     for (User *U : ZextHigh->users()) {
       Value *X, *Y;
@@ -2898,11 +2981,21 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
   }
 
   if (FShiftArgs.empty())
-    return nullptr;
+    return std::nullopt;
 
   Intrinsic::ID IID = IsFshl ? Intrinsic::fshl : Intrinsic::fshr;
-  Function *F = Intrinsic::getDeclaration(Or.getModule(), IID, Or.getType());
-  return CallInst::Create(F, FShiftArgs);
+  return std::make_pair(IID, FShiftArgs);
+}
+
+/// Match UB-safe variants of the funnel shift intrinsic.
+static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC) {
+  if (auto Opt = IC.convertOrOfShiftsToFunnelShift(Or)) {
+    auto [IID, FShiftArgs] = *Opt;
+    Function *F = Intrinsic::getDeclaration(Or.getModule(), IID, Or.getType());
+    return CallInst::Create(F, FShiftArgs);
+  }
+
+  return nullptr;
 }
 
 /// Attempt to combine or(zext(x),shl(zext(y),bw/2) concat packing patterns.
@@ -3393,7 +3486,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                                   /*MatchBitReversals*/ true))
     return BitOp;
 
-  if (Instruction *Funnel = matchFunnelShift(I, *this, DT))
+  if (Instruction *Funnel = matchFunnelShift(I, *this))
     return Funnel;
 
   if (Instruction *Concat = matchOrConcat(I, Builder))
@@ -3422,10 +3515,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     Value *IncrementY = Builder.CreateAdd(Y, ConstantInt::get(Ty, 1));
     return BinaryOperator::CreateMul(X, IncrementY);
   }
-
-  // X | (X ^ Y) --> X | Y (4 commuted patterns)
-  if (match(&I, m_c_Or(m_Value(X), m_c_Xor(m_Deferred(X), m_Value(Y)))))
-    return BinaryOperator::CreateOr(X, Y);
 
   // (A & C) | (B & D)
   Value *A, *B, *C, *D;
@@ -3528,22 +3617,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     if (match(Op1, m_Xor(m_Specific(B), m_Specific(A))))
       return BinaryOperator::CreateOr(Op1, C);
 
-  // ((A & B) ^ C) | B -> C | B
-  if (match(Op0, m_c_Xor(m_c_And(m_Value(A), m_Specific(Op1)), m_Value(C))))
-    return BinaryOperator::CreateOr(C, Op1);
-
-  // B | ((A & B) ^ C) -> B | C
-  if (match(Op1, m_c_Xor(m_c_And(m_Value(A), m_Specific(Op0)), m_Value(C))))
-    return BinaryOperator::CreateOr(Op0, C);
-
-  // ((B | C) & A) | B -> B | (A & C)
-  if (match(Op0, m_c_And(m_c_Or(m_Specific(Op1), m_Value(C)), m_Value(A))))
-    return BinaryOperator::CreateOr(Op1, Builder.CreateAnd(A, C));
-
-  // B | ((B | C) & A) -> B | (A & C)
-  if (match(Op1, m_c_And(m_c_Or(m_Specific(Op0), m_Value(C)), m_Value(A))))
-    return BinaryOperator::CreateOr(Op0, Builder.CreateAnd(A, C));
-
   if (Instruction *DeMorgan = matchDeMorgansLaws(I, *this))
     return DeMorgan;
 
@@ -3596,31 +3669,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       Value *Nand = Builder.CreateNot(Builder.CreateAnd(A, B), "nand");
       return BinaryOperator::CreateOr(Nand, C);
     }
-
-    // A | (~A ^ B) --> ~B | A
-    // B | (A ^ ~B) --> ~A | B
-    if (Op1->hasOneUse() && match(A, m_Not(m_Specific(Op0)))) {
-      Value *NotB = Builder.CreateNot(B, B->getName() + ".not");
-      return BinaryOperator::CreateOr(NotB, Op0);
-    }
-    if (Op1->hasOneUse() && match(B, m_Not(m_Specific(Op0)))) {
-      Value *NotA = Builder.CreateNot(A, A->getName() + ".not");
-      return BinaryOperator::CreateOr(NotA, Op0);
-    }
   }
-
-  // A | ~(A | B) -> A | ~B
-  // A | ~(A ^ B) -> A | ~B
-  if (match(Op1, m_Not(m_Value(A))))
-    if (BinaryOperator *B = dyn_cast<BinaryOperator>(A))
-      if ((Op0 == B->getOperand(0) || Op0 == B->getOperand(1)) &&
-          Op1->hasOneUse() && (B->getOpcode() == Instruction::Or ||
-                               B->getOpcode() == Instruction::Xor)) {
-        Value *NotOp = Op0 == B->getOperand(0) ? B->getOperand(1) :
-                                                 B->getOperand(0);
-        Value *Not = Builder.CreateNot(NotOp, NotOp->getName() + ".not");
-        return BinaryOperator::CreateOr(Not, Op0);
-      }
 
   if (SwappedForXor)
     std::swap(Op0, Op1);
@@ -3887,13 +3936,12 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // This is generous interpretation of noimplicitfloat, this is not a true
   // floating-point operation.
   Value *CastOp;
-  if (match(Op0, m_BitCast(m_Value(CastOp))) && match(Op1, m_SignMask()) &&
+  if (match(Op0, m_ElementWiseBitCast(m_Value(CastOp))) &&
+      match(Op1, m_SignMask()) &&
       !Builder.GetInsertBlock()->getParent()->hasFnAttribute(
           Attribute::NoImplicitFloat)) {
     Type *EltTy = CastOp->getType()->getScalarType();
-    if (EltTy->isFloatingPointTy() && EltTy->isIEEE() &&
-        EltTy->getPrimitiveSizeInBits() ==
-        I.getType()->getScalarType()->getPrimitiveSizeInBits()) {
+    if (EltTy->isFloatingPointTy() && EltTy->isIEEE()) {
       Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, CastOp);
       Value *FNegFAbs = Builder.CreateFNeg(FAbs);
       return new BitCastInst(FNegFAbs, I.getType());
@@ -3910,6 +3958,15 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   if (Instruction *Res = foldBitwiseLogicWithIntrinsics(I, Builder))
     return Res;
+
+  if (Value *V =
+          simplifyAndOrWithOpReplaced(Op0, Op1, Constant::getNullValue(Ty),
+                                      /*SimplifyOnly*/ false, *this))
+    return BinaryOperator::CreateOr(V, Op1);
+  if (Value *V =
+          simplifyAndOrWithOpReplaced(Op1, Op0, Constant::getNullValue(Ty),
+                                      /*SimplifyOnly*/ false, *this))
+    return BinaryOperator::CreateOr(Op0, V);
 
   return nullptr;
 }
@@ -4404,7 +4461,7 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
     }
 
     // ~(X + C) --> ~C - X
-    if (match(NotVal, m_c_Add(m_Value(X), m_ImmConstant(C))))
+    if (match(NotVal, m_Add(m_Value(X), m_ImmConstant(C))))
       return BinaryOperator::CreateSub(ConstantExpr::getNot(C), X);
 
     // ~(X - Y) --> ~X + Y
@@ -4658,13 +4715,12 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     // Assumes any IEEE-represented type has the sign bit in the high bit.
     // TODO: Unify with APInt matcher. This version allows undef unlike m_APInt
     Value *CastOp;
-    if (match(Op0, m_BitCast(m_Value(CastOp))) && match(Op1, m_SignMask()) &&
+    if (match(Op0, m_ElementWiseBitCast(m_Value(CastOp))) &&
+        match(Op1, m_SignMask()) &&
         !Builder.GetInsertBlock()->getParent()->hasFnAttribute(
             Attribute::NoImplicitFloat)) {
       Type *EltTy = CastOp->getType()->getScalarType();
-      if (EltTy->isFloatingPointTy() && EltTy->isIEEE() &&
-          EltTy->getPrimitiveSizeInBits() ==
-          I.getType()->getScalarType()->getPrimitiveSizeInBits()) {
+      if (EltTy->isFloatingPointTy() && EltTy->isIEEE()) {
         Value *FNeg = Builder.CreateFNeg(CastOp);
         return new BitCastInst(FNeg, I.getType());
       }

@@ -58,6 +58,8 @@ enum NodeType : unsigned {
 
   CALL_BTI, // Function call followed by a BTI instruction.
 
+  COALESCER_BARRIER,
+
   SMSTART,
   SMSTOP,
   RESTORE_ZA,
@@ -216,6 +218,7 @@ enum NodeType : unsigned {
   SQSHLU_I,
   SRSHR_I,
   URSHR_I,
+  URSHR_I_PRED,
 
   // Vector narrowing shift by immediate (bottom)
   RSHRNB_I,
@@ -245,6 +248,9 @@ enum NodeType : unsigned {
   FCMGTz,
   FCMLEz,
   FCMLTz,
+
+  // Round wide FP to narrow FP with inexact results to odd.
+  FCVTXN,
 
   // Vector across-lanes addition
   // Only the lower result lane is defined.
@@ -281,9 +287,6 @@ enum NodeType : unsigned {
   ORV_PRED,
   EORV_PRED,
   ANDV_PRED,
-
-  // Vector bitwise insertion
-  BIT,
 
   // Compare-and-branch
   CBZ,
@@ -686,6 +689,7 @@ public:
                                        StoreInst *SI) const override;
 
   bool isLegalAddImmediate(int64_t) const override;
+  bool isLegalAddScalableImmediate(int64_t) const override;
   bool isLegalICmpImmediate(int64_t) const override;
 
   bool isMulAddWithConstProfitable(SDValue AddNode,
@@ -965,12 +969,12 @@ public:
   bool shouldExpandCttzElements(EVT VT) const override;
 
   /// If a change in streaming mode is required on entry to/return from a
-  /// function call it emits and returns the corresponding SMSTART or SMSTOP node.
-  /// \p Entry tells whether this is before/after the Call, which is necessary
-  /// because PSTATE.SM is only queried once.
+  /// function call it emits and returns the corresponding SMSTART or SMSTOP
+  /// node. \p Condition should be one of the enum values from
+  /// AArch64SME::ToggleCondition.
   SDValue changeStreamingMode(SelectionDAG &DAG, SDLoc DL, bool Enable,
-                              SDValue Chain, SDValue InGlue,
-                              SDValue PStateSM, bool Entry) const;
+                              SDValue Chain, SDValue InGlue, unsigned Condition,
+                              SDValue PStateSM = SDValue()) const;
 
   bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
 
@@ -1026,7 +1030,7 @@ private:
                           const SmallVectorImpl<CCValAssign> &RVLocs,
                           const SDLoc &DL, SelectionDAG &DAG,
                           SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
-                          SDValue ThisVal) const;
+                          SDValue ThisVal, bool RequiresSMChange) const;
 
   SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
@@ -1305,6 +1309,8 @@ private:
   bool preferScalarizeSplat(SDNode *N) const override;
 
   unsigned getMinimumJumpTableEntries() const override;
+
+  bool softPromoteHalfType() const override { return true; }
 };
 
 namespace AArch64 {

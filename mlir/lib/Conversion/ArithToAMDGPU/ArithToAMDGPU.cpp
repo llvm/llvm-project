@@ -89,7 +89,7 @@ void ExtFOnFloat8RewritePattern::rewrite(arith::ExtFOp op,
   }
   VectorType inType = in.getType().cast<VectorType>();
   int64_t numElements = inType.getNumElements();
-  Value zero = rewriter.createOrFold<arith::ConstantOp>(
+  Value zero = rewriter.create<arith::ConstantOp>(
       loc, outElemType, rewriter.getFloatAttr(outElemType, 0.0));
   Value result =
       rewriter.createOrFold<vector::SplatOp>(loc, op.getOut().getType(), zero);
@@ -209,7 +209,7 @@ void TruncFToFloat8RewritePattern::rewrite(arith::TruncFOp op,
   }
   VectorType outType = op.getOut().getType().cast<VectorType>();
   int64_t numElements = outType.getNumElements();
-  Value zero = rewriter.createOrFold<arith::ConstantOp>(
+  Value zero = rewriter.create<arith::ConstantOp>(
       loc, outElemType, rewriter.getFloatAttr(outElemType, 0.0));
   Value result = rewriter.createOrFold<vector::SplatOp>(loc, outType, zero);
   if (outType.getShape().empty()) {

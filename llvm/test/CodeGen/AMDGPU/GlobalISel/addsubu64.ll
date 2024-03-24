@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX11 %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
 
-define amdgpu_kernel void @s_add_u64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
+define amdgpu_kernel void @s_add_u64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GFX11-LABEL: s_add_u64:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_clause 0x1
@@ -35,11 +35,11 @@ define amdgpu_kernel void @s_add_u64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
 ; GFX12-NEXT:    s_endpgm
 entry:
   %add = add i64 %a, %b
-  store i64 %add, i64 addrspace(1)* %out
+  store i64 %add, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_ps void @v_add_u64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
+define amdgpu_ps void @v_add_u64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GCN-LABEL: v_add_u64:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
@@ -50,11 +50,11 @@ define amdgpu_ps void @v_add_u64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
 ; GCN-NEXT:    s_endpgm
 entry:
   %add = add i64 %a, %b
-  store i64 %add, i64 addrspace(1)* %out
+  store i64 %add, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_sub_u64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
+define amdgpu_kernel void @s_sub_u64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GFX11-LABEL: s_sub_u64:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_clause 0x1
@@ -87,11 +87,11 @@ define amdgpu_kernel void @s_sub_u64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
 ; GFX12-NEXT:    s_endpgm
 entry:
   %sub = sub i64 %a, %b
-  store i64 %sub, i64 addrspace(1)* %out
+  store i64 %sub, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_ps void @v_sub_u64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
+define amdgpu_ps void @v_sub_u64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GCN-LABEL: v_sub_u64:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_sub_co_u32 v2, vcc_lo, v2, v4
@@ -102,6 +102,6 @@ define amdgpu_ps void @v_sub_u64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
 ; GCN-NEXT:    s_endpgm
 entry:
   %sub = sub i64 %a, %b
-  store i64 %sub, i64 addrspace(1)* %out
+  store i64 %sub, ptr addrspace(1) %out
   ret void
 }

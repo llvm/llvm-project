@@ -1121,7 +1121,8 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
     TS->emitDirectiveVariantPCS(CurrentFnSym);
   }
 
-  if (TM.getTargetTriple().isWindowsArm64EC()) {
+  if (TM.getTargetTriple().isWindowsArm64EC() &&
+      !MF->getFunction().hasLocalLinkage()) {
     // For ARM64EC targets, a function definition's name is mangled differently
     // from the normal symbol. We emit the alias from the unmangled symbol to
     // mangled symbol name here.
@@ -1602,7 +1603,9 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   // attributes (isCall, isReturn, etc.). We lower them to the real
   // instruction here.
   case AArch64::TCRETURNri:
-  case AArch64::TCRETURNriBTI:
+  case AArch64::TCRETURNrix16x17:
+  case AArch64::TCRETURNrix17:
+  case AArch64::TCRETURNrinotx16:
   case AArch64::TCRETURNriALL: {
     MCInst TmpInst;
     TmpInst.setOpcode(AArch64::BR);
