@@ -17,7 +17,8 @@ struct ICFGPathFinder {
     std::stack<int> callStack; // 部分平衡的括号匹配
     std::set<int> callSites;
 
-    void search(int source, int target, int maxCallDepth) {
+    void search(int source, int target, const std::vector<int> &pathFilter,
+                int maxCallDepth) {
         this->source = source;
         this->target = target;
         this->maxCallDepth = maxCallDepth;
@@ -33,6 +34,28 @@ struct ICFGPathFinder {
         callSites.clear();
 
         dfs(source);
+
+        // filter: mark paths that do not contain pathFilter
+        std::vector<std::set<std::vector<int>>::iterator> toDelete;
+        for (auto it = results.begin(); it != results.end(); ++it) {
+            const auto &path = *it;
+            bool match = true;
+            int i = 0;
+            for (int x : path) {
+                if (i >= pathFilter.size())
+                    break;
+                if (x == pathFilter[i]) {
+                    i++;
+                }
+            }
+            if (i != pathFilter.size()) {
+                toDelete.push_back(it);
+            }
+        }
+
+        for (auto it : toDelete) {
+            results.erase(it);
+        }
     }
 
     void dfs(int u) {

@@ -128,14 +128,14 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
                 }
             } else {
                 // search for var within stmt
-            const std::string var =
-                visitor.findVarInStmt(Context, stmt, file, line, column);
-            if (!var.empty()) {
-                int id = block->getBlockID();
+                const std::string var =
+                    visitor.findVarInStmt(Context, stmt, file, line, column);
+                if (!var.empty()) {
+                    int id = block->getBlockID();
                     llvm::errs() << "Found var '" << var << "' in "
                                  << fi->signature << " at " << line << ":"
                                  << column << " in block " << id << "\n";
-                return VarLocResult(fi, block);
+                    return VarLocResult(fi, block);
                 }
             }
         }
@@ -395,24 +395,23 @@ void saveAsJson(const std::set<std::vector<int>> &results,
 }
 
 static void findPathBetween(const VarLocResult &from, const VarLocResult &to,
+                            const std::vector<VarLocResult> &path,
                             const std::string &type, ordered_json &jResults) {
-    if (!from.isValid()) {
-        llvm::errs() << "Invalid FROM location!\n";
-        return;
-    }
-    if (!to.isValid()) {
-        llvm::errs() << "Invalid TO location!\n";
-        return;
-    }
+    requireTrue(from.isValid());
+    requireTrue(to.isValid());
 
     ICFG &icfg = Global.icfg;
     int u = icfg.getNodeId(from.fid, from.bid);
     int v = icfg.getNodeId(to.fid, to.bid);
 
-    llvm::errs() << "u: " << u << ", v: " << v << "\n";
+    std::vector<int> pathFilter;
+    for (const auto &loc : path) {
+        requireTrue(loc.isValid());
+        pathFilter.push_back(icfg.getNodeId(loc.fid, loc.bid));
+    }
 
     ICFGPathFinder pFinder(icfg);
-    pFinder.search(u, v, 3);
+    pFinder.search(u, v, pathFilter, 3);
 
     saveAsJson(pFinder.results, type, jResults);
 }
@@ -523,19 +522,32 @@ int main(int argc, const char **argv) {
             llvm::errs() << "[" << cnt << "/" << total << "] " << type << "\n";
 
             ordered_json &locations = result["locations"];
-            Location from, to;
+            VarLocResult from, to;
+            std::vector<VarLocResult> path;
             for (const ordered_json &loc : locations) {
                 std::string type = loc["type"].template get<std::string>();
+
+                bool isStmt = type == "stmt";
+                VarLocResult varLoc =
+                    locateVariable(locator, Location(loc), isStmt);
+                if (!varLoc.isValid()) {
+                    llvm::errs() << "Error: cannot locate " << type << " at "
+                                 << loc.dump(4, ' ', false,
+                                             json::error_handler_t::replace)
+                                 << "\n";
+                    exit(1);
+                }
+
                 if (type == "source") {
-                    from = Location(loc);
+                    from = varLoc;
                 } else if (type == "sink") {
-                    to = Location(loc);
+                    to = varLoc;
+                } else {
+                    path.emplace_back(varLoc);
                 }
             }
 
-            findPathBetween(locateVariable(locator, from),
-                            locateVariable(locator, to), type,
-                            output["results"]);
+            findPathBetween(from, to, path, type, output["results"]);
         }
 
         std::ofstream o(jsonResult);
