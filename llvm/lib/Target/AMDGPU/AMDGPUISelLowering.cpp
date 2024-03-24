@@ -3122,9 +3122,14 @@ SDValue AMDGPUTargetLowering::LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) cons
     // (cttz_zero_undef src) -> (S_FF1_I32_B64 src)
     SDValue NewOpr = DAG.getNode(NewOpc, SL, MVT::i32, Src);
     if (!ZeroUndef) {
-      const SDValue ConstVal = DAG.getConstant(
-          Op.getValueType().getScalarSizeInBits(), SL, MVT::i32);
-      NewOpr = DAG.getNode(ISD::UMIN, SL, MVT::i32, NewOpr, ConstVal);
+      // umin can be omitted if the operand is known to be non-zero.
+      auto KB = DAG.computeKnownBits(Src);
+      auto const IsNonZero = KB.countMinPopulation() > 0u;
+      if (!IsNonZero) {
+        const SDValue ConstVal = DAG.getConstant(
+            Op.getValueType().getScalarSizeInBits(), SL, MVT::i32);
+        NewOpr = DAG.getNode(ISD::UMIN, SL, MVT::i32, NewOpr, ConstVal);
+      }
     }
     return DAG.getNode(ISD::ZERO_EXTEND, SL, Src.getValueType(), NewOpr);
   }

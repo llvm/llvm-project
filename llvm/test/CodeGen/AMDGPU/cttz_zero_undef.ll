@@ -1561,7 +1561,6 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; VI-NEXT:    v_or_b32_e32 v0, v2, v0
 ; VI-NEXT:    v_or_b32_e32 v2, 0x10000, v0
 ; VI-NEXT:    v_ffbl_b32_e32 v2, v2
-; VI-NEXT:    v_min_u32_e32 v2, 32, v2
 ; VI-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v2, v1, v2, vcc
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
