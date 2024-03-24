@@ -162,9 +162,51 @@ static const ProbabilityTable ICmpWithOneTable{
 /// probably false given that what exactly is returned for nonzero values is
 /// not specified. Any kind of comparison other than equality we know
 /// nothing about.
-static const ProbabilityTable ICmpWithLibCallTable{
+static const ProbabilityTable ICmpWithCmpLibCallTable{
     {CmpInst::ICMP_EQ, {ZeroUntakenProb, ZeroTakenProb}},
     {CmpInst::ICMP_NE, {ZeroTakenProb, ZeroUntakenProb}},
+};
+
+// LibCall Heuristics
+static const uint32_t LIBH_TAKEN_WEIGHT = 999;
+static const uint32_t LIBH_NONTAKEN_WEIGHT = 1;
+static const BranchProbability
+    LibTakenProb(LIBH_TAKEN_WEIGHT, LIBH_TAKEN_WEIGHT + LIBH_NONTAKEN_WEIGHT);
+static const BranchProbability LibUntakenProb(LIBH_NONTAKEN_WEIGHT,
+                                              LIBH_TAKEN_WEIGHT +
+                                                  LIBH_NONTAKEN_WEIGHT);
+
+/// The return value of fread, fwrite, read and write will be mostly equal to
+/// the count parameter. So a comparison using eq is probably true when
+/// comparing return value and count parameter.
+static const ProbabilityTable ICmpWithRWLibcallEqTable{
+    {CmpInst::ICMP_EQ, {LibTakenProb, LibUntakenProb}},  /// X == Y -> likely
+    {CmpInst::ICMP_NE, {LibUntakenProb, LibTakenProb}},  /// X != Y -> Unlikely
+    {CmpInst::ICMP_SLT, {LibUntakenProb, LibTakenProb}}, /// X < Y -> Unlikely
+};
+
+/// The return value of fread and fwrite will be zero when size or count
+/// parameter is zero and it's less possible in program. The return value of
+/// read and write will only be -1 when they run failed. So a comparison
+/// with 0 or -1 is probably false.
+static const ProbabilityTable ICmpWithRWLibcallZeroTable{
+    {CmpInst::ICMP_EQ,
+     {LibUntakenProb, LibTakenProb}}, /// X == 0 or -1 -> Unlikely
+    {CmpInst::ICMP_NE,
+     {LibTakenProb, LibUntakenProb}}, /// X != 0 or -1 -> Likely
+};
+
+/// The return value of fread, fwrite, read and write will be mostly not less
+/// than 1. So a comparison that is slt 1 is probably false.
+static const ProbabilityTable ICmpWithRWLibcallOneTable{
+    {CmpInst::ICMP_SLT, {LibUntakenProb, LibTakenProb}}, /// X < 1 -> Unlikely
+};
+
+/// Most system library call like chmod, chown, mkdir etc will return 0 when
+/// they run successfully. So a comparison with 0 is probably true.
+static const ProbabilityTable ICmpWithSysLibcallTable{
+    {CmpInst::ICMP_EQ, {LibTakenProb, LibUntakenProb}}, /// X == 0 -> Likely
+    {CmpInst::ICMP_NE, {LibUntakenProb, LibTakenProb}}, /// X != 0 -> Unlikely
 };
 
 // Floating-Point Heuristics (FPH)
@@ -977,10 +1019,15 @@ bool BranchProbabilityInfo::calcZeroHeuristics(const BasicBlock *BB,
     return dyn_cast<ConstantInt>(V);
   };
 
-  Value *RHS = CI->getOperand(1);
-  ConstantInt *CV = GetConstantInt(RHS);
-  if (!CV)
+  auto IsSameValue = [&](Value *Lhs, Value *Rhs) -> bool {
+    if (Lhs == Rhs)
+      return true;
+    auto *LhsCV = GetConstantInt(Lhs);
+    auto *RhsCV = GetConstantInt(Rhs);
+    if (LhsCV && RhsCV && LhsCV->getZExtValue() == RhsCV->getZExtValue())
+      return true;
     return false;
+  };
 
   // If the LHS is the result of AND'ing a value with a single bit bitmask,
   // we don't have information about probabilities.
@@ -996,16 +1043,51 @@ bool BranchProbabilityInfo::calcZeroHeuristics(const BasicBlock *BB,
     if (CallInst *Call = dyn_cast<CallInst>(CI->getOperand(0)))
       if (Function *CalledFn = Call->getCalledFunction())
         TLI->getLibFunc(*CalledFn, Func);
-
+  Value *RHS = CI->getOperand(1);
+  ConstantInt *CV = GetConstantInt(RHS);
   ProbabilityTable::const_iterator Search;
-  if (Func == LibFunc_strcasecmp ||
-      Func == LibFunc_strcmp ||
-      Func == LibFunc_strncasecmp ||
-      Func == LibFunc_strncmp ||
-      Func == LibFunc_memcmp ||
-      Func == LibFunc_bcmp) {
-    Search = ICmpWithLibCallTable.find(CI->getPredicate());
-    if (Search == ICmpWithLibCallTable.end())
+  if (Func == LibFunc_fread || Func == LibFunc_fwrite || Func == LibFunc_read ||
+      Func == LibFunc_write) {
+    const uint32_t CountOpId = 2;
+    auto *Call = dyn_cast<CallInst>(CI->getOperand(0));
+    if (CV && (CV->isZero() || CV->isMinusOne())) {
+      Search = ICmpWithRWLibcallZeroTable.find(CI->getPredicate());
+      if (Search == ICmpWithRWLibcallZeroTable.end())
+        return false;
+    } else if (CV && CV->isOne()) {
+      Search = ICmpWithRWLibcallOneTable.find(CI->getPredicate());
+      if (Search == ICmpWithRWLibcallOneTable.end())
+        return false;
+    } else if (IsSameValue(Call->getOperand(CountOpId), RHS)) {
+      Search = ICmpWithRWLibcallEqTable.find(CI->getPredicate());
+      if (Search == ICmpWithRWLibcallEqTable.end())
+        return false;
+    } else
+      return false;
+  } else if (!CV)
+    return false;
+  else if (Func == LibFunc_strcasecmp || Func == LibFunc_strcmp ||
+           Func == LibFunc_strncasecmp || Func == LibFunc_strncmp ||
+           Func == LibFunc_memcmp || Func == LibFunc_bcmp) {
+    Search = ICmpWithCmpLibCallTable.find(CI->getPredicate());
+    if (Search == ICmpWithCmpLibCallTable.end())
+      return false;
+  } else if (CV->isZero() &&
+             (Func == LibFunc_chmod || Func == LibFunc_chown ||
+              Func == LibFunc_closedir || Func == LibFunc_fclose ||
+              Func == LibFunc_ferror || Func == LibFunc_fflush ||
+              Func == LibFunc_fseek || Func == LibFunc_fseeko ||
+              Func == LibFunc_fsetpos || Func == LibFunc_fstat ||
+              Func == LibFunc_fstatvfs || Func == LibFunc_ftrylockfile ||
+              Func == LibFunc_lchown || Func == LibFunc_lstat ||
+              Func == LibFunc_mkdir || Func == LibFunc_remove ||
+              Func == LibFunc_rename || Func == LibFunc_rmdir ||
+              Func == LibFunc_setvbuf || Func == LibFunc_stat ||
+              Func == LibFunc_statvfs || Func == LibFunc_unlink ||
+              Func == LibFunc_unsetenv || Func == LibFunc_utime ||
+              Func == LibFunc_utimes)) {
+    Search = ICmpWithSysLibcallTable.find(CI->getPredicate());
+    if (Search == ICmpWithSysLibcallTable.end())
       return false;
   } else if (CV->isZero()) {
     Search = ICmpWithZeroTable.find(CI->getPredicate());
