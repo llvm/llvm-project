@@ -212,3 +212,101 @@ body:             |
     %13:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
     GLOBAL_STORE_DWORD %13, %0.sub1, 0, 0, implicit $exec
 ...
+---
+
+# GFX9-LABEL: name: offset0_rebased
+# GFX9: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE %{{[0-9]+}}, %subreg.sub0, %{{[0-9]+}}, %subreg.sub1
+# GFX9: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]], -3072, 0
+# GFX9: [[GLOBAL_LOAD_DWORDX4_1:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]], 0, 0
+# GFX9: [[GLOBAL_LOAD_DWORDX4_2:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]], -4096, 0
+
+name: offset0_rebased
+body:             |
+  bb.0.entry:
+    %0:sreg_64_xexec = IMPLICIT_DEF
+    %1:vreg_64_align2 = IMPLICIT_DEF
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %1.sub0, 0, implicit $exec
+    %4:vgpr_32 = COPY %0.sub1
+    %5:vgpr_32, dead %6:sreg_64_xexec = V_ADDC_U32_e64 %4, %1.sub1, killed %3, 0, implicit $exec
+    %7:sreg_32 = S_MOV_B32 1024
+    %8:vgpr_32, %9:sreg_64_xexec = V_ADD_CO_U32_e64 %7, %2, 0, implicit $exec
+    %10:vgpr_32, %11:sreg_64 = V_ADDC_U32_e64 0, %5, killed %9, 0, implicit $exec
+    %12:vreg_64_align2 = REG_SEQUENCE killed %8, %subreg.sub0, killed %10, %subreg.sub1
+    %13:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 killed %12, 0, 0, implicit $exec
+    %14:sreg_32 = S_MOV_B32 4096
+    %15:vgpr_32, %16:sreg_64_xexec = V_ADD_CO_U32_e64 %14, %2, 0, implicit $exec
+    %17:vgpr_32, %18:sreg_64 = V_ADDC_U32_e64 0, %5, killed %16, 0, implicit $exec
+    %19:vreg_64_align2 = REG_SEQUENCE killed %15, %subreg.sub0, killed %17, %subreg.sub1
+    %20:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 killed %19, 0, 0, implicit $exec
+    %21:vreg_64_align2 = REG_SEQUENCE %2, %subreg.sub0, %5, %subreg.sub1
+    %22:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %21, 0, 0, implicit $exec
+...
+---
+
+# GFX9-LABEL: name: offset0_base
+# GFX9: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE %{{[0-9]+}}, %subreg.sub0, %{{[0-9]+}}, %subreg.sub1
+# GFX9: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]], 2048, 0
+# GFX9: [[GLOBAL_LOAD_DWORDX4_1:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]], 3072, 0
+# GFX9: [[GLOBAL_LOAD_DWORDX4_2:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]], 0, 0
+
+name: offset0_base
+body:             |
+  bb.0.entry:
+    %0:sreg_64_xexec = IMPLICIT_DEF
+    %1:vreg_64_align2 = IMPLICIT_DEF
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %1.sub0, 0, implicit $exec
+    %4:vgpr_32 = COPY %0.sub1
+    %5:vgpr_32, dead %6:sreg_64_xexec = V_ADDC_U32_e64 %4, %1.sub1, killed %3, 0, implicit $exec
+    %7:sreg_32 = S_MOV_B32 2048
+    %8:vgpr_32, %9:sreg_64_xexec = V_ADD_CO_U32_e64 %7, %2, 0, implicit $exec
+    %10:vgpr_32, %11:sreg_64 = V_ADDC_U32_e64 0, %5, killed %9, 0, implicit $exec
+    %12:vreg_64_align2 = REG_SEQUENCE killed %8, %subreg.sub0, killed %10, %subreg.sub1
+    %13:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 killed %12, 0, 0, implicit $exec
+    %14:sreg_32 = S_MOV_B32 3072
+    %15:vgpr_32, %16:sreg_64_xexec = V_ADD_CO_U32_e64 %14, %2, 0, implicit $exec
+    %17:vgpr_32, %18:sreg_64 = V_ADDC_U32_e64 0, %5, killed %16, 0, implicit $exec
+    %19:vreg_64_align2 = REG_SEQUENCE killed %15, %subreg.sub0, killed %17, %subreg.sub1
+    %20:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 killed %19, 0, 0, implicit $exec
+    %21:vreg_64_align2 = REG_SEQUENCE %2, %subreg.sub0, %5, %subreg.sub1
+    %22:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %21, 0, 0, implicit $exec
+...
+
+---
+
+# GFX9-LABEL: name: two_bases
+# GFX9: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE %{{[0-9]+}}, %subreg.sub0, %{{[0-9]+}}, %subreg.sub1
+# GFX9: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]], -4096, 0
+# GFX9: [[GLOBAL_LOAD_DWORDX4_1:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]],  0, 0
+# GFX9: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE %{{[0-9]+}}, %subreg.sub0, %{{[0-9]+}}, %subreg.sub1
+# GFX9: [[GLOBAL_LOAD_DWORDX4_2:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE5]], -4096, 0
+# GFX9: [[GLOBAL_LOAD_DWORDX4_3:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE5]], 0, 0
+
+
+name: two_bases
+body:             |
+  bb.0.entry:
+    %0:sreg_64_xexec = IMPLICIT_DEF
+    %1:vreg_64_align2 = IMPLICIT_DEF
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %1.sub0, 0, implicit $exec
+    %4:vgpr_32 = COPY %0.sub1
+    %5:vgpr_32, dead %6:sreg_64_xexec = V_ADDC_U32_e64 %4, %1.sub1, killed %3, 0, implicit $exec
+    %7:vreg_64_align2 = REG_SEQUENCE %2, %subreg.sub0, %5, %subreg.sub1
+    %8:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %7, 0, 0, implicit $exec
+    %9:vgpr_32 = V_LSHLREV_B32_e64 2, %10:vgpr_32(s32), implicit $exec
+    %11:sreg_32 = S_MOV_B32 4096
+    %12:vgpr_32, %13:sreg_64_xexec = V_ADD_CO_U32_e64 %11, %2, 0, implicit $exec
+    %14:vgpr_32, %15:sreg_64 = V_ADDC_U32_e64 0, %5, killed %13, 0, implicit $exec
+    %16:vreg_64_align2 = REG_SEQUENCE killed %12, %subreg.sub0, killed %14, %subreg.sub1
+    %17:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 killed %16, 0, 0, implicit $exec
+    %18:sreg_32 = S_MOV_B32 8192
+    %19:vgpr_32, %20:sreg_64_xexec = V_ADD_CO_U32_e64 %18, %2, 0, implicit $exec
+    %21:vgpr_32, %22:sreg_64 = V_ADDC_U32_e64 0, %5, killed %20, 0, implicit $exec
+    %23:vreg_64_align2 = REG_SEQUENCE killed %19, %subreg.sub0, killed %21, %subreg.sub1
+    %24:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 killed %23, 0, 0, implicit $exec
+    %25:sreg_32 = S_MOV_B32 12288
+    %26:vgpr_32, %27:sreg_64_xexec = V_ADD_CO_U32_e64 %25, %2, 0, implicit $exec
+    %28:vgpr_32, %29:sreg_64 = V_ADDC_U32_e64 0, %5, killed %27, 0, implicit $exec
+    %30:vreg_64_align2 = REG_SEQUENCE killed %26, %subreg.sub0, killed %28, %subreg.sub1
+    %31:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 killed %30, 0, 0, implicit $exec
+
+...
