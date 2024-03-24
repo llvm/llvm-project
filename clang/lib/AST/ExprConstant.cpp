@@ -7697,8 +7697,19 @@ protected:
 
   bool IsConstantEvaluatedBuiltinCall(const CallExpr *E) {
     unsigned BuiltinOp = E->getBuiltinCallee();
-    return BuiltinOp != 0 &&
-           Info.Ctx.BuiltinInfo.isConstantEvaluated(BuiltinOp);
+
+    if (BuiltinOp == 0 || !Info.Ctx.BuiltinInfo.isConstantEvaluated(BuiltinOp))
+      return false;
+
+    if (const auto* CD = E->getCalleeDecl()) {
+      if (const auto* FD = CD->getAsFunction()) {
+        if (FD->isConstexpr())
+          return true;
+        if (const auto* BA = FD->getAttr<BuiltinAttr>())
+          return BA->isImplicit();
+      }
+    }
+    return true;
   }
 
 public:

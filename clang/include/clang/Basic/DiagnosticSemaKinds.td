@@ -5838,6 +5838,17 @@ def warn_unavailable_def : Warning<
 def warn_deprecated_builtin : Warning<
   "builtin %0 is deprecated; use %1 instead">,
   InGroup<DeprecatedBuiltins>;
+def err_unknown_builtin : Error<"unknown builtin">;
+def warn_unsupported_builtin : Warning<"builtin is not supported">,
+  InGroup<UnsupportedBuiltin>;
+def warn_unsupported_on_member_function : Warning<
+  "attribute 'builtin' is not supported on member functions">,
+  InGroup<UnsupportedBuiltin>;
+def err_unexpected_param_count : Error<
+  "expected %0 argument%select{s|}1 but got %2">;
+def err_signature_mismatch : Error<
+  "function signature does not match the signature of the builtin">;
+def note_expected_signature : Note<"expected signature is %0">;
 def err_unavailable : Error<"%0 is unavailable">;
 def err_property_method_unavailable :
     Error<"property access is using %0 method which is unavailable">;

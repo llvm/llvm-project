@@ -33,11 +33,9 @@ typedef char __v8qi __attribute__((__vector_size__(8)));
 ///
 /// This intrinsic corresponds to the <c> EMMS </c> instruction.
 ///
-static __inline__ void __attribute__((__always_inline__, __nodebug__,
-                                      __target__("mmx,no-evex512")))
-_mm_empty(void) {
-  __builtin_ia32_emms();
-}
+static __inline__ void
+    __attribute__((__always_inline__, __nodebug__, __target__("mmx,no-evex512"),
+                   __builtin__("__builtin_ia32_emms"))) _mm_empty(void);
 
 /// Constructs a 64-bit integer vector, setting the lower 32 bits to the
 ///    value of the 32-bit integer parameter and setting the upper 32 bits to 0.
@@ -1553,4 +1551,3 @@ _mm_setr_pi8(char __b0, char __b1, char __b2, char __b3, char __b4, char __b5,
 #define _m_pcmpgtd _mm_cmpgt_pi32
 
 #endif /* __MMINTRIN_H */
-

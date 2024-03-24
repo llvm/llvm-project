@@ -3603,6 +3603,12 @@ unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
     BuiltinID = BAA->getBuiltinName()->getBuiltinID();
   } else if (const auto *A = getAttr<BuiltinAttr>()) {
     BuiltinID = A->getID();
+
+    // This is an explicit attribute, which means that this has been declared as
+    // a builtin by the user. In this case we can assume that the function is
+    // equivalent to the specified builtin.
+    if (!A->isImplicit())
+      return BuiltinID;
   }
 
   if (!BuiltinID)
