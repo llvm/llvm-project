@@ -10259,6 +10259,36 @@ INTERCEPTOR(int, cpuset_getaffinity, int level, int which, __int64_t id, SIZE_T 
 #define INIT_CPUSET_GETAFFINITY
 #endif
 
+#if SANITIZER_INTERCEPT_PTRACE_BSD
+INTERCEPTOR(int, ptrace, int request, pid_t pid, uptr addr, int data) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, ptrace, request, pid, addr, data);
+
+  if (request == ptrace_pt_io) {
+    // for PT_IO requests, data is ignored for both platforms
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, reinterpret_cast<void *>(addr), struct_ptrace_ptrace_io_desc_struct_sz);
+  } else if (request == ptrace_pt_lwpstatus) {
+    if (struct_ptrace_ptrace_lwpinfo_struct_sz != static_cast<u64>(data))
+      VPrintf(2, "Invalid data argument %d for request %d\n", data, request);
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, reinterpret_cast<void *>(addr), struct_ptrace_ptrace_lwpinfo_struct_sz);
+  }
+
+  int res = REAL(ptrace)(request, pid, addr, data);
+
+  if (!res) {
+    if (request == ptrace_pt_io) {
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, reinterpret_cast<void *>(addr), struct_ptrace_ptrace_io_desc_struct_sz);
+    } else if (request == ptrace_pt_lwpstatus) {
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, reinterpret_cast<void *>(addr), struct_ptrace_ptrace_lwpinfo_struct_sz);
+    }
+  }
+  return res;
+}
+#define INIT_PTRACE_BSD COMMON_INTERCEPT_FUNCTION(ptrace);
+#else
+#define INIT_PTRACE_BSD
+#endif
+
 #include "sanitizer_common_interceptors_netbsd_compat.inc"
 
 namespace __sanitizer {
@@ -10578,6 +10608,7 @@ static void InitializeCommonInterceptors() {
   INIT___XUNAME;
   INIT_ARGP_PARSE;
   INIT_CPUSET_GETAFFINITY;
+  INIT_PTRACE_BSD;
 
   INIT___PRINTF_CHK;
 }
