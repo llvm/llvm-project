@@ -1671,26 +1671,76 @@ define void @global_atomic_sub_i64_noret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_sub_x2 v[2:3], v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    buffer_load_dwordx2 v[6:7], v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB24_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_sub_i32_e32 v4, vcc, v6, v2
+; SI-NEXT:    v_subb_u32_e32 v5, vcc, v7, v3, vcc
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v7
+; SI-NEXT:    v_mov_b32_e32 v10, v6
+; SI-NEXT:    v_mov_b32_e32 v9, v5
+; SI-NEXT:    v_mov_b32_e32 v8, v4
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[8:11], v[0:1], s[4:7], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[8:9], v[6:7]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    v_mov_b32_e32 v6, v8
+; SI-NEXT:    v_mov_b32_e32 v7, v9
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB24_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: global_atomic_sub_i64_noret:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_atomic_sub_x2 v[0:1], v[2:3]
+; VI-NEXT:    flat_load_dwordx2 v[6:7], v[0:1]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB24_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_sub_u32_e32 v4, vcc, v6, v2
+; VI-NEXT:    v_subb_u32_e32 v5, vcc, v7, v3, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; VI-NEXT:    v_mov_b32_e32 v7, v5
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB24_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_sub_i64_noret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_sub_x2 v[0:1], v[2:3], off
+; GFX9-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB24_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_sub_co_u32_e32 v4, vcc, v6, v2
+; GFX9-NEXT:    v_subb_co_u32_e32 v5, vcc, v7, v3, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB24_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = atomicrmw sub ptr addrspace(1) %ptr, i64 %in seq_cst
   ret void
@@ -1704,9 +1754,29 @@ define void @global_atomic_sub_i64_noret_offset(ptr addrspace(1) %out, i64 %in) 
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_sub_x2 v[2:3], v[0:1], s[4:7], 0 addr64 offset:32
+; SI-NEXT:    buffer_load_dwordx2 v[6:7], v[0:1], s[4:7], 0 addr64 offset:32
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB25_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_sub_i32_e32 v4, vcc, v6, v2
+; SI-NEXT:    v_subb_u32_e32 v5, vcc, v7, v3, vcc
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v7
+; SI-NEXT:    v_mov_b32_e32 v10, v6
+; SI-NEXT:    v_mov_b32_e32 v9, v5
+; SI-NEXT:    v_mov_b32_e32 v8, v4
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[8:11], v[0:1], s[4:7], 0 addr64 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[8:9], v[6:7]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    v_mov_b32_e32 v6, v8
+; SI-NEXT:    v_mov_b32_e32 v7, v9
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB25_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1715,17 +1785,47 @@ define void @global_atomic_sub_i64_noret_offset(ptr addrspace(1) %out, i64 %in) 
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_sub_x2 v[0:1], v[2:3]
+; VI-NEXT:    flat_load_dwordx2 v[6:7], v[0:1]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB25_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_sub_u32_e32 v4, vcc, v6, v2
+; VI-NEXT:    v_subb_u32_e32 v5, vcc, v7, v3, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; VI-NEXT:    v_mov_b32_e32 v7, v5
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB25_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_sub_i64_noret_offset:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_sub_x2 v[0:1], v[2:3], off offset:32
+; GFX9-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off offset:32
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB25_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_sub_co_u32_e32 v4, vcc, v6, v2
+; GFX9-NEXT:    v_subb_co_u32_e32 v5, vcc, v7, v3, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB25_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %tmp0 = atomicrmw sub ptr addrspace(1) %gep, i64 %in seq_cst
@@ -1736,32 +1836,88 @@ define i64 @global_atomic_sub_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-LABEL: global_atomic_sub_i64_ret:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v6, v3
+; SI-NEXT:    v_mov_b32_e32 v7, v2
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_sub_x2 v[2:3], v[0:1], s[4:7], 0 addr64 glc
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[4:5], s[4:7], 0 addr64
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB26_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v1
+; SI-NEXT:    v_mov_b32_e32 v10, v0
+; SI-NEXT:    v_sub_i32_e32 v8, vcc, v10, v7
+; SI-NEXT:    v_subb_u32_e32 v9, vcc, v11, v6, vcc
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v0, v8
+; SI-NEXT:    v_mov_b32_e32 v1, v9
+; SI-NEXT:    v_mov_b32_e32 v2, v10
+; SI-NEXT:    v_mov_b32_e32 v3, v11
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], v[4:5], s[4:7], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[10:11]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB26_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: global_atomic_sub_i64_ret:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_atomic_sub_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    flat_load_dwordx2 v[4:5], v[0:1]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB26_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v7, v5
+; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    v_sub_u32_e32 v4, vcc, v6, v2
+; VI-NEXT:    v_subb_u32_e32 v5, vcc, v7, v3, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB26_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
+; VI-NEXT:    v_mov_b32_e32 v0, v4
+; VI-NEXT:    v_mov_b32_e32 v1, v5
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_sub_i64_ret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_sub_x2 v[0:1], v[0:1], v[2:3], off glc
+; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB26_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    v_sub_co_u32_e32 v4, vcc, v6, v2
+; GFX9-NEXT:    v_subb_co_u32_e32 v5, vcc, v7, v3, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB26_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v0, v4
+; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw sub ptr addrspace(1) %ptr, i64 %in seq_cst
   ret i64 %result
@@ -1771,34 +1927,88 @@ define i64 @global_atomic_sub_i64_ret_offset(ptr addrspace(1) %out, i64 %in) {
 ; SI-LABEL: global_atomic_sub_i64_ret_offset:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v6, v3
+; SI-NEXT:    v_mov_b32_e32 v7, v2
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_sub_x2 v[2:3], v[0:1], s[4:7], 0 addr64 offset:32 glc
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[4:5], s[4:7], 0 addr64 offset:32
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB27_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v1
+; SI-NEXT:    v_mov_b32_e32 v10, v0
+; SI-NEXT:    v_sub_i32_e32 v8, vcc, v10, v7
+; SI-NEXT:    v_subb_u32_e32 v9, vcc, v11, v6, vcc
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v0, v8
+; SI-NEXT:    v_mov_b32_e32 v1, v9
+; SI-NEXT:    v_mov_b32_e32 v2, v10
+; SI-NEXT:    v_mov_b32_e32 v3, v11
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], v[4:5], s[4:7], 0 addr64 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[10:11]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB27_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: global_atomic_sub_i64_ret_offset:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_sub_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[4:5]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB27_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v9, v1
+; VI-NEXT:    v_mov_b32_e32 v8, v0
+; VI-NEXT:    v_sub_u32_e32 v6, vcc, v8, v2
+; VI-NEXT:    v_subb_u32_e32 v7, vcc, v9, v3, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[6:9] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[8:9]
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB27_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_sub_i64_ret_offset:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_sub_x2 v[0:1], v[0:1], v[2:3], off offset:32 glc
+; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off offset:32
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB27_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    v_sub_co_u32_e32 v4, vcc, v6, v2
+; GFX9-NEXT:    v_subb_co_u32_e32 v5, vcc, v7, v3, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB27_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v0, v4
+; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %result = atomicrmw sub ptr addrspace(1) %gep, i64 %in seq_cst
@@ -1810,25 +2020,43 @@ define amdgpu_gfx void @global_atomic_sub_i64_noret_scalar(ptr addrspace(1) inre
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
-; SI-NEXT:    s_mov_b32 s34, s7
-; SI-NEXT:    s_mov_b32 s35, s6
+; SI-NEXT:    v_writelane_b32 v9, s6, 0
+; SI-NEXT:    v_writelane_b32 v9, s7, 1
+; SI-NEXT:    s_mov_b32 s35, s7
+; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s35
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    buffer_load_dwordx2 v[2:3], off, s[4:7], 0
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:    v_mov_b32_e32 v4, s35
+; SI-NEXT:  .LBB28_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_sub_x2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    v_subrev_i32_e32 v0, vcc, s34, v2
+; SI-NEXT:    v_subb_u32_e32 v1, vcc, v3, v4, vcc
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v8, v3
+; SI-NEXT:    v_mov_b32_e32 v7, v2
+; SI-NEXT:    v_mov_b32_e32 v6, v1
+; SI-NEXT:    v_mov_b32_e32 v5, v0
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[5:8], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[5:6], v[2:3]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    v_mov_b32_e32 v2, v5
+; SI-NEXT:    v_mov_b32_e32 v3, v6
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB28_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v9, 1
+; SI-NEXT:    v_readlane_b32 s6, v9, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -1836,24 +2064,54 @@ define amdgpu_gfx void @global_atomic_sub_i64_noret_scalar(ptr addrspace(1) inre
 ; VI-LABEL: global_atomic_sub_i64_noret_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
-; VI-NEXT:    v_mov_b32_e32 v2, s4
-; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    flat_atomic_sub_x2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v4, s4
+; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:    v_mov_b32_e32 v6, s7
+; VI-NEXT:    v_mov_b32_e32 v5, s5
+; VI-NEXT:  .LBB28_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_subrev_u32_e32 v0, vcc, s6, v2
+; VI-NEXT:    v_subb_u32_e32 v1, vcc, v3, v6, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; VI-NEXT:    v_mov_b32_e32 v3, v1
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    v_mov_b32_e32 v2, v0
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB28_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_sub_i64_noret_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_sub_x2 v2, v[0:1], s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:    global_load_dwordx2 v[2:3], v4, s[4:5]
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:    v_mov_b32_e32 v5, s7
+; GFX9-NEXT:  .LBB28_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_subrev_co_u32_e32 v0, vcc, s6, v2
+; GFX9-NEXT:    v_subb_co_u32_e32 v1, vcc, v3, v5, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[4:5] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v3, v1
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    v_mov_b32_e32 v2, v0
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB28_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = atomicrmw sub ptr addrspace(1) %ptr, i64 %in seq_cst
   ret void
@@ -1864,23 +2122,43 @@ define amdgpu_gfx void @global_atomic_sub_i64_noret_offset_scalar(ptr addrspace(
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
-; SI-NEXT:    v_mov_b32_e32 v0, s6
-; SI-NEXT:    v_mov_b32_e32 v1, s7
+; SI-NEXT:    v_writelane_b32 v9, s6, 0
+; SI-NEXT:    v_writelane_b32 v9, s7, 1
+; SI-NEXT:    s_mov_b32 s35, s7
+; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    buffer_load_dwordx2 v[2:3], off, s[4:7], 0 offset:32
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:    v_mov_b32_e32 v4, s35
+; SI-NEXT:  .LBB29_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_sub_x2 v[0:1], off, s[4:7], 0 offset:32
+; SI-NEXT:    v_subrev_i32_e32 v0, vcc, s34, v2
+; SI-NEXT:    v_subb_u32_e32 v1, vcc, v3, v4, vcc
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v8, v3
+; SI-NEXT:    v_mov_b32_e32 v7, v2
+; SI-NEXT:    v_mov_b32_e32 v6, v1
+; SI-NEXT:    v_mov_b32_e32 v5, v0
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[5:8], off, s[4:7], 0 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[5:6], v[2:3]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    v_mov_b32_e32 v2, v5
+; SI-NEXT:    v_mov_b32_e32 v3, v6
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB29_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v9, 1
+; SI-NEXT:    v_readlane_b32 s6, v9, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -1890,24 +2168,52 @@ define amdgpu_gfx void @global_atomic_sub_i64_noret_offset_scalar(ptr addrspace(
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s34, s4, 32
 ; VI-NEXT:    s_addc_u32 s35, s5, 0
-; VI-NEXT:    v_mov_b32_e32 v2, s34
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
-; VI-NEXT:    v_mov_b32_e32 v3, s35
-; VI-NEXT:    flat_atomic_sub_x2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v4, s34
+; VI-NEXT:    v_mov_b32_e32 v5, s35
+; VI-NEXT:    flat_load_dwordx2 v[2:3], v[4:5]
+; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:    v_mov_b32_e32 v6, s7
+; VI-NEXT:  .LBB29_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_subrev_u32_e32 v0, vcc, s6, v2
+; VI-NEXT:    v_subb_u32_e32 v1, vcc, v3, v6, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; VI-NEXT:    v_mov_b32_e32 v3, v1
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    v_mov_b32_e32 v2, v0
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB29_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_sub_i64_noret_offset_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_sub_x2 v2, v[0:1], s[4:5] offset:32
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:    global_load_dwordx2 v[2:3], v4, s[4:5] offset:32
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:    v_mov_b32_e32 v5, s7
+; GFX9-NEXT:  .LBB29_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_subrev_co_u32_e32 v0, vcc, s6, v2
+; GFX9-NEXT:    v_subb_co_u32_e32 v1, vcc, v3, v5, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[4:5] offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v3, v1
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    v_mov_b32_e32 v2, v0
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB29_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %tmp0 = atomicrmw sub ptr addrspace(1) %gep, i64 %in seq_cst
@@ -1919,25 +2225,43 @@ define amdgpu_gfx i64 @global_atomic_sub_i64_ret_scalar(ptr addrspace(1) inreg %
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
-; SI-NEXT:    s_mov_b32 s34, s7
-; SI-NEXT:    s_mov_b32 s35, s6
+; SI-NEXT:    v_writelane_b32 v9, s6, 0
+; SI-NEXT:    v_writelane_b32 v9, s7, 1
+; SI-NEXT:    s_mov_b32 s35, s7
+; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s35
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:    v_mov_b32_e32 v4, s35
+; SI-NEXT:  .LBB30_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_sub_x2 v[0:1], off, s[4:7], 0 glc
+; SI-NEXT:    v_mov_b32_e32 v8, v1
+; SI-NEXT:    v_mov_b32_e32 v7, v0
+; SI-NEXT:    v_subrev_i32_e32 v5, vcc, s34, v7
+; SI-NEXT:    v_subb_u32_e32 v6, vcc, v8, v4, vcc
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v0, v5
+; SI-NEXT:    v_mov_b32_e32 v1, v6
+; SI-NEXT:    v_mov_b32_e32 v2, v7
+; SI-NEXT:    v_mov_b32_e32 v3, v8
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[7:8]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB30_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v9, 1
+; SI-NEXT:    v_readlane_b32 s6, v9, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -1945,24 +2269,54 @@ define amdgpu_gfx i64 @global_atomic_sub_i64_ret_scalar(ptr addrspace(1) inreg %
 ; VI-LABEL: global_atomic_sub_i64_ret_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v2, s4
+; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:    v_mov_b32_e32 v4, s7
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    flat_atomic_sub_x2 v[0:1], v[2:3], v[0:1] glc
+; VI-NEXT:  .LBB30_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v8, v1
+; VI-NEXT:    v_mov_b32_e32 v7, v0
+; VI-NEXT:    v_subrev_u32_e32 v5, vcc, s6, v7
+; VI-NEXT:    v_subb_u32_e32 v6, vcc, v8, v4, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[5:8] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[7:8]
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB30_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_sub_i64_ret_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_sub_x2 v[0:1], v2, v[0:1], s[4:5] glc
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v2, s[4:5]
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:    v_mov_b32_e32 v3, s7
+; GFX9-NEXT:  .LBB30_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v7, v1
+; GFX9-NEXT:    v_mov_b32_e32 v6, v0
+; GFX9-NEXT:    v_subrev_co_u32_e32 v4, vcc, s6, v6
+; GFX9-NEXT:    v_subb_co_u32_e32 v5, vcc, v7, v3, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v2, v[4:7], s[4:5] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[6:7]
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB30_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw sub ptr addrspace(1) %ptr, i64 %in seq_cst
   ret i64 %result
@@ -1973,23 +2327,43 @@ define amdgpu_gfx i64 @global_atomic_sub_i64_ret_offset_scalar(ptr addrspace(1) 
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
-; SI-NEXT:    v_mov_b32_e32 v0, s6
-; SI-NEXT:    v_mov_b32_e32 v1, s7
+; SI-NEXT:    v_writelane_b32 v9, s6, 0
+; SI-NEXT:    v_writelane_b32 v9, s7, 1
+; SI-NEXT:    s_mov_b32 s35, s7
+; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0 offset:32
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:    v_mov_b32_e32 v4, s35
+; SI-NEXT:  .LBB31_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_sub_x2 v[0:1], off, s[4:7], 0 offset:32 glc
+; SI-NEXT:    v_mov_b32_e32 v8, v1
+; SI-NEXT:    v_mov_b32_e32 v7, v0
+; SI-NEXT:    v_subrev_i32_e32 v5, vcc, s34, v7
+; SI-NEXT:    v_subb_u32_e32 v6, vcc, v8, v4, vcc
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v0, v5
+; SI-NEXT:    v_mov_b32_e32 v1, v6
+; SI-NEXT:    v_mov_b32_e32 v2, v7
+; SI-NEXT:    v_mov_b32_e32 v3, v8
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], off, s[4:7], 0 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[7:8]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB31_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v9, 1
+; SI-NEXT:    v_readlane_b32 s6, v9, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -2000,23 +2374,51 @@ define amdgpu_gfx i64 @global_atomic_sub_i64_ret_offset_scalar(ptr addrspace(1) 
 ; VI-NEXT:    s_add_u32 s34, s4, 32
 ; VI-NEXT:    s_addc_u32 s35, s5, 0
 ; VI-NEXT:    v_mov_b32_e32 v2, s34
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
 ; VI-NEXT:    v_mov_b32_e32 v3, s35
-; VI-NEXT:    flat_atomic_sub_x2 v[0:1], v[2:3], v[0:1] glc
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[2:3]
+; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:    v_mov_b32_e32 v4, s7
+; VI-NEXT:  .LBB31_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v8, v1
+; VI-NEXT:    v_mov_b32_e32 v7, v0
+; VI-NEXT:    v_subrev_u32_e32 v5, vcc, s6, v7
+; VI-NEXT:    v_subb_u32_e32 v6, vcc, v8, v4, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[5:8] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[7:8]
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB31_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_sub_i64_ret_offset_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_sub_x2 v[0:1], v2, v[0:1], s[4:5] offset:32 glc
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v2, s[4:5] offset:32
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:    v_mov_b32_e32 v3, s7
+; GFX9-NEXT:  .LBB31_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v7, v1
+; GFX9-NEXT:    v_mov_b32_e32 v6, v0
+; GFX9-NEXT:    v_subrev_co_u32_e32 v4, vcc, s6, v6
+; GFX9-NEXT:    v_subb_co_u32_e32 v5, vcc, v7, v3, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v2, v[4:7], s[4:5] offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[6:7]
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB31_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %result = atomicrmw sub ptr addrspace(1) %gep, i64 %in seq_cst
@@ -2035,26 +2437,76 @@ define void @global_atomic_and_i64_noret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_and_x2 v[2:3], v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    buffer_load_dwordx2 v[6:7], v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB32_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_and_b32_e32 v5, v7, v3
+; SI-NEXT:    v_and_b32_e32 v4, v6, v2
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v7
+; SI-NEXT:    v_mov_b32_e32 v10, v6
+; SI-NEXT:    v_mov_b32_e32 v9, v5
+; SI-NEXT:    v_mov_b32_e32 v8, v4
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[8:11], v[0:1], s[4:7], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[8:9], v[6:7]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    v_mov_b32_e32 v6, v8
+; SI-NEXT:    v_mov_b32_e32 v7, v9
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB32_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: global_atomic_and_i64_noret:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_atomic_and_x2 v[0:1], v[2:3]
+; VI-NEXT:    flat_load_dwordx2 v[6:7], v[0:1]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB32_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_and_b32_e32 v5, v7, v3
+; VI-NEXT:    v_and_b32_e32 v4, v6, v2
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; VI-NEXT:    v_mov_b32_e32 v7, v5
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB32_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_and_i64_noret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_and_x2 v[0:1], v[2:3], off
+; GFX9-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB32_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_and_b32_e32 v5, v7, v3
+; GFX9-NEXT:    v_and_b32_e32 v4, v6, v2
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB32_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = atomicrmw and ptr addrspace(1) %ptr, i64 %in seq_cst
   ret void
@@ -2068,9 +2520,29 @@ define void @global_atomic_and_i64_noret_offset(ptr addrspace(1) %out, i64 %in) 
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_and_x2 v[2:3], v[0:1], s[4:7], 0 addr64 offset:32
+; SI-NEXT:    buffer_load_dwordx2 v[6:7], v[0:1], s[4:7], 0 addr64 offset:32
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB33_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_and_b32_e32 v5, v7, v3
+; SI-NEXT:    v_and_b32_e32 v4, v6, v2
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v7
+; SI-NEXT:    v_mov_b32_e32 v10, v6
+; SI-NEXT:    v_mov_b32_e32 v9, v5
+; SI-NEXT:    v_mov_b32_e32 v8, v4
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[8:11], v[0:1], s[4:7], 0 addr64 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[8:9], v[6:7]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    v_mov_b32_e32 v6, v8
+; SI-NEXT:    v_mov_b32_e32 v7, v9
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB33_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2079,17 +2551,47 @@ define void @global_atomic_and_i64_noret_offset(ptr addrspace(1) %out, i64 %in) 
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_and_x2 v[0:1], v[2:3]
+; VI-NEXT:    flat_load_dwordx2 v[6:7], v[0:1]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB33_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_and_b32_e32 v5, v7, v3
+; VI-NEXT:    v_and_b32_e32 v4, v6, v2
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; VI-NEXT:    v_mov_b32_e32 v7, v5
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB33_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_and_i64_noret_offset:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_and_x2 v[0:1], v[2:3], off offset:32
+; GFX9-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off offset:32
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB33_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_and_b32_e32 v5, v7, v3
+; GFX9-NEXT:    v_and_b32_e32 v4, v6, v2
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB33_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %tmp0 = atomicrmw and ptr addrspace(1) %gep, i64 %in seq_cst
@@ -2100,32 +2602,88 @@ define i64 @global_atomic_and_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-LABEL: global_atomic_and_i64_ret:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v6, v3
+; SI-NEXT:    v_mov_b32_e32 v7, v2
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_and_x2 v[2:3], v[0:1], s[4:7], 0 addr64 glc
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[4:5], s[4:7], 0 addr64
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB34_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v1
+; SI-NEXT:    v_mov_b32_e32 v10, v0
+; SI-NEXT:    v_and_b32_e32 v9, v11, v6
+; SI-NEXT:    v_and_b32_e32 v8, v10, v7
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v0, v8
+; SI-NEXT:    v_mov_b32_e32 v1, v9
+; SI-NEXT:    v_mov_b32_e32 v2, v10
+; SI-NEXT:    v_mov_b32_e32 v3, v11
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], v[4:5], s[4:7], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[10:11]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB34_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: global_atomic_and_i64_ret:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_atomic_and_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    flat_load_dwordx2 v[4:5], v[0:1]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB34_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v7, v5
+; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    v_and_b32_e32 v5, v7, v3
+; VI-NEXT:    v_and_b32_e32 v4, v6, v2
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB34_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
+; VI-NEXT:    v_mov_b32_e32 v0, v4
+; VI-NEXT:    v_mov_b32_e32 v1, v5
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_and_i64_ret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_and_x2 v[0:1], v[0:1], v[2:3], off glc
+; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB34_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    v_and_b32_e32 v5, v7, v3
+; GFX9-NEXT:    v_and_b32_e32 v4, v6, v2
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB34_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v0, v4
+; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw and ptr addrspace(1) %ptr, i64 %in seq_cst
   ret i64 %result
@@ -2135,34 +2693,88 @@ define i64 @global_atomic_and_i64_ret_offset(ptr addrspace(1) %out, i64 %in) {
 ; SI-LABEL: global_atomic_and_i64_ret_offset:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v6, v3
+; SI-NEXT:    v_mov_b32_e32 v7, v2
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_and_x2 v[2:3], v[0:1], s[4:7], 0 addr64 offset:32 glc
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[4:5], s[4:7], 0 addr64 offset:32
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB35_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v1
+; SI-NEXT:    v_mov_b32_e32 v10, v0
+; SI-NEXT:    v_and_b32_e32 v9, v11, v6
+; SI-NEXT:    v_and_b32_e32 v8, v10, v7
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v0, v8
+; SI-NEXT:    v_mov_b32_e32 v1, v9
+; SI-NEXT:    v_mov_b32_e32 v2, v10
+; SI-NEXT:    v_mov_b32_e32 v3, v11
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], v[4:5], s[4:7], 0 addr64 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[10:11]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB35_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: global_atomic_and_i64_ret_offset:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_and_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[4:5]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB35_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v9, v1
+; VI-NEXT:    v_mov_b32_e32 v8, v0
+; VI-NEXT:    v_and_b32_e32 v7, v9, v3
+; VI-NEXT:    v_and_b32_e32 v6, v8, v2
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[6:9] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[8:9]
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB35_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_and_i64_ret_offset:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_and_x2 v[0:1], v[0:1], v[2:3], off offset:32 glc
+; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off offset:32
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB35_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    v_and_b32_e32 v5, v7, v3
+; GFX9-NEXT:    v_and_b32_e32 v4, v6, v2
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB35_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v0, v4
+; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %result = atomicrmw and ptr addrspace(1) %gep, i64 %in seq_cst
@@ -2174,25 +2786,42 @@ define amdgpu_gfx void @global_atomic_and_i64_noret_scalar(ptr addrspace(1) inre
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
+; SI-NEXT:    v_writelane_b32 v8, s6, 0
+; SI-NEXT:    v_writelane_b32 v8, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s7
 ; SI-NEXT:    s_mov_b32 s35, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s35
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    buffer_load_dwordx2 v[2:3], off, s[4:7], 0
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:  .LBB36_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_and_x2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    v_and_b32_e32 v1, s34, v3
+; SI-NEXT:    v_and_b32_e32 v0, s35, v2
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v7, v3
+; SI-NEXT:    v_mov_b32_e32 v6, v2
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[4:7], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[2:3]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    v_mov_b32_e32 v2, v4
+; SI-NEXT:    v_mov_b32_e32 v3, v5
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB36_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v8, 1
+; SI-NEXT:    v_readlane_b32 s6, v8, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -2200,24 +2829,52 @@ define amdgpu_gfx void @global_atomic_and_i64_noret_scalar(ptr addrspace(1) inre
 ; VI-LABEL: global_atomic_and_i64_noret_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
-; VI-NEXT:    v_mov_b32_e32 v2, s4
-; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    flat_atomic_and_x2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v4, s4
+; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:    v_mov_b32_e32 v5, s5
+; VI-NEXT:  .LBB36_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_and_b32_e32 v1, s7, v3
+; VI-NEXT:    v_and_b32_e32 v0, s6, v2
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; VI-NEXT:    v_mov_b32_e32 v3, v1
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    v_mov_b32_e32 v2, v0
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB36_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_and_i64_noret_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_and_x2 v2, v[0:1], s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:    global_load_dwordx2 v[2:3], v4, s[4:5]
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:  .LBB36_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_and_b32_e32 v1, s7, v3
+; GFX9-NEXT:    v_and_b32_e32 v0, s6, v2
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[4:5] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v3, v1
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    v_mov_b32_e32 v2, v0
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB36_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = atomicrmw and ptr addrspace(1) %ptr, i64 %in seq_cst
   ret void
@@ -2228,23 +2885,42 @@ define amdgpu_gfx void @global_atomic_and_i64_noret_offset_scalar(ptr addrspace(
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
-; SI-NEXT:    v_mov_b32_e32 v0, s6
-; SI-NEXT:    v_mov_b32_e32 v1, s7
+; SI-NEXT:    v_writelane_b32 v8, s6, 0
+; SI-NEXT:    v_writelane_b32 v8, s7, 1
+; SI-NEXT:    s_mov_b32 s34, s7
+; SI-NEXT:    s_mov_b32 s35, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    buffer_load_dwordx2 v[2:3], off, s[4:7], 0 offset:32
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:  .LBB37_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_and_x2 v[0:1], off, s[4:7], 0 offset:32
+; SI-NEXT:    v_and_b32_e32 v1, s34, v3
+; SI-NEXT:    v_and_b32_e32 v0, s35, v2
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v7, v3
+; SI-NEXT:    v_mov_b32_e32 v6, v2
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[4:7], off, s[4:7], 0 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[2:3]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    v_mov_b32_e32 v2, v4
+; SI-NEXT:    v_mov_b32_e32 v3, v5
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB37_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v8, 1
+; SI-NEXT:    v_readlane_b32 s6, v8, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -2254,24 +2930,50 @@ define amdgpu_gfx void @global_atomic_and_i64_noret_offset_scalar(ptr addrspace(
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s34, s4, 32
 ; VI-NEXT:    s_addc_u32 s35, s5, 0
-; VI-NEXT:    v_mov_b32_e32 v2, s34
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
-; VI-NEXT:    v_mov_b32_e32 v3, s35
-; VI-NEXT:    flat_atomic_and_x2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v4, s34
+; VI-NEXT:    v_mov_b32_e32 v5, s35
+; VI-NEXT:    flat_load_dwordx2 v[2:3], v[4:5]
+; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:  .LBB37_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_and_b32_e32 v1, s7, v3
+; VI-NEXT:    v_and_b32_e32 v0, s6, v2
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; VI-NEXT:    v_mov_b32_e32 v3, v1
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    v_mov_b32_e32 v2, v0
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB37_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_and_i64_noret_offset_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_and_x2 v2, v[0:1], s[4:5] offset:32
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:    global_load_dwordx2 v[2:3], v4, s[4:5] offset:32
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:  .LBB37_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_and_b32_e32 v1, s7, v3
+; GFX9-NEXT:    v_and_b32_e32 v0, s6, v2
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[4:5] offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v3, v1
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    v_mov_b32_e32 v2, v0
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB37_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %tmp0 = atomicrmw and ptr addrspace(1) %gep, i64 %in seq_cst
@@ -2283,25 +2985,42 @@ define amdgpu_gfx i64 @global_atomic_and_i64_ret_scalar(ptr addrspace(1) inreg %
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
+; SI-NEXT:    v_writelane_b32 v6, s6, 0
+; SI-NEXT:    v_writelane_b32 v6, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s7
 ; SI-NEXT:    s_mov_b32 s35, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s35
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:  .LBB38_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_and_x2 v[0:1], off, s[4:7], 0 glc
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_and_b32_e32 v3, s34, v5
+; SI-NEXT:    v_and_b32_e32 v2, s35, v4
+; SI-NEXT:    v_mov_b32_e32 v0, v2
+; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_mov_b32_e32 v2, v4
+; SI-NEXT:    v_mov_b32_e32 v3, v5
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[4:5]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB38_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v6, 1
+; SI-NEXT:    v_readlane_b32 s6, v6, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -2309,24 +3028,52 @@ define amdgpu_gfx i64 @global_atomic_and_i64_ret_scalar(ptr addrspace(1) inreg %
 ; VI-LABEL: global_atomic_and_i64_ret_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v2, s4
+; VI-NEXT:    s_mov_b64 s[34:35], 0
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    flat_atomic_and_x2 v[0:1], v[2:3], v[0:1] glc
+; VI-NEXT:  .LBB38_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v7, v1
+; VI-NEXT:    v_mov_b32_e32 v6, v0
+; VI-NEXT:    v_and_b32_e32 v5, s7, v7
+; VI-NEXT:    v_and_b32_e32 v4, s6, v6
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[6:7]
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB38_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_and_i64_ret_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_and_x2 v[0:1], v2, v[0:1], s[4:5] glc
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v2, s[4:5]
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:  .LBB38_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v6, v1
+; GFX9-NEXT:    v_mov_b32_e32 v5, v0
+; GFX9-NEXT:    v_and_b32_e32 v4, s7, v6
+; GFX9-NEXT:    v_and_b32_e32 v3, s6, v5
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v2, v[3:6], s[4:5] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[5:6]
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB38_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw and ptr addrspace(1) %ptr, i64 %in seq_cst
   ret i64 %result
@@ -2337,23 +3084,42 @@ define amdgpu_gfx i64 @global_atomic_and_i64_ret_offset_scalar(ptr addrspace(1) 
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
-; SI-NEXT:    v_mov_b32_e32 v0, s6
-; SI-NEXT:    v_mov_b32_e32 v1, s7
+; SI-NEXT:    v_writelane_b32 v6, s6, 0
+; SI-NEXT:    v_writelane_b32 v6, s7, 1
+; SI-NEXT:    s_mov_b32 s34, s7
+; SI-NEXT:    s_mov_b32 s35, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0 offset:32
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:  .LBB39_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_and_x2 v[0:1], off, s[4:7], 0 offset:32 glc
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_and_b32_e32 v3, s34, v5
+; SI-NEXT:    v_and_b32_e32 v2, s35, v4
+; SI-NEXT:    v_mov_b32_e32 v0, v2
+; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_mov_b32_e32 v2, v4
+; SI-NEXT:    v_mov_b32_e32 v3, v5
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], off, s[4:7], 0 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[4:5]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB39_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v6, 1
+; SI-NEXT:    v_readlane_b32 s6, v6, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -2364,23 +3130,49 @@ define amdgpu_gfx i64 @global_atomic_and_i64_ret_offset_scalar(ptr addrspace(1) 
 ; VI-NEXT:    s_add_u32 s34, s4, 32
 ; VI-NEXT:    s_addc_u32 s35, s5, 0
 ; VI-NEXT:    v_mov_b32_e32 v2, s34
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
 ; VI-NEXT:    v_mov_b32_e32 v3, s35
-; VI-NEXT:    flat_atomic_and_x2 v[0:1], v[2:3], v[0:1] glc
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[2:3]
+; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:  .LBB39_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v7, v1
+; VI-NEXT:    v_mov_b32_e32 v6, v0
+; VI-NEXT:    v_and_b32_e32 v5, s7, v7
+; VI-NEXT:    v_and_b32_e32 v4, s6, v6
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[6:7]
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB39_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_and_i64_ret_offset_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_and_x2 v[0:1], v2, v[0:1], s[4:5] offset:32 glc
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v2, s[4:5] offset:32
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:  .LBB39_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v6, v1
+; GFX9-NEXT:    v_mov_b32_e32 v5, v0
+; GFX9-NEXT:    v_and_b32_e32 v4, s7, v6
+; GFX9-NEXT:    v_and_b32_e32 v3, s6, v5
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v2, v[3:6], s[4:5] offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[5:6]
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB39_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %result = atomicrmw and ptr addrspace(1) %gep, i64 %in seq_cst
@@ -3201,26 +3993,76 @@ define void @global_atomic_or_i64_noret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_or_x2 v[2:3], v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    buffer_load_dwordx2 v[6:7], v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB48_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_or_b32_e32 v5, v7, v3
+; SI-NEXT:    v_or_b32_e32 v4, v6, v2
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v7
+; SI-NEXT:    v_mov_b32_e32 v10, v6
+; SI-NEXT:    v_mov_b32_e32 v9, v5
+; SI-NEXT:    v_mov_b32_e32 v8, v4
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[8:11], v[0:1], s[4:7], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[8:9], v[6:7]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    v_mov_b32_e32 v6, v8
+; SI-NEXT:    v_mov_b32_e32 v7, v9
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB48_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: global_atomic_or_i64_noret:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_atomic_or_x2 v[0:1], v[2:3]
+; VI-NEXT:    flat_load_dwordx2 v[6:7], v[0:1]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB48_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_or_b32_e32 v5, v7, v3
+; VI-NEXT:    v_or_b32_e32 v4, v6, v2
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; VI-NEXT:    v_mov_b32_e32 v7, v5
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB48_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_or_i64_noret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_or_x2 v[0:1], v[2:3], off
+; GFX9-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB48_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_or_b32_e32 v5, v7, v3
+; GFX9-NEXT:    v_or_b32_e32 v4, v6, v2
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB48_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = atomicrmw or ptr addrspace(1) %ptr, i64 %in seq_cst
   ret void
@@ -3234,9 +4076,29 @@ define void @global_atomic_or_i64_noret_offset(ptr addrspace(1) %out, i64 %in) {
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_or_x2 v[2:3], v[0:1], s[4:7], 0 addr64 offset:32
+; SI-NEXT:    buffer_load_dwordx2 v[6:7], v[0:1], s[4:7], 0 addr64 offset:32
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB49_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_or_b32_e32 v5, v7, v3
+; SI-NEXT:    v_or_b32_e32 v4, v6, v2
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v7
+; SI-NEXT:    v_mov_b32_e32 v10, v6
+; SI-NEXT:    v_mov_b32_e32 v9, v5
+; SI-NEXT:    v_mov_b32_e32 v8, v4
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[8:11], v[0:1], s[4:7], 0 addr64 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[8:9], v[6:7]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    v_mov_b32_e32 v6, v8
+; SI-NEXT:    v_mov_b32_e32 v7, v9
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB49_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3245,17 +4107,47 @@ define void @global_atomic_or_i64_noret_offset(ptr addrspace(1) %out, i64 %in) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_or_x2 v[0:1], v[2:3]
+; VI-NEXT:    flat_load_dwordx2 v[6:7], v[0:1]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB49_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_or_b32_e32 v5, v7, v3
+; VI-NEXT:    v_or_b32_e32 v4, v6, v2
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; VI-NEXT:    v_mov_b32_e32 v7, v5
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB49_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_or_i64_noret_offset:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_or_x2 v[0:1], v[2:3], off offset:32
+; GFX9-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off offset:32
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB49_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_or_b32_e32 v5, v7, v3
+; GFX9-NEXT:    v_or_b32_e32 v4, v6, v2
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB49_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %tmp0 = atomicrmw or ptr addrspace(1) %gep, i64 %in seq_cst
@@ -3266,32 +4158,88 @@ define i64 @global_atomic_or_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-LABEL: global_atomic_or_i64_ret:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v6, v3
+; SI-NEXT:    v_mov_b32_e32 v7, v2
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_or_x2 v[2:3], v[0:1], s[4:7], 0 addr64 glc
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[4:5], s[4:7], 0 addr64
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB50_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v1
+; SI-NEXT:    v_mov_b32_e32 v10, v0
+; SI-NEXT:    v_or_b32_e32 v9, v11, v6
+; SI-NEXT:    v_or_b32_e32 v8, v10, v7
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v0, v8
+; SI-NEXT:    v_mov_b32_e32 v1, v9
+; SI-NEXT:    v_mov_b32_e32 v2, v10
+; SI-NEXT:    v_mov_b32_e32 v3, v11
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], v[4:5], s[4:7], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[10:11]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB50_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: global_atomic_or_i64_ret:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_atomic_or_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    flat_load_dwordx2 v[4:5], v[0:1]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB50_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v7, v5
+; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    v_or_b32_e32 v5, v7, v3
+; VI-NEXT:    v_or_b32_e32 v4, v6, v2
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB50_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
+; VI-NEXT:    v_mov_b32_e32 v0, v4
+; VI-NEXT:    v_mov_b32_e32 v1, v5
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_or_i64_ret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_or_x2 v[0:1], v[0:1], v[2:3], off glc
+; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB50_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    v_or_b32_e32 v5, v7, v3
+; GFX9-NEXT:    v_or_b32_e32 v4, v6, v2
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB50_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v0, v4
+; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw or ptr addrspace(1) %ptr, i64 %in seq_cst
   ret i64 %result
@@ -3301,34 +4249,88 @@ define i64 @global_atomic_or_i64_ret_offset(ptr addrspace(1) %out, i64 %in) {
 ; SI-LABEL: global_atomic_or_i64_ret_offset:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v6, v3
+; SI-NEXT:    v_mov_b32_e32 v7, v2
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_or_x2 v[2:3], v[0:1], s[4:7], 0 addr64 offset:32 glc
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[4:5], s[4:7], 0 addr64 offset:32
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB51_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v1
+; SI-NEXT:    v_mov_b32_e32 v10, v0
+; SI-NEXT:    v_or_b32_e32 v9, v11, v6
+; SI-NEXT:    v_or_b32_e32 v8, v10, v7
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v0, v8
+; SI-NEXT:    v_mov_b32_e32 v1, v9
+; SI-NEXT:    v_mov_b32_e32 v2, v10
+; SI-NEXT:    v_mov_b32_e32 v3, v11
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], v[4:5], s[4:7], 0 addr64 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[10:11]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB51_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: global_atomic_or_i64_ret_offset:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_or_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[4:5]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB51_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v9, v1
+; VI-NEXT:    v_mov_b32_e32 v8, v0
+; VI-NEXT:    v_or_b32_e32 v7, v9, v3
+; VI-NEXT:    v_or_b32_e32 v6, v8, v2
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[6:9] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[8:9]
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB51_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_or_i64_ret_offset:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_or_x2 v[0:1], v[0:1], v[2:3], off offset:32 glc
+; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off offset:32
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB51_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    v_or_b32_e32 v5, v7, v3
+; GFX9-NEXT:    v_or_b32_e32 v4, v6, v2
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB51_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v0, v4
+; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %result = atomicrmw or ptr addrspace(1) %gep, i64 %in seq_cst
@@ -3340,25 +4342,42 @@ define amdgpu_gfx void @global_atomic_or_i64_noret_scalar(ptr addrspace(1) inreg
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
+; SI-NEXT:    v_writelane_b32 v8, s6, 0
+; SI-NEXT:    v_writelane_b32 v8, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s7
 ; SI-NEXT:    s_mov_b32 s35, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s35
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    buffer_load_dwordx2 v[2:3], off, s[4:7], 0
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:  .LBB52_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_or_x2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    v_or_b32_e32 v1, s34, v3
+; SI-NEXT:    v_or_b32_e32 v0, s35, v2
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v7, v3
+; SI-NEXT:    v_mov_b32_e32 v6, v2
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[4:7], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[2:3]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    v_mov_b32_e32 v2, v4
+; SI-NEXT:    v_mov_b32_e32 v3, v5
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB52_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v8, 1
+; SI-NEXT:    v_readlane_b32 s6, v8, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -3366,24 +4385,52 @@ define amdgpu_gfx void @global_atomic_or_i64_noret_scalar(ptr addrspace(1) inreg
 ; VI-LABEL: global_atomic_or_i64_noret_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
-; VI-NEXT:    v_mov_b32_e32 v2, s4
-; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    flat_atomic_or_x2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v4, s4
+; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:    v_mov_b32_e32 v5, s5
+; VI-NEXT:  .LBB52_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_or_b32_e32 v1, s7, v3
+; VI-NEXT:    v_or_b32_e32 v0, s6, v2
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; VI-NEXT:    v_mov_b32_e32 v3, v1
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    v_mov_b32_e32 v2, v0
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB52_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_or_i64_noret_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_or_x2 v2, v[0:1], s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:    global_load_dwordx2 v[2:3], v4, s[4:5]
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:  .LBB52_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_or_b32_e32 v1, s7, v3
+; GFX9-NEXT:    v_or_b32_e32 v0, s6, v2
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[4:5] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v3, v1
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    v_mov_b32_e32 v2, v0
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB52_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = atomicrmw or ptr addrspace(1) %ptr, i64 %in seq_cst
   ret void
@@ -3394,23 +4441,42 @@ define amdgpu_gfx void @global_atomic_or_i64_noret_offset_scalar(ptr addrspace(1
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
-; SI-NEXT:    v_mov_b32_e32 v0, s6
-; SI-NEXT:    v_mov_b32_e32 v1, s7
+; SI-NEXT:    v_writelane_b32 v8, s6, 0
+; SI-NEXT:    v_writelane_b32 v8, s7, 1
+; SI-NEXT:    s_mov_b32 s34, s7
+; SI-NEXT:    s_mov_b32 s35, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    buffer_load_dwordx2 v[2:3], off, s[4:7], 0 offset:32
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:  .LBB53_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_or_x2 v[0:1], off, s[4:7], 0 offset:32
+; SI-NEXT:    v_or_b32_e32 v1, s34, v3
+; SI-NEXT:    v_or_b32_e32 v0, s35, v2
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v7, v3
+; SI-NEXT:    v_mov_b32_e32 v6, v2
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[4:7], off, s[4:7], 0 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[2:3]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    v_mov_b32_e32 v2, v4
+; SI-NEXT:    v_mov_b32_e32 v3, v5
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB53_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v8, 1
+; SI-NEXT:    v_readlane_b32 s6, v8, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -3420,24 +4486,50 @@ define amdgpu_gfx void @global_atomic_or_i64_noret_offset_scalar(ptr addrspace(1
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s34, s4, 32
 ; VI-NEXT:    s_addc_u32 s35, s5, 0
-; VI-NEXT:    v_mov_b32_e32 v2, s34
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
-; VI-NEXT:    v_mov_b32_e32 v3, s35
-; VI-NEXT:    flat_atomic_or_x2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v4, s34
+; VI-NEXT:    v_mov_b32_e32 v5, s35
+; VI-NEXT:    flat_load_dwordx2 v[2:3], v[4:5]
+; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:  .LBB53_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_or_b32_e32 v1, s7, v3
+; VI-NEXT:    v_or_b32_e32 v0, s6, v2
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; VI-NEXT:    v_mov_b32_e32 v3, v1
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    v_mov_b32_e32 v2, v0
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB53_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_or_i64_noret_offset_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_or_x2 v2, v[0:1], s[4:5] offset:32
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:    global_load_dwordx2 v[2:3], v4, s[4:5] offset:32
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:  .LBB53_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_or_b32_e32 v1, s7, v3
+; GFX9-NEXT:    v_or_b32_e32 v0, s6, v2
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[4:5] offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v3, v1
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    v_mov_b32_e32 v2, v0
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB53_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %tmp0 = atomicrmw or ptr addrspace(1) %gep, i64 %in seq_cst
@@ -3449,25 +4541,42 @@ define amdgpu_gfx i64 @global_atomic_or_i64_ret_scalar(ptr addrspace(1) inreg %p
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
+; SI-NEXT:    v_writelane_b32 v6, s6, 0
+; SI-NEXT:    v_writelane_b32 v6, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s7
 ; SI-NEXT:    s_mov_b32 s35, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s35
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:  .LBB54_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_or_x2 v[0:1], off, s[4:7], 0 glc
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_or_b32_e32 v3, s34, v5
+; SI-NEXT:    v_or_b32_e32 v2, s35, v4
+; SI-NEXT:    v_mov_b32_e32 v0, v2
+; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_mov_b32_e32 v2, v4
+; SI-NEXT:    v_mov_b32_e32 v3, v5
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[4:5]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB54_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v6, 1
+; SI-NEXT:    v_readlane_b32 s6, v6, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -3475,24 +4584,52 @@ define amdgpu_gfx i64 @global_atomic_or_i64_ret_scalar(ptr addrspace(1) inreg %p
 ; VI-LABEL: global_atomic_or_i64_ret_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v2, s4
+; VI-NEXT:    s_mov_b64 s[34:35], 0
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    flat_atomic_or_x2 v[0:1], v[2:3], v[0:1] glc
+; VI-NEXT:  .LBB54_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v7, v1
+; VI-NEXT:    v_mov_b32_e32 v6, v0
+; VI-NEXT:    v_or_b32_e32 v5, s7, v7
+; VI-NEXT:    v_or_b32_e32 v4, s6, v6
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[6:7]
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB54_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_or_i64_ret_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_or_x2 v[0:1], v2, v[0:1], s[4:5] glc
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v2, s[4:5]
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:  .LBB54_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v6, v1
+; GFX9-NEXT:    v_mov_b32_e32 v5, v0
+; GFX9-NEXT:    v_or_b32_e32 v4, s7, v6
+; GFX9-NEXT:    v_or_b32_e32 v3, s6, v5
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v2, v[3:6], s[4:5] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[5:6]
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB54_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw or ptr addrspace(1) %ptr, i64 %in seq_cst
   ret i64 %result
@@ -3503,23 +4640,42 @@ define amdgpu_gfx i64 @global_atomic_or_i64_ret_offset_scalar(ptr addrspace(1) i
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
-; SI-NEXT:    v_mov_b32_e32 v0, s6
-; SI-NEXT:    v_mov_b32_e32 v1, s7
+; SI-NEXT:    v_writelane_b32 v6, s6, 0
+; SI-NEXT:    v_writelane_b32 v6, s7, 1
+; SI-NEXT:    s_mov_b32 s34, s7
+; SI-NEXT:    s_mov_b32 s35, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0 offset:32
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:  .LBB55_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_or_x2 v[0:1], off, s[4:7], 0 offset:32 glc
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_or_b32_e32 v3, s34, v5
+; SI-NEXT:    v_or_b32_e32 v2, s35, v4
+; SI-NEXT:    v_mov_b32_e32 v0, v2
+; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_mov_b32_e32 v2, v4
+; SI-NEXT:    v_mov_b32_e32 v3, v5
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], off, s[4:7], 0 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[4:5]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB55_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v6, 1
+; SI-NEXT:    v_readlane_b32 s6, v6, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -3530,23 +4686,49 @@ define amdgpu_gfx i64 @global_atomic_or_i64_ret_offset_scalar(ptr addrspace(1) i
 ; VI-NEXT:    s_add_u32 s34, s4, 32
 ; VI-NEXT:    s_addc_u32 s35, s5, 0
 ; VI-NEXT:    v_mov_b32_e32 v2, s34
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
 ; VI-NEXT:    v_mov_b32_e32 v3, s35
-; VI-NEXT:    flat_atomic_or_x2 v[0:1], v[2:3], v[0:1] glc
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[2:3]
+; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:  .LBB55_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v7, v1
+; VI-NEXT:    v_mov_b32_e32 v6, v0
+; VI-NEXT:    v_or_b32_e32 v5, s7, v7
+; VI-NEXT:    v_or_b32_e32 v4, s6, v6
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[6:7]
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB55_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_or_i64_ret_offset_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_or_x2 v[0:1], v2, v[0:1], s[4:5] offset:32 glc
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v2, s[4:5] offset:32
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:  .LBB55_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v6, v1
+; GFX9-NEXT:    v_mov_b32_e32 v5, v0
+; GFX9-NEXT:    v_or_b32_e32 v4, s7, v6
+; GFX9-NEXT:    v_or_b32_e32 v3, s6, v5
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v2, v[3:6], s[4:5] offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[5:6]
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB55_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %result = atomicrmw or ptr addrspace(1) %gep, i64 %in seq_cst
@@ -3565,26 +4747,76 @@ define void @global_atomic_xor_i64_noret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_xor_x2 v[2:3], v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    buffer_load_dwordx2 v[6:7], v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB56_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_xor_b32_e32 v5, v7, v3
+; SI-NEXT:    v_xor_b32_e32 v4, v6, v2
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v7
+; SI-NEXT:    v_mov_b32_e32 v10, v6
+; SI-NEXT:    v_mov_b32_e32 v9, v5
+; SI-NEXT:    v_mov_b32_e32 v8, v4
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[8:11], v[0:1], s[4:7], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[8:9], v[6:7]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    v_mov_b32_e32 v6, v8
+; SI-NEXT:    v_mov_b32_e32 v7, v9
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB56_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: global_atomic_xor_i64_noret:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_atomic_xor_x2 v[0:1], v[2:3]
+; VI-NEXT:    flat_load_dwordx2 v[6:7], v[0:1]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB56_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_xor_b32_e32 v5, v7, v3
+; VI-NEXT:    v_xor_b32_e32 v4, v6, v2
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; VI-NEXT:    v_mov_b32_e32 v7, v5
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB56_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_xor_i64_noret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_xor_x2 v[0:1], v[2:3], off
+; GFX9-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB56_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_xor_b32_e32 v5, v7, v3
+; GFX9-NEXT:    v_xor_b32_e32 v4, v6, v2
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB56_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = atomicrmw xor ptr addrspace(1) %ptr, i64 %in seq_cst
   ret void
@@ -3598,9 +4830,29 @@ define void @global_atomic_xor_i64_noret_offset(ptr addrspace(1) %out, i64 %in) 
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_xor_x2 v[2:3], v[0:1], s[4:7], 0 addr64 offset:32
+; SI-NEXT:    buffer_load_dwordx2 v[6:7], v[0:1], s[4:7], 0 addr64 offset:32
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB57_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_xor_b32_e32 v5, v7, v3
+; SI-NEXT:    v_xor_b32_e32 v4, v6, v2
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v7
+; SI-NEXT:    v_mov_b32_e32 v10, v6
+; SI-NEXT:    v_mov_b32_e32 v9, v5
+; SI-NEXT:    v_mov_b32_e32 v8, v4
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[8:11], v[0:1], s[4:7], 0 addr64 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[8:9], v[6:7]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    v_mov_b32_e32 v6, v8
+; SI-NEXT:    v_mov_b32_e32 v7, v9
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB57_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3609,17 +4861,47 @@ define void @global_atomic_xor_i64_noret_offset(ptr addrspace(1) %out, i64 %in) 
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_xor_x2 v[0:1], v[2:3]
+; VI-NEXT:    flat_load_dwordx2 v[6:7], v[0:1]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB57_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_xor_b32_e32 v5, v7, v3
+; VI-NEXT:    v_xor_b32_e32 v4, v6, v2
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; VI-NEXT:    v_mov_b32_e32 v7, v5
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB57_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_xor_i64_noret_offset:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_xor_x2 v[0:1], v[2:3], off offset:32
+; GFX9-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off offset:32
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB57_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_xor_b32_e32 v5, v7, v3
+; GFX9-NEXT:    v_xor_b32_e32 v4, v6, v2
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB57_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %tmp0 = atomicrmw xor ptr addrspace(1) %gep, i64 %in seq_cst
@@ -3630,32 +4912,88 @@ define i64 @global_atomic_xor_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-LABEL: global_atomic_xor_i64_ret:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v6, v3
+; SI-NEXT:    v_mov_b32_e32 v7, v2
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_xor_x2 v[2:3], v[0:1], s[4:7], 0 addr64 glc
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[4:5], s[4:7], 0 addr64
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB58_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v1
+; SI-NEXT:    v_mov_b32_e32 v10, v0
+; SI-NEXT:    v_xor_b32_e32 v9, v11, v6
+; SI-NEXT:    v_xor_b32_e32 v8, v10, v7
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v0, v8
+; SI-NEXT:    v_mov_b32_e32 v1, v9
+; SI-NEXT:    v_mov_b32_e32 v2, v10
+; SI-NEXT:    v_mov_b32_e32 v3, v11
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], v[4:5], s[4:7], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[10:11]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB58_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: global_atomic_xor_i64_ret:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_atomic_xor_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    flat_load_dwordx2 v[4:5], v[0:1]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB58_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v7, v5
+; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    v_xor_b32_e32 v5, v7, v3
+; VI-NEXT:    v_xor_b32_e32 v4, v6, v2
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB58_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
+; VI-NEXT:    v_mov_b32_e32 v0, v4
+; VI-NEXT:    v_mov_b32_e32 v1, v5
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_xor_i64_ret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_xor_x2 v[0:1], v[0:1], v[2:3], off glc
+; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB58_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    v_xor_b32_e32 v5, v7, v3
+; GFX9-NEXT:    v_xor_b32_e32 v4, v6, v2
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB58_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v0, v4
+; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw xor ptr addrspace(1) %ptr, i64 %in seq_cst
   ret i64 %result
@@ -3665,34 +5003,88 @@ define i64 @global_atomic_xor_i64_ret_offset(ptr addrspace(1) %out, i64 %in) {
 ; SI-LABEL: global_atomic_xor_i64_ret_offset:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v6, v3
+; SI-NEXT:    v_mov_b32_e32 v7, v2
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_xor_x2 v[2:3], v[0:1], s[4:7], 0 addr64 offset:32 glc
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[4:5], s[4:7], 0 addr64 offset:32
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB59_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v1
+; SI-NEXT:    v_mov_b32_e32 v10, v0
+; SI-NEXT:    v_xor_b32_e32 v9, v11, v6
+; SI-NEXT:    v_xor_b32_e32 v8, v10, v7
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v0, v8
+; SI-NEXT:    v_mov_b32_e32 v1, v9
+; SI-NEXT:    v_mov_b32_e32 v2, v10
+; SI-NEXT:    v_mov_b32_e32 v3, v11
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], v[4:5], s[4:7], 0 addr64 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[10:11]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB59_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: global_atomic_xor_i64_ret_offset:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_xor_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[4:5]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB59_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v9, v1
+; VI-NEXT:    v_mov_b32_e32 v8, v0
+; VI-NEXT:    v_xor_b32_e32 v7, v9, v3
+; VI-NEXT:    v_xor_b32_e32 v6, v8, v2
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[6:9] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[8:9]
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB59_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_xor_i64_ret_offset:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_xor_x2 v[0:1], v[0:1], v[2:3], off offset:32 glc
+; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off offset:32
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB59_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    v_xor_b32_e32 v5, v7, v3
+; GFX9-NEXT:    v_xor_b32_e32 v4, v6, v2
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB59_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v0, v4
+; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %result = atomicrmw xor ptr addrspace(1) %gep, i64 %in seq_cst
@@ -3704,25 +5096,42 @@ define amdgpu_gfx void @global_atomic_xor_i64_noret_scalar(ptr addrspace(1) inre
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
+; SI-NEXT:    v_writelane_b32 v8, s6, 0
+; SI-NEXT:    v_writelane_b32 v8, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s7
 ; SI-NEXT:    s_mov_b32 s35, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s35
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    buffer_load_dwordx2 v[2:3], off, s[4:7], 0
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:  .LBB60_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_xor_x2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    v_xor_b32_e32 v1, s34, v3
+; SI-NEXT:    v_xor_b32_e32 v0, s35, v2
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v7, v3
+; SI-NEXT:    v_mov_b32_e32 v6, v2
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[4:7], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[2:3]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    v_mov_b32_e32 v2, v4
+; SI-NEXT:    v_mov_b32_e32 v3, v5
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB60_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v8, 1
+; SI-NEXT:    v_readlane_b32 s6, v8, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -3730,24 +5139,52 @@ define amdgpu_gfx void @global_atomic_xor_i64_noret_scalar(ptr addrspace(1) inre
 ; VI-LABEL: global_atomic_xor_i64_noret_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
-; VI-NEXT:    v_mov_b32_e32 v2, s4
-; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    flat_atomic_xor_x2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v4, s4
+; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:    v_mov_b32_e32 v5, s5
+; VI-NEXT:  .LBB60_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_xor_b32_e32 v1, s7, v3
+; VI-NEXT:    v_xor_b32_e32 v0, s6, v2
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; VI-NEXT:    v_mov_b32_e32 v3, v1
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    v_mov_b32_e32 v2, v0
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB60_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_xor_i64_noret_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_xor_x2 v2, v[0:1], s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:    global_load_dwordx2 v[2:3], v4, s[4:5]
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:  .LBB60_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_xor_b32_e32 v1, s7, v3
+; GFX9-NEXT:    v_xor_b32_e32 v0, s6, v2
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[4:5] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v3, v1
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    v_mov_b32_e32 v2, v0
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB60_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = atomicrmw xor ptr addrspace(1) %ptr, i64 %in seq_cst
   ret void
@@ -3758,23 +5195,42 @@ define amdgpu_gfx void @global_atomic_xor_i64_noret_offset_scalar(ptr addrspace(
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
-; SI-NEXT:    v_mov_b32_e32 v0, s6
-; SI-NEXT:    v_mov_b32_e32 v1, s7
+; SI-NEXT:    v_writelane_b32 v8, s6, 0
+; SI-NEXT:    v_writelane_b32 v8, s7, 1
+; SI-NEXT:    s_mov_b32 s34, s7
+; SI-NEXT:    s_mov_b32 s35, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    buffer_load_dwordx2 v[2:3], off, s[4:7], 0 offset:32
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:  .LBB61_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_xor_x2 v[0:1], off, s[4:7], 0 offset:32
+; SI-NEXT:    v_xor_b32_e32 v1, s34, v3
+; SI-NEXT:    v_xor_b32_e32 v0, s35, v2
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v7, v3
+; SI-NEXT:    v_mov_b32_e32 v6, v2
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[4:7], off, s[4:7], 0 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[2:3]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    v_mov_b32_e32 v2, v4
+; SI-NEXT:    v_mov_b32_e32 v3, v5
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB61_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v8, 1
+; SI-NEXT:    v_readlane_b32 s6, v8, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -3784,24 +5240,50 @@ define amdgpu_gfx void @global_atomic_xor_i64_noret_offset_scalar(ptr addrspace(
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s34, s4, 32
 ; VI-NEXT:    s_addc_u32 s35, s5, 0
-; VI-NEXT:    v_mov_b32_e32 v2, s34
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
-; VI-NEXT:    v_mov_b32_e32 v3, s35
-; VI-NEXT:    flat_atomic_xor_x2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v4, s34
+; VI-NEXT:    v_mov_b32_e32 v5, s35
+; VI-NEXT:    flat_load_dwordx2 v[2:3], v[4:5]
+; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:  .LBB61_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_xor_b32_e32 v1, s7, v3
+; VI-NEXT:    v_xor_b32_e32 v0, s6, v2
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; VI-NEXT:    v_mov_b32_e32 v3, v1
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    v_mov_b32_e32 v2, v0
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB61_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_xor_i64_noret_offset_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_xor_x2 v2, v[0:1], s[4:5] offset:32
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:    global_load_dwordx2 v[2:3], v4, s[4:5] offset:32
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:  .LBB61_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_xor_b32_e32 v1, s7, v3
+; GFX9-NEXT:    v_xor_b32_e32 v0, s6, v2
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[4:5] offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v3, v1
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    v_mov_b32_e32 v2, v0
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB61_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %tmp0 = atomicrmw xor ptr addrspace(1) %gep, i64 %in seq_cst
@@ -3813,25 +5295,42 @@ define amdgpu_gfx i64 @global_atomic_xor_i64_ret_scalar(ptr addrspace(1) inreg %
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
+; SI-NEXT:    v_writelane_b32 v6, s6, 0
+; SI-NEXT:    v_writelane_b32 v6, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s7
 ; SI-NEXT:    s_mov_b32 s35, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s35
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:  .LBB62_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_xor_x2 v[0:1], off, s[4:7], 0 glc
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_xor_b32_e32 v3, s34, v5
+; SI-NEXT:    v_xor_b32_e32 v2, s35, v4
+; SI-NEXT:    v_mov_b32_e32 v0, v2
+; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_mov_b32_e32 v2, v4
+; SI-NEXT:    v_mov_b32_e32 v3, v5
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[4:5]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB62_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v6, 1
+; SI-NEXT:    v_readlane_b32 s6, v6, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -3839,24 +5338,52 @@ define amdgpu_gfx i64 @global_atomic_xor_i64_ret_scalar(ptr addrspace(1) inreg %
 ; VI-LABEL: global_atomic_xor_i64_ret_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v2, s4
+; VI-NEXT:    s_mov_b64 s[34:35], 0
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    flat_atomic_xor_x2 v[0:1], v[2:3], v[0:1] glc
+; VI-NEXT:  .LBB62_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v7, v1
+; VI-NEXT:    v_mov_b32_e32 v6, v0
+; VI-NEXT:    v_xor_b32_e32 v5, s7, v7
+; VI-NEXT:    v_xor_b32_e32 v4, s6, v6
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[6:7]
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB62_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_xor_i64_ret_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_xor_x2 v[0:1], v2, v[0:1], s[4:5] glc
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v2, s[4:5]
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:  .LBB62_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v6, v1
+; GFX9-NEXT:    v_mov_b32_e32 v5, v0
+; GFX9-NEXT:    v_xor_b32_e32 v4, s7, v6
+; GFX9-NEXT:    v_xor_b32_e32 v3, s6, v5
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v2, v[3:6], s[4:5] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[5:6]
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB62_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw xor ptr addrspace(1) %ptr, i64 %in seq_cst
   ret i64 %result
@@ -3867,23 +5394,42 @@ define amdgpu_gfx i64 @global_atomic_xor_i64_ret_offset_scalar(ptr addrspace(1) 
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
-; SI-NEXT:    v_mov_b32_e32 v0, s6
-; SI-NEXT:    v_mov_b32_e32 v1, s7
+; SI-NEXT:    v_writelane_b32 v6, s6, 0
+; SI-NEXT:    v_writelane_b32 v6, s7, 1
+; SI-NEXT:    s_mov_b32 s34, s7
+; SI-NEXT:    s_mov_b32 s35, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0 offset:32
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:  .LBB63_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_xor_x2 v[0:1], off, s[4:7], 0 offset:32 glc
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_xor_b32_e32 v3, s34, v5
+; SI-NEXT:    v_xor_b32_e32 v2, s35, v4
+; SI-NEXT:    v_mov_b32_e32 v0, v2
+; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_mov_b32_e32 v2, v4
+; SI-NEXT:    v_mov_b32_e32 v3, v5
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], off, s[4:7], 0 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[4:5]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB63_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v6, 1
+; SI-NEXT:    v_readlane_b32 s6, v6, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -3894,23 +5440,49 @@ define amdgpu_gfx i64 @global_atomic_xor_i64_ret_offset_scalar(ptr addrspace(1) 
 ; VI-NEXT:    s_add_u32 s34, s4, 32
 ; VI-NEXT:    s_addc_u32 s35, s5, 0
 ; VI-NEXT:    v_mov_b32_e32 v2, s34
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
 ; VI-NEXT:    v_mov_b32_e32 v3, s35
-; VI-NEXT:    flat_atomic_xor_x2 v[0:1], v[2:3], v[0:1] glc
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[2:3]
+; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:  .LBB63_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v7, v1
+; VI-NEXT:    v_mov_b32_e32 v6, v0
+; VI-NEXT:    v_xor_b32_e32 v5, s7, v7
+; VI-NEXT:    v_xor_b32_e32 v4, s6, v6
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[6:7]
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB63_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_xor_i64_ret_offset_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_xor_x2 v[0:1], v2, v[0:1], s[4:5] offset:32 glc
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v2, s[4:5] offset:32
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:  .LBB63_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v6, v1
+; GFX9-NEXT:    v_mov_b32_e32 v5, v0
+; GFX9-NEXT:    v_xor_b32_e32 v4, s7, v6
+; GFX9-NEXT:    v_xor_b32_e32 v3, s6, v5
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v2, v[3:6], s[4:5] offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[5:6]
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB63_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %result = atomicrmw xor ptr addrspace(1) %gep, i64 %in seq_cst
@@ -8442,26 +10014,85 @@ define void @global_atomic_uinc_wrap_i64_noret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_inc_x2 v[2:3], v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    buffer_load_dwordx2 v[6:7], v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB107_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_add_i32_e32 v4, vcc, 1, v6
+; SI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v7, vcc
+; SI-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
+; SI-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v7
+; SI-NEXT:    v_mov_b32_e32 v10, v6
+; SI-NEXT:    v_mov_b32_e32 v9, v5
+; SI-NEXT:    v_mov_b32_e32 v8, v4
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[8:11], v[0:1], s[4:7], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[8:9], v[6:7]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    v_mov_b32_e32 v6, v8
+; SI-NEXT:    v_mov_b32_e32 v7, v9
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB107_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: global_atomic_uinc_wrap_i64_noret:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_atomic_inc_x2 v[0:1], v[2:3]
+; VI-NEXT:    flat_load_dwordx2 v[6:7], v[0:1]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB107_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 1, v6
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v7, vcc
+; VI-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
+; VI-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; VI-NEXT:    v_mov_b32_e32 v7, v5
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB107_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_uinc_wrap_i64_noret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_inc_x2 v[0:1], v[2:3], off
+; GFX9-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB107_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_add_co_u32_e32 v4, vcc, 1, v6
+; GFX9-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v7, vcc
+; GFX9-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
+; GFX9-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB107_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i64 %in seq_cst
   ret void
@@ -8475,9 +10106,32 @@ define void @global_atomic_uinc_wrap_i64_noret_offset(ptr addrspace(1) %out, i64
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_inc_x2 v[2:3], v[0:1], s[4:7], 0 addr64 offset:32
+; SI-NEXT:    buffer_load_dwordx2 v[6:7], v[0:1], s[4:7], 0 addr64 offset:32
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB108_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_add_i32_e32 v4, vcc, 1, v6
+; SI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v7, vcc
+; SI-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
+; SI-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v7
+; SI-NEXT:    v_mov_b32_e32 v10, v6
+; SI-NEXT:    v_mov_b32_e32 v9, v5
+; SI-NEXT:    v_mov_b32_e32 v8, v4
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[8:11], v[0:1], s[4:7], 0 addr64 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[8:9], v[6:7]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    v_mov_b32_e32 v6, v8
+; SI-NEXT:    v_mov_b32_e32 v7, v9
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB108_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -8486,17 +10140,53 @@ define void @global_atomic_uinc_wrap_i64_noret_offset(ptr addrspace(1) %out, i64
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_inc_x2 v[0:1], v[2:3]
+; VI-NEXT:    flat_load_dwordx2 v[6:7], v[0:1]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB108_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 1, v6
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v7, vcc
+; VI-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
+; VI-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; VI-NEXT:    v_mov_b32_e32 v7, v5
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB108_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_uinc_wrap_i64_noret_offset:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_inc_x2 v[0:1], v[2:3], off offset:32
+; GFX9-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off offset:32
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB108_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_add_co_u32_e32 v4, vcc, 1, v6
+; GFX9-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v7, vcc
+; GFX9-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
+; GFX9-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB108_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %tmp0 = atomicrmw uinc_wrap ptr addrspace(1) %gep, i64 %in seq_cst
@@ -8507,32 +10197,97 @@ define i64 @global_atomic_uinc_wrap_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-LABEL: global_atomic_uinc_wrap_i64_ret:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v5, v3
+; SI-NEXT:    v_mov_b32_e32 v4, v2
+; SI-NEXT:    v_mov_b32_e32 v7, v1
+; SI-NEXT:    v_mov_b32_e32 v6, v0
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_inc_x2 v[2:3], v[0:1], s[4:7], 0 addr64 glc
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[6:7], s[4:7], 0 addr64
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB109_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v1
+; SI-NEXT:    v_mov_b32_e32 v10, v0
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_add_i32_e32 v0, vcc, 1, v10
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v11, vcc
+; SI-NEXT:    v_cmp_lt_u64_e32 vcc, v[10:11], v[4:5]
+; SI-NEXT:    v_cndmask_b32_e32 v9, 0, v1, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v8, 0, v0, vcc
+; SI-NEXT:    v_mov_b32_e32 v0, v8
+; SI-NEXT:    v_mov_b32_e32 v1, v9
+; SI-NEXT:    v_mov_b32_e32 v2, v10
+; SI-NEXT:    v_mov_b32_e32 v3, v11
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], v[6:7], s[4:7], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[10:11]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB109_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: global_atomic_uinc_wrap_i64_ret:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_atomic_inc_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    flat_load_dwordx2 v[4:5], v[0:1]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB109_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v7, v5
+; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 1, v6
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v7, vcc
+; VI-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
+; VI-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB109_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
+; VI-NEXT:    v_mov_b32_e32 v0, v4
+; VI-NEXT:    v_mov_b32_e32 v1, v5
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_uinc_wrap_i64_ret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_inc_x2 v[0:1], v[0:1], v[2:3], off glc
+; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB109_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    v_add_co_u32_e32 v4, vcc, 1, v6
+; GFX9-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v7, vcc
+; GFX9-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
+; GFX9-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB109_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v0, v4
+; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i64 %in seq_cst
   ret i64 %result
@@ -8542,34 +10297,97 @@ define i64 @global_atomic_uinc_wrap_i64_ret_offset(ptr addrspace(1) %out, i64 %i
 ; SI-LABEL: global_atomic_uinc_wrap_i64_ret_offset:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v5, v3
+; SI-NEXT:    v_mov_b32_e32 v4, v2
+; SI-NEXT:    v_mov_b32_e32 v7, v1
+; SI-NEXT:    v_mov_b32_e32 v6, v0
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_inc_x2 v[2:3], v[0:1], s[4:7], 0 addr64 offset:32 glc
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[6:7], s[4:7], 0 addr64 offset:32
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:  .LBB110_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v1
+; SI-NEXT:    v_mov_b32_e32 v10, v0
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_add_i32_e32 v0, vcc, 1, v10
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v11, vcc
+; SI-NEXT:    v_cmp_lt_u64_e32 vcc, v[10:11], v[4:5]
+; SI-NEXT:    v_cndmask_b32_e32 v9, 0, v1, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v8, 0, v0, vcc
+; SI-NEXT:    v_mov_b32_e32 v0, v8
+; SI-NEXT:    v_mov_b32_e32 v1, v9
+; SI-NEXT:    v_mov_b32_e32 v2, v10
+; SI-NEXT:    v_mov_b32_e32 v3, v11
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], v[6:7], s[4:7], 0 addr64 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[10:11]
+; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; SI-NEXT:    s_cbranch_execnz .LBB110_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: global_atomic_uinc_wrap_i64_ret_offset:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_inc_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[4:5]
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:  .LBB110_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v9, v1
+; VI-NEXT:    v_mov_b32_e32 v8, v0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, 1, v8
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v9, vcc
+; VI-NEXT:    v_cmp_lt_u64_e32 vcc, v[8:9], v[2:3]
+; VI-NEXT:    v_cndmask_b32_e32 v7, 0, v1, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v6, 0, v0, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[6:9] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[8:9]
+; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz .LBB110_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_uinc_wrap_i64_ret_offset:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_inc_x2 v[0:1], v[0:1], v[2:3], off offset:32 glc
+; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off offset:32
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB110_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    v_add_co_u32_e32 v4, vcc, 1, v6
+; GFX9-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v7, vcc
+; GFX9-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
+; GFX9-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB110_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v0, v4
+; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %result = atomicrmw uinc_wrap ptr addrspace(1) %gep, i64 %in seq_cst
@@ -8581,25 +10399,45 @@ define amdgpu_gfx void @global_atomic_uinc_wrap_i64_noret_scalar(ptr addrspace(1
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
-; SI-NEXT:    s_mov_b32 s34, s7
-; SI-NEXT:    s_mov_b32 s35, s6
+; SI-NEXT:    v_writelane_b32 v8, s6, 0
+; SI-NEXT:    v_writelane_b32 v8, s7, 1
+; SI-NEXT:    s_mov_b32 s35, s7
+; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s35
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    buffer_load_dwordx2 v[2:3], off, s[4:7], 0
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:  .LBB111_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_inc_x2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    v_add_i32_e32 v0, vcc, 1, v2
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
+; SI-NEXT:    v_cmp_gt_u64_e32 vcc, s[34:35], v[2:3]
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v7, v3
+; SI-NEXT:    v_mov_b32_e32 v6, v2
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[4:7], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[2:3]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    v_mov_b32_e32 v2, v4
+; SI-NEXT:    v_mov_b32_e32 v3, v5
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB111_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v8, 1
+; SI-NEXT:    v_readlane_b32 s6, v8, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -8607,24 +10445,58 @@ define amdgpu_gfx void @global_atomic_uinc_wrap_i64_noret_scalar(ptr addrspace(1
 ; VI-LABEL: global_atomic_uinc_wrap_i64_noret_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
-; VI-NEXT:    v_mov_b32_e32 v2, s4
-; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    flat_atomic_inc_x2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v4, s4
+; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:    v_mov_b32_e32 v5, s5
+; VI-NEXT:  .LBB111_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_add_u32_e32 v0, vcc, 1, v2
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
+; VI-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[2:3]
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; VI-NEXT:    v_mov_b32_e32 v3, v1
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    v_mov_b32_e32 v2, v0
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB111_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_uinc_wrap_i64_noret_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_inc_x2 v2, v[0:1], s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:    global_load_dwordx2 v[2:3], v4, s[4:5]
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:  .LBB111_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 1, v2
+; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX9-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[2:3]
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[4:5] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v3, v1
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    v_mov_b32_e32 v2, v0
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB111_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i64 %in seq_cst
   ret void
@@ -8635,23 +10507,45 @@ define amdgpu_gfx void @global_atomic_uinc_wrap_i64_noret_offset_scalar(ptr addr
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
-; SI-NEXT:    v_mov_b32_e32 v0, s6
-; SI-NEXT:    v_mov_b32_e32 v1, s7
+; SI-NEXT:    v_writelane_b32 v8, s6, 0
+; SI-NEXT:    v_writelane_b32 v8, s7, 1
+; SI-NEXT:    s_mov_b32 s35, s7
+; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    buffer_load_dwordx2 v[2:3], off, s[4:7], 0 offset:32
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:  .LBB112_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_inc_x2 v[0:1], off, s[4:7], 0 offset:32
+; SI-NEXT:    v_add_i32_e32 v0, vcc, 1, v2
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
+; SI-NEXT:    v_cmp_gt_u64_e32 vcc, s[34:35], v[2:3]
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v7, v3
+; SI-NEXT:    v_mov_b32_e32 v6, v2
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[4:7], off, s[4:7], 0 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[2:3]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    v_mov_b32_e32 v2, v4
+; SI-NEXT:    v_mov_b32_e32 v3, v5
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB112_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v8, 1
+; SI-NEXT:    v_readlane_b32 s6, v8, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -8661,24 +10555,56 @@ define amdgpu_gfx void @global_atomic_uinc_wrap_i64_noret_offset_scalar(ptr addr
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s34, s4, 32
 ; VI-NEXT:    s_addc_u32 s35, s5, 0
-; VI-NEXT:    v_mov_b32_e32 v2, s34
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
-; VI-NEXT:    v_mov_b32_e32 v3, s35
-; VI-NEXT:    flat_atomic_inc_x2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v4, s34
+; VI-NEXT:    v_mov_b32_e32 v5, s35
+; VI-NEXT:    flat_load_dwordx2 v[2:3], v[4:5]
+; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:  .LBB112_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_add_u32_e32 v0, vcc, 1, v2
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
+; VI-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[2:3]
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; VI-NEXT:    v_mov_b32_e32 v3, v1
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    v_mov_b32_e32 v2, v0
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB112_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_uinc_wrap_i64_noret_offset_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_inc_x2 v2, v[0:1], s[4:5] offset:32
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:    global_load_dwordx2 v[2:3], v4, s[4:5] offset:32
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:  .LBB112_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 1, v2
+; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX9-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[2:3]
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[4:5] offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v3, v1
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    v_mov_b32_e32 v2, v0
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB112_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %tmp0 = atomicrmw uinc_wrap ptr addrspace(1) %gep, i64 %in seq_cst
@@ -8690,25 +10616,45 @@ define amdgpu_gfx i64 @global_atomic_uinc_wrap_i64_ret_scalar(ptr addrspace(1) i
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
-; SI-NEXT:    s_mov_b32 s34, s7
-; SI-NEXT:    s_mov_b32 s35, s6
+; SI-NEXT:    v_writelane_b32 v6, s6, 0
+; SI-NEXT:    v_writelane_b32 v6, s7, 1
+; SI-NEXT:    s_mov_b32 s35, s7
+; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s35
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:  .LBB113_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_inc_x2 v[0:1], off, s[4:7], 0 glc
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_add_i32_e32 v0, vcc, 1, v4
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v5, vcc
+; SI-NEXT:    v_cmp_gt_u64_e32 vcc, s[34:35], v[4:5]
+; SI-NEXT:    v_cndmask_b32_e32 v3, 0, v1, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc
+; SI-NEXT:    v_mov_b32_e32 v0, v2
+; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_mov_b32_e32 v2, v4
+; SI-NEXT:    v_mov_b32_e32 v3, v5
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[4:5]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB113_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v6, 1
+; SI-NEXT:    v_readlane_b32 s6, v6, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -8716,24 +10662,58 @@ define amdgpu_gfx i64 @global_atomic_uinc_wrap_i64_ret_scalar(ptr addrspace(1) i
 ; VI-LABEL: global_atomic_uinc_wrap_i64_ret_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v2, s4
+; VI-NEXT:    s_mov_b64 s[34:35], 0
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    flat_atomic_inc_x2 v[0:1], v[2:3], v[0:1] glc
+; VI-NEXT:  .LBB113_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v7, v1
+; VI-NEXT:    v_mov_b32_e32 v6, v0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, 1, v6
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v7, vcc
+; VI-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[6:7]
+; VI-NEXT:    v_cndmask_b32_e32 v5, 0, v1, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v4, 0, v0, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[6:7]
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB113_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_uinc_wrap_i64_ret_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_inc_x2 v[0:1], v2, v[0:1], s[4:5] glc
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v2, s[4:5]
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:  .LBB113_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v6, v1
+; GFX9-NEXT:    v_mov_b32_e32 v5, v0
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 1, v5
+; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v6, vcc
+; GFX9-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[5:6]
+; GFX9-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v3, 0, v0, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v2, v[3:6], s[4:5] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[5:6]
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB113_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i64 %in seq_cst
   ret i64 %result
@@ -8744,23 +10724,45 @@ define amdgpu_gfx i64 @global_atomic_uinc_wrap_i64_ret_offset_scalar(ptr addrspa
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
-; SI-NEXT:    v_mov_b32_e32 v0, s6
-; SI-NEXT:    v_mov_b32_e32 v1, s7
+; SI-NEXT:    v_writelane_b32 v6, s6, 0
+; SI-NEXT:    v_writelane_b32 v6, s7, 1
+; SI-NEXT:    s_mov_b32 s35, s7
+; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0 offset:32
+; SI-NEXT:    s_mov_b64 s[36:37], 0
+; SI-NEXT:  .LBB114_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_inc_x2 v[0:1], off, s[4:7], 0 offset:32 glc
+; SI-NEXT:    v_mov_b32_e32 v5, v1
+; SI-NEXT:    v_mov_b32_e32 v4, v0
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_add_i32_e32 v0, vcc, 1, v4
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v5, vcc
+; SI-NEXT:    v_cmp_gt_u64_e32 vcc, s[34:35], v[4:5]
+; SI-NEXT:    v_cndmask_b32_e32 v3, 0, v1, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc
+; SI-NEXT:    v_mov_b32_e32 v0, v2
+; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_mov_b32_e32 v2, v4
+; SI-NEXT:    v_mov_b32_e32 v3, v5
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], off, s[4:7], 0 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[4:5]
+; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
+; SI-NEXT:    s_cbranch_execnz .LBB114_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
+; SI-NEXT:    v_readlane_b32 s7, v6, 1
+; SI-NEXT:    v_readlane_b32 s6, v6, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -8771,23 +10773,55 @@ define amdgpu_gfx i64 @global_atomic_uinc_wrap_i64_ret_offset_scalar(ptr addrspa
 ; VI-NEXT:    s_add_u32 s34, s4, 32
 ; VI-NEXT:    s_addc_u32 s35, s5, 0
 ; VI-NEXT:    v_mov_b32_e32 v2, s34
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
 ; VI-NEXT:    v_mov_b32_e32 v3, s35
-; VI-NEXT:    flat_atomic_inc_x2 v[0:1], v[2:3], v[0:1] glc
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[2:3]
+; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:  .LBB114_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v7, v1
+; VI-NEXT:    v_mov_b32_e32 v6, v0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, 1, v6
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v7, vcc
+; VI-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[6:7]
+; VI-NEXT:    v_cndmask_b32_e32 v5, 0, v1, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v4, 0, v0, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[6:7]
+; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; VI-NEXT:    s_cbranch_execnz .LBB114_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_uinc_wrap_i64_ret_offset_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_inc_x2 v[0:1], v2, v[0:1], s[4:5] offset:32 glc
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v2, s[4:5] offset:32
+; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:  .LBB114_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v6, v1
+; GFX9-NEXT:    v_mov_b32_e32 v5, v0
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 1, v5
+; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v6, vcc
+; GFX9-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[5:6]
+; GFX9-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v3, 0, v0, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v2, v[3:6], s[4:5] offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[5:6]
+; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[34:35]
+; GFX9-NEXT:    s_cbranch_execnz .LBB114_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %result = atomicrmw uinc_wrap ptr addrspace(1) %gep, i64 %in seq_cst
@@ -8802,30 +10836,95 @@ define void @global_atomic_udec_wrap_i64_noret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-LABEL: global_atomic_udec_wrap_i64_noret:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    s_mov_b32 s6, 0
-; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s4, s6
-; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_dec_x2 v[2:3], v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    s_mov_b32 s10, 0
+; SI-NEXT:    s_mov_b32 s11, 0xf000
+; SI-NEXT:    s_mov_b32 s8, s10
+; SI-NEXT:    s_mov_b32 s9, s10
+; SI-NEXT:    buffer_load_dwordx2 v[6:7], v[0:1], s[8:11], 0 addr64
+; SI-NEXT:    s_mov_b64 s[6:7], 0
+; SI-NEXT:  .LBB115_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_add_i32_e32 v4, vcc, -1, v6
+; SI-NEXT:    v_addc_u32_e32 v5, vcc, -1, v7, vcc
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[6:7]
+; SI-NEXT:    v_cmp_gt_u64_e64 s[4:5], v[6:7], v[2:3]
+; SI-NEXT:    s_or_b64 vcc, vcc, s[4:5]
+; SI-NEXT:    v_cndmask_b32_e32 v5, v5, v3, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v4, v4, v2, vcc
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v7
+; SI-NEXT:    v_mov_b32_e32 v10, v6
+; SI-NEXT:    v_mov_b32_e32 v9, v5
+; SI-NEXT:    v_mov_b32_e32 v8, v4
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[8:11], v[0:1], s[8:11], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[8:9], v[6:7]
+; SI-NEXT:    s_or_b64 s[6:7], vcc, s[6:7]
+; SI-NEXT:    v_mov_b32_e32 v6, v8
+; SI-NEXT:    v_mov_b32_e32 v7, v9
+; SI-NEXT:    s_andn2_b64 exec, exec, s[6:7]
+; SI-NEXT:    s_cbranch_execnz .LBB115_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: global_atomic_udec_wrap_i64_noret:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_atomic_dec_x2 v[0:1], v[2:3]
+; VI-NEXT:    flat_load_dwordx2 v[6:7], v[0:1]
+; VI-NEXT:    s_mov_b64 s[8:9], 0
+; VI-NEXT:  .LBB115_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[6:7]
+; VI-NEXT:    v_cmp_gt_u64_e64 s[4:5], v[6:7], v[2:3]
+; VI-NEXT:    v_add_u32_e64 v4, s[6:7], -1, v6
+; VI-NEXT:    v_addc_u32_e64 v5, s[6:7], -1, v7, s[6:7]
+; VI-NEXT:    s_or_b64 vcc, vcc, s[4:5]
+; VI-NEXT:    v_cndmask_b32_e32 v5, v5, v3, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v4, v4, v2, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; VI-NEXT:    v_mov_b32_e32 v7, v5
+; VI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; VI-NEXT:    s_cbranch_execnz .LBB115_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_udec_wrap_i64_noret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_dec_x2 v[0:1], v[2:3], off
+; GFX9-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off
+; GFX9-NEXT:    s_mov_b64 s[8:9], 0
+; GFX9-NEXT:  .LBB115_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[6:7]
+; GFX9-NEXT:    v_cmp_gt_u64_e64 s[4:5], v[6:7], v[2:3]
+; GFX9-NEXT:    v_add_co_u32_e64 v4, s[6:7], -1, v6
+; GFX9-NEXT:    v_addc_co_u32_e64 v5, s[6:7], -1, v7, s[6:7]
+; GFX9-NEXT:    s_or_b64 vcc, vcc, s[4:5]
+; GFX9-NEXT:    v_cndmask_b32_e32 v5, v5, v3, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v4, v4, v2, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; GFX9-NEXT:    s_cbranch_execnz .LBB115_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = atomicrmw udec_wrap ptr addrspace(1) %ptr, i64 %in seq_cst
   ret void
@@ -8835,13 +10934,38 @@ define void @global_atomic_udec_wrap_i64_noret_offset(ptr addrspace(1) %out, i64
 ; SI-LABEL: global_atomic_udec_wrap_i64_noret_offset:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    s_mov_b32 s6, 0
-; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s4, s6
-; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_dec_x2 v[2:3], v[0:1], s[4:7], 0 addr64 offset:32
+; SI-NEXT:    s_mov_b32 s10, 0
+; SI-NEXT:    s_mov_b32 s11, 0xf000
+; SI-NEXT:    s_mov_b32 s8, s10
+; SI-NEXT:    s_mov_b32 s9, s10
+; SI-NEXT:    buffer_load_dwordx2 v[6:7], v[0:1], s[8:11], 0 addr64 offset:32
+; SI-NEXT:    s_mov_b64 s[6:7], 0
+; SI-NEXT:  .LBB116_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_add_i32_e32 v4, vcc, -1, v6
+; SI-NEXT:    v_addc_u32_e32 v5, vcc, -1, v7, vcc
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[6:7]
+; SI-NEXT:    v_cmp_gt_u64_e64 s[4:5], v[6:7], v[2:3]
+; SI-NEXT:    s_or_b64 vcc, vcc, s[4:5]
+; SI-NEXT:    v_cndmask_b32_e32 v5, v5, v3, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v4, v4, v2, vcc
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v7
+; SI-NEXT:    v_mov_b32_e32 v10, v6
+; SI-NEXT:    v_mov_b32_e32 v9, v5
+; SI-NEXT:    v_mov_b32_e32 v8, v4
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[8:11], v[0:1], s[8:11], 0 addr64 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[8:9], v[6:7]
+; SI-NEXT:    s_or_b64 s[6:7], vcc, s[6:7]
+; SI-NEXT:    v_mov_b32_e32 v6, v8
+; SI-NEXT:    v_mov_b32_e32 v7, v9
+; SI-NEXT:    s_andn2_b64 exec, exec, s[6:7]
+; SI-NEXT:    s_cbranch_execnz .LBB116_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -8850,17 +10974,57 @@ define void @global_atomic_udec_wrap_i64_noret_offset(ptr addrspace(1) %out, i64
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_dec_x2 v[0:1], v[2:3]
+; VI-NEXT:    flat_load_dwordx2 v[6:7], v[0:1]
+; VI-NEXT:    s_mov_b64 s[8:9], 0
+; VI-NEXT:  .LBB116_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[6:7]
+; VI-NEXT:    v_cmp_gt_u64_e64 s[4:5], v[6:7], v[2:3]
+; VI-NEXT:    v_add_u32_e64 v4, s[6:7], -1, v6
+; VI-NEXT:    v_addc_u32_e64 v5, s[6:7], -1, v7, s[6:7]
+; VI-NEXT:    s_or_b64 vcc, vcc, s[4:5]
+; VI-NEXT:    v_cndmask_b32_e32 v5, v5, v3, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v4, v4, v2, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; VI-NEXT:    v_mov_b32_e32 v7, v5
+; VI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; VI-NEXT:    s_cbranch_execnz .LBB116_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_udec_wrap_i64_noret_offset:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_dec_x2 v[0:1], v[2:3], off offset:32
+; GFX9-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off offset:32
+; GFX9-NEXT:    s_mov_b64 s[8:9], 0
+; GFX9-NEXT:  .LBB116_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[6:7]
+; GFX9-NEXT:    v_cmp_gt_u64_e64 s[4:5], v[6:7], v[2:3]
+; GFX9-NEXT:    v_add_co_u32_e64 v4, s[6:7], -1, v6
+; GFX9-NEXT:    v_addc_co_u32_e64 v5, s[6:7], -1, v7, s[6:7]
+; GFX9-NEXT:    s_or_b64 vcc, vcc, s[4:5]
+; GFX9-NEXT:    v_cndmask_b32_e32 v5, v5, v3, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v4, v4, v2, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; GFX9-NEXT:    s_cbranch_execnz .LBB116_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %tmp0 = atomicrmw udec_wrap ptr addrspace(1) %gep, i64 %in seq_cst
@@ -8871,32 +11035,103 @@ define i64 @global_atomic_udec_wrap_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-LABEL: global_atomic_udec_wrap_i64_ret:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    s_mov_b32 s6, 0
-; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s4, s6
-; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_dec_x2 v[2:3], v[0:1], s[4:7], 0 addr64 glc
+; SI-NEXT:    v_mov_b32_e32 v5, v3
+; SI-NEXT:    v_mov_b32_e32 v4, v2
+; SI-NEXT:    v_mov_b32_e32 v7, v1
+; SI-NEXT:    v_mov_b32_e32 v6, v0
+; SI-NEXT:    s_mov_b32 s10, 0
+; SI-NEXT:    s_mov_b32 s11, 0xf000
+; SI-NEXT:    s_mov_b32 s8, s10
+; SI-NEXT:    s_mov_b32 s9, s10
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[6:7], s[8:11], 0 addr64
+; SI-NEXT:    s_mov_b64 s[6:7], 0
+; SI-NEXT:  .LBB117_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v1
+; SI-NEXT:    v_mov_b32_e32 v10, v0
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_add_i32_e32 v0, vcc, -1, v10
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, -1, v11, vcc
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[10:11]
+; SI-NEXT:    v_cmp_gt_u64_e64 s[4:5], v[10:11], v[4:5]
+; SI-NEXT:    s_or_b64 vcc, vcc, s[4:5]
+; SI-NEXT:    v_cndmask_b32_e32 v9, v1, v5, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v8, v0, v4, vcc
+; SI-NEXT:    v_mov_b32_e32 v0, v8
+; SI-NEXT:    v_mov_b32_e32 v1, v9
+; SI-NEXT:    v_mov_b32_e32 v2, v10
+; SI-NEXT:    v_mov_b32_e32 v3, v11
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], v[6:7], s[8:11], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[10:11]
+; SI-NEXT:    s_or_b64 s[6:7], vcc, s[6:7]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[6:7]
+; SI-NEXT:    s_cbranch_execnz .LBB117_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: global_atomic_udec_wrap_i64_ret:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_atomic_dec_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    flat_load_dwordx2 v[4:5], v[0:1]
+; VI-NEXT:    s_mov_b64 s[8:9], 0
+; VI-NEXT:  .LBB117_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v7, v5
+; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[6:7]
+; VI-NEXT:    v_cmp_gt_u64_e64 s[4:5], v[6:7], v[2:3]
+; VI-NEXT:    v_add_u32_e64 v4, s[6:7], -1, v6
+; VI-NEXT:    v_addc_u32_e64 v5, s[6:7], -1, v7, s[6:7]
+; VI-NEXT:    s_or_b64 vcc, vcc, s[4:5]
+; VI-NEXT:    v_cndmask_b32_e32 v5, v5, v3, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v4, v4, v2, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; VI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; VI-NEXT:    s_cbranch_execnz .LBB117_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[8:9]
+; VI-NEXT:    v_mov_b32_e32 v0, v4
+; VI-NEXT:    v_mov_b32_e32 v1, v5
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_udec_wrap_i64_ret:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_dec_x2 v[0:1], v[0:1], v[2:3], off glc
+; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
+; GFX9-NEXT:    s_mov_b64 s[8:9], 0
+; GFX9-NEXT:  .LBB117_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[6:7]
+; GFX9-NEXT:    v_cmp_gt_u64_e64 s[4:5], v[6:7], v[2:3]
+; GFX9-NEXT:    v_add_co_u32_e64 v4, s[6:7], -1, v6
+; GFX9-NEXT:    v_addc_co_u32_e64 v5, s[6:7], -1, v7, s[6:7]
+; GFX9-NEXT:    s_or_b64 vcc, vcc, s[4:5]
+; GFX9-NEXT:    v_cndmask_b32_e32 v5, v5, v3, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v4, v4, v2, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; GFX9-NEXT:    s_cbranch_execnz .LBB117_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GFX9-NEXT:    v_mov_b32_e32 v0, v4
+; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw udec_wrap ptr addrspace(1) %ptr, i64 %in seq_cst
   ret i64 %result
@@ -8906,34 +11141,103 @@ define i64 @global_atomic_udec_wrap_i64_ret_offset(ptr addrspace(1) %out, i64 %i
 ; SI-LABEL: global_atomic_udec_wrap_i64_ret_offset:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    s_mov_b32 s6, 0
-; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s4, s6
-; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_atomic_dec_x2 v[2:3], v[0:1], s[4:7], 0 addr64 offset:32 glc
+; SI-NEXT:    v_mov_b32_e32 v5, v3
+; SI-NEXT:    v_mov_b32_e32 v4, v2
+; SI-NEXT:    v_mov_b32_e32 v7, v1
+; SI-NEXT:    v_mov_b32_e32 v6, v0
+; SI-NEXT:    s_mov_b32 s10, 0
+; SI-NEXT:    s_mov_b32 s11, 0xf000
+; SI-NEXT:    s_mov_b32 s8, s10
+; SI-NEXT:    s_mov_b32 s9, s10
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[6:7], s[8:11], 0 addr64 offset:32
+; SI-NEXT:    s_mov_b64 s[6:7], 0
+; SI-NEXT:  .LBB118_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v11, v1
+; SI-NEXT:    v_mov_b32_e32 v10, v0
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_add_i32_e32 v0, vcc, -1, v10
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, -1, v11, vcc
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[10:11]
+; SI-NEXT:    v_cmp_gt_u64_e64 s[4:5], v[10:11], v[4:5]
+; SI-NEXT:    s_or_b64 vcc, vcc, s[4:5]
+; SI-NEXT:    v_cndmask_b32_e32 v9, v1, v5, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v8, v0, v4, vcc
+; SI-NEXT:    v_mov_b32_e32 v0, v8
+; SI-NEXT:    v_mov_b32_e32 v1, v9
+; SI-NEXT:    v_mov_b32_e32 v2, v10
+; SI-NEXT:    v_mov_b32_e32 v3, v11
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], v[6:7], s[8:11], 0 addr64 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[10:11]
+; SI-NEXT:    s_or_b64 s[6:7], vcc, s[6:7]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[6:7]
+; SI-NEXT:    s_cbranch_execnz .LBB118_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: global_atomic_udec_wrap_i64_ret_offset:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_dec_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[4:5]
+; VI-NEXT:    s_mov_b64 s[8:9], 0
+; VI-NEXT:  .LBB118_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v9, v1
+; VI-NEXT:    v_mov_b32_e32 v8, v0
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[8:9]
+; VI-NEXT:    v_cmp_gt_u64_e64 s[4:5], v[8:9], v[2:3]
+; VI-NEXT:    v_add_u32_e64 v0, s[6:7], -1, v8
+; VI-NEXT:    v_addc_u32_e64 v1, s[6:7], -1, v9, s[6:7]
+; VI-NEXT:    s_or_b64 vcc, vcc, s[4:5]
+; VI-NEXT:    v_cndmask_b32_e32 v7, v1, v3, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v6, v0, v2, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[6:9] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[8:9]
+; VI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; VI-NEXT:    s_cbranch_execnz .LBB118_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_udec_wrap_i64_ret_offset:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_atomic_dec_x2 v[0:1], v[0:1], v[2:3], off offset:32 glc
+; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off offset:32
+; GFX9-NEXT:    s_mov_b64 s[8:9], 0
+; GFX9-NEXT:  .LBB118_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
+; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[6:7]
+; GFX9-NEXT:    v_cmp_gt_u64_e64 s[4:5], v[6:7], v[2:3]
+; GFX9-NEXT:    v_add_co_u32_e64 v4, s[6:7], -1, v6
+; GFX9-NEXT:    v_addc_co_u32_e64 v5, s[6:7], -1, v7, s[6:7]
+; GFX9-NEXT:    s_or_b64 vcc, vcc, s[4:5]
+; GFX9-NEXT:    v_cndmask_b32_e32 v5, v5, v3, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v4, v4, v2, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX9-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; GFX9-NEXT:    s_cbranch_execnz .LBB118_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GFX9-NEXT:    v_mov_b32_e32 v0, v4
+; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %result = atomicrmw udec_wrap ptr addrspace(1) %gep, i64 %in seq_cst
@@ -8945,25 +11249,49 @@ define amdgpu_gfx void @global_atomic_udec_wrap_i64_noret_scalar(ptr addrspace(1
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
-; SI-NEXT:    s_mov_b32 s34, s7
-; SI-NEXT:    s_mov_b32 s35, s6
+; SI-NEXT:    v_writelane_b32 v10, s6, 0
+; SI-NEXT:    v_writelane_b32 v10, s7, 1
+; SI-NEXT:    s_mov_b32 s35, s7
+; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s35
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    buffer_load_dwordx2 v[2:3], off, s[4:7], 0
+; SI-NEXT:    s_mov_b64 s[38:39], 0
+; SI-NEXT:    v_mov_b32_e32 v4, s35
+; SI-NEXT:    v_mov_b32_e32 v5, s34
+; SI-NEXT:  .LBB119_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_dec_x2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    v_add_i32_e32 v0, vcc, -1, v2
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, -1, v3, vcc
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[2:3]
+; SI-NEXT:    v_cmp_lt_u64_e64 s[36:37], s[34:35], v[2:3]
+; SI-NEXT:    s_or_b64 vcc, vcc, s[36:37]
+; SI-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v5, vcc
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v9, v3
+; SI-NEXT:    v_mov_b32_e32 v8, v2
+; SI-NEXT:    v_mov_b32_e32 v7, v1
+; SI-NEXT:    v_mov_b32_e32 v6, v0
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[6:9], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[6:7], v[2:3]
+; SI-NEXT:    s_or_b64 s[38:39], vcc, s[38:39]
+; SI-NEXT:    v_mov_b32_e32 v2, v6
+; SI-NEXT:    v_mov_b32_e32 v3, v7
+; SI-NEXT:    s_andn2_b64 exec, exec, s[38:39]
+; SI-NEXT:    s_cbranch_execnz .LBB119_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[38:39]
+; SI-NEXT:    v_readlane_b32 s7, v10, 1
+; SI-NEXT:    v_readlane_b32 s6, v10, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -8971,24 +11299,66 @@ define amdgpu_gfx void @global_atomic_udec_wrap_i64_noret_scalar(ptr addrspace(1
 ; VI-LABEL: global_atomic_udec_wrap_i64_noret_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
-; VI-NEXT:    v_mov_b32_e32 v2, s4
-; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    flat_atomic_dec_x2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v4, s4
+; VI-NEXT:    s_mov_b64 s[38:39], 0
+; VI-NEXT:    v_mov_b32_e32 v6, s7
+; VI-NEXT:    v_mov_b32_e32 v7, s6
+; VI-NEXT:    v_mov_b32_e32 v5, s5
+; VI-NEXT:  .LBB119_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[2:3]
+; VI-NEXT:    v_cmp_lt_u64_e64 s[34:35], s[6:7], v[2:3]
+; VI-NEXT:    v_add_u32_e64 v0, s[36:37], -1, v2
+; VI-NEXT:    v_addc_u32_e64 v1, s[36:37], -1, v3, s[36:37]
+; VI-NEXT:    s_or_b64 vcc, vcc, s[34:35]
+; VI-NEXT:    v_cndmask_b32_e32 v1, v1, v6, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v7, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; VI-NEXT:    v_mov_b32_e32 v3, v1
+; VI-NEXT:    s_or_b64 s[38:39], vcc, s[38:39]
+; VI-NEXT:    v_mov_b32_e32 v2, v0
+; VI-NEXT:    s_andn2_b64 exec, exec, s[38:39]
+; VI-NEXT:    s_cbranch_execnz .LBB119_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[38:39]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_udec_wrap_i64_noret_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_dec_x2 v2, v[0:1], s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:    global_load_dwordx2 v[2:3], v4, s[4:5]
+; GFX9-NEXT:    s_mov_b64 s[38:39], 0
+; GFX9-NEXT:    v_mov_b32_e32 v5, s7
+; GFX9-NEXT:    v_mov_b32_e32 v6, s6
+; GFX9-NEXT:  .LBB119_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[2:3]
+; GFX9-NEXT:    v_cmp_lt_u64_e64 s[34:35], s[6:7], v[2:3]
+; GFX9-NEXT:    v_add_co_u32_e64 v0, s[36:37], -1, v2
+; GFX9-NEXT:    v_addc_co_u32_e64 v1, s[36:37], -1, v3, s[36:37]
+; GFX9-NEXT:    s_or_b64 vcc, vcc, s[34:35]
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v6, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[4:5] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v3, v1
+; GFX9-NEXT:    s_or_b64 s[38:39], vcc, s[38:39]
+; GFX9-NEXT:    v_mov_b32_e32 v2, v0
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[38:39]
+; GFX9-NEXT:    s_cbranch_execnz .LBB119_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[38:39]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = atomicrmw udec_wrap ptr addrspace(1) %ptr, i64 %in seq_cst
   ret void
@@ -8999,23 +11369,49 @@ define amdgpu_gfx void @global_atomic_udec_wrap_i64_noret_offset_scalar(ptr addr
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
-; SI-NEXT:    v_mov_b32_e32 v0, s6
-; SI-NEXT:    v_mov_b32_e32 v1, s7
+; SI-NEXT:    v_writelane_b32 v10, s6, 0
+; SI-NEXT:    v_writelane_b32 v10, s7, 1
+; SI-NEXT:    s_mov_b32 s35, s7
+; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    buffer_load_dwordx2 v[2:3], off, s[4:7], 0 offset:32
+; SI-NEXT:    s_mov_b64 s[38:39], 0
+; SI-NEXT:    v_mov_b32_e32 v4, s35
+; SI-NEXT:    v_mov_b32_e32 v5, s34
+; SI-NEXT:  .LBB120_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_dec_x2 v[0:1], off, s[4:7], 0 offset:32
+; SI-NEXT:    v_add_i32_e32 v0, vcc, -1, v2
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, -1, v3, vcc
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[2:3]
+; SI-NEXT:    v_cmp_lt_u64_e64 s[36:37], s[34:35], v[2:3]
+; SI-NEXT:    s_or_b64 vcc, vcc, s[36:37]
+; SI-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v5, vcc
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v9, v3
+; SI-NEXT:    v_mov_b32_e32 v8, v2
+; SI-NEXT:    v_mov_b32_e32 v7, v1
+; SI-NEXT:    v_mov_b32_e32 v6, v0
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[6:9], off, s[4:7], 0 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[6:7], v[2:3]
+; SI-NEXT:    s_or_b64 s[38:39], vcc, s[38:39]
+; SI-NEXT:    v_mov_b32_e32 v2, v6
+; SI-NEXT:    v_mov_b32_e32 v3, v7
+; SI-NEXT:    s_andn2_b64 exec, exec, s[38:39]
+; SI-NEXT:    s_cbranch_execnz .LBB120_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[38:39]
+; SI-NEXT:    v_readlane_b32 s7, v10, 1
+; SI-NEXT:    v_readlane_b32 s6, v10, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -9025,24 +11421,64 @@ define amdgpu_gfx void @global_atomic_udec_wrap_i64_noret_offset_scalar(ptr addr
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s34, s4, 32
 ; VI-NEXT:    s_addc_u32 s35, s5, 0
-; VI-NEXT:    v_mov_b32_e32 v2, s34
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
-; VI-NEXT:    v_mov_b32_e32 v3, s35
-; VI-NEXT:    flat_atomic_dec_x2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v4, s34
+; VI-NEXT:    v_mov_b32_e32 v5, s35
+; VI-NEXT:    flat_load_dwordx2 v[2:3], v[4:5]
+; VI-NEXT:    s_mov_b64 s[38:39], 0
+; VI-NEXT:    v_mov_b32_e32 v6, s7
+; VI-NEXT:    v_mov_b32_e32 v7, s6
+; VI-NEXT:  .LBB120_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[2:3]
+; VI-NEXT:    v_cmp_lt_u64_e64 s[34:35], s[6:7], v[2:3]
+; VI-NEXT:    v_add_u32_e64 v0, s[36:37], -1, v2
+; VI-NEXT:    v_addc_u32_e64 v1, s[36:37], -1, v3, s[36:37]
+; VI-NEXT:    s_or_b64 vcc, vcc, s[34:35]
+; VI-NEXT:    v_cndmask_b32_e32 v1, v1, v6, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v7, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; VI-NEXT:    v_mov_b32_e32 v3, v1
+; VI-NEXT:    s_or_b64 s[38:39], vcc, s[38:39]
+; VI-NEXT:    v_mov_b32_e32 v2, v0
+; VI-NEXT:    s_andn2_b64 exec, exec, s[38:39]
+; VI-NEXT:    s_cbranch_execnz .LBB120_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[38:39]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_udec_wrap_i64_noret_offset_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_dec_x2 v2, v[0:1], s[4:5] offset:32
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:    global_load_dwordx2 v[2:3], v4, s[4:5] offset:32
+; GFX9-NEXT:    s_mov_b64 s[38:39], 0
+; GFX9-NEXT:    v_mov_b32_e32 v5, s7
+; GFX9-NEXT:    v_mov_b32_e32 v6, s6
+; GFX9-NEXT:  .LBB120_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[2:3]
+; GFX9-NEXT:    v_cmp_lt_u64_e64 s[34:35], s[6:7], v[2:3]
+; GFX9-NEXT:    v_add_co_u32_e64 v0, s[36:37], -1, v2
+; GFX9-NEXT:    v_addc_co_u32_e64 v1, s[36:37], -1, v3, s[36:37]
+; GFX9-NEXT:    s_or_b64 vcc, vcc, s[34:35]
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v6, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[4:5] offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v3, v1
+; GFX9-NEXT:    s_or_b64 s[38:39], vcc, s[38:39]
+; GFX9-NEXT:    v_mov_b32_e32 v2, v0
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[38:39]
+; GFX9-NEXT:    s_cbranch_execnz .LBB120_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[38:39]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %tmp0 = atomicrmw udec_wrap ptr addrspace(1) %gep, i64 %in seq_cst
@@ -9054,25 +11490,49 @@ define amdgpu_gfx i64 @global_atomic_udec_wrap_i64_ret_scalar(ptr addrspace(1) i
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
-; SI-NEXT:    s_mov_b32 s34, s7
-; SI-NEXT:    s_mov_b32 s35, s6
+; SI-NEXT:    v_writelane_b32 v10, s6, 0
+; SI-NEXT:    v_writelane_b32 v10, s7, 1
+; SI-NEXT:    s_mov_b32 s35, s7
+; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s35
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    s_mov_b64 s[38:39], 0
+; SI-NEXT:    v_mov_b32_e32 v4, s35
+; SI-NEXT:    v_mov_b32_e32 v5, s34
+; SI-NEXT:  .LBB121_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_dec_x2 v[0:1], off, s[4:7], 0 glc
+; SI-NEXT:    v_mov_b32_e32 v9, v1
+; SI-NEXT:    v_mov_b32_e32 v8, v0
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_add_i32_e32 v0, vcc, -1, v8
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, -1, v9, vcc
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[8:9]
+; SI-NEXT:    v_cmp_lt_u64_e64 s[36:37], s[34:35], v[8:9]
+; SI-NEXT:    s_or_b64 vcc, vcc, s[36:37]
+; SI-NEXT:    v_cndmask_b32_e32 v7, v1, v4, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v6, v0, v5, vcc
+; SI-NEXT:    v_mov_b32_e32 v0, v6
+; SI-NEXT:    v_mov_b32_e32 v1, v7
+; SI-NEXT:    v_mov_b32_e32 v2, v8
+; SI-NEXT:    v_mov_b32_e32 v3, v9
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[8:9]
+; SI-NEXT:    s_or_b64 s[38:39], vcc, s[38:39]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[38:39]
+; SI-NEXT:    s_cbranch_execnz .LBB121_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[38:39]
+; SI-NEXT:    v_readlane_b32 s7, v10, 1
+; SI-NEXT:    v_readlane_b32 s6, v10, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -9080,24 +11540,66 @@ define amdgpu_gfx i64 @global_atomic_udec_wrap_i64_ret_scalar(ptr addrspace(1) i
 ; VI-LABEL: global_atomic_udec_wrap_i64_ret_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v2, s4
+; VI-NEXT:    s_mov_b64 s[38:39], 0
+; VI-NEXT:    v_mov_b32_e32 v4, s7
+; VI-NEXT:    v_mov_b32_e32 v5, s6
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    flat_atomic_dec_x2 v[0:1], v[2:3], v[0:1] glc
+; VI-NEXT:  .LBB121_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v9, v1
+; VI-NEXT:    v_mov_b32_e32 v8, v0
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[8:9]
+; VI-NEXT:    v_cmp_lt_u64_e64 s[34:35], s[6:7], v[8:9]
+; VI-NEXT:    v_add_u32_e64 v0, s[36:37], -1, v8
+; VI-NEXT:    v_addc_u32_e64 v1, s[36:37], -1, v9, s[36:37]
+; VI-NEXT:    s_or_b64 vcc, vcc, s[34:35]
+; VI-NEXT:    v_cndmask_b32_e32 v7, v1, v4, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v6, v0, v5, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[8:9]
+; VI-NEXT:    s_or_b64 s[38:39], vcc, s[38:39]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[38:39]
+; VI-NEXT:    s_cbranch_execnz .LBB121_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[38:39]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_udec_wrap_i64_ret_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_dec_x2 v[0:1], v2, v[0:1], s[4:5] glc
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v2, s[4:5]
+; GFX9-NEXT:    s_mov_b64 s[38:39], 0
+; GFX9-NEXT:    v_mov_b32_e32 v3, s7
+; GFX9-NEXT:    v_mov_b32_e32 v4, s6
+; GFX9-NEXT:  .LBB121_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v8, v1
+; GFX9-NEXT:    v_mov_b32_e32 v7, v0
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[7:8]
+; GFX9-NEXT:    v_cmp_lt_u64_e64 s[34:35], s[6:7], v[7:8]
+; GFX9-NEXT:    v_add_co_u32_e64 v0, s[36:37], -1, v7
+; GFX9-NEXT:    v_addc_co_u32_e64 v1, s[36:37], -1, v8, s[36:37]
+; GFX9-NEXT:    s_or_b64 vcc, vcc, s[34:35]
+; GFX9-NEXT:    v_cndmask_b32_e32 v6, v1, v3, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v5, v0, v4, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v2, v[5:8], s[4:5] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[7:8]
+; GFX9-NEXT:    s_or_b64 s[38:39], vcc, s[38:39]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[38:39]
+; GFX9-NEXT:    s_cbranch_execnz .LBB121_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[38:39]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw udec_wrap ptr addrspace(1) %ptr, i64 %in seq_cst
   ret i64 %result
@@ -9108,23 +11610,49 @@ define amdgpu_gfx i64 @global_atomic_udec_wrap_i64_ret_offset_scalar(ptr addrspa
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v2, s6, 0
-; SI-NEXT:    v_writelane_b32 v2, s7, 1
-; SI-NEXT:    v_mov_b32_e32 v0, s6
-; SI-NEXT:    v_mov_b32_e32 v1, s7
+; SI-NEXT:    v_writelane_b32 v10, s6, 0
+; SI-NEXT:    v_writelane_b32 v10, s7, 1
+; SI-NEXT:    s_mov_b32 s35, s7
+; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0 offset:32
+; SI-NEXT:    s_mov_b64 s[38:39], 0
+; SI-NEXT:    v_mov_b32_e32 v4, s35
+; SI-NEXT:    v_mov_b32_e32 v5, s34
+; SI-NEXT:  .LBB122_1: ; %atomicrmw.start
+; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_dec_x2 v[0:1], off, s[4:7], 0 offset:32 glc
+; SI-NEXT:    v_mov_b32_e32 v9, v1
+; SI-NEXT:    v_mov_b32_e32 v8, v0
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_add_i32_e32 v0, vcc, -1, v8
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, -1, v9, vcc
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[8:9]
+; SI-NEXT:    v_cmp_lt_u64_e64 s[36:37], s[34:35], v[8:9]
+; SI-NEXT:    s_or_b64 vcc, vcc, s[36:37]
+; SI-NEXT:    v_cndmask_b32_e32 v7, v1, v4, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v6, v0, v5, vcc
+; SI-NEXT:    v_mov_b32_e32 v0, v6
+; SI-NEXT:    v_mov_b32_e32 v1, v7
+; SI-NEXT:    v_mov_b32_e32 v2, v8
+; SI-NEXT:    v_mov_b32_e32 v3, v9
+; SI-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], off, s[4:7], 0 offset:32 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v2, 1
-; SI-NEXT:    v_readlane_b32 s6, v2, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[8:9]
+; SI-NEXT:    s_or_b64 s[38:39], vcc, s[38:39]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[38:39]
+; SI-NEXT:    s_cbranch_execnz .LBB122_1
+; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; SI-NEXT:    s_or_b64 exec, exec, s[38:39]
+; SI-NEXT:    v_readlane_b32 s7, v10, 1
+; SI-NEXT:    v_readlane_b32 s6, v10, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -9135,23 +11663,63 @@ define amdgpu_gfx i64 @global_atomic_udec_wrap_i64_ret_offset_scalar(ptr addrspa
 ; VI-NEXT:    s_add_u32 s34, s4, 32
 ; VI-NEXT:    s_addc_u32 s35, s5, 0
 ; VI-NEXT:    v_mov_b32_e32 v2, s34
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
 ; VI-NEXT:    v_mov_b32_e32 v3, s35
-; VI-NEXT:    flat_atomic_dec_x2 v[0:1], v[2:3], v[0:1] glc
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[2:3]
+; VI-NEXT:    s_mov_b64 s[38:39], 0
+; VI-NEXT:    v_mov_b32_e32 v4, s7
+; VI-NEXT:    v_mov_b32_e32 v5, s6
+; VI-NEXT:  .LBB122_1: ; %atomicrmw.start
+; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v9, v1
+; VI-NEXT:    v_mov_b32_e32 v8, v0
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[8:9]
+; VI-NEXT:    v_cmp_lt_u64_e64 s[34:35], s[6:7], v[8:9]
+; VI-NEXT:    v_add_u32_e64 v0, s[36:37], -1, v8
+; VI-NEXT:    v_addc_u32_e64 v1, s[36:37], -1, v9, s[36:37]
+; VI-NEXT:    s_or_b64 vcc, vcc, s[34:35]
+; VI-NEXT:    v_cndmask_b32_e32 v7, v1, v4, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v6, v0, v5, vcc
+; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[8:9]
+; VI-NEXT:    s_or_b64 s[38:39], vcc, s[38:39]
+; VI-NEXT:    s_andn2_b64 exec, exec, s[38:39]
+; VI-NEXT:    s_cbranch_execnz .LBB122_1
+; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
+; VI-NEXT:    s_or_b64 exec, exec, s[38:39]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_atomic_udec_wrap_i64_ret_offset_scalar:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    global_atomic_dec_x2 v[0:1], v2, v[0:1], s[4:5] offset:32 glc
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v2, s[4:5] offset:32
+; GFX9-NEXT:    s_mov_b64 s[38:39], 0
+; GFX9-NEXT:    v_mov_b32_e32 v3, s7
+; GFX9-NEXT:    v_mov_b32_e32 v4, s6
+; GFX9-NEXT:  .LBB122_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v8, v1
+; GFX9-NEXT:    v_mov_b32_e32 v7, v0
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[7:8]
+; GFX9-NEXT:    v_cmp_lt_u64_e64 s[34:35], s[6:7], v[7:8]
+; GFX9-NEXT:    v_add_co_u32_e64 v0, s[36:37], -1, v7
+; GFX9-NEXT:    v_addc_co_u32_e64 v1, s[36:37], -1, v8, s[36:37]
+; GFX9-NEXT:    s_or_b64 vcc, vcc, s[34:35]
+; GFX9-NEXT:    v_cndmask_b32_e32 v6, v1, v3, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v5, v0, v4, vcc
+; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v2, v[5:8], s[4:5] offset:32 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[7:8]
+; GFX9-NEXT:    s_or_b64 s[38:39], vcc, s[38:39]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[38:39]
+; GFX9-NEXT:    s_cbranch_execnz .LBB122_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[38:39]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
   %result = atomicrmw udec_wrap ptr addrspace(1) %gep, i64 %in seq_cst
