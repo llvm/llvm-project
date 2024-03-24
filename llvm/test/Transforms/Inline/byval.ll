@@ -131,7 +131,7 @@ define i32 @test4() nounwind  {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 64
-; CHECK-NEXT:    call void @g3(ptr [[S]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @g3(ptr [[S]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret i32 4
 ;
 entry:

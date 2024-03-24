@@ -180,6 +180,13 @@ public:
     return ME;
   }
 
+  /// Get new MemoryEffectsBase with ModRef on the given Loc.
+  MemoryEffectsBase getWithLocUnknown(Location Loc) const {
+    MemoryEffectsBase ME = *this;
+    ME.setModRef(Loc, ModRefInfo::ModRef);
+    return ME;
+  }
+
   /// Get ModRefInfo for any location.
   ModRefInfo getModRef() const {
     ModRefInfo MR = ModRefInfo::NoModRef;

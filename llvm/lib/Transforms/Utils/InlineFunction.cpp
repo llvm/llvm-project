@@ -32,6 +32,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
@@ -61,6 +62,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -1374,6 +1376,129 @@ static AttrBuilder IdentifyValidPoisonGeneratingAttributes(CallBase &CB) {
   return Valid;
 }
 
+// Add attributes from CB params and Fn attributes that can always be propagated
+// to the corresponding argument / inner callbases.
+static void AddParamAndFnBasicAttributes(const CallBase &CB,
+                                         ValueToValueMapTy &VMap) {
+  auto *CalledFunction = CB.getCalledFunction();
+  auto &Context = CalledFunction->getContext();
+
+  // Collect valid attributes for all params.
+  SmallVector<AttrBuilder> ValidParamAttrs;
+  bool HasAttrToPropagate = false;
+
+  for (unsigned I = 0, E = CB.arg_size(); I < E; ++I) {
+    ValidParamAttrs.emplace_back(AttrBuilder{CB.getContext()});
+    // Access attributes can be propagated to any param with the same underlying
+    // object as the argument.
+    if (CB.paramHasAttr(I, Attribute::ReadNone))
+      ValidParamAttrs.back().addAttribute(Attribute::ReadNone);
+    if (CB.paramHasAttr(I, Attribute::ReadOnly))
+      ValidParamAttrs.back().addAttribute(Attribute::ReadOnly);
+    if (CB.paramHasAttr(I, Attribute::WriteOnly))
+      ValidParamAttrs.back().addAttribute(Attribute::WriteOnly);
+    HasAttrToPropagate |= ValidParamAttrs.back().hasAttributes();
+  }
+
+  // Won't be able to propagate anything.
+  if (!HasAttrToPropagate)
+    return;
+
+  for (BasicBlock &BB : *CalledFunction) {
+    for (Instruction &Ins : BB) {
+      CallBase *InnerCB = dyn_cast<CallBase>(&Ins);
+      if (InnerCB != nullptr) {
+        if (auto *NewInnerCB =
+                dyn_cast_or_null<CallBase>(VMap.lookup(InnerCB))) {
+          AttributeList AL = NewInnerCB->getAttributes();
+          for (unsigned I = 0, E = InnerCB->arg_size(); I < E; ++I) {
+            // Check if the underlying value for the parameter is an argument.
+            const Value *UnderlyingV =
+                getUnderlyingObject(InnerCB->getArgOperand(I));
+            if (const Argument *Arg = dyn_cast<Argument>(UnderlyingV)) {
+              unsigned ArgNo = Arg->getArgNo();
+              // If so, propagate its access attributes.
+              AL = AL.addParamAttributes(Context, I, ValidParamAttrs[ArgNo]);
+            }
+          }
+          NewInnerCB->setAttributes(AL);
+        }
+      }
+    }
+  }
+}
+
+// Recursively check BB for a preceding alloca. An alive alloca at the callsite
+// essentially makes propagating any memory effects impossible. While scanning
+// for the alloca also collect and callsites we may be able to modify.
+static const std::pair<bool, SmallVector<CallBase *, 4>> &
+GetBBAllocaAndCallsiteInfo(
+    BasicBlock *BB,
+    DenseMap<BasicBlock *, std::pair<bool, SmallVector<CallBase *, 4>>>
+        *FirstAllocaAndCBs,
+    MemoryEffects ME) {
+  auto InsertRes = FirstAllocaAndCBs->insert({BB, {false, {}}});
+  if (!InsertRes.second)
+    return InsertRes.first->second;
+
+  for (BasicBlock *PBB : predecessors(BB)) {
+    auto PBBInfo = GetBBAllocaAndCallsiteInfo(PBB, FirstAllocaAndCBs, ME);
+    if (PBBInfo.first) {
+      auto BBInfo = FirstAllocaAndCBs->find(BB);
+      assert(BBInfo != FirstAllocaAndCBs->end());
+      BBInfo->second.first = true;
+      // We have an alloca in a preceding BB, we can't propagate any memory
+      // effects.
+      return BBInfo->second;
+    }
+  }
+
+  auto BBInfo = FirstAllocaAndCBs->find(BB);
+  assert(BBInfo != FirstAllocaAndCBs->end());
+  for (auto &Ins : *BB) {
+    if (isa<AllocaInst>(&Ins)) {
+      BBInfo->second.first = true;
+      // Dominating alloca in the BB, we can propagate to any callsites prior to
+      // the alloca but none after.
+      return BBInfo->second;
+    }
+    // Add callsite.
+    if (auto *OtherCB = dyn_cast<CallBase>(&Ins))
+      BBInfo->second.second.push_back(OtherCB);
+  }
+  return BBInfo->second;
+}
+
+// Propagate memory effects from the to-be-inlined function to any callsites in
+// the function.
+static void AddFnAccessAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
+  auto *CalledFunction = CB.getCalledFunction();
+  MemoryEffects ME = CB.getMemoryEffects();
+  if (ME == MemoryEffects::unknown())
+    return;
+  DenseMap<BasicBlock *, std::pair<bool, SmallVector<CallBase *, 4>>>
+      FirstAllocaAndCBs;
+
+  for (BasicBlock &BB : *CalledFunction) {
+    auto BBInfo = GetBBAllocaAndCallsiteInfo(&BB, &FirstAllocaAndCBs, ME);
+    // We found no callsites that we can propagate memory effects to.
+    if (BBInfo.second.empty())
+      continue;
+    for (CallBase *OtherCB : BBInfo.second) {
+      assert(OtherCB->getParent() == &BB);
+      if (auto *NewOtherCB = dyn_cast_or_null<CallBase>(VMap.lookup(OtherCB))) {
+        MemoryEffects NewME = NewOtherCB->getMemoryEffects();
+        // ArgMem memory effects don't directly apply.
+        NewME &= ME.getWithLocUnknown(IRMemLocation::ArgMem);
+        // If we have complete coverage of some ModRef then we can apply to
+        // ArgMem as well.
+        NewME &= MemoryEffects(ME.getModRef());
+        NewOtherCB->setMemoryEffects(NewME);
+      }
+    }
+  }
+}
+
 static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
   AttrBuilder ValidUB = IdentifyValidUBGeneratingAttributes(CB);
   AttrBuilder ValidPG = IdentifyValidPoisonGeneratingAttributes(CB);
@@ -2358,6 +2483,9 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
     // Add noalias metadata if necessary.
     AddAliasScopeMetadata(CB, VMap, DL, CalleeAAR, InlinedFunctionInfo);
+
+    AddParamAndFnBasicAttributes(CB, VMap);
+    AddFnAccessAttributes(CB, VMap);
 
     // Clone return attributes on the callsite into the calls within the inlined
     // function which feed into its return value.
