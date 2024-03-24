@@ -74,7 +74,7 @@ TEST(AArch32_ELF, DynFixupInfos) {
   for (Edge::Kind K = FirstArmRelocation; K < LastArmRelocation; K += 1) {
     const auto *Info = FixupInfoBase::getDynFixupInfo(K);
     EXPECT_NE(Info, nullptr);
-    const auto *InfoArm = static_cast<const FixupInfoArm *>(Info);
+    const auto *InfoArm = static_cast<const FixupInfoArmBase *>(Info);
     EXPECT_NE(InfoArm->checkOpcode, nullptr);
     EXPECT_FALSE(InfoArm->checkOpcode(0x00000000));
   }
@@ -82,7 +82,7 @@ TEST(AArch32_ELF, DynFixupInfos) {
   for (Edge::Kind K = FirstThumbRelocation; K < LastThumbRelocation; K += 1) {
     const auto *Info = FixupInfoBase::getDynFixupInfo(K);
     EXPECT_NE(Info, nullptr);
-    const auto *InfoThumb = static_cast<const FixupInfoThumb *>(Info);
+    const auto *InfoThumb = static_cast<const FixupInfoThumbBase *>(Info);
     EXPECT_NE(InfoThumb->checkOpcode, nullptr);
     EXPECT_FALSE(InfoThumb->checkOpcode(0x0000, 0x0000));
   }

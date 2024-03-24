@@ -5,6 +5,7 @@ add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
   CodeGenIntrinsics.cpp
   DirectiveEmitter.cpp
   IntrinsicEmitter.cpp
+  JITLinkAArch32InstrInfo.cpp
   RISCVTargetDefEmitter.cpp
   SDNodeProperties.cpp
   VTEmitter.cpp

@@ -171,22 +171,104 @@ struct HalfWords {
   const uint16_t Lo; // Second halfword
 };
 
+enum InstrName {
+
+#define GET_INSTR(name, opcode, opcode_mask, imm_mask, reg_mask) name,
+
+#include "llvm/ExecutionEngine/JITLink/JITLinkAArch32.inc"
+#undef GET_INSTR
+  INSTR_COUNT,
+  NONE = INSTR_COUNT,
+};
+
+constexpr InstrName getInstrFromJITLinkEdgeKind(Edge::Kind Kind) {
+  switch (Kind) {
+  case Arm_Call:
+    return InstrName::NONE;
+  case aarch32::Arm_Jump24:
+    return InstrName::NONE;
+  case aarch32::Arm_MovwAbsNC:
+    return InstrName::MOVi16;
+  case aarch32::Arm_MovtAbs:
+    return InstrName::MOVTi16;
+  case aarch32::Thumb_Call:
+    return InstrName::NONE;
+  case aarch32::Thumb_Jump24:
+    return InstrName::NONE;
+  case aarch32::Thumb_MovwAbsNC:
+  case aarch32::Thumb_MovwPrelNC:
+    return InstrName::t2MOVi16;
+  case aarch32::Thumb_MovtAbs:
+  case aarch32::Thumb_MovtPrel:
+    return InstrName::t2MOVTi16;
+  default:
+    return InstrName::NONE;
+  }
+}
+
+struct InstrInfo {
+  uint32_t Opcode;
+  uint32_t OpcodeMask;
+  uint32_t ImmMask;
+  uint32_t RegMask;
+};
+
+static constexpr InstrInfo InstrTable[INSTR_COUNT] = {
+#define GET_INSTR(name, opcode, opcode_mask, imm_mask, reg_mask)               \
+  {opcode, opcode_mask, imm_mask, reg_mask},
+#include "llvm/ExecutionEngine/JITLink/JITLinkAArch32.inc"
+#undef GET_INSTR
+};
+
 /// FixupInfo base class is required for dynamic lookups.
 struct FixupInfoBase {
   static const FixupInfoBase *getDynFixupInfo(Edge::Kind K);
   virtual ~FixupInfoBase() {}
 };
 
-/// FixupInfo checks for Arm edge kinds work on 32-bit words
-struct FixupInfoArm : public FixupInfoBase {
+struct FixupInfoArmBase : public FixupInfoBase {
   bool (*checkOpcode)(uint32_t Wd) = nullptr;
 };
 
+constexpr InstrInfo getTableGenInfoArm(EdgeKind_aarch32 Kind) {
+  return InstrTable[getInstrFromJITLinkEdgeKind(Kind)];
+}
+
+/// FixupInfo checks for Arm edge kinds work on 32-bit words
+template <EdgeKind_aarch32 Kind> struct FixupInfoArm : public FixupInfoArmBase {
+  static constexpr uint32_t Opcode = getTableGenInfoArm(Kind).Opcode;
+  static constexpr uint32_t OpcodeMask = getTableGenInfoArm(Kind).OpcodeMask;
+  static constexpr uint32_t ImmMask = getTableGenInfoArm(Kind).ImmMask;
+  static constexpr uint32_t RegMask = getTableGenInfoArm(Kind).RegMask;
+};
+
 /// FixupInfo check for Thumb32 edge kinds work on a pair of 16-bit halfwords
-struct FixupInfoThumb : public FixupInfoBase {
+struct FixupInfoThumbBase : public FixupInfoBase {
   bool (*checkOpcode)(uint16_t Hi, uint16_t Lo) = nullptr;
 };
 
+struct InstrInfoThumb {
+  HalfWords Opcode;
+  HalfWords OpcodeMask;
+  HalfWords ImmMask;
+  HalfWords RegMask;
+};
+
+constexpr InstrInfoThumb getTableGenInfoThumb(EdgeKind_aarch32 Kind) {
+  InstrInfo II = InstrTable[getInstrFromJITLinkEdgeKind(Kind)];
+  return InstrInfoThumb{HalfWords(II.Opcode >> 16, II.Opcode & 0xffff),
+                        HalfWords(II.OpcodeMask >> 16, II.OpcodeMask & 0xffff),
+                        HalfWords(II.ImmMask >> 16, II.ImmMask & 0xffff),
+                        HalfWords(II.RegMask >> 16, II.RegMask & 0xffff)};
+}
+
+template <EdgeKind_aarch32 Kind>
+struct FixupInfoThumb : public FixupInfoThumbBase {
+  static constexpr HalfWords Opcode = getTableGenInfoThumb(Kind).Opcode;
+  static constexpr HalfWords OpcodeMask = getTableGenInfoThumb(Kind).OpcodeMask;
+  static constexpr HalfWords ImmMask = getTableGenInfoThumb(Kind).ImmMask;
+  static constexpr HalfWords RegMask = getTableGenInfoThumb(Kind).RegMask;
+};
 /// Collection of named constants per fixup kind
 ///
 /// Mandatory entries:
@@ -199,10 +281,10 @@ struct FixupInfoThumb : public FixupInfoBase {
 ///   RegMask     - Mask with all bits set that encode the register
 ///
 /// Specializations can add further custom fields without restrictions.
-///
+
 template <EdgeKind_aarch32 Kind> struct FixupInfo {};
 
-struct FixupInfoArmBranch : public FixupInfoArm {
+struct FixupInfoArmBranch : public FixupInfoArmBase {
   static constexpr uint32_t Opcode = 0x0a000000;
   static constexpr uint32_t ImmMask = 0x00ffffff;
 };
@@ -219,27 +301,27 @@ template <> struct FixupInfo<Arm_Call> : public FixupInfoArmBranch {
   static constexpr uint32_t BitBlx = 0x10000000;
 };
 
-struct FixupInfoArmMov : public FixupInfoArm {
+template <EdgeKind_aarch32 Kind>
+struct FixupInfoArmMov : public FixupInfoArm<Kind> {
   static constexpr uint32_t OpcodeMask = 0x0ff00000;
   static constexpr uint32_t ImmMask = 0x000f0fff;
   static constexpr uint32_t RegMask = 0x0000f000;
 };
 
-template <> struct FixupInfo<Arm_MovtAbs> : public FixupInfoArmMov {
-  static constexpr uint32_t Opcode = 0x03400000;
-};
+template <>
+struct FixupInfo<Arm_MovtAbs> : public FixupInfoArmMov<Arm_MovtAbs> {};
 
-template <> struct FixupInfo<Arm_MovwAbsNC> : public FixupInfoArmMov {
-  static constexpr uint32_t Opcode = 0x03000000;
-};
+template <>
+struct FixupInfo<Arm_MovwAbsNC> : public FixupInfoArmMov<Arm_MovwAbsNC> {};
 
-template <> struct FixupInfo<Thumb_Jump24> : public FixupInfoThumb {
+template <>
+struct FixupInfo<Thumb_Jump24> : public FixupInfoThumb<Thumb_Jump24> {
   static constexpr HalfWords Opcode{0xf000, 0x9000};
   static constexpr HalfWords OpcodeMask{0xf800, 0x9000};
   static constexpr HalfWords ImmMask{0x07ff, 0x2fff};
 };
 
-template <> struct FixupInfo<Thumb_Call> : public FixupInfoThumb {
+template <> struct FixupInfo<Thumb_Call> : public FixupInfoThumb<Thumb_Call> {
   static constexpr HalfWords Opcode{0xf000, 0xc000};
   static constexpr HalfWords OpcodeMask{0xf800, 0xc000};
   static constexpr HalfWords ImmMask{0x07ff, 0x2fff};
@@ -247,27 +329,17 @@ template <> struct FixupInfo<Thumb_Call> : public FixupInfoThumb {
   static constexpr uint16_t LoBitNoBlx = 0x1000;
 };
 
-struct FixupInfoThumbMov : public FixupInfoThumb {
-  static constexpr HalfWords OpcodeMask{0xfbf0, 0x8000};
-  static constexpr HalfWords ImmMask{0x040f, 0x70ff};
-  static constexpr HalfWords RegMask{0x0000, 0x0f00};
-};
+template <>
+struct FixupInfo<Thumb_MovtAbs> : public FixupInfoThumb<Thumb_MovtAbs> {};
 
-template <> struct FixupInfo<Thumb_MovtAbs> : public FixupInfoThumbMov {
-  static constexpr HalfWords Opcode{0xf2c0, 0x0000};
-};
+template <>
+struct FixupInfo<Thumb_MovtPrel> : public FixupInfoThumb<Thumb_MovtPrel> {};
 
-template <> struct FixupInfo<Thumb_MovtPrel> : public FixupInfoThumbMov {
-  static constexpr HalfWords Opcode{0xf2c0, 0x0000};
-};
+template <>
+struct FixupInfo<Thumb_MovwAbsNC> : public FixupInfoThumb<Thumb_MovwAbsNC> {};
 
-template <> struct FixupInfo<Thumb_MovwAbsNC> : public FixupInfoThumbMov {
-  static constexpr HalfWords Opcode{0xf240, 0x0000};
-};
-
-template <> struct FixupInfo<Thumb_MovwPrelNC> : public FixupInfoThumbMov {
-  static constexpr HalfWords Opcode{0xf240, 0x0000};
-};
+template <>
+struct FixupInfo<Thumb_MovwPrelNC> : public FixupInfoThumb<Thumb_MovwPrelNC> {};
 
 /// Helper function to read the initial addend for Data-class relocations.
 Expected<int64_t> readAddendData(LinkGraph &G, Block &B, Edge::OffsetT Offset,
