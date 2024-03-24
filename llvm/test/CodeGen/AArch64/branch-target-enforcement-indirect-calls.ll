@@ -20,13 +20,13 @@ entry:
   ret void
 }
 
-define void @bti_enabled(ptr %p) "branch-target-enforcement"="true" {
+define void @bti_enabled(ptr %p) "branch-target-enforcement" {
 entry:
   tail call void %p()
 ; CHECK: br {{x16|x17}}
   ret void
 }
-define void @bti_enabled_force_x10(ptr %p) "branch-target-enforcement"="true" {
+define void @bti_enabled_force_x10(ptr %p) "branch-target-enforcement" {
 entry:
   %p_x10 = tail call ptr asm "", "={x10},{x10},~{lr}"(ptr %p)
   tail call void %p_x10()
@@ -36,13 +36,13 @@ entry:
 
 ; sign-return-address places no further restrictions on the tail-call register.
 
-define void @bti_enabled_pac_enabled(ptr %p) "branch-target-enforcement"="true" "sign-return-address"="all" {
+define void @bti_enabled_pac_enabled(ptr %p) "branch-target-enforcement" "sign-return-address"="all" {
 entry:
   tail call void %p()
 ; CHECK: br {{x16|x17}}
   ret void
 }
-define void @bti_enabled_pac_enabled_force_x10(ptr %p) "branch-target-enforcement"="true" "sign-return-address"="all" {
+define void @bti_enabled_pac_enabled_force_x10(ptr %p) "branch-target-enforcement" "sign-return-address"="all" {
 entry:
   %p_x10 = tail call ptr asm "", "={x10},{x10},~{lr}"(ptr %p)
   tail call void %p_x10()
@@ -54,13 +54,13 @@ entry:
 ; can't be changed because the hint instruction only uses that register, so the
 ; only choice for the tail-call function pointer is x17.
 
-define void @bti_enabled_pac_pc_enabled(ptr %p) "branch-target-enforcement"="true" "sign-return-address"="all" "branch-protection-pauth-lr"="true" {
+define void @bti_enabled_pac_pc_enabled(ptr %p) "branch-target-enforcement" "sign-return-address"="all" "branch-protection-pauth-lr" {
 entry:
   tail call void %p()
 ; CHECK: br x17
   ret void
 }
-define void @bti_enabled_pac_pc_enabled_force_x16(ptr %p) "branch-target-enforcement"="true" "sign-return-address"="all" "branch-protection-pauth-lr"="true" {
+define void @bti_enabled_pac_pc_enabled_force_x16(ptr %p) "branch-target-enforcement" "sign-return-address"="all" "branch-protection-pauth-lr" {
 entry:
   %p_x16 = tail call ptr asm "", "={x16},{x16},~{lr}"(ptr %p)
   tail call void %p_x16()
@@ -71,20 +71,20 @@ entry:
 ; PAuthLR by itself prevents x16 from being used, but any other
 ; non-callee-saved register can be used.
 
-define void @pac_pc_enabled(ptr %p) "sign-return-address"="all" "branch-protection-pauth-lr"="true" {
+define void @pac_pc_enabled(ptr %p) "sign-return-address"="all" "branch-protection-pauth-lr" {
 entry:
   tail call void %p()
 ; CHECK: br {{(x[0-9]|x1[0-578])$}}
   ret void
 }
-define void @pac_pc_enabled_force_x16(ptr %p) "sign-return-address"="all" "branch-protection-pauth-lr"="true" {
+define void @pac_pc_enabled_force_x16(ptr %p) "sign-return-address"="all" "branch-protection-pauth-lr" {
 entry:
   %p_x16 = tail call ptr asm "", "={x16},{x16},~{lr}"(ptr %p)
   tail call void %p_x16()
 ; CHECK: br {{(x[0-9]|x1[0-578])$}}
   ret void
 }
-define void @pac_pc_enabled_force_x17(ptr %p) "sign-return-address"="all" "branch-protection-pauth-lr"="true" {
+define void @pac_pc_enabled_force_x17(ptr %p) "sign-return-address"="all" "branch-protection-pauth-lr" {
 entry:
   %p_x17 = tail call ptr asm "", "={x17},{x17},~{lr}"(ptr %p)
   tail call void %p_x17()

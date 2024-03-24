@@ -22,4 +22,9 @@ attributes #1 = {
 ; CHECK: invalid value for 'sign-return-address-key' attribute: B_Key
   "sign-return-address-key"="B_Key"
 ; CHECK:   invalid value for 'branch-target-enforcement' attribute: True
-  "branch-target-enforcement"="True" }
+  "branch-target-enforcement"="True"
+; CHECK:   invalid value for 'branch-protection-pauth-lr' attribute: Yes
+  "branch-protection-pauth-lr"="Yes"
+; CHECK:   invalid value for 'guarded-control-stack' attribute: True
+  "guarded-control-stack"="True"
+  }

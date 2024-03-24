@@ -255,17 +255,17 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   unsigned Flags = 0;
   if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("branch-target-enforcement")))
-    if (BTE->getZExtValue())
+    if (!BTE->isZero())
       Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
 
   if (const auto *GCS = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("guarded-control-stack")))
-    if (GCS->getZExtValue())
+    if (!GCS->isZero())
       Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
 
   if (const auto *Sign = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("sign-return-address")))
-    if (Sign->getZExtValue())
+    if (!Sign->isZero())
       Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
 
   if (Flags == 0)
