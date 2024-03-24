@@ -1,6 +1,6 @@
 ! This test checks lowering of OpenMP DO Directive (Worksharing).
 
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPsimple_parallel_do()
 subroutine simple_parallel_do

@@ -144,7 +144,7 @@ TEST(MultilibBuilderTest, SetFilterObject) {
       << "Size before filter was incorrect. Contents:\n"
       << MS;
   MS.FilterOut([](const Multilib &M) {
-    return StringRef(M.gccSuffix()).startswith("/p");
+    return StringRef(M.gccSuffix()).starts_with("/p");
   });
   ASSERT_EQ((int)MS.size(), 1 /* Default */ + 1 /* orange */ +
                                 1 /* orange/pear */ + 1 /* orange/plum */ +
@@ -152,7 +152,7 @@ TEST(MultilibBuilderTest, SetFilterObject) {
       << "Size after filter was incorrect. Contents:\n"
       << MS;
   for (MultilibSet::const_iterator I = MS.begin(), E = MS.end(); I != E; ++I) {
-    ASSERT_FALSE(StringRef(I->gccSuffix()).startswith("/p"))
+    ASSERT_FALSE(StringRef(I->gccSuffix()).starts_with("/p"))
         << "The filter should have removed " << *I;
   }
 }

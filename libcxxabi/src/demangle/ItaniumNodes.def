@@ -99,5 +99,6 @@ NODE(RequiresExpr)
 NODE(ExprRequirement)
 NODE(TypeRequirement)
 NODE(NestedRequirement)
+NODE(ExplicitObjectParameter)
 
 #undef NODE

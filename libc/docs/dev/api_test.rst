@@ -3,6 +3,11 @@
 ========
 API Test
 ========
+
+.. warning::
+  This page is severely out of date. Much of the information it contains may be
+  incorrect. Please only remove this warning once the page has been updated.
+
 The implementation of libc-project is unique because our public C header files
 are generated using information from ground truth captured in TableGen files.
 Unit tests only exercise the internal C++ implementations and don't ensure the

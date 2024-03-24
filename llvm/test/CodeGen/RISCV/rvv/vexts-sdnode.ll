@@ -617,4 +617,3 @@ define <vscale x 8 x i64> @vzext_nxv8i32_nxv8i64(<vscale x 8 x i32> %va) {
   %evec = zext <vscale x 8 x i32> %va to <vscale x 8 x i64>
   ret <vscale x 8 x i64> %evec
 }
-

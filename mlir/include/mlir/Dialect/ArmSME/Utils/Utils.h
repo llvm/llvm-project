@@ -15,10 +15,18 @@
 #ifndef MLIR_DIALECT_ARMSME_UTILS_UTILS_H_
 #define MLIR_DIALECT_ARMSME_UTILS_UTILS_H_
 
-#include "mlir/Dialect/ArmSME/IR/ArmSME.h"
+#include "mlir/Dialect/ArmSME/IR/ArmSMEEnums.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include <optional>
 
 namespace mlir {
-namespace arm_sme {
+class Location;
+class PatternRewriter;
+class Value;
+} // namespace mlir
+
+namespace mlir::arm_sme {
 
 constexpr unsigned MinStreamingVectorLengthInBits = 128;
 
@@ -34,13 +42,27 @@ bool isValidSMETileElementType(Type type);
 /// otherwise.
 bool isValidSMETileVectorType(VectorType vType);
 
-/// Extends or truncates `tile`, which should be an `arm_sme::GetTileID` or
-/// `arm_sme::CastVectorToTile` op returning an 8/16/32/64/128-bit scalar
-/// integer, to an i32 that can be passed as the `tile` parameter to the SME
-/// intrinsics. Or returns `tile` if already i32.
-Value castTileIDToI32(Value tile, Location loc, RewriterBase &rewriter);
+/// Returns the type of SME tile this vector type corresponds to, or none if the
+/// vector type does not fit within an SME tile.
+std::optional<ArmSMETileType> getSMETileType(VectorType);
 
-} // namespace arm_sme
-} // namespace mlir
+/// Verifies the tile ID (if set) on this tile operation is valid.
+LogicalResult verifyOperationHasValidTileId(Operation *);
+
+/// Generates a for loop over ZA tile slices where the induction variable is
+/// the tile slice index and each iteration yields a new tile. Loop body is
+/// built via `makeLoopBody`, which returns the next tile value.
+scf::ForOp createLoopOverTileSlices(
+    PatternRewriter &rewriter, Location loc, Value initTile,
+    std::function<Value(OpBuilder &, Location, Value, Value)> makeLoopBody);
+
+/// Returns true if `vType` is a multiple of an SME tile size. Returns false if
+/// the `vType` exactly matches the size of an SME tile.
+bool isMultipleOfSMETileVectorType(VectorType vType);
+
+/// Creates a vector type for the SME tile of `elementType`.
+VectorType getSMETileTypeForElement(Type elementType);
+
+} // namespace mlir::arm_sme
 
 #endif // MLIR_DIALECT_ARMSME_UTILS_UTILS_H_

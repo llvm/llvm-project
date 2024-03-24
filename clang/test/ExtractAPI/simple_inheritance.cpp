@@ -80,8 +80,8 @@ class Bar : public Foo {};
       },
       "location": {
         "position": {
-          "character": 7,
-          "line": 1
+          "character": 6,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -134,8 +134,8 @@ class Bar : public Foo {};
       },
       "location": {
         "position": {
-          "character": 7,
-          "line": 3
+          "character": 6,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },

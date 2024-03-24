@@ -9,9 +9,9 @@
   entry:
     %b = alloca i32
     %0 = alloca i32
-    store i32 %a, i32* %b
-    store i32 2, i32* %0
-    %c = load i32, i32* %b
+    store i32 %a, ptr %b
+    store i32 2, ptr %0
+    %c = load i32, ptr %b
     ret i32 %c
   }
 

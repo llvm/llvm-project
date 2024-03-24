@@ -1,0 +1,100 @@
+// Test visualization of MC/DC constructs for branches in macro expansions.
+
+// RUN: llvm-profdata merge %S/Inputs/mcdc-macro.proftext -o %t.profdata
+// RUN: llvm-cov show --show-expansions --show-branches=count --show-mcdc %S/Inputs/mcdc-macro.o -instr-profile %t.profdata --compilation-dir=%S/Inputs | FileCheck %s
+
+// CHECK:  |  |  |  Branch (2:11): [Folded - Ignored]
+// CHECK:  |  |  |  Branch (3:11): [True: 1, False: 0]
+// CHECK:  |  |  |  Branch (3:23): [True: 1, False: 0]
+// CHECK:  |  Branch (9:7): [True: 1, False: 0]
+// CHECK-NEXT:  |  Branch (9:22): [True: 0, False: 0]
+// CHECK-NEXT:  ------------------
+// CHECK-NEXT:  |---> MC/DC Decision Region (9:7) to (9:23)
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |  Number of Conditions: 5
+// CHECK-NEXT:  |     Condition C1 --> (9:7)
+// CHECK-NEXT:  |     Condition C2 --> (9:22)
+// CHECK-NEXT:  |     Condition C3 --> (2:11)
+// CHECK-NEXT:  |     Condition C4 --> (3:11)
+// CHECK-NEXT:  |     Condition C5 --> (3:23)
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |  Executed MC/DC Test Vectors:
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |     C1, C2, C3, C4, C5    Result
+// CHECK-NEXT:  |  1 { T,  -,  C,  T,  T  = T      }
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |  C1-Pair: not covered
+// CHECK-NEXT:  |  C2-Pair: not covered
+// CHECK-NEXT:  |  C3-Pair: constant folded
+// CHECK-NEXT:  |  C4-Pair: not covered
+// CHECK-NEXT:  |  C5-Pair: not covered
+// CHECK-NEXT:  |  MC/DC Coverage for Decision: 0.00%
+// CHECK-NEXT:  |
+// CHECK-NEXT:  ------------------
+
+// CHECK:  |  |  |  Branch (2:11): [Folded - Ignored]
+// CHECK:  |  Branch (11:7): [True: 1, False: 0]
+// CHECK-NEXT:  ------------------
+// CHECK-NEXT:  |---> MC/DC Decision Region (11:7) to (11:13)
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |  Number of Conditions: 2
+// CHECK-NEXT:  |     Condition C1 --> (11:7)
+// CHECK-NEXT:  |     Condition C2 --> (2:11)
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |  Executed MC/DC Test Vectors:
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |     C1, C2    Result
+// CHECK-NEXT:  |  1 { T,  C  = T      }
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |  C1-Pair: not covered
+// CHECK-NEXT:  |  C2-Pair: constant folded
+// CHECK-NEXT:  |  MC/DC Coverage for Decision: 0.00%
+// CHECK-NEXT:  |
+// CHECK-NEXT:  ------------------
+
+// CHECK:  |  |  |  Branch (1:11): [True: 1, False: 0]
+// CHECK:  |  |  |  Branch (2:11): [Folded - Ignored]
+// CHECK:  |  |  |  |  |  Branch (3:11): [True: 0, False: 0]
+// CHECK:  |  |  |  |  |  Branch (3:23): [True: 0, False: 0]
+// CHECK:  |  Branch (13:7): [True: 1, False: 0]
+// CHECK-NEXT:  |  Branch (13:13): [True: 1, False: 0]
+// CHECK-NEXT:  ------------------
+// CHECK-NEXT:  |---> MC/DC Decision Region (13:7) to (13:32)
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |  Number of Conditions: 6
+// CHECK-NEXT:  |     Condition C1 --> (13:7)
+// CHECK-NEXT:  |     Condition C2 --> (13:13)
+// CHECK-NEXT:  |     Condition C3 --> (1:11)
+// CHECK-NEXT:  |     Condition C4 --> (2:11)
+// CHECK-NEXT:  |     Condition C5 --> (3:11)
+// CHECK-NEXT:  |     Condition C6 --> (3:23)
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |  Executed MC/DC Test Vectors:
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |     C1, C2, C3, C4, C5, C6    Result
+// CHECK-NEXT:  |  1 { T,  T,  T,  C,  -,  -  = T      }
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |  C1-Pair: not covered
+// CHECK-NEXT:  |  C2-Pair: not covered
+// CHECK-NEXT:  |  C3-Pair: not covered
+// CHECK-NEXT:  |  C4-Pair: constant folded
+// CHECK-NEXT:  |  C5-Pair: not covered
+// CHECK-NEXT:  |  C6-Pair: not covered
+// CHECK-NEXT:  |  MC/DC Coverage for Decision: 0.00%
+// CHECK-NEXT:  |
+// CHECK-NEXT:  ------------------
+
+Instructions for regenerating the test:
+
+cd %S/Inputs # Or copy mcdc-macro.c into the working directory
+
+clang -fcoverage-mcdc -fprofile-instr-generate -fcoverage-compilation-dir=. \
+    -Os -mllvm -enable-name-compression=false \
+    -fcoverage-mapping mcdc-macro.c -c
+
+# Instructions for generating proftext
+clang -fprofile-instr-generate mcdc-macro.o
+rm -f default.prof*
+./a.out
+llvm-profdata merge --sparse -o default.profdata default.profraw
+llvm-profdata merge --text -o mcdc-macro.proftext default.profdata

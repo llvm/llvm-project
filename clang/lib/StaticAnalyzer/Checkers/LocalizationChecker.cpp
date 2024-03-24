@@ -62,7 +62,8 @@ class NonLocalizedStringChecker
                      check::PostObjCMessage,
                      check::PostStmt<ObjCStringLiteral>> {
 
-  mutable std::unique_ptr<BugType> BT;
+  const BugType BT{this, "Unlocalizable string",
+                   "Localizability Issue (Apple)"};
 
   // Methods that require a localized string
   mutable llvm::DenseMap<const IdentifierInfo *,
@@ -89,8 +90,6 @@ class NonLocalizedStringChecker
                                       Selector S) const;
 
 public:
-  NonLocalizedStringChecker();
-
   // When this parameter is set to true, the checker assumes all
   // methods that return NSStrings are unlocalized. Thus, more false
   // positives will be reported.
@@ -107,11 +106,6 @@ public:
 
 REGISTER_MAP_WITH_PROGRAMSTATE(LocalizedMemMap, const MemRegion *,
                                LocalizedState)
-
-NonLocalizedStringChecker::NonLocalizedStringChecker() {
-  BT.reset(new BugType(this, "Unlocalizable string",
-                       "Localizability Issue (Apple)"));
-}
 
 namespace {
 class NonLocalizedStringBRVisitor final : public BugReporterVisitor {
@@ -718,7 +712,7 @@ void NonLocalizedStringChecker::setNonLocalizedState(const SVal S,
 
 
 static bool isDebuggingName(std::string name) {
-  return StringRef(name).lower().find("debug") != StringRef::npos;
+  return StringRef(name).contains_insensitive("debug");
 }
 
 /// Returns true when, heuristically, the analyzer may be analyzing debugging
@@ -764,7 +758,7 @@ void NonLocalizedStringChecker::reportLocalizationError(
 
   // Generate the bug report.
   auto R = std::make_unique<PathSensitiveBugReport>(
-      *BT, "User-facing text should use localized string macro", ErrNode);
+      BT, "User-facing text should use localized string macro", ErrNode);
   if (argumentNumber) {
     R->addRange(M.getArgExpr(argumentNumber - 1)->getSourceRange());
   } else {
@@ -817,9 +811,9 @@ void NonLocalizedStringChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
     // Handle the case where the receiver is an NSString
     // These special NSString methods draw to the screen
 
-    if (!(SelectorName.startswith("drawAtPoint") ||
-          SelectorName.startswith("drawInRect") ||
-          SelectorName.startswith("drawWithRect")))
+    if (!(SelectorName.starts_with("drawAtPoint") ||
+          SelectorName.starts_with("drawInRect") ||
+          SelectorName.starts_with("drawWithRect")))
       return;
 
     SVal svTitle = msg.getReceiverSVal();
@@ -1254,8 +1248,8 @@ bool PluralMisuseChecker::MethodCrawler::isCheckingPlurality(
           BO = B;
         }
       }
-      if (VD->getName().lower().find("plural") != StringRef::npos ||
-          VD->getName().lower().find("singular") != StringRef::npos) {
+      if (VD->getName().contains_insensitive("plural") ||
+          VD->getName().contains_insensitive("singular")) {
         return true;
       }
     }

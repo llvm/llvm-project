@@ -185,8 +185,9 @@ TEST(EHFrameCFIBlockInspector, BasicSuccessCase) {
     if (CFIBI.isCIE()) {
       CIEs.push_back(B);
       // If this CIE has an edge, check that getPersonalityEdge returns it.
-      if (B->edges_size() != 0)
+      if (B->edges_size() != 0) {
         EXPECT_TRUE(!!CFIBI.getPersonalityEdge());
+      }
     }
   }
   ASSERT_EQ(CIEs.size(), 2U);

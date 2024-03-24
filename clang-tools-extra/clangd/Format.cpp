@@ -180,7 +180,7 @@ IncrementalChanges getIncrementalChangesAfterNewline(llvm::StringRef Code,
   bool NewLineIsComment = !commentMarker(Indentation).empty();
   if (!CommentMarker.empty() &&
       (NewLineIsComment || !commentMarker(NextLine).empty() ||
-       (!TrailingTrim.empty() && !TrailingTrim.startswith("//")))) {
+       (!TrailingTrim.empty() && !TrailingTrim.starts_with("//")))) {
     // We indent the new comment to match the previous one.
     StringRef PreComment =
         Leading.take_front(CommentMarker.data() - Leading.data());
@@ -197,8 +197,8 @@ IncrementalChanges getIncrementalChangesAfterNewline(llvm::StringRef Code,
   }
 
   // If we put a the newline inside a {} pair, put } on its own line...
-  if (CommentMarker.empty() && Leading.endswith("{") &&
-      Trailing.startswith("}")) {
+  if (CommentMarker.empty() && Leading.ends_with("{") &&
+      Trailing.starts_with("}")) {
     cantFail(
         Result.Changes.add(replacement(Code, Trailing.take_front(1), "\n}")));
     // ...and format it.

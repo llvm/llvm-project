@@ -38,7 +38,7 @@ class TestInterruptThreadNames(TestBase):
 
         # Check that the program was able to create its threads within the allotted time
         self.assertTrue(inferior_set_up.IsValid())
-        self.assertEquals(inferior_set_up.GetValueAsSigned(), 1)
+        self.assertEqual(inferior_set_up.GetValueAsSigned(), 1)
 
         self.check_number_of_threads(process)
 

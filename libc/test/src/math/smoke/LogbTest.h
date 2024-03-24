@@ -10,14 +10,12 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
-
 template <typename T> class LogbTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
-  static constexpr UIntType HIDDEN_BIT =
-      UIntType(1) << LIBC_NAMESPACE::fputil::MantissaWidth<T>::VALUE;
+  static constexpr StorageType HIDDEN_BIT =
+      StorageType(1) << LIBC_NAMESPACE::fputil::FPBits<T>::FRACTION_LEN;
 
 public:
   typedef T (*LogbFunc)(T);
@@ -68,13 +66,15 @@ public:
   }
 
   void testRange(LogbFunc func) {
-    using UIntType = typename FPBits::UIntType;
-    constexpr UIntType COUNT = 100'000;
-    constexpr UIntType STEP = UIntType(-1) / COUNT;
-    for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-      T x = static_cast<T>(FPBits(v));
-      if (isnan(x) || isinf(x) || x == 0.0l)
+    using StorageType = typename FPBits::StorageType;
+    constexpr StorageType COUNT = 100'000;
+    constexpr StorageType STEP = STORAGE_MAX / COUNT;
+    for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
+      FPBits x_bits = FPBits(v);
+      if (x_bits.is_zero() || x_bits.is_inf_or_nan())
         continue;
+
+      T x = x_bits.get_val();
 
       int exponent;
       LIBC_NAMESPACE::fputil::frexp(x, exponent);

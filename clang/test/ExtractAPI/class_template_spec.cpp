@@ -98,8 +98,8 @@ template<> class Foo<int> {};
       },
       "location": {
         "position": {
-          "character": 28,
-          "line": 1
+          "character": 27,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -178,8 +178,8 @@ template<> class Foo<int> {};
       },
       "location": {
         "position": {
-          "character": 18,
-          "line": 3
+          "character": 17,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },

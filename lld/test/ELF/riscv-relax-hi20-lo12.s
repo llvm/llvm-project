@@ -12,20 +12,20 @@
 # CHECK: 00000028 l       .text {{0*}}0 a
 
 # CHECK-NOT:  lui
-# CHECK:      addi    a0, gp, -2048
-# CHECK-NEXT: lw      a0, -2048(gp)
-# CHECK-NEXT: sw      a0, -2048(gp)
+# CHECK:      addi    a0, gp, -0x800
+# CHECK-NEXT: lw      a0, -0x800(gp)
+# CHECK-NEXT: sw      a0, -0x800(gp)
 # CHECK-NOT:  lui
-# CHECK-NEXT: addi    a0, gp, 2047
-# CHECK-NEXT: lb      a0, 2047(gp)
-# CHECK-NEXT: sb      a0, 2047(gp)
-# CHECK-NEXT: lui     a0, 513
-# CHECK-NEXT: addi    a0, a0, 0
-# CHECK-NEXT: lw      a0, 0(a0)
-# CHECK-NEXT: sw      a0, 0(a0)
+# CHECK-NEXT: addi    a0, gp, 0x7ff
+# CHECK-NEXT: lb      a0, 0x7ff(gp)
+# CHECK-NEXT: sb      a0, 0x7ff(gp)
+# CHECK-NEXT: lui     a0, 0x201
+# CHECK-NEXT: addi    a0, a0, 0x0
+# CHECK-NEXT: lw      a0, 0x0(a0)
+# CHECK-NEXT: sw      a0, 0x0(a0)
 # CHECK-EMPTY:
 # CHECK-NEXT: <a>:
-# CHECK-NEXT: addi a0, a0, 1
+# CHECK-NEXT: addi a0, a0, 0x1
 
 #--- a.s
 .global _start

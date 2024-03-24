@@ -8,8 +8,8 @@
 
 // UNSUPPORTED: c++03
 
-// Self assignement post-conditions are tested.
-// ADDITIONAL_COMPILE_FLAGS: -Wno-self-move
+// Self assignment post-conditions are tested.
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-self-move
 
 // <memory>
 

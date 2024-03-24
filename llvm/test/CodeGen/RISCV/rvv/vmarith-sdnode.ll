@@ -476,4 +476,3 @@ define <vscale x 16 x i1> @vmorn_vv_nxv16i1(<vscale x 16 x i1> %va, <vscale x 16
   %vc = or <vscale x 16 x i1> %va, %not
   ret <vscale x 16 x i1> %vc
 }
-

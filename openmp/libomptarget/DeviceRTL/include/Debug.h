@@ -36,7 +36,8 @@ void __assert_fail_internal(const char *expr, const char *msg, const char *file,
   }
 #define UNREACHABLE(msg)                                                       \
   PRINT(msg);                                                                  \
-  __builtin_trap();
+  __builtin_trap();                                                            \
+  __builtin_unreachable();
 
 ///}
 

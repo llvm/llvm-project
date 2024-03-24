@@ -56,3 +56,64 @@ loop.latch:
 exit:
   ret void
 }
+
+
+define void @chained_conditions(i64 noundef %a, i64 noundef %b, i64 noundef %c, i64 noundef %d) #0 {
+; CHECK-LABEL: @chained_conditions(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a.addr = alloca i64, align 8
+  %b.addr = alloca i64, align 8
+  %c.addr = alloca i64, align 8
+  %d.addr = alloca i64, align 8
+  store i64 %a, ptr %a.addr, align 8
+  store i64 %b, ptr %b.addr, align 8
+  store i64 %c, ptr %c.addr, align 8
+  store i64 %d, ptr %d.addr, align 8
+  %0 = load i64, ptr %a.addr, align 8
+  %cmp = icmp ugt i64 %0, 2048
+  br i1 %cmp, label %if.then, label %lor.lhs.false
+
+lor.lhs.false:                                    ; preds = %entry
+  %1 = load i64, ptr %b.addr, align 8
+  %cmp1 = icmp ugt i64 %1, 1024
+  br i1 %cmp1, label %if.then, label %lor.lhs.false2
+
+lor.lhs.false2:                                   ; preds = %lor.lhs.false
+  %2 = load i64, ptr %c.addr, align 8
+  %cmp3 = icmp ugt i64 %2, 1024
+  br i1 %cmp3, label %if.then, label %if.end
+
+if.then:                                          ; preds = %lor.lhs.false2, %lor.lhs.false, %entry
+  br label %if.end10
+
+if.end:                                           ; preds = %lor.lhs.false2
+  %3 = load i64, ptr %a.addr, align 8
+  %4 = load i64, ptr %b.addr, align 8
+  %add = add i64 %3, %4
+  %5 = load i64, ptr %c.addr, align 8
+  %add4 = add i64 %add, %5
+  %6 = load i64, ptr %d.addr, align 8
+  %cmp5 = icmp uge i64 %add4, %6
+  br i1 %cmp5, label %if.then6, label %if.end7
+
+if.then6:                                         ; preds = %if.end
+  br label %if.end10
+
+if.end7:                                          ; preds = %if.end
+  %7 = load i64, ptr %a.addr, align 8
+  %8 = load i64, ptr %d.addr, align 8
+  %cmp8 = icmp uge i64 %7, %8
+  br i1 %cmp8, label %if.then9, label %if.end10
+
+if.then9:                                         ; preds = %if.end7
+  call void @bar()
+  br label %if.end10
+
+if.end10:                                         ; preds = %if.then, %if.then6, %if.then9, %if.end7
+  ret void
+}
+
+declare void @bar()

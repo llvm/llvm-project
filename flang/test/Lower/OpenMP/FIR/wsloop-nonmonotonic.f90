@@ -1,7 +1,7 @@
 ! This test checks lowering of OpenMP DO Directive(Worksharing) with
 ! non-monotonic schedule modifier.
 
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 program wsloop_dynamic
   integer :: i

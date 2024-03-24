@@ -9,11 +9,11 @@
 ; Check a function that makes several calls with various profile hotness, and a
 ; reference (also tests forward references to function and variables in calls
 ; and refs).
-^2 = gv: (guid: 1, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 10, calls: ((callee: ^15, hotness: hot), (callee: ^17, hotness: cold), (callee: ^16, hotness: none)), refs: (writeonly ^14, readonly ^13, ^11))))
+^2 = gv: (guid: 1, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 10, calls: ((callee: ^15, hotness: hot), (callee: ^17, hotness: cold), (callee: ^16, hotness: none, tail: 1)), refs: (writeonly ^14, readonly ^13, ^11))))
 
 ; Function with a call that has relative block frequency instead of profile
 ; hotness.
-^3 = gv: (guid: 2, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 10, calls: ((callee: ^15, relbf: 256)))))
+^3 = gv: (guid: 2, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 10, calls: ((callee: ^15, relbf: 256, tail: 1)))))
 
 ; Summaries with different linkage types.
 ^4 = gv: (guid: 3, summaries: (function: (module: ^0, flags: (linkage: internal, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1), insts: 1)))
@@ -69,8 +69,10 @@
 ; Make sure we get back from llvm-dis essentially what we put in via llvm-as.
 ; CHECK: ^0 = module: (path: "thinlto-summary1.o", hash: (1369602428, 2747878711, 259090915, 2507395659, 1141468049))
 ; CHECK: ^1 = module: (path: "thinlto-summary2.o", hash: (2998369023, 4283347029, 1195487472, 2757298015, 1852134156))
-; CHECK: ^2 = gv: (guid: 1, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 10, calls: ((callee: ^15, hotness: hot), (callee: ^17, hotness: cold), (callee: ^16, hotness: none)), refs: (^11, readonly ^13, writeonly ^14))))
-; CHECK: ^3 = gv: (guid: 2, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 10, calls: ((callee: ^15)))))
+; CHECK: ^2 = gv: (guid: 1, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 10, calls: ((callee: ^15, hotness: hot), (callee: ^17, hotness: cold), (callee: ^16, hotness: none, tail: 1)), refs: (^11, readonly ^13, writeonly ^14))))
+;; relbf is not emitted since this is a combined summary, and that is only
+;; emitted for per-module summaries.
+; CHECK: ^3 = gv: (guid: 2, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 10, calls: ((callee: ^15, tail: 1)))))
 ; CHECK: ^4 = gv: (guid: 3, summaries: (function: (module: ^0, flags: (linkage: internal, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0), insts: 1)))
 ; CHECK: ^5 = gv: (guid: 4, summaries: (alias: (module: ^0, flags: (linkage: private, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0), aliasee: ^14)))
 ; CHECK: ^6 = gv: (guid: 5, summaries: (function: (module: ^0, flags: (linkage: available_externally, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1)))

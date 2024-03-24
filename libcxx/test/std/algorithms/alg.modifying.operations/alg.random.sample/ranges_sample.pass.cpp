@@ -164,7 +164,7 @@ void test_one(std::array<int, N> in, std::size_t n, Gen gen) {
     auto begin = Iter(in.data());
     auto end = Sent(Iter(in.data() + in.size()));
     std::array<int, N> output;
-    auto out = Out(output.begin());
+    auto out = Out(output.data());
 
     std::same_as<Out> decltype(auto) result = std::ranges::sample(
         std::move(begin), std::move(end), std::move(out), n, gen);
@@ -177,7 +177,7 @@ void test_one(std::array<int, N> in, std::size_t n, Gen gen) {
     auto begin = Iter(in.data());
     auto end = Sent(Iter(in.data() + in.size()));
     std::array<int, N> output;
-    auto out = Out(output.begin());
+    auto out = Out(output.data());
 
     std::same_as<Out> decltype(auto) result = std::ranges::sample(std::ranges::subrange(
         std::move(begin), std::move(end)), std::move(out), n, gen);

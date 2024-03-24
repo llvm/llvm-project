@@ -20,7 +20,7 @@ SWIFTCALL int indirect_result_2(OUT int *arg0, OUT float *arg1) {  __builtin_unr
 
 typedef struct { char array[1024]; } struct_reallybig;
 SWIFTCALL struct_reallybig indirect_result_3(OUT int *arg0, OUT float *arg1) { __builtin_unreachable(); }
-// CHECK-LABEL: define {{.*}} void @indirect_result_3(ptr noalias sret({{.*}}) {{.*}}, ptr noalias noundef align 4 dereferenceable(4){{.*}}, ptr noalias noundef align 4 dereferenceable(4){{.*}})
+// CHECK-LABEL: define {{.*}} void @indirect_result_3(ptr dead_on_unwind noalias writable sret({{.*}}) {{.*}}, ptr noalias noundef align 4 dereferenceable(4){{.*}}, ptr noalias noundef align 4 dereferenceable(4){{.*}})
 
 SWIFTCALL void context_1(CONTEXT void *self) {}
 // CHECK-LABEL: define {{.*}} void @context_1(ptr noundef swiftself
@@ -218,7 +218,7 @@ typedef struct {
 } struct_big_1;
 TEST(struct_big_1)
 
-// CHECK-LABEL: define {{.*}} void @return_struct_big_1({{.*}} noalias sret
+// CHECK-LABEL: define {{.*}} void @return_struct_big_1({{.*}} dead_on_unwind noalias writable sret
 
 // Should not be byval.
 // CHECK-LABEL: define {{.*}} void @take_struct_big_1(ptr noundef{{( %.*)?}})

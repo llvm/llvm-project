@@ -1,13 +1,9 @@
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
-declare_args() {
-  # If is_goma is true, the location of the goma client install.
-  # Set this to the output of `goma_ctl goma_dir`.
-  goma_dir = ""
-}
-
 assert(!use_goma || goma_dir != "",
        "set `goma_dir` to the output of `goma_ctl goma_dir` in your args.gn")
+assert(!use_goma || compiler_wrapper == "",
+       "`use_goma` and `compiler_wrapper` are mutually exclusive")
 
 unix_copy_command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
 
@@ -31,6 +27,9 @@ template("unix_toolchain") {
     if (use_goma) {
       cc = "$goma_dir/gomacc $cc"
       cxx = "$goma_dir/gomacc $cxx"
+    } else if (compiler_wrapper != "") {
+      cc = "$compiler_wrapper $cc"
+      cxx = "$compiler_wrapper $cxx"
     }
 
     tool("cc") {
@@ -304,6 +303,8 @@ template("win_toolchain") {
 
     if (use_goma) {
       cl = "$goma_dir/gomacc $cl"
+    } else if (compiler_wrapper != "") {
+      cl = "$compiler_wrapper $cl"
     }
 
     tool("cc") {

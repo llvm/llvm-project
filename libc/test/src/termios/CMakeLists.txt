@@ -18,5 +18,5 @@ add_libc_unittest(
     libc.src.termios.tcgetsid
     libc.src.termios.tcsetattr
     libc.src.unistd.close
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )

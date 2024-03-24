@@ -12,3 +12,7 @@ class TestCase(TestBase):
 
         # The offset of f2 should be 8 because of `alignas(8)`.
         self.expect_expr("(intptr_t)&d3g.f2 - (intptr_t)&d3g", result_value="8")
+
+        # Verify specified class alignments.
+        self.expect_expr("alignof(B2)", result_value="8")
+        self.expect_expr("alignof(EmptyClassAlign8)", result_value="8")

@@ -8,9 +8,9 @@
 // RUN:  -o - | FileCheck %s --check-prefix=CHECK-O
 
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 P.cpp \
-// RUN:    -emit-module-interface -fmodule-file=O=O.pcm -o P.pcm
+// RUN:    -emit-module-interface -fprebuilt-module-path=%t -o P.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 P.pcm -S -emit-llvm \
-// RUN:  -o - | FileCheck %s --check-prefix=CHECK-P
+// RUN:   -fprebuilt-module-path=%t -o - | FileCheck %s --check-prefix=CHECK-P
 
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 Q.cpp \
 // RUN:    -emit-module-interface -o Q.pcm
@@ -18,24 +18,24 @@
 // RUN:    -o - | FileCheck %s --check-prefix=CHECK-Q
 
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 R.cpp \
-// RUN:    -emit-module-interface -fmodule-file=Q=Q.pcm -o R.pcm
+// RUN:    -emit-module-interface -fprebuilt-module-path=%t -o R.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 R.pcm -S -emit-llvm \
-// RUN:    -o - | FileCheck %s --check-prefix=CHECK-R
+// RUN:    -fprebuilt-module-path=%t -o - | FileCheck %s --check-prefix=CHECK-R
 
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 S.cpp \
-// RUN:    -emit-module-interface -fmodule-file=Q=Q.pcm -fmodule-file=R=R.pcm -o S.pcm
+// RUN:    -emit-module-interface -fprebuilt-module-path=%t -o S.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 S.pcm -S -emit-llvm \
-// RUN:    -o - | FileCheck %s --check-prefix=CHECK-S
+// RUN:    -fprebuilt-module-path=%t -o - | FileCheck %s --check-prefix=CHECK-S
 
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 T.cpp \
-// RUN:    -emit-module-interface -fmodule-file=S=S.pcm -fmodule-file=R=R.pcm -o T.pcm
+// RUN:    -emit-module-interface -fprebuilt-module-path=%t -o T.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 T.pcm -S -emit-llvm \
-// RUN:    -o - | FileCheck %s --check-prefix=CHECK-T
+// RUN:    -fprebuilt-module-path=%t -o - | FileCheck %s --check-prefix=CHECK-T
 
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 U.cpp \
-// RUN:    -emit-module-interface -fmodule-file=T=T.pcm -fmodule-file=R=R.pcm -o U.pcm
+// RUN:    -emit-module-interface -fprebuilt-module-path=%t -o U.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 U.pcm -S -emit-llvm \
-// RUN:    -o - | FileCheck %s --check-prefix=CHECK-U
+// RUN:    -fprebuilt-module-path=%t -o - | FileCheck %s --check-prefix=CHECK-U
 
 // Testing cases where we can elide the module initializer guard variable.
 

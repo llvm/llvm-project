@@ -30,8 +30,8 @@ namespace mlir {
 //===----------------------------------------------------------------------===//
 
 /// A result type used to indicate if a change happened. Boolean operations on
-/// ChangeResult behave as though `Change` is truthy.
-enum class ChangeResult {
+/// ChangeResult behave as though `Change` is truth.
+enum class [[nodiscard]] ChangeResult {
   NoChange,
   Change,
 };
@@ -176,6 +176,32 @@ struct ProgramPoint
 class DataFlowAnalysis;
 
 //===----------------------------------------------------------------------===//
+// DataFlowConfig
+//===----------------------------------------------------------------------===//
+
+/// Configuration class for data flow solver and child analyses. Follows the
+/// fluent API pattern.
+class DataFlowConfig {
+public:
+  DataFlowConfig() = default;
+
+  /// Set whether the solver should operate interpocedurally, i.e. enter the
+  /// callee body when available. Interprocedural analyses may be more precise,
+  /// but also more expensive as more states need to be computed and the
+  /// fixpoint convergence takes longer.
+  DataFlowConfig &setInterprocedural(bool enable) {
+    interprocedural = enable;
+    return *this;
+  }
+
+  /// Return `true` if the solver operates interprocedurally, `false` otherwise.
+  bool isInterprocedural() const { return interprocedural; }
+
+private:
+  bool interprocedural = true;
+};
+
+//===----------------------------------------------------------------------===//
 // DataFlowSolver
 //===----------------------------------------------------------------------===//
 
@@ -195,6 +221,9 @@ class DataFlowAnalysis;
 /// TODO: Optimize the internal implementation of the solver.
 class DataFlowSolver {
 public:
+  explicit DataFlowSolver(const DataFlowConfig &config = DataFlowConfig())
+      : config(config) {}
+
   /// Load an analysis into the solver. Return the analysis instance.
   template <typename AnalysisT, typename... Args>
   AnalysisT *load(Args &&...args);
@@ -236,7 +265,13 @@ public:
   /// dependent work items to the back of the queue.
   void propagateIfChanged(AnalysisState *state, ChangeResult changed);
 
+  /// Get the configuration of the solver.
+  const DataFlowConfig &getConfig() const { return config; }
+
 private:
+  /// Configuration of the dataflow solver.
+  DataFlowConfig config;
+
   /// The solver's work queue. Work items can be inserted to the front of the
   /// queue to be processed greedily, speeding up computations that otherwise
   /// quickly degenerate to quadratic due to propagation of state updates.
@@ -422,6 +457,9 @@ protected:
     addDependency(state, dependent);
     return state;
   }
+
+  /// Return the configuration of the solver used for this analysis.
+  const DataFlowConfig &getSolverConfig() const { return solver.getConfig(); }
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// When compiling with debugging, keep a name for the analyis.

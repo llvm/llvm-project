@@ -28,25 +28,25 @@
   %0 = type { i8, i8, i8, i8, i16, i32, i32, i32 }
   
   @TTSize = external dso_local local_unnamed_addr global i32, align 4
-  @AS_TTable = external dso_local local_unnamed_addr global %0*, align 8
+  @AS_TTable = external dso_local local_unnamed_addr global ptr, align 8
   @Variant = external dso_local local_unnamed_addr global i32, align 4
   
   define dso_local void @LearnStoreTT(i32 signext %arg, i32 zeroext %arg1, i32 signext %arg2) #0 {
   bb:
-    %tmp = load i32, i32* @TTSize, align 4
+    %tmp = load i32, ptr @TTSize, align 4
     %tmp3 = urem i32 %arg1, %tmp
-    %tmp4 = load %0*, %0** @AS_TTable, align 8
+    %tmp4 = load ptr, ptr @AS_TTable, align 8
     %tmp5 = zext i32 %tmp3 to i64
-    %tmp6 = load i32, i32* @Variant, align 4
+    %tmp6 = load i32, ptr @Variant, align 4
     %tmp7 = add i32 %tmp6, -3
     %tmp8 = icmp ugt i32 %tmp7, 1
     %tmp9 = select i1 %tmp8, i8 3, i8 1
-    store i8 %tmp9, i8* undef, align 1
-    store i32 %arg, i32* undef, align 4
+    store i8 %tmp9, ptr undef, align 1
+    store i32 %arg, ptr undef, align 4
     %tmp10 = trunc i32 %arg2 to i8
-    store i8 %tmp10, i8* null, align 1
-    %tmp11 = getelementptr inbounds %0, %0* %tmp4, i64 %tmp5, i32 2
-    store i8 0, i8* %tmp11, align 2
+    store i8 %tmp10, ptr null, align 1
+    %tmp11 = getelementptr inbounds %0, ptr %tmp4, i64 %tmp5, i32 2
+    store i8 0, ptr %tmp11, align 2
     ret void
   }
   
@@ -79,9 +79,9 @@ body:             |
     CLFI killed renamable $r0l, 1, implicit-def $cc
     renamable $r0l = LHI 1
     renamable $r0l = LOCHI killed renamable $r0l, 3, 14, 2, implicit killed $cc
-    STC killed renamable $r0l, undef renamable $r1d, 0, $noreg :: (store (s8) into `i8* undef`)
-    ST renamable $r2l, undef renamable $r1d, 0, $noreg, implicit killed $r2d :: (store (s32) into `i32* undef`)
-    STC renamable $r4l, $noreg, 0, $noreg, implicit killed $r4d :: (store (s8) into `i8* null`)
+    STC killed renamable $r0l, undef renamable $r1d, 0, $noreg :: (store (s8) into `ptr undef`)
+    ST renamable $r2l, undef renamable $r1d, 0, $noreg, implicit killed $r2d :: (store (s32) into `ptr undef`)
+    STC renamable $r4l, $noreg, 0, $noreg, implicit killed $r4d :: (store (s8) into `ptr null`)
     renamable $r1d = MGHI killed renamable $r1d, 20
     renamable $r0l = LHI 0
     STC killed renamable $r0l, killed renamable $r3d, 2, killed renamable $r1d :: (store (s8) into %ir.tmp11, align 2)

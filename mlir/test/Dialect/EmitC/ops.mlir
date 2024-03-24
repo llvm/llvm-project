@@ -8,12 +8,31 @@ emitc.include "test.h"
 
 // CHECK-LABEL: func @f(%{{.*}}: i32, %{{.*}}: !emitc.opaque<"int32_t">) {
 func.func @f(%arg0: i32, %f: !emitc.opaque<"int32_t">) {
-  %1 = "emitc.call"() {callee = "blah"} : () -> i64
-  emitc.call "foo" (%1) {args = [
+  %1 = "emitc.call_opaque"() {callee = "blah"} : () -> i64
+  emitc.call_opaque "foo" (%1) {args = [
     0 : index, dense<[0, 1]> : tensor<2xi32>, 0 : index
   ]} : (i64) -> ()
   return
 }
+
+emitc.declare_func @func
+
+emitc.func @func(%arg0 : i32) {
+  emitc.call_opaque "foo"(%arg0) : (i32) -> ()
+  emitc.return
+}
+
+emitc.func @return_i32() -> i32 attributes {specifiers = ["static","inline"]} {
+  %0 = emitc.call_opaque "foo"(): () -> i32
+  emitc.return %0 : i32
+}
+
+emitc.func @call() -> i32 {
+  %0 = emitc.call @return_i32() : () -> (i32)
+  emitc.return %0 : i32
+}
+
+emitc.func private @extern(i32) attributes {specifiers = ["extern"]}
 
 func.func @cast(%arg0: i32) {
   %1 = emitc.cast %arg0: i32 to f32
@@ -39,6 +58,21 @@ func.func @add_int(%arg0: i32, %arg1: i32) {
 func.func @add_pointer(%arg0: !emitc.ptr<f32>, %arg1: i32, %arg2: !emitc.opaque<"unsigned int">) {
   %1 = "emitc.add" (%arg0, %arg1) : (!emitc.ptr<f32>, i32) -> !emitc.ptr<f32>
   %2 = "emitc.add" (%arg0, %arg2) : (!emitc.ptr<f32>, !emitc.opaque<"unsigned int">) -> !emitc.ptr<f32>
+  return
+}
+
+func.func @bitwise(%arg0: i32, %arg1: i32) -> () {
+  %0 = emitc.bitwise_and %arg0, %arg1 : (i32, i32) -> i32
+  %1 = emitc.bitwise_left_shift %arg0, %arg1 : (i32, i32) -> i32
+  %2 = emitc.bitwise_not %arg0 : (i32) -> i32
+  %3 = emitc.bitwise_or %arg0, %arg1 : (i32, i32) -> i32
+  %4 = emitc.bitwise_right_shift %arg0, %arg1 : (i32, i32) -> i32
+  %5 = emitc.bitwise_xor %arg0, %arg1 : (i32, i32) -> i32
+  return
+}
+
+func.func @cond(%cond: i1, %arg0: i32, %arg1: i32) -> () {
+  %0 = emitc.conditional %cond, %arg0, %arg1 : i32
   return
 }
 
@@ -98,16 +132,29 @@ func.func @cmp(%arg0 : i32, %arg1 : f32, %arg2 : i64, %arg3 : f64, %arg4 : !emit
   return
 }
 
+func.func @logical(%arg0: i32, %arg1: i32) {
+  %0 = emitc.logical_and %arg0, %arg1 : i32, i32
+  %1 = emitc.logical_not %arg0 : i32
+  %2 = emitc.logical_or %arg0, %arg1 : i32, i32
+  return
+}
+
+func.func @unary(%arg0: i32) {
+  %0 = emitc.unary_minus %arg0 : (i32) -> i32
+  %1 = emitc.unary_plus %arg0 : (i32) -> i32
+  return
+}
+
 func.func @test_if(%arg0: i1, %arg1: f32) {
   emitc.if %arg0 {
-     %0 = emitc.call "func_const"(%arg1) : (f32) -> i32
+     %0 = emitc.call_opaque "func_const"(%arg1) : (f32) -> i32
   }
   return
 }
 
 func.func @test_if_explicit_yield(%arg0: i1, %arg1: f32) {
   emitc.if %arg0 {
-     %0 = emitc.call "func_const"(%arg1) : (f32) -> i32
+     %0 = emitc.call_opaque "func_const"(%arg1) : (f32) -> i32
      emitc.yield
   }
   return
@@ -115,9 +162,9 @@ func.func @test_if_explicit_yield(%arg0: i1, %arg1: f32) {
 
 func.func @test_if_else(%arg0: i1, %arg1: f32) {
   emitc.if %arg0 {
-    %0 = emitc.call "func_true"(%arg1) : (f32) -> i32
+    %0 = emitc.call_opaque "func_true"(%arg1) : (f32) -> i32
   } else {
-    %0 = emitc.call "func_false"(%arg1) : (f32) -> i32
+    %0 = emitc.call_opaque "func_false"(%arg1) : (f32) -> i32
   }
   return
 }
@@ -128,16 +175,33 @@ func.func @test_assign(%arg1: f32) {
   return
 }
 
+func.func @test_expression(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: f32, %arg4: f32) -> i32 {
+  %c7 = "emitc.constant"() {value = 7 : i32} : () -> i32
+  %q = emitc.expression : i32 {
+    %a = emitc.rem %arg1, %c7 : (i32, i32) -> i32
+    emitc.yield %a : i32
+  }
+  %r = emitc.expression noinline : i32 {
+    %a = emitc.add %arg0, %arg1 : (i32, i32) -> i32
+    %b = emitc.call_opaque "bar" (%a, %arg2, %q) : (i32, i32, i32) -> (i32)
+    %c = emitc.mul %arg3, %arg4 : (f32, f32) -> f32
+    %d = emitc.cast %c : f32 to i32
+    %e = emitc.sub %b, %d : (i32, i32) -> i32
+    emitc.yield %e : i32
+  }
+  return %r : i32
+}
+
 func.func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
   emitc.for %i0 = %arg0 to %arg1 step %arg2 {
-    %0 = emitc.call "func_const"(%i0) : (index) -> i32
+    %0 = emitc.call_opaque "func_const"(%i0) : (index) -> i32
   }
   return
 }
 
 func.func @test_for_explicit_yield(%arg0 : index, %arg1 : index, %arg2 : index) {
   emitc.for %i0 = %arg0 to %arg1 step %arg2 {
-    %0 = emitc.call "func_const"(%i0) : (index) -> i32
+    %0 = emitc.call_opaque "func_const"(%i0) : (index) -> i32
     emitc.yield
   }
   return
@@ -145,7 +209,18 @@ func.func @test_for_explicit_yield(%arg0 : index, %arg1 : index, %arg2 : index) 
 
 func.func @test_for_not_index_induction(%arg0 : i16, %arg1 : i16, %arg2 : i16) {
   emitc.for %i0 = %arg0 to %arg1 step %arg2 : i16 {
-    %0 = emitc.call "func_const"(%i0) : (i16) -> i32
+    %0 = emitc.call_opaque "func_const"(%i0) : (i16) -> i32
   }
   return
 }
+
+emitc.verbatim "#ifdef __cplusplus"
+emitc.verbatim "extern \"C\" {"
+emitc.verbatim "#endif  // __cplusplus"
+
+emitc.verbatim "#ifdef __cplusplus"
+emitc.verbatim "}  // extern \"C\""
+emitc.verbatim "#endif  // __cplusplus"
+
+emitc.verbatim "typedef int32_t i32;"
+emitc.verbatim "typedef float f32;"

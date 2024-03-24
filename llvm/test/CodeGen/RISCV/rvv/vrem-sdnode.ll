@@ -1299,4 +1299,3 @@ define <vscale x 8 x i64> @vrem_vi_nxv8i64_0(<vscale x 8 x i64> %va) {
   %vc = srem <vscale x 8 x i64> %va, %splat
   ret <vscale x 8 x i64> %vc
 }
-

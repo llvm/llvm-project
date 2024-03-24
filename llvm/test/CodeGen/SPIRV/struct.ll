@@ -3,11 +3,10 @@
 %struct.ST = type { i32, i32, i32 }
 
 ; CHECK-DAG: OpName %[[#struct:]] "struct.ST"
-; CHECK-DAG: %[[#char:]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[#int:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#struct]] = OpTypeStruct %[[#int]] %[[#int]] %[[#int]]
 ; CHECK-DAG: %[[#structP:]] = OpTypePointer Function %[[#struct]]
-; CHECK-DAG: %[[#intP:]] = OpTypePointer Function %[[#char]]
+; CHECK-DAG: %[[#intP:]] = OpTypePointer Function %[[#int]]
 ; CHECK-DAG: %[[#zero:]] = OpConstant %[[#int]] 0
 ; CHECK-DAG: %[[#one:]] = OpConstant %[[#int]] 1
 ; CHECK-DAG: %[[#two:]] = OpConstant %[[#int]] 2

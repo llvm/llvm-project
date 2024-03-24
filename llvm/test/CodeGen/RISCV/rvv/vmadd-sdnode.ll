@@ -590,3 +590,25 @@ define <vscale x 8 x i64> @vmadd_vx_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 
   %y = add <vscale x 8 x i64> %x, %va
   ret <vscale x 8 x i64> %y
 }
+
+define <vscale x 4 x i32> @combine_mul_add_imm1(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: combine_mul_add_imm1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmadd.vv v8, v10, v10
+; CHECK-NEXT:    ret
+  %x = add <vscale x 4 x i32> %a, splat (i32 1)
+  %y = mul <vscale x 4 x i32> %x, %b
+  ret <vscale x 4 x i32> %y
+}
+
+define <vscale x 4 x i32> @combine_mul_add_imm1_2(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: combine_mul_add_imm1_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmadd.vv v8, v10, v10
+; CHECK-NEXT:    ret
+  %x = add <vscale x 4 x i32> %a, splat (i32 1)
+  %y = mul <vscale x 4 x i32> %b, %x
+  ret <vscale x 4 x i32> %y
+}

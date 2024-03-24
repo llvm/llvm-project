@@ -12,7 +12,6 @@ These should work for objects compiled with either the stable ABI or the unstabl
 
 from __future__ import print_function
 
-import math
 import re
 import gdb
 

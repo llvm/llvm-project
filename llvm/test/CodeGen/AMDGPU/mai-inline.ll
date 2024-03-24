@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX908 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX908 %s
 
 ; GCN-LABEL: {{^}}accvgpr_write_read:
 ; GFX908: v_accvgpr_write [[AREG:a[0-9]+]], 1

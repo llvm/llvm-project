@@ -3,10 +3,10 @@
 // CHECK-DAG: #[[FILE:.*]] = #llvm.di_file<"debuginfo.mlir" in "/test/">
 #file = #llvm.di_file<"debuginfo.mlir" in "/test/">
 
-// CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C, file = #[[FILE]], producer = "MLIR", isOptimized = true, emissionKind = Full>
+// CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], producer = "MLIR", isOptimized = true, emissionKind = Full>
 #cu = #llvm.di_compile_unit<
-  sourceLanguage = DW_LANG_C, file = #file, producer = "MLIR",
-  isOptimized = true, emissionKind = Full
+  id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #file,
+  producer = "MLIR", isOptimized = true, emissionKind = Full
 >
 
 // CHECK-DAG: #[[NULL:.*]] = #llvm.di_null_type
@@ -24,10 +24,11 @@
   sizeInBits = 32, encoding = DW_ATE_signed
 >
 
-// CHECK-DAG: #[[PTR0:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT0]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4>
+// CHECK-DAG: #[[PTR0:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT0]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4, extraData = #[[INT1]]>
 #ptr0 = #llvm.di_derived_type<
   tag = DW_TAG_pointer_type, baseType = #int0,
-  sizeInBits = 64, alignInBits = 32, offsetInBits = 4
+  sizeInBits = 64, alignInBits = 32, offsetInBits = 4,
+  extraData = #int1
 >
 
 // CHECK-DAG: #[[PTR1:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "ptr1">
@@ -162,8 +163,8 @@ llvm.func @addr(%arg: i64) {
 
 // CHECK: llvm.func @value(%[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32)
 llvm.func @value(%arg1: i32, %arg2: i32) {
-  // CHECK: llvm.intr.dbg.value #[[VAR1]] = %[[ARG1]]
-  llvm.intr.dbg.value #var1 = %arg1 : i32
+  // CHECK: llvm.intr.dbg.value #[[VAR1]] #llvm.di_expression<[DW_OP_LLVM_fragment(16, 8), DW_OP_plus_uconst(2), DW_OP_deref]> = %[[ARG1]]
+  llvm.intr.dbg.value #var1 #llvm.di_expression<[DW_OP_LLVM_fragment(16, 8), DW_OP_plus_uconst(2), DW_OP_deref]> = %arg1 : i32
   // CHECK: llvm.intr.dbg.value #[[VAR2]] = %[[ARG2]]
   llvm.intr.dbg.value #var2 = %arg2 : i32
   // CHECK: llvm.intr.dbg.label #[[LABEL1]]

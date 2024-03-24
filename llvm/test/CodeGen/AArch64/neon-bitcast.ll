@@ -545,7 +545,7 @@ define <4 x i8> @bitcast_i32_to_v4i8(i32 %word) {
 ; CHECK-BE-NEXT:    fmov s0, w0
 ; CHECK-BE-NEXT:    rev32 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    ret
   %ret = bitcast i32 %word to <4 x i8>
   ret <4 x i8> %ret

@@ -19,8 +19,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Function.h"
 #include <bitset>
 #include <cstddef>
@@ -54,10 +54,30 @@ enum {
   GICXXCustomAction_Invalid = 0,
 };
 
+/// The MatchTable is encoded as an array of bytes.
+/// Thus, opcodes are expected to be <255.
+///
+/// Operands can be variable-sized, their size is always after their name
+/// in the docs, e.g. "Foo(4)" means that "Foo" takes 4 entries in the table,
+/// so 4 bytes. "Foo()"
+///
+/// As a general rule of thumb:
+///   - Instruction & Operand IDs are ULEB128
+///   - LLT IDs are 1 byte
+///   - Predicates and target opcodes, register and register class IDs are 2
+///     bytes.
+///   - Indexes into the table are 4 bytes.
+///   - Inline constants are 8 bytes
+///
+/// Design notes:
+///   - Inst/Op IDs have to be LEB128 because some targets generate
+///     extremely long patterns which need more than 255 temporaries.
+///     We could just use 2 bytes everytime, but then some targets like
+///     X86/AMDGPU that have no need for it will pay the price all the time.
 enum {
   /// Begin a try-block to attempt a match and jump to OnFail if it is
   /// unsuccessful.
-  /// - OnFail - The MatchTable entry at which to resume if the match fails.
+  /// - OnFail(4) - The MatchTable entry at which to resume if the match fails.
   ///
   /// FIXME: This ought to take an argument indicating the number of try-blocks
   ///        to exit on failure. It's usually one but the last match attempt of
@@ -68,100 +88,103 @@ enum {
   GIM_Try,
 
   /// Switch over the opcode on the specified instruction
-  /// - InsnID - Instruction ID
-  /// - LowerBound - numerically minimum opcode supported
-  /// - UpperBound - numerically maximum + 1 opcode supported
-  /// - Default - failure jump target
-  /// - JumpTable... - (UpperBound - LowerBound) (at least 2) jump targets
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - LowerBound(2) - numerically minimum opcode supported
+  /// - UpperBound(2) - numerically maximum + 1 opcode supported
+  /// - Default(4) - failure jump target
+  /// - JumpTable(4)... - (UpperBound - LowerBound) (at least 2) jump targets
   GIM_SwitchOpcode,
 
   /// Switch over the LLT on the specified instruction operand
-  /// - InsnID - Instruction ID
-  /// - OpIdx - Operand index
-  /// - LowerBound - numerically minimum Type ID supported
-  /// - UpperBound - numerically maximum + 1 Type ID supported
-  /// - Default - failure jump target
-  /// - JumpTable... - (UpperBound - LowerBound) (at least 2) jump targets
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - LowerBound(2) - numerically minimum Type ID supported
+  /// - UpperBound(2) - numerically maximum + 1 Type ID supported
+  /// - Default(4) - failure jump target
+  /// - JumpTable(4)... - (UpperBound - LowerBound) (at least 2) jump targets
   GIM_SwitchType,
 
   /// Record the specified instruction.
   /// The IgnoreCopies variant ignores COPY instructions.
-  /// - NewInsnID - Instruction ID to define
-  /// - InsnID - Instruction ID
-  /// - OpIdx - Operand index
+  /// - NewInsnID(ULEB128) - Instruction ID to define
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
   GIM_RecordInsn,
   GIM_RecordInsnIgnoreCopies,
 
   /// Check the feature bits
-  /// - Expected features
+  ///   Feature(2) - Expected features
   GIM_CheckFeatures,
 
   /// Check the opcode on the specified instruction
-  /// - InsnID - Instruction ID
-  /// - Expected opcode
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - Opc(2) - Expected opcode
   GIM_CheckOpcode,
 
   /// Check the opcode on the specified instruction, checking 2 acceptable
   /// alternatives.
-  /// - InsnID - Instruction ID
-  /// - Expected opcode
-  /// - Alternative expected opcode
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - Opc(2) - Expected opcode
+  /// - Opc(2) - Alternative expected opcode
   GIM_CheckOpcodeIsEither,
 
   /// Check the instruction has the right number of operands
-  /// - InsnID - Instruction ID
-  /// - Expected number of operands
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - Ops(ULEB128) - Expected number of operands
   GIM_CheckNumOperands,
+
   /// Check an immediate predicate on the specified instruction
-  /// - InsnID - Instruction ID
-  /// - The predicate to test
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - Pred(2) - The predicate to test
   GIM_CheckI64ImmPredicate,
   /// Check an immediate predicate on the specified instruction via an APInt.
-  /// - InsnID - Instruction ID
-  /// - The predicate to test
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - Pred(2) - The predicate to test
   GIM_CheckAPIntImmPredicate,
   /// Check a floating point immediate predicate on the specified instruction.
-  /// - InsnID - Instruction ID
-  /// - The predicate to test
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - Pred(2) - The predicate to test
   GIM_CheckAPFloatImmPredicate,
   /// Check an immediate predicate on the specified instruction
-  /// - InsnID - Instruction ID
-  /// - OpIdx - Operand index
-  /// - The predicate to test
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - Pred(2) - The predicate to test
   GIM_CheckImmOperandPredicate,
+
   /// Check a memory operation has the specified atomic ordering.
-  /// - InsnID - Instruction ID
-  /// - Ordering - The AtomicOrdering value
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - Ordering(ULEB128) - The AtomicOrdering value
   GIM_CheckAtomicOrdering,
   GIM_CheckAtomicOrderingOrStrongerThan,
   GIM_CheckAtomicOrderingWeakerThan,
+
   /// Check the size of the memory access for the given machine memory operand.
-  /// - InsnID - Instruction ID
-  /// - MMOIdx - MMO index
-  /// - Size - The size in bytes of the memory access
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - MMOIdx(ULEB128) - MMO index
+  /// - Size(4) - The size in bytes of the memory access
   GIM_CheckMemorySizeEqualTo,
 
   /// Check the address space of the memory access for the given machine memory
   /// operand.
-  /// - InsnID - Instruction ID
-  /// - MMOIdx - MMO index
-  /// - NumAddrSpace - Number of valid address spaces
-  /// - AddrSpaceN - An allowed space of the memory access
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - MMOIdx(ULEB128) - MMO index
+  /// - NumAddrSpace(ULEB128) - Number of valid address spaces
+  /// - AddrSpaceN(ULEB128) - An allowed space of the memory access
   /// - AddrSpaceN+1 ...
   GIM_CheckMemoryAddressSpace,
 
   /// Check the minimum alignment of the memory access for the given machine
   /// memory operand.
-  /// - InsnID - Instruction ID
-  /// - MMOIdx - MMO index
-  /// - MinAlign - Minimum acceptable alignment
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - MMOIdx(ULEB128) - MMO index
+  /// - MinAlign(ULEB128) - Minimum acceptable alignment
   GIM_CheckMemoryAlignment,
 
   /// Check the size of the memory access for the given machine memory operand
   /// against the size of an operand.
-  /// - InsnID - Instruction ID
-  /// - MMOIdx - MMO index
-  /// - OpIdx - The operand index to compare the MMO against
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - MMOIdx(ULEB128) - MMO index
+  /// - OpIdx(ULEB128) - The operand index to compare the MMO against
   GIM_CheckMemorySizeEqualToLLT,
   GIM_CheckMemorySizeLessThanLLT,
   GIM_CheckMemorySizeGreaterThanLLT,
@@ -170,110 +193,134 @@ enum {
   /// constant. This is valid for both G_BUILD_VECTOR as well as
   /// G_BUILD_VECTOR_TRUNC. For AllOnes refers to individual bits, so a -1
   /// element.
-  /// - InsnID - Instruction ID
+  /// - InsnID(ULEB128) - Instruction ID
   GIM_CheckIsBuildVectorAllOnes,
   GIM_CheckIsBuildVectorAllZeros,
 
   /// Check a trivial predicate which takes no arguments.
   /// This can be used by executors to implement custom flags that don't fit in
   /// target features.
+  /// - Pred(2) - Predicate ID to check.
   GIM_CheckSimplePredicate,
 
   /// Check a generic C++ instruction predicate
-  /// - InsnID - Instruction ID
-  /// - PredicateID - The ID of the predicate function to call
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - PredicateID(2) - The ID of the predicate function to call
   GIM_CheckCxxInsnPredicate,
 
   /// Check if there's no use of the first result.
-  /// - InsnID - Instruction ID
+  /// - InsnID(ULEB128) - Instruction ID
   GIM_CheckHasNoUse,
 
   /// Check the type for the specified operand
-  /// - InsnID - Instruction ID
-  /// - OpIdx - Operand index
-  /// - Expected type
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - Ty(1) - Expected type
   GIM_CheckType,
+
   /// Check the type of a pointer to any address space.
-  /// - InsnID - Instruction ID
-  /// - OpIdx - Operand index
-  /// - SizeInBits - The size of the pointer value in bits.
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - SizeInBits(ULEB128) - The size of the pointer value in bits.
   GIM_CheckPointerToAny,
+
   /// Check the register bank for the specified operand
-  /// - InsnID - Instruction ID
-  /// - OpIdx - Operand index
-  /// - Expected register bank (specified as a register class)
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - RC(2) - Expected register bank (specified as a register class)
   GIM_CheckRegBankForClass,
 
   /// Check the operand matches a complex predicate
-  /// - InsnID - Instruction ID
-  /// - OpIdx - Operand index
-  /// - RendererID - The renderer to hold the result
-  /// - Complex predicate ID
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - RendererID(2) - The renderer to hold the result
+  /// - Pred(2) - Complex predicate ID
   GIM_CheckComplexPattern,
 
   /// Check the operand is a specific integer
-  /// - InsnID - Instruction ID
-  /// - OpIdx - Operand index
-  /// - Expected integer
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - Val(8) Expected integer
   GIM_CheckConstantInt,
+
+  /// Check the operand is a specific 8-bit signed integer
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - Val(1) Expected integer
+  GIM_CheckConstantInt8,
+
   /// Check the operand is a specific literal integer (i.e. MO.isImm() or
   /// MO.isCImm() is true).
-  /// - InsnID - Instruction ID
-  /// - OpIdx - Operand index
-  /// - Expected integer
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - Val(8) - Expected integer
   GIM_CheckLiteralInt,
+
   /// Check the operand is a specific intrinsic ID
-  /// - InsnID - Instruction ID
-  /// - OpIdx - Operand index
-  /// - Expected Intrinsic ID
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - IID(2) - Expected Intrinsic ID
   GIM_CheckIntrinsicID,
 
   /// Check the operand is a specific predicate
-  /// - InsnID - Instruction ID
-  /// - OpIdx - Operand index
-  /// - Expected predicate
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - Pred(2) - Expected predicate
   GIM_CheckCmpPredicate,
 
   /// Check the specified operand is an MBB
-  /// - InsnID - Instruction ID
-  /// - OpIdx - Operand index
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
   GIM_CheckIsMBB,
 
   /// Check the specified operand is an Imm
-  /// - InsnID - Instruction ID
-  /// - OpIdx - Operand index
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
   GIM_CheckIsImm,
 
   /// Check if the specified operand is safe to fold into the current
   /// instruction.
-  /// - InsnID - Instruction ID
+  /// - InsnID(ULEB128) - Instruction ID
   GIM_CheckIsSafeToFold,
 
   /// Check the specified operands are identical.
   /// The IgnoreCopies variant looks through COPY instructions before
   /// comparing the operands.
-  /// - InsnID - Instruction ID
-  /// - OpIdx - Operand index
-  /// - OtherInsnID - Other instruction ID
-  /// - OtherOpIdx - Other operand index
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - OtherInsnID(ULEB128) - Other instruction ID
+  /// - OtherOpIdx(ULEB128) - Other operand index
   GIM_CheckIsSameOperand,
   GIM_CheckIsSameOperandIgnoreCopies,
 
   /// Check we can replace all uses of a register with another.
-  /// - OldInsnID
-  /// - OldOpIdx
-  /// - NewInsnID
-  /// - NewOpIdx
+  /// - OldInsnID(ULEB128)
+  /// - OldOpIdx(ULEB128)
+  /// - NewInsnID(ULEB128)
+  /// - NewOpIdx(ULEB128)
   GIM_CheckCanReplaceReg,
+
+  /// Check that a matched instruction has, or doesn't have a MIFlag.
+  ///
+  /// - InsnID(ULEB128) - Instruction to check.
+  /// - Flags(4) - (can be one or more flags OR'd together)
+  GIM_MIFlags,
+  GIM_MIFlagsNot,
 
   /// Predicates with 'let PredicateCodeUsesOperands = 1' need to examine some
   /// named operands that will be recorded in RecordedOperands. Names of these
   /// operands are referenced in predicate argument list. Emitter determines
   /// StoreIdx(corresponds to the order in which names appear in argument list).
-  /// - InsnID - Instruction ID
-  /// - OpIdx - Operand index
-  /// - StoreIdx - Store location in RecordedOperands.
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - StoreIdx(ULEB128) - Store location in RecordedOperands.
   GIM_RecordNamedOperand,
+
+  /// Records an operand's register type into the set of temporary types.
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - TempTypeIdx(1) - Temp Type Index, always negative.
+  GIM_RecordRegType,
 
   /// Fail the current try-block, or completely fail to match if there is no
   /// current try-block.
@@ -282,107 +329,138 @@ enum {
   //=== Renderers ===
 
   /// Mutate an instruction
-  /// - NewInsnID - Instruction ID to define
-  /// - OldInsnID - Instruction ID to mutate
-  /// - NewOpcode - The new opcode to use
+  /// - NewInsnID(ULEB128) - Instruction ID to define
+  /// - OldInsnID(ULEB128) - Instruction ID to mutate
+  /// - NewOpcode(2) - The new opcode to use
   GIR_MutateOpcode,
 
   /// Build a new instruction
-  /// - InsnID - Instruction ID to define
-  /// - Opcode - The new opcode to use
+  /// - InsnID(ULEB128) - Instruction ID to define
+  /// - Opcode(2) - The new opcode to use
   GIR_BuildMI,
 
   /// Builds a constant and stores its result in a TempReg.
-  /// - TempRegID - Temp Register to define.
-  /// - Imm - The immediate to add
+  /// - TempRegID(ULEB128) - Temp Register to define.
+  /// - Imm(8) - The immediate to add
   GIR_BuildConstant,
 
   /// Copy an operand to the specified instruction
-  /// - NewInsnID - Instruction ID to modify
-  /// - OldInsnID - Instruction ID to copy from
-  /// - OpIdx - The operand to copy
+  /// - NewInsnID(ULEB128) - Instruction ID to modify
+  /// - OldInsnID(ULEB128) - Instruction ID to copy from
+  /// - OpIdx(ULEB128) - The operand to copy
   GIR_Copy,
 
   /// Copy an operand to the specified instruction or add a zero register if the
   /// operand is a zero immediate.
-  /// - NewInsnID - Instruction ID to modify
-  /// - OldInsnID - Instruction ID to copy from
-  /// - OpIdx - The operand to copy
-  /// - ZeroReg - The zero register to use
+  /// - NewInsnID(ULEB128) - Instruction ID to modify
+  /// - OldInsnID(ULEB128) - Instruction ID to copy from
+  /// - OpIdx(ULEB128) - The operand to copy
+  /// - ZeroReg(2) - The zero register to use
   GIR_CopyOrAddZeroReg,
   /// Copy an operand to the specified instruction
-  /// - NewInsnID - Instruction ID to modify
-  /// - OldInsnID - Instruction ID to copy from
-  /// - OpIdx - The operand to copy
-  /// - SubRegIdx - The subregister to copy
+  /// - NewInsnID(ULEB128) - Instruction ID to modify
+  /// - OldInsnID(ULEB128) - Instruction ID to copy from
+  /// - OpIdx(ULEB128) - The operand to copy
+  /// - SubRegIdx(2) - The subregister to copy
   GIR_CopySubReg,
 
   /// Add an implicit register def to the specified instruction
-  /// - InsnID - Instruction ID to modify
-  /// - RegNum - The register to add
-  /// - Flags - Register Flags
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - RegNum(2) - The register to add
+  /// - Flags(2) - Register Flags
   GIR_AddImplicitDef,
   /// Add an implicit register use to the specified instruction
-  /// - InsnID - Instruction ID to modify
-  /// - RegNum - The register to add
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - RegNum(2) - The register to add
   GIR_AddImplicitUse,
   /// Add an register to the specified instruction
-  /// - InsnID - Instruction ID to modify
-  /// - RegNum - The register to add
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - RegNum(2) - The register to add
+  /// - Flags(2) - Register Flags
   GIR_AddRegister,
 
+  /// Adds an intrinsic ID to the specified instruction.
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - IID(2) - Intrinsic ID
+  GIR_AddIntrinsicID,
+
   /// Marks the implicit def of a register as dead.
-  /// - InsnID - Instruction ID to modify
-  /// - OpIdx - The implicit def operand index
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - OpIdx(ULEB128) - The implicit def operand index
   ///
   /// OpIdx starts at 0 for the first implicit def.
   GIR_SetImplicitDefDead,
 
-  /// Add a temporary register to the specified instruction
-  /// - InsnID - Instruction ID to modify
-  /// - TempRegID - The temporary register ID to add
-  /// - TempRegFlags - The register flags to set
-  GIR_AddTempRegister,
+  /// Set or unset a MIFlag on an instruction.
+  ///
+  /// - InsnID(ULEB128)  - Instruction to modify.
+  /// - Flags(4) - (can be one or more flags OR'd together)
+  GIR_SetMIFlags,
+  GIR_UnsetMIFlags,
+
+  /// Copy the MIFlags of a matched instruction into an
+  /// output instruction. The flags are OR'd together.
+  ///
+  /// - InsnID(ULEB128)     - Instruction to modify.
+  /// - OldInsnID(ULEB128)  - Matched instruction to copy flags from.
+  GIR_CopyMIFlags,
 
   /// Add a temporary register to the specified instruction
-  /// - InsnID - Instruction ID to modify
-  /// - TempRegID - The temporary register ID to add
-  /// - TempRegFlags - The register flags to set
-  /// - SubRegIndex - The subregister index to set
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - TempRegID(ULEB128) - The temporary register ID to add
+  /// - TempRegFlags(2) - The register flags to set
+  GIR_AddTempRegister,
+
+  /// Add a temporary register to the specified instruction without
+  /// setting any flags.
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - TempRegID(ULEB128) - The temporary register ID to add
+  GIR_AddSimpleTempRegister,
+
+  /// Add a temporary register to the specified instruction
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - TempRegID(ULEB128) - The temporary register ID to add
+  /// - TempRegFlags(2) - The register flags to set
+  /// - SubRegIndex(2) - The subregister index to set
   GIR_AddTempSubRegister,
 
   /// Add an immediate to the specified instruction
-  /// - InsnID - Instruction ID to modify
-  /// - Imm - The immediate to add
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - Imm(8) - The immediate to add
   GIR_AddImm,
 
+  /// Add signed 8 bit immediate to the specified instruction
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - Imm(1) - The immediate to add
+  GIR_AddImm8,
+
   /// Add an CImm to the specified instruction
-  /// - InsnID - Instruction ID to modify
-  /// - Ty - Type of the constant immediate.
-  /// - Imm - The immediate to add
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - Ty(1) - Type of the constant immediate.
+  /// - Imm(8) - The immediate to add
   GIR_AddCImm,
 
   /// Render complex operands to the specified instruction
-  /// - InsnID - Instruction ID to modify
-  /// - RendererID - The renderer to call
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - RendererID(2) - The renderer to call
   GIR_ComplexRenderer,
   /// Render sub-operands of complex operands to the specified instruction
-  /// - InsnID - Instruction ID to modify
-  /// - RendererID - The renderer to call
-  /// - RenderOpID - The suboperand to render.
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - RendererID(2) - The renderer to call
+  /// - RenderOpID(ULEB128) - The suboperand to render.
   GIR_ComplexSubOperandRenderer,
   /// Render subregisters of suboperands of complex operands to the
   /// specified instruction
-  /// - InsnID - Instruction ID to modify
-  /// - RendererID - The renderer to call
-  /// - RenderOpID - The suboperand to render
-  /// - SubRegIdx - The subregister to extract
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - RendererID(2) - The renderer to call
+  /// - RenderOpID(ULEB128) - The suboperand to render
+  /// - SubRegIdx(2) - The subregister to extract
   GIR_ComplexSubOperandSubRegRenderer,
 
   /// Render operands to the specified instruction using a custom function
-  /// - InsnID - Instruction ID to modify
-  /// - OldInsnID - Instruction ID to get the matched operand from
-  /// - RendererFnID - Custom renderer function to call
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - OldInsnID(ULEB128) - Instruction ID to get the matched operand from
+  /// - RendererFnID(2) - Custom renderer function to call
   GIR_CustomRenderer,
 
   /// Calls a C++ function to perform an action when a match is complete.
@@ -391,88 +469,83 @@ enum {
   /// This is less constrained than a custom renderer and can update
   /// instructions
   /// in the state.
-  /// - FnID - The function to call.
+  /// - FnID(2) - The function to call.
   /// TODO: Remove this at some point when combiners aren't reliant on it. It's
   /// a bit of a hack.
   GIR_CustomAction,
 
   /// Render operands to the specified instruction using a custom function,
   /// reading from a specific operand.
-  /// - InsnID - Instruction ID to modify
-  /// - OldInsnID - Instruction ID to get the matched operand from
-  /// - OpIdx - Operand index in OldInsnID the render function should read
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - OldInsnID(ULEB128) - Instruction ID to get the matched operand from
+  /// - OpIdx(ULEB128) - Operand index in OldInsnID the render function should
+  /// read
   /// from..
-  /// - RendererFnID - Custom renderer function to call
+  /// - RendererFnID(2) - Custom renderer function to call
   GIR_CustomOperandRenderer,
 
   /// Render a G_CONSTANT operator as a sign-extended immediate.
-  /// - NewInsnID - Instruction ID to modify
-  /// - OldInsnID - Instruction ID to copy from
+  /// - NewInsnID(ULEB128) - Instruction ID to modify
+  /// - OldInsnID(ULEB128) - Instruction ID to copy from
   /// The operand index is implicitly 1.
   GIR_CopyConstantAsSImm,
 
   /// Render a G_FCONSTANT operator as a sign-extended immediate.
-  /// - NewInsnID - Instruction ID to modify
-  /// - OldInsnID - Instruction ID to copy from
+  /// - NewInsnID(ULEB128) - Instruction ID to modify
+  /// - OldInsnID(ULEB128) - Instruction ID to copy from
   /// The operand index is implicitly 1.
   GIR_CopyFConstantAsFPImm,
 
   /// Constrain an instruction operand to a register class.
-  /// - InsnID - Instruction ID to modify
-  /// - OpIdx - Operand index
-  /// - RCEnum - Register class enumeration value
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - OpIdx(ULEB128) - Operand index
+  /// - RCEnum(2) - Register class enumeration value
   GIR_ConstrainOperandRC,
 
   /// Constrain an instructions operands according to the instruction
   /// description.
-  /// - InsnID - Instruction ID to modify
+  /// - InsnID(ULEB128) - Instruction ID to modify
   GIR_ConstrainSelectedInstOperands,
 
   /// Merge all memory operands into instruction.
-  /// - InsnID - Instruction ID to modify
-  /// - MergeInsnID... - One or more Instruction ID to merge into the result.
-  /// - GIU_MergeMemOperands_EndOfList - Terminates the list of instructions to
-  ///                                    merge.
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - NumInsnID(1) - Number of instruction IDs following this argument
+  /// - MergeInsnID(ULEB128)... - One or more Instruction ID to merge into the
+  /// result.
   GIR_MergeMemOperands,
 
   /// Erase from parent.
-  /// - InsnID - Instruction ID to erase
+  /// - InsnID(ULEB128) - Instruction ID to erase
   GIR_EraseFromParent,
 
   /// Create a new temporary register that's not constrained.
-  /// - TempRegID - The temporary register ID to initialize.
-  /// - Expected type
+  /// - TempRegID(ULEB128) - The temporary register ID to initialize.
+  /// - Ty(1) - Expected type
   GIR_MakeTempReg,
 
   /// Replaces all references to a register from an instruction
   /// with another register from another instruction.
-  /// - OldInsnID
-  /// - OldOpIdx
-  /// - NewInsnID
-  /// - NewOpIdx
+  /// - OldInsnID(ULEB128)
+  /// - OldOpIdx(ULEB128)
+  /// - NewInsnID(ULEB128)
+  /// - NewOpIdx(ULEB128)
   GIR_ReplaceReg,
 
   /// Replaces all references to a register with a temporary register.
-  /// - OldInsnID
-  /// - OldOpIdx
-  /// - TempRegIdx
+  /// - OldInsnID(ULEB128)
+  /// - OldOpIdx(ULEB128)
+  /// - TempRegIdx(ULEB128)
   GIR_ReplaceRegWithTempReg,
 
   /// A successful emission
   GIR_Done,
 
   /// Increment the rule coverage counter.
-  /// - RuleID - The ID of the rule that was covered.
+  /// - RuleID(4) - The ID of the rule that was covered.
   GIR_Coverage,
 
   /// Keeping track of the number of the GI opcodes. Must be the last entry.
   GIU_NumOpcodes,
-};
-
-enum {
-  /// Indicates the end of the variable-length MergeInsnID list in a
-  /// GIR_MergeMemOperands opcode.
-  GIU_MergeMemOperands_EndOfList = -1,
 };
 
 /// Provides the logic to execute GlobalISel match tables, which are used by the
@@ -522,6 +595,10 @@ protected:
     /// list. Currently such predicates don't have more then 3 arguments.
     std::array<const MachineOperand *, 3> RecordedOperands;
 
+    /// Types extracted from an instruction's operand.
+    /// Whenever a type index is negative, we look here instead.
+    SmallVector<LLT, 4> RecordedTypes;
+
     MatcherState(unsigned MaxRenderers);
   };
 
@@ -564,14 +641,14 @@ protected:
   bool executeMatchTable(TgtExecutor &Exec, MatcherState &State,
                          const ExecInfoTy<PredicateBitset, ComplexMatcherMemFn,
                                           CustomRendererFn> &ExecInfo,
-                         MachineIRBuilder &Builder, const int64_t *MatchTable,
+                         MachineIRBuilder &Builder, const uint8_t *MatchTable,
                          const TargetInstrInfo &TII, MachineRegisterInfo &MRI,
                          const TargetRegisterInfo &TRI,
                          const RegisterBankInfo &RBI,
                          const PredicateBitset &AvailableFeatures,
                          CodeGenCoverage *CoverageInfo) const;
 
-  virtual const int64_t *getMatchTable() const {
+  virtual const uint8_t *getMatchTable() const {
     llvm_unreachable("Should have been overridden by tablegen if used");
   }
 
@@ -616,6 +693,12 @@ protected:
   /// MI and IntoMI do not need to be in the same basic blocks, but MI must
   /// preceed IntoMI.
   bool isObviouslySafeToFold(MachineInstr &MI, MachineInstr &IntoMI) const;
+
+  template <typename Ty> static Ty readBytesAs(const uint8_t *MatchTable) {
+    Ty Ret;
+    memcpy(&Ret, MatchTable, sizeof(Ret));
+    return Ret;
+  }
 };
 
 } // end namespace llvm

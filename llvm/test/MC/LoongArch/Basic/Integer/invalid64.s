@@ -65,7 +65,7 @@ addu16i.d $a0, $a0, 32768
 
 ## simm20
 pcaddu18i $a0, 0x80000
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-524288, 524287]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %call36) or an integer in the range [-524288, 524287]
 
 ## simm20_lu32id
 lu32i.d $a0, 0x80000

@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1100 %s -start-after postrapseudos -verify-machineinstrs -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 %s -start-after postrapseudos -verify-machineinstrs -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: test_V_WMMA_F32_16X16X16_F16_threeaddr_w32:
 # GCN: 	v_wmma_f32_16x16x16_f16 v[34:41], v[0:7], v[8:15], v[16:23]

@@ -65,6 +65,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
@@ -192,6 +193,7 @@ PIPE_OPERATOR(AAPointerInfo)
 PIPE_OPERATOR(AAAssumptionInfo)
 PIPE_OPERATOR(AAUnderlyingObjects)
 PIPE_OPERATOR(AAAddressSpace)
+PIPE_OPERATOR(AAAllocationInfo)
 PIPE_OPERATOR(AAIndirectCallInfo)
 PIPE_OPERATOR(AAGlobalValueInfo)
 PIPE_OPERATOR(AADenormalFPMath)
@@ -288,48 +290,16 @@ static const Value *getPointerOperand(const Instruction *I,
   return nullptr;
 }
 
-/// Helper function to create a pointer of type \p ResTy, based on \p Ptr, and
-/// advanced by \p Offset bytes. To aid later analysis the method tries to build
-/// getelement pointer instructions that traverse the natural type of \p Ptr if
-/// possible. If that fails, the remaining offset is adjusted byte-wise, hence
-/// through a cast to i8*.
-///
-/// TODO: This could probably live somewhere more prominantly if it doesn't
-///       already exist.
-static Value *constructPointer(Type *ResTy, Type *PtrElemTy, Value *Ptr,
-                               int64_t Offset, IRBuilder<NoFolder> &IRB,
-                               const DataLayout &DL) {
-  assert(Offset >= 0 && "Negative offset not supported yet!");
+/// Helper function to create a pointer based on \p Ptr, and advanced by \p
+/// Offset bytes.
+static Value *constructPointer(Value *Ptr, int64_t Offset,
+                               IRBuilder<NoFolder> &IRB) {
   LLVM_DEBUG(dbgs() << "Construct pointer: " << *Ptr << " + " << Offset
-                    << "-bytes as " << *ResTy << "\n");
+                    << "-bytes\n");
 
-  if (Offset) {
-    Type *Ty = PtrElemTy;
-    APInt IntOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset);
-    SmallVector<APInt> IntIndices = DL.getGEPIndicesForOffset(Ty, IntOffset);
-
-    SmallVector<Value *, 4> ValIndices;
-    std::string GEPName = Ptr->getName().str();
-    for (const APInt &Index : IntIndices) {
-      ValIndices.push_back(IRB.getInt(Index));
-      GEPName += "." + std::to_string(Index.getZExtValue());
-    }
-
-    // Create a GEP for the indices collected above.
-    Ptr = IRB.CreateGEP(PtrElemTy, Ptr, ValIndices, GEPName);
-
-    // If an offset is left we use byte-wise adjustment.
-    if (IntOffset != 0) {
-      Ptr = IRB.CreateGEP(IRB.getInt8Ty(), Ptr, IRB.getInt(IntOffset),
-                          GEPName + ".b" + Twine(IntOffset.getZExtValue()));
-    }
-  }
-
-  // Ensure the result has the requested type.
-  Ptr = IRB.CreatePointerBitCastOrAddrSpaceCast(Ptr, ResTy,
-                                                Ptr->getName() + ".cast");
-
-  LLVM_DEBUG(dbgs() << "Constructed pointer: " << *Ptr << "\n");
+  if (Offset)
+    Ptr = IRB.CreatePtrAdd(Ptr, IRB.getInt64(Offset),
+                           Ptr->getName() + ".b" + Twine(Offset));
   return Ptr;
 }
 
@@ -881,11 +851,9 @@ struct AA::PointerInfo::State : public AbstractState {
                          AAPointerInfo::AccessKind Kind, Type *Ty,
                          Instruction *RemoteI = nullptr);
 
-  using OffsetBinsTy = DenseMap<RangeTy, SmallSet<unsigned, 4>>;
-
-  using const_bin_iterator = OffsetBinsTy::const_iterator;
-  const_bin_iterator begin() const { return OffsetBins.begin(); }
-  const_bin_iterator end() const { return OffsetBins.end(); }
+  AAPointerInfo::const_bin_iterator begin() const { return OffsetBins.begin(); }
+  AAPointerInfo::const_bin_iterator end() const { return OffsetBins.end(); }
+  int64_t numOffsetBins() const { return OffsetBins.size(); }
 
   const AAPointerInfo::Access &getAccess(unsigned Index) const {
     return AccessList[Index];
@@ -905,7 +873,7 @@ protected:
   // are all combined into a single Access object. This may result in loss of
   // information in RangeTy in the Access object.
   SmallVector<AAPointerInfo::Access> AccessList;
-  OffsetBinsTy OffsetBins;
+  AAPointerInfo::OffsetBinsTy OffsetBins;
   DenseMap<const Instruction *, SmallVector<unsigned>> RemoteIMap;
 
   /// See AAPointerInfo::forallInterferingAccesses.
@@ -1107,6 +1075,12 @@ struct AAPointerInfoImpl
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     return AAPointerInfo::manifest(A);
+  }
+
+  virtual const_bin_iterator begin() const override { return State::begin(); }
+  virtual const_bin_iterator end() const override { return State::end(); }
+  virtual int64_t numOffsetBins() const override {
+    return State::numOffsetBins();
   }
 
   bool forallInterferingAccesses(
@@ -5216,6 +5190,12 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
   } else if (auto *LI = dyn_cast<LoadInst>(I)) {
     if (LI->getPointerOperand() == UseV)
       MA = LI->getAlign();
+  } else if (auto *AI = dyn_cast<AtomicRMWInst>(I)) {
+    if (AI->getPointerOperand() == UseV)
+      MA = AI->getAlign();
+  } else if (auto *AI = dyn_cast<AtomicCmpXchgInst>(I)) {
+    if (AI->getPointerOperand() == UseV)
+      MA = AI->getAlign();
   }
 
   if (!MA || *MA <= QueryingAA.getKnownAlign())
@@ -6154,8 +6134,8 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       return TypedV;
     if (CtxI && V.getType()->canLosslesslyBitCastTo(&Ty))
       return Check ? &V
-                   : BitCastInst::CreatePointerBitCastOrAddrSpaceCast(&V, &Ty,
-                                                                      "", CtxI);
+                   : BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
+                         &V, &Ty, "", CtxI->getIterator());
     return nullptr;
   }
 
@@ -6521,7 +6501,7 @@ struct AAValueSimplifyCallSiteReturned : AAValueSimplifyImpl {
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-        return indicatePessimisticFixpoint();
+    return indicatePessimisticFixpoint();
   }
 
   void trackStatistics() const override {
@@ -6751,14 +6731,15 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
         LLVMContext &Ctx = AI.CB->getContext();
         ObjectSizeOpts Opts;
         ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, Opts);
-        SizeOffsetEvalType SizeOffsetPair = Eval.compute(AI.CB);
+        SizeOffsetValue SizeOffsetPair = Eval.compute(AI.CB);
         assert(SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown() &&
-               cast<ConstantInt>(SizeOffsetPair.second)->isZero());
-        Size = SizeOffsetPair.first;
+               cast<ConstantInt>(SizeOffsetPair.Offset)->isZero());
+        Size = SizeOffsetPair.Size;
       }
 
-      Instruction *IP =
-          AI.MoveAllocaIntoEntry ? &F->getEntryBlock().front() : AI.CB;
+      BasicBlock::iterator IP = AI.MoveAllocaIntoEntry
+                                    ? F->getEntryBlock().begin()
+                                    : AI.CB->getIterator();
 
       Align Alignment(1);
       if (MaybeAlign RetAlign = AI.CB->getRetAlign())
@@ -6779,7 +6760,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
 
       if (Alloca->getType() != AI.CB->getType())
         Alloca = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
-            Alloca, AI.CB->getType(), "malloc_cast", AI.CB);
+            Alloca, AI.CB->getType(), "malloc_cast", AI.CB->getIterator());
 
       auto *I8Ty = Type::getInt8Ty(F->getContext());
       auto *InitVal = getInitialValueOfAllocation(AI.CB, TLI, I8Ty);
@@ -7476,33 +7457,29 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
   /// The values needed are taken from the arguments of \p F starting at
   /// position \p ArgNo.
   static void createInitialization(Type *PrivType, Value &Base, Function &F,
-                                   unsigned ArgNo, Instruction &IP) {
+                                   unsigned ArgNo, BasicBlock::iterator IP) {
     assert(PrivType && "Expected privatizable type!");
 
-    IRBuilder<NoFolder> IRB(&IP);
+    IRBuilder<NoFolder> IRB(IP->getParent(), IP);
     const DataLayout &DL = F.getParent()->getDataLayout();
 
     // Traverse the type, build GEPs and stores.
     if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
       const StructLayout *PrivStructLayout = DL.getStructLayout(PrivStructType);
       for (unsigned u = 0, e = PrivStructType->getNumElements(); u < e; u++) {
-        Type *PointeeTy = PrivStructType->getElementType(u)->getPointerTo();
         Value *Ptr =
-            constructPointer(PointeeTy, PrivType, &Base,
-                             PrivStructLayout->getElementOffset(u), IRB, DL);
-        new StoreInst(F.getArg(ArgNo + u), Ptr, &IP);
+            constructPointer(&Base, PrivStructLayout->getElementOffset(u), IRB);
+        new StoreInst(F.getArg(ArgNo + u), Ptr, IP);
       }
     } else if (auto *PrivArrayType = dyn_cast<ArrayType>(PrivType)) {
       Type *PointeeTy = PrivArrayType->getElementType();
-      Type *PointeePtrTy = PointeeTy->getPointerTo();
       uint64_t PointeeTySize = DL.getTypeStoreSize(PointeeTy);
       for (unsigned u = 0, e = PrivArrayType->getNumElements(); u < e; u++) {
-        Value *Ptr = constructPointer(PointeePtrTy, PrivType, &Base,
-                                      u * PointeeTySize, IRB, DL);
-        new StoreInst(F.getArg(ArgNo + u), Ptr, &IP);
+        Value *Ptr = constructPointer(&Base, u * PointeeTySize, IRB);
+        new StoreInst(F.getArg(ArgNo + u), Ptr, IP);
       }
     } else {
-      new StoreInst(F.getArg(ArgNo), &Base, &IP);
+      new StoreInst(F.getArg(ArgNo), &Base, IP);
     }
   }
 
@@ -7518,36 +7495,28 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     IRBuilder<NoFolder> IRB(IP);
     const DataLayout &DL = IP->getModule()->getDataLayout();
 
-    Type *PrivPtrType = PrivType->getPointerTo();
-    if (Base->getType() != PrivPtrType)
-      Base = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
-          Base, PrivPtrType, "", ACS.getInstruction());
-
     // Traverse the type, build GEPs and loads.
     if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
       const StructLayout *PrivStructLayout = DL.getStructLayout(PrivStructType);
       for (unsigned u = 0, e = PrivStructType->getNumElements(); u < e; u++) {
         Type *PointeeTy = PrivStructType->getElementType(u);
         Value *Ptr =
-            constructPointer(PointeeTy->getPointerTo(), PrivType, Base,
-                             PrivStructLayout->getElementOffset(u), IRB, DL);
-        LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP);
+            constructPointer(Base, PrivStructLayout->getElementOffset(u), IRB);
+        LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP->getIterator());
         L->setAlignment(Alignment);
         ReplacementValues.push_back(L);
       }
     } else if (auto *PrivArrayType = dyn_cast<ArrayType>(PrivType)) {
       Type *PointeeTy = PrivArrayType->getElementType();
       uint64_t PointeeTySize = DL.getTypeStoreSize(PointeeTy);
-      Type *PointeePtrTy = PointeeTy->getPointerTo();
       for (unsigned u = 0, e = PrivArrayType->getNumElements(); u < e; u++) {
-        Value *Ptr = constructPointer(PointeePtrTy, PrivType, Base,
-                                      u * PointeeTySize, IRB, DL);
-        LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP);
+        Value *Ptr = constructPointer(Base, u * PointeeTySize, IRB);
+        LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP->getIterator());
         L->setAlignment(Alignment);
         ReplacementValues.push_back(L);
       }
     } else {
-      LoadInst *L = new LoadInst(PrivType, Base, "", IP);
+      LoadInst *L = new LoadInst(PrivType, Base, "", IP->getIterator());
       L->setAlignment(Alignment);
       ReplacementValues.push_back(L);
     }
@@ -7587,13 +7556,13 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
         [=](const Attributor::ArgumentReplacementInfo &ARI,
             Function &ReplacementFn, Function::arg_iterator ArgIt) {
           BasicBlock &EntryBB = ReplacementFn.getEntryBlock();
-          Instruction *IP = &*EntryBB.getFirstInsertionPt();
+          BasicBlock::iterator IP = EntryBB.getFirstInsertionPt();
           const DataLayout &DL = IP->getModule()->getDataLayout();
           unsigned AS = DL.getAllocaAddrSpace();
           Instruction *AI = new AllocaInst(*PrivatizableType, AS,
                                            Arg->getName() + ".priv", IP);
           createInitialization(*PrivatizableType, *AI, ReplacementFn,
-                               ArgIt->getArgNo(), *IP);
+                               ArgIt->getArgNo(), IP);
 
           if (AI->getType() != Arg->getType())
             AI = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
@@ -7845,6 +7814,9 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
 
     // Clear existing attributes.
     A.removeAttrs(IRP, AttrKinds);
+    // Clear conflicting writable attribute.
+    if (isAssumedReadOnly())
+      A.removeAttrs(IRP, Attribute::Writable);
 
     // Use the generic manifest method.
     return IRAttribute::manifest(A);
@@ -8032,6 +8004,10 @@ struct AAMemoryBehaviorFunction final : public AAMemoryBehaviorImpl {
       ME = MemoryEffects::writeOnly();
 
     A.removeAttrs(getIRPosition(), AttrKinds);
+    // Clear conflicting writable attribute.
+    if (ME.onlyReadsMemory())
+      for (Argument &Arg : F.args())
+        A.removeAttrs(IRPosition::argument(Arg), Attribute::Writable);
     return A.manifestAttrs(getIRPosition(),
                            Attribute::getWithMemoryEffects(F.getContext(), ME));
   }
@@ -8066,6 +8042,11 @@ struct AAMemoryBehaviorCallSite final
       ME = MemoryEffects::writeOnly();
 
     A.removeAttrs(getIRPosition(), AttrKinds);
+    // Clear conflicting writable attribute.
+    if (ME.onlyReadsMemory())
+      for (Use &U : CB.args())
+        A.removeAttrs(IRPosition::callsite_argument(CB, U.getOperandNo()),
+                      Attribute::Writable);
     return A.manifestAttrs(
         getIRPosition(), Attribute::getWithMemoryEffects(CB.getContext(), ME));
   }
@@ -9048,7 +9029,8 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     if (!LVI || !CtxI)
       return getWorstState(getBitWidth());
     return LVI->getConstantRange(&getAssociatedValue(),
-                                 const_cast<Instruction *>(CtxI));
+                                 const_cast<Instruction *>(CtxI),
+                                 /*UndefAllowed*/ false);
   }
 
   /// Return true if \p CtxI is valid for querying outside analyses.
@@ -12338,10 +12320,10 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     Value *FP = CB->getCalledOperand();
     if (FP->getType()->getPointerAddressSpace())
       FP = new AddrSpaceCastInst(FP, PointerType::get(FP->getType(), 0),
-                                 FP->getName() + ".as0", CB);
+                                 FP->getName() + ".as0", CB->getIterator());
 
     bool CBIsVoid = CB->getType()->isVoidTy();
-    Instruction *IP = CB;
+    BasicBlock::iterator IP = CB->getIterator();
     FunctionType *CSFT = CB->getFunctionType();
     SmallVector<Value *> CSArgs(CB->arg_begin(), CB->arg_end());
 
@@ -12361,8 +12343,9 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
         promoteCall(*CB, NewCallee, nullptr);
         return ChangeStatus::CHANGED;
       }
-      Instruction *NewCall = CallInst::Create(FunctionCallee(CSFT, NewCallee),
-                                              CSArgs, CB->getName(), CB);
+      Instruction *NewCall =
+          CallInst::Create(FunctionCallee(CSFT, NewCallee), CSArgs,
+                           CB->getName(), CB->getIterator());
       if (!CBIsVoid)
         A.changeAfterManifest(IRPosition::callsite_returned(*CB), *NewCall);
       A.deleteAfterManifest(*CB);
@@ -12393,12 +12376,15 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       Instruction *ThenTI =
           SplitBlockAndInsertIfThen(LastCmp, IP, /* Unreachable */ false);
       BasicBlock *CBBB = CB->getParent();
+      A.registerManifestAddedBasicBlock(*ThenTI->getParent());
+      A.registerManifestAddedBasicBlock(*IP->getParent());
       auto *SplitTI = cast<BranchInst>(LastCmp->getNextNode());
       BasicBlock *ElseBB;
-      if (IP == CB) {
+      if (&*IP == CB) {
         ElseBB = BasicBlock::Create(ThenTI->getContext(), "",
                                     ThenTI->getFunction(), CBBB);
-        IP = BranchInst::Create(CBBB, ElseBB);
+        A.registerManifestAddedBasicBlock(*ElseBB);
+        IP = BranchInst::Create(CBBB, ElseBB)->getIterator();
         SplitTI->replaceUsesOfWith(CBBB, ElseBB);
       } else {
         ElseBB = IP->getParent();
@@ -12412,7 +12398,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
         NewCall = &cast<CallInst>(promoteCall(*CBClone, NewCallee, &RetBC));
       } else {
         NewCall = CallInst::Create(FunctionCallee(CSFT, NewCallee), CSArgs,
-                                   CB->getName(), ThenTI);
+                                   CB->getName(), ThenTI->getIterator());
       }
       NewCalls.push_back({NewCall, RetBC});
     }
@@ -12438,7 +12424,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     } else {
       auto *CBClone = cast<CallInst>(CB->clone());
       CBClone->setName(CB->getName());
-      CBClone->insertBefore(IP);
+      CBClone->insertBefore(*IP->getParent(), IP);
       NewCalls.push_back({CBClone, nullptr});
       AttachCalleeMetadata(*CBClone);
     }
@@ -12447,7 +12433,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     if (!CBIsVoid) {
       auto *PHI = PHINode::Create(CB->getType(), NewCalls.size(),
                                   CB->getName() + ".phi",
-                                  &*CB->getParent()->getFirstInsertionPt());
+                                  CB->getParent()->getFirstInsertionPt());
       for (auto &It : NewCalls) {
         CallBase *NewCall = It.first;
         Instruction *CallRet = It.second ? It.second : It.first;
@@ -12688,6 +12674,226 @@ struct AAAddressSpaceCallSiteArgument final : AAAddressSpaceImpl {
 };
 } // namespace
 
+/// ----------- Allocation Info ----------
+namespace {
+struct AAAllocationInfoImpl : public AAAllocationInfo {
+  AAAllocationInfoImpl(const IRPosition &IRP, Attributor &A)
+      : AAAllocationInfo(IRP, A) {}
+
+  std::optional<TypeSize> getAllocatedSize() const override {
+    assert(isValidState() && "the AA is invalid");
+    return AssumedAllocatedSize;
+  }
+
+  std::optional<TypeSize> findInitialAllocationSize(Instruction *I,
+                                                    const DataLayout &DL) {
+
+    // TODO: implement case for malloc like instructions
+    switch (I->getOpcode()) {
+    case Instruction::Alloca: {
+      AllocaInst *AI = cast<AllocaInst>(I);
+      return AI->getAllocationSize(DL);
+    }
+    default:
+      return std::nullopt;
+    }
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+
+    const IRPosition &IRP = getIRPosition();
+    Instruction *I = IRP.getCtxI();
+
+    // TODO: update check for malloc like calls
+    if (!isa<AllocaInst>(I))
+      return indicatePessimisticFixpoint();
+
+    bool IsKnownNoCapture;
+    if (!AA::hasAssumedIRAttr<Attribute::NoCapture>(
+            A, this, IRP, DepClassTy::OPTIONAL, IsKnownNoCapture))
+      return indicatePessimisticFixpoint();
+
+    const AAPointerInfo *PI =
+        A.getOrCreateAAFor<AAPointerInfo>(IRP, *this, DepClassTy::REQUIRED);
+
+    if (!PI)
+      return indicatePessimisticFixpoint();
+
+    if (!PI->getState().isValidState())
+      return indicatePessimisticFixpoint();
+
+    const DataLayout &DL = A.getDataLayout();
+    const auto AllocationSize = findInitialAllocationSize(I, DL);
+
+    // If allocation size is nullopt, we give up.
+    if (!AllocationSize)
+      return indicatePessimisticFixpoint();
+
+    // For zero sized allocations, we give up.
+    // Since we can't reduce further
+    if (*AllocationSize == 0)
+      return indicatePessimisticFixpoint();
+
+    int64_t BinSize = PI->numOffsetBins();
+
+    // TODO: implement for multiple bins
+    if (BinSize > 1)
+      return indicatePessimisticFixpoint();
+
+    if (BinSize == 0) {
+      auto NewAllocationSize = std::optional<TypeSize>(TypeSize(0, false));
+      if (!changeAllocationSize(NewAllocationSize))
+        return ChangeStatus::UNCHANGED;
+      return ChangeStatus::CHANGED;
+    }
+
+    // TODO: refactor this to be part of multiple bin case
+    const auto &It = PI->begin();
+
+    // TODO: handle if Offset is not zero
+    if (It->first.Offset != 0)
+      return indicatePessimisticFixpoint();
+
+    uint64_t SizeOfBin = It->first.Offset + It->first.Size;
+
+    if (SizeOfBin >= *AllocationSize)
+      return indicatePessimisticFixpoint();
+
+    auto NewAllocationSize =
+        std::optional<TypeSize>(TypeSize(SizeOfBin * 8, false));
+
+    if (!changeAllocationSize(NewAllocationSize))
+      return ChangeStatus::UNCHANGED;
+
+    return ChangeStatus::CHANGED;
+  }
+
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+
+    assert(isValidState() &&
+           "Manifest should only be called if the state is valid.");
+
+    Instruction *I = getIRPosition().getCtxI();
+
+    auto FixedAllocatedSizeInBits = getAllocatedSize()->getFixedValue();
+
+    unsigned long NumBytesToAllocate = (FixedAllocatedSizeInBits + 7) / 8;
+
+    switch (I->getOpcode()) {
+    // TODO: add case for malloc like calls
+    case Instruction::Alloca: {
+
+      AllocaInst *AI = cast<AllocaInst>(I);
+
+      Type *CharType = Type::getInt8Ty(I->getContext());
+
+      auto *NumBytesToValue =
+          ConstantInt::get(I->getContext(), APInt(32, NumBytesToAllocate));
+
+      BasicBlock::iterator insertPt = AI->getIterator();
+      insertPt = std::next(insertPt);
+      AllocaInst *NewAllocaInst =
+          new AllocaInst(CharType, AI->getAddressSpace(), NumBytesToValue,
+                         AI->getAlign(), AI->getName(), insertPt);
+
+      if (A.changeAfterManifest(IRPosition::inst(*AI), *NewAllocaInst))
+        return ChangeStatus::CHANGED;
+
+      break;
+    }
+    default:
+      break;
+    }
+
+    return ChangeStatus::UNCHANGED;
+  }
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr(Attributor *A) const override {
+    if (!isValidState())
+      return "allocationinfo(<invalid>)";
+    return "allocationinfo(" +
+           (AssumedAllocatedSize == HasNoAllocationSize
+                ? "none"
+                : std::to_string(AssumedAllocatedSize->getFixedValue())) +
+           ")";
+  }
+
+private:
+  std::optional<TypeSize> AssumedAllocatedSize = HasNoAllocationSize;
+
+  // Maintain the computed allocation size of the object.
+  // Returns (bool) weather the size of the allocation was modified or not.
+  bool changeAllocationSize(std::optional<TypeSize> Size) {
+    if (AssumedAllocatedSize == HasNoAllocationSize ||
+        AssumedAllocatedSize != Size) {
+      AssumedAllocatedSize = Size;
+      return true;
+    }
+    return false;
+  }
+};
+
+struct AAAllocationInfoFloating : AAAllocationInfoImpl {
+  AAAllocationInfoFloating(const IRPosition &IRP, Attributor &A)
+      : AAAllocationInfoImpl(IRP, A) {}
+
+  void trackStatistics() const override {
+    STATS_DECLTRACK_FLOATING_ATTR(allocationinfo);
+  }
+};
+
+struct AAAllocationInfoReturned : AAAllocationInfoImpl {
+  AAAllocationInfoReturned(const IRPosition &IRP, Attributor &A)
+      : AAAllocationInfoImpl(IRP, A) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    // TODO: we don't rewrite function argument for now because it will need to
+    // rewrite the function signature and all call sites
+    (void)indicatePessimisticFixpoint();
+  }
+
+  void trackStatistics() const override {
+    STATS_DECLTRACK_FNRET_ATTR(allocationinfo);
+  }
+};
+
+struct AAAllocationInfoCallSiteReturned : AAAllocationInfoImpl {
+  AAAllocationInfoCallSiteReturned(const IRPosition &IRP, Attributor &A)
+      : AAAllocationInfoImpl(IRP, A) {}
+
+  void trackStatistics() const override {
+    STATS_DECLTRACK_CSRET_ATTR(allocationinfo);
+  }
+};
+
+struct AAAllocationInfoArgument : AAAllocationInfoImpl {
+  AAAllocationInfoArgument(const IRPosition &IRP, Attributor &A)
+      : AAAllocationInfoImpl(IRP, A) {}
+
+  void trackStatistics() const override {
+    STATS_DECLTRACK_ARG_ATTR(allocationinfo);
+  }
+};
+
+struct AAAllocationInfoCallSiteArgument : AAAllocationInfoImpl {
+  AAAllocationInfoCallSiteArgument(const IRPosition &IRP, Attributor &A)
+      : AAAllocationInfoImpl(IRP, A) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+
+    (void)indicatePessimisticFixpoint();
+  }
+
+  void trackStatistics() const override {
+    STATS_DECLTRACK_CSARG_ATTR(allocationinfo);
+  }
+};
+} // namespace
+
 const char AANoUnwind::ID = 0;
 const char AANoSync::ID = 0;
 const char AANoFree::ID = 0;
@@ -12721,6 +12927,7 @@ const char AAPointerInfo::ID = 0;
 const char AAAssumptionInfo::ID = 0;
 const char AAUnderlyingObjects::ID = 0;
 const char AAAddressSpace::ID = 0;
+const char AAAllocationInfo::ID = 0;
 const char AAIndirectCallInfo::ID = 0;
 const char AAGlobalValueInfo::ID = 0;
 const char AADenormalFPMath::ID = 0;
@@ -12854,6 +13061,7 @@ CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoUndef)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFPClass)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPointerInfo)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAAddressSpace)
+CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAAllocationInfo)
 
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueSimplify)
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAIsDead)

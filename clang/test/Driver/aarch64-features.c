@@ -1,4 +1,5 @@
 // RUN: %clang --target=aarch64-none-linux-gnu -### %s -fsyntax-only 2>&1 | FileCheck %s
+// RUN: %clang --target=aarch64_be-none-linux-gnu -### %s -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=arm64-none-linux-gnu -### %s -fsyntax-only 2>&1 | FileCheck %s
 
 // CHECK: "-funwind-tables=2"

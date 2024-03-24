@@ -2,7 +2,10 @@
 ;; for double type.
 
 ; RUN: llc -O0 -debugger-tune=gdb -filetype=obj %s -o -  | llvm-dwarfdump - | FileCheck %s --check-prefixes=CHECK,BOTH
+; RUN: llc --try-experimental-debuginfo-iterators -O0 -debugger-tune=gdb -filetype=obj %s -o -  | llvm-dwarfdump - | FileCheck %s --check-prefixes=CHECK,BOTH
+
 ; RUN: llc -O0 -debugger-tune=lldb -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s --check-prefixes=CHECK,BOTH
+; RUN: llc --try-experimental-debuginfo-iterators -O0 -debugger-tune=lldb -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s --check-prefixes=CHECK,BOTH
 
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_variable
@@ -11,6 +14,7 @@
 ; CHECK-NEXT:  DW_AT_name    ("d")
 
 ; RUN: llc -O0 -debugger-tune=sce -filetype=obj %s -o -  | llvm-dwarfdump - | FileCheck %s -check-prefixes=SCE-CHECK,BOTH
+; RUN: llc --try-experimental-debuginfo-iterators -O0 -debugger-tune=sce -filetype=obj %s -o -  | llvm-dwarfdump - | FileCheck %s -check-prefixes=SCE-CHECK,BOTH
 
 ; SCE-CHECK: .debug_info contents:
 ; SCE-CHECK: DW_TAG_variable

@@ -7,6 +7,92 @@ declare void @use32(i32)
 
 ; There should be no 'and' instructions left in any test.
 
+define i32 @test_with_1(i32 %x) {
+; CHECK-LABEL: @test_with_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %shl = shl i32 1, %x
+  %and = and i32 %shl, 1
+  ret i32 %and
+}
+
+define i32 @test_with_3(i32 %x) {
+; CHECK-LABEL: @test_with_3(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %shl = shl i32 3, %x
+  %and = and i32 %shl, 1
+  ret i32 %and
+}
+
+define i32 @test_with_5(i32 %x) {
+; CHECK-LABEL: @test_with_5(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %shl = shl i32 5, %x
+  %and = and i32 %shl, 1
+  ret i32 %and
+}
+
+define i32 @test_with_neg_5(i32 %x) {
+; CHECK-LABEL: @test_with_neg_5(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %shl = shl i32 -5, %x
+  %and = and i32 %shl, 1
+  ret i32 %and
+}
+
+define i32 @test_with_even(i32 %x) {
+; CHECK-LABEL: @test_with_even(
+; CHECK-NEXT:    ret i32 0
+;
+  %shl = shl i32 4, %x
+  %and = and i32 %shl, 1
+  ret i32 %and
+}
+
+define <2 x i32> @test_vec(<2 x i32> %x) {
+; CHECK-LABEL: @test_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[AND:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[AND]]
+;
+  %shl = shl <2 x i32> <i32 5, i32 5>, %x
+  %and = and <2 x i32> %shl, <i32 1, i32 1>
+  ret <2 x i32> %and
+}
+
+define i32 @test_with_neg_even(i32 %x) {
+; CHECK-LABEL: @test_with_neg_even(
+; CHECK-NEXT:    ret i32 0
+;
+  %shl = shl i32 -4, %x
+  %and = and i32 %shl, 1
+  ret i32 %and
+}
+
+define i32 @test_with_more_one_use(i32 %x) {
+; CHECK-LABEL: @test_with_more_one_use(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 7, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHL]], 1
+; CHECK-NEXT:    call void @use32(i32 [[SHL]])
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %shl = shl i32 7, %x
+  %and = and i32 %shl, 1
+  call void @use32(i32 %shl)
+  ret i32 %and
+}
+
 define i32 @test1(i32 %A) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    ret i32 0
@@ -395,8 +481,8 @@ define i8 @test27(i8 %A) {
 
 define i32 @ashr_lowmask(i32 %x) {
 ; CHECK-LABEL: @ashr_lowmask(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 24
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[A:%.*]] = lshr i32 [[X:%.*]], 24
+; CHECK-NEXT:    ret i32 [[A]]
 ;
   %a = ashr i32 %x, 24
   %r = and i32 %a, 255
@@ -525,7 +611,7 @@ define <2 x i32> @and_demanded_bits_splat_vec(<2 x i32> %x) {
 define i32 @and_zext_demanded(i16 %x, i32 %y) {
 ; CHECK-LABEL: @and_zext_demanded(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i16 [[X:%.*]], 8
-; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[S]] to i32
+; CHECK-NEXT:    [[Z:%.*]] = zext nneg i16 [[S]] to i32
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %s = lshr i16 %x, 8
@@ -618,7 +704,7 @@ define i64 @test35(i32 %X) {
 ; CHECK-LABEL: @test35(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 240
-; CHECK-NEXT:    [[RES:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %zext = zext i32 %X to i64
@@ -631,7 +717,7 @@ define <2 x i64> @test35_uniform(<2 x i32> %X) {
 ; CHECK-LABEL: @test35_uniform(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> zeroinitializer, [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 240, i32 240>
-; CHECK-NEXT:    [[RES:%.*]] = zext <2 x i32> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg <2 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %zext = zext <2 x i32> %X to <2 x i64>
@@ -644,7 +730,7 @@ define i64 @test36(i32 %X) {
 ; CHECK-LABEL: @test36(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 7
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 240
-; CHECK-NEXT:    [[RES:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %zext = zext i32 %X to i64
@@ -657,7 +743,7 @@ define <2 x i64> @test36_uniform(<2 x i32> %X) {
 ; CHECK-LABEL: @test36_uniform(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], <i32 7, i32 7>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 240, i32 240>
-; CHECK-NEXT:    [[RES:%.*]] = zext <2 x i32> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg <2 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %zext = zext <2 x i32> %X to <2 x i64>
@@ -683,7 +769,7 @@ define i64 @test37(i32 %X) {
 ; CHECK-LABEL: @test37(
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X:%.*]], 7
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 240
-; CHECK-NEXT:    [[RES:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %zext = zext i32 %X to i64
@@ -696,7 +782,7 @@ define <2 x i64> @test37_uniform(<2 x i32> %X) {
 ; CHECK-LABEL: @test37_uniform(
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <2 x i32> [[X:%.*]], <i32 7, i32 7>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 240, i32 240>
-; CHECK-NEXT:    [[RES:%.*]] = zext <2 x i32> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg <2 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %zext = zext <2 x i32> %X to <2 x i64>
@@ -721,7 +807,7 @@ define <2 x i64> @test37_nonuniform(<2 x i32> %X) {
 define i64 @test38(i32 %X) {
 ; CHECK-LABEL: @test38(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 240
-; CHECK-NEXT:    [[RES:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %zext = zext i32 %X to i64
@@ -733,7 +819,7 @@ define i64 @test38(i32 %X) {
 define i64 @test39(i32 %X) {
 ; CHECK-LABEL: @test39(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 240
-; CHECK-NEXT:    [[RES:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %zext = zext i32 %X to i64
@@ -1811,14 +1897,14 @@ define i8 @not_ashr_bitwidth_mask_use1(i8 %x, i8 %y) {
   ret i8 %r
 }
 
-; negative test - extra use
+; extra use of xor is ok
 
 define i8 @not_ashr_bitwidth_mask_use2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @not_ashr_bitwidth_mask_use2(
 ; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[NOT:%.*]] = sext i1 [[ISNOTNEG]] to i8
 ; CHECK-NEXT:    call void @use8(i8 [[NOT]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[NOT]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNOTNEG]], i8 [[Y:%.*]], i8 0
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sign = ashr i8 %x, 7
@@ -1918,14 +2004,14 @@ define i16 @invert_signbit_splat_mask_use2(i8 %x, i16 %y) {
   ret i16 %r
 }
 
-; negative test - extra use
+; extra use of sext is ok 
 
 define i16 @invert_signbit_splat_mask_use3(i8 %x, i16 %y) {
 ; CHECK-LABEL: @invert_signbit_splat_mask_use3(
 ; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[S:%.*]] = sext i1 [[ISNOTNEG]] to i16
 ; CHECK-NEXT:    call void @use16(i16 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = and i16 [[S]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNOTNEG]], i16 [[Y:%.*]], i16 0
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %a = ashr i8 %x, 7
@@ -2433,7 +2519,7 @@ define i8 @negate_lowbitmask_use2(i8 %x, i8 %y) {
 define i64 @test_and_or_constexpr_infloop() {
 ; CHECK-LABEL: @test_and_or_constexpr_infloop(
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 ptrtoint (ptr @g to i64), -8
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[AND]], 1
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i64 [[AND]], 1
 ; CHECK-NEXT:    ret i64 [[OR]]
 ;
   %and = and i64 ptrtoint (ptr @g to i64), -8
@@ -2710,4 +2796,76 @@ define i32 @canonicalize_and_sub_power2_or_zero_multiuse_nofold(i32 %x, i32 %y) 
   call void @use32(i32 %val)
   %and = and i32 %val, %p2
   ret i32 %and
+}
+
+define i32 @add_constant_equal_with_the_top_bit_of_demandedbits_pass(i32 %x) {
+; CHECK-LABEL: @add_constant_equal_with_the_top_bit_of_demandedbits_pass(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 24
+; CHECK-NEXT:    [[AND:%.*]] = xor i32 [[TMP1]], 16
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %add = add i32 %x, 16
+  %and = and i32 %add, 24
+  ret i32 %and
+}
+
+define <2 x i16> @add_constant_equal_with_the_top_bit_of_demandedbits_pass_vector(<2 x i16> %x) {
+; CHECK-LABEL: @add_constant_equal_with_the_top_bit_of_demandedbits_pass_vector(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], <i16 24, i16 24>
+; CHECK-NEXT:    [[AND:%.*]] = xor <2 x i16> [[TMP1]], <i16 16, i16 16>
+; CHECK-NEXT:    ret <2 x i16> [[AND]]
+;
+  %add = add <2 x i16> %x, <i16 16, i16 16>
+  %and = and <2 x i16> %add, <i16 24, i16 24>
+  ret <2 x i16> %and
+}
+
+define i32 @add_constant_equal_with_the_top_bit_of_demandedbits_fail1(i32 %x) {
+; CHECK-LABEL: @add_constant_equal_with_the_top_bit_of_demandedbits_fail1(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], 24
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %add = add i32 %x, 8
+  %and = and i32 %add, 24
+  ret i32 %and
+}
+
+define i32 @add_constant_equal_with_the_top_bit_of_demandedbits_fail2(i32 %x) {
+; CHECK-LABEL: @add_constant_equal_with_the_top_bit_of_demandedbits_fail2(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 24
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], 24
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %add = add i32 %x, 24
+  %and = and i32 %add, 24
+  ret i32 %and
+}
+
+define i32 @add_constant_equal_with_the_top_bit_of_demandedbits_insertpt(i32 %x, i32 %y) {
+; CHECK-LABEL: @add_constant_equal_with_the_top_bit_of_demandedbits_insertpt(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], 16
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[OR]], 24
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %add = add i32 %x, 16
+  %or = or i32 %add, %y
+  %and = and i32 %or, 24
+  ret i32 %and
+}
+
+define i32 @and_sext_multiuse(i32 %x, i32 %y, i32 %a, i32 %b) {
+; CHECK-LABEL: @and_sext_multiuse(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[CMP]], i32 [[TMP1]], i32 0
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %cmp = icmp sgt i32 %x, %y
+  %sext = sext i1 %cmp to i32
+  %and1 = and i32 %sext, %a
+  %and2 = and i32 %sext, %b
+  %add = add i32 %and1, %and2
+  ret i32 %add
 }

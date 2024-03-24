@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=si-shrink-instructions --verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=si-shrink-instructions --verify-machineinstrs %s -o - | FileCheck %s
 
 # Make sure immediate folding into V_CNDMASK respects constant bus restrictions.
 ---

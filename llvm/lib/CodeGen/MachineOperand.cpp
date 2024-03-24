@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Config/llvm-config.h"
@@ -201,6 +202,19 @@ void MachineOperand::ChangeToGA(const GlobalValue *GV, int64_t Offset,
 
   OpKind = MO_GlobalAddress;
   Contents.OffsetedInfo.Val.GV = GV;
+  setOffset(Offset);
+  setTargetFlags(TargetFlags);
+}
+
+void MachineOperand::ChangeToBA(const BlockAddress *BA, int64_t Offset,
+                                unsigned TargetFlags) {
+  assert((!isReg() || !isTied()) &&
+         "Cannot change a tied operand into a block address");
+
+  removeRegFromUses();
+
+  OpKind = MO_BlockAddress;
+  Contents.OffsetedInfo.Val.BA = BA;
   setOffset(Offset);
   setTargetFlags(TargetFlags);
 }
@@ -1087,24 +1101,27 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
   assert(getFailureOrdering() == FailureOrdering && "Value truncated");
 }
 
-MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
-                                     uint64_t s, Align a,
+MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags F,
+                                     LocationSize TS, Align BaseAlignment,
                                      const AAMDNodes &AAInfo,
                                      const MDNode *Ranges, SyncScope::ID SSID,
                                      AtomicOrdering Ordering,
                                      AtomicOrdering FailureOrdering)
-    : MachineMemOperand(ptrinfo, f,
-                        s == ~UINT64_C(0) ? LLT() : LLT::scalar(8 * s), a,
-                        AAInfo, Ranges, SSID, Ordering, FailureOrdering) {}
+    : MachineMemOperand(
+          ptrinfo, F,
+          !TS.hasValue() ? LLT()
+          : TS.isScalable()
+              ? LLT::scalable_vector(1, 8 * TS.getValue().getKnownMinValue())
+              : LLT::scalar(8 * TS.getValue().getKnownMinValue()),
+          BaseAlignment, AAInfo, Ranges, SSID, Ordering, FailureOrdering) {}
 
 void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
   // The Value and Offset may differ due to CSE. But the flags and size
   // should be the same.
   assert(MMO->getFlags() == getFlags() && "Flags mismatch!");
-  assert((MMO->getSize() == ~UINT64_C(0) || getSize() == ~UINT64_C(0) ||
+  assert((!MMO->getSize().hasValue() || !getSize().hasValue() ||
           MMO->getSize() == getSize()) &&
          "Size mismatch!");
-
   if (MMO->getBaseAlign() >= getBaseAlign()) {
     // Update the alignment value.
     BaseAlign = MMO->getBaseAlign();
@@ -1226,7 +1243,8 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
        << "unknown-address";
   }
   MachineOperand::printOperandOffset(OS, getOffset());
-  if (getSize() > 0 && getAlign() != getSize())
+  if (!getSize().hasValue() ||
+      getAlign() != getSize().getValue().getKnownMinValue())
     OS << ", align " << getAlign().value();
   if (getAlign() != getBaseAlign())
     OS << ", basealign " << getBaseAlign().value();

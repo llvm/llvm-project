@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,SICIVI,SICI,SI %s
-; RUN: llc -march=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefixes=GCN,SICIVI,SICI %s
-; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,SICIVI,VI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,SICIVI,SICI,SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefixes=GCN,SICIVI,SICI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,SICIVI,VI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
 ; GCN-LABEL: {{^}}load_i32:
 ; GCN-DAG: s_mov_b32 s3, 0
@@ -238,7 +238,7 @@ main_body:
   %25 = getelementptr inbounds [0 x <8 x i32>], ptr addrspace(6) %1, i32 0, i32 %24, !amdgpu.uniform !0
   %26 = load <8 x i32>, ptr addrspace(6) %25, align 32, !invariant.load !0
   %27 = shl i32 %23, 2
-  %28 = or i32 %27, 3
+  %28 = or disjoint i32 %27, 3
   %29 = getelementptr inbounds [0 x <4 x i32>], ptr addrspace(6) %1, i32 0, i32 %28, !amdgpu.uniform !0
   %30 = load <4 x i32>, ptr addrspace(6) %29, align 16, !invariant.load !0
   %31 = call nsz <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float 0.0, <8 x i32> %26, <4 x i32> %30, i1 0, i32 0, i32 0) #8
@@ -270,7 +270,7 @@ main_body:
   %25 = getelementptr inbounds [0 x <8 x i32>], ptr addrspace(6) %1, i32 0, i32 %24
   %26 = load <8 x i32>, ptr addrspace(6) %25, align 32, !invariant.load !0
   %27 = shl i32 %23, 2
-  %28 = or i32 %27, 3
+  %28 = or disjoint i32 %27, 3
   %29 = getelementptr inbounds [0 x <4 x i32>], ptr addrspace(6) %1, i32 0, i32 %28
   %30 = load <4 x i32>, ptr addrspace(6) %29, align 16, !invariant.load !0
   %31 = call nsz <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float 0.0, <8 x i32> %26, <4 x i32> %30, i1 0, i32 0, i32 0) #8

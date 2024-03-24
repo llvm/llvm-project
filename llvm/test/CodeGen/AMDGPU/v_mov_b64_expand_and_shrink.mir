@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass postrapseudos,si-shrink-instructions -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass postrapseudos,si-shrink-instructions -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
 
 ---
 # GCN-LABEL: name: expand_imm64_sext_shrink_to_bfrev

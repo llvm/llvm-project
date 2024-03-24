@@ -396,7 +396,7 @@ define i1 @add_ultcmp_bad_i24_i8(i24 %x) nounwind {
 define i1 @add_ulecmp_bad_i16_i8(i16 %x) nounwind {
 ; CHECK-LABEL: add_ulecmp_bad_i16_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
   %tmp0 = add i16 %x, 128 ; 1U << (8-1)
   %tmp1 = icmp ule i16 %tmp0, -1 ; when we +1 it, it will wrap to 0

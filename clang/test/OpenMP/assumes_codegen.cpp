@@ -115,29 +115,29 @@ int lambda_outer() {
 // CHECK: define{{.*}} void @_Z3barv()
 // CHECK-SAME: [[attr1:#[0-9]]]
 // CHECK:   call{{.*}} @_ZN3BARC1Ev(ptr{{.*}} %b)
-// CHECK-SAME: [[attr9:#[0-9]]]
-// CHECK: define{{.*}} void @_ZN3BARC1Ev(ptr{{.*}} %this)
-// CHECK-SAME: [[attr2:#[0-9]]]
-// CHECK:   call{{.*}} @_ZN3BARC2Ev(ptr{{.*}} %this1)
-// CHECK-SAME: [[attr9]]
-// CHECK: define{{.*}} void @_ZN3BARC2Ev(ptr{{.*}} %this)
-// CHECK-SAME: [[attr3:#[0-9]]]
-// CHECK: define{{.*}} void @_Z3bazv()
-// CHECK-SAME: [[attr4:#[0-9]]]
-// CHECK:   call{{.*}} @_ZN3BAZIfEC1Ev(ptr{{.*}} %b)
-// CHECK-SAME: [[attr10:#[0-9]]]
-// CHECK: define{{.*}} void @_ZN3BAZIfEC1Ev(ptr{{.*}} %this)
-// CHECK-SAME: [[attr5:#[0-9]]]
-// CHECK:   call{{.*}} @_ZN3BAZIfEC2Ev(ptr{{.*}} %this1)
-// CHECK-SAME: [[attr10]]
-// CHECK: define{{.*}} void @_ZN3BAZIfEC2Ev(ptr{{.*}} %this)
-// CHECK-SAME: [[attr6:#[0-9]]]
-// CHECK: define{{.*}} i32 @_Z12lambda_outerv()
-// CHECK-SAME: [[attr7:#[0-9]]]
-// CHECK: call{{.*}} @"_ZZ12lambda_outervENK3$_0clEv"
-// CHECK-SAME: [[attr11:#[0-9]]]
-// CHECK: define{{.*}} i32 @"_ZZ12lambda_outervENK3$_0clEv"(ptr{{.*}} %this)
 // CHECK-SAME: [[attr8:#[0-9]]]
+// CHECK: define{{.*}} void @_ZN3BARC1Ev(ptr{{.*}} %this)
+// CHECK-SAME: [[attr1:#[0-9]]]
+// CHECK:   call{{.*}} @_ZN3BARC2Ev(ptr{{.*}} %this1)
+// CHECK-SAME: [[attr8]]
+// CHECK: define{{.*}} void @_ZN3BARC2Ev(ptr{{.*}} %this)
+// CHECK-SAME: [[attr2:#[0-9]]]
+// CHECK: define{{.*}} void @_Z3bazv()
+// CHECK-SAME: [[attr3:#[0-9]]]
+// CHECK:   call{{.*}} @_ZN3BAZIfEC1Ev(ptr{{.*}} %b)
+// CHECK-SAME: [[attr9:#[0-9]]]
+// CHECK: define{{.*}} void @_ZN3BAZIfEC1Ev(ptr{{.*}} %this)
+// CHECK-SAME: [[attr4:#[0-9]]]
+// CHECK:   call{{.*}} @_ZN3BAZIfEC2Ev(ptr{{.*}} %this1)
+// CHECK-SAME: [[attr9]]
+// CHECK: define{{.*}} void @_ZN3BAZIfEC2Ev(ptr{{.*}} %this)
+// CHECK-SAME: [[attr5:#[0-9]]]
+// CHECK: define{{.*}} i32 @_Z12lambda_outerv()
+// CHECK-SAME: [[attr6:#[0-9]]]
+// CHECK: call{{.*}} @"_ZZ12lambda_outervENK3$_0clEv"
+// CHECK-SAME: [[attr10:#[0-9]]]
+// CHECK: define{{.*}} i32 @"_ZZ12lambda_outervENK3$_0clEv"(ptr{{.*}} %this)
+// CHECK-SAME: [[attr7:#[0-9]]]
 
 // CHECK:     attributes [[attr0]]
 // CHECK-SAME:  "llvm.assume"="omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
@@ -146,20 +146,18 @@ int lambda_outer() {
 // CHECK:     attributes [[attr2]]
 // CHECK-SAME:  "llvm.assume"="ompx_range_bar_only,ompx_range_bar_only_2,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
 // CHECK:     attributes [[attr3]]
-// CHECK-SAME:  "llvm.assume"="ompx_range_bar_only,ompx_range_bar_only_2,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
-// CHECK:     attributes [[attr4]]
 // CHECK-SAME:  "llvm.assume"="ompx_1234,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp,ompx_1234,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
+// CHECK:     attributes [[attr4]]
+// CHECK-SAME:  "llvm.assume"="ompx_1234,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
 // CHECK:     attributes [[attr5]]
 // CHECK-SAME:  "llvm.assume"="ompx_1234,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
 // CHECK:     attributes [[attr6]]
-// CHECK-SAME:  "llvm.assume"="ompx_1234,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
+// CHECK-SAME:  "llvm.assume"="ompx_lambda_assumption,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
 // CHECK:     attributes [[attr7]]
 // CHECK-SAME:  "llvm.assume"="ompx_lambda_assumption,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
 // CHECK:     attributes [[attr8]]
-// CHECK-SAME:  "llvm.assume"="ompx_lambda_assumption,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
-// CHECK:     attributes [[attr9]]
 // CHECK-SAME:  "llvm.assume"="ompx_range_bar_only,ompx_range_bar_only_2,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
-// CHECK:     attributes [[attr10]]
+// CHECK:     attributes [[attr9]]
 // CHECK-SAME:  "llvm.assume"="ompx_1234,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
-// CHECK:     attributes [[attr11]]
+// CHECK:     attributes [[attr10]]
 // CHECK-SAME:  "llvm.assume"="ompx_lambda_assumption,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"

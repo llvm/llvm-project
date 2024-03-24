@@ -219,7 +219,7 @@ entry:
 }
 
 define void @test_memcpy_argonly(ptr %dst, ptr %src) {
-; FNATTRS: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; FNATTRS-LABEL: define void @test_memcpy_argonly
 ; FNATTRS-SAME: (ptr nocapture writeonly [[DST:%.*]], ptr nocapture readonly [[SRC:%.*]]) #[[ATTR9:[0-9]+]] {
 ; FNATTRS-NEXT:  entry:
@@ -243,7 +243,7 @@ declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 @arr = global [32 x i8] zeroinitializer
 
 define void @test_memcpy_src_global(ptr %dst) {
-; FNATTRS: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
 ; FNATTRS-LABEL: define void @test_memcpy_src_global
 ; FNATTRS-SAME: (ptr nocapture writeonly [[DST:%.*]]) #[[ATTR11:[0-9]+]] {
 ; FNATTRS-NEXT:  entry:
@@ -263,7 +263,7 @@ entry:
 }
 
 define void @test_memcpy_dst_global(ptr %src) {
-; FNATTRS: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
 ; FNATTRS-LABEL: define void @test_memcpy_dst_global
 ; FNATTRS-SAME: (ptr nocapture readonly [[SRC:%.*]]) #[[ATTR11]] {
 ; FNATTRS-NEXT:  entry:

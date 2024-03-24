@@ -261,8 +261,8 @@ InputSection *elf::createInterpSection() {
   StringRef s = saver().save(config->dynamicLinker);
   ArrayRef<uint8_t> contents = {(const uint8_t *)s.data(), s.size() + 1};
 
-  return make<InputSection>(nullptr, SHF_ALLOC, SHT_PROGBITS, 1, contents,
-                            ".interp");
+  return make<InputSection>(ctx.internalFile, SHF_ALLOC, SHT_PROGBITS, 1,
+                            contents, ".interp");
 }
 
 Defined *elf::addSyntheticLocal(StringRef name, uint8_t type, uint64_t value,
@@ -365,8 +365,7 @@ CieRecord *EhFrameSection::addCie(EhSectionPiece &cie, ArrayRef<RelTy> rels) {
   Symbol *personality = nullptr;
   unsigned firstRelI = cie.firstRelocation;
   if (firstRelI != (unsigned)-1)
-    personality =
-        &cie.sec->template getFile<ELFT>()->getRelocTargetSym(rels[firstRelI]);
+    personality = &cie.sec->file->getRelocTargetSym(rels[firstRelI]);
 
   // Search for an existing CIE by CIE contents/relocation target pair.
   CieRecord *&rec = cieMap[{cie.data(), personality}];
@@ -396,7 +395,7 @@ Defined *EhFrameSection::isFdeLive(EhSectionPiece &fde, ArrayRef<RelTy> rels) {
     return nullptr;
 
   const RelTy &rel = rels[firstRelI];
-  Symbol &b = sec->template getFile<ELFT>()->getRelocTargetSym(rel);
+  Symbol &b = sec->file->getRelocTargetSym(rel);
 
   // FDEs for garbage-collected or merged-by-ICF sections, or sections in
   // another partition, are dead.
@@ -537,9 +536,11 @@ SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
     for (EhSectionPiece *fde : rec->fdes) {
       uint64_t pc = getFdePc(buf, fde->outputOff, enc);
       uint64_t fdeVA = getParent()->addr + fde->outputOff;
-      if (!isInt<32>(pc - va))
-        fatal(toString(fde->sec) + ": PC offset is too large: 0x" +
-              Twine::utohexstr(pc - va));
+      if (!isInt<32>(pc - va)) {
+        errorOrWarn(toString(fde->sec) + ": PC offset is too large: 0x" +
+                    Twine::utohexstr(pc - va));
+        continue;
+      }
       ret.push_back({uint32_t(pc - va), uint32_t(fdeVA - va)});
     }
   }
@@ -1284,13 +1285,7 @@ static uint64_t addRelaSz(const RelocationBaseSection &relaDyn) {
 // output section. When this occurs we cannot just use the OutputSection
 // Size. Moreover the [DT_JMPREL, DT_JMPREL + DT_PLTRELSZ) is permitted to
 // overlap with the [DT_RELA, DT_RELA + DT_RELASZ).
-static uint64_t addPltRelSz() {
-  size_t size = in.relaPlt->getSize();
-  if (in.relaIplt->getParent() == in.relaPlt->getParent() &&
-      in.relaIplt->name == in.relaPlt->name)
-    size += in.relaIplt->getSize();
-  return size;
-}
+static uint64_t addPltRelSz() { return in.relaPlt->getSize(); }
 
 // Add remaining entries to complete .dynamic contents.
 template <class ELFT>
@@ -1406,18 +1401,15 @@ DynamicSection<ELFT>::computeContents() {
     addInt(config->useAndroidRelrTags ? DT_ANDROID_RELRENT : DT_RELRENT,
            sizeof(Elf_Relr));
   }
-  // .rel[a].plt section usually consists of two parts, containing plt and
-  // iplt relocations. It is possible to have only iplt relocations in the
-  // output. In that case relaPlt is empty and have zero offset, the same offset
-  // as relaIplt has. And we still want to emit proper dynamic tags for that
-  // case, so here we always use relaPlt as marker for the beginning of
-  // .rel[a].plt section.
-  if (isMain && (in.relaPlt->isNeeded() || in.relaIplt->isNeeded())) {
+  if (isMain && in.relaPlt->isNeeded()) {
     addInSec(DT_JMPREL, *in.relaPlt);
     entries.emplace_back(DT_PLTRELSZ, addPltRelSz());
     switch (config->emachine) {
     case EM_MIPS:
       addInSec(DT_MIPS_PLTGOT, *in.gotPlt);
+      break;
+    case EM_S390:
+      addInSec(DT_PLTGOT, *in.got);
       break;
     case EM_SPARCV9:
       addInSec(DT_PLTGOT, *in.plt);
@@ -1450,13 +1442,14 @@ DynamicSection<ELFT>::computeContents() {
     if (config->zPacPlt)
       addInt(DT_AARCH64_PAC_PLT, 0);
 
-    if (config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE) {
+    if (hasMemtag()) {
       addInt(DT_AARCH64_MEMTAG_MODE, config->androidMemtagMode == NT_MEMTAG_LEVEL_ASYNC);
       addInt(DT_AARCH64_MEMTAG_HEAP, config->androidMemtagHeap);
       addInt(DT_AARCH64_MEMTAG_STACK, config->androidMemtagStack);
-      if (mainPart->memtagDescriptors->isNeeded()) {
-        addInSec(DT_AARCH64_MEMTAG_GLOBALS, *mainPart->memtagDescriptors);
-        addInt(DT_AARCH64_MEMTAG_GLOBALSSZ, mainPart->memtagDescriptors->getSize());
+      if (mainPart->memtagGlobalDescriptors->isNeeded()) {
+        addInSec(DT_AARCH64_MEMTAG_GLOBALS, *mainPart->memtagGlobalDescriptors);
+        addInt(DT_AARCH64_MEMTAG_GLOBALSSZ,
+               mainPart->memtagGlobalDescriptors->getSize());
       }
     }
   }
@@ -1595,7 +1588,7 @@ uint32_t DynamicReloc::getSymIndex(SymbolTableBaseSection *symTab) const {
   if (!needsDynSymIndex())
     return 0;
 
-  size_t index = symTab->getSymbolIndex(sym);
+  size_t index = symTab->getSymbolIndex(*sym);
   assert((index != 0 || (type != target->gotRel && type != target->pltRel) ||
           !mainPart->dynSymTab->getParent()) &&
          "GOT or PLT relocation must refer to symbol in dynamic symbol table");
@@ -2167,9 +2160,9 @@ void SymbolTableBaseSection::addSymbol(Symbol *b) {
   symbols.push_back({b, strTabSec.addString(b->getName(), false)});
 }
 
-size_t SymbolTableBaseSection::getSymbolIndex(Symbol *sym) {
+size_t SymbolTableBaseSection::getSymbolIndex(const Symbol &sym) {
   if (this == mainPart->dynSymTab.get())
-    return sym->dynsymIndex;
+    return sym.dynsymIndex;
 
   // Initializes symbol lookup tables lazily. This is used only for -r,
   // --emit-relocs and dynsyms in partitions other than the main one.
@@ -2186,9 +2179,9 @@ size_t SymbolTableBaseSection::getSymbolIndex(Symbol *sym) {
 
   // Section symbols are mapped based on their output sections
   // to maintain their semantics.
-  if (sym->type == STT_SECTION)
-    return sectionIndexMap.lookup(sym->getOutputSection());
-  return symbolIndexMap.lookup(sym);
+  if (sym.type == STT_SECTION)
+    return sectionIndexMap.lookup(sym.getOutputSection());
+  return symbolIndexMap.lookup(&sym);
 }
 
 template <class ELFT>
@@ -2422,7 +2415,7 @@ void GnuHashTableSection::writeTo(uint8_t *buf) {
     // Write a hash bucket. Hash buckets contain indices in the following hash
     // value table.
     write32(buckets + i->bucketIdx,
-            getPartition().dynSymTab->getSymbolIndex(i->sym));
+            getPartition().dynSymTab->getSymbolIndex(*i->sym));
     oldBucket = i->bucketIdx;
   }
 }
@@ -2799,21 +2792,16 @@ createSymbols(
     cuIdx += chunks[i].compilationUnits.size();
   }
 
-  // The number of symbols we will handle in this function is of the order
-  // of millions for very large executables, so we use multi-threading to
-  // speed it up.
+  // Collect the compilation unitss for each unique name. Speed it up using
+  // multi-threading as the number of symbols can be in the order of millions.
+  // Shard GdbSymbols by hash's high bits.
   constexpr size_t numShards = 32;
   const size_t concurrency =
       llvm::bit_floor(std::min<size_t>(config->threadCount, numShards));
-
-  // A sharded map to uniquify symbols by name.
+  const size_t shift = 32 - llvm::countr_zero(numShards);
   auto map =
       std::make_unique<DenseMap<CachedHashStringRef, size_t>[]>(numShards);
-  size_t shift = 32 - llvm::countr_zero(numShards);
-
-  // Instantiate GdbSymbols while uniqufying them by name.
   auto symbols = std::make_unique<SmallVector<GdbSymbol, 0>[]>(numShards);
-
   parallelFor(0, concurrency, [&](size_t threadId) {
     uint32_t i = 0;
     for (ArrayRef<NameAttrEntry> entries : nameAttrs) {
@@ -2823,14 +2811,12 @@ createSymbols(
           continue;
 
         uint32_t v = ent.cuIndexAndAttrs + cuIdxs[i];
-        size_t &idx = map[shardId][ent.name];
-        if (idx) {
-          symbols[shardId][idx - 1].cuVector.push_back(v);
-          continue;
-        }
-
-        idx = symbols[shardId].size() + 1;
-        symbols[shardId].push_back({ent.name, {v}, 0, 0});
+        auto [it, inserted] =
+            map[shardId].try_emplace(ent.name, symbols[shardId].size());
+        if (inserted)
+          symbols[shardId].push_back({ent.name, {v}, 0, 0});
+        else
+          symbols[shardId][it->second].cuVector.push_back(v);
       }
       ++i;
     }
@@ -3140,10 +3126,8 @@ bool VersionTableSection::isNeeded() const {
 
 void elf::addVerneed(Symbol *ss) {
   auto &file = cast<SharedFile>(*ss->file);
-  if (ss->verdefIndex == VER_NDX_GLOBAL) {
-    ss->versionId = VER_NDX_GLOBAL;
+  if (ss->versionId == VER_NDX_GLOBAL)
     return;
-  }
 
   if (file.vernauxs.empty())
     file.vernauxs.resize(file.verdefs.size());
@@ -3152,10 +3136,10 @@ void elf::addVerneed(Symbol *ss) {
   // already allocated one. The verdef identifiers cover the range
   // [1..getVerDefNum()]; this causes the vernaux identifiers to start from
   // getVerDefNum()+1.
-  if (file.vernauxs[ss->verdefIndex] == 0)
-    file.vernauxs[ss->verdefIndex] = ++SharedFile::vernauxNum + getVerDefNum();
+  if (file.vernauxs[ss->versionId] == 0)
+    file.vernauxs[ss->versionId] = ++SharedFile::vernauxNum + getVerDefNum();
 
-  ss->versionId = file.vernauxs[ss->verdefIndex];
+  ss->versionId = file.vernauxs[ss->versionId];
 }
 
 template <class ELFT>
@@ -3921,8 +3905,9 @@ static size_t computeOrWriteULEB128(uint64_t v, uint8_t *buf, size_t offset) {
 // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#83encoding-of-sht_aarch64_memtag_globals_dynamic
 constexpr uint64_t kMemtagStepSizeBits = 3;
 constexpr uint64_t kMemtagGranuleSize = 16;
-static size_t createMemtagDescriptors(const SmallVector<const Symbol *, 0> &symbols,
-                                      uint8_t *buf = nullptr) {
+static size_t
+createMemtagGlobalDescriptors(const SmallVector<const Symbol *, 0> &symbols,
+                              uint8_t *buf = nullptr) {
   size_t sectionSize = 0;
   uint64_t lastGlobalEnd = 0;
 
@@ -3963,7 +3948,7 @@ static size_t createMemtagDescriptors(const SmallVector<const Symbol *, 0> &symb
   return sectionSize;
 }
 
-bool MemtagDescriptors::updateAllocSize() {
+bool MemtagGlobalDescriptors::updateAllocSize() {
   size_t oldSize = getSize();
   std::stable_sort(symbols.begin(), symbols.end(),
                    [](const Symbol *s1, const Symbol *s2) {
@@ -3972,12 +3957,12 @@ bool MemtagDescriptors::updateAllocSize() {
   return oldSize != getSize();
 }
 
-void MemtagDescriptors::writeTo(uint8_t *buf) {
-  createMemtagDescriptors(symbols, buf);
+void MemtagGlobalDescriptors::writeTo(uint8_t *buf) {
+  createMemtagGlobalDescriptors(symbols, buf);
 }
 
-size_t MemtagDescriptors::getSize() const {
-  return createMemtagDescriptors(symbols);
+size_t MemtagGlobalDescriptors::getSize() const {
+  return createMemtagGlobalDescriptors(symbols);
 }
 
 InStruct elf::in;

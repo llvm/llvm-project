@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple riscv32 -M numeric %s \
 # RUN:     | FileCheck -check-prefix=CHECK-NUMERIC %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
-# RUN:     | llvm-objdump -d -M numeric - \
+# RUN:     | llvm-objdump --no-print-imm-hex -d -M numeric - \
 # RUN:     | FileCheck -check-prefix=CHECK-NUMERIC %s
 
 # CHECK-NUMERIC: li x10, 1

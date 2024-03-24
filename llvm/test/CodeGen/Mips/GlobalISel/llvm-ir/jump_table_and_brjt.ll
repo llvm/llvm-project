@@ -23,10 +23,9 @@ define i32 @mod4_0_to_11(i32 %a) {
 ; MIPS32-NEXT:    subu $2, $4, $2
 ; MIPS32-NEXT:    sw $2, 28($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sltu $1, $1, $2
-; MIPS32-NEXT:    andi $1, $1, 1
 ; MIPS32-NEXT:    bnez $1, $BB0_6
 ; MIPS32-NEXT:    nop
-; MIPS32-NEXT:  $BB0_1: # %entry
+; MIPS32-NEXT:  # %bb.1: # %entry
 ; MIPS32-NEXT:    lw $2, 28($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    lui $1, %hi($JTI0_0)
 ; MIPS32-NEXT:    sll $2, $2, 2
@@ -64,10 +63,9 @@ define i32 @mod4_0_to_11(i32 %a) {
 ; MIPS32-NEXT:    subu $2, $2, $3
 ; MIPS32-NEXT:    sw $2, 0($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sltu $1, $1, $2
-; MIPS32-NEXT:    andi $1, $1, 1
 ; MIPS32-NEXT:    bnez $1, $BB0_13
 ; MIPS32-NEXT:    nop
-; MIPS32-NEXT:  $BB0_8: # %sw.epilog
+; MIPS32-NEXT:  # %bb.8: # %sw.epilog
 ; MIPS32-NEXT:    lw $2, 0($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    lui $1, %hi($JTI0_1)
 ; MIPS32-NEXT:    sll $2, $2, 2
@@ -125,10 +123,9 @@ define i32 @mod4_0_to_11(i32 %a) {
 ; MIPS32_PIC-NEXT:    subu $2, $4, $2
 ; MIPS32_PIC-NEXT:    sw $2, 36($sp) # 4-byte Folded Spill
 ; MIPS32_PIC-NEXT:    sltu $1, $1, $2
-; MIPS32_PIC-NEXT:    andi $1, $1, 1
 ; MIPS32_PIC-NEXT:    bnez $1, $BB0_6
 ; MIPS32_PIC-NEXT:    nop
-; MIPS32_PIC-NEXT:  $BB0_1: # %entry
+; MIPS32_PIC-NEXT:  # %bb.1: # %entry
 ; MIPS32_PIC-NEXT:    lw $2, 8($sp) # 4-byte Folded Reload
 ; MIPS32_PIC-NEXT:    lw $3, 36($sp) # 4-byte Folded Reload
 ; MIPS32_PIC-NEXT:    lw $1, %got($JTI0_0)($2)
@@ -168,10 +165,9 @@ define i32 @mod4_0_to_11(i32 %a) {
 ; MIPS32_PIC-NEXT:    subu $2, $2, $3
 ; MIPS32_PIC-NEXT:    sw $2, 4($sp) # 4-byte Folded Spill
 ; MIPS32_PIC-NEXT:    sltu $1, $1, $2
-; MIPS32_PIC-NEXT:    andi $1, $1, 1
 ; MIPS32_PIC-NEXT:    bnez $1, $BB0_13
 ; MIPS32_PIC-NEXT:    nop
-; MIPS32_PIC-NEXT:  $BB0_8: # %sw.epilog
+; MIPS32_PIC-NEXT:  # %bb.8: # %sw.epilog
 ; MIPS32_PIC-NEXT:    lw $2, 8($sp) # 4-byte Folded Reload
 ; MIPS32_PIC-NEXT:    lw $3, 4($sp) # 4-byte Folded Reload
 ; MIPS32_PIC-NEXT:    lw $1, %got($JTI0_1)($2)

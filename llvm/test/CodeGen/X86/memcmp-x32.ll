@@ -254,15 +254,11 @@ define i1 @length4_lt(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl (%ecx), %ecx
-; X86-NEXT:    movl (%eax), %edx
+; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    bswapl %ecx
-; X86-NEXT:    bswapl %edx
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    cmpl %edx, %ecx
-; X86-NEXT:    seta %al
-; X86-NEXT:    sbbl $0, %eax
-; X86-NEXT:    shrl $31, %eax
-; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    cmpl %eax, %ecx
+; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i32 4) nounwind
   %c = icmp slt i32 %m, 0
@@ -278,12 +274,8 @@ define i1 @length4_gt(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    bswapl %ecx
 ; X86-NEXT:    bswapl %eax
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    cmpl %eax, %ecx
-; X86-NEXT:    seta %dl
-; X86-NEXT:    sbbl $0, %edx
-; X86-NEXT:    testl %edx, %edx
-; X86-NEXT:    setg %al
+; X86-NEXT:    seta %al
 ; X86-NEXT:    retl
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i32 4) nounwind
   %c = icmp sgt i32 %m, 0

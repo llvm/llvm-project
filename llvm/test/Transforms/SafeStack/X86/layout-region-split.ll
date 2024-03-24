@@ -1,5 +1,6 @@
 ; Regression test for safestack layout. Used to fail with asan.
 ; RUN: opt -safe-stack -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
 
 define void @f() safestack {
 ; CHECK-LABEL: define void @f

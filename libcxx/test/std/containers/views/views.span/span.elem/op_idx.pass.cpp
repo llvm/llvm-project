@@ -41,7 +41,6 @@ void testRuntimeSpan(Span sp, std::size_t idx)
     assert(r1 == r2);
 }
 
-struct A{};
 constexpr int iArr1[] = { 0,  1,  2,  3,  4,  5,  6,  7,  8,  9};
           int iArr2[] = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
 

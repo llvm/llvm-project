@@ -1,4 +1,4 @@
-//=- AArch64.td - Define AArch64 Combine Rules ---------------*- tablegen -*-=//
+//=- AArch64Combine.td - Define AArch64 Combine Rules ---------*-tablegen -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,12 +33,33 @@ def fold_global_offset : GICombineRule<
   (apply [{ applyFoldGlobalOffset(*${root}, MRI, B, Observer, ${matchinfo});}])
 >;
 
+// Boolean: 0 = G_ZEXT, 1 = G_SEXT
+def ext_addv_to_udot_addv_matchinfo : GIDefMatchData<"std::tuple<Register, Register, bool>">;
+let Predicates = [HasDotProd] in {
+def ext_addv_to_udot_addv : GICombineRule<
+  (defs root:$root, ext_addv_to_udot_addv_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_VECREDUCE_ADD):$root,
+         [{ return matchExtAddvToUdotAddv(*${root}, MRI, STI, ${matchinfo}); }]),
+  (apply [{ applyExtAddvToUdotAddv(*${root}, MRI, B, Observer, STI, ${matchinfo}); }])
+>;
+}
+
+def ext_uaddv_to_uaddlv_matchinfo : GIDefMatchData<"std::pair<Register, bool>">;
+def ext_uaddv_to_uaddlv : GICombineRule<
+  (defs root:$root, ext_uaddv_to_uaddlv_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_VECREDUCE_ADD):$root,
+         [{ return matchExtUaddvToUaddlv(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyExtUaddvToUaddlv(*${root}, MRI, B, Observer, ${matchinfo}); }])
+>;
+
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
                                       fconstant_to_constant,
                                       icmp_redundant_trunc,
                                       fold_global_offset,
-                                      shuffle_to_extract]> {
+                                      shuffle_to_extract,
+                                      ext_addv_to_udot_addv,
+                                      ext_uaddv_to_uaddlv]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -121,6 +142,14 @@ def form_duplane : GICombineRule <
 def shuffle_vector_lowering : GICombineGroup<[dup, rev, ext, zip, uzp, trn,
                                               form_duplane,
                                               shuf_to_ins]>;
+
+// Turn G_UNMERGE_VALUES -> G_EXTRACT_VECTOR_ELT's
+def vector_unmerge_lowering : GICombineRule <
+  (defs root:$root),
+  (match (wip_match_opcode G_UNMERGE_VALUES):$root,
+          [{ return matchScalarizeVectorUnmerge(*${root}, MRI); }]),
+  (apply [{ applyScalarizeVectorUnmerge(*${root}, MRI, B); }])
+>;
 
 def adjust_icmp_imm_matchdata :
   GIDefMatchData<"std::pair<uint64_t, CmpInst::Predicate>">;
@@ -239,7 +268,8 @@ def AArch64PostLegalizerLowering
                         icmp_lowering, build_vector_lowering,
                         lower_vector_fcmp, form_truncstore,
                         vector_sext_inreg_to_shift,
-                        unmerge_ext_to_unmerge, lower_mull]> {
+                        unmerge_ext_to_unmerge, lower_mull,
+                        vector_unmerge_lowering]> {
 }
 
 // Post-legalization combines which are primarily optimizations.
@@ -258,5 +288,6 @@ def AArch64PostLegalizerCombiner
                         constant_fold_binops, identity_combines,
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
-                        select_to_minmax, or_to_bsp]> {
+                        select_to_minmax, or_to_bsp, combine_concat_vector,
+                        commute_constant_to_rhs]> {
 }

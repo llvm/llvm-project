@@ -1,7 +1,7 @@
 # RUN: dsymutil -f -o %t --verify -oso-prepend-path=%p/../Inputs -y %s
 # RUN: llvm-dwarfdump %t | FileCheck %s
 
-# RUN: dsymutil --linker llvm -f -o %t --verify -oso-prepend-path=%p/../Inputs -y %s
+# RUN: dsymutil --linker parallel -f -o %t --verify -oso-prepend-path=%p/../Inputs -y %s
 # RUN: llvm-dwarfdump %t | FileCheck %s
 
 ---
@@ -12,21 +12,23 @@ objects:
       - { sym: _foo, objAddr: 0x0, binAddr: 0x1000, size: 0x4 }
 ...
 
+CHECK: DW_TAG_compile_unit
+CHECK: DW_AT_name        ("dbg.c")
 
-CHECK:      DW_TAG_base_type
+CHECK:0x[[ADDR1:[0-9a-f]+]]:      DW_TAG_base_type
 CHECK-NEXT:     DW_AT_name	("DW_ATE_signed_8")
 CHECK-NEXT:     DW_AT_encoding	(DW_ATE_signed)
 CHECK-NEXT:     DW_AT_byte_size	(0x01)
 
-CHECK:   DW_TAG_base_type
+CHECK:0x[[ADDR2:[0-9a-f]+]]:   DW_TAG_base_type
 CHECK-NEXT:     DW_AT_name	("DW_ATE_signed_32")
 CHECK-NEXT:     DW_AT_encoding	(DW_ATE_signed)
 CHECK-NEXT:     DW_AT_byte_size	(0x04)
 
 CHECK:     DW_TAG_variable
 CHECK-NEXT:     DW_AT_location	(
-CHECK-NEXT:     [0x0000000000001000,  0x0000000000001002): DW_OP_breg5 RDI+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_convert (0x0000002a) "DW_ATE_signed_8", DW_OP_convert (0x00000031) "DW_ATE_signed_32", DW_OP_stack_value
-CHECK-NEXT:     [0x0000000000001002,  0x0000000000001003): DW_OP_breg0 RAX+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_convert (0x0000002a) "DW_ATE_signed_8", DW_OP_convert (0x00000031) "DW_ATE_signed_32", DW_OP_stack_value)
+CHECK-NEXT:     [0x0000000000001000,  0x0000000000001002): DW_OP_breg5 RDI+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_convert (0x[[ADDR1]]) "DW_ATE_signed_8", DW_OP_convert (0x[[ADDR2]]) "DW_ATE_signed_32", DW_OP_stack_value
+CHECK-NEXT:     [0x0000000000001002,  0x0000000000001003): DW_OP_breg0 RAX+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_convert (0x[[ADDR1]]) "DW_ATE_signed_8", DW_OP_convert (0x[[ADDR2]]) "DW_ATE_signed_32", DW_OP_stack_value)
 CHECK-NEXT:     DW_AT_name	("y")
 
 CHECK:     DW_TAG_variable
@@ -34,6 +36,6 @@ CHECK-NEXT:     DW_AT_location	(DW_OP_constu 0x33, DW_OP_convert 0x0, DW_OP_stac
 CHECK-NEXT:     DW_AT_name	("d")
 
 CHECK:     DW_TAG_variable
-CHECK-NEXT:     DW_AT_location	(DW_OP_constu 0x2a, DW_OP_convert (0x00000031) "DW_ATE_signed_32", DW_OP_stack_value)
+CHECK-NEXT:     DW_AT_location	(DW_OP_constu 0x2a, DW_OP_convert (0x[[ADDR2]]) "DW_ATE_signed_32", DW_OP_stack_value)
 CHECK-NEXT:     DW_AT_name	("c")
 

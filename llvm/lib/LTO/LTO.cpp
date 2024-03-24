@@ -124,9 +124,9 @@ void llvm::computeLTOCacheKey(
   AddString(Conf.CPU);
   // FIXME: Hash more of Options. For now all clients initialize Options from
   // command-line flags (which is unsupported in production), but may set
-  // RelaxELFRelocations. The clang driver can also pass FunctionSections,
+  // X86RelaxRelocations. The clang driver can also pass FunctionSections,
   // DataSections and DebuggerTuning via command line flags.
-  AddUnsigned(Conf.Options.RelaxELFRelocations);
+  AddUnsigned(Conf.Options.MCOptions.X86RelaxRelocations);
   AddUnsigned(Conf.Options.FunctionSections);
   AddUnsigned(Conf.Options.DataSections);
   AddUnsigned((unsigned)Conf.Options.DebuggerTuning);
@@ -579,7 +579,9 @@ LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
                                       const Config &Conf)
     : ParallelCodeGenParallelismLevel(ParallelCodeGenParallelismLevel),
       Ctx(Conf), CombinedModule(std::make_unique<Module>("ld-temp.o", Ctx)),
-      Mover(std::make_unique<IRMover>(*CombinedModule)) {}
+      Mover(std::make_unique<IRMover>(*CombinedModule)) {
+  CombinedModule->IsNewDbgInfoFormat = UseNewDbgInfoFormat;
+}
 
 LTO::ThinLTOState::ThinLTOState(ThinBackend Backend)
     : Backend(Backend), CombinedIndex(/*HaveGVs*/ false) {
@@ -592,7 +594,9 @@ LTO::LTO(Config Conf, ThinBackend Backend,
          unsigned ParallelCodeGenParallelismLevel, LTOKind LTOMode)
     : Conf(std::move(Conf)),
       RegularLTO(ParallelCodeGenParallelismLevel, this->Conf),
-      ThinLTO(std::move(Backend)), LTOMode(LTOMode) {}
+      ThinLTO(std::move(Backend)),
+      GlobalResolutions(std::make_optional<StringMap<GlobalResolution>>()),
+      LTOMode(LTOMode) {}
 
 // Requires a destructor for MapVector<BitcodeModule>.
 LTO::~LTO() = default;
@@ -610,13 +614,7 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     assert(ResI != ResE);
     SymbolResolution Res = *ResI++;
 
-    StringRef Name = Sym.getName();
-    // Strip the __imp_ prefix from COFF dllimport symbols (similar to the
-    // way they are handled by lld), otherwise we can end up with two
-    // global resolutions (one with and one for a copy of the symbol without).
-    if (TT.isOSBinFormatCOFF() && Name.startswith("__imp_"))
-      Name = Name.substr(strlen("__imp_"));
-    auto &GlobalRes = GlobalResolutions[Name];
+    auto &GlobalRes = (*GlobalResolutions)[Sym.getName()];
     GlobalRes.UnnamedAddr &= Sym.isUnnamedAddr();
     if (Res.Prevailing) {
       assert(!GlobalRes.Prevailing &&
@@ -1131,7 +1129,7 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   // Compute "dead" symbols, we don't want to import/export these!
   DenseSet<GlobalValue::GUID> GUIDPreservedSymbols;
   DenseMap<GlobalValue::GUID, PrevailingType> GUIDPrevailingResolutions;
-  for (auto &Res : GlobalResolutions) {
+  for (auto &Res : *GlobalResolutions) {
     // Normally resolution have IR name of symbol. We can do nothing here
     // otherwise. See comments in GlobalResolution struct for more details.
     if (Res.second.IRName.empty())
@@ -1175,6 +1173,8 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
 
   Error Result = runRegularLTO(AddStream);
   if (!Result)
+    // This will reset the GlobalResolutions optional once done with it to
+    // reduce peak memory before importing.
     Result = runThinLTO(AddStream, Cache, GUIDPreservedSymbols);
 
   if (StatsFile)
@@ -1260,7 +1260,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
                                   ConstantAggregateZero::get(Ty), "");
     GV->setAlignment(I.second.Alignment);
     if (OldGV) {
-      OldGV->replaceAllUsesWith(ConstantExpr::getBitCast(GV, OldGV->getType()));
+      OldGV->replaceAllUsesWith(GV);
       GV->takeName(OldGV);
       OldGV->eraseFromParent();
     } else {
@@ -1279,8 +1279,8 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
   // This returns true when the name is local or not defined. Locals are
   // expected to be handled separately.
   auto IsVisibleToRegularObj = [&](StringRef name) {
-    auto It = GlobalResolutions.find(name);
-    return (It == GlobalResolutions.end() || It->second.VisibleOutsideSummary);
+    auto It = GlobalResolutions->find(name);
+    return (It == GlobalResolutions->end() || It->second.VisibleOutsideSummary);
   };
 
   // If allowed, upgrade public vcall visibility metadata to linkage unit
@@ -1297,7 +1297,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
   if (!Conf.CodeGenOnly) {
-    for (const auto &R : GlobalResolutions) {
+    for (const auto &R : *GlobalResolutions) {
       GlobalValue *GV =
           RegularLTO.CombinedModule->getNamedValue(R.second.IRName);
       if (!R.second.isPrevailingIRSymbol())
@@ -1411,7 +1411,7 @@ public:
 
 namespace {
 class InProcessThinBackend : public ThinBackendProc {
-  ThreadPool BackendThreadPool;
+  DefaultThreadPool BackendThreadPool;
   AddStreamFn AddStream;
   FileCache Cache;
   std::set<GlobalValue::GUID> CfiFunctionDefs;
@@ -1539,7 +1539,7 @@ public:
   }
 
   unsigned getThreadCount() override {
-    return BackendThreadPool.getThreadCount();
+    return BackendThreadPool.getMaxConcurrency();
   }
 };
 } // end anonymous namespace
@@ -1559,6 +1559,21 @@ ThinBackend lto::createInProcessThinBackend(ThreadPoolStrategy Parallelism,
       };
 }
 
+StringLiteral lto::getThinLTODefaultCPU(const Triple &TheTriple) {
+  if (!TheTriple.isOSDarwin())
+    return "";
+  if (TheTriple.getArch() == Triple::x86_64)
+    return "core2";
+  if (TheTriple.getArch() == Triple::x86)
+    return "yonah";
+  if (TheTriple.isArm64e())
+    return "apple-a12";
+  if (TheTriple.getArch() == Triple::aarch64 ||
+      TheTriple.getArch() == Triple::aarch64_32)
+    return "cyclone";
+  return "";
+}
+
 // Given the original \p Path to an output file, replace any path
 // prefix matching \p OldPrefix with \p NewPrefix. Also, create the
 // resulting directory if it does not yet exist.
@@ -1575,7 +1590,7 @@ std::string lto::getThinLTOOutputFile(StringRef Path, StringRef OldPrefix,
       llvm::errs() << "warning: could not create directory '" << ParentPath
                    << "': " << EC.message() << '\n';
   }
-  return std::string(NewPath.str());
+  return std::string(NewPath);
 }
 
 namespace {
@@ -1714,8 +1729,8 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     // This returns true when the name is local or not defined. Locals are
     // expected to be handled separately.
     auto IsVisibleToRegularObj = [&](StringRef name) {
-      auto It = GlobalResolutions.find(name);
-      return (It == GlobalResolutions.end() ||
+      auto It = GlobalResolutions->find(name);
+      return (It == GlobalResolutions->end() ||
               It->second.VisibleOutsideSummary);
     };
 
@@ -1745,15 +1760,11 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     ContextDisambiguation.run(ThinLTO.CombinedIndex, isPrevailing);
   }
 
-  if (Conf.OptLevel > 0)
-    ComputeCrossModuleImport(ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
-                             isPrevailing, ImportLists, ExportLists);
-
   // Figure out which symbols need to be internalized. This also needs to happen
   // at -O0 because summary-based DCE is implemented using internalization, and
   // we must apply DCE consistently with the full LTO module in order to avoid
   // undefined references during the final link.
-  for (auto &Res : GlobalResolutions) {
+  for (auto &Res : *GlobalResolutions) {
     // If the symbol does not have external references or it is not prevailing,
     // then not need to mark it as exported from a ThinLTO partition.
     if (Res.second.Partition != GlobalResolution::External ||
@@ -1765,6 +1776,16 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     if (ThinLTO.CombinedIndex.isGUIDLive(GUID))
       ExportedGUIDs.insert(GUID);
   }
+
+  // Reset the GlobalResolutions to deallocate the associated memory, as there
+  // are no further accesses. We specifically want to do this before computing
+  // cross module importing, which adds to peak memory via the computed import
+  // and export lists.
+  GlobalResolutions.reset();
+
+  if (Conf.OptLevel > 0)
+    ComputeCrossModuleImport(ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
+                             isPrevailing, ImportLists, ExportLists);
 
   // Any functions referenced by the jump table in the regular LTO object must
   // be exported.

@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck -check-prefix=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx900 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - -early-live-intervals | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - -early-live-intervals | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: test_madmk_reg_imm_f32
 # GCN: V_MADMK_F32 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec

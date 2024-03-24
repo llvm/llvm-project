@@ -516,23 +516,14 @@ define void @compressstore_v16f64_v16i1(ptr %base, <16 x double> %V, <16 x i1> %
 ; AVX512F-NEXT:    vpmovsxbd %xmm2, %zmm2
 ; AVX512F-NEXT:    vpslld $31, %zmm2, %zmm2
 ; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    movzbl %al, %ecx
-; AVX512F-NEXT:    shrl %eax
-; AVX512F-NEXT:    andl $85, %eax
-; AVX512F-NEXT:    subl %eax, %ecx
-; AVX512F-NEXT:    movl %ecx, %eax
-; AVX512F-NEXT:    andl $858993459, %eax ## imm = 0x33333333
-; AVX512F-NEXT:    shrl $2, %ecx
-; AVX512F-NEXT:    andl $858993459, %ecx ## imm = 0x33333333
-; AVX512F-NEXT:    addl %eax, %ecx
-; AVX512F-NEXT:    movl %ecx, %eax
-; AVX512F-NEXT:    shrl $4, %eax
-; AVX512F-NEXT:    addl %ecx, %eax
-; AVX512F-NEXT:    andl $252645135, %eax ## imm = 0xF0F0F0F
-; AVX512F-NEXT:    imull $16843009, %eax, %eax ## imm = 0x1010101
-; AVX512F-NEXT:    shrl $24, %eax
 ; AVX512F-NEXT:    kshiftrw $8, %k1, %k2
+; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    movzbl %al, %eax
+; AVX512F-NEXT:    imull $134480385, %eax, %eax ## imm = 0x8040201
+; AVX512F-NEXT:    shrl $3, %eax
+; AVX512F-NEXT:    andl $286331153, %eax ## imm = 0x11111111
+; AVX512F-NEXT:    imull $286331153, %eax, %eax ## imm = 0x11111111
+; AVX512F-NEXT:    shrl $28, %eax
 ; AVX512F-NEXT:    vcompresspd %zmm1, (%rdi,%rax,8) {%k2}
 ; AVX512F-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
 ; AVX512F-NEXT:    vzeroupper
@@ -543,23 +534,13 @@ define void @compressstore_v16f64_v16i1(ptr %base, <16 x double> %V, <16 x i1> %
 ; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
 ; AVX512VLDQ-NEXT:    vpslld $31, %zmm2, %zmm2
 ; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k1
-; AVX512VLDQ-NEXT:    kmovb %k1, %eax
-; AVX512VLDQ-NEXT:    movl %eax, %ecx
-; AVX512VLDQ-NEXT:    shrl %ecx
-; AVX512VLDQ-NEXT:    andl $-43, %ecx
-; AVX512VLDQ-NEXT:    subl %ecx, %eax
-; AVX512VLDQ-NEXT:    movl %eax, %ecx
-; AVX512VLDQ-NEXT:    andl $858993459, %ecx ## imm = 0x33333333
-; AVX512VLDQ-NEXT:    shrl $2, %eax
-; AVX512VLDQ-NEXT:    andl $858993459, %eax ## imm = 0x33333333
-; AVX512VLDQ-NEXT:    addl %ecx, %eax
-; AVX512VLDQ-NEXT:    movl %eax, %ecx
-; AVX512VLDQ-NEXT:    shrl $4, %ecx
-; AVX512VLDQ-NEXT:    addl %eax, %ecx
-; AVX512VLDQ-NEXT:    andl $252645135, %ecx ## imm = 0xF0F0F0F
-; AVX512VLDQ-NEXT:    imull $16843009, %ecx, %eax ## imm = 0x1010101
-; AVX512VLDQ-NEXT:    shrl $24, %eax
 ; AVX512VLDQ-NEXT:    kshiftrw $8, %k1, %k2
+; AVX512VLDQ-NEXT:    kmovb %k1, %eax
+; AVX512VLDQ-NEXT:    imull $134480385, %eax, %eax ## imm = 0x8040201
+; AVX512VLDQ-NEXT:    shrl $3, %eax
+; AVX512VLDQ-NEXT:    andl $286331153, %eax ## imm = 0x11111111
+; AVX512VLDQ-NEXT:    imull $286331153, %eax, %eax ## imm = 0x11111111
+; AVX512VLDQ-NEXT:    shrl $28, %eax
 ; AVX512VLDQ-NEXT:    vcompresspd %zmm1, (%rdi,%rax,8) {%k2}
 ; AVX512VLDQ-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
 ; AVX512VLDQ-NEXT:    vzeroupper
@@ -569,23 +550,14 @@ define void @compressstore_v16f64_v16i1(ptr %base, <16 x double> %V, <16 x i1> %
 ; AVX512VLBW:       ## %bb.0:
 ; AVX512VLBW-NEXT:    vpsllw $7, %xmm2, %xmm2
 ; AVX512VLBW-NEXT:    vpmovb2m %xmm2, %k1
-; AVX512VLBW-NEXT:    kmovd %k1, %eax
-; AVX512VLBW-NEXT:    movzbl %al, %ecx
-; AVX512VLBW-NEXT:    shrl %eax
-; AVX512VLBW-NEXT:    andl $85, %eax
-; AVX512VLBW-NEXT:    subl %eax, %ecx
-; AVX512VLBW-NEXT:    movl %ecx, %eax
-; AVX512VLBW-NEXT:    andl $858993459, %eax ## imm = 0x33333333
-; AVX512VLBW-NEXT:    shrl $2, %ecx
-; AVX512VLBW-NEXT:    andl $858993459, %ecx ## imm = 0x33333333
-; AVX512VLBW-NEXT:    addl %eax, %ecx
-; AVX512VLBW-NEXT:    movl %ecx, %eax
-; AVX512VLBW-NEXT:    shrl $4, %eax
-; AVX512VLBW-NEXT:    addl %ecx, %eax
-; AVX512VLBW-NEXT:    andl $252645135, %eax ## imm = 0xF0F0F0F
-; AVX512VLBW-NEXT:    imull $16843009, %eax, %eax ## imm = 0x1010101
-; AVX512VLBW-NEXT:    shrl $24, %eax
 ; AVX512VLBW-NEXT:    kshiftrw $8, %k1, %k2
+; AVX512VLBW-NEXT:    kmovd %k1, %eax
+; AVX512VLBW-NEXT:    movzbl %al, %eax
+; AVX512VLBW-NEXT:    imull $134480385, %eax, %eax ## imm = 0x8040201
+; AVX512VLBW-NEXT:    shrl $3, %eax
+; AVX512VLBW-NEXT:    andl $286331153, %eax ## imm = 0x11111111
+; AVX512VLBW-NEXT:    imull $286331153, %eax, %eax ## imm = 0x11111111
+; AVX512VLBW-NEXT:    shrl $28, %eax
 ; AVX512VLBW-NEXT:    vcompresspd %zmm1, (%rdi,%rax,8) {%k2}
 ; AVX512VLBW-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper

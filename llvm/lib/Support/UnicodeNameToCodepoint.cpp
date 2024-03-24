@@ -123,7 +123,7 @@ static bool startsWith(StringRef Name, StringRef Needle, bool Strict,
 
   Consummed = 0;
   if (Strict) {
-    if (!Name.startswith(Needle))
+    if (!Name.starts_with(Needle))
       return false;
     Consummed = Needle.size();
     return true;
@@ -320,7 +320,7 @@ struct GeneratedNamesData {
   uint32_t End;
 };
 
-// Unicode 15.0 Table 4-8. Name Derivation Rule Prefix Strings
+// Unicode 15.1 Table 4-8. Name Derivation Rule Prefix Strings
 static const GeneratedNamesData GeneratedNamesDataTable[] = {
     {"CJK UNIFIED IDEOGRAPH-", 0x3400, 0x4DBF},
     {"CJK UNIFIED IDEOGRAPH-", 0x4E00, 0x9FFF},
@@ -329,6 +329,7 @@ static const GeneratedNamesData GeneratedNamesDataTable[] = {
     {"CJK UNIFIED IDEOGRAPH-", 0x2B740, 0x2B81D},
     {"CJK UNIFIED IDEOGRAPH-", 0x2B820, 0x2CEA1},
     {"CJK UNIFIED IDEOGRAPH-", 0x2CEB0, 0x2EBE0},
+    {"CJK UNIFIED IDEOGRAPH-", 0x2EBF0, 0x2EE5D},
     {"CJK UNIFIED IDEOGRAPH-", 0x30000, 0x3134A},
     {"CJK UNIFIED IDEOGRAPH-", 0x31350, 0x323AF},
     {"TANGUT IDEOGRAPH-", 0x17000, 0x187F7},

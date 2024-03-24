@@ -12,34 +12,29 @@
 
 //  constexpr unsigned c_encoding() const noexcept;
 
-
 #include <chrono>
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
 
-template <typename WD>
-constexpr bool testConstexpr()
-{
-    WD wd{5};
-    return wd.c_encoding() == 5;
+using weekday = std::chrono::weekday;
+
+constexpr bool test() {
+  for (unsigned i = 0; i <= 10; ++i) {
+    weekday wd(i);
+    assert(wd.c_encoding() == (i == 7 ? 0 : i));
+  }
+
+  return true;
 }
 
-int main(int, char**)
-{
-    using weekday = std::chrono::weekday;
+int main(int, char**) {
+  ASSERT_NOEXCEPT(std::declval<weekday&>().c_encoding());
+  ASSERT_SAME_TYPE(unsigned, decltype(std::declval<weekday&>().c_encoding()));
 
-    ASSERT_NOEXCEPT(                    std::declval<weekday&>().c_encoding());
-    ASSERT_SAME_TYPE(unsigned, decltype(std::declval<weekday&>().c_encoding()));
-
-    static_assert(testConstexpr<weekday>(), "");
-
-    for (unsigned i = 0; i <= 10; ++i)
-    {
-        weekday wd(i);
-        assert(wd.c_encoding() == (i == 7 ? 0 : i));
-    }
+  test();
+  static_assert(test());
 
   return 0;
 }

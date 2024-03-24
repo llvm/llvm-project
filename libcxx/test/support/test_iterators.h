@@ -1430,11 +1430,11 @@ class iterator_wrapper {
   using iter_traits = std::iterator_traits<Iter>;
 
 public:
-  using iterator_cateory = typename iter_traits::iterator_category;
-  using value_type       = typename iter_traits::value_type;
-  using difference_type  = typename iter_traits::difference_type;
-  using pointer          = typename iter_traits::pointer;
-  using reference        = typename iter_traits::reference;
+  using iterator_category = typename iter_traits::iterator_category;
+  using value_type        = typename iter_traits::value_type;
+  using difference_type   = typename iter_traits::difference_type;
+  using pointer           = typename iter_traits::pointer;
+  using reference         = typename iter_traits::reference;
 
   constexpr iterator_wrapper() : iter_() {}
   constexpr explicit iterator_wrapper(Iter iter) : iter_(iter) {}
@@ -1506,7 +1506,7 @@ class throw_on_move_iterator : public iterator_wrapper<throw_on_move_iterator<It
 public:
   using difference_type   = typename base::difference_type;
   using value_type        = typename base::value_type;
-  using iterator_category = typename base::iterator_cateory;
+  using iterator_category = typename base::iterator_category;
 
   throw_on_move_iterator() = default;
   throw_on_move_iterator(Iter iter, int moves_until_throw)

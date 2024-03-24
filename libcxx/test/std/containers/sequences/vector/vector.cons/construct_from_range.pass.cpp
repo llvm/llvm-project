@@ -19,7 +19,7 @@
 
 constexpr bool test() {
   for_all_iterators_and_allocators<int>([]<class Iter, class Sent, class Alloc>() {
-    test_sequence_container<std::vector, int, Iter, Sent, Alloc>([](const auto& c) {
+    test_sequence_container<std::vector, int, Iter, Sent, Alloc>([]([[maybe_unused]] const auto& c) {
       LIBCPP_ASSERT(c.__invariants());
       LIBCPP_ASSERT(is_contiguous_container_asan_correct(c));
     });

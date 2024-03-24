@@ -1,4 +1,28 @@
-// RUN: mlir-opt -split-input-file -test-written-to %s 2>&1 | FileCheck %s
+// RUN: mlir-opt -split-input-file -test-written-to %s 2>&1 |\
+// RUN:          FileCheck %s --check-prefixes=CHECK,IP
+// RUN: mlir-opt -split-input-file -test-written-to='interprocedural=false' %s \
+// RUN:          2>&1 | FileCheck %s --check-prefixes=CHECK,LOCAL
+// RUN: mlir-opt -split-input-file \
+// RUN:          -test-written-to='assume-func-writes=true' %s 2>&1 |\
+// RUN:          FileCheck %s --check-prefixes=CHECK,IP_AW
+// RUN: mlir-opt -split-input-file \
+// RUN:       -test-written-to='interprocedural=false assume-func-writes=true' \
+// RUN:       %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LC_AW
+
+// Check prefixes are as follows:
+// 'check': common for all runs;
+// 'ip': interprocedural runs;
+// 'ip_aw': interpocedural runs assuming calls to external functions write to
+//          all arguments;
+// 'local': local (non-interprocedural) analysis not assuming calls writing;
+// 'lc_aw': local analysis assuming external calls writing to all arguments.
+
+// Note that despite the name of the test analysis being "written to", it is set
+// up in a peculiar way where passing a value through a block or region argument
+// (via visitCall/BranchOperand) is considered as "writing" that value to the
+// corresponding operand, which is itself a value and not necessarily "memory".
+// This is arguably okay for testing purposes, but may be surprising for readers
+// trying to interpret this test using their intuition.
 
 // CHECK-LABEL: test_tag: constant0
 // CHECK: result #0: [a]
@@ -105,7 +129,9 @@ func.func @test_switch(%flag: i32, %m0: memref<i32>) {
 // -----
 
 // CHECK-LABEL: test_tag: add
-// CHECK: result #0: [a]
+// IP:    result #0: [a]
+// LOCAL: result #0: [callarg0]
+// LC_AW: result #0: [func.call]
 func.func @test_caller(%m0: memref<f32>, %arg: f32) {
   %0 = arith.addf %arg, %arg {tag = "add"} : f32
   %1 = func.call @callee(%0) : (f32) -> f32
@@ -130,7 +156,9 @@ func.func private @callee(%0 : f32) -> f32 {
 }
 
 // CHECK-LABEL: test_tag: sub
-// CHECK: result #0: [a]
+// IP:    result #0: [a]
+// LOCAL: result #0: [callarg0]
+// LC_AW: result #0: [func.call]
 func.func @test_caller_below_callee(%m0: memref<f32>, %arg: f32) {
   %0 = arith.subf %arg, %arg {tag = "sub"} : f32
   %1 = func.call @callee(%0) : (f32) -> f32
@@ -155,7 +183,9 @@ func.func private @callee3(%0 : f32) -> f32 {
 }
 
 // CHECK-LABEL: test_tag: mul
-// CHECK: result #0: [a]
+// IP:    result #0: [a]
+// LOCAL: result #0: [callarg0]
+// LC_AW: result #0: [func.call]
 func.func @test_callchain(%m0: memref<f32>, %arg: f32) {
   %0 = arith.mulf %arg, %arg {tag = "mul"} : f32
   %1 = func.call @callee1(%0) : (f32) -> f32
@@ -239,19 +269,19 @@ func.func @test_for(%m0: memref<i32>) {
 // -----
 
 // CHECK-LABEL: test_tag: default_a
-// CHECK-LABEL: result #0: [a]
+// CHECK:       result #0: [a]
 // CHECK-LABEL: test_tag: default_b
-// CHECK-LABEL: result #0: [b]
+// CHECK:       result #0: [b]
 // CHECK-LABEL: test_tag: 1a
-// CHECK-LABEL: result #0: [a]
+// CHECK:       result #0: [a]
 // CHECK-LABEL: test_tag: 1b
-// CHECK-LABEL: result #0: [b]
+// CHECK:       result #0: [b]
 // CHECK-LABEL: test_tag: 2a
-// CHECK-LABEL: result #0: [a]
+// CHECK:       result #0: [a]
 // CHECK-LABEL: test_tag: 2b
-// CHECK-LABEL: result #0: [b]
+// CHECK:       result #0: [b]
 // CHECK-LABEL: test_tag: switch
-// CHECK-LABEL: operand #0: [brancharg0]
+// CHECK:       operand #0: [brancharg0]
 func.func @test_switch(%arg0 : index, %m0: memref<i32>) {
   %0, %1 = scf.index_switch %arg0 {tag="switch"} -> i32, i32
   case 1 {
@@ -276,6 +306,9 @@ func.func @test_switch(%arg0 : index, %m0: memref<i32>) {
 
 // -----
 
+// The point of this test is to ensure the analysis doesn't crash in presence of
+// external functions.
+
 // CHECK-LABEL: llvm.func @decl(i64)
 // CHECK-LABEL: llvm.func @func(%arg0: i64) {
 // CHECK-NEXT:  llvm.call @decl(%arg0) : (i64) -> ()
@@ -295,12 +328,39 @@ func.func private @callee(%arg0 : i32, %arg1 : i32) -> i32 {
 }
 
 // CHECK-LABEL: test_tag: a
-// CHECK-LABEL:  operand #0: [b]
-// CHECK-LABEL:  operand #1: []
-// CHECK-LABEL:  operand #2: [callarg2]
-// CHECK-LABEL:  result #0: [b]
+
+// IP:           operand #0: [b]
+// LOCAL:        operand #0: [callarg0]
+// LC_AW:        operand #0: [test.call_on_device]
+
+// IP:           operand #1: []
+// LOCAL:        operand #1: [callarg1]
+// LC_AW:        operand #1: [test.call_on_device]
+
+// IP:           operand #2: [callarg2]
+// LOCAL:        operand #2: [callarg2]
+// LC_AW:        operand #2: [test.call_on_device]
+
+// CHECK:        result #0: [b]
 func.func @test_call_on_device(%arg0: i32, %arg1: i32, %device: i32, %m0: memref<i32>) {
   %0 = test.call_on_device @callee(%arg0, %arg1), %device {tag = "a"} : (i32, i32, i32) -> (i32)
   memref.store %0, %m0[] {tag_name = "b"} : memref<i32>
+  return
+}
+
+// -----
+
+func.func private @external_callee(%arg0: i32) -> i32
+
+// CHECK-LABEL: test_tag: add_external
+// IP:    operand #0: [callarg0]
+// LOCAL: operand #0: [callarg0]
+// LC_AW: operand #0: [func.call]
+// IP_AW: operand #0: [func.call]
+
+func.func @test_external_callee(%arg0: i32, %m0: memref<i32>) {
+  %0 = arith.addi %arg0, %arg0 { tag = "add_external"}: i32
+  %1 = func.call @external_callee(%arg0) : (i32) -> i32
+  memref.store %1, %m0[] {tag_name = "a"} : memref<i32>
   return
 }

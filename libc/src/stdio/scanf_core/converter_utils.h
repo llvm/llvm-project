@@ -9,11 +9,9 @@
 #ifndef LLVM_LIBC_SRC_STDIO_SCANF_CORE_CONVERTER_UTILS_H
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_CONVERTER_UTILS_H
 
-#include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/str_to_float.h"
 #include "src/stdio/scanf_core/core_structs.h"
-#include "src/stdio/scanf_core/reader.h"
 
 #include <stddef.h>
 

@@ -47,7 +47,7 @@ define i16 @zext_lshr(i8 %x) {
 ; CHECK-LABEL: @zext_lshr(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[X:%.*]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = zext i8 [[TMP2]] to i16
+; CHECK-NEXT:    [[R:%.*]] = zext nneg i8 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %z = zext i8 %x to i16
@@ -60,7 +60,7 @@ define i16 @zext_ashr(i8 %x) {
 ; CHECK-LABEL: @zext_ashr(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = zext i8 [[TMP2]] to i16
+; CHECK-NEXT:    [[R:%.*]] = zext nneg i8 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %z = zext i8 %x to i16
@@ -125,7 +125,7 @@ define <2 x i16> @zext_lshr_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @zext_lshr_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 4, i8 2>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[TMP1]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = zext <2 x i8> [[TMP2]] to <2 x i16>
+; CHECK-NEXT:    [[R:%.*]] = zext nneg <2 x i8> [[TMP2]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %z = zext <2 x i8> %x to <2 x i16>
@@ -138,7 +138,7 @@ define <2 x i16> @zext_ashr_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @zext_ashr_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 2, i8 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[TMP1]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = zext <2 x i8> [[TMP2]] to <2 x i16>
+; CHECK-NEXT:    [[R:%.*]] = zext nneg <2 x i8> [[TMP2]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %z = zext <2 x i8> %x to <2 x i16>

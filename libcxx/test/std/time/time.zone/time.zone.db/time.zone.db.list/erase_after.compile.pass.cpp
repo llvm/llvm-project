@@ -22,7 +22,7 @@
 //   Preconditions: The iterator following p is dereferenceable.
 //
 // Since there is no Standard way to create a second entry it's not
-// possible to fullfill this precondition. This is tested in a libc++
+// possible to fulfill this precondition. This is tested in a libc++
 // specific test.
 
 #include <chrono>

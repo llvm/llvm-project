@@ -124,7 +124,7 @@ define i16 @sge_with_sext_to_zext_conversion(i8 %a)  {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[SEXT:%.*]] = zext i8 [[A]] to i16
+; CHECK-NEXT:    [[SEXT:%.*]] = zext nneg i8 [[A]] to i16
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add i16 [[SEXT]], 1
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add i16 [[SEXT]], -128
 ; CHECK-NEXT:    [[ADD_3:%.*]] = add i16 [[SEXT]], -127
@@ -219,7 +219,7 @@ define i16 @test_add_in_different_block(i1 %c, i8 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], 0
 ; CHECK-NEXT:    [[COND4:%.*]] = select i1 [[CMP]], i8 1, i8 0
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[COND4]] to i16
+; CHECK-NEXT:    [[CONV:%.*]] = zext nneg i8 [[COND4]] to i16
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[ADD:%.*]] = add i16 1, [[CONV]]
@@ -239,4 +239,33 @@ then:
 
 else:
   ret i16 0
+}
+
+define i1 @test_add_nuw_sub(i32 %a) {
+; CHECK-LABEL: @test_add_nuw_sub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A:%.*]], 10000
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[ADD]], -5000
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %add = add nuw i32 %a, 10000
+  %sub = add i32 %add, -5000
+  %cond = icmp ult i32 %sub, 5000
+  ret i1 %cond
+}
+
+define i1 @test_add_nsw_sub(i32 %a) {
+; CHECK-LABEL: @test_add_nsw_sub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A:%.*]], 10000
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[ADD]], -5000
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[SUB]], 5000
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+entry:
+  %add = add nsw i32 %a, 10000
+  %sub = add i32 %add, -5000
+  %cond = icmp ult i32 %sub, 5000
+  ret i1 %cond
 }

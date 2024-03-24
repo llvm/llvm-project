@@ -1,0 +1,372 @@
+--- !fat-mach-o
+FatHeader:
+  magic:           0xCAFEBABE
+  nfat_arch:       2
+FatArchs:
+  - cputype:         0x0000000C
+    cpusubtype:      0x00000009
+    offset:          0x0000000000004000
+    size:            16424
+    align:           14
+  - cputype:         0x0100000C
+    cpusubtype:      0x00000000
+    offset:          0x000000000000C000
+    size:            16464
+    align:           14
+Slices:
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACE
+      cputype:         0x0000000C
+      cpusubtype:      0x00000009
+      filetype:        0x00000006
+      ncmds:           13
+      sizeofcmds:      608
+      flags:           0x00100085
+    LoadCommands:
+      - cmd:             LC_SEGMENT
+        cmdsize:         124
+        segname:         __TEXT
+        vmaddr:          0
+        vmsize:          16384
+        fileoff:         0
+        filesize:        16384
+        maxprot:         5
+        initprot:        5
+        nsects:          1
+        flags:           0
+        Sections:
+          - sectname:        __text
+            segname:         __TEXT
+            addr:            0x0000000000004000
+            size:            0
+            offset:          0x00004000
+            align:           0
+            reloff:          0x00000000
+            nreloc:          0
+            flags:           0x80000400
+            reserved1:       0x00000000
+            reserved2:       0x00000000
+            reserved3:       0x00000000
+            content:         ''
+      - cmd:             LC_SEGMENT
+        cmdsize:         124
+        segname:         __DATA
+        vmaddr:          16384
+        vmsize:          16384
+        fileoff:         0
+        filesize:        0
+        maxprot:         3
+        initprot:        3
+        nsects:          1
+        flags:           0
+        Sections:
+          - sectname:        __common
+            segname:         __DATA
+            addr:            0x0000000000004000
+            size:            4
+            offset:          0x00000000
+            align:           2
+            reloff:          0x00000000
+            nreloc:          0
+            flags:           0x00000001
+            reserved1:       0x00000000
+            reserved2:       0x00000000
+            reserved3:       0x00000000
+      - cmd:             LC_SEGMENT
+        cmdsize:         56
+        segname:         __LINKEDIT
+        vmaddr:          32768
+        vmsize:          16384
+        fileoff:         16384
+        filesize:        40
+        maxprot:         1
+        initprot:        1
+        nsects:          0
+        flags:           0
+      - cmd:             LC_ID_DYLIB
+        cmdsize:         44
+        dylib:
+          name:            24
+          timestamp:       1
+          current_version: 0
+          compatibility_version: 0
+        Content:   '@rpath/libfoo.dylib'
+        ZeroPadBytes:    1
+      - cmd:             LC_DYLD_INFO_ONLY
+        cmdsize:         48
+        rebase_off:      0
+        rebase_size:     0
+        bind_off:        0
+        bind_size:       0
+        weak_bind_off:   0
+        weak_bind_size:  0
+        lazy_bind_off:   0
+        lazy_bind_size:  0
+        export_off:      16384
+        export_size:     16
+      - cmd:             LC_SYMTAB
+        cmdsize:         24
+        symoff:          16404
+        nsyms:           1
+        stroff:          16416
+        strsize:         8
+      - cmd:             LC_DYSYMTAB
+        cmdsize:         80
+        ilocalsym:       0
+        nlocalsym:       0
+        iextdefsym:      0
+        nextdefsym:      1
+        iundefsym:       1
+        nundefsym:       0
+        tocoff:          0
+        ntoc:            0
+        modtaboff:       0
+        nmodtab:         0
+        extrefsymoff:    0
+        nextrefsyms:     0
+        indirectsymoff:  0
+        nindirectsyms:   0
+        extreloff:       0
+        nextrel:         0
+        locreloff:       0
+        nlocrel:         0
+      - cmd:             LC_UUID
+        cmdsize:         24
+        uuid:            55BB3EB2-88FF-39A2-BAFB-C8695DC33D4B
+      - cmd:             LC_VERSION_MIN_IPHONEOS
+        cmdsize:         16
+        version:         680803
+        sdk:             917504
+      - cmd:             LC_SOURCE_VERSION
+        cmdsize:         16
+        version:         0
+      - cmd:             LC_ENCRYPTION_INFO
+        cmdsize:         20
+        cryptoff:        16384
+        cryptsize:       0
+        cryptid:         0
+      - cmd:             LC_FUNCTION_STARTS
+        cmdsize:         16
+        dataoff:         16400
+        datasize:        4
+      - cmd:             LC_DATA_IN_CODE
+        cmdsize:         16
+        dataoff:         16404
+        datasize:        0
+    LinkEditData:
+      ExportTrie:
+        TerminalSize:    0
+        NodeOffset:      0
+        Name:            ''
+        Flags:           0x0000000000000000
+        Address:         0x0000000000000000
+        Other:           0x0000000000000000
+        ImportName:      ''
+        Children:
+          - TerminalSize:    4
+            NodeOffset:      8
+            Name:            _foo
+            Flags:           0x0000000000000000
+            Address:         0x0000000000004000
+            Other:           0x0000000000000000
+            ImportName:      ''
+      NameList:
+        - n_strx:          2
+          n_type:          0x0F
+          n_sect:          2
+          n_desc:          0
+          n_value:         16384
+      StringTable:
+        - ' '
+        - _foo
+        - ''
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACF
+      cputype:         0x0100000C
+      cpusubtype:      0x00000000
+      filetype:        0x00000006
+      ncmds:           14
+      sizeofcmds:      760
+      flags:           0x00100085
+      reserved:        0x00000000
+    LoadCommands:
+      - cmd:             LC_SEGMENT_64
+        cmdsize:         152
+        segname:         __TEXT
+        vmaddr:          0
+        vmsize:          16384
+        fileoff:         0
+        filesize:        16384
+        maxprot:         5
+        initprot:        5
+        nsects:          1
+        flags:           0
+        Sections:
+          - sectname:        __text
+            segname:         __TEXT
+            addr:            0x0000000000004000
+            size:            0
+            offset:          0x00004000
+            align:           0
+            reloff:          0x00000000
+            nreloc:          0
+            flags:           0x80000400
+            reserved1:       0x00000000
+            reserved2:       0x00000000
+            reserved3:       0x00000000
+            content:         ''
+      - cmd:             LC_SEGMENT_64
+        cmdsize:         152
+        segname:         __DATA
+        vmaddr:          16384
+        vmsize:          16384
+        fileoff:         0
+        filesize:        0
+        maxprot:         3
+        initprot:        3
+        nsects:          1
+        flags:           0
+        Sections:
+          - sectname:        __common
+            segname:         __DATA
+            addr:            0x0000000000004000
+            size:            4
+            offset:          0x00000000
+            align:           2
+            reloff:          0x00000000
+            nreloc:          0
+            flags:           0x00000001
+            reserved1:       0x00000000
+            reserved2:       0x00000000
+            reserved3:       0x00000000
+      - cmd:             LC_SEGMENT_64
+        cmdsize:         72
+        segname:         __LINKEDIT
+        vmaddr:          32768
+        vmsize:          16384
+        fileoff:         16384
+        filesize:        80
+        maxprot:         1
+        initprot:        1
+        nsects:          0
+        flags:           0
+      - cmd:             LC_ID_DYLIB
+        cmdsize:         48
+        dylib:
+          name:            24
+          timestamp:       1
+          current_version: 0
+          compatibility_version: 0
+        Content:   '@rpath/libfoo.dylib'
+        ZeroPadBytes:    5
+      - cmd:             LC_DYLD_INFO_ONLY
+        cmdsize:         48
+        rebase_off:      0
+        rebase_size:     0
+        bind_off:        0
+        bind_size:       0
+        weak_bind_off:   0
+        weak_bind_size:  0
+        lazy_bind_off:   0
+        lazy_bind_size:  0
+        export_off:      16384
+        export_size:     16
+      - cmd:             LC_SYMTAB
+        cmdsize:         24
+        symoff:          16408
+        nsyms:           2
+        stroff:          16440
+        strsize:         24
+      - cmd:             LC_DYSYMTAB
+        cmdsize:         80
+        ilocalsym:       0
+        nlocalsym:       0
+        iextdefsym:      0
+        nextdefsym:      1
+        iundefsym:       1
+        nundefsym:       1
+        tocoff:          0
+        ntoc:            0
+        modtaboff:       0
+        nmodtab:         0
+        extrefsymoff:    0
+        nextrefsyms:     0
+        indirectsymoff:  0
+        nindirectsyms:   0
+        extreloff:       0
+        nextrel:         0
+        locreloff:       0
+        nlocrel:         0
+      - cmd:             LC_UUID
+        cmdsize:         24
+        uuid:            57F7A4EB-2EDE-3150-80B6-8D587A135790
+      - cmd:             LC_BUILD_VERSION
+        cmdsize:         32
+        platform:        2
+        minos:           917504
+        sdk:             917504
+        ntools:          1
+        Tools:
+          - tool:            3
+            version:         39322368
+      - cmd:             LC_SOURCE_VERSION
+        cmdsize:         16
+        version:         0
+      - cmd:             LC_ENCRYPTION_INFO_64
+        cmdsize:         24
+        cryptoff:        16384
+        cryptsize:       0
+        cryptid:         0
+        pad:             0
+      - cmd:             LC_LOAD_DYLIB
+        cmdsize:         56
+        dylib:
+          name:            24
+          timestamp:       2
+          current_version: 84017152
+          compatibility_version: 65536
+        Content:   '/usr/lib/libSystem.B.dylib'
+        ZeroPadBytes:    6
+      - cmd:             LC_FUNCTION_STARTS
+        cmdsize:         16
+        dataoff:         16400
+        datasize:        8
+      - cmd:             LC_DATA_IN_CODE
+        cmdsize:         16
+        dataoff:         16408
+        datasize:        0
+    LinkEditData:
+      ExportTrie:
+        TerminalSize:    0
+        NodeOffset:      0
+        Name:            ''
+        Flags:           0x0000000000000000
+        Address:         0x0000000000000000
+        Other:           0x0000000000000000
+        ImportName:      ''
+        Children:
+          - TerminalSize:    4
+            NodeOffset:      8
+            Name:            _foo
+            Flags:           0x0000000000000000
+            Address:         0x0000000000004000
+            Other:           0x0000000000000000
+            ImportName:      ''
+      NameList:
+        - n_strx:          2
+          n_type:          0x0F
+          n_sect:          2
+          n_desc:          0
+          n_value:         16384
+        - n_strx:          7
+          n_type:          0x01
+          n_sect:          0
+          n_desc:          256
+          n_value:         0
+      StringTable:
+        - ' '
+        - _foo
+        - dyld_stub_binder
+...

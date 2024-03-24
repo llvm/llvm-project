@@ -332,7 +332,12 @@ def TestCopyCount : Test_Attr<"TestCopyCount"> {
   let assemblyFormat = "`<` $copy_count `>`";
 }
 
-
-
+def TestConditionalAliasAttr : Test_Attr<"TestConditionalAlias"> {
+  let mnemonic = "conditional_alias";
+  let parameters = (ins "mlir::StringAttr":$value);
+  let assemblyFormat = [{
+    `<` custom<ConditionalAlias>($value) `>`
+  }];
+}
 
 #endif // TEST_ATTRDEFS

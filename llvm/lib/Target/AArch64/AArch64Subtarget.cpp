@@ -43,10 +43,10 @@ static cl::opt<bool>
 UseAddressTopByteIgnored("aarch64-use-tbi", cl::desc("Assume that top byte of "
                          "an address is ignored"), cl::init(false), cl::Hidden);
 
-static cl::opt<bool>
-    UseNonLazyBind("aarch64-enable-nonlazybind",
-                   cl::desc("Call nonlazybind functions via direct GOT load"),
-                   cl::init(false), cl::Hidden);
+static cl::opt<bool> MachOUseNonLazyBind(
+    "aarch64-macho-enable-nonlazybind",
+    cl::desc("Call nonlazybind functions via direct GOT load for Mach-O"),
+    cl::Hidden);
 
 static cl::opt<bool> UseAA("aarch64-use-aa", cl::init(true),
                            cl::desc("Enable the use of AA during codegen."));
@@ -77,6 +77,10 @@ static cl::opt<AArch64PAuth::AuthCheckMethod>
                                         "to authenticated LR during tail call"),
                                cl::values(AUTH_CHECK_METHOD_CL_VALUES_LR));
 
+static cl::opt<unsigned> AArch64MinimumJumpTableEntries(
+    "aarch64-min-jump-table-entries", cl::init(13), cl::Hidden,
+    cl::desc("Set minimum number of entries to use a jump table on AArch64"));
+
 unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
   if (OverrideVectorInsertExtractBaseCost.getNumOccurrences() > 0)
     return OverrideVectorInsertExtractBaseCost;
@@ -84,7 +88,8 @@ unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
 }
 
 AArch64Subtarget &AArch64Subtarget::initializeSubtargetDependencies(
-    StringRef FS, StringRef CPUString, StringRef TuneCPUString) {
+    StringRef FS, StringRef CPUString, StringRef TuneCPUString,
+    bool HasMinSize) {
   // Determine default and user-specified characteristics
 
   if (CPUString.empty())
@@ -94,12 +99,12 @@ AArch64Subtarget &AArch64Subtarget::initializeSubtargetDependencies(
     TuneCPUString = CPUString;
 
   ParseSubtargetFeatures(CPUString, TuneCPUString, FS);
-  initializeProperties();
+  initializeProperties(HasMinSize);
 
   return *this;
 }
 
-void AArch64Subtarget::initializeProperties() {
+void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   // Initialize CPU specific properties. We should add a tablegen feature for
   // this in the future so we can specify it together with the subtarget
   // features.
@@ -135,6 +140,7 @@ void AArch64Subtarget::initializeProperties() {
   case CortexA76:
   case CortexA77:
   case CortexA78:
+  case CortexA78AE:
   case CortexA78C:
   case CortexR82:
   case CortexX1:
@@ -144,6 +150,7 @@ void AArch64Subtarget::initializeProperties() {
     MaxBytesForLoopAlignment = 16;
     break;
   case CortexA510:
+  case CortexA520:
     PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
     PrefLoopAlignment = Align(16);
@@ -151,8 +158,10 @@ void AArch64Subtarget::initializeProperties() {
     break;
   case CortexA710:
   case CortexA715:
+  case CortexA720:
   case CortexX2:
   case CortexX3:
+  case CortexX4:
     PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
     PrefLoopAlignment = Align(32);
@@ -176,6 +185,7 @@ void AArch64Subtarget::initializeProperties() {
   case AppleA14:
   case AppleA15:
   case AppleA16:
+  case AppleA17:
     CacheLineSize = 64;
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
@@ -184,6 +194,7 @@ void AArch64Subtarget::initializeProperties() {
     case AppleA14:
     case AppleA15:
     case AppleA16:
+    case AppleA17:
       MaxInterleaveFactor = 4;
       break;
     default:
@@ -286,12 +297,16 @@ void AArch64Subtarget::initializeProperties() {
     break;
   case Ampere1:
   case Ampere1A:
+  case Ampere1B:
     CacheLineSize = 64;
     PrefFunctionAlignment = Align(64);
     PrefLoopAlignment = Align(64);
     MaxInterleaveFactor = 4;
     break;
   }
+
+  if (AArch64MinimumJumpTableEntries.getNumOccurrences() > 0 || !HasMinSize)
+    MinimumJumpTableEntries = AArch64MinimumJumpTableEntries;
 }
 
 AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
@@ -300,17 +315,17 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
                                    unsigned MinSVEVectorSizeInBitsOverride,
                                    unsigned MaxSVEVectorSizeInBitsOverride,
                                    bool StreamingSVEMode,
-                                   bool StreamingCompatibleSVEMode)
+                                   bool StreamingCompatibleSVEMode,
+                                   bool HasMinSize)
     : AArch64GenSubtargetInfo(TT, CPU, TuneCPU, FS),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
       ReserveXRegisterForRA(AArch64::GPR64commonRegClass.getNumRegs()),
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
-      IsLittle(LittleEndian),
-      StreamingSVEMode(StreamingSVEMode),
+      IsLittle(LittleEndian), StreamingSVEMode(StreamingSVEMode),
       StreamingCompatibleSVEMode(StreamingCompatibleSVEMode),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
-      InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU)),
+      InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),
       TLInfo(TM, *this) {
   if (AArch64::isX18ReservedByDefault(TT))
     ReserveXRegister.set(18);
@@ -383,10 +398,8 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
   if (GV->isTagged())
     return AArch64II::MO_GOT;
 
-  if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV)) {
+  if (!TM.shouldAssumeDSOLocal(GV)) {
     if (GV->hasDLLImportStorageClass()) {
-      if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy())
-        return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORTAUX;
       return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT;
     }
     if (getTargetTriple().isOSWindows())
@@ -421,16 +434,23 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
 
   // NonLazyBind goes via GOT unless we know it's available locally.
   auto *F = dyn_cast<Function>(GV);
-  if (UseNonLazyBind && F && F->hasFnAttribute(Attribute::NonLazyBind) &&
-      !TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
+  if ((!isTargetMachO() || MachOUseNonLazyBind) && F &&
+      F->hasFnAttribute(Attribute::NonLazyBind) && !TM.shouldAssumeDSOLocal(GV))
     return AArch64II::MO_GOT;
 
   if (getTargetTriple().isOSWindows()) {
-    if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy() &&
-        GV->hasDLLImportStorageClass()) {
-      // On Arm64EC, if we're calling a function directly, use MO_DLLIMPORT,
-      // not MO_DLLIMPORTAUX.
-      return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT;
+    if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy()) {
+      if (GV->hasDLLImportStorageClass()) {
+        // On Arm64EC, if we're calling a symbol from the import table
+        // directly, use MO_ARM64EC_CALLMANGLE.
+        return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT |
+               AArch64II::MO_ARM64EC_CALLMANGLE;
+      }
+      if (GV->hasExternalLinkage()) {
+        // If we're calling a symbol directly, use the mangled form in the
+        // call instruction.
+        return AArch64II::MO_ARM64EC_CALLMANGLE;
+      }
     }
 
     // Use ClassifyGlobalReference for setting MO_DLLIMPORT/MO_COFFSTUB.
@@ -491,13 +511,13 @@ bool AArch64Subtarget::isStreamingCompatible() const {
 }
 
 bool AArch64Subtarget::isNeonAvailable() const {
-  return hasNEON() && !isStreaming() && !isStreamingCompatible();
+  return hasNEON() &&
+         (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
 }
 
-bool AArch64Subtarget::isSVEAvailable() const{
-  // FIXME: Also return false if FEAT_FA64 is set, but we can't do this yet
-  // as we don't yet support the feature in LLVM.
-  return hasSVE() && !isStreaming() && !isStreamingCompatible();
+bool AArch64Subtarget::isSVEAvailable() const {
+  return hasSVE() &&
+         (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
 }
 
 // If return address signing is enabled, tail calls are emitted as follows:
@@ -521,4 +541,8 @@ AArch64Subtarget::getAuthenticatedLRCheckMethod() const {
   // At now, use None by default because checks may introduce an unexpected
   // performance regression or incompatibility with execute-only mappings.
   return AArch64PAuth::AuthCheckMethod::None;
+}
+
+bool AArch64Subtarget::enableMachinePipeliner() const {
+  return getSchedModel().hasInstrSchedModel();
 }

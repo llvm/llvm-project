@@ -327,14 +327,33 @@ public:
     VectorType resType = op.getResultVectorType();
 
     // Set up convenience transposition table.
-    SmallVector<int64_t> transp;
-    for (auto attr : op.getTransp())
-      transp.push_back(cast<IntegerAttr>(attr).getInt());
+    ArrayRef<int64_t> transp = op.getPermutation();
 
     if (isShuffleLike(vectorTransformOptions.vectorTransposeLowering) &&
         succeeded(isTranspose2DSlice(op)))
       return rewriter.notifyMatchFailure(
           op, "Options specifies lowering to shuffle");
+
+    // Replace:
+    //   vector.transpose %0, [1, 0] : vector<nx1x<eltty>> to
+    //                                 vector<1xnxelty>
+    // with:
+    //   vector.shape_cast %0 : vector<nx1x<eltty>> to vector<1xnxelty>
+    //
+    // Source with leading unit dim (inverse) is also replaced. Unit dim must
+    // be fixed. Non-unit can be scalable.
+    if (resType.getRank() == 2 &&
+        ((resType.getShape().front() == 1 &&
+          !resType.getScalableDims().front()) ||
+         (resType.getShape().back() == 1 &&
+          !resType.getScalableDims().back())) &&
+        transp == ArrayRef<int64_t>({1, 0})) {
+      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, resType, input);
+      return success();
+    }
+
+    if (inputType.isScalable())
+      return failure();
 
     // Handle a true 2-D matrix transpose differently when requested.
     if (vectorTransformOptions.vectorTransposeLowering ==
@@ -414,6 +433,10 @@ public:
     if (!isShuffleLike(vectorTransformOptions.vectorTransposeLowering))
       return rewriter.notifyMatchFailure(
           op, "not using vector shuffle based lowering");
+
+    if (op.getSourceVectorType().isScalable())
+      return rewriter.notifyMatchFailure(
+          op, "vector shuffle lowering not supported for scalable vectors");
 
     auto srcGtOneDims = isTranspose2DSlice(op);
     if (failed(srcGtOneDims))

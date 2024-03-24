@@ -25,6 +25,7 @@
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/GenericDomTreeConstruction.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
@@ -48,10 +49,9 @@ static constexpr bool ExpensiveChecksEnabled = false;
 #endif
 
 bool BasicBlockEdge::isSingleEdge() const {
-  const Instruction *TI = Start->getTerminator();
   unsigned NumEdgesToEnd = 0;
-  for (unsigned int i = 0, n = TI->getNumSuccessors(); i < n; ++i) {
-    if (TI->getSuccessor(i) == End)
+  for (const BasicBlock *Succ : successors(Start)) {
+    if (Succ == End)
       ++NumEdgesToEnd;
     if (NumEdgesToEnd >= 2)
       return false;

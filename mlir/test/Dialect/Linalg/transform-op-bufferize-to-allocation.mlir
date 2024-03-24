@@ -15,7 +15,7 @@
 //       CHECK:   linalg.fill ins(%[[c50]] : index) outs(%[[alloc]] : memref<?x?xindex>)
 //       CHECK:   %[[dim0:.*]] = tensor.dim %[[t]], %[[c0]]
 //       CHECK:   %[[subview:.*]] = memref.subview %[[alloc]][5, %[[l2]]] [%[[dim0]], 10] [1, 1]
-//       CHECK:   memref.tensor_store %[[t]], %[[subview]]
+//       CHECK:   bufferization.materialize_in_destination %[[t]] in writable %[[subview]]
 //       CHECK:   %[[r:.*]] = bufferization.to_tensor %[[alloc]] restrict writable : memref<?x?xindex>
 //       CHECK:   memref.dealloc %[[alloc]]
 //       CHECK:   return %[[r]]
@@ -36,13 +36,15 @@ module attributes {transform.with_named_sequence} {
 
     // Ensure that one linalg.fill was generated.
     %fill_op = transform.select "linalg.fill" in %new : (!transform.any_op) -> !transform.any_op
+    %p = transform.num_associations %fill_op : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
-    transform.test_print_number_of_associated_payload_ir_ops %fill_op : !transform.any_op
+    transform.debug.emit_param_as_remark %p : !transform.param<i64>
 
     // Ensure that one linalg.copy was generated.
-    %tensor_store = transform.select "memref.tensor_store" in %new : (!transform.any_op) -> !transform.any_op
+    %mat = transform.select "bufferization.materialize_in_destination" in %new : (!transform.any_op) -> !transform.any_op
+    %p2 = transform.num_associations %mat : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
-    transform.test_print_number_of_associated_payload_ir_ops %tensor_store : !transform.any_op
+    transform.debug.emit_param_as_remark %p2 : !transform.param<i64>
     transform.yield
   }
 }
@@ -50,7 +52,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // CHECK-LABEL: func @tensor_pad_constant_with_custom_copy(
-//   CHECK-NOT:   memref.tensor_store
+//   CHECK-NOT:   bufferization.materialize_in_destination
 //   CHECK-NOT:   memref.copy
 //       CHECK:   memref.alloca
 //       CHECK:   linalg.copy
@@ -73,18 +75,21 @@ module attributes {transform.with_named_sequence} {
 
     // Ensure that one linalg.fill was generated.
     %fill_op = transform.select "linalg.fill" in %new : (!transform.any_op) -> !transform.any_op
+    %p = transform.num_associations %fill_op : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
-    transform.test_print_number_of_associated_payload_ir_ops %fill_op : !transform.any_op
+    transform.debug.emit_param_as_remark %p : !transform.param<i64>
 
     // Ensure that one linalg.copy was generated.
     %linalg_copy = transform.select "linalg.copy" in %new : (!transform.any_op) -> !transform.any_op
+    %p2 = transform.num_associations %linalg_copy : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
-    transform.test_print_number_of_associated_payload_ir_ops %linalg_copy : !transform.any_op
+    transform.debug.emit_param_as_remark %p2 : !transform.param<i64>
 
     // Ensure that one memref.alloca was generated.
     %alloca = transform.select "memref.alloca" in %new : (!transform.any_op) -> !transform.any_op
+    %p3 = transform.num_associations %alloca : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
-    transform.test_print_number_of_associated_payload_ir_ops %alloca : !transform.any_op
+    transform.debug.emit_param_as_remark %p3 : !transform.param<i64>
 
     // Make sure that One-Shot Bufferize can bufferize the rest.
     %4 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
@@ -194,7 +199,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-LABEL: func @vector_mask(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>,
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}}) : memref<?xf32, 4>
-//       CHECK:   memref.tensor_store %[[t]], %[[alloc]]
+//       CHECK:   bufferization.materialize_in_destination %[[t]] in writable %[[alloc]]
 //       CHECK:   vector.mask %{{.*}} { vector.transfer_write %{{.*}}, %[[alloc]]
 //       CHECK:   %[[r:.*]] = bufferization.to_tensor %[[alloc]] restrict writable
 //       CHECK:   memref.dealloc %[[alloc]]
@@ -217,7 +222,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-LABEL: func @tensor_insert_destination(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x10xindex>
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}}) : memref<?x10xindex, 4>
-//       CHECK:   memref.tensor_store %[[t]], %[[alloc]]
+//       CHECK:   bufferization.materialize_in_destination %[[t]] in writable %[[alloc]]
 //       CHECK:   %[[t2:.*]] = bufferization.to_tensor %[[alloc]] restrict writable
 //       CHECK:   %[[inserted:.*]] = tensor.insert %{{.*}} into %[[t2]]
 //       CHECK:   memref.dealloc %[[alloc]]
@@ -240,7 +245,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-LABEL: func @scf_for_destination(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x10xindex>
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}}) : memref<?x10xindex, 4>
-//       CHECK:   memref.tensor_store %[[t]], %[[alloc]]
+//       CHECK:   bufferization.materialize_in_destination %[[t]] in writable %[[alloc]]
 //       CHECK:   %[[t2:.*]] = bufferization.to_tensor %[[alloc]] restrict writable
 //       CHECK:   %[[for:.*]] = scf.for {{.*}} iter_args(%{{.*}} = %[[t2]])
 //       CHECK:   memref.dealloc %[[alloc]]

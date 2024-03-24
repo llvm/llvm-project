@@ -7,10 +7,10 @@
   target triple = "x86_64-apple-macosx10.7.0"
   
   ; Function Attrs: nounwind readonly ssp uwtable
-  define i32 @foo(i32 %i, i32* nocapture %c) !dbg !4 {
+  define i32 @foo(i32 %i, ptr nocapture %c) !dbg !4 {
     call void @llvm.dbg.value(metadata i32 %i, metadata !9, metadata !DIExpression()), !dbg !14
-    %ab = load i32, i32* %c, align 1, !dbg !15
-    call void @llvm.dbg.value(metadata i32* %c, metadata !10, metadata !DIExpression()), !dbg !16
+    %ab = load i32, ptr %c, align 1, !dbg !15
+    call void @llvm.dbg.value(metadata ptr %c, metadata !10, metadata !DIExpression()), !dbg !16
     call void @llvm.dbg.value(metadata i32 %ab, metadata !12, metadata !DIExpression()), !dbg !15
     %cd = icmp eq i32 %i, 42, !dbg !17
     br i1 %cd, label %bb1, label %bb2, !dbg !17
@@ -28,7 +28,7 @@
   declare void @llvm.dbg.value(metadata, metadata, metadata)
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**)
+  declare void @llvm.stackprotector(ptr, ptr)
   
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3}

@@ -10,17 +10,14 @@
 #ifndef SUPPORT_TEST_MACROS_HPP
 #define SUPPORT_TEST_MACROS_HPP
 
-// Attempt to get STL specific macros like _LIBCPP_VERSION using the most
-// minimal header possible. If we're testing libc++, we should use `<__config>`.
-// If <__config> isn't available, fall back to <ciso646>.
 #ifdef __has_include
-# if __has_include("<__config>")
-#   include <__config>
-#   define TEST_IMP_INCLUDED_HEADER
-# endif
-#endif
-#ifndef TEST_IMP_INCLUDED_HEADER
-#include <ciso646>
+#  if __has_include("<version>")
+#    include <version>
+#  else
+#    include <ciso646>
+#  endif
+#else
+#  include <ciso646>
 #endif
 
 #define TEST_STRINGIZE_IMPL(...) #__VA_ARGS__
@@ -151,6 +148,18 @@
 # define TEST_IS_CONSTANT_EVALUATED false
 #endif
 
+#if TEST_STD_VER >= 23
+#  define TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED true
+#else
+#  define TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+
+#if TEST_STD_VER >= 20
+#  define TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED true
+#else
+#  define TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+
 #if TEST_STD_VER >= 14
 # define TEST_CONSTEXPR_CXX14 constexpr
 #else
@@ -213,8 +222,6 @@
 
 #if TEST_STD_VER > 17
 #define TEST_CONSTINIT constinit
-#elif defined(_LIBCPP_CONSTINIT)
-#define TEST_CONSTINIT _LIBCPP_CONSTINIT
 #else
 #define TEST_CONSTINIT
 #endif
@@ -276,27 +283,35 @@ struct is_same<T, T> { enum {value = 1}; };
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)
+// This function can be used to hide some objects from compiler optimizations.
+//
+// For example, this is useful to hide the result of a call to `new` and ensure
+// that the compiler doesn't elide the call to new/delete. Otherwise, elliding
+// calls to new/delete is allowed by the Standard and compilers actually do it
+// when optimizations are enabled.
 template <class Tp>
-inline
-void DoNotOptimize(Tp const& value) {
+inline Tp const& DoNotOptimize(Tp const& value) {
     asm volatile("" : : "r,m"(value) : "memory");
+    return value;
 }
 
 template <class Tp>
-inline void DoNotOptimize(Tp& value) {
+inline Tp& DoNotOptimize(Tp& value) {
 #if defined(__clang__)
   asm volatile("" : "+r,m"(value) : : "memory");
 #else
   asm volatile("" : "+m,r"(value) : : "memory");
 #endif
+  return value;
 }
 #else
 #include <intrin.h>
 template <class Tp>
-inline void DoNotOptimize(Tp const& value) {
+inline Tp const& DoNotOptimize(Tp const& value) {
   const volatile void* volatile unused = __builtin_addressof(value);
   static_cast<void>(unused);
   _ReadWriteBarrier();
+  return value;
 }
 #endif
 
@@ -390,10 +405,6 @@ inline void DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_FILESYSTEM
 #endif
 
-#if defined(_LIBCPP_HAS_NO_FGETPOS_FSETPOS)
-#  define TEST_HAS_NO_FGETPOS_FSETPOS
-#endif
-
 #if defined(_LIBCPP_HAS_NO_C8RTOMB_MBRTOC8)
 #  define TEST_HAS_NO_C8RTOMB_MBRTOC8
 #endif
@@ -440,6 +451,10 @@ inline void DoNotOptimize(Tp const& value) {
 #  define TEST_SHORT_WCHAR
 #endif
 
+#ifdef _LIBCPP_ABI_MICROSOFT
+#  define TEST_ABI_MICROSOFT
+#endif
+
 // This is a temporary workaround for user-defined `operator new` definitions
 // not being picked up on Apple platforms in some circumstances. This is under
 // investigation and should be short-lived.
@@ -447,6 +462,17 @@ inline void DoNotOptimize(Tp const& value) {
 #  define TEST_WORKAROUND_BUG_109234844_WEAK __attribute__((weak))
 #else
 #  define TEST_WORKAROUND_BUG_109234844_WEAK /* nothing */
+#endif
+
+#ifdef _AIX
+#  define TEST_IF_AIX(arg_true, arg_false) arg_true
+#else
+#  define TEST_IF_AIX(arg_true, arg_false) arg_false
+#endif
+
+// Clang-18 has support for deducing this, but it does not set the FTM.
+#ifdef _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#  define TEST_HAS_EXPLICIT_THIS_PARAMETER
 #endif
 
 #endif // SUPPORT_TEST_MACROS_HPP

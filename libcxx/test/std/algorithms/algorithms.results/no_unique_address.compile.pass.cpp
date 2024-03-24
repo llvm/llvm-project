@@ -53,6 +53,14 @@ static_assert(sizeof(std::ranges::in_out_out_result<Empty, Empty, char>) == 2);
 static_assert(sizeof(std::ranges::in_out_out_result<int, Empty, Empty2>) == sizeof(int));
 static_assert(sizeof(std::ranges::in_out_out_result<Empty, Empty, Empty>) == 3);
 
+#if TEST_STD_VER >= 23
+
+static_assert(sizeof(std::ranges::in_value_result<Empty, int>) == sizeof(int));
+static_assert(sizeof(std::ranges::in_value_result<int, Empty>) == sizeof(int));
+static_assert(sizeof(std::ranges::in_value_result<Empty, Empty2>) == sizeof(Empty2));
+
+#endif // TEST_STD_VER
+
 // In min_max_result both elements have the same type, so they can't have the same address.
 // So the only way to test that [[no_unique_address]] is used is to have it in another struct
 struct MinMaxNoUniqueAddress {

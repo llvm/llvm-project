@@ -19,7 +19,7 @@ bfloat16x4_t test_vcreate_bf16(uint64_t a) {
 
 // CHECK-LABEL: @test_vdup_n_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x bfloat> undef, bfloat [[V:%.*]], i32 0
+// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x bfloat> poison, bfloat [[V:%.*]], i32 0
 // CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x bfloat> [[VECINIT_I]], bfloat [[V]], i32 1
 // CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x bfloat> [[VECINIT1_I]], bfloat [[V]], i32 2
 // CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x bfloat> [[VECINIT2_I]], bfloat [[V]], i32 3
@@ -31,7 +31,7 @@ bfloat16x4_t test_vdup_n_bf16(bfloat16_t v) {
 
 // CHECK-LABEL: @test_vdupq_n_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x bfloat> undef, bfloat [[V:%.*]], i32 0
+// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x bfloat> poison, bfloat [[V:%.*]], i32 0
 // CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <8 x bfloat> [[VECINIT_I]], bfloat [[V]], i32 1
 // CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <8 x bfloat> [[VECINIT1_I]], bfloat [[V]], i32 2
 // CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <8 x bfloat> [[VECINIT2_I]], bfloat [[V]], i32 3

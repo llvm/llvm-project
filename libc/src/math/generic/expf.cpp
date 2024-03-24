@@ -37,7 +37,7 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
   // When |x| >= 89, |x| < 2^-25, or x is nan
   if (LIBC_UNLIKELY(x_abs >= 0x42b2'0000U || x_abs <= 0x3280'0000U)) {
     // |x| < 2^-25
-    if (xbits.get_unbiased_exponent() <= 101) {
+    if (xbits.get_biased_exponent() <= 101) {
       return 1.0f + x;
     }
 
@@ -50,24 +50,24 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
       if (xbits.is_nan())
         return x;
       if (fputil::fenv_is_round_up())
-        return static_cast<float>(FPBits(FPBits::MIN_SUBNORMAL));
+        return FPBits::min_subnormal().get_val();
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_UNDERFLOW);
       return 0.0f;
     }
     // x >= 89 or nan
-    if (!xbits.get_sign() && (xbits.uintval() >= 0x42b2'0000)) {
+    if (xbits.is_pos() && (xbits.uintval() >= 0x42b2'0000)) {
       // x is finite
       if (xbits.uintval() < 0x7f80'0000U) {
         int rounding = fputil::quick_get_round();
         if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
-          return static_cast<float>(FPBits(FPBits::MAX_NORMAL));
+          return FPBits::max_normal().get_val();
 
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_OVERFLOW);
       }
       // x is +inf or nan
-      return x + static_cast<float>(FPBits::inf());
+      return x + FPBits::inf().get_val();
     }
   }
   // For -104 < x < 89, to compute exp(x), we perform the following range

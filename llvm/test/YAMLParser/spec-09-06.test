@@ -1,3 +1,4 @@
-# RUN: yaml-bench -canonical %s
+# RUN: yaml-bench -canonical %s | FileCheck %s
+# CHECK: "here's to \"quotes\""
 
  'here''s to "quotes"'

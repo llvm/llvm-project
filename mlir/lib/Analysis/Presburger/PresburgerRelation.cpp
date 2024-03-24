@@ -8,14 +8,22 @@
 
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
+#include "mlir/Analysis/Presburger/MPInt.h"
 #include "mlir/Analysis/Presburger/PWMAFunction.h"
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <functional>
 #include <optional>
+#include <utility>
+#include <vector>
 
 using namespace mlir;
 using namespace presburger;
@@ -1031,6 +1039,12 @@ PresburgerRelation PresburgerRelation::simplify() const {
       result.unionInPlace(disjunct);
   }
   return result;
+}
+
+bool PresburgerRelation::isFullDim() const {
+  return llvm::any_of(getAllDisjuncts(), [&](IntegerRelation disjunct) {
+    return disjunct.isFullDim();
+  });
 }
 
 void PresburgerRelation::print(raw_ostream &os) const {

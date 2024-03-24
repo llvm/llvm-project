@@ -70,7 +70,7 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    lw a3, %lo(d)(s5)
 ; RV32I-NEXT:    lw a4, %lo(e)(s6)
 ; RV32I-NEXT:    li a5, 32
-; RV32I-NEXT:    call foo@plt
+; RV32I-NEXT:    call foo
 ; RV32I-NEXT:  .LBB0_5: # %if.end
 ; RV32I-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; RV32I-NEXT:    lw a0, %lo(k)(s2)
@@ -83,7 +83,7 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    lw a3, %lo(e)(s6)
 ; RV32I-NEXT:    lw a4, %lo(f)(s7)
 ; RV32I-NEXT:    li a5, 64
-; RV32I-NEXT:    call foo@plt
+; RV32I-NEXT:    call foo
 ; RV32I-NEXT:  .LBB0_7: # %if.end5
 ; RV32I-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; RV32I-NEXT:    lw a0, %lo(j)(s3)
@@ -96,7 +96,7 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    lw a3, %lo(f)(s7)
 ; RV32I-NEXT:    lw a4, %lo(g)(s8)
 ; RV32I-NEXT:    li a5, 32
-; RV32I-NEXT:    call foo@plt
+; RV32I-NEXT:    call foo
 ; RV32I-NEXT:  .LBB0_9: # %if.end9
 ; RV32I-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; RV32I-NEXT:    lw a0, %lo(i)(s4)
@@ -109,7 +109,7 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    lw a3, %lo(g)(s8)
 ; RV32I-NEXT:    lw a4, %lo(h)(s9)
 ; RV32I-NEXT:    li a5, 32
-; RV32I-NEXT:    call foo@plt
+; RV32I-NEXT:    call foo
 ; RV32I-NEXT:    j .LBB0_2
 ; RV32I-NEXT:  .LBB0_11: # %for.end
 ; RV32I-NEXT:    li a0, 1

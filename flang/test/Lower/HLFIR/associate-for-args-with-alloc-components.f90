@@ -25,7 +25,7 @@ subroutine test1(x)
   call callee1(x)
 end subroutine test1
 ! CHECK-LABEL:   func.func @_QPtest1(
-! CHECK:           %[[VAL_6:.*]]:3 = hlfir.associate %{{.*}}(%{{.*}}) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, !fir.ref<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1)
+! CHECK:           %[[VAL_6:.*]]:3 = hlfir.associate %{{.*}}(%{{.*}}) {adapt.valuebyref} : (!hlfir.expr<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, !fir.ref<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1)
 ! CHECK:           hlfir.end_associate %[[VAL_6]]#0, %[[VAL_6]]#2 : !fir.box<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1
 
 subroutine test2(x)
@@ -40,7 +40,7 @@ subroutine test2(x)
   call callee2((x))
 end subroutine test2
 ! CHECK-LABEL:   func.func @_QPtest2(
-! CHECK:           %[[VAL_9:.*]]:3 = hlfir.associate %{{.*}}(%{{.*}}) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, !fir.ref<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1)
+! CHECK:           %[[VAL_9:.*]]:3 = hlfir.associate %{{.*}}(%{{.*}}) {adapt.valuebyref} : (!hlfir.expr<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, !fir.ref<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1)
 ! CHECK:           hlfir.end_associate %[[VAL_9]]#0, %[[VAL_9]]#2 : !fir.box<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1
 
 subroutine test3(x)
@@ -56,7 +56,7 @@ subroutine test3(x)
 end subroutine test3
 ! CHECK-LABEL:   func.func @_QPtest3(
 ! CHECK:           %[[VAL_3:.*]]:3 = fir.if %{{.*}} -> (!fir.ref<!fir.array<10x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, !fir.box<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1) {
-! CHECK:             %[[VAL_8:.*]]:3 = hlfir.associate %{{.*}}(%{{.*}}) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, !fir.ref<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1)
+! CHECK:             %[[VAL_8:.*]]:3 = hlfir.associate %{{.*}}(%{{.*}}) {adapt.valuebyref} : (!hlfir.expr<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, !fir.ref<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1)
 ! CHECK:             %[[VAL_9:.*]] = fir.convert %[[VAL_8]]#1 : (!fir.ref<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>) -> !fir.ref<!fir.array<10x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>
 ! CHECK:             fir.result %[[VAL_9]], %[[VAL_8]]#0, %[[VAL_8]]#2 : !fir.ref<!fir.array<10x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, !fir.box<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1
 ! CHECK:           } else {

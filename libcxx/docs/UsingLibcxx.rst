@@ -50,7 +50,6 @@ when ``-fexperimental-library`` is passed:
 * ``std::stop_token``, ``std::stop_source`` and ``std::stop_callback``
 * ``std::jthread``
 * ``std::chrono::tzdb`` and related time zone functionality
-* ``std::ranges::join_view``
 
 .. warning::
   Experimental libraries are experimental.
@@ -147,70 +146,6 @@ IWYU, you should run the tool like so:
 If you would prefer to not use that flag, then you can replace ``/path/to/include-what-you-use/share/libcxx.imp``
 file with the libc++-provided ``libcxx.imp`` file.
 
-.. _termination-handler:
-
-Overriding the default termination handler
-==========================================
-
-When the library wants to terminate due to an unforeseen condition (such as a hardening assertion
-failure), the program is aborted through a special verbose termination function. The library provides
-a default function that prints an error message and calls ``std::abort()``. Note that this function is
-provided by the static or shared library, so it is only available when deploying to a platform where
-the compiled library is sufficiently recent. On older platforms, the program will terminate in an
-unspecified unsuccessful manner, but the quality of diagnostics won't be great.
-
-However, users can also override that mechanism at two different levels. First, the mechanism can be
-overridden at compile time by defining the ``_LIBCPP_VERBOSE_ABORT(format, args...)`` variadic macro.
-When that macro is defined, it will be called with a format string as the first argument, followed by
-a series of arguments to format using printf-style formatting. Compile-time customization may be
-useful to get precise control over code generation, however it is also inconvenient to use in
-some cases. Indeed, compile-time customization of the verbose termination function requires that all
-translation units be compiled with a consistent definition for ``_LIBCPP_VERBOSE_ABORT`` to avoid ODR
-violations, which can add complexity in the build system of users.
-
-Otherwise, if compile-time customization is not necessary, link-time customization of the handler is also
-possible, similarly to how replacing ``operator new`` works. This mechanism trades off fine-grained control
-over the call site where the termination is initiated in exchange for better ergonomics. Link-time
-customization is done by simply defining the following function in exactly one translation unit of your
-program:
-
-.. code-block:: cpp
-
-  void __libcpp_verbose_abort(char const* format, ...)
-
-This mechanism is similar to how one can replace the default definition of ``operator new``
-and ``operator delete``. For example:
-
-.. code-block:: cpp
-
-  // In HelloWorldHandler.cpp
-  #include <version> // must include any libc++ header before defining the function (C compatibility headers excluded)
-
-  void std::__libcpp_verbose_abort(char const* format, ...) {
-    std::va_list list;
-    va_start(list, format);
-    std::vfprintf(stderr, format, list);
-    va_end(list);
-
-    std::abort();
-  }
-
-  // In HelloWorld.cpp
-  #include <vector>
-
-  int main() {
-    std::vector<int> v;
-    int& x = v[0]; // Your termination function will be called here if hardening is enabled.
-  }
-
-Also note that the verbose termination function should never return. Since assertions in libc++
-catch undefined behavior, your code will proceed with undefined behavior if your function is called
-and does return.
-
-Furthermore, exceptions should not be thrown from the function. Indeed, many functions in the
-library are ``noexcept``, and any exception thrown from the termination function will result
-in ``std::terminate`` being called.
-
 Libc++ Configuration Macros
 ===========================
 
@@ -223,14 +158,8 @@ safety annotations.
   ``std::mutex`` and ``std::lock_guard``. By default, these annotations are
   disabled and must be manually enabled by the user.
 
-**_LIBCPP_ENABLE_HARDENED_MODE**:
-  This macro is used to enable the :ref:`hardened mode <using-hardening-modes>`.
-
-**_LIBCPP_ENABLE_SAFE_MODE**:
-  This macro is used to enable the :ref:`safe mode <using-hardening-modes>`.
-
-**_LIBCPP_ENABLE_DEBUG_MODE**:
-  This macro is used to enable the :ref:`debug mode <using-hardening-modes>`.
+**_LIBCPP_HARDENING_MODE**:
+  This macro is used to choose the :ref:`hardening mode <using-hardening-modes>`.
 
 **_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS**:
   This macro is used to disable all visibility annotations inside libc++.
@@ -282,6 +211,8 @@ C++17 Specific Configuration Macros
 **_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES**:
   This macro is used to re-enable all the features removed in C++17. The effect
   is equivalent to manually defining each macro listed below.
+  This macro is deprecated and will be removed in LLVM-19. Use the
+  individual macros listed below.
 
 **_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR**:
   This macro is used to re-enable `auto_ptr`.
@@ -303,20 +234,15 @@ C++17 Specific Configuration Macros
 
 C++20 Specific Configuration Macros
 -----------------------------------
+**_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE**
+  This macro is used to re-enable the function
+  ``std::shared_ptr<...>::unique()``.
+
 **_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES**:
   This macro is used to re-enable all the features removed in C++20. The effect
   is equivalent to manually defining each macro listed below.
-
-**_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS**:
-  This macro is used to re-enable redundant members of `allocator<T>`,
-  including `pointer`, `reference`, `rebind`, `address`, `max_size`,
-  `construct`, `destroy`, and the two-argument overload of `allocate`.
-
-**_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_VOID_SPECIALIZATION**:
-  This macro is used to re-enable the library-provided specializations of
-  `allocator<void>` and `allocator<const void>`.
-  Use it in conjunction with `_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS`
-  to ensure that removed members of `allocator<void>` can be accessed.
+  This macro is deprecated and will be removed in LLVM-19. Use the
+  individual macros listed below.
 
 **_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS**:
   This macro is used to re-enable the `argument_type`, `result_type`,
@@ -334,6 +260,19 @@ C++20 Specific Configuration Macros
   This macro is used to re-enable `is_literal_type`, `is_literal_type_v`,
   `result_of` and `result_of_t`.
 
+
+C++26 Specific Configuration Macros
+-----------------------------------
+
+**_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT**:
+  This macro is used to re-enable all named declarations in ``<codecvt>``.
+
+**_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE**
+  This macro is used to re-enable the function
+  ``std::basic_string<...>::reserve()``.
+
+**_LIBCPP_ENABLE_CXX26_REMOVED_ALLOCATOR_MEMBERS**:
+  This macro is used to re-enable redundant member of ``allocator<T>::is_always_equal``
 
 Libc++ Extensions
 =================

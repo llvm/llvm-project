@@ -26,7 +26,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -346,14 +346,8 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
 
   // Fix up kill flags.
 
-  LivePhysRegs LPR(*HRI);
+  LiveRegUnits LPR(*HRI);
   LPR.addLiveOuts(B);
-  auto IsLive = [&LPR, this](unsigned Reg) -> bool {
-    for (MCPhysReg S : HRI->subregs_inclusive(Reg))
-      if (LPR.contains(S))
-        return true;
-    return false;
-  };
   for (MachineInstr &I : llvm::reverse(B)) {
     if (I.isDebugInstr())
       continue;
@@ -365,7 +359,7 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
       if (!Op.isReg() || !Op.isUse())
         continue;
       assert(Op.getSubReg() == 0 && "Should have physical registers only");
-      bool Live = IsLive(Op.getReg());
+      bool Live = !LPR.available(Op.getReg());
       Op.setIsKill(!Live);
     }
     LPR.stepBackward(I);

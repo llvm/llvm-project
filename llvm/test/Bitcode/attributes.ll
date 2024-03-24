@@ -511,10 +511,29 @@ define void @f87() fn_ret_thunk_extern { ret void }
 ; CHECK: define void @f88() [[SKIPPROFILE:#[0-9]+]]
 define void @f88() skipprofile { ret void }
 
-define void @f89() optdebug
 ; CHECK: define void @f89() [[OPTDEBUG:#[0-9]+]]
-{
+define void @f89() optdebug {
         ret void;
+}
+
+; CHECK: define void @f90(ptr writable %p)
+define void @f90(ptr writable %p) {
+  ret void
+}
+
+; CHECK: define void @f91(ptr dead_on_unwind %p)
+define void @f91(ptr dead_on_unwind %p) {
+  ret void
+}
+
+; CHECK: define range(i32 -1, 42) i32 @range_attribute(<4 x i32> range(i32 -1, 42) %a)
+define range(i32 -1, 42) i32 @range_attribute(<4 x i32> range(i32 -1, 42) %a) {
+  ret i32 0
+}
+
+; CHECK: define void @wide_range_attribute(i128 range(i128 618970019642690137449562111, 618970019642690137449562114) %a)
+define void @wide_range_attribute(i128 range(i128 618970019642690137449562111, 618970019642690137449562114) %a) {
+  ret void
 }
 
 ; CHECK: attributes #0 = { noreturn }

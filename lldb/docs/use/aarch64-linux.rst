@@ -194,9 +194,48 @@ instrucion could interpret its contents as many kinds and sizes of data.
 So LLDB will default to showing  ``za`` as one large vector of individual bytes.
 You can override this with a format option (see the SVE example above).
 
-Expression evaluation
+Expression Evaluation
 .....................
 
 The mode (streaming or non-streaming), streaming vector length and ZA state will
 be restored after expression evaluation. On top of all the things saved for SVE
 in general.
+
+Scalable Matrix Extension (SME2)
+--------------------------------
+
+The Scalable Matrix Extension 2 is documented in the same architecture
+specification as SME, and covered by the same kernel documentation page as SME.
+
+SME2 adds 1 new register, ``zt0``. This register is a fixed size 512 bit
+register that is used by new instructions added in SME2. It is shown in LLDB in
+the existing SME register set.
+
+``zt0`` can be active or inactive, as ``za`` can. The same ``SVCR.ZA`` bit
+controls this. An inactive ``zt0`` is shown as 0s, like ``za`` is. Though in
+``zt0``'s case, LLDB does not need to fake the value. Ptrace already returns a
+block of 0s for an inactive ``zt0``.
+
+Like ``za``, writing to an inactive ``zt0`` will enable it and ``za``. This can
+be done from within LLDB. If the write is instead to ``za``, ``zt0`` becomes
+active but with a value of all 0s.
+
+Since ``svcr`` is read only, there is no way at this time to deactivate the
+registers from within LLDB (though of course a running process can still do
+this).
+
+To check whether ``zt0`` is active, refer to ``SVCR.ZA`` and not to the value of
+``zt0``.
+
+ZT0 Register Presentation
+.........................
+
+As for ``za``, the meaning of ``zt0`` depends on the instructions used with it,
+so LLDB does not attempt to guess this and defaults to showing it as a vector of
+bytes.
+
+Expression Evaluation
+.....................
+
+``zt0``'s value and whether it is active or not will be saved prior to
+expression evaluation and restored afterwards.

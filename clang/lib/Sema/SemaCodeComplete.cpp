@@ -764,6 +764,10 @@ getRequiredQualification(ASTContext &Context, const DeclContext *CurContext,
 // Filter out names reserved for the implementation if they come from a
 // system header.
 static bool shouldIgnoreDueToReservedName(const NamedDecl *ND, Sema &SemaRef) {
+  // Debuggers want access to all identifiers, including reserved ones.
+  if (SemaRef.getLangOpts().DebuggerSupport)
+    return false;
+
   ReservedIdentifierStatus Status = ND->isReserved(SemaRef.getLangOpts());
   // Ignore reserved names for compiler provided decls.
   if (isReservedInAllContexts(Status) && ND->getLocation().isInvalid())
@@ -1576,8 +1580,9 @@ bool ResultBuilder::IsClassOrStruct(const NamedDecl *ND) const {
 
   // For purposes of this check, interfaces match too.
   if (const auto *RD = dyn_cast<RecordDecl>(ND))
-    return RD->getTagKind() == TTK_Class || RD->getTagKind() == TTK_Struct ||
-           RD->getTagKind() == TTK_Interface;
+    return RD->getTagKind() == TagTypeKind::Class ||
+           RD->getTagKind() == TagTypeKind::Struct ||
+           RD->getTagKind() == TagTypeKind::Interface;
 
   return false;
 }
@@ -1589,7 +1594,7 @@ bool ResultBuilder::IsUnion(const NamedDecl *ND) const {
     ND = ClassTemplate->getTemplatedDecl();
 
   if (const auto *RD = dyn_cast<RecordDecl>(ND))
-    return RD->getTagKind() == TTK_Union;
+    return RD->getTagKind() == TagTypeKind::Union;
 
   return false;
 }
@@ -2018,15 +2023,15 @@ static const char *GetCompletionTypeString(QualType T, ASTContext &Context,
       if (TagDecl *Tag = TagT->getDecl())
         if (!Tag->hasNameForLinkage()) {
           switch (Tag->getTagKind()) {
-          case TTK_Struct:
+          case TagTypeKind::Struct:
             return "struct <anonymous>";
-          case TTK_Interface:
+          case TagTypeKind::Interface:
             return "__interface <anonymous>";
-          case TTK_Class:
+          case TagTypeKind::Class:
             return "class <anonymous>";
-          case TTK_Union:
+          case TagTypeKind::Union:
             return "union <anonymous>";
-          case TTK_Enum:
+          case TagTypeKind::Enum:
             return "enum <anonymous>";
           }
         }
@@ -4164,17 +4169,20 @@ CXCursorKind clang::getCursorKindForDecl(const Decl *D) {
   case Decl::Concept:
     return CXCursor_ConceptDecl;
 
+  case Decl::LinkageSpec:
+    return CXCursor_LinkageSpec;
+
   default:
     if (const auto *TD = dyn_cast<TagDecl>(D)) {
       switch (TD->getTagKind()) {
-      case TTK_Interface: // fall through
-      case TTK_Struct:
+      case TagTypeKind::Interface: // fall through
+      case TagTypeKind::Struct:
         return CXCursor_StructDecl;
-      case TTK_Class:
+      case TagTypeKind::Class:
         return CXCursor_ClassDecl;
-      case TTK_Union:
+      case TagTypeKind::Union:
         return CXCursor_UnionDecl;
-      case TTK_Enum:
+      case TagTypeKind::Enum:
         return CXCursor_EnumDecl;
       }
     }
@@ -6133,6 +6141,7 @@ ProduceSignatureHelp(Sema &SemaRef, MutableArrayRef<ResultCandidate> Candidates,
 // so that we can recover argument names from it.
 static FunctionProtoTypeLoc GetPrototypeLoc(Expr *Fn) {
   TypeLoc Target;
+
   if (const auto *T = Fn->getType().getTypePtr()->getAs<TypedefType>()) {
     Target = T->getDecl()->getTypeSourceInfo()->getTypeLoc();
 
@@ -6140,6 +6149,11 @@ static FunctionProtoTypeLoc GetPrototypeLoc(Expr *Fn) {
     const auto *D = DR->getDecl();
     if (const auto *const VD = dyn_cast<VarDecl>(D)) {
       Target = VD->getTypeSourceInfo()->getTypeLoc();
+    }
+  } else if (const auto *ME = dyn_cast<MemberExpr>(Fn)) {
+    const auto *MD = ME->getMemberDecl();
+    if (const auto *FD = dyn_cast<FieldDecl>(MD)) {
+      Target = FD->getTypeSourceInfo()->getTypeLoc();
     }
   }
 
@@ -9794,7 +9808,7 @@ void Sema::CodeCompleteObjCMethodDeclSelector(
   Results.ExitScope();
 
   if (!AtParameterName && !SelIdents.empty() &&
-      SelIdents.front()->getName().startswith("init")) {
+      SelIdents.front()->getName().starts_with("init")) {
     for (const auto &M : PP.macros()) {
       if (M.first->getName() != "NS_DESIGNATED_INITIALIZER")
         continue;
@@ -10106,9 +10120,9 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
     }
 
     const StringRef &Dirname = llvm::sys::path::filename(Dir);
-    const bool isQt = Dirname.startswith("Qt") || Dirname == "ActiveQt";
+    const bool isQt = Dirname.starts_with("Qt") || Dirname == "ActiveQt";
     const bool ExtensionlessHeaders =
-        IsSystem || isQt || Dir.endswith(".framework/Headers");
+        IsSystem || isQt || Dir.ends_with(".framework/Headers");
     std::error_code EC;
     unsigned Count = 0;
     for (auto It = FS.dir_begin(Dir, EC);

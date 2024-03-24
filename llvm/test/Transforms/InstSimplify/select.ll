@@ -174,6 +174,19 @@ define i32 @test4(i32 %X) {
   ret i32 %cond
 }
 
+define i32 @test4_disjoint(i32 %X) {
+; CHECK-LABEL: @test4_disjoint(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[X]], -2147483648
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[OR]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp slt i32 %X, 0
+  %or = or disjoint i32 %X, -2147483648
+  %cond = select i1 %cmp, i32 %X, i32 %or
+  ret i32 %cond
+}
+
 ; Same as above, but the compare isn't canonical
 define i32 @test4noncanon(i32 %X) {
 ; CHECK-LABEL: @test4noncanon(
@@ -192,6 +205,16 @@ define i32 @test5(i32 %X) {
 ;
   %cmp = icmp slt i32 %X, 0
   %or = or i32 %X, -2147483648
+  %cond = select i1 %cmp, i32 %or, i32 %X
+  ret i32 %cond
+}
+
+define i32 @test5_disjoint(i32 %X) {
+; CHECK-LABEL: @test5_disjoint(
+; CHECK-NEXT:    ret i32 [[X:%.*]]
+;
+  %cmp = icmp slt i32 %X, 0
+  %or = or disjoint i32 %X, -2147483648
   %cond = select i1 %cmp, i32 %or, i32 %X
   ret i32 %cond
 }
@@ -227,6 +250,16 @@ define i32 @test8(i32 %X) {
   ret i32 %cond
 }
 
+define i32 @test8_disjoint(i32 %X) {
+; CHECK-LABEL: @test8_disjoint(
+; CHECK-NEXT:    ret i32 [[X:%.*]]
+;
+  %cmp = icmp sgt i32 %X, -1
+  %or = or disjoint i32 %X, -2147483648
+  %cond = select i1 %cmp, i32 %X, i32 %or
+  ret i32 %cond
+}
+
 define i32 @test9(i32 %X) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], -2147483648
@@ -234,6 +267,19 @@ define i32 @test9(i32 %X) {
 ;
   %cmp = icmp sgt i32 %X, -1
   %or = or i32 %X, -2147483648
+  %cond = select i1 %cmp, i32 %or, i32 %X
+  ret i32 %cond
+}
+
+define i32 @test9_disjoint(i32 %X) {
+; CHECK-LABEL: @test9_disjoint(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[X]], -2147483648
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[OR]], i32 [[X]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp sgt i32 %X, -1
+  %or = or disjoint i32 %X, -2147483648
   %cond = select i1 %cmp, i32 %or, i32 %X
   ret i32 %cond
 }
@@ -925,12 +971,8 @@ define <2 x i32> @all_constant_true_undef_false_constexpr_vec() {
 
 define i1 @expand_binop_undef(i32 %x, i32 %y) {
 ; CHECK-LABEL: @expand_binop_undef(
-; CHECK-NEXT:    [[CMP9_NOT_1:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP15:%.*]] = icmp slt i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[SPEC_SELECT39:%.*]] = select i1 [[CMP9_NOT_1]], i1 undef, i1 [[CMP15]]
-; CHECK-NEXT:    [[SPEC_SELECT40:%.*]] = xor i1 [[CMP9_NOT_1]], true
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = and i1 [[SPEC_SELECT39]], [[SPEC_SELECT40]]
-; CHECK-NEXT:    ret i1 [[SPEC_SELECT]]
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP15]]
 ;
   %cmp9.not.1 = icmp eq i32 %x, %y
   %cmp15 = icmp slt i32 %x, %y
@@ -1383,6 +1425,21 @@ define i8 @replace_false_op_eq_shl_or(i8 %x) {
   ret i8 %sel
 }
 
+define i8 @replace_false_op_eq_shl_or_disjoint(i8 %x) {
+; CHECK-LABEL: @replace_false_op_eq_shl_or_disjoint(
+; CHECK-NEXT:    [[EQ0:%.*]] = icmp eq i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X]], 3
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[X]], [[SHL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[EQ0]], i8 -1, i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %eq0 = icmp eq i8 %x, -1
+  %shl = shl i8 %x, 3
+  %or = or disjoint i8 %x, %shl
+  %sel = select i1 %eq0, i8 -1, i8 %or
+  ret i8 %sel
+}
+
 ; negative test - wrong cmp predicate
 
 define i8 @replace_false_op_sgt_neg_and(i8 %x) {
@@ -1651,4 +1708,47 @@ define i8 @select_xor_cmp_unmatched_operands(i8 %0, i8 %1, i8 %c) {
   %4 = xor i8 %1, %c
   %5 = select i1 %3, i8 0, i8 %4
   ret i8 %5
+}
+
+define i8 @select_or_eq(i8 %x, i8 %y) {
+; CHECK-LABEL: @select_or_eq(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[OR]]
+;
+  %cmp = icmp eq i8 %x, %y
+  %or = or i8 %x, %y
+  %sel = select i1 %cmp, i8 %x, i8 %or
+  ret i8 %sel
+}
+
+define i8 @select_or_disjoint_eq(i8 %x, i8 %y) {
+; CHECK-LABEL: @select_or_disjoint_eq(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[X]], i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, %y
+  %or = or disjoint i8 %x, %y
+  %sel = select i1 %cmp, i8 %x, i8 %or
+  ret i8 %sel
+}
+
+define <4 x i32> @select_vector_cmp_with_bitcasts(<2 x i64> %x, <4 x i32> %y) {
+; CHECK-LABEL: @select_vector_cmp_with_bitcasts(
+; CHECK-NEXT:    [[X_BC:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[Y_BC:%.*]] = bitcast <4 x i32> [[Y:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i64> [[X]], [[Y_BC]]
+; CHECK-NEXT:    [[SUB_BC:%.*]] = bitcast <2 x i64> [[SUB]] to <4 x i32>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[Y]], [[X_BC]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[SUB_BC]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[SEL]]
+;
+  %x.bc = bitcast <2 x i64> %x to <4 x i32>
+  %y.bc = bitcast <4 x i32> %y to <2 x i64>
+  %sub = sub <2 x i64> %x, %y.bc
+  %sub.bc = bitcast <2 x i64> %sub to <4 x i32>
+  %cmp = icmp eq <4 x i32> %y, %x.bc
+  %sel = select <4 x i1> %cmp, <4 x i32> %sub.bc, <4 x i32> zeroinitializer
+  ret <4 x i32> %sel
 }

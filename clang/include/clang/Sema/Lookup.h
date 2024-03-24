@@ -754,7 +754,8 @@ public:
 
 private:
   void diagnoseAccess() {
-    if (isClassLookup() && getSema().getLangOpts().AccessControl)
+    if (!isAmbiguous() && isClassLookup() &&
+        getSema().getLangOpts().AccessControl)
       getSema().CheckLookupAccess(*this);
   }
 

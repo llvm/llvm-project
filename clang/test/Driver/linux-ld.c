@@ -61,15 +61,15 @@
 // CHECK-LD-RT: "--eh-frame-hdr"
 // CHECK-LD-RT: "-m" "elf_x86_64"
 // CHECK-LD-RT: "-dynamic-linker"
-// CHECK-LD-RT: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}clang_rt.crtbegin-x86_64.o"
+// CHECK-LD-RT: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-linux{{/|\\\\}}clang_rt.crtbegin.o"
 // CHECK-LD-RT: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0"
 // CHECK-LD-RT: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-LD-RT: "-L[[SYSROOT]]/lib"
 // CHECK-LD-RT: "-L[[SYSROOT]]/usr/lib"
-// CHECK-LD-RT: libclang_rt.builtins-x86_64.a"
+// CHECK-LD-RT: libclang_rt.builtins.a"
 // CHECK-LD-RT: "-lc"
-// CHECK-LD-RT: libclang_rt.builtins-x86_64.a"
-// CHECK-LD-RT: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}clang_rt.crtend-x86_64.o"
+// CHECK-LD-RT: libclang_rt.builtins.a"
+// CHECK-LD-RT: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-linux{{/|\\\\}}clang_rt.crtend.o"
 //
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=i686-unknown-linux \
@@ -84,15 +84,15 @@
 // CHECK-LD-RT-I686: "--eh-frame-hdr"
 // CHECK-LD-RT-I686: "-m" "elf_i386"
 // CHECK-LD-RT-I686: "-dynamic-linker"
-// CHECK-LD-RT-I686: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}clang_rt.crtbegin-i386.o"
+// CHECK-LD-RT-I686: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}i686-unknown-linux{{/|\\\\}}clang_rt.crtbegin.o"
 // CHECK-LD-RT-I686: "-L[[SYSROOT]]/usr/lib/gcc/i686-unknown-linux/10.2.0"
 // CHECK-LD-RT-I686: "-L[[SYSROOT]]/usr/lib/gcc/i686-unknown-linux/10.2.0/../../../../i686-unknown-linux/lib"
 // CHECK-LD-RT-I686: "-L[[SYSROOT]]/lib"
 // CHECK-LD-RT-I686: "-L[[SYSROOT]]/usr/lib"
-// CHECK-LD-RT-I686: libclang_rt.builtins-i386.a"
+// CHECK-LD-RT-I686: libclang_rt.builtins.a"
 // CHECK-LD-RT-I686: "-lc"
-// CHECK-LD-RT-I686: libclang_rt.builtins-i386.a"
-// CHECK-LD-RT-I686: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}clang_rt.crtend-i386.o"
+// CHECK-LD-RT-I686: libclang_rt.builtins.a"
+// CHECK-LD-RT-I686: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}i686-unknown-linux{{/|\\\\}}clang_rt.crtend.o"
 //
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm-linux-androideabi \
@@ -182,12 +182,8 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE %s
 // CHECK-CLANG-LD-STATIC-PIE: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-CLANG-LD-STATIC-PIE: "-static"
-// CHECK-CLANG-LD-STATIC-PIE: "-pie"
-// CHECK-CLANG-LD-STATIC-PIE: "--no-dynamic-linker"
-// CHECK-CLANG-LD-STATIC-PIE: "-z"
-// CHECK-CLANG-LD-STATIC-PIE: "text"
 // CHECK-CLANG-LD-STATIC-PIE: "-m" "elf_x86_64"
+// CHECK-CLANG-LD-STATIC-PIE-SAME: "-static" "-pie" "--no-dynamic-linker" "-z" "text"
 // CHECK-CLANG-LD-STATIC-PIE: "{{.*}}rcrt1.o"
 // CHECK-CLANG-LD-STATIC-PIE: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
 //
@@ -197,12 +193,8 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE-PIE %s
 // CHECK-CLANG-LD-STATIC-PIE-PIE: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-CLANG-LD-STATIC-PIE-PIE: "-static"
-// CHECK-CLANG-LD-STATIC-PIE-PIE: "-pie"
-// CHECK-CLANG-LD-STATIC-PIE-PIE: "--no-dynamic-linker"
-// CHECK-CLANG-LD-STATIC-PIE-PIE: "-z"
-// CHECK-CLANG-LD-STATIC-PIE-PIE: "text"
 // CHECK-CLANG-LD-STATIC-PIE-PIE: "-m" "elf_x86_64"
+// CHECK-CLANG-LD-STATIC-PIE-PIE-SAME: "-static" "-pie" "--no-dynamic-linker" "-z" "text"
 // CHECK-CLANG-LD-STATIC-PIE-PIE: "{{.*}}rcrt1.o"
 // CHECK-CLANG-LD-STATIC-PIE-PIE: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
 //
@@ -212,16 +204,12 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE-STATIC %s
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-CLANG-LD-STATIC-PIE-STATIC: "-static"
-// CHECK-CLANG-LD-STATIC-PIE-STATIC: "-pie"
-// CHECK-CLANG-LD-STATIC-PIE-STATIC: "--no-dynamic-linker"
-// CHECK-CLANG-LD-STATIC-PIE-STATIC: "-z"
-// CHECK-CLANG-LD-STATIC-PIE-STATIC: "text"
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "-m" "elf_x86_64"
+// CHECK-CLANG-LD-STATIC-PIE-STATIC-SAME: "-static" "-pie" "--no-dynamic-linker" "-z" "text"
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "{{.*}}rcrt1.o"
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
 //
-// RUN: not %clang -static-pie -nopie -### %s -no-pie 2>&1 \
+// RUN: not %clang -static-pie -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -550,6 +538,15 @@
 // Check multi arch support on Ubuntu 12.04 LTS.
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm-unknown-linux-gnueabihf -rtlib=platform --unwindlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/ubuntu_12.04_LTS_multiarch_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-12-04-ARM-HF %s
+//
+// Check that musleabihf is treated as a hardfloat config, with respect to
+// multiarch directories.
+//
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=arm-unknown-linux-musleabihf -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/ubuntu_12.04_LTS_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-12-04-ARM-HF %s
@@ -1350,7 +1347,24 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PTHREAD-LINK %s
 // CHECK-ANDROID-PTHREAD-LINK-NOT: argument unused during compilation: '-pthread'
-//
+
+/// Check -fandroid-pad-segment.
+// RUN: %clang -### %s --target=aarch64-linux-android -rtlib=platform --unwindlib=platform \
+// RUN:   --gcc-toolchain="" --sysroot=%S/Inputs/basic_android_tree/sysroot \
+// RUN:   -fandroid-pad-segment 2>&1 | FileCheck --check-prefix=CHECK-ANDROID-PAD-PHDR %s
+// CHECK-ANDROID-PAD-PHDR: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-ANDROID-PAD-PHDR: "[[SYSROOT]]/usr/lib/crtbegin_dynamic.o" "[[SYSROOT]]/usr/lib/crt_pad_segment.o"
+
+// RUN: %clang -### %s --target=aarch64-linux-android -rtlib=platform --unwindlib=platform \
+// RUN:   --gcc-toolchain="" --sysroot=%S/Inputs/basic_android_tree/sysroot \
+// RUN:   -fandroid-pad-segment -fno-android-pad-segment 2>&1 | FileCheck --check-prefix=CHECK-NO-ANDROID-PAD-PHDR %s
+// CHECK-NO-ANDROID-PAD-PHDR: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-NO-ANDROID-PAD-PHDR: "[[SYSROOT]]/usr/lib/crtbegin_dynamic.o"
+// CHECK-NO-ANDROID-PAD-PHDR-NOT: crt_pad_segment.o"
+
+// RUN: not %clang -### %s --target=aarch64-linux -fandroid-pad-segment 2>&1 | FileCheck --check-prefix=ERR-ANDROID-PAD-EHDR %s
+// ERR-ANDROID-PAD-EHDR: error: unsupported option '-fandroid-pad-segment' for target 'aarch64-linux'
+
 // Check linker invocation on a Debian LoongArch sysroot.
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=loongarch64-linux-gnu -rtlib=platform --unwindlib=platform \
@@ -1736,10 +1750,10 @@
 // RUN:     --target=armv7eb-pc-linux-musleabi -mhard-float \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMEBHF %s
 // RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=aarch64-pc-linux-musleabi \
+// RUN:     --target=aarch64-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-AARCH64 %s
 // RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=aarch64_be-pc-linux-musleabi \
+// RUN:     --target=aarch64_be-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-AARCH64_BE %s
 // CHECK-MUSL-X86:        "-dynamic-linker" "/lib/ld-musl-i386.so.1"
 // CHECK-MUSL-X86_64:     "-dynamic-linker" "/lib/ld-musl-x86_64.so.1"
@@ -1873,3 +1887,7 @@
 // CHECK-OE-AARCH64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0{{/|\\\\}}crtend.o"
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0/../../../lib64{{/|\\\\}}crtn.o"
+
+/// -nopie is OpenBSD-specific.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu %s -nopie 2>&1 | FileCheck %s --check-prefix=CHECK-NOPIE
+// CHECK-NOPIE: error: unsupported option '-nopie' for target 'x86_64-unknown-linux-gnu'

@@ -28,7 +28,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
-#include "llvm/TargetParser/Host.h"
 #include <iterator>
 #include <optional>
 #include <string>
@@ -83,7 +82,7 @@ std::string resolve(std::string Path) {
     log("Failed to resolve possible symlink {0}", Path);
     return Path;
   }
-  return std::string(Resolved.str());
+  return std::string(Resolved);
 }
 
 // Get a plausible full `clang` path.
@@ -115,7 +114,7 @@ std::string detectClangPath() {
   SmallString<128> ClangPath;
   ClangPath = llvm::sys::path::parent_path(ClangdExecutable);
   llvm::sys::path::append(ClangPath, "clang");
-  return std::string(ClangPath.str());
+  return std::string(ClangPath);
 }
 
 // On mac, /usr/bin/clang sets SDKROOT and then invokes the real clang.
@@ -187,12 +186,6 @@ static std::string resolveDriver(llvm::StringRef Driver, bool FollowSymlink,
 
 } // namespace
 
-CommandMangler::CommandMangler() {
-  Tokenizer = llvm::Triple(llvm::sys::getProcessTriple()).isOSWindows()
-                  ? llvm::cl::TokenizeWindowsCommandLine
-                  : llvm::cl::TokenizeGNUCommandLine;
-}
-
 CommandMangler CommandMangler::detect() {
   CommandMangler Result;
   Result.ClangPath = detectClangPath();
@@ -212,14 +205,6 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   // a Cmd missing the driver is probably rare enough in practice and erroneous.
   if (Cmd.empty())
     return;
-
-  // FS used for expanding response files.
-  // FIXME: ExpandResponseFiles appears not to provide the usual
-  // thread-safety guarantees, as the access to FS is not locked!
-  // For now, use the real FS, which is known to be threadsafe (if we don't
-  // use/change working directory, which ExpandResponseFiles doesn't).
-  auto FS = llvm::vfs::getRealFileSystem();
-  tooling::addExpandedResponseFiles(Cmd, Command.Directory, Tokenizer, *FS);
 
   auto &OptTable = clang::driver::getDriverOptTable();
   // OriginalArgs needs to outlive ArgList.
@@ -328,26 +313,29 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
 
   tooling::addTargetAndModeForProgramName(Cmd, Cmd.front());
 
-  // Check whether the flag exists, either as -flag or -flag=*
-  auto Has = [&](llvm::StringRef Flag) {
-    for (llvm::StringRef Arg : Cmd) {
-      if (Arg.consume_front(Flag) && (Arg.empty() || Arg[0] == '='))
-        return true;
-    }
-    return false;
+  // Check whether the flag exists in the command.
+  auto HasExact = [&](llvm::StringRef Flag) {
+    return llvm::any_of(Cmd, [&](llvm::StringRef Arg) { return Arg == Flag; });
+  };
+
+  // Check whether the flag appears in the command as a prefix.
+  auto HasPrefix = [&](llvm::StringRef Flag) {
+    return llvm::any_of(
+        Cmd, [&](llvm::StringRef Arg) { return Arg.starts_with(Flag); });
   };
 
   llvm::erase_if(Cmd, [](llvm::StringRef Elem) {
-    return Elem.startswith("--save-temps") || Elem.startswith("-save-temps");
+    return Elem.starts_with("--save-temps") || Elem.starts_with("-save-temps");
   });
 
   std::vector<std::string> ToAppend;
-  if (ResourceDir && !Has("-resource-dir"))
+  if (ResourceDir && !HasExact("-resource-dir") && !HasPrefix("-resource-dir="))
     ToAppend.push_back(("-resource-dir=" + *ResourceDir));
 
   // Don't set `-isysroot` if it is already set or if `--sysroot` is set.
   // `--sysroot` is a superset of the `-isysroot` argument.
-  if (Sysroot && !Has("-isysroot") && !Has("--sysroot")) {
+  if (Sysroot && !HasPrefix("-isysroot") && !HasExact("--sysroot") &&
+      !HasPrefix("--sysroot=")) {
     ToAppend.push_back("-isysroot");
     ToAppend.push_back(*Sysroot);
   }
@@ -358,7 +346,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   }
 
   if (!Cmd.empty()) {
-    bool FollowSymlink = !Has("-no-canonical-prefixes");
+    bool FollowSymlink = !HasExact("-no-canonical-prefixes");
     Cmd.front() =
         (FollowSymlink ? ResolvedDrivers : ResolvedDriversNoFollow)
             .get(Cmd.front(), [&, this] {
@@ -587,7 +575,7 @@ const ArgStripper::Rule *ArgStripper::matchingRule(llvm::StringRef Arg,
       continue; // not applicable to current driver mode
     if (BestRule && BestRule->Priority < R.Priority)
       continue; // lower-priority than best candidate.
-    if (!Arg.startswith(R.Text))
+    if (!Arg.starts_with(R.Text))
       continue; // current arg doesn't match the prefix string
     bool PrefixMatch = Arg.size() > R.Text.size();
     // Can rule apply as an exact/prefix match?

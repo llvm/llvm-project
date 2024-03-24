@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,NOLIT-SRCC,GFX908,GFX908_A %s
-; RUN: llc -march=amdgcn -mcpu=gfx908 -mattr=-mfma-inline-literal-bug -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,LIT-SRCC,GFX908,GFX908_A %s
-; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX90A,GFX908_A,GFX90A_40 %s
-; RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX940,GFX90A_40 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,NOLIT-SRCC,GFX908,GFX908_A %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -mattr=-mfma-inline-literal-bug -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,LIT-SRCC,GFX908,GFX908_A %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX90A,GFX908_A,GFX90A_40 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX940,GFX90A_40 %s
 
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32)
 declare <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float, float, <16 x float>, i32, i32, i32)
@@ -595,8 +595,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_mfma_f32_4x4x1f32_lit_splat:
-; GFX908:         v_mov_b32_e32 [[TMP:v[0-9]+]], 0x42f60000
-; GFX90A_40:      s_mov_b32 [[TMP:s[0-9]+]], 0x42f60000
+; GCN:            v_mov_b32_e32 [[TMP:v[0-9]+]], 0x42f60000
 ; GCN:            v_accvgpr_write_b32 [[TTMPA:a[0-9]+]], [[TMP]]
 ; GFX908:         v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
 ; GFX908:         v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
@@ -621,8 +620,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_mfma_f32_4x4x1f32_lit_splat_bad_code:
-; GFX908:   v_mov_b32_e32 [[TMP0:v[0-9]+]], 0x42f60000
-; GFX90A_40:s_mov_b32 [[TMP0:s[0-9]+]], 0x42f60000
+; GCN:      v_mov_b32_e32 [[TMP0:v[0-9]+]], 0x42f60000
 ; GCN:      v_accvgpr_write_b32 [[AGPR:a[0-9]+]], [[TMP0]]
 ; GFX90A_40-COUNT-3: v_accvgpr_mov_b32 a{{[0-9]+}}, [[AGPR]]
 ; GFX908-NEXT:   v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP0]]

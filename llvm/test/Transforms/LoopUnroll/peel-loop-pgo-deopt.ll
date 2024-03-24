@@ -21,7 +21,7 @@
 ; CHECK: br i1 %{{.*}}, label %[[NEXT2:.*]], label %for.cond.for.end_crit_edge, !prof !18
 ; CHECK: [[NEXT2]]:
 ; CHECK: br i1 %c, label %{{.*}}, label %side_exit.loopexit, !prof !15
-; CHECK: br i1 %{{.*}}, label %for.body, label %{{.*}}, !prof !19
+; CHECK: br i1 %{{.*}}, label %for.body, label %{{.*}}, !prof !18
 
 define i32 @basic(ptr %p, i32 %k, i1 %c) #0 !prof !15 {
 entry:
@@ -85,6 +85,5 @@ attributes #1 = { nounwind optsize }
 ; This is a weights of latch and its copies.
 ;CHECK: !16 = !{!"branch_weights", i32 3001, i32 1001}
 ;CHECK: !17 = !{!"branch_weights", i32 2000, i32 1001}
-;CHECK: !18 = !{!"branch_weights", i32 999, i32 1001}
-;CHECK: !19 = !{!"branch_weights", i32 1, i32 1001}
+;CHECK: !18 = !{!"branch_weights", i32 1001, i32 1001}
 

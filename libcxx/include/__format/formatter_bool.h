@@ -22,7 +22,7 @@
 #include <__utility/unreachable.h>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
-#  include <locale>
+#  include <__locale>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -62,7 +62,7 @@ public:
           static_cast<unsigned>(__value), __ctx, __parser_.__get_parsed_std_specifications(__ctx));
 
     default:
-      _LIBCPP_ASSERT_UNCATEGORIZED(false, "The parse function should have validated the type");
+      _LIBCPP_ASSERT_INTERNAL(false, "The parse function should have validated the type");
       __libcpp_unreachable();
     }
   }

@@ -10,6 +10,7 @@
 #define _LIBCPP___ALGORITHM_PSTL_MOVE_H
 
 #include <__algorithm/copy_n.h>
+#include <__algorithm/pstl_backend.h>
 #include <__algorithm/pstl_frontend_dispatch.h>
 #include <__algorithm/pstl_transform.h>
 #include <__config>
@@ -25,6 +26,9 @@
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
@@ -74,5 +78,7 @@ move(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __l
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_PSTL_MOVE_H

@@ -1,5 +1,5 @@
 ! Test lowering of derived type temporary creation and init
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 program derived_temp_init
   type t1

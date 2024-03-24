@@ -602,3 +602,23 @@ func.func @tensor.splat(%f: f32) -> tensor<10x2x4xf32> {
   %t = tensor.splat %f : tensor<10x2x4xf32>
   return %t : tensor<10x2x4xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @tensor.splat_dynamic(
+// CHECK-SAME:  %[[F:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:  %[[M:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:  %[[N:[a-zA-Z0-9_]+]]: index
+// CHECK-DAG:     %[[ALLOC:.*]] = memref.alloc(%[[M]], %[[N]]) {{.*}} : memref<?x3x?xf32>
+// CHECK:         %[[ALLOC_T:.*]] = bufferization.to_tensor %[[ALLOC]]
+// CHECK:         %[[MAPPED:.*]] = linalg.map outs(%[[ALLOC_T]] : tensor<?x3x?xf32>)
+// CHECK:         () {
+// CHECK:           linalg.yield %[[F]] : f32
+// CHECK:         }
+// CHECK:         return %[[MAPPED]] : tensor<?x3x?xf32>
+// CHECK:       }
+func.func @tensor.splat_dynamic(%f: f32, %m: index, %n: index) -> tensor<?x3x?xf32> {
+  %0 = tensor.splat %f[%m, %n] : tensor<?x3x?xf32>
+  return %0 : tensor<?x3x?xf32>
+}
+

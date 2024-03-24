@@ -53,7 +53,7 @@ static void ShapeAsFortran(llvm::raw_ostream &o,
 
 template <typename RESULT, typename VALUE>
 llvm::raw_ostream &ConstantBase<RESULT, VALUE>::AsFortran(
-    llvm::raw_ostream &o) const {
+    llvm::raw_ostream &o, const parser::CharBlock *derivedTypeRename) const {
   bool hasNonDefaultLowerBound{printLbounds && HasNonDefaultLowerBound()};
   if (Rank() > 1 || hasNonDefaultLowerBound) {
     o << "reshape(";
@@ -85,7 +85,8 @@ llvm::raw_ostream &ConstantBase<RESULT, VALUE>::AsFortran(
         o << ".false." << '_' << Result::kind;
       }
     } else {
-      StructureConstructor{result_.derivedTypeSpec(), value}.AsFortran(o);
+      StructureConstructor{result_.derivedTypeSpec(), value}.AsFortran(
+          o, derivedTypeRename);
     }
   }
   if (Rank() > 0) {
@@ -503,8 +504,9 @@ llvm::raw_ostream &ExpressionBase<RESULT>::AsFortran(
   return o;
 }
 
-llvm::raw_ostream &StructureConstructor::AsFortran(llvm::raw_ostream &o) const {
-  o << DerivedTypeSpecAsFortran(result_.derivedTypeSpec());
+llvm::raw_ostream &StructureConstructor::AsFortran(
+    llvm::raw_ostream &o, const parser::CharBlock *derivedTypeRename) const {
+  o << DerivedTypeSpecAsFortran(result_.derivedTypeSpec(), derivedTypeRename);
   if (values_.empty()) {
     o << '(';
   } else {
@@ -566,10 +568,11 @@ std::string SomeDerived::AsFortran() const {
   }
 }
 
-std::string DerivedTypeSpecAsFortran(const semantics::DerivedTypeSpec &spec) {
+std::string DerivedTypeSpecAsFortran(const semantics::DerivedTypeSpec &spec,
+    const parser::CharBlock *derivedTypeRename) {
   std::string buf;
   llvm::raw_string_ostream ss{buf};
-  ss << spec.name().ToString();
+  ss << (derivedTypeRename ? *derivedTypeRename : spec.name()).ToString();
   char ch{'('};
   for (const auto &[name, value] : spec.parameters()) {
     ss << ch << name.ToString() << '=';

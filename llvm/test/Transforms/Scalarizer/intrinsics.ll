@@ -217,7 +217,12 @@ define <2 x i32> @scalarize_fptoui_sat(<2 x float> %x) #0 {
 
 define <2 x i32> @scalarize_lrint(<2 x float> %x) #0 {
 ; CHECK-LABEL: @scalarize_lrint(
-; CHECK-NEXT:    [[RND:%.*]] = call <2 x i32> @llvm.lrint.v2i32.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x float> [[X:%.*]], i64 0
+; CHECK-NEXT:    [[RND_I0:%.*]] = call i32 @llvm.lrint.i32.f32(float [[X_I0]])
+; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <2 x float> [[X]], i64 1
+; CHECK-NEXT:    [[RND_I1:%.*]] = call i32 @llvm.lrint.i32.f32(float [[X_I1]])
+; CHECK-NEXT:    [[RND_UPTO0:%.*]] = insertelement <2 x i32> poison, i32 [[RND_I0]], i64 0
+; CHECK-NEXT:    [[RND:%.*]] = insertelement <2 x i32> [[RND_UPTO0]], i32 [[RND_I1]], i64 1
 ; CHECK-NEXT:    ret <2 x i32> [[RND]]
 ;
   %rnd = call <2 x i32> @llvm.lrint.v2i32.v2f32(<2 x float> %x)
@@ -226,7 +231,12 @@ define <2 x i32> @scalarize_lrint(<2 x float> %x) #0 {
 
 define <2 x i32> @scalarize_llrint(<2 x float> %x) #0 {
 ; CHECK-LABEL: @scalarize_llrint(
-; CHECK-NEXT:    [[RND:%.*]] = call <2 x i32> @llvm.llrint.v2i32.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x float> [[X:%.*]], i64 0
+; CHECK-NEXT:    [[RND_I0:%.*]] = call i32 @llvm.llrint.i32.f32(float [[X_I0]])
+; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <2 x float> [[X]], i64 1
+; CHECK-NEXT:    [[RND_I1:%.*]] = call i32 @llvm.llrint.i32.f32(float [[X_I1]])
+; CHECK-NEXT:    [[RND_UPTO0:%.*]] = insertelement <2 x i32> poison, i32 [[RND_I0]], i64 0
+; CHECK-NEXT:    [[RND:%.*]] = insertelement <2 x i32> [[RND_UPTO0]], i32 [[RND_I1]], i64 1
 ; CHECK-NEXT:    ret <2 x i32> [[RND]]
 ;
   %rnd = call <2 x i32> @llvm.llrint.v2i32.v2f32(<2 x float> %x)

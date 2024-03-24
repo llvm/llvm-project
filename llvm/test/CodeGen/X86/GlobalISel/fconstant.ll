@@ -8,7 +8,7 @@
 define void @test_float(ptr %a , float %b) {
 ; CHECK64_SMALL-LABEL: test_float:
 ; CHECK64_SMALL:       # %bb.0: # %entry
-; CHECK64_SMALL-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK64_SMALL-NEXT:    movss {{.*#+}} xmm1 = [5.5E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK64_SMALL-NEXT:    addss %xmm0, %xmm1
 ; CHECK64_SMALL-NEXT:    movd %xmm1, %eax
 ; CHECK64_SMALL-NEXT:    movl %eax, (%rdi)
@@ -26,7 +26,7 @@ define void @test_float(ptr %a , float %b) {
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK32-NEXT:    movss {{.*#+}} xmm0 = [5.5E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK32-NEXT:    movd %ecx, %xmm1
 ; CHECK32-NEXT:    addss %xmm0, %xmm1
 ; CHECK32-NEXT:    movd %xmm1, %ecx

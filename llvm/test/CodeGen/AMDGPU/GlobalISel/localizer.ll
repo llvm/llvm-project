@@ -31,9 +31,9 @@ define amdgpu_kernel void @localize_constants(i1 %cond) {
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x7b
-; GFX9-NEXT:    s_mov_b32 s0, 0
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s0, 0
 ; GFX9-NEXT:  .LBB0_2: ; %Flow
 ; GFX9-NEXT:    s_xor_b32 s0, s0, 1
 ; GFX9-NEXT:    s_and_b32 s0, s0, 1

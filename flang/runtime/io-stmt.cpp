@@ -39,9 +39,9 @@ bool IoStatementBase::Receive(char *, std::size_t, std::size_t) {
   return false;
 }
 
-std::optional<DataEdit> IoStatementBase::GetNextDataEdit(
+Fortran::common::optional<DataEdit> IoStatementBase::GetNextDataEdit(
     IoStatementState &, int) {
-  return std::nullopt;
+  return Fortran::common::nullopt;
 }
 
 ExternalFileUnit *IoStatementBase::GetExternalFileUnit() const {
@@ -119,9 +119,6 @@ template <Direction DIR> void InternalIoStatementState<DIR>::BackspaceRecord() {
 }
 
 template <Direction DIR> int InternalIoStatementState<DIR>::EndIoStatement() {
-  if constexpr (DIR == Direction::Output) {
-    unit_.EndIoStatement(); // fill
-  }
   auto result{IoStatementBase::EndIoStatement()};
   if (free_) {
     FreeMemory(this);
@@ -165,7 +162,8 @@ template <Direction DIR, typename CHAR>
 void InternalFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
   if (!this->completedOperation()) {
     if constexpr (DIR == Direction::Output) {
-      format_.Finish(*this); // ignore any remaining input positioning actions
+      format_.Finish(*this);
+      unit_.AdvanceRecord(*this);
     }
     IoStatementBase::CompleteOperation();
   }
@@ -189,6 +187,30 @@ InternalListIoStatementState<DIR>::InternalListIoStatementState(
     : InternalIoStatementState<DIR>{d, sourceFile, sourceLine},
       ioStatementState_{*this} {}
 
+template <Direction DIR>
+void InternalListIoStatementState<DIR>::CompleteOperation() {
+  if (!this->completedOperation()) {
+    if constexpr (DIR == Direction::Output) {
+      if (unit_.furthestPositionInRecord > 0) {
+        unit_.AdvanceRecord(*this);
+      }
+    }
+    IoStatementBase::CompleteOperation();
+  }
+}
+
+template <Direction DIR>
+int InternalListIoStatementState<DIR>::EndIoStatement() {
+  CompleteOperation();
+  if constexpr (DIR == Direction::Input) {
+    if (int status{ListDirectedStatementState<DIR>::EndIoStatement()};
+        status != IostatOk) {
+      return status;
+    }
+  }
+  return InternalIoStatementState<DIR>::EndIoStatement();
+}
+
 ExternalIoStatementBase::ExternalIoStatementBase(
     ExternalFileUnit &unit, const char *sourceFile, int sourceLine)
     : IoStatementBase{sourceFile, sourceLine}, unit_{unit} {}
@@ -205,7 +227,17 @@ ConnectionState &ExternalIoStatementBase::GetConnectionState() { return unit_; }
 int ExternalIoStatementBase::EndIoStatement() {
   CompleteOperation();
   auto result{IoStatementBase::EndIoStatement()};
+#if !defined(RT_USE_PSEUDO_FILE_UNIT)
   unit_.EndIoStatement(); // annihilates *this in unit_.u_
+#else
+  // Fetch the unit pointer before *this disappears.
+  ExternalFileUnit *unitPtr{&unit_};
+  // The pseudo file units are dynamically allocated
+  // and are not tracked in the unit map.
+  // They have to be destructed and deallocated here.
+  unitPtr->~ExternalFileUnit();
+  FreeMemory(unitPtr);
+#endif
   return result;
 }
 
@@ -248,8 +280,10 @@ void OpenStatementState::CompleteOperation() {
   }
   if (path_.get() || wasExtant_ ||
       (status_ && *status_ == OpenStatus::Scratch)) {
-    unit().OpenUnit(status_, action_, position_.value_or(Position::AsIs),
-        std::move(path_), pathLength_, convert_, *this);
+    if (unit().OpenUnit(status_, action_, position_.value_or(Position::AsIs),
+            std::move(path_), pathLength_, convert_, *this)) {
+      wasExtant_ = false; // existing unit was closed
+    }
   } else {
     unit().OpenAnonymousUnit(
         status_, action_, position_.value_or(Position::AsIs), convert_, *this);
@@ -442,7 +476,7 @@ int ExternalFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
   return ExternalIoStatementState<DIR>::EndIoStatement();
 }
 
-std::optional<DataEdit> IoStatementState::GetNextDataEdit(int n) {
+Fortran::common::optional<DataEdit> IoStatementState::GetNextDataEdit(int n) {
   return common::visit(
       [&](auto &x) { return x.get().GetNextDataEdit(*this, n); }, u_);
 }
@@ -517,13 +551,13 @@ ExternalFileUnit *IoStatementState::GetExternalFileUnit() const {
       [](auto &x) { return x.get().GetExternalFileUnit(); }, u_);
 }
 
-std::optional<char32_t> IoStatementState::GetCurrentChar(
+Fortran::common::optional<char32_t> IoStatementState::GetCurrentChar(
     std::size_t &byteCount) {
   const char *p{nullptr};
   std::size_t bytes{GetNextInputBytes(p)};
   if (bytes == 0) {
     byteCount = 0;
-    return std::nullopt;
+    return Fortran::common::nullopt;
   } else {
     const ConnectionState &connection{GetConnectionState()};
     if (connection.isUTF8) {
@@ -549,8 +583,8 @@ std::optional<char32_t> IoStatementState::GetCurrentChar(
   }
 }
 
-std::optional<char32_t> IoStatementState::NextInField(
-    std::optional<int> &remaining, const DataEdit &edit) {
+Fortran::common::optional<char32_t> IoStatementState::NextInField(
+    Fortran::common::optional<int> &remaining, const DataEdit &edit) {
   std::size_t byteCount{0};
   if (!remaining) { // Stream, list-directed, or NAMELIST
     if (auto next{GetCurrentChar(byteCount)}) {
@@ -566,15 +600,21 @@ std::optional<char32_t> IoStatementState::NextInField(
         case '"':
         case '*':
         case '\n': // for stream access
-          return std::nullopt;
+          return Fortran::common::nullopt;
+        case '&':
+        case '$':
+          if (edit.IsNamelist()) {
+            return Fortran::common::nullopt;
+          }
+          break;
         case ',':
           if (!(edit.modes.editingFlags & decimalComma)) {
-            return std::nullopt;
+            return Fortran::common::nullopt;
           }
           break;
         case ';':
           if (edit.modes.editingFlags & decimalComma) {
-            return std::nullopt;
+            return Fortran::common::nullopt;
           }
           break;
         default:
@@ -588,7 +628,7 @@ std::optional<char32_t> IoStatementState::NextInField(
   } else if (*remaining > 0) {
     if (auto next{GetCurrentChar(byteCount)}) {
       if (byteCount > static_cast<std::size_t>(*remaining)) {
-        return std::nullopt;
+        return Fortran::common::nullopt;
       }
       *remaining -= byteCount;
       HandleRelativePosition(byteCount);
@@ -597,10 +637,10 @@ std::optional<char32_t> IoStatementState::NextInField(
     }
     if (CheckForEndOfRecord(0)) { // do padding
       --*remaining;
-      return std::optional<char32_t>{' '};
+      return Fortran::common::optional<char32_t>{' '};
     }
   }
-  return std::nullopt;
+  return Fortran::common::nullopt;
 }
 
 bool IoStatementState::CheckForEndOfRecord(std::size_t afterReading) {
@@ -679,9 +719,6 @@ void FormattedIoStatementState<Direction::Input>::GotChar(int n) {
 
 bool ListDirectedStatementState<Direction::Output>::EmitLeadingSpaceOrAdvance(
     IoStatementState &io, std::size_t length, bool isCharacter) {
-  if (length == 0) {
-    return true;
-  }
   const ConnectionState &connection{io.GetConnectionState()};
   int space{connection.positionInRecord == 0 ||
       !(isCharacter && lastWasUndelimitedCharacter())};
@@ -695,7 +732,7 @@ bool ListDirectedStatementState<Direction::Output>::EmitLeadingSpaceOrAdvance(
   return true;
 }
 
-std::optional<DataEdit>
+Fortran::common::optional<DataEdit>
 ListDirectedStatementState<Direction::Output>::GetNextDataEdit(
     IoStatementState &io, int maxRepeat) {
   DataEdit edit;
@@ -705,7 +742,14 @@ ListDirectedStatementState<Direction::Output>::GetNextDataEdit(
   return edit;
 }
 
-std::optional<DataEdit>
+int ListDirectedStatementState<Direction::Input>::EndIoStatement() {
+  if (repeatPosition_) {
+    repeatPosition_->Cancel();
+  }
+  return IostatOk;
+}
+
+Fortran::common::optional<DataEdit>
 ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     IoStatementState &io, int maxRepeat) {
   // N.B. list-directed transfers cannot be nonadvancing (C1221)
@@ -761,7 +805,7 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
   }
   eatComma_ = true;
   if (!ch) {
-    return std::nullopt;
+    return Fortran::common::nullopt;
   }
   if (*ch == '/') {
     hitSlash_ = true;
@@ -814,6 +858,17 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     edit.descriptor = DataEdit::ListDirectedRealPart;
   }
   return edit;
+}
+
+template <Direction DIR>
+int ExternalListIoStatementState<DIR>::EndIoStatement() {
+  if constexpr (DIR == Direction::Input) {
+    if (auto status{ListDirectedStatementState<DIR>::EndIoStatement()};
+        status != IostatOk) {
+      return status;
+    }
+  }
+  return ExternalIoStatementState<DIR>::EndIoStatement();
 }
 
 template <Direction DIR>
@@ -906,6 +961,16 @@ template <Direction DIR>
 bool ChildUnformattedIoStatementState<DIR>::Receive(
     char *data, std::size_t bytes, std::size_t elementBytes) {
   return this->child().parent().Receive(data, bytes, elementBytes);
+}
+
+template <Direction DIR> int ChildListIoStatementState<DIR>::EndIoStatement() {
+  if constexpr (DIR == Direction::Input) {
+    if (int status{ListDirectedStatementState<DIR>::EndIoStatement()};
+        status != IostatOk) {
+      return status;
+    }
+  }
+  return ChildIoStatementState<DIR>::EndIoStatement();
 }
 
 template class InternalIoStatementState<Direction::Output>;
@@ -1217,6 +1282,7 @@ bool InquireUnitState::Inquire(
   case HashInquiryKeyword("SIZE"):
     result = -1;
     if (unit().IsConnected()) {
+      unit().FlushOutput(*this);
       if (auto size{unit().knownSize()}) {
         result = *size;
       }
@@ -1344,7 +1410,7 @@ bool InquireUnconnectedFileState::Inquire(
   case HashInquiryKeyword("SEQUENTIAL"):
   case HashInquiryKeyword("STREAM"):
   case HashInquiryKeyword("UNFORMATTED"):
-    str = "UNKNONN";
+    str = "UNKNOWN";
     break;
   case HashInquiryKeyword("READ"):
     str =

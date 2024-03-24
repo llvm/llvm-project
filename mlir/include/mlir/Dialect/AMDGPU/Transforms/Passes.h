@@ -20,7 +20,7 @@ namespace mlir {
 class ConversionTarget;
 namespace amdgpu {
 
-#define GEN_PASS_DECL_AMDGPUEMULATEATOMICSPASS
+#define GEN_PASS_DECL
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/AMDGPU/Transforms/Passes.h.inc"
 

@@ -15,7 +15,7 @@
 
 define i8 @positive_samevar(i8 %x, i8 %y) {
 ; CHECK-LABEL: @positive_samevar(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
@@ -62,7 +62,7 @@ define i8 @positive_biggershl(i8 %x) {
 
 define i8 @positive_samevar_shlnuw(i8 %x, i8 %y) {
 ; CHECK-LABEL: @positive_samevar_shlnuw(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
@@ -109,7 +109,7 @@ define i8 @positive_biggershl_shlnuw(i8 %x) {
 
 define i8 @positive_samevar_shlnsw(i8 %x, i8 %y) {
 ; CHECK-LABEL: @positive_samevar_shlnsw(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
@@ -141,8 +141,8 @@ define i8 @positive_biggerlshr_shlnsw(i8 %x) {
 
 define i8 @positive_biggershl_shlnsw(i8 %x) {
 ; CHECK-LABEL: @positive_biggershl_shlnsw(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -64
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], 64
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %t0 = lshr i8 %x, 3
@@ -156,7 +156,7 @@ define i8 @positive_biggershl_shlnsw(i8 %x) {
 
 define i8 @positive_samevar_shlnuwnsw(i8 %x, i8 %y) {
 ; CHECK-LABEL: @positive_samevar_shlnuwnsw(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
@@ -273,7 +273,7 @@ define i8 @positive_biggerlshr_shlnsw_lshrexact(i8 %x) {
 
 define i8 @positive_biggershl_shlnsw_lshrexact(i8 %x) {
 ; CHECK-LABEL: @positive_biggershl_shlnsw_lshrexact(
-; CHECK-NEXT:    [[RET:%.*]] = shl nsw i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[RET:%.*]] = shl nuw nsw i8 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %t0 = lshr exact i8 %x, 3
@@ -371,7 +371,7 @@ define i8 @positive_biggershl_shlnuwnsw_lshrexact(i8 %x) {
 
 define <2 x i8> @positive_samevar_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @positive_samevar_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i8> <i8 -1, i8 -1>, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw <2 x i8> <i8 -1, i8 -1>, [[Y:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;

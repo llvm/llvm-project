@@ -466,7 +466,7 @@ PPCFrameLowering::findScratchRegister(MachineBasicBlock *MBB,
       RS.enterBasicBlock(*MBB);
     } else {
       RS.enterBasicBlockEnd(*MBB);
-      RS.backward(std::prev(MBBI));
+      RS.backward(MBBI);
     }
   } else {
     // The scratch register will be used at the start of the block.
@@ -1191,12 +1191,6 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
       if ((Reg == PPC::X2 || Reg == PPC::R2) && MustSaveTOC)
         continue;
 
-      // For SVR4, don't emit a move for the CR spill slot if we haven't
-      // spilled CRs.
-      if (isSVR4ABI && (PPC::CR2 <= Reg && Reg <= PPC::CR4)
-          && !MustSaveCR)
-        continue;
-
       // For 64-bit SVR4 when we have spilled CRs, the spill location
       // is SP+8, not a frame-relative slot.
       if (isSVR4ABI && isPPC64 && (PPC::CR2 <= Reg && Reg <= PPC::CR4)) {
@@ -1441,8 +1435,11 @@ void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
       ProbeLoopBodyMBB->addSuccessor(ProbeLoopBodyMBB);
     }
     // Update liveins.
-    recomputeLiveIns(*ProbeLoopBodyMBB);
-    recomputeLiveIns(*ProbeExitMBB);
+    bool anyChange = false;
+    do {
+      anyChange = recomputeLiveIns(*ProbeExitMBB) ||
+                  recomputeLiveIns(*ProbeLoopBodyMBB);
+    } while (anyChange);
     return ProbeExitMBB;
   };
   // For case HasBP && MaxAlign > 1, we have to realign the SP by performing
@@ -1534,8 +1531,10 @@ void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
         buildDefCFAReg(*ExitMBB, ExitMBB->begin(), SPReg);
       }
       // Update liveins.
-      recomputeLiveIns(*LoopMBB);
-      recomputeLiveIns(*ExitMBB);
+      bool anyChange = false;
+      do {
+        anyChange = recomputeLiveIns(*ExitMBB) || recomputeLiveIns(*LoopMBB);
+      } while (anyChange);
     }
   }
   ++NumPrologProbed;
@@ -2334,24 +2333,16 @@ bool PPCFrameLowering::assignCalleeSavedSpillSlots(
     // In case of SPE we only have SuperRegs and CRs
     // in our CalleSaveInfo vector.
 
-    unsigned Idx = 0;
     for (auto &CalleeSaveReg : CSI) {
-      const MCPhysReg &Reg = CalleeSaveReg.getReg();
-      const MCPhysReg &Lower = RegInfo->getSubReg(Reg, 1);
-      const MCPhysReg &Higher = RegInfo->getSubReg(Reg, 2);
+      MCPhysReg Reg = CalleeSaveReg.getReg();
+      MCPhysReg Lower = RegInfo->getSubReg(Reg, 1);
+      MCPhysReg Higher = RegInfo->getSubReg(Reg, 2);
 
-      // Check only for SuperRegs.
-      if (Lower) {
-        if (MRI.isPhysRegModified(Higher)) {
-          Idx++;
-          continue;
-        } else {
+      if ( // Check only for SuperRegs.
+          Lower &&
           // Replace Reg if only lower-32 bits modified
-          CSI.erase(CSI.begin() + Idx);
-          CSI.insert(CSI.begin() + Idx, CalleeSavedInfo(Lower));
-        }
-      }
-      Idx++;
+          !MRI.isPhysRegModified(Higher))
+        CalleeSaveReg = CalleeSavedInfo(Lower);
     }
   }
 
@@ -2685,7 +2676,7 @@ bool PPCFrameLowering::restoreCalleeSavedRegisters(
         Restored.set(Dst);
 
       } else {
-       // Default behavior for non-CR saves.
+        // Default behavior for non-CR saves.
         const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
 
         // Functions without NoUnwind need to preserve the order of elements in

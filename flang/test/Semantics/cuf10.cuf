@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -fopenacc
 module m
   real, device :: a(4,8)
   real, managed, allocatable :: b(:,:)
@@ -9,9 +9,18 @@ module m
     real a(n,m), c(n,m)
     real, managed :: b(n,m)
   end
+  attributes(device) subroutine devsub(a,n)
+    integer, value :: n
+    real, device :: a(n)
+  end
   subroutine test
+    real c(4)
     allocate(b(4,8))
     !ERROR: dummy argument 'm=' has ATTRIBUTES(DEVICE) but its associated actual argument has no CUDA data attribute
     call kernel<<<1,32>>>(a,b,b,4,8)
+    !$acc parallel loop copy(c)
+    do j = 1, 1
+      call devsub(c,4) ! not checked in OpenACC construct
+    end do
   end
 end

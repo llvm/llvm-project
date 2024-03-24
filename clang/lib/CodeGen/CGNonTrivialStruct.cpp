@@ -313,7 +313,7 @@ static const CGFunctionInfo &getFunctionInfo(CodeGenModule &CGM,
   for (unsigned I = 0; I < N; ++I)
     Params.push_back(ImplicitParamDecl::Create(
         Ctx, nullptr, SourceLocation(), &Ctx.Idents.get(ValNameStr[I]), ParamTy,
-        ImplicitParamDecl::Other));
+        ImplicitParamKind::Other));
 
   llvm::append_range(Args, Params);
 

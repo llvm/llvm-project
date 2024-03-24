@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
-#define LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
+#ifndef LLVM_LIBC_TEST_UNITTEST_LIBCTEST_H
+#define LLVM_LIBC_TEST_UNITTEST_LIBCTEST_H
 
 // This is defined as a simple macro in test.h so that it exists for platforms
 // that don't use our test infrastructure. It's defined as a proper function
@@ -125,8 +125,11 @@ protected:
   // is the result of the |Cond| operation on |LHS| and |RHS|. Though not bad,
   // |Cond| on mismatched |LHS| and |RHS| types can potentially succeed because
   // of type promotion.
-  template <typename ValType,
-            cpp::enable_if_t<cpp::is_integral_v<ValType>, int> = 0>
+  template <
+      typename ValType,
+      cpp::enable_if_t<cpp::is_integral_v<ValType> || is_big_int_v<ValType> ||
+                           cpp::is_fixed_point_v<ValType>,
+                       int> = 0>
   bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
             const char *RHSStr, internal::Location Loc) {
     return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
@@ -444,6 +447,16 @@ CString libc_make_test_file_path_func(const char *file_name);
 #define ASSERT_STRNE(LHS, RHS) LIBC_TEST_STR_(testStrNe, LHS, RHS, return)
 
 ////////////////////////////////////////////////////////////////////////////////
+// Errno checks.
+
+#define ASSERT_ERRNO_EQ(VAL)                                                   \
+  ASSERT_EQ(VAL, static_cast<int>(LIBC_NAMESPACE::libc_errno))
+#define ASSERT_ERRNO_SUCCESS()                                                 \
+  ASSERT_EQ(0, static_cast<int>(LIBC_NAMESPACE::libc_errno))
+#define ASSERT_ERRNO_FAILURE()                                                 \
+  ASSERT_NE(0, static_cast<int>(LIBC_NAMESPACE::libc_errno))
+
+////////////////////////////////////////////////////////////////////////////////
 // Subprocess checks.
 
 #ifdef ENABLE_SUBPROCESS_TESTS
@@ -481,4 +494,4 @@ CString libc_make_test_file_path_func(const char *file_name);
 
 #define WITH_SIGNAL(X) X
 
-#endif // LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
+#endif // LLVM_LIBC_TEST_UNITTEST_LIBCTEST_H

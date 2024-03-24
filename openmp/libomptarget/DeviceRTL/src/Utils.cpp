@@ -19,56 +19,19 @@
 
 using namespace ompx;
 
-extern "C" [[gnu::weak]] int IsSPMDMode;
-
 namespace impl {
 
 bool isSharedMemPtr(const void *Ptr) { return false; }
-void Unpack(uint64_t Val, uint32_t *LowBits, uint32_t *HighBits);
-uint64_t Pack(uint32_t LowBits, uint32_t HighBits);
-
-/// AMDGCN Implementation
-///
-///{
-#pragma omp begin declare variant match(device = {arch(amdgcn)})
 
 void Unpack(uint64_t Val, uint32_t *LowBits, uint32_t *HighBits) {
   static_assert(sizeof(unsigned long) == 8, "");
-  *LowBits = (uint32_t)(Val & 0x00000000FFFFFFFFUL);
-  *HighBits = (uint32_t)((Val & 0xFFFFFFFF00000000UL) >> 32);
+  *LowBits = static_cast<uint32_t>(Val & 0x00000000FFFFFFFFUL);
+  *HighBits = static_cast<uint32_t>((Val & 0xFFFFFFFF00000000UL) >> 32);
 }
 
 uint64_t Pack(uint32_t LowBits, uint32_t HighBits) {
   return (((uint64_t)HighBits) << 32) | (uint64_t)LowBits;
 }
-
-#pragma omp end declare variant
-///}
-
-/// NVPTX Implementation
-///
-///{
-#pragma omp begin declare variant match(                                       \
-        device = {arch(nvptx, nvptx64)},                                       \
-            implementation = {extension(match_any)})
-
-void Unpack(uint64_t Val, uint32_t *LowBits, uint32_t *HighBits) {
-  uint32_t LowBitsLocal, HighBitsLocal;
-  asm("mov.b64 {%0,%1}, %2;"
-      : "=r"(LowBitsLocal), "=r"(HighBitsLocal)
-      : "l"(Val));
-  *LowBits = LowBitsLocal;
-  *HighBits = HighBitsLocal;
-}
-
-uint64_t Pack(uint32_t LowBits, uint32_t HighBits) {
-  uint64_t Val;
-  asm("mov.b64 %0, {%1,%2};" : "=l"(Val) : "r"(LowBits), "r"(HighBits));
-  return Val;
-}
-
-#pragma omp end declare variant
-///}
 
 int32_t shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane);
 int32_t shuffleDown(uint64_t Mask, int32_t Var, uint32_t LaneDelta,

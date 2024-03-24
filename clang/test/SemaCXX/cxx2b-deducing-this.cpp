@@ -16,6 +16,10 @@ struct S {
     static void f(this auto); // expected-error{{an explicit object parameter cannot appear in a static function}}
     virtual void f(this S); // expected-error{{an explicit object parameter cannot appear in a virtual function}}
 
+    // new and delete are implicitly static
+    void *operator new(this unsigned long); // expected-error{{an explicit object parameter cannot appear in a static function}}
+    void operator delete(this void*); // expected-error{{an explicit object parameter cannot appear in a static function}}
+    
     void g(this auto) const; // expected-error{{explicit object member function cannot have 'const' qualifier}}
     void h(this auto) &; // expected-error{{explicit object member function cannot have '&' qualifier}}
     void i(this auto) &&; // expected-error{{explicit object member function cannot have '&&' qualifier}}
@@ -584,4 +588,65 @@ struct Thing {
 class Server : public Thing {
     S name_;
 };
+}
+
+namespace GH69233 {
+struct Base {};
+struct S : Base {
+    int j;
+    S& operator=(this Base& self, const S&) = default;
+    // expected-warning@-1 {{explicitly defaulted copy assignment operator is implicitly deleted}}
+    // expected-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit copy assignment operator}}
+    // expected-note@-3 {{explicitly defaulted function was implicitly deleted here}}
+};
+
+struct S2 {
+    S2& operator=(this int&& self, const S2&);
+    S2& operator=(this int&& self, S2&&);
+    operator int();
+};
+
+S2& S2::operator=(this int&& self, const S2&) = default;
+// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted copy assignment operator should match the type of the class 'S2'}}
+
+S2& S2::operator=(this int&& self, S2&&) = default;
+// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted move assignment operator should match the type of the class 'S2'}}
+
+struct Move {
+    Move& operator=(this int&, Move&&) = default;
+    // expected-warning@-1 {{explicitly defaulted move assignment operator is implicitly deleted}}
+    // expected-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit move assignment operator}}
+    // expected-note@-3 {{copy assignment operator is implicitly deleted because 'Move' has a user-declared move assignment operator}}
+};
+
+void test() {
+    S s;
+    s = s; // expected-error {{object of type 'S' cannot be assigned because its copy assignment operator is implicitly deleted}}
+    S2 s2;
+    s2 = s2;
+
+    Move m;
+    m = Move{}; // expected-error {{object of type 'Move' cannot be assigned because its copy assignment operator is implicitly deleted}}
+}
+
+}
+
+
+namespace GH75732 {
+auto serialize(auto&& archive, auto&& c){ }
+struct D {
+    auto serialize(this auto&& self, auto&& archive) {
+        serialize(archive, self); // expected-error {{call to explicit member function without an object argument}}
+    }
+};
+}
+
+namespace GH80971 {
+struct S {
+  auto f(this auto self...) {  }
+};
+
+int bug() {
+  S{}.f(0);
+}
 }

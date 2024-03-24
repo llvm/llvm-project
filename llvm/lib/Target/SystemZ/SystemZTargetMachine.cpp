@@ -11,6 +11,7 @@
 #include "SystemZ.h"
 #include "SystemZMachineFunctionInfo.h"
 #include "SystemZMachineScheduler.h"
+#include "SystemZTargetObjectFile.h"
 #include "SystemZTargetTransformInfo.h"
 #include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/ADT/StringRef.h"
@@ -83,7 +84,7 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
 
   // Note: Some times run with -triple s390x-unknown.
   // In this case, default to ELF unless z/OS specifically provided.
-  return std::make_unique<TargetLoweringObjectFileELF>();
+  return std::make_unique<SystemZELFTargetObjectFile>();
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -169,12 +170,14 @@ SystemZTargetMachine::getSubtargetImpl(const Function &F) const {
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
   // FIXME: This is related to the code below to reset the target options,
-  // we need to know whether or not the soft float flag is set on the
-  // function, so we can enable it as a subtarget feature.
+  // we need to know whether the soft float and backchain flags are set on the
+  // function, so we can enable them as subtarget features.
   bool SoftFloat = F.getFnAttribute("use-soft-float").getValueAsBool();
-
   if (SoftFloat)
     FS += FS.empty() ? "+soft-float" : ",+soft-float";
+  bool BackChain = F.hasFnAttribute("backchain");
+  if (BackChain)
+    FS += FS.empty() ? "+backchain" : ",+backchain";
 
   auto &I = SubtargetMap[CPU + TuneCPU + FS];
   if (!I) {
@@ -225,6 +228,8 @@ void SystemZPassConfig::addIRPasses() {
     addPass(createSystemZTDCPass());
     addPass(createLoopDataPrefetchPass());
   }
+
+  addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addIRPasses();
 }

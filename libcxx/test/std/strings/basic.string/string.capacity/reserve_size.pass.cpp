@@ -20,6 +20,7 @@
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "asan_testing.h"
 
 template <class S>
 TEST_CONSTEXPR_CXX20 void
@@ -28,6 +29,7 @@ test(typename S::size_type min_cap, typename S::size_type erased_index, typename
   s.erase(erased_index);
   assert(s.size() == erased_index);
   assert(s.capacity() >= min_cap); // Check that we really have at least this capacity.
+  LIBCPP_ASSERT(is_string_asan_correct(s));
 
 #if TEST_STD_VER > 17
   typename S::size_type old_cap = s.capacity();
@@ -39,6 +41,7 @@ test(typename S::size_type min_cap, typename S::size_type erased_index, typename
     assert(s == s0);
     assert(s.capacity() >= res_arg);
     assert(s.capacity() >= s.size());
+    LIBCPP_ASSERT(is_string_asan_correct(s));
 #if TEST_STD_VER > 17
     assert(s.capacity() >= old_cap); // reserve never shrinks as of P0966 (C++20)
 #endif
@@ -64,6 +67,7 @@ TEST_CONSTEXPR_CXX20 void test_string() {
     test<S>(0, 0, 50);
   }
   {
+    test<S>(100, 1, 5);
     test<S>(100, 50, 5);
     test<S>(100, 50, 10);
     test<S>(100, 50, 50);

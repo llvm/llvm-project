@@ -9,7 +9,6 @@
 #ifndef LLVM_EXECUTIONENGINE_RUNTIMEDYLDCHECKER_H
 #define LLVM_EXECUTIONENGINE_RUNTIMEDYLDCHECKER_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -155,7 +154,7 @@ public:
   using GetSectionInfoFunction = std::function<Expected<MemoryRegionInfo>(
       StringRef FileName, StringRef SectionName)>;
   using GetStubInfoFunction = std::function<Expected<MemoryRegionInfo>(
-      StringRef StubContainer, StringRef TargetName)>;
+      StringRef StubContainer, StringRef TargetName, StringRef StubKindFilter)>;
   using GetGOTInfoFunction = std::function<Expected<MemoryRegionInfo>(
       StringRef GOTContainer, StringRef TargetName)>;
 

@@ -978,8 +978,14 @@ void Editline::DisplayCompletions(
       break;
 
     fprintf(editline.m_output_file, "More (Y/n/a): ");
-    char reply = 'n';
-    int got_char = el_getc(editline.m_editline, &reply);
+    // The type for the output and the type for the parameter are different,
+    // to allow interoperability with older versions of libedit. The container
+    // for the reply must be as wide as what our implementation is using,
+    // but libedit may use a narrower type depending on the build
+    // configuration.
+    EditLineGetCharType reply = L'n';
+    int got_char = el_wgetc(editline.m_editline,
+                            reinterpret_cast<EditLineCharType *>(&reply));
     // Check for a ^C or other interruption.
     if (editline.m_editor_status == EditorStatus::Interrupted) {
       editline.m_editor_status = EditorStatus::Editing;
@@ -1023,8 +1029,11 @@ unsigned char Editline::TabCommand(int ch) {
     case CompletionMode::Normal: {
       std::string to_add = completion.GetCompletion();
       // Terminate the current argument with a quote if it started with a quote.
-      if (!request.GetParsedLine().empty() && request.GetParsedArg().IsQuoted())
+      Args &parsedLine = request.GetParsedLine();
+      if (!parsedLine.empty() && request.GetCursorIndex() < parsedLine.size() &&
+          request.GetParsedArg().IsQuoted()) {
         to_add.push_back(request.GetParsedArg().GetQuoteChar());
+      }
       to_add.push_back(' ');
       el_deletestr(m_editline, request.GetCursorArgumentPrefix().size());
       el_insertstr(m_editline, to_add.c_str());
@@ -1588,6 +1597,7 @@ bool Editline::GetLines(int first_line_number, StringList &lines,
 void Editline::PrintAsync(Stream *stream, const char *s, size_t len) {
   std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
   if (m_editor_status == EditorStatus::Editing) {
+    SaveEditedLine();
     MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);
     fprintf(m_output_file, ANSI_CLEAR_BELOW);
   }

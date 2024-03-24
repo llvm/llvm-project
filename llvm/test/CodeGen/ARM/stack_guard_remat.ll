@@ -1,9 +1,11 @@
-; RUN: llc < %s -mtriple=arm-apple-ios -relocation-model=pic -no-integrated-as | FileCheck %s -check-prefix=PIC
-; RUN: llc < %s -mtriple=arm-apple-ios -relocation-model=static -no-integrated-as | FileCheck %s -check-prefix=NO-PIC -check-prefix=STATIC
-; RUN: llc < %s -mtriple=arm-apple-ios -relocation-model=dynamic-no-pic -no-integrated-as | FileCheck %s  -check-prefix=NO-PIC -check-prefix=DYNAMIC-NO-PIC
-; RUN: llc < %s -mtriple=armv7-apple-ios -mcpu=cortex-a8 -relocation-model=pic -no-integrated-as | FileCheck %s -check-prefix=PIC-V7
-; RUN: llc < %s -mtriple=armv7-apple-ios -mcpu=cortex-a8 -relocation-model=static -no-integrated-as | FileCheck %s -check-prefix=STATIC-V7
-; RUN: llc < %s -mtriple=armv7-apple-ios -mcpu=cortex-a8 -relocation-model=dynamic-no-pic -no-integrated-as | FileCheck %s -check-prefix=DYNAMIC-NO-PIC-V7
+; RUN: rm -rf %t && split-file %s %t && cd %t
+; RUN: cat main.ll pic-flag.ll > pic.ll
+; RUN: llc < pic.ll -mtriple=arm-apple-ios -relocation-model=pic -no-integrated-as | FileCheck %s -check-prefix=PIC
+; RUN: llc < main.ll -mtriple=arm-apple-ios -relocation-model=static -no-integrated-as | FileCheck %s -check-prefix=NO-PIC -check-prefix=STATIC
+; RUN: llc < main.ll -mtriple=arm-apple-ios -relocation-model=dynamic-no-pic -no-integrated-as | FileCheck %s -check-prefixes=NO-PIC,DYNAMIC-NO-PIC
+; RUN: llc < pic.ll -mtriple=armv7-apple-ios -mcpu=cortex-a8 -relocation-model=pic -no-integrated-as | FileCheck %s -check-prefix=PIC-V7
+; RUN: llc < main.ll -mtriple=armv7-apple-ios -mcpu=cortex-a8 -relocation-model=static -no-integrated-as | FileCheck %s -check-prefix=STATIC-V7
+; RUN: llc < main.ll -mtriple=armv7-apple-ios -mcpu=cortex-a8 -relocation-model=dynamic-no-pic -no-integrated-as | FileCheck %s -check-prefix=DYNAMIC-NO-PIC-V7
 
 ;PIC:   foo2
 ;PIC:   ldr [[R0:r[0-9]+]], [[LABEL0:LCPI[0-9_]+]]
@@ -47,6 +49,7 @@
 ;DYNAMIC-NO-PIC-V7: L___stack_chk_guard$non_lazy_ptr:
 ;DYNAMIC-NO-PIC-V7:   .indirect_symbol        ___stack_chk_guard
 
+;--- main.ll
 ; Function Attrs: nounwind ssp
 define i32 @test_stack_guard_remat() #0 {
   %a1 = alloca [256 x i32], align 4
@@ -67,5 +70,6 @@ declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 attributes #0 = { nounwind ssp "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
+;--- pic-flag.ll
 !llvm.module.flags = !{!0}
 !0 = !{i32 7, !"PIC Level", i32 2}

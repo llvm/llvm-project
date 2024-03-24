@@ -967,6 +967,44 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     return BDVState(BaseValue, BDVState::Base, BaseValue);
   };
 
+  // Even though we have identified a concrete base (or a conflict) for all live
+  // pointers at this point, there are cases where the base is of an
+  // incompatible type compared to the original instruction. We conservatively
+  // mark those as conflicts to ensure that corresponding BDVs will be generated
+  // in the next steps.
+
+  // this is a rather explicit check for all cases where we should mark the
+  // state as a conflict to force the latter stages of the algorithm to emit
+  // the BDVs.
+  // TODO: in many cases the instructions emited for the conflicting states
+  // will be identical to the I itself (if the I's operate on their BDVs
+  // themselves). We should exploit this, but can't do it here since it would
+  // break the invariant about the BDVs not being known to be a base.
+  // TODO: the code also does not handle constants at all - the algorithm relies
+  // on all constants having the same BDV and therefore constant-only insns
+  // will never be in conflict, but this check is ignored here. If the
+  // constant conflicts will be to BDVs themselves, they will be identical
+  // instructions and will get optimized away (as in the above TODO)
+  auto MarkConflict = [&](Instruction *I, Value *BaseValue) {
+    // II and EE mixes vector & scalar so is always a conflict
+    if (isa<InsertElementInst>(I) || isa<ExtractElementInst>(I))
+      return true;
+    // Shuffle vector is always a conflict as it creates new vector from
+    // existing ones.
+    if (isa<ShuffleVectorInst>(I))
+      return true;
+    // Any  instructions where the computed base type differs from the
+    // instruction type. An example is where an extract instruction is used by a
+    // select. Here the select's BDV is a vector (because of extract's BDV),
+    // while the select itself is a scalar type. Note that the IE and EE
+    // instruction check is not fully subsumed by the vector<->scalar check at
+    // the end, this is due to the BDV algorithm being ignorant of BDV types at
+    // this junction.
+    if (!areBothVectorOrScalar(BaseValue, I))
+      return true;
+    return false;
+  };
+
   bool Progress = true;
   while (Progress) {
 #ifndef NDEBUG
@@ -993,7 +1031,15 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
         NewState.meet(OpState);
       });
 
-      BDVState OldState = States[BDV];
+      // if the instruction has known base, but should in fact be marked as
+      // conflict because of incompatible in/out types, we mark it as such
+      // ensuring that it will propagate through the fixpoint iteration
+      auto I = cast<Instruction>(BDV);
+      auto BV = NewState.getBaseValue();
+      if (BV && MarkConflict(I, BV))
+        NewState = BDVState(I, BDVState::Conflict);
+
+      BDVState OldState = Pair.second;
       if (OldState != NewState) {
         Progress = true;
         States[BDV] = NewState;
@@ -1010,10 +1056,9 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
   for (const auto &Pair : States) {
     LLVM_DEBUG(dbgs() << " " << Pair.second << " for " << *Pair.first << "\n");
   }
-#endif
 
-  // Handle all instructions that have a vector BDV, but the instruction itself
-  // is of scalar type.
+  // since we do the conflict marking as part of the fixpoint iteration this
+  // loop only asserts that invariants are met
   for (auto Pair : States) {
     Instruction *I = cast<Instruction>(Pair.first);
     BDVState State = Pair.second;
@@ -1025,35 +1070,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
         (!isKnownBase(I, KnownBases) || !areBothVectorOrScalar(I, BaseValue)) &&
         "why did it get added?");
     assert(!State.isUnknown() && "Optimistic algorithm didn't complete!");
-
-    if (!State.isBase() || !isa<VectorType>(BaseValue->getType()))
-      continue;
-    // extractelement instructions are a bit special in that we may need to
-    // insert an extract even when we know an exact base for the instruction.
-    // The problem is that we need to convert from a vector base to a scalar
-    // base for the particular indice we're interested in.
-    if (isa<ExtractElementInst>(I)) {
-      auto *EE = cast<ExtractElementInst>(I);
-      // TODO: In many cases, the new instruction is just EE itself.  We should
-      // exploit this, but can't do it here since it would break the invariant
-      // about the BDV not being known to be a base.
-      auto *BaseInst = ExtractElementInst::Create(
-          State.getBaseValue(), EE->getIndexOperand(), "base_ee", EE);
-      BaseInst->setMetadata("is_base_value", MDNode::get(I->getContext(), {}));
-      States[I] = BDVState(I, BDVState::Base, BaseInst);
-      setKnownBase(BaseInst, /* IsKnownBase */true, KnownBases);
-    } else if (!isa<VectorType>(I->getType())) {
-      // We need to handle cases that have a vector base but the instruction is
-      // a scalar type (these could be phis or selects or any instruction that
-      // are of scalar type, but the base can be a vector type).  We
-      // conservatively set this as conflict.  Setting the base value for these
-      // conflicts is handled in the next loop which traverses States.
-      States[I] = BDVState(I, BDVState::Conflict);
-    }
   }
-
-#ifndef NDEBUG
-  VerifyStates();
 #endif
 
   // Insert Phis for all conflicts
@@ -1126,7 +1143,8 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     assert(Base && "Can't be null");
     // The cast is needed since base traversal may strip away bitcasts
     if (Base->getType() != Input->getType() && InsertPt)
-      Base = new BitCastInst(Base, Input->getType(), "cast", InsertPt);
+      Base = new BitCastInst(Base, Input->getType(), "cast",
+                             InsertPt->getIterator());
     return Base;
   };
 
@@ -1232,6 +1250,9 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
   VerifyStates();
 #endif
 
+  // get the data layout to compare the sizes of base/derived pointer values
+  [[maybe_unused]] auto &DL =
+      cast<llvm::Instruction>(Def)->getModule()->getDataLayout();
   // Cache all of our results so we can cheaply reuse them
   // NOTE: This is actually two caches: one of the base defining value
   // relation and one of the base pointer relation!  FIXME
@@ -1239,6 +1260,11 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     auto *BDV = Pair.first;
     Value *Base = Pair.second.getBaseValue();
     assert(BDV && Base);
+    // Whenever we have a derived ptr(s), their base
+    // ptr(s) must be of the same size, not necessarily the same type
+    assert(DL.getTypeAllocSize(BDV->getType()) ==
+               DL.getTypeAllocSize(Base->getType()) &&
+           "Derived and base values should have same size");
     // Only values that do not have known bases or those that have differing
     // type (scalar versus vector) from a possible known base should be in the
     // lattice.
@@ -1495,7 +1521,7 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
   auto getGCRelocateDecl = [&](Type *Ty) {
     assert(isHandledGCPointerType(Ty, GC));
     auto AS = Ty->getScalarType()->getPointerAddressSpace();
-    Type *NewTy = Type::getInt8PtrTy(M->getContext(), AS);
+    Type *NewTy = PointerType::get(M->getContext(), AS);
     if (auto *VT = dyn_cast<VectorType>(Ty))
       NewTy = FixedVectorType::get(NewTy,
                                    cast<FixedVectorType>(VT)->getNumElements());
@@ -1587,7 +1613,7 @@ public:
       // Note: we've inserted instructions, so the call to llvm.deoptimize may
       // not necessarily be followed by the matching return.
       auto *RI = cast<ReturnInst>(OldI->getParent()->getTerminator());
-      new UnreachableInst(RI->getContext(), RI);
+      new UnreachableInst(RI->getContext(), RI->getIterator());
       RI->eraseFromParent();
     }
 
@@ -1948,19 +1974,10 @@ insertRelocationStores(iterator_range<Value::user_iterator> GCRelocs,
     assert(AllocaMap.count(OriginalValue));
     Value *Alloca = AllocaMap[OriginalValue];
 
-    // Emit store into the related alloca
-    // All gc_relocates are i8 addrspace(1)* typed, and it must be bitcasted to
-    // the correct type according to alloca.
+    // Emit store into the related alloca.
     assert(Relocate->getNextNode() &&
            "Should always have one since it's not a terminator");
-    IRBuilder<> Builder(Relocate->getNextNode());
-    Value *CastedRelocatedValue =
-      Builder.CreateBitCast(Relocate,
-                            cast<AllocaInst>(Alloca)->getAllocatedType(),
-                            suffixed_name_or(Relocate, ".casted", ""));
-
-    new StoreInst(CastedRelocatedValue, Alloca,
-                  cast<Instruction>(CastedRelocatedValue)->getNextNode());
+    new StoreInst(Relocate, Alloca, std::next(Relocate->getIterator()));
 
 #ifndef NDEBUG
     VisitedLiveValues.insert(OriginalValue);
@@ -1983,7 +2000,7 @@ static void insertRematerializationStores(
     Value *Alloca = AllocaMap[OriginalValue];
 
     new StoreInst(RematerializedValue, Alloca,
-                  RematerializedValue->getNextNode());
+                  std::next(RematerializedValue->getIterator()));
 
 #ifndef NDEBUG
     VisitedLiveValues.insert(OriginalValue);
@@ -2015,9 +2032,9 @@ static void relocationViaAlloca(
   // "PromotableAllocas"
   const DataLayout &DL = F.getParent()->getDataLayout();
   auto emitAllocaFor = [&](Value *LiveValue) {
-    AllocaInst *Alloca = new AllocaInst(LiveValue->getType(),
-                                        DL.getAllocaAddrSpace(), "",
-                                        F.getEntryBlock().getFirstNonPHI());
+    AllocaInst *Alloca =
+        new AllocaInst(LiveValue->getType(), DL.getAllocaAddrSpace(), "",
+                       F.getEntryBlock().getFirstNonPHIIt());
     AllocaMap[LiveValue] = Alloca;
     PromotableAllocas.push_back(Alloca);
   };
@@ -2030,7 +2047,7 @@ static void relocationViaAlloca(
   for (const auto &Info : Records)
     for (auto RematerializedValuePair : Info.RematerializedValues) {
       Value *OriginalValue = RematerializedValuePair.second;
-      if (AllocaMap.count(OriginalValue) != 0)
+      if (AllocaMap.contains(OriginalValue))
         continue;
 
       emitAllocaFor(OriginalValue);
@@ -2084,7 +2101,7 @@ static void relocationViaAlloca(
         ToClobber.push_back(Alloca);
       }
 
-      auto InsertClobbersAt = [&](Instruction *IP) {
+      auto InsertClobbersAt = [&](BasicBlock::iterator IP) {
         for (auto *AI : ToClobber) {
           auto AT = AI->getAllocatedType();
           Constant *CPN;
@@ -2099,10 +2116,11 @@ static void relocationViaAlloca(
       // Insert the clobbering stores.  These may get intermixed with the
       // gc.results and gc.relocates, but that's fine.
       if (auto II = dyn_cast<InvokeInst>(Statepoint)) {
-        InsertClobbersAt(&*II->getNormalDest()->getFirstInsertionPt());
-        InsertClobbersAt(&*II->getUnwindDest()->getFirstInsertionPt());
+        InsertClobbersAt(II->getNormalDest()->getFirstInsertionPt());
+        InsertClobbersAt(II->getUnwindDest()->getFirstInsertionPt());
       } else {
-        InsertClobbersAt(cast<Instruction>(Statepoint)->getNextNode());
+        InsertClobbersAt(
+            std::next(cast<Instruction>(Statepoint)->getIterator()));
       }
     }
   }
@@ -2138,15 +2156,15 @@ static void relocationViaAlloca(
         PHINode *Phi = cast<PHINode>(Use);
         for (unsigned i = 0; i < Phi->getNumIncomingValues(); i++) {
           if (Def == Phi->getIncomingValue(i)) {
-            LoadInst *Load =
-                new LoadInst(Alloca->getAllocatedType(), Alloca, "",
-                             Phi->getIncomingBlock(i)->getTerminator());
+            LoadInst *Load = new LoadInst(
+                Alloca->getAllocatedType(), Alloca, "",
+                Phi->getIncomingBlock(i)->getTerminator()->getIterator());
             Phi->setIncomingValue(i, Load);
           }
         }
       } else {
-        LoadInst *Load =
-            new LoadInst(Alloca->getAllocatedType(), Alloca, "", Use);
+        LoadInst *Load = new LoadInst(Alloca->getAllocatedType(), Alloca, "",
+                                      Use->getIterator());
         Use->replaceUsesOfWith(Def, Load);
       }
     }
@@ -2213,16 +2231,16 @@ static void insertUseHolderAfter(CallBase *Call, const ArrayRef<Value *> Values,
   if (isa<CallInst>(Call)) {
     // For call safepoints insert dummy calls right after safepoint
     Holders.push_back(
-        CallInst::Create(Func, Values, "", &*++Call->getIterator()));
+        CallInst::Create(Func, Values, "", std::next(Call->getIterator())));
     return;
   }
   // For invoke safepooints insert dummy calls both in normal and
   // exceptional destination blocks
   auto *II = cast<InvokeInst>(Call);
   Holders.push_back(CallInst::Create(
-      Func, Values, "", &*II->getNormalDest()->getFirstInsertionPt()));
+      Func, Values, "", II->getNormalDest()->getFirstInsertionPt()));
   Holders.push_back(CallInst::Create(
-      Func, Values, "", &*II->getUnwindDest()->getFirstInsertionPt()));
+      Func, Values, "", II->getUnwindDest()->getFirstInsertionPt()));
 }
 
 static void findLiveReferences(
@@ -2593,13 +2611,9 @@ static bool inlineGetBaseAndOffset(Function &F,
       Value *Base =
           findBasePointer(Callsite->getOperand(0), DVCache, KnownBases);
       assert(!DVCache.count(Callsite));
-      auto *BaseBC = IRBuilder<>(Callsite).CreateBitCast(
-          Base, Callsite->getType(), suffixed_name_or(Base, ".cast", ""));
-      if (BaseBC != Base)
-        DVCache[BaseBC] = Base;
-      Callsite->replaceAllUsesWith(BaseBC);
-      if (!BaseBC->hasName())
-        BaseBC->takeName(Callsite);
+      Callsite->replaceAllUsesWith(Base);
+      if (!Base->hasName())
+        Base->takeName(Callsite);
       Callsite->eraseFromParent();
       break;
     }

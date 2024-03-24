@@ -25,16 +25,21 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <
-    typename _DifferenceType,
-    typename _Tp,
-    typename _BinaryOperation,
-    typename _UnaryOperation,
-    __enable_if_t<__is_trivial_plus_operation<_BinaryOperation, _Tp, _Tp>::value && is_arithmetic_v<_Tp>, int> = 0>
+template <typename _DifferenceType,
+          typename _Tp,
+          typename _BinaryOperation,
+          typename _UnaryOperation,
+          typename _UnaryResult = invoke_result_t<_UnaryOperation, _DifferenceType>,
+          __enable_if_t<__desugars_to<__plus_tag, _BinaryOperation, _Tp, _UnaryResult>::value && is_arithmetic_v<_Tp> &&
+                            is_arithmetic_v<_UnaryResult>,
+                        int>    = 0>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __simd_transform_reduce(_DifferenceType __n, _Tp __init, _BinaryOperation, _UnaryOperation __f) noexcept {
   _PSTL_PRAGMA_SIMD_REDUCTION(+ : __init)
@@ -43,12 +48,14 @@ __simd_transform_reduce(_DifferenceType __n, _Tp __init, _BinaryOperation, _Unar
   return __init;
 }
 
-template <
-    typename _Size,
-    typename _Tp,
-    typename _BinaryOperation,
-    typename _UnaryOperation,
-    __enable_if_t<!(__is_trivial_plus_operation<_BinaryOperation, _Tp, _Tp>::value && is_arithmetic_v<_Tp>), int> = 0>
+template <typename _Size,
+          typename _Tp,
+          typename _BinaryOperation,
+          typename _UnaryOperation,
+          typename _UnaryResult = invoke_result_t<_UnaryOperation, _Size>,
+          __enable_if_t<!(__desugars_to<__plus_tag, _BinaryOperation, _Tp, _UnaryResult>::value &&
+                          is_arithmetic_v<_Tp> && is_arithmetic_v<_UnaryResult>),
+                        int>    = 0>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _UnaryOperation __f) noexcept {
   const _Size __block_size = __lane_size / sizeof(_Tp);
@@ -189,5 +196,7 @@ _LIBCPP_HIDE_FROM_ABI optional<_Tp> __pstl_transform_reduce(
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_TRANSFORM_REDUCE_H

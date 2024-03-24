@@ -13,8 +13,8 @@
 #include "clang/Parse/Parser.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
@@ -22,6 +22,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 using namespace clang;
 
 
@@ -69,6 +70,11 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
   PP.addCommentHandler(CommentSemaHandler.get());
 
   PP.setCodeCompletionHandler(*this);
+
+  Actions.ParseTypeFromStringCallback =
+      [this](StringRef TypeStr, StringRef Context, SourceLocation IncludeLoc) {
+        return this->ParseTypeFromString(TypeStr, Context, IncludeLoc);
+      };
 }
 
 DiagnosticBuilder Parser::Diag(SourceLocation Loc, unsigned DiagID) {
@@ -314,6 +320,13 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
     case tok::annot_pragma_openmp_end:
       // Stop before an OpenMP pragma boundary.
       if (OpenMPDirectiveParsing)
+        return false;
+      ConsumeAnnotationToken();
+      break;
+    case tok::annot_pragma_openacc:
+    case tok::annot_pragma_openacc_end:
+      // Stop before an OpenACC pragma boundary.
+      if (OpenACCDirectiveParsing)
         return false;
       ConsumeAnnotationToken();
       break;
@@ -672,7 +685,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     // FIXME: We need a better way to disambiguate C++ clang modules and
     // standard C++ modules.
     if (!getLangOpts().CPlusPlusModules || !Mod->isHeaderUnit())
-      Actions.ActOnModuleInclude(Loc, Mod);
+      Actions.ActOnAnnotModuleInclude(Loc, Mod);
     else {
       DeclResult Import =
           Actions.ActOnModuleImport(Loc, SourceLocation(), Loc, Mod);
@@ -684,15 +697,17 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
   }
 
   case tok::annot_module_begin:
-    Actions.ActOnModuleBegin(Tok.getLocation(), reinterpret_cast<Module *>(
-                                                    Tok.getAnnotationValue()));
+    Actions.ActOnAnnotModuleBegin(
+        Tok.getLocation(),
+        reinterpret_cast<Module *>(Tok.getAnnotationValue()));
     ConsumeAnnotationToken();
     ImportState = Sema::ModuleImportState::NotACXX20Module;
     return false;
 
   case tok::annot_module_end:
-    Actions.ActOnModuleEnd(Tok.getLocation(), reinterpret_cast<Module *>(
-                                                  Tok.getAnnotationValue()));
+    Actions.ActOnAnnotModuleEnd(
+        Tok.getLocation(),
+        reinterpret_cast<Module *>(Tok.getAnnotationValue()));
     ConsumeAnnotationToken();
     ImportState = Sema::ModuleImportState::NotACXX20Module;
     return false;
@@ -836,6 +851,9 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
   case tok::annot_pragma_fenv_round:
     HandlePragmaFEnvRound();
     return nullptr;
+  case tok::annot_pragma_cx_limited_range:
+    HandlePragmaCXLimitedRange();
+    return nullptr;
   case tok::annot_pragma_float_control:
     HandlePragmaFloatControl();
     return nullptr;
@@ -850,6 +868,8 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     AccessSpecifier AS = AS_none;
     return ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, Attrs);
   }
+  case tok::annot_pragma_openacc:
+    return ParseOpenACCDirectiveDecl();
   case tok::annot_pragma_ms_pointers_to_members:
     HandlePragmaMSPointersToMembers();
     return nullptr;
@@ -1022,8 +1042,8 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
              diag::warn_cxx98_compat_extern_template :
              diag::ext_extern_template) << SourceRange(ExternLoc, TemplateLoc);
       SourceLocation DeclEnd;
-      return Actions.ConvertDeclToDeclGroup(ParseExplicitInstantiation(
-          DeclaratorContext::File, ExternLoc, TemplateLoc, DeclEnd, Attrs));
+      return ParseExplicitInstantiation(DeclaratorContext::File, ExternLoc,
+                                        TemplateLoc, DeclEnd, Attrs);
     }
     goto dont_know;
 
@@ -1125,9 +1145,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
   DS.SetRangeEnd(DeclSpecAttrs.Range.getEnd());
   DS.takeAttributesFrom(DeclSpecAttrs);
 
+  ParsedTemplateInfo TemplateInfo;
   MaybeParseMicrosoftAttributes(DS.getAttributes());
   // Parse the common declaration-specifiers piece.
-  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS,
+  ParseDeclarationSpecifiers(DS, TemplateInfo, AS,
                              DeclSpecContext::DSC_top_level);
 
   // If we had a free-standing type definition with a missing semicolon, we
@@ -1223,12 +1244,19 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
     return Actions.ConvertDeclToDeclGroup(TheDecl);
   }
 
-  return ParseDeclGroup(DS, DeclaratorContext::File, Attrs);
+  return ParseDeclGroup(DS, DeclaratorContext::File, Attrs, TemplateInfo);
 }
 
 Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
     ParsedAttributes &Attrs, ParsedAttributes &DeclSpecAttrs,
     ParsingDeclSpec *DS, AccessSpecifier AS) {
+  // Add an enclosing time trace scope for a bunch of small scopes with
+  // "EvaluateAsConstExpr".
+  llvm::TimeTraceScope TimeScope("ParseDeclarationOrFunctionDefinition", [&]() {
+    return Tok.getLocation().printToString(
+        Actions.getASTContext().getSourceManager());
+  });
+
   if (DS) {
     return ParseDeclOrFunctionDefInternal(Attrs, DeclSpecAttrs, *DS, AS);
   } else {
@@ -1259,6 +1287,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
 Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
                                       const ParsedTemplateInfo &TemplateInfo,
                                       LateParsedAttrList *LateParsedAttrs) {
+  llvm::TimeTraceScope TimeScope("ParseFunctionDefinition", [&]() {
+    return Actions.GetNameForDeclarator(D).getName().getAsString();
+  });
+
   // Poison SEH identifiers so they are flagged as illegal in function bodies.
   PoisonSEHIdentifiersRAIIObject PoisonSEHIdentifiers(*this, true);
   const DeclaratorChunk::FunctionTypeInfo &FTI = D.getFunctionTypeInfo();
@@ -1963,7 +1995,8 @@ bool Parser::TryAnnotateTypeOrScopeToken(
   assert((Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
           Tok.is(tok::kw_typename) || Tok.is(tok::annot_cxxscope) ||
           Tok.is(tok::kw_decltype) || Tok.is(tok::annot_template_id) ||
-          Tok.is(tok::kw___super) || Tok.is(tok::kw_auto)) &&
+          Tok.is(tok::kw___super) || Tok.is(tok::kw_auto) ||
+          Tok.is(tok::annot_pack_indexing_type)) &&
          "Cannot be a type or scope token!");
 
   if (Tok.is(tok::kw_typename)) {
@@ -2621,7 +2654,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     auto &SrcMgr = PP.getSourceManager();
     auto FE = SrcMgr.getFileEntryRefForID(SrcMgr.getFileID(AtLoc));
     if (FE && llvm::sys::path::parent_path(FE->getDir().getName())
-                  .endswith(".framework"))
+                  .ends_with(".framework"))
       Diags.Report(AtLoc, diag::warn_atimport_in_framework_header);
   }
 
@@ -2677,9 +2710,9 @@ bool Parser::parseMisplacedModuleImport() {
       // happens.
       if (MisplacedModuleBeginCount) {
         --MisplacedModuleBeginCount;
-        Actions.ActOnModuleEnd(Tok.getLocation(),
-                               reinterpret_cast<Module *>(
-                                   Tok.getAnnotationValue()));
+        Actions.ActOnAnnotModuleEnd(
+            Tok.getLocation(),
+            reinterpret_cast<Module *>(Tok.getAnnotationValue()));
         ConsumeAnnotationToken();
         continue;
       }
@@ -2689,18 +2722,18 @@ bool Parser::parseMisplacedModuleImport() {
       return true;
     case tok::annot_module_begin:
       // Recover by entering the module (Sema will diagnose).
-      Actions.ActOnModuleBegin(Tok.getLocation(),
-                               reinterpret_cast<Module *>(
-                                   Tok.getAnnotationValue()));
+      Actions.ActOnAnnotModuleBegin(
+          Tok.getLocation(),
+          reinterpret_cast<Module *>(Tok.getAnnotationValue()));
       ConsumeAnnotationToken();
       ++MisplacedModuleBeginCount;
       continue;
     case tok::annot_module_include:
       // Module import found where it should not be, for instance, inside a
       // namespace. Recover by importing the module.
-      Actions.ActOnModuleInclude(Tok.getLocation(),
-                                 reinterpret_cast<Module *>(
-                                     Tok.getAnnotationValue()));
+      Actions.ActOnAnnotModuleInclude(
+          Tok.getLocation(),
+          reinterpret_cast<Module *>(Tok.getAnnotationValue()));
       ConsumeAnnotationToken();
       // If there is another module import, process it.
       continue;
@@ -2709,6 +2742,15 @@ bool Parser::parseMisplacedModuleImport() {
     }
   }
   return false;
+}
+
+void Parser::diagnoseUseOfC11Keyword(const Token &Tok) {
+  // Warn that this is a C11 extension if in an older mode or if in C++.
+  // Otherwise, warn that it is incompatible with standards before C11 if in
+  // C11 or later.
+  Diag(Tok, getLangOpts().C11 ? diag::warn_c11_compat_keyword
+                              : diag::ext_c11_feature)
+      << Tok.getName();
 }
 
 bool BalancedDelimiterTracker::diagnoseOverflow() {

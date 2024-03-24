@@ -6,10 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_COPYSIGNTEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_SMOKE_COPYSIGNTEST_H
+
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#include "include/llvm-libc-macros/math-macros.h"
 
 template <typename T>
 class CopySignTest : public LIBC_NAMESPACE::testing::Test {
@@ -20,28 +23,29 @@ public:
   typedef T (*CopySignFunc)(T, T);
 
   void testSpecialNumbers(CopySignFunc func) {
-    EXPECT_FP_EQ(aNaN, func(aNaN, -1.0));
-    EXPECT_FP_EQ(aNaN, func(aNaN, 1.0));
+    EXPECT_FP_EQ(aNaN, func(aNaN, T(-1.0)));
+    EXPECT_FP_EQ(aNaN, func(aNaN, T(1.0)));
 
-    EXPECT_FP_EQ(neg_inf, func(inf, -1.0));
-    EXPECT_FP_EQ(inf, func(neg_inf, 1.0));
+    EXPECT_FP_EQ(neg_inf, func(inf, T(-1.0)));
+    EXPECT_FP_EQ(inf, func(neg_inf, T(1.0)));
 
-    EXPECT_FP_EQ(neg_zero, func(zero, -1.0));
-    EXPECT_FP_EQ(zero, func(neg_zero, 1.0));
+    EXPECT_FP_EQ(neg_zero, func(zero, T(-1.0)));
+    EXPECT_FP_EQ(zero, func(neg_zero, T(1.0)));
   }
 
   void testRange(CopySignFunc func) {
-    constexpr UIntType COUNT = 100'000;
-    constexpr UIntType STEP = UIntType(-1) / COUNT;
-    for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-      T x = T(FPBits(v));
-      if (isnan(x) || isinf(x))
+    constexpr StorageType COUNT = 100'000;
+    constexpr StorageType STEP = STORAGE_MAX / COUNT;
+    for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
+      FPBits x_bits = FPBits(v);
+      T x = T(v);
+      if (x_bits.is_nan() || x_bits.is_inf())
         continue;
 
-      double res1 = func(x, -x);
+      T res1 = func(x, -x);
       ASSERT_FP_EQ(res1, -x);
 
-      double res2 = func(x, x);
+      T res2 = func(x, x);
       ASSERT_FP_EQ(res2, x);
     }
   }
@@ -51,3 +55,5 @@ public:
   using LlvmLibcCopySignTest = CopySignTest<T>;                                \
   TEST_F(LlvmLibcCopySignTest, SpecialNumbers) { testSpecialNumbers(&func); }  \
   TEST_F(LlvmLibcCopySignTest, Range) { testRange(&func); }
+
+#endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_COPYSIGNTEST_H

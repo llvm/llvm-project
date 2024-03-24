@@ -3,9 +3,9 @@
 ; RUN:   | FileCheck %s --check-prefixes=RV32-BOTH,RV32
 ; RUN: llc < %s -mtriple=riscv64 \
 ; RUN:   | FileCheck %s --check-prefixes=RV64-BOTH,RV64
-; RUN: llc < %s -mtriple=riscv32 -mattr=+unaligned-scalar-mem \
+; RUN: llc < %s -mtriple=riscv32 -mattr=+fast-unaligned-access \
 ; RUN:   | FileCheck %s --check-prefixes=RV32-BOTH,RV32-FAST
-; RUN: llc < %s -mtriple=riscv64 -mattr=+unaligned-scalar-mem \
+; RUN: llc < %s -mtriple=riscv64 -mattr=+fast-unaligned-access \
 ; RUN:   | FileCheck %s --check-prefixes=RV64-BOTH,RV64-FAST
 %struct.x = type { i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8 }
 
@@ -91,14 +91,14 @@ define void @t1(ptr nocapture %C) nounwind {
 ; RV32-NEXT:    lui a1, %hi(.L.str1)
 ; RV32-NEXT:    addi a1, a1, %lo(.L.str1)
 ; RV32-NEXT:    li a2, 31
-; RV32-NEXT:    tail memcpy@plt
+; RV32-NEXT:    tail memcpy
 ;
 ; RV64-LABEL: t1:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    lui a1, %hi(.L.str1)
 ; RV64-NEXT:    addi a1, a1, %lo(.L.str1)
 ; RV64-NEXT:    li a2, 31
-; RV64-NEXT:    tail memcpy@plt
+; RV64-NEXT:    tail memcpy
 ;
 ; RV32-FAST-LABEL: t1:
 ; RV32-FAST:       # %bb.0: # %entry
@@ -152,14 +152,14 @@ define void @t2(ptr nocapture %C) nounwind {
 ; RV32-BOTH-NEXT:    lui a1, %hi(.L.str2)
 ; RV32-BOTH-NEXT:    addi a1, a1, %lo(.L.str2)
 ; RV32-BOTH-NEXT:    li a2, 36
-; RV32-BOTH-NEXT:    tail memcpy@plt
+; RV32-BOTH-NEXT:    tail memcpy
 ;
 ; RV64-LABEL: t2:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    lui a1, %hi(.L.str2)
 ; RV64-NEXT:    addi a1, a1, %lo(.L.str2)
 ; RV64-NEXT:    li a2, 36
-; RV64-NEXT:    tail memcpy@plt
+; RV64-NEXT:    tail memcpy
 ;
 ; RV64-FAST-LABEL: t2:
 ; RV64-FAST:       # %bb.0: # %entry
@@ -188,14 +188,14 @@ define void @t3(ptr nocapture %C) nounwind {
 ; RV32-NEXT:    lui a1, %hi(.L.str3)
 ; RV32-NEXT:    addi a1, a1, %lo(.L.str3)
 ; RV32-NEXT:    li a2, 24
-; RV32-NEXT:    tail memcpy@plt
+; RV32-NEXT:    tail memcpy
 ;
 ; RV64-LABEL: t3:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    lui a1, %hi(.L.str3)
 ; RV64-NEXT:    addi a1, a1, %lo(.L.str3)
 ; RV64-NEXT:    li a2, 24
-; RV64-NEXT:    tail memcpy@plt
+; RV64-NEXT:    tail memcpy
 ;
 ; RV32-FAST-LABEL: t3:
 ; RV32-FAST:       # %bb.0: # %entry
@@ -241,14 +241,14 @@ define void @t4(ptr nocapture %C) nounwind {
 ; RV32-NEXT:    lui a1, %hi(.L.str4)
 ; RV32-NEXT:    addi a1, a1, %lo(.L.str4)
 ; RV32-NEXT:    li a2, 18
-; RV32-NEXT:    tail memcpy@plt
+; RV32-NEXT:    tail memcpy
 ;
 ; RV64-LABEL: t4:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    lui a1, %hi(.L.str4)
 ; RV64-NEXT:    addi a1, a1, %lo(.L.str4)
 ; RV64-NEXT:    li a2, 18
-; RV64-NEXT:    tail memcpy@plt
+; RV64-NEXT:    tail memcpy
 ;
 ; RV32-FAST-LABEL: t4:
 ; RV32-FAST:       # %bb.0: # %entry
@@ -353,7 +353,7 @@ define void @t6() nounwind {
 ; RV32-NEXT:    lui a1, %hi(.L.str6)
 ; RV32-NEXT:    addi a1, a1, %lo(.L.str6)
 ; RV32-NEXT:    li a2, 14
-; RV32-NEXT:    call memcpy@plt
+; RV32-NEXT:    call memcpy
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -367,7 +367,7 @@ define void @t6() nounwind {
 ; RV64-NEXT:    lui a1, %hi(.L.str6)
 ; RV64-NEXT:    addi a1, a1, %lo(.L.str6)
 ; RV64-NEXT:    li a2, 14
-; RV64-NEXT:    call memcpy@plt
+; RV64-NEXT:    call memcpy
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret

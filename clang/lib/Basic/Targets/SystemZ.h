@@ -29,11 +29,13 @@ class LLVM_LIBRARY_VISIBILITY SystemZTargetInfo : public TargetInfo {
   bool HasTransactionalExecution;
   bool HasVector;
   bool SoftFloat;
+  bool UnalignedSymbols;
 
 public:
   SystemZTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple), CPU("z10"), ISARevision(8),
-        HasTransactionalExecution(false), HasVector(false), SoftFloat(false) {
+        HasTransactionalExecution(false), HasVector(false), SoftFloat(false),
+        UnalignedSymbols(false) {
     IntMaxType = SignedLong;
     Int64Type = SignedLong;
     IntWidth = IntAlign = 32;
@@ -60,9 +62,11 @@ public:
       resetDataLayout("E-m:e-i1:8:16-i8:8:16-i64:64-f128:64"
                       "-v128:64-a:8:16-n32:64");
     }
-    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
+    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 128;
     HasStrictFP = true;
   }
+
+  unsigned getMinGlobalAlign(uint64_t Size, bool HasNonWeakDef) const override;
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
@@ -163,6 +167,7 @@ public:
     HasTransactionalExecution = false;
     HasVector = false;
     SoftFloat = false;
+    UnalignedSymbols = false;
     for (const auto &Feature : Features) {
       if (Feature == "+transactional-execution")
         HasTransactionalExecution = true;
@@ -170,6 +175,8 @@ public:
         HasVector = true;
       else if (Feature == "+soft-float")
         SoftFloat = true;
+      else if (Feature == "+unaligned-symbols")
+        UnalignedSymbols = true;
     }
     HasVector &= !SoftFloat;
 

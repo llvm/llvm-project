@@ -18,6 +18,24 @@ using namespace llvm;
 
 namespace {
 
+TEST(LowLevelTypeTest, Token) {
+  LLVMContext C;
+  DataLayout DL("");
+
+  const LLT TTy = LLT::token();
+
+  // Test kind.
+  EXPECT_TRUE(TTy.isValid());
+  EXPECT_TRUE(TTy.isScalar());
+  EXPECT_TRUE(TTy.isToken());
+
+  EXPECT_FALSE(TTy.isPointer());
+  EXPECT_FALSE(TTy.isVector());
+
+  const LLT STy = LLT::scalar(0);
+  EXPECT_EQ(STy, TTy);
+}
+
 TEST(LowLevelTypeTest, Scalar) {
   LLVMContext C;
   DataLayout DL("");
@@ -31,6 +49,8 @@ TEST(LowLevelTypeTest, Scalar) {
 
     ASSERT_FALSE(Ty.isPointer());
     ASSERT_FALSE(Ty.isVector());
+
+    EXPECT_TRUE(S != 0 || Ty.isToken());
 
     // Test sizes.
     EXPECT_EQ(S, Ty.getSizeInBits());
@@ -77,6 +97,7 @@ TEST(LowLevelTypeTest, Vector) {
 
       ASSERT_FALSE(VTy.isScalar());
       ASSERT_FALSE(VTy.isPointer());
+      ASSERT_FALSE(VTy.isToken());
 
       // Test sizes.
       EXPECT_EQ(S, VTy.getScalarSizeInBits());
@@ -84,7 +105,7 @@ TEST(LowLevelTypeTest, Vector) {
       if (!EC.isScalable())
         EXPECT_EQ(S * EC.getFixedValue(), VTy.getSizeInBits());
       else
-        EXPECT_EQ(TypeSize::Scalable(S * EC.getKnownMinValue()),
+        EXPECT_EQ(TypeSize::getScalable(S * EC.getKnownMinValue()),
                   VTy.getSizeInBits());
 
       // Test equality operators.
@@ -259,6 +280,7 @@ TEST(LowLevelTypeTest, Pointer) {
       // Test kind.
       ASSERT_TRUE(Ty.isValid());
       ASSERT_TRUE(Ty.isPointer());
+      ASSERT_TRUE(Ty.isPointerOrPointerVector());
 
       ASSERT_FALSE(Ty.isScalar());
       ASSERT_FALSE(Ty.isVector());
@@ -266,6 +288,8 @@ TEST(LowLevelTypeTest, Pointer) {
       ASSERT_TRUE(VTy.isValid());
       ASSERT_TRUE(VTy.isVector());
       ASSERT_TRUE(VTy.getElementType().isPointer());
+      ASSERT_TRUE(VTy.isPointerVector());
+      ASSERT_TRUE(VTy.isPointerOrPointerVector());
 
       EXPECT_EQ(Ty, VTy.getElementType());
       EXPECT_EQ(Ty.getSizeInBits(), VTy.getScalarSizeInBits());
@@ -297,6 +321,7 @@ TEST(LowLevelTypeTest, Invalid) {
   ASSERT_FALSE(Ty.isScalar());
   ASSERT_FALSE(Ty.isPointer());
   ASSERT_FALSE(Ty.isVector());
+  ASSERT_FALSE(Ty.isToken());
 }
 
 TEST(LowLevelTypeTest, Divide) {
@@ -382,8 +407,8 @@ static_assert(CEV2P1.isVector());
 static_assert(CEV2P1.getElementCount() == ElementCount::getFixed(2));
 static_assert(CEV2P1.getElementCount() != ElementCount::getFixed(1));
 static_assert(CEV2S32.getElementCount() == ElementCount::getFixed(2));
-static_assert(CEV2S32.getSizeInBits() == TypeSize::Fixed(64));
-static_assert(CEV2P1.getSizeInBits() == TypeSize::Fixed(128));
+static_assert(CEV2S32.getSizeInBits() == TypeSize::getFixed(64));
+static_assert(CEV2P1.getSizeInBits() == TypeSize::getFixed(128));
 static_assert(CEV2P1.getScalarType() == LLT::pointer(1, 64));
 static_assert(CES32.getScalarType() == CES32);
 static_assert(CEV2S32.getScalarType() == CES32);
@@ -411,5 +436,19 @@ TEST(LowLevelTypeTest, ConstExpr) {
   EXPECT_EQ(LLT::fixed_vector(2, 32), CEV2S32);
   EXPECT_EQ(LLT::pointer(0, 32), CEP0);
   EXPECT_EQ(LLT::scalable_vector(2, 32), CESV2S32);
+}
+
+TEST(LowLevelTypeTest, IsFixedVector) {
+  EXPECT_FALSE(LLT::scalar(32).isFixedVector());
+  EXPECT_TRUE(LLT::fixed_vector(2, 32).isFixedVector());
+  EXPECT_FALSE(LLT::scalable_vector(2, 32).isFixedVector());
+  EXPECT_FALSE(LLT::scalable_vector(1, 32).isFixedVector());
+}
+
+TEST(LowLevelTypeTest, IsScalableVector) {
+  EXPECT_FALSE(LLT::scalar(32).isScalableVector());
+  EXPECT_FALSE(LLT::fixed_vector(2, 32).isScalableVector());
+  EXPECT_TRUE(LLT::scalable_vector(2, 32).isScalableVector());
+  EXPECT_TRUE(LLT::scalable_vector(1, 32).isScalableVector());
 }
 }

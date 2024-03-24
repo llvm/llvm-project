@@ -305,7 +305,7 @@ TEST_F(QualifierFixerTest, RightQualifier) {
   verifyFormat("Foo inline static const;", "Foo inline const static;", Style);
   verifyFormat("Foo inline static const;", Style);
 
-  verifyFormat("Foo<T volatile>::Bar<Type const, 5> const volatile A::*;",
+  verifyFormat("Foo<T volatile>::Bar<Type const, 5> const volatile A:: *;",
                "volatile const Foo<volatile T>::Bar<const Type, 5> A::*;",
                Style);
 
@@ -351,6 +351,14 @@ TEST_F(QualifierFixerTest, RightQualifier) {
   verifyFormat("auto const i = 0;", "const auto i = 0;", Style);
   verifyFormat("auto const &ir = i;", "const auto &ir = i;", Style);
   verifyFormat("auto const *ip = &i;", "const auto *ip = &i;", Style);
+
+  verifyFormat("void f(Concept auto const &x);",
+               "void f(const Concept auto &x);", Style);
+  verifyFormat("void f(std::integral auto const &x);",
+               "void f(const std::integral auto &x);", Style);
+
+  verifyFormat("auto lambda = [] { int const i = 0; };",
+               "auto lambda = [] { const int i = 0; };", Style);
 
   verifyFormat("Foo<Foo<int> const> P;\n#if 0\n#else\n#endif",
                "Foo<const Foo<int>> P;\n#if 0\n#else\n#endif", Style);
@@ -515,14 +523,15 @@ TEST_F(QualifierFixerTest, RightQualifier) {
   verifyFormat("const INTPTR a;", Style);
 
   // Pointers to members
-  verifyFormat("int S::*a;", Style);
-  verifyFormat("int const S::*a;", "const int S:: *a;", Style);
-  verifyFormat("int const S::*const a;", "const int S::* const a;", Style);
-  verifyFormat("int A::*const A::*p1;", Style);
-  verifyFormat("float (C::*p)(int);", Style);
-  verifyFormat("float (C::*const p)(int);", Style);
-  verifyFormat("float (C::*p)(int) const;", Style);
-  verifyFormat("float const (C::*p)(int);", "const float (C::*p)(int);", Style);
+  verifyFormat("int S:: *a;", Style);
+  verifyFormat("int const S:: *a;", "const int S:: *a;", Style);
+  verifyFormat("int const S:: *const a;", "const int S::* const a;", Style);
+  verifyFormat("int A:: *const A:: *p1;", Style);
+  verifyFormat("float (C:: *p)(int);", Style);
+  verifyFormat("float (C:: *const p)(int);", Style);
+  verifyFormat("float (C:: *p)(int) const;", Style);
+  verifyFormat("float const (C:: *p)(int);", "const float (C::*p)(int);",
+               Style);
 }
 
 TEST_F(QualifierFixerTest, LeftQualifier) {
@@ -652,6 +661,14 @@ TEST_F(QualifierFixerTest, LeftQualifier) {
   verifyFormat("const auto i = 0;", "auto const i = 0;", Style);
   verifyFormat("const auto &ir = i;", "auto const &ir = i;", Style);
   verifyFormat("const auto *ip = &i;", "auto const *ip = &i;", Style);
+
+  verifyFormat("void f(const Concept auto &x);",
+               "void f(Concept auto const &x);", Style);
+  verifyFormat("void f(const std::integral auto &x);",
+               "void f(std::integral auto const &x);", Style);
+
+  verifyFormat("auto lambda = [] { const int i = 0; };",
+               "auto lambda = [] { int const i = 0; };", Style);
 
   verifyFormat("Foo<const Foo<int>> P;\n#if 0\n#else\n#endif",
                "Foo<Foo<int> const> P;\n#if 0\n#else\n#endif", Style);
@@ -814,14 +831,15 @@ TEST_F(QualifierFixerTest, LeftQualifier) {
   verifyFormat("INTPTR const a;", Style);
 
   // Pointers to members
-  verifyFormat("int S::*a;", Style);
-  verifyFormat("const int S::*a;", "int const S:: *a;", Style);
-  verifyFormat("const int S::*const a;", "int const S::* const a;", Style);
-  verifyFormat("int A::*const A::*p1;", Style);
-  verifyFormat("float (C::*p)(int);", Style);
-  verifyFormat("float (C::*const p)(int);", Style);
-  verifyFormat("float (C::*p)(int) const;", Style);
-  verifyFormat("const float (C::*p)(int);", "float const (C::*p)(int);", Style);
+  verifyFormat("int S:: *a;", Style);
+  verifyFormat("const int S:: *a;", "int const S:: *a;", Style);
+  verifyFormat("const int S:: *const a;", "int const S::* const a;", Style);
+  verifyFormat("int A:: *const A:: *p1;", Style);
+  verifyFormat("float (C:: *p)(int);", Style);
+  verifyFormat("float (C:: *const p)(int);", Style);
+  verifyFormat("float (C:: *p)(int) const;", Style);
+  verifyFormat("const float (C:: *p)(int);", "float const (C::*p)(int);",
+               Style);
 }
 
 TEST_F(QualifierFixerTest, ConstVolatileQualifiersOrder) {
@@ -1039,6 +1057,7 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
 
   auto Tokens = annotate(
       "const static inline auto restrict int double long constexpr friend");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
 
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       Tokens[0], ConfiguredTokens));
@@ -1073,6 +1092,7 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[9]));
 
   auto NotTokens = annotate("for while do Foo Bar ");
+  ASSERT_EQ(NotTokens.size(), 6u) << Tokens;
 
   EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       NotTokens[0], ConfiguredTokens));
@@ -1104,6 +1124,7 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
 TEST_F(QualifierFixerTest, IsMacro) {
 
   auto Tokens = annotate("INT INTPR Foo int");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
 
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isPossibleMacro(Tokens[0]));
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isPossibleMacro(Tokens[1]));
@@ -1156,6 +1177,19 @@ TEST_F(QualifierFixerTest, DontPushQualifierThroughNonSpecifiedTypes) {
   // Don't move qualifiers to the right for aestethics only.
   verifyFormat("inline const static Foo;", Style);
   verifyFormat("const inline static Foo;", Style);
+}
+
+TEST_F(QualifierFixerTest, QualifiersBrokenUpByPPDirectives) {
+  auto Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"constexpr", "inline", "type"};
+
+  verifyFormat("inline\n"
+               "#if FOO\n"
+               "    constexpr\n"
+               "#endif\n"
+               "    int i = 0;",
+               Style);
 }
 
 TEST_F(QualifierFixerTest, UnsignedQualifier) {

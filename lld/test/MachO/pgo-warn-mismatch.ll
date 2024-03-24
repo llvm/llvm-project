@@ -24,7 +24,7 @@ entry:
 
 ;--- cs.proftext
 :csir
-_foo
+foo
 # Func Hash:
 2277602155505015273
 # Num Counters:

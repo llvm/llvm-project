@@ -49,15 +49,21 @@ static void createForAllDimensions(OpBuilder &builder, Location loc,
 /// entry block of `launchOpBody`, to the corresponding result value of the
 /// added operations.
 static void injectGpuIndexOperations(Location loc, Region &launchFuncOpBody,
-                                     Region &launchOpBody, IRMapping &map) {
+                                     Region &launchOpBody, IRMapping &map,
+                                     bool hasCluster = false) {
   OpBuilder builder(loc->getContext());
   Block &firstBlock = launchOpBody.front();
   builder.setInsertionPointToStart(&launchFuncOpBody.front());
-  SmallVector<Value, 12> indexOps;
+  SmallVector<Value> indexOps;
+  // The order is important here, as it must match the order of the arguments
   createForAllDimensions<gpu::BlockIdOp>(builder, loc, indexOps);
   createForAllDimensions<gpu::ThreadIdOp>(builder, loc, indexOps);
   createForAllDimensions<gpu::GridDimOp>(builder, loc, indexOps);
   createForAllDimensions<gpu::BlockDimOp>(builder, loc, indexOps);
+  if (hasCluster) {
+    createForAllDimensions<gpu::ClusterIdOp>(builder, loc, indexOps);
+    createForAllDimensions<gpu::ClusterDimOp>(builder, loc, indexOps);
+  }
   // Replace the leading 12 function args with the respective thread/block index
   // operations. Iterate backwards since args are erased and indices change.
   for (const auto &indexOp : enumerate(indexOps))
@@ -212,9 +218,11 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
   IRMapping map;
 
   // Map the arguments corresponding to the launch parameters like blockIdx,
-  // threadIdx, etc.
+  // threadIdx, etc. If cluster is present, then we also generate clusterIdx and
+  // clusterDim.
   Region &outlinedFuncBody = outlinedFunc.getBody();
-  injectGpuIndexOperations(loc, outlinedFuncBody, launchOpBody, map);
+  injectGpuIndexOperations(loc, outlinedFuncBody, launchOpBody, map,
+                           launchOp.hasClusterSize());
 
   // Map memory attributions from the LaunOp op to the GPUFuncOp attributions.
   for (const auto &[launchArg, funcArg] :
@@ -278,12 +286,14 @@ static void convertToLaunchFuncOp(gpu::LaunchOp launchOp,
   // The launch op has an optional dynamic shared memory size. If it doesn't
   // exist, we use zero.
   Value asyncToken = launchOp.getAsyncToken();
+  std::optional<gpu::KernelDim3> clusterSize =
+      launchOp.getClusterSizeOperandValues();
   auto launchFunc = builder.create<gpu::LaunchFuncOp>(
       launchOp.getLoc(), kernelFunc, launchOp.getGridSizeOperandValues(),
       launchOp.getBlockSizeOperandValues(),
       launchOp.getDynamicSharedMemorySize(), operands,
       asyncToken ? asyncToken.getType() : nullptr,
-      launchOp.getAsyncDependencies());
+      launchOp.getAsyncDependencies(), clusterSize);
   launchOp.replaceAllUsesWith(launchFunc);
   launchOp.erase();
 }
@@ -349,13 +359,13 @@ public:
   void runOnOperation() override {
     SymbolTable symbolTable(getOperation());
     bool modified = false;
-    for (auto func : getOperation().getOps<func::FuncOp>()) {
+    for (auto func : getOperation().getOps<SymbolOpInterface>()) {
       // Insert just after the function.
       Block::iterator insertPt(func->getNextNode());
       auto funcWalkResult = func.walk([&](gpu::LaunchOp op) {
         SetVector<Value> operands;
         std::string kernelFnName =
-            Twine(op->getParentOfType<func::FuncOp>().getName(), "_kernel")
+            Twine(op->getParentOfType<SymbolOpInterface>().getName(), "_kernel")
                 .str();
 
         gpu::GPUFuncOp outlinedFunc =

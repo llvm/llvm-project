@@ -79,7 +79,7 @@ for.body:                                         ; preds = %for.body, %entry
 define i64 @bar(ptr nocapture %a) {
 ; CHECK-LABEL: bar
 
-; CHECK: Executing best plan with VF=2, UF=12
+; CHECK: Executing best plan with VF=2, UF=8
 
 entry:
   br label %for.body
@@ -107,7 +107,7 @@ for.body:
 
 define void @hoo(i32 %n) {
 ; CHECK-LABEL: hoo
-; CHECK: Executing best plan with VF=1, UF=12
+; CHECK: Executing best plan with VF=1, UF=8
 
 entry:
   br label %for.body

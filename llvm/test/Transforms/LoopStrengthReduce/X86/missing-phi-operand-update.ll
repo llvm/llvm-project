@@ -13,8 +13,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; All the other PHI inputs besides %tmp1 go to a new phi node.
 ; This test checks that LSR is still able to rewrite %tmp2, %tmp3, %tmp4.
 define i32 @foo(ptr %A, i32 %t) {
-; CHECK-LABEL: define i32 @foo
-; CHECK-SAME: (ptr [[A:%.*]], i32 [[T:%.*]]) {
+; CHECK-LABEL: define i32 @foo(
+; CHECK-SAME: ptr [[A:%.*]], i32 [[T:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_32:%.*]]
 ; CHECK:       loop.exit.loopexitsplitsplitsplit:
@@ -131,7 +131,7 @@ for.end:                                          ; preds = %then.8.1, %ifmerge.
 loop.32:                                          ; preds = %ifmerge.46, %entry
   %i1.i64.0 = phi i64 [ 0, %entry ], [ %nextivloop.32, %ifmerge.46 ]
   %tmp1 = shl i64 %i1.i64.0, 2
-  %tmp2 = or i64 %tmp1, 1
+  %tmp2 = or disjoint i64 %tmp1, 1
   %arrayIdx = getelementptr inbounds i32, ptr %A, i64 %tmp2
   %gepload = load i32, ptr %arrayIdx, align 4
   %cmp.34 = icmp sgt i32 %gepload, %t
@@ -144,7 +144,7 @@ then.34:                                          ; preds = %loop.32
   br i1 %cmp.35, label %loop.exit, label %ifmerge.34
 
 ifmerge.34:                                       ; preds = %then.34, %loop.32
-  %tmp3 = or i64 %tmp1, 2
+  %tmp3 = or disjoint i64 %tmp1, 2
   %arrayIdx19 = getelementptr inbounds i32, ptr %A, i64 %tmp3
   %gepload20 = load i32, ptr %arrayIdx19, align 4
   %cmp.38 = icmp sgt i32 %gepload20, %t
@@ -153,7 +153,7 @@ ifmerge.34:                                       ; preds = %then.34, %loop.32
   br i1 %or.cond, label %loop.exit, label %ifmerge.38
 
 ifmerge.38:                                       ; preds = %ifmerge.34
-  %tmp4 = or i64 %tmp1, 3
+  %tmp4 = or disjoint i64 %tmp1, 3
   %arrayIdx23 = getelementptr inbounds i32, ptr %A, i64 %tmp4
   %gepload24 = load i32, ptr %arrayIdx23, align 4
   %cmp.42 = icmp sgt i32 %gepload24, %t

@@ -59,7 +59,7 @@ LIBC_INLINE int64_t small_range_reduction(double x, double &y) {
 LIBC_INLINE int64_t large_range_reduction(double x, int x_exp, double &y) {
   int idx = 0;
   y = 0;
-  int x_lsb_exp_m4 = x_exp - fputil::FloatProperties<float>::MANTISSA_WIDTH;
+  int x_lsb_exp_m4 = x_exp - fputil::FPBits<float>::FRACTION_LEN;
 
   // Skipping the first parts of 32/pi such that:
   //   LSB of x * LSB of THIRTYTWO_OVER_PI_28[i] >= 32.

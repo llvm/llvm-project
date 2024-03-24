@@ -176,14 +176,18 @@ set(BENCHMARK_TESTS
     algorithms/count.bench.cpp
     algorithms/equal.bench.cpp
     algorithms/find.bench.cpp
+    algorithms/fill.bench.cpp
+    algorithms/for_each.bench.cpp
     algorithms/lower_bound.bench.cpp
     algorithms/make_heap.bench.cpp
     algorithms/make_heap_then_sort_heap.bench.cpp
     algorithms/min.bench.cpp
     algorithms/min_max_element.bench.cpp
+    algorithms/mismatch.bench.cpp
     algorithms/pop_heap.bench.cpp
     algorithms/pstl.stable_sort.bench.cpp
     algorithms/push_heap.bench.cpp
+    algorithms/ranges_contains.bench.cpp
     algorithms/ranges_ends_with.bench.cpp
     algorithms/ranges_make_heap.bench.cpp
     algorithms/ranges_make_heap_then_sort_heap.bench.cpp
@@ -195,11 +199,14 @@ set(BENCHMARK_TESTS
     algorithms/sort.bench.cpp
     algorithms/sort_heap.bench.cpp
     algorithms/stable_sort.bench.cpp
+    atomic_wait.bench.cpp
+    atomic_wait_vs_mutex_lock.bench.cpp
     libcxxabi/dynamic_cast.bench.cpp
     libcxxabi/dynamic_cast_old_stress.bench.cpp
     allocation.bench.cpp
     deque.bench.cpp
     deque_iterator.bench.cpp
+    exception_ptr.bench.cpp
     filesystem.bench.cpp
     format_to_n.bench.cpp
     format_to.bench.cpp

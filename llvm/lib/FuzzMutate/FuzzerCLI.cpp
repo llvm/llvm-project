@@ -43,7 +43,7 @@ void llvm::handleExecNameEncodedBEOpts(StringRef ExecName) {
       Args.push_back("-global-isel");
       // For now we default GlobalISel to -O0
       Args.push_back("-O0");
-    } else if (Opt.startswith("O")) {
+    } else if (Opt.starts_with("O")) {
       Args.push_back("-" + Opt.str());
     } else if (Triple(Opt).getArch()) {
       Args.push_back("-mtriple=" + Opt.str());
@@ -86,13 +86,12 @@ void llvm::handleExecNameEncodedOptimizerOpts(StringRef ExecName) {
       Args.push_back("-passes=gvn");
     } else if (Opt == "sccp") {
       Args.push_back("-passes=sccp");
-
     } else if (Opt == "loop_predication") {
       Args.push_back("-passes=loop-predication");
     } else if (Opt == "guard_widening") {
       Args.push_back("-passes=guard-widening");
     } else if (Opt == "loop_rotate") {
-      Args.push_back("-passes=loop(rotate)");
+      Args.push_back("-passes=loop-rotate");
     } else if (Opt == "loop_unswitch") {
       Args.push_back("-passes=loop(simple-loop-unswitch)");
     } else if (Opt == "loop_unroll") {
@@ -107,7 +106,18 @@ void llvm::handleExecNameEncodedOptimizerOpts(StringRef ExecName) {
       Args.push_back("-passes=loop-reduce");
     } else if (Opt == "irce") {
       Args.push_back("-passes=irce");
-
+    } else if (Opt == "dse") {
+      Args.push_back("-passes=dse");
+    } else if (Opt == "loop_idiom") {
+      Args.push_back("-passes=loop-idiom");
+    } else if (Opt == "reassociate") {
+      Args.push_back("-passes=reassociate");
+    } else if (Opt == "lower_matrix_intrinsics") {
+      Args.push_back("-passes=lower-matrix-intrinsics");
+    } else if (Opt == "memcpyopt") {
+      Args.push_back("-passes=memcpyopt");
+    } else if (Opt == "sroa") {
+      Args.push_back("-passes=sroa");
     } else if (Triple(Opt).getArch()) {
       Args.push_back("-mtriple=" + Opt.str());
     } else {
@@ -140,7 +150,7 @@ int llvm::runFuzzerOnInputs(int ArgC, char *ArgV[], FuzzerTestFun TestOne,
 
   for (int I = 1; I < ArgC; ++I) {
     StringRef Arg(ArgV[I]);
-    if (Arg.startswith("-")) {
+    if (Arg.starts_with("-")) {
       if (Arg.equals("-ignore_remaining_args=1"))
         break;
       continue;

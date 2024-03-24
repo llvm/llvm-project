@@ -3,6 +3,19 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+sve < %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SVE
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
+; CHECK-GI:       warning: Instruction selection used fallback path for smull_zext_v4i16_v4i32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for pmlsl2_v8i16_uzp1
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for smlsl2_v8i16_uzp1
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for umlsl2_v8i16_uzp1
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for smlsl2_v4i32_uzp1
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for umlsl2_v4i32_uzp1
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for pmlsl_pmlsl2_v8i16_uzp1
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for smlsl_smlsl2_v8i16_uzp1
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for umlsl_umlsl2_v8i16_uzp1
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for smlsl_smlsl2_v4i32_uzp1
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for umlsl_umlsl2_v4i32_uzp1
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for do_stuff
+
 define <8 x i16> @smull_v8i8_v8i16(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: smull_v8i8_v8i16:
 ; CHECK:       // %bb.0:
@@ -226,11 +239,10 @@ define <2 x i64> @smull_zext_v2i32_v2i64(ptr %A, ptr %B) nounwind {
 ; CHECK-GI-NEXT:    movi d0, #0x00ffff0000ffff
 ; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
 ; CHECK-GI-NEXT:    and v0.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    mov w8, v0.s[0]
+; CHECK-GI-NEXT:    mov w9, v0.s[1]
 ; CHECK-GI-NEXT:    ldr d0, [x1]
 ; CHECK-GI-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-GI-NEXT:    fmov w9, s1
 ; CHECK-GI-NEXT:    fmov d1, x8
 ; CHECK-GI-NEXT:    mov d3, v0.d[1]
 ; CHECK-GI-NEXT:    mov v1.d[1], x9

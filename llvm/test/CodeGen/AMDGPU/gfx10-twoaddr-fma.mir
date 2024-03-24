@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck --check-prefixes=GFX10 %s
-# RUN: llc -march=amdgcn -mcpu=gfx1010 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - -early-live-intervals | FileCheck --check-prefixes=GFX10 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck --check-prefixes=GFX10 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - -early-live-intervals | FileCheck --check-prefixes=GFX10 %s
 
 # GFX10-LABEL: name: test_fmamk_reg_imm_f16
 # GFX10: %2:vgpr_32 = IMPLICIT_DEF

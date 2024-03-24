@@ -26,6 +26,9 @@ struct AddressSanitizerOptions {
   bool UseAfterScope = false;
   AsanDetectStackUseAfterReturnMode UseAfterReturn =
       AsanDetectStackUseAfterReturnMode::Runtime;
+  int InstrumentationWithCallsThreshold = 7000;
+  uint32_t MaxInlinePoisoningSize = 64;
+  bool InsertVersionCheck = true;
 };
 
 /// Public interface to the address sanitizer module pass for instrumenting code

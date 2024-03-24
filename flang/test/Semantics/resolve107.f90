@@ -9,5 +9,8 @@ subroutine saves
   !CHECK: SAVE attribute was already specified on 'x'
   !CHECK: SAVE attribute was already specified on 'z'
   save x,z
+  save :: p
+  procedure() :: p
+  !CHECK-NOT: SAVE attribute was already specified on 'p'
+  pointer :: p
 end
-

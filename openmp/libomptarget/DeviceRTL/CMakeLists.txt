@@ -293,7 +293,7 @@ foreach(gpu_arch ${LIBOMPTARGET_DEVICE_ARCHITECTURES})
   if("${gpu_arch}" IN_LIST all_amdgpu_architectures)
     compileDeviceRTLLibrary(${gpu_arch} amdgpu amdgcn-amd-amdhsa -Xclang -mcode-object-version=none)
   elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
-    compileDeviceRTLLibrary(${gpu_arch} nvptx nvptx64-nvidia-cuda --cuda-feature=+ptx61)
+    compileDeviceRTLLibrary(${gpu_arch} nvptx nvptx64-nvidia-cuda --cuda-feature=+ptx63)
   else()
     libomptarget_error_say("Unknown GPU architecture '${gpu_arch}'")
   endif()
@@ -301,7 +301,10 @@ endforeach()
 
 # Archive all the object files generated above into a static library
 add_library(omptarget.devicertl STATIC)
-set_target_properties(omptarget.devicertl PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(omptarget.devicertl PROPERTIES
+  ARCHIVE_OUTPUT_DIRECTORY "${LIBOMPTARGET_LLVM_LIBRARY_INTDIR}"
+  LINKER_LANGUAGE CXX
+)
 target_link_libraries(omptarget.devicertl PRIVATE omptarget.devicertl.all_objs)
 
 install(TARGETS omptarget.devicertl ARCHIVE DESTINATION ${OPENMP_INSTALL_LIBDIR})

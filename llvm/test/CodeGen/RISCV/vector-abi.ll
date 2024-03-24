@@ -21,7 +21,7 @@ define void @caller() {
   ; RV32:   SW killed [[ADDI3]], %stack.0, 0 :: (store (s32) into %stack.0)
   ; RV32:   [[ADDI4:%[0-9]+]]:gpr = ADDI %stack.0, 0
   ; RV32:   $x10 = COPY [[ADDI4]]
-  ; RV32:   PseudoCALL target-flags(riscv-plt) @callee, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x2
+  ; RV32:   PseudoCALL target-flags(riscv-call) @callee, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x2
   ; RV32:   ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
   ; RV32:   PseudoRET
   ; RV64-LABEL: name: caller
@@ -41,7 +41,7 @@ define void @caller() {
   ; RV64:   SD killed [[ADDI3]], %stack.0, 0 :: (store (s64) into %stack.0)
   ; RV64:   [[ADDI4:%[0-9]+]]:gpr = ADDI %stack.0, 0
   ; RV64:   $x10 = COPY [[ADDI4]]
-  ; RV64:   PseudoCALL target-flags(riscv-plt) @callee, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x2
+  ; RV64:   PseudoCALL target-flags(riscv-call) @callee, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x2
   ; RV64:   ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
   ; RV64:   PseudoRET
   call void @callee(<4 x i8> <i8 4, i8 5, i8 6, i8 7>)

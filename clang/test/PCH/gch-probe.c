@@ -1,5 +1,13 @@
+// Unsupported on AIX because we don't support the requisite "__clangast"
+// section in XCOFF yet.
+// UNSUPPORTED: target={{.*}}-aix{{.*}}
+
 // For GCC compatibility, clang should probe also with the .gch extension.
 // RUN: %clang -x c-header -c %s -o %t.h.gch
+// RUN: %clang -fsyntax-only -include %t.h %s
+
+// -gmodules embeds the Clang AST file in an object file.
+// RUN: %clang -x c-header -c %s -gmodules -o %t.h.gch
 // RUN: %clang -fsyntax-only -include %t.h %s
 
 // gch probing should ignore files which are not clang pch files.

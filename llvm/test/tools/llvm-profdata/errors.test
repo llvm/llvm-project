@@ -5,4 +5,4 @@ RUN: not llvm-profdata show file -o file 2>&1 | FileCheck %s --check-prefix SHOW
 SHOW-OUT: Input file name cannot be the same as the output file name!
 
 RUN: not llvm-profdata 2>&1 | FileCheck %s --check-prefix EMPTY
-EMPTY: No command specified!
+EMPTY: No subcommand specified!

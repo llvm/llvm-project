@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_membound:
 ; GCN: MemoryBound: 1

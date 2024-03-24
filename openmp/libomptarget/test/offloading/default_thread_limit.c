@@ -9,6 +9,8 @@
 // UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
 // UNSUPPORTED: x86_64-pc-linux-gnu
 // UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+// UNSUPPORTED: s390x-ibm-linux-gnu
+// UNSUPPORTED: s390x-ibm-linux-gnu-LTO
 
 __attribute__((optnone)) int optnone() { return 1; }
 
@@ -48,8 +50,7 @@ int main() {
   for (int i = 0; i < N; ++i) {
     optnone();
   }
-// FIXME: Use the attribute value to imply a thread_limit
-// DEFAULT: {{(128|256)}} (MaxFlatWorkGroupSize: 42
+// DEFAULT: 42 (MaxFlatWorkGroupSize: 42
 #pragma omp target ompx_attribute(__attribute__((amdgpu_flat_work_group_size(42, 42))))
 #pragma omp teams distribute parallel for
   for (int i = 0; i < N; ++i) {

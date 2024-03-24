@@ -114,8 +114,8 @@ func.func @f5(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf
   %4 = fir.do_loop %arg3 = %c0 to %1 step %c1 iter_args(%arg4 = %2) -> (!fir.array<?xf32>) {
     // CHECK: %[[B_STRIDE_GEP:.*]] = getelementptr {{.*}}, ptr %[[B]], i32 0, i32 7, i32 0, i32 2
     // CHECK: %[[B_STRIDE:.*]] = load i64, ptr %[[B_STRIDE_GEP]]
-    // CHECK: %[[B_DIM_OFFSET:.*]] = mul i64 %{{.*}}, %[[B_STRIDE]]
-    // CHECK: %[[B_OFFSET:.*]] =  add i64 %[[B_DIM_OFFSET]], 0
+    // CHECK: %[[B_DIM_OFFSET:.*]] = mul nsw i64 %{{.*}}, %[[B_STRIDE]]
+    // CHECK: %[[B_OFFSET:.*]] =  add nsw i64 %[[B_DIM_OFFSET]], 0
     // CHECK: %[[B_BASE_GEP:.*]] = getelementptr {{.*}}, ptr %{{.*}}, i32 0, i32 0
     // CHECK: %[[B_BASE:.*]] = load ptr, ptr %[[B_BASE_GEP]]
     // CHECK: %[[B_VOID_ADDR:.*]] = getelementptr i8, ptr %[[B_BASE]], i64 %[[B_OFFSET]]
@@ -172,7 +172,7 @@ func.func @f7(%arg0: !fir.ref<f32>, %arg1: !fir.box<!fir.array<?xf32>>) {
   %0 = fir.shift %c4 : (index) -> !fir.shift<1>
   // CHECK: %[[STRIDE_GEP:.*]] = getelementptr {{.*}}, ptr %[[Y]], i32 0, i32 7, i32 0, i32 2
   // CHECK: %[[STRIDE:.*]] = load i64, ptr %[[STRIDE_GEP]]
-  // CHECK: mul i64 96, %[[STRIDE]]
+  // CHECK: mul nsw i64 96, %[[STRIDE]]
   %1 = fir.array_coor %arg1(%0) %c100 : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>, index) -> !fir.ref<f32>
   %2 = fir.load %1 : !fir.ref<f32>
   fir.store %2 to %arg0 : !fir.ref<f32>
@@ -202,7 +202,7 @@ func.func @f8(%a : !fir.ref<!fir.array<2x2x!fir.type<t{i:i32}>>>, %i : i32) {
 func.func @f9(%i: i32, %e : i64, %j: i64, %c: !fir.ref<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.ref<!fir.char<1,?>> {
   %s = fir.shape %e, %e : (i64, i64) -> !fir.shape<2>
   // CHECK: %[[CAST:.*]] = sext i32 %[[I]] to i64
-  // CHECK: %[[OFFSET:.*]] = mul i64 %{{.*}}, %[[CAST]]
+  // CHECK: %[[OFFSET:.*]] = mul nsw i64 %{{.*}}, %[[CAST]]
   // CHECK: getelementptr i8, ptr %[[C]], i64 %[[OFFSET]]
   %a = fir.array_coor %c(%s) %j, %j typeparams %i : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, i64, i64, i32) -> !fir.ref<!fir.char<1,?>>
   return %a :  !fir.ref<!fir.char<1,?>>

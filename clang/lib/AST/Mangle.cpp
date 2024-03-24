@@ -147,7 +147,7 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
 
     // If the label isn't literal, or if this is an alias for an LLVM intrinsic,
     // do not add a "\01" prefix.
-    if (!ALA->getIsLiteralLabel() || ALA->getLabel().startswith("llvm.")) {
+    if (!ALA->getIsLiteralLabel() || ALA->getLabel().starts_with("llvm.")) {
       Out << ALA->getLabel();
       return;
     }
@@ -464,7 +464,7 @@ public:
       SmallString<40> Mangled;
       auto Prefix = getClassSymbolPrefix(Kind, OCD->getASTContext());
       llvm::Mangler::getNameWithPrefix(Mangled, Prefix + ClassName, DL);
-      return std::string(Mangled.str());
+      return std::string(Mangled);
     };
 
     return {

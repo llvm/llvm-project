@@ -10,10 +10,10 @@ func.func @_QMpolymorphic_testPtest_allocate_unlimited_polymorphic_non_derived()
   return
 }
 
-// CHECK-LABEL: define void @_QMpolymorphic_testPtest_allocate_unlimited_polymorphic_non_derived() {
+// CHECK-LABEL: define void @_QMpolymorphic_testPtest_allocate_unlimited_polymorphic_non_derived(){{.*}}{
 // CHECK:   %[[MEM:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
 // CHECK:   %[[DESC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, i64 1
-// CHECK:   store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr null, i64 0, i32 20180515, i8 0, i8 -1, i8 1, i8 1, ptr null, [1 x i64] undef }, ptr %[[MEM]]
+// CHECK:   store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr null, i64 0, i32 20180515, i8 0, i8 -1, i8 1, i8 1, ptr null, [1 x i64] zeroinitializer }, ptr %[[MEM]]
 // CHECK:   %[[LOADED:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[MEM]], align 8
 // CHECK:   store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOADED]], ptr %[[DESC]]
 // CHECK:   ret void
@@ -25,7 +25,7 @@ func.func @_QMpolymorphic_testPtest_allocate_unlimited_polymorphic_non_derived()
 func.func @_QMpolymorphic_testPtest_rebox() {
   %0 = fir.address_of(@_QFEx) : !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>
   %c-1_i32 = arith.constant -1 : i32
-  %9 = fir.address_of(@_QQcl.2E2F64756D6D792E66393000) : !fir.ref<!fir.char<1,12>>
+  %9 = fir.address_of(@_QQclX2E2F64756D6D792E66393000) : !fir.ref<!fir.char<1,12>>
   %10 = fir.convert %9 : (!fir.ref<!fir.char<1,12>>) -> !fir.ref<i8>
   %c8_i32 = arith.constant 8 : i32
   %11 = fir.call @_FortranAioBeginExternalListOutput(%c-1_i32, %10, %c8_i32) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
@@ -87,7 +87,7 @@ func.func @_QMunlimitedPsub1(%arg0: !fir.class<!fir.array<?xnone>> {fir.bindc_na
 }
 
 // CHECK-LABEL: define void @_QMunlimitedPsub1(
-// CHECK-SAME: ptr %[[ARRAY:.*]]) {
+// CHECK-SAME: ptr %[[ARRAY:.*]]){{.*}}{
 // CHECK: %[[BOX:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
 // CHECK: %{{.}} = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[ARRAY]], i32 0, i32 7, i32 0, i32 2
 // CHECK: %[[TYPE_DESC_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[ARRAY]], i32 0, i32 8
@@ -100,7 +100,8 @@ func.func @_QMunlimitedPsub1(%arg0: !fir.class<!fir.array<?xnone>> {fir.bindc_na
 // CHECK: %[[TYPE_CODE_TRUNC:.*]] = trunc i32 %[[TYPE_CODE]] to i8
 // CHECK: %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %{{.*}}, i8 %[[TYPE_CODE_TRUNC]], 4
 // CHECK: %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %{{.*}}, ptr %[[TYPE_DESC]], 7
-// CHECK: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %24, ptr %[[BOX]]
+// CHECK: %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %{{.*}}, i64 0, 8, 0
+// CHECK: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %{{.*}}, ptr %[[BOX]]
 
 
 fir.global internal @_QFEx : !fir.class<!fir.ptr<!fir.array<?xnone>>> {
@@ -119,7 +120,7 @@ fir.global internal @_QFEy target : !fir.array<1xi32> {
 func.func private @_FortranAioBeginExternalListOutput(i32, !fir.ref<i8>, i32) -> !fir.ref<i8> attributes {fir.io, fir.runtime}
 func.func private @_FortranAioOutputDescriptor(!fir.ref<i8>, !fir.box<none>) -> i1 attributes {fir.io, fir.runtime}
 func.func private @_FortranAioEndIoStatement(!fir.ref<i8>) -> i32 attributes {fir.io, fir.runtime}
-fir.global linkonce @_QQcl.2E2F64756D6D792E66393000 constant : !fir.char<1,12> {
+fir.global linkonce @_QQclX2E2F64756D6D792E66393000 constant : !fir.char<1,12> {
   %0 = fir.string_lit "./dummy.f90\00"(12) : !fir.char<1,12>
   fir.has_value %0 : !fir.char<1,12>
 }
@@ -151,10 +152,10 @@ func.func @_QQmain() {
   return
 }
 
-// CHECK-LABEL: define void @_QQmain() {
+// CHECK-LABEL: define void @_QQmain(){{.*}}{
 // CHECK: %[[CLASS_NONE:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
 // CHECK: %[[DESC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, i64 1
-// CHECK: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr @_QMmod1Ea, i64 ptrtoint (ptr getelementptr (%_QMmod1TtK2, ptr null, i32 1) to i64), i32 20180515, i8 0, i8 42, i8 1, i8 1, ptr @_QMmod1E.dt.t.2, [1 x i64] undef }, ptr %[[CLASS_NONE]], align 8
+// CHECK: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr @_QMmod1Ea, i64 ptrtoint (ptr getelementptr (%_QMmod1TtK2, ptr null, i32 1) to i64), i32 20180515, i8 0, i8 42, i8 1, i8 1, ptr @_QMmod1E.dt.t.2, [1 x i64] zeroinitializer }, ptr %[[CLASS_NONE]], align 8
 // CHECK: %[[LOAD:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[CLASS_NONE]]
 // CHECK: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOAD]], ptr %[[DESC]]
 // CHECK: call void @_QMmod1Psub1(ptr %[[DESC]])
@@ -175,7 +176,7 @@ func.func @_QMmod2Pinitp(%arg0: !fir.ref<!fir.class<!fir.ptr<none>>> {fir.bindc_
 func.func private @_FortranAPointerAssociate(!fir.ref<!fir.box<none>>, !fir.box<none>) -> none attributes {fir.runtime}
 
 // CHECK-LABEL: define void @_QMmod2Pinitp(
-// CHECK-SAME: ptr %[[ARG0:.*]]) {
+// CHECK-SAME: ptr %[[ARG0:.*]]){{.*}}{
 // CHECK: %[[ALLOCA_CLASS_NONE:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
 // CHECK: %[[LOAD:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[ARG0]]
 // CHECK: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOAD]], ptr %[[ALLOCA_CLASS_NONE]]
@@ -194,4 +195,4 @@ func.func @_QQembox_input_type(%arg0 : !fir.ref<!fir.type<_QMmod1Tp2{v:!fir.arra
 }
 
 // CHECK-LABEL: define void @_QQembox_input_type
-// CHECK: %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr undef, i64 ptrtoint (ptr getelementptr (%_QMmod1Tp2, ptr null, i32 1) to i64), i32 20180515, i8 0, i8 42, i8 0, i8 1, ptr @_QMmod1E.dt.p2, [1 x i64] undef }, ptr %{{.*}}, 0
+// CHECK: %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr undef, i64 ptrtoint (ptr getelementptr (%_QMmod1Tp2, ptr null, i32 1) to i64), i32 20180515, i8 0, i8 42, i8 0, i8 1, ptr @_QMmod1E.dt.p2, [1 x i64] zeroinitializer }, ptr %{{.*}}, 0

@@ -34,62 +34,66 @@ define <2 x i256> @load_zext_v2i64i256(ptr %ap) #0 {
   ret <2 x i256> %val
 }
 
-define <8 x i32> @load_zext_v8i16i32(ptr %ap) vscale_range(2,0) #0 {
+define void @load_zext_v8i16i32(ptr %ap, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: load_zext_v8i16i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    st1w { z0.s }, p0, [x8]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %ap
   %val = zext <8 x i16> %a to <8 x i32>
-  ret <8 x i32> %val
+  store <8 x i32> %val, ptr %b
+  ret void
 }
 
-define <16 x i32> @load_zext_v16i16i32(ptr %ap) vscale_range(4,0) #0 {
+define void @load_zext_v16i16i32(ptr %ap, ptr %b) vscale_range(4,0) #0 {
 ; CHECK-LABEL: load_zext_v16i16i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl16
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    st1w { z0.s }, p0, [x8]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %a = load <16 x i16>, ptr %ap
   %val = zext <16 x i16> %a to <16 x i32>
-  ret <16 x i32> %val
+  store <16 x i32> %val, ptr %b
+  ret void
 }
 
-define <32 x i32> @load_zext_v32i16i32(ptr %ap) vscale_range(8,0) #0 {
+define void @load_zext_v32i16i32(ptr %ap, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: load_zext_v32i16i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    st1w { z0.s }, p0, [x8]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %a = load <32 x i16>, ptr %ap
   %val = zext <32 x i16> %a to <32 x i32>
-  ret <32 x i32> %val
+  store <32 x i32> %val, ptr %b
+  ret void
 }
 
-define <64 x i32> @load_zext_v64i16i32(ptr %ap) #0 {
+define void @load_zext_v64i16i32(ptr %ap, ptr %b) #0 {
 ; VBITS_GE_1024-LABEL: load_zext_v64i16i32:
 ; VBITS_GE_1024:       // %bb.0:
 ; VBITS_GE_1024-NEXT:    ptrue p0.s, vl32
-; VBITS_GE_1024-NEXT:    mov x9, #32 // =0x20
-; VBITS_GE_1024-NEXT:    ld1h { z0.s }, p0/z, [x0, x9, lsl #1]
+; VBITS_GE_1024-NEXT:    mov x8, #32 // =0x20
+; VBITS_GE_1024-NEXT:    ld1h { z0.s }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_1024-NEXT:    ld1h { z1.s }, p0/z, [x0]
-; VBITS_GE_1024-NEXT:    st1w { z0.s }, p0, [x8, x9, lsl #2]
-; VBITS_GE_1024-NEXT:    st1w { z1.s }, p0, [x8]
+; VBITS_GE_1024-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
+; VBITS_GE_1024-NEXT:    st1w { z1.s }, p0, [x1]
 ; VBITS_GE_1024-NEXT:    ret
 ;
 ; VBITS_GE_2048-LABEL: load_zext_v64i16i32:
 ; VBITS_GE_2048:       // %bb.0:
 ; VBITS_GE_2048-NEXT:    ptrue p0.s, vl64
 ; VBITS_GE_2048-NEXT:    ld1h { z0.s }, p0/z, [x0]
-; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x8]
+; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_2048-NEXT:    ret
   %a = load <64 x i16>, ptr %ap
   %val = zext <64 x i16> %a to <64 x i32>
-  ret <64 x i32> %val
+  store <64 x i32> %val, ptr %b
+  ret void
 }
 
 define <4 x i32> @load_sext_v4i16i32(ptr %ap) vscale_range(2,0) #0 {
@@ -103,196 +107,206 @@ define <4 x i32> @load_sext_v4i16i32(ptr %ap) vscale_range(2,0) #0 {
   ret <4 x i32> %val
 }
 
-define <8 x i32> @load_sext_v8i16i32(ptr %ap) vscale_range(2,0) #0 {
+define void @load_sext_v8i16i32(ptr %ap, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: load_sext_v8i16i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ld1sh { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    st1w { z0.s }, p0, [x8]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %ap
   %val = sext <8 x i16> %a to <8 x i32>
-  ret <8 x i32> %val
+  store <8 x i32> %val, ptr %b
+  ret void
 }
 
-define <16 x i32> @load_sext_v16i16i32(ptr %ap) vscale_range(4,0) #0 {
+define void @load_sext_v16i16i32(ptr %ap, ptr %b) vscale_range(4,0) #0 {
 ; CHECK-LABEL: load_sext_v16i16i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl16
 ; CHECK-NEXT:    ld1sh { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    st1w { z0.s }, p0, [x8]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %a = load <16 x i16>, ptr %ap
   %val = sext <16 x i16> %a to <16 x i32>
-  ret <16 x i32> %val
+  store <16 x i32> %val, ptr %b
+  ret void
 }
 
-define <32 x i32> @load_sext_v32i16i32(ptr %ap) vscale_range(8,0) #0 {
+define void @load_sext_v32i16i32(ptr %ap, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: load_sext_v32i16i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    ld1sh { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    st1w { z0.s }, p0, [x8]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %a = load <32 x i16>, ptr %ap
   %val = sext <32 x i16> %a to <32 x i32>
-  ret <32 x i32> %val
+  store <32 x i32> %val, ptr %b
+  ret void
 }
 
-define <64 x i32> @load_sext_v64i16i32(ptr %ap) #0 {
+define void @load_sext_v64i16i32(ptr %ap, ptr %b) #0 {
 ; VBITS_GE_1024-LABEL: load_sext_v64i16i32:
 ; VBITS_GE_1024:       // %bb.0:
 ; VBITS_GE_1024-NEXT:    ptrue p0.s, vl32
-; VBITS_GE_1024-NEXT:    mov x9, #32 // =0x20
-; VBITS_GE_1024-NEXT:    ld1sh { z0.s }, p0/z, [x0, x9, lsl #1]
+; VBITS_GE_1024-NEXT:    mov x8, #32 // =0x20
+; VBITS_GE_1024-NEXT:    ld1sh { z0.s }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_1024-NEXT:    ld1sh { z1.s }, p0/z, [x0]
-; VBITS_GE_1024-NEXT:    st1w { z0.s }, p0, [x8, x9, lsl #2]
-; VBITS_GE_1024-NEXT:    st1w { z1.s }, p0, [x8]
+; VBITS_GE_1024-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
+; VBITS_GE_1024-NEXT:    st1w { z1.s }, p0, [x1]
 ; VBITS_GE_1024-NEXT:    ret
 ;
 ; VBITS_GE_2048-LABEL: load_sext_v64i16i32:
 ; VBITS_GE_2048:       // %bb.0:
 ; VBITS_GE_2048-NEXT:    ptrue p0.s, vl64
 ; VBITS_GE_2048-NEXT:    ld1sh { z0.s }, p0/z, [x0]
-; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x8]
+; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_2048-NEXT:    ret
   %a = load <64 x i16>, ptr %ap
   %val = sext <64 x i16> %a to <64 x i32>
-  ret <64 x i32> %val
+  store <64 x i32> %val, ptr %b
+  ret void
 }
 
-define <32 x i64> @load_zext_v32i8i64(ptr %ap) #0 {
+define void @load_zext_v32i8i64(ptr %ap, ptr %b) #0 {
 ; VBITS_GE_1024-LABEL: load_zext_v32i8i64:
 ; VBITS_GE_1024:       // %bb.0:
 ; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
-; VBITS_GE_1024-NEXT:    mov w9, #16 // =0x10
-; VBITS_GE_1024-NEXT:    ld1b { z0.d }, p0/z, [x0, x9]
+; VBITS_GE_1024-NEXT:    mov w8, #16 // =0x10
+; VBITS_GE_1024-NEXT:    ld1b { z0.d }, p0/z, [x0, x8]
 ; VBITS_GE_1024-NEXT:    ld1b { z1.d }, p0/z, [x0]
-; VBITS_GE_1024-NEXT:    mov x9, #16 // =0x10
-; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x8, x9, lsl #3]
-; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x8]
+; VBITS_GE_1024-NEXT:    mov x8, #16 // =0x10
+; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
+; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x1]
 ; VBITS_GE_1024-NEXT:    ret
 ;
 ; VBITS_GE_2048-LABEL: load_zext_v32i8i64:
 ; VBITS_GE_2048:       // %bb.0:
 ; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
 ; VBITS_GE_2048-NEXT:    ld1b { z0.d }, p0/z, [x0]
-; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x8]
+; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_2048-NEXT:    ret
   %a = load <32 x i8>, ptr %ap
   %val = zext <32 x i8> %a to <32 x i64>
-  ret <32 x i64> %val
+  store <32 x i64> %val, ptr %b
+  ret void
 }
 
-define <32 x i64> @load_sext_v32i8i64(ptr %ap) #0 {
+define void @load_sext_v32i8i64(ptr %ap, ptr %b) #0 {
 ; VBITS_GE_1024-LABEL: load_sext_v32i8i64:
 ; VBITS_GE_1024:       // %bb.0:
 ; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
-; VBITS_GE_1024-NEXT:    mov w9, #16 // =0x10
-; VBITS_GE_1024-NEXT:    ld1sb { z0.d }, p0/z, [x0, x9]
+; VBITS_GE_1024-NEXT:    mov w8, #16 // =0x10
+; VBITS_GE_1024-NEXT:    ld1sb { z0.d }, p0/z, [x0, x8]
 ; VBITS_GE_1024-NEXT:    ld1sb { z1.d }, p0/z, [x0]
-; VBITS_GE_1024-NEXT:    mov x9, #16 // =0x10
-; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x8, x9, lsl #3]
-; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x8]
+; VBITS_GE_1024-NEXT:    mov x8, #16 // =0x10
+; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
+; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x1]
 ; VBITS_GE_1024-NEXT:    ret
 ;
 ; VBITS_GE_2048-LABEL: load_sext_v32i8i64:
 ; VBITS_GE_2048:       // %bb.0:
 ; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
 ; VBITS_GE_2048-NEXT:    ld1sb { z0.d }, p0/z, [x0]
-; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x8]
+; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_2048-NEXT:    ret
   %a = load <32 x i8>, ptr %ap
   %val = sext <32 x i8> %a to <32 x i64>
-  ret <32 x i64> %val
+  store <32 x i64> %val, ptr %b
+  ret void
 }
 
-define <32 x i64> @load_zext_v32i16i64(ptr %ap) #0 {
+define void @load_zext_v32i16i64(ptr %ap, ptr %b) #0 {
 ; VBITS_GE_1024-LABEL: load_zext_v32i16i64:
 ; VBITS_GE_1024:       // %bb.0:
 ; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
-; VBITS_GE_1024-NEXT:    mov x9, #16 // =0x10
-; VBITS_GE_1024-NEXT:    ld1h { z0.d }, p0/z, [x0, x9, lsl #1]
+; VBITS_GE_1024-NEXT:    mov x8, #16 // =0x10
+; VBITS_GE_1024-NEXT:    ld1h { z0.d }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_1024-NEXT:    ld1h { z1.d }, p0/z, [x0]
-; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x8, x9, lsl #3]
-; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x8]
+; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
+; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x1]
 ; VBITS_GE_1024-NEXT:    ret
 ;
 ; VBITS_GE_2048-LABEL: load_zext_v32i16i64:
 ; VBITS_GE_2048:       // %bb.0:
 ; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
 ; VBITS_GE_2048-NEXT:    ld1h { z0.d }, p0/z, [x0]
-; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x8]
+; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_2048-NEXT:    ret
   %a = load <32 x i16>, ptr %ap
   %val = zext <32 x i16> %a to <32 x i64>
-  ret <32 x i64> %val
+  store <32 x i64> %val, ptr %b
+  ret void
 }
 
-define <32 x i64> @load_sext_v32i16i64(ptr %ap) #0 {
+define void @load_sext_v32i16i64(ptr %ap, ptr %b) #0 {
 ; VBITS_GE_1024-LABEL: load_sext_v32i16i64:
 ; VBITS_GE_1024:       // %bb.0:
 ; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
-; VBITS_GE_1024-NEXT:    mov x9, #16 // =0x10
-; VBITS_GE_1024-NEXT:    ld1sh { z0.d }, p0/z, [x0, x9, lsl #1]
+; VBITS_GE_1024-NEXT:    mov x8, #16 // =0x10
+; VBITS_GE_1024-NEXT:    ld1sh { z0.d }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_1024-NEXT:    ld1sh { z1.d }, p0/z, [x0]
-; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x8, x9, lsl #3]
-; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x8]
+; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
+; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x1]
 ; VBITS_GE_1024-NEXT:    ret
 ;
 ; VBITS_GE_2048-LABEL: load_sext_v32i16i64:
 ; VBITS_GE_2048:       // %bb.0:
 ; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
 ; VBITS_GE_2048-NEXT:    ld1sh { z0.d }, p0/z, [x0]
-; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x8]
+; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_2048-NEXT:    ret
   %a = load <32 x i16>, ptr %ap
   %val = sext <32 x i16> %a to <32 x i64>
-  ret <32 x i64> %val
+  store <32 x i64> %val, ptr %b
+  ret void
 }
 
-define <32 x i64> @load_zext_v32i32i64(ptr %ap) #0 {
+define void @load_zext_v32i32i64(ptr %ap, ptr %b) #0 {
 ; VBITS_GE_1024-LABEL: load_zext_v32i32i64:
 ; VBITS_GE_1024:       // %bb.0:
 ; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
-; VBITS_GE_1024-NEXT:    mov x9, #16 // =0x10
-; VBITS_GE_1024-NEXT:    ld1w { z0.d }, p0/z, [x0, x9, lsl #2]
+; VBITS_GE_1024-NEXT:    mov x8, #16 // =0x10
+; VBITS_GE_1024-NEXT:    ld1w { z0.d }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_1024-NEXT:    ld1w { z1.d }, p0/z, [x0]
-; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x8, x9, lsl #3]
-; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x8]
+; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
+; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x1]
 ; VBITS_GE_1024-NEXT:    ret
 ;
 ; VBITS_GE_2048-LABEL: load_zext_v32i32i64:
 ; VBITS_GE_2048:       // %bb.0:
 ; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
 ; VBITS_GE_2048-NEXT:    ld1w { z0.d }, p0/z, [x0]
-; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x8]
+; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_2048-NEXT:    ret
   %a = load <32 x i32>, ptr %ap
   %val = zext <32 x i32> %a to <32 x i64>
-  ret <32 x i64> %val
+  store <32 x i64> %val, ptr %b
+  ret void
 }
 
-define <32 x i64> @load_sext_v32i32i64(ptr %ap) #0 {
+define void @load_sext_v32i32i64(ptr %ap, ptr %b) #0 {
 ; VBITS_GE_1024-LABEL: load_sext_v32i32i64:
 ; VBITS_GE_1024:       // %bb.0:
 ; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
-; VBITS_GE_1024-NEXT:    mov x9, #16 // =0x10
-; VBITS_GE_1024-NEXT:    ld1sw { z0.d }, p0/z, [x0, x9, lsl #2]
+; VBITS_GE_1024-NEXT:    mov x8, #16 // =0x10
+; VBITS_GE_1024-NEXT:    ld1sw { z0.d }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_1024-NEXT:    ld1sw { z1.d }, p0/z, [x0]
-; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x8, x9, lsl #3]
-; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x8]
+; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
+; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x1]
 ; VBITS_GE_1024-NEXT:    ret
 ;
 ; VBITS_GE_2048-LABEL: load_sext_v32i32i64:
 ; VBITS_GE_2048:       // %bb.0:
 ; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
 ; VBITS_GE_2048-NEXT:    ld1sw { z0.d }, p0/z, [x0]
-; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x8]
+; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_2048-NEXT:    ret
   %a = load <32 x i32>, ptr %ap
   %val = sext <32 x i32> %a to <32 x i64>
-  ret <32 x i64> %val
+  store <32 x i64> %val, ptr %b
+  ret void
 }
 
 attributes #0 = { "target-features"="+sve" }

@@ -632,7 +632,7 @@ static bool potentiallyWritesIntoIvar(const Decl *Parent,
 
     if (const auto *DRE = dyn_cast<DeclRefExpr>(Base))
       if (const auto *ID = dyn_cast<ImplicitParamDecl>(DRE->getDecl()))
-        if (ID->getParameterKind() == ImplicitParamDecl::ObjCSelf)
+        if (ID->getParameterKind() == ImplicitParamKind::ObjCSelf)
           return true;
 
     return false;
@@ -1394,8 +1394,7 @@ static void showBRParamDiagnostics(llvm::raw_svector_ostream &OS,
       VR->printPretty(OS);
     }
   } else if (const auto *ImplParam = dyn_cast<ImplicitParamDecl>(D)) {
-    if (ImplParam->getParameterKind() ==
-        ImplicitParamDecl::ImplicitParamKind::ObjCSelf) {
+    if (ImplParam->getParameterKind() == ImplicitParamKind::ObjCSelf) {
       OS << " via implicit parameter 'self'";
     }
   }
@@ -2884,6 +2883,16 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond, BugReporterContext &BRC,
   // previous program state we assuming the newly seen constraint information.
   // If we cannot evaluate the condition (and the constraints are the same)
   // the analyzer has no information about the value and just assuming it.
+  // FIXME: This logic is not entirely correct, because e.g. in code like
+  //   void f(unsigned arg) {
+  //     if (arg >= 0) {
+  //       // ...
+  //     }
+  //   }
+  // it will say that the "arg >= 0" check is _assuming_ something new because
+  // the constraint that "$arg >= 0" is 1 was added to the list of known
+  // constraints. However, the unsigned value is always >= 0 so semantically
+  // this is not a "real" assumption.
   bool IsAssuming =
       !BRC.getStateManager().haveEqualConstraints(CurrentState, PrevState) ||
       CurrentState->getSVal(Cond, LCtx).isUnknownOrUndef();
@@ -3373,7 +3382,7 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
   FullSourceLoc Loc = BR.getLocation().asLocation();
   while (Loc.isMacroID()) {
     Loc = Loc.getSpellingLoc();
-    if (SM.getFilename(Loc).endswith("sys/queue.h")) {
+    if (SM.getFilename(Loc).ends_with("sys/queue.h")) {
       BR.markInvalid(getTag(), nullptr);
       return;
     }

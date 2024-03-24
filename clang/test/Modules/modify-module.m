@@ -5,7 +5,7 @@
 // RUN: mkdir -p %t/include
 // RUN: cat %S/Inputs/Modified/A.h > %t/include/A.h
 // RUN: cat %S/Inputs/Modified/B.h > %t/include/B.h
-// RUN: cat %S/Inputs/Modified/module.map > %t/include/module.map
+// RUN: cat %S/Inputs/Modified/module.modulemap > %t/include/module.modulemap
 // RUN: %clang_cc1 -fdisable-module-hash -fmodules-cache-path=%t/cache -fmodules -fimplicit-module-maps -I %t/include %s -verify
 // RUN: echo '' >> %t/include/B.h
 // RUN: %clang_cc1 -fdisable-module-hash -fmodules-cache-path=%t/cache -fmodules -fimplicit-module-maps -I %t/include %s -verify
