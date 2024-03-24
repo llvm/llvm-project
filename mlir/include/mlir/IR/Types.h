@@ -305,6 +305,11 @@ protected:
 namespace TypeTrait {
 template <typename ConcreteType>
 using IsMutable = detail::StorageUserTrait::IsMutable<ConcreteType>;
+
+/// Trait used to tell the printer and parser to always print and parse
+/// instances of the type as if it occurs within a `qualified` directive.
+template <typename ConcreteType>
+struct PrintQualified : TraitBase<ConcreteType, PrintQualified> {};
 } // namespace TypeTrait
 
 //===----------------------------------------------------------------------===//
