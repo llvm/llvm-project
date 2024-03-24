@@ -76,6 +76,12 @@ if (LIBCXX_ENABLE_THREADS)
     )
 endif()
 
+if (LIBCXX_ENABLE_SHARED_RECURSIVE_MUTEX)
+  list(APPEND LIBCXX_SOURCES
+    shared_recursive_mutex.cpp
+    )
+endif()
+
 if (LIBCXX_ENABLE_RANDOM_DEVICE)
   list(APPEND LIBCXX_SOURCES
     random.cpp
