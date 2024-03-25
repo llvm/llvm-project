@@ -3206,6 +3206,8 @@ class ConstantArrayType final
       : ArrayType(ConstantArray, Et, Can, SM, TQ, nullptr), I(Width / 8, Sz) {
     ConstantArrayTypeBits.HasExternalSize = false;
     assert(Sz < 0x0FFFFFFFFFFFFFFF && "Size must fit in 60 bits");
+    // The in-structure size stores the size in bytes rather than bits so we
+    // drop the four least significant bits since they're always zero anyways.
     assert(Width < 0xFF && "Type width must fit in 8 bits");
   }
 
