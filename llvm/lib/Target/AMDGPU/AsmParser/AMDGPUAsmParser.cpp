@@ -985,7 +985,7 @@ public:
     return Imm.Type;
   }
 
-  unsigned getReg() const override {
+  MCRegister getReg() const override {
     assert(isRegKind());
     return Reg.RegNo;
   }
