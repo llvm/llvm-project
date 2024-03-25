@@ -3938,7 +3938,9 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
   llvm::GlobalVariable *OldGV = M.getNamedGlobal(Name);
   llvm::GlobalVariable *GV =
       new llvm::GlobalVariable(M, Init->getType(),
-                               /*isConstant=*/true, Linkage, Init, Name);
+                               /*isConstant=*/true, Linkage, Init, Name,
+                               nullptr, llvm::GlobalValue::NotThreadLocal,
+                               CGM.GlobalsInt8PtrTy->getAddressSpace());
 
   // Export the typeinfo in the same circumstances as the vtable is exported.
   auto GVDLLStorageClass = DLLStorageClass;
