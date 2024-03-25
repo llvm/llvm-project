@@ -2187,7 +2187,7 @@ void CodeGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
 }
 
 // Pushes a destroy and defers its deactivation until its
-// DeferredDeactivationCleanupScope is exited.
+// CleanupDeactivationScope is exited.
 void CodeGenFunction::pushDestroyAndDeferDeactivation(
     QualType::DestructionKind dtorKind, Address addr, QualType type) {
   assert(dtorKind && "cannot push destructor for trivial type");
