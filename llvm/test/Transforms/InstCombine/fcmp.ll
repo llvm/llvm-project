@@ -1284,19 +1284,3 @@ define <1 x i1> @bitcast_1vec_eq0(i32 %x) {
   %cmp = fcmp oeq <1 x float> %f, zeroinitializer
   ret <1 x i1> %cmp
 }
-
-define float @copysign_conditional(i1 noundef zeroext %0, float %1, float %2) {
-; CHECK-LABEL: define float @copysign_conditional(
-; CHECK-SAME: i1 noundef zeroext [[TMP0:%.*]], float [[TMP1:%.*]], float [[TMP2:%.*]]) {
-; CHECK-NEXT:    [[TMP4:%.*]] = fcmp olt float [[TMP1]], 0.000000e+00
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP4]], [[TMP0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float -1.000000e+00, float 1.000000e+00
-; CHECK-NEXT:    [[TMP7:%.*]] = tail call float @llvm.copysign.f32(float [[TMP2]], float [[TMP6]])
-; CHECK-NEXT:    ret float [[TMP7]]
-;
-  %4 = fcmp olt float %1, 0.000000e+00
-  %5 = and i1 %4, %0
-  %6 = select i1 %5, float -1.000000e+00, float 1.000000e+00
-  %7 = tail call float @llvm.copysign.f32(float %2, float %6)
-  ret float %7
-}

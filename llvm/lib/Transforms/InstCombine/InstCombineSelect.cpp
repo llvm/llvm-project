@@ -2790,47 +2790,6 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
   return ChangedFMF ? &SI : nullptr;
 }
 
-// Canonicalize select with fcmp -> select
-static Instruction *foldSelectWithFCmp(SelectInst &SI, InstCombinerImpl &IC) {
-  /* From
-    %4 = fcmp olt float %1, 0.000000e+00
-    %5 = and i1 %4, %0
-    %6 = select i1 %5, float -1.000000e+00, float 1.000000e+00
-  */
-  /* To
-   %4 = select i1 %0, float %1, float 1.000000e+00
-  */
-  Value *CondVal = SI.getCondition();
-  Value *TrueVal = SI.getTrueValue();
-  Value *FalseVal = SI.getFalseValue();
-  Value *One = Constant::getAllOnesValue(FalseVal->getType());
-  Value *X, *C, *Op;
-  const APFloat *A, *E;
-  CmpInst::Predicate Pred;
-  for (bool Swap : {false, true}) {
-    if (Swap)
-      std::swap(TrueVal, FalseVal);
-    if (match(&SI, (m_Value(CondVal), m_APFloat(A), m_APFloat(E)))) {
-      if (!match(TrueVal, m_APFloatAllowUndef(A)) &&
-          !match(FalseVal, m_APFloatAllowUndef(E)))
-        return nullptr;
-      if (!match(CondVal, m_And(m_FCmp(Pred, m_Specific(X), m_PosZeroFP()),
-                                m_Value(C))) &&
-          (X->hasOneUse() && C->hasOneUse()))
-        return nullptr;
-      if (!A->isNegative() && E->isNegative())
-        return nullptr;
-      if (!Swap && (Pred == FCmpInst::FCMP_OLT)) {
-        return SelectInst::Create(C, X, One);
-      }
-      if (Swap && (Pred == FCmpInst::FCMP_OGT)) {
-        return SelectInst::Create(C, X, One);
-      }
-    }
-  }
-  return nullptr;
-}
-
 // Match the following IR pattern:
 //   %x.lowbits = and i8 %x, %lowbitmask
 //   %x.lowbits.are.zero = icmp eq i8 %x.lowbits, 0
@@ -3548,10 +3507,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // Fold selecting to fabs.
   if (Instruction *Fabs = foldSelectWithFCmpToFabs(SI, *this))
     return Fabs;
-
-  // Fold selecting to ffold.
-  if (Instruction *Ffold = foldSelectWithFCmp(SI, *this))
-    return Ffold;
 
   // See if we are selecting two values based on a comparison of the two values.
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(CondVal))
