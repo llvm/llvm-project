@@ -337,8 +337,8 @@ static void emitInstBits(raw_ostream &IS, raw_ostream &SS, const APInt &Bits,
     return;
   }
 
-  IS.indent(4) << "{/*NumBits*/" << Bits.getBitWidth() << ", "
-               << "/*Index*/" << Index << "},";
+  IS.indent(4) << "{/*NumBits*/" << Bits.getBitWidth() << ", " << "/*Index*/"
+               << Index << "},";
 
   SS.indent(4);
   for (unsigned I = 0; I < Bits.getNumWords(); ++I, ++Index)
@@ -371,8 +371,8 @@ void VarLenCodeEmitterGen::emitInstructionBaseValues(
     if (ModeIt == InstIt->second.end())
       ModeIt = InstIt->second.find(Universal);
     if (ModeIt == InstIt->second.end()) {
-      IS.indent(4) << "{/*NumBits*/0, /*Index*/0},\t"
-                   << "// " << R->getName() << " no encoding\n";
+      IS.indent(4) << "{/*NumBits*/0, /*Index*/0},\t" << "// " << R->getName()
+                   << " no encoding\n";
       continue;
     }
     const VarLenInst &VLI = ModeIt->second;
@@ -492,10 +492,9 @@ std::string VarLenCodeEmitterGen::getInstructionCaseForEncoding(
 
       SS << ", /*Pos=*/" << utostr(Offset) << ", Scratch, Fixups, STI);\n";
 
-      SS.indent(I) << "Inst.insertBits("
-                   << "Scratch.extractBits(" << utostr(NumBits) << ", "
-                   << utostr(LoBit) << ")"
-                   << ", " << Offset << ");\n";
+      SS.indent(I) << "Inst.insertBits(" << "Scratch.extractBits("
+                   << utostr(NumBits) << ", " << utostr(LoBit) << ")" << ", "
+                   << Offset << ");\n";
 
       HighScratchAccess = std::max(HighScratchAccess, NumBits + LoBit);
     }

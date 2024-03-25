@@ -16,7 +16,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_GLOBALISELMATCHTABLE_H
 #define LLVM_UTILS_TABLEGEN_GLOBALISELMATCHTABLE_H
 
-#include "CodeGenDAGPatterns.h"
+#include "Common/CodeGenDAGPatterns.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"

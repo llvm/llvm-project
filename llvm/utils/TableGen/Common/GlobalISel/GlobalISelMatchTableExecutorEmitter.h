@@ -15,7 +15,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_GLOBALISELMATCHTABLEEXECUTOREMITTER_H
 #define LLVM_UTILS_TABLEGEN_GLOBALISELMATCHTABLEEXECUTOREMITTER_H
 
-#include "SubtargetFeatureInfo.h"
+#include "Common/SubtargetFeatureInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
