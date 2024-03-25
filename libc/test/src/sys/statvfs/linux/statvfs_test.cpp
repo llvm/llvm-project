@@ -6,7 +6,7 @@
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
 namespace LIBC_NAMESPACE {
-static int statfs(const char *path, statfs *buf) {
+static int statfs(const char *path, struct statfs *buf) {
   using namespace statfs_utils;
   if (cpp::optional<LinuxStatFs> result = linux_statfs(path)) {
     *buf = *result;
@@ -17,31 +17,31 @@ static int statfs(const char *path, statfs *buf) {
 } // namespace LIBC_NAMESPACE
 
 TEST(LlvmLibcSysStatfsTest, StatfsBasic) {
-  struct statfs buf[1];
-  ASSERT_THAT(LIBC_NAMESPACE::statfs("/", buf), Succeeds());
-  ASSERT_THAT(LIBC_NAMESPACE::statfs("/proc", buf), Succeeds());
-  ASSERT_EQ(buf->f_type, static_cast<decltype(buf->f_type)>(PROC_SUPER_MAGIC));
-  ASSERT_THAT(LIBC_NAMESPACE::statfs("/sys", buf), Succeeds());
-  ASSERT_EQ(buf->f_type, static_cast<decltype(buf->f_type)>(SYSFS_MAGIC));
+  struct statfs buf;
+  ASSERT_THAT(LIBC_NAMESPACE::statfs("/", &buf), Succeeds());
+  ASSERT_THAT(LIBC_NAMESPACE::statfs("/proc", &buf), Succeeds());
+  ASSERT_EQ(buf.f_type, static_cast<decltype(buf.f_type)>(PROC_SUPER_MAGIC));
+  ASSERT_THAT(LIBC_NAMESPACE::statfs("/sys", &buf), Succeeds());
+  ASSERT_EQ(buf.f_type, static_cast<decltype(buf.f_type)>(SYSFS_MAGIC));
 }
 
 TEST(LlvmLibcSysStatfsTest, StatvfsInvalidPath) {
-  struct statvfs buf[1];
-  ASSERT_THAT(LIBC_NAMESPACE::statvfs("", buf), Fails(ENOENT));
-  ASSERT_THAT(LIBC_NAMESPACE::statvfs("/nonexistent", buf), Fails(ENOENT));
-  ASSERT_THAT(LIBC_NAMESPACE::statvfs("/dev/null/whatever", buf),
+  struct statvfs buf;
+  ASSERT_THAT(LIBC_NAMESPACE::statvfs("", &buf), Fails(ENOENT));
+  ASSERT_THAT(LIBC_NAMESPACE::statvfs("/nonexistent", &buf), Fails(ENOENT));
+  ASSERT_THAT(LIBC_NAMESPACE::statvfs("/dev/null/whatever", &buf),
               Fails(ENOTDIR));
-  ASSERT_THAT(LIBC_NAMESPACE::statvfs(nullptr, buf), Fails(EFAULT));
+  ASSERT_THAT(LIBC_NAMESPACE::statvfs(nullptr, &buf), Fails(EFAULT));
 }
 
 TEST(LlvmLibcSysStatfsTest, StatvfsNameTooLong) {
-  struct statvfs buf[1];
-  ASSERT_THAT(LIBC_NAMESPACE::statvfs("/", buf), Succeeds());
-  char *name = static_cast<char *>(__builtin_alloca(buf->f_namemax + 3));
+  struct statvfs buf;
+  ASSERT_THAT(LIBC_NAMESPACE::statvfs("/", &buf), Succeeds());
+  char *name = static_cast<char *>(__builtin_alloca(buf.f_namemax + 3));
   name[0] = '/';
-  name[buf->f_namemax + 2] = '\0';
-  for (unsigned i = 1; i < buf->f_namemax + 2; ++i) {
+  name[buf.f_namemax + 2] = '\0';
+  for (unsigned i = 1; i < buf.f_namemax + 2; ++i) {
     name[i] = 'a';
   }
-  ASSERT_THAT(LIBC_NAMESPACE::statvfs(name, buf), Fails(ENAMETOOLONG));
+  ASSERT_THAT(LIBC_NAMESPACE::statvfs(name, &buf), Fails(ENAMETOOLONG));
 }

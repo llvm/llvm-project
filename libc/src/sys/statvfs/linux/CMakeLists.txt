@@ -17,6 +17,7 @@ add_entrypoint_object(
   HDRS
     ../statvfs.h
   DEPENDS
+    libc.src.__support.libc_assert
     libc.include.llvm-libc-types.struct_statvfs
     .statfs_utils
 )
@@ -28,6 +29,7 @@ add_entrypoint_object(
   HDRS
     ../fstatvfs.h
   DEPENDS
+    libc.src.__support.libc_assert
     libc.include.llvm-libc-types.struct_statvfs
     .statfs_utils
 )

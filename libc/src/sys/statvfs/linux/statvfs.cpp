@@ -8,6 +8,7 @@
 
 #include "src/sys/statvfs/statvfs.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_assert.h"
 #include "src/sys/statvfs/linux/statfs_utils.h"
 
 namespace LIBC_NAMESPACE {
@@ -17,8 +18,10 @@ LLVM_LIBC_FUNCTION(int, statvfs,
                     struct statvfs *__restrict buf)) {
   using namespace statfs_utils;
   cpp::optional<LinuxStatFs> result = linux_statfs(path);
-  if (result)
+  if (result) {
+    LIBC_ASSERT(buf != nullptr);
     *buf = statfs_to_statvfs(*result);
+  }
   return result ? 0 : -1;
 }
 
