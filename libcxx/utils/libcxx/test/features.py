@@ -280,6 +280,7 @@ DEFAULT_FEATURES = [
         # This is not allowed per C11 7.1.2 Standard headers/6
         #  Any declaration of a library function shall have external linkage.
         when=lambda cfg: "__ANDROID__" in compilerMacros(cfg)
+        or "__FreeBSD__" in compilerMacros(cfg)
         or "_WIN32" in compilerMacros(cfg)
         or platform.system().lower().startswith("aix")
         # Avoid building on platforms that don't support modules properly.
