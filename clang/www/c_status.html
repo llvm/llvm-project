@@ -315,7 +315,13 @@ conformance.</p>
     <tr>
       <td>additional predefined macro names</td>
       <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
+      <!-- It is unknown which paper brought in this change, which was listed in
+           the C99 front matter. After hunting around for what these changes are,
+           I found a mention in the C99 rationale document that implementers who
+           wish to add their own predefined macros must not start them with
+           __STDC_, which was a new restriction in C99. As best I can tell, that
+           is what this particular feature is about. -->
     </tr>
     <tr>
       <td>_Pragma preprocessing operator</td>
