@@ -31,6 +31,24 @@ struct DriverOptions {
   /// \brief Path to input file lists (JSON).
   llvm::MachO::PathSeq FileLists;
 
+  /// \brief Paths of extra public headers.
+  PathSeq ExtraPublicHeaders;
+
+  /// \brief Paths of extra private headers.
+  PathSeq ExtraPrivateHeaders;
+
+  /// \brief Paths of extra project headers.
+  PathSeq ExtraProjectHeaders;
+
+  /// \brief List of excluded public headers.
+  PathSeq ExcludePublicHeaders;
+
+  /// \brief List of excluded private headers.
+  PathSeq ExcludePrivateHeaders;
+
+  /// \brief List of excluded project headers.
+  PathSeq ExcludeProjectHeaders;
+
   /// \brief Mappings of target triples & tapi targets to build for.
   std::map<llvm::MachO::Target, llvm::Triple> Targets;
 
@@ -103,6 +121,9 @@ public:
   std::vector<std::string> &getClangFrontendArgs() { return FrontendArgs; }
 
 private:
+  bool addFilePaths(llvm::opt::InputArgList &Args, PathSeq &Headers,
+                    llvm::opt::OptSpecifier ID);
+
   DiagnosticsEngine *Diags;
   FileManager *FM;
   std::vector<std::string> FrontendArgs;

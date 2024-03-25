@@ -15,6 +15,9 @@ let CategoryName = "Command line" in {
 def err_cannot_write_file : Error<"cannot write file '%0': %1">;
 def err_no_install_name : Error<"no install name specified: add -install_name <path>">;
 def err_no_output_file: Error<"no output file specified">;
+def err_no_such_header_file : Error<"no such %select{public|private|project}1 header file: '%0'">;
+def warn_no_such_excluded_header_file : Warning<"no such excluded %select{public|private}0 header file: '%1'">, InGroup<InstallAPIViolation>;
+def warn_glob_did_not_match: Warning<"glob '%0' did not match any header file">, InGroup<InstallAPIViolation>;
 } // end of command line category.
 
 let CategoryName = "Verification" in {
