@@ -90,3 +90,16 @@ func.func @test_index_no_linearize(%arg0: vector<2x2xindex>, %arg1: vector<2x2xi
     %0 = arith.addi %arg0, %arg1 : vector<2x2xindex>
     return %0 : vector<2x2xindex>
 }
+
+// -----
+
+// vectorizable operation (arith.mulf) with tensor result types.
+
+func.func @nonvec_result(%arg0: tensor<2x2xf32>, %arg1: tensor<2x2xf32>) -> (tensor<2x2xf32>, tensor<2x2xf32>) {
+    // CHECK: %[[MULF:.*]] = arith.mulf %arg0, %arg1 : tensor<2x2xf32>
+    // CHECK128: %[[MULF:.*]] = arith.mulf %arg0, %arg1 : tensor<2x2xf32>
+    // CHECK0: %[[MULF:.*]] = arith.mulf %arg0, %arg1 : tensor<2x2xf32>
+    %0 = arith.mulf %arg0, %arg1 : tensor<2x2xf32>
+
+    return %0, %arg0 : tensor<2x2xf32>, tensor<2x2xf32>
+}
