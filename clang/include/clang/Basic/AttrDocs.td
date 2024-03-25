@@ -4269,6 +4269,9 @@ def RestrictDocs : Documentation {
 The ``malloc`` attribute indicates that the function acts like a system memory
 allocation function, returning a pointer to allocated storage disjoint from the
 storage for any other object accessible to the caller.
+
+The form of ``malloc`` with one or two arguments (supported by GCC 11) is
+currently ignored by Clang.
   }];
 }
 
