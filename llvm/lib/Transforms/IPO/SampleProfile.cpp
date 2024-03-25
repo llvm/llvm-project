@@ -242,12 +242,12 @@ static cl::opt<unsigned> HotFuncCutoffForStalenessError(
 static cl::opt<unsigned> MinfuncsForStalenessError(
     "min-functions-for-staleness-error", cl::Hidden, cl::init(50),
     cl::desc("Skip the check if the number of hot functions is smaller than "
-             "the given number."));
+             "the specified number."));
 
 static cl::opt<unsigned> PrecentMismatchForStalenessError(
     "precent-mismatch-for-staleness-error", cl::Hidden, cl::init(80),
     cl::desc("Reject the profile if the mismatch percent is higher than the "
-             "given number"));
+             "given number."));
 
 static cl::opt<bool> CallsitePrioritizedInline(
     "sample-profile-prioritized-inline", cl::Hidden,
@@ -2207,15 +2207,13 @@ bool SampleProfileLoader::doInitialization(Module &M,
 // Note that this is a module-level check. Even if one module is errored out,
 // the entire build will be errored out. However, the user could make big
 // changes to functions in single module but those changes might not be
-// performance significant to the whole binary. Therefore, we use a conservative
-// approach to make sure we only error out if it globally impacts the binary
-// performance. To achieve this, we use heuristics to select a reasonable
-// big set of functions that are supposed to be globally performance
-// significant, only compute and check the mismatch within those functions. The
-// function selection is based on two criteria: 1) The function is "hot" enough,
-// which is tuned by a hotness-based flag(HotFuncCutoffForStalenessError). 2)
-// The num of function is large enough which is tuned by the
-// MinfuncsForStalenessError flag.
+// performance significant to the whole binary. Therefore, to avoid those false
+// positives, we select a reasonable big set of hot functions that are supposed
+// to be globally performance significant, only compute and check the mismatch
+// within those functions. The function selection is based on two criteria:
+// 1) The function is hot enough, which is tuned by a hotness-based
+// flag(HotFuncCutoffForStalenessError). 2) The num of function is large enough
+// which is tuned by the MinfuncsForStalenessError flag.
 bool SampleProfileLoader::rejectHighStalenessProfile(
     Module &M, ProfileSummaryInfo *PSI, const SampleProfileMap &Profiles) {
   assert(FunctionSamples::ProfileIsProbeBased &&
@@ -2228,11 +2226,7 @@ bool SampleProfileLoader::rejectHighStalenessProfile(
     if (!FuncDesc)
       continue;
 
-    // We want to select a set of functions that are globally performance
-    // significant, in other words, if those functions profiles are
-    // checksum-mismatched and dropped, the whole binary will likely be
-    // impacted, so here we use a hotness-based threshold to control the
-    // selection.
+    // Use a hotness-based threshold to control the function selection.
     if (!PSI->isHotCountNthPercentile(HotFuncCutoffForStalenessError,
                                       FS.getTotalSamples()))
       continue;
@@ -2791,7 +2785,6 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
     PSI->refresh();
   }
 
-  // Error out if the profile checksum mismatch is too high.
   if (FunctionSamples::ProfileIsProbeBased &&
       rejectHighStalenessProfile(M, PSI, Reader->getProfiles()))
     return false;
