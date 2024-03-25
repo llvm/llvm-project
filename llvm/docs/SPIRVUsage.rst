@@ -224,8 +224,8 @@ previous type has the representation
 
 .. _spirv-intrinsics:
 
-LLVM IR Intrinsics
-------------------
+Target Intrinsics
+-----------------
 
 The SPIR-V backend employs several LLVM IR intrinsics that facilitate various low-level 
 operations essential for generating correct and efficient SPIR-V code. These intrinsics 
