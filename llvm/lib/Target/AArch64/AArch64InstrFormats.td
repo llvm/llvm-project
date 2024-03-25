@@ -3027,8 +3027,12 @@ class BaseAddSubEReg64<bit isSub, bit setFlags, RegisterClass dstRegtype,
 
 // Aliases for register+register add/subtract.
 class AddSubRegAlias<string asm, Instruction inst, RegisterClass dstRegtype,
-                     RegisterClass src1Regtype, RegisterClass src2Regtype,
-                     int shiftExt>
+                     RegisterClass src1Regtype, dag src2>
+    : InstAlias<asm#"\t$dst, $src1, $src2",
+                (inst dstRegtype:$dst, src1Regtype:$src1, src2)>;
+class AddSubRegAlias64<string asm, Instruction inst, RegisterClass dstRegtype,
+                       RegisterClass src1Regtype, RegisterClass src2Regtype,
+                       int shiftExt>
     : InstAlias<asm#"\t$dst, $src1, $src2",
                 (inst dstRegtype:$dst, src1Regtype:$src1, src2Regtype:$src2,
                       shiftExt)>;
@@ -3096,22 +3100,22 @@ multiclass AddSub<bit isSub, string mnemonic, string alias,
 
   // Register/register aliases with no shift when SP is not used.
   def : AddSubRegAlias<mnemonic, !cast<Instruction>(NAME#"Wrs"),
-                       GPR32, GPR32, GPR32, 0>;
+                       GPR32, GPR32, (arith_shifted_reg32 GPR32:$src2, 0)>;
   def : AddSubRegAlias<mnemonic, !cast<Instruction>(NAME#"Xrs"),
-                       GPR64, GPR64, GPR64, 0>;
+                       GPR64, GPR64, (arith_shifted_reg64 GPR64:$src2, 0)>;
 
   // Register/register aliases with no shift when either the destination or
   // first source register is SP.
   def : AddSubRegAlias<mnemonic, !cast<Instruction>(NAME#"Wrx"),
-                       GPR32sponly, GPR32sp, GPR32, 16>; // UXTW #0
+                       GPR32sponly, GPR32sp,
+                       (arith_extended_reg32_i32 GPR32:$src2, 16)>; // UXTW #0
   def : AddSubRegAlias<mnemonic, !cast<Instruction>(NAME#"Wrx"),
-                       GPR32sp, GPR32sponly, GPR32, 16>; // UXTW #0
-  def : AddSubRegAlias<mnemonic,
-                       !cast<Instruction>(NAME#"Xrx64"),
-                       GPR64sponly, GPR64sp, GPR64, 24>; // UXTX #0
-  def : AddSubRegAlias<mnemonic,
-                       !cast<Instruction>(NAME#"Xrx64"),
-                       GPR64sp, GPR64sponly, GPR64, 24>; // UXTX #0
+                       GPR32sp, GPR32sponly,
+                       (arith_extended_reg32_i32 GPR32:$src2, 16)>; // UXTW #0
+  def : AddSubRegAlias64<mnemonic, !cast<Instruction>(NAME#"Xrx64"),
+                         GPR64sponly, GPR64sp, GPR64, 24>;          // UXTX #0
+  def : AddSubRegAlias64<mnemonic, !cast<Instruction>(NAME#"Xrx64"),
+                         GPR64sp, GPR64sponly, GPR64, 24>;          // UXTX #0
 }
 
 multiclass AddSubS<bit isSub, string mnemonic, SDNode OpNode, string cmp,
@@ -3175,15 +3179,19 @@ multiclass AddSubS<bit isSub, string mnemonic, SDNode OpNode, string cmp,
   def : InstAlias<cmp#"\t$src, $imm", (!cast<Instruction>(NAME#"Xri")
                   XZR, GPR64sp:$src, addsub_shifted_imm64:$imm), 5>;
   def : InstAlias<cmp#"\t$src1, $src2$sh", (!cast<Instruction>(NAME#"Wrx")
-                  WZR, GPR32sp:$src1, GPR32:$src2, arith_extend:$sh), 4>;
+                  WZR, GPR32sp:$src1,
+                  (arith_extended_reg32_i32 GPR32:$src2, arith_extend:$sh)), 4>;
   def : InstAlias<cmp#"\t$src1, $src2$sh", (!cast<Instruction>(NAME#"Xrx")
-                  XZR, GPR64sp:$src1, GPR32:$src2, arith_extend:$sh), 4>;
+                  XZR, GPR64sp:$src1,
+                  (arith_extended_reg32_i64 GPR32:$src2, arith_extend:$sh)), 4>;
   def : InstAlias<cmp#"\t$src1, $src2$sh", (!cast<Instruction>(NAME#"Xrx64")
                   XZR, GPR64sp:$src1, GPR64:$src2, arith_extendlsl64:$sh), 4>;
   def : InstAlias<cmp#"\t$src1, $src2$sh", (!cast<Instruction>(NAME#"Wrs")
-                  WZR, GPR32:$src1, GPR32:$src2, arith_shift32:$sh), 4>;
+                  WZR, GPR32:$src1,
+                  (arith_shifted_reg32 GPR32:$src2, arith_shift32:$sh)), 4>;
   def : InstAlias<cmp#"\t$src1, $src2$sh", (!cast<Instruction>(NAME#"Xrs")
-                  XZR, GPR64:$src1, GPR64:$src2, arith_shift64:$sh), 4>;
+                  XZR, GPR64:$src1,
+                  (arith_shifted_reg64 GPR64:$src2, arith_shift64:$sh)), 4>;
 
   // Support negative immediates, e.g. cmp Rn, -imm -> cmn Rn, imm
   def : InstSubst<cmpAlias#"\t$src, $imm", (!cast<Instruction>(NAME#"Wri")
@@ -3193,27 +3201,28 @@ multiclass AddSubS<bit isSub, string mnemonic, SDNode OpNode, string cmp,
 
   // Compare shorthands
   def : InstAlias<cmp#"\t$src1, $src2", (!cast<Instruction>(NAME#"Wrs")
-                  WZR, GPR32:$src1, GPR32:$src2, 0), 5>;
+                  WZR, GPR32:$src1, (arith_shifted_reg32 GPR32:$src2, 0)), 5>;
   def : InstAlias<cmp#"\t$src1, $src2", (!cast<Instruction>(NAME#"Xrs")
-                  XZR, GPR64:$src1, GPR64:$src2, 0), 5>;
+                  XZR, GPR64:$src1, (arith_shifted_reg64 GPR64:$src2, 0)), 5>;
   def : InstAlias<cmp#"\t$src1, $src2", (!cast<Instruction>(NAME#"Wrx")
-                  WZR, GPR32sponly:$src1, GPR32:$src2, 16), 5>;
+                  WZR, GPR32sponly:$src1,
+                  (arith_extended_reg32_i32 GPR32:$src2, 16)), 5>;
   def : InstAlias<cmp#"\t$src1, $src2", (!cast<Instruction>(NAME#"Xrx64")
                   XZR, GPR64sponly:$src1, GPR64:$src2, 24), 5>;
 
   // Register/register aliases with no shift when SP is not used.
   def : AddSubRegAlias<mnemonic, !cast<Instruction>(NAME#"Wrs"),
-                       GPR32, GPR32, GPR32, 0>;
+                       GPR32, GPR32, (arith_shifted_reg32 GPR32:$src2, 0)>;
   def : AddSubRegAlias<mnemonic, !cast<Instruction>(NAME#"Xrs"),
-                       GPR64, GPR64, GPR64, 0>;
+                       GPR64, GPR64, (arith_shifted_reg64 GPR64:$src2, 0)>;
 
   // Register/register aliases with no shift when the first source register
   // is SP.
   def : AddSubRegAlias<mnemonic, !cast<Instruction>(NAME#"Wrx"),
-                       GPR32, GPR32sponly, GPR32, 16>; // UXTW #0
-  def : AddSubRegAlias<mnemonic,
-                       !cast<Instruction>(NAME#"Xrx64"),
-                       GPR64, GPR64sponly, GPR64, 24>; // UXTX #0
+                       GPR32, GPR32sponly,
+                       (arith_extended_reg32_i32 GPR32:$src2, 16)>; // UXTW #0
+  def : AddSubRegAlias64<mnemonic, !cast<Instruction>(NAME#"Xrx64"),
+                         GPR64, GPR64sponly, GPR64, 24>;            // UXTX #0
 }
 
 class AddSubG<bit isSub, string asm_inst, SDPatternOperator OpNode>
@@ -3398,9 +3407,10 @@ class BaseLogicalSReg<bits<2> opc, bit N, RegisterClass regtype,
 }
 
 // Aliases for register+register logical instructions.
-class LogicalRegAlias<string asm, Instruction inst, RegisterClass regtype>
+class LogicalRegAlias<string asm, Instruction inst, RegisterClass regtype,
+                      dag op2>
     : InstAlias<asm#"\t$dst, $src1, $src2",
-                (inst regtype:$dst, regtype:$src1, regtype:$src2, 0)>;
+                (inst regtype:$dst, regtype:$src1, op2)>;
 
 multiclass LogicalImm<bits<2> opc, string mnemonic, SDNode OpNode,
                       string Alias> {
@@ -3472,10 +3482,10 @@ multiclass LogicalReg<bits<2> opc, bit N, string mnemonic,
     let Inst{31} = 1;
   }
 
-  def : LogicalRegAlias<mnemonic,
-                        !cast<Instruction>(NAME#"Wrs"), GPR32>;
-  def : LogicalRegAlias<mnemonic,
-                        !cast<Instruction>(NAME#"Xrs"), GPR64>;
+  def : LogicalRegAlias<mnemonic, !cast<Instruction>(NAME#"Wrs"),
+                        GPR32, (logical_shifted_reg32 GPR32:$src2, 0)>;
+  def : LogicalRegAlias<mnemonic, !cast<Instruction>(NAME#"Xrs"),
+                        GPR64, (logical_shifted_reg64 GPR64:$src2, 0)>;
 }
 
 // Split from LogicalReg to allow setting NZCV Defs
@@ -3495,10 +3505,10 @@ multiclass LogicalRegS<bits<2> opc, bit N, string mnemonic,
   }
   } // Defs = [NZCV]
 
-  def : LogicalRegAlias<mnemonic,
-                        !cast<Instruction>(NAME#"Wrs"), GPR32>;
-  def : LogicalRegAlias<mnemonic,
-                        !cast<Instruction>(NAME#"Xrs"), GPR64>;
+  def : LogicalRegAlias<mnemonic, !cast<Instruction>(NAME#"Wrs"),
+                        GPR32, (logical_shifted_reg32 GPR32:$src2, 0)>;
+  def : LogicalRegAlias<mnemonic, !cast<Instruction>(NAME#"Xrs"),
+                        GPR64, (logical_shifted_reg64 GPR64:$src2, 0)>;
 }
 
 //---
@@ -3986,9 +3996,10 @@ class LoadStore8RO<bits<2> sz, bit V, bits<2> opc, string asm, dag ins,
   let Inst{4-0}   = Rt;
 }
 
-class ROInstAlias<string asm, DAGOperand regtype, Instruction INST>
+class ROInstAlias<string asm, DAGOperand regtype, Instruction INST,
+                  ro_extend ext>
   : InstAlias<asm # "\t$Rt, [$Rn, $Rm]",
-              (INST regtype:$Rt, GPR64sp:$Rn, GPR64:$Rm, 0, 0)>;
+              (INST regtype:$Rt, GPR64sp:$Rn, GPR64:$Rm, (ext 0, 0))>;
 
 multiclass Load8RO<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
                    string asm, ValueType Ty, SDPatternOperator loadop> {
@@ -4014,7 +4025,7 @@ multiclass Load8RO<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
     let Inst{13} = 0b1;
   }
 
-  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX")>;
+  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX"), ro_Xextend8>;
 }
 
 multiclass Store8RO<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
@@ -4039,7 +4050,7 @@ multiclass Store8RO<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
     let Inst{13} = 0b1;
   }
 
-  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX")>;
+  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX"), ro_Xextend8>;
 }
 
 class LoadStore16RO<bits<2> sz, bit V, bits<2> opc, string asm, dag ins,
@@ -4086,7 +4097,7 @@ multiclass Load16RO<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
     let Inst{13} = 0b1;
   }
 
-  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX")>;
+  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX"), ro_Xextend16>;
 }
 
 multiclass Store16RO<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
@@ -4111,7 +4122,7 @@ multiclass Store16RO<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
     let Inst{13} = 0b1;
   }
 
-  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX")>;
+  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX"), ro_Xextend16>;
 }
 
 class LoadStore32RO<bits<2> sz, bit V, bits<2> opc, string asm, dag ins,
@@ -4158,7 +4169,7 @@ multiclass Load32RO<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
     let Inst{13} = 0b1;
   }
 
-  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX")>;
+  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX"), ro_Xextend32>;
 }
 
 multiclass Store32RO<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
@@ -4183,7 +4194,7 @@ multiclass Store32RO<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
     let Inst{13} = 0b1;
   }
 
-  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX")>;
+  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX"), ro_Xextend32>;
 }
 
 class LoadStore64RO<bits<2> sz, bit V, bits<2> opc, string asm, dag ins,
@@ -4230,7 +4241,7 @@ multiclass Load64RO<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
     let Inst{13} = 0b1;
   }
 
-  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX")>;
+  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX"), ro_Xextend64>;
 }
 
 multiclass Store64RO<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
@@ -4255,7 +4266,7 @@ multiclass Store64RO<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
     let Inst{13} = 0b1;
   }
 
-  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX")>;
+  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX"), ro_Xextend64>;
 }
 
 class LoadStore128RO<bits<2> sz, bit V, bits<2> opc, string asm, dag ins,
@@ -4302,7 +4313,7 @@ multiclass Load128RO<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
     let Inst{13} = 0b1;
   }
 
-  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX")>;
+  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX"), ro_Xextend128>;
 }
 
 multiclass Store128RO<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
@@ -4323,7 +4334,7 @@ multiclass Store128RO<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
     let Inst{13} = 0b1;
   }
 
-  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX")>;
+  def : ROInstAlias<asm, regtype, !cast<Instruction>(NAME # "roX"), ro_Xextend128>;
 }
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in
@@ -4372,9 +4383,7 @@ multiclass PrefetchRO<bits<2> sz, bit V, bits<2> opc, string asm> {
     let Inst{13} = 0b1;
   }
 
-  def : InstAlias<"prfm $Rt, [$Rn, $Rm]",
-               (!cast<Instruction>(NAME # "roX") prfop:$Rt,
-                                                 GPR64sp:$Rn, GPR64:$Rm, 0, 0)>;
+  def : ROInstAlias<"prfm", prfop, !cast<Instruction>(NAME # "roX"), ro_Xextend64>;
 }
 
 //---
