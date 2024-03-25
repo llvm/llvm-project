@@ -14,9 +14,9 @@
 #ifndef LLVM_UTILS_TABLEGEN_CODEGENDAGPATTERNS_H
 #define LLVM_UTILS_TABLEGEN_CODEGENDAGPATTERNS_H
 
-#include "CodeGenIntrinsics.h"
+#include "Basic/CodeGenIntrinsics.h"
+#include "Basic/SDNodeProperties.h"
 #include "CodeGenTarget.h"
-#include "SDNodeProperties.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerUnion.h"
