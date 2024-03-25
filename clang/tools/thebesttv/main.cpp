@@ -42,7 +42,7 @@ void deduplicateCompilationDatabase(fs::path path) {
     for (auto &cmd : input) {
         std::string file = cmd["file"];
         if (visitedFiles.find(file) != visitedFiles.end()) {
-            llvm::errs() << "Duplicate entry for file: " << file << "\n";
+            logger.warn("Duplicate entry for file: {}", file);
             hasDuplicate = true;
             continue;
         }
@@ -51,14 +51,14 @@ void deduplicateCompilationDatabase(fs::path path) {
     }
 
     if (!hasDuplicate) {
-        llvm::errs() << "No duplicate entries found in " << path << "\n";
+        logger.info("No duplicate entries found in compilation database");
         return;
     }
 
-    llvm::errs() << "Found duplicate entries in " << path << "\n";
+    logger.warn("Found duplicate entries in compilation database!");
     {
         fs::path backup = path.string() + ".bk";
-        llvm::errs() << "Backing up to " << backup << "\n";
+        logger.warn("Original database is backed up to: {}", backup);
         std::ofstream o(backup);
         o << input.dump(4, ' ', false, json::error_handler_t::replace)
           << std::endl;
@@ -69,6 +69,7 @@ void deduplicateCompilationDatabase(fs::path path) {
         o << output.dump(4, ' ', false, json::error_handler_t::replace)
           << std::endl;
         o.close();
+        logger.warn("Deduplicated database is in: {}", path);
     }
 }
 
@@ -485,7 +486,7 @@ int main(int argc, const char **argv) {
 
     fs::path compile_commands =
         fs::canonical(input["compile_commands"].template get<std::string>());
-    llvm::errs() << "compile_commands: " << compile_commands << "\n";
+    logger.info("Compilation database: {}", compile_commands);
     deduplicateCompilationDatabase(compile_commands);
     Global.cb = getCompilationDatabase(compile_commands);
 
