@@ -69,9 +69,17 @@ and automatic location of the compilation database using source files paths.
   static llvm::cl::OptionCategory MyToolCategory("my-tool options");
 
   int main(int argc, const char **argv) {
-    // CommonOptionsParser constructor will parse arguments and create a
+
+    // CommonOptionsParser::create will parse arguments and create a
     // CompilationDatabase.  In case of error it will terminate the program.
-    CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
+    auto ExpectedParser = CommonOptionsParser::create(argc, argv, MyToolCategory);
+    if (!ExpectedParser) {
+      // Fail gracefully for unsupported options.
+      llvm::errs() << ExpectedParser.takeError();
+      return 1;
+    }
+
+    CommonOptionsParser& OptionsParser = ExpectedParser.get();
 
     // Use OptionsParser.getCompilations() and OptionsParser.getSourcePathList()
     // to retrieve CompilationDatabase and the list of input file paths.
@@ -133,7 +141,14 @@ version of this example tool is also checked into the clang tree at
   static cl::extrahelp MoreHelp("\nMore help text...\n");
 
   int main(int argc, const char **argv) {
-    CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
+    auto ExpectedParser = CommonOptionsParser::create(argc, argv, MyToolCategory);
+    if (!ExpectedParser) {
+      // Fail gracefully for unsupported options.
+      llvm::errs() << ExpectedParser.takeError();
+      return 1;
+    }
+
+    CommonOptionsParser& OptionsParser = ExpectedParser.get();
     ClangTool Tool(OptionsParser.getCompilations(),
                    OptionsParser.getSourcePathList());
     return Tool.run(newFrontendActionFactory<clang::SyntaxOnlyAction>().get());
