@@ -17,6 +17,36 @@ in  `the official SPIR-V specification <https://www.khronos.org/registry/SPIR-V/
 Usage
 =====
 
+The SPIR-V backend can be invoked either from LLVM's Static Compiler (llc) or Clang, 
+allowing developers to compile LLVM intermediate language (IL) files or OpenCL kernel 
+sources directly to SPIR-V. This section outlines the usage of various commands to 
+leverage the SPIR-V backend for different purposes.
+
+Static Compiler Commands
+------------------------
+
+1. **Basic SPIR-V Compilation**
+   Command: `llc -mtriple=spirv32-unknown-unknown input.ll -o output.spvt`
+   Description: This command compiles an LLVM IL file (`input.ll`) to a SPIR-V binary (`output.spvt`) for a 32-bit architecture.
+
+2. **Compilation with Extensions and Optimization**
+   Command: `llc -O1 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_arbitrary_precision_integers input.ll -o output.spvt`
+   Description: Compiles an LLVM IL file to SPIR-V with (`-O1`) optimizations, targeting a 64-bit architecture. It enables the SPV_INTEL_arbitrary_precision_integers extension.
+
+3. **SPIR-V Binary Generation**
+   Command: `llc -O0 -mtriple=spirv64-unknown-unknown -filetype=obj input.ll -o output.spvt`
+   Description: Generates a SPIR-V object file (`output.spvt`) from an LLVM module, targeting a 64-bit SPIR-V architecture with no optimizations.
+
+Clang Commands
+--------------
+
+1. **SPIR-V Generation**
+   Command: `clang –target=spirv64 input.cl`
+   Description: Generates a SPIR-V file directly from an OpenCL kernel source file (`input.cl`).
+
+Compiler Options
+================
+
 .. _spirv-target-triples:
 
 Target Triples
@@ -68,6 +98,8 @@ to specify the target triple:
      ===================== ============================================================
      *<empty>*/``unknown``  Defaults to the OpenCL runtime.
      ``vulkan``             Vulkan shader runtime.
+     ``vulkan1.2``          Vulkan 1.2 runtime, corresponding to SPIR-V 1.5.
+     ``vulkan1.3``          Vulkan 1.3 runtime, corresponding to SPIR-V 1.6.
      ===================== ============================================================
 
   .. table:: SPIR-V Environments
@@ -87,7 +119,11 @@ Example:
 Extensions
 ----------
 
-The SPIR-V backend supports a variety of extensions that enable or enhance features beyond the core SPIR-V specification. These extensions can be enabled using the ``-spirv-extensions`` option followed by the name of the extension(s) you wish to enable. Below is a list of supported SPIR-V extensions, sorted alphabetically by their extension names:
+The SPIR-V backend supports a variety of `extensions <https://github.com/KhronosGroup/SPIRV-Registry/tree/main/extensions>`_ 
+that enable or enhance features beyond the core SPIR-V specification. 
+These extensions can be enabled using the ``-spirv-extensions`` option 
+followed by the name of the extension(s) you wish to enable. Below is a 
+list of supported SPIR-V extensions, sorted alphabetically by their extension names:
 
 .. list-table:: Supported SPIR-V Extensions
    :widths: 50 150
@@ -132,15 +168,21 @@ The SPIR-V backend supports a variety of extensions that enable or enhance featu
 
 To enable multiple extensions, list them separated by spaces. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 
-``-spirv-extensions=SPV_EXT_shader_atomic_float_add,SPV_INTEL_arbitrary_precision_integers``
+``-spirv-ext=+SPV_EXT_shader_atomic_float_add,+SPV_INTEL_arbitrary_precision_integers``
 
-LLVM IR
-=======
+To enable all extensions, use the following option:
+``-spirv-ext=all``
+
+To enable all extensions except specified, specify ``all`` followed by a list of disallowed extensions. For example:
+``-spirv-ext=all,-SPV_INTEL_arbitrary_precision_integers``
+
+SPIR-V representation in LLVM IR
+================================
 
 SPIR-V is intentionally designed for seamless integration with various Intermediate 
 Representations (IRs), including LLVM IR, facilitating straightforward mappings for 
 most of its entities. The development of the SPIR-V backend has been guided by a 
-principle of compatibility with the Khronos Group's SPIR-V LLVM Translator.
+principle of compatibility with the `Khronos Group SPIR-V LLVM Translator <https://github.com/KhronosGroup/SPIRV-LLVM-Translator>`_.
 Consequently, the input representation accepted by the SPIR-V backend aligns closely 
 with that detailed in `the SPIR-V Representation in LLVM document <https://github.com/KhronosGroup/SPIRV-LLVM-Translator/blob/main/docs/SPIRVRepresentationInLLVM.rst>`_. 
 This document, along with the sections that follow, delineate the main points and focus 
@@ -153,7 +195,7 @@ Special types
 -------------
 
 SPIR-V specifies several kinds of opaque types. These types are represented
-using target extension types. These types are represented as follows:
+using target extension types and are represented as follows:
 
   .. table:: SPIR-V Opaque Types
 
