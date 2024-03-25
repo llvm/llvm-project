@@ -51,8 +51,12 @@ struct A { ~A(); };
 }
 
 namespace test5 {
-struct A { ~A(); };
-[[clang::always_destroy]] A a; // no warning
+  struct A { ~A(); };
+  [[clang::always_destroy]] A a; // no warning
+
+  void func() {
+    [[clang::always_destroy]] static A a; // no warning
+  }
 }
 
 namespace test6 {
