@@ -278,3 +278,28 @@ size_t test12(struct test_struct *p, int idx) {
 size_t test13(struct test_struct *p, int idx) {
   return __bdos(&p->buf2[idx]); // 7 - idx
 }
+
+// Referencing a flexible array member through a pointer.
+struct stest14 {
+  unsigned long flags;
+  int count;
+  struct {
+    char a;
+    int array[];
+  } *z;
+};
+
+// CHECK-LABEL: define dso_local i64 @test14(
+// CHECK-SAME: ptr noundef [[P:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[IDX]], ptr [[IDX_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
+// CHECK-NEXT:    ret i64 -1
+//
+size_t test14(struct stest14 *p, int idx) {
+  return __bdos(&p->z->array[idx]); // -1
+}

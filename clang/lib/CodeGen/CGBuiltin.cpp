@@ -1093,7 +1093,11 @@ static const FieldDecl *getLastDecl(const RecordDecl *RD) {
   if (const auto *LastRD = dyn_cast<RecordDecl>(LastDecl)) {
     LastDecl = getLastDecl(LastRD);
   } else if (const auto *LastFD = dyn_cast<FieldDecl>(LastDecl)) {
-    if (const RecordDecl *Rec = LastFD->getType()->getAsRecordDecl())
+    QualType Ty = LastFD->getType();
+    if (Ty->isPointerType())
+      Ty = Ty->getPointeeType();
+
+    if (const RecordDecl *Rec = Ty->getAsRecordDecl())
       // The last FieldDecl is a structure. Look into that struct to find its
       // last FieldDecl.
       LastDecl = getLastDecl(Rec);
@@ -1166,8 +1170,9 @@ CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
   if (!ObjectBase)
     return nullptr;
 
-  // Check to see if the Decl is a flexible array member. We don't have any
-  // information on its size, so return MAX_INT.
+  // Check to see if the Decl is a flexible array member. Processing of the
+  // 'counted_by' attribute is done by now. So we don't have any information on
+  // its size, so return MAX_INT.
   if (const auto *ME = dyn_cast<MemberExpr>(ObjectBase)) {
     if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
       const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
