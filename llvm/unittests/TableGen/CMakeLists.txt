@@ -15,4 +15,4 @@ add_llvm_unittest(TableGenTests DISABLE_LLVM_LINK_LLVM_DYLIB
   ParserEntryPointTest.cpp
   )
 
-target_link_libraries(TableGenTests PRIVATE LLVMTableGenGlobalISel LLVMTableGen)
+target_link_libraries(TableGenTests PRIVATE LLVMTableGenCommon LLVMTableGen)
