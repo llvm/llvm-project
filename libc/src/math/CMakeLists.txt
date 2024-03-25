@@ -127,6 +127,16 @@ add_math_entrypoint_object(frexpf)
 add_math_entrypoint_object(frexpl)
 add_math_entrypoint_object(frexpf128)
 
+add_math_entrypoint_object(fromfp)
+add_math_entrypoint_object(fromfpf)
+add_math_entrypoint_object(fromfpl)
+add_math_entrypoint_object(fromfpf128)
+
+add_math_entrypoint_object(fromfpx)
+add_math_entrypoint_object(fromfpxf)
+add_math_entrypoint_object(fromfpxl)
+add_math_entrypoint_object(fromfpxf128)
+
 add_math_entrypoint_object(hypot)
 add_math_entrypoint_object(hypotf)
 
@@ -267,3 +277,13 @@ add_math_entrypoint_object(trunc)
 add_math_entrypoint_object(truncf)
 add_math_entrypoint_object(truncl)
 add_math_entrypoint_object(truncf128)
+
+add_math_entrypoint_object(ufromfp)
+add_math_entrypoint_object(ufromfpf)
+add_math_entrypoint_object(ufromfpl)
+add_math_entrypoint_object(ufromfpf128)
+
+add_math_entrypoint_object(ufromfpx)
+add_math_entrypoint_object(ufromfpxf)
+add_math_entrypoint_object(ufromfpxl)
+add_math_entrypoint_object(ufromfpxf128)
