@@ -209,16 +209,10 @@ define <4 x half> @test_copysign_v4f16_v4f32(<4 x half> %a, <4 x float> %b) #0 {
 define <4 x half> @test_copysign_v4f16_v4f64(<4 x half> %a, <4 x double> %b) #0 {
 ; CHECK-LABEL: test_copysign_v4f16_v4f64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov d3, v1[1]
-; CHECK-NEXT:    fcvt h1, d1
-; CHECK-NEXT:    fcvt h3, d3
-; CHECK-NEXT:    mov.h v1[1], v3[0]
-; CHECK-NEXT:    fcvt h3, d2
-; CHECK-NEXT:    mov d2, v2[1]
-; CHECK-NEXT:    mov.h v1[2], v3[0]
-; CHECK-NEXT:    fcvt h2, d2
-; CHECK-NEXT:    mov.h v1[3], v2[0]
+; CHECK-NEXT:    fcvtxn v1.2s, v1.2d
+; CHECK-NEXT:    fcvtxn2 v1.4s, v2.2d
 ; CHECK-NEXT:    mvni.4h v2, #128, lsl #8
+; CHECK-NEXT:    fcvtn v1.4h, v1.4s
 ; CHECK-NEXT:    bif.8b v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp0 = fptrunc <4 x double> %b to <4 x half>
@@ -291,42 +285,20 @@ define <4 x bfloat> @test_copysign_v4bf16_v4f32(<4 x bfloat> %a, <4 x float> %b)
 define <4 x bfloat> @test_copysign_v4bf16_v4f64(<4 x bfloat> %a, <4 x double> %b) #0 {
 ; CHECK-LABEL: test_copysign_v4bf16_v4f64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov d3, v1[1]
-; CHECK-NEXT:    fcvtxn s1, d1
-; CHECK-NEXT:    mov w8, #32767 ; =0x7fff
-; CHECK-NEXT:    fcvtxn s3, d3
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    ubfx w12, w10, #16, #1
-; CHECK-NEXT:    add w10, w10, w8
-; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    fcvtxn s3, d2
-; CHECK-NEXT:    mov d2, v2[1]
-; CHECK-NEXT:    add w10, w12, w10
-; CHECK-NEXT:    lsr w10, w10, #16
-; CHECK-NEXT:    ubfx w11, w9, #16, #1
-; CHECK-NEXT:    add w9, w9, w8
-; CHECK-NEXT:    fcvtxn s1, d2
-; CHECK-NEXT:    add w9, w11, w9
-; CHECK-NEXT:    fmov w11, s3
-; CHECK-NEXT:    fmov s3, w10
-; CHECK-NEXT:    lsr w9, w9, #16
-; CHECK-NEXT:    ubfx w12, w11, #16, #1
-; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    add w9, w11, w8
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    add w9, w12, w9
-; CHECK-NEXT:    lsr w9, w9, #16
-; CHECK-NEXT:    mov.h v3[1], v2[0]
-; CHECK-NEXT:    ubfx w11, w10, #16, #1
-; CHECK-NEXT:    add w8, w10, w8
-; CHECK-NEXT:    fmov s1, w9
-; CHECK-NEXT:    add w8, w11, w8
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    mov.h v3[2], v1[0]
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    mov.h v3[3], v1[0]
-; CHECK-NEXT:    mvni.4h v1, #128, lsl #8
-; CHECK-NEXT:    bif.8b v0, v3, v1
+; CHECK-NEXT:    fcvtxn v1.2s, v1.2d
+; CHECK-NEXT:    movi.4s v3, #1
+; CHECK-NEXT:    fcvtxn2 v1.4s, v2.2d
+; CHECK-NEXT:    movi.4s v2, #127, msl #8
+; CHECK-NEXT:    ushr.4s v4, v1, #16
+; CHECK-NEXT:    add.4s v2, v1, v2
+; CHECK-NEXT:    and.16b v3, v4, v3
+; CHECK-NEXT:    add.4s v2, v3, v2
+; CHECK-NEXT:    fcmeq.4s v3, v1, v1
+; CHECK-NEXT:    orr.4s v1, #64, lsl #16
+; CHECK-NEXT:    bit.16b v1, v2, v3
+; CHECK-NEXT:    mvni.4h v2, #128, lsl #8
+; CHECK-NEXT:    shrn.4h v1, v1, #16
+; CHECK-NEXT:    bif.8b v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp0 = fptrunc <4 x double> %b to <4 x bfloat>
   %r = call <4 x bfloat> @llvm.copysign.v4bf16(<4 x bfloat> %a, <4 x bfloat> %tmp0)

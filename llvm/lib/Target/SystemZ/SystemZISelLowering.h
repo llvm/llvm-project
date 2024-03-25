@@ -378,6 +378,9 @@ enum NodeType : unsigned {
   // Element swapping load/store.  Same operands as regular load/store.
   VLER, VSTER,
 
+  // Use STORE CLOCK FAST to store current TOD clock value.
+  STCKF,
+
   // Prefetch from the second operand using the 4-bit control code in
   // the first operand.  The code is 1 for a load prefetch and 2 for
   // a store prefetch.
@@ -474,6 +477,8 @@ public:
     return VT != MVT::f64;
   }
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
+  AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override;
+  AtomicExpansionKind shouldCastAtomicStoreInIR(StoreInst *SI) const override;
   AtomicExpansionKind
   shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const override;
   bool isLegalICmpImmediate(int64_t Imm) const override;
@@ -692,8 +697,7 @@ private:
   SDValue lowerOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerCTPOP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerATOMIC_LOAD(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerATOMIC_LDST_I128(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_LOAD_OP(SDValue Op, SelectionDAG &DAG,
                               unsigned Opcode) const;
   SDValue lowerATOMIC_LOAD_SUB(SDValue Op, SelectionDAG &DAG) const;
@@ -716,6 +720,7 @@ private:
   SDValue lowerShift(SDValue Op, SelectionDAG &DAG, unsigned ByScalar) const;
   SDValue lowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
 
   bool canTreatAsByteVector(EVT VT) const;
   SDValue combineExtract(const SDLoc &DL, EVT ElemVT, EVT VecVT, SDValue OrigOp,

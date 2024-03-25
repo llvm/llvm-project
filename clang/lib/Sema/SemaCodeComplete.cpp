@@ -764,6 +764,10 @@ getRequiredQualification(ASTContext &Context, const DeclContext *CurContext,
 // Filter out names reserved for the implementation if they come from a
 // system header.
 static bool shouldIgnoreDueToReservedName(const NamedDecl *ND, Sema &SemaRef) {
+  // Debuggers want access to all identifiers, including reserved ones.
+  if (SemaRef.getLangOpts().DebuggerSupport)
+    return false;
+
   ReservedIdentifierStatus Status = ND->isReserved(SemaRef.getLangOpts());
   // Ignore reserved names for compiler provided decls.
   if (isReservedInAllContexts(Status) && ND->getLocation().isInvalid())

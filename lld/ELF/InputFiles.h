@@ -46,6 +46,7 @@ extern std::unique_ptr<llvm::TarWriter> tar;
 std::optional<MemoryBufferRef> readFile(StringRef path);
 
 // Add symbols in File to the symbol table.
+template <class ELFT> void doParseFile(InputFile *file);
 void parseFile(InputFile *file);
 
 void parseArmCMSEImportLib(InputFile *file);
@@ -97,6 +98,18 @@ public:
     assert(fileKind == BinaryKind || fileKind == ObjKind ||
            fileKind == BitcodeKind);
     return {symbols.get(), numSymbols};
+  }
+
+  Symbol &getSymbol(uint32_t symbolIndex) const {
+    assert(fileKind == ObjKind);
+    if (symbolIndex >= numSymbols)
+      fatal(toString(this) + ": invalid symbol index");
+    return *this->symbols[symbolIndex];
+  }
+
+  template <typename RelT> Symbol &getRelocTargetSym(const RelT &rel) const {
+    uint32_t symIndex = rel.getSymbol(config->isMips64EL);
+    return getSymbol(symIndex);
   }
 
   // Get filename to use for linker script processing.
@@ -242,18 +255,7 @@ public:
   StringRef getShtGroupSignature(ArrayRef<Elf_Shdr> sections,
                                  const Elf_Shdr &sec);
 
-  Symbol &getSymbol(uint32_t symbolIndex) const {
-    if (symbolIndex >= numSymbols)
-      fatal(toString(this) + ": invalid symbol index");
-    return *this->symbols[symbolIndex];
-  }
-
   uint32_t getSectionIndex(const Elf_Sym &sym) const;
-
-  template <typename RelT> Symbol &getRelocTargetSym(const RelT &rel) const {
-    uint32_t symIndex = rel.getSymbol(config->isMips64EL);
-    return getSymbol(symIndex);
-  }
 
   std::optional<llvm::DILineInfo> getDILineInfo(const InputSectionBase *,
                                                 uint64_t);

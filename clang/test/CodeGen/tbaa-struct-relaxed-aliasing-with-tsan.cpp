@@ -5,9 +5,7 @@
 // RUN:     FileCheck %s
 //
 // Check that we do not create tbaa for instructions generated for copies.
-// FIXME: !tbaa.struct is generated with null node as tag.
 
-// CHECK: !tbaa.struct
 // CHECK-NOT: !tbaa
 
 struct A {

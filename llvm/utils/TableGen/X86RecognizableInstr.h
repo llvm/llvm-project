@@ -106,6 +106,8 @@ enum {
   RawFrmImm16 = 8,
   AddCCFrm = 9,
   PrefixByte = 10,
+  MRMDestRegCC = 18,
+  MRMDestMemCC = 19,
   MRMDestMem4VOp3CC = 20,
   MRMr0 = 21,
   MRMSrcMemFSIB = 22,
@@ -214,6 +216,8 @@ struct RecognizableInstrBase {
   bool HasEVEX_B;
   /// The hasEVEX_NF field from the record
   bool HasEVEX_NF;
+  /// The hasTwoConditionalOps field from the record
+  bool HasTwoConditionalOps;
   /// Indicates that the instruction uses the L and L' fields for RC.
   bool EncodeRC;
   /// The isCodeGenOnly field from the record
