@@ -92,6 +92,9 @@ class SPIRVEmitIntrinsics
   void insertPtrCastOrAssignTypeInstr(Instruction *I, IRBuilder<> &B);
   void processGlobalValue(GlobalVariable &GV, IRBuilder<> &B);
   void processParamTypes(Function *F, IRBuilder<> &B);
+  Type *deduceFunParamType(Function *F, unsigned OpIdx);
+  Type *deduceFunParamType(Function *F, unsigned OpIdx,
+                           std::unordered_set<Function *> &FVisited);
 
 public:
   static char ID;
@@ -169,6 +172,10 @@ static inline void reportFatalOnTokenType(const Instruction *I) {
 static Type *deduceElementTypeHelper(Value *I,
                                      std::unordered_set<Value *> &Visited,
                                      DenseMap<Value *, Type *> &DeducedElTys) {
+  // allow to pass nullptr as an argument
+  if (!I)
+    return nullptr;
+
   // maybe already known
   auto It = DeducedElTys.find(I);
   if (It != DeducedElTys.end())
@@ -182,15 +189,20 @@ static Type *deduceElementTypeHelper(Value *I,
   // fallback value in case when we fail to deduce a type
   Type *Ty = nullptr;
   // look for known basic patterns of type inference
-  if (auto *Ref = dyn_cast<AllocaInst>(I))
+  if (auto *Ref = dyn_cast<AllocaInst>(I)) {
     Ty = Ref->getAllocatedType();
-  else if (auto *Ref = dyn_cast<GetElementPtrInst>(I))
+  } else if (auto *Ref = dyn_cast<GetElementPtrInst>(I)) {
     Ty = Ref->getResultElementType();
-  else if (auto *Ref = dyn_cast<GlobalValue>(I))
+  } else if (auto *Ref = dyn_cast<GlobalValue>(I)) {
     Ty = Ref->getValueType();
-  else if (auto *Ref = dyn_cast<AddrSpaceCastInst>(I))
+  } else if (auto *Ref = dyn_cast<AddrSpaceCastInst>(I)) {
     Ty = deduceElementTypeHelper(Ref->getPointerOperand(), Visited,
                                  DeducedElTys);
+  } else if (auto *Ref = dyn_cast<BitCastInst>(I)) {
+    if (Type *Src = Ref->getSrcTy(), *Dest = Ref->getDestTy();
+        isPointerTy(Src) && isPointerTy(Dest))
+      Ty = deduceElementTypeHelper(Ref->getOperand(0), Visited, DeducedElTys);
+  }
 
   // remember the found relationship
   if (Ty)
@@ -795,61 +807,80 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
   }
 }
 
-void SPIRVEmitIntrinsics::processParamTypes(Function *F, IRBuilder<> &B) {
-  DenseMap<unsigned, Argument *> Args;
-  unsigned i = 0;
-  for (Argument &Arg : F->args()) {
-    if (isUntypedPointerTy(Arg.getType()) &&
-        DeducedElTys.find(&Arg) == DeducedElTys.end() &&
-        !HasPointeeTypeAttr(&Arg))
-      Args[i] = &Arg;
-    i++;
-  }
-  if (Args.size() == 0)
-    return;
+Type *SPIRVEmitIntrinsics::deduceFunParamType(Function *F, unsigned OpIdx) {
+  std::unordered_set<Function *> FVisited;
+  return deduceFunParamType(F, OpIdx, FVisited);
+}
 
-  // Args contains opaque pointers without element type definition
-  B.SetInsertPointPastAllocas(F);
+Type *SPIRVEmitIntrinsics::deduceFunParamType(
+    Function *F, unsigned OpIdx, std::unordered_set<Function *> &FVisited) {
+  // maybe a cycle
+  if (FVisited.find(F) != FVisited.end())
+    return nullptr;
+  FVisited.insert(F);
+
   std::unordered_set<Value *> Visited;
+  SmallVector<std::pair<Function *, unsigned>> Lookup;
+  // search in function's call sites
   for (User *U : F->users()) {
     CallInst *CI = dyn_cast<CallInst>(U);
-    if (!CI)
+    if (!CI || OpIdx >= CI->arg_size())
       continue;
-    for (unsigned OpIdx = 0; OpIdx < CI->arg_size() && Args.size() > 0;
-         OpIdx++) {
-      auto It = Args.find(OpIdx);
-      Argument *Arg = It == Args.end() ? nullptr : It->second;
-      if (!Arg)
+    Value *OpArg = CI->getArgOperand(OpIdx);
+    if (!isPointerTy(OpArg->getType()))
+      continue;
+    // maybe we already know operand's element type
+    if (auto It = DeducedElTys.find(OpArg); It != DeducedElTys.end())
+      return It->second;
+    // search in actual parameter's users
+    for (User *OpU : OpArg->users()) {
+      Instruction *Inst = dyn_cast<Instruction>(OpU);
+      if (!Inst || Inst == CI)
         continue;
-      Value *OpArg = CI->getArgOperand(OpIdx);
-      if (!isPointerTy(OpArg->getType()))
-        continue;
-      // maybe we already know the operand's element type
-      auto DeducedIt = DeducedElTys.find(OpArg);
-      Type *ElemTy =
-          DeducedIt == DeducedElTys.end() ? nullptr : DeducedIt->second;
-      if (!ElemTy) {
-        for (User *OpU : OpArg->users()) {
-          if (Instruction *Inst = dyn_cast<Instruction>(OpU)) {
-            Visited.clear();
-            ElemTy = deduceElementTypeHelper(Inst, Visited, DeducedElTys);
-            if (ElemTy)
-              break;
-          }
-        }
-      }
-      if (ElemTy) {
-        unsigned AddressSpace = getPointerAddressSpace(Arg->getType());
-        CallInst *AssignPtrTyCI = buildIntrWithMD(
-            Intrinsic::spv_assign_ptr_type, {Arg->getType()},
-            Constant::getNullValue(ElemTy), Arg, {B.getInt32(AddressSpace)}, B);
-        DeducedElTys[AssignPtrTyCI] = ElemTy;
-        DeducedElTys[Arg] = ElemTy;
-        Args.erase(It);
+      Visited.clear();
+      if (Type *Ty = deduceElementTypeHelper(Inst, Visited, DeducedElTys))
+        return Ty;
+    }
+    // check if it's a formal parameter of the outer function
+    if (!CI->getParent() || !CI->getParent()->getParent())
+      continue;
+    Function *OuterF = CI->getParent()->getParent();
+    if (FVisited.find(OuterF) != FVisited.end())
+      continue;
+    for (unsigned i = 0; i < OuterF->arg_size(); ++i) {
+      if (OuterF->getArg(i) == OpArg) {
+        Lookup.push_back(std::make_pair(OuterF, i));
+        break;
       }
     }
-    if (Args.size() == 0)
-      break;
+  }
+
+  // search in function parameters
+  for (auto &Pair : Lookup) {
+    if (Type *Ty = deduceFunParamType(Pair.first, Pair.second, FVisited))
+      return Ty;
+  }
+
+  return nullptr;
+}
+
+void SPIRVEmitIntrinsics::processParamTypes(Function *F, IRBuilder<> &B) {
+  B.SetInsertPointPastAllocas(F);
+  DenseMap<Argument *, Type *> Args;
+  for (unsigned OpIdx = 0; OpIdx < F->arg_size(); ++OpIdx) {
+    Argument *Arg = F->getArg(OpIdx);
+    if (isUntypedPointerTy(Arg->getType()) &&
+        DeducedElTys.find(Arg) == DeducedElTys.end() &&
+        !HasPointeeTypeAttr(Arg)) {
+      if (Type *ElemTy = deduceFunParamType(F, OpIdx)) {
+        CallInst *AssignPtrTyCI = buildIntrWithMD(
+            Intrinsic::spv_assign_ptr_type, {Arg->getType()},
+            Constant::getNullValue(ElemTy), Arg,
+            {B.getInt32(getPointerAddressSpace(Arg->getType()))}, B);
+        DeducedElTys[AssignPtrTyCI] = ElemTy;
+        DeducedElTys[Arg] = ElemTy;
+      }
+    }
   }
 }
 
