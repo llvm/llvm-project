@@ -7369,7 +7369,7 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                        IsLoad ? "destination operands must be sequential"
                               : "source operands must be sequential");
       }
-      // Rt bust be even
+      // Rt must be even
       if (Rt & 1)
         return Error(
             Op1.getStartLoc(),
@@ -7380,7 +7380,7 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
           Reg1, ARM::gsub_0, &(MRI->getRegClass(ARM::GPRPairRegClassID)));
       Operands[Idx] =
           ARMOperand::CreateReg(NewReg, Op1.getStartLoc(), Op2.getEndLoc());
-      // Only remove redundent operand if not in GNU alias case
+      // redundant operand only exists if not in GNU alias case
       if (!IsGNUAlias)
         Operands.erase(Operands.begin() + Idx + 1);
     }
