@@ -2204,11 +2204,11 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     switch (IntrinsicID) {
       default: break;
       case Intrinsic::log:
-        #if defined(__FLOAT128__) && defined (HAS_LOGF128)
-        if (Ty->isFP128Ty()){
+#if defined(__FLOAT128__) && defined(HAS_LOGF128)
+        if (Ty->isFP128Ty()) {
           return ConstantFP::get(Ty, logf128(APF.convertToQuad()));
         }
-        #endif
+#endif
         return ConstantFoldFP(log, APF, Ty);
       case Intrinsic::log2:
         // TODO: What about hosts that lack a C99 library?
