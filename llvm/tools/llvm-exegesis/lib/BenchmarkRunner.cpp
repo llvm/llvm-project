@@ -317,6 +317,7 @@ private:
     int CounterFileDescriptor = Counter->getFileDescriptor();
     Error SendError =
         sendFileDescriptorThroughSocket(WriteFD, CounterFileDescriptor);
+    close(WriteFD);
 
     if (SendError)
       return SendError;

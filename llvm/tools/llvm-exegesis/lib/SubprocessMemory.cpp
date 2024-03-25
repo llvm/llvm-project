@@ -50,6 +50,7 @@ Error SubprocessMemory::initializeSubprocessMemory(pid_t ProcessID) {
                                Twine(strerror(errno)));
   }
   SharedMemoryNames.push_back(AuxiliaryMemoryName);
+  close(AuxiliaryMemoryFD);
   return Error::success();
 }
 
@@ -87,6 +88,8 @@ Error SubprocessMemory::addMemoryDefinition(
           "Unmapping a memory definition in the parent failed: " +
           Twine(strerror(errno)));
     }
+
+    close(SharedMemoryFD);
   }
   return Error::success();
 }
