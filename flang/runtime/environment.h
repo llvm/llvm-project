@@ -12,19 +12,16 @@
 #include "flang/Common/optional.h"
 #include "flang/Decimal/decimal.h"
 
+#include "llvm/ADT/bit.h"
+
 struct EnvironmentDefaultList;
 
 namespace Fortran::runtime {
 
 class Terminator;
 
-#if FLANG_BIG_ENDIAN
-constexpr bool isHostLittleEndian{false};
-#elif FLANG_LITTLE_ENDIAN
-constexpr bool isHostLittleEndian{true};
-#else
-#error host endianness is not known
-#endif
+constexpr bool isHostLittleEndian =
+    (llvm::endianness::native == llvm::endianness::little);
 
 // External unformatted I/O data conversions
 enum class Convert { Unknown, Native, LittleEndian, BigEndian, Swap };
