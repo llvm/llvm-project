@@ -1360,6 +1360,13 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
                        "canFreelyInvertAllUsersOf() ?");
     }
   }
+
+  // Adapt all dbg users
+  if (auto *Inst = dyn_cast<Instruction>(I); Inst && Inst->isUsedByMetadata()) {
+    auto *Not = Builder.CreateNot(I);
+    auto *NotInst = dyn_cast<Instruction>(I);
+    replaceAllDbgUsesWith(*Inst, *Not, NotInst ? *NotInst : *Inst, DT);
+  }
 }
 
 /// Given a 'sub' instruction, return the RHS of the instruction if the LHS is a
