@@ -149,6 +149,7 @@ class MipsAsmParser : public MCTargetAsmParser {
                        // directive.
   bool IsLittleEndian;
   bool IsPicEnabled;
+  bool HasParseRdata;
   bool IsCpRestoreSet;
   bool CurForbiddenSlotAttr;
   int CpRestoreOffset;
@@ -557,6 +558,7 @@ public:
     IsPicEnabled = getContext().getObjectFileInfo()->isPositionIndependent();
 
     IsCpRestoreSet = false;
+    HasParseRdata = false;
     CpRestoreOffset = -1;
     GPReg = ABI.GetGlobalPtr();
 
@@ -2996,11 +2998,45 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
         (Res.getSymA()->getSymbol().isELF() &&
          cast<MCSymbolELF>(Res.getSymA()->getSymbol()).getBinding() ==
              ELF::STB_LOCAL);
+
     // For O32, "$"-prefixed symbols are recognized as temporary while
     // .L-prefixed symbols are not (PrivateGlobalPrefix is "$"). Recognize ".L"
     // manually.
     if (ABI.IsO32() && Res.getSymA()->getSymbol().getName().starts_with(".L"))
       IsLocalSym = true;
+    else {
+      if (HasParseRdata == false) {
+        StringRef CurrentASMContent = StringRef(IDLoc.getPointer());
+
+        // Get local symbol name LocalSymbol from "la $number, localsymbolname\n
+        // ... "
+        size_t NewlineIndex = CurrentASMContent.find_first_of('\n');
+        size_t CommaIndex = CurrentASMContent.find_first_of(',');
+        size_t SymbolLength = NewlineIndex - CommaIndex - 2;
+        StringRef LocalSymbol =
+            CurrentASMContent.take_front(NewlineIndex).take_back(SymbolLength);
+
+        // Get and check if ".rdata" section exist.
+        size_t RdataIndex = CurrentASMContent.find(".rdata");
+        if (RdataIndex != StringRef::npos) {
+          StringRef Rdata = CurrentASMContent.substr(RdataIndex);
+
+          // Check if rdata section contain local symbol.
+          if (1 == Rdata.contains(LocalSymbol)) {
+            // Check if "LocalSymbol:" exist.
+            size_t A = Rdata.find(LocalSymbol);
+            size_t B = Rdata.find(':', A);
+            if (B - A == LocalSymbol.size()) {
+              IsLocalSym = true;
+              LLVM_DEBUG(dbgs()
+                         << DEBUG_TYPE << ": Has definition of local symbol "
+                         << LocalSymbol << " after 'la' instruction"
+                         << "\n");
+            }
+          }
+        }
+      }
+    }
     bool UseXGOT = STI->hasFeature(Mips::FeatureXGOT) && !IsLocalSym;
 
     // The case where the result register is $25 is somewhat special. If the
@@ -8149,6 +8185,7 @@ bool MipsAsmParser::parseDirectiveTpRelWord() {
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return Error(getLexer().getLoc(),
                 "unexpected token, expected end of statement");
+  HasParseRdata = true;
   Parser.Lex(); // Eat EndOfStatement token.
   return false;
 }
