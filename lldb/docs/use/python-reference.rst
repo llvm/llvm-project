@@ -511,15 +511,15 @@ when providing "long help" for your command, as in:
 
 though providing help can also be done programmatically (see below).
 
-Prior to lldb 3.5.2, LLDB Python command definitions didn't take the SBExecutionContext
+Prior to lldb 3.5.2 (April 2015), LLDB Python command definitions didn't take the SBExecutionContext
 argument. So you may still see commands where the command definition is:
 
 ::
-   
+
   def command_function(debugger, command, result, internal_dict):
       # Your code goes here
 
-This form is deprecated because it can only operate on the "currently selected"
+Using this form is strongly discouraged because it can only operate on the "currently selected"
 target, process, thread, frame.  The command will behave as expected when run
 directly on the command line.  But if the command is used in a stop-hook, breakpoint
 callback, etc. where the response to the callback determines whether we will select
