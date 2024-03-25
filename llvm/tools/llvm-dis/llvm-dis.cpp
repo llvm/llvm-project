@@ -81,6 +81,7 @@ static cl::opt<bool> PrintThinLTOIndexOnly(
     cl::init(false), cl::Hidden, cl::cat(DisCategory));
 
 extern cl::opt<bool> WriteNewDbgInfoFormat;
+
 extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
 
 namespace {
@@ -169,6 +170,7 @@ int main(int argc, char **argv) {
 
   cl::HideUnrelatedOptions({&DisCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm .bc -> .ll disassembler\n");
+
   // Load bitcode into the new debug info format by default.
   if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
     LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_TRUE;
