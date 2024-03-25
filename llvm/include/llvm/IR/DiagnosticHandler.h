@@ -28,7 +28,7 @@ struct DiagnosticHandler {
       : DiagnosticContext(DiagContext) {}
   virtual ~DiagnosticHandler() = default;
 
-  using DiagnosticHandlerTy = void (*)(const DiagnosticInfo* DI, void *Context);
+  using DiagnosticHandlerTy = void (*)(const DiagnosticInfo *DI, void *Context);
 
   /// DiagHandlerCallback is settable from the C API and base implementation
   /// of DiagnosticHandler will call it from handleDiagnostics(). Any derived
