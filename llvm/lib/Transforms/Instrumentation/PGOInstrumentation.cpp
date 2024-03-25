@@ -862,6 +862,10 @@ static void instrumentOneFunc(
   auto Name = FuncInfo.FuncNameVar;
   auto CFGHash = ConstantInt::get(Type::getInt64Ty(M->getContext()),
                                   FuncInfo.FunctionHash);
+  // Make sure that pointer to global is passed in with zero addrspace
+  // This is relevant during GPU profiling
+  auto *NormalizedPtr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+      Name, PointerType::get(M->getContext(), 0));
   if (PGOFunctionEntryCoverage) {
     auto &EntryBB = F.getEntryBlock();
     IRBuilder<> Builder(&EntryBB, EntryBB.getFirstInsertionPt());
@@ -869,7 +873,7 @@ static void instrumentOneFunc(
     //                      i32 <index>)
     Builder.CreateCall(
         Intrinsic::getDeclaration(M, Intrinsic::instrprof_cover),
-        {Name, CFGHash, Builder.getInt32(1), Builder.getInt32(0)});
+        {NormalizedPtr, CFGHash, Builder.getInt32(1), Builder.getInt32(0)});
     return;
   }
 
@@ -887,7 +891,8 @@ static void instrumentOneFunc(
     //                          i32 <index>)
     Builder.CreateCall(
         Intrinsic::getDeclaration(M, Intrinsic::instrprof_timestamp),
-        {Name, CFGHash, Builder.getInt32(NumCounters), Builder.getInt32(I)});
+        {NormalizedPtr, CFGHash, Builder.getInt32(NumCounters),
+         Builder.getInt32(I)});
     I += PGOBlockCoverage ? 8 : 1;
   }
 
@@ -901,7 +906,8 @@ static void instrumentOneFunc(
         Intrinsic::getDeclaration(M, PGOBlockCoverage
                                          ? Intrinsic::instrprof_cover
                                          : Intrinsic::instrprof_increment),
-        {Name, CFGHash, Builder.getInt32(NumCounters), Builder.getInt32(I++)});
+        {NormalizedPtr, CFGHash, Builder.getInt32(NumCounters),
+         Builder.getInt32(I++)});
   }
 
   // Now instrument select instructions:

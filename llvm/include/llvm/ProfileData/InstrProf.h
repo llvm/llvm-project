@@ -171,6 +171,10 @@ inline StringRef getInstrProfCounterBiasVarName() {
 /// Return the marker used to separate PGO names during serialization.
 inline StringRef getInstrProfNameSeparator() { return "\01"; }
 
+/// Determines whether module targets a GPU eligable for PGO
+/// instrumentation
+bool isGPUProfTarget(const Module &M);
+
 /// Please use getIRPGOFuncName for LLVM IR instrumentation. This function is
 /// for front-end (Clang, etc) instrumentation.
 /// Return the modified name for function \c F suitable to be
