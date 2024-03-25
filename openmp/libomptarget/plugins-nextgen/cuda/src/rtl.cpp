@@ -471,7 +471,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
   /// Allocate and construct a CUDA kernel.
   Expected<GenericKernelTy &> constructKernel(const char *Name) override {
     // Allocate and construct the CUDA kernel.
-    CUDAKernelTy *CUDAKernel = Plugin::get().allocate<CUDAKernelTy>();
+    CUDAKernelTy *CUDAKernel = PluginTy::get().allocate<CUDAKernelTy>();
     if (!CUDAKernel)
       return Plugin::error("Failed to allocate memory for CUDA kernel");
 
@@ -529,7 +529,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
       return std::move(Err);
 
     // Allocate and initialize the image object.
-    CUDADeviceImageTy *CUDAImage = Plugin::get().allocate<CUDADeviceImageTy>();
+    CUDADeviceImageTy *CUDAImage =
+        PluginTy::get().allocate<CUDADeviceImageTy>();
     new (CUDAImage) CUDADeviceImageTy(ImageId, *this, TgtImage);
 
     // Load the CUDA module.
@@ -1371,6 +1372,16 @@ struct CUDAPluginTy final : public GenericPluginTy {
   /// Deinitialize the plugin.
   Error deinitImpl() override { return Plugin::success(); }
 
+  /// Creates a CUDA device to use for offloading.
+  GenericDeviceTy *createDevice(int32_t DeviceId, int32_t NumDevices) override {
+    return new CUDADeviceTy(DeviceId, NumDevices);
+  }
+
+  /// Creates a CUDA global handler.
+  GenericGlobalHandlerTy *createGlobalHandler() override {
+    return new CUDAGlobalHandlerTy();
+  }
+
   /// Get the ELF code for recognizing the compatible image binary.
   uint16_t getMagicElfBits() const override { return ELF::EM_CUDA; }
 
@@ -1484,18 +1495,10 @@ Error CUDADeviceTy::dataExchangeImpl(const void *SrcPtr,
   return Plugin::check(Res, "Error in cuMemcpyDtoDAsync: %s");
 }
 
-GenericPluginTy *Plugin::createPlugin() { return new CUDAPluginTy(); }
-
-GenericDeviceTy *Plugin::createDevice(int32_t DeviceId, int32_t NumDevices) {
-  return new CUDADeviceTy(DeviceId, NumDevices);
-}
-
-GenericGlobalHandlerTy *Plugin::createGlobalHandler() {
-  return new CUDAGlobalHandlerTy();
-}
+GenericPluginTy *PluginTy::createPlugin() { return new CUDAPluginTy(); }
 
 template <typename... ArgsTy>
-Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
+static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   CUresult ResultCode = static_cast<CUresult>(Code);
   if (ResultCode == CUDA_SUCCESS)
     return Error::success();
