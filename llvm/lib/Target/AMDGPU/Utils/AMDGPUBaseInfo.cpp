@@ -590,9 +590,13 @@ bool isPermlane16(unsigned Opc) {
          Opc == AMDGPU::V_PERMLANE16_B32_e64_gfx11 ||
          Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx11 ||
          Opc == AMDGPU::V_PERMLANE16_B32_e64_gfx12 ||
+         Opc == AMDGPU::V_PERMLANE16_B32_e64_gfx13 ||
          Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx12 ||
+         Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx13 ||
          Opc == AMDGPU::V_PERMLANE16_VAR_B32_e64_gfx12 ||
-         Opc == AMDGPU::V_PERMLANEX16_VAR_B32_e64_gfx12;
+         Opc == AMDGPU::V_PERMLANE16_VAR_B32_e64_gfx13 ||
+         Opc == AMDGPU::V_PERMLANEX16_VAR_B32_e64_gfx12 ||
+         Opc == AMDGPU::V_PERMLANEX16_VAR_B32_e64_gfx13;
 }
 
 bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc) {
