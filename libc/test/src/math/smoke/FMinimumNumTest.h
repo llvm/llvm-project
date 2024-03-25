@@ -22,24 +22,27 @@ public:
   typedef T (*FMinimumNumFunc)(T, T);
 
   void testNaN(FMinimumNumFunc func) {
-    EXPECT_FP_EQ(inf, func(FPBits::quiet_nan().get_val(), inf));
-    EXPECT_FP_EQ(inf, func(FPBits::signaling_nan().get_val(), inf));
-    EXPECT_FP_EQ(neg_inf, func(neg_inf, FPBits::quiet_nan().get_val()));
-    EXPECT_FP_EQ(neg_inf, func(neg_inf, FPBits::signaling_nan().get_val()));
-    EXPECT_FP_EQ(FPBits::quiet_nan().get_val(), func(aNaN, aNaN));
-    EXPECT_FP_EQ(0.0, func(FPBits::quiet_nan().get_val(), 0.0));
-    EXPECT_FP_EQ(-0.0, func(-0.0, FPBits::quiet_nan().get_val()));
-    EXPECT_FP_EQ(0.0, func(FPBits::signaling_nan().get_val(), 0.0));
-    EXPECT_FP_EQ(-0.0, func(-0.0, FPBits::signaling_nan().get_val()));
-    EXPECT_FP_EQ(T(-1.2345), func(FPBits::quiet_nan().get_val(), T(-1.2345)));
-    EXPECT_FP_EQ(T(1.2345), func(T(1.2345), FPBits::quiet_nan().get_val()));
-    EXPECT_FP_EQ(T(-1.2345),
-                 func(FPBits::signaling_nan().get_val(), T(-1.2345)));
-    EXPECT_FP_EQ(T(1.2345), func(T(1.2345), FPBits::signaling_nan().get_val()));
+    EXPECT_FP_EQ(inf, func(aNaN, inf));
+    EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(sNaN, inf), FE_INVALID);
+    EXPECT_FP_EQ(neg_inf, func(neg_inf, aNaN));
+    EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, func(neg_inf, sNaN), FE_INVALID);
+    EXPECT_EQ(FPBits(aNaN).uintval(), FPBits(func(aNaN, aNaN)).uintval());
+    EXPECT_FP_EQ(0.0, func(aNaN, 0.0));
+    EXPECT_FP_EQ(-0.0, func(-0.0, aNaN));
+    EXPECT_FP_EQ_WITH_EXCEPTION(0.0, func(sNaN, 0.0), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(-0.0, func(-0.0, sNaN), FE_INVALID);
+    EXPECT_FP_EQ(T(-1.2345), func(aNaN, T(-1.2345)));
+    EXPECT_FP_EQ(T(1.2345), func(T(1.2345), aNaN));
+    EXPECT_FP_EQ_WITH_EXCEPTION(T(-1.2345),
+				func(sNaN, T(-1.2345)), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(T(1.2345), func(T(1.2345), sNaN), FE_INVALID);
     EXPECT_FP_IS_NAN_WITH_EXCEPTION(
-        func(aNaN, FPBits::signaling_nan().get_val()), FE_INVALID);
+        func(aNaN, sNaN), FE_INVALID);
     EXPECT_FP_IS_NAN_WITH_EXCEPTION(
-        func(FPBits::signaling_nan().get_val(), aNaN), FE_INVALID);
+        func(sNaN, aNaN), FE_INVALID);
+    EXPECT_EQ(FPBits(aNaN).uintval(), FPBits(func(aNaN, sNaN)).uintval());
+    EXPECT_EQ(FPBits(aNaN).uintval(), FPBits(func(sNaN, aNaN)).uintval());
+    EXPECT_EQ(FPBits(aNaN).uintval(), FPBits(func(sNaN, sNaN)).uintval());		 
   }
 
   void testInfArg(FMinimumNumFunc func) {
