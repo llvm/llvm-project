@@ -172,14 +172,14 @@ llvm.func @empty_types() {
 
 #di_file = #llvm.di_file<"foo.mlir" in "/test/">
 #di_subprogram = #llvm.di_subprogram<
-  scope = #di_file, name = "func_decl_with_subprogram", file = #di_file, subprogramFlags = "Optimized"
+  scope = #di_file, name = "func_decl_with_subprogram", file = #di_file
 >
 
 // CHECK-LABEL: declare !dbg
 // CHECK-SAME: ![[SUBPROGRAM:.*]] i32 @func_decl_with_subprogram(
 llvm.func @func_decl_with_subprogram() -> (i32) loc(fused<#di_subprogram>["foo.mlir":2:1])
 
-// CHECK: ![[SUBPROGRAM]] = !DISubprogram(name: "func_decl_with_subprogram", scope: ![[FILE:.*]], file: ![[FILE]], spFlags: DISPFlagOptimized)
+// CHECK: ![[SUBPROGRAM]] = !DISubprogram(name: "func_decl_with_subprogram", scope: ![[FILE:.*]], file: ![[FILE]], spFlags: 0)
 // CHECK: ![[FILE]] = !DIFile(filename: "foo.mlir", directory: "/test/")
 
 // -----
