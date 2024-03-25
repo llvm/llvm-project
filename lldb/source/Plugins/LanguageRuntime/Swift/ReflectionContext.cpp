@@ -32,21 +32,21 @@ struct DescriptorFinderForwarder : public swift::reflection::DescriptorFinder {
 
   std::unique_ptr<swift::reflection::BuiltinTypeDescriptorBase>
   getBuiltinTypeDescriptor(const swift::reflection::TypeRef *TR) override {
-    if (m_descriptor_finder)
+    if (m_descriptor_finder && shouldConsultDescriptorFinder())
       return m_descriptor_finder->getBuiltinTypeDescriptor(TR);
     return nullptr;
   }
 
   std::unique_ptr<swift::reflection::FieldDescriptorBase>
   getFieldDescriptor(const swift::reflection::TypeRef *TR) override {
-    if (m_descriptor_finder)
+    if (m_descriptor_finder && shouldConsultDescriptorFinder())
       return m_descriptor_finder->getFieldDescriptor(TR);
     return nullptr;
   }
 
   std::unique_ptr<swift::reflection::MultiPayloadEnumDescriptorBase>
   getMultiPayloadEnumDescriptor(const swift::reflection::TypeRef *TR) override {
-    if (m_descriptor_finder)
+    if (m_descriptor_finder && shouldConsultDescriptorFinder())
       return m_descriptor_finder->getMultiPayloadEnumDescriptor(TR);
     return nullptr;
   }
@@ -57,8 +57,26 @@ struct DescriptorFinderForwarder : public swift::reflection::DescriptorFinder {
 
   void ClearExternalDescriptorFinder() { m_descriptor_finder = nullptr; }
 
+  void SetImageAdded(bool image_added) {
+    m_image_added |= image_added;
+  }
+
 private:
+  bool shouldConsultDescriptorFinder() {
+    switch (Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging()) {
+    case lldb_private::AutoBool::True:
+      return true;
+    case lldb_private::AutoBool::False:
+      return false;
+    case lldb_private::AutoBool::Auto:
+      // Full DWARF debugging is auto-enabled if there is no reflection metadata
+      // to read from.
+      return !m_image_added;
+    }
+  }
+
   swift::reflection::DescriptorFinder *m_descriptor_finder = nullptr;
+  bool m_image_added = false;
 };
 
 /// An implementation of the generic ReflectionContextInterface that
@@ -82,21 +100,27 @@ public:
           swift::ReflectionSectionKind)>
           find_section,
       llvm::SmallVector<llvm::StringRef, 1> likely_module_names) override {
-    return m_reflection_ctx.addImage(find_section, likely_module_names);
+    auto id = m_reflection_ctx.addImage(find_section, likely_module_names);
+    m_forwader.SetImageAdded(id.has_value());
+    return id;
   }
 
   std::optional<uint32_t>
   AddImage(swift::remote::RemoteAddress image_start,
            llvm::SmallVector<llvm::StringRef, 1> likely_module_names) override {
-    return m_reflection_ctx.addImage(image_start, likely_module_names);
+    auto id = m_reflection_ctx.addImage(image_start, likely_module_names);
+    m_forwader.SetImageAdded(id.has_value());
+    return id;
   }
 
   std::optional<uint32_t> ReadELF(
       swift::remote::RemoteAddress ImageStart,
       std::optional<llvm::sys::MemoryBlock> FileBuffer,
       llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) override {
-    return m_reflection_ctx.readELF(ImageStart, FileBuffer,
+    auto id = m_reflection_ctx.readELF(ImageStart, FileBuffer,
                                     likely_module_names);
+    m_forwader.SetImageAdded(id.has_value());
+    return id;
   }
 
   const swift::reflection::TypeRef *GetTypeRefOrNull(
