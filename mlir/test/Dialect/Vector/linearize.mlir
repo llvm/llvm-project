@@ -93,6 +93,8 @@ func.func @test_index_no_linearize(%arg0: vector<2x2xindex>, %arg1: vector<2x2xi
 
 // -----
 
+// vectorizable operation (arith.mulf) with tensor result types.
+
 // CHECK-LABEL: func.func @nonvec_result
 // CHECK128-LABEL: func.func @nonvec_result
 // CHECK0-LABEL: func.func @nonvec_result
