@@ -184,10 +184,6 @@ public:
 
   bool GetSwiftEnableBareSlashRegex() const;
 
-  AutoBool GetEnableSwiftCxxInterop() const;
-
-  AutoBool GetSwiftEnableFullDwarfDebugging() const;
-
   bool GetSwiftAllowExplicitModules() const;
 
   Args GetSwiftPluginServerForPath() const;

@@ -82,6 +82,25 @@ static constexpr OptionEnumValueElement g_swift_module_loading_mode_enums[] = {
   {eSwiftModuleLoadingModeOnlySerialized, "only-serialized",
     "Only load Swift modules via their .swiftmodule file - ignore "
     ".swiftinterface files."} };
+
+
+static constexpr OptionEnumValueElement g_enable_swift_cxx_interop_values[] = {
+    {llvm::to_underlying(AutoBool::Auto), "auto",
+     "Automatically detect if C++ interop mode should be enabled."},
+    {llvm::to_underlying(AutoBool::True), "true", "Enable C++ interop."},
+    {llvm::to_underlying(AutoBool::False), "false", "Disable C++ interop."},
+};
+
+static constexpr OptionEnumValueElement g_enable_full_dwarf_debugging[] = {
+    {llvm::to_underlying(AutoBool::Auto), "auto",
+     "Automatically detect if full DWARF debugging should be enabled. Full "
+     "DWARF debugging is enabled if no reflection metadata is added to the "
+     "debugger."},
+    {llvm::to_underlying(AutoBool::True), "true",
+     "Enable full DWARF debugging."},
+    {llvm::to_underlying(AutoBool::False), "false",
+     "Disable full DWARF debugging."},
+};
 // END SWIFT
 
 #define LLDB_PROPERTIES_modulelist
@@ -237,6 +256,28 @@ uint64_t ModuleListProperties::GetSwiftMetadataCacheExpirationDays() {
   const uint32_t idx = ePropertySwiftMetadataCacheExpirationDays;
   return GetPropertyAtIndexAs<uint64_t>(
       idx, g_modulelist_properties[idx].default_uint_value);
+}
+
+
+AutoBool ModuleListProperties::GetSwiftEnableCxxInterop() const {
+  const uint32_t idx = ePropertySwiftEnableCxxInterop;
+
+  return GetPropertyAtIndexAs<AutoBool>(
+      idx, static_cast<AutoBool>(
+               g_modulelist_properties[idx].default_uint_value));
+}
+
+AutoBool ModuleListProperties::GetSwiftEnableFullDwarfDebugging() const {
+  const uint32_t idx = ePropertySwiftEnableFullDwarfDebugging;
+  return GetPropertyAtIndexAs<AutoBool>(
+      idx, static_cast<AutoBool>(
+               g_modulelist_properties[idx].default_uint_value));
+}
+
+bool ModuleListProperties::GetSwiftEnableASTContext() const {
+  const uint32_t idx = ePropertySwiftEnableASTContext;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
 }
 // END SWIFT
 

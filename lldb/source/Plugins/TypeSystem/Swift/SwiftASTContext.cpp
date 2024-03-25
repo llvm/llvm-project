@@ -978,6 +978,10 @@ SwiftASTContext::SwiftASTContext(std::string description,
     : TypeSystemSwift(), m_typeref_typesystem(&typeref_typesystem),
       m_compiler_invocation_ap(new swift::CompilerInvocation()),
       m_diagnostic_consumer_ap(new StoringDiagnosticConsumer(*this)) {
+  assert(
+      ModuleList::GetGlobalModuleListProperties().GetSwiftEnableASTContext() &&
+      "Swift AST context instantiation is disabled!");
+
   m_description = description;
 
   // Set the clang modules cache path.
@@ -1882,6 +1886,10 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   if (!SwiftASTContextSupportsLanguage(language))
     return lldb::TypeSystemSP();
 
+  if (!ModuleList::GetGlobalModuleListProperties()
+           .GetSwiftEnableASTContext())
+    return lldb::TypeSystemSP();
+
   std::string m_description;
   {
     llvm::raw_string_ostream ss(m_description);
@@ -2357,6 +2365,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   if (!SwiftASTContextSupportsLanguage(language))
     return lldb::TypeSystemSP();
 
+  if (!ModuleList::GetGlobalModuleListProperties()
+           .GetSwiftEnableASTContext())
+    return lldb::TypeSystemSP();
+
   LLDB_SCOPED_TIMER();
   std::string m_description = "SwiftASTContextForExpressions";
   std::vector<swift::PluginSearchOption> plugin_search_options;
@@ -2647,6 +2659,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     const SymbolContext &sc,
     TypeSystemSwiftTypeRefForExpressions &typeref_typesystem) {
   LLDB_SCOPED_TIMER();
+
+  if (!ModuleList::GetGlobalModuleListProperties()
+           .GetSwiftEnableASTContext())
+    return lldb::TypeSystemSP();
 
   CompileUnit *cu = sc.comp_unit;
   StringRef swift_module_name = TypeSystemSwiftTypeRef::GetSwiftModuleFor(&sc);

@@ -174,7 +174,8 @@ public:
 
   std::vector<std::unique_ptr<swift::reflection::FieldRecordBase>>
   getFieldRecords() override {
-    assert(Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging() !=
+    assert(ModuleList::GetGlobalModuleListProperties()
+                   .GetSwiftEnableFullDwarfDebugging() !=
                lldb_private::AutoBool::False &&
            "Full DWARF debugging for Swift is disabled!");
 
@@ -332,7 +333,8 @@ public:
 std::unique_ptr<swift::reflection::BuiltinTypeDescriptorBase>
 DWARFASTParserSwift::getBuiltinTypeDescriptor(
     const swift::reflection::TypeRef *TR) {
-  assert(Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging() !=
+  assert(ModuleList::GetGlobalModuleListProperties()
+                 .GetSwiftEnableFullDwarfDebugging() !=
              lldb_private::AutoBool::False &&
          "Full DWARF debugging for Swift is disabled!");
 
@@ -355,7 +357,8 @@ DWARFASTParserSwift::getBuiltinTypeDescriptor(
   if (byte_size == LLDB_INVALID_ADDRESS)
     return {};
 
-  auto alignment = die.GetAttributeValueAsUnsigned(DW_AT_alignment, 8);
+  auto alignment = die.GetAttributeValueAsUnsigned(DW_AT_alignment,
+                                                   byte_size ? byte_size : 8);
 
   // TODO: this seems simple to calculate but maybe we should encode the stride
   // in DWARF? That's what reflection metadata does.
@@ -374,7 +377,8 @@ DWARFASTParserSwift::getBuiltinTypeDescriptor(
 std::unique_ptr<swift::reflection::MultiPayloadEnumDescriptorBase>
 DWARFASTParserSwift::getMultiPayloadEnumDescriptor(
     const swift::reflection::TypeRef *TR) {
-  assert(Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging() !=
+  assert(ModuleList::GetGlobalModuleListProperties()
+                 .GetSwiftEnableFullDwarfDebugging() !=
              lldb_private::AutoBool::False &&
          "Full DWARF debugging for Swift is disabled!");
 
@@ -480,7 +484,8 @@ NodePointer DWARFASTParserSwift::GetCanonicalDemangleTree(DWARFDIE &die) {
 
 std::unique_ptr<swift::reflection::FieldDescriptorBase>
 DWARFASTParserSwift::getFieldDescriptor(const swift::reflection::TypeRef *TR) {
-  assert(Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging() !=
+  assert(ModuleList::GetGlobalModuleListProperties()
+                 .GetSwiftEnableFullDwarfDebugging() !=
              lldb_private::AutoBool::False &&
          "Full DWARF debugging for Swift is disabled!");
 

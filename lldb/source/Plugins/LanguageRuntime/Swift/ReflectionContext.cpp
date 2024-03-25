@@ -63,7 +63,8 @@ struct DescriptorFinderForwarder : public swift::reflection::DescriptorFinder {
 
 private:
   bool shouldConsultDescriptorFinder() {
-    switch (Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging()) {
+    switch (ModuleList::GetGlobalModuleListProperties()
+                .GetSwiftEnableFullDwarfDebugging()) {
     case lldb_private::AutoBool::True:
       return true;
     case lldb_private::AutoBool::False:
