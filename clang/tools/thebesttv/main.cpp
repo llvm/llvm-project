@@ -563,6 +563,8 @@ int main(int argc, const char **argv) {
         o.close();
     }
 
+    return 0;
+
     while (true) {
         std::string methodName;
         llvm::errs() << "> ";
@@ -581,6 +583,4 @@ int main(int argc, const char **argv) {
             }
         }
     }
-
-    return 0;
 }
