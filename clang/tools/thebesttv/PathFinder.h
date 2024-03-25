@@ -23,15 +23,11 @@ struct ICFGPathFinder {
         this->target = target;
         this->maxCallDepth = maxCallDepth;
 
-        llvm::errs() << "=== ICFGPathFinder ===\n";
-        llvm::errs() << "source: " << source << "\n";
-        llvm::errs() << "target: " << target << "\n";
-        llvm::errs() << "maxCallDepth: " << maxCallDepth << "\n";
-        llvm::errs() << "filter: ";
-        for (const auto &x : pathFilter) {
-            llvm::errs() << x << " ";
-        }
-        llvm::errs() << "\n";
+        logger.info("=== ICFGPathFinder ===");
+        logger.info("source: {}", source);
+        logger.info("target: {}", target);
+        logger.info("maxCallDepth: {}", maxCallDepth);
+        logger.info("filter: {}", fmt::join(pathFilter, " "));
 
         path.clear();
         path.push_back(source);
@@ -72,12 +68,7 @@ struct ICFGPathFinder {
         if (results.size() > 40)
             return;
         if (u == target) {
-            llvm::errs() << "found:";
-            for (int v : path) {
-                llvm::errs() << " " << v;
-            }
-            llvm::errs() << "\n";
-
+            logger.info("Found path: {}", fmt::join(path, " "));
             results.insert(path);
             return;
         }

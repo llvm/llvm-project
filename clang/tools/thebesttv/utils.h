@@ -26,6 +26,8 @@
 
 #include "lib/json.hpp"
 
+// doesn't seem useful
+// #include "spdlog/fmt/ostr.h"
 #include "spdlog/spdlog.h"
 
 using json = nlohmann::json;

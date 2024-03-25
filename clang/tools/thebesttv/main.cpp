@@ -75,7 +75,7 @@ void deduplicateCompilationDatabase(fs::path path) {
 
 std::unique_ptr<CompilationDatabase>
 getCompilationDatabase(fs::path buildPath) {
-    llvm::errs() << "Getting compilation database from: " << buildPath << "\n";
+    logger.info("Reading compilation database from: {}", buildPath);
     std::string errorMsg;
     std::unique_ptr<CompilationDatabase> cb =
         CompilationDatabase::autoDetectFromDirectory(buildPath.string(),
@@ -85,10 +85,12 @@ getCompilationDatabase(fs::path buildPath) {
     // JSONCompilationDatabase::loadFromFile(
     //     buildPath.string(), errorMsg, JSONCommandLineSyntax::AutoDetect);
     if (!cb) {
-        llvm::errs() << "Error while trying to load a compilation database:\n"
-                     << errorMsg << "Running without flags.\n";
+        logger.error("Error while trying to load compilation database: {}",
+                     errorMsg);
         exit(1);
     }
+    logger.info("There are {} entries for {} files in total",
+                cb->getAllCompileCommands().size(), cb->getAllFiles().size());
     return cb;
 }
 
@@ -122,9 +124,8 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
                 if (bLoc && bLoc->file == file && bLoc->line == line &&
                     bLoc->column == column) {
                     int id = block->getBlockID();
-                    llvm::errs()
-                        << "Found stmt in " << fi->signature << " at " << line
-                        << ":" << column << " in block " << id << "\n";
+                    logger.info("Found stmt in {} B{} at {}:{}:{}",
+                                fi->signature, id, file, line, column);
                     return VarLocResult(fi, block);
                 }
             } else {
@@ -133,9 +134,8 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
                     visitor.findVarInStmt(Context, stmt, file, line, column);
                 if (!var.empty()) {
                     int id = block->getBlockID();
-                    llvm::errs() << "Found var '" << var << "' in "
-                                 << fi->signature << " at " << line << ":"
-                                 << column << " in block " << id << "\n";
+                    logger.info("Found var '{}' in {} block {} at {}:{}:{}",
+                                var, fi->signature, id, file, line, column);
                     return VarLocResult(fi, block);
                 }
             }
@@ -282,8 +282,7 @@ void dumpICFGNode(int u, ordered_json &jPath) {
 
     const NamedLocation &loc = Global.functionLocations[fid];
 
-    llvm::errs() << ">> Node " << u << " is in " << loc.name << " at block "
-                 << bid << "\n";
+    logger.info(">> Node {} is in {} B{}", u, loc.name, bid);
 
     ClangTool Tool(*Global.cb, {loc.file});
     DiagnosticConsumer DC = IgnoringDiagConsumer();
@@ -297,7 +296,7 @@ void dumpICFGNode(int u, ordered_json &jPath) {
     // TODO: 想办法记录 function 用的是哪一条命令，然后只用这一条生成的
     requireTrue(ASTs.size() != 0, "No AST for file");
     if (ASTs.size() > 1) {
-        llvm::errs() << "Warning: multiple ASTs for file " << loc.file << "\n";
+        logger.warn("Warning: multiple ASTs for file {}", loc.file);
     }
     std::unique_ptr<ASTUnit> AST = std::move(ASTs[0]);
 
@@ -421,7 +420,7 @@ static void findPathBetween(const VarLocResult &from, const VarLocResult &to,
  * 生成全程序调用图
  */
 void generateICFG(const std::vector<std::string> &allFiles) {
-    llvm::errs() << "\n--- Generating whole program call graph ---\n";
+    logger.info("--- Generating whole program call graph ---");
     ClangTool Tool(*Global.cb, allFiles);
     DiagnosticConsumer DC = IgnoringDiagConsumer();
     Tool.setDiagnosticConsumer(&DC);
@@ -490,34 +489,26 @@ int main(int argc, const char **argv) {
     deduplicateCompilationDatabase(compile_commands);
     Global.cb = getCompilationDatabase(compile_commands);
 
-    // print all files in compilation database
-    const auto &allFiles = Global.cb->getAllFiles();
-    llvm::errs() << "All files (" << allFiles.size() << "):\n";
-    for (auto &file : allFiles)
-        llvm::errs() << "  " << file << "\n";
-
-    generateICFG(allFiles);
+    generateICFG(Global.cb->getAllFiles());
 
     {
-        llvm::errs() << "--- ICFG ---\n";
-        llvm::errs() << "  n: " << Global.icfg.n << "\n";
         int m = 0;
         for (const auto &edges : Global.icfg.G) {
             m += edges.size();
         }
-        llvm::errs() << "  m: " << m << "\n";
+        logger.info("ICFG: {} nodes, {} edges", Global.icfg.n, m);
     }
 
     fs::path outputDir = jsonPath.parent_path();
     {
-        llvm::errs() << "--- Path-finding ---\n";
+        logger.info("--- Path-finding ---");
 
         FunctionLocator locator;
         fs::path jsonResult = outputDir / "output.json";
-        llvm::errs() << "Output: " << jsonResult << "\n";
+        logger.info("Result will be saved to: {}", jsonResult);
 
         int total = input["results"].size();
-        llvm::errs() << "There are " << total << " results to search.\n";
+        logger.info("There are {} results to search", total);
 
         ordered_json output(input);
         output["results"].clear();
@@ -526,7 +517,7 @@ int main(int argc, const char **argv) {
         for (ordered_json &result : input["results"]) {
             cnt++;
             std::string type = result["type"].template get<std::string>();
-            llvm::errs() << "[" << cnt << "/" << total << "] " << type << "\n";
+            logger.info("[{}/{}] type: {}", cnt, total, type);
 
             ordered_json &locations = result["locations"];
             VarLocResult from, to;
@@ -538,10 +529,9 @@ int main(int argc, const char **argv) {
                 VarLocResult varLoc =
                     locateVariable(locator, Location(loc), isStmt);
                 if (!varLoc.isValid()) {
-                    llvm::errs() << "Error: cannot locate " << type << " at "
-                                 << loc.dump(4, ' ', false,
-                                             json::error_handler_t::replace)
-                                 << "\n";
+                    logger.error("Error: cannot locate {} at {}", type,
+                                 loc.dump(4, ' ', false,
+                                          json::error_handler_t::replace));
                     exit(1);
                 }
 

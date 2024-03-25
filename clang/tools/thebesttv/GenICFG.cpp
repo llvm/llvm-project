@@ -131,7 +131,7 @@ GenICFGAction::CreateASTConsumer(clang::CompilerInstance &Compiler,
     SourceManager &sm = Compiler.getSourceManager();
     const FileEntry *fileEntry = sm.getFileEntryForID(sm.getMainFileID());
     std::string filePath(fileEntry->tryGetRealPathName());
-    llvm::errs() << "[" << cnt << "/" << total << "] " << filePath << "\n";
+    logger.info("[{}/{}] {}", cnt, total, filePath);
 
     return std::make_unique<GenICFGConsumer>(&Compiler.getASTContext(),
                                              filePath);
