@@ -41,12 +41,8 @@ public:
     ///  - We also accept calls where the number of arguments or parameters is
     ///    greater than the specified value.
     /// For the exact heuristics, see CheckerContext::isCLibraryFunction().
-    /// Note that functions whose declaration context is not a TU (e.g.
-    /// methods, functions in namespaces) are not accepted as C library
-    /// functions.
-    /// FIXME: If I understand it correctly, this discards calls where C++ code
-    /// refers a C library function through the namespace `std::` via headers
-    /// like <cstdlib>.
+    /// (This mode only matches functions that are declared either directly
+    /// within a TU or in the namespace `std`.)
     CLibrary,
 
     /// Matches "simple" functions that are not methods. (Static methods are

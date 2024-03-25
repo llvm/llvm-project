@@ -882,6 +882,10 @@ if config.use_lld and config.has_lld and not config.use_lto:
 elif config.use_lld and (not config.has_lld):
     config.unsupported = True
 
+if config.host_os == "Darwin":
+    if getattr(config, "darwin_linker_version", None):
+        extra_cflags += ["-mlinker-version=" + config.darwin_linker_version]
+
 # Append any extra flags passed in lit_config
 append_target_cflags = lit_config.params.get("append_target_cflags", None)
 if append_target_cflags:
