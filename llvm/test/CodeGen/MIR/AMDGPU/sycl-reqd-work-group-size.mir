@@ -1,0 +1,78 @@
+# RUN: llc -march=amdgcn -mcpu=gfx90a -run-pass amdgpu-lower-kernel-attributes -o - %s | FileCheck %s
+
+# As SYCL allows for the required work group to be specified partially, we need
+# to patch it up to 3 dimensions. Make sure that it only happens when dealing
+# with SYCL kernels.
+
+--- |
+  target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
+
+  ; CHECK-LABEL: sycl_kernel_3dim
+  ; CHECK: !reqd_work_group_size [[SYCL_3DIM:![0-9]+]]
+  define amdgpu_kernel void @sycl_kernel_3dim() #0 !reqd_work_group_size !0 {
+  entry:
+    ret void
+  }
+
+  ; CHECK-LABEL: sycl_kernel_2dim
+  ; CHECK: !reqd_work_group_size [[SYCL_2DIM:![0-9]+]]
+  define amdgpu_kernel void @sycl_kernel_2dim() #0 !reqd_work_group_size !1 {
+  entry:
+    ret void
+  }
+
+  ; CHECK-LABEL: non_sycl_kernel_3dim
+  ; CHECK: !reqd_work_group_size [[NON_SYCL_3DIM:![0-9]+]]
+  define amdgpu_kernel void @non_sycl_kernel_3dim() #1 !reqd_work_group_size !2 {
+  entry:
+    ret void
+  }
+
+  ; CHECK-LABEL: non_sycl_kernel_2dim
+  ; CHECK: !reqd_work_group_size [[NON_SYCL_2DIM:![0-9]+]]
+  define amdgpu_kernel void @non_sycl_kernel_2dim() #1 !reqd_work_group_size !3 {
+  entry:
+    ret void
+  }
+
+  attributes #0 = { "sycl-module-id"="sycl-reqd-work-group-size.cpp" "target-cpu"="gfx90a" }
+  attributes #1 = { "target-cpu"="gfx90a" }
+
+  ; CHECK: [[SYCL_3DIM]] = !{i32 8, i32 16, i32 2}
+  !0 = !{i32 8, i32 16, i32 2}
+  ; CHECK: [[SYCL_2DIM]] = !{i32 8, i32 16, i32 1}
+  !1 = !{i32 8, i32 16}
+  ; CHECK: [[NON_SYCL_3DIM]] = !{i32 4, i32 8, i32 4}
+  !2 = !{i32 4, i32 8, i32 4}
+  ; CHECK: [[NON_SYCL_2DIM]] = !{i32 4, i32 8}
+  !3 = !{i32 4, i32 8}
+
+...
+---
+name:            sycl_kernel_3dim
+body:             |
+  bb.0.entry:
+    S_ENDPGM 0
+
+...
+---
+name:            sycl_kernel_2dim
+body:             |
+  bb.0.entry:
+    S_ENDPGM 0
+
+...
+---
+name:            non_sycl_kernel_3dim
+body:             |
+  bb.0.entry:
+    S_ENDPGM 0
+
+...
+---
+name:            non_sycl_kernel_2dim
+body:             |
+  bb.0.entry:
+    S_ENDPGM 0
+
+...

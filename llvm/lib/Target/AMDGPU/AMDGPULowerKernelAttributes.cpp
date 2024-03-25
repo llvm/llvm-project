@@ -318,10 +318,38 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
   return MadeChange;
 }
 
+// SYCL allows required work-group size attribute to be partially specified
+// (not all three dimensions), provide a default value (1) for the missing
+// dimensions.
+static void updateSYCLreqdWorkGroupMD(Function &F) {
+  auto *Node = F.getMetadata("reqd_work_group_size");
+  if (!Node || Node->getNumOperands() == 3)
+    return;
+
+  auto &Context = F.getContext();
+  SmallVector<uint64_t, 3> RWGS;
+  for (auto &Op : Node->operands())
+    RWGS.push_back(mdconst::extract<ConstantInt>(Op)->getZExtValue());
+  while (RWGS.size() != 3)
+    RWGS.push_back(1);
+
+  llvm::Metadata *RWGSArgs[] = {
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+          llvm::IntegerType::get(Context, 32), llvm::APInt(32, RWGS[0]))),
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+          llvm::IntegerType::get(Context, 32), llvm::APInt(32, RWGS[1]))),
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+          llvm::IntegerType::get(Context, 32), llvm::APInt(32, RWGS[2])))};
+  F.setMetadata("reqd_work_group_size", llvm::MDNode::get(Context, RWGSArgs));
+}
 
 // TODO: Move makeLIDRangeMetadata usage into here. Seem to not get
 // TargetPassConfig for subtarget.
 bool AMDGPULowerKernelAttributes::runOnModule(Module &M) {
+  for (auto &F : M)
+    if (F.hasFnAttribute("sycl-module-id"))
+      updateSYCLreqdWorkGroupMD(F);
+
   bool MadeChange = false;
   bool IsV5OrAbove =
       AMDGPU::getAMDHSACodeObjectVersion(M) >= AMDGPU::AMDHSA_COV5;
