@@ -28,7 +28,8 @@ llvm.func @func_no_debug() {
 >
 #ptr = #llvm.di_derived_type<
   tag = DW_TAG_pointer_type, baseType = #si32,
-  sizeInBits = 64, alignInBits = 32, offsetInBits = 8
+  sizeInBits = 64, alignInBits = 32, offsetInBits = 8,
+  extraData = #si32
 >
 #named = #llvm.di_derived_type<
   // Specify the name parameter.
@@ -135,7 +136,7 @@ llvm.func @empty_types() {
 // CHECK: ![[FUNC_TYPE]] = !DISubroutineType(cc: DW_CC_normal, types: ![[FUNC_ARGS:.*]])
 // CHECK: ![[FUNC_ARGS]] = !{null, ![[ARG_TYPE:.*]], ![[PTR_TYPE:.*]], ![[NAMED_TYPE:.*]], ![[COMPOSITE_TYPE:.*]], ![[VECTOR_TYPE:.*]]}
 // CHECK: ![[ARG_TYPE]] = !DIBasicType(name: "si64")
-// CHECK: ![[PTR_TYPE]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[BASE_TYPE:.*]], size: 64, align: 32, offset: 8)
+// CHECK: ![[PTR_TYPE]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[BASE_TYPE:.*]], size: 64, align: 32, offset: 8, extraData: ![[BASE_TYPE]])
 // CHECK: ![[BASE_TYPE]] = !DIBasicType(name: "si32", size: 32, encoding: DW_ATE_signed)
 // CHECK: ![[NAMED_TYPE]] = !DIDerivedType(tag: DW_TAG_pointer_type, name: "named", baseType: ![[BASE_TYPE:.*]])
 // CHECK: ![[COMPOSITE_TYPE]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "composite", file: ![[CU_FILE_LOC]], line: 42, size: 64, align: 32, elements: ![[COMPOSITE_ELEMENTS:.*]])
@@ -402,3 +403,23 @@ llvm.func @func_debug_directives() {
 llvm.func @class_method() {
   llvm.return loc(#loc3)
 } loc(#loc3)
+
+// -----
+
+// Ensures composite types with a recursive scope work.
+
+#di_composite_type_self = #llvm.di_composite_type<tag = DW_TAG_null, recId = distinct[0]<>>
+#di_file = #llvm.di_file<"test.mlir" in "/">
+#di_subroutine_type = #llvm.di_subroutine_type<types = #di_composite_type_self>
+#di_subprogram = #llvm.di_subprogram<scope = #di_file, file = #di_file, subprogramFlags = Optimized, type = #di_subroutine_type>
+#di_composite_type = #llvm.di_composite_type<tag = DW_TAG_class_type, recId = distinct[0]<>, scope = #di_subprogram>
+#di_global_variable = #llvm.di_global_variable<file = #di_file, line = 1, type = #di_composite_type>
+#di_global_variable_expression = #llvm.di_global_variable_expression<var = #di_global_variable>
+
+llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} : !llvm.struct<()>
+
+// CHECK: distinct !DIGlobalVariable({{.*}}type: ![[COMP:[0-9]+]],
+// CHECK: ![[COMP]] = distinct !DICompositeType({{.*}}scope: ![[SCOPE:[0-9]+]],
+// CHECK: ![[SCOPE]] = !DISubprogram({{.*}}type: ![[SUBROUTINE:[0-9]+]],
+// CHECK: ![[SUBROUTINE]] = !DISubroutineType(types: ![[SR_TYPES:[0-9]+]])
+// CHECK: ![[SR_TYPES]] = !{![[COMP]]}

@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <algorithm>
 #include <optional>
 #include <system_error>
 #include <utility>
@@ -33,7 +32,6 @@
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 
@@ -64,88 +62,27 @@ static bool isBackedgeNode(const CFGBlock &B) {
 
 namespace {
 
-// The return type of the visit functions in TerminatorVisitor. The first
-// element represents the terminator expression (that is the conditional
-// expression in case of a path split in the CFG). The second element
-// represents whether the condition was true or false.
-using TerminatorVisitorRetTy = std::pair<const Expr *, bool>;
-
-/// Extends the flow condition of an environment based on a terminator
-/// statement.
+/// Extracts the terminator's condition expression.
 class TerminatorVisitor
-    : public ConstStmtVisitor<TerminatorVisitor, TerminatorVisitorRetTy> {
+    : public ConstStmtVisitor<TerminatorVisitor, const Expr *> {
 public:
-  TerminatorVisitor(Environment &Env, int BlockSuccIdx)
-      : Env(Env), BlockSuccIdx(BlockSuccIdx) {}
-
-  TerminatorVisitorRetTy VisitIfStmt(const IfStmt *S) {
-    auto *Cond = S->getCond();
-    assert(Cond != nullptr);
-    return extendFlowCondition(*Cond);
-  }
-
-  TerminatorVisitorRetTy VisitWhileStmt(const WhileStmt *S) {
-    auto *Cond = S->getCond();
-    assert(Cond != nullptr);
-    return extendFlowCondition(*Cond);
-  }
-
-  TerminatorVisitorRetTy VisitDoStmt(const DoStmt *S) {
-    auto *Cond = S->getCond();
-    assert(Cond != nullptr);
-    return extendFlowCondition(*Cond);
-  }
-
-  TerminatorVisitorRetTy VisitForStmt(const ForStmt *S) {
-    auto *Cond = S->getCond();
-    if (Cond != nullptr)
-      return extendFlowCondition(*Cond);
-    return {nullptr, false};
-  }
-
-  TerminatorVisitorRetTy VisitCXXForRangeStmt(const CXXForRangeStmt *) {
+  TerminatorVisitor() = default;
+  const Expr *VisitIfStmt(const IfStmt *S) { return S->getCond(); }
+  const Expr *VisitWhileStmt(const WhileStmt *S) { return S->getCond(); }
+  const Expr *VisitDoStmt(const DoStmt *S) { return S->getCond(); }
+  const Expr *VisitForStmt(const ForStmt *S) { return S->getCond(); }
+  const Expr *VisitCXXForRangeStmt(const CXXForRangeStmt *) {
     // Don't do anything special for CXXForRangeStmt, because the condition
     // (being implicitly generated) isn't visible from the loop body.
-    return {nullptr, false};
+    return nullptr;
   }
-
-  TerminatorVisitorRetTy VisitBinaryOperator(const BinaryOperator *S) {
+  const Expr *VisitBinaryOperator(const BinaryOperator *S) {
     assert(S->getOpcode() == BO_LAnd || S->getOpcode() == BO_LOr);
-    auto *LHS = S->getLHS();
-    assert(LHS != nullptr);
-    return extendFlowCondition(*LHS);
+    return S->getLHS();
   }
-
-  TerminatorVisitorRetTy
-  VisitConditionalOperator(const ConditionalOperator *S) {
-    auto *Cond = S->getCond();
-    assert(Cond != nullptr);
-    return extendFlowCondition(*Cond);
+  const Expr *VisitConditionalOperator(const ConditionalOperator *S) {
+    return S->getCond();
   }
-
-private:
-  TerminatorVisitorRetTy extendFlowCondition(const Expr &Cond) {
-    auto *Val = Env.get<BoolValue>(Cond);
-    // In transferCFGBlock(), we ensure that we always have a `Value` for the
-    // terminator condition, so assert this.
-    // We consciously assert ourselves instead of asserting via `cast()` so
-    // that we get a more meaningful line number if the assertion fails.
-    assert(Val != nullptr);
-
-    bool ConditionValue = true;
-    // The condition must be inverted for the successor that encompasses the
-    // "else" branch, if such exists.
-    if (BlockSuccIdx == 1) {
-      Val = &Env.makeNot(*Val);
-      ConditionValue = false;
-    }
-
-    Env.assume(Val->formula());
-    return {&Cond, ConditionValue};
-  }
-
-  Environment &Env;
-  int BlockSuccIdx;
 };
 
 /// Holds data structures required for running dataflow analysis.
@@ -263,8 +200,12 @@ public:
     return Result;
   }
 };
-
 } // namespace
+
+static const Expr *getTerminatorCondition(const Stmt *TerminatorStmt) {
+  return TerminatorStmt == nullptr ? nullptr
+                                   : TerminatorVisitor().Visit(TerminatorStmt);
+}
 
 /// Computes the input state for a given basic block by joining the output
 /// states of its predecessors.
@@ -337,25 +278,32 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
     if (!MaybePredState)
       continue;
 
-    if (AC.Analysis.builtinOptions()) {
-      if (const Stmt *PredTerminatorStmt = Pred->getTerminatorStmt()) {
-        // We have a terminator: we need to mutate an environment to describe
-        // when the terminator is taken. Copy now.
-        TypeErasedDataflowAnalysisState Copy = MaybePredState->fork();
-
-        auto [Cond, CondValue] =
-            TerminatorVisitor(Copy.Env, blockIndexInPredecessor(*Pred, Block))
-                .Visit(PredTerminatorStmt);
-        if (Cond != nullptr)
-          // FIXME: Call transferBranchTypeErased even if BuiltinTransferOpts
-          // are not set.
-          AC.Analysis.transferBranchTypeErased(CondValue, Cond, Copy.Lattice,
-                                               Copy.Env);
-        Builder.addOwned(std::move(Copy));
-        continue;
-      }
+    const TypeErasedDataflowAnalysisState &PredState = *MaybePredState;
+    const Expr *Cond = getTerminatorCondition(Pred->getTerminatorStmt());
+    if (Cond == nullptr) {
+      Builder.addUnowned(PredState);
+      continue;
     }
-    Builder.addUnowned(*MaybePredState);
+
+    bool BranchVal = blockIndexInPredecessor(*Pred, Block) == 0;
+
+    // `transferBranch` may need to mutate the environment to describe the
+    // dynamic effect of the terminator for a given branch.  Copy now.
+    TypeErasedDataflowAnalysisState Copy = MaybePredState->fork();
+    if (AC.Analysis.builtinOptions()) {
+      auto *CondVal = Copy.Env.get<BoolValue>(*Cond);
+      // In transferCFGBlock(), we ensure that we always have a `Value`
+      // for the terminator condition, so assert this. We consciously
+      // assert ourselves instead of asserting via `cast()` so that we get
+      // a more meaningful line number if the assertion fails.
+      assert(CondVal != nullptr);
+      BoolValue *AssertedVal =
+          BranchVal ? CondVal : &Copy.Env.makeNot(*CondVal);
+      Copy.Env.assume(AssertedVal->formula());
+    }
+    AC.Analysis.transferBranchTypeErased(BranchVal, Cond, Copy.Lattice,
+                                         Copy.Env);
+    Builder.addOwned(std::move(Copy));
   }
   return std::move(Builder).take();
 }

@@ -10,6 +10,11 @@
 ; RUN: | llvm-dis --load-bitcode-into-experimental-debuginfo-iterators=true --write-experimental-debuginfo=true \
 ; RUN: | FileCheck %s --check-prefixes=RECORDS
 
+;; Load intrinsics directly into the new format (auto-upgrade).
+; RUN: llvm-as --write-experimental-debuginfo-iterators-to-bitcode=false %s -o - \
+; RUN: | llvm-dis --load-bitcode-into-experimental-debuginfo-iterators=true --write-experimental-debuginfo=true \
+; RUN: | FileCheck %s --check-prefixes=RECORDS
+
 ;; Check that verify-uselistorder passes regardless of input format.
 ; RUN: llvm-as %s --write-experimental-debuginfo-iterators-to-bitcode=true -o - | verify-uselistorder
 ; RUN: verify-uselistorder %s

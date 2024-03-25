@@ -95,12 +95,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenInstAlias.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenRegisters.h"
-#include "CodeGenTarget.h"
-#include "SubtargetFeatureInfo.h"
-#include "Types.h"
+#include "Common/CodeGenInstAlias.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenRegisters.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/SubtargetFeatureInfo.h"
+#include "Common/Types.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
@@ -2519,7 +2519,7 @@ static void emitValidateOperandClass(AsmMatcherInfo &Info, raw_ostream &OS) {
   // Check for register operands, including sub-classes.
   OS << "  if (Operand.isReg()) {\n";
   OS << "    MatchClassKind OpKind;\n";
-  OS << "    switch (Operand.getReg()) {\n";
+  OS << "    switch (Operand.getReg().id()) {\n";
   OS << "    default: OpKind = InvalidMatchClass; break;\n";
   for (const auto &RC : Info.RegisterClasses)
     OS << "    case " << RC.first->getValueAsString("Namespace")

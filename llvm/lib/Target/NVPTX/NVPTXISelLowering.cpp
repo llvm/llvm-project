@@ -580,9 +580,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::ROTL, MVT::i8, Expand);
   setOperationAction(ISD::ROTR, MVT::i8, Expand);
   setOperationAction(ISD::BSWAP, MVT::i16, Expand);
-  setOperationAction(ISD::BSWAP, MVT::v2i16, Expand);
-  setOperationAction(ISD::BSWAP, MVT::i32, Expand);
-  setOperationAction(ISD::BSWAP, MVT::i64, Expand);
 
   // Indirect branch is not supported.
   // This also disables Jump Table creation.

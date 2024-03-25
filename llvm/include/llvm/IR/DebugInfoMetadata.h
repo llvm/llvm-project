@@ -65,7 +65,7 @@ enum Tag : uint16_t;
 }
 
 class DbgVariableIntrinsic;
-class DPValue;
+class DbgVariableRecord;
 
 extern cl::opt<bool> EnableFSDiscriminator;
 
@@ -323,8 +323,8 @@ public:
   // This node has no operands to replace.
   void replaceOperandWith(unsigned I, Metadata *New) = delete;
 
-  SmallVector<DPValue *> getAllDPValueUsers() {
-    return Context.getReplaceableUses()->getAllDPValueUsers();
+  SmallVector<DbgVariableRecord *> getAllDbgVariableRecordUsers() {
+    return Context.getReplaceableUses()->getAllDbgVariableRecordUsers();
   }
 
   static DIAssignID *getDistinct(LLVMContext &Context) {
@@ -3840,8 +3840,8 @@ public:
     return MD->getMetadataID() == DIArgListKind;
   }
 
-  SmallVector<DPValue *> getAllDPValueUsers() {
-    return ReplaceableMetadataImpl::getAllDPValueUsers();
+  SmallVector<DbgVariableRecord *> getAllDbgVariableRecordUsers() {
+    return ReplaceableMetadataImpl::getAllDbgVariableRecordUsers();
   }
 
   void handleChangedOperand(void *Ref, Metadata *New);
@@ -3871,7 +3871,7 @@ class DebugVariable {
 
 public:
   DebugVariable(const DbgVariableIntrinsic *DII);
-  DebugVariable(const DPValue *DPV);
+  DebugVariable(const DbgVariableRecord *DVR);
 
   DebugVariable(const DILocalVariable *Var,
                 std::optional<FragmentInfo> FragmentInfo,

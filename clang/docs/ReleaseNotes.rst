@@ -37,6 +37,9 @@ These changes are ones which we think may surprise users when upgrading to
 Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
+- Setting the deprecated CMake variable ``GCC_INSTALL_PREFIX`` (which sets the
+  default ``--gcc-toolchain=``) now leads to a fatal error.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
@@ -177,6 +180,8 @@ Non-comprehensive list of changes in this release
   the previous builtins, this new builtin is constexpr and may be used in
   constant expressions.
 
+- Lambda expressions are now accepted in C++03 mode as an extension.
+
 New Compiler Flags
 ------------------
 
@@ -192,6 +197,26 @@ Modified Compiler Flags
 - Added a new diagnostic flag ``-Wreturn-mismatch`` which is grouped under
   ``-Wreturn-type``, and moved some of the diagnostics previously controlled by
   ``-Wreturn-type`` under this new flag. Fixes #GH72116.
+
+- Added ``-Wcast-function-type-mismatch`` under the ``-Wcast-function-type``
+  warning group. Moved the diagnostic previously controlled by
+  ``-Wcast-function-type`` to the new warning group and added
+  ``-Wcast-function-type-mismatch`` to ``-Wextra``. #GH76872
+
+  .. code-block:: c
+
+     int x(long);
+     typedef int (f2)(void*);
+     typedef int (f3)();
+
+     void func(void) {
+       // Diagnoses under -Wcast-function-type, -Wcast-function-type-mismatch,
+       // -Wcast-function-type-strict, -Wextra
+       f2 *b = (f2 *)x;
+       // Diagnoses under -Wcast-function-type, -Wcast-function-type-strict
+       f3 *c = (f3 *)x;
+     }
+
 
 Removed Compiler Flags
 -------------------------
@@ -209,6 +234,13 @@ Attribute Changes in Clang
   ``x``, ``y``, and ``z`` specify the maximum number of workgroups for the respective dimensions,
   and each must be a positive integer when provided. The parameter ``x`` is required, while ``y`` and
   ``z`` are optional with default value of 1.
+
+- The ``swiftasynccc`` attribute is now considered to be a Clang extension
+  rather than a language standard feature. Please use
+  ``__has_extension(swiftasynccc)`` to check the availability of this attribute
+  for the target platform instead of ``__has_feature(swiftasynccc)``. Also,
+  added a new extension query ``__has_extension(swiftcc)`` corresponding to the
+  ``__attribute__((swiftcc))`` attribute.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -254,6 +286,9 @@ Improvements to Clang's diagnostics
   operands, distinguishing it from potential typographical errors or unintended
   bitwise operations. Fixes #GH77601.
 
+- Clang now correctly diagnoses no arguments to a variadic macro parameter as a C23/C++20 extension.
+  Fixes #GH84495.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -283,6 +318,9 @@ Bug Fixes in This Version
 - Clang no longer produces a false-positive `-Wunused-variable` warning
   for variables created through copy initialization having side-effects in C++17 and later.
   Fixes (#GH64356) (#GH79518).
+
+- Fix value of predefined macro ``__FUNCTION__`` in MSVC compatibility mode.
+  Fixes (#GH66114).
 
 - Clang now emits errors for explicit specializations/instatiations of lambda call
   operator.
@@ -398,6 +436,9 @@ Bug Fixes to C++ Support
   expression references to an entity declared outside of the lambda. (#GH64808)
 - Clang's __builtin_bit_cast will now produce a constant value for records with empty bases. See:
   (#GH82383)
+- Fix a crash when instantiating a lambda that captures ``this`` outside of its context. Fixes (#GH85343).
+- Fix an issue where a namespace alias could be defined using a qualified name (all name components
+  following the first `::` were ignored).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -481,6 +522,7 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 
 - ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
+- Profile names in ``-march`` option are now supported.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -537,6 +579,7 @@ Static Analyzer
 - Fixed crashing on loops if the loop variable was declared in switch blocks
   but not under any case blocks if ``unroll-loops=true`` analyzer config is
   set. (#GH68819)
+- Support C++23 static operator calls. (#GH84972)
 
 New features
 ^^^^^^^^^^^^
