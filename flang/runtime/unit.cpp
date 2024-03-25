@@ -19,17 +19,24 @@
 
 namespace Fortran::runtime::io {
 
-ExternalFileUnit *defaultInput{nullptr}; // unit 5
-ExternalFileUnit *defaultOutput{nullptr}; // unit 6
-ExternalFileUnit *errorOutput{nullptr}; // unit 0 extension
+RT_OFFLOAD_VAR_GROUP_BEGIN
+RT_VAR_ATTRS ExternalFileUnit *defaultInput{nullptr}; // unit 5
+RT_VAR_ATTRS ExternalFileUnit *defaultOutput{nullptr}; // unit 6
+RT_VAR_ATTRS ExternalFileUnit *errorOutput{nullptr}; // unit 0 extension
+RT_OFFLOAD_VAR_GROUP_END
 
-static inline void SwapEndianness(
+RT_OFFLOAD_API_GROUP_BEGIN
+
+static inline RT_API_ATTRS void SwapEndianness(
     char *data, std::size_t bytes, std::size_t elementBytes) {
   if (elementBytes > 1) {
     auto half{elementBytes >> 1};
     for (std::size_t j{0}; j + elementBytes <= bytes; j += elementBytes) {
       for (std::size_t k{0}; k < half; ++k) {
+        RT_DIAG_PUSH
+        RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
         std::swap(data[j + k], data[j + elementBytes - 1 - k]);
+        RT_DIAG_POP
       }
     }
   }
@@ -475,7 +482,10 @@ bool ExternalFileUnit::SetDirectRec(
 
 void ExternalFileUnit::EndIoStatement() {
   io_.reset();
+  RT_DIAG_PUSH
+  RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
   u_.emplace<std::monostate>();
+  RT_DIAG_POP
   lock_.Drop();
 }
 
@@ -600,7 +610,8 @@ void ExternalFileUnit::BackspaceVariableUnformattedRecord(
 
 // There's no portable memrchr(), unfortunately, and strrchr() would
 // fail on a record with a NUL, so we have to do it the hard way.
-static const char *FindLastNewline(const char *str, std::size_t length) {
+static RT_API_ATTRS const char *FindLastNewline(
+    const char *str, std::size_t length) {
   for (const char *p{str + length}; p >= str; p--) {
     if (*p == '\n') {
       return p;
@@ -741,7 +752,10 @@ std::int32_t ExternalFileUnit::ReadHeaderOrFooter(std::int64_t frameOffset) {
 
 void ChildIo::EndIoStatement() {
   io_.reset();
+  RT_DIAG_PUSH
+  RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
   u_.emplace<std::monostate>();
+  RT_DIAG_POP
 }
 
 Iostat ChildIo::CheckFormattingAndDirection(
@@ -764,4 +778,5 @@ Iostat ChildIo::CheckFormattingAndDirection(
   }
 }
 
+RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime::io

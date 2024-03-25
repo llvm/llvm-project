@@ -1,4 +1,4 @@
-/*===-- include/flang/Runtime/api-attrs.h ---------------------------*- C -*-=//
+/*===-- include/flang/Common/api-attrs.h ---------------------------*- C -*-=//
  *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
@@ -102,7 +102,7 @@
  * to appear as part of a C++ decl-specifier.
  */
 #ifndef RT_CONST_VAR_ATTRS
-#if defined(__CUDACC__) || defined(__CUDA__)
+#if (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
 #define RT_CONST_VAR_ATTRS __constant__
 #else
 #define RT_CONST_VAR_ATTRS
