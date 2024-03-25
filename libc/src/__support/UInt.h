@@ -163,8 +163,8 @@ LIBC_INLINE constexpr word sub_with_borrow(cpp::array<word, N> &dst,
 // Inplace multiply-add. Returns carry.
 // i.e., 'dst += b x c'
 template <typename word, size_t N>
-LIBC_INLINE constexpr word mad_with_carry(cpp::array<word, N> &dst, word b,
-                                          word c) {
+LIBC_INLINE constexpr word mul_add_with_carry(cpp::array<word, N> &dst, word b,
+                                              word c) {
   return add_with_carry(dst, mul2(b, c));
 }
 
@@ -189,7 +189,7 @@ LIBC_INLINE constexpr word scalar_multiply_with_carry(cpp::array<word, N> &dst,
                                                       word x) {
   Accumulator<word> acc;
   for (auto &val : dst) {
-    const word carry = mad_with_carry(acc, val, x);
+    const word carry = mul_add_with_carry(acc, val, x);
     val = acc.advance(carry);
   }
   return acc.carry();
@@ -210,7 +210,7 @@ LIBC_INLINE constexpr word multiply_with_carry(cpp::array<word, O> &dst,
     const size_t upper_idx = i < M ? i : M - 1;
     word carry = 0;
     for (size_t j = lower_idx; j <= upper_idx; ++j)
-      carry += mad_with_carry(acc, lhs[j], rhs[i - j]);
+      carry += mul_add_with_carry(acc, lhs[j], rhs[i - j]);
     dst[i] = acc.advance(carry);
   }
   return acc.carry();
@@ -224,12 +224,12 @@ LIBC_INLINE constexpr void quick_mul_hi(cpp::array<word, N> &dst,
   word carry = 0;
   // First round of accumulation for those at N - 1 in the full product.
   for (size_t i = 0; i < N; ++i)
-    carry += mad_with_carry(acc, lhs[i], rhs[N - 1 - i]);
+    carry += mul_add_with_carry(acc, lhs[i], rhs[N - 1 - i]);
   for (size_t i = N; i < 2 * N - 1; ++i) {
     acc.advance(carry);
     carry = 0;
     for (size_t j = i - N + 1; j < N; ++j)
-      carry += mad_with_carry(acc, lhs[j], rhs[i - j]);
+      carry += mul_add_with_carry(acc, lhs[j], rhs[i - j]);
     dst[i - N] = acc.sum();
   }
   dst.back() = acc.carry();
