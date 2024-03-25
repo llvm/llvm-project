@@ -6688,6 +6688,9 @@ def analyzer_opt_analyze_headers : Flag<["-"], "analyzer-opt-analyze-headers">,
 def analyzer_display_progress : Flag<["-"], "analyzer-display-progress">,
   HelpText<"Emit verbose output about the analyzer's progress">,
   MarshallingInfoFlag<AnalyzerOpts<"AnalyzerDisplayProgress">>;
+def analyzer_note_analysis_entry_points : Flag<["-"], "analyzer-note-analysis-entry-points">,
+  HelpText<"Add a note for each bug report to denote their analysis entry points">,
+  MarshallingInfoFlag<AnalyzerOpts<"AnalyzerNoteAnalysisEntryPoints">>;
 def analyze_function : Separate<["-"], "analyze-function">,
   HelpText<"Run analysis on specific function (for C++ include parameters in name)">,
   MarshallingInfoString<AnalyzerOpts<"AnalyzeSpecificFunction">>;
