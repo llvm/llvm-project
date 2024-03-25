@@ -2597,7 +2597,18 @@ ConstantOp LLVM::ConstantOp::materialize(OpBuilder &builder, Attribute value,
 }
 
 // Constant op constant-folds to its value.
-OpFoldResult LLVM::ConstantOp::fold(FoldAdaptor) { return getValue(); }
+OpFoldResult LLVM::ConstantOp::fold(FoldAdaptor) {
+  if (auto integerValue = getValue().dyn_cast<IntegerAttr>();
+      integerValue && integerValue.getType() == getType()) {
+    return getValue();
+  }
+  if (auto floatValue = getValue().dyn_cast<FloatAttr>();
+      floatValue && floatValue.getType() == getType()) {
+    return getValue();
+  }
+
+  return {};
+}
 
 //===----------------------------------------------------------------------===//
 // AtomicRMWOp
