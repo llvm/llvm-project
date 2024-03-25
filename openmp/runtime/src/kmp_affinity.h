@@ -191,7 +191,8 @@ public:
 };
 #endif /* KMP_USE_HWLOC */
 
-#if KMP_OS_LINUX || KMP_OS_FREEBSD
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||     \
+    KMP_OS_AIX
 #if KMP_OS_LINUX
 /* On some of the older OS's that we build on, these constants aren't present
    in <asm/unistd.h> #included from <sys.syscall.h>. They must be the same on
@@ -311,9 +312,16 @@ public:
 #else
 #error Unknown or unsupported architecture
 #endif /* KMP_ARCH_* */
-#elif KMP_OS_FREEBSD
+#elif KMP_OS_FREEBSD || KMP_OS_DRAGONFLY
 #include <pthread.h>
 #include <pthread_np.h>
+#elif KMP_OS_NETBSD
+#include <pthread.h>
+#include <sched.h>
+#elif KMP_OS_AIX
+#include <sys/dr.h>
+#include <sys/rset.h>
+#define VMI_MAXRADS 64 // Maximum number of RADs allowed by AIX.
 #endif
 class KMPNativeAffinity : public KMPAffinity {
   class Mask : public KMPAffinity::Mask {
@@ -401,13 +409,77 @@ class KMPNativeAffinity : public KMPAffinity {
         ++retval;
       return retval;
     }
+#if KMP_OS_AIX
+    // On AIX, we don't have a way to get CPU(s) a thread is bound to.
+    // This routine is only used to get the full mask.
+    int get_system_affinity(bool abort_on_error) override {
+      KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
+                  "Illegal get affinity operation when not capable");
+
+      (void)abort_on_error;
+
+      // Set the mask with all CPUs that are available.
+      for (int i = 0; i < __kmp_xproc; ++i)
+        KMP_CPU_SET(i, this);
+      return 0;
+    }
+    int set_system_affinity(bool abort_on_error) const override {
+      KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
+
+                  "Illegal set affinity operation when not capable");
+
+      int location;
+      int gtid = __kmp_entry_gtid();
+      int tid = thread_self();
+
+      // Unbind the thread if it was bound to any processors before so that
+      // we can bind the thread to CPUs specified by the mask not others.
+      int retval = bindprocessor(BINDTHREAD, tid, PROCESSOR_CLASS_ANY);
+
+      // On AIX, we can only bind to one instead of a set of CPUs with the
+      // bindprocessor() system call.
+      KMP_CPU_SET_ITERATE(location, this) {
+        if (KMP_CPU_ISSET(location, this)) {
+          retval = bindprocessor(BINDTHREAD, tid, location);
+          if (retval == -1 && errno == 1) {
+            rsid_t rsid;
+            rsethandle_t rsh;
+            // Put something in rsh to prevent compiler warning
+            // about uninitalized use
+            rsh = rs_alloc(RS_EMPTY);
+            rsid.at_pid = getpid();
+            if (RS_DEFAULT_RSET != ra_getrset(R_PROCESS, rsid, 0, rsh)) {
+              retval = ra_detachrset(R_PROCESS, rsid, 0);
+              retval = bindprocessor(BINDTHREAD, tid, location);
+            }
+          }
+          if (retval == 0) {
+            KA_TRACE(10, ("__kmp_set_system_affinity:  Done binding "
+                          "T#%d to cpu=%d.\n",
+                          gtid, location));
+            continue;
+          }
+          int error = errno;
+          if (abort_on_error) {
+            __kmp_fatal(KMP_MSG(FunctionError, "bindprocessor()"),
+                        KMP_ERR(error), __kmp_msg_null);
+            KA_TRACE(10, ("__kmp_set_system_affinity:  Error binding "
+                          "T#%d to cpu=%d, errno=%d.\n",
+                          gtid, location, error));
+            return error;
+          }
+        }
+      }
+      return 0;
+    }
+#else // !KMP_OS_AIX
     int get_system_affinity(bool abort_on_error) override {
       KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
                   "Illegal get affinity operation when not capable");
 #if KMP_OS_LINUX
       long retval =
           syscall(__NR_sched_getaffinity, 0, __kmp_affin_mask_size, mask);
-#elif KMP_OS_FREEBSD
+#elif KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY
       int r = pthread_getaffinity_np(pthread_self(), __kmp_affin_mask_size,
                                      reinterpret_cast<cpuset_t *>(mask));
       int retval = (r == 0 ? 0 : -1);
@@ -428,7 +500,7 @@ class KMPNativeAffinity : public KMPAffinity {
 #if KMP_OS_LINUX
       long retval =
           syscall(__NR_sched_setaffinity, 0, __kmp_affin_mask_size, mask);
-#elif KMP_OS_FREEBSD
+#elif KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY
       int r = pthread_setaffinity_np(pthread_self(), __kmp_affin_mask_size,
                                      reinterpret_cast<cpuset_t *>(mask));
       int retval = (r == 0 ? 0 : -1);
@@ -443,6 +515,7 @@ class KMPNativeAffinity : public KMPAffinity {
       }
       return error;
     }
+#endif // KMP_OS_AIX
   };
   void determine_capable(const char *env_var) override {
     __kmp_affinity_determine_capable(env_var);
@@ -471,7 +544,8 @@ class KMPNativeAffinity : public KMPAffinity {
   }
   api_type get_api_type() const override { return NATIVE_OS; }
 };
-#endif /* KMP_OS_LINUX || KMP_OS_FREEBSD */
+#endif /* KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY  \
+          || KMP_OS_AIX */
 
 #if KMP_OS_WINDOWS
 class KMPNativeAffinity : public KMPAffinity {

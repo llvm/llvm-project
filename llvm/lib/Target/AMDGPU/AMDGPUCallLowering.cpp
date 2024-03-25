@@ -715,10 +715,13 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   if (!IsEntryFunc && !IsGraphics) {
     // For the fixed ABI, pass workitem IDs in the last argument register.
     TLI.allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
+  }
 
+  if (!IsEntryFunc) {
     if (!Subtarget.enableFlatScratch())
       CCInfo.AllocateReg(Info->getScratchRSrcReg());
-    TLI.allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
+    if (!IsGraphics)
+      TLI.allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
   }
 
   IncomingValueAssigner Assigner(AssignFn);
@@ -1301,6 +1304,9 @@ bool AMDGPUCallLowering::lowerTailCall(
   if (!handleAssignments(Handler, OutArgs, CCInfo, ArgLocs, MIRBuilder))
     return false;
 
+  if (Info.ConvergenceCtrlToken) {
+    MIB.addUse(Info.ConvergenceCtrlToken, RegState::Implicit);
+  }
   handleImplicitCallArguments(MIRBuilder, MIB, ST, *FuncInfo, CalleeCC,
                               ImplicitArgRegs);
 
@@ -1483,6 +1489,9 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
+  if (Info.ConvergenceCtrlToken) {
+    MIB.addUse(Info.ConvergenceCtrlToken, RegState::Implicit);
+  }
   handleImplicitCallArguments(MIRBuilder, MIB, ST, *MFI, Info.CallConv,
                               ImplicitArgRegs);
 

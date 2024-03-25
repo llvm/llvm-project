@@ -320,10 +320,10 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
     // Complex types.
     if (const auto *CT = Ty->getAs<ComplexType>()) {
       QualType ElemTy = CT->getElementType();
-      std::optional<PrimType> ElemT = Ctx.classify(ElemTy);
-      assert(ElemT);
 
       if (ElemTy->isIntegerType()) {
+        std::optional<PrimType> ElemT = Ctx.classify(ElemTy);
+        assert(ElemT);
         INT_TYPE_SWITCH(*ElemT, {
           auto V1 = Ptr.atIndex(0).deref<T>();
           auto V2 = Ptr.atIndex(1).deref<T>();

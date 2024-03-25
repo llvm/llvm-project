@@ -197,3 +197,124 @@ llvm.func @no_dynamic_indexing(%arg: i32) -> i32 {
   // CHECK: llvm.return %[[RES]] : i32
   llvm.return %3 : i32
 }
+
+// -----
+
+// CHECK-LABEL: llvm.func @no_nested_dynamic_indexing
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+llvm.func @no_nested_dynamic_indexing(%arg: i32) -> i32 {
+  // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(1 : i32)
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %[[SIZE]] x !llvm.struct<(array<10 x i32>, i32)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
+  %1 = llvm.alloca %0 x !llvm.struct<(array<10 x i32>, i32)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
+  // CHECK-NOT: = llvm.alloca
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 0, %[[ARG]]]
+  %2 = llvm.getelementptr %1[0, 0, %arg] : (!llvm.ptr, i32) -> !llvm.ptr, !llvm.struct<(array<10 x i32>, i32)>
+  // CHECK: %[[RES:.*]] = llvm.load %[[GEP]]
+  %3 = llvm.load %2 : !llvm.ptr -> i32
+  // CHECK: llvm.return %[[RES]] : i32
+  llvm.return %3 : i32
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @store_first_field
+llvm.func @store_first_field(%arg: i32) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x i32
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (i32, i32, i32)> : (i32) -> !llvm.ptr
+  // CHECK-NEXT: llvm.store %{{.*}}, %[[ALLOCA]] : i32
+  llvm.store %arg, %1 : i32, !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @store_first_field_different_type
+// CHECK-SAME: (%[[ARG:.*]]: f32)
+llvm.func @store_first_field_different_type(%arg: f32) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x i32
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (i32, i32, i32)> : (i32) -> !llvm.ptr
+  // CHECK-NEXT: llvm.store %[[ARG]], %[[ALLOCA]] : f32
+  llvm.store %arg, %1 : f32, !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @store_sub_field
+// CHECK-SAME: (%[[ARG:.*]]: f32)
+llvm.func @store_sub_field(%arg: f32) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x i64
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (i64, i32)> : (i32) -> !llvm.ptr
+  // CHECK-NEXT: llvm.store %[[ARG]], %[[ALLOCA]] : f32
+  llvm.store %arg, %1 : f32, !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @load_first_field
+llvm.func @load_first_field() -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x i32
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (i32, i32, i32)> : (i32) -> !llvm.ptr
+  // CHECK-NEXT: %[[RES:.*]] = llvm.load %[[ALLOCA]] : !llvm.ptr -> i32
+  %2 = llvm.load %1 : !llvm.ptr -> i32
+  // CHECK: llvm.return %[[RES]] : i32
+  llvm.return %2 : i32
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @load_first_field_different_type
+llvm.func @load_first_field_different_type() -> f32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x i32
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (i32, i32, i32)> : (i32) -> !llvm.ptr
+  // CHECK-NEXT: %[[RES:.*]] = llvm.load %[[ALLOCA]] : !llvm.ptr -> f32
+  %2 = llvm.load %1 : !llvm.ptr -> f32
+  // CHECK: llvm.return %[[RES]] : f32
+  llvm.return %2 : f32
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @load_sub_field
+llvm.func @load_sub_field() -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x i64 : (i32) -> !llvm.ptr
+  %1 = llvm.alloca %0 x !llvm.struct<(i64, i32)> : (i32) -> !llvm.ptr
+  // CHECK-NEXT: %[[RES:.*]] = llvm.load %[[ALLOCA]]
+  %res = llvm.load %1 : !llvm.ptr -> i32
+  // CHECK: llvm.return %[[RES]] : i32
+  llvm.return %res : i32
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @vector_store_type_mismatch
+// CHECK-SAME: %[[ARG:.*]]: vector<4xi32>
+llvm.func @vector_store_type_mismatch(%arg: vector<4xi32>) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x vector<4xf32>
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (vector<4xf32>)> : (i32) -> !llvm.ptr
+  // CHECK-NEXT: llvm.store %[[ARG]], %[[ALLOCA]]
+  llvm.store %arg, %1 : vector<4xi32>, !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @store_to_memory
+// CHECK-SAME: %[[ARG:.*]]: !llvm.ptr
+llvm.func @store_to_memory(%arg: !llvm.ptr) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (vector<4xf32>)> : (i32) -> !llvm.ptr
+  // CHECK-NEXT: llvm.store %[[ALLOCA]], %[[ARG]]
+  llvm.store %1, %arg : !llvm.ptr, !llvm.ptr
+  llvm.return
+}

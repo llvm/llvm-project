@@ -104,11 +104,7 @@ static void validatePtrTypes(const SPIRVSubtarget &STI,
   SPIRV::StorageClass::StorageClass SC =
       static_cast<SPIRV::StorageClass::StorageClass>(
           OpType->getOperand(1).getImm());
-  MachineInstr *PrevI = I.getPrevNode();
-  MachineBasicBlock &MBB = *I.getParent();
-  MachineBasicBlock::iterator InsPt =
-      PrevI ? PrevI->getIterator() : MBB.begin();
-  MachineIRBuilder MIB(MBB, InsPt);
+  MachineIRBuilder MIB(I);
   SPIRVType *NewPtrType = GR.getOrCreateSPIRVPointerType(ResType, MIB, SC);
   if (!GR.isBitcastCompatible(NewPtrType, OpType))
     report_fatal_error(
@@ -148,6 +144,26 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
         // OpStore ptr %Op, <Obj> implies that %Op points to the <Obj>'s type
         validatePtrTypes(STI, MRI, GR, MI,
                          GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg()), 0);
+        break;
+      // ensure that LLVM IR bitwise instructions result in logical SPIR-V
+      // instructions when applied to bool type
+      case SPIRV::OpBitwiseOrS:
+      case SPIRV::OpBitwiseOrV:
+        if (GR.isScalarOrVectorOfType(MI.getOperand(1).getReg(),
+                                      SPIRV::OpTypeBool))
+          MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalOr));
+        break;
+      case SPIRV::OpBitwiseAndS:
+      case SPIRV::OpBitwiseAndV:
+        if (GR.isScalarOrVectorOfType(MI.getOperand(1).getReg(),
+                                      SPIRV::OpTypeBool))
+          MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalAnd));
+        break;
+      case SPIRV::OpBitwiseXorS:
+      case SPIRV::OpBitwiseXorV:
+        if (GR.isScalarOrVectorOfType(MI.getOperand(1).getReg(),
+                                      SPIRV::OpTypeBool))
+          MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalNotEqual));
         break;
       }
     }

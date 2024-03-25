@@ -1136,38 +1136,19 @@ llvm::Value *CodeGenFunction::EmitCountedByFieldExpr(
 }
 
 const FieldDecl *CodeGenFunction::FindCountedByField(const FieldDecl *FD) {
-  if (!FD || !FD->hasAttr<CountedByAttr>())
+  if (!FD)
     return nullptr;
 
-  const auto *CBA = FD->getAttr<CountedByAttr>();
-  if (!CBA)
+  const auto *CAT = FD->getType()->getAs<CountAttributedType>();
+  if (!CAT)
     return nullptr;
 
-  auto GetNonAnonStructOrUnion =
-      [](const RecordDecl *RD) -> const RecordDecl * {
-    while (RD && RD->isAnonymousStructOrUnion()) {
-      const auto *R = dyn_cast<RecordDecl>(RD->getDeclContext());
-      if (!R)
-        return nullptr;
-      RD = R;
-    }
-    return RD;
-  };
-  const RecordDecl *EnclosingRD = GetNonAnonStructOrUnion(FD->getParent());
-  if (!EnclosingRD)
-    return nullptr;
+  const auto *CountDRE = cast<DeclRefExpr>(CAT->getCountExpr());
+  const auto *CountDecl = CountDRE->getDecl();
+  if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl))
+    CountDecl = IFD->getAnonField();
 
-  DeclarationName DName(CBA->getCountedByField());
-  DeclContext::lookup_result Lookup = EnclosingRD->lookup(DName);
-
-  if (Lookup.empty())
-    return nullptr;
-
-  const NamedDecl *ND = Lookup.front();
-  if (const auto *IFD = dyn_cast<IndirectFieldDecl>(ND))
-    ND = IFD->getAnonField();
-
-  return dyn_cast<FieldDecl>(ND);
+  return dyn_cast<FieldDecl>(CountDecl);
 }
 
 void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
@@ -4259,7 +4240,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
       if (const auto *ME = dyn_cast<MemberExpr>(Array);
           ME &&
           ME->isFlexibleArrayMemberLike(getContext(), StrictFlexArraysLevel) &&
-          ME->getMemberDecl()->hasAttr<CountedByAttr>()) {
+          ME->getMemberDecl()->getType()->isCountAttributedType()) {
         const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl());
         if (const FieldDecl *CountFD = FindCountedByField(FAMDecl)) {
           if (std::optional<int64_t> Diff =

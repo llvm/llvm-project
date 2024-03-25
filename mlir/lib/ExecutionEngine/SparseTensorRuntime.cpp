@@ -127,7 +127,7 @@ extern "C" {
     case Action::kPack: {                                                      \
       assert(ptr && "Received nullptr for SparseTensorStorage object");        \
       intptr_t *buffers = static_cast<intptr_t *>(ptr);                        \
-      return SparseTensorStorage<P, C, V>::packFromLvlBuffers(                 \
+      return SparseTensorStorage<P, C, V>::newFromBuffers(                     \
           dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim,    \
           dimRank, buffers);                                                   \
     }                                                                          \

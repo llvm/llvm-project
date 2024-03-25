@@ -3049,6 +3049,9 @@ def : MipsInstAlias<"divu $rd, $imm", (UDivIMacro GPR32Opnd:$rd, GPR32Opnd:$rd,
                                                   simm32:$imm), 0>,
       ISA_MIPS1_NOT_32R6_64R6;
 
+
+def : MipsInstAlias<"nal", (BLTZAL ZERO, 0), 1>, ISA_MIPS1_NOT_32R6_64R6;
+
 def SRemMacro : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
                                   (ins GPR32Opnd:$rs, GPR32Opnd:$rt),
                                   "rem\t$rd, $rs, $rt">,

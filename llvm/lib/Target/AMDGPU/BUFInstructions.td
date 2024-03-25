@@ -2365,7 +2365,7 @@ multiclass MUBUF_Real_gfx7<bits<8> op> {
 // Base ENC_VBUFFER for GFX12.
 //===----------------------------------------------------------------------===//
 
-class VBUFFER_Real <BUF_Pseudo ps, string real_name = ps.Mnemonic> :
+class VBUFFER_Real <bits<8> op, BUF_Pseudo ps, string real_name> :
   InstSI <ps.OutOperandList, ps.InOperandList, real_name # ps.AsmOperands, []>, Enc96 {
 
   let isPseudo = 0;
@@ -2389,6 +2389,8 @@ class VBUFFER_Real <BUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let IsAtomicNoRet      = ps.IsAtomicNoRet;
   let VALU               = ps.VALU;
   let LGKM_CNT           = ps.LGKM_CNT;
+  let MUBUF              = ps.MUBUF;
+  let MTBUF              = ps.MTBUF;
 
   bits<24> offset;
   bits<8>  vaddr;
@@ -2405,6 +2407,7 @@ class VBUFFER_Real <BUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let Inst{47-41} = !if(ps.has_srsrc, srsrc, ?);
   let Inst{49-48} = 0b00;
   let Inst{6-0}   = !if(ps.has_soffset, soffset, ?);
+  let Inst{21-14} = op;
   let Inst{22}    = ps.tfe;
   let Inst{62}    = ps.offen;
   let Inst{63}    = ps.idxen;
@@ -2416,33 +2419,27 @@ class VBUFFER_Real <BUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let Inst{31-26} = 0b110001;
 }
 
+class VBUFFER_Real_gfx12<bits<8> op, BUF_Pseudo ps, string real_name> :
+    VBUFFER_Real<op, ps, real_name>,
+    SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX12> {
+  let AssemblerPredicate = isGFX12Only;
+  let DecoderNamespace = "GFX12";
+}
+
 multiclass VBUFFER_MUBUF_Real_gfx12<bits<8> op, string real_name> {
   defvar ps = !cast<MUBUF_Pseudo>(NAME);
-  def _gfx12 : VBUFFER_Real<ps, real_name>,
-               SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX12> {
-    let MUBUF = 1;
-
+  def _gfx12 : VBUFFER_Real_gfx12<op, ps, real_name> {
     // Set the last bit of format to 1 to avoid round-trip issues, as some tools
     // print BUF_FMT_INVALID for format 0.
     let Inst{55} = 0b1;
-    let Inst{21-14} = op;
-    let AssemblerPredicate = isGFX12Only;
-    let DecoderNamespace = "GFX12";
   }
 }
 
 multiclass VBUFFER_MTBUF_Real_gfx12<bits<4> op, string real_name> {
   defvar ps = !cast<MTBUF_Pseudo>(NAME);
-  def _gfx12 : VBUFFER_Real<ps, real_name>, SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX12> {
-    let MTBUF = 1;
-
-    bits<7>  format;
-
-    let Inst{17-14} = op;
-    let Inst{21-18} = 0b1000;
+  def _gfx12 : VBUFFER_Real_gfx12<{0b1000, op}, ps, real_name> {
+    bits<7> format;
     let Inst{61-55} = format;
-    let AssemblerPredicate = isGFX12Only;
-    let DecoderNamespace = "GFX12";
   }
 }
 
@@ -2466,51 +2463,51 @@ class Mnem_gfx11 <string mnemonic, string real_name> :
 class Mnem_gfx12 <string mnemonic, string real_name> :
   MnemonicAlias<mnemonic, real_name>, Requires<[isGFX12Plus]>;
 
-multiclass MUBUF_Real_AllAddr_gfx11_Renamed_Impl2<bits<8> op, string real_name> {
+multiclass MUBUF_Real_AllAddr_gfx11_Impl2<bits<8> op, string real_name> {
   defm _BOTHEN : MUBUF_Real_gfx11<op, real_name>;
   defm _IDXEN  : MUBUF_Real_gfx11<op, real_name>;
   defm _OFFEN  : MUBUF_Real_gfx11<op, real_name>;
   defm _OFFSET : MUBUF_Real_gfx11<op, real_name>;
 }
 
-multiclass MUBUF_Real_AllAddr_gfx12_Renamed_Impl2<bits<8> op, string real_name> {
+multiclass MUBUF_Real_AllAddr_gfx12_Impl2<bits<8> op, string real_name> {
   defm _VBUFFER_BOTHEN : VBUFFER_MUBUF_Real_gfx12<op, real_name>;
   defm _VBUFFER_IDXEN  : VBUFFER_MUBUF_Real_gfx12<op, real_name>;
   defm _VBUFFER_OFFEN  : VBUFFER_MUBUF_Real_gfx12<op, real_name>;
   defm _VBUFFER_OFFSET : VBUFFER_MUBUF_Real_gfx12<op, real_name>;
 }
 
-multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl2<bits<8> op, string real_name> :
-  MUBUF_Real_AllAddr_gfx11_Renamed_Impl2<op, real_name>,
-  MUBUF_Real_AllAddr_gfx12_Renamed_Impl2<op, real_name>;
+multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Impl2<bits<8> op, string real_name> :
+  MUBUF_Real_AllAddr_gfx11_Impl2<op, real_name>,
+  MUBUF_Real_AllAddr_gfx12_Impl2<op, real_name>;
 
-multiclass MUBUF_Real_AllAddr_gfx11_Renamed_Impl<bits<8> op, string real_name,
-                                                 bit hasTFE = 1> {
-  defm NAME : MUBUF_Real_AllAddr_gfx11_Renamed_Impl2<op, real_name>;
+multiclass MUBUF_Real_AllAddr_gfx11_Impl<bits<8> op, bit hasTFE,
+                                 string real_name = get_BUF_ps<NAME>.Mnemonic> {
+  defm NAME : MUBUF_Real_AllAddr_gfx11_Impl2<op, real_name>;
   if hasTFE then
-    defm _TFE : MUBUF_Real_AllAddr_gfx11_Renamed_Impl2<op, real_name>;
+    defm _TFE : MUBUF_Real_AllAddr_gfx11_Impl2<op, real_name>;
 }
 
-multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl<bits<8> op, string real_name,
-                                                 bit hasTFE = 1> {
-  defm NAME : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl2<op, real_name>;
+multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Impl<bits<8> op, bit hasTFE,
+                                               string real_name> {
+  defm NAME : MUBUF_Real_AllAddr_gfx11_gfx12_Impl2<op, real_name>;
   if hasTFE then
-    defm _TFE : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl2<op, real_name>;
+    defm _TFE : MUBUF_Real_AllAddr_gfx11_gfx12_Impl2<op, real_name>;
 }
 
 // Non-renamed, non-atomic gfx11/gfx12 mubuf instructions.
 multiclass MUBUF_Real_AllAddr_gfx11<bits<8> op, bit hasTFE = 1> :
-  MUBUF_Real_AllAddr_gfx11_Renamed_Impl<op, get_BUF_ps<NAME>.Mnemonic, hasTFE>;
+  MUBUF_Real_AllAddr_gfx11_Impl<op, hasTFE>;
 
-multiclass MUBUF_Real_AllAddr_gfx11_gfx12<bits<8> op, bit hasTFE = 1> :
-  MUBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl<op, get_BUF_ps<NAME>.Mnemonic, hasTFE>;
-
-multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<bits<8> op, string real_name> :
-  MUBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl<op, real_name> {
-  def : Mnem_gfx11_gfx12<get_BUF_ps<NAME>.Mnemonic, real_name>;
+multiclass MUBUF_Real_AllAddr_gfx11_gfx12<bits<8> op,
+                                 string real_name = get_BUF_ps<NAME>.Mnemonic> :
+  MUBUF_Real_AllAddr_gfx11_gfx12_Impl<op, /*hasTFE=*/1, real_name> {
+  defvar ps = get_BUF_ps<NAME>;
+  if !ne(ps.Mnemonic, real_name) then
+    def : Mnem_gfx11_gfx12<ps.Mnemonic, real_name>;
 }
 
-multiclass MUBUF_Real_Atomic_gfx11_Renamed_impl<bits<8> op, bit is_return,
+multiclass MUBUF_Real_Atomic_gfx11_impl<bits<8> op, bit is_return,
                                                 string real_name> {
   defvar Rtn = !if(is_return, "_RTN", "");
   defm _BOTHEN#Rtn : MUBUF_Real_gfx11<op, real_name>;
@@ -2519,8 +2516,8 @@ multiclass MUBUF_Real_Atomic_gfx11_Renamed_impl<bits<8> op, bit is_return,
   defm _OFFSET#Rtn : MUBUF_Real_gfx11<op, real_name>;
 }
 
-multiclass MUBUF_Real_Atomic_gfx12_Renamed_impl<bits<8> op, bit is_return,
-                                                string real_name> {
+multiclass MUBUF_Real_Atomic_gfx12_impl<bits<8> op, bit is_return,
+                                 string real_name = get_BUF_ps<NAME>.Mnemonic> {
   defvar Rtn = !if(is_return, "_RTN", "");
   defm _VBUFFER_BOTHEN#Rtn : VBUFFER_MUBUF_Real_gfx12<op, real_name>;
   defm _VBUFFER_IDXEN#Rtn  : VBUFFER_MUBUF_Real_gfx12<op, real_name>;
@@ -2528,124 +2525,119 @@ multiclass MUBUF_Real_Atomic_gfx12_Renamed_impl<bits<8> op, bit is_return,
   defm _VBUFFER_OFFSET#Rtn : VBUFFER_MUBUF_Real_gfx12<op, real_name>;
 }
 
-multiclass MUBUF_Real_Atomic_gfx11_gfx12_Renamed_impl<bits<8> op, bit is_return,
+multiclass MUBUF_Real_Atomic_gfx11_gfx12_impl<bits<8> op, bit is_return,
                                                 string real_name> :
-  MUBUF_Real_Atomic_gfx11_Renamed_impl<op, is_return, real_name>,
-  MUBUF_Real_Atomic_gfx12_Renamed_impl<op, is_return, real_name>;
-
-// Non-renamed gfx11/gfx12 mubuf atomic.
-multiclass MUBUF_Real_Atomic_gfx11_gfx12<bits<8> op> :
-  MUBUF_Real_Atomic_gfx11_gfx12_Renamed_impl<op, 0, get_BUF_ps<NAME>.Mnemonic>,
-  MUBUF_Real_Atomic_gfx11_gfx12_Renamed_impl<op, 1, get_BUF_ps<NAME>.Mnemonic>;
+  MUBUF_Real_Atomic_gfx11_impl<op, is_return, real_name>,
+  MUBUF_Real_Atomic_gfx12_impl<op, is_return, real_name>;
 
 multiclass MUBUF_Real_Atomic_gfx12<bits<8> op> :
-  MUBUF_Real_Atomic_gfx12_Renamed_impl<op, 0, get_BUF_ps<NAME>.Mnemonic>,
-  MUBUF_Real_Atomic_gfx12_Renamed_impl<op, 1, get_BUF_ps<NAME>.Mnemonic>;
+  MUBUF_Real_Atomic_gfx12_impl<op, 0>,
+  MUBUF_Real_Atomic_gfx12_impl<op, 1>;
 
-multiclass MUBUF_Real_Atomic_gfx11_Renamed<bits<8> op, string real_name> :
-  MUBUF_Real_Atomic_gfx11_Renamed_impl<op, 0, real_name>,
-  MUBUF_Real_Atomic_gfx11_Renamed_impl<op, 1, real_name> {
-  def : Mnem_gfx11_gfx12<get_BUF_ps<NAME>.Mnemonic, real_name>;
+multiclass MUBUF_Real_Atomic_gfx11<bits<8> op, string real_name> :
+  MUBUF_Real_Atomic_gfx11_impl<op, 0, real_name>,
+  MUBUF_Real_Atomic_gfx11_impl<op, 1, real_name> {
+  defvar ps = get_BUF_ps<NAME>;
+  def : Mnem_gfx11_gfx12<ps.Mnemonic, real_name>;
 }
 
-multiclass MUBUF_Real_Atomic_gfx11_gfx12_Renamed<bits<8> op, string real_name> :
-  MUBUF_Real_Atomic_gfx11_gfx12_Renamed_impl<op, 0, real_name>,
-  MUBUF_Real_Atomic_gfx11_gfx12_Renamed_impl<op, 1, real_name>  {
-  def : Mnem_gfx11_gfx12<get_BUF_ps<NAME>.Mnemonic, real_name>;
-}
-
-multiclass MUBUF_Real_Atomic_gfx11_gfx12_Renamed_gfx12_Renamed<bits<8> op, string gfx12_name, string gfx11_name> :
-  MUBUF_Real_Atomic_gfx11_Renamed_impl<op, 0, gfx11_name>,
-  MUBUF_Real_Atomic_gfx11_Renamed_impl<op, 1, gfx11_name>,
-  MUBUF_Real_Atomic_gfx12_Renamed_impl<op, 0, gfx12_name>,
-  MUBUF_Real_Atomic_gfx12_Renamed_impl<op, 1, gfx12_name> {
-  def : Mnem_gfx11<get_BUF_ps<NAME>.Mnemonic, gfx11_name>;
-  def : Mnem_gfx12<get_BUF_ps<NAME>.Mnemonic, gfx12_name>;
-  def : Mnem_gfx12<gfx11_name, gfx12_name>;
+multiclass MUBUF_Real_Atomic_gfx11_gfx12<bits<8> op,
+                                  string gfx12_name = get_BUF_ps<NAME>.Mnemonic,
+                                  string gfx11_name = gfx12_name> :
+  MUBUF_Real_Atomic_gfx11_impl<op, 0, gfx11_name>,
+  MUBUF_Real_Atomic_gfx11_impl<op, 1, gfx11_name>,
+  MUBUF_Real_Atomic_gfx12_impl<op, 0, gfx12_name>,
+  MUBUF_Real_Atomic_gfx12_impl<op, 1, gfx12_name> {
+  defvar ps = get_BUF_ps<NAME>;
+  if !ne(ps.Mnemonic, gfx11_name) then
+    def : Mnem_gfx11<ps.Mnemonic, gfx11_name>;
+  if !ne(ps.Mnemonic, gfx12_name) then
+    def : Mnem_gfx12<ps.Mnemonic, gfx12_name>;
+  if !ne(gfx11_name, gfx12_name) then
+    def : Mnem_gfx12<gfx11_name, gfx12_name>;
 }
 
 defm BUFFER_GL0_INV               : MUBUF_Real_gfx11<0x02B>;
 defm BUFFER_GL1_INV               : MUBUF_Real_gfx11<0x02C>;
 
-defm BUFFER_LOAD_DWORD            : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x014, "buffer_load_b32">;
-defm BUFFER_LOAD_DWORDX2          : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x015, "buffer_load_b64">;
-defm BUFFER_LOAD_DWORDX3          : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x016, "buffer_load_b96">;
-defm BUFFER_LOAD_DWORDX4          : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x017, "buffer_load_b128">;
-defm BUFFER_LOAD_SHORT_D16        : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x020, "buffer_load_d16_b16">;
-defm BUFFER_LOAD_FORMAT_D16_X     : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x008, "buffer_load_d16_format_x">;
-defm BUFFER_LOAD_FORMAT_D16_XY    : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x009, "buffer_load_d16_format_xy">;
-defm BUFFER_LOAD_FORMAT_D16_XYZ   : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x00a, "buffer_load_d16_format_xyz">;
-defm BUFFER_LOAD_FORMAT_D16_XYZW  : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x00b, "buffer_load_d16_format_xyzw">;
-defm BUFFER_LOAD_SHORT_D16_HI     : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x023, "buffer_load_d16_hi_b16">;
-defm BUFFER_LOAD_FORMAT_D16_HI_X  : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x026, "buffer_load_d16_hi_format_x">;
-defm BUFFER_LOAD_SBYTE_D16_HI     : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x022, "buffer_load_d16_hi_i8">;
-defm BUFFER_LOAD_UBYTE_D16_HI     : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x021, "buffer_load_d16_hi_u8">;
-defm BUFFER_LOAD_SBYTE_D16        : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x01f, "buffer_load_d16_i8">;
-defm BUFFER_LOAD_UBYTE_D16        : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x01e, "buffer_load_d16_u8">;
+defm BUFFER_LOAD_DWORD            : MUBUF_Real_AllAddr_gfx11_gfx12<0x014, "buffer_load_b32">;
+defm BUFFER_LOAD_DWORDX2          : MUBUF_Real_AllAddr_gfx11_gfx12<0x015, "buffer_load_b64">;
+defm BUFFER_LOAD_DWORDX3          : MUBUF_Real_AllAddr_gfx11_gfx12<0x016, "buffer_load_b96">;
+defm BUFFER_LOAD_DWORDX4          : MUBUF_Real_AllAddr_gfx11_gfx12<0x017, "buffer_load_b128">;
+defm BUFFER_LOAD_SHORT_D16        : MUBUF_Real_AllAddr_gfx11_gfx12<0x020, "buffer_load_d16_b16">;
+defm BUFFER_LOAD_FORMAT_D16_X     : MUBUF_Real_AllAddr_gfx11_gfx12<0x008, "buffer_load_d16_format_x">;
+defm BUFFER_LOAD_FORMAT_D16_XY    : MUBUF_Real_AllAddr_gfx11_gfx12<0x009, "buffer_load_d16_format_xy">;
+defm BUFFER_LOAD_FORMAT_D16_XYZ   : MUBUF_Real_AllAddr_gfx11_gfx12<0x00a, "buffer_load_d16_format_xyz">;
+defm BUFFER_LOAD_FORMAT_D16_XYZW  : MUBUF_Real_AllAddr_gfx11_gfx12<0x00b, "buffer_load_d16_format_xyzw">;
+defm BUFFER_LOAD_SHORT_D16_HI     : MUBUF_Real_AllAddr_gfx11_gfx12<0x023, "buffer_load_d16_hi_b16">;
+defm BUFFER_LOAD_FORMAT_D16_HI_X  : MUBUF_Real_AllAddr_gfx11_gfx12<0x026, "buffer_load_d16_hi_format_x">;
+defm BUFFER_LOAD_SBYTE_D16_HI     : MUBUF_Real_AllAddr_gfx11_gfx12<0x022, "buffer_load_d16_hi_i8">;
+defm BUFFER_LOAD_UBYTE_D16_HI     : MUBUF_Real_AllAddr_gfx11_gfx12<0x021, "buffer_load_d16_hi_u8">;
+defm BUFFER_LOAD_SBYTE_D16        : MUBUF_Real_AllAddr_gfx11_gfx12<0x01f, "buffer_load_d16_i8">;
+defm BUFFER_LOAD_UBYTE_D16        : MUBUF_Real_AllAddr_gfx11_gfx12<0x01e, "buffer_load_d16_u8">;
 defm BUFFER_LOAD_FORMAT_X         : MUBUF_Real_AllAddr_gfx11_gfx12<0x000>;
 defm BUFFER_LOAD_FORMAT_XY        : MUBUF_Real_AllAddr_gfx11_gfx12<0x001>;
 defm BUFFER_LOAD_FORMAT_XYZ       : MUBUF_Real_AllAddr_gfx11_gfx12<0x002>;
 defm BUFFER_LOAD_FORMAT_XYZW      : MUBUF_Real_AllAddr_gfx11_gfx12<0x003>;
-defm BUFFER_LOAD_SBYTE            : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x011, "buffer_load_i8">;
-defm BUFFER_LOAD_SSHORT           : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x013, "buffer_load_i16">;
-defm BUFFER_LOAD_UBYTE            : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x010, "buffer_load_u8">;
-defm BUFFER_LOAD_USHORT           : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x012, "buffer_load_u16">;
+defm BUFFER_LOAD_SBYTE            : MUBUF_Real_AllAddr_gfx11_gfx12<0x011, "buffer_load_i8">;
+defm BUFFER_LOAD_SSHORT           : MUBUF_Real_AllAddr_gfx11_gfx12<0x013, "buffer_load_i16">;
+defm BUFFER_LOAD_UBYTE            : MUBUF_Real_AllAddr_gfx11_gfx12<0x010, "buffer_load_u8">;
+defm BUFFER_LOAD_USHORT           : MUBUF_Real_AllAddr_gfx11_gfx12<0x012, "buffer_load_u16">;
 defm BUFFER_LOAD_LDS_B32          : MUBUF_Real_AllAddr_gfx11<0x031, 0>;
 defm BUFFER_LOAD_LDS_FORMAT_X     : MUBUF_Real_AllAddr_gfx11<0x032, 0>;
 defm BUFFER_LOAD_LDS_I8           : MUBUF_Real_AllAddr_gfx11<0x02e, 0>;
 defm BUFFER_LOAD_LDS_I16          : MUBUF_Real_AllAddr_gfx11<0x030, 0>;
 defm BUFFER_LOAD_LDS_U8           : MUBUF_Real_AllAddr_gfx11<0x02d, 0>;
 defm BUFFER_LOAD_LDS_U16          : MUBUF_Real_AllAddr_gfx11<0x02f, 0>;
-defm BUFFER_STORE_BYTE            : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x018, "buffer_store_b8">;
-defm BUFFER_STORE_SHORT           : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x019, "buffer_store_b16">;
-defm BUFFER_STORE_DWORD           : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x01A, "buffer_store_b32">;
-defm BUFFER_STORE_DWORDX2         : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x01B, "buffer_store_b64">;
-defm BUFFER_STORE_DWORDX3         : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x01C, "buffer_store_b96">;
-defm BUFFER_STORE_DWORDX4         : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x01D, "buffer_store_b128">;
-defm BUFFER_STORE_FORMAT_D16_X    : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x00C, "buffer_store_d16_format_x">;
-defm BUFFER_STORE_FORMAT_D16_XY   : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x00D, "buffer_store_d16_format_xy">;
-defm BUFFER_STORE_FORMAT_D16_XYZ  : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x00E, "buffer_store_d16_format_xyz">;
-defm BUFFER_STORE_FORMAT_D16_XYZW : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x00F, "buffer_store_d16_format_xyzw">;
-defm BUFFER_STORE_BYTE_D16_HI     : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x024, "buffer_store_d16_hi_b8">;
-defm BUFFER_STORE_SHORT_D16_HI    : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x025, "buffer_store_d16_hi_b16">;
-defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x027, "buffer_store_d16_hi_format_x">;
+defm BUFFER_STORE_BYTE            : MUBUF_Real_AllAddr_gfx11_gfx12<0x018, "buffer_store_b8">;
+defm BUFFER_STORE_SHORT           : MUBUF_Real_AllAddr_gfx11_gfx12<0x019, "buffer_store_b16">;
+defm BUFFER_STORE_DWORD           : MUBUF_Real_AllAddr_gfx11_gfx12<0x01A, "buffer_store_b32">;
+defm BUFFER_STORE_DWORDX2         : MUBUF_Real_AllAddr_gfx11_gfx12<0x01B, "buffer_store_b64">;
+defm BUFFER_STORE_DWORDX3         : MUBUF_Real_AllAddr_gfx11_gfx12<0x01C, "buffer_store_b96">;
+defm BUFFER_STORE_DWORDX4         : MUBUF_Real_AllAddr_gfx11_gfx12<0x01D, "buffer_store_b128">;
+defm BUFFER_STORE_FORMAT_D16_X    : MUBUF_Real_AllAddr_gfx11_gfx12<0x00C, "buffer_store_d16_format_x">;
+defm BUFFER_STORE_FORMAT_D16_XY   : MUBUF_Real_AllAddr_gfx11_gfx12<0x00D, "buffer_store_d16_format_xy">;
+defm BUFFER_STORE_FORMAT_D16_XYZ  : MUBUF_Real_AllAddr_gfx11_gfx12<0x00E, "buffer_store_d16_format_xyz">;
+defm BUFFER_STORE_FORMAT_D16_XYZW : MUBUF_Real_AllAddr_gfx11_gfx12<0x00F, "buffer_store_d16_format_xyzw">;
+defm BUFFER_STORE_BYTE_D16_HI     : MUBUF_Real_AllAddr_gfx11_gfx12<0x024, "buffer_store_d16_hi_b8">;
+defm BUFFER_STORE_SHORT_D16_HI    : MUBUF_Real_AllAddr_gfx11_gfx12<0x025, "buffer_store_d16_hi_b16">;
+defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Real_AllAddr_gfx11_gfx12<0x027, "buffer_store_d16_hi_format_x">;
 defm BUFFER_STORE_FORMAT_X        : MUBUF_Real_AllAddr_gfx11_gfx12<0x004>;
 defm BUFFER_STORE_FORMAT_XY       : MUBUF_Real_AllAddr_gfx11_gfx12<0x005>;
 defm BUFFER_STORE_FORMAT_XYZ      : MUBUF_Real_AllAddr_gfx11_gfx12<0x006>;
 defm BUFFER_STORE_FORMAT_XYZW     : MUBUF_Real_AllAddr_gfx11_gfx12<0x007>;
 defm BUFFER_ATOMIC_ADD_F32        : MUBUF_Real_Atomic_gfx11_gfx12<0x056>;
-defm BUFFER_ATOMIC_ADD            : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x035, "buffer_atomic_add_u32">;
-defm BUFFER_ATOMIC_ADD_X2         : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x043, "buffer_atomic_add_u64">;
-defm BUFFER_ATOMIC_AND            : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x03C, "buffer_atomic_and_b32">;
-defm BUFFER_ATOMIC_AND_X2         : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x049, "buffer_atomic_and_b64">;
-defm BUFFER_ATOMIC_CMPSWAP        : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x034, "buffer_atomic_cmpswap_b32">;
-defm BUFFER_ATOMIC_CMPSWAP_X2     : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x042, "buffer_atomic_cmpswap_b64">;
-defm BUFFER_ATOMIC_FCMPSWAP       : MUBUF_Real_Atomic_gfx11_Renamed<0x050, "buffer_atomic_cmpswap_f32">;
+defm BUFFER_ATOMIC_ADD            : MUBUF_Real_Atomic_gfx11_gfx12<0x035, "buffer_atomic_add_u32">;
+defm BUFFER_ATOMIC_ADD_X2         : MUBUF_Real_Atomic_gfx11_gfx12<0x043, "buffer_atomic_add_u64">;
+defm BUFFER_ATOMIC_AND            : MUBUF_Real_Atomic_gfx11_gfx12<0x03C, "buffer_atomic_and_b32">;
+defm BUFFER_ATOMIC_AND_X2         : MUBUF_Real_Atomic_gfx11_gfx12<0x049, "buffer_atomic_and_b64">;
+defm BUFFER_ATOMIC_CMPSWAP        : MUBUF_Real_Atomic_gfx11_gfx12<0x034, "buffer_atomic_cmpswap_b32">;
+defm BUFFER_ATOMIC_CMPSWAP_X2     : MUBUF_Real_Atomic_gfx11_gfx12<0x042, "buffer_atomic_cmpswap_b64">;
+defm BUFFER_ATOMIC_FCMPSWAP       : MUBUF_Real_Atomic_gfx11<0x050, "buffer_atomic_cmpswap_f32">;
 defm BUFFER_ATOMIC_COND_SUB_U32   : MUBUF_Real_Atomic_gfx12<0x050>;
-defm BUFFER_ATOMIC_CSUB           : MUBUF_Real_Atomic_gfx11_gfx12_Renamed_gfx12_Renamed<0x037, "buffer_atomic_sub_clamp_u32", "buffer_atomic_csub_u32">;
-def : Mnem_gfx11_gfx12<"buffer_atomic_csub", "buffer_atomic_csub_u32">;
-defm BUFFER_ATOMIC_DEC            : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x040, "buffer_atomic_dec_u32">;
-defm BUFFER_ATOMIC_DEC_X2         : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x04D, "buffer_atomic_dec_u64">;
-defm BUFFER_ATOMIC_INC            : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x03F, "buffer_atomic_inc_u32">;
-defm BUFFER_ATOMIC_INC_X2         : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x04C, "buffer_atomic_inc_u64">;
-defm BUFFER_ATOMIC_FMAX           : MUBUF_Real_Atomic_gfx11_gfx12_Renamed_gfx12_Renamed<0x052, "buffer_atomic_max_num_f32", "buffer_atomic_max_f32">;
-defm BUFFER_ATOMIC_SMAX           : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x03A, "buffer_atomic_max_i32">;
-defm BUFFER_ATOMIC_SMAX_X2        : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x047, "buffer_atomic_max_i64">;
-defm BUFFER_ATOMIC_UMAX           : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x03B, "buffer_atomic_max_u32">;
-defm BUFFER_ATOMIC_UMAX_X2        : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x048, "buffer_atomic_max_u64">;
-defm BUFFER_ATOMIC_FMIN           : MUBUF_Real_Atomic_gfx11_gfx12_Renamed_gfx12_Renamed<0x051, "buffer_atomic_min_num_f32", "buffer_atomic_min_f32">;
-defm BUFFER_ATOMIC_SMIN           : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x038, "buffer_atomic_min_i32">;
-defm BUFFER_ATOMIC_SMIN_X2        : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x045, "buffer_atomic_min_i64">;
-defm BUFFER_ATOMIC_UMIN           : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x039, "buffer_atomic_min_u32">;
-defm BUFFER_ATOMIC_UMIN_X2        : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x046, "buffer_atomic_min_u64">;
-defm BUFFER_ATOMIC_OR             : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x03D, "buffer_atomic_or_b32">;
-defm BUFFER_ATOMIC_OR_X2          : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x04A, "buffer_atomic_or_b64">;
-defm BUFFER_ATOMIC_SUB            : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x036, "buffer_atomic_sub_u32">;
-defm BUFFER_ATOMIC_SUB_X2         : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x044, "buffer_atomic_sub_u64">;
-defm BUFFER_ATOMIC_SWAP           : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x033, "buffer_atomic_swap_b32">;
-defm BUFFER_ATOMIC_SWAP_X2        : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x041, "buffer_atomic_swap_b64">;
-defm BUFFER_ATOMIC_XOR            : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x03E, "buffer_atomic_xor_b32">;
-defm BUFFER_ATOMIC_XOR_X2         : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x04B, "buffer_atomic_xor_b64">;
+defm BUFFER_ATOMIC_CSUB           : MUBUF_Real_Atomic_gfx11_gfx12<0x037, "buffer_atomic_sub_clamp_u32", "buffer_atomic_csub_u32">;
+defm BUFFER_ATOMIC_DEC            : MUBUF_Real_Atomic_gfx11_gfx12<0x040, "buffer_atomic_dec_u32">;
+defm BUFFER_ATOMIC_DEC_X2         : MUBUF_Real_Atomic_gfx11_gfx12<0x04D, "buffer_atomic_dec_u64">;
+defm BUFFER_ATOMIC_INC            : MUBUF_Real_Atomic_gfx11_gfx12<0x03F, "buffer_atomic_inc_u32">;
+defm BUFFER_ATOMIC_INC_X2         : MUBUF_Real_Atomic_gfx11_gfx12<0x04C, "buffer_atomic_inc_u64">;
+defm BUFFER_ATOMIC_FMAX           : MUBUF_Real_Atomic_gfx11_gfx12<0x052, "buffer_atomic_max_num_f32", "buffer_atomic_max_f32">;
+defm BUFFER_ATOMIC_SMAX           : MUBUF_Real_Atomic_gfx11_gfx12<0x03A, "buffer_atomic_max_i32">;
+defm BUFFER_ATOMIC_SMAX_X2        : MUBUF_Real_Atomic_gfx11_gfx12<0x047, "buffer_atomic_max_i64">;
+defm BUFFER_ATOMIC_UMAX           : MUBUF_Real_Atomic_gfx11_gfx12<0x03B, "buffer_atomic_max_u32">;
+defm BUFFER_ATOMIC_UMAX_X2        : MUBUF_Real_Atomic_gfx11_gfx12<0x048, "buffer_atomic_max_u64">;
+defm BUFFER_ATOMIC_FMIN           : MUBUF_Real_Atomic_gfx11_gfx12<0x051, "buffer_atomic_min_num_f32", "buffer_atomic_min_f32">;
+defm BUFFER_ATOMIC_SMIN           : MUBUF_Real_Atomic_gfx11_gfx12<0x038, "buffer_atomic_min_i32">;
+defm BUFFER_ATOMIC_SMIN_X2        : MUBUF_Real_Atomic_gfx11_gfx12<0x045, "buffer_atomic_min_i64">;
+defm BUFFER_ATOMIC_UMIN           : MUBUF_Real_Atomic_gfx11_gfx12<0x039, "buffer_atomic_min_u32">;
+defm BUFFER_ATOMIC_UMIN_X2        : MUBUF_Real_Atomic_gfx11_gfx12<0x046, "buffer_atomic_min_u64">;
+defm BUFFER_ATOMIC_OR             : MUBUF_Real_Atomic_gfx11_gfx12<0x03D, "buffer_atomic_or_b32">;
+defm BUFFER_ATOMIC_OR_X2          : MUBUF_Real_Atomic_gfx11_gfx12<0x04A, "buffer_atomic_or_b64">;
+defm BUFFER_ATOMIC_SUB            : MUBUF_Real_Atomic_gfx11_gfx12<0x036, "buffer_atomic_sub_u32">;
+defm BUFFER_ATOMIC_SUB_X2         : MUBUF_Real_Atomic_gfx11_gfx12<0x044, "buffer_atomic_sub_u64">;
+defm BUFFER_ATOMIC_SWAP           : MUBUF_Real_Atomic_gfx11_gfx12<0x033, "buffer_atomic_swap_b32">;
+defm BUFFER_ATOMIC_SWAP_X2        : MUBUF_Real_Atomic_gfx11_gfx12<0x041, "buffer_atomic_swap_b64">;
+defm BUFFER_ATOMIC_XOR            : MUBUF_Real_Atomic_gfx11_gfx12<0x03E, "buffer_atomic_xor_b32">;
+defm BUFFER_ATOMIC_XOR_X2         : MUBUF_Real_Atomic_gfx11_gfx12<0x04B, "buffer_atomic_xor_b64">;
 defm BUFFER_ATOMIC_PK_ADD_F16     : MUBUF_Real_Atomic_gfx12<0x059>;
 defm BUFFER_ATOMIC_PK_ADD_BF16    : MUBUF_Real_Atomic_gfx12<0x05a>;
 
@@ -2698,9 +2690,8 @@ defm BUFFER_LOAD_SBYTE_D16        : MUBUF_Real_AllAddr_gfx10<0x022>;
 defm BUFFER_LOAD_SBYTE_D16_HI     : MUBUF_Real_AllAddr_gfx10<0x023>;
 defm BUFFER_LOAD_SHORT_D16        : MUBUF_Real_AllAddr_gfx10<0x024>;
 defm BUFFER_LOAD_SHORT_D16_HI     : MUBUF_Real_AllAddr_gfx10<0x025>;
-// FIXME-GFX10: Add following instructions:
-//defm BUFFER_LOAD_FORMAT_D16_HI_X  : MUBUF_Real_AllAddr_gfx10<0x026>;
-//defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Real_AllAddr_gfx10<0x027>;
+defm BUFFER_LOAD_FORMAT_D16_HI_X  : MUBUF_Real_AllAddr_gfx10<0x026>;
+defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Real_AllAddr_gfx10<0x027>;
 defm BUFFER_LOAD_FORMAT_D16_X     : MUBUF_Real_AllAddr_gfx10<0x080>;
 defm BUFFER_LOAD_FORMAT_D16_XY    : MUBUF_Real_AllAddr_gfx10<0x081>;
 defm BUFFER_LOAD_FORMAT_D16_XYZ   : MUBUF_Real_AllAddr_gfx10<0x082>;
@@ -2883,7 +2874,7 @@ class Base_MTBUF_Real_gfx6_gfx7_gfx10<bits<3> op, MTBUF_Pseudo ps, int ef> :
 // MTBUF - GFX11.
 //===----------------------------------------------------------------------===//
 
-multiclass MTBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl<bits<4> op, string real_name> {
+multiclass MTBUF_Real_AllAddr_gfx11_gfx12_Impl<bits<4> op, string real_name> {
   defm _BOTHEN : MTBUF_Real_gfx11<op, real_name>;
   defm _IDXEN  : MTBUF_Real_gfx11<op, real_name>;
   defm _OFFEN  : MTBUF_Real_gfx11<op, real_name>;
@@ -2895,28 +2886,26 @@ multiclass MTBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl<bits<4> op, string real_n
   defm _VBUFFER_OFFSET : VBUFFER_MTBUF_Real_gfx12<op, real_name>;
 }
 
-multiclass MTBUF_Real_AllAddr_gfx11_gfx12<bits<4> op>
- : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl<op, get_BUF_ps<NAME>.Mnemonic>;
-
-
-multiclass MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<bits<4> op, string real_name>
-  : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl<op, real_name> {
+multiclass MTBUF_Real_AllAddr_gfx11_gfx12<bits<4> op,
+                                   string real_name = get_BUF_ps<NAME>.Mnemonic>
+  : MTBUF_Real_AllAddr_gfx11_gfx12_Impl<op, real_name> {
   defvar ps = get_BUF_ps<NAME>;
-  def : Mnem_gfx11_gfx12<ps.Mnemonic, real_name>;
+  if !ne(ps.Mnemonic, real_name) then
+    def : Mnem_gfx11_gfx12<ps.Mnemonic, real_name>;
 }
 
-defm TBUFFER_LOAD_FORMAT_D16_X     : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x008, "tbuffer_load_d16_format_x">;
-defm TBUFFER_LOAD_FORMAT_D16_XY    : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x009, "tbuffer_load_d16_format_xy">;
-defm TBUFFER_LOAD_FORMAT_D16_XYZ   : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x00a, "tbuffer_load_d16_format_xyz">;
-defm TBUFFER_LOAD_FORMAT_D16_XYZW  : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x00b, "tbuffer_load_d16_format_xyzw">;
+defm TBUFFER_LOAD_FORMAT_D16_X     : MTBUF_Real_AllAddr_gfx11_gfx12<0x008, "tbuffer_load_d16_format_x">;
+defm TBUFFER_LOAD_FORMAT_D16_XY    : MTBUF_Real_AllAddr_gfx11_gfx12<0x009, "tbuffer_load_d16_format_xy">;
+defm TBUFFER_LOAD_FORMAT_D16_XYZ   : MTBUF_Real_AllAddr_gfx11_gfx12<0x00a, "tbuffer_load_d16_format_xyz">;
+defm TBUFFER_LOAD_FORMAT_D16_XYZW  : MTBUF_Real_AllAddr_gfx11_gfx12<0x00b, "tbuffer_load_d16_format_xyzw">;
 defm TBUFFER_LOAD_FORMAT_X         : MTBUF_Real_AllAddr_gfx11_gfx12<0x000>;
 defm TBUFFER_LOAD_FORMAT_XY        : MTBUF_Real_AllAddr_gfx11_gfx12<0x001>;
 defm TBUFFER_LOAD_FORMAT_XYZ       : MTBUF_Real_AllAddr_gfx11_gfx12<0x002>;
 defm TBUFFER_LOAD_FORMAT_XYZW      : MTBUF_Real_AllAddr_gfx11_gfx12<0x003>;
-defm TBUFFER_STORE_FORMAT_D16_X    : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x00c, "tbuffer_store_d16_format_x">;
-defm TBUFFER_STORE_FORMAT_D16_XY   : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x00d, "tbuffer_store_d16_format_xy">;
-defm TBUFFER_STORE_FORMAT_D16_XYZ  : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x00e, "tbuffer_store_d16_format_xyz">;
-defm TBUFFER_STORE_FORMAT_D16_XYZW : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x00f, "tbuffer_store_d16_format_xyzw">;
+defm TBUFFER_STORE_FORMAT_D16_X    : MTBUF_Real_AllAddr_gfx11_gfx12<0x00c, "tbuffer_store_d16_format_x">;
+defm TBUFFER_STORE_FORMAT_D16_XY   : MTBUF_Real_AllAddr_gfx11_gfx12<0x00d, "tbuffer_store_d16_format_xy">;
+defm TBUFFER_STORE_FORMAT_D16_XYZ  : MTBUF_Real_AllAddr_gfx11_gfx12<0x00e, "tbuffer_store_d16_format_xyz">;
+defm TBUFFER_STORE_FORMAT_D16_XYZW : MTBUF_Real_AllAddr_gfx11_gfx12<0x00f, "tbuffer_store_d16_format_xyzw">;
 defm TBUFFER_STORE_FORMAT_X        : MTBUF_Real_AllAddr_gfx11_gfx12<0x004>;
 defm TBUFFER_STORE_FORMAT_XY       : MTBUF_Real_AllAddr_gfx11_gfx12<0x005>;
 defm TBUFFER_STORE_FORMAT_XYZ      : MTBUF_Real_AllAddr_gfx11_gfx12<0x006>;

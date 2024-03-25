@@ -1577,7 +1577,8 @@ def : InstRW<[N2Write_2cyc_1M], (instregex "^(ZIP|UZP)[12]_PPP_[BHSDQ]$")>;
 // -----------------------------------------------------------------------------
 
 // Arithmetic, absolute diff
-def : InstRW<[N2Write_2cyc_1V], (instregex "^[SU]ABD_ZPmZ_[BHSD]$")>;
+def : InstRW<[N2Write_2cyc_1V], (instregex "^[SU]ABD_ZPmZ_[BHSD]",
+                                           "^[SU]ABD_ZPZZ_[BHSD]")>;
 
 // Arithmetic, absolute diff accum
 def : InstRW<[N2Write_4cyc_1V1], (instregex "^[SU]ABA_ZZZ_[BHSD]$")>;
@@ -1590,24 +1591,25 @@ def : InstRW<[N2Write_2cyc_1V], (instregex "^[SU]ABDL[TB]_ZZZ_[HSD]$")>;
 
 // Arithmetic, basic
 def : InstRW<[N2Write_2cyc_1V],
-             (instregex "^(ABS|ADD|CNOT|NEG|SUB|SUBR)_ZPmZ_[BHSD]$",
-                        "^(ADD|SUB)_ZZZ_[BHSD]$",
-                        "^(ADD|SUB|SUBR)_ZI_[BHSD]$",
-                        "^ADR_[SU]XTW_ZZZ_D_[0123]$",
-                        "^ADR_LSL_ZZZ_[SD]_[0123]$",
-                        "^[SU](ADD|SUB)[LW][BT]_ZZZ_[HSD]$",
-                        "^SADDLBT_ZZZ_[HSD]$",
-                        "^[SU]H(ADD|SUB|SUBR)_ZPmZ_[BHSD]$",
-                        "^SSUBL(BT|TB)_ZZZ_[HSD]$")>;
+             (instregex "^(ABS|ADD|CNOT|NEG|SUB|SUBR)_ZPmZ_[BHSD]",
+                        "^(ADD|SUB)_ZZZ_[BHSD]",
+                        "^(ADD|SUB|SUBR)_ZPZZ_[BHSD]",
+                        "^(ADD|SUB|SUBR)_ZI_[BHSD]",
+                        "^ADR_[SU]XTW_ZZZ_D_[0123]",
+                        "^ADR_LSL_ZZZ_[SD]_[0123]",
+                        "^[SU](ADD|SUB)[LW][BT]_ZZZ_[HSD]",
+                        "^SADDLBT_ZZZ_[HSD]",
+                        "^[SU]H(ADD|SUB|SUBR)_ZPmZ_[BHSD]",
+                        "^SSUBL(BT|TB)_ZZZ_[HSD]")>;
 
 // Arithmetic, complex
 def : InstRW<[N2Write_2cyc_1V],
-             (instregex "^R?(ADD|SUB)HN[BT]_ZZZ_[BHS]$",
-                        "^SQ(ABS|ADD|NEG|SUB|SUBR)_ZPmZ_[BHSD]$",
-                        "^[SU]Q(ADD|SUB)_ZZZ_[BHSD]$",
-                        "^[SU]Q(ADD|SUB)_ZI_[BHSD]$",
-                        "^(SRH|SUQ|UQ|USQ|URH)ADD_ZPmZ_[BHSD]$",
-                        "^(UQSUB|UQSUBR)_ZPmZ_[BHSD]$")>;
+             (instregex "^R?(ADD|SUB)HN[BT]_ZZZ_[BHS]",
+                        "^SQ(ABS|ADD|NEG|SUB|SUBR)_ZPmZ_[BHSD]",
+                        "^[SU]Q(ADD|SUB)_ZZZ_[BHSD]",
+                        "^[SU]Q(ADD|SUB)_ZI_[BHSD]",
+                        "^(SRH|SUQ|UQ|USQ|URH)ADD_ZPmZ_[BHSD]",
+                        "^(UQSUB|UQSUBR)_ZPmZ_[BHSD]")>;
 
 // Arithmetic, large integer
 def : InstRW<[N2Write_2cyc_1V], (instregex "^(AD|SB)CL[BT]_ZZZ_[SD]$")>;
@@ -1620,12 +1622,13 @@ def : InstRW<[N2Write_4cyc_1V1], (instregex "^[SU]ADALP_ZPmZ_[HSD]$")>;
 
 // Arithmetic, shift
 def : InstRW<[N2Write_2cyc_1V1],
-             (instregex "^(ASR|LSL|LSR)_WIDE_ZPmZ_[BHS]$",
-                        "^(ASR|LSL|LSR)_WIDE_ZZZ_[BHS]$",
-                        "^(ASR|LSL|LSR)_ZPmI_[BHSD]$",
-                        "^(ASR|LSL|LSR)_ZPmZ_[BHSD]$",
-                        "^(ASR|LSL|LSR)_ZZI_[BHSD]$",
-                        "^(ASRR|LSLR|LSRR)_ZPmZ_[BHSD]$")>;
+             (instregex "^(ASR|LSL|LSR)_WIDE_ZPmZ_[BHS]",
+                        "^(ASR|LSL|LSR)_WIDE_ZZZ_[BHS]",
+                        "^(ASR|LSL|LSR)_ZPmI_[BHSD]",
+                        "^(ASR|LSL|LSR)_ZPmZ_[BHSD]",
+                        "^(ASR|LSL|LSR)_ZZI_[BHSD]",
+                        "^(ASR|LSL|LSR)_ZPZ[IZ]_[BHSD]",
+                        "^(ASRR|LSLR|LSRR)_ZPmZ_[BHSD]")>;
 
 // Arithmetic, shift and accumulate
 def : InstRW<[N2Write_4cyc_1V1],
@@ -1638,29 +1641,29 @@ def : InstRW<[N2Write_2cyc_1V1],
 
 // Arithmetic, shift complex
 def : InstRW<[N2Write_4cyc_1V1],
-             (instregex "^(SQ)?RSHRU?N[BT]_ZZI_[BHS]$",
-                        "^(SQRSHL|SQRSHLR|SQSHL|SQSHLR|UQRSHL|UQRSHLR|UQSHL|UQSHLR)_ZPmZ_[BHSD]$",
-                        "^(SQSHL|SQSHLU|UQSHL)_ZPmI_[BHSD]$",
-                        "^SQSHRU?N[BT]_ZZI_[BHS]$",
-                        "^UQR?SHRN[BT]_ZZI_[BHS]$")>;
+             (instregex "^(SQ)?RSHRU?N[BT]_ZZI_[BHS]",
+                        "^(SQRSHL|SQRSHLR|SQSHL|SQSHLR|UQRSHL|UQRSHLR|UQSHL|UQSHLR)_ZPmZ_[BHSD]",
+                        "^[SU]QR?SHL_ZPZZ_[BHSD]",
+                        "^(SQSHL|SQSHLU|UQSHL)_(ZPmI|ZPZI)_[BHSD]",
+                        "^SQSHRU?N[BT]_ZZI_[BHS]",
+                        "^UQR?SHRN[BT]_ZZI_[BHS]")>;
 
 // Arithmetic, shift right for divide
-def : InstRW<[N2Write_4cyc_1V1], (instregex "^ASRD_ZPmI_[BHSD]$")>;
+def : InstRW<[N2Write_4cyc_1V1], (instregex "^ASRD_(ZPmI|ZPZI)_[BHSD]")>;
 
 // Arithmetic, shift rounding
-def : InstRW<[N2Write_4cyc_1V1],
-             (instregex "^(SRSHL|SRSHLR|URSHL|URSHLR)_ZPmZ_[BHSD]$",
-                        "^[SU]RSHR_ZPmI_[BHSD]$")>;
+def : InstRW<[N2Write_4cyc_1V1], (instregex "^[SU]RSHLR?_ZPmZ_[BHSD]",
+                                             "^[SU]RSHL_ZPZZ_[BHSD]",
+                                             "^[SU]RSHR_(ZPmI|ZPZI)_[BHSD]")>;
 
 // Bit manipulation
-def : InstRW<[N2Write_6cyc_2V1],
-             (instregex "^(BDEP|BEXT|BGRP)_ZZZ_[BHSD]$")>;
+def : InstRW<[N2Write_6cyc_2V1], (instregex "^(BDEP|BEXT|BGRP)_ZZZ_[BHSD]")>;
 
 // Bitwise select
 def : InstRW<[N2Write_2cyc_1V], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ$")>;
 
 // Count/reverse bits
-def : InstRW<[N2Write_2cyc_1V], (instregex "^(CLS|CLZ|CNT|RBIT)_ZPmZ_[BHSD]$")>;
+def : InstRW<[N2Write_2cyc_1V], (instregex "^(CLS|CLZ|CNT|RBIT)_ZPmZ_[BHSD]")>;
 
 // Broadcast logical bitmask immediate to vector
 def : InstRW<[N2Write_2cyc_1V], (instrs DUPM_ZI)>;
@@ -1695,19 +1698,14 @@ def : InstRW<[N2Write_3cyc_1V1], (instregex "^CLAST[AB]_[VZ]PZ_[BHSD]$",
                                             "^SPLICE_ZPZZ?_[BHSD]$")>;
 
 // Convert to floating point, 64b to float or convert to double
-def : InstRW<[N2Write_3cyc_1V0], (instregex "^[SU]CVTF_ZPmZ_Dto[SD]$")>;
-
-// Convert to floating point, 64b to half
-def : InstRW<[N2Write_3cyc_1V0], (instregex "^[SU]CVTF_ZPmZ_DtoH$")>;
+def : InstRW<[N2Write_3cyc_1V0], (instregex "^[SU]CVTF_ZPmZ_Dto[HSD]",
+                                            "^[SU]CVTF_ZPmZ_StoD")>;
 
 // Convert to floating point, 32b to single or half
-def : InstRW<[N2Write_4cyc_2V0], (instregex "^[SU]CVTF_ZPmZ_Sto[HS]$")>;
-
-// Convert to floating point, 32b to double
-def : InstRW<[N2Write_3cyc_1V0], (instregex "^[SU]CVTF_ZPmZ_StoD$")>;
+def : InstRW<[N2Write_4cyc_2V0], (instregex "^[SU]CVTF_ZPmZ_Sto[HS]")>;
 
 // Convert to floating point, 16b to half
-def : InstRW<[N2Write_6cyc_4V0], (instregex "^[SU]CVTF_ZPmZ_HtoH$")>;
+def : InstRW<[N2Write_6cyc_4V0], (instregex "^[SU]CVTF_ZPmZ_HtoH")>;
 
 // Copy, scalar
 def : InstRW<[N2Write_5cyc_1M0_1V], (instregex "^CPY_ZPmR_[BHSD]$")>;
@@ -1717,10 +1715,12 @@ def : InstRW<[N2Write_2cyc_1V], (instregex "^CPY_ZPm[IV]_[BHSD]$",
                                            "^CPY_ZPzI_[BHSD]$")>;
 
 // Divides, 32 bit
-def : InstRW<[N2Write_12cyc_1V0], (instregex "^[SU]DIVR?_ZPmZ_S$")>;
+def : InstRW<[N2Write_12cyc_1V0], (instregex "^[SU]DIVR?_ZPmZ_S",
+                                             "^[SU]DIV_ZPZZ_S")>;
 
 // Divides, 64 bit
-def : InstRW<[N2Write_20cyc_1V0], (instregex "^[SU]DIVR?_ZPmZ_D$")>;
+def : InstRW<[N2Write_20cyc_1V0], (instregex "^[SU]DIVR?_ZPmZ_D",
+                                             "^[SU]DIV_ZPZZ_D")>;
 
 // Dot product, 8 bit
 def : InstRW<[N2Write_3cyc_1V], (instregex "^[SU]DOT_ZZZI?_S$")>;
@@ -1739,9 +1739,9 @@ def : InstRW<[N2Write_2cyc_1V], (instregex "^DUP_ZI_[BHSD]$",
 def : InstRW<[N2Write_3cyc_1M0], (instregex "^DUP_ZR_[BHSD]$")>;
 
 // Extend, sign or zero
-def : InstRW<[N2Write_2cyc_1V1], (instregex "^[SU]XTB_ZPmZ_[HSD]$",
-                                            "^[SU]XTH_ZPmZ_[SD]$",
-                                            "^[SU]XTW_ZPmZ_[D]$")>;
+def : InstRW<[N2Write_2cyc_1V1], (instregex "^[SU]XTB_ZPmZ_[HSD]",
+                                            "^[SU]XTH_ZPmZ_[SD]",
+                                            "^[SU]XTW_ZPmZ_[D]")>;
 
 // Extract
 def : InstRW<[N2Write_2cyc_1V], (instrs EXT_ZZI, EXT_ZZI_B)>;
@@ -1778,14 +1778,16 @@ def : InstRW<[N2Write_8cyc_2M0_2V0], (instregex "^INDEX_(IR|RI|RR)_D$")>;
 
 // Logical
 def : InstRW<[N2Write_2cyc_1V],
-             (instregex "^(AND|EOR|ORR)_ZI$",
-                        "^(AND|BIC|EOR|EOR(BT|TB)?|ORR)_ZZZ$",
-                        "^EOR(BT|TB)_ZZZ_[BHSD]$",
-                        "^(AND|BIC|EOR|NOT|ORR)_ZPmZ_[BHSD]$")>;
+             (instregex "^(AND|EOR|ORR)_ZI",
+                        "^(AND|BIC|EOR|ORR)_ZZZ",
+                        "^EOR(BT|TB)_ZZZ_[BHSD]",
+                        "^(AND|BIC|EOR|NOT|ORR)_(ZPmZ|ZPZZ)_[BHSD]",
+                        "^NOT_ZPmZ_[BHSD]")>;
 
 // Max/min, basic and pairwise
-def : InstRW<[N2Write_2cyc_1V], (instregex "^[SU](MAX|MIN)_ZI_[BHSD]$",
-                                           "^[SU](MAX|MIN)P?_ZPmZ_[BHSD]$")>;
+def : InstRW<[N2Write_2cyc_1V], (instregex "^[SU](MAX|MIN)_ZI_[BHSD]",
+                                           "^[SU](MAX|MIN)P?_ZPmZ_[BHSD]",
+                                           "^[SU](MAX|MIN)_ZPZZ_[BHSD]")>;
 
 // Matching operations
 def : InstRW<[N2Write_2cyc_1V0_1M], (instregex "^N?MATCH_PPzZZ_[BH]$")>;
@@ -1798,12 +1800,16 @@ def : InstRW<[N2Write_2cyc_1V], (instregex "^MOVPRFX_ZP[mz]Z_[BHSD]$",
                                            "^MOVPRFX_ZZ$")>;
 
 // Multiply, B, H, S element size
-def : InstRW<[N2Write_4cyc_1V0], (instregex "^MUL_(ZI|ZPmZ|ZZZI|ZZZ)_[BHS]$",
-                                            "^[SU]MULH_(ZPmZ|ZZZ)_[BHS]$")>;
+def : InstRW<[N2Write_4cyc_1V0], (instregex "^MUL_(ZI|ZPmZ|ZZZI|ZZZ)_[BHS]",
+                                             "^MUL_ZPZZ_[BHS]",
+                                             "^[SU]MULH_(ZPmZ|ZZZ)_[BHS]",
+                                             "^[SU]MULH_ZPZZ_[BHS]")>;
 
 // Multiply, D element size
-def : InstRW<[N2Write_5cyc_2V0], (instregex "^MUL_(ZI|ZPmZ|ZZZI|ZZZ)_D$",
-                                            "^[SU]MULH_(ZPmZ|ZZZ)_D$")>;
+def : InstRW<[N2Write_5cyc_2V0], (instregex "^MUL_(ZI|ZPmZ|ZZZI|ZZZ)_D",
+                                             "^MUL_ZPZZ_D",
+                                             "^[SU]MULH_(ZPmZ|ZZZ)_D",
+                                             "^[SU]MULH_ZPZZ_D")>;
 
 // Multiply long
 def : InstRW<[N2Write_4cyc_1V0], (instregex "^[SU]MULL[BT]_ZZZI_[SD]$",
@@ -1811,11 +1817,11 @@ def : InstRW<[N2Write_4cyc_1V0], (instregex "^[SU]MULL[BT]_ZZZI_[SD]$",
 
 // Multiply accumulate, B, H, S element size
 def : InstRW<[N2Write_4cyc_1V0], (instregex "^ML[AS]_ZZZI_[BHS]$",
-                                            "^(ML[AS]|MAD|MSB)_ZPmZZ_[BHS]$")>;
+                                            "^(ML[AS]|MAD|MSB)_(ZPmZZ|ZPZZZ)_[BHS]")>;
 
 // Multiply accumulate, D element size
 def : InstRW<[N2Write_5cyc_2V0], (instregex "^ML[AS]_ZZZI_D$",
-                                            "^(ML[AS]|MAD|MSB)_ZPmZZ_D$")>;
+                                            "^(ML[AS]|MAD|MSB)_(ZPmZZ|ZPZZZ)_D")>;
 
 // Multiply accumulate long
 def : InstRW<[N2Write_4cyc_1V0], (instregex "^[SU]ML[AS]L[BT]_ZZZ_[HSD]$",
@@ -1864,7 +1870,7 @@ def : InstRW<[N2Write_2cyc_1V0],
              (instregex "^(DEC|INC|SQDEC|SQINC|UQDEC|UQINC)[HWD]_ZPiI$")>;
 
 // Reciprocal estimate
-def : InstRW<[N2Write_4cyc_2V0], (instrs URECPE_ZPmZ_S, URSQRTE_ZPmZ_S)>;
+def : InstRW<[N2Write_4cyc_2V0], (instregex "^URECPE_ZPmZ_S", "^URSQRTE_ZPmZ_S")>;
 
 // Reduction, arithmetic, B form
 def : InstRW<[N2Write_11cyc_2V_2V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_B")>;
@@ -1909,13 +1915,17 @@ def : InstRW<[N2Write_2cyc_1V], (instregex "^(UZP|ZIP)[12]_ZZZ_[BHSDQ]$")>;
 // -----------------------------------------------------------------------------
 
 // Floating point absolute value/difference
-def : InstRW<[N2Write_2cyc_1V], (instregex "^FAB[SD]_ZPmZ_[HSD]$")>;
+def : InstRW<[N2Write_2cyc_1V], (instregex "^FAB[SD]_ZPmZ_[HSD]",
+                                           "^FABD_ZPZZ_[HSD]",
+                                           "^FABS_ZPmZ_[HSD]")>;
 
 // Floating point arithmetic
-def : InstRW<[N2Write_2cyc_1V], (instregex "^F(ADD|SUB)_(ZPm[IZ]|ZZZ)_[HSD]$",
-                                           "^FADDP_ZPmZZ_[HSD]$",
-                                           "^FNEG_ZPmZ_[HSD]$",
-                                           "^FSUBR_ZPm[IZ]_[HSD]$")>;
+def : InstRW<[N2Write_2cyc_1V], (instregex "^F(ADD|SUB)_(ZPm[IZ]|ZZZ)_[HSD]",
+                                           "^F(ADD|SUB)_ZPZ[IZ]_[HSD]",
+                                           "^FADDP_ZPmZZ_[HSD]",
+                                           "^FNEG_ZPmZ_[HSD]",
+                                           "^FSUBR_ZPm[IZ]_[HSD]",
+                                           "^FSUBR_(ZPZI|ZPZZ)_[HSD]")>;
 
 // Floating point associative add, F16
 def : InstRW<[N2Write_10cyc_1V1], (instrs FADDA_VPZ_H)>;
@@ -1940,80 +1950,80 @@ def : InstRW<[N2Write_5cyc_1V], (instregex "^FCMLA_ZPmZZ_[HSD]$",
                                            "^FCMLA_ZZZI_[HS]$")>;
 
 // Floating point convert, long or narrow (F16 to F32 or F32 to F16)
-def : InstRW<[N2Write_4cyc_2V0], (instregex "^FCVT_ZPmZ_(HtoS|StoH)$",
-                                            "^FCVTLT_ZPmZ_HtoS$",
-                                            "^FCVTNT_ZPmZ_StoH$")>;
+def : InstRW<[N2Write_4cyc_2V0], (instregex "^FCVT_ZPmZ_(HtoS|StoH)",
+                                            "^FCVTLT_ZPmZ_HtoS",
+                                            "^FCVTNT_ZPmZ_StoH")>;
 
 // Floating point convert, long or narrow (F16 to F64, F32 to F64, F64 to F32
 // or F64 to F16)
-def : InstRW<[N2Write_3cyc_1V0], (instregex "^FCVT_ZPmZ_(HtoD|StoD|DtoS|DtoH)$",
-                                            "^FCVTLT_ZPmZ_StoD$",
-                                            "^FCVTNT_ZPmZ_DtoS$")>;
+def : InstRW<[N2Write_3cyc_1V0], (instregex "^FCVT_ZPmZ_(HtoD|StoD|DtoS|DtoH)",
+                                            "^FCVTLT_ZPmZ_StoD",
+                                            "^FCVTNT_ZPmZ_DtoS")>;
 
 // Floating point convert, round to odd
 def : InstRW<[N2Write_3cyc_1V0], (instrs FCVTX_ZPmZ_DtoS, FCVTXNT_ZPmZ_DtoS)>;
 
 // Floating point base2 log, F16
-def : InstRW<[N2Write_6cyc_4V0], (instrs FLOGB_ZPmZ_H)>;
+def : InstRW<[N2Write_6cyc_4V0], (instregex "^FLOGB_(ZPmZ|ZPZZ)_H")>;
 
 // Floating point base2 log, F32
-def : InstRW<[N2Write_4cyc_2V0], (instrs FLOGB_ZPmZ_S)>;
+def : InstRW<[N2Write_4cyc_2V0], (instregex "^FLOGB_(ZPmZ|ZPZZ)_S")>;
 
 // Floating point base2 log, F64
-def : InstRW<[N2Write_3cyc_1V0], (instrs FLOGB_ZPmZ_D)>;
+def : InstRW<[N2Write_3cyc_1V0], (instregex "^FLOGB_(ZPmZ|ZPZZ)_D")>;
 
 // Floating point convert to integer, F16
-def : InstRW<[N2Write_6cyc_4V0], (instregex "^FCVTZ[SU]_ZPmZ_HtoH$")>;
+def : InstRW<[N2Write_6cyc_4V0], (instregex "^FCVTZ[SU]_ZPmZ_HtoH")>;
 
 // Floating point convert to integer, F32
-def : InstRW<[N2Write_4cyc_2V0], (instregex "^FCVTZ[SU]_ZPmZ_(HtoS|StoS)$")>;
+def : InstRW<[N2Write_4cyc_2V0], (instregex "^FCVTZ[SU]_ZPmZ_(HtoS|StoS)")>;
 
 // Floating point convert to integer, F64
 def : InstRW<[N2Write_3cyc_1V0],
-             (instregex "^FCVTZ[SU]_ZPmZ_(HtoD|StoD|DtoS|DtoD)$")>;
+             (instregex "^FCVTZ[SU]_ZPmZ_(HtoD|StoD|DtoS|DtoD)")>;
 
 // Floating point copy
 def : InstRW<[N2Write_2cyc_1V], (instregex "^FCPY_ZPmI_[HSD]$",
                                            "^FDUP_ZI_[HSD]$")>;
 
 // Floating point divide, F16
-def : InstRW<[N2Write_13cyc_1V0], (instregex "^FDIVR?_ZPmZ_H$")>;
+def : InstRW<[N2Write_13cyc_1V0], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_H")>;
 
 // Floating point divide, F32
-def : InstRW<[N2Write_10cyc_1V0], (instregex "^FDIVR?_ZPmZ_S$")>;
+def : InstRW<[N2Write_10cyc_1V0], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_S")>;
 
 // Floating point divide, F64
-def : InstRW<[N2Write_15cyc_1V0], (instregex "^FDIVR?_ZPmZ_D$")>;
+def : InstRW<[N2Write_15cyc_1V0], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_D")>;
 
 // Floating point min/max pairwise
-def : InstRW<[N2Write_2cyc_1V], (instregex "^F(MAX|MIN)(NM)?P_ZPmZZ_[HSD]$")>;
+def : InstRW<[N2Write_2cyc_1V], (instregex "^F(MAX|MIN)(NM)?P_ZPmZZ_[HSD]")>;
 
 // Floating point min/max
-def : InstRW<[N2Write_2cyc_1V], (instregex "^F(MAX|MIN)(NM)?_ZPm[IZ]_[HSD]$")>;
+def : InstRW<[N2Write_2cyc_1V], (instregex "^F(MAX|MIN)(NM)?_ZPm[IZ]_[HSD]",
+                                           "^F(MAX|MIN)(NM)?_ZPZ[IZ]_[HSD]")>;
 
 // Floating point multiply
-def : InstRW<[N2Write_3cyc_1V], (instregex "^(FSCALE|FMULX)_ZPmZ_[HSD]$",
-                                           "^FMUL_(ZPm[IZ]|ZZZI?)_[HSD]$")>;
+def : InstRW<[N2Write_3cyc_1V], (instregex "^(FSCALE|FMULX)_ZPmZ_[HSD]",
+                                           "^FMULX_ZPZZ_[HSD]",
+                                           "^FMUL_(ZPm[IZ]|ZZZI?)_[HSD]",
+                                           "^FMUL_ZPZ[IZ]_[HSD]")>;
 
 // Floating point multiply accumulate
-def : InstRW<[N2Write_4cyc_1V],
-             (instregex "^FML[AS]_(ZPmZZ|ZZZI)_[HSD]$",
-                        "^(FMAD|FNMAD|FNML[AS]|FN?MSB)_ZPmZZ_[HSD]$")>;
+def : InstRW<[N2Write_4cyc_1V], (instregex "^F(N?M(AD|SB)|N?ML[AS])_ZPmZZ_[HSD]$",
+                                           "^FN?ML[AS]_ZPZZZ_[HSD]",
+                                           "^FML[AS]_ZZZI_[HSD]$")>;
 
 // Floating point multiply add/sub accumulate long
 def : InstRW<[N2Write_4cyc_1V], (instregex "^FML[AS]L[BT]_ZZZI?_SHH$")>;
 
 // Floating point reciprocal estimate, F16
-def : InstRW<[N2Write_6cyc_4V0], (instrs FRECPE_ZZ_H, FRECPX_ZPmZ_H,
-                                         FRSQRTE_ZZ_H)>;
+def : InstRW<[N2Write_6cyc_4V0], (instregex "^FR(ECP|SQRT)E_ZZ_H", "^FRECPX_ZPmZ_H")>;
 
 // Floating point reciprocal estimate, F32
-def : InstRW<[N2Write_4cyc_2V0], (instrs FRECPE_ZZ_S, FRECPX_ZPmZ_S,
-                                         FRSQRTE_ZZ_S)>;
+def : InstRW<[N2Write_4cyc_2V0], (instregex "^FR(ECP|SQRT)E_ZZ_S", "^FRECPX_ZPmZ_S")>;
 
 // Floating point reciprocal estimate, F64
-def : InstRW<[N2Write_3cyc_1V0], (instrs FRECPE_ZZ_D, FRECPX_ZPmZ_D,
-                                         FRSQRTE_ZZ_D)>;
+def : InstRW<[N2Write_3cyc_1V0], (instregex "^FR(ECP|SQRT)E_ZZ_D", "^FRECPX_ZPmZ_D")>;
 
 // Floating point reciprocal step
 def : InstRW<[N2Write_4cyc_1V0], (instregex "^F(RECPS|RSQRTS)_ZZZ_[HSD]$")>;
@@ -2031,22 +2041,22 @@ def : InstRW<[N2Write_2cyc_1V],
              (instregex "^(FADDV|FMAXNMV|FMAXV|FMINNMV|FMINV)_VPZ_D$")>;
 
 // Floating point round to integral, F16
-def : InstRW<[N2Write_6cyc_4V0], (instregex "^FRINT[AIMNPXZ]_ZPmZ_H$")>;
+def : InstRW<[N2Write_6cyc_4V0], (instregex "^FRINT[AIMNPXZ]_ZPmZ_H")>;
 
 // Floating point round to integral, F32
-def : InstRW<[N2Write_4cyc_2V0], (instregex "^FRINT[AIMNPXZ]_ZPmZ_S$")>;
+def : InstRW<[N2Write_4cyc_2V0], (instregex "^FRINT[AIMNPXZ]_ZPmZ_S")>;
 
 // Floating point round to integral, F64
-def : InstRW<[N2Write_3cyc_1V0], (instregex "^FRINT[AIMNPXZ]_ZPmZ_D$")>;
+def : InstRW<[N2Write_3cyc_1V0], (instregex "^FRINT[AIMNPXZ]_ZPmZ_D")>;
 
 // Floating point square root, F16
-def : InstRW<[N2Write_13cyc_1V0], (instrs FSQRT_ZPmZ_H)>;
+def : InstRW<[N2Write_13cyc_1V0], (instregex "^FSQRT_ZPmZ_H")>;
 
 // Floating point square root, F32
-def : InstRW<[N2Write_10cyc_1V0], (instrs FSQRT_ZPmZ_S)>;
+def : InstRW<[N2Write_10cyc_1V0], (instregex "^FSQRT_ZPmZ_S")>;
 
 // Floating point square root, F64
-def : InstRW<[N2Write_16cyc_1V0], (instrs FSQRT_ZPmZ_D)>;
+def : InstRW<[N2Write_16cyc_1V0], (instregex "^FSQRT_ZPmZ_D")>;
 
 // Floating point trigonometric exponentiation
 def : InstRW<[N2Write_3cyc_1V1], (instregex "^FEXPA_ZZ_[HSD]$")>;

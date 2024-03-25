@@ -13,6 +13,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/fixed_point/fx_rep.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 #include "test/UnitTest/TestLogger.h"
 
 #if __STDC_HOSTED__
@@ -215,11 +216,11 @@ TEST_SPECIALIZATION(bool);
 
 // We cannot just use a single UInt128 specialization as that resolves to only
 // one type, UInt<128> or __uint128_t. We want both overloads as we want to
-#ifdef __SIZEOF_INT128__
+#ifdef LIBC_TYPES_HAS_INT128
 // When builtin __uint128_t type is available, include its specialization
 // also.
 TEST_SPECIALIZATION(__uint128_t);
-#endif
+#endif // LIBC_TYPES_HAS_INT128
 
 TEST_SPECIALIZATION(LIBC_NAMESPACE::Int<128>);
 

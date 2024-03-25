@@ -27,7 +27,7 @@ public:
 
   ~LibcxxStdRangesRefViewSyntheticFrontEnd() override = default;
 
-  uint32_t CalculateNumChildren() override {
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
     // __range_ will be the sole child of this type
     return 1;
   }

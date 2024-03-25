@@ -8516,6 +8516,9 @@ class BuiltinCandidateTypeSet  {
   /// candidates.
   TypeSet MatrixTypes;
 
+  /// The set of _BitInt types that will be used in the built-in candidates.
+  TypeSet BitIntTypes;
+
   /// A flag indicating non-record types are viable candidates
   bool HasNonRecordTypes;
 
@@ -8564,6 +8567,7 @@ public:
   }
   llvm::iterator_range<iterator> vector_types() { return VectorTypes; }
   llvm::iterator_range<iterator> matrix_types() { return MatrixTypes; }
+  llvm::iterator_range<iterator> bitint_types() { return BitIntTypes; }
 
   bool containsMatrixType(QualType Ty) const { return MatrixTypes.count(Ty); }
   bool hasNonRecordTypes() { return HasNonRecordTypes; }
@@ -8735,6 +8739,9 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
   } else if (Ty->isEnumeralType()) {
     HasArithmeticOrEnumeralTypes = true;
     EnumerationTypes.insert(Ty);
+  } else if (Ty->isBitIntType()) {
+    HasArithmeticOrEnumeralTypes = true;
+    BitIntTypes.insert(Ty);
   } else if (Ty->isVectorType()) {
     // We treat vector types as arithmetic types in many contexts as an
     // extension.
@@ -8913,7 +8920,7 @@ class BuiltinOperatorOverloadBuilder {
   SmallVectorImpl<BuiltinCandidateTypeSet> &CandidateTypes;
   OverloadCandidateSet &CandidateSet;
 
-  static constexpr int ArithmeticTypesCap = 24;
+  static constexpr int ArithmeticTypesCap = 26;
   SmallVector<CanQualType, ArithmeticTypesCap> ArithmeticTypes;
 
   // Define some indices used to iterate over the arithmetic types in
@@ -8955,6 +8962,20 @@ class BuiltinOperatorOverloadBuilder {
         (S.Context.getAuxTargetInfo() &&
          S.Context.getAuxTargetInfo()->hasInt128Type()))
       ArithmeticTypes.push_back(S.Context.UnsignedInt128Ty);
+
+    /// We add candidates for the unique, unqualified _BitInt types present in
+    /// the candidate type set. The candidate set already handled ensuring the
+    /// type is unqualified and canonical, but because we're adding from N
+    /// different sets, we need to do some extra work to unique things. Insert
+    /// the candidates into a unique set, then move from that set into the list
+    /// of arithmetic types.
+    llvm::SmallSetVector<CanQualType, 2> BitIntCandidates;
+    llvm::for_each(CandidateTypes, [&BitIntCandidates](
+                                       BuiltinCandidateTypeSet &Candidate) {
+      for (QualType BitTy : Candidate.bitint_types())
+        BitIntCandidates.insert(CanQualType::CreateUnsafe(BitTy));
+    });
+    llvm::move(BitIntCandidates, std::back_inserter(ArithmeticTypes));
     LastPromotedIntegralType = ArithmeticTypes.size();
     LastPromotedArithmeticType = ArithmeticTypes.size();
     // End of promoted types.
@@ -8975,7 +8996,11 @@ class BuiltinOperatorOverloadBuilder {
     // End of integral types.
     // FIXME: What about complex? What about half?
 
-    assert(ArithmeticTypes.size() <= ArithmeticTypesCap &&
+    // We don't know for sure how many bit-precise candidates were involved, so
+    // we subtract those from the total when testing whether we're under the
+    // cap or not.
+    assert(ArithmeticTypes.size() - BitIntCandidates.size() <=
+               ArithmeticTypesCap &&
            "Enough inline storage for all arithmetic types.");
   }
 
