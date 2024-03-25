@@ -130,7 +130,8 @@ public:
     // shape is deferred and should not be loaded now to preserve
     // pointer/allocatable aspects.
     if (componentSym.Rank() == 0 ||
-        Fortran::semantics::IsAllocatableOrObjectPointer(&componentSym))
+        Fortran::semantics::IsAllocatableOrObjectPointer(&componentSym) ||
+        Fortran::semantics::IsProcedurePointer(&componentSym))
       return mlir::Value{};
 
     fir::FirOpBuilder &builder = getBuilder();
