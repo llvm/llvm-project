@@ -395,3 +395,18 @@ func.func @test_subscript_indices_mismatch(%arg0: !emitc.array<4x8xf32>, %arg2: 
   %0 = emitc.subscript %arg0[%arg2] : <4x8xf32>, index
   return
 }
+
+// -----
+
+// expected-error @+1 {{'emitc.global' op cannot have both static and extern specifiers}}
+emitc.global extern static @uninit : i32
+
+// -----
+
+emitc.global @myglobal : !emitc.array<2xf32>
+
+func.func @use_global() {
+  // expected-error @+1 {{'emitc.get_global' op result type 'f32' does not match type '!emitc.array<2xf32>' of the global @myglobal}}
+  %0 = emitc.get_global @myglobal : f32
+  return
+}
