@@ -36,6 +36,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include <cassert>
 #include <limits>
+#include <optional>
 #include <vector>
 
 using namespace llvm;
@@ -138,6 +139,10 @@ private:
 
   // A set to detect an INCLUDE() cycle.
   StringSet<> seen;
+
+  // If we are currently parsing a PROVIDE|PROVIDE_HIDDEN command,
+  // then this member is set to the PROVIDE symbol name.
+  std::optional<llvm::StringRef> activeProvideSym;
 };
 } // namespace
 
@@ -1055,6 +1060,9 @@ SymbolAssignment *ScriptParser::readProvideHidden(bool provide, bool hidden) {
       ;
     return nullptr;
   }
+  llvm::SaveAndRestore saveActiveProvideSym(activeProvideSym);
+  if (provide)
+    activeProvideSym = name;
   SymbolAssignment *cmd = readSymbolAssignment(name);
   cmd->provide = provide;
   cmd->hidden = hidden;
@@ -1570,7 +1578,10 @@ Expr ScriptParser::readPrimary() {
     tok = unquote(tok);
   else if (!isValidSymbolName(tok))
     setError("malformed number: " + tok);
-  script->referencedSymbols.push_back(tok);
+  if (activeProvideSym)
+    script->provideMap[*activeProvideSym].push_back(tok);
+  else
+    script->referencedSymbols.push_back(tok);
   return [=] { return script->getSymbolValue(tok, location); };
 }
 
