@@ -19,7 +19,7 @@
 
 using namespace llvm;
 
-const std::map<std::string, SPIRV::Extension::Extension> ExtensionMap = {
+const std::map<std::string, SPIRV::Extension::Extension> SPIRVExtensionMap = {
     {"SPV_EXT_shader_atomic_float_add",
      SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float_add},
     {"SPV_EXT_shader_atomic_float16_add",
@@ -55,7 +55,7 @@ const std::map<std::string, SPIRV::Extension::Extension> ExtensionMap = {
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
                                   llvm::StringRef ArgValue,
-                                  std::set<SPIRV::Extension::Extension> &Val) {
+                                  std::set<SPIRV::Extension::Extension> &Vals) {
   llvm::SmallVector<llvm::StringRef, 10> Tokens;
   ArgValue.split(Tokens, ",", -1, false);
 
@@ -63,30 +63,27 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
 
   for (const auto &Token : Tokens) {
     if (Token == "all") {
-      for (const auto &[ExtensionName, ExtensionEnum] : ExtensionMap)
+      for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap)
         EnabledExtensions.insert(ExtensionEnum);
 
       continue;
     }
 
-    if (!Token.empty() && (Token.starts_with("+") || Token.starts_with("-"))) {
-      llvm::StringRef ExtensionName = Token.substr(1);
-      auto NameValuePair = ExtensionMap.find(ExtensionName.str());
+    if (Token.empty() || (!Token.starts_with("+") && !Token.starts_with("-")))
+      return O.error("Invalid extension list format " + Token.str());
 
-      if (NameValuePair == ExtensionMap.end())
-        return O.error("Unknown SPIR-V extension: " + Token.str());
+    llvm::StringRef ExtensionName = Token.substr(1);
+    auto NameValuePair = SPIRVExtensionMap.find(ExtensionName.str());
 
-      if (Token.starts_with("+"))
-        EnabledExtensions.insert(NameValuePair->second);
-      else if (EnabledExtensions.count(NameValuePair->second))
-        EnabledExtensions.erase(NameValuePair->second);
+    if (NameValuePair == SPIRVExtensionMap.end())
+      return O.error("Unknown SPIR-V extension: " + Token.str());
 
-      continue;
-    }
-
-    return O.error("Invalid extension list format " + Token.str());
+    if (Token.starts_with("+"))
+      EnabledExtensions.insert(NameValuePair->second);
+    else if (EnabledExtensions.count(NameValuePair->second))
+      EnabledExtensions.erase(NameValuePair->second);
   }
 
-  Val = std::move(EnabledExtensions);
+  Vals = std::move(EnabledExtensions);
   return false;
 }

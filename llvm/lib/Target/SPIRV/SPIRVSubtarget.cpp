@@ -35,7 +35,7 @@ static cl::opt<bool>
 
 static cl::opt<std::set<SPIRV::Extension::Extension>, false,
                SPIRVExtensionsParser>
-    Extensions("spirv-extensions",
+    Extensions("spirv-ext",
                cl::desc("Specify list of enabled SPIR-V extensions"));
 
 // Compare version numbers, but allow 0 to mean unspecified.

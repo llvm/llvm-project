@@ -20,17 +20,18 @@
 
 namespace llvm {
 
+/// Command line parser for toggling SPIR-V extensions.
 struct SPIRVExtensionsParser
     : public cl::parser<std::set<SPIRV::Extension::Extension>> {
 public:
   SPIRVExtensionsParser(cl::Option &O)
       : cl::parser<std::set<SPIRV::Extension::Extension>>(O) {}
 
-  /// Parses SPIR-V extension name from a CLI arguments.
+  /// Parses SPIR-V extension name from CLI arguments.
   ///
   /// \return Returns true on error.
   bool parse(cl::Option &O, StringRef ArgName, StringRef ArgValue,
-             std::set<SPIRV::Extension::Extension> &Val);
+             std::set<SPIRV::Extension::Extension> &Vals);
 };
 
 } // namespace llvm
