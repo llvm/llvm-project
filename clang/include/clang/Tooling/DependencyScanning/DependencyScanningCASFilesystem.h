@@ -73,9 +73,6 @@ public:
   getDirectiveTokens(const Twine &Path);
 
 private:
-  /// Check whether the file should be scanned for preprocessor directives.
-  bool shouldScanForDirectives(StringRef Filename);
-
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
 
   struct FileEntry {
