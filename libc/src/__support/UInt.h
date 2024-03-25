@@ -70,7 +70,7 @@ template <typename T> LIBC_INLINE constexpr half_width_t<T> hi(T value) {
   return hi(split(value));
 }
 
-// Returns 'a' times 'b' in a Double<word>. Cannot overflow by definition.
+// Returns 'a' times 'b' in a Double<word>. Cannot overflow by construction.
 template <typename word>
 LIBC_INLINE constexpr Double<word> mul2(word a, word b) {
   if constexpr (cpp::is_same_v<word, uint8_t>) {

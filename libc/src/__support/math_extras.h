@@ -10,8 +10,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXTRAS_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXTRAS_H
 
-#include "src/__support/CPP/bit.h"           // countl_one, countr_zero
-#include "src/__support/CPP/limits.h"        // CHAR_BIT, numeric_limits
+#include "src/__support/CPP/bit.h"         // countl_one, countr_zero
+#include "src/__support/CPP/limits.h"      // CHAR_BIT, numeric_limits
 #include "src/__support/CPP/type_traits.h" // is_unsigned_v, is_constant_evaluated
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 
@@ -51,13 +51,16 @@ mask_leading_zeros() {
   return mask_trailing_ones<T, CHAR_BIT * sizeof(T) - count>();
 }
 
-#define RETURN_IF_BUILTIN(TYPE, BUILTIN)                                       \
+#define RETURN_IF_BUILTIN(TYPE, BUILTIN, ...)                                  \
   if constexpr (cpp::is_same_v<T, TYPE> && LIBC_HAS_BUILTIN(BUILTIN))          \
-    return BUILTIN(a, b, res);
+    return BUILTIN(__VA_ARGS__);
 
+// Returns whether 'a + b' overflows.
+// The result is stored in 'res' it not 'nullptr', dropped otherwise.
+// We keep the pass by pointer interface for consistency with the intrinsic.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr bool add_overflow(T a, T b, T *res) {
-  RETURN_IF_BUILTIN(T, __builtin_add_overflow)
+  RETURN_IF_BUILTIN(T, __builtin_add_overflow, a, b, res)
   if (res)
     *res = a + b;
   // https://stackoverflow.com/a/1514309
@@ -65,9 +68,12 @@ template <typename T>
          (b < 0 && a < (cpp::numeric_limits<T>::min() - b));
 }
 
+// Returns whether 'a - b' overflows.
+// The result is stored in 'res' it not 'nullptr', dropped otherwise.
+// We keep the pass by pointer interface for consistency with the intrinsic.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr bool sub_overflow(T a, T b, T *res) {
-  RETURN_IF_BUILTIN(T, __builtin_sub_overflow)
+  RETURN_IF_BUILTIN(T, __builtin_sub_overflow, a, b, res)
   if (res)
     *res = a - b;
   // https://stackoverflow.com/a/1514309
@@ -75,20 +81,20 @@ template <typename T>
          (b > 0 && a < (cpp::numeric_limits<T>::min() + b));
 }
 
-#undef RETURN_IF_BUILTIN
-#define RETURN_IF_BUILTIN(TYPE, BUILTIN)                                       \
-  if constexpr (cpp::is_same_v<T, TYPE> && LIBC_HAS_BUILTIN(BUILTIN))          \
-    return BUILTIN(a, b, carry_in, carry_out);
-
+// Returns the result of 'a + b' taking into account 'carry_in'.
+// The carry out is stored in 'carry_out' it not 'nullptr', dropped otherwise.
+// We keep the pass by pointer interface for consistency with the intrinsic.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
 add_with_carry(T a, T b, T carry_in, T *carry_out = nullptr) {
   if constexpr (!cpp::is_constant_evaluated()) {
-    RETURN_IF_BUILTIN(unsigned char, __builtin_addcb)
-    RETURN_IF_BUILTIN(unsigned short, __builtin_addcs)
-    RETURN_IF_BUILTIN(unsigned int, __builtin_addc)
-    RETURN_IF_BUILTIN(unsigned long, __builtin_addcl)
-    RETURN_IF_BUILTIN(unsigned long long, __builtin_addcll)
+    RETURN_IF_BUILTIN(unsigned char, __builtin_addcb, a, b, carry_in, carry_out)
+    RETURN_IF_BUILTIN(unsigned short, __builtin_addcs, a, b, carry_in,
+                      carry_out)
+    RETURN_IF_BUILTIN(unsigned int, __builtin_addc, a, b, carry_in, carry_out)
+    RETURN_IF_BUILTIN(unsigned long, __builtin_addcl, a, b, carry_in, carry_out)
+    RETURN_IF_BUILTIN(unsigned long long, __builtin_addcll, a, b, carry_in,
+                      carry_out)
   }
   T sum;
   T carry1 = add_overflow(a, b, &sum);
@@ -98,15 +104,20 @@ add_with_carry(T a, T b, T carry_in, T *carry_out = nullptr) {
   return sum;
 }
 
+// Returns the result of 'a - b' taking into account 'carry_in'.
+// The carry out is stored in 'carry_out' it not 'nullptr', dropped otherwise.
+// We keep the pass by pointer interface for consistency with the intrinsic.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
 sub_with_borrow(T a, T b, T carry_in, T *carry_out = nullptr) {
   if constexpr (!cpp::is_constant_evaluated()) {
-    RETURN_IF_BUILTIN(unsigned char, __builtin_subcb)
-    RETURN_IF_BUILTIN(unsigned short, __builtin_subcs)
-    RETURN_IF_BUILTIN(unsigned int, __builtin_subc)
-    RETURN_IF_BUILTIN(unsigned long, __builtin_subcl)
-    RETURN_IF_BUILTIN(unsigned long long, __builtin_subcll)
+    RETURN_IF_BUILTIN(unsigned char, __builtin_subcb, a, b, carry_in, carry_out)
+    RETURN_IF_BUILTIN(unsigned short, __builtin_subcs, a, b, carry_in,
+                      carry_out)
+    RETURN_IF_BUILTIN(unsigned int, __builtin_subc, a, b, carry_in, carry_out)
+    RETURN_IF_BUILTIN(unsigned long, __builtin_subcl, a, b, carry_in, carry_out)
+    RETURN_IF_BUILTIN(unsigned long long, __builtin_subcll, a, b, carry_in,
+                      carry_out)
   }
   T sub;
   T carry1 = sub_overflow(a, b, &sub);
