@@ -1002,7 +1002,17 @@ public:
         return TTI::SK_Splice;
       break;
     }
-    case TTI::SK_Select:
+    case TTI::SK_Select: {
+      int NumSubElts;
+      if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
+                                 Mask, NumSrcElts, NumSubElts, Index)) {
+        if (Index + NumSubElts > NumSrcElts)
+          return Kind;
+        SubTy = FixedVectorType::get(Ty->getElementType(), NumSubElts);
+        return TTI::SK_InsertSubvector;
+      }
+      break;
+    }
     case TTI::SK_Reverse:
     case TTI::SK_Broadcast:
     case TTI::SK_Transpose:
