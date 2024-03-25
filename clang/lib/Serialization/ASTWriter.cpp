@@ -514,6 +514,10 @@ void TypeLocWriter::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   Record.AddAttr(TL.getAttr());
 }
 
+void TypeLocWriter::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
+  // Nothing to do
+}
+
 void TypeLocWriter::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   // Nothing to do.
 }
@@ -6060,7 +6064,7 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
 
   BitsPacker DefinitionBits;
 
-  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
+  bool ShouldSkipCheckingODR = D->shouldSkipCheckingODR();
   DefinitionBits.addBit(ShouldSkipCheckingODR);
 
 #define FIELD(Name, Width, Merge)                                              \

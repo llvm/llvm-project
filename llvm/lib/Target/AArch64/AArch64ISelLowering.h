@@ -689,6 +689,7 @@ public:
                                        StoreInst *SI) const override;
 
   bool isLegalAddImmediate(int64_t) const override;
+  bool isLegalAddScalableImmediate(int64_t) const override;
   bool isLegalICmpImmediate(int64_t) const override;
 
   bool isMulAddWithConstProfitable(SDValue AddNode,
@@ -968,12 +969,12 @@ public:
   bool shouldExpandCttzElements(EVT VT) const override;
 
   /// If a change in streaming mode is required on entry to/return from a
-  /// function call it emits and returns the corresponding SMSTART or SMSTOP node.
-  /// \p Entry tells whether this is before/after the Call, which is necessary
-  /// because PSTATE.SM is only queried once.
+  /// function call it emits and returns the corresponding SMSTART or SMSTOP
+  /// node. \p Condition should be one of the enum values from
+  /// AArch64SME::ToggleCondition.
   SDValue changeStreamingMode(SelectionDAG &DAG, SDLoc DL, bool Enable,
-                              SDValue Chain, SDValue InGlue,
-                              SDValue PStateSM, bool Entry) const;
+                              SDValue Chain, SDValue InGlue, unsigned Condition,
+                              SDValue PStateSM = SDValue()) const;
 
   bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
 

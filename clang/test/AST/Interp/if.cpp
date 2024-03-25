@@ -1,8 +1,5 @@
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fexperimental-new-constant-interpreter %s -verify
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only %s -verify=ref
-
-// expected-no-diagnostics
-// ref-no-diagnostics
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fexperimental-new-constant-interpreter %s -verify=expected,both
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only %s -verify=ref,both
 
 namespace ConstEval {
   constexpr int f() {
@@ -51,3 +48,13 @@ namespace InitDecl {
   }
   static_assert(attrs() == 1, "");
 };
+
+/// The faulty if statement creates a RecoveryExpr with contains-errors,
+/// but the execution will never reach that.
+constexpr char g(char const (&x)[2]) {
+    return 'x';
+  if (auto [a, b] = x) // both-error {{an array type is not allowed here}} \
+                       // both-warning {{ISO C++17 does not permit structured binding declaration in a condition}}
+    ;
+}
+static_assert(g("x") == 'x');

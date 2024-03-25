@@ -140,6 +140,14 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
       SkipUntil(tok::semi);
       return nullptr;
     }
+    if (!ExtraNSs.empty()) {
+      Diag(ExtraNSs.front().NamespaceLoc,
+           diag::err_unexpected_qualified_namespace_alias)
+          << SourceRange(ExtraNSs.front().NamespaceLoc,
+                         ExtraNSs.back().IdentLoc);
+      SkipUntil(tok::semi);
+      return nullptr;
+    }
     if (attrLoc.isValid())
       Diag(attrLoc, diag::err_unexpected_namespace_attributes_alias);
     if (InlineLoc.isValid())
@@ -4634,7 +4642,9 @@ bool Parser::ParseCXX11AttributeArgs(
     return true;
   }
 
-  if (ScopeName && ScopeName->isStr("omp")) {
+  // [[omp::directive]] and [[omp::sequence]] need special handling.
+  if (ScopeName && ScopeName->isStr("omp") &&
+      (AttrName->isStr("directive") || AttrName->isStr("sequence"))) {
     Diag(AttrNameLoc, getLangOpts().OpenMP >= 51
                           ? diag::warn_omp51_compat_attributes
                           : diag::ext_omp_attributes);

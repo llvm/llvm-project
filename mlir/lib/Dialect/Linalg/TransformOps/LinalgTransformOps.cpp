@@ -25,9 +25,9 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -3269,17 +3269,24 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
-  if (target.getNumLoops() <= 1)
+  if (!isElementwise(target))
+    return mlir::emitSilenceableFailure(target->getLoc())
+           << "only elementwise flattening is supported";
+
+  // If rank <= 1, do nothing
+  if (target.getNumLoops() <= 1) {
+    results.push_back(target);
     return DiagnosedSilenceableFailure::success();
+  }
+
+  // Attempt to flatten all dims to one.
   ReassociationIndices reassociation(target.getNumLoops());
   std::iota(reassociation.begin(), reassociation.end(), 0);
   auto maybeFlattened =
-      (isElementwise(target))
-          ? collapseOpIterationDims(target, reassociation, rewriter)
-          : FailureOr<CollapseResult>(rewriter.notifyMatchFailure(
-                target, "only elementwise flattening is supported"));
+      collapseOpIterationDims(target, reassociation, rewriter);
   if (failed(maybeFlattened))
-    return emitDefaultSilenceableFailure(target);
+    return mlir::emitSilenceableFailure(target->getLoc())
+           << "attempted to flatten, but failed";
   results.push_back(maybeFlattened->collapsedOp);
   rewriter.replaceOp(target, maybeFlattened->results);
   return DiagnosedSilenceableFailure::success();

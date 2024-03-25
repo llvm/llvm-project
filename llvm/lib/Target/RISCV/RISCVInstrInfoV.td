@@ -157,10 +157,8 @@ class SchedBinaryMC<string write, string read0, string read1,
 
 // For instructions with three operands.
 class SchedTernary<string write, string read0, string read1, string read2,
-                   string mx, int sew = 0, bit forceMasked = 0,
-                   bit forceMergeOpRead = 0>
-    : SchedNary<write, [read0, read1, read2], mx, sew, forceMasked,
-                forceMergeOpRead>;
+                   string mx, int sew = 0, bit forceMasked = 0>
+    : SchedNary<write, [read0, read1, read2], mx, sew, forceMasked>;
 class SchedTernaryMC<string write, string read0, string read1, string read2,
                      int sew = 0, bit forceMasked = 1>:
   SchedNary<write, [read0, read1, read2], "WorstCase", sew, forceMasked>;
@@ -1637,11 +1635,11 @@ def VID_V : RVInstV<0b010100, 0b10001, OPMVV, (outs VR:$vd),
 let vm = 1, RVVConstraint = NoConstraint in {
 def VMV_X_S : RVInstV<0b010000, 0b00000, OPMVV, (outs GPR:$vd),
                       (ins VR:$vs2), "vmv.x.s", "$vd, $vs2">,
-              Sched<[WriteVIMovVX, ReadVIMovVX]>;
+              Sched<[WriteVMovXS, ReadVMovXS]>;
 let Constraints = "$vd = $vd_wb" in
 def VMV_S_X : RVInstV2<0b010000, 0b00000, OPMVX, (outs VR:$vd_wb),
                       (ins VR:$vd, GPR:$rs1), "vmv.s.x", "$vd, $rs1">,
-              Sched<[WriteVIMovXV, ReadVIMovXV, ReadVIMovXX]>;
+              Sched<[WriteVMovSX, ReadVMovSX_V, ReadVMovSX_X]>;
 }
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
@@ -1655,11 +1653,11 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1,
 // Floating-Point Scalar Move Instructions
 def VFMV_F_S : RVInstV<0b010000, 0b00000, OPFVV, (outs FPR32:$vd),
                       (ins VR:$vs2), "vfmv.f.s", "$vd, $vs2">,
-               Sched<[WriteVFMovVF, ReadVFMovVF]>;
+               Sched<[WriteVMovFS, ReadVMovFS]>;
 let Constraints = "$vd = $vd_wb" in
 def VFMV_S_F : RVInstV2<0b010000, 0b00000, OPFVF, (outs VR:$vd_wb),
                        (ins VR:$vd, FPR32:$rs1), "vfmv.s.f", "$vd, $rs1">,
-               Sched<[WriteVFMovFV, ReadVFMovFV, ReadVFMovFX]>;
+               Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>;
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1
 

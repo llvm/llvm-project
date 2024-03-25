@@ -3635,12 +3635,13 @@ memOpsHaveSameBaseOperands(ArrayRef<const MachineOperand *> BaseOps1,
   return true;
 }
 
-static bool offsetsDoNotOverlap(int WidthA, int OffsetA,
-                                int WidthB, int OffsetB) {
+static bool offsetsDoNotOverlap(LocationSize WidthA, int OffsetA,
+                                LocationSize WidthB, int OffsetB) {
   int LowOffset = OffsetA < OffsetB ? OffsetA : OffsetB;
   int HighOffset = OffsetA < OffsetB ? OffsetB : OffsetA;
-  int LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
-  return LowOffset + LowWidth <= HighOffset;
+  LocationSize LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
+  return LowWidth.hasValue() &&
+         LowOffset + (int)LowWidth.getValue() <= HighOffset;
 }
 
 bool SIInstrInfo::checkInstOffsetsDoNotOverlap(const MachineInstr &MIa,
@@ -3662,8 +3663,8 @@ bool SIInstrInfo::checkInstOffsetsDoNotOverlap(const MachineInstr &MIa,
     // FIXME: Handle ds_read2 / ds_write2.
     return false;
   }
-  unsigned Width0 = MIa.memoperands().front()->getSize();
-  unsigned Width1 = MIb.memoperands().front()->getSize();
+  LocationSize Width0 = MIa.memoperands().front()->getSize();
+  LocationSize Width1 = MIb.memoperands().front()->getSize();
   return offsetsDoNotOverlap(Width0, Offset0, Width1, Offset1);
 }
 
@@ -3780,8 +3781,28 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
     for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
       MIB.add(MI.getOperand(I));
     updateLiveVariables(LV, MI, *MIB);
-    if (LIS)
+    if (LIS) {
       LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+      // SlotIndex of defs needs to be updated when converting to early-clobber
+      MachineOperand &Def = MIB->getOperand(0);
+      if (Def.isEarlyClobber() && Def.isReg() &&
+          LIS->hasInterval(Def.getReg())) {
+        SlotIndex OldIndex = LIS->getInstructionIndex(*MIB).getRegSlot(false);
+        SlotIndex NewIndex = LIS->getInstructionIndex(*MIB).getRegSlot(true);
+        auto &LI = LIS->getInterval(Def.getReg());
+        auto UpdateDefIndex = [&](LiveRange &LR) {
+          auto S = LR.find(OldIndex);
+          if (S != LR.end() && S->start == OldIndex) {
+            assert(S->valno && S->valno->def == OldIndex);
+            S->start = NewIndex;
+            S->valno->def = NewIndex;
+          }
+        };
+        UpdateDefIndex(LI);
+        for (auto &SR : LI.subranges())
+          UpdateDefIndex(SR);
+      }
+    }
     return MIB;
   }
 

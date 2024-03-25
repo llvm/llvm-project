@@ -487,6 +487,9 @@ public:
       const auto namePair{
           currScope().try_emplace(name->source, Attrs{}, ProcEntityDetails{})};
       auto &newSymbol{*namePair.first->second};
+      if (context_.intrinsics().IsIntrinsic(name->ToString())) {
+        newSymbol.attrs().set(Attr::INTRINSIC);
+      }
       name->symbol = &newSymbol;
     };
     if (const auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
@@ -1644,6 +1647,15 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
     if (llvm::omp::allParallelSet.test(targetIt->directive) ||
         llvm::omp::taskGeneratingSet.test(targetIt->directive)) {
       break;
+    }
+  }
+  // If this symbol already has a data-sharing attribute then there is nothing
+  // to do here.
+  if (const Symbol * symbol{iv.symbol}) {
+    for (auto symMap : targetIt->objectWithDSA) {
+      if (symMap.first->name() == symbol->name()) {
+        return;
+      }
     }
   }
   // If this symbol is already Private or Firstprivate in the enclosing

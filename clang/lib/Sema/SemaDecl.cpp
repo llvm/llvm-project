@@ -1192,9 +1192,13 @@ Corrected:
     return ParsedType::make(T);
   }
 
-  if (isa<ConceptDecl>(FirstDecl))
+  if (isa<ConceptDecl>(FirstDecl)) {
+    // We want to preserve the UsingShadowDecl for concepts.
+    if (auto *USD = dyn_cast<UsingShadowDecl>(Result.getRepresentativeDecl()))
+      return NameClassification::Concept(TemplateName(USD));
     return NameClassification::Concept(
         TemplateName(cast<TemplateDecl>(FirstDecl)));
+  }
 
   if (auto *EmptyD = dyn_cast<UnresolvedUsingIfExistsDecl>(FirstDecl)) {
     (void)DiagnoseUseOfDecl(EmptyD, NameLoc);
@@ -2266,12 +2270,6 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
                             << D << FD << FD->getParent());
       }
       ShadowingDecls.erase(ShadowI);
-    }
-
-    if (!getLangOpts().CPlusPlus && S->isClassScope()) {
-      if (auto *FD = dyn_cast<FieldDecl>(TmpD);
-          FD && FD->hasAttr<CountedByAttr>())
-        CheckCountedByAttr(S, FD);
     }
   }
 
@@ -11443,9 +11441,9 @@ static bool CheckMultiVersionFirstFunction(Sema &S, FunctionDecl *FD) {
          "Function lacks multiversion attribute");
   const auto *TA = FD->getAttr<TargetAttr>();
   const auto *TVA = FD->getAttr<TargetVersionAttr>();
-  // Target and target_version only causes MV if it is default, otherwise this
-  // is a normal function.
-  if ((TA && !TA->isDefaultVersion()) || (TVA && !TVA->isDefaultVersion()))
+  // The target attribute only causes MV if this declaration is the default,
+  // otherwise it is treated as a normal function.
+  if (TA && !TA->isDefaultVersion())
     return false;
 
   if ((TA || TVA) && CheckMultiVersionValue(S, FD)) {
@@ -16111,7 +16109,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
               FD->setInvalidDecl();
           }
         }
-      } else if (getLangOpts().CPlusPlus11 && isLambdaCallOperator(FD)) {
+      } else if (getLangOpts().CPlusPlus && isLambdaCallOperator(FD)) {
         // In C++11, we don't use 'auto' deduction rules for lambda call
         // operators because we don't support return type deduction.
         auto *LSI = getCurLambda();

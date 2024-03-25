@@ -315,6 +315,19 @@ public:
   Defined *dyldPrivate = nullptr;
 };
 
+class ObjCSelRefsHelper {
+public:
+  static void initialize();
+  static void cleanup();
+
+  static ConcatInputSection *getSelRef(StringRef methname);
+  static ConcatInputSection *makeSelRef(StringRef methname);
+
+private:
+  static llvm::DenseMap<llvm::CachedHashStringRef, ConcatInputSection *>
+      methnameToSelref;
+};
+
 // Objective-C stubs are hoisted objc_msgSend calls per selector called in the
 // program. Apple Clang produces undefined symbols to each stub, such as
 // '_objc_msgSend$foo', which are then synthesized by the linker. The stubs
@@ -324,7 +337,6 @@ public:
 class ObjCStubsSection final : public SyntheticSection {
 public:
   ObjCStubsSection();
-  void initialize();
   void addEntry(Symbol *sym);
   uint64_t getSize() const override;
   bool isNeeded() const override { return !symbols.empty(); }
@@ -338,7 +350,6 @@ public:
 
 private:
   std::vector<Defined *> symbols;
-  llvm::DenseMap<llvm::CachedHashStringRef, InputSection *> methnameToSelref;
   Symbol *objcMsgSend = nullptr;
 };
 
