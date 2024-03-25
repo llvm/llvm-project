@@ -42,6 +42,7 @@ namespace mlir::sparse_tensor {
 llvm::hash_code hash_value(LevelType lt) {
   return llvm::hash_value(static_cast<uint64_t>(lt));
 }
+
 } // namespace mlir::sparse_tensor
 
 //===----------------------------------------------------------------------===//
@@ -1990,12 +1991,13 @@ static void printLevelRange(OpAsmPrinter &p, Operation *, IntegerAttr lvlLo,
     p << lo << " to " << hi;
 }
 
-ParseResult
+static ParseResult
 parseSparseSpaceLoop(OpAsmParser &parser, OperationState &state,
                      SmallVectorImpl<OpAsmParser::Argument> &iterators,
                      SmallVectorImpl<OpAsmParser::Argument> &iterArgs) {
   SmallVector<OpAsmParser::UnresolvedOperand> spaces;
   SmallVector<OpAsmParser::UnresolvedOperand> initArgs;
+
   // Parses "%iters, ... in %spaces, ..."
   if (parser.parseArgumentList(iterators) || parser.parseKeyword("in") ||
       parser.parseOperandList(spaces))
@@ -2006,6 +2008,34 @@ parseSparseSpaceLoop(OpAsmParser &parser, OperationState &state,
         parser.getNameLoc(),
         "mismatch in number of sparse iterators and sparse spaces");
 
+  // Parse "at(%crd0, _, ...)"
+  LevelSet crdUsedLvlSet;
+  bool hasUsedCrds = succeeded(parser.parseOptionalKeyword("at"));
+  unsigned lvlCrdCnt = 0;
+  if (hasUsedCrds) {
+    ParseResult crdList = parser.parseCommaSeparatedList(
+        OpAsmParser::Delimiter::Paren, [&]() -> ParseResult {
+          if (parser.parseOptionalKeyword("_")) {
+            if (parser.parseArgument(iterArgs.emplace_back()))
+              return failure();
+            // Always use IndexType for the coordinate.
+            crdUsedLvlSet.set(lvlCrdCnt);
+            iterArgs.back().type = parser.getBuilder().getIndexType();
+          }
+          lvlCrdCnt += 1;
+          return success();
+        });
+    if (failed(crdList)) {
+      return parser.emitError(
+          parser.getNameLoc(),
+          "expecting SSA value or \"_\" for level coordinates");
+    }
+  }
+  // Set the CrdUsedLvl bitset.
+  state.addAttribute("crdUsedLvls",
+                     parser.getBuilder().getI64IntegerAttr(crdUsedLvlSet));
+
+  // Parse "iter_args(%arg = %init, ...)"
   bool hasIterArgs = succeeded(parser.parseOptionalKeyword("iter_args"));
   if (hasIterArgs)
     if (parser.parseAssignmentList(iterArgs, initArgs))
@@ -2026,6 +2056,10 @@ parseSparseSpaceLoop(OpAsmParser &parser, OperationState &state,
       return parser.emitError(parser.getNameLoc(),
                               "expected sparse_tensor.iter_space type for "
                               "iteration space operands");
+    if (hasUsedCrds && spaceTp.getSpaceDim() != lvlCrdCnt)
+      return parser.emitError(parser.getNameLoc(),
+                              "mismatch in number of iteration space dimension "
+                              "and specified coordinates");
     it.type = spaceTp.getIteratorType();
   }
 
@@ -2039,7 +2073,10 @@ parseSparseSpaceLoop(OpAsmParser &parser, OperationState &state,
     return failure();
 
   if (hasIterArgs) {
-    for (auto [it, init, tp] : llvm::zip(iterArgs, initArgs, state.types)) {
+    unsigned numCrds = crdUsedLvlSet.count();
+    // Strip off leading args that used for coordinates.
+    MutableArrayRef args = MutableArrayRef(iterArgs).drop_front(numCrds);
+    for (auto [it, init, tp] : llvm::zip_equal(args, initArgs, state.types)) {
       it.type = tp;
       if (parser.resolveOperand(init, tp, state.operands))
         return failure();
@@ -2090,30 +2127,32 @@ LogicalResult ExtractIterSpaceOp::verify() {
   return success();
 }
 
-ValueRange CoordinateOp::collaspeOpInto(OpBuilder &builder,
-                                        ArrayRef<Operation *> loops,
-                                        Operation *collapsed) {
-  assert(llvm::all_of(loops,
-                      [](Operation *l) { return llvm::isa<IterateOp>(l); }));
-  auto finalLoop = llvm::cast<IterateOp>(collapsed);
-  SmallVector<Type> retTps(finalLoop.getIterSpace().getType().getSpaceDim(),
-                           builder.getIndexType());
-  auto collapsedCoords =
-      builder.create<CoordinateOp>(getLoc(), retTps, finalLoop.getIterator());
+// ValueRange CoordinateOp::collaspeOpInto(OpBuilder &builder,
+//                                         ArrayRef<Operation *> loops,
+//                                         Operation *collapsed) {
+//   assert(llvm::all_of(loops,
+//                       [](Operation *l) { return llvm::isa<IterateOp>(l); }));
+//   auto finalLoop = llvm::cast<IterateOp>(collapsed);
+//   SmallVector<Type> retTps(finalLoop.getIterSpace().getType().getSpaceDim(),
+//                            builder.getIndexType());
+//   auto collapsedCoords =
+//       builder.create<CoordinateOp>(getLoc(), retTps,
+//       finalLoop.getIterator());
 
-  for (Operation *l : loops) {
-    if (getIterator().getParentBlock()->getParentOp() == l) {
-      auto space = llvm::cast<IterateOp>(l)
-                       .getIterSpace()
-                       .getDefiningOp<ExtractIterSpaceOp>();
+//   for (Operation *l : loops) {
+//     if (getIterator().getParentBlock()->getParentOp() == l) {
+//       auto space = llvm::cast<IterateOp>(l)
+//                        .getIterSpace()
+//                        .getDefiningOp<ExtractIterSpaceOp>();
 
-      return collapsedCoords.getResults().slice(space.getLoLvl(),
-                                                space.getSpaceDim());
-    }
-  }
-  llvm_unreachable(
-      "Can not find the corresponding iterate space for the collapsable op.");
-}
+//       return collapsedCoords.getResults().slice(space.getLoLvl(),
+//                                                 space.getSpaceDim());
+//     }
+//   }
+//   llvm_unreachable(
+//       "Can not find the corresponding iterate space for the collapsable
+//       op.");
+// }
 
 ParseResult IterateOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::Argument iterator;
@@ -2160,8 +2199,30 @@ static void printInitializationList(OpAsmPrinter &p,
   p << ")";
 }
 
+static void printUsedCrdsList(OpAsmPrinter &p, unsigned spaceDim,
+                              Block::BlockArgListType blocksArgs,
+                              LevelSet crdUsedLvls) {
+  if (crdUsedLvls.empty())
+    return;
+
+  p << " at(";
+  for (unsigned i = 0; i < spaceDim; i++) {
+    if (crdUsedLvls[i]) {
+      p << blocksArgs.front();
+      blocksArgs = blocksArgs.drop_front();
+    } else {
+      p << "_";
+    }
+    if (i != spaceDim - 1)
+      p << ", ";
+  }
+  assert(blocksArgs.empty());
+  p << ")";
+}
+
 void IterateOp::print(OpAsmPrinter &p) {
   p << " " << getIterator() << " in " << getIterSpace();
+  printUsedCrdsList(p, getSpaceDim(), getCrds(), getCrdUsedLvls());
   printInitializationList(p, getRegionIterArgs(), getInitArgs(), " iter_args");
 
   p << " : " << getIterSpace().getType() << " ";
@@ -2216,16 +2277,12 @@ LogicalResult IterateOp::verifyRegions() {
 /// IterateOp implemented interfaces' methods.
 SmallVector<Region *> IterateOp::getLoopRegions() { return {&getRegion()}; }
 
-std::optional<Value> IterateOp::getSingleInductionVar() {
-  return getIterator();
-}
-
 MutableArrayRef<OpOperand> IterateOp::getInitsMutable() {
   return getInitArgsMutable();
 }
 
 Block::BlockArgListType IterateOp::getRegionIterArgs() {
-  return getRegion().getArguments().drop_front();
+  return getRegion().getArguments().take_back(getNumRegionIterArgs());
 }
 
 std::optional<MutableArrayRef<OpOperand>> IterateOp::getYieldedValuesMutable() {

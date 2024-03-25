@@ -1456,36 +1456,42 @@ def ExtractIterSpaceOp : SparseTensor_Op<"iteration.extract_space",
                        " attr-dict `:` type($tensor) (`,` type($parentIter)^)?";
 }
 
-def CoordinateOp : SparseTensor_Op<"iteration.coordinate",
-    [Pure, DeclareOpInterfaceMethods<SparseCollapsableOpInterface>]> {
-  let arguments = (ins AnySparseIterator:$iterator);
-  let results = (outs Variadic<Index>:$crds);
-
-  let extraClassDeclaration = [{ }];
-  // let hasVerifier = 1;
-  let assemblyFormat = " $iterator attr-dict `:` type($iterator) `->` type($crds)";
-}
+// def CoordinateOp : SparseTensor_Op<"iteration.coordinate",
+//     [Pure, DeclareOpInterfaceMethods<SparseCollapsableOpInterface>]> {
+//   let arguments = (ins AnySparseIterator:$iterator);
+//   let results = (outs Variadic<Index>:$crds);
+//   let extraClassDeclaration = [{ }];
+//   // let hasVerifier = 1;
+//   let assemblyFormat = " $iterator attr-dict `:` type($iterator) `->` type($crds)";
+// }
 
 def IterateOp : SparseTensor_Op<"iterate",
     [RecursiveMemoryEffects, RecursivelySpeculatable,
      DeclareOpInterfaceMethods<LoopLikeOpInterface,
       ["getInitsMutable", "getLoopResults", "getRegionIterArgs",
-      "getSingleInductionVar", "getYieldedValuesMutable"]>,
+       "getYieldedValuesMutable"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
       ["getEntrySuccessorOperands"]>,
      SingleBlockImplicitTerminator<"sparse_tensor::YieldOp">]> {
 
   let arguments = (ins AnySparseIterSpace:$iterSpace,
-                       Variadic<AnyType>:$initArgs);
+                       Variadic<AnyType>:$initArgs,
+                       LevelSetAttr:$crdUsedLvls);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
 
   let extraClassDeclaration = [{
+    unsigned getSpaceDim() {
+      return getIterSpace().getType().getSpaceDim();
+    }
     BlockArgument getIterator() {
       return getRegion().getArguments().front();
     }
+    Block::BlockArgListType getCrds() {
+      return getRegion().getArguments().slice(1, getCrdUsedLvls().count());
+    }
     unsigned getNumRegionIterArgs() {
-      return getRegion().getArguments().size() - 1;
+      return getRegion().getArguments().size() - 1 - getCrdUsedLvls().count();
     }
   }];
 

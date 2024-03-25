@@ -24,7 +24,6 @@ struct CollapseSpaceInfo {
   ExtractIterSpaceOp space;
   // Coiteration as well (if make sense)?
   IterateOp loop;
-  SmallVector<SparseCollapsableOp> collapseOps;
 };
 
 bool isCollapsableLoops(LoopLikeOpInterface parent, LoopLikeOpInterface node) {
@@ -66,8 +65,6 @@ bool legalToCollapse(SmallVectorImpl<CollapseSpaceInfo> &toCollapse,
       CollapseSpaceInfo &info = toCollapse.emplace_back();
       info.space = curSpace;
       info.loop = itOp;
-      // No operations need to be collapsed at the root level;
-      info.collapseOps = {};
       return true;
     }
     return false;
@@ -91,29 +88,13 @@ bool legalToCollapse(SmallVectorImpl<CollapseSpaceInfo> &toCollapse,
   if (pItOp && !isCollapsableLoops(pItOp, nItOp))
     return false;
 
-  // TODO: Make sure all other operations in the same basic block as `node` can
-  // be collapsed and sink into the collapsed iteration (through Interfaces
-  // defined in TD files).
-  SmallVector<SparseCollapsableOp> collapsableOps;
-  for (Operation &op : *pItOp.getBody()) {
-    if (&op == curSpace.getOperation() || &op == nItOp.getOperation() ||
-        &op == pItOp.getBody()->getTerminator())
-      continue;
-    // All other ops in parent loop need to be collapsable.
-    auto collapsableOp = llvm::dyn_cast<SparseCollapsableOp>(&op);
-    if (!collapsableOp)
-      return false;
-    collapsableOps.push_back(collapsableOp);
-  }
-
   CollapseSpaceInfo &info = toCollapse.emplace_back();
   info.space = curSpace;
   info.loop = nItOp;
-  info.collapseOps = std::move(collapsableOps);
   return true;
 }
 
-void collapseSparseSpace(SmallVectorImpl<CollapseSpaceInfo> &toCollapse) {
+void collapseSparseSpace(MutableArrayRef<CollapseSpaceInfo> toCollapse) {
   if (toCollapse.size() < 2)
     return;
 
@@ -141,21 +122,22 @@ void collapseSparseSpace(SmallVectorImpl<CollapseSpaceInfo> &toCollapse) {
 
   auto cloned = llvm::cast<IterateOp>(builder.clone(*innermost, mapper));
   builder.setInsertionPointToStart(cloned.getBody());
-  SmallVector<Operation *> loops =
-      llvm::map_to_vector(toCollapse, [](CollapseSpaceInfo &info) {
-        return info.loop.getOperation();
-      });
 
-  for (const CollapseSpaceInfo &info : toCollapse) {
-    for (SparseCollapsableOp op : info.collapseOps) {
-      ValueRange colVals = op.collaspeOpInto(builder, loops, cloned);
-      for (auto [o, r] : llvm::zip(op->getResults(), colVals))
-        o.replaceAllUsesWith(r);
-      op.erase();
+  LevelSet crdUsedLvls;
+  unsigned shift = 0, argIdx = 1;
+  for (auto info : toCollapse.drop_back()) {
+    LevelSet set = info.loop.getCrdUsedLvls();
+    crdUsedLvls |= set.lshift(shift);
+    shift += info.loop.getSpaceDim();
+    for (BlockArgument crd : info.loop.getCrds()) {
+      BlockArgument collapsedCrd = cloned.getBody()->insertArgument(
+          argIdx++, builder.getIndexType(), crd.getLoc());
+      crd.replaceAllUsesWith(collapsedCrd);
     }
   }
-
+  crdUsedLvls |= innermost.getCrdUsedLvls().lshift(shift);
   cloned.getIterator().setType(collapsedSpace.getType().getIteratorType());
+  cloned.setCrdUsedLvls(crdUsedLvls);
 
   rItOp.replaceAllUsesWith(cloned.getResults());
   // Erase collapsed loops.
