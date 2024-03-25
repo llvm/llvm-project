@@ -1082,6 +1082,17 @@ bit_cast(const UInt<Bits> &from) {
   return cpp::bit_cast<To>(from.val);
 }
 
+// Specialization of cpp::popcount ('bit.h') for BigInt.
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+popcount(T value) {
+  int bits = 0;
+  for (auto word : value.val)
+    if (word)
+      bits += popcount(word);
+  return bits;
+}
+
 // Specialization of cpp::has_single_bit ('bit.h') for BigInt.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, bool>
