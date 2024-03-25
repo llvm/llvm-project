@@ -501,7 +501,7 @@ bool PostMachineScheduler::runOnMachineFunction(MachineFunction &mf) {
   // Instantiate the selected scheduler for this target, function, and
   // optimization level.
   std::unique_ptr<ScheduleDAGInstrs> Scheduler(createPostMachineScheduler());
-  ScheduleDAGInstrs::DumpDirection D;
+  ScheduleDAGMI::DumpDirection D;
   if (PostRADirection == MISchedPostRASched::TopDown)
     D = ScheduleDAGMI::DumpDirection::TopDown;
   else if (PostRADirection == MISchedPostRASched::BottomUp)
