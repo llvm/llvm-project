@@ -43,6 +43,7 @@
 // Avoid formatting to keep the changes with the original code minimal.
 // clang-format off
 
+#include <__bit/countr.h>
 #include <__charconv/chars_format.h>
 #include <__charconv/to_chars_result.h>
 #include <__config>
@@ -72,7 +73,7 @@ _LIBCPP_HIDE_FROM_ABI inline unsigned char _BitScanForward64(unsigned long* __in
   if (__mask == 0) {
     return false;
   }
-  *__index = __builtin_ctzll(__mask);
+  *__index = __libcpp_ctz(__mask);
   return true;
 }
 
@@ -80,7 +81,7 @@ _LIBCPP_HIDE_FROM_ABI inline unsigned char _BitScanForward(unsigned long* __inde
   if (__mask == 0) {
     return false;
   }
-  *__index = __builtin_ctz(__mask);
+  *__index = __libcpp_ctz(__mask);
   return true;
 }
 #endif  // !_MSC_VER

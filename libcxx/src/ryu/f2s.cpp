@@ -107,7 +107,7 @@ inline constexpr uint64_t __FLOAT_POW5_SPLIT[47] = {
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline bool __multipleOfPowerOf2(const uint32_t __value, const uint32_t __p) {
   _LIBCPP_ASSERT_INTERNAL(__value != 0, "");
   _LIBCPP_ASSERT_INTERNAL(__p < 32, "");
-  // __builtin_ctz doesn't appear to be faster here.
+  // __builtin_ctz/__builtin_ctzg doesn't appear to be faster here.
   return (__value & ((1u << __p) - 1)) == 0;
 }
 

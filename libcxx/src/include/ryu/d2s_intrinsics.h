@@ -249,7 +249,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline bool __multipleOfPowerOf2(const uint64_t __value, const uint32_t __p) {
   _LIBCPP_ASSERT_INTERNAL(__value != 0, "");
   _LIBCPP_ASSERT_INTERNAL(__p < 64, "");
-  // __builtin_ctzll doesn't appear to be faster here.
+  // __builtin_ctzll/__builtin_ctzg doesn't appear to be faster here.
   return (__value & ((1ull << __p) - 1)) == 0;
 }
 

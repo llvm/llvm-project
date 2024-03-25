@@ -24,15 +24,27 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_ctz(unsigned __x) _NOEXCEPT {
+#if __has_builtin(__builtin_ctzg)
+  return __builtin_ctzg(__x);
+#else
   return __builtin_ctz(__x);
+#endif
 }
 
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_ctz(unsigned long __x) _NOEXCEPT {
+#if __has_builtin(__builtin_ctzg)
+  return __builtin_ctzg(__x);
+#else
   return __builtin_ctzl(__x);
+#endif
 }
 
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_ctz(unsigned long long __x) _NOEXCEPT {
+#if __has_builtin(__builtin_ctzg)
+  return __builtin_ctzg(__x);
+#else
   return __builtin_ctzll(__x);
+#endif
 }
 
 template <class _Tp>

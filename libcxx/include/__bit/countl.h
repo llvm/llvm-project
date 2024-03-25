@@ -25,15 +25,27 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_clz(unsigned __x) _NOEXCEPT {
+#if __has_builtin(__builtin_clzg)
+  return __builtin_clzg(__x);
+#else
   return __builtin_clz(__x);
+#endif
 }
 
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_clz(unsigned long __x) _NOEXCEPT {
+#if __has_builtin(__builtin_clzg)
+  return __builtin_clzg(__x);
+#else
   return __builtin_clzl(__x);
+#endif
 }
 
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_clz(unsigned long long __x) _NOEXCEPT {
+#if __has_builtin(__builtin_clzg)
+  return __builtin_clzg(__x);
+#else
   return __builtin_clzll(__x);
+#endif
 }
 
 #ifndef _LIBCPP_HAS_NO_INT128
@@ -47,8 +59,12 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_clz(__uint128_t __x)
   // - Any bits set:
   //   - The number of leading zeros of the input is the number of leading
   //     zeros in the high 64-bits.
+#  if __has_builtin(__builtin_clzg)
+  return __builtin_clzg(__x);
+#  else
   return ((__x >> 64) == 0) ? (64 + __builtin_clzll(static_cast<unsigned long long>(__x)))
                             : __builtin_clzll(static_cast<unsigned long long>(__x >> 64));
+#  endif
 }
 #endif // _LIBCPP_HAS_NO_INT128
 
