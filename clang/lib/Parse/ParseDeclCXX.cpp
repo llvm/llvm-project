@@ -5064,12 +5064,9 @@ void Parser::ParseMicrosoftAttributes(ParsedAttributes &Attrs) {
 
         // For HLSL we want to handle all attributes, but for MSVC compat, we
         // silently ignore unknown Microsoft attributes.
-        AttributeCommonInfo Info{II, NameLoc,
-                                 AttributeCommonInfo::Form::Microsoft()};
-        const ParsedAttrInfo &AttrInfo = ParsedAttrInfo::get(Info);
-        if (getLangOpts().HLSL ||
-            AttrInfo.hasSpelling(AttributeCommonInfo::AS_Microsoft,
-                                 II->getName())) {
+        int Attr = hasAttribute(AttributeCommonInfo::Syntax::AS_Microsoft, nullptr,
+                                II, getTargetInfo(), getLangOpts());
+        if (getLangOpts().HLSL || Attr != 0) {
           bool AttrParsed = false;
           if (Tok.is(tok::l_paren)) {
             CachedTokens OpenMPTokens;
