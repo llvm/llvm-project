@@ -1730,14 +1730,29 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
       thread_sp = memory_thread_sp;
 
     if (exc_type != 0) {
-      const size_t exc_data_size = exc_data.size();
-
-      thread_sp->SetStopInfo(
-          StopInfoMachException::CreateStopReasonWithMachException(
-              *thread_sp, exc_type, exc_data_size,
-              exc_data_size >= 1 ? exc_data[0] : 0,
-              exc_data_size >= 2 ? exc_data[1] : 0,
-              exc_data_size >= 3 ? exc_data[2] : 0));
+      if (m_interrupt_tid != LLDB_INVALID_THREAD_ID) {
+        {
+          std::lock_guard<std::recursive_mutex> guard(
+              m_thread_list_real.GetMutex());
+          thread_sp = m_thread_list_real.FindThreadByProtocolID(
+              m_interrupt_tid, /*can_update=*/false);
+        }
+        if (thread_sp) {
+          thread_sp->SetStopInfo(
+              StopInfo::CreateStopReasonWithInterrupt(
+                  *thread_sp, signo, description.c_str()));
+        }
+        // TODO: if thread_sp is null use the original one.
+        m_interrupt_tid = LLDB_INVALID_THREAD_ID;
+      } else {
+        const size_t exc_data_size = exc_data.size();
+        thread_sp->SetStopInfo(
+            StopInfoMachException::CreateStopReasonWithMachException(
+                *thread_sp, exc_type, exc_data_size,
+                exc_data_size >= 1 ? exc_data[0] : 0,
+                exc_data_size >= 2 ? exc_data[1] : 0,
+                exc_data_size >= 3 ? exc_data[2] : 0));
+      }
     } else {
       bool handled = false;
       bool did_exec = false;
@@ -1936,9 +1951,22 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
                   *thread_sp, signo, description.c_str()));
           }
         }
-        if (!handled)
-          thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithSignal(
-              *thread_sp, signo, description.c_str()));
+        if (!handled) {
+          // For thread plan async interrupt, creating stop info on the
+          // async interrupt request thread instead.
+          if (m_interrupt_tid != LLDB_INVALID_THREAD_ID) {
+            std::lock_guard<std::recursive_mutex> guard(
+                m_thread_list_real.GetMutex());
+            thread_sp = m_thread_list_real.FindThreadByProtocolID(
+                m_interrupt_tid, /*can_update=*/false);
+            if (thread_sp)
+              thread_sp->SetStopInfo(
+                  StopInfo::CreateStopReasonWithInterrupt(
+                      *thread_sp, signo, description.c_str()));
+          } else
+            thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithSignal(
+                *thread_sp, signo, description.c_str()));
+        }
       }
 
       if (!description.empty()) {

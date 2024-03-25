@@ -1317,6 +1317,8 @@ public:
 
   void SendAsyncInterrupt();
 
+  void SendAsyncInterrupt(Thread *thread);
+
   // Notify this process class that modules got loaded.
   //
   // If subclasses override this method, they must call this version before
@@ -3101,7 +3103,7 @@ protected:
                            // m_currently_handling_do_on_removals are true,
                            // Resume will only request a resume, using this
                            // flag to check.
-
+  lldb::tid_t m_interrupt_tid;
   /// This is set at the beginning of Process::Finalize() to stop functions
   /// from looking up or creating things during or after a finalize call.
   std::atomic<bool> m_finalizing;

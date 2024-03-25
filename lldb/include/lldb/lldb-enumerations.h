@@ -253,6 +253,7 @@ enum StopReason {
   eStopReasonFork,
   eStopReasonVFork,
   eStopReasonVForkDone,
+  eStopReasonInterrupt, ///< Thread requested interrupt
 };
 
 /// Command Return Status Types.

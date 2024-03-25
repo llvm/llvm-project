@@ -3680,6 +3680,14 @@ void Process::ControlPrivateStateThread(uint32_t signal) {
 }
 
 void Process::SendAsyncInterrupt() {
+  SendAsyncInterrupt(nullptr);
+}
+
+void Process::SendAsyncInterrupt(Thread *thread) {
+  if (thread != nullptr)
+    m_interrupt_tid = thread->GetProtocolID();
+  else
+    m_interrupt_tid = LLDB_INVALID_THREAD_ID;
   if (PrivateStateThreadIsValid())
     m_private_state_broadcaster.BroadcastEvent(Process::eBroadcastBitInterrupt,
                                                nullptr);
@@ -3905,9 +3913,11 @@ thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
 
       if (interrupt_requested) {
         if (StateIsStoppedState(internal_state, true)) {
-          // We requested the interrupt, so mark this as such in the stop event
-          // so clients can tell an interrupted process from a natural stop
-          ProcessEventData::SetInterruptedInEvent(event_sp.get(), true);
+          if (m_interrupt_tid == LLDB_INVALID_THREAD_ID) {
+            // We requested the interrupt, so mark this as such in the stop event
+            // so clients can tell an interrupted process from a natural stop
+            ProcessEventData::SetInterruptedInEvent(event_sp.get(), true);
+          }
           interrupt_requested = false;
         } else if (log) {
           LLDB_LOGF(log,

@@ -136,6 +136,11 @@ bool ThreadPlanStepOverRange::IsEquivalentContext(
   return m_addr_context.symbol && m_addr_context.symbol == context.symbol;
 }
 
+void ThreadPlanStepOverRange::SetStopOthers(bool stop_others) {
+  if (!stop_others)
+    m_stop_others = RunMode::eAllThreads;
+}
+
 bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
   Log *log = GetLog(LLDBLog::Step);
   Thread &thread = GetThread();

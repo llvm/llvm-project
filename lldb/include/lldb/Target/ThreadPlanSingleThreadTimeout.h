@@ -46,7 +46,7 @@ public:
   bool ValidatePlan(Stream *error) override { return true; }
   bool WillStop() override { return true; }
   bool DoPlanExplainsStop(Event *event_ptr) override { return true; }
-  lldb::StateType GetPlanRunState() override { return lldb::eStateRunning; }
+  lldb::StateType GetPlanRunState() override { return lldb::eStateStepping; }
   static void thread_function(ThreadPlanSingleThreadTimeout *self) {
     int timeout_ms = 5000; // 5 seconds timeout
     std::this_thread::sleep_for(
@@ -94,9 +94,11 @@ protected:
               "ThreadPlanSingleThreadTimeout::HandleEvent(): got event: %s.",
               StateAsCString(stop_state));
 
+    lldb::StopInfoSP stop_info = GetThread().GetStopInfo();
     bool should_stop = true;
     if (m_state == SingleThreadPlanTimeoutState::TimeoutHalt &&
-        stop_state == lldb::eStateStopped) {
+        stop_state == lldb::eStateStopped && stop_info &&
+        stop_info->GetStopReason() == lldb::eStopReasonInterrupt) {
       if (Process::ProcessEventData::GetRestartedFromEvent(event_ptr)) {
         // If we were restarted, we just need to go back up to fetch
         // another event.
@@ -105,7 +107,10 @@ protected:
                  "restart, so we'll continue waiting.");
 
       } else {
-        GetThread().GetCurrentPlan()->SetStopOthers(false);
+        LLDB_LOGF(
+            log, "ThreadPlanSingleThreadTimeout::HandleEvent(): Got async interrupt "
+                 ", so we will resume all threads.");
+        GetThread().SetStopOthers(false);
         m_state = SingleThreadPlanTimeoutState::ResumingAllThreads;
       }
       should_stop = false;
@@ -117,8 +122,11 @@ protected:
   }
 
   void HandleTimeout() {
+    Log *log = GetLog(LLDBLog::Step);
+    LLDB_LOGF(log,
+              "ThreadPlanSingleThreadTimeout::HandleTimeout() send async interrupt.");
     m_state = SingleThreadPlanTimeoutState::TimeoutHalt;
-    m_process.SendAsyncInterrupt();
+    m_process.SendAsyncInterrupt(&GetThread());
   }
 
 private:

@@ -29,6 +29,9 @@ public:
   void GetDescription(Stream *s, lldb::DescriptionLevel level) override;
   bool ValidatePlan(Stream *error) override;
   bool ShouldStop(Event *event_ptr) override;
+  void SetStopOthers(bool new_value) override {
+    m_stop_others = new_value;
+  }
   bool StopOthers() override;
   lldb::StateType GetPlanRunState() override;
   bool WillStop() override;

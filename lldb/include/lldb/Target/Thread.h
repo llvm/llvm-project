@@ -259,6 +259,8 @@ public:
 
   virtual const char *GetInfo() { return nullptr; }
 
+  void SetStopOthers(bool stop_others);
+
   /// Retrieve a dictionary of information about this thread
   ///
   /// On Mac OS X systems there may be voucher information.

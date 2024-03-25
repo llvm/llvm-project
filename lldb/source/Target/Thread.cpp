@@ -1056,6 +1056,14 @@ bool Thread::MatchesSpec(const ThreadSpec *spec) {
   return (spec == nullptr) ? true : spec->ThreadPassesBasicTests(*this);
 }
 
+void Thread::SetStopOthers(bool stop_others) {
+  auto plan = GetCurrentPlan();
+  while (plan) {
+    plan->SetStopOthers(stop_others);
+    plan = GetPreviousPlan(plan);
+  }
+}
+
 ThreadPlanStack &Thread::GetPlans() const {
   ThreadPlanStack *plans = GetProcess()->FindThreadPlans(GetID());
   if (plans)
