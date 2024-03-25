@@ -6069,6 +6069,9 @@ def AlwaysDestroyDocs : Documentation {
 The ``always_destroy`` attribute specifies that a variable with static or thread
 storage duration should have its exit-time destructor run. This attribute is the
 default unless clang was invoked with -fno-c++-static-destructors.
+
+If a variable is explicity declared with this attribute clang will silence the
+exit-time destructor warning.
   }];
 }
 
