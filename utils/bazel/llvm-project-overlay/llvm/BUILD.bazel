@@ -623,7 +623,7 @@ cc_library(
     srcs = [
         "utils/TableGen/Common/GlobalISel/CodeExpander.cpp",
     ],
-    hdrs = glob([
+    hdrs = [
         # We have to include these headers here as well as in the `hdrs` below
         # to allow the `.cpp` files to use file-relative-inclusion to find
         # them, even though consumers of this library use inclusion relative to
@@ -631,7 +631,7 @@ cc_library(
         # This mixture appears to be incompatible with header modules.
         "utils/TableGen/Common/GlobalISel/CodeExpander.h",
         "utils/TableGen/Common/GlobalISel/CodeExpansions.h",
-    ]),
+    ],
     copts = llvm_copts,
     features = ["-header_modules"],
     strip_include_prefix = "utils/TableGen",
@@ -665,10 +665,11 @@ cc_binary(
             # listed here. MC uses headers produced by tablegen, so it cannot be a
             # regular dependency.
             "include/llvm/MC/*.h",
-            "include/llvm/TargetParser/SubtargetFeature.h",
         ],
         exclude = ["utils/TableGen/Common/GlobalISel/CodeExpander.cpp"],
-    ),
+    ) + [
+        "include/llvm/TargetParser/SubtargetFeature.h",
+    ],
     copts = llvm_copts,
     includes = ["utils/TableGen"],
     stamp = 0,
