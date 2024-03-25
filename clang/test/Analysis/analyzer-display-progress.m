@@ -8,7 +8,7 @@
 
 void clang_analyzer_warnIfReached();
 
-// expected-note@+2 {{[invisible] analyzing from f}}
+// expected-note@+2 {{[debug] analyzing from f}}
 // expected-warning@+1 {{REACHABLE}} expected-note@+1 {{REACHABLE}}
 static void f(void) { clang_analyzer_warnIfReached(); }
 
@@ -25,7 +25,7 @@ static void f(void) { clang_analyzer_warnIfReached(); }
 +(void)classMethod { clang_analyzer_warnIfReached(); }
 @end
 
-// expected-note@+1 3 {{[invisible] analyzing from g}}
+// expected-note@+1 3 {{[debug] analyzing from g}}
 void g(I *i, int x, int y) {
   [I classMethod]; // expected-note {{Calling 'classMethod'}}
   [i instanceMethod: x with: y]; // expected-note {{Calling 'instanceMethod:with:'}}

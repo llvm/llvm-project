@@ -23,26 +23,26 @@ void other() {
 }
 
 struct SomeOtherStruct {
-  // CHECK: note: [invisible] analyzing from SomeOtherStruct::f()
+  // CHECK: note: [debug] analyzing from SomeOtherStruct::f()
   // CHECK-NEXT: |   void f() {
   // CHECK-NEXT: |        ^
-  // textout-note@+1 {{[invisible] analyzing from SomeOtherStruct::f()}}
+  // textout-note@+1 {{[debug] analyzing from SomeOtherStruct::f()}}
   void f() {
     other(); // textout-note {{Calling 'other'}}
   }
 };
 
-// CHECK: note: [invisible] analyzing from operator""_w(const char *)
+// CHECK: note: [debug] analyzing from operator""_w(const char *)
 // CHECK-NEXT: | unsigned operator ""_w(const char*) {
 // CHECK-NEXT: |          ^
-// textout-note@+1 {{[invisible] analyzing from operator""_w(const char *)}}
+// textout-note@+1 {{[debug] analyzing from operator""_w(const char *)}}
 unsigned operator ""_w(const char*) {
   // common-warning@+1 {{REACHABLE}} textout-note@+1 {{REACHABLE}}
   clang_analyzer_warnIfReached();
   return 404;
 }
 
-// textout-note@+1 {{[invisible] analyzing from checkASTCodeBodyHasAnalysisEntryPoints()}}
+// textout-note@+1 {{[debug] analyzing from checkASTCodeBodyHasAnalysisEntryPoints()}}
 void checkASTCodeBodyHasAnalysisEntryPoints() {
   int z = 1;
   z = 2;
@@ -51,10 +51,10 @@ void checkASTCodeBodyHasAnalysisEntryPoints() {
 }
 
 void notInvokedLambdaScope() {
-  // CHECK: note: [invisible] analyzing from notInvokedLambdaScope()::(anonymous class)::operator()()
+  // CHECK: note: [debug] analyzing from notInvokedLambdaScope()::(anonymous class)::operator()()
   // CHECK-NEXT: |   auto notInvokedLambda = []() {
   // CHECK-NEXT: |                           ^
-  // textout-note@+1 {{[invisible] analyzing from notInvokedLambdaScope()::(anonymous class)::operator()()}}
+  // textout-note@+1 {{[debug] analyzing from notInvokedLambdaScope()::(anonymous class)::operator()()}}
   auto notInvokedLambda = []() {
     // common-warning@+1 {{REACHABLE}} textout-note@+1 {{REACHABLE}}
     clang_analyzer_warnIfReached();
@@ -62,10 +62,10 @@ void notInvokedLambdaScope() {
   (void)notInvokedLambda; // Not invoking the lambda.
 }
 
-// CHECK: note: [invisible] analyzing from invokedLambdaScope()
+// CHECK: note: [debug] analyzing from invokedLambdaScope()
 // CHECK-NEXT: | void invokedLambdaScope() {
 // CHECK-NEXT: |      ^
-// textout-note@+1 {{[invisible] analyzing from invokedLambdaScope()}}
+// textout-note@+1 {{[debug] analyzing from invokedLambdaScope()}}
 void invokedLambdaScope() {
   auto invokedLambda = []() {
     // common-warning@+1 {{REACHABLE}} textout-note@+1 {{REACHABLE}}

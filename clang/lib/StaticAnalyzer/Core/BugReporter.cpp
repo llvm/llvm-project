@@ -3135,7 +3135,7 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
       const Decl *EntryPoint = getAnalysisEntryPoint();
       Pieces.push_front(std::make_shared<PathDiagnosticEventPiece>(
           PathDiagnosticLocation{EntryPoint->getLocation(), getSourceManager()},
-          "[invisible] analyzing from " +
+          "[debug] analyzing from " +
               AnalysisDeclContext::getFunctionName(EntryPoint)));
     }
     Consumer->HandlePathDiagnostic(std::move(PD));
