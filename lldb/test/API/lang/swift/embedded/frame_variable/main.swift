@@ -62,6 +62,27 @@ class SubSub: Sub {
   var subSubField = A()
 }
 
+
+struct GenericStructPair<T, U> {
+  let t: T
+  let u: U
+}
+
+class GenericClassPair<T, U> {
+  let t: T
+  let u: U
+
+  init(t: T, u: U) {
+    self.t = t
+    self.u = u
+  }
+}
+
+enum Either<Left, Right> {
+  case left(Left)
+  case right(Right)
+}
+
 let varB = B()
 let tuple = (A(), B())
 let trivial = TrivialEnum.theCase
@@ -85,6 +106,12 @@ let sup = Sup()
 let sub = Sub()
 let subSub = SubSub()
 let sup2: Sup = SubSub()
+let gsp = GenericStructPair(t: 42, u: 94.3)
+let gsp2 = GenericStructPair(t: Sup(), u: B())
+let gsp3 = GenericStructPair(t: bigFullMultipayloadEnum1, u: smallMultipayloadEnum2)
+let gcp = GenericClassPair(t: 43.8, u: 9348)
+let either = Either<Int, Double>.left(1234)
+let either2 = Either<Sup, _>.right(gsp3)
 
 // Dummy statement to set breakpoint print can't be used in embedded Swift for now.
 let dummy = A() // break here

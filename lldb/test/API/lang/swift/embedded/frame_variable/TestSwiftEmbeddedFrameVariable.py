@@ -129,3 +129,61 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
                 "subSubField = (field = 4.2000000000000002)",
             ],
         )
+
+        self.expect(
+            "frame variable gsp",
+            substrs=[
+                "GenericStructPair<Int, Double>) gsp =",
+                "(t = 42, u = 94.299999999999997)",
+            ],
+        )
+
+        self.expect(
+            "frame variable gsp2",
+            substrs=[
+                "a.GenericStructPair<a.Sup, a.B>) gsp2 = {",
+                "t = ",
+                "(supField = 42)",
+                "u = {",
+                "a = (field = 4.2000000000000002)",
+                "b = 123456",
+            ],
+        )
+
+        self.expect(
+            "frame variable gsp3",
+            substrs=[
+                "(a.GenericStructPair<a.BigFullMultipayloadEnum,",
+                "a.SmallMultipayloadEnum>) gsp3 = {",
+                "t = one {",
+                "one = (0 = 209, 1 = 315)",
+                "u = two {",
+            ],
+        )
+
+        self.expect(
+            "frame variable gcp",
+            substrs=[
+                "GenericClassPair<Double, Int>) gcp =",
+                "(t = 43.799999999999997, u = 9348)",
+            ],
+        )
+
+        self.expect(
+            "frame variable either",
+            substrs=["(a.Either<Int, Double>) either =", "left (left = 1234)"],
+        )
+
+        self.expect(
+            "frame variable either2",
+            substrs=[
+                "(a.Either<a.Sup, a.GenericStructPair<a.BigFullMultipayloadEnum,",
+                "a.SmallMultipayloadEnum>>)",
+                "either2 = right {",
+                "right = {",
+                "t = one {",
+                "one = (0 = 209, 1 = 315)",
+                "u = two {",
+                "two = one",
+            ],
+        )
