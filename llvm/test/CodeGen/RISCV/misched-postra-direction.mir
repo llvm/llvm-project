@@ -64,3 +64,6 @@ body:             |
 
 # BIDIRECTIONAL: *** Final schedule for %bb.0 ***
 # BIDIRECTIONAL-NEXT: * Schedule table (Bidirectional): not implemented
+# BIDIRECTIONAL-NEXT: SU(1):   renamable $x13 = ADD renamable $x11, renamable $x10
+# BIDIRECTIONAL-NEXT: SU(0):   renamable $x12 = MUL renamable $x11, renamable $x10
+# BIDIRECTIONAL-NEXT: SU(2):   renamable $x14 = DIVW renamable $x12, renamable $x13
