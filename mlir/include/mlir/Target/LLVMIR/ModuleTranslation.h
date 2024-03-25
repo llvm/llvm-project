@@ -201,6 +201,13 @@ public:
   /// Translates the given LLVM debug info metadata.
   llvm::Metadata *translateDebugInfo(LLVM::DINodeAttr attr);
 
+  /// Translates the given LLVM rounding mode metadata.
+  llvm::RoundingMode translateRoundingMode(LLVM::RoundingMode rounding);
+
+  /// Translates the given LLVM FP exception behavior metadata.
+  llvm::fp::ExceptionBehavior
+  translateFPExceptionBehavior(LLVM::FPExceptionBehavior exceptionBehavior);
+
   /// Translates the contents of the given block to LLVM IR using this
   /// translator. The LLVM IR basic block corresponding to the given block is
   /// expected to exist in the mapping of this translator. Uses `builder` to
@@ -422,10 +429,6 @@ llvm::CallInst *createIntrinsicCall(
     ArrayRef<unsigned> overloadedResults, ArrayRef<unsigned> overloadedOperands,
     ArrayRef<unsigned> immArgPositions,
     ArrayRef<StringLiteral> immArgAttrNames);
-
-llvm::CallInst *createConstrainedIntrinsicCall(
-    llvm::IRBuilderBase &builder, ModuleTranslation &moduleTranslation,
-    Operation *intrOp, llvm::Intrinsic::ID intrinsic);
 
 } // namespace detail
 

@@ -313,11 +313,15 @@ def LLVM_InvariantEndOp : LLVM_ZeroResultIntrOp<"invariant.end", [2],
 
 // Constrained Floating-Point Intrinsics
 
-class LLVM_ConstrainedIntr<string mnem, int numArgs, bit hasRoundingMode>
+class LLVM_ConstrainedIntr<string mnem, int numArgs,
+                           bit overloadedResult, list<int> overloadedOperands,
+                           bit hasRoundingMode>
     : LLVM_OneResultIntrOp<"experimental.constrained." # mnem,
-                           /*overloadedResults=*/[0],
-                           /*overloadedOperands=*/[0],
-                           /*traits=*/[Pure, DeclareOpInterfaceMethods<ExceptionBehaviorOpInterface>]
+                           /*overloadedResults=*/
+                           !cond(!gt(overloadedResult, 0) : [0],
+                                 true : []),
+                           overloadedOperands,
+                           /*traits=*/[Pure, DeclareOpInterfaceMethods<FPExceptionBehaviorOpInterface>]
                            # !cond(
                                !gt(hasRoundingMode, 0) : [DeclareOpInterfaceMethods<RoundingModeOpInterface>],
                                true : []),
@@ -327,28 +331,73 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs, bit hasRoundingMode>
   dag regularArgs = !dag(ins, !listsplat(LLVM_Type, numArgs), !foreach(i, !range(numArgs), "arg_" #i));
   dag attrArgs = !con(!cond(!gt(hasRoundingMode, 0) : (ins ValidRoundingModeAttr:$roundingmode),
                             true : (ins)),
-                      (ins ExceptionBehaviorAttr:$exceptionbehavior));
+                      (ins FPExceptionBehaviorAttr:$fpExceptionBehavior));
   let arguments = !con(regularArgs, attrArgs);
   let llvmBuilder = [{
-    $res = LLVM::detail::createConstrainedIntrinsicCall(
-      builder, moduleTranslation, &opInst, llvm::Intrinsic::experimental_constrained_}]
-       # mnem
-       # [{);
+    SmallVector<llvm::Value *> args =
+      moduleTranslation.lookupValues(opInst.getOperands());
+    SmallVector<llvm::Type *> overloadedTypes; }] #
+    !cond(!gt(overloadedResult, 0) : [{
+    // Take into account overloaded result type
+    overloadedTypes.push_back($_resultType); }],
+    // No overloaded result type
+          true : "") # [{
+    llvm::transform(ArrayRef<unsigned>}] # overloadedOperandsCpp # [{,
+                    std::back_inserter(overloadedTypes),
+                    [&args](unsigned index) { return args[index]->getType(); });
+    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Function *callee =
+      llvm::Intrinsic::getDeclaration(module,
+        llvm::Intrinsic::experimental_constrained_}] #
+    mnem # [{, overloadedTypes); }] #
+    !cond(!gt(hasRoundingMode, 0) : [{
+    // Get rounding mode using interface
+    llvm::RoundingMode rounding =
+        moduleTranslation.translateRoundingMode($roundingmode); }],
+          true : [{
+    // No rounding mode
+    std::optional<llvm::RoundingMode> rounding; }]) # [{
+    llvm::fp::ExceptionBehavior except =
+      moduleTranslation.translateFPExceptionBehavior($fpExceptionBehavior);
+    $res = builder.CreateConstrainedFPCall(callee, args, "", rounding, except);
   }];
   let mlirBuilder = [{
-    auto op = moduleImport.translateConstrainedIntrinsic(
-      $_location, $_resultType, llvmOperands,
-      $_qualCppClassName::getOperationName());
-    if (!op)
+    SmallVector<Value> mlirOperands;
+    SmallVector<NamedAttribute> mlirAttrs;
+    if (failed(moduleImport.convertIntrinsicArguments(
+        llvmOperands.take_front( }] # numArgs # [{),
+        {}, {}, mlirOperands, mlirAttrs))) {
       return failure();
-    $res = op;
+    }
+
+    FPExceptionBehaviorAttr fpExceptionBehaviorAttr =
+        $_fpExceptionBehavior_attr($fpExceptionBehavior);
+    if (!fpExceptionBehaviorAttr)
+      return failure();
+    mlirAttrs.push_back(
+        $_builder.getNamedAttr(
+            $_qualCppClassName::getFPExceptionBehaviorAttrName(),
+            fpExceptionBehaviorAttr)); }] #
+    !cond(!gt(hasRoundingMode, 0) : [{
+    RoundingModeAttr roundingModeAttr =
+        $_roundingMode_attr($roundingmode);
+    if (!roundingModeAttr)
+      return failure();
+    mlirAttrs.push_back(
+        $_builder.getNamedAttr($_qualCppClassName::getRoundingModeAttrName(),
+                               roundingModeAttr));
+    }], true : "") # [{
+    $res = $_builder.create<$_qualCppClassName>($_location,
+      $_resultType, mlirOperands, mlirAttrs);
   }];
 }
 
 def LLVM_ConstrainedFPTruncIntr
-    : LLVM_ConstrainedIntr<"fptrunc", /*numArgs=*/1, /*hasRoundingMode=*/1> {
+    : LLVM_ConstrainedIntr<"fptrunc", /*numArgs=*/1,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[0],
+        /*hasRoundingMode=*/1> {
   let assemblyFormat = [{
-    $arg_0 $roundingmode $exceptionbehavior attr-dict `:` type($arg_0) `to` type(results)
+    $arg_0 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0) `to` type(results)
   }];
 }
 

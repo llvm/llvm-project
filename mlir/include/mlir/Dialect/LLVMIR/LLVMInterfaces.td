@@ -290,7 +290,7 @@ def GetResultPtrElementType : OpInterface<"GetResultPtrElementType"> {
   ];
 }
 
-def ExceptionBehaviorOpInterface : OpInterface<"ExceptionBehaviorOpInterface"> {
+def FPExceptionBehaviorOpInterface : OpInterface<"FPExceptionBehaviorOpInterface"> {
   let description = [{
     An interface for operations receiving an exception behavior attribute
     controlling FP exception behavior.
@@ -300,25 +300,25 @@ def ExceptionBehaviorOpInterface : OpInterface<"ExceptionBehaviorOpInterface"> {
 
   let methods = [
     InterfaceMethod<
-      /*desc=*/        "Returns a ExceptionBehavior attribute for the operation",
-      /*returnType=*/  "ExceptionBehaviorAttr",
-      /*methodName=*/  "getExceptionBehaviorAttr",
+      /*desc=*/        "Returns a FPExceptionBehavior attribute for the operation",
+      /*returnType=*/  "FPExceptionBehaviorAttr",
+      /*methodName=*/  "getFPExceptionBehaviorAttr",
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
         auto op = cast<ConcreteOp>(this->getOperation());
-        return op.getExceptionbehaviorAttr();
+        return op.getFpExceptionBehaviorAttr();
       }]
     >,
     StaticInterfaceMethod<
-      /*desc=*/        [{Returns the name of the ExceptionBehaviorAttr attribute
-                         for the operation}],
+      /*desc=*/        [{Returns the name of the FPExceptionBehaviorAttr
+                        attribute for the operation}],
       /*returnType=*/  "StringRef",
-      /*methodName=*/  "getExceptionBehaviorAttrName",
+      /*methodName=*/  "getFPExceptionBehaviorAttrName",
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
-        return "exceptionbehavior";
+        return "fpExceptionBehavior";
       }]
     >
   ];

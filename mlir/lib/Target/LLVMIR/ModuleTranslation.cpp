@@ -862,29 +862,6 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
   return builder.CreateCall(llvmIntr, args);
 }
 
-llvm::CallInst *mlir::LLVM::detail::createConstrainedIntrinsicCall(
-    llvm::IRBuilderBase &builder, ModuleTranslation &moduleTranslation,
-    Operation *intrOp, llvm::Intrinsic::ID intrinsic) {
-  llvm::Module *module = builder.GetInsertBlock()->getModule();
-  SmallVector<llvm::Type *> overloadedTypes{
-      moduleTranslation.convertType(intrOp->getResult(0).getType()),
-      moduleTranslation.convertType(intrOp->getOperand(0).getType())};
-  llvm::Function *callee =
-      llvm::Intrinsic::getDeclaration(module, intrinsic, overloadedTypes);
-  SmallVector<llvm::Value *> args =
-      moduleTranslation.lookupValues(intrOp->getOperands());
-  std::optional<llvm::RoundingMode> rounding;
-  if (auto roundingModeOp = dyn_cast<RoundingModeOpInterface>(intrOp)) {
-    rounding = convertRoundingModeToLLVM(
-        roundingModeOp.getRoundingModeAttr().getValue());
-  }
-  llvm::fp::ExceptionBehavior except =
-      convertExceptionBehaviorToLLVM(cast<ExceptionBehaviorOpInterface>(intrOp)
-                                         .getExceptionBehaviorAttr()
-                                         .getValue());
-  return builder.CreateConstrainedFPCall(callee, args, "", rounding, except);
-}
-
 /// Given a single MLIR operation, create the corresponding LLVM IR operation
 /// using the `builder`.
 LogicalResult ModuleTranslation::convertOperation(Operation &op,
@@ -1742,6 +1719,18 @@ ModuleTranslation::translateGlobalVariableExpression(
 
 llvm::Metadata *ModuleTranslation::translateDebugInfo(LLVM::DINodeAttr attr) {
   return debugTranslation->translate(attr);
+}
+
+/// Translates the given LLVM rounding mode metadata.
+llvm::RoundingMode
+ModuleTranslation::translateRoundingMode(LLVM::RoundingMode rounding) {
+  return convertRoundingModeToLLVM(rounding);
+}
+
+/// Translates the given LLVM FP exception behavior metadata.
+llvm::fp::ExceptionBehavior ModuleTranslation::translateFPExceptionBehavior(
+    LLVM::FPExceptionBehavior exceptionBehavior) {
+  return convertFPExceptionBehaviorToLLVM(exceptionBehavior);
 }
 
 llvm::NamedMDNode *

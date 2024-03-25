@@ -741,24 +741,24 @@ def RoundingModeAttr : LLVM_EnumAttr<
 def ValidRoundingModeAttr : ConfinedAttr<RoundingModeAttr, [IntMinValue<0>]>;
 
 //===----------------------------------------------------------------------===//
-// ExceptionBehavior
+// FPExceptionBehavior
 //===----------------------------------------------------------------------===//
 
 // These values must match llvm::fp::ExceptionBehavior ones.
 // See llvm/include/llvm/IR/FPEnv.h.
-def ExceptionBehaviorIgnore
+def FPExceptionBehaviorIgnore
     : LLVM_EnumAttrCase<"Ignore", "ignore", "ebIgnore", 0>;
-def ExceptionBehaviorMayTrap
+def FPExceptionBehaviorMayTrap
     : LLVM_EnumAttrCase<"MayTrap", "maytrap", "ebMayTrap", 1>;
-def ExceptionBehaviorStrict
+def FPExceptionBehaviorStrict
     : LLVM_EnumAttrCase<"Strict", "strict", "ebStrict", 2>;
 
-def ExceptionBehaviorAttr : LLVM_EnumAttr<
-    "ExceptionBehavior",
+def FPExceptionBehaviorAttr : LLVM_EnumAttr<
+    "FPExceptionBehavior",
     "::llvm::fp::ExceptionBehavior",
     "LLVM Exception Behavior",
-    [ExceptionBehaviorIgnore, ExceptionBehaviorMayTrap,
-     ExceptionBehaviorStrict]> {
+    [FPExceptionBehaviorIgnore, FPExceptionBehaviorMayTrap,
+     FPExceptionBehaviorStrict]> {
   let cppNamespace = "::mlir::LLVM";
 }
 

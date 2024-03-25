@@ -649,7 +649,7 @@ llvm.func @experimental_noalias_scope_decl() {
 }
 
 // CHECK-LABEL: @experimental_constrained_fptrunc
-llvm.func @experimental_constrained_fptrunc(%in: f64) -> f32 {
+llvm.func @experimental_constrained_fptrunc(%in: f64) {
   // CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} towardzero ignore : f64 to f32
   %0 = llvm.intr.experimental.constrained.fptrunc %in towardzero ignore : f64 to f32
   // CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} tonearest maytrap : f64 to f32
@@ -660,9 +660,5 @@ llvm.func @experimental_constrained_fptrunc(%in: f64) -> f32 {
   %3 = llvm.intr.experimental.constrained.fptrunc %in downward ignore : f64 to f32
   // CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} tonearestaway ignore : f64 to f32
   %4 = llvm.intr.experimental.constrained.fptrunc %in tonearestaway ignore : f64 to f32
-  %tmp0 = llvm.fadd %0, %1 : f32
-  %tmp1 = llvm.fadd %2, %3 : f32
-  %tmp2 = llvm.fadd %tmp0, %tmp1 : f32
-  %res = llvm.fadd %tmp2, %4 : f32
-  llvm.return %res : f32
+  llvm.return
 }

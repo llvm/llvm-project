@@ -1258,21 +1258,8 @@ LogicalResult ModuleImport::convertIntrinsicArguments(
   return success();
 }
 
-static RoundingModeAttr metadataToRoundingMode(Builder &builder,
-                                               llvm::Metadata *metadata) {
-  auto *mdstr = dyn_cast<llvm::MDString>(metadata);
-  if (!mdstr)
-    return {};
-  std::optional<llvm::RoundingMode> optLLVM =
-      llvm::convertStrToRoundingMode(mdstr->getString());
-  if (!optLLVM)
-    return {};
-  return builder.getAttr<RoundingModeAttr>(
-      convertRoundingModeFromLLVM(*optLLVM));
-}
-
-static ExceptionBehaviorAttr
-metadataToExceptionBehavior(Builder &builder, llvm::Metadata *metadata) {
+static FPExceptionBehaviorAttr
+metadataToFPExceptionBehavior(Builder &builder, llvm::Metadata *metadata) {
   auto *mdstr = dyn_cast<llvm::MDString>(metadata);
   if (!mdstr)
     return {};
@@ -1280,68 +1267,8 @@ metadataToExceptionBehavior(Builder &builder, llvm::Metadata *metadata) {
       llvm::convertStrToExceptionBehavior(mdstr->getString());
   if (!optLLVM)
     return {};
-  return builder.getAttr<ExceptionBehaviorAttr>(
-      convertExceptionBehaviorFromLLVM(*optLLVM));
-}
-
-static void
-splitMetadataAndValues(ArrayRef<llvm::Value *> inputs,
-                       SmallVectorImpl<llvm::Value *> &values,
-                       SmallVectorImpl<llvm::Metadata *> &metadata) {
-  for (llvm::Value *in : inputs) {
-    if (auto *mdval = dyn_cast<llvm::MetadataAsValue>(in)) {
-      metadata.push_back(mdval->getMetadata());
-    } else {
-      values.push_back(in);
-    }
-  }
-}
-
-Value ModuleImport::translateConstrainedIntrinsic(
-    Location loc, Type type, ArrayRef<llvm::Value *> llvmOperands,
-    StringRef opName) {
-  // Split metadata values from regular ones.
-  SmallVector<llvm::Value *> values;
-  SmallVector<llvm::Metadata *> metadata;
-  splitMetadataAndValues(llvmOperands, values, metadata);
-
-  // Expect 1 or 2 metadata values.
-  assert((metadata.size() == 1 || metadata.size() == 2) &&
-         "Unexpected number of arguments");
-
-  SmallVector<Value> mlirOperands;
-  SmallVector<NamedAttribute> mlirAttrs;
-  if (failed(
-          convertIntrinsicArguments(values, {}, {}, mlirOperands, mlirAttrs))) {
-    return {};
-  }
-
-  // Create operation as usual.
-  StringAttr opNameAttr = builder.getStringAttr(opName);
-  Operation *op =
-      builder.create(loc, opNameAttr, mlirOperands, type, mlirAttrs);
-
-  // Set exception behavior attribute.
-  auto exceptionBehaviorOp = cast<ExceptionBehaviorOpInterface>(op);
-  ExceptionBehaviorAttr attr =
-      metadataToExceptionBehavior(builder, metadata.back());
-  if (!attr)
-    return {};
-  op->setAttr(exceptionBehaviorOp.getExceptionBehaviorAttrName(), attr);
-
-  // If avaialbe, set rounding mode attribute.
-  if (auto roundingModeOp = dyn_cast<RoundingModeOpInterface>(op)) {
-    assert(metadata.size() > 1 && "Unexpected number of arguments");
-    // rounding_mode present
-    RoundingModeAttr attr = metadataToRoundingMode(builder, metadata[0]);
-    if (!attr)
-      return {};
-    roundingModeOp->setAttr(roundingModeOp.getRoundingModeAttrName(), attr);
-  } else {
-    assert(metadata.size() == 1 && "Unexpected number of arguments");
-  }
-
-  return op->getResult(0);
+  return builder.getAttr<FPExceptionBehaviorAttr>(
+      convertFPExceptionBehaviorFromLLVM(*optLLVM));
 }
 
 IntegerAttr ModuleImport::matchIntegerAttr(llvm::Value *value) {
@@ -1374,6 +1301,25 @@ DILabelAttr ModuleImport::matchLabelAttr(llvm::Value *value) {
   auto *nodeAsVal = cast<llvm::MetadataAsValue>(value);
   auto *node = cast<llvm::DILabel>(nodeAsVal->getMetadata());
   return debugImporter->translate(node);
+}
+
+FPExceptionBehaviorAttr
+ModuleImport::matchFPExceptionBehaviorAttr(llvm::Value *value) {
+  auto *metadata = cast<llvm::MetadataAsValue>(value);
+  auto *mdstr = cast<llvm::MDString>(metadata->getMetadata());
+  std::optional<llvm::fp::ExceptionBehavior> optLLVM =
+      llvm::convertStrToExceptionBehavior(mdstr->getString());
+  return builder.getAttr<FPExceptionBehaviorAttr>(
+      convertFPExceptionBehaviorFromLLVM(*optLLVM));
+}
+
+RoundingModeAttr ModuleImport::matchRoundingModeAttr(llvm::Value *value) {
+  auto *metadata = cast<llvm::MetadataAsValue>(value);
+  auto *mdstr = cast<llvm::MDString>(metadata->getMetadata());
+  std::optional<llvm::RoundingMode> optLLVM =
+      llvm::convertStrToRoundingMode(mdstr->getString());
+  return builder.getAttr<RoundingModeAttr>(
+      convertRoundingModeFromLLVM(*optLLVM));
 }
 
 FailureOr<SmallVector<AliasScopeAttr>>
