@@ -181,13 +181,13 @@ class ZvkMxSet<string vd_lmul> {
 }
 
 class VPseudoUnaryNoMask_Zvk<DAGOperand RetClass, VReg OpClass> :
-      Pseudo<(outs RetClass:$rd),
-        (ins RetClass:$merge, OpClass:$rs2, AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
+      Pseudo<(outs RetClass:$rd_wb),
+        (ins RetClass:$rd, OpClass:$rs2, AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
         RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = "$rd = $merge";
+  let Constraints = "$rd_wb = $rd";
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -197,14 +197,14 @@ class VPseudoUnaryNoMask_Zvk<DAGOperand RetClass, VReg OpClass> :
 class VPseudoBinaryNoMask_Zvk<VReg RetClass,
                               VReg Op1Class,
                               DAGOperand Op2Class> :
-        Pseudo<(outs RetClass:$rd),
-               (ins RetClass:$merge, Op1Class:$rs2, Op2Class:$rs1,
+        Pseudo<(outs RetClass:$rd_wb),
+               (ins RetClass:$rd, Op1Class:$rs2, Op2Class:$rs1,
                     AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
         RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = "$rd = $merge";
+  let Constraints = "$rd_wb = $rd";
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -670,11 +670,11 @@ class VPatUnaryNoMask_Zvk<string intrinsic_name,
                           VReg result_reg_class,
                           VReg op2_reg_class> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
-                   (result_type result_reg_class:$merge),
+                   (result_type result_reg_class:$rd),
                    (op2_type op2_reg_class:$rs2),
                    VLOpFrag, (XLenVT timm:$policy))),
                    (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX)
-                   (result_type result_reg_class:$merge),
+                   (result_type result_reg_class:$rd),
                    (op2_type op2_reg_class:$rs2),
                    GPR:$vl, sew, (XLenVT timm:$policy))>;
 
@@ -689,11 +689,11 @@ class VPatUnaryNoMask_VS_Zvk<string intrinsic_name,
                              VReg result_reg_class,
                              VReg op2_reg_class> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
-                   (result_type result_reg_class:$merge),
+                   (result_type result_reg_class:$rd),
                    (op2_type op2_reg_class:$rs2),
                    VLOpFrag, (XLenVT timm:$policy))),
                    (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#"_"#vs2_lmul.MX)
-                   (result_type result_reg_class:$merge),
+                   (result_type result_reg_class:$rd),
                    (op2_type op2_reg_class:$rs2),
                    GPR:$vl, sew, (XLenVT timm:$policy))>;
 
