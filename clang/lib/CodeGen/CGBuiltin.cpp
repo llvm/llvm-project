@@ -1147,15 +1147,27 @@ CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
   if (!ObjectBase)
     return nullptr;
 
+  // Check to see if the Decl is a flexible array member. We don't have any
+  // information on its size, so return MAX_INT.
   if (const auto *ME = dyn_cast<MemberExpr>(ObjectBase)) {
-    const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-        getLangOpts().getStrictFlexArraysLevel();
-    const ValueDecl *Field = ME->getMemberDecl();
-    if (Decl::isFlexibleArrayMemberLike(
-            Ctx, Field, Field->getType(), StrictFlexArraysLevel,
-            /*IgnoreTemplateOrMacroSubstitution=*/true))
-      // FIXME: Support flexible array members?
-      return nullptr;
+    if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
+      if (const RecordDecl *RD = FD->getType()->getAsRecordDecl()) {
+        const RecordDecl *OuterRD = RD->getOuterLexicalRecordContext();
+        const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+            getLangOpts().getStrictFlexArraysLevel();
+
+        if (OuterRD->hasFlexibleArrayMember()) {
+          const FieldDecl *LastFD = nullptr;
+          for (const FieldDecl *Field : OuterRD->fields())
+            LastFD = Field;
+
+          if (FD == LastFD && Decl::isFlexibleArrayMemberLike(
+                                  Ctx, FD, FD->getType(), StrictFlexArraysLevel,
+                                  /*IgnoreTemplateOrMacroSubstitution=*/true))
+            return nullptr;
+        }
+      }
+    }
   }
 
   uint64_t ObjectSize =
