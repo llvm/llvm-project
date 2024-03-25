@@ -119,7 +119,7 @@ namespace __width_estimation_table {
 /// - bits [0, 13] The size of the range, allowing 16384 elements.
 /// - bits [14, 31] The lower bound code point of the range. The upper bound of
 ///   the range is lower bound + size.
-inline constexpr uint32_t __entries[108] = {
+_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[108] = {
     0x0440005f /* 00001100 - 0000115f [   96] */, //
     0x08c68001 /* 0000231a - 0000231b [    2] */, //
     0x08ca4001 /* 00002329 - 0000232a [    2] */, //

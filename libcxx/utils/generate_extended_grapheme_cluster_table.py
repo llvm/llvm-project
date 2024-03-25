@@ -113,7 +113,7 @@ DATA_ARRAY_TEMPLATE = """
 /// following benchmark.
 /// libcxx/benchmarks/std_format_spec_string_unicode.bench.cpp
 // clang-format off
-inline constexpr uint32_t __entries[{size}] = {{
+_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[{size}] = {{
 {entries}}};
 // clang-format on
 
