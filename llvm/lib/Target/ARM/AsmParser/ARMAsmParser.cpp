@@ -7343,34 +7343,46 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   // automatically
   // expressed as a GPRPair, so we have to manually merge them.
   // FIXME: We would really like to be able to tablegen'erate this.
-  if (!isThumb() && Operands.size() > MnemonicOpsEndInd + 1 &&
+  bool IsLoad = (Mnemonic == "ldrexd" || Mnemonic == "ldaexd");
+  if (!isThumb() && Operands.size() > MnemonicOpsEndInd + 1 + (!IsLoad) &&
       (Mnemonic == "ldrexd" || Mnemonic == "strexd" || Mnemonic == "ldaexd" ||
        Mnemonic == "stlexd")) {
-    bool isLoad = (Mnemonic == "ldrexd" || Mnemonic == "ldaexd");
-    unsigned Idx = isLoad ? MnemonicOpsEndInd : MnemonicOpsEndInd + 1;
+    unsigned Idx = IsLoad ? MnemonicOpsEndInd : MnemonicOpsEndInd + 1;
     ARMOperand &Op1 = static_cast<ARMOperand &>(*Operands[Idx]);
     ARMOperand &Op2 = static_cast<ARMOperand &>(*Operands[Idx + 1]);
 
     const MCRegisterClass &MRC = MRI->getRegClass(ARM::GPRRegClassID);
-    // Adjust only if Op1 and Op2 are GPRs.
-    if (Op1.isReg() && Op2.isReg() && MRC.contains(Op1.getReg()) &&
-        MRC.contains(Op2.getReg())) {
+    bool IsGNUAlias = !(Op2.isReg() && MRC.contains(Op2.getReg()));
+    // Adjust only if Op1 is a GPR.
+    if (Op1.isReg() && MRC.contains(Op1.getReg())) {
       unsigned Reg1 = Op1.getReg();
-      unsigned Reg2 = Op2.getReg();
       unsigned Rt = MRI->getEncodingValue(Reg1);
-      unsigned Rt2 = MRI->getEncodingValue(Reg2);
 
-      // Rt2 must be Rt + 1 and Rt must be even.
-      if (Rt + 1 != Rt2 || (Rt & 1)) {
-        return Error(Op2.getStartLoc(),
-                     isLoad ? "destination operands must be sequential"
-                            : "source operands must be sequential");
+      // Check we are not in the GNU alias case with only one of the register
+      // pair specified
+      if (!IsGNUAlias) {
+        unsigned Reg2 = Op2.getReg();
+        unsigned Rt2 = MRI->getEncodingValue(Reg2);
+        // Rt2 must be Rt + 1.
+        if (Rt + 1 != Rt2)
+          return Error(Op2.getStartLoc(),
+                       IsLoad ? "destination operands must be sequential"
+                              : "source operands must be sequential");
       }
+      // Rt bust be even
+      if (Rt & 1)
+        return Error(
+            Op1.getStartLoc(),
+            IsLoad ? "destination operands must start start at an even register"
+                   : "source operands must start start at an even register");
+
       unsigned NewReg = MRI->getMatchingSuperReg(
           Reg1, ARM::gsub_0, &(MRI->getRegClass(ARM::GPRPairRegClassID)));
       Operands[Idx] =
           ARMOperand::CreateReg(NewReg, Op1.getStartLoc(), Op2.getEndLoc());
-      Operands.erase(Operands.begin() + Idx + 1);
+      // Only remove redundent operand if not in GNU alias case
+      if (!IsGNUAlias)
+        Operands.erase(Operands.begin() + Idx + 1);
     }
   }
 
