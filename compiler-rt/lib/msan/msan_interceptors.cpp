@@ -255,7 +255,7 @@ static NOINLINE void clear_mallinfo(T *sret) {
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
 // Interceptors use NRVO and assume that sret will be pre-allocated in
 // caller frame.
-INTERCEPTOR(__sanitizer_struct_mallinfo, mallinfo) {
+INTERCEPTOR(__sanitizer_struct_mallinfo, mallinfo,) {
   __sanitizer_struct_mallinfo sret;
   clear_mallinfo(&sret);
   return sret;
