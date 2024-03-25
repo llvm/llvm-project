@@ -306,10 +306,12 @@ static bool isNonMangledOCLBuiltin(StringRef Name) {
 std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
   bool IsNonMangledOCL = isNonMangledOCLBuiltin(Name);
   bool IsNonMangledSPIRV = Name.starts_with("__spirv_");
+  bool IsNonMangledHLSL = Name.starts_with("__hlsl_");
   bool IsMangled = Name.starts_with("_Z");
 
-  if (!IsNonMangledOCL && !IsNonMangledSPIRV && !IsMangled)
-    return std::string();
+  // Otherwise use simple demangling to return the function name.
+  if (IsNonMangledOCL || IsNonMangledSPIRV || IsNonMangledHLSL || !IsMangled)
+    return Name.str();
 
   // Try to use the itanium demangler.
   if (char *DemangledName = itaniumDemangle(Name.data())) {
@@ -317,9 +319,6 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
     free(DemangledName);
     return Result;
   }
-  // Otherwise use simple demangling to return the function name.
-  if (IsNonMangledOCL || IsNonMangledSPIRV)
-    return Name.str();
 
   // Autocheck C++, maybe need to do explicit check of the source language.
   // OpenCL C++ built-ins are declared in cl namespace.

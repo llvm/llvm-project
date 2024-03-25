@@ -723,11 +723,14 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     AddrSpace = PType->getAddressSpace();
   else
     report_fatal_error("Unable to convert LLVM type to SPIRVType", true);
-  SPIRVType *SpvElementType;
-  // At the moment, all opaque pointers correspond to i8 element type.
-  // TODO: change the implementation once opaque pointers are supported
-  // in the SPIR-V specification.
-  SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
+
+  SPIRVType *SpvElementType = nullptr;
+  if (auto PType = dyn_cast<TypedPointerType>(Ty))
+    SpvElementType = getOrCreateSPIRVType(PType->getElementType(), MIRBuilder,
+                                          AccQual, EmitIR);
+  else
+    SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
+
   // Get access to information about available extensions
   const SPIRVSubtarget *ST =
       static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
