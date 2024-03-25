@@ -216,7 +216,6 @@ libc_support_library(
         ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
-        ":__support_macros_config",
         ":__support_macros_sanitizer",
     ],
 )
@@ -383,7 +382,6 @@ libc_support_library(
     ],
     deps = [
         ":__support_macros_attributes",
-        ":__support_macros_config",
         ":__support_macros_properties_types",
         ":llvm_libc_macros_stdfix_macros",
     ],
@@ -660,7 +658,6 @@ libc_support_library(
         ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
-        ":__support_macros_config",
     ],
 )
 
@@ -2318,7 +2315,6 @@ libc_support_library(
         ":__support_cpp_cstddef",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
-        ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_macros_properties_architectures",
         ":__support_macros_properties_cpu_features",

@@ -21,6 +21,11 @@
 
 using namespace LIBC_NAMESPACE;
 
+// Workaround for missing __has_builtin in < GCC 10.
+#ifndef __has_builtin
+#define __has_builtin 0
+#endif
+
 static_assert(sizeof(rpc_buffer_t) == sizeof(rpc::Buffer),
               "Buffer size mismatch");
 
