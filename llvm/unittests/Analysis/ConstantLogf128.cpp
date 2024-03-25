@@ -35,13 +35,15 @@ TEST(ConstantFoldLogf128Fixture, ConstantFoldLogf128) {
   FunctionType *FP128FP128Prototype =
       FunctionType::get(FP128Ty, {FP128Ty}, false);
   Constant *Constant2L = ConstantFP::get128(FP128Ty, 2.0L);
-  Function *Logf128 = Function::Create(
-      FP128FP128Prototype, Function::ExternalLinkage, "llvm.log.f128", MainModule);
+  Function *Logf128 =
+      Function::Create(FP128FP128Prototype, Function::ExternalLinkage,
+                       "llvm.log.f128", MainModule);
   CallInst *Logf128Call = Builder.CreateCall(Logf128, Constant2L);
 
   TargetLibraryInfoImpl TLII(Triple(MainModule.getTargetTriple()));
   TargetLibraryInfo TLI(TLII, Logf128TestFunction);
-  Constant *FoldResult = ConstantFoldCall(Logf128Call, Logf128, Constant2L, &TLI);
+  Constant *FoldResult =
+      ConstantFoldCall(Logf128Call, Logf128, Constant2L, &TLI);
 
 #ifndef HAS_LOGF128
   ASSERT_TRUE(FoldResult == nullptr);
@@ -58,10 +60,10 @@ TEST(ConstantFoldLogf128Fixture, ConstantFoldLogf128) {
 
   ASSERT_STREQ(LongDoubleHexString,
                std::string("0X1.62E42FEFA39EF000000000000000000P-1").c_str());
-#endif //HAS_LOGF128
-#else // __FLOAT128__
+#endif // HAS_LOGF128
+#else  // __FLOAT128__
   ASSERT_TRUE(true);
 #endif
 }
 
-}
+} // namespace
