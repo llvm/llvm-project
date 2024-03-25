@@ -1,4 +1,4 @@
-executable("llvm-min-tblgen") {
+source_set("llvm-min-tblgen-sources") {
   sources = [
     "Attributes.cpp",
     "DirectiveEmitter.cpp",
@@ -10,12 +10,19 @@ executable("llvm-min-tblgen") {
   deps = [
     "Basic",
     "//llvm/lib/Support",
-    "//llvm/lib/TableGen",
+  ]
+}
+
+executable("llvm-min-tblgen") {
+  deps = [
+    ":llvm-min-tblgen-sources",
+    "Basic",
   ]
 }
 
 executable("llvm-tblgen") {
   deps = [
+    ":llvm-min-tblgen-sources",
     "Basic",
     "Common",
     "//llvm/include/llvm/Config:llvm-config",
@@ -54,7 +61,6 @@ executable("llvm-tblgen") {
     "RegisterBankEmitter.cpp",
     "RegisterInfoEmitter.cpp",
     "SearchableTableEmitter.cpp",
-    "TableGen.cpp",
     "SubtargetEmitter.cpp",
     "WebAssemblyDisassemblerEmitter.cpp",
     "X86CompressEVEXTablesEmitter.cpp",
