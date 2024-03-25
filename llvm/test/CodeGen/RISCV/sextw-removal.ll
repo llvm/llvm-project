@@ -169,12 +169,11 @@ define signext i32 @test4(ptr %p, i32 signext %b) nounwind {
 define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-LABEL: test5:
 ; RV64I:       # %bb.0: # %bb
-; RV64I-NEXT:    addi sp, sp, -48
-; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    addi sp, sp, -32
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sraw a0, a0, a1
 ; RV64I-NEXT:    lui a1, 349525
 ; RV64I-NEXT:    addiw s0, a1, 1365
@@ -182,8 +181,6 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    addiw s1, a1, 819
 ; RV64I-NEXT:    lui a1, 61681
 ; RV64I-NEXT:    addi s2, a1, -241
-; RV64I-NEXT:    lui a1, 4112
-; RV64I-NEXT:    addi s3, a1, 257
 ; RV64I-NEXT:  .LBB4_1: # %bb2
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    call bar
@@ -198,16 +195,18 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    srli a2, a0, 4
 ; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    and a0, a0, s2
-; RV64I-NEXT:    mul a0, a0, s3
+; RV64I-NEXT:    slli a2, a0, 8
+; RV64I-NEXT:    add a0, a0, a2
+; RV64I-NEXT:    slli a2, a0, 16
+; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    srliw a0, a0, 24
 ; RV64I-NEXT:    bnez a1, .LBB4_1
 ; RV64I-NEXT:  # %bb.2: # %bb7
-; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 48
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test5:

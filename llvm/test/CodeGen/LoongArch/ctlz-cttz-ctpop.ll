@@ -285,10 +285,11 @@ define i32 @test_ctpop_i32(i32 %a) nounwind {
 ; LA64-NEXT:    lu12i.w $a1, 61680
 ; LA64-NEXT:    ori $a1, $a1, 3855
 ; LA64-NEXT:    and $a0, $a0, $a1
-; LA64-NEXT:    lu12i.w $a1, 4112
-; LA64-NEXT:    ori $a1, $a1, 257
-; LA64-NEXT:    mul.d $a0, $a0, $a1
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 24
+; LA64-NEXT:    slli.d $a1, $a0, 8
+; LA64-NEXT:    add.d $a0, $a0, $a1
+; LA64-NEXT:    slli.d $a1, $a0, 16
+; LA64-NEXT:    add.d $a0, $a0, $a1
+; LA64-NEXT:    bstrpick.d $a0, $a0, 29, 24
 ; LA64-NEXT:    ret
   %1 = call i32 @llvm.ctpop.i32(i32 %a)
   ret i32 %1
