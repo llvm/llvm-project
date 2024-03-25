@@ -6823,11 +6823,20 @@ public:
       llvm_unreachable("Unknown EndLoop");
   }
 
+  void createRemainingIterationsGreaterCondition(
+      int TC, MachineBasicBlock &MBB, SmallVectorImpl<MachineOperand> &Cond,
+      DenseMap<MachineInstr *, MachineInstr *> LastStage0Insts) override {
+    llvm_unreachable(
+        "Target didn't implement createRemainingIterationsGreaterCondition");
+  }
+
   void setPreheader(MachineBasicBlock *NewPreheader) override {}
 
   void adjustTripCount(int TripCountAdjust) override {}
 
   void disposed() override {}
+
+  bool isMVEExpanderSupported() override { return false; }
 };
 
 void ARMPipelinerLoopInfo::bumpCrossIterationPressure(RegPressureTracker &RPT,
