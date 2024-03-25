@@ -69,6 +69,7 @@ static cl::opt<unsigned>
                 cl::init(1), cl::cat(Cat));
 
 extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInforFormat;
+
 namespace {
 
 struct TempFile {
