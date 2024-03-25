@@ -603,7 +603,7 @@ void AArch64PassConfig::addIRPasses() {
       addPass(createFalkorMarkStridedAccessesPass());
   }
 
-  if (TM->getOptLevel() == CodeGenOptLevel::Aggressive && EnableGEPOpt) {
+  if (EnableGEPOpt) {
     // Call SeparateConstOffsetFromGEP pass to extract constants within indices
     // and lower a GEP with multiple indices to either arithmetic operations or
     // multiple GEPs with single index.
