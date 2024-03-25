@@ -44,6 +44,24 @@ llvm::StringRef SymbolVendorELF::GetPluginDescriptionStatic() {
          "executables.";
 }
 
+// If this is needed elsewhere, it can be exported/moved.
+static bool IsDwpSymbolFile(const lldb::ModuleSP &module_sp,
+                            const FileSpec &file_spec) {
+  DataBufferSP dwp_file_data_sp;
+  lldb::offset_t dwp_file_data_offset = 0;
+  // Try to create an ObjectFile from the file_spec.
+  ObjectFileSP dwp_obj_file = ObjectFile::FindPlugin(
+      module_sp, &file_spec, 0, FileSystem::Instance().GetByteSize(file_spec),
+      dwp_file_data_sp, dwp_file_data_offset);
+  // The presence of a debug_cu_index section is the key identifying feature of
+  // a DWP file. Make sure we don't fill in the section list on dwp_obj_file
+  // (by calling GetSectionList(false)) as this is invoked before we may have
+  // all the symbol files collected and available.
+  return dwp_obj_file && ObjectFileELF::classof(dwp_obj_file.get()) &&
+         dwp_obj_file->GetSectionList(false)->FindSectionByType(
+             eSectionTypeDWARFDebugCuIndex, false);
+}
+
 // CreateInstance
 //
 // Platforms can register a callback to use when creating symbol vendors to
