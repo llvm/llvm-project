@@ -10,11 +10,49 @@ struct MyClass {
   int __attribute__((target_version("dotprod"))) goo(int);
   int __attribute__((target_version("crc"))) goo(int);
   int __attribute__((target_version("default"))) goo(int);
+
+  // This should generate one target version but no resolver.
+  int __attribute__((target_version("default"))) unused_with_forward_default_decl(void);
+  int __attribute__((target_version("mops"))) unused_with_forward_default_decl(void);
+
+  // This should also generate one target version but no resolver.
+  int unused_with_implicit_forward_default_decl(void);
+  int __attribute__((target_version("dotprod"))) unused_with_implicit_forward_default_decl(void);
+
+  // This should also generate one target version but no resolver.
+  int __attribute__((target_version("aes"))) unused_with_default_decl(void);
+  int __attribute__((target_version("default"))) unused_with_default_decl(void);
+
+  // This should generate two target versions and the resolver.
+  int __attribute__((target_version("sve"))) unused_with_default_def(void);
+  int __attribute__((target_version("default"))) unused_with_default_def(void);
+
+  // This should also generate two target versions and the resolver.
+  int __attribute__((target_version("fp16"))) unused_with_implicit_default_def(void);
+  int unused_with_implicit_default_def(void);
+
+  // This should also generate two target versions and the resolver.
+  int unused_with_implicit_forward_default_def(void);
+  int __attribute__((target_version("lse"))) unused_with_implicit_forward_default_def(void);
+
+  // This should generate a normal function.
+  int __attribute__((target_version("rdm"))) unused_without_default(void);
 };
 
 int __attribute__((target_version("default"))) MyClass::goo(int) { return 1; }
 int __attribute__((target_version("crc"))) MyClass::goo(int) { return 2; }
 int __attribute__((target_version("dotprod"))) MyClass::goo(int) { return 3; }
+
+int __attribute__((target_version("mops"))) MyClass::unused_with_forward_default_decl(void) { return 0; }
+int __attribute__((target_version("dotprod"))) MyClass::unused_with_implicit_forward_default_decl(void) { return 0; }
+int __attribute__((target_version("aes"))) MyClass::unused_with_default_decl(void) { return 0; }
+int __attribute__((target_version("sve"))) MyClass::unused_with_default_def(void) { return 0; }
+int __attribute__((target_version("default"))) MyClass::unused_with_default_def(void) { return 1; }
+int __attribute__((target_version("fp16"))) MyClass::unused_with_implicit_default_def(void) { return 0; }
+int MyClass::unused_with_implicit_default_def(void) { return 1; }
+int MyClass::unused_with_implicit_forward_default_def(void) { return 0; }
+int __attribute__((target_version("lse"))) MyClass::unused_with_implicit_forward_default_def(void) { return 1; }
+int __attribute__((target_version("rdm"))) MyClass::unused_without_default(void) { return 0; }
 
 int bar() {
   MyClass m;
@@ -22,27 +60,144 @@ int bar() {
 }
 
 
-
-
 //.
 // CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
-// CHECK: @_ZN7MyClass3gooEi.ifunc = weak_odr alias i32 (ptr, i32), ptr @_ZN7MyClass3gooEi
 // CHECK: @_Z3fooi.ifunc = weak_odr alias i32 (i32), ptr @_Z3fooi
 // CHECK: @_Z3foov.ifunc = weak_odr alias i32 (), ptr @_Z3foov
+// CHECK: @_ZN7MyClass3gooEi.ifunc = weak_odr alias i32 (ptr, i32), ptr @_ZN7MyClass3gooEi
+// CHECK: @_ZN7MyClass23unused_with_default_defEv.ifunc = weak_odr alias i32 (ptr), ptr @_ZN7MyClass23unused_with_default_defEv
+// CHECK: @_ZN7MyClass32unused_with_implicit_default_defEv.ifunc = weak_odr alias i32 (ptr), ptr @_ZN7MyClass32unused_with_implicit_default_defEv
+// CHECK: @_ZN7MyClass40unused_with_implicit_forward_default_defEv.ifunc = weak_odr alias i32 (ptr), ptr @_ZN7MyClass40unused_with_implicit_forward_default_defEv
 // CHECK: @_ZN7MyClass3gooEi = weak_odr ifunc i32 (ptr, i32), ptr @_ZN7MyClass3gooEi.resolver
 // CHECK: @_Z3fooi = weak_odr ifunc i32 (i32), ptr @_Z3fooi.resolver
 // CHECK: @_Z3foov = weak_odr ifunc i32 (), ptr @_Z3foov.resolver
+// CHECK: @_ZN7MyClass23unused_with_default_defEv = weak_odr ifunc i32 (ptr), ptr @_ZN7MyClass23unused_with_default_defEv.resolver
+// CHECK: @_ZN7MyClass32unused_with_implicit_default_defEv = weak_odr ifunc i32 (ptr), ptr @_ZN7MyClass32unused_with_implicit_default_defEv.resolver
+// CHECK: @_ZN7MyClass40unused_with_implicit_forward_default_defEv = weak_odr ifunc i32 (ptr), ptr @_ZN7MyClass40unused_with_implicit_forward_default_defEv.resolver
 //.
-// CHECK-LABEL: @_Z3fooi._Mbf16Msme-f64f64(
+// CHECK-LABEL: @_Z3fooi.default(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
+// CHECK-NEXT:    ret i32 2
+//
+//
+// CHECK-LABEL: @_Z3foov.default(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 4
+//
+//
+// CHECK-LABEL: @_ZN7MyClass3gooEi.default(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK-LABEL: @_Z3foov._Mebf16Msm4(
+// CHECK-LABEL: @_ZN7MyClass3gooEi._Mcrc(
 // CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 2
+//
+//
+// CHECK-LABEL: @_ZN7MyClass3gooEi._Mdotprod(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    ret i32 3
+//
+//
+// CHECK-LABEL: @_ZN7MyClass32unused_with_forward_default_declEv._Mmops(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK-LABEL: @_ZN7MyClass41unused_with_implicit_forward_default_declEv._Mdotprod(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK-LABEL: @_ZN7MyClass24unused_with_default_declEv._Maes(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK-LABEL: @_ZN7MyClass23unused_with_default_defEv._Msve(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK-LABEL: @_ZN7MyClass23unused_with_default_defEv.default(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: @_ZN7MyClass32unused_with_implicit_default_defEv._Mfp16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK-LABEL: @_ZN7MyClass32unused_with_implicit_default_defEv.default(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: @_ZN7MyClass40unused_with_implicit_forward_default_defEv.default(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK-LABEL: @_ZN7MyClass40unused_with_implicit_forward_default_defEv._Mlse(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: @_Z3barv(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[M:%.*]] = alloca [[STRUCT_MYCLASS:%.*]], align 1
+// CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN7MyClass3gooEi(ptr noundef nonnull align 1 dereferenceable(1) [[M]], i32 noundef 1)
+// CHECK-NEXT:    [[CALL1:%.*]] = call noundef i32 @_Z3fooi(i32 noundef 1)
+// CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
+// CHECK-NEXT:    [[CALL2:%.*]] = call noundef i32 @_Z3foov()
+// CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[ADD]], [[CALL2]]
+// CHECK-NEXT:    ret i32 [[ADD3]]
 //
 //
 // CHECK-LABEL: @_ZN7MyClass3gooEi.resolver(
@@ -65,17 +220,6 @@ int bar() {
 // CHECK-NEXT:    ret ptr @_ZN7MyClass3gooEi._Mdotprod
 // CHECK:       resolver_else2:
 // CHECK-NEXT:    ret ptr @_ZN7MyClass3gooEi.default
-//
-//
-// CHECK-LABEL: @_Z3barv(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[M:%.*]] = alloca [[STRUCT_MYCLASS:%.*]], align 1
-// CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN7MyClass3gooEi(ptr noundef nonnull align 1 dereferenceable(1) [[M]], i32 noundef 1)
-// CHECK-NEXT:    [[CALL1:%.*]] = call noundef i32 @_Z3fooi(i32 noundef 1)
-// CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
-// CHECK-NEXT:    [[CALL2:%.*]] = call noundef i32 @_Z3foov()
-// CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[ADD]], [[CALL2]]
-// CHECK-NEXT:    ret i32 [[ADD3]]
 //
 //
 // CHECK-LABEL: @_Z3fooi.resolver(
@@ -106,53 +250,80 @@ int bar() {
 // CHECK-NEXT:    ret ptr @_Z3foov.default
 //
 //
-// CHECK-LABEL: @_ZN7MyClass3gooEi._Mdotprod(
+// CHECK-LABEL: @_Z3fooi._Mbf16Msme-f64f64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
-// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    ret i32 3
-//
-//
-// CHECK-LABEL: @_ZN7MyClass3gooEi._Mcrc(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
-// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    ret i32 2
-//
-//
-// CHECK-LABEL: @_ZN7MyClass3gooEi.default(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
-// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK-LABEL: @_Z3fooi.default(
+// CHECK-LABEL: @_Z3foov._Mebf16Msm4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
-// CHECK-NEXT:    ret i32 2
+// CHECK-NEXT:    ret i32 3
 //
 //
-// CHECK-LABEL: @_Z3foov.default(
+// CHECK-LABEL: @_ZN7MyClass22unused_without_defaultEv(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 4
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK-LABEL: @_ZN7MyClass23unused_with_default_defEv.resolver(
+// CHECK-NEXT:  resolver_entry:
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1073741824
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1073741824
+// CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
+// CHECK:       resolver_return:
+// CHECK-NEXT:    ret ptr @_ZN7MyClass23unused_with_default_defEv._Msve
+// CHECK:       resolver_else:
+// CHECK-NEXT:    ret ptr @_ZN7MyClass23unused_with_default_defEv.default
+//
+//
+// CHECK-LABEL: @_ZN7MyClass32unused_with_implicit_default_defEv.resolver(
+// CHECK-NEXT:  resolver_entry:
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 65536
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 65536
+// CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
+// CHECK:       resolver_return:
+// CHECK-NEXT:    ret ptr @_ZN7MyClass32unused_with_implicit_default_defEv._Mfp16
+// CHECK:       resolver_else:
+// CHECK-NEXT:    ret ptr @_ZN7MyClass32unused_with_implicit_default_defEv.default
+//
+//
+// CHECK-LABEL: @_ZN7MyClass40unused_with_implicit_forward_default_defEv.resolver(
+// CHECK-NEXT:  resolver_entry:
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 128
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 128
+// CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
+// CHECK:       resolver_return:
+// CHECK-NEXT:    ret ptr @_ZN7MyClass40unused_with_implicit_forward_default_defEv._Mlse
+// CHECK:       resolver_else:
+// CHECK-NEXT:    ret ptr @_ZN7MyClass40unused_with_implicit_forward_default_defEv.default
 //
 //.
-// CHECK: attributes #[[ATTR0:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme,+sme-f64f64" }
-// CHECK: attributes #[[ATTR1:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+neon,+sm4" }
-// CHECK: attributes #[[ATTR2:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #[[ATTR3:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+dotprod,+fp-armv8,+neon" }
-// CHECK: attributes #[[ATTR4:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+crc" }
+// CHECK: attributes #[[ATTR0:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR1:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+crc" }
+// CHECK: attributes #[[ATTR2:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+dotprod,+fp-armv8,+neon" }
+// CHECK: attributes #[[ATTR3:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+mops" }
+// CHECK: attributes #[[ATTR4:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon" }
+// CHECK: attributes #[[ATTR5:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon,+sve" }
+// CHECK: attributes #[[ATTR6:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon" }
+// CHECK: attributes #[[ATTR7:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+lse" }
+// CHECK: attributes #[[ATTR8:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme,+sme-f64f64" }
+// CHECK: attributes #[[ATTR9:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+neon,+sm4" }
+// CHECK: attributes #[[ATTR10:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon,+rdm" }
+// CHECK: attributes #[[ATTR11:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
