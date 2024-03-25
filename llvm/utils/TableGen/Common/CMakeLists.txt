@@ -33,7 +33,9 @@ add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
   SubtargetFeatureInfo.cpp
   Types.cpp
   VarLenCodeEmitterGen.cpp
-  $<TARGET_OBJECTS:obj.LLVMTableGenBasic>
+
+  LINK_LIBS
+  LLVMTableGenBasic
 
   DEPENDS
   vt_gen
