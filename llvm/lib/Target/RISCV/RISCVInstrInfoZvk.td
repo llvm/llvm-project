@@ -269,24 +269,24 @@ multiclass VPseudoVALU_VV_NoMask_Zvk {
   }
 }
 
-multiclass VPseudoVALU_VI_NoMask_Zvk<Operand ImmType = simm5> {
+multiclass VPseudoVALU_VI_NoMask_Zvk {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm _VI : VPseudoBinaryNoMask_Zvk<m.vrclass, m.vrclass, ImmType, m>,
+    defm _VI : VPseudoBinaryNoMask_Zvk<m.vrclass, m.vrclass, uimm5, m>,
                Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
 
-multiclass VPseudoVALU_VI_NoMaskTU_Zvk<Operand ImmType = uimm5> {
+multiclass VPseudoVALU_VI_NoMaskTU_Zvk {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm _VI : VPseudoBinaryNoMask<m.vrclass, m.vrclass, ImmType, m>,
+    defm _VI : VPseudoBinaryNoMask<m.vrclass, m.vrclass, uimm5, m>,
                Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
@@ -369,7 +369,7 @@ let Predicates = [HasStdExtZvkned] in {
   defm PseudoVAESEF  : VPseudoVALU_V_S_NoMask_Zvk;
   defm PseudoVAESEM  : VPseudoVALU_V_S_NoMask_Zvk;
   defm PseudoVAESKF1 : VPseudoVALU_VI_NoMaskTU_Zvk;
-  defm PseudoVAESKF2 : VPseudoVALU_VI_NoMask_Zvk<uimm5>;
+  defm PseudoVAESKF2 : VPseudoVALU_VI_NoMask_Zvk;
   defm PseudoVAESZ   : VPseudoVALU_S_NoMask_Zvk;
 } // Predicates = [HasStdExtZvkned]
 
@@ -385,7 +385,7 @@ let Predicates = [HasStdExtZvksed] in {
 } // Predicates = [HasStdExtZvksed]
 
 let Predicates = [HasStdExtZvksh] in {
-  defm PseudoVSM3C  : VPseudoVALU_VI_NoMask_Zvk<uimm5>;
+  defm PseudoVSM3C  : VPseudoVALU_VI_NoMask_Zvk;
   defm PseudoVSM3ME : VPseudoVALU_VV_NoMaskTU_Zvk;
 } // Predicates = [HasStdExtZvksh]
 
