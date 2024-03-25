@@ -3508,6 +3508,9 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
       case LibFunc_atan:
       case LibFunc_atanf:
       case LibFunc_atanl:
+      case LibFunc_tanh:
+      case LibFunc_tanhf:
+      case LibFunc_tanhl:
         // Per POSIX, this MAY fail if Op is denormal. We choose not failing.
         return true;
 
