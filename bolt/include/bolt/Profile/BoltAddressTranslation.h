@@ -150,6 +150,9 @@ private:
   /// Map a function to its basic blocks count
   std::unordered_map<uint64_t, size_t> NumBasicBlocksMap;
 
+  /// Map a function to its secondary entry points vector
+  std::unordered_map<uint64_t, std::vector<uint32_t>> SecondaryEntryPointsMap;
+
   /// Links outlined cold bocks to their original function
   std::map<uint64_t, uint64_t> ColdPartSource;
 
