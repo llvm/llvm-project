@@ -408,10 +408,6 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, s32, sXLen)
       .lowerForCartesianProduct({s32, sXLen, p0}, {p0});
 
-  getActionDefinitionsBuilder(G_VSCALE)
-      .clampScalar(0, sXLen, sXLen)
-      .customFor({sXLen});
-
   getLegacyLegalizerInfo().computeTables();
 }
 
@@ -533,48 +529,6 @@ bool RISCVLegalizerInfo::shouldBeInConstantPool(APInt APImm,
   return !(!SeqLo.empty() && (SeqLo.size() + 2) <= STI.getMaxBuildIntsCost());
 }
 
-bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
-                                        MachineIRBuilder &MIB) const {
-  const LLT XLenTy(STI.getXLenVT());
-  Register Dst = MI.getOperand(0).getReg();
-
-  // We define our scalable vector types for lmul=1 to use a 64 bit known
-  // minimum size. e.g. <vscale x 2 x i32>. VLENB is in bytes so we calculate
-  // vscale as VLENB / 8.
-  static_assert(RISCV::RVVBitsPerBlock == 64, "Unexpected bits per block!");
-  if (STI.getRealMinVLen() < RISCV::RVVBitsPerBlock)
-    // Support for VLEN==32 is incomplete.
-    return false;
-
-  // We assume VLENB is a multiple of 8. We manually choose the best shift
-  // here because SimplifyDemandedBits isn't always able to simplify it.
-  uint64_t Val = MI.getOperand(1).getCImm()->getZExtValue();
-  if (isPowerOf2_64(Val)) {
-    uint64_t Log2 = Log2_64(Val);
-    if (Log2 < 3) {
-      auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-      MIB.buildLShr(Dst, VLENB, MIB.buildConstant(XLenTy, 3 - Log2));
-    } else if (Log2 > 3) {
-      auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-      MIB.buildShl(Dst, VLENB, MIB.buildConstant(XLenTy, Log2 - 3));
-    } else {
-      MIB.buildInstr(RISCV::G_READ_VLENB, {Dst}, {});
-    }
-  } else if ((Val % 8) == 0) {
-    // If the multiplier is a multiple of 8, scale it down to avoid needing
-    // to shift the VLENB value.
-    auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-    MIB.buildMul(Dst, VLENB, MIB.buildConstant(XLenTy, Val / 8));
-  } else {
-    auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-    auto VScale = MIB.buildLShr(XLenTy, VLENB, MIB.buildConstant(XLenTy, 3));
-    MIB.buildMul(Dst, VScale, MIB.buildConstant(XLenTy, Val));
-  }
-
-  MI.eraseFromParent();
-  return true;
-}
-
 bool RISCVLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
@@ -632,8 +586,6 @@ bool RISCVLegalizerInfo::legalizeCustom(
   }
   case TargetOpcode::G_VASTART:
     return legalizeVAStart(MI, MIRBuilder);
-  case TargetOpcode::G_VSCALE:
-    return legalizeVScale(MI, MIRBuilder);
   }
 
   llvm_unreachable("expected switch to return");
