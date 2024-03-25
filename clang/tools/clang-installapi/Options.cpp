@@ -380,7 +380,7 @@ InstallAPIContext Options::createContext() {
 
   // After all headers have been added, consider excluded headers.
   std::vector<std::unique_ptr<HeaderGlob>> ExcludedHeaderGlobs;
-  std::set<const FileEntryRef> ExcludedHeaderFiles;
+  std::set<FileEntryRef> ExcludedHeaderFiles;
   auto ParseGlobs = [&](const PathSeq &Paths, HeaderType Type) {
     for (const StringRef Path : Paths) {
       auto Glob = HeaderGlob::create(Path, Type);
