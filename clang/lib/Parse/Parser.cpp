@@ -1516,6 +1516,18 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   if (LateParsedAttrs)
     ParseLexedAttributeList(*LateParsedAttrs, Res, false, true);
 
+  if (Res) {
+    for (const auto *FD : Res->redecls()) {
+      if (FD == Res)
+        continue;
+      if (Res->hasAttr<RequiresCapabilityAttr>() &&
+          !FD->hasAttr<RequiresCapabilityAttr>()) {
+        // Definition has attribute, but the declaration doesn't.
+        llvm::errs() << "AHA!\n";
+      }
+    }
+  }
+
   return ParseFunctionStatementBody(Res, BodyScope);
 }
 
