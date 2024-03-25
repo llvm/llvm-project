@@ -1394,6 +1394,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     syntheticSections.clear();
     thunkMap.clear();
     unprocessedLCLinkerOptions.clear();
+    ObjCSelRefsHelper::cleanup();
 
     firstTLVDataSection = nullptr;
     tar = nullptr;
