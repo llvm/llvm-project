@@ -1240,6 +1240,24 @@ inline bool HasCUDAAttrs(const Expr<SomeType> &expr) {
   return false;
 }
 
+/// Check if the expression is a mix of host and device variables that require
+/// implicit data transfer.
+inline bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
+  unsigned hostSymbols = 0;
+  unsigned deviceSymbols = 0;
+  for (const Symbol &sym : CollectSymbols(expr)) {
+    if (const auto *details =
+            sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+      if (details->cudaDataAttr()) {
+        ++deviceSymbols;
+      } else {
+        ++hostSymbols;
+      }
+    }
+  }
+  return hostSymbols > 0 && deviceSymbols > 0;
+}
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
