@@ -148,3 +148,72 @@ define i1 @fcmp_ogt_select(i1 %cond, float %a, float %b) {
   %res = fcmp ogt float %lhs, %rhs
   ret i1 %res
 }
+
+define i1 @test_fcmp_select_const_const(double %x) {
+; CHECK-LABEL: @test_fcmp_select_const_const(
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord double [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP2]], double 0xFFFFFFFFFFFFFFFF, double 0.000000e+00
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp oeq double [[SEL]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp1 = fcmp ord double %x, 0.000000e+00
+  %sel = select i1 %cmp1, double 0xFFFFFFFFFFFFFFFF, double 0.000000e+00
+  %cmp2 = fcmp oeq double %sel, 0.000000e+00
+  ret i1 %cmp2
+}
+
+define i1 @test_fcmp_select_var_const(double %x, double %y) {
+; CHECK-LABEL: @test_fcmp_select_var_const(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt double [[X:%.*]], 0x3E80000000000000
+; CHECK-NEXT:    [[Y:%.*]] = select i1 [[CMP1]], double [[Y1:%.*]], double 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[Y]], 0x3E80000000000000
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp1 = fcmp ogt double %x, 0x3E80000000000000
+  %sel = select i1 %cmp1, double %y, double 0.000000e+00
+  %cmp2 = fcmp olt double %sel, 0x3E80000000000000
+  ret i1 %cmp2
+}
+
+define i1 @test_fcmp_select_var_const_fmf(double %x, double %y) {
+; CHECK-LABEL: @test_fcmp_select_var_const_fmf(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt double [[X:%.*]], 0x3E80000000000000
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], double [[Y:%.*]], double 0.000000e+00
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp nnan olt double [[SEL]], 0x3E80000000000000
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %cmp1 = fcmp ogt double %x, 0x3E80000000000000
+  %sel = select i1 %cmp1, double %y, double 0.000000e+00
+  %cmp2 = fcmp nnan olt double %sel, 0x3E80000000000000
+  ret i1 %cmp2
+}
+
+define <2 x i1> @test_fcmp_select_const_const_vec(<2 x double> %x) {
+; CHECK-LABEL: @test_fcmp_select_const_const_vec(
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord <2 x double> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP2]], <2 x double> <double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF>, <2 x double> zeroinitializer
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp oeq <2 x double> [[SEL]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
+;
+  %cmp1 = fcmp ord <2 x double> %x, zeroinitializer
+  %sel = select <2 x i1> %cmp1, <2 x double> <double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF>, <2 x double> zeroinitializer
+  %cmp2 = fcmp oeq <2 x double> %sel, zeroinitializer
+  ret <2 x i1> %cmp2
+}
+
+; Don't break clamp idioms
+
+define double @test_fcmp_select_clamp(double %x) {
+; CHECK-LABEL: @test_fcmp_select_clamp(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt double [[X:%.*]], 9.000000e-01
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], double 9.000000e-01, double [[X]]
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt double [[SEL1]], 5.000000e-01
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], double 5.000000e-01, double [[SEL1]]
+; CHECK-NEXT:    ret double [[SEL2]]
+;
+  %cmp1 = fcmp ogt double %x, 9.000000e-01
+  %sel1 = select i1 %cmp1, double 9.000000e-01, double %x
+  %cmp2 = fcmp olt double %sel1, 5.000000e-01
+  %sel2 = select i1 %cmp2, double 5.000000e-01, double %sel1
+  ret double %sel2
+}
