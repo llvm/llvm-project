@@ -63,7 +63,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     element-type ::= float-type | integer-type | index-type
     dim-list := (static-dim-list `x`)?
     static-dim-list ::= decimal-literal `x` decimal-literal
-    attr-list = (, memory_scope = value)? (, arr_len = value)? (, boundary_check = value)?
+    attr-list = (, memory_scope = value)? (, arr_len = value)? (, boundary_check = value)? (, scattered = value)?
     ```
 
     Examples:
@@ -83,6 +83,17 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
   let parameters = (ins ArrayRefParameter<"int64_t">: $shape,
                         "mlir::Type": $elementType,
                         OptionalParameter<"mlir::Attribute">: $encoding);
+
+  let builders = [
+    TypeBuilder<(ins
+      "llvm::ArrayRef<int64_t>": $shape, 
+      "mlir::Type": $elementType,
+      CArg<"bool", "false">: $scattered,
+      CArg<"int", "1">: $array_length,
+      CArg<"xegpu::MemoryScope", "xegpu::MemoryScope::Global">:$memory_scope,
+      CArg<"bool", "true">: $boundary_check
+    )>
+  ];
 
   let extraClassDeclaration = [{
     using TensorType::clone;
@@ -125,6 +136,14 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
         return attr.getBoundaryCheck().getValue();
       // return default value
       return true;
+    }
+
+    bool getScattered() {
+      auto attr = getEncodingAsTensorDescAttr();
+      if (attr && attr.getScattered())
+        return attr.getScattered().getValue();
+      // return default value
+      return false;
     }
   }];
 
