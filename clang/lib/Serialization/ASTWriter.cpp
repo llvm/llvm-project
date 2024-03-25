@@ -161,8 +161,8 @@ static TypeCode getTypeCodeForTypeClass(Type::TypeClass id) {
 
 namespace {
 
-llvm::DenseSet<FileEntryRef> GetAffectingModuleMaps(const Preprocessor &PP,
-                                                    Module *RootModule) {
+std::set<const FileEntry *> GetAffectingModuleMaps(const Preprocessor &PP,
+                                                   Module *RootModule) {
   SmallVector<const Module *> ModulesToProcess{RootModule};
 
   const HeaderSearch &HS = PP.getHeaderSearchInfo();
@@ -193,17 +193,17 @@ llvm::DenseSet<FileEntryRef> GetAffectingModuleMaps(const Preprocessor &PP,
   const ModuleMap &MM = HS.getModuleMap();
   SourceManager &SourceMgr = PP.getSourceManager();
 
-  llvm::DenseSet<FileEntryRef> ModuleMaps;
-  auto CollectIncludingModuleMaps = [&](FileID FID, FileEntryRef FE) {
-    if (!ModuleMaps.insert(FE).second)
+  std::set<const FileEntry *> ModuleMaps;
+  auto CollectIncludingModuleMaps = [&](FileID FID, FileEntryRef F) {
+    if (!ModuleMaps.insert(F).second)
       return;
     SourceLocation Loc = SourceMgr.getIncludeLoc(FID);
     // The include location of inferred module maps can point into the header
     // file that triggered the inferring. Cut off the walk if that's the case.
     while (Loc.isValid() && isModuleMap(SourceMgr.getFileCharacteristic(Loc))) {
       FID = SourceMgr.getFileID(Loc);
-      FE = *SourceMgr.getFileEntryRefForID(FID);
-      if (!ModuleMaps.insert(FE).second)
+      F = *SourceMgr.getFileEntryRefForID(FID);
+      if (!ModuleMaps.insert(F).second)
         break;
       Loc = SourceMgr.getIncludeLoc(FID);
     }
