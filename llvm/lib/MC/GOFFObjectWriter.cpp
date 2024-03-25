@@ -310,8 +310,8 @@ class GOFFObjectWriter : public MCObjectWriter {
   // The target specific GOFF writer instance.
   std::unique_ptr<MCGOFFObjectTargetWriter> TargetObjectWriter;
 
-  /// Lookup table for MCSymbols to GOFFSymbols.  Needed to determine EsdIds
-  /// of symbols in Relocations.
+  /// Lookup table for MCSymbols to the ESD IDs of the associated
+  /// GOFF Symbol.
   SymbolMapType SymbolMap;
 
   /// Lookup table for MCSections to GOFFSections.  Needed to determine
@@ -325,6 +325,7 @@ class GOFFObjectWriter : public MCObjectWriter {
 
   // The "root" SD node. This should have ESDID = 1
   GOFFSymbol RootSD;
+  uint32_t ADAPREsdId;
   uint32_t EntryEDEsdId;
   uint32_t CodeLDEsdId;
 
@@ -370,7 +371,7 @@ private:
   GOFFSymbol createGOFFSymbol(StringRef Name, GOFF::ESDSymbolType Type,
                               uint32_t ParentEsdId);
   GOFFSymbol createSDSymbol(StringRef Name);
-  GOFFSymbol createEDSymbol(StringRef Name, uint32_t ParentEsdId);
+  GOFFSymbol createEDSymbol(StringRef Name, uint32_t ParentEsdId, GOFF::ESDAlignment Alignment = GOFF::ESD_ALIGN_Doubleword);
   GOFFSymbol createLDSymbol(StringRef Name, uint32_t ParentEsdId);
   GOFFSymbol createERSymbol(StringRef Name, uint32_t ParentEsdId,
                             const MCSymbolGOFF *Source = nullptr);
@@ -390,10 +391,6 @@ private:
   void writeSymbolDeclaredInModule(const MCSymbolGOFF &Symbol, MCAssembler &Asm,
                                    const MCAsmLayout &Layout);
 
-  // In XPLINK, the ESD Record owning the ADA is always the 4th record, behind
-  // the HDR record, the Root SD, and the ED symbol for the ADA, meaning it
-  // always has EsdId = 3.
-  static constexpr uint32_t ADAEsdId = 3u;
 };
 } // end anonymous namespace
 
@@ -408,11 +405,12 @@ GOFFSymbol GOFFObjectWriter::createSDSymbol(StringRef Name) {
 }
 
 GOFFSymbol GOFFObjectWriter::createEDSymbol(StringRef Name,
-                                            uint32_t ParentEsdId) {
+                                            uint32_t ParentEsdId,
+                                            GOFF::ESDAlignment Alignment) {
   GOFFSymbol ED =
       createGOFFSymbol(Name, GOFF::ESD_ST_ElementDefinition, ParentEsdId);
 
-  ED.Alignment = GOFF::ESD_ALIGN_Doubleword;
+  ED.Alignment = Alignment;
   return ED;
 }
 
@@ -517,7 +515,7 @@ void GOFFObjectWriter::writeSymbolDefinedInModule(const MCSymbolGOFF &Symbol,
                                                         : GOFF::ESD_BSC_Module))
             : GOFF::ESD_BSC_Section;
 
-    LD.ADAEsdId = GOFFObjectWriter::ADAEsdId;
+    LD.ADAEsdId = ADAPREsdId;
 
     if (Symbol.getName().equals("main")) {
       LD.BindingScope = GOFF::ESD_BSC_Library;
@@ -585,7 +583,6 @@ void GOFFObjectWriter::writeSymbolDeclaredInModule(const MCSymbolGOFF &Symbol,
                                                     : Symbol.getName(),
                                    SD.EsdId, &Symbol);
     ER.BindingScope = GOFF::ESD_BSC_ImportExport;
-    GSym.Indirect = IsIndirectSymbol;
     GSym = ER;
     GSymEsdId = ER.EsdId;
     break;
@@ -710,7 +707,7 @@ void GOFFObjectWriter::writeSymbol(const GOFFSymbol &Symbol,
       else
         setExecutable(GOFF::ESD_EXE_DATA);
 
-      if (Symbol.isForceRent() || Symbol.isReadOnly()) // TODO
+      if (Symbol.isForceRent() || Symbol.isReadOnly())
         setReadOnly(true);
     }
     Offset = 0; // TODO ED and SD are 1-1 for now
@@ -724,8 +721,6 @@ void GOFFObjectWriter::writeSymbol(const GOFFSymbol &Symbol,
     setBindingAlgorithm(Symbol.BindAlgorithm);
     setLoadingBehavior(Symbol.LoadBehavior);
     SymbolFlags.set(5, 3, GOFF::ESD_RQ_0); // Reserved Qwords
-    if (Symbol.isForceRent())
-      setReadOnly(true);
     NameSpaceId = Symbol.NameSpace;
     Length = Symbol.SectionLength;
     break;
@@ -844,6 +839,7 @@ void GOFFObjectWriter::writeADAandCodeSectionSymbols(
   ADA.SectionLength = std::max(getADASectionLength(Asm, Layout), 2u);
   writeSymbol(ADAED, Layout);
   writeSymbol(ADA, Layout);
+  ADAPREsdId = ADA.EsdId;
 
   // Write ESD Records for Code Section
   GOFFSymbol ED = createEDSymbol("C_CODE64", RootSD.EsdId);
@@ -866,7 +862,7 @@ void GOFFObjectWriter::writeADAandCodeSectionSymbols(
   else
     LD.BindingScope = GOFF::ESD_BSC_Library;
 
-  LD.ADAEsdId = GOFFObjectWriter::ADAEsdId;
+  LD.ADAEsdId = ADAPREsdId;
 
   EntryEDEsdId = ED.EsdId;
   CodeLDEsdId = LD.EsdId;
@@ -954,7 +950,7 @@ void GOFFObjectWriter::writeSectionSymbols(MCAssembler &Asm,
       SectionMap.insert(std::make_pair(&Section, GoffSec));
     } else if (Section.getName().equals(".ada")) {
       GOFFSection GoffSec = GOFFSection(
-          GOFFObjectWriter::ADAEsdId, GOFFObjectWriter::ADAEsdId, RootSD.EsdId);
+          ADAPREsdId, ADAPREsdId, RootSD.EsdId);
       SectionMap.insert(std::make_pair(&Section, GoffSec));
     } else if (Kind.isBSS() || Kind.isData() || Kind.isThreadData()) {
       // We handle this with the symbol definition, so there is no need to do
