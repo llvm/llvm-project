@@ -74,13 +74,13 @@ static ParameterKind getParameterKind(const Record *R) {
   auto VTRec = R->getValueAsDef("VT");
   switch (getValueType(VTRec)) {
   case MVT::isVoid:
-    return ParameterKind::VOID;
+    return ParameterKind::Void;
   case MVT::f16:
-    return ParameterKind::HALF;
+    return ParameterKind::Half;
   case MVT::f32:
-    return ParameterKind::FLOAT;
+    return ParameterKind::Float;
   case MVT::f64:
-    return ParameterKind::DOUBLE;
+    return ParameterKind::Double;
   case MVT::i1:
     return ParameterKind::I1;
   case MVT::i8:
@@ -91,11 +91,11 @@ static ParameterKind getParameterKind(const Record *R) {
     return ParameterKind::I32;
   case MVT::fAny:
   case MVT::iAny:
-    return ParameterKind::OVERLOAD;
+    return ParameterKind::Overload;
   case MVT::Other:
     // Handle DXIL-specific overload types
     if (R->getValueAsInt("isHalfOrFloat") || R->getValueAsInt("isI16OrI32")) {
-      return ParameterKind::OVERLOAD;
+      return ParameterKind::Overload;
     }
     LLVM_FALLTHROUGH;
   default:
@@ -201,16 +201,16 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 /// \return std::string string representation of input Kind
 static std::string getParameterKindStr(ParameterKind Kind) {
   switch (Kind) {
-  case ParameterKind::INVALID:
-    return "INVALID";
-  case ParameterKind::VOID:
-    return "VOID";
-  case ParameterKind::HALF:
-    return "HALF";
-  case ParameterKind::FLOAT:
-    return "FLOAT";
-  case ParameterKind::DOUBLE:
-    return "DOUBLE";
+  case ParameterKind::Invalid:
+    return "Invalid";
+  case ParameterKind::Void:
+    return "Void";
+  case ParameterKind::Half:
+    return "Half";
+  case ParameterKind::Float:
+    return "Float";
+  case ParameterKind::Double:
+    return "Double";
   case ParameterKind::I1:
     return "I1";
   case ParameterKind::I8:
@@ -221,14 +221,14 @@ static std::string getParameterKindStr(ParameterKind Kind) {
     return "I32";
   case ParameterKind::I64:
     return "I64";
-  case ParameterKind::OVERLOAD:
-    return "OVERLOAD";
-  case ParameterKind::CBUFFER_RET:
-    return "CBUFFER_RET";
-  case ParameterKind::RESOURCE_RET:
-    return "RESOURCE_RET";
-  case ParameterKind::DXIL_HANDLE:
-    return "DXIL_HANDLE";
+  case ParameterKind::Overload:
+    return "Overload";
+  case ParameterKind::CBufferRet:
+    return "CBufferRet";
+  case ParameterKind::ResourceRet:
+    return "ResourceRet";
+  case ParameterKind::DXILHandle:
+    return "DXILHandle";
   }
   llvm_unreachable("Unknown llvm::dxil::ParameterKind enum");
 }
@@ -462,7 +462,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
       [](raw_ostream &ParamOS, ParameterKind Kind) {
         ParamOS << "ParameterKind::" << getParameterKindStr(Kind);
       },
-      "ParameterKind::INVALID");
+      "ParameterKind::Invalid");
   OS << "  };\n\n";
   OS << "  unsigned Index = Prop.ParameterTableOffset;\n";
   OS << "  return DXILOpParameterKindTable + Index;\n";
