@@ -194,7 +194,7 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
     PrevAddress = Address;
     const uint32_t NumSecondaryEntryPoints =
         SecondaryEntryPointsMap.count(Address)
-            ? SecondaryEntryPointsMap.at(Address).size()
+            ? SecondaryEntryPointsMap[Address].size()
             : 0;
     if (Cold) {
       size_t HotIndex =
@@ -263,7 +263,7 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
     if (!Cold && NumSecondaryEntryPoints) {
       LLVM_DEBUG(dbgs() << "Secondary entry points: ");
       // Secondary entry point offsets, delta-encoded
-      for (uint32_t Offset : SecondaryEntryPointsMap.at(Address)) {
+      for (uint32_t Offset : SecondaryEntryPointsMap[Address]) {
         encodeULEB128(Offset - PrevOffset, OS);
         LLVM_DEBUG(dbgs() << formatv("{0:x} ", Offset));
         PrevOffset = Offset;
@@ -442,6 +442,13 @@ void BoltAddressTranslation::dump(raw_ostream &OS) {
       else
         OS << formatv(" hash: {0:x}", BBHashMap.getBBHash(Val));
       OS << "\n";
+    }
+    if (SecondaryEntryPointsMap.count(Address)) {
+      const std::vector<uint32_t> &SecondaryEntryPoints =
+          SecondaryEntryPointsMap[Address];
+      OS << SecondaryEntryPoints.size() << " secondary entry points:\n";
+      for (uint32_t EntryPointOffset : SecondaryEntryPoints)
+        OS << formatv("{0:x}\n", EntryPointOffset);
     }
     OS << "\n";
   }
