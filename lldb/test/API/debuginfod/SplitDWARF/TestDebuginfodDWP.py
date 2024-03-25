@@ -80,7 +80,7 @@ class DebugInfodDWPTests(TestBase):
         Test behavior with a stripped binary, with the unstripped binary and
         dwp symbols from Debuginfod.
         """
-        self.config_test(["a.out"], "a.out.dwp", "a.out.full")
+        self.config_test(["a.out"], "a.out.dwp", "a.out.unstripped")
         self.try_breakpoint(True)
 
     def test_debuginfod_both_okd_symfiles_from_service(self):
