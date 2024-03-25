@@ -141,7 +141,6 @@ public:
       //  Values    |            |           | (−1)**s × m × 2**−16382
 
       FPBits test5_1(UInt128(0x0000000000000001));
-      int exponent = test5_1.get_biased_exponent();
       const T test5_1_val = test5_1.get_val();
       TEST_SPECIAL(cx, test5_1_val, 0, 0);
       EXPECT_FP_EQ(
