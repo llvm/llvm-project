@@ -471,9 +471,11 @@ defm : X86WriteResPairUnsupported<WritePSADBWZ>;
 defm : BWWriteResPair<WritePHMINPOS, [BWPort0], 5>; // Vector PHMINPOS.
 
 // Vector integer shifts.
-defm : BWWriteResPair<WriteVecShift,     [BWPort0], 1, [1], 1, 5>;
-defm : BWWriteResPair<WriteVecShiftX,    [BWPort0,BWPort5],  2, [1,1], 2, 5>;
+defm : X86WriteRes<WriteVecShift,        [BWPort0], 1, [1], 1>;
+defm : X86WriteRes<WriteVecShiftX,       [BWPort0,BWPort5],  2, [1,1], 2>;
 defm : X86WriteRes<WriteVecShiftY,       [BWPort0,BWPort5],  4, [1,1], 2>;
+defm : X86WriteRes<WriteVecShiftLd,      [BWPort0,BWPort23], 6, [1,1], 2>;
+defm : X86WriteRes<WriteVecShiftXLd,     [BWPort0,BWPort23], 7, [1,1], 2>;
 defm : X86WriteRes<WriteVecShiftYLd,     [BWPort0,BWPort23], 7, [1,1], 2>;
 defm : X86WriteResPairUnsupported<WriteVecShiftZ>;
 

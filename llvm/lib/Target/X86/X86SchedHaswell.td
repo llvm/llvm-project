@@ -469,10 +469,12 @@ defm : HWWriteResPair<WritePSADBWZ, [HWPort0], 5, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WritePHMINPOS, [HWPort0],  5, [1], 1, 6>;
 
 // Vector integer shifts.
-defm : HWWriteResPair<WriteVecShift,     [HWPort0], 1, [1], 1, 5>;
-defm : HWWriteResPair<WriteVecShiftX,    [HWPort0,HWPort5],  2, [1,1], 2, 6>;
+defm : X86WriteRes<WriteVecShift,        [HWPort0], 1, [1], 1>;
+defm : X86WriteRes<WriteVecShiftX,       [HWPort0,HWPort5],  2, [1,1], 2>;
 defm : X86WriteRes<WriteVecShiftY,       [HWPort0,HWPort5],  4, [1,1], 2>;
 defm : X86WriteRes<WriteVecShiftZ,       [HWPort0,HWPort5],  4, [1,1], 2>; // Unsupported = 1
+defm : X86WriteRes<WriteVecShiftLd,      [HWPort0,HWPort23], 6, [1,1], 2>;
+defm : X86WriteRes<WriteVecShiftXLd,     [HWPort0,HWPort23], 8, [1,1], 2>;
 defm : X86WriteRes<WriteVecShiftYLd,     [HWPort0,HWPort23], 8, [1,1], 2>;
 defm : X86WriteRes<WriteVecShiftZLd,     [HWPort0,HWPort23], 8, [1,1], 2>; // Unsupported = 1
 
