@@ -63,7 +63,7 @@ class DebugInfodTests(TestBase):
         Test behavior with the full binary available from Debuginfod as
         'debuginfo' from the plug-in.
         """
-        test_root = self.config_test(["a.out"], "a.out.full")
+        test_root = self.config_test(["a.out"], "a.out.unstripped")
         self.try_breakpoint(True)
 
     def test_debuginfod_executable(self):
@@ -71,7 +71,7 @@ class DebugInfodTests(TestBase):
         Test behavior with the full binary available from Debuginfod as
         'executable' from the plug-in.
         """
-        test_root = self.config_test(["a.out"], None, "a.out.full")
+        test_root = self.config_test(["a.out"], None, "a.out.unstripped")
         self.try_breakpoint(True)
 
     def test_debuginfod_okd_symbols(self):
