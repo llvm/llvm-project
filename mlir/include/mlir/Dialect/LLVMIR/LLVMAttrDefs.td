@@ -546,7 +546,7 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
     "DIFileAttr":$file,
     OptionalParameter<"unsigned">:$line,
     OptionalParameter<"unsigned">:$scopeLine,
-    "DISubprogramFlags":$subprogramFlags,
+    OptionalParameter<"DISubprogramFlags">:$subprogramFlags,
     OptionalParameter<"DISubroutineTypeAttr">:$type
   );
   let builders = [
