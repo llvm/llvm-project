@@ -2985,12 +2985,6 @@ multiclass VPseudoVWALU_VV_VX {
   }
 }
 
-multiclass VPseudoVWALU_VV_VX_VI<Operand ImmType> : VPseudoVWALU_VV_VX {
-  foreach m = MxListW in {
-    defm "" : VPseudoBinaryW_VI<ImmType, m>;
-  }
-}
-
 multiclass VPseudoVWMUL_VV_VX {
   foreach m = MxListW in {
     defvar mx = m.MX;
