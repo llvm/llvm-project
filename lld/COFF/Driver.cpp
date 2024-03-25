@@ -365,20 +365,17 @@ bool LinkerDriver::isDecorated(StringRef sym) {
          (!ctx.config.mingw && sym.contains('@'));
 }
 
-void LinkerDriver::processDrectveSections(InputFile *file) {
-  std::vector<StringRef> directivesList = file->getDrectves();
-  if (directivesList.empty())
-    return;
-  for (StringRef s : directivesList) {
+void LinkerDriver::processDirectivesSection(InputFile *file) {
+  for (StringRef s : file->getDrectves()) {
     if (s.empty())
       continue;
-    parseDrectveSectionContents(file, s);
+    processDirectivesSection(file, s);
   }
 }
 
 // Parses .drectve section contents and returns a list of files
 // specified by /defaultlib.
-void LinkerDriver::parseDrectveSectionContents(InputFile *file, StringRef s) {
+void LinkerDriver::processDirectivesSection(InputFile *file, StringRef s) {
   log("Directives: " + toString(file) + ": " + s);
 
   ArgParser parser(ctx);

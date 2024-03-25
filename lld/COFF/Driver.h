@@ -87,7 +87,7 @@ public:
   void addClangLibSearchPaths(const std::string &argv0);
 
   // Used by the resolver to iterate through .drectve section(s).
-  void processDrectveSections(InputFile *file);
+  void processDirectivesSection(InputFile *file);
 
   // Used by ArchiveFile to enqueue members.
   void enqueueArchiveMember(const Archive::Child &c, const Archive::Symbol &sym,
@@ -111,8 +111,8 @@ private:
 
   bool findUnderscoreMangle(StringRef sym);
 
-  // Used by the processDrectveSections() to parse .drectve section contents.
-  void parseDrectveSectionContents(InputFile *file, StringRef s);
+  // Used by the processDirectivesSection() to parse .drectve section contents.
+  void processDirectivesSection(InputFile *file, StringRef s);
 
   // Determines the location of the sysroot based on `args`, environment, etc.
   void detectWinSysRoot(const llvm::opt::InputArgList &args);

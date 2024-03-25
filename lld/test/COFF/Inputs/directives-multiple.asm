@@ -1,3 +1,7 @@
+; Presently, the LLVM tooling incorrectly coalesces '.drectve' sections. So,
+; there is no way to generate an OBJ with multiple sections. This (and the
+; resulting OBJ) should be removed in the future when resolved.
+
 ; fasm2 directives-multiple.asm
 ; lld-link /dll directives-multiple.obj
 
