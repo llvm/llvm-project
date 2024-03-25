@@ -180,14 +180,14 @@ class ZvkMxSet<string vd_lmul> {
                                    !eq(vd_lmul, "MF8") : [V_MF8]);
 }
 
-class VPseudoUnaryNoMask_Zvk<DAGOperand RetClass, VReg OpClass, string Constraint = ""> :
+class VPseudoUnaryNoMask_Zvk<DAGOperand RetClass, VReg OpClass> :
       Pseudo<(outs RetClass:$rd),
         (ins RetClass:$merge, OpClass:$rs2, AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
         RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
+  let Constraints = "$rd = $merge";
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -196,8 +196,7 @@ class VPseudoUnaryNoMask_Zvk<DAGOperand RetClass, VReg OpClass, string Constrain
 
 class VPseudoBinaryNoMask_Zvk<VReg RetClass,
                               VReg Op1Class,
-                              DAGOperand Op2Class,
-                              string Constraint> :
+                              DAGOperand Op2Class> :
         Pseudo<(outs RetClass:$rd),
                (ins RetClass:$merge, Op1Class:$rs2, Op2Class:$rs1,
                     AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
@@ -205,7 +204,7 @@ class VPseudoBinaryNoMask_Zvk<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
+  let Constraints = "$rd = $merge";
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -215,98 +214,90 @@ class VPseudoBinaryNoMask_Zvk<VReg RetClass,
 multiclass VPseudoBinaryNoMask_Zvk<VReg RetClass,
                                    VReg Op1Class,
                                    DAGOperand Op2Class,
-                                   LMULInfo MInfo,
-                                   string Constraint = ""> {
+                                   LMULInfo MInfo> {
   let VLMul = MInfo.value in
-    def "_" # MInfo.MX : VPseudoBinaryNoMask_Zvk<RetClass, Op1Class, Op2Class,
-                                                 Constraint>;
+    def "_" # MInfo.MX : VPseudoBinaryNoMask_Zvk<RetClass, Op1Class, Op2Class>;
 }
 
-multiclass VPseudoUnaryV_V_NoMask_Zvk<LMULInfo m, string Constraint = ""> {
+multiclass VPseudoUnaryV_V_NoMask_Zvk<LMULInfo m> {
   let VLMul = m.value in {
-    def "_VV_" # m.MX : VPseudoUnaryNoMask_Zvk<m.vrclass, m.vrclass, Constraint>;
+    def "_VV_" # m.MX : VPseudoUnaryNoMask_Zvk<m.vrclass, m.vrclass>;
   }
 }
 
-multiclass VPseudoUnaryV_S_NoMask_Zvk<LMULInfo m, string Constraint = ""> {
+multiclass VPseudoUnaryV_S_NoMask_Zvk<LMULInfo m> {
   let VLMul = m.value in
     foreach vs2_lmul = ZvkMxSet<m.MX>.vs2_lmuls in
-      def "_VS_" # m.MX # "_" # vs2_lmul.MX : VPseudoUnaryNoMask_Zvk<m.vrclass, vs2_lmul.vrclass, Constraint>;
+      def "_VS_" # m.MX # "_" # vs2_lmul.MX : VPseudoUnaryNoMask_Zvk<m.vrclass, vs2_lmul.vrclass>;
 }
 
-multiclass VPseudoVALU_V_NoMask_Zvk<string Constraint = ""> {
+multiclass VPseudoVALU_V_NoMask_Zvk {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm "" : VPseudoUnaryV_V_NoMask_Zvk<m, Constraint>,
+    defm "" : VPseudoUnaryV_V_NoMask_Zvk<m>,
               Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
 
-multiclass VPseudoVALU_S_NoMask_Zvk<string Constraint = ""> {
+multiclass VPseudoVALU_S_NoMask_Zvk {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm "" : VPseudoUnaryV_S_NoMask_Zvk<m, Constraint>,
+    defm "" : VPseudoUnaryV_S_NoMask_Zvk<m>,
               Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
 
-multiclass VPseudoVALU_V_S_NoMask_Zvk<string Constraint = ""> {
-  defm "" : VPseudoVALU_V_NoMask_Zvk<Constraint>;
-  defm "" : VPseudoVALU_S_NoMask_Zvk<Constraint>;
+multiclass VPseudoVALU_V_S_NoMask_Zvk {
+  defm "" : VPseudoVALU_V_NoMask_Zvk;
+  defm "" : VPseudoVALU_S_NoMask_Zvk;
 }
 
-multiclass VPseudoVALU_VV_NoMask_Zvk<string Constraint = ""> {
+multiclass VPseudoVALU_VV_NoMask_Zvk {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm _VV : VPseudoBinaryNoMask_Zvk<m.vrclass, m.vrclass, m.vrclass, m,
-                                       Constraint>,
+    defm _VV : VPseudoBinaryNoMask_Zvk<m.vrclass, m.vrclass, m.vrclass, m>,
                Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
 
-multiclass VPseudoVALU_VI_NoMask_Zvk<Operand ImmType = simm5,
-                                     string Constraint = ""> {
+multiclass VPseudoVALU_VI_NoMask_Zvk<Operand ImmType = simm5> {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm _VI : VPseudoBinaryNoMask_Zvk<m.vrclass, m.vrclass, ImmType, m,
-                                       Constraint>,
+    defm _VI : VPseudoBinaryNoMask_Zvk<m.vrclass, m.vrclass, ImmType, m>,
                Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
 
-multiclass VPseudoVALU_VI_NoMaskTU_Zvk<Operand ImmType = uimm5,
-                                       string Constraint = ""> {
+multiclass VPseudoVALU_VI_NoMaskTU_Zvk<Operand ImmType = uimm5> {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm _VI : VPseudoBinaryNoMask<m.vrclass, m.vrclass, ImmType, m,
-                                   Constraint>,
+    defm _VI : VPseudoBinaryNoMask<m.vrclass, m.vrclass, ImmType, m>,
                Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
 
-multiclass VPseudoVALU_VV_NoMaskTU_Zvk<string Constraint = ""> {
+multiclass VPseudoVALU_VV_NoMaskTU_Zvk {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm _VV : VPseudoBinaryNoMask<m.vrclass, m.vrclass, m.vrclass, m,
-                                   Constraint>,
+    defm _VV : VPseudoBinaryNoMask<m.vrclass, m.vrclass, m.vrclass, m>,
                Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
