@@ -33,16 +33,13 @@ public:
     EXPECT_FP_EQ_WITH_EXCEPTION(-0.0, func(-0.0, sNaN), FE_INVALID);
     EXPECT_FP_EQ(T(-1.2345), func(aNaN, T(-1.2345)));
     EXPECT_FP_EQ(T(1.2345), func(T(1.2345), aNaN));
-    EXPECT_FP_EQ_WITH_EXCEPTION(T(-1.2345),
-				func(sNaN, T(-1.2345)), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(T(-1.2345), func(sNaN, T(-1.2345)), FE_INVALID);
     EXPECT_FP_EQ_WITH_EXCEPTION(T(1.2345), func(T(1.2345), sNaN), FE_INVALID);
-    EXPECT_FP_IS_NAN_WITH_EXCEPTION(
-        func(aNaN, sNaN), FE_INVALID);
-    EXPECT_FP_IS_NAN_WITH_EXCEPTION(
-        func(sNaN, aNaN), FE_INVALID);
+    EXPECT_FP_IS_NAN_WITH_EXCEPTION(func(aNaN, sNaN), FE_INVALID);
+    EXPECT_FP_IS_NAN_WITH_EXCEPTION(func(sNaN, aNaN), FE_INVALID);
     EXPECT_EQ(FPBits(aNaN).uintval(), FPBits(func(aNaN, sNaN)).uintval());
     EXPECT_EQ(FPBits(aNaN).uintval(), FPBits(func(sNaN, aNaN)).uintval());
-    EXPECT_EQ(FPBits(aNaN).uintval(), FPBits(func(sNaN, sNaN)).uintval());		 
+    EXPECT_EQ(FPBits(aNaN).uintval(), FPBits(func(sNaN, sNaN)).uintval());
   }
 
   void testInfArg(FMinimumNumFunc func) {

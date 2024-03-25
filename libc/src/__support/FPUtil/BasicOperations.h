@@ -113,7 +113,7 @@ LIBC_INLINE T fmaximum_num(T x, T y) {
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T fminimum_num(T x, T y) {
   const FPBits<T> bitx(x), bity(y);
-  
+
   if (bitx.is_signaling_nan()) {
     fputil::raise_except_if_required(FE_INVALID);
     if (bity.is_nan())
@@ -134,7 +134,6 @@ LIBC_INLINE T fminimum_num(T x, T y) {
     return (bitx.is_neg() ? x : y);
   return x < y ? x : y;
 }
-
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T fmaximum_mag(T x, T y) {
