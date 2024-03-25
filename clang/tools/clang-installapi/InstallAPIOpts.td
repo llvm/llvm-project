@@ -29,3 +29,35 @@ def verify_mode_EQ : Joined<["--"], "verify-mode=">,
   HelpText<"Specify the severity and extend of the validation. Valid modes are ErrorsOnly, ErrorsAndWarnings, and Pedantic.">;
 def demangle : Flag<["--", "-"], "demangle">,
   HelpText<"Demangle symbols when printing warnings and errors">;
+
+// Additional input options.
+def extra_project_header : Separate<["-"], "extra-project-header">,
+  MetaVarName<"<path>">,
+  HelpText<"Add additional project header location for parsing">;
+def extra_project_header_EQ : Joined<["--"], "extra-project-header=">,
+  Alias<extra_project_header>;
+def exclude_project_header : Separate<["-"], "exclude-project-header">,
+  MetaVarName<"<glob>">,
+  HelpText<"Exclude project header from parsing">;
+def exclude_project_header_EQ : Joined<["--"], "exclude-project-header=">,
+  Alias<exclude_project_header>;
+def extra_public_header : Separate<["-"], "extra-public-header">,
+  MetaVarName<"<path>">,
+  HelpText<"Add additional public header location for parsing">;
+def extra_public_header_EQ : Joined<["--"], "extra-public-header=">,
+  Alias<extra_public_header>;
+def extra_private_header : Separate<["-"], "extra-private-header">,
+  MetaVarName<"<path>">,
+  HelpText<"Add additional private header location for parsing">;
+def extra_private_header_EQ : Joined<["--"], "extra-private-header=">,
+  Alias<extra_private_header>;
+def exclude_public_header : Separate<["-"], "exclude-public-header">,
+  MetaVarName<"<glob>">,
+  HelpText<"Exclude public header from parsing">;
+def exclude_public_header_EQ : Joined<["--"], "exclude-public-header=">,
+  Alias<exclude_public_header>;
+def exclude_private_header : Separate<["-"], "exclude-private-header">,
+  MetaVarName<"<glob>">,
+  HelpText<"Exclude private header from parsing">;
+def exclude_private_header_EQ : Joined<["--"], "exclude-private-header=">,
+  Alias<exclude_private_header>;
