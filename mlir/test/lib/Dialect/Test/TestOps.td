@@ -2421,7 +2421,7 @@ def TestDestinationStyleOp :
   }];
 
   let extraClassDeclaration = [{
-    mlir::MutableOperandRange getDpsInitsMutable() {
+    mlir::MutableArrayRef<mlir::OpOperand> getDpsInitsMutable() {
       return getOutputsMutable();
     }
   }];
@@ -2482,7 +2482,7 @@ def TestLinalgConvOp :
       return "";
     }
 
-    mlir::MutableOperandRange getDpsInitsMutable() {
+    mlir::MutableArrayRef<mlir::OpOperand> getDpsInitsMutable() {
       return getOutputsMutable();
     }
   }];
@@ -2543,7 +2543,7 @@ def TestLinalgFillOp :
       return "";
     }
 
-    mlir::MutableOperandRange getDpsInitsMutable() {
+    mlir::MutableArrayRef<mlir::OpOperand> getDpsInitsMutable() {
       return getOutputsMutable();
     }
   }];

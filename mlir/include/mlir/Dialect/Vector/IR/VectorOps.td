@@ -1455,8 +1455,8 @@ def Vector_TransferReadOp :
     // MaskableOpInterface methods.
     bool supportsPassthru() { return true; }
 
-    MutableOperandRange getDpsInitsMutable() {
-      return MutableOperandRange(getOperation(), /*start=*/0, /*length=*/0);
+    MutableArrayRef<OpOperand> getDpsInitsMutable() {
+      return {};
     }
   }];
 
@@ -1615,7 +1615,9 @@ def Vector_TransferWriteOp :
     ///  ops of other dialects.
     Value getValue() { return getVector(); }
 
-    MutableOperandRange getDpsInitsMutable() { return getSourceMutable(); }
+    MutableArrayRef<OpOperand> getDpsInitsMutable() {
+      return getSourceMutable();
+    }
   }];
 
   let hasFolder = 1;

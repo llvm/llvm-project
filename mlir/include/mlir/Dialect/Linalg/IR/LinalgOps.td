@@ -149,7 +149,9 @@ def Linalg_SoftmaxOp : Linalg_Op<"softmax",
     int64_t getOutputOperandRank() {
       return getOutputOperandType().getRank();
     }
-    MutableOperandRange getDpsInitsMutable() { return getOutputMutable(); }
+    MutableArrayRef<OpOperand> getDpsInitsMutable() {
+      return getOutputMutable();
+    }
   }];
   let hasVerifier = 1;
 }
