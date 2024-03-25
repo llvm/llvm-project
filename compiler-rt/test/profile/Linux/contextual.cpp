@@ -1,4 +1,4 @@
-// RUN: %clangxx_pgogen %s -O2 -g -o %t.bin -fno-exceptions -mllvm -profile-context-root=the_root
+// RUN: %clangxx_pgogen %s -O2 -o %t.bin -fno-exceptions -mllvm -profile-context-root=the_root
 // RUN: %t.bin %t.rawprof
 // RUN: %llvm-ctx-ifdo %t.rawprof %t.bitstream
 // RUN: stat -c%%s %t.rawprof | FileCheck %s --check-prefix=RAW
