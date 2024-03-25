@@ -421,19 +421,15 @@ protected:
   /// Resolve relocations to external symbols.
   Error resolveExternalSymbols();
 
-  // Compute an upper bound of the memory that is required to load all
-  // sections
-  Error computeTotalAllocSize(const ObjectFile &Obj, uint64_t &CodeSize,
-                              Align &CodeAlign, uint64_t &RODataSize,
-                              Align &RODataAlign, uint64_t &RWDataSize,
-                              Align &RWDataAlign);
-
   // Compute GOT size
   unsigned computeGOTSize(const ObjectFile &Obj);
 
   // Compute the stub buffer size required for a section
   unsigned computeSectionStubBufSize(const ObjectFile &Obj,
                                      const SectionRef &Section);
+
+
+
 
   // Implementation of the generic part of the loadObject algorithm.
   Expected<ObjSectionToIDMap> loadObjectImpl(const object::ObjectFile &Obj);
@@ -463,6 +459,14 @@ public:
   }
 
   virtual ~RuntimeDyldImpl();
+
+// Compute an upper bound of the memory that is required to load all
+  // sections
+  Error computeTotalAllocSize(const ObjectFile &Obj, uint64_t &CodeSize,
+                              Align &CodeAlign, uint64_t &RODataSize,
+                              Align &RODataAlign, uint64_t &RWDataSize,
+                              Align &RWDataAlign);
+
 
   void setProcessAllSections(bool ProcessAllSections) {
     this->ProcessAllSections = ProcessAllSections;
