@@ -506,8 +506,7 @@ GOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
     std::copy(CompleteData.data(), CompleteData.data() + TxtDataSize,
               Data.begin() + TxtDataOffset);
   }
-  auto DataPtr = Data;
-  SectionDataCache[Sec.d.a] = std::move(DataPtr);
+  SectionDataCache[Sec.d.a] = Data;
   return ArrayRef<uint8_t>(Data);
 }
 

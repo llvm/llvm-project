@@ -41,7 +41,7 @@ class GOFFObjectFile : public ObjectFile {
   // (EDID, 0)               code, r/o data section
   // (EDID,PRID)             r/w data section
   SmallVector<SectionEntryImpl, 256> SectionList;
-  mutable DenseMap<uint32_t, SmallVector<uint8_t, 0>> SectionDataCache;
+  mutable DenseMap<uint32_t, SmallVector<uint8_t>> SectionDataCache;
 
 public:
   Expected<StringRef> getSymbolName(SymbolRef Symbol) const;
