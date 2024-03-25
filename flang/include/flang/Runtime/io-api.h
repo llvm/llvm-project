@@ -51,12 +51,20 @@ constexpr InquiryKeywordHash HashInquiryKeyword(const char *p) {
   return hash;
 }
 
-const char *InquiryKeywordHashDecode(
+RT_API_ATTRS const char *InquiryKeywordHashDecode(
     char *buffer, std::size_t, InquiryKeywordHash);
 
 extern "C" {
 
 #define IONAME(name) RTNAME(io##name)
+
+#ifndef IODECL
+#define IODECL(name) RT_API_ATTRS IONAME(name)
+#endif
+
+#ifndef IODEF
+#define IODEF(name) RT_API_ATTRS IONAME(name)
+#endif
 
 // These functions initiate data transfer statements (READ, WRITE, PRINT).
 // Example: PRINT *, 666 is implemented as the series of calls:
@@ -139,7 +147,7 @@ enum Iostat IONAME(CheckUnitNumberInRange128)(common::int128_t unit,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
 // External synchronous I/O initiation
-Cookie IONAME(BeginExternalListOutput)(ExternalUnit = DefaultOutputUnit,
+Cookie IODECL(BeginExternalListOutput)(ExternalUnit = DefaultOutputUnit,
     const char *sourceFile = nullptr, int sourceLine = 0);
 Cookie IONAME(BeginExternalListInput)(ExternalUnit = DefaultInputUnit,
     const char *sourceFile = nullptr, int sourceLine = 0);
@@ -253,7 +261,7 @@ bool IONAME(InputDescriptor)(Cookie, const Descriptor &);
 // Formatted (including list directed) I/O data items
 bool IONAME(OutputInteger8)(Cookie, std::int8_t);
 bool IONAME(OutputInteger16)(Cookie, std::int16_t);
-bool IONAME(OutputInteger32)(Cookie, std::int32_t);
+bool IODECL(OutputInteger32)(Cookie, std::int32_t);
 bool IONAME(OutputInteger64)(Cookie, std::int64_t);
 bool IONAME(OutputInteger128)(Cookie, common::int128_t);
 bool IONAME(InputInteger)(Cookie, std::int64_t &, int kind = 8);
@@ -357,7 +365,7 @@ bool IONAME(InquireInteger64)(
 // returned is guaranteed to only be one of the problems that the
 // EnableHandlers() call has indicated should be handled in compiled code
 // rather than by terminating the image.
-enum Iostat IONAME(EndIoStatement)(Cookie);
+enum Iostat IODECL(EndIoStatement)(Cookie);
 
 } // extern "C"
 } // namespace Fortran::runtime::io
