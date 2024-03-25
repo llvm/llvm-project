@@ -13,9 +13,7 @@
 #ifndef LLVM_CLANG_INSTALLAPI_HEADERFILE_H
 #define LLVM_CLANG_INSTALLAPI_HEADERFILE_H
 
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangStandard.h"
-#include "clang/InstallAPI/MachO.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
@@ -58,10 +56,6 @@ class HeaderFile {
   std::string IncludeName;
   /// Supported language mode for header.
   std::optional<clang::Language> Language;
-  /// Exclude header file from processing.
-  bool Excluded{false};
-  /// Add header file to processing.
-  bool Extra{false};
 
 public:
   HeaderFile() = delete;
@@ -77,46 +71,15 @@ public:
   StringRef getIncludeName() const { return IncludeName; }
   StringRef getPath() const { return FullPath; }
 
-  void setExtra(bool V = true) { Extra = V; }
-  void setExcluded(bool V = true) { Excluded = V; }
-  bool isExtra() const { return Extra; }
-  bool isExcluded() const { return Excluded; }
-
   bool useIncludeName() const {
     return Type != HeaderType::Project && !IncludeName.empty();
   }
 
   bool operator==(const HeaderFile &Other) const {
-    return std::tie(Type, FullPath, IncludeName, Language, Excluded, Extra) ==
+    return std::tie(Type, FullPath, IncludeName, Language) ==
            std::tie(Other.Type, Other.FullPath, Other.IncludeName,
-                    Other.Language, Other.Excluded, Other.Extra);
+                    Other.Language);
   }
-};
-
-/// Glob that represents a pattern of header files to retreive.
-class HeaderGlob {
-private:
-  std::string GlobString;
-  llvm::Regex Rule;
-  HeaderType Type;
-  bool FoundMatch{false};
-
-public:
-  HeaderGlob(StringRef GlobString, llvm::Regex &&, HeaderType Type);
-
-  /// Create a header glob from string for the header access level.
-  static llvm::Expected<std::unique_ptr<HeaderGlob>>
-  create(StringRef GlobString, HeaderType Type);
-
-  /// Query if provided header matches glob.
-  bool match(const HeaderFile &Header);
-
-  /// Query if a header was matched in the glob, used primarily for error
-  /// reporting.
-  bool didMatch() { return FoundMatch; }
-
-  /// Provide back input glob string.
-  StringRef str() { return GlobString; }
 };
 
 /// Assemble expected way header will be included by clients.
@@ -129,19 +92,6 @@ public:
 /// structure.
 std::optional<std::string> createIncludeHeaderName(const StringRef FullPath);
 using HeaderSeq = std::vector<HeaderFile>;
-
-/// Determine if Path is a header file.
-/// It does not touch the file system.
-///
-/// \param  Path File path to file.
-bool isHeaderFile(StringRef Path);
-
-/// Given input directory, collect all header files.
-///
-/// \param FM FileManager for finding input files.
-/// \param Directory Path to directory file.
-llvm::Expected<PathSeq> enumerateFiles(clang::FileManager &FM,
-                                       StringRef Directory);
 
 } // namespace clang::installapi
 
