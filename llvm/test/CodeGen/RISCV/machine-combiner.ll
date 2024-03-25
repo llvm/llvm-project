@@ -740,9 +740,9 @@ define i8 @test_reassoc_minu_i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3) {
 ; CHECK-LABEL: test_reassoc_minu_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a3, 255
-; CHECK-NEXT:    andi a2, a2, 255
 ; CHECK-NEXT:    andi a1, a1, 255
 ; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    andi a2, a2, 255
 ; CHECK-NEXT:    minu a0, a0, a1
 ; CHECK-NEXT:    minu a1, a2, a3
 ; CHECK-NEXT:    minu a0, a0, a1
@@ -757,9 +757,9 @@ define i16 @test_reassoc_minu_i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3) {
 ; CHECK-LABEL: test_reassoc_minu_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    zext.h a3, a3
-; CHECK-NEXT:    zext.h a2, a2
 ; CHECK-NEXT:    zext.h a1, a1
 ; CHECK-NEXT:    zext.h a0, a0
+; CHECK-NEXT:    zext.h a2, a2
 ; CHECK-NEXT:    minu a0, a0, a1
 ; CHECK-NEXT:    minu a1, a2, a3
 ; CHECK-NEXT:    minu a0, a0, a1
@@ -774,9 +774,9 @@ define i32 @test_reassoc_minu_i32(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: test_reassoc_minu_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.w a3, a3
-; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    sext.w a1, a1
 ; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    minu a0, a0, a1
 ; CHECK-NEXT:    minu a1, a2, a3
 ; CHECK-NEXT:    minu a0, a0, a1
@@ -804,9 +804,9 @@ define i8 @test_reassoc_min_i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3) {
 ; CHECK-LABEL: test_reassoc_min_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.b a3, a3
-; CHECK-NEXT:    sext.b a2, a2
 ; CHECK-NEXT:    sext.b a1, a1
 ; CHECK-NEXT:    sext.b a0, a0
+; CHECK-NEXT:    sext.b a2, a2
 ; CHECK-NEXT:    min a0, a0, a1
 ; CHECK-NEXT:    min a1, a2, a3
 ; CHECK-NEXT:    min a0, a0, a1
@@ -821,9 +821,9 @@ define i16 @test_reassoc_min_i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3) {
 ; CHECK-LABEL: test_reassoc_min_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.h a3, a3
-; CHECK-NEXT:    sext.h a2, a2
 ; CHECK-NEXT:    sext.h a1, a1
 ; CHECK-NEXT:    sext.h a0, a0
+; CHECK-NEXT:    sext.h a2, a2
 ; CHECK-NEXT:    min a0, a0, a1
 ; CHECK-NEXT:    min a1, a2, a3
 ; CHECK-NEXT:    min a0, a0, a1
@@ -838,9 +838,9 @@ define i32 @test_reassoc_min_i32(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: test_reassoc_min_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.w a3, a3
-; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    sext.w a1, a1
 ; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    min a0, a0, a1
 ; CHECK-NEXT:    min a1, a2, a3
 ; CHECK-NEXT:    min a0, a0, a1
@@ -868,9 +868,9 @@ define i8 @test_reassoc_maxu_i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3) {
 ; CHECK-LABEL: test_reassoc_maxu_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a3, 255
-; CHECK-NEXT:    andi a2, a2, 255
 ; CHECK-NEXT:    andi a1, a1, 255
 ; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    andi a2, a2, 255
 ; CHECK-NEXT:    maxu a0, a0, a1
 ; CHECK-NEXT:    maxu a1, a2, a3
 ; CHECK-NEXT:    maxu a0, a0, a1
@@ -885,9 +885,9 @@ define i16 @test_reassoc_maxu_i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3) {
 ; CHECK-LABEL: test_reassoc_maxu_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    zext.h a3, a3
-; CHECK-NEXT:    zext.h a2, a2
 ; CHECK-NEXT:    zext.h a1, a1
 ; CHECK-NEXT:    zext.h a0, a0
+; CHECK-NEXT:    zext.h a2, a2
 ; CHECK-NEXT:    maxu a0, a0, a1
 ; CHECK-NEXT:    maxu a1, a2, a3
 ; CHECK-NEXT:    maxu a0, a0, a1
@@ -902,9 +902,9 @@ define i32 @test_reassoc_maxu_i32(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: test_reassoc_maxu_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.w a3, a3
-; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    sext.w a1, a1
 ; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    maxu a0, a0, a1
 ; CHECK-NEXT:    maxu a1, a2, a3
 ; CHECK-NEXT:    maxu a0, a0, a1
@@ -932,9 +932,9 @@ define i8 @test_reassoc_max_i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3) {
 ; CHECK-LABEL: test_reassoc_max_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.b a3, a3
-; CHECK-NEXT:    sext.b a2, a2
 ; CHECK-NEXT:    sext.b a1, a1
 ; CHECK-NEXT:    sext.b a0, a0
+; CHECK-NEXT:    sext.b a2, a2
 ; CHECK-NEXT:    max a0, a0, a1
 ; CHECK-NEXT:    max a1, a2, a3
 ; CHECK-NEXT:    max a0, a0, a1
@@ -949,9 +949,9 @@ define i16 @test_reassoc_max_i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3) {
 ; CHECK-LABEL: test_reassoc_max_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.h a3, a3
-; CHECK-NEXT:    sext.h a2, a2
 ; CHECK-NEXT:    sext.h a1, a1
 ; CHECK-NEXT:    sext.h a0, a0
+; CHECK-NEXT:    sext.h a2, a2
 ; CHECK-NEXT:    max a0, a0, a1
 ; CHECK-NEXT:    max a1, a2, a3
 ; CHECK-NEXT:    max a0, a0, a1
@@ -966,9 +966,9 @@ define i32 @test_reassoc_max_i32(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: test_reassoc_max_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.w a3, a3
-; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    sext.w a1, a1
 ; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    max a0, a0, a1
 ; CHECK-NEXT:    max a1, a2, a3
 ; CHECK-NEXT:    max a0, a0, a1

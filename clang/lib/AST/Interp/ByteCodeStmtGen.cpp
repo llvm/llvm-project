@@ -273,15 +273,18 @@ bool ByteCodeStmtGen<Emitter>::visitStmt(const Stmt *S) {
     return visitCaseStmt(cast<CaseStmt>(S));
   case Stmt::DefaultStmtClass:
     return visitDefaultStmt(cast<DefaultStmt>(S));
-  case Stmt::GCCAsmStmtClass:
-  case Stmt::MSAsmStmtClass:
-    return visitAsmStmt(cast<AsmStmt>(S));
   case Stmt::AttributedStmtClass:
     return visitAttributedStmt(cast<AttributedStmt>(S));
   case Stmt::CXXTryStmtClass:
     return visitCXXTryStmt(cast<CXXTryStmt>(S));
   case Stmt::NullStmtClass:
     return true;
+  // Always invalid statements.
+  case Stmt::GCCAsmStmtClass:
+  case Stmt::MSAsmStmtClass:
+  case Stmt::GotoStmtClass:
+  case Stmt::LabelStmtClass:
+    return this->emitInvalid(S);
   default: {
     if (auto *Exp = dyn_cast<Expr>(S))
       return this->discard(Exp);
@@ -420,6 +423,11 @@ bool ByteCodeStmtGen<Emitter>::visitWhileStmt(const WhileStmt *S) {
   LoopScope<Emitter> LS(this, EndLabel, CondLabel);
 
   this->emitLabel(CondLabel);
+
+  if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
+    if (!visitDeclStmt(CondDecl))
+      return false;
+
   if (!this->visitBool(Cond))
     return false;
   if (!this->jumpFalse(EndLabel))
@@ -484,6 +492,10 @@ bool ByteCodeStmtGen<Emitter>::visitForStmt(const ForStmt *S) {
   if (Init && !this->visitStmt(Init))
     return false;
   this->emitLabel(CondLabel);
+
+  if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
+    if (!visitDeclStmt(CondDecl))
+      return false;
   if (Cond) {
     if (!this->visitBool(Cond))
       return false;
@@ -582,17 +594,21 @@ bool ByteCodeStmtGen<Emitter>::visitContinueStmt(const ContinueStmt *S) {
 template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
   const Expr *Cond = S->getCond();
-  PrimType CondT = this->classifyPrim(Cond->getType());
 
   LabelTy EndLabel = this->getLabel();
   OptLabelTy DefaultLabel = std::nullopt;
-  unsigned CondVar = this->allocateLocalPrimitive(Cond, CondT, true, false);
 
   if (const auto *CondInit = S->getInit())
     if (!visitStmt(CondInit))
       return false;
 
+  if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
+    if (!visitDeclStmt(CondDecl))
+      return false;
+
   // Initialize condition variable.
+  PrimType CondT = this->classifyPrim(Cond->getType());
+  unsigned CondVar = this->allocateLocalPrimitive(Cond, CondT, true, false);
   if (!this->visit(Cond))
     return false;
   if (!this->emitSetLocal(CondT, CondVar, S))
@@ -655,11 +671,6 @@ template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitDefaultStmt(const DefaultStmt *S) {
   this->emitLabel(*DefaultLabel);
   return this->visitStmt(S->getSubStmt());
-}
-
-template <class Emitter>
-bool ByteCodeStmtGen<Emitter>::visitAsmStmt(const AsmStmt *S) {
-  return this->emitInvalid(S);
 }
 
 template <class Emitter>

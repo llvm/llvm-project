@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ;; This test checks that the backend is capable to correctly translate
 ;; legacy atomic OpenCL C 1.2 built-in functions [1] into corresponding SPIR-V

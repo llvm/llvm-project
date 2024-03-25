@@ -831,10 +831,12 @@ def FeatureNoDataDepHazard : SubtargetFeature<"no-data-dep-hazard",
   "Does not need SW waitstates"
 >;
 
-def FeatureGFX11FullVGPRs : SubtargetFeature<"gfx11-full-vgprs",
-  "HasGFX11FullVGPRs",
+// Allocate 1536 VGPRs for wave32 and 768 VGPRs for wave64
+// with allocation granularity 24 for wave32 and 12 for wave64
+def Feature1_5xVGPRs : SubtargetFeature<"allocate1_5xvgprs",
+  "Has1_5xVGPRs",
   "true",
-  "GFX11 with 50% more physical VGPRs and 50% larger allocation granule than GFX10"
+  "Has 50% more physical VGPRs and 50% larger allocation granule"
 >;
 
 
@@ -1491,12 +1493,12 @@ def FeatureISAVersion11_0_Common : FeatureSet<
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
-    [FeatureGFX11FullVGPRs,
+    [Feature1_5xVGPRs,
      FeatureUserSGPRInit16Bug])>;
 
 def FeatureISAVersion11_0_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
-    [FeatureGFX11FullVGPRs])>;
+    [Feature1_5xVGPRs])>;
 
 def FeatureISAVersion11_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
@@ -1517,7 +1519,7 @@ def FeatureISAVersion11_5_1 : FeatureSet<
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureVGPRSingleUseHintInsts,
-     FeatureGFX11FullVGPRs])>;
+     Feature1_5xVGPRs])>;
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
@@ -1884,7 +1886,7 @@ def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
 def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
   AssemblerPredicate<(all_of (not FeatureGFX90AInsts))>;
 
-def HasInterpInsts : Predicate<"Subtarget->hasInterpInsts()">,
+def HasVINTERPEncoding : Predicate<"Subtarget->hasVINTERPEncoding()">,
   AssemblerPredicate<(all_of FeatureGFX11Insts)>;
 
 def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
@@ -1903,7 +1905,7 @@ def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
 
 def HasTrue16BitInsts : Predicate<"Subtarget->hasTrue16BitInsts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
-def NotHasTrue16BitInsts : Predicate<"!Subtarget->hasTrue16BitInsts()">;
+def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()">;
 
 // Control use of True16 instructions. The real True16 instructions are
 // True16 instructions as they are defined in the ISA. Fake True16

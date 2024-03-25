@@ -90,6 +90,7 @@ def : GINodeEquiv<G_UDIVFIX, udivfix>;
 def : GINodeEquiv<G_SDIVFIXSAT, sdivfixsat>;
 def : GINodeEquiv<G_UDIVFIXSAT, udivfixsat>;
 def : GINodeEquiv<G_SELECT, select>;
+def : GINodeEquiv<G_SELECT, vselect>;
 def : GINodeEquiv<G_FNEG, fneg>;
 def : GINodeEquiv<G_FPEXT, fpextend>;
 def : GINodeEquiv<G_FPTRUNC, fpround>;
@@ -250,6 +251,9 @@ def : GINodeEquiv<G_ATOMICRMW_UINC_WRAP, atomic_load_uinc_wrap>;
 def : GINodeEquiv<G_ATOMICRMW_UDEC_WRAP, atomic_load_udec_wrap>;
 def : GINodeEquiv<G_FENCE, atomic_fence>;
 def : GINodeEquiv<G_PREFETCH, prefetch>;
+def : GINodeEquiv<G_TRAP, trap>;
+def : GINodeEquiv<G_DEBUGTRAP, debugtrap>;
+def : GINodeEquiv<G_UBSANTRAP, ubsantrap>;
 
 // Specifies the GlobalISel equivalents for SelectionDAG's ComplexPattern.
 // Should be used on defs that subclass GIComplexOperandMatcher<>.

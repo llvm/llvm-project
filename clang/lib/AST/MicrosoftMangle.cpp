@@ -390,6 +390,7 @@ public:
                           const FunctionDecl *D = nullptr,
                           bool ForceThisQuals = false,
                           bool MangleExceptionSpec = true);
+  void mangleSourceName(StringRef Name);
   void mangleNestedName(GlobalDecl GD);
 
 private:
@@ -408,7 +409,6 @@ private:
     mangleUnqualifiedName(GD, cast<NamedDecl>(GD.getDecl())->getDeclName());
   }
   void mangleUnqualifiedName(GlobalDecl GD, DeclarationName Name);
-  void mangleSourceName(StringRef Name);
   void mangleOperatorName(OverloadedOperatorKind OO, SourceLocation Loc);
   void mangleCXXDtorType(CXXDtorType T);
   void mangleQualifiers(Qualifiers Quals, bool IsMember);
@@ -3911,7 +3911,8 @@ void MicrosoftMangleContextImpl::mangleReferenceTemporary(
   msvc_hashing_ostream MHO(Out);
   MicrosoftCXXNameMangler Mangler(*this, MHO);
 
-  Mangler.getStream() << "?$RT" << ManglingNumber << '@';
+  Mangler.getStream() << "?";
+  Mangler.mangleSourceName("$RT" + llvm::utostr(ManglingNumber));
   Mangler.mangle(VD, "");
 }
 
@@ -3920,7 +3921,8 @@ void MicrosoftMangleContextImpl::mangleThreadSafeStaticGuardVariable(
   msvc_hashing_ostream MHO(Out);
   MicrosoftCXXNameMangler Mangler(*this, MHO);
 
-  Mangler.getStream() << "?$TSS" << GuardNum << '@';
+  Mangler.getStream() << "?";
+  Mangler.mangleSourceName("$TSS" + llvm::utostr(GuardNum));
   Mangler.mangleNestedName(VD);
   Mangler.getStream() << "@4HA";
 }

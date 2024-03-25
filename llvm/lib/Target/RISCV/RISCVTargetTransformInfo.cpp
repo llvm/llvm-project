@@ -1001,6 +1001,51 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
       return getArithmeticReductionCost(Instruction::And, Ty, FMF, CostKind);
   }
 
+  if (IID == Intrinsic::maximum || IID == Intrinsic::minimum) {
+    SmallVector<unsigned, 3> Opcodes;
+    InstructionCost ExtraCost = 0;
+    switch (IID) {
+    case Intrinsic::maximum:
+      if (FMF.noNaNs()) {
+        Opcodes = {RISCV::VFREDMAX_VS, RISCV::VFMV_F_S};
+      } else {
+        Opcodes = {RISCV::VMFNE_VV, RISCV::VCPOP_M, RISCV::VFREDMAX_VS,
+                   RISCV::VFMV_F_S};
+        // Cost of Canonical Nan + branch
+        // lui a0, 523264
+        // fmv.w.x fa0, a0
+        Type *DstTy = Ty->getScalarType();
+        const unsigned EltTyBits = DstTy->getScalarSizeInBits();
+        Type *SrcTy = IntegerType::getIntNTy(DstTy->getContext(), EltTyBits);
+        ExtraCost = 1 +
+                    getCastInstrCost(Instruction::UIToFP, DstTy, SrcTy,
+                                     TTI::CastContextHint::None, CostKind) +
+                    getCFInstrCost(Instruction::Br, CostKind);
+      }
+      break;
+
+    case Intrinsic::minimum:
+      if (FMF.noNaNs()) {
+        Opcodes = {RISCV::VFREDMIN_VS, RISCV::VFMV_F_S};
+      } else {
+        Opcodes = {RISCV::VMFNE_VV, RISCV::VCPOP_M, RISCV::VFREDMIN_VS,
+                   RISCV::VFMV_F_S};
+        // Cost of Canonical Nan + branch
+        // lui a0, 523264
+        // fmv.w.x fa0, a0
+        Type *DstTy = Ty->getScalarType();
+        const unsigned EltTyBits = DL.getTypeSizeInBits(DstTy);
+        Type *SrcTy = IntegerType::getIntNTy(DstTy->getContext(), EltTyBits);
+        ExtraCost = 1 +
+                    getCastInstrCost(Instruction::UIToFP, DstTy, SrcTy,
+                                     TTI::CastContextHint::None, CostKind) +
+                    getCFInstrCost(Instruction::Br, CostKind);
+      }
+      break;
+    }
+    return ExtraCost + getRISCVInstructionCost(Opcodes, LT.second, CostKind);
+  }
+
   // IR Reduction is composed by two vmv and one rvv reduction instruction.
   InstructionCost BaseCost = 2;
 
@@ -1619,4 +1664,14 @@ bool RISCVTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
          std::tie(C2.Insns, C2.NumRegs, C2.AddRecCost,
                   C2.NumIVMuls, C2.NumBaseAdds,
                   C2.ScaleCost, C2.ImmCost, C2.SetupCost);
+}
+
+bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy, Align Alignment) {
+  auto *VTy = dyn_cast<VectorType>(DataTy);
+  if (!VTy || VTy->isScalableTy())
+    return false;
+
+  if (!isLegalMaskedLoadStore(DataTy, Alignment))
+    return false;
+  return true;
 }

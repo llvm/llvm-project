@@ -49,6 +49,7 @@ add_header_library(
   DEPENDS
     .type_traits
     libc.include.llvm-libc-macros.limits_macros
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
@@ -102,23 +103,24 @@ add_header_library(
   type_traits
   HDRS
     type_traits.h
-    type_traits/always_false.h
     type_traits/add_lvalue_reference.h
     type_traits/add_pointer.h
     type_traits/add_rvalue_reference.h
+    type_traits/always_false.h
     type_traits/bool_constant.h
     type_traits/conditional.h
     type_traits/decay.h
     type_traits/enable_if.h
     type_traits/false_type.h
     type_traits/integral_constant.h
-    type_traits/invoke.h
     type_traits/invoke_result.h
+    type_traits/invoke.h
     type_traits/is_arithmetic.h
     type_traits/is_array.h
     type_traits/is_base_of.h
     type_traits/is_class.h
     type_traits/is_const.h
+    type_traits/is_constant_evaluated.h
     type_traits/is_convertible.h
     type_traits/is_destructible.h
     type_traits/is_enum.h

@@ -169,60 +169,14 @@ entry:
 define <7 x half> @fadd_v7f16(<7 x half> %a, <7 x half> %b) {
 ; CHECK-SD-NOFP16-LABEL: fadd_v7f16:
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
-; CHECK-SD-NOFP16-NEXT:    mov h2, v1.h[1]
-; CHECK-SD-NOFP16-NEXT:    mov h3, v0.h[1]
-; CHECK-SD-NOFP16-NEXT:    fcvt s4, h1
-; CHECK-SD-NOFP16-NEXT:    fcvt s5, h0
-; CHECK-SD-NOFP16-NEXT:    mov h6, v1.h[2]
-; CHECK-SD-NOFP16-NEXT:    mov h7, v0.h[2]
-; CHECK-SD-NOFP16-NEXT:    mov h16, v1.h[3]
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s3, h3
-; CHECK-SD-NOFP16-NEXT:    fadd s4, s5, s4
-; CHECK-SD-NOFP16-NEXT:    mov h5, v0.h[3]
-; CHECK-SD-NOFP16-NEXT:    fcvt s6, h6
-; CHECK-SD-NOFP16-NEXT:    fcvt s7, h7
-; CHECK-SD-NOFP16-NEXT:    fcvt s16, h16
-; CHECK-SD-NOFP16-NEXT:    fadd s3, s3, s2
-; CHECK-SD-NOFP16-NEXT:    fcvt s5, h5
-; CHECK-SD-NOFP16-NEXT:    fcvt h2, s4
-; CHECK-SD-NOFP16-NEXT:    fadd s4, s7, s6
-; CHECK-SD-NOFP16-NEXT:    mov h6, v1.h[4]
-; CHECK-SD-NOFP16-NEXT:    mov h7, v0.h[4]
-; CHECK-SD-NOFP16-NEXT:    fcvt h3, s3
-; CHECK-SD-NOFP16-NEXT:    fadd s5, s5, s16
-; CHECK-SD-NOFP16-NEXT:    mov h16, v0.h[5]
-; CHECK-SD-NOFP16-NEXT:    fcvt h4, s4
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[1], v3.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt s3, h6
-; CHECK-SD-NOFP16-NEXT:    fcvt s6, h7
-; CHECK-SD-NOFP16-NEXT:    mov h7, v1.h[5]
-; CHECK-SD-NOFP16-NEXT:    fcvt h5, s5
-; CHECK-SD-NOFP16-NEXT:    fcvt s16, h16
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[2], v4.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov h4, v1.h[6]
-; CHECK-SD-NOFP16-NEXT:    fadd s3, s6, s3
-; CHECK-SD-NOFP16-NEXT:    mov h6, v0.h[6]
-; CHECK-SD-NOFP16-NEXT:    fcvt s7, h7
-; CHECK-SD-NOFP16-NEXT:    mov h1, v1.h[7]
-; CHECK-SD-NOFP16-NEXT:    mov h0, v0.h[7]
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[3], v5.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt s4, h4
-; CHECK-SD-NOFP16-NEXT:    fcvt h3, s3
-; CHECK-SD-NOFP16-NEXT:    fcvt s5, h6
-; CHECK-SD-NOFP16-NEXT:    fadd s6, s16, s7
-; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[4], v3.h[0]
-; CHECK-SD-NOFP16-NEXT:    fadd s4, s5, s4
-; CHECK-SD-NOFP16-NEXT:    fcvt h3, s6
-; CHECK-SD-NOFP16-NEXT:    fadd s0, s0, s1
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[5], v3.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt h3, s4
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[6], v3.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[7], v0.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NOFP16-NEXT:    fcvtl v2.4s, v1.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v3.4s, v0.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-SD-NOFP16-NEXT:    fadd v2.4s, v3.4s, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fadd v1.4s, v0.4s, v1.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v1.4s
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fadd_v7f16:
@@ -232,26 +186,24 @@ define <7 x half> @fadd_v7f16(<7 x half> %a, <7 x half> %b) {
 ;
 ; CHECK-GI-NOFP16-LABEL: fadd_v7f16:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    mov h2, v0.h[4]
-; CHECK-GI-NOFP16-NEXT:    mov h3, v0.h[5]
-; CHECK-GI-NOFP16-NEXT:    mov h4, v1.h[4]
-; CHECK-GI-NOFP16-NEXT:    mov h5, v1.h[5]
-; CHECK-GI-NOFP16-NEXT:    fcvtl v6.4s, v0.4h
-; CHECK-GI-NOFP16-NEXT:    fcvtl v7.4s, v1.4h
-; CHECK-GI-NOFP16-NEXT:    mov h0, v0.h[6]
+; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v0.4h
+; CHECK-GI-NOFP16-NEXT:    fcvtl v3.4s, v1.4h
+; CHECK-GI-NOFP16-NEXT:    mov h4, v0.h[4]
+; CHECK-GI-NOFP16-NEXT:    mov h5, v0.h[5]
+; CHECK-GI-NOFP16-NEXT:    mov h6, v1.h[4]
+; CHECK-GI-NOFP16-NEXT:    mov h7, v1.h[5]
 ; CHECK-GI-NOFP16-NEXT:    mov h1, v1.h[6]
-; CHECK-GI-NOFP16-NEXT:    mov v2.h[1], v3.h[0]
+; CHECK-GI-NOFP16-NEXT:    fadd v2.4s, v2.4s, v3.4s
+; CHECK-GI-NOFP16-NEXT:    mov h3, v0.h[6]
 ; CHECK-GI-NOFP16-NEXT:    mov v4.h[1], v5.h[0]
-; CHECK-GI-NOFP16-NEXT:    fadd v3.4s, v6.4s, v7.4s
-; CHECK-GI-NOFP16-NEXT:    mov v2.h[2], v0.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v4.h[2], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v3.4s
-; CHECK-GI-NOFP16-NEXT:    mov v2.h[3], v0.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v4.h[3], v0.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v6.h[1], v7.h[0]
+; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v2.4s
+; CHECK-GI-NOFP16-NEXT:    mov v4.h[2], v3.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v6.h[2], v1.h[0]
 ; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NOFP16-NEXT:    mov h5, v0.h[3]
-; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v2.4h
-; CHECK-GI-NOFP16-NEXT:    fcvtl v3.4s, v4.4h
+; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v4.4h
+; CHECK-GI-NOFP16-NEXT:    fcvtl v3.4s, v6.4h
 ; CHECK-GI-NOFP16-NEXT:    mov h4, v0.h[2]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fadd v1.4s, v2.4s, v3.4s
@@ -263,7 +215,6 @@ define <7 x half> @fadd_v7f16(<7 x half> %a, <7 x half> %b) {
 ; CHECK-GI-NOFP16-NEXT:    mov h1, v1.h[2]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[5], v2.h[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[6], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[7], v0.h[0]
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fadd_v7f16:
@@ -309,60 +260,14 @@ entry:
 define <8 x half> @fadd_v8f16(<8 x half> %a, <8 x half> %b) {
 ; CHECK-SD-NOFP16-LABEL: fadd_v8f16:
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
-; CHECK-SD-NOFP16-NEXT:    mov h2, v1.h[1]
-; CHECK-SD-NOFP16-NEXT:    mov h3, v0.h[1]
-; CHECK-SD-NOFP16-NEXT:    fcvt s4, h1
-; CHECK-SD-NOFP16-NEXT:    fcvt s5, h0
-; CHECK-SD-NOFP16-NEXT:    mov h6, v1.h[2]
-; CHECK-SD-NOFP16-NEXT:    mov h7, v0.h[2]
-; CHECK-SD-NOFP16-NEXT:    mov h16, v1.h[3]
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s3, h3
-; CHECK-SD-NOFP16-NEXT:    fadd s4, s5, s4
-; CHECK-SD-NOFP16-NEXT:    mov h5, v0.h[3]
-; CHECK-SD-NOFP16-NEXT:    fcvt s6, h6
-; CHECK-SD-NOFP16-NEXT:    fcvt s7, h7
-; CHECK-SD-NOFP16-NEXT:    fcvt s16, h16
-; CHECK-SD-NOFP16-NEXT:    fadd s3, s3, s2
-; CHECK-SD-NOFP16-NEXT:    fcvt s5, h5
-; CHECK-SD-NOFP16-NEXT:    fcvt h2, s4
-; CHECK-SD-NOFP16-NEXT:    fadd s4, s7, s6
-; CHECK-SD-NOFP16-NEXT:    mov h6, v1.h[4]
-; CHECK-SD-NOFP16-NEXT:    mov h7, v0.h[4]
-; CHECK-SD-NOFP16-NEXT:    fcvt h3, s3
-; CHECK-SD-NOFP16-NEXT:    fadd s5, s5, s16
-; CHECK-SD-NOFP16-NEXT:    mov h16, v0.h[5]
-; CHECK-SD-NOFP16-NEXT:    fcvt h4, s4
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[1], v3.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt s3, h6
-; CHECK-SD-NOFP16-NEXT:    fcvt s6, h7
-; CHECK-SD-NOFP16-NEXT:    mov h7, v1.h[5]
-; CHECK-SD-NOFP16-NEXT:    fcvt h5, s5
-; CHECK-SD-NOFP16-NEXT:    fcvt s16, h16
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[2], v4.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov h4, v1.h[6]
-; CHECK-SD-NOFP16-NEXT:    fadd s3, s6, s3
-; CHECK-SD-NOFP16-NEXT:    mov h6, v0.h[6]
-; CHECK-SD-NOFP16-NEXT:    fcvt s7, h7
-; CHECK-SD-NOFP16-NEXT:    mov h1, v1.h[7]
-; CHECK-SD-NOFP16-NEXT:    mov h0, v0.h[7]
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[3], v5.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt s4, h4
-; CHECK-SD-NOFP16-NEXT:    fcvt h3, s3
-; CHECK-SD-NOFP16-NEXT:    fcvt s5, h6
-; CHECK-SD-NOFP16-NEXT:    fadd s6, s16, s7
-; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[4], v3.h[0]
-; CHECK-SD-NOFP16-NEXT:    fadd s4, s5, s4
-; CHECK-SD-NOFP16-NEXT:    fcvt h3, s6
-; CHECK-SD-NOFP16-NEXT:    fadd s0, s0, s1
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[5], v3.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt h3, s4
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[6], v3.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[7], v0.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NOFP16-NEXT:    fcvtl v2.4s, v1.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v3.4s, v0.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-SD-NOFP16-NEXT:    fadd v2.4s, v3.4s, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fadd v1.4s, v0.4s, v1.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v1.4s
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fadd_v8f16:
@@ -394,114 +299,22 @@ entry:
 define <16 x half> @fadd_v16f16(<16 x half> %a, <16 x half> %b) {
 ; CHECK-SD-NOFP16-LABEL: fadd_v16f16:
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
-; CHECK-SD-NOFP16-NEXT:    mov h6, v2.h[1]
-; CHECK-SD-NOFP16-NEXT:    mov h7, v0.h[1]
-; CHECK-SD-NOFP16-NEXT:    fcvt s4, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s5, h0
-; CHECK-SD-NOFP16-NEXT:    mov h16, v3.h[1]
-; CHECK-SD-NOFP16-NEXT:    mov h17, v1.h[1]
-; CHECK-SD-NOFP16-NEXT:    mov h18, v2.h[2]
-; CHECK-SD-NOFP16-NEXT:    mov h19, v0.h[2]
-; CHECK-SD-NOFP16-NEXT:    fcvt s20, h3
-; CHECK-SD-NOFP16-NEXT:    fcvt s21, h1
-; CHECK-SD-NOFP16-NEXT:    mov h22, v3.h[2]
-; CHECK-SD-NOFP16-NEXT:    mov h23, v1.h[2]
-; CHECK-SD-NOFP16-NEXT:    fcvt s6, h6
-; CHECK-SD-NOFP16-NEXT:    fcvt s7, h7
-; CHECK-SD-NOFP16-NEXT:    mov h24, v0.h[6]
-; CHECK-SD-NOFP16-NEXT:    fadd s4, s5, s4
-; CHECK-SD-NOFP16-NEXT:    fcvt s5, h16
-; CHECK-SD-NOFP16-NEXT:    fcvt s16, h17
-; CHECK-SD-NOFP16-NEXT:    fcvt s17, h18
-; CHECK-SD-NOFP16-NEXT:    fcvt s18, h19
-; CHECK-SD-NOFP16-NEXT:    mov h19, v0.h[3]
-; CHECK-SD-NOFP16-NEXT:    fadd s20, s21, s20
-; CHECK-SD-NOFP16-NEXT:    fcvt s21, h22
-; CHECK-SD-NOFP16-NEXT:    mov h22, v3.h[3]
-; CHECK-SD-NOFP16-NEXT:    fadd s6, s7, s6
-; CHECK-SD-NOFP16-NEXT:    mov h7, v2.h[3]
-; CHECK-SD-NOFP16-NEXT:    mov h25, v1.h[6]
-; CHECK-SD-NOFP16-NEXT:    fcvt h4, s4
-; CHECK-SD-NOFP16-NEXT:    fadd s5, s16, s5
-; CHECK-SD-NOFP16-NEXT:    fcvt s16, h23
-; CHECK-SD-NOFP16-NEXT:    mov h23, v1.h[3]
-; CHECK-SD-NOFP16-NEXT:    fadd s17, s18, s17
-; CHECK-SD-NOFP16-NEXT:    fcvt s18, h19
-; CHECK-SD-NOFP16-NEXT:    fcvt h6, s6
-; CHECK-SD-NOFP16-NEXT:    fcvt s7, h7
-; CHECK-SD-NOFP16-NEXT:    fcvt h19, s5
-; CHECK-SD-NOFP16-NEXT:    fcvt h5, s20
-; CHECK-SD-NOFP16-NEXT:    fadd s16, s16, s21
-; CHECK-SD-NOFP16-NEXT:    fcvt s20, h23
-; CHECK-SD-NOFP16-NEXT:    fcvt h17, s17
-; CHECK-SD-NOFP16-NEXT:    mov h21, v2.h[4]
-; CHECK-SD-NOFP16-NEXT:    mov h23, v1.h[4]
-; CHECK-SD-NOFP16-NEXT:    mov v4.h[1], v6.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt s6, h22
-; CHECK-SD-NOFP16-NEXT:    mov h22, v0.h[4]
-; CHECK-SD-NOFP16-NEXT:    fadd s7, s18, s7
-; CHECK-SD-NOFP16-NEXT:    mov h18, v3.h[4]
-; CHECK-SD-NOFP16-NEXT:    mov v5.h[1], v19.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt h16, s16
-; CHECK-SD-NOFP16-NEXT:    fadd s6, s20, s6
-; CHECK-SD-NOFP16-NEXT:    mov v4.h[2], v17.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt s17, h21
-; CHECK-SD-NOFP16-NEXT:    fcvt s19, h22
-; CHECK-SD-NOFP16-NEXT:    fcvt h7, s7
-; CHECK-SD-NOFP16-NEXT:    fcvt s18, h18
-; CHECK-SD-NOFP16-NEXT:    fcvt s20, h23
-; CHECK-SD-NOFP16-NEXT:    mov h21, v2.h[5]
-; CHECK-SD-NOFP16-NEXT:    mov h22, v0.h[5]
-; CHECK-SD-NOFP16-NEXT:    mov v5.h[2], v16.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov h16, v3.h[5]
-; CHECK-SD-NOFP16-NEXT:    mov h23, v1.h[5]
-; CHECK-SD-NOFP16-NEXT:    fcvt h6, s6
-; CHECK-SD-NOFP16-NEXT:    mov h0, v0.h[7]
-; CHECK-SD-NOFP16-NEXT:    mov h1, v1.h[7]
-; CHECK-SD-NOFP16-NEXT:    fadd s17, s19, s17
-; CHECK-SD-NOFP16-NEXT:    mov h19, v2.h[6]
-; CHECK-SD-NOFP16-NEXT:    mov v4.h[3], v7.h[0]
-; CHECK-SD-NOFP16-NEXT:    fadd s18, s20, s18
-; CHECK-SD-NOFP16-NEXT:    mov h20, v3.h[6]
-; CHECK-SD-NOFP16-NEXT:    fcvt s7, h21
-; CHECK-SD-NOFP16-NEXT:    fcvt s21, h22
-; CHECK-SD-NOFP16-NEXT:    fcvt s22, h24
-; CHECK-SD-NOFP16-NEXT:    mov h2, v2.h[7]
-; CHECK-SD-NOFP16-NEXT:    mov v5.h[3], v6.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt s6, h16
-; CHECK-SD-NOFP16-NEXT:    fcvt s16, h23
-; CHECK-SD-NOFP16-NEXT:    fcvt h17, s17
-; CHECK-SD-NOFP16-NEXT:    fcvt s19, h19
-; CHECK-SD-NOFP16-NEXT:    fcvt s23, h25
-; CHECK-SD-NOFP16-NEXT:    fcvt h18, s18
-; CHECK-SD-NOFP16-NEXT:    fcvt s20, h20
-; CHECK-SD-NOFP16-NEXT:    mov h3, v3.h[7]
-; CHECK-SD-NOFP16-NEXT:    fadd s7, s21, s7
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    fadd s6, s16, s6
-; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-SD-NOFP16-NEXT:    mov v4.h[4], v17.h[0]
-; CHECK-SD-NOFP16-NEXT:    fadd s16, s22, s19
-; CHECK-SD-NOFP16-NEXT:    mov v5.h[4], v18.h[0]
-; CHECK-SD-NOFP16-NEXT:    fadd s17, s23, s20
-; CHECK-SD-NOFP16-NEXT:    fcvt s3, h3
-; CHECK-SD-NOFP16-NEXT:    fcvt h7, s7
-; CHECK-SD-NOFP16-NEXT:    fadd s0, s0, s2
-; CHECK-SD-NOFP16-NEXT:    fcvt h6, s6
-; CHECK-SD-NOFP16-NEXT:    fcvt h2, s16
-; CHECK-SD-NOFP16-NEXT:    fadd s1, s1, s3
-; CHECK-SD-NOFP16-NEXT:    mov v4.h[5], v7.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-SD-NOFP16-NEXT:    mov v5.h[5], v6.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt h6, s17
-; CHECK-SD-NOFP16-NEXT:    fcvt h1, s1
-; CHECK-SD-NOFP16-NEXT:    mov v4.h[6], v2.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov v5.h[6], v6.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov v4.h[7], v0.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov v5.h[7], v1.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov v0.16b, v4.16b
-; CHECK-SD-NOFP16-NEXT:    mov v1.16b, v5.16b
+; CHECK-SD-NOFP16-NEXT:    fcvtl v4.4s, v2.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v5.4s, v0.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v6.4s, v3.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v7.4s, v1.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v2.4s, v2.8h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v3.4s, v3.8h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
+; CHECK-SD-NOFP16-NEXT:    fadd v4.4s, v5.4s, v4.4s
+; CHECK-SD-NOFP16-NEXT:    fadd v5.4s, v7.4s, v6.4s
+; CHECK-SD-NOFP16-NEXT:    fadd v2.4s, v0.4s, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fadd v3.4s, v1.4s, v3.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v4.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v1.4h, v5.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn2 v1.8h, v3.4s
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fadd_v16f16:
@@ -705,60 +518,14 @@ entry:
 define <7 x half> @fsub_v7f16(<7 x half> %a, <7 x half> %b) {
 ; CHECK-SD-NOFP16-LABEL: fsub_v7f16:
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
-; CHECK-SD-NOFP16-NEXT:    mov h2, v1.h[1]
-; CHECK-SD-NOFP16-NEXT:    mov h3, v0.h[1]
-; CHECK-SD-NOFP16-NEXT:    fcvt s4, h1
-; CHECK-SD-NOFP16-NEXT:    fcvt s5, h0
-; CHECK-SD-NOFP16-NEXT:    mov h6, v1.h[2]
-; CHECK-SD-NOFP16-NEXT:    mov h7, v0.h[2]
-; CHECK-SD-NOFP16-NEXT:    mov h16, v1.h[3]
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s3, h3
-; CHECK-SD-NOFP16-NEXT:    fsub s4, s5, s4
-; CHECK-SD-NOFP16-NEXT:    mov h5, v0.h[3]
-; CHECK-SD-NOFP16-NEXT:    fcvt s6, h6
-; CHECK-SD-NOFP16-NEXT:    fcvt s7, h7
-; CHECK-SD-NOFP16-NEXT:    fcvt s16, h16
-; CHECK-SD-NOFP16-NEXT:    fsub s3, s3, s2
-; CHECK-SD-NOFP16-NEXT:    fcvt s5, h5
-; CHECK-SD-NOFP16-NEXT:    fcvt h2, s4
-; CHECK-SD-NOFP16-NEXT:    fsub s4, s7, s6
-; CHECK-SD-NOFP16-NEXT:    mov h6, v1.h[4]
-; CHECK-SD-NOFP16-NEXT:    mov h7, v0.h[4]
-; CHECK-SD-NOFP16-NEXT:    fcvt h3, s3
-; CHECK-SD-NOFP16-NEXT:    fsub s5, s5, s16
-; CHECK-SD-NOFP16-NEXT:    mov h16, v0.h[5]
-; CHECK-SD-NOFP16-NEXT:    fcvt h4, s4
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[1], v3.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt s3, h6
-; CHECK-SD-NOFP16-NEXT:    fcvt s6, h7
-; CHECK-SD-NOFP16-NEXT:    mov h7, v1.h[5]
-; CHECK-SD-NOFP16-NEXT:    fcvt h5, s5
-; CHECK-SD-NOFP16-NEXT:    fcvt s16, h16
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[2], v4.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov h4, v1.h[6]
-; CHECK-SD-NOFP16-NEXT:    fsub s3, s6, s3
-; CHECK-SD-NOFP16-NEXT:    mov h6, v0.h[6]
-; CHECK-SD-NOFP16-NEXT:    fcvt s7, h7
-; CHECK-SD-NOFP16-NEXT:    mov h1, v1.h[7]
-; CHECK-SD-NOFP16-NEXT:    mov h0, v0.h[7]
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[3], v5.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt s4, h4
-; CHECK-SD-NOFP16-NEXT:    fcvt h3, s3
-; CHECK-SD-NOFP16-NEXT:    fcvt s5, h6
-; CHECK-SD-NOFP16-NEXT:    fsub s6, s16, s7
-; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[4], v3.h[0]
-; CHECK-SD-NOFP16-NEXT:    fsub s4, s5, s4
-; CHECK-SD-NOFP16-NEXT:    fcvt h3, s6
-; CHECK-SD-NOFP16-NEXT:    fsub s0, s0, s1
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[5], v3.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt h3, s4
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[6], v3.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[7], v0.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NOFP16-NEXT:    fcvtl v2.4s, v1.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v3.4s, v0.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-SD-NOFP16-NEXT:    fsub v2.4s, v3.4s, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fsub v1.4s, v0.4s, v1.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v1.4s
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fsub_v7f16:
@@ -768,26 +535,24 @@ define <7 x half> @fsub_v7f16(<7 x half> %a, <7 x half> %b) {
 ;
 ; CHECK-GI-NOFP16-LABEL: fsub_v7f16:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    mov h2, v0.h[4]
-; CHECK-GI-NOFP16-NEXT:    mov h3, v0.h[5]
-; CHECK-GI-NOFP16-NEXT:    mov h4, v1.h[4]
-; CHECK-GI-NOFP16-NEXT:    mov h5, v1.h[5]
-; CHECK-GI-NOFP16-NEXT:    fcvtl v6.4s, v0.4h
-; CHECK-GI-NOFP16-NEXT:    fcvtl v7.4s, v1.4h
-; CHECK-GI-NOFP16-NEXT:    mov h0, v0.h[6]
+; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v0.4h
+; CHECK-GI-NOFP16-NEXT:    fcvtl v3.4s, v1.4h
+; CHECK-GI-NOFP16-NEXT:    mov h4, v0.h[4]
+; CHECK-GI-NOFP16-NEXT:    mov h5, v0.h[5]
+; CHECK-GI-NOFP16-NEXT:    mov h6, v1.h[4]
+; CHECK-GI-NOFP16-NEXT:    mov h7, v1.h[5]
 ; CHECK-GI-NOFP16-NEXT:    mov h1, v1.h[6]
-; CHECK-GI-NOFP16-NEXT:    mov v2.h[1], v3.h[0]
+; CHECK-GI-NOFP16-NEXT:    fsub v2.4s, v2.4s, v3.4s
+; CHECK-GI-NOFP16-NEXT:    mov h3, v0.h[6]
 ; CHECK-GI-NOFP16-NEXT:    mov v4.h[1], v5.h[0]
-; CHECK-GI-NOFP16-NEXT:    fsub v3.4s, v6.4s, v7.4s
-; CHECK-GI-NOFP16-NEXT:    mov v2.h[2], v0.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v4.h[2], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v3.4s
-; CHECK-GI-NOFP16-NEXT:    mov v2.h[3], v0.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v4.h[3], v0.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v6.h[1], v7.h[0]
+; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v2.4s
+; CHECK-GI-NOFP16-NEXT:    mov v4.h[2], v3.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v6.h[2], v1.h[0]
 ; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NOFP16-NEXT:    mov h5, v0.h[3]
-; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v2.4h
-; CHECK-GI-NOFP16-NEXT:    fcvtl v3.4s, v4.4h
+; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v4.4h
+; CHECK-GI-NOFP16-NEXT:    fcvtl v3.4s, v6.4h
 ; CHECK-GI-NOFP16-NEXT:    mov h4, v0.h[2]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fsub v1.4s, v2.4s, v3.4s
@@ -799,7 +564,6 @@ define <7 x half> @fsub_v7f16(<7 x half> %a, <7 x half> %b) {
 ; CHECK-GI-NOFP16-NEXT:    mov h1, v1.h[2]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[5], v2.h[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[6], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[7], v0.h[0]
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fsub_v7f16:
@@ -845,60 +609,14 @@ entry:
 define <8 x half> @fsub_v8f16(<8 x half> %a, <8 x half> %b) {
 ; CHECK-SD-NOFP16-LABEL: fsub_v8f16:
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
-; CHECK-SD-NOFP16-NEXT:    mov h2, v1.h[1]
-; CHECK-SD-NOFP16-NEXT:    mov h3, v0.h[1]
-; CHECK-SD-NOFP16-NEXT:    fcvt s4, h1
-; CHECK-SD-NOFP16-NEXT:    fcvt s5, h0
-; CHECK-SD-NOFP16-NEXT:    mov h6, v1.h[2]
-; CHECK-SD-NOFP16-NEXT:    mov h7, v0.h[2]
-; CHECK-SD-NOFP16-NEXT:    mov h16, v1.h[3]
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s3, h3
-; CHECK-SD-NOFP16-NEXT:    fsub s4, s5, s4
-; CHECK-SD-NOFP16-NEXT:    mov h5, v0.h[3]
-; CHECK-SD-NOFP16-NEXT:    fcvt s6, h6
-; CHECK-SD-NOFP16-NEXT:    fcvt s7, h7
-; CHECK-SD-NOFP16-NEXT:    fcvt s16, h16
-; CHECK-SD-NOFP16-NEXT:    fsub s3, s3, s2
-; CHECK-SD-NOFP16-NEXT:    fcvt s5, h5
-; CHECK-SD-NOFP16-NEXT:    fcvt h2, s4
-; CHECK-SD-NOFP16-NEXT:    fsub s4, s7, s6
-; CHECK-SD-NOFP16-NEXT:    mov h6, v1.h[4]
-; CHECK-SD-NOFP16-NEXT:    mov h7, v0.h[4]
-; CHECK-SD-NOFP16-NEXT:    fcvt h3, s3
-; CHECK-SD-NOFP16-NEXT:    fsub s5, s5, s16
-; CHECK-SD-NOFP16-NEXT:    mov h16, v0.h[5]
-; CHECK-SD-NOFP16-NEXT:    fcvt h4, s4
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[1], v3.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt s3, h6
-; CHECK-SD-NOFP16-NEXT:    fcvt s6, h7
-; CHECK-SD-NOFP16-NEXT:    mov h7, v1.h[5]
-; CHECK-SD-NOFP16-NEXT:    fcvt h5, s5
-; CHECK-SD-NOFP16-NEXT:    fcvt s16, h16
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[2], v4.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov h4, v1.h[6]
-; CHECK-SD-NOFP16-NEXT:    fsub s3, s6, s3
-; CHECK-SD-NOFP16-NEXT:    mov h6, v0.h[6]
-; CHECK-SD-NOFP16-NEXT:    fcvt s7, h7
-; CHECK-SD-NOFP16-NEXT:    mov h1, v1.h[7]
-; CHECK-SD-NOFP16-NEXT:    mov h0, v0.h[7]
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[3], v5.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt s4, h4
-; CHECK-SD-NOFP16-NEXT:    fcvt h3, s3
-; CHECK-SD-NOFP16-NEXT:    fcvt s5, h6
-; CHECK-SD-NOFP16-NEXT:    fsub s6, s16, s7
-; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[4], v3.h[0]
-; CHECK-SD-NOFP16-NEXT:    fsub s4, s5, s4
-; CHECK-SD-NOFP16-NEXT:    fcvt h3, s6
-; CHECK-SD-NOFP16-NEXT:    fsub s0, s0, s1
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[5], v3.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt h3, s4
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[6], v3.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov v2.h[7], v0.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NOFP16-NEXT:    fcvtl v2.4s, v1.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v3.4s, v0.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-SD-NOFP16-NEXT:    fsub v2.4s, v3.4s, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fsub v1.4s, v0.4s, v1.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v1.4s
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fsub_v8f16:
@@ -930,114 +648,22 @@ entry:
 define <16 x half> @fsub_v16f16(<16 x half> %a, <16 x half> %b) {
 ; CHECK-SD-NOFP16-LABEL: fsub_v16f16:
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
-; CHECK-SD-NOFP16-NEXT:    mov h6, v2.h[1]
-; CHECK-SD-NOFP16-NEXT:    mov h7, v0.h[1]
-; CHECK-SD-NOFP16-NEXT:    fcvt s4, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s5, h0
-; CHECK-SD-NOFP16-NEXT:    mov h16, v3.h[1]
-; CHECK-SD-NOFP16-NEXT:    mov h17, v1.h[1]
-; CHECK-SD-NOFP16-NEXT:    mov h18, v2.h[2]
-; CHECK-SD-NOFP16-NEXT:    mov h19, v0.h[2]
-; CHECK-SD-NOFP16-NEXT:    fcvt s20, h3
-; CHECK-SD-NOFP16-NEXT:    fcvt s21, h1
-; CHECK-SD-NOFP16-NEXT:    mov h22, v3.h[2]
-; CHECK-SD-NOFP16-NEXT:    mov h23, v1.h[2]
-; CHECK-SD-NOFP16-NEXT:    fcvt s6, h6
-; CHECK-SD-NOFP16-NEXT:    fcvt s7, h7
-; CHECK-SD-NOFP16-NEXT:    mov h24, v0.h[6]
-; CHECK-SD-NOFP16-NEXT:    fsub s4, s5, s4
-; CHECK-SD-NOFP16-NEXT:    fcvt s5, h16
-; CHECK-SD-NOFP16-NEXT:    fcvt s16, h17
-; CHECK-SD-NOFP16-NEXT:    fcvt s17, h18
-; CHECK-SD-NOFP16-NEXT:    fcvt s18, h19
-; CHECK-SD-NOFP16-NEXT:    mov h19, v0.h[3]
-; CHECK-SD-NOFP16-NEXT:    fsub s20, s21, s20
-; CHECK-SD-NOFP16-NEXT:    fcvt s21, h22
-; CHECK-SD-NOFP16-NEXT:    mov h22, v3.h[3]
-; CHECK-SD-NOFP16-NEXT:    fsub s6, s7, s6
-; CHECK-SD-NOFP16-NEXT:    mov h7, v2.h[3]
-; CHECK-SD-NOFP16-NEXT:    mov h25, v1.h[6]
-; CHECK-SD-NOFP16-NEXT:    fcvt h4, s4
-; CHECK-SD-NOFP16-NEXT:    fsub s5, s16, s5
-; CHECK-SD-NOFP16-NEXT:    fcvt s16, h23
-; CHECK-SD-NOFP16-NEXT:    mov h23, v1.h[3]
-; CHECK-SD-NOFP16-NEXT:    fsub s17, s18, s17
-; CHECK-SD-NOFP16-NEXT:    fcvt s18, h19
-; CHECK-SD-NOFP16-NEXT:    fcvt h6, s6
-; CHECK-SD-NOFP16-NEXT:    fcvt s7, h7
-; CHECK-SD-NOFP16-NEXT:    fcvt h19, s5
-; CHECK-SD-NOFP16-NEXT:    fcvt h5, s20
-; CHECK-SD-NOFP16-NEXT:    fsub s16, s16, s21
-; CHECK-SD-NOFP16-NEXT:    fcvt s20, h23
-; CHECK-SD-NOFP16-NEXT:    fcvt h17, s17
-; CHECK-SD-NOFP16-NEXT:    mov h21, v2.h[4]
-; CHECK-SD-NOFP16-NEXT:    mov h23, v1.h[4]
-; CHECK-SD-NOFP16-NEXT:    mov v4.h[1], v6.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt s6, h22
-; CHECK-SD-NOFP16-NEXT:    mov h22, v0.h[4]
-; CHECK-SD-NOFP16-NEXT:    fsub s7, s18, s7
-; CHECK-SD-NOFP16-NEXT:    mov h18, v3.h[4]
-; CHECK-SD-NOFP16-NEXT:    mov v5.h[1], v19.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt h16, s16
-; CHECK-SD-NOFP16-NEXT:    fsub s6, s20, s6
-; CHECK-SD-NOFP16-NEXT:    mov v4.h[2], v17.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt s17, h21
-; CHECK-SD-NOFP16-NEXT:    fcvt s19, h22
-; CHECK-SD-NOFP16-NEXT:    fcvt h7, s7
-; CHECK-SD-NOFP16-NEXT:    fcvt s18, h18
-; CHECK-SD-NOFP16-NEXT:    fcvt s20, h23
-; CHECK-SD-NOFP16-NEXT:    mov h21, v2.h[5]
-; CHECK-SD-NOFP16-NEXT:    mov h22, v0.h[5]
-; CHECK-SD-NOFP16-NEXT:    mov v5.h[2], v16.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov h16, v3.h[5]
-; CHECK-SD-NOFP16-NEXT:    mov h23, v1.h[5]
-; CHECK-SD-NOFP16-NEXT:    fcvt h6, s6
-; CHECK-SD-NOFP16-NEXT:    mov h0, v0.h[7]
-; CHECK-SD-NOFP16-NEXT:    mov h1, v1.h[7]
-; CHECK-SD-NOFP16-NEXT:    fsub s17, s19, s17
-; CHECK-SD-NOFP16-NEXT:    mov h19, v2.h[6]
-; CHECK-SD-NOFP16-NEXT:    mov v4.h[3], v7.h[0]
-; CHECK-SD-NOFP16-NEXT:    fsub s18, s20, s18
-; CHECK-SD-NOFP16-NEXT:    mov h20, v3.h[6]
-; CHECK-SD-NOFP16-NEXT:    fcvt s7, h21
-; CHECK-SD-NOFP16-NEXT:    fcvt s21, h22
-; CHECK-SD-NOFP16-NEXT:    fcvt s22, h24
-; CHECK-SD-NOFP16-NEXT:    mov h2, v2.h[7]
-; CHECK-SD-NOFP16-NEXT:    mov v5.h[3], v6.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt s6, h16
-; CHECK-SD-NOFP16-NEXT:    fcvt s16, h23
-; CHECK-SD-NOFP16-NEXT:    fcvt h17, s17
-; CHECK-SD-NOFP16-NEXT:    fcvt s19, h19
-; CHECK-SD-NOFP16-NEXT:    fcvt s23, h25
-; CHECK-SD-NOFP16-NEXT:    fcvt h18, s18
-; CHECK-SD-NOFP16-NEXT:    fcvt s20, h20
-; CHECK-SD-NOFP16-NEXT:    mov h3, v3.h[7]
-; CHECK-SD-NOFP16-NEXT:    fsub s7, s21, s7
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    fsub s6, s16, s6
-; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-SD-NOFP16-NEXT:    mov v4.h[4], v17.h[0]
-; CHECK-SD-NOFP16-NEXT:    fsub s16, s22, s19
-; CHECK-SD-NOFP16-NEXT:    mov v5.h[4], v18.h[0]
-; CHECK-SD-NOFP16-NEXT:    fsub s17, s23, s20
-; CHECK-SD-NOFP16-NEXT:    fcvt s3, h3
-; CHECK-SD-NOFP16-NEXT:    fcvt h7, s7
-; CHECK-SD-NOFP16-NEXT:    fsub s0, s0, s2
-; CHECK-SD-NOFP16-NEXT:    fcvt h6, s6
-; CHECK-SD-NOFP16-NEXT:    fcvt h2, s16
-; CHECK-SD-NOFP16-NEXT:    fsub s1, s1, s3
-; CHECK-SD-NOFP16-NEXT:    mov v4.h[5], v7.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-SD-NOFP16-NEXT:    mov v5.h[5], v6.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt h6, s17
-; CHECK-SD-NOFP16-NEXT:    fcvt h1, s1
-; CHECK-SD-NOFP16-NEXT:    mov v4.h[6], v2.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov v5.h[6], v6.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov v4.h[7], v0.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov v5.h[7], v1.h[0]
-; CHECK-SD-NOFP16-NEXT:    mov v0.16b, v4.16b
-; CHECK-SD-NOFP16-NEXT:    mov v1.16b, v5.16b
+; CHECK-SD-NOFP16-NEXT:    fcvtl v4.4s, v2.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v5.4s, v0.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v6.4s, v3.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v7.4s, v1.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v2.4s, v2.8h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v3.4s, v3.8h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
+; CHECK-SD-NOFP16-NEXT:    fsub v4.4s, v5.4s, v4.4s
+; CHECK-SD-NOFP16-NEXT:    fsub v5.4s, v7.4s, v6.4s
+; CHECK-SD-NOFP16-NEXT:    fsub v2.4s, v0.4s, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fsub v3.4s, v1.4s, v3.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v4.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v1.4h, v5.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn2 v1.8h, v3.4s
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fsub_v16f16:
