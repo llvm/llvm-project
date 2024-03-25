@@ -315,24 +315,16 @@ public:
   Defined *dyldPrivate = nullptr;
 };
 
-class ObjCSelRefsSection final : public SyntheticSection {
+class ObjCSelRefsHelper {
 public:
-  ObjCSelRefsSection();
-  void initialize();
+  static void initialize();
+  static void cleanup();
 
-  // This SyntheticSection does not do directly write data to the output, it is
-  // just a placeholder for easily creating SyntheticInputSection's which will
-  // be inserted into inputSections and handeled by the default writing
-  // mechanism.
-  uint64_t getSize() const override { return 0; }
-  bool isNeeded() const override { return false; }
-  void writeTo(uint8_t *buf) const override {}
-
-  ConcatInputSection *getSelRef(StringRef methname);
-  ConcatInputSection *makeSelRef(StringRef methname);
+  static ConcatInputSection *getSelRef(StringRef methname);
+  static ConcatInputSection *makeSelRef(StringRef methname);
 
 private:
-  llvm::DenseMap<llvm::CachedHashStringRef, ConcatInputSection *>
+  static llvm::DenseMap<llvm::CachedHashStringRef, ConcatInputSection *>
       methnameToSelref;
 };
 
@@ -813,7 +805,6 @@ struct InStruct {
   LazyPointerSection *lazyPointers = nullptr;
   StubsSection *stubs = nullptr;
   StubHelperSection *stubHelper = nullptr;
-  ObjCSelRefsSection *objcSelRefs = nullptr;
   ObjCStubsSection *objcStubs = nullptr;
   UnwindInfoSection *unwindInfo = nullptr;
   ObjCImageInfoSection *objCImageInfo = nullptr;
