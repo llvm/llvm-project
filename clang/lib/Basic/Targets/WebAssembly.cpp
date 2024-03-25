@@ -158,6 +158,7 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     Features["multimemory"] = true;
     setSIMDLevel(Features, SIMD128, true);
   } else if (CPU == "generic") {
+    Features["nontrapping-fptoint"] = true;
     Features["sign-ext"] = true;
     Features["mutable-globals"] = true;
   }
