@@ -28,6 +28,7 @@ using namespace lldb;
 
 char SymbolFile::ID;
 char SymbolFileCommon::ID;
+SymbolFile::LocateDwoCallback SymbolFile::LOCATE_DWO_CALLBACK;
 
 void SymbolFile::PreloadSymbols() {
   // No-op for most implementations.
@@ -103,6 +104,14 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFileSP objfile_sp) {
     }
   }
   return best_symfile_up.release();
+}
+
+void SymbolFile::SetLocateDwoCallback(LocateDwoCallback callback) {
+  LOCATE_DWO_CALLBACK = callback;
+}
+
+SymbolFile::LocateDwoCallback SymbolFile::GetLocateDwoCallback() {
+  return LOCATE_DWO_CALLBACK;
 }
 
 uint32_t

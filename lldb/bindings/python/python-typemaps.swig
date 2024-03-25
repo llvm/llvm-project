@@ -696,3 +696,55 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   $1 = $input == Py_None;
   $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
 }
+
+// For lldb::SBModuleLocateDwoCallback
+// The `baton` is the actual Python function passed, and we invoke the `baton` via a SWIG function.
+%typemap(in) (lldb::SBModuleLocateDwoCallback callback,
+              void *baton) {
+  if (!($input == Py_None ||
+        PyCallable_Check(reinterpret_cast<PyObject *>($input)))) {
+    PyErr_SetString(PyExc_TypeError, "Need a callable object or None!");
+    SWIG_fail;
+  }
+
+  if ($input == Py_None) {
+    $1 = nullptr;
+    $2 = nullptr;
+  } else {
+    PythonCallable callable = Retain<PythonCallable>($input);
+    if (!callable.IsValid()) {
+      PyErr_SetString(PyExc_TypeError, "Need a valid callable object");
+      SWIG_fail;
+    }
+
+    llvm::Expected<PythonCallable::ArgInfo> arg_info = callable.GetArgInfo();
+    if (!arg_info) {
+      PyErr_SetString(PyExc_TypeError,
+                      ("Could not get arguments: " +
+                          llvm::toString(arg_info.takeError())).c_str());
+      SWIG_fail;
+    }
+
+    if (arg_info.get().max_positional_args != 5) {
+      PyErr_SetString(PyExc_TypeError, "Expected 5 argument callable object");
+      SWIG_fail;
+    }
+
+    // NOTE: When this is called multiple times, this will leak the Python
+    // callable object as other callbacks, because this does not call Py_DECREF
+    // the object. But it should be almost zero impact since this method is
+    // expected to be called only once.
+
+    // Don't lose the callback reference
+    Py_INCREF($input);
+
+    $1 = LLDBSwigPythonCallLocateDwoCallback;
+    $2 = $input;
+  }
+}
+
+%typemap(typecheck) (lldb::SBModuleLocateDwoCallback callback,
+                     void *baton) {
+  $1 = $input == Py_None;
+  $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
+}
