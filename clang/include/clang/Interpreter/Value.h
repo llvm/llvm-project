@@ -76,6 +76,7 @@ class QualType;
   X(bool, Bool)                                                                \
   X(char, Char_S)                                                              \
   X(signed char, SChar)                                                        \
+  X(unsigned char, Char_U)                                                     \
   X(unsigned char, UChar)                                                      \
   X(short, Short)                                                              \
   X(unsigned short, UShort)                                                    \
