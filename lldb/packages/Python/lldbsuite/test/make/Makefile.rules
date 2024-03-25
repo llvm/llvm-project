@@ -577,7 +577,7 @@ endif
 else
 ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
 ifeq "$(SAVE_FULL_DEBUG_BINARY)" "YES"
-	cp "$(EXE)" "$(EXE).unstriped""
+	cp "$(EXE)" "$(EXE).unstripped"
 endif
 	$(OBJCOPY) --only-keep-debug "$(EXE)" "$(DSYM)"
 	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DSYM)" "$(EXE)" "$(EXE)"
@@ -587,13 +587,6 @@ ifeq "$(MAKE_DWP)" "YES"
 endif
 endif
 
-
-#----------------------------------------------------------------------
-# Support emitting the content of the GNU build-id into a file
-# This needs to be used in conjunction with GEN_GNU_BUILD_ID := YES
-#----------------------------------------------------------------------
-$(EXE).uuid : $(EXE)
-	$(OBJCOPY) --dump-section=.note.gnu.build-id=$@ $<
 
 #----------------------------------------------------------------------
 # Make the dylib
