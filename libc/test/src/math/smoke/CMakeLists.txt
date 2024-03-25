@@ -840,6 +840,198 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fromfp_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fromfp_test.cpp
+  HDRS
+    FromfpTest.h
+  DEPENDS
+    libc.src.math.fromfp
+)
+
+add_fp_unittest(
+  fromfpf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fromfpf_test.cpp
+  HDRS
+    FromfpTest.h
+  DEPENDS
+    libc.src.math.fromfpf
+)
+
+add_fp_unittest(
+  fromfpl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fromfpl_test.cpp
+  HDRS
+    FromfpTest.h
+  DEPENDS
+    libc.src.math.fromfpl
+)
+
+add_fp_unittest(
+  fromfpf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fromfpf128_test.cpp
+  HDRS
+    FromfpTest.h
+  DEPENDS
+    libc.src.math.fromfpf128
+)
+
+add_fp_unittest(
+  fromfpx_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fromfpx_test.cpp
+  HDRS
+    FromfpxTest.h
+  DEPENDS
+    libc.src.math.fromfpx
+)
+
+add_fp_unittest(
+  fromfpxf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fromfpxf_test.cpp
+  HDRS
+    FromfpxTest.h
+  DEPENDS
+    libc.src.math.fromfpxf
+)
+
+add_fp_unittest(
+  fromfpxl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fromfpxl_test.cpp
+  HDRS
+    FromfpxTest.h
+  DEPENDS
+    libc.src.math.fromfpxl
+)
+
+add_fp_unittest(
+  fromfpxf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fromfpxf128_test.cpp
+  HDRS
+    FromfpxTest.h
+  DEPENDS
+    libc.src.math.fromfpxf128
+)
+
+add_fp_unittest(
+  ufromfp_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfp_test.cpp
+  HDRS
+    UfromfpTest.h
+  DEPENDS
+    libc.src.math.ufromfp
+)
+
+add_fp_unittest(
+  ufromfpf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfpf_test.cpp
+  HDRS
+    UfromfpTest.h
+  DEPENDS
+    libc.src.math.ufromfpf
+)
+
+add_fp_unittest(
+  ufromfpl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfpl_test.cpp
+  HDRS
+    UfromfpTest.h
+  DEPENDS
+    libc.src.math.ufromfpl
+)
+
+add_fp_unittest(
+  ufromfpf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfpf128_test.cpp
+  HDRS
+    UfromfpTest.h
+  DEPENDS
+    libc.src.math.ufromfpf128
+)
+
+add_fp_unittest(
+  ufromfpx_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfpx_test.cpp
+  HDRS
+    UfromfpxTest.h
+  DEPENDS
+    libc.src.math.ufromfpx
+)
+
+add_fp_unittest(
+  ufromfpxf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfpxf_test.cpp
+  HDRS
+    UfromfpxTest.h
+  DEPENDS
+    libc.src.math.ufromfpxf
+)
+
+add_fp_unittest(
+  ufromfpxl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfpxl_test.cpp
+  HDRS
+    UfromfpxTest.h
+  DEPENDS
+    libc.src.math.ufromfpxl
+)
+
+add_fp_unittest(
+  ufromfpxf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfpxf128_test.cpp
+  HDRS
+    UfromfpxTest.h
+  DEPENDS
+    libc.src.math.ufromfpxf128
+)
+
+add_fp_unittest(
   ilogb_test
   SUITE
     libc-math-smoke-tests

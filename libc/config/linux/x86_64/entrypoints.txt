@@ -387,6 +387,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.frexp
     libc.src.math.frexpf
     libc.src.math.frexpl
+    libc.src.math.fromfp
+    libc.src.math.fromfpf
+    libc.src.math.fromfpl
+    libc.src.math.fromfpx
+    libc.src.math.fromfpxf
+    libc.src.math.fromfpxl
     libc.src.math.hypot
     libc.src.math.hypotf
     libc.src.math.ilogb
@@ -471,6 +477,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl
+    libc.src.math.ufromfp
+    libc.src.math.ufromfpf
+    libc.src.math.ufromfpl
+    libc.src.math.ufromfpx
+    libc.src.math.ufromfpxf
+    libc.src.math.ufromfpxl
 )
 
 if(LIBC_TYPES_HAS_FLOAT128)
@@ -485,6 +497,8 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.fminf128
     libc.src.math.fmodf128
     libc.src.math.frexpf128
+    libc.src.math.fromfpf128
+    libc.src.math.fromfpxf128
     libc.src.math.ilogbf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
@@ -502,6 +516,8 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.roundf128
     libc.src.math.sqrtf128
     libc.src.math.truncf128
+    libc.src.math.ufromfpf128
+    libc.src.math.ufromfpxf128
   )
 endif()
 
