@@ -190,13 +190,13 @@ static StructType *getHandleType(LLVMContext &Ctx) {
 static Type *getTypeFromParameterKind(ParameterKind Kind, Type *OverloadTy) {
   auto &Ctx = OverloadTy->getContext();
   switch (Kind) {
-  case ParameterKind::VOID:
+  case ParameterKind::Void:
     return Type::getVoidTy(Ctx);
-  case ParameterKind::HALF:
+  case ParameterKind::Half:
     return Type::getHalfTy(Ctx);
-  case ParameterKind::FLOAT:
+  case ParameterKind::Float:
     return Type::getFloatTy(Ctx);
-  case ParameterKind::DOUBLE:
+  case ParameterKind::Double:
     return Type::getDoubleTy(Ctx);
   case ParameterKind::I1:
     return Type::getInt1Ty(Ctx);
@@ -208,11 +208,11 @@ static Type *getTypeFromParameterKind(ParameterKind Kind, Type *OverloadTy) {
     return Type::getInt32Ty(Ctx);
   case ParameterKind::I64:
     return Type::getInt64Ty(Ctx);
-  case ParameterKind::OVERLOAD:
+  case ParameterKind::Overload:
     return OverloadTy;
-  case ParameterKind::RESOURCE_RET:
+  case ParameterKind::ResourceRet:
     return getResRetType(OverloadTy, Ctx);
-  case ParameterKind::DXIL_HANDLE:
+  case ParameterKind::DXILHandle:
     return getHandleType(Ctx);
   default:
     break;
@@ -320,8 +320,8 @@ Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, FunctionType *FT) {
   auto ParamKinds = getOpCodeParameterKind(*Prop);
   auto Kind = ParamKinds[Prop->OverloadParamIndex];
   // For ResRet and CBufferRet, OverloadTy is in field of StructType.
-  if (Kind == ParameterKind::CBUFFER_RET ||
-      Kind == ParameterKind::RESOURCE_RET) {
+  if (Kind == ParameterKind::CBufferRet ||
+      Kind == ParameterKind::ResourceRet) {
     auto *ST = cast<StructType>(OverloadType);
     OverloadType = ST->getElementType(0);
   }
