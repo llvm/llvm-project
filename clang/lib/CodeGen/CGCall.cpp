@@ -217,6 +217,8 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
 
   if (D->hasAttr<RegCallAttr>())
     return CC_X86RegCall;
+  if (D->hasAttr<RegCall4Attr>())
+    return CC_X86RegCall;
 
   if (D->hasAttr<ThisCallAttr>())
     return CC_X86ThisCall;
@@ -2431,6 +2433,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       FuncAttrs.addAttribute("no_caller_saved_registers");
     if (TargetDecl->hasAttr<AnyX86NoCfCheckAttr>())
       FuncAttrs.addAttribute(llvm::Attribute::NoCfCheck);
+    if (TargetDecl->hasAttr<RegCall4Attr>())
+      FuncAttrs.addAttribute("regcall4");
     if (TargetDecl->hasAttr<LeafAttr>())
       FuncAttrs.addAttribute(llvm::Attribute::NoCallback);
 
@@ -2474,7 +2478,6 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   // * LangOpts: -ffreestanding, -fno-builtin, -fno-builtin-<name>
   // * FunctionDecl attributes: __attribute__((no_builtin(...)))
   addNoBuiltinAttributes(FuncAttrs, getLangOpts(), NBA);
-
   // Collect function IR attributes based on global settiings.
   getDefaultFunctionAttributes(Name, HasOptnone, AttrOnCallSite, FuncAttrs);
 

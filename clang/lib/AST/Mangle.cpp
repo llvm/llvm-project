@@ -199,7 +199,8 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
   else if (CC == CCM_Fast)
     Out << '@';
   else if (CC == CCM_RegCall) {
-    if (getASTContext().getLangOpts().RegCall4)
+    if (getASTContext().getLangOpts().RegCall4 ||
+        cast<FunctionDecl>(D)->hasAttr<RegCall4Attr>())
       Out << "__regcall4__";
     else
       Out << "__regcall3__";

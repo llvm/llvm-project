@@ -1782,7 +1782,7 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
 
     if (FD &&
         FD->getType()->castAs<FunctionType>()->getCallConv() == CC_X86RegCall) {
-      if (CGM.getLangOpts().RegCall4)
+      if (CGM.getLangOpts().RegCall4 || FD->hasAttr<RegCall4Attr>())
         Out << "__regcall4__" << II->getName();
       else
         Out << "__regcall3__" << II->getName();
@@ -2369,6 +2369,9 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     F->addFnAttrs(B);
     return;
   }
+  
+  if (D->hasAttr<RegCall4Attr>())
+    B.addAttribute("regcall4");
 
   // Handle SME attributes that apply to function definitions,
   // rather than to function prototypes.
