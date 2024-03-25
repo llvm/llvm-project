@@ -493,9 +493,15 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   Register ResVReg =
       Info.OrigRet.Regs.empty() ? Register(0) : Info.OrigRet.Regs[0];
   const auto *ST = static_cast<const SPIRVSubtarget *>(&MF.getSubtarget());
-  // TODO: check that it's OCL builtin, then apply OpenCL_std.
-  if (!DemangledName.empty() && CF && CF->isDeclaration() &&
-      ST->canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std)) {
+
+  bool isFunctionDecl = CF && CF->isDeclaration();
+  bool canUseOpenCL = ST->canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std);
+  bool canUseGLSL = ST->canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450);
+  assert(canUseGLSL != canUseOpenCL &&
+         "Scenario where both sets are enabled is not supported.");
+
+  if (isFunctionDecl && !DemangledName.empty() &&
+      (canUseGLSL || canUseOpenCL)) {
     SmallVector<Register, 8> ArgVRegs;
     for (auto Arg : Info.OrigArgs) {
       assert(Arg.Regs.size() == 1 && "Call arg has multiple VRegs");
@@ -504,12 +510,15 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       if (!GR->getSPIRVTypeForVReg(Arg.Regs[0]))
         GR->assignSPIRVTypeToVReg(SPIRVTy, Arg.Regs[0], MF);
     }
-    if (auto Res = SPIRV::lowerBuiltin(
-            DemangledName, SPIRV::InstructionSet::OpenCL_std, MIRBuilder,
-            ResVReg, OrigRetTy, ArgVRegs, GR))
+    auto instructionSet = canUseOpenCL ? SPIRV::InstructionSet::OpenCL_std
+                                       : SPIRV::InstructionSet::GLSL_std_450;
+    if (auto Res =
+            SPIRV::lowerBuiltin(DemangledName, instructionSet, MIRBuilder,
+                                ResVReg, OrigRetTy, ArgVRegs, GR))
       return *Res;
   }
-  if (CF && CF->isDeclaration() && !GR->find(CF, &MF).isValid()) {
+
+  if (isFunctionDecl && !GR->find(CF, &MF).isValid()) {
     // Emit the type info and forward function declaration to the first MBB
     // to ensure VReg definition dependencies are valid across all MBBs.
     MachineIRBuilder FirstBlockBuilder;
