@@ -14138,15 +14138,13 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
     break;
 
   case OR_Deleted: {
-    CandidateSet->NoteCandidates(
-        PartialDiagnosticAt(Fn->getBeginLoc(),
-                            SemaRef.PDiag(diag::err_ovl_deleted_call)
-                                << ULE->getName() << Fn->getSourceRange()),
-        SemaRef, OCD_AllCandidates, Args);
+    FunctionDecl *FDecl = (*Best)->Function;
+    SemaRef.DiagnoseUseOfDeletedFunction(Fn->getBeginLoc(),
+                                         Fn->getSourceRange(), ULE->getName(),
+                                         *CandidateSet, FDecl, Args);
 
     // We emitted an error for the unavailable/deleted function call but keep
     // the call in the AST.
-    FunctionDecl *FDecl = (*Best)->Function;
     ExprResult Res =
         SemaRef.FixOverloadedFunctionReference(Fn, (*Best)->FoundDecl, FDecl);
     if (Res.isInvalid())
@@ -15588,11 +15586,9 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
           *this, OCD_AmbiguousCandidates, Args);
       break;
     case OR_Deleted:
-      CandidateSet.NoteCandidates(
-          PartialDiagnosticAt(UnresExpr->getMemberLoc(),
-                              PDiag(diag::err_ovl_deleted_member_call)
-                                  << DeclName << MemExprE->getSourceRange()),
-          *this, OCD_AllCandidates, Args);
+      DiagnoseUseOfDeletedFunction(
+          UnresExpr->getMemberLoc(), MemExprE->getSourceRange(), DeclName,
+          CandidateSet, Best->Function, Args, /*IsMember=*/true);
       break;
     }
     // Overload resolution fails, try to recover.
@@ -16482,4 +16478,18 @@ bool clang::shouldEnforceArgLimit(bool PartialOverloading,
       if (Proto->isTemplateVariadic())
         return false;
   return true;
+}
+
+void Sema::DiagnoseUseOfDeletedFunction(SourceLocation Loc, SourceRange Range,
+                                        DeclarationName Name,
+                                        OverloadCandidateSet &CandidateSet,
+                                        FunctionDecl *Fn, MultiExprArg Args,
+                                        bool IsMember) {
+  StringLiteral *Msg = Fn->getDeletedMessage();
+  CandidateSet.NoteCandidates(
+      PartialDiagnosticAt(Loc, PDiag(diag::err_ovl_deleted_call)
+                                   << IsMember << Name << !!Msg
+                                   << (Msg ? Msg->getString() : StringRef())
+                                   << Range),
+      *this, OCD_AllCandidates, Args);
 }

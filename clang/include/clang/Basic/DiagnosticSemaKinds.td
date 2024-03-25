@@ -4661,11 +4661,10 @@ def err_ovl_no_viable_member_function_in_call : Error<
   "no matching member function for call to %0">;
 def err_ovl_ambiguous_call : Error<
   "call to %0 is ambiguous">;
-def err_ovl_deleted_call : Error<"call to deleted function %0">;
+def err_ovl_deleted_call : Error<"call to deleted"
+  "%select{| member}0 function %1%select{|: %3}2">;
 def err_ovl_ambiguous_member_call : Error<
   "call to member function %0 is ambiguous">;
-def err_ovl_deleted_member_call : Error<
-  "call to deleted member function %0">;
 def note_ovl_too_many_candidates : Note<
     "remaining %0 candidate%s0 omitted; "
     "pass -fshow-overloads=all to show them">;
@@ -8857,7 +8856,7 @@ def err_nontemporal_builtin_must_be_pointer_intfltptr_or_vector : Error<
   "address argument to nontemporal builtin must be a pointer to integer, float, "
   "pointer, or a vector of such types (%0 invalid)">;
 
-def err_deleted_function_use : Error<"attempt to use a deleted function">;
+def err_deleted_function_use : Error<"attempt to use a deleted function%select{|: %1}0">;
 def err_deleted_inherited_ctor_use : Error<
   "constructor inherited by %0 from base class %1 is implicitly deleted">;
 

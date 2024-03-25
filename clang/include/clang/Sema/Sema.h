@@ -8264,6 +8264,11 @@ public:
   bool IsFunctionConversion(QualType FromType, QualType ToType,
                             QualType &ResultTy);
   bool DiagnoseMultipleUserDefinedConversion(Expr *From, QualType ToType);
+  void DiagnoseUseOfDeletedFunction(SourceLocation Loc, SourceRange Range,
+                                    DeclarationName Name,
+                                    OverloadCandidateSet &CandidateSet,
+                                    FunctionDecl *Fn, MultiExprArg Args,
+                                    bool IsMember = false);
 
   ExprResult InitializeExplicitObjectArgument(Sema &S, Expr *Obj,
                                               FunctionDecl *Fun);

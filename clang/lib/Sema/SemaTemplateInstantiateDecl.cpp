@@ -2202,9 +2202,6 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
   if (D->isLocalExternDecl())
     Function->setLocalExternDecl();
 
-  if (D->isDeletedAsWritten())
-    Function->setDeletedWithMessage(D->getDeletedMessage());
-
   DeclContext *LexicalDC = Owner;
   if (!isFriend && D->isOutOfLine() && !D->isLocalExternDecl()) {
     assert(D->getDeclContext()->isFileContext());
@@ -2432,7 +2429,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
       return nullptr;
   }
   if (D->isDeleted())
-    SemaRef.SetDeclDeleted(Function, D->getLocation());
+    SemaRef.SetDeclDeleted(Function, D->getLocation(), D->getDeletedMessage());
 
   NamedDecl *PrincipalDecl =
       (TemplateParams ? cast<NamedDecl>(FunctionTemplate) : Function);
@@ -2630,9 +2627,6 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   if (QualifierLoc)
     Method->setQualifierInfo(QualifierLoc);
 
-  if (D->isDeletedAsWritten())
-    Method->setDeletedWithMessage(D->getDeletedMessage());
-
   if (TemplateParams) {
     // Our resulting instantiation is actually a function template, since we
     // are substituting only the outer template parameters. For example, given
@@ -2811,7 +2805,8 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
       return nullptr;
   }
   if (D->isDeletedAsWritten())
-    SemaRef.SetDeclDeleted(Method, Method->getLocation());
+    SemaRef.SetDeclDeleted(Method, Method->getLocation(),
+                           D->getDeletedMessage());
 
   // If this is an explicit specialization, mark the implicitly-instantiated
   // template specialization as being an explicit specialization too.
