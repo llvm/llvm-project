@@ -1292,7 +1292,7 @@ template <class LP> void Writer::run() {
   scanSymbols();
   if (in.objcStubs->isNeeded())
     in.objcStubs->setUp();
-  if (in.objcMethList)
+  if (in.objcMethList->isNeeded())
     in.objcMethList->setUp();
   scanRelocations();
   if (in.initOffsets->isNeeded())
@@ -1365,9 +1365,7 @@ void macho::createSyntheticSections() {
   in.unwindInfo = makeUnwindInfoSection();
   in.objCImageInfo = make<ObjCImageInfoSection>();
   in.initOffsets = make<InitOffsetsSection>();
-  // Only create ObjCMethListSection if we need it
-  if (config->emitRelativeMethodLists)
-    in.objcMethList = make<ObjCMethListSection>();
+  in.objcMethList = make<ObjCMethListSection>();
 
   // This section contains space for just a single word, and will be used by
   // dyld to cache an address to the image loader it uses.

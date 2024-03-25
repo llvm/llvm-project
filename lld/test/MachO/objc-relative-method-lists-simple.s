@@ -5,14 +5,13 @@
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o a64_rel_dylib.o a64_simple_class.s
 
 ## Test arm64 + relative method lists
-# RUN: ld64.lld a64_rel_dylib.o -o a64_rel_dylib.dylib -map a64_rel_dylib.map -dylib -arch arm64 -platform_version macos 11.0.0 11.0.0 -objc_relative_method_lists
+# RUN: %no-lsystem-lld a64_rel_dylib.o -o a64_rel_dylib.dylib -map a64_rel_dylib.map -dylib -arch arm64 -objc_relative_method_lists
 # RUN: llvm-objdump --macho --objc-meta-data a64_rel_dylib.dylib  | FileCheck %s --check-prefix=CHK_REL
 
 ## Test arm64 + traditional method lists (no relative offsets)
-# RUN: ld64.lld a64_rel_dylib.o -o a64_rel_dylib.dylib -map a64_rel_dylib.map -dylib -arch arm64 -platform_version macos 11.0.0 11.0.0 -no_objc_relative_method_lists
+# RUN: %no-lsystem-lld a64_rel_dylib.o -o a64_rel_dylib.dylib -map a64_rel_dylib.map -dylib -arch arm64 -no_objc_relative_method_lists
 # RUN: llvm-objdump --macho --objc-meta-data a64_rel_dylib.dylib  | FileCheck %s --check-prefix=CHK_NO_REL
 
-CHK_NO_REL-NOT: (relative)
 
 CHK_REL:       Contents of (__DATA_CONST,__objc_classlist) section
 CHK_REL-NEXT:  _OBJC_CLASS_$_MyClass
@@ -44,6 +43,41 @@ CHK_REL-NEXT:   name 0x{{[0-9a-f]*}} (0x{{[0-9a-f]*}})  class_method_02
 CHK_REL-NEXT:  types 0x{{[0-9a-f]*}} (0x{{[0-9a-f]*}})  v16@0:8
 CHK_REL-NEXT:    imp 0x{{[0-9a-f]*}} (0x{{[0-9a-f]*}})  +[MyClass class_method_02]
 
+
+CHK_NO_REL-NOT: (relative)
+
+CHK_NO_REL:           Contents of (__DATA_CONST,__objc_classlist) section
+CHK_NO_REL-NEXT:      _OBJC_CLASS_$_MyClass
+
+CHK_NO_REL:            baseMethods 0x80e8 (struct method_list_t *)
+CHK_NO_REL-NEXT:		   entsize 24
+CHK_NO_REL-NEXT:		     count 3
+CHK_NO_REL-NEXT:		      name 0x5b8 instance_method_00
+CHK_NO_REL-NEXT:		     types 0x580 v16@0:8
+CHK_NO_REL-NEXT:		       imp -[MyClass instance_method_00]
+CHK_NO_REL-NEXT:		      name 0x5cb instance_method_01
+CHK_NO_REL-NEXT:		     types 0x580 v16@0:8
+CHK_NO_REL-NEXT:		       imp -[MyClass instance_method_01]
+CHK_NO_REL-NEXT:		      name 0x5de instance_method_02
+CHK_NO_REL-NEXT:		     types 0x580 v16@0:8
+CHK_NO_REL-NEXT:		       imp -[MyClass instance_method_02]
+
+
+CHK_NO_REL:             Meta Class
+CHK_NO_REL-NEXT:        _OBJC_METACLASS_$_MyClass
+
+CHK_NO_REL:             baseMethods 0x8050 (struct method_list_t *)
+CHK_NO_REL-NEXT:		   entsize 24
+CHK_NO_REL-NEXT:		     count 3
+CHK_NO_REL-NEXT:		      name 0x588 class_method_00
+CHK_NO_REL-NEXT:		     types 0x580 v16@0:8
+CHK_NO_REL-NEXT:		       imp +[MyClass class_method_00]
+CHK_NO_REL-NEXT:		      name 0x598 class_method_01
+CHK_NO_REL-NEXT:		     types 0x580 v16@0:8
+CHK_NO_REL-NEXT:		       imp +[MyClass class_method_01]
+CHK_NO_REL-NEXT:		      name 0x5a8 class_method_02
+CHK_NO_REL-NEXT:		     types 0x580 v16@0:8
+CHK_NO_REL-NEXT:		       imp +[MyClass class_method_02]
 
 
 ######################## Generate a64_simple_class.s #########################

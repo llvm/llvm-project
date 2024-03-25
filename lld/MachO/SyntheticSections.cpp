@@ -1979,7 +1979,7 @@ void InitOffsetsSection::setUp() {
 ObjCMethListSection::ObjCMethListSection()
     : SyntheticSection(segment_names::text, section_names::objcMethList) {
   flags = S_ATTR_NO_DEAD_STRIP;
-  align = m_align;
+  align = relativeOffsetSize;
 }
 
 // Go through all input method lists and ensure that we have selrefs for all
@@ -1993,7 +1993,7 @@ void ObjCMethListSection::setUp() {
     uint32_t structSize = structSizeAndFlags & m_structSizeMask;
 
     // Method name is immediately after header
-    uint32_t methodNameOff = m_methodListHeaderSize;
+    uint32_t methodNameOff = methodListHeaderSize;
 
     // Loop through all methods, and ensure a selref for each of them exists.
     while (methodNameOff < isec->data.size()) {
@@ -2016,19 +2016,19 @@ void ObjCMethListSection::setUp() {
 // Calculate section size and final offsets for where InputSection's need to be
 // written.
 void ObjCMethListSection::finalize() {
-  // m_size will be the total size of the __objc_methlist section
-  m_size = 0;
+  // sectionSize will be the total size of the __objc_methlist section
+  sectionSize = 0;
   for (ConcatInputSection *isec : inputs) {
-    // We can also use m_size as write offset for isec
-    assert(m_size == alignToPowerOf2(m_size, m_align) &&
+    // We can also use sectionSize as write offset for isec
+    assert(sectionSize == alignToPowerOf2(sectionSize, relativeOffsetSize) &&
            "expected __objc_methlist to be aligned by default with the "
            "required section alignment");
-    isec->outSecOff = m_size;
+    isec->outSecOff = sectionSize;
 
     isec->isFinal = true;
     uint32_t relativeListSize =
-        methodListSizeToRelativeMethodListSize(isec->data.size());
-    m_size += relativeListSize;
+        computeRelativeMethodListSize(isec->data.size());
+    sectionSize += relativeListSize;
 
     // If encoding the method list in relative offset format shrinks the size,
     // then we also need to adjust symbol sizes to match the new size. Note that
@@ -2061,7 +2061,7 @@ void ObjCMethListSection::writeTo(uint8_t *bufStart) const {
     uint32_t writtenSize = writeRelativeMethodList(isec, buf);
     buf += writtenSize;
   }
-  assert(buf - bufStart == m_size &&
+  assert(buf - bufStart == sectionSize &&
          "Written size does not match expected section size");
 }
 
@@ -2122,8 +2122,10 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
   uint32_t delta = symVA - currentVA;
   write32le(buf + outSecOff, delta);
 
+  // Move one pointer forward in the absolute method list
   inSecOff += target->wordSize;
-  outSecOff += sizeof(uint32_t);
+  // Move one relative offset forward in the relative method list (32 bits)
+  outSecOff += relativeOffsetSize;
 }
 
 // Write a relative method list to buf, return the size of the written
@@ -2135,16 +2137,16 @@ ObjCMethListSection::writeRelativeMethodList(const ConcatInputSection *isec,
   // value flag
   uint32_t structSizeAndFlags = 0, structCount = 0;
   readMethodListHeader(isec->data.data(), structSizeAndFlags, structCount);
-  structSizeAndFlags |= m_relMethodHeaderFlag;
+  structSizeAndFlags |= relMethodHeaderFlag;
   writeMethodListHeader(buf, structSizeAndFlags, structCount);
 
-  assert(m_methodListHeaderSize +
-                 (structCount * m_pointersPerStruct * target->wordSize) ==
+  assert(methodListHeaderSize +
+                 (structCount * pointersPerStruct * target->wordSize) ==
              isec->data.size() &&
          "Invalid computed ObjC method list size");
 
-  uint32_t inSecOff = m_methodListHeaderSize;
-  uint32_t outSecOff = m_methodListHeaderSize;
+  uint32_t inSecOff = methodListHeaderSize;
+  uint32_t outSecOff = methodListHeaderSize;
 
   // Go through the method list and encode input absolute pointers as relative
   // offsets. writeRelativeOffsetForIsec will be incrementing inSecOff and
@@ -2162,27 +2164,26 @@ ObjCMethListSection::writeRelativeMethodList(const ConcatInputSection *isec,
   assert(inSecOff == isec->data.size() &&
          "Invalid actual ObjC method list size");
   assert(
-      outSecOff == methodListSizeToRelativeMethodListSize(inSecOff) &&
+      outSecOff == computeRelativeMethodListSize(inSecOff) &&
       "Mismatch between input & output size when writing relative method list");
   return outSecOff;
 }
 
 // Given the size of an ObjC method list InputSection, return the size of the
 // method list when encoded in relative offsets format. We can do this without
-// decoding the actual data, as it can be directly infered from the size of the
+// decoding the actual data, as it can be directly inferred from the size of the
 // isec.
-uint32_t
-ObjCMethListSection::methodListSizeToRelativeMethodListSize(uint32_t iSecSize) {
-  uint32_t oldPointersSize = iSecSize - m_methodListHeaderSize;
+uint32_t ObjCMethListSection::computeRelativeMethodListSize(
+    uint32_t absoluteMethodListSize) const {
+  uint32_t oldPointersSize = absoluteMethodListSize - methodListHeaderSize;
   uint32_t pointerCount = oldPointersSize / target->wordSize;
-  assert(((pointerCount % m_pointersPerStruct) == 0) &&
+  assert(((pointerCount % pointersPerStruct) == 0) &&
          "__objc_methlist expects method lists to have multiple-of-3 pointers");
 
-  constexpr uint32_t sizeOfRelativeOffset = sizeof(uint32_t);
-  uint32_t newPointersSize = pointerCount * sizeOfRelativeOffset;
-  uint32_t newTotalSize = m_methodListHeaderSize + newPointersSize;
+  uint32_t newPointersSize = pointerCount * relativeOffsetSize;
+  uint32_t newTotalSize = methodListHeaderSize + newPointersSize;
 
-  assert((newTotalSize <= iSecSize) &&
+  assert((newTotalSize <= absoluteMethodListSize) &&
          "Expected relative method list size to be smaller or equal than "
          "original size");
   return newTotalSize;
@@ -2191,7 +2192,7 @@ ObjCMethListSection::methodListSizeToRelativeMethodListSize(uint32_t iSecSize) {
 // Read a method list header from buf
 void ObjCMethListSection::readMethodListHeader(const uint8_t *buf,
                                                uint32_t &structSizeAndFlags,
-                                               uint32_t &structCount) {
+                                               uint32_t &structCount) const {
   structSizeAndFlags = read32le(buf);
   structCount = read32le(buf + sizeof(uint32_t));
 }
@@ -2199,7 +2200,7 @@ void ObjCMethListSection::readMethodListHeader(const uint8_t *buf,
 // Write a method list header to buf
 void ObjCMethListSection::writeMethodListHeader(uint8_t *buf,
                                                 uint32_t structSizeAndFlags,
-                                                uint32_t structCount) {
+                                                uint32_t structCount) const {
   write32le(buf, structSizeAndFlags);
   write32le(buf + sizeof(structSizeAndFlags), structCount);
 }
