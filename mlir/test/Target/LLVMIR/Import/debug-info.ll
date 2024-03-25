@@ -136,7 +136,7 @@ define void @basic_type() !dbg !3 {
 
 ; CHECK: #[[INT:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int">
 ; CHECK: #[[PTR1:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT]]>
-; CHECK: #[[PTR2:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "mypointer", baseType = #[[INT]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4>
+; CHECK: #[[PTR2:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "mypointer", baseType = #[[INT]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4, extraData = #[[INT]]>
 ; CHECK: #llvm.di_subroutine_type<types = #[[PTR1]], #[[PTR2]]>
 
 define void @derived_type() !dbg !3 {
@@ -153,7 +153,7 @@ define void @derived_type() !dbg !3 {
 !5 = !{!7, !8}
 !6 = !DIBasicType(name: "int")
 !7 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6)
-!8 = !DIDerivedType(name: "mypointer", tag: DW_TAG_pointer_type, baseType: !6, size: 64, align: 32, offset: 4)
+!8 = !DIDerivedType(name: "mypointer", tag: DW_TAG_pointer_type, baseType: !6, size: 64, align: 32, offset: 4, extraData: !6)
 
 ; // -----
 
@@ -296,12 +296,17 @@ define void @class_method() {
   ret void, !dbg !9
 }
 
-; Verify the elements parameter is dropped due to the cyclic dependencies.
-; CHECK: #[[COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, name = "class_name", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial">
-; CHECK: #[[COMP_PTR:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]], sizeInBits = 64>
+; Verify the cyclic composite type is identified, even though conversion begins from the subprogram type.
+; CHECK: #[[COMP_SELF:.+]] = #llvm.di_composite_type<tag = DW_TAG_null, recId = [[REC_ID:.+]]>
+; CHECK: #[[COMP_PTR:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP_SELF]], sizeInBits = 64>
 ; CHECK: #[[SP_TYPE:.+]] = #llvm.di_subroutine_type<types = #{{.*}}, #[[COMP_PTR]]>
-; CHECK: #[[SP:.+]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #[[COMP]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE]]>
-; CHECK: #[[LOC]] = loc(fused<#[[SP]]>
+; CHECK: #[[SP_INNER:.+]] = #llvm.di_subprogram<id = [[SP_ID:.+]], compileUnit = #{{.*}}, scope = #[[COMP_SELF]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE]]>
+; CHECK: #[[COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, recId = [[REC_ID]], name = "class_name", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial", elements = #[[SP_INNER]]>
+
+; CHECK: #[[COMP_PTR_OUTER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]], sizeInBits = 64>
+; CHECK: #[[SP_TYPE_OUTER:.+]] = #llvm.di_subroutine_type<types = #{{.*}}, #[[COMP_PTR_OUTER]]>
+; CHECK: #[[SP_OUTER:.+]] = #llvm.di_subprogram<id = [[SP_ID]], compileUnit = #{{.*}}, scope = #[[COMP]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE_OUTER]]>
+; CHECK: #[[LOC]] = loc(fused<#[[SP_OUTER]]>
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
@@ -318,15 +323,18 @@ define void @class_method() {
 
 ; // -----
 
-; Verify the elements parameter is dropped due to the cyclic dependencies.
-; CHECK: #[[$COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, name = "class_field", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial">
-; CHECK: #[[$COMP_PTR:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[$COMP]]>
-; CHECK: #[[$VAR0:.+]] = #llvm.di_local_variable<scope = #{{.*}}, name = "class_field", file = #{{.*}}, type = #[[$COMP_PTR]]>
+; Verify the cyclic composite type is handled correctly.
+; CHECK: #[[COMP_SELF:.+]] = #llvm.di_composite_type<tag = DW_TAG_null, recId = [[REC_ID:.+]]>
+; CHECK: #[[COMP_PTR_INNER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP_SELF]]>
+; CHECK: #[[FIELD:.+]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "call_field", baseType = #[[COMP_PTR_INNER]]>
+; CHECK: #[[COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, recId = [[REC_ID]], name = "class_field", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial", elements = #[[FIELD]]>
+; CHECK: #[[COMP_PTR_OUTER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]]>
+; CHECK: #[[VAR0:.+]] = #llvm.di_local_variable<scope = #{{.*}}, name = "class_field", file = #{{.*}}, type = #[[COMP_PTR_OUTER]]>
 
-; CHECK-LABEL: @class_field
+; CHECK: @class_field
 ; CHECK-SAME:  %[[ARG0:[a-zA-Z0-9]+]]
 define void @class_field(ptr %arg1) {
-  ; CHECK: llvm.intr.dbg.value #[[$VAR0]] = %[[ARG0]] : !llvm.ptr
+  ; CHECK: llvm.intr.dbg.value #[[VAR0]] = %[[ARG0]] : !llvm.ptr
   call void @llvm.dbg.value(metadata ptr %arg1, metadata !7, metadata !DIExpression()), !dbg !9
   ret void
 }
@@ -563,35 +571,6 @@ define void @func_in_module(ptr %arg) !dbg !8 {
 
 ; // -----
 
-; Verifies that array types that have an unimportable base type are removed to
-; avoid producing invalid IR.
-; CHECK: #[[DI_LOCAL_VAR:.+]] = #llvm.di_local_variable<
-; CHECK-NOT: type =
-
-; CHECK-LABEL: @array_with_cyclic_base_type
-define i32 @array_with_cyclic_base_type(ptr %0) !dbg !3 {
-  call void @llvm.dbg.value(metadata ptr %0, metadata !4, metadata !DIExpression()), !dbg !7
-  ret i32 0
-}
-
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare void @llvm.dbg.value(metadata, metadata, metadata)
-
-
-!llvm.module.flags = !{!0}
-!llvm.dbg.cu = !{!1}
-
-!0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
-!2 = !DIFile(filename: "debug-info.ll", directory: "/")
-!3 = distinct !DISubprogram(name: "func", scope: !2, file: !2, line: 46, scopeLine: 48, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !1)
-!4 = !DILocalVariable(name: "op", arg: 5, scope: !3, file: !2, line: 47, type: !5)
-!5 = !DICompositeType(tag: DW_TAG_array_type, size: 42, baseType: !6)
-!6 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !5)
-!7 = !DILocation(line: 0, scope: !3)
-
-; // -----
-
 ; Verifies that import compile units respect the distinctness of the input.
 ; CHECK-LABEL: @distinct_cu_func0
 define void @distinct_cu_func0() !dbg !4 {
@@ -622,8 +601,9 @@ declare !dbg !1 void @declaration()
 
 ; CHECK: #di_subprogram = #llvm.di_subprogram<
 ; CHECK-NOT: id = distinct
+; CHECK-NOT: subprogramFlags =
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = !DISubprogram(name: "declaration", scope: !2, file: !2, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
+!1 = !DISubprogram(name: "declaration", scope: !2, file: !2, flags: DIFlagPrototyped, spFlags: 0)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")

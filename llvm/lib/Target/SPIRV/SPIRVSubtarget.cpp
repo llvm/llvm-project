@@ -27,6 +27,11 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "SPIRVGenSubtargetInfo.inc"
 
+static cl::opt<bool>
+    SPVTranslatorCompat("translator-compatibility-mode",
+                        cl::desc("SPIR-V Translator compatibility mode"),
+                        cl::Optional, cl::init(false));
+
 cl::list<SPIRV::Extension::Extension> Extensions(
     "spirv-extensions", cl::desc("SPIR-V extensions"), cl::ZeroOrMore,
     cl::Hidden,
@@ -157,8 +162,9 @@ bool SPIRVSubtarget::isAtLeastOpenCLVer(uint32_t VerToCompareTo) const {
 }
 
 // If the SPIR-V version is >= 1.4 we can call OpPtrEqual and OpPtrNotEqual.
+// In SPIR-V Translator compatibility mode this feature is not available.
 bool SPIRVSubtarget::canDirectlyComparePointers() const {
-  return isAtLeastVer(SPIRVVersion, 14);
+  return !SPVTranslatorCompat && isAtLeastVer(SPIRVVersion, 14);
 }
 
 void SPIRVSubtarget::initAvailableExtensions() {

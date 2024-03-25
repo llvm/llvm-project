@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenTarget.h"
-#include "SequenceToOffsetTable.h"
+#include "Basic/SequenceToOffsetTable.h"
+#include "Common/CodeGenTarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -22,6 +22,7 @@
 #include "llvm/Support/DXILABI.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <string>
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -38,8 +39,8 @@ struct DXILOperationDesc {
   int OpCode;         // ID of DXIL operation
   StringRef OpClass;  // name of the opcode class
   StringRef Doc;      // the documentation description of this instruction
-  SmallVector<MVT::SimpleValueType> OpTypes; // Vector of operand types -
-                                             // return type is at index 0
+  SmallVector<Record *> OpTypes; // Vector of operand type records -
+                                 // return type is at index 0
   SmallVector<std::string>
       OpAttributes;     // operation attribute represented as strings
   StringRef Intrinsic;  // The llvm intrinsic map to OpName. Default is "" which
@@ -57,28 +58,29 @@ struct DXILOperationDesc {
   DXILShaderModel ShaderModel;           // minimum shader model required
   DXILShaderModel ShaderModelTranslated; // minimum shader model required with
                                          // translation by linker
-  int OverloadParamIndex; // parameter index which control the overload.
-                          // When < 0, should be only 1 overload type.
+  int OverloadParamIndex;             // Index of parameter with overload type.
+                                      //   -1 : no overload types
   SmallVector<StringRef, 4> counters; // counters for this inst.
   DXILOperationDesc(const Record *);
 };
 } // end anonymous namespace
 
-/// Convert DXIL type name string to dxil::ParameterKind
+/// Return dxil::ParameterKind corresponding to input LLVMType record
 ///
-/// \param VT Simple Value Type
+/// \param R TableGen def record of class LLVMType
 /// \return ParameterKind As defined in llvm/Support/DXILABI.h
 
-static ParameterKind getParameterKind(MVT::SimpleValueType VT) {
-  switch (VT) {
+static ParameterKind getParameterKind(const Record *R) {
+  auto VTRec = R->getValueAsDef("VT");
+  switch (getValueType(VTRec)) {
   case MVT::isVoid:
-    return ParameterKind::VOID;
+    return ParameterKind::Void;
   case MVT::f16:
-    return ParameterKind::HALF;
+    return ParameterKind::Half;
   case MVT::f32:
-    return ParameterKind::FLOAT;
+    return ParameterKind::Float;
   case MVT::f64:
-    return ParameterKind::DOUBLE;
+    return ParameterKind::Double;
   case MVT::i1:
     return ParameterKind::I1;
   case MVT::i8:
@@ -89,7 +91,13 @@ static ParameterKind getParameterKind(MVT::SimpleValueType VT) {
     return ParameterKind::I32;
   case MVT::fAny:
   case MVT::iAny:
-    return ParameterKind::OVERLOAD;
+    return ParameterKind::Overload;
+  case MVT::Other:
+    // Handle DXIL-specific overload types
+    if (R->getValueAsInt("isHalfOrFloat") || R->getValueAsInt("isI16OrI32")) {
+      return ParameterKind::Overload;
+    }
+    LLVM_FALLTHROUGH;
   default:
     llvm_unreachable("Support for specified DXIL Type not yet implemented");
   }
@@ -106,45 +114,80 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 
   Doc = R->getValueAsString("Doc");
 
+  auto TypeRecs = R->getValueAsListOfDefs("OpTypes");
+  unsigned TypeRecsSize = TypeRecs.size();
+  // Populate OpTypes with return type and parameter types
+
+  // Parameter indices of overloaded parameters.
+  // This vector contains overload parameters in the order used to
+  // resolve an LLVMMatchType in accordance with  convention outlined in
+  // the comment before the definition of class LLVMMatchType in
+  // llvm/IR/Intrinsics.td
+  SmallVector<int> OverloadParamIndices;
+  for (unsigned i = 0; i < TypeRecsSize; i++) {
+    auto TR = TypeRecs[i];
+    // Track operation parameter indices of any overload types
+    auto isAny = TR->getValueAsInt("isAny");
+    if (isAny == 1) {
+      // TODO: At present it is expected that all overload types in a DXIL Op
+      // are of the same type. Hence, OverloadParamIndices will have only one
+      // element. This implies we do not need a vector. However, until more
+      // (all?) DXIL Ops are added in DXIL.td, a vector is being used to flag
+      // cases this assumption would not hold.
+      if (!OverloadParamIndices.empty()) {
+        bool knownType = true;
+        // Ensure that the same overload type registered earlier is being used
+        for (auto Idx : OverloadParamIndices) {
+          if (TR != TypeRecs[Idx]) {
+            knownType = false;
+            break;
+          }
+        }
+        if (!knownType) {
+          report_fatal_error("Specification of multiple differing overload "
+                             "parameter types not yet supported",
+                             false);
+        }
+      } else {
+        OverloadParamIndices.push_back(i);
+      }
+    }
+    // Populate OpTypes array according to the type specification
+    if (TR->isAnonymous()) {
+      // Check prior overload types exist
+      assert(!OverloadParamIndices.empty() &&
+             "No prior overloaded parameter found to match.");
+      // Get the parameter index of anonymous type, TR, references
+      auto OLParamIndex = TR->getValueAsInt("Number");
+      // Resolve and insert the type to that at OLParamIndex
+      OpTypes.emplace_back(TypeRecs[OLParamIndex]);
+    } else {
+      // A non-anonymous type. Just record it in OpTypes
+      OpTypes.emplace_back(TR);
+    }
+  }
+
+  // Set the index of the overload parameter, if any.
+  OverloadParamIndex = -1; // default; indicating none
+  if (!OverloadParamIndices.empty()) {
+    if (OverloadParamIndices.size() > 1)
+      report_fatal_error("Multiple overload type specification not supported",
+                         false);
+    OverloadParamIndex = OverloadParamIndices[0];
+  }
+  // Get the operation class
+  OpClass = R->getValueAsDef("OpClass")->getName();
+
   if (R->getValue("LLVMIntrinsic")) {
     auto *IntrinsicDef = R->getValueAsDef("LLVMIntrinsic");
     auto DefName = IntrinsicDef->getName();
     assert(DefName.starts_with("int_") && "invalid intrinsic name");
     // Remove the int_ from intrinsic name.
     Intrinsic = DefName.substr(4);
-    // TODO: It is expected that return type and parameter types of
-    // DXIL Operation are the same as that of the intrinsic. Deviations
-    // are expected to be encoded in TableGen record specification and
-    // handled accordingly here. Support to be added later, as needed.
-    // Get parameter type list of the intrinsic. Types attribute contains
-    // the list of as [returnType, param1Type,, param2Type, ...]
-
-    OverloadParamIndex = -1;
-    auto TypeRecs = IntrinsicDef->getValueAsListOfDefs("Types");
-    unsigned TypeRecsSize = TypeRecs.size();
-    // Populate return type and parameter type names
-    for (unsigned i = 0; i < TypeRecsSize; i++) {
-      auto TR = TypeRecs[i];
-      OpTypes.emplace_back(getValueType(TR->getValueAsDef("VT")));
-      // Get the overload parameter index.
-      // TODO : Seems hacky. Is it possible that more than one parameter can
-      // be of overload kind??
-      // TODO: Check for any additional constraints specified for DXIL operation
-      // restricting return type.
-      if (i > 0) {
-        auto &CurParam = OpTypes.back();
-        if (getParameterKind(CurParam) >= ParameterKind::OVERLOAD) {
-          OverloadParamIndex = i;
-        }
-      }
-    }
-    // Get the operation class
-    OpClass = R->getValueAsDef("OpClass")->getName();
-
-    // NOTE: For now, assume that attributes of DXIL Operation are the same as
+    // TODO: For now, assume that attributes of DXIL Operation are the same as
     // that of the intrinsic. Deviations are expected to be encoded in TableGen
     // record specification and handled accordingly here. Support to be added
-    // later.
+    // as needed.
     auto IntrPropList = IntrinsicDef->getValueAsListInit("IntrProperties");
     auto IntrPropListSize = IntrPropList->size();
     for (unsigned i = 0; i < IntrPropListSize; i++) {
@@ -158,16 +201,16 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 /// \return std::string string representation of input Kind
 static std::string getParameterKindStr(ParameterKind Kind) {
   switch (Kind) {
-  case ParameterKind::INVALID:
-    return "INVALID";
-  case ParameterKind::VOID:
-    return "VOID";
-  case ParameterKind::HALF:
-    return "HALF";
-  case ParameterKind::FLOAT:
-    return "FLOAT";
-  case ParameterKind::DOUBLE:
-    return "DOUBLE";
+  case ParameterKind::Invalid:
+    return "Invalid";
+  case ParameterKind::Void:
+    return "Void";
+  case ParameterKind::Half:
+    return "Half";
+  case ParameterKind::Float:
+    return "Float";
+  case ParameterKind::Double:
+    return "Double";
   case ParameterKind::I1:
     return "I1";
   case ParameterKind::I8:
@@ -178,25 +221,26 @@ static std::string getParameterKindStr(ParameterKind Kind) {
     return "I32";
   case ParameterKind::I64:
     return "I64";
-  case ParameterKind::OVERLOAD:
-    return "OVERLOAD";
-  case ParameterKind::CBUFFER_RET:
-    return "CBUFFER_RET";
-  case ParameterKind::RESOURCE_RET:
-    return "RESOURCE_RET";
-  case ParameterKind::DXIL_HANDLE:
-    return "DXIL_HANDLE";
+  case ParameterKind::Overload:
+    return "Overload";
+  case ParameterKind::CBufferRet:
+    return "CBufferRet";
+  case ParameterKind::ResourceRet:
+    return "ResourceRet";
+  case ParameterKind::DXILHandle:
+    return "DXILHandle";
   }
   llvm_unreachable("Unknown llvm::dxil::ParameterKind enum");
 }
 
 /// Return a string representation of OverloadKind enum that maps to
-/// input Simple Value Type enum
-/// \param VT Simple Value Type enum
+/// input LLVMType record
+/// \param R TableGen def record of class LLVMType
 /// \return std::string string representation of OverloadKind
 
-static std::string getOverloadKindStr(MVT::SimpleValueType VT) {
-  switch (VT) {
+static std::string getOverloadKindStr(const Record *R) {
+  auto VTRec = R->getValueAsDef("VT");
+  switch (getValueType(VTRec)) {
   case MVT::isVoid:
     return "OverloadKind::VOID";
   case MVT::f16:
@@ -219,6 +263,16 @@ static std::string getOverloadKindStr(MVT::SimpleValueType VT) {
     return "OverloadKind::I16 | OverloadKind::I32 | OverloadKind::I64";
   case MVT::fAny:
     return "OverloadKind::HALF | OverloadKind::FLOAT | OverloadKind::DOUBLE";
+  case MVT::Other:
+    // Handle DXIL-specific overload types
+    {
+      if (R->getValueAsInt("isHalfOrFloat")) {
+        return "OverloadKind::HALF | OverloadKind::FLOAT";
+      } else if (R->getValueAsInt("isI16OrI32")) {
+        return "OverloadKind::I16 | OverloadKind::I32";
+      }
+    }
+    LLVM_FALLTHROUGH;
   default:
     llvm_unreachable(
         "Support for specified parameter OverloadKind not yet implemented");
@@ -344,10 +398,20 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
 
   OS << "  static const OpCodeProperty OpCodeProps[] = {\n";
   for (auto &Op : Ops) {
+    // Consider Op.OverloadParamIndex as the overload parameter index, by
+    // default
+    auto OLParamIdx = Op.OverloadParamIndex;
+    // If no overload parameter index is set, treat first parameter type as
+    // overload type - unless the Op has no parameters, in which case treat the
+    // return type - as overload parameter to emit the appropriate overload kind
+    // enum.
+    if (OLParamIdx < 0) {
+      OLParamIdx = (Op.OpTypes.size() > 1) ? 1 : 0;
+    }
     OS << "  { dxil::OpCode::" << Op.OpName << ", " << OpStrings.get(Op.OpName)
        << ", OpCodeClass::" << Op.OpClass << ", "
        << OpClassStrings.get(Op.OpClass.data()) << ", "
-       << getOverloadKindStr(Op.OpTypes[0]) << ", "
+       << getOverloadKindStr(Op.OpTypes[OLParamIdx]) << ", "
        << emitDXILOperationAttr(Op.OpAttributes) << ", "
        << Op.OverloadParamIndex << ", " << Op.OpTypes.size() - 1 << ", "
        << Parameters.get(ParameterMap[Op.OpClass]) << " },\n";
@@ -398,7 +462,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
       [](raw_ostream &ParamOS, ParameterKind Kind) {
         ParamOS << "ParameterKind::" << getParameterKindStr(Kind);
       },
-      "ParameterKind::INVALID");
+      "ParameterKind::Invalid");
   OS << "  };\n\n";
   OS << "  unsigned Index = Prop.ParameterTableOffset;\n";
   OS << "  return DXILOpParameterKindTable + Index;\n";
