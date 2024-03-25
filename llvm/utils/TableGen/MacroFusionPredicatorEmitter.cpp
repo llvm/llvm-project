@@ -38,8 +38,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "CodeGenTarget.h"
-#include "PredicateExpander.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/PredicateExpander.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"

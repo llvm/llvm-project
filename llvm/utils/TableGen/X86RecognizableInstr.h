@@ -16,7 +16,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_X86RECOGNIZABLEINSTR_H
 #define LLVM_UTILS_TABLEGEN_X86RECOGNIZABLEINSTR_H
 
-#include "CodeGenInstruction.h"
+#include "Common/CodeGenInstruction.h"
 #include "llvm/Support/X86DisassemblerDecoderCommon.h"
 #include <cstdint>
 #include <string>
