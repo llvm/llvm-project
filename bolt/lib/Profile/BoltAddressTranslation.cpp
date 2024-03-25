@@ -88,14 +88,21 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
     if (Function.isIgnored() || (!BC.HasRelocations && !Function.isSimple()))
       continue;
 
-    // TBD: handle BAT functions w/multiple entry points.
-    if (Function.isMultiEntry())
-      continue;
+    uint32_t NumSecondaryEntryPoints = 0;
+    Function.forEachEntryPoint([&](uint64_t Offset, const MCSymbol *) {
+      if (!Offset)
+        return true;
+      ++NumSecondaryEntryPoints;
+      SecondaryEntryPointsMap[OutputAddress].push_back(Offset);
+      return true;
+    });
 
     LLVM_DEBUG(dbgs() << "Function name: " << Function.getPrintName() << "\n");
     LLVM_DEBUG(dbgs() << " Address reference: 0x"
                       << Twine::utohexstr(Function.getOutputAddress()) << "\n");
     LLVM_DEBUG(dbgs() << formatv(" Hash: {0:x}\n", getBFHash(OutputAddress)));
+    LLVM_DEBUG(dbgs() << " Secondary Entry Points: " << NumSecondaryEntryPoints
+                      << '\n');
 
     MapTy Map;
     for (const BinaryBasicBlock *const BB :
@@ -185,6 +192,10 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
                       << Twine::utohexstr(Address) << ".\n");
     encodeULEB128(Address - PrevAddress, OS);
     PrevAddress = Address;
+    const uint32_t NumSecondaryEntryPoints =
+        SecondaryEntryPointsMap.count(Address)
+            ? SecondaryEntryPointsMap[Address].size()
+            : 0;
     if (Cold) {
       size_t HotIndex =
           std::distance(ColdPartSource.begin(), ColdPartSource.find(Address));
@@ -199,6 +210,10 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
       size_t NumBasicBlocks = getBBHashMap(HotInputAddress).getNumBasicBlocks();
       LLVM_DEBUG(dbgs() << "Basic blocks: " << NumBasicBlocks << '\n');
       encodeULEB128(NumBasicBlocks, OS);
+      // Secondary entry points
+      encodeULEB128(NumSecondaryEntryPoints, OS);
+      LLVM_DEBUG(dbgs() << "Secondary Entry Points: " << NumSecondaryEntryPoints
+                        << '\n');
     }
     encodeULEB128(NumEntries, OS);
     // For hot fragments only: encode the number of equal offsets
@@ -244,6 +259,17 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
                                      InOffset >> 1, BBHash, BBIndex));
       }
     }
+    uint32_t PrevOffset = 0;
+    if (!Cold && NumSecondaryEntryPoints) {
+      LLVM_DEBUG(dbgs() << "Secondary entry points: ");
+      // Secondary entry point offsets, delta-encoded
+      for (uint32_t Offset : SecondaryEntryPointsMap[Address]) {
+        encodeULEB128(Offset - PrevOffset, OS);
+        LLVM_DEBUG(dbgs() << formatv("{0:x} ", Offset));
+        PrevOffset = Offset;
+      }
+      LLVM_DEBUG(dbgs() << '\n');
+    }
   }
 }
 
@@ -287,6 +313,7 @@ void BoltAddressTranslation::parseMaps(std::vector<uint64_t> &HotFuncs,
     const uint64_t Address = PrevAddress + DE.getULEB128(&Offset, &Err);
     uint64_t HotAddress = Cold ? 0 : Address;
     PrevAddress = Address;
+    uint32_t SecondaryEntryPoints = 0;
     if (Cold) {
       HotIndex += DE.getULEB128(&Offset, &Err);
       HotAddress = HotFuncs[HotIndex];
@@ -303,6 +330,12 @@ void BoltAddressTranslation::parseMaps(std::vector<uint64_t> &HotFuncs,
       LLVM_DEBUG(dbgs() << formatv("{0:x}: #bbs {1}, {2} bytes\n", Address,
                                    NumBasicBlocks,
                                    getULEB128Size(NumBasicBlocks)));
+      // Secondary entry points
+      SecondaryEntryPoints = DE.getULEB128(&Offset, &Err);
+      LLVM_DEBUG(
+          dbgs() << formatv("{0:x}: secondary entry points {1}, {2} bytes\n",
+                            Address, SecondaryEntryPoints,
+                            getULEB128Size(SecondaryEntryPoints)));
     }
     const uint32_t NumEntries = DE.getULEB128(&Offset, &Err);
     // Equal offsets, hot fragments only.
@@ -370,6 +403,19 @@ void BoltAddressTranslation::parseMaps(std::vector<uint64_t> &HotFuncs,
       });
     }
     Maps.insert(std::pair<uint64_t, MapTy>(Address, Map));
+    if (!Cold && SecondaryEntryPoints) {
+      uint32_t EntryPointOffset = 0;
+      LLVM_DEBUG(dbgs() << "Secondary entry points: ");
+      for (uint32_t EntryPointId = 0; EntryPointId != SecondaryEntryPoints;
+           ++EntryPointId) {
+        uint32_t OffsetDelta = DE.getULEB128(&Offset, &Err);
+        EntryPointOffset += OffsetDelta;
+        SecondaryEntryPointsMap[Address].push_back(EntryPointOffset);
+        LLVM_DEBUG(dbgs() << formatv("{0:x}/{1}b ", EntryPointOffset,
+                                     getULEB128Size(OffsetDelta)));
+      }
+      LLVM_DEBUG(dbgs() << '\n');
+    }
   }
 }
 
@@ -396,6 +442,13 @@ void BoltAddressTranslation::dump(raw_ostream &OS) {
       else
         OS << formatv(" hash: {0:x}", BBHashMap.getBBHash(Val));
       OS << "\n";
+    }
+    if (SecondaryEntryPointsMap.count(Address)) {
+      const std::vector<uint32_t> &SecondaryEntryPoints =
+          SecondaryEntryPointsMap[Address];
+      OS << SecondaryEntryPoints.size() << " secondary entry points:\n";
+      for (uint32_t EntryPointOffset : SecondaryEntryPoints)
+        OS << formatv("{0:x}\n", EntryPointOffset);
     }
     OS << "\n";
   }
