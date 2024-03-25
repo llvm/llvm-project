@@ -8,7 +8,7 @@ set(LLVM_LINK_COMPONENTS
   TableGen
   )
 
-add_llvm_library(LLVMTableGenBasic STATIC OBJECT EXCLUDE_FROM_ALL
+add_llvm_library(LLVMTableGenBasic OBJECT EXCLUDE_FROM_ALL
   CodeGenIntrinsics.cpp
   SDNodeProperties.cpp
 )
