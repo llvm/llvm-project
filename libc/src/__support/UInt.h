@@ -127,7 +127,7 @@ LIBC_INLINE constexpr Double<word> mul2(word a, word b) {
   }
 }
 
-// Inplace binary operation with carry propagation. Returns carry.
+// In-place 'dst op= rhs' with operation with carry propagation. Returns carry.
 template <typename Function, typename word, size_t N, size_t M>
 LIBC_INLINE constexpr word inplace_binop(Function op_with_carry,
                                          cpp::array<word, N> &dst,
@@ -146,22 +146,22 @@ LIBC_INLINE constexpr word inplace_binop(Function op_with_carry,
   return carry_out;
 }
 
-// Inplace addition. Returns carry.
+// In-place addition. Returns carry.
 template <typename word, size_t N, size_t M>
 LIBC_INLINE constexpr word add_with_carry(cpp::array<word, N> &dst,
                                           const cpp::array<word, M> &rhs) {
   return inplace_binop(LIBC_NAMESPACE::add_with_carry<word>, dst, rhs);
 }
 
-// Inplace subtraction. Returns borrow.
+// In-place subtraction. Returns borrow.
 template <typename word, size_t N, size_t M>
 LIBC_INLINE constexpr word sub_with_borrow(cpp::array<word, N> &dst,
                                            const cpp::array<word, M> &rhs) {
   return inplace_binop(LIBC_NAMESPACE::sub_with_borrow<word>, dst, rhs);
 }
 
-// Inplace multiply-add. Returns carry.
-// i.e., 'dst += b x c'
+// In-place multiply-add. Returns carry.
+// i.e., 'dst += b * c'
 template <typename word, size_t N>
 LIBC_INLINE constexpr word mul_add_with_carry(cpp::array<word, N> &dst, word b,
                                               word c) {
@@ -183,7 +183,7 @@ template <typename T> struct Accumulator final : cpp::array<T, 2> {
   LIBC_INLINE constexpr T carry() const { return UP::back(); }
 };
 
-// Inplace multiplication by a single word. Returns carry.
+// In-place multiplication by a single word. Returns carry.
 template <typename word, size_t N>
 LIBC_INLINE constexpr word scalar_multiply_with_carry(cpp::array<word, N> &dst,
                                                       word x) {
