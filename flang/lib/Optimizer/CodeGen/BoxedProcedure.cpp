@@ -154,7 +154,7 @@ public:
                                  ty.getName().str() + boxprocSuffix.str());
       if (rec.isFinalized())
         return rec;
-      auto it = convertedTypes.try_emplace(ty, rec);
+      [[maybe_unused]] auto it = convertedTypes.try_emplace(ty, rec);
       assert(it.second && "expected ty to not be in the map");
       std::vector<RecordType::TypePair> ps = ty.getLenParamList();
       std::vector<RecordType::TypePair> cs;
