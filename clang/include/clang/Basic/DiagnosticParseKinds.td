@@ -1646,7 +1646,7 @@ def warn_ext_int_deprecated : Warning<
   "'_ExtInt' is deprecated; use '_BitInt' instead">, InGroup<DeprecatedType>;
 def ext_bit_int : Extension<
   "'_BitInt' in %select{C17 and earlier|C++}0 is a Clang extension">,
-  InGroup<DiagGroup<"bit-int-extension">>;
+  InGroup<BitIntExtension>;
 } // end of Parse Issue category.
 
 let CategoryName = "Modules Issue" in {
