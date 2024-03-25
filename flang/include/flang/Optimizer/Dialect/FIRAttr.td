@@ -137,4 +137,20 @@ def fir_CUDAClusterDimsAttr : fir_Attr<"CUDAClusterDims"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+def fir_CUDADataTransferKind : I32EnumAttr<
+    "CUDADataTransferKind", "CUDA Fortran data transfer kind",
+    [
+      I32EnumAttrCase<"DeviceHost", 0, "device_host">,
+      I32EnumAttrCase<"HostDevice", 1, "host_device">,
+      I32EnumAttrCase<"DeviceDevice", 2, "device_device">,
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::fir";
+}
+
+def fir_CUDADataTransferKindAttr :
+    EnumAttr<FIROpsDialect, fir_CUDADataTransferKind, "cuda_transfer"> {
+  let assemblyFormat = [{ ```<` $value `>` }];
+}
+
 #endif // FIR_DIALECT_FIR_ATTRS
