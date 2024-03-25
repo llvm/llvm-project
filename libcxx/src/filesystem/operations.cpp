@@ -63,6 +63,10 @@ using parser::PathParser;
 using parser::string_view_t;
 
 static path __do_absolute(const path& p, path* cwd, error_code* ec) {
+  ErrorHandler<path> err("absolute", ec, &p);
+
+  if (p.empty())
+    return err.report(errc::invalid_argument);
   if (ec)
     ec->clear();
   if (p.is_absolute())
@@ -927,7 +931,7 @@ path __weakly_canonical(const path& p, error_code* ec) {
   ErrorHandler<path> err("weakly_canonical", ec, &p);
 
   if (p.empty())
-    return __canonical("", ec);
+    return p;
 
   path result;
   path tmp;
@@ -950,7 +954,7 @@ path __weakly_canonical(const path& p, error_code* ec) {
     --PP;
   }
   if (PP.State == PathParser::PS_BeforeBegin)
-    result = __canonical("", ec);
+    result = path{};
   if (ec)
     ec->clear();
   if (DNEParts.empty())
