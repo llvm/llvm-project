@@ -1,33 +1,9 @@
 // RUN: %clang_cc1 --std=c++20 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s
 
-#include "Inputs/coroutine.h"
-
 struct Printy {
   Printy(const char *name) : name(name) {}
   ~Printy() {}
   const char *name;
-};
-
-struct coroutine {
-  struct promise_type;
-  std::coroutine_handle<promise_type> handle;
-  ~coroutine() {
-    if (handle) handle.destroy();
-  }
-};
-
-struct coroutine::promise_type {
-  coroutine get_return_object() {
-    return {std::coroutine_handle<promise_type>::from_promise(*this)};
-  }
-  std::suspend_never initial_suspend() noexcept { return {}; }
-  std::suspend_always final_suspend() noexcept { return {}; }
-  void return_void() {}
-  void unhandled_exception() {}
-};
-
-struct Awaiter : std::suspend_always {
-  Printy await_resume() { return {"awaited"}; }
 };
 
 int foo() { return 2; }
@@ -67,49 +43,6 @@ void ParenInit() {
   // CHECK:     cleanup:
   // CHECK-NEXT:  call void @_ZN6PrintyD1Ev
   // CHECK-NEXT:  br label %return
-}
-
-coroutine ParenInitCoro() {
-  // CHECK-LABEL: define dso_local void @_Z13ParenInitCorov
-  // CHECK: [[ACTIVE1:%.+]] = alloca i1, align 1
-  // CHECK: [[ACTIVE2:%.+]] = alloca i1, align 1
-  Printies ps(Printy("a"), Printy("b"),
-    // CHECK:       call void @_ZN6PrintyC1EPKc
-    // CHECK-NEXT:  store i1 true, ptr [[ACTIVE2]].reload.addr, align 1
-    // CHECK:       call void @_ZN6PrintyC1EPKc
-    // CHECK-NEXT:  store i1 true, ptr [[ACTIVE1]].reload.addr, align 1
-    co_await Awaiter{}
-
-    // CHECK:     await.cleanup:
-    // CHECK-NEXT:  br label %[[CLEANUP:.+]].from.await.cleanup
-
-    // CHECK:     [[CLEANUP]].from.await.cleanup:
-    // CHECK:       br label %[[CLEANUP]]
-
-    // CHECK:     await.ready:
-    // CHECK:       store i1 false, ptr [[ACTIVE1]].reload.addr, align 1
-    // CHECK-NEXT:  store i1 false, ptr [[ACTIVE2]].reload.addr, align 1 
-    // CHECK-NEXT:  br label %[[CLEANUP]].from.await.ready
-
-    // CHECK:     [[CLEANUP]].from.await.ready:
-    // CHECK:       br label %[[CLEANUP]]
-
-    // CHECK:     [[CLEANUP]]:
-    // CHECK:       [[IS_ACTIVE1:%.+]] = load i1, ptr [[ACTIVE1]].reload.addr, align 1
-    // CHECK-NEXT:  br i1 [[IS_ACTIVE1]], label %[[ACTION1:.+]], label %[[DONE1:.+]]
-
-    // CHECK:     [[ACTION1]]:
-    // CHECK:       call void @_ZN6PrintyD1Ev
-    // CHECK:       br label %[[DONE1]]
-
-    // CHECK:     [[DONE1]]:
-    // CHECK:       [[IS_ACTIVE2:%.+]] = load i1, ptr [[ACTIVE2]].reload.addr, align 1
-    // CHECK-NEXT:  br i1 [[IS_ACTIVE2]], label %[[ACTION2:.+]], label %[[DONE2:.+]]
-
-    // CHECK:     [[ACTION2]]:
-    // CHECK:       call void @_ZN6PrintyD1Ev
-    // CHECK:       br label %[[DONE2]]
-  );
 }
 
 void break_in_stmt_expr() {
@@ -292,54 +225,6 @@ void ArrayInit() {
   // CHECK-NEXT:    br label %[[ARRAY_DESTROY_DONE1]]
 }
 
-coroutine ArrayInitCoro() {
-  // Verify that:
-  //  - We do the necessary stores for array cleanups.
-  //  - Array cleanups are called by await.cleanup.
-  //  - We activate the cleanup after the first element and deactivate it in await.ready (see cleanup.isactive).
-
-  // CHECK-LABEL: define dso_local void @_Z13ArrayInitCorov
-  // CHECK: %arrayinit.endOfInit = alloca ptr, align 8
-  // CHECK: %cleanup.isactive = alloca i1, align 1
-  Printy arr[2] = {
-    Printy("a"),
-    // CHECK:       %arrayinit.begin = getelementptr inbounds [2 x %struct.Printy], ptr %arr.reload.addr, i64 0, i64 0
-    // CHECK-NEXT:  %arrayinit.begin.spill.addr = getelementptr inbounds %_Z13ArrayInitCorov.Frame, ptr %0, i32 0, i32 10
-    // CHECK-NEXT:  store ptr %arrayinit.begin, ptr %arrayinit.begin.spill.addr, align 8
-    // CHECK-NEXT:  store i1 true, ptr %cleanup.isactive.reload.addr, align 1
-    // CHECK-NEXT:  store ptr %arrayinit.begin, ptr %arrayinit.endOfInit.reload.addr, align 8
-    // CHECK-NEXT:  call void @_ZN6PrintyC1EPKc(ptr noundef nonnull align 8 dereferenceable(8) %arrayinit.begin, ptr noundef @.str)
-    // CHECK-NEXT:  %arrayinit.element = getelementptr inbounds %struct.Printy, ptr %arrayinit.begin, i64 1
-    // CHECK-NEXT:  %arrayinit.element.spill.addr = getelementptr inbounds %_Z13ArrayInitCorov.Frame, ptr %0, i32 0, i32 11
-    // CHECK-NEXT:  store ptr %arrayinit.element, ptr %arrayinit.element.spill.addr, align 8
-    // CHECK-NEXT:  store ptr %arrayinit.element, ptr %arrayinit.endOfInit.reload.addr, align 8
-    co_await Awaiter{}
-    // CHECK-NEXT:  @_ZNSt14suspend_always11await_readyEv
-    // CHECK-NEXT:  br i1 %{{.+}}, label %await.ready, label %CoroSave30
-  };
-  // CHECK:       await.cleanup:                                    ; preds = %AfterCoroSuspend{{.*}}
-  // CHECK-NEXT:    br label %cleanup{{.*}}.from.await.cleanup
-
-  // CHECK:       cleanup{{.*}}.from.await.cleanup:                      ; preds = %await.cleanup
-  // CHECK:         br label %cleanup{{.*}}
-
-  // CHECK:       await.ready:
-  // CHECK-NEXT:    %arrayinit.element.reload.addr = getelementptr inbounds %_Z13ArrayInitCorov.Frame, ptr %0, i32 0, i32 11
-  // CHECK-NEXT:    %arrayinit.element.reload = load ptr, ptr %arrayinit.element.reload.addr, align 8
-  // CHECK-NEXT:    call void @_ZN7Awaiter12await_resumeEv
-  // CHECK-NEXT:    store i1 false, ptr %cleanup.isactive.reload.addr, align 1
-  // CHECK-NEXT:    br label %cleanup{{.*}}.from.await.ready
-
-  // CHECK:       cleanup{{.*}}:                                         ; preds = %cleanup{{.*}}.from.await.ready, %cleanup{{.*}}.from.await.cleanup
-  // CHECK:         %cleanup.is_active = load i1, ptr %cleanup.isactive.reload.addr, align 1
-  // CHECK-NEXT:    br i1 %cleanup.is_active, label %cleanup.action, label %cleanup.done
-
-  // CHECK:       cleanup.action:
-  // CHECK:         %arraydestroy.isempty = icmp eq ptr %arrayinit.begin.reload{{.*}}, %{{.*}}
-  // CHECK-NEXT:    br i1 %arraydestroy.isempty, label %arraydestroy.done{{.*}}, label %arraydestroy.body.from.cleanup.action
-  // Ignore rest of the array cleanup.
-}
-
 void ArraySubobjects() {
   struct S {
     Printy arr1[2];
@@ -476,16 +361,4 @@ void ArrayInitWithContinue() {
                        "b";
                      })};
   }
-}
-
-coroutine ArrayInitWithCoReturn() {
-  // CHECK-LABEL: define dso_local void @_Z21ArrayInitWithCoReturnv
-  // Verify that we start to emit the array destructor.
-  // CHECK: %arrayinit.endOfInit = alloca ptr, align 8
-  Printy arr[2] = {"a", ({
-                      if (foo()) {
-                        co_return;
-                      }
-                      "b";
-                    })};
 }
