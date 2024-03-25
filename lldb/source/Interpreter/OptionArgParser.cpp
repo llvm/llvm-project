@@ -9,7 +9,9 @@
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -233,24 +235,68 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
   // Since the compiler can't handle things like "main + 12" we should try to
   // do this for now. The compiler doesn't like adding offsets to function
   // pointer types.
+  // Some languages also don't have a natural representation for register
+  // values (e.g. swift) so handle simple uses of them here as well.
+  // We use a regex to parse these forms, the regex handles:
+  // $reg_name
+  // $reg_name+offset
+  // symbol_name+offset
+  //
+  // The important matching elements in the regex below are:
+  // 1: The reg name if there's no +offset
+  // 3: The symbol/reg name if there is an offset
+  // 4: +/-
+  // 5: The offset value.
   static RegularExpression g_symbol_plus_offset_regex(
-      "^(.*)([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*$");
+      "^(\\$[^ +-]+)|(([^ +-]+)([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*)$");
 
   llvm::SmallVector<llvm::StringRef, 4> matches;
   if (g_symbol_plus_offset_regex.Execute(sref, &matches)) {
     uint64_t offset = 0;
-    llvm::StringRef name = matches[1];
-    llvm::StringRef sign = matches[2];
-    llvm::StringRef str_offset = matches[3];
-    if (!str_offset.getAsInteger(0, offset)) {
+    llvm::StringRef name;
+    if (!matches[1].empty())
+      name = matches[1];
+    else
+      name = matches[3];
+
+    llvm::StringRef sign = matches[4];
+    llvm::StringRef str_offset = matches[5];
+
+    // Some languages don't have a natural type for register values, but it
+    // is still useful to look them up here:
+    std::optional<lldb::addr_t> register_value;
+    StackFrame *frame = exe_ctx->GetFramePtr();
+    llvm::StringRef reg_name = name;
+    if (frame && reg_name.consume_front("$")) {
+      RegisterContextSP reg_ctx_sp = frame->GetRegisterContext();
+      if (reg_ctx_sp) {
+        const RegisterInfo *reg_info = reg_ctx_sp->GetRegisterInfoByName(reg_name);
+        if (reg_info) {
+          RegisterValue reg_val;
+          bool success = reg_ctx_sp->ReadRegister(reg_info, reg_val);
+          if (success && reg_val.GetType() != RegisterValue::eTypeInvalid) {
+            register_value = reg_val.GetAsUInt64(0, &success);
+            if (!success)
+              register_value.reset();
+          }
+        }
+      } 
+    }
+    if (!str_offset.empty() && !str_offset.getAsInteger(0, offset)) {
       Status error;
-      addr = ToAddress(exe_ctx, name, LLDB_INVALID_ADDRESS, &error);
+      if (register_value)
+        addr = register_value.value();
+      else
+        addr = ToAddress(exe_ctx, name, LLDB_INVALID_ADDRESS, &error);
       if (addr != LLDB_INVALID_ADDRESS) {
         if (sign[0] == '+')
           return addr + offset;
         return addr - offset;
       }
-    }
+    } else if (register_value)
+      // In the case of register values, someone might just want to get the 
+      // value in a language whose expression parser doesn't support registers.
+      return register_value.value();
   }
 
   if (error_ptr)
