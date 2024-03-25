@@ -51,7 +51,7 @@ LLDB_BASE_DIR := $(THIS_FILE_DIR)/../../../../../
 #
 # GNUWin32 uname gives "windows32" or "server version windows32" while
 # some versions of MSYS uname return "MSYS_NT*", but most environments
-# standardize on "Windows_NT", so we'll make it consistent here. 
+# standardize on "Windows_NT", so we'll make it consistent here.
 # When running tests from Visual Studio, the environment variable isn't
 # inherited all the way down to the process spawned for make.
 #----------------------------------------------------------------------
@@ -210,6 +210,12 @@ else
 	ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
 		DSYM = $(EXE).debug
 	endif
+
+	ifeq "$(MAKE_DWP)" "YES"
+		MAKE_DWO := YES
+		DWP_NAME = $(EXE).dwp
+		DYLIB_DWP_NAME = $(DYLIB_NAME).dwp
+	endif
 endif
 
 LIMIT_DEBUG_INFO_FLAGS =
@@ -357,6 +363,7 @@ ifneq "$(OS)" "Darwin"
 
 	OBJCOPY ?= $(call replace_cc_with,objcopy)
 	ARCHIVER ?= $(call replace_cc_with,ar)
+	DWP ?= $(call replace_cc_with,dwp)
 	override AR = $(ARCHIVER)
 endif
 
@@ -527,6 +534,10 @@ ifneq "$(CXX)" ""
 	endif
 endif
 
+ifeq "$(GEN_GNU_BUILD_ID)" "YES"
+	LDFLAGS += -Wl,--build-id
+endif
+
 #----------------------------------------------------------------------
 # DYLIB_ONLY variable can be used to skip the building of a.out.
 # See the sections below regarding dSYM file as well as the building of
@@ -565,10 +576,24 @@ else
 endif
 else
 ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
+ifeq "$(SAVE_FULL_DEBUG_BINARY)" "YES"
+	cp "$(EXE)" "$(EXE).unstriped""
+endif
 	$(OBJCOPY) --only-keep-debug "$(EXE)" "$(DSYM)"
 	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DSYM)" "$(EXE)" "$(EXE)"
 endif
+ifeq "$(MAKE_DWP)" "YES"
+	$(DWP) -o "$(DWP_NAME)" $(DWOS)
 endif
+endif
+
+
+#----------------------------------------------------------------------
+# Support emitting the content of the GNU build-id into a file
+# This needs to be used in conjunction with GEN_GNU_BUILD_ID := YES
+#----------------------------------------------------------------------
+$(EXE).uuid : $(EXE)
+	$(OBJCOPY) --dump-section=.note.gnu.build-id=$@ $<
 
 #----------------------------------------------------------------------
 # Make the dylib
@@ -610,8 +635,14 @@ endif
 else
 	$(LD) $(DYLIB_OBJECTS) $(LDFLAGS) -shared -o "$(DYLIB_FILENAME)"
 ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
+	ifeq "$(SAVE_FULL_DEBUG_BINARY)" "YES"
+	cp "$(DYLIB_FILENAME)" "$(DYLIB_FILENAME).unstripped"
+	endif
 	$(OBJCOPY) --only-keep-debug "$(DYLIB_FILENAME)" "$(DYLIB_FILENAME).debug"
 	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DYLIB_FILENAME).debug" "$(DYLIB_FILENAME)" "$(DYLIB_FILENAME)"
+endif
+ifeq "$(MAKE_DWP)" "YES"
+	$(DWP) -o $(DYLIB_DWP_FILE) $(DYLIB_DWOS)
 endif
 endif
 
