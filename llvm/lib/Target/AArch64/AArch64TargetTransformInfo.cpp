@@ -1405,6 +1405,39 @@ instCombineSVEST1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
   return IC.eraseInstFromFunction(II);
 }
 
+static std::optional<Instruction *>
+instCombineSVESplice(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL,
+                     const AArch64Subtarget *ST) {
+  Value *Pred = II.getOperand(0);
+  Value *VecOp0 = II.getOperand(1);
+  Value *VecOp1 = II.getOperand(2);
+  const auto *F = II.getFunction();
+  ConstantRange CR = getVScaleRange(F, 64);
+  const APInt *C = CR.getSingleElement();
+  Value *PtrOp;
+
+  // The ld1ro load contiguous 256 bits, so half of 512 should match it.
+  if (!ST->hasMatMulFP64() || VecOp0 != VecOp1 || !C ||
+      C->getZExtValue() != 4 || !VecOp0->hasNUses(2) ||
+      !match(VecOp0,
+             m_Intrinsic<Intrinsic::masked_load>(m_Value(PtrOp), m_Value(),
+                                                 m_Specific(Pred), m_Zero())))
+    return std::nullopt;
+
+  unsigned BitsPerElt = II.getType()->getScalarSizeInBits();
+  unsigned VecLen = C->getZExtValue() * 128;
+  unsigned HalfLane = VecLen / BitsPerElt / 2;
+  const APInt *CI;
+  if (!match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_whilelt>(m_Zero(),
+                                                               m_APInt(CI))) ||
+      HalfLane == 0 || CI->getZExtValue() != HalfLane)
+    return std::nullopt;
+
+  CallInst *Res = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_ld1ro,
+                                             {II.getType()}, {Pred, PtrOp});
+  return IC.replaceInstUsesWith(II, Res);
+}
+
 static Instruction::BinaryOps intrinsicIDToBinOpCode(unsigned Intrinsic) {
   switch (Intrinsic) {
   case Intrinsic::aarch64_sve_fmul_u:
@@ -2093,6 +2126,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVELD1(IC, II, DL);
   case Intrinsic::aarch64_sve_st1:
     return instCombineSVEST1(IC, II, DL);
+  case Intrinsic::aarch64_sve_splice:
+    return instCombineSVESplice(IC, II, DL, ST);
   case Intrinsic::aarch64_sve_sdiv:
     return instCombineSVESDIV(IC, II);
   case Intrinsic::aarch64_sve_sel:
