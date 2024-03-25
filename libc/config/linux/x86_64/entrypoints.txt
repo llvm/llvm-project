@@ -257,6 +257,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.mkdirat
     libc.src.sys.stat.stat
 
+    # sys/statvfs.h
+    libc.src.sys.statvfs.statvfs
+    libc.src.sys.statvfs.fstatvfs
+
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
 
