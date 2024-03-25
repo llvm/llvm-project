@@ -6221,6 +6221,8 @@ private:
   ConstantInt *LinearOffset = nullptr;
   ConstantInt *LinearMultiplier = nullptr;
   bool LinearMapValWrapped = false;
+  unsigned LinearMapValMaskedBits = 0;
+  APInt LinearMapValHighBits;
 
   // For ArrayKind, this is the array.
   GlobalVariable *Array = nullptr;
@@ -6278,46 +6280,81 @@ SwitchLookupTable::SwitchLookupTable(
   // Check if we can derive the value with a linear transformation from the
   // table index.
   if (isa<IntegerType>(ValueType)) {
-    bool LinearMappingPossible = true;
-    APInt PrevVal;
-    APInt DistToPrev;
-    // When linear map is monotonic and signed overflow doesn't happen on
-    // maximum index, we can attach nsw on Add and Mul.
-    bool NonMonotonic = false;
-    assert(TableSize >= 2 && "Should be a SingleValue table.");
-    // Check if there is the same distance between two consecutive values.
+    auto MatchLinearMapping = [&](bool MaskOutHighBits, unsigned LowBits) {
+      APInt PrevVal;
+      APInt DistToPrev;
+      // When linear map is monotonic and signed overflow doesn't happen on
+      // maximum index, we can attach nsw on Add and Mul.
+      bool NonMonotonic = false;
+      assert(TableSize >= 2 && "Should be a SingleValue table.");
+      // Check if there is the same distance between two consecutive values.
+      for (uint64_t I = 0; I < TableSize; ++I) {
+        ConstantInt *ConstVal = dyn_cast<ConstantInt>(TableContents[I]);
+        if (!ConstVal) {
+          // This is an undef. We could deal with it, but undefs in lookup
+          // tables are very seldom. It's probably not worth the additional
+          // complexity.
+          return false;
+        }
+        const APInt &Val = ConstVal->getValue();
+        if (I != 0) {
+          APInt Dist = Val - PrevVal;
+          if (MaskOutHighBits)
+            Dist = Dist.getLoBits(LowBits);
+          if (I == 1)
+            DistToPrev = Dist;
+          else if (Dist != DistToPrev)
+            return false;
+          if (!MaskOutHighBits)
+            NonMonotonic |=
+                Dist.isStrictlyPositive() ? Val.sle(PrevVal) : Val.sgt(PrevVal);
+        }
+        PrevVal = Val;
+      }
+
+      LinearOffset = cast<ConstantInt>(TableContents[0]);
+      LinearMultiplier = ConstantInt::get(M.getContext(), DistToPrev);
+      if (MaskOutHighBits)
+        LinearMapValWrapped = true;
+      else {
+        bool MayWrap = false;
+        APInt M = LinearMultiplier->getValue();
+        (void)M.smul_ov(APInt(M.getBitWidth(), TableSize - 1), MayWrap);
+        LinearMapValWrapped = NonMonotonic || MayWrap;
+      }
+      Kind = LinearMapKind;
+      ++NumLinearMaps;
+      return true;
+    };
+
+    if (MatchLinearMapping(/* MaskOutHighBits */ false, /* LowBits */ 0))
+      return;
+    // Try matching highbits | ((offset + index * multiplier) & lowbits_mask)
+    APInt CommonOnes = APInt::getAllOnes(ValueType->getScalarSizeInBits());
+    APInt CommonZeros = APInt::getAllOnes(ValueType->getScalarSizeInBits());
+    bool IsCommonBitsValid = true;
     for (uint64_t I = 0; I < TableSize; ++I) {
       ConstantInt *ConstVal = dyn_cast<ConstantInt>(TableContents[I]);
       if (!ConstVal) {
-        // This is an undef. We could deal with it, but undefs in lookup tables
-        // are very seldom. It's probably not worth the additional complexity.
-        LinearMappingPossible = false;
+        // ignore undefs
+        IsCommonBitsValid = false;
         break;
       }
       const APInt &Val = ConstVal->getValue();
-      if (I != 0) {
-        APInt Dist = Val - PrevVal;
-        if (I == 1) {
-          DistToPrev = Dist;
-        } else if (Dist != DistToPrev) {
-          LinearMappingPossible = false;
-          break;
-        }
-        NonMonotonic |=
-            Dist.isStrictlyPositive() ? Val.sle(PrevVal) : Val.sgt(PrevVal);
-      }
-      PrevVal = Val;
+      CommonOnes &= Val;
+      CommonZeros &= ~Val;
     }
-    if (LinearMappingPossible) {
-      LinearOffset = cast<ConstantInt>(TableContents[0]);
-      LinearMultiplier = ConstantInt::get(M.getContext(), DistToPrev);
-      bool MayWrap = false;
-      APInt M = LinearMultiplier->getValue();
-      (void)M.smul_ov(APInt(M.getBitWidth(), TableSize - 1), MayWrap);
-      LinearMapValWrapped = NonMonotonic || MayWrap;
-      Kind = LinearMapKind;
-      ++NumLinearMaps;
-      return;
+    if (IsCommonBitsValid) {
+      unsigned CommonHighBits = (CommonOnes | CommonZeros).countLeadingOnes();
+      unsigned LowBits = CommonOnes.getBitWidth() - CommonHighBits;
+      assert(LowBits > 0 && "Should be a SingleValue table.");
+      if (CommonHighBits > 0 &&
+          MatchLinearMapping(/* MaskOutHighBits */ true, LowBits)) {
+        LinearMapValMaskedBits = LowBits;
+        LinearMapValHighBits = CommonOnes;
+        LinearMapValHighBits.clearLowBits(LowBits);
+        return;
+      }
     }
   }
 
@@ -6371,6 +6408,19 @@ Value *SwitchLookupTable::BuildLookup(Value *Index, IRBuilder<> &Builder) {
       Result = Builder.CreateAdd(Result, LinearOffset, "switch.offset",
                                  /*HasNUW = */ false,
                                  /*HasNSW = */ !LinearMapValWrapped);
+
+    if (LinearMapValMaskedBits) {
+      Result = Builder.CreateAnd(
+          Result,
+          APInt::getLowBitsSet(
+              cast<IntegerType>(Result->getType())->getBitWidth(),
+              LinearMapValMaskedBits),
+          "switch.masked");
+      if (!LinearMapValHighBits.isZero())
+        Result = Builder.CreateOr(Result, LinearMapValHighBits,
+                                  "switch.with_high_bits");
+    }
+
     return Result;
   }
   case BitMapKind: {
