@@ -160,7 +160,9 @@ jobs:
 
     - name: Install Debian build dependencies
       if: matrix.target.debian-build-deps != ''
-      run: sudo apt install ${{ matrix.target.debian-build-deps }}
+      run: |
+        sudo apt update
+        sudo apt install ${{ matrix.target.debian-build-deps }}
 
     - name: Set macOS build env variables
       if: runner.os == 'macOS'
@@ -181,6 +183,7 @@ jobs:
     - name: Upload binaries
       if: ${{ always() && needs.prepare.outputs.upload == 'true' }}
       run: |
+        sudo apt update
         sudo apt install python3-github
         ${{ needs.prepare.outputs.build-dir }}/llvm-project/llvm/utils/release/github-upload-release.py \
         --token ${{ github.token }} \
