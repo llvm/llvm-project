@@ -254,7 +254,6 @@ if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
       #   'long double' is treated as 'double' in device code
       -Xcudafe --diag_suppress=20208
       -Xcudafe --display_error_number
-      -G -g
       )
   endif()
   set_source_files_properties(${supported_files} PROPERTIES COMPILE_OPTIONS
