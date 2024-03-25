@@ -15,7 +15,7 @@ typedef short  v8s   __attribute__((ext_vector_type(8)));
 //
 v2i test_amdgcn_global_load_tr_v2i32(global v2i* inptr)
 {
-  return __builtin_amdgcn_global_load_tr_v2i32(inptr);
+  return __builtin_amdgcn_global_load_tr_b64_v2i32(inptr);
 }
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_global_load_tr4_v2i32(
@@ -45,7 +45,7 @@ v3i test_amdgcn_global_load_tr6_v3i32(global v3i* inptr)
 //
 v8s test_amdgcn_global_load_tr_v8i16(global v8s* inptr)
 {
-  return __builtin_amdgcn_global_load_tr_v8i16(inptr);
+  return __builtin_amdgcn_global_load_tr_b128_v8i16(inptr);
 }
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_global_load_tr_v8f16(
@@ -55,7 +55,7 @@ v8s test_amdgcn_global_load_tr_v8i16(global v8s* inptr)
 //
 v8h test_amdgcn_global_load_tr_v8f16(global v8h* inptr)
 {
-  return __builtin_amdgcn_global_load_tr_v8f16(inptr);
+  return __builtin_amdgcn_global_load_tr_b128_v8f16(inptr);
 }
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_ds_load_tr_v2i32(

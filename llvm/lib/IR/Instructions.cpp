@@ -4623,6 +4623,16 @@ CmpInst::Create(OtherOps Op, Predicate predicate, Value *S1, Value *S2,
                       S1, S2, Name);
 }
 
+CmpInst *CmpInst::CreateWithCopiedFlags(OtherOps Op, Predicate Pred, Value *S1,
+                                        Value *S2,
+                                        const Instruction *FlagsSource,
+                                        const Twine &Name,
+                                        Instruction *InsertBefore) {
+  CmpInst *Inst = Create(Op, Pred, S1, S2, Name, InsertBefore);
+  Inst->copyIRFlags(FlagsSource);
+  return Inst;
+}
+
 void CmpInst::swapOperands() {
   if (ICmpInst *IC = dyn_cast<ICmpInst>(this))
     IC->swapOperands();

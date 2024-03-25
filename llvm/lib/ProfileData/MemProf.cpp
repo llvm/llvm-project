@@ -3,8 +3,10 @@
 #include "llvm/IR/Function.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/HashBuilder.h"
 
 namespace llvm {
 namespace memprof {
@@ -115,6 +117,29 @@ Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer) {
   // Advace the buffer to one past the schema if we succeeded.
   Buffer = Ptr;
   return Result;
+}
+
+CallStackId hashCallStack(ArrayRef<FrameId> CS) {
+  llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
+      HashBuilder;
+  for (FrameId F : CS)
+    HashBuilder.add(F);
+  llvm::BLAKE3Result<8> Hash = HashBuilder.final();
+  CallStackId CSId;
+  std::memcpy(&CSId, Hash.data(), sizeof(Hash));
+  return CSId;
+}
+
+void verifyFunctionProfileData(
+    const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord>
+        &FunctionProfileData) {
+  for (const auto &[GUID, Record] : FunctionProfileData) {
+    (void)GUID;
+    for (const auto &AS : Record.AllocSites) {
+      assert(AS.CSId == hashCallStack(AS.CallStack));
+      (void)AS;
+    }
+  }
 }
 
 } // namespace memprof
