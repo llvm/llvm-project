@@ -2496,6 +2496,8 @@ def err_auto_init_list_from_c : Error<
   "%select{initializer list|array}1 in C">;
 def err_auto_bitfield : Error<
   "cannot pass bit-field as __auto_type initializer in C">;
+def note_deduced_auto_type : Note<
+    "deduced type of %0 is %1">;
 
 // C++1y decltype(auto) type
 def err_decltype_auto_invalid : Error<

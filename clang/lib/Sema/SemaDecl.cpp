@@ -13200,6 +13200,14 @@ bool Sema::DeduceVariableDeclarationType(VarDecl *VDecl, bool DirectInit,
   VDecl->setType(DeducedType);
   assert(VDecl->isLinkageValid());
 
+    // Check if the variable declaration is in the compiled file
+  SourceManager &SM = getSourceManager();
+  SourceLocation Loc = VDecl->getLocation();
+  if (SM.isWrittenInMainFile(Loc)) {
+    // Print the deduced type for diagnostic purposes
+    llvm::outs() << "Deduced type for '" << VDecl->getNameAsString() << "': " << DeducedType.getAsString() << "\n";
+  }
+
   // In ARC, infer lifetime.
   if (getLangOpts().ObjCAutoRefCount && inferObjCARCLifetime(VDecl))
     VDecl->setInvalidDecl();
