@@ -2013,6 +2013,12 @@ private:
     DefaultedFunctionInfo *DefaultedInfo;
   };
 
+  /// Message that indicates why this function was deleted.
+  ///
+  /// FIXME: Figure out where to actually put this; maybe in the
+  /// 'DefaultedInfo' above?
+  StringLiteral *DeletedMessage;
+
   unsigned ODRHash;
 
   /// End part of this FunctionDecl's source range.
@@ -2483,6 +2489,10 @@ public:
   }
 
   void setDeletedAsWritten(bool D = true) { FunctionDeclBits.IsDeleted = D; }
+  void setDeletedWithMessage(StringLiteral* Message) {
+    FunctionDeclBits.IsDeleted = true;
+    DeletedMessage = Message;
+  }
 
   /// Determines whether this function is "main", which is the
   /// entry point into an executable program.
@@ -2637,6 +2647,9 @@ public:
     if (auto *TRC = getTrailingRequiresClause())
       AC.push_back(TRC);
   }
+
+  /// Get the message that indicates why this function was deleted.
+  StringLiteral *getDeletedMessage() const { return DeletedMessage; }
 
   void setPreviousDeclaration(FunctionDecl * PrevDecl);
 

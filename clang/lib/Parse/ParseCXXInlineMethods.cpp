@@ -20,6 +20,27 @@
 
 using namespace clang;
 
+/// Parse the optional ("message") part of a deleted-function-body.
+StringLiteral *Parser::ParseCXXDeletedFunctionMessage() {
+  if (!Tok.is(tok::l_paren)) return nullptr;
+  StringLiteral *Message = nullptr;
+  BalancedDelimiterTracker BT{*this, tok::l_paren};
+  BT.consumeOpen();
+
+  if (isTokenStringLiteral()) {
+    ExprResult Res = ParseUnevaluatedStringLiteralExpression();
+    if (Res.isUsable())
+      Message = Res.getAs<StringLiteral>();
+  } else {
+    Diag(Tok.getLocation(), diag::err_expected_string_literal)
+      << /*Source='in'*/ 0 << "'delete'";
+    SkipUntil(tok::r_paren, StopAtSemi | StopBeforeMatch);
+  }
+
+  BT.consumeClose();
+  return Message;
+}
+
 /// ParseCXXInlineMethodDef - We parsed and verified that the specified
 /// Declarator is a well formed C++ inline method definition. Now lex its body
 /// and store its tokens for parsing after the C++ class is complete.
@@ -70,7 +91,8 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
                       ? diag::warn_cxx98_compat_defaulted_deleted_function
                       : diag::ext_defaulted_deleted_function)
         << 1 /* deleted */;
-      Actions.SetDeclDeleted(FnD, KWLoc);
+      StringLiteral* Message = ParseCXXDeletedFunctionMessage();
+      Actions.SetDeclDeleted(FnD, KWLoc, Message);
       Delete = true;
       if (auto *DeclAsFunction = dyn_cast<FunctionDecl>(FnD)) {
         DeclAsFunction->setRangeEnd(KWEndLoc);
