@@ -179,10 +179,8 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
     Operation *op = opOperand.get().getDefiningOp();
     if (auto sv = dyn_cast_or_null<memref::SubViewOp>(op)) {
       subViews[operandNumber] = sv;
-      // In case of linalg generic, copy in only if subview is used in linalg
-      // payload.
-      if (!isa<linalg::GenericOp>(linalgOp) ||
-          linalgOp.payloadUsesValueFromOperand(&opOperand))
+      // Copy in only if subview is being used by the linalg operation.
+      if (linalgOp.isDpsInput(&opOperand) || !linalgOp.isInitTensor(&opOperand))
         operandsNumbersToCopyIn.insert(operandNumber);
       useFullTileBuffers[sv] = vUseFullTileBuffers[operandNumber];
     }
