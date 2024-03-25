@@ -135,6 +135,7 @@ static cl::opt<bool> TryUseNewDbgInfoFormat(
     cl::init(false));
 
 extern cl::opt<bool> UseNewDbgInfoFormat;
+
 extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
 
 static ExitOnError ExitOnErr;
@@ -480,6 +481,7 @@ int main(int argc, char **argv) {
 
   cl::HideUnrelatedOptions({&LinkCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm linker\n");
+
   // Load bitcode into the new debug info format by default.
   if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
     LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_TRUE;
