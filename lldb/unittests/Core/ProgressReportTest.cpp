@@ -22,7 +22,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static std::chrono::milliseconds TIMEOUT(100);
+static std::chrono::milliseconds TIMEOUT(500);
 
 class ProgressReportTest : public ::testing::Test {
 public:
@@ -56,7 +56,8 @@ protected:
 
   DebuggerSP m_debugger_sp;
   ListenerSP m_listener_sp;
-  SubsystemRAII<FileSystem, HostInfo, PlatformMacOSX> subsystems;
+  SubsystemRAII<FileSystem, HostInfo, PlatformMacOSX, ProgressManager>
+      subsystems;
 };
 
 TEST_F(ProgressReportTest, TestReportCreation) {
@@ -209,4 +210,38 @@ TEST_F(ProgressReportTest, TestOverlappingEvents) {
   // The progress ID for the final report should be the same as that for the
   // initial report.
   EXPECT_EQ(data->GetID(), expected_progress_id);
+}
+
+TEST_F(ProgressReportTest, TestProgressManagerDisjointReports) {
+  ListenerSP listener_sp =
+      CreateListenerFor(Debugger::eBroadcastBitProgressCategory);
+  EventSP event_sp;
+  const ProgressEventData *data;
+  uint64_t expected_progress_id;
+
+  { Progress progress("Coalesced report 1", "Starting report 1"); }
+  { Progress progress("Coalesced report 1", "Starting report 2"); }
+  { Progress progress("Coalesced report 1", "Starting report 3"); }
+
+  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  expected_progress_id = data->GetID();
+
+  EXPECT_EQ(data->GetDetails(), "");
+  EXPECT_FALSE(data->IsFinite());
+  EXPECT_FALSE(data->GetCompleted());
+  EXPECT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
+  EXPECT_EQ(data->GetMessage(), "Coalesced report 1");
+
+  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+
+  EXPECT_EQ(data->GetID(), expected_progress_id);
+  EXPECT_EQ(data->GetDetails(), "");
+  EXPECT_FALSE(data->IsFinite());
+  EXPECT_TRUE(data->GetCompleted());
+  EXPECT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
+  EXPECT_EQ(data->GetMessage(), "Coalesced report 1");
+
+  ASSERT_FALSE(listener_sp->GetEvent(event_sp, TIMEOUT));
 }
