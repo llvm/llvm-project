@@ -41,19 +41,19 @@ using namespace lldb_private::plugin::dwarf;
 /// Double>), with a link back to the unsubstituted type. When looking up one of
 /// the specialized generics, return the unsubstituted version instead.
 static std::optional<std::pair<CompilerType, DWARFDIE>>
-findUnsubstitutedGenericTypeAndDie(TypeSystemSwiftTypeRef &ts,
+findUnsubstitutedGenericTypeAndDIE(TypeSystemSwiftTypeRef &ts,
                                    const DWARFDIE &die) {
-  auto specified_die =
+  auto unsubstituted_die =
       die.GetAttributeValueAsReferenceDIE(llvm::dwarf::DW_AT_specification);
-  if (!specified_die)
+  if (!unsubstituted_die)
     return {};
 
-  const auto *mangled_name = specified_die.GetAttributeValueAsString(
+  const auto *mangled_name = unsubstituted_die.GetAttributeValueAsString(
       llvm::dwarf::DW_AT_linkage_name, nullptr);
   assert(mangled_name);
-  auto specified_type =
+  auto unsubstituted_type =
       ts.GetTypeFromMangledTypename(ConstString(mangled_name));
-  return {{specified_type, specified_die}};
+  return {{unsubstituted_type, unsubstituted_die}};
 }
 /// Given a type system and a typeref, return the compiler type and die of the
 /// type that matches that mangled name, looking up the in the type system's
@@ -86,7 +86,7 @@ getTypeAndDie(TypeSystemSwiftTypeRef &ts,
   }
   auto die = dwarf->GetDIE(lldb_type->GetID());
 
-  if (auto unsubstituted_pair = findUnsubstitutedGenericTypeAndDie(ts, die))
+  if (auto unsubstituted_pair = findUnsubstitutedGenericTypeAndDIE(ts, die))
     return unsubstituted_pair;
 
   return {{type, die}};
