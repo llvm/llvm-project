@@ -95,16 +95,11 @@ func.func @test_index_no_linearize(%arg0: vector<2x2xindex>, %arg1: vector<2x2xi
 
 // vectorizable operation (arith.mulf) with tensor result types.
 
-// CHECK-LABEL: func.func @nonvec_result
-// CHECK128-LABEL: func.func @nonvec_result
-// CHECK0-LABEL: func.func @nonvec_result
-// CHECK-SAME: (%[[ARG0:.*]]: tensor<4xf32>, %[[ARG1:.*]]: tensor<4xf32>)
-// CHECK128-SAME: (%[[ARG0:.*]]: tensor<4xf32>, %[[ARG1:.*]]: tensor<4xf32>)
-// CHECK0-SAME: (%[[ARG0:.*]]: tensor<4xf32>, %[[ARG1:.*]]: tensor<4xf32>)
-func.func @nonvec_result(%arg0: tensor<4xf32>, %arg1: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
-    // CHECK: %[[MULF:.*]] = arith.mulf %[[ARG0]], %[[ARG1]]
-    // CHECK128: %[[MULF:.*]] = arith.mulf %[[ARG0]], %[[ARG1]]
-    // CHECK0: %[[MULF:.*]] = arith.mulf %[[ARG0]], %[[ARG1]]
-    %0 = arith.mulf %arg0, %arg1 : tensor<4xf32>
-    return %0, %arg0 : tensor<4xf32>, tensor<4xf32>
+func.func @nonvec_result(%arg0: tensor<2x2xf32>, %arg1: tensor<2x2xf32>) -> (tensor<2x2xf32>, tensor<2x2xf32>) {
+    // CHECK: %[[MULF:.*]] = arith.mulf %arg0, %arg1 : tensor<2x2xf32>
+    // CHECK128: %[[MULF:.*]] = arith.mulf %arg0, %arg1 : tensor<2x2xf32>
+    // CHECK0: %[[MULF:.*]] = arith.mulf %arg0, %arg1 : tensor<2x2xf32>
+    %0 = arith.mulf %arg0, %arg1 : tensor<2x2xf32>
+
+    return %0, %arg0 : tensor<2x2xf32>, tensor<2x2xf32>
 }
