@@ -3911,7 +3911,8 @@ void MicrosoftMangleContextImpl::mangleReferenceTemporary(
   msvc_hashing_ostream MHO(Out);
   MicrosoftCXXNameMangler Mangler(*this, MHO);
 
-  Mangler.getStream() << "?$RT" << ManglingNumber << '@';
+  Mangler.getStream() << "?";
+  Mangler.mangleSourceName("$RT" + llvm::utostr(ManglingNumber));
   Mangler.mangle(VD, "");
 }
 
