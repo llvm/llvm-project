@@ -13,6 +13,7 @@
 #include "InputFiles.h"
 #include "OutputSections.h"
 #include "OutputSegment.h"
+#include "SymbolTable.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/Demangle/Demangle.h"
@@ -35,7 +36,7 @@ std::string maybeDemangleSymbol(StringRef name) {
   if (name == "__main_argc_argv")
     return "main";
   if (wasm::config->demangle)
-    return demangle(name.str());
+    return demangle(name);
   return name.str();
 }
 
@@ -219,6 +220,10 @@ void Symbol::setHidden(bool isHidden) {
     flags |= WASM_SYMBOL_VISIBILITY_HIDDEN;
   else
     flags |= WASM_SYMBOL_VISIBILITY_DEFAULT;
+}
+
+bool Symbol::isImported() const {
+  return isUndefined() && (importName.has_value() || forceImport);
 }
 
 bool Symbol::isExported() const {
@@ -421,20 +426,15 @@ const OutputSectionSymbol *SectionSymbol::getOutputSectionSymbol() const {
   return section->outputSec->sectionSym;
 }
 
-void LazySymbol::fetch() { cast<ArchiveFile>(file)->addMember(&archiveSymbol); }
+void LazySymbol::extract() {
+  if (file->lazy) {
+    file->lazy = false;
+    symtab->addFile(file, name);
+  }
+}
 
 void LazySymbol::setWeak() {
   flags |= (flags & ~WASM_SYMBOL_BINDING_MASK) | WASM_SYMBOL_BINDING_WEAK;
-}
-
-MemoryBufferRef LazySymbol::getMemberBuffer() {
-  Archive::Child c =
-      CHECK(archiveSymbol.getMember(),
-            "could not get the member for symbol " + toString(*this));
-
-  return CHECK(c.getMemoryBufferRef(),
-               "could not get the buffer for the member defining symbol " +
-                   toString(*this));
 }
 
 void printTraceSymbolUndefined(StringRef name, const InputFile* file) {

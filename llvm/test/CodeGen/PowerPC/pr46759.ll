@@ -30,20 +30,20 @@ define void @foo(i32 %vla_size) #0 {
 ; CHECK-LE-NEXT:    .cfi_offset r31, -8
 ; CHECK-LE-NEXT:    .cfi_offset r30, -16
 ; CHECK-LE-NEXT:    clrldi r3, r3, 32
-; CHECK-LE-NEXT:    li r5, -2048
+; CHECK-LE-NEXT:    li r4, -2048
+; CHECK-LE-NEXT:    li r6, -4096
 ; CHECK-LE-NEXT:    mr r31, r1
 ; CHECK-LE-NEXT:    addi r3, r3, 15
 ; CHECK-LE-NEXT:    rldicl r3, r3, 60, 4
 ; CHECK-LE-NEXT:    rldicl r3, r3, 4, 31
-; CHECK-LE-NEXT:    neg r4, r3
+; CHECK-LE-NEXT:    neg r5, r3
 ; CHECK-LE-NEXT:    ld r3, 0(r1)
-; CHECK-LE-NEXT:    and r5, r4, r5
-; CHECK-LE-NEXT:    mr r4, r5
-; CHECK-LE-NEXT:    li r5, -4096
-; CHECK-LE-NEXT:    divd r6, r4, r5
-; CHECK-LE-NEXT:    mulld r5, r6, r5
-; CHECK-LE-NEXT:    sub r5, r4, r5
-; CHECK-LE-NEXT:    add r4, r1, r4
+; CHECK-LE-NEXT:    and r4, r5, r4
+; CHECK-LE-NEXT:    mr r5, r4
+; CHECK-LE-NEXT:    divd r7, r5, r6
+; CHECK-LE-NEXT:    add r4, r1, r5
+; CHECK-LE-NEXT:    mulld r6, r7, r6
+; CHECK-LE-NEXT:    sub r5, r5, r6
 ; CHECK-LE-NEXT:    stdux r3, r1, r5
 ; CHECK-LE-NEXT:    cmpd r1, r4
 ; CHECK-LE-NEXT:    beq cr0, .LBB0_4

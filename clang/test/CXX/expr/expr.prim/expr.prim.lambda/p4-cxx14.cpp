@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected,cxx2b    %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx23    %s
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20 %s
 // RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20 %s
 
@@ -9,7 +9,7 @@ int &d = [] (int &r) -> auto & { return r; } (a);
 int &e = [] (int &r) -> auto { return r; } (a); // expected-error {{cannot bind to a temporary}}
 int &f = [] (int r) -> decltype(auto) { return r; } (a); // expected-error {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
 int &g = [] (int r) -> decltype(auto) { return (r); } (a); // expected-warning {{reference to stack}}
-// cxx2b-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
+// cxx23-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
 
 int test_explicit_auto_return()
 {
@@ -17,7 +17,7 @@ int test_explicit_auto_return()
     auto L = [](auto F, auto a) { return F(a); };
     auto M = [](auto a) -> auto { return a; }; // OK
     auto MRef = [](auto b) -> auto & { return b; }; //cxx14_20-warning{{reference to stack}}
-    // cxx2b-error@-1 {{non-const lvalue reference to type 'X' cannot bind to a temporary of type 'X'}}
+    // cxx23-error@-1 {{non-const lvalue reference to type 'X' cannot bind to a temporary of type 'X'}}
     auto MPtr = [](auto c) -> auto* { return &c; }; //expected-warning{{address of stack}}
     auto MDeclType = [](auto&& d) -> decltype(auto) { return static_cast<decltype(d)>(d); }; //OK
     M(3);
@@ -57,7 +57,7 @@ int test_no_parameter_list()
     auto M = [] { return 5; }; // OK
     auto M2 = [] -> auto && { return si; };
 #if __cplusplus <= 202002L
-      // expected-warning@-2{{is a C++2b extension}}
+      // expected-warning@-2{{is a C++23 extension}}
 #endif
     M();
 }

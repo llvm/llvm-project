@@ -16,10 +16,10 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/HashBuilder.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TargetParser/Triple.h"
 #include <string>
 
 namespace clang {
@@ -100,16 +100,24 @@ public:
   bool isLegacyDispatchDefaultForArch(llvm::Triple::ArchType Arch) {
     // The GNUstep runtime uses a newer dispatch method by default from
     // version 1.6 onwards
-    if (getKind() == GNUstep && getVersion() >= VersionTuple(1, 6)) {
-      if (Arch == llvm::Triple::arm ||
-          Arch == llvm::Triple::x86 ||
-          Arch == llvm::Triple::x86_64)
-        return false;
-    }
-    else if ((getKind() ==  MacOSX) && isNonFragile() &&
-             (getVersion() >= VersionTuple(10, 0)) &&
-             (getVersion() < VersionTuple(10, 6)))
-        return Arch != llvm::Triple::x86_64;
+    if (getKind() == GNUstep) {
+      switch (Arch) {
+      case llvm::Triple::arm:
+      case llvm::Triple::x86:
+      case llvm::Triple::x86_64:
+        return !(getVersion() >= VersionTuple(1, 6));
+      case llvm::Triple::aarch64:
+      case llvm::Triple::mips64:
+        return !(getVersion() >= VersionTuple(1, 9));
+      case llvm::Triple::riscv64:
+        return !(getVersion() >= VersionTuple(2, 2));
+      default:
+        return true;
+      }
+    } else if ((getKind() == MacOSX) && isNonFragile() &&
+               (getVersion() >= VersionTuple(10, 0)) &&
+               (getVersion() < VersionTuple(10, 6)))
+      return Arch != llvm::Triple::x86_64;
     // Except for deployment target of 10.5 or less,
     // Mac runtimes use legacy dispatch everywhere now.
     return true;
@@ -203,7 +211,13 @@ public:
     case GCC:
       return false;
     case GNUstep:
-      return false;
+      // This could be enabled for all versions, except for the fact that the
+      // implementation of `objc_retain` and friends prior to 2.2 call [object
+      // retain] in their fall-back paths, which leads to infinite recursion if
+      // the runtime is built with this enabled.  Since distributions typically
+      // build all Objective-C things with the same compiler version and flags,
+      // it's better to be conservative here.
+      return (getVersion() >= VersionTuple(2, 2));
     case ObjFW:
       return false;
     }
@@ -240,7 +254,7 @@ public:
     case GCC:
       return false;
     case GNUstep:
-      return false;
+      return getVersion() >= VersionTuple(2, 2);
     case ObjFW:
       return false;
     }
@@ -258,6 +272,8 @@ public:
       return getVersion() >= VersionTuple(12, 2);
     case WatchOS:
       return getVersion() >= VersionTuple(5, 2);
+    case GNUstep:
+      return getVersion() >= VersionTuple(2, 2);
     default:
       return false;
     }
@@ -455,7 +471,8 @@ public:
     case iOS: return true;
     case WatchOS: return true;
     case GCC: return false;
-    case GNUstep: return false;
+    case GNUstep:
+      return (getVersion() >= VersionTuple(2, 2));
     case ObjFW: return false;
     }
     llvm_unreachable("bad kind");
@@ -482,8 +499,8 @@ public:
     return llvm::hash_combine(OCR.getKind(), OCR.getVersion());
   }
 
-  template <typename HasherT, llvm::support::endianness Endianness>
-  friend void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+  template <typename HasherT, llvm::endianness Endianness>
+  friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                       const ObjCRuntime &OCR) {
     HBuilder.add(OCR.getKind(), OCR.getVersion());
   }

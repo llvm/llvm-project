@@ -21,6 +21,7 @@
 #define DEBUG_TYPE "test-memref-dependence-check"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace {
 
@@ -81,10 +82,9 @@ static void checkDependences(ArrayRef<Operation *> loadsAndStores) {
       unsigned numCommonLoops =
           getNumCommonSurroundingLoops(*srcOpInst, *dstOpInst);
       for (unsigned d = 1; d <= numCommonLoops + 1; ++d) {
-        FlatAffineValueConstraints dependenceConstraints;
         SmallVector<DependenceComponent, 2> dependenceComponents;
         DependenceResult result = checkMemrefAccessDependence(
-            srcAccess, dstAccess, d, &dependenceConstraints,
+            srcAccess, dstAccess, d, /*dependenceConstraints=*/nullptr,
             &dependenceComponents);
         if (result.value == DependenceResult::Failure) {
           srcOpInst->emitError("dependence check failed");

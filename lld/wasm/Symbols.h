@@ -114,6 +114,7 @@ public:
   void setOutputSymbolIndex(uint32_t index);
 
   WasmSymbolType getWasmType() const;
+  bool isImported() const;
   bool isExported() const;
   bool isExportedExplicit() const;
 
@@ -135,7 +136,8 @@ protected:
   Symbol(StringRef name, Kind k, uint32_t flags, InputFile *f)
       : name(name), file(f), symbolKind(k), referenced(!config->gcSections),
         requiresGOT(false), isUsedInRegularObj(false), forceExport(false),
-        canInline(false), traced(false), isStub(false), flags(flags) {}
+        forceImport(false), canInline(false), traced(false), isStub(false),
+        flags(flags) {}
 
   StringRef name;
   InputFile *file;
@@ -159,6 +161,8 @@ public:
   // True if this symbol is explicitly marked for export (i.e. via the
   // -e/--export command line flag)
   bool forceExport : 1;
+
+  bool forceImport : 1;
 
   // False if LTO shouldn't inline whatever this symbol points to. If a symbol
   // is overwritten after LTO, LTO shouldn't inline the symbol because it
@@ -482,9 +486,9 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == UndefinedTagKind; }
 };
 
-// LazySymbol represents a symbol that is not yet in the link, but we know where
-// to find it if needed. If the resolver finds both Undefined and Lazy for the
-// same name, it will ask the Lazy to load a file.
+// LazySymbol symbols represent symbols in object files between --start-lib and
+// --end-lib options. LLD also handles traditional archives as if all the files
+// in the archive are surrounded by --start-lib and --end-lib.
 //
 // A special complication is the handling of weak undefined symbols. They should
 // not load a file, but we have to remember we have seen both the weak undefined
@@ -493,14 +497,12 @@ public:
 // symbols into consideration.
 class LazySymbol : public Symbol {
 public:
-  LazySymbol(StringRef name, uint32_t flags, InputFile *file,
-             const llvm::object::Archive::Symbol &sym)
-      : Symbol(name, LazyKind, flags, file), archiveSymbol(sym) {}
+  LazySymbol(StringRef name, uint32_t flags, InputFile *file)
+      : Symbol(name, LazyKind, flags, file) {}
 
   static bool classof(const Symbol *s) { return s->kind() == LazyKind; }
-  void fetch();
+  void extract();
   void setWeak();
-  MemoryBufferRef getMemberBuffer();
 
   // Lazy symbols can have a signature because they can replace an
   // UndefinedFunction in which case we need to be able to preserve the
@@ -508,9 +510,6 @@ public:
   // TODO(sbc): This repetition of the signature field is inelegant.  Revisit
   // the use of class hierarchy to represent symbol taxonomy.
   const WasmSignature *signature = nullptr;
-
-private:
-  llvm::object::Archive::Symbol archiveSymbol;
 };
 
 // linker-generated symbols
@@ -661,6 +660,7 @@ T *replaceSymbol(Symbol *s, ArgT &&... arg) {
   T *s2 = new (s) T(std::forward<ArgT>(arg)...);
   s2->isUsedInRegularObj = symCopy.isUsedInRegularObj;
   s2->forceExport = symCopy.forceExport;
+  s2->forceImport = symCopy.forceImport;
   s2->canInline = symCopy.canInline;
   s2->traced = symCopy.traced;
   s2->referenced = symCopy.referenced;

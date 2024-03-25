@@ -64,7 +64,7 @@ public:
   ///
   /// \return
   ///     true if the plugin supports the feature; otherwise, false.
-  virtual bool SupportsStructuredDataType(ConstString type_name) = 0;
+  virtual bool SupportsStructuredDataType(llvm::StringRef type_name) = 0;
 
   /// Handle the arrival of asynchronous structured data from the process.
   ///
@@ -92,7 +92,7 @@ public:
   ///     key named "type" that must be a string value containing the
   ///     structured data type name.
   virtual void
-  HandleArrivalOfStructuredData(Process &process, ConstString type_name,
+  HandleArrivalOfStructuredData(Process &process, llvm::StringRef type_name,
                                 const StructuredData::ObjectSP &object_sp) = 0;
 
   /// Get a human-readable description of the contents of the data.
@@ -124,7 +124,7 @@ public:
   /// \param[in] type_name
   ///     The name of the feature tag for the asynchronous structured data.
   ///     This is needed for plugins that support more than one feature.
-  virtual bool GetEnabled(ConstString type_name) const;
+  virtual bool GetEnabled(llvm::StringRef type_name) const;
 
   /// Allow the plugin to do work related to modules that loaded in the
   /// the corresponding process.

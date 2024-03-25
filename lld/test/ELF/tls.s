@@ -121,14 +121,12 @@ d:
 // CHECK-NEXT:     EntrySize:
 // CHECK-NEXT:   }
 
-// Check that the TLS NOBITS sections weren't added to the R/W PT_LOAD's size.
-
 // CHECK:      ProgramHeaders [
 // CHECK:          Type: PT_LOAD
 // CHECK:          Type: PT_LOAD
 // CHECK:          Type: PT_LOAD
 // CHECK:          FileSize: 8
-// CHECK-NEXT:     MemSize: 8
+// CHECK-NEXT:     MemSize: [[#]]
 // CHECK-NEXT:     Flags [
 // CHECK-NEXT:       PF_R
 // CHECK-NEXT:       PF_W

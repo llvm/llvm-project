@@ -17,17 +17,18 @@ unittest("LLVMExegesisX86Tests") {
     "//llvm/tools/llvm-exegesis/lib/X86",
   ]
   include_dirs = [
+    "..",
     "//llvm/lib/Target/X86",
     "//llvm/tools/llvm-exegesis/lib",
   ]
   sources = [
-    "AssemblerTest.cpp",
     "BenchmarkResultTest.cpp",
     "RegisterAliasingTest.cpp",
     "SchedClassResolutionTest.cpp",
     "SnippetFileTest.cpp",
     "SnippetGeneratorTest.cpp",
     "SnippetRepetitorTest.cpp",
+    "SubprocessMemoryTest.cpp",
     "TargetTest.cpp",
   ]
 }

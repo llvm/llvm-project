@@ -1,3 +1,5 @@
+// XFAIL: target={{.*}}-aix{{.*}}
+
 // RUN: %clang -### -c -integrated-as %s \
 // RUN: -Wa,-defsym,abc=5 -Wa,-defsym,xyz=0xa \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-DEFSYM1

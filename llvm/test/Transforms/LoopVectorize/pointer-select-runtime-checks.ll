@@ -84,15 +84,13 @@ define void @test_loop_dependent_select1(ptr %src.1, ptr %src.2, ptr %dst, i1 %c
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP2]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[DST1_FR:%.*]] = freeze i64 [[DST1]]
-; CHECK-NEXT:    [[SRC_12_FR:%.*]] = freeze i64 [[SRC_12]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[DST1_FR]], [[SRC_12_FR]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[DST1]], [[SRC_12]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
-; CHECK-NEXT:    [[DST1_FR4:%.*]] = freeze i64 [[DST1]]
-; CHECK-NEXT:    [[SRC_23_FR:%.*]] = freeze i64 [[SRC_23]]
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[DST1_FR4]], [[SRC_23_FR]]
+; CHECK-NEXT:    [[DIFF_CHECK_FR:%.*]] = freeze i1 [[DIFF_CHECK]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[DST1]], [[SRC_23]]
 ; CHECK-NEXT:    [[DIFF_CHECK5:%.*]] = icmp ult i64 [[TMP4]], 2
-; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK5]]
+; CHECK-NEXT:    [[DIFF_CHECK5_FR:%.*]] = freeze i1 [[DIFF_CHECK5]]
+; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK_FR]], [[DIFF_CHECK5_FR]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 2

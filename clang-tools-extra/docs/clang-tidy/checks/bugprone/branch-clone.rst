@@ -77,6 +77,8 @@ Here the check does not warn for the repeated ``return 10;``, which is good if
 we want to preserve that ``'a'`` is before ``'b'`` and ``default:`` is the last
 branch.
 
+Switch cases marked with the ``[[fallthrough]]`` attribute are ignored.
+
 Finally, the check also examines conditional operators and reports code like:
 
 .. code-block:: c++

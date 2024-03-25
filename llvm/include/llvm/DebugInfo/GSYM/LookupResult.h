@@ -52,6 +52,16 @@ struct LookupResult {
   std::string getSourceFile(uint32_t Index) const;
 };
 
+inline bool operator==(const LookupResult &LHS, const LookupResult &RHS) {
+  if (LHS.LookupAddr != RHS.LookupAddr)
+    return false;
+  if (LHS.FuncRange != RHS.FuncRange)
+    return false;
+  if (LHS.FuncName != RHS.FuncName)
+    return false;
+  return LHS.Locations == RHS.Locations;
+}
+
 raw_ostream &operator<<(raw_ostream &OS, const LookupResult &R);
 
 } // namespace gsym

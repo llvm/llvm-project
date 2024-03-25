@@ -4,15 +4,21 @@
 
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
-config.substitutions.append(('%{flags}', ''))
+import lit.util
+if lit.util.isAIXTriple(config.target_triple):
+  # Add the AIX version to the triple here because there currently isn't a good
+  # way to retrieve the AIX version in the driver.
+  config.target_triple = lit.util.addAIXVersion(config.target_triple)
+
+config.substitutions.append(('%{flags}', '-pthread'))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -D__LIBC_NO_CPP_MATH_OVERLOADS__ -I %{include} -I %{libcxx}/test/support -pthread'
+    '-nostdinc++ -D__LIBC_NO_CPP_MATH_OVERLOADS__ -I %{include-dir} -I %{libcxx-dir}/test/support'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{lib} -lc++ -lc++abi -latomic -Wl,-bbigtoc'
+    '-nostdlib++ -L %{lib-dir} -lc++ -lc++abi -latomic -Wl,-bbigtoc'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T --env LIBPATH=%{lib} -- '
+    '%{executor} --execdir %T --env LIBPATH=%{lib-dir} -- '
 ))
 
 # LIBCXX-AIX-FIXME is the feature name used to XFAIL the
@@ -24,8 +30,8 @@ config.available_features.add('LIBCXX-AIX-FIXME')
 
 import os, site
 site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
-import libcxx.test.params, libcxx.test.newconfig
-libcxx.test.newconfig.configure(
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
     libcxx.test.params.DEFAULT_PARAMETERS,
     libcxx.test.features.DEFAULT_FEATURES,
     config,

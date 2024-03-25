@@ -257,6 +257,7 @@ anything fails. This results in the following output:
 
 .. code:: console
 
+
   $ cat my_gwp_asan_error.txt | symbolize.sh
   |
   | *** GWP-ASan detected a memory error ***

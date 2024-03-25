@@ -242,7 +242,7 @@ static bool findDependencies(DependenceKind Flavor, const Value *Arg,
   } while (!Worklist.empty());
 
   // Determine whether the original StartBB post-dominates all of the blocks we
-  // visited. If not, insert a sentinal indicating that most optimizations are
+  // visited. If not, insert a sentinel indicating that most optimizations are
   // not safe.
   for (const BasicBlock *BB : Visited) {
     if (BB == StartBB)

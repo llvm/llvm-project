@@ -262,6 +262,7 @@ bool guessPredEdgeCounts(BinaryBasicBlock *BB, ArcSet &GuessedArcs) {
       continue;
 
     Pred->getBranchInfo(*BB).Count = Guessed;
+    GuessedArcs.insert(std::make_pair(Pred, BB));
     return true;
   }
   llvm_unreachable("Expected unguessed arc");

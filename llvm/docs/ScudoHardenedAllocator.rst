@@ -115,7 +115,7 @@ Memory reclaiming
 Primary and Secondary allocators have different behaviors with regard to
 reclaiming. While Secondary mapped allocations can be unmapped on deallocation,
 it isn't the case for the Primary, which could lead to a steady growth of the
-RSS of a process. To counteracty this, if the underlying OS allows it, pages
+RSS of a process. To counteract this, if the underlying OS allows it, pages
 that are covered by contiguous free memory blocks in the Primary can be
 released: this generally means they won't count towards the RSS of a process and
 be zero filled on subsequent accesses). This is done in the deallocation path,
@@ -210,46 +210,63 @@ Or using the function:
 
 The following "string" options are available:
 
-+---------------------------------+----------------+----------------+-------------------------------------------------+
-| Option                          | 64-bit default | 32-bit default | Description                                     |
-+---------------------------------+----------------+----------------+-------------------------------------------------+
-| quarantine_size_kb              | 0              | 0              | The size (in Kb) of quarantine used to delay    |
-|                                 |                |                | the actual deallocation of chunks. Lower value  |
-|                                 |                |                | may reduce memory usage but decrease the        |
-|                                 |                |                | effectiveness of the mitigation; a negative     |
-|                                 |                |                | value will fallback to the defaults. Setting    |
-|                                 |                |                | *both* this and thread_local_quarantine_size_kb |
-|                                 |                |                | to zero will disable the quarantine entirely.   |
-+---------------------------------+----------------+----------------+-------------------------------------------------+
-| quarantine_max_chunk_size       | 0              | 0              | Size (in bytes) up to which chunks can be       |
-|                                 |                |                | quarantined.                                    |
-+---------------------------------+----------------+----------------+-------------------------------------------------+
-| thread_local_quarantine_size_kb | 0              | 0              | The size (in Kb) of per-thread cache use to     |
-|                                 |                |                | offload the global quarantine. Lower value may  |
-|                                 |                |                | reduce memory usage but might increase          |
-|                                 |                |                | contention on the global quarantine. Setting    |
-|                                 |                |                | *both* this and quarantine_size_kb to zero will |
-|                                 |                |                | disable the quarantine entirely.                |
-+---------------------------------+----------------+----------------+-------------------------------------------------+
-| dealloc_type_mismatch           | false          | false          | Whether or not we report errors on              |
-|                                 |                |                | malloc/delete, new/free, new/delete[], etc.     |
-+---------------------------------+----------------+----------------+-------------------------------------------------+
-| delete_size_mismatch            | true           | true           | Whether or not we report errors on mismatch     |
-|                                 |                |                | between sizes of new and delete.                |
-+---------------------------------+----------------+----------------+-------------------------------------------------+
-| zero_contents                   | false          | false          | Whether or not we zero chunk contents on        |
-|                                 |                |                | allocation.                                     |
-+---------------------------------+----------------+----------------+-------------------------------------------------+
-| pattern_fill_contents           | false          | false          | Whether or not we fill chunk contents with a    |
-|                                 |                |                | byte pattern on allocation.                     |
-+---------------------------------+----------------+----------------+-------------------------------------------------+
-| may_return_null                 | true           | true           | Whether or not a non-fatal failure can return a |
-|                                 |                |                | NULL pointer (as opposed to terminating).       |
-+---------------------------------+----------------+----------------+-------------------------------------------------+
-| release_to_os_interval_ms       | 5000           | 5000           | The minimum interval (in ms) at which a release |
-|                                 |                |                | can be attempted (a negative value disables     |
-|                                 |                |                | reclaiming).                                    |
-+---------------------------------+----------------+----------------+-------------------------------------------------+
++---------------------------------+----------------+-------------------------------------------------+
+| Option                          | Default        | Description                                     |
++---------------------------------+----------------+-------------------------------------------------+
+| quarantine_size_kb              | 0              | The size (in Kb) of quarantine used to delay    |
+|                                 |                | the actual deallocation of chunks. Lower value  |
+|                                 |                | may reduce memory usage but decrease the        |
+|                                 |                | effectiveness of the mitigation; a negative     |
+|                                 |                | value will fallback to the defaults. Setting    |
+|                                 |                | *both* this and thread_local_quarantine_size_kb |
+|                                 |                | to zero will disable the quarantine entirely.   |
++---------------------------------+----------------+-------------------------------------------------+
+| quarantine_max_chunk_size       | 0              | Size (in bytes) up to which chunks can be       |
+|                                 |                | quarantined.                                    |
++---------------------------------+----------------+-------------------------------------------------+
+| thread_local_quarantine_size_kb | 0              | The size (in Kb) of per-thread cache use to     |
+|                                 |                | offload the global quarantine. Lower value may  |
+|                                 |                | reduce memory usage but might increase          |
+|                                 |                | contention on the global quarantine. Setting    |
+|                                 |                | *both* this and quarantine_size_kb to zero will |
+|                                 |                | disable the quarantine entirely.                |
++---------------------------------+----------------+-------------------------------------------------+
+| dealloc_type_mismatch           | false          | Whether or not we report errors on              |
+|                                 |                | malloc/delete, new/free, new/delete[], etc.     |
++---------------------------------+----------------+-------------------------------------------------+
+| delete_size_mismatch            | true           | Whether or not we report errors on mismatch     |
+|                                 |                | between sizes of new and delete.                |
++---------------------------------+----------------+-------------------------------------------------+
+| zero_contents                   | false          | Whether or not we zero chunk contents on        |
+|                                 |                | allocation.                                     |
++---------------------------------+----------------+-------------------------------------------------+
+| pattern_fill_contents           | false          | Whether or not we fill chunk contents with a    |
+|                                 |                | byte pattern on allocation.                     |
++---------------------------------+----------------+-------------------------------------------------+
+| may_return_null                 | true           | Whether or not a non-fatal failure can return a |
+|                                 |                | NULL pointer (as opposed to terminating).       |
++---------------------------------+----------------+-------------------------------------------------+
+| release_to_os_interval_ms       | 5000           | The minimum interval (in ms) at which a release |
+|                                 |                | can be attempted (a negative value disables     |
+|                                 |                | reclaiming).                                    |
++---------------------------------+----------------+-------------------------------------------------+
+| allocation_ring_buffer_size     | 32768          | If stack trace collection is requested, how     |
+|                                 |                | many previous allocations to keep in the        |
+|                                 |                | allocation ring buffer.                         |
+|                                 |                |                                                 |
+|                                 |                | This buffer is used to provide allocation and   |
+|                                 |                | deallocation stack traces for MTE fault         |
+|                                 |                | reports. The larger the buffer, the more        |
+|                                 |                | unrelated allocations can happen between        |
+|                                 |                | (de)allocation and the fault.                   |
+|                                 |                | If your sync-mode MTE faults do not have        |
+|                                 |                | (de)allocation stack traces, try increasing the |
+|                                 |                | buffer size.                                    |
+|                                 |                |                                                 |
+|                                 |                | Stack trace collection can be requested using   |
+|                                 |                | the scudo_malloc_set_track_allocation_stacks    |
+|                                 |                | function.                                       |
++---------------------------------+----------------+-------------------------------------------------+
 
 Additional flags can be specified, for example if Scudo if compiled with
 `GWP-ASan <https://llvm.org/docs/GwpAsan.html>`_ support.
@@ -265,7 +282,16 @@ The following "mallopt" options are available (options are defined in
 |                           | the interval to the minimum and maximum value as      |
 |                           | specified at compile time).                           |
 +---------------------------+-------------------------------------------------------+
-| M_PURGE                   | Forces immediate memory reclaiming (value is unused). |
+| M_PURGE                   | Forces immediate memory reclaiming but does not       |
+|                           | reclaim everything. For smaller size classes, there   |
+|                           | is still some memory that is not reclaimed due to the |
+|                           | extra time it takes and the small amount of memory    |
+|                           | that can be reclaimed.                                |
+|                           | The value is ignored.                                 |
++---------------------------+-------------------------------------------------------+
+| M_PURGE_ALL               | Same as M_PURGE but will force release all possible   |
+|                           | memory regardless of how long it takes.               |
+|                           | The value is ignored.                                 |
 +---------------------------+-------------------------------------------------------+
 | M_MEMTAG_TUNING           | Tunes the allocator's choice of memory tags to make   |
 |                           | it more likely that a certain class of memory errors  |

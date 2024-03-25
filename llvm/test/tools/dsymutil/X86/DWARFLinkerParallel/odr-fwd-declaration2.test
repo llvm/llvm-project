@@ -1,0 +1,131 @@
+/* Compile with:
+   for FILE in `seq 3`; do
+     clang -g -c  X86/odr-fwd-declaration2.cpp -DFILE$FILE -o
+       Inputs/odr-fwd-declaration2/$FILE.o done
+*/
+
+// RUN: dsymutil --linker=parallel -f \
+// RUN: -oso-prepend-path=%p/../../Inputs/odr-fwd-declaration2 \
+// RUN: -y %p/../dummy-debug-map.map -o %t1.out
+// RUN: llvm-dwarfdump -v %t1.out -debug-info | FileCheck %s
+
+#ifdef FILE1
+# 1 "Header.h" 1
+struct A {
+  struct B;
+  B *bPtr;
+  B &bRef;
+  int B::*bPtrToField;
+};
+# 3 "Source1.cpp" 2
+void foo() { A *ptr1 = 0; }
+
+// First we check that types are in type table unit.
+
+// CHECK: DW_TAG_compile_unit
+// CHECK: AT_name{{.*}}"__artificial_type_unit"
+
+// CHECK: 0x[[INT_BASE:[a-f0-9]*]]: DW_TAG_base_type
+// CHECK: AT_name{{.*}}"int"
+
+// CHECK: 0x[[PTR_A:[a-f0-9]*]]: DW_TAG_pointer_type
+// CHECK-NEXT: DW_AT_type [DW_FORM_ref4]   {{.*}}0x[[STRUCT_A:[a-f0-9]*]]} "A")
+
+// CHECK: 0x[[PTR_B:[a-f0-9]*]]: DW_TAG_pointer_type
+// CHECK-NEXT: DW_AT_type [DW_FORM_ref4]   {{.*}}0x[[STRUCT_B:[a-f0-9]*]]} "A::B")
+
+// CHECK: 0x[[REF_B:[a-f0-9]*]]: DW_TAG_reference_type
+// CHECK-NEXT: DW_AT_type [DW_FORM_ref4]   {{.*}}0x[[STRUCT_B]]} "A::B")
+
+// CHECK: 0x[[STRUCT_A]]: DW_TAG_structure_type
+// CHECK: AT_name{{.*}}"A"
+
+// CHECK: DW_TAG_member
+// CHECK-NEXT: AT_name{{.*}}"bPtr"
+// CHECK-NEXT: DW_AT_type [DW_FORM_ref4] {{.*}}{0x[[PTR_B]]} "A::B *")
+
+// CHECK: DW_TAG_member
+// CHECK-NEXT: AT_name{{.*}}"bRef"
+// CHECK-NEXT: DW_AT_type [DW_FORM_ref4] {{.*}}{0x[[REF_B]]} "A::B &"
+
+// CHECK: DW_TAG_member
+// CHECK-NEXT: AT_name{{.*}}"bPtrToField"
+// CHECK-NEXT: DW_AT_type [DW_FORM_ref4] {{.*}}{0x[[PTR_TO_FIELD:[a-f0-9]*]]} "int A::B::*"
+
+// CHECK: 0x[[STRUCT_B]]: DW_TAG_structure_type
+// CHECK: AT_name{{.*}}"B"
+
+// CHECK: DW_TAG_member
+// CHECK: AT_name{{.*}}"x"
+
+// CHECK: 0x[[PTR_TO_FIELD]]: DW_TAG_ptr_to_member_type
+// CHECK-NEXT: DW_AT_type [DW_FORM_ref4]   {{.*}}{0x[[INT_BASE]]} "int"
+// CHECK-NEXT: DW_AT_containing_type [DW_FORM_ref4] {{.*}}{0x[[STRUCT_B]]} "A::B")
+
+// Next we check that second compile unit references type from type table unit.
+//
+
+// CHECK: DW_TAG_compile_unit
+// CHECK: AT_name{{.*}}"X86/odr-fwd-declaration2.cpp"
+
+// CHECK: DW_TAG_subprogram
+
+// CHECK: DW_TAG_variable
+// CHECK: DW_AT_name{{.*}}"ptr1"
+// CHECK: DW_AT_type [DW_FORM_ref_addr] (0x00000000[[PTR_A]] "A *"
+
+#elif defined(FILE2)
+# 1 "Header.h" 1
+struct A {
+  struct B;
+  B *bPtr;
+  B &bRef;
+  int B::*bPtrToField;
+};
+# 3 "Source2.cpp" 2
+struct A::B {
+  int x;
+};
+void bar() { A *ptr2 = 0; }
+
+// Next we check that thrid compile unit references type from type table unit.
+//
+
+// CHECK: DW_TAG_compile_unit
+// CHECK: AT_name{{.*}}"X86/odr-fwd-declaration2.cpp"
+
+// CHECK: DW_TAG_subprogram
+
+// CHECK: DW_TAG_variable
+// CHECK: DW_AT_name{{.*}}"ptr2"
+// CHECK: DW_AT_type [DW_FORM_ref_addr] (0x00000000[[PTR_A]] "A *"
+
+#elif defined(FILE3)
+# 1 "Header.h" 1
+struct A {
+  struct B;
+  B *bPtr;
+  B &bRef;
+  int B::*bPtrToField;
+};
+# 3 "Source2.cpp" 2
+struct A::B {
+  int x;
+};
+void bar() { A *ptr2 = 0; }
+
+// Next we check that fourth compile unit references type from type table unit.
+//
+
+// CHECK: DW_TAG_compile_unit
+// CHECK: AT_name{{.*}}"X86/odr-fwd-declaration2.cpp"
+
+// CHECK: DW_TAG_subprogram
+
+// CHECK: DW_TAG_variable
+// CHECK: DW_AT_name{{.*}}"ptr2"
+// CHECK: DW_AT_type [DW_FORM_ref_addr] (0x00000000[[PTR_A]] "A *"
+
+#else
+#error "You must define which file you generate"
+#endif

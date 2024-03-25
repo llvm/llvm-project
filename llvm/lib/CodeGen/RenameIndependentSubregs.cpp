@@ -101,9 +101,9 @@ private:
                        const SmallVectorImpl<LiveInterval*> &Intervals) const;
 
 
-  LiveIntervals *LIS;
-  MachineRegisterInfo *MRI;
-  const TargetInstrInfo *TII;
+  LiveIntervals *LIS = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
 };
 
 } // end anonymous namespace
@@ -249,7 +249,7 @@ void RenameIndependentSubregs::rewriteOperands(const IntEqClasses &Classes,
       /// Undef use operands are not tracked in the equivalence class,
       /// but need to be updated if they are tied; take care to only
       /// update the tied operand.
-      unsigned OperandNo = MI->getOperandNo(&MO);
+      unsigned OperandNo = MO.getOperandNo();
       unsigned TiedIdx = MI->findTiedOperandIdx(OperandNo);
       MI->getOperand(TiedIdx).setReg(VReg);
 

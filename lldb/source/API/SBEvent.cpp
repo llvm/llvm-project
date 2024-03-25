@@ -12,7 +12,6 @@
 #include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/Breakpoint/Breakpoint.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
@@ -25,7 +24,8 @@ using namespace lldb_private;
 SBEvent::SBEvent() { LLDB_INSTRUMENT_VA(this); }
 
 SBEvent::SBEvent(uint32_t event_type, const char *cstr, uint32_t cstr_len)
-    : m_event_sp(new Event(event_type, new EventDataBytes(cstr, cstr_len))),
+    : m_event_sp(new Event(
+          event_type, new EventDataBytes(llvm::StringRef(cstr, cstr_len)))),
       m_opaque_ptr(m_event_sp.get()) {
   LLDB_INSTRUMENT_VA(this, event_type, cstr, cstr_len);
 }
@@ -63,7 +63,7 @@ const char *SBEvent::GetDataFlavor() {
   if (lldb_event) {
     EventData *event_data = lldb_event->GetData();
     if (event_data)
-      return lldb_event->GetData()->GetFlavor().AsCString();
+      return ConstString(lldb_event->GetData()->GetFlavor()).GetCString();
   }
   return nullptr;
 }
@@ -166,8 +166,9 @@ SBEvent::operator bool() const {
 const char *SBEvent::GetCStringFromEvent(const SBEvent &event) {
   LLDB_INSTRUMENT_VA(event);
 
-  return static_cast<const char *>(
-      EventDataBytes::GetBytesFromEvent(event.get()));
+  return ConstString(static_cast<const char *>(
+                         EventDataBytes::GetBytesFromEvent(event.get())))
+      .GetCString();
 }
 
 bool SBEvent::GetDescription(SBStream &description) {

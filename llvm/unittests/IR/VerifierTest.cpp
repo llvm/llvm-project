@@ -105,8 +105,45 @@ TEST(VerifierTest, InvalidRetAttribute) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyModule(M, &ErrorOS));
-  EXPECT_TRUE(StringRef(ErrorOS.str()).startswith(
-      "Attribute 'uwtable' does not apply to function return values"));
+  EXPECT_TRUE(
+      StringRef(ErrorOS.str())
+          .starts_with(
+              "Attribute 'uwtable' does not apply to function return values"));
+}
+
+/// Test the verifier rejects invalid nofpclass values that the assembler may
+/// also choose to reject.
+TEST(VerifierTest, InvalidNoFPClassAttribute) {
+  LLVMContext C;
+
+  const unsigned InvalidMasks[] = {0, fcAllFlags + 1};
+
+  for (unsigned InvalidMask : InvalidMasks) {
+    Module M("M", C);
+    FunctionType *FTy =
+        FunctionType::get(Type::getFloatTy(C), /*isVarArg=*/false);
+    Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+    AttributeList AS = F->getAttributes();
+
+    // Don't use getWithNoFPClass to avoid using out of bounds enum values here.
+    F->setAttributes(AS.addRetAttribute(
+        C, Attribute::get(C, Attribute::NoFPClass, InvalidMask)));
+
+    std::string Error;
+    raw_string_ostream ErrorOS(Error);
+    EXPECT_TRUE(verifyModule(M, &ErrorOS));
+
+    StringRef ErrMsg(ErrorOS.str());
+
+    if (InvalidMask == 0) {
+      EXPECT_TRUE(ErrMsg.starts_with(
+          "Attribute 'nofpclass' must have at least one test bit set"))
+          << ErrMsg;
+    } else {
+      EXPECT_TRUE(ErrMsg.starts_with("Invalid value for 'nofpclass' test mask"))
+          << ErrMsg;
+    }
+  }
 }
 
 TEST(VerifierTest, CrossModuleRef) {
@@ -160,8 +197,9 @@ TEST(VerifierTest, CrossModuleRef) {
 
   Error.clear();
   EXPECT_TRUE(verifyModule(M3, &ErrorOS));
-  EXPECT_TRUE(StringRef(ErrorOS.str()).startswith(
-      "Referencing personality function in another module!"));
+  EXPECT_TRUE(
+      StringRef(ErrorOS.str())
+          .starts_with("Referencing personality function in another module!"));
 
   // Erase bad methods to avoid triggering an assertion failure on destruction
   F1->eraseFromParent();
@@ -176,9 +214,9 @@ TEST(VerifierTest, InvalidVariableLinkage) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyModule(M, &ErrorOS));
-  EXPECT_TRUE(
-      StringRef(ErrorOS.str()).startswith("Global is external, but doesn't "
-                                          "have external or weak linkage!"));
+  EXPECT_TRUE(StringRef(ErrorOS.str())
+                  .starts_with("Global is external, but doesn't "
+                               "have external or weak linkage!"));
 }
 
 TEST(VerifierTest, InvalidFunctionLinkage) {
@@ -190,9 +228,9 @@ TEST(VerifierTest, InvalidFunctionLinkage) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyModule(M, &ErrorOS));
-  EXPECT_TRUE(
-      StringRef(ErrorOS.str()).startswith("Global is external, but doesn't "
-                                          "have external or weak linkage!"));
+  EXPECT_TRUE(StringRef(ErrorOS.str())
+                  .starts_with("Global is external, but doesn't "
+                               "have external or weak linkage!"));
 }
 
 TEST(VerifierTest, DetectInvalidDebugInfo) {
@@ -249,8 +287,9 @@ TEST(VerifierTest, MDNodeWrongContext) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyModule(M, &ErrorOS));
-  EXPECT_TRUE(StringRef(ErrorOS.str())
-                  .startswith("MDNode context does not match Module context!"));
+  EXPECT_TRUE(
+      StringRef(ErrorOS.str())
+          .starts_with("MDNode context does not match Module context!"));
 }
 
 TEST(VerifierTest, AttributesWrongContext) {
@@ -298,6 +337,34 @@ TEST(VerifierTest, SwitchInst) {
   // set one case value to function argument.
   Switch->setOperand(2, F->getArg(1));
   EXPECT_TRUE(verifyFunction(*F));
+}
+
+TEST(VerifierTest, CrossFunctionRef) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F1 = Function::Create(FTy, Function::ExternalLinkage, "foo1", M);
+  Function *F2 = Function::Create(FTy, Function::ExternalLinkage, "foo2", M);
+  BasicBlock *Entry1 = BasicBlock::Create(C, "entry", F1);
+  BasicBlock *Entry2 = BasicBlock::Create(C, "entry", F2);
+  Type *I32 = Type::getInt32Ty(C);
+
+  Value *Alloca = new AllocaInst(I32, 0, "alloca", Entry1);
+  ReturnInst::Create(C, Entry1);
+
+  Instruction *Store = new StoreInst(ConstantInt::get(I32, 0), Alloca, Entry2);
+  ReturnInst::Create(C, Entry2);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyModule(M, &ErrorOS));
+  EXPECT_TRUE(
+      StringRef(ErrorOS.str())
+          .starts_with("Referring to an instruction in another function!"));
+
+  // Explicitly erase the store to avoid a use-after-free when the module is
+  // destroyed.
+  Store->eraseFromParent();
 }
 
 } // end anonymous namespace

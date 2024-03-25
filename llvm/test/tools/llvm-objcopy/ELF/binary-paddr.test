@@ -254,3 +254,55 @@ ProgramHeaders:
     FileSize: 0x2
     MemSize:  0x13
     Align:    0x1000
+
+## Test that sections do not move relative to their physical addresses if
+## the physical address is not aligned. This behavior matches GNU objcopy
+## and is important for embedded images where the physical address is
+## used to store the initial data image. Without converting the type of a
+## NOBITS section, don't align the offset. This matches GNU objcopy when
+## the physical address of a section is not aligned.
+
+# RUN: yaml2obj --docnum=8 %s -o %t8
+# RUN: llvm-objcopy -O binary --only-section=.text --only-section=.data %t8 %t8.out
+# RUN: od -A x -t x1 %t8.out | FileCheck %s --check-prefix=PHYSUNALIGNED --ignore-case
+
+# PHYSUNALIGNED:      000000 11 22 33 44 55 66 77 88 99 aa bb cc dd ee ff 00
+# PHYSUNALIGNED-NEXT: 000010 11 22 33 44 bd ac cd ab
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .text
+    LastSec:         .text
+    VAddr:           0x200000
+    PAddr:           0x200000
+    Align:           0x1000
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .data
+    LastSec:         .data
+    VAddr:           0x400000
+    PAddr:           0x200014
+## PAddr is not aligned by sh_addralign(.data)
+    Align:           0x1000
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x200000
+    AddressAlign:    0x1
+    Offset:          0x1000
+    Content:         112233445566778899aabbccddeeff0011223344
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x400000
+    AddressAlign:    0x8
+    Offset:          0x2000
+    Content:         BDACCDAB

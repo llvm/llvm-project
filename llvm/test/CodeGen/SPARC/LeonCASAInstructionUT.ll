@@ -22,8 +22,8 @@
 ; CHECK-DAG:   mov 1, [[R0:%[a-z0-9]+]]
 ; CHECK-DAG:   mov %g0, [[R1:%[a-z0-9]+]]
 ; CHECK:       casa [{{%[a-z0-9]+}}] 10, [[R1]], [[R0]]
-define void @casa_test(i32* %ptr) {
-  %pair = cmpxchg i32* %ptr, i32 0, i32 1 monotonic monotonic
+define void @casa_test(ptr %ptr) {
+  %pair = cmpxchg ptr %ptr, i32 0, i32 1 monotonic monotonic
   %r = extractvalue { i32, i1 } %pair, 0
   %stored1  = icmp eq i32 %r, 0
 

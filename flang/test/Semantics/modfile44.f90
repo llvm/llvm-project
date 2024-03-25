@@ -19,12 +19,12 @@ end module
 
 !Expect: m1.mod
 !module m1
-!interface xyz
-!procedure::xzy
-!end interface
 !type::xyz
 !integer(4)::n
 !end type
+!interface xyz
+!procedure::xzy
+!end interface
 !contains
 !function xzy(j) result(res)
 !integer(4),intent(in)::j

@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Check for semantic errors in ALLOCATE statements
 
 subroutine C946(param_ca_4_assumed, param_ta_4_assumed, param_ca_4_deferred)
@@ -57,6 +57,9 @@ subroutine C946(param_ca_4_assumed, param_ta_4_assumed, param_ca_4_deferred)
 
   class(*), pointer :: whatever
 
+  character(:), allocatable :: deferredChar
+  character(2), allocatable :: char2
+
   ! Nominal test cases
   allocate(x1, x2(10), source=srcx)
   allocate(x2(10), source=srcx_array)
@@ -80,51 +83,58 @@ subroutine C946(param_ca_4_assumed, param_ta_4_assumed, param_ca_4_deferred)
 
   allocate(integer_default, source=[(i,i=0,9)])
 
+  allocate(deferredChar, source="abcd")
+  allocate(deferredChar, mold=deferredChar)
+  !PORTABILITY: Character length of allocatable object in ALLOCATE should be the same as the SOURCE or MOLD
+  allocate(char2, source="a")
+  !PORTABILITY: Character length of allocatable object in ALLOCATE should be the same as the SOURCE or MOLD
+  allocate(char2, source="abc")
+  allocate(char2, mold=deferredChar)
 
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(x1, source=cos(0._8))
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(x2(10), source=srcx8)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(x2(10), mold=srcx8_array)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(param_ta_4_2, source=src_a_8_2)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(param_ca_4_2, mold=src_a_8_2)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(param_ta_4_2, source=src_a_8_def)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(param_ca_4_2, source=src_b_8_2_8_3)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(param_ca_4_2, mold=src_b_8_def_8_3)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(param_ta_4_assumed, source=src_a_8_def)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(param_ta_4_assumed, mold=src_a_8_2)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(param_ca_4_assumed, mold=src_a_8_def)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(param_ca_4_assumed, source=src_b_8_2_8_3)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(param_ta_4_deferred, mold=src_a_8_2)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(param_ca_4_deferred, source=src_a_8_def)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(param_ca_4_deferred, mold=src_b_8_2_8_3)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(extended2, source=src_c_5_5_5_6_8_8)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(param_ca_4_2, mold=src_c_5_2_5_6_5_8)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(extended2, source=WithParamExtent2(k1=4, l1=5, k2=5, l2=6, k3=5, l3=8)(x=5))
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(param_ca_4_2, mold=param_defaulted)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(param_defaulted, source=param_ca_4_2)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(param_defaulted, mold=WithParam(k1=2)(x=5))
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(param_defaulted, source=src_c_5_2_5_6_5_8)
-  !ERROR: Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
+  !ERROR: Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression
   allocate(integer_default, source=[(i, integer(8)::i=0,9)])
 end subroutine

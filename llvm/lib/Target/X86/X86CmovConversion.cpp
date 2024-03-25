@@ -305,9 +305,13 @@ bool X86CmovConverterPass::collectCmovCandidates(
       // Skip debug instructions.
       if (I.isDebugInstr())
         continue;
+
       X86::CondCode CC = X86::getCondFromCMov(I);
-      // Check if we found a X86::CMOVrr instruction.
-      if (CC != X86::COND_INVALID && (IncludeLoads || !I.mayLoad())) {
+      // Check if we found a X86::CMOVrr instruction. If it is marked as
+      // unpredictable, skip it and do not convert it to branch.
+      if (CC != X86::COND_INVALID &&
+          !I.getFlag(MachineInstr::MIFlag::Unpredictable) &&
+          (IncludeLoads || !I.mayLoad())) {
         if (Group.empty()) {
           // We found first CMOV in the range, reset flags.
           FirstCC = CC;
@@ -770,6 +774,8 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
     const TargetRegisterClass *RC = MRI->getRegClass(MI.getOperand(0).getReg());
     Register TmpReg = MRI->createVirtualRegister(RC);
 
+    // Retain debug instr number when unfolded.
+    unsigned OldDebugInstrNum = MI.peekDebugInstrNum();
     SmallVector<MachineInstr *, 4> NewMIs;
     bool Unfolded = TII->unfoldMemoryOperand(*MBB->getParent(), MI, TmpReg,
                                              /*UnfoldLoad*/ true,
@@ -786,6 +792,9 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
     MBB->insert(MachineBasicBlock::iterator(MI), NewCMOV);
     if (&*MIItBegin == &MI)
       MIItBegin = MachineBasicBlock::iterator(NewCMOV);
+
+    if (OldDebugInstrNum)
+      NewCMOV->setDebugInstrNum(OldDebugInstrNum);
 
     // Sink whatever instructions were needed to produce the unfolded operand
     // into the false block.
@@ -854,9 +863,19 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
     LLVM_DEBUG(dbgs() << "\tFrom: "; MIIt->dump());
     LLVM_DEBUG(dbgs() << "\tTo: "; MIB->dump());
 
+    // debug-info: we can just copy the instr-ref number from one instruction
+    // to the other, seeing how it's a one-for-one substitution.
+    if (unsigned InstrNum = MIIt->peekDebugInstrNum())
+      MIB->setDebugInstrNum(InstrNum);
+
     // Add this PHI to the rewrite table.
     RegRewriteTable[DestReg] = std::make_pair(Op1Reg, Op2Reg);
   }
+
+  // Reset the NoPHIs property if a PHI was inserted to prevent a conflict with
+  // the MachineVerifier during testing.
+  if (MIItBegin != MIItEnd)
+    F->getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
 
   // Now remove the CMOV(s).
   MBB->erase(MIItBegin, MIItEnd);

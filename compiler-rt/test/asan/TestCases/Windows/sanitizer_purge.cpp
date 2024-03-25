@@ -3,7 +3,7 @@
 #include <sanitizer/allocator_interface.h>
 #include <psapi.h>
 
-// RUN: %clang_cl_asan -Od %s -Fe%t 
+// RUN: %clang_cl_asan %Od %s %Fe%t
 // RUN: %t
 // REQUIRES: asan-64-bits
 

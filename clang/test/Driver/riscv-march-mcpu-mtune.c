@@ -58,9 +58,9 @@
 // RUN:     | FileCheck -check-prefix=MCPU-E31-MARCH-RV32I %s
 // MCPU-E31-MARCH-RV32I: "-target-cpu" "sifive-e31"
 // MCPU-E31-MARCH-RV32I: "-target-feature" "+c"
-// MCPU-E31-MARCH-RV32I: "-target-feature" "-m"
 // MCPU-E31-MARCH-RV32I: "-target-feature" "-a"
 // MCPU-E31-MARCH-RV32I: "-target-feature" "-f"
+// MCPU-E31-MARCH-RV32I: "-target-feature" "-m"
 
 // -mcpu, -march and -mtune are given, so pipeline model take from -mtune
 // and arch ext. take from -march, -mcpu is unused.
@@ -68,7 +68,7 @@
 // RUN:     | FileCheck -check-prefix=MCPU-E31-MTUNE-E76-MARCH-RV32I %s
 // MCPU-E31-MTUNE-E76-MARCH-RV32I: "-target-cpu" "sifive-e31"
 // MCPU-E31-MTUNE-E76-MARCH-RV32I: "-target-feature" "+c"
-// MCPU-E31-MTUNE-E76-MARCH-RV32I: "-target-feature" "-m"
 // MCPU-E31-MTUNE-E76-MARCH-RV32I: "-target-feature" "-a"
 // MCPU-E31-MTUNE-E76-MARCH-RV32I: "-target-feature" "-f"
+// MCPU-E31-MTUNE-E76-MARCH-RV32I: "-target-feature" "-m"
 // MCPU-E31-MTUNE-E76-MARCH-RV32I: "-tune-cpu" "sifive-e76"

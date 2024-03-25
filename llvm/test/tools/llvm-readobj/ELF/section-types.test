@@ -59,6 +59,8 @@
 # LLVM: Type: SHT_LLVM_PART_EHDR
 # LLVM: Name: .phdrs
 # LLVM: Type: SHT_LLVM_PART_PHDR
+# LLVM: Name: .llvm.lto
+# LLVM: Type: SHT_LLVM_LTO
 # LLVM: Name: gnu_attributes
 # LLVM: Type: SHT_GNU_ATTRIBUTES
 # LLVM: Name: gnu_hash
@@ -119,6 +121,7 @@
 # GNU-NEXT: .llvm_sympart.f         LLVM_SYMPART
 # GNU-NEXT: part1                   LLVM_PART_EHDR
 # GNU-NEXT: .phdrs                  LLVM_PART_PHDR
+# GNU-NEXT: .llvm.lto               LLVM_LTO
 # GNU-NEXT: gnu_attributes          ATTRIBUTES
 # GNU-NEXT: gnu_hash                GNU_HASH
 # GNU-NEXT: gnu_verdef              VERDEF
@@ -205,6 +208,8 @@ Sections:
     Type: SHT_LLVM_PART_EHDR
   - Name: .phdrs
     Type: SHT_LLVM_PART_PHDR
+  - Name: .llvm.lto
+    Type: SHT_LLVM_LTO
   - Name: gnu_attributes
     Type: SHT_GNU_ATTRIBUTES
   - Name: gnu_hash

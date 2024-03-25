@@ -103,7 +103,7 @@ public:
 
   /// This function closes the dynamic library at the given path, using the
   /// library close operation of the host operating system, and there is no
-  /// guarantee if or when this will cause the the library to be unloaded.
+  /// guarantee if or when this will cause the library to be unloaded.
   ///
   /// This function should be called only if the library was loaded using the
   /// getLibrary() function.

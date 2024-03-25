@@ -16,7 +16,7 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define internal void @_ZN1AC2Ev(ptr %this) {
 entry:
-  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1A, i64 0, inrange i32 0, i64 2), ptr %this, align 8
+  store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV1A, i64 0, i32 0, i64 2), ptr %this, align 8
   ret void
 }
 
@@ -37,10 +37,9 @@ entry:
 declare dso_local noalias nonnull ptr @_Znwm(i64)
 @_ZTVN10__cxxabiv117__class_type_infoE = external dso_local global ptr
 
-!llvm.module.flags = !{!3, !4}
+!llvm.module.flags = !{!4}
 
 !0 = !{i64 16, !"_ZTS1A"}
 !1 = !{i64 16, !"_ZTSM1AFvvE.virtual"}
 !2 = !{i64 2} ; translation-unit vcall visibility
-!3 = !{i32 1, !"LTOPostLink", i32 1}
 !4 = !{i32 1, !"Virtual Function Elim", i32 1}

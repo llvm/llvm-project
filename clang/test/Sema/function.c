@@ -30,7 +30,7 @@ void t10(){}
 void t11(){t10(1);} // expected-warning{{too many arguments}}
 
 // PR3208
-void t12(int) {}  // c2x-warning{{omitting the parameter name in a function definition is a C2x extension}}
+void t12(int) {}  // c2x-warning{{omitting the parameter name in a function definition is a C23 extension}}
 
 // PR2790
 void t13() {
@@ -40,12 +40,11 @@ int t14() {
   return; // expected-error {{non-void function 't14' should return a value}}
 }
 
-// <rdar://problem/6097326>
 y(y) { return y; } // expected-error{{parameter 'y' was not declared, defaults to 'int'; ISO C99 and later do not support implicit int}} \
                    // expected-error{{type specifier missing, defaults to 'int'}}
 
 
-// PR3137, <rdar://problem/6127293>
+// PR3137
 extern int g0_3137(void);
 void f0_3137() {
   int g0_3137(void);
@@ -72,7 +71,6 @@ __attribute__((__gnu_inline__)) // expected-warning {{'gnu_inline' attribute req
 gnu_inline2() {}
 
 
-// rdar://6802350
 inline foo_t invalid_type() {  // expected-error {{unknown type name 'foo_t'}}
 }
 
@@ -81,7 +79,7 @@ fn_t t17;
 
 // PR4049
 unknown_type t18(void*) {   // expected-error {{unknown type name 'unknown_type'}} \
-                            // c2x-warning {{omitting the parameter name in a function definition is a C2x extension}}
+                            // c2x-warning {{omitting the parameter name in a function definition is a C23 extension}}
 }
 
 unknown_type t19(int* P) {   // expected-error {{unknown type name 'unknown_type'}}

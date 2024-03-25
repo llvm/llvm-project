@@ -10,8 +10,9 @@
 
 // constexpr explicit sentinel(Bound bound);
 
-#include <ranges>
 #include <cassert>
+#include <ranges>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "../types.h"

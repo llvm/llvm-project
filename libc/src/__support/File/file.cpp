@@ -10,12 +10,12 @@
 
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/span.h"
+#include "src/errno/libc_errno.h" // For error macros
 
-#include <errno.h> // For error macros
 #include <stdio.h>
 #include <stdlib.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 FileIOResult File::write_unlocked(const void *data, size_t len) {
   if (!write_allowed()) {
@@ -25,15 +25,15 @@ FileIOResult File::write_unlocked(const void *data, size_t len) {
 
   prev_op = FileOp::WRITE;
 
-  if (bufmode == _IOFBF) { // fully buffered
-    return write_unlocked_fbf(static_cast<const uint8_t *>(data), len);
-  } else if (bufmode == _IOLBF) { // line buffered
-    return write_unlocked_lbf(static_cast<const uint8_t *>(data), len);
-  } else /*if (bufmode == _IONBF) */ { // unbuffered
+  if (bufmode == _IONBF) { // unbuffered.
     size_t ret_val =
         write_unlocked_nbf(static_cast<const uint8_t *>(data), len);
     flush_unlocked();
     return ret_val;
+  } else if (bufmode == _IOFBF) { // fully buffered
+    return write_unlocked_fbf(static_cast<const uint8_t *>(data), len);
+  } else /*if (bufmode == _IOLBF) */ { // line buffered
+    return write_unlocked_lbf(static_cast<const uint8_t *>(data), len);
   }
 }
 
@@ -332,7 +332,6 @@ int File::flush_unlocked() {
       return buf_result.error;
     }
     pos = 0;
-    return platform_flush(this);
   }
   // TODO: Add POSIX behavior for input streams.
   return 0;
@@ -341,7 +340,6 @@ int File::flush_unlocked() {
 int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
   // We do not need to lock the file as this method should be called before
   // other operations are performed on the file.
-
   if (buffer != nullptr && size == 0)
     return EINVAL;
 
@@ -435,4 +433,4 @@ File::ModeFlags File::mode_flags(const char *mode) {
   return flags;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

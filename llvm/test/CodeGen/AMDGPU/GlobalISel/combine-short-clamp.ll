@@ -1,7 +1,7 @@
 ; RUN: llc -global-isel -mcpu=tahiti -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX678,GFX6789 %s
 ; RUN: llc -global-isel -mcpu=gfx900 -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9,GFX6789 %s
-; RUN: llc -global-isel -mcpu=gfx1010 -march=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10 %s
-; RUN: llc -global-isel -mcpu=gfx1100 -march=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10 %s
+; RUN: llc -global-isel -mcpu=gfx1010 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10 %s
+; RUN: llc -global-isel -mcpu=gfx1100 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10 %s
 
 declare i64 @llvm.smax.i64(i64, i64)
 declare i64 @llvm.smin.i64(i64, i64)
@@ -41,11 +41,12 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}v_clamp_i64_i16_invalid_lower
+; GFX6789: v_mov_b32_e32 v{{[0-9]+}}, 0x8001
 ; GFX6789: v_mov_b32_e32 [[B:v[0-9]+]], 0x8001
 ; GFX6789: v_cndmask_b32_e32 [[A:v[0-9]+]], [[B]], [[A]], vcc
 ; GFX6789: v_cndmask_b32_e32 [[C:v[0-9]+]], 0, [[C]], vcc
 
-; GFX10: v_cndmask_b32_e32 [[A:v[0-9]+]], 0x8001, [[A]], vcc_lo
+; GFX10: v_{{(dual_)?}}cndmask_b32{{(_e32)?}} [[A:v[0-9]+]], 0x8001, [[A]]
 ; GFX10: v_cndmask_b32_e32 [[B:v[0-9]+]], 0, [[B]], vcc_lo
 define i16 @v_clamp_i64_i16_invalid_lower(i64 %in) #0 {
 entry:
@@ -56,6 +57,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}v_clamp_i64_i16_invalid_lower_and_higher
+; GFX6789: v_mov_b32_e32 v{{[0-9]+}}, 0x8000
 ; GFX6789: v_mov_b32_e32 [[B:v[0-9]+]], 0x8000
 ; GFX6789: v_cndmask_b32_e32 [[A:v[0-9]+]], [[B]], [[A]], vcc
 ; GFX10: v_cndmask_b32_e32 [[A:v[0-9]+]], 0x8000, [[A]], vcc_lo

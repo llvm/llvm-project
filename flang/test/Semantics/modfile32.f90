@@ -33,11 +33,6 @@ contains
 end
 !Expect: m1.mod
 !module m1
-! interface f
-!  procedure :: f1
-!  procedure :: f2
-!  procedure :: f3
-! end interface
 ! interface
 !  pure function f1(x)
 !   real(4), intent(in) :: x
@@ -59,6 +54,11 @@ end
 !   real(4), intent(in), optional :: w
 !   integer(8) :: f3
 !  end
+! end interface
+! interface f
+!  procedure :: f1
+!  procedure :: f2
+!  procedure :: f3
 ! end interface
 !contains
 ! subroutine s1(x, z)
@@ -114,11 +114,6 @@ contains
 end
 !Expect: m2.mod
 !module m2
-! interface f
-!  procedure :: f_real4
-!  procedure :: f_real8
-!  procedure :: f_integer
-! end interface
 ! interface
 !  pure function f_real4(x)
 !   real(4), intent(in) :: x
@@ -136,6 +131,11 @@ end
 !   integer(4), intent(in) :: x
 !   integer(8) :: f_integer
 !  end
+! end interface
+! interface f
+!  procedure :: f_real4
+!  procedure :: f_real8
+!  procedure :: f_integer
 ! end interface
 !contains
 ! subroutine s1(x, y)
@@ -243,10 +243,6 @@ contains
 end
 !Expect: m4.mod
 !module m4
-! interface operator(.foo.)
-!  procedure :: f_real
-!  procedure :: f_integer
-! end interface
 ! interface
 !  pure function f_real(x)
 !   real(4), intent(in) :: x
@@ -258,6 +254,10 @@ end
 !   integer(4), intent(in) :: x
 !   integer(8) :: f_integer
 !  end
+! end interface
+! interface operator(.foo.)
+!  procedure :: f_real
+!  procedure :: f_integer
 ! end interface
 !contains
 ! subroutine s1(x, y)
@@ -294,10 +294,6 @@ contains
 end
 !Expect: m5.mod
 !module m5
-! interface operator(.foo.)
-!  procedure :: f1
-!  procedure :: f2
-! end interface
 ! interface
 !  pure function f1(x, y)
 !   real(4), intent(in) :: x
@@ -311,6 +307,10 @@ end
 !   complex(4), intent(in) :: y
 !   integer(8) :: f2
 !  end
+! end interface
+! interface operator(.foo.)
+!  procedure :: f1
+!  procedure :: f2
 ! end interface
 !contains
 ! subroutine s1(x, y)

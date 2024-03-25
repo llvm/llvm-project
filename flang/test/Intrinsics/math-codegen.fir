@@ -1467,9 +1467,15 @@ func.func private @llvm.powi.f64.i32(f64, i32) -> f64
 func.func private @pow(f64, f64) -> f64
 
 //--- exponentiation_integer.fir
-// RUN: fir-opt %t/exponentiation_integer.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/exponentiation_integer.fir
+// RUN: fir-opt %t/exponentiation_integer.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/exponentiation_integer.fir --check-prefixes="CHECK,CHECK-COMDAT"
+// RUN: fir-opt %t/exponentiation_integer.fir --fir-to-llvm-ir="target=x86_64-pc-windows-msvc" | FileCheck %t/exponentiation_integer.fir --check-prefixes="CHECK,CHECK-COMDAT"
+// RUN: fir-opt %t/exponentiation_integer.fir --fir-to-llvm-ir="target=aarch64-apple-darwin" | FileCheck %t/exponentiation_integer.fir --check-prefixes="CHECK,CHECK-NOCOMDAT"
+// CHECK-COMDAT: llvm.comdat_selector @__mlir_math_ipowi_i32 any
+// CHECK-NOCOMDAT-NOT: llvm.comdat_selector @__mlir_math_ipowi_i32 any
 // CHECK: @_QPtest_int4
 // CHECK: llvm.call @__mlir_math_ipowi_i32({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (i32, i32) -> i32
+// CHECK-COMDAT: llvm.func linkonce_odr @__mlir_math_ipowi_i32(%arg0: i32, %arg1: i32) -> i32 comdat(@__llvm_comdat::@__mlir_math_ipowi_i32)
+// CHECK-NOCOMDAT: llvm.func linkonce_odr @__mlir_math_ipowi_i32(%arg0: i32, %arg1: i32) -> i32
 
 func.func @_QPtest_int4(%arg0: !fir.ref<i32> {fir.bindc_name = "x"}, %arg1: !fir.ref<i32> {fir.bindc_name = "y"}, %arg2: !fir.ref<i32> {fir.bindc_name = "z"}) {
   %0 = fir.load %arg0 : !fir.ref<i32>

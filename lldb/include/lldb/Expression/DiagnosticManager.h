@@ -114,7 +114,17 @@ public:
   }
 
   void AddDiagnostic(std::unique_ptr<Diagnostic> diagnostic) {
-    m_diagnostics.push_back(std::move(diagnostic));
+    if (diagnostic)
+      m_diagnostics.push_back(std::move(diagnostic));
+  }
+
+  /// Moves over the contents of a second diagnostic manager over. Leaves other
+  /// diagnostic manager in an empty state.
+  void Consume(DiagnosticManager &&other) {
+    std::move(other.m_diagnostics.begin(), other.m_diagnostics.end(),
+              std::back_inserter(m_diagnostics));
+    m_fixed_expression = std::move(other.m_fixed_expression);
+    other.Clear();
   }
 
   size_t Printf(DiagnosticSeverity severity, const char *format, ...)

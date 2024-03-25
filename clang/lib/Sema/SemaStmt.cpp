@@ -27,6 +27,7 @@
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
@@ -39,6 +40,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
 using namespace sema;
@@ -525,6 +527,13 @@ Sema::ActOnCaseStmt(SourceLocation CaseLoc, ExprResult LHSVal,
     return StmtError();
   }
 
+  if (LangOpts.OpenACC &&
+      getCurScope()->isInOpenACCComputeConstructScope(Scope::SwitchScope)) {
+    Diag(CaseLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*branch*/ 0 << /*into*/ 1;
+    return StmtError();
+  }
+
   auto *CS = CaseStmt::Create(Context, LHSVal.get(), RHSVal.get(),
                               CaseLoc, DotDotDotLoc, ColonLoc);
   getCurFunction()->SwitchStack.back().getPointer()->addSwitchCase(CS);
@@ -542,6 +551,13 @@ Sema::ActOnDefaultStmt(SourceLocation DefaultLoc, SourceLocation ColonLoc,
   if (getCurFunction()->SwitchStack.empty()) {
     Diag(DefaultLoc, diag::err_default_not_in_switch);
     return SubStmt;
+  }
+
+  if (LangOpts.OpenACC &&
+      getCurScope()->isInOpenACCComputeConstructScope(Scope::SwitchScope)) {
+    Diag(DefaultLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*branch*/ 0 << /*into*/ 1;
+    return StmtError();
   }
 
   DefaultStmt *DS = new (Context) DefaultStmt(DefaultLoc, ColonLoc, SubStmt);
@@ -564,6 +580,11 @@ Sema::ActOnLabelStmt(SourceLocation IdentLoc, LabelDecl *TheDecl,
       !Context.getSourceManager().isInSystemHeader(IdentLoc))
     Diag(IdentLoc, diag::warn_reserved_extern_symbol)
         << TheDecl << static_cast<int>(Status);
+
+  // If this label is in a compute construct scope, we need to make sure we
+  // check gotos in/out.
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    setFunctionHasBranchProtectedScope();
 
   // Otherwise, things are good.  Fill in the declaration and return it.
   LabelStmt *LS = new (Context) LabelStmt(IdentLoc, TheDecl, SubStmt);
@@ -688,7 +709,7 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
     if (CMD->isStatic())
       Type.MemberType = FuncType::ft_static_member;
     else {
-      Type.This = CMD->getThisType()->getPointeeType();
+      Type.This = CMD->getFunctionObjectParameterType();
       Type.MemberType = FuncType::ft_non_static_member;
     }
     Type.Func = CMD->getType()->castAs<FunctionProtoType>();
@@ -782,6 +803,12 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
 
   if (CalleeType.Func->isVariadic() || CallerType.Func->isVariadic()) {
     Diag(St->getBeginLoc(), diag::err_musttail_no_variadic) << &MTA;
+    return false;
+  }
+
+  const auto *CalleeDecl = CE->getCalleeDecl();
+  if (CalleeDecl && CalleeDecl->hasAttr<CXX11NoReturnAttr>()) {
+    Diag(St->getBeginLoc(), diag::err_musttail_no_return) << &MTA;
     return false;
   }
 
@@ -932,11 +959,12 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
   }
 
   if (ConstevalOrNegatedConsteval) {
-    bool Immediate = isImmediateFunctionContext();
+    bool Immediate = ExprEvalContexts.back().Context ==
+                     ExpressionEvaluationContext::ImmediateFunctionContext;
     if (CurContext->isFunctionOrMethod()) {
       const auto *FD =
           dyn_cast<FunctionDecl>(Decl::castFromDeclContext(CurContext));
-      if (FD && FD->isConsteval())
+      if (FD && FD->isImmediateFunction())
         Immediate = true;
     }
     if (isUnevaluatedContext() || Immediate)
@@ -1269,6 +1297,9 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
 
   bool CaseListIsErroneous = false;
 
+  // FIXME: We'd better diagnose missing or duplicate default labels even
+  // in the dependent case. Because default labels themselves are never
+  // dependent.
   for (SwitchCase *SC = SS->getSwitchCaseList(); SC && !HasDependentValue;
        SC = SC->getNextSwitchCase()) {
 
@@ -1339,6 +1370,7 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
       assert(!HasConstantCond ||
              (ConstantCondValue.getBitWidth() == CondWidth &&
               ConstantCondValue.isSigned() == CondIsSigned));
+      Diag(SwitchLoc, diag::warn_switch_default);
     }
     bool ShouldCheckConstantCond = HasConstantCond;
 
@@ -1728,9 +1760,7 @@ Sema::ActOnDoStmt(SourceLocation DoLoc, Stmt *Body,
 
 namespace {
   // Use SetVector since the diagnostic cares about the ordering of the Decl's.
-  using DeclSetVector =
-      llvm::SetVector<VarDecl *, llvm::SmallVector<VarDecl *, 8>,
-                      llvm::SmallPtrSet<VarDecl *, 8>>;
+  using DeclSetVector = llvm::SmallSetVector<VarDecl *, 8>;
 
   // This visitor will traverse a conditional statement and store all
   // the evaluated decls into a vector.  Simple is set to true if none
@@ -2315,7 +2345,8 @@ Sema::ActOnObjCForCollectionStmt(SourceLocation ForLoc,
         FirstType = QualType();
         TemplateDeductionResult Result = DeduceAutoType(
             D->getTypeSourceInfo()->getTypeLoc(), DeducedInit, FirstType, Info);
-        if (Result != TDK_Success && Result != TDK_AlreadyDiagnosed)
+        if (Result != TemplateDeductionResult::Success &&
+            Result != TemplateDeductionResult::AlreadyDiagnosed)
           DiagnoseAutoDeductionFailure(D, DeducedInit);
         if (FirstType.isNull()) {
           D->setInvalidDecl();
@@ -2383,9 +2414,10 @@ static bool FinishForRangeVarDecl(Sema &SemaRef, VarDecl *Decl, Expr *Init,
     SemaRef.Diag(Loc, DiagID) << Init->getType();
   } else {
     TemplateDeductionInfo Info(Init->getExprLoc());
-    Sema::TemplateDeductionResult Result = SemaRef.DeduceAutoType(
+    TemplateDeductionResult Result = SemaRef.DeduceAutoType(
         Decl->getTypeSourceInfo()->getTypeLoc(), Init, InitType, Info);
-    if (Result != Sema::TDK_Success && Result != Sema::TDK_AlreadyDiagnosed)
+    if (Result != TemplateDeductionResult::Success &&
+        Result != TemplateDeductionResult::AlreadyDiagnosed)
       SemaRef.Diag(Loc, DiagID) << Init->getType();
   }
 
@@ -2479,11 +2511,11 @@ static bool ObjCEnumerationCollection(Expr *Collection) {
 ///
 /// The body of the loop is not available yet, since it cannot be analysed until
 /// we have determined the type of the for-range-declaration.
-StmtResult Sema::ActOnCXXForRangeStmt(Scope *S, SourceLocation ForLoc,
-                                      SourceLocation CoawaitLoc, Stmt *InitStmt,
-                                      Stmt *First, SourceLocation ColonLoc,
-                                      Expr *Range, SourceLocation RParenLoc,
-                                      BuildForRangeKind Kind) {
+StmtResult Sema::ActOnCXXForRangeStmt(
+    Scope *S, SourceLocation ForLoc, SourceLocation CoawaitLoc, Stmt *InitStmt,
+    Stmt *First, SourceLocation ColonLoc, Expr *Range, SourceLocation RParenLoc,
+    BuildForRangeKind Kind,
+    ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps) {
   // FIXME: recover in order to allow the body to be parsed.
   if (!First)
     return StmtError();
@@ -2547,7 +2579,8 @@ StmtResult Sema::ActOnCXXForRangeStmt(Scope *S, SourceLocation ForLoc,
   StmtResult R = BuildCXXForRangeStmt(
       ForLoc, CoawaitLoc, InitStmt, ColonLoc, RangeDecl.get(),
       /*BeginStmt=*/nullptr, /*EndStmt=*/nullptr,
-      /*Cond=*/nullptr, /*Inc=*/nullptr, DS, RParenLoc, Kind);
+      /*Cond=*/nullptr, /*Inc=*/nullptr, DS, RParenLoc, Kind,
+      LifetimeExtendTemps);
   if (R.isInvalid()) {
     ActOnInitializerError(LoopVar);
     return StmtError();
@@ -2737,13 +2770,12 @@ static StmtResult RebuildForRangeWithDereference(Sema &SemaRef, Scope *S,
 }
 
 /// BuildCXXForRangeStmt - Build or instantiate a C++11 for-range statement.
-StmtResult Sema::BuildCXXForRangeStmt(SourceLocation ForLoc,
-                                      SourceLocation CoawaitLoc, Stmt *InitStmt,
-                                      SourceLocation ColonLoc, Stmt *RangeDecl,
-                                      Stmt *Begin, Stmt *End, Expr *Cond,
-                                      Expr *Inc, Stmt *LoopVarDecl,
-                                      SourceLocation RParenLoc,
-                                      BuildForRangeKind Kind) {
+StmtResult Sema::BuildCXXForRangeStmt(
+    SourceLocation ForLoc, SourceLocation CoawaitLoc, Stmt *InitStmt,
+    SourceLocation ColonLoc, Stmt *RangeDecl, Stmt *Begin, Stmt *End,
+    Expr *Cond, Expr *Inc, Stmt *LoopVarDecl, SourceLocation RParenLoc,
+    BuildForRangeKind Kind,
+    ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps) {
   // FIXME: This should not be used during template instantiation. We should
   // pick up the set of unqualified lookup results for the != and + operators
   // in the initial parse.
@@ -2802,6 +2834,14 @@ StmtResult Sema::BuildCXXForRangeStmt(SourceLocation ForLoc,
     if (RequireCompleteType(RangeLoc, RangeType,
                             diag::err_for_range_incomplete_type))
       return StmtError();
+
+    // P2718R0 - Lifetime extension in range-based for loops.
+    if (getLangOpts().CPlusPlus23 && !LifetimeExtendTemps.empty()) {
+      InitializedEntity Entity =
+          InitializedEntity::InitializeVariable(RangeVar);
+      for (auto *MTE : LifetimeExtendTemps)
+        MTE->setExtendingDecl(RangeVar, Entity.allocateManglingNumber());
+    }
 
     // Build auto __begin = begin-expr, __end = end-expr.
     // Divide by 2, since the variables are in the inner scope (loop body).
@@ -3196,7 +3236,7 @@ static void DiagnoseForRangeConstVariableCopies(Sema &SemaRef,
   // (The function `getTypeSize` returns the size in bits.)
   ASTContext &Ctx = SemaRef.Context;
   if (Ctx.getTypeSize(VariableType) <= 64 * 8 &&
-      (VariableType.isTriviallyCopyableType(Ctx) ||
+      (VariableType.isTriviallyCopyConstructibleType(Ctx) ||
        hasTrivialABIAttr(VariableType)))
     return;
 
@@ -3283,6 +3323,12 @@ StmtResult Sema::ActOnGotoStmt(SourceLocation GotoLoc,
                                SourceLocation LabelLoc,
                                LabelDecl *TheDecl) {
   setFunctionHasBranchIntoScope();
+
+  // If this goto is in a compute construct scope, we need to make sure we check
+  // gotos in/out.
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    setFunctionHasBranchProtectedScope();
+
   TheDecl->markUsed(Context);
   return new (Context) GotoStmt(TheDecl, GotoLoc, LabelLoc);
 }
@@ -3311,6 +3357,11 @@ Sema::ActOnIndirectGotoStmt(SourceLocation GotoLoc, SourceLocation StarLoc,
 
   setFunctionHasIndirectGoto();
 
+  // If this goto is in a compute construct scope, we need to make sure we
+  // check gotos in/out.
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    setFunctionHasBranchProtectedScope();
+
   return new (Context) IndirectGotoStmt(GotoLoc, StarLoc, E);
 }
 
@@ -3335,6 +3386,15 @@ Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope) {
     // initialization of that variable.
     return StmtError(Diag(ContinueLoc, diag::err_continue_from_cond_var_init));
   }
+
+  // A 'continue' that would normally have execution continue on a block outside
+  // of a compute construct counts as 'branching out of' the compute construct,
+  // so diagnose here.
+  if (S->isOpenACCComputeConstructScope())
+    return StmtError(
+        Diag(ContinueLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*branch*/ 0 << /*out of */ 0);
+
   CheckJumpOutOfSEHFinally(*this, ContinueLoc, *S);
 
   return new (Context) ContinueStmt(ContinueLoc);
@@ -3350,6 +3410,21 @@ Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope) {
   if (S->isOpenMPLoopScope())
     return StmtError(Diag(BreakLoc, diag::err_omp_loop_cannot_use_stmt)
                      << "break");
+
+  // OpenACC doesn't allow 'break'ing from a compute construct, so diagnose if
+  // we are trying to do so.  This can come in 2 flavors: 1-the break'able thing
+  // (besides the compute construct) 'contains' the compute construct, at which
+  // point the 'break' scope will be the compute construct.  Else it could be a
+  // loop of some sort that has a direct parent of the compute construct.
+  // However, a 'break' in a 'switch' marked as a compute construct doesn't
+  // count as 'branch out of' the compute construct.
+  if (S->isOpenACCComputeConstructScope() ||
+      (S->isLoopScope() && S->getParent() &&
+       S->getParent()->isOpenACCComputeConstructScope()))
+    return StmtError(
+        Diag(BreakLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*branch*/ 0 << /*out of */ 0);
+
   CheckJumpOutOfSEHFinally(*this, BreakLoc, *S);
 
   return new (Context) BreakStmt(BreakLoc);
@@ -3364,7 +3439,7 @@ Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope) {
 /// might be modified by the implementation.
 ///
 /// \param Mode Overrides detection of current language mode
-/// and uses the rules for C++2b.
+/// and uses the rules for C++23.
 ///
 /// \returns An aggregate which contains the Candidate and isMoveEligible
 /// and isCopyElidable methods. If Candidate is non-null, it means
@@ -3381,11 +3456,13 @@ Sema::NamedReturnInfo Sema::getNamedReturnInfo(Expr *&E,
   const auto *VD = dyn_cast<VarDecl>(DR->getDecl());
   if (!VD)
     return NamedReturnInfo();
+  if (VD->getInit() && VD->getInit()->containsErrors())
+    return NamedReturnInfo();
   NamedReturnInfo Res = getNamedReturnInfo(VD);
   if (Res.Candidate && !E->isXValue() &&
       (Mode == SimplerImplicitMoveMode::ForceOn ||
        (Mode != SimplerImplicitMoveMode::ForceOff &&
-        getLangOpts().CPlusPlus2b))) {
+        getLangOpts().CPlusPlus23))) {
     E = ImplicitCastExpr::Create(Context, VD->getType().getNonReferenceType(),
                                  CK_NoOp, E, nullptr, VK_XValue,
                                  FPOptionsOverride());
@@ -3529,7 +3606,7 @@ ExprResult Sema::PerformMoveOrCopyInitialization(
     const InitializedEntity &Entity, const NamedReturnInfo &NRInfo, Expr *Value,
     bool SupressSimplerImplicitMoves) {
   if (getLangOpts().CPlusPlus &&
-      (!getLangOpts().CPlusPlus2b || SupressSimplerImplicitMoves) &&
+      (!getLangOpts().CPlusPlus23 || SupressSimplerImplicitMoves) &&
       NRInfo.isMoveEligible()) {
     ImplicitCastExpr AsRvalue(ImplicitCastExpr::OnStack, Value->getType(),
                               CK_NoOp, Value, VK_XValue, FPOptionsOverride());
@@ -3577,6 +3654,8 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
   CapturingScopeInfo *CurCap = cast<CapturingScopeInfo>(getCurFunction());
   QualType FnRetType = CurCap->ReturnType;
   LambdaScopeInfo *CurLambda = dyn_cast<LambdaScopeInfo>(CurCap);
+  if (CurLambda && CurLambda->CallOperator->getType().isNull())
+    return StmtError();
   bool HasDeducedReturnType =
       CurLambda && hasDeducedReturnType(CurLambda->CallOperator);
 
@@ -3730,6 +3809,11 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
   if (FunctionScopes.back()->FirstReturnLoc.isInvalid())
     FunctionScopes.back()->FirstReturnLoc = ReturnLoc;
 
+  if (auto *CurBlock = dyn_cast<BlockScopeInfo>(CurCap);
+      CurBlock && CurCap->HasImplicitReturnType && RetValExp &&
+      RetValExp->containsErrors())
+    CurBlock->TheDecl->setInvalidDecl();
+
   return Result;
 }
 
@@ -3825,17 +3909,26 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
   {
     //  Otherwise, [...] deduce a value for U using the rules of template
     //  argument deduction.
-    TemplateDeductionInfo Info(RetExpr->getExprLoc());
-    TemplateDeductionResult Res =
-        DeduceAutoType(OrigResultType, RetExpr, Deduced, Info);
-    if (Res != TDK_Success && FD->isInvalidDecl())
+    auto RetExprLoc = RetExpr->getExprLoc();
+    TemplateDeductionInfo Info(RetExprLoc);
+    SourceLocation TemplateSpecLoc;
+    if (RetExpr->getType() == Context.OverloadTy) {
+      auto FindResult = OverloadExpr::find(RetExpr);
+      if (FindResult.Expression)
+        TemplateSpecLoc = FindResult.Expression->getNameLoc();
+    }
+    TemplateSpecCandidateSet FailedTSC(TemplateSpecLoc);
+    TemplateDeductionResult Res = DeduceAutoType(
+        OrigResultType, RetExpr, Deduced, Info, /*DependentDeduction=*/false,
+        /*IgnoreConstraints=*/false, &FailedTSC);
+    if (Res != TemplateDeductionResult::Success && FD->isInvalidDecl())
       return true;
     switch (Res) {
-    case TDK_Success:
+    case TemplateDeductionResult::Success:
       break;
-    case TDK_AlreadyDiagnosed:
+    case TemplateDeductionResult::AlreadyDiagnosed:
       return true;
-    case TDK_Inconsistent: {
+    case TemplateDeductionResult::Inconsistent: {
       //  If a function with a declared return type that contains a placeholder
       //  type has multiple return statements, the return type is deduced for
       //  each return statement. [...] if the type deduced is not the same in
@@ -3853,6 +3946,7 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
     default:
       Diag(RetExpr->getExprLoc(), diag::err_auto_fn_deduction_failure)
           << OrigResultType.getType() << RetExpr->getType();
+      FailedTSC.NoteCandidates(*this, RetExprLoc);
       return true;
     }
   }
@@ -3885,6 +3979,12 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
       RetValExp, nullptr, /*RecoverUncorrectedTypos=*/true);
   if (RetVal.isInvalid())
     return StmtError();
+
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    return StmtError(
+        Diag(ReturnLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*return*/ 1 << /*out of */ 0);
+
   StmtResult R =
       BuildReturnStmt(ReturnLoc, RetVal.get(), /*AllowRecovery=*/true);
   if (R.isInvalid() || ExprEvalContexts.back().isDiscardedStatementContext())
@@ -3902,7 +4002,7 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
 
 static bool CheckSimplerImplicitMovesMSVCWorkaround(const Sema &S,
                                                     const Expr *E) {
-  if (!E || !S.getLangOpts().CPlusPlus2b || !S.getLangOpts().MSVCCompat)
+  if (!E || !S.getLangOpts().CPlusPlus23 || !S.getLangOpts().MSVCCompat)
     return false;
   const Decl *D = E->getReferencedDeclOfCallee();
   if (!D || !S.SourceMgr.isInSystemHeader(D->getLocation()))
@@ -3968,6 +4068,14 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
     }
   } else // If we don't have a function/method context, bail.
     return StmtError();
+
+  if (RetValExp) {
+    const auto *ATy = dyn_cast<ArrayType>(RetValExp->getType());
+    if (ATy && ATy->getElementType().isWebAssemblyReferenceType()) {
+      Diag(ReturnLoc, diag::err_wasm_table_art) << 1;
+      return StmtError();
+    }
+  }
 
   // C++1z: discarded return statements are not considered when deducing a
   // return type.
@@ -4335,6 +4443,7 @@ Sema::ActOnObjCAutoreleasePoolStmt(SourceLocation AtLoc, Stmt *Body) {
 namespace {
 class CatchHandlerType {
   QualType QT;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsPointer : 1;
 
   // This is a special constructor to be used only with DenseMapInfo's
@@ -4351,9 +4460,9 @@ public:
     if (QT->isPointerType())
       IsPointer = true;
 
+    QT = QT.getUnqualifiedType();
     if (IsPointer || QT->isReferenceType())
       QT = QT->getPointeeType();
-    QT = QT.getUnqualifiedType();
   }
 
   /// Used when creating a CatchHandlerType from a base class type; pretends the
@@ -4401,32 +4510,42 @@ template <> struct DenseMapInfo<CatchHandlerType> {
 
 namespace {
 class CatchTypePublicBases {
-  ASTContext &Ctx;
-  const llvm::DenseMap<CatchHandlerType, CXXCatchStmt *> &TypesToCheck;
-  const bool CheckAgainstPointer;
+  const llvm::DenseMap<QualType, CXXCatchStmt *> &TypesToCheck;
 
   CXXCatchStmt *FoundHandler;
-  CanQualType FoundHandlerType;
+  QualType FoundHandlerType;
+  QualType TestAgainstType;
 
 public:
-  CatchTypePublicBases(
-      ASTContext &Ctx,
-      const llvm::DenseMap<CatchHandlerType, CXXCatchStmt *> &T, bool C)
-      : Ctx(Ctx), TypesToCheck(T), CheckAgainstPointer(C),
-        FoundHandler(nullptr) {}
+  CatchTypePublicBases(const llvm::DenseMap<QualType, CXXCatchStmt *> &T,
+                       QualType QT)
+      : TypesToCheck(T), FoundHandler(nullptr), TestAgainstType(QT) {}
 
   CXXCatchStmt *getFoundHandler() const { return FoundHandler; }
-  CanQualType getFoundHandlerType() const { return FoundHandlerType; }
+  QualType getFoundHandlerType() const { return FoundHandlerType; }
 
   bool operator()(const CXXBaseSpecifier *S, CXXBasePath &) {
     if (S->getAccessSpecifier() == AccessSpecifier::AS_public) {
-      CatchHandlerType Check(S->getType(), CheckAgainstPointer);
+      QualType Check = S->getType().getCanonicalType();
       const auto &M = TypesToCheck;
       auto I = M.find(Check);
       if (I != M.end()) {
-        FoundHandler = I->second;
-        FoundHandlerType = Ctx.getCanonicalType(S->getType());
-        return true;
+        // We're pretty sure we found what we need to find. However, we still
+        // need to make sure that we properly compare for pointers and
+        // references, to handle cases like:
+        //
+        // } catch (Base *b) {
+        // } catch (Derived &d) {
+        // }
+        //
+        // where there is a qualification mismatch that disqualifies this
+        // handler as a potential problem.
+        if (I->second->getCaughtType()->isPointerType() ==
+                TestAgainstType->isPointerType()) {
+          FoundHandler = I->second;
+          FoundHandlerType = Check;
+          return true;
+        }
       }
     }
     return false;
@@ -4438,12 +4557,21 @@ public:
 /// handlers and creates a try statement from them.
 StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
                                   ArrayRef<Stmt *> Handlers) {
-  // Don't report an error if 'try' is used in system headers.
-  if (!getLangOpts().CXXExceptions &&
+  const llvm::Triple &T = Context.getTargetInfo().getTriple();
+  const bool IsOpenMPGPUTarget =
+      getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN());
+  // Don't report an error if 'try' is used in system headers or in an OpenMP
+  // target region compiled for a GPU architecture.
+  if (!IsOpenMPGPUTarget && !getLangOpts().CXXExceptions &&
       !getSourceManager().isInSystemHeader(TryLoc) && !getLangOpts().CUDA) {
     // Delay error emission for the OpenMP device code.
     targetDiag(TryLoc, diag::err_exceptions_disabled) << "try";
   }
+
+  // In OpenMP target regions, we assume that catch is never reached on GPU
+  // targets.
+  if (IsOpenMPGPUTarget)
+    targetDiag(TryLoc, diag::warn_try_not_valid_on_target) << T.str();
 
   // Exceptions aren't allowed in CUDA device code.
   if (getLangOpts().CUDA)
@@ -4465,6 +4593,7 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
   assert(!Handlers.empty() &&
          "The parser shouldn't call this if there are no handlers.");
 
+  llvm::DenseMap<QualType, CXXCatchStmt *> HandledBaseTypes;
   llvm::DenseMap<CatchHandlerType, CXXCatchStmt *> HandledTypes;
   for (unsigned i = 0; i < NumHandlers; ++i) {
     CXXCatchStmt *H = cast<CXXCatchStmt>(Handlers[i]);
@@ -4482,8 +4611,7 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
     // Walk the type hierarchy to diagnose when this type has already been
     // handled (duplication), or cannot be handled (derivation inversion). We
     // ignore top-level cv-qualifiers, per [except.handle]p3
-    CatchHandlerType HandlerCHT =
-        (QualType)Context.getCanonicalType(H->getCaughtType());
+    CatchHandlerType HandlerCHT = H->getCaughtType().getCanonicalType();
 
     // We can ignore whether the type is a reference or a pointer; we need the
     // underlying declaration type in order to get at the underlying record
@@ -4499,10 +4627,12 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
       // as the original type.
       CXXBasePaths Paths;
       Paths.setOrigin(RD);
-      CatchTypePublicBases CTPB(Context, HandledTypes, HandlerCHT.isPointer());
+      CatchTypePublicBases CTPB(HandledBaseTypes,
+                                H->getCaughtType().getCanonicalType());
       if (RD->lookupInBases(CTPB, Paths)) {
         const CXXCatchStmt *Problem = CTPB.getFoundHandler();
-        if (!Paths.isAmbiguous(CTPB.getFoundHandlerType())) {
+        if (!Paths.isAmbiguous(
+                CanQualType::CreateUnsafe(CTPB.getFoundHandlerType()))) {
           Diag(H->getExceptionDecl()->getTypeSpecStartLoc(),
                diag::warn_exception_caught_by_earlier_handler)
               << H->getCaughtType();
@@ -4511,11 +4641,16 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
               << Problem->getCaughtType();
         }
       }
+      // Strip the qualifiers here because we're going to be comparing this
+      // type to the base type specifiers of a class, which are ignored in a
+      // base specifier per [class.derived.general]p2.
+      HandledBaseTypes[Underlying.getUnqualifiedType()] = H;
     }
 
     // Add the type the list of ones we have handled; diagnose if we've already
     // handled it.
-    auto R = HandledTypes.insert(std::make_pair(H->getCaughtType(), H));
+    auto R = HandledTypes.insert(
+        std::make_pair(H->getCaughtType().getCanonicalType(), H));
     if (!R.second) {
       const CXXCatchStmt *Problem = R.first->second;
       Diag(H->getExceptionDecl()->getTypeSpecStartLoc(),
@@ -4529,7 +4664,8 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
 
   FSI->setHasCXXTry(TryLoc);
 
-  return CXXTryStmt::Create(Context, TryLoc, TryBlock, Handlers);
+  return CXXTryStmt::Create(Context, TryLoc, cast<CompoundStmt>(TryBlock),
+                            Handlers);
 }
 
 StmtResult Sema::ActOnSEHTryBlock(bool IsCXXTry, SourceLocation TryLoc,
@@ -4640,10 +4776,11 @@ Sema::CreateCapturedStmtRecordDecl(CapturedDecl *&CD, SourceLocation Loc,
 
   RecordDecl *RD = nullptr;
   if (getLangOpts().CPlusPlus)
-    RD = CXXRecordDecl::Create(Context, TTK_Struct, DC, Loc, Loc,
+    RD = CXXRecordDecl::Create(Context, TagTypeKind::Struct, DC, Loc, Loc,
                                /*Id=*/nullptr);
   else
-    RD = RecordDecl::Create(Context, TTK_Struct, DC, Loc, Loc, /*Id=*/nullptr);
+    RD = RecordDecl::Create(Context, TagTypeKind::Struct, DC, Loc, Loc,
+                            /*Id=*/nullptr);
 
   RD->setCapturedRecord();
   DC->addDecl(RD);
@@ -4710,7 +4847,7 @@ void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
   QualType ParamType = Context.getPointerType(Context.getTagDeclType(RD));
   auto *Param =
       ImplicitParamDecl::Create(Context, DC, Loc, ParamName, ParamType,
-                                ImplicitParamDecl::CapturedContext);
+                                ImplicitParamKind::CapturedContext);
   DC->addDecl(Param);
 
   CD->setContextParam(0, Param);
@@ -4725,6 +4862,7 @@ void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
 
   PushExpressionEvaluationContext(
       ExpressionEvaluationContext::PotentiallyEvaluated);
+  ExprEvalContexts.back().InImmediateEscalatingFunctionContext = false;
 }
 
 void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
@@ -4750,7 +4888,7 @@ void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
                                .withRestrict();
       auto *Param =
           ImplicitParamDecl::Create(Context, DC, Loc, ParamName, ParamType,
-                                    ImplicitParamDecl::CapturedContext);
+                                    ImplicitParamKind::CapturedContext);
       DC->addDecl(Param);
       CD->setContextParam(ParamNum, Param);
       ContextIsFound = true;
@@ -4758,7 +4896,7 @@ void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
       IdentifierInfo *ParamName = &Context.Idents.get(I->first);
       auto *Param =
           ImplicitParamDecl::Create(Context, DC, Loc, ParamName, I->second,
-                                    ImplicitParamDecl::CapturedContext);
+                                    ImplicitParamKind::CapturedContext);
       DC->addDecl(Param);
       CD->setParam(ParamNum, Param);
     }
@@ -4770,7 +4908,7 @@ void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
     QualType ParamType = Context.getPointerType(Context.getTagDeclType(RD));
     auto *Param =
         ImplicitParamDecl::Create(Context, DC, Loc, ParamName, ParamType,
-                                  ImplicitParamDecl::CapturedContext);
+                                  ImplicitParamKind::CapturedContext);
     DC->addDecl(Param);
     CD->setContextParam(ParamNum, Param);
   }

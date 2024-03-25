@@ -358,6 +358,12 @@ __m128i test_mm_stream_load_si128(__m128i const *a) {
   return _mm_stream_load_si128(a);
 }
 
+__m128i test_mm_stream_load_si128_void(const void *a) {
+  // CHECK-LABEL: test_mm_stream_load_si128_void
+  // CHECK: load <2 x i64>, ptr %{{.*}}, align 16, !nontemporal
+  return _mm_stream_load_si128(a);
+}
+
 int test_mm_test_all_ones(__m128i x) {
   // CHECK-LABEL: test_mm_test_all_ones
   // CHECK: call i32 @llvm.x86.sse41.ptestc(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})

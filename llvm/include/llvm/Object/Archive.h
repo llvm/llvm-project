@@ -302,6 +302,7 @@ public:
     StringRef getName() const;
     Expected<Child> getMember() const;
     Symbol getNext() const;
+    bool isECSymbol() const;
   };
 
   class symbol_iterator {
@@ -337,7 +338,8 @@ public:
 
   Kind kind() const { return (Kind)Format; }
   bool isThin() const { return IsThin; }
-  static object::Archive::Kind getDefaultKindForHost();
+  static object::Archive::Kind getDefaultKind();
+  static object::Archive::Kind getDefaultKindForTriple(Triple &T);
 
   child_iterator child_begin(Error &Err, bool SkipInternal = true) const;
   child_iterator child_end() const;
@@ -352,6 +354,8 @@ public:
     return make_range(symbol_begin(), symbol_end());
   }
 
+  Expected<iterator_range<symbol_iterator>> ec_symbols() const;
+
   static bool classof(Binary const *v) { return v->isArchive(); }
 
   // check if a symbol is in the archive
@@ -362,6 +366,7 @@ public:
   StringRef getSymbolTable() const { return SymbolTable; }
   StringRef getStringTable() const { return StringTable; }
   uint32_t getNumberOfSymbols() const;
+  uint32_t getNumberOfECSymbols() const;
   virtual uint64_t getFirstChildOffset() const { return getArchiveMagicLen(); }
 
   std::vector<std::unique_ptr<MemoryBuffer>> takeThinBuffers() {
@@ -377,6 +382,7 @@ protected:
   void setFirstRegular(const Child &C);
 
   StringRef SymbolTable;
+  StringRef ECSymbolTable;
   StringRef StringTable;
 
 private:
@@ -405,14 +411,18 @@ public:
   const FixLenHdr *ArFixLenHdr;
   uint64_t FirstChildOffset = 0;
   uint64_t LastChildOffset = 0;
+  std::string MergedGlobalSymtabBuf;
+  bool Has32BitGlobalSymtab = false;
+  bool Has64BitGlobalSymtab = false;
 
 public:
   BigArchive(MemoryBufferRef Source, Error &Err);
   uint64_t getFirstChildOffset() const override { return FirstChildOffset; }
   uint64_t getLastChildOffset() const { return LastChildOffset; }
-  bool isEmpty() const override {
-    return Data.getBufferSize() == sizeof(FixLenHdr);
-  };
+  bool isEmpty() const override { return getFirstChildOffset() == 0; }
+
+  bool has32BitGlobalSymtab() { return Has32BitGlobalSymtab; }
+  bool has64BitGlobalSymtab() { return Has64BitGlobalSymtab; }
 };
 
 } // end namespace object

@@ -1,6 +1,6 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass postrapseudos -verify-machineinstrs %s -o - | FileCheck -check-prefixes=GCN,GFX900 %s
-# RUN: llc -march=amdgcn -mcpu=gfx90a -run-pass postrapseudos -verify-machineinstrs %s -o - | FileCheck -check-prefixes=GCN,GFX90A %s
-# RUN: llc -march=amdgcn -mcpu=gfx940 -run-pass postrapseudos -verify-machineinstrs %s -o - | FileCheck -check-prefixes=GCN,GFX940 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass postrapseudos -verify-machineinstrs %s -o - | FileCheck -check-prefixes=GCN,GFX900 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx90a -run-pass postrapseudos -verify-machineinstrs %s -o - | FileCheck -check-prefixes=GCN,GFX90A %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx940 -run-pass postrapseudos -verify-machineinstrs %s -o - | FileCheck -check-prefixes=GCN,GFX940 %s
 
 # GCN-LABEL: name: v_mov_b64_from_vgpr
 # GFX900: $vgpr0 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit-def $vgpr0_vgpr1

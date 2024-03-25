@@ -14,6 +14,7 @@
 #include "lldb/lldb-forward.h"
 
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/RWMutex.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -36,11 +37,11 @@ public:
                            const SourceManager::File &rhs);
 
   public:
-    File(const FileSpec &file_spec, Target *target);
+    File(const FileSpec &file_spec, lldb::TargetSP target_sp);
     File(const FileSpec &file_spec, lldb::DebuggerSP debugger_sp);
-    ~File() = default;
 
-    void UpdateIfNeeded();
+    bool ModificationTimeIsStale() const;
+    bool PathRemappingIsStale() const;
 
     size_t DisplaySourceLines(uint32_t line, std::optional<size_t> column,
                               uint32_t context_before, uint32_t context_after,
@@ -65,7 +66,12 @@ public:
 
     uint32_t GetNumLines();
 
+    llvm::sys::TimePoint<> GetTimestamp() const { return m_mod_time; }
+
   protected:
+    /// Set file and update modification time.
+    void SetFileSpec(FileSpec file_spec);
+
     bool CalculateLineOffsets(uint32_t line = UINT32_MAX);
 
     FileSpec m_file_spec_orig; // The original file spec that was used (can be
@@ -84,39 +90,52 @@ public:
     typedef std::vector<uint32_t> LineOffsets;
     LineOffsets m_offsets;
     lldb::DebuggerWP m_debugger_wp;
+    lldb::TargetWP m_target_wp;
 
   private:
-    void CommonInitializer(const FileSpec &file_spec, Target *target);
+    void CommonInitializer(const FileSpec &file_spec, lldb::TargetSP target_sp);
   };
 
   typedef std::shared_ptr<File> FileSP;
 
-  // The SourceFileCache class separates the source manager from the cache of
-  // source files, so the cache can be stored in the Debugger, but the source
-  // managers can be per target.
+  /// The SourceFileCache class separates the source manager from the cache of
+  /// source files. There is one source manager per Target but both the Debugger
+  /// and the Process have their own source caches.
+  ///
+  /// The SourceFileCache just handles adding, storing, removing and looking up
+  /// source files. The caching policies are implemented in
+  /// SourceManager::GetFile.
   class SourceFileCache {
   public:
     SourceFileCache() = default;
     ~SourceFileCache() = default;
 
-    void AddSourceFile(const FileSP &file_sp);
+    void AddSourceFile(const FileSpec &file_spec, FileSP file_sp);
+    void RemoveSourceFile(const FileSP &file_sp);
+
     FileSP FindSourceFile(const FileSpec &file_spec) const;
 
     // Removes all elements from the cache.
     void Clear() { m_file_cache.clear(); }
 
-  protected:
+    void Dump(Stream &stream) const;
+
+  private:
+    void AddSourceFileImpl(const FileSpec &file_spec, FileSP file_sp);
+
     typedef std::map<FileSpec, FileSP> FileCache;
     FileCache m_file_cache;
+
+    mutable llvm::sys::RWMutex m_mutex;
   };
 
-  // Constructors and Destructors
-  // A source manager can be made with a non-null target, in which case it can
-  // use the path remappings to find
-  // source files that are not in their build locations.  With no target it
-  // won't be able to do this.
+  /// A source manager can be made with a valid Target, in which case it can use
+  /// the path remappings to find source files that are not in their build
+  /// locations.  Without a target it won't be able to do this.
+  /// @{
   SourceManager(const lldb::DebuggerSP &debugger_sp);
   SourceManager(const lldb::TargetSP &target_sp);
+  /// @}
 
   ~SourceManager();
 

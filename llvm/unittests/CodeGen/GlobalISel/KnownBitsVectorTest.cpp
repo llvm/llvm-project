@@ -1456,10 +1456,10 @@ TEST_F(AArch64GISelMITest, TestVectorInvalidQueries) {
   KnownBits BiggerSizeRes = Info.getKnownBits(BiggerSizedShl);
 
   EXPECT_TRUE(EqSizeRes.One.isZero());
-  EXPECT_TRUE(EqSizeRes.Zero.isZero());
+  EXPECT_TRUE(EqSizeRes.Zero.isAllOnes());
 
   EXPECT_TRUE(BiggerSizeRes.One.isZero());
-  EXPECT_TRUE(BiggerSizeRes.Zero.isZero());
+  EXPECT_TRUE(BiggerSizeRes.Zero.isAllOnes());
 }
 
 TEST_F(AArch64GISelMITest, TestKnownBitsVectorAssertZext) {

@@ -61,10 +61,42 @@ struct DuplicateSymbolDiag {
 SmallVector<DuplicateSymbolDiag> dupSymDiags;
 } // namespace
 
+// Move symbols at \p fromOff in \p fromIsec into \p toIsec, unless that symbol
+// is \p skip.
+static void transplantSymbolsAtOffset(InputSection *fromIsec,
+                                      InputSection *toIsec, Defined *skip,
+                                      uint64_t fromOff, uint64_t toOff) {
+  // Ensure the symbols will still be in address order after our insertions.
+  auto insertIt = llvm::upper_bound(toIsec->symbols, toOff,
+                                    [](uint64_t off, const Symbol *s) {
+                                      return cast<Defined>(s)->value < off;
+                                    });
+  llvm::erase_if(fromIsec->symbols, [&](Symbol *s) {
+    auto *d = cast<Defined>(s);
+    if (d->value != fromOff)
+      return false;
+    if (d != skip) {
+      // This repeated insertion will be quadratic unless insertIt is the end
+      // iterator. However, that is typically the case for files that have
+      // .subsections_via_symbols set.
+      insertIt = toIsec->symbols.insert(insertIt, d);
+      d->isec = toIsec;
+      d->value = toOff;
+      // We don't want to have more than one unwindEntry at a given address, so
+      // drop the redundant ones. We We can safely drop the unwindEntries of
+      // the symbols in fromIsec since we will be adding another unwindEntry as
+      // we finish parsing toIsec's file. (We can assume that toIsec has its
+      // own unwindEntry because of the ODR.)
+      d->unwindEntry = nullptr;
+    }
+    return true;
+  });
+}
+
 Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
                                  InputSection *isec, uint64_t value,
                                  uint64_t size, bool isWeakDef,
-                                 bool isPrivateExtern, bool isThumb,
+                                 bool isPrivateExtern,
                                  bool isReferencedDynamically, bool noDeadStrip,
                                  bool isWeakDefCanBeHidden) {
   bool overridesWeakDef = false;
@@ -82,18 +114,27 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
           defined->referencedDynamically |= isReferencedDynamically;
           defined->noDeadStrip |= noDeadStrip;
         }
-        // FIXME: Handle this for bitcode files.
-        if (auto concatIsec = dyn_cast_or_null<ConcatInputSection>(isec))
+        if (auto concatIsec = dyn_cast_or_null<ConcatInputSection>(isec)) {
           concatIsec->wasCoalesced = true;
+          // Any local symbols that alias the coalesced symbol should be moved
+          // into the prevailing section. Note that we have sorted the symbols
+          // in ObjFile::parseSymbols() such that extern weak symbols appear
+          // last, so we don't need to worry about subsequent symbols being
+          // added to an already-coalesced section.
+          if (defined->isec)
+            transplantSymbolsAtOffset(concatIsec, defined->isec,
+                                      /*skip=*/nullptr, value, defined->value);
+        }
         return defined;
       }
 
       if (defined->isWeakDef()) {
-        // FIXME: Handle this for bitcode files.
         if (auto concatIsec =
                 dyn_cast_or_null<ConcatInputSection>(defined->isec)) {
           concatIsec->wasCoalesced = true;
-          concatIsec->symbols.erase(llvm::find(concatIsec->symbols, defined));
+          if (isec)
+            transplantSymbolsAtOffset(concatIsec, isec, defined, defined->value,
+                                      value);
         }
       } else {
         std::string srcLoc1 = defined->getSourceLocation();
@@ -109,10 +150,48 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
       overridesWeakDef = !isWeakDef && dysym->isWeakDef();
       dysym->unreference();
     } else if (auto *undef = dyn_cast<Undefined>(s)) {
-      // Preserve the original bitcode file name (instead of using the object
-      // file name).
-      if (undef->wasBitcodeSymbol)
-        file = undef->getFile();
+      if (undef->wasBitcodeSymbol) {
+        auto objFile = dyn_cast<ObjFile>(file);
+        if (!objFile) {
+          // The file must be a native object file, as opposed to potentially
+          // being another bitcode file. A situation arises when some symbols
+          // are defined thru `module asm` and thus they are not present in the
+          // bitcode's symbol table. Consider bitcode modules `A`, `B`, and `C`.
+          // LTO compiles only `A` and `C`, since there's no explicit symbol
+          // reference to `B` other than a symbol from `A` via `module asm`.
+          // After LTO is finished, the missing symbol now appears in the
+          // resulting object file for `A`, which  prematurely resolves another
+          // prevailing symbol with `B` that hasn't been compiled, instead of
+          // the resulting object for `C`. Consequently, an incorrect
+          // relocation is generated for the prevailing symbol.
+          assert(isa<BitcodeFile>(file) && "Bitcode file is expected.");
+          std::string message =
+              "The pending prevailing symbol(" + name.str() +
+              ") in the bitcode file(" + toString(undef->getFile()) +
+              ") is overridden by a non-native object (from bitcode): " +
+              toString(file);
+          error(message);
+        } else if (!objFile->builtFromBitcode) {
+          // Ideally, this should be an object file compiled from a bitcode
+          // file. However, this might not hold true if a LC linker option is
+          // used. In case LTO internalizes a prevailing hidden weak symbol,
+          // there's a situation where an unresolved prevailing symbol might be
+          // linked with the corresponding one from a native library, which is
+          // loaded later after LTO. Although this could potentially result in
+          // an ODR violation, we choose to permit this scenario as a warning.
+          std::string message = "The pending prevailing symbol(" + name.str() +
+                                ") in the bitcode file(" +
+                                toString(undef->getFile()) +
+                                ") is overridden by a post-processed native "
+                                "object (from native archive): " +
+                                toString(file);
+          warn(message);
+        } else {
+          // Preserve the original bitcode file name (instead of using the
+          // object file name).
+          file = undef->getFile();
+        }
+      }
     }
     // Defined symbols take priority over other types of symbols, so in case
     // of a name conflict, we fall through to the replaceSymbol() call below.
@@ -125,9 +204,8 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
                       !isPrivateExtern;
   Defined *defined = replaceSymbol<Defined>(
       s, name, file, isec, value, size, isWeakDef, /*isExternal=*/true,
-      isPrivateExtern, /*includeInSymtab=*/true, isThumb,
-      isReferencedDynamically, noDeadStrip, overridesWeakDef,
-      isWeakDefCanBeHidden, interposable);
+      isPrivateExtern, /*includeInSymtab=*/true, isReferencedDynamically,
+      noDeadStrip, overridesWeakDef, isWeakDefCanBeHidden, interposable);
   return defined;
 }
 
@@ -135,7 +213,7 @@ Defined *SymbolTable::aliasDefined(Defined *src, StringRef target,
                                    InputFile *newFile, bool makePrivateExtern) {
   bool isPrivateExtern = makePrivateExtern || src->privateExtern;
   return addDefined(target, newFile, src->isec, src->value, src->size,
-                    src->isWeakDef(), isPrivateExtern, src->thumb,
+                    src->isWeakDef(), isPrivateExtern,
                     src->referencedDynamically, src->noDeadStrip,
                     src->weakDefCanBeHidden);
 }
@@ -254,11 +332,10 @@ Defined *SymbolTable::addSynthetic(StringRef name, InputSection *isec,
                                    bool includeInSymtab,
                                    bool referencedDynamically) {
   assert(!isec || !isec->getFile()); // See makeSyntheticInputSection().
-  Defined *s =
-      addDefined(name, /*file=*/nullptr, isec, value, /*size=*/0,
-                 /*isWeakDef=*/false, isPrivateExtern, /*isThumb=*/false,
-                 referencedDynamically, /*noDeadStrip=*/false,
-                 /*isWeakDefCanBeHidden=*/false);
+  Defined *s = addDefined(name, /*file=*/nullptr, isec, value, /*size=*/0,
+                          /*isWeakDef=*/false, isPrivateExtern,
+                          referencedDynamically, /*noDeadStrip=*/false,
+                          /*isWeakDefCanBeHidden=*/false);
   s->includeInSymtab = includeInSymtab;
   return s;
 }
@@ -346,7 +423,7 @@ static bool recoverFromUndefinedSymbol(const Undefined &sym) {
   }
 
   // Leave dtrace symbols, since we will handle them when we do the relocation
-  if (name.startswith("___dtrace_"))
+  if (name.starts_with("___dtrace_"))
     return true;
 
   // Handle -U.
@@ -382,7 +459,7 @@ struct UndefinedDiag {
 };
 
 MapVector<const Undefined *, UndefinedDiag> undefs;
-}
+} // namespace
 
 void macho::reportPendingDuplicateSymbols() {
   for (const auto &duplicate : dupSymDiags) {
@@ -418,8 +495,8 @@ static bool canSuggestExternCForCXX(StringRef ref, StringRef def) {
 // the suggested symbol, which is either in the symbol table, or in the same
 // file of sym.
 static const Symbol *getAlternativeSpelling(const Undefined &sym,
-                                            std::string &pre_hint,
-                                            std::string &post_hint) {
+                                            std::string &preHint,
+                                            std::string &postHint) {
   DenseMap<StringRef, const Symbol *> map;
   if (sym.getFile() && sym.getFile()->kind() == InputFile::ObjKind) {
     // Build a map of local defined symbols.
@@ -491,7 +568,7 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
 
   // The reference may be a mangled name while the definition is not. Suggest a
   // missing extern "C".
-  if (name.startswith("__Z")) {
+  if (name.starts_with("__Z")) {
     std::string buf = name.str();
     llvm::ItaniumPartialDemangler d;
     if (!d.partialDemangle(buf.c_str()))
@@ -499,28 +576,28 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
         const Symbol *s = suggest((Twine("_") + buf).str());
         free(buf);
         if (s) {
-          pre_hint = ": extern \"C\" ";
+          preHint = ": extern \"C\" ";
           return s;
         }
       }
   } else {
-    StringRef name_without_underscore = name;
-    name_without_underscore.consume_front("_");
+    StringRef nameWithoutUnderscore = name;
+    nameWithoutUnderscore.consume_front("_");
     const Symbol *s = nullptr;
     for (auto &it : map)
-      if (canSuggestExternCForCXX(name_without_underscore, it.first)) {
+      if (canSuggestExternCForCXX(nameWithoutUnderscore, it.first)) {
         s = it.second;
         break;
       }
     if (!s)
       for (Symbol *sym : symtab->getSymbols())
-        if (canSuggestExternCForCXX(name_without_underscore, sym->getName())) {
+        if (canSuggestExternCForCXX(nameWithoutUnderscore, sym->getName())) {
           s = sym;
           break;
         }
     if (s) {
-      pre_hint = " to declare ";
-      post_hint = " as extern \"C\"?";
+      preHint = " to declare ";
+      postHint = " as extern \"C\"?";
       return s;
     }
   }
@@ -564,11 +641,11 @@ static void reportUndefinedSymbol(const Undefined &sym,
             .str();
 
   if (correctSpelling) {
-    std::string pre_hint = ": ", post_hint;
+    std::string preHint = ": ", postHint;
     if (const Symbol *corrected =
-            getAlternativeSpelling(sym, pre_hint, post_hint)) {
+            getAlternativeSpelling(sym, preHint, postHint)) {
       message +=
-          "\n>>> did you mean" + pre_hint + toString(*corrected) + post_hint;
+          "\n>>> did you mean" + preHint + toString(*corrected) + postHint;
       if (corrected->getFile())
         message += "\n>>> defined in: " + toString(corrected->getFile());
     }

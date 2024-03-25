@@ -12,6 +12,7 @@
 
 // void push_front(value_type&& v);
 
+#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 #include <cstddef>
@@ -54,6 +55,7 @@ test(C& c1, int x)
     assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
     I i = c1.begin();
     assert(*i == MoveOnly(x));
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
     ++i;
     for (int j = 0; static_cast<std::size_t>(j) < c1_osize; ++j, (void) ++i)
         assert(*i == MoveOnly(j));
@@ -82,7 +84,7 @@ int main(int, char**)
     const int N = sizeof(rng)/sizeof(rng[0]);
     for (int i = 0; i < N; ++i)
         for (int j = 0; j < N; ++j)
-            testN<std::deque<MoveOnly, min_allocator<MoveOnly>> >(rng[i], rng[j]);
+            testN<std::deque<MoveOnly, safe_allocator<MoveOnly>> >(rng[i], rng[j]);
     }
 
   return 0;

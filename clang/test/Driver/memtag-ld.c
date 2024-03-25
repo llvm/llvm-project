@@ -24,11 +24,11 @@
 // RUN:   | FileCheck %s \
 // RUN:   --check-prefixes=CHECK-ASYNC,CHECK-HEAP,CHECK-NO-STACK
 
-// RUN: %clang -### --target=aarch64-linux-android -march=armv8+memtag \
+// RUN: not %clang -### --target=aarch64-linux-android -march=armv8+memtag \
 // RUN:   -fsanitize=memtag-heap -fsanitize-memtag-mode=asymm %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefixes=CHECK-INVALID-MODE
 
-// RUN: %clang -### --target=aarch64-linux-android -march=armv8+memtag \
+// RUN: not %clang -### --target=aarch64-linux-android -march=armv8+memtag \
 // RUN:   -fsanitize=memtag-stack -fsanitize=memtag-heap \
 // RUN:   -fsanitize-memtag-mode=asymm -fno-sanitize=memtag %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefixes=CHECK-NONE

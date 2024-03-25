@@ -42,7 +42,7 @@ struct ForLoopMapper : public impl::ConvertAffineForToGPUBase<ForLoopMapper> {
   void runOnOperation() override {
     for (Operation &op : llvm::make_early_inc_range(
              getOperation().getFunctionBody().getOps())) {
-      if (auto forOp = dyn_cast<AffineForOp>(&op)) {
+      if (auto forOp = dyn_cast<affine::AffineForOp>(&op)) {
         if (failed(convertAffineLoopNestToGPULaunch(forOp, numBlockDims,
                                                     numThreadDims)))
           signalPassFailure();

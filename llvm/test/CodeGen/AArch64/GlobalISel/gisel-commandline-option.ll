@@ -62,16 +62,15 @@
 ; ENABLED-O1-NEXT:  MachineDominator Tree Construction
 ; ENABLED-O1-NEXT:  Analysis containing CSE Info
 ; ENABLED-O1-NEXT:  PreLegalizerCombiner
+; ENABLED-O1-NEXT:  Localizer
 ; VERIFY-O0-NEXT:  AArch64O0PreLegalizerCombiner
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-O1-NEXT: LoadStoreOpt
-; VERIFY-O0-NEXT:  Analysis containing CSE Info
-; ENABLED-NEXT:  Legalizer
+; ENABLED-O1-NEXT:  Analysis containing CSE Info
+; ENABLED:  Legalizer
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED:  RegBankSelect
 ; VERIFY-NEXT:   Verify generated machine code
-; ENABLED-NEXT:  Localizer
-; VERIFY-O0-NEXT:   Verify generated machine code
 ; ENABLED-NEXT: Analysis for ComputingKnownBits
 ; ENABLED-O1-NEXT: Lazy Branch Probability Analysis
 ; ENABLED-O1-NEXT: Lazy Block Frequency Analysis

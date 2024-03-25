@@ -293,9 +293,12 @@ static int RunInMultipleProcesses(const std::vector<std::string> &Args,
   std::vector<std::thread> V;
   std::thread Pulse(PulseThread);
   Pulse.detach();
-  for (unsigned i = 0; i < NumWorkers; i++)
-    V.push_back(std::thread(WorkerThread, std::ref(Cmd), &Counter, NumJobs,
-                            &HasErrors));
+  V.resize(NumWorkers);
+  for (unsigned i = 0; i < NumWorkers; i++) {
+    V[i] = std::thread(WorkerThread, std::ref(Cmd), &Counter, NumJobs,
+                            &HasErrors);
+    SetThreadName(V[i], "FuzzerWorker");
+  }
   for (auto &T : V)
     T.join();
   return HasErrors ? 1 : 0;
@@ -463,7 +466,7 @@ int MinimizeCrashInput(const std::vector<std::string> &Args,
         CurrentFilePath = Flags.exact_artifact_path;
         WriteToFile(U, CurrentFilePath);
       }
-      Printf("CRASH_MIN: failed to minimize beyond %s (%d bytes), exiting\n",
+      Printf("CRASH_MIN: failed to minimize beyond %s (%zu bytes), exiting\n",
              CurrentFilePath.c_str(), U.size());
       break;
     }
@@ -501,7 +504,6 @@ int MinimizeCrashInputInternalStep(Fuzzer *F, InputCorpus *Corpus) {
   F->MinimizeCrashLoop(U);
   Printf("INFO: Done MinimizeCrashInputInternalStep, no crashes found\n");
   exit(0);
-  return 0;
 }
 
 void Merge(Fuzzer *F, FuzzingOptions &Options,
@@ -535,7 +537,7 @@ void Merge(Fuzzer *F, FuzzingOptions &Options,
 
 int AnalyzeDictionary(Fuzzer *F, const std::vector<Unit> &Dict,
                       UnitVector &Corpus) {
-  Printf("Started dictionary minimization (up to %d tests)\n",
+  Printf("Started dictionary minimization (up to %zu tests)\n",
          Dict.size() * Corpus.size() * 2);
 
   // Scores and usage count for each dictionary unit.
@@ -779,7 +781,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   if (!Options.FocusFunction.empty())
     Options.Entropic = false; // FocusFunction overrides entropic scheduling.
   if (Options.Entropic)
-    Printf("INFO: Running with entropic power schedule (0x%X, %d).\n",
+    Printf("INFO: Running with entropic power schedule (0x%zX, %zu).\n",
            Options.EntropicFeatureFrequencyThreshold,
            Options.EntropicNumberOfRarestFeatures);
   struct EntropicOptions Entropic;
@@ -797,7 +799,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   if (Flags.verbosity)
     Printf("INFO: Seed: %u\n", Seed);
 
-  if (Flags.collect_data_flow && !Flags.fork &&
+  if (Flags.collect_data_flow && Flags.data_flow_trace && !Flags.fork &&
       !(Flags.merge || Flags.set_cover_merge)) {
     if (RunIndividualFiles)
       return CollectDataFlow(Flags.collect_data_flow, Flags.data_flow_trace,
@@ -860,7 +862,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
         RunOneTest(F, Path.c_str(), Options.MaxLen);
       auto StopTime = system_clock::now();
       auto MS = duration_cast<milliseconds>(StopTime - StartTime).count();
-      Printf("Executed %s in %zd ms\n", Path.c_str(), (long)MS);
+      Printf("Executed %s in %ld ms\n", Path.c_str(), (long)MS);
     }
     Printf("***\n"
            "*** NOTE: fuzzing was not performed, you have only\n"

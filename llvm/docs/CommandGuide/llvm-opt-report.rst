@@ -15,6 +15,9 @@ DESCRIPTION
 
 You need to create an input YAML optimization record file before running :program:`llvm-opt-report`.
 
+It provides information on the execution time, memory usage, and other details of each optimization pass.
+
+
 .. code-block:: console
 
  $ clang -c foo.c -o foo.o -O3 -fsave-optimization-record
@@ -59,6 +62,12 @@ The meanings of the symbols are as follows:
 - I: The function is inlined.
 - U: The loop is unrolled. The following number indicates the unroll factor.
 - V: The loop is vectorized. The following numbers indicate the vector length and the interleave factor.
+
+.. note:: 
+
+    If a specific line of code is output twice, it means that the same optimization pass was applied to that 
+    line of code twice, and the pass was able to further optimize the code on the second iteration.
+
 
 OPTIONS
 -------

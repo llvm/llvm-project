@@ -1,4 +1,4 @@
-; RUN: llvm-mc -show-encoding -triple=m68k %s | FileCheck %s
+; RUN: llvm-mc -show-encoding -triple=m68k -mcpu=M68020 %s | FileCheck %s
 
 ; CHECK: cas.b %d3, %d2, (%a2)
 ; CHECK-SAME: ; encoding: [0x0a,0xd2,0x00,0x83]

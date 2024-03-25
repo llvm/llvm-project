@@ -83,16 +83,15 @@ define i32 @main() nounwind  {
 ; CHECK-NEXT:    call void @g(ptr byval(ptr) align 4 [[S]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @h(ptr byval(ptr) align 4 [[S]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @k(ptr byval(ptr) align 4 [[S]]) #[[ATTR0]]
-; CHECK-NEXT:    [[S_VAL:%.*]] = load ptr, ptr [[S]], align 8
 ; CHECK-NEXT:    call void @l() #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %S = alloca %struct.ss, align 32
-  %temp1 = getelementptr %struct.ss, %struct.ss* %S, i32 0, i32 0
-  store i32 1, i32* %temp1, align 4
-  %temp4 = getelementptr %struct.ss, %struct.ss* %S, i32 0, i32 1
-  store i64 2, i64* %temp4, align 8
+  %temp1 = getelementptr %struct.ss, ptr %S, i32 0, i32 0
+  store i32 1, ptr %temp1, align 4
+  %temp4 = getelementptr %struct.ss, ptr %S, i32 0, i32 1
+  store i64 2, ptr %temp4, align 8
   call void @f(ptr byval(ptr) align 4 %S) nounwind
   call void @g(ptr byval(ptr) align 4 %S) nounwind
   call void @h(ptr byval(ptr) align 4 %S) nounwind

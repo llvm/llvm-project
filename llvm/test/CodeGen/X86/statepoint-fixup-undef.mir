@@ -61,7 +61,7 @@ frameInfo:
   stackSize:       0
   offsetAdjustment: 0
   maxAlignment:    8
-  adjustsStack:    false
+  adjustsStack:    true
   hasCalls:        true
   stackProtector:  ''
   maxCallFrameSize: 4294967295
@@ -124,12 +124,11 @@ body:             |
   ; STACKMAP-NEXT:	.byte	0
   ; STACKMAP-NEXT:	.short	0
   ; STACKMAP-NEXT:	.long	1
-  ; STACKMAP-NEXT:	.long	1
+  ; STACKMAP-NEXT:	.long	0
   ; STACKMAP-NEXT:	.long	1
   ; STACKMAP-NEXT:	.quad	test_undef
   ; STACKMAP-NEXT:	.quad	88
   ; STACKMAP-NEXT:	.quad	1
-  ; STACKMAP-NEXT:	.quad	4278124286
   ; STACKMAP-NEXT:	.quad	2
   ; STACKMAP-NEXT:	.long	.Ltmp0-test_undef
   ; STACKMAP-NEXT:	.short	0
@@ -182,13 +181,13 @@ body:             |
   ; STACKMAP-NEXT:	.short	3
   ; STACKMAP-NEXT:	.short	0
   ; STACKMAP-NEXT:	.long	0
-  ;      This is entry we're looking for, reference to constant pool entry 0xFEFEFEFE
-  ; STACKMAP-NEXT:	.byte	5
+  ;      This is a constant 0xFEFEFEFE we are looking for
+  ; STACKMAP-NEXT:	.byte	4
   ; STACKMAP-NEXT:	.byte	0
   ; STACKMAP-NEXT:	.short	8
   ; STACKMAP-NEXT:	.short	0
   ; STACKMAP-NEXT:	.short	0
-  ; STACKMAP-NEXT:	.long	0
+  ; STACKMAP-NEXT:	.long	-16843010
   ; STACKMAP-NEXT:	.byte	4
   ; STACKMAP-NEXT:	.byte	0
   ; STACKMAP-NEXT:	.short	8

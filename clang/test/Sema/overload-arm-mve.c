@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple thumbv8.1m.main-none-none-eabi -target-feature +mve.fp -flax-vector-conversions=all -fdouble-square-bracket-attributes -Werror -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple thumbv8.1m.main-none-none-eabi -target-feature +mve.fp -flax-vector-conversions=all -fdouble-square-bracket-attributes -verify -fsyntax-only -DERROR_CHECK %s
+// RUN: %clang_cc1 -triple thumbv8.1m.main-none-none-eabi -target-feature +mve.fp -flax-vector-conversions=all -Werror -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple thumbv8.1m.main-none-none-eabi -target-feature +mve.fp -flax-vector-conversions=all -verify -fsyntax-only -DERROR_CHECK %s
 
 typedef   signed short      int16_t;
 typedef   signed int        int32_t;

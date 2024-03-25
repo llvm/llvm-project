@@ -1317,6 +1317,27 @@ func.func @select_aliases(%arg0: index, %arg1: memref<?xi8>, %arg2: i1) {
 
 // -----
 
+func.func @f(%arg0: memref<f64>) -> memref<f64> {
+  return %arg0 : memref<f64>
+}
+
+// CHECK-LABEL: func @function_call
+//       CHECK:   memref.alloc
+//       CHECK:   memref.alloc
+//       CHECK:   call
+//       CHECK:   test.copy
+//       CHECK:   memref.dealloc
+//       CHECK:   memref.dealloc
+func.func @function_call() {
+  %alloc = memref.alloc() : memref<f64>
+  %alloc2 = memref.alloc() : memref<f64>
+  %ret = call @f(%alloc) : (memref<f64>) -> memref<f64>
+  test.copy(%ret, %alloc2) : (memref<f64>, memref<f64>)
+  return
+}
+
+// -----
+
 // Memref allocated in `then` region and passed back to the parent if op.
 #set = affine_set<() : (0 >= 0)>
 // CHECK-LABEL:  func @test_affine_if_1
@@ -1418,3 +1439,24 @@ func.func @test_affine_if_4(%arg0 : memref<10xf32>) -> memref<10xf32> {
 // CHECK-NEXT:    %[[ALLOC:.*]] = memref.alloc() : memref<10xf32>
 // CHECK-NEXT:    memref.dealloc %[[ALLOC]] : memref<10xf32>
 // CHECK-NEXT:    affine.if
+
+// -----
+
+// Ensure we free the realloc, not the alloc.
+
+// CHECK-LABEL: func @auto_dealloc()
+func.func @auto_dealloc() {
+  %c10 = arith.constant 10 : index
+  %c100 = arith.constant 100 : index
+  %alloc = memref.alloc(%c10) : memref<?xi32>
+  %realloc = memref.realloc %alloc(%c100) : memref<?xi32> to memref<?xi32>
+  return
+}
+// CHECK-DAG:   %[[C10:.*]] = arith.constant 10 : index
+// CHECK-DAG:   %[[C100:.*]] = arith.constant 100 : index
+// CHECK-NEXT:  %[[A:.*]] = memref.alloc(%[[C10]]) : memref<?xi32>
+// CHECK-NEXT:  %[[R:.*]] = memref.realloc %alloc(%[[C100]]) : memref<?xi32> to memref<?xi32>
+// CHECK-NEXT:  memref.dealloc %[[R]] : memref<?xi32>
+// CHECK-NEXT:  return
+
+

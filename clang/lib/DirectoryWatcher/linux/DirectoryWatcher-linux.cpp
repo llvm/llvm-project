@@ -14,7 +14,6 @@
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include <atomic>
 #include <condition_variable>
@@ -25,6 +24,7 @@
 #include <vector>
 
 #include <fcntl.h>
+#include <limits.h>
 #include <optional>
 #include <sys/epoll.h>
 #include <sys/inotify.h>
@@ -333,8 +333,7 @@ llvm::Expected<std::unique_ptr<DirectoryWatcher>> clang::DirectoryWatcher::creat
   const int InotifyFD = inotify_init1(IN_CLOEXEC);
   if (InotifyFD == -1)
     return llvm::make_error<llvm::StringError>(
-        std::string("inotify_init1() error: ") + strerror(errno),
-        llvm::inconvertibleErrorCode());
+        llvm::errnoAsErrorCode(), std::string(": inotify_init1()"));
 
   const int InotifyWD = inotify_add_watch(
       InotifyFD, Path.str().c_str(),
@@ -346,15 +345,13 @@ llvm::Expected<std::unique_ptr<DirectoryWatcher>> clang::DirectoryWatcher::creat
       );
   if (InotifyWD == -1)
     return llvm::make_error<llvm::StringError>(
-        std::string("inotify_add_watch() error: ") + strerror(errno),
-        llvm::inconvertibleErrorCode());
+        llvm::errnoAsErrorCode(), std::string(": inotify_add_watch()"));
 
   auto InotifyPollingStopper = SemaphorePipe::create();
 
   if (!InotifyPollingStopper)
     return llvm::make_error<llvm::StringError>(
-        std::string("SemaphorePipe::create() error: ") + strerror(errno),
-        llvm::inconvertibleErrorCode());
+        llvm::errnoAsErrorCode(), std::string(": SemaphorePipe::create()"));
 
   return std::make_unique<DirectoryWatcherLinux>(
       Path, Receiver, WaitForInitialSync, InotifyFD, InotifyWD,

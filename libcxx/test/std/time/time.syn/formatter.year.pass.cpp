@@ -5,14 +5,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
-// UNSUPPORTED: libcpp-has-no-incomplete-format
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// TODO FMT Investigate Windows issues.
-// UNSUPPORTED: msvc, target={{.+}}-windows-gnu
+// TODO FMT This test should not require std::to_chars(floating-point)
+// XFAIL: availability-fp_to_chars-missing
 
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ja_JP.UTF-8
@@ -83,7 +81,7 @@ static void test_valid_values() {
 
   // Non localized output using C-locale
   check(SV("%C='00'\t"
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(_WIN32) || defined(__FreeBSD__)
            "%EC='00'\t"
 #else
            "%EC='0'\t"
@@ -92,7 +90,7 @@ static void test_valid_values() {
            "%Ey='00'\t"
            "%Oy='00'\t"
            "%Y='0000'\t"
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(_WIN32) || defined(__FreeBSD__)
            "%EY='0000'\t"
 #elif defined(_AIX)
            "%EY=''\t"
@@ -127,7 +125,7 @@ static void test_valid_values() {
 
   // Use the global locale (fr_FR)
   check(SV("%C='00'\t"
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(_WIN32) || defined(__FreeBSD__)
            "%EC='00'\t"
 #else
            "%EC='0'\t"
@@ -136,7 +134,7 @@ static void test_valid_values() {
            "%Ey='00'\t"
            "%Oy='00'\t"
            "%Y='0000'\t"
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(_WIN32) || defined(__FreeBSD__)
            "%EY='0000'\t"
 #elif defined(_AIX)
            "%EY=''\t"
@@ -170,10 +168,10 @@ static void test_valid_values() {
         std::chrono::year{2038});
 
   // Use supplied locale (ja_JP). This locale has a different alternate.
-#if defined(__APPLE__) || defined(_AIX)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
 
   check(SV("%C='00'\t"
-#  if defined(__APPLE__)
+#  if defined(__APPLE__) || defined(_WIN32) || defined(__FreeBSD__)
            "%EC='00'\t"
 #  else
            "%EC='0'\t"
@@ -213,12 +211,12 @@ static void test_valid_values() {
         lfmt,
         std::chrono::year{2038});
 
-#else // defined(__APPLE__) || defined(_AIX)
+#else // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
   check(loc,
         SV("%C='00'\t"
            "%EC='紀元前'\t"
            "%y='00'\t"
-// https://sourceware.org/bugzilla/show_bug.cgi?id=23758
+  // https://sourceware.org/bugzilla/show_bug.cgi?id=23758
 #  if defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 29
            "%Ey='1'\t"
 #  else
@@ -226,7 +224,7 @@ static void test_valid_values() {
 #  endif
            "%Oy='〇'\t"
            "%Y='0000'\t"
-// https://sourceware.org/bugzilla/show_bug.cgi?id=23758
+  // https://sourceware.org/bugzilla/show_bug.cgi?id=23758
 #  if defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 29
            "%EY='紀元前1年'\t"
 #  else
@@ -260,7 +258,7 @@ static void test_valid_values() {
            "\n"),
         lfmt,
         std::chrono::year{2038});
-#endif // defined(__APPLE__) || defined(_AIX)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
 
   std::locale::global(std::locale::classic());
 }
@@ -268,7 +266,6 @@ static void test_valid_values() {
 template <class CharT>
 static void test_padding() {
   constexpr std::basic_string_view<CharT> fmt = SV("{:%%C='%C'%t%%y='%y'%t%%Y='%Y'%t%n}");
-
   check(SV("%C='-100'\t%y='99'\t%Y='-9999'\t\n"), fmt, std::chrono::year{-9'999});
   check(SV("%C='-10'\t%y='99'\t%Y='-0999'\t\n"), fmt, std::chrono::year{-999});
   check(SV("%C='-1'\t%y='99'\t%Y='-0099'\t\n"), fmt, std::chrono::year{-99});
@@ -289,14 +286,14 @@ static void test() {
   check_invalid_types<CharT>(
       {SV("C"), SV("y"), SV("Y"), SV("EC"), SV("Ey"), SV("EY"), SV("Oy")}, std::chrono::year{1970});
 
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:A"), std::chrono::year{1970});
-  check_exception("The chrono-specs contains a '{'", SV("{:%%{"), std::chrono::year{1970});
-  check_exception("End of input while parsing the modifier chrono conversion-spec", SV("{:%"), std::chrono::year{1970});
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:A"), std::chrono::year{1970});
+  check_exception("The chrono specifiers contain a '{'", SV("{:%%{"), std::chrono::year{1970});
+  check_exception("End of input while parsing a conversion specifier", SV("{:%"), std::chrono::year{1970});
   check_exception("End of input while parsing the modifier E", SV("{:%E"), std::chrono::year{1970});
   check_exception("End of input while parsing the modifier O", SV("{:%O"), std::chrono::year{1970});
 
   // Precision not allowed
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:.3}"), std::chrono::year{1970});
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:.3}"), std::chrono::year{1970});
 }
 
 int main(int, char**) {

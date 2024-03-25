@@ -42,12 +42,12 @@ bool g(int i)
 }
 
 struct PredLWG526 {
-    PredLWG526 (int i) : i_(i) {};
-    ~PredLWG526() { i_ = -32767; }
-    bool operator() (const PredLWG526 &p) const { return p.i_ == i_; }
+  PredLWG526(int i) : i_(i) {}
+  ~PredLWG526() { i_ = -32767; }
+  bool operator()(const PredLWG526& p) const { return p.i_ == i_; }
 
-    bool operator==(int i) const { return i == i_;}
-    int i_;
+  bool operator==(int i) const { return i == i_; }
+  int i_;
 };
 
 int main(int, char**)
@@ -120,7 +120,7 @@ int main(int, char**)
     int a2[] = {   2,    3, 5, 8, 11};
     std::forward_list<PredLWG526> c(a1, a1 + 7);
     do_remove_if(c, std::ref(c.front()), 2);
-    for (size_t i = 0; i < 5; ++i)
+    for (std::size_t i = 0; i < 5; ++i)
     {
         assert(!c.empty());
         assert(c.front() == a2[i]);

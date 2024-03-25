@@ -14,6 +14,11 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
+// AIX doesn't support the debug_addr section
+#ifdef _AIX
+#define NO_SUPPORT_DEBUG_ADDR
+#endif
+
 using namespace llvm;
 using namespace dwarf;
 using namespace dwarfgen;
@@ -181,11 +186,7 @@ void checkDefaultPrologue(uint16_t Version, DwarfFormat Format,
   EXPECT_STREQ(*toString(Prologue.FileNames[0].Name), "a file");
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture, DISABLED_GetOrParseLineTableAtInvalidOffset) {
-#else
 TEST_F(DebugLineBasicFixture, GetOrParseLineTableAtInvalidOffset) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
   generate();
@@ -207,12 +208,7 @@ TEST_F(DebugLineBasicFixture, GetOrParseLineTableAtInvalidOffset) {
           "offset 0x00000001 is not a valid debug line section offset"));
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_GetOrParseLineTableAtInvalidOffsetAfterData) {
-#else
 TEST_F(DebugLineBasicFixture, GetOrParseLineTableAtInvalidOffsetAfterData) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -233,7 +229,7 @@ TEST_F(DebugLineBasicFixture, GetOrParseLineTableAtInvalidOffsetAfterData) {
           "offset 0x00000001 is not a valid debug line section offset"));
 }
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_P(DebugLineParameterisedFixture, DISABLED_PrologueGetLength) {
 #else
 TEST_P(DebugLineParameterisedFixture, PrologueGetLength) {
@@ -260,7 +256,7 @@ TEST_P(DebugLineParameterisedFixture, PrologueGetLength) {
   EXPECT_EQ((*ExpectedLineTable)->Prologue.getLength(), ExpectedLength);
 }
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_P(DebugLineParameterisedFixture, DISABLED_GetOrParseLineTableValidTable) {
 #else
 TEST_P(DebugLineParameterisedFixture, GetOrParseLineTableValidTable) {
@@ -330,7 +326,7 @@ TEST_P(DebugLineParameterisedFixture, GetOrParseLineTableValidTable) {
   // correctly.
 }
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_P(DebugLineParameterisedFixture, DISABLED_ClearLineValidTable) {
 #else
 TEST_P(DebugLineParameterisedFixture, ClearLineValidTable) {
@@ -406,11 +402,7 @@ TEST_P(DebugLineParameterisedFixture, ClearLineValidTable) {
   EXPECT_EQ(Expected4->Sequences.size(), 2u);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture, DISABLED_ErrorForReservedLength) {
-#else
 TEST_F(DebugLineBasicFixture, ErrorForReservedLength) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -433,12 +425,7 @@ struct DebugLineUnsupportedVersionFixture : public TestWithParam<uint16_t>,
   uint16_t Version;
 };
 
-#ifdef _AIX
-TEST_P(DebugLineUnsupportedVersionFixture,
-       DISABLED_ErrorForUnsupportedVersion) {
-#else
 TEST_P(DebugLineUnsupportedVersionFixture, ErrorForUnsupportedVersion) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -460,7 +447,7 @@ INSTANTIATE_TEST_SUITE_P(UnsupportedVersionTestParams,
                          Values(/*1 below min */ 1, /* 1 above max */ 6,
                                 /* Maximum possible */ 0xffff));
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_F(DebugLineBasicFixture, DISABLED_ErrorForInvalidV5IncludeDirTable) {
 #else
 TEST_F(DebugLineBasicFixture, ErrorForInvalidV5IncludeDirTable) {
@@ -505,7 +492,7 @@ TEST_F(DebugLineBasicFixture, ErrorForInvalidV5IncludeDirTable) {
           "found"));
 }
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_P(DebugLineParameterisedFixture, DISABLED_ErrorForTooLargePrologueLength) {
 #else
 TEST_P(DebugLineParameterisedFixture, ErrorForTooLargePrologueLength) {
@@ -545,7 +532,7 @@ TEST_P(DebugLineParameterisedFixture, ErrorForTooLargePrologueLength) {
               .str()));
 }
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_P(DebugLineParameterisedFixture, DISABLED_ErrorForTooShortPrologueLength) {
 #else
 TEST_P(DebugLineParameterisedFixture, ErrorForTooShortPrologueLength) {
@@ -603,12 +590,7 @@ INSTANTIATE_TEST_SUITE_P(
            std::make_pair(4, DWARF64), // Test v4 fields and DWARF64.
            std::make_pair(5, DWARF32), std::make_pair(5, DWARF64)));
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ErrorForExtendedOpcodeLengthSmallerThanExpected) {
-#else
 TEST_F(DebugLineBasicFixture, ErrorForExtendedOpcodeLengthSmallerThanExpected) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -637,12 +619,7 @@ TEST_F(DebugLineBasicFixture, ErrorForExtendedOpcodeLengthSmallerThanExpected) {
   EXPECT_EQ((*ExpectedLineTable)->Rows[1].Discriminator, DW_LNS_negate_stmt);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ErrorForExtendedOpcodeLengthLargerThanExpected) {
-#else
 TEST_F(DebugLineBasicFixture, ErrorForExtendedOpcodeLengthLargerThanExpected) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -671,11 +648,7 @@ TEST_F(DebugLineBasicFixture, ErrorForExtendedOpcodeLengthLargerThanExpected) {
   EXPECT_EQ((*ExpectedLineTable)->Rows[2].IsStmt, 1u);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture, DISABLED_ErrorForUnitLengthTooLarge) {
-#else
 TEST_F(DebugLineBasicFixture, ErrorForUnitLengthTooLarge) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -704,11 +677,7 @@ TEST_F(DebugLineBasicFixture, ErrorForUnitLengthTooLarge) {
   EXPECT_EQ((*ExpectedLineTable)->Sequences.size(), 1u);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture, DISABLED_ErrorForMismatchedAddressSize) {
-#else
 TEST_F(DebugLineBasicFixture, ErrorForMismatchedAddressSize) {
-#endif
   if (!setupGenerator(4, 8))
     GTEST_SKIP();
 
@@ -737,13 +706,8 @@ TEST_F(DebugLineBasicFixture, ErrorForMismatchedAddressSize) {
   EXPECT_EQ((*ExpectedLineTable)->Rows[1].Address.Address, Addr2);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ErrorForMismatchedAddressSizeUnsetInitialAddress) {
-#else
 TEST_F(DebugLineBasicFixture,
        ErrorForMismatchedAddressSizeUnsetInitialAddress) {
-#endif
   if (!setupGenerator(4, 0))
     GTEST_SKIP();
 
@@ -769,13 +733,8 @@ TEST_F(DebugLineBasicFixture,
   EXPECT_EQ((*ExpectedLineTable)->Rows[1].Address.Address, Addr2);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ErrorForUnsupportedAddressSizeInSetAddressLength) {
-#else
 TEST_F(DebugLineBasicFixture,
        ErrorForUnsupportedAddressSizeInSetAddressLength) {
-#endif
   // Use DWARF v4, and 0 for data extractor address size so that the address
   // size is derived from the opcode length.
   if (!setupGenerator(4, 0))
@@ -807,11 +766,7 @@ TEST_F(DebugLineBasicFixture,
   EXPECT_EQ((*ExpectedLineTable)->Rows[0].Address.Address, 0u);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture, DISABLED_ErrorForAddressSizeGreaterThanByteSize) {
-#else
 TEST_F(DebugLineBasicFixture, ErrorForAddressSizeGreaterThanByteSize) {
-#endif
   // Use DWARF v4, and 0 for data extractor address size so that the address
   // size is derived from the opcode length.
   if (!setupGenerator(4, 0))
@@ -835,7 +790,7 @@ TEST_F(DebugLineBasicFixture, ErrorForAddressSizeGreaterThanByteSize) {
   ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
 }
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_F(DebugLineBasicFixture,
        DISABLED_ErrorForUnsupportedAddressSizeDefinedInHeader) {
 #else
@@ -868,7 +823,9 @@ TEST_F(DebugLineBasicFixture, ErrorForUnsupportedAddressSizeDefinedInHeader) {
                                                     nullptr, RecordRecoverable);
   EXPECT_THAT_ERROR(
       std::move(Recoverable),
-      FailedWithMessage("address size 0x09 of DW_LNE_set_address opcode at "
+      FailedWithMessage("parsing line table prologue at offset 0x00000000: "
+                        "invalid address size 9",
+                        "address size 0x09 of DW_LNE_set_address opcode at "
                         "offset 0x00000038 is unsupported"));
   ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
   ASSERT_EQ((*ExpectedLineTable)->Rows.size(), 3u);
@@ -877,11 +834,7 @@ TEST_F(DebugLineBasicFixture, ErrorForUnsupportedAddressSizeDefinedInHeader) {
   EXPECT_EQ((*ExpectedLineTable)->Rows[0].Address.Address, 0u);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture, DISABLED_CallbackUsedForUnterminatedSequence) {
-#else
 TEST_F(DebugLineBasicFixture, CallbackUsedForUnterminatedSequence) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1085,41 +1038,185 @@ struct AdjustAddressFixtureBase : public CommonFixture {
   bool IsErrorExpected;
 };
 
-struct MaxOpsPerInstFixture
-    : TestWithParam<std::tuple<uint16_t, uint8_t, bool>>,
-      AdjustAddressFixtureBase {
-  void SetUp() override {
-    std::tie(Version, MaxOpsPerInst, IsErrorExpected) = GetParam();
-  }
-
-  uint64_t editPrologue(LineTable &LT) override {
+struct OpIndexFixture : Test, CommonFixture {
+  void createPrologue(LineTable &LT, uint8_t MaxOpsPerInst,
+                      uint8_t MinInstLength) {
     DWARFDebugLine::Prologue Prologue = LT.createBasicPrologue();
     Prologue.MaxOpsPerInst = MaxOpsPerInst;
+    Prologue.MinInstLength = MinInstLength;
     LT.setPrologue(Prologue);
-    return Prologue.TotalLength + Prologue.sizeofTotalLength();
   }
-
-  uint8_t MaxOpsPerInst;
 };
 
-#ifdef _AIX
-TEST_P(MaxOpsPerInstFixture, DISABLED_MaxOpsPerInstProblemsReportedCorrectly) {
-#else
-TEST_P(MaxOpsPerInstFixture, MaxOpsPerInstProblemsReportedCorrectly) {
-#endif
-  runTest(/*CheckAdvancePC=*/true,
-          "but the prologue maximum_operations_per_instruction value is " +
-              Twine(unsigned(MaxOpsPerInst)) +
-              ", which is unsupported. Assuming a value of 1 instead");
+TEST_F(OpIndexFixture, OpIndexAdvance) {
+  if (!setupGenerator(4, 4))
+    GTEST_SKIP();
+
+  uint8_t MaxOpsPerInst = 13;
+  uint8_t MinInstLength = 4;
+
+  LineTable &LT = Gen->addLineTable();
+
+  // Row 0-2: Different locations for one bundle set up using special opcodes.
+  LT.addExtendedOpcode(5, DW_LNE_set_address, {{0x20, LineTable::Long}});
+  LT.addByte(0x13); // Special opcode, +1 line.
+  LT.addByte(0x23); // Special opcode, +3 line, +1 op-index.
+  LT.addByte(0x3a); // Special opcode, -2 line, +3 op-index.
+
+  // Row 3: New bundle, set up using DW_LNS_advance pc.
+  // Operation advance 0x84, which gives +40 addr, +2 op-index
+  LT.addStandardOpcode(DW_LNS_advance_line, {{100, LineTable::SLEB}});
+  LT.addStandardOpcode(DW_LNS_advance_pc, {{0x84, LineTable::ULEB}});
+  LT.addStandardOpcode(DW_LNS_copy, {}); // Create new row.
+
+  // Row 4: New bundle, set up using a single special opcode.
+  LT.addByte(0x71); // Special opcode, +4 addr, -3 line, -6 op-index.
+
+  // Row 5: New bundle, set up using using DW_LNS_const_add_pc.
+  // Corresponds to advancing address and op-index using special opcode 255,
+  // which gives +4 addr, +4 op-index.
+  LT.addStandardOpcode(DW_LNS_advance_line, {{10, LineTable::SLEB}});
+  LT.addStandardOpcode(DW_LNS_const_add_pc, {});
+  LT.addStandardOpcode(DW_LNS_copy, {}); // Create new row.
+
+  // Row 6: End sequence to have the input well-formed.
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+
+  createPrologue(LT, MaxOpsPerInst, MinInstLength);
+
+  generate();
+
+  auto VerifyRow = [](const DWARFDebugLine::Row &Row, uint64_t Address,
+                      uint8_t OpIndex, uint32_t Line) {
+    EXPECT_EQ(Row.Address.Address, Address);
+    EXPECT_EQ(Row.OpIndex, OpIndex);
+    EXPECT_EQ(Row.Line, Line);
+  };
+
+  auto Table = Line.getOrParseLineTable(LineData, 0, *Context, nullptr,
+                                        RecordRecoverable);
+  EXPECT_THAT_ERROR(
+      std::move(Recoverable),
+      FailedWithMessage("line table program at offset 0x00000000 contains a "
+                        "special opcode at offset 0x00000035, but the prologue "
+                        "maximum_operations_per_instruction value is 13, which "
+                        "is experimentally supported, so line number "
+                        "information may be incorrect"));
+  EXPECT_THAT_ERROR(std::move(Unrecoverable), Succeeded());
+  ASSERT_THAT_EXPECTED(Table, Succeeded());
+
+  ASSERT_EQ((*Table)->Rows.size(), 7u);
+
+  VerifyRow((*Table)->Rows[0], 0x20, 0, 2);
+  VerifyRow((*Table)->Rows[1], 0x20, 1, 5);
+  VerifyRow((*Table)->Rows[2], 0x20, 4, 3);
+  VerifyRow((*Table)->Rows[3], 0x48, 6, 103);
+  VerifyRow((*Table)->Rows[4], 0x4c, 0, 100);
+  VerifyRow((*Table)->Rows[5], 0x50, 4, 110);
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    MaxOpsPerInstParams, MaxOpsPerInstFixture,
-    Values(std::make_tuple(3, 0, false), // Test for version < 4 (no error).
-           std::make_tuple(4, 0, true),  // Test zero value for V4 (error).
-           std::make_tuple(4, 1, false), // Test good value for V4 (no error).
-           std::make_tuple(
-               4, 2, true))); // Test one higher than permitted V4 (error).
+TEST_F(OpIndexFixture, OpIndexReset) {
+  if (!setupGenerator(4, 4))
+    GTEST_SKIP();
+
+  uint8_t MaxOpsPerInst = 13;
+  uint8_t MinInstLength = 4;
+
+  LineTable &LT = Gen->addLineTable();
+
+  // Row 0: Just set op-index to some value > 0.
+  LT.addExtendedOpcode(5, DW_LNE_set_address, {{0, LineTable::Long}});
+  LT.addByte(0x20); // Special opcode, +1 op-index
+
+  // Row 1: DW_LNE_fixed_advance_pc should set op-index to 0.
+  LT.addStandardOpcode(DW_LNS_fixed_advance_pc, {{10, LineTable::Half}});
+  LT.addStandardOpcode(DW_LNS_copy, {}); // Create new row.
+
+  // Row 2: Just set op-index to some value > 0.
+  LT.addByte(0x66); // Special opcode, +6 op-index
+
+  // Row 3: DW_LNE_set_address should set op-index to 0.
+  LT.addExtendedOpcode(5, DW_LNE_set_address, {{20, LineTable::Long}});
+  LT.addStandardOpcode(DW_LNS_copy, {}); // Create new row.
+
+  // Row 4: Just set op-index to some value > 0.
+  LT.addByte(0xba); // Special opcode, +12 op-index
+
+  // Row 5: End sequence (op-index unchanged for this row)...
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+
+  // Row 6: ... but shall be reset after the DW_LNE_end_sequence row.
+  LT.addStandardOpcode(DW_LNS_copy, {}); // Create new row.
+
+  // Row 7: End sequence to have the input well-formed.
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+
+  createPrologue(LT, MaxOpsPerInst, MinInstLength);
+
+  generate();
+
+  auto Table = Line.getOrParseLineTable(LineData, 0, *Context, nullptr,
+                                        RecordRecoverable);
+  EXPECT_THAT_ERROR(
+      std::move(Recoverable),
+      FailedWithMessage("line table program at offset 0x00000000 contains a "
+                        "special opcode at offset 0x00000035, but the prologue "
+                        "maximum_operations_per_instruction value is 13, which "
+                        "is experimentally supported, so line number "
+                        "information may be incorrect"));
+  EXPECT_THAT_ERROR(std::move(Unrecoverable), Succeeded());
+  ASSERT_THAT_EXPECTED(Table, Succeeded());
+
+  ASSERT_EQ((*Table)->Rows.size(), 8u);
+  EXPECT_EQ((*Table)->Rows[0].OpIndex, 1u);
+  EXPECT_EQ((*Table)->Rows[1].OpIndex, 0u); // DW_LNS_fixed_advance_pc.
+  EXPECT_EQ((*Table)->Rows[2].OpIndex, 6u);
+  EXPECT_EQ((*Table)->Rows[3].OpIndex, 0u); // DW_LNE_set_address.
+  EXPECT_EQ((*Table)->Rows[4].OpIndex, 12u);
+  EXPECT_EQ((*Table)->Rows[5].OpIndex, 12u);
+  EXPECT_EQ((*Table)->Rows[6].OpIndex, 0u); // row after DW_LNE_end_sequence.
+  EXPECT_EQ((*Table)->Rows[7].OpIndex, 0u);
+}
+
+TEST_F(OpIndexFixture, MaxOpsZeroDwarf3) {
+  if (!setupGenerator(3, 4))
+    GTEST_SKIP();
+
+  LineTable &LT = Gen->addLineTable();
+  LT.addStandardOpcode(DW_LNS_const_add_pc, {}); // Just some opcode to advance.
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {}); //
+  createPrologue(LT, /*MaxOpsPerInst=*/0, /*MinInstLength=*/1);
+  generate();
+
+  auto Table = Line.getOrParseLineTable(LineData, 0, *Context, nullptr,
+                                        RecordRecoverable);
+  EXPECT_THAT_ERROR(std::move(Recoverable), Succeeded());
+  EXPECT_THAT_ERROR(std::move(Unrecoverable), Succeeded());
+  ASSERT_THAT_EXPECTED(Table, Succeeded());
+}
+
+TEST_F(OpIndexFixture, MaxOpsZeroDwarf4) {
+  if (!setupGenerator(4, 4))
+    GTEST_SKIP();
+
+  LineTable &LT = Gen->addLineTable();
+  LT.addStandardOpcode(DW_LNS_const_add_pc, {}); // Just some opcode to advance.
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {}); //
+  createPrologue(LT, /*MaxOpsPerInst=*/0, /*MinInstLength=*/1);
+  generate();
+
+  auto Table = Line.getOrParseLineTable(LineData, 0, *Context, nullptr,
+                                        RecordRecoverable);
+  EXPECT_THAT_ERROR(
+      std::move(Recoverable),
+      FailedWithMessage(
+          "line table program at offset 0x00000000 contains a "
+          "DW_LNS_const_add_pc opcode at offset 0x0000002e, but "
+          "the prologue maximum_operations_per_instruction value "
+          "is 0, which is invalid. Assuming a value of 1 instead"));
+  EXPECT_THAT_ERROR(std::move(Unrecoverable), Succeeded());
+  ASSERT_THAT_EXPECTED(Table, Succeeded());
+}
 
 struct LineRangeFixture : TestWithParam<std::tuple<uint8_t, bool>>,
                           AdjustAddressFixtureBase {
@@ -1150,11 +1247,7 @@ struct LineRangeFixture : TestWithParam<std::tuple<uint8_t, bool>>,
   uint8_t LineRange;
 };
 
-#ifdef _AIX
-TEST_P(LineRangeFixture, DISABLED_LineRangeProblemsReportedCorrectly) {
-#else
 TEST_P(LineRangeFixture, LineRangeProblemsReportedCorrectly) {
-#endif
   runTest(/*CheckAdvancePC=*/false,
           "but the prologue line_range value is 0. The address and line will "
           "not be adjusted");
@@ -1189,11 +1282,7 @@ struct BadMinInstLenFixture : TestWithParam<std::tuple<uint8_t, bool>>,
   uint8_t MinInstLength;
 };
 
-#ifdef _AIX
-TEST_P(BadMinInstLenFixture, DISABLED_MinInstLengthProblemsReportedCorrectly) {
-#else
 TEST_P(BadMinInstLenFixture, MinInstLengthProblemsReportedCorrectly) {
-#endif
   runTest(/*CheckAdvancePC=*/true,
           "but the prologue minimum_instruction_length value is 0, which "
           "prevents any address advancing");
@@ -1204,11 +1293,7 @@ INSTANTIATE_TEST_SUITE_P(
     Values(std::make_tuple(0, true),    // Test zero value (error).
            std::make_tuple(1, false))); // Test non-zero value (no error).
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture, DISABLED_ParserParsesCorrectly) {
-#else
 TEST_F(DebugLineBasicFixture, ParserParsesCorrectly) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1235,11 +1320,7 @@ TEST_F(DebugLineBasicFixture, ParserParsesCorrectly) {
   EXPECT_FALSE(Unrecoverable);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture, DISABLED_ParserSkipsCorrectly) {
-#else
 TEST_F(DebugLineBasicFixture, ParserSkipsCorrectly) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1260,11 +1341,7 @@ TEST_F(DebugLineBasicFixture, ParserSkipsCorrectly) {
   EXPECT_FALSE(Unrecoverable);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture, DISABLED_ParserAlwaysDoneForEmptySection) {
-#else
 TEST_F(DebugLineBasicFixture, ParserAlwaysDoneForEmptySection) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1274,12 +1351,7 @@ TEST_F(DebugLineBasicFixture, ParserAlwaysDoneForEmptySection) {
   EXPECT_TRUE(Parser.done());
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ParserMarkedAsDoneForBadLengthWhenParsing) {
-#else
 TEST_F(DebugLineBasicFixture, ParserMarkedAsDoneForBadLengthWhenParsing) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1302,12 +1374,7 @@ TEST_F(DebugLineBasicFixture, ParserMarkedAsDoneForBadLengthWhenParsing) {
           "reserved unit length of value 0xfffffff0"));
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ParserMarkedAsDoneForBadLengthWhenSkipping) {
-#else
 TEST_F(DebugLineBasicFixture, ParserMarkedAsDoneForBadLengthWhenSkipping) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1330,12 +1397,7 @@ TEST_F(DebugLineBasicFixture, ParserMarkedAsDoneForBadLengthWhenSkipping) {
           "reserved unit length of value 0xfffffff0"));
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ParserReportsFirstErrorInEachTableWhenParsing) {
-#else
 TEST_F(DebugLineBasicFixture, ParserReportsFirstErrorInEachTableWhenParsing) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1361,12 +1423,7 @@ TEST_F(DebugLineBasicFixture, ParserReportsFirstErrorInEachTableWhenParsing) {
                         "unsupported version 1"));
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ParserReportsNonPrologueProblemsWhenParsing) {
-#else
 TEST_F(DebugLineBasicFixture, ParserReportsNonPrologueProblemsWhenParsing) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1398,13 +1455,8 @@ TEST_F(DebugLineBasicFixture, ParserReportsNonPrologueProblemsWhenParsing) {
   EXPECT_FALSE(Unrecoverable);
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ParserReportsPrologueErrorsInEachTableWhenSkipping) {
-#else
 TEST_F(DebugLineBasicFixture,
        ParserReportsPrologueErrorsInEachTableWhenSkipping) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1430,12 +1482,7 @@ TEST_F(DebugLineBasicFixture,
                         "unsupported version 1"));
 }
 
-#ifdef _AIX
-TEST_F(DebugLineBasicFixture,
-       DISABLED_ParserIgnoresNonPrologueErrorsWhenSkipping) {
-#else
 TEST_F(DebugLineBasicFixture, ParserIgnoresNonPrologueErrorsWhenSkipping) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -1451,7 +1498,7 @@ TEST_F(DebugLineBasicFixture, ParserIgnoresNonPrologueErrorsWhenSkipping) {
   EXPECT_FALSE(Unrecoverable);
 }
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_F(DebugLineBasicFixture, DISABLED_VerboseOutput) {
 #else
 TEST_F(DebugLineBasicFixture, VerboseOutput) {
@@ -1554,8 +1601,10 @@ TEST_F(DebugLineBasicFixture, VerboseOutput) {
   EXPECT_EQ(NextLine(), "           name: \"a file\"");
   EXPECT_EQ(NextLine(), "      dir_index: 0");
   EXPECT_EQ(NextLine(), "");
-  EXPECT_EQ(NextLine(), "            Address            Line   Column File   ISA Discriminator Flags");
-  EXPECT_EQ(NextLine(), "            ------------------ ------ ------ ------ --- ------------- -------------");
+  EXPECT_EQ(NextLine(), "            Address            Line   Column File   "
+                        "ISA Discriminator OpIndex Flags");
+  EXPECT_EQ(NextLine(), "            ------------------ ------ ------ ------ "
+                        "--- ------------- ------- -------------");
   EXPECT_EQ(NextLine(),
             "0x00000038: 00 Badly formed extended line op (length 0)");
   EXPECT_EQ(NextLine(),
@@ -1569,29 +1618,33 @@ TEST_F(DebugLineBasicFixture, VerboseOutput) {
   EXPECT_EQ(NextLine(), "0x00000055: 00 DW_LNE_set_discriminator (127)");
   EXPECT_EQ(NextLine(), "0x00000059: 01 DW_LNS_copy");
   EXPECT_EQ(NextLine(), "            0x0123456789abcdef      1      0      1   "
-                        "0           127  is_stmt");
-  EXPECT_EQ(NextLine(), "0x0000005a: 02 DW_LNS_advance_pc (11)");
+                        "0           127       0  is_stmt");
+  EXPECT_EQ(NextLine(), "0x0000005a: 02 DW_LNS_advance_pc (addr += 11, "
+                        "op-index += 0)");
   EXPECT_EQ(NextLine(), "0x0000005c: 03 DW_LNS_advance_line (23)");
   EXPECT_EQ(NextLine(), "0x0000005e: 04 DW_LNS_set_file (33)");
   EXPECT_EQ(NextLine(), "0x00000060: 05 DW_LNS_set_column (44)");
   EXPECT_EQ(NextLine(), "0x00000062: 06 DW_LNS_negate_stmt");
   EXPECT_EQ(NextLine(), "0x00000063: 07 DW_LNS_set_basic_block");
   EXPECT_EQ(NextLine(),
-            "0x00000064: 08 DW_LNS_const_add_pc (0x0000000000000011)");
-  EXPECT_EQ(NextLine(), "0x00000065: 09 DW_LNS_fixed_advance_pc (0x0037)");
+            "0x00000064: 08 DW_LNS_const_add_pc (addr += 0x0000000000000011, "
+            "op-index += 0)");
+  EXPECT_EQ(NextLine(), "0x00000065: 09 DW_LNS_fixed_advance_pc (addr += 0x0037"
+            ", op-index = 0)");
   EXPECT_EQ(NextLine(), "0x00000068: 0a DW_LNS_set_prologue_end");
   EXPECT_EQ(NextLine(), "0x00000069: 0b DW_LNS_set_epilogue_begin");
   EXPECT_EQ(NextLine(), "0x0000006a: 0c DW_LNS_set_isa (66)");
   EXPECT_EQ(NextLine(), "0x0000006c: 0d Unrecognized standard opcode "
                         "(operands: 0x0000000000000001, 0x0123456789abcdef)");
   EXPECT_EQ(NextLine(), "0x00000077: 0e Unrecognized standard opcode");
-  EXPECT_EQ(NextLine(), "0x00000078: ff address += 17,  line += -3");
+  EXPECT_EQ(NextLine(), "0x00000078: ff address += 17,  line += -3,  "
+                        "op-index += 0");
   EXPECT_EQ(NextLine(),
             "            0x0123456789abce53     20     44     33  66           "
-            "  0  basic_block prologue_end epilogue_begin");
+            "  0       0  basic_block prologue_end epilogue_begin");
   EXPECT_EQ(NextLine(), "0x00000079: 00 DW_LNE_end_sequence");
   EXPECT_EQ(NextLine(), "            0x0123456789abce53     20     44     33  "
-                        "66             0  end_sequence");
+                        "66             0       0  end_sequence");
   EXPECT_EQ(NextLine(), "");
   EXPECT_EQ(Output.size(), Pos);
 }
@@ -1611,7 +1664,7 @@ struct TruncatedPrologueFixture
   StringRef ExpectedErr;
 };
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_P(TruncatedPrologueFixture, DISABLED_ErrorForTruncatedPrologue) {
 #else
 TEST_P(TruncatedPrologueFixture, ErrorForTruncatedPrologue) {
@@ -1792,12 +1845,7 @@ struct TruncatedExtendedOpcodeFixture
   uint64_t OpcodeLength;
 };
 
-#ifdef _AIX
-TEST_P(TruncatedExtendedOpcodeFixture,
-       DISABLED_ErrorForTruncatedExtendedOpcode) {
-#else
 TEST_P(TruncatedExtendedOpcodeFixture, ErrorForTruncatedExtendedOpcode) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
   LineTable &LT = setupTable();
@@ -1876,12 +1924,7 @@ INSTANTIATE_TEST_SUITE_P(
             "unexpected end of data at offset 0x35 while reading [0x32, "
             "0x36)")));
 
-#ifdef _AIX
-TEST_P(TruncatedStandardOpcodeFixture,
-       DISABLED_ErrorForTruncatedStandardOpcode) {
-#else
 TEST_P(TruncatedStandardOpcodeFixture, ErrorForTruncatedStandardOpcode) {
-#endif
   if (!setupGenerator())
     GTEST_SKIP();
   LineTable &LT = setupTable();
@@ -1937,7 +1980,7 @@ INSTANTIATE_TEST_SUITE_P(
             "unable to decode LEB128 at offset 0x00000032: "
             "malformed uleb128, extends past end")));
 
-#ifdef _AIX
+#ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_F(DebugLineBasicFixture, DISABLED_PrintPathsProperly) {
 #else
 TEST_F(DebugLineBasicFixture, PrintPathsProperly) {

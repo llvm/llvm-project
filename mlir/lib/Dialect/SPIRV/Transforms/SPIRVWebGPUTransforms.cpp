@@ -41,10 +41,10 @@ namespace {
 //===----------------------------------------------------------------------===//
 Attribute getScalarOrSplatAttr(Type type, int64_t value) {
   APInt sizedValue(getElementTypeOrSelf(type).getIntOrFloatBitWidth(), value);
-  if (auto intTy = type.dyn_cast<IntegerType>())
+  if (auto intTy = dyn_cast<IntegerType>(type))
     return IntegerAttr::get(intTy, sizedValue);
 
-  return SplatElementsAttr::get(type, sizedValue);
+  return SplatElementsAttr::get(cast<ShapedType>(type), sizedValue);
 }
 
 Value lowerExtendedMultiplication(Operation *mulOp, PatternRewriter &rewriter,
@@ -149,7 +149,7 @@ struct ExpandMulExtendedPattern final : OpRewritePattern<MulExtendedOp> {
 
     // Currently, WGSL only supports 32-bit integer types. Any other integer
     // types should already have been promoted/demoted to i32.
-    auto elemTy = getElementTypeOrSelf(lhs.getType()).cast<IntegerType>();
+    auto elemTy = cast<IntegerType>(getElementTypeOrSelf(lhs.getType()));
     if (elemTy.getIntOrFloatBitWidth() != 32)
       return rewriter.notifyMatchFailure(
           loc,
@@ -166,6 +166,42 @@ using ExpandSMulExtendedPattern =
     ExpandMulExtendedPattern<SMulExtendedOp, true>;
 using ExpandUMulExtendedPattern =
     ExpandMulExtendedPattern<UMulExtendedOp, false>;
+
+struct ExpandAddCarryPattern final : OpRewritePattern<IAddCarryOp> {
+  using OpRewritePattern<IAddCarryOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IAddCarryOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    Value lhs = op.getOperand1();
+    Value rhs = op.getOperand2();
+
+    // Currently, WGSL only supports 32-bit integer types. Any other integer
+    // types should already have been promoted/demoted to i32.
+    Type argTy = lhs.getType();
+    auto elemTy = cast<IntegerType>(getElementTypeOrSelf(argTy));
+    if (elemTy.getIntOrFloatBitWidth() != 32)
+      return rewriter.notifyMatchFailure(
+          loc,
+          llvm::formatv("Unexpected integer type for WebGPU: '{0}'", elemTy));
+
+    Value one =
+        rewriter.create<ConstantOp>(loc, argTy, getScalarOrSplatAttr(argTy, 1));
+    Value zero =
+        rewriter.create<ConstantOp>(loc, argTy, getScalarOrSplatAttr(argTy, 0));
+
+    // Calculate the carry by checking if the addition resulted in an overflow.
+    Value out = rewriter.create<IAddOp>(loc, lhs, rhs);
+    Value cmp = rewriter.create<ULessThanOp>(loc, out, lhs);
+    Value carry = rewriter.create<SelectOp>(loc, cmp, one, zero);
+
+    Value add = rewriter.create<CompositeConstructOp>(
+        loc, op->getResultTypes().front(), llvm::ArrayRef({out, carry}));
+
+    rewriter.replaceOp(op, add);
+    return success();
+  }
+};
 
 //===----------------------------------------------------------------------===//
 // Passes
@@ -191,8 +227,12 @@ void populateSPIRVExpandExtendedMultiplicationPatterns(
     RewritePatternSet &patterns) {
   // WGSL currently does not support extended multiplication ops, see:
   // https://github.com/gpuweb/gpuweb/issues/1565.
-  patterns.add<ExpandSMulExtendedPattern, ExpandUMulExtendedPattern>(
-      patterns.getContext());
+  patterns.add<
+      // clang-format off
+    ExpandSMulExtendedPattern,
+    ExpandUMulExtendedPattern,
+    ExpandAddCarryPattern
+  >(patterns.getContext());
 }
 } // namespace spirv
 } // namespace mlir

@@ -1,5 +1,5 @@
 ! Test lowering of variables to fir.declare
-! RUN: bbc -emit-fir -hlfir %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
 subroutine scalar_numeric(x)
   integer :: x
@@ -22,8 +22,9 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPscalar_character_cst_len(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.boxchar<1>
 ! CHECK:  %[[VAL_1:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,10>>
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 10 : index
-! CHECK:  %[[VAL_3:.*]] = hlfir.declare %[[VAL_1]]#0 typeparams %[[VAL_2]] {uniq_name = "_QFscalar_character_cst_lenEc"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:  %[[VAL_4:.*]] = hlfir.declare %[[VAL_3]] typeparams %[[VAL_2]] {uniq_name = "_QFscalar_character_cst_lenEc"} : (!fir.ref<!fir.char<1,10>>, index) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
 
 subroutine array_numeric(x)
   integer :: x(10, 20)
@@ -95,3 +96,16 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPscalar_numeric_parameter() {
 ! CHECK:  %[[VAL_0:.*]] = fir.address_of(@_QFscalar_numeric_parameterECp) : !fir.ref<i32>
 ! CHECK:  %[[VAL_1:.*]] = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFscalar_numeric_parameterECp"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
+subroutine test_component_in_spec_expr(x, derived)
+  type t
+    integer :: component
+  end type
+  type(t) :: derived
+  ! Test that we do not try to instantiate "component" just because
+  ! its symbol appears in a specification expression.
+  real :: x(derived%component)
+end subroutine
+! CHECK-LABEL: func.func @_QPtest_component_in_spec_expr(
+! CHECK-NOT: alloca
+! CHECK: return

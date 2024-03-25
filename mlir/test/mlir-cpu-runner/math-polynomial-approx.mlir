@@ -1,8 +1,8 @@
-// RUN:   mlir-opt %s -pass-pipeline="builtin.module(func.func(test-math-polynomial-approximation,convert-arith-to-llvm),convert-vector-to-llvm,func.func(convert-math-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts)" \
+// RUN:   mlir-opt %s -pass-pipeline="builtin.module(func.func(test-math-polynomial-approximation,convert-arith-to-llvm),convert-vector-to-scf,convert-scf-to-cf,convert-cf-to-llvm,convert-vector-to-llvm,func.func(convert-math-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts)" \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \
-// RUN:     -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext  \
-// RUN:     -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext    \
+// RUN:     -shared-libs=%mlir_c_runner_utils  \
+// RUN:     -shared-libs=%mlir_runner_utils    \
 // RUN: | FileCheck %s
 
 // -------------------------------------------------------------------------- //
@@ -293,7 +293,7 @@ func.func @exp() {
   %f0 = arith.constant 1.0 : f32
   call @exp_f32(%f0) : (f32) -> ()
 
-  // CHECK: 0.778802, 2.117, 2.71828, 3.85742
+  // CHECK: 0.778801, 2.117, 2.71828, 3.85743
   %v1 = arith.constant dense<[-0.25, 0.75, 1.0, 1.35]> : vector<4xf32>
   call @exp_4xf32(%v1) : (vector<4xf32>) -> ()
 
@@ -301,7 +301,7 @@ func.func @exp() {
   %zero = arith.constant 0.0 : f32
   call @exp_f32(%zero) : (f32) -> ()
 
-  // CHECK: 1.17549e-38, 1.38879e-11, 7.20049e+10, inf
+  // CHECK: 0, 1.38879e-11, 7.20049e+10, inf
   %special_vec = arith.constant dense<[-89.0, -25.0, 25.0, 89.0]> : vector<4xf32>
   call @exp_4xf32(%special_vec) : (vector<4xf32>) -> ()
 
@@ -349,7 +349,7 @@ func.func @expm1() {
   %f0 = arith.constant 1.0e-10 : f32
   call @expm1_f32(%f0) : (f32) -> ()
 
-  // CHECK: -0.00995016, 0.0100502, 0.648721, 6.38905
+  // CHECK: -0.00995017, 0.0100502, 0.648721, 6.38906
   %v1 = arith.constant dense<[-0.01, 0.01, 0.5, 2.0]> : vector<4xf32>
   call @expm1_4xf32(%v1) : (vector<4xf32>) -> ()
 
@@ -471,19 +471,19 @@ func.func @atan_f32(%a : f32) {
 }
 
 func.func @atan() {
-  // CHECK: -0.785184
+  // CHECK: -0.785398
   %0 = arith.constant -1.0 : f32
   call @atan_f32(%0) : (f32) -> ()
 
-  // CHECK: 0.785184
+  // CHECK: 0.785398
   %1 = arith.constant 1.0 : f32
   call @atan_f32(%1) : (f32) -> ()
 
-  // CHECK: -0.463643
+  // CHECK: -0.463648
   %2 = arith.constant -0.5 : f32
   call @atan_f32(%2) : (f32) -> ()
 
-  // CHECK: 0.463643
+  // CHECK: 0.463648
   %3 = arith.constant 0.5 : f32
   call @atan_f32(%3) : (f32) -> ()
 
@@ -548,7 +548,7 @@ func.func @atan2() {
   // CHECK: -1.10715
   call @atan2_f32(%neg_two, %one) : (f32, f32) -> ()
 
-  // CHECK: 0.463643
+  // CHECK: 0.463648
   call @atan2_f32(%one, %two) : (f32, f32) -> ()
 
   // CHECK: 2.67795
@@ -561,12 +561,128 @@ func.func @atan2() {
   %y11 = arith.constant -1.0 : f32
   call @atan2_f32(%neg_one, %neg_two) : (f32, f32) -> ()
 
-  // CHECK: -0.463643
+  // CHECK: -0.463648
   call @atan2_f32(%neg_one, %two) : (f32, f32) -> ()
 
   return
 }
 
+
+// -------------------------------------------------------------------------- //
+// Cbrt.
+// -------------------------------------------------------------------------- //
+
+func.func @cbrt_f32(%a : f32) {
+  %r = math.cbrt %a : f32
+  vector.print %r : f32
+  return
+}
+
+func.func @cbrt() {
+  // CHECK: 1
+  %a = arith.constant 1.0 : f32
+  call @cbrt_f32(%a) : (f32) -> ()
+
+  // CHECK: -1
+  %b = arith.constant -1.0 : f32
+  call @cbrt_f32(%b) : (f32) -> ()
+
+  // CHECK: 0
+  %c = arith.constant 0.0 : f32
+  call @cbrt_f32(%c) : (f32) -> ()
+
+  // CHECK: -0
+  %d = arith.constant -0.0 : f32
+  call @cbrt_f32(%d) : (f32) -> ()
+
+  // CHECK: 10
+  %e = arith.constant 1000.0 : f32
+  call @cbrt_f32(%e) : (f32) -> ()
+
+  // CHECK: -10
+  %f = arith.constant -1000.0 : f32
+  call @cbrt_f32(%f) : (f32) -> ()
+
+  // CHECK: 2.57128
+  %g = arith.constant 17.0 : f32
+  call @cbrt_f32(%g) : (f32) -> ()
+
+  return
+}
+
+// -------------------------------------------------------------------------- //
+// floor.
+// -------------------------------------------------------------------------- //
+func.func @func_floorf32(%a : f32) {
+  %r = math.floor %a : f32
+  vector.print %r : f32
+  return
+}
+
+func.func @floorf() {
+  // CHECK: 3
+  %a = arith.constant 3.8 : f32
+  call @func_floorf32(%a) : (f32) -> ()
+
+  // CHECK: -4
+  %b = arith.constant -3.8 : f32
+  call @func_floorf32(%b) : (f32) -> ()
+
+  // CHECK: 0
+  %c = arith.constant 0.0 : f32
+  call @func_floorf32(%c) : (f32) -> ()
+
+  // CHECK: -5
+  %d = arith.constant -4.2 : f32
+  call @func_floorf32(%d) : (f32) -> ()
+
+  // CHECK: -2
+  %e = arith.constant -2.0 : f32
+  call @func_floorf32(%e) : (f32) -> ()
+
+  // CHECK: 2
+  %f = arith.constant 2.0 : f32
+  call @func_floorf32(%f) : (f32) -> ()
+
+  return
+}
+
+// -------------------------------------------------------------------------- //
+// ceil.
+// -------------------------------------------------------------------------- //
+func.func @func_ceilf32(%a : f32) {
+  %r = math.ceil %a : f32
+  vector.print %r : f32
+  return
+}
+
+func.func @ceilf() {
+  // CHECK: 4
+  %a = arith.constant 3.8 : f32
+  call @func_ceilf32(%a) : (f32) -> ()
+
+  // CHECK: -3
+  %b = arith.constant -3.8 : f32
+  call @func_ceilf32(%b) : (f32) -> ()
+
+  // CHECK: 0
+  %c = arith.constant 0.0 : f32
+  call @func_ceilf32(%c) : (f32) -> ()
+
+  // CHECK: -4
+  %d = arith.constant -4.2 : f32
+  call @func_ceilf32(%d) : (f32) -> ()
+
+  // CHECK: -495
+  %e = arith.constant -495.0 : f32
+  call @func_ceilf32(%e) : (f32) -> ()
+
+  // CHECK: 495
+  %f = arith.constant 495.0 : f32
+  call @func_ceilf32(%f) : (f32) -> ()
+
+  return
+}
 
 func.func @main() {
   call @tanh(): () -> ()
@@ -580,5 +696,8 @@ func.func @main() {
   call @cos(): () -> ()
   call @atan() : () -> ()
   call @atan2() : () -> ()
+  call @cbrt() : () -> ()
+  call @floorf() : () -> ()
+  call @ceilf() : () -> ()
   return
 }

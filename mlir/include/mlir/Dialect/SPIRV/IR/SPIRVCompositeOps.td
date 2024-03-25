@@ -43,17 +43,18 @@ def SPIRV_CompositeConstructOp : SPIRV_Op<"CompositeConstruct", [Pure]> {
     type of the result. When constructing a vector, there must be at least
     two Constituent operands.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    composite-construct-op ::= ssa-id `=` `spirv.CompositeConstruct`
-                               (ssa-use (`,` ssa-use)* )? `:` composite-type
-    ```
-
     #### Example:
 
     ```mlir
-    %0 = spirv.CompositeConstruct %1, %2, %3 : vector<3xf32>
+    %a = spirv.CompositeConstruct %1, %2, %3 : vector<3xf32>
+    %b = spirv.CompositeConstruct %a, %1 : (vector<3xf32>, f32) -> vector<4xf32>
+
+    %c = spirv.CompositeConstruct %1 :
+      (f32) -> !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA>
+
+    %d = spirv.CompositeConstruct %a, %4, %5 :
+      (vector<3xf32>, !spirv.array<4xf32>, !spirv.struct<(f32)>) ->
+        !spirv.struct<(vector<3xf32>, !spirv.array<4xf32>, !spirv.struct<(f32)>)>
     ```
   }];
 
@@ -179,7 +180,7 @@ def SPIRV_VectorExtractDynamicOp : SPIRV_Op<"VectorExtractDynamic", [
     Pure,
     TypesMatchWith<"type of 'result' matches element type of 'vector'",
                    "vector", "result",
-                   "$_self.cast<mlir::VectorType>().getElementType()">]> {
+                   "::llvm::cast<mlir::VectorType>($_self).getElementType()">]> {
   let summary = [{
     Extract a single, dynamically selected, component of a vector.
   }];
@@ -228,7 +229,7 @@ def SPIRV_VectorInsertDynamicOp : SPIRV_Op<"VectorInsertDynamic", [
     TypesMatchWith<
       "type of 'component' matches element type of 'vector'",
       "vector", "component",
-      "$_self.cast<mlir::VectorType>().getElementType()">,
+      "::llvm::cast<mlir::VectorType>($_self).getElementType()">,
     AllTypesMatch<["vector", "result"]>]> {
   let summary = [{
     Make a copy of a vector, with a single, variably selected, component
@@ -249,16 +250,6 @@ def SPIRV_VectorInsertDynamicOp : SPIRV_Op<"VectorInsertDynamic", [
 
     Behavior is undefined if Index's value is less than zero or greater than
     or equal to the number of components in Vector.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scalar-type ::= integer-type | float-type | boolean-type
-    vector-insert-dynamic-op ::= `spirv.VectorInsertDynamic ` ssa-use `,`
-                                  ssa-use `[` ssa-use `]`
-                                  `:` `vector<` integer-literal `x` scalar-type `>` `,`
-                                  integer-type
-    ```
 
     #### Example:
 
@@ -300,8 +291,8 @@ def SPIRV_VectorShuffleOp : SPIRV_Op<"VectorShuffle", [
     Vector 1 and Vector 2 must both have vector types, with the same
     Component Type as Result Type. They do not have to have the same number
     of components as Result Type or with each other. They are logically
-    concatenated, forming a single vector with Vector 1’s components
-    appearing before Vector 2’s. The components of this logical vector are
+    concatenated, forming a single vector with Vector 1's components
+    appearing before Vector 2's. The components of this logical vector are
     logically numbered with a single consecutive set of numbers from 0 to N
     - 1, where N is the total number of components.
 
@@ -323,9 +314,8 @@ def SPIRV_VectorShuffleOp : SPIRV_Op<"VectorShuffle", [
     #### Example:
 
     ```mlir
-    %0 = spirv.VectorShuffle [1: i32, 3: i32, 5: i32]
-                           %vector1: vector<4xf32>, %vector2: vector<2xf32>
-                        -> vector<3xf32>
+    %0 = spirv.VectorShuffle [1: i32, 3: i32, 5: i32] %vector1, %vector2 :
+      vector<4xf32>, vector<2xf32> -> vector<3xf32>
     ```
   }];
 
@@ -340,8 +330,8 @@ def SPIRV_VectorShuffleOp : SPIRV_Op<"VectorShuffle", [
   );
 
   let assemblyFormat = [{
-    attr-dict $components $vector1 `:` type($vector1) `,`
-                          $vector2 `:` type($vector2) `->` type($result)
+    attr-dict $components $vector1 `,` $vector2 `:`
+      type($vector1) `,` type($vector2) `->` type($result)
   }];
 }
 

@@ -13,7 +13,7 @@
 define i8 @t0_sub_from_trueval(i1 %c, i8 %Op0, i8 %FalseVal) {
 ; CHECK-LABEL: @t0_sub_from_trueval(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 [[OP0:%.*]], [[FALSEVAL:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i8 0, i8 [[TMP1]], !prof !0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i8 0, i8 [[TMP1]], !prof [[PROF0:![0-9]+]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %o = select i1 %c, i8 %Op0, i8 %FalseVal, !prof !0 ; while there, ensure preservation of prof md
@@ -23,7 +23,7 @@ define i8 @t0_sub_from_trueval(i1 %c, i8 %Op0, i8 %FalseVal) {
 define i8 @t1_sub_from_falseval(i1 %c, i8 %TrueVal, i8 %Op0) {
 ; CHECK-LABEL: @t1_sub_from_falseval(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 [[OP0:%.*]], [[TRUEVAL:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i8 [[TMP1]], i8 0, !prof !0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i8 [[TMP1]], i8 0, !prof [[PROF0]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %o = select i1 %c, i8 %TrueVal, i8 %Op0, !prof !0 ; while there, ensure preservation of prof md

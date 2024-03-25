@@ -60,17 +60,6 @@ template <typename V> void Walk(const format::IntrinsicTypeDataEditDesc &, V &);
 template <typename M> void Walk(format::IntrinsicTypeDataEditDesc &, M &);
 
 // Traversal of needed STL template classes (optional, list, tuple, variant)
-template <typename T, typename V>
-void Walk(const std::optional<T> &x, V &visitor) {
-  if (x) {
-    Walk(*x, visitor);
-  }
-}
-template <typename T, typename M> void Walk(std::optional<T> &x, M &mutator) {
-  if (x) {
-    Walk(*x, mutator);
-  }
-}
 // For most lists, just traverse the elements; but when a list constitutes
 // a Block (i.e., std::list<ExecutionPartConstruct>), also invoke the
 // visitor/mutator on the list itself.
@@ -98,6 +87,17 @@ template <typename M> void Walk(Block &x, M &mutator) {
       Walk(elem, mutator);
     }
     mutator.Post(x);
+  }
+}
+template <typename T, typename V>
+void Walk(const std::optional<T> &x, V &visitor) {
+  if (x) {
+    Walk(*x, visitor);
+  }
+}
+template <typename T, typename M> void Walk(std::optional<T> &x, M &mutator) {
+  if (x) {
+    Walk(*x, mutator);
   }
 }
 template <std::size_t I = 0, typename Func, typename T>
@@ -568,17 +568,33 @@ template <typename M> void Walk(Designator &x, M &mutator) {
     mutator.Post(x);
   }
 }
-template <typename V> void Walk(const Call &x, V &visitor) {
+template <typename V> void Walk(const FunctionReference &x, V &visitor) {
   if (visitor.Pre(x)) {
     Walk(x.source, visitor);
-    Walk(x.t, visitor);
+    Walk(x.v, visitor);
     visitor.Post(x);
   }
 }
-template <typename M> void Walk(Call &x, M &mutator) {
+template <typename M> void Walk(FunctionReference &x, M &mutator) {
   if (mutator.Pre(x)) {
     Walk(x.source, mutator);
-    Walk(x.t, mutator);
+    Walk(x.v, mutator);
+    mutator.Post(x);
+  }
+}
+template <typename V> void Walk(const CallStmt &x, V &visitor) {
+  if (visitor.Pre(x)) {
+    Walk(x.source, visitor);
+    Walk(x.call, visitor);
+    Walk(x.chevrons, visitor);
+    visitor.Post(x);
+  }
+}
+template <typename M> void Walk(CallStmt &x, M &mutator) {
+  if (mutator.Pre(x)) {
+    Walk(x.source, mutator);
+    Walk(x.call, mutator);
+    Walk(x.chevrons, mutator);
     mutator.Post(x);
   }
 }

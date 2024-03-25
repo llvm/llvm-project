@@ -21,7 +21,7 @@ namespace tools {
 namespace AMDGCN {
 // Runs llvm-link/opt/llc/lld, which links multiple LLVM bitcode, together with
 // device library, then compiles it to ISA in a shared object.
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("AMDGCN::Linker", "amdgcn-link", TC) {}
 

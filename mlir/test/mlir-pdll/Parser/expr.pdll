@@ -50,6 +50,22 @@ Pattern {
 
 // -----
 
+// CHECK: Module {{.*}}
+// CHECK:  -UserConstraintDecl {{.*}} Name<TestConstraint> ResultType<Tuple<>>
+// CHECK: `-PatternDecl {{.*}}
+// CHECK:   -CallExpr {{.*}} Type<Tuple<>> Negated
+// CHECK:     `-DeclRefExpr {{.*}} Type<Constraint>
+// CHECK:       `-UserConstraintDecl {{.*}} Name<TestConstraint> ResultType<Tuple<>>
+Constraint TestConstraint(op: Op);
+
+Pattern {
+  let inputOp = op<my_dialect.bar>;
+  not TestConstraint(inputOp);
+  erase inputOp;
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // MemberAccessExpr
 //===----------------------------------------------------------------------===//

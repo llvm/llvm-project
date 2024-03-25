@@ -43,7 +43,7 @@
 # BEFORE:       84:       91400000        add     x0, x0, #0, lsl #12
 # BEFORE:       88:       f9400000        ldr     x0, [x0]
 # BEFORE:       8c:       00000001        udf #1
-# BEFORE:       90:       30091a20        adr x0, #74565
+# BEFORE:       90:       30091a20        adr x0, 0x123d5
 # BEFORE:       94:       54000001        b.ne    0x94
 # BEFORE:       98:       36000000        tbz     w0, #0, 0x98
 # BEFORE:       9c:       00000001        udf #1
@@ -87,7 +87,7 @@
 # AFTER:  140001084:      91400400        add     x0, x0, #1, lsl #12
 # AFTER:  140001088:      f941c400        ldr     x0, [x0, #904]
 # AFTER:  14000108c:      00000003        udf #3
-# AFTER:  140001090:      300995e0        adr     x0, #78525
+# AFTER:  140001090:      300995e0        adr     x0, 0x14001434d
 # AFTER:  140001094:      54000081        b.ne    0x1400010a4
 # AFTER:  140001098:      36000060        tbz     w0, #0, 0x1400010a4
 # AFTER:  14000109c:      ffffff61        <unknown>

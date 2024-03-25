@@ -13,15 +13,15 @@
 ; RUN: %lld -save-temps %t/main.o %t/liba.a %t/libb.a -o %t/test
 ; RUN: FileCheck %s --check-prefix=DIFFERENT-ARCHIVES < %t/test.resolution.txt
 
-; SAME-ARCHIVE: libbar.abar.o[[#OFFSET:]]
-; SAME-ARCHIVE-NEXT: -r={{.*}}/libbar.abar.o[[#OFFSET:]],_foo,p
-; SAME-ARCHIVE-NEXT: libbar.abar.o[[#OTHEROFFSET:]]
-; SAME-ARCHIVE-NEXT: -r={{.*}}/libbar.abar.o[[#OTHEROFFSET:]],_bar,p
+; SAME-ARCHIVE: libbar.a(bar.o)[[#OFFSET:]]
+; SAME-ARCHIVE-NEXT: -r={{.*}}/libbar.a(bar.o)[[#OFFSET:]],_foo,p
+; SAME-ARCHIVE-NEXT: libbar.a(bar.o)[[#OTHEROFFSET:]]
+; SAME-ARCHIVE-NEXT: -r={{.*}}/libbar.a(bar.o)[[#OTHEROFFSET:]],_bar,p
 
-; DIFFERENT-ARCHIVES: liba.abar.o[[#OFFSET:]]
-; DIFFERENT-ARCHIVES-NEXT: -r={{.*}}/liba.abar.o[[#OFFSET:]],_foo,p
-; DIFFERENT-ARCHIVES-NEXT: libb.abar.o[[#OTHEROFFSET:]]
-; DIFFERENT-ARCHIVES-NEXT: -r={{.*}}/libb.abar.o[[#OTHEROFFSET:]],_bar,p
+; DIFFERENT-ARCHIVES: liba.a(bar.o)[[#OFFSET:]]
+; DIFFERENT-ARCHIVES-NEXT: -r={{.*}}/liba.a(bar.o)[[#OFFSET:]],_foo,p
+; DIFFERENT-ARCHIVES-NEXT: libb.a(bar.o)[[#OTHEROFFSET:]]
+; DIFFERENT-ARCHIVES-NEXT: -r={{.*}}/libb.a(bar.o)[[#OTHEROFFSET:]],_bar,p
 
 ;--- main.ll
 

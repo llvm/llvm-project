@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
 
 scratch_load_ubyte v1, v2, off cpol:2
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.

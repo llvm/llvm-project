@@ -148,6 +148,7 @@ add_clang_library(clangDaemon
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )
 
 # Include generated CompletionModel headers.
@@ -181,6 +182,7 @@ target_link_libraries(clangDaemon
   clangIncludeCleaner
   clangPseudo
   clangTidy
+  clangTidyUtils
 
   clangdSupport
   )

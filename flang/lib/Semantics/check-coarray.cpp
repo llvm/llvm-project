@@ -110,7 +110,10 @@ static void CheckSyncStatList(
               }
               gotStat = true;
             },
-            [&](const parser::MsgVariable &errmsg) {
+            [&](const parser::MsgVariable &var) {
+              WarnOnDeferredLengthCharacterScalar(context,
+                  GetExpr(context, var), var.v.thing.thing.GetSource(),
+                  "ERRMSG=");
               if (gotMsg) {
                 context.Say( // C1172
                     "The errmsg-variable in a sync-stat-list may not be repeated"_err_en_US);
@@ -124,9 +127,27 @@ static void CheckSyncStatList(
   }
 }
 
+static void CheckEventVariable(
+    SemanticsContext &context, const parser::EventVariable &eventVar) {
+  if (const auto *expr{GetExpr(context, eventVar)}) {
+    if (!IsEventType(evaluate::GetDerivedTypeSpec(expr->GetType()))) { // C1176
+      context.Say(parser::FindSourceLocation(eventVar),
+          "The event-variable must be of type EVENT_TYPE from module ISO_FORTRAN_ENV"_err_en_US);
+    } else if (!evaluate::IsCoarray(*expr)) { // C1604
+      context.Say(parser::FindSourceLocation(eventVar),
+          "The event-variable must be a coarray"_err_en_US);
+    }
+  }
+}
+
 void CoarrayChecker::Leave(const parser::ChangeTeamStmt &x) {
   CheckNamesAreDistinct(std::get<std::list<parser::CoarrayAssociation>>(x.t));
   CheckTeamType(context_, std::get<parser::TeamValue>(x.t));
+  CheckSyncStatList(context_, std::get<std::list<parser::StatOrErrmsg>>(x.t));
+}
+
+void CoarrayChecker::Leave(const parser::EndChangeTeamStmt &x) {
+  CheckSyncStatList(context_, std::get<std::list<parser::StatOrErrmsg>>(x.t));
 }
 
 void CoarrayChecker::Leave(const parser::SyncAllStmt &x) {
@@ -153,6 +174,100 @@ void CoarrayChecker::Leave(const parser::SyncMemoryStmt &x) {
 
 void CoarrayChecker::Leave(const parser::SyncTeamStmt &x) {
   CheckTeamType(context_, std::get<parser::TeamValue>(x.t));
+  CheckSyncStatList(context_, std::get<std::list<parser::StatOrErrmsg>>(x.t));
+}
+
+static void CheckEventWaitSpecList(SemanticsContext &context,
+    const std::list<parser::EventWaitSpec> &eventWaitSpecList) {
+  bool gotStat{false}, gotMsg{false}, gotUntil{false};
+  for (const parser::EventWaitSpec &eventWaitSpec : eventWaitSpecList) {
+    common::visit(
+        common::visitors{
+            [&](const parser::ScalarIntExpr &untilCount) {
+              if (gotUntil) {
+                context.Say( // C1178
+                    "Until-spec in a event-wait-spec-list may not be repeated"_err_en_US);
+              }
+              gotUntil = true;
+            },
+            [&](const parser::StatOrErrmsg &statOrErrmsg) {
+              common::visit(
+                  common::visitors{
+                      [&](const parser::StatVariable &stat) {
+                        if (gotStat) {
+                          context.Say( // C1178
+                              "A stat-variable in a event-wait-spec-list may not be repeated"_err_en_US);
+                        }
+                        gotStat = true;
+                      },
+                      [&](const parser::MsgVariable &var) {
+                        WarnOnDeferredLengthCharacterScalar(context,
+                            GetExpr(context, var),
+                            var.v.thing.thing.GetSource(), "ERRMSG=");
+                        if (gotMsg) {
+                          context.Say( // C1178
+                              "A errmsg-variable in a event-wait-spec-list may not be repeated"_err_en_US);
+                        }
+                        gotMsg = true;
+                      },
+                  },
+                  statOrErrmsg.u);
+              CheckCoindexedStatOrErrmsg(
+                  context, statOrErrmsg, "event-wait-spec-list");
+            },
+
+        },
+        eventWaitSpec.u);
+  }
+}
+
+void CoarrayChecker::Leave(const parser::NotifyWaitStmt &x) {
+  const auto &notifyVar{std::get<parser::Scalar<parser::Variable>>(x.t)};
+
+  if (const auto *expr{GetExpr(context_, notifyVar)}) {
+    if (ExtractCoarrayRef(expr)) {
+      context_.Say(parser::FindSourceLocation(notifyVar), // F2023 - C1178
+          "A notify-variable in a NOTIFY WAIT statement may not be a coindexed object"_err_en_US);
+    } else if (!IsNotifyType(evaluate::GetDerivedTypeSpec(
+                   expr->GetType()))) { // F2023 - C1177
+      context_.Say(parser::FindSourceLocation(notifyVar),
+          "The notify-variable must be of type NOTIFY_TYPE from module ISO_FORTRAN_ENV"_err_en_US);
+    } else if (!evaluate::IsCoarray(*expr)) { // F2023 - C1612
+      context_.Say(parser::FindSourceLocation(notifyVar),
+          "The notify-variable must be a coarray"_err_en_US);
+    }
+  }
+
+  CheckEventWaitSpecList(
+      context_, std::get<std::list<parser::EventWaitSpec>>(x.t));
+}
+
+void CoarrayChecker::Leave(const parser::EventPostStmt &x) {
+  CheckSyncStatList(context_, std::get<std::list<parser::StatOrErrmsg>>(x.t));
+  CheckEventVariable(context_, std::get<parser::EventVariable>(x.t));
+}
+
+void CoarrayChecker::Leave(const parser::EventWaitStmt &x) {
+  const auto &eventVar{std::get<parser::EventVariable>(x.t)};
+
+  if (const auto *expr{GetExpr(context_, eventVar)}) {
+    if (ExtractCoarrayRef(expr)) {
+      context_.Say(parser::FindSourceLocation(eventVar), // C1177
+          "A event-variable in a EVENT WAIT statement may not be a coindexed object"_err_en_US);
+    } else {
+      CheckEventVariable(context_, eventVar);
+    }
+  }
+
+  CheckEventWaitSpecList(
+      context_, std::get<std::list<parser::EventWaitSpec>>(x.t));
+}
+
+void CoarrayChecker::Leave(const parser::UnlockStmt &x) {
+  CheckSyncStatList(context_, std::get<std::list<parser::StatOrErrmsg>>(x.t));
+}
+
+void CoarrayChecker::Leave(const parser::CriticalStmt &x) {
   CheckSyncStatList(context_, std::get<std::list<parser::StatOrErrmsg>>(x.t));
 }
 

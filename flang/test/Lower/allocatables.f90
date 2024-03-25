@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Test lowering of allocatables using runtime for allocate/deallcoate statements.
 ! CHECK-LABEL: _QPfooscalar
@@ -97,8 +97,7 @@ subroutine char_deferred(n)
   call bar(c)
   ! CHECK-DAG: %[[cLen:.*]] = fir.load %[[cLenVar]] : !fir.ref<index>
   ! CHECK-DAG: %[[cAddr:.*]] = fir.load %[[cAddrVar]] : !fir.ref<!fir.heap<!fir.char<1,?>>>
-  ! CHECK-DAG: %[[cAddrcast:.*]] = fir.convert %[[cAddr]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
-  ! CHECK: fir.emboxchar %[[cAddrcast]], %[[cLen]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK: fir.emboxchar %[[cAddr]], %[[cLen]] : (!fir.heap<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 end subroutine
 
 ! CHECK-LABEL: _QPchar_explicit_cst(
@@ -120,8 +119,7 @@ subroutine char_explicit_cst(n)
   ! CHECK: fir.allocmem !fir.char<1,10> {{{.*}}uniq_name = "_QFchar_explicit_cstEc.alloc"}
   call bar(c)
   ! CHECK: %[[cAddr:.*]] = fir.load %[[cAddrVar]] : !fir.ref<!fir.heap<!fir.char<1,10>>>
-  ! CHECK: %[[cAddrcast:.*]] = fir.convert %[[cAddr]] : (!fir.heap<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,?>>
-  ! CHECK: fir.emboxchar %[[cAddrcast]], %[[cLen]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK: fir.emboxchar %[[cAddr]], %[[cLen]] : (!fir.heap<!fir.char<1,10>>, index) -> !fir.boxchar<1>
 end subroutine
 
 ! CHECK-LABEL: _QPchar_explicit_dyn(
@@ -150,8 +148,7 @@ subroutine char_explicit_dyn(l1, l2)
   call bar(c)
   ! CHECK-DAG: %[[cLenCast4:.*]] = fir.convert %[[cLen]] : (i32) -> index
   ! CHECK-DAG: %[[cAddr:.*]] = fir.load %[[cAddrVar]] : !fir.ref<!fir.heap<!fir.char<1,?>>>
-  ! CHECK-DAG: %[[cAddrcast:.*]] = fir.convert %[[cAddr]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
-  ! CHECK: fir.emboxchar %[[cAddrcast]], %[[cLenCast4]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK: fir.emboxchar %[[cAddr]], %[[cLenCast4]] : (!fir.heap<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 end subroutine
 
 ! CHECK-LABEL: _QPspecifiers(

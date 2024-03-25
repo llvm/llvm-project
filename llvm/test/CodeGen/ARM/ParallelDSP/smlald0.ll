@@ -1,11 +1,11 @@
-; RUN: opt -mtriple=arm-none-none-eabi -mcpu=cortex-m33 < %s -arm-parallel-dsp -S | FileCheck %s
-; RUN: opt -mtriple=armeb-none-none-eabi -mcpu=cortex-m33 < %s -arm-parallel-dsp -S | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
+; RUN: opt -mtriple=armv8m.main-none-none-eabi -mattr=+dsp < %s -arm-parallel-dsp -S | FileCheck %s
+; RUN: opt -mtriple=armv8m.maineb-none-none-eabi -mattr=+dsp < %s -arm-parallel-dsp -S | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
 ;
 ; The Cortex-M0 does not support unaligned accesses:
-; RUN: opt -mtriple=arm-none-none-eabi -mcpu=cortex-m0 < %s -arm-parallel-dsp -S | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
+; RUN: opt -mtriple=armv6m-none-none-eabi < %s -arm-parallel-dsp -S | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
 ;
 ; Check DSP extension:
-; RUN: opt -mtriple=arm-none-none-eabi -mcpu=cortex-m33 -mattr=-dsp < %s -arm-parallel-dsp -S | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
+; RUN: opt -mtriple=armv8m.main-none-none-eabi -mattr=-dsp < %s -arm-parallel-dsp -S | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
 
 define dso_local i64 @OneReduction(i32 %arg, ptr nocapture readnone %arg1, ptr nocapture readonly %arg2, ptr nocapture readonly %arg3) {
 ;
@@ -91,14 +91,14 @@ for.body:
   %i.056 = phi i32 [ %add29, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i16, ptr %arg3, i32 %i.056
   %0 = load i16, ptr %arrayidx, align 2
-  %add1 = or i32 %i.056, 1
+  %add1 = or disjoint i32 %i.056, 1
   %arrayidx2 = getelementptr inbounds i16, ptr %arg3, i32 %add1
   %1 = load i16, ptr %arrayidx2, align 2
-  %add3 = or i32 %i.056, 2
+  %add3 = or disjoint i32 %i.056, 2
   %arrayidx4 = getelementptr inbounds i16, ptr %arg3, i32 %add3
   %2 = load i16, ptr %arrayidx4, align 2
 
-  %add5 = or i32 %i.056, 3
+  %add5 = or disjoint i32 %i.056, 3
   %arrayidx6 = getelementptr inbounds i16, ptr %arg3, i32 %add5
   %3 = load i16, ptr %arrayidx6, align 2
   %arrayidx8 = getelementptr inbounds i16, ptr %arg2, i32 %i.056

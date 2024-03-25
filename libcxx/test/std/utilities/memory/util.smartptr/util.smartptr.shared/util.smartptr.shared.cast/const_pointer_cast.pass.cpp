@@ -10,11 +10,13 @@
 
 // shared_ptr
 
-// template<class T, class U> shared_ptr<T> const_pointer_cast(const shared_ptr<U>& r);
+// template<class T, class U> shared_ptr<T> const_pointer_cast(const shared_ptr<U>& r) noexcept;
+// template<class T, class U> shared_ptr<T> const_pointer_cast(shared_ptr<U>&& r) noexcept;
 
+#include <cassert>
 #include <memory>
 #include <type_traits>
-#include <cassert>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -45,6 +47,7 @@ int main(int, char**)
 {
     {
         const std::shared_ptr<const A> pA(new A);
+        ASSERT_NOEXCEPT(std::const_pointer_cast<A>(pA));
         std::shared_ptr<A> pB = std::const_pointer_cast<A>(pA);
         assert(pB.get() == pA.get());
         assert(!pB.owner_before(pA) && !pA.owner_before(pB));
@@ -63,6 +66,17 @@ int main(int, char**)
       assert(!pB.owner_before(pA) && !pA.owner_before(pB));
     }
 #endif // TEST_STD_VER > 14
+#if TEST_STD_VER > 20
+    {
+      A* pA_raw = new A;
+      std::shared_ptr<const A> pA(pA_raw);
+      ASSERT_NOEXCEPT(std::const_pointer_cast<A>(std::move(pA)));
+      std::shared_ptr<A> pB = std::const_pointer_cast<A>(std::move(pA));
+      assert(pA.get() == nullptr);
+      assert(pB.get() == pA_raw);
+      assert(pB.use_count() == 1);
+    }
+#endif // TEST_STD_VER > 20
 
     return 0;
 }

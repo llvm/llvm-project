@@ -8,9 +8,10 @@
 
 # `DO CONCURRENT` isn't necessarily concurrent
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 A variant form of Fortran's primary looping construct was

@@ -33,7 +33,8 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
 
 private:
@@ -45,14 +46,14 @@ private:
 void RestrictedIncludesPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
   // Compiler provided headers are allowed (e.g stddef.h).
   if (SrcMgr::isSystem(FileType) && SearchPath == CompilerIncudeDir)
     return;
   portability::RestrictedIncludesPPCallbacks::InclusionDirective(
       HashLoc, IncludeTok, FileName, IsAngled, FilenameRange, File, SearchPath,
-      RelativePath, Imported, FileType);
+      RelativePath, SuggestedModule, ModuleImported, FileType);
 }
 
 void RestrictSystemLibcHeadersCheck::registerPPCallbacks(

@@ -72,9 +72,10 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
 
 namespace __escaped_output_table {
+// clang-format off
 
 /// The entries of the characters to escape in format's debug string.
 ///
@@ -1029,9 +1030,10 @@ inline constexpr uint32_t __unallocated_region_lower_bound = 0x000323b0;
   return __code_point <= __upper_bound;
 }
 
+// clang-format on
 } // namespace __escaped_output_table
 
-#endif //_LIBCPP_STD_VER > 20
+#endif //_LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 

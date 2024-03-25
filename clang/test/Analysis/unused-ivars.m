@@ -22,7 +22,7 @@
 @implementation TestA @end
 
 // This test case tests whether the unused ivar check handles blocks that
-// reference an instance variable. (<rdar://problem/7075531>)
+// reference an instance variable.
 @interface TestB : NSObject {
 @private
   id _ivar; // no-warning
@@ -44,11 +44,19 @@
 }
 @end
 
-//===----------------------------------------------------------------------===//
-// <rdar://problem/6260004> Detect that ivar is in use, if used in category 
-//  in the same file as the implementation
-//===----------------------------------------------------------------------===//
+// Confirm that the checker respects [[clang::suppress]].
+@interface TestC {
+@private
+  [[clang::suppress]] int x; // no-warning
+}
+@end
+@implementation TestC @end
 
+
+//===----------------------------------------------------------------------===//
+// Detect that ivar is in use, if used in category in the same file as the
+// implementation.
+//===----------------------------------------------------------------------===//
 @protocol Protocol6260004
 - (id) getId;
 @end
@@ -66,10 +74,9 @@
 @end
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7254495> - ivars referenced by lexically nested functions
-//  should not be flagged as unused
+// ivars referenced by lexically nested functions should not be flagged as
+// unused
 //===----------------------------------------------------------------------===//
-
 @interface RDar7254495 {
 @private
   int x; // no-warning
@@ -83,10 +90,9 @@ int radar_7254495(RDar7254495 *a) {
 @end
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7353683> - consult attribute((unused)) to silence warnings
-// about unused instance variables
+// Consult attribute((unused)) to silence warnings about unused instance
+// variables.
 //===----------------------------------------------------------------------===//
-
 @interface RDar7353683 {
 @private
   id x __attribute__((unused));
@@ -95,11 +101,11 @@ int radar_7254495(RDar7254495 *a) {
 
 @implementation RDar7353683
 @end
-//===----------------------------------------------------------------------===//
-// <rdar://problem/8481311> Unused bitfield ivars trigger cause weird
-// diagnostic: "Instance variable '' in class..."
-//===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
+// Unused bitfield ivars trigger cause weird diagnostic:
+// "Instance variable '' in class..."
+//===----------------------------------------------------------------------===//
 @interface RDar8481311 {
 @private
     unsigned bitfield:1; // expected-warning {{Instance variable 'bitfield' in class 'RDar8481311' is never used}}

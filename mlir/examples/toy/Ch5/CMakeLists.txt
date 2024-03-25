@@ -28,12 +28,15 @@ add_toy_chapter(toyc-ch5
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include/)
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 target_link_libraries(toyc-ch5
   PRIVATE
     ${dialect_libs}
+    ${extension_libs}
     MLIRAnalysis
     MLIRCallInterfaces
     MLIRCastInterfaces
+    MLIRFunctionInterfaces
     MLIRIR
     MLIRParser
     MLIRPass

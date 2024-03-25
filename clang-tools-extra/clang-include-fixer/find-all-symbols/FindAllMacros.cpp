@@ -62,8 +62,8 @@ void FindAllMacros::Ifndef(SourceLocation Loc, const Token &MacroNameTok,
 }
 
 void FindAllMacros::EndOfMainFile() {
-  Reporter->reportSymbols(SM->getFileEntryForID(SM->getMainFileID())->getName(),
-                          FileSymbols);
+  Reporter->reportSymbols(
+      SM->getFileEntryRefForID(SM->getMainFileID())->getName(), FileSymbols);
   FileSymbols.clear();
 }
 

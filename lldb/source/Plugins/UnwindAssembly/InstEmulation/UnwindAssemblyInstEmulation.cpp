@@ -83,7 +83,7 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
       const uint32_t addr_byte_size = m_arch.GetAddressByteSize();
       const bool show_address = true;
       const bool show_bytes = true;
-      const bool show_control_flow_kind = true;
+      const bool show_control_flow_kind = false;
       m_cfa_reg_info = *m_inst_emulator_up->GetRegisterInfo(
           unwind_plan.GetRegisterKind(), unwind_plan.GetInitialCFARegister());
       m_fp_is_cfa = false;
@@ -500,7 +500,7 @@ bool UnwindAssemblyInstEmulation::ReadRegister(EmulateInstruction *instruction,
     strm.Printf("UnwindAssemblyInstEmulation::ReadRegister  (name = \"%s\") => "
                 "synthetic_value = %i, value = ",
                 reg_info->name, synthetic);
-    DumpRegisterValue(reg_value, &strm, reg_info, false, false, eFormatDefault);
+    DumpRegisterValue(reg_value, strm, *reg_info, false, false, eFormatDefault);
     log->PutString(strm.GetString());
   }
   return true;
@@ -526,7 +526,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
     strm.Printf(
         "UnwindAssemblyInstEmulation::WriteRegister (name = \"%s\", value = ",
         reg_info->name);
-    DumpRegisterValue(reg_value, &strm, reg_info, false, false, eFormatDefault);
+    DumpRegisterValue(reg_value, strm, *reg_info, false, false, eFormatDefault);
     strm.PutCString(", context = ");
     context.Dump(strm, instruction);
     log->PutString(strm.GetString());

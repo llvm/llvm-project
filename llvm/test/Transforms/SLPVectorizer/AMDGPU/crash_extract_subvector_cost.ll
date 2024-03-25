@@ -8,12 +8,11 @@ define <2 x i16> @uadd_sat_v9i16_combine_vi16(<9 x i16> %arg0, <9 x i16> %arg1) 
 ; CHECK-NEXT:    [[ARG0_2:%.*]] = extractelement <9 x i16> [[ARG0:%.*]], i64 8
 ; CHECK-NEXT:    [[ARG1_1:%.*]] = extractelement <9 x i16> [[ARG1:%.*]], i64 7
 ; CHECK-NEXT:    [[ARG1_2:%.*]] = extractelement <9 x i16> [[ARG1]], i64 8
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i16> poison, i16 [[ARG0_1]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> [[TMP0]], i16 [[ARG0_2]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i16> poison, i16 [[ARG1_1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> [[TMP2]], i16 [[ARG1_2]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16> [[TMP1]], <2 x i16> [[TMP3]])
-; CHECK-NEXT:    ret <2 x i16> [[TMP4]]
+; CHECK-NEXT:    [[ADD_1:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[ARG0_1]], i16 [[ARG1_1]])
+; CHECK-NEXT:    [[ADD_2:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[ARG0_2]], i16 [[ARG1_2]])
+; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <2 x i16> undef, i16 [[ADD_1]], i64 0
+; CHECK-NEXT:    [[INS_2:%.*]] = insertelement <2 x i16> [[INS_1]], i16 [[ADD_2]], i64 1
+; CHECK-NEXT:    ret <2 x i16> [[INS_2]]
 ;
 bb:
   %arg0.1 = extractelement <9 x i16> undef, i64 7

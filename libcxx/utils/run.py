@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 
 """run.py is a utility for running a program.
 
@@ -21,9 +21,12 @@ import subprocess
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--execdir', type=str, required=True)
-    parser.add_argument('--codesign_identity', type=str, required=False, default=None)
-    parser.add_argument('--env', type=str, nargs='*', required=False, default=dict())
+    parser.add_argument("--execdir", type=str, required=True)
+    parser.add_argument("--codesign_identity", type=str, required=False, default=None)
+    parser.add_argument("--env", type=str, nargs="*", required=False, default=[])
+    parser.add_argument(
+        "--prepend_env", type=str, nargs="*", required=False, default=[]
+    )
     parser.add_argument("command", nargs=argparse.ONE_OR_MORE)
     args = parser.parse_args()
     commandLine = args.command
@@ -34,27 +37,36 @@ def main():
     # below. This allows us to do custom processing like codesigning test-executables.
     # It's also possible for there to be no such executable, for example in the case
     # of a .sh.cpp test.
-    isTestExe = lambda exe: exe.endswith('.tmp.exe') and os.path.exists(exe)
+    isTestExe = lambda exe: exe.endswith(".tmp.exe") and os.path.exists(exe)
 
     # Do any necessary codesigning of test-executables found in the command line.
     if args.codesign_identity:
         for exe in filter(isTestExe, commandLine):
-            subprocess.check_call(['xcrun', 'codesign', '-f', '-s', args.codesign_identity, exe], env={})
+            codesign = ["codesign", "-f", "-s", args.codesign_identity, exe]
+            subprocess.check_call(codesign, env={})
 
     # Extract environment variables into a dictionary
-    env = {k : v  for (k, v) in map(lambda s: s.split('=', 1), args.env)}
-    if platform.system() == 'Windows':
+    env = {k: v for (k, v) in map(lambda s: s.split("=", 1), args.env)}
+
+    # Set environment variables where we prepend the given value to the
+    # existing environment variable.
+    for (k, v) in map(lambda s: s.split("=", 1), args.prepend_env):
+        if k in os.environ:
+            v = v + os.pathsep + os.environ[k]
+        env[k] = v
+
+    if platform.system() == "Windows":
         # Pass some extra variables through on Windows:
         # COMSPEC is needed for running subprocesses via std::system().
-        if 'COMSPEC' in os.environ:
-            env['COMSPEC'] = os.environ.get('COMSPEC')
+        if "COMSPEC" in os.environ:
+            env["COMSPEC"] = os.environ.get("COMSPEC")
         # TEMP is needed for placing temp files in a sensible directory.
-        if 'TEMP' in os.environ:
-            env['TEMP'] = os.environ.get('TEMP')
+        if "TEMP" in os.environ:
+            env["TEMP"] = os.environ.get("TEMP")
 
     # Run the command line with the given environment in the execution directory.
     return subprocess.call(commandLine, cwd=args.execdir, env=env, shell=False)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     exit(main())

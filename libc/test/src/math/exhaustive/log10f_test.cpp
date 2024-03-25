@@ -7,49 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "exhaustive_test.h"
-#include "src/__support/FPUtil/FPBits.h"
 #include "src/math/log10f.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
 
-using FPBits = __llvm_libc::fputil::FPBits<float>;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+using LlvmLibcLog10fExhaustiveTest =
+    LlvmLibcUnaryOpExhaustiveMathTest<float, mpfr::Operation::Log10,
+                                      LIBC_NAMESPACE::log10f>;
 
-struct LlvmLibcLog10fExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
-  bool check(uint32_t start, uint32_t stop,
-             mpfr::RoundingMode rounding) override {
-    mpfr::ForceRoundingMode r(rounding);
-    uint32_t bits = start;
-    bool result = true;
-    do {
-      FPBits xbits(bits);
-      float x = float(xbits);
-      result &= EXPECT_MPFR_MATCH(mpfr::Operation::Log10, x,
-                                  __llvm_libc::log10f(x), 0.5, rounding);
-    } while (bits++ < stop);
-    return result;
-  }
-};
+// Range: [0, Inf];
+static constexpr uint32_t POS_START = 0x0000'0000U;
+static constexpr uint32_t POS_STOP = 0x7f80'0000U;
 
-// Range: All non-negative;
-static constexpr uint32_t START = 0x0000'0000U;
-static constexpr uint32_t STOP = 0x7f80'0000U;
-// Range: [1, 10];
-// static constexpr uint32_t START = 0x3f80'0000U;
-// static constexpr uint32_t STOP  = 0x41c0'0000U;
-TEST_F(LlvmLibcLog10fExhaustiveTest, RoundNearestTieToEven) {
-  test_full_range(START, STOP, mpfr::RoundingMode::Nearest);
-}
-
-TEST_F(LlvmLibcLog10fExhaustiveTest, RoundUp) {
-  test_full_range(START, STOP, mpfr::RoundingMode::Upward);
-}
-
-TEST_F(LlvmLibcLog10fExhaustiveTest, RoundDown) {
-  test_full_range(START, STOP, mpfr::RoundingMode::Downward);
-}
-
-TEST_F(LlvmLibcLog10fExhaustiveTest, RoundTowardZero) {
-  test_full_range(START, STOP, mpfr::RoundingMode::TowardZero);
+TEST_F(LlvmLibcLog10fExhaustiveTest, PostiveRange) {
+  test_full_range_all_roundings(POS_START, POS_STOP);
 }

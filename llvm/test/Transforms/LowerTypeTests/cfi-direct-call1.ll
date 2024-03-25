@@ -56,7 +56,8 @@ entry:
 ; FULL: %fptr1 = select i1 %cmp.i, ptr @local_func1, ptr @local_func2
 
 ; Indirect references to extern_weak and extern_decl must go through jump table
-; FULL: %fptr2 = select i1 %cmp.i, ptr select (i1 icmp ne (ptr @extern_weak, ptr null), ptr getelementptr inbounds ([4 x [8 x i8]], ptr @.cfi.jumptable, i64 0, i64 2), ptr null), ptr getelementptr inbounds ([4 x [8 x i8]], ptr @.cfi.jumptable, i64 0, i64 3)
+; FULL: %0 = select i1 icmp ne (ptr @extern_weak, ptr null), ptr getelementptr inbounds ([4 x [8 x i8]], ptr @.cfi.jumptable, i64 0, i64 2), ptr null
+; FULL: %fptr2 = select i1 %cmp.i, ptr %0, ptr getelementptr inbounds ([4 x [8 x i8]], ptr @.cfi.jumptable, i64 0, i64 3)
 
 ; Direct calls to extern_weak and extern_decl should go to original names
 ; FULL: %call5 = tail call i32 @extern_decl()
@@ -82,7 +83,8 @@ entry:
 ; THIN: %fptr1 = select i1 %cmp.i, ptr @local_func1, ptr @local_func2
 
 ; Indirect references to extern_weak and extern_decl must go through jump table
-; THIN: %fptr2 = select i1 %cmp.i, ptr select (i1 icmp ne (ptr @extern_weak, ptr null), ptr @extern_weak.cfi_jt, ptr null), ptr @extern_decl.cfi_jt
+; THIN: %0 = select i1 icmp ne (ptr @extern_weak, ptr null), ptr @extern_weak.cfi_jt, ptr null
+; THIN: %fptr2 = select i1 %cmp.i, ptr %0, ptr @extern_decl.cfi_jt
 
 ; Direct calls to extern_weak and extern_decl should go to original names
 ; THIN: %call5 = tail call i32 @extern_decl()

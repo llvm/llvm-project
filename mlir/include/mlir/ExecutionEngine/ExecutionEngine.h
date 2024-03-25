@@ -68,10 +68,18 @@ struct ExecutionEngineOptions {
 
   /// `jitCodeGenOptLevel`, when provided, is used as the optimization level for
   /// target code generation.
-  std::optional<llvm::CodeGenOpt::Level> jitCodeGenOptLevel;
+  std::optional<llvm::CodeGenOptLevel> jitCodeGenOptLevel;
 
   /// If `sharedLibPaths` are provided, the underlying JIT-compilation will
-  /// open and link the shared libraries for symbol resolution.
+  /// open and link the shared libraries for symbol resolution. Libraries that
+  /// are designed to be used with the `ExecutionEngine` may implement a
+  /// loading and unloading protocol: if they implement the two functions with
+  /// the names defined in `kLibraryInitFnName` and `kLibraryDestroyFnName`,
+  /// these functions will be called upon loading the library and upon
+  /// destruction of the `ExecutionEngine`. In the init function, the library
+  /// may provide a list of symbols that it wants to make available to code
+  /// run by the `ExecutionEngine`. If the two functions are not defined, only
+  /// symbols with public visibility are available to the executed code.
   ArrayRef<StringRef> sharedLibPaths = {};
 
   /// Specifies an existing `sectionMemoryMapper` to be associated with the
@@ -105,12 +113,38 @@ struct ExecutionEngineOptions {
 /// be used to invoke the JIT-compiled function.
 class ExecutionEngine {
 public:
+  /// Name of init functions of shared libraries. If a library provides a
+  /// function with this name and the one of the destroy function, this function
+  /// is called upon loading the library.
+  static constexpr const char *const kLibraryInitFnName =
+      "__mlir_execution_engine_init";
+
+  /// Name of destroy functions of shared libraries. If a library provides a
+  /// function with this name and the one of the init function, this function is
+  /// called upon destructing the `ExecutionEngine`.
+  static constexpr const char *const kLibraryDestroyFnName =
+      "__mlir_execution_engine_destroy";
+
+  /// Function type for init functions of shared libraries. The library may
+  /// provide a list of symbols that it wants to make available to code run by
+  /// the `ExecutionEngine`. If the two functions are not defined, only symbols
+  /// with public visibility are available to the executed code.
+  using LibraryInitFn = void (*)(llvm::StringMap<void *> &);
+
+  /// Function type for destroy functions of shared libraries.
+  using LibraryDestroyFn = void (*)();
+
   ExecutionEngine(bool enableObjectDump, bool enableGDBNotificationListener,
                   bool enablePerfNotificationListener);
 
-  /// Creates an execution engine for the given MLIR IR.
+  ~ExecutionEngine();
+
+  /// Creates an execution engine for the given MLIR IR. If TargetMachine is
+  /// not provided, default TM is created (i.e. ignoring any command line flags
+  /// that could affect the set-up).
   static llvm::Expected<std::unique_ptr<ExecutionEngine>>
-  create(Operation *op, const ExecutionEngineOptions &options = {});
+  create(Operation *op, const ExecutionEngineOptions &options = {},
+         std::unique_ptr<llvm::TargetMachine> tm = nullptr);
 
   /// Looks up a packed-argument function wrapping the function with the given
   /// name and returns a pointer to it. Propagates errors in case of failure.
@@ -180,9 +214,11 @@ public:
     return invokePacked(adapterName, argsArray);
   }
 
-  /// Set the target triple on the module. This is implicitly done when creating
-  /// the engine.
-  static bool setupTargetTriple(llvm::Module *llvmModule);
+  /// Set the target triple and the data layout for the input module based on
+  /// the input TargetMachine. This is implicitly done when creating the
+  /// engine.
+  static void setupTargetTripleAndDataLayout(llvm::Module *llvmModule,
+                                             llvm::TargetMachine *tm);
 
   /// Dump object code to output file `filename`.
   void dumpToObjectFile(StringRef filename);
@@ -211,6 +247,10 @@ private:
 
   /// Perf notification listener.
   llvm::JITEventListener *perfListener;
+
+  /// Destroy functions in the libraries loaded by the ExecutionEngine that are
+  /// called when this ExecutionEngine is destructed.
+  SmallVector<LibraryDestroyFn> destroyFns;
 };
 
 } // namespace mlir

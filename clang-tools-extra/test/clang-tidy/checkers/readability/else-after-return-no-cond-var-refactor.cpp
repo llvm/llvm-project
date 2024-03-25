@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s readability-else-after-return %t -- \
-// RUN:     -config='{CheckOptions: [ \
-// RUN:         {key: readability-else-after-return.WarnOnConditionVariables, value: false}, \
-// RUN:     ]}'
+// RUN:     -config='{CheckOptions: { \
+// RUN:         readability-else-after-return.WarnOnConditionVariables: false, \
+// RUN:     }}'
 
 bool foo(int Y) {
   // Excess scopes are here so that the check would have to opportunity to

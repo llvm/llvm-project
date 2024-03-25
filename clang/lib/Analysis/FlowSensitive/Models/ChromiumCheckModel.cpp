@@ -43,15 +43,15 @@ bool isCheckLikeMethod(llvm::SmallDenseSet<const CXXMethodDecl *> &CheckDecls,
       return false;
 
     for (const CXXMethodDecl *M : ParentClass->methods())
-      if (M->getDeclName().isIdentifier() && M->getName().endswith("Check"))
+      if (M->getDeclName().isIdentifier() && M->getName().ends_with("Check"))
         CheckDecls.insert(M);
   }
 
   return CheckDecls.contains(&D);
 }
 
-bool ChromiumCheckModel::transfer(const CFGElement *Element, Environment &Env) {
-  auto CS = Element->getAs<CFGStmt>();
+bool ChromiumCheckModel::transfer(const CFGElement &Element, Environment &Env) {
+  auto CS = Element.getAs<CFGStmt>();
   if (!CS)
     return false;
   auto Stmt = CS->getStmt();
@@ -59,7 +59,7 @@ bool ChromiumCheckModel::transfer(const CFGElement *Element, Environment &Env) {
     if (const auto *M = dyn_cast<CXXMethodDecl>(Call->getDirectCallee())) {
       if (isCheckLikeMethod(CheckDecls, *M)) {
         // Mark this branch as unreachable.
-        Env.addToFlowCondition(Env.getBoolLiteralValue(false));
+        Env.assume(Env.arena().makeLiteral(false));
         return true;
       }
     }

@@ -7,24 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "InterpState.h"
-#include <limits>
-#include "Function.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
-#include "Opcode.h"
-#include "PrimType.h"
 #include "Program.h"
 #include "State.h"
 
 using namespace clang;
 using namespace clang::interp;
 
-using APSInt = llvm::APSInt;
-
 InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, SourceMapper *M)
-    : Parent(Parent), M(M), P(P), Stk(Stk), Ctx(Ctx), Current(nullptr),
-      CallStackDepth(Parent.getCallStackDepth() + 1) {}
+    : Parent(Parent), M(M), P(P), Stk(Stk), Ctx(Ctx), Current(nullptr) {}
 
 InterpState::~InterpState() {
   while (Current) {
@@ -35,17 +28,15 @@ InterpState::~InterpState() {
 
   while (DeadBlocks) {
     DeadBlock *Next = DeadBlocks->Next;
-    free(DeadBlocks);
+    std::free(DeadBlocks);
     DeadBlocks = Next;
   }
 }
 
 Frame *InterpState::getCurrentFrame() {
-  if (Current && Current->Caller) {
+  if (Current && Current->Caller)
     return Current;
-  } else {
-    return Parent.getCurrentFrame();
-  }
+  return Parent.getCurrentFrame();
 }
 
 bool InterpState::reportOverflow(const Expr *E, const llvm::APSInt &Value) {
@@ -55,20 +46,28 @@ bool InterpState::reportOverflow(const Expr *E, const llvm::APSInt &Value) {
 }
 
 void InterpState::deallocate(Block *B) {
-  Descriptor *Desc = B->getDescriptor();
+  assert(B);
+  const Descriptor *Desc = B->getDescriptor();
+  assert(Desc);
+
   if (B->hasPointers()) {
     size_t Size = B->getSize();
 
     // Allocate a new block, transferring over pointers.
-    char *Memory = reinterpret_cast<char *>(malloc(sizeof(DeadBlock) + Size));
+    char *Memory =
+        reinterpret_cast<char *>(std::malloc(sizeof(DeadBlock) + Size));
     auto *D = new (Memory) DeadBlock(DeadBlocks, B);
 
-    // Move data from one block to another.
-    if (Desc->MoveFn)
+    // Move data and metadata from the old block to the new (dead)block.
+    if (Desc->MoveFn) {
       Desc->MoveFn(B, B->data(), D->data(), Desc);
+      if (Desc->getMetadataSize() > 0)
+        std::memcpy(D->rawData(), B->rawData(), Desc->getMetadataSize());
+    }
+
+    // We moved the contents over to the DeadBlock.
+    B->IsInitialized = false;
   } else {
-    // Free storage, if necessary.
-    if (Desc->DtorFn)
-      Desc->DtorFn(B, B->data(), Desc);
+    B->invokeDtor();
   }
 }

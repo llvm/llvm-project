@@ -17,12 +17,12 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local i32 @main() nounwind uwtable {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq i(%rip), %rsi
-; CHECK-NEXT:    movq j(%rip), %rax
-; CHECK-NEXT:    movq %rsi, %rdx
-; CHECK-NEXT:    shrq $8, %rdx
+; CHECK-NEXT:    movl i(%rip), %esi
+; CHECK-NEXT:    movl j(%rip), %eax
+; CHECK-NEXT:    movl %esi, %edx
+; CHECK-NEXT:    shrl $8, %edx
 ; CHECK-NEXT:    movsbl %al, %ecx
-; CHECK-NEXT:    shrq $8, %rax
+; CHECK-NEXT:    shrl $8, %eax
 ; CHECK-NEXT:    cbtw
 ; CHECK-NEXT:    idivb %dl
 ; CHECK-NEXT:    movl %eax, %edx

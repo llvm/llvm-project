@@ -50,12 +50,7 @@
 using namespace clang;
 using namespace ento;
 
-static StringRef StripTrailingDots(StringRef s) {
-  for (StringRef::size_type i = s.size(); i != 0; --i)
-    if (s[i - 1] != '.')
-      return s.substr(0, i);
-  return {};
-}
+static StringRef StripTrailingDots(StringRef s) { return s.rtrim('.'); }
 
 PathDiagnosticPiece::PathDiagnosticPiece(StringRef s,
                                          Kind k, DisplayHint hint)
@@ -336,8 +331,10 @@ static bool compareCrossTUSourceLocs(FullSourceLoc XL, FullSourceLoc YL) {
   std::pair<bool, bool> InSameTU = SM.isInTheSameTranslationUnit(XOffs, YOffs);
   if (InSameTU.first)
     return XL.isBeforeInTranslationUnitThan(YL);
-  const FileEntry *XFE = SM.getFileEntryForID(XL.getSpellingLoc().getFileID());
-  const FileEntry *YFE = SM.getFileEntryForID(YL.getSpellingLoc().getFileID());
+  OptionalFileEntryRef XFE =
+      SM.getFileEntryRefForID(XL.getSpellingLoc().getFileID());
+  OptionalFileEntryRef YFE =
+      SM.getFileEntryRefForID(YL.getSpellingLoc().getFileID());
   if (!XFE || !YFE)
     return XFE && !YFE;
   int NameCmp = XFE->getName().compare(YFE->getName());
@@ -565,6 +562,7 @@ getLocationForCaller(const StackFrameContext *SFC,
   }
   case CFGElement::ScopeBegin:
   case CFGElement::ScopeEnd:
+  case CFGElement::CleanupFunction:
     llvm_unreachable("not yet implemented!");
   case CFGElement::LifetimeEnds:
   case CFGElement::LoopExit:
@@ -584,6 +582,7 @@ PathDiagnosticLocation
 PathDiagnosticLocation::createBegin(const Stmt *S,
                                     const SourceManager &SM,
                                     LocationOrAnalysisDeclContext LAC) {
+  assert(S && "Statement cannot be null");
   return PathDiagnosticLocation(getValidSourceLocation(S, LAC),
                                 SM, SingleLocK);
 }

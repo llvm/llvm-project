@@ -12,6 +12,7 @@ SECTIONS {
   multiplicative = 20 / 2 % 7;
   additive = 1 - 2 + -3 * -2;
   shift = 2 << 5 >> 1 << 2;
+  shift2 = 2 << 69 >> 65;
   less = 1 < 0 ? 1 : 2;
   lesseq = 1<<0 <= 1>>0 ? 1 : 2;
   greater = 0 > 1 ? 1 : 2;
@@ -20,6 +21,7 @@ SECTIONS {
   neq = 1 != 1 <= 1 ? 1 : 2;
   and = 3 & 4 > 0;
   or = 0xbb & 0xee | 1;
+  xor = 3&3^5|1;
   logicaland = (0 && 0) + (0&&1)*2 + (1&& 0)*4 + (1 &&1) *8;
   logicaland2 = 1 & 0 && 1 | 1;
   logicalor = (0 || 0) + (0||1)*2 + (1|| 0)*4 + (1 ||1) *8;
@@ -36,13 +38,20 @@ SECTIONS {
   minusassign = 3;
   minusassign -= 1;
   lshiftassign = 1;
-  lshiftassign <<= 2;
-  rshiftassign = 5;
+  lshiftassign <<= 1;
+  lshiftassign <<= 65;  # arbitrarily reduced to 1
+  rshiftassign = 24;
   rshiftassign >>= 1;
+  rshiftassign >>= 130;  # arbitrarily reduced to 2
   andassign = 6;
   andassign &= 4;
+  andassign&=4;
+  xorassign = 6;
+  xorassign ^= 3;
+  xorassign ^=0;
   orassign = 4;
   orassign |= 1;
+  orassign|=1;
   braces = 1 + (2 + 3) * 4;
   precedence1 = 1|0xff&1/1<<1+1*2;
   precedence2 = (1 | (0xff & (1 << (1 + (1 * 2)))));
@@ -73,6 +82,7 @@ SECTIONS {
 # CHECK-NEXT: 0000000000000003 A multiplicative
 # CHECK-NEXT: 0000000000000005 A additive
 # CHECK-NEXT: 0000000000000080 A shift
+# CHECK-NEXT: 0000000000000020 A shift
 # CHECK-NEXT: 0000000000000002 A less
 # CHECK-NEXT: 0000000000000001 A lesseq
 # CHECK-NEXT: 0000000000000002 A greater
@@ -81,6 +91,7 @@ SECTIONS {
 # CHECK-NEXT: 0000000000000002 A neq
 # CHECK-NEXT: 0000000000000001 A and
 # CHECK-NEXT: 00000000000000ab A or
+# CHECK-NEXT: 0000000000000007 A xor
 # CHECK-NEXT: 0000000000000008 A logicaland
 # CHECK-NEXT: 0000000000000000 A logicaland2
 # CHECK-NEXT: 000000000000000e A logicalor
@@ -92,8 +103,9 @@ SECTIONS {
 # CHECK-NEXT: 0000000000000003 A plusassign
 # CHECK-NEXT: 0000000000000002 A minusassign
 # CHECK-NEXT: 0000000000000004 A lshiftassign
-# CHECK-NEXT: 0000000000000002 A rshiftassign
+# CHECK-NEXT: 0000000000000003 A rshiftassign
 # CHECK-NEXT: 0000000000000004 A andassign
+# CHECK-NEXT: 0000000000000005 A xorassign
 # CHECK-NEXT: 0000000000000005 A orassign
 # CHECK-NEXT: 0000000000000015 A braces
 # CHECK-NEXT: 0000000000000009 A precedence1
@@ -161,10 +173,12 @@ SECTIONS {
 # RUN: echo 'a = 1; a /= 0;' > %t.script
 # RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | FileCheck --check-prefix=DIVZERO %s
 
-## GNU ld does not support %= or ^=.
+## GNU ld does not support %=.
 # RUN: echo 'a = 1; a %= 0;' > %t.script
-# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | FileCheck --check-prefix=UNKNOWN %s
-# RUN: echo 'a = 1; a ^= 0;' > %t.script
-# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | FileCheck --check-prefix=UNKNOWN %s
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | FileCheck --check-prefix=UNKNOWN1 %s
+## For now, we don't support ^= without a preceding space.
+# RUN: echo 'a = 1; a^=0;' > %t.script
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | FileCheck --check-prefix=UNKNOWN2 %s
 
-# UNKNOWN: error: {{.*}}:1: unknown directive: a
+# UNKNOWN1: error: {{.*}}:1: unknown directive: a{{$}}
+# UNKNOWN2: error: {{.*}}:1: unknown directive: a^=0{{$}}

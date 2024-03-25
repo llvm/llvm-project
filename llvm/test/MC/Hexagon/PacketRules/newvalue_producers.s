@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -arch=hexagon -mhvx -filetype=asm %s 2>%t; FileCheck %s <%t
+# RUN: not llvm-mc -triple=hexagon -mhvx -filetype=asm %s 2>%t; FileCheck %s <%t
 
 { r0=memw(r1=##0)
   memw(r0)=r1.new }

@@ -60,7 +60,8 @@ private:
 // corresponding to an element in array element order.
 class DesignatorFolder {
 public:
-  explicit DesignatorFolder(FoldingContext &c) : context_{c} {}
+  explicit DesignatorFolder(FoldingContext &c, bool getLastComponent = false)
+      : context_{c}, getLastComponent_{getLastComponent} {}
 
   bool isEmpty() const { return isEmpty_; }
   bool isOutOfRange() const { return isOutOfRange_; }
@@ -103,7 +104,7 @@ private:
   }
 
   template <typename A>
-  std::optional<OffsetSymbol> FoldDesignator(const A &x, ConstantSubscript) {
+  std::optional<OffsetSymbol> FoldDesignator(const A &, ConstantSubscript) {
     return std::nullopt;
   }
 
@@ -157,6 +158,7 @@ private:
   }
 
   FoldingContext &context_;
+  bool getLastComponent_{false};
   ConstantSubscript elementNumber_{0}; // zero-based
   bool isEmpty_{false};
   bool isOutOfRange_{false};

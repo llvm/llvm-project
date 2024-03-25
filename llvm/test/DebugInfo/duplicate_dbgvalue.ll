@@ -1,4 +1,5 @@
 ; RUN: opt -passes=instcombine -S -o - < %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=instcombine -S -o - < %s | FileCheck %s
 
 ; CHECK-LABEL: %3 = load i32, ptr %i1_311
 ; CHECK: call void @llvm.dbg.value(metadata i32 %3

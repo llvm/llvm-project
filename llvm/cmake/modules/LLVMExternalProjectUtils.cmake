@@ -83,7 +83,7 @@ function(llvm_ExternalProject_Add name source_dir)
     set(target_triple ${ARG_TARGET_TRIPLE})
   endif()
 
-  is_msvc_triple(is_msvc_target ${target_triple})
+  is_msvc_triple(is_msvc_target "${target_triple}")
 
   if(NOT ARG_TOOLCHAIN_TOOLS)
     set(ARG_TOOLCHAIN_TOOLS clang)
@@ -93,7 +93,10 @@ function(llvm_ExternalProject_Add name source_dir)
       if(_cmake_system_name STREQUAL Darwin)
         list(APPEND ARG_TOOLCHAIN_TOOLS llvm-libtool-darwin llvm-lipo)
       elseif(is_msvc_target)
-        list(APPEND ARG_TOOLCHAIN_TOOLS llvm-lib)
+        list(APPEND ARG_TOOLCHAIN_TOOLS llvm-lib llvm-rc)
+        if (LLVM_ENABLE_LIBXML2)
+          list(APPEND ARG_TOOLCHAIN_TOOLS llvm-mt)
+        endif()
       else()
         # TODO: These tools don't fully support Mach-O format yet.
         list(APPEND ARG_TOOLCHAIN_TOOLS llvm-objcopy llvm-strip llvm-readelf)
@@ -162,6 +165,19 @@ function(llvm_ExternalProject_Add name source_dir)
     endforeach()
   endforeach()
 
+  # Populate the non-project-specific passthrough variables
+  foreach(variableName ${LLVM_EXTERNAL_PROJECT_PASSTHROUGH})
+    if(DEFINED ${variableName})
+      if("${${variableName}}" STREQUAL "")
+        set(value "")
+      else()
+        string(REPLACE ";" "|" value "${${variableName}}")
+      endif()
+      list(APPEND PASSTHROUGH_VARIABLES
+        -D${variableName}=${value})
+    endif()
+  endforeach()
+
   if(ARG_USE_TOOLCHAIN AND NOT CMAKE_CROSSCOMPILING)
     if(CLANG_IN_TOOLCHAIN)
       if(is_msvc_target)
@@ -212,6 +228,12 @@ function(llvm_ExternalProject_Add name source_dir)
     if(llvm-readelf IN_LIST TOOLCHAIN_TOOLS)
       list(APPEND compiler_args -DCMAKE_READELF=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-readelf${CMAKE_EXECUTABLE_SUFFIX})
     endif()
+    if(llvm-mt IN_LIST TOOLCHAIN_TOOLS AND is_msvc_target)
+      list(APPEND compiler_args -DCMAKE_MT=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-mt${CMAKE_EXECUTABLE_SUFFIX})
+    endif()
+    if(llvm-rc IN_LIST TOOLCHAIN_TOOLS AND is_msvc_target)
+      list(APPEND compiler_args -DCMAKE_RC_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-rc${CMAKE_EXECUTABLE_SUFFIX})
+    endif()
     list(APPEND ARG_DEPENDS ${TOOLCHAIN_TOOLS})
   endif()
 
@@ -258,7 +280,11 @@ function(llvm_ExternalProject_Add name source_dir)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
       string(REGEX MATCH "^[0-9]+" CLANG_VERSION_MAJOR
              ${PACKAGE_VERSION})
-      set(resource_dir "${LLVM_LIBRARY_DIR}/clang/${CLANG_VERSION_MAJOR}")
+      if(DEFINED CLANG_RESOURCE_DIR AND NOT CLANG_RESOURCE_DIR STREQUAL "")
+        set(resource_dir ${LLVM_TOOLS_BINARY_DIR}/${CLANG_RESOURCE_DIR})
+      else()
+        set(resource_dir "${LLVM_LIBRARY_DIR}/clang/${CLANG_VERSION_MAJOR}")
+      endif()
       set(flag_types ASM C CXX MODULE_LINKER SHARED_LINKER EXE_LINKER)
       foreach(type ${flag_types})
         set(${type}_flag -DCMAKE_${type}_FLAGS=-resource-dir=${resource_dir})
@@ -293,6 +319,10 @@ function(llvm_ExternalProject_Add name source_dir)
     list(APPEND compiler_args -DCMAKE_ASM_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
   endif()
 
+  if(CMAKE_VERBOSE_MAKEFILE)
+    set(verbose -DCMAKE_VERBOSE_MAKEFILE=ON)
+  endif()
+
   ExternalProject_Add(${name}
     DEPENDS ${ARG_DEPENDS} llvm-config
     ${name}-clobber
@@ -302,7 +332,9 @@ function(llvm_ExternalProject_Add name source_dir)
     BINARY_DIR ${BINARY_DIR}
     ${exclude}
     CMAKE_ARGS ${${nameCanon}_CMAKE_ARGS}
+               --no-warn-unused-cli
                ${compiler_args}
+               ${verbose}
                -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
                ${sysroot_arg}
                -DLLVM_BINARY_DIR=${PROJECT_BINARY_DIR}
@@ -317,8 +349,6 @@ function(llvm_ExternalProject_Add name source_dir)
                -DPACKAGE_VERSION=${PACKAGE_VERSION}
                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
-               -DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}
-               -DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}
                -DCMAKE_EXPORT_COMPILE_COMMANDS=1
                ${cmake_args}
                ${PASSTHROUGH_VARIABLES}

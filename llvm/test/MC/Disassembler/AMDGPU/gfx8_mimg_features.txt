@@ -1,5 +1,5 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=tonga -disassemble -show-encoding < %s | FileCheck %s -check-prefix=VI -check-prefix=GFX80
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx810 -disassemble -show-encoding < %s | FileCheck %s -check-prefix=VI -check-prefix=GFX81
+# RUN: llvm-mc -triple=amdgcn -mcpu=tonga -disassemble -show-encoding < %s | FileCheck %s -check-prefix=VI -check-prefix=GFX80
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx810 -disassemble -show-encoding < %s | FileCheck %s -check-prefix=VI -check-prefix=GFX81
 
 #===------------------------------------------------------------------------===#
 # Image load/store

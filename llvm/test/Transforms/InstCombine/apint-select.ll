@@ -5,7 +5,7 @@
 
 define i41 @zext(i1 %C) {
 ; CHECK-LABEL: @zext(
-; CHECK-NEXT:    [[V:%.*]] = zext i1 %C to i41
+; CHECK-NEXT:    [[V:%.*]] = zext i1 [[C:%.*]] to i41
 ; CHECK-NEXT:    ret i41 [[V]]
 ;
   %V = select i1 %C, i41 1, i41 0
@@ -14,7 +14,7 @@ define i41 @zext(i1 %C) {
 
 define i41 @sext(i1 %C) {
 ; CHECK-LABEL: @sext(
-; CHECK-NEXT:    [[V:%.*]] = sext i1 %C to i41
+; CHECK-NEXT:    [[V:%.*]] = sext i1 [[C:%.*]] to i41
 ; CHECK-NEXT:    ret i41 [[V]]
 ;
   %V = select i1 %C, i41 -1, i41 0
@@ -23,7 +23,7 @@ define i41 @sext(i1 %C) {
 
 define i999 @not_zext(i1 %C) {
 ; CHECK-LABEL: @not_zext(
-; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 %C, true
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
 ; CHECK-NEXT:    [[V:%.*]] = zext i1 [[NOT_C]] to i999
 ; CHECK-NEXT:    ret i999 [[V]]
 ;
@@ -33,7 +33,7 @@ define i999 @not_zext(i1 %C) {
 
 define i999 @not_sext(i1 %C) {
 ; CHECK-LABEL: @not_sext(
-; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 %C, true
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
 ; CHECK-NEXT:    [[V:%.*]] = sext i1 [[NOT_C]] to i999
 ; CHECK-NEXT:    ret i999 [[V]]
 ;
@@ -45,7 +45,7 @@ define i999 @not_sext(i1 %C) {
 
 define <2 x i41> @zext_vec(<2 x i1> %C) {
 ; CHECK-LABEL: @zext_vec(
-; CHECK-NEXT:    [[V:%.*]] = zext <2 x i1> %C to <2 x i41>
+; CHECK-NEXT:    [[V:%.*]] = zext <2 x i1> [[C:%.*]] to <2 x i41>
 ; CHECK-NEXT:    ret <2 x i41> [[V]]
 ;
   %V = select <2 x i1> %C, <2 x i41> <i41 1, i41 1>, <2 x i41> <i41 0, i41 0>
@@ -54,7 +54,7 @@ define <2 x i41> @zext_vec(<2 x i1> %C) {
 
 define <2 x i32> @sext_vec(<2 x i1> %C) {
 ; CHECK-LABEL: @sext_vec(
-; CHECK-NEXT:    [[V:%.*]] = sext <2 x i1> %C to <2 x i32>
+; CHECK-NEXT:    [[V:%.*]] = sext <2 x i1> [[C:%.*]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[V]]
 ;
   %V = select <2 x i1> %C, <2 x i32> <i32 -1, i32 -1>, <2 x i32> <i32 0, i32 0>
@@ -63,7 +63,7 @@ define <2 x i32> @sext_vec(<2 x i1> %C) {
 
 define <2 x i999> @not_zext_vec(<2 x i1> %C) {
 ; CHECK-LABEL: @not_zext_vec(
-; CHECK-NEXT:    [[NOT_C:%.*]] = xor <2 x i1> %C, <i1 true, i1 true>
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor <2 x i1> [[C:%.*]], <i1 true, i1 true>
 ; CHECK-NEXT:    [[V:%.*]] = zext <2 x i1> [[NOT_C]] to <2 x i999>
 ; CHECK-NEXT:    ret <2 x i999> [[V]]
 ;
@@ -73,7 +73,7 @@ define <2 x i999> @not_zext_vec(<2 x i1> %C) {
 
 define <2 x i64> @not_sext_vec(<2 x i1> %C) {
 ; CHECK-LABEL: @not_sext_vec(
-; CHECK-NEXT:    [[NOT_C:%.*]] = xor <2 x i1> %C, <i1 true, i1 true>
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor <2 x i1> [[C:%.*]], <i1 true, i1 true>
 ; CHECK-NEXT:    [[V:%.*]] = sext <2 x i1> [[NOT_C]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[V]]
 ;
@@ -85,7 +85,7 @@ define <2 x i64> @not_sext_vec(<2 x i1> %C) {
 
 define <2 x i32> @scalar_select_of_vectors(i1 %c) {
 ; CHECK-LABEL: @scalar_select_of_vectors(
-; CHECK-NEXT:    [[V:%.*]] = select i1 %c, <2 x i32> <i32 1, i32 1>, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 1, i32 1>, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[V]]
 ;
   %V = select i1 %c, <2 x i32> <i32 1, i32 1>, <2 x i32> zeroinitializer
@@ -96,7 +96,7 @@ define <2 x i32> @scalar_select_of_vectors(i1 %c) {
 
 define i41 @test3(i41 %X) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr i41 %X, 40
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr i41 [[X:%.*]], 40
 ; CHECK-NEXT:    ret i41 [[X_LOBIT]]
 ;
   %t = icmp slt i41 %X, 0
@@ -108,7 +108,7 @@ define i41 @test3(i41 %X) {
 
 define i1023 @test4(i1023 %X) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr i1023 %X, 1022
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr i1023 [[X:%.*]], 1022
 ; CHECK-NEXT:    ret i1023 [[X_LOBIT]]
 ;
   %t = icmp slt i1023 %X, 0

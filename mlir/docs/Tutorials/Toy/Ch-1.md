@@ -61,9 +61,9 @@ def main() {
   # trigger another specialization of `multiply_transpose`.
   var e = multiply_transpose(c, d);
 
-  # Finally, calling into `multiply_transpose` with incompatible shape will
-  # trigger a shape inference error.
-  var f = multiply_transpose(transpose(a), c);
+  # Finally, calling into `multiply_transpose` with incompatible shapes
+  # (<2, 3> and <3, 2>) will trigger a shape inference error.
+  var f = multiply_transpose(a, c);
 }
 ```
 
@@ -74,7 +74,7 @@ The AST from the above code is fairly straightforward; here is a dump of it:
 ```
 Module:
   Function 
-    Proto 'multiply_transpose' @test/Examples/Toy/Ch1/ast.toy:4:1'
+    Proto 'multiply_transpose' @test/Examples/Toy/Ch1/ast.toy:4:1
     Params: [a, b]
     Block {
       Return
@@ -87,7 +87,7 @@ Module:
           ]
     } // Block
   Function 
-    Proto 'main' @test/Examples/Toy/Ch1/ast.toy:8:1'
+    Proto 'main' @test/Examples/Toy/Ch1/ast.toy:8:1
     Params: []
     Block {
       VarDecl a<> @test/Examples/Toy/Ch1/ast.toy:11:3
@@ -111,10 +111,8 @@ Module:
         ]
       VarDecl f<> @test/Examples/Toy/Ch1/ast.toy:28:3
         Call 'multiply_transpose' [ @test/Examples/Toy/Ch1/ast.toy:28:11
-          Call 'transpose' [ @test/Examples/Toy/Ch1/ast.toy:28:30
-            var: a @test/Examples/Toy/Ch1/ast.toy:28:40
-          ]
-          var: c @test/Examples/Toy/Ch1/ast.toy:28:44
+          var: a @test/Examples/Toy/Ch1/ast.toy:28:30
+          var: c @test/Examples/Toy/Ch1/ast.toy:28:33
         ]
     } // Block
 ```

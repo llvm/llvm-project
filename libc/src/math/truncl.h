@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_TRUNCL_H
 #define LLVM_LIBC_SRC_MATH_TRUNCL_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 long double truncl(long double x);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_TRUNCL_H

@@ -11,11 +11,11 @@
 
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int pthread_mutexattr_getpshared(const pthread_mutexattr_t *__restrict attr,
                                  int *__restrict pshared);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_GETPSHARED_H

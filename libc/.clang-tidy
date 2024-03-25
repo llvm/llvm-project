@@ -9,18 +9,24 @@ CheckOptions:
   - key:             readability-identifier-naming.MemberCase
     value:           lower_case
   - key:             readability-identifier-naming.MemberIgnoredRegexp
-    value:           "^_[A-Za-z0-9_]+$"
+    value:           "_?(_[A-Za-z0-9]+)*"
   - key:             readability-identifier-naming.VariableCase
     value:           lower_case
   - key:             readability-identifier-naming.VariableIgnoredRegexp
-    value:           "^_[A-Za-z0-9_]+$"
+    value:           "_?(_[A-Za-z0-9]+)*"
   - key:             readability-identifier-naming.FunctionCase
     value:           lower_case
   - key:             readability-identifier-naming.FunctionIgnoredRegexp
-    value:           "^_[A-Za-z0-9_]+$"
+    value:           "_?(_[A-Za-z0-9]+)*"
   - key:             readability-identifier-naming.GlobalConstantCase
+    value:           UPPER_CASE
+  - key:             readability-identifier-naming.LocalConstantIgnoredRegexp
+    value:           "[A-Z]+[A-Z0-9]*(_[A-Z0-9]+)*"
+  - key:             readability-identifier-naming.ClassConstantCase
     value:           UPPER_CASE
   - key:             readability-identifier-naming.ConstexprVariableCase
     value:           UPPER_CASE
+  - key:             readability-identifier-naming.ConstexprFunctionCase
+    value:           lower_case
   - key:             readability-identifier-naming.GetConfigPerFile
     value:           true

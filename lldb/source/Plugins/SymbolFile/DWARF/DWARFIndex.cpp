@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/SymbolFile/DWARF/DWARFIndex.h"
+#include "DWARFDebugInfoEntry.h"
+#include "DWARFDeclContext.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
@@ -17,6 +19,7 @@
 
 using namespace lldb_private;
 using namespace lldb;
+using namespace lldb_private::plugin::dwarf;
 
 DWARFIndex::~DWARFIndex() = default;
 
@@ -99,9 +102,33 @@ bool DWARFIndex::DIERefCallbackImpl::operator()(DIERef ref) const {
   return true;
 }
 
+bool DWARFIndex::DIERefCallbackImpl::operator()(
+    const llvm::AppleAcceleratorTable::Entry &entry) const {
+  return this->operator()(DIERef(std::nullopt, DIERef::Section::DebugInfo,
+                                 *entry.getDIESectionOffset()));
+}
+
 void DWARFIndex::ReportInvalidDIERef(DIERef ref, llvm::StringRef name) const {
   m_module.ReportErrorIfModifyDetected(
       "the DWARF debug information has been modified (accelerator table had "
       "bad die {0:x16} for '{1}')\n",
       ref.die_offset(), name.str().c_str());
+}
+
+void DWARFIndex::GetFullyQualifiedType(
+    const DWARFDeclContext &context,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+  GetTypes(context, [&](DWARFDIE die) {
+    return GetFullyQualifiedTypeImpl(context, die, callback);
+  });
+}
+
+bool DWARFIndex::GetFullyQualifiedTypeImpl(
+    const DWARFDeclContext &context, DWARFDIE die,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+  DWARFDeclContext dwarf_decl_ctx =
+      die.GetDIE()->GetDWARFDeclContext(die.GetCU());
+  if (dwarf_decl_ctx == context)
+    return callback(die);
+  return true;
 }

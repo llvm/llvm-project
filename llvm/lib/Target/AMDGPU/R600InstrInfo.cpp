@@ -328,7 +328,7 @@ R600InstrInfo::ExtractSrcs(MachineInstr &MI,
     if (Reg == R600::OQAP) {
       Result.push_back(std::pair(Index, 0U));
     }
-    if (PV.find(Reg) != PV.end()) {
+    if (PV.contains(Reg)) {
       // 255 is used to tells its a PS/PV reg
       Result.push_back(std::pair(255, 0U));
       continue;

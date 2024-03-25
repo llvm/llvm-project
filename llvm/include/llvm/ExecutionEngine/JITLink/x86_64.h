@@ -16,8 +16,6 @@
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/TableManager.h"
 
-#include <limits>
-
 namespace llvm {
 namespace jitlink {
 namespace x86_64 {
@@ -63,6 +61,17 @@ enum EdgeKind_x86_64 : Edge::Kind {
   ///     otherwise an out-of-range error will be returned.
   ///
   Pointer16,
+
+  /// A plain 8-bit pointer value relocation.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Target + Addend : uint8
+  ///
+  /// Errors:
+  ///   - The target must reside in the low 8-bits of the address space,
+  ///     otherwise an out-of-range error will be returned.
+  ///
+  Pointer8,
 
   /// A 64-bit delta.
   ///
@@ -381,17 +390,6 @@ enum EdgeKind_x86_64 : Edge::Kind {
 /// only.
 const char *getEdgeKindName(Edge::Kind K);
 
-/// Returns true if the given uint64_t value is in range for a uint32_t.
-inline bool isInRangeForImmU32(uint64_t Value) {
-  return Value <= std::numeric_limits<uint32_t>::max();
-}
-
-/// Returns true if the given int64_t value is in range for an int32_t.
-inline bool isInRangeForImmS32(int64_t Value) {
-  return (Value >= std::numeric_limits<int32_t>::min() &&
-          Value <= std::numeric_limits<int32_t>::max());
-}
-
 /// Apply fixup expression for edge to block content.
 inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
                         const Symbol *GOTSymbol) {
@@ -411,7 +409,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 
   case Pointer32: {
     uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
-    if (LLVM_LIKELY(isInRangeForImmU32(Value)))
+    if (LLVM_LIKELY(isUInt<32>(Value)))
       *(ulittle32_t *)FixupPtr = Value;
     else
       return makeTargetOutOfRangeError(G, B, E);
@@ -419,7 +417,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   }
   case Pointer32Signed: {
     int64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
-    if (LLVM_LIKELY(isInRangeForImmS32(Value)))
+    if (LLVM_LIKELY(isInt<32>(Value)))
       *(little32_t *)FixupPtr = Value;
     else
       return makeTargetOutOfRangeError(G, B, E);
@@ -435,6 +433,15 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     break;
   }
 
+  case Pointer8: {
+    uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
+    if (LLVM_LIKELY(isUInt<8>(Value)))
+      *(uint8_t *)FixupPtr = Value;
+    else
+      return makeTargetOutOfRangeError(G, B, E);
+    break;
+  }
+
   case PCRel32:
   case BranchPCRel32:
   case BranchPCRel32ToPtrJumpStub:
@@ -444,7 +451,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   case PCRel32TLVPLoadREXRelaxable: {
     int64_t Value =
         E.getTarget().getAddress() - (FixupAddress + 4) + E.getAddend();
-    if (LLVM_LIKELY(isInRangeForImmS32(Value)))
+    if (LLVM_LIKELY(isInt<32>(Value)))
       *(little32_t *)FixupPtr = Value;
     else
       return makeTargetOutOfRangeError(G, B, E);
@@ -459,7 +466,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 
   case Delta32: {
     int64_t Value = E.getTarget().getAddress() - FixupAddress + E.getAddend();
-    if (LLVM_LIKELY(isInRangeForImmS32(Value)))
+    if (LLVM_LIKELY(isInt<32>(Value)))
       *(little32_t *)FixupPtr = Value;
     else
       return makeTargetOutOfRangeError(G, B, E);
@@ -474,7 +481,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 
   case NegDelta32: {
     int64_t Value = FixupAddress - E.getTarget().getAddress() + E.getAddend();
-    if (LLVM_LIKELY(isInRangeForImmS32(Value)))
+    if (LLVM_LIKELY(isInt<32>(Value)))
       *(little32_t *)FixupPtr = Value;
     else
       return makeTargetOutOfRangeError(G, B, E);
@@ -491,7 +498,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   default:
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
-        "unsupported edge kind" + getEdgeKindName(E.getKind()));
+        " unsupported edge kind " + getEdgeKindName(E.getKind()));
   }
 
   return Error::success();
@@ -540,7 +547,7 @@ inline Block &createPointerJumpStubBlock(LinkGraph &G, Section &StubSection,
                                          Symbol &PointerSymbol) {
   auto &B = G.createContentBlock(StubSection, PointerJumpStubContent,
                                  orc::ExecutorAddr(~uint64_t(5)), 1, 0);
-  B.addEdge(Delta32, 2, PointerSymbol, -4);
+  B.addEdge(BranchPCRel32, 2, PointerSymbol, 0);
   return B;
 }
 

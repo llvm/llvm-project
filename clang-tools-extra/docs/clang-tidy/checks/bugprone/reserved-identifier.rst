@@ -53,5 +53,5 @@ Options
 
 .. option:: AllowedIdentifiers
 
-   Semicolon-separated list of names that the check ignores. Default is an
+   Semicolon-separated list of regular expressions that the check ignores. Default is an
    empty list.

@@ -95,7 +95,7 @@ bb.2:
 
 After optimisations and code layout complete, information about variable
 values must be translated into variable locations, i.e. registers and stack
-slots. This is performed in the [LiveDebugValues pass][`LiveDebugValues`], where
+slots. This is performed in the [`LiveDebugValues` pass][LiveDebugValues], where
 the debug instructions and machine code are separated out into two independent
 functions:
  * One that assigns values to variable names,
@@ -191,4 +191,4 @@ instruction number of any cloned instruction, to avoid duplicate numbers
 appearing to `LiveDebugValues`. Dealing with duplicated instructions is a
 natural extension to instruction referencing that's currently unimplemented.
 
-[LiveDebugValues]: SourceLevelDebugging.html#livedebugvalues-expansion-of-variable-locations
+[LiveDebugValues]: project:SourceLevelDebugging.rst#LiveDebugValues expansion of variable locations

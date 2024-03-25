@@ -18,8 +18,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Statepoint.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 
 using namespace llvm;
 
@@ -44,7 +42,7 @@ static bool stripGCRelocates(Function &F) {
     // All gc_relocates are i8 addrspace(1)* typed, we need a bitcast from i8
     // addrspace(1)* to the type of the OrigPtr, if the are not the same.
     if (GCRel->getType() != OrigPtr->getType())
-      ReplaceGCRel = new BitCastInst(OrigPtr, GCRel->getType(), "cast", GCRel);
+      ReplaceGCRel = new BitCastInst(OrigPtr, GCRel->getType(), "cast", GCRel->getIterator());
 
     // Replace all uses of gc.relocate and delete the gc.relocate
     // There maybe unncessary bitcasts back to the OrigPtr type, an instcombine
@@ -66,21 +64,3 @@ PreservedAnalyses StripGCRelocates::run(Function &F,
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
-
-namespace {
-struct StripGCRelocatesLegacy : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
-  StripGCRelocatesLegacy() : FunctionPass(ID) {
-    initializeStripGCRelocatesLegacyPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &Info) const override {}
-
-  bool runOnFunction(Function &F) override { return ::stripGCRelocates(F); }
-};
-char StripGCRelocatesLegacy::ID = 0;
-} // namespace
-
-INITIALIZE_PASS(StripGCRelocatesLegacy, "strip-gc-relocates",
-                "Strip gc.relocates inserted through RewriteStatepointsForGC",
-                true, false)

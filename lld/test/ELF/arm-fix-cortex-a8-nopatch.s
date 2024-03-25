@@ -75,7 +75,7 @@ target4:
 // CALLSITE4:      00025002 <target4>:
 // CALLSITE4-NEXT:    25002:            nop.w
 
- .space 4084
+ .space 4082
  .type target5, %function
 
 target5:
@@ -83,14 +83,15 @@ target5:
 /// a 32-bit thumb instruction, but in ARM state (illegal instruction), we
 /// should not decode and match it as Thumb, expect no patch.
  .arm
- .inst 0x800f3af /// nop.w encoding in Thumb
+ .short 0xbf00 // nop encoding in Thumb for alignment
+ .inst 0xf3af8000 /// nop.w encoding in Thumb
  .thumb
  .thumb_func
 source5:
  beq.w target5
 
 // CALLSITE5:      00025ffe <source5>:
-// CALLSITE5-NEXT:    25ffe:            beq.w   0x25ffa <target5>
+// CALLSITE5-NEXT:    25ffe:            beq.w   0x25ff8 <target5>
 
 /// Edge case where two word sequence starts at offset 0xffc, check that
 /// we don't match. In this case the branch will be completely in the 2nd

@@ -96,8 +96,8 @@ body:             |
     ; CHECK-LABEL: name: test_urem_1
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C]]
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C]]
@@ -126,8 +126,8 @@ body:             |
     ; CHECK-NEXT: $d0 = COPY [[COPY]](s64)
     ; CHECK-NEXT: $d1 = COPY [[COPY1]](s64)
     ; CHECK-NEXT: BL &fmod, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $d0, implicit $d1, implicit-def $d0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $d0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $d0
     ; CHECK-NEXT: $x0 = COPY [[COPY2]](s64)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
@@ -135,8 +135,8 @@ body:             |
     ; CHECK-NEXT: $s0 = COPY [[TRUNC]](s32)
     ; CHECK-NEXT: $s1 = COPY [[TRUNC1]](s32)
     ; CHECK-NEXT: BL &fmodf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $s0
     ; CHECK-NEXT: $w0 = COPY [[COPY3]](s32)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
@@ -203,11 +203,9 @@ body:             |
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
     ; CHECK-NEXT: [[SDIV:%[0-9]+]]:_(s64) = G_SDIV [[UV]], [[UV2]]
     ; CHECK-NEXT: [[SDIV1:%[0-9]+]]:_(s64) = G_SDIV [[UV1]], [[UV3]]
-    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
-    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[SDIV]], [[UV4]]
-    ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(s64) = G_MUL [[SDIV1]], [[UV5]]
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MUL]](s64), [[MUL1]](s64)
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(<2 x s64>) = G_SUB [[COPY]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[SDIV]](s64), [[SDIV1]](s64)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(<2 x s64>) = G_MUL [[BUILD_VECTOR]], [[COPY1]]
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(<2 x s64>) = G_SUB [[COPY]], [[MUL]]
     ; CHECK-NEXT: $q0 = COPY [[SUB]](<2 x s64>)
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1

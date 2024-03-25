@@ -18,17 +18,15 @@
 #include "llvm-c/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
-#include <bitset>
 #include <cassert>
 #include <cstdint>
 #include <optional>
-#include <set>
 #include <string>
 #include <utility>
 
@@ -39,12 +37,13 @@ class AttributeMask;
 class AttributeImpl;
 class AttributeListImpl;
 class AttributeSetNode;
+class ConstantRange;
 class FoldingSetNodeID;
 class Function;
 class LLVMContext;
-class MemoryEffects;
 class Type;
 class raw_ostream;
+enum FPClassTest : unsigned;
 
 enum class AllocFnKind : uint64_t {
   Unknown = 0,
@@ -88,7 +87,7 @@ public:
     None,                  ///< No attributes have been set
     #define GET_ATTR_ENUM
     #include "llvm/IR/Attributes.inc"
-    EndAttrKinds,          ///< Sentinal value useful for loops
+    EndAttrKinds,          ///< Sentinel value useful for loops
     EmptyKey,              ///< Use as Empty key for DenseMap of AttrKind
     TombstoneKey,          ///< Use as Tombstone key for DenseMap of AttrKind
   };
@@ -104,6 +103,9 @@ public:
   }
   static bool isTypeAttrKind(AttrKind Kind) {
     return Kind >= FirstTypeAttr && Kind <= LastTypeAttr;
+  }
+  static bool isConstantRangeAttrKind(AttrKind Kind) {
+    return Kind >= FirstConstantRangeAttr && Kind <= LastConstantRangeAttr;
   }
 
   static bool canUseAsFnAttr(AttrKind Kind);
@@ -127,6 +129,8 @@ public:
   static Attribute get(LLVMContext &Context, StringRef Kind,
                        StringRef Val = StringRef());
   static Attribute get(LLVMContext &Context, AttrKind Kind, Type *Ty);
+  static Attribute get(LLVMContext &Context, AttrKind Kind,
+                       const ConstantRange &CR);
 
   /// Return a uniquified Attribute object that has the specific
   /// alignment set.
@@ -148,6 +152,7 @@ public:
   static Attribute getWithInAllocaType(LLVMContext &Context, Type *Ty);
   static Attribute getWithUWTableKind(LLVMContext &Context, UWTableKind Kind);
   static Attribute getWithMemoryEffects(LLVMContext &Context, MemoryEffects ME);
+  static Attribute getWithNoFPClass(LLVMContext &Context, FPClassTest Mask);
 
   /// For a typed attribute, return the equivalent attribute with the type
   /// changed to \p ReplacementTy.
@@ -181,6 +186,9 @@ public:
   /// Return true if the attribute is a type attribute.
   bool isTypeAttribute() const;
 
+  /// Return true if the attribute is a ConstantRange attribute.
+  bool isConstantRangeAttribute() const;
+
   /// Return true if the attribute is any kind of attribute.
   bool isValid() const { return pImpl; }
 
@@ -213,6 +221,10 @@ public:
   /// Return the attribute's value as a Type. This requires the attribute to be
   /// a type attribute.
   Type *getValueAsType() const;
+
+  /// Return the attribute's value as a ConstantRange. This requires the
+  /// attribute to be a ConstantRange attribute.
+  ConstantRange getValueAsConstantRange() const;
 
   /// Returns the alignment field of an attribute as a byte alignment
   /// value.
@@ -248,6 +260,12 @@ public:
 
   /// Returns memory effects.
   MemoryEffects getMemoryEffects() const;
+
+  /// Return the FPClassTest for nofpclass
+  FPClassTest getNoFPClass() const;
+
+  /// Returns the value of the range attribute.
+  ConstantRange getRange() const;
 
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
@@ -383,6 +401,7 @@ public:
   UWTableKind getUWTableKind() const;
   AllocFnKind getAllocKind() const;
   MemoryEffects getMemoryEffects() const;
+  FPClassTest getNoFPClass() const;
   std::string getAsString(bool InAttrGrp = false) const;
 
   /// Return true if this attribute set belongs to the LLVMContext.
@@ -829,6 +848,11 @@ public:
     return getAttributeAtIndex(FunctionIndex, Kind);
   }
 
+  /// Return the attribute for the given attribute kind for the return value.
+  Attribute getRetAttr(Attribute::AttrKind Kind) const {
+    return getAttributeAtIndex(ReturnIndex, Kind);
+  }
+
   /// Return the alignment of the return value.
   MaybeAlign getRetAlignment() const;
 
@@ -876,6 +900,12 @@ public:
   /// Get the number of dereferenceable_or_null bytes (or zero if unknown) of an
   /// arg.
   uint64_t getParamDereferenceableOrNullBytes(unsigned ArgNo) const;
+
+  /// Get the disallowed floating-point classes of the return value.
+  FPClassTest getRetNoFPClass() const;
+
+  /// Get the disallowed floating-point classes of the argument value.
+  FPClassTest getParamNoFPClass(unsigned ArgNo) const;
 
   /// Get the unwind table kind requested for the function.
   UWTableKind getUWTableKind() const;
@@ -969,65 +999,6 @@ template <> struct DenseMapInfo<AttributeList, void> {
 
   static bool isEqual(AttributeList LHS, AttributeList RHS) {
     return LHS == RHS;
-  }
-};
-
-//===----------------------------------------------------------------------===//
-/// \class
-/// This class stores enough information to efficiently remove some attributes
-/// from an existing AttrBuilder, AttributeSet or AttributeList.
-class AttributeMask {
-  std::bitset<Attribute::EndAttrKinds> Attrs;
-  std::set<SmallString<32>, std::less<>> TargetDepAttrs;
-
-public:
-  AttributeMask() = default;
-  AttributeMask(const AttributeMask &) = delete;
-  AttributeMask(AttributeMask &&) = default;
-
-  AttributeMask(AttributeSet AS) {
-    for (Attribute A : AS)
-      addAttribute(A);
-  }
-
-  /// Add an attribute to the mask.
-  AttributeMask &addAttribute(Attribute::AttrKind Val) {
-    assert((unsigned)Val < Attribute::EndAttrKinds &&
-           "Attribute out of range!");
-    Attrs[Val] = true;
-    return *this;
-  }
-
-  /// Add the Attribute object to the builder.
-  AttributeMask &addAttribute(Attribute A) {
-    if (A.isStringAttribute())
-      addAttribute(A.getKindAsString());
-    else
-      addAttribute(A.getKindAsEnum());
-    return *this;
-  }
-
-  /// Add the target-dependent attribute to the builder.
-  AttributeMask &addAttribute(StringRef A) {
-    TargetDepAttrs.insert(A);
-    return *this;
-  }
-
-  /// Return true if the builder has the specified attribute.
-  bool contains(Attribute::AttrKind A) const {
-    assert((unsigned)A < Attribute::EndAttrKinds && "Attribute out of range!");
-    return Attrs[A];
-  }
-
-  /// Return true if the builder has the specified target-dependent
-  /// attribute.
-  bool contains(StringRef A) const { return TargetDepAttrs.count(A); }
-
-  /// Return true if the mask contains the specified attribute.
-  bool contains(Attribute A) const {
-    if (A.isStringAttribute())
-      return contains(A.getKindAsString());
-    return contains(A.getKindAsEnum());
   }
 };
 
@@ -1236,6 +1207,16 @@ public:
   /// Add memory effect attribute.
   AttrBuilder &addMemoryAttr(MemoryEffects ME);
 
+  // Add nofpclass attribute
+  AttrBuilder &addNoFPClassAttr(FPClassTest NoFPClassMask);
+
+  /// Add a ConstantRange attribute with the given range.
+  AttrBuilder &addConstantRangeAttr(Attribute::AttrKind Kind,
+                                    const ConstantRange &CR);
+
+  /// Add range attribute.
+  AttrBuilder &addRangeAttr(const ConstantRange &CR);
+
   ArrayRef<Attribute> attrs() const { return Attrs; }
 
   bool operator==(const AttrBuilder &B) const;
@@ -1249,6 +1230,10 @@ enum AttributeSafetyKind : uint8_t {
   ASK_UNSAFE_TO_DROP = 2,
   ASK_ALL = ASK_SAFE_TO_DROP | ASK_UNSAFE_TO_DROP,
 };
+
+/// Returns true if this is a type legal for the 'nofpclass' attribute. This
+/// follows the same type rules as FPMathOperator.
+bool isNoFPClassCompatibleType(Type *Ty);
 
 /// Which attributes cannot be applied to a type. The argument \p ASK indicates,
 /// if only attributes that are known to be safely droppable are contained in

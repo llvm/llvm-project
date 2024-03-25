@@ -1,4 +1,6 @@
 ; RUN: opt %s -passes='sroa,verify' -S -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -passes='sroa,verify' -S -o - | FileCheck %s
+
 ; ModuleID = 'test.c'
 ; Test that SROA updates the debug info correctly if an alloca was rewritten but
 ; not partitioned into multiple allocas.

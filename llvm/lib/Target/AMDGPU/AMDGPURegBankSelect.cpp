@@ -14,6 +14,7 @@
 
 #include "AMDGPURegBankSelect.h"
 #include "AMDGPU.h"
+#include "GCNSubtarget.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/InitializePasses.h"
 
@@ -59,12 +60,14 @@ bool AMDGPURegBankSelect::runOnMachineFunction(MachineFunction &MF) {
 
   assert(checkFunctionIsLegal(MF));
 
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   MachineCycleInfo &CycleInfo =
       getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
   MachineDominatorTree &DomTree = getAnalysis<MachineDominatorTree>();
 
   MachineUniformityInfo Uniformity =
-      computeMachineUniformityInfo(MF, CycleInfo, DomTree.getBase());
+      computeMachineUniformityInfo(MF, CycleInfo, DomTree.getBase(),
+                                   !ST.isSingleLaneExecution(F));
   (void)Uniformity; // TODO: Use this
 
   assignRegisterBanks(MF);

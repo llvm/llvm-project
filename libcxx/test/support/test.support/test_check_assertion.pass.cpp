@@ -8,8 +8,8 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
+// UNSUPPORTED: libcpp-hardening-mode=none
+// XFAIL: availability-verbose_abort-missing
 
 #include <cassert>
 #include <cstdio>
@@ -18,47 +18,115 @@
 #include "check_assertion.h"
 
 template <class Func>
-inline bool TestDeathTest(const char* stmt, Func&& func, DeathTest::ResultKind ExpectResult, AssertionInfoMatcher Matcher = AnyMatcher) {
-  DeathTest DT(Matcher);
-  DeathTest::ResultKind RK = DT.Run(func);
-  auto OnFailure = [&](std::string msg) {
-    std::fprintf(stderr, "EXPECT_DEATH( %s ) failed! (%s)\n\n", stmt, msg.c_str());
-    if (!DT.getChildStdErr().empty()) {
-      std::fprintf(stderr, "---------- standard err ----------\n%s\n", DT.getChildStdErr().c_str());
-    }
-    if (!DT.getChildStdOut().empty()) {
-      std::fprintf(stderr, "---------- standard out ----------\n%s\n", DT.getChildStdOut().c_str());
-    }
-    return false;
+bool TestDeathTest(
+    Outcome expected_outcome, DeathCause expected_cause, const char* stmt, Func&& func, const Matcher& matcher) {
+  auto get_matcher = [&] {
+#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+    return matcher;
+#else
+    (void)matcher;
+    return MakeAnyMatcher();
+#endif
   };
-  if (RK != ExpectResult)
-    return OnFailure(std::string("expected result did not occur: expected ") + DeathTest::ResultKindToString(ExpectResult) + " got: " + DeathTest::ResultKindToString(RK));
+
+  DeathTest test_case;
+  DeathTestResult test_result = test_case.Run(std::array<DeathCause, 1>{expected_cause}, func, get_matcher());
+  std::string maybe_failure_description;
+
+  Outcome outcome = test_result.outcome();
+  if (expected_outcome != outcome) {
+    maybe_failure_description +=
+        std::string("Test outcome was different from expected; expected ") + ToString(expected_outcome) +
+        ", got: " + ToString(outcome);
+  }
+
+  DeathCause cause = test_result.cause();
+  if (expected_cause != cause) {
+    auto failure_description =
+        std::string("Cause of death was different from expected; expected ") + ToString(expected_cause) +
+        ", got: " + ToString(cause);
+    if (maybe_failure_description.empty()) {
+      maybe_failure_description = failure_description;
+    } else {
+      maybe_failure_description += std::string("; ") + failure_description;
+    }
+  }
+
+  if (!maybe_failure_description.empty()) {
+    test_case.PrintFailureDetails(maybe_failure_description, stmt, test_result.cause());
+    return false;
+  }
+
   return true;
 }
-#define TEST_DEATH_TEST(RK, ...) assert((TestDeathTest(#__VA_ARGS__, [&]() { __VA_ARGS__; }, RK, AnyMatcher )))
 
-#define TEST_DEATH_TEST_MATCHES(RK, Matcher, ...) assert((TestDeathTest(#__VA_ARGS__, [&]() { __VA_ARGS__; }, RK, Matcher)))
+// clang-format off
 
-void my_libcpp_assert() {
-  _LIBCPP_ASSERT(false, "other");
-}
+#define TEST_DEATH_TEST(outcome, cause, ...)                   \
+  assert(( TestDeathTest(outcome, cause, #__VA_ARGS__, [&]() { __VA_ARGS__; }, MakeAnyMatcher()) ))
+#define TEST_DEATH_TEST_MATCHES(outcome, cause, matcher, ...)  \
+  assert(( TestDeathTest(outcome, cause, #__VA_ARGS__, [&]() { __VA_ARGS__; }, matcher) ))
 
-void test_no_match_found() {
-  AssertionInfoMatcher ExpectMatch("my message");
-  TEST_DEATH_TEST_MATCHES(DeathTest::RK_MatchFailure, ExpectMatch, my_libcpp_assert());
-}
+// clang-format on
 
-void test_did_not_die() {
-  TEST_DEATH_TEST(DeathTest::RK_DidNotDie, ((void)0));
-}
-
-void test_unknown() {
-  TEST_DEATH_TEST(DeathTest::RK_Unknown, std::exit(13));
-}
+#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+DeathCause assertion_death_cause = DeathCause::VerboseAbort;
+#else
+DeathCause assertion_death_cause = DeathCause::Trap;
+#endif
 
 int main(int, char**) {
-  test_no_match_found();
-  test_did_not_die();
-  test_unknown();
+  auto fail_assert     = [] { _LIBCPP_ASSERT(false, "Some message"); };
+  Matcher good_matcher = MakeAssertionMessageMatcher("Some message");
+  Matcher bad_matcher  = MakeAssertionMessageMatcher("Bad expected message");
+
+  // Test the implementation of death tests. We're bypassing the assertions added by the actual `EXPECT_DEATH` macros
+  // which allows us to test failure cases (where the assertion would fail) as well.
+  {
+    // Success -- `std::terminate`.
+    TEST_DEATH_TEST(Outcome::Success, DeathCause::StdTerminate, std::terminate());
+
+    // Success -- trapping.
+    TEST_DEATH_TEST(Outcome::Success, DeathCause::Trap, __builtin_trap());
+
+    // Success -- assertion failure with any matcher.
+    TEST_DEATH_TEST_MATCHES(Outcome::Success, assertion_death_cause, MakeAnyMatcher(), fail_assert());
+
+    // Success -- assertion failure with a specific matcher.
+    TEST_DEATH_TEST_MATCHES(Outcome::Success, assertion_death_cause, good_matcher, fail_assert());
+
+#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+    // Failure -- error message doesn't match.
+    TEST_DEATH_TEST_MATCHES(Outcome::UnexpectedErrorMessage, assertion_death_cause, bad_matcher, fail_assert());
+#endif
+
+    // Invalid cause -- child did not die.
+    TEST_DEATH_TEST(Outcome::InvalidCause, DeathCause::DidNotDie, ((void)0));
+
+    // Invalid cause --  unknown.
+    TEST_DEATH_TEST(Outcome::InvalidCause, DeathCause::Unknown, std::exit(13));
+  }
+
+  // Test the `EXPECT_DEATH` macros themselves. Since they assert success, we can only test successful cases.
+  {
+    auto invoke_verbose_abort = [] { _LIBCPP_VERBOSE_ABORT("contains some message"); };
+    auto invoke_abort         = [] { std::abort(); };
+
+    auto simple_matcher = [](const std::string& text) {
+      bool success = text.find("some") != std::string::npos;
+      return MatchResult(success, "");
+    };
+
+    EXPECT_ANY_DEATH(_LIBCPP_VERBOSE_ABORT(""));
+    EXPECT_ANY_DEATH(std::abort());
+    EXPECT_ANY_DEATH(std::terminate());
+    EXPECT_DEATH(invoke_verbose_abort());
+    EXPECT_DEATH_MATCHES(MakeAnyMatcher(), invoke_verbose_abort());
+    EXPECT_DEATH_MATCHES(simple_matcher, invoke_verbose_abort());
+    EXPECT_STD_ABORT(invoke_abort());
+    EXPECT_STD_TERMINATE([] { std::terminate(); });
+    TEST_LIBCPP_ASSERT_FAILURE(fail_assert(), "Some message");
+  }
+
   return 0;
 }

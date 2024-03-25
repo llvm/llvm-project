@@ -28,11 +28,13 @@ def BaseC : RegisterClass<"MyTarget", [i32], 32, (sequence "R%u", 2, 3)> {
 
 def MyTarget : Target;
 
-// CHECK: static const TargetRegisterClass *BaseClasses[4] = {
-// CHECK-NEXT:   nullptr,
-// CHECK-NEXT:   &MyTarget::BaseCRegClass,
-// CHECK-NEXT:   &MyTarget::BaseARegClass,
-// CHECK-NEXT:   &MyTarget::BaseBRegClass,
-// CHECK-NEXT: }
-// CHECK-NEXT: static const uint8_t Mapping[8] = {
-// CHECK-NEXT:   0,2,2,1,1,3,3,0, };
+// CHECK:      static const uint16_t Mapping[8] = {
+// CHECK-NEXT:   InvalidRegClassID,  // NoRegister
+// CHECK-NEXT:   MyTarget::BaseARegClassID,  // R0
+// CHECK-NEXT:   MyTarget::BaseARegClassID,  // R1
+// CHECK-NEXT:   MyTarget::BaseCRegClassID,  // R2
+// CHECK-NEXT:   MyTarget::BaseCRegClassID,  // R3
+// CHECK-NEXT:   MyTarget::BaseBRegClassID,  // R4
+// CHECK-NEXT:   MyTarget::BaseBRegClassID,  // R5
+// CHECK-NEXT:   InvalidRegClassID,  // R6
+// CHECK-NEXT: };

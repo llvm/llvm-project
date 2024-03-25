@@ -1,13 +1,13 @@
 // RUN: mlir-opt %s \
 // RUN: | mlir-opt -gpu-kernel-outlining \
-// RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,gpu-to-cubin))' \
-// RUN: | mlir-opt -gpu-async-region -gpu-to-llvm \
+// RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm),nvvm-attach-target)' \
+// RUN: | mlir-opt -gpu-async-region -gpu-to-llvm -gpu-module-to-binary="format=%gpu_compilation_format" \
 // RUN: | mlir-opt -async-to-async-runtime -async-runtime-ref-counting \
 // RUN: | mlir-opt -convert-async-to-llvm -convert-func-to-llvm \
 // RUN: | mlir-cpu-runner \
-// RUN:   --shared-libs=%mlir_lib_dir/libmlir_cuda_runtime%shlibext \
-// RUN:   --shared-libs=%mlir_lib_dir/libmlir_async_runtime%shlibext \
-// RUN:   --shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext \
+// RUN:   --shared-libs=%mlir_cuda_runtime \
+// RUN:   --shared-libs=%mlir_async_runtime \
+// RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void -O0 \
 // RUN: | FileCheck %s
 

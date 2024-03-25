@@ -16,13 +16,13 @@ try:
 except NameError:
     unichr = chr
 
+
 def CFString_SummaryProvider(valobj, dict):
     logger = lldb.formatters.Logger.Logger()
     provider = CFStringSynthProvider(valobj, dict)
     if not provider.invalid:
         try:
-            summary = provider.get_child_at_index(
-                provider.get_child_index("content"))
+            summary = provider.get_child_at_index(provider.get_child_index("content"))
             if isinstance(summary, lldb.SBValue):
                 summary = summary.GetSummary()
             else:
@@ -30,45 +30,47 @@ def CFString_SummaryProvider(valobj, dict):
         except:
             summary = None
         if summary is None:
-            summary = '<variable is not NSString>'
-        return '@' + summary
-    return ''
+            summary = "<variable is not NSString>"
+        return "@" + summary
+    return ""
 
 
 def CFAttributedString_SummaryProvider(valobj, dict):
     logger = lldb.formatters.Logger.Logger()
     offset = valobj.GetTarget().GetProcess().GetAddressByteSize()
     pointee = valobj.GetValueAsUnsigned(0)
-    summary = '<variable is not NSAttributedString>'
+    summary = "<variable is not NSAttributedString>"
     if pointee is not None and pointee != 0:
         pointee = pointee + offset
         child_ptr = valobj.CreateValueFromAddress(
-            "string_ptr", pointee, valobj.GetType())
+            "string_ptr", pointee, valobj.GetType()
+        )
         child = child_ptr.CreateValueFromAddress(
-            "string_data",
-            child_ptr.GetValueAsUnsigned(),
-            valobj.GetType()).AddressOf()
+            "string_data", child_ptr.GetValueAsUnsigned(), valobj.GetType()
+        ).AddressOf()
         provider = CFStringSynthProvider(child, dict)
         if not provider.invalid:
             try:
                 summary = provider.get_child_at_index(
-                    provider.get_child_index("content")).GetSummary()
+                    provider.get_child_index("content")
+                ).GetSummary()
             except:
-                summary = '<variable is not NSAttributedString>'
+                summary = "<variable is not NSAttributedString>"
     if summary is None:
-        summary = '<variable is not NSAttributedString>'
-    return '@' + summary
+        summary = "<variable is not NSAttributedString>"
+    return "@" + summary
 
 
 def __lldb_init_module(debugger, dict):
     debugger.HandleCommand(
-        "type summary add -F CFString.CFString_SummaryProvider NSString CFStringRef CFMutableStringRef")
+        "type summary add -F CFString.CFString_SummaryProvider NSString CFStringRef CFMutableStringRef"
+    )
     debugger.HandleCommand(
-        "type summary add -F CFString.CFAttributedString_SummaryProvider NSAttributedString")
+        "type summary add -F CFString.CFAttributedString_SummaryProvider NSAttributedString"
+    )
 
 
 class CFStringSynthProvider:
-
     def __init__(self, valobj, dict):
         logger = lldb.formatters.Logger.Logger()
         self.valobj = valobj
@@ -86,7 +88,7 @@ class CFStringSynthProvider:
         logger = lldb.formatters.Logger.Logger()
         process = self.valobj.GetTarget().GetProcess()
         error = lldb.SBError()
-        pystr = u''
+        pystr = ""
         # cannot do the read at once because the length value has
         # a weird encoding. better play it safe here
         while max_len > 0:
@@ -121,21 +123,22 @@ class CFStringSynthProvider:
         pointer = self.valobj.GetValueAsUnsigned(0) + offset
         pystr = self.read_unicode(pointer)
         return self.valobj.CreateValueFromExpression(
-            "content", "(char*)\"" + pystr.encode('utf-8') + "\"")
+            "content", '(char*)"' + pystr.encode("utf-8") + '"'
+        )
 
     # last resort call, use ObjC code to read; the final aim is to
     # be able to strip this call away entirely and only do the read
     # ourselves
     def handle_unicode_string_safe(self):
         return self.valobj.CreateValueFromExpression(
-            "content", "(char*)\"" + self.valobj.GetObjectDescription() + "\"")
+            "content", '(char*)"' + self.valobj.GetObjectDescription() + '"'
+        )
 
     def handle_unicode_string(self):
         logger = lldb.formatters.Logger.Logger()
         # step 1: find offset
         if self.inline:
-            pointer = self.valobj.GetValueAsUnsigned(
-                0) + self.size_of_cfruntime_base()
+            pointer = self.valobj.GetValueAsUnsigned(0) + self.size_of_cfruntime_base()
             if not self.explicit:
                 # untested, use the safe code path
                 return self.handle_unicode_string_safe()
@@ -144,79 +147,93 @@ class CFStringSynthProvider:
                 # data
                 pointer = pointer + self.pointer_size
         else:
-            pointer = self.valobj.GetValueAsUnsigned(
-                0) + self.size_of_cfruntime_base()
+            pointer = self.valobj.GetValueAsUnsigned(0) + self.size_of_cfruntime_base()
             # read 8 bytes here and make an address out of them
             try:
-                char_type = self.valobj.GetType().GetBasicType(
-                    lldb.eBasicTypeChar).GetPointerType()
+                char_type = (
+                    self.valobj.GetType()
+                    .GetBasicType(lldb.eBasicTypeChar)
+                    .GetPointerType()
+                )
                 vopointer = self.valobj.CreateValueFromAddress(
-                    "dummy", pointer, char_type)
+                    "dummy", pointer, char_type
+                )
                 pointer = vopointer.GetValueAsUnsigned(0)
             except:
                 return self.valobj.CreateValueFromExpression(
-                    "content", '(char*)"@\"invalid NSString\""')
+                    "content", '(char*)"@"invalid NSString""'
+                )
         # step 2: read Unicode data at pointer
         pystr = self.read_unicode(pointer)
         # step 3: return it
-        return pystr.encode('utf-8')
+        return pystr.encode("utf-8")
 
     def handle_inline_explicit(self):
         logger = lldb.formatters.Logger.Logger()
         offset = 3 * self.pointer_size
         offset = offset + self.valobj.GetValueAsUnsigned(0)
         return self.valobj.CreateValueFromExpression(
-            "content", "(char*)(" + str(offset) + ")")
+            "content", "(char*)(" + str(offset) + ")"
+        )
 
     def handle_mutable_string(self):
         logger = lldb.formatters.Logger.Logger()
         offset = 2 * self.pointer_size
         data = self.valobj.CreateChildAtOffset(
-            "content", offset, self.valobj.GetType().GetBasicType(
-                lldb.eBasicTypeChar).GetPointerType())
+            "content",
+            offset,
+            self.valobj.GetType().GetBasicType(lldb.eBasicTypeChar).GetPointerType(),
+        )
         data_value = data.GetValueAsUnsigned(0)
         if self.explicit and self.unicode:
-            return self.read_unicode(data_value).encode('utf-8')
+            return self.read_unicode(data_value).encode("utf-8")
         else:
             data_value = data_value + 1
             return self.valobj.CreateValueFromExpression(
-                "content", "(char*)(" + str(data_value) + ")")
+                "content", "(char*)(" + str(data_value) + ")"
+            )
 
     def handle_UTF8_inline(self):
         logger = lldb.formatters.Logger.Logger()
-        offset = self.valobj.GetValueAsUnsigned(
-            0) + self.size_of_cfruntime_base()
+        offset = self.valobj.GetValueAsUnsigned(0) + self.size_of_cfruntime_base()
         if not self.explicit:
             offset = offset + 1
         return self.valobj.CreateValueFromAddress(
-            "content", offset, self.valobj.GetType().GetBasicType(
-                lldb.eBasicTypeChar)).AddressOf()
+            "content", offset, self.valobj.GetType().GetBasicType(lldb.eBasicTypeChar)
+        ).AddressOf()
 
     def handle_UTF8_not_inline(self):
         logger = lldb.formatters.Logger.Logger()
         offset = self.size_of_cfruntime_base()
         return self.valobj.CreateChildAtOffset(
-            "content", offset, self.valobj.GetType().GetBasicType(
-                lldb.eBasicTypeChar).GetPointerType())
+            "content",
+            offset,
+            self.valobj.GetType().GetBasicType(lldb.eBasicTypeChar).GetPointerType(),
+        )
 
     def get_child_at_index(self, index):
         logger = lldb.formatters.Logger.Logger()
         logger >> "Querying for child [" + str(index) + "]"
         if index == 0:
             return self.valobj.CreateValueFromExpression(
-                "mutable", str(int(self.mutable)))
+                "mutable", str(int(self.mutable))
+            )
         if index == 1:
-            return self.valobj.CreateValueFromExpression("inline",
-                                                         str(int(self.inline)))
+            return self.valobj.CreateValueFromExpression(
+                "inline", str(int(self.inline))
+            )
         if index == 2:
             return self.valobj.CreateValueFromExpression(
-                "explicit", str(int(self.explicit)))
+                "explicit", str(int(self.explicit))
+            )
         if index == 3:
             return self.valobj.CreateValueFromExpression(
-                "unicode", str(int(self.unicode)))
+                "unicode", str(int(self.unicode))
+            )
         if index == 4:
             return self.valobj.CreateValueFromExpression(
-                "special", str(int(self.special)))
+                "special", str(int(self.special))
+            )
         if index == 5:
             # we are handling the several possible combinations of flags.
             # for each known combination we have a function that knows how to
@@ -233,9 +250,13 @@ class CFStringSynthProvider:
             # print 'special = ' + str(self.special)
             if self.mutable:
                 return self.handle_mutable_string()
-            elif self.inline and self.explicit and \
-                    self.unicode == False and self.special == False and \
-                    self.mutable == False:
+            elif (
+                self.inline
+                and self.explicit
+                and self.unicode == False
+                and self.special == False
+                and self.mutable == False
+            ):
                 return self.handle_inline_explicit()
             elif self.unicode:
                 return self.handle_unicode_string()
@@ -287,8 +308,8 @@ class CFStringSynthProvider:
         cfinfo = self.valobj.CreateChildAtOffset(
             "cfinfo",
             self.offset_of_info_bits(),
-            self.valobj.GetType().GetBasicType(
-                lldb.eBasicTypeChar))
+            self.valobj.GetType().GetBasicType(lldb.eBasicTypeChar),
+        )
         cfinfo.SetFormat(11)
         info = cfinfo.GetValue()
         if info is not None:
@@ -333,8 +354,9 @@ class CFStringSynthProvider:
         logger = lldb.formatters.Logger.Logger()
         self.pointer_size = self.valobj.GetTarget().GetProcess().GetAddressByteSize()
         self.is_64_bit = self.pointer_size == 8
-        self.is_little = self.valobj.GetTarget().GetProcess(
-        ).GetByteOrder() == lldb.eByteOrderLittle
+        self.is_little = (
+            self.valobj.GetTarget().GetProcess().GetByteOrder() == lldb.eByteOrderLittle
+        )
 
     # reading info bits out of the CFString and computing
     # useful values to get at the real data

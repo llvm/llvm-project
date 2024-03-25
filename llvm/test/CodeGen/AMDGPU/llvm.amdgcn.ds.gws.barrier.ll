@@ -4,8 +4,8 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,NOLOOP-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,NOLOOP-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,NOLOOP-SDAG,GFX9 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,NOLOOP-GISEL,GFX9 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,NOLOOP-SDAG,GFX10 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,NOLOOP-GISEL,GFX10 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,NOLOOP-SDAG,GFX10 %s
@@ -186,7 +186,8 @@ define amdgpu_kernel void @gws_barrier_wait_after(i32 %val, ptr addrspace(1) %pt
 ; GCN-LABEL: {{^}}gws_barrier_fence_before:
 ; NOLOOP: s_mov_b32 m0, 0{{$}}
 ; NOLOOP: store_{{dword|b32}}
-; NOLOOP: s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9: s_waitcnt vmcnt(0)
+; GFX10: s_waitcnt_vscnt null, 0x0
 ; NOLOOP: ds_gws_barrier v{{[0-9]+}} offset:7 gds
 ; NOLOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 define amdgpu_kernel void @gws_barrier_fence_before(i32 %val, ptr addrspace(1) %ptr) #0 {
@@ -201,7 +202,6 @@ define amdgpu_kernel void @gws_barrier_fence_before(i32 %val, ptr addrspace(1) %
 ; NOLOOP: s_mov_b32 m0, 0{{$}}
 ; NOLOOP: ds_gws_barrier v{{[0-9]+}} offset:7 gds
 ; NOLOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT: s_waitcnt_vscnt null, 0x0
 ; NOLOOP-NEXT: load_{{dword|b32}}
 
 define amdgpu_kernel void @gws_barrier_fence_after(i32 %val, ptr addrspace(1) %ptr) #0 {
@@ -229,8 +229,6 @@ define amdgpu_kernel void @gws_init_barrier(i32 %val) #0 {
 ; NOLOOP: s_mov_b32 m0, 0
 ; NOLOOP: ds_gws_init v0 offset:7 gds
 ; NOLOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT: s_waitcnt_vscnt null, 0x0
-
 ; NOLOOP-NEXT: ds_gws_barrier v0 offset:7 gds
 ; NOLOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 define amdgpu_kernel void @gws_init_fence_barrier(i32 %val) #0 {

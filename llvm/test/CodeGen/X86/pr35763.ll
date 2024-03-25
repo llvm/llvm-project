@@ -10,10 +10,10 @@
 define dso_local void @PR35763() {
 ; CHECK-LABEL: PR35763:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl z(%rip), %eax
-; CHECK-NEXT:    orl z+2(%rip), %eax
-; CHECK-NEXT:    movzwl %ax, %eax
-; CHECK-NEXT:    movq %rax, tf_3_var_136(%rip)
+; CHECK-NEXT:    movzwl z(%rip), %eax
+; CHECK-NEXT:    movzwl z+2(%rip), %ecx
+; CHECK-NEXT:    orl %eax, %ecx
+; CHECK-NEXT:    movq %rcx, tf_3_var_136(%rip)
 ; CHECK-NEXT:    movl z+6(%rip), %eax
 ; CHECK-NEXT:    movzbl z+10(%rip), %ecx
 ; CHECK-NEXT:    shlq $32, %rcx

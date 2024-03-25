@@ -19,8 +19,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGen/RegisterBank.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LowLevelTypeImpl.h"
 #include <cassert>
 #include <initializer_list>
 #include <memory>
@@ -28,9 +29,9 @@
 namespace llvm {
 
 class MachineInstr;
+class MachineIRBuilder;
 class MachineRegisterInfo;
 class raw_ostream;
-class RegisterBank;
 class TargetInstrInfo;
 class TargetRegisterClass;
 class TargetRegisterInfo;
@@ -62,8 +63,8 @@ public:
     PartialMapping() = default;
 
     /// Provide a shortcut for quickly building PartialMapping.
-    PartialMapping(unsigned StartIdx, unsigned Length,
-                   const RegisterBank &RegBank)
+    constexpr PartialMapping(unsigned StartIdx, unsigned Length,
+                             const RegisterBank &RegBank)
         : StartIdx(StartIdx), Length(Length), RegBank(&RegBank) {}
 
     /// \return the index of in the original value of the most
@@ -83,7 +84,7 @@ public:
     /// \note This method does not check anything when assertions are disabled.
     ///
     /// \return True is the check was successful.
-    bool verify() const;
+    bool verify(const RegisterBankInfo &RBI) const;
   };
 
   /// Helper struct that represents how a value is mapped through
@@ -156,7 +157,8 @@ public:
     /// Initialize a ValueMapping with the given parameter.
     /// \p BreakDown needs to have a life time at least as long
     /// as this instance.
-    ValueMapping(const PartialMapping *BreakDown, unsigned NumBreakDowns)
+    constexpr ValueMapping(const PartialMapping *BreakDown,
+                           unsigned NumBreakDowns)
         : BreakDown(BreakDown), NumBreakDowns(NumBreakDowns) {}
 
     /// Iterators through the PartialMappings.
@@ -175,7 +177,7 @@ public:
     /// \note This method does not check anything when assertions are disabled.
     ///
     /// \return True is the check was successful.
-    bool verify(unsigned MeaningfulBitWidth) const;
+    bool verify(const RegisterBankInfo &RBI, TypeSize MeaningfulBitWidth) const;
 
     /// Print this on dbgs() stream.
     void dump() const;
@@ -384,10 +386,16 @@ public:
 
 protected:
   /// Hold the set of supported register banks.
-  RegisterBank **RegBanks;
+  const RegisterBank **RegBanks;
 
   /// Total number of register banks.
   unsigned NumRegBanks;
+
+  /// Hold the sizes of the register banks for all HwModes.
+  const unsigned *Sizes;
+
+  /// Current HwMode for the target.
+  unsigned HwMode;
 
   /// Keep dynamically allocated PartialMapping in a separate map.
   /// This shouldn't be needed when everything gets TableGen'ed.
@@ -415,7 +423,8 @@ protected:
 
   /// Create a RegisterBankInfo that can accommodate up to \p NumRegBanks
   /// RegisterBank instances.
-  RegisterBankInfo(RegisterBank **RegBanks, unsigned NumRegBanks);
+  RegisterBankInfo(const RegisterBank **RegBanks, unsigned NumRegBanks,
+                   const unsigned *Sizes, unsigned HwMode);
 
   /// This constructor is meaningless.
   /// It just provides a default constructor that can be used at link time
@@ -428,7 +437,7 @@ protected:
   }
 
   /// Get the register bank identified by \p ID.
-  RegisterBank &getRegBank(unsigned ID) {
+  const RegisterBank &getRegBank(unsigned ID) {
     assert(ID < getNumRegBanks() && "Accessing an unknown register bank");
     return *RegBanks[ID];
   }
@@ -564,8 +573,9 @@ public:
   static void applyDefaultMapping(const OperandsMapper &OpdMapper);
 
   /// See ::applyMapping.
-  virtual void applyMappingImpl(const OperandsMapper &OpdMapper) const {
-    llvm_unreachable("The target has to implement that part");
+  virtual void applyMappingImpl(MachineIRBuilder &Builder,
+                                const OperandsMapper &OpdMapper) const {
+    llvm_unreachable("The target has to implement this");
   }
 
 public:
@@ -574,6 +584,11 @@ public:
   /// Get the register bank identified by \p ID.
   const RegisterBank &getRegBank(unsigned ID) const {
     return const_cast<RegisterBankInfo *>(this)->getRegBank(ID);
+  }
+
+  /// Get the maximum size in bits that fits in the given register bank.
+  unsigned getMaximumSize(unsigned RegBankID) const {
+    return Sizes[RegBankID + HwMode * NumRegBanks];
   }
 
   /// Get the register bank of \p Reg.
@@ -586,6 +601,11 @@ public:
 
   /// Get the total number of register banks.
   unsigned getNumRegBanks() const { return NumRegBanks; }
+
+  /// Returns true if the register bank is considered divergent.
+  virtual bool isDivergentRegBank(const RegisterBank *RB) const {
+    return false;
+  }
 
   /// Get a register bank that covers \p RC.
   ///
@@ -611,7 +631,7 @@ public:
   ///
   /// \note Since this is a copy, both registers have the same size.
   virtual unsigned copyCost(const RegisterBank &A, const RegisterBank &B,
-                            unsigned Size) const {
+                            TypeSize Size) const {
     // Optimistically assume that copies are coalesced. I.e., when
     // they are on the same bank, they are free.
     // Otherwise assume a non-zero cost of 1. The targets are supposed
@@ -621,7 +641,7 @@ public:
 
   /// \returns true if emitting a copy from \p Src to \p Dst is impossible.
   bool cannotCopy(const RegisterBank &Dst, const RegisterBank &Src,
-                  unsigned Size) const {
+                  TypeSize Size) const {
     return copyCost(Dst, Src, Size) == std::numeric_limits<unsigned>::max();
   }
 
@@ -712,14 +732,15 @@ public:
   ///
   /// Therefore, getting the mapping and applying it should be kept in
   /// sync.
-  void applyMapping(const OperandsMapper &OpdMapper) const {
+  void applyMapping(MachineIRBuilder &Builder,
+                    const OperandsMapper &OpdMapper) const {
     // The only mapping we know how to handle is the default mapping.
     if (OpdMapper.getInstrMapping().getID() == DefaultMappingID)
       return applyDefaultMapping(OpdMapper);
     // For other mapping, the target needs to do the right thing.
     // If that means calling applyDefaultMapping, fine, but this
     // must be explicitly stated.
-    applyMappingImpl(OpdMapper);
+    applyMappingImpl(Builder, OpdMapper);
   }
 
   /// Get the size in bits of \p Reg.
@@ -728,7 +749,7 @@ public:
   /// virtual register.
   ///
   /// \pre \p Reg != 0 (NoRegister).
-  unsigned getSizeInBits(Register Reg, const MachineRegisterInfo &MRI,
+  TypeSize getSizeInBits(Register Reg, const MachineRegisterInfo &MRI,
                          const TargetRegisterInfo &TRI) const;
 
   /// Check that information hold by this instance make sense for the

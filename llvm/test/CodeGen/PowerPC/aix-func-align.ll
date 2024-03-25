@@ -23,13 +23,13 @@ entry:
   ret i32 0
 }
 
-; CHECK:      .csect .text[PR],6
+; CHECK:      .csect ..text..[PR],6
 ; CHECK-NEXT: .foo:
 
-; CHECK:      .csect .text[PR],6
+; CHECK:      .csect ..text..[PR],6
 ; CHECK-NEXT: .bar:
 
-; SYMS:       Symbol {{[{][[:space:]] *}}Index: [[#INDX:]]{{[[:space:]] *}}Name: .text
+; SYMS:       Symbol {{[{][[:space:]] *}}Index: [[#INDX:]]{{[[:space:]] *Name: $}}
 ; SYMS-NEXT:    Value (RelocatableAddress): 0x0
 ; SYMS-NEXT:    Section: .text
 ; SYMS-NEXT:    Type: 0x0

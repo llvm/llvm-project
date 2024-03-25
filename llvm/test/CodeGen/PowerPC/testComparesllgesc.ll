@@ -71,19 +71,19 @@ define dso_local void @test_llgesc_store(i8 signext %a, i8 signext %b) {
 ; CHECK-BE-LABEL: test_llgesc_store:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    sub r3, r3, r4
-; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-BE-NEXT:    xori r3, r3, 1
-; CHECK-BE-NEXT:    stb r3, glob@toc@l(r5)
+; CHECK-BE-NEXT:    stb r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_llgesc_store:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    sub r3, r3, r4
-; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-LE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-LE-NEXT:    xori r3, r3, 1
-; CHECK-LE-NEXT:    stb r3, glob@toc@l(r5)
+; CHECK-LE-NEXT:    stb r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp sge i8 %a, %b
@@ -104,19 +104,19 @@ define dso_local void @test_llgesc_sext_store(i8 signext %a, i8 signext %b) {
 ; CHECK-BE-LABEL: test_llgesc_sext_store:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    sub r3, r3, r4
-; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-BE-NEXT:    addi r3, r3, -1
-; CHECK-BE-NEXT:    stb r3, glob@toc@l(r5)
+; CHECK-BE-NEXT:    stb r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_llgesc_sext_store:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    sub r3, r3, r4
-; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-LE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-LE-NEXT:    addi r3, r3, -1
-; CHECK-LE-NEXT:    stb r3, glob@toc@l(r5)
+; CHECK-LE-NEXT:    stb r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp sge i8 %a, %b

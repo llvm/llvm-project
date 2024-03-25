@@ -228,16 +228,17 @@ public:
 
   bool VisitDesignatedInitExpr(const DesignatedInitExpr *E) {
     for (const DesignatedInitExpr::Designator &D : E->designators()) {
-      if (D.isFieldDesignator() && D.getField()) {
-        const FieldDecl *Decl = D.getField();
-        if (isInUSRSet(Decl)) {
-          auto StartLoc = D.getFieldLoc();
-          auto EndLoc = D.getFieldLoc();
-          RenameInfos.push_back({StartLoc, EndLoc,
-                                 /*FromDecl=*/nullptr,
-                                 /*Context=*/nullptr,
-                                 /*Specifier=*/nullptr,
-                                 /*IgnorePrefixQualifiers=*/true});
+      if (D.isFieldDesignator()) {
+        if (const FieldDecl *Decl = D.getFieldDecl()) {
+          if (isInUSRSet(Decl)) {
+            auto StartLoc = D.getFieldLoc();
+            auto EndLoc = D.getFieldLoc();
+            RenameInfos.push_back({StartLoc, EndLoc,
+                                   /*FromDecl=*/nullptr,
+                                   /*Context=*/nullptr,
+                                   /*Specifier=*/nullptr,
+                                   /*IgnorePrefixQualifiers=*/true});
+          }
         }
       }
     }
@@ -561,8 +562,8 @@ createRenameAtomicChanges(llvm::ArrayRef<std::string> USRs,
           ReplacedName = tooling::replaceNestedName(
               RenameInfo.Specifier, RenameInfo.Begin,
               RenameInfo.Context->getDeclContext(), RenameInfo.FromDecl,
-              NewName.startswith("::") ? NewName.str()
-                                       : ("::" + NewName).str());
+              NewName.starts_with("::") ? NewName.str()
+                                        : ("::" + NewName).str());
         } else {
           // This fixes the case where type `T` is a parameter inside a function
           // type (e.g. `std::function<void(T)>`) and the DeclContext of `T`
@@ -577,13 +578,13 @@ createRenameAtomicChanges(llvm::ArrayRef<std::string> USRs,
               SM, TranslationUnitDecl->getASTContext().getLangOpts());
           // Add the leading "::" back if the name written in the code contains
           // it.
-          if (ActualName.startswith("::") && !NewName.startswith("::")) {
+          if (ActualName.starts_with("::") && !NewName.starts_with("::")) {
             ReplacedName = "::" + NewName.str();
           }
         }
       }
       // If the NewName contains leading "::", add it back.
-      if (NewName.startswith("::") && NewName.substr(2) == ReplacedName)
+      if (NewName.starts_with("::") && NewName.substr(2) == ReplacedName)
         ReplacedName = NewName.str();
     }
     Replace(RenameInfo.Begin, RenameInfo.End, ReplacedName);

@@ -1,10 +1,11 @@
 // RUN: %clangxx %s -O1 -o %t -fexperimental-sanitize-metadata=covered,uar && %t | FileCheck %s
-// RUN: %clangxx %s -O1 -o %t -fexperimental-sanitize-metadata=covered,uar -fsanitize=address,signed-integer-overflow && %t | FileCheck %s
+// RUN: %clangxx %s -O1 -o %t -fexperimental-sanitize-metadata=covered,uar -fsanitize=address,signed-integer-overflow,alignment && %t | FileCheck %s
+// RUN: %clangxx %s -O1 -o %t -mcmodel=large -fexperimental-sanitize-metadata=covered,uar -fsanitize=address,signed-integer-overflow,alignment && %t | FileCheck %s
 
-// CHECK: metadata add version 1
+// CHECK: metadata add version 2
 
 __attribute__((noinline, not_tail_called)) void escape(const volatile void *p) {
-  static const volatile void *sink;
+  [[maybe_unused]] static const volatile void *sink;
   sink = p;
 }
 
@@ -44,20 +45,20 @@ void no_stack_args(long a0, long a1, long a2, long a3, long a4, long a5) {
   escape(&x);
 }
 
-// CHECK: stack_args: features=2 stack_args=16
+// CHECK: stack_args: features=6 stack_args=16
 void stack_args(long a0, long a1, long a2, long a3, long a4, long a5, long a6) {
   int x;
   escape(&x);
 }
 
-// CHECK: more_stack_args: features=2 stack_args=32
+// CHECK: more_stack_args: features=6 stack_args=32
 void more_stack_args(long a0, long a1, long a2, long a3, long a4, long a5,
                      long a6, long a7, long a8) {
   int x;
   escape(&x);
 }
 
-// CHECK: struct_stack_args: features=2 stack_args=144
+// CHECK: struct_stack_args: features=6 stack_args=144
 struct large {
   char x[131];
 };

@@ -1,4 +1,5 @@
 ; RUN: llc -O0 %s -o /dev/null
+; RUN: llc --try-experimental-debuginfo-iterators -O0 %s -o /dev/null
 
 define void @CGRectStandardize(ptr sret(i32) %agg.result, ptr byval(i32) %rect) nounwind ssp !dbg !0 {
 entry:

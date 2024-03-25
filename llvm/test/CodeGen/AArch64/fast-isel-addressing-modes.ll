@@ -97,13 +97,13 @@ define void @store_breg_i1(ptr %a) {
 define void @store_breg_i1_2(ptr %a) {
 ; SDAG-LABEL: store_breg_i1_2:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    mov w8, #1
+; SDAG-NEXT:    mov w8, #1 ; =0x1
 ; SDAG-NEXT:    strb w8, [x0]
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: store_breg_i1_2:
 ; FAST:       ; %bb.0:
-; FAST-NEXT:    mov w8, #1
+; FAST-NEXT:    mov w8, #1 ; =0x1
 ; FAST-NEXT:    and w8, w8, #0x1
 ; FAST-NEXT:    strb w8, [x0]
 ; FAST-NEXT:    ret
@@ -169,13 +169,13 @@ define void @store_breg_f64(ptr %a) {
 define i32 @load_immoff_1() {
 ; SDAG-LABEL: load_immoff_1:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    mov w8, #128
+; SDAG-NEXT:    mov w8, #128 ; =0x80
 ; SDAG-NEXT:    ldr w0, [x8]
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: load_immoff_1:
 ; FAST:       ; %bb.0:
-; FAST-NEXT:    mov x8, #128
+; FAST-NEXT:    mov x8, #128 ; =0x80
 ; FAST-NEXT:    ldr w0, [x8]
 ; FAST-NEXT:    ret
   %1 = inttoptr i64 128 to ptr
@@ -250,7 +250,7 @@ define i32 @load_breg_immoff_5(i64 %a) {
 define i32 @load_breg_immoff_6(i64 %a) {
 ; SDAG-LABEL: load_breg_immoff_6:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    mov w8, #16384
+; SDAG-NEXT:    mov w8, #16384 ; =0x4000
 ; SDAG-NEXT:    ldr w0, [x0, x8]
 ; SDAG-NEXT:    ret
 ;
@@ -331,7 +331,7 @@ define void @store_breg_immoff_5(i64 %a) {
 define void @store_breg_immoff_6(i64 %a) {
 ; SDAG-LABEL: store_breg_immoff_6:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    mov w8, #16384
+; SDAG-NEXT:    mov w8, #16384 ; =0x4000
 ; SDAG-NEXT:    str wzr, [x0, x8]
 ; SDAG-NEXT:    ret
 ;
@@ -410,7 +410,7 @@ define i64 @load_breg_offreg_immoff_1(i64 %a, i64 %b) {
 define i64 @load_breg_offreg_immoff_2(i64 %a, i64 %b) {
 ; SDAG-LABEL: load_breg_offreg_immoff_2:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    mov w8, #61440
+; SDAG-NEXT:    mov w8, #61440 ; =0xf000
 ; SDAG-NEXT:    add x9, x0, x1
 ; SDAG-NEXT:    ldr x0, [x9, x8]
 ; SDAG-NEXT:    ret
@@ -772,10 +772,10 @@ define i64 @kill_reg(i64 %a) {
 ;
 ; FAST-LABEL: kill_reg:
 ; FAST:       ; %bb.0:
-; FAST-NEXT:    ldr x8, [x0, #88]
-; FAST-NEXT:    sub x9, x0, #8
-; FAST-NEXT:    add x9, x9, #96
-; FAST-NEXT:    add x0, x9, x8
+; FAST-NEXT:    sub x8, x0, #8
+; FAST-NEXT:    ldr x9, [x0, #88]
+; FAST-NEXT:    add x8, x8, #96
+; FAST-NEXT:    add x0, x8, x9
 ; FAST-NEXT:    ret
   %1 = sub i64 %a, 8
   %2 = add i64 %1, 96
@@ -786,25 +786,15 @@ define i64 @kill_reg(i64 %a) {
 }
 
 define void @store_fi(i64 %i) {
-; SDAG-LABEL: store_fi:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    sub sp, sp, #32
-; SDAG-NEXT:    .cfi_def_cfa_offset 32
-; SDAG-NEXT:    mov x8, sp
-; SDAG-NEXT:    mov w9, #47
-; SDAG-NEXT:    str w9, [x8, x0, lsl #2]
-; SDAG-NEXT:    add sp, sp, #32
-; SDAG-NEXT:    ret
-;
-; FAST-LABEL: store_fi:
-; FAST:       ; %bb.0:
-; FAST-NEXT:    sub sp, sp, #32
-; FAST-NEXT:    .cfi_def_cfa_offset 32
-; FAST-NEXT:    mov w8, #47
-; FAST-NEXT:    mov x9, sp
-; FAST-NEXT:    str w8, [x9, x0, lsl #2]
-; FAST-NEXT:    add sp, sp, #32
-; FAST-NEXT:    ret
+; CHECK-LABEL: store_fi:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    mov w9, #47 ; =0x2f
+; CHECK-NEXT:    str w9, [x8, x0, lsl #2]
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ret
   %1 = alloca [8 x i32]
   %2 = ptrtoint ptr %1 to i64
   %3 = mul i64 %i, 4

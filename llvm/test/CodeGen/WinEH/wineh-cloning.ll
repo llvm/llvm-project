@@ -1,4 +1,5 @@
-; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -winehprepare  < %s | FileCheck %s
+; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -win-eh-prepare  < %s | FileCheck %s
+; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -passes=win-eh-prepare  < %s | FileCheck %s
 
 declare i32 @__CxxFrameHandler3(...)
 declare i32 @__C_specific_handler(...)

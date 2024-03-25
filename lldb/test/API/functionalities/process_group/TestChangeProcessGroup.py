@@ -1,7 +1,6 @@
 """Test that we handle inferiors which change their process group"""
 
 
-
 import os
 import lldb
 from lldbsuite.test.decorators import *
@@ -16,25 +15,25 @@ class ChangeProcessGroupTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break for main.c.
-        self.line = line_number('main.c', '// Set breakpoint here')
+        self.line = line_number("main.c", "// Set breakpoint here")
 
     @skipIfFreeBSD  # Times out on FreeBSD llvm.org/pr23731
     @skipIfWindows  # setpgid call does not exist on Windows
     @expectedFailureAndroid("http://llvm.org/pr23762", api_levels=[16])
     @expectedFailureNetBSD
-    @skipIftvOS # fork not available on tvOS.
-    @skipIfwatchOS # fork not available on watchOS.
+    @skipIftvOS  # fork not available on tvOS.
+    @skipIfwatchOS  # fork not available on watchOS.
     def test_setpgid(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
 
         # Use a file as a synchronization point between test and inferior.
-        pid_file_path = lldbutil.append_to_process_working_directory(self,
-            "pid_file_%d" % (int(time.time())))
+        pid_file_path = lldbutil.append_to_process_working_directory(
+            self, "pid_file_%d" % (int(time.time()))
+        )
         self.addTearDownHook(
-            lambda: self.run_platform_command(
-                "rm %s" %
-                (pid_file_path)))
+            lambda: self.run_platform_command("rm %s" % (pid_file_path))
+        )
 
         popen = self.spawnSubprocess(exe, [pid_file_path])
 
@@ -47,6 +46,7 @@ class ChangeProcessGroupTestCase(TestBase):
             else:
                 if os.path.exists("/proc/" + pid):
                     os.kill(int(pid), signal.SIGKILL)
+
         self.addTearDownHook(cleanupChild)
 
         # Create a target by the debugger.
@@ -60,14 +60,15 @@ class ChangeProcessGroupTestCase(TestBase):
 
         # set a breakpoint just before the setpgid() call
         lldbutil.run_break_set_by_file_and_line(
-            self, 'main.c', self.line, num_expected_locations=-1)
+            self, "main.c", self.line, num_expected_locations=-1
+        )
 
         thread = process.GetSelectedThread()
 
         # release the child from its loop
         value = thread.GetSelectedFrame().EvaluateExpression("release_child_flag = 1")
         self.assertTrue(value.IsValid())
-        self.assertEquals(value.GetValueAsUnsigned(0), 1)
+        self.assertEqual(value.GetValueAsUnsigned(0), 1)
         process.Continue()
 
         # make sure the child's process group id is different from its pid

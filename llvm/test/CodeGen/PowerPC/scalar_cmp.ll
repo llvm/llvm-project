@@ -20,10 +20,10 @@
 define float @select_oeq_float(float %a, float %b, float %c, float %d) {
 ; FAST-P8-LABEL: select_oeq_float:
 ; FAST-P8:       # %bb.0: # %entry
-; FAST-P8-NEXT:    xssubsp f0, f1, f2
-; FAST-P8-NEXT:    xssubsp f1, f2, f1
-; FAST-P8-NEXT:    fsel f0, f0, f3, f4
-; FAST-P8-NEXT:    fsel f1, f1, f0, f4
+; FAST-P8-NEXT:    xssubsp f0, f2, f1
+; FAST-P8-NEXT:    xssubsp f1, f1, f2
+; FAST-P8-NEXT:    fsel f1, f1, f3, f4
+; FAST-P8-NEXT:    fsel f1, f0, f1, f4
 ; FAST-P8-NEXT:    blr
 ;
 ; FAST-P9-LABEL: select_oeq_float:
@@ -37,10 +37,11 @@ define float @select_oeq_float(float %a, float %b, float %c, float %d) {
 ; NO-FAST-P8-LABEL: select_oeq_float:
 ; NO-FAST-P8:       # %bb.0: # %entry
 ; NO-FAST-P8-NEXT:    fcmpu cr0, f1, f2
-; NO-FAST-P8-NEXT:    fmr f1, f3
-; NO-FAST-P8-NEXT:    beqlr cr0
+; NO-FAST-P8-NEXT:    beq cr0, .LBB0_2
 ; NO-FAST-P8-NEXT:  # %bb.1: # %entry
-; NO-FAST-P8-NEXT:    fmr f1, f4
+; NO-FAST-P8-NEXT:    fmr f3, f4
+; NO-FAST-P8-NEXT:  .LBB0_2: # %entry
+; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    blr
 ;
 ; NO-FAST-P9-LABEL: select_oeq_float:
@@ -62,9 +63,9 @@ define double @select_oeq_double(double %a, double %b, double %c, double %d) {
 ; FAST-P8-LABEL: select_oeq_double:
 ; FAST-P8:       # %bb.0: # %entry
 ; FAST-P8-NEXT:    xssubdp f0, f1, f2
-; FAST-P8-NEXT:    xsnegdp f1, f0
-; FAST-P8-NEXT:    fsel f0, f0, f3, f4
-; FAST-P8-NEXT:    fsel f1, f1, f0, f4
+; FAST-P8-NEXT:    fsel f1, f0, f3, f4
+; FAST-P8-NEXT:    xsnegdp f0, f0
+; FAST-P8-NEXT:    fsel f1, f0, f1, f4
 ; FAST-P8-NEXT:    blr
 ;
 ; FAST-P9-LABEL: select_oeq_double:
@@ -78,10 +79,11 @@ define double @select_oeq_double(double %a, double %b, double %c, double %d) {
 ; NO-FAST-P8-LABEL: select_oeq_double:
 ; NO-FAST-P8:       # %bb.0: # %entry
 ; NO-FAST-P8-NEXT:    xscmpudp cr0, f1, f2
-; NO-FAST-P8-NEXT:    fmr f1, f3
-; NO-FAST-P8-NEXT:    beqlr cr0
+; NO-FAST-P8-NEXT:    beq cr0, .LBB1_2
 ; NO-FAST-P8-NEXT:  # %bb.1: # %entry
-; NO-FAST-P8-NEXT:    fmr f1, f4
+; NO-FAST-P8-NEXT:    fmr f3, f4
+; NO-FAST-P8-NEXT:  .LBB1_2: # %entry
+; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    blr
 ;
 ; NO-FAST-P9-LABEL: select_oeq_double:
@@ -102,10 +104,10 @@ entry:
 define float @select_fast_oeq_float(float %a, float %b, float %c, float %d) {
 ; FAST-P8-LABEL: select_fast_oeq_float:
 ; FAST-P8:       # %bb.0: # %entry
-; FAST-P8-NEXT:    xssubsp f0, f1, f2
-; FAST-P8-NEXT:    xssubsp f1, f2, f1
-; FAST-P8-NEXT:    fsel f0, f0, f3, f4
-; FAST-P8-NEXT:    fsel f1, f1, f0, f4
+; FAST-P8-NEXT:    xssubsp f0, f2, f1
+; FAST-P8-NEXT:    xssubsp f1, f1, f2
+; FAST-P8-NEXT:    fsel f1, f1, f3, f4
+; FAST-P8-NEXT:    fsel f1, f0, f1, f4
 ; FAST-P8-NEXT:    blr
 ;
 ; FAST-P9-LABEL: select_fast_oeq_float:
@@ -118,10 +120,10 @@ define float @select_fast_oeq_float(float %a, float %b, float %c, float %d) {
 ;
 ; NO-FAST-P8-LABEL: select_fast_oeq_float:
 ; NO-FAST-P8:       # %bb.0: # %entry
-; NO-FAST-P8-NEXT:    xssubsp f0, f1, f2
-; NO-FAST-P8-NEXT:    xssubsp f1, f2, f1
-; NO-FAST-P8-NEXT:    fsel f0, f0, f3, f4
-; NO-FAST-P8-NEXT:    fsel f1, f1, f0, f4
+; NO-FAST-P8-NEXT:    xssubsp f0, f2, f1
+; NO-FAST-P8-NEXT:    xssubsp f1, f1, f2
+; NO-FAST-P8-NEXT:    fsel f1, f1, f3, f4
+; NO-FAST-P8-NEXT:    fsel f1, f0, f1, f4
 ; NO-FAST-P8-NEXT:    blr
 ;
 ; NO-FAST-P9-LABEL: select_fast_oeq_float:
@@ -141,9 +143,9 @@ define double @select_fast_oeq_double(double %a, double %b, double %c, double %d
 ; FAST-P8-LABEL: select_fast_oeq_double:
 ; FAST-P8:       # %bb.0: # %entry
 ; FAST-P8-NEXT:    xssubdp f0, f1, f2
-; FAST-P8-NEXT:    xsnegdp f1, f0
-; FAST-P8-NEXT:    fsel f0, f0, f3, f4
-; FAST-P8-NEXT:    fsel f1, f1, f0, f4
+; FAST-P8-NEXT:    fsel f1, f0, f3, f4
+; FAST-P8-NEXT:    xsnegdp f0, f0
+; FAST-P8-NEXT:    fsel f1, f0, f1, f4
 ; FAST-P8-NEXT:    blr
 ;
 ; FAST-P9-LABEL: select_fast_oeq_double:
@@ -157,9 +159,9 @@ define double @select_fast_oeq_double(double %a, double %b, double %c, double %d
 ; NO-FAST-P8-LABEL: select_fast_oeq_double:
 ; NO-FAST-P8:       # %bb.0: # %entry
 ; NO-FAST-P8-NEXT:    xssubdp f0, f1, f2
-; NO-FAST-P8-NEXT:    xsnegdp f1, f0
-; NO-FAST-P8-NEXT:    fsel f0, f0, f3, f4
-; NO-FAST-P8-NEXT:    fsel f1, f1, f0, f4
+; NO-FAST-P8-NEXT:    fsel f1, f0, f3, f4
+; NO-FAST-P8-NEXT:    xsnegdp f0, f0
+; NO-FAST-P8-NEXT:    fsel f1, f0, f1, f4
 ; NO-FAST-P8-NEXT:    blr
 ;
 ; NO-FAST-P9-LABEL: select_fast_oeq_double:
@@ -180,10 +182,10 @@ entry:
 define float @select_one_float(float %a, float %b, float %c, float %d) {
 ; FAST-P8-LABEL: select_one_float:
 ; FAST-P8:       # %bb.0: # %entry
-; FAST-P8-NEXT:    xssubsp f0, f1, f2
-; FAST-P8-NEXT:    xssubsp f1, f2, f1
-; FAST-P8-NEXT:    fsel f0, f0, f4, f3
-; FAST-P8-NEXT:    fsel f1, f1, f0, f3
+; FAST-P8-NEXT:    xssubsp f0, f2, f1
+; FAST-P8-NEXT:    xssubsp f1, f1, f2
+; FAST-P8-NEXT:    fsel f1, f1, f4, f3
+; FAST-P8-NEXT:    fsel f1, f0, f1, f3
 ; FAST-P8-NEXT:    blr
 ;
 ; FAST-P9-LABEL: select_one_float:
@@ -197,11 +199,12 @@ define float @select_one_float(float %a, float %b, float %c, float %d) {
 ; NO-FAST-P8-LABEL: select_one_float:
 ; NO-FAST-P8:       # %bb.0: # %entry
 ; NO-FAST-P8-NEXT:    fcmpu cr0, f1, f2
-; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    crnor 4*cr5+lt, un, eq
-; NO-FAST-P8-NEXT:    bclr 12, 4*cr5+lt, 0
+; NO-FAST-P8-NEXT:    bc 12, 4*cr5+lt, .LBB4_2
 ; NO-FAST-P8-NEXT:  # %bb.1: # %entry
-; NO-FAST-P8-NEXT:    fmr f1, f4
+; NO-FAST-P8-NEXT:    fmr f3, f4
+; NO-FAST-P8-NEXT:  .LBB4_2: # %entry
+; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    blr
 ;
 ; NO-FAST-P9-LABEL: select_one_float:
@@ -224,9 +227,9 @@ define double @select_one_double(double %a, double %b, double %c, double %d) {
 ; FAST-P8-LABEL: select_one_double:
 ; FAST-P8:       # %bb.0: # %entry
 ; FAST-P8-NEXT:    xssubdp f0, f1, f2
-; FAST-P8-NEXT:    xsnegdp f1, f0
-; FAST-P8-NEXT:    fsel f0, f0, f4, f3
-; FAST-P8-NEXT:    fsel f1, f1, f0, f3
+; FAST-P8-NEXT:    fsel f1, f0, f4, f3
+; FAST-P8-NEXT:    xsnegdp f0, f0
+; FAST-P8-NEXT:    fsel f1, f0, f1, f3
 ; FAST-P8-NEXT:    blr
 ;
 ; FAST-P9-LABEL: select_one_double:
@@ -240,11 +243,12 @@ define double @select_one_double(double %a, double %b, double %c, double %d) {
 ; NO-FAST-P8-LABEL: select_one_double:
 ; NO-FAST-P8:       # %bb.0: # %entry
 ; NO-FAST-P8-NEXT:    fcmpu cr0, f1, f2
-; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    crnor 4*cr5+lt, un, eq
-; NO-FAST-P8-NEXT:    bclr 12, 4*cr5+lt, 0
+; NO-FAST-P8-NEXT:    bc 12, 4*cr5+lt, .LBB5_2
 ; NO-FAST-P8-NEXT:  # %bb.1: # %entry
-; NO-FAST-P8-NEXT:    fmr f1, f4
+; NO-FAST-P8-NEXT:    fmr f3, f4
+; NO-FAST-P8-NEXT:  .LBB5_2: # %entry
+; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    blr
 ;
 ; NO-FAST-P9-LABEL: select_one_double:
@@ -266,10 +270,10 @@ entry:
 define float @select_fast_one_float(float %a, float %b, float %c, float %d) {
 ; FAST-P8-LABEL: select_fast_one_float:
 ; FAST-P8:       # %bb.0: # %entry
-; FAST-P8-NEXT:    xssubsp f0, f1, f2
-; FAST-P8-NEXT:    xssubsp f1, f2, f1
-; FAST-P8-NEXT:    fsel f0, f0, f4, f3
-; FAST-P8-NEXT:    fsel f1, f1, f0, f3
+; FAST-P8-NEXT:    xssubsp f0, f2, f1
+; FAST-P8-NEXT:    xssubsp f1, f1, f2
+; FAST-P8-NEXT:    fsel f1, f1, f4, f3
+; FAST-P8-NEXT:    fsel f1, f0, f1, f3
 ; FAST-P8-NEXT:    blr
 ;
 ; FAST-P9-LABEL: select_fast_one_float:
@@ -282,10 +286,10 @@ define float @select_fast_one_float(float %a, float %b, float %c, float %d) {
 ;
 ; NO-FAST-P8-LABEL: select_fast_one_float:
 ; NO-FAST-P8:       # %bb.0: # %entry
-; NO-FAST-P8-NEXT:    xssubsp f0, f1, f2
-; NO-FAST-P8-NEXT:    xssubsp f1, f2, f1
-; NO-FAST-P8-NEXT:    fsel f0, f0, f4, f3
-; NO-FAST-P8-NEXT:    fsel f1, f1, f0, f3
+; NO-FAST-P8-NEXT:    xssubsp f0, f2, f1
+; NO-FAST-P8-NEXT:    xssubsp f1, f1, f2
+; NO-FAST-P8-NEXT:    fsel f1, f1, f4, f3
+; NO-FAST-P8-NEXT:    fsel f1, f0, f1, f3
 ; NO-FAST-P8-NEXT:    blr
 ;
 ; NO-FAST-P9-LABEL: select_fast_one_float:
@@ -305,9 +309,9 @@ define double @select_fast_one_double(double %a, double %b, double %c, double %d
 ; FAST-P8-LABEL: select_fast_one_double:
 ; FAST-P8:       # %bb.0: # %entry
 ; FAST-P8-NEXT:    xssubdp f0, f1, f2
-; FAST-P8-NEXT:    xsnegdp f1, f0
-; FAST-P8-NEXT:    fsel f0, f0, f4, f3
-; FAST-P8-NEXT:    fsel f1, f1, f0, f3
+; FAST-P8-NEXT:    fsel f1, f0, f4, f3
+; FAST-P8-NEXT:    xsnegdp f0, f0
+; FAST-P8-NEXT:    fsel f1, f0, f1, f3
 ; FAST-P8-NEXT:    blr
 ;
 ; FAST-P9-LABEL: select_fast_one_double:
@@ -321,9 +325,9 @@ define double @select_fast_one_double(double %a, double %b, double %c, double %d
 ; NO-FAST-P8-LABEL: select_fast_one_double:
 ; NO-FAST-P8:       # %bb.0: # %entry
 ; NO-FAST-P8-NEXT:    xssubdp f0, f1, f2
-; NO-FAST-P8-NEXT:    xsnegdp f1, f0
-; NO-FAST-P8-NEXT:    fsel f0, f0, f4, f3
-; NO-FAST-P8-NEXT:    fsel f1, f1, f0, f3
+; NO-FAST-P8-NEXT:    fsel f1, f0, f4, f3
+; NO-FAST-P8-NEXT:    xsnegdp f0, f0
+; NO-FAST-P8-NEXT:    fsel f1, f0, f1, f3
 ; NO-FAST-P8-NEXT:    blr
 ;
 ; NO-FAST-P9-LABEL: select_fast_one_double:
@@ -357,11 +361,12 @@ define float @select_oge_float(float %a, float %b, float %c, float %d) {
 ; NO-FAST-P8-LABEL: select_oge_float:
 ; NO-FAST-P8:       # %bb.0: # %entry
 ; NO-FAST-P8-NEXT:    fcmpu cr0, f1, f2
-; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    crnor 4*cr5+lt, un, lt
-; NO-FAST-P8-NEXT:    bclr 12, 4*cr5+lt, 0
+; NO-FAST-P8-NEXT:    bc 12, 4*cr5+lt, .LBB8_2
 ; NO-FAST-P8-NEXT:  # %bb.1: # %entry
-; NO-FAST-P8-NEXT:    fmr f1, f4
+; NO-FAST-P8-NEXT:    fmr f3, f4
+; NO-FAST-P8-NEXT:  .LBB8_2: # %entry
+; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    blr
 ;
 ; NO-FAST-P9-LABEL: select_oge_float:
@@ -396,11 +401,12 @@ define double @select_oge_double(double %a, double %b, double %c, double %d) {
 ; NO-FAST-P8-LABEL: select_oge_double:
 ; NO-FAST-P8:       # %bb.0: # %entry
 ; NO-FAST-P8-NEXT:    fcmpu cr0, f1, f2
-; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    crnor 4*cr5+lt, un, lt
-; NO-FAST-P8-NEXT:    bclr 12, 4*cr5+lt, 0
+; NO-FAST-P8-NEXT:    bc 12, 4*cr5+lt, .LBB9_2
 ; NO-FAST-P8-NEXT:  # %bb.1: # %entry
-; NO-FAST-P8-NEXT:    fmr f1, f4
+; NO-FAST-P8-NEXT:    fmr f3, f4
+; NO-FAST-P8-NEXT:  .LBB9_2: # %entry
+; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    blr
 ;
 ; NO-FAST-P9-LABEL: select_oge_double:
@@ -497,10 +503,11 @@ define float @select_olt_float(float %a, float %b, float %c, float %d) {
 ; NO-FAST-P8-LABEL: select_olt_float:
 ; NO-FAST-P8:       # %bb.0: # %entry
 ; NO-FAST-P8-NEXT:    fcmpu cr0, f1, f2
-; NO-FAST-P8-NEXT:    fmr f1, f3
-; NO-FAST-P8-NEXT:    bltlr cr0
+; NO-FAST-P8-NEXT:    blt cr0, .LBB12_2
 ; NO-FAST-P8-NEXT:  # %bb.1: # %entry
-; NO-FAST-P8-NEXT:    fmr f1, f4
+; NO-FAST-P8-NEXT:    fmr f3, f4
+; NO-FAST-P8-NEXT:  .LBB12_2: # %entry
+; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    blr
 ;
 ; NO-FAST-P9-LABEL: select_olt_float:
@@ -534,10 +541,11 @@ define double @select_olt_double(double %a, double %b, double %c, double %d) {
 ; NO-FAST-P8-LABEL: select_olt_double:
 ; NO-FAST-P8:       # %bb.0: # %entry
 ; NO-FAST-P8-NEXT:    xscmpudp cr0, f1, f2
-; NO-FAST-P8-NEXT:    fmr f1, f3
-; NO-FAST-P8-NEXT:    bltlr cr0
+; NO-FAST-P8-NEXT:    blt cr0, .LBB13_2
 ; NO-FAST-P8-NEXT:  # %bb.1: # %entry
-; NO-FAST-P8-NEXT:    fmr f1, f4
+; NO-FAST-P8-NEXT:    fmr f3, f4
+; NO-FAST-P8-NEXT:  .LBB13_2: # %entry
+; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    blr
 ;
 ; NO-FAST-P9-LABEL: select_olt_double:
@@ -633,10 +641,11 @@ define float @select_ogt_float(float %a, float %b, float %c, float %d) {
 ; NO-FAST-P8-LABEL: select_ogt_float:
 ; NO-FAST-P8:       # %bb.0: # %entry
 ; NO-FAST-P8-NEXT:    fcmpu cr0, f1, f2
-; NO-FAST-P8-NEXT:    fmr f1, f3
-; NO-FAST-P8-NEXT:    bgtlr cr0
+; NO-FAST-P8-NEXT:    bgt cr0, .LBB16_2
 ; NO-FAST-P8-NEXT:  # %bb.1: # %entry
-; NO-FAST-P8-NEXT:    fmr f1, f4
+; NO-FAST-P8-NEXT:    fmr f3, f4
+; NO-FAST-P8-NEXT:  .LBB16_2: # %entry
+; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    blr
 ;
 ; NO-FAST-P9-LABEL: select_ogt_float:
@@ -670,10 +679,11 @@ define double @select_ogt_double(double %a, double %b, double %c, double %d) {
 ; NO-FAST-P8-LABEL: select_ogt_double:
 ; NO-FAST-P8:       # %bb.0: # %entry
 ; NO-FAST-P8-NEXT:    xscmpudp cr0, f1, f2
-; NO-FAST-P8-NEXT:    fmr f1, f3
-; NO-FAST-P8-NEXT:    bgtlr cr0
+; NO-FAST-P8-NEXT:    bgt cr0, .LBB17_2
 ; NO-FAST-P8-NEXT:  # %bb.1: # %entry
-; NO-FAST-P8-NEXT:    fmr f1, f4
+; NO-FAST-P8-NEXT:    fmr f3, f4
+; NO-FAST-P8-NEXT:  .LBB17_2: # %entry
+; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    blr
 ;
 ; NO-FAST-P9-LABEL: select_ogt_double:
@@ -769,11 +779,12 @@ define float @select_ole_float(float %a, float %b, float %c, float %d) {
 ; NO-FAST-P8-LABEL: select_ole_float:
 ; NO-FAST-P8:       # %bb.0: # %entry
 ; NO-FAST-P8-NEXT:    fcmpu cr0, f1, f2
-; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    crnor 4*cr5+lt, un, gt
-; NO-FAST-P8-NEXT:    bclr 12, 4*cr5+lt, 0
+; NO-FAST-P8-NEXT:    bc 12, 4*cr5+lt, .LBB20_2
 ; NO-FAST-P8-NEXT:  # %bb.1: # %entry
-; NO-FAST-P8-NEXT:    fmr f1, f4
+; NO-FAST-P8-NEXT:    fmr f3, f4
+; NO-FAST-P8-NEXT:  .LBB20_2: # %entry
+; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    blr
 ;
 ; NO-FAST-P9-LABEL: select_ole_float:
@@ -808,11 +819,12 @@ define double @select_ole_double(double %a, double %b, double %c, double %d) {
 ; NO-FAST-P8-LABEL: select_ole_double:
 ; NO-FAST-P8:       # %bb.0: # %entry
 ; NO-FAST-P8-NEXT:    fcmpu cr0, f1, f2
-; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    crnor 4*cr5+lt, un, gt
-; NO-FAST-P8-NEXT:    bclr 12, 4*cr5+lt, 0
+; NO-FAST-P8-NEXT:    bc 12, 4*cr5+lt, .LBB21_2
 ; NO-FAST-P8-NEXT:  # %bb.1: # %entry
-; NO-FAST-P8-NEXT:    fmr f1, f4
+; NO-FAST-P8-NEXT:    fmr f3, f4
+; NO-FAST-P8-NEXT:  .LBB21_2: # %entry
+; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    blr
 ;
 ; NO-FAST-P9-LABEL: select_ole_double:
@@ -966,10 +978,11 @@ define double @onecmp2(double %a, double %y, double %z) {
 ; NO-FAST-P8-NEXT:    vspltisw v2, 1
 ; NO-FAST-P8-NEXT:    xvcvsxwdp vs0, vs34
 ; NO-FAST-P8-NEXT:    xscmpudp cr0, f1, f0
-; NO-FAST-P8-NEXT:    fmr f1, f2
-; NO-FAST-P8-NEXT:    bgtlr cr0
+; NO-FAST-P8-NEXT:    bgt cr0, .LBB25_2
 ; NO-FAST-P8-NEXT:  # %bb.1: # %entry
-; NO-FAST-P8-NEXT:    fmr f1, f3
+; NO-FAST-P8-NEXT:    fmr f2, f3
+; NO-FAST-P8-NEXT:  .LBB25_2: # %entry
+; NO-FAST-P8-NEXT:    fmr f1, f2
 ; NO-FAST-P8-NEXT:    blr
 ;
 ; NO-FAST-P9-LABEL: onecmp2:
@@ -995,9 +1008,9 @@ define double @onecmp3(double %a, double %y, double %z) {
 ; FAST-P8-NEXT:    vspltisw v2, -1
 ; FAST-P8-NEXT:    xvcvsxwdp vs0, vs34
 ; FAST-P8-NEXT:    xsadddp f0, f1, f0
-; FAST-P8-NEXT:    xsnegdp f1, f0
-; FAST-P8-NEXT:    fsel f0, f0, f2, f3
-; FAST-P8-NEXT:    fsel f1, f1, f0, f3
+; FAST-P8-NEXT:    fsel f1, f0, f2, f3
+; FAST-P8-NEXT:    xsnegdp f0, f0
+; FAST-P8-NEXT:    fsel f1, f0, f1, f3
 ; FAST-P8-NEXT:    blr
 ;
 ; FAST-P9-LABEL: onecmp3:
@@ -1015,10 +1028,11 @@ define double @onecmp3(double %a, double %y, double %z) {
 ; NO-FAST-P8-NEXT:    vspltisw v2, 1
 ; NO-FAST-P8-NEXT:    xvcvsxwdp vs0, vs34
 ; NO-FAST-P8-NEXT:    xscmpudp cr0, f1, f0
-; NO-FAST-P8-NEXT:    fmr f1, f2
-; NO-FAST-P8-NEXT:    beqlr cr0
+; NO-FAST-P8-NEXT:    beq cr0, .LBB26_2
 ; NO-FAST-P8-NEXT:  # %bb.1: # %entry
-; NO-FAST-P8-NEXT:    fmr f1, f3
+; NO-FAST-P8-NEXT:    fmr f2, f3
+; NO-FAST-P8-NEXT:  .LBB26_2: # %entry
+; NO-FAST-P8-NEXT:    fmr f1, f2
 ; NO-FAST-P8-NEXT:    blr
 ;
 ; NO-FAST-P9-LABEL: onecmp3:

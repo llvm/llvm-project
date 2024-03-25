@@ -504,18 +504,18 @@ define void @f3() #0 {
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl var_13, %ecx
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    notl %ecx
-; X86-NEXT:    sete %al
+; X86-NEXT:    movl var_13, %eax
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    notl %eax
+; X86-NEXT:    sete %cl
 ; X86-NEXT:    movl var_16, %edx
-; X86-NEXT:    xorl %ecx, %edx
-; X86-NEXT:    andl %eax, %edx
-; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    xorl %eax, %edx
+; X86-NEXT:    andl %ecx, %edx
+; X86-NEXT:    orl %eax, %edx
 ; X86-NEXT:    movl %edx, (%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %ecx, var_46
+; X86-NEXT:    movl %eax, var_46
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    .cfi_def_cfa %esp, 4

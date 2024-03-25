@@ -94,7 +94,7 @@
 // CHECK:      ObjCInterfaceDecl{{.*}} TestGenericInterface
 // CHECK-NEXT:   -super ObjCInterface {{.+}} 'A'
 // CHECK-NEXT:   -ObjCProtocol {{.+}} 'P'
-// CHECK-NEXT:   -ObjCTypeParamDecl {{.+}} <col:33> col:33 T 'id':'id'
+// CHECK-NEXT:   -ObjCTypeParamDecl {{.+}} <col:33> col:33 T 'id'
 
 @implementation TestObjCClass (TestObjCCategoryDecl)
 - (void) bar {
@@ -142,12 +142,17 @@
 
 void TestBlockDecl(int x) {
   ^(int y, ...){ x; };
+  int z;
 }
 // CHECK:      FunctionDecl{{.*}}TestBlockDecl
 // CHECK:      BlockDecl {{.+}} <col:3, col:21> col:3 variadic
 // CHECK-NEXT:   ParmVarDecl{{.*}} y 'int'
 // CHECK-NEXT:   capture ParmVar{{.*}} 'x' 'int'
 // CHECK-NEXT:   CompoundStmt
+// CHECK-NEXT:     ImplicitCastExpr
+// CHECK-NEXT:       DeclRefExpr{{.*}} 'x'
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT:   VarDecl{{.*}} z
 
 @interface B
 + (int) foo;

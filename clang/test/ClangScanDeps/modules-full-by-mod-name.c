@@ -1,5 +1,3 @@
-// UNSUPPORTED: target=powerpc64-ibm-aix{{.*}}
-
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 

@@ -14,19 +14,8 @@ void foo(int n) {
 // SAMPLEPGO:               Running pass: PGOIndirectCallPromotion on [module]
 // SAMPLEPGO:               Running pass: LoopUnrollPass on bar
 
-// SAMPLEPGO-OLDPM:         PGOIndirectCallPromotion
-// SAMPLEPGO-OLDPM:         Unroll loops
-// SAMPLEPGO-OLDPM:         Unroll loops
-
 // THINLTO-NOT:             Running pass: PGOIndirectCallPromotion on [module]
 // THINLTO-NOT:             Running pass: LoopUnrollPass on bar
-
-// THINLTO-OLDPM-NOT:       PGOIndirectCallPromotion
-// The first Unroll loop pass is the createSimpleLoopUnrollPass that unrolls and peels
-// loops with small constant trip counts. The second one is skipped by ThinLTO.
-// THINLTO-OLDPM:           Unroll loops
-// THINLTO-OLDPM-NOT:       Unroll loops
-
 
 // Checks if hot call is inlined by normal compile, but not inlined by
 // thinlto compile.

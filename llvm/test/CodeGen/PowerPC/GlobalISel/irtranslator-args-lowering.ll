@@ -73,18 +73,21 @@ define void @foo_pt(ptr %x) {
   ret void
 }
 
+; TODO: The correct registers used to pass struct arguments in this example
+; are R3, R4 and R5. Currently, the calling convention used for GlobalISel
+; does not handle passing structs and will need to implemented at a later time.
 define dso_local void @foo_struct(%struct.A %a) #0 {
   ; CHECK-LABEL: name: foo_struct
   ; CHECK: bb.1.entry:
-  ; CHECK:   liveins: $f1, $x3, $x4, $x5, $x6
+  ; CHECK:   liveins: $f1, $x3, $x5, $x6, $x7
   ; CHECK:   [[COPY:%[0-9]+]]:_(s64) = COPY $x3
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s64)
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f1
-  ; CHECK:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x4
+  ; CHECK:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x5
   ; CHECK:   [[TRUNC2:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
-  ; CHECK:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x5
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x6
   ; CHECK:   [[TRUNC3:%[0-9]+]]:_(s32) = G_TRUNC [[COPY3]](s64)
-  ; CHECK:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x6
+  ; CHECK:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x7
   ; CHECK:   [[TRUNC4:%[0-9]+]]:_(s32) = G_TRUNC [[COPY4]](s64)
   ; CHECK:   BLR8 implicit $lr8, implicit $rm
 entry:

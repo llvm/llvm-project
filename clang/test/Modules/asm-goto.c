@@ -5,7 +5,7 @@
 
 // CHECK-LABEL: define {{.*}} @foo(
 // CHECK: callbr {{.*}} "=r,!i{{.*}}()
-// CHECK-NEXT: to label %asm.fallthrough [label %indirect]
+// CHECK-NEXT: to label %asm.fallthrough [label %indirect.split]
 
 int bar(void) {
   return foo();

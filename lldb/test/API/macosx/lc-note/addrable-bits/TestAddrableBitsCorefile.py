@@ -1,7 +1,6 @@
 """Test that corefiles with LC_NOTE "addrable bits" load command, creating and reading."""
 
 
-
 import os
 import re
 import subprocess
@@ -20,21 +19,22 @@ class TestAddrableBitsCorefile(TestBase):
         self.exe = self.getBuildArtifact("a.out")
         self.corefile = self.getBuildArtifact("corefile")
 
-    @skipIf(archs=no_match(['arm64e']))
+    @skipIf(archs=no_match(["arm64e"]))
     @skipUnlessDarwin
     def test_lc_note_addrable_bits(self):
         self.initial_setup()
 
         self.target = self.dbg.CreateTarget(self.exe)
         err = lldb.SBError()
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self, "break here",
-                                          lldb.SBFileSpec('main.c'))
-        self.assertEqual(process.IsValid(), True)
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.c")
+        )
+        self.assertTrue(process.IsValid())
 
         found_main = False
         for f in thread.frames:
-          if f.GetFunctionName() == "main":
-            found_main = True
+            if f.GetFunctionName() == "main":
+                found_main = True
         self.assertTrue(found_main)
 
         cmdinterp = self.dbg.GetCommandInterpreter()
@@ -44,14 +44,13 @@ class TestAddrableBitsCorefile(TestBase):
         process.Kill()
         self.dbg.DeleteTarget(target)
 
-        target = self.dbg.CreateTarget('')
+        target = self.dbg.CreateTarget("")
         process = target.LoadCore(self.corefile)
         self.assertTrue(process.IsValid(), True)
         thread = process.GetSelectedThread()
 
         found_main = False
         for f in thread.frames:
-          if f.GetFunctionName() == "main":
-            found_main = True
+            if f.GetFunctionName() == "main":
+                found_main = True
         self.assertTrue(found_main)
-

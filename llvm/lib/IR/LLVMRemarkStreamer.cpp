@@ -96,8 +96,8 @@ Expected<std::unique_ptr<ToolOutputFile>> llvm::setupLLVMOptimizationRemarks(
     LLVMContext &Context, StringRef RemarksFilename, StringRef RemarksPasses,
     StringRef RemarksFormat, bool RemarksWithHotness,
     std::optional<uint64_t> RemarksHotnessThreshold) {
-  if (RemarksWithHotness)
-    Context.setDiagnosticsHotnessRequested(true);
+  if (RemarksWithHotness || RemarksHotnessThreshold.value_or(1))
+      Context.setDiagnosticsHotnessRequested(true);
 
   Context.setDiagnosticsHotnessThreshold(RemarksHotnessThreshold);
 
@@ -143,7 +143,7 @@ Error llvm::setupLLVMOptimizationRemarks(
     LLVMContext &Context, raw_ostream &OS, StringRef RemarksPasses,
     StringRef RemarksFormat, bool RemarksWithHotness,
     std::optional<uint64_t> RemarksHotnessThreshold) {
-  if (RemarksWithHotness)
+  if (RemarksWithHotness || RemarksHotnessThreshold.value_or(1))
     Context.setDiagnosticsHotnessRequested(true);
 
   Context.setDiagnosticsHotnessThreshold(RemarksHotnessThreshold);

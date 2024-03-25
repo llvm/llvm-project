@@ -23,7 +23,6 @@ using llvm::yaml::Hex32;
 using llvm::yaml::Hex64;
 using llvm::yaml::Hex8;
 using llvm::yaml::Input;
-using llvm::yaml::IO;
 using llvm::yaml::isNumeric;
 using llvm::yaml::MappingNormalization;
 using llvm::yaml::MappingTraits;
@@ -96,11 +95,30 @@ TEST(YAMLIO, TestMapRead) {
     EXPECT_EQ(doc.foo, 3);
     EXPECT_EQ(doc.bar, 5);
   }
+
+  {
+    Input yin("{\"foo\": 3\n, \"bar\": 5}");
+    yin >> doc;
+
+    EXPECT_FALSE(yin.error());
+    EXPECT_EQ(doc.foo, 3);
+    EXPECT_EQ(doc.bar, 5);
+  }
 }
 
 TEST(YAMLIO, TestMalformedMapRead) {
   FooBar doc;
   Input yin("{foo: 3; bar: 5}", nullptr, suppressErrorMessages);
+  yin >> doc;
+  EXPECT_TRUE(!!yin.error());
+}
+
+TEST(YAMLIO, TestMapDuplicatedKeysRead) {
+  auto testDiagnostic = [](const llvm::SMDiagnostic &Error, void *) {
+    EXPECT_EQ(Error.getMessage(), "duplicated mapping key 'foo'");
+  };
+  FooBar doc;
+  Input yin("{foo: 3, bar: 5, foo: 4}", nullptr, testDiagnostic);
   yin >> doc;
   EXPECT_TRUE(!!yin.error());
 }
@@ -532,10 +550,10 @@ TEST(YAMLIO, TestReadWriteBuiltInTypes) {
 
 struct EndianTypes {
   typedef llvm::support::detail::packed_endian_specific_integral<
-      float, llvm::support::little, llvm::support::unaligned>
+      float, llvm::endianness::little, llvm::support::unaligned>
       ulittle_float;
   typedef llvm::support::detail::packed_endian_specific_integral<
-      double, llvm::support::little, llvm::support::unaligned>
+      double, llvm::endianness::little, llvm::support::unaligned>
       ulittle_double;
 
   llvm::support::ulittle64_t u64;
@@ -2374,6 +2392,7 @@ TEST(YAMLIO, TestMalformedMapFailsGracefully) {
 
 struct OptionalTest {
   std::vector<int> Numbers;
+  std::optional<int> MaybeNumber;
 };
 
 struct OptionalTestSeq {
@@ -2387,6 +2406,7 @@ namespace yaml {
   struct MappingTraits<OptionalTest> {
     static void mapping(IO& IO, OptionalTest &OT) {
       IO.mapOptional("Numbers", OT.Numbers);
+      IO.mapOptional("MaybeNumber", OT.MaybeNumber);
     }
   };
 
@@ -2448,6 +2468,7 @@ TEST(YAMLIO, TestEmptyStringSucceedsForMapWithOptionalFields) {
   Input yin("");
   yin >> doc;
   EXPECT_FALSE(yin.error());
+  EXPECT_FALSE(doc.MaybeNumber.has_value());
 }
 
 TEST(YAMLIO, TestEmptyStringSucceedsForSequence) {
@@ -2601,6 +2622,9 @@ template <> struct MappingContextTraits<SimpleMap, MappingContext> {
     io.mapRequired("C", sm.C);
     ++Context.A;
     io.mapRequired("Context", Context.A);
+  }
+  static std::string validate(IO &io, SimpleMap &sm, MappingContext &Context) {
+    return "";
   }
 };
 
@@ -3135,7 +3159,7 @@ TEST(YAMLIO, TestFlowSequenceTokenErrors) {
 
 TEST(YAMLIO, TestDirectiveMappingNoValue) {
   Input yin("%YAML\n{5:");
-  EXPECT_FALSE(yin.setCurrentDocument());
+  yin.setCurrentDocument();
   EXPECT_TRUE(yin.error());
 
   Input yin2("%TAG\n'\x98!< :\n");

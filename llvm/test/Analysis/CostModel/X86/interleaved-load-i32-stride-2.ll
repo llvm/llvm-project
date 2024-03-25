@@ -64,7 +64,7 @@ for.body:
   %reduce.add.0.narrow = trunc i32 %reduce.add.0 to i8
 
   %out = getelementptr inbounds [1024 x i8], ptr @B, i64 0, i64 %iv.0
-  store i8 %reduce.add.0.narrow, i8* %out
+  store i8 %reduce.add.0.narrow, ptr %out
 
   %iv.next = add nuw nsw i64 %iv.0, 2
   %cmp = icmp ult i64 %iv.next, 1024

@@ -6,46 +6,59 @@
 ; RUN: llvm-objdump --section-headers %t.obj | FileCheck %s --check-prefix=CHECK-OBJ
 ; RUN: llc < %t.ll -filetype=asm -o - | FileCheck %s --check-prefix=CHECK-ASM
 
-; CHECK: (1/3) of functions' profile are invalid and (10/50) of samples are discarded due to function hash mismatch.
-; CHECK: (2/3) of callsites' profile are invalid and (20/30) of samples are discarded due to callsite location mismatch.
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch-nested.prof -report-profile-staleness -persist-profile-staleness -S 2>&1 | FileCheck %s --check-prefix=CHECK-NESTED
 
-; CHECK-MD: ![[#]] = !{!"NumMismatchedFuncHash", i64 1, !"TotalProfiledFunc", i64 3, !"MismatchedFuncHashSamples", i64 10, !"TotalFuncHashSamples", i64 50, !"NumMismatchedCallsites", i64 2, !"TotalProfiledCallsites", i64 3, !"MismatchedCallsiteSamples", i64 20, !"TotalCallsiteSamples", i64 30}
+
+; CHECK: (2/3) of functions' profile are invalid and (40/50) of samples are discarded due to function hash mismatch.
+; CHECK: (2/3) of callsites' profile are invalid and (20/50) of samples are discarded due to callsite location mismatch.
+; CHECK: (1/2) of callsites and (10/20) of samples are recovered by stale profile matching.
+
+; CHECK-MD: ![[#]] = !{!"NumStaleProfileFunc", i64 2, !"TotalProfiledFunc", i64 3, !"MismatchedFunctionSamples", i64 40, !"TotalFunctionSamples", i64 50, !"NumMismatchedCallsites", i64 1, !"NumRecoveredCallsites", i64 1, !"TotalProfiledCallsites", i64 3, !"MismatchedCallsiteSamples", i64 10, !"RecoveredCallsiteSamples", i64 10}
+
 
 ; CHECK-OBJ: .llvm_stats
 
-; CHECK-ASM: .section  .llvm_stats,"",@progbits
-; CHECK-ASM: .byte 21
-; CHECK-ASM: .ascii  "NumMismatchedFuncHash"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "MQ=="
-; CHECK-ASM: .byte 17
-; CHECK-ASM: .ascii  "TotalProfiledFunc"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "Mw=="
-; CHECK-ASM: .byte 25
-; CHECK-ASM: .ascii  "MismatchedFuncHashSamples"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "MTA="
-; CHECK-ASM: .byte 20
-; CHECK-ASM: .ascii  "TotalFuncHashSamples"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "NTA="
-; CHECK-ASM: .byte 22
-; CHECK-ASM: .ascii  "NumMismatchedCallsites"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "Mg=="
-; CHECK-ASM: .byte 22
-; CHECK-ASM: .ascii  "TotalProfiledCallsites"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "Mw=="
-; CHECK-ASM: .byte 25
-; CHECK-ASM: .ascii  "MismatchedCallsiteSamples"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "MjA="
-; CHECK-ASM: .byte 20
-; CHECK-ASM: .ascii  "TotalCallsiteSamples"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "MzA="
+; CHECK-ASM: .section	.llvm_stats,"",@progbits
+; CHECK-ASM: .byte	19
+; CHECK-ASM: .ascii	"NumStaleProfileFunc"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"Mg=="
+; CHECK-ASM: .byte	17
+; CHECK-ASM: .ascii	"TotalProfiledFunc"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"Mw=="
+; CHECK-ASM: .byte	25
+; CHECK-ASM: .ascii	"MismatchedFunctionSamples"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"NDA="
+; CHECK-ASM: .byte	20
+; CHECK-ASM: .ascii	"TotalFunctionSamples"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"NTA="
+; CHECK-ASM: .byte	22
+; CHECK-ASM: .ascii	"NumMismatchedCallsites"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"MQ=="
+; CHECK-ASM: .byte	21
+; CHECK-ASM: .ascii	"NumRecoveredCallsites"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"MQ=="
+; CHECK-ASM: .byte	22
+; CHECK-ASM: .ascii	"TotalProfiledCallsites"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"Mw=="
+; CHECK-ASM: .byte	25
+; CHECK-ASM: .ascii	"MismatchedCallsiteSamples"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"MTA="
+; CHECK-ASM: .byte	24
+; CHECK-ASM: .ascii	"RecoveredCallsiteSamples"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"MTA="
+
+
+; CHECK-NESTED: (1/2) of functions' profile are invalid and (211/311) of samples are discarded due to function hash mismatch.
+
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -232,24 +245,24 @@ attributes #5 = { nocallback nofree nosync nounwind readnone speculatable willre
 !60 = !DILocation(line: 0, scope: !54)
 !61 = !DILocation(line: 16, column: 8, scope: !54)
 !62 = !DILocation(line: 16, column: 19, scope: !63)
-!63 = !DILexicalBlockFile(scope: !58, file: !3, discriminator: 2)
+!63 = !DILexicalBlockFile(scope: !58, file: !3, discriminator: 0)
 !64 = !DILocation(line: 16, column: 21, scope: !63)
 !65 = !DILocation(line: 16, column: 3, scope: !66)
-!66 = !DILexicalBlockFile(scope: !54, file: !3, discriminator: 2)
+!66 = !DILexicalBlockFile(scope: !54, file: !3, discriminator: 0)
 !67 = !DILocation(line: 0, scope: !49)
 !68 = !DILocation(line: 23, column: 1, scope: !49)
 !69 = !DILocation(line: 17, column: 14, scope: !56)
 !70 = !DILocation(line: 0, scope: !56)
 !71 = !DILocation(line: 17, column: 10, scope: !56)
 !72 = !DILocation(line: 17, column: 21, scope: !73)
-!73 = !DILexicalBlockFile(scope: !74, file: !3, discriminator: 2)
+!73 = !DILexicalBlockFile(scope: !74, file: !3, discriminator: 0)
 !74 = distinct !DILexicalBlock(scope: !56, file: !3, line: 17, column: 5)
 !75 = !DILocation(line: 17, column: 23, scope: !73)
 !76 = !DILocation(line: 17, column: 5, scope: !77)
-!77 = !DILexicalBlockFile(scope: !56, file: !3, discriminator: 2)
+!77 = !DILexicalBlockFile(scope: !56, file: !3, discriminator: 0)
 !78 = !DILocation(line: 22, column: 3, scope: !57)
 !79 = !DILocation(line: 16, column: 30, scope: !80)
-!80 = !DILexicalBlockFile(scope: !58, file: !3, discriminator: 4)
+!80 = !DILexicalBlockFile(scope: !58, file: !3, discriminator: 0)
 !81 = !DILocation(line: 16, column: 3, scope: !80)
 !82 = distinct !{!82, !83, !84, !85}
 !83 = !DILocation(line: 16, column: 3, scope: !54)
@@ -269,7 +282,7 @@ attributes #5 = { nocallback nofree nosync nounwind readnone speculatable willre
 !97 = !DILexicalBlockFile(scope: !87, file: !3, discriminator: 186646647)
 !98 = !DILocation(line: 20, column: 9, scope: !87)
 !99 = !DILocation(line: 17, column: 33, scope: !100)
-!100 = !DILexicalBlockFile(scope: !74, file: !3, discriminator: 4)
+!100 = !DILexicalBlockFile(scope: !74, file: !3, discriminator: 0)
 !101 = !DILocation(line: 17, column: 5, scope: !100)
 !102 = distinct !{!102, !103, !104, !85}
 !103 = !DILocation(line: 17, column: 5, scope: !56)

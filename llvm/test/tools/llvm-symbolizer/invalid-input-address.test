@@ -1,10 +1,12 @@
 # Use address that can't fit in a 64-bit number. Show that llvm-symbolizer
-# simply echoes it as per other malformed input addresses.
-RUN: llvm-symbolizer --obj=addr.exe 0x10000000000000000 | FileCheck --check-prefix=LARGE-ADDR %s
+# simply treats it as an unknown symbol.
+RUN: llvm-symbolizer --obj=%p/Inputs/addr.exe 0x10000000000000000 | FileCheck --check-prefix=LARGE-ADDR %s
 
-LARGE-ADDR-NOT: {{.}}
-LARGE-ADDR:     0x10000000000000000
-LARGE-ADDR-NOT: {{.}}
+LARGE-ADDR-NOT:  {{.}}
+LARGE-ADDR:      ??
+LARGE-ADDR-NEXT: ??:0:0
+LARGE-ADDR-EMPTY:
+LARGE-ADDR-NOT:  {{.}}
 
 RUN: echo '"some text"' '"some text2"' > %t.rsp
 RUN: echo -e 'some text\nsome text2\n' > %t.inp
@@ -19,5 +21,5 @@ RUN: llvm-addr2line --obj=%p/Inputs/addr.exe < %t.inp | FileCheck --check-prefix
 RUN: llvm-addr2line --obj=%p/Inputs/addr.exe "some text" "some text2" | FileCheck --check-prefix=BAD-INPUT %s
 RUN: llvm-addr2line --obj=%p/Inputs/addr.exe @%t.rsp | FileCheck --check-prefix=BAD-INPUT %s
 
-BAD-INPUT:      some text
-BAD-INPUT-NEXT: some text2
+BAD-INPUT:      ??
+BAD-INPUT-NEXT: ??:0

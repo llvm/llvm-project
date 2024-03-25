@@ -36,16 +36,16 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "ProcessGDBRemoteLog.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 
 #ifdef __ANDROID__
 #include "lldb/Host/android/HostInfoAndroid.h"
+#include "lldb/Host/common/ZipFileResolver.h"
 #endif
-
 
 using namespace lldb;
 using namespace lldb_private::process_gdb_remote;
@@ -187,8 +187,8 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
   response.PutStringAsRawHex8(host_triple.getTriple());
   response.Printf(";ptrsize:%u;", host_arch.GetAddressByteSize());
 
-  const char *distribution_id = host_arch.GetDistributionId().AsCString();
-  if (distribution_id) {
+  llvm::StringRef distribution_id = HostInfo::GetDistributionId();
+  if (!distribution_id.empty()) {
     response.PutCString("distribution_id:");
     response.PutStringAsRawHex8(distribution_id);
     response.PutCString(";");
@@ -1138,7 +1138,7 @@ GDBRemoteCommunicationServerCommon::Handle_qModuleInfo(
 
   response.PutCString("file_path:");
   response.PutStringAsRawHex8(
-        matched_module_spec.GetFileSpec().GetPath().c_str());
+      matched_module_spec.GetFileSpec().GetPath().c_str());
   response.PutChar(';');
   response.PutCString("file_offset:");
   response.PutHex64(file_offset);
@@ -1326,16 +1326,49 @@ GDBRemoteCommunicationServerCommon::GetModuleInfo(llvm::StringRef module_path,
 
   const FileSpec module_path_spec =
       FindModuleFile(req_module_path_spec.GetPath(), arch);
-  const ModuleSpec module_spec(module_path_spec, arch);
+
+  lldb::offset_t file_offset = 0;
+  lldb::offset_t file_size = 0;
+#ifdef __ANDROID__
+  // In Android API level 23 and above, dynamic loader is able to load .so file
+  // directly from zip file. In that case, module_path will be
+  // "zip_path!/so_path". Resolve the zip file path, .so file offset and size.
+  ZipFileResolver::FileKind file_kind = ZipFileResolver::eFileKindInvalid;
+  std::string file_path;
+  if (!ZipFileResolver::ResolveSharedLibraryPath(
+          module_path_spec, file_kind, file_path, file_offset, file_size)) {
+    return ModuleSpec();
+  }
+  lldbassert(file_kind != ZipFileResolver::eFileKindInvalid);
+  // For zip .so file, this file_path will contain only the actual zip file
+  // path for the object file processing. Otherwise it is the same as
+  // module_path.
+  const FileSpec actual_module_path_spec(file_path);
+#else
+  // It is just module_path_spec reference for other platforms.
+  const FileSpec &actual_module_path_spec = module_path_spec;
+#endif
+
+  const ModuleSpec module_spec(actual_module_path_spec, arch);
 
   ModuleSpecList module_specs;
-  if (!ObjectFile::GetModuleSpecifications(module_path_spec, 0, 0,
-                                           module_specs))
+  if (!ObjectFile::GetModuleSpecifications(actual_module_path_spec, file_offset,
+                                           file_size, module_specs))
     return ModuleSpec();
 
   ModuleSpec matched_module_spec;
   if (!module_specs.FindMatchingModuleSpec(module_spec, matched_module_spec))
     return ModuleSpec();
+
+#ifdef __ANDROID__
+  if (file_kind == ZipFileResolver::eFileKindZip) {
+    // For zip .so file, matched_module_spec contains only the actual zip file
+    // path for the object file processing. Overwrite the matched_module_spec
+    // file spec with the original module_path_spec to pass "zip_path!/so_path"
+    // through to PlatformAndroid::DownloadModuleSlice.
+    *matched_module_spec.GetFileSpecPtr() = module_path_spec;
+  }
+#endif
 
   return matched_module_spec;
 }

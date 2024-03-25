@@ -32,6 +32,7 @@ module m
   !ERROR: The entity 's1' has multiple BIND names
   integer :: s1
   bind(c, name="gg") :: s1
+  !ERROR: BIND_C attribute was already specified on 's1'
   bind(c, name="hh") :: s1
 
   !ERROR: Two entities have the same global name 'ii'
@@ -41,10 +42,12 @@ module m
 
   !ERROR: The entity 's4' has multiple BIND names
   integer, bind(c, name="ss1") :: s4
+  !ERROR: BIND_C attribute was already specified on 's4'
   bind(c, name="jj") :: s4
 
   !ERROR: The entity 's5' has multiple BIND names
   bind(c, name="kk") :: s5
+  !ERROR: BIND_C attribute was already specified on 's5'
   integer, bind(c, name="ss2") :: s5
 
 end

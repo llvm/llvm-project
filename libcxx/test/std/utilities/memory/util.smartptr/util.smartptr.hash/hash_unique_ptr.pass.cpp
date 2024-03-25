@@ -48,8 +48,8 @@ void test_disabled_with_deleter() {
 }
 
 template <class T>
-struct std::hash<min_pointer<T, std::integral_constant<size_t, 1>>> {
-  size_t operator()(min_pointer<T, std::integral_constant<size_t, 1>> p) const TEST_NOEXCEPT_FALSE {
+struct std::hash<min_pointer<T, std::integral_constant<std::size_t, 1>>> {
+  std::size_t operator()(min_pointer<T, std::integral_constant<size_t, 1>> p) const TEST_NOEXCEPT_FALSE {
     if (!p) return 0;
     return std::hash<T*>{}(std::addressof(*p));
   }

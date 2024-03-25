@@ -63,7 +63,7 @@ caller:
 # CHECK-EMPTY:
 # CHECK-NEXT:  <def>:
 # CHECK-NEXT:    addis 2, 12, 2
-# CHECK-NEXT:    addi 2, 2, -32448
+# CHECK-NEXT:    addi 2, 2, -32432
 # CHECK-NEXT:    [[DEF]]: li 3, 55
 # CHECK-NEXT:    blr
 # CHECK-NEXT:    trap

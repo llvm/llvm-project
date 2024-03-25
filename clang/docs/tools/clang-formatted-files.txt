@@ -122,6 +122,7 @@ clang/include/clang/Analysis/MacroExpansionContext.h
 clang/include/clang/Analysis/Analyses/CalledOnceCheck.h
 clang/include/clang/Analysis/Analyses/CFGReachabilityAnalysis.h
 clang/include/clang/Analysis/Analyses/ExprMutationAnalyzer.h
+clang/include/clang/Analysis/FlowSensitive/AdornedCFG.h
 clang/include/clang/Analysis/FlowSensitive/ControlFlowContext.h
 clang/include/clang/Analysis/FlowSensitive/DataflowAnalysis.h
 clang/include/clang/Analysis/FlowSensitive/DataflowAnalysisContext.h
@@ -306,7 +307,7 @@ clang/include/clang-c/Index.h
 clang/lib/Analysis/CalledOnceCheck.cpp
 clang/lib/Analysis/CloneDetection.cpp
 clang/lib/Analysis/CodeInjector.cpp
-clang/lib/Analysis/FlowSensitive/ControlFlowContext.cpp
+clang/lib/Analysis/FlowSensitive/AdornedCFG.cpp
 clang/lib/Analysis/FlowSensitive/DataflowAnalysisContext.cpp
 clang/lib/Analysis/FlowSensitive/DataflowEnvironment.cpp
 clang/lib/Analysis/FlowSensitive/DebugSupport.cpp
@@ -378,6 +379,8 @@ clang/lib/Basic/Targets/VE.h
 clang/lib/Basic/Targets/WebAssembly.cpp
 clang/lib/Basic/Targets/WebAssembly.h
 clang/lib/Basic/Targets/XCore.cpp
+clang/lib/CodeGen/ABIInfoImpl.cpp
+clang/lib/CodeGen/ABIInfoImpl.h
 clang/lib/CodeGen/CGCUDARuntime.cpp
 clang/lib/CodeGen/CGLoopInfo.cpp
 clang/lib/CodeGen/CGLoopInfo.h
@@ -395,12 +398,9 @@ clang/lib/Driver/ToolChains/AIX.cpp
 clang/lib/Driver/ToolChains/AIX.h
 clang/lib/Driver/ToolChains/AMDGPUOpenMP.cpp
 clang/lib/Driver/ToolChains/AMDGPUOpenMP.h
-clang/lib/Driver/ToolChains/Ananas.h
 clang/lib/Driver/ToolChains/AVR.cpp
 clang/lib/Driver/ToolChains/AVR.h
-clang/lib/Driver/ToolChains/CloudABI.cpp
 clang/lib/Driver/ToolChains/CommonArgs.h
-clang/lib/Driver/ToolChains/Contiki.cpp
 clang/lib/Driver/ToolChains/CrossWindows.h
 clang/lib/Driver/ToolChains/DragonFly.h
 clang/lib/Driver/ToolChains/FreeBSD.cpp
@@ -414,7 +414,6 @@ clang/lib/Driver/ToolChains/Hurd.cpp
 clang/lib/Driver/ToolChains/Hurd.h
 clang/lib/Driver/ToolChains/InterfaceStubs.cpp
 clang/lib/Driver/ToolChains/InterfaceStubs.h
-clang/lib/Driver/ToolChains/Minix.h
 clang/lib/Driver/ToolChains/MipsLinux.cpp
 clang/lib/Driver/ToolChains/MSP430.h
 clang/lib/Driver/ToolChains/PPCFreeBSD.cpp
@@ -987,8 +986,6 @@ clang-tools-extra/clang-tidy/cert/MutatingCopyCheck.cpp
 clang-tools-extra/clang-tidy/cert/MutatingCopyCheck.h
 clang-tools-extra/clang-tidy/cert/NonTrivialTypesLibcMemoryCallsCheck.cpp
 clang-tools-extra/clang-tidy/cert/NonTrivialTypesLibcMemoryCallsCheck.h
-clang-tools-extra/clang-tidy/cert/PostfixOperatorCheck.cpp
-clang-tools-extra/clang-tidy/cert/PostfixOperatorCheck.h
 clang-tools-extra/clang-tidy/cert/ProperlySeededRandomGeneratorCheck.cpp
 clang-tools-extra/clang-tidy/cert/ProperlySeededRandomGeneratorCheck.h
 clang-tools-extra/clang-tidy/cert/SetLongJmpCheck.cpp
@@ -1839,7 +1836,7 @@ compiler-rt/lib/sanitizer_common/sanitizer_stack_store.cpp
 compiler-rt/lib/sanitizer_common/sanitizer_stack_store.h
 compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_fuchsia.h
 compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_win.cpp
-compiler-rt/lib/sanitizer_common/sanitizer_symbolizer_fuchsia.h
+compiler-rt/lib/sanitizer_common/sanitizer_symbolizer_markup_constants.h
 compiler-rt/lib/sanitizer_common/sanitizer_thread_safety.h
 compiler-rt/lib/sanitizer_common/sanitizer_tls_get_addr.h
 compiler-rt/lib/sanitizer_common/sanitizer_type_traits.cpp
@@ -2183,6 +2180,8 @@ flang/include/flang/Runtime/time-intrinsic.h
 flang/include/flang/Runtime/transformational.h
 flang/include/flang/Runtime/type-code.h
 flang/include/flang/Semantics/attr.h
+flang/include/flang/Semantics/expression.h
+flang/include/flang/Semantics/openmp-directive-sets.h
 flang/include/flang/Semantics/runtime-type-info.h
 flang/include/flang/Semantics/scope.h
 flang/include/flang/Semantics/semantics.h
@@ -2299,6 +2298,7 @@ flang/lib/Optimizer/Transforms/MemoryAllocation.cpp
 flang/lib/Optimizer/Transforms/MemRefDataFlowOpt.cpp
 flang/lib/Optimizer/Transforms/PassDetail.h
 flang/lib/Optimizer/Transforms/RewriteLoop.cpp
+flang/lib/Optimizer/Transforms/StackArrays.cpp
 flang/lib/Parser/basic-parsers.h
 flang/lib/Parser/char-block.cpp
 flang/lib/Parser/char-buffer.cpp
@@ -2593,6 +2593,7 @@ libc/include/llvm-libc-types/fexcept_t.h
 libc/include/llvm-libc-types/FILE.h
 libc/include/llvm-libc-types/float_t.h
 libc/include/llvm-libc-types/imaxdiv_t.h
+libc/include/llvm-libc-types/jmp_buf.h
 libc/include/llvm-libc-types/ldiv_t.h
 libc/include/llvm-libc-types/lldiv_t.h
 libc/include/llvm-libc-types/mode_t.h
@@ -3100,7 +3101,6 @@ libc/src/__support/CPP/Bit.h
 libc/src/__support/CPP/Bitset.h
 libc/src/__support/CPP/Functional.h
 libc/src/__support/CPP/Limits.h
-libc/src/__support/CPP/StringView.h
 libc/src/__support/CPP/Utility.h
 libc/src/__support/CPP/vector.h
 libc/src/__support/File/file.cpp
@@ -3449,7 +3449,6 @@ libcxx/src/ryu/d2fixed.cpp
 libcxx/src/ryu/d2s.cpp
 libcxx/src/ryu/f2s.cpp
 libcxxabi/src/cxa_guard_impl.h
-libcxxabi/src/demangle/StringView.h
 libcxxabi/src/demangle/Utility.h
 libunwind/src/cet_unwind.h
 lld/COFF/CallGraphSort.cpp
@@ -5248,7 +5247,7 @@ llvm/include/llvm/Debuginfod/Debuginfod.h
 llvm/include/llvm/Debuginfod/DIFetcher.h
 llvm/include/llvm/Debuginfod/HTTPClient.h
 llvm/include/llvm/Demangle/Demangle.h
-llvm/include/llvm/Demangle/StringView.h
+llvm/include/llvm/Demangle/StringViewExtras.h
 llvm/include/llvm/Demangle/Utility.h
 llvm/include/llvm/DWARFLinker/DWARFLinker.h
 llvm/include/llvm/DWARFLinker/DWARFLinkerCompileUnit.h
@@ -5444,8 +5443,10 @@ llvm/include/llvm/Passes/StandardInstrumentations.h
 llvm/include/llvm/ProfileData/GCOV.h
 llvm/include/llvm/ProfileData/InstrProfCorrelator.h
 llvm/include/llvm/ProfileData/InstrProfWriter.h
+llvm/include/llvm/ProfileData/ItaniumManglingCanonicalizer.h
 llvm/include/llvm/ProfileData/ProfileCommon.h
 llvm/include/llvm/ProfileData/RawMemProfReader.h
+llvm/include/llvm/ProfileData/SymbolRemappingReader.h
 llvm/include/llvm/ProfileData/Coverage/CoverageMappingReader.h
 llvm/include/llvm/ProfileData/Coverage/CoverageMappingWriter.h
 llvm/include/llvm/Remarks/BitstreamRemarkContainer.h
@@ -5496,7 +5497,6 @@ llvm/include/llvm/Support/GenericIteratedDominanceFrontier.h
 llvm/include/llvm/Support/HashBuilder.h
 llvm/include/llvm/Support/InitLLVM.h
 llvm/include/llvm/Support/InstructionCost.h
-llvm/include/llvm/Support/ItaniumManglingCanonicalizer.h
 llvm/include/llvm/Support/MD5.h
 llvm/include/llvm/Support/MemAlloc.h
 llvm/include/llvm/Support/MemoryBufferRef.h
@@ -5518,7 +5518,6 @@ llvm/include/llvm/Support/SMLoc.h
 llvm/include/llvm/Support/SMTAPI.h
 llvm/include/llvm/Support/SourceMgr.h
 llvm/include/llvm/Support/SuffixTree.h
-llvm/include/llvm/Support/SymbolRemappingReader.h
 llvm/include/llvm/Support/SystemUtils.h
 llvm/include/llvm/TargetParser/TargetParser.h
 llvm/include/llvm/Support/TrailingObjects.h
@@ -5705,15 +5704,12 @@ llvm/include/llvm-c/Comdat.h
 llvm/include/llvm-c/Error.h
 llvm/include/llvm-c/ErrorHandling.h
 llvm/include/llvm-c/ExternC.h
-llvm/include/llvm-c/Initialization.h
 llvm/include/llvm-c/IRReader.h
 llvm/include/llvm-c/LLJIT.h
 llvm/include/llvm-c/OrcEE.h
 llvm/include/llvm-c/Remarks.h
 llvm/include/llvm-c/Types.h
 llvm/include/llvm-c/Transforms/PassBuilder.h
-llvm/include/llvm-c/Transforms/Scalar.h
-llvm/include/llvm-c/Transforms/Vectorize.h
 llvm/lib/Analysis/CodeMetrics.cpp
 llvm/lib/Analysis/CycleAnalysis.cpp
 llvm/lib/Analysis/DDGPrinter.cpp
@@ -5803,7 +5799,7 @@ llvm/lib/CodeGen/MIRPrintingPass.cpp
 llvm/lib/CodeGen/MIRSampleProfile.cpp
 llvm/lib/CodeGen/MIRVRegNamerUtils.cpp
 llvm/lib/CodeGen/MIRYamlMapping.cpp
-llvm/lib/CodeGen/MLRegallocEvictAdvisor.cpp
+llvm/lib/CodeGen/MLRegAllocEvictAdvisor.cpp
 llvm/lib/CodeGen/MultiHazardRecognizer.cpp
 llvm/lib/CodeGen/NonRelocatableStringpool.cpp
 llvm/lib/CodeGen/ParallelCG.cpp
@@ -6816,7 +6812,6 @@ llvm/lib/Target/X86/X86LoadValueInjectionRetHardening.cpp
 llvm/lib/Target/X86/X86LowerAMXIntrinsics.cpp
 llvm/lib/Target/X86/X86LowerAMXType.cpp
 llvm/lib/Target/X86/X86LowerTileCopy.cpp
-llvm/lib/Target/X86/X86PreAMXConfig.cpp
 llvm/lib/Target/X86/X86PreTileConfig.cpp
 llvm/lib/Target/X86/X86RegisterBankInfo.h
 llvm/lib/Target/X86/X86ShuffleDecodeConstantPool.cpp
@@ -7143,7 +7138,6 @@ llvm/tools/llvm-reduce/deltas/ReduceOperandsToArgs.cpp
 llvm/tools/llvm-reduce/deltas/ReduceOperandsToArgs.h
 llvm/tools/llvm-reduce/deltas/ReduceSpecialGlobals.cpp
 llvm/tools/llvm-reduce/deltas/ReduceSpecialGlobals.h
-llvm/tools/llvm-remark-size-diff/RemarkSizeDiff.cpp
 llvm/tools/llvm-rust-demangle-fuzzer/DummyDemanglerFuzzer.cpp
 llvm/tools/llvm-rust-demangle-fuzzer/llvm-rust-demangle-fuzzer.cpp
 llvm/tools/llvm-shlib/libllvm.cpp
@@ -7325,6 +7319,7 @@ llvm/unittests/Passes/TestPlugin.cpp
 llvm/unittests/Passes/TestPlugin.h
 llvm/unittests/ProfileData/InstrProfDataTest.cpp
 llvm/unittests/ProfileData/MemProfTest.cpp
+llvm/unittests/ProfileData/SymbolRemappingReaderTest.cpp
 llvm/unittests/Remarks/BitstreamRemarksFormatTest.cpp
 llvm/unittests/Remarks/BitstreamRemarksParsingTest.cpp
 llvm/unittests/Remarks/RemarksLinkingTest.cpp
@@ -7357,7 +7352,6 @@ llvm/unittests/Support/ScaledNumberTest.cpp
 llvm/unittests/Support/ScopedPrinterTest.cpp
 llvm/unittests/Support/SHA256.cpp
 llvm/unittests/Support/SuffixTreeTest.cpp
-llvm/unittests/Support/SymbolRemappingReaderTest.cpp
 llvm/unittests/Support/TarWriterTest.cpp
 llvm/unittests/Support/ToolOutputFileTest.cpp
 llvm/unittests/Support/TypeTraitsTest.cpp
@@ -7578,7 +7572,6 @@ mlir/include/mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h
 mlir/include/mlir/Conversion/GPUToROCDL/Runtimes.h
 mlir/include/mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h
 mlir/include/mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h
-mlir/include/mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h
 mlir/include/mlir/Conversion/LinalgToSPIRV/LinalgToSPIRV.h
 mlir/include/mlir/Conversion/LinalgToSPIRV/LinalgToSPIRVPass.h
 mlir/include/mlir/Conversion/LinalgToStandard/LinalgToStandard.h
@@ -8006,7 +7999,6 @@ mlir/lib/Conversion/GPUToSPIRV/GPUToSPIRV.cpp
 mlir/lib/Conversion/GPUToSPIRV/GPUToSPIRVPass.cpp
 mlir/lib/Conversion/GPUToVulkan/ConvertGPULaunchFuncToVulkanLaunchFunc.cpp
 mlir/lib/Conversion/GPUToVulkan/ConvertLaunchFuncToVulkanCalls.cpp
-mlir/lib/Conversion/LinalgToLLVM/LinalgToLLVM.cpp
 mlir/lib/Conversion/LinalgToSPIRV/LinalgToSPIRVPass.cpp
 mlir/lib/Conversion/LLVMCommon/ConversionTarget.cpp
 mlir/lib/Conversion/LLVMCommon/LoweringOptions.cpp
@@ -8250,7 +8242,6 @@ mlir/lib/Dialect/Tensor/IR/TensorTilingInterfaceImpl.cpp
 mlir/lib/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.cpp
 mlir/lib/Dialect/Tensor/Transforms/Bufferize.cpp
 mlir/lib/Dialect/Tensor/Transforms/PassDetail.h
-mlir/lib/Dialect/Tensor/Transforms/SplitPadding.cpp
 mlir/lib/Dialect/Tensor/Utils/Utils.cpp
 mlir/lib/Dialect/Tosa/IR/TosaOps.cpp
 mlir/lib/Dialect/Tosa/Transforms/TosaDecomposeConv2D.cpp

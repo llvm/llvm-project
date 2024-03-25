@@ -29,10 +29,10 @@ using namespace llvm;
 struct Status {
   // Mask is a bitmask where a '1' indicates the corresponding Mode bit has a
   // known value
-  unsigned Mask;
-  unsigned Mode;
+  unsigned Mask = 0;
+  unsigned Mode = 0;
 
-  Status() : Mask(0), Mode(0){};
+  Status() = default;
 
   Status(unsigned NewMask, unsigned NewMode) : Mask(NewMask), Mode(NewMode) {
     Mode &= Mask;
@@ -96,13 +96,13 @@ public:
 
   // In Phase 1 we record the first instruction that has a mode requirement,
   // which is used in Phase 3 if we need to insert a mode change.
-  MachineInstr *FirstInsertionPoint;
+  MachineInstr *FirstInsertionPoint = nullptr;
 
   // A flag to indicate whether an Exit value has been set (we can't tell by
   // examining the Exit value itself as all values may be valid results).
-  bool ExitSet;
+  bool ExitSet = false;
 
-  BlockData() : FirstInsertionPoint(nullptr), ExitSet(false){};
+  BlockData() = default;
 };
 
 namespace {
@@ -225,11 +225,10 @@ void SIModeRegister::insertSetreg(MachineBasicBlock &MBB, MachineInstr *MI,
     unsigned Offset = llvm::countr_zero<unsigned>(InstrMode.Mask);
     unsigned Width = llvm::countr_one<unsigned>(InstrMode.Mask >> Offset);
     unsigned Value = (InstrMode.Mode >> Offset) & ((1 << Width) - 1);
+    using namespace AMDGPU::Hwreg;
     BuildMI(MBB, MI, nullptr, TII->get(AMDGPU::S_SETREG_IMM32_B32))
         .addImm(Value)
-        .addImm(((Width - 1) << AMDGPU::Hwreg::WIDTH_M1_SHIFT_) |
-                (Offset << AMDGPU::Hwreg::OFFSET_SHIFT_) |
-                (AMDGPU::Hwreg::ID_MODE << AMDGPU::Hwreg::ID_SHIFT_));
+        .addImm(HwregEncoding::encode(ID_MODE, Offset, Width));
     ++NumSetregInserted;
     Changed = true;
     InstrMode.Mask &= ~(((1 << Width) - 1) << Offset);
@@ -276,16 +275,12 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
       // as we assume it has been inserted by a higher authority (this is
       // likely to be a very rare occurrence).
       unsigned Dst = TII->getNamedOperand(MI, AMDGPU::OpName::simm16)->getImm();
-      if (((Dst & AMDGPU::Hwreg::ID_MASK_) >> AMDGPU::Hwreg::ID_SHIFT_) !=
-          AMDGPU::Hwreg::ID_MODE)
+      using namespace AMDGPU::Hwreg;
+      auto [Id, Offset, Width] = HwregEncoding::decode(Dst);
+      if (Id != ID_MODE)
         continue;
 
-      unsigned Width = ((Dst & AMDGPU::Hwreg::WIDTH_M1_MASK_) >>
-                        AMDGPU::Hwreg::WIDTH_M1_SHIFT_) +
-                       1;
-      unsigned Offset =
-          (Dst & AMDGPU::Hwreg::OFFSET_MASK_) >> AMDGPU::Hwreg::OFFSET_SHIFT_;
-      unsigned Mask = ((1 << Width) - 1) << Offset;
+      unsigned Mask = maskTrailingOnes<unsigned>(Width) << Offset;
 
       // If an InsertionPoint is set we will insert a setreg there.
       if (InsertionPoint) {

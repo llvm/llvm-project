@@ -6,51 +6,58 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "src/unistd/symlinkat.h"
 #include "src/unistd/unlink.h"
-#include "test/ErrnoSetterMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
+#include "test/UnitTest/Test.h"
 
-#include <errno.h>
+#include <sys/stat.h>
 
 TEST(LlvmLibcSymlinkatTest, CreateAndUnlink) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_DIR = "testdata";
-  constexpr const char *TEST_FILE = "symlinkat.test";
-  constexpr const char *TEST_FILE_PATH = "testdata/symlinkat.test";
-  constexpr const char *TEST_FILE_LINK = "symlinkat.test.link";
-  constexpr const char *TEST_FILE_LINK_PATH = "testdata/symlinkat.test.link";
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+  constexpr const char *FILENAME = "testdata";
+  auto TEST_DIR = libc_make_test_file_path(FILENAME);
+  constexpr const char *FILENAME2 = "symlinkat.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME2);
+  constexpr const char *FILENAME3 = "testdata/symlinkat.test";
+  auto TEST_FILE_PATH = libc_make_test_file_path(FILENAME3);
+  constexpr const char *FILENAME4 = "symlinkat.test.link";
+  auto TEST_FILE_LINK = libc_make_test_file_path(FILENAME4);
+  constexpr const char *FILENAME5 = "testdata/symlinkat.test.link";
+  auto TEST_FILE_LINK_PATH = libc_make_test_file_path(FILENAME5);
 
   // The test strategy is as follows:
   //   1. Create a normal file
   //   2. Create a link to that file.
   //   3. Open the link to check that the link was created.
   //   4. Cleanup the file and its link.
-  errno = 0;
-  int write_fd = __llvm_libc::open(TEST_FILE_PATH, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(errno, 0);
+  LIBC_NAMESPACE::libc_errno = 0;
+  int write_fd =
+      LIBC_NAMESPACE::open(TEST_FILE_PATH, O_WRONLY | O_CREAT, S_IRWXU);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(write_fd, 0);
-  ASSERT_THAT(__llvm_libc::close(write_fd), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::close(write_fd), Succeeds(0));
 
-  int dir_fd = __llvm_libc::open(TEST_DIR, O_DIRECTORY);
-  ASSERT_THAT(__llvm_libc::symlinkat(TEST_FILE, dir_fd, TEST_FILE_LINK),
+  int dir_fd = LIBC_NAMESPACE::open(TEST_DIR, O_DIRECTORY);
+  ASSERT_THAT(LIBC_NAMESPACE::symlinkat(TEST_FILE, dir_fd, TEST_FILE_LINK),
               Succeeds(0));
 
-  int link_fd = __llvm_libc::open(TEST_FILE_LINK_PATH, O_PATH);
+  int link_fd = LIBC_NAMESPACE::open(TEST_FILE_LINK_PATH, O_PATH);
   ASSERT_GT(link_fd, 0);
-  ASSERT_EQ(errno, 0);
-  ASSERT_THAT(__llvm_libc::close(link_fd), Succeeds(0));
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_THAT(LIBC_NAMESPACE::close(link_fd), Succeeds(0));
 
-  ASSERT_THAT(__llvm_libc::close(dir_fd), Succeeds(0));
-  ASSERT_THAT(__llvm_libc::unlink(TEST_FILE_LINK_PATH), Succeeds(0));
-  ASSERT_THAT(__llvm_libc::unlink(TEST_FILE_PATH), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::close(dir_fd), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE_LINK_PATH), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE_PATH), Succeeds(0));
 }
 
 TEST(LlvmLibcSymlinkatTest, SymlinkInNonExistentPath) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
-  ASSERT_THAT(__llvm_libc::symlinkat("non-existent-dir/non-existent-file",
-                                     AT_FDCWD, "non-existent-dir/bad-link"),
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+  ASSERT_THAT(LIBC_NAMESPACE::symlinkat("non-existent-dir/non-existent-file",
+                                        AT_FDCWD, "non-existent-dir/bad-link"),
               Fails(ENOENT));
 }

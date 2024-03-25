@@ -74,7 +74,6 @@ add_header_library(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -87,6 +86,7 @@ add_entrypoint_object(
     .kernel_statx
     libc.include.fcntl
     libc.include.sys_stat
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -99,6 +99,7 @@ add_entrypoint_object(
     .kernel_statx
     libc.include.fcntl
     libc.include.sys_stat
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -111,4 +112,5 @@ add_entrypoint_object(
     .kernel_statx
     libc.include.fcntl
     libc.include.sys_stat
+    libc.src.errno.errno
 )

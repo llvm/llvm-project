@@ -9,12 +9,13 @@
 #include "BenchmarkResult.h"
 #include "BenchmarkRunner.h"
 #include "Error.h"
+#include "ValidationEvent.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -193,6 +194,27 @@ template <> struct SequenceElementTraits<exegesis::BenchmarkMeasure> {
   static const bool flow = false;
 };
 
+template <>
+struct CustomMappingTraits<std::map<exegesis::ValidationEvent, int64_t>> {
+  static void inputOne(IO &Io, StringRef KeyStr,
+                       std::map<exegesis::ValidationEvent, int64_t> &VI) {
+    Expected<exegesis::ValidationEvent> Key =
+        exegesis::getValidationEventByName(KeyStr);
+    if (!Key) {
+      Io.setError("Key is not a valid validation event");
+      return;
+    }
+    Io.mapRequired(KeyStr.str().c_str(), VI[*Key]);
+  }
+
+  static void output(IO &Io, std::map<exegesis::ValidationEvent, int64_t> &VI) {
+    for (auto &IndividualVI : VI) {
+      Io.mapRequired(exegesis::getValidationEventName(IndividualVI.first),
+                     IndividualVI.second);
+    }
+  }
+};
+
 // exegesis::Measure is rendererd as a flow instead of a list.
 // e.g. { "key": "the key", "value": 0123 }
 template <> struct MappingTraits<exegesis::BenchmarkMeasure> {
@@ -204,19 +226,20 @@ template <> struct MappingTraits<exegesis::BenchmarkMeasure> {
     }
     Io.mapRequired("value", Obj.PerInstructionValue);
     Io.mapOptional("per_snippet_value", Obj.PerSnippetValue);
+    Io.mapOptional("validation_counters", Obj.ValidationCounters);
   }
   static const bool flow = true;
 };
 
 template <>
-struct ScalarEnumerationTraits<exegesis::InstructionBenchmark::ModeE> {
+struct ScalarEnumerationTraits<exegesis::Benchmark::ModeE> {
   static void enumeration(IO &Io,
-                          exegesis::InstructionBenchmark::ModeE &Value) {
-    Io.enumCase(Value, "", exegesis::InstructionBenchmark::Unknown);
-    Io.enumCase(Value, "latency", exegesis::InstructionBenchmark::Latency);
-    Io.enumCase(Value, "uops", exegesis::InstructionBenchmark::Uops);
+                          exegesis::Benchmark::ModeE &Value) {
+    Io.enumCase(Value, "", exegesis::Benchmark::Unknown);
+    Io.enumCase(Value, "latency", exegesis::Benchmark::Latency);
+    Io.enumCase(Value, "uops", exegesis::Benchmark::Uops);
     Io.enumCase(Value, "inverse_throughput",
-                exegesis::InstructionBenchmark::InverseThroughput);
+                exegesis::Benchmark::InverseThroughput);
   }
 };
 
@@ -260,8 +283,8 @@ template <> struct ScalarTraits<exegesis::RegisterValue> {
 };
 
 template <>
-struct MappingContextTraits<exegesis::InstructionBenchmarkKey, YamlContext> {
-  static void mapping(IO &Io, exegesis::InstructionBenchmarkKey &Obj,
+struct MappingContextTraits<exegesis::BenchmarkKey, YamlContext> {
+  static void mapping(IO &Io, exegesis::BenchmarkKey &Obj,
                       YamlContext &Context) {
     Io.setContext(&Context);
     Io.mapRequired("instructions", Obj.Instructions);
@@ -271,7 +294,7 @@ struct MappingContextTraits<exegesis::InstructionBenchmarkKey, YamlContext> {
 };
 
 template <>
-struct MappingContextTraits<exegesis::InstructionBenchmark, YamlContext> {
+struct MappingContextTraits<exegesis::Benchmark, YamlContext> {
   struct NormalizedBinary {
     NormalizedBinary(IO &io) {}
     NormalizedBinary(IO &, std::vector<uint8_t> &Data) : Binary(Data) {}
@@ -288,13 +311,23 @@ struct MappingContextTraits<exegesis::InstructionBenchmark, YamlContext> {
     BinaryRef Binary;
   };
 
-  static void mapping(IO &Io, exegesis::InstructionBenchmark &Obj,
+  static void mapping(IO &Io, exegesis::Benchmark &Obj,
                       YamlContext &Context) {
     Io.mapRequired("mode", Obj.Mode);
     Io.mapRequired("key", Obj.Key, Context);
     Io.mapRequired("cpu_name", Obj.CpuName);
     Io.mapRequired("llvm_triple", Obj.LLVMTriple);
-    Io.mapRequired("num_repetitions", Obj.NumRepetitions);
+    // Optionally map num_repetitions and min_instructions to the same
+    // value to preserve backwards compatibility.
+    // TODO(boomanaiden154): Move min_instructions to mapRequired and
+    // remove num_repetitions once num_repetitions is ready to be removed
+    // completely.
+    if (Io.outputting())
+      Io.mapRequired("min_instructions", Obj.MinInstructions);
+    else {
+      Io.mapOptional("num_repetitions", Obj.MinInstructions);
+      Io.mapOptional("min_instructions", Obj.MinInstructions);
+    }
     Io.mapRequired("measurements", Obj.Measurements);
     Io.mapRequired("error", Obj.Error);
     Io.mapOptional("info", Obj.Info);
@@ -305,9 +338,9 @@ struct MappingContextTraits<exegesis::InstructionBenchmark, YamlContext> {
   }
 };
 
-template <> struct MappingTraits<exegesis::InstructionBenchmark::TripleAndCpu> {
+template <> struct MappingTraits<exegesis::Benchmark::TripleAndCpu> {
   static void mapping(IO &Io,
-                      exegesis::InstructionBenchmark::TripleAndCpu &Obj) {
+                      exegesis::Benchmark::TripleAndCpu &Obj) {
     assert(!Io.outputting() && "can only read TripleAndCpu");
     // Read triple.
     Io.mapRequired("llvm_triple", Obj.LLVMTriple);
@@ -320,8 +353,8 @@ template <> struct MappingTraits<exegesis::InstructionBenchmark::TripleAndCpu> {
 
 namespace exegesis {
 
-Expected<std::set<InstructionBenchmark::TripleAndCpu>>
-InstructionBenchmark::readTriplesAndCpusFromYamls(MemoryBufferRef Buffer) {
+Expected<std::set<Benchmark::TripleAndCpu>>
+Benchmark::readTriplesAndCpusFromYamls(MemoryBufferRef Buffer) {
   // We're only mapping a field, drop other fields and silence the corresponding
   // warnings.
   yaml::Input Yin(
@@ -340,11 +373,11 @@ InstructionBenchmark::readTriplesAndCpusFromYamls(MemoryBufferRef Buffer) {
   return Result;
 }
 
-Expected<InstructionBenchmark>
-InstructionBenchmark::readYaml(const LLVMState &State, MemoryBufferRef Buffer) {
+Expected<Benchmark>
+Benchmark::readYaml(const LLVMState &State, MemoryBufferRef Buffer) {
   yaml::Input Yin(Buffer);
   YamlContext Context(State);
-  InstructionBenchmark Benchmark;
+  Benchmark Benchmark;
   if (Yin.setCurrentDocument())
     yaml::yamlize(Yin, Benchmark, /*unused*/ true, Context);
   if (!Context.getLastError().empty())
@@ -352,12 +385,12 @@ InstructionBenchmark::readYaml(const LLVMState &State, MemoryBufferRef Buffer) {
   return std::move(Benchmark);
 }
 
-Expected<std::vector<InstructionBenchmark>>
-InstructionBenchmark::readYamls(const LLVMState &State,
+Expected<std::vector<Benchmark>>
+Benchmark::readYamls(const LLVMState &State,
                                 MemoryBufferRef Buffer) {
   yaml::Input Yin(Buffer);
   YamlContext Context(State);
-  std::vector<InstructionBenchmark> Benchmarks;
+  std::vector<Benchmark> Benchmarks;
   while (Yin.setCurrentDocument()) {
     Benchmarks.emplace_back();
     yamlize(Yin, Benchmarks.back(), /*unused*/ true, Context);
@@ -370,7 +403,7 @@ InstructionBenchmark::readYamls(const LLVMState &State,
   return std::move(Benchmarks);
 }
 
-Error InstructionBenchmark::writeYamlTo(const LLVMState &State,
+Error Benchmark::writeYamlTo(const LLVMState &State,
                                         raw_ostream &OS) {
   auto Cleanup = make_scope_exit([&] { OS.flush(); });
   yaml::Output Yout(OS, nullptr /*Ctx*/, 200 /*WrapColumn*/);
@@ -383,7 +416,7 @@ Error InstructionBenchmark::writeYamlTo(const LLVMState &State,
   return Error::success();
 }
 
-Error InstructionBenchmark::readYamlFrom(const LLVMState &State,
+Error Benchmark::readYamlFrom(const LLVMState &State,
                                          StringRef InputContent) {
   yaml::Input Yin(InputContent);
   YamlContext Context(State);
@@ -408,7 +441,6 @@ bool operator==(const BenchmarkMeasure &A, const BenchmarkMeasure &B) {
   return std::tie(A.Key, A.PerInstructionValue, A.PerSnippetValue) ==
          std::tie(B.Key, B.PerInstructionValue, B.PerSnippetValue);
 }
-
 
 } // namespace exegesis
 } // namespace llvm

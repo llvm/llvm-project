@@ -55,6 +55,8 @@ public:
     interval_.ExtendToCover(that.interval_);
   }
 
+  // Returns the block's first non-blank character, if it has
+  // one; otherwise ' '.
   char FirstNonBlank() const {
     for (char ch : *this) {
       if (ch != ' ' && ch != '\t') {
@@ -62,6 +64,34 @@ public:
       }
     }
     return ' '; // non no-blank character
+  }
+
+  // Returns the block's only non-blank character, if it has
+  // exactly one non-blank character; otherwise ' '.
+  char OnlyNonBlank() const {
+    char result{' '};
+    for (char ch : *this) {
+      if (ch != ' ' && ch != '\t') {
+        if (result == ' ') {
+          result = ch;
+        } else {
+          return ' ';
+        }
+      }
+    }
+    return result;
+  }
+
+  std::size_t CountLeadingBlanks() const {
+    std::size_t n{size()};
+    std::size_t j{0};
+    for (; j < n; ++j) {
+      char ch{(*this)[j]};
+      if (ch != ' ' && ch != '\t') {
+        break;
+      }
+    }
+    return j;
   }
 
   bool IsBlank() const { return FirstNonBlank() == ' '; }
@@ -99,6 +129,13 @@ public:
 
 private:
   int Compare(const CharBlock &that) const {
+    // "memcmp" in glibc has "nonnull" attributes on the input pointers.
+    // Avoid passing null pointers, since it would result in an undefined
+    // behavior.
+    if (size() == 0)
+      return that.size() == 0 ? 0 : -1;
+    if (that.size() == 0)
+      return 1;
     std::size_t bytes{std::min(size(), that.size())};
     int cmp{std::memcmp(static_cast<const void *>(begin()),
         static_cast<const void *>(that.begin()), bytes)};

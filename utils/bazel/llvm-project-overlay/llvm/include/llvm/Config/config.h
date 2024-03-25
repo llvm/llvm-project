@@ -144,9 +144,6 @@
 /* Define to 1 if you have the <link.h> header file. */
 /* HAVE_LINK_H defined in Bazel */
 
-/* Define to 1 if you have the `lseek64' function. */
-/* HAVE_LSEEK64 defined in Bazel */
-
 /* Define to 1 if you have the <mach/mach.h> header file. */
 /* HAVE_MACH_MACH_H defined in Bazel */
 
@@ -191,9 +188,6 @@
 
 /* Define to 1 if you have the <signal.h> header file. */
 #define HAVE_SIGNAL_H 1
-
-/* Define to 1 if you have the `strerror' function. */
-#define HAVE_STRERROR 1
 
 /* Define to 1 if you have the `strerror_r' function. */
 /* HAVE_STRERROR_R defined in Bazel */

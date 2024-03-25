@@ -117,10 +117,10 @@ void ARM64Common::handleDtraceReloc(const Symbol *sym, const Reloc &r,
   if (config->outputType == MH_OBJECT)
     return;
 
-  if (sym->getName().startswith("___dtrace_probe")) {
+  if (sym->getName().starts_with("___dtrace_probe")) {
     // change call site to a NOP
     write32le(loc, 0xD503201F);
-  } else if (sym->getName().startswith("___dtrace_isenabled")) {
+  } else if (sym->getName().starts_with("___dtrace_isenabled")) {
     // change call site to 'MOVZ X0,0'
     write32le(loc, 0xD2800000);
   } else {

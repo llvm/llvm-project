@@ -437,3 +437,14 @@ define half @bf16_to_f32_to_f16(bfloat %a) nounwind {
   %z = fptrunc float %y to half
   ret half %z
 }
+
+define bfloat @bf16_frem(bfloat %x) {
+; CHECK-LABEL: @bf16_frem(
+; CHECK-NEXT:    [[FREM:%.*]] = frem bfloat [[X:%.*]], 0xR40C9
+; CHECK-NEXT:    ret bfloat [[FREM]]
+;
+  %t1 = fpext bfloat %x to float
+  %t2 = frem float %t1, 6.281250e+00
+  %t3 = fptrunc float %t2 to bfloat
+  ret bfloat %t3
+}

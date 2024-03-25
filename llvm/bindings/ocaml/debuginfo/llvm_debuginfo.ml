@@ -231,7 +231,7 @@ external llmetadata_null : unit -> Llvm.llmetadata = "llvm_metadata_null"
 
 let dibuild_create_debug_location ?(inlined_at = llmetadata_null ()) llctx ~line
     ~column ~scope =
-  dibuild_create_debug_location_helper llctx line column scope inlined_at
+  dibuild_create_debug_location_helper llctx ~line ~column ~scope ~inlined_at
 
 external di_location_get_line : location:Llvm.llmetadata -> int
   = "llvm_di_location_get_line"

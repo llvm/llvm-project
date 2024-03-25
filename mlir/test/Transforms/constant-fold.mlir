@@ -756,12 +756,15 @@ func.func @cmpf_inf() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1
 
 // CHECK-LABEL: func @nested_isolated_region
 func.func @nested_isolated_region() {
+  // CHECK-NEXT: builtin.module {
   // CHECK-NEXT: func @isolated_op
   // CHECK-NEXT: arith.constant 2
-  func.func @isolated_op() {
-    %0 = arith.constant 1 : i32
-    %2 = arith.addi %0, %0 : i32
-    "foo.yield"(%2) : (i32) -> ()
+  builtin.module {
+    func.func @isolated_op() {
+      %0 = arith.constant 1 : i32
+      %2 = arith.addi %0, %0 : i32
+      "foo.yield"(%2) : (i32) -> ()
+    }
   }
 
   // CHECK: "foo.unknown_region"

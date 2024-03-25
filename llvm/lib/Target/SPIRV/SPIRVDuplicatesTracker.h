@@ -59,6 +59,7 @@ struct SpecialTypeDescriptor {
     STK_Sampler,
     STK_Pipe,
     STK_DeviceEvent,
+    STK_Pointer,
     STK_Last = -1
   };
   SpecialTypeKind Kind;
@@ -158,6 +159,23 @@ struct DeviceEventTypeDescriptor : public SpecialTypeDescriptor {
 
   static bool classof(const SpecialTypeDescriptor *TD) {
     return TD->Kind == SpecialTypeKind::STK_DeviceEvent;
+  }
+};
+
+struct PointerTypeDescriptor : public SpecialTypeDescriptor {
+  const Type *ElementType;
+  unsigned AddressSpace;
+
+  PointerTypeDescriptor() = delete;
+  PointerTypeDescriptor(const Type *ElementType, unsigned AddressSpace)
+      : SpecialTypeDescriptor(SpecialTypeKind::STK_Pointer),
+        ElementType(ElementType), AddressSpace(AddressSpace) {
+    Hash = (DenseMapInfo<Type *>().getHashValue(ElementType) & 0xffff) ^
+           ((AddressSpace << 8) | Kind);
+  }
+
+  static bool classof(const SpecialTypeDescriptor *TD) {
+    return TD->Kind == SpecialTypeKind::STK_Pointer;
   }
 };
 } // namespace SPIRV
@@ -262,8 +280,14 @@ public:
   void buildDepsGraph(std::vector<SPIRV::DTSortableEntry *> &Graph,
                       MachineModuleInfo *MMI);
 
-  void add(const Type *T, const MachineFunction *MF, Register R) {
-    TT.add(T, MF, R);
+  void add(const Type *Ty, const MachineFunction *MF, Register R) {
+    TT.add(Ty, MF, R);
+  }
+
+  void add(const Type *PointerElementType, unsigned AddressSpace,
+           const MachineFunction *MF, Register R) {
+    ST.add(SPIRV::PointerTypeDescriptor(PointerElementType, AddressSpace), MF,
+           R);
   }
 
   void add(const Constant *C, const MachineFunction *MF, Register R) {
@@ -287,8 +311,14 @@ public:
     ST.add(TD, MF, R);
   }
 
-  Register find(const Type *T, const MachineFunction *MF) {
-    return TT.find(const_cast<Type *>(T), MF);
+  Register find(const Type *Ty, const MachineFunction *MF) {
+    return TT.find(const_cast<Type *>(Ty), MF);
+  }
+
+  Register find(const Type *PointerElementType, unsigned AddressSpace,
+                const MachineFunction *MF) {
+    return ST.find(
+        SPIRV::PointerTypeDescriptor(PointerElementType, AddressSpace), MF);
   }
 
   Register find(const Constant *C, const MachineFunction *MF) {

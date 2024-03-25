@@ -16,16 +16,18 @@
 #include "lldb/API/SBDefines.h"
 
 namespace lldb_private {
+class CommandPluginInterfaceImplementation;
 class SBCommandReturnObjectImpl;
+namespace python {
+class SWIGBridge;
 }
+} // namespace lldb_private
 
 namespace lldb {
 
 class LLDB_API SBCommandReturnObject {
 public:
   SBCommandReturnObject();
-
-  SBCommandReturnObject(lldb_private::CommandReturnObject &ref);
 
   // rvalue ctor+assignment are incompatible with Reproducers.
 
@@ -44,21 +46,29 @@ public:
 
   const char *GetError();
 
-  size_t PutOutput(FILE *fh); // DEPRECATED
+#ifndef SWIG
+  LLDB_DEPRECATED_FIXME("Use PutOutput(SBFile) or PutOutput(FileSP)",
+                        "PutOutput(SBFile)")
+  size_t PutOutput(FILE *fh);
+#endif
 
   size_t PutOutput(SBFile file);
 
-  size_t PutOutput(FileSP file);
+  size_t PutOutput(FileSP BORROWED);
 
   size_t GetOutputSize();
 
   size_t GetErrorSize();
 
-  size_t PutError(FILE *fh); // DEPRECATED
+#ifndef SWIG
+  LLDB_DEPRECATED_FIXME("Use PutError(SBFile) or PutError(FileSP)",
+                        "PutError(SBFile)")
+  size_t PutError(FILE *fh);
+#endif
 
   size_t PutError(SBFile file);
 
-  size_t PutError(FileSP file);
+  size_t PutError(FileSP BORROWED);
 
   void Clear();
 
@@ -76,25 +86,41 @@ public:
 
   bool GetDescription(lldb::SBStream &description);
 
-  void SetImmediateOutputFile(FILE *fh); // DEPRECATED
+#ifndef SWIG
+  LLDB_DEPRECATED_FIXME(
+      "Use SetImmediateOutputFile(SBFile) or SetImmediateOutputFile(FileSP)",
+      "SetImmediateOutputFile(SBFile)")
+  void SetImmediateOutputFile(FILE *fh);
 
-  void SetImmediateErrorFile(FILE *fh); // DEPRECATED
+  LLDB_DEPRECATED_FIXME(
+      "Use SetImmediateErrorFile(SBFile) or SetImmediateErrorFile(FileSP)",
+      "SetImmediateErrorFile(SBFile)")
+  void SetImmediateErrorFile(FILE *fh);
 
-  void SetImmediateOutputFile(FILE *fh, bool transfer_ownership); // DEPRECATED
+  LLDB_DEPRECATED_FIXME(
+      "Use SetImmediateOutputFile(SBFile) or SetImmediateOutputFile(FileSP)",
+      "SetImmediateOutputFile(SBFile)")
+  void SetImmediateOutputFile(FILE *fh, bool transfer_ownership);
 
-  void SetImmediateErrorFile(FILE *fh, bool transfer_ownership); // DEPRECATED
+  LLDB_DEPRECATED_FIXME(
+      "Use SetImmediateErrorFile(SBFile) or SetImmediateErrorFile(FileSP)",
+      "SetImmediateErrorFile(SBFile)")
+  void SetImmediateErrorFile(FILE *fh, bool transfer_ownership);
+#endif
 
   void SetImmediateOutputFile(SBFile file);
 
   void SetImmediateErrorFile(SBFile file);
 
-  void SetImmediateOutputFile(FileSP file);
+  void SetImmediateOutputFile(FileSP BORROWED);
 
-  void SetImmediateErrorFile(FileSP file);
+  void SetImmediateErrorFile(FileSP BORROWED);
 
   void PutCString(const char *string, int len = -1);
 
-  size_t Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
+#ifndef SWIG
+  __attribute__((format(printf, 2, 3))) size_t Printf(const char *format, ...);
+#endif
 
   const char *GetOutput(bool only_if_no_immediate);
 
@@ -108,6 +134,11 @@ public:
 protected:
   friend class SBCommandInterpreter;
   friend class SBOptions;
+
+  friend class lldb_private::CommandPluginInterfaceImplementation;
+  friend class lldb_private::python::SWIGBridge;
+
+  SBCommandReturnObject(lldb_private::CommandReturnObject &ref);
 
   lldb_private::CommandReturnObject *operator->() const;
 

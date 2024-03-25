@@ -3,6 +3,8 @@ get_property(LLVM_DRIVER_OBJLIBS GLOBAL PROPERTY LLVM_DRIVER_OBJLIBS)
 
 get_property(LLVM_DRIVER_TOOLS GLOBAL PROPERTY LLVM_DRIVER_TOOLS)
 
+list(SORT LLVM_DRIVER_TOOLS)
+list(REVERSE LLVM_DRIVER_TOOLS)
 foreach(tool ${LLVM_DRIVER_TOOLS})
   string(REPLACE "-" "_" tool_entry ${tool})
   get_property(tool_aliases GLOBAL PROPERTY LLVM_DRIVER_TOOL_ALIASES_${tool})
@@ -23,6 +25,7 @@ target_sources(llvm-driver PRIVATE llvm-driver.cpp)
 set_target_properties(llvm-driver PROPERTIES OUTPUT_NAME llvm)
 
 target_link_libraries(llvm-driver PUBLIC ${LLVM_DRIVER_OBJLIBS})
+target_link_libraries(llvm-driver PUBLIC LLVMDebuginfod)
 
 if(APPLE)
   # dsymutil uses some CoreFoundation stuff on Darwin...

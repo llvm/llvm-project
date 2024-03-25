@@ -13,8 +13,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/Wasm.h"
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 
 class InputSegment;
 
@@ -28,7 +27,7 @@ public:
   // to the output binary.  However if the memory is imported, and
   // we can't use memory.fill during startup (due to lack of bulk
   // memory feature) then we include BSS segments verbatim.
-  bool requiredInBinary() const { return !isBss || config->emitBssSegments; }
+  bool requiredInBinary() const { return !isBss || ctx.emitBssSegments; }
 
   bool isTLS() const { return name == ".tdata"; }
 
@@ -49,7 +48,6 @@ public:
   std::string header;
 };
 
-} // namespace wasm
-} // namespace lld
+} // namespace lld::wasm
 
 #endif // LLD_WASM_OUTPUT_SEGMENT_H

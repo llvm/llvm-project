@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -enable-ipra -amdgpu-sroa=0 < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -amdgpu-sroa=0 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -enable-ipra < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; Kernels are not called, so there is no call preserved mask.
 ; GCN-LABEL: {{^}}kernel:
@@ -42,11 +42,11 @@ define amdgpu_kernel void @kernel_call() #0 {
 ; GCN-LABEL: {{^}}func_regular_call:
 ; GCN-NOT: buffer_load
 ; GCN-NOT: readlane
-; GCN: flat_load_dword v9
+; GCN: flat_load_dword v8
 ; GCN: s_swappc_b64
 ; GCN-NOT: buffer_load
 ; GCN-NOT: readlane
-; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v9
+; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v8
 
 ; GCN: ; NumSgprs: 34
 ; GCN: ; NumVgprs: 10
@@ -72,9 +72,9 @@ define void @func_tail_call() #1 {
 }
 
 ; GCN-LABEL: {{^}}func_call_tail_call:
-; GCN: flat_load_dword v9
+; GCN: flat_load_dword v8
 ; GCN: s_swappc_b64
-; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v9
+; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v8
 ; GCN: s_setpc_b64
 
 ; GCN: ; NumSgprs: 34

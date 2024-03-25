@@ -7,9 +7,11 @@
 # RUN:   FileCheck %s -DFILE=%t1 --check-prefix=LLVM1 --implicit-check-not="warning:"
 # RUN: llvm-readelf %t1 --symbols --relocations 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t1 --check-prefix=GNU1 --implicit-check-not="warning:"
+# RUN: llvm-readelf %t1 --symbols -X 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t1 --check-prefix=GNUX1 --implicit-check-not="warning:"
 
 # LLVM1:      Relocations [
-# LLVM1-NEXT:   Section (4) .rela.foo {
+# LLVM1-NEXT:   Section (5) .rela.foo {
 # LLVM1-NEXT:     0x1 R_X86_64_NONE .foo 0x0
 # LLVM1-NEXT:     0x2 R_X86_64_NONE symbol1 0x0
 # LLVM1-NEXT: warning: '[[FILE]]': invalid section index: 67
@@ -32,8 +34,10 @@
 # LLVM1: Name: symbol3 (9)
 # LLVM1: Name: <section 66> (0)
 # LLVM1: Name: symbol4 (1)
+# LLVM1: warning: '[[FILE]]': a section [index 3] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# LLVM1: Name: <section 3> (0)
 
-# GNU1:      Relocation section '.rela.foo' at offset 0x58 contains 8 entries:
+# GNU1:      Relocation section '.rela.foo' at offset {{.*}} contains 8 entries:
 # GNU1-NEXT:  Offset     Info    Type         Sym. Value  Symbol's Name + Addend
 # GNU1-NEXT: 00000001  00000100 R_X86_64_NONE   00000000   .foo + 0
 # GNU1-NEXT: 00000002  00000200 R_X86_64_NONE   00000000   symbol1 + 0
@@ -46,7 +50,7 @@
 # GNU1-NEXT: 00000007  00000700 R_X86_64_NONE   00000000   <section 66> + 0
 # GNU1-NEXT: 00000008  00000800 R_X86_64_NONE   00000000   symbol4 + 0
 
-# GNU1:      Symbol table '.symtab' contains 9 entries:
+# GNU1:      Symbol table '.symtab' contains 10 entries:
 # GNU1-NEXT:    Num: {{.*}} Type    {{.*}} Ndx Name
 # GNU1-NEXT:      0: {{.*}} NOTYPE  {{.*}} UND {{$}}
 # GNU1-NEXT:      1: {{.*}} SECTION {{.*}}  1 .foo
@@ -57,6 +61,24 @@
 # GNU1-NEXT:      6: {{.*}} SECTION {{.*}}  2 symbol3
 # GNU1-NEXT:      7: {{.*}} SECTION {{.*}} 66 <section 66>
 # GNU1-NEXT:      8: {{.*}} SECTION {{.*}} 66 symbol4
+# GNU1-NEXT: warning: '[[FILE]]': a section [index 3] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# GNU1-NEXT:      9: {{.*}} SECTION {{.*}}  3 <section 3>
+
+# GNUX1:      Symbol table '.symtab' contains 10 entries:
+# GNUX1-NEXT:    Num: {{.*}} Type    {{.*}} Ndx(SecName) Name
+# GNUX1-NEXT:      0: {{.*}} NOTYPE  {{.*}} UND {{$}}
+# GNUX1-NEXT:      1: {{.*}} SECTION {{.*}}   1 (.foo)    .foo
+# GNUX1-NEXT:      2: {{.*}} SECTION {{.*}}   1 (.foo)     symbol1
+# GNUX1-NEXT: warning: '[[FILE]]': invalid section index: 67
+# GNUX1-NEXT:      3: {{.*}} SECTION {{.*}}  67            <section 67>
+# GNUX1-NEXT:      4: {{.*}} SECTION {{.*}}  67            symbol2
+# GNUX1-NEXT:      5: {{.*}} SECTION {{.*}}   2 (.bar)     .bar
+# GNUX1-NEXT:      6: {{.*}} SECTION {{.*}}   2 (.bar)     symbol3
+# GNUX1-NEXT: warning: '[[FILE]]': invalid section index: 66
+# GNUX1-NEXT:      7: {{.*}} SECTION {{.*}}  66            <section 66>
+# GNUX1-NEXT:      8: {{.*}} SECTION {{.*}}  66            symbol4
+# GNUX1-NEXT: warning: '[[FILE]]': a section [index 3] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# GNUX1-NEXT:      9: {{.*}} SECTION {{.*}}   3            <section 3>
 
 --- !ELF
 FileHeader:
@@ -69,10 +91,13 @@ Sections:
     Type: SHT_PROGBITS
   - Name: .bar
     Type: SHT_PROGBITS
+  - Name:   .invalid
+    Type:   SHT_PROGBITS
+    ShName: 0xffff
   - Name: .symtab_shndx
     Type: SHT_SYMTAB_SHNDX
     Link: .symtab
-    Entries: [ 0, 0, 0, 0, 0, 2, 2, 0x42, 0x42 ]
+    Entries: [ 0, 0, 0, 0, 0, 2, 2, 0x42, 0x42, 0 ]
   - Name: .rela.foo
     Type: SHT_RELA
     Link: .symtab
@@ -134,6 +159,10 @@ Symbols:
 ## Case 8: a named section symbol via SHT_SYMTAB_SHNDX with invalid index.
   - Name: "symbol4"
     Index: SHN_XINDEX
+    Type: STT_SECTION
+## Case 9: a unnamed section symbol with invalid name.
+  - Name: ""
+    Index: 3
     Type: STT_SECTION
 
 # RUN: yaml2obj %s --docnum=2 -o %t2

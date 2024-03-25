@@ -19,10 +19,8 @@ define void @test.not.uge.ult(i8 %start, i8 %low, i8 %high) {
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i8 [[START_2]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[T_2]])
 ; CHECK-NEXT:    [[START_3:%.*]] = sub nuw i8 [[START]], 3
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ult i8 [[START_3]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_4:%.*]] = sub nuw i8 [[START]], 4
-; CHECK-NEXT:    [[C_4:%.*]] = icmp ult i8 [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
@@ -67,16 +65,12 @@ define void @test.not.uge.ule(i8 %start, i8 %low, i8 %high) {
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[START_1]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[T_1]])
 ; CHECK-NEXT:    [[START_2:%.*]] = sub nuw i8 [[START]], 2
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[START_2]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_3:%.*]] = sub nuw i8 [[START]], 3
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i8 [[START_3]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_4:%.*]] = sub nuw i8 [[START]], 4
-; CHECK-NEXT:    [[T_4:%.*]] = icmp ule i8 [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_5:%.*]] = sub nuw i8 [[START]], 5
-; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i8 [[START_5]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
@@ -126,16 +120,12 @@ define void @test.not.uge.ugt(i8 %start, i8 %low, i8 %high) {
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp ugt i8 [[START_1]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[F_1]])
 ; CHECK-NEXT:    [[START_2:%.*]] = sub nuw i8 [[START]], 2
-; CHECK-NEXT:    [[F_2:%.*]] = icmp ugt i8 [[START_2]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_3:%.*]] = sub nuw i8 [[START]], 3
-; CHECK-NEXT:    [[F_3:%.*]] = icmp ugt i8 [[START_3]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_4:%.*]] = sub nuw i8 [[START]], 4
-; CHECK-NEXT:    [[F_4:%.*]] = icmp ugt i8 [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_5:%.*]] = sub nuw i8 [[START]], 5
-; CHECK-NEXT:    [[C_5:%.*]] = icmp ugt i8 [[START_5]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -192,13 +182,10 @@ define void @test.not.uge.uge(i8 %start, i8 %low, i8 %high) {
 ; CHECK-NEXT:    [[F_2:%.*]] = icmp uge i8 [[START_2]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[F_2]])
 ; CHECK-NEXT:    [[START_3:%.*]] = sub nuw i8 [[START]], 3
-; CHECK-NEXT:    [[F_3:%.*]] = icmp uge i8 [[START_3]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_4:%.*]] = sub nuw i8 [[START]], 4
-; CHECK-NEXT:    [[C_4:%.*]] = icmp uge i8 [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_5:%.*]] = sub nuw i8 [[START]], 5
-; CHECK-NEXT:    [[C_5:%.*]] = icmp uge i8 [[START_5]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -283,7 +270,6 @@ define i1 @sub_nuw_i16_simp(i16 %a) {
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i16 [[A]], 0
 ; CHECK-NEXT:    ret i1 [[C_2]]
 ; CHECK:       exit.2:
-; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i16 [[A]], 0
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
@@ -310,7 +296,6 @@ define i1 @sub_nuw_i64_simp(i64 %a) {
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i64 [[A]], 0
 ; CHECK-NEXT:    ret i1 [[C_2]]
 ; CHECK:       exit.2:
-; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i64 [[A]], 0
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
@@ -335,10 +320,9 @@ define i1 @sub_nuw_neg_i16(i16 %a) {
 ; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
 ; CHECK:       exit.1:
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i16 [[A]], 0
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 [[C_2]]
 ; CHECK:       exit.2:
-; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i16 [[A]], 0
-; CHECK-NEXT:    ret i1 [[C_3]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %neg2 = sub nuw i16 %a, -305
@@ -395,4 +379,118 @@ entry:
   %neg2 = sub nuw i64 0, -9223372036854775808
   %c = icmp ugt i64 %neg2, 0
   ret i1 %c
+}
+
+define i1 @pr76713(i16 %i1, i16 %i3) {
+; CHECK-LABEL: @pr76713(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i16 [[I1:%.*]], -1
+; CHECK-NEXT:    [[C2:%.*]] = icmp uge i16 [[I1]], -3
+; CHECK-NEXT:    [[C3:%.*]] = icmp ult i16 [[I3:%.*]], 2
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
+; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[AND]], [[C3]]
+; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i16 [[I1]], -3
+; CHECK-NEXT:    [[ARRAYIDX_IDX:%.*]] = mul nuw nsw i16 [[I3]], 4
+; CHECK-NEXT:    [[I6:%.*]] = add nuw nsw i16 [[ARRAYIDX_IDX]], [[SUB]]
+; CHECK-NEXT:    [[C4:%.*]] = icmp ult i16 12, [[I6]]
+; CHECK-NEXT:    ret i1 [[C4]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %c1 = icmp ult i16 %i1, -1
+  %c2 = icmp uge i16 %i1, -3
+  %c3 = icmp ult i16 %i3, 2
+  %and = and i1 %c1, %c2
+  %and.2 = and i1 %and, %c3
+  br i1 %and, label %then, label %else
+
+then:
+  %sub = sub nuw nsw i16 %i1, -3
+  %arrayidx.idx = mul nuw nsw i16 %i3, 4
+  %i6 = add nuw nsw i16 %arrayidx.idx, %sub
+  %c4 = icmp ult i16 12, %i6
+  ret i1 %c4
+
+else:
+  ret i1 0
+}
+
+define void @sub_nuw_chained_positive_constants(i16 %a) {
+; CHECK-LABEL: @sub_nuw_chained_positive_constants(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nuw i16 [[A:%.*]], 10
+; CHECK-NEXT:    [[SUB2:%.*]] = sub nuw i16 [[SUB1]], 20
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i16 [[SUB2]], 90
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i16 [[A]], 121
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    ret void
+; CHECK:       exit.2:
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %sub1 = sub nuw i16 %a, 10
+  %sub2 = sub nuw i16 %sub1, 20
+  %c.1 = icmp ugt i16 %sub2, 90
+  br i1 %c.1, label %exit.1, label %exit.2
+
+exit.1:
+  %c.2 = icmp ugt i16 %a, 120
+  call void @use(i1 %c.2)
+  %c.3 = icmp ugt i16 %a, 121
+  call void @use(i1 %c.3)
+  ret void
+
+exit.2:
+  %c.4 = icmp ugt i16 %a, 120
+  call void @use(i1 %c.4)
+  %c.5 = icmp ugt i16 %a, 121
+  call void @use(i1 %c.5)
+  ret void
+}
+
+define void @sub_nuw_chained_negative_constants(i8 %a) {
+; CHECK-LABEL: @sub_nuw_chained_negative_constants(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nuw i8 [[A:%.*]], 10
+; CHECK-NEXT:    [[SUB2:%.*]] = sub nuw i8 [[SUB1]], -126
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[SUB2]], 20
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i8 [[A]], -95
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    ret void
+; CHECK:       exit.2:
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %sub1 = sub nuw i8 %a, 10
+  %sub2 = sub nuw i8 %sub1, 130
+  %c.1 = icmp ugt i8 %sub2, 20
+  br i1 %c.1, label %exit.1, label %exit.2
+
+exit.1:
+  %c.2 = icmp ugt i8 %a, 160
+  call void @use(i1 %c.2)
+  %c.3 = icmp ugt i8 %a, 161
+  call void @use(i1 %c.3)
+  ret void
+
+
+exit.2:
+  %c.4 = icmp ugt i8 %a, 160
+  call void @use(i1 %c.4)
+  %c.5 = icmp ugt i8 %a, 161
+  call void @use(i1 %c.5)
+  ret void
 }

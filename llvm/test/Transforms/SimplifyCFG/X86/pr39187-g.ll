@@ -1,4 +1,5 @@
 ; RUN: opt < %s -S -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -hoist-common-insts=true | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators < %s -S -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -hoist-common-insts=true | FileCheck %s
 
 ; SimplifyCFG can hoist any common code in the 'then' and 'else' blocks to
 ; the 'if' basic block.

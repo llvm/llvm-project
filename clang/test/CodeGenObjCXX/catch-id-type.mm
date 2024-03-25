@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple i386-apple-macosx10.6.6 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -fobjc-exceptions -fcxx-exceptions -fexceptions -o - %s | FileCheck %s
-// rdar://8940528
 
 @interface ns_array
 + (id) array;

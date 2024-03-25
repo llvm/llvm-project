@@ -47,7 +47,7 @@ static inline bool isPGSOColdCodeOnly(ProfileSummaryInfo *PSI) {
          (PGSOLargeWorkingSetSizeOnly && !PSI->hasLargeWorkingSetSize());
 }
 
-template<typename AdapterT, typename FuncT, typename BFIT>
+template <typename FuncT, typename BFIT>
 bool shouldFuncOptimizeForSizeImpl(const FuncT *F, ProfileSummaryInfo *PSI,
                                    BFIT *BFI, PGSOQueryType QueryType) {
   assert(F);
@@ -58,19 +58,20 @@ bool shouldFuncOptimizeForSizeImpl(const FuncT *F, ProfileSummaryInfo *PSI,
   if (!EnablePGSO)
     return false;
   if (isPGSOColdCodeOnly(PSI))
-    return AdapterT::isFunctionColdInCallGraph(F, PSI, *BFI);
+    return PSI->isFunctionColdInCallGraph(F, *BFI);
   if (PSI->hasSampleProfile())
     // The "isCold" check seems to work better for Sample PGO as it could have
     // many profile-unannotated functions.
-    return AdapterT::isFunctionColdInCallGraphNthPercentile(
-        PgsoCutoffSampleProf, F, PSI, *BFI);
-  return !AdapterT::isFunctionHotInCallGraphNthPercentile(PgsoCutoffInstrProf,
-                                                          F, PSI, *BFI);
+    return PSI->isFunctionColdInCallGraphNthPercentile(PgsoCutoffSampleProf, F,
+                                                       *BFI);
+  return !PSI->isFunctionHotInCallGraphNthPercentile(PgsoCutoffInstrProf, F,
+                                                     *BFI);
 }
 
-template<typename AdapterT, typename BlockTOrBlockFreq, typename BFIT>
-bool shouldOptimizeForSizeImpl(BlockTOrBlockFreq BBOrBlockFreq, ProfileSummaryInfo *PSI,
-                               BFIT *BFI, PGSOQueryType QueryType) {
+template <typename BlockTOrBlockFreq, typename BFIT>
+bool shouldOptimizeForSizeImpl(BlockTOrBlockFreq BBOrBlockFreq,
+                               ProfileSummaryInfo *PSI, BFIT *BFI,
+                               PGSOQueryType QueryType) {
   if (!PSI || !BFI || !PSI->hasProfileSummary())
     return false;
   if (ForcePGSO)
@@ -78,14 +79,13 @@ bool shouldOptimizeForSizeImpl(BlockTOrBlockFreq BBOrBlockFreq, ProfileSummaryIn
   if (!EnablePGSO)
     return false;
   if (isPGSOColdCodeOnly(PSI))
-    return AdapterT::isColdBlock(BBOrBlockFreq, PSI, BFI);
+    return PSI->isColdBlock(BBOrBlockFreq, BFI);
   if (PSI->hasSampleProfile())
     // The "isCold" check seems to work better for Sample PGO as it could have
     // many profile-unannotated functions.
-    return AdapterT::isColdBlockNthPercentile(PgsoCutoffSampleProf,
-                                              BBOrBlockFreq, PSI, BFI);
-  return !AdapterT::isHotBlockNthPercentile(PgsoCutoffInstrProf, BBOrBlockFreq,
-                                            PSI, BFI);
+    return PSI->isColdBlockNthPercentile(PgsoCutoffSampleProf, BBOrBlockFreq,
+                                         BFI);
+  return !PSI->isHotBlockNthPercentile(PgsoCutoffInstrProf, BBOrBlockFreq, BFI);
 }
 
 /// Returns true if function \p F is suggested to be size-optimized based on the

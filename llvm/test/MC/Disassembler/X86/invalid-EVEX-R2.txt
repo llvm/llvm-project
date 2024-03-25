@@ -1,4 +1,0 @@
-# RUN: llvm-mc --disassemble %s -triple=x86_64-apple-darwin9 2>&1 | grep "invalid instruction encoding"
-
-# This instruction would decode as vcvtsd2usi if the EVEX.R' field weren't 0.
-0x62 0xe1 0xff 0x08 0x79 0xc0

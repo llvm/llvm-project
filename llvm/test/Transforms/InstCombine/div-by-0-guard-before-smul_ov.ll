@@ -47,11 +47,7 @@ define i1 @n2_wrong_size(i4 %size0, i4 %size1, i4 %nmemb) {
 
 define i1 @n3_wrong_pred(i4 %size, i4 %nmemb) {
 ; CHECK-LABEL: @n3_wrong_pred(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i4 [[SIZE:%.*]], 0
-; CHECK-NEXT:    [[SMUL:%.*]] = tail call { i4, i1 } @llvm.smul.with.overflow.i4(i4 [[SIZE]], i4 [[NMEMB:%.*]])
-; CHECK-NEXT:    [[SMUL_OV:%.*]] = extractvalue { i4, i1 } [[SMUL]], 1
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[SMUL_OV]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = icmp eq i4 %size, 0 ; not 'ne'
   %smul = tail call { i4, i1 } @llvm.smul.with.overflow.i4(i4 %size, i4 %nmemb)
@@ -63,10 +59,7 @@ define i1 @n3_wrong_pred(i4 %size, i4 %nmemb) {
 define i1 @n4_not_and(i4 %size, i4 %nmemb) {
 ; CHECK-LABEL: @n4_not_and(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i4 [[SIZE:%.*]], 0
-; CHECK-NEXT:    [[SMUL:%.*]] = tail call { i4, i1 } @llvm.smul.with.overflow.i4(i4 [[SIZE]], i4 [[NMEMB:%.*]])
-; CHECK-NEXT:    [[SMUL_OV:%.*]] = extractvalue { i4, i1 } [[SMUL]], 1
-; CHECK-NEXT:    [[AND:%.*]] = or i1 [[SMUL_OV]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = icmp ne i4 %size, 0
   %smul = tail call { i4, i1 } @llvm.smul.with.overflow.i4(i4 %size, i4 %nmemb)

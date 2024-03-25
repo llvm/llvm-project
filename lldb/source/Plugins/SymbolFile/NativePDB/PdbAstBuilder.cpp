@@ -14,17 +14,18 @@
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/Demangle/MicrosoftDemangle.h"
 
+#include "PdbUtil.h"
 #include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "SymbolFileNativePDB.h"
+#include "UdtRecordCompleter.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/LLDBAssert.h"
-#include "PdbUtil.h"
-#include "UdtRecordCompleter.h"
-#include "SymbolFileNativePDB.h"
 #include <optional>
+#include <string_view>
 
 using namespace lldb_private;
 using namespace lldb_private::npdb;
@@ -98,18 +99,18 @@ struct CreateMethodDecl : public TypeVisitorCallbacks {
 static clang::TagTypeKind TranslateUdtKind(const TagRecord &cr) {
   switch (cr.Kind) {
   case TypeRecordKind::Class:
-    return clang::TTK_Class;
+    return clang::TagTypeKind::Class;
   case TypeRecordKind::Struct:
-    return clang::TTK_Struct;
+    return clang::TagTypeKind::Struct;
   case TypeRecordKind::Union:
-    return clang::TTK_Union;
+    return clang::TagTypeKind::Union;
   case TypeRecordKind::Interface:
-    return clang::TTK_Interface;
+    return clang::TagTypeKind::Interface;
   case TypeRecordKind::Enum:
-    return clang::TTK_Enum;
+    return clang::TagTypeKind::Enum;
   default:
     lldbassert(false && "Invalid tag record kind!");
-    return clang::TTK_Struct;
+    return clang::TagTypeKind::Struct;
   }
 }
 
@@ -174,7 +175,7 @@ PdbAstBuilder::CreateDeclInfoForType(const TagRecord &record, TypeIndex ti) {
     return CreateDeclInfoForUndecoratedName(record.Name);
 
   llvm::ms_demangle::Demangler demangler;
-  StringView sv(record.UniqueName.begin(), record.UniqueName.size());
+  std::string_view sv(record.UniqueName.begin(), record.UniqueName.size());
   llvm::ms_demangle::TagTypeNode *ttn = demangler.parseTagUniqueName(sv);
   if (demangler.Error)
     return {m_clang.GetTranslationUnitDecl(), std::string(record.UniqueName)};
@@ -607,16 +608,17 @@ clang::QualType PdbAstBuilder::CreateRecordType(PdbTypeSymId id,
     return {};
 
   clang::TagTypeKind ttk = TranslateUdtKind(record);
-  lldb::AccessType access =
-      (ttk == clang::TTK_Class) ? lldb::eAccessPrivate : lldb::eAccessPublic;
+  lldb::AccessType access = (ttk == clang::TagTypeKind::Class)
+                                ? lldb::eAccessPrivate
+                                : lldb::eAccessPublic;
 
   ClangASTMetadata metadata;
   metadata.SetUserID(toOpaqueUid(id));
   metadata.SetIsDynamicCXXType(false);
 
-  CompilerType ct =
-      m_clang.CreateRecordType(context, OptionalClangModuleID(), access, uname,
-                               ttk, lldb::eLanguageTypeC_plus_plus, &metadata);
+  CompilerType ct = m_clang.CreateRecordType(
+      context, OptionalClangModuleID(), access, uname, llvm::to_underlying(ttk),
+      lldb::eLanguageTypeC_plus_plus, &metadata);
 
   lldbassert(ct.IsValid());
 
@@ -1262,9 +1264,9 @@ void PdbAstBuilder::ParseNamespace(clang::DeclContext &context) {
 
     clang::NamespaceDecl *ns = llvm::cast<clang::NamespaceDecl>(context);
     llvm::StringRef ns_name = ns->getName();
-    if (ns_name.startswith(qname)) {
+    if (ns_name.starts_with(qname)) {
       ns_name = ns_name.drop_front(qname.size());
-      if (ns_name.startswith("::"))
+      if (ns_name.starts_with("::"))
         GetOrCreateType(tid);
     }
   }

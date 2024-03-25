@@ -1,7 +1,11 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -fsyntax-only %s -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -std=c++11 -fsyntax-only %s -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 -fsyntax-only %s -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 -std=c++11 -fsyntax-only %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fsyntax-only %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -fsyntax-only %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -fsyntax-only %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -std=c++11 -fsyntax-only %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -fsyntax-only %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -fsyntax-only %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -fsyntax-only %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -std=c++11 -fsyntax-only %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_null_allocator;
@@ -151,7 +155,7 @@ T tmain(T argc) {
   [[omp::directive(taskloop reduction(* : ca))]] // expected-error {{const-qualified variable cannot be reduction}}
   for (int i = 0; i < 10; ++i)
     foo();
-  [[omp::directive(taskloop reduction(- : da))]] // expected-error {{const-qualified variable cannot be reduction}} expected-error {{const-qualified variable cannot be reduction}}
+  [[omp::directive(taskloop reduction(- : da))]] // expected-error 2 {{const-qualified variable cannot be reduction}} omp52-warning 3 {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   for (int i = 0; i < 10; ++i)
     foo();
   [[omp::directive(taskloop reduction(^ : fl))]] // expected-error {{invalid operands to binary expression ('float' and 'float')}}
@@ -253,7 +257,7 @@ int main(int argc, char **argv) {
   [[omp::directive(taskloop reduction(* : ca))]] // expected-error {{const-qualified variable cannot be reduction}}
   for (int i = 0; i < 10; ++i)
     foo();
-  [[omp::directive(taskloop reduction(- : da))]] // expected-error {{const-qualified variable cannot be reduction}}
+  [[omp::directive(taskloop reduction(- : da))]] // expected-error {{const-qualified variable cannot be reduction}} omp52-warning {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   for (int i = 0; i < 10; ++i)
     foo();
   [[omp::directive(taskloop reduction(^ : fl))]] // expected-error {{invalid operands to binary expression ('float' and 'float')}}

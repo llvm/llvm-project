@@ -83,9 +83,8 @@ Please use the tag "libunwind" for new threads.
 
 **Patches**
 
-If you want to contribute a patch to libunwind, the best place for that is
-`Phabricator <https://llvm.org/docs/Phabricator.html>`_. Please include [libunwind] in the subject and
-add `cfe-commits` as a subscriber. Also make sure you are subscribed to the `cfe-commits mailing list`_.
+If you want to contribute a patch to libunwind, please start by reading the LLVM
+`documentation about contributing <https://www.llvm.org/docs/Contributing.html>`__.
 
 **Discussion and Questions**
 

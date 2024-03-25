@@ -47,6 +47,13 @@ static uint64_t extractBitsForFixup(MCFixupKind Kind, uint64_t Value,
     return (int64_t)Value / 2;
   };
 
+  auto handleImmValue = [&](bool IsSigned, unsigned W) -> uint64_t {
+    if (!(IsSigned ? checkFixupInRange(minIntN(W), maxIntN(W))
+                   : checkFixupInRange(0, maxUIntN(W))))
+      return 0;
+    return Value;
+  };
+
   switch (unsigned(Kind)) {
   case SystemZ::FK_390_PC12DBL:
     return handlePCRelFixupValue(12);
@@ -57,22 +64,41 @@ static uint64_t extractBitsForFixup(MCFixupKind Kind, uint64_t Value,
   case SystemZ::FK_390_PC32DBL:
     return handlePCRelFixupValue(32);
 
-  case SystemZ::FK_390_12:
-    if (!checkFixupInRange(0, maxUIntN(12)))
-      return 0;
-    return Value;
+  case SystemZ::FK_390_TLS_CALL:
+    return 0;
 
-  case SystemZ::FK_390_20: {
-    if (!checkFixupInRange(minIntN(20), maxIntN(20)))
-      return 0;
+  case SystemZ::FK_390_S8Imm:
+    return handleImmValue(true, 8);
+  case SystemZ::FK_390_S16Imm:
+    return handleImmValue(true, 16);
+  case SystemZ::FK_390_S20Imm: {
+    Value = handleImmValue(true, 20);
+    // S20Imm is used only for signed 20-bit displacements.
     // The high byte of a 20 bit displacement value comes first.
     uint64_t DLo = Value & 0xfff;
     uint64_t DHi = (Value >> 12) & 0xff;
     return (DLo << 8) | DHi;
   }
-
-  case SystemZ::FK_390_TLS_CALL:
-    return 0;
+  case SystemZ::FK_390_S32Imm:
+    return handleImmValue(true, 32);
+  case SystemZ::FK_390_U1Imm:
+    return handleImmValue(false, 1);
+  case SystemZ::FK_390_U2Imm:
+    return handleImmValue(false, 2);
+  case SystemZ::FK_390_U3Imm:
+    return handleImmValue(false, 3);
+  case SystemZ::FK_390_U4Imm:
+    return handleImmValue(false, 4);
+  case SystemZ::FK_390_U8Imm:
+    return handleImmValue(false, 8);
+  case SystemZ::FK_390_U12Imm:
+    return handleImmValue(false, 12);
+  case SystemZ::FK_390_U16Imm:
+    return handleImmValue(false, 16);
+  case SystemZ::FK_390_U32Imm:
+    return handleImmValue(false, 32);
+  case SystemZ::FK_390_U48Imm:
+    return handleImmValue(false, 48);
   }
 
   llvm_unreachable("Unknown fixup kind!");
@@ -80,10 +106,8 @@ static uint64_t extractBitsForFixup(MCFixupKind Kind, uint64_t Value,
 
 namespace {
 class SystemZMCAsmBackend : public MCAsmBackend {
-  uint8_t OSABI;
 public:
-  SystemZMCAsmBackend(uint8_t osABI)
-      : MCAsmBackend(support::big), OSABI(osABI) {}
+  SystemZMCAsmBackend() : MCAsmBackend(llvm::endianness::big) {}
 
   // Override MCAsmBackend
   unsigned getNumFixupKinds() const override {
@@ -92,7 +116,8 @@ public:
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target) override;
+                             const MCValue &Target,
+                             const MCSubtargetInfo *STI) override;
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved,
@@ -104,10 +129,6 @@ public:
   }
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
-  std::unique_ptr<MCObjectTargetWriter>
-  createObjectTargetWriter() const override {
-    return createSystemZObjectWriter(OSABI);
-  }
 };
 } // end anonymous namespace
 
@@ -130,16 +151,6 @@ SystemZMCAsmBackend::getFixupKind(StringRef Name) const {
 
 const MCFixupKindInfo &
 SystemZMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
-  const static MCFixupKindInfo Infos[SystemZ::NumTargetFixupKinds] = {
-    { "FK_390_PC12DBL",  4, 12, MCFixupKindInfo::FKF_IsPCRel },
-    { "FK_390_PC16DBL",  0, 16, MCFixupKindInfo::FKF_IsPCRel },
-    { "FK_390_PC24DBL",  0, 24, MCFixupKindInfo::FKF_IsPCRel },
-    { "FK_390_PC32DBL",  0, 32, MCFixupKindInfo::FKF_IsPCRel },
-    { "FK_390_TLS_CALL", 0, 0, 0 },
-    { "FK_390_12",       4, 12, 0 },
-    { "FK_390_20",       4, 20, 0 }
-  };
-
   // Fixup kinds from .reloc directive are like R_390_NONE. They
   // do not require any extra processing.
   if (Kind >= FirstLiteralRelocationKind)
@@ -150,12 +161,13 @@ SystemZMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
   assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
          "Invalid kind!");
-  return Infos[Kind - FirstTargetFixupKind];
+  return SystemZ::MCFixupKindInfos[Kind - FirstTargetFixupKind];
 }
 
 bool SystemZMCAsmBackend::shouldForceRelocation(const MCAssembler &,
-						const MCFixup &Fixup,
-						const MCValue &) {
+                                                const MCFixup &Fixup,
+                                                const MCValue &,
+                                                const MCSubtargetInfo *STI) {
   return Fixup.getKind() >= FirstLiteralRelocationKind;
 }
 
@@ -192,11 +204,39 @@ bool SystemZMCAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
+namespace {
+class ELFSystemZAsmBackend : public SystemZMCAsmBackend {
+  uint8_t OSABI;
+
+public:
+  ELFSystemZAsmBackend(uint8_t OsABI) : SystemZMCAsmBackend(), OSABI(OsABI){};
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createSystemZELFObjectWriter(OSABI);
+  }
+};
+
+class GOFFSystemZAsmBackend : public SystemZMCAsmBackend {
+public:
+  GOFFSystemZAsmBackend() : SystemZMCAsmBackend(){};
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createSystemZGOFFObjectWriter();
+  }
+};
+} // namespace
+
 MCAsmBackend *llvm::createSystemZMCAsmBackend(const Target &T,
                                               const MCSubtargetInfo &STI,
                                               const MCRegisterInfo &MRI,
                                               const MCTargetOptions &Options) {
+  if (STI.getTargetTriple().isOSzOS()) {
+    return new GOFFSystemZAsmBackend();
+  }
+
   uint8_t OSABI =
       MCELFObjectTargetWriter::getOSABI(STI.getTargetTriple().getOS());
-  return new SystemZMCAsmBackend(OSABI);
+  return new ELFSystemZAsmBackend(OSABI);
 }

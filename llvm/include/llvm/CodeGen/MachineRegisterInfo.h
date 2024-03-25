@@ -57,7 +57,7 @@ public:
     virtual ~Delegate() = default;
 
     virtual void MRI_NoteNewVirtualRegister(Register Reg) = 0;
-    virtual void MRI_NotecloneVirtualRegister(Register NewReg,
+    virtual void MRI_NoteCloneVirtualRegister(Register NewReg,
                                               Register SrcReg) {
       MRI_NoteNewVirtualRegister(NewReg);
     }
@@ -101,8 +101,9 @@ private:
   /// first member of the pair being non-zero. If the hinted register is
   /// virtual, it means the allocator should prefer the physical register
   /// allocated to it if any.
-  IndexedMap<std::pair<Register, SmallVector<Register, 4>>,
-             VirtReg2IndexFunctor> RegAllocHints;
+  IndexedMap<std::pair<unsigned, SmallVector<Register, 4>>,
+             VirtReg2IndexFunctor>
+      RegAllocHints;
 
   /// PhysRegUseDefLists - This is an array of the head of the use/def list for
   /// physical registers.
@@ -180,7 +181,7 @@ public:
 
   void noteCloneVirtualRegister(Register NewReg, Register SrcReg) {
     for (auto *TheDelegate : TheDelegates)
-      TheDelegate->MRI_NotecloneVirtualRegister(NewReg, SrcReg);
+      TheDelegate->MRI_NoteCloneVirtualRegister(NewReg, SrcReg);
   }
 
   //===--------------------------------------------------------------------===//
@@ -228,7 +229,8 @@ public:
   }
   bool shouldTrackSubRegLiveness(Register VReg) const {
     assert(VReg.isVirtual() && "Must pass a VReg");
-    return shouldTrackSubRegLiveness(*getRegClass(VReg));
+    const TargetRegisterClass *RC = getRegClassOrNull(VReg);
+    return LLVM_LIKELY(RC) ? shouldTrackSubRegLiveness(*RC) : false;
   }
   bool subRegLivenessEnabled() const {
     return TracksSubRegLiveness;
@@ -240,16 +242,6 @@ public:
 
   /// Returns true if the updated CSR list was initialized and false otherwise.
   bool isUpdatedCSRsInitialized() const { return IsUpdatedCSRsInitialized; }
-
-  /// Returns true if a register can be used as an argument to a function.
-  bool isArgumentRegister(const MachineFunction &MF, MCRegister Reg) const;
-
-  /// Returns true if a register is a fixed register.
-  bool isFixedRegister(const MachineFunction &MF, MCRegister Reg) const;
-
-  /// Returns true if a register is a general purpose register.
-  bool isGeneralPurposeRegister(const MachineFunction &MF,
-                                MCRegister Reg) const;
 
   /// Disables the register from the list of CSRs.
   /// I.e. the register will not appear as part of the CSR mask.
@@ -452,7 +444,7 @@ public:
   }
 
   void insertVRegByName(StringRef Name, Register Reg) {
-    assert((Name.empty() || VRegNames.find(Name) == VRegNames.end()) &&
+    assert((Name.empty() || !VRegNames.contains(Name)) &&
            "Named VRegs Must be Unique.");
     if (!Name.empty()) {
       VRegNames.insert(Name);
@@ -659,9 +651,9 @@ public:
   /// This shouldn't be used directly unless \p Reg has a register class.
   /// \see getRegClassOrNull when this might happen.
   const TargetRegisterClass *getRegClass(Register Reg) const {
-    assert(VRegInfo[Reg.id()].first.is<const TargetRegisterClass *>() &&
+    assert(isa<const TargetRegisterClass *>(VRegInfo[Reg.id()].first) &&
            "Register class not set, wrong accessor");
-    return VRegInfo[Reg.id()].first.get<const TargetRegisterClass *>();
+    return cast<const TargetRegisterClass *>(VRegInfo[Reg.id()].first);
   }
 
   /// Return the register class of \p Reg, or null if Reg has not been assigned
@@ -677,7 +669,7 @@ public:
   /// the select pass, using getRegClass is safe.
   const TargetRegisterClass *getRegClassOrNull(Register Reg) const {
     const RegClassOrRegBank &Val = VRegInfo[Reg].first;
-    return Val.dyn_cast<const TargetRegisterClass *>();
+    return dyn_cast_if_present<const TargetRegisterClass *>(Val);
   }
 
   /// Return the register bank of \p Reg, or null if Reg has not been assigned
@@ -686,7 +678,7 @@ public:
   /// RegisterBankInfo::getRegBankFromRegClass.
   const RegisterBank *getRegBankOrNull(Register Reg) const {
     const RegClassOrRegBank &Val = VRegInfo[Reg].first;
-    return Val.dyn_cast<const RegisterBank *>();
+    return dyn_cast_if_present<const RegisterBank *>(Val);
   }
 
   /// Return the register bank or register class of \p Reg.
@@ -749,6 +741,24 @@ public:
   /// function with the specified register class.
   Register createVirtualRegister(const TargetRegisterClass *RegClass,
                                  StringRef Name = "");
+
+  /// All attributes(register class or bank and low-level type) a virtual
+  /// register can have.
+  struct VRegAttrs {
+    RegClassOrRegBank RCOrRB;
+    LLT Ty;
+  };
+
+  /// Returns register class or bank and low level type of \p Reg. Always safe
+  /// to use. Special values are returned when \p Reg does not have some of the
+  /// attributes.
+  VRegAttrs getVRegAttrs(Register Reg) {
+    return {getRegClassOrRegBank(Reg), getType(Reg)};
+  }
+
+  /// Create and return a new virtual register in the function with the
+  /// specified register attributes(register class or bank and low level type).
+  Register createVirtualRegister(VRegAttrs RegAttr, StringRef Name = "");
 
   /// Create and return a new virtual register in the function with the same
   /// attributes as the given register.
@@ -818,27 +828,25 @@ public:
   /// getRegAllocationHint - Return the register allocation hint for the
   /// specified virtual register. If there are many hints, this returns the
   /// one with the greatest weight.
-  std::pair<Register, Register>
-  getRegAllocationHint(Register VReg) const {
+  std::pair<unsigned, Register> getRegAllocationHint(Register VReg) const {
     assert(VReg.isVirtual());
     Register BestHint = (RegAllocHints[VReg.id()].second.size() ?
                          RegAllocHints[VReg.id()].second[0] : Register());
-    return std::pair<Register, Register>(RegAllocHints[VReg.id()].first,
-                                         BestHint);
+    return {RegAllocHints[VReg.id()].first, BestHint};
   }
 
   /// getSimpleHint - same as getRegAllocationHint except it will only return
   /// a target independent hint.
   Register getSimpleHint(Register VReg) const {
     assert(VReg.isVirtual());
-    std::pair<Register, Register> Hint = getRegAllocationHint(VReg);
+    std::pair<unsigned, Register> Hint = getRegAllocationHint(VReg);
     return Hint.first ? Register() : Hint.second;
   }
 
   /// getRegAllocationHints - Return a reference to the vector of all
   /// register allocation hints for VReg.
-  const std::pair<Register, SmallVector<Register, 4>>
-  &getRegAllocationHints(Register VReg) const {
+  const std::pair<unsigned, SmallVector<Register, 4>> &
+  getRegAllocationHints(Register VReg) const {
     assert(VReg.isVirtual());
     return RegAllocHints[VReg];
   }
@@ -912,7 +920,7 @@ public:
 
   /// freezeReservedRegs - Called by the register allocator to freeze the set
   /// of reserved registers before allocation begins.
-  void freezeReservedRegs(const MachineFunction&);
+  void freezeReservedRegs();
 
   /// reserveReg -- Mark a register as reserved so checks like isAllocatable 
   /// will not suggest using it. This should not be used during the middle

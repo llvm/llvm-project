@@ -1,0 +1,27 @@
+RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/start.s -o %t.o
+
+; The initial heap size will be added to the stack size
+RUN: wasm-ld %t.o -o %t1.wasm --stack-first -z stack-size=65536 --initial-heap=131072
+RUN: obj2yaml %t1.wasm | FileCheck %s --check-prefixes=CHECK,CHECK-2P
+
+; Also test that we can parse and process a large size correctly
+RUN: wasm-ld %t.o -o %t2.wasm --stack-first -z stack-size=65536 --initial-heap=4294901760
+RUN: obj2yaml %t2.wasm | FileCheck %s --check-prefixes=CHECK,CHECK-4G
+
+CHECK:      - Type:            MEMORY
+CHECK-NEXT:   Memories:
+CHECK-2P-NEXT:    Minimum:         0x3
+CHECK-4G-NEXT:    Minimum:         0x10000
+
+; Test various error cases.
+RUN: not wasm-ld %t.o -o %t3.wasm --initial-heap=131073 2>&1 | FileCheck %s --check-prefix NOT-PAGE-MULTIPLE
+RUN: not wasm-ld %t.o -o %t4.wasm --stack-first -z stack-size=65536 --initial-heap=4295032832 2>&1 | FileCheck %s --check-prefix TOO-LARGE-BY-ITSELF
+RUN: not wasm-ld %t.o -o %t5.wasm --stack-first -z stack-size=131072 --initial-heap=4294901760 2>&1 | FileCheck %s --check-prefix TOO-LARGE-WITH-STACK
+RUN: not wasm-ld %t.o -o %t6.wasm --stack-first -z stack-size=65536 --initial-heap=131072 --initial-memory=131072 2>&1 | FileCheck %s --check-prefix INITIAL-MEMORY-TOO-SMALL
+RUN: not wasm-ld %t.o -o %t7.wasm --stack-first -z stack-size=65536 --initial-heap=131072 --max-memory=131072 2>&1 | FileCheck %s --check-prefix MAX-MEMORY-TOO-SMALL
+
+NOT-PAGE-MULTIPLE: initial heap must be 65536-byte aligned
+TOO-LARGE-BY-ITSELF: initial heap too large, cannot be greater than 4294901760
+TOO-LARGE-WITH-STACK: initial heap too large, cannot be greater than 4294836224
+INITIAL-MEMORY-TOO-SMALL: initial memory too small, 196608 bytes needed
+MAX-MEMORY-TOO-SMALL: maximum memory too small, 196608 bytes needed

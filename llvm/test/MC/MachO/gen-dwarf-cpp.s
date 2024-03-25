@@ -24,6 +24,6 @@ L1:	leave
 // CHECK-NOT: file_names
 
 // We check that the source line number 100 is picked up before the "movl"
-// CHECK: Address            Line   Column File   ISA Discriminator Flags
-// CHECK: ------------------ ------ ------ ------ --- ------------- -------------
-// CHECK: 0x0000000000000000    102      0      1   0             0  is_stmt
+// CHECK: Address            Line   Column File   ISA Discriminator OpIndex Flags
+// CHECK: ------------------ ------ ------ ------ --- ------------- ------- -------------
+// CHECK: 0x0000000000000000    102      0      1   0             0       0  is_stmt

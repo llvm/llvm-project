@@ -8,6 +8,9 @@
 //
 // UNSUPPORTED: no-threads
 
+// This test occasionally fails on Android.
+// UNSUPPORTED: LIBCXX-ANDROID-FIXME
+
 // <condition_variable>
 
 // class condition_variable;

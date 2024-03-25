@@ -255,7 +255,7 @@ public:
     iterator end() { return iterator(Edges.end(), Edges.end()); }
 
     Edge &operator[](Node &N) {
-      assert(EdgeIndexMap.find(&N) != EdgeIndexMap.end() && "No such edge!");
+      assert(EdgeIndexMap.contains(&N) && "No such edge!");
       auto &E = Edges[EdgeIndexMap.find(&N)->second];
       assert(E && "Dead or null edge!");
       return E;
@@ -1288,6 +1288,8 @@ public:
   explicit LazyCallGraphPrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// A pass which prints the call graph as a DOT file to a \c raw_ostream.
@@ -1301,6 +1303,8 @@ public:
   explicit LazyCallGraphDOTPrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

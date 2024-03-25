@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx940 -show-encoding -disassemble %s | FileCheck -check-prefix=GFX940 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx940 -show-encoding -disassemble %s | FileCheck -check-prefix=GFX940 %s
 
 # GFX940: v_accvgpr_write_b32 a10, s20 ; encoding: [0x0a,0x40,0xd9,0xd3,0x14,0x00,0x00,0x18]
 0x0a,0x40,0xd9,0xd3,0x14,0x00,0x00,0x18

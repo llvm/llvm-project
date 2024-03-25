@@ -16,17 +16,21 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Serialization/ASTReader.h"
+#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <variant>
 
 namespace clang {
 namespace tooling {
 namespace dependencies {
 
+class DependencyActionController;
 class DependencyConsumer;
 
 /// Modular dependency that has already been built prior to the dependency scan.
@@ -58,8 +62,35 @@ struct ModuleID {
   std::string ContextHash;
 
   bool operator==(const ModuleID &Other) const {
-    return ModuleName == Other.ModuleName && ContextHash == Other.ContextHash;
+    return std::tie(ModuleName, ContextHash) ==
+           std::tie(Other.ModuleName, Other.ContextHash);
   }
+
+  bool operator<(const ModuleID& Other) const {
+    return std::tie(ModuleName, ContextHash) <
+           std::tie(Other.ModuleName, Other.ContextHash);
+  }
+};
+
+/// P1689ModuleInfo - Represents the needed information of standard C++20
+/// modules for P1689 format.
+struct P1689ModuleInfo {
+  /// The name of the module. This may include `:` for partitions.
+  std::string ModuleName;
+
+  /// Optional. The source path to the module.
+  std::string SourcePath;
+
+  /// If this module is a standard c++ interface unit.
+  bool IsStdCXXModuleInterface = true;
+
+  enum class ModuleType {
+    NamedCXXModule
+    // To be supported
+    // AngleHeaderUnit,
+    // QuoteHeaderUnit
+  };
+  ModuleType Type = ModuleType::NamedCXXModule;
 };
 
 /// An output from a module compilation, such as the path of the module file.
@@ -107,14 +138,18 @@ struct ModuleDeps {
   /// determined that the differences are benign for this compilation.
   std::vector<ModuleID> ClangModuleDeps;
 
-  // Used to track which modules that were discovered were directly imported by
-  // the primary TU.
-  bool ImportedByMainFile = false;
+  /// Get (or compute) the compiler invocation that can be used to build this
+  /// module. Does not include argv[0].
+  const std::vector<std::string> &getBuildArguments();
 
-  /// Compiler invocation that can be used to build this module. Does not
-  /// include argv[0].
-  std::vector<std::string> BuildArguments;
+private:
+  friend class ModuleDepCollectorPP;
+
+  std::variant<std::monostate, CowCompilerInvocation, std::vector<std::string>>
+      BuildInfo;
 };
+
+using PrebuiltModuleVFSMapT = llvm::StringMap<llvm::StringSet<>>;
 
 class ModuleDepCollector;
 
@@ -126,14 +161,15 @@ class ModuleDepCollectorPP final : public PPCallbacks {
 public:
   ModuleDepCollectorPP(ModuleDepCollector &MDC) : MDC(MDC) {}
 
-  void FileChanged(SourceLocation Loc, FileChangeReason Reason,
-                   SrcMgr::CharacteristicKind FileType,
-                   FileID PrevFID) override;
+  void LexedFileChanged(FileID FID, LexedFileChangeReason Reason,
+                        SrcMgr::CharacteristicKind FileType, FileID PrevFID,
+                        SourceLocation Loc) override;
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
   void moduleImport(SourceLocation ImportLoc, ModuleIdPath Path,
                     const Module *Imported) override;
@@ -143,8 +179,6 @@ public:
 private:
   /// The parent dependency collector.
   ModuleDepCollector &MDC;
-  /// Working set of direct modular dependencies.
-  llvm::SetVector<const Module *> DirectModularDeps;
 
   void handleImport(const Module *Imported);
 
@@ -180,8 +214,11 @@ class ModuleDepCollector final : public DependencyCollector {
 public:
   ModuleDepCollector(std::unique_ptr<DependencyOutputOptions> Opts,
                      CompilerInstance &ScanInstance, DependencyConsumer &C,
-                     CompilerInvocation OriginalCI, bool OptimizeArgs,
-                     bool EagerLoadModules);
+                     DependencyActionController &Controller,
+                     CompilerInvocation OriginalCI,
+                     PrebuiltModuleVFSMapT PrebuiltModuleVFSMap,
+                     ScanningOptimizations OptimizeArgs, bool EagerLoadModules,
+                     bool IsStdModuleP1689Format);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
@@ -197,6 +234,10 @@ private:
   CompilerInstance &ScanInstance;
   /// The consumer of collected dependency information.
   DependencyConsumer &Consumer;
+  /// Callbacks for computing dependency information.
+  DependencyActionController &Controller;
+  /// Mapping from prebuilt AST files to their sorted list of VFS overlay files.
+  PrebuiltModuleVFSMapT PrebuiltModuleVFSMap;
   /// Path to the main source file.
   std::string MainFile;
   /// Hash identifying the compilation conditions of the current TU.
@@ -211,14 +252,25 @@ private:
   llvm::DenseMap<ModuleID, ModuleDeps *> ModuleDepsByID;
   /// Direct modular dependencies that have already been built.
   llvm::MapVector<const Module *, PrebuiltModuleDep> DirectPrebuiltModularDeps;
+  /// Working set of direct modular dependencies.
+  llvm::SetVector<const Module *> DirectModularDeps;
   /// Options that control the dependency output generation.
   std::unique_ptr<DependencyOutputOptions> Opts;
-  /// The original Clang invocation passed to dependency scanner.
-  CompilerInvocation OriginalInvocation;
+  /// A Clang invocation that's based on the original TU invocation and that has
+  /// been partially transformed into one that can perform explicit build of
+  /// a discovered modular dependency. Note that this still needs to be adjusted
+  /// for each individual module.
+  CowCompilerInvocation CommonInvocation;
   /// Whether to optimize the modules' command-line arguments.
-  bool OptimizeArgs;
+  ScanningOptimizations OptimizeArgs;
   /// Whether to set up command-lines to load PCM files eagerly.
   bool EagerLoadModules;
+  /// If we're generating dependency output in P1689 format
+  /// for standard C++ modules.
+  bool IsStdModuleP1689Format;
+
+  std::optional<P1689ModuleInfo> ProvidedStdCXXModule;
+  std::vector<P1689ModuleInfo> RequiredStdCXXModules;
 
   /// Checks whether the module is known as being prebuilt.
   bool isPrebuiltModule(const Module *M);
@@ -228,12 +280,11 @@ private:
   /// Adds \p Path to \c MD.FileDeps, making it absolute if necessary.
   void addFileDep(ModuleDeps &MD, StringRef Path);
 
-  /// Constructs a CompilerInvocation that can be used to build the given
-  /// module, excluding paths to discovered modular dependencies that are yet to
-  /// be built.
-  CompilerInvocation makeInvocationForModuleBuildWithoutOutputs(
+  /// Get a Clang invocation adjusted to build the given modular dependency.
+  /// This excludes paths that are yet-to-be-provided by the build system.
+  CowCompilerInvocation getInvocationAdjustedForModuleBuildWithoutOutputs(
       const ModuleDeps &Deps,
-      llvm::function_ref<void(CompilerInvocation &)> Optimize) const;
+      llvm::function_ref<void(CowCompilerInvocation &)> Optimize) const;
 
   /// Collect module map files for given modules.
   llvm::DenseSet<const FileEntry *>
@@ -245,13 +296,16 @@ private:
   /// Add module files (pcm) to the invocation, if needed.
   void addModuleFiles(CompilerInvocation &CI,
                       ArrayRef<ModuleID> ClangModuleDeps) const;
+  void addModuleFiles(CowCompilerInvocation &CI,
+                      ArrayRef<ModuleID> ClangModuleDeps) const;
 
   /// Add paths that require looking up outputs to the given dependencies.
-  void addOutputPaths(CompilerInvocation &CI, ModuleDeps &Deps);
+  void addOutputPaths(CowCompilerInvocation &CI, ModuleDeps &Deps);
 
   /// Compute the context hash for \p Deps, and create the mapping
   /// \c ModuleDepsByID[Deps.ID] = &Deps.
-  void associateWithContextHash(const CompilerInvocation &CI, ModuleDeps &Deps);
+  void associateWithContextHash(const CowCompilerInvocation &CI,
+                                ModuleDeps &Deps);
 };
 
 } // end namespace dependencies
@@ -259,15 +313,17 @@ private:
 } // end namespace clang
 
 namespace llvm {
+inline hash_code hash_value(const clang::tooling::dependencies::ModuleID &ID) {
+  return hash_combine(ID.ModuleName, ID.ContextHash);
+}
+
 template <> struct DenseMapInfo<clang::tooling::dependencies::ModuleID> {
   using ModuleID = clang::tooling::dependencies::ModuleID;
   static inline ModuleID getEmptyKey() { return ModuleID{"", ""}; }
   static inline ModuleID getTombstoneKey() {
     return ModuleID{"~", "~"}; // ~ is not a valid module name or context hash
   }
-  static unsigned getHashValue(const ModuleID &ID) {
-    return hash_combine(ID.ModuleName, ID.ContextHash);
-  }
+  static unsigned getHashValue(const ModuleID &ID) { return hash_value(ID); }
   static bool isEqual(const ModuleID &LHS, const ModuleID &RHS) {
     return LHS == RHS;
   }

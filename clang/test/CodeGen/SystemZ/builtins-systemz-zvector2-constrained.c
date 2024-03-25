@@ -70,10 +70,10 @@ void test_core(void) {
   // CHECK-ASM: vlvgg
 
   vf = vec_promote(f, idx);
-  // CHECK: insertelement <4 x float> undef, float %{{.*}}, i32 %{{.*}}
+  // CHECK: insertelement <4 x float> poison, float %{{.*}}, i32 %{{.*}}
   // CHECK-ASM: vlvgf
   vd = vec_promote(d, idx);
-  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 %{{.*}}
+  // CHECK: insertelement <2 x double> poison, double %{{.*}}, i32 %{{.*}}
   // CHECK-ASM: vlvgg
 
   vf = vec_insert_and_zero(cptrf);
@@ -133,13 +133,13 @@ void test_core(void) {
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> poison, <4 x i32> zeroinitializer
   // CHECK-ASM: vrepf
   vf = vec_splat(vf, 1);
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   // CHECK-ASM: vrepf
   vd = vec_splat(vd, 0);
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> poison, <2 x i32> zeroinitializer
   // CHECK-ASM: vrepg
   vd = vec_splat(vd, 1);
-  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> undef, <2 x i32> <i32 1, i32 1>
+  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> poison, <2 x i32> <i32 1, i32 1>
   // CHECK-ASM: vrepg
 
   vf = vec_splats(f);

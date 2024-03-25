@@ -77,8 +77,8 @@ define i64 @test_ptrauth_resign_auth(ptr %p) {
 define i64 @test_ptrauth_resign_auth_mismatch(ptr %p) {
 ; CHECK-LABEL: @test_ptrauth_resign_auth_mismatch(
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; CHECK-NEXT:    [[SIGNED:%.*]] = call i64 @llvm.ptrauth.resign(i64 %tmp0, i32 1, i64 1234, i32 0, i64 10)
-; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 %signed, i32 0, i64 42)
+; CHECK-NEXT:    [[SIGNED:%.*]] = call i64 @llvm.ptrauth.resign(i64 [[TMP0]], i32 1, i64 1234, i32 0, i64 10)
+; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[SIGNED]], i32 0, i64 42)
 ; CHECK-NEXT:    ret i64 [[AUTHED]]
 ;
   %tmp0 = ptrtoint ptr %p to i64

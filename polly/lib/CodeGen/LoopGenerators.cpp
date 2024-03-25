@@ -186,15 +186,12 @@ Value *ParallelLoopGenerator::createParallelLoop(
   *LoopBody = Builder.GetInsertPoint();
   Builder.SetInsertPoint(&*BeforeLoop);
 
-  Value *SubFnParam = Builder.CreateBitCast(Struct, Builder.getInt8PtrTy(),
-                                            "polly.par.userContext");
-
   // Add one as the upper bound provided by OpenMP is a < comparison
   // whereas the codegenForSequential function creates a <= comparison.
   UB = Builder.CreateAdd(UB, ConstantInt::get(LongType, 1));
 
   // Execute the prepared subfunction in parallel.
-  deployParallelExecution(SubFn, SubFnParam, LB, UB, Stride);
+  deployParallelExecution(SubFn, Struct, LB, UB, Stride);
 
   return IV;
 }
@@ -228,7 +225,7 @@ ParallelLoopGenerator::storeValuesIntoStruct(SetVector<Value *> &Values) {
   // in the entry block of the function and use annotations to denote the actual
   // live span (similar to clang).
   BasicBlock &EntryBB = Builder.GetInsertBlock()->getParent()->getEntryBlock();
-  Instruction *IP = &*EntryBB.getFirstInsertionPt();
+  BasicBlock::iterator IP = EntryBB.getFirstInsertionPt();
   StructType *Ty = StructType::get(Builder.getContext(), Members);
   AllocaInst *Struct = new AllocaInst(Ty, DL.getAllocaAddrSpace(), nullptr,
                                       "polly.par.userContext", IP);

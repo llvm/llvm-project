@@ -23,7 +23,6 @@
 #include <cstdint>
 #include <limits>
 #include <string>
-#include <vector>
 
 namespace llvm {
 
@@ -49,6 +48,12 @@ GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
 // Otherwise creates a new comdat, sets F's comdat, and returns it.
 // Returns nullptr on failure.
 Comdat *getOrCreateFunctionComdat(Function &F, Triple &T);
+
+// Place global in a large section for x86-64 ELF binaries to mitigate
+// relocation overflow pressure. This can be be used for metadata globals that
+// aren't directly accessed by code, which has no performance impact.
+void setGlobalVariableLargeSection(const Triple &TargetTriple,
+                                   GlobalVariable &GV);
 
 // Insert GCOV profiling instrumentation
 struct GCOVOptions {

@@ -374,17 +374,15 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
     CleanedNodes.Add(CEBNode);
   }
 
-  for (ExplodedNodeSet::iterator I = CleanedNodes.begin(),
-                                 E = CleanedNodes.end(); I != E; ++I) {
-
+  for (ExplodedNode *N : CleanedNodes) {
     // Step 4: Generate the CallExit and leave the callee's context.
     // CleanedNodes -> CEENode
     CallExitEnd Loc(calleeCtx, callerCtx);
     bool isNew;
-    ProgramStateRef CEEState = (*I == CEBNode) ? state : (*I)->getState();
+    ProgramStateRef CEEState = (N == CEBNode) ? state : N->getState();
 
     ExplodedNode *CEENode = G.getNode(Loc, CEEState, false, &isNew);
-    CEENode->addPredecessor(*I, G);
+    CEENode->addPredecessor(N, G);
     if (!isNew)
       return;
 
@@ -610,15 +608,14 @@ void ExprEngine::VisitCallExpr(const CallExpr *CE, ExplodedNode *Pred,
   // Get the call in its initial state. We use this as a template to perform
   // all the checks.
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
-  CallEventRef<> CallTemplate
-    = CEMgr.getSimpleCall(CE, Pred->getState(), Pred->getLocationContext());
+  CallEventRef<> CallTemplate = CEMgr.getSimpleCall(
+      CE, Pred->getState(), Pred->getLocationContext(), getCFGElementRef());
 
   // Evaluate the function call.  We try each of the checkers
   // to see if the can evaluate the function call.
   ExplodedNodeSet dstCallEvaluated;
-  for (ExplodedNodeSet::iterator I = dstPreVisit.begin(), E = dstPreVisit.end();
-       I != E; ++I) {
-    evalCall(dstCallEvaluated, *I, *CallTemplate);
+  for (ExplodedNode *N : dstPreVisit) {
+    evalCall(dstCallEvaluated, N, *CallTemplate);
   }
 
   // Finally, perform the post-condition check of the CallExpr and store
@@ -837,7 +834,8 @@ void ExprEngine::conservativeEvalCall(const CallEvent &Call, NodeBuilder &Bldr,
   State = bindReturnValue(Call, Pred->getLocationContext(), State);
 
   // And make the result node.
-  Bldr.generateNode(Call.getProgramPoint(), State, Pred);
+  static SimpleProgramPointTag PT("ExprEngine", "Conservative eval call");
+  Bldr.generateNode(Call.getProgramPoint(false, &PT), State, Pred);
 }
 
 ExprEngine::CallInlinePolicy
@@ -848,6 +846,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
   const StackFrameContext *CallerSFC = CurLC->getStackFrame();
   switch (Call.getKind()) {
   case CE_Function:
+  case CE_CXXStaticOperator:
   case CE_Block:
     break;
   case CE_CXXMember:
@@ -890,7 +889,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     if (!Opts.mayInlineCXXMemberFunction(CIMK_Destructors))
       return CIP_DisallowedAlways;
 
-    if (CtorExpr->getConstructionKind() == CXXConstructExpr::CK_Complete) {
+    if (CtorExpr->getConstructionKind() == CXXConstructionKind::Complete) {
       // If we don't handle temporary destructors, we shouldn't inline
       // their constructors.
       if (CallOpts.IsTemporaryCtorOrDtor &&

@@ -9,7 +9,6 @@
 #ifndef PYTHON_BINDINGS_TENSOR_OPS
 #define PYTHON_BINDINGS_TENSOR_OPS
 
-include "mlir/Bindings/Python/Attributes.td"
 include "mlir/Dialect/Tensor/IR/TensorOps.td"
 
 #endif

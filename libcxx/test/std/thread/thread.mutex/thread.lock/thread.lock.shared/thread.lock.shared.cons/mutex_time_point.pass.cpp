@@ -9,9 +9,6 @@
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11
 
-// dylib support for shared_mutex was added in macosx10.12
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
-
 // <shared_mutex>
 
 // class shared_timed_mutex;
@@ -22,6 +19,7 @@
 #include <thread>
 
 #include <atomic>
+#include <chrono>
 #include <cassert>
 #include <cstdlib>
 #include <shared_mutex>

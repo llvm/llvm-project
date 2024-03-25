@@ -1,8 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -fblocks -verify %s
 // RUN: %clang_cc1 -fsyntax-only -fobjc-arc -fblocks -verify %s
 
-// rdar://20130079
-
 #if __has_feature(objc_arc)
 __attribute__((ns_returns_retained)) id (^invalidBlockRedecl)(void); // expected-note {{previous definition is here}}
 id (^invalidBlockRedecl)(void); //expected-error {{redefinition of 'invalidBlockRedecl' with a different type: 'id (^__strong)(void)' vs 'id ((^__strong))(void) __attribute__((ns_returns_retained))'}}

@@ -1,13 +1,13 @@
 static_library("GlobalISel") {
-  deps = [ "//llvm/lib/Support" ]
+  deps = [
+    "//llvm/include/llvm/CodeGen:GenVT",
+    "//llvm/lib/CodeGenTypes",
+    "//llvm/lib/Support",
+  ]
   sources = [
+    "CXXPredicates.cpp",
     "CodeExpander.cpp",
-    "GIMatchDag.cpp",
-    "GIMatchDagEdge.cpp",
-    "GIMatchDagInstr.cpp",
-    "GIMatchDagOperands.cpp",
-    "GIMatchDagPredicate.cpp",
-    "GIMatchDagPredicateDependencyEdge.cpp",
-    "GIMatchTree.cpp",
+    "MatchDataInfo.cpp",
+    "Patterns.cpp",
   ]
 }

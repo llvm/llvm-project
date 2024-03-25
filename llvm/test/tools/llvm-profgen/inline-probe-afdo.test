@@ -1,0 +1,82 @@
+; RUN: llvm-profgen --format=text --use-dwarf-correlation --ignore-stack-samples --perfscript=%S/Inputs/cs-preinline-cost.perfscript --binary=%S/Inputs/cs-preinline-cost.perfbin --output %t
+; RUN: FileCheck %s --input-file %t
+
+; CHECK:     main:947937:0
+; CHECK-NEXT:  2: 545
+; CHECK-NEXT:  3: 545
+; CHECK-NEXT:  5: 545
+; CHECK-NEXT:  7: 0
+; CHECK-NEXT:  65496: 545
+; CHECK-NEXT:  3.7: _Z3fooi:915794
+; CHECK-NEXT:   1: 545
+; CHECK-NEXT:   5: 545
+; CHECK-NEXT:   6: 272
+; CHECK-NEXT:   10: 273
+; CHECK-NEXT:   11: 180
+; CHECK-NEXT:   12: 6965
+; CHECK-NEXT:   13: 6965
+; CHECK-NEXT:   14: 6965
+; CHECK-NEXT:   15: 6965
+; CHECK-NEXT:   20: 182
+; CHECK-NEXT:   21: 6958
+; CHECK-NEXT:   22: 6958
+; CHECK-NEXT:   23: 6958
+; CHECK-NEXT:   24: 6958
+; CHECK-NEXT:   29: 272
+; CHECK-NEXT:   65529: 182
+; CHECK-NEXT:  4.8: _Z3fooi:16338
+; CHECK-NEXT:   1: 272
+; CHECK-NEXT:   6: 545
+
+
+
+
+; binary is built with the source below using the following command line:
+;   clang -O3 -g -fpseudo-probe-for-profiling test.cpp
+;
+;#include <stdio.h>
+;
+;volatile int state = 9000;
+;
+;int foo(int x) {
+;    if (x == 0) {
+;        return 7;
+;    }
+;
+;    if ((x & 1) == 0) {
+;        state--;
+;        return 9;
+;    }
+;
+;    if (state > 5000) {
+;        while (state > 5000) {
+;               for (int i = 50; i >= 0; i--) {
+;                state *= 6;
+;                state /= 7;
+;                state -= 1;
+;            }
+;        }
+;    }
+;    else {
+;        while (state < 5000) {
+;            for (int i = 50; i >= 0; i--) {
+;                state *= 6;
+;                state /= 5;
+;                state += 1;
+;            }
+;        }
+;    }
+;
+;    return state;
+;}
+;
+;volatile int cnt = 10000000;//10000000;
+;int main() {
+;    int r = 0;
+;    for (int i = 0; i < cnt; i++) {
+;      r += foo(i);
+;      r -= foo(i & (~1));
+;      r += foo(0);
+;    }
+;    return r;
+;}

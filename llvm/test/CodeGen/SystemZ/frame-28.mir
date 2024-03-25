@@ -162,6 +162,8 @@ body:             |
 ---
 name:            fun4
 tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
 stack:
   - { id: 0, size: 5000 }
   - { id: 1, size: 2500 }

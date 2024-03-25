@@ -34,10 +34,10 @@
 
 class RandGen {
 public:
-  constexpr static size_t min() { return 0; }
-  constexpr static size_t max() { return 255; }
+  constexpr static std::size_t min() { return 0; }
+  constexpr static std::size_t max() { return 255; }
 
-  constexpr size_t operator()() {
+  constexpr std::size_t operator()() {
     flip = !flip;
     return flip;
   }
@@ -52,9 +52,9 @@ static_assert(std::uniform_random_bit_generator<RandGen>);
 LIBCPP_STATIC_ASSERT(!std::__libcpp_random_is_valid_urng<RandGen>::value);
 
 struct BadGen {
-  constexpr static size_t min() { return 255; }
-  constexpr static size_t max() { return 0; }
-  constexpr size_t operator()() const;
+  constexpr static std::size_t min() { return 255; }
+  constexpr static std::size_t max() { return 0; }
+  constexpr std::size_t operator()() const;
 };
 static_assert(!std::uniform_random_bit_generator<BadGen>);
 
@@ -109,7 +109,7 @@ static_assert(!HasShuffleRange<PermutableNotSwappable>);
 // !uniform_random_bit_generator<remove_reference_t<Gen>>
 static_assert(!HasShuffleRange<R<int*>, BadGen>);
 
-template <class Iter, class Sent, size_t N, class Gen>
+template <class Iter, class Sent, std::size_t N, class Gen>
 void test_one(const std::array<int, N> input, Gen gen) {
   { // (iterator, sentinel) overload.
     auto shuffled = input;
@@ -219,18 +219,18 @@ void test_generator() {
 // generator class has a const or non-const invocation operator (or both).
 void test_generators() {
   struct GenBase {
-    constexpr static size_t min() { return 0; }
-    constexpr static size_t max() { return 255; }
+    constexpr static std::size_t min() { return 0; }
+    constexpr static std::size_t max() { return 255; }
   };
   struct NonconstGen : GenBase {
-    size_t operator()() { return 1; }
+    std::size_t operator()() { return 1; }
   };
   struct ConstGen : GenBase {
-    size_t operator()() const { return 1; }
+    std::size_t operator()() const { return 1; }
   };
   struct ConstAndNonconstGen : GenBase {
-    size_t operator()() { return 1; }
-    size_t operator()() const { return 1; }
+    std::size_t operator()() { return 1; }
+    std::size_t operator()() const { return 1; }
   };
 
   test_generator<ConstGen>();

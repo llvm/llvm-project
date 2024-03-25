@@ -17,9 +17,9 @@ namespace {
 )] struct struct_with_uuid_brace;
 
 // uuids must be ascii string literals.
-// expected-error@+1 {{uuid attribute contains a malformed GUID}}
+// expected-warning@+1 {{encoding prefix 'u8' on an unevaluated string literal has no effect and is incompatible with c++2c}}
 [uuid(u8"000000A0-0000-0000-C000-000000000049")] struct struct_with_uuid_u8;
-// expected-error@+1 {{uuid attribute contains a malformed GUID}}
+// expected-warning@+1 {{encoding prefix 'L' on an unevaluated string literal has no effect and is incompatible with c++2c}}
 [uuid(L"000000A0-0000-0000-C000-000000000049")] struct struct_with_uuid_L;
 
 // cl.exe doesn't allow raw string literals in []-style attributes, but does

@@ -15,9 +15,9 @@ entry:
 }
 
 ; CHECK-LABEL: @bar0
-; CHECK-DAG: xxswapd 1, 1
+; CHECK-DAG: xxswapd 0, 1
 ; CHECK-DAG: lxvd2x [[REG1:[0-9]+]]
-; CHECK: xxmrgld [[REG2:[0-9]+]], 1, [[REG1]]
+; CHECK: xxmrgld [[REG2:[0-9]+]], 0, [[REG1]]
 ; CHECK: stxvd2x [[REG2]]
 ; CHECK-NOT: xxswapd
 
@@ -30,9 +30,9 @@ entry:
 }
 
 ; CHECK-LABEL: @bar1
-; CHECK-DAG: xxswapd 1, 1
+; CHECK-DAG: xxswapd 0, 1
 ; CHECK-DAG: lxvd2x [[REG1:[0-9]+]]
-; CHECK: xxpermdi [[REG2:[0-9]+]], [[REG1]], 1, 1
+; CHECK: xxpermdi [[REG2:[0-9]+]], [[REG1]], 0, 1
 ; CHECK: stxvd2x [[REG2]]
 ; CHECK-NOT: xxswapd
 

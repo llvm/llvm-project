@@ -13,6 +13,10 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 namespace {
+AST_MATCHER_P(InitListExpr, initCountLeq, unsigned, N) {
+  return Node.getNumInits() <= N;
+}
+
 // Identical to hasAnyName, except it does not take template specifiers into
 // account. This is used to match the functions names as in
 // DefaultEmplacyFunctions below without caring about the template types of the
@@ -41,11 +45,11 @@ AST_MATCHER_P(NamedDecl, hasAnyNameIgnoringTemplates, std::vector<StringRef>,
   // FullNameTrimmed matches any of the given Names.
   const StringRef FullNameTrimmedRef = FullNameTrimmed;
   for (const StringRef Pattern : Names) {
-    if (Pattern.startswith("::")) {
+    if (Pattern.starts_with("::")) {
       if (FullNameTrimmed == Pattern)
         return true;
-    } else if (FullNameTrimmedRef.endswith(Pattern) &&
-               FullNameTrimmedRef.drop_back(Pattern.size()).endswith("::")) {
+    } else if (FullNameTrimmedRef.ends_with(Pattern) &&
+               FullNameTrimmedRef.drop_back(Pattern.size()).ends_with("::")) {
       return true;
     }
   }
@@ -67,17 +71,38 @@ AST_MATCHER_P(CallExpr, hasLastArgument,
 // function had parameters defined (this is useful to check if there is only one
 // variadic argument).
 AST_MATCHER(CXXMemberCallExpr, hasSameNumArgsAsDeclNumParams) {
-  if (Node.getMethodDecl()->isFunctionTemplateSpecialization())
-    return Node.getNumArgs() == Node.getMethodDecl()
-                                    ->getPrimaryTemplate()
-                                    ->getTemplatedDecl()
-                                    ->getNumParams();
+  if (const FunctionTemplateDecl *Primary =
+          Node.getMethodDecl()->getPrimaryTemplate())
+    return Node.getNumArgs() == Primary->getTemplatedDecl()->getNumParams();
 
   return Node.getNumArgs() == Node.getMethodDecl()->getNumParams();
 }
 
 AST_MATCHER(DeclRefExpr, hasExplicitTemplateArgs) {
   return Node.hasExplicitTemplateArgs();
+}
+
+// Helper Matcher which applies the given QualType Matcher either directly or by
+// resolving a pointer type to its pointee. Used to match v.push_back() as well
+// as p->push_back().
+auto hasTypeOrPointeeType(
+    const ast_matchers::internal::Matcher<QualType> &TypeMatcher) {
+  return anyOf(hasType(TypeMatcher),
+               hasType(pointerType(pointee(TypeMatcher))));
+}
+
+// Matches if the node has canonical type matching any of the given names.
+auto hasWantedType(llvm::ArrayRef<StringRef> TypeNames) {
+  return hasCanonicalType(hasDeclaration(cxxRecordDecl(hasAnyName(TypeNames))));
+}
+
+// Matches member call expressions of the named method on the listed container
+// types.
+auto cxxMemberCallExprOnContainer(
+    StringRef MethodName, llvm::ArrayRef<StringRef> ContainerNames) {
+  return cxxMemberCallExpr(
+      hasDeclaration(functionDecl(hasName(MethodName))),
+      on(hasTypeOrPointeeType(hasWantedType(ContainerNames))));
 }
 
 const auto DefaultContainersWithPushBack =
@@ -130,27 +155,19 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   // because this requires special treatment (it could cause performance
   // regression)
   // + match for emplace calls that should be replaced with insertion
-  auto CallPushBack = cxxMemberCallExpr(
-      hasDeclaration(functionDecl(hasName("push_back"))),
-      on(hasType(hasCanonicalType(
-          hasDeclaration(cxxRecordDecl(hasAnyName(ContainersWithPushBack)))))));
-
-  auto CallPush =
-      cxxMemberCallExpr(hasDeclaration(functionDecl(hasName("push"))),
-                        on(hasType(hasCanonicalType(hasDeclaration(
-                            cxxRecordDecl(hasAnyName(ContainersWithPush)))))));
-
-  auto CallPushFront = cxxMemberCallExpr(
-      hasDeclaration(functionDecl(hasName("push_front"))),
-      on(hasType(hasCanonicalType(hasDeclaration(
-          cxxRecordDecl(hasAnyName(ContainersWithPushFront)))))));
+  auto CallPushBack =
+      cxxMemberCallExprOnContainer("push_back", ContainersWithPushBack);
+  auto CallPush = cxxMemberCallExprOnContainer("push", ContainersWithPush);
+  auto CallPushFront =
+      cxxMemberCallExprOnContainer("push_front", ContainersWithPushFront);
 
   auto CallEmplacy = cxxMemberCallExpr(
       hasDeclaration(
           functionDecl(hasAnyNameIgnoringTemplates(EmplacyFunctions))),
-      on(hasType(hasCanonicalType(hasDeclaration(has(typedefNameDecl(
-          hasName("value_type"), hasType(type(hasUnqualifiedDesugaredType(
-                                     recordType().bind("value_type")))))))))));
+      on(hasTypeOrPointeeType(hasCanonicalType(hasDeclaration(
+          has(typedefNameDecl(hasName("value_type"),
+                              hasType(type(hasUnqualifiedDesugaredType(
+                                  recordType().bind("value_type")))))))))));
 
   // We can't replace push_backs of smart pointer because
   // if emplacement fails (f.e. bad_alloc in vector) we will have leak of
@@ -192,11 +209,12 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   auto HasConstructExpr = has(ignoringImplicit(SoughtConstructExpr));
 
   // allow for T{} to be replaced, even if no CTOR is declared
-  auto HasConstructInitListExpr = has(initListExpr(anyOf(
-      allOf(has(SoughtConstructExpr),
-            has(cxxConstructExpr(argumentCountIs(0)))),
-      has(cxxBindTemporaryExpr(has(SoughtConstructExpr),
-                               has(cxxConstructExpr(argumentCountIs(0))))))));
+  auto HasConstructInitListExpr = has(initListExpr(
+      initCountLeq(1), anyOf(allOf(has(SoughtConstructExpr),
+                                   has(cxxConstructExpr(argumentCountIs(0)))),
+                             has(cxxBindTemporaryExpr(
+                                 has(SoughtConstructExpr),
+                                 has(cxxConstructExpr(argumentCountIs(0))))))));
   auto HasBracedInitListExpr =
       anyOf(has(cxxBindTemporaryExpr(HasConstructInitListExpr)),
             HasConstructInitListExpr);

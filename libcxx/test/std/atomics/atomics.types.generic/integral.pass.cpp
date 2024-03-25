@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: !has-64-bit-atomics
+
 // <atomic>
 
 // template <>
@@ -84,8 +86,9 @@
 // };
 
 #include <atomic>
-#include <new>
 #include <cassert>
+#include <cstdint>
+#include <new>
 
 #include <cmpxchg_loop.h>
 
@@ -97,8 +100,14 @@ do_test()
 {
     A obj(T(0));
     assert(obj == T(0));
-    bool b0 = obj.is_lock_free();
-    ((void)b0); // mark as unused
+    {
+        bool lockfree = obj.is_lock_free();
+        (void)lockfree;
+#if TEST_STD_VER >= 17
+        if (A::is_always_lock_free)
+            assert(lockfree);
+#endif
+    }
     obj.store(T(0));
     assert(obj == T(0));
     obj.store(T(1), std::memory_order_release);

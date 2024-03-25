@@ -54,14 +54,12 @@ void *MmapOrDie(uptr size, const char *mem_type, bool raw_report) {
   return (void *)res;
 }
 
-void UnmapOrDie(void *addr, uptr size) {
+void UnmapOrDie(void *addr, uptr size, bool raw_report) {
   if (!addr || !size) return;
   uptr res = internal_munmap(addr, size);
-  if (UNLIKELY(internal_iserror(res))) {
-    Report("ERROR: %s failed to deallocate 0x%zx (%zd) bytes at address %p\n",
-           SanitizerToolName, size, size, addr);
-    CHECK("unable to unmap" && 0);
-  }
+  int reserrno;
+  if (UNLIKELY(internal_iserror(res, &reserrno)))
+    ReportMunmapFailureAndDie(addr, size, reserrno, raw_report);
   DecreaseTotalMmap(size);
 }
 
@@ -87,8 +85,8 @@ void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
   CHECK(IsPowerOfTwo(size));
   CHECK(IsPowerOfTwo(alignment));
   uptr map_size = size + alignment;
-  // mmap maps entire pages and rounds up map_size needs to be a an integral 
-  // number of pages. 
+  // mmap maps entire pages and rounds up map_size needs to be a an integral
+  // number of pages.
   // We need to be aware of this size for calculating end and for unmapping
   // fragments before and after the alignment region.
   map_size = RoundUpTo(map_size, GetPageSizeCached());
@@ -154,6 +152,10 @@ bool MprotectNoAccess(uptr addr, uptr size) {
 
 bool MprotectReadOnly(uptr addr, uptr size) {
   return 0 == internal_mprotect((void *)addr, size, PROT_READ);
+}
+
+bool MprotectReadWrite(uptr addr, uptr size) {
+  return 0 == internal_mprotect((void *)addr, size, PROT_READ | PROT_WRITE);
 }
 
 #if !SANITIZER_APPLE

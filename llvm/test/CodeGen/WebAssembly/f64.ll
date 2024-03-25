@@ -13,6 +13,7 @@ declare double @llvm.floor.f64(double)
 declare double @llvm.trunc.f64(double)
 declare double @llvm.nearbyint.f64(double)
 declare double @llvm.rint.f64(double)
+declare double @llvm.roundeven.f64(double)
 declare double @llvm.fma.f64(double, double, double)
 
 define double @fadd64(double %x, double %y) {
@@ -163,27 +164,48 @@ define double @nearest64_via_rint(double %x) {
   ret double %a
 }
 
+define double @nearest64_via_roundeven(double %x) {
+; CHECK-LABEL: nearest64_via_roundeven:
+; CHECK:         .functype nearest64_via_roundeven (f64) -> (f64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push1=, 0
+; CHECK-NEXT:    f64.nearest $push0=, $pop1
+; CHECK-NEXT:    return $pop0
+  %a = call double @llvm.roundeven.f64(double %x)
+  ret double %a
+}
+
+; This is not "minimum" because a -0.0 input returns +0.0.
+
 define double @fmin64(double %x) {
 ; CHECK-LABEL: fmin64:
 ; CHECK:         .functype fmin64 (f64) -> (f64)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get $push2=, 0
 ; CHECK-NEXT:    f64.const $push0=, 0x0p0
-; CHECK-NEXT:    f64.min $push1=, $pop2, $pop0
-; CHECK-NEXT:    return $pop1
+; CHECK-NEXT:    local.get $push5=, 0
+; CHECK-NEXT:    local.get $push4=, 0
+; CHECK-NEXT:    f64.const $push3=, 0x0p0
+; CHECK-NEXT:    f64.ge $push1=, $pop4, $pop3
+; CHECK-NEXT:    f64.select $push2=, $pop0, $pop5, $pop1
+; CHECK-NEXT:    return $pop2
   %a = fcmp ult double %x, 0.0
   %b = select i1 %a, double %x, double 0.0
   ret double %b
 }
 
+; This is not "maximum" because a -0.0 input returns +0.0.
+
 define double @fmax64(double %x) {
 ; CHECK-LABEL: fmax64:
 ; CHECK:         .functype fmax64 (f64) -> (f64)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get $push2=, 0
 ; CHECK-NEXT:    f64.const $push0=, 0x0p0
-; CHECK-NEXT:    f64.max $push1=, $pop2, $pop0
-; CHECK-NEXT:    return $pop1
+; CHECK-NEXT:    local.get $push5=, 0
+; CHECK-NEXT:    local.get $push4=, 0
+; CHECK-NEXT:    f64.const $push3=, 0x0p0
+; CHECK-NEXT:    f64.le $push1=, $pop4, $pop3
+; CHECK-NEXT:    f64.select $push2=, $pop0, $pop5, $pop1
+; CHECK-NEXT:    return $pop2
   %a = fcmp ugt double %x, 0.0
   %b = select i1 %a, double %x, double 0.0
   ret double %b
@@ -202,6 +224,61 @@ define double @fmin64_intrinsic(double %x, double %y) {
   ret double %a
 }
 
+declare double @llvm.minnum.f64(double, double)
+define double @fminnum64_intrinsic(double %x, double %y) {
+; CHECK-LABEL: fminnum64_intrinsic:
+; CHECK:         .functype fminnum64_intrinsic (f64, f64) -> (f64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push5=, 0
+; CHECK-NEXT:    local.get $push4=, 1
+; CHECK-NEXT:    local.get $push3=, 0
+; CHECK-NEXT:    local.get $push2=, 1
+; CHECK-NEXT:    f64.lt $push0=, $pop3, $pop2
+; CHECK-NEXT:    f64.select $push1=, $pop5, $pop4, $pop0
+; CHECK-NEXT:    return $pop1
+  %a = call nnan double @llvm.minnum.f64(double %x, double %y)
+  ret double %a
+}
+
+define double @fminnum64_nsz_intrinsic(double %x, double %y) {
+; CHECK-LABEL: fminnum64_nsz_intrinsic:
+; CHECK:         .functype fminnum64_nsz_intrinsic (f64, f64) -> (f64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push2=, 0
+; CHECK-NEXT:    local.get $push1=, 1
+; CHECK-NEXT:    f64.min $push0=, $pop2, $pop1
+; CHECK-NEXT:    return $pop0
+  %a = call nnan nsz double @llvm.minnum.f64(double %x, double %y)
+  ret double %a
+}
+
+define double @fminnum64_zero_intrinsic(double %x) {
+; CHECK-LABEL: fminnum64_zero_intrinsic:
+; CHECK:         .functype fminnum64_zero_intrinsic (f64) -> (f64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push5=, 0
+; CHECK-NEXT:    f64.const $push0=, -0x0p0
+; CHECK-NEXT:    local.get $push4=, 0
+; CHECK-NEXT:    f64.const $push3=, -0x0p0
+; CHECK-NEXT:    f64.lt $push1=, $pop4, $pop3
+; CHECK-NEXT:    f64.select $push2=, $pop5, $pop0, $pop1
+; CHECK-NEXT:    return $pop2
+  %a = call nnan double @llvm.minnum.f64(double %x, double -0.0)
+  ret double %a
+}
+
+define double @fminnum64_non_zero_intrinsic(double %x) {
+; CHECK-LABEL: fminnum64_non_zero_intrinsic:
+; CHECK:         .functype fminnum64_non_zero_intrinsic (f64) -> (f64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push2=, 0
+; CHECK-NEXT:    f64.const $push0=, -0x1p0
+; CHECK-NEXT:    f64.min $push1=, $pop2, $pop0
+; CHECK-NEXT:    return $pop1
+  %a = call nnan double @llvm.minnum.f64(double %x, double -1.0)
+  ret double %a
+}
+
 declare double @llvm.maximum.f64(double, double)
 define double @fmax64_intrinsic(double %x, double %y) {
 ; CHECK-LABEL: fmax64_intrinsic:
@@ -212,6 +289,61 @@ define double @fmax64_intrinsic(double %x, double %y) {
 ; CHECK-NEXT:    f64.max $push0=, $pop2, $pop1
 ; CHECK-NEXT:    return $pop0
   %a = call double @llvm.maximum.f64(double %x, double %y)
+  ret double %a
+}
+
+declare double @llvm.maxnum.f64(double, double)
+define double@fmaxnum64_intrinsic(double %x, double %y) {
+; CHECK-LABEL: fmaxnum64_intrinsic:
+; CHECK:         .functype fmaxnum64_intrinsic (f64, f64) -> (f64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push5=, 0
+; CHECK-NEXT:    local.get $push4=, 1
+; CHECK-NEXT:    local.get $push3=, 0
+; CHECK-NEXT:    local.get $push2=, 1
+; CHECK-NEXT:    f64.gt $push0=, $pop3, $pop2
+; CHECK-NEXT:    f64.select $push1=, $pop5, $pop4, $pop0
+; CHECK-NEXT:    return $pop1
+  %a = call nnan double @llvm.maxnum.f64(double %x, double %y)
+  ret double %a
+}
+
+define double@fmaxnum64_nsz_intrinsic(double %x, double %y) {
+; CHECK-LABEL: fmaxnum64_nsz_intrinsic:
+; CHECK:         .functype fmaxnum64_nsz_intrinsic (f64, f64) -> (f64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push2=, 0
+; CHECK-NEXT:    local.get $push1=, 1
+; CHECK-NEXT:    f64.max $push0=, $pop2, $pop1
+; CHECK-NEXT:    return $pop0
+  %a = call nnan nsz double @llvm.maxnum.f64(double %x, double %y)
+  ret double %a
+}
+
+define double @fmaxnum64_zero_intrinsic(double %x) {
+; CHECK-LABEL: fmaxnum64_zero_intrinsic:
+; CHECK:         .functype fmaxnum64_zero_intrinsic (f64) -> (f64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push5=, 0
+; CHECK-NEXT:    f64.const $push0=, 0x0p0
+; CHECK-NEXT:    local.get $push4=, 0
+; CHECK-NEXT:    f64.const $push3=, 0x0p0
+; CHECK-NEXT:    f64.gt $push1=, $pop4, $pop3
+; CHECK-NEXT:    f64.select $push2=, $pop5, $pop0, $pop1
+; CHECK-NEXT:    return $pop2
+  %a = call nnan double @llvm.maxnum.f64(double %x, double 0.0)
+  ret double %a
+}
+
+define double @fmaxnum64_non_zero_intrinsic(double %x) {
+; CHECK-LABEL: fmaxnum64_non_zero_intrinsic:
+; CHECK:         .functype fmaxnum64_non_zero_intrinsic (f64) -> (f64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push2=, 0
+; CHECK-NEXT:    f64.const $push0=, 0x1p0
+; CHECK-NEXT:    f64.max $push1=, $pop2, $pop0
+; CHECK-NEXT:    return $pop1
+  %a = call nnan double @llvm.maxnum.f64(double %x, double 1.0)
   ret double %a
 }
 

@@ -11,18 +11,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenTarget.h"
+#include "Common/CodeGenTarget.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <deque>
+#include <set>
+
 using namespace llvm;
 
 namespace {
 class CallingConvEmitter {
   RecordKeeper &Records;
-  unsigned Counter;
+  unsigned Counter = 0u;
   std::string CurrentAction;
-  bool SwiftAction;
+  bool SwiftAction = false;
 
   std::map<std::string, std::set<std::string>> AssignedRegsMap;
   std::map<std::string, std::set<std::string>> AssignedSwiftRegsMap;
@@ -41,7 +44,9 @@ private:
 } // End anonymous namespace
 
 void CallingConvEmitter::run(raw_ostream &O) {
-  std::vector<Record*> CCs = Records.getAllDerivedDefinitions("CallingConv");
+  emitSourceFileHeader("Calling Convention Implementation Fragment", O);
+
+  std::vector<Record *> CCs = Records.getAllDerivedDefinitions("CallingConv");
 
   // Emit prototypes for all of the non-custom CC's so that they can forward ref
   // each other.
@@ -102,33 +107,34 @@ void CallingConvEmitter::EmitCallingConv(Record *CC, raw_ostream &O) {
   // Emit all of the actions, in order.
   for (unsigned i = 0, e = CCActions->size(); i != e; ++i) {
     Record *Action = CCActions->getElementAsRecord(i);
-    SwiftAction = llvm::any_of(Action->getSuperClasses(),
-                               [](const std::pair<Record *, SMRange> &Class) {
-                                 std::string Name =
-                                     Class.first->getNameInitAsString();
-                                 return StringRef(Name).startswith("CCIfSwift");
-                               });
+    SwiftAction =
+        llvm::any_of(Action->getSuperClasses(),
+                     [](const std::pair<Record *, SMRange> &Class) {
+                       std::string Name = Class.first->getNameInitAsString();
+                       return StringRef(Name).starts_with("CCIfSwift");
+                     });
 
     O << "\n";
     EmitAction(Action, 2, O);
   }
-  
+
   O << "\n  return true; // CC didn't match.\n";
   O << "}\n";
 }
 
-void CallingConvEmitter::EmitAction(Record *Action,
-                                    unsigned Indent, raw_ostream &O) {
+void CallingConvEmitter::EmitAction(Record *Action, unsigned Indent,
+                                    raw_ostream &O) {
   std::string IndentStr = std::string(Indent, ' ');
 
   if (Action->isSubClassOf("CCPredicateAction")) {
     O << IndentStr << "if (";
-    
+
     if (Action->isSubClassOf("CCIfType")) {
       ListInit *VTs = Action->getValueAsListInit("VTs");
       for (unsigned i = 0, e = VTs->size(); i != e; ++i) {
         Record *VT = VTs->getElementAsRecord(i);
-        if (i != 0) O << " ||\n    " << IndentStr;
+        if (i != 0)
+          O << " ||\n    " << IndentStr;
         O << "LocVT == " << getEnumName(getValueType(VT));
       }
 
@@ -138,9 +144,9 @@ void CallingConvEmitter::EmitAction(Record *Action,
       errs() << *Action;
       PrintFatalError(Action->getLoc(), "Unknown CCPredicateAction!");
     }
-    
+
     O << ") {\n";
-    EmitAction(Action->getValueAsDef("SubAction"), Indent+2, O);
+    EmitAction(Action->getValueAsDef("SubAction"), Indent + 2, O);
     O << IndentStr << "}\n";
   } else {
     if (Action->isSubClassOf("CCDelegateTo")) {
@@ -236,8 +242,8 @@ void CallingConvEmitter::EmitAction(Record *Action,
         O << "\n" << IndentStr << "};\n";
 
         O << IndentStr << "if (unsigned Reg = State.AllocateReg(RegList"
-          << RegListNumber << ", " << "RegList" << ShadowRegListNumber
-          << ")) {\n";
+          << RegListNumber << ", "
+          << "RegList" << ShadowRegListNumber << ")) {\n";
       }
       O << IndentStr << "  State.addLoc(CCValAssign::getReg(ValNo, ValVT, "
         << "Reg, LocVT, LocInfo));\n";
@@ -247,12 +253,13 @@ void CallingConvEmitter::EmitAction(Record *Action,
       int Size = Action->getValueAsInt("Size");
       int Align = Action->getValueAsInt("Align");
 
-      O << IndentStr << "unsigned Offset" << ++Counter
+      O << IndentStr << "int64_t Offset" << ++Counter
         << " = State.AllocateStack(";
       if (Size)
         O << Size << ", ";
       else
-        O << "\n" << IndentStr
+        O << "\n"
+          << IndentStr
           << "  State.getMachineFunction().getDataLayout()."
              "getTypeAllocSize(EVT(LocVT).getTypeForEVT(State.getContext())),"
              " ";
@@ -264,8 +271,8 @@ void CallingConvEmitter::EmitAction(Record *Action,
           << "  State.getMachineFunction().getDataLayout()."
              "getABITypeAlign(EVT(LocVT).getTypeForEVT(State.getContext()"
              "))";
-      O << ");\n" << IndentStr
-        << "State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset"
+      O << ");\n"
+        << IndentStr << "State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset"
         << Counter << ", LocVT, LocInfo));\n";
       O << IndentStr << "return false;\n";
     } else if (Action->isSubClassOf("CCAssignToStackWithShadow")) {
@@ -276,14 +283,14 @@ void CallingConvEmitter::EmitAction(Record *Action,
       unsigned ShadowRegListNumber = ++Counter;
 
       O << IndentStr << "static const MCPhysReg ShadowRegList"
-          << ShadowRegListNumber << "[] = {\n";
+        << ShadowRegListNumber << "[] = {\n";
       O << IndentStr << "  ";
       ListSeparator LS;
       for (unsigned i = 0, e = ShadowRegList->size(); i != e; ++i)
         O << LS << getQualifiedName(ShadowRegList->getElementAsRecord(i));
       O << "\n" << IndentStr << "};\n";
 
-      O << IndentStr << "unsigned Offset" << ++Counter
+      O << IndentStr << "int64_t Offset" << ++Counter
         << " = State.AllocateStack(" << Size << ", Align(" << Align << "), "
         << "ShadowRegList" << ShadowRegListNumber << ");\n";
       O << IndentStr << "State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset"
@@ -292,7 +299,7 @@ void CallingConvEmitter::EmitAction(Record *Action,
     } else if (Action->isSubClassOf("CCPromoteToType")) {
       Record *DestTy = Action->getValueAsDef("DestTy");
       MVT::SimpleValueType DestVT = getValueType(DestTy);
-      O << IndentStr << "LocVT = " << getEnumName(DestVT) <<";\n";
+      O << IndentStr << "LocVT = " << getEnumName(DestVT) << ";\n";
       if (MVT(DestVT).isFloatingPoint()) {
         O << IndentStr << "LocInfo = CCValAssign::FPExt;\n";
       } else {
@@ -321,15 +328,18 @@ void CallingConvEmitter::EmitAction(Record *Action,
       }
     } else if (Action->isSubClassOf("CCBitConvertToType")) {
       Record *DestTy = Action->getValueAsDef("DestTy");
-      O << IndentStr << "LocVT = " << getEnumName(getValueType(DestTy)) <<";\n";
+      O << IndentStr << "LocVT = " << getEnumName(getValueType(DestTy))
+        << ";\n";
       O << IndentStr << "LocInfo = CCValAssign::BCvt;\n";
     } else if (Action->isSubClassOf("CCTruncToType")) {
       Record *DestTy = Action->getValueAsDef("DestTy");
-      O << IndentStr << "LocVT = " << getEnumName(getValueType(DestTy)) <<";\n";
+      O << IndentStr << "LocVT = " << getEnumName(getValueType(DestTy))
+        << ";\n";
       O << IndentStr << "LocInfo = CCValAssign::Trunc;\n";
     } else if (Action->isSubClassOf("CCPassIndirect")) {
       Record *DestTy = Action->getValueAsDef("DestTy");
-      O << IndentStr << "LocVT = " << getEnumName(getValueType(DestTy)) <<";\n";
+      O << IndentStr << "LocVT = " << getEnumName(getValueType(DestTy))
+        << ";\n";
       O << IndentStr << "LocInfo = CCValAssign::Indirect;\n";
     } else if (Action->isSubClassOf("CCPassByVal")) {
       int Size = Action->getValueAsInt("Size");
@@ -338,8 +348,8 @@ void CallingConvEmitter::EmitAction(Record *Action,
         << Size << ", Align(" << Align << "), ArgFlags);\n";
       O << IndentStr << "return false;\n";
     } else if (Action->isSubClassOf("CCCustom")) {
-      O << IndentStr
-        << "if (" << Action->getValueAsString("FuncName") << "(ValNo, ValVT, "
+      O << IndentStr << "if (" << Action->getValueAsString("FuncName")
+        << "(ValNo, ValVT, "
         << "LocVT, LocInfo, ArgFlags, State))\n";
       O << IndentStr << "  return false;\n";
     } else {
@@ -371,9 +381,8 @@ void CallingConvEmitter::EmitArgRegisterLists(raw_ostream &O) {
         std::set<std::string> &InnerRegisters = InnerEntry.second;
 
         if (InnerRegisters.find(CCName) != InnerRegisters.end()) {
-          AssignedRegsMap[InnerCCName].insert(
-              AssignedRegsMap[CCName].begin(),
-              AssignedRegsMap[CCName].end());
+          AssignedRegsMap[InnerCCName].insert(AssignedRegsMap[CCName].begin(),
+                                              AssignedRegsMap[CCName].end());
           InnerRegisters.erase(CCName);
         }
       }
@@ -426,11 +435,5 @@ void CallingConvEmitter::EmitArgRegisterLists(raw_ostream &O) {
   }
 }
 
-namespace llvm {
-
-void EmitCallingConv(RecordKeeper &RK, raw_ostream &OS) {
-  emitSourceFileHeader("Calling Convention Implementation Fragment", OS);
-  CallingConvEmitter(RK).run(OS);
-}
-
-} // End llvm namespace
+static TableGen::Emitter::OptClass<CallingConvEmitter>
+    X("gen-callingconv", "Generate calling convention descriptions");

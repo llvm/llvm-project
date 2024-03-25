@@ -33,15 +33,17 @@ namespace clangd {
 namespace {
 
 using ::testing::AllOf;
-using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::Eq;
 using ::testing::IsEmpty;
 using ::testing::Matcher;
-using ::testing::Not;
 using ::testing::UnorderedElementsAre;
 using ::testing::UnorderedElementsAreArray;
 using ::testing::UnorderedPointwise;
+
+std::string guard(llvm::StringRef Code) {
+  return "#pragma once\n" + Code.str();
+}
 
 MATCHER_P2(FileRange, File, Range, "") {
   return Location{URIForFile::canonicalize(File, testRoot()), Range} == arg;
@@ -121,6 +123,13 @@ TEST(HighlightsTest, All) {
         @end
         void go() {
           [Foo [[x]]:2 [[^y]]:4];
+        }
+      )cpp",
+      R"cpp( // Label
+        int main() {
+          goto [[^theLabel]];
+          [[theLabel]]:
+            return 1;
         }
       )cpp",
   };
@@ -1000,7 +1009,17 @@ TEST(LocateSymbol, All) {
         void play(Dog *dog) {
           [dog ho^wl];
         }
-      )objc"};
+      )objc",
+      R"cpp(
+        struct PointerIntPairInfo {
+          static void *getPointer(void *Value);
+        };
+
+        template <typename Info = PointerIntPairInfo> struct PointerIntPair {
+          void *Value;
+          void *getPointer() const { return Info::get^Pointer(Value); }
+        };
+    )cpp"};
   for (const char *Test : Tests) {
     Annotations T(Test);
     std::optional<Range> WantDecl;
@@ -1875,7 +1894,7 @@ TEST(FindType, All) {
 
     ASSERT_GT(A.points().size(), 0u) << Case;
     for (auto Pos : A.points())
-      EXPECT_THAT(findType(AST, Pos),
+      EXPECT_THAT(findType(AST, Pos, nullptr),
                   ElementsAre(
                     sym("Target", HeaderA.range("Target"), HeaderA.range("Target"))))
           << Case;
@@ -1888,13 +1907,46 @@ TEST(FindType, All) {
     TU.Code = A.code().str();
     ParsedAST AST = TU.build();
 
-    EXPECT_THAT(findType(AST, A.point()),
+    EXPECT_THAT(findType(AST, A.point(), nullptr),
                 UnorderedElementsAre(
                   sym("Target", HeaderA.range("Target"), HeaderA.range("Target")),
                   sym("smart_ptr", HeaderA.range("smart_ptr"), HeaderA.range("smart_ptr"))
                 ))
         << Case;
   }
+}
+
+TEST(FindType, Definition) {
+  Annotations A(R"cpp(
+    class $decl[[X]];
+    X *^x;
+    class $def[[X]] {};
+  )cpp");
+  auto TU = TestTU::withCode(A.code().str());
+  ParsedAST AST = TU.build();
+
+  EXPECT_THAT(findType(AST, A.point(), nullptr),
+              ElementsAre(sym("X", A.range("decl"), A.range("def"))));
+}
+
+TEST(FindType, Index) {
+  Annotations Def(R"cpp(
+    // This definition is only available through the index.
+    class [[X]] {};
+  )cpp");
+  TestTU DefTU = TestTU::withHeaderCode(Def.code());
+  DefTU.HeaderFilename = "def.h";
+  auto DefIdx = DefTU.index();
+
+  Annotations A(R"cpp(
+    class [[X]];
+    X *^x;
+  )cpp");
+  auto TU = TestTU::withCode(A.code().str());
+  ParsedAST AST = TU.build();
+
+  EXPECT_THAT(findType(AST, A.point(), DefIdx.get()),
+              ElementsAre(sym("X", A.range(), Def.range())));
 }
 
 void checkFindRefs(llvm::StringRef Test, bool UseIndex = false) {
@@ -2291,6 +2343,50 @@ TEST(FindReferences, ExplicitSymbols) {
   };
   for (const char *Test : Tests)
     checkFindRefs(Test);
+}
+
+TEST(FindReferences, UsedSymbolsFromInclude) {
+  const char *Tests[] = {
+      R"cpp(   [[#include   ^"bar.h"]]
+        #include <vector>
+        int fstBar = [[bar1]]();
+        int sndBar = [[bar2]]();
+        [[Bar]] bar;
+        int macroBar = [[BAR]];
+        std::vector<int> vec;
+      )cpp",
+
+      R"cpp([[#in^clude <vector>]]
+        std::[[vector]]<int> vec;
+      )cpp"};
+  for (const char *Test : Tests) {
+    Annotations T(Test);
+    auto TU = TestTU::withCode(T.code());
+    TU.ExtraArgs.push_back("-std=c++20");
+    TU.AdditionalFiles["bar.h"] = guard(R"cpp(
+      #define BAR 5
+      int bar1();
+      int bar2();
+      class Bar {};            
+    )cpp");
+    TU.AdditionalFiles["system/vector"] = guard(R"cpp(
+      namespace std {
+        template<typename>
+        class vector{};
+      }
+    )cpp");
+    TU.ExtraArgs.push_back("-isystem" + testPath("system"));
+
+    auto AST = TU.build();
+    std::vector<Matcher<ReferencesResult::Reference>> ExpectedLocations;
+    for (const auto &R : T.ranges())
+      ExpectedLocations.push_back(AllOf(rangeIs(R), attrsAre(0u)));
+    for (const auto &P : T.points()) 
+      EXPECT_THAT(findReferences(AST, P, 0).References,
+                  UnorderedElementsAreArray(ExpectedLocations))
+          << "Failed for Refs at " << P << "\n"
+          << Test;
+  }
 }
 
 TEST(FindReferences, NeedsIndexForSymbols) {

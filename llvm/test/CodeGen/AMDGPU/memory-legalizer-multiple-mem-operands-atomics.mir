@@ -1,13 +1,13 @@
-# RUN: llc -march=amdgcn -mcpu=gfx803 -run-pass si-memory-legalizer %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx803 -run-pass si-memory-legalizer %s -o - | FileCheck -check-prefix=GCN %s
 
 ---
 
 # GCN-LABEL: name: multiple_mem_operands
 
 # GCN-LABEL: bb.3:
-# GCN:       S_WAITCNT 3952
+# GCN:       S_WAITCNT_soft 3952
 # GCN-NEXT:  BUFFER_LOAD_DWORD_OFFEN
-# GCN-NEXT:  S_WAITCNT 3952
+# GCN-NEXT:  S_WAITCNT_soft 3952
 # GCN-NEXT:  BUFFER_WBINVL1_VOL
 
 name:            multiple_mem_operands

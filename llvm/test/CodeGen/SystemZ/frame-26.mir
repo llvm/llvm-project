@@ -17,16 +17,16 @@
 --- |
   
   @g_181 = external dso_local global i32, align 4
-  @g_1390 = external dso_local constant i64*, align 8
+  @g_1390 = external dso_local constant ptr, align 8
   
-  define internal i8 @fun0(i8 %arg, i8 %arg1, i32 %arg2, i8 %arg3, i32* %arg4, float %F0, float %F1) #0 {
+  define internal i8 @fun0(i8 %arg, i8 %arg1, i32 %arg2, i8 %arg3, ptr %arg4, float %F0, float %F1) #0 {
     ret i8 0
   }
   
   ; Same function but in a single block which will make the verifier complain
   ; if R6 is killed by the original store before the point where the
   ; RegScavenger inserts its (killing) store of R6.
-  define internal i8 @fun1(i8 %arg, i8 %arg1, i32 %arg2, i8 %arg3, i32* %arg4) #0 {
+  define internal i8 @fun1(i8 %arg, i8 %arg1, i32 %arg2, i8 %arg3, ptr %arg4) #0 {
     ret i8 0
   }
   
@@ -75,10 +75,10 @@ body:             |
   bb.0:
     liveins: $f0s, $f2s, $r6d
   
-    STG killed renamable $r6d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i32** undef`)
+    STG killed renamable $r6d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
     renamable $r0d = LARL @g_181
     nofpexcept CEBR renamable $f0s, renamable $f2s, implicit-def $cc, implicit $fpc
-    STG renamable $r0d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i32** undef`)
+    STG renamable $r0d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
     BRC 15, 4, %bb.2, implicit killed $cc
   
   bb.1:
@@ -89,36 +89,36 @@ body:             |
   bb.2:
     liveins: $f0s, $r0d
   
-    STE killed renamable $f0s, undef renamable $r1d, 0, $noreg :: (volatile store (s32) into `float* undef`)
+    STE killed renamable $f0s, undef renamable $r1d, 0, $noreg :: (volatile store (s32) into `ptr undef`)
     renamable $r1d = nuw LA %stack.0, 16, $noreg
     renamable $r2d = nuw LA %stack.0, 24, $noreg
     renamable $r3d = LA %stack.0, 40, $noreg
     renamable $r4d = LARL @g_1390
-    STG renamable $r4d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
+    STG renamable $r4d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
     renamable $r5d = nuw LA %stack.0, 48, $noreg
     renamable $r14d = LA %stack.0, 72, $noreg
     renamable $r13d = LA %stack.0, 80, $noreg
     renamable $r12d = LA %stack.0, 56, $noreg
     renamable $r10d = LA %stack.0, 0, $noreg
-    STG renamable $r10d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
+    STG renamable $r10d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
     renamable $r9d = LA %stack.0, 64, $noreg
     renamable $r8d = LA %stack.0, 88, $noreg
     renamable $r7d = nuw LA %stack.0, 8, $noreg
     MVGHI %stack.1, 904, 0
-    STG killed renamable $r9d, $noreg, 0, $noreg :: (store (s64) into `i64*** null`)
-    STG killed renamable $r3d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r14d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r7d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r1d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r4d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r2d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r5d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r8d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r12d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r13d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r10d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
+    STG killed renamable $r9d, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+    STG killed renamable $r3d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r14d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r7d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r1d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r4d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r2d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r5d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r8d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r12d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r13d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r10d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
     $r2l = LHI 0
-    STG killed renamable $r0d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i32** undef`)
+    STG killed renamable $r0d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
     Return implicit $r2l
 
 ...
@@ -162,38 +162,38 @@ body:             |
   bb.0:
     liveins: $r6d
   
-    STG killed renamable $r6d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i32** undef`)
+    STG killed renamable $r6d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
     renamable $r0d = LARL @g_181
-    STG renamable $r0d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i32** undef`)
+    STG renamable $r0d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
     renamable $r1d = nuw LA %stack.0, 16, $noreg
     renamable $r2d = nuw LA %stack.0, 24, $noreg
     renamable $r3d = LA %stack.0, 40, $noreg
     renamable $r4d = LARL @g_1390
-    STG renamable $r4d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
+    STG renamable $r4d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
     renamable $r5d = nuw LA %stack.0, 48, $noreg
     renamable $r14d = LA %stack.0, 72, $noreg
     renamable $r13d = LA %stack.0, 80, $noreg
     renamable $r12d = LA %stack.0, 56, $noreg
     renamable $r10d = LA %stack.0, 0, $noreg
-    STG renamable $r10d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
+    STG renamable $r10d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
     renamable $r9d = LA %stack.0, 64, $noreg
     renamable $r8d = LA %stack.0, 88, $noreg
     renamable $r7d = nuw LA %stack.0, 8, $noreg
     MVGHI %stack.1, 904, 0
-    STG killed renamable $r9d, $noreg, 0, $noreg :: (store (s64) into `i64*** null`)
-    STG killed renamable $r3d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r14d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r7d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r1d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r4d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r2d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r5d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r8d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r12d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r13d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
-    STG killed renamable $r10d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i64*** undef`)
+    STG killed renamable $r9d, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+    STG killed renamable $r3d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r14d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r7d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r1d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r4d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r2d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r5d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r8d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r12d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r13d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
+    STG killed renamable $r10d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
     $r2l = LHI 0
-    STG killed renamable $r0d, undef renamable $r1d, 0, $noreg :: (store (s64) into `i32** undef`)
+    STG killed renamable $r0d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
     Return implicit $r2l
 
 ...

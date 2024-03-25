@@ -9,8 +9,8 @@
 #ifndef LLVM_MC_MCDXCONTAINERWRITER_H
 #define LLVM_MC_MCDXCONTAINERWRITER_H
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 

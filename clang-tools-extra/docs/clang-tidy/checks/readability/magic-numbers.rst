@@ -10,7 +10,7 @@ Many coding guidelines advise replacing the magic values with symbolic
 constants to improve readability. Here are a few references:
 
    * `Rule ES.45: Avoid "magic constants"; use symbolic constants in C++ Core Guidelines <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Res-magic>`_
-   * `Rule 5.1.1 Use symbolic names instead of literal values in code in High Integrity C++ <http://www.codingstandard.com/rule/5-1-1-use-symbolic-names-instead-of-literal-values-in-code/>`_
+   * `Rule 5.1.1 Use symbolic names instead of literal values in code in High Integrity C++ <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-standard-expressions>`_
    * Item 17 in "C++ Coding Standards: 101 Rules, Guidelines and Best
      Practices" by Herb Sutter and Andrei Alexandrescu
    * Chapter 17 in "Clean Code - A handbook of agile software craftsmanship."
@@ -23,6 +23,16 @@ constants to improve readability. Here are a few references:
 Examples of magic values:
 
 .. code-block:: c++
+
+   template<typename T, size_t N>
+   struct CustomType {
+      T arr[N];
+   };
+
+   struct OtherType {
+      CustomType<int, 30> container;
+   }
+   CustomType<int, 30> values;
 
    double circleArea = 3.1415926535 * radius * radius;
 
@@ -39,6 +49,19 @@ Examples of magic values:
 Example with magic values refactored:
 
 .. code-block:: c++
+
+   template<typename T, size_t N>
+   struct CustomType {
+      T arr[N];
+   };
+
+   const size_t NUMBER_OF_ELEMENTS = 30;
+   using containerType = CustomType<int, NUMBER_OF_ELEMENTS>;
+
+   struct OtherType {
+      containerType container;
+   }
+   containerType values;
 
    double circleArea = M_PI * radius * radius;
 
@@ -116,3 +139,13 @@ Options
    Boolean value indicating whether to accept magic numbers as bit field widths
    without warning. This is useful for example for register definitions which
    are generated from hardware specifications. Default value is `true`.
+
+.. option:: IgnoreTypeAliases
+
+   Boolean value indicating whether to accept magic numbers in ``typedef`` or
+   ``using`` declarations. Default value is `false`.
+
+.. option:: IgnoreUserDefinedLiterals
+
+   Boolean value indicating whether to accept magic numbers in user-defined
+   literals. Default value is `false`.

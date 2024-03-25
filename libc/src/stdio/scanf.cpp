@@ -15,7 +15,13 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-namespace __llvm_libc {
+#ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
+#define SCANF_STDIN LIBC_NAMESPACE::stdin
+#else // LIBC_COPT_STDIO_USE_SYSTEM_FILE
+#define SCANF_STDIN ::stdin
+#endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
+
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, scanf, (const char *__restrict format, ...)) {
   va_list vlist;
@@ -25,10 +31,10 @@ LLVM_LIBC_FUNCTION(int, scanf, (const char *__restrict format, ...)) {
                                  // destruction automatically.
   va_end(vlist);
   int ret_val = scanf_core::vfscanf_internal(
-      reinterpret_cast<::FILE *>(__llvm_libc::stdin), format, args);
+      reinterpret_cast<::FILE *>(SCANF_STDIN), format, args);
   // This is done to avoid including stdio.h in the internals. On most systems
   // EOF is -1, so this will be transformed into just "return ret_val".
   return (ret_val == -1) ? EOF : ret_val;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

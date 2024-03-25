@@ -1,9 +1,7 @@
 // RUN: %clang_cc1 -x objective-c %s -fsyntax-only -verify
-// rdar://8592641
 Class f0(void) { return objc_getClass("a"); } // expected-error {{call to undeclared library function 'objc_getClass' with type 'id (const char *)'}} \
 					  // expected-note {{include the header <objc/runtime.h> or explicitly provide a declaration for 'objc_getClass'}}
 
-// rdar://8735023
 Class f1(void) { return objc_getMetaClass("a"); } // expected-error {{call to undeclared library function 'objc_getMetaClass' with type 'id (const char *)'}} \
 					  // expected-note {{include the header <objc/runtime.h> or explicitly provide a declaration for 'objc_getMetaClass'}}
 

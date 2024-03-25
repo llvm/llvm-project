@@ -4,7 +4,7 @@
 // RUN:   -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -fprofile-instrument=clang -disable-llvm-passes \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -fprofile-arcs -disable-llvm-passes \
+// RUN: %clang_cc1 -coverage-data-file=/dev/null -disable-llvm-passes \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
 int g(int);
 

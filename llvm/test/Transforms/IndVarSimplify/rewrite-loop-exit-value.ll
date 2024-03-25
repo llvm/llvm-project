@@ -169,9 +169,9 @@ define i16 @pr57336(i16 %end, i16 %m) mustprogress {
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp sgt i16 [[MUL]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[CRIT_EDGE:%.*]], label [[FOR_BODY]]
 ; CHECK:       crit_edge:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i16 @llvm.smax.i16(i16 [[END]], i16 -1)
-; CHECK-NEXT:    [[SMAX:%.*]] = add nsw i16 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i16 [[SMAX]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[END]], 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[TMP0]], i16 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i16 [[END]], 32767
 ; CHECK-NEXT:    [[UMIN:%.*]] = zext i1 [[TMP1]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i16 [[SMAX]], [[UMIN]]
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i16 @llvm.umax.i16(i16 [[M]], i16 1)

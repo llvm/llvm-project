@@ -48,21 +48,38 @@ static Status EnsureFDFlags(int fd, int flags) {
   return error;
 }
 
+static Status CanTrace() {
+  int proc_debug, ret;
+  size_t len = sizeof(proc_debug);
+  ret = ::sysctlbyname("security.bsd.unprivileged_proc_debug", &proc_debug,
+                       &len, nullptr, 0);
+  if (ret != 0)
+    return Status("sysctlbyname() security.bsd.unprivileged_proc_debug failed");
+
+  if (proc_debug < 1)
+    return Status(
+        "process debug disabled by security.bsd.unprivileged_proc_debug oid");
+
+  return {};
+}
+
 // Public Static Methods
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-NativeProcessFreeBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
-                                      NativeDelegate &native_delegate,
-                                      MainLoop &mainloop) const {
+NativeProcessFreeBSD::Manager::Launch(ProcessLaunchInfo &launch_info,
+                                      NativeDelegate &native_delegate) {
   Log *log = GetLog(POSIXLog::Process);
-
   Status status;
+
   ::pid_t pid = ProcessLauncherPosixFork()
                     .LaunchProcess(launch_info, status)
                     .GetProcessId();
   LLDB_LOG(log, "pid = {0:x}", pid);
   if (status.Fail()) {
     LLDB_LOG(log, "failed to launch process: {0}", status);
+    auto error = CanTrace();
+    if (error.Fail())
+      return error.ToError();
     return status.ToError();
   }
 
@@ -70,7 +87,7 @@ NativeProcessFreeBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
   int wstatus;
   ::pid_t wpid = llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, &wstatus, 0);
   assert(wpid == pid);
-  (void)wpid;
+  UNUSED_IF_ASSERT_DISABLED(wpid);
   if (!WIFSTOPPED(wstatus)) {
     LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
              WaitStatus::Decode(wstatus));
@@ -91,7 +108,7 @@ NativeProcessFreeBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
 
   std::unique_ptr<NativeProcessFreeBSD> process_up(new NativeProcessFreeBSD(
       pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
-      Info.GetArchitecture(), mainloop));
+      Info.GetArchitecture(), m_mainloop));
 
   status = process_up->SetupTrace();
   if (status.Fail())
@@ -105,9 +122,8 @@ NativeProcessFreeBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-NativeProcessFreeBSD::Factory::Attach(
-    lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate,
-    MainLoop &mainloop) const {
+NativeProcessFreeBSD::Manager::Attach(
+    lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate) {
   Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "pid = {0:x}", pid);
 
@@ -119,7 +135,7 @@ NativeProcessFreeBSD::Factory::Attach(
   }
 
   std::unique_ptr<NativeProcessFreeBSD> process_up(new NativeProcessFreeBSD(
-      pid, -1, native_delegate, Info.GetArchitecture(), mainloop));
+      pid, -1, native_delegate, Info.GetArchitecture(), m_mainloop));
 
   Status status = process_up->Attach();
   if (!status.Success())
@@ -129,7 +145,7 @@ NativeProcessFreeBSD::Factory::Attach(
 }
 
 NativeProcessFreeBSD::Extension
-NativeProcessFreeBSD::Factory::GetSupportedExtensions() const {
+NativeProcessFreeBSD::Manager::GetSupportedExtensions() const {
   return
 #if defined(PT_COREDUMP)
       Extension::savecore |
@@ -394,8 +410,11 @@ Status NativeProcessFreeBSD::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
   ret =
       ptrace(req, static_cast<::pid_t>(pid), static_cast<caddr_t>(addr), data);
 
-  if (ret == -1)
-    error.SetErrorToErrno();
+  if (ret == -1) {
+    error = CanTrace();
+    if (error.Success())
+      error.SetErrorToErrno();
+  }
 
   if (result)
     *result = ret;
@@ -709,8 +728,12 @@ Status NativeProcessFreeBSD::SetBreakpoint(lldb::addr_t addr, uint32_t size,
 Status NativeProcessFreeBSD::GetLoadedModuleFileSpec(const char *module_path,
                                                      FileSpec &file_spec) {
   Status error = PopulateMemoryRegionCache();
-  if (error.Fail())
+  if (error.Fail()) {
+    auto status = CanTrace();
+    if (status.Fail())
+      return status;
     return error;
+  }
 
   FileSpec module_file_spec(module_path);
   FileSystem::Instance().Resolve(module_file_spec);
@@ -731,8 +754,12 @@ NativeProcessFreeBSD::GetFileLoadAddress(const llvm::StringRef &file_name,
                                          lldb::addr_t &load_addr) {
   load_addr = LLDB_INVALID_ADDRESS;
   Status error = PopulateMemoryRegionCache();
-  if (error.Fail())
+  if (error.Fail()) {
+    auto status = CanTrace();
+    if (status.Fail())
+      return status;
     return error;
+  }
 
   FileSpec file(file_name);
   for (const auto &it : m_mem_region_cache) {

@@ -5,6 +5,9 @@
 # RUN: llvm-nm %t.so | FileCheck %s --check-prefix=NM
 # RUN: llvm-readelf -x .rodata -x nonalloc %t.so | FileCheck %s --check-prefix=HEX
 
+## ABS64 and RELATIVE64 relocs do not cause --check-dynamic-relocations errors.
+# RUN: ld.lld --hash-style=sysv -shared %t.o -o /dev/null --apply-dynamic-relocs
+
 .text
 
 kernel0:

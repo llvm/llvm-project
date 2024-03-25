@@ -1,13 +1,13 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 target triple = "nvptx-unknown-nvcl"
 
 define void @foo(i64 %img, i64 %sampler, ptr align 32 %v1, ptr %v2) {
 ; The parameter alignment is determined by the align attribute (default 1).
 ; CHECK-LABEL: .entry foo(
-; CHECK: .param .u32 .ptr .align 32 foo_param_2
-; CHECK: .param .u32 .ptr .align 1 foo_param_3
+; CHECK: .param .u64 .ptr .align 32 foo_param_2
+; CHECK: .param .u64 .ptr .align 1 foo_param_3
   ret void
 }
 

@@ -1,6 +1,6 @@
 ! Test how transformational intrinsic function references are lowered
 
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! The exact intrinsic being tested does not really matter, what is
 ! tested here is that transformational intrinsics are lowered correctly
@@ -192,7 +192,7 @@ end subroutine
   ! CHECK:         %[[VAL_63:.*]] = fir.embox %[[VAL_60]](%[[VAL_62]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
   ! CHECK:         fir.store %[[VAL_63]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   ! CHECK:         %[[VAL_64:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
-  ! CHECK:         %[[VAL_65:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
+  ! CHECK:         %[[VAL_65:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
   ! CHECK:         %[[VAL_66:.*]] = arith.constant {{[0-9]+}} : i32
   ! CHECK:         %[[VAL_67:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK:         %[[VAL_68:.*]] = fir.convert %[[VAL_59]] : (!fir.box<!fir.array<6xi32>>) -> !fir.box<none>

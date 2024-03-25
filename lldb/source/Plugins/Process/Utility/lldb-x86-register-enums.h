@@ -321,6 +321,197 @@ enum {
                                 k_num_mpx_registers_x86_64,
   k_num_dbr_registers_x86_64 = k_last_dbr_x86_64 - k_first_dbr_x86_64 + 1,
 };
+
+// For platform that supports fs_base/gs_base registers.
+namespace x86_64_with_base {
+enum {
+  k_first_gpr,
+  lldb_rax = k_first_gpr,
+  lldb_rbx,
+  lldb_rcx,
+  lldb_rdx,
+  lldb_rdi,
+  lldb_rsi,
+  lldb_rbp,
+  lldb_rsp,
+  lldb_r8,
+  lldb_r9,
+  lldb_r10,
+  lldb_r11,
+  lldb_r12,
+  lldb_r13,
+  lldb_r14,
+  lldb_r15,
+  lldb_rip,
+  lldb_rflags,
+  lldb_cs,
+  lldb_fs,
+  lldb_gs,
+  lldb_ss,
+  lldb_fs_base,
+  lldb_gs_base,
+  lldb_ds,
+  lldb_es,
+
+  k_first_alias,
+  lldb_eax = k_first_alias,
+  lldb_ebx,
+  lldb_ecx,
+  lldb_edx,
+  lldb_edi,
+  lldb_esi,
+  lldb_ebp,
+  lldb_esp,
+  lldb_r8d,  // Low 32 bits of r8
+  lldb_r9d,  // Low 32 bits of r9
+  lldb_r10d, // Low 32 bits of r10
+  lldb_r11d, // Low 32 bits of r11
+  lldb_r12d, // Low 32 bits of r12
+  lldb_r13d, // Low 32 bits of r13
+  lldb_r14d, // Low 32 bits of r14
+  lldb_r15d, // Low 32 bits of r15
+  lldb_ax,
+  lldb_bx,
+  lldb_cx,
+  lldb_dx,
+  lldb_di,
+  lldb_si,
+  lldb_bp,
+  lldb_sp,
+  lldb_r8w,  // Low 16 bits of r8
+  lldb_r9w,  // Low 16 bits of r9
+  lldb_r10w, // Low 16 bits of r10
+  lldb_r11w, // Low 16 bits of r11
+  lldb_r12w, // Low 16 bits of r12
+  lldb_r13w, // Low 16 bits of r13
+  lldb_r14w, // Low 16 bits of r14
+  lldb_r15w, // Low 16 bits of r15
+  lldb_ah,
+  lldb_bh,
+  lldb_ch,
+  lldb_dh,
+  lldb_al,
+  lldb_bl,
+  lldb_cl,
+  lldb_dl,
+  lldb_dil,
+  lldb_sil,
+  lldb_bpl,
+  lldb_spl,
+  lldb_r8l,  // Low 8 bits of r8
+  lldb_r9l,  // Low 8 bits of r9
+  lldb_r10l, // Low 8 bits of r10
+  lldb_r11l, // Low 8 bits of r11
+  lldb_r12l, // Low 8 bits of r12
+  lldb_r13l, // Low 8 bits of r13
+  lldb_r14l, // Low 8 bits of r14
+  lldb_r15l, // Low 8 bits of r15
+  k_last_alias = lldb_r15l,
+
+  k_last_gpr = k_last_alias,
+
+  k_first_fpr,
+  lldb_fctrl = k_first_fpr,
+  lldb_fstat,
+  lldb_ftag,
+  lldb_fop,
+  lldb_fiseg,
+  lldb_fioff,
+  lldb_fip,
+  lldb_foseg,
+  lldb_fooff,
+  lldb_fdp,
+  lldb_mxcsr,
+  lldb_mxcsrmask,
+  lldb_st0,
+  lldb_st1,
+  lldb_st2,
+  lldb_st3,
+  lldb_st4,
+  lldb_st5,
+  lldb_st6,
+  lldb_st7,
+  lldb_mm0,
+  lldb_mm1,
+  lldb_mm2,
+  lldb_mm3,
+  lldb_mm4,
+  lldb_mm5,
+  lldb_mm6,
+  lldb_mm7,
+  lldb_xmm0,
+  lldb_xmm1,
+  lldb_xmm2,
+  lldb_xmm3,
+  lldb_xmm4,
+  lldb_xmm5,
+  lldb_xmm6,
+  lldb_xmm7,
+  lldb_xmm8,
+  lldb_xmm9,
+  lldb_xmm10,
+  lldb_xmm11,
+  lldb_xmm12,
+  lldb_xmm13,
+  lldb_xmm14,
+  lldb_xmm15,
+  k_last_fpr = lldb_xmm15,
+
+  k_first_avx,
+  lldb_ymm0 = k_first_avx,
+  lldb_ymm1,
+  lldb_ymm2,
+  lldb_ymm3,
+  lldb_ymm4,
+  lldb_ymm5,
+  lldb_ymm6,
+  lldb_ymm7,
+  lldb_ymm8,
+  lldb_ymm9,
+  lldb_ymm10,
+  lldb_ymm11,
+  lldb_ymm12,
+  lldb_ymm13,
+  lldb_ymm14,
+  lldb_ymm15,
+  k_last_avx = lldb_ymm15,
+
+  k_first_mpxr,
+  lldb_bnd0 = k_first_mpxr,
+  lldb_bnd1,
+  lldb_bnd2,
+  lldb_bnd3,
+  k_last_mpxr = lldb_bnd3,
+
+  k_first_mpxc,
+  lldb_bndcfgu = k_first_mpxc,
+  lldb_bndstatus,
+  k_last_mpxc = lldb_bndstatus,
+
+  k_first_dbr,
+  lldb_dr0 = k_first_dbr,
+  lldb_dr1,
+  lldb_dr2,
+  lldb_dr3,
+  lldb_dr4,
+  lldb_dr5,
+  lldb_dr6,
+  lldb_dr7,
+  k_last_dbr = lldb_dr7,
+
+  k_num_registers,
+  k_num_gpr_registers = k_last_gpr - k_first_gpr + 1,
+  k_num_fpr_registers = k_last_fpr - k_first_fpr + 1,
+  k_num_avx_registers = k_last_avx - k_first_avx + 1,
+  k_num_mpx_registers = k_last_mpxc - k_first_mpxr + 1,
+  k_num_user_registers = k_num_gpr_registers +
+                                k_num_fpr_registers +
+                                k_num_avx_registers +
+                                k_num_mpx_registers,
+  k_num_dbr_registers = k_last_dbr - k_first_dbr + 1,
+};
+} // namespace x86_64_with_base
+
 }
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LLDB_X86_REGISTER_ENUMS_H

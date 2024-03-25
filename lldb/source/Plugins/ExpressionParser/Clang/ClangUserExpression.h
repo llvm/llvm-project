@@ -51,12 +51,15 @@ public:
 
   enum { kDefaultTimeout = 500000u };
 
-  class ClangUserExpressionHelper : public ClangExpressionHelper {
+  class ClangUserExpressionHelper
+      : public llvm::RTTIExtends<ClangUserExpressionHelper,
+                                 ClangExpressionHelper> {
   public:
+    // LLVM RTTI support
+    static char ID;
+
     ClangUserExpressionHelper(Target &target, bool top_level)
         : m_target(target), m_top_level(top_level) {}
-
-    ~ClangUserExpressionHelper() override = default;
 
     /// Return the object that the parser should use when resolving external
     /// values.  May be NULL if everything should be self-contained.
@@ -201,7 +204,7 @@ private:
                         bool for_completion);
 
   lldb::addr_t GetCppObjectPointer(lldb::StackFrameSP frame,
-                                   ConstString &object_name, Status &err);
+                                   llvm::StringRef object_name, Status &err);
 
   /// Defines how the current expression should be wrapped.
   ClangExpressionSourceCode::WrapKind GetWrapKind() const;

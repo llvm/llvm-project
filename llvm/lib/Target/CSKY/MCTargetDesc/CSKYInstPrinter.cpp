@@ -113,7 +113,7 @@ void CSKYInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
 
     if (Reg == CSKY::C)
       O << "";
-    else if (STI.getFeatureBits()[CSKY::FeatureJAVA]) {
+    else if (STI.hasFeature(CSKY::FeatureJAVA)) {
       if (Reg == CSKY::R23)
         O << (useABIName ? "fp" : "r23");
       else if (Reg == CSKY::R24)

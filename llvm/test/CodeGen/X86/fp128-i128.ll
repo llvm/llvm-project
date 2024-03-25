@@ -130,42 +130,30 @@ entry:
 define fp128 @TestI128_1(fp128 %x) #0 {
 ; SSE-LABEL: TestI128_1:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    subq $40, %rsp
-; SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; SSE-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
-; SSE-NEXT:    andq {{[0-9]+}}(%rsp), %rax
-; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
-; SSE-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; SSE-NEXT:    movq %rcx, (%rsp)
-; SSE-NEXT:    movaps (%rsp), %xmm0
-; SSE-NEXT:    movaps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1.00000000000000000000000000000000005E-1]
 ; SSE-NEXT:    callq __lttf2@PLT
 ; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    sets %cl
-; SSE-NEXT:    shlq $4, %rcx
-; SSE-NEXT:    movaps {{\.?LCPI[0-9]+_[0-9]+}}(%rcx), %xmm0
-; SSE-NEXT:    addq $40, %rsp
+; SSE-NEXT:    shll $4, %ecx
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [?]
+; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: TestI128_1:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    subq $40, %rsp
-; AVX-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp)
-; AVX-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
-; AVX-NEXT:    andq {{[0-9]+}}(%rsp), %rax
-; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
-; AVX-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; AVX-NEXT:    movq %rcx, (%rsp)
-; AVX-NEXT:    vmovaps (%rsp), %xmm0
-; AVX-NEXT:    vmovaps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [1.00000000000000000000000000000000005E-1]
 ; AVX-NEXT:    callq __lttf2@PLT
 ; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    testl %eax, %eax
 ; AVX-NEXT:    sets %cl
-; AVX-NEXT:    shlq $4, %rcx
-; AVX-NEXT:    vmovaps {{\.?LCPI[0-9]+_[0-9]+}}(%rcx), %xmm0
-; AVX-NEXT:    addq $40, %rsp
+; AVX-NEXT:    shll $4, %ecx
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [?]
+; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    retq
 entry:
   %0 = bitcast fp128 %x to i128
@@ -236,7 +224,7 @@ define fp128 @TestI128_3(fp128 %x, ptr nocapture readnone %ex) #0 {
 ; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; SSE-NEXT:    jmp .LBB4_3
 ; SSE-NEXT:  .LBB4_2: # %if.then
-; SSE-NEXT:    movaps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    movaps {{.*#+}} xmm1 = [5.36312317197703883982960999928233845E+154]
 ; SSE-NEXT:    callq __multf3@PLT
 ; SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
@@ -263,7 +251,7 @@ define fp128 @TestI128_3(fp128 %x, ptr nocapture readnone %ex) #0 {
 ; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; AVX-NEXT:    jmp .LBB4_3
 ; AVX-NEXT:  .LBB4_2: # %if.then
-; AVX-NEXT:    vmovaps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [5.36312317197703883982960999928233845E+154]
 ; AVX-NEXT:    callq __multf3@PLT
 ; AVX-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp)
 ; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rcx

@@ -8,13 +8,16 @@ on:
     branches:
       - 'release/**'
 
+permissions:
+  contents: read
+
 jobs:
   version_check:
     if: github.repository_owner == 'llvm'
     runs-on: ubuntu-latest
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -25,4 +28,4 @@ jobs:
       - name: Version Check
         run: |
           version=$(grep -o 'LLVM_VERSION_\(MAJOR\|MINOR\|PATCH\) [0-9]\+' llvm/CMakeLists.txt  | cut -d ' ' -f 2 | tr "\n" "." | sed 's/.$//g')
-          .github/workflows/version-check.py $version
+          .github/workflows/version-check.py "$version"

@@ -38,9 +38,8 @@ class SymbolTable {
 public:
   Defined *addDefined(StringRef name, InputFile *, InputSection *,
                       uint64_t value, uint64_t size, bool isWeakDef,
-                      bool isPrivateExtern, bool isThumb,
-                      bool isReferencedDynamically, bool noDeadStrip,
-                      bool isWeakDefCanBeHidden);
+                      bool isPrivateExtern, bool isReferencedDynamically,
+                      bool noDeadStrip, bool isWeakDefCanBeHidden);
 
   Defined *aliasDefined(Defined *src, StringRef target, InputFile *newFile,
                         bool makePrivateExtern = false);

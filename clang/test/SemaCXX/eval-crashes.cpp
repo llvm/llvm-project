@@ -29,7 +29,7 @@ namespace pr33140_2 {
   // temporaries.
   struct A { int &&r = 0; }; // expected-note 2{{initializing field 'r' with default member initializer}}
   struct B { A x, y; };
-  B b = {}; // expected-warning 2{{not supported}}
+  B b = {}; // expected-warning 2{{lifetime extension of temporary created by aggregate initialization using a default member initializer is not yet supported}}
 }
 
 namespace pr33140_3 {
@@ -53,4 +53,11 @@ namespace pr33140_6 {
 namespace pr33140_10 {
   int a(const int &n = 0);
   bool b() { return a() == a(); }
+}
+
+namespace GH67317 {
+struct array {
+  int (&data)[2];
+  array() : data(*new int[1][2]) {}
+};
 }

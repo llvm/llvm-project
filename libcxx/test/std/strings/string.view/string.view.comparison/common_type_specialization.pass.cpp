@@ -10,7 +10,7 @@
 
 // During the review D130295 it was noticed libc++'s implementation uses
 // std::common_type. When users specialize this template for their own types the
-// comparisions would fail. This tests with a specialized std::common_type.
+// comparisons would fail. This tests with a specialized std::common_type.
 
 // <string_view>
 
@@ -32,7 +32,7 @@ struct std::char_traits<char_wrapper> {
 
   static bool eq(char_wrapper lhs, char_wrapper rhs) { return lhs.c == rhs.c; }
 
-  static size_t length(const char_wrapper* a) {
+  static std::size_t length(const char_wrapper* a) {
     static_assert(sizeof(char_wrapper) == 1, "strlen requires this");
     return std::strlen(reinterpret_cast<const char*>(a));
   }

@@ -49,7 +49,7 @@ using familiar concepts of compiler [Passes](Passes.md). Enabling an arbitrary
 set of passes on an arbitrary set of operations results in a significant scaling
 challenge, since each transformation must potentially take into account the
 semantics of any operation. MLIR addresses this complexity by allowing operation
-semantics to be described abstractly using [Traits](Traits.md) and
+semantics to be described abstractly using [Traits](Traits) and
 [Interfaces](Interfaces.md), enabling transformations to operate on operations
 more generically. Traits often describe verification constraints on valid IR,
 enabling complex invariants to be captured and checked. (see
@@ -77,10 +77,12 @@ func.func @mul(%A: tensor<100x?xf32>, %B: tensor<?x50xf32>) -> (tensor<100x50xf3
 
   // Allocate addressable "buffers" and copy tensors %A and %B into them.
   %A_m = memref.alloc(%n) : memref<100x?xf32>
-  memref.tensor_store %A to %A_m : memref<100x?xf32>
+  bufferization.materialize_in_destination %A in writable %A_m
+      : (tensor<100x?xf32>, memref<100x?xf32>) -> ()
 
   %B_m = memref.alloc(%n) : memref<?x50xf32>
-  memref.tensor_store %B to %B_m : memref<?x50xf32>
+  bufferization.materialize_in_destination %B in writable %B_m
+      : (tensor<?x50xf32>, memref<?x50xf32>) -> ()
 
   // Call function @multiply passing memrefs as arguments,
   // and getting returned the result of the multiplication.
@@ -188,7 +190,7 @@ toplevel := (operation | attribute-alias-def | type-alias-def)*
 
 The production `toplevel` is the top level production that is parsed by any parsing
 consuming the MLIR syntax. [Operations](#operations),
-[Attribute alises](#attribute-value-aliases), and [Type aliases](#type-aliases)
+[Attribute aliases](#attribute-value-aliases), and [Type aliases](#type-aliases)
 can be declared on the toplevel.
 
 ### Identifiers and keywords
@@ -207,7 +209,7 @@ symbol-ref-id ::= `@` (suffix-id | string-literal) (`::` symbol-ref-id)?
 value-id-list ::= value-id (`,` value-id)*
 
 // Uses of value, e.g. in an operand list to an operation.
-value-use ::= value-id
+value-use ::= value-id (`#` decimal-literal)?
 value-use-list ::= value-use (`,` value-use)*
 ```
 
@@ -232,7 +234,7 @@ their regions. For instance, the scope of values in a region with
 [SSA control flow semantics](#control-flow-and-ssacfg-regions) is constrained
 according to the standard definition of
 [SSA dominance](https://en.wikipedia.org/wiki/Dominator_\(graph_theory\)).
-Another example is the [IsolatedFromAbove trait](Traits.md/#isolatedfromabove),
+Another example is the [IsolatedFromAbove trait](Traits/#isolatedfromabove),
 which restricts directly accessing values defined in containing regions.
 
 Function identifiers and mapping identifiers are associated with
@@ -287,18 +289,20 @@ GPUs), and are required to align with the LLVM definition of these intrinsics.
 Syntax:
 
 ```
-operation            ::= op-result-list? (generic-operation | custom-operation)
-                         trailing-location?
-generic-operation    ::= string-literal `(` value-use-list? `)`  successor-list?
-                         region-list? dictionary-attribute? `:` function-type
-custom-operation     ::= bare-id custom-operation-format
-op-result-list       ::= op-result (`,` op-result)* `=`
-op-result            ::= value-id (`:` integer-literal)
-successor-list       ::= `[` successor (`,` successor)* `]`
-successor            ::= caret-id (`:` block-arg-list)?
-region-list          ::= `(` region (`,` region)* `)`
-dictionary-attribute ::= `{` (attribute-entry (`,` attribute-entry)*)? `}`
-trailing-location    ::= (`loc` `(` location `)`)?
+operation             ::= op-result-list? (generic-operation | custom-operation)
+                          trailing-location?
+generic-operation     ::= string-literal `(` value-use-list? `)`  successor-list?
+                          dictionary-properties? region-list? dictionary-attribute?
+                          `:` function-type
+custom-operation      ::= bare-id custom-operation-format
+op-result-list        ::= op-result (`,` op-result)* `=`
+op-result             ::= value-id (`:` integer-literal)?
+successor-list        ::= `[` successor (`,` successor)* `]`
+successor             ::= caret-id (`:` block-arg-list)?
+dictionary-properties ::= `<` dictionary-attribute `>`
+region-list           ::= `(` region (`,` region)* `)`
+dictionary-attribute  ::= `{` (attribute-entry (`,` attribute-entry)*)? `}`
+trailing-location     ::= `loc` `(` location `)`
 ```
 
 MLIR introduces a uniform concept called *operations* to enable describing many
@@ -312,9 +316,10 @@ semantics. For example, MLIR supports
 The internal representation of an operation is simple: an operation is
 identified by a unique string (e.g. `dim`, `tf.Conv2d`, `x86.repmovsb`,
 `ppc.eieio`, etc), can return zero or more results, take zero or more operands,
-has a dictionary of [attributes](#attributes), has zero or more successors, and
-zero or more enclosed [regions](#regions). The generic printing form includes
-all these elements literally, with a function type to indicate the types of the
+has storage for [properties](#properties), has a dictionary of
+[attributes](#attributes), has zero or more successors, and zero or more
+enclosed [regions](#regions). The generic printing form includes all these
+elements literally, with a function type to indicate the types of the
 results and operands.
 
 Example:
@@ -328,8 +333,11 @@ Example:
 %foo, %bar = "foo_div"() : () -> (f32, i32)
 
 // Invoke a TensorFlow function called tf.scramble with two inputs
-// and an attribute "fruit".
-%2 = "tf.scramble"(%result#0, %bar) {fruit = "banana"} : (f32, i32) -> f32
+// and an attribute "fruit" stored in properties.
+%2 = "tf.scramble"(%result#0, %bar) <{fruit = "banana"}> : (f32, i32) -> f32
+
+// Invoke an operation with some discardable attributes
+%foo, %bar = "foo_div"() {some_attr = "value", other_attr = 42 : i64} : () -> (f32, i32)
 ```
 
 In addition to the basic syntax above, dialects may register known operations.
@@ -470,7 +478,7 @@ the enclosing region, if any. By default, operations inside a region can
 reference values defined outside of the region whenever it would have been legal
 for operands of the enclosing operation to reference those values, but this can
 be restricted using traits, such as
-[OpTrait::IsolatedFromAbove](Traits.md/#isolatedfromabove), or a custom
+[OpTrait::IsolatedFromAbove](Traits/#isolatedfromabove), or a custom
 verifier.
 
 Example:
@@ -656,8 +664,8 @@ function-type ::= (type | type-list-parens) `->` (type | type-list-parens)
 ### Type Aliases
 
 ```
-type-alias-def ::= '!' alias-name '=' type
-type-alias ::= '!' alias-name
+type-alias-def ::= `!` alias-name `=` type
+type-alias ::= `!` alias-name
 ```
 
 MLIR supports defining named aliases for types. A type alias is an identifier
@@ -685,18 +693,18 @@ system.
 ```
 dialect-namespace ::= bare-id
 
-dialect-type ::= '!' (opaque-dialect-type | pretty-dialect-type)
+dialect-type ::= `!` (opaque-dialect-type | pretty-dialect-type)
 opaque-dialect-type ::= dialect-namespace dialect-type-body
-pretty-dialect-type ::= dialect-namespace '.' pretty-dialect-type-lead-ident
+pretty-dialect-type ::= dialect-namespace `.` pretty-dialect-type-lead-ident
                                               dialect-type-body?
-pretty-dialect-type-lead-ident ::= '[A-Za-z][A-Za-z0-9._]*'
+pretty-dialect-type-lead-ident ::= `[A-Za-z][A-Za-z0-9._]*`
 
-dialect-type-body ::= '<' dialect-type-contents+ '>'
+dialect-type-body ::= `<` dialect-type-contents+ `>`
 dialect-type-contents ::= dialect-type-body
-                            | '(' dialect-type-contents+ ')'
-                            | '[' dialect-type-contents+ ']'
-                            | '{' dialect-type-contents+ '}'
-                            | '[^\[<({\]>)}\0]+'
+                            | `(` dialect-type-contents+ `)`
+                            | `[` dialect-type-contents+ `]`
+                            | `{` dialect-type-contents+ `}`
+                            | [^\[<({\]>)}\0]+
 ```
 
 Dialect types are generally specified in an opaque form, where the contents
@@ -733,6 +741,15 @@ The [builtin dialect](Dialects/Builtin.md) defines a set of types that are
 directly usable by any other dialect in MLIR. These types cover a range from
 primitive integer and floating-point types, function types, and more.
 
+## Properties
+
+Properties are extra data members stored directly on an Operation class. They
+provide a way to store [inherent attributes](#attributes) and other arbitrary
+data. The semantics of the data is specific to a given operation, and may be
+exposed through [Interfaces](Interfaces.md) accessors and other methods.
+Properties can always be serialized to Attribute in order to be printed
+generically.
+
 ## Attributes
 
 Syntax:
@@ -751,9 +768,10 @@ values. MLIR's builtin dialect provides a rich set of
 arrays, dictionaries, strings, etc.). Additionally, dialects can define their
 own [dialect attribute values](#dialect-attribute-values).
 
-The top-level attribute dictionary attached to an operation has special
-semantics. The attribute entries are considered to be of two different kinds
-based on whether their dictionary key has a dialect prefix:
+For dialects which haven't adopted properties yet, the top-level attribute
+dictionary attached to an operation has special semantics. The attribute
+entries are considered to be of two different kinds based on whether their
+dictionary key has a dialect prefix:
 
 -   *inherent attributes* are inherent to the definition of an operation's
     semantics. The operation itself is expected to verify the consistency of
@@ -771,11 +789,15 @@ Note that attribute values are allowed to themselves be dictionary attributes,
 but only the top-level dictionary attribute attached to the operation is subject
 to the classification above.
 
+When properties are adopted, only discardable attributes are stored in the
+top-level dictionary, while inherent attributes are stored in the properties
+storage.
+
 ### Attribute Value Aliases
 
 ```
-attribute-alias-def ::= '#' alias-name '=' attribute-value
-attribute-alias ::= '#' alias-name
+attribute-alias-def ::= `#` alias-name `=` attribute-value
+attribute-alias ::= `#` alias-name
 ```
 
 MLIR supports defining named aliases for attribute values. An attribute alias is
@@ -803,18 +825,18 @@ Similarly to operations, dialects may define custom attribute values.
 ```
 dialect-namespace ::= bare-id
 
-dialect-attribute ::= '#' (opaque-dialect-attribute | pretty-dialect-attribute)
+dialect-attribute ::= `#` (opaque-dialect-attribute | pretty-dialect-attribute)
 opaque-dialect-attribute ::= dialect-namespace dialect-attribute-body
-pretty-dialect-attribute ::= dialect-namespace '.' pretty-dialect-attribute-lead-ident
+pretty-dialect-attribute ::= dialect-namespace `.` pretty-dialect-attribute-lead-ident
                                               dialect-attribute-body?
-pretty-dialect-attribute-lead-ident ::= '[A-Za-z][A-Za-z0-9._]*'
+pretty-dialect-attribute-lead-ident ::= `[A-Za-z][A-Za-z0-9._]*`
 
-dialect-attribute-body ::= '<' dialect-attribute-contents+ '>'
+dialect-attribute-body ::= `<` dialect-attribute-contents+ `>`
 dialect-attribute-contents ::= dialect-attribute-body
-                            | '(' dialect-attribute-contents+ ')'
-                            | '[' dialect-attribute-contents+ ']'
-                            | '{' dialect-attribute-contents+ '}'
-                            | '[^\[<({\]>)}\0]+'
+                            | `(` dialect-attribute-contents+ `)`
+                            | `[` dialect-attribute-contents+ `]`
+                            | `{` dialect-attribute-contents+ `}`
+                            | [^\[<({\]>)}\0]+
 ```
 
 Dialect attributes are generally specified in an opaque form, where the contents
@@ -845,3 +867,18 @@ The [builtin dialect](Dialects/Builtin.md) defines a set of attribute values
 that are directly usable by any other dialect in MLIR. These types cover a range
 from primitive integer and floating-point values, attribute dictionaries, dense
 multi-dimensional arrays, and more.
+
+### IR Versioning
+
+A dialect can opt-in to handle versioning through the
+`BytecodeDialectInterface`. Few hooks are exposed to the dialect to allow
+managing a version encoded into the bytecode file. The version is loaded lazily
+and allows to retrieve the version information while parsing the input IR, and
+gives an opportunity to each dialect for which a version is present to perform
+IR upgrades post-parsing through the `upgradeFromVersion` method. Custom
+Attribute and Type encodings can also be upgraded according to the dialect
+version using readAttribute and readType methods.
+
+There is no restriction on what kind of information a dialect is allowed to
+encode to model its versioning. Currently, versioning is supported only for
+bytecode formats.

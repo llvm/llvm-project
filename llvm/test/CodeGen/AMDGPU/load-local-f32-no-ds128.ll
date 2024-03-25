@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=-enable-ds128 < %s | FileCheck -check-prefixes=SI,GCN %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-enable-ds128 < %s | FileCheck -check-prefixes=CIVI,GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-enable-ds128 < %s | FileCheck -check-prefixes=CIVI,GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -mattr=-enable-ds128 < %s | FileCheck -check-prefixes=SI,GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-enable-ds128 < %s | FileCheck -check-prefixes=CIVI,GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-enable-ds128 < %s | FileCheck -check-prefixes=CIVI,GCN %s
 
 ; Test if ds_read/write_b128 doesn't gets generated when the option is
 ; disabled.

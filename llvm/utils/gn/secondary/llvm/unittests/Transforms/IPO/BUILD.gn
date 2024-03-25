@@ -9,6 +9,7 @@ unittest("IPOTests") {
   ]
   sources = [
     "AttributorTest.cpp",
+    "FunctionSpecializationTest.cpp",
     "LowerTypeTests.cpp",
     "WholeProgramDevirt.cpp",
   ]

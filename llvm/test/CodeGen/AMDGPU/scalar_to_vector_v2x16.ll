@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-OPT %s
-; RUN: llc -march=amdgcn -mcpu=fiji -O0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-NOOPT %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-OPT %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -O0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-NOOPT %s
 
 ; GCN-LABEL: {{^}}scalar_to_vector_i16:
 ; GCN-NOOPT: s_mov_b32 [[S:s[0-9]+]], 42

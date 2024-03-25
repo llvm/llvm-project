@@ -58,12 +58,12 @@ for the post register allocation pseudo instruction expansion pass, you can
 specify the machine copy propagation pass in the ``-stop-after`` option, as it
 runs just before the pass that we are trying to test:
 
-   ``llc -stop-after=machine-cp bug-trigger.ll > test.mir``
+   ``llc -stop-after=machine-cp bug-trigger.ll -o test.mir``
 
 If the same pass is run multiple times, a run index can be included
 after the name with a comma.
 
-   ``llc -stop-after=dead-mi-elimination,1 bug-trigger.ll > test.mir``
+   ``llc -stop-after=dead-mi-elimination,1 bug-trigger.ll -o test.mir``
 
 After generating the input MIR file, you'll have to add a run line that uses
 the ``-run-pass`` option to it. In order to test the post register allocation

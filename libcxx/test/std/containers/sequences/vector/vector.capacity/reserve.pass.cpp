@@ -51,7 +51,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
     if (!TEST_IS_CONSTANT_EVALUATED) {
         std::vector<int> v;
-        size_t sz = v.max_size() + 1;
+        std::size_t sz = v.max_size() + 1;
 
         try {
             v.reserve(sz);
@@ -64,8 +64,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     if (!TEST_IS_CONSTANT_EVALUATED) {
         std::vector<int> v(10, 42);
         int* previous_data = v.data();
-        size_t previous_capacity = v.capacity();
-        size_t sz = v.max_size() + 1;
+        std::size_t previous_capacity = v.capacity();
+        std::size_t sz = v.max_size() + 1;
 
         try {
             v.reserve(sz);
@@ -98,6 +98,23 @@ TEST_CONSTEXPR_CXX20 bool tests() {
         assert(v.size() == 100);
         assert(v.capacity() == 150);
         assert(is_contiguous_container_asan_correct(v));
+    }
+    {
+      std::vector<int, safe_allocator<int>> v;
+      v.reserve(10);
+      assert(v.capacity() >= 10);
+      assert(is_contiguous_container_asan_correct(v));
+    }
+    {
+      std::vector<int, safe_allocator<int>> v(100);
+      assert(v.capacity() == 100);
+      v.reserve(50);
+      assert(v.size() == 100);
+      assert(v.capacity() == 100);
+      v.reserve(150);
+      assert(v.size() == 100);
+      assert(v.capacity() == 150);
+      assert(is_contiguous_container_asan_correct(v));
     }
 #endif
 #ifndef TEST_HAS_NO_EXCEPTIONS

@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy -std=c++11,c++14 %s cert-err60-cpp %t -- -- -fcxx-exceptions
 // FIXME: Split off parts of this test that rely on dynamic exception
 // specifications, and run this test in all language modes.
-
+// FIXME: Fix the checker to work in C++17 or later mode.
 struct S {};
 struct T : S {};
 struct U {

@@ -1,4 +1,4 @@
-; RUN: opt -march=hexagon < %s -hexagon-vlcr -adce -S | FileCheck %s
+; RUN: opt -mtriple hexagon-- -passes='loop(hexagon-vlcr),adce' -S %s | FileCheck %s
 
 ; CHECK: %v32.hexagon.vlcr = tail call <32 x i32> @llvm.hexagon.V6.vmaxub.128B
 

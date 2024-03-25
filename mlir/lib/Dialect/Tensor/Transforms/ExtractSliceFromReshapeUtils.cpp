@@ -23,28 +23,8 @@
 #include "llvm/ADT/STLExtras.h"
 
 using namespace mlir;
+using namespace mlir::affine;
 using namespace mlir::tensor;
-
-/// Get the dimension size of a value of RankedTensor type at the
-static OpFoldResult getShapeDimSize(OpBuilder &b, Location loc,
-                                    Value rankedTensor, int64_t dimIdx) {
-  RankedTensorType tensorType = rankedTensor.getType().cast<RankedTensorType>();
-  if (!tensorType.isDynamicDim(dimIdx)) {
-    return b.getIndexAttr(tensorType.getDimSize(dimIdx));
-  }
-  Value idxValue = b.create<arith::ConstantIndexOp>(loc, dimIdx);
-  return b.createOrFold<tensor::DimOp>(loc, rankedTensor, idxValue);
-}
-
-/// Get all the dimension sizes of a value of RankedTensor type.
-static SmallVector<OpFoldResult> getShapeDimSizes(OpBuilder &b, Location loc,
-                                                  Value rankedTensor) {
-  SmallVector<OpFoldResult> dimSizes;
-  RankedTensorType tensorType = rankedTensor.getType().cast<RankedTensorType>();
-  for (unsigned i = 0; i < tensorType.getRank(); i++)
-    dimSizes.push_back(getShapeDimSize(b, loc, rankedTensor, i));
-  return dimSizes;
-}
 
 /// A tuple that represents (dimension number, dimension value).
 using DimAndIndex = std::tuple<unsigned, Value>;
@@ -60,12 +40,9 @@ static DimAndIndex invertSliceIndexing(OpBuilder &b, Location loc,
   auto [dim, indexValue] = dimAndIndex;
   assert(dim < sliceParams.size() && "slice should be non rank-reducing");
   return std::make_pair(
-      dim,
-      makeComposedAffineApply(
-          b, loc, s0 + d0 * s1,
-          {indexValue,
-           getValueOrCreateConstantIndexOp(b, loc, sliceParams[dim].offset),
-           getValueOrCreateConstantIndexOp(b, loc, sliceParams[dim].stride)}));
+      dim, affine::makeComposedAffineApply(
+               b, loc, s0 + d0 * s1,
+               {indexValue, sliceParams[dim].offset, sliceParams[dim].stride}));
 }
 
 /// Transform `dimAndIndex` from the result tensor index space of a
@@ -112,12 +89,9 @@ tensor::ExtractSliceFromCollapseHelper::create(OpBuilder &b,
   // Materialize the output shape of the collapse_shape operation. This will
   // create IR describing the output shape in terms of the input shape.
   ReifiedRankedShapedTypeDims reifiedShapes;
-  ReifyRankedShapedTypeOpInterface reifyShapedTypeInterface =
-      dyn_cast<ReifyRankedShapedTypeOpInterface>(op.getOperation());
-  if (failed(reifyShapedTypeInterface.reifyResultShapes(b, reifiedShapes)))
+  if (failed(reifyResultShapes(b, op, reifiedShapes)))
     return failure();
-  SmallVector<OpFoldResult> collapseShapeOutputShape =
-      getAsOpFoldResult(reifiedShapes[0]);
+  SmallVector<OpFoldResult> &collapseShapeOutputShape = reifiedShapes[0];
   SmallVector<ReassociationIndices> reassociationIndices =
       op.getReassociationIndices();
 
@@ -128,7 +102,8 @@ tensor::ExtractSliceFromCollapseHelper::create(OpBuilder &b,
   llvm::SmallBitVector slicedDimensions =
       getSlicedDimensions(collapseShapeOutputShape, sliceParams);
 
-  auto collapseShapeInputShape = getShapeDimSizes(b, op.getLoc(), op.getSrc());
+  auto collapseShapeInputShape =
+      tensor::getMixedSizes(b, op.getLoc(), op.getSrc());
 
   SmallVector<Value> tileSizes;
   for (unsigned i = 0; i < sliceParams.size(); i++) {
@@ -198,7 +173,7 @@ tensor::simplifyCollapseShapeWithRankReducingExtractSlice(
   auto one = rewriter.getIndexAttr(1);
   SmallVector<OpFoldResult> offsets(sourceType.getRank(), zero);
   SmallVector<OpFoldResult> sizes =
-      getShapeDimSizes(rewriter, op.getLoc(), op.getSrc());
+      tensor::getMixedSizes(rewriter, op.getLoc(), op.getSrc());
   SmallVector<OpFoldResult> strides(sourceType.getRank(), one);
   auto sliceOp = rewriter.create<tensor::ExtractSliceOp>(
       op.getLoc(), info->sliceResultType, op.getSrc(), offsets, sizes, strides);

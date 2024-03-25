@@ -24,6 +24,14 @@ RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/op-convert
 RUN: llvm-dwarfdump %p/../Inputs/private/tmp/op-convert-offset/op-convert-offset.o 2>&1 | FileCheck %s --check-prefix OBJ
 RUN: llvm-dwarfdump %t.dSYM 2>&1 | FileCheck %s --check-prefix DSYM
 
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs \
+RUN:  %p/../Inputs/private/tmp/op-convert-offset/op-convert-offset \
+RUN:  -o %t.dSYM 2>&1
+RUN: llvm-dwarfdump \
+RUN:   %p/../Inputs/private/tmp/op-convert-offset/op-convert-offset.o 2>&1 \
+RUN:   | FileCheck %s --check-prefix OBJ
+RUN: llvm-dwarfdump %t.dSYM 2>&1 | FileCheck %s --check-prefix DSYM
+
 OBJ: 0x0000007d:   DW_TAG_base_type
 OBJ:                 DW_AT_name      ("DW_ATE_unsigned_1")
 OBJ:                 DW_AT_encoding  (DW_ATE_unsigned)
@@ -34,12 +42,12 @@ OBJ:                   DW_AT_location        (DW_OP_breg2 RCX+0, DW_OP_constu 0x
 OBJ:                   DW_AT_name    ("b")
 OBJ:                   DW_AT_type    (0x000000af "_Bool")
 
-DSYM: 0x00000095:   DW_TAG_base_type
+DSYM: 0x00000084:   DW_TAG_base_type
 DSYM:                 DW_AT_name      ("DW_ATE_unsigned_1")
 DSYM:                 DW_AT_encoding  (DW_ATE_unsigned)
 DSYM:                 DW_AT_byte_size (0x01)
 
-DSYM: 0x000000bc:     DW_TAG_formal_parameter
-DSYM:                   DW_AT_location        (DW_OP_breg2 RCX+0, DW_OP_constu 0xff, DW_OP_and, DW_OP_convert (0x00000095) "DW_ATE_unsigned_1", DW_OP_convert (0x0000009c) "DW_ATE_unsigned_8", DW_OP_stack_value)
+DSYM: 0x0000009b:     DW_TAG_formal_parameter
+DSYM:                   DW_AT_location        (DW_OP_breg2 RCX+0, DW_OP_constu 0xff, DW_OP_and, DW_OP_convert (0x00000084) "DW_ATE_unsigned_1", DW_OP_convert (0x00000088) "DW_ATE_unsigned_8", DW_OP_stack_value)
 DSYM:                   DW_AT_name    ("b")
-DSYM:                   DW_AT_type    (0x000000da "_Bool")
+DSYM:                   DW_AT_type    ({{.*}} "_Bool")

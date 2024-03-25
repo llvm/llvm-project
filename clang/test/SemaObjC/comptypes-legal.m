@@ -36,7 +36,6 @@ void foo(void)
   [Derived registerFunc: ExternFunc];  // expected-error{{incompatible function pointer types sending 'NSObject *(NSObject *, NSObject *)' to parameter of type 'FuncSignature *' (aka 'id (*)(NSObject *, Derived *)')}}
 }
 
-// rdar://10751015
 @protocol NSCopying @end
 @interface I
 - (void) Meth : (id <NSCopying>)aKey; // expected-note {{passing argument to parameter 'aKey' here}}

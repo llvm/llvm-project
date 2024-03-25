@@ -72,6 +72,8 @@ int get_value(int *p) SHARED_LOCKS_REQUIRED(foo_.mu_){
   return *p;
 }
 
+void unlock_scope(struct Mutex *const *mu) __attribute__((release_capability(**mu)));
+
 int main(void) {
 
   Foo_fun1(1); // expected-warning{{calling function 'Foo_fun1' requires holding mutex 'mu2'}} \
@@ -126,6 +128,13 @@ int main(void) {
   mutex_exclusive_unlock(&mu1); // expected-warning {{releasing mutex 'mu1' using exclusive access, expected shared access}}
                                 // expected-note@-1{{mutex released here}}
   mutex_shared_unlock(&mu1);    // expected-warning {{releasing mutex 'mu1' that was not held}}
+
+  /// Cleanup functions
+  {
+    struct Mutex* const __attribute__((cleanup(unlock_scope))) scope = &mu1;
+    mutex_exclusive_lock(scope);  // Note that we have to lock through scope, because no alias analysis!
+    // Cleanup happens automatically -> no warning.
+  }
 
   return 0;
 }

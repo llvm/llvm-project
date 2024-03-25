@@ -6,14 +6,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-format
 
-// TODO FMT Fix this test using GCC, it currently times out.
-// UNSUPPORTED: gcc-12
-
-// This test requires the dylib support introduced in D92214.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{.+}}
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx11.{{.+}}
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // <format>
 
@@ -22,13 +16,14 @@
 // class range_formatter
 
 // constexpr void constexpr void set_brackets(basic_string_view<charT> opening,
-//                                            basic_string_view<charT> closing);
+//                                            basic_string_view<charT> closing) noexcept;
 
 // Note this tests the basics of this function. It's tested in more detail in
 // the format functions test.
 
 #include <format>
 #include <cassert>
+#include <iterator>
 #include <type_traits>
 #include <vector>
 
@@ -41,6 +36,8 @@ template <class CharT>
 constexpr void test_setter() {
   std::range_formatter<int, CharT> formatter;
   formatter.set_brackets(SV("open"), SV("close"));
+  // Note the SV macro may throw, so can't use it.
+  static_assert(noexcept(formatter.set_brackets(std::basic_string_view<CharT>{}, std::basic_string_view<CharT>{})));
 
   // Note there is no direct way to validate this function modified the object.
   if (!std::is_constant_evaluated()) {

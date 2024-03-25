@@ -38,10 +38,6 @@ public:
 
   virtual bool IsHardware() const = 0;
 
-  uint32_t GetHardwareIndex() const { return m_hardware_index; }
-
-  void SetHardwareIndex(uint32_t index) { m_hardware_index = index; }
-
   virtual bool ShouldStop(StoppointCallbackContext* context) = 0;
 
   virtual void Dump(Stream* stream) const = 0;
@@ -58,9 +54,6 @@ protected:
   /// True if this point is required to use hardware (which may fail due to
   /// the lack of resources).
   bool m_is_hardware_required;
-
-  /// The hardware resource index for this breakpoint/watchpoint.
-  uint32_t m_hardware_index;
 
   /// The size in bytes of stoppoint, e.g. the length of the trap opcode for
   /// software breakpoints, or the optional length in bytes for hardware

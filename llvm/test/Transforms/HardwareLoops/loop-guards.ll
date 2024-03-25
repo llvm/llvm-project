@@ -1,6 +1,6 @@
-; RUN: opt -hardware-loops -force-hardware-loops=true -hardware-loop-decrement=1 -hardware-loop-counter-bitwidth=32 -force-hardware-loop-guard=true -S %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-EXIT
-; RUN: opt -hardware-loops -force-hardware-loops=true -hardware-loop-decrement=1 -hardware-loop-counter-bitwidth=32 -force-hardware-loop-guard=true -force-hardware-loop-phi=true -S %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LATCH
-; RUN: opt -hardware-loops -force-hardware-loops=true -hardware-loop-decrement=1 -hardware-loop-counter-bitwidth=32 -force-hardware-loop-guard=false -S %s -o - | FileCheck %s --check-prefix=NO-GUARD
+; RUN: opt -passes='hardware-loops<force-hardware-loops;force-hardware-loop-guard;hardware-loop-decrement=1;hardware-loop-counter-bitwidth=32>' -S %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-EXIT
+; RUN: opt -passes='hardware-loops<force-hardware-loops;force-hardware-loop-guard;force-hardware-loop-phi;hardware-loop-decrement=1;hardware-loop-counter-bitwidth=32>' -S %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LATCH
+; RUN: opt -passes='hardware-loops<force-hardware-loops;hardware-loop-decrement=1;hardware-loop-counter-bitwidth=32>' -S %s -o - | FileCheck %s --check-prefix=NO-GUARD
 
 ; NO-GUARD-NOT: @llvm.test.set.loop.iterations
 

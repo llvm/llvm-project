@@ -9,7 +9,6 @@
 #ifndef PYTHON_BINDINGS_MEMREF_OPS
 #define PYTHON_BINDINGS_MEMREF_OPS
 
-include "mlir/Bindings/Python/Attributes.td"
 include "mlir/Dialect/MemRef/IR/MemRefOps.td"
 
 #endif

@@ -8,6 +8,7 @@
 
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Host/FileSystem.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Errno.h"
 #include <cassert>
@@ -95,7 +96,7 @@ llvm::Error PseudoTerminal::OpenSecondary(int oflag) {
   CloseSecondaryFileDescriptor();
 
   std::string name = GetSecondaryName();
-  m_secondary_fd = llvm::sys::RetryAfterSignal(-1, ::open, name.c_str(), oflag);
+  m_secondary_fd = FileSystem::Instance().Open(name.c_str(), oflag);
   if (m_secondary_fd >= 0)
     return llvm::Error::success();
 
@@ -122,7 +123,7 @@ std::string PseudoTerminal::GetSecondaryName() const {
     char buf[PATH_MAX];
     buf[0] = '\0';
     int r = ptsname_r(m_primary_fd, buf, sizeof(buf));
-    (void)r;
+    UNUSED_IF_ASSERT_DISABLED(r);
     assert(r == 0);
     return buf;
 #if defined(__APPLE__)

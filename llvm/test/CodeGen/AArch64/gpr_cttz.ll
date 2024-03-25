@@ -103,24 +103,24 @@ define i64 @cttz64(i64 %x) nounwind readnone {
 define i128 @cttz128(i128 %x) nounwind readnone {
 ; CHECK-LABEL: cttz128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rbit x9, x1
-; CHECK-NEXT:    rbit x8, x0
-; CHECK-NEXT:    clz x9, x9
-; CHECK-NEXT:    clz x8, x8
-; CHECK-NEXT:    add x9, x9, #64
+; CHECK-NEXT:    rbit x8, x1
+; CHECK-NEXT:    rbit x9, x0
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    csel x0, x8, x9, ne
 ; CHECK-NEXT:    mov x1, xzr
+; CHECK-NEXT:    clz x8, x8
+; CHECK-NEXT:    clz x9, x9
+; CHECK-NEXT:    add x8, x8, #64
+; CHECK-NEXT:    csel x0, x9, x8, ne
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-CSSC-LABEL: cttz128:
 ; CHECK-CSSC:       // %bb.0:
-; CHECK-CSSC-NEXT:    ctz x9, x1
-; CHECK-CSSC-NEXT:    ctz x8, x0
-; CHECK-CSSC-NEXT:    add x9, x9, #64
+; CHECK-CSSC-NEXT:    ctz x8, x1
+; CHECK-CSSC-NEXT:    ctz x9, x0
 ; CHECK-CSSC-NEXT:    cmp x0, #0
-; CHECK-CSSC-NEXT:    csel x0, x8, x9, ne
+; CHECK-CSSC-NEXT:    add x8, x8, #64
 ; CHECK-CSSC-NEXT:    mov x1, xzr
+; CHECK-CSSC-NEXT:    csel x0, x9, x8, ne
 ; CHECK-CSSC-NEXT:    ret
   %ctz = tail call i128 @llvm.cttz.i128(i128 %x)
   ret i128 %ctz

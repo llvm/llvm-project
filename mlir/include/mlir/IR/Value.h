@@ -90,6 +90,9 @@ protected:
 /// class has value-type semantics and is just a simple wrapper around a
 /// ValueImpl that is either owner by a block(in the case of a BlockArgument) or
 /// an Operation(in the case of an OpResult).
+/// As most IR constructs, this isn't const-correct, but we keep method
+/// consistent and as such method that immediately modify this Value aren't
+/// marked `const` (include modifying the Value use-list).
 class Value {
 public:
   constexpr Value(detail::ValueImpl *impl = nullptr) : impl(impl) {}
@@ -158,26 +161,25 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Drop all uses of this object from their respective owners.
-  void dropAllUses() const { return impl->dropAllUses(); }
+  void dropAllUses() { return impl->dropAllUses(); }
 
   /// Replace all uses of 'this' value with the new value, updating anything in
   /// the IR that uses 'this' to use the other value instead.  When this returns
   /// there are zero uses of 'this'.
-  void replaceAllUsesWith(Value newValue) const {
+  void replaceAllUsesWith(Value newValue) {
     impl->replaceAllUsesWith(newValue);
   }
 
   /// Replace all uses of 'this' value with 'newValue', updating anything in the
   /// IR that uses 'this' to use the other value instead except if the user is
   /// listed in 'exceptions' .
-  void
-  replaceAllUsesExcept(Value newValue,
-                       const SmallPtrSetImpl<Operation *> &exceptions) const;
+  void replaceAllUsesExcept(Value newValue,
+                            const SmallPtrSetImpl<Operation *> &exceptions);
 
   /// Replace all uses of 'this' value with 'newValue', updating anything in the
   /// IR that uses 'this' to use the other value instead except if the user is
   /// 'exceptedUser'.
-  void replaceAllUsesExcept(Value newValue, Operation *exceptedUser) const;
+  void replaceAllUsesExcept(Value newValue, Operation *exceptedUser);
 
   /// Replace all uses of 'this' value with 'newValue' if the given callback
   /// returns true.
@@ -185,7 +187,12 @@ public:
                          function_ref<bool(OpOperand &)> shouldReplace);
 
   /// Returns true if the value is used outside of the given block.
-  bool isUsedOutsideOfBlock(Block *block);
+  bool isUsedOutsideOfBlock(Block *block) const;
+
+  /// Shuffle the use list order according to the provided indices. It is
+  /// responsibility of the caller to make sure that the indices map the current
+  /// use-list chain to another valid use-list chain.
+  void shuffleUseList(ArrayRef<unsigned> indices);
 
   //===--------------------------------------------------------------------===//
   // Uses
@@ -219,13 +226,14 @@ public:
   //===--------------------------------------------------------------------===//
   // Utilities
 
-  void print(raw_ostream &os);
-  void print(raw_ostream &os, const OpPrintingFlags &flags);
-  void print(raw_ostream &os, AsmState &state);
-  void dump();
+  void print(raw_ostream &os) const;
+  void print(raw_ostream &os, const OpPrintingFlags &flags) const;
+  void print(raw_ostream &os, AsmState &state) const;
+  void dump() const;
 
   /// Print this value as if it were an operand.
-  void printAsOperand(raw_ostream &os, AsmState &state);
+  void printAsOperand(raw_ostream &os, AsmState &state) const;
+  void printAsOperand(raw_ostream &os, const OpPrintingFlags &flags) const;
 
   /// Methods for supporting PointerLikeTypeTraits.
   void *getAsOpaquePointer() const { return impl; }
@@ -261,6 +269,9 @@ public:
 
   /// Return which operand this is in the OpOperand list of the Operation.
   unsigned getOperandNumber();
+
+  /// Set the current value being used by this operand.
+  void assign(Value value) { set(value); }
 
 private:
   /// Keep the constructor private and accessible to the OperandStorage class
@@ -432,7 +443,7 @@ struct TypedValue : Value {
   static bool classof(Value value) { return llvm::isa<Ty>(value.getType()); }
 
   /// Return the known Type
-  Ty getType() { return Value::getType().template cast<Ty>(); }
+  Ty getType() const { return llvm::cast<Ty>(Value::getType()); }
   void setType(Ty ty) { Value::setType(ty); }
 };
 
@@ -523,6 +534,18 @@ struct DenseMapInfo<mlir::OpResult> : public DenseMapInfo<mlir::Value> {
     return reinterpret_cast<mlir::detail::OpResultImpl *>(pointer);
   }
 };
+template <typename T>
+struct DenseMapInfo<mlir::detail::TypedValue<T>>
+    : public DenseMapInfo<mlir::Value> {
+  static mlir::detail::TypedValue<T> getEmptyKey() {
+    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    return reinterpret_cast<mlir::detail::ValueImpl *>(pointer);
+  }
+  static mlir::detail::TypedValue<T> getTombstoneKey() {
+    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    return reinterpret_cast<mlir::detail::ValueImpl *>(pointer);
+  }
+};
 
 /// Allow stealing the low bits of a value.
 template <>
@@ -553,6 +576,14 @@ struct PointerLikeTypeTraits<mlir::OpResult>
 public:
   static inline mlir::OpResult getFromVoidPointer(void *pointer) {
     return reinterpret_cast<mlir::detail::OpResultImpl *>(pointer);
+  }
+};
+template <typename T>
+struct PointerLikeTypeTraits<mlir::detail::TypedValue<T>>
+    : public PointerLikeTypeTraits<mlir::Value> {
+public:
+  static inline mlir::detail::TypedValue<T> getFromVoidPointer(void *pointer) {
+    return reinterpret_cast<mlir::detail::ValueImpl *>(pointer);
   }
 };
 

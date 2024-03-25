@@ -24,14 +24,14 @@ target triple = "bpf"
 %union.v1 = type { i32 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @test(%union.v3* %arg) local_unnamed_addr #0 !dbg !15 {
+define dso_local i32 @test(ptr %arg) local_unnamed_addr #0 !dbg !15 {
 entry:
-  call void @llvm.dbg.value(metadata %union.v3* %arg, metadata !33, metadata !DIExpression()), !dbg !34
-  %0 = tail call %union.v3* @llvm.preserve.union.access.index.p0s_union.v3s.p0s_union.v3s(%union.v3* %arg, i32 1), !dbg !35, !llvm.preserve.access.index !20
-  %1 = bitcast %union.v3* %0 to %union.v1*, !dbg !35
-  %2 = tail call %union.v1* @llvm.preserve.union.access.index.p0s_union.v1s.p0s_union.v1s(%union.v1* %1, i32 1), !dbg !35, !llvm.preserve.access.index !6
-  %b = getelementptr inbounds %union.v1, %union.v1* %2, i64 0, i32 0, !dbg !35
-  %call = tail call i32 @get_value(i32* %b) #4, !dbg !36
+  call void @llvm.dbg.value(metadata ptr %arg, metadata !33, metadata !DIExpression()), !dbg !34
+  %0 = tail call ptr @llvm.preserve.union.access.index.p0.p0(ptr %arg, i32 1), !dbg !35, !llvm.preserve.access.index !20
+  %1 = bitcast ptr %0 to ptr, !dbg !35
+  %2 = tail call ptr @llvm.preserve.union.access.index.p0.p0(ptr %1, i32 1), !dbg !35, !llvm.preserve.access.index !6
+  %b = getelementptr inbounds %union.v1, ptr %2, i64 0, i32 0, !dbg !35
+  %call = tail call i32 @get_value(ptr %b) #4, !dbg !36
   ret i32 %call, !dbg !37
 }
 
@@ -61,13 +61,12 @@ entry:
 ; CHECK-NEXT:        .long   45
 ; CHECK-NEXT:        .long   0
 
-declare dso_local i32 @get_value(i32*) local_unnamed_addr #1
+declare dso_local i32 @get_value(ptr) local_unnamed_addr #1
 
 ; Function Attrs: nounwind readnone
-declare %union.v3* @llvm.preserve.union.access.index.p0s_union.v3s.p0s_union.v3s(%union.v3*, i32) #2
+declare ptr @llvm.preserve.union.access.index.p0.p0(ptr, i32) #2
 
 ; Function Attrs: nounwind readnone
-declare %union.v1* @llvm.preserve.union.access.index.p0s_union.v1s.p0s_union.v1s(%union.v1*, i32) #2
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #3

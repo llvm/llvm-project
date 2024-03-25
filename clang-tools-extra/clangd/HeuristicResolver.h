@@ -16,6 +16,7 @@ namespace clang {
 
 class ASTContext;
 class CallExpr;
+class CXXBasePath;
 class CXXDependentScopeMemberExpr;
 class DeclarationName;
 class DependentScopeDeclRefExpr;
@@ -76,24 +77,6 @@ public:
 
 private:
   ASTContext &Ctx;
-
-  // Given a tag-decl type and a member name, heuristically resolve the
-  // name to one or more declarations.
-  // The current heuristic is simply to look up the name in the primary
-  // template. This is a heuristic because the template could potentially
-  // have specializations that declare different members.
-  // Multiple declarations could be returned if the name is overloaded
-  // (e.g. an overloaded method in the primary template).
-  // This heuristic will give the desired answer in many cases, e.g.
-  // for a call to vector<T>::size().
-  std::vector<const NamedDecl *> resolveDependentMember(
-      const Type *T, DeclarationName Name,
-      llvm::function_ref<bool(const NamedDecl *ND)> Filter) const;
-
-  // Try to heuristically resolve the type of a possibly-dependent expression
-  // `E`.
-  const Type *resolveExprToType(const Expr *E) const;
-  std::vector<const NamedDecl *> resolveExprToDecls(const Expr *E) const;
 };
 
 } // namespace clangd

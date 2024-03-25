@@ -1,7 +1,7 @@
-# RUN: llvm-mc -arch=mips64el -filetype=obj -mcpu=mips64r2 -target-abi=n64 %s -o - \
+# RUN: llvm-mc -triple=mips64el -filetype=obj -mcpu=mips64r2 -target-abi=n64 %s -o - \
 # RUN:   | llvm-objdump --no-print-imm-hex -d - | FileCheck --check-prefix=OBJ %s
 
-# RUN: llvm-mc -arch=mips64el -mcpu=mips64r2 -target-abi=n64 %s -o - \
+# RUN: llvm-mc -triple=mips64el -mcpu=mips64r2 -target-abi=n64 %s -o - \
 # RUN:   | FileCheck --check-prefix=ASM %s
 
         dext $2, $4, 5, 10   # OBJ: dext ${{[0-9]+}}, ${{[0-9]+}}, 5, 10

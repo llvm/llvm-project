@@ -12,7 +12,7 @@ module m1
   integer :: myAge = 2
   type(person) associated
   type hasAlloc
-    integer, allocatable :: a(:)
+    integer, allocatable :: a
   end type
 end
 

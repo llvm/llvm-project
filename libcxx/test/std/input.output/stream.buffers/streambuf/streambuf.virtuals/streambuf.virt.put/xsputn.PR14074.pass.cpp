@@ -17,7 +17,7 @@
 // basic_streambuf, but I can't seem to reproduce without going through one
 // of its derived classes.
 
-// UNSUPPORTED: no-fstream
+// UNSUPPORTED: no-filesystem
 
 #include <cassert>
 #include <cstddef>

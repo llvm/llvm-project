@@ -1,5 +1,8 @@
 # RUN: llc -O0 -run-pass=avr-expand-pseudo -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: llc -O0 -run-pass=avr-expand-pseudo -verify-machineinstrs -mattr=avrtiny %s -o - | FileCheck %s --check-prefix=CHECK-TINY
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -verify-machineinstrs -mattr=avrtiny %s -o - \
+# RUN:     | FileCheck %s --check-prefix=CHECK-TINY
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -verify-machineinstrs -mattr=lowbytefirst %s -o - \
+# RUN:     | FileCheck %s --check-prefix=CHECK-XMEGA
 
 --- |
   target triple = "avr--"
@@ -17,29 +20,37 @@ body: |
     ; CHECK-LABEL: test
 
     ; Small displacement (<63):
-    ; CHECK:      STDPtrQRr $r29r28, 3, $r0
-    ; CHECK-NEXT: STDPtrQRr $r29r28, 4, $r1
-    ; CHECK-TINY:      $r28 = SUBIRdK killed $r28, 253, implicit-def $sreg
-    ; CHECK-TINY-NEXT: $r29 = SBCIRdK killed $r29, 255, implicit-def $sreg, implicit killed $sreg
-    ; CHECK-TINY-NEXT: early-clobber $r29r28 = STPtrPiRr killed $r29r28, $r0, 0
-    ; CHECK-TINY-NEXT: early-clobber $r29r28 = STPtrPiRr killed $r29r28, $r1, 0
-    ; CHECK-TINY-NEXT: $r28 = SUBIRdK killed $r28, 5, implicit-def $sreg
-    ; CHECK-TINY-NEXT: $r29 = SBCIRdK killed $r29, 0, implicit-def $sreg, implicit killed $sreg
+    ; CHECK:            STDPtrQRr $r29r28, 4, $r1
+    ; CHECK-NEXT:       STDPtrQRr $r29r28, 3, $r0
+    ; CHECK-XMEGA:      STDPtrQRr $r29r28, 3, $r0
+    ; CHECK-XMEGA-NEXT: STDPtrQRr $r29r28, 4, $r1
+    ; CHECK-TINY:       $r28 = SUBIRdK killed $r28, 253, implicit-def $sreg
+    ; CHECK-TINY-NEXT:  $r29 = SBCIRdK killed $r29, 255, implicit-def $sreg, implicit killed $sreg
+    ; CHECK-TINY-NEXT:  early-clobber $r29r28 = STPtrPiRr killed $r29r28, $r0, 0
+    ; CHECK-TINY-NEXT:  early-clobber $r29r28 = STPtrPiRr killed $r29r28, $r1, 0
+    ; CHECK-TINY-NEXT:  $r28 = SUBIRdK killed $r28, 5, implicit-def $sreg
+    ; CHECK-TINY-NEXT:  $r29 = SBCIRdK killed $r29, 0, implicit-def $sreg, implicit killed $sreg
     STDWPtrQRr $r29r28, 3, $r1r0
 
     ; Small displacement where the destination register is killed:
-    ; CHECK:      STDPtrQRr $r29r28, 3, $r0
-    ; CHECK-NEXT: STDPtrQRr killed $r29r28, 4, $r1
+    ; CHECK-NEXT:       STDPtrQRr $r29r28, 4, $r1
+    ; CHECK-NEXT:       STDPtrQRr killed $r29r28, 3, $r0
+    ; CHECK-XMEGA-NEXT: STDPtrQRr $r29r28, 3, $r0
+    ; CHECK-XMEGA-NEXT: STDPtrQRr killed $r29r28, 4, $r1
     STDWPtrQRr killed $r29r28, 3, $r1r0
 
     ; Small displacement where the source register is killed:
-    ; CHECK:      STDPtrQRr $r29r28, 3, killed $r0
-    ; CHECK-NEXT: STDPtrQRr $r29r28, 4, killed $r1
+    ; CHECK:            STDPtrQRr $r29r28, 4, killed $r1
+    ; CHECK-NEXT:       STDPtrQRr $r29r28, 3, killed $r0
+    ; CHECK-XMEGA:      STDPtrQRr $r29r28, 3, killed $r0
+    ; CHECK-XMEGA-NEXT: STDPtrQRr $r29r28, 4, killed $r1
     STDWPtrQRr $r29r28, 3, killed $r1r0
 
     ; Small displacement, near the limit (=62):
-    ; CHECK:      STDPtrQRr $r29r28, 62, $r0
-    ; CHECK-NEXT: STDPtrQRr $r29r28, 63, $r1
+    ; CHECK:            STDPtrQRr $r29r28, 63, $r1
+    ; CHECK-NEXT:       STDPtrQRr $r29r28, 62, $r0
+    ; CHECK-XMEGA:      STDPtrQRr $r29r28, 62, $r0
+    ; CHECK-XMEGA-NEXT: STDPtrQRr $r29r28, 63, $r1
     STDWPtrQRr $r29r28, 62, $r1r0
 
     ; Large displacement (>=63):

@@ -1,5 +1,5 @@
-; RUN: llc -opaque-pointers=0 -mtriple=x86_64-unknown-unknown -O2 --relocation-model=pic --tls-load-hoist=true --stop-after=tlshoist -o - %s | FileCheck %s
-; RUN: llc -opaque-pointers=0 -mtriple=x86_64-unknown-unknown -O2 --relocation-model=pic --stop-after=tlshoist -o - %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -O2 --relocation-model=pic --tls-load-hoist=true --stop-after=tlshoist -o - %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -O2 --relocation-model=pic --stop-after=tlshoist -o - %s | FileCheck %s
 
 ; This test come from compiling clang/test/CodeGen/intel/tls_loads.cpp with:
 ; (clang tls_loads.cpp -fPIC -ftls-model=global-dynamic -O2 -S -emit-llvm)
@@ -47,11 +47,11 @@ define noundef i32 @_Z2f1i(i32 noundef %c) local_unnamed_addr #0 {
 ; CHECK:      entry:
 ; CHECK-NEXT:   %call = tail call noundef i32 @_Z5gfuncv()
 ; CHECK-NEXT:   %phi.cmp = icmp eq i32 %call, 0
-; CHECK-NEXT:   %tls_bitcast1 = bitcast i32* @thl_x to i32*
+; CHECK-NEXT:   %tls_bitcast1 = bitcast ptr @thl_x to ptr
 ; CHECK-NEXT:   br i1 %phi.cmp, label %while.end11, label %while.body4.preheader
 
 ; CHECK:      while.body4.preheader:
-; CHECK-NEXT:   %tls_bitcast = bitcast i32* @thl_x2 to i32*
+; CHECK-NEXT:   %tls_bitcast = bitcast ptr @thl_x2 to ptr
 ; CHECK-NEXT:   br label %while.body4
 
 ; CHECK:      while.body4:
@@ -71,16 +71,16 @@ define noundef i32 @_Z2f1i(i32 noundef %c) local_unnamed_addr #0 {
 ; CHECK:      while.body8:
 ; CHECK-NEXT:   %c.addr.219 = phi i32 [ %dec, %while.body8 ], [ %call5, %while.body8.preheader ]
 ; CHECK-NEXT:   %dec = add i32 %c.addr.219, -1
-; CHECK-NEXT:   %0 = load i32, i32* %tls_bitcast, align 4
+; CHECK-NEXT:   %0 = load i32, ptr %tls_bitcast, align 4
 ; CHECK-NEXT:   %call9 = tail call noundef i32 @_Z6gfunc2i(i32 noundef %0)
-; CHECK-NEXT:   %1 = load i32, i32* %tls_bitcast1, align 4
+; CHECK-NEXT:   %1 = load i32, ptr %tls_bitcast1, align 4
 ; CHECK-NEXT:   %add = add nsw i32 %1, %call9
-; CHECK-NEXT:   store i32 %add, i32* %tls_bitcast1, align 4
+; CHECK-NEXT:   store i32 %add, ptr %tls_bitcast1, align 4
 ; CHECK-NEXT:   %tobool7.not = icmp eq i32 %dec, 0
 ; CHECK-NEXT:   br i1 %tobool7.not, label %while.body4.backedge.loopexit, label %while.body8, !llvm.loop !4
 
 ; CHECK:      while.end11:
-; CHECK-NEXT:   %2 = load i32, i32* %tls_bitcast1, align 4
+; CHECK-NEXT:   %2 = load i32, ptr %tls_bitcast1, align 4
 ; CHECK-NEXT:   ret i32 %2
 
 entry:
@@ -99,16 +99,16 @@ while.body4.backedge:                             ; preds = %while.body8, %while
 while.body8:                                      ; preds = %while.body4, %while.body8
   %c.addr.219 = phi i32 [ %dec, %while.body8 ], [ %call5, %while.body4 ]
   %dec = add nsw i32 %c.addr.219, -1
-  %0 = load i32, i32* @thl_x2, align 4
+  %0 = load i32, ptr @thl_x2, align 4
   %call9 = tail call noundef i32 @_Z6gfunc2i(i32 noundef %0)
-  %1 = load i32, i32* @thl_x, align 4
+  %1 = load i32, ptr @thl_x, align 4
   %add = add nsw i32 %1, %call9
-  store i32 %add, i32* @thl_x, align 4
+  store i32 %add, ptr @thl_x, align 4
   %tobool7.not = icmp eq i32 %dec, 0
   br i1 %tobool7.not, label %while.body4.backedge, label %while.body8, !llvm.loop !4
 
 while.end11:                                      ; preds = %entry
-  %2 = load i32, i32* @thl_x, align 4
+  %2 = load i32, ptr @thl_x, align 4
   ret i32 %2
 }
 
@@ -134,30 +134,30 @@ define noundef i32 @_Z2f2i(i32 noundef %c) local_unnamed_addr #0 {
 ; CHECK-NEXT:   %call = tail call noundef i32 @_Z5gfuncv()
 ; CHECK-NEXT:   %add = add nsw i32 %call, %c
 ; CHECK-NEXT:   %tobool.not12 = icmp eq i32 %add, 0
-; CHECK-NEXT:   %tls_bitcast = bitcast i32* @thl_x to i32*
+; CHECK-NEXT:   %tls_bitcast = bitcast ptr @thl_x to ptr
 ; CHECK-NEXT:   br i1 %tobool.not12, label %while.end, label %while.body.preheader
 
 ; CHECK:      while.body.preheader:
-; CHECK-NEXT:   %tls_bitcast1 = bitcast i8* @_ZZ2f2iE2st.0 to i8*
-; CHECK-NEXT:   %tls_bitcast2 = bitcast i32* @_ZZ2f2iE2st.1 to i32*
+; CHECK-NEXT:   %tls_bitcast1 = bitcast ptr @_ZZ2f2iE2st.0 to ptr
+; CHECK-NEXT:   %tls_bitcast2 = bitcast ptr @_ZZ2f2iE2st.1 to ptr
 ; CHECK-NEXT:   br label %while.body
 
 ; CHECK:      while.body:
 ; CHECK-NEXT:   %c.addr.013 = phi i32 [ %dec, %while.body ], [ %add, %while.body.preheader ]
 ; CHECK-NEXT:   %dec = add i32 %c.addr.013, -1
 ; CHECK-NEXT:   %call1 = tail call noundef i32 @_Z5gfuncv()
-; CHECK-NEXT:   %0 = load i32, i32* %tls_bitcast, align 4
+; CHECK-NEXT:   %0 = load i32, ptr %tls_bitcast, align 4
 ; CHECK-NEXT:   %add2 = add nsw i32 %0, %call1
-; CHECK-NEXT:   store i32 %add2, i32* %tls_bitcast, align 4
+; CHECK-NEXT:   store i32 %add2, ptr %tls_bitcast, align 4
 ; CHECK-NEXT:   %call3 = tail call noundef i32 @_Z5gfuncv()
-; CHECK-NEXT:   %1 = load i8, i8* %tls_bitcast1, align 4
+; CHECK-NEXT:   %1 = load i8, ptr %tls_bitcast1, align 4
 ; CHECK-NEXT:   %2 = trunc i32 %call3 to i8
 ; CHECK-NEXT:   %conv7 = add i8 %1, %2
-; CHECK-NEXT:   store i8 %conv7, i8* %tls_bitcast1, align 4
+; CHECK-NEXT:   store i8 %conv7, ptr %tls_bitcast1, align 4
 ; CHECK-NEXT:   %call8 = tail call noundef i32 @_Z5gfuncv()
-; CHECK-NEXT:   %3 = load i32, i32* %tls_bitcast2, align 4
+; CHECK-NEXT:   %3 = load i32, ptr %tls_bitcast2, align 4
 ; CHECK-NEXT:   %add9 = add nsw i32 %3, %call8
-; CHECK-NEXT:   store i32 %add9, i32* %tls_bitcast2, align 4
+; CHECK-NEXT:   store i32 %add9, ptr %tls_bitcast2, align 4
 ; CHECK-NEXT:   %tobool.not = icmp eq i32 %dec, 0
 ; CHECK-NEXT:   br i1 %tobool.not, label %while.end.loopexit, label %while.body
 
@@ -165,7 +165,7 @@ define noundef i32 @_Z2f2i(i32 noundef %c) local_unnamed_addr #0 {
 ; CHECK-NEXT:   br label %while.end
 
 ; CHECK:      while.end:
-; CHECK-NEXT:   %4 = load i32, i32* %tls_bitcast, align 4
+; CHECK-NEXT:   %4 = load i32, ptr %tls_bitcast, align 4
 ; CHECK-NEXT:   ret i32 %4
 entry:
   %call = tail call noundef i32 @_Z5gfuncv()
@@ -177,23 +177,23 @@ while.body:                                       ; preds = %entry, %while.body
   %c.addr.013 = phi i32 [ %dec, %while.body ], [ %add, %entry ]
   %dec = add nsw i32 %c.addr.013, -1
   %call1 = tail call noundef i32 @_Z5gfuncv()
-  %0 = load i32, i32* @thl_x, align 4
+  %0 = load i32, ptr @thl_x, align 4
   %add2 = add nsw i32 %0, %call1
-  store i32 %add2, i32* @thl_x, align 4
+  store i32 %add2, ptr @thl_x, align 4
   %call3 = tail call noundef i32 @_Z5gfuncv()
-  %1 = load i8, i8* @_ZZ2f2iE2st.0, align 4
+  %1 = load i8, ptr @_ZZ2f2iE2st.0, align 4
   %2 = trunc i32 %call3 to i8
   %conv7 = add i8 %1, %2
-  store i8 %conv7, i8* @_ZZ2f2iE2st.0, align 4
+  store i8 %conv7, ptr @_ZZ2f2iE2st.0, align 4
   %call8 = tail call noundef i32 @_Z5gfuncv()
-  %3 = load i32, i32* @_ZZ2f2iE2st.1, align 4
+  %3 = load i32, ptr @_ZZ2f2iE2st.1, align 4
   %add9 = add nsw i32 %3, %call8
-  store i32 %add9, i32* @_ZZ2f2iE2st.1, align 4
+  store i32 %add9, ptr @_ZZ2f2iE2st.1, align 4
   %tobool.not = icmp eq i32 %dec, 0
   br i1 %tobool.not, label %while.end, label %while.body
 
 while.end:                                        ; preds = %while.body, %entry
-  %4 = load i32, i32* @thl_x, align 4
+  %4 = load i32, ptr @thl_x, align 4
   ret i32 %4
 }
 
@@ -209,28 +209,28 @@ while.end:                                        ; preds = %while.body, %entry
 define noundef i32 @_Z2f3i(i32 noundef %c) local_unnamed_addr #0 {
 ; CHECK-LABEL: _Z2f3i
 ; CHECK:      entry:
-; CHECK-NEXT:   %tls_bitcast = bitcast i32* @thl_x to i32*
-; CHECK-NEXT:   %0 = load i32, i32* %tls_bitcast, align 4
+; CHECK-NEXT:   %tls_bitcast = bitcast ptr @thl_x to ptr
+; CHECK-NEXT:   %0 = load i32, ptr %tls_bitcast, align 4
 ; CHECK-NEXT:   %call = tail call noundef i32 @_Z6gfunc2i(i32 noundef %0)
-; CHECK-NEXT:   %1 = load i32, i32* %tls_bitcast, align 4
+; CHECK-NEXT:   %1 = load i32, ptr %tls_bitcast, align 4
 ; CHECK-NEXT:   %call1 = tail call noundef i32 @_Z6gfunc2i(i32 noundef %1)
 ; CHECK-NEXT:   ret i32 1
 entry:
-  %0 = load i32, i32* @thl_x, align 4
+  %0 = load i32, ptr @thl_x, align 4
   %call = tail call noundef i32 @_Z6gfunc2i(i32 noundef %0)
-  %1 = load i32, i32* @thl_x, align 4
+  %1 = load i32, ptr @thl_x, align 4
   %call1 = tail call noundef i32 @_Z6gfunc2i(i32 noundef %1)
   ret i32 1
 }
 
 ; Function Attrs: uwtable
-define weak_odr hidden noundef i32* @_ZTW5thl_x() local_unnamed_addr #2 comdat {
-  ret i32* @thl_x
+define weak_odr hidden noundef ptr @_ZTW5thl_x() local_unnamed_addr #2 comdat {
+  ret ptr @thl_x
 }
 
 ; Function Attrs: uwtable
-define weak_odr hidden noundef i32* @_ZTW6thl_x2() local_unnamed_addr #2 comdat {
-  ret i32* @thl_x2
+define weak_odr hidden noundef ptr @_ZTW6thl_x2() local_unnamed_addr #2 comdat {
+  ret ptr @thl_x2
 }
 
 attributes #0 = { mustprogress uwtable "tls-load-hoist" "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }

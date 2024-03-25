@@ -1,6 +1,9 @@
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s > %t
 ; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
 
+; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -O0 -filetype=obj < %s > %t
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
+
 ; Check for a univariant discriminated union -- that is, a variant
 ; part without a discriminant and with just a single variant.
 

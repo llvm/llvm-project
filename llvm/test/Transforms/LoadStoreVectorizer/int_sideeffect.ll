@@ -78,9 +78,9 @@ define void @test_inaccessiblememonly_not_willreturn(ptr %p) {
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, ptr [[P]], i64 2
 ; CHECK-NEXT:    [[P3:%.*]] = getelementptr float, ptr [[P]], i64 3
 ; CHECK-NEXT:    [[L0:%.*]] = load float, ptr [[P]], align 16
+; CHECK-NEXT:    call void @foo() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[L1:%.*]] = load float, ptr [[P1]], align 4
 ; CHECK-NEXT:    [[L2:%.*]] = load float, ptr [[P2]], align 4
-; CHECK-NEXT:    call void @foo() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[L3:%.*]] = load float, ptr [[P3]], align 4
 ; CHECK-NEXT:    store float [[L0]], ptr [[P]], align 16
 ; CHECK-NEXT:    call void @foo() #[[ATTR2]]
@@ -93,9 +93,9 @@ define void @test_inaccessiblememonly_not_willreturn(ptr %p) {
   %p2 = getelementptr float, ptr %p, i64 2
   %p3 = getelementptr float, ptr %p, i64 3
   %l0 = load float, ptr %p, align 16
+  call void @foo() inaccessiblememonly nounwind
   %l1 = load float, ptr %p1
   %l2 = load float, ptr %p2
-  call void @foo() inaccessiblememonly nounwind
   %l3 = load float, ptr %p3
   store float %l0, ptr %p, align 16
   call void @foo() inaccessiblememonly nounwind
@@ -111,9 +111,9 @@ define void @test_inaccessiblememonly_not_nounwind(ptr %p) {
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, ptr [[P]], i64 2
 ; CHECK-NEXT:    [[P3:%.*]] = getelementptr float, ptr [[P]], i64 3
 ; CHECK-NEXT:    [[L0:%.*]] = load float, ptr [[P]], align 16
+; CHECK-NEXT:    call void @foo() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    [[L1:%.*]] = load float, ptr [[P1]], align 4
 ; CHECK-NEXT:    [[L2:%.*]] = load float, ptr [[P2]], align 4
-; CHECK-NEXT:    call void @foo() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    [[L3:%.*]] = load float, ptr [[P3]], align 4
 ; CHECK-NEXT:    store float [[L0]], ptr [[P]], align 16
 ; CHECK-NEXT:    call void @foo() #[[ATTR3]]
@@ -126,9 +126,9 @@ define void @test_inaccessiblememonly_not_nounwind(ptr %p) {
   %p2 = getelementptr float, ptr %p, i64 2
   %p3 = getelementptr float, ptr %p, i64 3
   %l0 = load float, ptr %p, align 16
+  call void @foo() inaccessiblememonly willreturn
   %l1 = load float, ptr %p1
   %l2 = load float, ptr %p2
-  call void @foo() inaccessiblememonly willreturn
   %l3 = load float, ptr %p3
   store float %l0, ptr %p, align 16
   call void @foo() inaccessiblememonly willreturn

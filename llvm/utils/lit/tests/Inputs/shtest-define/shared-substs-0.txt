@@ -19,4 +19,4 @@
 # DEFINE: %{local:echo}=echo LOCAL0: subst
 # RUN: %{local:echo}
 
-# CHECK: Passed: 1
+# CHECK: Passed: 1 {{\([0-9]*.[0-9]*%\)}}

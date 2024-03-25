@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s openmp-exception-escape %t -- -extra-arg=-fopenmp=libomp -extra-arg=-fexceptions -config="{CheckOptions: [{key: openmp-exception-escape.IgnoredExceptions, value: 'ignored, ignored2'}]}" --
+// RUN: %check_clang_tidy %s openmp-exception-escape %t -- -extra-arg=-fopenmp=libomp -extra-arg=-fexceptions -config="{CheckOptions: {openmp-exception-escape.IgnoredExceptions: 'ignored, ignored2'}}" --
 
 int thrower() {
   throw 42;

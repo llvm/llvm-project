@@ -1,8 +1,11 @@
 # REQUIRES: x86_64-linux
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc -triple=x86_64-unknown-linux -filetype=obj -o %t/tls.o %s
-# RUN: llvm-rtdyld -triple=x86_64-unknown-linux -execute %t/tls.o
+# RUN: split-file %s %t
+# RUN: llvm-mc -triple=x86_64-unknown-linux -filetype=obj -o %t/test_runner.o %t/test_runner.s
+# RUN: llvm-mc -triple=x86_64-unknown-linux -filetype=obj -o %t/external_tls.o %t/external_tls.s
+# RUN: llvm-rtdyld -triple=x86_64-unknown-linux -execute %t/test_runner.o %t/external_tls.o
 
+#--- test_runner.s
 
 _main:
 
@@ -130,6 +133,28 @@ _main:
 	jmp 2f
 1:
 
+# External TLS variable, Local Exec TLS Model (small code model)
+	mov %fs:external_tls_var@tpoff, %eax
+	cmp $0x56, %eax
+	je 1f
+	mov $12, %eax
+	jmp 2f
+1:
+
+# External TLS variable, Global Dynamic TLS Model (small code model)
+	.byte 0x66
+	leaq external_tls_var@tlsgd(%rip), %rdi
+	.byte 0x66, 0x66, 0x48
+	call __tls_get_addr@plt
+	mov (%rax), %eax
+	cmp $0x56, %eax
+	je 1f
+	mov $13, %eax
+	jmp 2f
+1:
+
+
+# Return 0 if all tests are successful
 	xor %eax, %eax
 
 2:
@@ -152,3 +177,14 @@ tls_foo:
 	.align 4
 tls_bar:
 	.long 0x34
+
+#--- external_tls.s
+
+	.section .tdata, "awT", @progbits
+
+	.global external_tls_var
+	.type external_tls_var, @object
+	.size external_tls_var, 4
+	.align 4
+external_tls_var:
+	.long 0x56

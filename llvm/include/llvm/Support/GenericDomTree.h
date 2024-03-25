@@ -227,7 +227,7 @@ template <typename NodeT> struct DomTreeNodeTraits {
   using NodeType = NodeT;
   using NodePtr = NodeT *;
   using ParentPtr = decltype(std::declval<NodePtr>()->getParent());
-  static_assert(std::is_pointer<ParentPtr>::value,
+  static_assert(std::is_pointer_v<ParentPtr>,
                 "Currently NodeT's parent must be a pointer type");
   using ParentType = std::remove_pointer_t<ParentPtr>;
 
@@ -242,13 +242,13 @@ template <typename NodeT> struct DomTreeNodeTraits {
 template <typename NodeT, bool IsPostDom>
 class DominatorTreeBase {
  public:
-  static_assert(std::is_pointer<typename GraphTraits<NodeT *>::NodeRef>::value,
+  static_assert(std::is_pointer_v<typename GraphTraits<NodeT *>::NodeRef>,
                 "Currently DominatorTreeBase supports only pointer nodes");
   using NodeTrait = DomTreeNodeTraits<NodeT>;
   using NodeType = typename NodeTrait::NodeType;
   using NodePtr = typename NodeTrait::NodePtr;
   using ParentPtr = typename NodeTrait::ParentPtr;
-  static_assert(std::is_pointer<ParentPtr>::value,
+  static_assert(std::is_pointer_v<ParentPtr>,
                 "Currently NodeT's parent must be a pointer type");
   using ParentType = std::remove_pointer_t<ParentPtr>;
   static constexpr bool IsPostDominator = IsPostDom;
@@ -850,17 +850,16 @@ protected:
   void Split(typename GraphTraits<N>::NodeRef NewBB) {
     using GraphT = GraphTraits<N>;
     using NodeRef = typename GraphT::NodeRef;
-    assert(std::distance(GraphT::child_begin(NewBB),
-                         GraphT::child_end(NewBB)) == 1 &&
+    assert(llvm::hasSingleElement(children<N>(NewBB)) &&
            "NewBB should have a single successor!");
     NodeRef NewBBSucc = *GraphT::child_begin(NewBB);
 
-    SmallVector<NodeRef, 4> PredBlocks(children<Inverse<N>>(NewBB));
+    SmallVector<NodeRef, 4> PredBlocks(inverse_children<N>(NewBB));
 
     assert(!PredBlocks.empty() && "No predblocks?");
 
     bool NewBBDominatesNewBBSucc = true;
-    for (auto *Pred : children<Inverse<N>>(NewBBSucc)) {
+    for (auto *Pred : inverse_children<N>(NewBBSucc)) {
       if (Pred != NewBB && !dominates(NewBBSucc, Pred) &&
           isReachableFromEntry(Pred)) {
         NewBBDominatesNewBBSucc = false;

@@ -49,8 +49,8 @@
   define i32 @_Z3bari(i32 %y) #0 !dbg !6 {
   entry:
     %MyAlloca = alloca [64 x i8], align 32
-    %0 = ptrtoint [64 x i8]* %MyAlloca to i64
-    %1 = load i32, i32* @__asan_option_detect_stack_use_after_return
+    %0 = ptrtoint ptr %MyAlloca to i64
+    %1 = load i32, ptr @__asan_option_detect_stack_use_after_return
     %2 = icmp ne i32 %1, 0
     br i1 %2, label %3, label %5
   
@@ -61,27 +61,27 @@
   ; <label>:5:                                      ; preds = %3, %entry
     %6 = phi i64 [ %0, %entry ], [ %4, %3 ]
     %7 = add i64 %6, 32
-    %8 = inttoptr i64 %7 to i32*
-    %9 = inttoptr i64 %6 to i64*
-    store i64 1102416563, i64* %9
+    %8 = inttoptr i64 %7 to ptr
+    %9 = inttoptr i64 %6 to ptr
+    store i64 1102416563, ptr %9
     %10 = add i64 %6, 8
-    %11 = inttoptr i64 %10 to i64*
-    store i64 ptrtoint ([16 x i8]* @___asan_gen_ to i64), i64* %11
+    %11 = inttoptr i64 %10 to ptr
+    store i64 ptrtoint (ptr @___asan_gen_ to i64), ptr %11
     %12 = add i64 %6, 16
-    %13 = inttoptr i64 %12 to i64*
-    store i64 ptrtoint (i32 (i32)* @_Z3bari to i64), i64* %13
+    %13 = inttoptr i64 %12 to ptr
+    store i64 ptrtoint (ptr @_Z3bari to i64), ptr %13
     %14 = lshr i64 %6, 3
     %15 = add i64 %14, 2147450880
     %16 = add i64 %15, 0
-    %17 = inttoptr i64 %16 to i64*
-    store i64 -868083100587789839, i64* %17
-    %18 = ptrtoint i32* %8 to i64
+    %17 = inttoptr i64 %16 to ptr
+    store i64 -868083100587789839, ptr %17
+    %18 = ptrtoint ptr %8 to i64
     %19 = lshr i64 %18, 3
     %20 = add i64 %19, 2147450880
-    %21 = inttoptr i64 %20 to i8*
-    %22 = load i8, i8* %21
+    %21 = inttoptr i64 %20 to ptr
+    %22 = load i8, ptr %21
     %23 = icmp ne i8 %22, 0
-    call void @llvm.dbg.declare(metadata i32* %8, metadata !10, metadata !DIExpression(DW_OP_deref)), !dbg !11
+    call void @llvm.dbg.declare(metadata ptr %8, metadata !10, metadata !DIExpression(DW_OP_deref)), !dbg !11
     br i1 %23, label %24, label %30
   
   ; <label>:24:                                     ; preds = %5
@@ -97,12 +97,12 @@
     unreachable
   
   ; <label>:30:                                     ; preds = %24, %5
-    store i32 %y, i32* %8, align 4
-    %31 = ptrtoint i32* %8 to i64, !dbg !12
+    store i32 %y, ptr %8, align 4
+    %31 = ptrtoint ptr %8 to i64, !dbg !12
     %32 = lshr i64 %31, 3, !dbg !12
     %33 = add i64 %32, 2147450880, !dbg !12
-    %34 = inttoptr i64 %33 to i8*, !dbg !12
-    %35 = load i8, i8* %34, !dbg !12
+    %34 = inttoptr i64 %33 to ptr, !dbg !12
+    %35 = load i8, ptr %34, !dbg !12
     %36 = icmp ne i8 %35, 0, !dbg !12
     br i1 %36, label %37, label %43, !dbg !12
   
@@ -119,27 +119,27 @@
     unreachable
   
   ; <label>:43:                                     ; preds = %37, %30
-    %44 = load i32, i32* %8, align 4, !dbg !12
+    %44 = load i32, ptr %8, align 4, !dbg !12
     %add = add nsw i32 %44, 2, !dbg !12
-    store i64 1172321806, i64* %9, !dbg !12
+    store i64 1172321806, ptr %9, !dbg !12
     %45 = icmp ne i64 %6, %0, !dbg !12
     br i1 %45, label %46, label %53, !dbg !12
   
   ; <label>:46:                                     ; preds = %43
     %47 = add i64 %15, 0, !dbg !12
-    %48 = inttoptr i64 %47 to i64*, !dbg !12
-    store i64 -723401728380766731, i64* %48, !dbg !12
+    %48 = inttoptr i64 %47 to ptr, !dbg !12
+    store i64 -723401728380766731, ptr %48, !dbg !12
     %49 = add i64 %6, 56, !dbg !12
-    %50 = inttoptr i64 %49 to i64*, !dbg !12
-    %51 = load i64, i64* %50, !dbg !12
-    %52 = inttoptr i64 %51 to i8*, !dbg !12
-    store i8 0, i8* %52, !dbg !12
+    %50 = inttoptr i64 %49 to ptr, !dbg !12
+    %51 = load i64, ptr %50, !dbg !12
+    %52 = inttoptr i64 %51 to ptr, !dbg !12
+    store i8 0, ptr %52, !dbg !12
     br label %56, !dbg !12
   
   ; <label>:53:                                     ; preds = %43
     %54 = add i64 %15, 0, !dbg !12
-    %55 = inttoptr i64 %54 to i64*, !dbg !12
-    store i64 0, i64* %55, !dbg !12
+    %55 = inttoptr i64 %54 to ptr, !dbg !12
+    store i64 0, ptr %55, !dbg !12
     br label %56, !dbg !12
   
   ; <label>:56:                                     ; preds = %53, %46
@@ -158,7 +158,7 @@
   declare i64 @__asan_stack_malloc_0(i64, i64)
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #2
+  declare void @llvm.stackprotector(ptr, ptr) #2
   
   attributes #0 = { nounwind sanitize_address uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #1 = { nounwind readnone speculatable }
@@ -221,7 +221,7 @@ body:             |
     $rsp = frame-setup AND64ri8 $rsp, -32, implicit-def dead $eflags
     $rsp = frame-setup SUB64ri32 $rsp, 160, implicit-def dead $eflags
     renamable $rax = LEA64r $rsp, 1, $noreg, 64, $noreg
-    CMP32mi8 $noreg, 1, $noreg, @__asan_option_detect_stack_use_after_return, $noreg, 0, implicit-def $eflags :: (load (s32) from @__asan_option_detect_stack_use_after_return)
+    CMP32mi $noreg, 1, $noreg, @__asan_option_detect_stack_use_after_return, $noreg, 0, implicit-def $eflags :: (load (s32) from @__asan_option_detect_stack_use_after_return)
     $rcx = MOV64rr $rax
     MOV32mr $rsp, 1, $noreg, 60, $noreg, killed $edi :: (store (s32) into %stack.1)
     MOV64mr $rsp, 1, $noreg, 48, $noreg, killed $rax :: (store (s64) into %stack.2)

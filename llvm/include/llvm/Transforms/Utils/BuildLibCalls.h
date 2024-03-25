@@ -80,9 +80,6 @@ namespace llvm {
                        LibFunc DoubleFn, LibFunc FloatFn, LibFunc LongDoubleFn,
                        LibFunc &TheLibFunc);
 
-  /// Return V if it is an i8*, otherwise cast it to i8*.
-  Value *castToCStr(Value *V, IRBuilderBase &B);
-
   /// Emit a call to the strlen function to the builder, for the specified
   /// pointer. Ptr is required to be some pointer type, and the return value has
   /// 'size_t' type.
@@ -248,6 +245,21 @@ namespace llvm {
   /// Emit a call to the calloc function.
   Value *emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
                     const TargetLibraryInfo &TLI);
+
+  /// Emit a call to the hot/cold operator new function.
+  Value *emitHotColdNew(Value *Num, IRBuilderBase &B,
+                        const TargetLibraryInfo *TLI, LibFunc NewFunc,
+                        uint8_t HotCold);
+  Value *emitHotColdNewNoThrow(Value *Num, Value *NoThrow, IRBuilderBase &B,
+                               const TargetLibraryInfo *TLI, LibFunc NewFunc,
+                               uint8_t HotCold);
+  Value *emitHotColdNewAligned(Value *Num, Value *Align, IRBuilderBase &B,
+                               const TargetLibraryInfo *TLI, LibFunc NewFunc,
+                               uint8_t HotCold);
+  Value *emitHotColdNewAlignedNoThrow(Value *Num, Value *Align, Value *NoThrow,
+                                      IRBuilderBase &B,
+                                      const TargetLibraryInfo *TLI,
+                                      LibFunc NewFunc, uint8_t HotCold);
 }
 
 #endif

@@ -22,7 +22,7 @@ define void @sin() {
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %17 = call <vscale x 2 x double> @llvm.sin.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %18 = call <vscale x 4 x double> @llvm.sin.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %19 = call <vscale x 8 x double> @llvm.sin.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.sin.f32(float undef)
   call <2 x float> @llvm.sin.v2f32(<2 x float> undef)
@@ -67,7 +67,7 @@ define void @cos() {
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %17 = call <vscale x 2 x double> @llvm.cos.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %18 = call <vscale x 4 x double> @llvm.cos.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %19 = call <vscale x 8 x double> @llvm.cos.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.cos.f32(float undef)
   call <2 x float> @llvm.cos.v2f32(<2 x float> undef)
@@ -112,7 +112,7 @@ define void @exp() {
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %17 = call <vscale x 2 x double> @llvm.exp.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %18 = call <vscale x 4 x double> @llvm.exp.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %19 = call <vscale x 8 x double> @llvm.exp.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.exp.f32(float undef)
   call <2 x float> @llvm.exp.v2f32(<2 x float> undef)
@@ -157,7 +157,7 @@ define void @exp2() {
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %17 = call <vscale x 2 x double> @llvm.exp2.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %18 = call <vscale x 4 x double> @llvm.exp2.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %19 = call <vscale x 8 x double> @llvm.exp2.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.exp2.f32(float undef)
   call <2 x float> @llvm.exp2.v2f32(<2 x float> undef)
@@ -202,7 +202,7 @@ define void @log() {
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %17 = call <vscale x 2 x double> @llvm.log.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %18 = call <vscale x 4 x double> @llvm.log.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %19 = call <vscale x 8 x double> @llvm.log.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.log.f32(float undef)
   call <2 x float> @llvm.log.v2f32(<2 x float> undef)
@@ -247,7 +247,7 @@ define void @log10() {
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %17 = call <vscale x 2 x double> @llvm.log10.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %18 = call <vscale x 4 x double> @llvm.log10.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %19 = call <vscale x 8 x double> @llvm.log10.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.log10.f32(float undef)
   call <2 x float> @llvm.log10.v2f32(<2 x float> undef)
@@ -292,7 +292,7 @@ define void @log2() {
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %17 = call <vscale x 2 x double> @llvm.log2.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %18 = call <vscale x 4 x double> @llvm.log2.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %19 = call <vscale x 8 x double> @llvm.log2.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.log2.f32(float undef)
   call <2 x float> @llvm.log2.v2f32(<2 x float> undef)

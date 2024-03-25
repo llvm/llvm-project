@@ -12,7 +12,6 @@
 // RUN: FileCheck %s -check-prefix=WRONG < %t/98
 // RUN: FileCheck %s -check-prefix=WRONG < %t/11
 // WRONG-NOT: CommentXMLInvalid
-// rdar://12378714
 
 /**
  * \brief plain c++ class

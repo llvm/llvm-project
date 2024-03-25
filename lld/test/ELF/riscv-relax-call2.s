@@ -16,8 +16,8 @@
 # CHECK-NEXT:             jal    zero, 0x8 <abs>
 # CHECK-NEXT:             jal    zero, 0x8 <abs>
 # CHECK-NEXT:             jal    ra, 0x8 <abs>
-# CHECK-NEXT:             auipc  t1, 1048320
-# CHECK-NEXT:             jalr   zero, -4(t1)
+# CHECK-NEXT:             auipc  t1, 0xfff00
+# CHECK-NEXT:             jalr   zero, -0x4(t1)
 # CHECK-EMPTY:
 
 # CHECK-LABEL:  <.mid>:
@@ -26,10 +26,10 @@
 # CHECK-EMPTY:
 
 # CHECK2-LABEL: <.mid>:
-# CHECK2-NEXT:            auipc  t1, 0
-# CHECK2-NEXT:            jalr   zero, 0(t1)
-# CHECK2-NEXT:            auipc  t1, 0
-# CHECK2-NEXT:            jalr   zero, 0(t1)
+# CHECK2-NEXT:            auipc  t1, 0x0
+# CHECK2-NEXT:            jalr   zero, 0x0(t1)
+# CHECK2-NEXT:            auipc  t1, 0x0
+# CHECK2-NEXT:            jalr   zero, 0x0(t1)
 # CHECK2-EMPTY:
 
 #--- a.s

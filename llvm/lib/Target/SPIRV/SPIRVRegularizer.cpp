@@ -171,14 +171,14 @@ void SPIRVRegularizer::visitCallInst(CallInst &CI) {
     return;
 
   auto MangledName = F->getName();
-  size_t n;
-  int status;
-  char *NameStr = itaniumDemangle(F->getName().data(), nullptr, &n, &status);
+  char *NameStr = itaniumDemangle(F->getName().data());
+  if (!NameStr)
+    return;
   StringRef DemangledName(NameStr);
 
   // TODO: add support for other builtins.
-  if (DemangledName.startswith("fmin") || DemangledName.startswith("fmax") ||
-      DemangledName.startswith("min") || DemangledName.startswith("max"))
+  if (DemangledName.starts_with("fmin") || DemangledName.starts_with("fmax") ||
+      DemangledName.starts_with("min") || DemangledName.starts_with("max"))
     visitCallScalToVec(&CI, MangledName, DemangledName);
   free(NameStr);
 }

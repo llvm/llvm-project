@@ -48,23 +48,28 @@ struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
       : OpAsmDialectInterface(dialect), blobManager(mgr) {}
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
-    if (attr.isa<AffineMapAttr>()) {
+    if (llvm::isa<AffineMapAttr>(attr)) {
       os << "map";
       return AliasResult::OverridableAlias;
     }
-    if (attr.isa<IntegerSetAttr>()) {
+    if (llvm::isa<IntegerSetAttr>(attr)) {
       os << "set";
       return AliasResult::OverridableAlias;
     }
-    if (attr.isa<LocationAttr>()) {
+    if (llvm::isa<LocationAttr>(attr)) {
       os << "loc";
       return AliasResult::OverridableAlias;
     }
+    if (auto distinct = llvm::dyn_cast<DistinctAttr>(attr))
+      if (!llvm::isa<UnitAttr>(distinct.getReferencedAttr())) {
+        os << "distinct";
+        return AliasResult::OverridableAlias;
+      }
     return AliasResult::NoAlias;
   }
 
   AliasResult getAlias(Type type, raw_ostream &os) const final {
-    if (auto tupleType = type.dyn_cast<TupleType>()) {
+    if (auto tupleType = llvm::dyn_cast<TupleType>(type)) {
       if (tupleType.size() > 16) {
         os << "tuple";
         return AliasResult::OverridableAlias;
@@ -145,7 +150,7 @@ DataLayoutSpecInterface ModuleOp::getDataLayoutSpec() {
   // interface. This needs a linear search, but is called only once per data
   // layout object construction that is used for repeated queries.
   for (NamedAttribute attr : getOperation()->getAttrs())
-    if (auto spec = attr.getValue().dyn_cast<DataLayoutSpecInterface>())
+    if (auto spec = llvm::dyn_cast<DataLayoutSpecInterface>(attr.getValue()))
       return spec;
   return {};
 }
@@ -168,7 +173,7 @@ LogicalResult ModuleOp::verify() {
   StringRef layoutSpecAttrName;
   DataLayoutSpecInterface layoutSpec;
   for (const NamedAttribute &na : (*this)->getAttrs()) {
-    if (auto spec = na.getValue().dyn_cast<DataLayoutSpecInterface>()) {
+    if (auto spec = llvm::dyn_cast<DataLayoutSpecInterface>(na.getValue())) {
       if (layoutSpec) {
         InFlightDiagnostic diag =
             emitOpError() << "expects at most one data layout attribute";
@@ -217,10 +222,12 @@ UnrealizedConversionCastOp::fold(FoldAdaptor adaptor,
   return success();
 }
 
-bool UnrealizedConversionCastOp::areCastCompatible(TypeRange inputs,
-                                                   TypeRange outputs) {
-  // `UnrealizedConversionCastOp` is agnostic of the input/output types.
-  return true;
+LogicalResult UnrealizedConversionCastOp::verify() {
+  // TODO: The verifier of external models is not called. This op verifier can
+  // be removed when that is fixed.
+  if (getNumResults() == 0)
+    return emitOpError() << "expected at least one result for cast operation";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

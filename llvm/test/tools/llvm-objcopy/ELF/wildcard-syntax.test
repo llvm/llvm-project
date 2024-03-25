@@ -131,7 +131,7 @@ Sections:
     Type: SHT_PROGBITS
 Symbols: []
 
-# WARN: warning: invalid glob pattern: ][]
+# WARN: warning: invalid glob pattern, unmatched '['
 
 # CHECK: LoadName:
 # CHECK:         Name: (0)

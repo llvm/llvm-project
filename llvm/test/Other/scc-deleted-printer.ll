@@ -4,7 +4,7 @@
 ; RUN: 	   -passes=inline -print-before-all -print-after-all -print-module-scope | FileCheck %s
 
 ; CHECK: IR Dump Before InlinerPass on (tester, foo)
-; CHECK: IR Dump After InlinerPass on (tester, foo) (invalidated)
+; CHECK: IR Dump After InlinerPass on (tester, foo)
 ; CHECK: IR Dump Before InlinerPass on (tester)
 ; CHECK: IR Dump After InlinerPass on (tester)
 

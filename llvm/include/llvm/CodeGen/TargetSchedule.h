@@ -46,7 +46,7 @@ class TargetSchedModel {
   unsigned computeInstrLatency(const MCSchedClassDesc &SCDesc) const;
 
 public:
-  TargetSchedModel() : SchedModel(MCSchedModel::GetDefaultSchedModel()) {}
+  TargetSchedModel() : SchedModel(MCSchedModel::Default) {}
 
   /// Initialize the machine model for instruction scheduling.
   ///
@@ -90,7 +90,7 @@ public:
   bool hasInstrSchedModelOrItineraries() const {
     return hasInstrSchedModel() || hasInstrItineraries();
   }
-
+  bool enableIntervals() const;
   /// Identify the processor corresponding to the current subtarget.
   unsigned getProcessorID() const { return SchedModel.getProcessorID(); }
 

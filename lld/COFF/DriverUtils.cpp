@@ -18,6 +18,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
@@ -30,6 +31,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/WindowsManifest/WindowsManifestMerger.h"
 #include <limits>
@@ -37,6 +39,7 @@
 #include <optional>
 
 using namespace llvm::COFF;
+using namespace llvm::opt;
 using namespace llvm;
 using llvm::sys::Process;
 
@@ -262,6 +265,19 @@ void LinkerDriver::parseFunctionPadMin(llvm::opt::Arg *a) {
   }
 }
 
+// Parses /dependentloadflag option argument.
+void LinkerDriver::parseDependentLoadFlags(llvm::opt::Arg *a) {
+  StringRef arg = a->getNumValues() ? a->getValue() : "";
+  if (!arg.empty()) {
+    if (arg.getAsInteger(0, ctx.config.dependentLoadFlags))
+      error("/dependentloadflag: invalid argument: " + arg);
+    return;
+  }
+  // MSVC linker reports error "no argument specified", although MSDN describes
+  // argument as optional.
+  error("/dependentloadflag: no argument specified");
+}
+
 // Parses a string in the form of "EMBED[,=<integer>]|NO".
 // Results are directly written to
 // Config.
@@ -270,13 +286,13 @@ void LinkerDriver::parseManifest(StringRef arg) {
     ctx.config.manifest = Configuration::No;
     return;
   }
-  if (!arg.startswith_insensitive("embed"))
+  if (!arg.starts_with_insensitive("embed"))
     fatal("invalid option " + arg);
   ctx.config.manifest = Configuration::Embed;
   arg = arg.substr(strlen("embed"));
   if (arg.empty())
     return;
-  if (!arg.startswith_insensitive(",id="))
+  if (!arg.starts_with_insensitive(",id="))
     fatal("invalid option " + arg);
   arg = arg.substr(strlen(",id="));
   if (arg.getAsInteger(0, ctx.config.manifestID))
@@ -294,13 +310,11 @@ void LinkerDriver::parseManifestUAC(StringRef arg) {
     arg = arg.ltrim();
     if (arg.empty())
       return;
-    if (arg.startswith_insensitive("level=")) {
-      arg = arg.substr(strlen("level="));
+    if (arg.consume_front_insensitive("level=")) {
       std::tie(ctx.config.manifestLevel, arg) = arg.split(" ");
       continue;
     }
-    if (arg.startswith_insensitive("uiaccess=")) {
-      arg = arg.substr(strlen("uiaccess="));
+    if (arg.consume_front_insensitive("uiaccess=")) {
       std::tie(ctx.config.manifestUIAccess, arg) = arg.split(" ");
       continue;
     }
@@ -322,7 +336,7 @@ void LinkerDriver::parseSwaprun(StringRef arg) {
     else
       error("/swaprun: invalid argument: " + swaprun);
     // To catch trailing commas, e.g. `/spawrun:cd,`
-    if (newArg.empty() && arg.endswith(","))
+    if (newArg.empty() && arg.ends_with(","))
       error("/swaprun: missing argument");
     arg = newArg;
   } while (!arg.empty());
@@ -336,7 +350,7 @@ public:
     SmallString<128> s;
     if (auto ec = sys::fs::createTemporaryFile("lld-" + prefix, extn, s))
       fatal("cannot create a temporary file: " + ec.message());
-    path = std::string(s.str());
+    path = std::string(s);
 
     if (!contents.empty()) {
       std::error_code ec;
@@ -549,6 +563,8 @@ void LinkerDriver::createSideBySideManifest() {
 // Used for parsing /export arguments.
 Export LinkerDriver::parseExport(StringRef arg) {
   Export e;
+  e.source = ExportSource::Export;
+
   StringRef rest;
   std::tie(e.name, rest) = arg.split(",");
   if (e.name.empty())
@@ -592,7 +608,7 @@ Export LinkerDriver::parseExport(StringRef arg) {
       e.isPrivate = true;
       continue;
     }
-    if (tok.startswith("@")) {
+    if (tok.starts_with("@")) {
       int32_t ord;
       if (tok.substr(1).getAsInteger(0, ord))
         goto err;
@@ -616,9 +632,9 @@ static StringRef undecorate(COFFLinkerContext &ctx, StringRef sym) {
   // as-is with the leading underscore (with type IMPORT_NAME).
   // In MinGW mode, a decorated stdcall function gets the underscore
   // removed, just like normal cdecl functions.
-  if (sym.startswith("_") && sym.contains('@') && !ctx.config.mingw)
+  if (sym.starts_with("_") && sym.contains('@') && !ctx.config.mingw)
     return sym;
-  return sym.startswith("_") ? sym.substr(1) : sym;
+  return sym.starts_with("_") ? sym.substr(1) : sym;
 }
 
 // Convert stdcall/fastcall style symbols into unsuffixed symbols,
@@ -628,8 +644,8 @@ static StringRef killAt(StringRef sym, bool prefix) {
     return sym;
   // Strip any trailing stdcall suffix
   sym = sym.substr(0, sym.find('@', 1));
-  if (!sym.startswith("@")) {
-    if (prefix && !sym.startswith("_"))
+  if (!sym.starts_with("@")) {
+    if (prefix && !sym.starts_with("_"))
       return saver().save("_" + sym);
     return sym;
   }
@@ -641,9 +657,23 @@ static StringRef killAt(StringRef sym, bool prefix) {
   return sym;
 }
 
+static StringRef exportSourceName(ExportSource s) {
+  switch (s) {
+  case ExportSource::Directives:
+    return "source file (directives)";
+  case ExportSource::Export:
+    return "/export";
+  case ExportSource::ModuleDefinition:
+    return "/def";
+  default:
+    llvm_unreachable("unknown ExportSource");
+  }
+}
+
 // Performs error checking on all /export arguments.
 // It also sets ordinals.
 void LinkerDriver::fixupExports() {
+  llvm::TimeTraceScope timeScope("Fixup exports");
   // Symbol ordinals must be unique.
   std::set<uint16_t> ords;
   for (Export &e : ctx.config.exports) {
@@ -671,19 +701,36 @@ void LinkerDriver::fixupExports() {
   }
 
   // Uniquefy by name.
-  DenseMap<StringRef, Export *> map(ctx.config.exports.size());
+  DenseMap<StringRef, std::pair<Export *, unsigned>> map(
+      ctx.config.exports.size());
   std::vector<Export> v;
   for (Export &e : ctx.config.exports) {
-    auto pair = map.insert(std::make_pair(e.exportName, &e));
+    auto pair = map.insert(std::make_pair(e.exportName, std::make_pair(&e, 0)));
     bool inserted = pair.second;
     if (inserted) {
+      pair.first->second.second = v.size();
       v.push_back(e);
       continue;
     }
-    Export *existing = pair.first->second;
+    Export *existing = pair.first->second.first;
     if (e == *existing || e.name != existing->name)
       continue;
-    warn("duplicate /export option: " + e.name);
+    // If the existing export comes from .OBJ directives, we are allowed to
+    // overwrite it with /DEF: or /EXPORT without any warning, as MSVC link.exe
+    // does.
+    if (existing->source == ExportSource::Directives) {
+      *existing = e;
+      v[pair.first->second.second] = e;
+      continue;
+    }
+    if (existing->source == e.source) {
+      warn(Twine("duplicate ") + exportSourceName(existing->source) +
+           " option: " + e.name);
+    } else {
+      warn("duplicate export: " + e.name +
+           Twine(" first seen in " + exportSourceName(existing->source) +
+                 Twine(", now in " + exportSourceName(e.source))));
+    }
   }
   ctx.config.exports = std::move(v);
 
@@ -785,9 +832,7 @@ MemoryBufferRef LinkerDriver::convertResToCOFF(ArrayRef<MemoryBufferRef> mbs,
 
 // Create table mapping all options defined in Options.td
 static constexpr llvm::opt::OptTable::Info infoTable[] = {
-#define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
-  {X1, X2, X10,         X11,         OPT_##ID, llvm::opt::Option::KIND##Class, \
-   X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
@@ -904,14 +949,14 @@ ParsedDirectives ArgParser::parseDirectives(StringRef s) {
   SmallVector<StringRef, 16> tokens;
   cl::TokenizeWindowsCommandLineNoCopy(s, saver(), tokens);
   for (StringRef tok : tokens) {
-    if (tok.startswith_insensitive("/export:") ||
-        tok.startswith_insensitive("-export:"))
+    if (tok.starts_with_insensitive("/export:") ||
+        tok.starts_with_insensitive("-export:"))
       result.exports.push_back(tok.substr(strlen("/export:")));
-    else if (tok.startswith_insensitive("/include:") ||
-             tok.startswith_insensitive("-include:"))
+    else if (tok.starts_with_insensitive("/include:") ||
+             tok.starts_with_insensitive("-include:"))
       result.includes.push_back(tok.substr(strlen("/include:")));
-    else if (tok.startswith_insensitive("/exclude-symbols:") ||
-             tok.startswith_insensitive("-exclude-symbols:"))
+    else if (tok.starts_with_insensitive("/exclude-symbols:") ||
+             tok.starts_with_insensitive("-exclude-symbols:"))
       result.excludes.push_back(tok.substr(strlen("/exclude-symbols:")));
     else {
       // Copy substrings that are not valid C strings. The tokenizer may have

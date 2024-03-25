@@ -20,8 +20,8 @@ define void @copy_1_byte(ptr %d, ptr %s) {
 
 define void @copy_2_bytes(ptr %d, ptr %s) {
 ; CHECK-LABEL: @copy_2_bytes(
-; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[S:%.*]], align 1
-; CHECK-NEXT:    store i16 [[TMP3]], ptr [[D:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[S:%.*]], align 1
+; CHECK-NEXT:    store i16 [[TMP1]], ptr [[D:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i32(ptr %d, ptr %s, i32 2, i1 false)
@@ -41,8 +41,8 @@ define void @copy_3_bytes(ptr %d, ptr %s) {
 
 define void @copy_4_bytes(ptr %d, ptr %s) {
 ; CHECK-LABEL: @copy_4_bytes(
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[S:%.*]], align 1
-; CHECK-NEXT:    store i32 [[TMP3]], ptr [[D:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[S:%.*]], align 1
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[D:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i32(ptr %d, ptr %s, i32 4, i1 false)
@@ -62,8 +62,8 @@ define void @copy_5_bytes(ptr %d, ptr %s) {
 
 define void @copy_8_bytes(ptr %d, ptr %s) {
 ; CHECK-LABEL: @copy_8_bytes(
-; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[S:%.*]], align 1
-; CHECK-NEXT:    store i64 [[TMP3]], ptr [[D:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[S:%.*]], align 1
+; CHECK-NEXT:    store i64 [[TMP1]], ptr [[D:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i32(ptr %d, ptr %s, i32 8, i1 false)
@@ -79,3 +79,19 @@ define void @copy_16_bytes(ptr %d, ptr %s) {
   ret void
 }
 
+define void @copy_8_bytes_noalias(ptr %d, ptr %s) {
+; CHECK-LABEL: @copy_8_bytes_noalias(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[S:%.*]], align 1, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
+; CHECK-NEXT:    store i64 [[TMP1]], ptr [[D:%.*]], align 1, !alias.scope [[META0]], !noalias [[META3]]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memcpy.p0.p0.i32(ptr %d, ptr %s, i32 8, i1 false), !alias.scope !4, !noalias !5
+  ret void
+}
+
+!0 = distinct !{!0, !"The domain"}
+!1 = distinct !{!1}
+!2 = !{!2, !0}
+!3 = !{!3, !1}
+!4 = !{!2}
+!5 = !{!3}

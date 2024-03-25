@@ -163,16 +163,27 @@ define <16 x i8> @or_icmp_eq_const_1bit_diff(<16 x i8> %x) {
 }
 
 define <4 x i32> @or_icmp_ne_const_1bit_diff(<4 x i32> %x) {
-; SSE-LABEL: or_icmp_ne_const_1bit_diff:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [44,60,44,60]
-; SSE-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    pxor %xmm2, %xmm1
-; SSE-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    pxor %xmm2, %xmm0
-; SSE-NEXT:    por %xmm1, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: or_icmp_ne_const_1bit_diff:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [44,60,44,60]
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE2-NEXT:    pxor %xmm2, %xmm1
+; SSE2-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: or_icmp_ne_const_1bit_diff:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm1 = [44,60,44,60]
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE41-NEXT:    pxor %xmm2, %xmm1
+; SSE41-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    pxor %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: or_icmp_ne_const_1bit_diff:
 ; AVX:       # %bb.0:
@@ -215,16 +226,27 @@ define <16 x i8> @and_icmp_eq_const_1bit_diff(<16 x i8> %x) {
 }
 
 define <4 x i32> @and_icmp_ne_const_1bit_diff(<4 x i32> %x) {
-; SSE-LABEL: and_icmp_ne_const_1bit_diff:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [44,60,54,44]
-; SSE-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    pxor %xmm2, %xmm1
-; SSE-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    pxor %xmm2, %xmm0
-; SSE-NEXT:    por %xmm1, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: and_icmp_ne_const_1bit_diff:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [44,60,54,44]
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE2-NEXT:    pxor %xmm2, %xmm1
+; SSE2-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: and_icmp_ne_const_1bit_diff:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm1 = [44,60,54,44]
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE41-NEXT:    pxor %xmm2, %xmm1
+; SSE41-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    pxor %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: and_icmp_ne_const_1bit_diff:
 ; AVX:       # %bb.0:
@@ -308,9 +330,9 @@ define <3 x i1> @test_setcc_v3i1_v3i16(ptr %a) nounwind {
 ; SSE2-LABEL: test_setcc_v3i1_v3i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpeqw %xmm0, %xmm1
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
@@ -322,7 +344,7 @@ define <3 x i1> @test_setcc_v3i1_v3i16(ptr %a) nounwind {
 ; SSE41-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE41-NEXT:    pxor %xmm1, %xmm1
 ; SSE41-NEXT:    pcmpeqw %xmm0, %xmm1
-; SSE41-NEXT:    pextrb $0, %xmm1, %eax
+; SSE41-NEXT:    movd %xmm1, %eax
 ; SSE41-NEXT:    pextrb $2, %xmm1, %edx
 ; SSE41-NEXT:    pextrb $4, %xmm1, %ecx
 ; SSE41-NEXT:    # kill: def $al killed $al killed $eax
@@ -335,7 +357,7 @@ define <3 x i1> @test_setcc_v3i1_v3i16(ptr %a) nounwind {
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpextrb $0, %xmm0, %eax
+; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    vpextrb $2, %xmm0, %edx
 ; AVX-NEXT:    vpextrb $4, %xmm0, %ecx
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax

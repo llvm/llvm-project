@@ -37,7 +37,7 @@ define void @f() {
 entry:
   %o = alloca %class.Impl
   %base = getelementptr %class.Impl, %class.Impl* %o, i64 0, i32 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
   %f = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 1
   store i32 3, i32* %f
   %base.i = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 0
@@ -171,7 +171,7 @@ define void @f() {
 entry:
   %o = alloca %class.Impl
   %base = getelementptr %class.Impl, %class.Impl* %o, i64 0, i32 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
   %f = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 1
   store i32 3, i32* %f
   %base.i = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 0
@@ -213,7 +213,7 @@ define void @f() {
 entry:
   %o = alloca %class.Impl
   %base = getelementptr %class.Impl, %class.Impl* %o, i64 0, i32 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
   %f = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 1
   store i32 3, i32* %f
   %base.i = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 0
@@ -256,7 +256,7 @@ entry:
   %a = alloca %struct.A, align 8
   %0 = bitcast %struct.A* %a to i8*
   %1 = getelementptr %struct.A, %struct.A* %a, i64 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV1A, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %1, align 8
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV1A, i64 0, i32 0, i64 2) to i32 (...)**), i32 (...)*** %1, align 8
   %2 = bitcast %struct.A* %a to i8*
   %3 = bitcast i8* %2 to i8**
   %vtable.i = load i8*, i8** %3, align 8
@@ -271,7 +271,7 @@ entry:
   %a = alloca %struct.A, align 8
   %0 = bitcast %struct.A* %a to i8*
   %1 = getelementptr %struct.A, %struct.A* %a, i64 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV1A, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %1, align 8
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV1A, i64 0, i32 0, i64 2) to i32 (...)**), i32 (...)*** %1, align 8
   %2 = bitcast %struct.A* %a to i8*
   %3 = bitcast i8* %2 to i8**
   %vtable.i = load i8*, i8** %3, align 8
@@ -340,7 +340,7 @@ define %struct1 @f() {
 entry:
   %o = alloca %class.Impl
   %base = getelementptr %class.Impl, %class.Impl* %o, i64 0, i32 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
   %f = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 1
   store i32 3, i32* %f
   %base.i = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 0

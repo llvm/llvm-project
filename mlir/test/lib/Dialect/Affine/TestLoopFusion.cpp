@@ -20,6 +20,7 @@
 #define DEBUG_TYPE "test-loop-fusion"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 static llvm::cl::OptionCategory clOptionsCategory(DEBUG_TYPE " options");
 
@@ -60,10 +61,10 @@ struct TestLoopFusion
 static bool testDependenceCheck(AffineForOp srcForOp, AffineForOp dstForOp,
                                 unsigned i, unsigned j, unsigned loopDepth,
                                 unsigned maxLoopDepth) {
-  mlir::ComputationSliceState sliceUnion;
+  affine::ComputationSliceState sliceUnion;
   for (unsigned d = loopDepth + 1; d <= maxLoopDepth; ++d) {
     FusionResult result =
-        mlir::canFuseLoops(srcForOp, dstForOp, d, &sliceUnion);
+        affine::canFuseLoops(srcForOp, dstForOp, d, &sliceUnion);
     if (result.value == FusionResult::FailBlockDependence) {
       srcForOp->emitRemark("block-level dependence preventing"
                            " fusion of loop nest ")
@@ -85,7 +86,8 @@ static unsigned getBlockIndex(Operation &op) {
 }
 
 // Returns a string representation of 'sliceUnion'.
-static std::string getSliceStr(const mlir::ComputationSliceState &sliceUnion) {
+static std::string
+getSliceStr(const affine::ComputationSliceState &sliceUnion) {
   std::string result;
   llvm::raw_string_ostream os(result);
   // Slice insertion point format [loop-depth, operation-block-index]
@@ -114,8 +116,8 @@ static bool testSliceComputation(AffineForOp forOpA, AffineForOp forOpB,
                                  unsigned i, unsigned j, unsigned loopDepth,
                                  unsigned maxLoopDepth) {
   for (unsigned d = loopDepth + 1; d <= maxLoopDepth; ++d) {
-    mlir::ComputationSliceState sliceUnion;
-    FusionResult result = mlir::canFuseLoops(forOpA, forOpB, d, &sliceUnion);
+    affine::ComputationSliceState sliceUnion;
+    FusionResult result = affine::canFuseLoops(forOpA, forOpB, d, &sliceUnion);
     if (result.value == FusionResult::Success) {
       forOpB->emitRemark("slice (")
           << " src loop: " << i << ", dst loop: " << j << ", depth: " << d
@@ -137,10 +139,10 @@ static bool testLoopFusionTransformation(AffineForOp forOpA, AffineForOp forOpB,
                                          unsigned loopDepth,
                                          unsigned maxLoopDepth) {
   for (unsigned d = loopDepth + 1; d <= maxLoopDepth; ++d) {
-    mlir::ComputationSliceState sliceUnion;
-    FusionResult result = mlir::canFuseLoops(forOpA, forOpB, d, &sliceUnion);
+    affine::ComputationSliceState sliceUnion;
+    FusionResult result = affine::canFuseLoops(forOpA, forOpB, d, &sliceUnion);
     if (result.value == FusionResult::Success) {
-      mlir::fuseLoops(forOpA, forOpB, sliceUnion);
+      affine::fuseLoops(forOpA, forOpB, sliceUnion);
       // Note: 'forOpA' is removed to simplify test output. A proper loop
       // fusion pass should check the data dependence graph and run memref
       // region analysis to ensure removing 'forOpA' is safe.

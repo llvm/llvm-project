@@ -61,7 +61,7 @@ constexpr bool test() {
     {
       struct ThrowingCopyNoexceptDecrement {
         using value_type = int;
-        using difference_type = ptrdiff_t;
+        using difference_type = std::ptrdiff_t;
 
         ThrowingCopyNoexceptDecrement();
         ThrowingCopyNoexceptDecrement(const ThrowingCopyNoexceptDecrement&);
@@ -89,7 +89,7 @@ constexpr bool test() {
     {
       struct NoexceptCopyThrowingDecrement {
         using value_type = int;
-        using difference_type = ptrdiff_t;
+        using difference_type = std::ptrdiff_t;
 
         NoexceptCopyThrowingDecrement();
         NoexceptCopyThrowingDecrement(const NoexceptCopyThrowingDecrement&) noexcept;
@@ -117,7 +117,7 @@ constexpr bool test() {
     {
       struct NoexceptCopyAndDecrement {
         using value_type = int;
-        using difference_type = ptrdiff_t;
+        using difference_type = std::ptrdiff_t;
 
         NoexceptCopyAndDecrement();
         NoexceptCopyAndDecrement(const NoexceptCopyAndDecrement&) noexcept;

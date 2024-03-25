@@ -6,10 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: no-filesystem
-
-// std::filesystem is unavailable prior to macOS 10.15
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+// XFAIL: availability-filesystem-missing
 
 // Make sure the various containers' iterators are not broken by the use of `std::rel_ops`.
 
@@ -17,6 +14,7 @@
 
 #include <array>
 #include <deque>
+#include <filesystem>
 #include <forward_list>
 #include <list>
 #include <map>
@@ -27,10 +25,6 @@
 #include <vector>
 
 #include "test_macros.h"
-
-#if TEST_STD_VER >= 11
-#include "filesystem_include.h"
-#endif
 
 #if TEST_STD_VER >= 17
 #include <string_view>
@@ -117,16 +111,18 @@ template void test_forward<std::unordered_multiset<int> >();
 template void test_forward<std::unordered_set<int> >();
 template void test_random_access<std::vector<int> >();
 
-#if TEST_STD_VER >= 11
+#if TEST_STD_VER >= 17
 void test_directory_iterators() {
-    fs::directory_iterator it;
+#ifndef TEST_HAS_NO_FILESYSTEM
+    std::filesystem::directory_iterator it;
     test_eq(it, it);
 
-    fs::recursive_directory_iterator rdit;
+    std::filesystem::recursive_directory_iterator rdit;
     test_eq(rdit, rdit);
+#endif
 }
 
-template void test_forward<fs::path>();
+template void test_forward<std::filesystem::path>();
 #endif
 
 #if TEST_STD_VER >= 17

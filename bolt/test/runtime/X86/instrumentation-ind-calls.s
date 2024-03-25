@@ -1,5 +1,5 @@
 # This reproduces a bug with instrumentation when trying to count calls
-# when the target address is computed with a referece to the stack pointer.
+# when the target address is computed with a reference to the stack pointer.
 # Our instrumentation code uses the stack to save registers to be
 # transparent with the instrumented code, but we end up updating the stack
 # pointer while doing so, which affects this target address calculation.

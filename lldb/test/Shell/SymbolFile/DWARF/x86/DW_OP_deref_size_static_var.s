@@ -1,11 +1,17 @@
 # RUN: llvm-mc -filetype=obj -o %t -triple x86_64-apple-macosx10.15.0 %s
-# RUN: %lldb %t -o "target variable ug" -b | FileCheck %s
+# RUN: %lldb %t -o "target variable ug" -b \
+# RUN:  | FileCheck --check-prefix=TARGET-VARIABLE %s
+# RUN: %lldb %t -o "image lookup --verbose --address 0x0" -b \
+# RUN:  | FileCheck --check-prefix=IMAGE-LOOKUP %s
 
-# CHECK: (lldb) target variable ug
-# CHECK: (U) ug = {
-# CHECK:   raw = 0
-# CHECK:    = (a = 0, b = 0, c = 0, d = 0, e = 0, f = 0)
-# CHECK: }
+# TARGET-VARIABLE: (lldb) target variable ug
+# TARGET-VARIABLE: (U) ug = {
+# TARGET-VARIABLE:   raw = 0
+# TARGET-VARIABLE:    = (a = 0, b = 0, c = 0, d = 0, e = 0, f = 0)
+# TARGET-VARIABLE: }
+
+# IMAGE-LOOKUP: Summary:
+# IMAGE-LOOKUP: Module: file =
 
 # We are testing how DWARFExpression::Evaluate(...) in the case of
 # DW_OP_deref_size deals with static variable.

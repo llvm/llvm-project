@@ -1,4 +1,13 @@
-# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - | FileCheck %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mtriple=avr -mcpu=attiny11 %s -o - \
+# RUN:     | FileCheck %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mtriple=avr -mcpu=atmega328 %s -o - \
+# RUN:     | FileCheck %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mtriple=avr -mcpu=attiny817 %s -o - \
+# RUN:     | FileCheck --check-prefix=XMEGA %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mtriple=avr -mcpu=atxmega64a1 %s -o - \
+# RUN:     | FileCheck --check-prefix=XMEGA %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mtriple=avr -mcpu=atxmega256a3u %s -o - \
+# RUN:     | FileCheck --check-prefix=XMEGA %s
 
 --- |
   target triple = "avr--"
@@ -15,9 +24,12 @@ body: |
     liveins: $r15r14
 
     ; CHECK-LABEL: test
+    ; CHECK:       OUTARr 32, $r15
+    ; CHECK-NEXT:  OUTARr 31, $r14
 
-    ; CHECK:      OUTARr 32, $r15
-    ; CHECK-NEXT: OUTARr 31, $r14
+    ; XMEGA-LABEL: test
+    ; XMEGA:       OUTARr 31, $r14
+    ; XMEGA-NEXT:  OUTARr 32, $r15
 
     OUTWARr 31, $r15r14
 ...

@@ -17,13 +17,13 @@
 ! FLANG FRONTEND DRIVER (flang -fc1)
 !---------------------------------------
 ! Test `-E`: for the corresponding frontend actions the driver relies on the prescanner API to handle file I/O
-! RUN: cat %s | %flang -fc1 -E -cpp | FileCheck %s --check-prefix=PP-NOT-DEFINED
-! RUN: cat %s | %flang -fc1 -DNEW -E -cpp | FileCheck %s --check-prefix=PP-DEFINED
+! RUN: cat %s | %flang_fc1 -E -cpp | FileCheck %s --check-prefix=PP-NOT-DEFINED
+! RUN: cat %s | %flang_fc1 -DNEW -E -cpp | FileCheck %s --check-prefix=PP-DEFINED
 
 ! Test `-test-io`: for the corresponding frontend action (`InputOutputTestAction`) the driver handles the file I/O on its own
 ! the corresponding action (`PrintPreprocessedAction`)
-! RUN: cat %s | %flang -fc1 -test-io -cpp | FileCheck %s --check-prefix=IO --match-full-lines
-! RUN: cat %s | %flang -fc1 -DNEW -cpp -test-io | FileCheck %s --check-prefix=IO --match-full-lines
+! RUN: cat %s | %flang_fc1 -test-io -cpp | FileCheck %s --check-prefix=IO --match-full-lines
+! RUN: cat %s | %flang_fc1 -DNEW -cpp -test-io | FileCheck %s --check-prefix=IO --match-full-lines
 
 ! PP-NOT-DEFINED: Program B
 ! PP-DEFINED: Program A

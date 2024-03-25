@@ -13,6 +13,8 @@
 
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cctype>
@@ -30,7 +32,7 @@ ARM::ArchKind ARM::parseArch(StringRef Arch) {
   Arch = getCanonicalArchName(Arch);
   StringRef Syn = getArchSynonym(Arch);
   for (const auto &A : ARMArchNames) {
-    if (A.Name.endswith(Syn))
+    if (A.Name.ends_with(Syn))
       return A.ID;
   }
   return ArchKind::INVALID;
@@ -84,6 +86,7 @@ unsigned ARM::parseArchVersion(StringRef Arch) {
   case ArchKind::ARMV9_2A:
   case ArchKind::ARMV9_3A:
   case ArchKind::ARMV9_4A:
+  case ArchKind::ARMV9_5A:
     return 9;
   case ArchKind::INVALID:
     return 0;
@@ -121,6 +124,7 @@ static ARM::ProfileKind getProfileKind(ARM::ArchKind AK) {
   case ARM::ArchKind::ARMV9_2A:
   case ARM::ArchKind::ARMV9_3A:
   case ARM::ArchKind::ARMV9_4A:
+  case ARM::ArchKind::ARMV9_5A:
     return ARM::ProfileKind::A;
   case ARM::ArchKind::ARMV4:
   case ARM::ArchKind::ARMV4T:
@@ -147,7 +151,8 @@ ARM::ProfileKind ARM::parseArchProfile(StringRef Arch) {
   return getProfileKind(parseArch(Arch));
 }
 
-bool ARM::getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features) {
+bool ARM::getFPUFeatures(ARM::FPUKind FPUKind,
+                         std::vector<StringRef> &Features) {
 
   if (FPUKind >= FK_LAST || FPUKind == FK_INVALID)
     return false;
@@ -211,7 +216,7 @@ bool ARM::getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features) {
   return true;
 }
 
-unsigned ARM::parseFPU(StringRef FPU) {
+ARM::FPUKind ARM::parseFPU(StringRef FPU) {
   StringRef Syn = getFPUSynonym(FPU);
   for (const auto &F : FPUNames) {
     if (Syn == F.Name)
@@ -220,7 +225,7 @@ unsigned ARM::parseFPU(StringRef FPU) {
   return FK_INVALID;
 }
 
-ARM::NeonSupportLevel ARM::getFPUNeonSupportLevel(unsigned FPUKind) {
+ARM::NeonSupportLevel ARM::getFPUNeonSupportLevel(ARM::FPUKind FPUKind) {
   if (FPUKind >= FK_LAST)
     return NeonSupportLevel::None;
   return FPUNames[FPUKind].NeonSupport;
@@ -243,33 +248,33 @@ StringRef ARM::getFPUSynonym(StringRef FPU) {
       .Default(FPU);
 }
 
-StringRef ARM::getFPUName(unsigned FPUKind) {
+StringRef ARM::getFPUName(ARM::FPUKind FPUKind) {
   if (FPUKind >= FK_LAST)
     return StringRef();
   return FPUNames[FPUKind].Name;
 }
 
-ARM::FPUVersion ARM::getFPUVersion(unsigned FPUKind) {
+ARM::FPUVersion ARM::getFPUVersion(ARM::FPUKind FPUKind) {
   if (FPUKind >= FK_LAST)
     return FPUVersion::NONE;
   return FPUNames[FPUKind].FPUVer;
 }
 
-ARM::FPURestriction ARM::getFPURestriction(unsigned FPUKind) {
+ARM::FPURestriction ARM::getFPURestriction(ARM::FPUKind FPUKind) {
   if (FPUKind >= FK_LAST)
     return FPURestriction::None;
   return FPUNames[FPUKind].Restriction;
 }
 
-unsigned ARM::getDefaultFPU(StringRef CPU, ARM::ArchKind AK) {
+ARM::FPUKind ARM::getDefaultFPU(StringRef CPU, ARM::ArchKind AK) {
   if (CPU == "generic")
     return ARM::ARMArchNames[static_cast<unsigned>(AK)].DefaultFPU;
 
-  return StringSwitch<unsigned>(CPU)
+  return StringSwitch<ARM::FPUKind>(CPU)
 #define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)           \
   .Case(NAME, DEFAULT_FPU)
 #include "llvm/TargetParser/ARMTargetParser.def"
-   .Default(ARM::FK_INVALID);
+      .Default(ARM::FK_INVALID);
 }
 
 uint64_t ARM::getDefaultExtensions(StringRef CPU, ARM::ArchKind AK) {
@@ -345,11 +350,7 @@ StringRef ARM::getArchExtName(uint64_t ArchExtKind) {
 }
 
 static bool stripNegationPrefix(StringRef &Name) {
-  if (Name.startswith("no")) {
-    Name = Name.substr(2);
-    return true;
-  }
-  return false;
+  return Name.consume_front("no");
 }
 
 StringRef ARM::getArchExtFeature(StringRef ArchExt) {
@@ -362,27 +363,52 @@ StringRef ARM::getArchExtFeature(StringRef ArchExt) {
   return StringRef();
 }
 
-static unsigned findDoublePrecisionFPU(unsigned InputFPUKind) {
+static ARM::FPUKind findDoublePrecisionFPU(ARM::FPUKind InputFPUKind) {
+  if (InputFPUKind == ARM::FK_INVALID || InputFPUKind == ARM::FK_NONE)
+    return ARM::FK_INVALID;
+
   const ARM::FPUName &InputFPU = ARM::FPUNames[InputFPUKind];
 
   // If the input FPU already supports double-precision, then there
   // isn't any different FPU we can return here.
-  //
-  // The current available FPURestriction values are None (no
-  // restriction), D16 (only 16 d-regs) and SP_D16 (16 d-regs
-  // and single precision only); there's no value representing
-  // SP restriction without D16. So this test just means 'is it
-  // SP only?'.
-  if (InputFPU.Restriction != ARM::FPURestriction::SP_D16)
-    return ARM::FK_INVALID;
+  if (ARM::isDoublePrecision(InputFPU.Restriction))
+    return InputFPUKind;
 
   // Otherwise, look for an FPU entry with all the same fields, except
-  // that SP_D16 has been replaced with just D16, representing adding
-  // double precision and not changing anything else.
+  // that it supports double precision.
   for (const ARM::FPUName &CandidateFPU : ARM::FPUNames) {
     if (CandidateFPU.FPUVer == InputFPU.FPUVer &&
         CandidateFPU.NeonSupport == InputFPU.NeonSupport &&
-        CandidateFPU.Restriction == ARM::FPURestriction::D16) {
+        ARM::has32Regs(CandidateFPU.Restriction) ==
+            ARM::has32Regs(InputFPU.Restriction) &&
+        ARM::isDoublePrecision(CandidateFPU.Restriction)) {
+      return CandidateFPU.ID;
+    }
+  }
+
+  // nothing found
+  return ARM::FK_INVALID;
+}
+
+static ARM::FPUKind findSinglePrecisionFPU(ARM::FPUKind InputFPUKind) {
+  if (InputFPUKind == ARM::FK_INVALID || InputFPUKind == ARM::FK_NONE)
+    return ARM::FK_INVALID;
+
+  const ARM::FPUName &InputFPU = ARM::FPUNames[InputFPUKind];
+
+  // If the input FPU already is single-precision only, then there
+  // isn't any different FPU we can return here.
+  if (!ARM::isDoublePrecision(InputFPU.Restriction))
+    return InputFPUKind;
+
+  // Otherwise, look for an FPU entry with all the same fields, except
+  // that it does not support double precision.
+  for (const ARM::FPUName &CandidateFPU : ARM::FPUNames) {
+    if (CandidateFPU.FPUVer == InputFPU.FPUVer &&
+        CandidateFPU.NeonSupport == InputFPU.NeonSupport &&
+        ARM::has32Regs(CandidateFPU.Restriction) ==
+            ARM::has32Regs(InputFPU.Restriction) &&
+        !ARM::isDoublePrecision(CandidateFPU.Restriction)) {
       return CandidateFPU.ID;
     }
   }
@@ -394,7 +420,7 @@ static unsigned findDoublePrecisionFPU(unsigned InputFPUKind) {
 bool ARM::appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK,
                                 StringRef ArchExt,
                                 std::vector<StringRef> &Features,
-                                unsigned &ArgFPUID) {
+                                ARM::FPUKind &ArgFPUKind) {
 
   size_t StartingNumFeatures = Features.size();
   const bool Negated = stripNegationPrefix(ArchExt);
@@ -417,20 +443,35 @@ bool ARM::appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK,
     CPU = "generic";
 
   if (ArchExt == "fp" || ArchExt == "fp.dp") {
-    unsigned FPUKind;
+    const ARM::FPUKind DefaultFPU = getDefaultFPU(CPU, AK);
+    ARM::FPUKind FPUKind;
     if (ArchExt == "fp.dp") {
+      const bool IsDP = ArgFPUKind != ARM::FK_INVALID &&
+                        ArgFPUKind != ARM::FK_NONE &&
+                        isDoublePrecision(getFPURestriction(ArgFPUKind));
       if (Negated) {
-        Features.push_back("-fp64");
-        return true;
+        /* If there is no FPU selected yet, we still need to set ArgFPUKind, as
+         * leaving it as FK_INVALID, would cause default FPU to be selected
+         * later and that could be double precision one. */
+        if (ArgFPUKind != ARM::FK_INVALID && !IsDP)
+          return true;
+        FPUKind = findSinglePrecisionFPU(DefaultFPU);
+        if (FPUKind == ARM::FK_INVALID)
+          FPUKind = ARM::FK_NONE;
+      } else {
+        if (IsDP)
+          return true;
+        FPUKind = findDoublePrecisionFPU(DefaultFPU);
+        if (FPUKind == ARM::FK_INVALID)
+          return false;
       }
-      FPUKind = findDoublePrecisionFPU(getDefaultFPU(CPU, AK));
     } else if (Negated) {
       FPUKind = ARM::FK_NONE;
     } else {
-      FPUKind = getDefaultFPU(CPU, AK);
+      FPUKind = DefaultFPU;
     }
-    ArgFPUID = FPUKind;
-    return ARM::getFPUFeatures(FPUKind, Features);
+    ArgFPUKind = FPUKind;
+    return true;
   }
   return StartingNumFeatures != Features.size();
 }
@@ -516,6 +557,7 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
   case Triple::GNUEABIHF:
   case Triple::MuslEABI:
   case Triple::MuslEABIHF:
+  case Triple::OpenHOS:
     return "aapcs-linux";
   case Triple::EABIHF:
   case Triple::EABI:
@@ -523,7 +565,8 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
   default:
     if (TT.isOSNetBSD())
       return "apcs-gnu";
-    if (TT.isOSOpenBSD())
+    if (TT.isOSFreeBSD() || TT.isOSOpenBSD() || TT.isOSHaiku() ||
+        TT.isOHOSFamily())
       return "aapcs-linux";
     return "aapcs";
   }
@@ -539,6 +582,7 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   case llvm::Triple::FreeBSD:
   case llvm::Triple::NetBSD:
   case llvm::Triple::OpenBSD:
+  case llvm::Triple::Haiku:
     if (!MArch.empty() && MArch == "v6")
       return "arm1176jzf-s";
     if (!MArch.empty() && MArch == "v7")
@@ -554,6 +598,7 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   case llvm::Triple::TvOS:
   case llvm::Triple::WatchOS:
   case llvm::Triple::DriverKit:
+  case llvm::Triple::XROS:
     if (MArch == "v7k")
       return "cortex-a7";
     break;
@@ -571,6 +616,8 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   // If no specific architecture version is requested, return the minimum CPU
   // required by the OS and environment.
   switch (Triple.getOS()) {
+  case llvm::Triple::Haiku:
+    return "arm1176jzf-s";
   case llvm::Triple::NetBSD:
     switch (Triple.getEnvironment()) {
     case llvm::Triple::EABI:
@@ -596,4 +643,19 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   }
 
   llvm_unreachable("invalid arch name");
+}
+
+void ARM::PrintSupportedExtensions(StringMap<StringRef> DescMap) {
+  outs() << "All available -march extensions for ARM\n\n"
+         << "    " << left_justify("Name", 20)
+         << (DescMap.empty() ? "\n" : "Description\n");
+  for (const auto &Ext : ARCHExtNames) {
+    // Extensions without a feature cannot be used with -march.
+    if (!Ext.Feature.empty()) {
+      std::string Description = DescMap[Ext.Name].str();
+      outs() << "    "
+             << format(Description.empty() ? "%s\n" : "%-20s%s\n",
+                       Ext.Name.str().c_str(), Description.c_str());
+    }
+  }
 }

@@ -12,13 +12,16 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_MEMPROFILER_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_MEMPROFILER_H
 
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
 class Function;
-class FunctionPass;
 class Module;
-class ModulePass;
+
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 
 /// Public interface to the memory profiler pass for instrumenting code to
 /// profile memory accesses.
@@ -43,9 +46,16 @@ public:
   static bool isRequired() { return true; }
 };
 
-// Insert MemProfiler instrumentation
-FunctionPass *createMemProfilerFunctionPass();
-ModulePass *createModuleMemProfilerLegacyPassPass();
+class MemProfUsePass : public PassInfoMixin<MemProfUsePass> {
+public:
+  explicit MemProfUsePass(std::string MemoryProfileFile,
+                          IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+private:
+  std::string MemoryProfileFileName;
+  IntrusiveRefCntPtr<vfs::FileSystem> FS;
+};
 
 } // namespace llvm
 

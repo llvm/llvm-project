@@ -1,6 +1,6 @@
 ! Test lowering of allocate, deallocate and pointer assignment statements to
 ! HLFIR.
-! RUN: bbc -emit-fir -hlfir -o - %s -I nw | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s -I nw | FileCheck %s
 
 subroutine allocation(x)
   character(*), allocatable :: x(:)
@@ -20,7 +20,7 @@ subroutine allocation(x)
 ! CHECK:  %[[VAL_12:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_13:.*]] = arith.cmpi sgt, %[[VAL_11]], %[[VAL_12]] : index
 ! CHECK:  %[[VAL_14:.*]] = arith.select %[[VAL_13]], %[[VAL_11]], %[[VAL_12]] : index
-! CHECK:  %[[VAL_15:.*]] = fir.allocmem !fir.array<?x!fir.char<1,?>>(%[[VAL_2]] : index), %[[VAL_14]] {uniq_name = "_QFallocationEx.alloc"}
+! CHECK:  %[[VAL_15:.*]] = fir.allocmem !fir.array<?x!fir.char<1,?>>(%[[VAL_2]] : index), %[[VAL_14]] {fir.must_be_heap = true, uniq_name = "_QFallocationEx.alloc"}
 ! CHECK:  %[[VAL_16:.*]] = fir.shape %[[VAL_14]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_17:.*]] = fir.embox %[[VAL_15]](%[[VAL_16]]) typeparams %[[VAL_2]] : (!fir.heap<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>
 ! CHECK:  fir.store %[[VAL_17]] to %[[VAL_3]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
@@ -84,7 +84,7 @@ subroutine alloc_comp(x)
 ! CHECK:  %[[VAL_9:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_10:.*]] = arith.cmpi sgt, %[[VAL_8]], %[[VAL_9]] : index
 ! CHECK:  %[[VAL_11:.*]] = arith.select %[[VAL_10]], %[[VAL_8]], %[[VAL_9]] : index
-! CHECK:  %[[VAL_12:.*]] = fir.allocmem !fir.array<?xf32>, %[[VAL_11]] {uniq_name = "_QEa.alloc"}
+! CHECK:  %[[VAL_12:.*]] = fir.allocmem !fir.array<?xf32>, %[[VAL_11]] {fir.must_be_heap = true, uniq_name = "_QFalloc_compEa.alloc"}
 ! CHECK:  %[[VAL_13:.*]] = fir.shape %[[VAL_11]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_14:.*]] = fir.embox %[[VAL_12]](%[[VAL_13]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
 ! CHECK:  fir.store %[[VAL_14]] to %[[VAL_6]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>

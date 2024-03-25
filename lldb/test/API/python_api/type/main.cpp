@@ -21,13 +21,26 @@ public:
     } my_type_is_nameless;
     struct name {
       int x;
+      enum E : int {} e;
+      enum E2 {} e2;
     } my_type_is_named;
+    enum E : unsigned char {} e;
+    union U {
+    } u;
     Task(int i, Task *n):
         id(i),
         next(n),
         type(TASK_TYPE_1)
     {}
 };
+
+template <unsigned Value> struct PointerInfo {
+  enum Masks1 { pointer_mask };
+  enum class Masks2 { pointer_mask };
+};
+
+template <unsigned Value, typename InfoType = PointerInfo<Value>>
+struct Pointer {};
 
 enum EnumType {};
 enum class ScopedEnumType {};
@@ -65,6 +78,10 @@ int main (int argc, char const *argv[])
     EnumType enum_type;
     ScopedEnumType scoped_enum_type;
     EnumUChar scoped_enum_type_uchar;
+
+    Pointer<3> pointer;
+    PointerInfo<3>::Masks1 mask1 = PointerInfo<3>::Masks1::pointer_mask;
+    PointerInfo<3>::Masks2 mask2 = PointerInfo<3>::Masks2::pointer_mask;
 
     return 0; // Break at this line
 }

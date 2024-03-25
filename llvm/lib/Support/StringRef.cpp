@@ -191,7 +191,7 @@ size_t StringRef::find(StringRef Str, size_t From) const {
 size_t StringRef::find_insensitive(StringRef Str, size_t From) const {
   StringRef This = substr(From);
   while (This.size() >= Str.size()) {
-    if (This.startswith_insensitive(Str))
+    if (This.starts_with_insensitive(Str))
       return From;
     This = This.drop_front();
     ++From;
@@ -388,20 +388,14 @@ static unsigned GetAutoSenseRadix(StringRef &Str) {
   if (Str.empty())
     return 10;
 
-  if (Str.startswith("0x") || Str.startswith("0X")) {
-    Str = Str.substr(2);
+  if (Str.consume_front_insensitive("0x"))
     return 16;
-  }
 
-  if (Str.startswith("0b") || Str.startswith("0B")) {
-    Str = Str.substr(2);
+  if (Str.consume_front_insensitive("0b"))
     return 2;
-  }
 
-  if (Str.startswith("0o")) {
-    Str = Str.substr(2);
+  if (Str.consume_front("0o"))
     return 8;
-  }
 
   if (Str[0] == '0' && Str.size() > 1 && isDigit(Str[1])) {
     Str = Str.substr(1);
@@ -464,7 +458,7 @@ bool llvm::consumeSignedInteger(StringRef &Str, unsigned Radix,
   unsigned long long ULLVal;
 
   // Handle positive strings first.
-  if (Str.empty() || Str.front() != '-') {
+  if (!Str.starts_with("-")) {
     if (consumeUnsignedInteger(Str, Radix, ULLVal) ||
         // Check for value so large it overflows a signed value.
         (long long)ULLVal < 0)
@@ -509,7 +503,7 @@ bool llvm::getAsSignedInteger(StringRef Str, unsigned Radix,
   return !Str.empty();
 }
 
-bool StringRef::getAsInteger(unsigned Radix, APInt &Result) const {
+bool StringRef::consumeInteger(unsigned Radix, APInt &Result) {
   StringRef Str = *this;
 
   // Autosense radix if not specified.
@@ -523,12 +517,12 @@ bool StringRef::getAsInteger(unsigned Radix, APInt &Result) const {
 
   // Skip leading zeroes.  This can be a significant improvement if
   // it means we don't need > 64 bits.
-  while (!Str.empty() && Str.front() == '0')
-    Str = Str.substr(1);
+  Str = Str.ltrim('0');
 
   // If it was nothing but zeroes....
   if (Str.empty()) {
     Result = APInt(64, 0);
+    *this = Str;
     return false;
   }
 
@@ -561,12 +555,12 @@ bool StringRef::getAsInteger(unsigned Radix, APInt &Result) const {
     else if (Str[0] >= 'A' && Str[0] <= 'Z')
       CharVal = Str[0]-'A'+10;
     else
-      return true;
+      break;
 
     // If the parsed value is larger than the integer radix, the string is
     // invalid.
     if (CharVal >= Radix)
-      return true;
+      break;
 
     // Add in this character.
     if (IsPowerOf2Radix) {
@@ -581,7 +575,23 @@ bool StringRef::getAsInteger(unsigned Radix, APInt &Result) const {
     Str = Str.substr(1);
   }
 
+  // We consider the operation a failure if no characters were consumed
+  // successfully.
+  if (size() == Str.size())
+    return true;
+
+  *this = Str;
   return false;
+}
+
+bool StringRef::getAsInteger(unsigned Radix, APInt &Result) const {
+  StringRef Str = *this;
+  if (Str.consumeInteger(Radix, Result))
+    return true;
+
+  // For getAsInteger, we require the whole string to be consumed or else we
+  // consider it a failure.
+  return !Str.empty();
 }
 
 bool StringRef::getAsDouble(double &Result, bool AllowInexact) const {

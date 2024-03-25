@@ -35,7 +35,7 @@ void test(int n) {
   // CHECK-NEXT: [[t2:%.+]] = load i32, ptr [[n_addr]]
   // CHECK-NEXT: [[add:%.+]] = add nsw i32 [[t2]], 1
   // CHECK-NEXT: [[t3:%.+]] = zext i32 [[add]] to i64
-  // CHECK-NEXT: [[t4:%.+]] = call ptr @llvm.stacksave()
+  // CHECK-NEXT: [[t4:%.+]] = call ptr @llvm.stacksave.p0()
   // CHECK-NEXT: store ptr [[t4]], ptr [[saved_stack]]
   // CHECK-NEXT: [[t5:%.+]] = mul nuw i64 [[t1]], [[t3]]
   // CHECK-NEXT: [[vla:%.+]] = alloca [[struct_S]], i64 [[t5]]
@@ -97,7 +97,7 @@ void test(int n) {
 
   //  CHECK: [[arraydestroy_done2]]
   //  CHECK-NEXT: [[t17:%.+]] = load ptr, ptr [[saved_stack]]
-  //  CHECK-NEXT: call void @llvm.stackrestore(ptr [[t17]])
+  //  CHECK-NEXT: call void @llvm.stackrestore.p0(ptr [[t17]])
   //  CHECK: ret void
 
   //  CHECK: [[lpad]]

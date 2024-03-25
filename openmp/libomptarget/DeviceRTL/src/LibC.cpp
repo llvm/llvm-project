@@ -15,7 +15,8 @@ int32_t omp_vprintf(const char *Format, void *Arguments, uint32_t);
 }
 
 #pragma omp begin declare variant match(                                       \
-    device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
+        device = {arch(nvptx, nvptx64)},                                       \
+            implementation = {extension(match_any)})
 extern "C" int32_t vprintf(const char *, void *);
 namespace impl {
 int32_t omp_vprintf(const char *Format, void *Arguments, uint32_t) {
@@ -44,6 +45,12 @@ int memcmp(const void *lhs, const void *rhs, size_t count) {
       return (int)L[I] - (int)R[I];
 
   return 0;
+}
+
+void memset(void *dst, int C, size_t count) {
+  auto *dstc = reinterpret_cast<char *>(dst);
+  for (size_t I = 0; I < count; ++I)
+    dstc[I] = C;
 }
 
 /// printf() calls are rewritten by CGGPUBuiltin to __llvm_omp_vprintf

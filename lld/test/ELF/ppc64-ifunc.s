@@ -8,7 +8,8 @@
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=REL %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
-# RUN: ld.lld %t.o -o %t
+## IRELATIVE relocs relocating NOBITS .plt do not cause --check-dynamic-relocations errors.
+# RUN: ld.lld %t.o -o %t --apply-dynamic-relocs --check-dynamic-relocations
 # RUN: llvm-readelf -s %t | FileCheck --check-prefix=SYM %s
 # RUN: llvm-readelf -S %t | FileCheck --check-prefix=SECTIONS %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s

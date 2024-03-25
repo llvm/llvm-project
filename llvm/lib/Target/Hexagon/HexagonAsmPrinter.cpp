@@ -17,6 +17,7 @@
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
+#include "HexagonTargetStreamer.h"
 #include "MCTargetDesc/HexagonInstPrinter.h"
 #include "MCTargetDesc/HexagonMCExpr.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
@@ -46,6 +47,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -66,8 +68,7 @@ void HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
 inline static unsigned getHexagonRegisterPair(unsigned Reg,
       const MCRegisterInfo *RI) {
   assert(Hexagon::IntRegsRegClass.contains(Reg));
-  MCSuperRegIterator SR(Reg, RI, false);
-  unsigned Pair = *SR;
+  unsigned Pair = *RI->superregs(Reg).begin();
   assert(Hexagon::DoubleRegsRegClass.contains(Pair));
   return Pair;
 }
@@ -774,6 +775,24 @@ void HexagonAsmPrinter::emitInstruction(const MachineInstr *MI) {
   if (HexagonMCInstrInfo::bundleSize(MCB) == 0)
     return;
   OutStreamer->emitInstruction(MCB, getSubtargetInfo());
+}
+
+void HexagonAsmPrinter::emitStartOfAsmFile(Module &M) {
+  if (TM.getTargetTriple().isOSBinFormatELF())
+    emitAttributes();
+}
+
+void HexagonAsmPrinter::emitEndOfAsmFile(Module &M) {
+  HexagonTargetStreamer &HTS =
+      static_cast<HexagonTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  if (TM.getTargetTriple().isOSBinFormatELF())
+    HTS.finishAttributeSection();
+}
+
+void HexagonAsmPrinter::emitAttributes() {
+  HexagonTargetStreamer &HTS =
+      static_cast<HexagonTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  HTS.emitTargetAttributes(*TM.getMCSubtargetInfo());
 }
 
 void HexagonAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {

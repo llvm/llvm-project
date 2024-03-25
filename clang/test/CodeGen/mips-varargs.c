@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple mips-unknown-linux -o - -emit-llvm %s | FileCheck %s -check-prefixes=ALL,O32 -enable-var-scope
-// RUN: %clang_cc1 -no-opaque-pointers -triple mipsel-unknown-linux -o - -emit-llvm %s | FileCheck %s -check-prefixes=ALL,O32 -enable-var-scope
-// RUN: %clang_cc1 -no-opaque-pointers -triple mips64-unknown-linux -o - -emit-llvm  -target-abi n32 %s | FileCheck %s -check-prefixes=ALL,N32,NEW -enable-var-scope
-// RUN: %clang_cc1 -no-opaque-pointers -triple mips64-unknown-linux -o - -emit-llvm  -target-abi n32 %s | FileCheck %s -check-prefixes=ALL,N32,NEW -enable-var-scope
-// RUN: %clang_cc1 -no-opaque-pointers -triple mips64-unknown-linux -o - -emit-llvm %s | FileCheck %s -check-prefixes=ALL,N64,NEW -enable-var-scope
-// RUN: %clang_cc1 -no-opaque-pointers -triple mips64el-unknown-linux -o - -emit-llvm %s | FileCheck %s -check-prefixes=ALL,N64,NEW -enable-var-scope
+// RUN: %clang_cc1 -triple mips-unknown-linux -o - -emit-llvm %s | FileCheck %s -check-prefixes=ALL,O32 -enable-var-scope
+// RUN: %clang_cc1 -triple mipsel-unknown-linux -o - -emit-llvm %s | FileCheck %s -check-prefixes=ALL,O32 -enable-var-scope
+// RUN: %clang_cc1 -triple mips64-unknown-linux -o - -emit-llvm  -target-abi n32 %s | FileCheck %s -check-prefixes=ALL,N32,NEW -enable-var-scope
+// RUN: %clang_cc1 -triple mips64-unknown-linux -o - -emit-llvm  -target-abi n32 %s | FileCheck %s -check-prefixes=ALL,N32,NEW -enable-var-scope
+// RUN: %clang_cc1 -triple mips64-unknown-linux -o - -emit-llvm %s | FileCheck %s -check-prefixes=ALL,N64,NEW -enable-var-scope
+// RUN: %clang_cc1 -triple mips64el-unknown-linux -o - -emit-llvm %s | FileCheck %s -check-prefixes=ALL,N64,NEW -enable-var-scope
 
 #include <stdarg.h>
 
@@ -19,38 +19,33 @@ int test_i32(char *fmt, ...) {
   return v;
 }
 
-// O32-LABEL: define{{.*}} i32 @test_i32(i8*{{.*}} %fmt, ...)
-// N32-LABEL: define{{.*}} signext i32 @test_i32(i8*{{.*}} %fmt, ...)
-// N64-LABEL: define{{.*}} signext i32 @test_i32(i8*{{.*}} %fmt, ...)
+// O32-LABEL: define{{.*}} i32 @test_i32(ptr{{.*}} %fmt, ...)
+// N32-LABEL: define{{.*}} signext i32 @test_i32(ptr{{.*}} %fmt, ...)
+// N64-LABEL: define{{.*}} signext i32 @test_i32(ptr{{.*}} %fmt, ...)
 //
-// O32:   %va = alloca i8*, align [[$PTRALIGN:4]]
-// N32:   %va = alloca i8*, align [[$PTRALIGN:4]]
-// N64:   %va = alloca i8*, align [[$PTRALIGN:8]]
+// O32:   %va = alloca ptr, align [[$PTRALIGN:4]]
+// N32:   %va = alloca ptr, align [[$PTRALIGN:4]]
+// N64:   %va = alloca ptr, align [[$PTRALIGN:8]]
 // ALL:   [[V:%.*]] = alloca i32, align 4
 // NEW:   [[PROMOTION_TEMP:%.*]] = alloca i32, align 4
 //
-// ALL:   [[VA:%.+]] = bitcast i8** %va to i8*
-// ALL:   call void @llvm.va_start(i8* [[VA]])
-// ALL:   [[AP_CUR:%.+]] = load i8*, i8** %va, align [[$PTRALIGN]]
-// O32:   [[AP_NEXT:%.+]] = getelementptr inbounds i8, i8* [[AP_CUR]], [[$INTPTR_T:i32]] [[$CHUNKSIZE:4]]
-// NEW:   [[AP_NEXT:%.+]] = getelementptr inbounds i8, i8* [[AP_CUR]], [[$INTPTR_T:i32|i64]] [[$CHUNKSIZE:8]]
+// ALL:   call void @llvm.va_start(ptr %va)
+// ALL:   [[AP_CUR:%.+]] = load ptr, ptr %va, align [[$PTRALIGN]]
+// O32:   [[AP_NEXT:%.+]] = getelementptr inbounds i8, ptr [[AP_CUR]], [[$INTPTR_T:i32]] [[$CHUNKSIZE:4]]
+// NEW:   [[AP_NEXT:%.+]] = getelementptr inbounds i8, ptr [[AP_CUR]], [[$INTPTR_T:i32|i64]] [[$CHUNKSIZE:8]]
 //
-// ALL:   store i8* [[AP_NEXT]], i8** %va, align [[$PTRALIGN]]
+// ALL:   store ptr [[AP_NEXT]], ptr %va, align [[$PTRALIGN]]
 //
-// O32:   [[AP_CAST:%.+]] = bitcast i8* [[AP_CUR]] to [[CHUNK_T:i32]]*
-// O32:   [[ARG:%.+]] = load i32, i32* [[AP_CAST]], align [[CHUNKALIGN:4]]
+// O32:   [[ARG:%.+]] = load i32, ptr [[AP_CUR]], align [[CHUNKALIGN:4]]
 //
-// N32:   [[AP_CAST:%.+]] = bitcast i8* [[AP_CUR]] to [[CHUNK_T:i64]]*
-// N32:   [[TMP:%.+]] = load i64, i64* [[AP_CAST]], align [[CHUNKALIGN:8]]
-// N64:   [[AP_CAST:%.+]] = bitcast i8* [[AP_CUR]] to [[CHUNK_T:i64]]*
-// N64:   [[TMP:%.+]] = load i64, i64* [[AP_CAST]], align [[CHUNKALIGN:8]]
+// N32:   [[TMP:%.+]] = load i64, ptr [[AP_CUR]], align [[CHUNKALIGN:8]]
+// N64:   [[TMP:%.+]] = load i64, ptr [[AP_CUR]], align [[CHUNKALIGN:8]]
 // NEW:   [[TMP2:%.+]] = trunc i64 [[TMP]] to i32
-// NEW:   store i32 [[TMP2]], i32* [[PROMOTION_TEMP]], align 4
-// NEW:   [[ARG:%.+]] = load i32, i32* [[PROMOTION_TEMP]], align 4
-// ALL:   store i32 [[ARG]], i32* [[V]], align 4
+// NEW:   store i32 [[TMP2]], ptr [[PROMOTION_TEMP]], align 4
+// NEW:   [[ARG:%.+]] = load i32, ptr [[PROMOTION_TEMP]], align 4
+// ALL:   store i32 [[ARG]], ptr [[V]], align 4
 //
-// ALL:   [[VA1:%.+]] = bitcast i8** %va to i8*
-// ALL:   call void @llvm.va_end(i8* [[VA1]])
+// ALL:   call void @llvm.va_end(ptr %va)
 // ALL: }
 
 long long test_i64(char *fmt, ...) {
@@ -63,28 +58,23 @@ long long test_i64(char *fmt, ...) {
   return v;
 }
 
-// ALL-LABEL: define{{.*}} i64 @test_i64(i8*{{.*}} %fmt, ...)
+// ALL-LABEL: define{{.*}} i64 @test_i64(ptr{{.*}} %fmt, ...)
 //
-// ALL:   %va = alloca i8*, align [[$PTRALIGN]]
-// ALL:   [[VA:%.+]] = bitcast i8** %va to i8*
-// ALL:   call void @llvm.va_start(i8* [[VA]])
-// ALL:   [[AP_CUR:%.+]] = load i8*, i8** %va, align [[$PTRALIGN]]
+// ALL:   %va = alloca ptr, align [[$PTRALIGN]]
+// ALL:   call void @llvm.va_start(ptr %va)
+// ALL:   [[AP_CUR:%.+]] = load ptr, ptr %va, align [[$PTRALIGN]]
 //
 // i64 is 8-byte aligned, while this is within O32's stack alignment there's no
 // guarantee that the offset is still 8-byte aligned after earlier reads.
-// O32:   [[TMP1:%.+]] = ptrtoint i8* [[AP_CUR]] to i32
-// O32:   [[TMP2:%.+]] = add i32 [[TMP1]], 7
-// O32:   [[TMP3:%.+]] = and i32 [[TMP2]], -8
-// O32:   [[AP_CUR:%.+]] = inttoptr i32 [[TMP3]] to i8*
+// O32:   [[TMP1:%.+]] = getelementptr inbounds i8, ptr [[AP_CUR]], i32 7
+// O32:   [[AP_CUR:%.+]] = call ptr @llvm.ptrmask.p0.i32(ptr [[TMP1]], i32 -8)
 //
-// ALL:   [[AP_NEXT:%.+]] = getelementptr inbounds i8, i8* [[AP_CUR]], [[$INTPTR_T]] 8
-// ALL:   store i8* [[AP_NEXT]], i8** %va, align [[$PTRALIGN]]
+// ALL:   [[AP_NEXT:%.+]] = getelementptr inbounds i8, ptr [[AP_CUR]], [[$INTPTR_T]] 8
+// ALL:   store ptr [[AP_NEXT]], ptr %va, align [[$PTRALIGN]]
 //
-// ALL:   [[AP_CAST:%.*]] = bitcast i8* [[AP_CUR]] to i64*
-// ALL:   [[ARG:%.+]] = load i64, i64* [[AP_CAST]], align 8
+// ALL:   [[ARG:%.+]] = load i64, ptr [[AP_CUR]], align 8
 //
-// ALL:   [[VA1:%.+]] = bitcast i8** %va to i8*
-// ALL:   call void @llvm.va_end(i8* [[VA1]])
+// ALL:   call void @llvm.va_end(ptr %va)
 // ALL: }
 
 char *test_ptr(char *fmt, ...) {
@@ -97,32 +87,29 @@ char *test_ptr(char *fmt, ...) {
   return v;
 }
 
-// ALL-LABEL: define{{.*}} i8* @test_ptr(i8*{{.*}} %fmt, ...)
+// ALL-LABEL: define{{.*}} ptr @test_ptr(ptr{{.*}} %fmt, ...)
 //
-// ALL:   %va = alloca i8*, align [[$PTRALIGN]]
-// ALL:   [[V:%.*]] = alloca i8*, align [[$PTRALIGN]]
-// N32:   [[AP_CAST:%.+]] = alloca i8*, align 4
-// ALL:   [[VA:%.+]] = bitcast i8** %va to i8*
-// ALL:   call void @llvm.va_start(i8* [[VA]])
-// ALL:   [[AP_CUR:%.+]] = load i8*, i8** %va, align [[$PTRALIGN]]
-// ALL:   [[AP_NEXT:%.+]] = getelementptr inbounds i8, i8* [[AP_CUR]], [[$INTPTR_T]] [[$CHUNKSIZE]]
-// ALL:   store i8* [[AP_NEXT]], i8** %va, align [[$PTRALIGN]]
+// ALL:   %va = alloca ptr, align [[$PTRALIGN]]
+// ALL:   [[V:%.*]] = alloca ptr, align [[$PTRALIGN]]
+// N32:   [[AP_CAST:%.+]] = alloca ptr, align 4
+// ALL:   call void @llvm.va_start(ptr %va)
+// ALL:   [[AP_CUR:%.+]] = load ptr, ptr %va, align [[$PTRALIGN]]
+// ALL:   [[AP_NEXT:%.+]] = getelementptr inbounds i8, ptr [[AP_CUR]], [[$INTPTR_T]] [[$CHUNKSIZE]]
+// ALL:   store ptr [[AP_NEXT]], ptr %va, align [[$PTRALIGN]]
 //
 // When the chunk size matches the pointer size, this is easy.
-// O32:   [[AP_CAST:%.+]] = bitcast i8* [[AP_CUR]] to i8**
-// N64:   [[AP_CAST:%.+]] = bitcast i8* [[AP_CUR]] to i8**
 // Otherwise we need a promotion temporary.
-// N32:   [[TMP1:%.+]] = bitcast i8* [[AP_CUR]] to i64*
-// N32:   [[TMP2:%.+]] = load i64, i64* [[TMP1]], align 8
+// N32:   [[TMP2:%.+]] = load i64, ptr [[AP_CUR]], align 8
 // N32:   [[TMP3:%.+]] = trunc i64 [[TMP2]] to i32
-// N32:   [[PTR:%.+]] = inttoptr i32 [[TMP3]] to i8*
-// N32:   store i8* [[PTR]], i8** [[AP_CAST]], align 4
+// N32:   [[PTR:%.+]] = inttoptr i32 [[TMP3]] to ptr
+// N32:   store ptr [[PTR]], ptr [[AP_CAST]], align 4
+// N32:   [[ARG:%.+]] = load ptr, ptr [[AP_CAST]], align [[$PTRALIGN]]
 //
-// ALL:   [[ARG:%.+]] = load i8*, i8** [[AP_CAST]], align [[$PTRALIGN]]
-// ALL:   store i8* [[ARG]], i8** [[V]], align [[$PTRALIGN]]
+// O32:   [[ARG:%.+]] = load ptr, ptr [[AP_CUR]], align [[$PTRALIGN]]
+// N64:   [[ARG:%.+]] = load ptr, ptr [[AP_CUR]], align [[$PTRALIGN]]
+// ALL:   store ptr [[ARG]], ptr [[V]], align [[$PTRALIGN]]
 //
-// ALL:   [[VA1:%.+]] = bitcast i8** %va to i8*
-// ALL:   call void @llvm.va_end(i8* [[VA1]])
+// ALL:   call void @llvm.va_end(ptr %va)
 // ALL: }
 
 int test_v4i32(char *fmt, ...) {
@@ -135,39 +122,37 @@ int test_v4i32(char *fmt, ...) {
   return v[0];
 }
 
-// O32-LABEL: define{{.*}} i32 @test_v4i32(i8*{{.*}} %fmt, ...)
-// N32-LABEL: define{{.*}} signext i32 @test_v4i32(i8*{{.*}} %fmt, ...)
-// N64-LABEL: define{{.*}} signext i32 @test_v4i32(i8*{{.*}} %fmt, ...)
+// O32-LABEL: define{{.*}} i32 @test_v4i32(ptr{{.*}} %fmt, ...)
+// N32-LABEL: define{{.*}} signext i32 @test_v4i32(ptr{{.*}} %fmt, ...)
+// N64-LABEL: define{{.*}} signext i32 @test_v4i32(ptr{{.*}} %fmt, ...)
 //
-// ALL:   %va = alloca i8*, align [[$PTRALIGN]]
+// ALL:   %va = alloca ptr, align [[$PTRALIGN]]
 // ALL:   [[V:%.+]] = alloca <4 x i32>, align 16
-// ALL:   [[VA1:%.+]] = bitcast i8** %va to i8*
-// ALL:   call void @llvm.va_start(i8* [[VA1]])
-// ALL:   [[AP_CUR:%.+]] = load i8*, i8** %va, align [[$PTRALIGN]]
+// ALL:   call void @llvm.va_start(ptr %va)
+// ALL:   [[AP_CUR:%.+]] = load ptr, ptr %va, align [[$PTRALIGN]]
 //
 // Vectors are 16-byte aligned, however the O32 ABI has a maximum alignment of
 // 8-bytes since the base of the stack is 8-byte aligned.
-// O32:   [[TMP1:%.+]] = ptrtoint i8* [[AP_CUR]] to i32
-// O32:   [[TMP2:%.+]] = add i32 [[TMP1]], 7
-// O32:   [[TMP3:%.+]] = and i32 [[TMP2]], -8
-// O32:   [[AP_CUR:%.+]] = inttoptr i32 [[TMP3]] to i8*
+
+// O32:   [[TMP1:%.+]] = getelementptr inbounds i8, ptr [[AP_CUR]], i32 7
+// O32:   [[AP_CUR:%.+]] = call ptr @llvm.ptrmask.p0.i32(ptr [[TMP1]], i32 -8)
+
+// N32:   [[TMP1:%.+]] = getelementptr inbounds i8, ptr [[AP_CUR]], i32 15
+// N32:   [[AP_CUR:%.+]] = call ptr @llvm.ptrmask.p0.i32(ptr [[TMP1]], i32 -16)
+
+// N64:   [[TMP1:%.+]] = getelementptr inbounds i8, ptr [[AP_CUR]], i32 15
+// N64:   [[AP_CUR:%.+]] = call ptr @llvm.ptrmask.p0.i64(ptr [[TMP1]], i64 -16)
+
 //
-// NEW:   [[TMP1:%.+]] = ptrtoint i8* [[AP_CUR]] to [[$INTPTR_T]]
-// NEW:   [[TMP2:%.+]] = add [[$INTPTR_T]] [[TMP1]], 15
-// NEW:   [[TMP3:%.+]] = and [[$INTPTR_T]] [[TMP2]], -16
-// NEW:   [[AP_CUR:%.+]] = inttoptr [[$INTPTR_T]] [[TMP3]] to i8*
+// ALL:   [[AP_NEXT:%.+]] = getelementptr inbounds i8, ptr [[AP_CUR]], [[$INTPTR_T]] 16
+// ALL:   store ptr [[AP_NEXT]], ptr %va, align [[$PTRALIGN]]
 //
-// ALL:   [[AP_NEXT:%.+]] = getelementptr inbounds i8, i8* [[AP_CUR]], [[$INTPTR_T]] 16
-// ALL:   store i8* [[AP_NEXT]], i8** %va, align [[$PTRALIGN]]
+// O32:   [[ARG:%.+]] = load <4 x i32>, ptr [[AP_CUR]], align 8
+// N64:   [[ARG:%.+]] = load <4 x i32>, ptr [[AP_CUR]], align 16
+// N32:   [[ARG:%.+]] = load <4 x i32>, ptr [[AP_CUR]], align 16
+// ALL:   store <4 x i32> [[ARG]], ptr [[V]], align 16
 //
-// ALL:   [[AP_CAST:%.+]] = bitcast i8* [[AP_CUR]] to <4 x i32>*
-// O32:   [[ARG:%.+]] = load <4 x i32>, <4 x i32>* [[AP_CAST]], align 8
-// N64:   [[ARG:%.+]] = load <4 x i32>, <4 x i32>* [[AP_CAST]], align 16
-// N32:   [[ARG:%.+]] = load <4 x i32>, <4 x i32>* [[AP_CAST]], align 16
-// ALL:   store <4 x i32> [[ARG]], <4 x i32>* [[V]], align 16
-//
-// ALL:   [[VA1:%.+]] = bitcast i8** %va to i8*
-// ALL:   call void @llvm.va_end(i8* [[VA1]])
+// ALL:   call void @llvm.va_end(ptr %va)
 // ALL:   [[VECEXT:%.+]] = extractelement <4 x i32> {{.*}}, i32 0
 // ALL:   ret i32 [[VECEXT]]
 // ALL: }

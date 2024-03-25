@@ -54,9 +54,9 @@ struct IFSSymbol {
   explicit IFSSymbol(std::string SymbolName) : Name(std::move(SymbolName)) {}
   std::string Name;
   std::optional<uint64_t> Size;
-  IFSSymbolType Type;
-  bool Undefined;
-  bool Weak;
+  IFSSymbolType Type = IFSSymbolType::NoType;
+  bool Undefined = false;
+  bool Weak = false;
   std::optional<std::string> Warning;
   bool operator<(const IFSSymbol &RHS) const { return Name < RHS.Name; }
 };
@@ -97,6 +97,7 @@ struct IFSStub {
   IFSStub() = default;
   IFSStub(const IFSStub &Stub);
   IFSStub(IFSStub &&Stub);
+  virtual ~IFSStub() = default;
 };
 
 // Create a alias class for IFSStub.

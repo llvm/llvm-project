@@ -15,14 +15,17 @@
 #include "lib/BenchmarkResult.h"
 #include "lib/BenchmarkRunner.h"
 #include "lib/Clustering.h"
+#include "lib/CodeTemplate.h"
 #include "lib/Error.h"
 #include "lib/LlvmState.h"
 #include "lib/PerfHelper.h"
 #include "lib/ProgressMeter.h"
+#include "lib/ResultAggregator.h"
 #include "lib/SnippetFile.h"
 #include "lib/SnippetRepetitor.h"
 #include "lib/Target.h"
 #include "lib/TargetSelect.h"
+#include "lib/ValidationEvent.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -36,11 +39,11 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
 #include <algorithm>
 #include <string>
 
@@ -69,81 +72,80 @@ static cl::opt<std::string>
                            "results. “-” uses stdin/stdout."),
                   cl::cat(Options), cl::init(""));
 
-static cl::opt<exegesis::InstructionBenchmark::ModeE> BenchmarkMode(
+static cl::opt<Benchmark::ModeE> BenchmarkMode(
     "mode", cl::desc("the mode to run"), cl::cat(Options),
-    cl::values(clEnumValN(exegesis::InstructionBenchmark::Latency, "latency",
-                          "Instruction Latency"),
-               clEnumValN(exegesis::InstructionBenchmark::InverseThroughput,
-                          "inverse_throughput",
+    cl::values(clEnumValN(Benchmark::Latency, "latency", "Instruction Latency"),
+               clEnumValN(Benchmark::InverseThroughput, "inverse_throughput",
                           "Instruction Inverse Throughput"),
-               clEnumValN(exegesis::InstructionBenchmark::Uops, "uops",
-                          "Uop Decomposition"),
+               clEnumValN(Benchmark::Uops, "uops", "Uop Decomposition"),
                // When not asking for a specific benchmark mode,
                // we'll analyse the results.
-               clEnumValN(exegesis::InstructionBenchmark::Unknown, "analysis",
-                          "Analysis")));
+               clEnumValN(Benchmark::Unknown, "analysis", "Analysis")));
 
-static cl::opt<exegesis::InstructionBenchmark::ResultAggregationModeE>
-    ResultAggMode(
-        "result-aggregation-mode",
-        cl::desc("How to aggregate multi-values result"),
-        cl::cat(BenchmarkOptions),
-        cl::values(clEnumValN(exegesis::InstructionBenchmark::Min, "min",
-                              "Keep min reading"),
-                   clEnumValN(exegesis::InstructionBenchmark::Max, "max",
-                              "Keep max reading"),
-                   clEnumValN(exegesis::InstructionBenchmark::Mean, "mean",
-                              "Compute mean of all readings"),
-                   clEnumValN(exegesis::InstructionBenchmark::MinVariance,
-                              "min-variance",
-                              "Keep readings set with min-variance")),
-        cl::init(exegesis::InstructionBenchmark::Min));
+static cl::opt<Benchmark::ResultAggregationModeE> ResultAggMode(
+    "result-aggregation-mode", cl::desc("How to aggregate multi-values result"),
+    cl::cat(BenchmarkOptions),
+    cl::values(clEnumValN(Benchmark::Min, "min", "Keep min reading"),
+               clEnumValN(Benchmark::Max, "max", "Keep max reading"),
+               clEnumValN(Benchmark::Mean, "mean",
+                          "Compute mean of all readings"),
+               clEnumValN(Benchmark::MinVariance, "min-variance",
+                          "Keep readings set with min-variance")),
+    cl::init(Benchmark::Min));
 
-static cl::opt<exegesis::InstructionBenchmark::RepetitionModeE> RepetitionMode(
+static cl::opt<Benchmark::RepetitionModeE> RepetitionMode(
     "repetition-mode", cl::desc("how to repeat the instruction snippet"),
     cl::cat(BenchmarkOptions),
     cl::values(
-        clEnumValN(exegesis::InstructionBenchmark::Duplicate, "duplicate",
-                   "Duplicate the snippet"),
-        clEnumValN(exegesis::InstructionBenchmark::Loop, "loop",
-                   "Loop over the snippet"),
-        clEnumValN(exegesis::InstructionBenchmark::AggregateMin, "min",
-                   "All of the above and take the minimum of measurements")),
-    cl::init(exegesis::InstructionBenchmark::Duplicate));
+        clEnumValN(Benchmark::Duplicate, "duplicate", "Duplicate the snippet"),
+        clEnumValN(Benchmark::Loop, "loop", "Loop over the snippet"),
+        clEnumValN(Benchmark::AggregateMin, "min",
+                   "All of the above and take the minimum of measurements"),
+        clEnumValN(Benchmark::MiddleHalfDuplicate, "middle-half-duplicate",
+                   "Middle half duplicate mode"),
+        clEnumValN(Benchmark::MiddleHalfLoop, "middle-half-loop",
+                   "Middle half loop mode")),
+    cl::init(Benchmark::Duplicate));
 
 static cl::opt<bool> BenchmarkMeasurementsPrintProgress(
     "measurements-print-progress",
     cl::desc("Produce progress indicator when performing measurements"),
     cl::cat(BenchmarkOptions), cl::init(false));
 
-static cl::opt<exegesis::BenchmarkPhaseSelectorE> BenchmarkPhaseSelector(
+static cl::opt<BenchmarkPhaseSelectorE> BenchmarkPhaseSelector(
     "benchmark-phase",
     cl::desc(
         "it is possible to stop the benchmarking process after some phase"),
     cl::cat(BenchmarkOptions),
     cl::values(
-        clEnumValN(exegesis::BenchmarkPhaseSelectorE::PrepareSnippet,
-                   "prepare-snippet",
+        clEnumValN(BenchmarkPhaseSelectorE::PrepareSnippet, "prepare-snippet",
                    "Only generate the minimal instruction sequence"),
-        clEnumValN(exegesis::BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet,
+        clEnumValN(BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet,
                    "prepare-and-assemble-snippet",
                    "Same as prepare-snippet, but also dumps an excerpt of the "
                    "sequence (hex encoded)"),
-        clEnumValN(exegesis::BenchmarkPhaseSelectorE::AssembleMeasuredCode,
+        clEnumValN(BenchmarkPhaseSelectorE::AssembleMeasuredCode,
                    "assemble-measured-code",
                    "Same as prepare-and-assemble-snippet, but also creates the "
                    "full sequence "
                    "that can be dumped to a file using --dump-object-to-disk"),
         clEnumValN(
-            exegesis::BenchmarkPhaseSelectorE::Measure, "measure",
+            BenchmarkPhaseSelectorE::Measure, "measure",
             "Same as prepare-measured-code, but also runs the measurement "
             "(default)")),
-    cl::init(exegesis::BenchmarkPhaseSelectorE::Measure));
+    cl::init(BenchmarkPhaseSelectorE::Measure));
+
+static cl::opt<bool>
+    UseDummyPerfCounters("use-dummy-perf-counters",
+                         cl::desc("Do not read real performance counters, use "
+                                  "dummy values (for testing)"),
+                         cl::cat(BenchmarkOptions), cl::init(false));
 
 static cl::opt<unsigned>
-    NumRepetitions("num-repetitions",
-                   cl::desc("number of time to repeat the asm snippet"),
-                   cl::cat(BenchmarkOptions), cl::init(10000));
+    MinInstructions("min-instructions",
+                    cl::desc("The minimum number of instructions that should "
+                             "be included in the snippet"),
+                    cl::cat(BenchmarkOptions), cl::init(10000));
 
 static cl::opt<unsigned>
     LoopBodySize("loop-body-size",
@@ -163,27 +165,26 @@ static cl::opt<bool> IgnoreInvalidSchedClass(
     cl::desc("ignore instructions that do not define a sched class"),
     cl::cat(BenchmarkOptions), cl::init(false));
 
-static cl::opt<exegesis::InstructionBenchmarkFilter> AnalysisSnippetFilter(
+static cl::opt<BenchmarkFilter> AnalysisSnippetFilter(
     "analysis-filter", cl::desc("Filter the benchmarks before analysing them"),
     cl::cat(BenchmarkOptions),
     cl::values(
-        clEnumValN(exegesis::InstructionBenchmarkFilter::All, "all",
+        clEnumValN(BenchmarkFilter::All, "all",
                    "Keep all benchmarks (default)"),
-        clEnumValN(exegesis::InstructionBenchmarkFilter::RegOnly, "reg-only",
+        clEnumValN(BenchmarkFilter::RegOnly, "reg-only",
                    "Keep only those benchmarks that do *NOT* involve memory"),
-        clEnumValN(exegesis::InstructionBenchmarkFilter::WithMem, "mem-only",
+        clEnumValN(BenchmarkFilter::WithMem, "mem-only",
                    "Keep only the benchmarks that *DO* involve memory")),
-    cl::init(exegesis::InstructionBenchmarkFilter::All));
+    cl::init(BenchmarkFilter::All));
 
-static cl::opt<exegesis::InstructionBenchmarkClustering::ModeE>
-    AnalysisClusteringAlgorithm(
-        "analysis-clustering", cl::desc("the clustering algorithm to use"),
-        cl::cat(AnalysisOptions),
-        cl::values(clEnumValN(exegesis::InstructionBenchmarkClustering::Dbscan,
-                              "dbscan", "use DBSCAN/OPTICS algorithm"),
-                   clEnumValN(exegesis::InstructionBenchmarkClustering::Naive,
-                              "naive", "one cluster per opcode")),
-        cl::init(exegesis::InstructionBenchmarkClustering::Dbscan));
+static cl::opt<BenchmarkClustering::ModeE> AnalysisClusteringAlgorithm(
+    "analysis-clustering", cl::desc("the clustering algorithm to use"),
+    cl::cat(AnalysisOptions),
+    cl::values(clEnumValN(BenchmarkClustering::Dbscan, "dbscan",
+                          "use DBSCAN/OPTICS algorithm"),
+               clEnumValN(BenchmarkClustering::Naive, "naive",
+                          "one cluster per opcode")),
+    cl::init(BenchmarkClustering::Dbscan));
 
 static cl::opt<unsigned> AnalysisDbscanNumPoints(
     "analysis-numpoints",
@@ -236,11 +237,37 @@ static cl::opt<std::string>
          cl::desc("Target a specific cpu type (-mcpu=help for details)"),
          cl::value_desc("cpu-name"), cl::cat(Options), cl::init("native"));
 
-static cl::opt<bool> DumpObjectToDisk(
-    "dump-object-to-disk",
-    cl::desc("dumps the generated benchmark object to disk "
-             "and prints a message to access it (default = false)"),
-    cl::cat(BenchmarkOptions), cl::init(false));
+static cl::opt<std::string>
+    DumpObjectToDisk("dump-object-to-disk",
+                     cl::desc("dumps the generated benchmark object to disk "
+                              "and prints a message to access it"),
+                     cl::ValueOptional, cl::cat(BenchmarkOptions));
+
+static cl::opt<BenchmarkRunner::ExecutionModeE> ExecutionMode(
+    "execution-mode",
+    cl::desc("Selects the execution mode to use for running snippets"),
+    cl::cat(BenchmarkOptions),
+    cl::values(clEnumValN(BenchmarkRunner::ExecutionModeE::InProcess,
+                          "inprocess",
+                          "Executes the snippets within the same process"),
+               clEnumValN(BenchmarkRunner::ExecutionModeE::SubProcess,
+                          "subprocess",
+                          "Spawns a subprocess for each snippet execution, "
+                          "allows for the use of memory annotations")),
+    cl::init(BenchmarkRunner::ExecutionModeE::InProcess));
+
+static cl::opt<unsigned> BenchmarkRepeatCount(
+    "benchmark-repeat-count",
+    cl::desc("The number of times to repeat measurements on the benchmark k "
+             "before aggregating the results"),
+    cl::cat(BenchmarkOptions), cl::init(30));
+
+static cl::list<ValidationEvent> ValidationCounters(
+    "validation-counter",
+    cl::desc(
+        "The name of a validation counter to run concurrently with the main "
+        "counter to validate benchmarking assumptions"),
+    cl::CommaSeparated, cl::cat(BenchmarkOptions), ValidationEventOptions());
 
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
@@ -271,6 +298,9 @@ static std::vector<unsigned> getOpcodesOrDie(const LLVMState &State) {
   const size_t NumSetFlags = (OpcodeNames.empty() ? 0 : 1) +
                              (OpcodeIndex == 0 ? 0 : 1) +
                              (SnippetsFile.empty() ? 0 : 1);
+  const auto &ET = State.getExegesisTarget();
+  const auto AvailableFeatures = State.getSubtargetInfo().getFeatureBits();
+
   if (NumSetFlags != 1) {
     ExitOnErr.setBanner("llvm-exegesis: ");
     ExitWithError("please provide one and only one of 'opcode-index', "
@@ -284,8 +314,11 @@ static std::vector<unsigned> getOpcodesOrDie(const LLVMState &State) {
     std::vector<unsigned> Result;
     unsigned NumOpcodes = State.getInstrInfo().getNumOpcodes();
     Result.reserve(NumOpcodes);
-    for (unsigned I = 0, E = NumOpcodes; I < E; ++I)
+    for (unsigned I = 0, E = NumOpcodes; I < E; ++I) {
+      if (!ET.isOpcodeAvailable(I, AvailableFeatures))
+        continue;
       Result.push_back(I);
+    }
     return Result;
   }
   // Resolve opcode name -> opcode.
@@ -367,63 +400,72 @@ static void runBenchmarkConfigurations(
   std::optional<ProgressMeter<>> Meter;
   if (BenchmarkMeasurementsPrintProgress)
     Meter.emplace(Configurations.size());
+
+  SmallVector<unsigned, 2> MinInstructionCounts = {MinInstructions};
+  if (RepetitionMode == Benchmark::MiddleHalfDuplicate ||
+      RepetitionMode == Benchmark::MiddleHalfLoop)
+    MinInstructionCounts.push_back(MinInstructions * 2);
+
   for (const BenchmarkCode &Conf : Configurations) {
     ProgressMeter<>::ProgressMeterStep MeterStep(Meter ? &*Meter : nullptr);
-    SmallVector<InstructionBenchmark, 2> AllResults;
+    SmallVector<Benchmark, 2> AllResults;
 
     for (const std::unique_ptr<const SnippetRepetitor> &Repetitor :
          Repetitors) {
-      auto RC = ExitOnErr(Runner.getRunnableConfiguration(
-          Conf, NumRepetitions, LoopBodySize, *Repetitor));
-      AllResults.emplace_back(
-          ExitOnErr(Runner.runConfiguration(std::move(RC), DumpObjectToDisk)));
+      for (unsigned IterationRepetitions : MinInstructionCounts) {
+        auto RC = ExitOnErr(Runner.getRunnableConfiguration(
+            Conf, IterationRepetitions, LoopBodySize, *Repetitor));
+        std::optional<StringRef> DumpFile;
+        if (DumpObjectToDisk.getNumOccurrences())
+          DumpFile = DumpObjectToDisk;
+        auto [Err, BenchmarkResult] =
+            Runner.runConfiguration(std::move(RC), DumpFile);
+        if (Err) {
+          // Errors from executing the snippets are fine.
+          // All other errors are a framework issue and should fail.
+          if (!Err.isA<SnippetExecutionFailure>())
+            ExitOnErr(std::move(Err));
+
+          BenchmarkResult.Error = toString(std::move(Err));
+        }
+        AllResults.push_back(std::move(BenchmarkResult));
+      }
     }
-    InstructionBenchmark &Result = AllResults.front();
+
+    Benchmark &Result = AllResults.front();
 
     // If any of our measurements failed, pretend they all have failed.
     if (AllResults.size() > 1 &&
-        any_of(AllResults, [](const InstructionBenchmark &R) {
+        any_of(AllResults, [](const Benchmark &R) {
           return R.Measurements.empty();
         }))
       Result.Measurements.clear();
 
-    if (RepetitionMode == InstructionBenchmark::RepetitionModeE::AggregateMin) {
-      for (const InstructionBenchmark &OtherResult :
-           ArrayRef<InstructionBenchmark>(AllResults).drop_front()) {
-        llvm::append_range(Result.AssembledSnippet,
-                           OtherResult.AssembledSnippet);
-        // Aggregate measurements, but only iff all measurements succeeded.
-        if (Result.Measurements.empty())
-          continue;
-        assert(OtherResult.Measurements.size() == Result.Measurements.size() &&
-               "Expected to have identical number of measurements.");
-        for (auto I : zip(Result.Measurements, OtherResult.Measurements)) {
-          BenchmarkMeasure &Measurement = std::get<0>(I);
-          const BenchmarkMeasure &NewMeasurement = std::get<1>(I);
-          assert(Measurement.Key == NewMeasurement.Key &&
-                 "Expected measurements to be symmetric");
+    std::unique_ptr<ResultAggregator> ResultAgg =
+        ResultAggregator::CreateAggregator(RepetitionMode);
+    ResultAgg->AggregateResults(Result,
+                                ArrayRef<Benchmark>(AllResults).drop_front());
 
-          Measurement.PerInstructionValue =
-              std::min(Measurement.PerInstructionValue,
-                       NewMeasurement.PerInstructionValue);
-          Measurement.PerSnippetValue = std::min(
-              Measurement.PerSnippetValue, NewMeasurement.PerSnippetValue);
-        }
-      }
-    }
+    // With dummy counters, measurements are rather meaningless,
+    // so drop them altogether.
+    if (UseDummyPerfCounters)
+      Result.Measurements.clear();
 
     ExitOnFileError(BenchmarkFile, Result.writeYamlTo(State, Ostr));
   }
 }
 
 void benchmarkMain() {
-  if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure) {
+  if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
+      !UseDummyPerfCounters) {
 #ifndef HAVE_LIBPFM
     ExitWithError(
-        "benchmarking unavailable, LLVM was built without libpfm. You can pass "
-        "--skip-measurements to skip the actual benchmarking.");
+        "benchmarking unavailable, LLVM was built without libpfm. You can "
+        "pass --benchmark-phase=... to skip the actual benchmarking or "
+        "--use-dummy-perf-counters to not query the kernel for real event "
+        "counts.");
 #else
-    if (exegesis::pfm::pfmInitialize())
+    if (pfm::pfmInitialize())
       ExitWithError("cannot initialize libpfm");
 #endif
   }
@@ -432,40 +474,64 @@ void benchmarkMain() {
   InitializeAllAsmParsers();
   InitializeAllExegesisTargets();
 
-  const LLVMState State = ExitOnErr(LLVMState::Create(TripleName, MCPU));
+  const LLVMState State =
+      ExitOnErr(LLVMState::Create(TripleName, MCPU, "", UseDummyPerfCounters));
 
   // Preliminary check to ensure features needed for requested
   // benchmark mode are present on target CPU and/or OS.
   if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure)
     ExitOnErr(State.getExegesisTarget().checkFeatureSupport());
 
+  if (ExecutionMode == BenchmarkRunner::ExecutionModeE::SubProcess &&
+      UseDummyPerfCounters)
+    ExitWithError("Dummy perf counters are not supported in the subprocess "
+                  "execution mode.");
+
   const std::unique_ptr<BenchmarkRunner> Runner =
       ExitOnErr(State.getExegesisTarget().createBenchmarkRunner(
-          BenchmarkMode, State, BenchmarkPhaseSelector, ResultAggMode));
+          BenchmarkMode, State, BenchmarkPhaseSelector, ExecutionMode,
+          BenchmarkRepeatCount, ValidationCounters, ResultAggMode));
   if (!Runner) {
     ExitWithError("cannot create benchmark runner");
   }
 
   const auto Opcodes = getOpcodesOrDie(State);
+  std::vector<BenchmarkCode> Configurations;
+
+  unsigned LoopRegister =
+      State.getExegesisTarget().getDefaultLoopCounterRegister(
+          State.getTargetMachine().getTargetTriple());
+
+  if (Opcodes.empty()) {
+    Configurations = ExitOnErr(readSnippets(State, SnippetsFile));
+    for (const auto &Configuration : Configurations) {
+      if (ExecutionMode != BenchmarkRunner::ExecutionModeE::SubProcess &&
+          (Configuration.Key.MemoryMappings.size() != 0 ||
+           Configuration.Key.MemoryValues.size() != 0 ||
+           Configuration.Key.SnippetAddress != 0))
+        ExitWithError("Memory and snippet address annotations are only "
+                      "supported in subprocess "
+                      "execution mode");
+    }
+    LoopRegister = Configurations[0].Key.LoopRegister;
+  }
 
   SmallVector<std::unique_ptr<const SnippetRepetitor>, 2> Repetitors;
-  if (RepetitionMode != InstructionBenchmark::RepetitionModeE::AggregateMin)
-    Repetitors.emplace_back(SnippetRepetitor::Create(RepetitionMode, State));
+  if (RepetitionMode != Benchmark::RepetitionModeE::AggregateMin)
+    Repetitors.emplace_back(
+        SnippetRepetitor::Create(RepetitionMode, State, LoopRegister));
   else {
-    for (InstructionBenchmark::RepetitionModeE RepMode :
-         {InstructionBenchmark::RepetitionModeE::Duplicate,
-          InstructionBenchmark::RepetitionModeE::Loop})
-      Repetitors.emplace_back(SnippetRepetitor::Create(RepMode, State));
+    for (Benchmark::RepetitionModeE RepMode :
+         {Benchmark::RepetitionModeE::Duplicate,
+          Benchmark::RepetitionModeE::Loop})
+      Repetitors.emplace_back(
+          SnippetRepetitor::Create(RepMode, State, LoopRegister));
   }
 
   BitVector AllReservedRegs;
-  llvm::for_each(Repetitors,
-                 [&AllReservedRegs](
-                     const std::unique_ptr<const SnippetRepetitor> &Repetitor) {
-                   AllReservedRegs |= Repetitor->getReservedRegs();
-                 });
+  for (const std::unique_ptr<const SnippetRepetitor> &Repetitor : Repetitors)
+    AllReservedRegs |= Repetitor->getReservedRegs();
 
-  std::vector<BenchmarkCode> Configurations;
   if (!Opcodes.empty()) {
     for (const unsigned Opcode : Opcodes) {
       // Ignore instructions without a sched class if
@@ -487,13 +553,11 @@ void benchmarkMain() {
       std::move(ConfigsForInstr->begin(), ConfigsForInstr->end(),
                 std::back_inserter(Configurations));
     }
-  } else {
-    Configurations = ExitOnErr(readSnippets(State, SnippetsFile));
   }
 
-  if (NumRepetitions == 0) {
+  if (MinInstructions == 0) {
     ExitOnErr.setBanner("llvm-exegesis: ");
-    ExitWithError("--num-repetitions must be greater than zero");
+    ExitWithError("--min-instructions must be greater than zero");
   }
 
   // Write to standard output if file is not set.
@@ -503,7 +567,7 @@ void benchmarkMain() {
   if (!Configurations.empty())
     runBenchmarkConfigurations(State, Configurations, Repetitors, *Runner);
 
-  exegesis::pfm::pfmTerminate();
+  pfm::pfmTerminate();
 }
 
 // Prints the results of running analysis pass `Pass` to file `OutputFilename`
@@ -526,14 +590,13 @@ static void maybeRunAnalysis(const Analysis &Analyzer, const std::string &Name,
     ExitOnFileError(OutputFilename, std::move(Err));
 }
 
-static void filterPoints(MutableArrayRef<InstructionBenchmark> Points,
+static void filterPoints(MutableArrayRef<Benchmark> Points,
                          const MCInstrInfo &MCII) {
-  if (AnalysisSnippetFilter == exegesis::InstructionBenchmarkFilter::All)
+  if (AnalysisSnippetFilter == BenchmarkFilter::All)
     return;
 
-  bool WantPointsWithMemOps =
-      AnalysisSnippetFilter == exegesis::InstructionBenchmarkFilter::WithMem;
-  for (InstructionBenchmark &Point : Points) {
+  bool WantPointsWithMemOps = AnalysisSnippetFilter == BenchmarkFilter::WithMem;
+  for (Benchmark &Point : Points) {
     if (!Point.Error.empty())
       continue;
     if (WantPointsWithMemOps ==
@@ -568,7 +631,7 @@ static void analysisMain() {
 
   const auto TriplesAndCpus = ExitOnFileError(
       BenchmarkFile,
-      InstructionBenchmark::readTriplesAndCpusFromYamls(*MemoryBuffer));
+      Benchmark::readTriplesAndCpusFromYamls(*MemoryBuffer));
   if (TriplesAndCpus.empty()) {
     errs() << "no benchmarks to analyze\n";
     return;
@@ -579,20 +642,20 @@ static void analysisMain() {
   }
   auto TripleAndCpu = *TriplesAndCpus.begin();
   if (AnalysisOverrideBenchmarksTripleAndCpu) {
-    llvm::errs() << "overridding file CPU name (" << TripleAndCpu.CpuName
-                 << ") with provided tripled (" << TripleName
-                 << ") and CPU name (" << MCPU << ")\n";
+    errs() << "overridding file CPU name (" << TripleAndCpu.CpuName
+           << ") with provided tripled (" << TripleName << ") and CPU name ("
+           << MCPU << ")\n";
     TripleAndCpu.LLVMTriple = TripleName;
     TripleAndCpu.CpuName = MCPU;
   }
-  llvm::errs() << "using Triple '" << TripleAndCpu.LLVMTriple << "' and CPU '"
-               << TripleAndCpu.CpuName << "'\n";
+  errs() << "using Triple '" << TripleAndCpu.LLVMTriple << "' and CPU '"
+         << TripleAndCpu.CpuName << "'\n";
 
   // Read benchmarks.
   const LLVMState State = ExitOnErr(
       LLVMState::Create(TripleAndCpu.LLVMTriple, TripleAndCpu.CpuName));
-  std::vector<InstructionBenchmark> Points = ExitOnFileError(
-      BenchmarkFile, InstructionBenchmark::readYamls(State, *MemoryBuffer));
+  std::vector<Benchmark> Points = ExitOnFileError(
+      BenchmarkFile, Benchmark::readYamls(State, *MemoryBuffer));
 
   outs() << "Parsed " << Points.size() << " benchmark points\n";
   if (Points.empty()) {
@@ -603,7 +666,7 @@ static void analysisMain() {
 
   filterPoints(Points, State.getInstrInfo());
 
-  const auto Clustering = ExitOnErr(InstructionBenchmarkClustering::create(
+  const auto Clustering = ExitOnErr(BenchmarkClustering::create(
       Points, AnalysisClusteringAlgorithm, AnalysisDbscanNumPoints,
       AnalysisClusteringEpsilon, &State.getSubtargetInfo(),
       &State.getInstrInfo()));
@@ -637,9 +700,8 @@ int main(int Argc, char **Argv) {
   // Enable printing of available targets when flag --version is specified.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
-  cl::HideUnrelatedOptions({&llvm::exegesis::Options,
-                            &llvm::exegesis::BenchmarkOptions,
-                            &llvm::exegesis::AnalysisOptions});
+  cl::HideUnrelatedOptions({&exegesis::Options, &exegesis::BenchmarkOptions,
+                            &exegesis::AnalysisOptions});
 
   cl::ParseCommandLineOptions(Argc, Argv,
                               "llvm host machine instruction characteristics "
@@ -651,7 +713,7 @@ int main(int Argc, char **Argv) {
     return EXIT_FAILURE;
   });
 
-  if (exegesis::BenchmarkMode == exegesis::InstructionBenchmark::Unknown) {
+  if (exegesis::BenchmarkMode == exegesis::Benchmark::Unknown) {
     exegesis::analysisMain();
   } else {
     exegesis::benchmarkMain();

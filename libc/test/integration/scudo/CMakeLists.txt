@@ -27,7 +27,7 @@ add_executable(
 target_link_options(
   libc-scudo-integration-test
   PRIVATE
-  -pthreads
+  -pthread
 )
 
 target_link_libraries(libc-scudo-integration-test
@@ -43,7 +43,7 @@ add_executable(
 target_link_options(
   libc-gwp-asan-uaf-should-crash
   PRIVATE
-  -pthreads
+  -pthread
 )
 
 target_link_libraries(libc-gwp-asan-uaf-should-crash
@@ -54,5 +54,5 @@ target_link_libraries(libc-gwp-asan-uaf-should-crash
 add_custom_command(TARGET libc-scudo-integration-test
                    POST_BUILD
                    COMMAND $<TARGET_FILE:libc-scudo-integration-test>
-                   COMMENT "Run the test after it is built." 
+                   COMMENT "Run the test after it is built."
                    VERBATIM)

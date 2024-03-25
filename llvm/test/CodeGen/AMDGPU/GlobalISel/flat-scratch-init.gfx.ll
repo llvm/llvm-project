@@ -12,7 +12,7 @@ define amdgpu_ps void @amdgpu_ps() {
 ; MESA-NEXT:    s_add_u32 flat_scratch_lo, s2, s4
 ; MESA-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; MESA-NEXT:    s_addc_u32 flat_scratch_hi, s3, 0
-; MESA-NEXT:    v_mov_b32_e32 v0, 4
+; MESA-NEXT:    v_mov_b32_e32 v0, 0
 ; MESA-NEXT:    v_mov_b32_e32 v1, s1
 ; MESA-NEXT:    v_mov_b32_e32 v2, 0
 ; MESA-NEXT:    flat_store_dword v[0:1], v2
@@ -24,7 +24,7 @@ define amdgpu_ps void @amdgpu_ps() {
 ; PAL-NEXT:    s_getpc_b64 s[2:3]
 ; PAL-NEXT:    s_mov_b32 s2, s0
 ; PAL-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
-; PAL-NEXT:    v_mov_b32_e32 v0, 4
+; PAL-NEXT:    v_mov_b32_e32 v0, 0
 ; PAL-NEXT:    v_mov_b32_e32 v2, 0
 ; PAL-NEXT:    s_waitcnt lgkmcnt(0)
 ; PAL-NEXT:    s_and_b32 s3, s3, 0xffff

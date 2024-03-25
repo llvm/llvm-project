@@ -23,7 +23,7 @@ void OptionValueUUID::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   if (dump_mask & eDumpOptionValue) {
     if (dump_mask & eDumpOptionType)
       strm.PutCString(" = ");
-    m_uuid.Dump(&strm);
+    m_uuid.Dump(strm);
   }
 }
 

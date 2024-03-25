@@ -59,9 +59,7 @@ endfunction(find_all_header_files)
 function(llvm_process_sources OUT_VAR)
   cmake_parse_arguments(ARG "PARTIAL_SOURCES_INTENDED" "" "ADDITIONAL_HEADERS;ADDITIONAL_HEADER_DIRS" ${ARGN})
   set(sources ${ARG_UNPARSED_ARGUMENTS})
-  if (NOT ARG_PARTIAL_SOURCES_INTENDED)
-    llvm_check_source_file_list(${sources})
-  endif()
+  llvm_check_source_file_list(${sources})
 
   # This adds .td and .h files to the Visual Studio solution:
   add_td_sources(sources)
@@ -90,6 +88,12 @@ function(llvm_check_source_file_list)
     file(GLOB globbed *.c *.cpp)
   endif()
 
+  set_property(DIRECTORY APPEND PROPERTY LLVM_SOURCE_FILES ${listed})
+  if (ARG_PARTIAL_SOURCES_INTENDED) # llvm_process_source's scope
+    return()
+  endif()
+  get_directory_property(listed LLVM_SOURCE_FILES)
+
   foreach(g ${globbed})
     get_filename_component(fn ${g} NAME)
     if(ARG_SOURCE_DIR)
@@ -109,7 +113,12 @@ function(llvm_check_source_file_list)
           else()
               set(fn_relative "${fn}")
           endif()
-          message(SEND_ERROR "Found unknown source file ${fn_relative}
+          message(SEND_ERROR "Found erroneous configuration for source file ${fn_relative}
+LLVM's build system enforces that all source files are added to a build target, \
+that exactly one build target exists in each directory, \
+and that this target lists all files in that directory. \
+If you want multiple targets in the same directory, add \
+PARTIAL_SOURCES_INTENDED to the target specification, though it is discouraged.
 Please update ${CMAKE_CURRENT_LIST_FILE}\n")
         endif()
       endif()

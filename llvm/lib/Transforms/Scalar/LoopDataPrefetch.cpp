@@ -399,7 +399,7 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
       continue;
 
     unsigned PtrAddrSpace = NextLSCEV->getType()->getPointerAddressSpace();
-    Type *I8Ptr = Type::getInt8PtrTy(BB->getContext(), PtrAddrSpace);
+    Type *I8Ptr = PointerType::get(BB->getContext(), PtrAddrSpace);
     Value *PrefPtrValue = SCEVE.expandCodeFor(NextLSCEV, I8Ptr, P.InsertPt);
 
     IRBuilder<> Builder(P.InsertPt);

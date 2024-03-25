@@ -6,16 +6,27 @@ module m
   type t2
     class(t2), allocatable :: pc
   end type
+  class(t1), pointer :: mp1
+  type(t2) :: mv1
  contains
   pure subroutine subr(pp1, pp2, mp2)
     class(t1), intent(in out), pointer :: pp1
     class(t2), intent(in out) :: pp2
     type(t2), pointer :: mp2
-    !ERROR: 'pp1' may not be deallocated in a pure procedure because it is polymorphic
+    !ERROR: Name in DEALLOCATE statement is not definable
+    !BECAUSE: 'mp1' may not be defined in pure subprogram 'subr' because it is host-associated
+    deallocate(mp1)
+    !ERROR: Name in DEALLOCATE statement is not definable
+    !BECAUSE: 'mv1' may not be defined in pure subprogram 'subr' because it is host-associated
+    deallocate(mv1%pc)
+    !ERROR: Object in DEALLOCATE statement is not deallocatable
+    !BECAUSE: 'pp1' is polymorphic in a pure subprogram
     deallocate(pp1)
-    !ERROR: 'pc' may not be deallocated in a pure procedure because it is polymorphic
+    !ERROR: Object in DEALLOCATE statement is not deallocatable
+    !BECAUSE: 'pc' is polymorphic in a pure subprogram
     deallocate(pp2%pc)
-    !ERROR: 'mp2' may not be deallocated in a pure procedure because its type has a polymorphic allocatable ultimate component 'pc'
+    !ERROR: Object in DEALLOCATE statement is not deallocatable
+    !BECAUSE: 'mp2' has polymorphic component '%pc' in a pure subprogram
     deallocate(mp2)
   end subroutine
 end module

@@ -12,8 +12,8 @@
 
 define float @test1(float %arg) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[TMP1:%.*]] = fneg fast float [[ARG:%.*]]
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[T2:%.*]] = fneg fast float [[ARG:%.*]]
+; CHECK-NEXT:    ret float [[T2]]
 ;
   %t1 = fsub fast float -1.200000e+01, %arg
   %t2 = fadd fast float %t1, 1.200000e+01
@@ -24,8 +24,8 @@ define float @test1(float %arg) {
 ; Both 'reassoc' and 'nsz' are required.
 define float @test1_minimal(float %arg) {
 ; CHECK-LABEL: @test1_minimal(
-; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc nsz float [[ARG:%.*]]
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[T2:%.*]] = fneg reassoc nsz float [[ARG:%.*]]
+; CHECK-NEXT:    ret float [[T2]]
 ;
   %t1 = fsub reassoc nsz float -1.200000e+01, %arg
   %t2 = fadd reassoc nsz float %t1, 1.200000e+01
@@ -141,8 +141,8 @@ define float @test7_reassoc(float %X, float %Y, float %Z) {
 
 define float @test8(float %X) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], 9.400000e+01
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[Z:%.*]] = fmul fast float [[X:%.*]], 9.400000e+01
+; CHECK-NEXT:    ret float [[Z]]
 ;
   %Y = fmul fast float %X, 4.700000e+01
   %Z = fadd fast float %Y, %Y
@@ -152,8 +152,8 @@ define float @test8(float %X) {
 ; Check again with 'reassoc' and 'nsz' ('nsz' not technically required).
 define float @test8_reassoc_nsz(float %X) {
 ; CHECK-LABEL: @test8_reassoc_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz float [[X:%.*]], 9.400000e+01
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[Z:%.*]] = fmul reassoc nsz float [[X:%.*]], 9.400000e+01
+; CHECK-NEXT:    ret float [[Z]]
 ;
   %Y = fmul reassoc nsz float %X, 4.700000e+01
   %Z = fadd reassoc nsz float %Y, %Y
@@ -178,8 +178,8 @@ define float @test8_reassoc(float %X) {
 
 define float @test9(float %X) {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], 4.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[W:%.*]] = fmul fast float [[X:%.*]], 4.000000e+00
+; CHECK-NEXT:    ret float [[W]]
 ;
   %Y = fadd fast float %X ,%X
   %Z = fadd fast float %Y, %X
@@ -190,8 +190,8 @@ define float @test9(float %X) {
 ; Check again with 'reassoc' and 'nsz' ('nsz' not technically required).
 define float @test9_reassoc_nsz(float %X) {
 ; CHECK-LABEL: @test9_reassoc_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz float [[X:%.*]], 4.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[W:%.*]] = fmul reassoc nsz float [[X:%.*]], 4.000000e+00
+; CHECK-NEXT:    ret float [[W]]
 ;
   %Y = fadd reassoc nsz float %X ,%X
   %Z = fadd reassoc nsz float %Y, %X
@@ -254,8 +254,8 @@ define float @test10_reassoc(float %W) {
 define float @test11(float %X) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], 3.000000e+00
-; CHECK-NEXT:    [[TMP2:%.*]] = fsub fast float 6.000000e+00, [[TMP1]]
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[Z:%.*]] = fsub fast float 6.000000e+00, [[TMP1]]
+; CHECK-NEXT:    ret float [[Z]]
 ;
   %A = fsub fast float 1.000000e+00, %X
   %B = fsub fast float 2.000000e+00, %X
@@ -269,8 +269,8 @@ define float @test11(float %X) {
 define float @test11_reassoc_nsz(float %X) {
 ; CHECK-LABEL: @test11_reassoc_nsz(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz float [[X:%.*]], 3.000000e+00
-; CHECK-NEXT:    [[TMP2:%.*]] = fsub reassoc nsz float 6.000000e+00, [[TMP1]]
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[Z:%.*]] = fsub reassoc nsz float 6.000000e+00, [[TMP1]]
+; CHECK-NEXT:    ret float [[Z]]
 ;
   %A = fsub reassoc nsz float 1.000000e+00, %X
   %B = fsub reassoc nsz float 2.000000e+00, %X

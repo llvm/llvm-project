@@ -23,8 +23,8 @@ Prerequisites
 -------------
 
 CUDA is supported since llvm 3.9. Clang currently supports CUDA 7.0 through
-11.5. If clang detects a newer CUDA version, it will issue a warning and will
-attempt to use detected CUDA SDK it as if it were CUDA 11.5.
+12.1. If clang detects a newer CUDA version, it will issue a warning and will
+attempt to use detected CUDA SDK it as if it were CUDA 12.1.
 
 Before you build CUDA code, you'll need to have installed the CUDA SDK.  See
 `NVIDIA's CUDA installation guide

@@ -9,9 +9,6 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // <optional>
 
-// Throwing bad_optional_access is supported starting in macosx10.13
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}} && !no-exceptions
-
 // constexpr T& optional<T>::value() &&;
 
 #include <optional>

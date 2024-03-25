@@ -1,4 +1,4 @@
-; RUN: opt -codegenprepare -S < %s | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -S < %s | FileCheck %s
 ; RUN: opt -strip-debug -codegenprepare -S < %s | FileCheck %s
 ; REQUIRES: x86-registered-target
 
@@ -61,6 +61,10 @@ sw.default:                                       ; preds = %while.cond
 
 lbl:                                              ; preds = %sw.bb, %while.cond.lbl_crit_edge
   %var03.1 = phi i32 [ 0, %while.cond.lbl_crit_edge ], [ 3, %sw.bb ]
+  br label %phi_use
+
+phi_use:
+  store i32 %var03.1, ptr %arg0
   unreachable
 }
 

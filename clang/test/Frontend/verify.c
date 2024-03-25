@@ -48,15 +48,15 @@ unexpected b; // expected-error@33 1-1 {{unknown type}}
 // This is encapsulated in "#if 0" so that the expected-* checks below
 // are not inadvertently included in the diagnostic checking!
 
-//      CHECK2: error: 'error' diagnostics expected but not seen:
+//      CHECK2: error: 'expected-error' diagnostics expected but not seen:
 // CHECK2-NEXT:   Line 41: define_error
 // CHECK2-NEXT:   Line 43: line_error
-// CHECK2-NEXT: error: 'error' diagnostics seen but not expected:
+// CHECK2-NEXT: error: 'expected-error' diagnostics seen but not expected:
 // CHECK2-NEXT:   Line 43: #line directive requires a positive integer argument
 // CHECK2-NEXT:   Line 44: AAA // expected-error {{[{][{]BBB[}][}]}} <- this shall be part of diagnostic
-// CHECK2-NEXT: error: 'warning' diagnostics expected but not seen:
+// CHECK2-NEXT: error: 'expected-warning' diagnostics expected but not seen:
 // CHECK2-NEXT:   Line 42: undef_error
-// CHECK2-NEXT: error: 'warning' diagnostics seen but not expected:
+// CHECK2-NEXT: error: 'expected-warning' diagnostics seen but not expected:
 // CHECK2-NEXT:   Line 42: extra tokens at end of #undef directive
 // CHECK2-NEXT:   Line 45: CCC // expected-warning {{[{][{]DDD[}][}]}} <- this shall be part of diagnostic
 // CHECK2-NEXT: 7 errors generated.
@@ -78,7 +78,7 @@ unexpected b; // expected-error@33 1-1 {{unknown type}}
 # endif               // expected-note {{line_78}}
 #endif
 
-//      CHECK3: error: 'note' diagnostics expected but not seen:
+//      CHECK3: error: 'expected-note' diagnostics expected but not seen:
 // CHECK3-NEXT:   Line 67: line_67
 // CHECK3-NEXT:   Line 71: line_71
 // CHECK3-NEXT:   Line 72: line_72
@@ -91,9 +91,9 @@ unexpected b; // expected-error@33 1-1 {{unknown type}}
 #ifdef TEST4
 #include "missing_header_file.include" // expected-error {{include_error}}
 
-//      CHECK4: error: 'error' diagnostics expected but not seen:
+//      CHECK4: error: 'expected-error' diagnostics expected but not seen:
 // CHECK4-NEXT:   Line 92: include_error
-// CHECK4-NEXT: error: 'error' diagnostics seen but not expected:
+// CHECK4-NEXT: error: 'expected-error' diagnostics seen but not expected:
 // CHECK4-NEXT:   Line 92: 'missing_header_file.include' file not found
 // CHECK4-NEXT: 2 errors generated.
 #endif
@@ -102,7 +102,7 @@ unexpected b; // expected-error@33 1-1 {{unknown type}}
 #include "verify-directive.h"
 // expected-error@50 {{source file test}}
 
-//      CHECK5: error: 'error' diagnostics expected but not seen:
+//      CHECK5: error: 'expected-error' diagnostics expected but not seen:
 // CHECK5-NEXT:   Line 1 (directive at {{.*}}verify-directive.h:2): include file test
 // CHECK5-NEXT:   Line 50 (directive at {{.*}}verify.c:103): source file test
 // CHECK5-NEXT: 2 errors generated.
@@ -112,15 +112,15 @@ unexpected b; // expected-error@33 1-1 {{unknown type}}
 // RUN: not %clang_cc1 -verify %t.invalid 2>&1 | FileCheck -check-prefix=CHECK6 %s
 
 //      CHECK6: error: no expected directives found: consider use of 'expected-no-diagnostics'
-// CHECK6-NEXT: error: 'error' diagnostics seen but not expected:
+// CHECK6-NEXT: error: 'expected-error' diagnostics seen but not expected:
 // CHECK6-NEXT:   (frontend): error reading '{{.*}}verify.c.tmp.invalid'
 // CHECK6-NEXT: 2 errors generated.
 
 // RUN: printf '//expected-error@2{{1}}\n#error 2\n' | not %clang_cc1 -verify 2>&1 | FileCheck -check-prefix=CHECK7 %s
 
-//      CHECK7: error: 'error' diagnostics expected but not seen:
+//      CHECK7: error: 'expected-error' diagnostics expected but not seen:
 // CHECK7-NEXT:   Line 2 (directive at <stdin>:1): 1
-// CHECK7-NEXT: error: 'error' diagnostics seen but not expected:
+// CHECK7-NEXT: error: 'expected-error' diagnostics seen but not expected:
 // CHECK7-NEXT:   Line 2: 2
 // CHECK7-NEXT: 2 errors generated.
 #endif
@@ -145,7 +145,74 @@ unexpected b; // expected-error@33 1-1 {{unknown type}}
 
 // expected-warning@verify-directive.h:1 {{diagnostic}}
 
-//      CHECK8: error: 'warning' diagnostics expected but not seen:
+//      CHECK8: error: 'expected-warning' diagnostics expected but not seen:
 // CHECK8-NEXT:   File {{.*}}verify-directive.h Line 1 (directive at {{.*}}verify.c:146): diagnostic
 // CHECK8-NEXT: 1 error generated.
+#endif
+
+
+#ifdef TEST9
+// RUN: not %clang_cc1 -DTEST9 -verify=what %s 2>&1 | FileCheck -check-prefix=CHECK9 %s
+
+// what-error {{huh?}}
+// CHECK9: error: 'what-error' diagnostics expected but not seen:
+#endif
+
+#ifdef TEST_WIDE_DELIM
+// RUN: not %clang_cc1 -DTEST_WIDE_DELIM -verify %s 2>&1 | FileCheck -check-prefix=CHECK-WIDE-DELIM %s
+
+// expected-error {{{some message with {{}} in it}}}
+// expected-error {{{some message with  {}} in it}}}
+// expected-error {{{some message with {{}  in it}}}
+
+// expected-error-re {{{some {{.*}} regex with double braces}}}
+// expected-error-re {{{some message with {{}  in it}}}
+
+// expected-error {{{mismatched delim}}
+// expected-error-re {{{mismatched re {{.*} }}}
+// expected-error-re {{{no regex}}}
+
+#if 0
+//      CHECK-WIDE-DELIM: error: 'expected-error' diagnostics expected but not seen:
+// CHECK-WIDE-DELIM-NEXT:   verify.c Line 164: some message with {{[{]{}[}]}} in it
+// CHECK-WIDE-DELIM-NEXT:   verify.c Line 165: some message with  {}} in it
+// CHECK-WIDE-DELIM-NEXT:   verify.c Line 166: some message with {{[{]{[}]}}  in it
+// CHECK-WIDE-DELIM-NEXT:   verify.c Line 168: {some {{.*}} regex with double braces
+// CHECK-WIDE-DELIM-NEXT: error: 'expected-error' diagnostics seen but not expected:
+// CHECK-WIDE-DELIM-NEXT:   verify.c Line 169: cannot find end ('}}') of expected regex
+// CHECK-WIDE-DELIM-NEXT:   verify.c Line 171: cannot find end ('}}}') of expected string
+// CHECK-WIDE-DELIM-NEXT:   verify.c Line 172: cannot find end ('}}') of expected regex
+// CHECK-WIDE-DELIM-NEXT:   verify.c Line 173: cannot find start of regex ('{{[{][{]}}') in {no regex
+// CHECK-WIDE-DELIM-NEXT: 8 errors generated.
+#endif
+
+#endif
+
+#ifdef TEST10
+// RUN: not %clang_cc1 -DTEST10 -verify=foo %s 2>&1 | FileCheck -check-prefix=CHECK10 %s
+
+// CHECK10: error: no expected directives found: consider use of 'foo-no-diagnostics'
+#endif
+
+#ifdef TEST11
+// RUN: not %clang_cc1 -DTEST11 -verify=foo %s 2>&1 | FileCheck -check-prefix=CHECK11 %s
+
+// foo-no-diagnostics
+// foo-note {{}}
+
+//      CHECK11: error: 'foo-error' diagnostics seen but not expected:
+// CHECK11-NEXT:   Line 201: expected directive cannot follow 'foo-no-diagnostics' directive
+// CHECK11-NEXT: 1 error generated.
+#endif
+
+#ifdef TEST12
+// RUN: not %clang_cc1 -DTEST12 -verify=foo %s 2>&1 | FileCheck -check-prefix=CHECK12 %s
+
+#warning X
+// foo-warning@-1 {{X}}
+// foo-no-diagnostics
+
+//      CHECK12: error: 'foo-error' diagnostics seen but not expected:
+// CHECK12-NEXT:   Line 213: 'foo-no-diagnostics' directive cannot follow other expected directives
+// CHECK12-NEXT: 1 error generated.
 #endif

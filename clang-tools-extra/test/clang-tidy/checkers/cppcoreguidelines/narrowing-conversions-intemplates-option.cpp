@@ -1,13 +1,11 @@
 // RUN: %check_clang_tidy -check-suffix=DEFAULT %s \
-// RUN: cppcoreguidelines-narrowing-conversions %t -- \
-// RUN: -config='{CheckOptions: [ \
-// RUN: ]}'
+// RUN: cppcoreguidelines-narrowing-conversions %t --
 
 // RUN: %check_clang_tidy -check-suffix=WARN %s \
 // RUN: cppcoreguidelines-narrowing-conversions %t -- \
-// RUN: -config='{CheckOptions: [ \
-// RUN:   {key: cppcoreguidelines-narrowing-conversions.WarnWithinTemplateInstantiation, value: 1} \
-// RUN: ]}'
+// RUN: -config='{CheckOptions: { \
+// RUN:   cppcoreguidelines-narrowing-conversions.WarnWithinTemplateInstantiation: 1 \
+// RUN: }}'
 
 template <typename OrigType>
 void assign_in_template(OrigType jj) {

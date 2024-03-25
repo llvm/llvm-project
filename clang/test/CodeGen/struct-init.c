@@ -22,7 +22,6 @@ struct GLGENH ABHFBF = {1};
 typedef __attribute__(( ext_vector_type(2) )) unsigned int uint2;
 typedef __attribute__(( __vector_size__(8) )) unsigned int __neon_uint32x2_t;
 
-// rdar://8183908
 typedef unsigned int uint32_t;
 typedef __attribute__((neon_vector_type(2)))  uint32_t uint32x2_t;
 void foo(void) {

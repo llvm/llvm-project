@@ -70,12 +70,13 @@ define i64 @predicate(ptr nocapture readonly %arg, i32 %length, ptr nocapture re
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i64 1048576, [[LENGTH_EXT]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 0, [[LENGTH_EXT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze i1 [[TMP2]]
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       Header:
 ; CHECK-NEXT:    [[RESULT_IN3:%.*]] = phi ptr [ [[ARG2:%.*]], [[ENTRY:%.*]] ], [ [[ARG:%.*]], [[LATCH:%.*]] ]
 ; CHECK-NEXT:    [[J2:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[J_NEXT:%.*]], [[LATCH]] ]
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i64 [[J2]], [[LENGTH_EXT]]
-; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[INNERCMP:%.*]] = icmp eq i64 [[J2]], [[N_PRE]]
 ; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J2]], 1

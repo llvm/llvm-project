@@ -101,20 +101,16 @@ static const unsigned FCCRegDecoderTable[] = {
   SP::FCC0, SP::FCC1, SP::FCC2, SP::FCC3 };
 
 static const unsigned ASRRegDecoderTable[] = {
-  SP::Y,     SP::ASR1,  SP::ASR2,  SP::ASR3,
-  SP::ASR4,  SP::ASR5,  SP::ASR6,  SP::ASR7,
-  SP::ASR8,  SP::ASR9,  SP::ASR10, SP::ASR11,
-  SP::ASR12, SP::ASR13, SP::ASR14, SP::ASR15,
-  SP::ASR16, SP::ASR17, SP::ASR18, SP::ASR19,
-  SP::ASR20, SP::ASR21, SP::ASR22, SP::ASR23,
-  SP::ASR24, SP::ASR25, SP::ASR26, SP::ASR27,
-  SP::ASR28, SP::ASR29, SP::ASR30, SP::ASR31};
+    SP::Y,     SP::ASR1,  SP::ASR2,  SP::ASR3,  SP::ASR4,  SP::ASR5,  SP::ASR6,
+    SP::ASR7,  SP::ASR8,  SP::ASR9,  SP::ASR10, SP::ASR11, SP::ASR12, SP::ASR13,
+    SP::ASR14, SP::ASR15, SP::ASR16, SP::ASR17, SP::ASR18, SP::ASR19, SP::ASR20,
+    SP::ASR21, SP::ASR22, SP::ASR23, SP::ASR24, SP::ASR25, SP::ASR26, SP::ASR27,
+    SP::ASR28, SP::ASR29, SP::ASR30, SP::ASR31};
 
 static const unsigned PRRegDecoderTable[] = {
-  SP::TPC, SP::TNPC, SP::TSTATE, SP::TT, SP::TICK, SP::TBA, SP::PSTATE,
-  SP::TL, SP::PIL, SP::CWP, SP::CANSAVE, SP::CANRESTORE, SP::CLEANWIN,
-  SP::OTHERWIN, SP::WSTATE, SP::PC
-};
+    SP::TPC,     SP::TNPC,       SP::TSTATE,   SP::TT,       SP::TICK,
+    SP::TBA,     SP::PSTATE,     SP::TL,       SP::PIL,      SP::CWP,
+    SP::CANSAVE, SP::CANRESTORE, SP::CLEANWIN, SP::OTHERWIN, SP::WSTATE};
 
 static const uint16_t IntPairDecoderTable[] = {
   SP::G0_G1, SP::G2_G3, SP::G4_G5, SP::G6_G7,
@@ -302,7 +298,7 @@ DecodeStatus SparcDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
 
   // Calling the auto-generated decoder function.
 
-  if (STI.getFeatureBits()[Sparc::FeatureV9])
+  if (STI.hasFeature(Sparc::FeatureV9))
   {
     Result = decodeInstruction(DecoderTableSparcV932, Instr, Insn, Address, this, STI);
   }
@@ -310,8 +306,10 @@ DecodeStatus SparcDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   {
     Result = decodeInstruction(DecoderTableSparcV832, Instr, Insn, Address, this, STI);
   }
-  if (Result != MCDisassembler::Fail)
+  if (Result != MCDisassembler::Fail) {
+    Size = 4;
     return Result;
+  }
 
   Result =
       decodeInstruction(DecoderTableSparc32, Instr, Insn, Address, this, STI);
@@ -344,7 +342,7 @@ static DecodeStatus DecodeCall(MCInst &MI, unsigned insn, uint64_t Address,
 
 static DecodeStatus DecodeSIMM13(MCInst &MI, unsigned insn, uint64_t Address,
                                  const MCDisassembler *Decoder) {
-  unsigned tgt = SignExtend32<13>(fieldFromInstruction(insn, 0, 13));
-  MI.addOperand(MCOperand::createImm(tgt));
+  assert(isUInt<13>(insn));
+  MI.addOperand(MCOperand::createImm(SignExtend64<13>(insn)));
   return MCDisassembler::Success;
 }

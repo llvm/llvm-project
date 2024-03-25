@@ -14,6 +14,7 @@ add_llvm_component_library(LLVMMipsDesc
   MipsTargetStreamer.cpp
 
   LINK_COMPONENTS
+  CodeGenTypes
   MC
   MipsInfo
   Support

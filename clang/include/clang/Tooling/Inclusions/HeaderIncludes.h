@@ -128,6 +128,8 @@ private:
   // inserting new #includes into the actual code section (e.g. after a
   // declaration).
   unsigned MaxInsertOffset;
+  // True if we find the main-file header in the Code.
+  bool MainIncludeFound;
   IncludeCategoryManager Categories;
   // Record the offset of the end of the last include in each category.
   std::unordered_map<int, int> CategoryEndOffsets;

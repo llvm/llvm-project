@@ -4,7 +4,7 @@
 declare {i32, i1} @llvm.sadd.with.overflow.i32(i32, i32)
 declare {i32, i1} @llvm.uadd.with.overflow.i32(i32, i32)
 
-define fastcc i32 @test5(i32 %v1, i32 %v2, i32* %X) nounwind {
+define fastcc i32 @test5(i32 %v1, i32 %v2, ptr %X) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    add.l %d1, %d0
@@ -20,14 +20,14 @@ entry:
   br i1 %obit, label %overflow, label %normal
 
 normal:
-  store i32 0, i32* %X
+  store i32 0, ptr %X
   br label %overflow
 
 overflow:
   ret i32 %sum
 }
 
-define fastcc i1 @test6(i32 %v1, i32 %v2, i32* %X) nounwind {
+define fastcc i1 @test6(i32 %v1, i32 %v2, ptr %X) nounwind {
 ; CHECK-LABEL: test6:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    add.l %d1, %d0
@@ -44,7 +44,7 @@ entry:
   br i1 %obit, label %carry, label %normal
 
 normal:
-  store i32 0, i32* %X
+  store i32 0, ptr %X
   br label %carry
 
 carry:

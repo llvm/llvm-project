@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, windows
+// UNSUPPORTED: c++03, c++11, c++14, windows
+// UNSUPPORTED: availability-filesystem-missing
 
 // MS STL and libstdc++ use the native windows file timestamp resolution,
 // with 100 ns resolution.
@@ -15,13 +16,13 @@
 
 // typedef TrivialClock file_time_type;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <chrono>
 #include <ratio>
 #include <type_traits>
 
 #include "test_macros.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 using Dur = file_time_type::duration;
 using Period = Dur::period;

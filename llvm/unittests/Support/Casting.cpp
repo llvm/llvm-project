@@ -45,6 +45,10 @@ struct derived : public base {
   static bool classof(const base *B) { return true; }
 };
 
+struct derived_nocast : public base {
+  static bool classof(const base *B) { return false; }
+};
+
 template <> struct isa_impl<foo, bar> {
   static inline bool doit(const bar &Val) {
     dbgs() << "Classof: " << &Val << "\n";
@@ -212,6 +216,18 @@ TEST(CastingTest, dyn_cast) {
   // EXPECT_EQ(F4, null_foo);
   foo *F5 = B1.daz();
   EXPECT_NE(F5, null_foo);
+
+  auto BP = std::make_unique<const bar>();
+  auto FP = dyn_cast<foo>(BP);
+  static_assert(std::is_same_v<std::unique_ptr<const foo>, decltype(FP)>,
+                "Incorrect deduced return type!");
+  EXPECT_NE(FP.get(), nullptr);
+  EXPECT_EQ(BP.get(), nullptr);
+
+  auto BP2 = std::make_unique<base>();
+  auto DP = dyn_cast<derived_nocast>(BP2);
+  EXPECT_EQ(DP.get(), nullptr);
+  EXPECT_NE(BP2.get(), nullptr);
 }
 
 // All these tests forward to dyn_cast_if_present, so they also provde an
@@ -264,6 +280,21 @@ TEST(CastingTest, dyn_cast_if_present) {
   // FallibleCastTraits, which default-constructs a T4, which has no value.
   T4 t4 = dyn_cast_if_present<T4>(t3);
   EXPECT_FALSE(t4.hasValue);
+}
+
+TEST(CastingTest, isa_check_predicates) {
+  auto IsaFoo = IsaPred<foo>;
+  EXPECT_TRUE(IsaFoo(B1));
+  EXPECT_TRUE(IsaFoo(B2));
+  EXPECT_TRUE(IsaFoo(B3));
+  EXPECT_TRUE(IsaPred<foo>(B4));
+  EXPECT_TRUE((IsaPred<foo, bar>(B4)));
+
+  auto IsaAndPresentFoo = IsaAndPresentPred<foo>;
+  EXPECT_TRUE(IsaAndPresentFoo(B2));
+  EXPECT_TRUE(IsaAndPresentFoo(B4));
+  EXPECT_FALSE(IsaAndPresentPred<foo>(fub()));
+  EXPECT_FALSE((IsaAndPresentPred<foo, bar>(fub())));
 }
 
 std::unique_ptr<derived> newd() { return std::make_unique<derived>(); }

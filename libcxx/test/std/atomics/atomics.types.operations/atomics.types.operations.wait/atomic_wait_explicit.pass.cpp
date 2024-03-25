@@ -8,10 +8,9 @@
 //
 // UNSUPPORTED: no-threads
 // XFAIL: c++03
-// XFAIL: !non-lockfree-atomics
+// XFAIL: !has-1024-bit-atomics
 
-// This test requires the dylib support introduced in D68480, which shipped in macOS 11.0.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+// XFAIL: availability-synchronization_library-missing
 
 // <atomic>
 

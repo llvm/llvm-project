@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Testing for pointer constant, along with :
 ! C751 A component shall not have both the ALLOCATABLE and POINTER attributes.
 ! C752 If the CONTIGUOUS attribute is specified, the component shall be an 
@@ -12,7 +12,7 @@ subroutine s()
     !ERROR: 'pointerallocatablefield' may not have both the POINTER and ALLOCATABLE attributes
     real, pointer, allocatable :: pointerAllocatableField
     real, dimension(:), contiguous, pointer :: goodContigField
-    !ERROR: A CONTIGUOUS component must be an array with the POINTER attribute
+    !PORTABILITY: CONTIGUOUS component 'badcontigfield' should be an array with the POINTER attribute
     real, dimension(:), contiguous, allocatable :: badContigField
     character :: charField * 3
     !ERROR: A length specifier cannot be used to declare the non-character entity 'realfield'

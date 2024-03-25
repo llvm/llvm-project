@@ -132,8 +132,8 @@ define <vscale x 16 x i8> @smulh_i8(<vscale x 16 x i8> %a,
 ; CHECK-NEXT:    ret
                                     <vscale x 16 x i8> %b) {
   %sel = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.smulh.nxv16i8(<vscale x 16 x i1> %sel, <vscale x 16 x i8> %a,
-                                                                 <vscale x 16 x i8> %b)
+  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.smulh.u.nxv16i8(<vscale x 16 x i1> %sel, <vscale x 16 x i8> %a,
+                                                                   <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %res
 }
 
@@ -144,8 +144,8 @@ define <vscale x 8 x i16> @smulh_i16(<vscale x 8 x i16> %a,
 ; CHECK-NEXT:    ret
                                      <vscale x 8 x i16> %b) {
   %sel = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %res = call <vscale x 8 x i16> @llvm.aarch64.sve.smulh.nxv8i16(<vscale x 8 x i1> %sel, <vscale x 8 x i16> %a,
-                                                                 <vscale x 8 x i16> %b)
+  %res = call <vscale x 8 x i16> @llvm.aarch64.sve.smulh.u.nxv8i16(<vscale x 8 x i1> %sel, <vscale x 8 x i16> %a,
+                                                                   <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %res
 }
 
@@ -156,8 +156,8 @@ define <vscale x 4 x i32> @smulh_i32(<vscale x 4 x i32> %a,
 ; CHECK-NEXT:    ret
                                      <vscale x 4 x i32> %b) {
   %sel = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %res = call <vscale x 4 x i32> @llvm.aarch64.sve.smulh.nxv4i32(<vscale x 4 x i1> %sel, <vscale x 4 x i32> %a,
-                                                                 <vscale x 4 x i32> %b)
+  %res = call <vscale x 4 x i32> @llvm.aarch64.sve.smulh.u.nxv4i32(<vscale x 4 x i1> %sel, <vscale x 4 x i32> %a,
+                                                                   <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %res
 }
 
@@ -168,8 +168,8 @@ define <vscale x 2 x i64> @smulh_i64(<vscale x 2 x i64> %a,
 ; CHECK-NEXT:    ret
                                      <vscale x 2 x i64> %b) {
   %sel = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %res = call <vscale x 2 x i64> @llvm.aarch64.sve.smulh.nxv2i64(<vscale x 2 x i1> %sel, <vscale x 2 x i64> %a,
-                                                                 <vscale x 2 x i64> %b)
+  %res = call <vscale x 2 x i64> @llvm.aarch64.sve.smulh.u.nxv2i64(<vscale x 2 x i1> %sel, <vscale x 2 x i64> %a,
+                                                                   <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %res
 }
 
@@ -183,8 +183,8 @@ define <vscale x 16 x i8> @umulh_i8(<vscale x 16 x i8> %a,
 ; CHECK-NEXT:    ret
                                     <vscale x 16 x i8> %b) {
   %sel = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.umulh.nxv16i8(<vscale x 16 x i1> %sel, <vscale x 16 x i8> %a,
-                                                                 <vscale x 16 x i8> %b)
+  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.umulh.u.nxv16i8(<vscale x 16 x i1> %sel, <vscale x 16 x i8> %a,
+                                                                   <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %res
 }
 
@@ -195,8 +195,8 @@ define <vscale x 8 x i16> @umulh_i16(<vscale x 8 x i16> %a,
 ; CHECK-NEXT:    ret
                                      <vscale x 8 x i16> %b) {
   %sel = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %res = call <vscale x 8 x i16> @llvm.aarch64.sve.umulh.nxv8i16(<vscale x 8 x i1> %sel, <vscale x 8 x i16> %a,
-                                                                 <vscale x 8 x i16> %b)
+  %res = call <vscale x 8 x i16> @llvm.aarch64.sve.umulh.u.nxv8i16(<vscale x 8 x i1> %sel, <vscale x 8 x i16> %a,
+                                                                   <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %res
 }
 
@@ -207,8 +207,8 @@ define <vscale x 4 x i32> @umulh_i32(<vscale x 4 x i32> %a,
 ; CHECK-NEXT:    ret
                                      <vscale x 4 x i32> %b) {
   %sel = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %res = call <vscale x 4 x i32> @llvm.aarch64.sve.umulh.nxv4i32(<vscale x 4 x i1> %sel, <vscale x 4 x i32> %a,
-                                                                 <vscale x 4 x i32> %b)
+  %res = call <vscale x 4 x i32> @llvm.aarch64.sve.umulh.u.nxv4i32(<vscale x 4 x i1> %sel, <vscale x 4 x i32> %a,
+                                                                   <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %res
 }
 
@@ -219,8 +219,8 @@ define <vscale x 2 x i64> @umulh_i64(<vscale x 2 x i64> %a,
 ; CHECK-NEXT:    ret
                                      <vscale x 2 x i64> %b) {
   %sel = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %res = call <vscale x 2 x i64> @llvm.aarch64.sve.umulh.nxv2i64(<vscale x 2 x i1> %sel, <vscale x 2 x i64> %a,
-                                                                 <vscale x 2 x i64> %b)
+  %res = call <vscale x 2 x i64> @llvm.aarch64.sve.umulh.u.nxv2i64(<vscale x 2 x i1> %sel, <vscale x 2 x i64> %a,
+                                                                   <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %res
 }
 
@@ -336,14 +336,14 @@ declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32)
 declare <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32)
 declare <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32)
 declare <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32)
-declare <vscale x 16 x  i8> @llvm.aarch64.sve.smulh.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x  i8>, <vscale x 16 x  i8>)
-declare <vscale x  8 x i16> @llvm.aarch64.sve.smulh.nxv8i16(<vscale x  8 x i1>, <vscale x  8 x i16>, <vscale x  8 x i16>)
-declare <vscale x  4 x i32> @llvm.aarch64.sve.smulh.nxv4i32(<vscale x  4 x i1>, <vscale x  4 x i32>, <vscale x  4 x i32>)
-declare <vscale x  2 x i64> @llvm.aarch64.sve.smulh.nxv2i64(<vscale x  2 x i1>, <vscale x  2 x i64>, <vscale x  2 x i64>)
-declare <vscale x 16 x  i8> @llvm.aarch64.sve.umulh.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x  i8>, <vscale x 16 x  i8>)
-declare <vscale x  8 x i16> @llvm.aarch64.sve.umulh.nxv8i16(<vscale x  8 x i1>, <vscale x  8 x i16>, <vscale x  8 x i16>)
-declare <vscale x  4 x i32> @llvm.aarch64.sve.umulh.nxv4i32(<vscale x  4 x i1>, <vscale x  4 x i32>, <vscale x  4 x i32>)
-declare <vscale x  2 x i64> @llvm.aarch64.sve.umulh.nxv2i64(<vscale x  2 x i1>, <vscale x  2 x i64>, <vscale x  2 x i64>)
+declare <vscale x 16 x  i8> @llvm.aarch64.sve.smulh.u.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x  i8>, <vscale x 16 x  i8>)
+declare <vscale x  8 x i16> @llvm.aarch64.sve.smulh.u.nxv8i16(<vscale x  8 x i1>, <vscale x  8 x i16>, <vscale x  8 x i16>)
+declare <vscale x  4 x i32> @llvm.aarch64.sve.smulh.u.nxv4i32(<vscale x  4 x i1>, <vscale x  4 x i32>, <vscale x  4 x i32>)
+declare <vscale x  2 x i64> @llvm.aarch64.sve.smulh.u.nxv2i64(<vscale x  2 x i1>, <vscale x  2 x i64>, <vscale x  2 x i64>)
+declare <vscale x 16 x  i8> @llvm.aarch64.sve.umulh.u.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x  i8>, <vscale x 16 x  i8>)
+declare <vscale x  8 x i16> @llvm.aarch64.sve.umulh.u.nxv8i16(<vscale x  8 x i1>, <vscale x  8 x i16>, <vscale x  8 x i16>)
+declare <vscale x  4 x i32> @llvm.aarch64.sve.umulh.u.nxv4i32(<vscale x  4 x i1>, <vscale x  4 x i32>, <vscale x  4 x i32>)
+declare <vscale x  2 x i64> @llvm.aarch64.sve.umulh.u.nxv2i64(<vscale x  2 x i1>, <vscale x  2 x i64>, <vscale x  2 x i64>)
 declare <vscale x 16 x i8> @llvm.aarch64.sve.pmul.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 16 x i8> @llvm.aarch64.sve.sqdmulh.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.sqdmulh.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>)

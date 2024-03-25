@@ -23,6 +23,10 @@ using namespace llvm::logicalview;
 namespace {
 
 class ReaderTestElements : public LVReader {
+#define CREATE(VARIABLE, CREATE_FUNCTION)                                      \
+  VARIABLE = CREATE_FUNCTION();                                                \
+  EXPECT_NE(VARIABLE, nullptr);
+
   // Types.
   LVType *IntegerType = nullptr;
   LVType *UnsignedType = nullptr;
@@ -60,11 +64,6 @@ class ReaderTestElements : public LVReader {
 
 protected:
   void add(LVScope *Parent, LVElement *Element);
-  template <typename T> T *create() {
-    T *Element = new (std::nothrow) T();
-    EXPECT_NE(Element, nullptr);
-    return Element;
-  }
   void set(LVElement *Element, StringRef Name, LVOffset Offset,
            uint32_t LineNumber = 0, LVElement *Type = nullptr);
 
@@ -111,40 +110,40 @@ void ReaderTestElements::createElements() {
   ASSERT_NE(Root, nullptr);
 
   // Create the logical types.
-  IntegerType = create<LVType>();
-  UnsignedType = create<LVType>();
-  GlobalType = create<LVType>();
-  LocalType = create<LVType>();
-  NestedType = create<LVType>();
-  EnumeratorOne = create<LVTypeEnumerator>();
-  EnumeratorTwo = create<LVTypeEnumerator>();
-  TypeDefinitionOne = create<LVTypeDefinition>();
-  TypeDefinitionTwo = create<LVTypeDefinition>();
-  TypeSubrange = create<LVTypeSubrange>();
-  TypeParam = create<LVTypeParam>();
-  TypeImport = create<LVTypeImport>();
+  CREATE(IntegerType, createType);
+  CREATE(UnsignedType, createType);
+  CREATE(GlobalType, createType);
+  CREATE(LocalType, createType);
+  CREATE(NestedType, createType);
+  CREATE(EnumeratorOne, createTypeEnumerator);
+  CREATE(EnumeratorTwo, createTypeEnumerator);
+  CREATE(TypeDefinitionOne, createTypeDefinition);
+  CREATE(TypeDefinitionTwo, createTypeDefinition);
+  CREATE(TypeSubrange, createTypeSubrange);
+  CREATE(TypeParam, createTypeParam);
+  CREATE(TypeImport, createTypeImport);
 
   // Create the logical scopes.
-  NestedScope = create<LVScope>();
-  Aggregate = create<LVScopeAggregate>();
-  Array = create<LVScopeArray>();
-  CompileUnit = create<LVScopeCompileUnit>();
-  Enumeration = create<LVScopeEnumeration>();
-  Function = create<LVScopeFunction>();
-  ClassFunction = create<LVScopeFunction>();
-  InlinedFunction = create<LVScopeFunctionInlined>();
-  Namespace = create<LVScopeNamespace>();
+  CREATE(NestedScope, createScope);
+  CREATE(Aggregate, createScopeAggregate);
+  CREATE(Array, createScopeArray);
+  CREATE(CompileUnit, createScopeCompileUnit);
+  CREATE(Enumeration, createScopeEnumeration);
+  CREATE(Function, createScopeFunction);
+  CREATE(ClassFunction, createScopeFunction);
+  CREATE(InlinedFunction, createScopeFunctionInlined);
+  CREATE(Namespace, createScopeNamespace);
 
   // Create the logical symbols.
-  GlobalVariable = create<LVSymbol>();
-  LocalVariable = create<LVSymbol>();
-  ClassMember = create<LVSymbol>();
-  NestedVariable = create<LVSymbol>();
-  Parameter = create<LVSymbol>();
+  CREATE(GlobalVariable, createSymbol);
+  CREATE(LocalVariable, createSymbol);
+  CREATE(ClassMember, createSymbol);
+  CREATE(NestedVariable, createSymbol);
+  CREATE(Parameter, createSymbol);
 
   // Create the logical lines.
-  LocalLine = create<LVLine>();
-  NestedLine = create<LVLine>();
+  CREATE(LocalLine, createLine);
+  CREATE(NestedLine, createLine);
 }
 
 // Create the logical view adding the created logical elements.

@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -x objective-c++ -fms-extensions -rewrite-objc %s -o %t-rw.cpp 
 // RUN: %clang_cc1 -fsyntax-only -D"__declspec(X)=" %t-rw.cpp
-// rdar://11124775
 
 typedef bool BOOL;
 

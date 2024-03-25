@@ -8,13 +8,14 @@
 
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
 /// See if the given exception handling personality function is one that we
@@ -91,7 +92,11 @@ bool llvm::canSimplifyInvokeNoUnwind(const Function *F) {
   // We can't simplify any invokes to nounwind functions if the personality
   // function wants to catch asynch exceptions.  The nounwind attribute only
   // implies that the function does not throw synchronous exceptions.
-  return !isAsynchronousEHPersonality(Personality);
+
+  // Cannot simplify CXX Personality under AsynchEH
+  const llvm::Module *M = (const llvm::Module *)F->getParent();
+  bool EHa = M->getModuleFlag("eh-asynch");
+  return !EHa && !isAsynchronousEHPersonality(Personality);
 }
 
 DenseMap<BasicBlock *, ColorVector> llvm::colorEHFunclets(Function &F) {
@@ -109,7 +114,7 @@ DenseMap<BasicBlock *, ColorVector> llvm::colorEHFunclets(Function &F) {
   // Note: Despite not being a funclet in the truest sense, a catchswitch is
   // considered to belong to its own funclet for the purposes of coloring.
 
-  DEBUG_WITH_TYPE("winehprepare-coloring",
+  DEBUG_WITH_TYPE("win-eh-prepare-coloring",
                   dbgs() << "\nColoring funclets for " << F.getName() << "\n");
 
   Worklist.push_back({EntryBlock, EntryBlock});
@@ -118,7 +123,7 @@ DenseMap<BasicBlock *, ColorVector> llvm::colorEHFunclets(Function &F) {
     BasicBlock *Visiting;
     BasicBlock *Color;
     std::tie(Visiting, Color) = Worklist.pop_back_val();
-    DEBUG_WITH_TYPE("winehprepare-coloring",
+    DEBUG_WITH_TYPE("win-eh-prepare-coloring",
                     dbgs() << "Visiting " << Visiting->getName() << ", "
                            << Color->getName() << "\n");
     Instruction *VisitingHead = Visiting->getFirstNonPHI();
@@ -133,7 +138,7 @@ DenseMap<BasicBlock *, ColorVector> llvm::colorEHFunclets(Function &F) {
     else
       continue;
 
-    DEBUG_WITH_TYPE("winehprepare-coloring",
+    DEBUG_WITH_TYPE("win-eh-prepare-coloring",
                     dbgs() << "  Assigned color \'" << Color->getName()
                            << "\' to block \'" << Visiting->getName()
                            << "\'.\n");

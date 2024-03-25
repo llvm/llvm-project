@@ -10,13 +10,13 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/InterfaceStub/IFSStub.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/TargetParser/Triple.h"
 #include <functional>
 #include <optional>
 
@@ -167,7 +167,7 @@ template <> struct MappingTraits<IFSStubTriple> {
 bool usesTriple(StringRef Buf) {
   for (line_iterator I(MemoryBufferRef(Buf, "ELFStub")); !I.is_at_eof(); ++I) {
     StringRef Line = (*I).trim();
-    if (Line.startswith("Target:")) {
+    if (Line.starts_with("Target:")) {
       if (Line == "Target:" || Line.contains("{")) {
         return false;
       }
@@ -193,8 +193,19 @@ Expected<std::unique_ptr<IFSStub>> ifs::readIFSFromBuffer(StringRef Buf) {
         "IFS version " + Stub->IfsVersion.getAsString() + " is unsupported.",
         std::make_error_code(std::errc::invalid_argument));
   if (Stub->Target.ArchString) {
-    Stub->Target.Arch =
+    uint16_t eMachine =
         ELF::convertArchNameToEMachine(*Stub->Target.ArchString);
+    if (eMachine == ELF::EM_NONE)
+      return createStringError(
+          std::make_error_code(std::errc::invalid_argument),
+          "IFS arch '" + *Stub->Target.ArchString + "' is unsupported");
+    Stub->Target.Arch = eMachine;
+  }
+  for (const auto &Item : Stub->Symbols) {
+    if (Item.Type == IFSSymbolType::Unknown)
+      return createStringError(
+          std::make_error_code(std::errc::invalid_argument),
+          "IFS symbol type for symbol '" + Item.Name + "' is unsupported");
   }
   return std::move(Stub);
 }

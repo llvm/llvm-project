@@ -66,6 +66,9 @@ public:
   /// The type of this jump table.
   JumpTableType Type;
 
+  /// Whether this jump table has entries pointing to multiple functions.
+  bool IsSplit{false};
+
   /// All the entries as labels.
   std::vector<MCSymbol *> Entries;
 

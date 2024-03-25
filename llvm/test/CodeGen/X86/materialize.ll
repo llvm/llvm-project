@@ -100,7 +100,7 @@ entry:
 ; CHECK32:       retl
 
 ; Check push/pop have implicit def/use of $esp
-; OPERAND32:      PUSH32i8 5, implicit-def $esp, implicit $esp
+; OPERAND32:      PUSH32i 5, implicit-def $esp, implicit $esp
 ; OPERAND32-NEXT: CFI_INSTRUCTION adjust_cfa_offset 4
 ; OPERAND32-NEXT: renamable $ecx = POP32r implicit-def $esp, implicit $esp
 ; OPERAND32-NEXT: CFI_INSTRUCTION adjust_cfa_offset -4
@@ -124,7 +124,7 @@ entry:
 ; CHECKWIN64-NEXT:  retq
 
 ; Check push/pop have implicit def/use of $rsp
-; OPERAND64:      PUSH64i8 1, implicit-def $rsp, implicit $rsp
+; OPERAND64:      PUSH64i32 1, implicit-def $rsp, implicit $rsp
 ; OPERAND64-NEXT: CFI_INSTRUCTION adjust_cfa_offset 8
 ; OPERAND64-NEXT: $rax = POP64r implicit-def $rsp, implicit $rsp
 ; OPERAND64-NEXT: CFI_INSTRUCTION adjust_cfa_offset -8

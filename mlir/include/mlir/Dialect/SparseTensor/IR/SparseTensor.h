@@ -9,7 +9,9 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_IR_SPARSETENSOR_H_
 #define MLIR_DIALECT_SPARSETENSOR_IR_SPARSETENSOR_H_
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -18,8 +20,33 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
-// We must include Enums.h.inc before AttrDefs.h.inc due to dependency between
-// StorageSpecifierKindAttr and StorageSpeciferKind Enum.
+//===----------------------------------------------------------------------===//
+//
+// Type aliases to help code be more self-documenting. Unfortunately
+// these are not type-checked, so they only provide documentation rather
+// than doing anything to prevent mixups.
+//
+//===----------------------------------------------------------------------===//
+
+namespace mlir {
+namespace sparse_tensor {
+
+/// The type of dimension identifiers and dimension-ranks.
+using Dimension = uint64_t;
+
+/// The type of level identifiers and level-ranks.
+using Level = uint64_t;
+
+/// The type for individual components of a compile-time shape,
+/// including the value `ShapedType::kDynamic` (for shapes).
+using Size = int64_t;
+
+} // namespace sparse_tensor
+} // namespace mlir
+
+//===----------------------------------------------------------------------===//
+// TableGen-defined classes
+//===----------------------------------------------------------------------===//
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrEnums.h.inc"
@@ -35,116 +62,97 @@
 
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorOpsDialect.h.inc"
 
+//===----------------------------------------------------------------------===//
+// Additional convenience methods.
+//===----------------------------------------------------------------------===//
+
 namespace mlir {
 namespace sparse_tensor {
 
 /// Convenience method to abbreviate casting `getType()`.
 template <typename T>
-inline RankedTensorType getRankedTensorType(T t) {
-  return t.getType().template cast<RankedTensorType>();
+inline RankedTensorType getRankedTensorType(T &&t) {
+  assert(static_cast<bool>(std::forward<T>(t)) &&
+         "getRankedTensorType got null argument");
+  return dyn_cast<RankedTensorType>(std::forward<T>(t).getType());
 }
 
 /// Convenience method to abbreviate casting `getType()`.
 template <typename T>
-inline MemRefType getMemRefType(T t) {
-  return t.getType().template cast<MemRefType>();
+inline MemRefType getMemRefType(T &&t) {
+  assert(static_cast<bool>(std::forward<T>(t)) &&
+         "getMemRefType got null argument");
+  return cast<MemRefType>(std::forward<T>(t).getType());
 }
 
 /// Convenience method to get a sparse encoding attribute from a type.
 /// Returns null-attribute for any type without an encoding.
 SparseTensorEncodingAttr getSparseTensorEncoding(Type type);
 
-/// Returns true iff the given type is a type for a COO tensor with the last
-/// dimension level type being unique.
-bool isUniqueCOOType(RankedTensorType tp);
+/// Returns true iff MLIR operand has any sparse operand.
+inline bool hasAnySparseOperand(Operation *op) {
+  return llvm::any_of(op->getOperands().getTypes(), [](Type t) {
+    return getSparseTensorEncoding(t) != nullptr;
+  });
+}
 
-/// Returns the starting dimension for a trailing COO region that spans across
-/// at least two dimensions. If no such COO region is found, returns the rank
-/// of the tensor.
-unsigned getCOOStart(SparseTensorEncodingAttr enc);
+/// Returns true iff MLIR operand has any sparse result.
+inline bool hasAnySparseResult(Operation *op) {
+  return llvm::any_of(op->getResults().getTypes(), [](Type t) {
+    return getSparseTensorEncoding(t) != nullptr;
+  });
+}
+
+/// Returns true iff MLIR operand has any sparse operand or result.
+inline bool hasAnySparseOperandOrResult(Operation *op) {
+  return hasAnySparseOperand(op) || hasAnySparseResult(op);
+}
+
+/// Returns true iff MLIR operation has any sparse tensor with non-identity
+/// dim2lvl maps.
+bool hasAnyNonIdentityOperandsOrResults(Operation *op);
 
 //
-// Dimension level types.
+// Inference.
 //
 
-// MSVC does not allow this function to be constexpr, because
-// `SparseTensorEncodingAttr::operator bool` isn't declared constexpr.
-// And therefore all functions calling it cannot be constexpr either.
-// TODO: since Clang does allow these to be constexpr, perhaps we should
-// define a macro to abstract over `inline` vs `constexpr` annotations.
-inline DimLevelType getDimLevelType(SparseTensorEncodingAttr enc, uint64_t d) {
-  if (enc) {
-    auto types = enc.getDimLevelType();
-    assert(d < types.size() && "Dimension out of bounds");
-    return types[d];
-  }
-  return DimLevelType::Dense; // unannotated tensor is dense
-}
+/// Given the dimToLvl map, infers the lvlToDim map, or returns
+/// empty Affine map when inference fails.
+AffineMap inferLvlToDim(AffineMap dimToLvl, MLIRContext *context);
 
-inline DimLevelType getDimLevelType(RankedTensorType type, uint64_t d) {
-  return getDimLevelType(getSparseTensorEncoding(type), d);
-}
+/// Returns the lvlToDim map for the given dimToLvl map specific
+/// to the block sparse cases.
+/// Asserts on failure (so only use when known to succeed).
+AffineMap inverseBlockSparsity(AffineMap dimToLvl, MLIRContext *context);
 
-/// Convenience function to test for dense dimension (0 <= d < rank).
-inline bool isDenseDim(RankedTensorType type, uint64_t d) {
-  return isDenseDLT(getDimLevelType(type, d));
-}
+/// Given the dimToLvl map, returns the block sizes in a vector.
+/// For instance, a 2x3 block will return [2, 3]. Unblocked dimension i
+/// will return 0, and i floordiv 1, i mod 1 will return 1. Therefore,
+/// the example below will return [0, 1].
+/// map = ( i, j ) ->
+///       ( i : dense,
+///         j floordiv 1 : compressed,
+///         j mod 1      : dense
+///       )
+/// Only valid block sparsity will be accepted.
+SmallVector<unsigned> getBlockSize(AffineMap dimToLvl);
 
-/// Convenience function to test for compressed dimension (0 <= d < rank).
-inline bool isCompressedDim(RankedTensorType type, uint64_t d) {
-  return isCompressedDLT(getDimLevelType(type, d));
-}
-
-/// Convenience function to test for singleton dimension (0 <= d < rank).
-inline bool isSingletonDim(RankedTensorType type, uint64_t d) {
-  return isSingletonDLT(getDimLevelType(type, d));
-}
-
-/// Convenience function to test for dense dimension (0 <= d < rank).
-inline bool isDenseDim(SparseTensorEncodingAttr enc, uint64_t d) {
-  return isDenseDLT(getDimLevelType(enc, d));
-}
-
-/// Convenience function to test for compressed dimension (0 <= d < rank).
-inline bool isCompressedDim(SparseTensorEncodingAttr enc, uint64_t d) {
-  return isCompressedDLT(getDimLevelType(enc, d));
-}
-
-/// Convenience function to test for singleton dimension (0 <= d < rank).
-inline bool isSingletonDim(SparseTensorEncodingAttr enc, uint64_t d) {
-  return isSingletonDLT(getDimLevelType(enc, d));
-}
-
-//
-// Dimension level properties.
-//
-
-/// Convenience function to test for ordered property in the
-/// given dimension (0 <= d < rank).
-inline bool isOrderedDim(RankedTensorType type, uint64_t d) {
-  return isOrderedDLT(getDimLevelType(type, d));
-}
-
-/// Convenience function to test for unique property in the
-/// given dimension (0 <= d < rank).
-inline bool isUniqueDim(RankedTensorType type, uint64_t d) {
-  return isUniqueDLT(getDimLevelType(type, d));
-}
+/// Given the dimToLvl map, returns if it's block sparsity.
+bool isBlockSparsity(AffineMap dimToLvl);
 
 //
 // Reordering.
 //
 
-uint64_t toOrigDim(SparseTensorEncodingAttr enc, uint64_t d);
-uint64_t toStoredDim(SparseTensorEncodingAttr enc, uint64_t d);
+/// Convenience method to translate the given level to the corresponding
+/// dimension.
+/// Requires: `enc` has a permuted dim2lvl map and `0 <= l < lvlRank`.
+Dimension toDim(SparseTensorEncodingAttr enc, Level l);
 
-/// Convenience method to translate the given stored dimension
-/// to the original dimension (0 <= d < rank).
-uint64_t toOrigDim(RankedTensorType type, uint64_t d);
-
-/// Convenience method to translate the given original dimension
-/// to the stored dimension (0 <= d < rank).
-uint64_t toStoredDim(RankedTensorType type, uint64_t d);
+/// Convenience method to translate the given dimension to the corresponding
+/// level.
+/// Requires: `enc` has a permuted dim2lvl map and `0 <= d < dimRank`.
+Level toLvl(SparseTensorEncodingAttr enc, Dimension d);
 
 } // namespace sparse_tensor
 } // namespace mlir

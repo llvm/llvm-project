@@ -15,6 +15,11 @@
 // RUN: %clang -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefix=P10
 
+// RUN: %clang -x c++ -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -fsyntax-only
+// RUN: %clang -x c++ -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -fsyntax-only
+
 // RUN: %clang -S -emit-llvm -target powerpc64le-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
 // RUN: %clang -S -emit-llvm -target powerpc64-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
@@ -73,7 +78,7 @@ test_blend() {
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_blend_epi16(<2 x i64> noundef %{{[0-9a-zA-Z_.]+}}, <2 x i64> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef signext %{{[0-9a-zA-Z_.]+}})
 // CHECK: %[[TRUNC:[0-9a-zA-Z_.]+]] = trunc i32 %{{[0-9a-zA-Z_.]+}} to i8
-// CHECK: call <16 x i8> @vec_splats(signed char)(i8 noundef signext %[[TRUNC]])
+// CHECK: call <16 x i8> @vec_splats(unsigned char)(i8 noundef zeroext %[[TRUNC]])
 // CHECK: call <16 x i8> @llvm.ppc.altivec.vgbbd(<16 x i8> %{{[0-9a-zA-Z_.]+}})
 // CHECK: %[[PACK:[0-9a-zA-Z_.]+]] = call <8 x i16> @vec_unpackh(signed char vector[16])
 // CHECK: store <8 x i16> %[[PACK]], ptr %{{[0-9a-zA-Z_.]+}}, align 16
@@ -232,51 +237,55 @@ void __attribute__((noinline))
 test_round() {
   _mm_round_ps(mn1, 0);
   _mm_round_ss(mn1, mn2, 0);
-  _mm_round_pd(mn1, 0);
-  _mm_round_sd(mn1, mn2, 0);
+  _mm_round_pd(md1, 0);
+  _mm_round_sd(md1, md2, 0);
 }
 
 // CHECK-LABEL: @test_round
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_round_ps(<4 x float> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef signext %{{[0-9a-zA-Z_.]+}})
-// CHECK: call signext i32 @__builtin_mffs()
-// CHECK: call signext i32 @__builtin_mtfsf(i32 noundef signext 3, double noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call double @llvm.ppc.readflm()
+// CHECK: call void @llvm.ppc.mtfsf(i32 3, double %{{[0-9a-zA-Z_.]+}})
 // CHECK: %{{[0-9a-zA-Z_.]+}} = call <4 x float> asm "", "=^wa,0"
-// CHECK: call signext i32 @__builtin_mffsl()
-// CHECK: call signext i32 @__builtin_set_fpscr_rn(i32 noundef signext 0)
+// CHECK: call double @llvm.ppc.readflm()
+// P10: call double @llvm.ppc.mffsl()
+// CHECK: call double @llvm.ppc.setrnd(i32 0)
 // CHECK: %{{[0-9a-zA-Z_.]+}} = call <4 x float> asm "", "=^wa,0"
 // CHECK: call <4 x float> @vec_rint(float vector[4])
 // CHECK: call void asm sideeffect "", "^wa"
-// CHECK: call signext i32 @__builtin_set_fpscr_rn(i64 noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call double @llvm.ppc.setrnd(i32 %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <4 x float> @vec_floor(float vector[4])
 // CHECK: call <4 x float> @vec_ceil(float vector[4])
 // CHECK: call <4 x float> @vec_trunc(float vector[4])
 // CHECK: call <4 x float> @vec_rint(float vector[4])
 // CHECK: call void asm sideeffect "", "^wa"
-// CHECK: call signext i32 @__builtin_mffsl()
-// CHECK: call signext i32 @__builtin_mtfsf(i32 noundef signext 3, double noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call double @llvm.ppc.readflm()
+// P10: call double @llvm.ppc.mffsl()
+// CHECK: call void @llvm.ppc.mtfsf(i32 3, double %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_round_ss(<4 x float> noundef %{{[0-9a-zA-Z_.]+}}, <4 x float> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef signext %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <4 x float> @_mm_round_ps(<4 x float> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef signext %{{[0-9a-zA-Z_.]+}})
 // CHECK: extractelement <4 x float> %{{[0-9a-zA-Z_.]+}}, i32 0
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_round_pd(<2 x double> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef signext %{{[0-9a-zA-Z_.]+}})
-// CHECK: call signext i32 @__builtin_mffs()
-// CHECK: call signext i32 @__builtin_mtfsf(i32 noundef signext 3, double noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call double @llvm.ppc.readflm()
+// CHECK: call void @llvm.ppc.mtfsf(i32 3, double %{{[0-9a-zA-Z_.]+}})
 // CHECK: %{{[0-9a-zA-Z_.]+}} = call <2 x double> asm "", "=^wa,0"
-// CHECK: call signext i32 @__builtin_mffsl()
-// CHECK: call signext i32 @__builtin_set_fpscr_rn(i32 noundef signext 0)
+// CHECK: call double @llvm.ppc.readflm()
+// P10: call double @llvm.ppc.mffsl()
+// CHECK: call double @llvm.ppc.setrnd(i32 0)
 // CHECK: %{{[0-9a-zA-Z_.]+}} = call <2 x double> asm "", "=^wa,0"
 // CHECK: call <2 x double> @vec_rint(double vector[2])
 // CHECK: call void asm sideeffect "", "^wa"
-// CHECK: call signext i32 @__builtin_set_fpscr_rn(i64 noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call double @llvm.ppc.setrnd(i32 %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <2 x double> @vec_floor(double vector[2])
 // CHECK: call <2 x double> @vec_ceil(double vector[2])
 // CHECK: call <2 x double> @vec_trunc(double vector[2])
 // CHECK: call <2 x double> @vec_rint(double vector[2])
 // CHECK: call void asm sideeffect "", "^wa"
-// CHECK: call signext i32 @__builtin_mffsl()
-// CHECK: call signext i32 @__builtin_mtfsf(i32 noundef signext 3, double noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call double @llvm.ppc.readflm()
+// P10: call double @llvm.ppc.mffsl()
+// CHECK: call void @llvm.ppc.mtfsf(i32 3, double %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_round_sd(<2 x double> noundef %{{[0-9a-zA-Z_.]+}}, <2 x double> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef signext %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <2 x double> @_mm_round_pd(<2 x double> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef signext %{{[0-9a-zA-Z_.]+}})

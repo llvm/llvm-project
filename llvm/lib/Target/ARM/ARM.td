@@ -228,10 +228,13 @@ def FeatureFuseAES        : SubtargetFeature<"fuse-aes", "HasFuseAES", "true",
 def FeatureFuseLiterals   : SubtargetFeature<"fuse-literals", "HasFuseLiterals", "true",
                                              "CPU fuses literal generation operations">;
 
-// The way of reading thread pointer.
-// True if read thread pointer from coprocessor register.
-def FeatureReadTp :  SubtargetFeature<"read-tp-hard", "IsReadTPHard", "true",
-                                      "Reading thread pointer from register">;
+// Choice of hardware register to use as the thread pointer, if any.
+def FeatureReadTpTPIDRURW :  SubtargetFeature<"read-tp-tpidrurw", "IsReadTPTPIDRURW", "true",
+                                      "Reading thread pointer from TPIDRURW register">;
+def FeatureReadTpTPIDRURO :  SubtargetFeature<"read-tp-tpidruro", "IsReadTPTPIDRURO", "true",
+                                      "Reading thread pointer from TPIDRURO register">;
+def FeatureReadTpTPIDRPRW :  SubtargetFeature<"read-tp-tpidrprw", "IsReadTPTPIDRPRW", "true",
+                                      "Reading thread pointer from TPIDRPRW register">;
 
 // Cyclone can zero VFP registers in 0 cycles.
 // True if the instructions "vmov.i32 d0, #0" and "vmov.i32 q0, #0" are
@@ -701,6 +704,12 @@ def HasV9_4aOps   : SubtargetFeature<"v9.4a", "HasV9_4aOps", "true",
                                    "Support ARM v9.4a instructions",
                                    [HasV8_9aOps, HasV9_3aOps]>;
 
+// Armv9.5-A is a v9-only architecture. From v9.5-A onwards there's no mapping
+// to an equivalent v8.x version.
+def HasV9_5aOps   : SubtargetFeature<"v9.5a", "HasV9_5aOps", "true",
+                                   "Support ARM v9.5a instructions",
+                                   [HasV9_4aOps]>;
+
 def HasV8_1MMainlineOps : SubtargetFeature<
                "v8.1m.main", "HasV8_1MMainlineOps", "true",
                "Support ARM v8-1M Mainline instructions",
@@ -800,6 +809,8 @@ def ProcA77     : SubtargetFeature<"a77", "ARMProcFamily", "CortexA77",
                                    "Cortex-A77 ARM processors", []>;
 def ProcA78     : SubtargetFeature<"cortex-a78", "ARMProcFamily", "CortexA78",
                                    "Cortex-A78 ARM processors", []>;
+def ProcA78AE   : SubtargetFeature<"cortex-a78ae", "ARMProcFamily", "CortexA78AE",
+                                   "Cortex-A78AE ARM processors", []>;
 def ProcA78C    : SubtargetFeature<"a78c", "ARMProcFamily", "CortexA78C",
                                    "Cortex-A78C ARM processors", []>;
 def ProcA710    : SubtargetFeature<"cortex-a710", "ARMProcFamily",
@@ -1136,6 +1147,18 @@ def ARMv94a   : Architecture<"armv9.4-a", "ARMv94a",  [HasV9_4aOps,
                                                        FeatureCRC,
                                                        FeatureRAS,
                                                        FeatureDotProd]>;
+def ARMv95a   : Architecture<"armv9.5-a", "ARMv95a",  [HasV9_5aOps,
+                                                       FeatureAClass,
+                                                       FeatureDB,
+                                                       FeatureFPARMv8,
+                                                       FeatureNEON,
+                                                       FeatureDSP,
+                                                       FeatureTrustZone,
+                                                       FeatureMP,
+                                                       FeatureVirtualization,
+                                                       FeatureCRC,
+                                                       FeatureRAS,
+                                                       FeatureDotProd]>;
 
 def ARMv8r    : Architecture<"armv8-r",   "ARMv8r",   [HasV8Ops,
                                                        FeatureRClass,
@@ -1224,6 +1247,7 @@ include "ARMScheduleA57.td"
 include "ARMScheduleM4.td"
 include "ARMScheduleM55.td"
 include "ARMScheduleM7.td"
+include "ARMScheduleM85.td"
 
 //===----------------------------------------------------------------------===//
 // ARM processors
@@ -1508,11 +1532,22 @@ def : ProcessorModel<"cortex-m55", CortexM55Model,      [ARMv81mMainline,
                                                          HasMVEFloatOps,
                                                          FeatureFixCMSE_CVE_2021_35465]>;
 
-def : ProcessorModel<"cortex-m85", CortexM7Model,       [ARMv81mMainline,
+def : ProcessorModel<"cortex-m85", CortexM85Model,      [ARMv81mMainline,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16,
                                                          FeaturePACBTI,
                                                          FeatureUseMISched,
+                                                         HasMVEFloatOps]>;
+
+def : ProcessorModel<"cortex-m52", CortexM55Model,      [ARMv81mMainline,
+                                                         FeatureDSP,
+                                                         FeatureFPARMv8_D16,
+                                                         FeatureHasNoBranchPredictor,
+                                                         FeaturePACBTI,
+                                                         FeatureUseMISched,
+                                                         FeaturePrefLoopAlign32,
+                                                         FeatureHasSlowFPVMLx,
+                                                         FeatureMVEVectorCostFactor1,
                                                          HasMVEFloatOps]>;
 
 def : ProcNoItin<"cortex-a32",                           [ARMv8a,
@@ -1599,6 +1634,14 @@ def : ProcNoItin<"cortex-a78",                          [ARMv82a, ProcA78,
                                                          FeatureFullFP16,
                                                          FeatureDotProd]>;
 
+def : ProcNoItin<"cortex-a78ae",                        [ARMv82a, ProcA78AE,
+                                                         FeatureHWDivThumb,
+                                                         FeatureHWDivARM,
+                                                         FeatureCrypto,
+                                                         FeatureCRC,
+                                                         FeatureFullFP16,
+                                                         FeatureDotProd]>;
+
 def : ProcNoItin<"cortex-a78c",                         [ARMv82a, ProcA78C,
                                                          FeatureHWDivThumb,
                                                          FeatureHWDivARM,
@@ -1647,8 +1690,9 @@ def : ProcNoItin<"neoverse-n1",                         [ARMv82a,
                                                          FeatureCRC,
                                                          FeatureDotProd]>;
 
-def : ProcNoItin<"neoverse-n2",                         [ARMv85a,
+def : ProcNoItin<"neoverse-n2",                         [ARMv9a,
                                                          FeatureBF16,
+                                                         FeatureFP16FML,
                                                          FeatureMatMulInt8]>;
 
 def : ProcessorModel<"cyclone",     SwiftModel,         [ARMv8a, ProcSwift,
@@ -1698,6 +1742,7 @@ def ARMAsmWriter : AsmWriter {
 
 def ARMAsmParser : AsmParser {
   bit ReportMultipleNearMisses = 1;
+  let PreferSmallerInstructions = true;
 }
 
 def ARMAsmParserVariant : AsmParserVariant {

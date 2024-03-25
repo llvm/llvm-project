@@ -968,7 +968,12 @@ define i32 @ctlz_i32_fold_cmov(i32 %n) {
 
 ; Don't generate any xors when a 'ctlz' intrinsic is actually used to compute
 ; the most significant bit, which is what 'bsr' does natively.
-; FIXME: We should probably select BSR instead of LZCNT in these circumstances.
+; NOTE: We intentionally don't select `bsr` when `fast-lzcnt` is
+; available. This is 1) because `bsr` has some drawbacks including a
+; dependency on dst, 2) very poor performance on some of the
+; `fast-lzcnt` processors, and 3) `lzcnt` runs at ALU latency/throughput
+; so `lzcnt` + `xor` has better throughput than even the 1-uop
+; (1c latency, 1c throughput) `bsr`.
 define i32 @ctlz_bsr(i32 %n) {
 ; X86-LABEL: ctlz_bsr:
 ; X86:       # %bb.0:
@@ -982,14 +987,12 @@ define i32 @ctlz_bsr(i32 %n) {
 ;
 ; X86-CLZ-LABEL: ctlz_bsr:
 ; X86-CLZ:       # %bb.0:
-; X86-CLZ-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
-; X86-CLZ-NEXT:    xorl $31, %eax
+; X86-CLZ-NEXT:    bsrl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    retl
 ;
 ; X64-CLZ-LABEL: ctlz_bsr:
 ; X64-CLZ:       # %bb.0:
-; X64-CLZ-NEXT:    lzcntl %edi, %eax
-; X64-CLZ-NEXT:    xorl $31, %eax
+; X64-CLZ-NEXT:    bsrl %edi, %eax
 ; X64-CLZ-NEXT:    retq
 ;
 ; X64-FASTLZCNT-LABEL: ctlz_bsr:
@@ -1441,8 +1444,7 @@ define i32 @PR47603_zext(i32 %a0, ptr %a1) {
 ; X86-CLZ-LABEL: PR47603_zext:
 ; X86-CLZ:       # %bb.0:
 ; X86-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-CLZ-NEXT:    lzcntl {{[0-9]+}}(%esp), %ecx
-; X86-CLZ-NEXT:    xorl $31, %ecx
+; X86-CLZ-NEXT:    bsrl {{[0-9]+}}(%esp), %ecx
 ; X86-CLZ-NEXT:    movsbl (%eax,%ecx), %eax
 ; X86-CLZ-NEXT:    retl
 ;
@@ -1566,18 +1568,14 @@ define i8 @ctlz_xor7_i8_true(i8 %x) {
 ; X86-CLZ-LABEL: ctlz_xor7_i8_true:
 ; X86-CLZ:       # %bb.0:
 ; X86-CLZ-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-CLZ-NEXT:    lzcntl %eax, %eax
-; X86-CLZ-NEXT:    addl $-24, %eax
-; X86-CLZ-NEXT:    xorb $7, %al
+; X86-CLZ-NEXT:    bsrl %eax, %eax
 ; X86-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-CLZ-NEXT:    retl
 ;
 ; X64-CLZ-LABEL: ctlz_xor7_i8_true:
 ; X64-CLZ:       # %bb.0:
 ; X64-CLZ-NEXT:    movzbl %dil, %eax
-; X64-CLZ-NEXT:    lzcntl %eax, %eax
-; X64-CLZ-NEXT:    addl $-24, %eax
-; X64-CLZ-NEXT:    xorb $7, %al
+; X64-CLZ-NEXT:    bsrl %eax, %eax
 ; X64-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-CLZ-NEXT:    retq
 ;
@@ -1692,16 +1690,12 @@ define i16 @ctlz_xor15_i16_true(i16 %x) {
 ;
 ; X86-CLZ-LABEL: ctlz_xor15_i16_true:
 ; X86-CLZ:       # %bb.0:
-; X86-CLZ-NEXT:    lzcntw {{[0-9]+}}(%esp), %ax
-; X86-CLZ-NEXT:    xorl $15, %eax
-; X86-CLZ-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-CLZ-NEXT:    bsrw {{[0-9]+}}(%esp), %ax
 ; X86-CLZ-NEXT:    retl
 ;
 ; X64-CLZ-LABEL: ctlz_xor15_i16_true:
 ; X64-CLZ:       # %bb.0:
-; X64-CLZ-NEXT:    lzcntw %di, %ax
-; X64-CLZ-NEXT:    xorl $15, %eax
-; X64-CLZ-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-CLZ-NEXT:    bsrw %di, %ax
 ; X64-CLZ-NEXT:    retq
 ;
 ; X64-FASTLZCNT-LABEL: ctlz_xor15_i16_true:
@@ -1836,8 +1830,7 @@ define i64 @ctlz_xor63_i64_true(i64 %x) {
 ;
 ; X64-CLZ-LABEL: ctlz_xor63_i64_true:
 ; X64-CLZ:       # %bb.0:
-; X64-CLZ-NEXT:    lzcntq %rdi, %rax
-; X64-CLZ-NEXT:    xorq $63, %rax
+; X64-CLZ-NEXT:    bsrq %rdi, %rax
 ; X64-CLZ-NEXT:    retq
 ;
 ; X64-FASTLZCNT-LABEL: ctlz_xor63_i64_true:

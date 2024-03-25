@@ -6,7 +6,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe -q --Tdata=0x80000
-# RUN: llvm-bolt %t.exe --relocs -o /dev/null --print-only=_start --print-disasm \
+# RUN: llvm-bolt %t.exe --relocs -o %t.null --print-only=_start --print-disasm \
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT
 # RUN: llvm-objdump -d --print-imm-hex %t.exe \
 # RUN:   | FileCheck %s --check-prefix=CHECK-OBJDUMP
@@ -24,6 +24,10 @@ _start:
 
 ## VAR value is 0x80000. Using relocations, llvm-bolt should correctly
 ## symbolize the instruction operands.
+
+  movq $0x80000, 0x80000
+# CHECK-BOLT:    movq $0x80000, 0x80000
+# CHECK-OBJDUMP: movq $0x80000, 0x80000
 
   movq $VAR, 0x80000
 # CHECK-BOLT:    movq $VAR, 0x80000

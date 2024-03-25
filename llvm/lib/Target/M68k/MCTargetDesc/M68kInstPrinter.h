@@ -14,13 +14,17 @@
 #ifndef LLVM_LIB_TARGET_M68K_INSTPRINTER_M68KINSTPRINTER_H
 #define LLVM_LIB_TARGET_M68K_INSTPRINTER_M68KINSTPRINTER_H
 
+#include "M68kMemOperandPrinter.h"
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
 
 class TargetMachine;
 
-class M68kInstPrinter : public MCInstPrinter {
+class M68kInstPrinter : public MCInstPrinter,
+                        public M68kMemOperandPrinter<M68kInstPrinter, MCInst> {
+  friend class M68kMemOperandPrinter;
+
 public:
   M68kInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                   const MCRegisterInfo &MRI)
@@ -48,16 +52,7 @@ private:
   /// Print register mask for MOVEM instruction in order A7-A0,D7-D0
   void printMoveMaskR(const MCInst *MI, unsigned opNum, raw_ostream &O);
   void printDisp(const MCInst *MI, unsigned opNum, raw_ostream &O);
-  void printARIMem(const MCInst *MI, unsigned opNum, raw_ostream &O);
-  void printARIPIMem(const MCInst *MI, unsigned opNum, raw_ostream &O);
-  void printARIPDMem(const MCInst *MI, unsigned opNum, raw_ostream &O);
-  void printARIDMem(const MCInst *MI, unsigned opNum, raw_ostream &O);
-  void printARIIMem(const MCInst *MI, unsigned opNum, raw_ostream &O);
   void printAbsMem(const MCInst *MI, unsigned opNum, raw_ostream &O);
-  void printPCDMem(const MCInst *MI, uint64_t Address, unsigned opNum,
-                   raw_ostream &O);
-  void printPCIMem(const MCInst *MI, uint64_t Address, unsigned opNum,
-                   raw_ostream &O);
 
   //===----------------------------------------------------------------------===//
   // Specializations

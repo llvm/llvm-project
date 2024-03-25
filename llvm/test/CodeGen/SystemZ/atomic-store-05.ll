@@ -1,6 +1,7 @@
-; Test 128-bit atomic stores.
+; Test 128-bit integer atomic stores.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
 
 define void @f1(i128 %val, ptr %src) {
 ; CHECK-LABEL: f1:
@@ -21,5 +22,12 @@ define void @f2(i128 %val, ptr %src) {
 ; CHECK-NOT: bcr 1{{[45]}}, %r0
 ; CHECK: br %r14
   store atomic i128 %val, ptr %src monotonic, align 16
+  ret void
+}
+
+define void @f3(i128 %val, ptr %src) {
+; CHECK-LABEL: f3:
+; CHECK: brasl %r14, __atomic_store@PLT
+  store atomic i128 %val, ptr %src seq_cst, align 8
   ret void
 }

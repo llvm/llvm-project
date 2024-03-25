@@ -36,7 +36,7 @@ TEST_CONSTEXPR_CXX20 bool tests()
     {
         std::vector<bool> v(100);
         while(v.size() < v.capacity()) v.push_back(false);
-        size_t sz = v.size();
+        std::size_t sz = v.size();
         std::vector<bool>::iterator i = v.insert(v.cbegin() + 10, 5, 1);
         assert(v.size() == sz + 5);
         assert(i == v.begin() + 10);
@@ -52,7 +52,7 @@ TEST_CONSTEXPR_CXX20 bool tests()
         std::vector<bool> v(100);
         while(v.size() < v.capacity()) v.push_back(false);
         v.pop_back(); v.pop_back();
-        size_t sz = v.size();
+        std::size_t sz = v.size();
         std::vector<bool>::iterator i = v.insert(v.cbegin() + 10, 5, 1);
         assert(v.size() == sz + 5);
         assert(i == v.begin() + 10);

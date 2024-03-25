@@ -48,6 +48,10 @@ describes the process for defining both Attributes and Types side-by-side with
 examples for both. If necessary, a section will explicitly call out any
 distinct differences.
 
+One difference is that generating C++ classes from declarative TableGen 
+definitions will require adding additional targets to your `CMakeLists.txt`.
+This is not necessary for custom types. The details are outlined further below.
+
 ### Adding a new Attribute or Type definition
 
 As described above, C++ Attribute and Type objects in MLIR are value-typed and
@@ -168,6 +172,26 @@ was provided to `MyDialect_Attr` and `MyDialect_Type`. For the definitions we
 added above, we would get C++ classes named `IntegerType` and `IntegerAttr`
 respectively. This can be explicitly overridden via the `cppClassName` field.
 
+### CMake Targets
+
+If you added your dialect using `add_mlir_dialect()` in your `CMakeLists.txt`,
+the above mentioned classes will automatically get generated for custom 
+_types_. They will be output in a file named `<Your Dialect>Types.h.inc`. 
+
+To also generate the classes for custom _attributes_, you will need to add
+two additional TableGen targets to your `CMakeLists.txt`: 
+
+```cmake
+mlir_tablegen(<Your Dialect>AttrDefs.h.inc -gen-attrdef-decls 
+              -attrdefs-dialect=<Your Dialect>)
+mlir_tablegen(<Your Dialect>AttrDefs.cpp.inc -gen-attrdef-defs 
+              -attrdefs-dialect=<Your Dialect>)
+add_public_tablegen_target(<Your Dialect>AttrDefsIncGen)
+```
+
+The generated `<Your Dialect>AttrDefs.h.inc` will need to be included whereever
+you are referencing the custom attribute types.
+
 ### Documentation
 
 The `summary` and `description` fields allow for providing user documentation
@@ -281,7 +305,7 @@ MLIR includes several specialized classes for common situations:
 Similarly to operations, Attribute and Type classes may attach `Traits` that
 provide additional mixin methods and other data. `Trait`s may be attached via
 the trailing template argument, i.e. the `traits` list parameter in the example
-above. See the main [`Trait`](../Traits.md) documentation for more information
+above. See the main [`Trait`](../Traits) documentation for more information
 on defining and using traits.
 
 ### Interfaces

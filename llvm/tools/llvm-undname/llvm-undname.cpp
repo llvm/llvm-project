@@ -75,8 +75,7 @@ static bool msDemangle(const std::string &S) {
     Flags = MSDemangleFlags(Flags | MSDF_NoVariableType);
 
   size_t NRead;
-  char *ResultBuf =
-      microsoftDemangle(S.c_str(), &NRead, nullptr, nullptr, &Status, Flags);
+  char *ResultBuf = microsoftDemangle(S, &NRead, &Status, Flags);
   if (Status == llvm::demangle_success) {
     outs() << ResultBuf << "\n";
     outs().flush();
@@ -117,7 +116,7 @@ int main(int argc, char **argv) {
 
       StringRef Line(LineStr);
       Line = Line.trim();
-      if (Line.empty() || Line.startswith("#") || Line.startswith(";"))
+      if (Line.empty() || Line.starts_with("#") || Line.starts_with(";"))
         continue;
 
       // If the user is manually typing in these decorated names, don't echo

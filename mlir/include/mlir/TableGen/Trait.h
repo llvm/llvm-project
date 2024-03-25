@@ -68,6 +68,14 @@ public:
   // Returns if this is a structural op trait.
   bool isStructuralOpTrait() const;
 
+  // Returns extra class declaration code to be added to the concrete instance
+  // when the trait is specified
+  StringRef getExtraConcreteClassDeclaration() const;
+
+  // Returns extra class definition code to be added to the concrete instance
+  // when the trait is specified
+  StringRef getExtraConcreteClassDefinition() const;
+
   static bool classof(const Trait *t) { return t->getKind() == Kind::Native; }
 };
 

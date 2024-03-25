@@ -6,7 +6,7 @@
 define i32 @mul_add_imm(i32 %a, i32 %b) {
 ; CHECK-LABEL: mul_add_imm:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w8, #4
+; CHECK-NEXT:    mov w8, #4 ; =0x4
 ; CHECK-NEXT:    madd w0, w0, w1, w8
 ; CHECK-NEXT:    ret
   %1 = mul i32 %a, %b
@@ -17,7 +17,7 @@ define i32 @mul_add_imm(i32 %a, i32 %b) {
 define i32 @mul_sub_imm1(i32 %a, i32 %b) {
 ; CHECK-LABEL: mul_sub_imm1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w8, #4
+; CHECK-NEXT:    mov w8, #4 ; =0x4
 ; CHECK-NEXT:    msub w0, w0, w1, w8
 ; CHECK-NEXT:    ret
   %1 = mul i32 %a, %b
@@ -29,7 +29,7 @@ define i32 @mul_sub_imm1(i32 %a, i32 %b) {
 define void @mul_add_imm2() {
 ; CHECK-ISEL-LABEL: mul_add_imm2:
 ; CHECK-ISEL:       ; %bb.0: ; %entry
-; CHECK-ISEL-NEXT:    mov w8, #1
+; CHECK-ISEL-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-ISEL-NEXT:  LBB2_1: ; %for.body8
 ; CHECK-ISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-ISEL-NEXT:    cbnz w8, LBB2_1
@@ -38,10 +38,10 @@ define void @mul_add_imm2() {
 ;
 ; CHECK-FAST-LABEL: mul_add_imm2:
 ; CHECK-FAST:       ; %bb.0: ; %entry
-; CHECK-FAST-NEXT:    mov x8, #-3
-; CHECK-FAST-NEXT:    mov x9, #-3
+; CHECK-FAST-NEXT:    mov x8, #-3 ; =0xfffffffffffffffd
+; CHECK-FAST-NEXT:    mov x9, #-3 ; =0xfffffffffffffffd
 ; CHECK-FAST-NEXT:    madd x8, x8, x8, x9
-; CHECK-FAST-NEXT:    mov x9, #45968
+; CHECK-FAST-NEXT:    mov x9, #45968 ; =0xb390
 ; CHECK-FAST-NEXT:    movk x9, #48484, lsl #16
 ; CHECK-FAST-NEXT:    movk x9, #323, lsl #32
 ; CHECK-FAST-NEXT:  LBB2_1: ; %for.body8
@@ -120,9 +120,9 @@ define i64 @add1_mul_val4(i64 %a, i64 %b, i64 %c) {
 ;
 ; CHECK-FAST-LABEL: add1_mul_val4:
 ; CHECK-FAST:       ; %bb.0:
-; CHECK-FAST-NEXT:    add x8, x1, #1
-; CHECK-FAST-NEXT:    add x9, x0, x2
-; CHECK-FAST-NEXT:    mul x0, x9, x8
+; CHECK-FAST-NEXT:    add x8, x0, x2
+; CHECK-FAST-NEXT:    add x9, x1, #1
+; CHECK-FAST-NEXT:    mul x0, x8, x9
 ; CHECK-FAST-NEXT:    ret
   %1 = add i64 %a, %c
   %2 = add i64 %b, 1
@@ -138,7 +138,7 @@ define i32 @sub1_mul_val1(i32 %a, i32 %b) {
 ;
 ; CHECK-FAST-LABEL: sub1_mul_val1:
 ; CHECK-FAST:       ; %bb.0:
-; CHECK-FAST-NEXT:    mov w8, #1
+; CHECK-FAST-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-FAST-NEXT:    sub w8, w8, w0
 ; CHECK-FAST-NEXT:    mul w0, w8, w1
 ; CHECK-FAST-NEXT:    ret
@@ -155,7 +155,7 @@ define i32 @sub1_mul_val2(i32 %a, i32 %b) {
 ;
 ; CHECK-FAST-LABEL: sub1_mul_val2:
 ; CHECK-FAST:       ; %bb.0:
-; CHECK-FAST-NEXT:    mov w8, #1
+; CHECK-FAST-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-FAST-NEXT:    sub w8, w8, w1
 ; CHECK-FAST-NEXT:    mul w0, w0, w8
 ; CHECK-FAST-NEXT:    ret
@@ -172,7 +172,7 @@ define i64 @sub1_mul_val3(i64 %a, i64 %b) {
 ;
 ; CHECK-FAST-LABEL: sub1_mul_val3:
 ; CHECK-FAST:       ; %bb.0:
-; CHECK-FAST-NEXT:    mov x8, #1
+; CHECK-FAST-NEXT:    mov x8, #1 ; =0x1
 ; CHECK-FAST-NEXT:    sub x8, x8, x1
 ; CHECK-FAST-NEXT:    mul x0, x0, x8
 ; CHECK-FAST-NEXT:    ret
@@ -190,7 +190,7 @@ define i64 @sub1_mul_val4(i64 %a, i64 %b) {
 ;
 ; CHECK-FAST-LABEL: sub1_mul_val4:
 ; CHECK-FAST:       ; %bb.0:
-; CHECK-FAST-NEXT:    mov x8, #1
+; CHECK-FAST-NEXT:    mov x8, #1 ; =0x1
 ; CHECK-FAST-NEXT:    sub x9, x0, #1
 ; CHECK-FAST-NEXT:    sub x8, x8, x1
 ; CHECK-FAST-NEXT:    mul x0, x9, x8

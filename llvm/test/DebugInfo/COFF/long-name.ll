@@ -5,7 +5,8 @@
 ; CHECK:   FunctionType: {{A+}} (0x1002)
 ; CHECK:   CodeOffset: f+0x0
 ; CHECK:   Segment: 0x0
-; CHECK:   Flags [ (0x0)
+; CHECK:   Flags [ (0x80)
+; CHECK:     HasOptimizedDebugInfo (0x80)
 ; CHECK:   ]
 ; CHECK:   DisplayName: {{A+$}}
 ; CHECK:   LinkageName: f

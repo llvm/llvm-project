@@ -131,7 +131,7 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
        _Atomic(int*) *p, _Atomic(float) *f, _Atomic(double) *d,
        _Atomic(long double) *ld,
        int *I, const int *CI,
-       int **P, float *D, struct S *s1, struct S *s2) {
+       int **P, float *F, double *D, struct S *s1, struct S *s2) {
   __c11_atomic_init(I, 5); // expected-error {{pointer to _Atomic}}
   __c11_atomic_init(ci, 5); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const _Atomic(int) *' invalid)}}
 
@@ -199,14 +199,27 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   __c11_atomic_fetch_add(f, 1.0f, memory_order_seq_cst);
   __c11_atomic_fetch_add(d, 1.0, memory_order_seq_cst);
   __c11_atomic_fetch_add(ld, 1.0, memory_order_seq_cst); // fp80-error {{must be a pointer to atomic integer, pointer or supported floating point type}}
+  __c11_atomic_fetch_min(i, 1, memory_order_seq_cst);
+  __c11_atomic_fetch_min(p, 1, memory_order_seq_cst); // expected-error {{must be a pointer to atomic integer or supported floating point type}}
+  __c11_atomic_fetch_min(f, 1.0f, memory_order_seq_cst);
+  __c11_atomic_fetch_min(d, 1.0, memory_order_seq_cst);
+  __c11_atomic_fetch_min(ld, 1.0, memory_order_seq_cst); // fp80-error {{must be a pointer to atomic integer or supported floating point type}}
+  __c11_atomic_fetch_max(i, 1, memory_order_seq_cst);
+  __c11_atomic_fetch_max(p, 1, memory_order_seq_cst); // expected-error {{must be a pointer to atomic integer or supported floating point type}}
+  __c11_atomic_fetch_max(f, 1.0f, memory_order_seq_cst);
+  __c11_atomic_fetch_max(d, 1.0, memory_order_seq_cst);
+  __c11_atomic_fetch_max(ld, 1.0, memory_order_seq_cst); // fp80-error {{must be a pointer to atomic integer or supported floating point type}}
 
   __atomic_fetch_add(i, 3, memory_order_seq_cst); // expected-error {{pointer to integer, pointer or supported floating point type}}
   __atomic_fetch_sub(I, 3, memory_order_seq_cst);
   __atomic_fetch_sub(P, 3, memory_order_seq_cst);
-  __atomic_fetch_sub(D, 3, memory_order_seq_cst);
+  __atomic_fetch_sub(F, 3, memory_order_seq_cst);
   __atomic_fetch_sub(s1, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer, pointer or supported floating point type}}
-  __atomic_fetch_min(D, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer}}
-  __atomic_fetch_max(P, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer}}
+  __atomic_fetch_min(F, 3, memory_order_seq_cst);
+  __atomic_fetch_min(D, 3, memory_order_seq_cst);
+  __atomic_fetch_max(F, 3, memory_order_seq_cst);
+  __atomic_fetch_max(D, 3, memory_order_seq_cst);
+  __atomic_fetch_max(P, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer or supported floating point type}}
   __atomic_fetch_max(p, 3);                       // expected-error {{too few arguments to function call, expected 3, have 2}}
 
   __c11_atomic_fetch_and(i, 1, memory_order_seq_cst);
@@ -216,7 +229,7 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   __atomic_fetch_and(i, 3, memory_order_seq_cst); // expected-error {{pointer to integer}}
   __atomic_fetch_or(I, 3, memory_order_seq_cst);
   __atomic_fetch_xor(P, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer}}
-  __atomic_fetch_or(D, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer}}
+  __atomic_fetch_or(F, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer}}
   __atomic_fetch_and(s1, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer}}
 
   _Bool cmpexch_1 = __c11_atomic_compare_exchange_strong(i, I, 1, memory_order_seq_cst, memory_order_seq_cst);
@@ -326,18 +339,18 @@ void memory_checks(_Atomic(int) *Ap, int *p, int val) {
   (void)__c11_atomic_load(Ap, memory_order_relaxed);
   (void)__c11_atomic_load(Ap, memory_order_acquire);
   (void)__c11_atomic_load(Ap, memory_order_consume);
-  (void)__c11_atomic_load(Ap, memory_order_release); // expected-warning {{memory order argument to atomic operation is invalid}}
-  (void)__c11_atomic_load(Ap, memory_order_acq_rel); // expected-warning {{memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_load(Ap, memory_order_release); // expected-warning-re {{{{^}}memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_load(Ap, memory_order_acq_rel); // expected-warning-re {{{{^}}memory order argument to atomic operation is invalid}}
   (void)__c11_atomic_load(Ap, memory_order_seq_cst);
   (void)__c11_atomic_load(Ap, val);
-  (void)__c11_atomic_load(Ap, -1); // expected-warning {{memory order argument to atomic operation is invalid}}
-  (void)__c11_atomic_load(Ap, 42); // expected-warning {{memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_load(Ap, -1); // expected-warning-re {{{{^}}memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_load(Ap, 42); // expected-warning-re {{{{^}}memory order argument to atomic operation is invalid}}
 
   (void)__c11_atomic_store(Ap, val, memory_order_relaxed);
-  (void)__c11_atomic_store(Ap, val, memory_order_acquire); // expected-warning {{memory order argument to atomic operation is invalid}}
-  (void)__c11_atomic_store(Ap, val, memory_order_consume); // expected-warning {{memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_store(Ap, val, memory_order_acquire); // expected-warning-re {{{{^}}memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_store(Ap, val, memory_order_consume); // expected-warning-re {{{{^}}memory order argument to atomic operation is invalid}}
   (void)__c11_atomic_store(Ap, val, memory_order_release);
-  (void)__c11_atomic_store(Ap, val, memory_order_acq_rel); // expected-warning {{memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_store(Ap, val, memory_order_acq_rel); // expected-warning-re {{{{^}}memory order argument to atomic operation is invalid}}
   (void)__c11_atomic_store(Ap, val, memory_order_seq_cst);
 
   (void)__c11_atomic_fetch_add(Ap, 1, memory_order_relaxed);
@@ -414,19 +427,35 @@ void memory_checks(_Atomic(int) *Ap, int *p, int val) {
   (void)__c11_atomic_exchange(Ap, val, memory_order_acq_rel);
   (void)__c11_atomic_exchange(Ap, val, memory_order_seq_cst);
 
+  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, -1, memory_order_relaxed); // expected-warning {{success memory order argument to atomic operation is invalid}}
   (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_relaxed, memory_order_relaxed);
   (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_acquire, memory_order_relaxed);
   (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_consume, memory_order_relaxed);
   (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_release, memory_order_relaxed);
   (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_acq_rel, memory_order_relaxed);
-  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_seq_cst, memory_order_relaxed);
+  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_seq_cst, memory_order_acquire);
+  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_seq_cst, memory_order_consume);
+  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_seq_cst, memory_order_release); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_seq_cst, memory_order_acq_rel); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_seq_cst, memory_order_seq_cst);
+  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_seq_cst, -1); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_relaxed, memory_order_acquire);
+  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_acquire, memory_order_seq_cst);
 
+  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, -1, memory_order_relaxed); // expected-warning {{success memory order argument to atomic operation is invalid}}
   (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_relaxed, memory_order_relaxed);
   (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_acquire, memory_order_relaxed);
   (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_consume, memory_order_relaxed);
   (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_release, memory_order_relaxed);
   (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_acq_rel, memory_order_relaxed);
-  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_seq_cst, memory_order_relaxed);
+  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_seq_cst, memory_order_acquire);
+  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_seq_cst, memory_order_consume);
+  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_seq_cst, memory_order_release); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_seq_cst, memory_order_acq_rel); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_seq_cst, memory_order_seq_cst);
+  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_seq_cst, -1); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_relaxed, memory_order_acquire);
+  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_acquire, memory_order_seq_cst);
 
   (void)__atomic_load_n(p, memory_order_relaxed);
   (void)__atomic_load_n(p, memory_order_acquire);
@@ -582,19 +611,32 @@ void memory_checks(_Atomic(int) *Ap, int *p, int val) {
   (void)__atomic_exchange(p, p, p, memory_order_acq_rel);
   (void)__atomic_exchange(p, p, p, memory_order_seq_cst);
 
+  (void)__atomic_compare_exchange(p, p, p, 0, -1, memory_order_relaxed); // expected-warning {{success memory order argument to atomic operation is invalid}}
   (void)__atomic_compare_exchange(p, p, p, 0, memory_order_relaxed, memory_order_relaxed);
   (void)__atomic_compare_exchange(p, p, p, 0, memory_order_acquire, memory_order_relaxed);
   (void)__atomic_compare_exchange(p, p, p, 0, memory_order_consume, memory_order_relaxed);
   (void)__atomic_compare_exchange(p, p, p, 0, memory_order_release, memory_order_relaxed);
   (void)__atomic_compare_exchange(p, p, p, 0, memory_order_acq_rel, memory_order_relaxed);
-  (void)__atomic_compare_exchange(p, p, p, 0, memory_order_seq_cst, memory_order_relaxed);
+  (void)__atomic_compare_exchange(p, p, p, 0, memory_order_seq_cst, memory_order_acquire);
+  (void)__atomic_compare_exchange(p, p, p, 0, memory_order_seq_cst, memory_order_consume);
+  (void)__atomic_compare_exchange(p, p, p, 0, memory_order_seq_cst, memory_order_release); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__atomic_compare_exchange(p, p, p, 0, memory_order_seq_cst, memory_order_acq_rel); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__atomic_compare_exchange(p, p, p, 0, memory_order_seq_cst, memory_order_seq_cst);
+  (void)__atomic_compare_exchange(p, p, p, 0, memory_order_seq_cst, -1); // expected-warning {{memory order argument to atomic operation is invalid}}
 
+  (void)__atomic_compare_exchange_n(p, p, val, 0, -1, memory_order_relaxed); // expected-warning {{success memory order argument to atomic operation is invalid}}
   (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_relaxed, memory_order_relaxed);
   (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_acquire, memory_order_relaxed);
   (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_consume, memory_order_relaxed);
   (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_release, memory_order_relaxed);
   (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_acq_rel, memory_order_relaxed);
   (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, memory_order_relaxed);
+  (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, memory_order_acquire);
+  (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, memory_order_consume);
+  (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, memory_order_release); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, memory_order_acq_rel); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, memory_order_seq_cst);
+  (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, -1); // expected-warning {{memory order argument to atomic operation is invalid}}
 }
 
 void nullPointerWarning(void) {

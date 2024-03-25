@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=thumbv8.1m.main -mattr=+mve -run-pass=arm-low-overhead-loops %s -o - | FileCheck %s
 
 --- |
-  define dso_local arm_aapcs_vfpcc void @multi_cond_iter_count(i32* nocapture %0, i32* nocapture readonly %1, i32 %2, i32 %3) local_unnamed_addr #0 {
+  define dso_local arm_aapcs_vfpcc void @multi_cond_iter_count(ptr nocapture %0, ptr nocapture readonly %1, i32 %2, i32 %3) local_unnamed_addr #0 {
     %5 = icmp eq i32 %3, 2
     %6 = select i1 %5, i32 2, i32 4
     %7 = icmp eq i32 %3, 4
@@ -12,10 +12,10 @@
     br i1 %10, label %64, label %11
 
   11:                                               ; preds = %4
-    %12 = getelementptr i32, i32* %0, i32 %9
-    %13 = getelementptr i32, i32* %1, i32 %9
-    %14 = icmp ugt i32* %13, %0
-    %15 = icmp ugt i32* %12, %1
+    %12 = getelementptr i32, ptr %0, i32 %9
+    %13 = getelementptr i32, ptr %1, i32 %9
+    %14 = icmp ugt ptr %13, %0
+    %15 = icmp ugt ptr %12, %1
     %16 = and i1 %14, %15
     %17 = add i32 %9, 3
     %18 = lshr i32 %17, 2
@@ -44,20 +44,20 @@
     br label %33
 
   33:                                               ; preds = %33, %32
-    %34 = phi i32* [ %46, %33 ], [ %0, %32 ]
-    %35 = phi i32* [ %45, %33 ], [ %1, %32 ]
+    %34 = phi ptr [ %46, %33 ], [ %0, %32 ]
+    %35 = phi ptr [ %45, %33 ], [ %1, %32 ]
     %36 = phi i32 [ %start2, %32 ], [ %47, %33 ]
     %37 = phi i32 [ %9, %32 ], [ %41, %33 ]
-    %38 = bitcast i32* %34 to <4 x i32>*
-    %39 = bitcast i32* %35 to <4 x i32>*
+    %38 = bitcast ptr %34 to ptr
+    %39 = bitcast ptr %35 to ptr
     %40 = call <4 x i1> @llvm.arm.mve.vctp32(i32 %37)
     %41 = sub i32 %37, 4
-    %42 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %39, i32 4, <4 x i1> %40, <4 x i32> undef)
-    %43 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %38, i32 4, <4 x i1> %40, <4 x i32> undef)
+    %42 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %39, i32 4, <4 x i1> %40, <4 x i32> undef)
+    %43 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %38, i32 4, <4 x i1> %40, <4 x i32> undef)
     %44 = mul nsw <4 x i32> %43, %42
-    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %44, <4 x i32>* %38, i32 4, <4 x i1> %40)
-    %45 = getelementptr i32, i32* %35, i32 4
-    %46 = getelementptr i32, i32* %34, i32 4
+    call void @llvm.masked.store.v4i32.p0(<4 x i32> %44, ptr %38, i32 4, <4 x i1> %40)
+    %45 = getelementptr i32, ptr %35, i32 4
+    %46 = getelementptr i32, ptr %34, i32 4
     %47 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %36, i32 1)
     %48 = icmp ne i32 %47, 0
     br i1 %48, label %33, label %64
@@ -68,19 +68,19 @@
     br i1 %51, label %64, label %52
 
   52:                                               ; preds = %49
-    %53 = getelementptr inbounds i32, i32* %1, i32 %50
-    %54 = load i32, i32* %53, align 4
-    %55 = getelementptr inbounds i32, i32* %0, i32 %50
-    %56 = load i32, i32* %55, align 4
+    %53 = getelementptr inbounds i32, ptr %1, i32 %50
+    %54 = load i32, ptr %53, align 4
+    %55 = getelementptr inbounds i32, ptr %0, i32 %50
+    %56 = load i32, ptr %55, align 4
     %57 = mul nsw i32 %56, %54
-    store i32 %57, i32* %55, align 4
+    store i32 %57, ptr %55, align 4
     %58 = add nuw i32 %50, 1
-    %59 = getelementptr inbounds i32, i32* %1, i32 %58
-    %60 = load i32, i32* %59, align 4
-    %61 = getelementptr inbounds i32, i32* %0, i32 %58
-    %62 = load i32, i32* %61, align 4
+    %59 = getelementptr inbounds i32, ptr %1, i32 %58
+    %60 = load i32, ptr %59, align 4
+    %61 = getelementptr inbounds i32, ptr %0, i32 %58
+    %62 = load i32, ptr %61, align 4
     %63 = mul nsw i32 %62, %60
-    store i32 %63, i32* %61, align 4
+    store i32 %63, ptr %61, align 4
     br label %64
 
   64:                                               ; preds = %33, %52, %49, %4
@@ -90,48 +90,48 @@
     %66 = phi i32 [ %108, %65 ], [ 0, %31 ]
     %67 = phi i32 [ 0, %31 ], [ %107, %65 ]
     %68 = phi i32 [ %start1, %31 ], [ %109, %65 ]
-    %69 = bitcast i32* %0 to i8*
-    %70 = bitcast i32* %1 to i8*
-    %71 = getelementptr i8, i8* %70, i32 %66
-    %72 = bitcast i8* %71 to i32*
-    %73 = bitcast i32* %72 to i32*
-    %74 = load i32, i32* %73, align 4
-    %75 = getelementptr i8, i8* %69, i32 %66
-    %76 = bitcast i8* %75 to i32*
-    %77 = bitcast i32* %76 to i32*
-    %78 = load i32, i32* %77, align 4
+    %69 = bitcast ptr %0 to ptr
+    %70 = bitcast ptr %1 to ptr
+    %71 = getelementptr i8, ptr %70, i32 %66
+    %72 = bitcast ptr %71 to ptr
+    %73 = bitcast ptr %72 to ptr
+    %74 = load i32, ptr %73, align 4
+    %75 = getelementptr i8, ptr %69, i32 %66
+    %76 = bitcast ptr %75 to ptr
+    %77 = bitcast ptr %76 to ptr
+    %78 = load i32, ptr %77, align 4
     %79 = mul nsw i32 %78, %74
-    store i32 %79, i32* %77, align 4
-    %80 = getelementptr i8, i8* %70, i32 %66
-    %81 = bitcast i8* %80 to i32*
-    %82 = getelementptr i32, i32* %81, i32 1
-    %83 = load i32, i32* %82, align 4
-    %84 = getelementptr i8, i8* %69, i32 %66
-    %85 = bitcast i8* %84 to i32*
-    %86 = getelementptr i32, i32* %85, i32 1
-    %87 = load i32, i32* %86, align 4
+    store i32 %79, ptr %77, align 4
+    %80 = getelementptr i8, ptr %70, i32 %66
+    %81 = bitcast ptr %80 to ptr
+    %82 = getelementptr i32, ptr %81, i32 1
+    %83 = load i32, ptr %82, align 4
+    %84 = getelementptr i8, ptr %69, i32 %66
+    %85 = bitcast ptr %84 to ptr
+    %86 = getelementptr i32, ptr %85, i32 1
+    %87 = load i32, ptr %86, align 4
     %88 = mul nsw i32 %87, %83
-    store i32 %88, i32* %86, align 4
-    %89 = getelementptr i8, i8* %70, i32 %66
-    %90 = bitcast i8* %89 to i32*
-    %91 = getelementptr i32, i32* %90, i32 2
-    %92 = load i32, i32* %91, align 4
-    %93 = getelementptr i8, i8* %69, i32 %66
-    %94 = bitcast i8* %93 to i32*
-    %95 = getelementptr i32, i32* %94, i32 2
-    %96 = load i32, i32* %95, align 4
+    store i32 %88, ptr %86, align 4
+    %89 = getelementptr i8, ptr %70, i32 %66
+    %90 = bitcast ptr %89 to ptr
+    %91 = getelementptr i32, ptr %90, i32 2
+    %92 = load i32, ptr %91, align 4
+    %93 = getelementptr i8, ptr %69, i32 %66
+    %94 = bitcast ptr %93 to ptr
+    %95 = getelementptr i32, ptr %94, i32 2
+    %96 = load i32, ptr %95, align 4
     %97 = mul nsw i32 %96, %92
-    store i32 %97, i32* %95, align 4
-    %98 = getelementptr i8, i8* %70, i32 %66
-    %99 = bitcast i8* %98 to i32*
-    %100 = getelementptr i32, i32* %99, i32 3
-    %101 = load i32, i32* %100, align 4
-    %102 = getelementptr i8, i8* %69, i32 %66
-    %103 = bitcast i8* %102 to i32*
-    %104 = getelementptr i32, i32* %103, i32 3
-    %105 = load i32, i32* %104, align 4
+    store i32 %97, ptr %95, align 4
+    %98 = getelementptr i8, ptr %70, i32 %66
+    %99 = bitcast ptr %98 to ptr
+    %100 = getelementptr i32, ptr %99, i32 3
+    %101 = load i32, ptr %100, align 4
+    %102 = getelementptr i8, ptr %69, i32 %66
+    %103 = bitcast ptr %102 to ptr
+    %104 = getelementptr i32, ptr %103, i32 3
+    %105 = load i32, ptr %104, align 4
     %106 = mul nsw i32 %105, %101
-    store i32 %106, i32* %104, align 4
+    store i32 %106, ptr %104, align 4
     %107 = add nuw i32 %67, 4
     %108 = add i32 %66, 16
     %109 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %68, i32 1)
@@ -139,8 +139,8 @@
     br i1 %110, label %65, label %49
   }
 
-  declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>) #1
-  declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>) #2
+  declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32 immarg, <4 x i1>, <4 x i32>) #1
+  declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32 immarg, <4 x i1>) #2
   declare i32 @llvm.start.loop.iterations.i32(i32) #3
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #3
   declare <4 x i1> @llvm.arm.mve.vctp32(i32) #4

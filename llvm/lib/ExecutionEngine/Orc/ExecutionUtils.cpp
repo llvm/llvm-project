@@ -103,8 +103,8 @@ bool StaticInitGVIterator::isStaticInitGlobal(GlobalValue &GV) {
     // FIXME: These section checks are too strict: We should match first and
     // second word split by comma.
     if (GV.hasSection() &&
-        (GV.getSection().startswith("__DATA,__objc_classlist") ||
-         GV.getSection().startswith("__DATA,__objc_selrefs")))
+        (GV.getSection().starts_with("__DATA,__objc_classlist") ||
+         GV.getSection().starts_with("__DATA,__objc_selrefs")))
       return true;
   }
 
@@ -156,8 +156,7 @@ Error CtorDtorRunner::run() {
     for (auto &KV : CtorDtorsByPriority) {
       for (auto &Name : KV.second) {
         assert(CtorDtorMap->count(Name) && "No entry for Name");
-        auto CtorDtor = reinterpret_cast<CtorDtorTy>(
-            static_cast<uintptr_t>((*CtorDtorMap)[Name].getAddress()));
+        auto CtorDtor = (*CtorDtorMap)[Name].getAddress().toPtr<CtorDtorTy>();
         CtorDtor();
       }
     }
@@ -186,12 +185,10 @@ int LocalCXXRuntimeOverridesBase::CXAAtExitOverride(DestructorPtr Destructor,
 Error LocalCXXRuntimeOverrides::enable(JITDylib &JD,
                                         MangleAndInterner &Mangle) {
   SymbolMap RuntimeInterposes;
-  RuntimeInterposes[Mangle("__dso_handle")] =
-    JITEvaluatedSymbol(toTargetAddress(&DSOHandleOverride),
-                       JITSymbolFlags::Exported);
-  RuntimeInterposes[Mangle("__cxa_atexit")] =
-    JITEvaluatedSymbol(toTargetAddress(&CXAAtExitOverride),
-                       JITSymbolFlags::Exported);
+  RuntimeInterposes[Mangle("__dso_handle")] = {
+      ExecutorAddr::fromPtr(&DSOHandleOverride), JITSymbolFlags::Exported};
+  RuntimeInterposes[Mangle("__cxa_atexit")] = {
+      ExecutorAddr::fromPtr(&CXAAtExitOverride), JITSymbolFlags::Exported};
 
   return JD.define(absoluteSymbols(std::move(RuntimeInterposes)));
 }
@@ -221,19 +218,23 @@ void ItaniumCXAAtExitSupport::runAtExits(void *DSOHandle) {
 }
 
 DynamicLibrarySearchGenerator::DynamicLibrarySearchGenerator(
-    sys::DynamicLibrary Dylib, char GlobalPrefix, SymbolPredicate Allow)
+    sys::DynamicLibrary Dylib, char GlobalPrefix, SymbolPredicate Allow,
+    AddAbsoluteSymbolsFn AddAbsoluteSymbols)
     : Dylib(std::move(Dylib)), Allow(std::move(Allow)),
+      AddAbsoluteSymbols(std::move(AddAbsoluteSymbols)),
       GlobalPrefix(GlobalPrefix) {}
 
 Expected<std::unique_ptr<DynamicLibrarySearchGenerator>>
 DynamicLibrarySearchGenerator::Load(const char *FileName, char GlobalPrefix,
-                                    SymbolPredicate Allow) {
+                                    SymbolPredicate Allow,
+                                    AddAbsoluteSymbolsFn AddAbsoluteSymbols) {
   std::string ErrMsg;
   auto Lib = sys::DynamicLibrary::getPermanentLibrary(FileName, &ErrMsg);
   if (!Lib.isValid())
     return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
   return std::make_unique<DynamicLibrarySearchGenerator>(
-      std::move(Lib), GlobalPrefix, std::move(Allow));
+      std::move(Lib), GlobalPrefix, std::move(Allow),
+      std::move(AddAbsoluteSymbols));
 }
 
 Error DynamicLibrarySearchGenerator::tryToGenerate(
@@ -257,16 +258,15 @@ Error DynamicLibrarySearchGenerator::tryToGenerate(
 
     std::string Tmp((*Name).data() + HasGlobalPrefix,
                     (*Name).size() - HasGlobalPrefix);
-    if (void *Addr = Dylib.getAddressOfSymbol(Tmp.c_str())) {
-      NewSymbols[Name] = JITEvaluatedSymbol(
-          static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(Addr)),
-          JITSymbolFlags::Exported);
-    }
+    if (void *P = Dylib.getAddressOfSymbol(Tmp.c_str()))
+      NewSymbols[Name] = {ExecutorAddr::fromPtr(P), JITSymbolFlags::Exported};
   }
 
   if (NewSymbols.empty())
     return Error::success();
 
+  if (AddAbsoluteSymbols)
+    return AddAbsoluteSymbols(JD, std::move(NewSymbols));
   return JD.define(absoluteSymbols(std::move(NewSymbols)));
 }
 
@@ -274,57 +274,41 @@ Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
 StaticLibraryDefinitionGenerator::Load(
     ObjectLayer &L, const char *FileName,
     GetObjectFileInterface GetObjFileInterface) {
-  auto ArchiveBuffer = MemoryBuffer::getFile(FileName);
-
-  if (!ArchiveBuffer)
-    return createFileError(FileName, ArchiveBuffer.getError());
-
-  return Create(L, std::move(*ArchiveBuffer), std::move(GetObjFileInterface));
-}
-
-Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
-StaticLibraryDefinitionGenerator::Load(
-    ObjectLayer &L, const char *FileName, const Triple &TT,
-    GetObjectFileInterface GetObjFileInterface) {
 
   auto B = object::createBinary(FileName);
   if (!B)
     return createFileError(FileName, B.takeError());
 
   // If this is a regular archive then create an instance from it.
-  if (isa<object::Archive>(B->getBinary()))
-    return Create(L, std::move(B->takeBinary().second),
+  if (isa<object::Archive>(B->getBinary())) {
+    auto [Archive, ArchiveBuffer] = B->takeBinary();
+    return Create(L, std::move(ArchiveBuffer),
+                  std::unique_ptr<object::Archive>(
+                      static_cast<object::Archive *>(Archive.release())),
                   std::move(GetObjFileInterface));
+  }
 
   // If this is a universal binary then search for a slice matching the given
   // Triple.
-  if (auto *UB = cast<object::MachOUniversalBinary>(B->getBinary())) {
-    for (const auto &Obj : UB->objects()) {
-      auto ObjTT = Obj.getTriple();
-      if (ObjTT.getArch() == TT.getArch() &&
-          ObjTT.getSubArch() == TT.getSubArch() &&
-          (TT.getVendor() == Triple::UnknownVendor ||
-           ObjTT.getVendor() == TT.getVendor())) {
-        // We found a match. Create an instance from a buffer covering this
-        // slice.
-        auto SliceBuffer = MemoryBuffer::getFileSlice(FileName, Obj.getSize(),
-                                                      Obj.getOffset());
-        if (!SliceBuffer)
-          return make_error<StringError>(
-              Twine("Could not create buffer for ") + TT.str() + " slice of " +
-                  FileName + ": [ " + formatv("{0:x}", Obj.getOffset()) +
-                  " .. " + formatv("{0:x}", Obj.getOffset() + Obj.getSize()) +
-                  ": " + SliceBuffer.getError().message(),
-              SliceBuffer.getError());
-        return Create(L, std::move(*SliceBuffer),
-                      std::move(GetObjFileInterface));
-      }
-    }
+  if (auto *UB = dyn_cast<object::MachOUniversalBinary>(B->getBinary())) {
 
-    return make_error<StringError>(Twine("Universal binary ") + FileName +
-                                       " does not contain a slice for " +
-                                       TT.str(),
-                                   inconvertibleErrorCode());
+    const auto &TT = L.getExecutionSession().getTargetTriple();
+
+    auto SliceRange = getSliceRangeForArch(*UB, TT);
+    if (!SliceRange)
+      return SliceRange.takeError();
+
+    auto SliceBuffer = MemoryBuffer::getFileSlice(FileName, SliceRange->second,
+                                                  SliceRange->first);
+    if (!SliceBuffer)
+      return make_error<StringError>(
+          Twine("Could not create buffer for ") + TT.str() + " slice of " +
+              FileName + ": [ " + formatv("{0:x}", SliceRange->first) + " .. " +
+              formatv("{0:x}", SliceRange->first + SliceRange->second) + ": " +
+              SliceBuffer.getError().message(),
+          SliceBuffer.getError());
+
+    return Create(L, std::move(*SliceBuffer), std::move(GetObjFileInterface));
   }
 
   return make_error<StringError>(Twine("Unrecognized file type for ") +
@@ -335,17 +319,64 @@ StaticLibraryDefinitionGenerator::Load(
 Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
 StaticLibraryDefinitionGenerator::Create(
     ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
+    std::unique_ptr<object::Archive> Archive,
     GetObjectFileInterface GetObjFileInterface) {
+
   Error Err = Error::success();
 
   std::unique_ptr<StaticLibraryDefinitionGenerator> ADG(
       new StaticLibraryDefinitionGenerator(
-          L, std::move(ArchiveBuffer), std::move(GetObjFileInterface), Err));
+          L, std::move(ArchiveBuffer), std::move(Archive),
+          std::move(GetObjFileInterface), Err));
 
   if (Err)
     return std::move(Err);
 
   return std::move(ADG);
+}
+
+Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
+StaticLibraryDefinitionGenerator::Create(
+    ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
+    GetObjectFileInterface GetObjFileInterface) {
+
+  auto B = object::createBinary(ArchiveBuffer->getMemBufferRef());
+  if (!B)
+    return B.takeError();
+
+  // If this is a regular archive then create an instance from it.
+  if (isa<object::Archive>(*B))
+    return Create(L, std::move(ArchiveBuffer),
+                  std::unique_ptr<object::Archive>(
+                      static_cast<object::Archive *>(B->release())),
+                  std::move(GetObjFileInterface));
+
+  // If this is a universal binary then search for a slice matching the given
+  // Triple.
+  if (auto *UB = dyn_cast<object::MachOUniversalBinary>(B->get())) {
+
+    const auto &TT = L.getExecutionSession().getTargetTriple();
+
+    auto SliceRange = getSliceRangeForArch(*UB, TT);
+    if (!SliceRange)
+      return SliceRange.takeError();
+
+    MemoryBufferRef SliceRef(
+        StringRef(ArchiveBuffer->getBufferStart() + SliceRange->first,
+                  SliceRange->second),
+        ArchiveBuffer->getBufferIdentifier());
+
+    auto Archive = object::Archive::create(SliceRef);
+    if (!Archive)
+      return Archive.takeError();
+
+    return Create(L, std::move(ArchiveBuffer), std::move(*Archive),
+                  std::move(GetObjFileInterface));
+  }
+
+  return make_error<StringError>(Twine("Unrecognized file type for ") +
+                                     ArchiveBuffer->getBufferIdentifier(),
+                                 inconvertibleErrorCode());
 }
 
 Error StaticLibraryDefinitionGenerator::tryToGenerate(
@@ -417,12 +448,33 @@ Error StaticLibraryDefinitionGenerator::buildObjectFilesMap() {
   return Error::success();
 }
 
+Expected<std::pair<size_t, size_t>>
+StaticLibraryDefinitionGenerator::getSliceRangeForArch(
+    object::MachOUniversalBinary &UB, const Triple &TT) {
+
+  for (const auto &Obj : UB.objects()) {
+    auto ObjTT = Obj.getTriple();
+    if (ObjTT.getArch() == TT.getArch() &&
+        ObjTT.getSubArch() == TT.getSubArch() &&
+        (TT.getVendor() == Triple::UnknownVendor ||
+         ObjTT.getVendor() == TT.getVendor())) {
+      // We found a match. Return the range for the slice.
+      return std::make_pair(Obj.getOffset(), Obj.getSize());
+    }
+  }
+
+  return make_error<StringError>(Twine("Universal binary ") + UB.getFileName() +
+                                     " does not contain a slice for " +
+                                     TT.str(),
+                                 inconvertibleErrorCode());
+}
+
 StaticLibraryDefinitionGenerator::StaticLibraryDefinitionGenerator(
     ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
+    std::unique_ptr<object::Archive> Archive,
     GetObjectFileInterface GetObjFileInterface, Error &Err)
     : L(L), GetObjFileInterface(std::move(GetObjFileInterface)),
-      ArchiveBuffer(std::move(ArchiveBuffer)),
-      Archive(std::make_unique<object::Archive>(*this->ArchiveBuffer, Err)) {
+      ArchiveBuffer(std::move(ArchiveBuffer)), Archive(std::move(Archive)) {
   ErrorAsOutParameter _(&Err);
   if (!this->GetObjFileInterface)
     this->GetObjFileInterface = getObjectFileInterface;
@@ -457,7 +509,7 @@ Error DLLImportDefinitionGenerator::tryToGenerate(
   DenseMap<StringRef, SymbolLookupFlags> ToLookUpSymbols;
   for (auto &KV : Symbols) {
     StringRef Deinterned = *KV.first;
-    if (Deinterned.startswith(getImpPrefix()))
+    if (Deinterned.starts_with(getImpPrefix()))
       Deinterned = Deinterned.drop_front(StringRef(getImpPrefix()).size());
     // Don't degrade the required state
     if (ToLookUpSymbols.count(Deinterned) &&
@@ -492,11 +544,11 @@ DLLImportDefinitionGenerator::getTargetPointerSize(const Triple &TT) {
   }
 }
 
-Expected<support::endianness>
+Expected<llvm::endianness>
 DLLImportDefinitionGenerator::getTargetEndianness(const Triple &TT) {
   switch (TT.getArch()) {
   case Triple::x86_64:
-    return support::endianness::little;
+    return llvm::endianness::little;
   default:
     return make_error<StringError>(
         "architecture unsupported by DLLImportDefinitionGenerator",
@@ -506,8 +558,8 @@ DLLImportDefinitionGenerator::getTargetEndianness(const Triple &TT) {
 
 Expected<std::unique_ptr<jitlink::LinkGraph>>
 DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
-  Triple TT = ES.getExecutorProcessControl().getTargetTriple();
-  auto PointerSize = getTargetEndianness(TT);
+  Triple TT = ES.getTargetTriple();
+  auto PointerSize = getTargetPointerSize(TT);
   if (!PointerSize)
     return PointerSize.takeError();
   auto Endianness = getTargetEndianness(TT);
@@ -522,13 +574,13 @@ DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
 
   for (auto &KV : Resolved) {
     jitlink::Symbol &Target = G->addAbsoluteSymbol(
-        *KV.first, ExecutorAddr(KV.second.getAddress()), *PointerSize,
+        *KV.first, KV.second.getAddress(), *PointerSize,
         jitlink::Linkage::Strong, jitlink::Scope::Local, false);
 
     // Create __imp_ symbol
     jitlink::Symbol &Ptr =
         jitlink::x86_64::createAnonymousPointer(*G, Sec, &Target);
-    auto NameCopy = G->allocateString(Twine(getImpPrefix()) + *KV.first);
+    auto NameCopy = G->allocateContent(Twine(getImpPrefix()) + *KV.first);
     StringRef NameCopyRef = StringRef(NameCopy.data(), NameCopy.size());
     Ptr.setName(NameCopyRef);
     Ptr.setLinkage(jitlink::Linkage::Strong);

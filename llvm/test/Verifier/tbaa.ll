@@ -37,6 +37,9 @@ define void @f_0(ptr %ptr) {
 ; CHECK: Access type node must be a valid scalar type
 ; CHECK-NEXT:  store i32 9, ptr %ptr, align 4, !tbaa !{{[0-9]+}}
 
+; CHECK: TBAA metadata cannot have 0 operands
+; CHECK-NEXT:  store i32 10, ptr %ptr, align 4, !tbaa !{{[0-9]+}}
+
   store i32 0, ptr %ptr, !tbaa !{!3, !2, i64 40, i64 0, i64 1, i64 2}
   store i32 1, ptr %ptr, !tbaa !{!3, !2, i64 40, !"immutable"}
   store i32 2, ptr %ptr, !tbaa !{!3, !2, i64 40, i64 4}
@@ -47,6 +50,7 @@ define void @f_0(ptr %ptr) {
   store i32 7, ptr %ptr, !tbaa !{!3, !12, i32 40, i64 0}, !metadata !42
   store i32 8, ptr %ptr, !tbaa !{!13, !1, i64 0}
   store i32 9, ptr %ptr, !tbaa !{!14, !14, i64 0}
+  store i32 10, ptr %ptr, !tbaa !15
   ret void
 }
 !42 = !{!"Do no strip this!"}
@@ -121,3 +125,4 @@ define void @f_1(ptr %ptr) {
 !12 = !{!"bad-scalar-2", !3, i64 0}
 !13 = !{!1, !1, i64 0}
 !14 = !{!"bad-scalar-2", !13}
+!15 = !{}

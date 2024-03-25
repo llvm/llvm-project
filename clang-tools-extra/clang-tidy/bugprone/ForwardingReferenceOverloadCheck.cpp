@@ -56,6 +56,9 @@ AST_MATCHER_P(TemplateTypeParmDecl, hasDefaultArgument,
   return Node.hasDefaultArgument() &&
          TypeMatcher.matches(Node.getDefaultArgument(), Finder, Builder);
 }
+AST_MATCHER(TemplateDecl, hasAssociatedConstraints) {
+  return Node.hasAssociatedConstraints();
+}
 } // namespace
 
 void ForwardingReferenceOverloadCheck::registerMatchers(MatchFinder *Finder) {
@@ -74,6 +77,9 @@ void ForwardingReferenceOverloadCheck::registerMatchers(MatchFinder *Finder) {
               // No warning: enable_if as constructor parameter.
               parmVarDecl(hasType(isEnableIf())))),
           unless(hasParent(functionTemplateDecl(anyOf(
+              // No warning: has associated constraints (like requires
+              // expression).
+              hasAssociatedConstraints(),
               // No warning: enable_if as type parameter.
               has(templateTypeParmDecl(hasDefaultArgument(isEnableIf()))),
               // No warning: enable_if as non-type template parameter.

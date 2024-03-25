@@ -6,19 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEAREST_INTEGER_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEAREST_INTEGER_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEAREST_INTEGER_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEAREST_INTEGER_H
 
-#include "src/__support/architectures.h"
-#include "src/__support/common.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/cpu_features.h"
 
-#if (defined(LLVM_LIBC_ARCH_X86_64) && defined(__SSE4_2__))
+#if (defined(LIBC_TARGET_ARCH_IS_X86_64) && defined(LIBC_TARGET_CPU_HAS_SSE4_2))
 #include "x86_64/nearest_integer.h"
-#elif defined(LLVM_LIBC_ARCH_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "aarch64/nearest_integer.h"
 #else
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 // This is a fast implementation for rounding to a nearest integer that.
@@ -33,9 +34,9 @@ LIBC_INLINE float nearest_integer(float x) {
     // The expression above is correct for the default rounding mode, round-to-
     // nearest, tie-to-even.  For other rounding modes, it might be off by 1,
     // which is corrected below.
-    if (unlikely(diff > 0.5f))
+    if (LIBC_UNLIKELY(diff > 0.5f))
       return r + 1.0f;
-    if (unlikely(diff < -0.5f))
+    if (LIBC_UNLIKELY(diff < -0.5f))
       return r - 1.0f;
     return r;
   }
@@ -49,9 +50,9 @@ LIBC_INLINE double nearest_integer(double x) {
     // The expression above is correct for the default rounding mode, round-to-
     // nearest, tie-to-even.  For other rounding modes, it might be off by 1,
     // which is corrected below.
-    if (unlikely(diff > 0.5))
+    if (LIBC_UNLIKELY(diff > 0.5))
       return r + 1.0;
-    if (unlikely(diff < -0.5))
+    if (LIBC_UNLIKELY(diff < -0.5))
       return r - 1.0;
     return r;
   }
@@ -59,7 +60,7 @@ LIBC_INLINE double nearest_integer(double x) {
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEAREST_INTEGER_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEAREST_INTEGER_H

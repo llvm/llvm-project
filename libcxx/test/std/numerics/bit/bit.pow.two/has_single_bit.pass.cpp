@@ -1,11 +1,11 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // template <class T>
@@ -84,13 +84,13 @@ int main(int, char**)
     static_assert(!std::is_invocable_v<L, __int128_t>);
 #endif
 
-    static_assert(!std::is_invocable_v<L, int8_t>);
-    static_assert(!std::is_invocable_v<L, int16_t>);
-    static_assert(!std::is_invocable_v<L, int32_t>);
-    static_assert(!std::is_invocable_v<L, int64_t>);
-    static_assert(!std::is_invocable_v<L, intmax_t>);
-    static_assert(!std::is_invocable_v<L, intptr_t>);
-    static_assert(!std::is_invocable_v<L, ptrdiff_t>);
+    static_assert(!std::is_invocable_v<L, std::int8_t>);
+    static_assert(!std::is_invocable_v<L, std::int16_t>);
+    static_assert(!std::is_invocable_v<L, std::int32_t>);
+    static_assert(!std::is_invocable_v<L, std::int64_t>);
+    static_assert(!std::is_invocable_v<L, std::intmax_t>);
+    static_assert(!std::is_invocable_v<L, std::intptr_t>);
+    static_assert(!std::is_invocable_v<L, std::ptrdiff_t>);
 
     static_assert(!std::is_invocable_v<L, bool>);
     static_assert(!std::is_invocable_v<L, char>);
@@ -115,13 +115,13 @@ int main(int, char**)
 #ifndef TEST_HAS_NO_INT128
     static_assert(test<__uint128_t>());
 #endif
-    static_assert(test<uint8_t>());
-    static_assert(test<uint16_t>());
-    static_assert(test<uint32_t>());
-    static_assert(test<uint64_t>());
-    static_assert(test<uintmax_t>());
-    static_assert(test<uintptr_t>());
-    static_assert(test<size_t>());
+    static_assert(test<std::uint8_t>());
+    static_assert(test<std::uint16_t>());
+    static_assert(test<std::uint32_t>());
+    static_assert(test<std::uint64_t>());
+    static_assert(test<std::uintmax_t>());
+    static_assert(test<std::uintptr_t>());
+    static_assert(test<std::size_t>());
 
     test<unsigned char>();
     test<unsigned short>();
@@ -131,13 +131,13 @@ int main(int, char**)
 #ifndef TEST_HAS_NO_INT128
     test<__uint128_t>();
 #endif
-    test<uint8_t>();
-    test<uint16_t>();
-    test<uint32_t>();
-    test<uint64_t>();
-    test<uintmax_t>();
-    test<uintptr_t>();
-    test<size_t>();
+    test<std::uint8_t>();
+    test<std::uint16_t>();
+    test<std::uint32_t>();
+    test<std::uint64_t>();
+    test<std::uintmax_t>();
+    test<std::uintptr_t>();
+    test<std::size_t>();
 
     return 0;
 }

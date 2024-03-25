@@ -1,4 +1,4 @@
-; RUN: llc -march=bpfel -filetype=obj -o - %s | llvm-objdump --no-print-imm-hex -D - | FileCheck %s
+; RUN: llc -mtriple=bpfel -filetype=obj -o - %s | llvm-objdump --no-print-imm-hex -D - | FileCheck %s
 ;
 ; Source:
 ;   /* *(u64 *)(r10 - 16) = r1 */

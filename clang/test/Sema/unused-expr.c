@@ -73,7 +73,6 @@ void t4(int a) {
   for (;;b < 1) {} // expected-warning{{relational comparison result unused}}
 }
 
-// rdar://7186119
 int t5f(void) __attribute__((warn_unused_result));
 void t5(void) {
   t5f();   // expected-warning {{ignoring return value of function declared with 'warn_unused_result' attribute}}
@@ -83,7 +82,6 @@ void t5(void) {
 int fn1(void) __attribute__ ((warn_unused_result));
 int fn2() __attribute__ ((pure));
 int fn3() __attribute__ ((__const));
-// rdar://6587766
 int t6(void) {
   if (fn1() < 0 || fn2(2,1) < 0 || fn3(2) < 0)  // no warnings
     return -1;
@@ -106,7 +104,6 @@ void t8(void) {
 
 void t9(void) __attribute__((warn_unused_result)); // expected-warning {{attribute 'warn_unused_result' cannot be applied to functions without return value}}
 
-// rdar://7410924
 void *some_function(void);
 void t10(void) {
   (void*) some_function(); //expected-warning {{expression result unused; should this cast be to 'void'?}}

@@ -18,18 +18,16 @@
 #include "min_allocator.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(S s)
-{
-    const S& cs = s;
-    ASSERT_SAME_TYPE(decltype( s.back()), typename S::reference);
-    ASSERT_SAME_TYPE(decltype(cs.back()), typename S::const_reference);
-    LIBCPP_ASSERT_NOEXCEPT(    s.back());
-    LIBCPP_ASSERT_NOEXCEPT(   cs.back());
-    assert(&cs.back() == &cs[cs.size()-1]);
-    assert(&s.back() == &s[cs.size()-1]);
-    s.back() = typename S::value_type('z');
-    assert(s.back() == typename S::value_type('z'));
+TEST_CONSTEXPR_CXX20 void test(S s) {
+  const S& cs = s;
+  ASSERT_SAME_TYPE(decltype(s.back()), typename S::reference);
+  ASSERT_SAME_TYPE(decltype(cs.back()), typename S::const_reference);
+  LIBCPP_ASSERT_NOEXCEPT(s.back());
+  LIBCPP_ASSERT_NOEXCEPT(cs.back());
+  assert(&cs.back() == &cs[cs.size() - 1]);
+  assert(&s.back() == &s[cs.size() - 1]);
+  s.back() = typename S::value_type('z');
+  assert(s.back() == typename S::value_type('z'));
 }
 
 template <class S>
@@ -47,8 +45,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

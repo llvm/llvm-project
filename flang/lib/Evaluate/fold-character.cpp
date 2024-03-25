@@ -80,13 +80,11 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
       return FoldMaxvalMinval<T>(
           context, std::move(funcRef), RelationalOperator::GT, *identity);
     }
-  } else if (name == "merge") {
-    return FoldMerge<T>(context, std::move(funcRef));
   } else if (name == "min") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
   } else if (name == "minval") {
     // Collating sequences correspond to positive integers (3.31)
-    SingleCharType most{0x7fffffff >> (8 * (4 - KIND))};
+    auto most{static_cast<SingleCharType>(0xffffffff >> (8 * (4 - KIND)))};
     if (auto identity{Identity<T>(
             StringType{most}, GetConstantLength(context, funcRef, 0))}) {
       return FoldMaxvalMinval<T>(
@@ -99,7 +97,11 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
             context, funcRef.arguments())}) {
       auto str{std::get<Scalar<T>>(*scalars)};
       auto n{std::get<Scalar<SubscriptInteger>>(*scalars).ToInt64()};
-      if (static_cast<double>(n) * str.size() >
+      if (n < 0) {
+        context.messages().Say(
+            "NCOPIES= argument to REPEAT() should be nonnegative, but is %jd"_err_en_US,
+            static_cast<std::intmax_t>(n));
+      } else if (static_cast<double>(n) * str.size() >
           (1 << 20)) { // sanity limit of 1MiB
         context.messages().Say(
             "Result of REPEAT() is too large to compute at compilation time (%g characters)"_port_en_US,
@@ -114,6 +116,12 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
       return Expr<T>{Constant<T>{
           CharacterUtils<KIND>::TRIM(std::get<Scalar<T>>(*scalar))}};
     }
+  } else if (name == "__builtin_compiler_options") {
+    auto &o = context.targetCharacteristics().compilerOptionsString();
+    return Expr<T>{Constant<T>{StringType(o.begin(), o.end())}};
+  } else if (name == "__builtin_compiler_version") {
+    auto &v = context.targetCharacteristics().compilerVersionString();
+    return Expr<T>{Constant<T>{StringType(v.begin(), v.end())}};
   }
   return Expr<T>{std::move(funcRef)};
 }

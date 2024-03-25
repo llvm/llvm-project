@@ -41,7 +41,6 @@ _Noreturn void test5(void) {
   test2_positive();
 }
 
-// rdar://16274746
 void test6(void)
 {
     (void)^{ 

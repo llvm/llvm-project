@@ -27,19 +27,10 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Scalar/DCE.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include <map>
 #include <optional>
 
 using namespace llvm;
-
-static void createEmptyFunction(Module &M) {
-  // TODO: Some arguments and a return value would probably be more interesting.
-  LLVMContext &Context = M.getContext();
-  Function *F = Function::Create(FunctionType::get(Type::getVoidTy(Context), {},
-                                                   /*isVarArg=*/false),
-                                 GlobalValue::ExternalLinkage, "f", &M);
-  BasicBlock *BB = BasicBlock::Create(Context, "BB", F);
-  ReturnInst::Create(Context, BB);
-}
 
 void IRMutationStrategy::mutate(Module &M, RandomIRBuilder &IB) {
   auto RS = makeSampler<Function *>(IB.Rand);
@@ -47,31 +38,41 @@ void IRMutationStrategy::mutate(Module &M, RandomIRBuilder &IB) {
     if (!F.isDeclaration())
       RS.sample(&F, /*Weight=*/1);
 
-  if (RS.isEmpty())
-    createEmptyFunction(M);
-  else
-    mutate(*RS.getSelection(), IB);
+  while (RS.totalWeight() < IB.MinFunctionNum) {
+    Function *F = IB.createFunctionDefinition(M);
+    RS.sample(F, /*Weight=*/1);
+  }
+  mutate(*RS.getSelection(), IB);
 }
 
 void IRMutationStrategy::mutate(Function &F, RandomIRBuilder &IB) {
-  mutate(*makeSampler(IB.Rand, make_pointer_range(F)).getSelection(), IB);
+  auto Range = make_filter_range(make_pointer_range(F),
+                                 [](BasicBlock *BB) { return !BB->isEHPad(); });
+
+  mutate(*makeSampler(IB.Rand, Range).getSelection(), IB);
 }
 
 void IRMutationStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   mutate(*makeSampler(IB.Rand, make_pointer_range(BB)).getSelection(), IB);
 }
 
-void IRMutator::mutateModule(Module &M, int Seed, size_t CurSize,
-                             size_t MaxSize) {
+size_t llvm::IRMutator::getModuleSize(const Module &M) {
+  return M.getInstructionCount() + M.size() + M.global_size() + M.alias_size();
+}
+
+void IRMutator::mutateModule(Module &M, int Seed, size_t MaxSize) {
   std::vector<Type *> Types;
   for (const auto &Getter : AllowedTypes)
     Types.push_back(Getter(M.getContext()));
   RandomIRBuilder IB(Seed, Types);
 
+  size_t CurSize = IRMutator::getModuleSize(M);
   auto RS = makeSampler<IRMutationStrategy *>(IB.Rand);
   for (const auto &Strategy : Strategies)
     RS.sample(Strategy.get(),
               Strategy->getWeight(CurSize, MaxSize, RS.totalWeight()));
+  if (RS.totalWeight() == 0)
+    return;
   auto Strategy = RS.getSelection();
 
   Strategy->mutate(M, IB);
@@ -113,10 +114,16 @@ InjectorIRStrategy::chooseOperation(Value *Src, RandomIRBuilder &IB) {
   return *RS;
 }
 
+static inline iterator_range<BasicBlock::iterator>
+getInsertionRange(BasicBlock &BB) {
+  auto End = BB.getTerminatingMustTailCall() ? std::prev(BB.end()) : BB.end();
+  return make_range(BB.getFirstInsertionPt(), End);
+}
+
 void InjectorIRStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   SmallVector<Instruction *, 32> Insts;
-  for (auto I = BB.getFirstInsertionPt(), E = BB.end(); I != E; ++I)
-    Insts.push_back(&*I);
+  for (Instruction &I : getInsertionRange(BB))
+    Insts.push_back(&I);
   if (Insts.size() < 1)
     return;
 
@@ -252,7 +259,7 @@ void InstModificationIRStrategy::mutate(Instruction &Inst,
     break;
 
   case Instruction::FCmp:
-    CI = cast<ICmpInst>(&Inst);
+    CI = cast<FCmpInst>(&Inst);
     for (unsigned p = CmpInst::FIRST_FCMP_PREDICATE;
          p <= CmpInst::LAST_FCMP_PREDICATE; p++) {
       Modifications.push_back(
@@ -349,10 +356,73 @@ static uint64_t getUniqueCaseValue(SmallSet<uint64_t, 4> &CasesTaken,
   return tmp;
 }
 
+void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
+  Module *M = BB.getParent()->getParent();
+  // If nullptr is selected, we will create a new function declaration.
+  SmallVector<Function *, 32> Functions({nullptr});
+  for (Function &F : M->functions()) {
+    Functions.push_back(&F);
+  }
+
+  auto RS = makeSampler(IB.Rand, Functions);
+  Function *F = RS.getSelection();
+  // Some functions accept metadata type or token type as arguments.
+  // We don't call those functions for now.
+  // For example, `@llvm.dbg.declare(metadata, metadata, metadata)`
+  // https://llvm.org/docs/SourceLevelDebugging.html#llvm-dbg-declare
+  auto IsUnsupportedTy = [](Type *T) {
+    return T->isMetadataTy() || T->isTokenTy();
+  };
+  if (!F || IsUnsupportedTy(F->getReturnType()) ||
+      any_of(F->getFunctionType()->params(), IsUnsupportedTy)) {
+    F = IB.createFunctionDeclaration(*M);
+  }
+
+  FunctionType *FTy = F->getFunctionType();
+  SmallVector<fuzzerop::SourcePred, 2> SourcePreds;
+  if (!F->arg_empty()) {
+    for (Type *ArgTy : FTy->params()) {
+      SourcePreds.push_back(fuzzerop::onlyType(ArgTy));
+    }
+  }
+  bool isRetVoid = (F->getReturnType() == Type::getVoidTy(M->getContext()));
+  auto BuilderFunc = [FTy, F, isRetVoid](ArrayRef<Value *> Srcs,
+                                         Instruction *Inst) {
+    StringRef Name = isRetVoid ? nullptr : "C";
+    CallInst *Call = CallInst::Create(FTy, F, Srcs, Name, Inst);
+    // Don't return this call inst if it return void as it can't be sinked.
+    return isRetVoid ? nullptr : Call;
+  };
+
+  SmallVector<Instruction *, 32> Insts;
+  for (Instruction &I : getInsertionRange(BB))
+    Insts.push_back(&I);
+  if (Insts.size() < 1)
+    return;
+
+  // Choose an insertion point for our new call instruction.
+  uint64_t IP = uniform<uint64_t>(IB.Rand, 0, Insts.size() - 1);
+
+  auto InstsBefore = ArrayRef(Insts).slice(0, IP);
+  auto InstsAfter = ArrayRef(Insts).slice(IP);
+
+  // Choose a source, which will be used to constrain the operation selection.
+  SmallVector<Value *, 2> Srcs;
+
+  for (const auto &Pred : ArrayRef(SourcePreds)) {
+    Srcs.push_back(IB.findOrCreateSource(BB, InstsBefore, Srcs, Pred));
+  }
+
+  if (Value *Op = BuilderFunc(Srcs, Insts[IP])) {
+    // Find a sink and wire up the results of the operation.
+    IB.connectToSink(BB, InstsAfter, Op);
+  }
+}
+
 void InsertCFGStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   SmallVector<Instruction *, 32> Insts;
-  for (auto I = BB.getFirstInsertionPt(), E = BB.end(); I != E; ++I)
-    Insts.push_back(&*I);
+  for (Instruction &I : getInsertionRange(BB))
+    Insts.push_back(&I);
   if (Insts.size() < 1)
     return;
 
@@ -491,8 +561,8 @@ void InsertPHIStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
     PHI->addIncoming(Src, Pred);
   }
   SmallVector<Instruction *, 32> InstsAfter;
-  for (auto I = BB.getFirstInsertionPt(), E = BB.end(); I != E; ++I)
-    InstsAfter.push_back(&*I);
+  for (Instruction &I : getInsertionRange(BB))
+    InstsAfter.push_back(&I);
   IB.connectToSink(BB, InstsAfter, PHI);
 }
 
@@ -503,8 +573,8 @@ void SinkInstructionStrategy::mutate(Function &F, RandomIRBuilder &IB) {
 }
 void SinkInstructionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   SmallVector<Instruction *, 32> Insts;
-  for (auto I = BB.getFirstInsertionPt(), E = BB.end(); I != E; ++I)
-    Insts.push_back(&*I);
+  for (Instruction &I : getInsertionRange(BB))
+    Insts.push_back(&I);
   if (Insts.size() < 1)
     return;
   // Choose an Instruction to mutate.
@@ -512,64 +582,74 @@ void SinkInstructionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   Instruction *Inst = Insts[Idx];
   // `Idx + 1` so we don't sink to ourselves.
   auto InstsAfter = ArrayRef(Insts).slice(Idx + 1);
-  LLVMContext &C = BB.getParent()->getParent()->getContext();
-  // Don't sink terminators, void function calls, etc.
-  if (Inst->getType() != Type::getVoidTy(C))
+  Type *Ty = Inst->getType();
+  // Don't sink terminators, void function calls, token, etc.
+  if (!Ty->isVoidTy() && !Ty->isTokenTy())
     // Find a new sink and wire up the results of the operation.
     IB.connectToSink(BB, InstsAfter, Inst);
 }
 
 void ShuffleBlockStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
-
-  SmallPtrSet<Instruction *, 8> AliveInsts;
+  // A deterministic alternative to SmallPtrSet with the same lookup
+  // performance.
+  std::map<size_t, Instruction *> AliveInsts;
+  std::map<Instruction *, size_t> AliveInstsLookup;
+  size_t InsertIdx = 0;
   for (auto &I : make_early_inc_range(make_range(
            BB.getFirstInsertionPt(), BB.getTerminator()->getIterator()))) {
     // First gather all instructions that can be shuffled. Don't take
     // terminator.
-    AliveInsts.insert(&I);
+    AliveInsts.insert({InsertIdx, &I});
+    AliveInstsLookup.insert({&I, InsertIdx++});
     // Then remove these instructions from the block
     I.removeFromParent();
   }
 
   // Shuffle these instructions using topological sort.
-  // Returns true if all current instruction's dependencies in this block have
+  // Returns false if all current instruction's dependencies in this block have
   // been shuffled. If so, this instruction can be shuffled too.
-  auto hasAliveParent = [&AliveInsts](Instruction *I) {
-    for (Value *O : I->operands()) {
+  auto hasAliveParent = [&AliveInsts, &AliveInstsLookup](size_t Index) {
+    for (Value *O : AliveInsts[Index]->operands()) {
       Instruction *P = dyn_cast<Instruction>(O);
-      if (P && AliveInsts.count(P))
+      if (P && AliveInstsLookup.count(P))
         return true;
     }
     return false;
   };
   // Get all alive instructions that depend on the current instruction.
-  auto getAliveChildren = [&AliveInsts](Instruction *I) {
-    SmallPtrSet<Instruction *, 4> Children;
+  // Takes Instruction* instead of index because the instruction is already
+  // shuffled.
+  auto getAliveChildren = [&AliveInstsLookup](Instruction *I) {
+    SmallSetVector<size_t, 8> Children;
     for (Value *U : I->users()) {
       Instruction *P = dyn_cast<Instruction>(U);
-      if (P && AliveInsts.count(P))
-        Children.insert(P);
+      if (P && AliveInstsLookup.count(P))
+        Children.insert(AliveInstsLookup[P]);
     }
     return Children;
   };
-  SmallPtrSet<Instruction *, 8> Roots;
+  SmallSet<size_t, 8> RootIndices;
   SmallVector<Instruction *, 8> Insts;
-  for (Instruction *I : AliveInsts) {
-    if (!hasAliveParent(I))
-      Roots.insert(I);
+  for (const auto &[Index, Inst] : AliveInsts) {
+    if (!hasAliveParent(Index))
+      RootIndices.insert(Index);
   }
   // Topological sort by randomly selecting a node without a parent, or root.
-  while (!Roots.empty()) {
-    auto RS = makeSampler<Instruction *>(IB.Rand);
-    for (Instruction *Root : Roots)
-      RS.sample(Root, 1);
-    Instruction *Root = RS.getSelection();
-    Roots.erase(Root);
-    AliveInsts.erase(Root);
+  while (!RootIndices.empty()) {
+    auto RS = makeSampler<size_t>(IB.Rand);
+    for (size_t RootIdx : RootIndices)
+      RS.sample(RootIdx, 1);
+    size_t RootIdx = RS.getSelection();
+
+    RootIndices.erase(RootIdx);
+    Instruction *Root = AliveInsts[RootIdx];
+    AliveInsts.erase(RootIdx);
+    AliveInstsLookup.erase(Root);
     Insts.push_back(Root);
-    for (Instruction *Child : getAliveChildren(Root)) {
+
+    for (size_t Child : getAliveChildren(Root)) {
       if (!hasAliveParent(Child)) {
-        Roots.insert(Child);
+        RootIndices.insert(Child);
       }
     }
   }

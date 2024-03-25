@@ -75,6 +75,7 @@ private:
 
 protected:
   bool HasInstructions;
+  bool LinkerRelaxable = false;
 
   MCFragment(FragmentType Kind, bool HasInstructions,
              MCSection *Parent = nullptr);
@@ -246,6 +247,9 @@ public:
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_Data;
   }
+
+  bool isLinkerRelaxable() const { return LinkerRelaxable; }
+  void setLinkerRelaxable() { LinkerRelaxable = true; }
 };
 
 /// This is a compact (memory-size-wise) fragment for holding an encoded
@@ -311,7 +315,7 @@ class MCAlignFragment : public MCFragment {
   unsigned MaxBytesToEmit;
 
   /// When emitting Nops some subtargets have specific nop encodings.
-  const MCSubtargetInfo *STI;
+  const MCSubtargetInfo *STI = nullptr;
 
 public:
   MCAlignFragment(Align Alignment, int64_t Value, unsigned ValueSize,
@@ -424,27 +428,24 @@ public:
   }
 };
 
-class MCLEBFragment : public MCFragment {
+class MCLEBFragment final : public MCEncodedFragmentWithFixups<8, 0> {
   /// True if this is a sleb128, false if uleb128.
   bool IsSigned;
 
   /// The value this fragment should contain.
   const MCExpr *Value;
 
-  SmallString<8> Contents;
-
 public:
-  MCLEBFragment(const MCExpr &Value_, bool IsSigned_, MCSection *Sec = nullptr)
-      : MCFragment(FT_LEB, false, Sec), IsSigned(IsSigned_), Value(&Value_) {
-    Contents.push_back(0);
+  MCLEBFragment(const MCExpr &Value, bool IsSigned, MCSection *Sec = nullptr)
+      : MCEncodedFragmentWithFixups<8, 0>(FT_LEB, false, Sec),
+        IsSigned(IsSigned), Value(&Value) {
+    getContents().push_back(0);
   }
 
   const MCExpr &getValue() const { return *Value; }
+  void setValue(const MCExpr *Expr) { Value = Expr; }
 
   bool isSigned() const { return IsSigned; }
-
-  SmallString<8> &getContents() { return Contents; }
-  const SmallString<8> &getContents() const { return Contents; }
 
   /// @}
 
@@ -488,6 +489,7 @@ public:
         AddrDelta(&AddrDelta) {}
 
   const MCExpr &getAddrDelta() const { return *AddrDelta; }
+  void setAddrDelta(const MCExpr *E) { AddrDelta = E; }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_DwarfFrame;

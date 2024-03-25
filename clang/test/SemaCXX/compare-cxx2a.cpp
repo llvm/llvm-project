@@ -461,3 +461,44 @@ namespace PR52537 {
   template<typename T> bool f6() { return 0 < y6; } // expected-note {{instantiation of}}
   void g6() { f6<int>(); } // expected-note {{instantiation of}}
 }
+
+
+namespace GH64923 {
+using nullptr_t = decltype(nullptr);
+struct MyTask{};
+constexpr MyTask DoAnotherThing() {
+    return {};
+}
+
+constexpr nullptr_t operator++(MyTask &&T); // expected-note 2{{declared here}}
+void DoSomething() {
+  if constexpr (++DoAnotherThing() != nullptr) {} // expected-error {{constexpr if condition is not a constant expression}} \
+                                                  // expected-note  {{undefined function 'operator++' cannot be used in a constant expression}}
+
+  if constexpr (nullptr == ++DoAnotherThing()) {} // expected-error {{constexpr if condition is not a constant expression}} \
+                                                  // expected-note  {{undefined function 'operator++' cannot be used in a constant expression}}
+}
+}
+
+namespace GH64162 {
+struct S {
+    const std::strong_ordering& operator<=>(const S&) const = default;
+};
+bool test(S s) {
+    return s < s; // We expect this not to crash anymore
+}
+
+// Following example never crashed but worth adding in because it is related
+struct A {};
+bool operator<(A, int);
+
+struct B {
+    operator A();
+};
+
+struct C {
+    B operator<=>(C);
+};
+
+bool f(C c) { return c < c; }
+}

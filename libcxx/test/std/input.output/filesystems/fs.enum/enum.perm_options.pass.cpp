@@ -6,20 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
 
 // enum class perm_options;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
-#include <sys/stat.h>
 
 #include "test_macros.h"
 #include "check_bitmask_types.h"
-
+namespace fs = std::filesystem;
 
 constexpr fs::perm_options ME(int val) {
   return static_cast<fs::perm_options>(val);
@@ -33,7 +32,7 @@ int main(int, char**) {
   typedef std::underlying_type<E>::type UT;
   static_assert(!std::is_convertible<E, UT>::value, "");
 
-  LIBCPP_ONLY(static_assert(std::is_same<UT, unsigned char >::value, "")); // Implementation detail
+  LIBCPP_STATIC_ASSERT(std::is_same<UT, unsigned char >::value, ""); // Implementation detail
 
   typedef check_bitmask_type<E, E::replace, E::nofollow> BitmaskTester;
   assert(BitmaskTester::check());

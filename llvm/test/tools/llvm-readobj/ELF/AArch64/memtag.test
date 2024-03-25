@@ -1,0 +1,399 @@
+# RUN: yaml2obj -D DESC='0d000000' -D MODE=1 -D HEAP=1 -D STACK=1 %s -o %t
+# RUN: llvm-readelf --notes --dynamic --memtag %t | FileCheck %s --check-prefixes=GNU,GNU-OK,ASYNC,HEAP,STACK
+# RUN: llvm-readobj --notes --dynamic --memtag %t | FileCheck %s --check-prefixes=LLVM,LLVM-OK,ASYNC,HEAP,STACK
+
+# RUN: yaml2obj -D DESC='0e000000' -D MODE=0 -D HEAP=1 -D STACK=1 %s -o %t
+# RUN: llvm-readelf --notes --dynamic --memtag %t | FileCheck %s --check-prefixes=GNU,GNU-OK,SYNC,HEAP,STACK
+# RUN: llvm-readobj --notes --dynamic --memtag %t | FileCheck %s --check-prefixes=LLVM,LLVM-OK,SYNC,HEAP,STACK
+
+# RUN: yaml2obj -D DESC='05000000' -D MODE=1 -D HEAP=1 -D STACK=0 %s -o %t
+# RUN: llvm-readelf --notes --dynamic --memtag %t | FileCheck %s --check-prefixes=GNU,GNU-OK,ASYNC,HEAP,NOSTACK
+# RUN: llvm-readobj --notes --dynamic --memtag %t | FileCheck %s --check-prefixes=LLVM,LLVM-OK,ASYNC,HEAP,NOSTACK
+
+# RUN: yaml2obj -D DESC='06000000' -D MODE=0 -D HEAP=1 -D STACK=0 %s -o %t
+# RUN: llvm-readelf --notes --dynamic --memtag %t | FileCheck %s --check-prefixes=GNU,GNU-OK,SYNC,HEAP,NOSTACK
+# RUN: llvm-readobj --notes --dynamic --memtag %t | FileCheck %s --check-prefixes=LLVM,LLVM-OK,SYNC,HEAP,NOSTACK
+
+# RUN: yaml2obj -D DESC='09000000' -D MODE=1 -D HEAP=0 -D STACK=1 %s -o %t
+# RUN: llvm-readelf --notes --dynamic --memtag %t | FileCheck %s --check-prefixes=GNU,GNU-OK,ASYNC,NOHEAP,STACK
+# RUN: llvm-readobj --notes --dynamic --memtag %t | FileCheck %s --check-prefixes=LLVM,LLVM-OK,ASYNC,NOHEAP,STACK
+
+# RUN: yaml2obj -D DESC='0a000000' -D MODE=0 -D HEAP=0 -D STACK=1 %s -o %t
+# RUN: llvm-readelf --notes --dynamic --memtag %t | FileCheck %s --check-prefixes=GNU,GNU-OK,SYNC,NOHEAP,STACK
+# RUN: llvm-readobj --notes --dynamic --memtag %t | FileCheck %s --check-prefixes=LLVM,LLVM-OK,SYNC,NOHEAP,STACK
+
+# RUN: yaml2obj -D DESC='03000000' -D MODE=2 -D HEAP=0 -D STACK=0 %s -o %t
+# RUN: llvm-readelf --notes --dynamic --memtag %t | FileCheck %s --check-prefixes=GNU,GNU-OK,UNKNOWN,NOHEAP,NOSTACK
+# RUN: llvm-readobj --notes --dynamic --memtag %t | FileCheck %s --check-prefixes=LLVM,LLVM-OK,UNKNOWN,NOHEAP,NOSTACK
+
+# RUN: yaml2obj -D DESC='00000000' -D MODE=2 -D HEAP=0 -D STACK=0 %s -o %t
+# RUN: llvm-readelf --notes --dynamic --memtag %t | FileCheck %s --check-prefixes=GNU,GNU-OK,NONE,NOHEAP,NOSTACK
+# RUN: llvm-readobj --notes --dynamic --memtag %t | FileCheck %s --check-prefixes=LLVM,LLVM-OK,NONE,NOHEAP,NOSTACK
+
+# RUN: yaml2obj -D DESC='""' -D MODE=2 -D HEAP=2 -D STACK=2 %s -o %t
+# RUN: llvm-readelf --notes --dynamic --memtag %t | FileCheck %s --check-prefixes=GNU,GNU-BAD,INVALID
+# RUN: llvm-readobj --notes --dynamic --memtag %t | FileCheck %s --check-prefixes=LLVM,LLVM-BAD,INVALID
+
+# LLVM: DynamicSection [ (6 entries)
+# LLVM:  Tag                Type                     Name/Value
+# GNU: Dynamic section
+# GNU-SAME: contains 6 entries
+
+# ASYNC:      0x0000000070000009
+# ASYNC-SAME: AARCH64_MEMTAG_MODE
+# ASYNC-SAME: Asynchronous (1)
+
+# SYNC:      0x0000000070000009
+# SYNC-SAME: AARCH64_MEMTAG_MODE
+# SYNC-SAME: Synchronous (0)
+
+# UNKNOWN:      0x0000000070000009
+# UNKNOWN-SAME: AARCH64_MEMTAG_MODE
+# UNKNOWN-SAME: Unknown (2)
+
+# INVALID:      0x0000000070000009
+# INVALID-SAME: AARCH64_MEMTAG_MODE
+# INVALID-SAME: Unknown (2)
+
+# HEAP:      0x000000007000000{{[bB]}}
+# HEAP-SAME: AARCH64_MEMTAG_HEAP
+# HEAP-SAME: Enabled (1)
+
+# NOHEAP:      0x000000007000000{{[bB]}}
+# NOHEAP-SAME: AARCH64_MEMTAG_HEAP
+# NOHEAP-SAME: Disabled (0)
+
+# INVALID:      0x000000007000000{{[bB]}}
+# INVALID-SAME: AARCH64_MEMTAG_HEAP
+# INVALID-SAME: Unknown (2)
+
+# STACK:      0x000000007000000{{[cC]}}
+# STACK-SAME: AARCH64_MEMTAG_STACK
+# STACK-SAME: Enabled (1)
+
+# NOSTACK:      0x000000007000000{{[cC]}}
+# NOSTACK-SAME: AARCH64_MEMTAG_STACK
+# NOSTACK-SAME: Disabled (0)
+
+# INVALID:      0x000000007000000{{[cC]}}
+# INVALID-SAME: AARCH64_MEMTAG_STACK
+# INVALID-SAME: Unknown (2)
+
+# LLVM:  0x000000007000000D AARCH64_MEMTAG_GLOBALS   0xdeadbeef
+# LLVM:  0x000000007000000F AARCH64_MEMTAG_GLOBALSSZ 15
+
+# GNU: 0x000000007000000d (AARCH64_MEMTAG_GLOBALS)   0xdeadbeef0
+# GNU: 0x000000007000000f (AARCH64_MEMTAG_GLOBALSSZ) 15
+
+# GNU:          Displaying notes found in: .note.android.memtag
+# GNU-NEXT:     Owner    Data size	 Description
+# GNU-OK-NEXT:  Android  0x00000004  NT_ANDROID_TYPE_MEMTAG (Android memory tagging information)
+# GNU-BAD-NEXT: Android  0x00000000  NT_ANDROID_TYPE_MEMTAG (Android memory tagging information)
+
+# LLVM:      Notes [
+# LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Name: .note.android.memtag
+# LLVM-NEXT:     Offset: 0x40
+# LLVM-OK-NEXT:  Size: 0x18
+# LLVM-BAD-NEXT: Size: 0x14
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: Android
+# LLVM-OK-NEXT:    Data size: 0x4
+# LLVM-BAD-NEXT:   Data size: 0x0
+# LLVM-NEXT:       Type: NT_ANDROID_TYPE_MEMTAG (Android memory tagging information)
+
+## Hint: Also used for the GNU tests.
+# INVALID-NEXT:    Invalid .note.android.memtag
+# NONE-NEXT:       Tagging Mode: NONE
+# ASYNC-NEXT:      Tagging Mode: ASYNC
+# SYNC-NEXT:       Tagging Mode: SYNC
+# UNKNOWN-NEXT:    Tagging Mode: Unknown (3)
+# HEAP-NEXT:       Heap: Enabled
+# NOHEAP-NEXT:     Heap: Disabled
+# STACK-NEXT:      Stack: Enabled
+# NOSTACK-NEXT:    Stack: Disabled
+
+# LLVM-NEXT:     }
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]
+
+# LLVM: Memtag Dynamic Entries
+# GNU:  Memtag Dynamic Entries
+
+## Ensure that for --memtag, we don't print irrelevant dynamic entries.
+# LLVM-NOT: DT_INIT_ARRAY
+# GNU-NOT: DT_INIT_ARRAY
+
+# SYNC:    AARCH64_MEMTAG_MODE: Synchronous (0)
+# ASYNC:   AARCH64_MEMTAG_MODE: Asynchronous (1)
+# HEAP:    AARCH64_MEMTAG_HEAP: Enabled (1)
+# NOHEAP:  AARCH64_MEMTAG_HEAP: Disabled (0)
+# STACK:   AARCH64_MEMTAG_STACK: Enabled (1)
+# NOSTACK: AARCH64_MEMTAG_STACK: Disabled (0)
+# LLVM:    AARCH64_MEMTAG_GLOBALS: 0xdeadbeef0
+# GNU:     AARCH64_MEMTAG_GLOBALS: 0xdeadbeef0
+# LLVM:    AARCH64_MEMTAG_GLOBALSSZ: 15
+# GNU:     AARCH64_MEMTAG_GLOBALSSZ: 15
+
+# LLVM-OK: Memtag Android Note
+# GNU-OK:  Memtag Android Note
+
+# SYNC:    Tagging Mode: SYNC
+# ASYNC:   Tagging Mode: ASYNC
+# UNKNOWN: Tagging Mode: Unknown (3)
+# HEAP:    Heap: Enabled
+# NOHEAP:  Heap: Disabled
+# STACK:   Stack: Enabled
+# NOSTACK: Stack: Disabled
+
+## Below is the maths for calculating the hand-written `.memtag.globals.dynamic` section contents.
+## This is based on the AArch64 MemtagABI:
+## https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#83encoding-of-sht_aarch64_memtag_globals_dynamic
+## You may find the following python one-liner helpful to encode your own values:
+##     `binascii.hexlify(leb128.u.encode(value_to_encode))`
+## Remember that a granule is 16 bytes.
+##   1. Tagged region of 16 bytes at 0xdead0000
+##      - Distance from the end of the last tagged region: 0xdead0000 bytes, 0xdead000 granules
+##      - Size: 0x10 bytes, 0x1 granules
+##      - Value to encode: (0xdead000 << 3) + 0x1 = 0x6f568001
+##      - ULEB-encoded value: 0x81 0x80 0xda 0xfa 0x06
+##   2. Tagged region of 32 bytes at 0xdead0010
+##      - Distance from the end of the last tagged region: 0x0 bytes, 0x0 granules
+##      - Size: 0x20 bytes, 0x2 granules
+##      - Value to encode: (0 << 3) + 0x2 == 0x2
+##      - ULEB-encoded value: 0x2
+##   3. Tagged region of 64 bytes at 0xdead0100
+##      - Distance: 0xdead0100 - 0xdead0010 - 32 = 0xd0 bytes, 0xd granules
+##      - Size: 0x40 bytes, 0x4 granules.
+##      - Value to encode: (0xd << 3) + 0x4 = 0x6c
+##      - ULEB-encoded value: 0x6c
+##   4. Tagged region of 0x1000 bytes at 0xdeadf000
+##      - Distance: 0xdeadf000 - 0xdead0100 - 64 = 0xeec0 bytes, 0xeec granules
+##      - Size: 0x1000 bytes, 0x100 granules.
+##        (note: size of 0x100 granules exceeds the 3-bit size allowance in value to encode, so the
+##         size needs to go to its own value, minus one).
+##      - 1st value to encode (distance only): (0xeec << 3) == 0x7760
+##      - 1st ULEB-encoded value: 0xe0 0xee 0x01
+##      - 2nd value to encode (size only): 0x100 - 1
+##      - 2nd ULEB-encoded value: 0xff 0x01
+##   5. Tagged region of 16 bytes at 0xdeae0000
+##      - Distance: 0xdeae000 - 0xdeadf000 - 0x1000 = 0x0 bytes, 0x0 granules (regions are adjacent)
+##      - Size: 0x10 bytes, 0x1 granules
+##      - Value to encode: (0x0 << 3) + 0x1
+##      - ULEB-encoded value: 0x01
+##   6. Tagged region of 16 bytes at 0xdeae0010
+##      - Distance: 0x0 (regions are adjacent)
+##      - Size: 0x10 bytes, 0x1 granules
+##      - Value to encode: (0x0 << 3) + 0x1
+##      - ULEB-encoded value: 0x01
+##   6. Tagged region of 16 bytes at 0xdeae0020
+##      - Distance: 0x0 (regions are adjacent)
+##      - Size: 0x10 bytes, 0x1 granules
+##      - Value to encode: (0x0 << 3) + 0x1
+##      - ULEB-encoded value: 0x01
+
+# LLVM-OK:      Memtag Global Descriptors: [
+# LLVM-OK-NEXT:    0xDEAD0000: 0x10
+# LLVM-OK-NEXT:    0xDEAD0010: 0x20
+# LLVM-OK-NEXT:    0xDEAD0100: 0x40
+# LLVM-OK-NEXT:    0xDEADF000: 0x1000
+# LLVM-OK-NEXT:    0xDEAE0000: 0x10
+# LLVM-OK-NEXT:    0xDEAE0010: 0x10
+# LLVM-OK-NEXT:    0xDEAE0020: 0x10
+# LLVM-OK-NEXT: ]
+# GNU-OK:       Memtag Global Descriptors:
+# GNU-OK-NEXT:     0xdead0000: 0x10
+# GNU-OK-NEXT:     0xdead0010: 0x20
+# GNU-OK-NEXT:     0xdead0100: 0x40
+# GNU-OK-NEXT:     0xdeadf000: 0x1000
+# GNU-OK-NEXT:     0xdeae0000: 0x10
+# GNU-OK-NEXT:     0xdeae0010: 0x10
+# GNU-OK-NEXT:     0xdeae0020: 0x10
+# GNU-OK-NOT:   {{.}}
+
+#########################################
+## --docnum=1 (default)
+#########################################
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+Sections:
+  - Name: .note.android.memtag
+    Type: SHT_NOTE
+    Notes:
+      - Name: Android
+        Type: NT_ANDROID_TYPE_MEMTAG
+        Desc: [[DESC]]
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_AARCH64_MEMTAG_MODE
+        Value: [[MODE]]
+      - Tag:   DT_AARCH64_MEMTAG_HEAP
+        Value: [[HEAP]]
+      - Tag:   DT_AARCH64_MEMTAG_STACK
+        Value: [[STACK]]
+      - Tag:   DT_AARCH64_MEMTAG_GLOBALS
+        Value: 0xdeadbeef0
+      - Tag:   DT_AARCH64_MEMTAG_GLOBALSSZ
+        Value: 15
+      - Tag:   DT_INIT_ARRAY
+        Value: 0x1000
+  - Name:            .memtag.globals.dynamic
+    Type:            SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC
+    Flags:           [ SHF_ALLOC ]
+    Address:         0xdeadbeef0
+    AddressAlign:    0x4
+    Content:         8180DAFA06026CE0EE01ff01010101
+
+#########################################
+## Ensure the header is printed, even if there's no relevant dynamic entries,
+## and that nothing else is printed.
+#########################################
+
+# RUN: yaml2obj --docnum=2 %s -o %t
+# RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=MISSING-GNU
+# RUN: llvm-readobj --memtag %t | FileCheck %s --check-prefixes=MISSING-LLVM
+
+# MISSING-GNU-NOT:  {{.}}
+# MISSING-GNU:      Memtag Dynamic Entries:
+# MISSING-GNU-NEXT: < none found >
+# MISSING-GNU-NOT:  {{.}}
+
+# MISSING-LLVM-NOT:  {{.}}
+# MISSING-LLVM:      File: {{.*}}memtag.test
+# MISSING-LLVM-NEXT: Format: elf64-littleaarch64
+# MISSING-LLVM-NEXT: Arch: aarch64
+# MISSING-LLVM-NEXT: AddressSize: 64bit
+# MISSING-LLVM-NEXT: LoadName:
+# MISSING-LLVM-NEXT: Memtag Dynamic Entries: [
+# MISSING-LLVM-NEXT:   < none found >
+# MISSING-LLVM-NEXT: ]
+# MISSING-LLVM-NOT:  {{.}}
+
+#########################################
+## --docnum=2
+#########################################
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_INIT_ARRAY
+        Value: 0x1000
+
+#########################################
+## Ensure that we fail if DT_AARCH64_MEMTAG_GLOBALSSZ doesn't match the actual
+## section size.
+#########################################
+
+# RUN: yaml2obj --docnum=3 %s -o %t \
+# RUN:   -D DT_AARCH64_MEMTAG_GLOBALSSZ=0x1337 \
+# RUN:   -D GLOBALS_SECTION_CONTENTS=12345678901234567890
+# RUN: llvm-readelf --memtag %t 2>&1 | FileCheck %s --check-prefixes=SIZE-MISMATCH
+# RUN: llvm-readobj --memtag %t 2>&1 | FileCheck %s --check-prefixes=SIZE-MISMATCH
+
+# SIZE-MISMATCH:      warning: {{.*}} mismatch between DT_AARCH64_MEMTAG_GLOBALSSZ (0x1337) and
+# SIZE-MISMATCH-SAME: SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC section size (0xa)
+
+#########################################
+## Ensure that GLOBALSSZ tag is stored in a 64-bit integer even on 32-bit machines.
+#########################################
+
+# RUN: yaml2obj --docnum=3 %s -o %t \
+# RUN:   -D DT_AARCH64_MEMTAG_GLOBALSSZ=0x100000001 \
+# RUN:   -D GLOBALS_SECTION_CONTENTS=11
+# RUN: llvm-readelf --memtag %t 2>&1 | FileCheck %s --check-prefixes=SIZE-MISMATCH2
+# RUN: llvm-readobj --memtag %t 2>&1 | FileCheck %s --check-prefixes=SIZE-MISMATCH2
+
+# SIZE-MISMATCH2:      warning: {{.*}} mismatch between DT_AARCH64_MEMTAG_GLOBALSSZ (0x100000001) and
+# SIZE-MISMATCH2-SAME: SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC section size (0x1)
+
+#########################################
+## Ensure that we fail if DT_AARCH64_MEMTAG_GLOBALS doesn't agree with the address of the section.
+#########################################
+
+# RUN: yaml2obj --docnum=3 %s -o %t \
+# RUN:   -D DT_AARCH64_MEMTAG_GLOBALS=0xdeadbeef123 \
+# RUN:   -D DT_AARCH64_MEMTAG_GLOBALSSZ=10 \
+# RUN:   -D GLOBALS_SECTION_CONTENTS=00000000000000000000
+# RUN: llvm-readelf --memtag %t 2>&1 | FileCheck %s --check-prefixes=BAD-SECTION
+# RUN: llvm-readobj --memtag %t 2>&1 | FileCheck %s --check-prefixes=BAD-SECTION
+
+# BAD-SECTION:      warning: {{.*}} SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC section was unexpectedly at
+# BAD-SECTION-SAME: 0xdeadbeef, when DT_AARCH64_MEMTAG_GLOBALS says it should be at 0xdeadbeef123
+
+#########################################
+## Ensure that we fail if the ULEB-encoded globals stream can't be decoded.
+#########################################
+
+# RUN: yaml2obj --docnum=3 %s -o %t \
+# RUN:   -D DT_AARCH64_MEMTAG_GLOBALSSZ=3 \
+# RUN:   -D GLOBALS_SECTION_CONTENTS=808080
+# RUN: llvm-readelf --memtag %t 2>&1 | FileCheck %s --check-prefixes=BAD-STREAM1
+# RUN: llvm-readobj --memtag %t 2>&1 | FileCheck %s --check-prefixes=BAD-STREAM1
+
+# BAD-STREAM1:      warning: {{.*}} error decoding distance uleb, 3 byte(s) into
+# BAD-STREAM1-SAME: SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC
+
+# RUN: yaml2obj --docnum=3 %s -o %t \
+# RUN:   -D DT_AARCH64_MEMTAG_GLOBALSSZ=2 \
+# RUN:   -D GLOBALS_SECTION_CONTENTS=0080
+# RUN: llvm-readelf --memtag %t 2>&1 | FileCheck %s --check-prefixes=BAD-STREAM2
+# RUN: llvm-readobj --memtag %t 2>&1 | FileCheck %s --check-prefixes=BAD-STREAM2
+
+# BAD-STREAM2:      warning: {{.*}} error decoding size-only uleb, 1 byte(s) into
+# BAD-STREAM2-SAME: SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC
+
+# RUN: yaml2obj --docnum=3 %s -o %t \
+# RUN:   -D SH_OFFSET=0xffff \
+# RUN:   -D DT_AARCH64_MEMTAG_GLOBALSSZ=10 \
+# RUN:   -D GLOBALS_SECTION_CONTENTS=00000000000000000000
+# RUN: llvm-readelf --memtag %t 2>&1 | FileCheck %s --check-prefixes=UNREADABLE-SECTION
+# RUN: llvm-readobj --memtag %t 2>&1 | FileCheck %s --check-prefixes=UNREADABLE-SECTION
+
+# UNREADABLE-SECTION:      couldn't get SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC section contents: section
+# UNREADABLE-SECTION-SAME: [index 2] has a sh_offset (0xffff) + sh_size (0xa) that is greater than
+# UNREADABLE-SECTION-SAME: the file size
+
+#########################################
+## --docnum=3
+#########################################
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_AARCH64_MEMTAG_MODE
+        Value: 0
+      - Tag:   DT_AARCH64_MEMTAG_HEAP
+        Value: 0
+      - Tag:   DT_AARCH64_MEMTAG_STACK
+        Value: 0
+      - Tag:   DT_AARCH64_MEMTAG_GLOBALS
+        Value: [[DT_AARCH64_MEMTAG_GLOBALS=0xdeadbeef]]
+      - Tag:   DT_AARCH64_MEMTAG_GLOBALSSZ
+        Value: [[DT_AARCH64_MEMTAG_GLOBALSSZ]]
+  - Name:         .memtag.globals.dynamic
+    Type:         SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC
+    Flags:        [ SHF_ALLOC ]
+    Address:      0xdeadbeef
+    AddressAlign: 0x4
+    Content:      [[GLOBALS_SECTION_CONTENTS]]
+    ShOffset:     [[SH_OFFSET=<none>]]

@@ -1,0 +1,344 @@
+# RUN: llvm-mc -triple x86_64 -disassemble %s | FileCheck %s --check-prefix=ATT
+# RUN: llvm-mc -triple x86_64 -disassemble -output-asm-variant=1 %s | FileCheck %s --check-prefix=INTEL
+
+## AddRegFrm
+
+# ATT:   movl	$1, %r16d
+# INTEL: mov	r16d, 1
+0xd5,0x10,0xb8,0x01,0x00,0x00,0x00
+
+## MRMSrcReg
+
+# ATT:   movslq	%r16d, %rax
+# INTEL: movsxd	rax, r16d
+0xd5,0x18,0x63,0xc0
+
+# ATT:   movslq	%eax, %r16
+# INTEL: movsxd	r16, eax
+0xd5,0x48,0x63,0xc0
+
+# ATT:   movslq	%r16d, %r17
+# INTEL: movsxd	r17, r16d
+0xd5,0x58,0x63,0xc8
+
+## MRMSrcRegCC
+
+# ATT:   cmovll	%r16d, %eax
+# INTEL: cmovl	eax, r16d
+0xd5,0x90,0x4c,0xc0
+
+# ATT:   cmovll	%eax, %r16d
+# INTEL: cmovl	r16d, eax
+0xd5,0xc0,0x4c,0xc0
+
+# ATT:   cmovll	%r16d, %r17d
+# INTEL: cmovl	r17d, r16d
+0xd5,0xd0,0x4c,0xc8
+
+## MRMSrcMem
+
+# ATT:   imull	(%r16,%rax), %ebx
+# INTEL: imul	ebx, dword ptr [r16 + rax]
+0xd5,0x90,0xaf,0x1c,0x00
+
+# ATT:   imull	(%rax,%r16), %ebx
+# INTEL: imul	ebx, dword ptr [rax + r16]
+0xd5,0xa0,0xaf,0x1c,0x00
+
+# ATT:   imull	(%rax,%rbx), %r16d
+# INTEL: imul	r16d, dword ptr [rax + rbx]
+0xd5,0xc0,0xaf,0x04,0x18
+
+# ATT:   imull	(%r16,%r17), %eax
+# INTEL: imul	eax, dword ptr [r16 + r17]
+0xd5,0xb0,0xaf,0x04,0x08
+
+# ATT:   imull	(%rax,%r16), %r17d
+# INTEL: imul	r17d, dword ptr [rax + r16]
+0xd5,0xe0,0xaf,0x0c,0x00
+
+# ATT:   imull	(%r16,%rax), %r17d
+# INTEL: imul	r17d, dword ptr [r16 + rax]
+0xd5,0xd0,0xaf,0x0c,0x00
+
+# ATT:   imull	(%r16,%r17), %r18d
+# INTEL: imul	r18d, dword ptr [r16 + r17]
+0xd5,0xf0,0xaf,0x14,0x08
+
+## MRMSrcMemCC
+
+# ATT:   cmovll	(%r16,%rax), %ebx
+# INTEL: cmovl	ebx, dword ptr [r16 + rax]
+0xd5,0x90,0x4c,0x1c,0x00
+
+# ATT:   cmovll	(%rax,%r16), %ebx
+# INTEL: cmovl	ebx, dword ptr [rax + r16]
+0xd5,0xa0,0x4c,0x1c,0x00
+
+# ATT:   cmovll	(%rax,%rbx), %r16d
+# INTEL: cmovl	r16d, dword ptr [rax + rbx]
+0xd5,0xc0,0x4c,0x04,0x18
+
+# ATT:   cmovll	(%r16,%r17), %eax
+# INTEL: cmovl	eax, dword ptr [r16 + r17]
+0xd5,0xb0,0x4c,0x04,0x08
+
+# ATT:   cmovll	(%rax,%r16), %r17d
+# INTEL: cmovl	r17d, dword ptr [rax + r16]
+0xd5,0xe0,0x4c,0x0c,0x00
+
+# ATT:   cmovll	(%r16,%rax), %r17d
+# INTEL: cmovl	r17d, dword ptr [r16 + rax]
+0xd5,0xd0,0x4c,0x0c,0x00
+
+# ATT:   cmovll	(%r16,%r17), %r18d
+# INTEL: cmovl	r18d, dword ptr [r16 + r17]
+0xd5,0xf0,0x4c,0x14,0x08
+
+## MRMDestReg
+
+# ATT:   movl	%eax, %r16d
+# INTEL: mov	r16d, eax
+0xd5,0x10,0x89,0xc0
+
+# ATT:   movl	%r16d, %eax
+# INTEL: mov	eax, r16d
+0xd5,0x40,0x89,0xc0
+
+# ATT:   movl	%r16d, %r17d
+# INTEL: mov	r17d, r16d
+0xd5,0x50,0x89,0xc1
+
+## MRMDestMem
+
+# ATT:   movl	%ebx, (%r16,%rax)
+# INTEL: mov	dword ptr [r16 + rax], ebx
+0xd5,0x10,0x89,0x1c,0x00
+
+# ATT:   movl	%ebx, (%rax,%r16)
+# INTEL: mov	dword ptr [rax + r16], ebx
+0xd5,0x20,0x89,0x1c,0x00
+
+# ATT:   movl	%r16d, (%rax,%rbx)
+# INTEL: mov	dword ptr [rax + rbx], r16d
+0xd5,0x40,0x89,0x04,0x18
+
+# ATT:   movl	%eax, (%r16,%r17)
+# INTEL: mov	dword ptr [r16 + r17], eax
+0xd5,0x30,0x89,0x04,0x08
+
+# ATT:   movl	%r17d, (%rax,%r16)
+# INTEL: mov	dword ptr [rax + r16], r17d
+0xd5,0x60,0x89,0x0c,0x00
+
+# ATT:   movl	%r17d, (%r16,%rax)
+# INTEL: mov	dword ptr [r16 + rax], r17d
+0xd5,0x50,0x89,0x0c,0x00
+
+# ATT:   movl	%r18d, (%r16,%r17)
+# INTEL: mov	dword ptr [r16 + r17], r18d
+0xd5,0x70,0x89,0x14,0x08
+
+# ATT:   movb    %bpl, (%r16,%r14)
+# INTEL: mov    byte ptr [r16 + r14], bpl
+0xd5,0x12,0x88,0x2c,0x30
+
+## MRMXmCC
+
+# ATT:   sete	(%rax,%r16)
+# INTEL: sete	byte ptr [rax + r16]
+0xd5,0xa0,0x94,0x04,0x00
+
+# ATT:   sete	(%r16,%rax)
+# INTEL: sete	byte ptr [r16 + rax]
+0xd5,0x90,0x94,0x04,0x00
+
+# ATT:   sete	(%r16,%r17)
+# INTEL: sete	byte ptr [r16 + r17]
+0xd5,0xb0,0x94,0x04,0x08
+
+## MRMXm
+
+# ATT:   nopl	(%rax,%r16)
+# INTEL: nop	dword ptr [rax + r16]
+0xd5,0xa0,0x1f,0x04,0x00
+
+# ATT:   nopl	(%r16,%rax)
+# INTEL: nop	dword ptr [r16 + rax]
+0xd5,0x90,0x1f,0x04,0x00
+
+# ATT:   nopl	(%r16,%r17)
+# INTEL: nop	dword ptr [r16 + r17]
+0xd5,0xb0,0x1f,0x04,0x08
+
+## MRM0m
+
+# ATT:   incl	(%rax,%r16)
+# INTEL: inc	dword ptr [rax + r16]
+0xd5,0x20,0xff,0x04,0x00
+
+# ATT:   incl	(%r16,%rax)
+# INTEL: inc	dword ptr [r16 + rax]
+0xd5,0x10,0xff,0x04,0x00
+
+# ATT:   incl	(%r16,%r17)
+# INTEL: inc	dword ptr [r16 + r17]
+0xd5,0x30,0xff,0x04,0x08
+
+## MRM1m
+
+# ATT:   decl	(%rax,%r16)
+# INTEL: dec	dword ptr [rax + r16]
+0xd5,0x20,0xff,0x0c,0x00
+
+# ATT:   decl	(%r16,%rax)
+# INTEL: dec	dword ptr [r16 + rax]
+0xd5,0x10,0xff,0x0c,0x00
+
+# ATT:   decl	(%r16,%r17)
+# INTEL: dec	dword ptr [r16 + r17]
+0xd5,0x30,0xff,0x0c,0x08
+
+## MRM2m
+
+# ATT:   notl	(%rax,%r16)
+# INTEL: not	dword ptr [rax + r16]
+0xd5,0x20,0xf7,0x14,0x00
+
+# ATT:   notl	(%r16,%rax)
+# INTEL: not	dword ptr [r16 + rax]
+0xd5,0x10,0xf7,0x14,0x00
+
+# ATT:   notl	(%r16,%r17)
+# INTEL: not	dword ptr [r16 + r17]
+0xd5,0x30,0xf7,0x14,0x08
+
+## MRM3m
+
+# ATT:   negl	(%rax,%r16)
+# INTEL: neg	dword ptr [rax + r16]
+0xd5,0x20,0xf7,0x1c,0x00
+
+# ATT:   negl	(%r16,%rax)
+# INTEL: neg	dword ptr [r16 + rax]
+0xd5,0x10,0xf7,0x1c,0x00
+
+# ATT:   negl	(%r16,%r17)
+# INTEL: neg	dword ptr [r16 + r17]
+0xd5,0x30,0xf7,0x1c,0x08
+
+## MRM4m
+
+# ATT:   mull	(%rax,%r16)
+# INTEL: mul	dword ptr [rax + r16]
+0xd5,0x20,0xf7,0x24,0x00
+
+# ATT:   mull	(%r16,%rax)
+# INTEL: mul	dword ptr [r16 + rax]
+0xd5,0x10,0xf7,0x24,0x00
+
+# ATT:   mull	(%r16,%r17)
+# INTEL: mul	dword ptr [r16 + r17]
+0xd5,0x30,0xf7,0x24,0x08
+
+## MRM5m
+
+# ATT:   imull	(%rax,%r16)
+# INTEL: imul	dword ptr [rax + r16]
+0xd5,0x20,0xf7,0x2c,0x00
+
+# ATT:   imull	(%r16,%rax)
+# INTEL: imul	dword ptr [r16 + rax]
+0xd5,0x10,0xf7,0x2c,0x00
+
+# ATT:   imull	(%r16,%r17)
+# INTEL: imul	dword ptr [r16 + r17]
+0xd5,0x30,0xf7,0x2c,0x08
+
+## MRM6m
+
+# ATT:   divl	(%rax,%r16)
+# INTEL: div	dword ptr [rax + r16]
+0xd5,0x20,0xf7,0x34,0x00
+
+# ATT:   divl	(%r16,%rax)
+# INTEL: div	dword ptr [r16 + rax]
+0xd5,0x10,0xf7,0x34,0x00
+
+# ATT:   divl	(%r16,%r17)
+# INTEL: div	dword ptr [r16 + r17]
+0xd5,0x30,0xf7,0x34,0x08
+
+## MRM7m
+
+# ATT:   idivl	(%rax,%r16)
+# INTEL: idiv	dword ptr [rax + r16]
+0xd5,0x20,0xf7,0x3c,0x00
+
+# ATT:   idivl	(%r16,%rax)
+# INTEL: idiv	dword ptr [r16 + rax]
+0xd5,0x10,0xf7,0x3c,0x00
+
+# ATT:   idivl	(%r16,%r17)
+# INTEL: idiv	dword ptr [r16 + r17]
+0xd5,0x30,0xf7,0x3c,0x08
+
+## MRMXrCC
+
+# ATT:   sete	%r16b
+# INTEL: sete	r16b
+0xd5,0x90,0x94,0xc0
+
+## MRMXr
+
+# ATT:   nopl	%r16d
+# INTEL: nop	r16d
+0xd5,0x90,0x1f,0xc0
+
+## MRM0r
+
+# ATT:   incl	%r16d
+# INTEL: inc	r16d
+0xd5,0x10,0xff,0xc0
+
+## MRM1r
+
+# ATT:   decl	%r16d
+# INTEL: dec	r16d
+0xd5,0x10,0xff,0xc8
+
+## MRM2r
+
+# ATT:   notl	%r16d
+# INTEL: not	r16d
+0xd5,0x10,0xf7,0xd0
+
+## MRM3r
+
+# ATT:   negl	%r16d
+# INTEL: neg	r16d
+0xd5,0x10,0xf7,0xd8
+
+## MRM4r
+
+# ATT:   mull	%r16d
+# INTEL: mul	r16d
+0xd5,0x10,0xf7,0xe0
+
+## MRM5r
+
+# ATT:   imull	%r16d
+# INTEL: imul	r16d
+0xd5,0x10,0xf7,0xe8
+
+## MRM6r
+
+# ATT:   divl	%r16d
+# INTEL: div	r16d
+0xd5,0x10,0xf7,0xf0
+
+## MRM7r
+
+# ATT:   idivl	%r16d
+# INTEL: idiv	r16d
+0xd5,0x10,0xf7,0xf8

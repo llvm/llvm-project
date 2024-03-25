@@ -6,8 +6,9 @@ declare void @llvm.experimental.guard(i1, ...)
 ; Regression test. If %flag is false then %s == 0 and guard should be triggered.
 define i32 @a(i1 %flag, i32 %X) nounwind readnone {
 ; CHECK-LABEL: @a(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X:%.*]], 0
-; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[CMP]]) #2 [ "deopt"() ]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = select i1 [[FLAG:%.*]], i1 [[CMP1]], i1 false
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[CMP]]) #[[ATTR1:[0-9]+]] [ "deopt"() ]
 ; CHECK-NEXT:    [[R:%.*]] = sdiv i32 100, [[X]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;

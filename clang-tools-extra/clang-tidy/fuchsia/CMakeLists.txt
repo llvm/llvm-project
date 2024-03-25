@@ -20,6 +20,7 @@ add_clang_library(clangTidyFuchsiaModule
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangTidyFuchsiaModule

@@ -7,4 +7,4 @@
 # CHECK-NEXT: Existing pattern: %{foo}
 #  CHECK-NOT: Existing pattern:
 
-# CHECK: Unresolved: 1
+# CHECK: Unresolved: 1 {{\([0-9]*.[0-9]*%\)}}

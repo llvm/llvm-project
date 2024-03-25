@@ -11,7 +11,7 @@
 
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, pthread_mutexattr_init, (pthread_mutexattr_t * attr)) {
   // Set the default attributes and mark the attribute object as initiliazed
@@ -20,4 +20,4 @@ LLVM_LIBC_FUNCTION(int, pthread_mutexattr_init, (pthread_mutexattr_t * attr)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

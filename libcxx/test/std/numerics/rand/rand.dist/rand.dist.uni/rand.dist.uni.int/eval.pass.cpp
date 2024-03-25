@@ -15,21 +15,16 @@
 
 // template<class _URNG> result_type operator()(_URNG& g);
 
-#include <random>
 #include <cassert>
 #include <climits>
 #include <cstddef>
+#include <cstdint>
 #include <limits>
 #include <numeric>
+#include <random>
 #include <vector>
 
 #include "test_macros.h"
-
-// The __int128 conversions to/from floating point crash on MinGW on x86_64.
-// This is fixed in Clang 14 by https://reviews.llvm.org/D110413.
-#if defined(__x86_64__) && defined(__MINGW32__) && defined(__clang_major__) && __clang_major__ < 14
- #define TEST_BUGGY_I128_FP
-#endif
 
 template <class T>
 T sqr(T x) {
@@ -123,10 +118,10 @@ int main(int, char**)
     test_statistics<short, std::minstd_rand0>(SHRT_MIN, SHRT_MAX);
 
 #if defined(_LIBCPP_VERSION) // extension
-    test_statistics<int8_t, std::minstd_rand0>();
-    test_statistics<uint8_t, std::minstd_rand0>();
+    test_statistics<std::int8_t, std::minstd_rand0>();
+    test_statistics<std::uint8_t, std::minstd_rand0>();
 
-#if !defined(TEST_HAS_NO_INT128) && !defined(TEST_BUGGY_I128_FP)
+#if !defined(TEST_HAS_NO_INT128)
     test_statistics<__int128_t, std::minstd_rand0>();
     test_statistics<__uint128_t, std::minstd_rand0>();
 

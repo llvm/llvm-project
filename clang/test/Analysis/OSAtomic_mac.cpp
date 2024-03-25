@@ -3,7 +3,7 @@
 
 // Test handling of OSAtomicCompareAndSwap when C++ inserts "no-op" casts and we
 // do a forced load and binding to the environment on an expression that would regularly
-// not have an environment binding.  This previously triggered a crash (<rdar://problem/9339920>).
+// not have an environment binding.  This previously triggered a crash.
 // NOTE: It is critical that the function called is OSAtomicCompareAndSwapIntBarrier.
 bool OSAtomicCompareAndSwapIntBarrier( int __oldValue, int __newValue, volatile int *__theValue ) ;
 static int _rdar9339920_x = 0;

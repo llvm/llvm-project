@@ -42,6 +42,10 @@ class LoongArchSubtarget : public LoongArchGenSubtargetInfo {
   bool HasLaGlobalWithPcrel = false;
   bool HasLaGlobalWithAbs = false;
   bool HasLaLocalWithAbs = false;
+  bool HasUAL = false;
+  bool HasLinkerRelax = false;
+  bool HasExpAutoVec = false;
+  bool HasFrecipe = false;
   unsigned GRLen = 32;
   MVT GRLenVT = MVT::i32;
   LoongArchABI::ABI TargetABI = LoongArchABI::ABI_Unknown;
@@ -51,6 +55,10 @@ class LoongArchSubtarget : public LoongArchGenSubtargetInfo {
   LoongArchTargetLowering TLInfo;
   SelectionDAGTargetInfo TSInfo;
 
+  Align PrefFunctionAlignment;
+  Align PrefLoopAlignment;
+  unsigned MaxBytesForAlignment;
+
   /// Initializes using the passed in CPU and feature strings so that we can
   /// use initializer lists for subtarget initialization.
   LoongArchSubtarget &initializeSubtargetDependencies(const Triple &TT,
@@ -58,6 +66,9 @@ class LoongArchSubtarget : public LoongArchGenSubtargetInfo {
                                                       StringRef TuneCPU,
                                                       StringRef FS,
                                                       StringRef ABIName);
+
+  /// Initialize properties based on the selected processor family.
+  void initializeProperties(StringRef TuneCPU);
 
 public:
   // Initializes the data members to match that of the specified triple.
@@ -91,9 +102,18 @@ public:
   bool hasLaGlobalWithPcrel() const { return HasLaGlobalWithPcrel; }
   bool hasLaGlobalWithAbs() const { return HasLaGlobalWithAbs; }
   bool hasLaLocalWithAbs() const { return HasLaLocalWithAbs; }
+  bool hasUAL() const { return HasUAL; }
+  bool hasLinkerRelax() const { return HasLinkerRelax; }
+  bool hasExpAutoVec() const { return HasExpAutoVec; }
+  bool hasFrecipe() const { return HasFrecipe; }
   MVT getGRLenVT() const { return GRLenVT; }
   unsigned getGRLen() const { return GRLen; }
   LoongArchABI::ABI getTargetABI() const { return TargetABI; }
+  bool isXRaySupported() const override { return is64Bit(); }
+  Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
+  Align getPrefLoopAlignment() const { return PrefLoopAlignment; }
+  unsigned getMaxBytesForAlignment() const { return MaxBytesForAlignment; }
+  bool enableMachineScheduler() const override { return true; }
 };
 } // end namespace llvm
 

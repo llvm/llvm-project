@@ -40,7 +40,6 @@ registers:
 liveins:
   - { reg: '$r0', virtual-reg: '%8' }
   - { reg: '$r1', virtual-reg: '%9' }
-liveins:         []
 body:             |
   ; CHECK-LABEL: name: g
   ; CHECK: bb.0:

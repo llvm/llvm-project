@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -filetype=asm %s | FileCheck %s
+# RUN: llvm-mc -triple=hexagon -filetype=asm %s | FileCheck %s
 #
 
          r1:0=s75:74

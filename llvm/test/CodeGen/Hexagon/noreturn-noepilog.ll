@@ -1,12 +1,10 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
 ;
-; XFAIL: *
-; This test is failing after post-ra machine sinking.
 ;
 ; Check that no epilogue is inserted after a noreturn call.
 ;
 ; CHECK-LABEL: f1:
-; CHECK: allocframe(r29,#0):raw
+; CHECK: allocframe
 ; CHECK-NOT: deallocframe
 
 target triple = "hexagon"

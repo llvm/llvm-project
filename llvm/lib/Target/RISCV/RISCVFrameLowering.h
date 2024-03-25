@@ -1,4 +1,4 @@
-//===-- RISCVFrameLowering.h - Define frame lowering for RISCV -*- C++ -*--===//
+//===-- RISCVFrameLowering.h - Define frame lowering for RISC-V -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This class implements RISCV-specific bits of TargetFrameLowering class.
+// This class implements RISC-V specific bits of TargetFrameLowering class.
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,12 +21,7 @@ class RISCVSubtarget;
 
 class RISCVFrameLowering : public TargetFrameLowering {
 public:
-  explicit RISCVFrameLowering(const RISCVSubtarget &STI)
-      : TargetFrameLowering(StackGrowsDown,
-                            /*StackAlignment=*/Align(16),
-                            /*LocalAreaOffset=*/0,
-                            /*TransientStackAlignment=*/Align(16)),
-        STI(STI) {}
+  explicit RISCVFrameLowering(const RISCVSubtarget &STI);
 
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
@@ -50,6 +45,12 @@ public:
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
+
+  bool assignCalleeSavedSpillSlots(MachineFunction &MF,
+                                   const TargetRegisterInfo *TRI,
+                                   std::vector<CalleeSavedInfo> &CSI,
+                                   unsigned &MinCSFrameIndex,
+                                   unsigned &MaxCSFrameIndex) const override;
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  ArrayRef<CalleeSavedInfo> CSI,
@@ -61,7 +62,7 @@ public:
                               const TargetRegisterInfo *TRI) const override;
 
   // Get the first stack adjustment amount for SplitSPAdjust.
-  // Return 0 if we don't want to to split the SP adjustment in prologue and
+  // Return 0 if we don't want to split the SP adjustment in prologue and
   // epilogue.
   uint64_t getFirstSPAdjustAmount(const MachineFunction &MF) const;
 
@@ -74,7 +75,7 @@ public:
   TargetStackID::Value getStackIDForScalableVectors() const override;
 
   bool isStackIdSafeForLocalArea(unsigned StackId) const override {
-    // We don't support putting RISCV Vector objects into the pre-allocated
+    // We don't support putting RISC-V Vector objects into the pre-allocated
     // local frame block at the moment.
     return StackId != TargetStackID::ScalableVector;
   }

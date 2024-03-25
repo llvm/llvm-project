@@ -10,8 +10,8 @@ entry:
 ; CHECK-LABEL: foobar:
   %retval = alloca i32, align 4
   %x.addr = alloca i32, align 4
-  %a = alloca %struct.x, align 4
-  %c = alloca ptr, align 4
+  %a = alloca %struct.x, align 8
+  %c = alloca ptr, align 8
   store i32 %x, ptr %x.addr, align 4
   %0 = load i32, ptr %x.addr, align 4
   store i32 %0, ptr %a, align 4

@@ -68,7 +68,9 @@ public:
 
   void SetLanguage(lldb::LanguageType language);
 
+#ifndef SWIG
   void SetCancelCallback(lldb::ExpressionCancelCallback callback, void *baton);
+#endif
 
   bool GetGenerateDebugInfo();
 

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -march=hexagon -O2 < %s -pipeliner-experimental-cg=true -verify-machineinstrs | FileCheck %s
 
 ; We do not pipeline sigma yet, but the non-pipelined version
 ; with good scheduling is pretty fast. The compiler generates

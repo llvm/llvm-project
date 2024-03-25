@@ -12,12 +12,13 @@
 
 #include "PPC.h"
 #include "PPCInstrInfo.h"
+#include "PPCMachineFunctionInfo.h"
 #include "PPCRegisterBankInfo.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -54,6 +55,8 @@ private:
 
   bool selectZExt(MachineInstr &I, MachineBasicBlock &MBB,
                   MachineRegisterInfo &MRI) const;
+  bool selectConstantPool(MachineInstr &I, MachineBasicBlock &MBB,
+                          MachineRegisterInfo &MRI) const;
 
   std::optional<bool> selectI64ImmDirect(MachineInstr &I,
                                          MachineBasicBlock &MBB,
@@ -62,6 +65,7 @@ private:
   bool selectI64Imm(MachineInstr &I, MachineBasicBlock &MBB,
                     MachineRegisterInfo &MRI) const;
 
+  const PPCTargetMachine &TM;
   const PPCSubtarget &STI;
   const PPCInstrInfo &TII;
   const PPCRegisterInfo &TRI;
@@ -85,7 +89,8 @@ private:
 PPCInstructionSelector::PPCInstructionSelector(const PPCTargetMachine &TM,
                                                const PPCSubtarget &STI,
                                                const PPCRegisterBankInfo &RBI)
-    : STI(STI), TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI),
+    : TM(TM), STI(STI), TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()),
+      RBI(RBI),
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "PPCGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_INIT
@@ -107,6 +112,10 @@ static const TargetRegisterClass *getRegClass(LLT Ty, const RegisterBank *RB) {
       return &PPC::F4RCRegClass;
     if (Ty.getSizeInBits() == 64)
       return &PPC::F8RCRegClass;
+  }
+  if (RB->getID() == PPC::VECRegBankID) {
+    if (Ty.getSizeInBits() == 128)
+      return &PPC::VSRCRegClass;
   }
   if (RB->getID() == PPC::CRRegBankID) {
     if (Ty.getSizeInBits() == 1)
@@ -636,6 +645,66 @@ bool PPCInstructionSelector::selectI64Imm(MachineInstr &I,
   return true;
 }
 
+bool PPCInstructionSelector::selectConstantPool(
+    MachineInstr &I, MachineBasicBlock &MBB, MachineRegisterInfo &MRI) const {
+  const DebugLoc &DbgLoc = I.getDebugLoc();
+  MachineFunction *MF = MBB.getParent();
+
+  // TODO: handle 32-bit.
+  // TODO: Enabling floating point constant pool selection on AIX requires
+  // global isel on big endian target enabled first.
+  // See CallLowering::enableBigEndian().
+  if (!STI.isPPC64() || !STI.isLittleEndian())
+    return false;
+
+  MF->getInfo<PPCFunctionInfo>()->setUsesTOCBasePtr();
+
+  const Register DstReg = I.getOperand(0).getReg();
+  unsigned CPI = I.getOperand(1).getIndex();
+
+  // Address stored in the TOC entry. This is related to code model and the ABI
+  // we are currently using. For now we only handle 64-bit Linux LE. PowerPC
+  // only supports small, medium and large code model.
+  const CodeModel::Model CModel = TM.getCodeModel();
+  assert(!(CModel == CodeModel::Tiny || CModel == CodeModel::Kernel) &&
+         "PowerPC doesn't support tiny or kernel code models.");
+
+  const MCRegister TOCReg = STI.getTOCPointerRegister();
+  MachineMemOperand *MMO = MF->getMachineMemOperand(
+      MachinePointerInfo::getGOT(*MF), MachineMemOperand::MOLoad,
+      MRI.getType(DstReg), MF->getDataLayout().getPointerABIAlignment(0));
+
+  MachineInstr *MI = nullptr;
+  // For now we only handle 64-bit Linux.
+  if (CModel == CodeModel::Small) {
+    // For small code model, generate LDtocCPT(CPI, X2).
+    MI = BuildMI(MBB, I, DbgLoc, TII.get(PPC::LDtocCPT), DstReg)
+             .addConstantPoolIndex(CPI)
+             .addReg(TOCReg)
+             .addMemOperand(MMO);
+  } else {
+    Register HaAddrReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    BuildMI(MBB, I, DbgLoc, TII.get(PPC::ADDIStocHA8), HaAddrReg)
+        .addReg(TOCReg)
+        .addConstantPoolIndex(CPI);
+
+    if (CModel == CodeModel::Large)
+      // For large code model, generate LDtocL(CPI, ADDIStocHA8(X2, CPI))
+      MI = BuildMI(MBB, I, DbgLoc, TII.get(PPC::LDtocL), DstReg)
+               .addConstantPoolIndex(CPI)
+               .addReg(HaAddrReg)
+               .addMemOperand(MMO);
+    else
+      // For medium code model, generate ADDItocL8(CPI, ADDIStocHA8(X2, CPI))
+      MI = BuildMI(MBB, I, DbgLoc, TII.get(PPC::ADDItocL8), DstReg)
+               .addReg(HaAddrReg)
+               .addConstantPoolIndex(CPI);
+  }
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+}
+
 bool PPCInstructionSelector::select(MachineInstr &I) {
   auto &MBB = *I.getParent();
   auto &MF = *MBB.getParent();
@@ -670,7 +739,7 @@ bool PPCInstructionSelector::select(MachineInstr &I) {
     auto SelectLoadStoreAddressingMode = [&]() -> MachineInstr * {
       const unsigned NewOpc = selectLoadStoreOp(
           I.getOpcode(), RBI.getRegBank(LdSt.getReg(0), MRI, TRI)->getID(),
-          LdSt.getMemSizeInBits());
+          LdSt.getMemSizeInBits().getValue());
 
       if (NewOpc == I.getOpcode())
         return nullptr;
@@ -704,6 +773,8 @@ bool PPCInstructionSelector::select(MachineInstr &I) {
     return selectZExt(I, MBB, MRI);
   case TargetOpcode::G_CONSTANT:
     return selectI64Imm(I, MBB, MRI);
+  case TargetOpcode::G_CONSTANT_POOL:
+    return selectConstantPool(I, MBB, MRI);
   }
   return false;
 }

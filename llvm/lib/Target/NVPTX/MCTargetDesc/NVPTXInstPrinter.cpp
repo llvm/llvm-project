@@ -60,12 +60,6 @@ void NVPTXInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
   case 6:
     OS << "%fd";
     break;
-  case 7:
-    OS << "%h";
-    break;
-  case 8:
-    OS << "%hh";
-    break;
   }
 
   unsigned VReg = Reg.id() & 0x0FFFFFFF;
@@ -88,7 +82,7 @@ void NVPTXInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     unsigned Reg = Op.getReg();
     printRegName(O, Reg);
   } else if (Op.isImm()) {
-    O << markup("<imm:") << formatImm(Op.getImm()) << markup(">");
+    markup(O, Markup::Immediate) << formatImm(Op.getImm());
   } else {
     assert(Op.isExpr() && "Unknown operand kind in printOperand");
     Op.getExpr()->print(O, &MAI);
@@ -314,4 +308,35 @@ void NVPTXInstPrinter::printProtoIdent(const MCInst *MI, int OpNum,
   const MCExpr *Expr = Op.getExpr();
   const MCSymbol &Sym = cast<MCSymbolRefExpr>(Expr)->getSymbol();
   O << Sym.getName();
+}
+
+void NVPTXInstPrinter::printPrmtMode(const MCInst *MI, int OpNum,
+                                     raw_ostream &O, const char *Modifier) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  int64_t Imm = MO.getImm();
+
+  switch (Imm) {
+  default:
+    return;
+  case NVPTX::PTXPrmtMode::NONE:
+    break;
+  case NVPTX::PTXPrmtMode::F4E:
+    O << ".f4e";
+    break;
+  case NVPTX::PTXPrmtMode::B4E:
+    O << ".b4e";
+    break;
+  case NVPTX::PTXPrmtMode::RC8:
+    O << ".rc8";
+    break;
+  case NVPTX::PTXPrmtMode::ECL:
+    O << ".ecl";
+    break;
+  case NVPTX::PTXPrmtMode::ECR:
+    O << ".ecr";
+    break;
+  case NVPTX::PTXPrmtMode::RC16:
+    O << ".rc16";
+    break;
+  }
 }

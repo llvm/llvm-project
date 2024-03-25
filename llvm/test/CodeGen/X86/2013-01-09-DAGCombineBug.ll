@@ -48,16 +48,74 @@ bb:
   br label %bb3
 
 bb1:                                              ; No predecessors!
-  br i1 icmp ult (i64 xor (i64 zext (i1 trunc (i192 lshr (i192 or (i192 shl (i192 zext (i64 trunc (i128 lshr (i128 trunc (i384 lshr (i384 or (i384 shl (i384 zext (i64 ptrtoint (ptr @global to i64) to i384), i384 192), i384 425269881901436522087161771558896140289), i384 128) to i128), i128 64) to i64) to i192), i192 64), i192 1), i192 128) to i1) to i64), i64 1), i64 1), label %bb2, label %bb3
+  %constexpr = ptrtoint ptr @global to i64
+  %constexpr1 = zext i64 %constexpr to i384
+  %constexpr2 = shl i384 %constexpr1, 192
+  %constexpr3 = or i384 %constexpr2, 425269881901436522087161771558896140289
+  %constexpr4 = lshr i384 %constexpr3, 128
+  %constexpr5 = trunc i384 %constexpr4 to i128
+  %constexpr6 = lshr i128 %constexpr5, 64
+  %constexpr7 = trunc i128 %constexpr6 to i64
+  %constexpr8 = zext i64 %constexpr7 to i192
+  %constexpr9 = shl i192 %constexpr8, 64
+  %constexpr10 = or i192 %constexpr9, 1
+  %constexpr11 = lshr i192 %constexpr10, 128
+  %constexpr12 = trunc i192 %constexpr11 to i1
+  %constexpr13 = zext i1 %constexpr12 to i64
+  %constexpr14 = xor i64 %constexpr13, 1
+  %constexpr15 = icmp ult i64 %constexpr14, 1
+  br i1 %constexpr15, label %bb2, label %bb3
 
 bb2:                                              ; preds = %bb1
   unreachable
 
 bb3:                                              ; preds = %bb1, %bb
-  br i1 xor (i1 trunc (i192 lshr (i192 or (i192 shl (i192 zext (i64 trunc (i128 lshr (i128 trunc (i384 lshr (i384 or (i384 shl (i384 zext (i64 ptrtoint (ptr @global to i64) to i384), i384 192), i384 425269881901436522087161771558896140289), i384 128) to i128), i128 64) to i64) to i192), i192 64), i192 1), i192 128) to i1), i1 trunc (i192 lshr (i192 or (i192 and (i192 or (i192 shl (i192 zext (i64 trunc (i128 lshr (i128 trunc (i384 lshr (i384 or (i384 shl (i384 zext (i64 ptrtoint (ptr @global to i64) to i384), i384 192), i384 425269881901436522087161771558896140289), i384 128) to i128), i128 64) to i64) to i192), i192 64), i192 1), i192 -340282366920938463463374607431768211457), i192 shl (i192 zext (i1 trunc (i192 lshr (i192 or (i192 shl (i192 zext (i64 trunc (i128 lshr (i128 trunc (i384 lshr (i384 or (i384 shl (i384 zext (i64 ptrtoint (ptr @global to i64) to i384), i384 192), i384 425269881901436522087161771558896140289), i384 128) to i128), i128 64) to i64) to i192), i192 64), i192 1), i192 128) to i1) to i192), i192 128)), i192 128) to i1)), label %bb7, label %bb4
+  %constexpr16 = ptrtoint ptr @global to i64
+  %constexpr17 = zext i64 %constexpr16 to i384
+  %constexpr18 = shl i384 %constexpr17, 192
+  %constexpr19 = or i384 %constexpr18, 425269881901436522087161771558896140289
+  %constexpr20 = lshr i384 %constexpr19, 128
+  %constexpr21 = trunc i384 %constexpr20 to i128
+  %constexpr22 = lshr i128 %constexpr21, 64
+  %constexpr23 = trunc i128 %constexpr22 to i64
+  %constexpr24 = zext i64 %constexpr23 to i192
+  %constexpr25 = shl i192 %constexpr24, 64
+  %constexpr26 = or i192 %constexpr25, 1
+  %constexpr27 = lshr i192 %constexpr26, 128
+  %constexpr28 = trunc i192 %constexpr27 to i1
+  %constexpr29 = and i192 %constexpr26, -340282366920938463463374607431768211457
+  %constexpr30 = zext i1 %constexpr28 to i192
+  %constexpr31 = shl i192 %constexpr30, 128
+  %constexpr32 = or i192 %constexpr29, %constexpr31
+  %constexpr33 = lshr i192 %constexpr32, 128
+  %constexpr34 = trunc i192 %constexpr33 to i1
+  %constexpr35 = xor i1 %constexpr28, %constexpr34
+  br i1 %constexpr35, label %bb7, label %phi.constexpr
 
-bb4:                                              ; preds = %bb6, %bb3
-  %tmp = phi i1 [ true, %bb6 ], [ trunc (i192 lshr (i192 or (i192 and (i192 or (i192 shl (i192 zext (i64 trunc (i128 lshr (i128 trunc (i384 lshr (i384 or (i384 shl (i384 zext (i64 ptrtoint (ptr @global to i64) to i384), i384 192), i384 425269881901436522087161771558896140289), i384 128) to i128), i128 64) to i64) to i192), i192 64), i192 1), i192 -340282366920938463463374607431768211457), i192 shl (i192 zext (i1 trunc (i192 lshr (i192 or (i192 shl (i192 zext (i64 trunc (i128 lshr (i128 trunc (i384 lshr (i384 or (i384 shl (i384 zext (i64 ptrtoint (ptr @global to i64) to i384), i384 192), i384 425269881901436522087161771558896140289), i384 128) to i128), i128 64) to i64) to i192), i192 64), i192 1), i192 128) to i1) to i192), i192 128)), i192 128) to i1), %bb3 ]
+phi.constexpr:                                    ; preds = %bb3
+  %constexpr36 = ptrtoint ptr @global to i64
+  %constexpr37 = zext i64 %constexpr36 to i384
+  %constexpr38 = shl i384 %constexpr37, 192
+  %constexpr39 = or i384 %constexpr38, 425269881901436522087161771558896140289
+  %constexpr40 = lshr i384 %constexpr39, 128
+  %constexpr41 = trunc i384 %constexpr40 to i128
+  %constexpr42 = lshr i128 %constexpr41, 64
+  %constexpr43 = trunc i128 %constexpr42 to i64
+  %constexpr44 = zext i64 %constexpr43 to i192
+  %constexpr45 = shl i192 %constexpr44, 64
+  %constexpr46 = or i192 %constexpr45, 1
+  %constexpr47 = and i192 %constexpr46, -340282366920938463463374607431768211457
+  %constexpr48 = lshr i192 %constexpr46, 128
+  %constexpr49 = trunc i192 %constexpr48 to i1
+  %constexpr50 = zext i1 %constexpr49 to i192
+  %constexpr51 = shl i192 %constexpr50, 128
+  %constexpr52 = or i192 %constexpr47, %constexpr51
+  %constexpr53 = lshr i192 %constexpr52, 128
+  %constexpr54 = trunc i192 %constexpr53 to i1
+  br label %bb4
+
+bb4:                                              ; preds = %phi.constexpr, %bb6
+  %tmp = phi i1 [ true, %bb6 ], [ %constexpr54, %phi.constexpr ]
   br i1 false, label %bb8, label %bb5
 
 bb5:                                              ; preds = %bb4

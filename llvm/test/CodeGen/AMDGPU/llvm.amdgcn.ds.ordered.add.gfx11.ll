@@ -1,5 +1,8 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GFX12-ERR %s
+
+; GFX12-ERR: LLVM ERROR: Cannot select: {{.*}} = DS_ORDERED_COUNT
 
 ; FUNC-LABEL: {{^}}ds_ordered_add:
 ; GCN-DAG: v_mov_b32_e32 v[[INCR:[0-9]+]], 31

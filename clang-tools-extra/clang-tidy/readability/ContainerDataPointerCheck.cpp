@@ -8,6 +8,8 @@
 
 #include "ContainerDataPointerCheck.h"
 
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -21,13 +23,22 @@ constexpr llvm::StringLiteral AddrOfContainerExprName =
     "addr-of-container-expr";
 constexpr llvm::StringLiteral AddressOfName = "address-of";
 
+void ContainerDataPointerCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoredContainers",
+                utils::options::serializeStringList(IgnoredContainers));
+}
+
 ContainerDataPointerCheck::ContainerDataPointerCheck(StringRef Name,
                                                      ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {}
+    : ClangTidyCheck(Name, Context),
+      IgnoredContainers(utils::options::parseStringList(
+          Options.get("IgnoredContainers", ""))) {}
 
 void ContainerDataPointerCheck::registerMatchers(MatchFinder *Finder) {
   const auto Record =
       cxxRecordDecl(
+          unless(matchers::matchesAnyListedName(IgnoredContainers)),
           isSameOrDerivedFrom(
               namedDecl(
                   has(cxxMethodDecl(isPublic(), hasName("data")).bind("data")))

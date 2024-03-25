@@ -67,7 +67,7 @@ public:
 
   lldb::ValueType GetValueType() const override;
 
-  size_t CalculateNumChildren(uint32_t max) override;
+  llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
 
   ConstString GetTypeName() override;
 
@@ -106,7 +106,7 @@ public:
 
   lldb::LanguageType GetPreferredDisplayLanguage() override;
 
-  lldb::ValueObjectSP Cast(const CompilerType &compiler_type) override;
+  lldb::ValueObjectSP DoCast(const CompilerType &compiler_type) override;
 
 protected:
   bool UpdateValue() override;

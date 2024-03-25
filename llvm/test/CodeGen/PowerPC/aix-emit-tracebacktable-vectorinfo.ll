@@ -89,7 +89,7 @@ declare <4 x float> @llvm.fabs.v4f32(<4 x float>) #1
 ; COMMON-NEXT:                                         # -IsFloatingPointOperationLogOrAbortEnabled
 ; COMMON-NEXT:  .byte   0x40                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
 ; COMMON-NEXT:                                         # OnConditionDirective = 0, -IsCRSaved, -IsLRSaved
-; COMMON-NEXT:  .byte   0x80                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
+; COMMON-NEXT:  .byte   0x00                            # -IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
 ; COMMON-NEXT:  .byte   0x40                            # -HasExtensionTable, +HasVectorInfo, NumOfGPRsSaved = 0
 ; COMMON-NEXT:  .byte   0x02                            # NumberOfFixedParms = 2
 ; COMMON-NEXT:  .byte   0x05                            # NumberOfFPParms = 2, +HasParmsOnStack
@@ -114,7 +114,7 @@ declare <4 x float> @llvm.fabs.v4f32(<4 x float>) #1
 ; COMMON-NEXT:                                         # -IsFloatingPointOperationLogOrAbortEnabled
 ; COMMON-NEXT:  .byte   0x40                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
 ; COMMON-NEXT:                                         # OnConditionDirective = 0, -IsCRSaved, -IsLRSaved
-; COMMON-NEXT:  .byte   0x80                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
+; COMMON-NEXT:  .byte   0x00                            # -IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
 ; COMMON-NEXT:  .byte   0x40                            # -HasExtensionTable, +HasVectorInfo, NumOfGPRsSaved = 0
 ; COMMON-NEXT:  .byte   0x01                            # NumberOfFixedParms = 1
 ; COMMON-NEXT:  .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack

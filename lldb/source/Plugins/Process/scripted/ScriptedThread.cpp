@@ -35,7 +35,7 @@ ScriptedThread::Create(ScriptedProcess &process,
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Invalid scripted process.");
 
-  process.CheckInterpreterAndScriptObject();
+  process.CheckScriptedInterface();
 
   auto scripted_thread_interface =
       process.GetInterface().CreateScriptedThreadInterface();
@@ -56,14 +56,18 @@ ScriptedThread::Create(ScriptedProcess &process,
   }
 
   ExecutionContext exe_ctx(process);
-  StructuredData::GenericSP owned_script_object_sp =
-      scripted_thread_interface->CreatePluginObject(
-          thread_class_name, exe_ctx, process.m_scripted_metadata.GetArgsSP(),
-          script_object);
+  auto obj_or_err = scripted_thread_interface->CreatePluginObject(
+      thread_class_name, exe_ctx, process.m_scripted_metadata.GetArgsSP(),
+      script_object);
 
-  if (!owned_script_object_sp)
+  if (!obj_or_err) {
+    llvm::consumeError(obj_or_err.takeError());
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Failed to create script object.");
+  }
+
+  StructuredData::GenericSP owned_script_object_sp = *obj_or_err;
+
   if (!owned_script_object_sp->IsValid())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Created script object is invalid.");
@@ -172,8 +176,9 @@ bool ScriptedThread::LoadArtificialStackFrames() {
   StackFrameListSP frames = GetStackFrameList();
 
   for (size_t idx = 0; idx < arr_size; idx++) {
-    StructuredData::Dictionary *dict;
-    if (!arr_sp->GetItemAtIndexAsDictionary(idx, dict) || !dict)
+    std::optional<StructuredData::Dictionary *> maybe_dict =
+        arr_sp->GetItemAtIndexAsDictionary(idx);
+    if (!maybe_dict)
       return ScriptedInterface::ErrorWithMessage<bool>(
           LLVM_PRETTY_FUNCTION,
           llvm::Twine(
@@ -181,6 +186,7 @@ bool ScriptedThread::LoadArtificialStackFrames() {
               llvm::Twine(idx) + llvm::Twine(") from stackframe array."))
               .str(),
           error, LLDBLog::Thread);
+    StructuredData::Dictionary *dict = *maybe_dict;
 
     lldb::addr_t pc;
     if (!dict->GetValueForKeyAsInteger("pc", pc))
@@ -250,13 +256,18 @@ bool ScriptedThread::CalculateStopInfo() {
         StopInfo::CreateStopReasonWithBreakpointSiteID(*this, break_id);
   } break;
   case lldb::eStopReasonSignal: {
-    int signal;
+    uint32_t signal;
     llvm::StringRef description;
-    data_dict->GetValueForKeyAsInteger("signal", signal,
-                                       LLDB_INVALID_SIGNAL_NUMBER);
+    if (!data_dict->GetValueForKeyAsInteger("signal", signal)) {
+        signal = LLDB_INVALID_SIGNAL_NUMBER;
+        return false;
+    }
     data_dict->GetValueForKeyAsString("desc", description);
     stop_info_sp =
         StopInfo::CreateStopReasonWithSignal(*this, signal, description.data());
+  } break;
+  case lldb::eStopReasonTrace: {
+    stop_info_sp = StopInfo::CreateStopReasonToTrace(*this);
   } break;
   case lldb::eStopReasonException: {
 #if defined(__APPLE__)
@@ -280,7 +291,7 @@ bool ScriptedThread::CalculateStopInfo() {
         auto fetch_data = [&raw_codes](StructuredData::Object *obj) {
           if (!obj)
             return false;
-          raw_codes.push_back(obj->GetIntegerValue());
+          raw_codes.push_back(obj->GetUnsignedIntegerValue());
           return true;
         };
 
@@ -338,7 +349,7 @@ std::shared_ptr<DynamicRegisterInfo> ScriptedThread::GetDynamicRegisterInfo() {
           LLVM_PRETTY_FUNCTION, "Failed to get scripted thread registers info.",
           error, LLDBLog::Thread);
 
-    m_register_info_sp = std::make_shared<DynamicRegisterInfo>(
+    m_register_info_sp = DynamicRegisterInfo::Create(
         *reg_info, m_scripted_process.GetTarget().GetArchitecture());
   }
 

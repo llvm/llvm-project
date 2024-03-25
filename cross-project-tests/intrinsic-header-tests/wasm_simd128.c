@@ -1,7 +1,8 @@
 // REQUIRES: webassembly-registered-target
 // expected-no-diagnostics
 
-// RUN: %clang %s -O2 -S -o - -target wasm32-unknown-unknown -msimd128 -Wcast-qual -Werror | FileCheck %s
+// RUN: %clang %s -O2 -S -o - -target wasm32-unknown-unknown \
+// RUN: -msimd128 -mrelaxed-simd -Wcast-qual -Werror | FileCheck %s
 
 #include <wasm_simd128.h>
 
@@ -1263,4 +1264,124 @@ v128_t test_u64x2_extmul_high_u32x4(v128_t a, v128_t b) {
 // CHECK: i16x8.q15mulr_sat_s{{$}}
 v128_t test_i16x8_q15mulr_sat(v128_t a, v128_t b) {
   return wasm_i16x8_q15mulr_sat(a, b);
+}
+
+// CHECK-LABEL: test_f32x4_relaxed_madd:
+// CHECK: f32x4.relaxed_madd{{$}}
+v128_t test_f32x4_relaxed_madd(v128_t a, v128_t b, v128_t c) {
+  return wasm_f32x4_relaxed_madd(a, b, c);
+}
+
+// CHECK-LABEL: test_f32x4_relaxed_nmadd:
+// CHECK: f32x4.relaxed_nmadd{{$}}
+v128_t test_f32x4_relaxed_nmadd(v128_t a, v128_t b, v128_t c) {
+  return wasm_f32x4_relaxed_nmadd(a, b, c);
+}
+
+// CHECK-LABEL: test_f64x2_relaxed_madd:
+// CHECK: f64x2.relaxed_madd{{$}}
+v128_t test_f64x2_relaxed_madd(v128_t a, v128_t b, v128_t c) {
+  return wasm_f64x2_relaxed_madd(a, b, c);
+}
+
+// CHECK-LABEL: test_f64x2_relaxed_nmadd:
+// CHECK: f64x2.relaxed_nmadd{{$}}
+v128_t test_f64x2_relaxed_nmadd(v128_t a, v128_t b, v128_t c) {
+  return wasm_f64x2_relaxed_nmadd(a, b, c);
+}
+
+// CHECK-LABEL: test_i8x16_relaxed_laneselect:
+// CHECK: i8x16.relaxed_laneselect{{$}}
+v128_t test_i8x16_relaxed_laneselect(v128_t a, v128_t b, v128_t m) {
+  return wasm_i8x16_relaxed_laneselect(a, b, m);
+}
+
+// CHECK-LABEL: test_i16x8_relaxed_laneselect:
+// CHECK: i16x8.relaxed_laneselect{{$}}
+v128_t test_i16x8_relaxed_laneselect(v128_t a, v128_t b, v128_t m) {
+  return wasm_i16x8_relaxed_laneselect(a, b, m);
+}
+
+// CHECK-LABEL: test_i32x4_relaxed_laneselect:
+// CHECK: i32x4.relaxed_laneselect{{$}}
+v128_t test_i32x4_relaxed_laneselect(v128_t a, v128_t b, v128_t m) {
+  return wasm_i32x4_relaxed_laneselect(a, b, m);
+}
+
+// CHECK-LABEL: test_i64x2_relaxed_laneselect:
+// CHECK: i64x2.relaxed_laneselect{{$}}
+v128_t test_i64x2_relaxed_laneselect(v128_t a, v128_t b, v128_t m) {
+  return wasm_i64x2_relaxed_laneselect(a, b, m);
+}
+
+// CHECK-LABEL: test_i8x16_relaxed_swizzle:
+// CHECK: i8x16.relaxed_swizzle{{$}}
+v128_t test_i8x16_relaxed_swizzle(v128_t a, v128_t s) {
+  return wasm_i8x16_relaxed_swizzle(a, s);
+}
+
+// CHECK-LABEL: test_f32x4_relaxed_min:
+// CHECK: f32x4.relaxed_min{{$}}
+v128_t test_f32x4_relaxed_min(v128_t a, v128_t b) {
+  return wasm_f32x4_relaxed_min(a, b);
+}
+
+// CHECK-LABEL: test_f32x4_relaxed_max:
+// CHECK: f32x4.relaxed_max{{$}}
+v128_t test_f32x4_relaxed_max(v128_t a, v128_t b) {
+  return wasm_f32x4_relaxed_max(a, b);
+}
+
+// CHECK-LABEL: test_f64x2_relaxed_min:
+// CHECK: f64x2.relaxed_min{{$}}
+v128_t test_f64x2_relaxed_min(v128_t a, v128_t b) {
+  return wasm_f64x2_relaxed_min(a, b);
+}
+
+// CHECK-LABEL: test_f64x2_relaxed_max:
+// CHECK: f64x2.relaxed_max
+v128_t test_f64x2_relaxed_max(v128_t a, v128_t b) {
+  return wasm_f64x2_relaxed_max(a, b);
+}
+
+// CHECK-LABEL: test_i32x4_relaxed_trunc_f32x4:
+// CHECK: i32x4.relaxed_trunc_f32x4_s{{$}}
+v128_t test_i32x4_relaxed_trunc_f32x4(v128_t a) {
+  return wasm_i32x4_relaxed_trunc_f32x4(a);
+}
+
+// CHECK-LABEL: test_u32x4_relaxed_trunc_f32x4:
+// CHECK: i32x4.relaxed_trunc_f32x4_u{{$}}
+v128_t test_u32x4_relaxed_trunc_f32x4(v128_t a) {
+  return wasm_u32x4_relaxed_trunc_f32x4(a);
+}
+
+// CHECK-LABEL: test_i32x4_relaxed_trunc_f64x2_zero:
+// CHECK: i32x4.relaxed_trunc_f64x2_s_zero{{$}}
+v128_t test_i32x4_relaxed_trunc_f64x2_zero(v128_t a) {
+  return wasm_i32x4_relaxed_trunc_f64x2_zero(a);
+}
+
+// CHECK-LABEL: test_u32x4_relaxed_trunc_f64x2_zero:
+// CHECK: i32x4.relaxed_trunc_f64x2_u_zero{{$}}
+v128_t test_u32x4_relaxed_trunc_f64x2_zero(v128_t a) {
+  return wasm_u32x4_relaxed_trunc_f64x2_zero(a);
+}
+
+// CHECK-LABEL: test_i16x8_relaxed_q15mulr:
+// CHECK: i16x8.relaxed_q15mulr_s{{$}}
+v128_t test_i16x8_relaxed_q15mulr(v128_t a, v128_t b) {
+  return wasm_i16x8_relaxed_q15mulr(a, b);
+}
+
+// CHECK-LABEL: test_i16x8_relaxed_dot_i8x16_i7x16:
+// CHECK: i16x8.relaxed_dot_i8x16_i7x16_s{{$}}
+v128_t test_i16x8_relaxed_dot_i8x16_i7x16(v128_t a, v128_t b) {
+  return wasm_i16x8_relaxed_dot_i8x16_i7x16(a, b);
+}
+
+// CHECK-LABEL: test_i32x4_relaxed_dot_i8x16_i7x16_add:
+// CHECK: i32x4.relaxed_dot_i8x16_i7x16_add_s{{$}}
+v128_t test_i32x4_relaxed_dot_i8x16_i7x16_add(v128_t a, v128_t b, v128_t c) {
+  return wasm_i32x4_relaxed_dot_i8x16_i7x16_add(a, b, c);
 }

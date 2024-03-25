@@ -36,7 +36,7 @@ MCAsmBackend *createLoongArchAsmBackend(const Target &T,
                                         const MCTargetOptions &Options);
 
 std::unique_ptr<MCObjectTargetWriter>
-createLoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit);
+createLoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit, bool Relax);
 
 } // end namespace llvm
 

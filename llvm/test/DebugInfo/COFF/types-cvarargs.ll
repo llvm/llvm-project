@@ -1,6 +1,9 @@
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 ; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
 
+; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
+
 ; C++ source to regenerate:
 ; $ cat t.cpp
 ; typedef void (*FuncTypedef)(int, float, ...);
@@ -48,14 +51,14 @@ target triple = "x86_64-pc-windows-msvc19.11.25507"
 
 $"\01?MemberFunc@A@MemberTest@@QEAAHZZ" = comdat any
 
-@"\01?funcVar@@3P6AXHMZZEA" = global void (i32, float, ...)* null, align 8, !dbg !0
+@"\01?funcVar@@3P6AXHMZZEA" = global ptr null, align 8, !dbg !0
 
 ; Function Attrs: noinline optnone uwtable
 define i32 @"\01?f@@YAHXZ"() #0 !dbg !17 {
 entry:
   %v1 = alloca %"class.MemberTest::A", align 1
-  call void @llvm.dbg.declare(metadata %"class.MemberTest::A"* %v1, metadata !20, metadata !DIExpression()), !dbg !28
-  %call = call i32 (%"class.MemberTest::A"*, ...) @"\01?MemberFunc@A@MemberTest@@QEAAHZZ"(%"class.MemberTest::A"* %v1, i32 1, i32 20, i64 0), !dbg !29
+  call void @llvm.dbg.declare(metadata ptr %v1, metadata !20, metadata !DIExpression()), !dbg !28
+  %call = call i32 (ptr, ...) @"\01?MemberFunc@A@MemberTest@@QEAAHZZ"(ptr %v1, i32 1, i32 20, i64 0), !dbg !29
   ret i32 1, !dbg !30
 }
 
@@ -63,12 +66,12 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define linkonce_odr i32 @"\01?MemberFunc@A@MemberTest@@QEAAHZZ"(%"class.MemberTest::A"* %this, ...) #2 comdat align 2 !dbg !31 {
+define linkonce_odr i32 @"\01?MemberFunc@A@MemberTest@@QEAAHZZ"(ptr %this, ...) #2 comdat align 2 !dbg !31 {
 entry:
-  %this.addr = alloca %"class.MemberTest::A"*, align 8
-  store %"class.MemberTest::A"* %this, %"class.MemberTest::A"** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %"class.MemberTest::A"** %this.addr, metadata !32, metadata !DIExpression()), !dbg !34
-  %this1 = load %"class.MemberTest::A"*, %"class.MemberTest::A"** %this.addr, align 8
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !32, metadata !DIExpression()), !dbg !34
+  %this1 = load ptr, ptr %this.addr, align 8
   ret i32 1, !dbg !35
 }
 

@@ -44,12 +44,12 @@ end module
 function foo2()
   real(4) :: foo2
 contains
-  ! CHECK-LABEL: func @_QFfoo2Psub() {
+  ! CHECK-LABEL: func private @_QFfoo2Psub() {{.*}} {
   subroutine sub()
   ! CHECK: }
   end subroutine
 
-  ! CHECK-LABEL: func @_QFfoo2Pfoo() {
+  ! CHECK-LABEL: func private @_QFfoo2Pfoo() {{.*}} {
   subroutine foo()
   ! CHECK: }
   end subroutine
@@ -58,12 +58,12 @@ end function
 ! CHECK-LABEL: func @_QPsub2()
 subroutine sUb2()
 contains
-  ! CHECK-LABEL: func @_QFsub2Psub() {
+  ! CHECK-LABEL: func private @_QFsub2Psub() {{.*}} {
   subroutine sub()
   ! CHECK: }
   end subroutine
 
-  ! CHECK-LABEL: func @_QFsub2Pfoo() {
+  ! CHECK-LABEL: func private @_QFsub2Pfoo() {{.*}} {
   subroutine Foo()
   ! CHECK: }
   end subroutine
@@ -74,7 +74,7 @@ contains
   ! CHECK-LABEL: func @_QMtestmod2Psub()
   subroutine sub()
   contains
-    ! CHECK-LABEL: func @_QMtestmod2FsubPsubsub() {
+    ! CHECK-LABEL: func private @_QMtestmod2FsubPsubsub() {{.*}} {
     subroutine subSub()
     ! CHECK: }
     end subroutine
@@ -92,45 +92,43 @@ module color_points
   end interface
 end module color_points
 
-! We don't handle lowering of submodules yet.  The following tests are
-! commented out and "CHECK" is changed to "xHECK" to not trigger FileCheck.
-!submodule (color_points) color_points_a
-!contains
-!  ! xHECK-LABEL: func @_QMcolor_pointsScolor_points_aPsub() {
-!  subroutine sub
-!  end subroutine
-!  ! xHECK: }
-!end submodule
-!
-!submodule (color_points:color_points_a) impl
-!contains
-!  ! xHECK-LABEL: func @_QMcolor_pointsScolor_points_aSimplPfoo()
-!  subroutine foo
-!    contains
-!    ! xHECK-LABEL: func @_QMcolor_pointsScolor_points_aSimplFfooPbar() {
-!    subroutine bar
-!    ! xHECK: }
-!    end subroutine
-!  end subroutine
-!  ! xHECK-LABEL: func @_QMcolor_pointsPdraw() {
-!  module subroutine draw()
-!  end subroutine
-!  !FIXME func @_QMcolor_pointsPerase() -> i32 {
-!  module procedure erase
-!  ! xHECK: }
-!  end procedure
-!end submodule
+submodule (color_points) color_points_a
+contains
+  ! CHECK-LABEL: func @_QMcolor_pointsScolor_points_aPsub() {
+  subroutine sub
+  end subroutine
+  ! CHECK: }
+end submodule
+
+submodule (color_points:color_points_a) impl
+contains
+  ! CHECK-LABEL: func @_QMcolor_pointsScolor_points_aSimplPfoo()
+  subroutine foo
+    contains
+    ! CHECK-LABEL: func private @_QMcolor_pointsScolor_points_aSimplFfooPbar() {{.*}} {
+    subroutine bar
+    ! CHECK: }
+    end subroutine
+  end subroutine
+  ! CHECK-LABEL: func @_QMcolor_pointsPdraw() {
+  module subroutine draw()
+  end subroutine
+  !FIXME func @_QMcolor_pointsPerase() -> i32 {
+  module procedure erase
+  ! CHECK: }
+  end procedure
+end submodule
 
 ! CHECK-LABEL: func @_QPshould_not_collide() {
 subroutine should_not_collide()
 ! CHECK: }
 end subroutine
 
-! CHECK-LABEL: func @_QQmain() {
+! CHECK-LABEL: func @_QQmain() attributes {fir.bindc_name = "test"} {
 program test
 ! CHECK: }
 contains
-! CHECK-LABEL: func @_QFPshould_not_collide() {
+! CHECK-LABEL: func private @_QFPshould_not_collide() {{.*}} {
 subroutine should_not_collide()
 ! CHECK: }
 end subroutine
@@ -221,5 +219,32 @@ module testMod3
     call s1
   end subroutine
 end module
+
+
+! CHECK-LABEL: func @_QPnest1
+subroutine nest1
+  ! CHECK:   fir.call @_QFnest1Pinner()
+  call inner
+contains
+  ! CHECK-LABEL: func private @_QFnest1Pinner
+  subroutine inner
+    ! CHECK:   %[[V_0:[0-9]+]] = fir.address_of(@_QFnest1FinnerEkk) : !fir.ref<i32>
+    integer, save :: kk = 1
+    print*, 'qq:inner', kk
+  end
+end
+
+! CHECK-LABEL: func @_QPnest2
+subroutine nest2
+  ! CHECK:   fir.call @_QFnest2Pinner()
+  call inner
+contains
+  ! CHECK-LABEL: func private @_QFnest2Pinner
+  subroutine inner
+    ! CHECK:   %[[V_0:[0-9]+]] = fir.address_of(@_QFnest2FinnerEkk) : !fir.ref<i32>
+    integer, save :: kk = 77
+    print*, 'ss:inner', kk
+  end
+end
 
 ! CHECK-LABEL: fir.global internal @_QFfooEpi : f32 {

@@ -5,7 +5,7 @@ define i64 @test_shl_nuw_nsw__all_are_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl_nuw_nsw__all_are_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 60
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -22,7 +22,7 @@ define i64 @test_shl_nuw__all_are_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl_nuw__all_are_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 60
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -39,7 +39,7 @@ define i64 @test_shl_nsw__all_are_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl_nsw__all_are_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 60
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -56,7 +56,7 @@ define i64 @test_shl__all_are_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl__all_are_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 60
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -73,7 +73,7 @@ define i64 @test_shl_nuw_nsw__nuw_is_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl_nuw_nsw__nuw_is_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -8
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -90,7 +90,7 @@ define i64 @test_shl_nuw__nuw_is_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl_nuw__nuw_is_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -8
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -107,7 +107,7 @@ define i64 @test_shl_nsw__nuw_is_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl_nsw__nuw_is_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -8
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -124,7 +124,7 @@ define i64 @test_shl__nuw_is_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl__nuw_is_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -8
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -139,11 +139,7 @@ define i64 @test_shl__nuw_is_safe(i32 %x, i64 %y) {
 
 define i32 @test_shl_nuw_nsw__nsw_is_safe(i32 %x) {
 ; CHECK-LABEL: @test_shl_nuw_nsw__nsw_is_safe(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X:%.*]], -83886080
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    ret i32 [[TMP4]]
+; CHECK-NEXT:    ret i32 0
 ;
   %1 = or i32 %x, -83886080
   %2 = icmp eq i32 %1, -83886079
@@ -156,11 +152,7 @@ define i32 @test_shl_nuw_nsw__nsw_is_safe(i32 %x) {
 
 define i32 @test_shl_nuw__nsw_is_safe(i32 %x) {
 ; CHECK-LABEL: @test_shl_nuw__nsw_is_safe(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X:%.*]], -83886080
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    ret i32 [[TMP4]]
+; CHECK-NEXT:    ret i32 0
 ;
   %1 = or i32 %x, -83886080
   %2 = icmp eq i32 %1, -83886079
@@ -210,7 +202,7 @@ define i64 @test_shl_nuw_nsw__none_are_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl_nuw_nsw__none_are_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -8
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -227,7 +219,7 @@ define i64 @test_shl_nuw__none_are_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl_nuw__none_are_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -8
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -244,7 +236,7 @@ define i64 @test_shl_nsw__none_are_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl_nsw__none_are_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -8
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -261,7 +253,7 @@ define i64 @test_shl__none_are_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl__none_are_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -8
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -278,7 +270,7 @@ define i64 @test_lshr_exact__exact_is_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_lshr_exact__exact_is_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 15
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -295,7 +287,7 @@ define i64 @test_lshr__exact_is_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_lshr__exact_is_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 15
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -312,7 +304,7 @@ define i64 @test_lshr_exact__exact_is_unsafe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_lshr_exact__exact_is_unsafe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 15
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -329,7 +321,7 @@ define i64 @test_lshr__exact_is_unsafe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_lshr__exact_is_unsafe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 15
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -346,7 +338,7 @@ define i64 @test_ashr_exact__exact_is_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_ashr_exact__exact_is_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -536870897
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -363,7 +355,7 @@ define i64 @test_ashr__exact_is_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_ashr__exact_is_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -536870897
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -380,7 +372,7 @@ define i64 @test_ashr_exact__exact_is_unsafe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_ashr_exact__exact_is_unsafe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -536870897
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -397,7 +389,7 @@ define i64 @test_ashr__exact_is_unsafe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_ashr__exact_is_unsafe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -536870897
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;

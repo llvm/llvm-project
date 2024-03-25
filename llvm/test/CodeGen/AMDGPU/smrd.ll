@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti  -verify-machineinstrs -show-mc-encoding < %s | FileCheck --check-prefixes=SI,GCN,SICIVI,SICI,SIVIGFX9_10 %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -show-mc-encoding < %s | FileCheck --check-prefixes=CI,GCN,SICIVI,SICI %s
-; RUN: llc -march=amdgcn -mcpu=tonga   -verify-machineinstrs -show-mc-encoding < %s | FileCheck --check-prefixes=VI,GCN,SICIVI,VIGFX9_10,SIVIGFX9_10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900  -verify-machineinstrs -show-mc-encoding < %s | FileCheck --check-prefixes=GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -show-mc-encoding < %s | FileCheck --check-prefixes=GFX10,GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti  -verify-machineinstrs -show-mc-encoding < %s | FileCheck --check-prefixes=SI,GCN,SICIVI,SICI,SIVIGFX9_10 %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs -show-mc-encoding < %s | FileCheck --check-prefixes=CI,GCN,SICIVI,SICI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga   -verify-machineinstrs -show-mc-encoding < %s | FileCheck --check-prefixes=VI,GCN,SICIVI,VIGFX9_10,SIVIGFX9_10 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900  -verify-machineinstrs -show-mc-encoding < %s | FileCheck --check-prefixes=GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -show-mc-encoding < %s | FileCheck --check-prefixes=GFX10,GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
 
 ; SMRD load with an immediate offset.
 ; GCN-LABEL: {{^}}smrd0:
@@ -645,8 +645,7 @@ exit:
 
 
 ; GCN-LABEL: {{^}}smrd_uniform_loop2:
-; (this test differs from smrd_uniform_loop by the more complex structure of phis,
-; which used to confuse the DivergenceAnalysis after structurization)
+; (this test differs from smrd_uniform_loop by the more complex structure of phis)
 ;
 ; TODO: we should keep the loop counter in an SGPR and use an S_BUFFER_LOAD
 ;

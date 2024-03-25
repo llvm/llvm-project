@@ -145,7 +145,7 @@ struct SampleProfTest : ::testing::Test {
 
     StringRef FooName("_Z3fooi");
     FunctionSamples FooSamples;
-    FooSamples.setName(FooName);
+    FooSamples.setFunction(FunctionId(FooName));
     FooSamples.addTotalSamples(7711);
     FooSamples.addHeadSamples(610);
     FooSamples.addBodySamples(1, 0, 610);
@@ -155,43 +155,43 @@ struct SampleProfTest : ::testing::Test {
     FooSamples.addBodySamples(10, 0, 605);
 
     // Add inline instance with name "_Z3gooi".
-    StringRef GooName("_Z3gooi");
+    FunctionId GooName(StringRef("_Z3gooi"));
     auto &GooSamples =
-        FooSamples.functionSamplesAt(LineLocation(7, 0))[GooName.str()];
-    GooSamples.setName(GooName);
+        FooSamples.functionSamplesAt(LineLocation(7, 0))[GooName];
+    GooSamples.setFunction(GooName);
     GooSamples.addTotalSamples(502);
     GooSamples.addBodySamples(3, 0, 502);
 
     // Add inline instance with name "_Z3hooi".
-    StringRef HooName("_Z3hooi");
+    FunctionId HooName(StringRef("_Z3hooi"));
     auto &HooSamples =
-        GooSamples.functionSamplesAt(LineLocation(9, 0))[HooName.str()];
-    HooSamples.setName(HooName);
+        GooSamples.functionSamplesAt(LineLocation(9, 0))[HooName];
+    HooSamples.setFunction(HooName);
     HooSamples.addTotalSamples(317);
     HooSamples.addBodySamples(4, 0, 317);
 
     StringRef BarName("_Z3bari");
     FunctionSamples BarSamples;
-    BarSamples.setName(BarName);
+    BarSamples.setFunction(FunctionId(BarName));
     BarSamples.addTotalSamples(20301);
     BarSamples.addHeadSamples(1437);
     BarSamples.addBodySamples(1, 0, 1437);
     // Test how reader/writer handles unmangled names.
     StringRef MconstructName("_M_construct<char *>");
     StringRef StringviewName("string_view<std::allocator<char> >");
-    BarSamples.addCalledTargetSamples(1, 0, MconstructName, 1000);
-    BarSamples.addCalledTargetSamples(1, 0, StringviewName, 437);
+    BarSamples.addCalledTargetSamples(1, 0, FunctionId(MconstructName), 1000);
+    BarSamples.addCalledTargetSamples(1, 0, FunctionId(StringviewName), 437);
 
     StringRef BazName("_Z3bazi");
     FunctionSamples BazSamples;
-    BazSamples.setName(BazName);
+    BazSamples.setFunction(FunctionId(BazName));
     BazSamples.addTotalSamples(12557);
     BazSamples.addHeadSamples(1257);
     BazSamples.addBodySamples(1, 0, 12557);
 
     StringRef BooName("_Z3booi");
     FunctionSamples BooSamples;
-    BooSamples.setName(BooName);
+    BooSamples.setFunction(FunctionId(BooName));
     BooSamples.addTotalSamples(1232);
     BooSamples.addHeadSamples(1);
     BooSamples.addBodySamples(1, 0, 1232);
@@ -210,8 +210,8 @@ struct SampleProfTest : ::testing::Test {
     if (Remap) {
       FooName = "_Z4fauxi";
       BarName = "_Z3barl";
-      GooName = "_Z3gool";
-      HooName = "_Z3hool";
+      GooName = FunctionId(StringRef("_Z3gool"));
+      HooName = FunctionId(StringRef("_Z3hool"));
     }
 
     M.getOrInsertFunction(FooName, fn_type);
@@ -245,7 +245,7 @@ struct SampleProfTest : ::testing::Test {
     FunctionSamples *ReadFooSamples = Reader->getSamplesFor(FooName);
     ASSERT_TRUE(ReadFooSamples != nullptr);
     if (!UseMD5) {
-      ASSERT_EQ("_Z3fooi", ReadFooSamples->getName());
+      ASSERT_EQ("_Z3fooi", ReadFooSamples->getFunction().str());
     }
     ASSERT_EQ(7711u, ReadFooSamples->getTotalSamples());
     ASSERT_EQ(610u, ReadFooSamples->getHeadSamples());
@@ -254,7 +254,8 @@ struct SampleProfTest : ::testing::Test {
     // inline instance for GooName. Test the correct FunctionSamples can be
     // found with Remapper support.
     const FunctionSamples *ReadGooSamples =
-        ReadFooSamples->findFunctionSamplesAt(LineLocation(7, 0), GooName,
+        ReadFooSamples->findFunctionSamplesAt(LineLocation(7, 0),
+                                              GooName.stringRef(),
                                               Reader->getRemapper());
     ASSERT_TRUE(ReadGooSamples != nullptr);
     ASSERT_EQ(502u, ReadGooSamples->getTotalSamples());
@@ -263,7 +264,8 @@ struct SampleProfTest : ::testing::Test {
     // no inline instance for GooName. Test no FunctionSamples will be
     // found with Remapper support.
     const FunctionSamples *ReadGooSamplesAgain =
-        ReadFooSamples->findFunctionSamplesAt(LineLocation(9, 0), GooName,
+        ReadFooSamples->findFunctionSamplesAt(LineLocation(9, 0),
+                                              GooName.stringRef(),
                                               Reader->getRemapper());
     ASSERT_TRUE(ReadGooSamplesAgain == nullptr);
 
@@ -272,7 +274,8 @@ struct SampleProfTest : ::testing::Test {
     // inline instance for HooName. Test the correct FunctionSamples can be
     // found with Remapper support.
     const FunctionSamples *ReadHooSamples =
-        ReadGooSamples->findFunctionSamplesAt(LineLocation(9, 0), HooName,
+        ReadGooSamples->findFunctionSamplesAt(LineLocation(9, 0),
+                                              HooName.stringRef(),
                                               Reader->getRemapper());
     ASSERT_TRUE(ReadHooSamples != nullptr);
     ASSERT_EQ(317u, ReadHooSamples->getTotalSamples());
@@ -280,7 +283,7 @@ struct SampleProfTest : ::testing::Test {
     FunctionSamples *ReadBarSamples = Reader->getSamplesFor(BarName);
     ASSERT_TRUE(ReadBarSamples != nullptr);
     if (!UseMD5) {
-      ASSERT_EQ("_Z3bari", ReadBarSamples->getName());
+      ASSERT_EQ("_Z3bari", ReadBarSamples->getFunction().str());
     }
     ASSERT_EQ(20301u, ReadBarSamples->getTotalSamples());
     ASSERT_EQ(1437u, ReadBarSamples->getHeadSamples());
@@ -289,11 +292,10 @@ struct SampleProfTest : ::testing::Test {
     ASSERT_FALSE(CTMap.getError());
 
     // Because _Z3bazi is not defined in module M, expect _Z3bazi's profile
-    // is not loaded when the profile is ExtBinary or Compact format because
-    // these formats support loading function profiles on demand.
+    // is not loaded when the profile is ExtBinary format because this format
+    // supports loading function profiles on demand.
     FunctionSamples *ReadBazSamples = Reader->getSamplesFor(BazName);
-    if (Format == SampleProfileFormat::SPF_Ext_Binary ||
-        Format == SampleProfileFormat::SPF_Compact_Binary) {
+    if (Format == SampleProfileFormat::SPF_Ext_Binary) {
       ASSERT_TRUE(ReadBazSamples == nullptr);
       ASSERT_EQ(3u, Reader->getProfiles().size());
     } else {
@@ -305,13 +307,9 @@ struct SampleProfTest : ::testing::Test {
     FunctionSamples *ReadBooSamples = Reader->getSamplesFor(BooName);
     ASSERT_TRUE(ReadBooSamples != nullptr);
     ASSERT_EQ(1232u, ReadBooSamples->getTotalSamples());
-
-    std::string MconstructGUID;
-    StringRef MconstructRep =
-        getRepInFormat(MconstructName, UseMD5, MconstructGUID);
-    std::string StringviewGUID;
-    StringRef StringviewRep =
-        getRepInFormat(StringviewName, UseMD5, StringviewGUID);
+    
+    FunctionId MconstructRep = getRepInFormat(MconstructName);
+    FunctionId StringviewRep = getRepInFormat(StringviewName);
     ASSERT_EQ(1000u, CTMap.get()[MconstructRep]);
     ASSERT_EQ(437u, CTMap.get()[StringviewRep]);
 
@@ -334,7 +332,7 @@ struct SampleProfTest : ::testing::Test {
                           uint64_t TotalSamples, uint64_t HeadSamples) {
     StringRef Name(Fname);
     FunctionSamples FcnSamples;
-    FcnSamples.setName(Name);
+    FcnSamples.setFunction(FunctionId(Name));
     FcnSamples.addTotalSamples(TotalSamples);
     FcnSamples.addHeadSamples(HeadSamples);
     FcnSamples.addBodySamples(1, 0, HeadSamples);
@@ -408,10 +406,6 @@ TEST_F(SampleProfTest, roundtrip_raw_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Binary, false, false);
 }
 
-TEST_F(SampleProfTest, roundtrip_compact_binary_profile) {
-  testRoundTrip(SampleProfileFormat::SPF_Compact_Binary, false, true);
-}
-
 TEST_F(SampleProfTest, roundtrip_ext_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false);
 }
@@ -473,19 +467,6 @@ TEST_F(SampleProfTest, default_suffix_elision_text) {
   testSuffixElisionPolicy(SampleProfileFormat::SPF_Text, "", Expected);
 }
 
-TEST_F(SampleProfTest, default_suffix_elision_compact_binary) {
-  // Default suffix elision policy: strip everything after first dot.
-  // This implies that all suffix variants will map to "foo", so
-  // we don't expect to see any entries for them in the sample
-  // profile.
-  StringMap<uint64_t> Expected;
-  Expected["foo"] = uint64_t(20301);
-  Expected["foo.bar"] = uint64_t(-1);
-  Expected["foo.llvm.2465"] = uint64_t(-1);
-  testSuffixElisionPolicy(SampleProfileFormat::SPF_Compact_Binary, "",
-                          Expected);
-}
-
 TEST_F(SampleProfTest, selected_suffix_elision_text) {
   // Profile is created and searched using the "selected"
   // suffix elision policy: we only strip a .XXX suffix if
@@ -498,19 +479,6 @@ TEST_F(SampleProfTest, selected_suffix_elision_text) {
   testSuffixElisionPolicy(SampleProfileFormat::SPF_Text, "selected", Expected);
 }
 
-TEST_F(SampleProfTest, selected_suffix_elision_compact_binary) {
-  // Profile is created and searched using the "selected"
-  // suffix elision policy: we only strip a .XXX suffix if
-  // it matches a pattern known to be generated by the compiler
-  // (e.g. ".llvm.<digits>").
-  StringMap<uint64_t> Expected;
-  Expected["foo"] = uint64_t(20301);
-  Expected["foo.bar"] = uint64_t(20303);
-  Expected["foo.llvm.2465"] = uint64_t(-1);
-  testSuffixElisionPolicy(SampleProfileFormat::SPF_Compact_Binary, "selected",
-                          Expected);
-}
-
 TEST_F(SampleProfTest, none_suffix_elision_text) {
   // Profile is created and searched using the "none"
   // suffix elision policy: no stripping of suffixes at all.
@@ -520,18 +488,6 @@ TEST_F(SampleProfTest, none_suffix_elision_text) {
   Expected["foo.bar"] = uint64_t(20303);
   Expected["foo.llvm.2465"] = uint64_t(20305);
   testSuffixElisionPolicy(SampleProfileFormat::SPF_Text, "none", Expected);
-}
-
-TEST_F(SampleProfTest, none_suffix_elision_compact_binary) {
-  // Profile is created and searched using the "none"
-  // suffix elision policy: no stripping of suffixes at all.
-  // Here we expect to see all variants in the profile.
-  StringMap<uint64_t> Expected;
-  Expected["foo"] = uint64_t(20301);
-  Expected["foo.bar"] = uint64_t(20303);
-  Expected["foo.llvm.2465"] = uint64_t(20305);
-  testSuffixElisionPolicy(SampleProfileFormat::SPF_Compact_Binary, "none",
-                          Expected);
 }
 
 } // end anonymous namespace

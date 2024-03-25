@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDescs
   AllTargetsDisassemblers
   AllTargetsInfos
+  CodeGenTypes
   MC
   MCParser
   Support

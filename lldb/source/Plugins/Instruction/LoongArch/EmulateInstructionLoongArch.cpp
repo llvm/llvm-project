@@ -187,7 +187,7 @@ bool EmulateInstructionLoongArch::SetTargetTriple(const ArchSpec &arch) {
 }
 
 bool EmulateInstructionLoongArch::TestEmulation(
-    Stream *out_stream, ArchSpec &arch, OptionValueDictionary *test_data) {
+    Stream &out_stream, ArchSpec &arch, OptionValueDictionary *test_data) {
   return false;
 }
 

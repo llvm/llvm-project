@@ -30,12 +30,13 @@ define i1 @lt_signed_to_large_unsigned(i8 %SB) {
 
 define i1 @PR28011(i16 %a) {
 ; CHECK-LABEL: @PR28011(
-; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[A:%.*]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[CONV]], or (i32 zext (i1 icmp ne (ptr @b, ptr @a) to i32), i32 1)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[A:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %conv = sext i16 %a to i32
-  %cmp = icmp ne i32 %conv, or (i32 zext (i1 icmp ne (ptr @b, ptr @a) to i32), i32 1)
+  %ext = zext i1 icmp ne (ptr @b, ptr @a) to i32
+  %or = or i32 %ext, 1
+  %cmp = icmp ne i32 %conv, %or
   ret i1 %cmp
 }
 

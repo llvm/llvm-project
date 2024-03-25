@@ -8,7 +8,7 @@
 ; CHECK:       early-cse
 ; CHECK-SAME:  {4,1,1}
 ; CHECK:       instcombine-visit
-; CHECK-SAME:  {12,0,-1}
+; CHECK-SAME:  {13,0,-1}
 ; CHECK:       newgvn-vn
 ; CHECK-SAME:  {9,1,2}
 define i32 @f1(i32 %a, i32 %b) {

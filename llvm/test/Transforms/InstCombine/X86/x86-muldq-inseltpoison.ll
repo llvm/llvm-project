@@ -159,8 +159,8 @@ define <8 x i64> @fold_pmuldq_512(<16 x i32> %a0, <16 x i32> %a1) {
 
 define <2 x i64> @test_demanded_elts_pmuludq_128(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: @test_demanded_elts_pmuludq_128(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A0:%.*]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A1:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A0:%.*]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A1:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <2 x i64> [[TMP3]], <i64 4294967295, i64 poison>

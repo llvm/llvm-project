@@ -9,8 +9,6 @@ add_dependencies(libc-integration-tests libc-startup-tests)
 add_integration_test(
   startup_args_test
   SUITE libc-startup-tests
-  STARTUP
-    libc.startup.linux.crt1
   SRCS
     args_test.cpp
   ARGS
@@ -23,8 +21,6 @@ add_integration_test(
 add_integration_test(
   startup_no_envp_test
   SUITE libc-startup-tests
-  STARTUP
-    libc.startup.linux.crt1
   SRCS
     main_without_envp.cpp
 )
@@ -32,8 +28,6 @@ add_integration_test(
 add_integration_test(
   startup_no_args_test
   SUITE libc-startup-tests
-  STARTUP
-    libc.startup.linux.crt1
   SRCS
     main_without_args.cpp
 )
@@ -41,8 +35,6 @@ add_integration_test(
 add_integration_test(
   startup_tls_test
   SUITE libc-startup-tests
-  STARTUP
-    libc.startup.linux.crt1
   SRCS
     tls_test.cpp
   DEPENDS
@@ -55,8 +47,6 @@ add_integration_test(
 add_integration_test(
   init_fini_array_test
   SUITE libc-startup-tests
-  STARTUP
-    libc.startup.linux.crt1
   SRCS
     init_fini_array_test.cpp
 )

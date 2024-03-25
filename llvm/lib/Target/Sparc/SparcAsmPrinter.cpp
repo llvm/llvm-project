@@ -13,6 +13,7 @@
 
 #include "MCTargetDesc/SparcInstPrinter.h"
 #include "MCTargetDesc/SparcMCExpr.h"
+#include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "MCTargetDesc/SparcTargetStreamer.h"
 #include "Sparc.h"
 #include "SparcInstrInfo.h"
@@ -109,6 +110,15 @@ static void EmitCall(MCStreamer &OutStreamer,
   CallInst.setOpcode(SP::CALL);
   CallInst.addOperand(Callee);
   OutStreamer.emitInstruction(CallInst, STI);
+}
+
+static void EmitRDPC(MCStreamer &OutStreamer, MCOperand &RD,
+                     const MCSubtargetInfo &STI) {
+  MCInst RDPCInst;
+  RDPCInst.setOpcode(SP::RDASR);
+  RDPCInst.addOperand(RD);
+  RDPCInst.addOperand(MCOperand::createReg(SP::ASR5));
+  OutStreamer.emitInstruction(RDPCInst, STI);
 }
 
 static void EmitSETHI(MCStreamer &OutStreamer,
@@ -226,7 +236,7 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
   MCOperand RegO7   = MCOperand::createReg(SP::O7);
 
   // <StartLabel>:
-  //   call <EndLabel>
+  //   <GET-PC> // This will be either `call <EndLabel>` or `rd %pc, %o7`.
   // <SethiLabel>:
   //     sethi %hi(_GLOBAL_OFFSET_TABLE_+(<SethiLabel>-<StartLabel>)), <MO>
   // <EndLabel>:
@@ -234,8 +244,17 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
   //   add <MO>, %o7, <MO>
 
   OutStreamer->emitLabel(StartLabel);
-  MCOperand Callee =  createPCXCallOP(EndLabel, OutContext);
-  EmitCall(*OutStreamer, Callee, STI);
+  if (!STI.getTargetTriple().isSPARC64() ||
+      STI.hasFeature(Sparc::TuneSlowRDPC)) {
+    MCOperand Callee = createPCXCallOP(EndLabel, OutContext);
+    EmitCall(*OutStreamer, Callee, STI);
+  } else {
+    // TODO find out whether it is possible to store PC
+    // in other registers, to enable leaf function optimization.
+    // (On the other hand, approx. over 97.8% of GETPCXes happen
+    // in non-leaf functions, so would this be worth the effort?)
+    EmitRDPC(*OutStreamer, RegO7, STI);
+  }
   OutStreamer->emitLabel(SethiLabel);
   MCOperand hiImm = createPCXRelExprOp(SparcMCExpr::VK_Sparc_PC22,
                                        GOTLabel, StartLabel, SethiLabel,
@@ -301,7 +320,7 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
     if (MI->getOpcode() == SP::CALL)
       assert(TF == SparcMCExpr::VK_Sparc_None &&
              "Cannot handle target flags on call address");
-    else if (MI->getOpcode() == SP::SETHIi || MI->getOpcode() == SP::SETHIXi)
+    else if (MI->getOpcode() == SP::SETHIi)
       assert((TF == SparcMCExpr::VK_Sparc_HI
               || TF == SparcMCExpr::VK_Sparc_H44
               || TF == SparcMCExpr::VK_Sparc_HH
@@ -329,7 +348,7 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
     else if (MI->getOpcode() == SP::TLS_LDXrr)
       assert(TF == SparcMCExpr::VK_Sparc_TLS_IE_LDX &&
              "Cannot handle target flags on ldx for TLS");
-    else if (MI->getOpcode() == SP::XORri || MI->getOpcode() == SP::XORXri)
+    else if (MI->getOpcode() == SP::XORri)
       assert((TF == SparcMCExpr::VK_Sparc_TLS_LDO_LOX10
               || TF == SparcMCExpr::VK_Sparc_TLS_LE_LOX10) &&
              "Cannot handle target flags on xor for TLS");

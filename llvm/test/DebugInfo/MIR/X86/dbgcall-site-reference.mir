@@ -29,22 +29,22 @@
   %struct.A = type { i8 }
   %struct.C = type { i8 }
 
-  @_ZN1DC1E1B = dso_local unnamed_addr alias void (%struct.D*, %struct.B*), void (%struct.D*, %struct.B*)* @_ZN1DC2E1B
+  @_ZN1DC1E1B = dso_local unnamed_addr alias void (ptr, ptr), ptr @_ZN1DC2E1B
   ; Function Attrs: uwtable
-  define dso_local void @_ZN1DC2E1B(%struct.D* %this, %struct.B* nocapture readnone %b) unnamed_addr #0 align 2 !dbg !7 {
+  define dso_local void @_ZN1DC2E1B(ptr %this, ptr nocapture readnone %b) unnamed_addr #0 align 2 !dbg !7 {
   entry:
     %agg.tmp = alloca %struct.B, align 1
-    call void @llvm.dbg.value(metadata %struct.D* %this, metadata !32, metadata !DIExpression()), !dbg !35
-    call void @llvm.dbg.declare(metadata %struct.B* %b, metadata !34, metadata !DIExpression()), !dbg !36
-    %0 = bitcast %struct.D* %this to %struct.C*, !dbg !36
-    call void @_ZN1CC2E1B(%struct.C* %0, %struct.B* nonnull %agg.tmp), !dbg !36
+    call void @llvm.dbg.value(metadata ptr %this, metadata !32, metadata !DIExpression()), !dbg !35
+    call void @llvm.dbg.declare(metadata ptr %b, metadata !34, metadata !DIExpression()), !dbg !36
+    %0 = bitcast ptr %this to ptr, !dbg !36
+    call void @_ZN1CC2E1B(ptr %0, ptr nonnull %agg.tmp), !dbg !36
     ret void, !dbg !36
   }
 
   ; Function Attrs: nounwind readnone speculatable willreturn
   declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-  declare dso_local void @_ZN1CC2E1B(%struct.C*, %struct.B*) unnamed_addr
+  declare dso_local void @_ZN1CC2E1B(ptr, ptr) unnamed_addr
 
   ; Function Attrs: nounwind readnone speculatable willreturn
   declare void @llvm.dbg.value(metadata, metadata, metadata) #1

@@ -1,19 +1,21 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=pre-c2x-cpp2b %s
-// RUN: %clang_cc1 -std=c2x -fsyntax-only -verify=c2x-cpp2b %s
-// RUN: %clang_cc1 -x c++ -std=c++2b -fsyntax-only -verify=c2x-cpp2b %s
-// RUN: %clang_cc1 -x c++ -std=c++2b -fsyntax-only %s -fdiagnostics-parseable-fixits 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -verify=pre-c2x-cpp23 %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-unknown-directives -verify=okay %s
+// RUN: %clang_cc1 -std=c2x -fsyntax-only -verify=c2x-cpp23 %s
+// RUN: %clang_cc1 -x c++ -std=c++23 -fsyntax-only -verify=c2x-cpp23 %s
+// RUN: %clang_cc1 -x c++ -std=c++23 -fsyntax-only %s -fdiagnostics-parseable-fixits 2>&1 | FileCheck %s
+// okay-no-diagnostics
 
-// id:        pre-c2x-cpp2b-warning@+12 {{invalid preprocessing directive, did you mean '#if'?}}
-// ifd:       pre-c2x-cpp2b-warning@+12 {{invalid preprocessing directive, did you mean '#if'?}}
-// ifde:      pre-c2x-cpp2b-warning@+12 {{invalid preprocessing directive, did you mean '#ifdef'?}}
-// elf:       pre-c2x-cpp2b-warning@+12 {{invalid preprocessing directive, did you mean '#elif'?}}
-// elsif:     pre-c2x-cpp2b-warning@+12 {{invalid preprocessing directive, did you mean '#elif'?}}
-// elseif:    pre-c2x-cpp2b-warning@+12 {{invalid preprocessing directive, did you mean '#elif'?}}
+// id:        pre-c2x-cpp23-warning@+12 {{invalid preprocessing directive, did you mean '#if'?}}
+// ifd:       pre-c2x-cpp23-warning@+12 {{invalid preprocessing directive, did you mean '#if'?}}
+// ifde:      pre-c2x-cpp23-warning@+12 {{invalid preprocessing directive, did you mean '#ifdef'?}}
+// elf:       pre-c2x-cpp23-warning@+12 {{invalid preprocessing directive, did you mean '#elif'?}}
+// elsif:     pre-c2x-cpp23-warning@+12 {{invalid preprocessing directive, did you mean '#elif'?}}
+// elseif:    pre-c2x-cpp23-warning@+12 {{invalid preprocessing directive, did you mean '#elif'?}}
 // elfidef:   not suggested to '#elifdef'
 // elfindef:  not suggested to '#elifdef'
 // elfinndef: not suggested to '#elifndef'
-// els:       pre-c2x-cpp2b-warning@+12 {{invalid preprocessing directive, did you mean '#else'?}}
-// endi:      pre-c2x-cpp2b-warning@+12 {{invalid preprocessing directive, did you mean '#endif'?}}
+// els:       pre-c2x-cpp23-warning@+12 {{invalid preprocessing directive, did you mean '#else'?}}
+// endi:      pre-c2x-cpp23-warning@+12 {{invalid preprocessing directive, did you mean '#endif'?}}
 #ifdef UNDEFINED
 #id
 #ifd
@@ -27,17 +29,17 @@
 #els
 #endi
 #endif
-// id:        c2x-cpp2b-warning@-12 {{invalid preprocessing directive, did you mean '#if'?}}
-// ifd:       c2x-cpp2b-warning@-12 {{invalid preprocessing directive, did you mean '#if'?}}
-// ifde:      c2x-cpp2b-warning@-12 {{invalid preprocessing directive, did you mean '#ifdef'?}}
-// elf:       c2x-cpp2b-warning@-12 {{invalid preprocessing directive, did you mean '#elif'?}}
-// elsif:     c2x-cpp2b-warning@-12 {{invalid preprocessing directive, did you mean '#elif'?}}
-// elseif:    c2x-cpp2b-warning@-12 {{invalid preprocessing directive, did you mean '#elif'?}}
-// elfidef:   c2x-cpp2b-warning@-12 {{invalid preprocessing directive, did you mean '#elifdef'?}}
-// elfindef:  c2x-cpp2b-warning@-12 {{invalid preprocessing directive, did you mean '#elifdef'?}}
-// elfinndef: c2x-cpp2b-warning@-12 {{invalid preprocessing directive, did you mean '#elifndef'?}}
-// els:       c2x-cpp2b-warning@-12 {{invalid preprocessing directive, did you mean '#else'?}}
-// endi:      c2x-cpp2b-warning@-12 {{invalid preprocessing directive, did you mean '#endif'?}}
+// id:        c2x-cpp23-warning@-12 {{invalid preprocessing directive, did you mean '#if'?}}
+// ifd:       c2x-cpp23-warning@-12 {{invalid preprocessing directive, did you mean '#if'?}}
+// ifde:      c2x-cpp23-warning@-12 {{invalid preprocessing directive, did you mean '#ifdef'?}}
+// elf:       c2x-cpp23-warning@-12 {{invalid preprocessing directive, did you mean '#elif'?}}
+// elsif:     c2x-cpp23-warning@-12 {{invalid preprocessing directive, did you mean '#elif'?}}
+// elseif:    c2x-cpp23-warning@-12 {{invalid preprocessing directive, did you mean '#elif'?}}
+// elfidef:   c2x-cpp23-warning@-12 {{invalid preprocessing directive, did you mean '#elifdef'?}}
+// elfindef:  c2x-cpp23-warning@-12 {{invalid preprocessing directive, did you mean '#elifdef'?}}
+// elfinndef: c2x-cpp23-warning@-12 {{invalid preprocessing directive, did you mean '#elifndef'?}}
+// els:       c2x-cpp23-warning@-12 {{invalid preprocessing directive, did you mean '#else'?}}
+// endi:      c2x-cpp23-warning@-12 {{invalid preprocessing directive, did you mean '#endif'?}}
 
 // CHECK: fix-it:{{.*}}:{[[@LINE-24]]:2-[[@LINE-24]]:4}:"if"
 // CHECK: fix-it:{{.*}}:{[[@LINE-24]]:2-[[@LINE-24]]:5}:"if"

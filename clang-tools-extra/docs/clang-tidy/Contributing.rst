@@ -278,7 +278,7 @@ are:
   for information about tokens, lexing (transforming characters into tokens) and the
   preprocessor.
 - `The AST Library
-  <https://clang.llvm.org/docs/InternalsManual.html#the-lexer-and-preprocessor-library>`_
+  <https://clang.llvm.org/docs/InternalsManual.html#the-ast-library>`_
   for information about how C++ source statements are represented as an abstract syntax
   tree (AST).
 
@@ -475,7 +475,7 @@ Add this near the ``ClangTidyModuleRegistry::Add<MyModule>`` variable:
 
 And this to the main translation unit of the :program:`clang-tidy` binary (or
 the binary you link the ``clang-tidy`` library in)
-``clang-tidy/tool/ClangTidyMain.cpp``:
+``clang-tidy/ClangTidyForceLinker.h``:
 
 .. code-block:: c++
 

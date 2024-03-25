@@ -56,7 +56,7 @@ define i64 @g(ptr %gp) {
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = load ptr addrspace(4), ptr [[GP:%.*]], align 8
 ; CHECK-NEXT:    [[V74:%.*]] = call ptr addrspace(4) @alloc()
 ; CHECK-NEXT:    [[V75:%.*]] = addrspacecast ptr addrspace(4) [[V74]] to ptr
-; CHECK-NEXT:    [[V77:%.*]] = getelementptr ptr addrspace(4), ptr [[V75]], i64 -1
+; CHECK-NEXT:    [[V77:%.*]] = getelementptr i8, ptr [[V75]], i64 -8
 ; CHECK-NEXT:    store ptr addrspace(4) [[DOTPRE]], ptr [[V77]], align 8
 ; CHECK-NEXT:    [[V81:%.*]] = load i64, ptr [[V77]], align 8
 ; CHECK-NEXT:    ret i64 [[V81]]
@@ -74,7 +74,7 @@ define i64 @g2(ptr addrspace(4) %gp) {
 ; CHECK-LABEL: @g2(
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = load ptr, ptr addrspace(4) [[GP:%.*]], align 8
 ; CHECK-NEXT:    [[V74:%.*]] = call ptr addrspace(4) @alloc()
-; CHECK-NEXT:    [[V77:%.*]] = getelementptr ptr, ptr addrspace(4) [[V74]], i64 -1
+; CHECK-NEXT:    [[V77:%.*]] = getelementptr i8, ptr addrspace(4) [[V74]], i64 -8
 ; CHECK-NEXT:    store ptr [[DOTPRE]], ptr addrspace(4) [[V77]], align 8
 ; CHECK-NEXT:    [[V81_CAST:%.*]] = ptrtoint ptr [[DOTPRE]] to i64
 ; CHECK-NEXT:    ret i64 [[V81_CAST]]

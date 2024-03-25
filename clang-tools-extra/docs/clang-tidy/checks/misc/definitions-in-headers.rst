@@ -27,6 +27,7 @@ from multiple translation units.
    const int c = 1;
    const char* const str2 = "foo";
    constexpr int k = 1;
+   namespace { int x = 1; }
 
    // Warning: function definition.
    int g() {
@@ -87,18 +88,7 @@ from multiple translation units.
    template <class T>
    constexpr T pi = T(3.1415926L);
 
-Options
--------
-
-.. option:: HeaderFileExtensions
-
-   A comma-separated list of filename extensions of header files (the filename
-   extensions should not include "." prefix). Default is "h,hh,hpp,hxx".
-   For header files without an extension, use an empty string (if there are no
-   other desired extensions) or leave an empty element in the list. E.g.,
-   "h,hh,hpp,hxx," (note the trailing comma).
-
-.. option:: UseHeaderFileExtension
-
-   When `true`, the check will use the file extension to distinguish header
-   files. Default is `true`.
+When :program:`clang-tidy` is invoked with the `--fix-notes` option, this check
+provides fixes that automatically add the ``inline`` keyword to discovered
+functions. Please note that the addition of the ``inline`` keyword to variables
+is not currently supported by this check.

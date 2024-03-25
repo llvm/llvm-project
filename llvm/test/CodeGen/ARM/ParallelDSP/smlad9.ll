@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=arm-none-none-eabi -mcpu=cortex-m33 < %s -arm-parallel-dsp -S | FileCheck %s
+; RUN: opt -mtriple=armv8m.main-none-none-eabi -mattr=+dsp < %s -arm-parallel-dsp -S | FileCheck %s
 ;
 ; Muls with operands that are constants: not yet supported, so the rewrite
 ; should not trigger (but we do want to add this soon).

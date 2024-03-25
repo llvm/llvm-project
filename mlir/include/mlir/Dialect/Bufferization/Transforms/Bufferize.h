@@ -63,21 +63,33 @@ void populateEliminateBufferizeMaterializationsPatterns(
     BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns);
 
 /// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
-/// If `copyBeforeWrite`, buffers are duplicated and copied before any tensor
-/// use that bufferizes to a memory write.
 ///
-/// Note: In the general case, it unsafe to run with `copyBeforeWrite = false`
-/// because read-after-write conflicts may materialize during bufferization.
-/// `copyBeforeWrite = false` is safe only if the input IR is guaranteed to
-/// *not* require any out-of-place bufferization.
-///
-/// Note: This function bufferizes ops without utilizing analysis results. It
-/// can be used to implement partial bufferization passes.
+/// Note: This function does not resolve read-after-write conflicts. Use this
+/// function only if it is guaranteed that the input IR can bufferize without
+/// additional buffer copies or set "options.copyBeforeWrite = true". The
+/// general bufferization entry point is `runOneShotBufferize`.
 LogicalResult bufferizeOp(Operation *op, const BufferizationOptions &options,
-                          bool copyBeforeWrite = true,
-                          const OpFilter *opFilter = nullptr,
                           BufferizationStatistics *statistics = nullptr);
 
+/// Bufferize the signature of `block` and its callers (i.e., ops that have the
+/// given block as a successor). All block argument types are changed to memref
+/// types. All corresponding operands of all callers  are wrapped in
+/// bufferization.to_memref ops. All uses of bufferized tensor block arguments
+/// are wrapped in bufferization.to_tensor ops.
+///
+/// It is expected that all callers implement the `BranchOpInterface`.
+/// Otherwise, this function will fail. The `BranchOpInterface` is used to query
+/// the range of operands that are forwarded to this block.
+///
+/// It is expected that the parent op of this block implements the
+/// `BufferizableOpInterface`. The buffer types of tensor block arguments are
+/// computed with `BufferizableOpIntercace::getBufferType`.
+LogicalResult bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
+                                      const BufferizationOptions &options);
+
+/// Return `BufferizationOptions` such that the `bufferizeOp` behaves like the
+/// old (deprecated) partial, dialect conversion-based bufferization passes. A
+/// copy will be inserted before every buffer write.
 BufferizationOptions getPartialBufferizationOptions();
 
 } // namespace bufferization

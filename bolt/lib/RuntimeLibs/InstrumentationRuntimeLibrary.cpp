@@ -13,8 +13,8 @@
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/JumpTable.h"
+#include "bolt/Core/Linker.h"
 #include "bolt/Utils/CommandLineOpts.h"
-#include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CommandLine.h"
@@ -57,10 +57,21 @@ void InstrumentationRuntimeLibrary::adjustCommandLineOptions(
               "the input binary\n";
     exit(1);
   }
-  if (!BC.FiniFunctionAddress && !BC.IsStaticExecutable) {
-    errs() << "BOLT-ERROR: input binary lacks DT_FINI entry in the dynamic "
-              "section but instrumentation currently relies on patching "
-              "DT_FINI to write the profile\n";
+
+  if (BC.IsStaticExecutable && !opts::InstrumentationSleepTime) {
+    errs() << "BOLT-ERROR: instrumentation of static binary currently does not "
+              "support profile output on binary finalization, so it "
+              "requires -instrumentation-sleep-time=N (N>0) usage\n";
+    exit(1);
+  }
+
+  if ((opts::InstrumentationWaitForks || opts::InstrumentationSleepTime) &&
+      opts::InstrumentationFileAppendPID) {
+    errs()
+        << "BOLT-ERROR: instrumentation-file-append-pid is not compatible with "
+           "instrumentation-sleep-time and instrumentation-wait-forks. If you "
+           "want a separate profile for each fork, it can only be dumped in "
+           "the end of process when instrumentation-file-append-pid is used.\n";
     exit(1);
   }
 }
@@ -78,13 +89,6 @@ void InstrumentationRuntimeLibrary::emitBinary(BinaryContext &BC,
                            : static_cast<MCSection *>(BC.Ctx->getMachOSection(
                                  "__BOLT", "__counters", MachO::S_REGULAR,
                                  SectionKind::getData()));
-
-  if (BC.IsStaticExecutable && !opts::InstrumentationSleepTime) {
-    errs() << "BOLT-ERROR: instrumentation of static binary currently does not "
-              "support profile output on binary finalization, so it "
-              "requires -instrumentation-sleep-time=N (N>0) usage\n";
-    exit(1);
-  }
 
   Section->setAlignment(llvm::Align(BC.RegularPageSize));
   Streamer.switchSection(Section);
@@ -191,28 +195,22 @@ void InstrumentationRuntimeLibrary::emitBinary(BinaryContext &BC,
 }
 
 void InstrumentationRuntimeLibrary::link(
-    BinaryContext &BC, StringRef ToolPath, RuntimeDyld &RTDyld,
-    std::function<void(RuntimeDyld &)> OnLoad) {
+    BinaryContext &BC, StringRef ToolPath, BOLTLinker &Linker,
+    BOLTLinker::SectionsMapper MapSections) {
   std::string LibPath = getLibPath(ToolPath, opts::RuntimeInstrumentationLib);
-  loadLibrary(LibPath, RTDyld);
-  OnLoad(RTDyld);
-  RTDyld.finalizeWithMemoryManagerLocking();
-  if (RTDyld.hasError()) {
-    outs() << "BOLT-ERROR: RTDyld failed: " << RTDyld.getErrorString() << "\n";
-    exit(1);
-  }
+  loadLibrary(LibPath, Linker, MapSections);
 
   if (BC.isMachO())
     return;
 
-  RuntimeFiniAddress = RTDyld.getSymbol("__bolt_instr_fini").getAddress();
+  RuntimeFiniAddress = Linker.lookupSymbol("__bolt_instr_fini").value_or(0);
   if (!RuntimeFiniAddress) {
     errs() << "BOLT-ERROR: instrumentation library does not define "
               "__bolt_instr_fini: "
            << LibPath << "\n";
     exit(1);
   }
-  RuntimeStartAddress = RTDyld.getSymbol("__bolt_instr_start").getAddress();
+  RuntimeStartAddress = Linker.lookupSymbol("__bolt_instr_start").value_or(0);
   if (!RuntimeStartAddress) {
     errs() << "BOLT-ERROR: instrumentation library does not define "
               "__bolt_instr_start: "
@@ -224,7 +222,7 @@ void InstrumentationRuntimeLibrary::link(
          << Twine::utohexstr(RuntimeFiniAddress) << "\n";
   outs() << "BOLT-INFO: clear procedure is 0x"
          << Twine::utohexstr(
-                RTDyld.getSymbol("__bolt_instr_clear_counters").getAddress())
+                Linker.lookupSymbol("__bolt_instr_clear_counters").value_or(0))
          << "\n";
 
   emitTablesAsELFNote(BC);

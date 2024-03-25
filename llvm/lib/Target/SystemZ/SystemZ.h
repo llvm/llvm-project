@@ -189,7 +189,7 @@ static inline bool isImmHF(uint64_t Val) {
 } // end namespace SystemZ
 
 FunctionPass *createSystemZISelDag(SystemZTargetMachine &TM,
-                                   CodeGenOpt::Level OptLevel);
+                                   CodeGenOptLevel OptLevel);
 FunctionPass *createSystemZElimComparePass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZShortenInstPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZLongBranchPass(SystemZTargetMachine &TM);

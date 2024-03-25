@@ -16,6 +16,11 @@ define void @d(i32 %x, ...) {
   ret void
 }
 
+define void @naked_func() naked {
+  tail call void asm sideeffect "mov  r1, r0", ""()
+  unreachable
+}
+
 define void @g(ptr %y) {
   call i32 @b(i32 zeroext 0)
   call void @c(ptr %y)
@@ -23,6 +28,7 @@ define void @g(ptr %y) {
   call void @d(i32 0, ptr sret(i32) %y)
   call void @d(i32 0, ptr nocapture %y)
   call void @d(ptr nocapture noundef %y)
+  call void @naked_func(i32 1)
   ret void
 }
 ; CHECK-LABEL: define void @g(ptr %y)
@@ -34,3 +40,4 @@ define void @g(ptr %y) {
 ; CHECK32:  %2 = ptrtoint ptr %y to i32
 ; CHECK32:  call void (i32, ...) @d(i32 noundef %2)
 ; CHECK64:  call void @d(ptr nocapture noundef %y)
+; CHECK:    call void @naked_func(i32 1)

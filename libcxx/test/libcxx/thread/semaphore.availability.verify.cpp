@@ -7,17 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11
-// REQUIRES: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-
+// REQUIRES: availability-synchronization_library-missing
 
 // Test the availability markup on std::counting_semaphore and std::binary_semaphore.
 
 #include <chrono>
 #include <semaphore>
 
-
-int main(int, char**)
-{
+void f() {
     {
         // Tests for std::counting_semaphore with non-default template argument
         std::counting_semaphore<20> sem(10);

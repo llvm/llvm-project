@@ -344,6 +344,12 @@ static GenericValue lle_X_abort(FunctionType *FT, ArrayRef<GenericValue> Args) {
   return GenericValue();
 }
 
+// Silence warnings about sprintf. (See also
+// https://github.com/llvm/llvm-project/issues/58086)
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 // int sprintf(char *, const char *, ...) - a very rough implementation to make
 // output useful.
 static GenericValue lle_X_sprintf(FunctionType *FT,
@@ -425,6 +431,9 @@ static GenericValue lle_X_sprintf(FunctionType *FT,
   }
   return GV;
 }
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 // int printf(const char *, ...) - a very rough implementation to make output
 // useful.

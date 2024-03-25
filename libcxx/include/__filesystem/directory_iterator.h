@@ -16,22 +16,27 @@
 #include <__filesystem/directory_entry.h>
 #include <__filesystem/directory_options.h>
 #include <__filesystem/path.h>
+#include <__iterator/default_sentinel.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/shared_ptr.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
+#include <__system_error/error_code.h>
+#include <__utility/move.h>
 #include <cstddef>
-#include <system_error>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-#ifndef _LIBCPP_CXX03_LANG
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
+#if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_PUSH
+_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
 class _LIBCPP_HIDDEN __dir_stream;
 class directory_iterator {
@@ -43,123 +48,105 @@ public:
   typedef input_iterator_tag iterator_category;
 
 public:
-  //ctor & dtor
-  _LIBCPP_HIDE_FROM_ABI
-  directory_iterator() noexcept {}
+  // ctor & dtor
+  _LIBCPP_HIDE_FROM_ABI directory_iterator() noexcept {}
 
-  _LIBCPP_HIDE_FROM_ABI
-  explicit directory_iterator(const path& __p)
-      : directory_iterator(__p, nullptr) {}
+  _LIBCPP_HIDE_FROM_ABI explicit directory_iterator(const path& __p) : directory_iterator(__p, nullptr) {}
 
-  _LIBCPP_HIDE_FROM_ABI
-  directory_iterator(const path& __p, directory_options __opts)
+  _LIBCPP_HIDE_FROM_ABI directory_iterator(const path& __p, directory_options __opts)
       : directory_iterator(__p, nullptr, __opts) {}
 
-  _LIBCPP_HIDE_FROM_ABI
-  directory_iterator(const path& __p, error_code& __ec)
-      : directory_iterator(__p, &__ec) {}
+  _LIBCPP_HIDE_FROM_ABI directory_iterator(const path& __p, error_code& __ec) : directory_iterator(__p, &__ec) {}
 
-  _LIBCPP_HIDE_FROM_ABI
-  directory_iterator(const path& __p, directory_options __opts,
-                     error_code& __ec)
+  _LIBCPP_HIDE_FROM_ABI directory_iterator(const path& __p, directory_options __opts, error_code& __ec)
       : directory_iterator(__p, &__ec, __opts) {}
 
-  _LIBCPP_HIDE_FROM_ABI directory_iterator(const directory_iterator&) = default;
-  _LIBCPP_HIDE_FROM_ABI directory_iterator(directory_iterator&&) = default;
+  _LIBCPP_HIDE_FROM_ABI directory_iterator(const directory_iterator&)            = default;
+  _LIBCPP_HIDE_FROM_ABI directory_iterator(directory_iterator&&)                 = default;
   _LIBCPP_HIDE_FROM_ABI directory_iterator& operator=(const directory_iterator&) = default;
 
-  _LIBCPP_HIDE_FROM_ABI
-  directory_iterator& operator=(directory_iterator&& __o) noexcept {
+  _LIBCPP_HIDE_FROM_ABI directory_iterator& operator=(directory_iterator&& __o) noexcept {
     // non-default implementation provided to support self-move assign.
     if (this != &__o) {
-      __imp_ = _VSTD::move(__o.__imp_);
+      __imp_ = std::move(__o.__imp_);
     }
     return *this;
   }
 
   _LIBCPP_HIDE_FROM_ABI ~directory_iterator() = default;
 
-  _LIBCPP_HIDE_FROM_ABI
-  const directory_entry& operator*() const {
-    _LIBCPP_ASSERT(__imp_, "The end iterator cannot be dereferenced");
+  _LIBCPP_HIDE_FROM_ABI const directory_entry& operator*() const {
+    // Note: this check duplicates a check in `__dereference()`.
+    _LIBCPP_ASSERT_NON_NULL(__imp_, "The end iterator cannot be dereferenced");
     return __dereference();
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  const directory_entry* operator->() const { return &**this; }
+  _LIBCPP_HIDE_FROM_ABI const directory_entry* operator->() const { return &**this; }
 
-  _LIBCPP_HIDE_FROM_ABI
-  directory_iterator& operator++() { return __increment(); }
+  _LIBCPP_HIDE_FROM_ABI directory_iterator& operator++() { return __increment(); }
 
-  _LIBCPP_HIDE_FROM_ABI
-  __dir_element_proxy operator++(int) {
+  _LIBCPP_HIDE_FROM_ABI __dir_element_proxy operator++(int) {
     __dir_element_proxy __p(**this);
     __increment();
     return __p;
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  directory_iterator& increment(error_code& __ec) { return __increment(&__ec); }
+  _LIBCPP_HIDE_FROM_ABI directory_iterator& increment(error_code& __ec) { return __increment(&__ec); }
+
+#  if _LIBCPP_STD_VER >= 20
+
+  _LIBCPP_HIDE_FROM_ABI bool operator==(default_sentinel_t) const noexcept { return *this == directory_iterator(); }
+
+#  endif
 
 private:
   inline _LIBCPP_HIDE_FROM_ABI friend bool
-  operator==(const directory_iterator& __lhs,
-             const directory_iterator& __rhs) noexcept;
+  operator==(const directory_iterator& __lhs, const directory_iterator& __rhs) noexcept;
 
   // construct the dir_stream
-  _LIBCPP_FUNC_VIS
-  directory_iterator(const path&, error_code*,
-                     directory_options = directory_options::none);
+  _LIBCPP_EXPORTED_FROM_ABI directory_iterator(const path&, error_code*, directory_options = directory_options::none);
 
-  _LIBCPP_FUNC_VIS
-  directory_iterator& __increment(error_code* __ec = nullptr);
+  _LIBCPP_EXPORTED_FROM_ABI directory_iterator& __increment(error_code* __ec = nullptr);
 
-  _LIBCPP_FUNC_VIS
-  const directory_entry& __dereference() const;
+  _LIBCPP_EXPORTED_FROM_ABI const directory_entry& __dereference() const;
 
 private:
   shared_ptr<__dir_stream> __imp_;
 };
 
 inline _LIBCPP_HIDE_FROM_ABI bool
-operator==(const directory_iterator& __lhs,
-           const directory_iterator& __rhs) noexcept {
+operator==(const directory_iterator& __lhs, const directory_iterator& __rhs) noexcept {
   return __lhs.__imp_ == __rhs.__imp_;
 }
 
 inline _LIBCPP_HIDE_FROM_ABI bool
-operator!=(const directory_iterator& __lhs,
-           const directory_iterator& __rhs) noexcept {
+operator!=(const directory_iterator& __lhs, const directory_iterator& __rhs) noexcept {
   return !(__lhs == __rhs);
 }
 
 // enable directory_iterator range-based for statements
-inline _LIBCPP_HIDE_FROM_ABI directory_iterator
-begin(directory_iterator __iter) noexcept {
-  return __iter;
-}
+inline _LIBCPP_HIDE_FROM_ABI directory_iterator begin(directory_iterator __iter) noexcept { return __iter; }
 
-inline _LIBCPP_HIDE_FROM_ABI directory_iterator
-end(directory_iterator) noexcept {
-  return directory_iterator();
-}
+inline _LIBCPP_HIDE_FROM_ABI directory_iterator end(directory_iterator) noexcept { return directory_iterator(); }
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_POP
+_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
-#if _LIBCPP_STD_VER > 17
+#  if _LIBCPP_STD_VER >= 20
 
 template <>
-_LIBCPP_AVAILABILITY_FILESYSTEM
-inline constexpr bool _VSTD::ranges::enable_borrowed_range<_VSTD_FS::directory_iterator> = true;
+_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY inline constexpr bool
+    std::ranges::enable_borrowed_range<std::filesystem::directory_iterator> = true;
 
 template <>
-_LIBCPP_AVAILABILITY_FILESYSTEM
-inline constexpr bool _VSTD::ranges::enable_view<_VSTD_FS::directory_iterator> = true;
+_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY inline constexpr bool
+    std::ranges::enable_view<std::filesystem::directory_iterator> = true;
 
-#endif // _LIBCPP_STD_VER > 17
+#  endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___FILESYSTEM_DIRECTORY_ITERATOR_H

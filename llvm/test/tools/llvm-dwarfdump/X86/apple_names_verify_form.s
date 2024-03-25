@@ -3,7 +3,7 @@
 # RUN: | FileCheck %s
 
 # CHECK: Verifying .apple_names...
-# CHECK-NEXT:	error: Unsupported form: failed to read HashData.
+# CHECK-NEXT:	error: Unsupported form:
 
 # This test is meant to verify that the -verify option
 # in llvm-dwarfdump, correctly identifies that Atom[0].form is unsupported.
@@ -34,7 +34,7 @@ Lnames_begin:
 	.long	0                       ## HeaderData Die Offset Base
 	.long	1                       ## HeaderData Atom Count
 	.short	1                       ## DW_ATOM_die_offset
-	.short	400                     ## DW_FORM_data4 -- error: unsupported form; failed to read HashData.
+	.short	400                     ## not a valid form -- error: unsupported form; failed to read HashData.
 	.long	0                       ## Bucket 0
 	.long	1                       ## Bucket 1
 	.long	177678                  ## Hash in Bucket 0

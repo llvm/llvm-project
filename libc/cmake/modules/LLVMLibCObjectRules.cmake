@@ -1,70 +1,5 @@
 set(OBJECT_LIBRARY_TARGET_TYPE "OBJECT_LIBRARY")
 
-function(_get_common_compile_options output_var flags)
-  list(FIND flags ${FMA_OPT_FLAG} fma)
-  if(${fma} LESS 0)
-    list(FIND flags "${FMA_OPT_FLAG}__ONLY" fma)
-  endif()
-  if((${fma} GREATER -1) AND (LIBC_CPU_FEATURES MATCHES "FMA"))
-    set(ADD_FMA_FLAG TRUE)
-  endif()
-
-  list(FIND flags ${ROUND_OPT_FLAG} round)
-  if(${round} LESS 0)
-    list(FIND flags "${ROUND_OPT_FLAG}__ONLY" round)
-  endif()
-  if((${round} GREATER -1) AND (LIBC_CPU_FEATURES MATCHES "SSE4_2"))
-    set(ADD_SSE4_2_FLAG TRUE)
-  endif()
-
-  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${ARGN})
-  if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
-    list(APPEND compile_options "-fpie")
-    list(APPEND compile_options "-ffreestanding")
-    list(APPEND compile_options "-fno-builtin")
-    list(APPEND compile_options "-fno-exceptions")
-    list(APPEND compile_options "-fno-lax-vector-conversions")
-    list(APPEND compile_options "-fno-unwind-tables")
-    list(APPEND compile_options "-fno-asynchronous-unwind-tables")
-    list(APPEND compile_options "-fno-rtti")
-    list(APPEND compile_options "-Wall")
-    list(APPEND compile_options "-Wextra")
-    list(APPEND compile_options "-Wimplicit-fallthrough")
-    list(APPEND compile_options "-Wwrite-strings")
-    list(APPEND compile_options "-Wextra-semi")
-    if(NOT CMAKE_COMPILER_IS_GNUCXX)
-      list(APPEND compile_options "-Wnewline-eof")
-      list(APPEND compile_options "-Wnonportable-system-include-path")
-      list(APPEND compile_options "-Wstrict-prototypes")
-      list(APPEND compile_options "-Wthread-safety")
-    endif()
-    if(ADD_FMA_FLAG)
-      list(APPEND compile_options "-mfma")
-    endif()
-    if(ADD_SSE4_2_FLAG)
-      list(APPEND compile_options "-msse4.2")
-    endif()
-  elseif(MSVC)
-    list(APPEND compile_options "/EHs-c-")
-    list(APPEND compile_options "/GR-")
-    if(ADD_FMA_FLAG)
-      list(APPEND compile_options "/arch:AVX2")
-    endif()
-  endif()
-  if (LIBC_TARGET_ARCHITECTURE_IS_GPU)
-    list(APPEND compile_options "-fopenmp")
-    list(APPEND compile_options "-fopenmp-cuda-mode")
-    foreach(gpu_arch ${LIBC_GPU_ARCHITECTURES})
-      list(APPEND compile_options "--offload-arch=${gpu_arch}")
-    endforeach()
-    list(APPEND compile_options "-nogpulib")
-    list(APPEND compile_options "-nogpuinc")
-    list(APPEND compile_options "-fvisibility=hidden")
-    list(APPEND compile_options "-foffload-lto")
-  endif()
-  set(${output_var} ${compile_options} PARENT_SCOPE)
-endfunction()
-
 # Rule which is essentially a wrapper over add_library to compile a set of
 # sources to object files.
 # Usage:
@@ -72,21 +7,48 @@ endfunction()
 #       <target_name>
 #       HDRS <list of header files>
 #       SRCS <list of source files>
-#       DEPENDS <list of dependencies>
+#       [ALIAS] <If this object library is an alias for another object library.>
+#       DEPENDS <list of dependencies; Should be a single item for ALIAS libraries>
 #       COMPILE_OPTIONS <optional list of special compile options for this target>
 #       FLAGS <optional list of flags>
 function(create_object_library fq_target_name)
   cmake_parse_arguments(
     "ADD_OBJECT"
-    "" # No optional arguments
+    "ALIAS;NO_GPU_BUNDLE" # optional arguments
     "CXX_STANDARD" # Single value arguments
     "SRCS;HDRS;COMPILE_OPTIONS;DEPENDS;FLAGS" # Multivalue arguments
     ${ARGN}
   )
 
+  get_fq_deps_list(fq_deps_list ${ADD_OBJECT_DEPENDS})
+
+  if(ADD_OBJECT_ALIAS)
+    if(ADD_OBJECT_SRCS OR ADD_OBJECT_HDRS)
+      message(FATAL_ERROR
+              "${fq_target_name}: object library alias cannot have SRCS and/or HDRS.")
+    endif()
+    list(LENGTH fq_deps_list depends_size)
+    if(NOT ${depends_size} EQUAL 1)
+      message(FATAL_ERROR
+              "${fq_targe_name}: object library alias should have exactly one DEPENDS.")
+    endif()
+    add_library(
+      ${fq_target_name}
+      ALIAS
+      ${fq_deps_list}
+    )
+    return()
+  endif()
+
   if(NOT ADD_OBJECT_SRCS)
     message(FATAL_ERROR "'add_object_library' rule requires SRCS to be specified.")
   endif()
+
+  set(internal_target_name ${fq_target_name}.__internal__)
+  set(public_packaging_for_internal "-DLIBC_COPT_PUBLIC_PACKAGING")
+
+  _get_common_compile_options(compile_options "${ADD_OBJECT_FLAGS}")
+  list(APPEND compile_options ${ADD_OBJECT_COMPILE_OPTIONS})
 
   add_library(
     ${fq_target_name}
@@ -95,21 +57,25 @@ function(create_object_library fq_target_name)
     ${ADD_OBJECT_SRCS}
     ${ADD_OBJECT_HDRS}
   )
-  target_include_directories(
-    ${fq_target_name}
-    PRIVATE
-      ${LIBC_BUILD_DIR}/include
-      ${LIBC_SOURCE_DIR}
-      ${LIBC_BUILD_DIR}
-  )
-  _get_common_compile_options(
-    compile_options
-    "${ADD_OBJECT_FLAGS}"
-    ${ADD_OBJECT_COMPILE_OPTIONS}
-  )
+  target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(${fq_target_name} PRIVATE ${compile_options})
 
-  get_fq_deps_list(fq_deps_list ${ADD_OBJECT_DEPENDS})
+  # The NVPTX target is installed as LLVM-IR but the internal testing toolchain
+  # cannot handle it natively. Make a separate internal target for testing.
+  if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX AND NOT LIBC_GPU_TESTS_DISABLED)
+    add_library(
+      ${internal_target_name}
+      EXCLUDE_FROM_ALL
+      OBJECT
+      ${ADD_OBJECT_SRCS}
+      ${ADD_OBJECT_HDRS}
+    )
+    target_include_directories(${internal_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+    target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR})
+    target_compile_options(${internal_target_name} PRIVATE ${compile_options}
+                           -fno-lto -march=${LIBC_GPU_TARGET_ARCHITECTURE})
+  endif()
 
   if(SHOW_INTERMEDIATE_OBJECTS)
     message(STATUS "Adding object library ${fq_target_name}")
@@ -122,119 +88,45 @@ function(create_object_library fq_target_name)
 
   if(fq_deps_list)
     add_dependencies(${fq_target_name} ${fq_deps_list})
+    # Add deps as link libraries to inherit interface compile and link options.
+    target_link_libraries(${fq_target_name} PUBLIC ${fq_deps_list})
   endif()
 
   if(NOT ADD_OBJECT_CXX_STANDARD)
     set(ADD_OBJECT_CXX_STANDARD ${CMAKE_CXX_STANDARD})
   endif()
-  
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
       TARGET_TYPE ${OBJECT_LIBRARY_TARGET_TYPE}
-      OBJECT_FILES "$<TARGET_OBJECTS:${fq_target_name}>"
       CXX_STANDARD ${ADD_OBJECT_CXX_STANDARD}
       DEPS "${fq_deps_list}"
       FLAGS "${ADD_OBJECT_FLAGS}"
   )
+
+  # If we built a separate internal target we want to use those target objects
+  # for testing instead of the exported target.
+  set(target_objects ${fq_target_name})
+  if(TARGET ${internal_target_name})
+    set(target_objects ${internal_target_name})
+  endif()
+
+  set_target_properties(
+    ${fq_target_name}
+    PROPERTIES
+      OBJECT_FILES "$<TARGET_OBJECTS:${target_objects}>"
+  )
 endfunction(create_object_library)
 
-# Internal function, used by `add_object_library`.
-function(expand_flags_for_object_library target_name flags)
-  cmake_parse_arguments(
-    "EXPAND_FLAGS"
-    "IGNORE_MARKER" # Optional arguments
-    "" # Single-value arguments
-    "DEPENDS;FLAGS" # Multi-value arguments
-    ${ARGN}
-  )
-
-  list(LENGTH flags nflags)
-  if(NOT ${nflags})
-    create_object_library(
-      ${target_name}
-      DEPENDS ${EXPAND_FLAGS_DEPENDS}
-      FLAGS ${EXPAND_FLAGS_FLAGS}
-      ${EXPAND_FLAGS_UNPARSED_ARGUMENTS}
-    )
-    return()
-  endif()
-
-  list(GET flags 0 flag)
-  list(REMOVE_AT flags 0)
-  extract_flag_modifier(${flag} real_flag modifier)
-
-  if(NOT "${modifier}" STREQUAL "NO")
-    expand_flags_for_object_library(
-      ${target_name}
-      "${flags}"
-      DEPENDS "${EXPAND_FLAGS_DEPENDS}" IGNORE_MARKER
-      FLAGS "${EXPAND_FLAGS_FLAGS}" IGNORE_MARKER
-      "${EXPAND_FLAGS_UNPARSED_ARGUMENTS}"
-    )
-  endif()
-
-  if("${real_flag}" STREQUAL "" OR "${modifier}" STREQUAL "ONLY")
-    return()
-  endif()
-
-  set(NEW_FLAGS ${EXPAND_FLAGS_FLAGS})
-  list(REMOVE_ITEM NEW_FLAGS ${flag})
-  get_fq_dep_list_without_flag(NEW_DEPS ${real_flag} ${EXPAND_FLAGS_DEPENDS})
-
-  # Only target with `flag` has `.__NO_flag` target, `flag__NO` and
-  # `flag__ONLY` do not.
-  if("${modifier}" STREQUAL "")
-    set(TARGET_NAME "${target_name}.__NO_${flag}")
-  else()
-    set(TARGET_NAME "${target_name}")
-  endif()
-
-  expand_flags_for_object_library(
-    ${TARGET_NAME}
-    "${flags}"
-    DEPENDS "${NEW_DEPS}" IGNORE_MARKER
-    FLAGS "${NEW_FLAGS}" IGNORE_MARKER
-    "${EXPAND_FLAGS_UNPARSED_ARGUMENTS}"
-  )
-endfunction(expand_flags_for_object_library)
-
 function(add_object_library target_name)
-  cmake_parse_arguments(
-    "ADD_TO_EXPAND"
-    "" # Optional arguments
-    "" # Single value arguments
-    "DEPENDS;FLAGS" # Multi-value arguments
-    ${ARGN}
-  )
-
-  get_fq_target_name(${target_name} fq_target_name)
-
-  if(ADD_TO_EXPAND_DEPENDS AND ("${SHOW_INTERMEDIATE_OBJECTS}" STREQUAL "DEPS"))
-    message(STATUS "Gathering FLAGS from dependencies for ${fq_target_name}")
-  endif()
-
-  get_fq_deps_list(fq_deps_list ${ADD_TO_EXPAND_DEPENDS})
-  get_flags_from_dep_list(deps_flag_list ${fq_deps_list})
-
-  list(APPEND ADD_TO_EXPAND_FLAGS ${deps_flag_list})
-  remove_duplicated_flags("${ADD_TO_EXPAND_FLAGS}" flags)
-  list(SORT flags)
-
-  if(SHOW_INTERMEDIATE_OBJECTS AND flags)
-    message(STATUS "Object library ${fq_target_name} has FLAGS: ${flags}")
-  endif()
-
-  expand_flags_for_object_library(
-    ${fq_target_name}
-    "${flags}"
-    DEPENDS "${fq_deps_list}" IGNORE_MARKER
-    FLAGS "${flags}" IGNORE_MARKER
-    ${ADD_TO_EXPAND_UNPARSED_ARGUMENTS}
-  )
+  add_target_with_flags(
+    ${target_name}
+    CREATE_TARGET create_object_library
+    ${ARGN})
 endfunction(add_object_library)
 
 set(ENTRYPOINT_OBJ_TARGET_TYPE "ENTRYPOINT_OBJ")
+set(ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE "ENTRYPOINT_OBJ_VENDOR")
 
 # A rule for entrypoint object targets.
 # Usage:
@@ -252,12 +144,20 @@ set(ENTRYPOINT_OBJ_TARGET_TYPE "ENTRYPOINT_OBJ")
 function(create_entrypoint_object fq_target_name)
   cmake_parse_arguments(
     "ADD_ENTRYPOINT_OBJ"
-    "ALIAS;REDIRECTED" # Optional argument
+    "ALIAS;REDIRECTED;VENDOR" # Optional argument
     "NAME;CXX_STANDARD" # Single value arguments
     "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;FLAGS"  # Multi value arguments
     ${ARGN}
   )
 
+  set(entrypoint_target_type ${ENTRYPOINT_OBJ_TARGET_TYPE})
+  if(${ADD_ENTRYPOINT_OBJ_VENDOR})
+    # TODO: We currently rely on external definitions of certain math functions
+    # provided by GPU vendors like AMD or Nvidia. We need to mark these so we
+    # don't end up running tests on these. In the future all of these should be
+    # implemented and this can be removed.
+    set(entrypoint_target_type ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
+  endif()
   list(FIND TARGET_ENTRYPOINT_NAME_LIST ${ADD_ENTRYPOINT_OBJ_NAME} entrypoint_name_index)
   if(${entrypoint_name_index} EQUAL -1)
     add_custom_target(${fq_target_name})
@@ -265,7 +165,7 @@ function(create_entrypoint_object fq_target_name)
       ${fq_target_name}
       PROPERTIES
         "ENTRYPOINT_NAME" ${ADD_ENTRYPOINT_OBJ_NAME}
-        "TARGET_TYPE" ${ENTRYPOINT_OBJ_TARGET_TYPE}
+        "TARGET_TYPE" ${entrypoint_target_type}
         "OBJECT_FILE" ""
         "OBJECT_FILE_RAW" ""
         "DEPS" ""
@@ -276,6 +176,8 @@ function(create_entrypoint_object fq_target_name)
     endif()
     return()
   endif()
+
+  set(internal_target_name ${fq_target_name}.__internal__)
 
   if(ADD_ENTRYPOINT_OBJ_ALIAS)
     # Alias targets help one add aliases to other entrypoint object targets.
@@ -299,19 +201,39 @@ function(create_entrypoint_object fq_target_name)
     endif()
 
     get_target_property(obj_type ${fq_dep_name} "TARGET_TYPE")
-    if((NOT obj_type) OR (NOT (${obj_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})))
+    if((NOT obj_type) OR (NOT (${obj_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE} OR
+                               ${obj_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})))
       message(FATAL_ERROR "The aliasee of an entrypoint alias should be an entrypoint.")
     endif()
 
-    add_custom_target(${fq_target_name})
-    add_dependencies(${fq_target_name} ${fq_dep_name})
     get_target_property(object_file ${fq_dep_name} "OBJECT_FILE")
     get_target_property(object_file_raw ${fq_dep_name} "OBJECT_FILE_RAW")
+
+    # If the system cannot build the GPU tests we simply make a dummy target.
+    if(LIBC_TARGET_OS_IS_GPU AND LIBC_GPU_TESTS_DISABLED)
+      add_custom_target(${internal_target_name})
+    else()
+      add_library(
+        ${internal_target_name}
+        EXCLUDE_FROM_ALL
+        OBJECT
+        ${object_file_raw}
+      )
+    endif()
+
+    add_dependencies(${internal_target_name} ${fq_dep_name})
+    add_library(
+      ${fq_target_name}
+      EXCLUDE_FROM_ALL
+      OBJECT
+      ${object_file}
+    )
+    add_dependencies(${fq_target_name} ${fq_dep_name} ${internal_target_name})
     set_target_properties(
       ${fq_target_name}
       PROPERTIES
         ENTRYPOINT_NAME ${ADD_ENTRYPOINT_OBJ_NAME}
-        TARGET_TYPE ${ENTRYPOINT_OBJ_TARGET_TYPE}
+        TARGET_TYPE ${entrypoint_target_type}
         IS_ALIAS "YES"
         OBJECT_FILE ""
         OBJECT_FILE_RAW ""
@@ -331,20 +253,15 @@ function(create_entrypoint_object fq_target_name)
     set(ADD_ENTRYPOINT_OBJ_CXX_STANDARD ${CMAKE_CXX_STANDARD})
   endif()
 
-  _get_common_compile_options(
-    common_compile_options
-    "${ADD_ENTRYPOINT_OBJ_FLAGS}"
-    ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS}
-  )
-  set(internal_target_name ${fq_target_name}.__internal__)
-  set(include_dirs ${LIBC_BUILD_DIR}/include ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
+  _get_common_compile_options(common_compile_options "${ADD_ENTRYPOINT_OBJ_FLAGS}")
+  list(APPEND common_compile_options ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS})
   get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
   set(full_deps_list ${fq_deps_list} libc.src.__support.common)
 
   if(SHOW_INTERMEDIATE_OBJECTS)
     message(STATUS "Adding entrypoint object ${fq_target_name}")
     if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
-      foreach(dep IN LISTS ADD_OBJECT_DEPENDS)
+      foreach(dep IN LISTS ADD_ENTRYPOINT_OBJ_DEPENDS)
         message(STATUS "  ${fq_target_name} depends on ${dep}")
       endforeach()
     endif()
@@ -360,14 +277,16 @@ function(create_entrypoint_object fq_target_name)
     ${ADD_ENTRYPOINT_OBJ_HDRS}
   )
   target_compile_options(${internal_target_name} BEFORE PRIVATE ${common_compile_options})
-  target_include_directories(${internal_target_name} PRIVATE ${include_dirs})
+  target_include_directories(${internal_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   add_dependencies(${internal_target_name} ${full_deps_list})
-  set_target_properties(
-    ${internal_target_name}
-    PROPERTIES
-      CXX_STANDARD ${ADD_ENTRYPOINT_OBJ_CXX_STANDARD}
-      FLAGS "${ADD_ENTRYPOINT_OBJ_FLAGS}"
-  )
+  target_link_libraries(${internal_target_name} ${full_deps_list})
+
+  # The NVPTX target cannot use LTO for the internal targets used for testing.
+  if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+    target_compile_options(${internal_target_name} PRIVATE
+                           -fno-lto -march=${LIBC_GPU_TARGET_ARCHITECTURE})
+  endif()
 
   add_library(
     ${fq_target_name}
@@ -378,25 +297,40 @@ function(create_entrypoint_object fq_target_name)
     ${ADD_ENTRYPOINT_OBJ_SRCS}
     ${ADD_ENTRYPOINT_OBJ_HDRS}
   )
-  target_compile_options(${fq_target_name} BEFORE PRIVATE ${common_compile_options} -DLLVM_LIBC_PUBLIC_PACKAGING)
-  target_include_directories(${fq_target_name} PRIVATE ${include_dirs})
+  target_compile_options(${fq_target_name} BEFORE PRIVATE ${common_compile_options} -DLIBC_COPT_PUBLIC_PACKAGING)
+  target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   add_dependencies(${fq_target_name} ${full_deps_list})
+  target_link_libraries(${fq_target_name} ${full_deps_list})
 
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
       ENTRYPOINT_NAME ${ADD_ENTRYPOINT_OBJ_NAME}
-      TARGET_TYPE ${ENTRYPOINT_OBJ_TARGET_TYPE}
+      TARGET_TYPE ${entrypoint_target_type}
       OBJECT_FILE "$<TARGET_OBJECTS:${fq_target_name}>"
-      # TODO: We don't need to list internal object files if the internal
-      # target is a normal static library.
-      OBJECT_FILE_RAW "$<TARGET_OBJECTS:${internal_target_name}>"
       CXX_STANDARD ${ADD_ENTRYPOINT_OBJ_CXX_STANDARD}
       DEPS "${fq_deps_list}"
       FLAGS "${ADD_ENTRYPOINT_OBJ_FLAGS}"
   )
 
-  if(LLVM_LIBC_ENABLE_LINTING)
+  if(TARGET ${internal_target_name})
+    set_target_properties(
+      ${internal_target_name}
+      PROPERTIES
+        CXX_STANDARD ${ADD_ENTRYPOINT_OBJ_CXX_STANDARD}
+        FLAGS "${ADD_ENTRYPOINT_OBJ_FLAGS}"
+    )
+    set_target_properties(
+      ${fq_target_name}
+      PROPERTIES
+        # TODO: We don't need to list internal object files if the internal
+        # target is a normal static library.
+        OBJECT_FILE_RAW "$<TARGET_OBJECTS:${internal_target_name}>"
+    )
+  endif()
+
+  if(LLVM_LIBC_ENABLE_LINTING AND TARGET ${internal_target_name})
     if(NOT LLVM_LIBC_CLANG_TIDY)
       message(FATAL_ERROR "Something is wrong!  LLVM_LIBC_ENABLE_LINTING is "
               "ON but LLVM_LIBC_CLANG_TIDY is not set.")
@@ -424,9 +358,8 @@ function(create_entrypoint_object fq_target_name)
         COMMAND ${CMAKE_COMMAND} -E echo "Header file check skipped")
     endif()
 
-    set(lint_timestamp "${CMAKE_CURRENT_BINARY_DIR}/.${target_name}.__lint_timestamp__")
-    add_custom_command(
-      OUTPUT ${lint_timestamp}
+    add_custom_target(
+      ${fq_target_name}.__lint__
       # --quiet is used to surpress warning statistics from clang-tidy like:
       #     Suppressed X warnings (X in non-user code).
       # There seems to be a bug in clang-tidy where by even with --quiet some
@@ -448,112 +381,33 @@ function(create_entrypoint_object fq_target_name)
       # use add_custom_command. This function requires an output file and since
       # linting doesn't produce a file, we create a dummy file using a
       # crossplatform touch.
-      COMMAND "${CMAKE_COMMAND}" -E touch ${lint_timestamp}
-      COMMENT "Linting... ${target_name}"
-      DEPENDS clang-tidy ${internal_target_name} ${ADD_ENTRYPOINT_OBJ_SRCS}
+      COMMENT "Linting... ${fq_target_name}"
+      DEPENDS ${internal_target_name} ${ADD_ENTRYPOINT_OBJ_SRCS}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
+    add_dependencies(libc-lint ${fq_target_name}.__lint__)
   endif()
 
 endfunction(create_entrypoint_object)
 
-# Internal function, used by `add_entrypoint_object`.
-function(expand_flags_for_entrypoint_object target_name flags)
-  cmake_parse_arguments(
-    "EXPAND_FLAGS"
-    "IGNORE_MARKER" # Optional arguments
-    "" # Single-value arguments
-    "DEPENDS;FLAGS" # Multi-value arguments
-    ${ARGN}
-  )
-
-  list(LENGTH flags nflags)
-  if(NOT ${nflags})
-    create_entrypoint_object(
-      ${target_name}
-      DEPENDS ${EXPAND_FLAGS_DEPENDS}
-      FLAGS ${EXPAND_FLAGS_FLAGS}
-      ${EXPAND_FLAGS_UNPARSED_ARGUMENTS}
-    )
-    return()
-  endif()
-
-  list(GET flags 0 flag)
-  list(REMOVE_AT flags 0)
-  extract_flag_modifier(${flag} real_flag modifier)
-
-  if(NOT "${modifier}" STREQUAL "NO")
-    expand_flags_for_entrypoint_object(
-      ${target_name}
-      "${flags}"
-      DEPENDS "${EXPAND_FLAGS_DEPENDS}" IGNORE_MARKER
-      FLAGS "${EXPAND_FLAGS_FLAGS}" IGNORE_MARKER
-      "${EXPAND_FLAGS_UNPARSED_ARGUMENTS}"
-    )
-  endif()
-
-  if("${real_flag}" STREQUAL "" OR "${modifier}" STREQUAL "ONLY")
-    return()
-  endif()
-
-  set(NEW_FLAGS ${EXPAND_FLAGS_FLAGS})
-  list(REMOVE_ITEM NEW_FLAGS ${flag})
-  get_fq_dep_list_without_flag(NEW_DEPS ${real_flag} ${EXPAND_FLAGS_DEPENDS})
-
-  # Only target with `flag` has `.__NO_flag` target, `flag__NO` and
-  # `flag__ONLY` do not.
-  if("${modifier}" STREQUAL "")
-    set(TARGET_NAME "${target_name}.__NO_${flag}")
-  else()
-    set(TARGET_NAME "${target_name}")
-  endif()
-
-  expand_flags_for_entrypoint_object(
-    ${TARGET_NAME}
-    "${flags}"
-    DEPENDS "${NEW_DEPS}" IGNORE_MARKER
-    FLAGS "${NEW_FLAGS}" IGNORE_MARKER
-    "${EXPAND_FLAGS_UNPARSED_ARGUMENTS}"
-  )
-endfunction(expand_flags_for_entrypoint_object)
-
 function(add_entrypoint_object target_name)
   cmake_parse_arguments(
-    "ADD_TO_EXPAND"
+    "ADD_ENTRYPOINT_OBJ"
     "" # Optional arguments
     "NAME" # Single value arguments
-    "DEPENDS;FLAGS" # Multi-value arguments
+    "" # Multi-value arguments
     ${ARGN}
   )
 
-  get_fq_target_name(${target_name} fq_target_name)
-
-  if(ADD_TO_EXPAND_DEPENDS AND ("${SHOW_INTERMEDIATE_OBJECTS}" STREQUAL "DEPS"))
-    message(STATUS "Gathering FLAGS from dependencies for ${fq_target_name}")
+  if(NOT ADD_ENTRYPOINT_OBJ_NAME)
+    set(ADD_ENTRYPOINT_OBJ_NAME ${target_name})
   endif()
 
-  get_fq_deps_list(fq_deps_list ${ADD_TO_EXPAND_DEPENDS})
-  get_flags_from_dep_list(deps_flag_list ${fq_deps_list})
-
-  list(APPEND ADD_TO_EXPAND_FLAGS ${deps_flag_list})
-  remove_duplicated_flags("${ADD_TO_EXPAND_FLAGS}" flags)
-  list(SORT flags)
-
-  if(SHOW_INTERMEDIATE_OBJECTS AND flags)
-    message(STATUS "Entrypoint object ${fq_target_name} has FLAGS: ${flags}")
-  endif()
-
-  if(NOT ADD_TO_EXPAND_NAME)
-    set(ADD_TO_EXPAND_NAME ${target_name})
-  endif()
-
-  expand_flags_for_entrypoint_object(
-    ${fq_target_name}
-    "${flags}"
-    NAME ${ADD_TO_EXPAND_NAME} IGNORE_MARKER
-    DEPENDS "${fq_deps_list}" IGNORE_MARKER
-    FLAGS "${flags}" IGNORE_MARKER
-    ${ADD_TO_EXPAND_UNPARSED_ARGUMENTS}
+  add_target_with_flags(
+    ${target_name}
+    NAME ${ADD_ENTRYPOINT_OBJ_NAME}
+    CREATE_TARGET create_entrypoint_object
+    ${ADD_ENTRYPOINT_OBJ_UNPARSED_ARGUMENTS}
   )
 endfunction(add_entrypoint_object)
 

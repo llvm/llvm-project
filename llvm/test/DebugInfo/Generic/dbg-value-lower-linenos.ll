@@ -1,4 +1,5 @@
 ; RUN: opt < %s -S -passes=mem2reg,instcombine | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators < %s -S -passes=mem2reg,instcombine | FileCheck %s
 
 ; The '%bar' alloca will be promoted to an SSA register by mem2reg: test that
 ; zero line number are assigned to the dbg.value intrinsics that are inserted

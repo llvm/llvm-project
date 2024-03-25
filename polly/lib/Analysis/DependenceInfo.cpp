@@ -950,8 +950,8 @@ public:
   bool runOnScop(Scop &S) override {
     DependenceInfo &P = getAnalysis<DependenceInfo>();
 
-    OS << "Printing analysis '" << P.getPassName() << "' for "
-       << "region: '" << S.getRegion().getNameStr() << "' in function '"
+    OS << "Printing analysis '" << P.getPassName() << "' for " << "region: '"
+       << S.getRegion().getNameStr() << "' in function '"
        << S.getFunction().getName() << "':\n";
     P.printScop(OS, S);
 

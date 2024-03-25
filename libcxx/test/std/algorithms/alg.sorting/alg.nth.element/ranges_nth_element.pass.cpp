@@ -30,7 +30,6 @@
 #include <ranges>
 
 #include "almost_satisfies_types.h"
-#include "boolean_testable.h"
 #include "test_iterators.h"
 
 // SFINAE tests.
@@ -64,11 +63,11 @@ static_assert(!HasNthElementR<UncheckedRange<int*, SentinelForNotWeaklyEqualityC
 static_assert(!HasNthElementR<UncheckedRange<int*>, BadComparator>);
 static_assert(!HasNthElementR<UncheckedRange<const int*>>); // Doesn't satisfy `sortable`.
 
-template <size_t N, class T, class Iter>
-constexpr void verify_nth(const std::array<T, N>& partially_sorted, size_t nth_index, Iter last, T expected_nth) {
+template <std::size_t N, class T, class Iter>
+constexpr void verify_nth(const std::array<T, N>& partially_sorted, std::size_t nth_index, Iter last, T expected_nth) {
   // Note that the exact output of `nth_element` is unspecified and may vary between implementations.
 
-  assert(base(last) == partially_sorted.end());
+  assert(base(last) == partially_sorted.data() + partially_sorted.size());
 
   auto b = partially_sorted.begin();
   auto nth = b + nth_index;
@@ -92,8 +91,8 @@ constexpr void verify_nth(const std::array<T, N>& partially_sorted, size_t nth_i
   }
 }
 
-template <class Iter, class Sent, size_t N>
-constexpr void test_one(std::array<int, N> input, size_t nth_index, std::optional<int> expected_nth = {}) {
+template <class Iter, class Sent, std::size_t N>
+constexpr void test_one(std::array<int, N> input, std::size_t nth_index, std::optional<int> expected_nth = {}) {
   assert(expected_nth || nth_index == N);
 
   { // (iterator, sentinel) overload.
@@ -126,7 +125,7 @@ constexpr void test_one(std::array<int, N> input, size_t nth_index, std::optiona
   }
 }
 
-template <class Iter, class Sent, size_t N>
+template <class Iter, class Sent, std::size_t N>
 constexpr void test_all_cases(std::array<int, N> input) {
   auto sorted = input;
   std::sort(sorted.begin(), sorted.end());
@@ -162,7 +161,7 @@ constexpr void test_iterators() {
 
     { // nth element is in the right place.
       std::array input = {6, 5, 3, 1, 4, 2};
-      constexpr size_t N = input.size();
+      constexpr std::size_t N = input.size();
       test_one<Iter, Sent, N>(input, 2, /*expected_nth=*/3);
     }
 
@@ -253,25 +252,6 @@ constexpr bool test() {
       auto in = input;
       auto last = std::ranges::nth_element(in, in.begin() + 1, &S::comparator, &S::projection);
       assert(in[1] == S{2});
-      assert(last == in.end());
-    }
-  }
-
-  { // The comparator can return any type that's convertible to `bool`.
-    const std::array input = {2, 1, 3};
-    auto pred = [](int i, int j) { return BooleanTestable{i < j}; };
-
-    {
-      std::array in = input;
-      auto last = std::ranges::nth_element(in.begin(), in.begin() + 1, in.end(), pred);
-      assert(in[1] == 2);
-      assert(last == in.end());
-    }
-
-    {
-      std::array in = input;
-      auto last = std::ranges::nth_element(in, in.begin() + 1, pred);
-      assert(in[1] == 2);
       assert(last == in.end());
     }
   }

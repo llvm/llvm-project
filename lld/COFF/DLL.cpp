@@ -110,7 +110,7 @@ private:
 // A chunk for the import descriptor table.
 class ImportDirectoryChunk : public NonSectionChunk {
 public:
-  explicit ImportDirectoryChunk(Chunk *n) : dllName(n) {}
+  explicit ImportDirectoryChunk(Chunk *n) : dllName(n) { setAlignment(4); }
   size_t getSize() const override { return sizeof(ImportDirectoryTableEntry); }
 
   void writeTo(uint8_t *buf) const override {
@@ -172,7 +172,7 @@ binImports(COFFLinkerContext &ctx,
 // A chunk for the delay import descriptor table etnry.
 class DelayDirectoryChunk : public NonSectionChunk {
 public:
-  explicit DelayDirectoryChunk(Chunk *n) : dllName(n) {}
+  explicit DelayDirectoryChunk(Chunk *n) : dllName(n) { setAlignment(4); }
 
   size_t getSize() const override {
     return sizeof(delay_import_directory_table_entry);
@@ -313,11 +313,12 @@ static const uint8_t tailMergeARM64[] = {
 };
 
 // A chunk for the delay import thunk.
-class ThunkChunkX64 : public NonSectionChunk {
+class ThunkChunkX64 : public NonSectionCodeChunk {
 public:
   ThunkChunkX64(Defined *i, Chunk *tm) : imp(i), tailMerge(tm) {}
 
   size_t getSize() const override { return sizeof(thunkX64); }
+  MachineTypes getMachine() const override { return AMD64; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, thunkX64, sizeof(thunkX64));
@@ -329,11 +330,12 @@ public:
   Chunk *tailMerge = nullptr;
 };
 
-class TailMergeChunkX64 : public NonSectionChunk {
+class TailMergeChunkX64 : public NonSectionCodeChunk {
 public:
   TailMergeChunkX64(Chunk *d, Defined *h) : desc(d), helper(h) {}
 
   size_t getSize() const override { return sizeof(tailMergeX64); }
+  MachineTypes getMachine() const override { return AMD64; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, tailMergeX64, sizeof(tailMergeX64));
@@ -380,12 +382,13 @@ public:
   }
 };
 
-class ThunkChunkX86 : public NonSectionChunk {
+class ThunkChunkX86 : public NonSectionCodeChunk {
 public:
   ThunkChunkX86(COFFLinkerContext &ctx, Defined *i, Chunk *tm)
       : imp(i), tailMerge(tm), ctx(ctx) {}
 
   size_t getSize() const override { return sizeof(thunkX86); }
+  MachineTypes getMachine() const override { return I386; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, thunkX86, sizeof(thunkX86));
@@ -404,12 +407,13 @@ private:
   const COFFLinkerContext &ctx;
 };
 
-class TailMergeChunkX86 : public NonSectionChunk {
+class TailMergeChunkX86 : public NonSectionCodeChunk {
 public:
   TailMergeChunkX86(COFFLinkerContext &ctx, Chunk *d, Defined *h)
       : desc(d), helper(h), ctx(ctx) {}
 
   size_t getSize() const override { return sizeof(tailMergeX86); }
+  MachineTypes getMachine() const override { return I386; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, tailMergeX86, sizeof(tailMergeX86));
@@ -428,7 +432,7 @@ private:
   const COFFLinkerContext &ctx;
 };
 
-class ThunkChunkARM : public NonSectionChunk {
+class ThunkChunkARM : public NonSectionCodeChunk {
 public:
   ThunkChunkARM(COFFLinkerContext &ctx, Defined *i, Chunk *tm)
       : imp(i), tailMerge(tm), ctx(ctx) {
@@ -436,6 +440,7 @@ public:
   }
 
   size_t getSize() const override { return sizeof(thunkARM); }
+  MachineTypes getMachine() const override { return ARMNT; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, thunkARM, sizeof(thunkARM));
@@ -454,7 +459,7 @@ private:
   const COFFLinkerContext &ctx;
 };
 
-class TailMergeChunkARM : public NonSectionChunk {
+class TailMergeChunkARM : public NonSectionCodeChunk {
 public:
   TailMergeChunkARM(COFFLinkerContext &ctx, Chunk *d, Defined *h)
       : desc(d), helper(h), ctx(ctx) {
@@ -462,6 +467,7 @@ public:
   }
 
   size_t getSize() const override { return sizeof(tailMergeARM); }
+  MachineTypes getMachine() const override { return ARMNT; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, tailMergeARM, sizeof(tailMergeARM));
@@ -480,13 +486,14 @@ private:
   const COFFLinkerContext &ctx;
 };
 
-class ThunkChunkARM64 : public NonSectionChunk {
+class ThunkChunkARM64 : public NonSectionCodeChunk {
 public:
   ThunkChunkARM64(Defined *i, Chunk *tm) : imp(i), tailMerge(tm) {
     setAlignment(4);
   }
 
   size_t getSize() const override { return sizeof(thunkARM64); }
+  MachineTypes getMachine() const override { return ARM64; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, thunkARM64, sizeof(thunkARM64));
@@ -499,13 +506,14 @@ public:
   Chunk *tailMerge = nullptr;
 };
 
-class TailMergeChunkARM64 : public NonSectionChunk {
+class TailMergeChunkARM64 : public NonSectionCodeChunk {
 public:
   TailMergeChunkARM64(Chunk *d, Defined *h) : desc(d), helper(h) {
     setAlignment(4);
   }
 
   size_t getSize() const override { return sizeof(tailMergeARM64); }
+  MachineTypes getMachine() const override { return ARM64; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, tailMergeARM64, sizeof(tailMergeARM64));
@@ -555,8 +563,10 @@ private:
 // A chunk for the export descriptor table.
 class ExportDirectoryChunk : public NonSectionChunk {
 public:
-  ExportDirectoryChunk(int i, int j, Chunk *d, Chunk *a, Chunk *n, Chunk *o)
-      : maxOrdinal(i), nameTabSize(j), dllName(d), addressTab(a), nameTab(n),
+  ExportDirectoryChunk(int baseOrdinal, int maxOrdinal, int nameTabSize,
+                       Chunk *d, Chunk *a, Chunk *n, Chunk *o)
+      : baseOrdinal(baseOrdinal), maxOrdinal(maxOrdinal),
+        nameTabSize(nameTabSize), dllName(d), addressTab(a), nameTab(n),
         ordinalTab(o) {}
 
   size_t getSize() const override {
@@ -568,14 +578,15 @@ public:
 
     auto *e = (export_directory_table_entry *)(buf);
     e->NameRVA = dllName->getRVA();
-    e->OrdinalBase = 1;
-    e->AddressTableEntries = maxOrdinal;
+    e->OrdinalBase = baseOrdinal;
+    e->AddressTableEntries = (maxOrdinal - baseOrdinal) + 1;
     e->NumberOfNamePointers = nameTabSize;
     e->ExportAddressTableRVA = addressTab->getRVA();
     e->NamePointerRVA = nameTab->getRVA();
     e->OrdinalTableRVA = ordinalTab->getRVA();
   }
 
+  uint16_t baseOrdinal;
   uint16_t maxOrdinal;
   uint16_t nameTabSize;
   Chunk *dllName;
@@ -586,17 +597,19 @@ public:
 
 class AddressTableChunk : public NonSectionChunk {
 public:
-  explicit AddressTableChunk(COFFLinkerContext &ctx, size_t maxOrdinal)
-      : size(maxOrdinal), ctx(ctx) {}
+  explicit AddressTableChunk(COFFLinkerContext &ctx, size_t baseOrdinal,
+                             size_t maxOrdinal)
+      : baseOrdinal(baseOrdinal), size((maxOrdinal - baseOrdinal) + 1),
+        ctx(ctx) {}
   size_t getSize() const override { return size * 4; }
 
   void writeTo(uint8_t *buf) const override {
     memset(buf, 0, getSize());
 
     for (const Export &e : ctx.config.exports) {
-      assert(e.ordinal != 0 && "Export symbol has invalid ordinal");
-      // OrdinalBase is 1, so subtract 1 to get the index.
-      uint8_t *p = buf + (e.ordinal - 1) * 4;
+      assert(e.ordinal >= baseOrdinal && "Export symbol has invalid ordinal");
+      // Subtract the OrdinalBase to get the index.
+      uint8_t *p = buf + (e.ordinal - baseOrdinal) * 4;
       uint32_t bit = 0;
       // Pointer to thumb code must have the LSB set, so adjust it.
       if (ctx.config.machine == ARMNT && !e.data)
@@ -612,6 +625,7 @@ public:
   }
 
 private:
+  size_t baseOrdinal;
   size_t size;
   const COFFLinkerContext &ctx;
 };
@@ -634,22 +648,24 @@ private:
 
 class ExportOrdinalChunk : public NonSectionChunk {
 public:
-  explicit ExportOrdinalChunk(const COFFLinkerContext &ctx, size_t i)
-      : size(i), ctx(ctx) {}
+  explicit ExportOrdinalChunk(const COFFLinkerContext &ctx, size_t baseOrdinal,
+                              size_t tableSize)
+      : baseOrdinal(baseOrdinal), size(tableSize), ctx(ctx) {}
   size_t getSize() const override { return size * 2; }
 
   void writeTo(uint8_t *buf) const override {
     for (const Export &e : ctx.config.exports) {
       if (e.noname)
         continue;
-      assert(e.ordinal != 0 && "Export symbol has invalid ordinal");
-      // This table stores unbiased indices, so subtract 1 (OrdinalBase).
-      write16le(buf, e.ordinal - 1);
+      assert(e.ordinal >= baseOrdinal && "Export symbol has invalid ordinal");
+      // This table stores unbiased indices, so subtract OrdinalBase.
+      write16le(buf, e.ordinal - baseOrdinal);
       buf += 2;
     }
   }
 
 private:
+  size_t baseOrdinal;
   size_t size;
   const COFFLinkerContext &ctx;
 };
@@ -831,12 +847,17 @@ Chunk *DelayLoadContents::newThunkChunk(DefinedImportData *s,
 }
 
 EdataContents::EdataContents(COFFLinkerContext &ctx) : ctx(ctx) {
-  uint16_t maxOrdinal = 0;
-  for (Export &e : ctx.config.exports)
-    maxOrdinal = std::max(maxOrdinal, e.ordinal);
+  unsigned baseOrdinal = 1 << 16, maxOrdinal = 0;
+  for (Export &e : ctx.config.exports) {
+    baseOrdinal = std::min(baseOrdinal, (unsigned)e.ordinal);
+    maxOrdinal = std::max(maxOrdinal, (unsigned)e.ordinal);
+  }
+  // Ordinals must start at 1 as suggested in:
+  // https://learn.microsoft.com/en-us/cpp/build/reference/export-exports-a-function?view=msvc-170
+  assert(baseOrdinal >= 1);
 
   auto *dllName = make<StringChunk>(sys::path::filename(ctx.config.outputFile));
-  auto *addressTab = make<AddressTableChunk>(ctx, maxOrdinal);
+  auto *addressTab = make<AddressTableChunk>(ctx, baseOrdinal, maxOrdinal);
   std::vector<Chunk *> names;
   for (Export &e : ctx.config.exports)
     if (!e.noname)
@@ -851,9 +872,10 @@ EdataContents::EdataContents(COFFLinkerContext &ctx) : ctx(ctx) {
   }
 
   auto *nameTab = make<NamePointersChunk>(names);
-  auto *ordinalTab = make<ExportOrdinalChunk>(ctx, names.size());
-  auto *dir = make<ExportDirectoryChunk>(maxOrdinal, names.size(), dllName,
-                                         addressTab, nameTab, ordinalTab);
+  auto *ordinalTab = make<ExportOrdinalChunk>(ctx, baseOrdinal, names.size());
+  auto *dir =
+      make<ExportDirectoryChunk>(baseOrdinal, maxOrdinal, names.size(), dllName,
+                                 addressTab, nameTab, ordinalTab);
   chunks.push_back(dir);
   chunks.push_back(dllName);
   chunks.push_back(addressTab);

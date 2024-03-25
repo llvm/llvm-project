@@ -35,6 +35,7 @@ using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(JITLoaderGDB)
 
+namespace {
 // Debug Interface Structures
 enum jit_actions_t { JIT_NOACTION = 0, JIT_REGISTER_FN, JIT_UNREGISTER_FN };
 
@@ -52,7 +53,6 @@ template <typename ptr_t> struct jit_descriptor {
   ptr_t first_entry;    // pointer
 };
 
-namespace {
 enum EnableJITLoaderGDB {
   eEnableJITLoaderGDBDefault,
   eEnableJITLoaderGDBOn,
@@ -89,8 +89,8 @@ enum {
 
 class PluginProperties : public Properties {
 public:
-  static ConstString GetSettingName() {
-    return ConstString(JITLoaderGDB::GetPluginNameStatic());
+  static llvm::StringRef GetSettingName() {
+    return JITLoaderGDB::GetPluginNameStatic();
   }
 
   PluginProperties() {
@@ -99,9 +99,10 @@ public:
   }
 
   EnableJITLoaderGDB GetEnable() const {
-    return (EnableJITLoaderGDB)m_collection_sp->GetPropertyAtIndexAsEnumeration(
-        nullptr, ePropertyEnable,
-        g_jitloadergdb_properties[ePropertyEnable].default_uint_value);
+    return GetPropertyAtIndexAs<EnableJITLoaderGDB>(
+        ePropertyEnable,
+        static_cast<EnableJITLoaderGDB>(
+            g_jitloadergdb_properties[ePropertyEnable].default_uint_value));
   }
 };
 } // namespace
@@ -158,8 +159,7 @@ void JITLoaderGDB::DebuggerInitialize(Debugger &debugger) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForJITLoaderPlugin(
         debugger, GetGlobalPluginProperties().GetValueProperties(),
-        ConstString("Properties for the JIT LoaderGDB plug-in."),
-        is_global_setting);
+        "Properties for the JIT LoaderGDB plug-in.", is_global_setting);
   }
 }
 

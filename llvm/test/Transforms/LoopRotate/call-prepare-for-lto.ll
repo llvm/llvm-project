@@ -1,7 +1,7 @@
 ; RUN: opt -S -passes=loop-rotate < %s | FileCheck --check-prefix=FULL %s
 ; RUN: opt -S -passes=loop-rotate -rotation-prepare-for-lto < %s | FileCheck --check-prefix=PREPARE %s
-; RUN: opt -S -passes='require<targetir>,require<assumptions>,loop(loop-rotate)' < %s | FileCheck --check-prefix=FULL %s
-; RUN: opt -S -passes='require<targetir>,require<assumptions>,loop(loop-rotate)' -rotation-prepare-for-lto < %s | FileCheck --check-prefix=PREPARE %s
+; RUN: opt -S -passes='require<target-ir>,require<assumptions>,loop(loop-rotate)' < %s | FileCheck --check-prefix=FULL %s
+; RUN: opt -S -passes='require<target-ir>,require<assumptions>,loop(loop-rotate)' -rotation-prepare-for-lto < %s | FileCheck --check-prefix=PREPARE %s
 
 ; Test case to make sure loop-rotate avoids rotating during the prepare-for-lto
 ; stage, when the header contains a call which may be inlined during the LTO stage.

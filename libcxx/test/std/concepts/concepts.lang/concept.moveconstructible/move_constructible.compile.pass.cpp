@@ -76,5 +76,3 @@ static_assert(std::move_constructible<const ImplicitlyDeletedMoveAssign&&>);
 static_assert(!std::move_constructible<NonMovable>);
 static_assert(!std::move_constructible<DerivedFromNonMovable>);
 static_assert(!std::move_constructible<HasANonMovable>);
-
-int main(int, char**) { return 0; }

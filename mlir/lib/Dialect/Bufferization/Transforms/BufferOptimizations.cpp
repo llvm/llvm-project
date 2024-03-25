@@ -13,7 +13,9 @@
 
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 
+#include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
 #include "mlir/Dialect/Bufferization/Transforms/BufferUtils.h"
+#include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Operation.h"
@@ -38,12 +40,47 @@ static bool isKnownControlFlowInterface(Operation *op) {
   return isa<LoopLikeOpInterface, RegionBranchOpInterface>(op);
 }
 
+/// Returns true if the given operation represents a loop by testing whether it
+/// implements the `LoopLikeOpInterface` or the `RegionBranchOpInterface`. In
+/// the case of a `RegionBranchOpInterface`, it checks all region-based control-
+/// flow edges for cycles.
+static bool isLoop(Operation *op) {
+  // If the operation implements the `LoopLikeOpInterface` it can be considered
+  // a loop.
+  if (isa<LoopLikeOpInterface>(op))
+    return true;
+
+  // If the operation does not implement the `RegionBranchOpInterface`, it is
+  // (currently) not possible to detect a loop.
+  auto regionInterface = dyn_cast<RegionBranchOpInterface>(op);
+  if (!regionInterface)
+    return false;
+
+  return regionInterface.hasLoop();
+}
+
+/// Returns true if the given operation implements the AllocationOpInterface
+/// and it supports the dominate block hoisting.
+static bool allowAllocDominateBlockHoisting(Operation *op) {
+  auto allocOp = dyn_cast<AllocationOpInterface>(op);
+  return allocOp &&
+         static_cast<uint8_t>(allocOp.getHoistingKind() & HoistingKind::Block);
+}
+
+/// Returns true if the given operation implements the AllocationOpInterface
+/// and it supports the loop hoisting.
+static bool allowAllocLoopHoisting(Operation *op) {
+  auto allocOp = dyn_cast<AllocationOpInterface>(op);
+  return allocOp &&
+         static_cast<uint8_t>(allocOp.getHoistingKind() & HoistingKind::Loop);
+}
+
 /// Check if the size of the allocation is less than the given size. The
 /// transformation is only applied to small buffers since large buffers could
 /// exceed the stack space.
 static bool defaultIsSmallAlloc(Value alloc, unsigned maximumSizeInBytes,
                                 unsigned maxRankOfAllocatedMemRef) {
-  auto type = alloc.getType().dyn_cast<ShapedType>();
+  auto type = dyn_cast<ShapedType>(alloc.getType());
   if (!type || !alloc.getDefiningOp<memref::AllocOp>())
     return false;
   if (!type.hasStaticShape()) {
@@ -74,7 +111,8 @@ leavesAllocationScope(Region *parentRegion,
       // If there is at least one alias that leaves the parent region, we know
       // that this alias escapes the whole region and hence the associated
       // allocation leaves allocation scope.
-      if (isRegionReturnLike(use) && use->getParentRegion() == parentRegion)
+      if (isa<RegionBranchTerminatorOpInterface>(use) &&
+          use->getParentRegion() == parentRegion)
         return true;
     }
   }
@@ -96,8 +134,7 @@ static bool hasAllocationScope(Value alloc,
       // Check if the operation is a known control flow interface and break the
       // loop to avoid transformation in loops. Furthermore skip transformation
       // if the operation does not implement a RegionBeanchOpInterface.
-      if (BufferPlacementTransformationBase::isLoop(parentOp) ||
-          !isKnownControlFlowInterface(parentOp))
+      if (isLoop(parentOp) || !isKnownControlFlowInterface(parentOp))
         break;
     }
   } while ((region = region->getParentRegion()));
@@ -271,13 +308,11 @@ struct BufferAllocationHoistingState : BufferAllocationHoistingStateBase {
   }
 
   /// Returns true if the given operation does not represent a loop.
-  bool isLegalPlacement(Operation *op) {
-    return !BufferPlacementTransformationBase::isLoop(op);
-  }
+  bool isLegalPlacement(Operation *op) { return !isLoop(op); }
 
   /// Returns true if the given operation should be considered for hoisting.
   static bool shouldHoistOpType(Operation *op) {
-    return llvm::isa<memref::AllocOp>(op);
+    return allowAllocDominateBlockHoisting(op);
   }
 
   /// Sets the current placement block to the given block.
@@ -308,13 +343,13 @@ struct BufferAllocationLoopHoistingState : BufferAllocationHoistingStateBase {
   /// given loop operation. If this is the case, it indicates that the
   /// allocation is passed via a back edge.
   bool isLegalPlacement(Operation *op) {
-    return BufferPlacementTransformationBase::isLoop(op) &&
+    return isLoop(op) &&
            !dominators->dominates(aliasDominatorBlock, op->getBlock());
   }
 
   /// Returns true if the given operation should be considered for hoisting.
   static bool shouldHoistOpType(Operation *op) {
-    return llvm::isa<memref::AllocOp, memref::AllocaOp>(op);
+    return allowAllocLoopHoisting(op);
   }
 
   /// Does not change the internal placement block, as we want to move
@@ -354,13 +389,15 @@ public:
       // `AutomaticAllocationScope` determined during the initialization phase.
       OpBuilder builder(startOperation);
       Operation *allocOp = alloc.getDefiningOp();
-      Operation *alloca = builder.create<memref::AllocaOp>(
-          alloc.getLoc(), alloc.getType().cast<MemRefType>(),
-          allocOp->getOperands());
-
-      // Replace the original alloc by a newly created alloca.
-      allocOp->replaceAllUsesWith(alloca);
-      allocOp->erase();
+      if (auto allocInterface = dyn_cast<AllocationOpInterface>(allocOp)) {
+        Operation *alloca =
+            allocInterface.buildPromotedAlloc(builder, alloc).value();
+        if (!alloca)
+          continue;
+        // Replace the original alloc by a newly created alloca.
+        allocOp->replaceAllUsesWith(alloca);
+        allocOp->erase();
+      }
     }
   }
 };
@@ -389,9 +426,7 @@ struct BufferLoopHoistingPass
 
   void runOnOperation() override {
     // Hoist all allocations out of loops.
-    BufferAllocationHoisting<BufferAllocationLoopHoistingState> optimizer(
-        getOperation());
-    optimizer.hoist();
+    hoistBuffersFromLoops(getOperation());
   }
 };
 
@@ -431,6 +466,11 @@ private:
 };
 
 } // namespace
+
+void mlir::bufferization::hoistBuffersFromLoops(Operation *op) {
+  BufferAllocationHoisting<BufferAllocationLoopHoistingState> optimizer(op);
+  optimizer.hoist();
+}
 
 std::unique_ptr<Pass> mlir::bufferization::createBufferHoistingPass() {
   return std::make_unique<BufferHoistingPass>();

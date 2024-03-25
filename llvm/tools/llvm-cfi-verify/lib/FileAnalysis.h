@@ -39,7 +39,6 @@
 #include <functional>
 #include <set>
 #include <string>
-#include <unordered_map>
 
 namespace llvm {
 namespace cfi_verify {

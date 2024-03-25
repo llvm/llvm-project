@@ -101,19 +101,19 @@ define amdgpu_ps float @add_shl_vgpr_const(i32 %a, i32 %b) {
 define amdgpu_ps float @add_shl_vgpr_const_inline_const(i32 %a) {
 ; VI-LABEL: add_shl_vgpr_const_inline_const:
 ; VI:       ; %bb.0:
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 0x3f4, v0
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 9, v0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, 0x7e800, v0
 ; VI-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: add_shl_vgpr_const_inline_const:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0x3f4
-; GFX9-NEXT:    v_add_lshl_u32 v0, v0, v1, 9
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7e800
+; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 9, v1
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: add_shl_vgpr_const_inline_const:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_add_lshl_u32 v0, 0x3f4, v0, 9
+; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 9, 0x7e800
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = add i32 %a, 1012
   %result = shl i32 %x, 9
@@ -124,18 +124,19 @@ define amdgpu_ps float @add_shl_vgpr_const_inline_const(i32 %a) {
 define amdgpu_ps float @add_shl_vgpr_inline_const_x2(i32 %a) {
 ; VI-LABEL: add_shl_vgpr_inline_const_x2:
 ; VI:       ; %bb.0:
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 3, v0
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 9, v0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, 0x600, v0
 ; VI-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: add_shl_vgpr_inline_const_x2:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_add_lshl_u32 v0, v0, 3, 9
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0x600
+; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 9, v1
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: add_shl_vgpr_inline_const_x2:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_add_lshl_u32 v0, v0, 3, 9
+; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 9, 0x600
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = add i32 %a, 3
   %result = shl i32 %x, 9

@@ -1,7 +1,10 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fsanitize-address-use-after-scope | FileCheck %s --check-prefix=CHECK --check-prefix=LIFETIME --check-prefix=OMP45
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fsanitize-address-use-after-scope | FileCheck %s --check-prefix=CHECK --check-prefix=LIFETIME --check-prefix=OMP5
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fsanitize-address-use-after-scope | FileCheck %s --check-prefix=CHECK --check-prefix=LIFETIME --check-prefix=OMP5
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fsanitize-address-use-after-scope | FileCheck %s --check-prefix=CHECK --check-prefix=LIFETIME --check-prefix=OMP51
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK --check-prefix=OMP5
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK --check-prefix=OMP5
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -fopenmp-version=45 -emit-llvm -o - | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
 // RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -gno-column-info -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
@@ -78,6 +81,7 @@ void loop_with_counter_collapse() {
   // CHECK: br label %[[EXIT]]
   // CHECK: [[EXIT]]:
   // CHECK: [[J_LB_VAL:%.+]] = phi i32 [ [[J_LB_MIN_VAL]], %[[TRUE]] ], [ [[J_LB_MAX_VAL]], %[[FALSE]] ]
+  // CHECK: store i32 [[J_LB_VAL]], ptr [[I_TMP]],
   // CHECK: store i32 [[J_LB_VAL]], ptr [[J_LB:%.+]],
   // CHECK: [[J_UB_VAL:%.+]] = load i32, ptr [[J_UB]],
   // CHECK: [[J_LB_VAL:%.+]] = load i32, ptr [[J_LB]],
@@ -410,6 +414,7 @@ void guided7(float *a, float *b, float *c, float *d) {
   #pragma omp for schedule(guided, 7)
 // OMP45: call void @__kmpc_dispatch_init_8u(ptr [[DEFAULT_LOC]], i32 [[GTID]], i32 36, i64 0, i64 16908287, i64 1, i64 7)
 // OMP5: call void @__kmpc_dispatch_init_8u(ptr [[DEFAULT_LOC]], i32 [[GTID]], i32 1073741860, i64 0, i64 16908287, i64 1, i64 7)
+// OMP51: call void @__kmpc_dispatch_init_8u(ptr [[DEFAULT_LOC]], i32 [[GTID]], i32 1073741860, i64 0, i64 16908287, i64 1, i64 7)
 //
 // CHECK: [[HASWORK:%.+]] = call i32 @__kmpc_dispatch_next_8u(ptr [[DEFAULT_LOC]], i32 [[GTID]], ptr [[OMP_ISLAST:%[^,]+]], ptr [[OMP_LB:%[^,]+]], ptr [[OMP_UB:%[^,]+]], ptr [[OMP_ST:%[^,]+]])
 // CHECK-NEXT: [[O_CMP:%.+]] = icmp ne i32 [[HASWORK]], 0
@@ -455,6 +460,7 @@ void test_auto(float *a, float *b, float *c, float *d) {
   #pragma omp for schedule(auto) collapse(2)
 // OMP45: call void @__kmpc_dispatch_init_8(ptr [[DEFAULT_LOC]], i32 [[GTID]], i32 38, i64 0, i64 [[LAST_ITER:%[^,]+]], i64 1, i64 1)
 // OMP5: call void @__kmpc_dispatch_init_8(ptr [[DEFAULT_LOC]], i32 [[GTID]], i32 1073741862, i64 0, i64 [[LAST_ITER:%[^,]+]], i64 1, i64 1)
+// OMP51: call void @__kmpc_dispatch_init_8(ptr [[DEFAULT_LOC]], i32 [[GTID]], i32 1073741862, i64 0, i64 [[LAST_ITER:%[^,]+]], i64 1, i64 1)
 //
 // CHECK: [[HASWORK:%.+]] = call i32 @__kmpc_dispatch_next_8(ptr [[DEFAULT_LOC]], i32 [[GTID]], ptr [[OMP_ISLAST:%[^,]+]], ptr [[OMP_LB:%[^,]+]], ptr [[OMP_UB:%[^,]+]], ptr [[OMP_ST:%[^,]+]])
 // CHECK-NEXT: [[O_CMP:%.+]] = icmp ne i32 [[HASWORK]], 0
@@ -498,8 +504,10 @@ void runtime(float *a, float *b, float *c, float *d) {
   int x = 0;
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(ptr [[DEFAULT_LOC:[@%].+]])
   #pragma omp for collapse(2) schedule(runtime)
+
 // OMP45: call void @__kmpc_dispatch_init_4(ptr [[DEFAULT_LOC]], i32 [[GTID]], i32 37, i32 0, i32 199, i32 1, i32 1)
 // OMP5: call void @__kmpc_dispatch_init_4(ptr [[DEFAULT_LOC]], i32 [[GTID]], i32 1073741861, i32 0, i32 199, i32 1, i32 1)
+// OMP51: call void @__kmpc_dispatch_init_4(ptr [[DEFAULT_LOC]], i32 [[GTID]], i32 1073741861, i32 0, i32 199, i32 1, i32 1)
 //
 // CHECK: [[HASWORK:%.+]] = call i32 @__kmpc_dispatch_next_4(ptr [[DEFAULT_LOC]], i32 [[GTID]], ptr [[OMP_ISLAST:%[^,]+]], ptr [[OMP_LB:%[^,]+]], ptr [[OMP_UB:%[^,]+]], ptr [[OMP_ST:%[^,]+]])
 // CHECK-NEXT: [[O_CMP:%.+]] = icmp ne i32 [[HASWORK]], 0
@@ -763,6 +771,7 @@ void inner_f();
 void inner_l();
 void body_f();
 
+// OMP51-NOT: imperfectly_nested_loop
 // OMP5-LABEL: imperfectly_nested_loop
 void imperfectly_nested_loop() {
   // OMP5: call void @__kmpc_for_static_init_4(

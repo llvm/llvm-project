@@ -17,7 +17,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
-
+#include "llvm/ADT/SmallString.h"
 using namespace clang;
 using namespace clang::targets;
 
@@ -33,55 +33,56 @@ static const char *const DataLayoutStringR600 =
 
 static const char *const DataLayoutStringAMDGCN =
     "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
-    "-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
+    "-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:"
+    "32-v48:64-v96:128"
     "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1"
-    "-ni:7";
+    "-ni:7:8:9";
 
 const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
-    Generic,  // Default
-    Global,   // opencl_global
-    Local,    // opencl_local
-    Constant, // opencl_constant
-    Private,  // opencl_private
-    Generic,  // opencl_generic
-    Global,   // opencl_global_device
-    Global,   // opencl_global_host
-    Global,   // cuda_device
-    Constant, // cuda_constant
-    Local,    // cuda_shared
-    Global,   // sycl_global
-    Global,   // sycl_global_device
-    Global,   // sycl_global_host
-    Local,    // sycl_local
-    Private,  // sycl_private
-    Generic,  // ptr32_sptr
-    Generic,  // ptr32_uptr
-    Generic,  // ptr64
-    Generic,  // hlsl_groupshared
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // Default
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global
+    llvm::AMDGPUAS::LOCAL_ADDRESS,    // opencl_local
+    llvm::AMDGPUAS::CONSTANT_ADDRESS, // opencl_constant
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // opencl_private
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // opencl_generic
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_device
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_host
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // cuda_device
+    llvm::AMDGPUAS::CONSTANT_ADDRESS, // cuda_constant
+    llvm::AMDGPUAS::LOCAL_ADDRESS,    // cuda_shared
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // sycl_global
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // sycl_global_device
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // sycl_global_host
+    llvm::AMDGPUAS::LOCAL_ADDRESS,    // sycl_local
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // sycl_private
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_sptr
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_uptr
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr64
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // hlsl_groupshared
 };
 
 const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
-    Private,  // Default
-    Global,   // opencl_global
-    Local,    // opencl_local
-    Constant, // opencl_constant
-    Private,  // opencl_private
-    Generic,  // opencl_generic
-    Global,   // opencl_global_device
-    Global,   // opencl_global_host
-    Global,   // cuda_device
-    Constant, // cuda_constant
-    Local,    // cuda_shared
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // Default
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global
+    llvm::AMDGPUAS::LOCAL_ADDRESS,    // opencl_local
+    llvm::AMDGPUAS::CONSTANT_ADDRESS, // opencl_constant
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // opencl_private
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // opencl_generic
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_device
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_host
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // cuda_device
+    llvm::AMDGPUAS::CONSTANT_ADDRESS, // cuda_constant
+    llvm::AMDGPUAS::LOCAL_ADDRESS,    // cuda_shared
     // SYCL address space values for this map are dummy
-    Generic, // sycl_global
-    Generic, // sycl_global_device
-    Generic, // sycl_global_host
-    Generic, // sycl_local
-    Generic, // sycl_private
-    Generic, // ptr32_sptr
-    Generic, // ptr32_uptr
-    Generic, // ptr64
-    Generic, // hlsl_groupshared
+    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_global
+    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_global_device
+    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_global_host
+    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_local
+    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_private
+    llvm::AMDGPUAS::FLAT_ADDRESS, // ptr32_sptr
+    llvm::AMDGPUAS::FLAT_ADDRESS, // ptr32_uptr
+    llvm::AMDGPUAS::FLAT_ADDRESS, // ptr64
+    llvm::AMDGPUAS::FLAT_ADDRESS, // hlsl_groupshared
 
 };
 } // namespace targets
@@ -179,189 +180,17 @@ ArrayRef<const char *> AMDGPUTargetInfo::getGCCRegNames() const {
 bool AMDGPUTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeatureVec) const {
-  const bool IsNullCPU = CPU.empty();
-  bool IsWave32Capable = false;
 
   using namespace llvm::AMDGPU;
-
-  // XXX - What does the member GPU mean if device name string passed here?
-  if (isAMDGCN(getTriple())) {
-    switch (llvm::AMDGPU::parseArchAMDGCN(CPU)) {
-    case GK_GFX1103:
-    case GK_GFX1102:
-    case GK_GFX1101:
-    case GK_GFX1100:
-      IsWave32Capable = true;
-      Features["ci-insts"] = true;
-      Features["dot5-insts"] = true;
-      Features["dot7-insts"] = true;
-      Features["dot8-insts"] = true;
-      Features["dot9-insts"] = true;
-      Features["dot10-insts"] = true;
-      Features["dl-insts"] = true;
-      Features["16-bit-insts"] = true;
-      Features["dpp"] = true;
-      Features["gfx8-insts"] = true;
-      Features["gfx9-insts"] = true;
-      Features["gfx10-insts"] = true;
-      Features["gfx10-3-insts"] = true;
-      Features["gfx11-insts"] = true;
-      break;
-    case GK_GFX1036:
-    case GK_GFX1035:
-    case GK_GFX1034:
-    case GK_GFX1033:
-    case GK_GFX1032:
-    case GK_GFX1031:
-    case GK_GFX1030:
-      IsWave32Capable = true;
-      Features["ci-insts"] = true;
-      Features["dot1-insts"] = true;
-      Features["dot2-insts"] = true;
-      Features["dot5-insts"] = true;
-      Features["dot6-insts"] = true;
-      Features["dot7-insts"] = true;
-      Features["dot10-insts"] = true;
-      Features["dl-insts"] = true;
-      Features["16-bit-insts"] = true;
-      Features["dpp"] = true;
-      Features["gfx8-insts"] = true;
-      Features["gfx9-insts"] = true;
-      Features["gfx10-insts"] = true;
-      Features["gfx10-3-insts"] = true;
-      Features["s-memrealtime"] = true;
-      Features["s-memtime-inst"] = true;
-      break;
-    case GK_GFX1012:
-    case GK_GFX1011:
-      Features["dot1-insts"] = true;
-      Features["dot2-insts"] = true;
-      Features["dot5-insts"] = true;
-      Features["dot6-insts"] = true;
-      Features["dot7-insts"] = true;
-      Features["dot10-insts"] = true;
-      [[fallthrough]];
-    case GK_GFX1013:
-    case GK_GFX1010:
-      IsWave32Capable = true;
-      Features["dl-insts"] = true;
-      Features["ci-insts"] = true;
-      Features["16-bit-insts"] = true;
-      Features["dpp"] = true;
-      Features["gfx8-insts"] = true;
-      Features["gfx9-insts"] = true;
-      Features["gfx10-insts"] = true;
-      Features["s-memrealtime"] = true;
-      Features["s-memtime-inst"] = true;
-      break;
-    case GK_GFX940:
-      Features["gfx940-insts"] = true;
-      Features["fp8-insts"] = true;
-      [[fallthrough]];
-    case GK_GFX90A:
-      Features["gfx90a-insts"] = true;
-      [[fallthrough]];
-    case GK_GFX908:
-      Features["dot3-insts"] = true;
-      Features["dot4-insts"] = true;
-      Features["dot5-insts"] = true;
-      Features["dot6-insts"] = true;
-      Features["mai-insts"] = true;
-      [[fallthrough]];
-    case GK_GFX906:
-      Features["dl-insts"] = true;
-      Features["dot1-insts"] = true;
-      Features["dot2-insts"] = true;
-      Features["dot7-insts"] = true;
-      Features["dot10-insts"] = true;
-      [[fallthrough]];
-    case GK_GFX90C:
-    case GK_GFX909:
-    case GK_GFX904:
-    case GK_GFX902:
-    case GK_GFX900:
-      Features["gfx9-insts"] = true;
-      [[fallthrough]];
-    case GK_GFX810:
-    case GK_GFX805:
-    case GK_GFX803:
-    case GK_GFX802:
-    case GK_GFX801:
-      Features["gfx8-insts"] = true;
-      Features["16-bit-insts"] = true;
-      Features["dpp"] = true;
-      Features["s-memrealtime"] = true;
-      [[fallthrough]];
-    case GK_GFX705:
-    case GK_GFX704:
-    case GK_GFX703:
-    case GK_GFX702:
-    case GK_GFX701:
-    case GK_GFX700:
-      Features["ci-insts"] = true;
-      [[fallthrough]];
-    case GK_GFX602:
-    case GK_GFX601:
-    case GK_GFX600:
-      Features["s-memtime-inst"] = true;
-      break;
-    case GK_NONE:
-      break;
-    default:
-      llvm_unreachable("Unhandled GPU!");
-    }
-  } else {
-    if (CPU.empty())
-      CPU = "r600";
-
-    switch (llvm::AMDGPU::parseArchR600(CPU)) {
-    case GK_CAYMAN:
-    case GK_CYPRESS:
-    case GK_RV770:
-    case GK_RV670:
-      // TODO: Add fp64 when implemented.
-      break;
-    case GK_TURKS:
-    case GK_CAICOS:
-    case GK_BARTS:
-    case GK_SUMO:
-    case GK_REDWOOD:
-    case GK_JUNIPER:
-    case GK_CEDAR:
-    case GK_RV730:
-    case GK_RV710:
-    case GK_RS880:
-    case GK_R630:
-    case GK_R600:
-      break;
-    default:
-      llvm_unreachable("Unhandled GPU!");
-    }
-  }
-
+  fillAMDGPUFeatureMap(CPU, getTriple(), Features);
   if (!TargetInfo::initFeatureMap(Features, Diags, CPU, FeatureVec))
     return false;
 
-  // FIXME: Not diagnosing wavefrontsize32 on wave64 only targets.
-  const bool HaveWave32 =
-      (IsWave32Capable || IsNullCPU) && Features.count("wavefrontsize32");
-  const bool HaveWave64 = Features.count("wavefrontsize64");
-
   // TODO: Should move this logic into TargetParser
-  if (HaveWave32 && HaveWave64) {
-    Diags.Report(diag::err_invalid_feature_combination)
-        << "'wavefrontsize32' and 'wavefrontsize64' are mutually exclusive";
+  std::string ErrorMsg;
+  if (!insertWaveSizeFeature(CPU, getTriple(), Features, ErrorMsg)) {
+    Diags.Report(diag::err_invalid_feature_combination) << ErrorMsg;
     return false;
-  }
-
-  // Don't assume any wavesize with an unknown subtarget.
-  if (!IsNullCPU) {
-    // Default to wave32 if available, or wave64 if not
-    if (!HaveWave32 && !HaveWave64) {
-      StringRef DefaultWaveSizeFeature =
-          IsWave32Capable ? "wavefrontsize32" : "wavefrontsize64";
-      Features.insert(std::make_pair(DefaultWaveSizeFeature, true));
-    }
   }
 
   return true;
@@ -416,6 +245,10 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   }
 
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
+  CUMode = !(GPUFeatures & llvm::AMDGPU::FEATURE_WGP);
+  for (auto F : {"image-insts", "gws"})
+    ReadOnlyFeatures.insert(F);
+  HalfArgsAndReturns = true;
 }
 
 void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
@@ -442,30 +275,42 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   else
     Builder.defineMacro("__R600__");
 
-  if (GPUKind != llvm::AMDGPU::GK_NONE) {
-    StringRef CanonName = isAMDGCN(getTriple()) ?
-      getArchNameAMDGCN(GPUKind) : getArchNameR600(GPUKind);
-    Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
-    // Emit macros for gfx family e.g. gfx906 -> __GFX9__, gfx1030 -> __GFX10___
-    if (isAMDGCN(getTriple())) {
-      assert(CanonName.startswith("gfx") && "Invalid amdgcn canonical name");
-      Builder.defineMacro(Twine("__") + Twine(CanonName.drop_back(2).upper()) +
-                          Twine("__"));
-    }
-    if (isAMDGCN(getTriple())) {
-      Builder.defineMacro("__amdgcn_processor__",
-                          Twine("\"") + Twine(CanonName) + Twine("\""));
-      Builder.defineMacro("__amdgcn_target_id__",
-                          Twine("\"") + Twine(*getTargetID()) + Twine("\""));
-      for (auto F : getAllPossibleTargetIDFeatures(getTriple(), CanonName)) {
-        auto Loc = OffloadArchFeatures.find(F);
-        if (Loc != OffloadArchFeatures.end()) {
-          std::string NewF = F.str();
-          std::replace(NewF.begin(), NewF.end(), '-', '_');
-          Builder.defineMacro(Twine("__amdgcn_feature_") + Twine(NewF) +
-                                  Twine("__"),
-                              Loc->second ? "1" : "0");
-        }
+  // Legacy HIP host code relies on these default attributes to be defined.
+  bool IsHIPHost = Opts.HIP && !Opts.CUDAIsDevice;
+  if (GPUKind == llvm::AMDGPU::GK_NONE && !IsHIPHost)
+    return;
+
+  llvm::SmallString<16> CanonName =
+      (isAMDGCN(getTriple()) ? getArchNameAMDGCN(GPUKind)
+                             : getArchNameR600(GPUKind));
+
+  // Sanitize the name of generic targets.
+  // e.g. gfx10-1-generic -> gfx10_1_generic
+  if (GPUKind >= llvm::AMDGPU::GK_AMDGCN_GENERIC_FIRST &&
+      GPUKind <= llvm::AMDGPU::GK_AMDGCN_GENERIC_LAST) {
+    std::replace(CanonName.begin(), CanonName.end(), '-', '_');
+  }
+
+  Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
+  // Emit macros for gfx family e.g. gfx906 -> __GFX9__, gfx1030 -> __GFX10___
+  if (isAMDGCN(getTriple()) && !IsHIPHost) {
+    assert(StringRef(CanonName).starts_with("gfx") &&
+           "Invalid amdgcn canonical name");
+    StringRef CanonFamilyName = getArchFamilyNameAMDGCN(GPUKind);
+    Builder.defineMacro(Twine("__") + Twine(CanonFamilyName.upper()) +
+                        Twine("__"));
+    Builder.defineMacro("__amdgcn_processor__",
+                        Twine("\"") + Twine(CanonName) + Twine("\""));
+    Builder.defineMacro("__amdgcn_target_id__",
+                        Twine("\"") + Twine(*getTargetID()) + Twine("\""));
+    for (auto F : getAllPossibleTargetIDFeatures(getTriple(), CanonName)) {
+      auto Loc = OffloadArchFeatures.find(F);
+      if (Loc != OffloadArchFeatures.end()) {
+        std::string NewF = F.str();
+        std::replace(NewF.begin(), NewF.end(), '-', '_');
+        Builder.defineMacro(Twine("__amdgcn_feature_") + Twine(NewF) +
+                                Twine("__"),
+                            Loc->second ? "1" : "0");
       }
     }
   }
@@ -486,7 +331,10 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (hasFastFMA())
     Builder.defineMacro("FP_FAST_FMA");
 
+  Builder.defineMacro("__AMDGCN_WAVEFRONT_SIZE__", Twine(WavefrontSize));
+  // ToDo: deprecate this macro for naming consistency.
   Builder.defineMacro("__AMDGCN_WAVEFRONT_SIZE", Twine(WavefrontSize));
+  Builder.defineMacro("__AMDGCN_CUMODE__", Twine(CUMode));
 }
 
 void AMDGPUTargetInfo::setAuxTarget(const TargetInfo *Aux) {

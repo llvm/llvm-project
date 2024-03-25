@@ -105,3 +105,12 @@ func.func @no_integer_or_index() {
   %cmp = arith.cmpi slt, %cst_0, %cst_0 : vector<1xi32> 
   return
 }
+
+// CHECK-LABEL: @gpu_func
+func.func @gpu_func(%arg0: memref<2x32xf32>, %arg1: memref<2x32xf32>, %arg2: memref<32xf32>, %arg3: f32, %arg4: !gpu.async.token, %arg5: index, %arg6: index) -> memref<2x32xf32> {
+  %c1 = arith.constant 1 : index  
+  %2 = gpu.launch async [%arg4] blocks(%arg7, %arg8, %arg9) in (%arg13 = %c1, %arg14 = %c1, %arg15 = %c1) threads(%arg10, %arg11, %arg12) in (%arg16 = %c1, %arg17 = %c1, %arg18 = %c1) {
+    gpu.terminator
+  } 
+  return %arg1 : memref<2x32xf32> 
+}  

@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=fiji -show-mc-encoding < %s | FileCheck -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -show-mc-encoding < %s | FileCheck -check-prefix=VI %s
 
 declare void @llvm.amdgcn.s.dcache.wb() #0
 declare void @llvm.amdgcn.s.waitcnt(i32) #0

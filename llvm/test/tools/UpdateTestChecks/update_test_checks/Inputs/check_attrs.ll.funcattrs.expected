@@ -6,7 +6,7 @@
 %struct.ST = type { i32, double, %struct.RT }
 
 define ptr @foo(ptr %s) nounwind uwtable readnone optsize ssp {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind optsize ssp willreturn memory(none) uwtable
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind optsize ssp willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: (ptr nofree readnone [[S:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:

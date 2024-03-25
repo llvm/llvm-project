@@ -122,8 +122,8 @@ public:
   /// ARM uses bit zero to signify a code address is thumb, so any ARM ABI
   /// plug-ins would strip those bits.
   /// @{
-  virtual lldb::addr_t FixCodeAddress(lldb::addr_t pc) { return pc; }
-  virtual lldb::addr_t FixDataAddress(lldb::addr_t pc) { return pc; }
+  virtual lldb::addr_t FixCodeAddress(lldb::addr_t pc);
+  virtual lldb::addr_t FixDataAddress(lldb::addr_t pc);
   /// @}
 
   /// Use this method when you do not know, or do not care what kind of address
@@ -147,6 +147,8 @@ public:
 
   virtual bool GetPointerReturnRegister(const char *&name) { return false; }
 
+  virtual uint64_t GetStackFrameSize() { return 512 * 1024; }
+
   static lldb::ABISP FindPlugin(lldb::ProcessSP process_sp, const ArchSpec &arch);
 
 protected:
@@ -163,10 +165,6 @@ protected:
 
   lldb::ProcessWP m_process_wp;
   std::unique_ptr<llvm::MCRegisterInfo> m_mc_register_info_up;
-
-  virtual lldb::addr_t FixCodeAddress(lldb::addr_t pc, lldb::addr_t mask) {
-    return pc;
-  }
 
 private:
   ABI(const ABI &) = delete;

@@ -30,7 +30,7 @@ define i32 @sext_of_not_cmp(i32 %x) {
 
 ;; fold (sext (not (setcc a, b, cc))) -> (sext (setcc a, b, !cc))
 ;; make sure we don't crash if the not gets replaced in-visit
-define i32 @sext_of_not_fsetccs(double %x) {
+define i32 @sext_of_not_fsetccs(double %x) strictfp {
 ; CHECK-LABEL: sext_of_not_fsetccs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ltdbr %f0, %f0

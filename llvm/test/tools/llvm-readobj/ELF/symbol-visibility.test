@@ -7,6 +7,7 @@
 # RUN: yaml2obj --docnum=1 %s -o %t1.o
 # RUN: llvm-readobj --symbols %t1.o | FileCheck %s --check-prefix=LLVM
 # RUN: llvm-readelf --symbols %t1.o | FileCheck %s --strict-whitespace --check-prefix=GNU
+# RUN: llvm-readobj --symbols --pretty-print --elf-output-style=JSON %t1.o | FileCheck %s --check-prefix=JSON
 
 # LLVM:      Name: default
 # LLVM:      Other: 0
@@ -29,6 +30,45 @@
 # GNU-NEXT: INTERNAL  UND internal
 # GNU-NEXT: HIDDEN    UND hidden
 # GNU-NEXT: PROTECTED UND protected
+
+# JSON:      "Name": "default",
+# JSON:      "Other": {
+# JSON-NEXT:   "Value": 0,
+# JSON-NEXT:   "Flags": []
+# JSON-NEXT: },
+
+# JSON:      "Name": "internal",
+# JSON:      "Other": {
+# JSON-NEXT:    "Value": 1,
+# JSON-NEXT:    "Flags": [
+# JSON-NEXT:      {
+# JSON-NEXT:        "Name": "STV_INTERNAL",
+# JSON-NEXT:        "Value": 1
+# JSON-NEXT:      }
+# JSON-NEXT:    ]
+# JSON-NEXT:  },
+
+# JSON:      "Name": "hidden",
+# JSON:      "Other": {
+# JSON-NEXT:    "Value": 2,
+# JSON-NEXT:    "Flags": [
+# JSON-NEXT:      {
+# JSON-NEXT:        "Name": "STV_HIDDEN",
+# JSON-NEXT:        "Value": 2
+# JSON-NEXT:      }
+# JSON-NEXT:    ]
+# JSON-NEXT:  },
+
+# JSON:      "Name": "protected",
+# JSON:      "Other": {
+# JSON-NEXT:    "Value": 3,
+# JSON-NEXT:    "Flags": [
+# JSON-NEXT:      {
+# JSON-NEXT:        "Name": "STV_PROTECTED",
+# JSON-NEXT:        "Value": 3
+# JSON-NEXT:      }
+# JSON-NEXT:    ]
+# JSON-NEXT:  },
 
 --- !ELF
 FileHeader:

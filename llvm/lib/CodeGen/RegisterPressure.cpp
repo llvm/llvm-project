@@ -521,9 +521,8 @@ class RegisterOperandsCollector {
     if (Reg.isVirtual()) {
       addRegLanes(RegUnits, RegisterMaskPair(Reg, LaneBitmask::getAll()));
     } else if (MRI.isAllocatable(Reg)) {
-      for (MCRegUnitIterator Units(Reg.asMCReg(), &TRI); Units.isValid();
-           ++Units)
-        addRegLanes(RegUnits, RegisterMaskPair(*Units, LaneBitmask::getAll()));
+      for (MCRegUnit Unit : TRI.regunits(Reg.asMCReg()))
+        addRegLanes(RegUnits, RegisterMaskPair(Unit, LaneBitmask::getAll()));
     }
   }
 
@@ -557,9 +556,8 @@ class RegisterOperandsCollector {
                              : MRI.getMaxLaneMaskForVReg(Reg);
       addRegLanes(RegUnits, RegisterMaskPair(Reg, LaneMask));
     } else if (MRI.isAllocatable(Reg)) {
-      for (MCRegUnitIterator Units(Reg.asMCReg(), &TRI); Units.isValid();
-           ++Units)
-        addRegLanes(RegUnits, RegisterMaskPair(*Units, LaneBitmask::getAll()));
+      for (MCRegUnit Unit : TRI.regunits(Reg.asMCReg()))
+        addRegLanes(RegUnits, RegisterMaskPair(Unit, LaneBitmask::getAll()));
     }
   }
 };

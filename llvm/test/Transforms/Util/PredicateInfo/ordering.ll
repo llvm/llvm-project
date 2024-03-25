@@ -6,7 +6,7 @@ declare void @use.i1(i1)
 
 ; Make sure we are visiting the values to build predicate infos for in a
 ; deterministic order.
-define i32 @test12(i32 %x, i32 %y) {
+define i32 @test12(i32 %x, i32 %y, i1 %c1) {
 ; CHECK: Visiting   %lcmp = icmp eq i32 %x, 0
 ; CHECK: Visiting i32 %x
 ; CHECK: Visiting   %lcmp2 = icmp slt i32 %y, 1000
@@ -18,7 +18,7 @@ define i32 @test12(i32 %x, i32 %y) {
 ; CHECK: Visiting   %lcmp7 = icmp slt i32 %y.0.1.2.3.4, 700
 ; CHECK: Visiting   %rcmp = icmp eq i32 %x, 0
 entry:
-  br i1 undef, label %left, label %right
+  br i1 %c1, label %left, label %right
 
 left:
   %lcmp = icmp eq i32 %x, 0

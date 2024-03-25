@@ -200,9 +200,7 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[COPY]](s64)
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[CTTZ_ZERO_UNDEF]](s32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ZEXT]], [[C]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[AND]](s64)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s33) = G_TRUNC %0
     %2:_(s33) = G_CTTZ_ZERO_UNDEF %1

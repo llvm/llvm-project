@@ -68,15 +68,15 @@ llvm::Error SystemInitializerFull::Initialize() {
 #define LLDB_PLUGIN(p) LLDB_PLUGIN_INITIALIZE(p);
 #include "Plugins/Plugins.def"
 
-  // Initialize plug-ins in core LLDB
-  ProcessTrace::Initialize();
-
   // Scan for any system or user LLDB plug-ins
   PluginManager::Initialize();
 
   // The process settings need to know about installed plug-ins, so the
   // Settings must be initialized AFTER PluginManager::Initialize is called.
   Debugger::SettingsInitialize();
+
+  // Use the Debugger's LLDBAssert callback.
+  SetLLDBAssertCallback(Debugger::AssertCallback);
 
   return llvm::Error::success();
 }

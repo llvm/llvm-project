@@ -1,41 +1,46 @@
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctions \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=false \
 // RUN:   -triple i686-unknown-linux \
 // RUN:   -verify
 
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctions \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=false \
 // RUN:   -triple x86_64-unknown-linux \
 // RUN:   -verify
 
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctions \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=false \
 // RUN:   -triple armv7-a15-linux \
 // RUN:   -verify
 
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctions \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=false \
 // RUN:   -triple thumbv7-a15-linux \
 // RUN:   -verify
 
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctions \
-// RUN:   -analyzer-config apiModeling.StdCLibraryFunctions:DisplayLoadedSummaries=true \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=false \
 // RUN:   -triple i686-unknown-linux 2>&1 | FileCheck %s
 
 //      CHECK: Loaded summary for: int isalnum(int)
@@ -50,8 +55,9 @@
 // CHECK-NEXT: Loaded summary for: int isspace(int)
 // CHECK-NEXT: Loaded summary for: int isupper(int)
 // CHECK-NEXT: Loaded summary for: int isxdigit(int)
-// CHECK-NEXT: Loaded summary for: int getc(FILE *)
-// CHECK-NEXT: Loaded summary for: int fgetc(FILE *)
+// CHECK-NEXT: Loaded summary for: int toupper(int)
+// CHECK-NEXT: Loaded summary for: int tolower(int)
+// CHECK-NEXT: Loaded summary for: int toascii(int)
 // CHECK-NEXT: Loaded summary for: int getchar(void)
 // CHECK-NEXT: Loaded summary for: unsigned int fread(void *restrict, size_t, size_t, FILE *restrict)
 // CHECK-NEXT: Loaded summary for: unsigned int fwrite(const void *restrict, size_t, size_t, FILE *restrict)
@@ -59,16 +65,16 @@
 // CHECK-NEXT: Loaded summary for: ssize_t write(int, const void *, size_t)
 // CHECK-NEXT: Loaded summary for: ssize_t getline(char **restrict, size_t *restrict, FILE *restrict)
 // CHECK-NEXT: Loaded summary for: ssize_t getdelim(char **restrict, size_t *restrict, int, FILE *restrict)
+// CHECK-NEXT: Loaded summary for: char *getenv(const char *)
+// CHECK-NEXT: Loaded summary for: int getc(FILE *)
+// CHECK-NEXT: Loaded summary for: int fgetc(FILE *)
 
+#include "Inputs/std-c-library-functions.h"
 
 void clang_analyzer_eval(int);
 
 int glob;
 
-typedef struct FILE FILE;
-#define EOF -1
-
-int getc(FILE *);
 void test_getc(FILE *fp) {
   int x;
   while ((x = getc(fp)) != EOF) {
@@ -77,17 +83,11 @@ void test_getc(FILE *fp) {
   }
 }
 
-int fgetc(FILE *);
 void test_fgets(FILE *fp) {
   clang_analyzer_eval(fgetc(fp) < 256); // expected-warning{{TRUE}}
   clang_analyzer_eval(fgetc(fp) >= 0); // expected-warning{{UNKNOWN}}
 }
 
-
-typedef typeof(sizeof(int)) size_t;
-typedef signed long ssize_t;
-ssize_t read(int, void *, size_t);
-ssize_t write(int, const void *, size_t);
 void test_read_write(int fd, char *buf) {
   glob = 1;
   ssize_t x = write(fd, buf, 10);
@@ -106,8 +106,6 @@ void test_read_write(int fd, char *buf) {
   }
 }
 
-size_t fread(void *restrict, size_t, size_t, FILE *restrict);
-size_t fwrite(const void *restrict, size_t, size_t, FILE *restrict);
 void test_fread_fwrite(FILE *fp, int *buf) {
 
   size_t x = fwrite(buf, sizeof(int), 10, fp);
@@ -128,8 +126,6 @@ void test_fread_uninitialized(void) {
   (void)fread(ptr, sz, nmem, fp); // expected-warning {{1st function call argument is an uninitialized value}}
 }
 
-ssize_t getline(char **restrict, size_t *restrict, FILE *restrict);
-ssize_t getdelim(char **restrict, size_t *restrict, int, FILE *restrict);
 void test_getline(FILE *fp) {
   char *line = 0;
   size_t n = 0;
@@ -139,7 +135,6 @@ void test_getline(FILE *fp) {
   }
 }
 
-int isascii(int);
 void test_isascii(int x) {
   clang_analyzer_eval(isascii(123)); // expected-warning{{TRUE}}
   clang_analyzer_eval(isascii(-1)); // expected-warning{{FALSE}}
@@ -157,7 +152,6 @@ void test_isascii(int x) {
   clang_analyzer_eval(glob); // expected-warning{{TRUE}}
 }
 
-int islower(int);
 void test_islower(int x) {
   clang_analyzer_eval(islower('x')); // expected-warning{{TRUE}}
   clang_analyzer_eval(islower('X')); // expected-warning{{FALSE}}
@@ -165,7 +159,6 @@ void test_islower(int x) {
     clang_analyzer_eval(x < 'a'); // expected-warning{{FALSE}}
 }
 
-int getchar(void);
 void test_getchar(void) {
   int x = getchar();
   if (x == EOF)
@@ -174,27 +167,23 @@ void test_getchar(void) {
   clang_analyzer_eval(x < 256); // expected-warning{{TRUE}}
 }
 
-int isalpha(int);
 void test_isalpha(void) {
   clang_analyzer_eval(isalpha(']')); // expected-warning{{FALSE}}
   clang_analyzer_eval(isalpha('Q')); // expected-warning{{TRUE}}
   clang_analyzer_eval(isalpha(128)); // expected-warning{{UNKNOWN}}
 }
 
-int isalnum(int);
 void test_alnum(void) {
   clang_analyzer_eval(isalnum('1')); // expected-warning{{TRUE}}
   clang_analyzer_eval(isalnum(')')); // expected-warning{{FALSE}}
 }
 
-int isblank(int);
 void test_isblank(void) {
   clang_analyzer_eval(isblank('\t')); // expected-warning{{TRUE}}
   clang_analyzer_eval(isblank(' ')); // expected-warning{{TRUE}}
   clang_analyzer_eval(isblank('\n')); // expected-warning{{FALSE}}
 }
 
-int ispunct(int);
 void test_ispunct(int x) {
   clang_analyzer_eval(ispunct(' ')); // expected-warning{{FALSE}}
   clang_analyzer_eval(ispunct(-1)); // expected-warning{{FALSE}}
@@ -204,21 +193,17 @@ void test_ispunct(int x) {
     clang_analyzer_eval(x < 127); // expected-warning{{TRUE}}
 }
 
-int isupper(int);
 void test_isupper(int x) {
   if (isupper(x))
     clang_analyzer_eval(x < 'A'); // expected-warning{{FALSE}}
 }
 
-int isgraph(int);
-int isprint(int);
 void test_isgraph_isprint(int x) {
   char y = x;
   if (isgraph(y))
     clang_analyzer_eval(isprint(x)); // expected-warning{{TRUE}}
 }
 
-int isdigit(int);
 void test_mixed_branches(int x) {
   if (isdigit(x)) {
     clang_analyzer_eval(isgraph(x)); // expected-warning{{TRUE}}
@@ -230,7 +215,6 @@ void test_mixed_branches(int x) {
   }
 }
 
-int isspace(int);
 void test_isspace(int x) {
   if (!isascii(x))
     return;
@@ -239,7 +223,6 @@ void test_isspace(int x) {
     clang_analyzer_eval(isspace(x)); // expected-warning{{TRUE}}
 }
 
-int isxdigit(int);
 void test_isxdigit(int x) {
   if (isxdigit(x) && isupper(x)) {
     clang_analyzer_eval(x >= 'A'); // expected-warning{{TRUE}}
@@ -255,7 +238,6 @@ void test_call_by_pointer(void) {
   clang_analyzer_eval(f('A')); // expected-warning{{FALSE}}
 }
 
-char *getenv(const char *name);
 void test_getenv(void) {
   // getenv() bifurcates here.
   clang_analyzer_eval(getenv("FOO") == 0);

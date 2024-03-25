@@ -36,9 +36,7 @@ define <4 x i32> @sgt_min(<4 x i32> %x) {
 define <4 x i32> @sle_min(<4 x i32> %x) {
 ; CHECK-LABEL: sle_min:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
-; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp sle <4 x i32> %x, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
   %r = sext <4 x i1> %cmp to <4 x i32>
@@ -80,10 +78,7 @@ define <4 x i32> @slt_max(<4 x i32> %x) {
 define <4 x i32> @sge_max(<4 x i32> %x) {
 ; CHECK-LABEL: sge_max:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
-; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
-; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp sge <4 x i32> %x, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
   %r = sext <4 x i1> %cmp to <4 x i32>
@@ -197,10 +192,7 @@ define <4 x i32> @slt_min_plus1(<4 x i32> %x) {
 define <4 x i32> @sge_min_plus1(<4 x i32> %x) {
 ; CHECK-LABEL: sge_min_plus1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [2147483649,2147483649,2147483649,2147483649]
-; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
-; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp sge <4 x i32> %x, <i32 -2147483647, i32 -2147483647, i32 -2147483647, i32 -2147483647>
   %r = sext <4 x i1> %cmp to <4 x i32>
@@ -220,9 +212,9 @@ define <4 x i32> @sgt_max_minus1(<4 x i32> %x) {
 define <4 x i32> @sle_max_minus1(<4 x i32> %x) {
 ; CHECK-LABEL: sle_max_minus1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
-; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp sle <4 x i32> %x, <i32 2147483646, i32 2147483646, i32 2147483646, i32 2147483646>
   %r = sext <4 x i1> %cmp to <4 x i32>

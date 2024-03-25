@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-sizeof-expression %t -- -config="{CheckOptions: [{key: bugprone-sizeof-expression.WarnOnSizeOfPointerToAggregate, value: false}]}" --
+// RUN: %check_clang_tidy %s bugprone-sizeof-expression %t -- -config="{CheckOptions: {bugprone-sizeof-expression.WarnOnSizeOfPointerToAggregate: false}}" --
 
 class C {
   int size() { return sizeof(this); }
@@ -68,9 +68,9 @@ int Test5() {
   sum += sizeof(A10) / sizeof(PtrArray[0]);
   // No warning.
   sum += sizeof(PC) / sizeof(PtrArray[0]);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of sizeof pointer 'sizeof(T)/sizeof(T)'
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: suspicious usage of sizeof pointer 'sizeof(T)/sizeof(T)'
   sum += sizeof(ArrayC) / sizeof(PtrArray[0]);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; numerator is not a multiple of denominator
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; numerator is not a multiple of denominator
 
   return sum;
 }

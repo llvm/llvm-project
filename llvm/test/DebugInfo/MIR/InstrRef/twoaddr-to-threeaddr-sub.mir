@@ -34,7 +34,7 @@ body:             |
 
     %0:gr32 = COPY killed $edi
     %1:gr32 = SHL32ri killed %0, 5, implicit-def dead $eflags
-    %2:gr32 = ADD32ri8_DB killed %1, 3, implicit-def dead $eflags, debug-instr-number 1
+    %2:gr32 = ADD32ri_DB killed %1, 3, implicit-def dead $eflags, debug-instr-number 1
     DBG_INSTR_REF dbg-instr-ref(1, 0)
     $eax = COPY killed %2
     RET 0, killed $eax

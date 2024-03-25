@@ -16,7 +16,6 @@
 
 #else
 
-// rdar://13712705
 @interface SS : AA
 @end
 

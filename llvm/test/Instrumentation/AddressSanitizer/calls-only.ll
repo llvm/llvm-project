@@ -29,8 +29,8 @@ entry:
 ; OUTLINE:  call void @__asan_set_shadow_f2(i64 %45, i64 3)
 ; OUTLINE:  call void @__asan_set_shadow_07(i64 %46, i64 1)
 ; OUTLINE:  call void @__asan_set_shadow_f3(i64 %47, i64 3)
-; OUTLINE:  call void @__asan_set_shadow_f5(i64 %134, i64 32)
-; OUTLINE:  call void @__asan_set_shadow_00(i64 %140, i64 24)
+; OUTLINE:  call void @__asan_stack_free_2(i64 %7, i64 192)
+; OUTLINE:  call void @__asan_set_shadow_00(i64 %135, i64 24)
 ; INLINE:  store i64 -1007977276409515535, ptr %34, align 1
 ; INLINE:  store i64 -940423264817843709, ptr %36, align 1
 ; INLINE:  store i64 -868083087686045178, ptr %38, align 1

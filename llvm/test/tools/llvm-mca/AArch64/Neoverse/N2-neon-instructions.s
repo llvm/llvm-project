@@ -360,6 +360,14 @@ mov b0, v0.b[15]
 mov d6, v0.d[1]
 mov h2, v0.h[5]
 mov s17, v0.s[2]
+mov v2.b[0], v0.b[0]
+mov v2.h[1], v0.h[1]
+mov v2.s[2], v0.s[2]
+mov v2.d[1], v0.d[1]
+mov v0.b[0], w8
+mov v0.h[1], w8
+mov v0.s[2], w8
+mov v0.d[1], x8
 mov v0.16b, v0.16b
 mov v0.8b, v0.8b
 movi d15, #0xff00ff00ff00ff
@@ -1429,6 +1437,14 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      2     0.50                        mov	d6, v0.d[1]
 # CHECK-NEXT:  1      2     0.50                        mov	h2, v0.h[5]
 # CHECK-NEXT:  1      2     0.50                        mov	s17, v0.s[2]
+# CHECK-NEXT:  1      2     0.50                        mov	v2.b[0], v0.b[0]
+# CHECK-NEXT:  1      2     0.50                        mov	v2.h[1], v0.h[1]
+# CHECK-NEXT:  1      2     0.50                        mov	v2.s[2], v0.s[2]
+# CHECK-NEXT:  1      2     0.50                        mov	v2.d[1], v0.d[1]
+# CHECK-NEXT:  2      5     1.00                        mov	v0.b[0], w8
+# CHECK-NEXT:  2      5     1.00                        mov	v0.h[1], w8
+# CHECK-NEXT:  2      5     1.00                        mov	v0.s[2], w8
+# CHECK-NEXT:  2      5     1.00                        mov	v0.d[1], x8
 # CHECK-NEXT:  1      2     0.50                        mov	v0.16b, v0.16b
 # CHECK-NEXT:  1      2     0.50                        mov	v0.8b, v0.8b
 # CHECK-NEXT:  1      2     0.50                        movi	d15, #0xff00ff00ff00ff
@@ -2147,7 +2163,7 @@ zip2	v0.8h, v0.8h, v0.8h
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]
-# CHECK-NEXT:  -      -      -      -     26.67  52.17  52.17  28.75  7.75   7.75   7.75   708.00 617.00
+# CHECK-NEXT:  -      -      -      -     26.67  52.17  52.17  32.75  7.75   7.75   7.75   712.00 621.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    Instructions:
@@ -2510,6 +2526,14 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	d6, v0.d[1]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	h2, v0.h[5]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	s17, v0.s[2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	v2.b[0], v0.b[0]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	v2.h[1], v0.h[1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	v2.s[2], v0.s[2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	v2.d[1], v0.d[1]
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -     0.50   0.50   mov	v0.b[0], w8
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -     0.50   0.50   mov	v0.h[1], w8
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -     0.50   0.50   mov	v0.s[2], w8
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -     0.50   0.50   mov	v0.d[1], x8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	v0.8b, v0.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   movi	d15, #0xff00ff00ff00ff

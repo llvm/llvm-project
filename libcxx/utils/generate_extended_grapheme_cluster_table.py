@@ -15,7 +15,7 @@
 
 from io import StringIO
 from pathlib import Path
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 import re
 import sys
@@ -112,8 +112,10 @@ DATA_ARRAY_TEMPLATE = """
 /// this approach uses less space for the data and is about 4% faster in the
 /// following benchmark.
 /// libcxx/benchmarks/std_format_spec_string_unicode.bench.cpp
+// clang-format off
 inline constexpr uint32_t __entries[{size}] = {{
 {entries}}};
+// clang-format on
 
 /// Returns the extended grapheme cluster bondary property of a code point.
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __property __get_property(const char32_t __code_point) noexcept {{
@@ -222,13 +224,13 @@ MSVC_FORMAT_UCD_TABLES_HPP_TEMPLATE = """
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 namespace __extended_grapheme_custer_property_boundary {{
 {content}
 }} // namespace __extended_grapheme_custer_property_boundary
 
-#endif //_LIBCPP_STD_VER > 17
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

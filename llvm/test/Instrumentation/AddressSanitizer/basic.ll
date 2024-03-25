@@ -135,6 +135,27 @@ define void @i64test_align1(ptr %b) nounwind uwtable sanitize_address {
 ; CHECK: __asan_report_store_n{{.*}}, i64 8)
 ; CHECK: ret void
 
+define void @i128test_align8(ptr %a) nounwind uwtable sanitize_address {
+entry:
+  store i128 0, ptr %a, align 8
+  ret void
+}
+; CHECK-LABEL: define {{[^@]+}}@i128test_align8(
+; CHECK-S3:      load i16, ptr %[[#]], align 1
+; CHECK-S3-NEXT: icmp ne i16 %[[#]], 0
+; CHECK-S5:      load i8, ptr %[[#]], align 1
+; CHECK-S5:      load i8, ptr %[[#]], align 1
+
+define void @i128test_align16(ptr %a) nounwind uwtable sanitize_address {
+entry:
+  store i128 0, ptr %a, align 16
+  ret void
+}
+; CHECK-LABEL: define {{[^@]+}}@i128test_align16(
+; CHECK-S3:      load i16, ptr %[[#]], align 2
+; CHECK-S3-NEXT: icmp ne i16 %[[#]], 0
+; CHECK-S5:      load i8, ptr %[[#]], align 1
+; CHECK-S5-NEXT: icmp ne i8 %[[#]], 0
 
 define void @i80test(ptr %a, ptr %b) nounwind uwtable sanitize_address {
   entry:
@@ -189,8 +210,10 @@ define void @test_swifterror_3() sanitize_address {
 
 ;; ctor/dtor have the nounwind attribute. See uwtable.ll, they additionally have
 ;; the uwtable attribute with the module flag "uwtable".
-; CHECK: define internal void @asan.module_ctor() #[[#ATTR:]] {{(comdat )?}}{
+; CHECK: define internal void @asan.module_ctor() #[[#ATTR:]] comdat {
 ; CHECK: call void @__asan_init()
+;; __asan_register_elf_globals is called even if this module does not contain instrumented global variables.
+; CHECK: call void @__asan_register_elf_globals(i64 ptrtoint (ptr @___asan_globals_registered to i64), i64 ptrtoint (ptr @__start_asan_globals to i64), i64 ptrtoint (ptr @__stop_asan_globals to i64))
 
 ; CHECK: attributes #[[#ATTR]] = { nounwind }
 

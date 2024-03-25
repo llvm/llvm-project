@@ -1,12 +1,12 @@
 ! Testing Sparc TLS relocations emission
 ! (for now a couple local ones).
 !
-! RUN: llvm-mc %s -arch=sparc -show-encoding | FileCheck %s --check-prefix=ASM
-! RUN: llvm-mc %s -arch=sparcv9 -show-encoding | FileCheck %s --check-prefix=ASM
-! RUN: llvm-mc %s -arch=sparc -filetype=obj | llvm-readobj -r - | FileCheck %s --check-prefix=REL
-! RUN: llvm-mc %s -arch=sparcv9 -filetype=obj | llvm-readobj -r - | FileCheck %s --check-prefix=REL
-! RUN: llvm-mc %s -arch=sparc -filetype=obj | llvm-objdump -r -d - | FileCheck %s --check-prefix=OBJDUMP
-! RUN: llvm-mc %s -arch=sparcv9 -filetype=obj | llvm-objdump -r -d - | FileCheck %s --check-prefix=OBJDUMP
+! RUN: llvm-mc %s -triple=sparc -show-encoding | FileCheck %s --check-prefix=ASM
+! RUN: llvm-mc %s -triple=sparcv9 -show-encoding | FileCheck %s --check-prefix=ASM
+! RUN: llvm-mc %s -triple=sparc -filetype=obj | llvm-readobj -r - | FileCheck %s --check-prefix=REL
+! RUN: llvm-mc %s -triple=sparcv9 -filetype=obj | llvm-readobj -r - | FileCheck %s --check-prefix=REL
+! RUN: llvm-mc %s -triple=sparc -filetype=obj | llvm-objdump -r -d - | FileCheck %s --check-prefix=OBJDUMP
+! RUN: llvm-mc %s -triple=sparcv9 -filetype=obj | llvm-objdump -r -d - | FileCheck %s --check-prefix=OBJDUMP
 
 ! REL: Arch: sparc
 ! REL: Relocations [

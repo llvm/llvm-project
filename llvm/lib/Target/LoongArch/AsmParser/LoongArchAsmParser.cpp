@@ -43,15 +43,12 @@ class LoongArchAsmParser : public MCTargetAsmParser {
   using InstSeq = SmallVector<Inst>;
 
   /// Parse a register as used in CFI directives.
-  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                     SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
-
-  bool ParseDirective(AsmToken DirectiveID) override { return true; }
 
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
@@ -64,7 +61,8 @@ class LoongArchAsmParser : public MCTargetAsmParser {
                                       unsigned Kind) override;
 
   bool generateImmOutOfRangeError(OperandVector &Operands, uint64_t ErrorInfo,
-                                  int64_t Lower, int64_t Upper, Twine Msg);
+                                  int64_t Lower, int64_t Upper,
+                                  const Twine &Msg);
 
   /// Helper for processing MC instructions that have been successfully matched
   /// by MatchAndEmitInstruction.
@@ -75,11 +73,11 @@ class LoongArchAsmParser : public MCTargetAsmParser {
 #define GET_ASSEMBLER_HEADER
 #include "LoongArchGenAsmMatcher.inc"
 
-  OperandMatchResultTy parseRegister(OperandVector &Operands);
-  OperandMatchResultTy parseImmediate(OperandVector &Operands);
-  OperandMatchResultTy parseOperandWithModifier(OperandVector &Operands);
-  OperandMatchResultTy parseSImm26Operand(OperandVector &Operands);
-  OperandMatchResultTy parseAtomicMemOp(OperandVector &Operands);
+  ParseStatus parseRegister(OperandVector &Operands);
+  ParseStatus parseImmediate(OperandVector &Operands);
+  ParseStatus parseOperandWithModifier(OperandVector &Operands);
+  ParseStatus parseSImm26Operand(OperandVector &Operands);
+  ParseStatus parseAtomicMemOp(OperandVector &Operands);
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
@@ -87,7 +85,7 @@ class LoongArchAsmParser : public MCTargetAsmParser {
   // "emitLoadAddress*" functions.
   void emitLAInstSeq(MCRegister DestReg, MCRegister TmpReg,
                      const MCExpr *Symbol, SmallVectorImpl<Inst> &Insts,
-                     SMLoc IDLoc, MCStreamer &Out);
+                     SMLoc IDLoc, MCStreamer &Out, bool RelaxHint = false);
 
   // Helper to emit pseudo instruction "la.abs $rd, sym".
   void emitLoadAddressAbs(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
@@ -122,6 +120,10 @@ class LoongArchAsmParser : public MCTargetAsmParser {
 
   // Helper to emit pseudo instruction "li.w/d $rd, $imm".
   void emitLoadImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
+
+  // Helper to emit pseudo instruction "call36 sym" or "tail36 $rj, sym".
+  void emitFuncCall36(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                      bool IsTailCall);
 
 public:
   enum LoongArchMatchResultTy {
@@ -235,12 +237,24 @@ public:
            VK == LoongArchMCExpr::VK_LoongArch_None;
   }
 
+  bool isUImm1() const { return isUImm<1>(); }
   bool isUImm2() const { return isUImm<2>(); }
   bool isUImm2plus1() const { return isUImm<2, 1>(); }
   bool isUImm3() const { return isUImm<3>(); }
+  bool isUImm4() const { return isUImm<4>(); }
+  bool isSImm5() const { return isSImm<5>(); }
   bool isUImm5() const { return isUImm<5>(); }
   bool isUImm6() const { return isUImm<6>(); }
+  bool isUImm7() const { return isUImm<7>(); }
+  bool isSImm8() const { return isSImm<8>(); }
+  bool isSImm8lsl1() const { return isSImm<8, 1>(); }
+  bool isSImm8lsl2() const { return isSImm<8, 2>(); }
+  bool isSImm8lsl3() const { return isSImm<8, 3>(); }
   bool isUImm8() const { return isUImm<8>(); }
+  bool isSImm9lsl3() const { return isSImm<9, 3>(); }
+  bool isSImm10() const { return isSImm<10>(); }
+  bool isSImm10lsl2() const { return isSImm<10, 2>(); }
+  bool isSImm11lsl1() const { return isSImm<11, 1>(); }
   bool isSImm12() const { return isSImm<12>(); }
 
   bool isSImm12addlike() const {
@@ -304,6 +318,7 @@ public:
                      IsValidKind;
   }
 
+  bool isSImm13() const { return isSImm<13>(); }
   bool isUImm14() const { return isUImm<14>(); }
   bool isUImm15() const { return isUImm<15>(); }
 
@@ -389,6 +404,22 @@ public:
                      IsValidKind;
   }
 
+  bool isSImm20pcaddu18i() const {
+    if (!isImm())
+      return false;
+
+    int64_t Imm;
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
+                       VK == LoongArchMCExpr::VK_LoongArch_CALL36;
+
+    return IsConstantImm
+               ? isInt<20>(Imm) && IsValidKind
+               : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
+                     IsValidKind;
+  }
+
   bool isSImm21lsl2() const {
     if (!isImm())
       return false;
@@ -422,15 +453,23 @@ public:
   }
 
   bool isImm32() const { return isSImm<32>() || isUImm<32>(); }
+  bool isImm64() const {
+    if (!isImm())
+      return false;
+    int64_t Imm;
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && VK == LoongArchMCExpr::VK_LoongArch_None;
+  }
 
   /// Gets location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
   /// Gets location of the last token of this operand.
   SMLoc getEndLoc() const override { return EndLoc; }
 
-  unsigned getReg() const override {
+  MCRegister getReg() const override {
     assert(Kind == KindTy::Register && "Invalid type access!");
-    return Reg.RegNum.id();
+    return Reg.RegNum;
   }
 
   const MCExpr *getImm() const {
@@ -537,14 +576,14 @@ static bool matchRegisterNameHelper(MCRegister &RegNo, StringRef Name) {
   return RegNo == LoongArch::NoRegister;
 }
 
-bool LoongArchAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+bool LoongArchAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                        SMLoc &EndLoc) {
   return Error(getLoc(), "invalid register number");
 }
 
-OperandMatchResultTy LoongArchAsmParser::tryParseRegister(MCRegister &RegNo,
-                                                          SMLoc &StartLoc,
-                                                          SMLoc &EndLoc) {
+ParseStatus LoongArchAsmParser::tryParseRegister(MCRegister &Reg,
+                                                 SMLoc &StartLoc,
+                                                 SMLoc &EndLoc) {
   llvm_unreachable("Unimplemented function.");
 }
 
@@ -563,39 +602,34 @@ bool LoongArchAsmParser::classifySymbolRef(const MCExpr *Expr,
   return false;
 }
 
-OperandMatchResultTy
-LoongArchAsmParser::parseRegister(OperandVector &Operands) {
-  if (getLexer().getTok().isNot(AsmToken::Dollar))
-    return MatchOperand_NoMatch;
-
-  // Eat the $ prefix.
-  getLexer().Lex();
+ParseStatus LoongArchAsmParser::parseRegister(OperandVector &Operands) {
+  if (!parseOptionalToken(AsmToken::Dollar))
+    return ParseStatus::NoMatch;
   if (getLexer().getKind() != AsmToken::Identifier)
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
 
   StringRef Name = getLexer().getTok().getIdentifier();
   MCRegister RegNo;
   matchRegisterNameHelper(RegNo, Name);
   if (RegNo == LoongArch::NoRegister)
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
 
   SMLoc S = getLoc();
   SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
   getLexer().Lex();
   Operands.push_back(LoongArchOperand::createReg(RegNo, S, E));
 
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-OperandMatchResultTy
-LoongArchAsmParser::parseImmediate(OperandVector &Operands) {
+ParseStatus LoongArchAsmParser::parseImmediate(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E;
   const MCExpr *Res;
 
   switch (getLexer().getKind()) {
   default:
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
   case AsmToken::LParen:
   case AsmToken::Dot:
   case AsmToken::Minus:
@@ -606,59 +640,49 @@ LoongArchAsmParser::parseImmediate(OperandVector &Operands) {
   case AsmToken::String:
   case AsmToken::Identifier:
     if (getParser().parseExpression(Res, E))
-      return MatchOperand_ParseFail;
+      return ParseStatus::Failure;
     break;
   case AsmToken::Percent:
     return parseOperandWithModifier(Operands);
   }
 
   Operands.push_back(LoongArchOperand::createImm(Res, S, E));
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-OperandMatchResultTy
+ParseStatus
 LoongArchAsmParser::parseOperandWithModifier(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E;
 
-  if (getLexer().getKind() != AsmToken::Percent) {
-    Error(getLoc(), "expected '%' for operand modifier");
-    return MatchOperand_ParseFail;
-  }
+  if (getLexer().getKind() != AsmToken::Percent)
+    return Error(getLoc(), "expected '%' for operand modifier");
 
   getParser().Lex(); // Eat '%'
 
-  if (getLexer().getKind() != AsmToken::Identifier) {
-    Error(getLoc(), "expected valid identifier for operand modifier");
-    return MatchOperand_ParseFail;
-  }
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return Error(getLoc(), "expected valid identifier for operand modifier");
   StringRef Identifier = getParser().getTok().getIdentifier();
   LoongArchMCExpr::VariantKind VK =
       LoongArchMCExpr::getVariantKindForName(Identifier);
-  if (VK == LoongArchMCExpr::VK_LoongArch_Invalid) {
-    Error(getLoc(), "unrecognized operand modifier");
-    return MatchOperand_ParseFail;
-  }
+  if (VK == LoongArchMCExpr::VK_LoongArch_Invalid)
+    return Error(getLoc(), "unrecognized operand modifier");
 
   getParser().Lex(); // Eat the identifier
-  if (getLexer().getKind() != AsmToken::LParen) {
-    Error(getLoc(), "expected '('");
-    return MatchOperand_ParseFail;
-  }
+  if (getLexer().getKind() != AsmToken::LParen)
+    return Error(getLoc(), "expected '('");
   getParser().Lex(); // Eat '('
 
   const MCExpr *SubExpr;
-  if (getParser().parseParenExpression(SubExpr, E)) {
-    return MatchOperand_ParseFail;
-  }
+  if (getParser().parseParenExpression(SubExpr, E))
+    return ParseStatus::Failure;
 
   const MCExpr *ModExpr = LoongArchMCExpr::create(SubExpr, VK, getContext());
   Operands.push_back(LoongArchOperand::createImm(ModExpr, S, E));
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-OperandMatchResultTy
-LoongArchAsmParser::parseSImm26Operand(OperandVector &Operands) {
+ParseStatus LoongArchAsmParser::parseSImm26Operand(OperandVector &Operands) {
   SMLoc S = getLoc();
   const MCExpr *Res;
 
@@ -666,11 +690,11 @@ LoongArchAsmParser::parseSImm26Operand(OperandVector &Operands) {
     return parseOperandWithModifier(Operands);
 
   if (getLexer().getKind() != AsmToken::Identifier)
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
 
   StringRef Identifier;
   if (getParser().parseIdentifier(Identifier))
-    return MatchOperand_ParseFail;
+    return ParseStatus::Failure;
 
   SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
 
@@ -679,30 +703,26 @@ LoongArchAsmParser::parseSImm26Operand(OperandVector &Operands) {
   Res = LoongArchMCExpr::create(Res, LoongArchMCExpr::VK_LoongArch_CALL,
                                 getContext());
   Operands.push_back(LoongArchOperand::createImm(Res, S, E));
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-OperandMatchResultTy
-LoongArchAsmParser::parseAtomicMemOp(OperandVector &Operands) {
+ParseStatus LoongArchAsmParser::parseAtomicMemOp(OperandVector &Operands) {
   // Parse "$r*".
-  if (parseRegister(Operands) != MatchOperand_Success)
-    return MatchOperand_NoMatch;
+  if (!parseRegister(Operands).isSuccess())
+    return ParseStatus::NoMatch;
 
   // If there is a next operand and it is 0, ignore it. Otherwise print a
   // diagnostic message.
-  if (getLexer().is(AsmToken::Comma)) {
-    getLexer().Lex(); // Consume comma token.
+  if (parseOptionalToken(AsmToken::Comma)) {
     int64_t ImmVal;
     SMLoc ImmStart = getLoc();
     if (getParser().parseIntToken(ImmVal, "expected optional integer offset"))
-      return MatchOperand_ParseFail;
-    if (ImmVal) {
-      Error(ImmStart, "optional integer offset must be 0");
-      return MatchOperand_ParseFail;
-    }
+      return ParseStatus::Failure;
+    if (ImmVal)
+      return Error(ImmStart, "optional integer offset must be 0");
   }
 
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 /// Looks at a token type and creates the relevant operand from this
 /// information, adding to Operands. Return true upon an error.
@@ -710,20 +730,19 @@ bool LoongArchAsmParser::parseOperand(OperandVector &Operands,
                                       StringRef Mnemonic) {
   // Check if the current operand has a custom associated parser, if so, try to
   // custom parse the operand, or fallback to the general approach.
-  OperandMatchResultTy Result =
+  ParseStatus Result =
       MatchOperandParserImpl(Operands, Mnemonic, /*ParseForAllFeatures=*/true);
-  if (Result == MatchOperand_Success)
+  if (Result.isSuccess())
     return false;
-  if (Result == MatchOperand_ParseFail)
+  if (Result.isFailure())
     return true;
 
-  if (parseRegister(Operands) == MatchOperand_Success ||
-      parseImmediate(Operands) == MatchOperand_Success)
+  if (parseRegister(Operands).isSuccess() ||
+      parseImmediate(Operands).isSuccess())
     return false;
 
   // Finally we have exhausted all options and must declare defeat.
-  Error(getLoc(), "unknown operand");
-  return true;
+  return Error(getLoc(), "unknown operand");
 }
 
 bool LoongArchAsmParser::ParseInstruction(ParseInstructionInfo &Info,
@@ -757,12 +776,14 @@ bool LoongArchAsmParser::ParseInstruction(ParseInstructionInfo &Info,
 void LoongArchAsmParser::emitLAInstSeq(MCRegister DestReg, MCRegister TmpReg,
                                        const MCExpr *Symbol,
                                        SmallVectorImpl<Inst> &Insts,
-                                       SMLoc IDLoc, MCStreamer &Out) {
+                                       SMLoc IDLoc, MCStreamer &Out,
+                                       bool RelaxHint) {
   MCContext &Ctx = getContext();
   for (LoongArchAsmParser::Inst &Inst : Insts) {
     unsigned Opc = Inst.Opc;
     LoongArchMCExpr::VariantKind VK = Inst.VK;
-    const LoongArchMCExpr *LE = LoongArchMCExpr::create(Symbol, VK, Ctx);
+    const LoongArchMCExpr *LE =
+        LoongArchMCExpr::create(Symbol, VK, Ctx, RelaxHint);
     switch (Opc) {
     default:
       llvm_unreachable("unexpected opcode");
@@ -863,7 +884,7 @@ void LoongArchAsmParser::emitLoadAddressPcrel(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(
       LoongArchAsmParser::Inst(ADDI, LoongArchMCExpr::VK_LoongArch_PCALA_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out, true);
 }
 
 void LoongArchAsmParser::emitLoadAddressPcrelLarge(MCInst &Inst, SMLoc IDLoc,
@@ -909,7 +930,7 @@ void LoongArchAsmParser::emitLoadAddressGot(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(
       LoongArchAsmParser::Inst(LD, LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out, true);
 }
 
 void LoongArchAsmParser::emitLoadAddressGotLarge(MCInst &Inst, SMLoc IDLoc,
@@ -1117,6 +1138,35 @@ void LoongArchAsmParser::emitLoadImm(MCInst &Inst, SMLoc IDLoc,
   }
 }
 
+void LoongArchAsmParser::emitFuncCall36(MCInst &Inst, SMLoc IDLoc,
+                                        MCStreamer &Out, bool IsTailCall) {
+  // call36 sym
+  // expands to:
+  //   pcaddu18i $ra, %call36(sym)
+  //   jirl      $ra, $ra, 0
+  //
+  // tail36 $rj, sym
+  // expands to:
+  //   pcaddu18i $rj, %call36(sym)
+  //   jirl      $r0, $rj, 0
+  unsigned ScratchReg =
+      IsTailCall ? Inst.getOperand(0).getReg() : (unsigned)LoongArch::R1;
+  const MCExpr *Sym =
+      IsTailCall ? Inst.getOperand(1).getExpr() : Inst.getOperand(0).getExpr();
+  const LoongArchMCExpr *LE = LoongArchMCExpr::create(
+      Sym, llvm::LoongArchMCExpr::VK_LoongArch_CALL36, getContext());
+
+  Out.emitInstruction(
+      MCInstBuilder(LoongArch::PCADDU18I).addReg(ScratchReg).addExpr(LE),
+      getSTI());
+  Out.emitInstruction(
+      MCInstBuilder(LoongArch::JIRL)
+          .addReg(IsTailCall ? (unsigned)LoongArch::R0 : ScratchReg)
+          .addReg(ScratchReg)
+          .addImm(0),
+      getSTI());
+}
+
 bool LoongArchAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
                                             OperandVector &Operands,
                                             MCStreamer &Out) {
@@ -1165,6 +1215,12 @@ bool LoongArchAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case LoongArch::PseudoLI_D:
     emitLoadImm(Inst, IDLoc, Out);
     return false;
+  case LoongArch::PseudoCALL36:
+    emitFuncCall36(Inst, IDLoc, Out, /*IsTailCall=*/false);
+    return false;
+  case LoongArch::PseudoTAIL36:
+    emitFuncCall36(Inst, IDLoc, Out, /*IsTailCall=*/true);
+    return false;
   }
   Out.emitInstruction(Inst, getSTI());
   return false;
@@ -1193,7 +1249,8 @@ unsigned LoongArchAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       return Match_RequiresLAORdDifferRj;
     break;
   }
-  case LoongArch::CSRXCHG: {
+  case LoongArch::CSRXCHG:
+  case LoongArch::GCSRXCHG: {
     unsigned Rj = Inst.getOperand(2).getReg();
     if (Rj == LoongArch::R0 || Rj == LoongArch::R1)
       return Match_RequiresOpnd2NotR0R1;
@@ -1242,7 +1299,7 @@ LoongArchAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 
 bool LoongArchAsmParser::generateImmOutOfRangeError(
     OperandVector &Operands, uint64_t ErrorInfo, int64_t Lower, int64_t Upper,
-    Twine Msg = "immediate must be an integer in the range") {
+    const Twine &Msg = "immediate must be an integer in the range") {
   SMLoc ErrorLoc = ((LoongArchOperand &)*Operands[ErrorInfo]).getStartLoc();
   return Error(ErrorLoc, Msg + " [" + Twine(Lower) + ", " + Twine(Upper) + "]");
 }
@@ -1319,6 +1376,9 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                  "$rd must be different from both $rk and $rj");
   case Match_RequiresLAORdDifferRj:
     return Error(Operands[1]->getStartLoc(), "$rd must be different from $rj");
+  case Match_InvalidUImm1:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
+                                      /*Upper=*/(1 << 1) - 1);
   case Match_InvalidUImm2:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 2) - 1);
@@ -1328,12 +1388,21 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidUImm3:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 3) - 1);
+  case Match_InvalidUImm4:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
+                                      /*Upper=*/(1 << 4) - 1);
   case Match_InvalidUImm5:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 5) - 1);
   case Match_InvalidUImm6:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 6) - 1);
+  case Match_InvalidUImm7:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
+                                      /*Upper=*/(1 << 7) - 1);
+  case Match_InvalidUImm8:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
+                                      /*Upper=*/(1 << 8) - 1);
   case Match_InvalidUImm12:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 12) - 1);
@@ -1343,9 +1412,45 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         /*Upper=*/(1 << 12) - 1,
         "operand must be a symbol with modifier (e.g. %abs_lo12) or an "
         "integer in the range");
+  case Match_InvalidUImm14:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
+                                      /*Upper=*/(1 << 14) - 1);
   case Match_InvalidUImm15:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 15) - 1);
+  case Match_InvalidSImm5:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/-(1 << 4),
+                                      /*Upper=*/(1 << 4) - 1);
+  case Match_InvalidSImm8:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/-(1 << 7),
+                                      /*Upper=*/(1 << 7) - 1);
+  case Match_InvalidSImm8lsl1:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 8), /*Upper=*/(1 << 8) - 2,
+        "immediate must be a multiple of 2 in the range");
+  case Match_InvalidSImm8lsl2:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 9), /*Upper=*/(1 << 9) - 4,
+        "immediate must be a multiple of 4 in the range");
+  case Match_InvalidSImm10:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/-(1 << 9),
+                                      /*Upper=*/(1 << 9) - 1);
+  case Match_InvalidSImm8lsl3:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 10), /*Upper=*/(1 << 10) - 8,
+        "immediate must be a multiple of 8 in the range");
+  case Match_InvalidSImm9lsl3:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 11), /*Upper=*/(1 << 11) - 8,
+        "immediate must be a multiple of 8 in the range");
+  case Match_InvalidSImm10lsl2:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 11), /*Upper=*/(1 << 11) - 4,
+        "immediate must be a multiple of 4 in the range");
+  case Match_InvalidSImm11lsl1:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 11), /*Upper=*/(1 << 11) - 2,
+        "immediate must be a multiple of 2 in the range");
   case Match_InvalidSImm12:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/-(1 << 11),
                                       /*Upper=*/(1 << 11) - 1);
@@ -1361,6 +1466,9 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         /*Upper=*/(1 << 11) - 1,
         "operand must be a symbol with modifier (e.g. %pc64_hi12) or an "
         "integer in the range");
+  case Match_InvalidSImm13:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/-(1 << 12),
+                                      /*Upper=*/(1 << 12) - 1);
   case Match_InvalidSImm14lsl2:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, /*Lower=*/-(1 << 15), /*Upper=*/(1 << 15) - 4,
@@ -1394,6 +1502,12 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         /*Upper=*/(1 << 19) - 1,
         "operand must be a symbol with modifier (e.g. %pc_hi20) or an integer "
         "in the range");
+  case Match_InvalidSImm20pcaddu18i:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 19),
+        /*Upper=*/(1 << 19) - 1,
+        "operand must be a symbol with modifier (e.g. %call36) or an integer "
+        "in the range");
   case Match_InvalidSImm21lsl2:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, /*Lower=*/-(1 << 22), /*Upper=*/(1 << 22) - 4,
@@ -1407,6 +1521,10 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm32: {
     SMLoc ErrorLoc = ((LoongArchOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, "operand must be a 32 bit immediate");
+  }
+  case Match_InvalidImm64: {
+    SMLoc ErrorLoc = ((LoongArchOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, "operand must be a 64 bit immediate");
   }
   case Match_InvalidBareSymbol: {
     SMLoc ErrorLoc = ((LoongArchOperand &)*Operands[ErrorInfo]).getStartLoc();

@@ -15,18 +15,21 @@ define amdgpu_kernel void @test_zeroinit() #0 {
 ; CHECK-LABEL: @test_zeroinit(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA:%.*]] = load <4 x float>, ptr undef, align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x half>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 0
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 1
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 2
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %b_blockwise_copy = alloca %"struct.b", align 16
   store <8 x half> zeroinitializer, ptr %b_blockwise_copy, align 16
-  %data = load <4 x float>, <4 x float>* undef
+  %data = load <4 x float>, ptr undef
   store <4 x float> %data, ptr %b_blockwise_copy, align 16
   br label %bb
 
@@ -43,18 +46,21 @@ define amdgpu_kernel void @test_memset() #0 {
 ; CHECK-LABEL: @test_memset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA:%.*]] = load <4 x float>, ptr undef, align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x half>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 0
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 1
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 2
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %b_blockwise_copy = alloca %"struct.b", align 16
   call void @llvm.memset.p0.i64(ptr align 16 %b_blockwise_copy, i8 0, i64 16, i1 false)
-  %data = load <4 x float>, <4 x float>* undef
+  %data = load <4 x float>, ptr undef
   store <4 x float> %data, ptr %b_blockwise_copy, align 16
   br label %bb
 
@@ -67,30 +73,25 @@ bb:
   ret void
 }
 
-; Initial SROA pass failed to promote alloca and same alloca type was re-used
-; so alloca was not re-added to the worklist after initial SROA pass. This
-; caused it to fail to promote unlike the other tests.
 define amdgpu_kernel void @vector_type_alloca() #0 {
 ; CHECK-LABEL: @vector_type_alloca(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY:%.*]] = alloca <8 x half>, align 16
-; CHECK-NEXT:    store <8 x half> zeroinitializer, ptr [[B_BLOCKWISE_COPY]], align 16
 ; CHECK-NEXT:    [[DATA:%.*]] = load <4 x float>, ptr undef, align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x half>
-; CHECK-NEXT:    store <8 x half> [[TMP0]], ptr [[B_BLOCKWISE_COPY]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_0_LOAD1:%.*]] = load half, ptr [[B_BLOCKWISE_COPY]], align 16
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_2_PTR2_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[B_BLOCKWISE_COPY]], i64 2
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_2_LOAD2:%.*]] = load half, ptr [[B_BLOCKWISE_COPY_2_PTR2_SROA_IDX]], align 2
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_4_PTR3_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[B_BLOCKWISE_COPY]], i64 4
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_4_LOAD3:%.*]] = load half, ptr [[B_BLOCKWISE_COPY_4_PTR3_SROA_IDX]], align 4
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %b_blockwise_copy = alloca <8 x half>, align 16
   store <8 x half> zeroinitializer, ptr %b_blockwise_copy, align 16
-  %data = load <4 x float>, <4 x float>* undef
+  %data = load <4 x float>, ptr undef
   store <4 x float> %data, ptr %b_blockwise_copy, align 16
   br label %bb
 
@@ -107,18 +108,21 @@ define amdgpu_kernel void @test_struct_contain_multiple_types1() #0 {
 ; CHECK-LABEL: @test_struct_contain_multiple_types1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA:%.*]] = load <4 x float>, ptr undef, align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x half>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 0
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 1
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 2
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %b_blockwise_copy = alloca %"struct.c", align 16
   store <8 x half> zeroinitializer, ptr %b_blockwise_copy, align 16
-  %data = load <4 x float>, <4 x float>* undef
+  %data = load <4 x float>, ptr undef
   store <4 x float> %data, ptr %b_blockwise_copy, align 16
   br label %bb
 
@@ -140,22 +144,25 @@ define amdgpu_kernel void @test_struct_contain_multiple_types2() #0 {
 ; CHECK-NEXT:    [[DATA1_FCA_2_EXTRACT:%.*]] = extractvalue [4 x i32] [[DATA1]], 2
 ; CHECK-NEXT:    [[DATA1_FCA_3_EXTRACT:%.*]] = extractvalue [4 x i32] [[DATA1]], 3
 ; CHECK-NEXT:    [[DATA2:%.*]] = load <4 x float>, ptr undef, align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA2]] to <8 x half>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA2]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_5_0_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 0
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_5_2_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 1
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_5_4_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 2
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_5_16_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_5_16_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_5_18_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_5_18_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_5_20_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_5_20_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %b_blockwise_copy = alloca %"struct.d", align 16
   call void @llvm.memset.p0.i32(ptr align 16 %b_blockwise_copy, i8 0, i32 16, i1 false)
-  %data1 = load [4 x i32], [4 x i32]* undef
+  %data1 = load [4 x i32], ptr undef
   store [4 x i32] %data1, ptr %b_blockwise_copy, align 16
   %data2_gep = getelementptr inbounds i8, ptr %b_blockwise_copy, i64 16
   store <8 x half> zeroinitializer, ptr %data2_gep, align 16
-  %data2 = load <4 x float>, <4 x float>* undef
+  %data2 = load <4 x float>, ptr undef
   store <4 x float> %data2, ptr %data2_gep, align 16
   br label %bb
 
@@ -173,13 +180,15 @@ define amdgpu_kernel void @test_struct_array_vector() #0 {
 ; CHECK-LABEL: @test_struct_array_vector(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA0:%.*]] = load <4 x float>, ptr undef, align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA0]] to <8 x half>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA0]] to <8 x i16>
 ; CHECK-NEXT:    [[DATA1:%.*]] = load <4 x float>, ptr undef, align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[DATA1]] to <8 x half>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[DATA1]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 0
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_3_0_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP1]], i32 0
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_3_16_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_3_16_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -187,9 +196,9 @@ entry:
   store <8 x half> zeroinitializer, ptr %b_blockwise_copy, align 16
   %0 = getelementptr inbounds i8, ptr %b_blockwise_copy, i64 16
   store <8 x half> zeroinitializer, ptr %0, align 16
-  %data0 = load <4 x float>, <4 x float>* undef
+  %data0 = load <4 x float>, ptr undef
   store <4 x float> %data0, ptr %b_blockwise_copy, align 16
-  %data1 = load <4 x float>, <4 x float>* undef
+  %data1 = load <4 x float>, ptr undef
   store <4 x float> %data1, ptr %0, align 16
   br label %bb
 
@@ -211,15 +220,15 @@ define amdgpu_kernel void @test_struct_array_vector_i16() #0 {
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
 ; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 1
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_4_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP1]], i32 0
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_4_16_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP1]], i32 0
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %b_blockwise_copy = alloca %"struct.f", align 16
   call void @llvm.memset.p0.i32(ptr align 16 %b_blockwise_copy, i8 0, i32 32, i1 false)
-  %data = load <4 x i32>, <4 x i32>* undef
+  %data = load <4 x i32>, ptr undef
   store <4 x i32> %data, ptr %b_blockwise_copy, align 16
-  %data2 = load <4 x i32>, <4 x i32>* undef
+  %data2 = load <4 x i32>, ptr undef
   %data2_gep = getelementptr inbounds i8, ptr %b_blockwise_copy, i64 16
   store <4 x i32> %data2, ptr %data2_gep, align 16
   br label %bb
@@ -260,7 +269,7 @@ define amdgpu_kernel void @test_half_array() #0 {
 entry:
   %b_blockwise_copy = alloca [8 x half], align 16
   call void @llvm.memset.p0.i32(ptr align 16 %b_blockwise_copy, i8 0, i32 16, i1 false)
-  %data = load [4 x float], [4 x float]* undef
+  %data = load [4 x float], ptr undef
   store [4 x float] %data, ptr %b_blockwise_copy, align 16
   br label %bb
 
@@ -279,18 +288,21 @@ define amdgpu_kernel void @test_array_vector() #0 {
 ; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_5:%.*]] = alloca <8 x half>, align 16
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 16 [[B_BLOCKWISE_COPY_SROA_5]], i8 0, i32 16, i1 false)
 ; CHECK-NEXT:    [[DATA:%.*]] = load <4 x float>, ptr undef, align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x half>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 0
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 1
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 2
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %b_blockwise_copy = alloca %"array.a", align 16
   call void @llvm.memset.p0.i32(ptr align 16 %b_blockwise_copy, i8 0, i32 32, i1 false)
-  %data = load <4 x float>, <4 x float>* undef
+  %data = load <4 x float>, ptr undef
   store <4 x float> %data, ptr %b_blockwise_copy, align 16
   br label %bb
 
@@ -309,18 +321,21 @@ define amdgpu_kernel void @test_array_vector2() #0 {
 ; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_5:%.*]] = alloca <8 x half>, align 16
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 16 [[B_BLOCKWISE_COPY_SROA_5]], i8 0, i32 16, i1 false)
 ; CHECK-NEXT:    [[DATA:%.*]] = load <4 x float>, ptr undef, align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x half>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 0
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 1
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 2
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %b_blockwise_copy = alloca %"array.b", align 16
   call void @llvm.memset.p0.i32(ptr align 16 %b_blockwise_copy, i8 0, i32 32, i1 false)
-  %data = load <4 x float>, <4 x float>* undef
+  %data = load <4 x float>, ptr undef
   store <4 x float> %data, ptr %b_blockwise_copy, align 16
   br label %bb
 
@@ -373,10 +388,10 @@ define amdgpu_kernel void @test_array_vector_no_vector_common_type() #0 {
 entry:
   %b_blockwise_copy = alloca %"array.a", align 16
   call void @llvm.memset.p0.i32(ptr align 16 %b_blockwise_copy, i8 0, i32 32, i1 false)
-  %data1 = load float, float* undef
-  %data2 = load float, float* undef
-  %data3 = load float, float* undef
-  %data4 = load float, float* undef
+  %data1 = load float, ptr undef
+  %data2 = load float, ptr undef
+  %data3 = load float, ptr undef
+  %data4 = load float, ptr undef
   store float %data1, ptr %b_blockwise_copy, align 16
   %data_ptr1 = getelementptr inbounds i8, ptr %b_blockwise_copy, i64 4
   store float %data2, ptr %data_ptr1, align 16
@@ -405,7 +420,6 @@ bb:
   ret void
 }
 
-declare <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32>, i32, i32, i32) #0
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1) nounwind
 declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1) nounwind
 attributes #0 = { nounwind readonly }

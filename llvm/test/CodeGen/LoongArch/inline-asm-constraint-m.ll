@@ -5,9 +5,8 @@
 define i32 @m_offset_neg_2049(ptr %p) nounwind {
 ; LA32-LABEL: m_offset_neg_2049:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    lu12i.w $a1, -1
-; LA32-NEXT:    ori $a1, $a1, 2047
-; LA32-NEXT:    add.w $a0, $a0, $a1
+; LA32-NEXT:    addi.w $a0, $a0, -2048
+; LA32-NEXT:    addi.w $a0, $a0, -1
 ; LA32-NEXT:    #APP
 ; LA32-NEXT:    ld.w $a0, $a0, 0
 ; LA32-NEXT:    #NO_APP
@@ -15,9 +14,8 @@ define i32 @m_offset_neg_2049(ptr %p) nounwind {
 ;
 ; LA64-LABEL: m_offset_neg_2049:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    lu12i.w $a1, -1
-; LA64-NEXT:    ori $a1, $a1, 2047
-; LA64-NEXT:    add.d $a0, $a0, $a1
+; LA64-NEXT:    addi.d $a0, $a0, -2048
+; LA64-NEXT:    addi.d $a0, $a0, -1
 ; LA64-NEXT:    #APP
 ; LA64-NEXT:    ld.w $a0, $a0, 0
 ; LA64-NEXT:    #NO_APP
@@ -124,8 +122,8 @@ define i32 @m_offset_2047(ptr %p) nounwind {
 define i32 @m_offset_2048(ptr %p) nounwind {
 ; LA32-LABEL: m_offset_2048:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a1, $zero, 2048
-; LA32-NEXT:    add.w $a0, $a0, $a1
+; LA32-NEXT:    addi.w $a0, $a0, 2047
+; LA32-NEXT:    addi.w $a0, $a0, 1
 ; LA32-NEXT:    #APP
 ; LA32-NEXT:    ld.w $a0, $a0, 0
 ; LA32-NEXT:    #NO_APP
@@ -133,8 +131,8 @@ define i32 @m_offset_2048(ptr %p) nounwind {
 ;
 ; LA64-LABEL: m_offset_2048:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a1, $zero, 2048
-; LA64-NEXT:    add.d $a0, $a0, $a1
+; LA64-NEXT:    addi.d $a0, $a0, 2047
+; LA64-NEXT:    addi.d $a0, $a0, 1
 ; LA64-NEXT:    #APP
 ; LA64-NEXT:    ld.w $a0, $a0, 0
 ; LA64-NEXT:    #NO_APP

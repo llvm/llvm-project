@@ -32,7 +32,7 @@ int main(int, char**)
       LIBCPP_ASSERT(c.max_size() == 10);
     }
     {
-      typedef limited_allocator<int, (size_t)-1> A;
+      typedef limited_allocator<int, (std::size_t)-1> A;
       typedef std::unordered_multiset<int, std::hash<int>, std::equal_to<int>,
                                       A>
           C;

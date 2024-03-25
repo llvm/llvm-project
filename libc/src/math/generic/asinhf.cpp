@@ -11,22 +11,25 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/common_constants.h"
 #include "src/math/generic/explogxf.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
   using FPBits_t = typename fputil::FPBits<float>;
   FPBits_t xbits(x);
   uint32_t x_u = xbits.uintval();
-  uint32_t x_abs = x_u & FPBits_t::FloatProp::EXP_MANT_MASK;
+  uint32_t x_abs = xbits.abs().uintval();
 
   // |x| <= 2^-3
-  if (unlikely(x_abs <= 0x3e80'0000U)) {
+  if (LIBC_UNLIKELY(x_abs <= 0x3e80'0000U)) {
     // |x| <= 2^-26
-    if (unlikely(x_abs <= 0x3280'0000U)) {
-      return unlikely(x_abs == 0) ? x : (x - 0x1.5555555555555p-3 * x * x * x);
+    if (LIBC_UNLIKELY(x_abs <= 0x3280'0000U)) {
+      return static_cast<float>(LIBC_UNLIKELY(x_abs == 0)
+                                    ? x
+                                    : (x - 0x1.5555555555555p-3 * x * x * x));
     }
 
     double x_d = x;
@@ -38,7 +41,7 @@ LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
         x_sq, 0.0, -0x1.555555555551ep-3, 0x1.3333333325495p-4,
         -0x1.6db6db5a7622bp-5, 0x1.f1c70f82928c6p-6, -0x1.6e893934266b7p-6,
         0x1.1c0b41d3fbe78p-6, -0x1.c0f47810b3c4fp-7, 0x1.2c8602690143dp-7);
-    return fputil::multiply_add(x_d, p, x_d);
+    return static_cast<float>(fputil::multiply_add(x_d, p, x_d));
   }
 
   const double SIGN[2] = {1.0, -1.0};
@@ -55,11 +58,9 @@ LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
                                 static_cast<float>(x_sign) * 0x1.0p-24f);
   };
 
-  if (unlikely(x_abs >= 0x4bdd'65a5U)) {
-    if (unlikely(x_abs >= 0x7f80'0000U)) {
-      // x is +-inf or nan
+  if (LIBC_UNLIKELY(x_abs >= 0x4bdd'65a5U)) {
+    if (LIBC_UNLIKELY(xbits.is_inf_or_nan()))
       return x;
-    }
 
     // Exceptional cases when x > 2^24.
     switch (x_abs) {
@@ -84,20 +85,21 @@ LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
     }
   } else {
     // Exceptional cases when x < 2^24.
-    if (unlikely(x_abs == 0x45abaf26)) {
+    if (LIBC_UNLIKELY(x_abs == 0x45abaf26)) {
       // |x| = 0x1.575e4cp12f
       return round_result_slightly_down(0x1.29becap3f);
     }
-    if (unlikely(x_abs == 0x49d29048)) {
+    if (LIBC_UNLIKELY(x_abs == 0x49d29048)) {
       // |x| = 0x1.a5209p20f
       return round_result_slightly_down(0x1.e1b92p3f);
     }
   }
 
   // asinh(x) = log(x + sqrt(x^2 + 1))
-  return x_sign *
-         log_eval(fputil::multiply_add(
-             x_d, x_sign, fputil::sqrt(fputil::multiply_add(x_d, x_d, 1.0))));
+  return static_cast<float>(
+      x_sign *
+      log_eval(fputil::multiply_add(
+          x_d, x_sign, fputil::sqrt(fputil::multiply_add(x_d, x_d, 1.0)))));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

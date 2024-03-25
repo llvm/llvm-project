@@ -24,6 +24,15 @@ class RewriteBuffer;
 class Preprocessor;
 
 namespace html {
+  struct RelexRewriteCache;
+  using RelexRewriteCacheRef = std::shared_ptr<RelexRewriteCache>;
+
+  /// If you need to rewrite the same file multiple times, you can instantiate
+  /// a RelexRewriteCache and refer functions such as SyntaxHighlight()
+  /// and HighlightMacros() to it so that to avoid re-lexing the file each time.
+  /// The cache may outlive the rewriter as long as cached FileIDs and source
+  /// locations continue to make sense for the translation unit as a whole.
+  RelexRewriteCacheRef instantiateRelexRewriteCache();
 
   /// HighlightRange - Highlight a range in the source code with the specified
   /// start/end tags.  B/E must be in the same file.  This ensures that
@@ -67,13 +76,15 @@ namespace html {
 
   /// SyntaxHighlight - Relex the specified FileID and annotate the HTML with
   /// information about keywords, comments, etc.
-  void SyntaxHighlight(Rewriter &R, FileID FID, const Preprocessor &PP);
+  void SyntaxHighlight(Rewriter &R, FileID FID, const Preprocessor &PP,
+                       RelexRewriteCacheRef Cache = nullptr);
 
   /// HighlightMacros - This uses the macro table state from the end of the
   /// file, to reexpand macros and insert (into the HTML) information about the
   /// macro expansions.  This won't be perfectly perfect, but it will be
   /// reasonably close.
-  void HighlightMacros(Rewriter &R, FileID FID, const Preprocessor &PP);
+  void HighlightMacros(Rewriter &R, FileID FID, const Preprocessor &PP,
+                       RelexRewriteCacheRef Cache = nullptr);
 
 } // end html namespace
 } // end clang namespace

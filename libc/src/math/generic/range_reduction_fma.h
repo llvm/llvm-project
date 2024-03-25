@@ -14,7 +14,7 @@
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 namespace fma {
 
@@ -51,8 +51,9 @@ LIBC_INLINE int64_t large_range_reduction(double x, int x_exp, double &y) {
     // - When |x| >= 2^55, the LSB of double(x * THIRTYTWO_OVER_PI[0]) is at
     // least 2^6.
     fputil::FPBits<double> prod_hi(x * THIRTYTWO_OVER_PI[0]);
-    prod_hi.bits &= (x_exp < 55) ? (~0xfffULL) : (~0ULL); // |x| < 2^55
-    double k_hi = fputil::nearest_integer(static_cast<double>(prod_hi));
+    prod_hi.set_uintval(prod_hi.uintval() &
+                        ((x_exp < 55) ? (~0xfffULL) : (~0ULL))); // |x| < 2^55
+    double k_hi = fputil::nearest_integer(prod_hi.get_val());
     double truncated_prod = fputil::fma(x, THIRTYTWO_OVER_PI[0], -k_hi);
     double prod_lo = fputil::fma(x, THIRTYTWO_OVER_PI[1], truncated_prod);
     double k_lo = fputil::nearest_integer(prod_lo);
@@ -70,8 +71,9 @@ LIBC_INLINE int64_t large_range_reduction(double x, int x_exp, double &y) {
   // - When |x| >= 2^110, the LSB of double(x * THIRTYTWO_OVER_PI[1]) is at
   // least 64.
   fputil::FPBits<double> prod_hi(x * THIRTYTWO_OVER_PI[1]);
-  prod_hi.bits &= (x_exp < 110) ? (~0xfffULL) : (~0ULL); // |x| < 2^110
-  double k_hi = fputil::nearest_integer(static_cast<double>(prod_hi));
+  prod_hi.set_uintval(prod_hi.uintval() &
+                      ((x_exp < 110) ? (~0xfffULL) : (~0ULL))); // |x| < 2^110
+  double k_hi = fputil::nearest_integer(prod_hi.get_val());
   double truncated_prod = fputil::fma(x, THIRTYTWO_OVER_PI[1], -k_hi);
   double prod_lo = fputil::fma(x, THIRTYTWO_OVER_PI[2], truncated_prod);
   double k_lo = fputil::nearest_integer(prod_lo);
@@ -84,6 +86,6 @@ LIBC_INLINE int64_t large_range_reduction(double x, int x_exp, double &y) {
 
 } // namespace fma
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_RANGE_REDUCTION_FMA_H

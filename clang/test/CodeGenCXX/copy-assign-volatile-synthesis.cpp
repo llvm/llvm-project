@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - | FileCheck %s
-// rdar://9894548
 
 typedef unsigned long word_t;
 typedef unsigned long u64_t;

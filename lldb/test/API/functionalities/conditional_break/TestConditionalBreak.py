@@ -14,8 +14,7 @@ from lldbsuite.test import lldbutil
 
 
 class ConditionalBreakTestCase(TestBase):
-
-    @add_test_categories(['pyapi'])
+    @add_test_categories(["pyapi"])
     def test_with_python(self):
         """Exercise some thread and frame APIs to break if c() is called by a()."""
         self.build()
@@ -37,19 +36,19 @@ class ConditionalBreakTestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # The stop reason of the thread should be breakpoint.
-        self.assertState(process.GetState(), lldb.eStateStopped,
-                         STOPPED_DUE_TO_BREAKPOINT)
+        self.assertState(
+            process.GetState(), lldb.eStateStopped, STOPPED_DUE_TO_BREAKPOINT
+        )
 
         # Find the line number where a's parent frame function is c.
         line = line_number(
-            'main.c',
-            "// Find the line number where c's parent frame is a here.")
+            "main.c", "// Find the line number where c's parent frame is a here."
+        )
 
         # Suppose we are only interested in the call scenario where c()'s
         # immediate caller is a() and we want to find out the value passed from
@@ -60,10 +59,10 @@ class ConditionalBreakTestCase(TestBase):
         for j in range(10):
             if self.TraceOn():
                 print("j is: ", j)
-            thread = lldbutil.get_one_thread_stopped_at_breakpoint(
-                process, breakpoint)
+            thread = lldbutil.get_one_thread_stopped_at_breakpoint(process, breakpoint)
             self.assertIsNotNone(
-                thread, "Expected one thread to be stopped at the breakpoint")
+                thread, "Expected one thread to be stopped at the breakpoint"
+            )
 
             if thread.GetNumFrames() >= 2:
                 frame0 = thread.GetFrameAtIndex(0)
@@ -72,12 +71,15 @@ class ConditionalBreakTestCase(TestBase):
                 name1 = frame1.GetFunction().GetName()
                 # lldbutil.print_stacktrace(thread)
                 self.assertEqual(name0, "c", "Break on function c()")
-                if (name1 == "a"):
+                if name1 == "a":
                     # By design, we know that a() calls c() only from main.c:27.
                     # In reality, similar logic can be used to find out the call
                     # site.
-                    self.assertEqual(frame1.GetLineEntry().GetLine(), line,
-                                    "Immediate caller a() at main.c:%d" % line)
+                    self.assertEqual(
+                        frame1.GetLineEntry().GetLine(),
+                        line,
+                        "Immediate caller a() at main.c:%d" % line,
+                    )
 
                     # And the local variable 'val' should have a value of (int)
                     # 3.
@@ -118,16 +120,19 @@ class ConditionalBreakTestCase(TestBase):
             print("Done running")
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped', 'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
         # The frame info for frame #0 points to a.out`c and its immediate caller
         # (frame #1) points to a.out`a.
 
-        self.expect("frame info", "We should stop at c()",
-                    substrs=["a.out`c"])
+        self.expect("frame info", "We should stop at c()", substrs=["a.out`c"])
 
         # Select our parent frame as the current frame.
         self.runCmd("frame select 1")
-        self.expect("frame info", "The immediate caller should be a()",
-                    substrs=["a.out`a"])
+        self.expect(
+            "frame info", "The immediate caller should be a()", substrs=["a.out`a"]
+        )

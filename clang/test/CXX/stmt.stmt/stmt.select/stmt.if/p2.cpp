@@ -80,6 +80,7 @@ namespace generic_lambda {
     [](auto x) {
       if constexpr (sizeof(T) == 1 && sizeof(x) == 1)
         T::error(); // expected-error 2{{'::'}}
+                    // expected-note@-3 2{{while substituting into a lambda expression here}}
     } (0);
   }
 
@@ -88,6 +89,7 @@ namespace generic_lambda {
       if constexpr (sizeof(T) == 1)
         if constexpr (sizeof(x) == 1)
           T::error(); // expected-error {{'::'}}
+                      // expected-note@-4 {{while substituting into a lambda expression here}}
     } (0);
   }
 
@@ -151,7 +153,8 @@ a:  if constexpr(sizeof(n) == 4) // expected-error {{redefinition}} expected-not
 
   void evil_things() {
     goto evil_label; // expected-error {{cannot jump}}
-    if constexpr (true || ({evil_label: false;})) {} // expected-note {{constexpr if}}
+    if constexpr (true || ({evil_label: false;})) {} // expected-note {{constexpr if}} \
+                                                     // expected-note {{jump enters a statement expression}}
 
     if constexpr (true) // expected-note {{constexpr if}}
       goto surprise; // expected-error {{cannot jump}}

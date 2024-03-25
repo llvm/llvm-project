@@ -33,7 +33,7 @@
 #include "lldb/Utility/StreamString.h"
 
 #include "llvm/Object/ELF.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 extern "C" {
 extern char **environ;
@@ -108,10 +108,11 @@ static bool GetNetBSDProcessCPUType(ProcessInstanceInfo &process_info) {
     auto buffer_sp = FileSystem::Instance().CreateDataBuffer(
         process_info.GetExecutableFile(), 0x20, 0);
     if (buffer_sp) {
-      uint8_t exe_class = llvm::object::getElfArchType(
-                              {reinterpret_cast<char *>(buffer_sp->GetBytes()),
-                               size_t(buffer_sp->GetByteSize())})
-                              .first;
+      uint8_t exe_class =
+          llvm::object::getElfArchType(
+              {reinterpret_cast<const char *>(buffer_sp->GetBytes()),
+               size_t(buffer_sp->GetByteSize())})
+              .first;
 
       switch (exe_class) {
       case llvm::ELF::ELFCLASS32:

@@ -10,15 +10,15 @@ define dso_local fastcc void @BuildVectorICE() unnamed_addr {
 ; 32BIT:       # %bb.0: # %entry
 ; 32BIT-NEXT:    stwu 1, -64(1)
 ; 32BIT-NEXT:    .cfi_def_cfa_offset 64
-; 32BIT-NEXT:    li 3, .LCPI0_0@l
-; 32BIT-NEXT:    lis 4, .LCPI0_0@ha
-; 32BIT-NEXT:    addi 5, 1, 16
+; 32BIT-NEXT:    li 4, .LCPI0_0@l
+; 32BIT-NEXT:    lis 5, .LCPI0_0@ha
+; 32BIT-NEXT:    lxvw4x 34, 0, 3
+; 32BIT-NEXT:    li 3, 0
 ; 32BIT-NEXT:    addi 6, 1, 48
 ; 32BIT-NEXT:    li 7, 0
-; 32BIT-NEXT:    lxvw4x 34, 0, 3
-; 32BIT-NEXT:    lxvw4x 35, 4, 3
-; 32BIT-NEXT:    li 3, 0
+; 32BIT-NEXT:    lxvw4x 35, 5, 4
 ; 32BIT-NEXT:    addi 4, 1, 32
+; 32BIT-NEXT:    addi 5, 1, 16
 ; 32BIT-NEXT:    .p2align 4
 ; 32BIT-NEXT:  .LBB0_1: # %while.body
 ; 32BIT-NEXT:    #
@@ -36,8 +36,8 @@ define dso_local fastcc void @BuildVectorICE() unnamed_addr {
 ;
 ; 64BIT-LABEL: BuildVectorICE:
 ; 64BIT:       # %bb.0: # %entry
-; 64BIT-NEXT:    li 3, 0
 ; 64BIT-NEXT:    lxvw4x 34, 0, 3
+; 64BIT-NEXT:    li 3, 0
 ; 64BIT-NEXT:    rldimi 3, 3, 32, 0
 ; 64BIT-NEXT:    mtfprd 0, 3
 ; 64BIT-NEXT:    li 3, 0

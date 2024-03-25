@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
 ! UNSUPPORTED: system-windows
 
    character*10 :: exx
@@ -107,6 +107,28 @@ c = 1; d = 9
 write(*,'(8F4.1,I5)',iostat=m) (c,d,j=11,14), j
 end
 
+! CHECK-LABEL: func @_QPcontrol3
+subroutine control3 ! I/O condition specifier control flow
+    character(10) :: internal(2) = ['aaa','bbb']
+    integer stat, k(3)
+    ! CHECK:   BeginInternalArrayListInput
+    ! CHECK:   EnableHandlers
+    ! CHECK:   InputDescriptor
+    ! CHECK:   %[[V_15:[0-9]+]] = fir.call @_FortranAioEndIoStatement
+    ! CHECK:   %[[V_16:[0-9]+]] = fir.convert %[[V_15]] : (i32) -> index
+    ! CHECK:   fir.select %[[V_16]] : index [-2, ^bb1, -1, ^bb1, 0, ^bb1, unit, ^bb2]
+    read(internal,*,err=666,iostat=stat) k ! set stat to IOSTAT_END (-1)
+    ! CHECK: ^bb1:  // 3 preds: ^bb0, ^bb0, ^bb0
+    ! CHECK:   StopStatementText
+    ! CHECK:   fir.unreachable
+    stop 'fallthrough -> ok'
+    ! CHECK: ^bb2:  // pred: ^bb0
+    ! CHECK:   BeginExternalListOutput
+    ! CHECK:   OutputAscii
+    ! CHECK:   EndIoStatement
+666 print*, 'FAIL'
+    end
+
 ! CHECK-LABEL: func @_QPloopnest
 subroutine loopnest
    integer :: aa(3,3)
@@ -137,11 +159,11 @@ end
 
 ! CHECK-LABEL: func @_QPimpliedformat
 subroutine impliedformat
-  ! CHECK: BeginExternalListInput(%c-1
+  ! CHECK: BeginExternalListInput
   ! CHECK: InputReal32
   ! CHECK: EndIoStatement(%3) {{.*}}: (!fir.ref<i8>) -> i32
   read*, x
-  ! CHECK: BeginExternalListOutput(%c-1
+  ! CHECK: BeginExternalListOutput
   ! CHECK: OutputReal32
   ! CHECK: EndIoStatement
   print*, x

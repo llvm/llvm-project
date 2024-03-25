@@ -12,11 +12,9 @@ define i32 @logical_and_2ops(i32 %n, i32 %m) {
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_2ops
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %m)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%n umin_seq %m)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq %m)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -42,11 +40,9 @@ define i32 @logical_or_2ops(i32 %n, i32 %m) {
 ; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq (true + %cond_p1))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_2ops
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %m)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%n umin_seq %m)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq %m)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -74,11 +70,9 @@ define i32 @logical_and_3ops(i32 %n, i32 %m, i32 %k) {
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1 umin_seq %cond_p2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_3ops
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %m umin_seq %k)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%n umin_seq %m umin_seq %k)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq %m umin_seq %k)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -108,11 +102,9 @@ define i32 @logical_or_3ops(i32 %n, i32 %m, i32 %k) {
 ; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq (true + %cond_p1) umin_seq (true + %cond_p2))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_3ops
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %m umin_seq %k)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%n umin_seq %m umin_seq %k)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq %m umin_seq %k)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -144,11 +136,9 @@ define i32 @logical_or_3ops_duplicate(i32 %n, i32 %m, i32 %k) {
 ; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq ((true + %cond_p1) umin (true + %cond_p2)) umin_seq (true + %cond_p3))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_3ops_duplicate
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %m umin_seq %k)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%n umin_seq %m umin_seq %k)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq %m umin_seq %k)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -177,16 +167,14 @@ define i32 @logical_or_3ops_redundant_uminseq_operand(i32 %n, i32 %m, i32 %k) {
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %n, i32 %m)
 ; CHECK-NEXT:    --> (%n umin %m) U: full-set S: full-set Exits: (%n umin %m) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %cond_p3 = select i1 %cond_p0, i1 true, i1 %cond_p1
-; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq (true + %cond_p1))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin (true + %cond_p1))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %cond = select i1 %cond_p3, i1 true, i1 %cond_p2
-; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq (true + %cond_p1) umin_seq (true + %cond_p2))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (true + (((true + %cond_p0) umin (true + %cond_p1)) umin_seq (true + %cond_p2))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_3ops_redundant_uminseq_operand
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((%n umin %m) umin_seq %k)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((%n umin %m) umin_seq %k)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((%n umin %m) umin_seq %k)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -219,11 +207,9 @@ define i32 @logical_or_3ops_redundant_umin_operand(i32 %n, i32 %m, i32 %k) {
 ; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq (true + %cond_p1) umin_seq (true + %cond_p2))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_3ops_redundant_umin_operand
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %k umin_seq %m)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%n umin_seq %k umin_seq %m)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq %k umin_seq %m)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -258,11 +244,9 @@ define i32 @logical_or_4ops_redundant_operand_across_umins(i32 %n, i32 %m, i32 %
 ; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq (true + %cond_p1) umin_seq (true + %cond_p2))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_4ops_redundant_operand_across_umins
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((%n umin %m) umin_seq %k umin_seq %q)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((%n umin %m) umin_seq %k umin_seq %q)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((%n umin %m) umin_seq %k umin_seq %q)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -298,11 +282,9 @@ define i32 @logical_or_3ops_operand_wise_redundant_umin(i32 %n, i32 %m, i32 %k) 
 ; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq (true + %cond_p1) umin_seq (true + %cond_p2))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_3ops_operand_wise_redundant_umin
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((%n umin %m) umin_seq %k)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((%n umin %m) umin_seq %k)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((%n umin %m) umin_seq %k)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -336,11 +318,9 @@ define i32 @logical_or_3ops_partially_redundant_umin(i32 %n, i32 %m, i32 %k) {
 ; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq (true + %cond_p1))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_3ops_partially_redundant_umin
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq (%m umin %k))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%n umin_seq (%m umin %k))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq (%m umin %k))
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -382,17 +362,13 @@ define i32 @logical_or_5ops_redundant_opearand_of_inner_uminseq(i32 %a, i32 %b, 
 ; CHECK-NEXT:    --> (true + ((true + %cond_p5) umin_seq (true + %cond_p6) umin_seq (true + %cond_p7))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_5ops_redundant_opearand_of_inner_uminseq
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%a umin_seq %b umin_seq ((%e umin_seq %d) umin %c))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%a umin_seq %b umin_seq ((%e umin_seq %d) umin %c))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%a umin_seq %b umin_seq ((%e umin_seq %d) umin %c))
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ; CHECK-NEXT:  Loop %first.loop: backedge-taken count is (%e umin_seq %d umin_seq %a)
-; CHECK-NEXT:  Loop %first.loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %first.loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %first.loop: symbolic max backedge-taken count is (%e umin_seq %d umin_seq %a)
-; CHECK-NEXT:  Loop %first.loop: Predicated backedge-taken count is (%e umin_seq %d umin_seq %a)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %first.loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %first.loop: Trip multiple is 1
 ;
 entry:
   br label %first.loop
@@ -426,20 +402,18 @@ define i32 @logical_and_2ops_and_constant(i32 %n, i32 %m, i32 %k) {
 ; CHECK-LABEL: 'logical_and_2ops_and_constant'
 ; CHECK-NEXT:  Classifying expressions for: @logical_and_2ops_and_constant
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,43) S: [0,43) Exits: (42 umin %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,43) S: [0,43) Exits: (42 umin %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,44) S: [1,44) Exits: (1 + (42 umin %n))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,44) S: [1,44) Exits: (1 + (42 umin %n))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %n, i32 42)
 ; CHECK-NEXT:    --> (42 umin %n) U: [0,43) S: [0,43) Exits: (42 umin %n) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %cond = select i1 %cond_p1, i1 true, i1 %cond_p0
 ; CHECK-NEXT:    --> (true + ((true + %cond_p1) umin (true + %cond_p0))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_2ops_and_constant
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (42 umin %n)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 42
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 42
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (42 umin %n)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (42 umin %n)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -469,26 +443,21 @@ define i32 @computeSCEVAtScope(i32 %d.0) {
 ; CHECK-NEXT:    %inc3 = add nsw i32 %e.1, 1
 ; CHECK-NEXT:    --> {(1 + %d.0),+,1}<nw><%for.cond> U: full-set S: full-set Exits: 1 LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
 ; CHECK-NEXT:    %f.1 = phi i32 [ %inc8, %for.body5 ], [ 0, %for.cond4.preheader ]
-; CHECK-NEXT:    --> {0,+,1}<%for.cond4> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.cond4> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
 ; CHECK-NEXT:    %inc8 = add i32 %f.1, 1
-; CHECK-NEXT:    --> {1,+,1}<%for.cond4> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.cond4> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @computeSCEVAtScope
 ; CHECK-NEXT:  Loop %for.cond: backedge-taken count is (-1 * %d.0)
-; CHECK-NEXT:  Loop %for.cond: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.cond: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %for.cond: symbolic max backedge-taken count is (-1 * %d.0)
-; CHECK-NEXT:  Loop %for.cond: Predicated backedge-taken count is (-1 * %d.0)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.cond: Trip multiple is 1
-; CHECK-NEXT:  Loop %for.cond4: backedge-taken count is 0
-; CHECK-NEXT:  Loop %for.cond4: constant max backedge-taken count is 0
-; CHECK-NEXT:  Loop %for.cond4: symbolic max backedge-taken count is 0
-; CHECK-NEXT:  Loop %for.cond4: Predicated backedge-taken count is 0
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.cond4: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.cond: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.cond4: backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %for.cond4: constant max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %for.cond4: symbolic max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %for.cond4: Trip multiple is 1
 ; CHECK-NEXT:  Loop %while.cond: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %while.cond: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %while.cond: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %while.cond: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %while.cond
@@ -543,11 +512,9 @@ define i64 @uminseq_vs_ptrtoint_complexity(i64 %n, i64 %m, ptr %ptr) {
 ; CHECK-NEXT:    --> {(ptrtoint ptr %ptr to i64),+,1}<%loop> U: full-set S: full-set --> ((%n umin_seq %m) + (ptrtoint ptr %ptr to i64)) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @uminseq_vs_ptrtoint_complexity
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %m)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%n umin_seq %m)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq %m)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -577,11 +544,9 @@ define i32 @logical_and_implies_poison1(i32 %n) {
 ; CHECK-NEXT:    --> (%cond_p0 umin %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison1
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((1 + %n) umin %n)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((1 + %n) umin %n)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((1 + %n) umin %n)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %add = add i32 %n, 1
@@ -610,11 +575,9 @@ define i32 @logical_and_implies_poison2(i32 %n) {
 ; CHECK-NEXT:    --> (%cond_p1 umin %cond_p0) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((1 + %n) umin %n)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((1 + %n) umin %n)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((1 + %n) umin %n)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %add = add i32 %n, 1
@@ -643,11 +606,9 @@ define i32 @logical_and_implies_poison3(i32 %n, i32 %m) {
 ; CHECK-NEXT:    --> (%cond_p1 umin %cond_p0) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison3
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((%n + %m) umin %n)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((%n + %m) umin %n)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((%n + %m) umin %n)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %add = add i32 %n, %m
@@ -676,11 +637,9 @@ define i32 @logical_and_implies_poison_wrong_direction(i32 %n, i32 %m) {
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison_wrong_direction
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq (%n + %m))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%n umin_seq (%n + %m))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq (%n + %m))
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %add = add i32 %n, %m
@@ -707,11 +666,9 @@ define i32 @logical_and_implies_poison_noundef(i32 %n, i32 noundef %m) {
 ; CHECK-NEXT:    --> (%cond_p0 umin %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison_noundef
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin %m)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%n umin %m)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin %m)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -737,11 +694,9 @@ define i32 @logical_and_implies_poison_noundef_wrong_direction(i32 %n, i32 nound
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison_noundef_wrong_direction
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%m umin_seq %n)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%m umin_seq %n)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%m umin_seq %n)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -771,11 +726,9 @@ define i32 @logical_and_implies_poison_complex1(i32 %n, i32 %m) {
 ; CHECK-NEXT:    --> (%cond_p0 umin %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison_complex1
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((%n + %m) umin (1 + %n + %m))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((%n + %m) umin (1 + %n + %m))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((%n + %m) umin (1 + %n + %m))
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %add = add i32 %n, %m
@@ -807,11 +760,9 @@ define i32 @logical_and_implies_poison_complex2(i32 %n, i32 %m, i32 %l) {
 ; CHECK-NEXT:    --> (%cond_p0 umin %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison_complex2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((%n + %m) umin (%n + %m + %l))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((%n + %m) umin (%n + %m + %l))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((%n + %m) umin (%n + %m + %l))
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %add = add i32 %n, %m
@@ -843,11 +794,9 @@ define i32 @logical_and_implies_poison_complex_wrong_direction(i32 %n, i32 %m, i
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison_complex_wrong_direction
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((%n + %m) umin_seq (%n + %m + %l))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((%n + %m) umin_seq (%n + %m + %l))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((%n + %m) umin_seq (%n + %m + %l))
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %add = add i32 %n, %m
@@ -879,11 +828,9 @@ define i32 @logical_and_implies_multiple_ops(i32 %n, i32 %m) {
 ; CHECK-NEXT:    --> ((%cond_p0 umin %cond_p1) umin_seq %cond_p2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_multiple_ops
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (((1 + %n) umin %n) umin_seq %m)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (((1 + %n) umin %n) umin_seq %m)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (((1 + %n) umin %n) umin_seq %m)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %add = add i32 %n, 1
@@ -916,11 +863,9 @@ define i32 @logical_and_implies_multiple_ops2(i32 %n, i32 %m) {
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq (%cond_p1 umin %cond_p2)) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_multiple_ops2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq ((1 + %n) umin %m))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%n umin_seq ((1 + %n) umin %m))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq ((1 + %n) umin %m))
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %add = add i32 %n, 1
@@ -953,11 +898,9 @@ define i32 @logical_and_implies_multiple_ops3(i32 %n, i32 %m) {
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1 umin_seq %cond_p2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_multiple_ops3
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%m umin_seq ((1 + %n) umin %n))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%m umin_seq ((1 + %n) umin %n))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%m umin_seq ((1 + %n) umin %n))
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %add = add i32 %n, 1
@@ -983,18 +926,16 @@ define i32 @logical_and_not_zero(i16 %n, i32 %m) {
 ; CHECK-NEXT:    %n1 = add i32 %n.ext, 1
 ; CHECK-NEXT:    --> (1 + (zext i16 %n to i32))<nuw><nsw> U: [1,65537) S: [1,65537)
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65537) S: [0,65537) Exits: ((1 + (zext i16 %n to i32))<nuw><nsw> umin %m) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,65537) S: [0,65537) Exits: ((1 + (zext i16 %n to i32))<nuw><nsw> umin %m) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65538) S: [1,65538) Exits: (1 + ((1 + (zext i16 %n to i32))<nuw><nsw> umin %m))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,65538) S: [1,65538) Exits: (1 + ((1 + (zext i16 %n to i32))<nuw><nsw> umin %m))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_not_zero
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((1 + (zext i16 %n to i32))<nuw><nsw> umin %m)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 65536
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 65536
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((1 + (zext i16 %n to i32))<nuw><nsw> umin %m)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((1 + (zext i16 %n to i32))<nuw><nsw> umin %m)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %n.ext = zext i16 %n to i32
@@ -1019,18 +960,16 @@ define i32 @logical_and_not_zero_wrong_order(i16 %n, i32 %m) {
 ; CHECK-NEXT:    %n1 = add i32 %n.ext, 1
 ; CHECK-NEXT:    --> (1 + (zext i16 %n to i32))<nuw><nsw> U: [1,65537) S: [1,65537)
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65537) S: [0,65537) Exits: (%m umin_seq (1 + (zext i16 %n to i32))<nuw><nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,65537) S: [0,65537) Exits: (%m umin_seq (1 + (zext i16 %n to i32))<nuw><nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65538) S: [1,65538) Exits: (1 + (%m umin_seq (1 + (zext i16 %n to i32))<nuw><nsw>))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,65538) S: [1,65538) Exits: (1 + (%m umin_seq (1 + (zext i16 %n to i32))<nuw><nsw>))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_not_zero_wrong_order
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%m umin_seq (1 + (zext i16 %n to i32))<nuw><nsw>)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 65536
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 65536
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%m umin_seq (1 + (zext i16 %n to i32))<nuw><nsw>)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%m umin_seq (1 + (zext i16 %n to i32))<nuw><nsw>)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %n.ext = zext i16 %n to i32
@@ -1058,11 +997,9 @@ define i32 @logical_and_not_zero_needs_context(i32 %n, i32 %m) {
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_not_zero_needs_context
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %m)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%n umin_seq %m)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq %m)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %cmp = icmp ne i32 %n, 0
@@ -1090,18 +1027,16 @@ define i32 @logical_and_known_smaller(i16 %n, i16 %m) {
 ; CHECK-NEXT:    %m.add = add i32 %m.ext, 65536
 ; CHECK-NEXT:    --> (65536 + (zext i16 %m to i32))<nuw><nsw> U: [65536,131072) S: [65536,131072)
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65536) S: [0,65536) Exits: (zext i16 %n to i32) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,65536) S: [0,65536) Exits: (zext i16 %n to i32) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65537) S: [1,65537) Exits: (1 + (zext i16 %n to i32))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,65537) S: [1,65537) Exits: (1 + (zext i16 %n to i32))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_known_smaller
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (zext i16 %n to i32)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 65535
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 65535
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i16 %n to i32)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (zext i16 %n to i32)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %n.ext = zext i16 %n to i32
@@ -1129,18 +1064,16 @@ define i32 @logical_and_known_smaller_equal(i16 %n, i16 %m) {
 ; CHECK-NEXT:    %m.add = add i32 %m.ext, 65535
 ; CHECK-NEXT:    --> (65535 + (zext i16 %m to i32))<nuw><nsw> U: [65535,131071) S: [65535,131071)
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65536) S: [0,65536) Exits: (zext i16 %n to i32) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,65536) S: [0,65536) Exits: (zext i16 %n to i32) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65537) S: [1,65537) Exits: (1 + (zext i16 %n to i32))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,65537) S: [1,65537) Exits: (1 + (zext i16 %n to i32))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_known_smaller_equal
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (zext i16 %n to i32)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 65535
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 65535
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i16 %n to i32)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (zext i16 %n to i32)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %n.ext = zext i16 %n to i32
@@ -1168,18 +1101,16 @@ define i32 @logical_and_not_known_smaller_equal(i16 %n, i16 %m) {
 ; CHECK-NEXT:    %m.add = add i32 %m.ext, 65534
 ; CHECK-NEXT:    --> (65534 + (zext i16 %m to i32))<nuw><nsw> U: [65534,131070) S: [65534,131070)
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65536) S: [0,65536) Exits: ((zext i16 %n to i32) umin_seq (65534 + (zext i16 %m to i32))<nuw><nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,65536) S: [0,65536) Exits: ((zext i16 %n to i32) umin_seq (65534 + (zext i16 %m to i32))<nuw><nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65537) S: [1,65537) Exits: (1 + ((zext i16 %n to i32) umin_seq (65534 + (zext i16 %m to i32))<nuw><nsw>))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,65537) S: [1,65537) Exits: (1 + ((zext i16 %n to i32) umin_seq (65534 + (zext i16 %m to i32))<nuw><nsw>))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_not_known_smaller_equal
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((zext i16 %n to i32) umin_seq (65534 + (zext i16 %m to i32))<nuw><nsw>)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 65535
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 65535
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((zext i16 %n to i32) umin_seq (65534 + (zext i16 %m to i32))<nuw><nsw>)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((zext i16 %n to i32) umin_seq (65534 + (zext i16 %m to i32))<nuw><nsw>)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %n.ext = zext i16 %n to i32
@@ -1207,18 +1138,16 @@ define i32 @logical_and_known_greater(i16 %n, i16 %m) {
 ; CHECK-NEXT:    %m.add = add i32 %m.ext, 65536
 ; CHECK-NEXT:    --> (65536 + (zext i16 %m to i32))<nuw><nsw> U: [65536,131072) S: [65536,131072)
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65536) S: [0,65536) Exits: (zext i16 %n to i32) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,65536) S: [0,65536) Exits: (zext i16 %n to i32) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65537) S: [1,65537) Exits: (1 + (zext i16 %n to i32))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,65537) S: [1,65537) Exits: (1 + (zext i16 %n to i32))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_known_greater
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (zext i16 %n to i32)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 65535
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 65535
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i16 %n to i32)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (zext i16 %n to i32)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %n.ext = zext i16 %n to i32
@@ -1246,18 +1175,16 @@ define i32 @logical_and_known_greater_equal(i16 %n, i16 %m) {
 ; CHECK-NEXT:    %m.add = add i32 %m.ext, 65535
 ; CHECK-NEXT:    --> (65535 + (zext i16 %m to i32))<nuw><nsw> U: [65535,131071) S: [65535,131071)
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65536) S: [0,65536) Exits: (zext i16 %n to i32) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,65536) S: [0,65536) Exits: (zext i16 %n to i32) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65537) S: [1,65537) Exits: (1 + (zext i16 %n to i32))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,65537) S: [1,65537) Exits: (1 + (zext i16 %n to i32))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_known_greater_equal
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (zext i16 %n to i32)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 65535
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 65535
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i16 %n to i32)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (zext i16 %n to i32)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %n.ext = zext i16 %n to i32
@@ -1285,18 +1212,16 @@ define i32 @logical_and_not_known_greater_equal(i16 %n, i16 %m) {
 ; CHECK-NEXT:    %m.add = add i32 %m.ext, 65534
 ; CHECK-NEXT:    --> (65534 + (zext i16 %m to i32))<nuw><nsw> U: [65534,131070) S: [65534,131070)
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65536) S: [0,65536) Exits: ((zext i16 %n to i32) umin (65534 + (zext i16 %m to i32))<nuw><nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,65536) S: [0,65536) Exits: ((zext i16 %n to i32) umin (65534 + (zext i16 %m to i32))<nuw><nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65537) S: [1,65537) Exits: (1 + ((zext i16 %n to i32) umin (65534 + (zext i16 %m to i32))<nuw><nsw>))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,65537) S: [1,65537) Exits: (1 + ((zext i16 %n to i32) umin (65534 + (zext i16 %m to i32))<nuw><nsw>))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_not_known_greater_equal
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((zext i16 %n to i32) umin (65534 + (zext i16 %m to i32))<nuw><nsw>)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 65535
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 65535
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((zext i16 %n to i32) umin (65534 + (zext i16 %m to i32))<nuw><nsw>)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((zext i16 %n to i32) umin (65534 + (zext i16 %m to i32))<nuw><nsw>)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %n.ext = zext i16 %n to i32
@@ -1318,18 +1243,16 @@ define i32 @logical_and_zero_arg1(i32 %n) {
 ; CHECK-LABEL: 'logical_and_zero_arg1'
 ; CHECK-NEXT:  Classifying expressions for: @logical_and_zero_arg1
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: false LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_zero_arg1
-; CHECK-NEXT:  Loop %loop: backedge-taken count is 0
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 0
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 0
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 0
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -1348,18 +1271,16 @@ define i32 @logical_and_zero_arg2(i32 %n) {
 ; CHECK-LABEL: 'logical_and_zero_arg2'
 ; CHECK-NEXT:  Classifying expressions for: @logical_and_zero_arg2
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p1 umin %cond_p0) U: full-set S: full-set Exits: false LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_zero_arg2
-; CHECK-NEXT:  Loop %loop: backedge-taken count is 0
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 0
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 0
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 0
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop

@@ -1,11 +1,11 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck -check-prefix=SICI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=hawaii -show-encoding %s | FileCheck -check-prefix=SICI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=VI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck --check-prefix=GFX9 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefixes=NOSICI,NOGCN --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=hawaii %s 2>&1 | FileCheck -check-prefixes=NOSICI,NOGCN --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefixes=NOVI,NOGCN --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefix=NOGFX9 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck -check-prefix=SICI %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=hawaii -show-encoding %s | FileCheck -check-prefix=SICI %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=VI %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck --check-prefix=GFX9 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefixes=NOSICI,NOGCN --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=hawaii %s 2>&1 | FileCheck -check-prefixes=NOSICI,NOGCN --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefixes=NOVI,NOGCN --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefix=NOGFX9 --implicit-check-not=error: %s
 
 v_lshl_add_u32 v1, v2, v3, v4
 // GFX9: v_lshl_add_u32 v1, v2, v3, v4 ; encoding: [0x01,0x00,0xfd,0xd1,0x02,0x07,0x12,0x04]
@@ -426,9 +426,9 @@ v_mad_i16 v5, v1, -1, v3
 // VI: v_mad_i16 v5, v1, -1, v3 ; encoding: [0x05,0x00,0xec,0xd1,0x01,0x83,0x0d,0x04]
 
 v_mad_i16 v5, v1, v2, -4.0
-// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
+// GFX9: v_mad_i16 v5, v1, v2, -4.0 ; encoding: [0x05,0x00,0x05,0xd2,0x01,0x05,0xde,0x03]
 // NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: literal operands are not supported
+// VI: v_mad_i16 v5, v1, v2, -4.0 ; encoding: [0x05,0x00,0xec,0xd1,0x01,0x05,0xde,0x03]
 
 v_mad_i16 v5, v1, v2, v3 clamp
 // GFX9: v_mad_i16 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0x05,0xd2,0x01,0x05,0x0e,0x04]
@@ -478,11 +478,11 @@ v_mad_legacy_i16 v5, v1, -1, v3
 // NOGCN: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_mad_legacy_i16 v5, v1, v2, -4.0
-// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
+// GFX9: v_mad_legacy_i16 v5, v1, v2, -4.0 ; encoding: [0x05,0x00,0xec,0xd1,0x01,0x05,0xde,0x03]
 // NOGCN: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_mad_legacy_i16 v5, v1, v2, -4.0 clamp
-// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
+// GFX9: v_mad_legacy_i16 v5, v1, v2, -4.0 clamp ; encoding: [0x05,0x80,0xec,0xd1,0x01,0x05,0xde,0x03]
 // NOGCN: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_mad_legacy_u16_e64 v5, 0, v2, v3
@@ -494,11 +494,11 @@ v_mad_legacy_u16 v5, v1, -1, v3
 // NOGCN: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_mad_legacy_u16 v5, v1, v2, -4.0
-// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
+// GFX9: v_mad_legacy_u16 v5, v1, v2, -4.0 ; encoding: [0x05,0x00,0xeb,0xd1,0x01,0x05,0xde,0x03]
 // NOGCN: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_mad_legacy_u16 v5, v1, v2, -4.0 clamp
-// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
+// GFX9: v_mad_legacy_u16 v5, v1, v2, -4.0 clamp ; encoding: [0x05,0x80,0xeb,0xd1,0x01,0x05,0xde,0x03]
 // NOGCN: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_mad_u16_e64 v5, 0, v2, v3
@@ -512,9 +512,9 @@ v_mad_u16 v5, v1, -1, v3
 // VI: v_mad_u16 v5, v1, -1, v3 ; encoding: [0x05,0x00,0xeb,0xd1,0x01,0x83,0x0d,0x04]
 
 v_mad_u16 v5, v1, v2, -4.0
-// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
+// GFX9: v_mad_u16 v5, v1, v2, -4.0 ; encoding: [0x05,0x00,0x04,0xd2,0x01,0x05,0xde,0x03]
 // NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: literal operands are not supported
+// VI: v_mad_u16 v5, v1, v2, -4.0 ; encoding: [0x05,0x00,0xeb,0xd1,0x01,0x05,0xde,0x03]
 
 v_mad_u16 v5, v1, v2, v3 clamp
 // GFX9: v_mad_u16 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0x04,0xd2,0x01,0x05,0x0e,0x04]

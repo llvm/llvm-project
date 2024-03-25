@@ -22,59 +22,80 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(SparseTensor, sparse_tensor);
 /// Dimension level types (and properties) that define sparse tensors.
 /// See the documentation in SparseTensorAttrDefs.td for their meaning.
 ///
-/// These correspond to SparseTensorEncodingAttr::DimLevelType in the C++ API.
+/// These correspond to SparseTensorEncodingAttr::LevelType in the C++ API.
 /// If updating, keep them in sync and update the static_assert in the impl
 /// file.
-enum MlirSparseTensorDimLevelType {
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_DENSE = 4,             // 0b001_00
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED = 8,        // 0b010_00
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU = 9,     // 0b010_01
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NO = 10,    // 0b010_10
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU_NO = 11, // 0b010_11
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON = 16,        // 0b100_00
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU = 17,     // 0b100_01
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NO = 18,     // 0b100_10
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU_NO = 19,  // 0b100_11
+typedef uint64_t MlirSparseTensorLevelType;
+
+enum MlirSparseTensorLevelFormat {
+  MLIR_SPARSE_TENSOR_LEVEL_DENSE = 0x000000010000,
+  MLIR_SPARSE_TENSOR_LEVEL_BATCH = 0x000000020000,
+  MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED = 0x000000040000,
+  MLIR_SPARSE_TENSOR_LEVEL_SINGLETON = 0x000000080000,
+  MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED = 0x000000100000,
+  MLIR_SPARSE_TENSOR_LEVEL_N_OUT_OF_M = 0x000000200000,
+};
+
+enum MlirSparseTensorLevelPropertyNondefault {
+  MLIR_SPARSE_PROPERTY_NON_UNIQUE = 0x0001,
+  MLIR_SPARSE_PROPERTY_NON_ORDERED = 0x0002,
 };
 
 //===----------------------------------------------------------------------===//
 // SparseTensorEncodingAttr
 //===----------------------------------------------------------------------===//
 
-/// Checks whether the given attribute is a sparse_tensor.encoding attribute.
+/// Checks whether the given attribute is a `sparse_tensor.encoding` attribute.
 MLIR_CAPI_EXPORTED bool
 mlirAttributeIsASparseTensorEncodingAttr(MlirAttribute attr);
 
-/// Creates a sparse_tensor.encoding attribute with the given parameters.
+/// Creates a `sparse_tensor.encoding` attribute with the given parameters.
 MLIR_CAPI_EXPORTED MlirAttribute mlirSparseTensorEncodingAttrGet(
-    MlirContext ctx, intptr_t numDimLevelTypes,
-    enum MlirSparseTensorDimLevelType const *dimLevelTypes,
-    MlirAffineMap dimOrdering, MlirAffineMap higherOrdering,
-    int pointerBitWidth, int indexBitWidth);
+    MlirContext ctx, intptr_t lvlRank,
+    MlirSparseTensorLevelType const *lvlTypes, MlirAffineMap dimToLvl,
+    MlirAffineMap lvlTodim, int posWidth, int crdWidth);
 
-/// Returns the number of dim level types in a sparse_tensor.encoding attribute.
+/// Returns the level-rank of the `sparse_tensor.encoding` attribute.
 MLIR_CAPI_EXPORTED intptr_t
-mlirSparseTensorEncodingGetNumDimLevelTypes(MlirAttribute attr);
+mlirSparseTensorEncodingGetLvlRank(MlirAttribute attr);
 
-/// Returns a specified dim level type in a sparse_tensor.encoding attribute.
-MLIR_CAPI_EXPORTED enum MlirSparseTensorDimLevelType
-mlirSparseTensorEncodingAttrGetDimLevelType(MlirAttribute attr, intptr_t pos);
+/// Returns a specified level-type of the `sparse_tensor.encoding` attribute.
+MLIR_CAPI_EXPORTED MlirSparseTensorLevelType
+mlirSparseTensorEncodingAttrGetLvlType(MlirAttribute attr, intptr_t lvl);
 
-/// Returns the dimension ordering in a sparse_tensor.encoding attribute.
+/// Returns a specified level-format of the `sparse_tensor.encoding` attribute.
+MLIR_CAPI_EXPORTED enum MlirSparseTensorLevelFormat
+mlirSparseTensorEncodingAttrGetLvlFmt(MlirAttribute attr, intptr_t lvl);
+
+/// Returns the dimension-to-level mapping of the `sparse_tensor.encoding`
+/// attribute.
 MLIR_CAPI_EXPORTED MlirAffineMap
-mlirSparseTensorEncodingAttrGetDimOrdering(MlirAttribute attr);
+mlirSparseTensorEncodingAttrGetDimToLvl(MlirAttribute attr);
 
-/// Returns the higher ordering in a sparse_tensor.encoding attribute.
+/// Returns the level-to-dimension mapping of the `sparse_tensor.encoding`
+/// attribute.
 MLIR_CAPI_EXPORTED MlirAffineMap
-mlirSparseTensorEncodingAttrGetHigherOrdering(MlirAttribute attr);
+mlirSparseTensorEncodingAttrGetLvlToDim(MlirAttribute attr);
 
-/// Returns the pointer bit width in a sparse_tensor.encoding attribute.
+/// Returns the position bitwidth of the `sparse_tensor.encoding` attribute.
 MLIR_CAPI_EXPORTED int
-mlirSparseTensorEncodingAttrGetPointerBitWidth(MlirAttribute attr);
+mlirSparseTensorEncodingAttrGetPosWidth(MlirAttribute attr);
 
-/// Returns the index bit width in a sparse_tensor.encoding attribute.
+/// Returns the coordinate bitwidth of the `sparse_tensor.encoding` attribute.
 MLIR_CAPI_EXPORTED int
-mlirSparseTensorEncodingAttrGetIndexBitWidth(MlirAttribute attr);
+mlirSparseTensorEncodingAttrGetCrdWidth(MlirAttribute attr);
+
+MLIR_CAPI_EXPORTED unsigned
+mlirSparseTensorEncodingAttrGetStructuredN(MlirSparseTensorLevelType lvlType);
+
+MLIR_CAPI_EXPORTED unsigned
+mlirSparseTensorEncodingAttrGetStructuredM(MlirSparseTensorLevelType lvlType);
+
+MLIR_CAPI_EXPORTED MlirSparseTensorLevelType
+mlirSparseTensorEncodingAttrBuildLvlType(
+    enum MlirSparseTensorLevelFormat lvlFmt,
+    const enum MlirSparseTensorLevelPropertyNondefault *properties,
+    unsigned propSize, unsigned n, unsigned m);
 
 #ifdef __cplusplus
 }

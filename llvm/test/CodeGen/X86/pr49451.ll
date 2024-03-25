@@ -22,7 +22,6 @@ define void @func_6(i8 %uc_8, i64 %uli_10) nounwind {
 ; X86-NEXT:    je .LBB0_2
 ; X86-NEXT:  # %bb.3: # %if.end1401
 ; X86-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; X86-NEXT:    testb %dl, %dl
 ; X86-NEXT:    addl %eax, %esi
 ; X86-NEXT:    movw %si, s_2
 ; X86-NEXT:    movw %bx, s_0
@@ -45,7 +44,6 @@ define void @func_6(i8 %uc_8, i64 %uli_10) nounwind {
 ; X64-NEXT:    je .LBB0_2
 ; X64-NEXT:  # %bb.3: # %if.end1401
 ; X64-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; X64-NEXT:    testb %cl, %cl
 ; X64-NEXT:    addl %esi, %edx
 ; X64-NEXT:    movw %dx, s_2(%rip)
 ; X64-NEXT:    leal -23090(%rax), %edi

@@ -507,13 +507,20 @@ bool AVRAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 
 bool AVRAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                           const MCFixup &Fixup,
-                                          const MCValue &Target) {
+                                          const MCValue &Target,
+                                          const MCSubtargetInfo *STI) {
   switch ((unsigned)Fixup.getKind()) {
   default:
     return Fixup.getKind() >= FirstLiteralRelocationKind;
   // Fixups which should always be recorded as relocations.
   case AVR::fixup_7_pcrel:
   case AVR::fixup_13_pcrel:
+    // Do not force relocation for PC relative branch like 'rjmp .',
+    // 'rcall . - off' and 'breq . + off'.
+    if (const auto *SymA = Target.getSymA())
+      if (SymA->getSymbol().getName().size() == 0)
+        return false;
+    [[fallthrough]];
   case AVR::fixup_call:
     return true;
   }

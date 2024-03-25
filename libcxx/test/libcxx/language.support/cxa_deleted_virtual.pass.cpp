@@ -11,7 +11,7 @@
 // Test exporting the symbol: "__cxa_deleted_virtual" in macosx
 // But don't expect the symbol to be exported in previous versions.
 //
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13}}
 
 struct S { virtual void f() = delete; virtual ~S() {} };
 int main(int, char**) {

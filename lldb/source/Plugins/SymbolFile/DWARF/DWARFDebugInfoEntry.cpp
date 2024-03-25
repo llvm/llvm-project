@@ -22,7 +22,6 @@
 #include "lldb/Utility/StreamString.h"
 
 #include "DWARFCompileUnit.h"
-#include "DWARFDebugAbbrev.h"
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFDebugRanges.h"
@@ -32,8 +31,11 @@
 #include "SymbolFileDWARF.h"
 #include "SymbolFileDWARFDwo.h"
 
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
+
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 extern int g_verbose;
 
 // Extract a debug info entry for a given DWARFUnit from the data
@@ -48,163 +50,38 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
   lldbassert(abbr_idx <= UINT16_MAX);
   m_abbr_idx = abbr_idx;
 
-  // assert (fixed_form_sizes);  // For best performance this should be
-  // specified!
-
   if (m_abbr_idx == 0) {
     m_tag = llvm::dwarf::DW_TAG_null;
     m_has_children = false;
     return true; // NULL debug tag entry
   }
 
-  lldb::offset_t offset = *offset_ptr;
   const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
   if (abbrevDecl == nullptr) {
     cu->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
         "[{0:x16}]: invalid abbreviation code {1}, "
         "please file a bug and "
         "attach the file at the start of this error message",
-        m_offset, (unsigned)abbr_idx);
+        (uint64_t)m_offset, (unsigned)abbr_idx);
     // WE can't parse anymore if the DWARF is borked...
     *offset_ptr = UINT32_MAX;
     return false;
   }
-  m_tag = abbrevDecl->Tag();
-  m_has_children = abbrevDecl->HasChildren();
+  m_tag = abbrevDecl->getTag();
+  m_has_children = abbrevDecl->hasChildren();
   // Skip all data in the .debug_info or .debug_types for the attributes
-  const uint32_t numAttributes = abbrevDecl->NumAttributes();
-  uint32_t i;
-  dw_form_t form;
-  for (i = 0; i < numAttributes; ++i) {
-    form = abbrevDecl->GetFormByIndexUnchecked(i);
-    std::optional<uint8_t> fixed_skip_size =
-        DWARFFormValue::GetFixedSize(form, cu);
-    if (fixed_skip_size)
-      offset += *fixed_skip_size;
-    else {
-      bool form_is_indirect = false;
-      do {
-        form_is_indirect = false;
-        uint32_t form_size = 0;
-        switch (form) {
-        // Blocks if inlined data that have a length field and the data bytes
-        // inlined in the .debug_info/.debug_types
-        case DW_FORM_exprloc:
-        case DW_FORM_block:
-          form_size = data.GetULEB128(&offset);
-          break;
-        case DW_FORM_block1:
-          form_size = data.GetU8_unchecked(&offset);
-          break;
-        case DW_FORM_block2:
-          form_size = data.GetU16_unchecked(&offset);
-          break;
-        case DW_FORM_block4:
-          form_size = data.GetU32_unchecked(&offset);
-          break;
+  for (const auto &attribute : abbrevDecl->attributes()) {
+    if (DWARFFormValue::SkipValue(attribute.Form, data, offset_ptr, cu))
+      continue;
 
-        // Inlined NULL terminated C-strings
-        case DW_FORM_string:
-          data.GetCStr(&offset);
-          break;
-
-        // Compile unit address sized values
-        case DW_FORM_addr:
-          form_size = cu->GetAddressByteSize();
-          break;
-        case DW_FORM_ref_addr:
-          if (cu->GetVersion() <= 2)
-            form_size = cu->GetAddressByteSize();
-          else
-            form_size = 4;
-          break;
-
-        // 0 sized form
-        case DW_FORM_flag_present:
-          form_size = 0;
-          break;
-
-        // 1 byte values
-        case DW_FORM_addrx1:
-        case DW_FORM_data1:
-        case DW_FORM_flag:
-        case DW_FORM_ref1:
-        case DW_FORM_strx1:
-          form_size = 1;
-          break;
-
-        // 2 byte values
-        case DW_FORM_addrx2:
-        case DW_FORM_data2:
-        case DW_FORM_ref2:
-        case DW_FORM_strx2:
-          form_size = 2;
-          break;
-
-        // 3 byte values
-        case DW_FORM_addrx3:
-        case DW_FORM_strx3:
-          form_size = 3;
-          break;
-
-        // 4 byte values
-        case DW_FORM_addrx4:
-        case DW_FORM_data4:
-        case DW_FORM_ref4:
-        case DW_FORM_strx4:
-          form_size = 4;
-          break;
-
-        // 8 byte values
-        case DW_FORM_data8:
-        case DW_FORM_ref8:
-        case DW_FORM_ref_sig8:
-          form_size = 8;
-          break;
-
-        // signed or unsigned LEB 128 values
-        case DW_FORM_addrx:
-        case DW_FORM_loclistx:
-        case DW_FORM_rnglistx:
-        case DW_FORM_sdata:
-        case DW_FORM_udata:
-        case DW_FORM_ref_udata:
-        case DW_FORM_GNU_addr_index:
-        case DW_FORM_GNU_str_index:
-        case DW_FORM_strx:
-          data.Skip_LEB128(&offset);
-          break;
-
-        case DW_FORM_indirect:
-          form_is_indirect = true;
-          form = data.GetULEB128(&offset);
-          break;
-
-        case DW_FORM_strp:
-        case DW_FORM_line_strp:
-        case DW_FORM_sec_offset:
-          data.GetU32(&offset);
-          break;
-
-        case DW_FORM_implicit_const:
-          form_size = 0;
-          break;
-
-        default:
-          cu->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-              "[{0:x16}]: Unsupported DW_FORM_{1:x}, please file a bug "
-              "and "
-              "attach the file at the start of this error message",
-              m_offset, (unsigned)form);
-          *offset_ptr = m_offset;
-          return false;
-        }
-        offset += form_size;
-
-      } while (form_is_indirect);
-    }
+    cu->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+        "[{0:x16}]: Unsupported DW_FORM_{1:x}, please file a bug "
+        "and "
+        "attach the file at the start of this error message",
+        (uint64_t)m_offset, (unsigned)attribute.Form);
+    *offset_ptr = m_offset;
+    return false;
   }
-  *offset_ptr = offset;
   return true;
 }
 
@@ -228,39 +105,46 @@ static DWARFRangeList GetRangesOrReportError(DWARFUnit &unit,
   return DWARFRangeList();
 }
 
+static void ExtractAttrAndFormValue(
+    const llvm::DWARFAbbreviationDeclaration::AttributeSpec &attr_spec,
+    dw_attr_t &attr, DWARFFormValue &form_value) {
+  attr = attr_spec.Attr;
+  form_value.FormRef() = attr_spec.Form;
+  if (attr_spec.isImplicitConst())
+    form_value.SetSigned(attr_spec.getImplicitConstValue());
+}
+
 // GetDIENamesAndRanges
 //
 // Gets the valid address ranges for a given DIE by looking for a
 // DW_AT_low_pc/DW_AT_high_pc pair, DW_AT_entry_pc, or DW_AT_ranges attributes.
 bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
     DWARFUnit *cu, const char *&name, const char *&mangled,
-    DWARFRangeList &ranges, int &decl_file, int &decl_line, int &decl_column,
-    int &call_file, int &call_line, int &call_column,
-    DWARFExpressionList *frame_base) const {
+    DWARFRangeList &ranges, std::optional<int> &decl_file,
+    std::optional<int> &decl_line, std::optional<int> &decl_column,
+    std::optional<int> &call_file, std::optional<int> &call_line,
+    std::optional<int> &call_column, DWARFExpressionList *frame_base) const {
   dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
   dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
   std::vector<DWARFDIE> dies;
   bool set_frame_base_loclist_addr = false;
 
-  const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
-
   SymbolFileDWARF &dwarf = cu->GetSymbolFileDWARF();
   lldb::ModuleSP module = dwarf.GetObjectFile()->GetModule();
 
-  if (abbrevDecl) {
+  if (const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu)) {
     const DWARFDataExtractor &data = cu->GetData();
     lldb::offset_t offset = GetFirstAttributeOffset();
 
     if (!data.ValidOffset(offset))
       return false;
 
-    const uint32_t numAttributes = abbrevDecl->NumAttributes();
     bool do_offset = false;
 
-    for (uint32_t i = 0; i < numAttributes; ++i) {
+    for (const auto &attribute : abbrevDecl->attributes()) {
       DWARFFormValue form_value(cu);
       dw_attr_t attr;
-      abbrevDecl->GetAttrAndFormValueByIndex(i, attr, form_value);
+      ExtractAttrAndFormValue(attribute, attr, form_value);
 
       if (form_value.ExtractValue(data, &offset)) {
         switch (attr) {
@@ -315,32 +199,32 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
           break;
 
         case DW_AT_decl_file:
-          if (decl_file == 0)
+          if (!decl_file)
             decl_file = form_value.Unsigned();
           break;
 
         case DW_AT_decl_line:
-          if (decl_line == 0)
+          if (!decl_line)
             decl_line = form_value.Unsigned();
           break;
 
         case DW_AT_decl_column:
-          if (decl_column == 0)
+          if (!decl_column)
             decl_column = form_value.Unsigned();
           break;
 
         case DW_AT_call_file:
-          if (call_file == 0)
+          if (!call_file)
             call_file = form_value.Unsigned();
           break;
 
         case DW_AT_call_line:
-          if (call_line == 0)
+          if (!call_line)
             call_line = form_value.Unsigned();
           break;
 
         case DW_AT_call_column:
-          if (call_column == 0)
+          if (!call_column)
             call_column = form_value.Unsigned();
           break;
 
@@ -409,61 +293,60 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
 // specification or abstract origin attributes and including those in the
 // results. Any duplicate attributes will have the first instance take
 // precedence (this can happen for declaration attributes).
-size_t DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
-                                          DWARFAttributes &attributes,
-                                          Recurse recurse,
-                                          uint32_t curr_depth) const {
+void DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
+                                        DWARFAttributes &attributes,
+                                        Recurse recurse,
+                                        uint32_t curr_depth) const {
   const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
-  if (abbrevDecl) {
-    const DWARFDataExtractor &data = cu->GetData();
-    lldb::offset_t offset = GetFirstAttributeOffset();
+  if (!abbrevDecl) {
+    attributes.Clear();
+    return;
+  }
 
-    const uint32_t num_attributes = abbrevDecl->NumAttributes();
-    for (uint32_t i = 0; i < num_attributes; ++i) {
-      DWARFFormValue form_value(cu);
-      dw_attr_t attr;
-      abbrevDecl->GetAttrAndFormValueByIndex(i, attr, form_value);
-      const dw_form_t form = form_value.Form();
+  const DWARFDataExtractor &data = cu->GetData();
+  lldb::offset_t offset = GetFirstAttributeOffset();
 
-      // If we are tracking down DW_AT_specification or DW_AT_abstract_origin
-      // attributes, the depth will be non-zero. We need to omit certain
-      // attributes that don't make sense.
-      switch (attr) {
-      case DW_AT_sibling:
-      case DW_AT_declaration:
-        if (curr_depth > 0) {
-          // This attribute doesn't make sense when combined with the DIE that
-          // references this DIE. We know a DIE is referencing this DIE because
-          // curr_depth is not zero
-          break;
-        }
-        [[fallthrough]];
-      default:
-        attributes.Append(form_value, offset, attr);
+  for (const auto &attribute : abbrevDecl->attributes()) {
+    DWARFFormValue form_value(cu);
+    dw_attr_t attr;
+    ExtractAttrAndFormValue(attribute, attr, form_value);
+
+    // If we are tracking down DW_AT_specification or DW_AT_abstract_origin
+    // attributes, the depth will be non-zero. We need to omit certain
+    // attributes that don't make sense.
+    switch (attr) {
+    case DW_AT_sibling:
+    case DW_AT_declaration:
+      if (curr_depth > 0) {
+        // This attribute doesn't make sense when combined with the DIE that
+        // references this DIE. We know a DIE is referencing this DIE because
+        // curr_depth is not zero
         break;
       }
-
-      if (recurse == Recurse::yes &&
-          ((attr == DW_AT_specification) || (attr == DW_AT_abstract_origin))) {
-        if (form_value.ExtractValue(data, &offset)) {
-          DWARFDIE spec_die = form_value.Reference();
-          if (spec_die)
-            spec_die.GetDIE()->GetAttributes(spec_die.GetCU(), attributes,
-                                             recurse, curr_depth + 1);
-        }
-      } else {
-        std::optional<uint8_t> fixed_skip_size =
-            DWARFFormValue::GetFixedSize(form, cu);
-        if (fixed_skip_size)
-          offset += *fixed_skip_size;
-        else
-          DWARFFormValue::SkipValue(form, data, &offset, cu);
-      }
+      [[fallthrough]];
+    default:
+      attributes.Append(form_value, offset, attr);
+      break;
     }
-  } else {
-    attributes.Clear();
+
+    if (recurse == Recurse::yes &&
+        ((attr == DW_AT_specification) || (attr == DW_AT_abstract_origin))) {
+      if (form_value.ExtractValue(data, &offset)) {
+        DWARFDIE spec_die = form_value.Reference();
+        if (spec_die)
+          spec_die.GetDIE()->GetAttributes(spec_die.GetCU(), attributes,
+                                           recurse, curr_depth + 1);
+      }
+    } else {
+      const dw_form_t form = form_value.Form();
+      std::optional<uint8_t> fixed_skip_size =
+          DWARFFormValue::GetFixedSize(form, cu);
+      if (fixed_skip_size)
+        offset += *fixed_skip_size;
+      else
+        DWARFFormValue::SkipValue(form, data, &offset, cu);
+    }
   }
-  return attributes.Size();
 }
 
 // GetAttributeValue
@@ -477,20 +360,20 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
     dw_offset_t *end_attr_offset_ptr,
     bool check_specification_or_abstract_origin) const {
   if (const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu)) {
-    uint32_t attr_idx = abbrevDecl->FindAttributeIndex(attr);
+    std::optional<uint32_t> attr_idx = abbrevDecl->findAttributeIndex(attr);
 
-    if (attr_idx != DW_INVALID_INDEX) {
+    if (attr_idx) {
       const DWARFDataExtractor &data = cu->GetData();
       lldb::offset_t offset = GetFirstAttributeOffset();
 
       uint32_t idx = 0;
-      while (idx < attr_idx)
-        DWARFFormValue::SkipValue(abbrevDecl->GetFormByIndex(idx++),
-                                  data, &offset, cu);
+      while (idx < *attr_idx)
+        DWARFFormValue::SkipValue(abbrevDecl->getFormByIndex(idx++), data,
+                                  &offset, cu);
 
       const dw_offset_t attr_offset = offset;
       form_value.SetUnit(cu);
-      form_value.SetForm(abbrevDecl->GetFormByIndex(idx));
+      form_value.SetForm(abbrevDecl->getFormByIndex(idx));
       if (form_value.ExtractValue(data, &offset)) {
         if (end_attr_offset_ptr)
           *end_attr_offset_ptr = offset;
@@ -632,15 +515,16 @@ bool DWARFDebugInfoEntry::GetAttributeAddressRange(
   return false;
 }
 
-size_t DWARFDebugInfoEntry::GetAttributeAddressRanges(
-    DWARFUnit *cu, DWARFRangeList &ranges, bool check_hi_lo_pc,
+DWARFRangeList DWARFDebugInfoEntry::GetAttributeAddressRanges(
+    DWARFUnit *cu, bool check_hi_lo_pc,
     bool check_specification_or_abstract_origin) const {
-  ranges.Clear();
 
   DWARFFormValue form_value;
-  if (GetAttributeValue(cu, DW_AT_ranges, form_value)) {
-    ranges = GetRangesOrReportError(*cu, *this, form_value);
-  } else if (check_hi_lo_pc) {
+  if (GetAttributeValue(cu, DW_AT_ranges, form_value))
+    return GetRangesOrReportError(*cu, *this, form_value);
+
+  DWARFRangeList ranges;
+  if (check_hi_lo_pc) {
     dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
     dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
     if (GetAttributeAddressRange(cu, lo_pc, hi_pc, LLDB_INVALID_ADDRESS,
@@ -649,7 +533,7 @@ size_t DWARFDebugInfoEntry::GetAttributeAddressRanges(
         ranges.Append(DWARFRangeList::Entry(lo_pc, hi_pc - lo_pc));
     }
   }
-  return ranges.GetSize();
+  return ranges;
 }
 
 // GetName
@@ -712,9 +596,8 @@ void DWARFDebugInfoEntry::BuildFunctionAddressRangeTable(
     DWARFUnit *cu, DWARFDebugAranges *debug_aranges) const {
   if (m_tag) {
     if (m_tag == DW_TAG_subprogram) {
-      DWARFRangeList ranges;
-      GetAttributeAddressRanges(cu, ranges,
-                                /*check_hi_lo_pc=*/true);
+      DWARFRangeList ranges =
+          GetAttributeAddressRanges(cu, /*check_hi_lo_pc=*/true);
       for (const auto &r : ranges) {
         debug_aranges->AppendRange(GetOffset(), r.GetRangeBase(),
                                    r.GetRangeEnd());
@@ -755,8 +638,7 @@ DWARFDeclContext DWARFDebugInfoEntry::GetDWARFDeclContext(DWARFUnit *cu) const {
 
 DWARFDIE
 DWARFDebugInfoEntry::GetParentDeclContextDIE(DWARFUnit *cu) const {
-  DWARFAttributes attributes;
-  GetAttributes(cu, attributes, Recurse::yes);
+  DWARFAttributes attributes = GetAttributes(cu, Recurse::yes);
   return GetParentDeclContextDIE(cu, attributes);
 }
 
@@ -807,14 +689,17 @@ lldb::offset_t DWARFDebugInfoEntry::GetFirstAttributeOffset() const {
   return GetOffset() + llvm::getULEB128Size(m_abbr_idx);
 }
 
-const DWARFAbbreviationDeclaration *
+const llvm::DWARFAbbreviationDeclaration *
 DWARFDebugInfoEntry::GetAbbreviationDeclarationPtr(const DWARFUnit *cu) const {
-  if (cu) {
-    const DWARFAbbreviationDeclarationSet *abbrev_set = cu->GetAbbreviations();
-    if (abbrev_set)
-      return abbrev_set->GetAbbreviationDeclaration(m_abbr_idx);
-  }
-  return nullptr;
+  if (!cu)
+    return nullptr;
+
+  const llvm::DWARFAbbreviationDeclarationSet *abbrev_set =
+      cu->GetAbbreviations();
+  if (!abbrev_set)
+    return nullptr;
+
+  return abbrev_set->getAbbreviationDeclaration(m_abbr_idx);
 }
 
 bool DWARFDebugInfoEntry::IsGlobalOrStaticScopeVariable() const {

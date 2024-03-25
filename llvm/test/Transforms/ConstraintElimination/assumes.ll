@@ -14,16 +14,12 @@ define i1 @assume_dominates(i8 %a, i8 %b, i1 %c) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_1]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[ADD_1]], [[B]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i8 [[A]], 2
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[ADD_2]], [[B]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_1]]
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i8 [[ADD_1]], [[B]]
-; CHECK-NEXT:    [[T_4:%.*]] = icmp ule i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[ADD_2_1:%.*]] = add nuw nsw i8 [[A]], 2
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i8 [[ADD_2_1]], [[B]]
@@ -62,16 +58,12 @@ define i1 @assume_dominates_with_may_unwind_call_before_assume(i8 %a, i8 %b, i1 
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_1]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[ADD_1]], [[B]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i8 [[A]], 2
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[ADD_2]], [[B]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_1]]
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i8 [[ADD_1]], [[B]]
-; CHECK-NEXT:    [[T_4:%.*]] = icmp ule i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[ADD_2_1:%.*]] = add nuw nsw i8 [[A]], 2
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i8 [[ADD_2_1]], [[B]]
@@ -111,16 +103,12 @@ define i1 @assume_dominates_with_may_unwind_call_after_assume(i8 %a, i8 %b, i1 %
 ; CHECK-NEXT:    call void @may_unwind()
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[ADD_1]], [[B]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i8 [[A]], 2
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[ADD_2]], [[B]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_1]]
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i8 [[ADD_1]], [[B]]
-; CHECK-NEXT:    [[T_4:%.*]] = icmp ule i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[ADD_2_1:%.*]] = add nuw nsw i8 [[A]], 2
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i8 [[ADD_2_1]], [[B]]
@@ -188,7 +176,6 @@ define i1 @assume_dominates_successor_with_may_unwind_call_before_assume_uncond_
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i16 [[A]], 0
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
@@ -263,8 +250,6 @@ define i1 @assume_single_bb(i8 %a, i8 %b, i1 %c) {
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i8 [[A:%.*]], 1
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ule i8 [[ADD_1]], [[B:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_1]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[ADD_1]], [[B]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i8 [[A]], 2
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[ADD_2]], [[B]]
@@ -290,8 +275,6 @@ define i1 @assume_same_bb(i8 %a, i8 %b, i1 %c) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_1]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[ADD_1]], [[B]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i8 [[A]], 2
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[ADD_2]], [[B]]
@@ -335,8 +318,6 @@ define i1 @assume_same_bb2(i8 %a, i8 %b, i1 %c) {
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i8 [[A:%.*]], 1
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ule i8 [[ADD_1]], [[B:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_1]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[ADD_1]], [[B]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i8 [[A]], 2
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[ADD_2]], [[B]]
@@ -369,8 +350,6 @@ define i1 @assume_same_bb_after_may_exiting_call(i8 %a, i8 %b, i1 %c) {
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ule i8 [[ADD_1]], [[B:%.*]]
 ; CHECK-NEXT:    call void @may_unwind()
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_1]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[ADD_1]], [[B]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i8 [[A]], 2
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[ADD_2]], [[B]]
@@ -403,8 +382,6 @@ define i1 @assume_same_bb_before_may_exiting_call(i8 %a, i8 %b, i1 %c) {
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ule i8 [[ADD_1]], [[B:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_1]])
 ; CHECK-NEXT:    call void @may_unwind()
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[ADD_1]], [[B]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i8 [[A]], 2
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[ADD_2]], [[B]]
@@ -432,11 +409,9 @@ exit:
 define i1 @assume_same_bb_after_condition(i8 %a, i8 %b, i1 %c) {
 ; CHECK-LABEL: @assume_same_bb_after_condition(
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i8 [[A:%.*]], 1
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[ADD_1]], [[B:%.*]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i8 [[A]], 2
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[ADD_2]], [[B]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[ADD_2]], [[B:%.*]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_1]]
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ule i8 [[ADD_1]], [[B]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_1]])
@@ -500,7 +475,6 @@ exit:
 }
 
 ; The information of from the assume can be used to simplify %t.2.
-; TODO
 define i1 @assume_single_bb_conditions_after_assume(i8 %a, i8 %b, i1 %c) {
 ; CHECK-LABEL: @assume_single_bb_conditions_after_assume(
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i8 [[A:%.*]], 1
@@ -509,8 +483,7 @@ define i1 @assume_single_bb_conditions_after_assume(i8 %a, i8 %b, i1 %c) {
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    call void @may_unwind()
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_1]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[A]], [[B]]
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_1]], true
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i8 [[A]], 2
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i8 [[ADD_2]], [[B]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_2]]
@@ -571,11 +544,10 @@ define i1 @all_uses_after_assume(i8 %a, i8 %b, i1 %c) {
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i8 [[A:%.*]], 1
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ule i8 [[ADD_1]], [[B:%.*]]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[ADD_1]], [[B]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[A]], [[B]]
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    call void @may_unwind()
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_1]])
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_1]], [[T_2]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i8 [[A]], 2
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i8 [[ADD_2]], [[B]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_2]]
@@ -607,7 +579,7 @@ define i1 @test_order_assume_and_conds_in_different_bb(i16 %a, ptr %dst) {
 ; CHECK-NEXT:    store volatile float 0.000000e+00, ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i16 [[A]], 20
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[C_2]])
-; CHECK-NEXT:    ret i1 [[C_2]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %c.1 = icmp ult i16 %a, 10

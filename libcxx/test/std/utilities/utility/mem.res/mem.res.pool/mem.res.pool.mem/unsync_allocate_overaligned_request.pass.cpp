@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{11.0|12.0}}
+// TODO: Change to XFAIL once https://github.com/llvm/llvm-project/issues/40340 is fixed
+// UNSUPPORTED: availability-pmr-missing
 
 // <memory_resource>
 
@@ -21,9 +21,9 @@
 #include "count_new.h"
 #include "test_macros.h"
 
-bool is_aligned_to(void* p, size_t alignment) {
+bool is_aligned_to(void* p, std::size_t alignment) {
   void* p2     = p;
-  size_t space = 1;
+  std::size_t space = 1;
   void* result = std::align(alignment, 1, p2, space);
   return (result == p);
 }
@@ -34,7 +34,7 @@ int main(int, char**) {
   auto unsync1                  = std::pmr::unsynchronized_pool_resource(opts, std::pmr::new_delete_resource());
   std::pmr::memory_resource& r1 = unsync1;
 
-  constexpr size_t big_alignment = 8 * alignof(std::max_align_t);
+  constexpr std::size_t big_alignment = 8 * alignof(std::max_align_t);
   static_assert(big_alignment > 4);
 
   assert(globalMemCounter.checkNewCalledEq(0));

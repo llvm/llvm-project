@@ -65,9 +65,3 @@ void test() {
     LIBCPP_STATIC_ASSERT(!std::__default_initializable<const int[]>);
     static_assert(!std::default_initializable<const int[]>);
 }
-
-int main(int, char**) {
-    test();
-
-    return 0;
-}

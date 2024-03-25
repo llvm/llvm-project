@@ -1,5 +1,7 @@
-; RUN: llvm-profdata merge --sample -profile-isfs -o %t.afdo %S/Inputs/fsloader.afdo
-; RUN: llc -enable-fs-discriminator -fs-profile-file=%t.afdo -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false -print-machine-bfi -print-bfi-func-name=foo -print-before=fs-profile-loader -stop-after=fs-profile-loader < %s 2>&1 | FileCheck %s --check-prefix=BFI
+; RUN: llvm-profdata merge --sample -profile-isfs -o %t0.afdo %S/Inputs/fsloader.afdo
+; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=false -fs-profile-file=%t0.afdo -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false -print-machine-bfi -print-bfi-func-name=foo -print-before=fs-profile-loader -stop-after=fs-profile-loader < %s 2>&1 | FileCheck %s --check-prefixes=BFI,BFIV0
+; RUN: llvm-profdata merge --sample -profile-isfs -o %t1.afdo %S/Inputs/fsloader_v1.afdo
+; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true -fs-profile-file=%t1.afdo -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false -print-machine-bfi -print-bfi-func-name=foo -print-before=fs-profile-loader -stop-after=fs-profile-loader < %s 2>&1 | FileCheck %s --check-prefixes=BFI,BFIV1
 ;
 ;;
 ;; C source code for the test (compiler at -O3):
@@ -41,49 +43,51 @@
 ;; Check BFI before and after
 
 ; BFI: block-frequency-info: foo
-; BFI:  - BB0[entry]: float = 1.0, int = 8, count = 4268
-; BFI:  - BB1[for.cond1.preheader]: float = 59.967, int = 479, count = 255547
-; BFI:  - BB2[if.then]: float = 2.5405, int = 20, count = 10670
-; BFI:  - BB3[if.end]: float = 59.967, int = 479, count = 255547
-; BFI:  - BB4[if.then7]: float = 2.5405, int = 20, count = 10670
-; BFI:  - BB5[if.end9]: float = 59.967, int = 479, count = 255547
-; BFI:  - BB6[if.then.1]: float = 2.5405, int = 20, count = 10670
-; BFI:  - BB7[if.end.1]: float = 59.967, int = 479, count = 255547
-; BFI:  - BB8[if.then7.1]: float = 2.5405, int = 20, count = 10670
-; BFI:  - BB9[if.end9.1]: float = 59.967, int = 479, count = 255547
-; BFI:  - BB10[if.then.2]: float = 2.5405, int = 20, count = 10670
-; BFI:  - BB11[if.end.2]: float = 59.967, int = 479, count = 255547
-; BFI:  - BB12[if.then7.2]: float = 2.5405, int = 20, count = 10670
-; BFI:  - BB13[if.end9.2]: float = 59.967, int = 479, count = 255547
-; BFI:  - BB14[if.then.3]: float = 2.5405, int = 20, count = 10670
-; BFI:  - BB15[if.end.3]: float = 59.967, int = 479, count = 255547
-; BFI:  - BB16[if.then7.3]: float = 2.5405, int = 20, count = 10670
-; BFI:  - BB17[if.end9.3]: float = 59.967, int = 479, count = 255547
-; BFI:  - BB18[for.end12]: float = 1.0, int = 8, count = 4268
+; BFI:  - BB0[entry]: float = 1.0, int = {{.*}}, count = 4268
+; BFI:  - BB1[for.cond1.preheader]: float = 59.967, int = {{.*}}, count = 255941
+; BFI:  - BB2[if.then]: float = 2.5405, int = {{.*}}, count = 10843
+; BFI:  - BB3[if.end]: float = 59.967, int = {{.*}}, count = 255941
+; BFI:  - BB4[if.then7]: float = 2.5405, int = {{.*}}, count = 10843
+; BFI:  - BB5[if.end9]: float = 59.967, int = {{.*}}, count = 255941
+; BFI:  - BB6[if.then.1]: float = 2.5405, int = {{.*}}, count = 10843
+; BFI:  - BB7[if.end.1]: float = 59.967, int = {{.*}}, count = 255941
+; BFI:  - BB8[if.then7.1]: float = 2.5405, int = {{.*}}, count = 10843
+; BFI:  - BB9[if.end9.1]: float = 59.967, int = {{.*}}, count = 255941
+; BFI:  - BB10[if.then.2]: float = 2.5405, int = {{.*}}, count = 10843
+; BFI:  - BB11[if.end.2]: float = 59.967, int = {{.*}}, count = 255941
+; BFI:  - BB12[if.then7.2]: float = 2.5405, int = {{.*}}, count = 10843
+; BFI:  - BB13[if.end9.2]: float = 59.967, int = {{.*}}, count = 255941
+; BFI:  - BB14[if.then.3]: float = 2.5405, int = {{.*}}, count = 10843
+; BFI:  - BB15[if.end.3]: float = 59.967, int = {{.*}}, count = 255941
+; BFI:  - BB16[if.then7.3]: float = 2.5405, int = {{.*}}, count = 10843
+; BFI:  - BB17[if.end9.3]: float = 59.967, int = {{.*}}, count = 255941
+; BFI:  - BB18[for.end12]: float = 1.0, int = {{.*}}, count = 4268
 ;
 ; BFI: # *** IR Dump Before SampleFDO loader in MIR (fs-profile-loader) ***:
 ; BFI: # End machine code for function foo.
-;
+; BFI-EMPTY:
 ; BFI: block-frequency-info: foo
-; BFI:  - BB0[entry]: float = 1.0, int = 8, count = 4268
-; BFI:  - BB1[for.cond1.preheader]: float = 66.446, int = 531, count = 283289
-; BFI:  - BB2[if.then]: float = 2.7041, int = 21, count = 11204
-; BFI:  - BB3[if.end]: float = 66.446, int = 531, count = 283289
-; BFI:  - BB4[if.then7]: float = 2.7041, int = 21, count = 11204
-; BFI:  - BB5[if.end9]: float = 66.446, int = 531, count = 283289
-; BFI:  - BB6[if.then.1]: float = 65.351, int = 522, count = 278487
-; BFI:  - BB7[if.end.1]: float = 66.446, int = 531, count = 283289
-; BFI:  - BB8[if.then7.1]: float = 66.446, int = 531, count = 283289
-; BFI:  - BB9[if.end9.1]: float = 66.446, int = 531, count = 283289
-; BFI:  - BB10[if.then.2]: float = 2.7041, int = 21, count = 11204
-; BFI:  - BB11[if.end.2]: float = 66.446, int = 531, count = 283289
-; BFI:  - BB12[if.then7.2]: float = 65.405, int = 523, count = 279021
-; BFI:  - BB13[if.end9.2]: float = 66.446, int = 531, count = 283289
-; BFI:  - BB14[if.then.3]: float = 61.075, int = 488, count = 260348
-; BFI:  - BB15[if.end.3]: float = 66.446, int = 531, count = 283289
-; BFI:  - BB16[if.then7.3]: float = 54.846, int = 438, count = 233673
-; BFI:  - BB17[if.end9.3]: float = 66.446, int = 531, count = 283289
-; BFI:  - BB18[for.end12]: float = 1.0, int = 8, count = 4268
+; BFI:  - BB0[entry]: float = 1.0, int = {{.*}}, count = 4268
+; BFI:  - BB1[for.cond1.preheader]: float = 66.446, int = {{.*}}, count = 283590
+; BFI:  - BB2[if.then]: float = 2.7041, int = {{.*}}, count = 11541
+; BFI:  - BB3[if.end]: float = 66.446, int = {{.*}}, count = 283590
+; BFI:  - BB4[if.then7]: float = 2.7041, int = {{.*}}, count = 11541
+; BFI:  - BB5[if.end9]: float = 66.446, int = {{.*}}, count = 283590
+; BFI:  - BB6[if.then.1]: float = 65.351, int = {{.*}}, count = 278916
+; BFI:  - BB7[if.end.1]: float = 66.446, int = {{.*}}, count = 283590
+; BFI:  - BB8[if.then7.1]: float = 66.446, int = {{.*}}, count = 283590
+; BFI:  - BB9[if.end9.1]: float = 66.446, int = {{.*}}, count = 283590
+; BFIV0:  - BB10[if.then.2]: float = 2.7041, int = {{.*}}, count = 11541
+; BFIV1:  - BB10[if.then.2]: float = 61.075, int = {{.*}}, count = 260670
+; BFI:  - BB11[if.end.2]: float = 66.446, int = {{.*}}, count = 283590
+; BFI:  - BB12[if.then7.2]: float = 65.405, int = {{.*}}, count = 279149
+; BFI:  - BB13[if.end9.2]: float = 66.446, int = {{.*}}, count = 283590
+; BFIV0:  - BB14[if.then.3]: float = 61.075, int = {{.*}}, count = 260670
+; BFIV1:  - BB14[if.then.3]: float = 2.7041, int = {{.*}}, count = 11541
+; BFI:  - BB15[if.end.3]: float = 66.446, int = {{.*}}, count = 283590
+; BFI:  - BB16[if.then7.3]: float = 54.846, int = {{.*}}, count = 234082
+; BFI:  - BB17[if.end9.3]: float = 66.446, int = {{.*}}, count = 283590
+; BFI:  - BB18[for.end12]: float = 1.0, int = {{.*}}, count = 4268
 
 target triple = "x86_64-unknown-linux-gnu"
 

@@ -1,0 +1,149 @@
+## Check that llvm-dwarfdump works when dumping .o files with .dwo files.
+
+# RUN: yaml2obj %p/Inputs/dump_dwo.o.yaml -o %T/dump_dwo.o
+# RUN: yaml2obj %p/Inputs/dump_dwo.dwo.yaml -o %T/dump_dwo.dwo
+## We need to be in the same directory so we can find .dwo file
+# RUN: cd %T
+# RUN: llvm-dwarfdump --dwo dump_dwo.o | FileCheck %s
+# RUN: llvm-dwarfdump --dwo --name int --name char dump_dwo.o | FileCheck %s --check-prefix=NAMES
+# RUN: llvm-dwarfdump --name int --name char dump_dwo.o | FileCheck %s --check-prefix=NAMES_NO_DWO
+# RUN: llvm-dwarfdump --dwo --lookup 0x10 dump_dwo.o | FileCheck %s --check-prefix=LOOKUP
+# RUN: llvm-dwarfdump --lookup 0x10 dump_dwo.o | FileCheck %s --check-prefix=LOOKUP_NO_DWO
+
+
+## Make sure if we dump dump_dwo.o with the --dwo option that we see the
+## contents of the dump_dwo.o _and_ the dump_dwo.dwo file.
+
+# CHECK: .debug_info contents:
+# CHECK: 0x00000000: Compile Unit: length = 0x00000024, format = DWARF32, version = 0x0005, unit_type = DW_UT_skeleton, abbr_offset = 0x0000, addr_size = 0x08, DWO_id = 0x376dd35da7c3c136 (next unit at 0x00000028)
+
+# CHECK: 0x00000014: DW_TAG_skeleton_unit
+# CHECK:               DW_AT_stmt_list	(0x00000000)
+# CHECK:               DW_AT_str_offsets_base	(0x00000008)
+# CHECK:               DW_AT_comp_dir	("./")
+# CHECK:               DW_AT_GNU_pubnames	(true)
+# CHECK:               DW_AT_dwo_name	("./dump_dwo.dwo")
+# CHECK:               DW_AT_low_pc	(0x0000000000000000)
+# CHECK:               DW_AT_high_pc	(0x0000000000000033)
+# CHECK:               DW_AT_addr_base	(0x00000008)
+
+# CHECK: 0x00000014: DW_TAG_compile_unit
+# CHECK:               DW_AT_producer	("Apple clang version 15.0.0 (clang-1500.1.0.2.5)")
+# CHECK:               DW_AT_language	(DW_LANG_C_plus_plus)
+# CHECK:               DW_AT_name	("dump_dwo.cpp")
+# CHECK:               DW_AT_dwo_name	("./dump_dwo.dwo")
+
+# CHECK: 0x0000001a:   DW_TAG_subprogram
+# CHECK:                 DW_AT_low_pc	(0x0000000000000000)
+# CHECK:                 DW_AT_high_pc	(0x0000000000000008)
+# CHECK:                 DW_AT_frame_base	(DW_OP_reg6
+# CHECK:                 DW_AT_linkage_name	("_Z3foov")
+# CHECK:                 DW_AT_name	("foo")
+# CHECK:                 DW_AT_decl_file	(0x00)
+# CHECK:                 DW_AT_decl_line	(2)
+# CHECK:                 DW_AT_type	(0x00000050 "int")
+# CHECK:                 DW_AT_external	(true)
+
+# CHECK: 0x0000002a:   DW_TAG_subprogram
+# CHECK:                 DW_AT_low_pc	(0x0000000000000010)
+# CHECK:                 DW_AT_high_pc	(0x0000000000000033)
+# CHECK:                 DW_AT_frame_base	(DW_OP_reg6
+# CHECK:                 DW_AT_name	("main")
+# CHECK:                 DW_AT_decl_file	(0x00)
+# CHECK:                 DW_AT_decl_line	(6)
+# CHECK:                 DW_AT_type	(0x00000050 "int")
+# CHECK:                 DW_AT_external	(true)
+
+# CHECK: 0x00000039:     DW_TAG_formal_parameter
+# CHECK:                   DW_AT_location	(DW_OP_fbreg -8)
+# CHECK:                   DW_AT_name	("argc")
+# CHECK:                   DW_AT_decl_file	(0x00)
+# CHECK:                   DW_AT_decl_line	(6)
+# CHECK:                   DW_AT_type	(0x00000050 "int")
+
+# CHECK: 0x00000044:     DW_TAG_formal_parameter
+# CHECK:                   DW_AT_location	(DW_OP_fbreg -16)
+# CHECK:                   DW_AT_name	("argv")
+# CHECK:                   DW_AT_decl_file	(0x00)
+# CHECK:                   DW_AT_decl_line	(6)
+# CHECK:                   DW_AT_type	(0x00000054 "const char **")
+
+# CHECK: 0x0000004f:     NULL
+
+# CHECK: 0x00000050:   DW_TAG_base_type
+# CHECK:                 DW_AT_name	("int")
+# CHECK:                 DW_AT_encoding	(DW_ATE_signed)
+# CHECK:                 DW_AT_byte_size	(0x04)
+
+# CHECK: 0x00000054:   DW_TAG_pointer_type
+# CHECK:                 DW_AT_type	(0x00000059 "const char *")
+
+# CHECK: 0x00000059:   DW_TAG_pointer_type
+# CHECK:                 DW_AT_type	(0x0000005e "const char")
+
+# CHECK: 0x0000005e:   DW_TAG_const_type
+# CHECK:                 DW_AT_type	(0x00000063 "char")
+
+# CHECK: 0x00000063:   DW_TAG_base_type
+# CHECK:                 DW_AT_name	("char")
+# CHECK:                 DW_AT_encoding	(DW_ATE_signed_char)
+# CHECK:                 DW_AT_byte_size	(0x01)
+
+# CHECK: 0x00000067:   NULL
+
+
+## Make sure that if we do specify the --dwo when using --name that we get
+## the expected results form the .dwo file
+
+# NAMES: 0x00000050: DW_TAG_base_type
+# NAMES:               DW_AT_name	("int")
+# NAMES:               DW_AT_encoding	(DW_ATE_signed)
+# NAMES:               DW_AT_byte_size	(0x04)
+
+# NAMES: 0x00000063: DW_TAG_base_type
+# NAMES:               DW_AT_name	("char")
+# NAMES:               DW_AT_encoding	(DW_ATE_signed_char)
+# NAMES:               DW_AT_byte_size	(0x01)
+
+## Make sure that if we don't specify the --dwo when using --name that we get
+## no results
+
+# NAMES_NO_DWO-NOT:  0x00000050: DW_TAG_base_type
+# NAMES_NO_DWO-NOT:  0x00000063: DW_TAG_base_type
+
+## Make sure address lookups succeed when using the --dwo option and the
+## --lookup option. Verify that we see the information from the .dwo file which
+## means "unit_type = DW_UT_split_compile" and that we see a DW_TAG_compile_unit
+# LOOKUP: 0x00000000: Compile Unit: length = 0x00000064, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset = 0x0000, addr_size = 0x08, DWO_id = 0x376dd35da7c3c136 (next unit at 0x00000068)
+
+# LOOKUP: 0x00000014: DW_TAG_compile_unit
+# LOOKUP:               DW_AT_producer	("Apple clang version 15.0.0 (clang-1500.1.0.2.5)")
+# LOOKUP:               DW_AT_language	(DW_LANG_C_plus_plus)
+# LOOKUP:               DW_AT_name	("dump_dwo.cpp")
+# LOOKUP:               DW_AT_dwo_name	("./dump_dwo.dwo")
+
+# LOOKUP: 0x0000002a:   DW_TAG_subprogram
+# LOOKUP:                 DW_AT_low_pc	(0x0000000000000010)
+# LOOKUP:                 DW_AT_high_pc	(0x0000000000000033)
+# LOOKUP:                 DW_AT_frame_base	(DW_OP_reg6
+# LOOKUP:                 DW_AT_name	("main")
+# LOOKUP:                 DW_AT_decl_file	(0x00)
+# LOOKUP:                 DW_AT_decl_line	(6)
+# LOOKUP:                 DW_AT_type	(0x00000050 "int")
+# LOOKUP:                 DW_AT_external	(true)
+
+## Make sure address lookups succeed when not using the --dwo option and the
+## --lookup option. Verify that we see the information from the .o file which
+## Means "unit_type = DW_UT_skeleton" and that we see a DW_TAG_skeleton_unit
+
+# LOOKUP_NO_DWO: 0x00000000: Compile Unit: length = 0x00000024, format = DWARF32, version = 0x0005, unit_type = DW_UT_skeleton, abbr_offset = 0x0000, addr_size = 0x08, DWO_id = 0x376dd35da7c3c136 (next unit at 0x00000028)
+
+# LOOKUP_NO_DWO: 0x00000014: DW_TAG_skeleton_unit
+# LOOKUP_NO_DWO:               DW_AT_stmt_list	(0x00000000)
+# LOOKUP_NO_DWO:               DW_AT_str_offsets_base	(0x00000008)
+# LOOKUP_NO_DWO:               DW_AT_comp_dir	("./")
+# LOOKUP_NO_DWO:               DW_AT_GNU_pubnames	(true)
+# LOOKUP_NO_DWO:               DW_AT_dwo_name	("./dump_dwo.dwo")
+# LOOKUP_NO_DWO:               DW_AT_low_pc	(0x0000000000000000)
+# LOOKUP_NO_DWO:               DW_AT_high_pc	(0x0000000000000033)
+# LOOKUP_NO_DWO:               DW_AT_addr_base	(0x00000008)

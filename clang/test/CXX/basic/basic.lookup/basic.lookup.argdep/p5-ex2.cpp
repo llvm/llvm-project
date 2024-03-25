@@ -5,10 +5,10 @@
 //
 // RUN: %clang_cc1 -std=c++20 M.cpp -emit-module-interface -o M.pcm
 // RUN: %clang_cc1 -std=c++20 N.cpp -emit-module-interface -o N.pcm \
-// RUN:   -fmodule-file=M.pcm
+// RUN:   -fmodule-file=M=M.pcm
 // RUN: %clang_cc1 -std=c++20 Q.cpp -emit-module-interface -o Q.pcm
-// RUN: %clang_cc1 -std=c++20 Q-impl.cpp -fsyntax-only -fmodule-file=Q.pcm \
-// RUN:   -fmodule-file=N.pcm -verify
+// RUN: %clang_cc1 -std=c++20 Q-impl.cpp -fsyntax-only -fmodule-file=Q=Q.pcm \
+// RUN:   -fmodule-file=N=N.pcm -fmodule-file=M=M.pcm -verify
 
 //--- M.cpp
 export module M;
@@ -50,9 +50,7 @@ void test() {
   auto x = make();
 
   // error: R and R::f are not visible here
-  R::f(x); // expected-error {{declaration of 'R' must be imported from module 'N' before it is required}}
-  // expected-note@N.cpp:4 {{declaration here is not visible}}
-  // expected-error@-2 {{no type named 'f' in namespace 'R'}}
+  R::f(x); // expected-error {{no type named 'f' in namespace 'R'}}
 
   f(x); // Found by [basic.lookup.argdep] / p4.3
 

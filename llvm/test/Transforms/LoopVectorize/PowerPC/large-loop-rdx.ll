@@ -8,10 +8,6 @@
 ; CHECK-NEXT: fadd
 ; CHECK-NEXT: fadd
 ; CHECK-NEXT: fadd
-; CHECK-NEXT: fadd
-; CHECK-NEXT: fadd
-; CHECK-NEXT: fadd
-; CHECK-NEXT: fadd
 ; CHECK-NEXT: =
 ; CHECK-NOT: fadd
 ; CHECK-SAME: >

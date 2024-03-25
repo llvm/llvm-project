@@ -13,6 +13,7 @@ def fuzz_obj(obj):
     ea = obj.GetEndAddress()
     # Do fuzz testing on the address obj, it should not crash lldb.
     import sb_address
+
     sb_address.fuzz_obj(sa)
     sb_address.fuzz_obj(ea)
     obj.GetPrologueByteSize

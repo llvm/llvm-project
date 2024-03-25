@@ -1,4 +1,4 @@
-; RUN: opt -opaque-pointers=0 < %s -loop-reduce -S | FileCheck %s
+; RUN: opt < %s -loop-reduce -S | FileCheck %s
 ; CHECK-NOT: {{inttoptr|ptrtoint}}
 ; CHECK: scevgep
 ; CHECK-NOT: {{inttoptr|ptrtoint}}
@@ -6,7 +6,7 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 
 ; Indvars shouldn't need inttoptr/ptrtoint to expand an address here.
 
-define void @foo(i8* %p) nounwind {
+define void @foo(ptr %p) nounwind {
 entry:
   br i1 true, label %bb.nph, label %for.end
 
@@ -28,8 +28,8 @@ for.body:
   %conv3 = sext i8 %conv to i64
   %add = add nsw i64 %call, %storemerge1
   %add4 = add nsw i64 %add, %conv3
-  %arrayidx = getelementptr inbounds i8, i8* %p, i64 %add4
-  store i8 0, i8* %arrayidx
+  %arrayidx = getelementptr inbounds i8, ptr %p, i64 %add4
+  store i8 0, ptr %arrayidx
   %inc = add nsw i64 %storemerge1, 1
   br label %for.cond
 

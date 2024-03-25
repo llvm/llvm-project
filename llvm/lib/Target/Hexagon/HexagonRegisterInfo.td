@@ -117,11 +117,11 @@ let Namespace = "Hexagon" in {
 
   def isub_lo  : SubRegIndex<32>;
   def isub_hi  : SubRegIndex<32, 32>;
-  def vsub_lo  : SubRegIndex<512>;
-  def vsub_hi  : SubRegIndex<512, 512>;
-  def vsub_fake: SubRegIndex<512>;
-  def wsub_lo  : SubRegIndex<1024>;
-  def wsub_hi  : SubRegIndex<1024, 1024>;
+  def vsub_lo  : SubRegIndex<-1, -1>;
+  def vsub_hi  : SubRegIndex<-1, -1>;
+  def vsub_fake: SubRegIndex<-1, -1>;
+  def wsub_lo  : SubRegIndex<-1, -1>;
+  def wsub_hi  : SubRegIndex<-1, -1>;
   def subreg_overflow : SubRegIndex<1, 0>;
 
   // Integer registers.

@@ -219,7 +219,7 @@ the function:
     this fact as `⊤`.
 
 *   When two control flow paths join, we compute the set union of incoming
-    values (limiting the number of elements to 3, representig larger sets as
+    values (limiting the number of elements to 3, representing larger sets as
     `⊤`).
 
 The sets of possible values are influenced by:
@@ -332,7 +332,7 @@ void PrintAbs(int x) {
 We can't say what specific value gets printed, but we know that it is either `x`
 or `-x`.
 
-Dataflow analysis is an istance of abstract interpretation, and does not dictate
+Dataflow analysis is an instance of abstract interpretation, and does not dictate
 how exactly the lattice and transfer functions should be designed, beyond the
 necessary conditions for the analysis to converge. Nevertheless, we can use
 symbolic execution ideas to guide our design of the lattice and transfer
@@ -634,7 +634,7 @@ void Uninit() {
 
 For this purpose we can use lattice in a form of a mapping from variable
 declarations to initialization states; each initialization state is represented
-by the followingn lattice:
+by the following lattice:
 
 ![Lattice for definitive initialization analysis](DataFlowAnalysisIntroImages/DefinitiveInitializationLattice.svg)
 

@@ -81,3 +81,9 @@ std::optional<StringRef> Builder::getBody() const {
   std::optional<StringRef> body = def->getValueAsOptionalString("body");
   return body && !body->empty() ? body : std::nullopt;
 }
+
+std::optional<StringRef> Builder::getDeprecatedMessage() const {
+  std::optional<StringRef> message =
+      def->getValueAsOptionalString("odsCppDeprecated");
+  return message && !message->empty() ? message : std::nullopt;
+}

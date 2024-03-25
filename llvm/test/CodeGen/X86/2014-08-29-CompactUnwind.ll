@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple x86_64-apple-darwin11 -mcpu corei7 -filetype=obj -o - | llvm-objdump -d --unwind-info -s - | FileCheck %s
+; RUN: llc < %s -mtriple x86_64-apple-darwin11 -mcpu corei7 -emit-compact-unwind-non-canonical=true -filetype=obj -o - | llvm-objdump -d --unwind-info -s - | FileCheck %s
 ; Regression test for http://llvm.org/bugs/show_bug.cgi?id=20800.
 
 ; ModuleID = 'asan_report.ii'

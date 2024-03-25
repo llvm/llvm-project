@@ -10,11 +10,10 @@ from lldbsuite.test import lldbutil
 
 
 class CompileRunToBreakpointBench(BenchBase):
-
     def setUp(self):
         BenchBase.setUp(self)
         self.exe = lldbtest_config.lldbExec
-        self.function = 'Driver::MainLoop()'
+        self.function = "Driver::MainLoop()"
         self.count = 3
 
         self.lldb_avg = None
@@ -22,9 +21,7 @@ class CompileRunToBreakpointBench(BenchBase):
 
     @benchmarks_test
     @no_debug_info_test
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @add_test_categories(["pexpect"])
     def test_run_lldb_then_gdb(self):
         """Benchmark turnaround time with lldb vs. gdb."""
         print()
@@ -42,8 +39,8 @@ class CompileRunToBreakpointBench(BenchBase):
 
             # So that the child gets torn down after the test.
             self.child = pexpect.spawn(
-                '%s %s %s' %
-                (lldbtest_config.lldbExec, self.lldbOption, exe))
+                "%s %s %s" % (lldbtest_config.lldbExec, self.lldbOption, exe)
+            )
             child = self.child
 
             # Turn on logging for what the child sends back.
@@ -51,13 +48,13 @@ class CompileRunToBreakpointBench(BenchBase):
                 child.logfile_read = sys.stdout
 
             child.expect_exact(prompt)
-            child.sendline('breakpoint set -F %s' % function)
+            child.sendline("breakpoint set -F %s" % function)
             child.expect_exact(prompt)
-            child.sendline('run')
+            child.sendline("run")
             child.expect_exact(prompt)
 
         # Set self.child_prompt, which is "(lldb) ".
-        self.child_prompt = '(lldb) '
+        self.child_prompt = "(lldb) "
         # Reset the stopwatch now.
         self.stopwatch.reset()
 
@@ -70,7 +67,7 @@ class CompileRunToBreakpointBench(BenchBase):
                 with self.stopwatch:
                     run_one_round()
 
-            self.child.sendline('quit')
+            self.child.sendline("quit")
             try:
                 self.child.expect(pexpect.EOF)
             except:
@@ -86,7 +83,7 @@ class CompileRunToBreakpointBench(BenchBase):
             prompt = self.child_prompt
 
             # So that the child gets torn down after the test.
-            self.child = pexpect.spawn('gdb --nx %s' % exe)
+            self.child = pexpect.spawn("gdb --nx %s" % exe)
             child = self.child
 
             # Turn on logging for what the child sends back.
@@ -94,13 +91,13 @@ class CompileRunToBreakpointBench(BenchBase):
                 child.logfile_read = sys.stdout
 
             child.expect_exact(prompt)
-            child.sendline('break %s' % function)
+            child.sendline("break %s" % function)
             child.expect_exact(prompt)
-            child.sendline('run')
+            child.sendline("run")
             child.expect_exact(prompt)
 
         # Set self.child_prompt, which is "(gdb) ".
-        self.child_prompt = '(gdb) '
+        self.child_prompt = "(gdb) "
         # Reset the stopwatch now.
         self.stopwatch.reset()
 
@@ -113,9 +110,9 @@ class CompileRunToBreakpointBench(BenchBase):
                 with self.stopwatch:
                     run_one_round()
 
-            self.child.sendline('quit')
-            self.child.expect_exact('The program is running.  Exit anyway?')
-            self.child.sendline('y')
+            self.child.sendline("quit")
+            self.child.expect_exact("The program is running.  Exit anyway?")
+            self.child.sendline("y")
             try:
                 self.child.expect(pexpect.EOF)
             except:

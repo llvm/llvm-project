@@ -31,7 +31,7 @@ void integer_suffix() {
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: integer literal has suffix 'l', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v5 = 1l;
   // CHECK-MESSAGES-NEXT: ^~
-  // CHECK-MESSAGES-NEXT: {{^ *}}L{{$}}
+  // CHECK-MESSAGES-NEXT: {{^ *| *}}L{{$}}
   // CHECK-FIXES: static constexpr auto v5 = 1L;
   static_assert(is_same<decltype(v5), const long>::value, "");
   static_assert(v5 == 1, "");
@@ -46,7 +46,7 @@ void integer_suffix() {
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: integer literal has suffix 'll', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v7 = 1ll;
   // CHECK-MESSAGES-NEXT: ^~~
-  // CHECK-MESSAGES-NEXT: {{^ *}}LL{{$}}
+  // CHECK-MESSAGES-NEXT: {{^ *| *}}LL{{$}}
   // CHECK-FIXES: static constexpr auto v7 = 1LL;
   static_assert(is_same<decltype(v7), const long long>::value, "");
   static_assert(v7 == 1, "");
@@ -79,7 +79,7 @@ void integer_suffix() {
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'lu', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v13 = 1lu;
   // CHECK-MESSAGES-NEXT: ^~~
-  // CHECK-MESSAGES-NEXT: {{^ *}}LU{{$}}
+  // CHECK-MESSAGES-NEXT: {{^ *| *}}LU{{$}}
   // CHECK-FIXES: static constexpr auto v13 = 1LU;
   static_assert(is_same<decltype(v13), const unsigned long>::value, "");
   static_assert(v13 == 1, "");
@@ -88,7 +88,7 @@ void integer_suffix() {
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'Lu', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v14 = 1Lu;
   // CHECK-MESSAGES-NEXT: ^~~
-  // CHECK-MESSAGES-NEXT: {{^ *}}LU{{$}}
+  // CHECK-MESSAGES-NEXT: {{^ *| *}}LU{{$}}
   // CHECK-FIXES: static constexpr auto v14 = 1LU;
   static_assert(is_same<decltype(v14), const unsigned long>::value, "");
   static_assert(v14 == 1, "");
@@ -97,7 +97,7 @@ void integer_suffix() {
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'lU', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v15 = 1lU;
   // CHECK-MESSAGES-NEXT: ^~~
-  // CHECK-MESSAGES-NEXT: {{^ *}}LU{{$}}
+  // CHECK-MESSAGES-NEXT: {{^ *| *}}LU{{$}}
   // CHECK-FIXES: static constexpr auto v15 = 1LU;
   static_assert(is_same<decltype(v15), const unsigned long>::value, "");
   static_assert(v15 == 1, "");
@@ -130,7 +130,7 @@ void integer_suffix() {
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'llu', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v21 = 1llu;
   // CHECK-MESSAGES-NEXT: ^~~~
-  // CHECK-MESSAGES-NEXT: {{^ *}}LLU{{$}}
+  // CHECK-MESSAGES-NEXT: {{^ *| *}}LLU{{$}}
   // CHECK-FIXES: static constexpr auto v21 = 1LLU;
   static_assert(is_same<decltype(v21), const unsigned long long>::value, "");
   static_assert(v21 == 1, "");
@@ -139,7 +139,7 @@ void integer_suffix() {
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'LLu', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v22 = 1LLu;
   // CHECK-MESSAGES-NEXT: ^~~~
-  // CHECK-MESSAGES-NEXT: {{^ *}}LLU{{$}}
+  // CHECK-MESSAGES-NEXT: {{^ *| *}}LLU{{$}}
   // CHECK-FIXES: static constexpr auto v22 = 1LLU;
   static_assert(is_same<decltype(v22), const unsigned long long>::value, "");
   static_assert(v22 == 1, "");
@@ -148,7 +148,7 @@ void integer_suffix() {
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'llU', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v23 = 1llU;
   // CHECK-MESSAGES-NEXT: ^~~~
-  // CHECK-MESSAGES-NEXT: {{^ *}}LLU{{$}}
+  // CHECK-MESSAGES-NEXT: {{^ *| *}}LLU{{$}}
   // CHECK-FIXES: static constexpr auto v23 = 1LLU;
   static_assert(is_same<decltype(v23), const unsigned long long>::value, "");
   static_assert(v23 == 1, "");

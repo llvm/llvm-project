@@ -28,7 +28,7 @@ class Stmt;
 /// \enum IfThen -- then branch of the if statement has no call.
 /// \enum IfElse -- else branch of the if statement has no call.
 /// \enum Switch -- one of the switch cases doesn't have a call.
-/// \enum SwitchSkipped -- there is no call if none of the cases appies.
+/// \enum SwitchSkipped -- there is no call if none of the cases applies.
 /// \enum LoopEntered -- no call when the loop is entered.
 /// \enum LoopSkipped -- no call when the loop is not entered.
 /// \enum FallbackReason -- fallback case when we were not able to figure out

@@ -26,9 +26,10 @@ namespace {
 //===----------------------------------------------------------------------===//
 // Basic Reader functionality.
 class ReaderTestCompare : public LVReader {
-  // Elements created but not added to any logical scope. They are
-  // deleted when the logical Reader is destroyed.
-  LVAutoSmallVector<LVElement *> OrphanElements;
+#define CREATE(VARIABLE, CREATE_FUNCTION, SET_FUNCTION)                        \
+  VARIABLE = CREATE_FUNCTION();                                                \
+  EXPECT_NE(VARIABLE, nullptr);                                                \
+  VARIABLE->SET_FUNCTION();
 
 public:
   // Types.
@@ -66,14 +67,6 @@ public:
 
 protected:
   void add(LVScope *Parent, LVElement *Element);
-  template <typename T, typename F> T *create(F Function) {
-    // 'Function' will update a specific kind of the logical element to
-    // have the ability of kind selection.
-    T *Element = new (std::nothrow) T();
-    EXPECT_NE(Element, nullptr);
-    (Element->*Function)();
-    return Element;
-  }
   void set(LVElement *Element, StringRef Name, LVOffset Offset,
            uint32_t LineNumber = 0, LVElement *Type = nullptr);
 
@@ -116,54 +109,38 @@ void ReaderTestCompare::createElements() {
   ASSERT_NE(Root, nullptr);
 
   // Create the logical types.
-  IntegerType = create<LVType, LVTypeSetFunction>(&LVType::setIsBase);
-  UnsignedType = create<LVType, LVTypeSetFunction>(&LVType::setIsBase);
-  GlobalType = create<LVType, LVTypeSetFunction>(&LVType::setIsBase);
-  LocalType = create<LVType, LVTypeSetFunction>(&LVType::setIsBase);
-  NestedType = create<LVType, LVTypeSetFunction>(&LVType::setIsBase);
-  EnumeratorOne =
-      create<LVTypeEnumerator, LVTypeSetFunction>(&LVType::setIsEnumerator);
-  EnumeratorTwo =
-      create<LVTypeEnumerator, LVTypeSetFunction>(&LVType::setIsEnumerator);
-  TypeDefinitionOne =
-      create<LVTypeDefinition, LVTypeSetFunction>(&LVType::setIsTypedef);
-  TypeDefinitionTwo =
-      create<LVTypeDefinition, LVTypeSetFunction>(&LVType::setIsTypedef);
+  CREATE(IntegerType, createType, setIsBase);
+  CREATE(UnsignedType, createType, setIsBase);
+  CREATE(GlobalType, createType, setIsBase);
+  CREATE(LocalType, createType, setIsBase);
+  CREATE(NestedType, createType, setIsBase);
+  CREATE(EnumeratorOne, createTypeEnumerator, setIsEnumerator);
+  CREATE(EnumeratorTwo, createTypeEnumerator, setIsEnumerator);
+  CREATE(TypeDefinitionOne, createTypeDefinition, setIsTypedef);
+  CREATE(TypeDefinitionTwo, createTypeDefinition, setIsTypedef);
 
   // Create the logical scopes.
-  NestedScope =
-      create<LVScope, LVScopeSetFunction>(&LVScope::setIsLexicalBlock);
-  InnerScope = create<LVScope, LVScopeSetFunction>(&LVScope::setIsLexicalBlock);
-  Aggregate =
-      create<LVScopeAggregate, LVScopeSetFunction>(&LVScope::setIsAggregate);
-  CompileUnit = create<LVScopeCompileUnit, LVScopeSetFunction>(
-      &LVScope::setIsCompileUnit);
-  Enumeration = create<LVScopeEnumeration, LVScopeSetFunction>(
-      &LVScope::setIsEnumeration);
-  FunctionOne =
-      create<LVScopeFunction, LVScopeSetFunction>(&LVScope::setIsFunction);
-  FunctionTwo =
-      create<LVScopeFunction, LVScopeSetFunction>(&LVScope::setIsFunction);
-  Namespace =
-      create<LVScopeNamespace, LVScopeSetFunction>(&LVScope::setIsNamespace);
+  CREATE(NestedScope, createScope, setIsLexicalBlock);
+  CREATE(InnerScope, createScope, setIsLexicalBlock);
+  CREATE(Aggregate, createScopeAggregate, setIsAggregate);
+  CREATE(CompileUnit, createScopeCompileUnit, setIsCompileUnit);
+  CREATE(Enumeration, createScopeEnumeration, setIsEnumeration);
+  CREATE(FunctionOne, createScopeFunction, setIsFunction);
+  CREATE(FunctionTwo, createScopeFunction, setIsFunction);
+  CREATE(Namespace, createScopeNamespace, setIsNamespace);
 
   // Create the logical symbols.
-  GlobalVariable =
-      create<LVSymbol, LVSymbolSetFunction>(&LVSymbol::setIsVariable);
-  LocalVariable =
-      create<LVSymbol, LVSymbolSetFunction>(&LVSymbol::setIsVariable);
-  ClassMember = create<LVSymbol, LVSymbolSetFunction>(&LVSymbol::setIsMember);
-  NestedVariable =
-      create<LVSymbol, LVSymbolSetFunction>(&LVSymbol::setIsVariable);
-  ParameterOne =
-      create<LVSymbol, LVSymbolSetFunction>(&LVSymbol::setIsParameter);
-  ParameterTwo =
-      create<LVSymbol, LVSymbolSetFunction>(&LVSymbol::setIsParameter);
+  CREATE(GlobalVariable, createSymbol, setIsVariable);
+  CREATE(LocalVariable, createSymbol, setIsVariable);
+  CREATE(ClassMember, createSymbol, setIsMember);
+  CREATE(NestedVariable, createSymbol, setIsVariable);
+  CREATE(ParameterOne, createSymbol, setIsParameter);
+  CREATE(ParameterTwo, createSymbol, setIsParameter);
 
   // Create the logical lines.
-  LineOne = create<LVLine, LVLineSetFunction>(&LVLine::setIsLineDebug);
-  LineTwo = create<LVLine, LVLineSetFunction>(&LVLine::setIsLineDebug);
-  LineThree = create<LVLine, LVLineSetFunction>(&LVLine::setIsLineDebug);
+  CREATE(LineOne, createLine, setIsLineDebug);
+  CREATE(LineTwo, createLine, setIsLineDebug);
+  CREATE(LineThree, createLine, setIsLineDebug);
 }
 
 // Reference Reader:              Target Reader:
@@ -203,8 +180,6 @@ void ReaderTestCompare::addElements(bool IsReference, bool IsTarget) {
   auto Insert = [&](bool Insert, auto *Parent, auto *Child) {
     if (Insert)
       add(Parent, Child);
-    else
-      OrphanElements.push_back(Child);
   };
 
   setCompileUnit(CompileUnit);

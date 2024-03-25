@@ -6,11 +6,11 @@
 // RUN: %clang --target=x86_64-unknown-linux-gnu --print-supported-cpus 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=CHECK-X86
 
-// Test -mcpu=? and -mtune=? alises.
-// RUN: %clang --target=x86_64-unknown-linux-gnu -mcpu=? 2>&1 | \
+// Test -mcpu=help and -mtune=help alises.
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mcpu=help 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=CHECK-X86
 
-// RUN: %clang --target=x86_64-unknown-linux-gnu -mtune=? -fuse-ld=dummy 2>&1 | \
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mtune=help -fuse-ld=dummy 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=CHECK-X86
 
 // CHECK-NOT: warning: argument unused during compilation

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fexceptions -fcxx-exceptions -fms-extensions -fms-compatibility -fms-compatibility-version=19 -std=c++11 -emit-llvm %s -o - -triple=i386-pc-win32 | FileCheck %s
+// RUN: %clang_cc1 -fexceptions -fcxx-exceptions -fms-extensions -fms-compatibility -fms-compatibility-version=19 -std=c++11 -emit-llvm %s -o - -triple=i386-pc-win32 | FileCheck %s
 // REQUIRES: asserts
 
 struct S {
@@ -19,33 +19,33 @@ struct S {
 // CHECK-DAG: @"?$TSS0@?1??g1@@YAHXZ@4HA" = internal global i32 0, align 4
 
 // CHECK-LABEL: define {{.*}} @"?f@@YAAAUS@@XZ"()
-// CHECK-SAME:  personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*)
+// CHECK-SAME:  personality ptr @__CxxFrameHandler3
 extern inline S &f() {
   static thread_local S s;
-// CHECK:       %[[guard:.*]] = load i32, i32* @"??__J?1??f@@YAAAUS@@XZ@51"
+// CHECK:       %[[guard:.*]] = load i32, ptr @"??__J?1??f@@YAAAUS@@XZ@51"
 // CHECK-NEXT:  %[[mask:.*]] = and i32 %[[guard]], 1
 // CHECK-NEXT:  %[[cmp:.*]] = icmp eq i32 %[[mask]], 0
 // CHECK-NEXT:  br i1 %[[cmp]], label %[[init:.*]], label %[[init_end:.*]], !prof ![[unlikely_threadlocal:.*]]
 //
 // CHECK:     [[init]]:
 // CHECK-NEXT:  %[[or:.*]] = or i32 %[[guard]], 1
-// CHECK-NEXT:  store i32 %[[or]], i32* @"??__J?1??f@@YAAAUS@@XZ@51"
-// CHECK-NEXT:  invoke {{.*}} @"??0S@@QAE@XZ"(%struct.S* {{[^,]*}} @"?s@?1??f@@YAAAUS@@XZ@4U2@A")
+// CHECK-NEXT:  store i32 %[[or]], ptr @"??__J?1??f@@YAAAUS@@XZ@51"
+// CHECK-NEXT:  invoke {{.*}} @"??0S@@QAE@XZ"(ptr {{[^,]*}} @"?s@?1??f@@YAAAUS@@XZ@4U2@A")
 // CHECK-NEXT:    to label %[[invoke_cont:.*]] unwind label %[[lpad:.*]]
 //
 // CHECK:     [[invoke_cont]]:
-// CHECK-NEXT:  call i32 @__tlregdtor(void ()* @"??__Fs@?1??f@@YAAAUS@@XZ@YAXXZ")
+// CHECK-NEXT:  call i32 @__tlregdtor(ptr @"??__Fs@?1??f@@YAAAUS@@XZ@YAXXZ")
 // CHECK-NEXT:  br label %[[init_end:.*]]
 
 // CHECK:     [[init_end]]:
-// CHECK: [[S_ADDR:%.+]] = call align 1 %struct.S* @llvm.threadlocal.address.p0s_struct.Ss(%struct.S* align 1 @"?s@?1??f@@YAAAUS@@XZ@4U2@A")
-// CHECK-NEXT:  ret %struct.S* [[S_ADDR]]
+// CHECK: [[S_ADDR:%.+]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @"?s@?1??f@@YAAAUS@@XZ@4U2@A")
+// CHECK-NEXT:  ret ptr [[S_ADDR]]
 
 // CHECK:     [[lpad:.*]]:
 // CHECK-NEXT: cleanuppad within none []
-// CHECK:       %[[guard:.*]] = load i32, i32* @"??__J?1??f@@YAAAUS@@XZ@51"
+// CHECK:       %[[guard:.*]] = load i32, ptr @"??__J?1??f@@YAAAUS@@XZ@51"
 // CHECK-NEXT:  %[[mask:.*]] = and i32 %[[guard]], -2
-// CHECK-NEXT:  store i32 %[[mask]], i32* @"??__J?1??f@@YAAAUS@@XZ@51"
+// CHECK-NEXT:  store i32 %[[mask]], ptr @"??__J?1??f@@YAAAUS@@XZ@51"
 // CHECK-NEXT:  cleanupret {{.*}} unwind to caller
   return s;
 }
@@ -54,32 +54,32 @@ extern inline S &f() {
 // CHECK-LABEL: define {{.*}} @"?g@@YAAAUS@@XZ"()
 extern inline S &g() {
   static S s;
-// CHECK:  %[[guard:.*]] = load atomic i32, i32* @"?$TSS0@?1??g@@YAAAUS@@XZ@4HA" unordered, align 4
-// CHECK-NEXT:  %[[epoch:.*]] = load i32, i32* @_Init_thread_epoch
+// CHECK:  %[[guard:.*]] = load atomic i32, ptr @"?$TSS0@?1??g@@YAAAUS@@XZ@4HA" unordered, align 4
+// CHECK-NEXT:  %[[epoch:.*]] = load i32, ptr @_Init_thread_epoch
 // CHECK-NEXT:  %[[cmp:.*]] = icmp sgt i32 %[[guard]], %[[epoch]]
 // CHECK-NEXT:  br i1 %[[cmp]], label %[[init_attempt:.*]], label %[[init_end:.*]], !prof ![[unlikely_staticlocal:.*]]
 //
 // CHECK:     [[init_attempt]]:
-// CHECK-NEXT:  call void @_Init_thread_header(i32* @"?$TSS0@?1??g@@YAAAUS@@XZ@4HA")
-// CHECK-NEXT:  %[[guard2:.*]] = load atomic i32, i32* @"?$TSS0@?1??g@@YAAAUS@@XZ@4HA" unordered, align 4
+// CHECK-NEXT:  call void @_Init_thread_header(ptr @"?$TSS0@?1??g@@YAAAUS@@XZ@4HA")
+// CHECK-NEXT:  %[[guard2:.*]] = load atomic i32, ptr @"?$TSS0@?1??g@@YAAAUS@@XZ@4HA" unordered, align 4
 // CHECK-NEXT:  %[[cmp2:.*]] = icmp eq i32 %[[guard2]], -1
 // CHECK-NEXT:  br i1 %[[cmp2]], label %[[init:.*]], label %[[init_end:.*]]
 //
 // CHECK:     [[init]]:
-// CHECK-NEXT:  invoke {{.*}} @"??0S@@QAE@XZ"(%struct.S* {{[^,]*}} @"?s@?1??g@@YAAAUS@@XZ@4U2@A")
+// CHECK-NEXT:  invoke {{.*}} @"??0S@@QAE@XZ"(ptr {{[^,]*}} @"?s@?1??g@@YAAAUS@@XZ@4U2@A")
 // CHECK-NEXT:    to label %[[invoke_cont:.*]] unwind label %[[lpad:.*]]
 //
 // CHECK:     [[invoke_cont]]:
-// CHECK-NEXT:  call i32 @atexit(void ()* @"??__Fs@?1??g@@YAAAUS@@XZ@YAXXZ")
-// CHECK-NEXT:  call void @_Init_thread_footer(i32* @"?$TSS0@?1??g@@YAAAUS@@XZ@4HA")
+// CHECK-NEXT:  call i32 @atexit(ptr @"??__Fs@?1??g@@YAAAUS@@XZ@YAXXZ")
+// CHECK-NEXT:  call void @_Init_thread_footer(ptr @"?$TSS0@?1??g@@YAAAUS@@XZ@4HA")
 // CHECK-NEXT:  br label %init.end
 //
 // CHECK:     [[init_end]]:
-// CHECK-NEXT:  ret %struct.S* @"?s@?1??g@@YAAAUS@@XZ@4U2@A"
+// CHECK-NEXT:  ret ptr @"?s@?1??g@@YAAAUS@@XZ@4U2@A"
 //
 // CHECK:     [[lpad]]:
 // CHECK-NEXT: cleanuppad within none []
-// CHECK:       call void @_Init_thread_abort(i32* @"?$TSS0@?1??g@@YAAAUS@@XZ@4HA")
+// CHECK:       call void @_Init_thread_abort(ptr @"?$TSS0@?1??g@@YAAAUS@@XZ@4HA")
 // CHECK-NEXT:  cleanupret {{.*}} unwind to caller
   return s;
 }

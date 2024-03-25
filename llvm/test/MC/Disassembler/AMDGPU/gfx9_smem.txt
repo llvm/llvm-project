@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
 
 # CHECK: s_load_dword s5, s[2:3], s0             ; encoding: [0x41,0x01,0x00,0xc0,0x00,0x00,0x00,0x00]
 0x41,0x01,0x00,0xc0,0x00,0x00,0x00,0x00

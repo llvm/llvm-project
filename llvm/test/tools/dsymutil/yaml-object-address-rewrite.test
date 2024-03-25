@@ -1,5 +1,7 @@
 # RUN: dsymutil -dump-debug-map -oso-prepend-path=%p -y %s | FileCheck %s
 #
+# RUN: dsymutil --linker parallel -dump-debug-map -oso-prepend-path=%p -y %s | FileCheck %s
+#
 # The YAML debug map bellow is the one from basic-archive.macho.x86_64 with
 # the object addresses set to zero. Check that the YAML import is able to
 # rewrite these addresses to the right values.

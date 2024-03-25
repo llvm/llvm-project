@@ -25,6 +25,16 @@ void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
   SupportDebugThreadLocalLocation = false;
 }
 
+const MCExpr *AArch64_ELFTargetObjectFile::getIndirectSymViaGOTPCRel(
+    const GlobalValue *GV, const MCSymbol *Sym, const MCValue &MV,
+    int64_t Offset, MachineModuleInfo *MMI, MCStreamer &Streamer) const {
+  int64_t FinalOffset = Offset + MV.getConstant();
+  const MCExpr *Res =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOTPCREL, getContext());
+  const MCExpr *Off = MCConstantExpr::create(FinalOffset, getContext());
+  return MCBinaryExpr::createAdd(Res, Off, getContext());
+}
+
 AArch64_MachoTargetObjectFile::AArch64_MachoTargetObjectFile() {
   SupportGOTPCRelWithOffset = false;
 }

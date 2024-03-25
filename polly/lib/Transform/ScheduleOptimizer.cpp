@@ -96,6 +96,13 @@ static cl::opt<std::string>
                       cl::desc("Maximize the band depth (yes/no)"), cl::Hidden,
                       cl::init("yes"), cl::cat(PollyCategory));
 
+static cl::opt<int>
+    ScheduleComputeOut("polly-schedule-computeout",
+                       cl::desc("Bound the scheduler by maximal amount"
+                                "of computational steps. "),
+                       cl::Hidden, cl::init(300000), cl::ZeroOrMore,
+                       cl::cat(PollyCategory));
+
 static cl::opt<bool>
     GreedyFusion("polly-loopfusion-greedy",
                  cl::desc("Aggressively try to fuse everything"), cl::Hidden,
@@ -711,11 +718,6 @@ static void runIslScheduleOptimizer(
     function_ref<const Dependences &(Dependences::AnalysisLevel)> GetDeps,
     TargetTransformInfo *TTI, OptimizationRemarkEmitter *ORE,
     isl::schedule &LastSchedule, bool &DepsChanged) {
-
-  // Skip SCoPs in case they're already optimised by PPCGCodeGeneration
-  if (S.isToBeSkipped())
-    return;
-
   // Skip empty SCoPs but still allow code generation as it will delete the
   // loops present but not needed.
   if (S.getSize() == 0) {
@@ -865,7 +867,16 @@ static void runIslScheduleOptimizer(
     SC = SC.set_proximity(Proximity);
     SC = SC.set_validity(Validity);
     SC = SC.set_coincidence(Validity);
-    Schedule = SC.compute_schedule();
+
+    {
+      IslMaxOperationsGuard MaxOpGuard(Ctx, ScheduleComputeOut);
+      Schedule = SC.compute_schedule();
+
+      if (MaxOpGuard.hasQuotaExceeded())
+        LLVM_DEBUG(
+            dbgs() << "Schedule optimizer calculation exceeds ISL quota\n");
+    }
+
     isl_options_set_on_error(Ctx, OnErrorStatus);
 
     ScopsRescheduled++;

@@ -12,11 +12,13 @@
 #include "mlir/AsmParser/AsmParserState.h"
 #include "mlir/AsmParser/CodeComplete.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
-#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Parser/Parser.h"
+#include "mlir/Support/ToolUtilities.h"
 #include "mlir/Tools/lsp-server-support/Logging.h"
 #include "mlir/Tools/lsp-server-support/SourceMgrUtils.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Base64.h"
 #include "llvm/Support/SourceMgr.h"
 #include <optional>
@@ -58,7 +60,7 @@ getLocationFromLoc(llvm::SourceMgr &sourceMgr, Location loc,
                    StringRef uriScheme, const lsp::URIForFile *uri = nullptr) {
   std::optional<lsp::Location> location;
   loc->walk([&](Location nestedLoc) {
-    FileLineColLoc fileLoc = nestedLoc.dyn_cast<FileLineColLoc>();
+    FileLineColLoc fileLoc = dyn_cast<FileLineColLoc>(nestedLoc);
     if (!fileLoc)
       return WalkResult::advance();
 
@@ -91,7 +93,7 @@ static void collectLocationsFromLoc(Location loc,
                                     const lsp::URIForFile &uri) {
   SetVector<Location> visitedLocs;
   loc->walk([&](Location nestedLoc) {
-    FileLineColLoc fileLoc = nestedLoc.dyn_cast<FileLineColLoc>();
+    FileLineColLoc fileLoc = dyn_cast<FileLineColLoc>(nestedLoc);
     if (!fileLoc || !visitedLocs.insert(nestedLoc))
       return WalkResult::advance();
 
@@ -180,7 +182,7 @@ static unsigned getBlockNumber(Block *block) {
 static void printDefBlockName(raw_ostream &os, Block *block, SMRange loc = {}) {
   // Try to extract a name from the source location.
   std::optional<StringRef> text = getTextFromRange(loc);
-  if (text && text->startswith("^")) {
+  if (text && text->starts_with("^")) {
     os << *text;
     return;
   }
@@ -285,6 +287,12 @@ struct MLIRDocument {
   lsp::Hover
   buildHoverForBlockArgument(SMRange hoverRange, BlockArgument arg,
                              const AsmParserState::BlockDefinition &block);
+
+  lsp::Hover buildHoverForAttributeAlias(
+      SMRange hoverRange, const AsmParserState::AttributeAliasDefinition &attr);
+  lsp::Hover
+  buildHoverForTypeAlias(SMRange hoverRange,
+                         const AsmParserState::TypeAliasDefinition &type);
 
   //===--------------------------------------------------------------------===//
   // Document Symbols
@@ -403,6 +411,18 @@ void MLIRDocument::getLocationsOf(const lsp::URIForFile &uri,
       if (containsPosition(arg))
         return;
   }
+
+  // Check all alias definitions.
+  for (const AsmParserState::AttributeAliasDefinition &attr :
+       asmState.getAttributeAliasDefs()) {
+    if (containsPosition(attr.definition))
+      return;
+  }
+  for (const AsmParserState::TypeAliasDefinition &type :
+       asmState.getTypeAliasDefs()) {
+    if (containsPosition(type.definition))
+      return;
+  }
 }
 
 void MLIRDocument::findReferencesOf(const lsp::URIForFile &uri,
@@ -448,6 +468,18 @@ void MLIRDocument::findReferencesOf(const lsp::URIForFile &uri,
     for (const AsmParserState::SMDefinition &arg : block.arguments)
       if (isDefOrUse(arg, posLoc))
         return appendSMDef(arg);
+  }
+
+  // Check all alias definitions.
+  for (const AsmParserState::AttributeAliasDefinition &attr :
+       asmState.getAttributeAliasDefs()) {
+    if (isDefOrUse(attr.definition, posLoc))
+      return appendSMDef(attr.definition);
+  }
+  for (const AsmParserState::TypeAliasDefinition &type :
+       asmState.getTypeAliasDefs()) {
+    if (isDefOrUse(type.definition, posLoc))
+      return appendSMDef(type.definition);
   }
 }
 
@@ -500,6 +532,19 @@ MLIRDocument::findHover(const lsp::URIForFile &uri,
           hoverRange, block.block->getArgument(arg.index()), block);
     }
   }
+
+  // Check to see if the hover is over an alias.
+  for (const AsmParserState::AttributeAliasDefinition &attr :
+       asmState.getAttributeAliasDefs()) {
+    if (isDefOrUse(attr.definition, posLoc, &hoverRange))
+      return buildHoverForAttributeAlias(hoverRange, attr);
+  }
+  for (const AsmParserState::TypeAliasDefinition &type :
+       asmState.getTypeAliasDefs()) {
+    if (isDefOrUse(type.definition, posLoc, &hoverRange))
+      return buildHoverForTypeAlias(hoverRange, type);
+  }
+
   return std::nullopt;
 }
 
@@ -516,22 +561,11 @@ std::optional<lsp::Hover> MLIRDocument::buildHoverForOperation(
 
   os << "Generic Form:\n\n```mlir\n";
 
-  // Temporary drop the regions of this operation so that they don't get
-  // printed in the output. This helps keeps the size of the output hover
-  // small.
-  SmallVector<std::unique_ptr<Region>> regions;
-  for (Region &region : op.op->getRegions()) {
-    regions.emplace_back(std::make_unique<Region>());
-    regions.back()->takeBody(region);
-  }
-
-  op.op->print(
-      os, OpPrintingFlags().printGenericOpForm().elideLargeElementsAttrs());
+  op.op->print(os, OpPrintingFlags()
+                       .printGenericOpForm()
+                       .elideLargeElementsAttrs()
+                       .skipRegions());
   os << "\n```\n";
-
-  // Move the regions back to the current operation.
-  for (Region &region : op.op->getRegions())
-    region.takeBody(*regions.back());
 
   return hover;
 }
@@ -615,6 +649,28 @@ lsp::Hover MLIRDocument::buildHoverForBlockArgument(
   printDefBlockName(os, block);
   os << "\n\nArgument #" << arg.getArgNumber() << "\n\n"
      << "Type: `" << arg.getType() << "`\n\n";
+
+  return hover;
+}
+
+lsp::Hover MLIRDocument::buildHoverForAttributeAlias(
+    SMRange hoverRange, const AsmParserState::AttributeAliasDefinition &attr) {
+  lsp::Hover hover(lsp::Range(sourceMgr, hoverRange));
+  llvm::raw_string_ostream os(hover.contents.value);
+
+  os << "Attribute Alias: \"" << attr.name << "\n\n";
+  os << "Value: ```mlir\n" << attr.value << "\n```\n\n";
+
+  return hover;
+}
+
+lsp::Hover MLIRDocument::buildHoverForTypeAlias(
+    SMRange hoverRange, const AsmParserState::TypeAliasDefinition &type) {
+  lsp::Hover hover(lsp::Range(sourceMgr, hoverRange));
+  llvm::raw_string_ostream os(hover.contents.value);
+
+  os << "Type Alias: \"" << type.name << "\n\n";
+  os << "Value: ```mlir\n" << type.value << "\n```\n\n";
 
   return hover;
 }
@@ -845,7 +901,7 @@ void MLIRDocument::getCodeActionForDiagnostic(
   // Ignore diagnostics that print the current operation. These are always
   // enabled for the language server, but not generally during normal
   // parsing/verification.
-  if (message.startswith("see current operation: "))
+  if (message.starts_with("see current operation: "))
     return;
 
   // Get the start of the line containing the diagnostic.
@@ -896,7 +952,8 @@ MLIRDocument::convertToBytecode() {
 
     std::string rawBytecodeBuffer;
     llvm::raw_string_ostream os(rawBytecodeBuffer);
-    writeBytecodeToFile(&parsedIR.front(), os, writerConfig);
+    // No desired bytecode version set, so no need to check for error.
+    (void)writeBytecodeToFile(&parsedIR.front(), os, writerConfig);
     result.output = llvm::encodeBase64(rawBytecodeBuffer);
   }
   return result;
@@ -996,11 +1053,8 @@ MLIRTextFile::MLIRTextFile(const lsp::URIForFile &uri, StringRef fileContents,
   context.allowUnregisteredDialects();
 
   // Split the file into separate MLIR documents.
-  // TODO: Find a way to share the split file marker with other tools. We don't
-  // want to use `splitAndProcessBuffer` here, but we do want to make sure this
-  // marker doesn't go out of sync.
   SmallVector<StringRef, 8> subContents;
-  StringRef(contents).split(subContents, "// -----");
+  StringRef(contents).split(subContents, kDefaultSplitMarker);
   chunks.emplace_back(std::make_unique<MLIRTextFileChunk>(
       context, /*lineOffset=*/0, uri, subContents.front(), diagnostics));
 
@@ -1332,13 +1386,13 @@ lsp::MLIRServer::convertFromBytecode(const URIForFile &uri) {
     // Extract the top-level op so that aliases get printed.
     // FIXME: We should be able to enable aliases without having to do this!
     OwningOpRef<Operation *> topOp = &parsedBlock.front();
-    (*topOp)->remove();
+    topOp->remove();
 
     AsmState state(*topOp, OpPrintingFlags().enableDebugInfo().assumeVerified(),
                    /*locationMap=*/nullptr, &fallbackResourceMap);
 
     llvm::raw_string_ostream os(result.output);
-    (*topOp)->print(os, state);
+    topOp->print(os, state);
   }
   return std::move(result);
 }

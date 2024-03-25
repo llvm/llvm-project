@@ -35,7 +35,7 @@ MachineFunctionInfo *WebAssemblyFunctionInfo::clone(
 
 void WebAssemblyFunctionInfo::initWARegs(MachineRegisterInfo &MRI) {
   assert(WARegs.empty());
-  unsigned Reg = UnusedReg;
+  unsigned Reg = WebAssembly::UnusedReg;
   WARegs.resize(MRI.getNumVirtRegs(), Reg);
 }
 
@@ -105,7 +105,7 @@ void llvm::computeSignatureVTs(const FunctionType *Ty,
   }
 }
 
-void llvm::valTypesFromMVTs(const ArrayRef<MVT> &In,
+void llvm::valTypesFromMVTs(ArrayRef<MVT> In,
                             SmallVectorImpl<wasm::ValType> &Out) {
   for (MVT Ty : In)
     Out.push_back(WebAssembly::toValType(Ty));

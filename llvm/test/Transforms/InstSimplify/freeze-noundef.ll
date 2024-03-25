@@ -29,6 +29,17 @@ define i1 @or(i1 noundef %x, i1 noundef %x2) {
   ret i1 %z
 }
 
+define i1 @or_disjoint(i1 noundef %x, i1 noundef %x2) {
+; CHECK-LABEL: @or_disjoint(
+; CHECK-NEXT:    [[Y:%.*]] = or disjoint i1 [[X:%.*]], [[X2:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = freeze i1 [[Y]]
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %y = or disjoint i1 %x, %x2
+  %z = freeze i1 %y
+  ret i1 %z
+}
+
 define i1 @or2(i1 noundef %x, i1 %x2) {
 ; CHECK-LABEL: @or2(
 ; CHECK-NEXT:    [[Y:%.*]] = or i1 [[X:%.*]], [[X2:%.*]]
@@ -59,6 +70,27 @@ define i8 @addnsw(i8 noundef %x) {
   %y = add nsw i8 %x, 1
   %z = freeze i8 %y
   ret i8 %z
+}
+
+define i16 @zext(i8 noundef %x) {
+; CHECK-LABEL: @zext(
+; CHECK-NEXT:    [[Y:%.*]] = zext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    ret i16 [[Y]]
+;
+  %y = zext i8 %x to i16
+  %z = freeze i16 %y
+  ret i16 %z
+}
+
+define i16 @zext_nneg(i8 noundef %x) {
+; CHECK-LABEL: @zext_nneg(
+; CHECK-NEXT:    [[Y:%.*]] = zext nneg i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[Z:%.*]] = freeze i16 [[Y]]
+; CHECK-NEXT:    ret i16 [[Z]]
+;
+  %y = zext nneg i8 %x to i16
+  %z = freeze i16 %y
+  ret i16 %z
 }
 
 define {i8, i32} @aggr({i8, i32} noundef %x) {
@@ -107,7 +139,7 @@ define i1 @used_by_fncall(i1 %x) {
 
 define i32 @noundef_metadata(ptr %p) {
 ; CHECK-LABEL: @noundef_metadata(
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4, !noundef !0
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4, !noundef [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
   %v = load i32, ptr %p, !noundef !{}
@@ -117,7 +149,7 @@ define i32 @noundef_metadata(ptr %p) {
 
 define {i8, i32} @noundef_metadata2(ptr %p) {
 ; CHECK-LABEL: @noundef_metadata2(
-; CHECK-NEXT:    [[V:%.*]] = load { i8, i32 }, ptr [[P:%.*]], align 4, !noundef !0
+; CHECK-NEXT:    [[V:%.*]] = load { i8, i32 }, ptr [[P:%.*]], align 4, !noundef [[META0]]
 ; CHECK-NEXT:    ret { i8, i32 } [[V]]
 ;
   %v = load {i8, i32}, ptr %p, !noundef !{}

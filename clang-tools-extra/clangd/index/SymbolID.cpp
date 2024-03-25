@@ -8,6 +8,7 @@
 
 #include "SymbolID.h"
 #include "support/Logger.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/SHA1.h"
 
 namespace clang {

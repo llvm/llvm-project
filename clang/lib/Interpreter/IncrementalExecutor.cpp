@@ -17,39 +17,51 @@
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
+#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
 
+// Force linking some of the runtimes that helps attaching to a debugger.
+LLVM_ATTRIBUTE_USED void linkComponents() {
+  llvm::errs() << (void *)&llvm_orc_registerJITLoaderGDBWrapper
+               << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
+}
+
 namespace clang {
 
+llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
+IncrementalExecutor::createDefaultJITBuilder(
+    llvm::orc::JITTargetMachineBuilder JTMB) {
+  auto JITBuilder = std::make_unique<llvm::orc::LLJITBuilder>();
+  JITBuilder->setJITTargetMachineBuilder(std::move(JTMB));
+  JITBuilder->setPrePlatformSetup([](llvm::orc::LLJIT &J) {
+    // Try to enable debugging of JIT'd code (only works with JITLink for
+    // ELF and MachO).
+    consumeError(llvm::orc::enableDebuggerSupport(J));
+    return llvm::Error::success();
+  });
+  return std::move(JITBuilder);
+}
+
 IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
-                                         llvm::Error &Err,
-                                         const clang::TargetInfo &TI)
+                                         llvm::orc::LLJITBuilder &JITBuilder,
+                                         llvm::Error &Err)
     : TSCtx(TSC) {
   using namespace llvm::orc;
   llvm::ErrorAsOutParameter EAO(&Err);
 
-  auto JTMB = JITTargetMachineBuilder(TI.getTriple());
-  JTMB.addFeatures(TI.getTargetOpts().Features);
-  if (auto JitOrErr = LLJITBuilder().setJITTargetMachineBuilder(JTMB).create())
+  if (auto JitOrErr = JITBuilder.create())
     Jit = std::move(*JitOrErr);
   else {
     Err = JitOrErr.takeError();
-    return;
-  }
-
-  const char Pref = Jit->getDataLayout().getGlobalPrefix();
-  // Discover symbols from the process as a fallback.
-  if (auto PSGOrErr = DynamicLibrarySearchGenerator::GetForCurrentProcess(Pref))
-    Jit->getMainJITDylib().addGenerator(std::move(*PSGOrErr));
-  else {
-    Err = PSGOrErr.takeError();
     return;
   }
 }
@@ -86,15 +98,22 @@ llvm::Error IncrementalExecutor::runCtors() const {
   return Jit->initialize(Jit->getMainJITDylib());
 }
 
-llvm::Expected<llvm::JITTargetAddress>
+llvm::Expected<llvm::orc::ExecutorAddr>
 IncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
                                       SymbolNameKind NameKind) const {
-  auto Sym = (NameKind == LinkerName) ? Jit->lookupLinkerMangled(Name)
-                                      : Jit->lookup(Name);
+  using namespace llvm::orc;
+  auto SO = makeJITDylibSearchOrder({&Jit->getMainJITDylib(),
+                                     Jit->getPlatformJITDylib().get(),
+                                     Jit->getProcessSymbolsJITDylib().get()});
 
-  if (!Sym)
-    return Sym.takeError();
-  return Sym->getValue();
+  ExecutionSession &ES = Jit->getExecutionSession();
+
+  auto SymOrErr =
+      ES.lookup(SO, (NameKind == LinkerName) ? ES.intern(Name)
+                                             : Jit->mangleAndIntern(Name));
+  if (auto Err = SymOrErr.takeError())
+    return std::move(Err);
+  return SymOrErr->getAddress();
 }
 
 } // end namespace clang

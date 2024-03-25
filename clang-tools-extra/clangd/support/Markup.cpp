@@ -47,7 +47,7 @@ bool looksLikeTag(llvm::StringRef Contents) {
   for (; !Contents.empty(); Contents = Contents.drop_front()) {
     if (llvm::isAlnum(Contents.front()) || llvm::isSpace(Contents.front()))
       continue;
-    if (Contents.front() == '>' || Contents.startswith("/>"))
+    if (Contents.front() == '>' || Contents.starts_with("/>"))
       return true; // May close the tag.
     if (Contents.front() == '=')
       return true; // Don't try to parse attribute values.
@@ -75,7 +75,7 @@ bool needsLeadingEscape(char C, llvm::StringRef Before, llvm::StringRef After,
   };
   auto IsBullet = [&]() {
     return StartsLine && Before.empty() &&
-           (After.empty() || After.startswith(" "));
+           (After.empty() || After.starts_with(" "));
   };
   auto SpaceSurrounds = [&]() {
     return (After.empty() || llvm::isSpace(After.front())) &&
@@ -94,12 +94,12 @@ bool needsLeadingEscape(char C, llvm::StringRef Before, llvm::StringRef After,
     // anywhere (including on another line). We must escape them all.
     return true;
   case '~': // Code block
-    return StartsLine && Before.empty() && After.startswith("~~");
+    return StartsLine && Before.empty() && After.starts_with("~~");
   case '#': { // ATX heading.
     if (!StartsLine || !Before.empty())
       return false;
     llvm::StringRef Rest = After.ltrim(C);
-    return Rest.empty() || Rest.startswith(" ");
+    return Rest.empty() || Rest.starts_with(" ");
   }
   case ']': // Link or link reference.
     // We escape ] rather than [ here, because it's more constrained:
@@ -109,7 +109,7 @@ bool needsLeadingEscape(char C, llvm::StringRef Before, llvm::StringRef After,
     //   ] by itself is a shortcut link
     //   ][...] is an out-of-line link
     // Because we never emit link references, we don't need to handle these.
-    return After.startswith(":") || After.startswith("(");
+    return After.starts_with(":") || After.starts_with("(");
   case '=': // Setex heading.
     return RulerLength() > 0;
   case '_': // Horizontal ruler or matched delimiter.
@@ -145,7 +145,7 @@ bool needsLeadingEscape(char C, llvm::StringRef Before, llvm::StringRef After,
   case '.': // Numbered list indicator. Escape 12. -> 12\. at start of line.
   case ')':
     return StartsLine && !Before.empty() &&
-           llvm::all_of(Before, llvm::isDigit) && After.startswith(" ");
+           llvm::all_of(Before, llvm::isDigit) && After.starts_with(" ");
   default:
     return false;
   }
@@ -180,12 +180,12 @@ std::string renderInlineBlock(llvm::StringRef Input) {
   }
   // If results starts with a backtick, add spaces on both sides. The spaces
   // are ignored by markdown renderers.
-  if (llvm::StringRef(R).startswith("`") || llvm::StringRef(R).endswith("`"))
+  if (llvm::StringRef(R).starts_with("`") || llvm::StringRef(R).ends_with("`"))
     return "` " + std::move(R) + " `";
   // Markdown render should ignore first and last space if both are there. We
   // add an extra pair of spaces in that case to make sure we render what the
   // user intended.
-  if (llvm::StringRef(R).startswith(" ") && llvm::StringRef(R).endswith(" "))
+  if (llvm::StringRef(R).starts_with(" ") && llvm::StringRef(R).ends_with(" "))
     return "` " + std::move(R) + " `";
   return "`" + std::move(R) + "`";
 }
@@ -250,7 +250,7 @@ std::string renderBlocks(llvm::ArrayRef<std::unique_ptr<Block>> Children,
                   return !llvm::StringRef(TrimmedText.data(),
                                           &C - TrimmedText.data() + 1)
                               // We allow at most two newlines.
-                              .endswith("\n\n\n");
+                              .ends_with("\n\n\n");
                 });
 
   return AdjustedResult;
@@ -301,7 +301,7 @@ private:
 // Inserts two spaces after each `\n` to indent each line. First line is not
 // indented.
 std::string indentLines(llvm::StringRef Input) {
-  assert(!Input.endswith("\n") && "Input should've been trimmed.");
+  assert(!Input.ends_with("\n") && "Input should've been trimmed.");
   std::string IndentedR;
   // We'll add 2 spaces after each new line.
   IndentedR.reserve(Input.size() + Input.count('\n') * 2);

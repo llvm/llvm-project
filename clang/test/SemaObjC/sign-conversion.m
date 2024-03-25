@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wsign-conversion %s
-// rdar://13855394
 
 typedef unsigned int NSUInteger;
 
@@ -27,7 +26,6 @@ void foo(void) {
     x.uint = sint; // expected-warning {{implicit conversion changes signedness: 'int' to 'NSUInteger'}}
 }
 
-// rdar://13855682
 void Test1(void) {
 signed int si = -1;
 NSArray *array;

@@ -29,7 +29,6 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c) {
 ; CHECK:       L1.early.exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       L1.exit:
-; CHECK-NEXT:    [[INDUCTION_IV_LCSSA3:%.*]] = phi i32 [ [[INDUCTION_IV]], [[L1_BACKEDGE]] ]
 ; CHECK-NEXT:    [[INDUCTION_IV_LCSSA1:%.*]] = phi i32 [ [[INDUCTION_IV]], [[L1_BACKEDGE]] ]
 ; CHECK-NEXT:    [[L1_EXIT_VAL:%.*]] = phi i32 [ [[L1_SUM_NEXT]], [[L1_BACKEDGE]] ]
 ; CHECK-NEXT:    br label [[L2_HEADER:%.*]]
@@ -54,8 +53,7 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 12
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 12, 12
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[L2_HEADER_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[L2_HEADER_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[L2_INNER_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ 13, [[MIDDLE_BLOCK]] ], [ 1, [[L2_INNER_HEADER_PREHEADER]] ]
@@ -67,7 +65,7 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c) {
 ; CHECK-NEXT:    [[L2_DUMMY_BUT_NEED_IT:%.*]] = sext i32 [[L2_ACCUM_NEXT]] to i64
 ; CHECK-NEXT:    [[L2_IV_NEXT]] = add nuw nsw i64 [[L2_IV]], 1
 ; CHECK-NEXT:    [[L2_EXIT_COND:%.*]] = icmp ugt i64 [[L2_IV]], 11
-; CHECK-NEXT:    br i1 [[L2_EXIT_COND]], label [[L2_HEADER_LOOPEXIT]], label [[L2_INNER_HEADER]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[L2_EXIT_COND]], label [[L2_HEADER_LOOPEXIT]], label [[L2_INNER_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       L2.exit:
 ; CHECK-NEXT:    ret void
 ;

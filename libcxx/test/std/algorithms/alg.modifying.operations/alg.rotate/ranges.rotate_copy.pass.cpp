@@ -34,16 +34,16 @@ template <class Range, class Out = int*>
 concept HasRotateCopyR = requires(Range range, Out out) { std::ranges::rotate_copy(range, nullptr, out); };
 
 static_assert(HasRotateCopyIt<int*>);
-static_assert(!HasRotateCopyIt<BidirectionalIteratorNotDerivedFrom>);
-static_assert(!HasRotateCopyIt<BidirectionalIteratorNotDecrementable>);
+static_assert(!HasRotateCopyIt<ForwardIteratorNotDerivedFrom>);
+static_assert(!HasRotateCopyIt<ForwardIteratorNotIncrementable>);
 static_assert(!HasRotateCopyIt<int*, SentinelForNotSemiregular>);
 static_assert(!HasRotateCopyIt<int*, SentinelForNotWeaklyEqualityComparableWith>);
 static_assert(!HasRotateCopyIt<int*, OutputIteratorNotIndirectlyWritable>);
 static_assert(!HasRotateCopyIt<int*, OutputIteratorNotInputOrOutputIterator>);
 
 static_assert(HasRotateCopyR<UncheckedRange<int*>>);
-static_assert(!HasRotateCopyR<BidirectionalRangeNotDerivedFrom>);
-static_assert(!HasRotateCopyR<BidirectionalRangeNotDecrementable>);
+static_assert(!HasRotateCopyR<ForwardRangeNotDerivedFrom>);
+static_assert(!HasRotateCopyR<ForwardRangeNotIncrementable>);
 static_assert(!HasRotateCopyR<UncheckedRange<int*, SentinelForNotSemiregular>>);
 static_assert(!HasRotateCopyR<UncheckedRange<int*>, OutputIteratorNotIndirectlyWritable>);
 static_assert(!HasRotateCopyR<UncheckedRange<int*>, OutputIteratorNotInputOrOutputIterator>);
@@ -51,7 +51,7 @@ static_assert(!HasRotateCopyR<UncheckedRange<int*>, OutputIteratorNotInputOrOutp
 static_assert(std::is_same_v<std::ranges::rotate_copy_result<int, int>, std::ranges::in_out_result<int, int>>);
 
 template <class Iter, class OutIter, class Sent, int N>
-constexpr void test(std::array<int, N> value, size_t middle, std::array<int, N> expected) {
+constexpr void test(std::array<int, N> value, std::size_t middle, std::array<int, N> expected) {
   {
     std::array<int, N> out;
     std::same_as<std::ranges::in_out_result<Iter, OutIter>> decltype(auto) ret =
@@ -112,6 +112,7 @@ constexpr void test_out_iterators() {
 }
 
 constexpr bool test() {
+  test_out_iterators<forward_iterator<int*>>();
   test_out_iterators<bidirectional_iterator<int*>>();
   test_out_iterators<random_access_iterator<int*>>();
   test_out_iterators<contiguous_iterator<int*>>();

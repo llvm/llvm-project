@@ -14,18 +14,21 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
+#include "gtest/gtest.h"
 #include <fstream>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
-#include "gtest/gtest.h"
 
 class LibclangParseTest : public ::testing::Test {
-  std::set<std::string> Files;
   typedef std::unique_ptr<std::string> fixed_addr_string;
   std::map<fixed_addr_string, fixed_addr_string> UnsavedFileContents;
 public:
+  // std::greater<> to remove files before their parent dirs in TearDown().
+  std::set<std::string, std::greater<>> FilesAndDirsToRemove;
   std::string TestDir;
+  bool RemoveTestDirRecursivelyDuringTeardown = false;
   CXIndex Index;
   CXTranslationUnit ClangTU;
   unsigned TUFlags;
@@ -37,22 +40,32 @@ public:
     TestDir = std::string(Dir.str());
     TUFlags = CXTranslationUnit_DetailedPreprocessingRecord |
       clang_defaultEditingTranslationUnitOptions();
-    Index = clang_createIndex(0, 0);
+    CreateIndex();
     ClangTU = nullptr;
   }
   void TearDown() override {
     clang_disposeTranslationUnit(ClangTU);
     clang_disposeIndex(Index);
-    for (const std::string &Path : Files)
-      llvm::sys::fs::remove(Path);
-    llvm::sys::fs::remove(TestDir);
+
+    namespace fs = llvm::sys::fs;
+    for (const std::string &Path : FilesAndDirsToRemove)
+      EXPECT_FALSE(fs::remove(Path, /*IgnoreNonExisting=*/false));
+    if (RemoveTestDirRecursivelyDuringTeardown)
+      EXPECT_FALSE(fs::remove_directories(TestDir, /*IgnoreErrors=*/false));
+    else
+      EXPECT_FALSE(fs::remove(TestDir, /*IgnoreNonExisting=*/false));
   }
   void WriteFile(std::string &Filename, const std::string &Contents) {
     if (!llvm::sys::path::is_absolute(Filename)) {
       llvm::SmallString<256> Path(TestDir);
-      llvm::sys::path::append(Path, Filename);
+      namespace path = llvm::sys::path;
+      for (auto FileI = path::begin(Filename), FileEnd = path::end(Filename);
+           FileI != FileEnd; ++FileI) {
+        ASSERT_NE(*FileI, ".");
+        path::append(Path, *FileI);
+        FilesAndDirsToRemove.emplace(Path.str());
+      }
       Filename = std::string(Path.str());
-      Files.insert(Filename);
     }
     llvm::sys::fs::create_directories(llvm::sys::path::parent_path(Filename));
     std::ofstream OS(Filename);
@@ -74,19 +87,26 @@ public:
         it.first->second->size()    // length
     });
   }
-  template<typename F>
-  void Traverse(const F &TraversalFunctor) {
-    CXCursor TuCursor = clang_getTranslationUnitCursor(ClangTU);
+  template <typename F>
+  void Traverse(const CXCursor &cursor, const F &TraversalFunctor) {
     std::reference_wrapper<const F> FunctorRef = std::cref(TraversalFunctor);
-    clang_visitChildren(TuCursor,
-        &TraverseStateless<std::reference_wrapper<const F>>,
-        &FunctorRef);
+    clang_visitChildren(cursor,
+                        &TraverseStateless<std::reference_wrapper<const F>>,
+                        &FunctorRef);
   }
+
+  template <typename F> void Traverse(const F &TraversalFunctor) {
+    Traverse(clang_getTranslationUnitCursor(ClangTU), TraversalFunctor);
+  }
+
   static std::string fromCXString(CXString cx_string) {
     std::string string{clang_getCString(cx_string)};
     clang_disposeString(cx_string);
     return string;
   };
+
+protected:
+  virtual void CreateIndex() { Index = clang_createIndex(0, 0); }
 
 private:
   template<typename TState>

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-noexcept-move-constructor %t
+// RUN: %check_clang_tidy %s performance-noexcept-move-constructor %t -- -- -fexceptions
 
 struct C_1 {
  ~C_1() {}
@@ -31,9 +31,7 @@ struct C_3 {
 };
 
 C_3::C_3(C_3&& a) = default;
-// CHECK-FIXES: ){{.*}}noexcept{{.*}} = default;
 C_3& C_3::operator=(C_3&& a) = default;
-// CHECK-FIXES: ){{.*}}noexcept{{.*}} = default;
 
 template <class T>
 struct C_4 {
@@ -41,7 +39,6 @@ struct C_4 {
 // CHECK-FIXES: ){{.*}}noexcept{{.*}} {}
  ~C_4() {}
  C_4& operator=(C_4&& a) = default;
-// CHECK-FIXES: ){{.*}}noexcept{{.*}} = default;
 };
 
 template <class T>
@@ -50,7 +47,6 @@ struct C_5 {
 // CHECK-FIXES:){{.*}}noexcept{{.*}} {}
  ~C_5() {}
  auto operator=(C_5&& a)->C_5<T> = default;
-// CHECK-FIXES:){{.*}}noexcept{{.*}} = default;
 };
 
 template <class T>

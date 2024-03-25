@@ -1,4 +1,4 @@
-; RUN: opt -opaque-pointers=0 %loadPolly -polly-import-jscop \
+; RUN: opt %loadPolly -polly-import-jscop \
 ; RUN: -polly-import-jscop-postfix=transformed -polly-codegen \
 ; RUN: -verify-dom-info \
 ; RUN: -S < %s | FileCheck %s
@@ -13,16 +13,17 @@
 ;    }
 
 ; CHECK: polly.stmt.bb5:                                   ; preds = %polly.stmt.bb2
-; CHECK-NEXT:   %scevgep10 = getelementptr float, float* %B, i64 %polly.indvar
-; CHECK-NEXT:   %tmp7_p_scalar_ = load float, float* %scevgep10
+; CHECK-NEXT:   %[[offset:.*]] = shl nuw nsw i64 %polly.indvar, 2
+; CHECK-NEXT:   %scevgep10 = getelementptr i8, ptr %B, i64 %[[offset]]
+; CHECK-NEXT:   %tmp7_p_scalar_ = load float, ptr %scevgep10
 ; CHECK-NEXT:   %p_tmp8 = fadd float %tmp7_p_scalar_, 1.000000e+00
-; CHECK-NEXT:   %24 = icmp sle i64 %polly.indvar, 9
-; CHECK-NEXT:   %polly.Stmt_bb2__TO__bb9_MayWrite2.cond = icmp ne i1 %24, false
+; CHECK-NEXT:   %[[cmp:.*]] = icmp sle i64 %polly.indvar, 9
+; CHECK-NEXT:   %polly.Stmt_bb2__TO__bb9_MayWrite2.cond = icmp ne i1 %[[cmp]], false
 ; CHECK-NEXT:   br i1 %polly.Stmt_bb2__TO__bb9_MayWrite2.cond, label %polly.stmt.bb5.Stmt_bb2__TO__bb9_MayWrite2.partial, label %polly.stmt.bb5.cont
 
 ; CHECK: polly.stmt.bb5.Stmt_bb2__TO__bb9_MayWrite2.partial: ; preds = %polly.stmt.bb5
-; CHECK-NEXT:   %polly.access.B11 = getelementptr float, float* %B, i64 %polly.indvar
-; CHECK-NEXT:   store float %p_tmp8, float* %polly.access.B11
+; CHECK-NEXT:   %polly.access.B11 = getelementptr float, ptr %B, i64 %polly.indvar
+; CHECK-NEXT:   store float %p_tmp8, ptr %polly.access.B11
 ; CHECK-NEXT:   br label %polly.stmt.bb5.cont
 
 ; CHECK: polly.stmt.bb5.cont:                              ; preds = %polly.stmt.bb5, %polly.stmt.bb5.Stmt_bb2__TO__bb9_MayWrite2.partial
@@ -30,7 +31,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @partial_write_in_region(i64* %A, float* %B, float* %C) {
+define void @partial_write_in_region(ptr %A, ptr %B, ptr %C) {
 bb:
   br label %bb1
 
@@ -40,20 +41,20 @@ bb1:                                              ; preds = %bb10, %bb
   br i1 %exitcond, label %bb2, label %bb12
 
 bb2:                                              ; preds = %bb1
-  %tmp = getelementptr inbounds i64, i64* %A, i64 %i.0
-  %tmp3 = load i64, i64* %tmp, align 8
+  %tmp = getelementptr inbounds i64, ptr %A, i64 %i.0
+  %tmp3 = load i64, ptr %tmp, align 8
   %tmp4 = icmp eq i64 %tmp3, 0
   br i1 %tmp4, label %bb9, label %bb5
 
 bb5:                                              ; preds = %bb2
-  %tmp6 = getelementptr inbounds float, float* %B, i64 %i.0
-  %tmp7 = load float, float* %tmp6, align 4
+  %tmp6 = getelementptr inbounds float, ptr %B, i64 %i.0
+  %tmp7 = load float, ptr %tmp6, align 4
   %tmp8 = fadd float %tmp7, 1.000000e+00
-  store float %tmp8, float* %tmp6, align 4
+  store float %tmp8, ptr %tmp6, align 4
   br label %bb9b
 
 bb9b:
-  store float 42.0, float* %C
+  store float 42.0, ptr %C
   br label %bb9
 
 bb9:                                              ; preds = %bb2, %bb5

@@ -40,11 +40,7 @@ define <2 x i1> @eq_or_non_0_commute(<2 x i32> %x) {
 
 define i1 @eq_or_non_0_wrong_pred1(i32 %x) {
 ; CHECK-LABEL: @eq_or_non_0_wrong_pred1(
-; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[T0]], 10
-; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[NOTZERO]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ne i32 %t0, 10
@@ -90,9 +86,7 @@ define i1 @ne_and_is_0_wrong_pred1(i32 %x) {
 ; CHECK-LABEL: @ne_and_is_0_wrong_pred1(
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[T0]], 10
-; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[ISZERO]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ne i32 %t0, 10

@@ -23,3 +23,7 @@
 ; when emitting it, followed by xfoo.
 !\xfoo = !{!0, !1, !2}
 ; CHECK: !\5Cxfoo = !{!0, !1, !2}
+
+; Make sure we handle escapes with the high bit set correctly.
+!\FFfoo = !{!0, !1, !2}
+; CHECK: !\FFfoo = !{!0, !1, !2}

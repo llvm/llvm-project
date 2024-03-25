@@ -73,10 +73,11 @@ class DataLayout {
 public:
   explicit DataLayout(DataLayoutOpInterface scope);
 
-  unsigned getTypeSize(Type type) const;
-  unsigned getTypeSizeInBits(Type type) const;
-  unsigned getTypeABIAlignment(Type type) const;
-  unsigned getTypePreferredAlignment(Type type) const;
+  llvm::TypeSize getTypeSize(Type type) const;
+  llvm::TypeSize getTypeSizeInBits(Type type) const;
+  uint64_t getTypeABIAlignment(Type type) const;
+  uint64_t getTypePreferredAlignment(Type type) const;
+  std::optional<uint64_t> getTypeIndexBitwidth(Type type) const;
 };
 ```
 
@@ -267,7 +268,8 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 >} {}
 ```
 
-specifies that `index` has 32 bits. All other layout properties of `index` match
+specifies that `index` has 32 bits and index computations should be performed
+using 32-bit precision as well. All other layout properties of `index` match
 those of the integer type with the same bitwidth defined above.
 
 In absence of the corresponding entry, `index` is assumed to be a 64-bit

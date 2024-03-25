@@ -88,13 +88,12 @@ struct Config {
     bool StandardLibrary = true;
   } Index;
 
-  enum UnusedIncludesPolicy {
-    /// Diagnose unused includes.
+  enum class IncludesPolicy {
+    /// Diagnose missing and unused includes.
     Strict,
     None,
-    /// The same as Strict, but using the include-cleaner library.
-    Experiment,
   };
+  enum class FastCheckPolicy { Strict, Loose, None };
   /// Controls warnings and errors when parsing code.
   struct {
     bool SuppressAll = false;
@@ -102,12 +101,14 @@ struct Config {
 
     /// Configures what clang-tidy checks to run and options to use with them.
     struct {
-      // A comma-seperated list of globs specify which clang-tidy checks to run.
+      // A comma-separated list of globs specify which clang-tidy checks to run.
       std::string Checks;
       llvm::StringMap<std::string> CheckOptions;
+      FastCheckPolicy FastCheckFilter = FastCheckPolicy::Strict;
     } ClangTidy;
 
-    UnusedIncludesPolicy UnusedIncludes = None;
+    IncludesPolicy UnusedIncludes = IncludesPolicy::Strict;
+    IncludesPolicy MissingIncludes = IncludesPolicy::None;
 
     /// IncludeCleaner will not diagnose usages of these headers matched by
     /// these regexes.
@@ -145,7 +146,17 @@ struct Config {
     bool Parameters = true;
     bool DeducedTypes = true;
     bool Designators = true;
+    bool BlockEnd = false;
+    // Limit the length of type names in inlay hints. (0 means no limit)
+    uint32_t TypeNameLimit = 32;
   } InlayHints;
+
+  struct {
+    /// Controls highlighting kinds that are disabled.
+    std::vector<std::string> DisabledKinds;
+    /// Controls highlighting modifiers that are disabled.
+    std::vector<std::string> DisabledModifiers;
+  } SemanticTokens;
 };
 
 } // namespace clangd

@@ -7,12 +7,12 @@
 
 // CHECK-LABEL: @test_svwrffr(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void @llvm.aarch64.sve.wrffr(<vscale x 16 x i1> [[OP:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.wrffr(<vscale x 16 x i1> [[OP:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z12test_svwrffru10__SVBool_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    call void @llvm.aarch64.sve.wrffr(<vscale x 16 x i1> [[OP:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.wrffr(<vscale x 16 x i1> [[OP:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svwrffr(svbool_t op)

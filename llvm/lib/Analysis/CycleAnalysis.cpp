@@ -17,9 +17,6 @@ namespace llvm {
 class Module;
 }
 
-template class llvm::GenericCycleInfo<SSAContext>;
-template class llvm::GenericCycle<SSAContext>;
-
 CycleInfo CycleAnalysis::run(Function &F, FunctionAnalysisManager &) {
   CycleInfo CI;
   CI.compute(F);

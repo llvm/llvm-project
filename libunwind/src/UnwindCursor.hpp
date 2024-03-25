@@ -31,7 +31,10 @@
 #endif
 
 #if defined(_LIBUNWIND_TARGET_LINUX) &&                                        \
-    (defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_S390X))
+    (defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_RISCV) || \
+     defined(_LIBUNWIND_TARGET_S390X))
+#include <errno.h>
+#include <signal.h>
 #include <sys/syscall.h>
 #include <sys/uio.h>
 #include <unistd.h>
@@ -506,7 +509,14 @@ public:
 #endif
 
   DISPATCHER_CONTEXT *getDispatcherContext() { return &_dispContext; }
-  void setDispatcherContext(DISPATCHER_CONTEXT *disp) { _dispContext = *disp; }
+  void setDispatcherContext(DISPATCHER_CONTEXT *disp) {
+    _dispContext = *disp;
+    _info.lsda = reinterpret_cast<unw_word_t>(_dispContext.HandlerData);
+    if (_dispContext.LanguageHandler) {
+      _info.handler = reinterpret_cast<unw_word_t>(__libunwind_seh_personality);
+    } else
+      _info.handler = 0;
+  }
 
   // libunwind does not and should not depend on C++ library which means that we
   // need our own definition of inline placement new.
@@ -568,10 +578,12 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
                 "UnwindCursor<> requires more alignment than unw_cursor_t");
   memset(&_info, 0, sizeof(_info));
   memset(&_histTable, 0, sizeof(_histTable));
+  memset(&_dispContext, 0, sizeof(_dispContext));
   _dispContext.ContextRecord = &_msContext;
   _dispContext.HistoryTable = &_histTable;
   // Initialize MS context from ours.
   R r(context);
+  RtlCaptureContext(&_msContext);
   _msContext.ContextFlags = CONTEXT_CONTROL|CONTEXT_INTEGER|CONTEXT_FLOATING_POINT;
 #if defined(_LIBUNWIND_TARGET_X86_64)
   _msContext.Rax = r.getRegister(UNW_X86_64_RAX);
@@ -669,6 +681,7 @@ UnwindCursor<A, R>::UnwindCursor(CONTEXT *context, A &as)
                 "UnwindCursor<> does not fit in unw_cursor_t");
   memset(&_info, 0, sizeof(_info));
   memset(&_histTable, 0, sizeof(_histTable));
+  memset(&_dispContext, 0, sizeof(_dispContext));
   _dispContext.ContextRecord = &_msContext;
   _dispContext.HistoryTable = &_histTable;
   _msContext = *context;
@@ -679,7 +692,7 @@ template <typename A, typename R>
 bool UnwindCursor<A, R>::validReg(int regNum) {
   if (regNum == UNW_REG_IP || regNum == UNW_REG_SP) return true;
 #if defined(_LIBUNWIND_TARGET_X86_64)
-  if (regNum >= UNW_X86_64_RAX && regNum <= UNW_X86_64_R15) return true;
+  if (regNum >= UNW_X86_64_RAX && regNum <= UNW_X86_64_RIP) return true;
 #elif defined(_LIBUNWIND_TARGET_ARM)
   if ((regNum >= UNW_ARM_R0 && regNum <= UNW_ARM_R15) ||
       regNum == UNW_ARM_RA_AUTH_CODE)
@@ -694,6 +707,7 @@ template <typename A, typename R>
 unw_word_t UnwindCursor<A, R>::getReg(int regNum) {
   switch (regNum) {
 #if defined(_LIBUNWIND_TARGET_X86_64)
+  case UNW_X86_64_RIP:
   case UNW_REG_IP: return _msContext.Rip;
   case UNW_X86_64_RAX: return _msContext.Rax;
   case UNW_X86_64_RDX: return _msContext.Rdx;
@@ -744,6 +758,7 @@ template <typename A, typename R>
 void UnwindCursor<A, R>::setReg(int regNum, unw_word_t value) {
   switch (regNum) {
 #if defined(_LIBUNWIND_TARGET_X86_64)
+  case UNW_X86_64_RIP:
   case UNW_REG_IP: _msContext.Rip = value; break;
   case UNW_X86_64_RAX: _msContext.Rax = value; break;
   case UNW_X86_64_RDX: _msContext.Rdx = value; break;
@@ -977,9 +992,14 @@ private:
     R dummy;
     return stepThroughSigReturn(dummy);
   }
+  bool isReadableAddr(const pint_t addr) const;
 #if defined(_LIBUNWIND_TARGET_AARCH64)
   bool setInfoForSigReturn(Registers_arm64 &);
   int stepThroughSigReturn(Registers_arm64 &);
+#endif
+#if defined(_LIBUNWIND_TARGET_RISCV)
+  bool setInfoForSigReturn(Registers_riscv &);
+  int stepThroughSigReturn(Registers_riscv &);
 #endif
 #if defined(_LIBUNWIND_TARGET_S390X)
   bool setInfoForSigReturn(Registers_s390x &);
@@ -1978,6 +1998,9 @@ bool UnwindCursor<A, R>::getInfoFromSEH(pint_t pc) {
       uint32_t lastcode = (xdata->CountOfCodes + 1) & ~1;
       const uint32_t *handler = reinterpret_cast<uint32_t *>(&xdata->UnwindCodes[lastcode]);
       _info.lsda = reinterpret_cast<unw_word_t>(handler+1);
+      _dispContext.HandlerData = reinterpret_cast<void *>(_info.lsda);
+      _dispContext.LanguageHandler =
+          reinterpret_cast<EXCEPTION_ROUTINE *>(base + *handler);
       if (*handler) {
         _info.handler = reinterpret_cast<unw_word_t>(__libunwind_seh_personality);
       } else
@@ -2281,27 +2304,39 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
     if (!getFunctionName(functionBuf, sizeof(functionBuf), &offset)) {
       functionName = ".anonymous.";
     }
-    _LIBUNWIND_TRACE_UNWINDING("%s: Look up traceback table of func=%s at %p",
-                               __func__, functionName,
-                               reinterpret_cast<void *>(TBTable));
+    _LIBUNWIND_TRACE_UNWINDING(
+        "%s: Look up traceback table of func=%s at %p, pc=%p, "
+        "SP=%p, saves_lr=%d, stores_bc=%d",
+        __func__, functionName, reinterpret_cast<void *>(TBTable),
+        reinterpret_cast<void *>(pc),
+        reinterpret_cast<void *>(registers.getSP()), TBTable->tb.saves_lr,
+        TBTable->tb.stores_bc);
   }
 
 #if defined(__powerpc64__)
-  // Instruction to reload TOC register "l r2,40(r1)"
+  // Instruction to reload TOC register "ld r2,40(r1)"
   const uint32_t loadTOCRegInst = 0xe8410028;
   const int32_t unwPPCF0Index = UNW_PPC64_F0;
   const int32_t unwPPCV0Index = UNW_PPC64_V0;
 #else
-  // Instruction to reload TOC register "l r2,20(r1)"
+  // Instruction to reload TOC register "lwz r2,20(r1)"
   const uint32_t loadTOCRegInst = 0x80410014;
   const int32_t unwPPCF0Index = UNW_PPC_F0;
   const int32_t unwPPCV0Index = UNW_PPC_V0;
 #endif
 
+  // lastStack points to the stack frame of the next routine up.
+  pint_t curStack = static_cast<pint_t>(registers.getSP());
+  pint_t lastStack = *reinterpret_cast<pint_t *>(curStack);
+
+  if (lastStack == 0)
+    return UNW_STEP_END;
+
   R newRegisters = registers;
 
-  // lastStack points to the stack frame of the next routine up.
-  pint_t lastStack = *(reinterpret_cast<pint_t *>(registers.getSP()));
+  // If backchain is not stored, use the current stack frame.
+  if (!TBTable->tb.stores_bc)
+    lastStack = curStack;
 
   // Return address is the address after call site instruction.
   pint_t returnAddress;
@@ -2311,32 +2346,40 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
                                reinterpret_cast<void *>(lastStack));
 
     sigcontext *sigContext = reinterpret_cast<sigcontext *>(
-        reinterpret_cast<char *>(lastStack) + STKMIN);
+        reinterpret_cast<char *>(lastStack) + STKMINALIGN);
     returnAddress = sigContext->sc_jmpbuf.jmp_context.iar;
 
-    _LIBUNWIND_TRACE_UNWINDING("From sigContext=%p, returnAddress=%p\n",
+    bool useSTKMIN = false;
+    if (returnAddress < 0x10000000) {
+      // Try again using STKMIN.
+      sigContext = reinterpret_cast<sigcontext *>(
+          reinterpret_cast<char *>(lastStack) + STKMIN);
+      returnAddress = sigContext->sc_jmpbuf.jmp_context.iar;
+      if (returnAddress < 0x10000000) {
+        _LIBUNWIND_TRACE_UNWINDING("Bad returnAddress=%p from sigcontext=%p",
+                                   reinterpret_cast<void *>(returnAddress),
+                                   reinterpret_cast<void *>(sigContext));
+        return UNW_EBADFRAME;
+      }
+      useSTKMIN = true;
+    }
+    _LIBUNWIND_TRACE_UNWINDING("Returning from a signal handler %s: "
+                               "sigContext=%p, returnAddress=%p. "
+                               "Seems to be a valid address",
+                               useSTKMIN ? "STKMIN" : "STKMINALIGN",
                                reinterpret_cast<void *>(sigContext),
                                reinterpret_cast<void *>(returnAddress));
 
-    if (returnAddress < 0x10000000) {
-      // Try again using STKMINALIGN
-      sigContext = reinterpret_cast<sigcontext *>(
-          reinterpret_cast<char *>(lastStack) + STKMINALIGN);
-      returnAddress = sigContext->sc_jmpbuf.jmp_context.iar;
-      if (returnAddress < 0x10000000) {
-        _LIBUNWIND_TRACE_UNWINDING("Bad returnAddress=%p\n",
-                                   reinterpret_cast<void *>(returnAddress));
-        return UNW_EBADFRAME;
-      } else {
-        _LIBUNWIND_TRACE_UNWINDING("Tried again using STKMINALIGN: "
-                                   "sigContext=%p, returnAddress=%p. "
-                                   "Seems to be a valid address\n",
-                                   reinterpret_cast<void *>(sigContext),
-                                   reinterpret_cast<void *>(returnAddress));
-      }
-    }
     // Restore the condition register from sigcontext.
     newRegisters.setCR(sigContext->sc_jmpbuf.jmp_context.cr);
+
+    // Save the LR in sigcontext for stepping up when the function that
+    // raised the signal is a leaf function. This LR has the return address
+    // to the caller of the leaf function.
+    newRegisters.setLR(sigContext->sc_jmpbuf.jmp_context.lr);
+    _LIBUNWIND_TRACE_UNWINDING(
+        "Save LR=%p from sigcontext",
+        reinterpret_cast<void *>(sigContext->sc_jmpbuf.jmp_context.lr));
 
     // Restore GPRs from sigcontext.
     for (int i = 0; i < 32; ++i)
@@ -2360,13 +2403,26 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
     }
   } else {
     // Step up a normal frame.
-    returnAddress = reinterpret_cast<pint_t *>(lastStack)[2];
 
-    _LIBUNWIND_TRACE_UNWINDING("Extract info from lastStack=%p, "
-                               "returnAddress=%p\n",
-                               reinterpret_cast<void *>(lastStack),
-                               reinterpret_cast<void *>(returnAddress));
-    _LIBUNWIND_TRACE_UNWINDING("fpr_regs=%d, gpr_regs=%d, saves_cr=%d\n",
+    if (!TBTable->tb.saves_lr && registers.getLR()) {
+      // This case should only occur if we were called from a signal handler
+      // and the signal occurred in a function that doesn't save the LR.
+      returnAddress = static_cast<pint_t>(registers.getLR());
+      _LIBUNWIND_TRACE_UNWINDING("Use saved LR=%p",
+                                 reinterpret_cast<void *>(returnAddress));
+    } else {
+      // Otherwise, use the LR value in the stack link area.
+      returnAddress = reinterpret_cast<pint_t *>(lastStack)[2];
+    }
+
+    // Reset LR in the current context.
+    newRegisters.setLR(NULL);
+
+    _LIBUNWIND_TRACE_UNWINDING(
+        "Extract info from lastStack=%p, returnAddress=%p",
+        reinterpret_cast<void *>(lastStack),
+        reinterpret_cast<void *>(returnAddress));
+    _LIBUNWIND_TRACE_UNWINDING("fpr_regs=%d, gpr_regs=%d, saves_cr=%d",
                                TBTable->tb.fpr_saved, TBTable->tb.gpr_saved,
                                TBTable->tb.saves_cr);
 
@@ -2430,7 +2486,7 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
 
       struct vec_ext *vec_ext = reinterpret_cast<struct vec_ext *>(charPtr);
 
-      _LIBUNWIND_TRACE_UNWINDING("vr_saved=%d\n", vec_ext->vr_saved);
+      _LIBUNWIND_TRACE_UNWINDING("vr_saved=%d", vec_ext->vr_saved);
 
       // Restore vector register(s) if saved on the stack.
       if (vec_ext->vr_saved) {
@@ -2460,11 +2516,11 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
 
     // Do we need to set the TOC register?
     _LIBUNWIND_TRACE_UNWINDING(
-        "Current gpr2=%p\n",
+        "Current gpr2=%p",
         reinterpret_cast<void *>(newRegisters.getRegister(2)));
     if (firstInstruction == loadTOCRegInst) {
       _LIBUNWIND_TRACE_UNWINDING(
-          "Set gpr2=%p from frame\n",
+          "Set gpr2=%p from frame",
           reinterpret_cast<void *>(reinterpret_cast<pint_t *>(lastStack)[5]));
       newRegisters.setRegister(2, reinterpret_cast<pint_t *>(lastStack)[5]);
     }
@@ -2496,7 +2552,6 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
   } else {
     isSignalFrame = false;
   }
-
   return UNW_STEP_SUCCESS;
 }
 #endif // defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
@@ -2648,20 +2703,12 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
   // [1] https://github.com/torvalds/linux/blob/master/arch/arm64/kernel/vdso/sigreturn.S
   const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
-  // directly accessing it could cause a segfault. Use process_vm_readv to read
-  // the memory safely instead. process_vm_readv was added in Linux 3.2, and
-  // AArch64 supported was added in Linux 3.7, so the syscall is guaranteed to
-  // be present. Unfortunately, there are Linux AArch64 environments where the
-  // libc wrapper for the syscall might not be present (e.g. Android 5), so call
-  // the syscall directly instead.
-  uint32_t instructions[2];
-  struct iovec local_iov = {&instructions, sizeof instructions};
-  struct iovec remote_iov = {reinterpret_cast<void *>(pc), sizeof instructions};
-  long bytesRead =
-      syscall(SYS_process_vm_readv, getpid(), &local_iov, 1, &remote_iov, 1, 0);
+  // directly accessing it could cause a SIGSEGV.
+  if (!isReadableAddr(pc))
+    return false;
+  auto *instructions = reinterpret_cast<const uint32_t *>(pc);
   // Look for instructions: mov x8, #0x8b; svc #0x0
-  if (bytesRead != sizeof instructions || instructions[0] != 0xd2801168 ||
-      instructions[1] != 0xd4000001)
+  if (instructions[0] != 0xd2801168 || instructions[1] != 0xd4000001)
     return false;
 
   _info = {};
@@ -2706,6 +2753,59 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_arm64 &) {
        // defined(_LIBUNWIND_TARGET_AARCH64)
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
+    defined(_LIBUNWIND_TARGET_RISCV)
+template <typename A, typename R>
+bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_riscv &) {
+  const pint_t pc = static_cast<pint_t>(getReg(UNW_REG_IP));
+  // The PC might contain an invalid address if the unwind info is bad, so
+  // directly accessing it could cause a SIGSEGV.
+  if (!isReadableAddr(pc))
+    return false;
+  const auto *instructions = reinterpret_cast<const uint32_t *>(pc);
+  // Look for the two instructions used in the sigreturn trampoline
+  // __vdso_rt_sigreturn:
+  //
+  // 0x08b00893 li a7,0x8b
+  // 0x00000073 ecall
+  if (instructions[0] != 0x08b00893 || instructions[1] != 0x00000073)
+    return false;
+
+  _info = {};
+  _info.start_ip = pc;
+  _info.end_ip = pc + 4;
+  _isSigReturn = true;
+  return true;
+}
+
+template <typename A, typename R>
+int UnwindCursor<A, R>::stepThroughSigReturn(Registers_riscv &) {
+  // In the signal trampoline frame, sp points to an rt_sigframe[1], which is:
+  //  - 128-byte siginfo struct
+  //  - ucontext_t struct:
+  //     - 8-byte long (__uc_flags)
+  //     - 8-byte pointer (*uc_link)
+  //     - 24-byte uc_stack
+  //     - 8-byte uc_sigmask
+  //     - 120-byte of padding to allow sigset_t to be expanded in the future
+  //     - 8 bytes of padding because sigcontext has 16-byte alignment
+  //     - struct sigcontext uc_mcontext
+  // [1]
+  // https://github.com/torvalds/linux/blob/master/arch/riscv/kernel/signal.c
+  const pint_t kOffsetSpToSigcontext = 128 + 8 + 8 + 24 + 8 + 128;
+
+  const pint_t sigctx = _registers.getSP() + kOffsetSpToSigcontext;
+  _registers.setIP(_addressSpace.get64(sigctx));
+  for (int i = UNW_RISCV_X1; i <= UNW_RISCV_X31; ++i) {
+    uint64_t value = _addressSpace.get64(sigctx + static_cast<pint_t>(i * 8));
+    _registers.setRegister(i, value);
+  }
+  _isSignalFrame = true;
+  return UNW_STEP_SUCCESS;
+}
+#endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
+       // defined(_LIBUNWIND_TARGET_RISCV)
+
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
     defined(_LIBUNWIND_TARGET_S390X)
 template <typename A, typename R>
 bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_s390x &) {
@@ -2716,13 +2816,11 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_s390x &) {
   // onto the stack.
   const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
-  // directly accessing it could cause a segfault. Use process_vm_readv to
-  // read the memory safely instead.
-  uint16_t inst;
-  struct iovec local_iov = {&inst, sizeof inst};
-  struct iovec remote_iov = {reinterpret_cast<void *>(pc), sizeof inst};
-  long bytesRead = process_vm_readv(getpid(), &local_iov, 1, &remote_iov, 1, 0);
-  if (bytesRead == sizeof inst && (inst == 0x0a77 || inst == 0x0aad)) {
+  // directly accessing it could cause a SIGSEGV.
+  if (!isReadableAddr(pc))
+    return false;
+  const auto inst = *reinterpret_cast<const uint16_t *>(pc);
+  if (inst == 0x0a77 || inst == 0x0aad) {
     _info = {};
     _info.start_ip = pc;
     _info.end_ip = pc + 2;
@@ -2867,6 +2965,37 @@ bool UnwindCursor<A, R>::getFunctionName(char *buf, size_t bufLen,
   return _addressSpace.findFunctionName((pint_t)this->getReg(UNW_REG_IP),
                                          buf, bufLen, offset);
 }
+
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)
+template <typename A, typename R>
+bool UnwindCursor<A, R>::isReadableAddr(const pint_t addr) const {
+  // We use SYS_rt_sigprocmask, inspired by Abseil's AddressIsReadable.
+
+  const auto sigsetAddr = reinterpret_cast<sigset_t *>(addr);
+  // We have to check that addr is nullptr because sigprocmask allows that
+  // as an argument without failure.
+  if (!sigsetAddr)
+    return false;
+  const auto saveErrno = errno;
+  // We MUST use a raw syscall here, as wrappers may try to access
+  // sigsetAddr which may cause a SIGSEGV. A raw syscall however is
+  // safe. Additionally, we need to pass the kernel_sigset_size, which is
+  // different from libc sizeof(sigset_t). For the majority of architectures,
+  // it's 64 bits (_NSIG), and libc NSIG is _NSIG + 1.
+  const auto kernelSigsetSize = NSIG / 8;
+  [[maybe_unused]] const int Result = syscall(
+      SYS_rt_sigprocmask, /*how=*/~0, sigsetAddr, nullptr, kernelSigsetSize);
+  // Because our "how" is invalid, this syscall should always fail, and our
+  // errno should always be EINVAL or an EFAULT. This relies on the Linux
+  // kernel to check copy_from_user before checking if the "how" argument is
+  // invalid.
+  assert(Result == -1);
+  assert(errno == EFAULT || errno == EINVAL);
+  const auto readable = errno != EFAULT;
+  errno = saveErrno;
+  return readable;
+}
+#endif
 
 #if defined(_LIBUNWIND_USE_CET)
 extern "C" void *__libunwind_cet_get_registers(unw_cursor_t *cursor) {

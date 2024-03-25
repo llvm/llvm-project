@@ -18,8 +18,7 @@
 #include "test_macros.h"
 
 // Flag that makes the copy constructor for CMyClass throw an exception
-static bool gCopyConstructorShouldThow = false;
-
+static bool gCopyConstructorShouldThrow = false;
 
 class CMyClass {
     public: CMyClass();
@@ -48,8 +47,8 @@ CMyClass::CMyClass(const CMyClass& /*iOther*/) :
     fMagicValue(kStartedConstructionMagicValue)
 {
     // If requested, throw an exception _before_ setting fMagicValue to kFinishedConstructionMagicValue
-    if (gCopyConstructorShouldThow) {
-        throw std::exception();
+    if (gCopyConstructorShouldThrow) {
+      throw std::exception();
     }
     // Signal that the constructor has finished running
     fMagicValue = kFinishedConstructionMagicValue;
@@ -67,7 +66,7 @@ int main(int, char**)
 
     vec.push_back(instance);
 
-    gCopyConstructorShouldThow = true;
+    gCopyConstructorShouldThrow = true;
     try {
         vec.push_back(instance);
     }

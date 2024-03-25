@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Check for 8.6.4(1)
 ! The BIND statement specifies the BIND attribute for a list of variables and
 ! common blocks.
@@ -6,10 +6,10 @@
 module m
 
   interface
-    subroutine proc() bind(c)
+    subroutine proc()
     end
   end interface
-  procedure(proc), bind(c) :: pc1
+  procedure(proc) :: pc1
   !ERROR: Only variable and named common block can be in BIND statement
   bind(c) :: proc
   !ERROR: Only variable and named common block can be in BIND statement

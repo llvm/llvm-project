@@ -14,7 +14,6 @@ namespace test0 {
   B b;
 }
 
-// rdar://problem/8204127
 namespace test1 {
   template <class T> struct A;
 
@@ -58,7 +57,6 @@ namespace test2 {
   };
 }
 
-// Tests 3, 4 and 5 were all noted in <rdar://problem/8540527>.
 namespace test3 {
   template <class T> struct A {
     struct Inner {

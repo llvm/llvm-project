@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
@@ -28,9 +29,9 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
                                 PatternRewriter &rewriter) const override {
     Value input = op.getInput();
     Value weight = op.getWeight();
-    ShapedType inputType = input.getType().cast<ShapedType>();
-    ShapedType weightType = weight.getType().cast<ShapedType>();
-    ShapedType resultType = op.getOutput().getType().cast<ShapedType>();
+    ShapedType inputType = cast<ShapedType>(input.getType());
+    ShapedType weightType = cast<ShapedType>(weight.getType());
+    ShapedType resultType = cast<ShapedType>(op.getOutput().getType());
 
     if (!(inputType.hasStaticShape() && weightType.hasStaticShape() &&
           resultType.hasStaticShape())) {
@@ -52,7 +53,7 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
         inputShape[0], inputShape[1], inputShape[2], inputShape[3], 1};
     inputType = RankedTensorType::get(
         revisedInputShape,
-        input.getType().dyn_cast<RankedTensorType>().getElementType());
+        dyn_cast<RankedTensorType>(input.getType()).getElementType());
     input = rewriter
                 .create<tosa::ReshapeOp>(
                     op.getLoc(), inputType, input,
@@ -76,8 +77,10 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
       auto applyZp = [&](Value val, int64_t zp) -> Value {
         if (zp == 0)
           return val;
-        auto ety = val.getType().cast<ShapedType>().getElementType();
-        auto zpTy = RankedTensorType::get({}, ety);
+        auto ety = cast<ShapedType>(val.getType()).getElementType();
+        std::vector<int64_t> shape(cast<ShapedType>(val.getType()).getRank(),
+                                   1);
+        auto zpTy = RankedTensorType::get(shape, ety);
         auto zpAttr =
             DenseElementsAttr::get(zpTy, rewriter.getIntegerAttr(ety, zp));
         auto zpVal = rewriter.create<tosa::ConstOp>(op.getLoc(), zpTy, zpAttr);
@@ -126,25 +129,34 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
         inputType.getDimSize(2), inputType.getDimSize(3), weightShape[3]};
     auto mulShapeType = RankedTensorType::get(
         mulShape,
-        weight.getType().dyn_cast<RankedTensorType>().getElementType());
+        dyn_cast<RankedTensorType>(weight.getType()).getElementType());
+
+    if (EqualizeRanks(rewriter, op.getLoc(), input, weight).failed()) {
+      return failure();
+    }
+
     Value mulValue = rewriter
                          .create<tosa::MulOp>(op.getLoc(), mulShapeType, input,
                                               weight, /*shift=*/0)
                          .getResult();
 
     // Reshape output to [N, H, W, C * M].
-    auto outputShape = op.getOutput().getType().cast<ShapedType>().getShape();
+    auto outputShape = cast<ShapedType>(op.getOutput().getType()).getShape();
     auto outputShapeType = RankedTensorType::get(
         outputShape,
-        input.getType().dyn_cast<RankedTensorType>().getElementType());
-    auto outputValue = rewriter.create<tosa::ReshapeOp>(
+        dyn_cast<RankedTensorType>(input.getType()).getElementType());
+    Value outputValue = rewriter.create<tosa::ReshapeOp>(
         op.getLoc(), outputShapeType, mulValue,
         rewriter.getDenseI64ArrayAttr(outputShape));
 
+    Value bias = op.getBias();
+    if (EqualizeRanks(rewriter, op.getLoc(), outputValue, bias).failed()) {
+      return failure();
+    }
+
     // Add in the bias.
     rewriter
-        .replaceOpWithNewOp<tosa::AddOp>(op, outputShapeType, outputValue,
-                                         op.getBias())
+        .replaceOpWithNewOp<tosa::AddOp>(op, outputShapeType, outputValue, bias)
         .getResult();
     return success();
   }

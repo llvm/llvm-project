@@ -77,13 +77,10 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
@@ -112,33 +109,6 @@ static cl::opt<unsigned> LVLoopDepthThreshold(
     cl::init(2), cl::Hidden);
 
 namespace {
-
-struct LoopVersioningLICMLegacyPass : public LoopPass {
-  static char ID;
-
-  LoopVersioningLICMLegacyPass() : LoopPass(ID) {
-    initializeLoopVersioningLICMLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  bool runOnLoop(Loop *L, LPPassManager &LPM) override;
-
-  StringRef getPassName() const override { return "Loop Versioning for LICM"; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequiredID(LCSSAID);
-    AU.addRequired<LoopAccessLegacyAnalysis>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addRequiredID(LoopSimplifyID);
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-    AU.addPreserved<AAResultsWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-  }
-};
 
 struct LoopVersioningLICM {
   // We don't explicitly pass in LoopAccessInfo to the constructor since the
@@ -288,14 +258,19 @@ bool LoopVersioningLICM::legalLoopMemoryAccesses() {
     // With MustAlias its not worth adding runtime bound check.
     if (AS.isMustAlias())
       return false;
-    Value *SomePtr = AS.begin()->getValue();
+    const Value *SomePtr = AS.begin()->Ptr;
     bool TypeCheck = true;
     // Check for Mod & MayAlias
     HasMayAlias |= AS.isMayAlias();
     HasMod |= AS.isMod();
-    for (const auto &A : AS) {
-      Value *Ptr = A.getValue();
+    for (const auto &MemLoc : AS) {
+      const Value *Ptr = MemLoc.Ptr;
       // Alias tracker should have pointers of same data type.
+      //
+      // FIXME: check no longer effective since opaque pointers?
+      // If the intent is to check that the memory accesses use the
+      // same data type (such that LICM can promote them), then we
+      // can no longer see this from the pointer value types.
       TypeCheck = (TypeCheck && (SomePtr->getType() == Ptr->getType()));
     }
     // At least one alias tracker should have pointers of same data type.
@@ -563,21 +538,6 @@ void LoopVersioningLICM::setNoAliasToLoop(Loop *VerLoop) {
   }
 }
 
-bool LoopVersioningLICMLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
-  if (skipLoop(L))
-    return false;
-
-  AliasAnalysis *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  OptimizationRemarkEmitter *ORE =
-      &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-  LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &LAIs = getAnalysis<LoopAccessLegacyAnalysis>().getLAIs();
-
-  return LoopVersioningLICM(AA, SE, ORE, LAIs, LI, L).run(DT);
-}
-
 bool LoopVersioningLICM::run(DominatorTree *DT) {
   // Do not do the transformation if disabled by metadata.
   if (hasLICMVersioningTransformation(CurLoop) & TM_Disable)
@@ -609,26 +569,6 @@ bool LoopVersioningLICM::run(DominatorTree *DT) {
     Changed = true;
   }
   return Changed;
-}
-
-char LoopVersioningLICMLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(LoopVersioningLICMLegacyPass, "loop-versioning-licm",
-                      "Loop Versioning For LICM", false, false)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LCSSAWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopAccessLegacyAnalysis)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
-INITIALIZE_PASS_END(LoopVersioningLICMLegacyPass, "loop-versioning-licm",
-                    "Loop Versioning For LICM", false, false)
-
-Pass *llvm::createLoopVersioningLICMPass() {
-  return new LoopVersioningLICMLegacyPass();
 }
 
 namespace llvm {

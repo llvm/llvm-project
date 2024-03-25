@@ -75,16 +75,6 @@ class CodeGenVTables {
                             bool vtableHasLocalLinkage,
                             bool isCompleteDtor) const;
 
-  /// Create a dso_local stub that will be used for a relative reference in the
-  /// relative vtable layout. This stub will just be a tail call to the original
-  /// function and propagate any function attributes from the original. If the
-  /// original function is already dso_local, the original is returned instead
-  /// and a stub is not created.
-  llvm::Function *
-  getOrCreateRelativeStub(llvm::Function *func,
-                          llvm::GlobalValue::LinkageTypes stubLinkage,
-                          bool isCompleteDtor) const;
-
   bool useRelativeLayout() const;
 
   llvm::Type *getVTableComponentType() const;

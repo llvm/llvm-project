@@ -15,7 +15,7 @@ define dso_local void @Widen_i32_i8ptr() local_unnamed_addr {
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[GID_0]], i64 1
 ; CHECK-NEXT:    [[ARRAYIDX2115:%.*]] = getelementptr inbounds [15 x ptr], ptr [[PTRIDS]], i64 0, i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store ptr [[GID_0]], ptr [[ARRAYIDX2115]], align 8
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br label [[FOR_COND2106]]
 ;
 entry:

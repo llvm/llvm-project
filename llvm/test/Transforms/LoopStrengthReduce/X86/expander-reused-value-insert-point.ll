@@ -20,15 +20,16 @@ define void @test(ptr %ioptr, i32 %X, ptr %start, ptr %end) {
 ; CHECK:       for.body37:
 ; CHECK-NEXT:    [[P0R_0335:%.*]] = phi ptr [ [[ADD_PTR94:%.*]], [[FOR_BODY37]] ], [ [[START:%.*]], [[FOR_BODY15]] ]
 ; CHECK-NEXT:    [[ADD_PTR94]] = getelementptr inbounds double, ptr [[P0R_0335]], i64 1
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P0R_0335]], i64 [[TMP1]]
-; CHECK-NEXT:    [[F1I_0:%.*]] = load double, ptr [[UGLYGEP]], align 8
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P0R_0335]], i64 [[TMP1]]
+; CHECK-NEXT:    [[F1I_0:%.*]] = load double, ptr [[SCEVGEP]], align 8
 ; CHECK-NEXT:    call void @use(double [[F1I_0]])
 ; CHECK-NEXT:    [[EC0:%.*]] = icmp eq ptr [[ADD_PTR94]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[EC0]], label [[FOR_BODY37]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    [[ADD_PTR94_LCSSA:%.*]] = phi ptr [ [[ADD_PTR94]], [[FOR_BODY37]] ]
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[P0R_0_LCSSA:%.*]] = phi ptr [ [[ADD_PTR94]], [[FOR_END_LOOPEXIT]] ]
+; CHECK-NEXT:    [[P0R_0_LCSSA:%.*]] = phi ptr [ [[ADD_PTR94_LCSSA]], [[FOR_END_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[EC1:%.*]] = icmp eq ptr [[P0R_0_LCSSA]], [[END]]
 ; CHECK-NEXT:    br i1 [[EC1]], label [[FOR_BODY15]], label [[FOR_INC133:%.*]]
 ; CHECK:       for.inc133:

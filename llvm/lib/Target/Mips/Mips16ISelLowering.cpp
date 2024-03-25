@@ -127,19 +127,19 @@ Mips16TargetLowering::Mips16TargetLowering(const MipsTargetMachine &TM,
   if (!Subtarget.useSoftFloat())
     setMips16HardFloatLibCalls();
 
-  setOperationAction(ISD::ATOMIC_FENCE,       MVT::Other, Expand);
-  setOperationAction(ISD::ATOMIC_CMP_SWAP,    MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_SWAP,        MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_ADD,    MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_SUB,    MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_AND,    MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_OR,     MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_XOR,    MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_NAND,   MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_MIN,    MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_MAX,    MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_UMIN,   MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_UMAX,   MVT::i32,   Expand);
+  setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, LibCall);
+  setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_SWAP, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_ADD, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_OR, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_XOR, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_NAND, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_MIN, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_MAX, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_UMIN, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_UMAX, MVT::i32, LibCall);
 
   setOperationAction(ISD::ROTR, MVT::i32,  Expand);
   setOperationAction(ISD::ROTR, MVT::i64,  Expand);

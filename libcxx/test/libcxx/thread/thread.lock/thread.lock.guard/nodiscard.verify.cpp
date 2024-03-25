@@ -23,9 +23,8 @@
 
 #include <mutex>
 
-int main(int, char**) {
+void f() {
     std::mutex m;
     std::lock_guard<std::mutex>{m}; // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
     std::lock_guard<std::mutex>{m, std::adopt_lock}; // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
-    return 0;
 }

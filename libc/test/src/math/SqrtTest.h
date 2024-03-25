@@ -7,20 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/bit.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
-#include "utils/UnitTest/Test.h"
 
-#include <math.h>
+#include "include/llvm-libc-macros/math-macros.h"
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-template <typename T> class SqrtTest : public __llvm_libc::testing::Test {
+template <typename T> class SqrtTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
-  static constexpr UIntType HIDDEN_BIT =
-      UIntType(1) << __llvm_libc::fputil::MantissaWidth<T>::VALUE;
+  static constexpr StorageType HIDDEN_BIT =
+      StorageType(1) << LIBC_NAMESPACE::fputil::FPBits<T>::FRACTION_LEN;
 
 public:
   typedef T (*SqrtFunc)(T);
@@ -38,49 +38,31 @@ public:
   }
 
   void test_denormal_values(SqrtFunc func) {
-    for (UIntType mant = 1; mant < HIDDEN_BIT; mant <<= 1) {
+    for (StorageType mant = 1; mant < HIDDEN_BIT; mant <<= 1) {
       FPBits denormal(T(0.0));
       denormal.set_mantissa(mant);
-
-      test_all_rounding_modes(func, T(denormal));
+      T x = denormal.get_val();
+      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x, func(x), 0.5);
     }
 
-    constexpr UIntType COUNT = 1'000'001;
-    constexpr UIntType STEP = HIDDEN_BIT / COUNT;
-    for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-      T x = __llvm_libc::cpp::bit_cast<T>(v);
-      test_all_rounding_modes(func, x);
+    constexpr StorageType COUNT = 200'001;
+    constexpr StorageType STEP = HIDDEN_BIT / COUNT;
+    for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
+      T x = LIBC_NAMESPACE::cpp::bit_cast<T>(v);
+      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x, func(x), 0.5);
     }
   }
 
   void test_normal_range(SqrtFunc func) {
-    constexpr UIntType COUNT = 10'000'001;
-    constexpr UIntType STEP = UIntType(-1) / COUNT;
-    for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-      T x = __llvm_libc::cpp::bit_cast<T>(v);
+    constexpr StorageType COUNT = 200'001;
+    constexpr StorageType STEP = STORAGE_MAX / COUNT;
+    for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
+      T x = LIBC_NAMESPACE::cpp::bit_cast<T>(v);
       if (isnan(x) || (x < 0)) {
         continue;
       }
-      test_all_rounding_modes(func, x);
+      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x, func(x), 0.5);
     }
-  }
-
-  void test_all_rounding_modes(SqrtFunc func, T x) {
-    mpfr::ForceRoundingMode r1(mpfr::RoundingMode::Nearest);
-    EXPECT_MPFR_MATCH(mpfr::Operation::Sqrt, x, func(x), 0.5,
-                      mpfr::RoundingMode::Nearest);
-
-    mpfr::ForceRoundingMode r2(mpfr::RoundingMode::Upward);
-    EXPECT_MPFR_MATCH(mpfr::Operation::Sqrt, x, func(x), 0.5,
-                      mpfr::RoundingMode::Upward);
-
-    mpfr::ForceRoundingMode r3(mpfr::RoundingMode::Downward);
-    EXPECT_MPFR_MATCH(mpfr::Operation::Sqrt, x, func(x), 0.5,
-                      mpfr::RoundingMode::Downward);
-
-    mpfr::ForceRoundingMode r4(mpfr::RoundingMode::TowardZero);
-    EXPECT_MPFR_MATCH(mpfr::Operation::Sqrt, x, func(x), 0.5,
-                      mpfr::RoundingMode::TowardZero);
   }
 };
 

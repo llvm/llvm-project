@@ -3,8 +3,8 @@
 add_subdirectory(lib)
 
 llvm_canonicalize_cmake_booleans(
-  FLANG_BUILD_EXAMPLES
   FLANG_STANDALONE_BUILD
+  LLVM_BUILD_EXAMPLES
   LLVM_BYE_LINK_INTO_TOOLS
   LLVM_ENABLE_PLUGINS
 )
@@ -59,6 +59,7 @@ set(FLANG_TEST_DEPENDS
   bbc
   llvm-dis
   llvm-objdump
+  llvm-readobj
   split-file
   FortranRuntime
   Fortran_main
@@ -74,10 +75,11 @@ if (FLANG_INCLUDE_TESTS)
   endif()
 endif()
 
-if (FLANG_BUILD_EXAMPLES)
+if (LLVM_BUILD_EXAMPLES)
   list(APPEND FLANG_TEST_DEPENDS
     flangPrintFunctionNames
     flangOmpReport
+    flangFeatureList
     )
 endif ()
 

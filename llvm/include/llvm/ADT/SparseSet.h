@@ -203,6 +203,7 @@ public:
   ///
   iterator findIndex(unsigned Idx) {
     assert(Idx < Universe && "Key out of range");
+    assert(Sparse != nullptr && "Invalid sparse type");
     const unsigned Stride = std::numeric_limits<SparseT>::max() + 1u;
     for (unsigned i = Sparse[Idx], e = size(); i < e; i += Stride) {
       const unsigned FoundIdx = ValIndexOf(Dense[i]);
@@ -232,7 +233,7 @@ public:
   /// Check if the set contains the given \c Key.
   ///
   /// @param Key A valid key to find.
-  bool contains(const KeyT &Key) const { return find(Key) == end() ? 0 : 1; }
+  bool contains(const KeyT &Key) const { return find(Key) != end(); }
 
   /// count - Returns 1 if this set contains an element identified by Key,
   /// 0 otherwise.

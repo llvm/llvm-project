@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy %s altera-unroll-loops %t -- -config="{CheckOptions: [{key: "altera-unroll-loops.MaxLoopIterations", value: 50}]}" -header-filter=.*
-// RUN: %check_clang_tidy -check-suffix=MULT %s altera-unroll-loops %t -- -config="{CheckOptions: [{key: "altera-unroll-loops.MaxLoopIterations", value: 5}]}" -header-filter=.* "--" -DMULT
+// RUN: %check_clang_tidy %s altera-unroll-loops %t -- -config="{CheckOptions: {altera-unroll-loops.MaxLoopIterations: 50}}" -header-filter=.*
+// RUN: %check_clang_tidy -check-suffix=MULT %s altera-unroll-loops %t -- -config="{CheckOptions: {altera-unroll-loops.MaxLoopIterations: 5}}" -header-filter=.* "--" -DMULT
 
 #ifdef MULT
 // For loops with *= and /= increments.

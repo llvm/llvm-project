@@ -1,4 +1,5 @@
 # RUN: llvm-exegesis -mode=latency -opcode-name=ADDXrr | FileCheck %s
+# REQUIRES: exegesis-can-execute-aarch64, exegesis-can-measure-latency
 
 CHECK:      ---
 CHECK-NEXT: mode: latency

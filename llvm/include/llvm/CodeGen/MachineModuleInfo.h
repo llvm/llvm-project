@@ -84,7 +84,7 @@ class MachineModuleInfo {
   MCContext *ExternalContext = nullptr;
 
   /// This is the LLVM Module being worked on.
-  const Module *TheModule;
+  const Module *TheModule = nullptr;
 
   /// This is the object-file-format-specific implementation of
   /// MachineModuleInfoImpl, which lets targets accumulate whatever info they
@@ -95,7 +95,7 @@ class MachineModuleInfo {
   /// \{
 
   /// The current call site index being processed, if any. 0 if none.
-  unsigned CurCallSite;
+  unsigned CurCallSite = 0;
 
   /// \}
 
@@ -106,11 +106,11 @@ class MachineModuleInfo {
   // go into .eh_frame only, while others go into .debug_frame only.
 
   /// True if debugging information is available in this module.
-  bool DbgInfoAvailable;
+  bool DbgInfoAvailable = false;
 
   /// True if this module is being built for windows/msvc, and uses floating
   /// point.  This is used to emit an undefined reference to _fltused.
-  bool UsesMSVCFloatingPoint;
+  bool UsesMSVCFloatingPoint = false;
 
   /// Maps IR Functions to their corresponding MachineFunctions.
   DenseMap<const Function*, std::unique_ptr<MachineFunction>> MachineFunctions;
@@ -192,12 +192,6 @@ public:
   unsigned getCurrentCallSite() { return CurCallSite; }
 
   /// \}
-
-  // MMI owes MCContext. It should never be invalidated.
-  bool invalidate(Module &, const PreservedAnalyses &,
-                  ModuleAnalysisManager::Invalidator &) {
-    return false;
-  }
 }; // End class MachineModuleInfo
 
 class MachineModuleInfoWrapperPass : public ImmutablePass {
@@ -218,21 +212,37 @@ public:
   const MachineModuleInfo &getMMI() const { return MMI; }
 };
 
-/// An analysis that produces \c MachineInfo for a module.
+/// An analysis that produces \c MachineModuleInfo for a module.
+/// This does not produce its own MachineModuleInfo because we need a consistent
+/// MachineModuleInfo to keep ownership of MachineFunctions regardless of
+/// analysis invalidation/clearing. So something outside the analysis
+/// infrastructure must own the MachineModuleInfo.
 class MachineModuleAnalysis : public AnalysisInfoMixin<MachineModuleAnalysis> {
   friend AnalysisInfoMixin<MachineModuleAnalysis>;
   static AnalysisKey Key;
 
-  const LLVMTargetMachine *TM;
+  MachineModuleInfo &MMI;
 
 public:
-  /// Provide the result type for this analysis pass.
-  using Result = MachineModuleInfo;
+  class Result {
+    MachineModuleInfo &MMI;
+    Result(MachineModuleInfo &MMI) : MMI(MMI) {}
+    friend class MachineModuleAnalysis;
 
-  MachineModuleAnalysis(const LLVMTargetMachine *TM) : TM(TM) {}
+  public:
+    MachineModuleInfo &getMMI() { return MMI; }
+
+    // MMI owes MCContext. It should never be invalidated.
+    bool invalidate(Module &, const PreservedAnalyses &,
+                    ModuleAnalysisManager::Invalidator &) {
+      return false;
+    }
+  };
+
+  MachineModuleAnalysis(MachineModuleInfo &MMI) : MMI(MMI) {}
 
   /// Run the analysis pass and produce machine module information.
-  MachineModuleInfo run(Module &M, ModuleAnalysisManager &);
+  Result run(Module &M, ModuleAnalysisManager &);
 };
 
 } // end namespace llvm

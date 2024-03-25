@@ -28,7 +28,6 @@ using ::llvm::HasValue;
 using ::llvm::StringError;
 using ::testing::AllOf;
 using ::testing::HasSubstr;
-using ::testing::Property;
 
 using MatchResult = MatchFinder::MatchResult;
 
@@ -484,6 +483,22 @@ TEST(RangeSelectorTest, NameOpTypeLoc) {
   TestMatch MatchC = matchCode(
       Code, cxxTemporaryObjectExpr(hasTypeLoc(typeLoc().bind(CtorTy))));
   EXPECT_THAT_EXPECTED(select(name(CtorTy), MatchC), HasValue("Foo"));
+}
+
+TEST(RangeSelectorTest, NameOpTemplateSpecializationTypeLoc) {
+  StringRef Code = R"cc(
+    namespace ns {
+    template <typename T>
+    struct Foo {};
+    }  // namespace ns
+
+    ns::Foo<int> a;
+  )cc";
+  const char *Loc = "tyloc";
+  // Matches declaration of `a`.
+  TestMatch MatchA =
+      matchCode(Code, varDecl(hasName("a"), hasTypeLoc(typeLoc().bind(Loc))));
+  EXPECT_THAT_EXPECTED(select(name(Loc), MatchA), HasValue("Foo"));
 }
 
 TEST(RangeSelectorTest, NameOpErrors) {

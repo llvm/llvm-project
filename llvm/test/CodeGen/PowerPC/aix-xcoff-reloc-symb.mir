@@ -21,7 +21,7 @@ body:             |
 ...
 
 # RELOC:       Relocation {{[{][[:space:]] *}}Virtual Address: 0x8
-# RELOC-NEXT:    Symbol: .text ([[#TXT_INDX:]])
+# RELOC-NEXT:    Symbol:  ([[#TXT_INDX:]])
 # RELOC-NEXT:    IsSigned: No
 # RELOC-NEXT:    FixupBitValue: 0
 # RELOC-NEXT:    Length: 32
@@ -36,7 +36,7 @@ body:             |
 # RELOC-NEXT:    Type: R_NEG (0x1)
 # RELOC-NEXT:  }
 
-# SYM:       Symbol {{[{][[:space:]] *}}Index: [[#TXT_INDX]]{{[[:space:]] *}}Name: .text
+# SYM:       Symbol {{[{][[:space:]] *}}Index: [[#TXT_INDX]]{{[[:space:]] *}}Name: 
 # SYM-NEXT:    Value (RelocatableAddress): 0x0
 # SYM-NEXT:    Section: .text
 # SYM-NEXT:    Type: 0x0

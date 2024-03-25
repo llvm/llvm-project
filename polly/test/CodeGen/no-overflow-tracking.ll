@@ -1,5 +1,5 @@
-; RUN: opt -opaque-pointers=0 %loadPolly -polly-invariant-load-hoisting=true -polly-print-scops -disable-output < %s | FileCheck %s
-; RUN: opt -opaque-pointers=0 %loadPolly -polly-invariant-load-hoisting=true -polly-overflow-tracking=never -polly-codegen -S < %s | FileCheck %s --check-prefix=IR
+; RUN: opt %loadPolly -polly-invariant-load-hoisting=true -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-invariant-load-hoisting=true -polly-overflow-tracking=never -polly-codegen -S < %s | FileCheck %s --check-prefix=IR
 ;
 ; As (p + q) can overflow we have to check that we load from
 ; I[p + q] only if it does not.
@@ -14,8 +14,8 @@
 ; CHECK-NEXT:    }
 ;
 ; IR:      polly.preload.merge:
-; IR-NEXT:   %polly.preload.tmp1.merge = phi i32* [ %polly.access.I.load, %polly.preload.exec ], [ null, %polly.preload.cond ]
-; IR-NEXT:   store i32* %polly.preload.tmp1.merge, i32** %tmp1.preload.s2a
+; IR-NEXT:   %polly.preload.tmp1.merge = phi ptr [ %polly.access.I.load, %polly.preload.exec ], [ null, %polly.preload.cond ]
+; IR-NEXT:   store ptr %polly.preload.tmp1.merge, ptr %tmp1.preload.s2a
 ; IR-NEXT:   %12 = sext i32 %N to i64
 ; IR-NEXT:   %13 = icmp sge i64 %12, 1
 ; IR-NEXT:   %14 = sext i32 %q to i64
@@ -35,8 +35,8 @@
 ; IR-NEXT:   br i1 %polly.preload.cond.result1
 ;
 ; IR:      polly.preload.exec4:
-; IR-NEXT:   %polly.access.polly.preload.tmp1.merge = getelementptr i32, i32* %polly.preload.tmp1.merge, i64 0
-; IR-NEXT:   %polly.access.polly.preload.tmp1.merge.load = load i32, i32* %polly.access.polly.preload.tmp1.merge, align 4
+; IR-NEXT:   %polly.access.polly.preload.tmp1.merge = getelementptr i32, ptr %polly.preload.tmp1.merge, i64 0
+; IR-NEXT:   %polly.access.polly.preload.tmp1.merge.load = load i32, ptr %polly.access.polly.preload.tmp1.merge, align 4
 ;
 ;    void f(int **I, int *A, int N, int p, int q) {
 ;      for (int i = 0; i < N; i++)
@@ -45,7 +45,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32** %I, i32* %A, i32 %N, i32 %p, i32 %q) {
+define void @f(ptr %I, ptr %A, i32 %N, i32 %p, i32 %q) {
 entry:
   %tmp = sext i32 %N to i64
   br label %for.cond
@@ -58,11 +58,11 @@ for.cond:                                         ; preds = %for.inc, %entry
 for.body:                                         ; preds = %for.cond
   %add = add i32 %p, %q
   %idxprom = sext i32 %add to i64
-  %arrayidx = getelementptr inbounds i32*, i32** %I, i64 %idxprom
-  %tmp1 = load i32*, i32** %arrayidx, align 8
-  %tmp2 = load i32, i32* %tmp1, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %tmp2, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds ptr, ptr %I, i64 %idxprom
+  %tmp1 = load ptr, ptr %arrayidx, align 8
+  %tmp2 = load i32, ptr %tmp1, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %tmp2, ptr %arrayidx2, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

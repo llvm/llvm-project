@@ -8,6 +8,8 @@
 
 #include "Procfs.h"
 #include "lldb/Host/linux/Support.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 #include <optional>
@@ -67,4 +69,19 @@ lldb_private::process_linux::GetAvailableLogicalCoreIDs() {
     logical_cores_ids.emplace(std::move(*cpu_ids));
   }
   return *logical_cores_ids;
+}
+
+llvm::Expected<int> lldb_private::process_linux::GetPtraceScope() {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> ptrace_scope_file =
+      getProcFile("sys/kernel/yama/ptrace_scope");
+  if (!*ptrace_scope_file)
+    return errorCodeToError(ptrace_scope_file.getError());
+  // The contents should be something like "1\n". Trim it so we get "1".
+  StringRef buffer = (*ptrace_scope_file)->getBuffer().trim();
+  int ptrace_scope_value;
+  if (buffer.getAsInteger(10, ptrace_scope_value)) {
+    return createStringError(inconvertibleErrorCode(),
+                             "Invalid ptrace_scope value: '%s'", buffer.data());
+  }
+  return ptrace_scope_value;
 }

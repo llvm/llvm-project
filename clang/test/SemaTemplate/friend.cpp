@@ -148,3 +148,21 @@ namespace PR42513_comment3 {
   template struct T<X1>;
   int n = f((X1*)nullptr); // expected-error {{cannot initialize a variable of type 'int' with an rvalue of type 'std::nullptr_t'}}
 }
+
+namespace GH61851 {
+namespace A {
+inline namespace B {
+  constexpr struct {} foo;
+}
+
+template <typename T>
+class Bar {
+  template <typename U>
+  friend void foo(U &&arg) {} // no diagnostic expected
+};
+}
+
+void foobar() {
+  A::Bar<int> b;
+}
+}

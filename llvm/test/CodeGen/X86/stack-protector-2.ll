@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -start-before=stack-protector -stop-after=stack-protector -o - < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -start-before=stack-protector \
+; RUN:   -stop-after=stack-protector -o - < %s | FileCheck %s
 ; Bugs 42238/43308: Test some additional situations not caught previously.
 
 define void @store_captures() #0 {
@@ -217,6 +218,15 @@ if.end:                                           ; preds = %entry
 
 return:                                           ; preds = %if.end, %if.then
   ret i32 0
+}
+
+declare void @callee() noreturn nounwind
+define void @caller() sspstrong {
+; Test that a stack protector is NOT inserted when we call nounwind functions.
+; CHECK-LABEL: @caller
+; CHECK-NEXT: call void @callee
+  call void @callee() noreturn nounwind
+  ret void
 }
 
 attributes #0 = { sspstrong }

@@ -1,9 +1,6 @@
 InheritParentConfig: true
 Checks: 'llvm-qualified-auto'
 CheckOptions:
-  - key:             modernize-loop-convert.MaxCopySize
-    value:           '20'
-  - key:             llvm-qualified-auto.AddConstToQualified
-    value:           'true'
-  - key:             IgnoreMacros
-    value:           'false'
+  modernize-loop-convert.MaxCopySize: '20'
+  llvm-qualified-auto.AddConstToQualified: 'true'
+  IgnoreMacros: 'false'

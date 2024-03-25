@@ -9,19 +9,19 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import os
 
-class ExecTestCase(TestBase):
 
+class ExecTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    def test_zero_dwo_id (self):
-        '''
-            Test that we can load a .o file that has a skeleton compile unit
-            with a DWO ID of zero. We do this by hacking up the yaml to emit
-            zero as a DWO ID is both the .o file and .dwo file. Then we make
-            sure we can resolve something in the debug information to verify
-            that we were able to load the .dwo file corrrectly since that is
-            the only place that has this information.
-        '''
+    def test_zero_dwo_id(self):
+        """
+        Test that we can load a .o file that has a skeleton compile unit
+        with a DWO ID of zero. We do this by hacking up the yaml to emit
+        zero as a DWO ID is both the .o file and .dwo file. Then we make
+        sure we can resolve something in the debug information to verify
+        that we were able to load the .dwo file corrrectly since that is
+        the only place that has this information.
+        """
         src_dir = self.getSourceDir()
         dwo_yaml_path = os.path.join(src_dir, "main.dwo.yaml")
         obj_yaml_path = os.path.join(src_dir, "main.o.yaml")
@@ -38,7 +38,7 @@ class ExecTestCase(TestBase):
 
         # Set a breakpoint by file and line, this doesn't require anything from
         # the .dwo file.
-        bp = target.BreakpointCreateByLocation('main.cpp', 6)
+        bp = target.BreakpointCreateByLocation("main.cpp", 6)
         self.assertEqual(bp.GetNumLocations(), 1)
         bp_loc = bp.GetLocationAtIndex(0)
         self.assertTrue(bp_loc.IsValid())

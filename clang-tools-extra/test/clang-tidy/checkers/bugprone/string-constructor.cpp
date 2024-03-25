@@ -49,6 +49,8 @@ void Test() {
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: negative value used as length parameter
   std::string q2("test", 200);
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger than string literal size
+  std::string t1("test", 5);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger than string literal size
   std::string q3(kText, 200);
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger than string literal size
   std::string q4(kText2, 200);
@@ -97,6 +99,8 @@ void Valid() {
   std::string s1("test", 4);
   std::string s2("test", 3);
   std::string s3("test");
+  std::string s4("test\000", 5);
+  std::string s6("te" "st", 4);
 
   std::string_view emptyv();
   std::string_view sv1("test", 4);

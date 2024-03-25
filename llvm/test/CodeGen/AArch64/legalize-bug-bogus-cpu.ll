@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-eabi -mcpu=bogus
+; RUN: llc < %s -mtriple=aarch64 -mcpu=bogus
 
 ; Fix the bug in PR20557. Set mcpu to a bogus name, llc will crash in type
 ; legalization.

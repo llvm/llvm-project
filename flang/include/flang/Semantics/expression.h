@@ -327,8 +327,8 @@ private:
       const parser::SectionSubscript &);
   std::vector<Subscript> AnalyzeSectionSubscripts(
       const std::list<parser::SectionSubscript> &);
-  std::optional<Component> CreateComponent(
-      DataRef &&, const Symbol &, const semantics::Scope &);
+  std::optional<Component> CreateComponent(DataRef &&, const Symbol &,
+      const semantics::Scope &, bool C919bAlreadyEnforced = false);
   MaybeExpr CompleteSubscripts(ArrayRef &&);
   MaybeExpr ApplySubscripts(DataRef &&, std::vector<Subscript> &&);
   void CheckConstantSubscripts(ArrayRef &);
@@ -380,12 +380,16 @@ private:
   }
   bool CheckIsValidForwardReference(const semantics::DerivedTypeSpec &);
   MaybeExpr AnalyzeComplex(MaybeExpr &&re, MaybeExpr &&im, const char *what);
+  std::optional<Chevrons> AnalyzeChevrons(const parser::CallStmt &);
 
   MaybeExpr IterativelyAnalyzeSubexpressions(const parser::Expr &);
 
   semantics::SemanticsContext &context_;
   FoldingContext &foldingContext_{context_.foldingContext()};
   std::map<parser::CharBlock, int> impliedDos_; // values are INTEGER kinds
+  std::map<parser::CharBlock,
+      std::pair<parser::CharBlock, evaluate::characteristics::Procedure>>
+      implicitInterfaces_;
   bool isWholeAssumedSizeArrayOk_{false};
   bool isNullPointerOk_{false};
   bool useSavedTypedExprs_{true};
@@ -502,9 +506,18 @@ public:
   }
 
   bool Pre(const parser::ComponentDefStmt &) {
-    // Already analyzed in name resolution and PDT instantiation;
-    // do not attempt to re-analyze now without type parameters.
-    return false;
+    inComponentDefStmt_ = true;
+    return true;
+  }
+  void Post(const parser::ComponentDefStmt &) { inComponentDefStmt_ = false; }
+  bool Pre(const parser::Initialization &x) {
+    // Default component initialization expressions (but not DATA-like ones
+    // as in DEC STRUCTUREs) were already analyzed in name resolution
+    // and PDT instantiation; do not attempt to re-analyze them without
+    // type parameters.
+    return !inComponentDefStmt_ ||
+        std::holds_alternative<
+            std::list<common::Indirection<parser::DataStmtValue>>>(x.u);
   }
 
   template <typename A> bool Pre(const parser::Scalar<A> &x) {
@@ -534,6 +547,7 @@ private:
   SemanticsContext &context_;
   evaluate::ExpressionAnalyzer exprAnalyzer_{context_};
   int whereDepth_{0}; // nesting of WHERE statements & constructs
+  bool inComponentDefStmt_{false};
 };
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_EXPRESSION_H_

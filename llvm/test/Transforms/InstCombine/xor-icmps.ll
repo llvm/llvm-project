@@ -43,8 +43,8 @@ define i1 @eq_ne_zero(i4 %x, i4 %y) {
 define i1 @slt_zero(i4 %x, i4 %y) {
 ; CHECK-LABEL: @slt_zero(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i4 [[TMP1]], 0
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i4 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %i0 = icmp slt i4 %x, 0
   %i1 = icmp slt i4 %y, 0
@@ -89,8 +89,8 @@ define i1 @sgt_zero(i4 %x, i4 %y) {
 define i1 @sgt_minus1(i4 %x, i4 %y) {
 ; CHECK-LABEL: @sgt_minus1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i4 [[TMP1]], 0
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i4 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %i0 = icmp sgt i4 %x, -1
   %i1 = icmp sgt i4 %y, -1
@@ -101,8 +101,8 @@ define i1 @sgt_minus1(i4 %x, i4 %y) {
 define i1 @slt_zero_sgt_minus1(i4 %x, i4 %y) {
 ; CHECK-LABEL: @slt_zero_sgt_minus1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i4 [[TMP1]], -1
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i4 [[TMP1]], -1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %i0 = icmp slt i4 %x, 0
   %i1 = icmp sgt i4 %y, -1
@@ -113,8 +113,8 @@ define i1 @slt_zero_sgt_minus1(i4 %x, i4 %y) {
 define <2 x i1> @sgt_minus1_slt_zero_sgt(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @sgt_minus1_slt_zero_sgt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i4> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <2 x i4> [[TMP1]], <i4 -1, i4 -1>
-; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i4> [[TMP1]], <i4 -1, i4 -1>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %i1 = icmp sgt <2 x i4> %x, <i4 -1, i4 -1>
   %i0 = icmp slt <2 x i4> %y, zeroinitializer
@@ -139,8 +139,8 @@ define i1 @different_type_cmp_ops(i32 %x, i64 %y) {
 
 define i1 @test13(i8 %A, i8 %B) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[E:%.*]] = icmp ne i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[E]]
 ;
   %C = icmp ult i8 %A, %B
   %D = icmp ugt i8 %A, %B
@@ -171,3 +171,151 @@ define i1 @xor_icmp_ptr(ptr %c, ptr %d) {
   ret i1 %xor
 }
 
+; Tests from PR70928
+define i1 @xor_icmp_true_signed(i32 %a) {
+; CHECK-LABEL: @xor_icmp_true_signed(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp sgt i32 %a, 5
+  %cmp1 = icmp slt i32 %a, 6
+  %cmp3 = xor i1 %cmp, %cmp1
+  ret i1 %cmp3
+}
+define i1 @xor_icmp_true_signed_multiuse1(i32 %a) {
+; CHECK-LABEL: @xor_icmp_true_signed_multiuse1(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 5
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp sgt i32 %a, 5
+  call void @use(i1 %cmp)
+  %cmp1 = icmp slt i32 %a, 6
+  %cmp3 = xor i1 %cmp, %cmp1
+  ret i1 %cmp3
+}
+define i1 @xor_icmp_true_signed_multiuse2(i32 %a) {
+; CHECK-LABEL: @xor_icmp_true_signed_multiuse2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 5
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A]], 6
+; CHECK-NEXT:    call void @use(i1 [[CMP1]])
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp sgt i32 %a, 5
+  call void @use(i1 %cmp)
+  %cmp1 = icmp slt i32 %a, 6
+  call void @use(i1 %cmp1)
+  %cmp3 = xor i1 %cmp, %cmp1
+  ret i1 %cmp3
+}
+define i1 @xor_icmp_true_signed_commuted(i32 %a) {
+; CHECK-LABEL: @xor_icmp_true_signed_commuted(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp sgt i32 %a, 5
+  %cmp1 = icmp slt i32 %a, 6
+  %cmp3 = xor i1 %cmp1, %cmp
+  ret i1 %cmp3
+}
+define i1 @xor_icmp_true_unsigned(i32 %a) {
+; CHECK-LABEL: @xor_icmp_true_unsigned(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp ugt i32 %a, 5
+  %cmp1 = icmp ult i32 %a, 6
+  %cmp3 = xor i1 %cmp, %cmp1
+  ret i1 %cmp3
+}
+define i1 @xor_icmp_to_ne(i32 %a) {
+; CHECK-LABEL: @xor_icmp_to_ne(
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[A:%.*]], 5
+; CHECK-NEXT:    ret i1 [[CMP3]]
+;
+  %cmp = icmp sgt i32 %a, 4
+  %cmp1 = icmp slt i32 %a, 6
+  %cmp3 = xor i1 %cmp, %cmp1
+  ret i1 %cmp3
+}
+define i1 @xor_icmp_to_ne_multiuse1(i32 %a) {
+; CHECK-LABEL: @xor_icmp_to_ne_multiuse1(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 4
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[A]], 5
+; CHECK-NEXT:    ret i1 [[CMP3]]
+;
+  %cmp = icmp sgt i32 %a, 4
+  call void @use(i1 %cmp)
+  %cmp1 = icmp slt i32 %a, 6
+  %cmp3 = xor i1 %cmp, %cmp1
+  ret i1 %cmp3
+}
+define i1 @xor_icmp_to_icmp_add(i32 %a) {
+; CHECK-LABEL: @xor_icmp_to_icmp_add(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], -6
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[TMP1]], -2
+; CHECK-NEXT:    ret i1 [[CMP3]]
+;
+  %cmp = icmp sgt i32 %a, 3
+  %cmp1 = icmp slt i32 %a, 6
+  %cmp3 = xor i1 %cmp, %cmp1
+  ret i1 %cmp3
+}
+; Negative tests
+; The result of ConstantRange::difference is not exact.
+define i1 @xor_icmp_invalid_range(i8 %x0) {
+; CHECK-LABEL: @xor_icmp_invalid_range(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X0:%.*]], -5
+; CHECK-NEXT:    [[OR_COND:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[OR_COND]]
+;
+  %cmp = icmp eq i8 %x0, 0
+  %cmp4 = icmp ne i8 %x0, 4
+  %or.cond = xor i1 %cmp, %cmp4
+  ret i1 %or.cond
+}
+define i1 @xor_icmp_to_ne_multiuse2(i32 %a) {
+; CHECK-LABEL: @xor_icmp_to_ne_multiuse2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 4
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A]], 6
+; CHECK-NEXT:    call void @use(i1 [[CMP1]])
+; CHECK-NEXT:    [[CMP3:%.*]] = xor i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    ret i1 [[CMP3]]
+;
+  %cmp = icmp sgt i32 %a, 4
+  call void @use(i1 %cmp)
+  %cmp1 = icmp slt i32 %a, 6
+  call void @use(i1 %cmp1)
+  %cmp3 = xor i1 %cmp, %cmp1
+  ret i1 %cmp3
+}
+define i1 @xor_icmp_to_icmp_add_multiuse1(i32 %a) {
+; CHECK-LABEL: @xor_icmp_to_icmp_add_multiuse1(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 3
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A]], 6
+; CHECK-NEXT:    [[CMP3:%.*]] = xor i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    ret i1 [[CMP3]]
+;
+  %cmp = icmp sgt i32 %a, 3
+  call void @use(i1 %cmp)
+  %cmp1 = icmp slt i32 %a, 6
+  %cmp3 = xor i1 %cmp, %cmp1
+  ret i1 %cmp3
+}
+define i1 @xor_icmp_to_icmp_add_multiuse2(i32 %a) {
+; CHECK-LABEL: @xor_icmp_to_icmp_add_multiuse2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 3
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A]], 6
+; CHECK-NEXT:    call void @use(i1 [[CMP1]])
+; CHECK-NEXT:    [[CMP3:%.*]] = xor i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    ret i1 [[CMP3]]
+;
+  %cmp = icmp sgt i32 %a, 3
+  call void @use(i1 %cmp)
+  %cmp1 = icmp slt i32 %a, 6
+  call void @use(i1 %cmp1)
+  %cmp3 = xor i1 %cmp, %cmp1
+  ret i1 %cmp3
+}

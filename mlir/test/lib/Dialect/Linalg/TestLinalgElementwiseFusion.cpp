@@ -26,7 +26,7 @@ static void addOperands(Operation *op, SetVector<Value> &operandSet) {
     return;
   TypeSwitch<Operation *, void>(op)
       .Case<linalg::LinalgOp>([&](linalg::LinalgOp linalgOp) {
-        SmallVector<Value> inputOperands{linalgOp.getDpsInputOperands()};
+        SmallVector<Value> inputOperands = linalgOp.getDpsInputs();
         operandSet.insert(inputOperands.begin(), inputOperands.end());
       })
       .Default([&](Operation *operation) {
@@ -74,7 +74,7 @@ struct TestMultiUseProducerFusion : public OpRewritePattern<linalg::GenericOp> {
     if (!fusionResult)
       return rewriter.notifyMatchFailure(genericOp, "fusion failed");
     for (auto [origValue, replacement] : fusionResult->replacements) {
-      rewriter.replaceUseIf(origValue, replacement, [&](OpOperand &use) {
+      rewriter.replaceUsesWithIf(origValue, replacement, [&](OpOperand &use) {
         return use.getOwner() != genericOp.getOperation();
       });
     }
@@ -92,8 +92,8 @@ struct TestLinalgElementwiseFusion
   TestLinalgElementwiseFusion(const TestLinalgElementwiseFusion &pass)
       : PassWrapper(pass) {}
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,
-                    tensor::TensorDialect>();
+    registry.insert<affine::AffineDialect, linalg::LinalgDialect,
+                    memref::MemRefDialect, tensor::TensorDialect>();
   }
   StringRef getArgument() const final {
     return "test-linalg-elementwise-fusion-patterns";
@@ -258,7 +258,7 @@ struct TestLinalgElementwiseFusion
       SmallVector<int64_t, 2> dims(collapseDimensions.begin(),
                                    collapseDimensions.end());
       linalg::GetCollapsableDimensionsFn collapseFn =
-          [&dims](linalg::GenericOp op) {
+          [&dims](linalg::LinalgOp op) {
             SmallVector<ReassociationIndices> reassociations;
             reassociations.emplace_back(dims);
             return reassociations;

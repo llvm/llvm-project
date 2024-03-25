@@ -44,9 +44,9 @@ namespace {
 
 class VforkChecker : public Checker<check::PreCall, check::PostCall,
                                     check::Bind, check::PreStmt<ReturnStmt>> {
-  mutable std::unique_ptr<BuiltinBug> BT;
+  const BugType BT{this, "Dangerous construct in a vforked process"};
   mutable llvm::SmallSet<const IdentifierInfo *, 10> VforkAllowlist;
-  mutable const IdentifierInfo *II_vfork;
+  mutable const IdentifierInfo *II_vfork = nullptr;
 
   static bool isChildProcess(const ProgramStateRef State);
 
@@ -58,7 +58,7 @@ class VforkChecker : public Checker<check::PreCall, check::PostCall,
                  const char *Details = nullptr) const;
 
 public:
-  VforkChecker() : II_vfork(nullptr) {}
+  VforkChecker() = default;
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
@@ -123,10 +123,6 @@ bool VforkChecker::isCallExplicitelyAllowed(const IdentifierInfo *II,
 void VforkChecker::reportBug(const char *What, CheckerContext &C,
                              const char *Details) const {
   if (ExplodedNode *N = C.generateErrorNode(C.getState())) {
-    if (!BT)
-      BT.reset(new BuiltinBug(this,
-                              "Dangerous construct in a vforked process"));
-
     SmallString<256> buf;
     llvm::raw_svector_ostream os(buf);
 
@@ -135,7 +131,7 @@ void VforkChecker::reportBug(const char *What, CheckerContext &C,
     if (Details)
       os << "; " << Details;
 
-    auto Report = std::make_unique<PathSensitiveBugReport>(*BT, os.str(), N);
+    auto Report = std::make_unique<PathSensitiveBugReport>(BT, os.str(), N);
     // TODO: mark vfork call in BugReportVisitor
     C.emitReport(std::move(Report));
   }

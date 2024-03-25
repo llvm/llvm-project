@@ -30,7 +30,7 @@ class DXContainerObjectWriter : public MCObjectWriter {
 public:
   DXContainerObjectWriter(std::unique_ptr<MCDXContainerTargetWriter> MOTW,
                           raw_pwrite_stream &OS)
-      : W(OS, support::little), TargetObjectWriter(std::move(MOTW)) {}
+      : W(OS, llvm::endianness::little), TargetObjectWriter(std::move(MOTW)) {}
 
   ~DXContainerObjectWriter() override {}
 

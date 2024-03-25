@@ -20,19 +20,23 @@ using namespace lldb_private;
 llvm::VersionTuple HostInfoOpenBSD::GetOSVersion() {
   struct utsname un;
 
-  ::memset(&un, 0, sizeof(utsname));
-  if (uname(&un) < 0)
+  ::memset(&un, 0, sizeof(un));
+  if (::uname(&un) < 0)
     return llvm::VersionTuple();
 
-  unsigned major, minor;
-  if (2 == sscanf(un.release, "%u.%u", &major, &minor))
+  uint32_t major, minor;
+  int status = ::sscanf(un.release, "%" PRIu32 ".%" PRIu32, &major, &minor);
+  switch (status) {
+  case 1:
+    return llvm::VersionTuple(major);
+  case 2:
     return llvm::VersionTuple(major, minor);
+  }
   return llvm::VersionTuple();
 }
 
 std::optional<std::string> HostInfoOpenBSD::GetOSBuildString() {
   int mib[2] = {CTL_KERN, KERN_OSREV};
-  char osrev_str[12];
   uint32_t osrev = 0;
   size_t osrev_len = sizeof(osrev);
 

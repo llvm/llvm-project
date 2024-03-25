@@ -9,12 +9,14 @@
 
 // INLINE:     "-fsplit-dwarf-inlining"
 // NOINLINE-NOT: "-fsplit-dwarf-inlining"
+// SPLIT-NOT:  "-dumpdir"
 // SPLIT:      "-debug-info-kind=constructor"
 // SPLIT-SAME: "-ggnu-pubnames"
 // SPLIT-SAME: "-split-dwarf-file" "split-debug.dwo" "-split-dwarf-output" "split-debug.dwo"
 
 // RUN: %clang -### -c -target wasm32 -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=SPLIT
-// RUN: %clang -### -c -target amdgcn-amd-amdhsa -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=SPLIT
+// RUN: %clang -### -c --target=amdgcn-amd-amdhsa -nogpuinc -nogpulib -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=SPLIT
+// RUN: %clang_cl -### -c --target=x86_64-unknown-windows-msvc -gno-split-dwarf -gsplit-dwarf -g -- %s 2>&1 | FileCheck %s --check-prefix=SPLIT
 
 /// -gsplit-dwarf is a no-op on a non-ELF platform.
 // RUN: %clang -### -c -target x86_64-apple-darwin  -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=DARWIN
@@ -50,12 +52,35 @@
 // SINGLE-NOT: "-split-dwarf-output"
 
 // RUN: %clang -### -c -target x86_64 -gsplit-dwarf=single -g -o %tfoo.o %s 2>&1 | FileCheck %s --check-prefix=SINGLE_WITH_FILENAME
+// RUN: %clang_cl -### -c --target=x86_64-unknown-windows-msvc -gsplit-dwarf=single -g -o %tfoo.o -- %s 2>&1 | FileCheck %s --check-prefix=SINGLE_WITH_FILENAME
 
 // SINGLE_WITH_FILENAME: "-split-dwarf-file" "{{.*}}foo.o"
 // SINGLE_WITH_FILENAME-NOT: "-split-dwarf-output"
 
-/// Without -c, clang performs linking as well. The output is unchanged.
-// RUN: %clang -### -target x86_64-unknown-linux-gnu -gsplit-dwarf -g %s -o ignore.d 2>&1 | FileCheck %s --check-prefix=SPLIT
+/// If linking is the final phase, the .dwo filename is derived from -o (if specified) or "a".
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -gsplit-dwarf -g %s -o obj/out 2>&1 | FileCheck %s --check-prefix=SPLIT_LINK
+// RUN: %clang_cl -### --target=x86_64-unknown-windows-msvc -gsplit-dwarf -g -o obj/out -- %s 2>&1 | FileCheck %s --check-prefix=SPLIT_LINK
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=SPLIT_LINK_A
+
+// SPLIT_LINK:      "-dumpdir" "obj/out-"
+// SPLIT_LINK:      "-debug-info-kind=constructor"
+// SPLIT_LINK-SAME: "-split-dwarf-file" "obj/out-split-debug.dwo" "-split-dwarf-output" "obj/out-split-debug.dwo"
+// SPLIT_LINK_A:      "-dumpdir" "a-"
+// SPLIT_LINK_A-SAME: "-split-dwarf-file" "a-split-debug.dwo" "-split-dwarf-output" "a-split-debug.dwo"
+
+/// GCC special cases /dev/null (HOST_BIT_BUCKET) but not other special files like /dev/zero.
+/// We don't apply special rules at all.
+// RUN: %if !system-windows %{ %clang -### --target=x86_64-unknown-linux-gnu -gsplit-dwarf -g %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=SPLIT_LINK_NULL %}
+
+// SPLIT_LINK_NULL:      "-dumpdir" "/dev/null-"
+// SPLIT_LINK_NULL-SAME: "-split-dwarf-output" "/dev/null-split-debug.dwo"
+
+/// If -dumpdir is specified, use its value to derive the .dwo filename.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -gsplit-dwarf -g %s -o obj/out -dumpdir pf/x -c 2>&1 | FileCheck %s --check-prefix=DUMPDIR
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -gsplit-dwarf -g %s -o obj/out -dumpdir pf/x 2>&1 | FileCheck %s --check-prefix=DUMPDIR
+
+// DUMPDIR:      "-dumpdir" "pf/x"
+// DUMPDIR-SAME: "-split-dwarf-output" "pf/xsplit-debug.dwo"
 
 /// -fsplit-dwarf-inlining
 // RUN: %clang -### -c -target x86_64 -gsplit-dwarf=split -g -fsplit-dwarf-inlining %s 2>&1 | FileCheck %s --check-prefixes=INLINE,SPLIT
@@ -99,3 +124,13 @@
 // G1_NOSPLIT: "-debug-info-kind=line-tables-only"
 // G1_NOSPLIT-NOT: "-split-dwarf-file"
 // G1_NOSPLIT-NOT: "-split-dwarf-output"
+
+/// Do not generate -ggnu-pubnames for -glldb
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf -g -glldb %s 2>&1 | FileCheck %s --check-prefixes=GLLDBSPLIT
+
+// GLLDBSPLIT-NOT: "-ggnu-pubnames"
+
+/// Generate -ggnu-pubnames for -glldb when it is explicitly enabled
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf -g -glldb -ggnu-pubnames %s 2>&1 | FileCheck %s --check-prefixes=GLLDBSPLIT2
+
+// GLLDBSPLIT2: "-ggnu-pubnames"

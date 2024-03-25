@@ -1,5 +1,7 @@
 # RUN: dsymutil -f -oso-prepend-path=%p/../Inputs -y %s -o - 2>&1 | FileCheck %s
 
+# RUN: dsymutil --linker parallel -f -oso-prepend-path=%p/../Inputs -y %s -o - 2>&1 | FileCheck %s
+
 ---
 triple:          'thumbv7-apple-darwin'
 ...

@@ -1,10 +1,10 @@
-! RUN: bbc %s -o "-" -emit-fir | FileCheck %s
+! RUN: bbc %s -o "-" -emit-fir -hlfir=false | FileCheck %s
 
 program basic
   return
 end program
 
-! CHECK-LABEL: func @_QQmain() {
+! CHECK-LABEL: func @_QQmain() attributes {fir.bindc_name = "basic"} {
 ! CHECK:         return
 ! CHECK:       }
 

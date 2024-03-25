@@ -9,7 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class ExprDoesntDeadlockTestCase(TestBase):
-
     @add_test_categories(["basic_process"])
     def test_with_run_command(self):
         """Test that expr will time out and allow other threads to run if it blocks."""
@@ -20,25 +19,25 @@ class ExprDoesntDeadlockTestCase(TestBase):
         # gets called.
 
         main_file_spec = lldb.SBFileSpec("locking.cpp")
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'Break here', main_file_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex("Break here", main_file_spec)
         if self.TraceOn():
             print("breakpoint:", breakpoint)
-        self.assertTrue(breakpoint and
-                        breakpoint.GetNumLocations() == 1,
-                        VALID_BREAKPOINT)
+        self.assertTrue(
+            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
+        )
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be on self.line1 and the break condition should hold.
         from lldbsuite.test.lldbutil import get_stopped_thread
+
         thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
             thread.IsValid(),
-            "There should be a thread stopped due to breakpoint condition")
+            "There should be a thread stopped due to breakpoint condition",
+        )
 
         frame0 = thread.GetFrameAtIndex(0)
 

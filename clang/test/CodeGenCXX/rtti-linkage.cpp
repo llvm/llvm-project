@@ -152,13 +152,11 @@ void t3() {
   (void) typeid(T<2>);
 }
 
-// rdar://problem/8778973
 struct T4 {};
 void t4(const T4 *ptr) {
   const void *value = &typeid(ptr);
 }
 
-// rdar://16265084
 void t5() {
   struct A {};
   const void *value = &typeid(A);

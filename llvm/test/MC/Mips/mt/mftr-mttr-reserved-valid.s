@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=mips -mcpu=mips32r2 -mattr=+mt -show-encoding < %s | FileCheck %s
+# RUN: llvm-mc -triple=mips -mcpu=mips32r2 -mattr=+mt -show-encoding < %s | FileCheck %s
 
 # The selector value and register values here are marked as reserved in the
 # documentation, but GAS accepts them without warning.

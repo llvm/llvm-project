@@ -17,15 +17,10 @@
 // This signature was removed in C++17
 
 #include <functional>
-#include <cassert>
 #include <memory>
-
-#include "test_macros.h"
 
 void foo(int) {}
 
-int main(int, char**)
-{
+void f() {
     std::function<void(int)> f(std::allocator_arg, std::allocator<int>(), foo); // expected-error {{no matching constructor for initialization of}}
-    return 0;
 }

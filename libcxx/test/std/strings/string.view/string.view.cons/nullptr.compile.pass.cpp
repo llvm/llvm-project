@@ -10,7 +10,7 @@
 
 // <string_view>
 
-// basic_string_view(nullptr_t) = delete; // C++2b
+// basic_string_view(nullptr_t) = delete; // C++23
 
 #include <string_view>
 #include <type_traits>

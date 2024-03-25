@@ -12,6 +12,7 @@ declare void @llvm.memmove.p0.p0.i32(ptr %dest, ptr %src, i32 %len, i1 %isvolati
 declare void @llvm.memset.p0.i64(ptr %dest, i8 %val, i64 %len, i1 %isvolatile)
 
 declare void @unknown_call(ptr %dest)
+declare void @unknown_call_int(i64 %i)
 declare ptr @retptr(ptr returned)
 
 ; Address leaked.
@@ -1036,6 +1037,86 @@ entry:
   call void @llvm.memset.p0.i32(ptr %a, i8 1, i32 4, i1 false)
   call void @llvm.lifetime.end.p0(i64 4, ptr %a)
   call void @unknown_call(ptr %a)
+  ret void
+}
+
+define void @Cmpxchg4Arg(ptr %p) {
+; CHECK-LABEL: @Cmpxchg4Arg
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: p[]: [0,4){{$}}
+; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: cmpxchg ptr %p, i32 0, i32 1 monotonic monotonic, align 1
+; CHECK-EMPTY:
+entry:
+  cmpxchg ptr %p, i32 0, i32 1 monotonic monotonic, align 1
+  ret void
+}
+
+define void @AtomicRMW4Arg(ptr %p) {
+; CHECK-LABEL: @AtomicRMW4Arg
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: p[]: [0,4){{$}}
+; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: atomicrmw add ptr %p, i32 1 monotonic, align 1
+; CHECK-EMPTY:
+entry:
+  atomicrmw add ptr %p, i32 1 monotonic, align 1
+  ret void
+}
+
+define void @Cmpxchg4Alloca() {
+; CHECK-LABEL: @Cmpxchg4Alloca
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[4]: [0,4){{$}}
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: cmpxchg ptr %x, i32 0, i32 1 monotonic monotonic, align 1
+; CHECK-EMPTY:
+entry:
+  %x = alloca i32, align 4
+  cmpxchg ptr %x, i32 0, i32 1 monotonic monotonic, align 1
+  ret void
+}
+
+define void @AtomicRMW4Alloca() {
+; CHECK-LABEL: @AtomicRMW4Alloca
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[4]: [0,4){{$}}
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: atomicrmw add ptr %x, i32 1 monotonic, align 1
+; CHECK-EMPTY:
+entry:
+  %x = alloca i32, align 4
+  atomicrmw add ptr %x, i32 1 monotonic, align 1
+  ret void
+}
+
+define void @StoreArg(ptr %p) {
+; CHECK-LABEL: @StoreArg
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: p[]: [0,4){{$}}
+; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: store i32 1, ptr %p
+; CHECK-EMPTY:
+entry:
+  store i32 1, ptr %p
+  ret void
+}
+
+define void @NonPointer(ptr %p) {
+; CHECK-LABEL: @NonPointer
+; CHECK-NEXT: args uses:
+; LOCAL-NEXT: p[]: empty-set, @unknown_call_int(arg0, full-set)
+; GLOBAL-NEXT: p[]: full-set, @unknown_call_int(arg0, full-set)
+; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
+; CHECK-EMPTY:
+  %int = ptrtoint ptr %p to i64
+  call void @unknown_call_int(i64 %int)
   ret void
 }
 

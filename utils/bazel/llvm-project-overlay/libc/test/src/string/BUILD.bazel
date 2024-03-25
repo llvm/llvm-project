@@ -4,6 +4,7 @@
 
 # Tests for LLVM libc string.h functions.
 
+load("//libc:libc_build_rules.bzl", "libc_support_library")
 load("//libc/test:libc_test_rules.bzl", "libc_test")
 
 package(default_visibility = ["//visibility:public"])
@@ -42,12 +43,19 @@ libc_test(
     ],
 )
 
+libc_support_library(
+    name = "strchr_test_helper",
+    hdrs = ["StrchrTest.h"],
+    deps = ["//libc/test/UnitTest:LibcUnitTest"],
+)
+
 libc_test(
     name = "strchr_test",
     srcs = ["strchr_test.cpp"],
     libc_function_deps = [
         "//libc:strchr",
     ],
+    deps = [":strchr_test_helper"],
 )
 
 libc_test(
@@ -80,6 +88,7 @@ libc_test(
     libc_function_deps = [
         "//libc:strrchr",
     ],
+    deps = [":strchr_test_helper"],
 )
 
 libc_test(
@@ -106,11 +115,13 @@ libc_test(
     ],
 )
 
-cc_library(
+libc_support_library(
     name = "memory_check_utils",
     hdrs = ["memory_utils/memory_check_utils.h"],
     deps = [
         "//libc:__support_cpp_span",
+        "//libc:__support_libc_assert",
+        "//libc:__support_macros_sanitizer",
         "//libc:string_memory_utils",
     ],
 )
@@ -122,6 +133,14 @@ libc_test(
         "//libc:memcpy",
     ],
     deps = [":memory_check_utils"],
+)
+
+libc_test(
+    name = "mempcpy_test",
+    srcs = ["mempcpy_test.cpp"],
+    libc_function_deps = [
+        "//libc:mempcpy",
+    ],
 )
 
 libc_test(
@@ -141,8 +160,9 @@ libc_test(
         "//libc:memmove",
     ],
     deps = [
+        ":memory_check_utils",
         "//libc:__support_cpp_span",
-        "//libc/utils/UnitTest:memory_matcher",
+        "//libc/test/UnitTest:memory_matcher",
     ],
 )
 
@@ -153,8 +173,9 @@ libc_test(
         "//libc:bcopy",
     ],
     deps = [
+        ":memory_check_utils",
         "//libc:__support_cpp_span",
-        "//libc/utils/UnitTest:memory_matcher",
+        "//libc/test/UnitTest:memory_matcher",
     ],
 )
 
@@ -164,7 +185,10 @@ libc_test(
     libc_function_deps = [
         "//libc:memcmp",
     ],
-    deps = [":memory_check_utils"],
+    deps = [
+        ":memory_check_utils",
+        "//libc/test/UnitTest:test_logger",
+    ],
 )
 
 libc_test(
@@ -173,7 +197,10 @@ libc_test(
     libc_function_deps = [
         "//libc:bcmp",
     ],
-    deps = [":memory_check_utils"],
+    deps = [
+        ":memory_check_utils",
+        "//libc/test/UnitTest:test_logger",
+    ],
 )
 
 libc_test(

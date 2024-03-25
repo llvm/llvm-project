@@ -20,8 +20,8 @@ foo:
 ; CHECK: rcall  .Ltmp3+46            ; encoding: [A,0b1101AAAA]
 ; CHECK:                             ;   fixup A - offset: 0, value: .Ltmp3+46, kind: fixup_13_pcrel
 
-; INST: rcall   .+0
-; INST: rcall   .+0
-; INST: rcall   .+0
-; INST: rcall   .+0
-; INST: rcall   .-44
+; INST: 00 d0    rcall .+0
+; INST: fc df    rcall .-8
+; INST: 06 d0    rcall .+12
+; INST: 17 d0    rcall .+46
+; INST: ea df    rcall .-44

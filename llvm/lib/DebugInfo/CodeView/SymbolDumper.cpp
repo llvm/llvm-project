@@ -589,7 +589,22 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
 }
 
 Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR, CallerSym &Caller) {
-  ListScope S(W, CVR.kind() == S_CALLEES ? "Callees" : "Callers");
+  llvm::StringRef ScopeName;
+  switch (CVR.kind()) {
+  case S_CALLEES:
+    ScopeName = "Callees";
+    break;
+  case S_CALLERS:
+    ScopeName = "Callers";
+    break;
+  case S_INLINEES:
+    ScopeName = "Inlinees";
+    break;
+  default:
+    return llvm::make_error<CodeViewError>(
+        "Unknown CV Record type for a CallerSym object!");
+  }
+  ListScope S(W, ScopeName);
   for (auto FuncID : Caller.Indices)
     printTypeIndex("FuncID", FuncID);
   return Error::success();
@@ -640,6 +655,20 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
   for (StringRef Str : Annot.Strings)
     W.printString(Str);
 
+  return Error::success();
+}
+
+Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
+                                           JumpTableSym &JumpTable) {
+  W.printHex("BaseOffset", JumpTable.BaseOffset);
+  W.printNumber("BaseSegment", JumpTable.BaseSegment);
+  W.printEnum("SwitchType", static_cast<uint16_t>(JumpTable.SwitchType),
+              getJumpTableEntrySizeNames());
+  W.printHex("BranchOffset", JumpTable.BranchOffset);
+  W.printHex("TableOffset", JumpTable.TableOffset);
+  W.printNumber("BranchSegment", JumpTable.BranchSegment);
+  W.printNumber("TableSegment", JumpTable.TableSegment);
+  W.printNumber("EntriesCount", JumpTable.EntriesCount);
   return Error::success();
 }
 

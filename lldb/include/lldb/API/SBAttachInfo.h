@@ -11,6 +11,10 @@
 
 #include "lldb/API/SBDefines.h"
 
+namespace lldb_private {
+class ScriptInterpreter;
+}
+
 namespace lldb {
 
 class SBTarget;
@@ -164,8 +168,38 @@ public:
   /// allows a different listener to be used to listen for process events.
   void SetListener(SBListener &listener);
 
+  /// Get the shadow listener that receive public process events,
+  /// additionally to the default process event listener.
+  ///
+  /// If no listener has been set via a call to
+  /// SBLaunchInfo::SetShadowListener(), then an invalid SBListener will
+  /// be returned (SBListener::IsValid() will return false). If a listener
+  /// has been set, then the valid listener object will be returned.
+  SBListener GetShadowListener();
+
+  /// Set the shadow listener that will receive public process events,
+  /// additionally to the default process event listener.
+  ///
+  /// By default a process have no shadow event listener.
+  /// Calling this function allows public process events to be broadcasted to an
+  /// additional listener on top of the default process event listener.
+  /// If the `listener` argument is invalid (SBListener::IsValid() will
+  /// return false), this will clear the shadow listener.
+  void SetShadowListener(SBListener &listener);
+
+  const char *GetScriptedProcessClassName() const;
+
+  void SetScriptedProcessClassName(const char *class_name);
+
+  lldb::SBStructuredData GetScriptedProcessDictionary() const;
+
+  void SetScriptedProcessDictionary(lldb::SBStructuredData dict);
+
 protected:
   friend class SBTarget;
+  friend class SBPlatform;
+
+  friend class lldb_private::ScriptInterpreter;
 
   lldb_private::ProcessAttachInfo &ref();
 

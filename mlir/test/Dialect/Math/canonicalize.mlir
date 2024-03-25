@@ -483,3 +483,12 @@ func.func @erf_fold_vec() -> (vector<4xf32>) {
   %0 = math.erf %v1 : vector<4xf32>
   return %0 : vector<4xf32>
 }
+
+// CHECK-LABEL: @abs_poison
+//       CHECK:   %[[P:.*]] = ub.poison : f32
+//       CHECK:   return %[[P]]
+func.func @abs_poison() -> f32 {
+  %0 = ub.poison : f32
+  %1 = math.absf %0 : f32
+  return %1 : f32
+}

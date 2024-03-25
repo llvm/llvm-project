@@ -1,4 +1,4 @@
-// RUN: %libomptarget-compile-generic -fopenmp-version=51
+// RUN: %libomptarget-compile-generic
 // RUN: %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic
 
@@ -16,9 +16,9 @@ int main() {
 #pragma omp target exit data map(delete : i)
   }
 
-  // CHECK-NOT: Libomptarget
+  // CHECK-NOT: omptarget
   // CHECK: success
-  // CHECK-NOT: Libomptarget
+  // CHECK-NOT: omptarget
   fprintf(stderr, "success\n");
 
   return 0;

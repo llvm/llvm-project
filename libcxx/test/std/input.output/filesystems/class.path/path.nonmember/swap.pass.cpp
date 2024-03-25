@@ -6,19 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
 // void swap(path& lhs, path& rhs) noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
 #include "count_new.h"
-#include "filesystem_test_helper.h"
+namespace fs = std::filesystem;
 
 // NOTE: this is tested in path.members/path.modifiers via the member swap.
 int main(int, char**)

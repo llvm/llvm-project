@@ -15,7 +15,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, fscanf,
                    (::FILE *__restrict stream, const char *__restrict format,
@@ -32,4 +32,4 @@ LLVM_LIBC_FUNCTION(int, fscanf,
   return (ret_val == -1) ? EOF : ret_val;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

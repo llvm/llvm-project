@@ -1,4 +1,4 @@
-! RUN: %flang -fsyntax-only 2>&1 %s | FileCheck %s
+! RUN: %flang -fsyntax-only -pedantic 2>&1 %s | FileCheck %s
 ! Verifies that warnings issue when actual arguments with implicit
 ! interfaces are associated with dummy procedures and dummy procedure
 ! pointers whose interfaces are explicit.

@@ -6,7 +6,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestRestartBug(GDBRemoteTestBase):
-
     @expectedFailureAll(bugnumber="llvm.org/pr24530")
     def test(self):
         """
@@ -16,6 +15,7 @@ class TestRestartBug(GDBRemoteTestBase):
         client should not auto-continue in this case, unless the user has
         explicitly requested that we ignore signals of this type.
         """
+
         class MyResponder(MockGDBServerResponder):
             continueCount = 0
 
@@ -32,7 +32,7 @@ class TestRestartBug(GDBRemoteTestBase):
                 if self.continueCount == 1:
                     # No response, wait for the client to interrupt us.
                     return None
-                return "W00" # Exit
+                return "W00"  # Exit
 
         self.server.responder = MyResponder()
         target = self.createTarget("a.yaml")
@@ -50,8 +50,10 @@ class TestRestartBug(GDBRemoteTestBase):
         event = lldb.SBEvent()
         while self.dbg.GetListener().WaitForEvent(2, event):
             if self.TraceOn():
-                print("Process changing state to:",
-                    self.dbg.StateAsCString(process.GetStateFromEvent(event)))
+                print(
+                    "Process changing state to:",
+                    self.dbg.StateAsCString(process.GetStateFromEvent(event)),
+                )
             if process.GetStateFromEvent(event) == lldb.eStateExited:
                 break
 

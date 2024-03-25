@@ -14,18 +14,17 @@ define i32 @wc_max() {
 ; CHECK-LABEL: 'wc_max'
 ; CHECK-NEXT:  Classifying expressions for: @wc_max
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,2000) S: [0,2000) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,2000) S: [0,2000) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,2001) S: [1,2001) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,2001) S: [1,2001) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %widenable_cond3 = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    --> %widenable_cond3 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %exiplicit_guard_cond4 = and i1 %cond_1, %widenable_cond3
 ; CHECK-NEXT:    --> (%cond_1 umin %widenable_cond3) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @wc_max
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 1999
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 1999
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1999
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 1999
 ;
 entry:
   br label %loop

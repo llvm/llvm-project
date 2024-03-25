@@ -8,11 +8,10 @@ import binascii
 
 
 class TestGDBServerTargetXML(GDBRemoteTestBase):
-
     @staticmethod
     def filecheck_to_blob(fc):
         for l in fc.strip().splitlines():
-            val = l.split('0x')[1]
+            val = l.split("0x")[1]
             yield binascii.b2a_hex(bytes(reversed(binascii.a2b_hex(val)))).decode()
 
     @skipIfRemote
@@ -20,7 +19,7 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
     def test_x86_64_regs(self):
         """Test grabbing various x86_64 registers from gdbserver."""
 
-        GPRS = '''
+        GPRS = """
 CHECK-AMD64-DAG: rax = 0x0807060504030201
 CHECK-AMD64-DAG: rbx = 0x1817161514131211
 CHECK-AMD64-DAG: rcx = 0x2827262524232221
@@ -41,9 +40,9 @@ CHECK-AMD64-DAG: rip = 0x100f0e0d0c0b0a09
 CHECK-AMD64-DAG: eflags = 0x1c1b1a19
 CHECK-AMD64-DAG: cs = 0x2c2b2a29
 CHECK-AMD64-DAG: ss = 0x3c3b3a39
-'''
+"""
 
-        SUPPL = '''
+        SUPPL = """
 CHECK-AMD64-DAG: eax = 0x04030201
 CHECK-AMD64-DAG: ebx = 0x14131211
 CHECK-AMD64-DAG: ecx = 0x24232221
@@ -99,10 +98,10 @@ CHECK-AMD64-DAG: r12l = 0xc1
 CHECK-AMD64-DAG: r13l = 0xd1
 CHECK-AMD64-DAG: r14l = 0xe1
 CHECK-AMD64-DAG: r15l = 0xf1
-'''
+"""
 
         class MyResponder(MockGDBServerResponder):
-            reg_data = ''.join(self.filecheck_to_blob(GPRS))
+            reg_data = "".join(self.filecheck_to_blob(GPRS))
 
             def readRegister(self, regnum):
                 return ""
@@ -117,41 +116,35 @@ CHECK-AMD64-DAG: r15l = 0xf1
 
         target = self.createTarget("basic_eh_frame.yaml")
         process = self.connect(target)
-        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
-                                      [lldb.eStateStopped])
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
 
         # test all registers
-        self.filecheck("register read --all", __file__,
-                       filecheck_options='--check-prefix=CHECK-AMD64')
+        self.filecheck(
+            "register read --all",
+            __file__,
+            filecheck_options="--check-prefix=CHECK-AMD64",
+        )
 
         # test generic aliases
-        self.match("register read arg4",
-                   ["rcx = 0x2827262524232221"])
-        self.match("register read arg3",
-                   ["rdx = 0x3837363534333231"])
-        self.match("register read arg2",
-                   ["rsi = 0x4847464544434241"])
-        self.match("register read arg1",
-                   ["rdi = 0x5857565554535251"])
-        self.match("register read fp",
-                   ["rbp = 0x6867666564636261"])
-        self.match("register read sp",
-                   ["rsp = 0x7877767574737271"])
-        self.match("register read arg5",
-                   ["r8 = 0x8887868584838281"])
-        self.match("register read arg6",
-                   ["r9 = 0x9897969594939291"])
-        self.match("register read pc",
-                   ["rip = 0x100f0e0d0c0b0a09"])
-        self.match("register read flags",
-                   ["eflags = 0x1c1b1a19"])
+        self.match("register read arg4", ["rcx = 0x2827262524232221"])
+        self.match("register read arg3", ["rdx = 0x3837363534333231"])
+        self.match("register read arg2", ["rsi = 0x4847464544434241"])
+        self.match("register read arg1", ["rdi = 0x5857565554535251"])
+        self.match("register read fp", ["rbp = 0x6867666564636261"])
+        self.match("register read sp", ["rsp = 0x7877767574737271"])
+        self.match("register read arg5", ["r8 = 0x8887868584838281"])
+        self.match("register read arg6", ["r9 = 0x9897969594939291"])
+        self.match("register read pc", ["rip = 0x100f0e0d0c0b0a09"])
+        self.match("register read flags", ["eflags = 0x1c1b1a19"])
 
     @skipIfRemote
     @skipIfLLVMTargetMissing("AArch64")
     def test_aarch64_regs(self):
         """Test grabbing various aarch64 registers from gdbserver."""
 
-        GPRS = '''
+        GPRS = """
 CHECK-AARCH64-DAG: x0 = 0x0001020304050607
 CHECK-AARCH64-DAG: x1 = 0x0102030405060708
 CHECK-AARCH64-DAG: x2 = 0x0203040506070809
@@ -186,9 +179,9 @@ CHECK-AARCH64-DAG: x30 = 0x1e1f202122232425
 CHECK-AARCH64-DAG: sp = 0x1f20212223242526
 CHECK-AARCH64-DAG: pc = 0x2021222324252627
 CHECK-AARCH64-DAG: cpsr = 0x21222324
-'''
+"""
 
-        SUPPL = '''
+        SUPPL = """
 CHECK-AARCH64-DAG: w0 = 0x04050607
 CHECK-AARCH64-DAG: w1 = 0x05060708
 CHECK-AARCH64-DAG: w2 = 0x06070809
@@ -221,10 +214,10 @@ CHECK-AARCH64-DAG: w28 = 0x20212223
 CHECK-AARCH64-DAG: w29 = 0x21222324
 CHECK-AARCH64-DAG: w30 = 0x22232425
 CHECK-AARCH64-DAG: w31 = 0x23242526
-'''
+"""
 
         class MyResponder(MockGDBServerResponder):
-            reg_data = ''.join(self.filecheck_to_blob(GPRS))
+            reg_data = "".join(self.filecheck_to_blob(GPRS))
 
             def readRegister(self, regnum):
                 return ""
@@ -239,33 +232,31 @@ CHECK-AARCH64-DAG: w31 = 0x23242526
 
         target = self.createTarget("basic_eh_frame-aarch64.yaml")
         process = self.connect(target)
-        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
-                                      [lldb.eStateStopped])
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
 
         # test all registers
-        self.filecheck("register read --all", __file__,
-                       filecheck_options='--check-prefix=CHECK-AARCH64')
+        self.filecheck(
+            "register read --all",
+            __file__,
+            filecheck_options="--check-prefix=CHECK-AARCH64",
+        )
 
         # test generic aliases
-        self.match("register read arg1",
-                   ["x0 = 0x0001020304050607"])
-        self.match("register read arg2",
-                   ["x1 = 0x0102030405060708"])
-        self.match("register read fp",
-                   ["x29 = 0x1d1e1f2021222324"])
-        self.match("register read lr",
-                   ["x30 = 0x1e1f202122232425"])
-        self.match("register read ra",
-                   ["x30 = 0x1e1f202122232425"])
-        self.match("register read flags",
-                   ["cpsr = 0x21222324"])
+        self.match("register read arg1", ["x0 = 0x0001020304050607"])
+        self.match("register read arg2", ["x1 = 0x0102030405060708"])
+        self.match("register read fp", ["x29 = 0x1d1e1f2021222324"])
+        self.match("register read lr", ["x30 = 0x1e1f202122232425"])
+        self.match("register read ra", ["x30 = 0x1e1f202122232425"])
+        self.match("register read flags", ["cpsr = 0x21222324"])
 
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
     def test_i386_regs(self):
         """Test grabbing various i386 registers from gdbserver."""
 
-        GPRS = '''
+        GPRS = """
 CHECK-I386-DAG: eax = 0x04030201
 CHECK-I386-DAG: ecx = 0x14131211
 CHECK-I386-DAG: edx = 0x24232221
@@ -282,9 +273,9 @@ CHECK-I386-DAG: ds = 0xc4c3c2c1
 CHECK-I386-DAG: es = 0xd4d3d2d1
 CHECK-I386-DAG: fs = 0xe4e3e2e1
 CHECK-I386-DAG: gs = 0xf4f3f2f1
-'''
+"""
 
-        SUPPL = '''
+        SUPPL = """
 CHECK-I386-DAG: ax = 0x0201
 CHECK-I386-DAG: cx = 0x1211
 CHECK-I386-DAG: dx = 0x2221
@@ -307,10 +298,10 @@ CHECK-I386-DAG: spl = 0x41
 CHECK-I386-DAG: bpl = 0x51
 CHECK-I386-DAG: sil = 0x61
 CHECK-I386-DAG: dil = 0x71
-'''
+"""
 
         class MyResponder(MockGDBServerResponder):
-            reg_data = ''.join(self.filecheck_to_blob(GPRS))
+            reg_data = "".join(self.filecheck_to_blob(GPRS))
 
             def readRegister(self, regnum):
                 return ""
@@ -325,19 +316,19 @@ CHECK-I386-DAG: dil = 0x71
 
         target = self.createTarget("basic_eh_frame-i386.yaml")
         process = self.connect(target)
-        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
-                                      [lldb.eStateStopped])
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
 
         # test all registers
-        self.filecheck("register read --all", __file__,
-                       filecheck_options='--check-prefix=CHECK-I386')
+        self.filecheck(
+            "register read --all",
+            __file__,
+            filecheck_options="--check-prefix=CHECK-I386",
+        )
 
         # test generic aliases
-        self.match("register read fp",
-                   ["ebp = 0x54535251"])
-        self.match("register read sp",
-                   ["esp = 0x44434241"])
-        self.match("register read pc",
-                   ["eip = 0x84838281"])
-        self.match("register read flags",
-                   ["eflags = 0x94939291"])
+        self.match("register read fp", ["ebp = 0x54535251"])
+        self.match("register read sp", ["esp = 0x44434241"])
+        self.match("register read pc", ["eip = 0x84838281"])
+        self.match("register read flags", ["eflags = 0x94939291"])

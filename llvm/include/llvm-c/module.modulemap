@@ -1,4 +1,0 @@
-module LLVM_C {
-  umbrella "."
-  module * { export * }
-}

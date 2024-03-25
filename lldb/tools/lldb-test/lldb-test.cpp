@@ -290,8 +290,8 @@ int lldb_assert(Debugger &Dbg);
 } // namespace assert
 } // namespace opts
 
-std::vector<CompilerContext> parseCompilerContext() {
-  std::vector<CompilerContext> result;
+llvm::SmallVector<CompilerContext, 4> parseCompilerContext() {
+  llvm::SmallVector<CompilerContext, 4> result;
   if (opts::symbols::CompilerContext.empty())
     return result;
 
@@ -322,10 +322,10 @@ std::vector<CompilerContext> parseCompilerContext() {
     }
     result.push_back({kind, ConstString{value}});
   }
-  outs() << "Search context: {\n";
-  for (auto entry: result)
-    entry.Dump();
-  outs() << "}\n";
+  outs() << "Search context: {";
+  lldb_private::StreamString s;
+  llvm::interleaveComma(result, s, [&](auto &ctx) { ctx.Dump(s); });
+  outs() << s.GetString().str() << "}\n";
 
   return result;
 }
@@ -466,6 +466,7 @@ static lldb::DescriptionLevel GetDescriptionLevel() {
 Error opts::symbols::findFunctions(lldb_private::Module &Module) {
   SymbolFile &Symfile = *Module.GetSymbolFile();
   SymbolContextList List;
+  auto compiler_context = parseCompilerContext();
   if (!File.empty()) {
     assert(Line != 0);
 
@@ -498,6 +499,9 @@ Error opts::symbols::findFunctions(lldb_private::Module &Module) {
     assert(RE.IsValid());
     List.Clear();
     Symfile.FindFunctions(RE, true, List);
+  } else if (!compiler_context.empty()) {
+    List.Clear();
+    Module.FindFunctions(compiler_context, getFunctionNameFlags(), {}, List);
   } else {
     Expected<CompilerDeclContext> ContextOr = getDeclContext(Symfile);
     if (!ContextOr)
@@ -577,29 +581,33 @@ Error opts::symbols::findTypes(lldb_private::Module &Module) {
   Expected<CompilerDeclContext> ContextOr = getDeclContext(Symfile);
   if (!ContextOr)
     return ContextOr.takeError();
-  const CompilerDeclContext &ContextPtr =
-      ContextOr->IsValid() ? *ContextOr : CompilerDeclContext();
 
-  LanguageSet languages;
-  if (!Language.empty())
-    languages.Insert(Language::GetLanguageTypeFromString(Language));
-
-  DenseSet<SymbolFile *> SearchedFiles;
-  TypeMap Map;
-  if (!Name.empty())
-    Symfile.FindTypes(ConstString(Name), ContextPtr, UINT32_MAX, SearchedFiles,
-                      Map);
-  else
-    Module.FindTypes(parseCompilerContext(), languages, SearchedFiles, Map);
-
-  outs() << formatv("Found {0} types:\n", Map.GetSize());
+  TypeResults results;
+  if (!Name.empty()) {
+    if (ContextOr->IsValid()) {
+      TypeQuery query(*ContextOr, ConstString(Name),
+                      TypeQueryOptions::e_module_search);
+      if (!Language.empty())
+        query.AddLanguage(Language::GetLanguageTypeFromString(Language));
+      Symfile.FindTypes(query, results);
+    } else {
+      TypeQuery query(Name);
+      if (!Language.empty())
+        query.AddLanguage(Language::GetLanguageTypeFromString(Language));
+      Symfile.FindTypes(query, results);
+    }
+  } else {
+    TypeQuery query(parseCompilerContext(), TypeQueryOptions::e_module_search);
+    if (!Language.empty())
+      query.AddLanguage(Language::GetLanguageTypeFromString(Language));
+    Symfile.FindTypes(query, results);
+  }
+  outs() << formatv("Found {0} types:\n", results.GetTypeMap().GetSize());
   StreamString Stream;
   // Resolve types to force-materialize typedef types.
-  Map.ForEach([&](TypeSP &type) {
-    type->GetFullCompilerType();
-    return false;
-  });
-  Map.Dump(&Stream, false, GetDescriptionLevel());
+  for (const auto &type_sp : results.GetTypeMap().Types())
+    type_sp->GetFullCompilerType();
+  results.GetTypeMap().Dump(&Stream, false, GetDescriptionLevel());
   outs() << Stream.GetData() << "\n";
   return Error::success();
 }

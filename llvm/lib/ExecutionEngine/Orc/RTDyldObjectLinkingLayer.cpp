@@ -16,7 +16,9 @@ using namespace llvm::orc;
 
 class JITDylibSearchOrderResolver : public JITSymbolResolver {
 public:
-  JITDylibSearchOrderResolver(MaterializationResponsibility &MR) : MR(MR) {}
+  JITDylibSearchOrderResolver(MaterializationResponsibility &MR,
+                              SymbolDependenceMap &Deps)
+      : MR(MR), Deps(Deps) {}
 
   void lookup(const LookupSet &Symbols, OnResolvedFunction OnResolved) override {
     auto &ES = MR.getTargetJITDylib().getExecutionSession();
@@ -38,21 +40,18 @@ public:
 
           LookupResult Result;
           for (auto &KV : *InternedResult)
-            Result[*KV.first] = std::move(KV.second);
+            Result[*KV.first] = {KV.second.getAddress().getValue(),
+                                 KV.second.getFlags()};
           OnResolved(Result);
         };
-
-    // Register dependencies for all symbols contained in this set.
-    auto RegisterDependencies = [&](const SymbolDependenceMap &Deps) {
-      MR.addDependenciesForAll(Deps);
-    };
 
     JITDylibSearchOrder LinkOrder;
     MR.getTargetJITDylib().withLinkOrderDo(
         [&](const JITDylibSearchOrder &LO) { LinkOrder = LO; });
-    ES.lookup(LookupKind::Static, LinkOrder, InternedSymbols,
-              SymbolState::Resolved, std::move(OnResolvedWithUnwrap),
-              RegisterDependencies);
+    ES.lookup(
+        LookupKind::Static, LinkOrder, InternedSymbols, SymbolState::Resolved,
+        std::move(OnResolvedWithUnwrap),
+        [this](const SymbolDependenceMap &LookupDeps) { Deps = LookupDeps; });
   }
 
   Expected<LookupSet> getResponsibilitySet(const LookupSet &Symbols) override {
@@ -68,6 +67,7 @@ public:
 
 private:
   MaterializationResponsibility &MR;
+  SymbolDependenceMap &Deps;
 };
 
 } // end anonymous namespace
@@ -182,8 +182,9 @@ void RTDyldObjectLinkingLayer::emit(
   // Switch to shared ownership of MR so that it can be captured by both
   // lambdas below.
   std::shared_ptr<MaterializationResponsibility> SharedR(std::move(R));
+  auto Deps = std::make_unique<SymbolDependenceMap>();
 
-  JITDylibSearchOrderResolver Resolver(*SharedR);
+  JITDylibSearchOrderResolver Resolver(*SharedR, *Deps);
 
   jitLinkForORC(
       object::OwningBinary<object::ObjectFile>(std::move(*Obj), std::move(O)),
@@ -195,12 +196,12 @@ void RTDyldObjectLinkingLayer::emit(
         return onObjLoad(*SharedR, Obj, MemMgrRef, LoadedObjInfo,
                          ResolvedSymbols, *InternalSymbols);
       },
-      [this, SharedR, MemMgr = std::move(MemMgr)](
+      [this, SharedR, MemMgr = std::move(MemMgr), Deps = std::move(Deps)](
           object::OwningBinary<object::ObjectFile> Obj,
           std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObjInfo,
           Error Err) mutable {
         onObjEmit(*SharedR, std::move(Obj), std::move(MemMgr),
-                  std::move(LoadedObjInfo), std::move(Err));
+                  std::move(LoadedObjInfo), std::move(Deps), std::move(Err));
       });
 }
 
@@ -232,7 +233,7 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
   if (auto *COFFObj = dyn_cast<object::COFFObjectFile>(&Obj)) {
     auto &ES = getExecutionSession();
 
-    // For all resolved symbols that are not already in the responsibilty set:
+    // For all resolved symbols that are not already in the responsibility set:
     // check whether the symbol is in a comdat section and if so mark it as
     // weak.
     for (auto &Sym : COFFObj->symbols()) {
@@ -326,7 +327,7 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
     } else if (AutoClaimObjectSymbols)
       ExtraSymbolsToClaim[InternedName] = Flags;
 
-    Symbols[InternedName] = JITEvaluatedSymbol(KV.second.getAddress(), Flags);
+    Symbols[InternedName] = {ExecutorAddr(KV.second.getAddress()), Flags};
   }
 
   if (!ExtraSymbolsToClaim.empty()) {
@@ -355,14 +356,20 @@ void RTDyldObjectLinkingLayer::onObjEmit(
     MaterializationResponsibility &R,
     object::OwningBinary<object::ObjectFile> O,
     std::unique_ptr<RuntimeDyld::MemoryManager> MemMgr,
-    std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObjInfo, Error Err) {
+    std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObjInfo,
+    std::unique_ptr<SymbolDependenceMap> Deps, Error Err) {
   if (Err) {
     getExecutionSession().reportError(std::move(Err));
     R.failMaterialization();
     return;
   }
 
-  if (auto Err = R.notifyEmitted()) {
+  SymbolDependenceGroup SDG;
+  for (auto &[Sym, Flags] : R.getSymbols())
+    SDG.Symbols.insert(Sym);
+  SDG.Dependencies = std::move(*Deps);
+
+  if (auto Err = R.notifyEmitted(SDG)) {
     getExecutionSession().reportError(std::move(Err));
     R.failMaterialization();
     return;

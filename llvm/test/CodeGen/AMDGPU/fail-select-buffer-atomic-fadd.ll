@@ -1,8 +1,8 @@
-; RUN: not --crash llc -march=amdgcn -mcpu=tahiti -o /dev/null %s 2>&1 | FileCheck -check-prefix=FAIL %s
-; RUN: not --crash llc -march=amdgcn -mcpu=hawaii -o /dev/null %s 2>&1 | FileCheck -check-prefix=FAIL %s
-; RUN: not --crash llc -march=amdgcn -mcpu=fiji -o /dev/null %s 2>&1 | FileCheck -check-prefix=FAIL %s
-; RUN: not --crash llc -march=amdgcn -mcpu=gfx900 -o /dev/null %s 2>&1 | FileCheck -check-prefix=FAIL %s
-; RUN: not --crash llc -march=amdgcn -mcpu=gfx1010 -o /dev/null %s 2>&1 | FileCheck -check-prefix=FAIL %s
+; RUN: not --crash llc -mtriple=amdgcn -mcpu=tahiti -o /dev/null %s 2>&1 | FileCheck -check-prefix=FAIL %s
+; RUN: not --crash llc -mtriple=amdgcn -mcpu=hawaii -o /dev/null %s 2>&1 | FileCheck -check-prefix=FAIL %s
+; RUN: not --crash llc -mtriple=amdgcn -mcpu=fiji -o /dev/null %s 2>&1 | FileCheck -check-prefix=FAIL %s
+; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx900 -o /dev/null %s 2>&1 | FileCheck -check-prefix=FAIL %s
+; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1010 -o /dev/null %s 2>&1 | FileCheck -check-prefix=FAIL %s
 
 ; Make sure selection of these intrinsics fails on targets that do not
 ; have the instruction available.

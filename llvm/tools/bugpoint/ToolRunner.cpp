@@ -442,7 +442,7 @@ Expected<CC::FileType> LLC::OutputCode(const std::string &Bitcode,
     errs() << "Error making unique filename: " << EC.message() << "\n";
     exit(1);
   }
-  OutputAsmFile = std::string(UniqueFile.str());
+  OutputAsmFile = std::string(UniqueFile);
   std::vector<StringRef> LLCArgs;
   LLCArgs.push_back(LLCPath);
 
@@ -612,7 +612,7 @@ static bool IsARMArchitecture(std::vector<StringRef> Args) {
     ++I;
     if (I == Args.size())
       break;
-    if (Args[I].startswith_insensitive("arm"))
+    if (Args[I].starts_with_insensitive("arm"))
       return true;
   }
 
@@ -772,7 +772,7 @@ Error CC::MakeSharedObject(const std::string &InputFile, FileType fileType,
     errs() << "Error making unique filename: " << EC.message() << "\n";
     exit(1);
   }
-  OutputFile = std::string(UniqueFilename.str());
+  OutputFile = std::string(UniqueFilename);
 
   std::vector<StringRef> CCArgs;
 

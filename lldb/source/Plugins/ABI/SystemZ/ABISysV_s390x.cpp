@@ -9,7 +9,7 @@
 #include "ABISysV_s390x.h"
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -117,7 +117,7 @@ enum dwarf_regnums {
     #name, alt, size, 0, eEncodingUint, eFormatHex,                            \
         {dwarf_##name##_s390x, dwarf_##name##_s390x, generic,                  \
          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM },                           \
-         nullptr, nullptr,                                                     \
+         nullptr, nullptr, nullptr,                                            \
   }
 
 static const RegisterInfo g_register_infos[] = {

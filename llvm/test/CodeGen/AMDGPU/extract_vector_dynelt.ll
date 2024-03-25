@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN %s
 
 ; GCN-LABEL: {{^}}float4_extelt:
 ; GCN-NOT: buffer_
@@ -410,6 +410,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}bit4_extelt:
+; FIXME: One v_mov_b32_e32 vN, 0 should suffice
+; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 0
 ; GCN-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
 ; GCN-DAG: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN-DAG: buffer_store_byte [[ZERO]],

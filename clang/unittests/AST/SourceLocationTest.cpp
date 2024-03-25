@@ -16,7 +16,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "MatchVerifier.h"
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTFwd.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
@@ -370,10 +374,10 @@ TEST(CompoundLiteralExpr, CompoundVectorLiteralRange) {
 TEST(CompoundLiteralExpr, ParensCompoundVectorLiteralRange) {
   RangeVerifier<CompoundLiteralExpr> Verifier;
   Verifier.expectRange(2, 20, 2, 31);
-  EXPECT_TRUE(Verifier.match(
-                  "typedef int int2 __attribute__((ext_vector_type(2)));\n"
-                  "constant int2 i2 = (int2)(1, 2);", 
-                  compoundLiteralExpr(), Lang_OpenCL));
+  EXPECT_TRUE(
+      Verifier.match("typedef int int2 __attribute__((ext_vector_type(2)));\n"
+                     "constant int2 i2 = (int2)(1, 2);",
+                     compoundLiteralExpr(), Lang_OpenCL));
 }
 
 TEST(InitListExpr, VectorLiteralListBraceRange) {
@@ -998,6 +1002,131 @@ TEST(Decl, MemberPointerStarLoc) {
   auto TL =
       VD->getTypeSourceInfo()->getTypeLoc().castAs<MemberPointerTypeLoc>();
   ASSERT_EQ(SM.getFileOffset(TL.getStarLoc()), Example.point("star"));
+}
+
+class AutoTypeLocConceptReferenceRangeVerifier
+    : public RangeVerifier<AutoTypeLoc> {
+protected:
+  SourceRange getRange(const AutoTypeLoc &Node) override {
+    if (const ConceptReference *ConceptRef = Node.getConceptReference()) {
+      return ConceptRef->getSourceRange();
+    }
+    return SourceRange();
+  }
+};
+
+TEST(LocationVerifier, AutoTypeLocConceptReference) {
+  AutoTypeLocConceptReferenceRangeVerifier Verifier;
+
+  const char *Code =
+      R"cpp(template <typename T> concept CCC = true;
+CCC auto abc();
+)cpp";
+  Verifier.expectRange(2, 1, 2, 1);
+  EXPECT_TRUE(Verifier.match(Code, typeLoc(loc(autoType())), Lang_CXX20));
+
+  const char *Code2 =
+      R"cpp(template <typename T, int> concept CCC = true;
+CCC<10> auto abc();
+)cpp";
+  Verifier.expectRange(2, 1, 2, 7);
+  EXPECT_TRUE(Verifier.match(Code2, typeLoc(loc(autoType())), Lang_CXX20));
+
+  const char *Code3 =
+      R"cpp(namespace NS {
+  template <typename T, int> concept CCC = true;
+}
+NS::CCC<10> auto abc();
+)cpp";
+  Verifier.expectRange(4, 1, 4, 11);
+  EXPECT_TRUE(Verifier.match(Code3, typeLoc(loc(autoType())), Lang_CXX20));
+
+  const char *Code4 =
+      R"cpp(template <typename T> concept CCC = true;
+CCC<> auto abc();
+)cpp";
+  Verifier.expectRange(2, 1, 2, 5);
+  EXPECT_TRUE(Verifier.match(Code4, typeLoc(loc(autoType())), Lang_CXX20));
+}
+
+class TemplateTypeParmDeclConceptReferenceRangeVerifier
+    : public RangeVerifier<TemplateTypeParmDecl> {
+protected:
+  SourceRange getRange(const TemplateTypeParmDecl &Node) override {
+    if (const TypeConstraint *TC = Node.getTypeConstraint()) {
+      if (const ConceptReference *ConceptRef = TC->getConceptReference()) {
+        return ConceptRef->getSourceRange();
+      }
+    }
+    return SourceRange();
+  }
+};
+
+TEST(LocationVerifier, TemplateTypeParmDeclConceptReference) {
+  TemplateTypeParmDeclConceptReferenceRangeVerifier Verifier;
+
+  const char *Code =
+      R"cpp(template <typename S> concept CCC = true;
+template <CCC T> void print(T object);
+)cpp";
+  Verifier.expectRange(2, 11, 2, 11);
+  EXPECT_TRUE(Verifier.match(Code, templateTypeParmDecl(), Lang_CXX20));
+
+  const char *Code2 =
+      R"cpp(template <typename S, typename T> concept CCC = true;
+template <CCC<int> T> void print(T object);
+)cpp";
+  Verifier.expectRange(2, 11, 2, 18);
+  EXPECT_TRUE(Verifier.match(Code2, templateTypeParmDecl(), Lang_CXX20));
+
+  const char *Code3 =
+      R"cpp(namespace X {
+  template <typename S, typename T> concept CCC = true;
+}
+template <X::CCC<int> T> void print(T object);
+)cpp";
+  Verifier.expectRange(4, 11, 4, 21);
+  EXPECT_TRUE(Verifier.match(Code3, templateTypeParmDecl(), Lang_CXX20));
+}
+
+class ConceptSpecializationExprConceptReferenceRangeVerifier
+    : public RangeVerifier<VarTemplateDecl> {
+protected:
+  SourceRange getRange(const VarTemplateDecl &Node) override {
+    assert(Node.hasAssociatedConstraints());
+    SmallVector<const Expr *, 3> ACs;
+    Node.getAssociatedConstraints(ACs);
+    for (const Expr *Constraint : ACs) {
+      if (const ConceptSpecializationExpr *CSConstraint =
+              dyn_cast<ConceptSpecializationExpr>(Constraint)) {
+        return CSConstraint->getConceptReference()->getSourceRange();
+      }
+    }
+    return SourceRange();
+  }
+};
+
+const internal::VariadicDynCastAllOfMatcher<Decl, VarTemplateDecl>
+    varTemplateDecl;
+
+TEST(LocationVerifier, ConceptSpecializationExprConceptReference) {
+  ConceptSpecializationExprConceptReferenceRangeVerifier Verifier;
+
+  const char *Code =
+      R"cpp(template <int X> concept CCC = true;
+template <int X> requires CCC<X> int z = X;
+)cpp";
+  Verifier.expectRange(2, 27, 2, 32);
+  EXPECT_TRUE(Verifier.match(Code, varTemplateDecl(hasName("z")), Lang_CXX20));
+
+  const char *Code2 =
+      R"cpp(namespace NS {
+template <int X> concept CCC = true;
+}
+template <int X> requires NS::CCC<X> int z = X;
+)cpp";
+  Verifier.expectRange(4, 27, 4, 36);
+  EXPECT_TRUE(Verifier.match(Code2, varTemplateDecl(hasName("z")), Lang_CXX20));
 }
 
 } // end namespace

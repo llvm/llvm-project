@@ -59,6 +59,10 @@ void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
   const ASTContext &Context = *Result.Context;
   const SourceManager &Source = Context.getSourceManager();
 
+  // Clang diagnostic error may cause the variable to be an invalid int vardecl
+  if (MatchedDecl->isInvalidDecl())
+    return;
+
   // We want to warn about cases where the type name
   // comes from a macro like this:
   //

@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -std=c++20 -verify %s
 // RUN: %clang_cc1 -std=c++20 -verify %s -triple powerpc64-ibm-aix
-// expected-no-diagnostics
 
 namespace GH57945 {
   template<typename T>
@@ -91,4 +90,138 @@ struct Foo {
 
 static_assert(ConstructibleWithN<Foo>);
 
+namespace GH56556 {
+
+template <typename It>
+inline constexpr It declare ();
+
+template <typename It, template <typename> typename Template>
+concept D = requires {
+	{ [] <typename T1> (Template<T1> &) {}(declare<It &>()) };
+};
+
+template <typename T>
+struct B {};
+
+template <typename T>
+struct Adapter;
+
+template <D<B> T>
+struct Adapter<T> {};
+
+template struct Adapter<B<int>>;
+
+} // namespace GH56556
+
+namespace GH82849 {
+
+template <class T>
+concept C = requires(T t) {
+  requires requires (T u) {
+    []<class V>(V) {
+      return requires(V v) {
+        [](V w) {}(v);
+      };
+    }(t);
+  };
+};
+
+template <class From>
+struct Widget;
+
+template <C F>
+struct Widget<F> {
+  static F create(F from) {
+    return from;
+  }
+};
+
+template <class>
+bool foo() {
+  return C<int>;
 }
+
+void bar() {
+  // https://github.com/llvm/llvm-project/issues/49570#issuecomment-1664966972
+  Widget<char>::create(0);
+}
+
+} // namespace GH82849
+
+}
+
+// GH60642 reported an assert being hit, make sure we don't assert.
+namespace GH60642 {
+template<auto Q> concept C = requires { Q.template operator()<float>(); };
+template<class> concept D = true;
+static_assert(C<[]<D>{}>);  // ok
+template<class> concept E = C<[]<D>{}>;
+static_assert(E<int>);  // previously Asserted.
+
+// ensure we properly diagnose when "D" is false.
+namespace DIsFalse {
+template<auto Q> concept C = requires { Q.template operator()<float>(); };
+template<class> concept D = false;
+static_assert(C<[]<D>{}>);
+// expected-error@-1{{static assertion failed}}
+// expected-note@-2{{does not satisfy 'C'}}
+// expected-note@-5{{because 'Q.template operator()<float>()' would be invalid: no matching member function for call to 'operator()'}}
+template<class> concept E = C<[]<D>{}>;
+static_assert(E<int>);
+// expected-error@-1{{static assertion failed}}
+// expected-note@-2{{because 'int' does not satisfy 'E'}}
+// expected-note@-4{{does not satisfy 'C'}}
+// expected-note@-11{{because 'Q.template operator()<float>()' would be invalid: no matching member function for call to 'operator()'}}
+}
+}
+
+namespace ReturnTypeRequirementInLambda {
+template <typename T>
+concept C1 = true;
+
+template <class T>
+concept test = [] {
+  return requires(T t) {
+    { t } -> C1;
+  };
+}();
+
+static_assert(test<int>);
+
+template <typename T>
+concept C2 = true;
+struct S1 {
+  int f1() { return 1; }
+};
+
+void foo() {
+  auto make_caller = []<auto member> {
+    return [](S1 *ps) {
+      if constexpr (requires {
+                      { (ps->*member)() } -> C2;
+                    })
+        ;
+    };
+  };
+
+  auto caller = make_caller.operator()<&S1::f1>();
+}
+} // namespace ReturnTypeRequirementInLambda
+
+namespace GH73418 {
+void foo() {
+  int x;
+  [&x](auto) {
+    return [](auto y) {
+      return [](auto obj, auto... params)
+        requires requires {
+          sizeof...(params);
+          [](auto... pack) {
+            return sizeof...(pack);
+          }(params...);
+        }
+      { return false; }(y);
+    }(x);
+  }(x);
+}
+} // namespace GH73418

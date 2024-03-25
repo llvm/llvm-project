@@ -7,9 +7,9 @@
 ; RUN:   < %s | FileCheck -check-prefixes=RV32C %s
 ; RUN: llc -mtriple=riscv64 -mattr=+c -verify-machineinstrs --riscv-no-aliases \
 ; RUN:   < %s | FileCheck -check-prefixes=RV64C %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-zca -verify-machineinstrs --riscv-no-aliases \
+; RUN: llc -mtriple=riscv32 -mattr=+zca -verify-machineinstrs --riscv-no-aliases \
 ; RUN:   < %s | FileCheck -check-prefixes=RV32C %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-zca -verify-machineinstrs --riscv-no-aliases \
+; RUN: llc -mtriple=riscv64 -mattr=+zca -verify-machineinstrs --riscv-no-aliases \
 ; RUN:   < %s | FileCheck -check-prefixes=RV64C %s
 
 ; These test that constant adds are not moved after shifts by DAGCombine,
@@ -25,7 +25,7 @@ define signext i32 @add_small_const(i32 signext %a) nounwind {
 ;
 ; RV64I-LABEL: add_small_const:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addiw a0, a0, 1
+; RV64I-NEXT:    addi a0, a0, 1
 ; RV64I-NEXT:    slli a0, a0, 56
 ; RV64I-NEXT:    srai a0, a0, 56
 ; RV64I-NEXT:    jalr zero, 0(ra)
@@ -39,7 +39,7 @@ define signext i32 @add_small_const(i32 signext %a) nounwind {
 ;
 ; RV64C-LABEL: add_small_const:
 ; RV64C:       # %bb.0:
-; RV64C-NEXT:    c.addiw a0, 1
+; RV64C-NEXT:    c.addi a0, 1
 ; RV64C-NEXT:    c.slli a0, 56
 ; RV64C-NEXT:    c.srai a0, 56
 ; RV64C-NEXT:    c.jr ra
@@ -78,7 +78,7 @@ define signext i32 @add_large_const(i32 signext %a) nounwind {
 ; RV64C-LABEL: add_large_const:
 ; RV64C:       # %bb.0:
 ; RV64C-NEXT:    c.lui a1, 1
-; RV64C-NEXT:    c.addiw a1, -1
+; RV64C-NEXT:    c.addi a1, -1
 ; RV64C-NEXT:    c.add a0, a1
 ; RV64C-NEXT:    c.slli a0, 48
 ; RV64C-NEXT:    c.srai a0, 48
@@ -118,7 +118,7 @@ define signext i32 @add_huge_const(i32 signext %a) nounwind {
 ; RV64C-LABEL: add_huge_const:
 ; RV64C:       # %bb.0:
 ; RV64C-NEXT:    c.lui a1, 8
-; RV64C-NEXT:    c.addiw a1, -1
+; RV64C-NEXT:    c.addi a1, -1
 ; RV64C-NEXT:    c.add a0, a1
 ; RV64C-NEXT:    c.slli a0, 48
 ; RV64C-NEXT:    c.srai a0, 48
@@ -139,7 +139,7 @@ define signext i24 @add_non_machine_type(i24 signext %a) nounwind {
 ;
 ; RV64I-LABEL: add_non_machine_type:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addiw a0, a0, 256
+; RV64I-NEXT:    addi a0, a0, 256
 ; RV64I-NEXT:    slli a0, a0, 52
 ; RV64I-NEXT:    srai a0, a0, 40
 ; RV64I-NEXT:    jalr zero, 0(ra)
@@ -153,7 +153,7 @@ define signext i24 @add_non_machine_type(i24 signext %a) nounwind {
 ;
 ; RV64C-LABEL: add_non_machine_type:
 ; RV64C:       # %bb.0:
-; RV64C-NEXT:    addiw a0, a0, 256
+; RV64C-NEXT:    addi a0, a0, 256
 ; RV64C-NEXT:    c.slli a0, 52
 ; RV64C-NEXT:    c.srai a0, 40
 ; RV64C-NEXT:    c.jr ra

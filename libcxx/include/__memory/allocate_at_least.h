@@ -19,30 +19,15 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 20
-template <class _Pointer>
-struct allocation_result {
-  _Pointer ptr;
-  size_t count;
-};
-_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(allocation_result);
+#if _LIBCPP_STD_VER >= 23
 
 template <class _Alloc>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr
-allocation_result<typename allocator_traits<_Alloc>::pointer> allocate_at_least(_Alloc& __alloc, size_t __n) {
-  if constexpr (requires { __alloc.allocate_at_least(__n); }) {
-    return __alloc.allocate_at_least(__n);
-  } else {
-    return {__alloc.allocate(__n), __n};
-  }
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto __allocate_at_least(_Alloc& __alloc, size_t __n) {
+  return std::allocator_traits<_Alloc>::allocate_at_least(__alloc, __n);
 }
 
-template <class _Alloc>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr
-auto __allocate_at_least(_Alloc& __alloc, size_t __n) {
-  return std::allocate_at_least(__alloc, __n);
-}
 #else
+
 template <class _Pointer>
 struct __allocation_result {
   _Pointer ptr;
@@ -51,11 +36,12 @@ struct __allocation_result {
 
 template <class _Alloc>
 _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
-__allocation_result<typename allocator_traits<_Alloc>::pointer> __allocate_at_least(_Alloc& __alloc, size_t __n) {
+    __allocation_result<typename allocator_traits<_Alloc>::pointer>
+    __allocate_at_least(_Alloc& __alloc, size_t __n) {
   return {__alloc.allocate(__n), __n};
 }
 
-#endif // _LIBCPP_STD_VER > 20
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 

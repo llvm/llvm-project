@@ -735,7 +735,7 @@ require them.
 | register   | NO   |        |          | **?** | **?**   | **?**       | **?**    | **?**      |
 | map        |      |        |          |       |         |             |          |            |
 +------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| \* Derived pointers only pose a hasard to copying collections.                                |
+| \* Derived pointers only pose a hazard to copying collections.                                |
 +------------+------+--------+----------+-------+---------+-------------+----------+------------+
 | **?** denotes a feature which could be utilized if available.                                 |
 +------------+------+--------+----------+-------+---------+-------------+----------+------------+

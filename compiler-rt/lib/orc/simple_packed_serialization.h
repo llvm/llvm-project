@@ -281,6 +281,13 @@ public:
   static constexpr bool available = true;
 };
 
+/// Trivial span<T> -> SPSSequence<SPSElementTagT> serialization.
+template <typename SPSElementTagT, typename T>
+class TrivialSPSSequenceSerialization<SPSElementTagT, span<T>> {
+public:
+  static constexpr bool available = true;
+};
+
 /// Trivial SPSSequence<SPSElementTagT> -> std::vector<T> deserialization.
 template <typename SPSElementTagT, typename T>
 class TrivialSPSSequenceDeserialization<SPSElementTagT, std::vector<T>> {
@@ -382,6 +389,44 @@ public:
       return false;
     S = span<const char>(IB.data(), Size);
     return IB.skip(Size);
+  }
+};
+
+/// SPSTuple serialization for std::tuple.
+template <typename... SPSTagTs, typename... Ts>
+class SPSSerializationTraits<SPSTuple<SPSTagTs...>, std::tuple<Ts...>> {
+private:
+  using TupleArgList = typename SPSTuple<SPSTagTs...>::AsArgList;
+  using ArgIndices = std::make_index_sequence<sizeof...(Ts)>;
+
+  template <std::size_t... I>
+  static size_t size(const std::tuple<Ts...> &T, std::index_sequence<I...>) {
+    return TupleArgList::size(std::get<I>(T)...);
+  }
+
+  template <std::size_t... I>
+  static bool serialize(SPSOutputBuffer &OB, const std::tuple<Ts...> &T,
+                        std::index_sequence<I...>) {
+    return TupleArgList::serialize(OB, std::get<I>(T)...);
+  }
+
+  template <std::size_t... I>
+  static bool deserialize(SPSInputBuffer &IB, std::tuple<Ts...> &T,
+                          std::index_sequence<I...>) {
+    return TupleArgList::deserialize(IB, std::get<I>(T)...);
+  }
+
+public:
+  static size_t size(const std::tuple<Ts...> &T) {
+    return size(T, ArgIndices{});
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const std::tuple<Ts...> &T) {
+    return serialize(OB, T, ArgIndices{});
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, std::tuple<Ts...> &T) {
+    return deserialize(IB, T, ArgIndices{});
   }
 };
 

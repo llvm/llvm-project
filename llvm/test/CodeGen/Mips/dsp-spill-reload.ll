@@ -1,6 +1,6 @@
-; RUN: llc -march=mips -mattr=+dsp < %s -asm-show-inst -O0 | FileCheck %s \
+; RUN: llc -mtriple=mips -mattr=+dsp < %s -asm-show-inst -O0 | FileCheck %s \
 ; RUN:   --check-prefixes=ASM,ALL
-; RUN: llc -march=mips -mattr=+dsp,+micromips < %s -O0 -filetype=obj | \
+; RUN: llc -mtriple=mips -mattr=+dsp,+micromips < %s -O0 -filetype=obj | \
 ; RUN:   llvm-objdump --no-print-imm-hex -d - | FileCheck %s --check-prefixes=MM-OBJ,ALL
 
 ; Test that spill and reloads use the dsp "variant" instructions. We use -O0

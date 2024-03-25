@@ -8,7 +8,6 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/Basic/DiagnosticSerialization.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -19,20 +18,15 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
 
 #include "ClangHost.h"
 #include "ClangModulesDeclVendor.h"
-#include "ModuleDependencyCollector.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/Progress.h"
-#include "lldb/Host/Host.h"
-#include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SourceModule.h"
 #include "lldb/Target/Target.h"
@@ -40,10 +34,8 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
 
 #include <memory>
-#include <mutex>
 
 using namespace lldb_private;
 
@@ -68,19 +60,18 @@ public:
 
 private:
   bool HandleModuleRemark(const clang::Diagnostic &info);
-  void SetCurrentModuleProgress(llvm::StringRef module_name);
+  void SetCurrentModuleProgress(std::string module_name);
 
   typedef std::pair<clang::DiagnosticsEngine::Level, std::string>
       IDAndDiagnostic;
   std::vector<IDAndDiagnostic> m_diagnostics;
   /// The DiagnosticPrinter used for creating the full diagnostic messages
   /// that are stored in m_diagnostics.
-  std::shared_ptr<clang::TextDiagnosticPrinter> m_diag_printer;
+  std::unique_ptr<clang::TextDiagnosticPrinter> m_diag_printer;
   /// Output stream of m_diag_printer.
-  std::shared_ptr<llvm::raw_string_ostream> m_os;
+  std::unique_ptr<llvm::raw_string_ostream> m_os;
   /// Output string filled by m_os. Will be reused for different diagnostics.
   std::string m_output;
-  Log *m_log;
   /// A Progress with explicitly managed lifetime.
   std::unique_ptr<Progress> m_current_progress_up;
   std::vector<std::string> m_module_build_stack;
@@ -142,12 +133,10 @@ private:
 } // anonymous namespace
 
 StoringDiagnosticConsumer::StoringDiagnosticConsumer() {
-  m_log = GetLog(LLDBLog::Expressions);
-
-  clang::DiagnosticOptions *m_options = new clang::DiagnosticOptions();
-  m_os = std::make_shared<llvm::raw_string_ostream>(m_output);
+  auto *options = new clang::DiagnosticOptions();
+  m_os = std::make_unique<llvm::raw_string_ostream>(m_output);
   m_diag_printer =
-      std::make_shared<clang::TextDiagnosticPrinter>(*m_os, m_options);
+      std::make_unique<clang::TextDiagnosticPrinter>(*m_os, options);
 }
 
 void StoringDiagnosticConsumer::HandleDiagnostic(
@@ -191,7 +180,7 @@ void StoringDiagnosticConsumer::EndSourceFile() {
 
 bool StoringDiagnosticConsumer::HandleModuleRemark(
     const clang::Diagnostic &info) {
-  Log *log = GetLog(LLDBLog::Expressions);
+  Log *log = GetLog(LLDBLog::Types | LLDBLog::Expressions);
   switch (info.getID()) {
   case clang::diag::remark_module_build: {
     const auto &module_name = info.getArgStdStr(0);
@@ -208,8 +197,9 @@ bool StoringDiagnosticConsumer::HandleModuleRemark(
     if (m_module_build_stack.empty()) {
       m_current_progress_up = nullptr;
     } else {
-      // Update the progress to re-show the module that was currently being
-      // built from the time the now completed module was originally began.
+      // When the just completed module began building, a module that depends on
+      // it ("module A") was effectively paused. Update the progress to re-show
+      // "module A" as continuing to be built.
       const auto &resumed_module_name = m_module_build_stack.back();
       SetCurrentModuleProgress(resumed_module_name);
     }
@@ -224,13 +214,12 @@ bool StoringDiagnosticConsumer::HandleModuleRemark(
 }
 
 void StoringDiagnosticConsumer::SetCurrentModuleProgress(
-    llvm::StringRef module_name) {
-  // Ensure the ordering of:
-  //   1. Completing the existing progress event.
-  //   2. Beginining a new progress event.
-  m_current_progress_up = nullptr;
-  m_current_progress_up = std::make_unique<Progress>(
-      llvm::formatv("Currently building module {0}", module_name));
+    std::string module_name) {
+  if (!m_current_progress_up)
+    m_current_progress_up =
+        std::make_unique<Progress>("Building Clang modules");
+
+  m_current_progress_up->Increment(1, std::move(module_name));
 }
 
 ClangModulesDeclVendor::ClangModulesDeclVendor()
@@ -329,14 +318,14 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
 
       bool is_system = true;
       bool is_framework = false;
-      auto dir =
-          HS.getFileMgr().getDirectory(module.search_path.GetStringRef());
+      auto dir = HS.getFileMgr().getOptionalDirectoryRef(
+          module.search_path.GetStringRef());
       if (!dir)
         return error();
-      auto *file = HS.lookupModuleMapFile(*dir, is_framework);
+      auto file = HS.lookupModuleMapFile(*dir, is_framework);
       if (!file)
         return error();
-      if (!HS.loadModuleMapFile(file, is_system))
+      if (!HS.loadModuleMapFile(*file, is_system))
         return error();
     }
   }

@@ -61,8 +61,10 @@ void f(atomic_int *i, const atomic_int *ci,
 
   __opencl_atomic_fetch_min(i, 1, memory_order_seq_cst, memory_scope_work_group);
   __opencl_atomic_fetch_max(i, 1, memory_order_seq_cst, memory_scope_work_group);
-  __opencl_atomic_fetch_min(f, 1, memory_order_seq_cst, memory_scope_work_group); // expected-error {{address argument to atomic operation must be a pointer to atomic integer ('__generic atomic_float *' (aka '__generic _Atomic(float) *') invalid)}}
-  __opencl_atomic_fetch_max(f, 1, memory_order_seq_cst, memory_scope_work_group); // expected-error {{address argument to atomic operation must be a pointer to atomic integer ('__generic atomic_float *' (aka '__generic _Atomic(float) *') invalid)}}
+  __opencl_atomic_fetch_min(f, 1, memory_order_seq_cst, memory_scope_work_group);
+  __opencl_atomic_fetch_max(f, 1, memory_order_seq_cst, memory_scope_work_group);
+  __opencl_atomic_fetch_min(d, 1, memory_order_seq_cst, memory_scope_work_group);
+  __opencl_atomic_fetch_max(d, 1, memory_order_seq_cst, memory_scope_work_group);
 
   bool cmpexch_1 = __opencl_atomic_compare_exchange_strong(i, I, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group);
   bool cmpexch_2 = __opencl_atomic_compare_exchange_strong(p, P, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group);

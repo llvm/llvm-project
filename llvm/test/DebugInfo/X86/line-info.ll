@@ -2,7 +2,7 @@
 ; RUN: llvm-dwarfdump -v %t | FileCheck %s
 
 ; CHECK: [[FILEID:[0-9]+]]]{{.*}}list0.h
-; CHECK: [[FILEID]]      0      1   0  0 is_stmt{{$}}
+; CHECK: [[FILEID]]      0      1   0  0 0 is_stmt{{$}}
 
 ; IR generated from clang -g -emit-llvm with the following source:
 ; list0.h:

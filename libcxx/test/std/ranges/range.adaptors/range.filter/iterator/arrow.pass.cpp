@@ -22,7 +22,7 @@
 #include "test_macros.h"
 #include "../types.h"
 
-struct Point {
+struct XYPoint {
   int x;
   int y;
 };
@@ -31,21 +31,21 @@ template <class T>
 concept has_arrow = requires (T t) {
   { t->x };
 };
-static_assert(has_arrow<Point*>); // test the test
+static_assert(has_arrow<XYPoint*>); // test the test
 
 struct WithArrowOperator {
   using iterator_category = std::input_iterator_tag;
   using difference_type = std::ptrdiff_t;
-  using value_type = Point;
+  using value_type = XYPoint;
 
-  constexpr explicit WithArrowOperator(Point* p) : p_(p) { }
-  constexpr Point& operator*() const { return *p_; }
-  constexpr Point* operator->() const { return p_; } // has arrow
+  constexpr explicit WithArrowOperator(XYPoint* p) : p_(p) { }
+  constexpr XYPoint& operator*() const { return *p_; }
+  constexpr XYPoint* operator->() const { return p_; } // has arrow
   constexpr WithArrowOperator& operator++() { ++p_; return *this; }
   constexpr WithArrowOperator operator++(int) { return WithArrowOperator(p_++); }
 
-  friend constexpr Point* base(WithArrowOperator const& i) { return i.p_; }
-  Point* p_;
+  friend constexpr XYPoint* base(WithArrowOperator const& i) { return i.p_; }
+  XYPoint* p_;
 };
 static_assert(std::input_iterator<WithArrowOperator>);
 
@@ -53,43 +53,43 @@ struct WithNonCopyableIterator : std::ranges::view_base {
   struct iterator {
     using iterator_category = std::input_iterator_tag;
     using difference_type = std::ptrdiff_t;
-    using value_type = Point;
+    using value_type = XYPoint;
 
     iterator(iterator const&) = delete; // not copyable
     iterator(iterator&&);
     iterator& operator=(iterator&&);
-    Point& operator*() const;
-    iterator operator->() const;
+    XYPoint& operator*() const;
+    XYPoint* operator->() const;
     iterator& operator++();
     iterator operator++(int);
 
-    // We need this to use Point* as a sentinel type below. sentinel_wrapper
+    // We need this to use XYPoint* as a sentinel type below. sentinel_wrapper
     // can't be used because this iterator is not copyable.
-    friend bool operator==(iterator const&, Point*);
+    friend bool operator==(iterator const&, XYPoint*);
   };
 
   iterator begin() const;
-  Point* end() const;
+  XYPoint* end() const;
 };
 static_assert(std::ranges::input_range<WithNonCopyableIterator>);
 
-template <class Iterator, class Sentinel = sentinel_wrapper<Iterator>>
+template <class Iter, class Sent = sentinel_wrapper<Iter>>
 constexpr void test() {
-  std::array<Point, 5> array{{{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}};
-  using View = minimal_view<Iterator, Sentinel>;
+  std::array<XYPoint, 5> array{{{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}};
+  using View = minimal_view<Iter, Sent>;
   using FilterView = std::ranges::filter_view<View, AlwaysTrue>;
   using FilterIterator = std::ranges::iterator_t<FilterView>;
 
   auto make_filter_view = [](auto begin, auto end, auto pred) {
-    View view{Iterator(begin), Sentinel(Iterator(end))};
+    View view{Iter(begin), Sent(Iter(end))};
     return FilterView(std::move(view), pred);
   };
 
   for (std::ptrdiff_t n = 0; n != 5; ++n) {
-    FilterView view = make_filter_view(array.begin(), array.end(), AlwaysTrue{});
-    FilterIterator const iter(view, Iterator(array.begin() + n));
-    std::same_as<Iterator> decltype(auto) result = iter.operator->();
-    assert(base(result) == array.begin() + n);
+    FilterView view = make_filter_view(array.data(), array.data() + array.size(), AlwaysTrue{});
+    FilterIterator const iter(view, Iter(array.data() + n));
+    std::same_as<Iter> decltype(auto) result = iter.operator->();
+    assert(base(result) == array.data() + n);
     assert(iter->x == n);
     assert(iter->y == n);
   }
@@ -97,10 +97,10 @@ constexpr void test() {
 
 constexpr bool tests() {
   test<WithArrowOperator>();
-  test<Point*>();
-  test<Point const*>();
-  test<contiguous_iterator<Point*>>();
-  test<contiguous_iterator<Point const*>>();
+  test<XYPoint*>();
+  test<XYPoint const*>();
+  test<contiguous_iterator<XYPoint*>>();
+  test<contiguous_iterator<XYPoint const*>>();
 
   // Make sure filter_view::iterator doesn't have operator-> if the
   // underlying iterator doesn't have one.
@@ -111,11 +111,11 @@ constexpr bool tests() {
       using FilterIterator = std::ranges::iterator_t<FilterView>;
       static_assert(!has_arrow<FilterIterator>);
     };
-    check_no_arrow.operator()<cpp17_input_iterator<Point*>>();
-    check_no_arrow.operator()<cpp20_input_iterator<Point*>>();
-    check_no_arrow.operator()<forward_iterator<Point*>>();
-    check_no_arrow.operator()<bidirectional_iterator<Point*>>();
-    check_no_arrow.operator()<random_access_iterator<Point*>>();
+    check_no_arrow.operator()<cpp17_input_iterator<XYPoint*>>();
+    check_no_arrow.operator()<cpp20_input_iterator<XYPoint*>>();
+    check_no_arrow.operator()<forward_iterator<XYPoint*>>();
+    check_no_arrow.operator()<bidirectional_iterator<XYPoint*>>();
+    check_no_arrow.operator()<random_access_iterator<XYPoint*>>();
     check_no_arrow.operator()<int*>();
   }
 

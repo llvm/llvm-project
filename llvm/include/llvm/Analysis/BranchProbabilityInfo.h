@@ -122,16 +122,23 @@ public:
   }
 
   BranchProbabilityInfo(BranchProbabilityInfo &&Arg)
-      : Probs(std::move(Arg.Probs)), LastF(Arg.LastF),
-        EstimatedBlockWeight(std::move(Arg.EstimatedBlockWeight)) {}
+      : Handles(std::move(Arg.Handles)), Probs(std::move(Arg.Probs)),
+        LastF(Arg.LastF),
+        EstimatedBlockWeight(std::move(Arg.EstimatedBlockWeight)) {
+    for (auto &Handle : Handles)
+      Handle.setBPI(this);
+  }
 
   BranchProbabilityInfo(const BranchProbabilityInfo &) = delete;
   BranchProbabilityInfo &operator=(const BranchProbabilityInfo &) = delete;
 
   BranchProbabilityInfo &operator=(BranchProbabilityInfo &&RHS) {
     releaseMemory();
+    Handles = std::move(RHS.Handles);
     Probs = std::move(RHS.Probs);
     EstimatedBlockWeight = std::move(RHS.EstimatedBlockWeight);
+    for (auto &Handle : Handles)
+      Handle.setBPI(this);
     return *this;
   }
 
@@ -188,6 +195,9 @@ public:
   /// This allows to keep probabilities unset for the destination if they were
   /// unset for source.
   void copyEdgeProbabilities(BasicBlock *Src, BasicBlock *Dst);
+
+  /// Swap outgoing edges probabilities for \p Src with branch terminator
+  void swapSuccEdgesProbabilities(const BasicBlock *Src);
 
   static BranchProbability getBranchProbStackProtector(bool IsLikely) {
     static const BranchProbability LikelyProb((1u << 20) - 1, 1u << 20);
@@ -276,6 +286,8 @@ private:
     }
 
   public:
+    void setBPI(BranchProbabilityInfo *BPI) { this->BPI = BPI; }
+
     BasicBlockCallbackVH(const Value *V, BranchProbabilityInfo *BPI = nullptr)
         : CallbackVH(const_cast<Value *>(V)), BPI(BPI) {}
   };
@@ -433,6 +445,8 @@ public:
   explicit BranchProbabilityPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes \c BranchProbabilityInfo.

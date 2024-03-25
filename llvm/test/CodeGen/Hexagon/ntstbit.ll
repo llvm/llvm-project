@@ -7,7 +7,7 @@ define i32 @f0(i32 %a0, i32 %a1, i32 %a2) #0 {
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = !tstbit(r1,r2)
-; CHECK-NEXT:     r17:16 = combine(r0,r1)
+; CHECK-NEXT:     r17:16 = combine(r1,r0)
 ; CHECK-NEXT:     memd(r29+#-16) = r17:16
 ; CHECK-NEXT:     allocframe(#8)
 ; CHECK-NEXT:    } // 8-byte Folded Spill
@@ -28,8 +28,8 @@ define i32 @f0(i32 %a0, i32 %a1, i32 %a2) #0 {
 ; CHECK-NEXT:  .LBB0_3: // %b3
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     call f3
-; CHECK-NEXT:     r1 = add(r16,#2)
-; CHECK-NEXT:     r0 = r17
+; CHECK-NEXT:     r1 = add(r17,#2)
+; CHECK-NEXT:     r0 = r16
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = #0

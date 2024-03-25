@@ -7,71 +7,59 @@
 //===----------------------------------------------------------------------===//
 
 #include "exhaustive_test.h"
-#include "src/__support/FPUtil/FPBits.h"
 #include "src/math/sincosf.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
 
-#include <thread>
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-using FPBits = __llvm_libc::fputil::FPBits<float>;
+struct SincosfChecker : public virtual LIBC_NAMESPACE::testing::Test {
+  using FloatType = float;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
+  using StorageType = uint32_t;
 
-namespace mpfr = __llvm_libc::testing::mpfr;
-
-struct LlvmLibcSinCosfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
-  bool check(uint32_t start, uint32_t stop,
-             mpfr::RoundingMode rounding) override {
+  uint64_t check(StorageType start, StorageType stop,
+                 mpfr::RoundingMode rounding) {
     mpfr::ForceRoundingMode r(rounding);
-    uint32_t bits = start;
-    bool result = true;
+    if (!r.success)
+      return (stop > start);
+    StorageType bits = start;
+    uint64_t failed = 0;
     do {
       FPBits xbits(bits);
-      float x = float(xbits);
-      float sinx, cosx;
-      __llvm_libc::sincosf(x, &sinx, &cosx);
-      result &= EXPECT_MPFR_MATCH(mpfr::Operation::Sin, x, sinx, 0.5, rounding);
-      result &= EXPECT_MPFR_MATCH(mpfr::Operation::Cos, x, cosx, 0.5, rounding);
-    } while (++bits < stop);
-    return result;
+      FloatType x = xbits.get_val();
+      FloatType sinx, cosx;
+      LIBC_NAMESPACE::sincosf(x, &sinx, &cosx);
+
+      bool correct = TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Sin, x,
+                                                       sinx, 0.5, rounding);
+      correct = correct && TEST_MPFR_MATCH_ROUNDING_SILENTLY(
+                               mpfr::Operation::Cos, x, cosx, 0.5, rounding);
+      failed += (!correct);
+      // Uncomment to print out failed values.
+      // if (!correct) {
+      //   TEST_MPFR_MATCH(mpfr::Operation::Sin, x, sinx, 0.5, rounding);
+      //   TEST_MPFR_MATCH(mpfr::Operation::Cos, x, cosx, 0.5, rounding);
+      // }
+    } while (bits++ < stop);
+    return failed;
   }
 };
 
-// Range: [0, +Inf);
+using LlvmLibcSincosfExhaustiveTest =
+    LlvmLibcExhaustiveMathTest<SincosfChecker>;
+
+// Range: [0, Inf];
 static constexpr uint32_t POS_START = 0x0000'0000U;
 static constexpr uint32_t POS_STOP = 0x7f80'0000U;
 
-TEST_F(LlvmLibcSinCosfExhaustiveTest, PostiveRangeRoundNearestTieToEven) {
-  test_full_range(POS_START, POS_STOP, mpfr::RoundingMode::Nearest);
+TEST_F(LlvmLibcSincosfExhaustiveTest, PostiveRange) {
+  test_full_range_all_roundings(POS_START, POS_STOP);
 }
 
-TEST_F(LlvmLibcSinCosfExhaustiveTest, PostiveRangeRoundUp) {
-  test_full_range(POS_START, POS_STOP, mpfr::RoundingMode::Upward);
-}
+// Range: [-1, 0];
+static constexpr uint32_t NEG_START = 0xb000'0000U;
+static constexpr uint32_t NEG_STOP = 0xbf7f'ffffU;
 
-TEST_F(LlvmLibcSinCosfExhaustiveTest, PostiveRangeRoundDown) {
-  test_full_range(POS_START, POS_STOP, mpfr::RoundingMode::Downward);
-}
-
-TEST_F(LlvmLibcSinCosfExhaustiveTest, PostiveRangeRoundTowardZero) {
-  test_full_range(POS_START, POS_STOP, mpfr::RoundingMode::TowardZero);
-}
-
-// Range: (-Inf, 0];
-static constexpr uint32_t NEG_START = 0x8000'0000U;
-static constexpr uint32_t NEG_STOP = 0xff80'0000U;
-
-TEST_F(LlvmLibcSinCosfExhaustiveTest, NegativeRangeRoundNearestTieToEven) {
-  test_full_range(NEG_START, NEG_STOP, mpfr::RoundingMode::Nearest);
-}
-
-TEST_F(LlvmLibcSinCosfExhaustiveTest, NegativeRangeRoundUp) {
-  test_full_range(NEG_START, NEG_STOP, mpfr::RoundingMode::Upward);
-}
-
-TEST_F(LlvmLibcSinCosfExhaustiveTest, NegativeRangeRoundDown) {
-  test_full_range(NEG_START, NEG_STOP, mpfr::RoundingMode::Downward);
-}
-
-TEST_F(LlvmLibcSinCosfExhaustiveTest, NegativeRangeRoundTowardZero) {
-  test_full_range(NEG_START, NEG_STOP, mpfr::RoundingMode::TowardZero);
+TEST_F(LlvmLibcSincosfExhaustiveTest, NegativeRange) {
+  test_full_range_all_roundings(NEG_START, NEG_STOP);
 }

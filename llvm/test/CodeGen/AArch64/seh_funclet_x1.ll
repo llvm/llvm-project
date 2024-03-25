@@ -3,8 +3,8 @@
 ; Windows runtime passes the establisher frame as the second argument to the
 ; termination handler.  Check that we copy it into fp.
 
-; CHECK:      ?dtor$3@?0?main@4HA":
-; CHECK:      .seh_proc "?dtor$3@?0?main@4HA"
+; CHECK:      ?dtor$6@?0?main@4HA":
+; CHECK:      .seh_proc "?dtor$6@?0?main@4HA"
 ; CHECK:      stp     x29, x30, [sp, #-16]!   // 16-byte Folded Spill
 ; CHECK-NEXT: .seh_save_fplr_x 16
 ; CHECK-NEXT: .seh_endprologue

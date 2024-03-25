@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -verify -emit-llvm-only %s
 
-// rdar://problem/7838962
 namespace test0 {
   template<typename T> unsigned f0() {
     return T::MaxSize; // expected-error {{'int' cannot be used prior to '::'}}

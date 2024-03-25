@@ -39,9 +39,9 @@ mlirPassManagerGetAsOpPassManager(MlirPassManager passManager) {
   return wrap(static_cast<OpPassManager *>(unwrap(passManager)));
 }
 
-MlirLogicalResult mlirPassManagerRun(MlirPassManager passManager,
-                                     MlirModule module) {
-  return wrap(unwrap(passManager)->run(unwrap(module)));
+MlirLogicalResult mlirPassManagerRunOnOp(MlirPassManager passManager,
+                                         MlirOperation op) {
+  return wrap(unwrap(passManager)->run(unwrap(op)));
 }
 
 void mlirPassManagerEnableIRPrinting(MlirPassManager passManager) {

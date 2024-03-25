@@ -7,6 +7,13 @@
 // RUN:       } " > %t.script
 // RUN: ld.lld --no-rosegment --script %t.script %t -o %t2
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 | FileCheck %s
+
+// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7aeb-none-linux-gnueabi -mcpu=cortex-a8 %s -o %t
+// RUN: ld.lld --no-rosegment --script %t.script %t -o %t2
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 | FileCheck %s
+// RUN: ld.lld --be8 --no-rosegment --script %t.script %t -o %t2
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 | FileCheck %s
+
 // Simple test that we can support range extension thunks with linker scripts
  .syntax unified
  .section .text_low, "ax", %progbits

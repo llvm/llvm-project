@@ -13,4 +13,5 @@ add_header_library(
   DEPENDS
     .${LIBC_TARGET_ARCHITECTURE}.linux_${LIBC_TARGET_ARCHITECTURE}_util
     libc.src.__support.common
+    libc.src.__support.CPP.string_view
 )

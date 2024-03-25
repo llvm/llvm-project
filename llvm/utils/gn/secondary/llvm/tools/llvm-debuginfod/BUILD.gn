@@ -1,5 +1,12 @@
 import("//llvm/tools/binutils_symlinks.gni")
+import("//llvm/utils/TableGen/tablegen.gni")
+import("//llvm/utils/gn/build/driver_executable.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
+
+tablegen("Opts") {
+  visibility = [ ":llvm-debuginfod" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
 
 if (llvm_install_binutils_symlinks) {
   symlink_or_copy("debuginfod") {
@@ -17,9 +24,11 @@ group("symlinks") {
   }
 }
 
-executable("llvm-debuginfod") {
+driver_executable("llvm-debuginfod") {
   deps = [
+    ":Opts",
     "//llvm/lib/Debuginfod",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
   sources = [ "llvm-debuginfod.cpp" ]

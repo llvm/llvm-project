@@ -72,10 +72,14 @@ add_llvm_target(ARMCodeGen
   LINK_COMPONENTS
   ARMDesc
   ARMInfo
+  ARMUtils
   Analysis
   AsmPrinter
+  CFGuard
   CodeGen
+  CodeGenTypes
   Core
+  GlobalISel
   IPO
   MC
   Scalar
@@ -83,10 +87,7 @@ add_llvm_target(ARMCodeGen
   Support
   Target
   TargetParser
-  GlobalISel
-  ARMUtils
   TransformUtils
-  CFGuard
 
   ADD_TO_COMPONENT
   ARM

@@ -8,8 +8,9 @@
 
 #include "ObjcopyOptions.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/ConfigManager.h"
@@ -25,13 +26,12 @@
 
 using namespace llvm;
 using namespace llvm::objcopy;
+using namespace llvm::opt;
 
 namespace {
 enum ObjcopyID {
   OBJCOPY_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OBJCOPY_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(OBJCOPY_, __VA_ARGS__),
 #include "ObjcopyOpts.inc"
 #undef OPTION
 };
@@ -45,12 +45,8 @@ namespace objcopy_opt {
 #undef PREFIX
 
 static constexpr opt::OptTable::Info ObjcopyInfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {PREFIX,          NAME,         HELPTEXT,                                    \
-   METAVAR,         OBJCOPY_##ID, opt::Option::KIND##Class,                    \
-   PARAM,           FLAGS,        OBJCOPY_##GROUP,                             \
-   OBJCOPY_##ALIAS, ALIASARGS,    VALUES},
+#define OPTION(...)                                                            \
+  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(OBJCOPY_, __VA_ARGS__),
 #include "ObjcopyOpts.inc"
 #undef OPTION
 };
@@ -65,9 +61,8 @@ public:
 
 enum InstallNameToolID {
   INSTALL_NAME_TOOL_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  INSTALL_NAME_TOOL_##ID,
+#define OPTION(...)                                                            \
+  LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(INSTALL_NAME_TOOL_, __VA_ARGS__),
 #include "InstallNameToolOpts.inc"
 #undef OPTION
 };
@@ -82,20 +77,8 @@ namespace install_name_tool {
 #undef PREFIX
 
 static constexpr opt::OptTable::Info InstallNameToolInfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {PREFIX,                                                                     \
-   NAME,                                                                       \
-   HELPTEXT,                                                                   \
-   METAVAR,                                                                    \
-   INSTALL_NAME_TOOL_##ID,                                                     \
-   opt::Option::KIND##Class,                                                   \
-   PARAM,                                                                      \
-   FLAGS,                                                                      \
-   INSTALL_NAME_TOOL_##GROUP,                                                  \
-   INSTALL_NAME_TOOL_##ALIAS,                                                  \
-   ALIASARGS,                                                                  \
-   VALUES},
+#define OPTION(...)                                                            \
+  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(INSTALL_NAME_TOOL_, __VA_ARGS__),
 #include "InstallNameToolOpts.inc"
 #undef OPTION
 };
@@ -109,9 +92,8 @@ public:
 
 enum BitcodeStripID {
   BITCODE_STRIP_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  BITCODE_STRIP_##ID,
+#define OPTION(...)                                                            \
+  LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(BITCODE_STRIP_, __VA_ARGS__),
 #include "BitcodeStripOpts.inc"
 #undef OPTION
 };
@@ -126,20 +108,8 @@ namespace bitcode_strip {
 #undef PREFIX
 
 static constexpr opt::OptTable::Info BitcodeStripInfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {PREFIX,                                                                     \
-   NAME,                                                                       \
-   HELPTEXT,                                                                   \
-   METAVAR,                                                                    \
-   BITCODE_STRIP_##ID,                                                         \
-   opt::Option::KIND##Class,                                                   \
-   PARAM,                                                                      \
-   FLAGS,                                                                      \
-   BITCODE_STRIP_##GROUP,                                                      \
-   BITCODE_STRIP_##ALIAS,                                                      \
-   ALIASARGS,                                                                  \
-   VALUES},
+#define OPTION(...)                                                            \
+  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(BITCODE_STRIP_, __VA_ARGS__),
 #include "BitcodeStripOpts.inc"
 #undef OPTION
 };
@@ -153,9 +123,7 @@ public:
 
 enum StripID {
   STRIP_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  STRIP_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(STRIP_, __VA_ARGS__),
 #include "StripOpts.inc"
 #undef OPTION
 };
@@ -169,12 +137,7 @@ namespace strip {
 #undef PREFIX
 
 static constexpr opt::OptTable::Info StripInfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {PREFIX,        NAME,       HELPTEXT,                                        \
-   METAVAR,       STRIP_##ID, opt::Option::KIND##Class,                        \
-   PARAM,         FLAGS,      STRIP_##GROUP,                                   \
-   STRIP_##ALIAS, ALIASARGS,  VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(STRIP_, __VA_ARGS__),
 #include "StripOpts.inc"
 #undef OPTION
 };
@@ -204,6 +167,7 @@ static SectionFlag parseSectionRenameFlag(StringRef SectionName) {
       .CaseLower("contents", SectionFlag::SecContents)
       .CaseLower("share", SectionFlag::SecShare)
       .CaseLower("exclude", SectionFlag::SecExclude)
+      .CaseLower("large", SectionFlag::SecLarge)
       .Default(SectionFlag::SecNone);
 }
 
@@ -217,7 +181,7 @@ parseSectionFlagSet(ArrayRef<StringRef> SectionFlags) {
           errc::invalid_argument,
           "unrecognized section flag '%s'. Flags supported for GNU "
           "compatibility: alloc, load, noload, readonly, exclude, debug, "
-          "code, data, rom, share, contents, merge, strings",
+          "code, data, rom, share, contents, merge, strings, large",
           Flag.str().c_str());
     ParsedFlags |= ParsedFlag;
   }
@@ -291,6 +255,21 @@ parseSetSectionFlagValue(StringRef FlagValue) {
   return SFU;
 }
 
+static Expected<uint8_t> parseVisibilityType(StringRef VisType) {
+  const uint8_t Invalid = 0xff;
+  uint8_t type = StringSwitch<uint8_t>(VisType)
+                     .Case("default", ELF::STV_DEFAULT)
+                     .Case("hidden", ELF::STV_HIDDEN)
+                     .Case("internal", ELF::STV_INTERNAL)
+                     .Case("protected", ELF::STV_PROTECTED)
+                     .Default(Invalid);
+  if (type == Invalid)
+    return createStringError(errc::invalid_argument,
+                             "'%s' is not a valid symbol visibility",
+                             VisType.str().c_str());
+  return type;
+}
+
 namespace {
 struct TargetInfo {
   FileFormat Format;
@@ -331,7 +310,13 @@ static const StringMap<MachineInfo> TargetMap{
     // SPARC
     {"elf32-sparc", {ELF::EM_SPARC, false, false}},
     {"elf32-sparcel", {ELF::EM_SPARC, false, true}},
+    // Hexagon
     {"elf32-hexagon", {ELF::EM_HEXAGON, false, true}},
+    // LoongArch
+    {"elf32-loongarch", {ELF::EM_LOONGARCH, false, true}},
+    {"elf64-loongarch", {ELF::EM_LOONGARCH, true, true}},
+    // SystemZ
+    {"elf64-s390", {ELF::EM_S390, true, false}},
 };
 
 static Expected<TargetInfo>
@@ -348,7 +333,7 @@ getOutputTargetInfoByTargetName(StringRef TargetName) {
     MI.OSABI = ELF::ELFOSABI_FREEBSD;
 
   FileFormat Format;
-  if (TargetName.startswith("elf"))
+  if (TargetName.starts_with("elf"))
     Format = FileFormat::ELF;
   else
     // This should never happen because `TargetName` is valid (it certainly
@@ -544,7 +529,7 @@ static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
 // ArgValue, loads data from the file, and stores section name and data
 // into the vector of new sections \p NewSections.
 static Error loadNewSectionData(StringRef ArgValue, StringRef OptionName,
-                                std::vector<NewSectionInfo> &NewSections) {
+                                SmallVector<NewSectionInfo, 0> &NewSections) {
   if (!ArgValue.contains('='))
     return createStringError(errc::invalid_argument,
                              "bad format for " + OptionName + ": missing '='");
@@ -720,6 +705,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   Config.OutputFormat = StringSwitch<FileFormat>(OutputFormat)
                             .Case("binary", FileFormat::Binary)
                             .Case("ihex", FileFormat::IHex)
+                            .Case("srec", FileFormat::SREC)
                             .Default(FileFormat::Unspecified);
   if (Config.OutputFormat == FileFormat::Unspecified) {
     if (OutputFormat.empty()) {
@@ -764,11 +750,44 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
         llvm::crc32(arrayRefFromStringRef(Debug->getBuffer()));
   }
   Config.SplitDWO = InputArgs.getLastArgValue(OBJCOPY_split_dwo);
+
   Config.SymbolsPrefix = InputArgs.getLastArgValue(OBJCOPY_prefix_symbols);
+  Config.SymbolsPrefixRemove =
+      InputArgs.getLastArgValue(OBJCOPY_remove_symbol_prefix);
+
   Config.AllocSectionsPrefix =
       InputArgs.getLastArgValue(OBJCOPY_prefix_alloc_sections);
   if (auto Arg = InputArgs.getLastArg(OBJCOPY_extract_partition))
     Config.ExtractPartition = Arg->getValue();
+
+  if (const auto *A = InputArgs.getLastArg(OBJCOPY_gap_fill)) {
+    if (Config.OutputFormat != FileFormat::Binary)
+      return createStringError(
+          errc::invalid_argument,
+          "'--gap-fill' is only supported for binary output");
+    ErrorOr<uint64_t> Val = getAsInteger<uint64_t>(A->getValue());
+    if (!Val)
+      return createStringError(Val.getError(), "--gap-fill: bad number: %s",
+                               A->getValue());
+    uint8_t ByteVal = Val.get();
+    if (ByteVal != Val.get())
+      return createStringError(std::errc::value_too_large,
+                               "gap-fill value %s is out of range (0 to 0xff)",
+                               A->getValue());
+    Config.GapFill = ByteVal;
+  }
+
+  if (const auto *A = InputArgs.getLastArg(OBJCOPY_pad_to)) {
+    if (Config.OutputFormat != FileFormat::Binary)
+      return createStringError(
+          errc::invalid_argument,
+          "'--pad-to' is only supported for binary output");
+    ErrorOr<uint64_t> Addr = getAsInteger<uint64_t>(A->getValue());
+    if (!Addr)
+      return createStringError(Addr.getError(), "--pad-to: bad number: %s",
+                               A->getValue());
+    Config.PadTo = *Addr;
+  }
 
   for (auto *Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {
     if (!StringRef(Arg->getValue()).contains('='))
@@ -959,12 +978,48 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
             addSymbolsFromFile(Config.SymbolsToKeep, DC.Alloc, Arg->getValue(),
                                SymbolMatchStyle, ErrorCallback))
       return std::move(E);
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_skip_symbol))
+    if (Error E = Config.SymbolsToSkip.addMatcher(NameOrPattern::create(
+            Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
+      return std::move(E);
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_skip_symbols))
+    if (Error E =
+            addSymbolsFromFile(Config.SymbolsToSkip, DC.Alloc, Arg->getValue(),
+                               SymbolMatchStyle, ErrorCallback))
+      return std::move(E);
   for (auto *Arg : InputArgs.filtered(OBJCOPY_add_symbol)) {
     Expected<NewSymbolInfo> SymInfo = parseNewSymbolInfo(Arg->getValue());
     if (!SymInfo)
       return SymInfo.takeError();
 
     Config.SymbolsToAdd.push_back(*SymInfo);
+  }
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_set_symbol_visibility)) {
+    if (!StringRef(Arg->getValue()).contains('='))
+      return createStringError(errc::invalid_argument,
+                               "bad format for --set-symbol-visibility");
+    auto [Sym, Visibility] = StringRef(Arg->getValue()).split('=');
+    Expected<uint8_t> Type = parseVisibilityType(Visibility);
+    if (!Type)
+      return Type.takeError();
+    ELFConfig.SymbolsToSetVisibility.emplace_back(NameMatcher(), *Type);
+    if (Error E = ELFConfig.SymbolsToSetVisibility.back().first.addMatcher(
+            NameOrPattern::create(Sym, SymbolMatchStyle, ErrorCallback)))
+      return std::move(E);
+  }
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_set_symbols_visibility)) {
+    if (!StringRef(Arg->getValue()).contains('='))
+      return createStringError(errc::invalid_argument,
+                               "bad format for --set-symbols-visibility");
+    auto [File, Visibility] = StringRef(Arg->getValue()).split('=');
+    Expected<uint8_t> Type = parseVisibilityType(Visibility);
+    if (!Type)
+      return Type.takeError();
+    ELFConfig.SymbolsToSetVisibility.emplace_back(NameMatcher(), *Type);
+    if (Error E =
+            addSymbolsFromFile(ELFConfig.SymbolsToSetVisibility.back().first,
+                               DC.Alloc, File, SymbolMatchStyle, ErrorCallback))
+      return std::move(E);
   }
 
   ELFConfig.AllowBrokenLinks = InputArgs.hasArg(OBJCOPY_allow_broken_links);

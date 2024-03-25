@@ -1,4 +1,4 @@
-! RUN: bbc -o - %s | FileCheck %s
+! RUN: bbc -hlfir=false -o - %s | FileCheck %s
 
 module units
   integer, parameter :: preconnected_unit(3) = [0, 5, 6]
@@ -29,7 +29,7 @@ end
 subroutine zero
   complex, parameter :: a(0) = [(((k,k=1,10),j=-2,2,-1),i=2,-2,-2)]
   complex, parameter :: b(0) = [(7,i=3,-3)]
-  ! CHECK: fir.address_of(@_QQro.0xz4.null) : !fir.ref<!fir.array<0x!fir.complex<4>>>
+  ! CHECK: fir.address_of(@_QQro.0xz4.null.0) : !fir.ref<!fir.array<0x!fir.complex<4>>>
   ! CHECK-NOT: _QQro
   print*, '>', a, '<'
   print*, '>', b, '<'

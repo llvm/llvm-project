@@ -53,7 +53,6 @@ public:
   }
 
 private:
-  Multilib SelectedMultilib;
   std::string LibSuffix;
 };
 

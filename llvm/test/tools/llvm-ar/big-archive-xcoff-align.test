@@ -1,0 +1,109 @@
+## Test the alignment of XCOFF object files in the big archive format.
+
+# RUN: rm -rf %t && mkdir %t
+# RUN: cd %t
+
+# RUN: yaml2obj --docnum=1 -DFLAG=0x1DF -DSECNAME=.data %s -o t32_1.o
+# RUN: yaml2obj --docnum=1 -DFLAG=0x1F7 -DSECNAME=.data %s -o t64_1.o
+# RUN: yaml2obj --docnum=1 -DFLAG=0x1DF -DSECNAME=.text %s -o t32_2.o
+# RUN: yaml2obj --docnum=1 -DFLAG=0x1F7 -DSECNAME=.text %s -o t64_2.o
+# RUN: yaml2obj --docnum=2 -DFLAG=0x1DF %s -o t32_nomaxdata_text.o
+# RUN: yaml2obj --docnum=2 -DFLAG=0x1F7 %s -o t64_nomaxdata_text.o
+# RUN: yaml2obj --docnum=3 -DFLAG=0x1DF %s -o t32_maxdata_text.o
+# RUN: yaml2obj --docnum=3 -DFLAG=0x1F7 %s -o t64_maxdata_text.o
+# RUN: yaml2obj --docnum=4 -DFLAG=0x1DF %s -o t32_noloader.o
+# RUN: yaml2obj --docnum=4 -DFLAG=0x1F7 %s -o t64_noloader.o
+# RUN: yaml2obj --docnum=5 -DFLAG=0x1DF %s -o t32_excess.o
+# RUN: yaml2obj --docnum=5 -DFLAG=0x1F7 %s -o t64_excess.o
+
+# RUN: echo -e "import sys\nf=open(sys.argv[1],\"rb\");f.seek(int(sys.argv[2]));print(f.read(2));f.close()" > print_magic.py
+
+## Test that the content of an XCOFF object file, which has an auxiliary header,
+## is aligned in a big archive based on the content of auxiliary header.
+# RUN: env OBJECT_MODE=32_64 llvm-ar -q t_aux.a t32_nomaxdata_text.o t64_nomaxdata_text.o  t32_maxdata_text.o t64_maxdata_text.o t32_noloader.o t64_noloader.o  t32_excess.o t64_excess.o
+## The content of t32_nomaxdata_text, t64_nomaxdata_text.o aligned at 2. 
+# RUN: %python print_magic.py t_aux.a 262 | FileCheck --check-prefix=MAGIC32 %s
+# RUN: %python print_magic.py t_aux.a 528 | FileCheck --check-prefix=MAGIC64 %s
+## The content of t32_maxdata_text.o, t64_maxdata_text.o aligned at 2^8.
+# RUN: %python print_magic.py t_aux.a 1024 | FileCheck --check-prefix=MAGIC32 %s
+# RUN: %python print_magic.py t_aux.a 1536 | FileCheck --check-prefix=MAGIC64 %s
+## The content of t32_noloader.o, t64_noloader.o aligned at 2.
+# RUN: %python print_magic.py t_aux.a 1870 | FileCheck --check-prefix=MAGIC32 %s
+# RUN: %python print_magic.py t_aux.a 2130 | FileCheck --check-prefix=MAGIC64 %s
+## The content of t32_excess.o aligned at word.
+# RUN: %python print_magic.py t_aux.a 2464 | FileCheck --check-prefix=MAGIC32 %s
+## The content of t64_excess.o aligned at 2^12.
+# RUN: %python print_magic.py t_aux.a 4096 | FileCheck --check-prefix=MAGIC64 %s
+
+## Test that the content of an XCOFF object file, which does not have an auxiliary
+## header, is aligned at 2 in a big archive.
+# RUN: env OBJECT_MODE=32_64 llvm-ar -q t3.a t32_1.o t64_1.o t32_2.o t64_2.o
+# # RUN: %python print_magic.py t3.a 250 | FileCheck --check-prefix=MAGIC32 %s
+# # RUN: %python print_magic.py t3.a 432 | FileCheck -check-prefix=MAGIC64 %s
+# # RUN: %python print_magic.py t3.a 650 | FileCheck --check-prefix=MAGIC32 %s
+# # RUN: %python print_magic.py t3.a 832 | FileCheck -check-prefix=MAGIC64 %s
+
+# MAGIC64: b'\x01\xf7'
+# MAGIC32: b'\x01\xdf'
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       [[FLAG]]
+Sections:
+  - Name:            [[SECNAME]]
+    Flags:           [ STYP_DATA ]
+
+## The auxiliary header has neither the MaxAlignOfData nor MaxAlignOfText field.
+--- !XCOFF
+FileHeader:
+  MagicNumber:       [[FLAG]]
+  AuxiliaryHeaderSize: 12
+AuxiliaryHeader:
+  Magic: 0x10B
+  SecNumOfLoader: 1
+Sections:
+  - Name:            .text
+    Flags:           [ STYP_DATA ]
+
+## The auxiliary header has both MaxAlignOfData and MaxAlignOfText fields.
+--- !XCOFF
+FileHeader:
+  MagicNumber:       [[FLAG]]
+  AuxiliaryHeaderSize: 48
+AuxiliaryHeader:
+  Magic: 0x10B
+  SecNumOfLoader: 1
+  MaxAlignOfText: 6
+  MaxAlignOfData: 8
+Sections:
+  - Name:            .text
+    Flags:           [ STYP_DATA ]
+
+## The auxiliary header does not have a loader section.
+--- !XCOFF
+FileHeader:
+  MagicNumber:       [[FLAG]]
+  AuxiliaryHeaderSize: 34
+AuxiliaryHeader:
+  Magic: 0x10B
+  SecNumOfLoader: 0
+  MaxAlignOfText: 14
+  MaxAlignOfData: 8
+Sections:
+  - Name:            .text
+    Flags:           [ STYP_DATA ]
+
+## The auxiliary header has both MaxAlignOfData and MaxAlignOfText fields
+## but max(MaxAlignOfData, MaxAlignOfText) exceeds the page size(2^12).
+--- !XCOFF
+FileHeader:
+  MagicNumber:       [[FLAG]]
+  AuxiliaryHeaderSize: 48
+AuxiliaryHeader:
+  Magic: 0x10B
+  SecNumOfLoader: 1
+  MaxAlignOfText: 14
+  MaxAlignOfData: 8
+Sections:
+  - Name:           .text
+    Flags:          [ STYP_DATA ]

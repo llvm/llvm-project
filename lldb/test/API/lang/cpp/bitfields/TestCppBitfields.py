@@ -7,51 +7,59 @@ from lldbsuite.test import lldbutil
 
 
 class CppBitfieldsTestCase(TestBase):
-
     @no_debug_info_test
     def test_bitfields(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, '// break here',
-            lldb.SBFileSpec("main.cpp", False))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp", False)
+        )
 
         # Accessing LargeBitsA.
-        self.expect_expr("lba", result_children=[
-            ValueCheck(name="", type="int:32"),
-            ValueCheck(name="a", type="unsigned int:20", value="2")
-        ])
+        self.expect_expr(
+            "lba",
+            result_children=[
+                ValueCheck(name="", type="int:32"),
+                ValueCheck(name="a", type="unsigned int:20", value="2"),
+            ],
+        )
         self.expect_expr("lba.a", result_type="unsigned int", result_value="2")
 
-
         # Accessing LargeBitsB.
-        self.expect_expr("lbb", result_children=[
-            ValueCheck(name="a", type="unsigned int:1", value="1"),
-            ValueCheck(name="", type="int:31"),
-            ValueCheck(name="b", type="unsigned int:20", value="3")
-        ])
+        self.expect_expr(
+            "lbb",
+            result_children=[
+                ValueCheck(name="a", type="unsigned int:1", value="1"),
+                ValueCheck(name="", type="int:31"),
+                ValueCheck(name="b", type="unsigned int:20", value="3"),
+            ],
+        )
         self.expect_expr("lbb.b", result_type="unsigned int", result_value="3")
 
-
         # Accessing LargeBitsC.
-        self.expect_expr("lbc", result_children=[
-            ValueCheck(name="", type="int:22"),
-            ValueCheck(name="a", type="unsigned int:1", value="1"),
-            ValueCheck(name="b", type="unsigned int:1", value="0"),
-            ValueCheck(name="c", type="unsigned int:5", value="4"),
-            ValueCheck(name="d", type="unsigned int:1", value="1"),
-            ValueCheck(name="", type="int:2"),
-            ValueCheck(name="e", type="unsigned int:20", value="20"),
-        ])
+        self.expect_expr(
+            "lbc",
+            result_children=[
+                ValueCheck(name="", type="int:22"),
+                ValueCheck(name="a", type="unsigned int:1", value="1"),
+                ValueCheck(name="b", type="unsigned int:1", value="0"),
+                ValueCheck(name="c", type="unsigned int:5", value="4"),
+                ValueCheck(name="d", type="unsigned int:1", value="1"),
+                ValueCheck(name="", type="int:2"),
+                ValueCheck(name="e", type="unsigned int:20", value="20"),
+            ],
+        )
         self.expect_expr("lbc.c", result_type="unsigned int", result_value="4")
 
-
         # Accessing LargeBitsD.
-        self.expect_expr("lbd", result_children=[
-            ValueCheck(name="arr", type="char[3]", summary='"ab"'),
-            ValueCheck(name="", type="int:32"),
-            ValueCheck(name="a", type="unsigned int:20", value="5")
-        ])
+        self.expect_expr(
+            "lbd",
+            result_children=[
+                ValueCheck(name="arr", type="char[3]", summary='"ab"'),
+                ValueCheck(name="", type="int:32"),
+                ValueCheck(name="a", type="unsigned int:20", value="5"),
+            ],
+        )
         self.expect_expr("lbd.a", result_type="unsigned int", result_value="5")
-
 
         # Test BitfieldsInStructInUnion.
         # FIXME: This needs some more explanation for what it's actually testing.
@@ -67,50 +75,68 @@ class CppBitfieldsTestCase(TestBase):
             ValueCheck(name="h", type="uint64_t:1", value="0"),
             ValueCheck(name="i", type="uint64_t:1", value="1"),
             ValueCheck(name="j", type="uint64_t:1", value="0"),
-            ValueCheck(name="k", type="uint64_t:1", value="1")
+            ValueCheck(name="k", type="uint64_t:1", value="1"),
         ]
-        self.expect_expr("bitfields_in_struct_in_union",
+        self.expect_expr(
+            "bitfields_in_struct_in_union",
             result_type="BitfieldsInStructInUnion",
-            result_children=[ValueCheck(name="", children=[
-              ValueCheck(name="f", children=nested_struct_children)
-            ])]
+            result_children=[
+                ValueCheck(
+                    name="",
+                    children=[ValueCheck(name="f", children=nested_struct_children)],
+                )
+            ],
         )
-        self.expect_expr("bitfields_in_struct_in_union.f.a",
-            result_type="uint64_t", result_value="1")
-
+        self.expect_expr(
+            "bitfields_in_struct_in_union.f.a", result_type="uint64_t", result_value="1"
+        )
 
         # Unions with bitfields.
-        self.expect_expr("uwbf", result_type="UnionWithBitfields", result_children=[
-            ValueCheck(name="a", value="255"),
-            ValueCheck(name="b", value="65535"),
-            ValueCheck(name="c", value="4294967295"),
-            ValueCheck(name="x", value="4294967295")
-        ])
-        self.expect_expr("uwubf", result_type="UnionWithUnnamedBitfield",
+        self.expect_expr(
+            "uwbf",
+            result_type="UnionWithBitfields",
+            result_children=[
+                ValueCheck(name="a", value="255"),
+                ValueCheck(name="b", value="65535"),
+                ValueCheck(name="c", value="4294967295"),
+                ValueCheck(name="x", value="4294967295"),
+            ],
+        )
+        self.expect_expr(
+            "uwubf",
+            result_type="UnionWithUnnamedBitfield",
             result_children=[
                 ValueCheck(name="a", value="16777215"),
-                ValueCheck(name="x", value="4294967295")
-            ]
+                ValueCheck(name="x", value="4294967295"),
+            ],
         )
 
         # Class with a base class and a bitfield.
-        self.expect_expr("derived", result_type="Derived", result_children=[
-            ValueCheck(name="Base", children=[
-              ValueCheck(name="b_a", value="2", type="uint32_t")
-            ]),
-            ValueCheck(name="d_a", value="1", type="uint32_t:1")
-        ])
-
+        self.expect_expr(
+            "derived",
+            result_type="Derived",
+            result_children=[
+                ValueCheck(
+                    name="Base",
+                    children=[ValueCheck(name="b_a", value="2", type="uint32_t")],
+                ),
+                ValueCheck(name="d_a", value="1", type="uint32_t:1"),
+            ],
+        )
 
         # Struct with bool bitfields.
-        self.expect_expr("bb", result_type="", result_children=[
-            ValueCheck(name="a", value="true", type="bool:1"),
-            ValueCheck(name="b", value="false", type="bool:1"),
-            ValueCheck(name="c", value="true", type="bool:2"),
-            ValueCheck(name="d", value="true", type="bool:2")
-        ])
+        self.expect_expr(
+            "bb",
+            result_type="",
+            result_children=[
+                ValueCheck(name="a", value="true", type="bool:1"),
+                ValueCheck(name="b", value="false", type="bool:1"),
+                ValueCheck(name="c", value="true", type="bool:2"),
+                ValueCheck(name="d", value="true", type="bool:2"),
+            ],
+        )
 
-        bb = self.frame().FindVariable('bb')
+        bb = self.frame().FindVariable("bb")
         self.assertSuccess(bb.GetError())
 
         bb_a = bb.GetChildAtIndex(0)
@@ -138,7 +164,7 @@ class CppBitfieldsTestCase(TestBase):
         base_with_vtable_children = [
             ValueCheck(name="a", type="unsigned int:4", value="5"),
             ValueCheck(name="b", type="unsigned int:4", value="0"),
-            ValueCheck(name="c", type="unsigned int:4", value="5")
+            ValueCheck(name="c", type="unsigned int:4", value="5"),
         ]
         self.expect_expr("base_with_vtable", result_children=base_with_vtable_children)
         self.expect_var_path("base_with_vtable", children=base_with_vtable_children)
@@ -146,14 +172,15 @@ class CppBitfieldsTestCase(TestBase):
     @no_debug_info_test
     def test_bitfield_behind_vtable_ptr(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, '// break here',
-            lldb.SBFileSpec("main.cpp", False))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp", False)
+        )
 
         # Test a class with a vtable ptr and bitfields.
         with_vtable_children = [
             ValueCheck(name="a", type="unsigned int:4", value="5"),
             ValueCheck(name="b", type="unsigned int:4", value="0"),
-            ValueCheck(name="c", type="unsigned int:4", value="5")
+            ValueCheck(name="c", type="unsigned int:4", value="5"),
         ]
         self.expect_expr("with_vtable", result_children=with_vtable_children)
         self.expect_var_path("with_vtable", children=with_vtable_children)
@@ -162,9 +189,25 @@ class CppBitfieldsTestCase(TestBase):
         with_vtable_and_unnamed_children = [
             ValueCheck(name="", type="int:4", value="0"),
             ValueCheck(name="b", type="unsigned int:4", value="0"),
-            ValueCheck(name="c", type="unsigned int:4", value="5")
+            ValueCheck(name="c", type="unsigned int:4", value="5"),
         ]
-        self.expect_expr("with_vtable_and_unnamed",
-                         result_children=with_vtable_and_unnamed_children)
-        self.expect_var_path("with_vtable_and_unnamed",
-                         children=with_vtable_and_unnamed_children)
+        self.expect_expr(
+            "with_vtable_and_unnamed", result_children=with_vtable_and_unnamed_children
+        )
+        self.expect_var_path(
+            "with_vtable_and_unnamed", children=with_vtable_and_unnamed_children
+        )
+
+        derived_with_vtable_children = [
+            ValueCheck(
+                name="Base",
+                children=[ValueCheck(name="b_a", value="2", type="uint32_t")],
+            ),
+            ValueCheck(name="a", value="1", type="unsigned int:1"),
+        ]
+        self.expect_expr(
+            "derived_with_vtable", result_children=derived_with_vtable_children
+        )
+        self.expect_var_path(
+            "derived_with_vtable", children=derived_with_vtable_children
+        )

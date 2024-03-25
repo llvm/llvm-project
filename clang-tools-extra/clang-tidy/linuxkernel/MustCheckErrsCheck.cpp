@@ -31,13 +31,13 @@ void MustCheckErrsCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void MustCheckErrsCheck::check(const MatchFinder::MatchResult &Result) {
-  const CallExpr *MatchedCallExpr = Result.Nodes.getNodeAs<CallExpr>("call");
+  const auto *MatchedCallExpr = Result.Nodes.getNodeAs<CallExpr>("call");
   if (MatchedCallExpr) {
     diag(MatchedCallExpr->getExprLoc(), "result from function %0 is unused")
         << MatchedCallExpr->getDirectCallee();
   }
 
-  const CallExpr *MatchedTransitiveCallExpr =
+  const auto *MatchedTransitiveCallExpr =
       Result.Nodes.getNodeAs<CallExpr>("transitive_call");
   if (MatchedTransitiveCallExpr) {
     diag(MatchedTransitiveCallExpr->getExprLoc(),

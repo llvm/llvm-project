@@ -38,7 +38,6 @@ namespace std {
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__expected/bad_expected_access.h>
 #include <__expected/expected.h>
@@ -51,4 +50,3 @@ namespace std {
 #endif
 
 #endif // _LIBCPP_EXPECTED
-

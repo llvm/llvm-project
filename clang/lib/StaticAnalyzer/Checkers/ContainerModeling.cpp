@@ -227,7 +227,7 @@ void ContainerModeling::checkDeadSymbols(SymbolReaper &SR,
                                          CheckerContext &C) const {
   // Cleanup
   auto State = C.getState();
-  
+
   auto ContMap = State->get<ContainerMap>();
   for (const auto &Cont : ContMap) {
     if (!SR.isLiveRegion(Cont.first)) {
@@ -749,14 +749,14 @@ bool isBeginCall(const FunctionDecl *Func) {
   const auto *IdInfo = Func->getIdentifier();
   if (!IdInfo)
     return false;
-  return IdInfo->getName().endswith_insensitive("begin");
+  return IdInfo->getName().ends_with_insensitive("begin");
 }
 
 bool isEndCall(const FunctionDecl *Func) {
   const auto *IdInfo = Func->getIdentifier();
   if (!IdInfo)
     return false;
-  return IdInfo->getName().endswith_insensitive("end");
+  return IdInfo->getName().ends_with_insensitive("end");
 }
 
 const CXXRecordDecl *getCXXRecordDecl(ProgramStateRef State,
@@ -1021,7 +1021,7 @@ SymbolRef rebaseSymbol(ProgramStateRef State, SValBuilder &SVB,
                        SymbolRef NewSym) {
   auto &SymMgr = SVB.getSymbolManager();
   auto Diff = SVB.evalBinOpNN(State, BO_Sub, nonloc::SymbolVal(OrigExpr),
-                              nonloc::SymbolVal(OldExpr), 
+                              nonloc::SymbolVal(OldExpr),
                               SymMgr.getType(OrigExpr));
 
   const auto DiffInt = Diff.getAs<nonloc::ConcreteInt>();

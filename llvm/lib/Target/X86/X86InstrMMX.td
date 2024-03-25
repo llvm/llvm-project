@@ -178,7 +178,7 @@ def MMX_MOVD64grr : MMXI<0x7E, MRMDestReg, (outs GR32:$dst), (ins VR64:$src),
                          "movd\t{$src, $dst|$dst, $src}",
                          [(set GR32:$dst,
                           (MMX_X86movd2w (x86mmx VR64:$src)))]>,
-                         Sched<[WriteVecMoveToGpr]>, FoldGenData<"MMX_MOVD64rr">;
+                         Sched<[WriteVecMoveToGpr]>;
 
 let isBitcast = 1 in
 def MMX_MOVD64to64rr : MMXRI<0x6E, MRMSrcReg, (outs VR64:$dst), (ins GR64:$src),
@@ -202,19 +202,15 @@ def MMX_MOVQ64rr : MMXI<0x6F, MRMSrcReg, (outs VR64:$dst), (ins VR64:$src),
                         "movq\t{$src, $dst|$dst, $src}", []>;
 let isCodeGenOnly = 1, ForceDisassemble = 1 in
 def MMX_MOVQ64rr_REV : MMXI<0x7F, MRMDestReg, (outs VR64:$dst), (ins VR64:$src),
-                            "movq\t{$src, $dst|$dst, $src}", []>,
-                            FoldGenData<"MMX_MOVQ64rr">;
+                            "movq\t{$src, $dst|$dst, $src}", []>;
 } // SchedRW, hasSideEffects, isMoveReg
 } // isBitcast
-
-def : InstAlias<"movq.s\t{$src, $dst|$dst, $src}",
-                (MMX_MOVQ64rr_REV VR64:$dst, VR64:$src), 0>;
 
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayStore = 1 in
 def MMX_MOVD64from64mr : MMXRI<0x7E, MRMDestMem,
                                (outs), (ins i64mem:$dst, VR64:$src),
                                "movq\t{$src, $dst|$dst, $src}", []>,
-                               Sched<[SchedWriteVecMoveLS.MMX.MR]>, NotMemoryFoldable;
+                               Sched<[SchedWriteVecMoveLS.MMX.MR]>;
 
 let SchedRW = [SchedWriteVecMoveLS.MMX.RM] in {
 let canFoldAsLoad = 1 in
@@ -491,24 +487,24 @@ def MMX_PSHUFWmi : MMXIi8<0x70, MRMSrcMem,
 // -- Conversion Instructions
 defm MMX_CVTPS2PI : sse12_cvt_pint<0x2D, VR128, VR64, int_x86_sse_cvtps2pi,
                       f64mem, load, "cvtps2pi\t{$src, $dst|$dst, $src}",
-                      WriteCvtPS2I, SSEPackedSingle>, PS, SIMD_EXC;
+                      WriteCvtPS2I, SSEPackedSingle>, TB, SIMD_EXC;
 defm MMX_CVTPD2PI : sse12_cvt_pint<0x2D, VR128, VR64, int_x86_sse_cvtpd2pi,
                       f128mem, memop, "cvtpd2pi\t{$src, $dst|$dst, $src}",
-                      WriteCvtPD2I, SSEPackedDouble>, PD, SIMD_EXC;
+                      WriteCvtPD2I, SSEPackedDouble>, TB, PD, SIMD_EXC;
 defm MMX_CVTTPS2PI : sse12_cvt_pint<0x2C, VR128, VR64, int_x86_sse_cvttps2pi,
                        f64mem, load, "cvttps2pi\t{$src, $dst|$dst, $src}",
-                       WriteCvtPS2I, SSEPackedSingle>, PS, SIMD_EXC;
+                       WriteCvtPS2I, SSEPackedSingle>, TB, SIMD_EXC;
 defm MMX_CVTTPD2PI : sse12_cvt_pint<0x2C, VR128, VR64, int_x86_sse_cvttpd2pi,
                        f128mem, memop, "cvttpd2pi\t{$src, $dst|$dst, $src}",
-                       WriteCvtPD2I, SSEPackedDouble>, PD, SIMD_EXC;
+                       WriteCvtPD2I, SSEPackedDouble>, TB, PD, SIMD_EXC;
 defm MMX_CVTPI2PD : sse12_cvt_pint<0x2A, VR64, VR128, int_x86_sse_cvtpi2pd,
                          i64mem, load, "cvtpi2pd\t{$src, $dst|$dst, $src}",
-                         WriteCvtI2PD, SSEPackedDouble>, PD;
+                         WriteCvtI2PD, SSEPackedDouble>, TB, PD;
 let Constraints = "$src1 = $dst" in {
   defm MMX_CVTPI2PS : sse12_cvt_pint_3addr<0x2A, VR64, VR128,
                          int_x86_sse_cvtpi2ps,
                          i64mem, load, "cvtpi2ps\t{$src2, $dst|$dst, $src2}",
-                         SSEPackedSingle>, PS, SIMD_EXC;
+                         SSEPackedSingle>, TB, SIMD_EXC;
 }
 
 // Extract / Insert
@@ -552,13 +548,13 @@ def MMX_PMOVMSKBrr : MMXI<0xD7, MRMSrcReg, (outs GR32orGR64:$dst),
 // Misc.
 let SchedRW = [SchedWriteShuffle.MMX] in {
 let Uses = [EDI], Predicates = [HasMMX, HasSSE1,Not64BitMode] in
-def MMX_MASKMOVQ : MMXI32<0xF7, MRMSrcReg, (outs), (ins VR64:$src, VR64:$mask),
-                          "maskmovq\t{$mask, $src|$src, $mask}",
-                          [(int_x86_mmx_maskmovq VR64:$src, VR64:$mask, EDI)]>;
+def MMX_MASKMOVQ : MMXI<0xF7, MRMSrcReg, (outs), (ins VR64:$src, VR64:$mask),
+                        "maskmovq\t{$mask, $src|$src, $mask}",
+                        [(int_x86_mmx_maskmovq VR64:$src, VR64:$mask, EDI)]>;
 let Uses = [RDI], Predicates = [HasMMX, HasSSE1,In64BitMode] in
-def MMX_MASKMOVQ64: MMXI64<0xF7, MRMSrcReg, (outs), (ins VR64:$src, VR64:$mask),
-                           "maskmovq\t{$mask, $src|$src, $mask}",
-                           [(int_x86_mmx_maskmovq VR64:$src, VR64:$mask, RDI)]>;
+def MMX_MASKMOVQ64: MMXI<0xF7, MRMSrcReg, (outs), (ins VR64:$src, VR64:$mask),
+                         "maskmovq\t{$mask, $src|$src, $mask}",
+                         [(int_x86_mmx_maskmovq VR64:$src, VR64:$mask, RDI)]>;
 }
 
 // 64-bit bit convert.

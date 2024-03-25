@@ -17,6 +17,8 @@
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Utility/Listener.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -146,7 +148,8 @@ uint32_t SBLaunchInfo::GetNumArguments() {
 const char *SBLaunchInfo::GetArgumentAtIndex(uint32_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 
-  return m_opaque_sp->GetArguments().GetArgumentAtIndex(idx);
+  return ConstString(m_opaque_sp->GetArguments().GetArgumentAtIndex(idx))
+      .GetCString();
 }
 
 void SBLaunchInfo::SetArguments(const char **argv, bool append) {
@@ -174,7 +177,7 @@ const char *SBLaunchInfo::GetEnvironmentEntryAtIndex(uint32_t idx) {
 
   if (idx > GetNumEnvironmentEntries())
     return nullptr;
-  return m_opaque_sp->GetEnvp()[idx];
+  return ConstString(m_opaque_sp->GetEnvp()[idx]).GetCString();
 }
 
 void SBLaunchInfo::SetEnvironmentEntries(const char **envp, bool append) {
@@ -231,7 +234,7 @@ void SBLaunchInfo::SetLaunchFlags(uint32_t flags) {
 const char *SBLaunchInfo::GetProcessPluginName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_sp->GetProcessPluginName();
+  return ConstString(m_opaque_sp->GetProcessPluginName()).GetCString();
 }
 
 void SBLaunchInfo::SetProcessPluginName(const char *plugin_name) {
@@ -313,7 +316,7 @@ void SBLaunchInfo::SetLaunchEventData(const char *data) {
 const char *SBLaunchInfo::GetLaunchEventData() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_sp->GetLaunchEventData();
+  return ConstString(m_opaque_sp->GetLaunchEventData()).GetCString();
 }
 
 void SBLaunchInfo::SetDetachOnError(bool enable) {
@@ -331,25 +334,36 @@ bool SBLaunchInfo::GetDetachOnError() const {
 const char *SBLaunchInfo::GetScriptedProcessClassName() const {
   LLDB_INSTRUMENT_VA(this);
 
+  ScriptedMetadataSP metadata_sp = m_opaque_sp->GetScriptedMetadata();
+
+  if (!metadata_sp || !*metadata_sp)
+    return nullptr;
+
   // Constify this string so that it is saved in the string pool.  Otherwise it
   // would be freed when this function goes out of scope.
-  ConstString class_name(m_opaque_sp->GetScriptedProcessClassName().c_str());
+  ConstString class_name(metadata_sp->GetClassName().data());
   return class_name.AsCString();
 }
 
 void SBLaunchInfo::SetScriptedProcessClassName(const char *class_name) {
   LLDB_INSTRUMENT_VA(this, class_name);
-
-  m_opaque_sp->SetScriptedProcessClassName(class_name);
+  ScriptedMetadataSP metadata_sp = m_opaque_sp->GetScriptedMetadata();
+  StructuredData::DictionarySP dict_sp =
+      metadata_sp ? metadata_sp->GetArgsSP() : nullptr;
+  metadata_sp = std::make_shared<ScriptedMetadata>(class_name, dict_sp);
+  m_opaque_sp->SetScriptedMetadata(metadata_sp);
 }
 
 lldb::SBStructuredData SBLaunchInfo::GetScriptedProcessDictionary() const {
   LLDB_INSTRUMENT_VA(this);
 
-  lldb_private::StructuredData::DictionarySP dict_sp =
-      m_opaque_sp->GetScriptedProcessDictionarySP();
+  ScriptedMetadataSP metadata_sp = m_opaque_sp->GetScriptedMetadata();
 
   SBStructuredData data;
+  if (!metadata_sp)
+    return data;
+
+  lldb_private::StructuredData::DictionarySP dict_sp = metadata_sp->GetArgsSP();
   data.m_impl_up->SetObjectSP(dict_sp);
 
   return data;
@@ -370,5 +384,29 @@ void SBLaunchInfo::SetScriptedProcessDictionary(lldb::SBStructuredData dict) {
   if (!dict_sp || dict_sp->GetType() == lldb::eStructuredDataTypeInvalid)
     return;
 
-  m_opaque_sp->SetScriptedProcessDictionarySP(dict_sp);
+  ScriptedMetadataSP metadata_sp = m_opaque_sp->GetScriptedMetadata();
+  llvm::StringRef class_name = metadata_sp ? metadata_sp->GetClassName() : "";
+  metadata_sp = std::make_shared<ScriptedMetadata>(class_name, dict_sp);
+  m_opaque_sp->SetScriptedMetadata(metadata_sp);
+}
+
+SBListener SBLaunchInfo::GetShadowListener() {
+  LLDB_INSTRUMENT_VA(this);
+
+  lldb::ListenerSP shadow_sp = m_opaque_sp->GetShadowListener();
+  if (!shadow_sp)
+    return SBListener();
+  return SBListener(shadow_sp);
+}
+
+void SBLaunchInfo::SetShadowListener(SBListener &listener) {
+  LLDB_INSTRUMENT_VA(this, listener);
+
+  ListenerSP listener_sp = listener.GetSP();
+  if (listener_sp && listener.IsValid())
+    listener_sp->SetShadow(true);
+  else
+    listener_sp = nullptr;
+
+  m_opaque_sp->SetShadowListener(listener_sp);
 }

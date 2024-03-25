@@ -56,12 +56,12 @@ class Pipeline {
     Started, // Pipeline has started running.
     Paused   // Pipeline is paused.
   };
-  State CurrentState;
+  State CurrentState = State::Created;
 
   /// An ordered list of stages that define this instruction pipeline.
   SmallVector<std::unique_ptr<Stage>, 8> Stages;
   std::set<HWEventListener *> Listeners;
-  unsigned Cycles;
+  unsigned Cycles = 0;
 
   Error runCycle();
   bool hasWorkToProcess();
@@ -69,7 +69,7 @@ class Pipeline {
   void notifyCycleEnd();
 
 public:
-  Pipeline() : CurrentState(State::Created), Cycles(0) {}
+  Pipeline() = default;
   void appendStage(std::unique_ptr<Stage> S);
 
   /// Returns the total number of simulated cycles.

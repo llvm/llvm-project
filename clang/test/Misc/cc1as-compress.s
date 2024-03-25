@@ -12,4 +12,4 @@
 // ZSTD: 0000 02000000 00000000
 
 .section        .debug_str,"MS",@progbits,1
-.asciz  "perfectly compressable data sample *****************************************"
+.asciz  "perfectly compressable data sample ******************************************"

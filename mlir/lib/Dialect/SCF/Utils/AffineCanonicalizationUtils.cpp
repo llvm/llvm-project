@@ -12,12 +12,12 @@
 
 #include <utility>
 
-#include "mlir/Dialect/SCF/Utils/AffineCanonicalizationUtils.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Utils/AffineCanonicalizationUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Matchers.h"
@@ -27,7 +27,41 @@
 #define DEBUG_TYPE "mlir-scf-affine-utils"
 
 using namespace mlir;
+using namespace affine;
 using namespace presburger;
+
+LogicalResult scf::matchForLikeLoop(Value iv, OpFoldResult &lb,
+                                    OpFoldResult &ub, OpFoldResult &step) {
+  if (scf::ForOp forOp = scf::getForInductionVarOwner(iv)) {
+    lb = forOp.getLowerBound();
+    ub = forOp.getUpperBound();
+    step = forOp.getStep();
+    return success();
+  }
+  if (scf::ParallelOp parOp = scf::getParallelForInductionVarOwner(iv)) {
+    for (unsigned idx = 0; idx < parOp.getNumLoops(); ++idx) {
+      if (parOp.getInductionVars()[idx] == iv) {
+        lb = parOp.getLowerBound()[idx];
+        ub = parOp.getUpperBound()[idx];
+        step = parOp.getStep()[idx];
+        return success();
+      }
+    }
+    return failure();
+  }
+  if (scf::ForallOp forallOp = scf::getForallOpThreadIndexOwner(iv)) {
+    for (int64_t idx = 0; idx < forallOp.getRank(); ++idx) {
+      if (forallOp.getInductionVar(idx) == iv) {
+        lb = forallOp.getMixedLowerBound()[idx];
+        ub = forallOp.getMixedUpperBound()[idx];
+        step = forallOp.getMixedStep()[idx];
+        return success();
+      }
+    }
+    return failure();
+  }
+  return failure();
+}
 
 static FailureOr<AffineApplyOp>
 canonicalizeMinMaxOp(RewriterBase &rewriter, Operation *op,
@@ -35,44 +69,45 @@ canonicalizeMinMaxOp(RewriterBase &rewriter, Operation *op,
   RewriterBase::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(op);
   FailureOr<AffineValueMap> simplified =
-      mlir::simplifyConstrainedMinMaxOp(op, std::move(constraints));
+      affine::simplifyConstrainedMinMaxOp(op, std::move(constraints));
   if (failed(simplified))
     return failure();
   return rewriter.replaceOpWithNewOp<AffineApplyOp>(
       op, simplified->getAffineMap(), simplified->getOperands());
 }
 
-static LogicalResult
-addLoopRangeConstraints(FlatAffineValueConstraints &constraints, Value iv,
-                        OpFoldResult lb, OpFoldResult ub, OpFoldResult step,
-                        RewriterBase &rewriter) {
+LogicalResult scf::addLoopRangeConstraints(FlatAffineValueConstraints &cstr,
+                                           Value iv, OpFoldResult lb,
+                                           OpFoldResult ub, OpFoldResult step) {
+  Builder b(iv.getContext());
+
   // IntegerPolyhedron does not support semi-affine expressions.
   // Therefore, only constant step values are supported.
   auto stepInt = getConstantIntValue(step);
   if (!stepInt)
     return failure();
 
-  unsigned dimIv = constraints.appendDimVar(iv);
-  auto lbv = lb.dyn_cast<Value>();
-  unsigned symLb = lbv ? constraints.appendSymbolVar(lbv)
-                       : constraints.appendSymbolVar(/*num=*/1);
-  auto ubv = ub.dyn_cast<Value>();
-  unsigned symUb = ubv ? constraints.appendSymbolVar(ubv)
-                       : constraints.appendSymbolVar(/*num=*/1);
+  unsigned dimIv = cstr.appendDimVar(iv);
+  auto lbv = llvm::dyn_cast_if_present<Value>(lb);
+  unsigned symLb =
+      lbv ? cstr.appendSymbolVar(lbv) : cstr.appendSymbolVar(/*num=*/1);
+  auto ubv = llvm::dyn_cast_if_present<Value>(ub);
+  unsigned symUb =
+      ubv ? cstr.appendSymbolVar(ubv) : cstr.appendSymbolVar(/*num=*/1);
 
   // If loop lower/upper bounds are constant: Add EQ constraint.
   std::optional<int64_t> lbInt = getConstantIntValue(lb);
   std::optional<int64_t> ubInt = getConstantIntValue(ub);
   if (lbInt)
-    constraints.addBound(IntegerPolyhedron::EQ, symLb, *lbInt);
+    cstr.addBound(BoundType::EQ, symLb, *lbInt);
   if (ubInt)
-    constraints.addBound(IntegerPolyhedron::EQ, symUb, *ubInt);
+    cstr.addBound(BoundType::EQ, symUb, *ubInt);
 
   // Lower bound: iv >= lb (equiv.: iv - lb >= 0)
-  SmallVector<int64_t> ineqLb(constraints.getNumCols(), 0);
+  SmallVector<int64_t> ineqLb(cstr.getNumCols(), 0);
   ineqLb[dimIv] = 1;
   ineqLb[symLb] = -1;
-  constraints.addInequality(ineqLb);
+  cstr.addInequality(ineqLb);
 
   // Upper bound
   AffineExpr ivUb;
@@ -81,26 +116,23 @@ addLoopRangeConstraints(FlatAffineValueConstraints &constraints, Value iv,
     // iv < lb + 1
     // TODO: Try to derive this constraint by simplifying the expression in
     // the else-branch.
-    ivUb =
-        rewriter.getAffineSymbolExpr(symLb - constraints.getNumDimVars()) + 1;
+    ivUb = b.getAffineSymbolExpr(symLb - cstr.getNumDimVars()) + 1;
   } else {
     // The loop may have more than one iteration.
     // iv < lb + step * ((ub - lb - 1) floorDiv step) + 1
     AffineExpr exprLb =
-        lbInt
-            ? rewriter.getAffineConstantExpr(*lbInt)
-            : rewriter.getAffineSymbolExpr(symLb - constraints.getNumDimVars());
+        lbInt ? b.getAffineConstantExpr(*lbInt)
+              : b.getAffineSymbolExpr(symLb - cstr.getNumDimVars());
     AffineExpr exprUb =
-        ubInt
-            ? rewriter.getAffineConstantExpr(*ubInt)
-            : rewriter.getAffineSymbolExpr(symUb - constraints.getNumDimVars());
+        ubInt ? b.getAffineConstantExpr(*ubInt)
+              : b.getAffineSymbolExpr(symUb - cstr.getNumDimVars());
     ivUb = exprLb + 1 + (*stepInt * ((exprUb - exprLb - 1).floorDiv(*stepInt)));
   }
   auto map = AffineMap::get(
-      /*dimCount=*/constraints.getNumDimVars(),
-      /*symbolCount=*/constraints.getNumSymbolVars(), /*result=*/ivUb);
+      /*dimCount=*/cstr.getNumDimVars(),
+      /*symbolCount=*/cstr.getNumSymbolVars(), /*result=*/ivUb);
 
-  return constraints.addBound(IntegerPolyhedron::UB, dimIv, map);
+  return cstr.addBound(BoundType::UB, dimIv, map);
 }
 
 /// Canonicalize min/max operations in the context of for loops with a known
@@ -121,7 +153,7 @@ LogicalResult scf::canonicalizeMinMaxOpInLoop(RewriterBase &rewriter,
   // Find all iteration variables among `minOp`'s operands add constrain them.
   for (Value operand : op->getOperands()) {
     // Skip duplicate ivs.
-    if (llvm::is_contained(allIvs, operand))
+    if (allIvs.contains(operand))
       continue;
 
     // If `operand` is an iteration variable: Find corresponding loop
@@ -132,8 +164,7 @@ LogicalResult scf::canonicalizeMinMaxOpInLoop(RewriterBase &rewriter,
       continue;
     allIvs.insert(iv);
 
-    if (failed(
-            addLoopRangeConstraints(constraints, iv, lb, ub, step, rewriter)))
+    if (failed(addLoopRangeConstraints(constraints, iv, lb, ub, step)))
       return failure();
   }
 
@@ -172,9 +203,9 @@ LogicalResult scf::rewritePeeledMinMaxOp(RewriterBase &rewriter, Operation *op,
   constraints.appendDimVar({iv});
   constraints.appendSymbolVar({ub, step});
   if (auto constUb = getConstantIntValue(ub))
-    constraints.addBound(IntegerPolyhedron::EQ, 1, *constUb);
+    constraints.addBound(BoundType::EQ, 1, *constUb);
   if (auto constStep = getConstantIntValue(step))
-    constraints.addBound(IntegerPolyhedron::EQ, 2, *constStep);
+    constraints.addBound(BoundType::EQ, 2, *constStep);
 
   // Add loop peeling invariant. This is the main piece of knowledge that
   // enables AffineMinOp simplification.

@@ -5,8 +5,7 @@
 // RUN: echo "Checks: '-*,modernize-use-auto'" > %t/.clang-tidy
 // RUN: echo "WarningsAsErrors: '*'" >> %t/.clang-tidy
 // RUN: echo "CheckOptions:" >> %t/.clang-tidy
-// RUN: echo "  - key:             modernize-use-auto.MinTypeNameLength" >> %t/.clang-tidy
-// RUN: echo "    value:           '0'" >> %t/.clang-tidy
+// RUN: echo "  modernize-use-auto.MinTypeNameLength: '0'" >> %t/.clang-tidy
 // RUN: cp "%s" "%t/test.cpp"
 // RUN: cd "%t"
 // RUN: not %run_clang_tidy "test.cpp"

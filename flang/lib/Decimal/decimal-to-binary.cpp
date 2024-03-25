@@ -14,6 +14,7 @@
 #include <cinttypes>
 #include <cstring>
 #include <ctype.h>
+#include <utility>
 
 namespace Fortran::decimal {
 
@@ -237,6 +238,15 @@ private:
   int exponent_{0};
 };
 
+// The standard says that these overflow cases round to "representable"
+// numbers, and some popular compilers interpret that to mean +/-HUGE()
+// rather than +/-Inf.
+static inline constexpr bool RoundOverflowToHuge(
+    enum FortranRounding rounding, bool isNegative) {
+  return rounding == RoundToZero || (!isNegative && rounding == RoundDown) ||
+      (isNegative && rounding == RoundUp);
+}
+
 template <int PREC>
 ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
     bool isNegative, FortranRounding rounding) const {
@@ -256,14 +266,32 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
   if (guard != 0) {
     flags |= Inexact;
   }
-  if (fraction == 0 && guard <= oneHalf) {
-    return {Binary{}, static_cast<enum ConversionResultFlags>(flags)};
-  }
-  // The value is nonzero; normalize it.
-  while (fraction < topBit && expo > 1) {
-    --expo;
-    fraction = fraction * 2 + (guard >> (guardBits - 2));
-    guard = (((guard >> (guardBits - 2)) & 1) << (guardBits - 1)) | (guard & 1);
+  if (fraction == 0) {
+    if (guard <= oneHalf) {
+      if ((!isNegative && rounding == RoundUp) ||
+          (isNegative && rounding == RoundDown)) {
+        // round to least nonzero value
+        expo = 0;
+      } else { // round to zero
+        if (guard != 0) {
+          flags |= Underflow;
+        }
+        Binary zero;
+        if (isNegative) {
+          zero.Negate();
+        }
+        return {
+            std::move(zero), static_cast<enum ConversionResultFlags>(flags)};
+      }
+    }
+  } else {
+    // The value is nonzero; normalize it.
+    while (fraction < topBit && expo > 1) {
+      --expo;
+      fraction = fraction * 2 + (guard >> (guardBits - 2));
+      guard =
+          (((guard >> (guardBits - 2)) & 1) << (guardBits - 1)) | (guard & 1);
+    }
   }
   // Apply rounding
   bool incr{false};
@@ -294,11 +322,22 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
   }
   if (expo == 1 && fraction < topBit) {
     expo = 0; // subnormal
-  }
-  if (expo >= Binary::maxExponent) {
-    expo = Binary::maxExponent; // Inf
-    flags |= Overflow;
-    fraction = 0;
+    flags |= Underflow;
+  } else if (expo == 0) {
+    flags |= Underflow;
+  } else if (expo >= Binary::maxExponent) {
+    if (RoundOverflowToHuge(rounding, isNegative)) {
+      expo = Binary::maxExponent - 1;
+      fraction = mask;
+    } else { // Inf
+      expo = Binary::maxExponent;
+      flags |= Overflow;
+      if constexpr (Binary::bits == 80) { // x87
+        fraction = IntType{1} << 63;
+      } else {
+        fraction = 0;
+      }
+    }
   }
   using Raw = typename Binary::RawType;
   Raw raw = static_cast<Raw>(isNegative) << (Binary::bits - 1);
@@ -326,10 +365,23 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary() {
   exponent_ += digits_ * log10Radix;
   // Sanity checks for ridiculous exponents
   static constexpr int crazy{2 * Real::decimalRange + log10Radix};
-  if (exponent_ < -crazy) { // underflow to +/-0.
-    return {Real{SignBit()}, Inexact};
-  } else if (exponent_ > crazy) { // overflow to +/-Inf.
-    return {Real{Infinity()}, Overflow};
+  if (exponent_ < -crazy) {
+    enum ConversionResultFlags flags {
+      static_cast<enum ConversionResultFlags>(Inexact | Underflow)
+    };
+    if ((!isNegative_ && rounding_ == RoundUp) ||
+        (isNegative_ && rounding_ == RoundDown)) {
+      // return least nonzero value
+      return {Real{Raw{1} | SignBit()}, flags};
+    } else { // underflow to +/-0.
+      return {Real{SignBit()}, flags};
+    }
+  } else if (exponent_ > crazy) { // overflow to +/-HUGE() or +/-Inf
+    if (RoundOverflowToHuge(rounding_, isNegative_)) {
+      return {Real{HUGE()}};
+    } else {
+      return {Real{Infinity()}, Overflow};
+    }
   }
   // Apply any negative decimal exponent by multiplication
   // by a power of two, adjusting the binary exponent to compensate.
@@ -407,36 +459,40 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary(
     return result;
   } else {
     // Could not parse a decimal floating-point number.  p has been
-    // advanced over any leading spaces.
-    if ((!limit || limit >= p + 3) && toupper(p[0]) == 'N' &&
-        toupper(p[1]) == 'A' && toupper(p[2]) == 'N') {
+    // advanced over any leading spaces.  Most Fortran compilers set
+    // the sign bit for -NaN.
+    const char *q{p};
+    if (!limit || q < limit) {
+      isNegative_ = *q == '-';
+      if (isNegative_ || *q == '+') {
+        ++q;
+      }
+    }
+    if ((!limit || limit >= q + 3) && toupper(q[0]) == 'N' &&
+        toupper(q[1]) == 'A' && toupper(q[2]) == 'N') {
       // NaN
-      p += 3;
+      p = q + 3;
+      bool isQuiet{true};
       if ((!limit || p < limit) && *p == '(') {
         int depth{1};
         do {
           ++p;
           if (limit && p >= limit) {
             // Invalid input
-            return {Real{NaN()}, Invalid};
+            return {Real{NaN(false)}, Invalid};
           } else if (*p == '(') {
             ++depth;
           } else if (*p == ')') {
             --depth;
+          } else if (*p != ' ') {
+            // Implementation dependent, but other compilers
+            // all return quiet NaNs.
           }
         } while (depth > 0);
         ++p;
       }
-      return {Real{NaN()}};
-    } else {
-      // Try to parse Inf, maybe with a sign
-      const char *q{p};
-      if (!limit || q < limit) {
-        isNegative_ = *q == '-';
-        if (isNegative_ || *q == '+') {
-          ++q;
-        }
-      }
+      return {Real{NaN(isQuiet)}};
+    } else { // Inf?
       if ((!limit || limit >= q + 3) && toupper(q[0]) == 'I' &&
           toupper(q[1]) == 'N' && toupper(q[2]) == 'F') {
         if ((!limit || limit >= q + 8) && toupper(q[3]) == 'I' &&

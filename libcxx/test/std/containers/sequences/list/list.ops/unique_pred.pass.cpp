@@ -24,12 +24,12 @@ bool g(int x, int y)
 }
 
 struct PredLWG526 {
-    PredLWG526 (int i) : i_(i) {};
-    ~PredLWG526() { i_ = -32767; }
-    bool operator() (const PredLWG526 &lhs, const PredLWG526 &rhs) const { return lhs.i_ == rhs.i_; }
+  PredLWG526(int i) : i_(i) {}
+  ~PredLWG526() { i_ = -32767; }
+  bool operator()(const PredLWG526& lhs, const PredLWG526& rhs) const { return lhs.i_ == rhs.i_; }
 
-    bool operator==(int i) const { return i == i_;}
-    int i_;
+  bool operator==(int i) const { return i == i_; }
+  int i_;
 };
 
 int main(int, char**)
@@ -59,7 +59,7 @@ int main(int, char**)
     c.unique(std::ref(c.front()));
 #endif
     assert(c.size() == 6);
-    for (size_t i = 0; i < c.size(); ++i)
+    for (std::size_t i = 0; i < c.size(); ++i)
     {
         assert(c.front() == a2[i]);
         c.pop_front();

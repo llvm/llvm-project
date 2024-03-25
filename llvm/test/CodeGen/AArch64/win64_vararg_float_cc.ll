@@ -3,17 +3,30 @@
 ; RUN: llc < %s -mtriple=aarch64-windows -verify-machineinstrs -O0 -fast-isel | FileCheck %s --check-prefixes=O0,FASTISEL
 ; RUN: llc < %s -mtriple=aarch64-windows -verify-machineinstrs -O0 -global-isel | FileCheck %s --check-prefixes=O0,GISEL
 
+; Check that non-vararg functions compilation is not broken
+define win64cc float @foo(float %arg) nounwind {
+; DAGISEL-LABEL: foo:
+; DAGISEL:       // %bb.0: // %entry
+; DAGISEL-NEXT:    ret
+;
+; O0-LABEL: foo:
+; O0:       // %bb.0: // %entry
+; O0-NEXT:    ret
+entry:
+  ret float %arg
+}
+
 define win64cc void @float_va_fn(float %a, i32 %b, ...) nounwind {
 ; DAGISEL-LABEL: float_va_fn:
 ; DAGISEL:       // %bb.0: // %entry
 ; DAGISEL-NEXT:    str x30, [sp, #-64]! // 8-byte Folded Spill
-; DAGISEL-NEXT:    add x8, sp, #16
 ; DAGISEL-NEXT:    fmov s0, w0
+; DAGISEL-NEXT:    add x8, sp, #16
 ; DAGISEL-NEXT:    add x0, sp, #16
-; DAGISEL-NEXT:    stp x3, x4, [sp, #24]
-; DAGISEL-NEXT:    stp x5, x6, [sp, #40]
-; DAGISEL-NEXT:    stp x8, x2, [sp, #8]
-; DAGISEL-NEXT:    str x7, [sp, #56]
+; DAGISEL-NEXT:    stp x2, x3, [sp, #16]
+; DAGISEL-NEXT:    stp x4, x5, [sp, #32]
+; DAGISEL-NEXT:    stp x6, x7, [sp, #48]
+; DAGISEL-NEXT:    str x8, [sp, #8]
 ; DAGISEL-NEXT:    bl f_va_list
 ; DAGISEL-NEXT:    ldr x30, [sp], #64 // 8-byte Folded Reload
 ; DAGISEL-NEXT:    ret
@@ -57,13 +70,13 @@ define win64cc void @double_va_fn(double %a, i32 %b, ...) nounwind {
 ; DAGISEL-LABEL: double_va_fn:
 ; DAGISEL:       // %bb.0: // %entry
 ; DAGISEL-NEXT:    str x30, [sp, #-64]! // 8-byte Folded Spill
-; DAGISEL-NEXT:    add x8, sp, #16
 ; DAGISEL-NEXT:    fmov d0, x0
+; DAGISEL-NEXT:    add x8, sp, #16
 ; DAGISEL-NEXT:    add x0, sp, #16
-; DAGISEL-NEXT:    stp x3, x4, [sp, #24]
-; DAGISEL-NEXT:    stp x5, x6, [sp, #40]
-; DAGISEL-NEXT:    stp x8, x2, [sp, #8]
-; DAGISEL-NEXT:    str x7, [sp, #56]
+; DAGISEL-NEXT:    stp x2, x3, [sp, #16]
+; DAGISEL-NEXT:    stp x4, x5, [sp, #32]
+; DAGISEL-NEXT:    stp x6, x7, [sp, #48]
+; DAGISEL-NEXT:    str x8, [sp, #8]
 ; DAGISEL-NEXT:    bl d_va_list
 ; DAGISEL-NEXT:    ldr x30, [sp], #64 // 8-byte Folded Reload
 ; DAGISEL-NEXT:    ret
@@ -103,10 +116,10 @@ define void @call_f_va() nounwind {
 ; DAGISEL-LABEL: call_f_va:
 ; DAGISEL:       // %bb.0: // %entry
 ; DAGISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; DAGISEL-NEXT:    mov w0, #1065353216
-; DAGISEL-NEXT:    mov w1, #2
-; DAGISEL-NEXT:    mov x2, #4613937818241073152
-; DAGISEL-NEXT:    mov w3, #4
+; DAGISEL-NEXT:    mov w0, #1065353216 // =0x3f800000
+; DAGISEL-NEXT:    mov w1, #2 // =0x2
+; DAGISEL-NEXT:    mov x2, #4613937818241073152 // =0x4008000000000000
+; DAGISEL-NEXT:    mov w3, #4 // =0x4
 ; DAGISEL-NEXT:    bl other_f_va_fn
 ; DAGISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; DAGISEL-NEXT:    ret
@@ -114,10 +127,10 @@ define void @call_f_va() nounwind {
 ; FASTISEL-LABEL: call_f_va:
 ; FASTISEL:       // %bb.0: // %entry
 ; FASTISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; FASTISEL-NEXT:    mov w0, #1065353216
-; FASTISEL-NEXT:    mov w1, #2
-; FASTISEL-NEXT:    mov x2, #4613937818241073152
-; FASTISEL-NEXT:    mov w3, #4
+; FASTISEL-NEXT:    mov w0, #1065353216 // =0x3f800000
+; FASTISEL-NEXT:    mov w1, #2 // =0x2
+; FASTISEL-NEXT:    mov x2, #4613937818241073152 // =0x4008000000000000
+; FASTISEL-NEXT:    mov w3, #4 // =0x4
 ; FASTISEL-NEXT:    bl other_f_va_fn
 ; FASTISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; FASTISEL-NEXT:    ret
@@ -127,10 +140,10 @@ define void @call_f_va() nounwind {
 ; GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; GISEL-NEXT:    fmov s0, #1.00000000
 ; GISEL-NEXT:    fmov w0, s0
-; GISEL-NEXT:    mov w1, #2
+; GISEL-NEXT:    mov w1, #2 // =0x2
 ; GISEL-NEXT:    fmov d0, #3.00000000
 ; GISEL-NEXT:    fmov x2, d0
-; GISEL-NEXT:    mov w3, #4
+; GISEL-NEXT:    mov w3, #4 // =0x4
 ; GISEL-NEXT:    bl other_f_va_fn
 ; GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; GISEL-NEXT:    ret
@@ -145,10 +158,10 @@ define void @call_d_va() nounwind {
 ; DAGISEL-LABEL: call_d_va:
 ; DAGISEL:       // %bb.0: // %entry
 ; DAGISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; DAGISEL-NEXT:    mov x0, #4607182418800017408
-; DAGISEL-NEXT:    mov w1, #2
-; DAGISEL-NEXT:    mov x2, #4613937818241073152
-; DAGISEL-NEXT:    mov w3, #4
+; DAGISEL-NEXT:    mov x0, #4607182418800017408 // =0x3ff0000000000000
+; DAGISEL-NEXT:    mov w1, #2 // =0x2
+; DAGISEL-NEXT:    mov x2, #4613937818241073152 // =0x4008000000000000
+; DAGISEL-NEXT:    mov w3, #4 // =0x4
 ; DAGISEL-NEXT:    bl other_d_va_fn
 ; DAGISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; DAGISEL-NEXT:    ret
@@ -156,10 +169,10 @@ define void @call_d_va() nounwind {
 ; FASTISEL-LABEL: call_d_va:
 ; FASTISEL:       // %bb.0: // %entry
 ; FASTISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; FASTISEL-NEXT:    mov x0, #4607182418800017408
-; FASTISEL-NEXT:    mov w1, #2
-; FASTISEL-NEXT:    mov x2, #4613937818241073152
-; FASTISEL-NEXT:    mov w3, #4
+; FASTISEL-NEXT:    mov x0, #4607182418800017408 // =0x3ff0000000000000
+; FASTISEL-NEXT:    mov w1, #2 // =0x2
+; FASTISEL-NEXT:    mov x2, #4613937818241073152 // =0x4008000000000000
+; FASTISEL-NEXT:    mov w3, #4 // =0x4
 ; FASTISEL-NEXT:    bl other_d_va_fn
 ; FASTISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; FASTISEL-NEXT:    ret
@@ -169,10 +182,10 @@ define void @call_d_va() nounwind {
 ; GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; GISEL-NEXT:    fmov d0, #1.00000000
 ; GISEL-NEXT:    fmov x0, d0
-; GISEL-NEXT:    mov w1, #2
+; GISEL-NEXT:    mov w1, #2 // =0x2
 ; GISEL-NEXT:    fmov d0, #3.00000000
 ; GISEL-NEXT:    fmov x2, d0
-; GISEL-NEXT:    mov w3, #4
+; GISEL-NEXT:    mov w3, #4 // =0x4
 ; GISEL-NEXT:    bl other_d_va_fn
 ; GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; GISEL-NEXT:    ret
@@ -189,8 +202,8 @@ define void @call_d_non_va() nounwind {
 ; DAGISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; DAGISEL-NEXT:    fmov d0, #1.00000000
 ; DAGISEL-NEXT:    fmov d1, #3.00000000
-; DAGISEL-NEXT:    mov w0, #2
-; DAGISEL-NEXT:    mov w1, #4
+; DAGISEL-NEXT:    mov w0, #2 // =0x2
+; DAGISEL-NEXT:    mov w1, #4 // =0x4
 ; DAGISEL-NEXT:    bl other_d_non_va_fn
 ; DAGISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; DAGISEL-NEXT:    ret
@@ -199,9 +212,9 @@ define void @call_d_non_va() nounwind {
 ; O0:       // %bb.0: // %entry
 ; O0-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; O0-NEXT:    fmov d0, #1.00000000
-; O0-NEXT:    mov w0, #2
+; O0-NEXT:    mov w0, #2 // =0x2
 ; O0-NEXT:    fmov d1, #3.00000000
-; O0-NEXT:    mov w1, #4
+; O0-NEXT:    mov w1, #4 // =0x4
 ; O0-NEXT:    bl other_d_non_va_fn
 ; O0-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; O0-NEXT:    ret

@@ -135,15 +135,22 @@ void Thumb1InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 void Thumb1InstrInfo::expandLoadStackGuard(
     MachineBasicBlock::iterator MI) const {
   MachineFunction &MF = *MI->getParent()->getParent();
-  const TargetMachine &TM = MF.getTarget();
+  const ARMSubtarget &ST = MF.getSubtarget<ARMSubtarget>();
+  const auto *GV = cast<GlobalValue>((*MI->memoperands_begin())->getValue());
 
   assert(MF.getFunction().getParent()->getStackProtectorGuard() != "tls" &&
          "TLS stack protector not supported for Thumb1 targets");
 
-  if (TM.isPositionIndependent())
-    expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_pcrel, ARM::tLDRi);
+  unsigned Instr;
+  if (!GV->isDSOLocal())
+    Instr = ARM::tLDRLIT_ga_pcrel;
+  else if (ST.genExecuteOnly() && ST.hasV8MBaselineOps())
+    Instr = ARM::t2MOVi32imm;
+  else if (ST.genExecuteOnly())
+    Instr = ARM::tMOVi32imm;
   else
-    expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_abs, ARM::tLDRi);
+    Instr = ARM::tLDRLIT_ga_abs;
+  expandLoadStackGuardBase(MI, Instr, ARM::tLDRi);
 }
 
 bool Thumb1InstrInfo::canCopyGluedNodeDuringSchedule(SDNode *N) const {

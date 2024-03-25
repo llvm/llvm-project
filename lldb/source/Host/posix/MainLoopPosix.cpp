@@ -122,7 +122,7 @@ sigset_t MainLoopPosix::RunImpl::get_sigmask() {
   sigset_t sigmask;
   int ret = pthread_sigmask(SIG_SETMASK, nullptr, &sigmask);
   assert(ret == 0);
-  (void)ret;
+  UNUSED_IF_ASSERT_DISABLED(ret);
 
   for (const auto &sig : loop.m_signals)
     sigdelset(&sigmask, sig.first);
@@ -156,9 +156,12 @@ Status MainLoopPosix::RunImpl::Poll() {
     size_t sigset_len;
   } extra_data = {&kernel_sigset, sizeof(kernel_sigset)};
   if (syscall(__NR_pselect6, nfds, &read_fd_set, nullptr, nullptr, nullptr,
-              &extra_data) == -1 &&
-      errno != EINTR)
-    return Status(errno, eErrorTypePOSIX);
+              &extra_data) == -1) {
+    if (errno != EINTR)
+      return Status(errno, eErrorTypePOSIX);
+    else
+      FD_ZERO(&read_fd_set);
+  }
 
   return Status();
 }
@@ -296,7 +299,7 @@ MainLoopPosix::RegisterSignal(int signo, const Callback &callback,
   // Even if using kqueue, the signal handler will still be invoked, so it's
   // important to replace it with our "benign" handler.
   int ret = sigaction(signo, &new_action, &info.old_action);
-  (void)ret;
+  UNUSED_IF_ASSERT_DISABLED(ret);
   assert(ret == 0 && "sigaction failed");
 
 #if HAVE_SYS_EVENT_H
@@ -343,7 +346,7 @@ void MainLoopPosix::UnregisterSignal(
   int ret = pthread_sigmask(it->second.was_blocked ? SIG_BLOCK : SIG_UNBLOCK,
                             &set, nullptr);
   assert(ret == 0);
-  (void)ret;
+  UNUSED_IF_ASSERT_DISABLED(ret);
 
 #if HAVE_SYS_EVENT_H
   struct kevent ev;

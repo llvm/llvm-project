@@ -268,8 +268,6 @@ define i1 @fcmp_fast_olt(double %a, double %b, i1 %c) nounwind {
 ; LA32-NEXT:  # %bb.1: # %if.then
 ; LA32-NEXT:    ret
 ; LA32-NEXT:  .LBB16_2: # %if.else
-; LA32-NEXT:    movgr2fr.w $fa1, $zero
-; LA32-NEXT:    movgr2frh.w $fa1, $zero
 ; LA32-NEXT:    fcmp.clt.d $fcc0, $fa0, $fa1
 ; LA32-NEXT:    movcf2gr $a0, $fcc0
 ; LA32-NEXT:    ret
@@ -308,9 +306,6 @@ define i1 @fcmp_fast_oeq(double %a, double %b, i1 %c) nounwind {
 ; LA32-NEXT:  # %bb.1: # %if.then
 ; LA32-NEXT:    ret
 ; LA32-NEXT:  .LBB17_2: # %if.else
-; LA32-NEXT:    movgr2fr.w $fa1, $zero
-; LA32-NEXT:    movgr2frh.w $fa1, $zero
-; LA32-NEXT:    fcmp.ceq.d $fcc0, $fa0, $fa1
 ; LA32-NEXT:    movcf2gr $a0, $fcc0
 ; LA32-NEXT:    ret
 ;
@@ -346,8 +341,6 @@ define i1 @fcmp_fast_ole(double %a, double %b, i1 %c) nounwind {
 ; LA32-NEXT:  # %bb.1: # %if.then
 ; LA32-NEXT:    ret
 ; LA32-NEXT:  .LBB18_2: # %if.else
-; LA32-NEXT:    movgr2fr.w $fa1, $zero
-; LA32-NEXT:    movgr2frh.w $fa1, $zero
 ; LA32-NEXT:    fcmp.cle.d $fcc0, $fa0, $fa1
 ; LA32-NEXT:    movcf2gr $a0, $fcc0
 ; LA32-NEXT:    ret

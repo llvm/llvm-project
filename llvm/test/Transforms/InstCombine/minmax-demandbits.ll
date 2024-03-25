@@ -26,8 +26,8 @@ define i32 @and_umax_muchless(i32 %A) {
 
 define i32 @and_umax_more(i32 %A) {
 ; CHECK-LABEL: @and_umax_more(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[A:%.*]], i32 32)
-; CHECK-NEXT:    [[X:%.*]] = and i32 [[TMP1]], -32
+; CHECK-NEXT:    [[L1:%.*]] = call i32 @llvm.umax.i32(i32 [[A:%.*]], i32 32)
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[L1]], -32
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %l0 = icmp ugt i32 32, %A
@@ -117,8 +117,8 @@ define i8 @t_2_63_or(i8 %A) {
 
 define i8 @f_1_1(i8 %A) {
 ; CHECK-LABEL: @f_1_1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[A:%.*]], i8 1)
-; CHECK-NEXT:    [[X:%.*]] = and i8 [[TMP1]], 1
+; CHECK-NEXT:    [[L1:%.*]] = call i8 @llvm.umax.i8(i8 [[A:%.*]], i8 1)
+; CHECK-NEXT:    [[X:%.*]] = and i8 [[L1]], 1
 ; CHECK-NEXT:    ret i8 [[X]]
 ;
   %l2 = icmp ugt i8 %A, 1
@@ -129,8 +129,8 @@ define i8 @f_1_1(i8 %A) {
 
 define i8 @f_32_32(i8 %A) {
 ; CHECK-LABEL: @f_32_32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[A:%.*]], i8 32)
-; CHECK-NEXT:    [[X:%.*]] = and i8 [[TMP1]], -32
+; CHECK-NEXT:    [[L1:%.*]] = call i8 @llvm.umax.i8(i8 [[A:%.*]], i8 32)
+; CHECK-NEXT:    [[X:%.*]] = and i8 [[L1]], -32
 ; CHECK-NEXT:    ret i8 [[X]]
 ;
   %l2 = icmp ugt i8 %A, 32
@@ -141,8 +141,8 @@ define i8 @f_32_32(i8 %A) {
 
 define i8 @f_191_192(i8 %A) {
 ; CHECK-LABEL: @f_191_192(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[A:%.*]], i8 -65)
-; CHECK-NEXT:    [[X:%.*]] = and i8 [[TMP1]], -64
+; CHECK-NEXT:    [[L1:%.*]] = call i8 @llvm.umax.i8(i8 [[A:%.*]], i8 -65)
+; CHECK-NEXT:    [[X:%.*]] = and i8 [[L1]], -64
 ; CHECK-NEXT:    ret i8 [[X]]
 ;
   %l2 = icmp ugt i8 %A, 191
@@ -153,8 +153,8 @@ define i8 @f_191_192(i8 %A) {
 
 define i8 @f_10_1(i8 %A) {
 ; CHECK-LABEL: @f_10_1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[A:%.*]], i8 10)
-; CHECK-NEXT:    [[X:%.*]] = and i8 [[TMP1]], 1
+; CHECK-NEXT:    [[L1:%.*]] = call i8 @llvm.umax.i8(i8 [[A:%.*]], i8 10)
+; CHECK-NEXT:    [[X:%.*]] = and i8 [[L1]], 1
 ; CHECK-NEXT:    ret i8 [[X]]
 ;
   %l2 = icmp ugt i8 %A, 10
@@ -218,8 +218,8 @@ define i8 @and_min_7_8(i8 %A) {
 
 define i8 @and_min_7_9(i8 %A) {
 ; CHECK-LABEL: @and_min_7_9(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[A:%.*]], i8 -9)
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP1]], -8
+; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.umin.i8(i8 [[A:%.*]], i8 -9)
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[MIN]], -8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %l2 = icmp ult i8 %A, -9

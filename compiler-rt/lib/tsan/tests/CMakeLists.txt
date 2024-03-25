@@ -11,6 +11,7 @@ set(TSAN_UNITTEST_CFLAGS
   -I${COMPILER_RT_SOURCE_DIR}/include
   -I${COMPILER_RT_SOURCE_DIR}/lib
   -I${COMPILER_RT_SOURCE_DIR}/lib/tsan/rtl
+  -DSANITIZER_COMMON_NO_REDEFINE_BUILTINS
   -DGTEST_HAS_RTTI=0
   -fno-rtti
 )
@@ -63,10 +64,10 @@ foreach (header ${TSAN_HEADERS})
   list(APPEND TSAN_RTL_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../${header})
 endforeach()
 
-set(TSAN_DEPS llvm_gtest tsan)
+set(TSAN_DEPS tsan)
 # TSan uses C++ standard library headers.
 if (TARGET cxx-headers OR HAVE_LIBCXX)
-  set(TSAN_DEPS cxx-headers)
+  list(APPEND TSAN_DEPS cxx-headers)
 endif()
 
 # add_tsan_unittest(<name>

@@ -63,6 +63,7 @@ def BPF_JA   : BPFJumpOp<0x0>;
 def BPF_JEQ  : BPFJumpOp<0x1>;
 def BPF_JGT  : BPFJumpOp<0x2>;
 def BPF_JGE  : BPFJumpOp<0x3>;
+def BPF_JSET : BPFJumpOp<0x4>;
 def BPF_JNE  : BPFJumpOp<0x5>;
 def BPF_JSGT : BPFJumpOp<0x6>;
 def BPF_JSGE : BPFJumpOp<0x7>;
@@ -72,6 +73,7 @@ def BPF_JLT  : BPFJumpOp<0xa>;
 def BPF_JLE  : BPFJumpOp<0xb>;
 def BPF_JSLT : BPFJumpOp<0xc>;
 def BPF_JSLE : BPFJumpOp<0xd>;
+def BPF_JCOND : BPFJumpOp<0xe>;
 
 class BPFWidthModifer<bits<2> val> {
   bits<2> Value = val;
@@ -90,6 +92,7 @@ def BPF_IMM  : BPFModeModifer<0x0>;
 def BPF_ABS  : BPFModeModifer<0x1>;
 def BPF_IND  : BPFModeModifer<0x2>;
 def BPF_MEM  : BPFModeModifer<0x3>;
+def BPF_MEMSX  : BPFModeModifer<0x4>;
 def BPF_ATOMIC : BPFModeModifer<0x6>;
 
 class BPFAtomicFlag<bits<4> val> {

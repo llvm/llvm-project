@@ -9,6 +9,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
+#include "mlir/InitAllExtensions.h"
 #include "mlir/Tools/mlir-lsp-server/MlirLspServerMain.h"
 
 using namespace mlir;
@@ -16,6 +17,7 @@ using namespace mlir;
 #ifdef MLIR_INCLUDE_TESTS
 namespace test {
 void registerTestDialect(DialectRegistry &);
+void registerTestDynDialect(DialectRegistry &);
 void registerTestTransformDialectExtension(DialectRegistry &);
 } // namespace test
 #endif
@@ -23,9 +25,12 @@ void registerTestTransformDialectExtension(DialectRegistry &);
 int main(int argc, char **argv) {
   DialectRegistry registry;
   registerAllDialects(registry);
+  registerAllExtensions(registry);
+
 #ifdef MLIR_INCLUDE_TESTS
   ::test::registerTestDialect(registry);
   ::test::registerTestTransformDialectExtension(registry);
+  ::test::registerTestDynDialect(registry);
 #endif
   return failed(MlirLspServerMain(argc, argv, registry));
 }

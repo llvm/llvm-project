@@ -12,6 +12,7 @@
 
 // #include "src/__support/FPUtil/FPBits.h"
 
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <string>

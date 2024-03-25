@@ -54,4 +54,11 @@ void narrow_fp_constants() {
   f = __builtin_nan("0"); // double NaN is not narrowing.
 }
 
+double false_positive_const_qualified_cast(bool t) {
+  double b = 1.0;
+  constexpr double a = __builtin_huge_val();
+  // PR49498 The constness difference of 'a' and 'b' results in an implicit cast.
+  return t ? b : a;
+}
+
 } // namespace floats

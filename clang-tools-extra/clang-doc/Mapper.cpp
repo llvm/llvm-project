@@ -103,7 +103,7 @@ llvm::SmallString<128> MapASTVisitor::getFile(const NamedDecl *D,
                                   .getPresumedLoc(D->getBeginLoc())
                                   .getFilename());
   IsFileInRootDir = false;
-  if (RootDir.empty() || !File.startswith(RootDir))
+  if (RootDir.empty() || !File.starts_with(RootDir))
     return File;
   IsFileInRootDir = true;
   llvm::SmallString<128> Prefix(RootDir);

@@ -11,7 +11,9 @@
 ; RUN: not ld.lld %t-v5 %t-xmega3 -o /dev/null 2>&1 | FileCheck --check-prefix ERR %s
 ; ERR: error: {{.*}}: cannot link object files with incompatible target ISA
 
-; V5:  Flags [ (0x5)
+; V5:  Flags [ (0x85)
 ; V5:  EF_AVR_ARCH_AVR5 (0x5)
-; XMEGA3: Flags [ (0x67)
+; V5:  EF_AVR_LINKRELAX_PREPARED (0x80)
+; XMEGA3: Flags [ (0xE7)
 ; XMEGA3: EF_AVR_ARCH_XMEGA3 (0x67)
+; XMEGA3: EF_AVR_LINKRELAX_PREPARED (0x80)

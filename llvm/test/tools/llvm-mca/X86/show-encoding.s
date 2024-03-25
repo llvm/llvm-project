@@ -51,7 +51,7 @@
 # NORMAL-NEXT:         1      1     0.50                        vpslldq	$12, %xmm3, %xmm5
 # NORMAL-NEXT:         1      3     1.00                        vaddps	%xmm4, %xmm5, %xmm7
 # NORMAL-NEXT:         1      3     1.00                        vaddps	%xmm6, %xmm7, %xmm8
-# NORMAL-NEXT:         1      3     1.00                        vaddps	%xmm8, %xmm0, %xmm9
+# NORMAL-NEXT:         1      3     1.00                        vaddps	%xmm0, %xmm8, %xmm9
 # NORMAL-NEXT:         1      1     0.50                        vshufps	$255, %xmm9, %xmm9, %xmm0
 # NORMAL-NEXT:         1      1     1.00           *            vmovups	%xmm9, (%r11,%r9,4)
 # NORMAL-NEXT:         1      1     0.50                        cmpl	%r8d, %esi
@@ -70,7 +70,7 @@
 # WITHENCODINGS-NEXT:  1      1     0.50                         5     c5 d1 73 fb 0c                vpslldq	$12, %xmm3, %xmm5
 # WITHENCODINGS-NEXT:  1      3     1.00                         4     c5 d0 58 fc                   vaddps	%xmm4, %xmm5, %xmm7
 # WITHENCODINGS-NEXT:  1      3     1.00                         4     c5 40 58 c6                   vaddps	%xmm6, %xmm7, %xmm8
-# WITHENCODINGS-NEXT:  1      3     1.00                         5     c4 41 78 58 c8                vaddps	%xmm8, %xmm0, %xmm9
+# WITHENCODINGS-NEXT:  1      3     1.00                         4     c5 38 58 c8                   vaddps	%xmm0, %xmm8, %xmm9
 # WITHENCODINGS-NEXT:  1      1     0.50                         6     c4 c1 30 c6 c1 ff             vshufps	$255, %xmm9, %xmm9, %xmm0
 # WITHENCODINGS-NEXT:  1      1     1.00           *             6     c4 01 78 11 0c 8b             vmovups	%xmm9, (%r11,%r9,4)
 # WITHENCODINGS-NEXT:  1      1     0.50                         3     44 39 c6                      cmpl	%r8d, %esi

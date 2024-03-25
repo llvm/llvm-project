@@ -82,8 +82,6 @@ public:
     return E->getKind() == MCExpr::Target;
   }
 
-  static bool classof(const VEMCExpr *) { return true; }
-
   static VariantKind parseVariantKind(StringRef name);
   static bool printVariantKind(raw_ostream &OS, VariantKind Kind);
   static void printVariantKindSuffix(raw_ostream &OS, VariantKind Kind);

@@ -49,10 +49,12 @@ void TestHostRuntimeSubnormalFlushing() {
     flushingTargetCharacteristics.set_areSubnormalsFlushedToZero(true);
     TargetCharacteristics noFlushingTargetCharacteristics;
     noFlushingTargetCharacteristics.set_areSubnormalsFlushedToZero(false);
-    FoldingContext flushingContext{
-        messages, defaults, intrinsics, flushingTargetCharacteristics};
-    FoldingContext noFlushingContext{
-        messages, defaults, intrinsics, noFlushingTargetCharacteristics};
+    Fortran::common::LanguageFeatureControl languageFeatures;
+    std::set<std::string> tempNames;
+    FoldingContext flushingContext{messages, defaults, intrinsics,
+        flushingTargetCharacteristics, languageFeatures, tempNames};
+    FoldingContext noFlushingContext{messages, defaults, intrinsics,
+        noFlushingTargetCharacteristics, languageFeatures, tempNames};
 
     DynamicType r4{R4{}.GetType()};
     // Test subnormal argument flushing

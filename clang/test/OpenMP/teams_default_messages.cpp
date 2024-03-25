@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-version=51 -fopenmp -DOMP51 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-version=51 -fopenmp-simd -DOMP51 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-version=51 -DOMP51 -fopenmp -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-version=50 -fopenmp -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-version=51 -DOMP51 -fopenmp-simd -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-version=50 -fopenmp-simd -o - %s -Wuninitialized
 
 void foo();
 
@@ -42,6 +42,9 @@ int main(int argc, char **argv) {
   #pragma omp parallel default(shared)
   ++argc; // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
 
+  #pragma omp teams if(x) // expected-error {{unexpected OpenMP clause 'if' in directive '#pragma omp teams'}}
+  foo();
+
 #ifdef OMP51
 #pragma omp target
 #pragma omp teams default(firstprivate) // expected-note 2 {{explicit data sharing attribute requested here}}
@@ -55,6 +58,9 @@ int main(int argc, char **argv) {
     ++x; // expected-error {{variable 'x' must have explicitly specified data sharing attributes}}
     ++y; // expected-error {{variable 'y' must have explicitly specified data sharing attributes}}
   }
+#pragma omp teams if(x) // expected-error {{unexpected OpenMP clause 'if' in directive '#pragma omp teams'}}
+  foo();
+
 #endif
   return 0;
 }

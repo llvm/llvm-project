@@ -9,25 +9,27 @@
 #ifndef FORTRAN_TOOLS_POINTER_MODELS_H
 #define FORTRAN_TOOLS_POINTER_MODELS_H
 
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 
-/// models for FIR pointer like types that already provide a `getElementType` or
-/// a `getEleTy` method
+/// models for FIR pointer like types that already provide a `getElementType`
+/// method
 
 template <typename T>
-struct PointerLikeModel
-    : public mlir::omp::PointerLikeType::ExternalModel<PointerLikeModel<T>, T> {
+struct OpenMPPointerLikeModel
+    : public mlir::omp::PointerLikeType::ExternalModel<
+          OpenMPPointerLikeModel<T>, T> {
   mlir::Type getElementType(mlir::Type pointer) const {
     return pointer.cast<T>().getElementType();
   }
 };
 
 template <typename T>
-struct AlternativePointerLikeModel
-    : public mlir::omp::PointerLikeType::ExternalModel<
-          AlternativePointerLikeModel<T>, T> {
+struct OpenACCPointerLikeModel
+    : public mlir::acc::PointerLikeType::ExternalModel<
+          OpenACCPointerLikeModel<T>, T> {
   mlir::Type getElementType(mlir::Type pointer) const {
-    return pointer.cast<T>().getEleTy();
+    return pointer.cast<T>().getElementType();
   }
 };
 

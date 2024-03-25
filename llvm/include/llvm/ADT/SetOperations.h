@@ -45,6 +45,25 @@ void set_intersect(S1Ty &S1, const S2Ty &S2) {
    }
 }
 
+template <class S1Ty, class S2Ty>
+S1Ty set_intersection_impl(const S1Ty &S1, const S2Ty &S2) {
+   S1Ty Result;
+   for (typename S1Ty::const_iterator SI = S1.begin(), SE = S1.end(); SI != SE;
+        ++SI)
+     if (S2.count(*SI))
+      Result.insert(*SI);
+   return Result;
+}
+
+/// set_intersection(A, B) - Return A ^ B
+template <class S1Ty, class S2Ty>
+S1Ty set_intersection(const S1Ty &S1, const S2Ty &S2) {
+   if (S1.size() < S2.size())
+     return set_intersection_impl(S1, S2);
+   else
+     return set_intersection_impl(S2, S1);
+}
+
 /// set_difference(A, B) - Return A - B
 ///
 template <class S1Ty, class S2Ty>
@@ -64,6 +83,19 @@ void set_subtract(S1Ty &S1, const S2Ty &S2) {
   for (typename S2Ty::const_iterator SI = S2.begin(), SE = S2.end();
        SI != SE; ++SI)
     S1.erase(*SI);
+}
+
+/// set_subtract(A, B, C, D) - Compute A := A - B, set C to the elements of B
+/// removed from A (A ^ B), and D to the elements of B not found in and removed
+/// from A (B - A).
+template <class S1Ty, class S2Ty>
+void set_subtract(S1Ty &S1, const S2Ty &S2, S1Ty &Removed, S1Ty &Remaining) {
+  for (typename S2Ty::const_iterator SI = S2.begin(), SE = S2.end(); SI != SE;
+       ++SI)
+    if (S1.erase(*SI))
+      Removed.insert(*SI);
+    else
+      Remaining.insert(*SI);
 }
 
 /// set_is_subset(A, B) - Return true iff A in B

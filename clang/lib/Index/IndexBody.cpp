@@ -77,21 +77,21 @@ public:
     const Stmt *Parent = *It;
 
     if (auto BO = dyn_cast<BinaryOperator>(Parent)) {
-      if (BO->getOpcode() == BO_Assign && BO->getLHS()->IgnoreParenCasts() == E)
-        Roles |= (unsigned)SymbolRole::Write;
-
+      if (BO->getOpcode() == BO_Assign) {
+        if (BO->getLHS()->IgnoreParenCasts() == E)
+          Roles |= (unsigned)SymbolRole::Write;
+      } else if (auto CA = dyn_cast<CompoundAssignOperator>(Parent)) {
+        if (CA->getLHS()->IgnoreParenCasts() == E) {
+          Roles |= (unsigned)SymbolRole::Read;
+          Roles |= (unsigned)SymbolRole::Write;
+        }
+      }
     } else if (auto UO = dyn_cast<UnaryOperator>(Parent)) {
       if (UO->isIncrementDecrementOp()) {
         Roles |= (unsigned)SymbolRole::Read;
         Roles |= (unsigned)SymbolRole::Write;
       } else if (UO->getOpcode() == UO_AddrOf) {
         Roles |= (unsigned)SymbolRole::AddressOf;
-      }
-
-    } else if (auto CA = dyn_cast<CompoundAssignOperator>(Parent)) {
-      if (CA->getLHS()->IgnoreParenCasts() == E) {
-        Roles |= (unsigned)SymbolRole::Read;
-        Roles |= (unsigned)SymbolRole::Write;
       }
 
     } else if (auto CE = dyn_cast<CallExpr>(Parent)) {
@@ -142,6 +142,17 @@ public:
     SymbolRoleSet Roles = getRolesForRef(E, Relations);
     return IndexCtx.handleReference(E->getDecl(), E->getLocation(),
                                     Parent, ParentDC, Roles, Relations, E);
+  }
+
+  bool VisitGotoStmt(GotoStmt *S) {
+    return IndexCtx.handleReference(S->getLabel(), S->getLabelLoc(), Parent,
+                                    ParentDC);
+  }
+
+  bool VisitLabelStmt(LabelStmt *S) {
+    if (IndexCtx.shouldIndexFunctionLocalSymbols())
+      return IndexCtx.handleDecl(S->getDecl());
+    return true;
   }
 
   bool VisitMemberExpr(MemberExpr *E) {
@@ -203,9 +214,12 @@ public:
 
   bool VisitDesignatedInitExpr(DesignatedInitExpr *E) {
     for (DesignatedInitExpr::Designator &D : llvm::reverse(E->designators())) {
-      if (D.isFieldDesignator() && D.getField())
-        return IndexCtx.handleReference(D.getField(), D.getFieldLoc(), Parent,
-                                        ParentDC, SymbolRoleSet(), {}, E);
+      if (D.isFieldDesignator()) {
+        if (const FieldDecl *FD = D.getFieldDecl()) {
+          return IndexCtx.handleReference(FD, D.getFieldLoc(), Parent,
+                                          ParentDC, SymbolRoleSet(), {}, E);
+        }
+      }
     }
     return true;
   }
@@ -417,10 +431,13 @@ public:
 
     auto visitSyntacticDesignatedInitExpr = [&](DesignatedInitExpr *E) -> bool {
       for (DesignatedInitExpr::Designator &D : llvm::reverse(E->designators())) {
-        if (D.isFieldDesignator() && D.getField())
-          return IndexCtx.handleReference(D.getField(), D.getFieldLoc(),
-                                          Parent, ParentDC, SymbolRoleSet(),
-                                          {}, E);
+        if (D.isFieldDesignator()) {
+          if (const FieldDecl *FD = D.getFieldDecl()) {
+            return IndexCtx.handleReference(FD, D.getFieldLoc(), Parent,
+                                            ParentDC, SymbolRoleSet(),
+                                            /*Relations=*/{}, E);
+          }
+        }
       }
       return true;
     };

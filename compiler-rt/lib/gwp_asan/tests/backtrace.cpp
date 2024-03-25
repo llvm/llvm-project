@@ -21,7 +21,7 @@ TEST_P(BacktraceGuardedPoolAllocatorDeathTest, DoubleFree) {
   DeathRegex.append("was deallocated.*DeallocateMemory[^2].*");
   DeathRegex.append("was allocated.*AllocateMemory");
   if (!Recoverable) {
-    ASSERT_DEATH(DeallocateMemory2(GPA, Ptr), DeathRegex);
+    EXPECT_DEATH(DeallocateMemory2(GPA, Ptr), DeathRegex);
     return;
   }
 
@@ -51,7 +51,7 @@ TEST_P(BacktraceGuardedPoolAllocatorDeathTest, UseAfterFree) {
   DeathRegex.append("was allocated.*AllocateMemory");
 
   if (!Recoverable) {
-    ASSERT_DEATH(TouchMemory(Ptr), DeathRegex);
+    EXPECT_DEATH(TouchMemory(Ptr), DeathRegex);
     return;
   }
 
@@ -67,10 +67,6 @@ TEST_P(BacktraceGuardedPoolAllocatorDeathTest, UseAfterFree) {
       << GetOutputBuffer() << "\n============";
   ;
 }
-
-INSTANTIATE_TEST_SUITE_P(RecoverableSignalDeathTest,
-                         BacktraceGuardedPoolAllocatorDeathTest,
-                         /* Recoverable */ testing::Bool());
 
 TEST(Backtrace, Short) {
   gwp_asan::AllocationMetadata Meta;

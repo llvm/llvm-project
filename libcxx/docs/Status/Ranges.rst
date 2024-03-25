@@ -1,4 +1,4 @@
-a. ranges-status:
+.. _ranges-status:
 
 ================================
 libc++ Ranges Status

@@ -11,7 +11,7 @@
 // iterator insert(const_iterator p, charT c);
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-debug-mode, c++03
+// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
 
 // TODO: Since string::insert(iter, char) is intantiated in the dylib, this test doesn't
 //       actually work if the dylib hasn't been built with debug assertions enabled.
@@ -23,12 +23,17 @@
 
 #include "check_assertion.h"
 
-int main(int, char**) {
-    typedef std::string S;
-    S s;
-    S s2;
-    TEST_LIBCPP_ASSERT_FAILURE(s.insert(s2.begin(), '1'),
-        "string::insert(iterator, character) called with an iterator not referring to this string");
+template <class S>
+void test() {
+  S s;
+  S s2;
+  TEST_LIBCPP_ASSERT_FAILURE(
+      s.insert(s2.begin(), '1'),
+      "string::insert(iterator, character) called with an iterator not referring to this string");
+}
 
-    return 0;
+int main(int, char**) {
+  test<std::string>();
+
+  return 0;
 }

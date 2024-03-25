@@ -25,6 +25,7 @@
 #include "llvm/Support/Errno.h"
 
 #include <cstdio>
+#include <variant>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -70,7 +71,9 @@ Expected<std::string> python::As<std::string>(Expected<PythonObject> &&obj) {
 }
 
 static bool python_is_finalizing() {
-#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 7
+#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 13) || (PY_MAJOR_VERSION > 3)
+  return Py_IsFinalizing();
+#elif PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 7
   return _Py_Finalizing != nullptr;
 #else
   return _Py_IsFinalizing();
@@ -101,7 +104,7 @@ Expected<long long> PythonObject::AsLongLong() const {
   return r;
 }
 
-Expected<long long> PythonObject::AsUnsignedLongLong() const {
+Expected<unsigned long long> PythonObject::AsUnsignedLongLong() const {
   if (!m_py_obj)
     return nullDeref();
   assert(!PyErr_Occurred());
@@ -117,6 +120,7 @@ Expected<unsigned long long> PythonObject::AsModuloUnsignedLongLong() const {
     return nullDeref();
   assert(!PyErr_Occurred());
   unsigned long long r = PyLong_AsUnsignedLongLongMask(m_py_obj);
+  // FIXME: We should fetch the exception message and hoist it.
   if (PyErr_Occurred())
     return exception();
   return r;
@@ -267,9 +271,15 @@ StructuredData::ObjectSP PythonObject::CreateStructuredObject() const {
   case PyObjectType::Boolean:
     return PythonBoolean(PyRefType::Borrowed, m_py_obj)
         .CreateStructuredBoolean();
-  case PyObjectType::Integer:
-    return PythonInteger(PyRefType::Borrowed, m_py_obj)
-        .CreateStructuredInteger();
+  case PyObjectType::Integer: {
+    StructuredData::IntegerSP int_sp =
+        PythonInteger(PyRefType::Borrowed, m_py_obj).CreateStructuredInteger();
+    if (std::holds_alternative<StructuredData::UnsignedIntegerSP>(int_sp))
+      return std::get<StructuredData::UnsignedIntegerSP>(int_sp);
+    if (std::holds_alternative<StructuredData::SignedIntegerSP>(int_sp))
+      return std::get<StructuredData::SignedIntegerSP>(int_sp);
+    return nullptr;
+  };
   case PyObjectType::List:
     return PythonList(PyRefType::Borrowed, m_py_obj).CreateStructuredArray();
   case PyObjectType::String:
@@ -459,17 +469,32 @@ void PythonInteger::SetInteger(int64_t value) {
 }
 
 StructuredData::IntegerSP PythonInteger::CreateStructuredInteger() const {
-  StructuredData::IntegerSP result(new StructuredData::Integer);
-  // FIXME this is really not ideal.   Errors are silently converted to 0
-  // and overflows are silently wrapped.   But we'd need larger changes
-  // to StructuredData to fix it, so that's how it is for now.
-  llvm::Expected<unsigned long long> value = AsModuloUnsignedLongLong();
-  if (!value) {
+  StructuredData::UnsignedIntegerSP uint_sp = CreateStructuredUnsignedInteger();
+  return uint_sp ? StructuredData::IntegerSP(uint_sp)
+                 : CreateStructuredSignedInteger();
+}
+
+StructuredData::UnsignedIntegerSP
+PythonInteger::CreateStructuredUnsignedInteger() const {
+  StructuredData::UnsignedIntegerSP result = nullptr;
+  llvm::Expected<unsigned long long> value = AsUnsignedLongLong();
+  if (!value)
     llvm::consumeError(value.takeError());
-    result->SetValue(0);
-  } else {
-    result->SetValue(value.get());
-  }
+  else
+    result = std::make_shared<StructuredData::UnsignedInteger>(value.get());
+
+  return result;
+}
+
+StructuredData::SignedIntegerSP
+PythonInteger::CreateStructuredSignedInteger() const {
+  StructuredData::SignedIntegerSP result = nullptr;
+  llvm::Expected<long long> value = AsLongLong();
+  if (!value)
+    llvm::consumeError(value.takeError());
+  else
+    result = std::make_shared<StructuredData::SignedInteger>(value.get());
+
   return result;
 }
 
@@ -636,6 +661,20 @@ bool PythonDictionary::Check(PyObject *py_obj) {
     return false;
 
   return PyDict_Check(py_obj);
+}
+
+bool PythonDictionary::HasKey(const llvm::Twine &key) const {
+  if (!IsValid())
+    return false;
+
+  PythonString key_object(key.isSingleStringRef() ? key.getSingleStringRef()
+                                                  : key.str());
+
+  if (int res = PyDict_Contains(m_py_obj, key_object.get()) > 0)
+    return res;
+
+  PyErr_Print();
+  return false;
 }
 
 uint32_t PythonDictionary::GetSize() const {
@@ -1321,7 +1360,7 @@ llvm::Expected<FileSP> PythonFile::ConvertToFile(bool borrowed) {
 
   FileSP file_sp;
   if (borrowed) {
-    // In this case we we don't need to retain the python
+    // In this case we don't need to retain the python
     // object at all.
     file_sp = std::make_shared<NativeFile>(fd, options.get(), false);
   } else {

@@ -24,9 +24,9 @@ body:             |
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors:{{ $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+  ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   $w0 = COPY [[ADD]](s32)
@@ -48,7 +48,7 @@ body:             |
   bb.2:
     successors:
 
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
 
   bb.3:
     %8:_(s32) = G_ZEXT %6(s8)
@@ -78,9 +78,9 @@ body:             |
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors:{{ $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+  ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   $w0 = COPY [[ADD]](s32)
@@ -102,7 +102,7 @@ body:             |
   bb.2:
     successors:
 
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
 
   bb.3:
     %8:_(s32) = G_ZEXT %6(s16)
@@ -132,9 +132,9 @@ body:             |
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors:{{ $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+  ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   liveins: $x2
@@ -165,7 +165,7 @@ body:             |
   bb.2:
     successors:
 
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
 
   bb.3:
     liveins: $x2
@@ -204,9 +204,9 @@ body:             |
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors:{{ $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+  ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   $w0 = COPY [[ADD]](s32)
@@ -228,7 +228,7 @@ body:             |
   bb.2:
     successors:
 
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
 
   bb.3:
     %8:_(s32) = G_ANYEXT %6(s16)
@@ -259,9 +259,9 @@ body:             |
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors:{{ $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+  ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   $w0 = COPY [[ADD]](s32)
@@ -284,7 +284,7 @@ body:             |
   bb.2:
     successors:
 
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
 
   bb.3:
     %8:_(s32) = G_ZEXT %6(s16)
@@ -310,14 +310,14 @@ body:             |
   ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C]]
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND]](s32), [[C1]]
-  ; CHECK-NEXT:   DBG_VALUE {{%[0-9]+}}:_(s16)
+  ; CHECK-NEXT:   DBG_VALUE %6:_(s16)
   ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors:{{ $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+  ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   $w0 = COPY [[ADD]](s32)
@@ -340,7 +340,7 @@ body:             |
   bb.2:
     successors:
 
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
 
   bb.3:
     %8:_(s32) = G_ZEXT %6(s16)
@@ -375,9 +375,9 @@ body:             |
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors:{{ $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+  ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   liveins: $x2
@@ -410,7 +410,7 @@ body:             |
   bb.2:
     successors:
 
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
 
   bb.3:
     liveins: $x2
@@ -438,23 +438,22 @@ body:             |
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
   ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 16
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT1]](s32)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 10
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C]](s16)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
   ; CHECK-NEXT:   [[UADDO:%[0-9]+]]:_(s16), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[TRUNC]], [[TRUNC1]]
-  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UADDO]](s16)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UADDO]](s16)
   ; CHECK-NEXT:   G_BRCOND [[UADDO1]](s1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[ANYEXT]](s32), %bb.2, [[ANYEXT1]](s32), %bb.0
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[C]](s32), %bb.2, [[ANYEXT]](s32), %bb.0
   ; CHECK-NEXT:   $w0 = COPY [[PHI]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UADDO]](s16)
-  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT2]](s32)
+  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UADDO]](s16)
+  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT1]](s32)
   ; CHECK-NEXT:   G_BR %bb.1
   bb.1:
     liveins: $w0, $w1
@@ -511,9 +510,9 @@ body:             |
   ; CHECK-NEXT:   G_BR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   successors:{{ $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+  ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO]](s16)
@@ -545,7 +544,7 @@ body:             |
   bb.2:
     successors:
 
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
 
   bb.3:
     %9:_(s32) = G_ZEXT %6(s16)
@@ -576,9 +575,9 @@ body:             |
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors:{{ $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+  ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO]](s8)
@@ -602,7 +601,7 @@ body:             |
   bb.2:
     successors:
 
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
 
   bb.3:
     %9:_(s32) = G_ZEXT %7(s8)
@@ -633,9 +632,9 @@ body:             |
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors:{{ $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+  ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO]](s8)
@@ -659,7 +658,7 @@ body:             |
   bb.2:
     successors:
 
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
 
   bb.3:
     %9:_(s32) = G_ZEXT %7(s8)
@@ -691,9 +690,9 @@ body:             |
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors:{{ $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+  ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO]](s8)
@@ -718,7 +717,7 @@ body:             |
   bb.2:
     successors:
 
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
 
   bb.3:
     %10:_(s32) = G_ZEXT %8(s8)
@@ -782,9 +781,9 @@ body:             |
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors:{{ $}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+  ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UADDO]](s16)
@@ -805,7 +804,7 @@ body:             |
   bb.2:
     successors:
 
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
 
   bb.3:
     %6:_(s32) = G_ANYEXT %4(s16)
@@ -840,7 +839,7 @@ body:             |
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+  ; CHECK-NEXT:   G_TRAP
   bb.1:
     successors: %bb.2(0x7ffff800), %bb.3(0x00000800)
     liveins: $w0, $w1
@@ -861,6 +860,6 @@ body:             |
     RET_ReallyLR implicit $w0
 
   bb.3:
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
 
 ...

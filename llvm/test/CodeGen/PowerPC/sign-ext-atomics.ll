@@ -68,8 +68,8 @@ top:
 define i16 @noSEXTLoad(ptr %p) #0 {
 ; CHECK-LABEL: noSEXTLoad:
 ; CHECK:       # %bb.0: # %top
-; CHECK-NEXT:    lha 3, 0(3)
 ; CHECK-NEXT:    li 4, 0
+; CHECK-NEXT:    lha 3, 0(3)
 ; CHECK-NEXT:    sth 4, -4(1)
 ; CHECK-NEXT:    addi 4, 1, -4
 ; CHECK-NEXT:    lwsync

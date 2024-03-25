@@ -8,6 +8,7 @@
 define void @ossfuzz_14169_test1(ptr %a0) {
 ; CHECK-LABEL: @ossfuzz_14169_test1(
 ; CHECK-NEXT:  bb:
+; CHECK-NEXT:    store ptr poison, ptr undef, align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -23,6 +24,7 @@ bb:
 define void @ossfuzz_14169_test2(ptr %a0) {
 ; CHECK-LABEL: @ossfuzz_14169_test2(
 ; CHECK-NEXT:  bb:
+; CHECK-NEXT:    store ptr poison, ptr undef, align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:

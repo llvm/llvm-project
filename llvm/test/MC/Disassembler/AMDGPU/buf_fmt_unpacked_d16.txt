@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=fiji -disassemble -show-encoding < %s | FileCheck %s -check-prefix=UNPACKED
+# RUN: llvm-mc -triple=amdgcn -mcpu=fiji -disassemble -show-encoding < %s | FileCheck %s -check-prefix=UNPACKED
 
 
 # UNPACKED: buffer_load_format_d16_x v1, off, s[4:7], s1 ; encoding: [0x00,0x00,0x20,0xe0,0x00,0x01,0x01,0x01]

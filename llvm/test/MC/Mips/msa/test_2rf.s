@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
 #
 # CHECK:        fclass.w        $w26, $w12              # encoding: [0x7b,0x20,0x66,0x9e]
 # CHECK:        fclass.d        $w24, $w17              # encoding: [0x7b,0x21,0x8e,0x1e]

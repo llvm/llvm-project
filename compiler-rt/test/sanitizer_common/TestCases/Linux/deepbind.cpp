@@ -1,6 +1,9 @@
 // RUN: %clangxx %s -o %t && %run not %t 1 2>&1 | FileCheck %s
 // UNSUPPORTED: lsan,ubsan,android
 
+// FIXME: Implement.
+// XFAIL: hwasan
+
 #include <dlfcn.h>
 #include <stdio.h>
 #include <string>

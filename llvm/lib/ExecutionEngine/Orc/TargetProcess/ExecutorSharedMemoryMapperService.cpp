@@ -62,15 +62,15 @@ ExecutorSharedMemoryMapperService::reserve(uint64_t Size) {
   int SharedMemoryFile =
       shm_open(SharedMemoryName.c_str(), O_RDWR | O_CREAT | O_EXCL, 0700);
   if (SharedMemoryFile < 0)
-    return errorCodeToError(std::error_code(errno, std::generic_category()));
+    return errorCodeToError(errnoAsErrorCode());
 
   // by default size is 0
   if (ftruncate(SharedMemoryFile, Size) < 0)
-    return errorCodeToError(std::error_code(errno, std::generic_category()));
+    return errorCodeToError(errnoAsErrorCode());
 
   void *Addr = mmap(nullptr, Size, PROT_NONE, MAP_SHARED, SharedMemoryFile, 0);
   if (Addr == MAP_FAILED)
-    return errorCodeToError(std::error_code(errno, std::generic_category()));
+    return errorCodeToError(errnoAsErrorCode());
 
   close(SharedMemoryFile);
 
@@ -132,20 +132,19 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
 #if defined(LLVM_ON_UNIX)
 
     int NativeProt = 0;
-    if ((Segment.AG.getMemProt() & MemProt::Read) == MemProt::Read)
+    if ((Segment.RAG.Prot & MemProt::Read) == MemProt::Read)
       NativeProt |= PROT_READ;
-    if ((Segment.AG.getMemProt() & MemProt::Write) == MemProt::Write)
+    if ((Segment.RAG.Prot & MemProt::Write) == MemProt::Write)
       NativeProt |= PROT_WRITE;
-    if ((Segment.AG.getMemProt() & MemProt::Exec) == MemProt::Exec)
+    if ((Segment.RAG.Prot & MemProt::Exec) == MemProt::Exec)
       NativeProt |= PROT_EXEC;
 
     if (mprotect(Segment.Addr.toPtr<void *>(), Segment.Size, NativeProt))
-      return errorCodeToError(std::error_code(errno, std::generic_category()));
+      return errorCodeToError(errnoAsErrorCode());
 
 #elif defined(_WIN32)
 
-    DWORD NativeProt =
-        getWindowsProtectionFlags(Segment.AG.getMemProt());
+    DWORD NativeProt = getWindowsProtectionFlags(Segment.RAG.Prot);
 
     if (!VirtualProtect(Segment.Addr.toPtr<void *>(), Segment.Size, NativeProt,
                         &NativeProt))
@@ -153,7 +152,7 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
 
 #endif
 
-    if ((Segment.AG.getMemProt() & MemProt::Exec) == MemProt::Exec)
+    if ((Segment.RAG.Prot & MemProt::Exec) == MemProt::Exec)
       sys::Memory::InvalidateInstructionCache(Segment.Addr.toPtr<void *>(),
                                               Segment.Size);
   }
@@ -195,9 +194,7 @@ Error ExecutorSharedMemoryMapperService::deinitialize(
 
       // Remove the allocation from the allocation list of its reservation
       for (auto &Reservation : Reservations) {
-        auto AllocationIt =
-            std::find(Reservation.second.Allocations.begin(),
-                      Reservation.second.Allocations.end(), Base);
+        auto AllocationIt = llvm::find(Reservation.second.Allocations, Base);
         if (AllocationIt != Reservation.second.Allocations.end()) {
           Reservation.second.Allocations.erase(AllocationIt);
           break;
@@ -243,8 +240,7 @@ Error ExecutorSharedMemoryMapperService::release(
 #if defined(LLVM_ON_UNIX)
 
     if (munmap(Base.toPtr<void *>(), Size) != 0)
-      Err = joinErrors(std::move(Err), errorCodeToError(std::error_code(
-                                           errno, std::generic_category())));
+      Err = joinErrors(std::move(Err), errorCodeToError(errnoAsErrorCode()));
 
 #elif defined(_WIN32)
     (void)Size;

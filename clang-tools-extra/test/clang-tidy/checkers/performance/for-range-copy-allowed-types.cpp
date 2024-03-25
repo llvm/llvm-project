@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s performance-for-range-copy %t -- \
-// RUN:     -config="{CheckOptions: [{key: performance-for-range-copy.AllowedTypes, value: '[Pp]ointer$;[Pp]tr$;[Rr]ef(erence)?$;qualified::Type;::fully::QualifiedType'}]}" \
+// RUN:     -config="{CheckOptions: {performance-for-range-copy.AllowedTypes: '[Pp]ointer$;[Pp]tr$;[Rr]ef(erence)?$;qualified::Type;::fully::QualifiedType'}}" \
 // RUN:     -- -fno-delayed-template-parsing
 
 template <typename T>

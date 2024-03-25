@@ -65,31 +65,19 @@ bool ARMBranchTargets::runOnMachineFunction(MachineFunction &MF) {
   const ARMInstrInfo &TII =
       *static_cast<const ARMInstrInfo *>(MF.getSubtarget().getInstrInfo());
 
-  // LLVM does not consider basic blocks which are the targets of jump tables
-  // to be address-taken (the address can't escape anywhere else), but they are
-  // used for indirect branches, so need BTI instructions.
-  SmallPtrSet<const MachineBasicBlock *, 8> JumpTableTargets;
-  if (const MachineJumpTableInfo *JTI = MF.getJumpTableInfo())
-    for (const MachineJumpTableEntry &JTE : JTI->getJumpTables())
-      for (const MachineBasicBlock *MBB : JTE.MBBs)
-        JumpTableTargets.insert(MBB);
-
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : MF) {
-    bool NeedBTI = false;
     bool IsFirstBB = &MBB == &MF.front();
 
     // Every function can potentially be called indirectly (even if it has
     // static linkage, due to linker-generated veneers).
-    if (IsFirstBB)
-      NeedBTI = true;
-
     // If the block itself is address-taken, or is an exception landing pad, it
     // could be indirectly branched to.
-    if (MBB.hasAddressTaken() || MBB.isEHPad() || JumpTableTargets.count(&MBB))
-      NeedBTI = true;
+    // Jump tables only emit indirect jumps (JUMPTABLE_ADDRS) in ARM or Thumb1
+    // modes. These modes do not support PACBTI. As a result, BTI instructions
+    // are not added in the destination blocks.
 
-    if (NeedBTI) {
+    if (IsFirstBB || MBB.hasAddressTaken() || MBB.isEHPad()) {
       addBTI(TII, MBB, IsFirstBB);
       MadeChange = true;
     }

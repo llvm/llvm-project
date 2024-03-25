@@ -16,20 +16,20 @@
 # ALL:           Iterations:        100
 # ALL-NEXT:      Instructions:      1000
 
-# NOALIAS-NEXT:  Total Cycles:      1009
+# NOALIAS-NEXT:  Total Cycles:      509
 # YESALIAS-NEXT: Total Cycles:      7003
 
 # ALL-NEXT:      Total uOps:        3000
 
 # ALL:           Dispatch Width:    6
 
-# NOALIAS-NEXT:  uOps Per Cycle:    2.97
-# NOALIAS-NEXT:  IPC:               0.99
+# NOALIAS-NEXT:  uOps Per Cycle:    5.89
+# NOALIAS-NEXT:  IPC:               1.96
 
 # YESALIAS-NEXT: uOps Per Cycle:    0.43
 # YESALIAS-NEXT: IPC:               0.14
 
-# ALL-NEXT:      Block RThroughput: 10.0
+# ALL-NEXT:      Block RThroughput: 5.0
 
 # ALL:           Instruction Info:
 # ALL-NEXT:      [1]: #uOps
@@ -40,16 +40,16 @@
 # ALL-NEXT:      [6]: HasSideEffects (U)
 
 # ALL:           [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# ALL-NEXT:       3      7     1.00    *      *            addq	$44, 64(%r14)
-# ALL-NEXT:       3      7     1.00    *      *            addq	$44, 128(%r14)
-# ALL-NEXT:       3      7     1.00    *      *            addq	$44, 192(%r14)
-# ALL-NEXT:       3      7     1.00    *      *            addq	$44, 256(%r14)
-# ALL-NEXT:       3      7     1.00    *      *            addq	$44, 320(%r14)
-# ALL-NEXT:       3      7     1.00    *      *            addq	$44, 384(%r14)
-# ALL-NEXT:       3      7     1.00    *      *            addq	$44, 448(%r14)
-# ALL-NEXT:       3      7     1.00    *      *            addq	$44, 512(%r14)
-# ALL-NEXT:       3      7     1.00    *      *            addq	$44, 576(%r14)
-# ALL-NEXT:       3      7     1.00    *      *            addq	$44, 640(%r14)
+# ALL-NEXT:       3      7     0.50    *      *            addq	$44, 64(%r14)
+# ALL-NEXT:       3      7     0.50    *      *            addq	$44, 128(%r14)
+# ALL-NEXT:       3      7     0.50    *      *            addq	$44, 192(%r14)
+# ALL-NEXT:       3      7     0.50    *      *            addq	$44, 256(%r14)
+# ALL-NEXT:       3      7     0.50    *      *            addq	$44, 320(%r14)
+# ALL-NEXT:       3      7     0.50    *      *            addq	$44, 384(%r14)
+# ALL-NEXT:       3      7     0.50    *      *            addq	$44, 448(%r14)
+# ALL-NEXT:       3      7     0.50    *      *            addq	$44, 512(%r14)
+# ALL-NEXT:       3      7     0.50    *      *            addq	$44, 576(%r14)
+# ALL-NEXT:       3      7     0.50    *      *            addq	$44, 640(%r14)
 
 # ALL:           Resources:
 # ALL-NEXT:      [0]   - ICXDivider
@@ -67,39 +67,39 @@
 
 # ALL:           Resource pressure per iteration:
 # ALL-NEXT:      [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# ALL-NEXT:       -      -     2.50   2.50   6.66   6.67   10.00  2.50   2.50   6.67    -      -
+# ALL-NEXT:       -      -     2.50   2.50   5.00   5.00   5.00   2.50   2.50   5.00   5.00   5.00
 
 # ALL:           Resource pressure by instruction:
 # ALL-NEXT:      [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
-# ALL-NEXT:       -      -      -     0.50   0.66   0.67   1.00    -     0.50   0.67    -      -     addq	$44, 64(%r14)
-# ALL-NEXT:       -      -     0.50    -     0.67   0.66   1.00   0.50    -     0.67    -      -     addq	$44, 128(%r14)
-# ALL-NEXT:       -      -      -     0.50   0.67   0.67   1.00    -     0.50   0.66    -      -     addq	$44, 192(%r14)
-# ALL-NEXT:       -      -     0.50    -     0.66   0.67   1.00   0.50    -     0.67    -      -     addq	$44, 256(%r14)
-# ALL-NEXT:       -      -      -     0.50   0.67   0.66   1.00    -     0.50   0.67    -      -     addq	$44, 320(%r14)
-# ALL-NEXT:       -      -     0.50    -     0.67   0.67   1.00   0.50    -     0.66    -      -     addq	$44, 384(%r14)
-# ALL-NEXT:       -      -      -     0.50   0.66   0.67   1.00    -     0.50   0.67    -      -     addq	$44, 448(%r14)
-# ALL-NEXT:       -      -     0.50    -     0.67   0.66   1.00   0.50    -     0.67    -      -     addq	$44, 512(%r14)
-# ALL-NEXT:       -      -      -     0.50   0.67   0.67   1.00    -     0.50   0.66    -      -     addq	$44, 576(%r14)
-# ALL-NEXT:       -      -     0.50    -     0.66   0.67   1.00   0.50    -     0.67    -      -     addq	$44, 640(%r14)
+# ALL-NEXT:       -      -      -     0.50    -     1.00    -      -     0.50    -     1.00   1.00   addq	$44, 64(%r14)
+# ALL-NEXT:       -      -     0.50    -     1.00    -     1.00   0.50    -     1.00    -      -     addq	$44, 128(%r14)
+# ALL-NEXT:       -      -      -     0.50    -     1.00    -      -     0.50    -     1.00   1.00   addq	$44, 192(%r14)
+# ALL-NEXT:       -      -     0.50    -     1.00    -     1.00   0.50    -     1.00    -      -     addq	$44, 256(%r14)
+# ALL-NEXT:       -      -      -     0.50    -     1.00    -      -     0.50    -     1.00   1.00   addq	$44, 320(%r14)
+# ALL-NEXT:       -      -     0.50    -     1.00    -     1.00   0.50    -     1.00    -      -     addq	$44, 384(%r14)
+# ALL-NEXT:       -      -      -     0.50    -     1.00    -      -     0.50    -     1.00   1.00   addq	$44, 448(%r14)
+# ALL-NEXT:       -      -     0.50    -     1.00    -     1.00   0.50    -     1.00    -      -     addq	$44, 512(%r14)
+# ALL-NEXT:       -      -      -     0.50    -     1.00    -      -     0.50    -     1.00   1.00   addq	$44, 576(%r14)
+# ALL-NEXT:       -      -     0.50    -     1.00    -     1.00   0.50    -     1.00    -      -     addq	$44, 640(%r14)
 
 # ALL:           Timeline view:
 
-# NOALIAS-NEXT:                      012345678
+# NOALIAS-NEXT:                      0123
 # NOALIAS-NEXT:  Index     0123456789
 
 # YESALIAS-NEXT:                     0123456789          0123456789          0123456789          012
 # YESALIAS-NEXT: Index     0123456789          0123456789          0123456789          0123456789
 
-# NOALIAS:       [0,0]     DeeeeeeeER.    .  .   addq	$44, 64(%r14)
-# NOALIAS-NEXT:  [0,1]     D=eeeeeeeER    .  .   addq	$44, 128(%r14)
-# NOALIAS-NEXT:  [0,2]     .D=eeeeeeeER   .  .   addq	$44, 192(%r14)
-# NOALIAS-NEXT:  [0,3]     .D==eeeeeeeER  .  .   addq	$44, 256(%r14)
-# NOALIAS-NEXT:  [0,4]     . D==eeeeeeeER .  .   addq	$44, 320(%r14)
-# NOALIAS-NEXT:  [0,5]     . D===eeeeeeeER.  .   addq	$44, 384(%r14)
-# NOALIAS-NEXT:  [0,6]     .  D===eeeeeeeER  .   addq	$44, 448(%r14)
-# NOALIAS-NEXT:  [0,7]     .  D====eeeeeeeER .   addq	$44, 512(%r14)
-# NOALIAS-NEXT:  [0,8]     .   D====eeeeeeeER.   addq	$44, 576(%r14)
-# NOALIAS-NEXT:  [0,9]     .   D=====eeeeeeeER   addq	$44, 640(%r14)
+# NOALIAS:       [0,0]     DeeeeeeeER.  .   addq	$44, 64(%r14)
+# NOALIAS-NEXT:  [0,1]     DeeeeeeeER.  .   addq	$44, 128(%r14)
+# NOALIAS-NEXT:  [0,2]     .DeeeeeeeER  .   addq	$44, 192(%r14)
+# NOALIAS-NEXT:  [0,3]     .DeeeeeeeER  .   addq	$44, 256(%r14)
+# NOALIAS-NEXT:  [0,4]     . DeeeeeeeER .   addq	$44, 320(%r14)
+# NOALIAS-NEXT:  [0,5]     . DeeeeeeeER .   addq	$44, 384(%r14)
+# NOALIAS-NEXT:  [0,6]     .  DeeeeeeeER.   addq	$44, 448(%r14)
+# NOALIAS-NEXT:  [0,7]     .  DeeeeeeeER.   addq	$44, 512(%r14)
+# NOALIAS-NEXT:  [0,8]     .   DeeeeeeeER   addq	$44, 576(%r14)
+# NOALIAS-NEXT:  [0,9]     .   DeeeeeeeER   addq	$44, 640(%r14)
 
 # YESALIAS:      [0,0]     DeeeeeeeER.    .    .    .    .    .    .    .    .    .    .    .    . .   addq	$44, 64(%r14)
 # YESALIAS-NEXT: [0,1]     D=======eeeeeeeER   .    .    .    .    .    .    .    .    .    .    . .   addq	$44, 128(%r14)
@@ -121,16 +121,16 @@
 # ALL:                 [0]    [1]    [2]    [3]
 # ALL-NEXT:      0.     1     1.0    1.0    0.0       addq	$44, 64(%r14)
 
-# NOALIAS-NEXT:  1.     1     2.0    1.0    0.0       addq	$44, 128(%r14)
-# NOALIAS-NEXT:  2.     1     2.0    1.0    0.0       addq	$44, 192(%r14)
-# NOALIAS-NEXT:  3.     1     3.0    1.0    0.0       addq	$44, 256(%r14)
-# NOALIAS-NEXT:  4.     1     3.0    1.0    0.0       addq	$44, 320(%r14)
-# NOALIAS-NEXT:  5.     1     4.0    1.0    0.0       addq	$44, 384(%r14)
-# NOALIAS-NEXT:  6.     1     4.0    1.0    0.0       addq	$44, 448(%r14)
-# NOALIAS-NEXT:  7.     1     5.0    1.0    0.0       addq	$44, 512(%r14)
-# NOALIAS-NEXT:  8.     1     5.0    1.0    0.0       addq	$44, 576(%r14)
-# NOALIAS-NEXT:  9.     1     6.0    1.0    0.0       addq	$44, 640(%r14)
-# NOALIAS-NEXT:         1     3.5    1.0    0.0       <total>
+# NOALIAS-NEXT:  1.     1     1.0    0.0    0.0       addq	$44, 128(%r14)
+# NOALIAS-NEXT:  2.     1     1.0    1.0    0.0       addq	$44, 192(%r14)
+# NOALIAS-NEXT:  3.     1     1.0    0.0    0.0       addq	$44, 256(%r14)
+# NOALIAS-NEXT:  4.     1     1.0    1.0    0.0       addq	$44, 320(%r14)
+# NOALIAS-NEXT:  5.     1     1.0    0.0    0.0       addq	$44, 384(%r14)
+# NOALIAS-NEXT:  6.     1     1.0    1.0    0.0       addq	$44, 448(%r14)
+# NOALIAS-NEXT:  7.     1     1.0    0.0    0.0       addq	$44, 512(%r14)
+# NOALIAS-NEXT:  8.     1     1.0    1.0    0.0       addq	$44, 576(%r14)
+# NOALIAS-NEXT:  9.     1     1.0    0.0    0.0       addq	$44, 640(%r14)
+# NOALIAS-NEXT:         1     1.0    0.5    0.0       <total>
 
 # YESALIAS-NEXT: 1.     1     8.0    0.0    0.0       addq	$44, 128(%r14)
 # YESALIAS-NEXT: 2.     1     14.0   0.0    0.0       addq	$44, 192(%r14)

@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+// This is a compile-only test, so "inline function is not defined" warnings are irrelevant.
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-undefined-inline
+
 // template<input_range V, forward_range Pattern>
 //   requires view<V> && view<Pattern> &&
 //            indirectly_comparable<iterator_t<V>, iterator_t<Pattern>, ranges::equal_to> &&
@@ -66,7 +69,7 @@ namespace test3 {
 
   struct AlmostInputIterator {
     using value_type = char;
-    using difference_type = ptrdiff_t;
+    using difference_type = std::ptrdiff_t;
     using iterator_concept = int;
 
     constexpr const char& operator*() const;
@@ -169,7 +172,7 @@ namespace test8 {
   struct AlmostTinyRange : std::ranges::view_base {
     int* begin() const;
     int* end() const;
-    static size_t size() { return 1; }
+    static std::size_t size() { return 1; }
   };
 
   using View = InputView;
@@ -192,7 +195,7 @@ namespace test9 {
   struct AlmostTinyRange : std::ranges::view_base {
     int* begin() const;
     int* end() const;
-    constexpr static size_t size() { return 2; }
+    constexpr static std::size_t size() { return 2; }
   };
 
   using View = InputView;

@@ -4,7 +4,7 @@
 //
 // LTOPATH: "-bplugin:{{.*}}libLTO.{{so|dll|dylib}}"
 // MCPUOPTLEVEL: "-bplugin_opt:-mcpu={{.*}}" "-bplugin_opt:-O3"
-//
+
 // More opt level option tests
 // RUN: %clang --target=powerpc-ibm-aix --sysroot %S/Inputs/aix_ppc_tree %s \
 // RUN:   -fuse-ld=ld -flto -O -### 2>&1 | FileCheck --check-prefix=O1 %s
@@ -26,7 +26,7 @@
 // O1: "-bplugin_opt:-O1"
 // O2: "-bplugin_opt:-O2"
 // O3: "-bplugin_opt:-O3"
-//
+
 // vec-extabi option
 // RUN: %clang --target=powerpc-ibm-aix --sysroot %S/Inputs/aix_ppc_tree %s \
 // RUN:   -fuse-ld=ld -flto -mabi=vec-extabi -### 2>&1 \
@@ -36,7 +36,7 @@
 //
 // VECEXTABI: "-bplugin_opt:-vec-extabi"
 // NOVECEXTABI-NOT: "-bplugin_opt:-vec-extabi"
-//
+
 // Test debugging options
 // RUN: %clang --target=powerpc-ibm-aix -### %s -flto -fuse-ld=ld -gdbx 2>&1 \
 // RUN:   | FileCheck -check-prefix=DBX %s
@@ -67,9 +67,20 @@
 //
 // STRICT:       "-bplugin_opt:-strict-dwarf=true"
 // NOSTRICT-NOT: "-bplugin_opt:-strict-dwarf=true"
-//
+
 // Test cspgo options
 // RUN: %clang --target=powerpc-ibm-aix -### %s -flto -fuse-ld=ld \
 // RUN:   -fcs-profile-generate 2>&1 | FileCheck -check-prefix=CSPGO %s
 //
 // CSPGO: "-bplugin_opt:-cs-profile-generate" "-bplugin_opt:-cs-profile-path=default_%m.profraw"
+
+// Test integrated assembler options
+// RUN: %clang --target=powerpc-ibm-aix -### %s -flto -fno-integrated-as \
+// RUN:   -fintegrated-as 2>&1 | FileCheck --check-prefix=INTAS %s
+// RUN: %clang --target=powerpc-ibm-aix -### %s -flto -fintegrated-as \
+// RUN:   -fno-integrated-as 2>&1 | FileCheck --check-prefix=NOINTAS %s
+// RUN: %clang --target=powerpc-ibm-aix -### %s -flto 2>&1 \
+// RUN:   | FileCheck --check-prefix=INTAS %s
+//
+// NOINTAS: "-bplugin_opt:-no-integrated-as=1"
+// INTAS-NOT: "-bplugin_opt:-no-integrated-as"

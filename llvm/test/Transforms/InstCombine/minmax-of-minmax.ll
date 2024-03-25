@@ -3,8 +3,8 @@
 
 define i32 @smax_of_smax_smin_commute0(i32 %x, i32 %y) {
 ; CHECK-LABEL: @smax_of_smax_smin_commute0(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.smax.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[MAX]]
 ;
   %cmp1 = icmp slt i32 %x, %y
   %min = select i1 %cmp1, i32 %x, i32 %y
@@ -17,8 +17,8 @@ define i32 @smax_of_smax_smin_commute0(i32 %x, i32 %y) {
 
 define i32 @smax_of_smax_smin_commute1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @smax_of_smax_smin_commute1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[MAX]]
 ;
   %cmp1 = icmp sgt i32 %x, %y
   %min = select i1 %cmp1, i32 %y, i32 %x
@@ -31,8 +31,8 @@ define i32 @smax_of_smax_smin_commute1(i32 %x, i32 %y) {
 
 define i32 @smax_of_smax_smin_commute2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @smax_of_smax_smin_commute2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.smax.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[MAX]]
 ;
   %cmp1 = icmp slt i32 %x, %y
   %min = select i1 %cmp1, i32 %x, i32 %y
@@ -45,8 +45,8 @@ define i32 @smax_of_smax_smin_commute2(i32 %x, i32 %y) {
 
 define <2 x i32> @smax_of_smax_smin_commute3(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @smax_of_smax_smin_commute3(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]])
-; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+; CHECK-NEXT:    [[MAX:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x i32> [[MAX]]
 ;
   %cmp1 = icmp sgt <2 x i32> %x, %y
   %min = select <2 x i1> %cmp1, <2 x i32> %y, <2 x i32> %x
@@ -59,8 +59,8 @@ define <2 x i32> @smax_of_smax_smin_commute3(<2 x i32> %x, <2 x i32> %y) {
 
 define i32 @smin_of_smin_smax_commute0(i32 %x, i32 %y) {
 ; CHECK-LABEL: @smin_of_smin_smax_commute0(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[MIN]]
 ;
   %cmp1 = icmp sgt i32 %x, %y
   %max = select i1 %cmp1, i32 %x, i32 %y
@@ -73,8 +73,8 @@ define i32 @smin_of_smin_smax_commute0(i32 %x, i32 %y) {
 
 define i32 @smin_of_smin_smax_commute1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @smin_of_smin_smax_commute1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[MIN]]
 ;
   %cmp1 = icmp slt i32 %x, %y
   %max = select i1 %cmp1, i32 %y, i32 %x
@@ -87,8 +87,8 @@ define i32 @smin_of_smin_smax_commute1(i32 %x, i32 %y) {
 
 define <2 x i32> @smin_of_smin_smax_commute2(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @smin_of_smin_smax_commute2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]])
-; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+; CHECK-NEXT:    [[MIN:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x i32> [[MIN]]
 ;
   %cmp1 = icmp sgt <2 x i32> %x, %y
   %max = select <2 x i1> %cmp1, <2 x i32> %x, <2 x i32> %y
@@ -101,8 +101,8 @@ define <2 x i32> @smin_of_smin_smax_commute2(<2 x i32> %x, <2 x i32> %y) {
 
 define i32 @smin_of_smin_smax_commute3(i32 %x, i32 %y) {
 ; CHECK-LABEL: @smin_of_smin_smax_commute3(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[MIN]]
 ;
   %cmp1 = icmp slt i32 %x, %y
   %max = select i1 %cmp1, i32 %y, i32 %x
@@ -115,8 +115,8 @@ define i32 @smin_of_smin_smax_commute3(i32 %x, i32 %y) {
 
 define i32 @umax_of_umax_umin_commute0(i32 %x, i32 %y) {
 ; CHECK-LABEL: @umax_of_umax_umin_commute0(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[MAX]]
 ;
   %cmp1 = icmp ult i32 %x, %y
   %min = select i1 %cmp1, i32 %x, i32 %y
@@ -129,8 +129,8 @@ define i32 @umax_of_umax_umin_commute0(i32 %x, i32 %y) {
 
 define i32 @umax_of_umax_umin_commute1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @umax_of_umax_umin_commute1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[MAX]]
 ;
   %cmp1 = icmp ugt i32 %x, %y
   %min = select i1 %cmp1, i32 %y, i32 %x
@@ -143,8 +143,8 @@ define i32 @umax_of_umax_umin_commute1(i32 %x, i32 %y) {
 
 define i32 @umax_of_umax_umin_commute2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @umax_of_umax_umin_commute2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[MAX]]
 ;
   %cmp1 = icmp ult i32 %x, %y
   %min = select i1 %cmp1, i32 %x, i32 %y
@@ -157,8 +157,8 @@ define i32 @umax_of_umax_umin_commute2(i32 %x, i32 %y) {
 
 define <2 x i32> @umax_of_umax_umin_commute3(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @umax_of_umax_umin_commute3(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]])
-; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+; CHECK-NEXT:    [[MAX:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x i32> [[MAX]]
 ;
   %cmp1 = icmp ugt <2 x i32> %x, %y
   %min = select <2 x i1> %cmp1, <2 x i32> %y, <2 x i32> %x
@@ -171,8 +171,8 @@ define <2 x i32> @umax_of_umax_umin_commute3(<2 x i32> %x, <2 x i32> %y) {
 
 define i32 @umin_of_umin_umax_commute0(i32 %x, i32 %y) {
 ; CHECK-LABEL: @umin_of_umin_umax_commute0(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[MIN]]
 ;
   %cmp1 = icmp ugt i32 %x, %y
   %max = select i1 %cmp1, i32 %x, i32 %y
@@ -185,8 +185,8 @@ define i32 @umin_of_umin_umax_commute0(i32 %x, i32 %y) {
 
 define i32 @umin_of_umin_umax_commute1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @umin_of_umin_umax_commute1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[MIN]]
 ;
   %cmp1 = icmp ult i32 %x, %y
   %max = select i1 %cmp1, i32 %y, i32 %x
@@ -199,8 +199,8 @@ define i32 @umin_of_umin_umax_commute1(i32 %x, i32 %y) {
 
 define <2 x i32> @umin_of_umin_umax_commute2(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @umin_of_umin_umax_commute2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]])
-; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+; CHECK-NEXT:    [[MIN:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x i32> [[MIN]]
 ;
   %cmp1 = icmp ugt <2 x i32> %x, %y
   %max = select <2 x i1> %cmp1, <2 x i32> %x, <2 x i32> %y
@@ -213,8 +213,8 @@ define <2 x i32> @umin_of_umin_umax_commute2(<2 x i32> %x, <2 x i32> %y) {
 
 define i32 @umin_of_umin_umax_commute3(i32 %x, i32 %y) {
 ; CHECK-LABEL: @umin_of_umin_umax_commute3(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[MIN]]
 ;
   %cmp1 = icmp ult i32 %x, %y
   %max = select i1 %cmp1, i32 %y, i32 %x
@@ -229,8 +229,8 @@ define i32 @umin_of_umin_umax_commute3(i32 %x, i32 %y) {
 
 define i32 @umin_of_smin_umax_wrong_pattern(i32 %x, i32 %y) {
 ; CHECK-LABEL: @umin_of_smin_umax_wrong_pattern(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[MIN]]
 ;
   %cmp1 = icmp ugt i32 %x, %y
   %max = select i1 %cmp1, i32 %x, i32 %y
@@ -245,10 +245,8 @@ define i32 @umin_of_smin_umax_wrong_pattern(i32 %x, i32 %y) {
 
 define i32 @smin_of_umin_umax_wrong_pattern2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @smin_of_umin_umax_wrong_pattern2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP1]], i32 [[TMP2]])
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cmp1 = icmp ult i32 %x, %y
   %max = select i1 %cmp1, i32 %y, i32 %x
@@ -263,8 +261,8 @@ define i32 @smin_of_umin_umax_wrong_pattern2(i32 %x, i32 %y) {
 
 define <2 x i32> @umin_of_umin_umax_wrong_operand(<2 x i32> %x, <2 x i32> %y, <2 x i32> %z) {
 ; CHECK-LABEL: @umin_of_umin_umax_wrong_operand(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Z:%.*]])
-; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+; CHECK-NEXT:    [[MIN:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Z:%.*]])
+; CHECK-NEXT:    ret <2 x i32> [[MIN]]
 ;
   %cmp1 = icmp ugt <2 x i32> %x, %y
   %max = select <2 x i1> %cmp1, <2 x i32> %x, <2 x i32> %y
@@ -279,8 +277,8 @@ define <2 x i32> @umin_of_umin_umax_wrong_operand(<2 x i32> %x, <2 x i32> %y, <2
 
 define i32 @umin_of_umin_umax_wrong_operand2(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @umin_of_umin_umax_wrong_operand2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[MIN]]
 ;
   %cmp1 = icmp ult i32 %x, %z
   %max = select i1 %cmp1, i32 %z, i32 %x

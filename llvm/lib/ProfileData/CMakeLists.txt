@@ -4,12 +4,14 @@ add_llvm_component_library(LLVMProfileData
   InstrProfCorrelator.cpp
   InstrProfReader.cpp
   InstrProfWriter.cpp
+  ItaniumManglingCanonicalizer.cpp
   MemProf.cpp
   ProfileSummaryBuilder.cpp
+  RawMemProfReader.cpp
   SampleProf.cpp
   SampleProfReader.cpp
   SampleProfWriter.cpp
-  RawMemProfReader.cpp
+  SymbolRemappingReader.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ProfileData

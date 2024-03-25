@@ -43,6 +43,11 @@ enum Fixups {
   // The high 14 bits of a 21-bit pc-relative immediate.
   fixup_aarch64_pcrel_branch14,
 
+  // The high 16 bits of a 18-bit unsigned PC-relative immediate. Used by
+  // pointer authentication, only within a function, so no relocation can be
+  // generated.
+  fixup_aarch64_pcrel_branch16,
+
   // The high 19 bits of a 21-bit pc-relative immediate. Same encoding as
   // fixup_aarch64_pcrel_adrhi, except this is use by b.cc and generates
   // relocations directly when necessary.

@@ -62,6 +62,6 @@ declare <32 x i32> @llvm.masked.load.v32i32.p0(ptr, i32 immarg, <32 x i1>, <32 x
 ; Function Attrs: argmemonly nounwind willreturn
 declare void @llvm.masked.store.v32i32.p0(<32 x i32>, ptr, i32 immarg, <32 x i1>) #2
 
-attributes #0 = { nounwind "target-cpu"="hexagonv66" "target-features"="+hvx,+hvx-length128b,-packets" }
+attributes #0 = { nounwind "target-cpu"="hexagonv66" "target-features"="+hvxv66,+hvx-length128b,-packets" }
 attributes #1 = { argmemonly nounwind readonly willreturn }
 attributes #2 = { argmemonly nounwind willreturn }

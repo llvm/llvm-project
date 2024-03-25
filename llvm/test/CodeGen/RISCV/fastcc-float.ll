@@ -62,7 +62,7 @@ define float @caller(<32 x float> %A) nounwind {
 ; CHECK-NEXT:    fsw fs2, 8(sp)
 ; CHECK-NEXT:    fsw fs1, 4(sp)
 ; CHECK-NEXT:    fsw fs0, 0(sp)
-; CHECK-NEXT:    call callee@plt
+; CHECK-NEXT:    call callee
 ; CHECK-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 64
 ; CHECK-NEXT:    ret

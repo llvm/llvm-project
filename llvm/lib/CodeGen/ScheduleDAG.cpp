@@ -15,7 +15,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -201,7 +200,7 @@ void SUnit::removePred(const SDep &D) {
   }
   if (!isScheduled) {
     if (D.isWeak()) {
-      assert(WeakSuccsLeft > 0 && "WeakSuccsLeft will underflow!");
+      assert(N->WeakSuccsLeft > 0 && "WeakSuccsLeft will underflow!");
       --N->WeakSuccsLeft;
     } else {
       assert(N->NumSuccsLeft > 0 && "NumSuccsLeft will underflow!");
@@ -724,6 +723,8 @@ void ScheduleDAGTopologicalSort::AddSUnitWithoutPredecessors(const SUnit *SU) {
 
 bool ScheduleDAGTopologicalSort::IsReachable(const SUnit *SU,
                                              const SUnit *TargetSU) {
+  assert(TargetSU != nullptr && "Invalid target SUnit");
+  assert(SU != nullptr && "Invalid SUnit");
   FixOrder();
   // If insertion of the edge SU->TargetSU would create a cycle
   // then there is a path from TargetSU to SU.

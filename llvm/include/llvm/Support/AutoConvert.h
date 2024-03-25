@@ -9,16 +9,32 @@
 // This file contains functions used for auto conversion between
 // ASCII/EBCDIC codepages specific to z/OS.
 //
-//===----------------------------------------------------------------------===//i
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_AUTOCONVERT_H
 #define LLVM_SUPPORT_AUTOCONVERT_H
 
 #ifdef __MVS__
+#include <_Ccsid.h>
+#ifdef __cplusplus
+#include <system_error>
+#endif // __cplusplus
+
 #define CCSID_IBM_1047 1047
 #define CCSID_UTF_8 1208
-#include <system_error>
+#define CCSID_ISO8859_1 819
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+int enableAutoConversion(int FD);
+int disableAutoConversion(int FD);
+int restoreStdHandleAutoConversion(int FD);
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
+#ifdef __cplusplus
 namespace llvm {
 
 /// \brief Disable the z/OS enhanced ASCII auto-conversion for the file
@@ -30,10 +46,14 @@ std::error_code disableAutoConversion(int FD);
 /// codepage.
 std::error_code enableAutoConversion(int FD);
 
+/// Restore the z/OS enhanced ASCII auto-conversion for the std handle.
+std::error_code restoreStdHandleAutoConversion(int FD);
+
 /// \brief Set the tag information for a file descriptor.
 std::error_code setFileTag(int FD, int CCSID, bool Text);
 
 } // namespace llvm
+#endif // __cplusplus
 
 #endif // __MVS__
 

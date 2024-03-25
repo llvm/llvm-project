@@ -24,7 +24,7 @@ define internal void @foo() {
 }
 
 ; CHECK-O0: define internal i32 @bar(
-; CHECK-O1: define internal i32 @bar(
+; CHECK-O1: define internal noundef i32 @bar(
 define internal i32 @bar(i1 %p) {
   br i1 %p, label %t, label %f
 

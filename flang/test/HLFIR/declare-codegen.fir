@@ -178,3 +178,25 @@ func.func @array_declare_unlimited_polymorphic_boxaddr(%arg0: !fir.ref<!fir.clas
 // CHECK-LABEL: func.func @array_declare_unlimited_polymorphic_boxaddr(
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.array<?x?xnone>>>>) {
 // CHECK:         %[[VAL_1:.*]] = fir.declare %[[VAL_0]] {uniq_name = "x"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x?xnone>>>>) -> !fir.ref<!fir.class<!fir.ptr<!fir.array<?x?xnone>>>>
+
+
+func.func @test_optional_declare(%arg0: !fir.box<!fir.array<?xi32>>) {
+  %c42 = arith.constant 42 : index
+  %0 = fir.shift %c42 : (index) -> !fir.shift<1>
+  %1:2 = hlfir.declare %arg0(%0) {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "x"} : (!fir.box<!fir.array<?xi32>>, !fir.shift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  return
+}
+
+// CHECK-LABEL:   func.func @test_optional_declare(
+// CHECK-SAME:      %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>>) {
+// CHECK:  %[[VAL_1:.*]] = arith.constant 42 : index
+// CHECK:  %[[VAL_2:.*]] = fir.shift %[[VAL_1]] : (index) -> !fir.shift<1>
+// CHECK:  %[[VAL_3:.*]] = fir.declare %[[VAL_0]](%[[VAL_2]]) {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "x"} : (!fir.box<!fir.array<?xi32>>, !fir.shift<1>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:  %[[VAL_4:.*]] = fir.is_present %[[VAL_3]] : (!fir.box<!fir.array<?xi32>>) -> i1
+// CHECK:  %[[VAL_5:.*]] = fir.if %[[VAL_4]] -> (!fir.box<!fir.array<?xi32>>) {
+// CHECK:    %[[VAL_6:.*]] = fir.rebox %[[VAL_3]](%[[VAL_2]]) : (!fir.box<!fir.array<?xi32>>, !fir.shift<1>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:    fir.result %[[VAL_6]] : !fir.box<!fir.array<?xi32>>
+// CHECK:  } else {
+// CHECK:    %[[VAL_7:.*]] = fir.absent !fir.box<!fir.array<?xi32>>
+// CHECK:    fir.result %[[VAL_7]] : !fir.box<!fir.array<?xi32>>
+// CHECK:  }

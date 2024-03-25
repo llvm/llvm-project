@@ -1,0 +1,104 @@
+; REQUIRES: x86_64-linux
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-inlined-subroutine-gc-sections-range-main.s \
+; RUN: -split-dwarf-file=main.dwo -o main.o
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-inlined-subroutine-gc-sections-range-helper.s \
+; RUN: -split-dwarf-file=helper.dwo -o helper.o
+; RUN: %clang --target=x86_64-pc-linux -fuse-ld=lld -Wl,-gc-sections -Wl,-q -gdwarf-5 -gsplit-dwarf=split main.o helper.o -o main.exe
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
+; RUN: llvm-dwarfdump --debug-addr main.exe > log.txt
+; RUN: llvm-dwarfdump --debug-rnglists --verbose --show-form main.dwo >> log.txt
+; RUN: llvm-dwarfdump --debug-info --verbose --show-form main.dwo >> log.txt
+; RUN: llvm-dwarfdump --debug-rnglists --verbose --show-form helper.dwo >> log.txt
+; RUN: llvm-dwarfdump --debug-info --verbose --show-form helper.dwo >> log.txt
+; RUN: llvm-dwarfdump --debug-addr main.exe.bolt > logBolt.txt
+; RUN: llvm-dwarfdump --debug-info --verbose --show-form main.dwo.dwo >> logBolt.txt
+; RUN: llvm-dwarfdump --debug-info --verbose --show-form helper.dwo.dwo >> logBolt.txt
+; RUN: cat log.txt | FileCheck -check-prefix=BOLT-PRE %s
+; RUN: cat logBolt.txt | FileCheck -check-prefix=BOLT-MAIN %s
+
+; Tests whether BOLT handles correctly DW_TAG_inlined_subroutine when DW_AT_ranges is 0,
+; and split dwarf is enabled.
+
+; BOLT-PRE: Addrs:
+; BOLT-PRE: 0x0000000000000000
+; BOLT-PRE: 0x0000000000000000
+; BOLT-PRE-NOT: 0x0000000000000000
+; BOLT-PRE: Addrs:
+; BOLT-PRE: 0x0000000000000000
+; BOLT-PRE: 0x0000000000000000
+; BOLT-PRE: 0x0000000000000000
+
+; main.dwo
+; BOLT-PRE: [DW_RLE_base_addressx]:  0x0000000000000002
+; BOLT-PRE: [DW_RLE_offset_pair  ]:  0x0000000000000018, 0x000000000000002d => [0x000000000000001a, 0x000000000000002f)
+; BOLT-PRE: [DW_RLE_end_of_list  ]
+; BOLT-PRE: [DW_RLE_base_addressx]:  0x0000000000000002
+; BOLT-PRE: [DW_RLE_offset_pair  ]:  0x0000000000000033, 0x0000000000000042 => [0x0000000000000035, 0x0000000000000044)
+; BOLT-PRE: [DW_RLE_end_of_list  ]
+; BOLT-PRE: DW_TAG_inlined_subroutine [9] * (0x0000006c)
+; BOLT-PRE: DW_AT_abstract_origin [DW_FORM_ref4]  (cu + 0x0044 => {0x00000044} "_Z7doStuffi")
+; BOLT-PRE: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x00000014
+; BOLT-PRE:   [0x000000000000001a, 0x000000000000002f))
+; BOLT-PRE: DW_TAG_inlined_subroutine [9] * (0x0000006c)
+; BOLT-PRE: DW_AT_abstract_origin [DW_FORM_ref4]  (cu + 0x005a => {0x0000005a} "_Z11doStuffSamei")
+; BOLT-PRE: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1) rangelist = 0x0000001a
+; BOLT-PRE:   [0x0000000000000035, 0x0000000000000044))
+
+; helper.dwo
+; BOLT-PRE: [DW_RLE_base_addressx]:  0x0000000000000002
+; BOLT-PRE: [DW_RLE_offset_pair  ]:  0x000000000000000d, 0x000000000000001a => [0x000000000000000f, 0x000000000000001c)
+; BOLT-PRE: [DW_RLE_end_of_list  ]
+; BOLT-PRE: [DW_RLE_base_addressx]:  0x0000000000000002
+; BOLT-PRE: [DW_RLE_offset_pair  ]:  0x0000000000000020, 0x000000000000002d => [0x0000000000000022, 0x000000000000002f)
+; BOLT-PRE: [DW_RLE_end_of_list  ]
+; BOLT-PRE: DW_TAG_inlined_subroutine [11] * (0x0000008c)
+; BOLT-PRE: DW_AT_abstract_origin [DW_FORM_ref4]  (cu + 0x0054 => {0x00000054} "_Z12doStuff2Samei")
+; BOLT-PRE: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x00000014
+; BOLT-PRE:   [0x000000000000000f, 0x000000000000001c))
+; BOLT-PRE: DW_TAG_inlined_subroutine [11] * (0x0000008c)
+; BOLT-PRE: DW_AT_abstract_origin [DW_FORM_ref4]  (cu + 0x0072 => {0x00000072} "_Z8doStuff2i")
+; BOLT-PRE: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1) rangelist = 0x0000001a
+; BOLT-PRE:   [0x0000000000000022, 0x000000000000002f))
+
+; BOLT-MAIN: Addrs:
+; BOLT-MAIN: 0x0000000000000000
+; BOLT-MAIN-NOT: 0x0000000000000000
+; BOLT-MAIN-NOT: 0x0000000000000000
+; BOLT-MAIN-NOT: 0x0000000000000000
+; BOLT-MAIN: Addrs:
+; BOLT-MAIN: 0x0000000000000000
+
+; main.dwo.dwo
+; BOLT-MAIN: DW_TAG_inlined_subroutine
+; BOLT-MAIN: DW_AT_abstract_origin [DW_FORM_ref4]  (cu + 0x0044 => {0x00000044} "_Z7doStuffi")
+; BOLT-MAIN: DW_AT_call_file
+; BOLT-MAIN: DW_AT_call_line
+; BOLT-MAIN: DW_AT_call_column
+; BOLT-MAIN: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000002) address = <unresolved>)
+; BOLT-MAIN: DW_AT_high_pc [DW_FORM_data4] (0x00000015)
+; BOLT-MAIN: DW_TAG_inlined_subroutine
+; BOLT-MAIN: DW_AT_abstract_origin [DW_FORM_ref4]  (cu + 0x005a => {0x0000005a} "_Z11doStuffSamei")
+; BOLT-MAIN: DW_AT_call_file
+; BOLT-MAIN: DW_AT_call_line
+; BOLT-MAIN: DW_AT_call_column
+; BOLT-MAIN: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000003) address = <unresolved>)
+; BOLT-MAIN: DW_AT_high_pc [DW_FORM_data4] (0x0000000f)
+
+; helper.dwo.dwo
+; BOLT-MAIN: DW_TAG_inlined_subroutine
+; BOLT-MAIN: DW_AT_abstract_origin [DW_FORM_ref4]  (cu + 0x0054 => {0x00000054} "_Z12doStuff2Samei")
+; BOLT-MAIN: DW_AT_call_file
+; BOLT-MAIN: DW_AT_call_line
+; BOLT-MAIN: DW_AT_call_column
+; BOLT-MAIN: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000000) address = <unresolved>)
+; BOLT-MAIN: DW_AT_high_pc [DW_FORM_data4] (0x0000001a)
+; BOLT-MAIN: DW_TAG_inlined_subroutine
+; BOLT-MAIN: DW_AT_abstract_origin [DW_FORM_ref4]  (cu + 0x0072 => {0x00000072} "_Z8doStuff2i")
+; BOLT-MAIN: DW_AT_call_file
+; BOLT-MAIN: DW_AT_call_line
+; BOLT-MAIN: DW_AT_call_column
+; BOLT-MAIN: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000000) address = <unresolved>)
+; BOLT-MAIN: DW_AT_high_pc [DW_FORM_data4] (0x0000002d)

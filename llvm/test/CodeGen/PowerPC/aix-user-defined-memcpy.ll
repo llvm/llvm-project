@@ -1,12 +1,12 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
 ; RUN:   -mattr=-altivec -filetype=obj -xcoff-traceback-table=false -o %t.o < %s
 
-; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefix=32-SYM %s
+; RUN: llvm-readobj --syms %t.o | FileCheck -D#NFA=2 --check-prefix=32-SYM %s
 
-; RUN: llvm-readobj --relocs --expand-relocs %t.o | FileCheck \
+; RUN: llvm-readobj --relocs --expand-relocs %t.o | FileCheck -D#NFA=2 \
 ; RUN:   --check-prefix=32-REL %s
 
-; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=32-DIS %s
+; RUN: llvm-objdump -D %t.o | FileCheck -D#NFA=2 --check-prefix=32-DIS %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:   -mcpu=pwr4 -mattr=-altivec < %s | FileCheck %s
@@ -38,6 +38,25 @@ declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture reado
 
 ; CHECK-NOT: .extern .memcpy
 
+; 32-SYM:      Symbol {{[{][[:space:]] *}}Index: [[#Index:]]{{[[:space:]] *}}Name: .___memmove
+; 32-SYM-NEXT:    Value (RelocatableAddress): 0x0
+; 32-SYM-NEXT:    Section: N_UNDEF
+; 32-SYM-NEXT:    Type: 0x0
+; 32-SYM-NEXT:    StorageClass: C_EXT (0x2)
+; 32-SYM-NEXT:    NumberOfAuxEntries: 1
+; 32-SYM-NEXT:    CSECT Auxiliary Entry {
+; 32-SYM-NEXT:      Index: [[#NFA+2]]
+; 32-SYM-NEXT:      SectionLen: 0
+; 32-SYM-NEXT:      ParameterHashIndex: 0x0
+; 32-SYM-NEXT:      TypeChkSectNum: 0x0
+; 32-SYM-NEXT:      SymbolAlignmentLog2: 0
+; 32-SYM-NEXT:      SymbolType: XTY_ER (0x0)
+; 32-SYM-NEXT:      StorageMappingClass: XMC_PR (0x0)
+; 32-SYM-NEXT:      StabInfoIndex: 0x0
+; 32-SYM-NEXT:      StabSectNum: 0x0
+; 32-SYM-NEXT:    }
+; 32-SYM-NEXT:  }
+
 ; 32-SYM:      Symbol {{[{][[:space:]] *}}Index: [[#Index:]]{{[[:space:]] *}}Name: .memcpy 
 ; 32-SYM-NEXT:    Value (RelocatableAddress): 0x0
 ; 32-SYM-NEXT:    Section: .text
@@ -45,8 +64,8 @@ declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture reado
 ; 32-SYM-NEXT:    StorageClass: C_EXT (0x2)
 ; 32-SYM-NEXT:    NumberOfAuxEntries: 1
 ; 32-SYM-NEXT:    CSECT Auxiliary Entry {
-; 32-SYM-NEXT:      Index: 4
-; 32-SYM-NEXT:      ContainingCsectSymbolIndex: 1
+; 32-SYM-NEXT:      Index: [[#NFA+6]]
+; 32-SYM-NEXT:      ContainingCsectSymbolIndex: [[#NFA+3]]
 ; 32-SYM-NEXT:      ParameterHashIndex: 0x0
 ; 32-SYM-NEXT:      TypeChkSectNum: 0x0
 ; 32-SYM-NEXT:      SymbolAlignmentLog2: 0
@@ -60,10 +79,20 @@ declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture reado
 ; 32-SYM-NOT: .memcpy
 
 ; 32-REL:      Relocations [
+; 32-REL-NEXT:  Section (index: 1) .text {
+; 32-REL-NEXT:  Relocation {
+; 32-REL-NEXT:    Virtual Address: 0x1C
+; 32-REL-NEXT:    Symbol: .___memmove ([[#NFA+1]])
+; 32-REL-NEXT:    IsSigned: Yes
+; 32-REL-NEXT:    FixupBitValue: 0
+; 32-REL-NEXT:    Length: 26
+; 32-REL-NEXT:    Type: R_RBR (0x1A)
+; 32-REL-NEXT:  }
+; 32-REL-NEXT:}
 ; 32-REL-NEXT:  Section (index: 2) .data {
 ; 32-REL-NEXT:  Relocation {
 ; 32-REL-NEXT:    Virtual Address: 0x34
-; 32-REL-NEXT:    Symbol: .memcpy (3)
+; 32-REL-NEXT:    Symbol: .memcpy ([[#NFA+5]])
 ; 32-REL-NEXT:    IsSigned: No
 ; 32-REL-NEXT:    FixupBitValue: 0
 ; 32-REL-NEXT:    Length: 32
@@ -71,7 +100,7 @@ declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture reado
 ; 32-REL-NEXT:  }
 ; 32-REL-NEXT:  Relocation {
 ; 32-REL-NEXT:    Virtual Address: 0x38
-; 32-REL-NEXT:    Symbol: TOC (11)
+; 32-REL-NEXT:    Symbol: TOC ([[#NFA+13]])
 ; 32-REL-NEXT:    IsSigned: No
 ; 32-REL-NEXT:    FixupBitValue: 0
 ; 32-REL-NEXT:    Length: 32
@@ -79,7 +108,7 @@ declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture reado
 ; 32-REL-NEXT:  }
 ; 32-REL-NEXT:  Relocation {
 ; 32-REL-NEXT:    Virtual Address: 0x40
-; 32-REL-NEXT:    Symbol: .call_memcpy (5)
+; 32-REL-NEXT:    Symbol: .call_memcpy ([[#NFA+7]])
 ; 32-REL-NEXT:    IsSigned: No
 ; 32-REL-NEXT:    FixupBitValue: 0
 ; 32-REL-NEXT:    Length: 32
@@ -87,7 +116,7 @@ declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture reado
 ; 32-REL-NEXT:  }
 ; 32-REL-NEXT:  Relocation {
 ; 32-REL-NEXT:    Virtual Address: 0x44
-; 32-REL-NEXT:    Symbol: TOC (11)
+; 32-REL-NEXT:    Symbol: TOC ([[#NFA+13]])
 ; 32-REL-NEXT:    IsSigned: No
 ; 32-REL-NEXT:    FixupBitValue: 0
 ; 32-REL-NEXT:    Length: 32

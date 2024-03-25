@@ -12,7 +12,7 @@
 // CHECKPREL-NEXT:  R_AARCH64_PREL32      {{.*}} _start + 4
 // CHECKPREL-NEXT:  R_AARCH64_PREL64      {{.*}} _start + 8
 
-// RUN: llvm-bolt %t.exe -o %t.bolt
+// RUN: llvm-bolt %t.exe -o %t.bolt --strict
 // RUN: llvm-objdump -D %t.bolt | FileCheck %s --check-prefix=CHECKPREL32
 
 // CHECKPREL32: [[#%x,DATATABLEADDR:]] <datatable>:
@@ -43,7 +43,7 @@ _start:
   mov x0, #0
   ret 
 
-.section .dummy, "da"
+.section .dummy, "a", @progbits
 dummy:
   .word 0
 

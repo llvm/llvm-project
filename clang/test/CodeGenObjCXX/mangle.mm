@@ -42,7 +42,6 @@
 }
 @end
 
-// rdar://9566314
 @interface NX
 - (void)Meth;
 @end
@@ -55,8 +54,6 @@
 }
 @end
 
-// rdar://13434937
-//
 // Don't crash when mangling an enum whose semantic context
 // is a class extension (which looks anonymous in the AST).
 // The other tests here are just for coverage.

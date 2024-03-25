@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Support/IndentedOstream.h"
+#include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
@@ -18,6 +19,7 @@
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Pattern.h"
 #include "mlir/TableGen/Predicate.h"
+#include "mlir/TableGen/Property.h"
 #include "mlir/TableGen/Type.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -103,14 +105,20 @@ private:
   // DAG `tree` as an operand. `operandName` and `operandMatcher` indicate the
   // bound name and the constraint of the operand respectively.
   void emitOperandMatch(DagNode tree, StringRef opName, StringRef operandName,
-                        DagLeaf operandMatcher, StringRef argName,
-                        int argIndex);
+                        int operandIndex, DagLeaf operandMatcher,
+                        StringRef argName, int argIndex,
+                        std::optional<int> variadicSubIndex);
 
   // Emits C++ statements for matching the operands which can be matched in
   // either order.
   void emitEitherOperandMatch(DagNode tree, DagNode eitherArgTree,
                               StringRef opName, int argIndex, int &operandIndex,
                               int depth);
+
+  // Emits C++ statements for matching a variadic operand.
+  void emitVariadicOperandMatch(DagNode tree, DagNode variadicArgTree,
+                                StringRef opName, int argIndex,
+                                int &operandIndex, int depth);
 
   // Emits C++ statements for matching the `argIndex`-th argument of the given
   // DAG `tree` as an attribute.
@@ -262,6 +270,11 @@ public:
   // Determine if we should inline the match logic or delegate to a static
   // function.
   bool useStaticMatcher(DagNode node) {
+    // either/variadic node must be associated to the parentOp, thus we can't
+    // emit a static matcher rooted at them.
+    if (node.isEither() || node.isVariadic())
+      return false;
+
     return refStats[node] > kStaticMatcherThreshold;
   }
 
@@ -462,6 +475,8 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
     if (DagNode argTree = tree.getArgAsNestedDag(i)) {
       if (argTree.isEither())
         PrintFatalError(loc, "NativeCodeCall cannot have `either` operands");
+      if (argTree.isVariadic())
+        PrintFatalError(loc, "NativeCodeCall cannot have `variadic` operands");
 
       os << "::mlir::Value " << argName << ";\n";
     } else {
@@ -504,7 +519,7 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
     std::string argName = capture[i];
 
     // Handle nested DAG construct first
-    if (DagNode argTree = tree.getArgAsNestedDag(i)) {
+    if (tree.getArgAsNestedDag(i)) {
       PrintFatalError(
           loc, formatv("Matching nested tree in NativeCodecall not support for "
                        "{0} as arg {1}",
@@ -582,22 +597,36 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
   if (!name.empty())
     os << formatv("{0} = {1};\n", name, castedName);
 
-  for (int i = 0, e = tree.getNumArgs(), nextOperand = 0; i != e; ++i) {
-    auto opArg = op.getArg(i);
+  for (int i = 0, opArgIdx = 0, e = tree.getNumArgs(), nextOperand = 0; i != e;
+       ++i, ++opArgIdx) {
+    auto opArg = op.getArg(opArgIdx);
     std::string argName = formatv("op{0}", depth + 1);
 
     // Handle nested DAG construct first
     if (DagNode argTree = tree.getArgAsNestedDag(i)) {
       if (argTree.isEither()) {
-        emitEitherOperandMatch(tree, argTree, castedName, i, nextOperand,
+        emitEitherOperandMatch(tree, argTree, castedName, opArgIdx, nextOperand,
                                depth);
+        ++opArgIdx;
         continue;
       }
-      if (auto *operand = opArg.dyn_cast<NamedTypeConstraint *>()) {
+      if (auto *operand = llvm::dyn_cast_if_present<NamedTypeConstraint *>(opArg)) {
+        if (argTree.isVariadic()) {
+          if (!operand->isVariadic()) {
+            auto error = formatv("variadic DAG construct can't match op {0}'s "
+                                 "non-variadic operand #{1}",
+                                 op.getOperationName(), opArgIdx);
+            PrintFatalError(loc, error);
+          }
+          emitVariadicOperandMatch(tree, argTree, castedName, opArgIdx,
+                                   nextOperand, depth);
+          ++nextOperand;
+          continue;
+        }
         if (operand->isVariableLength()) {
           auto error = formatv("use nested DAG construct to match op {0}'s "
                                "variadic operand #{1} unsupported now",
-                               op.getOperationName(), i);
+                               op.getOperationName(), opArgIdx);
           PrintFatalError(loc, error);
         }
       }
@@ -625,13 +654,13 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
     if (opArg.is<NamedTypeConstraint *>()) {
       auto operandName =
           formatv("{0}.getODSOperands({1})", castedName, nextOperand);
-      emitOperandMatch(tree, castedName, operandName.str(),
+      emitOperandMatch(tree, castedName, operandName.str(), opArgIdx,
                        /*operandMatcher=*/tree.getArgAsLeaf(i),
-                       /*argName=*/tree.getArgName(i),
-                       /*argIndex=*/i);
+                       /*argName=*/tree.getArgName(i), opArgIdx,
+                       /*variadicSubIndex=*/std::nullopt);
       ++nextOperand;
     } else if (opArg.is<NamedAttribute *>()) {
-      emitAttributeMatch(tree, opName, i, depth);
+      emitAttributeMatch(tree, opName, opArgIdx, depth);
     } else {
       PrintFatalError(loc, "unhandled case when matching op");
     }
@@ -642,11 +671,12 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
 }
 
 void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
-                                      StringRef operandName,
+                                      StringRef operandName, int operandIndex,
                                       DagLeaf operandMatcher, StringRef argName,
-                                      int argIndex) {
+                                      int argIndex,
+                                      std::optional<int> variadicSubIndex) {
   Operator &op = tree.getDialectOp(opMap);
-  auto *operand = op.getArg(argIndex).get<NamedTypeConstraint *>();
+  auto *operand = op.getArg(operandIndex).get<NamedTypeConstraint *>();
 
   // If a constraint is specified, we need to generate C++ statements to
   // check the constraint.
@@ -681,7 +711,11 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
   // Capture the value
   // `$_` is a special symbol to ignore op argument matching.
   if (!argName.empty() && argName != "_") {
-    auto res = symbolInfoMap.findBoundSymbol(argName, tree, op, argIndex);
+    auto res = symbolInfoMap.findBoundSymbol(argName, tree, op, operandIndex,
+                                             variadicSubIndex);
+    if (res == symbolInfoMap.end())
+      PrintFatalError(loc, formatv("symbol not found: {0}", argName));
+
     os << formatv("{0} = {1};\n", res->second.getVarName(argName), operandName);
   }
 }
@@ -714,19 +748,30 @@ void PatternEmitter::emitEitherOperandMatch(DagNode tree, DagNode eitherArgTree,
 
       os << formatv("auto {0} = (*v{1}.begin()).getDefiningOp();\n", argName,
                     i);
+
+      // Indent emitMatchCheck and emitMatch because they declare local
+      // variables.
+      os << "{\n";
+      os.indent();
+
       emitMatchCheck(
           opName, /*matchStr=*/argName,
           formatv("\"There's no operation that defines operand {0} of {1}\"",
                   operandIndex++, opName));
       emitMatch(argTree, argName, depth + 1);
+
+      os.unindent() << "}\n";
+
       // `tblgen_ops` is used to collect the matched operations. In either, we
       // need to queue the operation only if the matching success. Thus we emit
       // the code at the end.
       tblgenOps << formatv("tblgen_ops.push_back({0});\n", argName);
     } else if (op.getArg(argIndex).is<NamedTypeConstraint *>()) {
       emitOperandMatch(tree, opName, /*operandName=*/formatv("v{0}", i).str(),
+                       operandIndex,
                        /*operandMatcher=*/eitherArgTree.getArgAsLeaf(i),
-                       /*argName=*/eitherArgTree.getArgName(i), argIndex);
+                       /*argName=*/eitherArgTree.getArgName(i), argIndex,
+                       /*variadicSubIndex=*/std::nullopt);
       ++operandIndex;
     } else {
       PrintFatalError(loc, "either can only be applied on operand");
@@ -754,6 +799,67 @@ void PatternEmitter::emitEitherOperandMatch(DagNode tree, DagNode eitherArgTree,
   os.unindent().unindent() << "}\n";
 }
 
+void PatternEmitter::emitVariadicOperandMatch(DagNode tree,
+                                              DagNode variadicArgTree,
+                                              StringRef opName, int argIndex,
+                                              int &operandIndex, int depth) {
+  Operator &op = tree.getDialectOp(opMap);
+
+  os << "{\n";
+  os.indent();
+
+  os << formatv("auto variadic_operand_range = {0}.getODSOperands({1});\n",
+                opName, operandIndex);
+  os << formatv("if (variadic_operand_range.size() != {0}) "
+                "return ::mlir::failure();\n",
+                variadicArgTree.getNumArgs());
+
+  StringRef variadicTreeName = variadicArgTree.getSymbol();
+  if (!variadicTreeName.empty()) {
+    auto res =
+        symbolInfoMap.findBoundSymbol(variadicTreeName, tree, op, operandIndex,
+                                      /*variadicSubIndex=*/std::nullopt);
+    if (res == symbolInfoMap.end())
+      PrintFatalError(loc, formatv("symbol not found: {0}", variadicTreeName));
+
+    os << formatv("{0} = variadic_operand_range;\n",
+                  res->second.getVarName(variadicTreeName));
+  }
+
+  for (int i = 0; i < variadicArgTree.getNumArgs(); ++i) {
+    if (DagNode argTree = variadicArgTree.getArgAsNestedDag(i)) {
+      if (!argTree.isOperation())
+        PrintFatalError(loc, "variadic only accepts operation sub-dags");
+
+      os << "{\n";
+      os.indent();
+
+      std::string argName = formatv("local_op_{0}", i).str();
+      os << formatv("auto *{0} = "
+                    "variadic_operand_range[{1}].getDefiningOp();\n",
+                    argName, i);
+      emitMatchCheck(
+          opName, /*matchStr=*/argName,
+          formatv("\"There's no operation that defines variadic operand "
+                  "{0} (variadic sub-opearnd #{1}) of {2}\"",
+                  operandIndex, i, opName));
+      emitMatch(argTree, argName, depth + 1);
+      os << formatv("tblgen_ops.push_back({0});\n", argName);
+
+      os.unindent() << "}\n";
+    } else if (op.getArg(argIndex).is<NamedTypeConstraint *>()) {
+      auto operandName = formatv("variadic_operand_range.slice({0}, 1)", i);
+      emitOperandMatch(tree, opName, operandName.str(), operandIndex,
+                       /*operandMatcher=*/variadicArgTree.getArgAsLeaf(i),
+                       /*argName=*/variadicArgTree.getArgName(i), argIndex, i);
+    } else {
+      PrintFatalError(loc, "variadic can only be applied on operand");
+    }
+  }
+
+  os.unindent() << "}\n";
+}
+
 void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef opName,
                                         int argIndex, int depth) {
   Operator &op = tree.getDialectOp(opMap);
@@ -774,7 +880,8 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef opName,
   } else if (attr.isOptional()) {
     // For a missing attribute that is optional according to definition, we
     // should just capture a mlir::Attribute() to signal the missing state.
-    // That is precisely what getAttr() returns on missing attributes.
+    // That is precisely what getDiscardableAttr() returns on missing
+    // attributes.
   } else {
     emitMatchCheck(opName, tgfmt("tblgen_attr", &fmtCtx),
                    formatv("\"expected op '{0}' to have attribute '{1}' "
@@ -1068,9 +1175,22 @@ void PatternEmitter::emitRewriteLogic() {
       os << val << ";\n";
   }
 
+  auto processSupplementalPatterns = [&]() {
+    int numSupplementalPatterns = pattern.getNumSupplementalPatterns();
+    for (int i = 0, offset = -numSupplementalPatterns;
+         i < numSupplementalPatterns; ++i) {
+      DagNode resultTree = pattern.getSupplementalPattern(i);
+      auto val = handleResultPattern(resultTree, offset++, 0);
+      if (resultTree.isNativeCodeCall() &&
+          resultTree.getNumReturnsOfNativeCode() == 0)
+        os << val << ";\n";
+    }
+  };
+
   if (numExpectedResults == 0) {
     assert(replStartIndex >= numResultPatterns &&
            "invalid auxiliary vs. replacement pattern division!");
+    processSupplementalPatterns();
     // No result to replace. Just erase the op.
     os << "rewriter.eraseOp(op0);\n";
   } else {
@@ -1092,6 +1212,7 @@ void PatternEmitter::emitRewriteLogic() {
           "  tblgen_repl_values.push_back(v);\n}\n",
           "\n");
     }
+    processSupplementalPatterns();
     os << "\nrewriter.replaceOp(op0, tblgen_repl_values);\n";
   }
 
@@ -1399,10 +1520,36 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   // the key. This includes both bound and unbound child nodes.
   ChildNodeIndexNameMap childNodeNames;
 
+  // If the argument is a type constraint, then its an operand. Check if the
+  // op's argument is variadic that the argument in the pattern is too.
+  auto checkIfMatchedVariadic = [&](int i) {
+    // FIXME: This does not yet check for variable/leaf case.
+    // FIXME: Change so that native code call can be handled.
+    const auto *operand =
+        llvm::dyn_cast_if_present<NamedTypeConstraint *>(resultOp.getArg(i));
+    if (!operand || !operand->isVariadic())
+      return;
+
+    auto child = tree.getArgAsNestedDag(i);
+    if (!child)
+      return;
+
+    // Skip over replaceWithValues.
+    while (child.isReplaceWithValue()) {
+      if (!(child = child.getArgAsNestedDag(0)))
+        return;
+    }
+    if (!child.isNativeCodeCall() && !child.isVariadic())
+      PrintFatalError(loc, formatv("op expects variadic operand `{0}`, while "
+                                   "provided is non-variadic",
+                                   resultOp.getArgName(i)));
+  };
+
   // First go through all the child nodes who are nested DAG constructs to
   // create ops for them and remember the symbol names for them, so that we can
   // use the results in the current node. This happens in a recursive manner.
   for (int i = 0, e = tree.getNumArgs() - tail.numDirectives; i != e; ++i) {
+    checkIfMatchedVariadic(i);
     if (auto child = tree.getArgAsNestedDag(i))
       childNodeNames[i] = handleResultPattern(child, i, depth + 1);
   }
@@ -1523,7 +1670,7 @@ void PatternEmitter::createSeparateLocalVarsForOpArgs(
   int valueIndex = 0; // An index for uniquing local variable names.
   for (int argIndex = 0, e = resultOp.getNumArgs(); argIndex < e; ++argIndex) {
     const auto *operand =
-        resultOp.getArg(argIndex).dyn_cast<NamedTypeConstraint *>();
+        llvm::dyn_cast_if_present<NamedTypeConstraint *>(resultOp.getArg(argIndex));
     // We do not need special handling for attributes.
     if (!operand)
       continue;
@@ -1578,7 +1725,7 @@ void PatternEmitter::supplyValuesForOpArgs(
 
     Argument opArg = resultOp.getArg(argIndex);
     // Handle the case of operand first.
-    if (auto *operand = opArg.dyn_cast<NamedTypeConstraint *>()) {
+    if (auto *operand = llvm::dyn_cast_if_present<NamedTypeConstraint *>(opArg)) {
       if (!operand->name.empty())
         os << "/*" << operand->name << "=*/";
       os << childNodeNames.lookup(argIndex);
@@ -1624,10 +1771,15 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
       "if (auto tmpAttr = {1}) {\n"
       "  tblgen_attrs.emplace_back(rewriter.getStringAttr(\"{0}\"), "
       "tmpAttr);\n}\n";
+  int numVariadic = 0;
+  bool hasOperandSegmentSizes = false;
+  std::vector<std::string> sizes;
   for (int argIndex = 0, e = resultOp.getNumArgs(); argIndex < e; ++argIndex) {
     if (resultOp.getArg(argIndex).is<NamedAttribute *>()) {
       // The argument in the op definition.
       auto opArgName = resultOp.getArgName(argIndex);
+      hasOperandSegmentSizes =
+          hasOperandSegmentSizes || opArgName == "operandSegmentSizes";
       if (auto subTree = node.getArgAsNestedDag(argIndex)) {
         if (!subTree.isNativeCodeCall())
           PrintFatalError(loc, "only NativeCodeCall allowed in nested dag node "
@@ -1647,6 +1799,7 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
         resultOp.getArg(argIndex).get<NamedTypeConstraint *>();
     std::string varName;
     if (operand->isVariadic()) {
+      ++numVariadic;
       std::string range;
       if (node.isNestedDagArg(argIndex)) {
         range = childNodeNames.lookup(argIndex);
@@ -1658,7 +1811,9 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
       range = symbolInfoMap.getValueAndRangeUse(range);
       os << formatv("for (auto v: {0}) {{\n  tblgen_values.push_back(v);\n}\n",
                     range);
+      sizes.push_back(formatv("static_cast<int32_t>({0}.size())", range));
     } else {
+      sizes.emplace_back("1");
       os << formatv("tblgen_values.push_back(");
       if (node.isNestedDagArg(argIndex)) {
         os << symbolInfoMap.getValueAndRangeUse(
@@ -1685,6 +1840,19 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
       os << ");\n";
     }
   }
+
+  if (numVariadic > 1 && !hasOperandSegmentSizes) {
+    // Only set size if it can't be computed.
+    const auto *sameVariadicSize =
+        resultOp.getTrait("::mlir::OpTrait::SameVariadicOperandSize");
+    if (!sameVariadicSize) {
+      const char *setSizes = R"(
+        tblgen_attrs.emplace_back(rewriter.getStringAttr("operandSegmentSizes"),
+          rewriter.getDenseI32ArrayAttr({{ {0} }));
+          )";
+      os.printReindented(formatv(setSizes, llvm::join(sizes, ", ")).str());
+    }
+  }
 }
 
 StaticMatcherHelper::StaticMatcherHelper(raw_ostream &os,
@@ -1703,7 +1871,7 @@ void StaticMatcherHelper::populateStaticMatchers(raw_ostream &os) {
 
     std::string funcName =
         formatv("static_dag_matcher_{0}", staticMatcherCounter++);
-    assert(matcherNames.find(node) == matcherNames.end());
+    assert(!matcherNames.contains(node));
     PatternEmitter(dagInfo.second, &opMap, os, *this)
         .emitStaticMatcher(node, funcName);
     matcherNames[node] = funcName;
@@ -1754,7 +1922,7 @@ StringRef StaticMatcherHelper::getVerifierName(DagLeaf leaf) {
 }
 
 static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  emitSourceFileHeader("Rewriters", os);
+  emitSourceFileHeader("Rewriters", os, recordKeeper);
 
   const auto &patterns = recordKeeper.getAllDerivedDefinitions("Pattern");
 

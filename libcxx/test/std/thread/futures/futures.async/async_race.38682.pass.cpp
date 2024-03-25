@@ -11,7 +11,7 @@
 
 // There's currently no release of OS X whose dylib contains the patch for
 // PR38682. Since the fix for future<void> is in the dylib, this test may fail.
-// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
 
 // This test is designed to cause and allow TSAN to detect a race condition
 // in std::async, as reported in https://llvm.org/PR38682.

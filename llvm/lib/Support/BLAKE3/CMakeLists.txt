@@ -46,7 +46,7 @@ if (CAN_USE_ASSEMBLER)
         blake3_avx2_x86-64_windows_gnu.S
         blake3_avx512_x86-64_windows_gnu.S
       )
-      # Clang-6 needs this flag.
+      # Clang before 7 needs -mavx512vl to assemble some instructions.
       set_source_files_properties(blake3_avx512_x86-64_windows_gnu.S
         PROPERTIES COMPILE_OPTIONS "-mavx512vl")
     else()
@@ -54,7 +54,7 @@ if (CAN_USE_ASSEMBLER)
     endif()
   else()
     check_symbol_exists(__x86_64__ "" IS_X64)
-    if (IS_X64 OR CMAKE_OSX_ARCHITECTURES)
+    if (IS_X64 OR CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
       # In a macOS Universal build (setting CMAKE_OSX_ARCHITECTURES to multiple
       # values), compilation of the source files will target multiple architectures
       # (each source file is internally compiled once for each architecture).
@@ -66,7 +66,7 @@ if (CAN_USE_ASSEMBLER)
         blake3_avx2_x86-64_unix.S
         blake3_avx512_x86-64_unix.S
       )
-      # Clang-6 needs this flag.
+      # Clang before 7 needs -mavx512vl to assemble some instructions.
       set_source_files_properties(blake3_avx512_x86-64_unix.S
         PROPERTIES COMPILE_OPTIONS "-mavx512vl")
     else()

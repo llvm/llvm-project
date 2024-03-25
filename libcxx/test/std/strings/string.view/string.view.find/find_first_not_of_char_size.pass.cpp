@@ -19,29 +19,23 @@
 #include "constexpr_char_traits.h"
 
 template <class S>
-void
-test(const S& s, typename S::value_type c, typename S::size_type pos,
-     typename S::size_type x)
-{
-    LIBCPP_ASSERT_NOEXCEPT(s.find_first_not_of(c, pos));
-    assert(s.find_first_not_of(c, pos) == x);
-    if (x != S::npos)
-        assert(pos <= x && x < s.size());
+void test(const S& s, typename S::value_type c, typename S::size_type pos, typename S::size_type x) {
+  LIBCPP_ASSERT_NOEXCEPT(s.find_first_not_of(c, pos));
+  assert(s.find_first_not_of(c, pos) == x);
+  if (x != S::npos)
+    assert(pos <= x && x < s.size());
 }
 
 template <class S>
-void
-test(const S& s, typename S::value_type c, typename S::size_type x)
-{
-    LIBCPP_ASSERT_NOEXCEPT(s.find_first_not_of(c));
-    assert(s.find_first_not_of(c) == x);
-    if (x != S::npos)
-        assert(x < s.size());
+void test(const S& s, typename S::value_type c, typename S::size_type x) {
+  LIBCPP_ASSERT_NOEXCEPT(s.find_first_not_of(c));
+  assert(s.find_first_not_of(c) == x);
+  if (x != S::npos)
+    assert(x < s.size());
 }
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef std::string_view S;
     test(S(""), 'q', 0, S::npos);
     test(S(""), 'q', 1, S::npos);
@@ -70,20 +64,20 @@ int main(int, char**)
     test(S("csope"), 'q', 0);
     test(S("gfsmthlkon"), 'q', 0);
     test(S("laenfsbridchgotmkqpj"), 'q', 0);
-    }
+  }
 
 #if TEST_STD_VER > 11
-    {
+  {
     typedef std::basic_string_view<char, constexpr_char_traits<char>> SV;
-    constexpr SV  sv1;
-    constexpr SV  sv2 { "abcde", 5 };
+    constexpr SV sv1;
+    constexpr SV sv2{"abcde", 5};
 
-    static_assert (sv1.find_first_not_of( 'q', 0 ) == SV::npos, "" );
-    static_assert (sv1.find_first_not_of( 'q', 1 ) == SV::npos, "" );
-    static_assert (sv2.find_first_not_of( 'q', 0 ) == 0, "" );
-    static_assert (sv2.find_first_not_of( 'q', 1 ) == 1, "" );
-    static_assert (sv2.find_first_not_of( 'q', 5 ) == SV::npos, "" );
-    }
+    static_assert(sv1.find_first_not_of('q', 0) == SV::npos, "");
+    static_assert(sv1.find_first_not_of('q', 1) == SV::npos, "");
+    static_assert(sv2.find_first_not_of('q', 0) == 0, "");
+    static_assert(sv2.find_first_not_of('q', 1) == 1, "");
+    static_assert(sv2.find_first_not_of('q', 5) == SV::npos, "");
+  }
 #endif
 
   return 0;

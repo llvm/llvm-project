@@ -1,0 +1,68 @@
+REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows arm64-data-sym.s -o arm64-data-sym.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-data-sym.s -o arm64ec-data-sym.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows x86_64-data-sym.s -o x86_64-data-sym.obj
+RUN: llvm-cvtres -machine:arm64x -out:arm64x-resource.obj %S/Inputs/resource.res
+
+RUN: lld-link -out:test.dll -machine:arm64ec arm64ec-data-sym.obj -dll -noentry
+RUN: llvm-readobj --file-headers test.dll | FileCheck -check-prefix=ARM64EC-HEADER %s
+ARM64EC-HEADER:      Format: COFF-x86-64
+ARM64EC-HEADER-NEXT: Arch: x86_64
+ARM64EC-HEADER-NEXT: AddressSize: 64bit
+ARM64EC-HEADER:      Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
+
+RUN: lld-link -out:test.dll -machine:arm64x arm64x-resource.obj -dll -noentry
+RUN: llvm-readobj --file-headers test.dll | FileCheck -check-prefix=ARM64X-HEADER %s
+ARM64X-HEADER:      Machine: IMAGE_FILE_MACHINE_ARM64 (0xAA64)
+
+arm64x object files are allowed with -machine:arm64 as well
+RUN: lld-link -out:test.dll -machine:arm64 arm64x-resource.obj -dll -noentry
+
+RUN: lld-link -out:test.dll -machine:arm64ec arm64ec-data-sym.obj x86_64-data-sym.obj \
+RUN:          arm64x-resource.obj -dll -noentry
+RUN: llvm-readobj --file-headers test.dll | FileCheck -check-prefix=ARM64EC-HEADER %s
+
+RUN: llvm-readobj --hex-dump=.data test.dll | FileCheck -check-prefix=ARM64EC-DATA %s
+ARM64EC-DATA: 02020202 03030303
+
+RUN: lld-link -out:test.dll -machine:arm64x x86_64-data-sym.obj arm64-data-sym.obj \
+RUN:          arm64ec-data-sym.obj arm64x-resource.obj -dll -noentry
+RUN: llvm-readobj --file-headers test.dll | FileCheck -check-prefix=ARM64X-HEADER %s
+
+RUN: llvm-readobj --hex-dump=.data test.dll | FileCheck -check-prefix=ARM64X-DATA %s
+ARM64X-DATA: 03030303 01010101 02020202
+
+RUN: not lld-link -out:test.dll -machine:arm64 arm64-data-sym.obj arm64ec-data-sym.obj \
+RUN:              -dll -noentry 2>&1 | FileCheck -check-prefix=INCOMPAT1 %s
+INCOMPAT1: lld-link: error: arm64ec-data-sym.obj: machine type arm64ec conflicts with arm64
+
+RUN: not lld-link -out:test.dll -machine:arm64ec arm64ec-data-sym.obj arm64-data-sym.obj \
+RUN:              -dll -noentry 2>&1 | FileCheck -check-prefix=INCOMPAT2 %s
+INCOMPAT2: lld-link: error: arm64-data-sym.obj: machine type arm64 conflicts with arm64ec
+
+RUN: not lld-link -out:test.dll -machine:arm64 arm64-data-sym.obj x86_64-data-sym.obj \
+RUN:              -dll -noentry 2>&1 | FileCheck -check-prefix=INCOMPAT3 %s
+INCOMPAT3: lld-link: error: x86_64-data-sym.obj: machine type x64 conflicts with arm64
+
+#--- arm64ec-data-sym.s
+    .data
+    .globl arm64ec_data_sym
+    .p2align 2, 0x0
+arm64ec_data_sym:
+    .word 0x02020202
+
+#--- arm64-data-sym.s
+    .data
+    .globl arm64_data_sym
+    .p2align 2, 0x0
+arm64_data_sym:
+    .word 0x01010101
+
+#--- x86_64-data-sym.s
+    .data
+    .globl x86_64_data_sym
+    .p2align 2, 0x0
+x86_64_data_sym:
+    .long 0x03030303

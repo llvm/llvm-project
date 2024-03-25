@@ -1,4 +1,4 @@
-; RUN: opt -S -place-safepoints < %s -enable-new-pm=0 | FileCheck %s
+; RUN: opt -S -passes=place-safepoints < %s | FileCheck %s
 
 declare void @callee()
 

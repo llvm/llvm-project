@@ -13,8 +13,8 @@ define i32 @main() local_unnamed_addr #1 {
 ; CHECK-LABEL: main:
 ; CHECK:       // %bb.0: // %for.body.lr.ph.i.i.i.i.i.i63
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    .cfi_def_cfa_offset 112
 ; CHECK-NEXT:    str x30, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 112
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl _Z5setupv
 ; CHECK-NEXT:    movi v0.4s, #1

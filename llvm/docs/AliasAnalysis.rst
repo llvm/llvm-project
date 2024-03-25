@@ -207,7 +207,7 @@ Writing a new ``AliasAnalysis`` Implementation
 
 Writing a new alias analysis implementation for LLVM is quite straight-forward.
 There are already several implementations that you can use for examples, and the
-following information should help fill in any details.  For a examples, take a
+following information should help fill in any details.  For examples, take a
 look at the `various alias analysis implementations`_ included with LLVM.
 
 Different Pass styles

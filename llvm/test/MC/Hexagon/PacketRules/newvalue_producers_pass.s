@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -mhvx -mcpu=hexagonv65 -filetype=obj %s | llvm-objdump --no-print-imm-hex --mattr=+hvxv65 -d - | FileCheck %s
+# RUN: llvm-mc -triple=hexagon -mhvx -mcpu=hexagonv65 -filetype=obj %s | llvm-objdump --no-print-imm-hex --mattr=+hvxv65 -d - | FileCheck %s
 
 { r0=r0
   memw(r0)=r0.new }

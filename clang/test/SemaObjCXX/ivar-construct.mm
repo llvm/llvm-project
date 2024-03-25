@@ -28,7 +28,6 @@ struct Z; // expected-note{{forward declaration}}
 @implementation B
 @end
 
-// <rdar://problem/11284902>
 template<typename T> struct Incomplete; // expected-note{{declared here}}
 
 @interface C {

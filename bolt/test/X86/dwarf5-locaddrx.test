@@ -3,8 +3,8 @@
 ; RUN: cd %t
 ; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-locaddrx.s \
 ; RUN: -split-dwarf-file=mainlocadddrx.dwo -o mainlocadddrx.o
-; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split mainlocadddrx.o -o mainlocadddrx.exe
-; RUN: llvm-bolt mainlocadddrx.exe -o mainlocadddrx.exe.bolt --update-debug-sections
+; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split mainlocadddrx.o -o mainlocadddrx.exe -fno-pic -no-pie
+; RUN: llvm-bolt mainlocadddrx.exe -o mainlocadddrx.exe.bolt --update-debug-sections --always-convert-to-ranges
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info mainlocadddrx.exe | FileCheck -check-prefix=PRE-BOLT %s
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-addr mainlocadddrx.exe.bolt &> %t/foo.txt
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info mainlocadddrx.exe.bolt >> %t/foo.txt
@@ -25,10 +25,9 @@
 ; BOLT-NEXT: 0x
 ; BOLT-NEXT: 0x
 ; BOLT-NEXT: 0x[[#%.16x,ADDR:]]
-; BOLT-NEXT: 0x
 ; BOLT-NEXT: 0x[[#%.16x,ADDR2:]]
 ; BOLT: DW_TAG_skeleton_unit
-; BOLT: DW_AT_low_pc [DW_FORM_addrx]	(indexed (00000003) address = 0x0000000000000000)
+; BOLT: DW_AT_low_pc [DW_FORM_addrx]	(indexed (00000004) address = 0x0000000000000000)
 ; BOLT-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x00000010
 ; BOLT-NEXT: [0x[[#ADDR]]
 ; BOLT-SAME: 0x[[#ADDR + 0x24]]
@@ -76,10 +75,8 @@
 ; BOLT-DWO-NEXT: DW_AT_decl_line
 ; BOLT-DWO-NEXT: DW_AT_location [DW_FORM_exprloc]	(DW_OP_addrx 0x1)
 ; BOLT-DWO: DW_TAG_subprogram [4]
-; BOLT-DWO-NEXT: DW_AT_low_pc [DW_FORM_addrx]	(indexed (00000003)
 ; BOLT-DWO-NEXT: DW_AT_ranges [DW_FORM_rnglistx]	(indexed (0x0) rangelist = 0x00000014
 ; BOLT-DWO-NEXT: [0x0000000000000000, 0x0000000000000024))
 ; BOLT-DWO: DW_TAG_subprogram [6]
-; BOLT-DWO-NEXT: DW_AT_low_pc [DW_FORM_addrx]	(indexed (00000003)
 ; BOLT-DWO-NEXT: DW_AT_ranges [DW_FORM_rnglistx]	(indexed (0x1) rangelist = 0x00000018
 ; BOLT-DWO-NEXT: [0x0000000000000000, 0x0000000000000054))

@@ -32,6 +32,9 @@ namespace func {
 /// Creates an instance of func bufferization pass.
 std::unique_ptr<Pass> createFuncBufferizePass();
 
+/// Pass to deduplicate functions.
+std::unique_ptr<Pass> createDuplicateFunctionEliminationPass();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//

@@ -173,22 +173,16 @@ void test_nontemplate_cast_wrappers()
   std::to_integer<int>(b);
 #endif
 
-#if TEST_STD_VER > 17
-  std::bit_cast<unsigned int>(42);
-#endif
-
 #if TEST_STD_VER > 20
   enum E { Apple, Orange } e = Apple;
   std::to_underlying(e);
 #endif
 }
 
-int main(int, char**) {
+void tests() {
   test_algorithms();
 
   int i = 42;
   test_template_cast_wrappers(i, std::move(i));
   test_nontemplate_cast_wrappers();
-
-  return 0;
 }

@@ -19,6 +19,7 @@
 #include <cassert>
 #include <concepts>
 #include <functional>
+#include <iterator>
 #include <utility>
 
 template <class T, class Comp = std::ranges::less, class Proj = std::identity>
@@ -37,6 +38,16 @@ static_assert(HasClamp<int, std::ranges::less, std::identity>);
 static_assert(!HasClamp<NoComp>);
 static_assert(!HasClamp<int, NoComp>);
 static_assert(!HasClamp<int, std::ranges::less, CreateNoComp>);
+
+struct EnsureValueCategoryComp {
+  constexpr bool operator()(const int&& x, const int&& y) const { return x < y; }
+  constexpr bool operator()(const int&& x, int& y) const { return x < y; }
+  constexpr bool operator()(int& x, const int&& y) const { return x < y; }
+  constexpr bool operator()(int& x, int& y) const { return x < y; }
+  constexpr bool operator()(std::same_as<const int&> auto&& x, std::same_as<const int&> auto&& y) const {
+    return x < y;
+  }
+};
 
 constexpr bool test() {
   { // low < val < high
@@ -68,45 +79,38 @@ constexpr bool test() {
   { // Check that a custom projection works.
     struct S {
       int i;
-
-      constexpr const int& lvalue_proj() const { return i; }
-      constexpr int prvalue_proj() const { return i; }
-    };
-
-    struct Comp {
-      constexpr bool operator()(const int& lhs, const int& rhs) const { return lhs < rhs; }
-      constexpr bool operator()(int&& lhs, int&& rhs) const { return lhs > rhs; }
+      constexpr bool operator==(S const& other) const { return i == other.i; }
     };
 
     auto val = S{10};
     auto low = S{20};
     auto high = S{30};
-    // Check that the value category of the projection return type is preserved.
-    assert(&std::ranges::clamp(val, low, high, Comp{}, &S::lvalue_proj) == &low);
-    assert(&std::ranges::clamp(val, high, low, Comp{}, &S::prvalue_proj) == &low);
+    auto proj = [](S const& s) -> int const& { return s.i; };
+
+    assert(std::ranges::clamp(val, low, high, std::less{}, proj) == low);
   }
 
-  { // Check that the implementation doesn't cause double moves (which could result from calling the projection on
-    // `value` once and then forwarding the result into the comparator).
-    struct CheckDoubleMove {
-      int i;
-      bool moved = false;
-
-      constexpr explicit CheckDoubleMove(int set_i) : i(set_i) {}
-      constexpr CheckDoubleMove(const CheckDoubleMove&) = default;
-      constexpr CheckDoubleMove(CheckDoubleMove&& rhs) noexcept : i(rhs.i) {
-        assert(!rhs.moved);
-        rhs.moved = true;
-      }
+  { // Ensure that we respect the value category of the projection when calling the comparator.
+    // This additional example was provided by Tim Song in https://github.com/microsoft/STL/issues/3970#issuecomment-1685120958.
+    struct MoveProj {
+      constexpr int const&& operator()(int const& x) const { return std::move(x); }
     };
 
-    auto val = CheckDoubleMove{20};
-    auto low = CheckDoubleMove{10};
-    auto high = CheckDoubleMove{30};
+    static_assert(std::indirect_strict_weak_order<EnsureValueCategoryComp, std::projected<const int*, MoveProj>>);
 
-    auto moving_comp = [](CheckDoubleMove lhs, CheckDoubleMove rhs) { return lhs.i < rhs.i; };
-    auto prvalue_proj = [](const CheckDoubleMove& x) -> CheckDoubleMove { return x; };
-    assert(&std::ranges::clamp(val, low, high, moving_comp, prvalue_proj) == &val);
+    assert(std::ranges::clamp(0, 1, 2, EnsureValueCategoryComp{}, MoveProj{}) == 1);
+  }
+
+  { // Make sure we don't call the projection more than three times per [alg.clamp], see #64717
+    int counter              = 0;
+    auto projection_function = [&counter](const int value) -> int {
+      counter++;
+      return value;
+    };
+    assert(std::ranges::clamp(3, 2, 4, std::ranges::less{}, projection_function) == 3);
+#if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_EXTENSIVE && _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
+    assert(counter <= 3);
+#endif
   }
 
   return true;

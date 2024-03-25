@@ -97,6 +97,33 @@ TEST(TypePrinter, ParamsUglified) {
                                  "const f<Tp &> *", Clean));
 }
 
+TEST(TypePrinter, SuppressElaboration) {
+  llvm::StringLiteral Code = R"cpp(
+    namespace shared {
+    namespace a {
+    template <typename T>
+    struct S {};
+    }  // namespace a
+    namespace b {
+    struct Foo {};
+    }  // namespace b
+    using Alias = a::S<b::Foo>;
+    }  // namespace shared
+  )cpp";
+
+  auto Matcher = typedefNameDecl(hasName("::shared::Alias"),
+                                 hasType(qualType().bind("id")));
+  ASSERT_TRUE(PrintedTypeMatches(
+      Code, {}, Matcher, "a::S<b::Foo>",
+      [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = true; }));
+  ASSERT_TRUE(PrintedTypeMatches(Code, {}, Matcher,
+                                 "shared::a::S<shared::b::Foo>",
+                                 [](PrintingPolicy &Policy) {
+                                   Policy.SuppressElaboration = true;
+                                   Policy.FullyQualifiedName = true;
+                                 }));
+}
+
 TEST(TypePrinter, TemplateIdWithNTTP) {
   constexpr char Code[] = R"cpp(
     template <int N>
@@ -126,6 +153,22 @@ TEST(TypePrinter, TemplateIdWithNTTP) {
       [](PrintingPolicy &Policy) {
         Policy.EntireContentsOfLargeArray = true;
       }));
+}
+
+TEST(TypePrinter, TemplateArgumentsSubstitution) {
+  constexpr char Code[] = R"cpp(
+       template <typename Y> class X {};
+       typedef X<int> A;
+       int foo() {
+          return sizeof(A);
+       }
+  )cpp";
+  auto Matcher = typedefNameDecl(hasName("A"), hasType(qualType().bind("id")));
+  ASSERT_TRUE(PrintedTypeMatches(Code, {}, Matcher, "X<int>",
+                                 [](PrintingPolicy &Policy) {
+                                   Policy.SuppressTagKeyword = false;
+                                   Policy.SuppressScope = true;
+                                 }));
 }
 
 TEST(TypePrinter, TemplateArgumentsSubstitution_Expressions) {

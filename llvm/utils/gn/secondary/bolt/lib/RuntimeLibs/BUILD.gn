@@ -7,7 +7,7 @@ static_library("RuntimeLibs") {
     "//bolt/lib/Passes",
     "//bolt/lib/Utils",
     "//llvm/lib/BinaryFormat",
-    "//llvm/lib/ExecutionEngine/RuntimeDyld",
+    "//llvm/lib/ExecutionEngine/JITLink",
     "//llvm/lib/MC",
     "//llvm/lib/Object",
     "//llvm/lib/Support",

@@ -109,10 +109,8 @@ module m
     !ERROR: A pure subprogram may not initialize a variable
     real :: v3
     data v3/0./
-    !ERROR: A pure subprogram may not have a variable with the SAVE attribute
     real :: v4
     common /blk/ v4
-    save /blk/
     block
     !ERROR: A pure subprogram may not have a variable with the SAVE attribute
       real, save :: v5
@@ -157,11 +155,12 @@ module m
   end subroutine
   pure subroutine s11(to) ! C1596
     ! Implicit deallocation at the end of the subroutine
-    !ERROR: Deallocation of polymorphic object 'auto%a' is not permitted in a pure subprogram
+    !ERROR: 'auto' may not be a local variable in a pure subprogram
+    !BECAUSE: 'auto' has polymorphic component '%a' in a pure subprogram
     type(polyAlloc) :: auto
     type(polyAlloc), intent(in out) :: to
     !ERROR: Left-hand side of assignment is not definable
-    !BECAUSE: 'to' has polymorphic non-coarray component '%a' in a pure subprogram
+    !BECAUSE: 'to' has polymorphic component '%a' in a pure subprogram
     to = auto
   end subroutine
   pure subroutine s12

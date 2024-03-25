@@ -42,8 +42,8 @@ define double @sqrt_a_sqrt_b_multiple_uses(double %a, double %b) {
 define double @sqrt_a_sqrt_b_reassoc_nnan(double %a, double %b) {
 ; CHECK-LABEL: @sqrt_a_sqrt_b_reassoc_nnan(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nnan double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc nnan double @llvm.sqrt.f64(double [[TMP1]])
-; CHECK-NEXT:    ret double [[TMP2]]
+; CHECK-NEXT:    [[MUL:%.*]] = call reassoc nnan double @llvm.sqrt.f64(double [[TMP1]])
+; CHECK-NEXT:    ret double [[MUL]]
 ;
   %1 = call double @llvm.sqrt.f64(double %a)
   %2 = call double @llvm.sqrt.f64(double %b)
@@ -75,8 +75,8 @@ define double @sqrt_a_sqrt_b_sqrt_c_sqrt_d_reassoc(double %a, double %b, double 
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nnan arcp double [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nnan double [[TMP1]], [[C:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul reassoc nnan ninf double [[TMP2]], [[D:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call reassoc nnan ninf double @llvm.sqrt.f64(double [[TMP3]])
-; CHECK-NEXT:    ret double [[TMP4]]
+; CHECK-NEXT:    [[MUL2:%.*]] = call reassoc nnan ninf double @llvm.sqrt.f64(double [[TMP3]])
+; CHECK-NEXT:    ret double [[MUL2]]
 ;
   %1 = call double @llvm.sqrt.f64(double %a)
   %2 = call double @llvm.sqrt.f64(double %b)
@@ -103,7 +103,7 @@ define double @rsqrt_x_reassociate_extra_use(double %x, ptr %p) {
 ; CHECK-LABEL: @rsqrt_x_reassociate_extra_use(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
 ; CHECK-NEXT:    [[RSQRT:%.*]] = fdiv double 1.000000e+00, [[SQRT]]
-; CHECK-NEXT:    [[RES:%.*]] = fdiv reassoc nsz double [[X:%.*]], [[SQRT]]
+; CHECK-NEXT:    [[RES:%.*]] = fdiv reassoc nsz double [[X]], [[SQRT]]
 ; CHECK-NEXT:    store double [[RSQRT]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    ret double [[RES]]
 ;

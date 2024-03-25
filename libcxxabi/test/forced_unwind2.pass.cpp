@@ -10,9 +10,12 @@
 
 // UNSUPPORTED: no-exceptions, c++03
 
+// VE only supports SjLj and doesn't provide _Unwind_ForcedUnwind.
+// UNSUPPORTED: target={{ve-.*}}
+
 // These tests fail on previously released dylibs, investigation needed.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{11.0|12.0}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{11.0|12.0}}
 
 #include <exception>
 #include <stdlib.h>

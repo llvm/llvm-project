@@ -457,7 +457,7 @@ readCompileCommand(Reader CmdReader, llvm::ArrayRef<llvm::StringRef> Strings) {
 // The current versioning scheme is simple - non-current versions are rejected.
 // If you make a breaking change, bump this version number to invalidate stored
 // data. Later we may want to support some backward compatibility.
-constexpr static uint32_t Version = 18;
+constexpr static uint32_t Version = 19;
 
 llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data,
                                      SymbolOrigin Origin) {
@@ -692,7 +692,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O) {
 
 llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef Data,
                                           SymbolOrigin Origin) {
-  if (Data.startswith("RIFF")) {
+  if (Data.starts_with("RIFF")) {
     return readRIFF(Data, Origin);
   }
   if (auto YAMLContents = readYAML(Data, Origin)) {

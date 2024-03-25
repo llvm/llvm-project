@@ -21,16 +21,16 @@ program test_event_wait
 
   !_________________________ invalid event-variable ________________________________
 
-  ! event-variable must be event_type
+  !ERROR: The event-variable must be of type EVENT_TYPE from module ISO_FORTRAN_ENV
   event wait(non_event)
 
-  ! event-variable must be a coarray
+  !ERROR: The event-variable must be a coarray
   event wait(non_coarray)
 
-  ! event-variable must not be coindexed
+  !ERROR: A event-variable in a EVENT WAIT statement may not be a coindexed object
   event wait(concert[1])
 
-  ! event-variable must not be coindexed
+  !ERROR: A event-variable in a EVENT WAIT statement may not be a coindexed object
   event wait(occurrences(1)[1])
 
   !ERROR: Must be a scalar value, but is a rank-1 array
@@ -62,21 +62,62 @@ program test_event_wait
 
   !______ invalid event-wait-spec-lists: redundant event-wait-spec-list ____________
 
-  ! No specifier shall appear more than once in a given event-wait-spec-list
+  !ERROR: Until-spec in a event-wait-spec-list may not be repeated
   event wait(concert, until_count=threshold, until_count=indexed(1))
 
-  ! No specifier shall appear more than once in a given event-wait-spec-list
+  !ERROR: Until-spec in a event-wait-spec-list may not be repeated
+  event wait(concert, until_count=threshold, stat=sync_status, until_count=indexed(1))
+
+  !ERROR: Until-spec in a event-wait-spec-list may not be repeated
+  event wait(concert, until_count=threshold, errmsg=error_message, until_count=indexed(1))
+
+  !ERROR: Until-spec in a event-wait-spec-list may not be repeated
+  event wait(concert, until_count=threshold, stat=sync_status, errmsg=error_message, until_count=indexed(1))
+
+  !ERROR: A stat-variable in a event-wait-spec-list may not be repeated
   event wait(concert, stat=sync_status, stat=superfluous_stat)
 
-  ! No specifier shall appear more than once in a given event-wait-spec-list
+  !ERROR: A stat-variable in a event-wait-spec-list may not be repeated
+  event wait(concert, stat=sync_status, until_count=threshold, stat=superfluous_stat)
+
+  !ERROR: A stat-variable in a event-wait-spec-list may not be repeated
+  event wait(concert, stat=sync_status, errmsg=error_message, stat=superfluous_stat)
+
+  !ERROR: A stat-variable in a event-wait-spec-list may not be repeated
+  event wait(concert, stat=sync_status, until_count=threshold, errmsg=error_message, stat=superfluous_stat)
+
+  !ERROR: A errmsg-variable in a event-wait-spec-list may not be repeated
   event wait(concert, errmsg=error_message, errmsg=superfluous_errmsg)
 
-  !_____________ invalid sync-stat-lists: coindexed stat-variable __________________
+  !ERROR: A errmsg-variable in a event-wait-spec-list may not be repeated
+  event wait(concert, errmsg=error_message, until_count=threshold, errmsg=superfluous_errmsg)
 
-  ! Check constraint C1173 from the Fortran 2018 standard
+  !ERROR: A errmsg-variable in a event-wait-spec-list may not be repeated
+  event wait(concert, errmsg=error_message, stat=superfluous_stat, errmsg=superfluous_errmsg)
+
+  !ERROR: A errmsg-variable in a event-wait-spec-list may not be repeated
+  event wait(concert, errmsg=error_message, until_count=threshold, stat=superfluous_stat, errmsg=superfluous_errmsg)
+
+  !_____________ invalid sync-stat-lists: coindexed stat-variable - C1173 __________________
+
+  !ERROR: The stat-variable or errmsg-variable in a event-wait-spec-list may not be a coindexed object
   event wait(concert, stat=co_indexed_integer[1])
 
-  ! Check constraint C1173 from the Fortran 2018 standard
+  !ERROR: The stat-variable or errmsg-variable in a event-wait-spec-list may not be a coindexed object
   event wait(concert, errmsg=co_indexed_character[1])
+
+  !ERROR: The stat-variable or errmsg-variable in a event-wait-spec-list may not be a coindexed object
+  event wait(concert, stat=co_indexed_integer[1], errmsg=error_message)
+
+  !ERROR: The stat-variable or errmsg-variable in a event-wait-spec-list may not be a coindexed object
+  event wait(concert, stat=sync_status, errmsg=co_indexed_character[1])
+
+  !ERROR: The stat-variable or errmsg-variable in a event-wait-spec-list may not be a coindexed object
+  !ERROR: The stat-variable or errmsg-variable in a event-wait-spec-list may not be a coindexed object
+  event wait(concert, stat=co_indexed_integer[1], errmsg=co_indexed_character[1])
+
+  !ERROR: The stat-variable or errmsg-variable in a event-wait-spec-list may not be a coindexed object
+  !ERROR: The stat-variable or errmsg-variable in a event-wait-spec-list may not be a coindexed object
+  event wait(concert, errmsg=co_indexed_character[1], stat=co_indexed_integer[1])
 
 end program test_event_wait

@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -mattr=+hvxv68 -filetype=obj %s | llvm-objdump --no-print-imm-hex --mattr=+hvxv68 -d - | FileCheck %s
+# RUN: llvm-mc -triple=hexagon -mattr=+hvxv68 -filetype=obj %s | llvm-objdump --no-print-imm-hex --mattr=+hvxv68 -d - | FileCheck %s
 
 # packet w/accum with register different from one loaded to
 {

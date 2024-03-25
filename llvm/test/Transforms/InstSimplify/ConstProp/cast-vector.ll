@@ -8,7 +8,7 @@
 define <2 x i16> @test1() {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <2 x i16> ptrtoint (<2 x ptr> getelementptr ([10 x i32], ptr null, <2 x i64> zeroinitializer, <2 x i64> <i64 5, i64 7>) to <2 x i16>)
+; CHECK-NEXT:    ret <2 x i16> ptrtoint (<2 x ptr> getelementptr inbounds ([10 x i32], ptr null, <2 x i64> zeroinitializer, <2 x i64> <i64 5, i64 7>) to <2 x i16>)
 ;
 entry:
   %gep = getelementptr inbounds [10 x i32], ptr null, i16 0, <2 x i16> <i16 5, i16 7>

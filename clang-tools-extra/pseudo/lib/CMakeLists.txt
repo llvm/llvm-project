@@ -17,6 +17,9 @@ add_clang_library(clangPseudo
   clangBasic
   clangLex
   clangPseudoGrammar
+
+  DEPENDS
+  ClangDriverOptions
   )
 
   target_include_directories(clangPseudo INTERFACE

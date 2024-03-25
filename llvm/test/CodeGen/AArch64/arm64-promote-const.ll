@@ -44,7 +44,7 @@ entry:
 ; PROMOTED: ldr q[[REGNUM:[0-9]+]], [[[PAGEADDR]], [[CSTV1]]@PAGEOFF]
 ; Destination register is defined by ABI
 ; PROMOTED-NEXT: add.16b v0, v0, v[[REGNUM]]
-; PROMOTED-NEXT: mla.16b v0, v0, v[[REGNUM]]
+; PROMOTED-NEXT: mls.16b v0, v0, v[[REGNUM]]
 ; PROMOTED-NEXT: ret
 
 ; REGULAR-LABEL: test2:
@@ -55,12 +55,12 @@ entry:
 ; REGULAR: ldr q[[REGNUM:[0-9]+]], [[[PAGEADDR]], [[CSTLABEL]]@PAGEOFF]
 ; Destination register is defined by ABI
 ; REGULAR-NEXT: add.16b v0, v0, v[[REGNUM]]
-; REGULAR-NEXT: mla.16b v0, v0, v[[REGNUM]]
+; REGULAR-NEXT: mls.16b v0, v0, v[[REGNUM]]
 ; REGULAR-NEXT: ret
   %add.i = add <16 x i8> %arg, <i8 -40, i8 -93, i8 -118, i8 -99, i8 -75, i8 -105, i8 74, i8 -110, i8 62, i8 -115, i8 -119, i8 -120, i8 34, i8 -124, i8 0, i8 -128>
   %mul.i = mul <16 x i8> %add.i, <i8 -40, i8 -93, i8 -118, i8 -99, i8 -75, i8 -105, i8 74, i8 -110, i8 62, i8 -115, i8 -119, i8 -120, i8 34, i8 -124, i8 0, i8 -128>
-  %add.i9 = add <16 x i8> %add.i, %mul.i
-  ret <16 x i8> %add.i9
+  %sub.i9 = sub <16 x i8> %add.i, %mul.i
+  ret <16 x i8> %sub.i9
 }
 
 ; Two different uses of the same constant in two different basic blocks,

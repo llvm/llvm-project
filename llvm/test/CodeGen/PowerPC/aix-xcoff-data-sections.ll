@@ -5,7 +5,7 @@
 ; RUN:   FileCheck --check-prefixes=CHECK,CHECK64 %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:     -filetype=obj -data-sections -xcoff-traceback-table=false -o %t.o < %s
-; RUN: llvm-objdump -D --symbol-description %t.o | FileCheck --check-prefix=CHECKOBJ %s
+; RUN: llvm-objdump -D --symbol-description %t.o | FileCheck -D#NFA=2 --check-prefix=CHECKOBJ %s
 ; RUN: llvm-readobj -s %t.o | FileCheck --check-prefix=CHECKSYM %s
 
 ;; Test to see if the default is correct for -data-sections on AIX.
@@ -16,7 +16,7 @@
 ; RUN:   FileCheck --check-prefixes=CHECK,CHECK64 %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:     -xcoff-traceback-table=false -filetype=obj -o %t.o < %s
-; RUN: llvm-objdump -D --symbol-description %t.o | FileCheck --check-prefix=CHECKOBJ %s
+; RUN: llvm-objdump -D --symbol-description %t.o | FileCheck -D#NFA=2 --check-prefix=CHECKOBJ %s
 ; RUN: llvm-readobj -s %t.o | FileCheck --check-prefix=CHECKSYM %s
 
 ;; Test to see if the default is correct for -data-sections on AIX.
@@ -28,7 +28,7 @@
 ; RUN:   FileCheck --check-prefixes=CHECK,CHECK64 %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:     -xcoff-traceback-table=false -filetype=obj -o %t.o < %s
-; RUN: llvm-objdump -D --symbol-description %t.o | FileCheck --check-prefix=CHECKOBJ %s
+; RUN: llvm-objdump -D --symbol-description %t.o | FileCheck -D#NFA=2 --check-prefix=CHECKOBJ %s
 ; RUN: llvm-readobj -s %t.o | FileCheck --check-prefix=CHECKSYM %s
 
 @ivar = local_unnamed_addr global i32 35, align 4
@@ -70,16 +70,16 @@ entry:
 ; CHECK-NEXT:         .vbyte  4, 35                           # 0x23
 ; CHECK-NEXT:         .comm   a[RW],4,2
 ; CHECK-NEXT:         .comm   f[RW],4,2
-; CHECK-NEXT:         .csect .rodata.str1.1L...str[RO],2
+; CHECK-NEXT:         .csect L...str[RO],2
 ; CHECK-NEXT:         .string "abcdefgh"
 ; CHECK32:            .csect p[RW],2
 ; CHECK32-NEXT:       .globl  p[RW]
 ; CHECK32-NEXT:       .align  2
-; CHECK32-NEXT:       .vbyte  4, .rodata.str1.1L...str[RO]
+; CHECK32-NEXT:       .vbyte  4, L...str[RO]
 ; CHECK64:            .csect p[RW],3
 ; CHECK64-NEXT:       .globl  p[RW]
 ; CHECK64-NEXT:       .align  3
-; CHECK64-NEXT:       .vbyte  8, .rodata.str1.1L...str[RO]
+; CHECK64-NEXT:       .vbyte  8, L...str[RO]
 ; CHECK:              .toc
 ; CHECK-NEXT: L..C0:
 ; CHECK-NEXT:         .tc p[TC],p[RW]
@@ -90,50 +90,50 @@ entry:
 ; CHECK-NEXT: L..C3:
 ; CHECK-NEXT:         .tc f[TC],f[RW]
 
-; CHECKOBJ:        00000038 (idx: 7) const_ivar[RO]:
+; CHECKOBJ:        00000038 (idx: [[#NFA+7]]) const_ivar[RO]:
 ; CHECKOBJ-NEXT:         38: 00 00 00 23   <unknown>
 ; CHECKOBJ-EMPTY:
-; CHECKOBJ-NEXT:   0000003c (idx: 9) .rodata.str1.1L...str[RO]:
+; CHECKOBJ-NEXT:   0000003c (idx: [[#NFA+9]]) L...str[RO]:
 ; CHECKOBJ-NEXT:         3c: 61 62 63 64
 ; CHECKOBJ-NEXT:         40: 65 66 67 68
 ; CHECKOBJ-NEXT:         44: 00 00 00 00   <unknown>
 ; CHECKOBJ-EMPTY:
 ; CHECKOBJ-NEXT:   Disassembly of section .data:
 ; CHECKOBJ-EMPTY:
-; CHECKOBJ-NEXT:   00000048 (idx: 11) ivar[RW]:
+; CHECKOBJ-NEXT:   00000048 (idx: [[#NFA+11]]) ivar[RW]:
 ; CHECKOBJ-NEXT:         48: 00 00 00 23   <unknown>
 ; CHECKOBJ-EMPTY:
-; CHECKOBJ-NEXT:   0000004c (idx: 13) p[RW]:
+; CHECKOBJ-NEXT:   0000004c (idx: [[#NFA+13]]) p[RW]:
 ; CHECKOBJ-NEXT:         4c: 00 00 00 3c   <unknown>
 ; CHECKOBJ-EMPTY:
-; CHECKOBJ-NEXT:   00000050 (idx: 15) foo[DS]:
+; CHECKOBJ-NEXT:   00000050 (idx: [[#NFA+15]]) foo[DS]:
 ; CHECKOBJ-NEXT:         50: 00 00 00 00   <unknown>
 ; CHECKOBJ-NEXT:         54: 00 00 00 68   <unknown>
 ; CHECKOBJ-NEXT:         58: 00 00 00 00   <unknown>
 ; CHECKOBJ-EMPTY:
-; CHECKOBJ-NEXT:   0000005c (idx: 17) bar[DS]:
+; CHECKOBJ-NEXT:   0000005c (idx: [[#NFA+17]]) bar[DS]:
 ; CHECKOBJ-NEXT:         5c: 00 00 00 10   <unknown>
 ; CHECKOBJ-NEXT:         60: 00 00 00 68   <unknown>
 ; CHECKOBJ-NEXT:         64: 00 00 00 00   <unknown>
 ; CHECKOBJ-EMPTY:
-; CHECKOBJ-NEXT:   00000068 (idx: 21) p[TC]:
+; CHECKOBJ-NEXT:   00000068 (idx: [[#NFA+21]]) p[TC]:
 ; CHECKOBJ-NEXT:         68: 00 00 00 4c   <unknown>
 ; CHECKOBJ-EMPTY:
-; CHECKOBJ-NEXT:   0000006c (idx: 23) ivar[TC]:
+; CHECKOBJ-NEXT:   0000006c (idx: [[#NFA+23]]) ivar[TC]:
 ; CHECKOBJ-NEXT:         6c: 00 00 00 48   <unknown>
 ; CHECKOBJ-EMPTY:
-; CHECKOBJ-NEXT:   00000070 (idx: 25) a[TC]:
+; CHECKOBJ-NEXT:   00000070 (idx: [[#NFA+25]]) a[TC]:
 ; CHECKOBJ-NEXT:         70: 00 00 00 78   <unknown>
 ; CHECKOBJ-EMPTY:
-; CHECKOBJ-NEXT:   00000074 (idx: 27) f[TC]:
+; CHECKOBJ-NEXT:   00000074 (idx: [[#NFA+27]]) f[TC]:
 ; CHECKOBJ-NEXT:         74: 00 00 00 7c   <unknown>
 ; CHECKOBJ-EMPTY:
 ; CHECKOBJ-NEXT:   Disassembly of section .bss:
 ; CHECKOBJ-EMPTY:
-; CHECKOBJ-NEXT:   00000078 (idx: 29) a[RW]:
+; CHECKOBJ-NEXT:   00000078 (idx: [[#NFA+29]]) a[RW]:
 ; CHECKOBJ-NEXT:   ...
 ; CHECKOBJ-EMPTY:
-; CHECKOBJ-NEXT:   0000007c (idx: 31) f[RW]:
+; CHECKOBJ-NEXT:   0000007c (idx: [[#NFA+31]]) f[RW]:
 ; CHECKOBJ-NEXT:   ...
 
 
@@ -156,7 +156,7 @@ entry:
 ; CHECKSYM:      }
 ; CHECKSYM:    }
 ; CHECKSYM:    Symbol {
-; CHECKSYM:      Name: .rodata.str1.1L...str
+; CHECKSYM:      Name: L...str
 ; CHECKSYM:      Value (RelocatableAddress): 0x3C
 ; CHECKSYM:      Section: .text
 ; CHECKSYM:      Type: 0x0

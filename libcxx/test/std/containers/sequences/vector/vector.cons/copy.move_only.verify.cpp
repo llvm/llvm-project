@@ -14,9 +14,7 @@
 
 #include "MoveOnly.h"
 
-int main(int, char**)
-{
+void f() {
     std::vector<MoveOnly> v;
-    std::vector<MoveOnly> copy = v; // expected-error-re@* {{{{(no matching function for call to 'construct_at')|(call to implicitly-deleted copy constructor of 'MoveOnly')|(call to deleted constructor of 'MoveOnly')}}}}
-    return 0;
+    std::vector<MoveOnly> copy = v; // expected-error-re@* {{{{(no matching function for call to '__construct_at')|(call to deleted constructor of 'MoveOnly')}}}}
 }

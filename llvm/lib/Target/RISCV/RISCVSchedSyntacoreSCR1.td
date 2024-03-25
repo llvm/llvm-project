@@ -41,7 +41,6 @@ def SCR1_CFU : ProcResource<1>;
 def : WriteRes<WriteJmp, [SCR1_CFU]>;
 def : WriteRes<WriteJal, [SCR1_CFU]>;
 def : WriteRes<WriteJalr, [SCR1_CFU]>;
-def : WriteRes<WriteJmpReg, [SCR1_CFU]>;
 
 // Integer arithmetic and logic
 def : WriteRes<WriteIALU32, [SCR1_ALU]>;
@@ -55,15 +54,17 @@ def : WriteRes<WriteShiftReg, [SCR1_ALU]>;
 def : WriteRes<WriteIMul, [SCR1_MUL]>;
 def : WriteRes<WriteIMul32, [SCR1_MUL]>;
 
-// Integer division: latency 33, inverse throughput 33
-let Latency = 33, ResourceCycles = [33] in {
+// Integer division/remainder: latency 33, inverse throughput 33
+let Latency = 33, ReleaseAtCycles = [33] in {
 def : WriteRes<WriteIDiv32, [SCR1_DIV]>;
 def : WriteRes<WriteIDiv, [SCR1_DIV]>;
+def : WriteRes<WriteIRem32, [SCR1_DIV]>;
+def : WriteRes<WriteIRem, [SCR1_DIV]>;
 }
 
 // Load/store instructions on SCR1 have latency 2 and inverse throughput 2
 // (SCR1_CFG_RV32IMC_MAX includes TCM)
-let Latency = 2, ResourceCycles=[2] in {
+let Latency = 2, ReleaseAtCycles=[2] in {
 // Memory
 def : WriteRes<WriteSTB, [SCR1_LSU]>;
 def : WriteRes<WriteSTH, [SCR1_LSU]>;
@@ -148,6 +149,8 @@ def : ReadAdvance<ReadShiftReg, 0>;
 def : ReadAdvance<ReadShiftReg32, 0>;
 def : ReadAdvance<ReadIDiv, 0>;
 def : ReadAdvance<ReadIDiv32, 0>;
+def : ReadAdvance<ReadIRem, 0>;
+def : ReadAdvance<ReadIRem32, 0>;
 def : ReadAdvance<ReadIMul, 0>;
 def : ReadAdvance<ReadIMul32, 0>;
 def : ReadAdvance<ReadAtomicWA, 0>;
@@ -165,7 +168,9 @@ def : ReadAdvance<ReadFAdd64, 0>;
 def : ReadAdvance<ReadFMul32, 0>;
 def : ReadAdvance<ReadFMul64, 0>;
 def : ReadAdvance<ReadFMA32, 0>;
+def : ReadAdvance<ReadFMA32Addend, 0>;
 def : ReadAdvance<ReadFMA64, 0>;
+def : ReadAdvance<ReadFMA64Addend, 0>;
 def : ReadAdvance<ReadFDiv32, 0>;
 def : ReadAdvance<ReadFDiv64, 0>;
 def : ReadAdvance<ReadFSqrt32, 0>;
@@ -192,16 +197,19 @@ def : ReadAdvance<ReadFMovF64ToI64, 0>;
 def : ReadAdvance<ReadFMovI64ToF64, 0>;
 def : ReadAdvance<ReadFClass32, 0>;
 def : ReadAdvance<ReadFClass64, 0>;
-def : ReadAdvance<ReadSFB, 0>;
+def : ReadAdvance<ReadSFBJmp, 0>;
+def : ReadAdvance<ReadSFBALU, 0>;
 
 //===----------------------------------------------------------------------===//
 // Unsupported extensions
 defm : UnsupportedSchedV;
+defm : UnsupportedSchedZabha;
 defm : UnsupportedSchedZba;
 defm : UnsupportedSchedZbb;
 defm : UnsupportedSchedZbc;
 defm : UnsupportedSchedZbs;
 defm : UnsupportedSchedZbkb;
 defm : UnsupportedSchedZbkx;
+defm : UnsupportedSchedZfa;
 defm : UnsupportedSchedZfh;
 }

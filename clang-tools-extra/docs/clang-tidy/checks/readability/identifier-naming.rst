@@ -11,13 +11,14 @@ another if a mismatch is detected
 
 Casing types include:
 
- - ``lower_case``,
- - ``UPPER_CASE``,
- - ``camelBack``,
- - ``CamelCase``,
- - ``camel_Snake_Back``,
- - ``Camel_Snake_Case``,
- - ``aNy_CasE``.
+ - ``lower_case``
+ - ``UPPER_CASE``
+ - ``camelBack``
+ - ``CamelCase``
+ - ``camel_Snake_Back``
+ - ``Camel_Snake_Case``
+ - ``aNy_CasE``
+ - ``Leading_upper_snake_case``
 
 It also supports a fixed prefix and suffix that will be prepended or appended
 to the identifiers, regardless of the casing.
@@ -30,6 +31,18 @@ The naming of virtual methods is reported where they occur in the base class,
 but not where they are overridden, as it can't be fixed locally there.
 This also applies for pseudo-override patterns like CRTP.
 
+``Leading_upper_snake_case`` is a naming convention where the first word is capitalized
+followed by lower case word(s) separated by underscore(s) '_'. Examples include:
+`Cap_snake_case`, `Cobra_case`, `Foo_bar_baz`, and `Master_copy_8gb`.
+
+Hungarian notation can be customized using different *HungarianPrefix* settings.
+The options and their corresponding values are:
+
+ - ``Off`` - the default setting
+ - ``On`` - example: ``int iVariable``
+ - ``LowerCase`` - example: ``int i_Variable``
+ - ``CamelCase`` - example: ``int IVariable``
+
 Options
 -------
 
@@ -37,10 +50,12 @@ The following options are described below:
 
  - :option:`AbstractClassCase`, :option:`AbstractClassPrefix`, :option:`AbstractClassSuffix`, :option:`AbstractClassIgnoredRegexp`, :option:`AbstractClassHungarianPrefix`
  - :option:`AggressiveDependentMemberLookup`
+ - :option:`CheckAnonFieldInParent`
  - :option:`ClassCase`, :option:`ClassPrefix`, :option:`ClassSuffix`, :option:`ClassIgnoredRegexp`, :option:`ClassHungarianPrefix`
  - :option:`ClassConstantCase`, :option:`ClassConstantPrefix`, :option:`ClassConstantSuffix`, :option:`ClassConstantIgnoredRegexp`, :option:`ClassConstantHungarianPrefix`
  - :option:`ClassMemberCase`, :option:`ClassMemberPrefix`, :option:`ClassMemberSuffix`, :option:`ClassMemberIgnoredRegexp`, :option:`ClassMemberHungarianPrefix`
  - :option:`ClassMethodCase`, :option:`ClassMethodPrefix`, :option:`ClassMethodSuffix`, :option:`ClassMethodIgnoredRegexp`
+ - :option:`ConceptCase`, :option:`ConceptPrefix`, :option:`ConceptSuffix`, :option:`ConceptIgnoredRegexp`
  - :option:`ConstantCase`, :option:`ConstantPrefix`, :option:`ConstantSuffix`, :option:`ConstantIgnoredRegexp`, :option:`ConstantHungarianPrefix`
  - :option:`ConstantMemberCase`, :option:`ConstantMemberPrefix`, :option:`ConstantMemberSuffix`, :option:`ConstantMemberIgnoredRegexp`, :option:`ConstantMemberHungarianPrefix`
  - :option:`ConstantParameterCase`, :option:`ConstantParameterPrefix`, :option:`ConstantParameterSuffix`, :option:`ConstantParameterIgnoredRegexp`, :option:`ConstantParameterHungarianPrefix`
@@ -200,6 +215,32 @@ After if AggressiveDependentMemberLookup is `true`:
         this->bad_named_member = 0;
       }
     };
+
+.. option:: CheckAnonFieldInParent
+
+    When set to `true`, fields in anonymous records (i.e. anonymous
+    unions and structs) will be treated as names in the enclosing scope
+    rather than public members of the anonymous record for the purpose
+    of name checking.
+
+For example:
+
+.. code-block:: c++
+
+    class Foo {
+    private:
+      union {
+        int iv_;
+        float fv_;
+      };
+    };
+
+If :option:`CheckAnonFieldInParent` is `false`, you may get warnings
+that ``iv_`` and ``fv_`` are not coherent to public member names, because
+``iv_`` and ``fv_`` are public members of the anonymous union. When
+:option:`CheckAnonFieldInParent` is `true`, ``iv_`` and ``fv_`` will be
+treated as private data members of ``Foo`` for the purpose of name checking
+and thus no warnings will be emitted.
 
 .. option:: ClassCase
 
@@ -404,6 +445,46 @@ After:
     public:
       int pre_class_member_post();
     };
+
+.. option:: ConceptCase
+
+    When defined, the check will ensure concept names conform to the
+    selected casing.
+
+.. option:: ConceptPrefix
+
+    When defined, the check will ensure concept names will add the
+    prefixed with the given value (regardless of casing).
+
+.. option:: ConceptIgnoredRegexp
+
+    Identifier naming checks won't be enforced for concept names
+    matching this regular expression.
+
+.. option:: ConceptSuffix
+
+    When defined, the check will ensure concept names will add the
+    suffix with the given value (regardless of casing).
+
+For example using values of:
+
+   - ConceptCase of ``CamelCase``
+   - ConceptPrefix of ``Pre``
+   - ConceptSuffix of ``Post``
+
+Identifies and/or transforms concept names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    template<typename T> concept my_concept = requires (T t) { {t++}; };
+
+After:
+
+.. code-block:: c++
+
+    template<typename T> concept PreMyConceptPost = requires (T t) { {t++}; };
 
 .. option:: ConstantCase
 
@@ -2521,41 +2602,41 @@ Otherwise the case of this character denotes scope.
 The following table is the default mapping table of Hungarian Notation which
 maps Decl to its prefix string. You can also have your own style in config file.
 
-================= ============== ====================== ============== =========== ==============
-Primitive Types                                                        Microsoft data types
----------------------------------------------------------------------- --------------------------
-    Type          Prefix         Type                   Prefix         Type        Prefix
-================= ============== ====================== ============== =========== ==============
-int8_t            i8             signed int             si             BOOL        b
-int16_t           i16            signed short           ss             BOOLEAN     b
-int32_t           i32            signed short int       ssi            BYTE        by
-int64_t           i64            signed long long int   slli           CHAR        c
-uint8_t           u8             signed long long       sll            UCHAR       uc
-uint16_t          u16            signed long int        sli            SHORT       s
-uint32_t          u32            signed long            sl             USHORT      us
-uint64_t          u64            signed                 s              WORD        w
-char8_t           c8             unsigned long long int ulli           DWORD       dw
-char16_t          c16            unsigned long long     ull            DWORD32     dw32
-char32_t          c32            unsigned long int      uli            DWORD64     dw64
-float             f              unsigned long          ul             LONG        l
-double            d              unsigned short int     usi            ULONG       ul
-char              c              unsigned short         us             ULONG32     ul32
-bool              b              unsigned int           ui             ULONG64     ul64
-_Bool             b              unsigned               u              ULONGLONG   ull
-int               i              long long int          lli            HANDLE      h
-size_t            n              long double            ld             INT         i
-short             s              long long              ll             INT8        i8
-signed            i              long int               li             INT16       i16
-unsigned          u              long                   l              INT32       i32
-long              l              ptrdiff_t              p              INT64       i64
-long long         ll                                                   UINT        ui
-unsigned long     ul                                                   UINT8       u8
-long double       ld                                                   UINT16      u16
-ptrdiff_t         p                                                    UINT32      u32
-wchar_t           wc                                                   UINT64      u64
-short int         si                                                   PVOID       p
+================= ============== ====================== ============== ============== ==============
+Primitive Type                                                         Microsoft Type
+----------------- -------------- ---------------------- -------------- -------------- --------------
+    Type          Prefix         Type                   Prefix         Type           Prefix
+================= ============== ====================== ============== ============== ==============
+int8_t            i8             signed int             si             BOOL           b
+int16_t           i16            signed short           ss             BOOLEAN        b
+int32_t           i32            signed short int       ssi            BYTE           by
+int64_t           i64            signed long long int   slli           CHAR           c
+uint8_t           u8             signed long long       sll            UCHAR          uc
+uint16_t          u16            signed long int        sli            SHORT          s
+uint32_t          u32            signed long            sl             USHORT         us
+uint64_t          u64            signed                 s              WORD           w
+char8_t           c8             unsigned long long int ulli           DWORD          dw
+char16_t          c16            unsigned long long     ull            DWORD32        dw32
+char32_t          c32            unsigned long int      uli            DWORD64        dw64
+float             f              unsigned long          ul             LONG           l
+double            d              unsigned short int     usi            ULONG          ul
+char              c              unsigned short         us             ULONG32        ul32
+bool              b              unsigned int           ui             ULONG64        ul64
+_Bool             b              unsigned char          uc             ULONGLONG      ull
+int               i              unsigned               u              HANDLE         h
+size_t            n              long long int          lli            INT            i
+short             s              long double            ld             INT8           i8
+signed            i              long long              ll             INT16          i16
+unsigned          u              long int               li             INT32          i32
+long              l              long                   l              INT64          i64
+long long         ll             ptrdiff_t              p              UINT           ui
+unsigned long     ul             void                   *none*         UINT8          u8
+long double       ld                                                   UINT16         u16
+ptrdiff_t         p                                                    UINT32         u32
+wchar_t           wc                                                   UINT64         u64
+short int         si                                                   PVOID          p
 short             s
-================= ============== ====================== ============== =========== ==============
+================= ============== ====================== ============== ============== ==============
 
 **There are more trivial options for Hungarian Notation:**
 
@@ -2584,9 +2665,9 @@ Options for Hungarian Notation
 - :option:`HungarianNotation.DerivedType.Pointer`
 - :option:`HungarianNotation.DerivedType.FunctionPointer`
 
-- :option:`HungarianNotation.CString.CharPrinter`
+- :option:`HungarianNotation.CString.CharPointer`
 - :option:`HungarianNotation.CString.CharArray`
-- :option:`HungarianNotation.CString.WideCharPrinter`
+- :option:`HungarianNotation.CString.WideCharPointer`
 - :option:`HungarianNotation.CString.WideCharArray`
 
 - :option:`HungarianNotation.PrimitiveType.*`
@@ -2642,7 +2723,7 @@ After:
     FUNC_PTR fnFuncPtr = NULL;
 
 
-.. option:: HungarianNotation.CString.CharPrinter
+.. option:: HungarianNotation.CString.CharPointer
 
     When defined, the check will ensure variable name will add the prefix with
     the given string. The default prefix is `sz`.
@@ -2652,7 +2733,7 @@ After:
     When defined, the check will ensure variable name will add the prefix with
     the given string. The default prefix is `sz`.
 
-.. option:: HungarianNotation.CString.WideCharPrinter
+.. option:: HungarianNotation.CString.WideCharPointer
 
     When defined, the check will ensure variable name will add the prefix with
     the given string. The default prefix is `wsz`.
@@ -2667,13 +2748,13 @@ Before:
 
 .. code-block:: c++
 
-    // CharPrinter
+    // CharPointer
     const char *NamePtr = "Name";
 
     // CharArray
     const char NameArray[] = "Name";
 
-    // WideCharPrinter
+    // WideCharPointer
     const wchar_t *WideNamePtr = L"Name";
 
     // WideCharArray
@@ -2683,13 +2764,13 @@ After:
 
 .. code-block:: c++
 
-    // CharPrinter
+    // CharPointer
     const char *szNamePtr = "Name";
 
     // CharArray
     const char szNameArray[] = "Name";
 
-    // WideCharPrinter
+    // WideCharPointer
     const wchar_t *wszWideNamePtr = L"Name";
 
     // WideCharArray

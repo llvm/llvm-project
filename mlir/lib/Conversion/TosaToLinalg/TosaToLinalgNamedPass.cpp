@@ -37,6 +37,9 @@ namespace {
 struct TosaToLinalgNamed
     : public impl::TosaToLinalgNamedBase<TosaToLinalgNamed> {
 public:
+  TosaToLinalgNamed(const TosaToLinalgNamedOptions &options)
+      : impl::TosaToLinalgNamedBase<TosaToLinalgNamed>(options) {}
+
   void getDependentDialects(DialectRegistry &registry) const override {
     registry
         .insert<arith::ArithDialect, linalg::LinalgDialect, math::MathDialect,
@@ -57,17 +60,21 @@ public:
     target.addIllegalOp<tosa::AvgPool2dOp>();
     target.addIllegalOp<tosa::MatMulOp>();
     target.addIllegalOp<tosa::FullyConnectedOp>();
+    target.addIllegalOp<tosa::TransposeOp>();
 
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
     FunctionOpInterface func = getOperation();
-    mlir::tosa::populateTosaToLinalgNamedConversionPatterns(&patterns);
+    TosaToLinalgNamedOptions options;
+    options.preferConv2DKernelLayoutHWCF = preferConv2DKernelLayoutHWCF;
+    tosa::populateTosaToLinalgNamedConversionPatterns(&patterns, options);
     if (failed(applyFullConversion(func, target, std::move(patterns))))
       signalPassFailure();
   }
 };
 } // namespace
 
-std::unique_ptr<Pass> mlir::tosa::createTosaToLinalgNamed() {
-  return std::make_unique<TosaToLinalgNamed>();
+std::unique_ptr<Pass>
+mlir::tosa::createTosaToLinalgNamed(const TosaToLinalgNamedOptions &options) {
+  return std::make_unique<TosaToLinalgNamed>(options);
 }

@@ -38,6 +38,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/GCStrategy.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include <algorithm>
 #include <cstddef>
@@ -101,6 +102,10 @@ public:
   GCFunctionInfo(const Function &F, GCStrategy &S);
   ~GCFunctionInfo();
 
+  /// Handle invalidation explicitly.
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &Inv);
+
   /// getFunction - Return the function to which this metadata applies.
   const Function &getFunction() const { return F; }
 
@@ -144,6 +149,52 @@ public:
   live_iterator live_begin(const iterator &p) { return roots_begin(); }
   live_iterator live_end(const iterator &p) { return roots_end(); }
   size_t live_size(const iterator &p) const { return roots_size(); }
+};
+
+struct GCStrategyMap {
+  StringMap<std::unique_ptr<GCStrategy>> StrategyMap;
+
+  GCStrategyMap() = default;
+  GCStrategyMap(GCStrategyMap &&) = default;
+
+  /// Handle invalidation explicitly.
+  bool invalidate(Module &M, const PreservedAnalyses &PA,
+                  ModuleAnalysisManager::Invalidator &Inv);
+};
+
+/// An analysis pass which caches information about the entire Module.
+/// Records a cache of the 'active' gc strategy objects for the current Module.
+class CollectorMetadataAnalysis
+    : public AnalysisInfoMixin<CollectorMetadataAnalysis> {
+  friend struct AnalysisInfoMixin<CollectorMetadataAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = GCStrategyMap;
+  Result run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+/// An analysis pass which caches information about the Function.
+/// Records the function level information used by GCRoots.
+/// This pass depends on `CollectorMetadataAnalysis`.
+class GCFunctionAnalysis : public AnalysisInfoMixin<GCFunctionAnalysis> {
+  friend struct AnalysisInfoMixin<GCFunctionAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = GCFunctionInfo;
+  Result run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+/// LowerIntrinsics - This pass rewrites calls to the llvm.gcread or
+/// llvm.gcwrite intrinsics, replacing them with simple loads and stores as
+/// directed by the GCStrategy. It also performs automatic root initialization
+/// and custom intrinsic lowering.
+///
+/// This pass requires `CollectorMetadataAnalysis`.
+class GCLoweringPass : public PassInfoMixin<GCLoweringPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 /// An analysis pass which caches information about the entire Module.

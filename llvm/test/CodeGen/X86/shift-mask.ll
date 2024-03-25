@@ -142,9 +142,9 @@ define i16 @test_i16_shl_lshr_1(i16 %a0) {
 define i16 @test_i16_shl_lshr_2(i16 %a0) {
 ; X86-LABEL: test_i16_shl_lshr_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrl $2, %eax
-; X86-NEXT:    andl $16376, %eax # imm = 0x3FF8
+; X86-NEXT:    andl $-8, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
@@ -411,7 +411,7 @@ define i16 @test_i16_lshr_lshr_0(i16 %a0) {
 define i16 @test_i16_lshr_lshr_1(i16 %a0) {
 ; X86-LABEL: test_i16_lshr_lshr_1:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrl $2, %eax
 ; X86-NEXT:    andl $2047, %eax # imm = 0x7FF
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax

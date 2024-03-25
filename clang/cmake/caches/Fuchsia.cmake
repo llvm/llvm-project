@@ -1,10 +1,12 @@
 # This file sets up a CMakeCache for a Fuchsia toolchain build.
 
+option(FUCHSIA_ENABLE_LLDB "Enable LLDB")
+
 set(LLVM_TARGETS_TO_BUILD X86;ARM;AArch64;RISCV CACHE STRING "")
 
 set(PACKAGE_VENDOR Fuchsia CACHE STRING "")
 
-set(LLVM_ENABLE_PROJECTS "bolt;clang;clang-tools-extra;lld;llvm;polly" CACHE STRING "")
+set(_FUCHSIA_ENABLE_PROJECTS "bolt;clang;clang-tools-extra;libc;lld;llvm;polly")
 
 set(LLVM_ENABLE_DIA_SDK OFF CACHE BOOL "")
 set(LLVM_ENABLE_LIBEDIT OFF CACHE BOOL "")
@@ -16,10 +18,76 @@ set(LLVM_ENABLE_Z3_SOLVER OFF CACHE BOOL "")
 set(LLVM_ENABLE_ZLIB OFF CACHE BOOL "")
 set(LLVM_INCLUDE_DOCS OFF CACHE BOOL "")
 set(LLVM_INCLUDE_EXAMPLES OFF CACHE BOOL "")
+set(LIBC_HDRGEN_ONLY ON CACHE BOOL "")
+set(LLVM_USE_RELATIVE_PATHS_IN_FILES ON CACHE BOOL "")
+set(LLDB_ENABLE_CURSES OFF CACHE BOOL "")
+set(LLDB_ENABLE_LIBEDIT OFF CACHE BOOL "")
 
-if(WIN32)
-  set(LLVM_USE_CRT_RELEASE "MT" CACHE STRING "")
-endif()
+# Passthrough stage1 flags to stage1.
+set(_FUCHSIA_BOOTSTRAP_PASSTHROUGH
+  LLVM_ENABLE_ZLIB
+  ZLIB_INCLUDE_DIR
+  ZLIB_LIBRARY
+  LLVM_ENABLE_ZSTD
+  zstd_DIR
+  LLVM_ENABLE_LIBXML2
+  LibXml2_ROOT
+  LLVM_ENABLE_CURL
+  LLVM_ENABLE_HTTPLIB
+  LLVM_ENABLE_TERMINFO
+  LLVM_ENABLE_LIBEDIT
+  CURL_ROOT
+  OpenSSL_ROOT
+  httplib_ROOT
+
+  # Deprecated
+  CursesAndPanel_ROOT
+
+  CURSES_INCLUDE_DIRS
+  CURSES_LIBRARIES
+  PANEL_LIBRARIES
+
+  # Deprecated
+  Terminfo_ROOT
+
+  Terminfo_LIBRARIES
+
+  # Deprecated
+  LibEdit_ROOT
+
+  LibEdit_INCLUDE_DIRS
+  LibEdit_LIBRARIES
+
+  FUCHSIA_ENABLE_LLDB
+  LLDB_ENABLE_CURSES
+  LLDB_ENABLE_LIBEDIT
+  LLDB_ENABLE_PYTHON
+  LLDB_EMBED_PYTHON_HOME
+  LLDB_PYTHON_HOME
+  LLDB_PYTHON_RELATIVE_PATH
+  LLDB_TEST_USE_VENDOR_PACKAGES
+  LLDB_TEST_USER_ARGS
+  Python3_EXECUTABLE
+  Python3_LIBRARIES
+  Python3_INCLUDE_DIRS
+  Python3_RPATH
+  CMAKE_FIND_PACKAGE_PREFER_CONFIG
+  CMAKE_SYSROOT
+  CMAKE_MODULE_LINKER_FLAGS
+  CMAKE_SHARED_LINKER_FLAGS
+  CMAKE_EXE_LINKER_FLAGS
+  LLVM_WINSYSROOT
+  LLVM_VFSOVERLAY
+)
+
+foreach(variable ${_FUCHSIA_BOOTSTRAP_PASSTHROUGH})
+  get_property(is_value_set CACHE ${variable} PROPERTY VALUE SET)
+  if(${is_value_set})
+    get_property(value CACHE ${variable} PROPERTY VALUE)
+    get_property(type CACHE ${variable} PROPERTY TYPE)
+    set(BOOTSTRAP_${variable} "${value}" CACHE ${type} "")
+  endif()
+endforeach()
 
 set(CLANG_DEFAULT_CXX_STDLIB libc++ CACHE STRING "")
 set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
@@ -50,7 +118,6 @@ endif()
 
 if(WIN32)
   set(LIBCXX_ABI_VERSION 2 CACHE STRING "")
-  set(LIBCXX_ENABLE_FILESYSTEM OFF CACHE BOOL "")
   set(LIBCXX_ENABLE_ABI_LINKER_SCRIPT OFF CACHE BOOL "")
   set(LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
   set(BUILTINS_CMAKE_ARGS -DCMAKE_SYSTEM_NAME=Windows CACHE STRING "")
@@ -68,6 +135,7 @@ else()
   set(LIBCXX_ABI_VERSION 2 CACHE STRING "")
   set(LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
   set(LIBCXX_ENABLE_STATIC_ABI_LIBRARY ON CACHE BOOL "")
+  set(LIBCXX_HARDENING_MODE "none" CACHE STRING "")
   set(LIBCXX_USE_COMPILER_RT ON CACHE BOOL "")
   set(LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
   set(RUNTIMES_CMAKE_ARGS "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13;-DCMAKE_OSX_ARCHITECTURES=arm64|x86_64" CACHE STRING "")
@@ -105,16 +173,10 @@ if(BOOTSTRAP_CMAKE_SYSTEM_NAME)
   endif()
 endif()
 
-if(UNIX)
-  set(BOOTSTRAP_CMAKE_SHARED_LINKER_FLAGS "-ldl -lpthread" CACHE STRING "")
-  set(BOOTSTRAP_CMAKE_MODULE_LINKER_FLAGS "-ldl -lpthread" CACHE STRING "")
-  set(BOOTSTRAP_CMAKE_EXE_LINKER_FLAGS "-ldl -lpthread" CACHE STRING "")
-endif()
-
 set(BOOTSTRAP_LLVM_ENABLE_LLD ON CACHE BOOL "")
 set(BOOTSTRAP_LLVM_ENABLE_LTO ON CACHE BOOL "")
 
-set(CLANG_BOOTSTRAP_TARGETS
+set(_FUCHSIA_BOOTSTRAP_TARGETS
   check-all
   check-clang
   check-lld
@@ -126,19 +188,37 @@ set(CLANG_BOOTSTRAP_TARGETS
   llvm-test-depends
   test-suite
   test-depends
-  distribution
-  install-distribution
-  install-distribution-stripped
-  install-distribution-toolchain
-  clang CACHE STRING "")
+  toolchain-distribution
+  install-toolchain-distribution
+  install-toolchain-distribution-stripped
+  install-toolchain-distribution-toolchain
+  clang)
+
+if(FUCHSIA_ENABLE_LLDB)
+  list(APPEND _FUCHSIA_ENABLE_PROJECTS lldb)
+  list(APPEND _FUCHSIA_BOOTSTRAP_TARGETS
+    check-lldb
+    lldb-test-depends
+    debugger-distribution
+    install-debugger-distribution
+    install-debugger-distribution-stripped
+    install-debugger-distribution-toolchain)
+endif()
+
+set(LLVM_ENABLE_PROJECTS ${_FUCHSIA_ENABLE_PROJECTS} CACHE STRING "")
+set(CLANG_BOOTSTRAP_TARGETS ${_FUCHSIA_BOOTSTRAP_TARGETS} CACHE STRING "")
 
 get_cmake_property(variableNames VARIABLES)
 foreach(variableName ${variableNames})
   if(variableName MATCHES "^STAGE2_")
     string(REPLACE "STAGE2_" "" new_name ${variableName})
-    list(APPEND EXTRA_ARGS "-D${new_name}=${${variableName}}")
+    string(REPLACE ";" "|" value "${${variableName}}")
+    list(APPEND EXTRA_ARGS "-D${new_name}=${value}")
   endif()
 endforeach()
+
+# TODO: This is a temporary workaround until we figure out the right solution.
+set(BOOTSTRAP_LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
 
 # Setup the bootstrap build.
 set(CLANG_ENABLE_BOOTSTRAP ON CACHE BOOL "")

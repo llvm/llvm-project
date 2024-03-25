@@ -45,7 +45,7 @@ struct BadArgument {
   BadArgument& operator=(BadArgument&);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should take 'BadArgument const&', 'BadArgument&&' or 'BadArgument'
   BadArgument& operator=(const BadArgument&&);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should take 'BadAr
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should take 'BadArgument const&', 'BadArgument&&' or 'BadArgument'
 };
 
 struct BadModifier {
@@ -76,7 +76,7 @@ class BadReturnStatement {
 public:
   BadReturnStatement& operator=(BadReturnStatement&& rhs) {
     n = std::move(rhs.n);
-    return rhs;
+    return *&rhs;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operator=() should always return '*this'
   }
 

@@ -14,7 +14,7 @@
 #include <errno.h>
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, pthread_mutexattr_settype,
                    (pthread_mutexattr_t *__restrict attr, int type)) {
@@ -28,4 +28,4 @@ LLVM_LIBC_FUNCTION(int, pthread_mutexattr_settype,
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -141,6 +141,11 @@ public:
     AddSourceLocation(Loc);
   }
 
+  void writeTypeCoupledDeclRefInfo(TypeCoupledDeclRefInfo Info) {
+    writeDeclRef(Info.getDecl());
+    writeBool(Info.isDeref());
+  }
+
   /// Emit a source range.
   void AddSourceRange(SourceRange Range, LocSeq *Seq = nullptr) {
     return Writer->AddSourceRange(Range, *Record, Seq);
@@ -221,6 +226,9 @@ public:
   /// Emits an AST template argument list info.
   void AddASTTemplateArgumentListInfo(
       const ASTTemplateArgumentListInfo *ASTTemplArgList);
+
+  // Emits a concept reference.
+  void AddConceptReference(const ConceptReference *CR);
 
   /// Emit a reference to a declaration.
   void AddDeclRef(const Decl *D) {

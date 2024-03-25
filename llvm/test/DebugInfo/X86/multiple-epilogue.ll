@@ -24,16 +24,16 @@
 ; LINE-TABLE:  seg_select_size: 0
 ; LINE-TABLE:  prologue_length: 0x00000037
 
-; LINE-TABLE:      Address            Line   Column File   ISA Discriminator Flags
-; LINE-TABLE-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
-; LINE-TABLE-NEXT: 0x0000000000000000      4      0      0   0             0  is_stmt
-; LINE-TABLE-NEXT: 0x0000000000000001      5      9      0   0             0  is_stmt prologue_end
-; LINE-TABLE-NEXT: 0x0000000000000004      5      7      0   0             0 
-; LINE-TABLE-NEXT: 0x0000000000000006      6     12      0   0             0  is_stmt
-; LINE-TABLE-NEXT: 0x000000000000000b      9      1      0   0             0  is_stmt epilogue_begin
-; LINE-TABLE-NEXT: 0x000000000000000d      8     12      0   0             0  is_stmt
-; LINE-TABLE-NEXT: 0x0000000000000012      9      1      0   0             0  is_stmt epilogue_begin
-; LINE-TABLE-NEXT: 0x0000000000000014      9      1      0   0             0  is_stmt end_sequence
+; LINE-TABLE:      Address            Line   Column File   ISA Discriminator OpIndex Flags
+; LINE-TABLE-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+; LINE-TABLE-NEXT: 0x0000000000000000      4      0      0   0             0       0  is_stmt
+; LINE-TABLE-NEXT: 0x0000000000000001      5      9      0   0             0       0  is_stmt prologue_end
+; LINE-TABLE-NEXT: 0x0000000000000004      5      7      0   0             0       0
+; LINE-TABLE-NEXT: 0x0000000000000006      6     12      0   0             0       0  is_stmt
+; LINE-TABLE-NEXT: 0x000000000000000b      9      1      0   0             0       0  is_stmt epilogue_begin
+; LINE-TABLE-NEXT: 0x000000000000000d      8     12      0   0             0       0  is_stmt
+; LINE-TABLE-NEXT: 0x0000000000000012      9      1      0   0             0       0  is_stmt epilogue_begin
+; LINE-TABLE-NEXT: 0x0000000000000014      9      1      0   0             0       0  is_stmt end_sequence
 
 
 

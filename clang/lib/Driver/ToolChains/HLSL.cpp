@@ -12,7 +12,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Job.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -226,16 +226,23 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       A->claim();
       continue;
     }
+    if (A->getOption().getID() == options::OPT_dxc_hlsl_version) {
+      // Translate -HV into -std for llvm
+      // depending on the value given
+      LangStandard::Kind LangStd = LangStandard::getHLSLLangKind(A->getValue());
+      if (LangStd != LangStandard::lang_unspecified) {
+        LangStandard l = LangStandard::getLangStandardForKind(LangStd);
+        DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_std_EQ),
+                            l.getName());
+      } else {
+        getDriver().Diag(diag::err_drv_invalid_value) << "HV" << A->getValue();
+      }
+
+      A->claim();
+      continue;
+    }
     DAL->append(A);
   }
-
-  if (DAL->hasArg(options::OPT_o)) {
-    // When run the whole pipeline.
-    if (!DAL->hasArg(options::OPT_emit_llvm))
-      // Emit obj if write to file.
-      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_emit_obj));
-  } else
-    DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_o), "-");
 
   // Add default validator version if not set.
   // TODO: remove this once read validator version from validator.

@@ -28,7 +28,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     LIBCPP_ASSERT(c.max_size() == 10);
   }
   {
-    typedef limited_allocator<int, (size_t)-1> A;
+    typedef limited_allocator<int, (std::size_t)-1> A;
     typedef std::vector<int, A> C;
     const C::size_type max_dist =
         static_cast<C::size_type>(std::numeric_limits<C::difference_type>::max());

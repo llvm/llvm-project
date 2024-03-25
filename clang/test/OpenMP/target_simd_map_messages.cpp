@@ -1,10 +1,12 @@
 // RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp -fopenmp-version=45 %s -Wno-openmp-mapping -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,ge50,lt51 -fopenmp -fopenmp-version=50 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp -fopenmp-version=51 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,lt51,omp52 -fopenmp -fopenmp-version=52 %s -Wno-openmp-mapping -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp-simd -fopenmp-version=45 %s -Wno-openmp-mapping -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,ge50,lt51 -fopenmp-simd -fopenmp-version=50 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp-simd -fopenmp-version=51 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp-simd %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,lt51,omp52 -fopenmp-simd -fopenmp-version=52 %s -Wno-openmp-mapping -Wuninitialized
 
 void foo() {
 }
@@ -299,6 +301,8 @@ int main(int argc, char **argv) {
 #pragma omp target simd map(tofrom, always: x)
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target simd map(always, tofrom: always, tofrom, x)
+  for (i = 0; i < argc; ++i) foo();
+#pragma omp target simd map(always tofrom: x) // omp52-error {{missing ',' after map type modifier}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target simd map(tofrom j) // expected-error {{expected ',' or ')' in 'map' clause}}
   for (i = 0; i < argc; ++i) foo();

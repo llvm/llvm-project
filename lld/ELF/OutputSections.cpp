@@ -22,6 +22,8 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 #if LLVM_ENABLE_ZLIB
+// Avoid introducing max as a macro from Windows headers.
+#define NOMINMAX
 #include <zlib.h>
 #endif
 #if LLVM_ENABLE_ZSTD
@@ -116,16 +118,18 @@ void OutputSection::commitSection(InputSection *isec) {
     if (hasInputSections || typeIsSet) {
       if (typeIsSet || !canMergeToProgbits(type) ||
           !canMergeToProgbits(isec->type)) {
-        // Changing the type of a (NOLOAD) section is fishy, but some projects
-        // (e.g. https://github.com/ClangBuiltLinux/linux/issues/1597)
-        // traditionally rely on the behavior. Issue a warning to not break
-        // them. Other types get an error.
-        auto diagnose = type == SHT_NOBITS ? warn : errorOrWarn;
-        diagnose("section type mismatch for " + isec->name + "\n>>> " +
-                 toString(isec) + ": " +
-                 getELFSectionTypeName(config->emachine, isec->type) +
-                 "\n>>> output section " + name + ": " +
-                 getELFSectionTypeName(config->emachine, type));
+        // The (NOLOAD) changes the section type to SHT_NOBITS, the intention is
+        // that the contents at that address is provided by some other means.
+        // Some projects (e.g.
+        // https://github.com/ClangBuiltLinux/linux/issues/1597) rely on the
+        // behavior. Other types get an error.
+        if (type != SHT_NOBITS) {
+          errorOrWarn("section type mismatch for " + isec->name + "\n>>> " +
+                      toString(isec) + ": " +
+                      getELFSectionTypeName(config->emachine, isec->type) +
+                      "\n>>> output section " + name + ": " +
+                      getELFSectionTypeName(config->emachine, type));
+        }
       }
       if (!typeIsSet)
         type = SHT_PROGBITS;
@@ -217,7 +221,7 @@ void OutputSection::finalizeInputSections() {
       });
       if (i == mergeSections.end()) {
         MergeSyntheticSection *syn =
-            createMergeSynthetic(name, ms->type, ms->flags, ms->addralign);
+            createMergeSynthetic(s->name, ms->type, ms->flags, ms->addralign);
         mergeSections.push_back(syn);
         i = std::prev(mergeSections.end());
         syn->entsize = ms->entsize;
@@ -322,17 +326,30 @@ static SmallVector<uint8_t, 0> deflateShard(ArrayRef<uint8_t> in, int level,
 }
 #endif
 
-// Compress section contents if this section contains debug info.
+// Compress certain non-SHF_ALLOC sections:
+//
+// * (if --compress-debug-sections is specified) non-empty .debug_* sections
+// * (if --compress-sections is specified) matched sections
 template <class ELFT> void OutputSection::maybeCompress() {
   using Elf_Chdr = typename ELFT::Chdr;
   (void)sizeof(Elf_Chdr);
 
-  // Compress only DWARF debug sections.
-  if (config->compressDebugSections == DebugCompressionType::None ||
-      (flags & SHF_ALLOC) || !name.startswith(".debug_") || size == 0)
+  DebugCompressionType ctype = DebugCompressionType::None;
+  for (auto &[glob, t] : config->compressSections)
+    if (glob.match(name))
+      ctype = t;
+  if (!(flags & SHF_ALLOC) && config->compressDebugSections &&
+      name.starts_with(".debug_") && size)
+    ctype = *config->compressDebugSections;
+  if (ctype == DebugCompressionType::None)
     return;
+  if (flags & SHF_ALLOC) {
+    errorOrWarn("--compress-sections: section '" + name +
+                "' with the SHF_ALLOC flag cannot be compressed");
+    return;
+  }
 
-  llvm::TimeTraceScope timeScope("Compress debug sections");
+  llvm::TimeTraceScope timeScope("Compress sections");
   compressed.uncompressedSize = size;
   auto buf = std::make_unique<uint8_t[]>(size);
   // Write uncompressed data to a temporary zero-initialized buffer.
@@ -340,14 +357,21 @@ template <class ELFT> void OutputSection::maybeCompress() {
     parallel::TaskGroup tg;
     writeTo<ELFT>(buf.get(), tg);
   }
+  // The generic ABI specifies "The sh_size and sh_addralign fields of the
+  // section header for a compressed section reflect the requirements of the
+  // compressed section." However, 1-byte alignment has been wildly accepted
+  // and utilized for a long time. Removing alignment padding is particularly
+  // useful when there are many compressed output sections.
+  addralign = 1;
 
 #if LLVM_ENABLE_ZSTD
   // Use ZSTD's streaming compression API which permits parallel workers working
   // on the stream. See http://facebook.github.io/zstd/zstd_manual.html
   // "Streaming compression - HowTo".
-  if (config->compressDebugSections == DebugCompressionType::Zstd) {
+  if (ctype == DebugCompressionType::Zstd) {
     // Allocate a buffer of half of the input size, and grow it by 1.5x if
     // insufficient.
+    compressed.type = ELFCOMPRESS_ZSTD;
     compressed.shards = std::make_unique<SmallVector<uint8_t, 0>[]>(1);
     SmallVector<uint8_t, 0> &out = compressed.shards[0];
     out.resize_for_overwrite(std::max<size_t>(size / 2, 32));
@@ -420,6 +444,7 @@ template <class ELFT> void OutputSection::maybeCompress() {
   }
   size += 4; // checksum
 
+  compressed.type = ELFCOMPRESS_ZLIB;
   compressed.shards = std::move(shardsOut);
   compressed.numShards = numShards;
   compressed.checksum = checksum;
@@ -446,20 +471,18 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
   if (type == SHT_NOBITS)
     return;
 
-  // If --compress-debug-section is specified and if this is a debug section,
-  // we've already compressed section contents. If that's the case,
-  // just write it down.
+  // If the section is compressed due to
+  // --compress-debug-section/--compress-sections, the content is already known.
   if (compressed.shards) {
     auto *chdr = reinterpret_cast<typename ELFT::Chdr *>(buf);
+    chdr->ch_type = compressed.type;
     chdr->ch_size = compressed.uncompressedSize;
     chdr->ch_addralign = addralign;
     buf += sizeof(*chdr);
-    if (config->compressDebugSections == DebugCompressionType::Zstd) {
-      chdr->ch_type = ELFCOMPRESS_ZSTD;
+    if (compressed.type == ELFCOMPRESS_ZSTD) {
       memcpy(buf, compressed.shards[0].data(), compressed.shards[0].size());
       return;
     }
-    chdr->ch_type = ELFCOMPRESS_ZLIB;
 
     // Compute shard offsets.
     auto offsets = std::make_unique<size_t[]>(compressed.numShards);
@@ -493,6 +516,12 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
         s->writeTo(buf + isec->outSecOff);
       else
         isec->writeTo<ELFT>(buf + isec->outSecOff);
+
+      // When in Arm BE8 mode, the linker has to convert the big-endian
+      // instructions to little-endian, leaving the data big-endian.
+      if (config->emachine == EM_ARM && !config->isLE && config->armBe8 &&
+          (flags & SHF_EXECINSTR))
+        convertArmInstructionstoBE8(isec, buf + isec->outSecOff);
 
       // Fill gaps between sections.
       if (nonZeroFiller) {
@@ -534,7 +563,7 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
     taskSize += sections[i]->getSize();
     bool done = ++i == numSections;
     if (done || taskSize >= taskSizeLimit) {
-      tg.execute([=] { fn(begin, i); });
+      tg.spawn([=] { fn(begin, i); });
       if (done)
         break;
       begin = i;
@@ -554,7 +583,7 @@ static void finalizeShtGroup(OutputSection *os, InputSection *section) {
   // sh_info then contain index of an entry in symbol table section which
   // provides signature of the section group.
   ArrayRef<Symbol *> symbols = section->file->getSymbols();
-  os->info = in.symTab->getSymbolIndex(symbols[section->info]);
+  os->info = in.symTab->getSymbolIndex(*symbols[section->info]);
 
   // Some group members may be combined or discarded, so we need to compute the
   // new size. The content will be rewritten in InputSection::copyShtGroup.
@@ -586,7 +615,7 @@ void OutputSection::finalize() {
     return;
   }
 
-  if (!config->copyRelocs || (type != SHT_RELA && type != SHT_REL))
+  if (!config->copyRelocs || !isStaticRelSecType(type))
     return;
 
   // Skip if 'first' is synthetic, i.e. not a section created by --emit-relocs.
@@ -667,7 +696,7 @@ int elf::getPriority(StringRef s) {
     return 65536;
   int v = 65536;
   if (to_integer(s.substr(pos + 1), v, 10) &&
-      (pos == 6 && (s.startswith(".ctors") || s.startswith(".dtors"))))
+      (pos == 6 && (s.starts_with(".ctors") || s.starts_with(".dtors"))))
     v = 65535 - v;
   return v;
 }
@@ -721,7 +750,7 @@ std::array<uint8_t, 4> OutputSection::getFiller() {
 
 void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
   assert(config->writeAddends && config->checkDynamicRelocs);
-  assert(type == SHT_REL || type == SHT_RELA);
+  assert(isStaticRelSecType(type));
   SmallVector<InputSection *, 0> storage;
   ArrayRef<InputSection *> sections = getInputSections(*this, storage);
   parallelFor(0, sections.size(), [&](size_t i) {
@@ -736,6 +765,12 @@ void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
       int64_t addend = rel.addend;
       const OutputSection *relOsec = rel.inputSec->getOutputSection();
       assert(relOsec != nullptr && "missing output section for relocation");
+      // Some targets have NOBITS synthetic sections with dynamic relocations
+      // with non-zero addends. Skip such sections.
+      if (is_contained({EM_PPC, EM_PPC64}, config->emachine) &&
+          (rel.inputSec == in.ppc64LongBranchTarget.get() ||
+           rel.inputSec == in.igotPlt.get()))
+        continue;
       const uint8_t *relocTarget =
           bufStart + relOsec->offset + rel.inputSec->getOffset(rel.offsetInSec);
       // For SHT_NOBITS the written addend is always zero.

@@ -1,25 +1,43 @@
-// DEFINE: %{option} = enable-runtime-library=true
-// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
-// DEFINE: TENSOR0="%mlir_src_dir/test/Integration/data/test_symmetric_complex.mtx" \
-// DEFINE: mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// DEFINE: FileCheck %s
+//--------------------------------------------------------------------------------------------------
+// WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.
 //
-// RUN: %{command}
+// Set-up that's shared across all tests in this directory. In principle, this
+// config could be moved to lit.local.cfg. However, there are downstream users that
+//  do not use these LIT config files. Hence why this is kept inline.
+//
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
+// DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
+// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+//
+// DEFINE: %{env} =
+//--------------------------------------------------------------------------------------------------
+
+// REDEFINE: %{env} = TENSOR0="%mlir_src_dir/test/Integration/data/test_symmetric_complex.mtx"
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{option} = enable-runtime-library=false
-// RUN: %{command}
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
-// Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
-// RUN: %{command}
+// Do the same run, but now with vectorization.
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
+//
+// Do the same run, but now with  VLA vectorization.
+// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | env %{env} %{run_sve} | FileCheck %s %}
 
-!Filename = !llvm.ptr<i8>
+// TODO: The test currently only operates on the triangular part of the
+// symmetric matrix.
+
+!Filename = !llvm.ptr
 
 #SparseMatrix = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed" ]
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed)
 }>
 
 #trait_sum_reduce = {
@@ -57,7 +75,7 @@ module {
   //
   // Main driver that reads matrix from file and calls the sparse kernel.
   //
-  func.func @entry() {
+  func.func @main() {
     //%d0 = arith.constant 0.0 : complex<f64>
     %d0 = complex.constant [0.0 : f64, 0.0 : f64] : complex<f64>
     %c0 = arith.constant 0 : index
@@ -65,12 +83,12 @@ module {
     // Setup memory for a single reduction scalar,
     // initialized to zero.
     // TODO: tensor.from_elements does not support complex.
-    %alloc = bufferization.alloc_tensor() : tensor<complex<f64>>
+    %alloc = tensor.empty() : tensor<complex<f64>>
     %x = tensor.insert %d0 into %alloc[] : tensor<complex<f64>>
 
     // Read the sparse matrix from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
-    %a = sparse_tensor.new expand_symmetry %fileName : !Filename to tensor<?x?xcomplex<f64>, #SparseMatrix>
+    %a = sparse_tensor.new %fileName : !Filename to tensor<?x?xcomplex<f64>, #SparseMatrix>
 
     // Call the kernel.
     %0 = call @kernel_sum_reduce(%a, %x)
@@ -78,8 +96,8 @@ module {
 
     // Print the result for verification.
     //
-    // CHECK: 30.2
-    // CHECK-NEXT: 22.2
+    // CHECK: 24.1
+    // CHECK-NEXT: 16.1
     //
     %v = tensor.extract %0[] : tensor<complex<f64>>
     %real = complex.re %v : complex<f64>
@@ -88,6 +106,7 @@ module {
     vector.print %imag : f64
 
     // Release the resources.
+    bufferization.dealloc_tensor %0 : tensor<complex<f64>>
     bufferization.dealloc_tensor %a : tensor<?x?xcomplex<f64>, #SparseMatrix>
 
     return

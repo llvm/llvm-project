@@ -8,8 +8,8 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
@@ -148,6 +148,21 @@ void test2(FunctionOpInterface f) {
     llvm::outs() << "Pattern add(add(a, constant), a) matched\n";
 }
 
+void test3(FunctionOpInterface f) {
+  arith::FastMathFlagsAttr fastMathAttr;
+  auto p = m_Op<arith::MulFOp>(m_Any(),
+                               m_Op<arith::AddFOp>(m_Any(), m_Op("test.name")));
+  auto p1 = m_Attr("fastmath", &fastMathAttr);
+
+  // Last operation that is not the terminator.
+  Operation *lastOp = f.getFunctionBody().front().back().getPrevNode();
+  if (p.match(lastOp))
+    llvm::outs() << "Pattern mul(*, add(*, m_Op(\"test.name\"))) matched\n";
+  if (p1.match(lastOp))
+    llvm::outs() << "Pattern m_Attr(\"fastmath\") matched and bound value to: "
+                 << fastMathAttr.getValue() << "\n";
+}
+
 void TestMatchers::runOnOperation() {
   auto f = getOperation();
   llvm::outs() << f.getName() << "\n";
@@ -155,6 +170,8 @@ void TestMatchers::runOnOperation() {
     test1(f);
   if (f.getName() == "test2")
     test2(f);
+  if (f.getName() == "test3")
+    test3(f);
 }
 
 namespace mlir {

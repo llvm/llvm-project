@@ -1,8 +1,8 @@
-// KEEP-ALL-NOT:  warning:
+// KEEP-ALL-NOT:  warning: argument unused
 // KEEP-ALL:      "-mframe-pointer=all"
-// KEEP-NON-LEAF-NOT: warning:
+// KEEP-NON-LEAF-NOT: warning: argument unused
 // KEEP-NON-LEAF: "-mframe-pointer=non-leaf"
-// KEEP-NONE-NOT: warning:
+// KEEP-NONE-NOT: warning: argument unused
 // KEEP-NONE:     "-mframe-pointer=none"
 
 // On Linux x86, omit frame pointer when optimization is enabled.
@@ -42,17 +42,10 @@
 // RUN:   FileCheck --check-prefix=KEEP-NONE %s
 
 // -pg -fomit-frame-pointer => error.
-// RUN: %clang -### -S -fomit-frame-pointer -pg %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-OMIT-FP-PG %s
+// RUN: not %clang -### -S -fomit-frame-pointer -pg %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-OMIT-FP-PG %s
 // RUN: %clang -### -S -fomit-frame-pointer -fno-omit-frame-pointer -pg %s 2>&1 | FileCheck -check-prefix=CHECK-MIX-NO-OMIT-FP-PG %s
 // CHECK-NO-MIX-OMIT-FP-PG: '-fomit-frame-pointer' not allowed with '-pg'
 // CHECK-MIX-NO-OMIT-FP-PG-NOT: '-fomit-frame-pointer' not allowed with '-pg'
-
-// CloudABI follows the same rules as Linux.
-// RUN: %clang -### -target x86_64-unknown-cloudabi -S -O1 %s 2>&1 | \
-// RUN:   FileCheck --check-prefix=KEEP-NONE %s
-
-// RUN: %clang -### -target x86_64-unknown-cloudabi -S %s 2>&1 | \
-// RUN:   FileCheck --check-prefix=KEEP-ALL %s
 
 // NetBSD follows the same rules as Linux.
 // RUN: %clang -### -target x86_64-unknown-netbsd -S -O1 %s 2>&1 | \
@@ -106,6 +99,12 @@
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
 // RUN: %clang -### -target ve-unknown-linux-gnu -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### --target=aarch64-linux-android -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### --target=aarch64-linux-android -S -O2 %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### --target=aarch64-linux-android -S -Os %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
 
 // RUN: %clang -### -target powerpc64 -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-ALL %s
@@ -153,6 +152,9 @@
 // RUN:   FileCheck --check-prefix=KEEP-ALL %s
 // RUN: %clang -### -target armv7a-linux-androideabi- -mthumb -mbig-endian -O1 -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-ALL %s
-
+// RUN: %clang -### --target=riscv64-linux-android -O1 -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: not %clang -### --target=riscv64-linux-android -mbig-endian -O1 -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
 void f0() {}
 void f1() { f0(); }

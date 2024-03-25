@@ -175,6 +175,7 @@ Sections:
         Symbol:          .text
         Type:            R_AARCH64_ADD_ABS_LO12_NC
         Addend:          56
+      - Offset:          0x400540
         Symbol:          '__libc_start_main@@GLIBC_2.17'
         Type:            R_AARCH64_CALL26
       - Offset:          0x400544

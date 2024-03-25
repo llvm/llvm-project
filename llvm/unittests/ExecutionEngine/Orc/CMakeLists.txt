@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   IRReader
   JITLink
   Object
+  OrcDebugging
   OrcJIT
   OrcShared
   OrcTargetProcess
@@ -25,8 +26,10 @@ add_llvm_unittest(OrcJITTests
   JITTargetMachineBuilderTest.cpp
   LazyCallThroughAndReexportsTest.cpp
   LookupAndRecordAddrsTest.cpp
+  MachOPlatformTest.cpp
   MapperJITLinkMemoryManagerTest.cpp
   MemoryMapperTest.cpp
+  ObjectFormatsTest.cpp
   ObjectLinkingLayerTest.cpp
   OrcCAPITest.cpp
   OrcTestCommon.cpp
@@ -46,3 +49,5 @@ target_link_libraries(OrcJITTests PRIVATE
                         ${ORC_JIT_TEST_LIBS})
 
 set_property(TARGET OrcJITTests PROPERTY FOLDER "Tests/UnitTests/ExecutionTests")
+
+export_executable_symbols(OrcJITTests)

@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: rm -rf %t; split-file %s %t
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/bad-function.s -o %t/bad-function.o
+# RUN: llvm-mc -emit-compact-unwind-non-canonical=true -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/bad-function.s -o %t/bad-function.o
 # RUN: not %lld -lSystem -dylib -lc++ %t/bad-function.o -o /dev/null 2>&1 | FileCheck %s
 # CHECK: error: {{.*}}bad-function.o:(__compact_unwind+0x0) references section __data which is not in segment __TEXT
 # CHECK: error: {{.*}}bad-function.o:(__compact_unwind+0x20) references section __data which is not in segment __TEXT

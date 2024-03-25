@@ -19,7 +19,11 @@
 
 // The AIX assembler does not support CFI directives, which
 // are necessary to run this test.
-// UNSUPPORTED: target=powerpc{{(64)?}}-ibm-aix
+// UNSUPPORTED: target={{.*}}-aix{{.*}}
+
+// Windows doesn't generally use CFI directives. However, i686
+// mingw targets do use DWARF (where CFI directives are supported).
+// UNSUPPORTED: target={{x86_64|arm.*|aarch64}}-{{.*}}-windows-{{.*}}
 
 #undef NDEBUG
 #include <assert.h>

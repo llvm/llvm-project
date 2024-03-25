@@ -33,12 +33,10 @@ define i1 @cmp_anybits_concat_i32(i32 %x, i32 %y) {
 define i1 @cmp_anybits_concat_shl_shl_i16(i16 %x, i16 %y) {
 ; CHECK-LABEL: cmp_anybits_concat_shl_shl_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    movzwl %di, %eax
 ; CHECK-NEXT:    movzwl %si, %ecx
-; CHECK-NEXT:    shlq $8, %rcx
-; CHECK-NEXT:    orq %rax, %rcx
+; CHECK-NEXT:    shll $8, %ecx
+; CHECK-NEXT:    orl %eax, %ecx
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %zx = zext i16 %x to i64
@@ -53,12 +51,10 @@ define i1 @cmp_anybits_concat_shl_shl_i16(i16 %x, i16 %y) {
 define i1 @cmp_anybits_concat_shl_shl_i16_commute(i16 %x, i16 %y) {
 ; CHECK-LABEL: cmp_anybits_concat_shl_shl_i16_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    movzwl %di, %eax
 ; CHECK-NEXT:    movzwl %si, %ecx
-; CHECK-NEXT:    shlq $8, %rcx
-; CHECK-NEXT:    orq %rax, %rcx
+; CHECK-NEXT:    shll $8, %ecx
+; CHECK-NEXT:    orl %eax, %ecx
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %zx = zext i16 %x to i64

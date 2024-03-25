@@ -14,9 +14,8 @@ define i32 @vscale_and_elimination() vscale_range(1,16) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    and w9, w8, #0x1f
-; CHECK-NEXT:    and w8, w8, #0xfffffffc
-; CHECK-NEXT:    add w0, w9, w8
+; CHECK-NEXT:    and w9, w8, #0x1c
+; CHECK-NEXT:    add w0, w8, w9
 ; CHECK-NEXT:    ret
   %vscale = call i32 @llvm.vscale.i32()
   %and_redundant = and i32 %vscale, 31
@@ -85,8 +84,7 @@ define i64 @vscale_trunc_zext() vscale_range(1,16) {
 ; CHECK-LABEL: vscale_trunc_zext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    and x0, x8, #0xffffffff
+; CHECK-NEXT:    lsr x0, x8, #4
 ; CHECK-NEXT:    ret
   %vscale = call i32 @llvm.vscale.i32()
   %zext = zext i32 %vscale to i64
@@ -97,8 +95,7 @@ define i64 @vscale_trunc_sext() vscale_range(1,16) {
 ; CHECK-LABEL: vscale_trunc_sext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    sxtw x0, w8
+; CHECK-NEXT:    lsr x0, x8, #4
 ; CHECK-NEXT:    ret
   %vscale = call i32 @llvm.vscale.i32()
   %sext = sext i32 %vscale to i64
@@ -200,9 +197,8 @@ define i32 @vscale_with_multiplier() vscale_range(1,16) {
 ; CHECK-NEXT:    mov w9, #5
 ; CHECK-NEXT:    lsr x8, x8, #4
 ; CHECK-NEXT:    mul x8, x8, x9
-; CHECK-NEXT:    and w9, w8, #0x7f
-; CHECK-NEXT:    and w8, w8, #0x3f
-; CHECK-NEXT:    add w0, w9, w8
+; CHECK-NEXT:    and w9, w8, #0x3f
+; CHECK-NEXT:    add w0, w8, w9
 ; CHECK-NEXT:    ret
   %vscale = call i32 @llvm.vscale.i32()
   %mul = mul i32 %vscale, 5
@@ -219,14 +215,29 @@ define i32 @vscale_with_negative_multiplier() vscale_range(1,16) {
 ; CHECK-NEXT:    mov x9, #-5
 ; CHECK-NEXT:    lsr x8, x8, #4
 ; CHECK-NEXT:    mul x8, x8, x9
-; CHECK-NEXT:    orr w9, w8, #0xffffff80
-; CHECK-NEXT:    and w8, w8, #0xffffffc0
-; CHECK-NEXT:    add w0, w9, w8
+; CHECK-NEXT:    and w9, w8, #0xffffffc0
+; CHECK-NEXT:    add w0, w8, w9
 ; CHECK-NEXT:    ret
   %vscale = call i32 @llvm.vscale.i32()
   %mul = mul i32 %vscale, -5
   %or_redundant = or i32 %mul, 4294967168
   %or_required = and i32 %mul, 4294967232
+  %result = add i32 %or_redundant, %or_required
+  ret i32 %result
+}
+
+define i32 @pow2_vscale_with_negative_multiplier() vscale_range(1,16) {
+; CHECK-LABEL: pow2_vscale_with_negative_multiplier:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cntd x8
+; CHECK-NEXT:    neg x8, x8
+; CHECK-NEXT:    orr w9, w8, #0xfffffff0
+; CHECK-NEXT:    add w0, w8, w9
+; CHECK-NEXT:    ret
+  %vscale = call i32 @llvm.vscale.i32()
+  %mul = mul i32 %vscale, -2
+  %or_redundant = or i32 %mul, 4294967264
+  %or_required = or i32 %mul, 4294967280
   %result = add i32 %or_redundant, %or_required
   ret i32 %result
 }

@@ -14,7 +14,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; CHECK-NEXT: Loop 'for.k' has cost = 2030000
 ; CHECK-NEXT: Loop 'for.j' has cost = 1060000
 
-define void @foo(i64 %n, i64 %m, i64 %o, i32* %A, i32* %B, i32* %C) {
+define void @foo(i64 %n, i64 %m, i64 %o, ptr %A, ptr %B, ptr %C) {
 entry:
   %cmp32 = icmp sgt i64 %n, 0
   %cmp230 = icmp sgt i64 %m, 0
@@ -48,23 +48,23 @@ for.k:                                            ; preds = %for.k, %for.j
   %addk = add i64 %muli, %k
   %mulk = mul i64 %addk, %o
   %arrayidx1 = add i64 %j, %mulk
-  %arrayidx2 = getelementptr inbounds i32, i32* %B, i64 %arrayidx1
-  %elem_B = load i32, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %B, i64 %arrayidx1
+  %elem_B = load i32, ptr %arrayidx2, align 4
 
   ; C[i][j][k]
   %arrayidx3 = add i64 %k, %mulj
-  %arrayidx4 = getelementptr inbounds i32, i32* %C, i64 %arrayidx3
-  %elem_C = load i32, i32* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds i32, ptr %C, i64 %arrayidx3
+  %elem_C = load i32, ptr %arrayidx4, align 4
 
   ; A[i][k][j]
-  %arrayidx5 = getelementptr inbounds i32, i32* %A, i64 %arrayidx1
-  %elem_A = load i32, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %A, i64 %arrayidx1
+  %elem_A = load i32, ptr %arrayidx5, align 4
 
   ; A[i][k][j] += B[i][k][j] + C[i][j][k]
   %add1 = add i32 %elem_B, %elem_C
   %add2 = add i32 %add1, %elem_A
-  %arrayidx6 = getelementptr inbounds i32, i32* %A, i64 %arrayidx1
-  store i32 %add2, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %A, i64 %arrayidx1
+  store i32 %add2, ptr %arrayidx6, align 4
 
   %inck = add nsw i64 %k, 1
   %exitcond.us = icmp eq i64 %inck, %o

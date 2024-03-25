@@ -200,3 +200,35 @@ define float @fadd_nnan_ninf_keep_nnan(float %a, float %b) {
   %op = fadd nnan ninf float %a, %b
   ret float %op
 }
+
+; CHECK-LABEL: @zext_nneg_drop(
+; INTERESTING: = zext
+; RESULT: zext i32
+define i64 @zext_nneg_drop(i32 %a) {
+  %op = zext nneg i32 %a to i64
+  ret i64 %op
+}
+
+; CHECK-LABEL: @zext_nneg_keep(
+; INTERESTING: = zext nneg
+; RESULT: zext nneg i32
+define i64 @zext_nneg_keep(i32 %a) {
+  %op = zext nneg i32 %a to i64
+  ret i64 %op
+}
+
+; CHECK-LABEL: @or_disjoint_drop(
+; INTERESTING: = or
+; RESULT: or i32
+define i32 @or_disjoint_drop(i32 %a, i32 %b) {
+  %op = or disjoint i32 %a, %b
+  ret i32 %op
+}
+
+; CHECK-LABEL: @or_disjoint_keep(
+; INTERESTING: = or disjoint
+; RESULT: or disjoint i32
+define i32 @or_disjoint_keep(i32 %a, i32 %b) {
+  %op = or disjoint i32 %a, %b
+  ret i32 %op
+}

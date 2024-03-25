@@ -1,6 +1,10 @@
 # This replicates part of the add_mlir_dialect cmake function from MLIR that
 # cannot be used her because it expects to be run inside MLIR directory which
 # is not the case for FIR.
+set(LLVM_TARGET_DEFINITIONS FIRDialect.td)
+mlir_tablegen(FIRDialect.h.inc -gen-dialect-decls -dialect=fir)
+mlir_tablegen(FIRDialect.cpp.inc -gen-dialect-defs -dialect=fir)
+
 set(LLVM_TARGET_DEFINITIONS FIRAttr.td)
 mlir_tablegen(FIREnumAttr.h.inc -gen-enum-decls)
 mlir_tablegen(FIREnumAttr.cpp.inc -gen-enum-defs)
@@ -17,6 +21,10 @@ add_public_tablegen_target(FIROpsIncGen)
 set(LLVM_TARGET_DEFINITIONS FortranVariableInterface.td)
 mlir_tablegen(FortranVariableInterface.h.inc -gen-op-interface-decls)
 mlir_tablegen(FortranVariableInterface.cpp.inc -gen-op-interface-defs)
+
+set(LLVM_TARGET_DEFINITIONS FirAliasTagOpInterface.td)
+mlir_tablegen(FirAliasTagOpInterface.h.inc -gen-op-interface-decls)
+mlir_tablegen(FirAliasTagOpInterface.cpp.inc -gen-op-interface-defs)
 
 set(LLVM_TARGET_DEFINITIONS CanonicalizationPatterns.td)
 mlir_tablegen(CanonicalizationPatterns.inc -gen-rewriters)

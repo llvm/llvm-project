@@ -16,8 +16,8 @@ include(CheckIncludeFile)
 include(CheckLibraryExists)
 include(CheckIncludeFiles)
 include(CheckSymbolExists)
-include(LibompCheckLinkerFlag)
 include(LibompCheckFortranFlag)
+include(LLVMCheckCompilerLinkerFlag)
 
 # Check for versioned symbols
 function(libomp_check_version_symbols retval)
@@ -96,11 +96,6 @@ if(WIN32)
       )
     endforeach()
   endforeach()
-else()
-  # It is difficult to create a dummy assembly file that compiles into an
-  # executable for every architecture and then check the C compiler to
-  # see if -x assembler-with-cpp exists and works, so we assume it does for non-Windows.
-  set(LIBOMP_HAVE_X_ASSEMBLER_WITH_CPP_FLAG TRUE)
 endif()
 if(${LIBOMP_FORTRAN_MODULES})
   libomp_check_fortran_flag(-m32 LIBOMP_HAVE_M32_FORTRAN_FLAG)
@@ -133,13 +128,13 @@ check_symbol_exists(_aligned_malloc "malloc.h" LIBOMP_HAVE__ALIGNED_MALLOC)
 
 # Check linker flags
 if(WIN32)
-  libomp_check_linker_flag(/SAFESEH LIBOMP_HAVE_SAFESEH_FLAG)
+  llvm_check_compiler_linker_flag(C /SAFESEH LIBOMP_HAVE_SAFESEH_FLAG)
 elseif(NOT APPLE)
-  libomp_check_linker_flag(-Wl,-x LIBOMP_HAVE_X_FLAG)
-  libomp_check_linker_flag(-Wl,--as-needed LIBOMP_HAVE_AS_NEEDED_FLAG)
-  libomp_check_linker_flag("-Wl,--version-script=${LIBOMP_SRC_DIR}/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-  libomp_check_linker_flag(-static-libgcc LIBOMP_HAVE_STATIC_LIBGCC_FLAG)
-  libomp_check_linker_flag(-Wl,-z,noexecstack LIBOMP_HAVE_Z_NOEXECSTACK_FLAG)
+  llvm_check_compiler_linker_flag(C -Wl,-x LIBOMP_HAVE_X_FLAG)
+  llvm_check_compiler_linker_flag(C -Wl,--as-needed LIBOMP_HAVE_AS_NEEDED_FLAG)
+  llvm_check_compiler_linker_flag(C "-Wl,--version-script=${LIBOMP_SRC_DIR}/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  llvm_check_compiler_linker_flag(C -static-libgcc LIBOMP_HAVE_STATIC_LIBGCC_FLAG)
+  llvm_check_compiler_linker_flag(C -Wl,-z,noexecstack LIBOMP_HAVE_Z_NOEXECSTACK_FLAG)
 endif()
 
 # Check Intel(R) C Compiler specific flags
@@ -150,20 +145,25 @@ if(CMAKE_C_COMPILER_ID STREQUAL "Intel" OR CMAKE_C_COMPILER_ID STREQUAL "IntelLL
   check_cxx_compiler_flag(-Qoption,cpp,--extended_float_types LIBOMP_HAVE_EXTENDED_FLOAT_TYPES_FLAG)
   check_cxx_compiler_flag(-falign-stack=maintain-16-byte LIBOMP_HAVE_FALIGN_STACK_FLAG)
   check_cxx_compiler_flag("-opt-streaming-stores never" LIBOMP_HAVE_OPT_STREAMING_STORES_FLAG)
-  libomp_check_linker_flag(-static-intel LIBOMP_HAVE_STATIC_INTEL_FLAG)
-  libomp_check_linker_flag(-no-intel-extensions LIBOMP_HAVE_NO_INTEL_EXTENSIONS_FLAG)
+  llvm_check_compiler_linker_flag(C -static-intel LIBOMP_HAVE_STATIC_INTEL_FLAG)
+  llvm_check_compiler_linker_flag(C -no-intel-extensions LIBOMP_HAVE_NO_INTEL_EXTENSIONS_FLAG)
   check_library_exists(irc_pic _intel_fast_memcpy "" LIBOMP_HAVE_IRC_PIC_LIBRARY)
 endif()
 
-# Checking Threading requirements
-find_package(Threads REQUIRED)
-if(WIN32)
-  if(NOT CMAKE_USE_WIN32_THREADS_INIT)
-    libomp_error_say("Need Win32 thread interface on Windows.")
-  endif()
-else()
-  if(NOT CMAKE_USE_PTHREADS_INIT)
-    libomp_error_say("Need pthread interface on Unix-like systems.")
+# Checking threading requirements. Note that compiling to WebAssembly threads
+# with either the Emscripten or wasi-threads flavor ends up using the pthreads
+# interface in a WebAssembly-compiled libc; CMake does not yet know how to
+# detect this.
+if (NOT WASM)
+  find_package(Threads REQUIRED)
+  if(WIN32)
+    if(NOT CMAKE_USE_WIN32_THREADS_INIT)
+      libomp_error_say("Need Win32 thread interface on Windows.")
+    endif()
+  else()
+    if(NOT CMAKE_USE_PTHREADS_INIT)
+      libomp_error_say("Need pthread interface on Unix-like systems.")
+    endif()
   endif()
 endif()
 
@@ -246,7 +246,11 @@ endif()
 
 # Checking features
 # Check if version symbol assembler directives are supported
-libomp_check_version_symbols(LIBOMP_HAVE_VERSION_SYMBOLS)
+if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  libomp_check_version_symbols(LIBOMP_HAVE_VERSION_SYMBOLS)
+else()
+  set(LIBOMP_HAVE_VERSION_SYMBOLS FALSE)
+endif()
 
 # Check if quad precision types are available
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
@@ -326,9 +330,11 @@ else()
       (LIBOMP_ARCH STREQUAL ppc64le) OR
       (LIBOMP_ARCH STREQUAL ppc64) OR
       (LIBOMP_ARCH STREQUAL riscv64) OR
-      (LIBOMP_ARCH STREQUAL loongarch64))
+      (LIBOMP_ARCH STREQUAL loongarch64) OR
+      (LIBOMP_ARCH STREQUAL s390x))
      AND # OS supported?
-     ((WIN32 AND LIBOMP_HAVE_PSAPI) OR APPLE OR (NOT WIN32 AND LIBOMP_HAVE_WEAK_ATTRIBUTE)))
+     ((WIN32 AND LIBOMP_HAVE_PSAPI) OR APPLE OR
+      (NOT (WIN32 OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX") AND LIBOMP_HAVE_WEAK_ATTRIBUTE)))
     set(LIBOMP_HAVE_OMPT_SUPPORT TRUE)
   else()
     set(LIBOMP_HAVE_OMPT_SUPPORT FALSE)

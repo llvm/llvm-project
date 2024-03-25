@@ -26,6 +26,11 @@ E: aaron@aaronballman.com
 D: Clang frontend, frontend attributes, Windows support, general bug fixing
 I: AaronBallman
 
+N: Alexey Bataev
+E: a.bataev@outlook.com
+D: Clang frontend, OpenMP in clang, SLP vectorizer, Loop vectorizer, InstCombine
+I: ABataev
+
 N: Nate Begeman
 E: natebegeman@mac.com
 D: PowerPC backend developer
@@ -169,7 +174,6 @@ D: WebAssembly Backend
 
 N: Renato Golin
 E: rengolin@systemcall.eu
-E: renato.golin@linaro.org
 E: rengolin@gmail.com
 D: ARM/AArch64 back-end improvements
 D: Loop Vectorizer improvements
@@ -265,6 +269,10 @@ D: Author of the original C backend
 N: Benjamin Kramer
 E: benny.kra@gmail.com
 D: Miscellaneous bug fixes
+
+N: Michael Kuperstein
+E: mkuper@google.com
+D: Loop Vectorizer
 
 N: Sundeep Kushwaha
 E: sundeepk@codeaurora.org

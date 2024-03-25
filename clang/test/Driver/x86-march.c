@@ -96,6 +96,30 @@
 // RUN:   | FileCheck %s -check-prefix=meteorlake
 // meteorlake: "-target-cpu" "meteorlake"
 //
+// RUN: %clang --target=x86_64 -c -### %s -march=arrowlake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=arrowlake
+// arrowlake: "-target-cpu" "arrowlake"
+//
+// RUN: %clang --target=x86_64 -c -### %s -march=arrowlake-s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=arrowlake-s
+// arrowlake-s: "-target-cpu" "arrowlake-s"
+//
+// RUN: %clang --target=x86_64 -c -### %s -march=lunarlake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=lunarlake
+// lunarlake: "-target-cpu" "lunarlake"
+//
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=gracemont 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=gracemont
+// gracemont: "-target-cpu" "gracemont"
+//
+// RUN: %clang --target=x86_64 -c -### %s -march=pantherlake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=pantherlake
+// pantherlake: "-target-cpu" "pantherlake"
+//
+// RUN: %clang --target=x86_64 -c -### %s -march=clearwaterforest 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=clearwaterforest
+// clearwaterforest: "-target-cpu" "clearwaterforest"
+//
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=lakemont 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=lakemont
 // lakemont: "-target-cpu" "lakemont"
@@ -130,6 +154,10 @@
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=graniterapids 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=graniterapids
 // graniterapids: "-target-cpu" "graniterapids"
+//
+// RUN: %clang --target=x86_64-unknown-unknown -c -### %s -march=graniterapids-d 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=graniterapids-d
+// graniterapids-d: "-target-cpu" "graniterapids-d"
 //
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=emeraldrapids 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=emeraldrapids

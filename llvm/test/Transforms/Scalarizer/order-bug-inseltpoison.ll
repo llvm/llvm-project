@@ -9,10 +9,10 @@ define dllexport spir_func <4 x i32> @main(float %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[Z:%.*]]
 ; CHECK:       y:
-; CHECK-NEXT:    [[F_UPTO0:%.*]] = insertelement <4 x i32> poison, i32 [[B_I0:%.*]], i32 0
-; CHECK-NEXT:    [[F_UPTO1:%.*]] = insertelement <4 x i32> [[F_UPTO0]], i32 [[B_I0]], i32 1
-; CHECK-NEXT:    [[F_UPTO2:%.*]] = insertelement <4 x i32> [[F_UPTO1]], i32 [[B_I0]], i32 2
-; CHECK-NEXT:    [[F:%.*]] = insertelement <4 x i32> [[F_UPTO2]], i32 [[B_I0]], i32 3
+; CHECK-NEXT:    [[F_UPTO0:%.*]] = insertelement <4 x i32> poison, i32 [[B_I0:%.*]], i64 0
+; CHECK-NEXT:    [[F_UPTO1:%.*]] = insertelement <4 x i32> [[F_UPTO0]], i32 [[B_I0]], i64 1
+; CHECK-NEXT:    [[F_UPTO2:%.*]] = insertelement <4 x i32> [[F_UPTO1]], i32 [[B_I0]], i64 2
+; CHECK-NEXT:    [[F:%.*]] = insertelement <4 x i32> [[F_UPTO2]], i32 [[B_I0]], i64 3
 ; CHECK-NEXT:    ret <4 x i32> [[F]]
 ; CHECK:       z:
 ; CHECK-NEXT:    [[B_I0]] = bitcast float [[A:%.*]] to i32

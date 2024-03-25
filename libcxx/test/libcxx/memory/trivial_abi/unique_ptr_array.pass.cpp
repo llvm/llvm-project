@@ -24,6 +24,8 @@ struct Node {
   int* shared_val;
 
   explicit Node(int* ptr) : shared_val(ptr) {}
+  Node(const Node&) = default;
+  Node& operator=(const Node&) = default;
   ~Node() { ++(*shared_val); }
 };
 

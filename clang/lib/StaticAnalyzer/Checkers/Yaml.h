@@ -35,7 +35,7 @@ std::optional<T> getConfiguration(CheckerManager &Mgr, Checker *Chk,
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
       FS->getBufferForFile(ConfigFile.str());
 
-  if (std::error_code ec = Buffer.getError()) {
+  if (Buffer.getError()) {
     Mgr.reportInvalidCheckerOptionValue(Chk, Option,
                                         "a valid filename instead of '" +
                                             std::string(ConfigFile) + "'");

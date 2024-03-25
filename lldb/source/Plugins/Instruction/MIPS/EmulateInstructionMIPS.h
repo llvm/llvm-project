@@ -75,7 +75,7 @@ public:
                       const lldb_private::Address &inst_addr,
                       lldb_private::Target *target) override;
 
-  bool TestEmulation(lldb_private::Stream *out_stream,
+  bool TestEmulation(lldb_private::Stream &out_stream,
                      lldb_private::ArchSpec &arch,
                      lldb_private::OptionValueDictionary *test_data) override {
     return false;

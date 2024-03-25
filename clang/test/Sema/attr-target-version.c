@@ -15,14 +15,21 @@ int __attribute__((target_version("aes"))) foo(void) { return 1; }
 //expected-note@+1 {{previous definition is here}}
 int __attribute__((target_version("default"))) foo(void) { return 2; }
 
-//expected-note@+1 {{previous declaration is here}}
+//expected-note@+1 {{previous definition is here}}
 int __attribute__((target_version("sha3 + pmull "))) foo(void) { return 1; }
+//expected-note@-1 {{previous definition is here}}
 
-//expected-error@+1 {{multiversioning attributes cannot be combined}}
+//expected-error@+1 {{redefinition of 'foo'}}
 int __attribute__((target("dotprod"))) foo(void) { return -1; }
+//expected-warning@-1 {{attribute declaration must precede definition}}
 
 //expected-error@+1 {{redefinition of 'foo'}}
 int foo(void) { return 2; }
+
+//expected-note@+1 {{previous definition is here}}
+__attribute__ ((target("bf16,sve,sve2,dotprod"))) int func(void) { return 1; }
+//expected-error@+1 {{redefinition of 'func'}}
+__attribute__ ((target("default"))) int func(void) { return 0; }
 
 //expected-note@+1 {{previous declaration is here}}
 void __attribute__((target_version("bti+flagm2"))) one(void) {}
@@ -35,12 +42,25 @@ void __attribute__((target_version("ssbs+fp16fml"))) two(void) {}
 //expected-error@+1 {{'main' cannot be a multiversioned function}}
 int __attribute__((target_version("lse"))) main(void) { return 1; }
 
-//expected-note@+1 {{previous definition is here}}
-int hoo(void) { return 1; }
-//expected-note@-1 {{previous definition is here}}
-//expected-warning@+2 {{attribute declaration must precede definition}}
-//expected-error@+1 {{redefinition of 'hoo'}}
-int __attribute__((target_version("dit"))) hoo(void) { return 2; }
+// It is ok for the default version to appear first.
+int default_first(void) { return 1; }
+int __attribute__((target_version("dit"))) default_first(void) { return 2; }
+int __attribute__((target_version("mops"))) default_first(void) { return 3; }
+
+// It is ok if the default version is between other versions.
+int __attribute__((target_version("simd"))) default_middle(void) {return 0; }
+int __attribute__((target_version("default"))) default_middle(void) { return 1; }
+int __attribute__((target_version("aes"))) default_middle(void) { return 2; }
+
+// It is ok for the default version to be the last one.
+int __attribute__((target_version("rdm"))) default_last(void) {return 0; }
+int __attribute__((target_version("lse+aes"))) default_last(void) { return 1; }
+int __attribute__((target_version("default"))) default_last(void) { return 2; }
+
+// It is also ok to forward declare the default.
+int __attribute__((target_version("default"))) default_fwd_declare(void);
+int __attribute__((target_version("sve"))) default_fwd_declare(void) { return 0; }
+int default_fwd_declare(void) { return 1; }
 
 //expected-warning@+1 {{unsupported '' in the 'target_version' attribute string; 'target_version' attribute ignored}}
 int __attribute__((target_version(""))) unsup1(void) { return 1; }
@@ -82,3 +102,8 @@ float __attribute__((target_version("rdm"))) rtype(int);
 int __attribute__((target_version("sha2"))) combine(void) { return 1; }
 // expected-error@+1 {{multiversioned function declaration has a different calling convention}}
 int __attribute__((aarch64_vector_pcs, target_version("sha3"))) combine(void) { return 2; }
+
+int __attribute__((target_version("fp+aes+pmull+rcpc"))) unspec_args() { return -1; }
+// expected-error@+1 {{multiversioned function must have a prototype}}
+int __attribute__((target_version("default"))) unspec_args() { return 0; }
+int cargs() { return unspec_args(); }

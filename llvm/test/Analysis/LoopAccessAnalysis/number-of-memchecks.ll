@@ -1,7 +1,7 @@
 ; RUN: opt -passes='print<access-info>' -disable-output  < %s 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64--linux-gnueabi"
+target triple = "aarch64"
 
 ; 3 reads and 3 writes should need 12 memchecks
 ; CHECK: function 'testf':
@@ -247,7 +247,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:   Grouped accesses:
 ; CHECK-NEXT:     Group {{.*}}[[ZERO]]:
 ; CHECK-NEXT:       (Low: ((2 * %offset) + %a) High: (10000 + (2 * %offset) + %a))
-; CHECK-NEXT:         Member: {((2 * %offset) + %a),+,2}<nw><%for.body>
+; CHECK-NEXT:         Member: {((2 * %offset) + %a),+,2}<%for.body>
 ; CHECK-NEXT:     Group {{.*}}[[ONE]]:
 ; CHECK-NEXT:       (Low: %a High: (10000 + %a))
 ; CHECK-NEXT:         Member: {%a,+,2}<nw><%for.body>

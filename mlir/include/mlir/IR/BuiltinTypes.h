@@ -11,6 +11,7 @@
 
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/Support/ADTExtras.h"
 
 namespace llvm {
 class BitVector;
@@ -27,8 +28,16 @@ class AffineMap;
 class FloatType;
 class IndexType;
 class IntegerType;
+class MemRefType;
+class RankedTensorType;
 class StringAttr;
 class TypeRange;
+
+namespace detail {
+struct FunctionTypeStorage;
+struct IntegerTypeStorage;
+struct TupleTypeStorage;
+} // namespace detail
 
 //===----------------------------------------------------------------------===//
 // FloatType
@@ -42,11 +51,15 @@ public:
   static FloatType getBF16(MLIRContext *ctx);
   static FloatType getF16(MLIRContext *ctx);
   static FloatType getF32(MLIRContext *ctx);
+  static FloatType getTF32(MLIRContext *ctx);
   static FloatType getF64(MLIRContext *ctx);
   static FloatType getF80(MLIRContext *ctx);
   static FloatType getF128(MLIRContext *ctx);
   static FloatType getFloat8E5M2(MLIRContext *ctx);
   static FloatType getFloat8E4M3FN(MLIRContext *ctx);
+  static FloatType getFloat8E5M2FNUZ(MLIRContext *ctx);
+  static FloatType getFloat8E4M3FNUZ(MLIRContext *ctx);
+  static FloatType getFloat8E4M3B11FNUZ(MLIRContext *ctx);
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(Type type);
@@ -55,6 +68,7 @@ public:
   unsigned getWidth();
 
   /// Return the width of the mantissa of this type.
+  /// The width includes the integer bit.
   unsigned getFPMantissaWidth();
 
   /// Get or create a new FloatType with bitwidth scaled by `scale`.
@@ -88,9 +102,20 @@ public:
   ArrayRef<int64_t> getShape() const;
 
   /// Clone this type with the given shape and element type. If the
-  /// provided shape is `None`, the current shape of the type is used.
+  /// provided shape is `std::nullopt`, the current shape of the type is used.
   TensorType cloneWith(std::optional<ArrayRef<int64_t>> shape,
                        Type elementType) const;
+
+  // Make sure that base class overloads are visible.
+  using ShapedType::Trait<TensorType>::clone;
+
+  /// Return a clone of this type with the given new shape and element type.
+  /// The returned type is ranked, even if this type is unranked.
+  RankedTensorType clone(ArrayRef<int64_t> shape, Type elementType) const;
+
+  /// Return a clone of this type with the given new shape. The returned type
+  /// is ranked, even if this type is unranked.
+  RankedTensorType clone(ArrayRef<int64_t> shape) const;
 
   /// Return true if the specified element type is ok in a tensor.
   static bool isValidElementType(Type type);
@@ -99,7 +124,7 @@ public:
   static bool classof(Type type);
 
   /// Allow implicit conversion to ShapedType.
-  operator ShapedType() const { return cast<ShapedType>(); }
+  operator ShapedType() const { return llvm::cast<ShapedType>(*this); }
 };
 
 //===----------------------------------------------------------------------===//
@@ -124,9 +149,20 @@ public:
   ArrayRef<int64_t> getShape() const;
 
   /// Clone this type with the given shape and element type. If the
-  /// provided shape is `None`, the current shape of the type is used.
+  /// provided shape is `std::nullopt`, the current shape of the type is used.
   BaseMemRefType cloneWith(std::optional<ArrayRef<int64_t>> shape,
                            Type elementType) const;
+
+  // Make sure that base class overloads are visible.
+  using ShapedType::Trait<BaseMemRefType>::clone;
+
+  /// Return a clone of this type with the given new shape and element type.
+  /// The returned type is ranked, even if this type is unranked.
+  MemRefType clone(ArrayRef<int64_t> shape, Type elementType) const;
+
+  /// Return a clone of this type with the given new shape. The returned type
+  /// is ranked, even if this type is unranked.
+  MemRefType clone(ArrayRef<int64_t> shape) const;
 
   /// Return true if the specified element type is ok in a memref.
   static bool isValidElementType(Type type);
@@ -142,7 +178,7 @@ public:
   unsigned getMemorySpaceAsInt() const;
 
   /// Allow implicit conversion to ShapedType.
-  operator ShapedType() const { return cast<ShapedType>(); }
+  operator ShapedType() const { return llvm::cast<ShapedType>(*this); }
 };
 
 } // namespace mlir
@@ -239,20 +275,14 @@ public:
   /// Erase a dim from shape @pos.
   Builder &dropDim(unsigned pos) {
     assert(pos < shape.size() && "overflow");
-    if (storage.empty())
-      storage.append(shape.begin(), shape.end());
-    storage.erase(storage.begin() + pos);
-    shape = {storage.data(), storage.size()};
+    shape.erase(pos);
     return *this;
   }
 
   /// Insert a val into shape @pos.
   Builder &insertDim(int64_t val, unsigned pos) {
     assert(pos <= shape.size() && "overflow");
-    if (storage.empty())
-      storage.append(shape.begin(), shape.end());
-    storage.insert(storage.begin() + pos, val);
-    shape = {storage.data(), storage.size()};
+    shape.insert(pos, val);
     return *this;
   }
 
@@ -261,9 +291,7 @@ public:
   }
 
 private:
-  ArrayRef<int64_t> shape;
-  // Owning shape data for copy-on-write operations.
-  SmallVector<int64_t> storage;
+  CopyOnWriteArrayRef<int64_t> shape;
   Type elementType;
   Attribute encoding;
 };
@@ -278,19 +306,18 @@ class VectorType::Builder {
 public:
   /// Build from another VectorType.
   explicit Builder(VectorType other)
-      : shape(other.getShape()), elementType(other.getElementType()),
-        numScalableDims(other.getNumScalableDims()) {}
+      : elementType(other.getElementType()), shape(other.getShape()),
+        scalableDims(other.getScalableDims()) {}
 
   /// Build from scratch.
   Builder(ArrayRef<int64_t> shape, Type elementType,
-          unsigned numScalableDims = 0)
-      : shape(shape), elementType(elementType),
-        numScalableDims(numScalableDims) {}
+          ArrayRef<bool> scalableDims = {})
+      : elementType(elementType), shape(shape), scalableDims(scalableDims) {}
 
   Builder &setShape(ArrayRef<int64_t> newShape,
-                    unsigned newNumScalableDims = 0) {
-    numScalableDims = newNumScalableDims;
+                    ArrayRef<bool> newIsScalableDim = {}) {
     shape = newShape;
+    scalableDims = newIsScalableDim;
     return *this;
   }
 
@@ -302,30 +329,27 @@ public:
   /// Erase a dim from shape @pos.
   Builder &dropDim(unsigned pos) {
     assert(pos < shape.size() && "overflow");
-    if (pos >= shape.size() - numScalableDims)
-      numScalableDims--;
-    if (storage.empty())
-      storage.append(shape.begin(), shape.end());
-    storage.erase(storage.begin() + pos);
-    shape = {storage.data(), storage.size()};
+    shape.erase(pos);
+    if (!scalableDims.empty())
+      scalableDims.erase(pos);
     return *this;
   }
 
-  /// In the particular case where the vector has a single dimension that we
-  /// drop, return the scalar element type.
-  // TODO: unify once we have a VectorType that supports 0-D.
-  operator Type() {
-    if (shape.empty())
-      return elementType;
-    return VectorType::get(shape, elementType, numScalableDims);
+  /// Set a dim in shape @pos to val.
+  Builder &setDim(unsigned pos, int64_t val) {
+    assert(pos < shape.size() && "overflow");
+    shape.set(pos, val);
+    return *this;
+  }
+
+  operator VectorType() {
+    return VectorType::get(shape, elementType, scalableDims);
   }
 
 private:
-  ArrayRef<int64_t> shape;
-  // Owning shape data for copy-on-write operations.
-  SmallVector<int64_t> storage;
   Type elementType;
-  unsigned numScalableDims;
+  CopyOnWriteArrayRef<int64_t> shape;
+  CopyOnWriteArrayRef<bool> scalableDims;
 };
 
 /// Given an `originalShape` and a `reducedShape` assumed to be a subset of
@@ -364,18 +388,21 @@ SliceVerificationResult isRankReducedType(ShapedType originalType,
 //===----------------------------------------------------------------------===//
 
 inline bool BaseMemRefType::classof(Type type) {
-  return type.isa<MemRefType, UnrankedMemRefType>();
+  return llvm::isa<MemRefType, UnrankedMemRefType>(type);
 }
 
 inline bool BaseMemRefType::isValidElementType(Type type) {
   return type.isIntOrIndexOrFloat() ||
-         type.isa<ComplexType, MemRefType, VectorType, UnrankedMemRefType>() ||
-         type.isa<MemRefElementTypeInterface>();
+         llvm::isa<ComplexType, MemRefType, VectorType, UnrankedMemRefType>(
+             type) ||
+         llvm::isa<MemRefElementTypeInterface>(type);
 }
 
 inline bool FloatType::classof(Type type) {
-  return type.isa<Float8E5M2Type, Float8E4M3FNType, BFloat16Type, Float16Type,
-                  Float32Type, Float64Type, Float80Type, Float128Type>();
+  return llvm::isa<Float8E5M2Type, Float8E4M3FNType, Float8E5M2FNUZType,
+                   Float8E4M3FNUZType, Float8E4M3B11FNUZType, BFloat16Type,
+                   Float16Type, FloatTF32Type, Float32Type, Float64Type,
+                   Float80Type, Float128Type>(type);
 }
 
 inline FloatType FloatType::getFloat8E5M2(MLIRContext *ctx) {
@@ -386,12 +413,28 @@ inline FloatType FloatType::getFloat8E4M3FN(MLIRContext *ctx) {
   return Float8E4M3FNType::get(ctx);
 }
 
+inline FloatType FloatType::getFloat8E5M2FNUZ(MLIRContext *ctx) {
+  return Float8E5M2FNUZType::get(ctx);
+}
+
+inline FloatType FloatType::getFloat8E4M3FNUZ(MLIRContext *ctx) {
+  return Float8E4M3FNUZType::get(ctx);
+}
+
+inline FloatType FloatType::getFloat8E4M3B11FNUZ(MLIRContext *ctx) {
+  return Float8E4M3B11FNUZType::get(ctx);
+}
+
 inline FloatType FloatType::getBF16(MLIRContext *ctx) {
   return BFloat16Type::get(ctx);
 }
 
 inline FloatType FloatType::getF16(MLIRContext *ctx) {
   return Float16Type::get(ctx);
+}
+
+inline FloatType FloatType::getTF32(MLIRContext *ctx) {
+  return FloatTF32Type::get(ctx);
 }
 
 inline FloatType FloatType::getF32(MLIRContext *ctx) {
@@ -411,7 +454,7 @@ inline FloatType FloatType::getF128(MLIRContext *ctx) {
 }
 
 inline bool TensorType::classof(Type type) {
-  return type.isa<RankedTensorType, UnrankedTensorType>();
+  return llvm::isa<RankedTensorType, UnrankedTensorType>(type);
 }
 
 //===----------------------------------------------------------------------===//
@@ -449,7 +492,7 @@ MemRefType canonicalizeStridedLayout(MemRefType t);
 /// canonical "contiguous" strides AffineExpr. Strides are multiplicative and
 /// once a dynamic dimension is encountered, all canonical strides become
 /// dynamic and need to be encoded with a different symbol.
-/// For canonical strides expressions, the offset is always 0 and and fastest
+/// For canonical strides expressions, the offset is always 0 and the fastest
 /// varying stride is always `1`.
 ///
 /// Examples:
@@ -468,8 +511,22 @@ AffineExpr makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
 AffineExpr makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
                                           MLIRContext *context);
 
-/// Return true if the layout for `t` is compatible with strided semantics.
+/// Return "true" if the layout for `t` is compatible with strided semantics.
 bool isStrided(MemRefType t);
+
+/// Return "true" if the last dimension of the given type has a static unit
+/// stride. Also return "true" for types with no strides.
+bool isLastMemrefDimUnitStride(MemRefType type);
+
+/// Return "true" if the last N dimensions of the given type are contiguous.
+///
+/// Examples:
+///   - memref<5x4x3x2xi8, strided<[24, 6, 2, 1]> is contiguous when
+///   considering both _all_ and _only_ the trailing 3 dims,
+///   - memref<5x4x3x2xi8, strided<[48, 6, 2, 1]> is _only_ contiguous when
+///   considering the trailing 3 dims.
+///
+bool trailingNDimsContiguous(MemRefType type, int64_t n);
 
 } // namespace mlir
 

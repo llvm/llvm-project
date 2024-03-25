@@ -13,8 +13,9 @@
 #include "src/stdio/printf_core/vfprintf_internal.h"
 
 #include <stdarg.h>
+#include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, fprintf,
                    (::FILE *__restrict stream, const char *__restrict format,
@@ -29,4 +30,4 @@ LLVM_LIBC_FUNCTION(int, fprintf,
   return ret_val;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -19,7 +19,6 @@
 
 ; DIS: ^0 = module: (path: "{{.*}}thinlto-index-disassembled-by-llvm-dis.ll.tmp
 ; DIS: ^1 = gv: (name: "aplusb", summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 2))) ; guid = 
-; DIS: ^2 = blockcount: 1
 
 source_filename = "add.cpp"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

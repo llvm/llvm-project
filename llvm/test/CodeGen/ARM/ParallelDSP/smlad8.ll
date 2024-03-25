@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=arm-none-none-eabi -mcpu=cortex-m33 < %s -arm-parallel-dsp -S | FileCheck %s
+; RUN: opt -mtriple=armv8m.main-none-none-eabi -mattr=+dsp < %s -arm-parallel-dsp -S | FileCheck %s
 ;
 ; Mul with operands that are not simple load and sext/zext chains: this is not
 ; yet supported so the rewrite shouldn't trigger (but we do want to support this

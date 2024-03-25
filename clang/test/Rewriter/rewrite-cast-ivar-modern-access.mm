@@ -24,7 +24,6 @@ void __CFAssignWithWriteBarrier(void **location, void *value) {
         objc_assign_strongCast((id)value);
 }
 
-// radar 7607605
 @interface RealClass {
         @public
         int f;

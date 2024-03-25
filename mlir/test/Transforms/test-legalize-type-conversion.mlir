@@ -121,3 +121,11 @@ func.func @recursive_type_conversion() {
   "test.type_producer"() : () -> !test.test_rec<something, test_rec<something>>
   return
 }
+
+// -----
+
+// CHECK-LABEL: @unsupported_func_op_interface
+llvm.func @unsupported_func_op_interface() {
+  // CHECK: llvm.return
+  llvm.return
+}

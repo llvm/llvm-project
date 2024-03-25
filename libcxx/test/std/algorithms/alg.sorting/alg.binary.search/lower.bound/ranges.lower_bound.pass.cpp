@@ -194,6 +194,22 @@ constexpr void test_iterators() {
       assert(base(ret) == a);
     }
   }
+
+  { // check that the middle of a range is returned when there are smaller and larger elements
+    {
+      int a[] = {1, 2, 3, 4, 6, 7, 8};
+      auto ret = std::ranges::lower_bound(It(a), It(a + 7), 5);
+      assert(base(ret) == a + 4);
+      assert(*ret == 6);
+    }
+    {
+      int a[] = {1, 2, 3, 4, 6, 7, 8};
+      auto range = std::ranges::subrange(It(a), It(a + 7));
+      auto ret = std::ranges::lower_bound(range, 5);
+      assert(base(ret) == a + 4);
+      assert(*ret == 6);
+    }
+  }
 }
 
 constexpr bool test() {

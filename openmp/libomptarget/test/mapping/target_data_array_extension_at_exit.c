@@ -3,7 +3,7 @@
 // --------------------------------------------------
 
 // RUN: %libomptarget-compile-generic \
-// RUN:   -fopenmp-version=51 -DEXTENDS=BEFORE
+// RUN:   -DEXTENDS=BEFORE
 // RUN: %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic
 
@@ -12,7 +12,7 @@
 // --------------------------------------------------
 
 // RUN: %libomptarget-compile-generic \
-// RUN:   -fopenmp-version=51 -DEXTENDS=AFTER
+// RUN:   -DEXTENDS=AFTER
 // RUN: %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic
 
@@ -66,7 +66,7 @@ void check_not_present() {
       arr[i] = 88;
   }
 
-  // CHECK-NOT: Libomptarget
+  // CHECK-NOT: omptarget
   // CHECK-NOT: error
   for (int i = 0; i < SIZE; ++i) {
     if (arr[i] != 99)
@@ -95,7 +95,7 @@ void check_is_present() {
       arr[i] = 88;
   }
 
-  // CHECK-NOT: Libomptarget
+  // CHECK-NOT: omptarget
   // CHECK-NOT: error
   for (int i = 0; i < SIZE; ++i) {
     if (SMALL_BEG <= i && i < SMALL_END) {

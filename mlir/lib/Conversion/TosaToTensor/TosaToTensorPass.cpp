@@ -35,6 +35,8 @@ public:
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
+    target.addIllegalOp<tosa::ConcatOp>();
+    target.addIllegalOp<tosa::ReshapeOp>();
     target.addIllegalOp<tosa::SliceOp>();
     target.addIllegalOp<tosa::PadOp>();
     target.addLegalDialect<arith::ArithDialect>();

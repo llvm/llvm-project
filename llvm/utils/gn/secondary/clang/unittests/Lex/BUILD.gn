@@ -5,10 +5,12 @@ unittest("LexTests") {
   deps = [
     "//clang/lib/AST",
     "//clang/lib/Basic",
+    "//clang/lib/Frontend",
     "//clang/lib/Lex",
     "//clang/lib/Parse",
     "//clang/lib/Sema",
     "//llvm/lib/Support",
+    "//llvm/lib/Testing/Annotations",
     "//llvm/lib/Testing/Support",
   ]
   sources = [
@@ -16,6 +18,7 @@ unittest("LexTests") {
     "HeaderMapTest.cpp",
     "HeaderSearchTest.cpp",
     "LexerTest.cpp",
+    "ModuleDeclStateTest.cpp",
     "PPCallbacksTest.cpp",
     "PPConditionalDirectiveRecordTest.cpp",
     "PPDependencyDirectivesTest.cpp",

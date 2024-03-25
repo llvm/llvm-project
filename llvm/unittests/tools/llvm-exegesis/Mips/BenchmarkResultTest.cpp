@@ -20,11 +20,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using ::testing::AllOf;
-using ::testing::Eq;
-using ::testing::get;
 using ::testing::Pointwise;
-using ::testing::Property;
 
 using llvm::unittest::TempDir;
 
@@ -55,7 +51,7 @@ class MipsBenchmarkResultTest : public MipsTestBase {};
 TEST_F(MipsBenchmarkResultTest, WriteToAndReadFromDisk) {
   ExitOnError ExitOnErr;
 
-  InstructionBenchmark ToDisk;
+  Benchmark ToDisk;
 
   ToDisk.Key.Instructions.push_back(MCInstBuilder(Mips::XOR)
                                         .addReg(Mips::T0)
@@ -65,12 +61,12 @@ TEST_F(MipsBenchmarkResultTest, WriteToAndReadFromDisk) {
   ToDisk.Key.RegisterInitialValues = {
       RegisterValue{Mips::T1, APInt(8, "123", 10)},
       RegisterValue{Mips::T2, APInt(8, "456", 10)}};
-  ToDisk.Mode = InstructionBenchmark::Latency;
+  ToDisk.Mode = Benchmark::Latency;
   ToDisk.CpuName = "cpu_name";
   ToDisk.LLVMTriple = "llvm_triple";
-  ToDisk.NumRepetitions = 1;
-  ToDisk.Measurements.push_back(BenchmarkMeasure{"a", 1, 1});
-  ToDisk.Measurements.push_back(BenchmarkMeasure{"b", 2, 2});
+  ToDisk.MinInstructions = 1;
+  ToDisk.Measurements.push_back(BenchmarkMeasure::Create("a", 1, {}));
+  ToDisk.Measurements.push_back(BenchmarkMeasure::Create("b", 2, {}));
   ToDisk.Error = "error";
   ToDisk.Info = "info";
 
@@ -94,7 +90,7 @@ TEST_F(MipsBenchmarkResultTest, WriteToAndReadFromDisk) {
   {
     // One-element version.
     const auto FromDisk =
-        ExitOnErr(InstructionBenchmark::readYaml(State, *Buffer));
+        ExitOnErr(Benchmark::readYaml(State, *Buffer));
 
     EXPECT_THAT(FromDisk.Key.Instructions,
                 Pointwise(EqMCInst(), ToDisk.Key.Instructions));
@@ -102,7 +98,7 @@ TEST_F(MipsBenchmarkResultTest, WriteToAndReadFromDisk) {
     EXPECT_EQ(FromDisk.Mode, ToDisk.Mode);
     EXPECT_EQ(FromDisk.CpuName, ToDisk.CpuName);
     EXPECT_EQ(FromDisk.LLVMTriple, ToDisk.LLVMTriple);
-    EXPECT_EQ(FromDisk.NumRepetitions, ToDisk.NumRepetitions);
+    EXPECT_EQ(FromDisk.MinInstructions, ToDisk.MinInstructions);
     EXPECT_THAT(FromDisk.Measurements, ToDisk.Measurements);
     EXPECT_THAT(FromDisk.Error, ToDisk.Error);
     EXPECT_EQ(FromDisk.Info, ToDisk.Info);
@@ -110,7 +106,7 @@ TEST_F(MipsBenchmarkResultTest, WriteToAndReadFromDisk) {
   {
     // Vector version.
     const auto FromDiskVector =
-        ExitOnErr(InstructionBenchmark::readYamls(State, *Buffer));
+        ExitOnErr(Benchmark::readYamls(State, *Buffer));
     ASSERT_EQ(FromDiskVector.size(), size_t{1});
     const auto &FromDisk = FromDiskVector[0];
     EXPECT_THAT(FromDisk.Key.Instructions,
@@ -119,7 +115,7 @@ TEST_F(MipsBenchmarkResultTest, WriteToAndReadFromDisk) {
     EXPECT_EQ(FromDisk.Mode, ToDisk.Mode);
     EXPECT_EQ(FromDisk.CpuName, ToDisk.CpuName);
     EXPECT_EQ(FromDisk.LLVMTriple, ToDisk.LLVMTriple);
-    EXPECT_EQ(FromDisk.NumRepetitions, ToDisk.NumRepetitions);
+    EXPECT_EQ(FromDisk.MinInstructions, ToDisk.MinInstructions);
     EXPECT_THAT(FromDisk.Measurements, ToDisk.Measurements);
     EXPECT_THAT(FromDisk.Error, ToDisk.Error);
     EXPECT_EQ(FromDisk.Info, ToDisk.Info);
@@ -128,10 +124,10 @@ TEST_F(MipsBenchmarkResultTest, WriteToAndReadFromDisk) {
 
 TEST_F(MipsBenchmarkResultTest, PerInstructionStats) {
   PerInstructionStats Stats;
-  Stats.push(BenchmarkMeasure{"a", 0.5, 0.0});
-  Stats.push(BenchmarkMeasure{"a", 1.5, 0.0});
-  Stats.push(BenchmarkMeasure{"a", -1.0, 0.0});
-  Stats.push(BenchmarkMeasure{"a", 0.0, 0.0});
+  Stats.push(BenchmarkMeasure::Create("a", 0.5, {}));
+  Stats.push(BenchmarkMeasure::Create("a", 1.5, {}));
+  Stats.push(BenchmarkMeasure::Create("a", -1.0, {}));
+  Stats.push(BenchmarkMeasure::Create("a", 0.0, {}));
   EXPECT_EQ(Stats.min(), -1.0);
   EXPECT_EQ(Stats.max(), 1.5);
   EXPECT_EQ(Stats.avg(), 0.25); // (0.5+1.5-1.0+0.0) / 4

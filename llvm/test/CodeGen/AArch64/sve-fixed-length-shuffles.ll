@@ -31,77 +31,77 @@ define void @crash_when_lowering_extract_shuffle(ptr %dst, i1 %cond) vscale_rang
 ; CHECK-NEXT:    mov z0.b, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    umov w8, v0.b[8]
-; CHECK-NEXT:    umov w9, v0.b[1]
-; CHECK-NEXT:    umov w10, v0.b[9]
-; CHECK-NEXT:    umov w11, v0.b[2]
+; CHECK-NEXT:    umov w9, v0.b[9]
+; CHECK-NEXT:    umov w10, v0.b[1]
 ; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    umov w11, v0.b[15]
 ; CHECK-NEXT:    fmov s2, w8
 ; CHECK-NEXT:    umov w8, v0.b[10]
-; CHECK-NEXT:    mov v1.b[1], w9
-; CHECK-NEXT:    umov w9, v0.b[3]
-; CHECK-NEXT:    mov v2.b[1], w10
+; CHECK-NEXT:    mov v1.b[1], w10
 ; CHECK-NEXT:    umov w10, v0.b[11]
-; CHECK-NEXT:    mov v1.b[2], w11
-; CHECK-NEXT:    umov w11, v0.b[7]
+; CHECK-NEXT:    mov v2.b[1], w9
+; CHECK-NEXT:    umov w9, v0.b[2]
 ; CHECK-NEXT:    mov v2.b[2], w8
-; CHECK-NEXT:    umov w8, v0.b[4]
-; CHECK-NEXT:    mov v1.b[3], w9
+; CHECK-NEXT:    umov w8, v0.b[3]
+; CHECK-NEXT:    mov v1.b[2], w9
 ; CHECK-NEXT:    umov w9, v0.b[12]
 ; CHECK-NEXT:    mov v2.b[3], w10
-; CHECK-NEXT:    umov w10, v0.b[5]
-; CHECK-NEXT:    mov v1.b[4], w8
+; CHECK-NEXT:    umov w10, v0.b[4]
+; CHECK-NEXT:    mov v1.b[3], w8
 ; CHECK-NEXT:    umov w8, v0.b[13]
 ; CHECK-NEXT:    mov v2.b[4], w9
-; CHECK-NEXT:    umov w9, v0.b[6]
-; CHECK-NEXT:    mov v1.b[5], w10
+; CHECK-NEXT:    umov w9, v0.b[5]
+; CHECK-NEXT:    mov v1.b[4], w10
 ; CHECK-NEXT:    umov w10, v0.b[14]
 ; CHECK-NEXT:    mov v2.b[5], w8
-; CHECK-NEXT:    mov x8, #16
-; CHECK-NEXT:    mov v1.b[6], w9
-; CHECK-NEXT:    mov x9, #24
-; CHECK-NEXT:    ld1w { z4.s }, p0/z, [x0, x8, lsl #2]
-; CHECK-NEXT:    mov v2.b[6], w10
-; CHECK-NEXT:    umov w10, v0.b[15]
+; CHECK-NEXT:    umov w8, v0.b[6]
+; CHECK-NEXT:    mov v1.b[5], w9
+; CHECK-NEXT:    umov w9, v0.b[7]
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #16
-; CHECK-NEXT:    ld1w { z5.s }, p0/z, [x0, x9, lsl #2]
-; CHECK-NEXT:    dup v3.2d, v0.d[1]
+; CHECK-NEXT:    mov v2.b[6], w10
+; CHECK-NEXT:    mov v1.b[6], w8
+; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    mov v1.b[7], w11
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    mov v2.b[7], w10
+; CHECK-NEXT:    mov x8, #16 // =0x10
+; CHECK-NEXT:    mov x10, #8 // =0x8
+; CHECK-NEXT:    ld1w { z4.s }, p0/z, [x0, x8, lsl #2]
+; CHECK-NEXT:    mov v2.b[7], w11
+; CHECK-NEXT:    mov v1.b[7], w9
 ; CHECK-NEXT:    uunpklo z3.h, z3.b
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    mov x9, #24 // =0x18
+; CHECK-NEXT:    uunpklo z2.h, z2.b
+; CHECK-NEXT:    uunpklo z1.h, z1.b
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
-; CHECK-NEXT:    mov x11, #8
 ; CHECK-NEXT:    lsl z0.s, z0.s, #31
+; CHECK-NEXT:    uunpklo z2.s, z2.h
+; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    lsl z3.s, z3.s, #31
 ; CHECK-NEXT:    asr z0.s, z0.s, #31
 ; CHECK-NEXT:    asr z3.s, z3.s, #31
-; CHECK-NEXT:    uunpklo z1.h, z1.b
-; CHECK-NEXT:    uunpklo z2.h, z2.b
+; CHECK-NEXT:    lsl z2.s, z2.s, #31
+; CHECK-NEXT:    lsl z1.s, z1.s, #31
 ; CHECK-NEXT:    and z0.s, z0.s, #0x1
 ; CHECK-NEXT:    and z3.s, z3.s, #0x1
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z2.s, z2.h
-; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x11, lsl #2]
-; CHECK-NEXT:    cmpne p2.s, p0/z, z3.s, #0
-; CHECK-NEXT:    ld1w { z3.s }, p0/z, [x0]
-; CHECK-NEXT:    lsl z1.s, z1.s, #31
-; CHECK-NEXT:    lsl z2.s, z2.s, #31
-; CHECK-NEXT:    asr z1.s, z1.s, #31
 ; CHECK-NEXT:    asr z2.s, z2.s, #31
-; CHECK-NEXT:    and z1.s, z1.s, #0x1
+; CHECK-NEXT:    asr z1.s, z1.s, #31
+; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x9, lsl #2]
+; CHECK-NEXT:    cmpne p2.s, p0/z, z3.s, #0
+; CHECK-NEXT:    ld1w { z3.s }, p0/z, [x0, x10, lsl #2]
 ; CHECK-NEXT:    and z2.s, z2.s, #0x1
+; CHECK-NEXT:    and z1.s, z1.s, #0x1
 ; CHECK-NEXT:    mov z4.s, p1/m, #0 // =0x0
-; CHECK-NEXT:    mov z5.s, p2/m, #0 // =0x0
-; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
-; CHECK-NEXT:    cmpne p2.s, p0/z, z2.s, #0
-; CHECK-NEXT:    mov z3.s, p1/m, #0 // =0x0
 ; CHECK-NEXT:    mov z0.s, p2/m, #0 // =0x0
+; CHECK-NEXT:    cmpne p3.s, p0/z, z2.s, #0
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0]
+; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
 ; CHECK-NEXT:    st1w { z4.s }, p0, [x0, x8, lsl #2]
-; CHECK-NEXT:    st1w { z5.s }, p0, [x0, x9, lsl #2]
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0, x11, lsl #2]
-; CHECK-NEXT:    st1w { z3.s }, p0, [x0]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0, x9, lsl #2]
+; CHECK-NEXT:    mov z3.s, p3/m, #0 // =0x0
+; CHECK-NEXT:    mov z2.s, p1/m, #0 // =0x0
+; CHECK-NEXT:    st1w { z3.s }, p0, [x0, x10, lsl #2]
+; CHECK-NEXT:    st1w { z2.s }, p0, [x0]
 ; CHECK-NEXT:  .LBB1_2: // %exit
 ; CHECK-NEXT:    ret
   %broadcast.splat = shufflevector <32 x i1> zeroinitializer, <32 x i1> zeroinitializer, <32 x i32> zeroinitializer

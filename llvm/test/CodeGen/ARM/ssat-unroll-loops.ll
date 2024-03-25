@@ -6,11 +6,11 @@
 define void @ssat_unroll(ptr %pSrcA, ptr %pSrcB, ptr %pDst, i32 %blockSize) {
 ; CHECK-LABEL: ssat_unroll:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    bxeq lr
+; CHECK-NEXT:  .LBB0_1: @ %while.body.preheader
 ; CHECK-NEXT:    .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    beq .LBB0_5
-; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
 ; CHECK-NEXT:    sub r12, r3, #1
 ; CHECK-NEXT:    tst r3, #1
 ; CHECK-NEXT:    beq .LBB0_3
@@ -23,7 +23,7 @@ define void @ssat_unroll(ptr %pSrcA, ptr %pSrcB, ptr %pDst, i32 %blockSize) {
 ; CHECK-NEXT:    mov r3, r12
 ; CHECK-NEXT:  .LBB0_3: @ %while.body.prol.loopexit
 ; CHECK-NEXT:    cmp r12, #0
-; CHECK-NEXT:    popeq {r11, pc}
+; CHECK-NEXT:    beq .LBB0_5
 ; CHECK-NEXT:  .LBB0_4: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrsh r12, [r0]
@@ -41,8 +41,9 @@ define void @ssat_unroll(ptr %pSrcA, ptr %pSrcB, ptr %pDst, i32 %blockSize) {
 ; CHECK-NEXT:    strh r12, [r2, #2]
 ; CHECK-NEXT:    add r2, r2, #4
 ; CHECK-NEXT:    bne .LBB0_4
-; CHECK-NEXT:  .LBB0_5: @ %while.end
-; CHECK-NEXT:    pop {r11, pc}
+; CHECK-NEXT:  .LBB0_5:
+; CHECK-NEXT:    pop {r11, lr}
+; CHECK-NEXT:    bx lr
 entry:
   %cmp.not7 = icmp eq i32 %blockSize, 0
   br i1 %cmp.not7, label %while.end, label %while.body.preheader
@@ -125,11 +126,11 @@ while.end:                                        ; preds = %while.body, %while.
 define void @ssat_unroll_minmax(ptr nocapture readonly %pSrcA, ptr nocapture readonly %pSrcB, ptr nocapture writeonly %pDst, i32 %blockSize) {
 ; CHECK-LABEL: ssat_unroll_minmax:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    bxeq lr
+; CHECK-NEXT:  .LBB1_1: @ %while.body.preheader
 ; CHECK-NEXT:    .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    beq .LBB1_5
-; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
 ; CHECK-NEXT:    sub r12, r3, #1
 ; CHECK-NEXT:    tst r3, #1
 ; CHECK-NEXT:    beq .LBB1_3
@@ -142,7 +143,7 @@ define void @ssat_unroll_minmax(ptr nocapture readonly %pSrcA, ptr nocapture rea
 ; CHECK-NEXT:    mov r3, r12
 ; CHECK-NEXT:  .LBB1_3: @ %while.body.prol.loopexit
 ; CHECK-NEXT:    cmp r12, #0
-; CHECK-NEXT:    popeq {r11, pc}
+; CHECK-NEXT:    beq .LBB1_5
 ; CHECK-NEXT:  .LBB1_4: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrsh r12, [r0]
@@ -160,8 +161,9 @@ define void @ssat_unroll_minmax(ptr nocapture readonly %pSrcA, ptr nocapture rea
 ; CHECK-NEXT:    strh r12, [r2, #2]
 ; CHECK-NEXT:    add r2, r2, #4
 ; CHECK-NEXT:    bne .LBB1_4
-; CHECK-NEXT:  .LBB1_5: @ %while.end
-; CHECK-NEXT:    pop {r11, pc}
+; CHECK-NEXT:  .LBB1_5:
+; CHECK-NEXT:    pop {r11, lr}
+; CHECK-NEXT:    bx lr
 entry:
   %cmp.not7 = icmp eq i32 %blockSize, 0
   br i1 %cmp.not7, label %while.end, label %while.body.preheader

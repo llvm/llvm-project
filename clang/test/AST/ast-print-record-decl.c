@@ -289,3 +289,19 @@ KW DeclGroupInMemberList {
 
 // A tag decl group in the tag decl's own member list is exercised in
 // defSelfRef above.
+
+
+// Check out-of-line record definition
+#ifdef __cplusplus
+// PRINT-CXX-NEXT: [[KW]] OutOfLineRecord {
+KW OutOfLineRecord {
+  // PRINT-CXX-NEXT: [[KW]] Inner
+  KW Inner;
+  // PRINT-CXX-NEXT: };
+};
+
+// PRINT-CXX-NEXT: [[KW]] OutOfLineRecord::Inner {
+KW OutOfLineRecord::Inner {
+  // PRINT-CXX-NEXT: };
+};
+#endif

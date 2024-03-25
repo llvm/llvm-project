@@ -14,9 +14,9 @@
 #include "environment.h"
 #include "io-error.h"
 #include "flang/Common/Fortran.h"
+#include "flang/Common/optional.h"
 #include "flang/Decimal/decimal.h"
 #include <cinttypes>
-#include <optional>
 
 namespace Fortran::runtime {
 class Descriptor;
@@ -61,17 +61,17 @@ struct DataEdit {
     return IsListDirected() && modes.inNamelist;
   }
 
-  static constexpr char DefinedDerivedType{'d'}; // DT user-defined derived type
+  static constexpr char DefinedDerivedType{'d'}; // DT defined I/O
 
-  char variation{'\0'}; // N, S, or X for EN, ES, EX
-  std::optional<int> width; // the 'w' field; optional for A
-  std::optional<int> digits; // the 'm' or 'd' field
-  std::optional<int> expoDigits; // 'Ee' field
+  char variation{'\0'}; // N, S, or X for EN, ES, EX; G/l for original G/list
+  Fortran::common::optional<int> width; // the 'w' field; optional for A
+  Fortran::common::optional<int> digits; // the 'm' or 'd' field
+  Fortran::common::optional<int> expoDigits; // 'Ee' field
   MutableModes modes;
   int repeat{1};
 
   // "iotype" &/or "v_list" values for a DT'iotype'(v_list)
-  // user-defined derived type data edit descriptor
+  // defined I/O data edit descriptor
   static constexpr std::size_t maxIoTypeChars{32};
   static constexpr std::size_t maxVListEntries{4};
   std::uint8_t ioTypeChars{0};
@@ -102,7 +102,8 @@ public:
   // Extracts the next data edit descriptor, handling control edit descriptors
   // along the way.  If maxRepeat==0, this is a peek at the next data edit
   // descriptor.
-  DataEdit GetNextDataEdit(Context &, int maxRepeat = 1);
+  Fortran::common::optional<DataEdit> GetNextDataEdit(
+      Context &, int maxRepeat = 1);
 
   // Emit any remaining character literals after the last data item (on output)
   // and perform remaining record positioning actions.
@@ -142,7 +143,8 @@ private:
     }
     return format_[offset_++];
   }
-  int GetIntField(IoErrorHandler &, CharType firstCh = '\0');
+  int GetIntField(
+      IoErrorHandler &, CharType firstCh = '\0', bool *hadError = nullptr);
 
   // Advances through the FORMAT until the next data edit
   // descriptor has been found; handles control edit descriptors
@@ -183,6 +185,7 @@ private:
   const std::uint8_t maxHeight_{maxMaxHeight};
   std::uint8_t height_{0};
   bool freeFormat_{false};
+  bool hitEnd_{false};
   const CharType *format_{nullptr};
   int formatLength_{0}; // in units of characters
   int offset_{0}; // next item is at format_[offset_]

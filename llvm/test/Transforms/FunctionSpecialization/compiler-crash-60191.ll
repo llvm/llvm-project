@@ -1,4 +1,4 @@
-; RUN: opt -S --passes="ipsccp<func-spec>" -force-function-specialization < %s | FileCheck %s
+; RUN: opt -S --passes="ipsccp<func-spec>" -force-specialization < %s | FileCheck %s
 
 @A = private constant [6 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0, i32 0], align 16
 @B = external global ptr, align 8
@@ -60,7 +60,7 @@ define i32 @f2(i32 %offset) {
 }
 
 ; Tests that `func` has been specialized and it didn't cause compiler crash.
-; CHECK-DAG: func.1
-; CHECK-DAG: func.2
-; CHECK-DAG: func.3
+; CHECK-DAG: func.specialized.1
+; CHECK-DAG: func.specialized.2
+; CHECK-DAG: func.specialized.3
 

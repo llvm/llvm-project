@@ -51,3 +51,75 @@ entry:
   %div = fdiv float %a, %b
   ret float %div
 }
+
+define <4 x float> @test_fadd_v4f32(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: test_fadd_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvaddsp v2, v2, v3
+; CHECK-NEXT:    blr
+  %res = fadd <4 x float> %a, %b
+  ret <4 x float> %res
+}
+
+define <2 x double> @test_fadd_v2f64(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: test_fadd_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvadddp v2, v2, v3
+; CHECK-NEXT:    blr
+  %res = fadd <2 x double> %a, %b
+  ret <2 x double> %res
+}
+
+define <4 x float> @test_fsub_v4f32(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: test_fsub_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvsubsp v2, v2, v3
+; CHECK-NEXT:    blr
+  %res = fsub <4 x float> %a, %b
+  ret <4 x float> %res
+}
+
+define <2 x double> @test_fsub_v2f64(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: test_fsub_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvsubdp v2, v2, v3
+; CHECK-NEXT:    blr
+  %res = fsub <2 x double> %a, %b
+  ret <2 x double> %res
+}
+
+define <4 x float> @test_fmul_v4f32(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: test_fmul_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvmulsp v2, v2, v3
+; CHECK-NEXT:    blr
+  %res = fmul <4 x float> %a, %b
+  ret <4 x float> %res
+}
+
+define <2 x double> @test_fmul_v2f64(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: test_fmul_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvmuldp v2, v2, v3
+; CHECK-NEXT:    blr
+  %res = fmul <2 x double> %a, %b
+  ret <2 x double> %res
+}
+
+define <4 x float> @test_fdiv_v4f32(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: test_fdiv_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvdivsp v2, v2, v3
+; CHECK-NEXT:    blr
+  %res = fdiv <4 x float> %a, %b
+  ret <4 x float> %res
+}
+
+define <2 x double> @test_fdiv_v2f64(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: test_fdiv_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvdivdp v2, v2, v3
+; CHECK-NEXT:    blr
+  %res = fdiv <2 x double> %a, %b
+  ret <2 x double> %res
+}

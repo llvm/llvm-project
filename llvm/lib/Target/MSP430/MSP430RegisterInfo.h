@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-struct MSP430RegisterInfo : public MSP430GenRegisterInfo {
+class MSP430RegisterInfo : public MSP430GenRegisterInfo {
 public:
   MSP430RegisterInfo();
 

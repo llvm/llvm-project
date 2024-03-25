@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-strict-prototypes %s
 
-// rdar: // 8125274
 static int a16[];  // expected-warning {{tentative array definition assumed to have one element}}
 
 void f16(void) {
@@ -23,7 +22,6 @@ int PR10013(void) {
 static int test1_a[]; // expected-warning {{tentative array definition assumed to have one element}}
 extern int test1_a[];
 
-// rdar://13535367
 void test2declarer(void) { extern int test2_array[100]; }
 extern int test2_array[];
 int test2v = sizeof(test2_array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int[]'}}

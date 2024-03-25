@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.10 -emit-llvm -o - %s | FileCheck %s
-// rdar://20286356
 
 @protocol P1
 - InstP;

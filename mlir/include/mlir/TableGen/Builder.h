@@ -70,6 +70,10 @@ public:
   /// Return an optional string containing the body of the builder.
   std::optional<StringRef> getBody() const;
 
+  /// Return the deprecation message of the builder.
+  /// Empty optional if the builder is not deprecated.
+  std::optional<StringRef> getDeprecatedMessage() const;
+
 protected:
   /// The TableGen definition of this builder.
   const llvm::Record *def;

@@ -5,10 +5,9 @@ define void @csrot_(ptr %0) {
 ; CHECK-LABEL: csrot_:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    xorps %xmm0, %xmm1
-; CHECK-NEXT:    blendps {{.*#+}} xmm1 = xmm1[0],mem[1,2,3]
-; CHECK-NEXT:    movlps %xmm1, (%rax)
+; CHECK-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],mem[1,2,3]
+; CHECK-NEXT:    movlps %xmm0, (%rax)
 ; CHECK-NEXT:    retq
 1:
   %2 = load float, ptr %0, align 4

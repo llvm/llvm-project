@@ -11,7 +11,7 @@
 // Increment iterator past end.
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-debug-mode, c++03
+// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
 
 #include <string>
 #include <cassert>
@@ -19,24 +19,18 @@
 #include "check_assertion.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
-  {
-    typedef std::string C;
-    C c(1, '\0');
-    C::iterator i = c.begin();
-    ++i;
-    assert(i == c.end());
-    TEST_LIBCPP_ASSERT_FAILURE(++i, "Attempted to increment a non-incrementable iterator");
-  }
+template <class C>
+void test() {
+  C c(1, '\0');
+  typename C::iterator i = c.begin();
+  ++i;
+  assert(i == c.end());
+  TEST_LIBCPP_ASSERT_FAILURE(++i, "Attempted to increment a non-incrementable iterator");
+}
 
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > C;
-    C c(1, '\0');
-    C::iterator i = c.begin();
-    ++i;
-    assert(i == c.end());
-    TEST_LIBCPP_ASSERT_FAILURE(++i, "Attempted to increment a non-incrementable iterator");
-  }
+int main(int, char**) {
+  test<std::string>();
+  test<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
 
   return 0;
 }

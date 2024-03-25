@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized -DOMP51
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized -DOMP51
 
-// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized -fopenmp-version=51 -DOMP51
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized -fopenmp-version=50
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized -fopenmp-version=51 -DOMP51
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized -fopenmp-version=50
 
 void foo();
 
@@ -37,13 +37,15 @@ int main(int argc, char **argv) {
   #pragma omp teams distribute parallel for simd default(none) // expected-note {{explicit data sharing attribute requested here}}
   for (int i=0; i<200; i++) ++argc; // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
 
-#ifdef OpenMP51
-#pragma omp teams distribute parallel for default(firstprivate) // expected-note 2 {{explicit data sharing attribute requested here}}
+#ifdef OMP51
+#pragma omp target
+#pragma omp teams distribute parallel for simd default(firstprivate) // expected-note 2 {{explicit data sharing attribute requested here}}
   for (int i = 0; i < 200; i++) {
     ++x; // expected-error {{variable 'x' must have explicitly specified data sharing attributes}}
     ++y; // expected-error {{variable 'y' must have explicitly specified data sharing attributes}}
   }
-#pragma omp teams distribute parallel for default(private) // expected-note 2 {{explicit data sharing attribute requested here}}
+#pragma omp target
+#pragma omp teams distribute parallel for simd default(private) // expected-note 2 {{explicit data sharing attribute requested here}}
   for (int i = 0; i < 200; i++) {
     ++x; // expected-error {{variable 'x' must have explicitly specified data sharing attributes}}
     ++y; // expected-error {{variable 'y' must have explicitly specified data sharing attributes}}

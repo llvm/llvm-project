@@ -1,8 +1,8 @@
-! RUN: bbc -emit-fir %s -opt-transpose=true -o - | FileCheck %s
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -O1 %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -O2 %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -O3 %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -opt-transpose=true -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -O1 %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -O2 %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -O3 %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPtranspose_test(
 ! CHECK-SAME:                               %[[VAL_0:.*]]: !fir.ref<!fir.array<2x3xf32>> {fir.bindc_name = "mat"}) {

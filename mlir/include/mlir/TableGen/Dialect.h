@@ -14,6 +14,8 @@
 #define MLIR_TABLEGEN_DIALECT_H_
 
 #include "mlir/Support/LLVM.h"
+#include "llvm/TableGen/Record.h"
+
 #include <string>
 #include <vector>
 
@@ -86,14 +88,13 @@ public:
   /// operations or types.
   bool isExtensible() const;
 
-  enum class FolderAPI {
-    RawAttributes = 0, /// fold method with ArrayRef<Attribute>.
-    FolderAdaptor = 1, /// fold method with the operation's FoldAdaptor.
-  };
-
-  /// Returns the folder API that should be emitted for operations in this
+  /// Default to use properties for storing Attributes for operations in this
   /// dialect.
-  FolderAPI getFolderAPI() const;
+  bool usePropertiesForAttributes() const;
+
+  llvm::DagInit *getDiscardableAttributes() const;
+
+  const llvm::Record *getDef() const { return def; }
 
   // Returns whether two dialects are equal by checking the equality of the
   // underlying record.

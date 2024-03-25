@@ -1,4 +1,5 @@
 import sys
+
 if sys.version_info[0] < 3:
     import __builtin__ as builtins
 else:
@@ -18,10 +19,10 @@ except AttributeError:
     have_readline = False
 else:
     have_readline = True
-    if 'libedit' in readline.__doc__:
-        readline.parse_and_bind('bind ^I rl_complete')
+    if "libedit" in readline.__doc__:
+        readline.parse_and_bind("bind ^I rl_complete")
     else:
-        readline.parse_and_bind('tab: complete')
+        readline.parse_and_bind("tab: complete")
 
 # When running one line, we might place the string to run in this string
 # in case it would be hard to correctly escape a string's contents
@@ -34,7 +35,8 @@ def get_terminal_size(fd):
         import fcntl
         import termios
         import struct
-        hw = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
+
+        hw = struct.unpack("hh", fcntl.ioctl(fd, termios.TIOCGWINSZ, "1234"))
     except:
         hw = (0, 0)
     return hw
@@ -46,7 +48,7 @@ class LLDBExit(SystemExit):
 
 def strip_and_check_exit(line):
     line = line.rstrip()
-    if line in ('exit', 'quit'):
+    if line in ("exit", "quit"):
         raise LLDBExit
     return line
 
@@ -75,6 +77,7 @@ def run_python_interpreter(local_dict):
         if get_terminal_size(fd)[1] == 0:
             try:
                 import termios
+
                 old = termios.tcgetattr(fd)
                 if old[3] & termios.ECHO:
                     # Need to turn off echoing and restore
@@ -86,7 +89,8 @@ def run_python_interpreter(local_dict):
                         code.interact(
                             banner="Python Interactive Interpreter. To exit, type 'quit()', 'exit()'.",
                             readfunc=readfunc_stdio,
-                            local=local_dict)
+                            local=local_dict,
+                        )
                     finally:
                         termios.tcsetattr(fd, termios.TCSADRAIN, old)
             except:
@@ -96,18 +100,20 @@ def run_python_interpreter(local_dict):
                 code.interact(
                     banner="Python Interactive Interpreter. To exit, type 'quit()', 'exit()' or Ctrl-D.",
                     readfunc=readfunc_stdio,
-                    local=local_dict)
+                    local=local_dict,
+                )
         else:
             # We have a real interactive terminal
             code.interact(
                 banner="Python Interactive Interpreter. To exit, type 'quit()', 'exit()' or Ctrl-D.",
                 readfunc=readfunc,
-                local=local_dict)
+                local=local_dict,
+            )
     except LLDBExit:
         pass
     except SystemExit as e:
         if e.code:
-            print('Script exited with code %s' % e.code)
+            print("Script exited with code %s" % e.code)
 
 
 def run_one_line(local_dict, input_string):
@@ -127,4 +133,4 @@ def run_one_line(local_dict, input_string):
         pass
     except SystemExit as e:
         if e.code:
-            print('Script exited with code %s' % e.code)
+            print("Script exited with code %s" % e.code)

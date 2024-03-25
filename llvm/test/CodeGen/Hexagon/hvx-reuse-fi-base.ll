@@ -42,7 +42,7 @@ define dso_local void @f2() #0 {
 ; CHECK-NEXT:    } // 8-byte Folded Spill
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v0 = vsplat(r16)
-; CHECK-NEXT:     vmem(r29+#6) = v0.new
+; CHECK-NEXT:     vmem(r29+#2) = v0.new
 ; CHECK-NEXT:    } // 128-byte Folded Spill
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     q0 = vand(v0,r0)
@@ -56,7 +56,7 @@ define dso_local void @f2() #0 {
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v0 = vand(q0,r17)
 ; CHECK-NEXT:     r19 = ##g0+128
-; CHECK-NEXT:     vmem(r29+#7) = v0.new
+; CHECK-NEXT:     vmem(r29+#1) = v0.new
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r20 = ##g0
@@ -78,15 +78,15 @@ define dso_local void @f2() #0 {
 ; CHECK-NEXT:     vmem(r20+#0) = v30
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0 = vmem(r29+#6)
+; CHECK-NEXT:     v0 = vmem(r29+#2)
 ; CHECK-NEXT:    } // 128-byte Folded Reload
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1:0.h = vadd(v0.ub,v0.ub)
 ; CHECK-NEXT:     r0 = ##g2
-; CHECK-NEXT:     vmem(r29+#1) = v0.new
+; CHECK-NEXT:     vmem(r29+#6) = v0.new
 ; CHECK-NEXT:    } // 256-byte Folded Spill
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     vmem(r29+#2) = v1
+; CHECK-NEXT:     vmem(r29+#7) = v1
 ; CHECK-NEXT:    } // 256-byte Folded Spill
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1:0.uw = vrmpy(v1:0.ub,r17.ub,#0)
@@ -98,10 +98,10 @@ define dso_local void @f2() #0 {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = ##2147483647
-; CHECK-NEXT:     v0 = vmem(r29+#1)
+; CHECK-NEXT:     v0 = vmem(r29+#6)
 ; CHECK-NEXT:    } // 256-byte Folded Reload
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1 = vmem(r29+#2)
+; CHECK-NEXT:     v1 = vmem(r29+#7)
 ; CHECK-NEXT:    } // 256-byte Folded Reload
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1:0.uw = vrmpy(v1:0.ub,r0.ub,#1)
@@ -142,7 +142,7 @@ define dso_local void @f2() #0 {
 ; CHECK-NEXT:     vmem(r20+#0) = v0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0 = vmem(r29+#6)
+; CHECK-NEXT:     v0 = vmem(r29+#2)
 ; CHECK-NEXT:    } // 128-byte Folded Reload
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1 = vmem(r29+#3)

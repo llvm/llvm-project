@@ -23,7 +23,7 @@
 using namespace lldb_private;
 
 bool ClangHighlighter::isKeyword(llvm::StringRef token) const {
-  return keywords.find(token) != keywords.end();
+  return keywords.contains(token);
 }
 
 ClangHighlighter::ClangHighlighter() {

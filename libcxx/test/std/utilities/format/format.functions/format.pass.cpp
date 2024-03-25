@@ -6,9 +6,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-format
-// TODO FMT Evaluate gcc-12 status
-// UNSUPPORTED: gcc-12
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+
+// XFAIL: availability-fp_to_chars-missing
 
 // Note this formatter shows additional information when tests are failing.
 // This aids the development. Since other formatters fail in the same fashion
@@ -30,6 +30,7 @@
 #include "string_literal.h"
 #include "test_format_string.h"
 #include "assert_macros.h"
+#include "concat_macros.h"
 
 auto test =
     []<class CharT, class... Args>(
@@ -37,7 +38,7 @@ auto test =
       std::basic_string<CharT> out = std::format(fmt, std::forward<Args>(args)...);
       TEST_REQUIRE(
           out == expected,
-          test_concat_message(
+          TEST_WRITE_CONCATENATED(
               "\nFormat string   ", fmt.get(), "\nExpected output ", expected, "\nActual output   ", out, '\n'));
     };
 

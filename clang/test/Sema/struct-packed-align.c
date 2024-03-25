@@ -86,7 +86,6 @@ extern int g1[sizeof(struct as3) == 16 ? 1 : -1];
 extern int g2[__alignof(struct as3) == 8 ? 1 : -1];
 
 
-// rdar://5921025
 struct packedtest {
   int ted_likes_cheese;
   void *args[] __attribute__((packed));

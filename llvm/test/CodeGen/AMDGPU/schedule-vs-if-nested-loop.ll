@@ -1,4 +1,4 @@
-;RUN: llc < %s -march=r600 -mcpu=cayman -stress-sched -verify-misched
+;RUN: llc < %s -mtriple=r600 -mcpu=cayman -stress-sched -verify-misched
 ;REQUIRES: asserts
 
 define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) {

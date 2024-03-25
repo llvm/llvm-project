@@ -1,7 +1,7 @@
 // REQUIRES: ve-registered-target
 
 // RUN: %clang_cc1 -S -emit-llvm -triple ve-unknown-linux-gnu \
-// RUN:   -no-opaque-pointers -ffreestanding %s -o - | FileCheck %s
+// RUN:   -ffreestanding %s -o - | FileCheck %s
 
 #include <velintrin.h>
 
@@ -15,574 +15,574 @@ __vm512 vm1_512, vm2_512, vm3_512;
 void __attribute__((noinline))
 test_vld_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vld_vssl
-  // CHECK: call <256 x double> @llvm.ve.vl.vld.vssl(i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vld.vssl(i64 %{{.*}}, ptr %{{.*}}, i32 256)
   vr1 = _vel_vld_vssl(idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vld_vssvl(char* p, long idx) {
   // CHECK-LABEL: @test_vld_vssvl
-  // CHECK: call <256 x double> @llvm.ve.vl.vld.vssvl(i64 %{{.*}}, i8* %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vld.vssvl(i64 %{{.*}}, ptr %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vld_vssvl(idx, p, vr1, 256);
 }
 
 void __attribute__((noinline))
 test_vldnc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vldnc_vssl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldnc.vssl(i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldnc.vssl(i64 %{{.*}}, ptr %{{.*}}, i32 256)
   vr1 = _vel_vldnc_vssl(idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vldnc_vssvl(char* p, long idx) {
   // CHECK-LABEL: @test_vldnc_vssvl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldnc.vssvl(i64 %{{.*}}, i8* %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldnc.vssvl(i64 %{{.*}}, ptr %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vldnc_vssvl(idx, p, vr1, 256);
 }
 
 void __attribute__((noinline))
 test_vldu_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vldu_vssl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldu.vssl(i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldu.vssl(i64 %{{.*}}, ptr %{{.*}}, i32 256)
   vr1 = _vel_vldu_vssl(idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vldu_vssvl(char* p, long idx) {
   // CHECK-LABEL: @test_vldu_vssvl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldu.vssvl(i64 %{{.*}}, i8* %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldu.vssvl(i64 %{{.*}}, ptr %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vldu_vssvl(idx, p, vr1, 256);
 }
 
 void __attribute__((noinline))
 test_vldunc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vldunc_vssl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldunc.vssl(i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldunc.vssl(i64 %{{.*}}, ptr %{{.*}}, i32 256)
   vr1 = _vel_vldunc_vssl(idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vldunc_vssvl(char* p, long idx) {
   // CHECK-LABEL: @test_vldunc_vssvl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldunc.vssvl(i64 %{{.*}}, i8* %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldunc.vssvl(i64 %{{.*}}, ptr %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vldunc_vssvl(idx, p, vr1, 256);
 }
 
 void __attribute__((noinline))
 test_vldlsx_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vldlsx_vssl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldlsx.vssl(i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldlsx.vssl(i64 %{{.*}}, ptr %{{.*}}, i32 256)
   vr1 = _vel_vldlsx_vssl(idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vldlsx_vssvl(char* p, long idx) {
   // CHECK-LABEL: @test_vldlsx_vssvl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldlsx.vssvl(i64 %{{.*}}, i8* %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldlsx.vssvl(i64 %{{.*}}, ptr %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vldlsx_vssvl(idx, p, vr1, 256);
 }
 
 void __attribute__((noinline))
 test_vldlsxnc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vldlsxnc_vssl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldlsxnc.vssl(i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldlsxnc.vssl(i64 %{{.*}}, ptr %{{.*}}, i32 256)
   vr1 = _vel_vldlsxnc_vssl(idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vldlsxnc_vssvl(char* p, long idx) {
   // CHECK-LABEL: @test_vldlsxnc_vssvl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldlsxnc.vssvl(i64 %{{.*}}, i8* %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldlsxnc.vssvl(i64 %{{.*}}, ptr %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vldlsxnc_vssvl(idx, p, vr1, 256);
 }
 
 void __attribute__((noinline))
 test_vldlzx_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vldlzx_vssl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldlzx.vssl(i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldlzx.vssl(i64 %{{.*}}, ptr %{{.*}}, i32 256)
   vr1 = _vel_vldlzx_vssl(idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vldlzx_vssvl(char* p, long idx) {
   // CHECK-LABEL: @test_vldlzx_vssvl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldlzx.vssvl(i64 %{{.*}}, i8* %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldlzx.vssvl(i64 %{{.*}}, ptr %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vldlzx_vssvl(idx, p, vr1, 256);
 }
 
 void __attribute__((noinline))
 test_vldlzxnc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vldlzxnc_vssl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldlzxnc.vssl(i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldlzxnc.vssl(i64 %{{.*}}, ptr %{{.*}}, i32 256)
   vr1 = _vel_vldlzxnc_vssl(idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vldlzxnc_vssvl(char* p, long idx) {
   // CHECK-LABEL: @test_vldlzxnc_vssvl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldlzxnc.vssvl(i64 %{{.*}}, i8* %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldlzxnc.vssvl(i64 %{{.*}}, ptr %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vldlzxnc_vssvl(idx, p, vr1, 256);
 }
 
 void __attribute__((noinline))
 test_vld2d_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vld2d_vssl
-  // CHECK: call <256 x double> @llvm.ve.vl.vld2d.vssl(i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vld2d.vssl(i64 %{{.*}}, ptr %{{.*}}, i32 256)
   vr1 = _vel_vld2d_vssl(idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vld2d_vssvl(char* p, long idx) {
   // CHECK-LABEL: @test_vld2d_vssvl
-  // CHECK: call <256 x double> @llvm.ve.vl.vld2d.vssvl(i64 %{{.*}}, i8* %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vld2d.vssvl(i64 %{{.*}}, ptr %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vld2d_vssvl(idx, p, vr1, 256);
 }
 
 void __attribute__((noinline))
 test_vld2dnc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vld2dnc_vssl
-  // CHECK: call <256 x double> @llvm.ve.vl.vld2dnc.vssl(i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vld2dnc.vssl(i64 %{{.*}}, ptr %{{.*}}, i32 256)
   vr1 = _vel_vld2dnc_vssl(idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vld2dnc_vssvl(char* p, long idx) {
   // CHECK-LABEL: @test_vld2dnc_vssvl
-  // CHECK: call <256 x double> @llvm.ve.vl.vld2dnc.vssvl(i64 %{{.*}}, i8* %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vld2dnc.vssvl(i64 %{{.*}}, ptr %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vld2dnc_vssvl(idx, p, vr1, 256);
 }
 
 void __attribute__((noinline))
 test_vldu2d_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vldu2d_vssl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldu2d.vssl(i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldu2d.vssl(i64 %{{.*}}, ptr %{{.*}}, i32 256)
   vr1 = _vel_vldu2d_vssl(idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vldu2d_vssvl(char* p, long idx) {
   // CHECK-LABEL: @test_vldu2d_vssvl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldu2d.vssvl(i64 %{{.*}}, i8* %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldu2d.vssvl(i64 %{{.*}}, ptr %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vldu2d_vssvl(idx, p, vr1, 256);
 }
 
 void __attribute__((noinline))
 test_vldu2dnc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vldu2dnc_vssl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldu2dnc.vssl(i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldu2dnc.vssl(i64 %{{.*}}, ptr %{{.*}}, i32 256)
   vr1 = _vel_vldu2dnc_vssl(idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vldu2dnc_vssvl(char* p, long idx) {
   // CHECK-LABEL: @test_vldu2dnc_vssvl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldu2dnc.vssvl(i64 %{{.*}}, i8* %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldu2dnc.vssvl(i64 %{{.*}}, ptr %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vldu2dnc_vssvl(idx, p, vr1, 256);
 }
 
 void __attribute__((noinline))
 test_vldl2dsx_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vldl2dsx_vssl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldl2dsx.vssl(i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldl2dsx.vssl(i64 %{{.*}}, ptr %{{.*}}, i32 256)
   vr1 = _vel_vldl2dsx_vssl(idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vldl2dsx_vssvl(char* p, long idx) {
   // CHECK-LABEL: @test_vldl2dsx_vssvl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldl2dsx.vssvl(i64 %{{.*}}, i8* %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldl2dsx.vssvl(i64 %{{.*}}, ptr %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vldl2dsx_vssvl(idx, p, vr1, 256);
 }
 
 void __attribute__((noinline))
 test_vldl2dsxnc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vldl2dsxnc_vssl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldl2dsxnc.vssl(i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldl2dsxnc.vssl(i64 %{{.*}}, ptr %{{.*}}, i32 256)
   vr1 = _vel_vldl2dsxnc_vssl(idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vldl2dsxnc_vssvl(char* p, long idx) {
   // CHECK-LABEL: @test_vldl2dsxnc_vssvl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldl2dsxnc.vssvl(i64 %{{.*}}, i8* %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldl2dsxnc.vssvl(i64 %{{.*}}, ptr %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vldl2dsxnc_vssvl(idx, p, vr1, 256);
 }
 
 void __attribute__((noinline))
 test_vldl2dzx_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vldl2dzx_vssl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldl2dzx.vssl(i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldl2dzx.vssl(i64 %{{.*}}, ptr %{{.*}}, i32 256)
   vr1 = _vel_vldl2dzx_vssl(idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vldl2dzx_vssvl(char* p, long idx) {
   // CHECK-LABEL: @test_vldl2dzx_vssvl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldl2dzx.vssvl(i64 %{{.*}}, i8* %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldl2dzx.vssvl(i64 %{{.*}}, ptr %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vldl2dzx_vssvl(idx, p, vr1, 256);
 }
 
 void __attribute__((noinline))
 test_vldl2dzxnc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vldl2dzxnc_vssl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldl2dzxnc.vssl(i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldl2dzxnc.vssl(i64 %{{.*}}, ptr %{{.*}}, i32 256)
   vr1 = _vel_vldl2dzxnc_vssl(idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vldl2dzxnc_vssvl(char* p, long idx) {
   // CHECK-LABEL: @test_vldl2dzxnc_vssvl
-  // CHECK: call <256 x double> @llvm.ve.vl.vldl2dzxnc.vssvl(i64 %{{.*}}, i8* %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  // CHECK: call <256 x double> @llvm.ve.vl.vldl2dzxnc.vssvl(i64 %{{.*}}, ptr %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vldl2dzxnc_vssvl(idx, p, vr1, 256);
 }
 
 void __attribute__((noinline))
 test_vst_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vst_vssl
-  // CHECK: call void @llvm.ve.vl.vst.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vst.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vst_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vst_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vst_vssml
-  // CHECK: call void @llvm.ve.vl.vst.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vst.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vst_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstnc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstnc_vssl
-  // CHECK: call void @llvm.ve.vl.vstnc.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstnc.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstnc_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstnc_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstnc_vssml
-  // CHECK: call void @llvm.ve.vl.vstnc.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstnc.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstnc_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstot_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstot_vssl
-  // CHECK: call void @llvm.ve.vl.vstot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstot_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstot_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstot_vssml
-  // CHECK: call void @llvm.ve.vl.vstot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstot_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstncot_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstncot_vssl
-  // CHECK: call void @llvm.ve.vl.vstncot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstncot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstncot_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstncot_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstncot_vssml
-  // CHECK: call void @llvm.ve.vl.vstncot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstncot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstncot_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstu_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstu_vssl
-  // CHECK: call void @llvm.ve.vl.vstu.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstu.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstu_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstu_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstu_vssml
-  // CHECK: call void @llvm.ve.vl.vstu.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstu.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstu_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstunc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstunc_vssl
-  // CHECK: call void @llvm.ve.vl.vstunc.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstunc.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstunc_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstunc_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstunc_vssml
-  // CHECK: call void @llvm.ve.vl.vstunc.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstunc.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstunc_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstuot_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstuot_vssl
-  // CHECK: call void @llvm.ve.vl.vstuot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstuot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstuot_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstuot_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstuot_vssml
-  // CHECK: call void @llvm.ve.vl.vstuot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstuot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstuot_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstuncot_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstuncot_vssl
-  // CHECK: call void @llvm.ve.vl.vstuncot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstuncot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstuncot_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstuncot_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstuncot_vssml
-  // CHECK: call void @llvm.ve.vl.vstuncot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstuncot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstuncot_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstl_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstl_vssl
-  // CHECK: call void @llvm.ve.vl.vstl.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstl.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstl_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstl_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstl_vssml
-  // CHECK: call void @llvm.ve.vl.vstl.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstl.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstl_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstlnc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstlnc_vssl
-  // CHECK: call void @llvm.ve.vl.vstlnc.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstlnc.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstlnc_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstlnc_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstlnc_vssml
-  // CHECK: call void @llvm.ve.vl.vstlnc.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstlnc.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstlnc_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstlot_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstlot_vssl
-  // CHECK: call void @llvm.ve.vl.vstlot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstlot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstlot_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstlot_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstlot_vssml
-  // CHECK: call void @llvm.ve.vl.vstlot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstlot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstlot_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstlncot_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstlncot_vssl
-  // CHECK: call void @llvm.ve.vl.vstlncot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstlncot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstlncot_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstlncot_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstlncot_vssml
-  // CHECK: call void @llvm.ve.vl.vstlncot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstlncot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstlncot_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vst2d_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vst2d_vssl
-  // CHECK: call void @llvm.ve.vl.vst2d.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vst2d.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vst2d_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vst2d_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vst2d_vssml
-  // CHECK: call void @llvm.ve.vl.vst2d.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vst2d.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vst2d_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vst2dnc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vst2dnc_vssl
-  // CHECK: call void @llvm.ve.vl.vst2dnc.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vst2dnc.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vst2dnc_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vst2dnc_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vst2dnc_vssml
-  // CHECK: call void @llvm.ve.vl.vst2dnc.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vst2dnc.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vst2dnc_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vst2dot_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vst2dot_vssl
-  // CHECK: call void @llvm.ve.vl.vst2dot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vst2dot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vst2dot_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vst2dot_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vst2dot_vssml
-  // CHECK: call void @llvm.ve.vl.vst2dot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vst2dot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vst2dot_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vst2dncot_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vst2dncot_vssl
-  // CHECK: call void @llvm.ve.vl.vst2dncot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vst2dncot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vst2dncot_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vst2dncot_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vst2dncot_vssml
-  // CHECK: call void @llvm.ve.vl.vst2dncot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vst2dncot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vst2dncot_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstu2d_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstu2d_vssl
-  // CHECK: call void @llvm.ve.vl.vstu2d.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstu2d.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstu2d_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstu2d_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstu2d_vssml
-  // CHECK: call void @llvm.ve.vl.vstu2d.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstu2d.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstu2d_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstu2dnc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstu2dnc_vssl
-  // CHECK: call void @llvm.ve.vl.vstu2dnc.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstu2dnc.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstu2dnc_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstu2dnc_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstu2dnc_vssml
-  // CHECK: call void @llvm.ve.vl.vstu2dnc.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstu2dnc.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstu2dnc_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstu2dot_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstu2dot_vssl
-  // CHECK: call void @llvm.ve.vl.vstu2dot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstu2dot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstu2dot_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstu2dot_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstu2dot_vssml
-  // CHECK: call void @llvm.ve.vl.vstu2dot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstu2dot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstu2dot_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstu2dncot_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstu2dncot_vssl
-  // CHECK: call void @llvm.ve.vl.vstu2dncot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstu2dncot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstu2dncot_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstu2dncot_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstu2dncot_vssml
-  // CHECK: call void @llvm.ve.vl.vstu2dncot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstu2dncot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstu2dncot_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstl2d_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstl2d_vssl
-  // CHECK: call void @llvm.ve.vl.vstl2d.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstl2d.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstl2d_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstl2d_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstl2d_vssml
-  // CHECK: call void @llvm.ve.vl.vstl2d.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstl2d.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstl2d_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstl2dnc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstl2dnc_vssl
-  // CHECK: call void @llvm.ve.vl.vstl2dnc.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstl2dnc.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstl2dnc_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstl2dnc_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstl2dnc_vssml
-  // CHECK: call void @llvm.ve.vl.vstl2dnc.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstl2dnc.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstl2dnc_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstl2dot_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstl2dot_vssl
-  // CHECK: call void @llvm.ve.vl.vstl2dot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstl2dot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstl2dot_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstl2dot_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstl2dot_vssml
-  // CHECK: call void @llvm.ve.vl.vstl2dot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstl2dot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstl2dot_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_vstl2dncot_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstl2dncot_vssl
-  // CHECK: call void @llvm.ve.vl.vstl2dncot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstl2dncot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_vstl2dncot_vssl(vr1, idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_vstl2dncot_vssml(char* p, long idx) {
   // CHECK-LABEL: @test_vstl2dncot_vssml
-  // CHECK: call void @llvm.ve.vl.vstl2dncot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.vstl2dncot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, ptr %{{.*}}, <256 x i1> %{{.*}}, i32 256)
   _vel_vstl2dncot_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
 test_pfchv_ssl(char* p, long idx) {
   // CHECK-LABEL: @test_pfchv_ssl
-  // CHECK: call void @llvm.ve.vl.pfchv.ssl(i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.pfchv.ssl(i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_pfchv_ssl(idx, p, 256);
 }
 
 void __attribute__((noinline))
 test_pfchvnc_ssl(char* p, long idx) {
   // CHECK-LABEL: @test_pfchvnc_ssl
-  // CHECK: call void @llvm.ve.vl.pfchvnc.ssl(i64 %{{.*}}, i8* %{{.*}}, i32 256)
+  // CHECK: call void @llvm.ve.vl.pfchvnc.ssl(i64 %{{.*}}, ptr %{{.*}}, i32 256)
   _vel_pfchvnc_ssl(idx, p, 256);
 }
 
@@ -8815,17 +8815,14 @@ test_svob() {
 void __attribute__((noinline))
 test_pack_f32p(float* p1, float* p2) {
   // CHECK-LABEL: @test_pack_f32p
-  // CHECK: %[[VAR1:[A-Za-z0-9.]+]] = bitcast float* %{{.*}} to i8*
-  // CHECK: %[[VAR2:[A-Za-z0-9.]+]] = bitcast float* %{{.*}} to i8*
-  // CHECK-NEXT: call i64 @llvm.ve.vl.pack.f32p(i8* %[[VAR1]], i8* %[[VAR2]])
+  // CHECK: call i64 @llvm.ve.vl.pack.f32p(ptr %{{.*}}, ptr %{{.*}})
   v1 = _vel_pack_f32p(p1, p2);
 }
 
 void __attribute__((noinline))
 test_pack_f32a(float* p) {
   // CHECK-LABEL: @test_pack_f32a
-  // CHECK: %[[VAR3:[A-Za-z0-9.]+]] = bitcast float* %{{.*}} to i8*
-  // CHECK-NEXT: call i64 @llvm.ve.vl.pack.f32a(i8* %[[VAR3]])
+  // CHECK: call i64 @llvm.ve.vl.pack.f32a(ptr %{{.*}})
   v1 = _vel_pack_f32a(p);
 }
 

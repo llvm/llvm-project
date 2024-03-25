@@ -7,18 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/exit.h"
+#include "src/__support/OSUtil/quick_exit.h"
 #include "src/__support/common.h"
-#include "src/stdlib/_Exit.h"
 
-namespace __llvm_libc {
+extern "C" void __cxa_finalize(void *);
 
-namespace internal {
-void call_exit_callbacks();
-}
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, exit, (int status)) {
-  internal::call_exit_callbacks();
-  _Exit(status);
+  __cxa_finalize(nullptr);
+  quick_exit(status);
+  __builtin_unreachable();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

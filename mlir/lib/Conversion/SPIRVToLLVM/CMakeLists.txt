@@ -13,7 +13,7 @@ add_mlir_conversion_library(MLIRSPIRVToLLVM
   LINK_LIBS PUBLIC
   MLIRArithToLLVM
   MLIRFuncToLLVM
-  MLIRGPUOps
+  MLIRGPUDialect
   MLIRIR
   MLIRLLVMCommonConversion
   MLIRLLVMDialect

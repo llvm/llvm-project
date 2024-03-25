@@ -3,10 +3,6 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify=expected-cpp20 %s
 // RUN: %clang_cc1 -std=c++20 -verify=ref %s
 
-// ref-no-diagnostics
-// expected-no-diagnostics
-// expected-cpp20-no-diagnostics
-
 namespace WhileLoop {
   constexpr int f() {
     int i = 0;
@@ -274,3 +270,57 @@ namespace ForLoop {
 #endif
 
 };
+
+namespace RangeForLoop {
+  constexpr int localArray() {
+    int a[] = {1,2,3,4};
+    int s = 0;
+    for(int i : a) {
+      s += i;
+    }
+    return s;
+  }
+  static_assert(localArray() == 10, "");
+
+  constexpr int localArray2() {
+    int a[] = {1,2,3,4};
+    int s = 0;
+    for(const int &i : a) {
+      s += i;
+    }
+    return s;
+  }
+  static_assert(localArray2() == 10, "");
+
+  constexpr int nested() {
+    int s = 0;
+    for (const int i : (int[]){1,2,3,4}) {
+      int a[] = {i, i};
+      for(int m : a) {
+        s += m;
+      }
+    }
+    return s;
+  }
+  static_assert(nested() == 20, "");
+
+  constexpr int withBreak() {
+    int s = 0;
+    for (const int &i: (bool[]){false, true}) {
+      if (i)
+        break;
+      s++;
+    }
+    return s;
+  }
+  static_assert(withBreak() == 1, "");
+
+  constexpr void NoBody() {
+    for (const int &i: (bool[]){false, true}); // expected-warning {{empty body}} \
+                                               // expected-note {{semicolon on a separate line}} \
+                                               // expected-cpp20-warning {{empty body}} \
+                                               // expected-cpp20-note {{semicolon on a separate line}} \
+                                               // ref-warning {{empty body}} \
+                                               // ref-note {{semicolon on a separate line}}
+  }
+}

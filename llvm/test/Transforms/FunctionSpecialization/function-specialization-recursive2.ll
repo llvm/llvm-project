@@ -1,9 +1,9 @@
-; RUN: opt -passes="ipsccp<func-spec>" -force-function-specialization -func-specialization-max-iters=2 -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<func-spec>" -force-specialization -funcspec-max-iters=2 -S < %s | FileCheck %s
 
 ; Volatile store preventing recursive specialisation:
 ;
-; CHECK:     @recursiveFunc.1
-; CHECK-NOT: @recursiveFunc.2
+; CHECK:     @recursiveFunc.specialized.1
+; CHECK-NOT: @recursiveFunc.specialized.2
 
 @Global = internal constant i32 1, align 4
 

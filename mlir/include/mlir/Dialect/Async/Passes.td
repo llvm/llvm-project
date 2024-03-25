@@ -36,6 +36,7 @@ def AsyncParallelFor : Pass<"async-parallel-for", "ModuleOp"> {
   let dependentDialects = [
     "arith::ArithDialect",
     "async::AsyncDialect",
+    "func::FuncDialect",
     "scf::SCFDialect"
   ];
 }
@@ -44,7 +45,7 @@ def AsyncToAsyncRuntime : Pass<"async-to-async-runtime", "ModuleOp"> {
   let summary = "Lower all high level async operations (e.g. async.execute) to"
                 "the explicit async.runtime and async.coro operations";
   let constructor = "mlir::createAsyncToAsyncRuntimePass()";
-  let dependentDialects = ["async::AsyncDialect", "func::FuncDialect"];
+  let dependentDialects = ["async::AsyncDialect", "func::FuncDialect", "cf::ControlFlowDialect"];
 }
 
 def AsyncFuncToAsyncRuntime : Pass<"async-func-to-async-runtime", "ModuleOp"> {

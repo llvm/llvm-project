@@ -123,7 +123,6 @@ struct late_delete {
 };
 late_delete::late_delete() = default; // expected-error {{would delete it}}
 
-// See also rdar://problem/8125400.
 namespace empty {
   static union {}; // expected-warning {{does not declare anything}}
   static union { union {}; }; // expected-warning {{does not declare anything}}

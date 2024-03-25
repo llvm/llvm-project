@@ -7,17 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -25,11 +27,12 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cstring>
 #include <inttypes.h>
 #include <iostream>
-#include <map>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -41,6 +44,7 @@
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
 #include "llvm/DebugInfo/GSYM/ObjectFileTransformer.h"
+#include "llvm/DebugInfo/GSYM/OutputAggregator.h"
 #include <optional>
 
 using namespace llvm;
@@ -51,78 +55,128 @@ using namespace object;
 /// Command line options.
 /// @{
 
-namespace {
-using namespace cl;
+using namespace llvm::opt;
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
 
-OptionCategory GeneralOptions("Options");
-OptionCategory ConversionOptions("Conversion Options");
-OptionCategory LookupOptions("Lookup Options");
+#define PREFIX(NAME, VALUE)                                                    \
+  constexpr llvm::StringLiteral NAME##_init[] = VALUE;                         \
+  constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                          \
+      NAME##_init, std::size(NAME##_init) - 1);
+#include "Opts.inc"
+#undef PREFIX
 
-static opt<bool> Help("h", desc("Alias for -help"), Hidden,
-                      cat(GeneralOptions));
+const opt::OptTable::Info InfoTable[] = {
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
 
-static opt<bool> Verbose("verbose",
-                         desc("Enable verbose logging and encoding details."),
-                         cat(GeneralOptions));
+class GSYMUtilOptTable : public llvm::opt::GenericOptTable {
+public:
+  GSYMUtilOptTable() : GenericOptTable(InfoTable) {
+    setGroupedShortOptions(true);
+  }
+};
 
-static list<std::string> InputFilenames(Positional, desc("<input GSYM files>"),
-                                        cat(GeneralOptions));
+static bool Verbose;
+static std::vector<std::string> InputFilenames;
+static std::string ConvertFilename;
+static std::vector<std::string> ArchFilters;
+static std::string OutputFilename;
+static std::string JsonSummaryFile;
+static bool Verify;
+static unsigned NumThreads;
+static uint64_t SegmentSize;
+static bool Quiet;
+static std::vector<uint64_t> LookupAddresses;
+static bool LookupAddressesFromStdin;
 
-static opt<std::string>
-    ConvertFilename("convert", cl::init(""),
-                    cl::desc("Convert the specified file to the GSYM format.\n"
-                             "Supported files include ELF and mach-o files "
-                             "that will have their debug info (DWARF) and "
-                             "symbol table converted."),
-                    cl::value_desc("path"), cat(ConversionOptions));
+static void parseArgs(int argc, char **argv) {
+  GSYMUtilOptTable Tbl;
+  llvm::StringRef ToolName = argv[0];
+  llvm::BumpPtrAllocator A;
+  llvm::StringSaver Saver{A};
+  llvm::opt::InputArgList Args =
+      Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
+        llvm::errs() << Msg << '\n';
+        std::exit(1);
+      });
+  if (Args.hasArg(OPT_help)) {
+    const char *Overview =
+        "A tool for dumping, searching and creating GSYM files.\n\n"
+        "Specify one or more GSYM paths as arguments to dump all of the "
+        "information in each GSYM file.\n"
+        "Specify a single GSYM file along with one or more --lookup options to "
+        "lookup addresses within that GSYM file.\n"
+        "Use the --convert option to specify a file with option --out-file "
+        "option to convert to GSYM format.\n";
 
-static list<std::string>
-    ArchFilters("arch",
-                desc("Process debug information for the specified CPU "
-                     "architecture only.\nArchitectures may be specified by "
-                     "name or by number.\nThis option can be specified "
-                     "multiple times, once for each desired architecture."),
-                cl::value_desc("arch"), cat(ConversionOptions));
+    Tbl.printHelp(llvm::outs(), "llvm-gsymutil [options] <input GSYM files>",
+                  Overview);
+    std::exit(0);
+  }
+  if (Args.hasArg(OPT_version)) {
+    llvm::outs() << ToolName << '\n';
+    cl::PrintVersionMessage();
+    std::exit(0);
+  }
 
-static opt<std::string>
-    OutputFilename("out-file", cl::init(""),
-                   cl::desc("Specify the path where the converted GSYM file "
-                            "will be saved.\nWhen not specified, a '.gsym' "
-                            "extension will be appended to the file name "
-                            "specified in the --convert option."),
-                   cl::value_desc("path"), cat(ConversionOptions));
-static alias OutputFilenameAlias("o", desc("Alias for -out-file."),
-                                 aliasopt(OutputFilename),
-                                 cat(ConversionOptions));
+  Verbose = Args.hasArg(OPT_verbose);
 
-static opt<bool> Verify("verify",
-                        desc("Verify the generated GSYM file against the "
-                             "information in the file that was converted."),
-                        cat(ConversionOptions));
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_INPUT))
+    InputFilenames.emplace_back(A->getValue());
 
-static opt<unsigned>
-    NumThreads("num-threads",
-               desc("Specify the maximum number (n) of simultaneous threads "
-                    "to use when converting files to GSYM.\nDefaults to the "
-                    "number of cores on the current machine."),
-               cl::value_desc("n"), cat(ConversionOptions));
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_convert_EQ))
+    ConvertFilename = A->getValue();
 
-static opt<bool>
-    Quiet("quiet", desc("Do not output warnings about the debug information"),
-          cat(ConversionOptions));
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_arch_EQ))
+    ArchFilters.emplace_back(A->getValue());
 
-static list<uint64_t> LookupAddresses("address",
-                                      desc("Lookup an address in a GSYM file"),
-                                      cl::value_desc("addr"),
-                                      cat(LookupOptions));
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_out_file_EQ))
+    OutputFilename = A->getValue();
 
-static opt<bool> LookupAddressesFromStdin(
-    "addresses-from-stdin",
-    desc("Lookup addresses in a GSYM file that are read from stdin\nEach input "
-         "line is expected to be of the following format: <addr> <gsym-path>"),
-    cat(LookupOptions));
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_json_summary_file_EQ))
+    JsonSummaryFile = A->getValue();
 
-} // namespace
+  Verify = Args.hasArg(OPT_verify);
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_num_threads_EQ)) {
+    StringRef S{A->getValue()};
+    if (!llvm::to_integer(S, NumThreads, 0)) {
+      llvm::errs() << ToolName << ": for the --num-threads option: '" << S
+                   << "' value invalid for uint argument!\n";
+      std::exit(1);
+    }
+  }
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_segment_size_EQ)) {
+    StringRef S{A->getValue()};
+    if (!llvm::to_integer(S, SegmentSize, 0)) {
+      llvm::errs() << ToolName << ": for the --segment-size option: '" << S
+                   << "' value invalid for uint argument!\n";
+      std::exit(1);
+    }
+  }
+
+  Quiet = Args.hasArg(OPT_quiet);
+
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_address_EQ)) {
+    StringRef S{A->getValue()};
+    if (!llvm::to_integer(S, LookupAddresses.emplace_back(), 0)) {
+      llvm::errs() << ToolName << ": for the --address option: '" << S
+                   << "' value invalid for uint argument!\n";
+      std::exit(1);
+    }
+  }
+
+  LookupAddressesFromStdin = Args.hasArg(OPT_addresses_from_stdin);
+}
+
 /// @}
 //===----------------------------------------------------------------------===//
 
@@ -163,14 +217,14 @@ static bool filterArch(MachOObjectFile &Obj) {
   Triple ObjTriple(Obj.getArchTriple());
   StringRef ObjArch = ObjTriple.getArchName();
 
-  for (auto Arch : ArchFilters) {
+  for (StringRef Arch : ArchFilters) {
     // Match name.
     if (Arch == ObjArch)
       return true;
 
     // Match architecture number.
     unsigned Value;
-    if (!StringRef(Arch).getAsInteger(0, Value))
+    if (!Arch.getAsInteger(0, Value))
       if (Value == getCPUType(Obj))
         return true;
   }
@@ -180,7 +234,7 @@ static bool filterArch(MachOObjectFile &Obj) {
 /// Determine the virtual address that is considered the base address of an ELF
 /// object file.
 ///
-/// The base address of an ELF file is the the "p_vaddr" of the first program
+/// The base address of an ELF file is the "p_vaddr" of the first program
 /// header whose "p_type" is PT_LOAD.
 ///
 /// \param ELFFile An ELF object file we will search.
@@ -252,11 +306,10 @@ static std::optional<uint64_t> getImageBaseAddress(object::ObjectFile &Obj) {
   return std::nullopt;
 }
 
-static llvm::Error handleObjectFile(ObjectFile &Obj,
-                                    const std::string &OutFile) {
+static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
+                                    OutputAggregator &Out) {
   auto ThreadCount =
       NumThreads > 0 ? NumThreads : std::thread::hardware_concurrency();
-  auto &OS = outs();
 
   GsymCreator Gsym(Quiet);
 
@@ -282,41 +335,53 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
   }
 
   // Make sure there is DWARF to convert first.
-  std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
+  std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(
+      Obj,
+      /*RelocAction=*/DWARFContext::ProcessDebugRelocations::Process,
+      nullptr,
+      /*DWPName=*/"",
+      /*RecoverableErrorHandler=*/WithColor::defaultErrorHandler,
+      /*WarningHandler=*/WithColor::defaultWarningHandler,
+      /*ThreadSafe*/true);
   if (!DICtx)
     return createStringError(std::errc::invalid_argument,
                              "unable to create DWARF context");
 
   // Make a DWARF transformer object and populate the ranges of the code
   // so we don't end up adding invalid functions to GSYM data.
-  DwarfTransformer DT(*DICtx, OS, Gsym);
+  DwarfTransformer DT(*DICtx, Gsym);
   if (!TextRanges.empty())
     Gsym.SetValidTextRanges(TextRanges);
 
   // Convert all DWARF to GSYM.
-  if (auto Err = DT.convert(ThreadCount))
+  if (auto Err = DT.convert(ThreadCount, Out))
     return Err;
 
   // Get the UUID and convert symbol table to GSYM.
-  if (auto Err = ObjectFileTransformer::convert(Obj, OS, Gsym))
+  if (auto Err = ObjectFileTransformer::convert(Obj, Out, Gsym))
     return Err;
 
   // Finalize the GSYM to make it ready to save to disk. This will remove
   // duplicate FunctionInfo entries where we might have found an entry from
   // debug info and also a symbol table entry from the object file.
-  if (auto Err = Gsym.finalize(OS))
+  if (auto Err = Gsym.finalize(Out))
     return Err;
 
   // Save the GSYM file to disk.
-  support::endianness Endian =
-      Obj.makeTriple().isLittleEndian() ? support::little : support::big;
-  if (auto Err = Gsym.save(OutFile, Endian))
+  llvm::endianness Endian = Obj.makeTriple().isLittleEndian()
+                                ? llvm::endianness::little
+                                : llvm::endianness::big;
+
+  std::optional<uint64_t> OptSegmentSize;
+  if (SegmentSize > 0)
+    OptSegmentSize = SegmentSize;
+  if (auto Err = Gsym.save(OutFile, Endian, OptSegmentSize))
     return Err;
 
   // Verify the DWARF if requested. This will ensure all the info in the DWARF
   // can be looked up in the GSYM and that all lookups get matching data.
   if (Verify) {
-    if (auto Err = DT.verify(OutFile))
+    if (auto Err = DT.verify(OutFile, Out))
       return Err;
   }
 
@@ -324,7 +389,8 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
 }
 
 static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
-                                const std::string &OutFile) {
+                                const std::string &OutFile,
+                                OutputAggregator &Out) {
   Expected<std::unique_ptr<Binary>> BinOrErr = object::createBinary(Buffer);
   error(Filename, errorToErrorCode(BinOrErr.takeError()));
 
@@ -332,7 +398,7 @@ static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
     Triple ObjTriple(Obj->makeTriple());
     auto ArchName = ObjTriple.getArchName();
     outs() << "Output file (" << ArchName << "): " << OutFile << "\n";
-    if (auto Err = handleObjectFile(*Obj, OutFile))
+    if (auto Err = handleObjectFile(*Obj, OutFile, Out))
       return Err;
   } else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get())) {
     // Iterate over all contained architectures and filter out any that were
@@ -366,7 +432,7 @@ static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
         ArchOutFile.append(ArchName.str());
       }
       outs() << "Output file (" << ArchName << "): " << ArchOutFile << "\n";
-      if (auto Err = handleObjectFile(*Obj, ArchOutFile))
+      if (auto Err = handleObjectFile(*Obj, ArchOutFile, Out))
         return Err;
     }
   }
@@ -374,15 +440,16 @@ static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
 }
 
 static llvm::Error handleFileConversionToGSYM(StringRef Filename,
-                                              const std::string &OutFile) {
+                                              const std::string &OutFile,
+                                              OutputAggregator &Out) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
       MemoryBuffer::getFileOrSTDIN(Filename);
   error(Filename, BuffOrErr.getError());
   std::unique_ptr<MemoryBuffer> Buffer = std::move(BuffOrErr.get());
-  return handleBuffer(Filename, *Buffer, OutFile);
+  return handleBuffer(Filename, *Buffer, OutFile, Out);
 }
 
-static llvm::Error convertFileToGSYM(raw_ostream &OS) {
+static llvm::Error convertFileToGSYM(OutputAggregator &Out) {
   // Expand any .dSYM bundles to the individual object files contained therein.
   std::vector<std::string> Objects;
   std::string OutFile = OutputFilename;
@@ -391,7 +458,7 @@ static llvm::Error convertFileToGSYM(raw_ostream &OS) {
     OutFile += ".gsym";
   }
 
-  OS << "Input file: " << ConvertFilename << "\n";
+  Out << "Input file: " << ConvertFilename << "\n";
 
   if (auto DsymObjectsOrErr =
           MachOObjectFile::findDsymObjectMembers(ConvertFilename)) {
@@ -403,10 +470,9 @@ static llvm::Error convertFileToGSYM(raw_ostream &OS) {
     error(DsymObjectsOrErr.takeError());
   }
 
-  for (auto Object : Objects) {
-    if (auto Err = handleFileConversionToGSYM(Object, OutFile))
+  for (StringRef Object : Objects)
+    if (Error Err = handleFileConversionToGSYM(Object, OutFile, Out))
       return Err;
-  }
   return Error::success();
 }
 
@@ -431,7 +497,7 @@ static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
     OS << "\n";
 }
 
-int main(int argc, char const *argv[]) {
+int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
   // Print a stack trace if we signal out.
   sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
@@ -439,24 +505,11 @@ int main(int argc, char const *argv[]) {
 
   llvm::InitializeAllTargets();
 
-  const char *Overview =
-      "A tool for dumping, searching and creating GSYM files.\n\n"
-      "Specify one or more GSYM paths as arguments to dump all of the "
-      "information in each GSYM file.\n"
-      "Specify a single GSYM file along with one or more --lookup options to "
-      "lookup addresses within that GSYM file.\n"
-      "Use the --convert option to specify a file with option --out-file "
-      "option to convert to GSYM format.\n";
-  HideUnrelatedOptions({&GeneralOptions, &ConversionOptions, &LookupOptions});
-  cl::ParseCommandLineOptions(argc, argv, Overview);
-
-  if (Help) {
-    PrintHelpMessage(/*Hidden =*/false, /*Categorized =*/true);
-    return 0;
-  }
+  parseArgs(argc, argv);
 
   raw_ostream &OS = outs();
 
+  OutputAggregator Aggregation(&OS);
   if (!ConvertFilename.empty()) {
     // Convert DWARF to GSYM
     if (!InputFilenames.empty()) {
@@ -465,8 +518,36 @@ int main(int argc, char const *argv[]) {
       return 1;
     }
     // Call error() if we have an error and it will exit with a status of 1
-    if (auto Err = convertFileToGSYM(OS))
+    if (auto Err = convertFileToGSYM(Aggregation))
       error("DWARF conversion failed: ", std::move(Err));
+
+    // Report the errors from aggregator:
+    Aggregation.EnumerateResults([&](StringRef category, unsigned count) {
+      OS << category << " occurred " << count << " time(s)\n";
+    });
+    if (!JsonSummaryFile.empty()) {
+      std::error_code EC;
+      raw_fd_ostream JsonStream(JsonSummaryFile, EC, sys::fs::OF_Text);
+      if (EC) {
+        OS << "error opening aggregate error json file '" << JsonSummaryFile
+           << "' for writing: " << EC.message() << '\n';
+        return 1;
+      }
+
+      llvm::json::Object Categories;
+      uint64_t ErrorCount = 0;
+      Aggregation.EnumerateResults([&](StringRef Category, unsigned Count) {
+        llvm::json::Object Val;
+        Val.try_emplace("count", Count);
+        Categories.try_emplace(Category, std::move(Val));
+        ErrorCount += Count;
+      });
+      llvm::json::Object RootNode;
+      RootNode.try_emplace("error-categories", std::move(Categories));
+      RootNode.try_emplace("error-count", ErrorCount);
+
+      JsonStream << llvm::json::Value(std::move(RootNode));
+    }
     return 0;
   }
 

@@ -12,6 +12,7 @@
 
 // bool empty() const noexcept;
 
+#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 
@@ -27,8 +28,10 @@ int main(int, char**)
     assert(c.empty());
     c.push_back(C::value_type(1));
     assert(!c.empty());
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     c.clear();
     assert(c.empty());
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     }
 #if TEST_STD_VER >= 11
     {
@@ -38,8 +41,10 @@ int main(int, char**)
     assert(c.empty());
     c.push_back(C::value_type(1));
     assert(!c.empty());
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     c.clear();
     assert(c.empty());
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     }
 #endif
 

@@ -20,7 +20,6 @@
 #include <vector>
 
 #include "lldb/Target/PostMortemProcess.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 
 #include "Plugins/ObjectFile/ELF/ELFHeader.h"
@@ -117,7 +116,7 @@ private:
     lldb::addr_t start;
     lldb::addr_t end;
     lldb::addr_t file_ofs;
-    lldb_private::ConstString path;
+    std::string path;
   };
 
   // For ProcessElfCore only
@@ -128,7 +127,6 @@ private:
       VMRangeToPermissions;
 
   lldb::ModuleSP m_core_module_sp;
-  lldb_private::FileSpec m_core_file;
   std::string m_dyld_plugin_name;
 
   // True if m_thread_contexts contains valid entries

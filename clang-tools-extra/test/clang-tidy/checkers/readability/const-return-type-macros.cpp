@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -std=c++14 %s readability-const-return-type %t -- \
-// RUN:   -config="{CheckOptions: [{key: readability-const-return-type.IgnoreMacros, value: false}]}"
+// RUN: %check_clang_tidy -std=c++14-or-later %s readability-const-return-type %t -- \
+// RUN:   -config="{CheckOptions: {readability-const-return-type.IgnoreMacros: false}}"
 
 //  p# = positive test
 //  n# = negative test

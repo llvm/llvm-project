@@ -69,6 +69,7 @@ next:
 ; CHECK-NEXT:  %x = phi i32 [ %y, %entry ]
 }
 
+;; No issue!
 define i32 @f6(i32 %x) {
 bb0:
   %y1 = callbr i32 asm "", "=r,!i"() to label %bb1 [label %bb2]
@@ -76,8 +77,4 @@ bb1:
   ret i32 0
 bb2:
   ret i32 %y1
-; CHECK: Instruction does not dominate all uses!
-; CHECK-NEXT:  %y1 = callbr i32 asm "", "=r,!i"()
-; CHECK-NEXT:        to label %bb1 [label %bb2]
-; CHECK-NEXT:  ret i32 %y1
 }

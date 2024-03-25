@@ -13,13 +13,14 @@ import abc
 from collections import namedtuple
 from typing import List
 
-StepExpectInfo = namedtuple('StepExpectInfo', 'expression, path, frame_idx, line_range')
+StepExpectInfo = namedtuple("StepExpectInfo", "expression, path, frame_idx, line_range")
+
 
 class CommandBase(object, metaclass=abc.ABCMeta):
     def __init__(self):
         self.path = None
         self.lineno = None
-        self.raw_text = ''
+        self.raw_text = ""
 
     def get_label_args(self):
         return list()

@@ -8,7 +8,6 @@
 #define AVAILABLE_WEBKIT_VERSION_3_0_AND_LATER
 #define DEPRECATED  __attribute__((deprecated)) 
 
-// rdar://15442742
 #if TARGET_OS_IPHONE
   #define NS_NONATOMIC_IOSONLY nonatomic
 #else
@@ -161,7 +160,6 @@ DEPRECATED
 - (void)setXxxdelegateYYY:(id)delegate DEPRECATED;
 @end
 
-// rdar://14987909
 #define NS_AVAILABLE __attribute__((availability(macosx,introduced=10.0)))
 #define NORETURN __attribute__((noreturn))
 #define ALIGNED __attribute__((aligned(16)))
@@ -198,7 +196,6 @@ DEPRECATED
 
 @end
 
-// rdar://15082818
 @class NSMutableDictionary;
 
 @interface NSArray

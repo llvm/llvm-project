@@ -11,14 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/StableHashing.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Config/llvm-config.h"
@@ -51,6 +51,11 @@ static const MachineFunction *getMFIfAvailable(const MachineOperand &MO) {
 static MachineFunction *getMFIfAvailable(MachineOperand &MO) {
   return const_cast<MachineFunction *>(
       getMFIfAvailable(const_cast<const MachineOperand &>(MO)));
+}
+
+unsigned MachineOperand::getOperandNo() const {
+  assert(getParent() && "Operand does not belong to any instruction!");
+  return getParent()->getOperandNo(this);
 }
 
 void MachineOperand::setReg(Register Reg) {
@@ -197,6 +202,19 @@ void MachineOperand::ChangeToGA(const GlobalValue *GV, int64_t Offset,
 
   OpKind = MO_GlobalAddress;
   Contents.OffsetedInfo.Val.GV = GV;
+  setOffset(Offset);
+  setTargetFlags(TargetFlags);
+}
+
+void MachineOperand::ChangeToBA(const BlockAddress *BA, int64_t Offset,
+                                unsigned TargetFlags) {
+  assert((!isReg() || !isTied()) &&
+         "Cannot change a tied operand into a block address");
+
+  removeRegFromUses();
+
+  OpKind = MO_BlockAddress;
+  Contents.OffsetedInfo.Val.BA = BA;
   setOffset(Offset);
   setTargetFlags(TargetFlags);
 }
@@ -986,7 +1004,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   case MachineOperand::MO_Predicate: {
     auto Pred = static_cast<CmpInst::Predicate>(getPredicate());
     OS << (CmpInst::isIntPredicate(Pred) ? "int" : "float") << "pred("
-       << CmpInst::getPredicateName(Pred) << ')';
+       << Pred << ')';
     break;
   }
   case MachineOperand::MO_ShuffleMask:
@@ -1022,10 +1040,10 @@ unsigned MachinePointerInfo::getAddrSpace() const { return AddrSpace; }
 /// Offset + Size byte.
 bool MachinePointerInfo::isDereferenceable(unsigned Size, LLVMContext &C,
                                            const DataLayout &DL) const {
-  if (!V.is<const Value *>())
+  if (!isa<const Value *>(V))
     return false;
 
-  const Value *BasePtr = V.get<const Value *>();
+  const Value *BasePtr = cast<const Value *>(V);
   if (BasePtr == nullptr)
     return false;
 
@@ -1070,8 +1088,8 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
                                      AtomicOrdering FailureOrdering)
     : PtrInfo(ptrinfo), MemoryType(type), FlagVals(f), BaseAlign(a),
       AAInfo(AAInfo), Ranges(Ranges) {
-  assert((PtrInfo.V.isNull() || PtrInfo.V.is<const PseudoSourceValue *>() ||
-          isa<PointerType>(PtrInfo.V.get<const Value *>()->getType())) &&
+  assert((PtrInfo.V.isNull() || isa<const PseudoSourceValue *>(PtrInfo.V) ||
+          isa<PointerType>(cast<const Value *>(PtrInfo.V)->getType())) &&
          "invalid pointer value");
   assert((isLoad() || isStore()) && "Not a load/store!");
 
@@ -1083,34 +1101,27 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
   assert(getFailureOrdering() == FailureOrdering && "Value truncated");
 }
 
-MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
-                                     uint64_t s, Align a,
+MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags F,
+                                     LocationSize TS, Align BaseAlignment,
                                      const AAMDNodes &AAInfo,
                                      const MDNode *Ranges, SyncScope::ID SSID,
                                      AtomicOrdering Ordering,
                                      AtomicOrdering FailureOrdering)
-    : MachineMemOperand(ptrinfo, f,
-                        s == ~UINT64_C(0) ? LLT() : LLT::scalar(8 * s), a,
-                        AAInfo, Ranges, SSID, Ordering, FailureOrdering) {}
-
-/// Profile - Gather unique data for the object.
-///
-void MachineMemOperand::Profile(FoldingSetNodeID &ID) const {
-  ID.AddInteger(getOffset());
-  ID.AddInteger(getMemoryType().getUniqueRAWLLTData());
-  ID.AddPointer(getOpaqueValue());
-  ID.AddInteger(getFlags());
-  ID.AddInteger(getBaseAlign().value());
-}
+    : MachineMemOperand(
+          ptrinfo, F,
+          !TS.hasValue() ? LLT()
+          : TS.isScalable()
+              ? LLT::scalable_vector(1, 8 * TS.getValue().getKnownMinValue())
+              : LLT::scalar(8 * TS.getValue().getKnownMinValue()),
+          BaseAlignment, AAInfo, Ranges, SSID, Ordering, FailureOrdering) {}
 
 void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
   // The Value and Offset may differ due to CSE. But the flags and size
   // should be the same.
   assert(MMO->getFlags() == getFlags() && "Flags mismatch!");
-  assert((MMO->getSize() == ~UINT64_C(0) || getSize() == ~UINT64_C(0) ||
+  assert((!MMO->getSize().hasValue() || !getSize().hasValue() ||
           MMO->getSize() == getSize()) &&
          "Size mismatch!");
-
   if (MMO->getBaseAlign() >= getBaseAlign()) {
     // Update the alignment value.
     BaseAlign = MMO->getBaseAlign();
@@ -1232,7 +1243,8 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
        << "unknown-address";
   }
   MachineOperand::printOperandOffset(OS, getOffset());
-  if (getSize() > 0 && getAlign() != getSize())
+  if (!getSize().hasValue() ||
+      getAlign() != getSize().getValue().getKnownMinValue())
     OS << ", align " << getAlign().value();
   if (getAlign() != getBaseAlign())
     OS << ", basealign " << getBaseAlign().value();

@@ -16,10 +16,10 @@
 #include "OSTargets.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/Support/ARMTargetParser.h"
-#include "llvm/Support/ARMTargetParserCommon.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
+#include "llvm/TargetParser/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace clang {
 namespace targets {
@@ -61,26 +61,43 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   llvm::ARM::ProfileKind ArchProfile;
   unsigned ArchVersion;
 
+  LLVM_PREFERRED_TYPE(FPUMode)
   unsigned FPU : 5;
+  LLVM_PREFERRED_TYPE(MVEMode)
   unsigned MVE : 2;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsAAPCS : 1;
+  LLVM_PREFERRED_TYPE(HWDivMode)
   unsigned HWDiv : 2;
 
   // Initialized via features.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SoftFloat : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SoftFloatABI : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CRC : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Crypto : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SHA2 : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned AES : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned DSP : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Unaligned : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned DotProd : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasMatMul : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned FPRegsDisabled : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasPAC : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasBTI : 1;
 
   enum {
@@ -99,6 +116,19 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
     HW_FP_DP = (1 << 3), /// double (64-bit)
   };
   uint32_t HW_FP;
+
+  enum {
+    /// __arm_cdp __arm_ldc, __arm_ldcl, __arm_stc,
+    /// __arm_stcl, __arm_mcr and __arm_mrc
+    FEATURE_COPROC_B1 = (1 << 0),
+    /// __arm_cdp2, __arm_ldc2, __arm_stc2, __arm_ldc2l,
+    /// __arm_stc2l, __arm_mcr2 and __arm_mrc2
+    FEATURE_COPROC_B2 = (1 << 1),
+    /// __arm_mcrr, __arm_mrrc
+    FEATURE_COPROC_B3 = (1 << 2),
+    /// __arm_mcrr2,  __arm_mrrc2
+    FEATURE_COPROC_B4 = (1 << 3),
+  };
 
   void setABIAAPCS();
   void setABIAPCS(bool IsAAPCS16);
@@ -181,7 +211,7 @@ public:
   bool
   validateConstraintModifier(StringRef Constraint, char Modifier, unsigned Size,
                              std::string &SuggestedModifier) const override;
-  const char *getClobbers() const override;
+  std::string_view getClobbers() const override;
 
   StringRef getConstraintRegister(StringRef Constraint,
                                   StringRef Expression) const override {

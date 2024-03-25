@@ -227,12 +227,12 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
   // We can completely ignore inaccessible memory here, because MemoryLocations
   // can only reference accessible memory.
   auto ME = getMemoryEffects(Call, AAQI)
-                .getWithoutLoc(MemoryEffects::InaccessibleMem);
+                .getWithoutLoc(IRMemLocation::InaccessibleMem);
   if (ME.doesNotAccessMemory())
     return ModRefInfo::NoModRef;
 
-  ModRefInfo ArgMR = ME.getModRef(MemoryEffects::ArgMem);
-  ModRefInfo OtherMR = ME.getWithoutLoc(MemoryEffects::ArgMem).getModRef();
+  ModRefInfo ArgMR = ME.getModRef(IRMemLocation::ArgMem);
+  ModRefInfo OtherMR = ME.getWithoutLoc(IRMemLocation::ArgMem).getModRef();
   if ((ArgMR | OtherMR) != OtherMR) {
     // Refine the modref info for argument memory. We only bother to do this
     // if ArgMR is not a subset of OtherMR, otherwise this won't have an impact
@@ -442,15 +442,15 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, ModRefInfo MR) {
 }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
-  for (MemoryEffects::Location Loc : MemoryEffects::locations()) {
+  for (IRMemLocation Loc : MemoryEffects::locations()) {
     switch (Loc) {
-    case MemoryEffects::ArgMem:
+    case IRMemLocation::ArgMem:
       OS << "ArgMem: ";
       break;
-    case MemoryEffects::InaccessibleMem:
+    case IRMemLocation::InaccessibleMem:
       OS << "InaccessibleMem: ";
       break;
-    case MemoryEffects::Other:
+    case IRMemLocation::Other:
       OS << "Other: ";
       break;
     }
@@ -768,10 +768,6 @@ INITIALIZE_PASS_DEPENDENCY(TypeBasedAAWrapperPass)
 INITIALIZE_PASS_END(AAResultsWrapperPass, "aa",
                     "Function Alias Analysis Results", false, true)
 
-FunctionPass *llvm::createAAResultsWrapperPass() {
-  return new AAResultsWrapperPass();
-}
-
 /// Run the wrapper pass to rebuild an aggregation over known AA passes.
 ///
 /// This is the legacy pass manager's interface to the new-style AA results
@@ -840,29 +836,6 @@ AAManager::Result AAManager::run(Function &F, FunctionAnalysisManager &AM) {
   return R;
 }
 
-AAResults llvm::createLegacyPMAAResults(Pass &P, Function &F,
-                                        BasicAAResult &BAR) {
-  AAResults AAR(P.getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F));
-
-  // Add in our explicitly constructed BasicAA results.
-  if (!DisableBasicAA)
-    AAR.addAAResult(BAR);
-
-  // Populate the results with the other currently available AAs.
-  if (auto *WrapperPass =
-          P.getAnalysisIfAvailable<ScopedNoAliasAAWrapperPass>())
-    AAR.addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = P.getAnalysisIfAvailable<TypeBasedAAWrapperPass>())
-    AAR.addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = P.getAnalysisIfAvailable<GlobalsAAWrapperPass>())
-    AAR.addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = P.getAnalysisIfAvailable<ExternalAAWrapperPass>())
-    if (WrapperPass->CB)
-      WrapperPass->CB(P, F, AAR);
-
-  return AAR;
-}
-
 bool llvm::isNoAliasCall(const Value *V) {
   if (const auto *Call = dyn_cast<CallBase>(V))
     return Call->hasRetAttr(Attribute::NoAlias);
@@ -910,6 +883,11 @@ bool llvm::isEscapeSource(const Value *V) {
   if (isa<IntToPtrInst>(V))
     return true;
 
+  // Same for inttoptr constant expressions.
+  if (auto *CE = dyn_cast<ConstantExpr>(V))
+    if (CE->getOpcode() == Instruction::IntToPtr)
+      return true;
+
   return false;
 }
 
@@ -923,7 +901,7 @@ bool llvm::isNotVisibleOnUnwind(const Value *Object,
 
   // Byval goes out of scope on unwind.
   if (auto *A = dyn_cast<Argument>(Object))
-    return A->hasByValAttr();
+    return A->hasByValAttr() || A->hasAttribute(Attribute::DeadOnUnwind);
 
   // A noalias return is not accessible from any other code. If the pointer
   // does not escape prior to the unwind, then the caller cannot access the
@@ -936,13 +914,27 @@ bool llvm::isNotVisibleOnUnwind(const Value *Object,
   return false;
 }
 
-void llvm::getAAResultsAnalysisUsage(AnalysisUsage &AU) {
-  // This function needs to be in sync with llvm::createLegacyPMAAResults -- if
-  // more alias analyses are added to llvm::createLegacyPMAAResults, they need
-  // to be added here also.
-  AU.addRequired<TargetLibraryInfoWrapperPass>();
-  AU.addUsedIfAvailable<ScopedNoAliasAAWrapperPass>();
-  AU.addUsedIfAvailable<TypeBasedAAWrapperPass>();
-  AU.addUsedIfAvailable<GlobalsAAWrapperPass>();
-  AU.addUsedIfAvailable<ExternalAAWrapperPass>();
+// We don't consider globals as writable: While the physical memory is writable,
+// we may not have provenance to perform the write.
+bool llvm::isWritableObject(const Value *Object,
+                            bool &ExplicitlyDereferenceableOnly) {
+  ExplicitlyDereferenceableOnly = false;
+
+  // TODO: Alloca might not be writable after its lifetime ends.
+  // See https://github.com/llvm/llvm-project/issues/51838.
+  if (isa<AllocaInst>(Object))
+    return true;
+
+  if (auto *A = dyn_cast<Argument>(Object)) {
+    if (A->hasAttribute(Attribute::Writable)) {
+      ExplicitlyDereferenceableOnly = true;
+      return true;
+    }
+
+    return A->hasByValAttr();
+  }
+
+  // TODO: Noalias shouldn't imply writability, this should check for an
+  // allocator function instead.
+  return isNoAliasCall(Object);
 }

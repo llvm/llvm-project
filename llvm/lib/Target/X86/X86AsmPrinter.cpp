@@ -14,6 +14,7 @@
 #include "X86AsmPrinter.h"
 #include "MCTargetDesc/X86ATTInstPrinter.h"
 #include "MCTargetDesc/X86BaseInfo.h"
+#include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86InstrInfo.h"
@@ -24,6 +25,7 @@
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Mangler.h"
@@ -33,6 +35,7 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -42,7 +45,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -510,7 +512,9 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
 
   if (!DispSpec.isImm()) {
     if (NeedPlus) O << " + ";
-    PrintOperand(MI, OpNo + X86::AddrDisp, O);
+    // Do not add `offset` operator. Matches the behaviour of
+    // X86IntelInstPrinter::printMemReference.
+    PrintSymbolOperand(DispSpec, O);
   } else {
     int64_t DispVal = DispSpec.getImm();
     if (DispVal || (!IndexReg.getReg() && !HasBaseReg)) {
@@ -526,6 +530,86 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
     }
   }
   O << ']';
+}
+
+const MCSubtargetInfo *X86AsmPrinter::getIFuncMCSubtargetInfo() const {
+  assert(Subtarget);
+  return Subtarget;
+}
+
+void X86AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
+                                           MCSymbol *LazyPointer) {
+  // _ifunc:
+  //   jmpq *lazy_pointer(%rip)
+
+  OutStreamer->emitInstruction(
+      MCInstBuilder(X86::JMP32m)
+          .addReg(X86::RIP)
+          .addImm(1)
+          .addReg(0)
+          .addOperand(MCOperand::createExpr(
+              MCSymbolRefExpr::create(LazyPointer, OutContext)))
+          .addReg(0),
+      *Subtarget);
+}
+
+void X86AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
+                                                 const GlobalIFunc &GI,
+                                                 MCSymbol *LazyPointer) {
+  // _ifunc.stub_helper:
+  //   push %rax
+  //   push %rdi
+  //   push %rsi
+  //   push %rdx
+  //   push %rcx
+  //   push %r8
+  //   push %r9
+  //   callq foo
+  //   movq %rax,lazy_pointer(%rip)
+  //   pop %r9
+  //   pop %r8
+  //   pop %rcx
+  //   pop %rdx
+  //   pop %rsi
+  //   pop %rdi
+  //   pop %rax
+  //   jmpq *lazy_pointer(%rip)
+
+  for (int Reg :
+       {X86::RAX, X86::RDI, X86::RSI, X86::RDX, X86::RCX, X86::R8, X86::R9})
+    OutStreamer->emitInstruction(MCInstBuilder(X86::PUSH64r).addReg(Reg),
+                                 *Subtarget);
+
+  OutStreamer->emitInstruction(
+      MCInstBuilder(X86::CALL64pcrel32)
+          .addOperand(MCOperand::createExpr(lowerConstant(GI.getResolver()))),
+      *Subtarget);
+
+  OutStreamer->emitInstruction(
+      MCInstBuilder(X86::MOV64mr)
+          .addReg(X86::RIP)
+          .addImm(1)
+          .addReg(0)
+          .addOperand(MCOperand::createExpr(
+              MCSymbolRefExpr::create(LazyPointer, OutContext)))
+          .addReg(0)
+          .addReg(X86::RAX),
+      *Subtarget);
+
+  for (int Reg :
+       {X86::R9, X86::R8, X86::RCX, X86::RDX, X86::RSI, X86::RDI, X86::RAX})
+    OutStreamer->emitInstruction(MCInstBuilder(X86::POP64r).addReg(Reg),
+                                 *Subtarget);
+
+  OutStreamer->emitInstruction(
+      MCInstBuilder(X86::JMP32m)
+          .addReg(X86::RIP)
+          .addImm(1)
+          .addReg(0)
+          .addOperand(MCOperand::createExpr(
+              MCSymbolRefExpr::create(LazyPointer, OutContext)))
+          .addReg(0),
+      *Subtarget);
 }
 
 static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,
@@ -690,6 +774,14 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       PrintOperand(MI, OpNo, O);
       return false;
 
+    case 'p': {
+      const MachineOperand &MO = MI->getOperand(OpNo);
+      if (MO.getType() != MachineOperand::MO_GlobalAddress)
+        return true;
+      PrintSymbolOperand(MO, O);
+      return false;
+    }
+
     case 'P': // This is the operand of a call, treat specially.
       PrintPCRelImm(MI, OpNo, O);
       return false;
@@ -764,8 +856,8 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
 
     if (FeatureFlagsAnd) {
       // Emit a .note.gnu.property section with the flags.
-      if (!TT.isArch32Bit() && !TT.isArch64Bit())
-        llvm_unreachable("CFProtection used on invalid architecture!");
+      assert((TT.isArch32Bit() || TT.isArch64Bit()) &&
+             "CFProtection used on invalid architecture!");
       MCSection *Cur = OutStreamer->getCurrentSectionOnly();
       MCSection *Nt = MMI->getContext().getELFSection(
           ".note.gnu.property", ELF::SHT_NOTE, ELF::SHF_ALLOC);
@@ -785,7 +877,6 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
       OutStreamer->emitInt32(FeatureFlagsAnd);            // data
       emitAlignment(WordSize == 4 ? Align(4) : Align(8)); // padding
 
-      OutStreamer->endSection(Nt);
       OutStreamer->switchSection(Cur);
     }
   }

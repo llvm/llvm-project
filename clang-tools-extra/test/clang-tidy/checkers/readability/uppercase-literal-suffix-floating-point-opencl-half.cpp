@@ -14,14 +14,14 @@ void floating_point_half_suffix() {
   // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: floating point literal has suffix 'h', which is not uppercase
   // CHECK-MESSAGES-NEXT: static half v2 = 1.h;
   // CHECK-MESSAGES-NEXT: ^ ~
-  // CHECK-MESSAGES-NEXT: {{^ *}}H{{$}}
+  // CHECK-MESSAGES-NEXT: H{{$}}
   // CHECK-HIXES: static half v2 = 1.H;
 
   static half v3 = 1.e0h;
   // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: floating point literal has suffix 'h', which is not uppercase
   // CHECK-MESSAGES-NEXT: static half v3 = 1.e0h;
   // CHECK-MESSAGES-NEXT: ^ ~
-  // CHECK-MESSAGES-NEXT: {{^ *}}H{{$}}
+  // CHECK-MESSAGES-NEXT: H{{$}}
   // CHECK-HIXES: static half v3 = 1.e0H;
 
   static half v4 = 1.H; // OK.

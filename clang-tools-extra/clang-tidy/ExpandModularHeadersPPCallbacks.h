@@ -41,7 +41,7 @@ namespace tooling {
 class ExpandModularHeadersPPCallbacks : public PPCallbacks {
 public:
   ExpandModularHeadersPPCallbacks(
-      CompilerInstance *Compiler,
+      CompilerInstance *CI,
       IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
   ~ExpandModularHeadersPPCallbacks();
 
@@ -69,7 +69,7 @@ private:
                           bool IsAngled, CharSourceRange FilenameRange,
                           OptionalFileEntryRef IncludedFile,
                           StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          const Module *SuggestedModule, bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
 
   void EndOfMainFile() override;

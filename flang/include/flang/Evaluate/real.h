@@ -18,8 +18,8 @@
 #include <limits>
 #include <string>
 
-// Some environments, viz. clang on Darwin, allow the macro HUGE
-// to leak out of <math.h> even when it is never directly included.
+// Some environments, viz. glibc 2.17, allow the macro HUGE
+// to leak out of <math.h>.
 #undef HUGE
 
 namespace llvm {
@@ -69,19 +69,60 @@ public:
     return !IsNotANumber() && IsSignBitSet();
   }
   constexpr bool IsNotANumber() const {
-    return Exponent() == maxExponent && !GetSignificand().IsZero();
+    auto expo{Exponent()};
+    auto sig{GetSignificand()};
+    if constexpr (bits == 80) { // x87
+      // 7FFF8000000000000000 is Infinity, not NaN, on 80387 & later.
+      if (expo == maxExponent) {
+        return sig != Significand{}.IBSET(63);
+      } else {
+        return expo != 0 && !sig.BTEST(63);
+      }
+    } else {
+      return expo == maxExponent && !sig.IsZero();
+    }
   }
   constexpr bool IsQuietNaN() const {
-    return Exponent() == maxExponent &&
-        GetSignificand().BTEST(significandBits - 1);
+    auto expo{Exponent()};
+    auto sig{GetSignificand()};
+    if constexpr (bits == 80) { // x87
+      if (expo == maxExponent) {
+        return sig.IBITS(62, 2) == 3;
+      } else {
+        return expo != 0 && !sig.BTEST(63);
+      }
+    } else {
+      return expo == maxExponent && sig.BTEST(significandBits - 1);
+    }
   }
   constexpr bool IsSignalingNaN() const {
-    return IsNotANumber() && !GetSignificand().BTEST(significandBits - 1);
+    auto expo{Exponent()};
+    auto sig{GetSignificand()};
+    if constexpr (bits == 80) { // x87
+      return expo == maxExponent && sig != Significand{}.IBSET(63) &&
+          sig.IBITS(62, 2) != 3;
+    } else {
+      return expo == maxExponent && !sig.IsZero() &&
+          !sig.BTEST(significandBits - 1);
+    }
   }
   constexpr bool IsInfinite() const {
-    return Exponent() == maxExponent && GetSignificand().IsZero();
+    if constexpr (bits == 80) { // x87
+      // 7FFF8000000000000000 is Infinity, not NaN, on 80387 & later.
+      return Exponent() == maxExponent &&
+          GetSignificand() == Significand{}.IBSET(63);
+    } else {
+      return Exponent() == maxExponent && GetSignificand().IsZero();
+    }
   }
-  constexpr bool IsFinite() const { return Exponent() != maxExponent; }
+  constexpr bool IsFinite() const {
+    auto expo{Exponent()};
+    if constexpr (bits == 80) { // x87
+      return expo != maxExponent && (expo == 0 || GetSignificand().BTEST(63));
+    } else {
+      return expo != maxExponent;
+    }
+  }
   constexpr bool IsZero() const {
     return Exponent() == 0 && GetSignificand().IsZero();
   }
@@ -129,8 +170,8 @@ public:
   // DIM(X,Y) = MAX(X-Y, 0)
   ValueWithRealFlags<Real> DIM(const Real &,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
-  // MOD(x,y) = x - AINT(x/y)*y
-  // MODULO(x,y) = x - FLOOR(x/y)*y
+  // MOD(x,y) = x - AINT(x/y)*y (in the standard)
+  // MODULO(x,y) = x - FLOOR(x/y)*y (in the standard)
   ValueWithRealFlags<Real> MOD(const Real &,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
   ValueWithRealFlags<Real> MODULO(const Real &,
@@ -180,20 +221,33 @@ public:
     // Normalize a fraction with just its LSB set and then multiply.
     // (Set the LSB, not the MSB, in case the scale factor needs to
     //  be subnormal.)
-    auto adjust{exponentBias + binaryPrecision - 1};
+    constexpr auto adjust{exponentBias + binaryPrecision - 1};
+    constexpr auto maxCoeffExpo{maxExponent + binaryPrecision - 1};
     auto expo{adjust + by.ToInt64()};
-    Real twoPow;
     RealFlags flags;
     int rMask{1};
     if (IsZero()) {
       expo = exponentBias; // ignore by, don't overflow
-    } else if (by > INT{maxExponent}) {
-      expo = maxExponent + binaryPrecision - 1;
-    } else if (by < INT{-adjust}) { // underflow
-      expo = 0;
-      rMask = 0;
-      flags.set(RealFlag::Underflow);
+    } else if (expo > maxCoeffExpo) {
+      if (Exponent() < exponentBias) {
+        // Must implement with two multiplications
+        return SCALE(INT{exponentBias})
+            .value.SCALE(by.SubtractSigned(INT{exponentBias}).value, rounding);
+      } else { // overflow
+        expo = maxCoeffExpo;
+      }
+    } else if (expo < 0) {
+      if (Exponent() > exponentBias) {
+        // Must implement with two multiplications
+        return SCALE(INT{-exponentBias})
+            .value.SCALE(by.AddSigned(INT{exponentBias}).value, rounding);
+      } else { // underflow to zero
+        expo = 0;
+        rMask = 0;
+        flags.set(RealFlag::Underflow);
+      }
     }
+    Real twoPow;
     flags |=
         twoPow.Normalize(false, static_cast<int>(expo), Fraction::MASKR(rMask));
     ValueWithRealFlags<Real> result{Multiply(twoPow, rounding)};
@@ -225,6 +279,10 @@ public:
     infinity = infinity.SHIFTL(significandBits);
     if (negative) {
       infinity = infinity.IBSET(infinity.bits - 1);
+    }
+    if constexpr (bits == 80) { // x87
+      // 7FFF8000000000000000 is Infinity, not NaN, on 80387 & later.
+      infinity.IBSET(63);
     }
     return {infinity};
   }

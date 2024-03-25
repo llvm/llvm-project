@@ -58,13 +58,13 @@ TEST(Symbolizer, ExtractTokenUpToDelimiter) {
 TEST(Symbolizer, DemangleSwiftAndCXX) {
   // Swift names are not demangled in default llvm build because Swift
   // runtime is not linked in.
-  EXPECT_STREQ("_TtSd", DemangleSwiftAndCXX("_TtSd"));
+  EXPECT_STREQ(nullptr, DemangleSwiftAndCXX("_TtSd"));
   // Check that the rest demangles properly.
   EXPECT_STREQ("f1(char*, int)", DemangleSwiftAndCXX("_Z2f1Pci"));
 #if !SANITIZER_FREEBSD // QoI issue with libcxxrt on FreeBSD
-  EXPECT_STREQ("foo", DemangleSwiftAndCXX("foo"));
+  EXPECT_STREQ(nullptr, DemangleSwiftAndCXX("foo"));
 #endif
-  EXPECT_STREQ("", DemangleSwiftAndCXX(""));
+  EXPECT_STREQ(nullptr, DemangleSwiftAndCXX(""));
 }
 #endif
 

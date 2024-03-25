@@ -28,13 +28,10 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 
-#define AA_NAME "alignment-from-assumptions"
-#define DEBUG_TYPE AA_NAME
+#define DEBUG_TYPE "alignment-from-assumptions"
 using namespace llvm;
 
 STATISTIC(NumLoadAlignChanged,
@@ -43,46 +40,6 @@ STATISTIC(NumStoreAlignChanged,
   "Number of stores changed by alignment assumptions");
 STATISTIC(NumMemIntAlignChanged,
   "Number of memory intrinsics changed by alignment assumptions");
-
-namespace {
-struct AlignmentFromAssumptions : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
-  AlignmentFromAssumptions() : FunctionPass(ID) {
-    initializeAlignmentFromAssumptionsPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-
-    AU.setPreservesCFG();
-    AU.addPreserved<AAResultsWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<ScalarEvolutionWrapperPass>();
-  }
-
-  AlignmentFromAssumptionsPass Impl;
-};
-}
-
-char AlignmentFromAssumptions::ID = 0;
-static const char aip_name[] = "Alignment from assumptions";
-INITIALIZE_PASS_BEGIN(AlignmentFromAssumptions, AA_NAME,
-                      aip_name, false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-INITIALIZE_PASS_END(AlignmentFromAssumptions, AA_NAME,
-                    aip_name, false, false)
-
-FunctionPass *llvm::createAlignmentFromAssumptionsPass() {
-  return new AlignmentFromAssumptions();
-}
 
 // Given an expression for the (constant) alignment, AlignSCEV, and an
 // expression for the displacement between a pointer and the aligned address,
@@ -126,11 +83,7 @@ static Align getNewAlignment(const SCEV *AASCEV, const SCEV *AlignSCEV,
                              const SCEV *OffSCEV, Value *Ptr,
                              ScalarEvolution *SE) {
   const SCEV *PtrSCEV = SE->getSCEV(Ptr);
-  // On a platform with 32-bit allocas, but 64-bit flat/global pointer sizes
-  // (*cough* AMDGPU), the effective SCEV type of AASCEV and PtrSCEV
-  // may disagree. Trunc/extend so they agree.
-  PtrSCEV = SE->getTruncateOrZeroExtend(
-      PtrSCEV, SE->getEffectiveSCEVType(AASCEV->getType()));
+
   const SCEV *DiffSCEV = SE->getMinusSCEV(PtrSCEV, AASCEV);
   if (isa<SCEVCouldNotCompute>(DiffSCEV))
     return Align(1);
@@ -222,6 +175,9 @@ bool AlignmentFromAssumptionsPass::extractAlignmentInfo(CallInst *I,
     // Added to suppress a crash because consumer doesn't expect non-constant
     // alignments in the assume bundle.  TODO: Consider generalizing caller.
     return false;
+  if (!cast<SCEVConstant>(AlignSCEV)->getAPInt().isPowerOf2())
+    // Only power of two alignments are supported.
+    return false;
   if (AlignOB.Inputs.size() == 3)
     OffSCEV = SE->getSCEV(AlignOB.Inputs[2].get());
   else
@@ -307,25 +263,20 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall,
     // Now that we've updated that use of the pointer, look for other uses of
     // the pointer to update.
     Visited.insert(J);
-    for (User *UJ : J->users()) {
-      Instruction *K = cast<Instruction>(UJ);
-      if (!Visited.count(K))
-        WorkList.push_back(K);
-    }
+    if (isa<GetElementPtrInst>(J) || isa<PHINode>(J))
+      for (auto &U : J->uses()) {
+        if (U->getType()->isPointerTy()) {
+          Instruction *K = cast<Instruction>(U.getUser());
+          StoreInst *SI = dyn_cast<StoreInst>(K);
+          if (SI && SI->getPointerOperandIndex() != U.getOperandNo())
+            continue;
+          if (!Visited.count(K))
+            WorkList.push_back(K);
+        }
+      }
   }
 
   return true;
-}
-
-bool AlignmentFromAssumptions::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-
-  return Impl.runImpl(F, AC, SE, DT);
 }
 
 bool AlignmentFromAssumptionsPass::runImpl(Function &F, AssumptionCache &AC,

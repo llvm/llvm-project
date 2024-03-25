@@ -44,11 +44,13 @@ namespace ScopedEnum {
   enum class E b = E::a; // expected-error {{must use 'enum' not 'enum class'}}
   struct S {
     friend enum class E; // expected-error {{must use 'enum' not 'enum class'}}
+                         // expected-warning@-1 {{elaborated enum specifier cannot be declared as a friend}}
+                         // expected-note@-2 {{remove 'enum class' to befriend an enum}}
   };
 }
 
-struct S2 { 
-  void f(int i); 
+struct S2 {
+  void f(int i);
   void g(int i);
 };
 
@@ -59,8 +61,8 @@ void S2::f(int i) {
   (void)[] mutable {};
   (void)[]->int{};
 #if __cplusplus <= 202002L
-  // expected-warning@-3{{is a C++2b extension}}
-  // expected-warning@-3{{is a C++2b extension}}
+  // expected-warning@-3{{is a C++23 extension}}
+  // expected-warning@-3{{is a C++23 extension}}
 #endif
 
   delete []() { return new int; }(); // expected-error{{'[]' after delete interpreted as 'delete[]'}}

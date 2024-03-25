@@ -250,8 +250,7 @@ bool Filler::delayHasHazard(MachineBasicBlock::iterator candidate,
       return true;
   }
 
-  for (unsigned i = 0, e = candidate->getNumOperands(); i!= e; ++i) {
-    const MachineOperand &MO = candidate->getOperand(i);
+  for (const MachineOperand &MO : candidate->operands()) {
     if (!MO.isReg())
       continue; // skip
 

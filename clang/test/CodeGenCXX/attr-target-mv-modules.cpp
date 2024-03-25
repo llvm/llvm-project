@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -fmodules -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-macos -fmodules -emit-llvm %s -o - | FileCheck %s
 #pragma clang module build A
 module A {}
 #pragma clang module contents

@@ -41,7 +41,10 @@ CLANG_ENABLE_BOOTSTRAP.
 
 .. code-block:: console
 
-  $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCLANG_ENABLE_BOOTSTRAP=On <path to source>
+  $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
+      -DCLANG_ENABLE_BOOTSTRAP=On \
+      -DLLVM_ENABLE_PROJECTS="clang" \
+      <path to source>/llvm
   $ ninja stage2
 
 This command itself isn't terribly useful because it assumes default
@@ -55,7 +58,11 @@ CMake option, each variable separated by a ";". As example:
 
 .. code-block:: console
 
-  $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCLANG_ENABLE_BOOTSTRAP=On -DCLANG_BOOTSTRAP_PASSTHROUGH="CMAKE_INSTALL_PREFIX;CMAKE_VERBOSE_MAKEFILE" <path to source>
+  $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
+      -DCLANG_ENABLE_BOOTSTRAP=On \
+      -DCLANG_BOOTSTRAP_PASSTHROUGH="CMAKE_INSTALL_PREFIX;CMAKE_VERBOSE_MAKEFILE" \
+      -DLLVM_ENABLE_PROJECTS="clang" \
+      <path to source>/llvm
   $ ninja stage2
 
 CMake options starting by ``BOOTSTRAP_`` will be passed only to the stage2 build.
@@ -88,7 +95,7 @@ You can build an Apple Clang compiler using the following commands:
 
 .. code-block:: console
 
-  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/Apple-stage1.cmake <path to source>
+  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/Apple-stage1.cmake <path to source>/llvm
   $ ninja stage2-distribution
 
 This CMake invocation configures the stage1 host compiler, and sets
@@ -138,6 +145,29 @@ that also enables ThinTLO, use the following command:
       -DPGO_INSTRUMENT_LTO=Thin \
       <path to source>/llvm
 
+By default, clang will generate profile data by compiling a simple
+hello world program.  You can also tell clang use an external
+project for generating profile data that may be a better fit for your
+use case.  The project you specify must either be a lit test suite
+(use the CLANG_PGO_TRAINING_DATA option) or a CMake project (use the
+CLANG_PERF_TRAINING_DATA_SOURCE_DIR option).
+
+For example, If you wanted to use the
+`LLVM Test Suite <https://github.com/llvm/llvm-test-suite/>`_ to generate
+profile data you would use the following command:
+
+.. code-block:: console
+
+  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/PGO.cmake \
+       -DBOOTSTRAP_CLANG_PGO_TRAINING_DATA_SOURCE_DIR=<path to llvm-test-suite> \
+       -DBOOTSTRAP_CLANG_PGO_TRAINING_DEPS=runtimes
+
+The BOOTSTRAP\_ prefixes tells CMake to pass the variables on to the instrumented
+stage two build.  And the CLANG_PGO_TRAINING_DEPS option let's you specify
+additional build targets to build before building the external project.  The
+LLVM Test Suite requires compiler-rt to build, so we need to add the
+`runtimes` target as a dependency.
+
 After configuration, building the stage2-instrumented-generate-profdata target
 will automatically build the stage1 compiler, build the instrumented compiler
 with the stage1 compiler, and then run the instrumented compiler against the
@@ -165,12 +195,12 @@ You can feed that file into the LLVM_PROFDATA_FILE option when you build your
 optimized compiler.
 
 It may be necessary to build additional targets before running perf training, such as
-builtins and runtime libraries. You can use the :code:`CLANG_PERF_TRAINING_DEPS` CMake
+builtins and runtime libraries. You can use the :code:`CLANG_PGO_TRAINING_DEPS` CMake
 variable for that purpose:
 
 .. code-block:: cmake
 
-  set(CLANG_PERF_TRAINING_DEPS builtins runtimes CACHE STRING "")
+  set(CLANG_PGO_TRAINING_DEPS builtins runtimes CACHE STRING "")
 
 The PGO cache has a slightly different stage naming scheme than other
 multi-stage builds. It generates three stages: stage1, stage2-instrumented, and
@@ -263,12 +293,12 @@ and build a compiler (stage1), then use that compiler to rebuild the sources
 this, you have a stage2 and stage3 compiler that should be bit-for-bit
 identical.
 
-You can perform one of these 3-stage builds with LLVM & clang using the
+You can perform one of these 3-stage builds with LLVM and clang using the
 following commands:
 
 .. code-block:: console
 
-  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/3-stage.cmake <path to source>
-  $ cmake --build . --target stage3 --parallel
+  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/3-stage.cmake <path to source>/llvm
+  $ ninja stage3
 
-After the build you can compare the stage2 & stage3 compilers.
+After the build you can compare the stage2 and stage3 compilers.

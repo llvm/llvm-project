@@ -17,12 +17,8 @@
 // This signature was removed in C++17
 
 #include <functional>
-#include <cassert>
+#include <memory>
 
-#include "min_allocator.h"
-
-int main(int, char**)
-{
+void f() {
     std::function<int(int)> f(std::allocator_arg, std::allocator<int>(), nullptr); // expected-error {{no matching constructor for initialization of}}
-    return 0;
 }

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DMAX=128 -foperator-arrow-depth 128
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DMAX=2 -foperator-arrow-depth 2
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DMAX=128 -foperator-arrow-depth=128
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DMAX=2 -foperator-arrow-depth=2
 // RUN: %clang -fsyntax-only -Xclang -verify %s -DMAX=10 -foperator-arrow-depth=10
 
 template<int N> struct B;

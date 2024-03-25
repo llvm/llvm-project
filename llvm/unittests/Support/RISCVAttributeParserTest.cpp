@@ -42,7 +42,7 @@ static bool testAttribute(unsigned Tag, unsigned Value, unsigned ExpectedTag,
                           OS.str().size());
 
   RISCVAttributeParser Parser;
-  cantFail(Parser.parse(Bytes, support::little));
+  cantFail(Parser.parse(Bytes, llvm::endianness::little));
 
   std::optional<unsigned> Attr = Parser.getAttributeValue(ExpectedTag);
   return Attr && *Attr == ExpectedValue;
@@ -55,10 +55,8 @@ static bool testTagString(unsigned Tag, const char *name) {
 
 TEST(StackAlign, testAttribute) {
   EXPECT_TRUE(testTagString(4, "Tag_stack_align"));
-  EXPECT_TRUE(
-      testAttribute(4, 4, RISCVAttrs::STACK_ALIGN, RISCVAttrs::ALIGN_4));
-  EXPECT_TRUE(
-      testAttribute(4, 16, RISCVAttrs::STACK_ALIGN, RISCVAttrs::ALIGN_16));
+  EXPECT_TRUE(testAttribute(4, 4, RISCVAttrs::STACK_ALIGN, 4));
+  EXPECT_TRUE(testAttribute(4, 16, RISCVAttrs::STACK_ALIGN, 16));
 }
 
 TEST(UnalignedAccess, testAttribute) {

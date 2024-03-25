@@ -156,11 +156,6 @@ define double @v_floor_f64_fabs(double %x) {
 ; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_floor_f64_e64 v[0:1], |v[0:1]|
 ; GFX78-NEXT:    s_setpc_b64 s[30:31]
-; GFX7-LABEL: v_floor_f64_fabs:
-; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_floor_f64_e64 v[0:1], |v[0:1]|
-; GFX7-NEXT:    s_setpc_b64 s[30:31]
   %abs.x = call double @llvm.fabs.f64(double %x)
   %result = call double @llvm.floor.f64(double %abs.x)
   ret double %result

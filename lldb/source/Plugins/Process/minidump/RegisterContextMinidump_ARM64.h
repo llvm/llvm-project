@@ -67,13 +67,14 @@ public:
     uint8_t v[32 * 16]; // 32 128-bit floating point registers
   };
 
-protected:
   enum class Flags : uint32_t {
     ARM64_Flag = 0x80000000,
     Integer = ARM64_Flag | 0x00000002,
     FloatingPoint = ARM64_Flag | 0x00000004,
     LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ FloatingPoint)
   };
+
+protected:
   Context m_regs;
 };
 

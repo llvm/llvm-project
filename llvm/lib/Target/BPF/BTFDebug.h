@@ -16,11 +16,11 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
+#include "llvm/DebugInfo/BTF/BTF.h"
 #include <cstdint>
 #include <map>
 #include <set>
 #include <unordered_map>
-#include "BTF.h"
 
 namespace llvm {
 
@@ -337,6 +337,9 @@ class BTFDebug : public DebugHandlerBase {
                         bool CheckPointer, bool SeenPointer);
   void visitMapDefType(const DIType *Ty, uint32_t &TypeId);
   /// @}
+
+  /// Check whether the type is a forward declaration candidate or not.
+  bool IsForwardDeclCandidate(const DIType *Base);
 
   /// Get the file content for the subprogram. Certain lines of the file
   /// later may be put into string table and referenced by line info.

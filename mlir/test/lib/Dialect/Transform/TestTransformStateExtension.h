@@ -14,7 +14,7 @@
 #ifndef MLIR_TEST_LIB_DIALECT_TRANSFORM_TESTTRANSFORMSTATEEXTENSION_H
 #define MLIR_TEST_LIB_DIALECT_TRANSFORM_TESTTRANSFORMSTATEEXTENSION_H
 
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 
 using namespace mlir;
 
@@ -29,9 +29,7 @@ public:
 
   StringRef getMessage() const { return message.getValue(); }
 
-  LogicalResult updateMapping(Operation *previous, Operation *updated) {
-    return replacePayloadOp(previous, updated);
-  }
+  LogicalResult updateMapping(Operation *previous, Operation *updated);
 
 private:
   StringAttr message;

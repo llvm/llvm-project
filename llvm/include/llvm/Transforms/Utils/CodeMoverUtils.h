@@ -9,6 +9,9 @@
 // This family of functions determine movements are safe on basic blocks, and
 // instructions contained within a function.
 //
+// Please note that this is work in progress, and the functionality is not
+// ready for broader production use.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TRANSFORMS_UTILS_CODEMOVERUTILS_H

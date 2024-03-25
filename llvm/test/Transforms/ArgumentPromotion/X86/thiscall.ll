@@ -12,7 +12,7 @@ target triple = "i386-pc-windows-msvc19.11.0"
 
 %struct.a = type { i8 }
 
-define internal x86_thiscallcc void @internalfun(ptr %this, <{ %struct.a }>* inalloca(<{ %struct.a }>)) {
+define internal x86_thiscallcc void @internalfun(ptr %this, ptr inalloca(<{ %struct.a }>)) {
 ; ARGPROMOTION-LABEL: define {{[^@]+}}@internalfun
 ; ARGPROMOTION-SAME: (ptr [[THIS:%.*]], ptr inalloca(<{ [[STRUCT_A:%.*]] }>) [[TMP0:%.*]]) {
 ; ARGPROMOTION-NEXT:  entry:
@@ -34,11 +34,11 @@ define internal x86_thiscallcc void @internalfun(ptr %this, <{ %struct.a }>* ina
 ; GLOBALOPT_ARGPROMOTION-NEXT:    ret void
 ;
 entry:
-  %a = getelementptr inbounds <{ %struct.a }>, <{ %struct.a }>* %0, i32 0, i32 0
+  %a = getelementptr inbounds <{ %struct.a }>, ptr %0, i32 0, i32 0
   %argmem = alloca inalloca <{ %struct.a }>, align 4
-  %1 = getelementptr inbounds <{ %struct.a }>, <{ %struct.a }>* %argmem, i32 0, i32 0
+  %1 = getelementptr inbounds <{ %struct.a }>, ptr %argmem, i32 0, i32 0
   %call = call x86_thiscallcc ptr @copy_ctor(ptr %1, ptr dereferenceable(1) %a)
-  call void @ext(<{ %struct.a }>* inalloca(<{ %struct.a }>) %argmem)
+  call void @ext(ptr inalloca(<{ %struct.a }>) %argmem)
   ret void
 }
 
@@ -46,28 +46,28 @@ entry:
 define void @exportedfun(ptr %a) {
 ; ARGPROMOTION-LABEL: define {{[^@]+}}@exportedfun
 ; ARGPROMOTION-SAME: (ptr [[A:%.*]]) {
-; ARGPROMOTION-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave()
+; ARGPROMOTION-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave.p0()
 ; ARGPROMOTION-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
 ; ARGPROMOTION-NEXT:    call x86_thiscallcc void @internalfun(ptr [[A]], ptr inalloca(<{ [[STRUCT_A]] }>) [[ARGMEM]])
-; ARGPROMOTION-NEXT:    call void @llvm.stackrestore(ptr [[INALLOCA_SAVE]])
+; ARGPROMOTION-NEXT:    call void @llvm.stackrestore.p0(ptr [[INALLOCA_SAVE]])
 ; ARGPROMOTION-NEXT:    ret void
 ;
 ; GLOBALOPT_ARGPROMOTION-LABEL: define {{[^@]+}}@exportedfun
 ; GLOBALOPT_ARGPROMOTION-SAME: (ptr [[A:%.*]]) local_unnamed_addr {
-; GLOBALOPT_ARGPROMOTION-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave()
+; GLOBALOPT_ARGPROMOTION-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave.p0()
 ; GLOBALOPT_ARGPROMOTION-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
 ; GLOBALOPT_ARGPROMOTION-NEXT:    call fastcc void @internalfun(ptr [[ARGMEM]])
-; GLOBALOPT_ARGPROMOTION-NEXT:    call void @llvm.stackrestore(ptr [[INALLOCA_SAVE]])
+; GLOBALOPT_ARGPROMOTION-NEXT:    call void @llvm.stackrestore.p0(ptr [[INALLOCA_SAVE]])
 ; GLOBALOPT_ARGPROMOTION-NEXT:    ret void
 ;
   %inalloca.save = tail call ptr @llvm.stacksave()
   %argmem = alloca inalloca <{ %struct.a }>, align 4
-  call x86_thiscallcc void @internalfun(ptr %a, <{ %struct.a }>* inalloca(<{ %struct.a }>) %argmem)
+  call x86_thiscallcc void @internalfun(ptr %a, ptr inalloca(<{ %struct.a }>) %argmem)
   call void @llvm.stackrestore(ptr %inalloca.save)
   ret void
 }
 
 declare x86_thiscallcc ptr @copy_ctor(ptr returned, ptr dereferenceable(1))
-declare void @ext(<{ %struct.a }>* inalloca(<{ %struct.a }>))
+declare void @ext(ptr inalloca(<{ %struct.a }>))
 declare ptr @llvm.stacksave()
 declare void @llvm.stackrestore(ptr)

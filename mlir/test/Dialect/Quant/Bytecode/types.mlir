@@ -1,8 +1,5 @@
 // RUN: mlir-opt -emit-bytecode %s | mlir-opt | FileCheck %s
 
-// Bytecode currently does not support big-endian platforms
-// UNSUPPORTED: target=s390x-{{.*}}
-
 //===----------------------------------------------------------------------===//
 // AnyQuantized
 //===----------------------------------------------------------------------===//

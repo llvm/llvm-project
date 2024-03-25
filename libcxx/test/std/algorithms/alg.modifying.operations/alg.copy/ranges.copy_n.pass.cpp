@@ -23,7 +23,7 @@
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
 
-template <class In, class Out = In, class Count = size_t>
+template <class In, class Out = In, class Count = std::size_t>
 concept HasCopyNIt = requires(In in, Count count, Out out) { std::ranges::copy_n(in, count, out); };
 
 static_assert(HasCopyNIt<int*>);
@@ -53,7 +53,7 @@ constexpr void test_iterators() {
   { // check that an empty range works
     std::array<int, 0> in;
     std::array<int, 0> out;
-    auto ret = std::ranges::copy_n(In(in.data()), in.size(), Out(out.begin()));
+    auto ret = std::ranges::copy_n(In(in.data()), in.size(), Out(out.data()));
     assert(base(ret.in) == in.data());
     assert(base(ret.out) == out.data());
   }
@@ -103,7 +103,7 @@ constexpr bool test() {
     };
     std::array<CopyOnce, 4> in {};
     std::array<CopyOnce, 4> out {};
-    auto ret = std::ranges::copy_n(in.data(), in.size(), out.begin());
+    auto ret = std::ranges::copy_n(in.begin(), in.size(), out.begin());
     assert(ret.in == in.end());
     assert(ret.out == out.end());
     assert(std::all_of(out.begin(), out.end(), [](const auto& e) { return e.copied; }));

@@ -87,7 +87,7 @@ void Preprocessor::appendMacroDirective(IdentifierInfo *II, MacroDirective *MD){
 
   // Set up the identifier as having associated macro history.
   II->setHasMacroDefinition(true);
-  if (!MD->isDefined() && LeafModuleMacros.find(II) == LeafModuleMacros.end())
+  if (!MD->isDefined() && !LeafModuleMacros.contains(II))
     II->setHasMacroDefinition(false);
   if (II->isFromAST())
     II->setChangedSinceDeserialization();
@@ -125,7 +125,7 @@ void Preprocessor::setLoadedMacroDirective(IdentifierInfo *II,
 
   // Setup the identifier as having associated macro history.
   II->setHasMacroDefinition(true);
-  if (!MD->isDefined() && LeafModuleMacros.find(II) == LeafModuleMacros.end())
+  if (!MD->isDefined() && !LeafModuleMacros.contains(II))
     II->setHasMacroDefinition(false);
 }
 
@@ -993,11 +993,20 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
       // If the macro contains the comma pasting extension, the diagnostic
       // is suppressed; we know we'll get another diagnostic later.
       if (!MI->hasCommaPasting()) {
-        // C++20 allows this construct, but standards before C++20 and all C
-        // standards do not allow the construct (we allow it as an extension).
-        Diag(Tok, getLangOpts().CPlusPlus20
-                      ? diag::warn_cxx17_compat_missing_varargs_arg
-                      : diag::ext_missing_varargs_arg);
+        // C++20 [cpp.replace]p15, C23 6.10.5p12
+        //
+        // C++20 and C23 allow this construct, but standards before that
+        // do not (we allow it as an extension).
+        unsigned ID;
+        if (getLangOpts().CPlusPlus20)
+          ID = diag::warn_cxx17_compat_missing_varargs_arg;
+        else if (getLangOpts().CPlusPlus)
+          ID = diag::ext_cxx_missing_varargs_arg;
+        else if (getLangOpts().C23)
+          ID = diag::warn_c17_compat_missing_varargs_arg;
+        else
+          ID = diag::ext_c_missing_varargs_arg;
+        Diag(Tok, ID);
         Diag(MI->getDefinitionLoc(), diag::note_macro_here)
           << MacroName.getIdentifierInfo();
       }
@@ -1136,7 +1145,8 @@ static bool HasFeature(const Preprocessor &PP, StringRef Feature) {
   const LangOptions &LangOpts = PP.getLangOpts();
 
   // Normalize the feature name, __foo__ becomes foo.
-  if (Feature.startswith("__") && Feature.endswith("__") && Feature.size() >= 4)
+  if (Feature.starts_with("__") && Feature.ends_with("__") &&
+      Feature.size() >= 4)
     Feature = Feature.substr(2, Feature.size() - 4);
 
 #define FEATURE(Name, Predicate) .Case(#Name, Predicate)
@@ -1162,7 +1172,7 @@ static bool HasExtension(const Preprocessor &PP, StringRef Extension) {
   const LangOptions &LangOpts = PP.getLangOpts();
 
   // Normalize the extension name, __foo__ becomes foo.
-  if (Extension.startswith("__") && Extension.endswith("__") &&
+  if (Extension.starts_with("__") && Extension.ends_with("__") &&
       Extension.size() >= 4)
     Extension = Extension.substr(2, Extension.size() - 4);
 
@@ -1248,16 +1258,20 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
   if (Filename.empty())
     return false;
 
+  // Passing this to LookupFile forces header search to check whether the found
+  // file belongs to a module. Skipping that check could incorrectly mark
+  // modular header as textual, causing issues down the line.
+  ModuleMap::KnownHeader KH;
+
   // Search include directories.
   OptionalFileEntryRef File =
       PP.LookupFile(FilenameLoc, Filename, isAngled, LookupFrom, LookupFromFile,
-                    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+                    nullptr, nullptr, nullptr, &KH, nullptr, nullptr);
 
   if (PPCallbacks *Callbacks = PP.getPPCallbacks()) {
     SrcMgr::CharacteristicKind FileType = SrcMgr::C_User;
     if (File)
-      FileType =
-          PP.getHeaderSearchInfo().getFileDirFlavor(&File->getFileEntry());
+      FileType = PP.getHeaderSearchInfo().getFileDirFlavor(*File);
     Callbacks->HasInclude(FilenameLoc, Filename, isAngled, File, FileType);
   }
 
@@ -1559,17 +1573,11 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
       // __FILE_NAME__ is a Clang-specific extension that expands to the
       // the last part of __FILE__.
       if (II == Ident__FILE_NAME__) {
-        // Try to get the last path component, failing that return the original
-        // presumed location.
-        StringRef PLFileName = llvm::sys::path::filename(PLoc.getFilename());
-        if (PLFileName != "")
-          FN += PLFileName;
-        else
-          FN += PLoc.getFilename();
+        processPathToFileName(FN, PLoc, getLangOpts(), getTargetInfo());
       } else {
         FN += PLoc.getFilename();
+        processPathForFileMacro(FN, getLangOpts(), getTargetInfo());
       }
-      processPathForFileMacro(FN, getLangOpts(), getTargetInfo());
       Lexer::Stringify(FN);
       OS << '"' << FN << '"';
     }
@@ -1637,35 +1645,14 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     Tok.setKind(tok::string_literal);
   } else if (II == Ident__FLT_EVAL_METHOD__) {
     // __FLT_EVAL_METHOD__ is set to the default value.
-    if (getTUFPEvalMethod() ==
-        LangOptions::FPEvalMethodKind::FEM_Indeterminable) {
-      // This is possible if `AllowFPReassoc` or `AllowReciprocal` is enabled.
-      // These modes can be triggered via the command line option `-ffast-math`
-      // or via a `pragam float_control`.
-      // __FLT_EVAL_METHOD__ expands to -1.
-      // The `minus` operator is the next token we read from the stream.
-      auto Toks = std::make_unique<Token[]>(1);
-      OS << "-";
-      Tok.setKind(tok::minus);
-      // Push the token `1` to the stream.
-      Token NumberToken;
-      NumberToken.startToken();
-      NumberToken.setKind(tok::numeric_constant);
-      NumberToken.setLiteralData("1");
-      NumberToken.setLength(1);
-      Toks[0] = NumberToken;
-      EnterTokenStream(std::move(Toks), 1, /*DisableMacroExpansion*/ false,
-                       /*IsReinject*/ false);
-    } else {
-      OS << getTUFPEvalMethod();
-      // __FLT_EVAL_METHOD__ expands to a simple numeric value.
-      Tok.setKind(tok::numeric_constant);
-      if (getLastFPEvalPragmaLocation().isValid()) {
-        // The program is ill-formed. The value of __FLT_EVAL_METHOD__ is
-        // altered by the pragma.
-        Diag(Tok, diag::err_illegal_use_of_flt_eval_macro);
-        Diag(getLastFPEvalPragmaLocation(), diag::note_pragma_entered_here);
-      }
+    OS << getTUFPEvalMethod();
+    // __FLT_EVAL_METHOD__ expands to a simple numeric value.
+    Tok.setKind(tok::numeric_constant);
+    if (getLastFPEvalPragmaLocation().isValid()) {
+      // The program is ill-formed. The value of __FLT_EVAL_METHOD__ is altered
+      // by the pragma.
+      Diag(Tok, diag::err_illegal_use_of_flt_eval_macro);
+      Diag(getLastFPEvalPragmaLocation(), diag::note_pragma_entered_here);
     }
   } else if (II == Ident__COUNTER__) {
     // __COUNTER__ expands to a simple numeric value.
@@ -1694,6 +1681,12 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
           return false;
         else if (II->getBuiltinID() != 0) {
           switch (II->getBuiltinID()) {
+          case Builtin::BI__builtin_cpu_is:
+            return getTargetInfo().supportsCpuIs();
+          case Builtin::BI__builtin_cpu_init:
+            return getTargetInfo().supportsCpuInit();
+          case Builtin::BI__builtin_cpu_supports:
+            return getTargetInfo().supportsCpuSupports();
           case Builtin::BI__builtin_operator_new:
           case Builtin::BI__builtin_operator_delete:
             // denotes date of behavior change to support calling arbitrary
@@ -1714,14 +1707,15 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
           // as being "builtin functions", even if the syntax isn't a valid
           // function call (for example, because the builtin takes a type
           // argument).
-          if (II->getName().startswith("__builtin_") ||
-              II->getName().startswith("__is_") ||
-              II->getName().startswith("__has_"))
+          if (II->getName().starts_with("__builtin_") ||
+              II->getName().starts_with("__is_") ||
+              II->getName().starts_with("__has_"))
             return true;
           return llvm::StringSwitch<bool>(II->getName())
               .Case("__array_rank", true)
               .Case("__array_extent", true)
               .Case("__reference_binds_to_temporary", true)
+              .Case("__reference_constructs_from_temporary", true)
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) .Case("__" #Trait, true)
 #include "clang/Basic/TransformTypeTraits.def"
               .Default(false);
@@ -1808,7 +1802,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
 
           AttributeCommonInfo::Syntax Syntax =
               IsCXX ? AttributeCommonInfo::Syntax::AS_CXX11
-                    : AttributeCommonInfo::Syntax::AS_C2x;
+                    : AttributeCommonInfo::Syntax::AS_C23;
           return II ? hasAttribute(Syntax, ScopeII, II, getTargetInfo(),
                                    getLangOpts())
                     : 0;
@@ -1896,7 +1890,8 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     if (!Tok.isAnnotation() && Tok.getIdentifierInfo())
       Tok.setKind(tok::identifier);
     else if (Tok.is(tok::string_literal) && !Tok.hasUDSuffix()) {
-      StringLiteralParser Literal(Tok, *this);
+      StringLiteralParser Literal(Tok, *this,
+                                  StringLiteralEvalMethod::Unevaluated);
       if (Literal.hadError)
         return;
 
@@ -1994,4 +1989,17 @@ void Preprocessor::processPathForFileMacro(SmallVectorImpl<char> &Path,
     else
       llvm::sys::path::remove_dots(Path, false, llvm::sys::path::Style::posix);
   }
+}
+
+void Preprocessor::processPathToFileName(SmallVectorImpl<char> &FileName,
+                                         const PresumedLoc &PLoc,
+                                         const LangOptions &LangOpts,
+                                         const TargetInfo &TI) {
+  // Try to get the last path component, failing that return the original
+  // presumed location.
+  StringRef PLFileName = llvm::sys::path::filename(PLoc.getFilename());
+  if (PLFileName.empty())
+    PLFileName = PLoc.getFilename();
+  FileName.append(PLFileName.begin(), PLFileName.end());
+  processPathForFileMacro(FileName, LangOpts, TI);
 }

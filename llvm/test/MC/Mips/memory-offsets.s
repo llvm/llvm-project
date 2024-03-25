@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=mips -mcpu=mips32 -show-encoding %s | FileCheck %s
+# RUN: llvm-mc -triple=mips -mcpu=mips32 -show-encoding %s | FileCheck %s
 
 # Check that parseMemOperand handles expressions such as <int>, (<int>),
 # <expr>, <expr> op <expr>, (<expr>) op (<expr>).

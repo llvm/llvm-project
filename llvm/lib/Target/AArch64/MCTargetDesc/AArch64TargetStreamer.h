@@ -66,6 +66,7 @@ public:
   virtual void emitARM64WinCFITrapFrame() {}
   virtual void emitARM64WinCFIMachineFrame() {}
   virtual void emitARM64WinCFIContext() {}
+  virtual void emitARM64WinCFIECContext() {}
   virtual void emitARM64WinCFIClearUnwoundToCall() {}
   virtual void emitARM64WinCFIPACSignLR() {}
   virtual void emitARM64WinCFISaveAnyRegI(unsigned Reg, int Offset) {}
@@ -132,6 +133,7 @@ public:
   void emitARM64WinCFITrapFrame() override;
   void emitARM64WinCFIMachineFrame() override;
   void emitARM64WinCFIContext() override;
+  void emitARM64WinCFIECContext() override;
   void emitARM64WinCFIClearUnwoundToCall() override;
   void emitARM64WinCFIPACSignLR() override;
   void emitARM64WinCFISaveAnyRegI(unsigned Reg, int Offset) override;

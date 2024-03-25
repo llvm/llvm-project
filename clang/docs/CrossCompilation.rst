@@ -77,12 +77,12 @@ match (since Clang assumes the host triple), and the compilation will
 go ahead, creating code for the host platform, which will break later
 on when assembling or linking.
 
-The triple has the general format ``<arch><sub>-<vendor>-<sys>-<abi>``, where:
+The triple has the general format ``<arch><sub>-<vendor>-<sys>-<env>``, where:
  * ``arch`` = ``x86_64``, ``i386``, ``arm``, ``thumb``, ``mips``, etc.
  * ``sub`` = for ex. on ARM: ``v5``, ``v6m``, ``v7a``, ``v7m``, etc.
  * ``vendor`` = ``pc``, ``apple``, ``nvidia``, ``ibm``, etc.
  * ``sys`` = ``none``, ``linux``, ``win32``, ``darwin``, ``cuda``, etc.
- * ``abi`` = ``eabi``, ``gnu``, ``android``, ``macho``, ``elf``, etc.
+ * ``env`` = ``eabi``, ``gnu``, ``android``, ``macho``, ``elf``, etc.
 
 The sub-architecture options are available for their own architectures,
 of course, so "x86v7a" doesn't make sense. The vendor needs to be
@@ -97,8 +97,8 @@ choose ``unknown`` and the defaults will be used. If you choose a parameter
 that Clang doesn't know, like ``blerg``, it'll ignore and assume
 ``unknown``, which is not always desired, so be careful.
 
-Finally, the ABI option is something that will pick default CPU/FPU,
-define the specific behaviour of your code (PCS, extensions),
+Finally, the env (environment) option is something that will pick default
+CPU/FPU, define the specific behaviour of your code (PCS, extensions),
 and also choose the correct library calls, etc.
 
 CPU, FPU, ABI
@@ -198,6 +198,6 @@ forget to specify ``-ccc-gcc-name armv7l-linux-gnueabihf-gcc`` (which
 uses hard-float), Clang will pick the ``armv7l-linux-gnueabi-ld``
 (which uses soft-float) and linker errors will happen.
 
-The same is true if you're compiling for different ABIs, like ``gnueabi``
-and ``androideabi``, and might even link and run, but produce run-time
-errors, which are much harder to track down and fix.
+The same is true if you're compiling for different environments, like
+``gnueabi`` and ``androideabi``, and might even link and run, but produce
+run-time errors, which are much harder to track down and fix.

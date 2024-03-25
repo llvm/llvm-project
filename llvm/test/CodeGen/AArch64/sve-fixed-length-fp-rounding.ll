@@ -46,8 +46,8 @@ define void @frintp_v16f16(ptr %a) vscale_range(2,0) #0 {
 define void @frintp_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintp_v32f16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frintp z0.h, p0/m, z0.h
@@ -134,8 +134,8 @@ define void @frintp_v8f32(ptr %a) vscale_range(2,0) #0 {
 define void @frintp_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintp_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frintp z0.s, p0/m, z0.s
@@ -222,8 +222,8 @@ define void @frintp_v4f64(ptr %a) vscale_range(2,0) #0 {
 define void @frintp_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintp_v8f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frintp z0.d, p0/m, z0.d
@@ -314,8 +314,8 @@ define void @frintm_v16f16(ptr %a) vscale_range(2,0) #0 {
 define void @frintm_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintm_v32f16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frintm z0.h, p0/m, z0.h
@@ -402,8 +402,8 @@ define void @frintm_v8f32(ptr %a) vscale_range(2,0) #0 {
 define void @frintm_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintm_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frintm z0.s, p0/m, z0.s
@@ -490,8 +490,8 @@ define void @frintm_v4f64(ptr %a) vscale_range(2,0) #0 {
 define void @frintm_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintm_v8f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frintm z0.d, p0/m, z0.d
@@ -582,8 +582,8 @@ define void @frinti_v16f16(ptr %a) vscale_range(2,0) #0 {
 define void @frinti_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frinti_v32f16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frinti z0.h, p0/m, z0.h
@@ -670,8 +670,8 @@ define void @frinti_v8f32(ptr %a) vscale_range(2,0) #0 {
 define void @frinti_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frinti_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frinti z0.s, p0/m, z0.s
@@ -758,8 +758,8 @@ define void @frinti_v4f64(ptr %a) vscale_range(2,0) #0 {
 define void @frinti_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frinti_v8f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frinti z0.d, p0/m, z0.d
@@ -850,8 +850,8 @@ define void @frintx_v16f16(ptr %a) vscale_range(2,0) #0 {
 define void @frintx_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintx_v32f16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frintx z0.h, p0/m, z0.h
@@ -938,8 +938,8 @@ define void @frintx_v8f32(ptr %a) vscale_range(2,0) #0 {
 define void @frintx_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintx_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frintx z0.s, p0/m, z0.s
@@ -1026,8 +1026,8 @@ define void @frintx_v4f64(ptr %a) vscale_range(2,0) #0 {
 define void @frintx_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintx_v8f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frintx z0.d, p0/m, z0.d
@@ -1118,8 +1118,8 @@ define void @frinta_v16f16(ptr %a) vscale_range(2,0) #0 {
 define void @frinta_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frinta_v32f16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frinta z0.h, p0/m, z0.h
@@ -1206,8 +1206,8 @@ define void @frinta_v8f32(ptr %a) vscale_range(2,0) #0 {
 define void @frinta_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frinta_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frinta z0.s, p0/m, z0.s
@@ -1294,8 +1294,8 @@ define void @frinta_v4f64(ptr %a) vscale_range(2,0) #0 {
 define void @frinta_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frinta_v8f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frinta z0.d, p0/m, z0.d
@@ -1386,8 +1386,8 @@ define void @frintn_v16f16(ptr %a) vscale_range(2,0) #0 {
 define void @frintn_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintn_v32f16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frintn z0.h, p0/m, z0.h
@@ -1474,8 +1474,8 @@ define void @frintn_v8f32(ptr %a) vscale_range(2,0) #0 {
 define void @frintn_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintn_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frintn z0.s, p0/m, z0.s
@@ -1562,8 +1562,8 @@ define void @frintn_v4f64(ptr %a) vscale_range(2,0) #0 {
 define void @frintn_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintn_v8f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frintn z0.d, p0/m, z0.d
@@ -1654,8 +1654,8 @@ define void @frintz_v16f16(ptr %a) vscale_range(2,0) #0 {
 define void @frintz_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintz_v32f16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frintz z0.h, p0/m, z0.h
@@ -1742,8 +1742,8 @@ define void @frintz_v8f32(ptr %a) vscale_range(2,0) #0 {
 define void @frintz_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintz_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frintz z0.s, p0/m, z0.s
@@ -1830,8 +1830,8 @@ define void @frintz_v4f64(ptr %a) vscale_range(2,0) #0 {
 define void @frintz_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintz_v8f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    frintz z0.d, p0/m, z0.d

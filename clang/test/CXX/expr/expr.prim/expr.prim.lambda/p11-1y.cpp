@@ -74,6 +74,7 @@ auto s = [s(move(S()))] {};
 
 template<typename T> T instantiate_test(T t) {
   [x(&t)]() { *x = 1; } (); // expected-error {{assigning to 'const char *'}}
+                            // expected-note@-1 {{while substituting into a lambda expression here}}
   return t;
 }
 int instantiate_test_1 = instantiate_test(0);

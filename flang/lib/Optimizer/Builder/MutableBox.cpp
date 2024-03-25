@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
@@ -63,6 +64,12 @@ createNewFirBox(fir::FirOpBuilder &builder, mlir::Location loc,
     cleanedAddr = builder.createConvert(loc, type, addr);
     if (charTy.getLen() == fir::CharacterType::unknownLen())
       cleanedLengths.append(lengths.begin(), lengths.end());
+  } else if (fir::isUnlimitedPolymorphicType(box.getBoxTy())) {
+    if (auto charTy = fir::dyn_cast_ptrEleTy(addr.getType())
+                          .dyn_cast<fir::CharacterType>()) {
+      if (charTy.getLen() == fir::CharacterType::unknownLen())
+        cleanedLengths.append(lengths.begin(), lengths.end());
+    }
   } else if (box.isDerivedWithLenParameters()) {
     TODO(loc, "updating mutablebox of derived type with length parameters");
     cleanedLengths = lengths;
@@ -359,9 +366,9 @@ mlir::Value fir::factory::createUnallocatedBox(
 
 fir::MutableBoxValue fir::factory::createTempMutableBox(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type type,
-    llvm::StringRef name, mlir::Value typeSourceBox) {
+    llvm::StringRef name, mlir::Value typeSourceBox, bool isPolymorphic) {
   mlir::Type boxType;
-  if (typeSourceBox)
+  if (typeSourceBox || isPolymorphic)
     boxType = fir::ClassType::get(fir::HeapType::get(type));
   else
     boxType = fir::BoxType::get(fir::HeapType::get(type));
@@ -399,7 +406,8 @@ static bool readToBoxValue(const fir::MutableBoxValue &box,
 fir::ExtendedValue
 fir::factory::genMutableBoxRead(fir::FirOpBuilder &builder, mlir::Location loc,
                                 const fir::MutableBoxValue &box,
-                                bool mayBePolymorphic) {
+                                bool mayBePolymorphic,
+                                bool preserveLowerBounds) {
   if (box.hasAssumedRank())
     TODO(loc, "assumed rank allocatables or pointers");
   llvm::SmallVector<mlir::Value> lbounds;
@@ -407,7 +415,8 @@ fir::factory::genMutableBoxRead(fir::FirOpBuilder &builder, mlir::Location loc,
   llvm::SmallVector<mlir::Value> lengths;
   if (readToBoxValue(box, mayBePolymorphic)) {
     auto reader = MutablePropertyReader(builder, loc, box);
-    reader.getLowerBounds(lbounds);
+    if (preserveLowerBounds)
+      reader.getLowerBounds(lbounds);
     return fir::BoxValue{reader.getIrBox(), lbounds,
                          box.nonDeferredLenParams()};
   }
@@ -415,6 +424,8 @@ fir::factory::genMutableBoxRead(fir::FirOpBuilder &builder, mlir::Location loc,
   // fir.box.
   auto addr =
       MutablePropertyReader(builder, loc, box).read(lbounds, extents, lengths);
+  if (!preserveLowerBounds)
+    lbounds.clear();
   auto rank = box.rank();
   if (box.isCharacter()) {
     auto len = lengths.empty() ? mlir::Value{} : lengths[0];
@@ -447,12 +458,10 @@ mlir::Value fir::factory::genIsNotAllocatedOrAssociatedTest(
   return builder.genIsNullAddr(loc, addr);
 }
 
-/// Generate finalizer call and inlined free. This does not check that the
+/// Call freemem. This does not check that the
 /// address was allocated.
-static void genFinalizeAndFree(fir::FirOpBuilder &builder, mlir::Location loc,
-                               mlir::Value addr) {
-  // TODO: call finalizer if any.
-
+static void genFreemem(fir::FirOpBuilder &builder, mlir::Location loc,
+                       mlir::Value addr) {
   // A heap (ALLOCATABLE) object may have been converted to a ptr (POINTER),
   // so make sure the heap type is restored before deallocation.
   auto cast = builder.createConvert(
@@ -460,16 +469,16 @@ static void genFinalizeAndFree(fir::FirOpBuilder &builder, mlir::Location loc,
   builder.create<fir::FreeMemOp>(loc, cast);
 }
 
-void fir::factory::genFinalization(fir::FirOpBuilder &builder,
-                                   mlir::Location loc,
-                                   const fir::MutableBoxValue &box) {
+void fir::factory::genFreememIfAllocated(fir::FirOpBuilder &builder,
+                                         mlir::Location loc,
+                                         const fir::MutableBoxValue &box) {
   auto addr = MutablePropertyReader(builder, loc, box).readBaseAddress();
   auto isAllocated = builder.genIsNotNullAddr(loc, addr);
   auto ifOp = builder.create<fir::IfOp>(loc, isAllocated,
                                         /*withElseRegion=*/false);
   auto insPt = builder.saveInsertionPoint();
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  genFinalizeAndFree(builder, loc, addr);
+  ::genFreemem(builder, loc, addr);
   builder.restoreInsertionPoint(insPt);
 }
 
@@ -665,12 +674,13 @@ void fir::factory::disassociateMutableBox(fir::FirOpBuilder &builder,
     // 7.3.2.3 point 7. The dynamic type of a disassociated pointer is the
     // same as its declared type.
     auto boxTy = box.getBoxTy().dyn_cast<fir::BaseBoxType>();
-    auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(boxTy.getEleTy());
+    auto eleTy = fir::unwrapPassByRefType(boxTy.getEleTy());
     mlir::Type derivedType = fir::getDerivedType(eleTy);
-    if (auto recTy = derivedType.dyn_cast<fir::RecordType>())
+    if (auto recTy = derivedType.dyn_cast<fir::RecordType>()) {
       fir::runtime::genNullifyDerivedType(builder, loc, box.getAddr(), recTy,
                                           box.rank());
-    return;
+      return;
+    }
   }
   MutablePropertyWriter{builder, loc, box}.setUnallocatedStatus();
 }
@@ -719,13 +729,11 @@ static mlir::Value allocateAndInitNewStorage(fir::FirOpBuilder &builder,
   return newStorage;
 }
 
-void fir::factory::genInlinedAllocation(fir::FirOpBuilder &builder,
-                                        mlir::Location loc,
-                                        const fir::MutableBoxValue &box,
-                                        mlir::ValueRange lbounds,
-                                        mlir::ValueRange extents,
-                                        mlir::ValueRange lenParams,
-                                        llvm::StringRef allocName) {
+void fir::factory::genInlinedAllocation(
+    fir::FirOpBuilder &builder, mlir::Location loc,
+    const fir::MutableBoxValue &box, mlir::ValueRange lbounds,
+    mlir::ValueRange extents, mlir::ValueRange lenParams,
+    llvm::StringRef allocName, bool mustBeHeap) {
   auto lengths = getNewLengths(builder, loc, box, lenParams);
   llvm::SmallVector<mlir::Value> safeExtents;
   for (mlir::Value extent : extents)
@@ -742,14 +750,18 @@ void fir::factory::genInlinedAllocation(fir::FirOpBuilder &builder,
     mlir::Value irBox = fir::factory::getMutableIRBox(builder, loc, box);
     fir::runtime::genDerivedTypeInitialize(builder, loc, irBox);
   }
+
+  heap->setAttr(fir::MustBeHeapAttr::getAttrName(),
+                fir::MustBeHeapAttr::get(builder.getContext(), mustBeHeap));
 }
 
-void fir::factory::genInlinedDeallocate(fir::FirOpBuilder &builder,
-                                        mlir::Location loc,
-                                        const fir::MutableBoxValue &box) {
+mlir::Value fir::factory::genFreemem(fir::FirOpBuilder &builder,
+                                     mlir::Location loc,
+                                     const fir::MutableBoxValue &box) {
   auto addr = MutablePropertyReader(builder, loc, box).readBaseAddress();
-  genFinalizeAndFree(builder, loc, addr);
+  ::genFreemem(builder, loc, addr);
   MutablePropertyWriter{builder, loc, box}.setUnallocatedStatus();
+  return addr;
 }
 
 fir::factory::MutableBoxReallocation fir::factory::genReallocIfNeeded(
@@ -898,8 +910,7 @@ void fir::factory::finalizeRealloc(fir::FirOpBuilder &builder,
         auto heap = fir::getBase(realloc.newValue);
         auto extents = fir::factory::getExtents(loc, builder, realloc.newValue);
         builder.genIfThen(loc, realloc.oldAddressWasAllocated)
-            .genThen(
-                [&]() { genFinalizeAndFree(builder, loc, realloc.oldAddress); })
+            .genThen([&]() { ::genFreemem(builder, loc, realloc.oldAddress); })
             .end();
         MutablePropertyWriter{builder, loc, box}.updateMutableBox(
             heap, lbs, extents, lengths);
@@ -924,4 +935,14 @@ void fir::factory::syncMutableBoxFromIRBox(fir::FirOpBuilder &builder,
                                            mlir::Location loc,
                                            const fir::MutableBoxValue &box) {
   MutablePropertyWriter{builder, loc, box}.syncMutablePropertiesFromIRBox();
+}
+
+mlir::Value fir::factory::genNullBoxStorage(fir::FirOpBuilder &builder,
+                                            mlir::Location loc,
+                                            mlir::Type boxTy) {
+  mlir::Value boxStorage = builder.createTemporary(loc, boxTy);
+  mlir::Value nullBox = fir::factory::createUnallocatedBox(
+      builder, loc, boxTy, /*nonDeferredParams=*/{});
+  builder.create<fir::StoreOp>(loc, nullBox, boxStorage);
+  return boxStorage;
 }

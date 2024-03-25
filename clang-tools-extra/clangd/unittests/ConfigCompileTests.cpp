@@ -246,22 +246,19 @@ TEST_F(ConfigCompileTests, PathSpecMatch) {
 }
 
 TEST_F(ConfigCompileTests, DiagnosticsIncludeCleaner) {
-  // Defaults to None.
+  // Defaults to Strict.
   EXPECT_TRUE(compileAndApply());
-  EXPECT_EQ(Conf.Diagnostics.UnusedIncludes,
-            Config::UnusedIncludesPolicy::None);
+  EXPECT_EQ(Conf.Diagnostics.UnusedIncludes, Config::IncludesPolicy::Strict);
 
   Frag = {};
   Frag.Diagnostics.UnusedIncludes.emplace("None");
   EXPECT_TRUE(compileAndApply());
-  EXPECT_EQ(Conf.Diagnostics.UnusedIncludes,
-            Config::UnusedIncludesPolicy::None);
+  EXPECT_EQ(Conf.Diagnostics.UnusedIncludes, Config::IncludesPolicy::None);
 
   Frag = {};
   Frag.Diagnostics.UnusedIncludes.emplace("Strict");
   EXPECT_TRUE(compileAndApply());
-  EXPECT_EQ(Conf.Diagnostics.UnusedIncludes,
-            Config::UnusedIncludesPolicy::Strict);
+  EXPECT_EQ(Conf.Diagnostics.UnusedIncludes, Config::IncludesPolicy::Strict);
 
   Frag = {};
   EXPECT_TRUE(Conf.Diagnostics.Includes.IgnoreHeader.empty())

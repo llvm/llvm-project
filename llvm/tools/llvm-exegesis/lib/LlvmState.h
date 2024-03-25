@@ -16,7 +16,6 @@
 
 #include "MCInstrDescView.h"
 #include "RegisterAliasing.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -41,9 +40,12 @@ public:
   // Factory function.
   // If `Triple` is empty, uses the host triple.
   // If `CpuName` is empty, uses the host CPU.
-  // `Features` is intended for tests.
+  // If `UseDummyPerfCounters` is set, does not query the kernel
+  // for event counts.
+  // `UseDummyPerfCounters` and `Features` are intended for tests.
   static Expected<LLVMState> Create(std::string TripleName, std::string CpuName,
-                                    StringRef Features = "");
+                                    StringRef Features = "",
+                                    bool UseDummyPerfCounters = false);
 
   const TargetMachine &getTargetMachine() const { return *TheTargetMachine; }
   std::unique_ptr<LLVMTargetMachine> createTargetMachine() const;
@@ -86,7 +88,7 @@ private:
   createRegNameToRegNoMapping() const;
 
   LLVMState(std::unique_ptr<const TargetMachine> TM, const ExegesisTarget *ET,
-            StringRef CpuName);
+            const PfmCountersInfo *PCI);
 
   const ExegesisTarget *TheExegesisTarget;
   std::unique_ptr<const TargetMachine> TheTargetMachine;

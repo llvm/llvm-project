@@ -58,7 +58,7 @@ define amdgpu_kernel void @test_readfirstlane_copy_from_sgpr(ptr addrspace(1) %o
 
 ; Make sure this doesn't crash.
 ; CHECK-LABEL: {{^}}test_readfirstlane_fi:
-; CHECK: s_mov_b32 [[FIVAL:s[0-9]]], 4
+; CHECK: s_mov_b32 [[FIVAL:s[0-9]]], 0
 define amdgpu_kernel void @test_readfirstlane_fi(ptr addrspace(1) %out) #1 {
   %alloca = alloca i32, addrspace(5)
   %int = ptrtoint ptr addrspace(5) %alloca to i32

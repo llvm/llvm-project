@@ -9,8 +9,8 @@ define i1 @extractloadi1(ptr %ptr, i32 %idx) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_load_ubyte v0, v[0:1]
 ; CHECK-NEXT:    v_and_b32_e32 v1, 7, v2
-; CHECK-NEXT:    v_lshr_b32_e64 v9, s32, 6
-; CHECK-NEXT:    v_or_b32_e32 v1, v9, v1
+; CHECK-NEXT:    v_lshr_b32_e64 v2, s32, 6
+; CHECK-NEXT:    v_or_b32_e32 v1, v2, v1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_bfe_u32 v2, v0, 1, 1
 ; CHECK-NEXT:    v_bfe_u32 v3, v0, 2, 2

@@ -29,7 +29,7 @@
 // RELATIVE: 00010154 l       .text           00000000 patatino
 // RELATIVE: Disassembly of section .text:
 // RELATIVE-EMPTY:
-// RELATIVE: <$d.0>:
+// RELATIVE: <.text>:
 // RELATIVE:     10150:       04 00 00 00     .word   0x00000004
 
 // ABS: relocation R_ARM_TARGET1 cannot be used against symbol 'patatino'; recompile with -fPIC

@@ -21,7 +21,7 @@ void integer_suffix() {
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: integer literal has suffix 'i32', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v3 = 1i32;
   // CHECK-MESSAGES-NEXT: ^~
-  // CHECK-MESSAGES-NEXT: {{^ *}}I32{{$}}
+  // CHECK-MESSAGES-NEXT: I32{{$}}
   // CHECK-FIXES: static constexpr auto v3 = 1I32;
   static_assert(is_same<decltype(v3), const int>::value, "");
   static_assert(v3 == 1I32, "");
@@ -36,7 +36,7 @@ void integer_suffix() {
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: integer literal has suffix 'i64', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v5 = 1i64;
   // CHECK-MESSAGES-NEXT: ^~
-  // CHECK-MESSAGES-NEXT: {{^ *}}I64{{$}}
+  // CHECK-MESSAGES-NEXT: I64{{$}}
   // CHECK-FIXES: static constexpr auto v5 = 1I64;
   static_assert(is_same<decltype(v5), const long int>::value, "");
   static_assert(v5 == 1I64, "");
@@ -51,7 +51,7 @@ void integer_suffix() {
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: integer literal has suffix 'i16', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v7 = 1i16;
   // CHECK-MESSAGES-NEXT: ^~
-  // CHECK-MESSAGES-NEXT: {{^ *}}I16{{$}}
+  // CHECK-MESSAGES-NEXT: I16{{$}}
   // CHECK-FIXES: static constexpr auto v7 = 1I16;
   static_assert(is_same<decltype(v7), const short>::value, "");
   static_assert(v7 == 1I16, "");
@@ -66,7 +66,7 @@ void integer_suffix() {
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: integer literal has suffix 'i8', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v9 = 1i8;
   // CHECK-MESSAGES-NEXT: ^~
-  // CHECK-MESSAGES-NEXT: {{^ *}}I8{{$}}
+  // CHECK-MESSAGES-NEXT: I8{{$}}
   // CHECK-FIXES: static constexpr auto v9 = 1I8;
   static_assert(is_same<decltype(v9), const char>::value, "");
   static_assert(v9 == 1I8, "");

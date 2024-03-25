@@ -18,7 +18,6 @@
 @synthesize foo = _foo;
 @end
 
-// rdar://10666594
 @interface MPMediaItem
 @end
 

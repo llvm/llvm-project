@@ -28,6 +28,7 @@ Linfo_string:
 Lsection_abbrev:
 	.byte	1                       ## Abbreviation Code
 	.byte	17                      ## DW_TAG_compile_unit
+        .byte   0                       ## DW_CHILDREN_no
 	.byte	0                       ## EOM(1)
 	.byte	0                       ## EOM(2)
 	.byte	0                       ## EOM(3)

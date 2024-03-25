@@ -26,13 +26,16 @@ public:
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void onEndOfTranslationUnit() override;
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
 
 private:
   void removeFromFoundDecls(const Decl *D);
 
   struct UsingDeclContext {
     explicit UsingDeclContext(const UsingDecl *FoundUsingDecl)
-        : FoundUsingDecl(FoundUsingDecl), IsUsed(false) {}
+        : FoundUsingDecl(FoundUsingDecl) {}
     // A set saves all UsingShadowDecls introduced by a UsingDecl. A UsingDecl
     // can introduce multiple UsingShadowDecls in some cases (such as
     // overloaded functions).
@@ -42,13 +45,14 @@ private:
     // The source range of the UsingDecl.
     CharSourceRange UsingDeclRange;
     // Whether the UsingDecl is used.
-    bool IsUsed;
+    bool IsUsed = false;
   };
 
   std::vector<UsingDeclContext> Contexts;
+  llvm::SmallPtrSet<const Decl *, 32> UsingTargetDeclsCache;
 
-  const StringRef RawStringHeaderFileExtensions;
-  utils::FileExtensionsSet HeaderFileExtensions;
+  StringRef RawStringHeaderFileExtensions;
+  FileExtensionsSet HeaderFileExtensions;
 };
 
 } // namespace clang::tidy::misc

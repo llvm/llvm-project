@@ -126,3 +126,20 @@ func.func private @foo() -> ()
 // CHECK: omp.parallel
 // CHECK: func.call @foo() : () -> ()
 // CHECK: omp.terminator
+
+// -----
+
+func.func @constant_hoisting_target(%x : !llvm.ptr) {
+  omp.target {
+    ^bb0(%arg0: !llvm.ptr):
+    %c1 = arith.constant 10 : i32
+    llvm.store %c1, %arg0 : i32, !llvm.ptr
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @constant_hoisting_target
+// CHECK-NOT: arith.constant
+// CHECK: omp.target
+// CHECK: arith.constant

@@ -25,9 +25,16 @@ def opt_level : Joined<["--"], "opt-level=">,
 def bitcode_library_EQ : Joined<["--"], "bitcode-library=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<kind>-<triple>-<arch>=<path>">,
   HelpText<"Extra bitcode library to link">;
+def builtin_bitcode_EQ : Joined<["--"], "builtin-bitcode=">,
+  Flags<[WrapperOnlyOption]>, MetaVarName<"<triple>=<path>">,
+  HelpText<"Perform a special internalizing link on the bitcode file. "
+           "This is necessary for some vendor libraries to be linked correctly">;
 def device_linker_args_EQ : Joined<["--"], "device-linker=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<value> or <triple>=<value>">,
   HelpText<"Arguments to pass to the device linker invocation">;
+def clang_backend : Flag<["--"], "clang-backend">,
+  Flags<[WrapperOnlyOption]>,
+  HelpText<"Run the backend using clang rather than the LTO backend">;
 def dry_run : Flag<["--"], "dry-run">,
   Flags<[WrapperOnlyOption]>,
   HelpText<"Print program arguments without running">;
@@ -51,6 +58,10 @@ def print_wrapped_module : Flag<["--"], "print-wrapped-module">,
   HelpText<"Print the wrapped module's IR for testing">;
 def save_temps : Flag<["--"], "save-temps">,
   Flags<[WrapperOnlyOption]>, HelpText<"Save intermediate results">;
+def compress : Flag<["--"], "compress">,
+  Flags<[WrapperOnlyOption]>, HelpText<"Compress bundled files">;
+def compression_level_eq : Joined<["--"], "compression-level=">,
+  Flags<[WrapperOnlyOption]>, HelpText<"Specify the compression level (integer)">;
 
 def wrapper_time_trace_eq : Joined<["--"], "wrapper-time-trace=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<file>">,
@@ -77,10 +88,6 @@ def linker_arg_EQ : Joined<["--"], "linker-arg=">,
   Flags<[DeviceOnlyOption, HelpHidden]>,
   HelpText<"An extra argument to be passed to the linker">;
 
-// Separator between the linker wrapper and host linker flags.
-def separator : Flag<["--"], "">, Flags<[WrapperOnlyOption]>,
-  HelpText<"The separator for the wrapped linker arguments">;
-
 // Arguments for the LLVM backend.
 def mllvm : Separate<["-"], "mllvm">, Flags<[WrapperOnlyOption]>,
   MetaVarName<"<arg>">, HelpText<"Arguments passed to the LLVM invocation">;
@@ -88,7 +95,7 @@ def offload_opt_eq_minus : Joined<["--", "-"], "offload-opt=-">, Flags<[HelpHidd
   HelpText<"Options passed to LLVM">;
 
 // Standard linker flags also used by the linker wrapper.
-def sysroot_EQ : Joined<["--"], "sysroot">, HelpText<"Set the system root">;
+def sysroot_EQ : Joined<["--"], "sysroot=">, HelpText<"Set the system root">;
 
 def o : JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
@@ -119,3 +126,12 @@ def version : Flag<["--", "-"], "version">, Flags<[HelpHidden]>, Alias<v>;
 
 def whole_archive : Flag<["--", "-"], "whole-archive">, Flags<[HelpHidden]>;
 def no_whole_archive : Flag<["--", "-"], "no-whole-archive">, Flags<[HelpHidden]>;
+
+def relocatable : Flag<["--", "-"], "relocatable">, 
+    HelpText<"Link device code to create a relocatable offloading application">;
+def r : Flag<["-"], "r">, Alias<relocatable>;
+
+// link.exe-style linker options.
+def out : Joined<["/", "-", "/?", "-?"], "out:">, Flags<[HelpHidden]>;
+def libpath : Joined<["/", "-", "/?", "-?"], "libpath:">, Flags<[HelpHidden]>;
+def wholearchive_flag : Joined<["/", "-", "/?", "-?"], "wholearchive">, Flags<[HelpHidden]>;

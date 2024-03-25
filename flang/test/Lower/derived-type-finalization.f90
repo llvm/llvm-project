@@ -1,5 +1,5 @@
 ! Test derived type finalization
-! RUN: bbc -polymorphic-type -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Missing tests:
 ! - finalization within BLOCK construct
@@ -10,12 +10,36 @@ module derived_type_finalization
     integer :: a
   contains
     final :: t1_final
+    final :: t1_final_1r
+  end type
+
+  type :: t2
+    integer, allocatable, dimension(:) :: a
+  contains
+    final :: t2_final
+  end type
+
+  type :: t3
+    type(t2) :: t
+  end type
+
+  type t4
+  contains
+    final :: t4_final
   end type
 
 contains
 
   subroutine t1_final(this)
     type(t1) :: this
+  end subroutine
+
+  subroutine t1_final_1r(this)
+    type(t1) :: this(:)
+  end subroutine
+
+  subroutine t2_final(this)
+    type(t2) :: this
   end subroutine
 
   ! 7.5.6.3 point 1. Finalization of LHS.
@@ -31,11 +55,12 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_lhs() {
+! CHECK: %[[BOXREF:.*]] = fir.alloca !fir.box<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>
 ! CHECK: %[[LHS:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt1{a:i32}> {bindc_name = "lhs", uniq_name = "_QMderived_type_finalizationFtest_lhsElhs"}
-! CHECK: %[[RHS:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt1{a:i32}> {bindc_name = "rhs", uniq_name = "_QMderived_type_finalizationFtest_lhsErhs"}
 ! CHECK: %[[EMBOX:.*]] = fir.embox %[[LHS]] : (!fir.ref<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>) -> !fir.box<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>
-! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[EMBOX]] : (!fir.box<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>) -> !fir.box<none>
-! CHECK: %{{.*}} = fir.call @_FortranADestroy(%[[BOX_NONE]]) {{.*}} : (!fir.box<none>) -> none
+! CHECK: fir.store %[[EMBOX]] to %[[BOXREF]] : !fir.ref<!fir.box<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>
+! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[BOXREF]] : (!fir.ref<!fir.box<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %{{.*}} = fir.call @_FortranAAssign(%[[BOX_NONE]], {{.*}}
 
 ! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_lhs_allocatable() {
 ! CHECK: %[[LHS:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>> {bindc_name = "lhs", uniq_name = "_QMderived_type_finalizationFtest_lhs_allocatableElhs"}
@@ -148,25 +173,84 @@ contains
 ! CHECK: %{{.*}} = fir.call @_FortranADestroy(%[[BOX_NONE]]) {{.*}}: (!fir.box<none>) -> none
 ! CHECK: return
 
+  function get_t1(i)
+    type(t1), pointer :: get_t1
+    allocate(get_t1)
+    get_t1%a = i
+  end function
+
+  subroutine test_nonpointer_function()
+    print*, get_t1(20)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_nonpointer_function() {
+! CHECK: %[[TMP:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>> {bindc_name = ".result"}
+! CHECK: %{{.*}} = fir.call @_FortranAioBeginExternalListOutput
+! CHECK: %[[RES:.*]] = fir.call @_QMderived_type_finalizationPget_t1(%{{.*}}) {{.*}} : (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>
+! CHECK: fir.save_result %[[RES]] to %[[TMP]] : !fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>>
+! CHECK: %{{.*}} = fir.call @_FortranAioOutputDerivedType
+! CHECK-NOT: %{{.*}} = fir.call @_FortranADestroy
+! CHECK: %{{.*}} = fir.call @_FortranAioEndIoStatement
+! CHECK: return
+
+  subroutine test_avoid_double_finalization(a)
+    type(t3), intent(inout) :: a
+    type(t3)                :: b
+    b = a
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_avoid_double_finalization(
+! CHECK: fir.call @_FortranAInitialize(
+! CHECK-NOT: %{{.*}} = fir.call @_FortranADestroy
+! CHECK: %{{.*}} = fir.call @_FortranAAssign(
+! CHECK: %{{.*}} = fir.call @_FortranADestroy(
+
+  function no_func_ret_finalize() result(ty)
+    type(t1) :: ty
+    ty = t1(10)
+  end function
+
+! CHECK-LABEL: func.func @_QMderived_type_finalizationPno_func_ret_finalize() -> !fir.type<_QMderived_type_finalizationTt1{a:i32}> {
+! CHECK: %{{.*}} = fir.call @_FortranAAssign
+! CHECK-NOT: fir.call @_FortranADestroy
+! CHECK: return %{{.*}} : !fir.type<_QMderived_type_finalizationTt1{a:i32}>
+
+  function copy(a) result(ty)
+    class(t1), allocatable :: ty(:)
+    integer, intent(in) :: a
+    allocate(t1::ty(a))
+    ty%a = 1
+  end function
+
+  subroutine test_avoid_double_free()
+    class(*), allocatable :: up(:)
+    allocate(up(10), source=copy(10))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_avoid_double_free() {
+! CHECK: %[[RES:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>> {bindc_name = ".result"}
+! CHECK: fir.call @_FortranAAllocatableAllocateSource(
+! CHECK-NOT: fir.freemem %{{.*}} : !fir.heap<!fir.array<?x!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>
+! CHECK: %[[RES_CONV:.*]] = fir.convert %[[RES]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranADestroy(%[[RES_CONV]]) {{.*}} : (!fir.box<none>) -> none
+
+  subroutine t4_final(this)
+    type(t4) :: this
+  end subroutine
+
+  subroutine local_t4()
+    type(t4) :: t
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMderived_type_finalizationPlocal_t4()
+! CHECK: %{{.*}} = fir.call @_FortranADestroy(%2) fastmath<contract> : (!fir.box<none>) -> none
+
 end module
 
 program p
   use derived_type_finalization
   type(t1) :: t
-  if (t%a == 10) return
-  print *, 'end of program'
 end program
 
-! CHECK-LABEL: func.func @_QQmain() {
-! CHECK: %[[T:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt1{a:i32}> {bindc_name = "t", uniq_name = "_QFEt"}
-! CHECK: cf.cond_br %{{.*}}, ^bb1, ^bb2
-! CHECK: ^bb1:
-! CHECK:  %[[EMBOX:.*]] = fir.embox %[[T]] : (!fir.ref<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>) -> !fir.box<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>
-! CHECK:  %[[BOX_NONE:.*]] = fir.convert %[[EMBOX]] : (!fir.box<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>) -> !fir.box<none>
-! CHECK:  %{{.*}} = fir.call @_FortranADestroy(%[[BOX_NONE]]) {{.*}} : (!fir.box<none>) -> none
-! CHECK:  return
-! CHECK: ^bb2:
-! CHECK:  %[[EMBOX:.*]] = fir.embox %[[T]] : (!fir.ref<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>) -> !fir.box<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>
-! CHECK:  %[[BOX_NONE:.*]] = fir.convert %[[EMBOX]] : (!fir.box<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>) -> !fir.box<none>
-! CHECK:  %{{.*}} = fir.call @_FortranADestroy(%[[BOX_NONE]]) {{.*}} : (!fir.box<none>) -> none
-! CHECK:  return
+! CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "p"} {
+! CHECK-NOT: fir.call @_FortranADestroy

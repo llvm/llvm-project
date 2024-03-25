@@ -48,6 +48,14 @@ void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
   if (auto Err = runPasses(Passes.PostPrunePasses))
     return Ctx->notifyFailed(std::move(Err));
 
+  // Skip straight to phase 2 if the graph is empty with no associated actions.
+  if (G->allocActions().empty() && llvm::all_of(G->sections(), [](Section &S) {
+        return S.getMemLifetime() == orc::MemLifetime::NoAlloc;
+      })) {
+    linkPhase2(std::move(Self), nullptr);
+    return;
+  }
+
   Ctx->getMemoryManager().allocate(
       Ctx->getJITLinkDylib(), *G,
       [S = std::move(Self)](AllocResult AR) mutable {
@@ -65,7 +73,7 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
   if (AR)
     Alloc = std::move(*AR);
   else
-    return abandonAllocAndBailOut(std::move(Self), AR.takeError());
+    return Ctx->notifyFailed(AR.takeError());
 
   LLVM_DEBUG({
     dbgs() << "Link graph \"" << G->getName()
@@ -163,6 +171,12 @@ void JITLinkerBase::linkPhase3(std::unique_ptr<JITLinkerBase> Self,
   if (auto Err = runPasses(Passes.PostFixupPasses))
     return abandonAllocAndBailOut(std::move(Self), std::move(Err));
 
+  // Skip straight to phase 4 if the graph has no allocation.
+  if (!Alloc) {
+    linkPhase4(std::move(Self), JITLinkMemoryManager::FinalizedAlloc{});
+    return;
+  }
+
   Alloc->finalize([S = std::move(Self)](FinalizeResult FR) mutable {
     // FIXME: Once MSVC implements c++17 order of evaluation rules for calls
     // this can be simplified to
@@ -218,8 +232,7 @@ void JITLinkerBase::applyLookupResult(AsyncLookupResult Result) {
     assert(!Sym->isDefined() && "Symbol being resolved is already defined");
     auto ResultI = Result.find(Sym->getName());
     if (ResultI != Result.end()) {
-      Sym->getAddressable().setAddress(
-          orc::ExecutorAddr(ResultI->second.getAddress()));
+      Sym->getAddressable().setAddress(ResultI->second.getAddress());
       Sym->setLinkage(ResultI->second.getFlags().isWeak() ? Linkage::Weak
                                                           : Linkage::Strong);
       Sym->setScope(ResultI->second.getFlags().isExported() ? Scope::Default

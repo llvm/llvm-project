@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -mcpu=hexagonv62 -filetype=obj %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
+# RUN: llvm-mc -triple=hexagon -mcpu=hexagonv62 -filetype=obj %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 	r0=gpmucnt4
  # CHECK: { r0 = gpmucnt4 }

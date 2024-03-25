@@ -24,12 +24,8 @@ public:
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
-  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-
-  const bool IsUseDefaultMemberInitEnabled;
-  const bool UseAssignment;
 };
 
 } // namespace clang::tidy::cppcoreguidelines

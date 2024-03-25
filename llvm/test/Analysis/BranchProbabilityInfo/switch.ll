@@ -7,19 +7,19 @@ declare void @g(i32)
 ; returned by BranchProbabilityInfo::getEdgeProbability.
 
 define void @test1(i32 %x) {
-;CHECK: edge entry -> return probability is 0x0ccccccd / 0x80000000 = 10.00%
-;CHECK: edge entry -> bb0 probability is 0x26666666 / 0x80000000 = 30.00%
-;CHECK: edge entry -> bb0 probability is 0x26666666 / 0x80000000 = 30.00%
-;CHECK: edge entry -> bb0 probability is 0x26666666 / 0x80000000 = 30.00%
-;CHECK: edge entry -> bb1 probability is 0x26666666 / 0x80000000 = 30.00%
-;CHECK: edge entry -> bb1 probability is 0x26666666 / 0x80000000 = 30.00%
-;CHECK: edge entry -> bb1 probability is 0x26666666 / 0x80000000 = 30.00%
-;CHECK: edge entry -> bb2 probability is 0x26666666 / 0x80000000 = 30.00%
-;CHECK: edge entry -> bb2 probability is 0x26666666 / 0x80000000 = 30.00%
-;CHECK: edge entry -> bb2 probability is 0x26666666 / 0x80000000 = 30.00%
-;CHECK: edge bb0 -> return probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-;CHECK: edge bb1 -> return probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-;CHECK: edge bb2 -> return probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %entry -> %return probability is 0x0ccccccd / 0x80000000 = 10.00%
+;CHECK: edge %entry -> %bb0 probability is 0x26666666 / 0x80000000 = 30.00%
+;CHECK: edge %entry -> %bb0 probability is 0x26666666 / 0x80000000 = 30.00%
+;CHECK: edge %entry -> %bb0 probability is 0x26666666 / 0x80000000 = 30.00%
+;CHECK: edge %entry -> %bb1 probability is 0x26666666 / 0x80000000 = 30.00%
+;CHECK: edge %entry -> %bb1 probability is 0x26666666 / 0x80000000 = 30.00%
+;CHECK: edge %entry -> %bb1 probability is 0x26666666 / 0x80000000 = 30.00%
+;CHECK: edge %entry -> %bb2 probability is 0x26666666 / 0x80000000 = 30.00%
+;CHECK: edge %entry -> %bb2 probability is 0x26666666 / 0x80000000 = 30.00%
+;CHECK: edge %entry -> %bb2 probability is 0x26666666 / 0x80000000 = 30.00%
+;CHECK: edge %bb0 -> %return probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %bb1 -> %return probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %bb2 -> %return probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 entry:
   switch i32 %x, label %return [

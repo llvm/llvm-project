@@ -41,6 +41,7 @@
 // PART0-NEXT: .plt              PROGBITS
 // PART0-NEXT: .init_array       INIT_ARRAY      {{0*}}[[INIT_ARRAY_ADDR:[^ ]*]]
 // CHECK-NEXT: .dynamic          DYNAMIC         {{0*}}[[DYNAMIC_ADDR:[^ ]*]]
+// PART0-NEXT: .relro_padding    NOBITS
 // PART0-NEXT: .data             PROGBITS        000000000000[[DATA_SEGMENT:.]]178
 // PART1-NEXT: .data             PROGBITS        000000000000[[DATA_SEGMENT:.]]130
 // PART0-NEXT: .got.plt          PROGBITS        {{0*}}[[GOT_PLT_ADDR:[^ ]*]]

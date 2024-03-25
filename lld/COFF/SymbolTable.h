@@ -28,7 +28,6 @@ class COFFLinkerContext;
 class Defined;
 class DefinedAbsolute;
 class DefinedRegular;
-class DefinedRelative;
 class LazyArchive;
 class SectionChunk;
 class Symbol;
@@ -134,6 +133,7 @@ private:
 
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> symMap;
   std::unique_ptr<BitcodeCompiler> lto;
+  bool ltoCompilationDone = false;
 
   COFFLinkerContext &ctx;
 };

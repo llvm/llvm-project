@@ -1,7 +1,6 @@
-
-; RUN: llc < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X32
+; RUN: llc < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefix=X64
-; RUN: llc < %s -mtriple=i686-w64-windows-gnu | FileCheck %s -check-prefix=X32
+; RUN: llc < %s -mtriple=i686-w64-windows-gnu | FileCheck %s -check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-w64-windows-gnu | FileCheck %s -check-prefix=X64
 ; Control Flow Guard is currently only available on Windows
 
@@ -20,7 +19,7 @@ entry:
   call void %0()
   ret void
 
-  ; X32-NOT: __guard_check_icall_fptr
+  ; X86-NOT: __guard_check_icall_fptr
   ; X64-NOT: __guard_dispatch_icall_fptr
 }
 

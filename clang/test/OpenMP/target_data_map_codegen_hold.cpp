@@ -54,26 +54,22 @@ struct S2 {
 
 //.
 // CHECK-PPC64LE: @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 20]
-// CHECK-PPC64LE: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 8193]
-// CHECK-PPC64LE: @0 = private unnamed_addr constant [23 x i8] c"
-// CHECK-PPC64LE: @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @0 }, align 8
+// CHECK-PPC64LE: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 [[#0x2001]]]
 // CHECK-PPC64LE: @.offload_sizes.1 = private unnamed_addr constant [1 x i64] [i64 20]
-// CHECK-PPC64LE: @.offload_maptypes.2 = private unnamed_addr constant [1 x i64] [i64 9221]
+// CHECK-PPC64LE: @.offload_maptypes.2 = private unnamed_addr constant [1 x i64] [i64 [[#0x2405]]]
 // CHECK-PPC64LE: @.offload_sizes.3 = private unnamed_addr constant [1 x i64] [i64 4]
-// CHECK-PPC64LE: @.offload_maptypes.4 = private unnamed_addr constant [1 x i64] [i64 8195]
+// CHECK-PPC64LE: @.offload_maptypes.4 = private unnamed_addr constant [1 x i64] [i64 [[#0x2003]]]
 // CHECK-PPC64LE: @.offload_sizes.5 = private unnamed_addr constant [11 x i64] [i64 0, i64 4, i64 8, i64 8, i64 4, i64 4, i64 0, i64 4, i64 8, i64 8, i64 4]
-// CHECK-PPC64LE: @.offload_maptypes.6 = private unnamed_addr constant [11 x i64] [i64 8192, i64 281474976718851, i64 281474976718864, i64 8208, i64 8211, i64 3, i64 8192, i64 1970324836982787, i64 1970324836982800, i64 8208, i64 8211]
+// CHECK-PPC64LE: @.offload_maptypes.6 = private unnamed_addr constant [11 x i64] [i64 [[#0x2000]], i64 [[#0x1000000002003]], i64 [[#0x1000000002010]], i64 [[#0x2010]], i64 [[#0x2013]], i64 [[#0x3]], i64 [[#0x2000]], i64 [[#0x7000000002003]], i64 [[#0x7000000002010]], i64 [[#0x2010]], i64 [[#0x2013]]]
 //.
 // CHECK-I386: @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 20]
-// CHECK-I386: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 8193]
-// CHECK-I386: @0 = private unnamed_addr constant [23 x i8] c"
-// CHECK-I386: @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @0 }, align 8
+// CHECK-I386: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 [[#0x2001]]]
 // CHECK-I386: @.offload_sizes.1 = private unnamed_addr constant [1 x i64] [i64 20]
-// CHECK-I386: @.offload_maptypes.2 = private unnamed_addr constant [1 x i64] [i64 9221]
+// CHECK-I386: @.offload_maptypes.2 = private unnamed_addr constant [1 x i64] [i64 [[#0x2405]]]
 // CHECK-I386: @.offload_sizes.3 = private unnamed_addr constant [1 x i64] [i64 4]
-// CHECK-I386: @.offload_maptypes.4 = private unnamed_addr constant [1 x i64] [i64 8195]
+// CHECK-I386: @.offload_maptypes.4 = private unnamed_addr constant [1 x i64] [i64 [[#0x2003]]]
 // CHECK-I386: @.offload_sizes.5 = private unnamed_addr constant [11 x i64] [i64 0, i64 4, i64 4, i64 4, i64 4, i64 4, i64 0, i64 4, i64 4, i64 4, i64 4]
-// CHECK-I386: @.offload_maptypes.6 = private unnamed_addr constant [11 x i64] [i64 8192, i64 281474976718851, i64 281474976718864, i64 8208, i64 8211, i64 3, i64 8192, i64 1970324836982787, i64 1970324836982800, i64 8208, i64 8211]
+// CHECK-I386: @.offload_maptypes.6 = private unnamed_addr constant [11 x i64] [i64 [[#0x2000]], i64 [[#0x1000000002003]], i64 [[#0x1000000002010]], i64 [[#0x2010]], i64 [[#0x2013]], i64 [[#0x3]], i64 [[#0x2000]], i64 [[#0x7000000002003]], i64 [[#0x7000000002010]], i64 [[#0x2010]], i64 [[#0x2013]]]
 //.
 // CHECK-PPC64LE-LABEL: @_Z3fooi(
 // CHECK-PPC64LE-NEXT:  entry:
@@ -514,11 +510,3 @@ void foo(int arg) {
 }
 
 #endif
-//.
-// CHECK-PPC64LE: attributes #0 = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-altivec,-bpermd,-crbits,-crypto,-direct-move,-extdiv,-htm,-isa-v206-instructions,-isa-v207-instructions,-isa-v30-instructions,-power8-vector,-power9-vector,-privileged,-quadword-atomics,-rop-protect,-spe,-vsx" }
-// CHECK-PPC64LE: attributes #1 = { nounwind }
-// CHECK-PPC64LE: attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-//.
-// CHECK-I386: attributes #0 = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+x87" }
-// CHECK-I386: attributes #1 = { nounwind }
-// CHECK-I386: attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }

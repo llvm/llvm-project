@@ -12,14 +12,14 @@ define i32 @foo(ptr nocapture %A, i32 %n) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[N]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <8 x i32> [[TMP1]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> poison, i32 [[N]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <8 x i32> [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    store <8 x i32> [[TMP3]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 8
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP5]], [[N]]
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP4]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i32 undef
@@ -34,37 +34,37 @@ for.body:
   %0 = load i32, ptr %arrayidx, align 4
   %add1 = add nsw i32 %0, %n
   store i32 %add1, ptr %arrayidx, align 4
-  %1 = or i64 %indvars.iv, 1
+  %1 = or disjoint i64 %indvars.iv, 1
   %arrayidx4 = getelementptr inbounds i32, ptr %A, i64 %1
   %2 = load i32, ptr %arrayidx4, align 4
   %add5 = add nsw i32 %2, %n
   store i32 %add5, ptr %arrayidx4, align 4
-  %3 = or i64 %indvars.iv, 2
+  %3 = or disjoint i64 %indvars.iv, 2
   %arrayidx8 = getelementptr inbounds i32, ptr %A, i64 %3
   %4 = load i32, ptr %arrayidx8, align 4
   %add9 = add nsw i32 %4, %n
   store i32 %add9, ptr %arrayidx8, align 4
-  %5 = or i64 %indvars.iv, 3
+  %5 = or disjoint i64 %indvars.iv, 3
   %arrayidx12 = getelementptr inbounds i32, ptr %A, i64 %5
   %6 = load i32, ptr %arrayidx12, align 4
   %add13 = add nsw i32 %6, %n
   store i32 %add13, ptr %arrayidx12, align 4
-  %7 = or i64 %indvars.iv, 4
+  %7 = or disjoint i64 %indvars.iv, 4
   %arrayidx16 = getelementptr inbounds i32, ptr %A, i64 %7
   %8 = load i32, ptr %arrayidx16, align 4
   %add17 = add nsw i32 %8, %n
   store i32 %add17, ptr %arrayidx16, align 4
-  %9 = or i64 %indvars.iv, 5
+  %9 = or disjoint i64 %indvars.iv, 5
   %arrayidx20 = getelementptr inbounds i32, ptr %A, i64 %9
   %10 = load i32, ptr %arrayidx20, align 4
   %add21 = add nsw i32 %10, %n
   store i32 %add21, ptr %arrayidx20, align 4
-  %11 = or i64 %indvars.iv, 6
+  %11 = or disjoint i64 %indvars.iv, 6
   %arrayidx24 = getelementptr inbounds i32, ptr %A, i64 %11
   %12 = load i32, ptr %arrayidx24, align 4
   %add25 = add nsw i32 %12, %n
   store i32 %add25, ptr %arrayidx24, align 4
-  %13 = or i64 %indvars.iv, 7
+  %13 = or disjoint i64 %indvars.iv, 7
   %arrayidx28 = getelementptr inbounds i32, ptr %A, i64 %13
   %14 = load i32, ptr %arrayidx28, align 4
   %add29 = add nsw i32 %14, %n

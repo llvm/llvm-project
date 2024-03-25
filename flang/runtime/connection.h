@@ -12,8 +12,8 @@
 #define FORTRAN_RUNTIME_IO_CONNECTION_H_
 
 #include "format.h"
+#include "flang/Common/optional.h"
 #include <cinttypes>
-#include <optional>
 
 namespace Fortran::runtime::io {
 
@@ -26,10 +26,10 @@ enum class Access { Sequential, Direct, Stream };
 // established in an OPEN statement.
 struct ConnectionAttributes {
   Access access{Access::Sequential}; // ACCESS='SEQUENTIAL', 'DIRECT', 'STREAM'
-  std::optional<bool> isUnformatted; // FORM='UNFORMATTED' if true
+  Fortran::common::optional<bool> isUnformatted; // FORM='UNFORMATTED' if true
   bool isUTF8{false}; // ENCODING='UTF-8'
   unsigned char internalIoCharKind{0}; // 0->external, 1/2/4->internal
-  std::optional<std::int64_t> openRecl; // RECL= on OPEN
+  Fortran::common::optional<std::int64_t> openRecl; // RECL= on OPEN
 
   bool IsRecordFile() const {
     // Formatted stream files are viewed as having records, at least on input
@@ -63,18 +63,18 @@ struct ConnectionState : public ConnectionAttributes {
     unterminatedRecord = false;
   }
 
-  std::optional<std::int64_t> EffectiveRecordLength() const {
+  Fortran::common::optional<std::int64_t> EffectiveRecordLength() const {
     // When an input record is longer than an explicit RECL= from OPEN
     // it is effectively truncated on input.
     return openRecl && recordLength && *openRecl < *recordLength ? openRecl
                                                                  : recordLength;
   }
 
-  std::optional<std::int64_t> recordLength;
+  Fortran::common::optional<std::int64_t> recordLength;
 
   std::int64_t currentRecordNumber{1}; // 1 is first
 
-  // positionInRecord is the 0-based bytes offset in the current recurd
+  // positionInRecord is the 0-based bytes offset in the current record
   // to/from which the next data transfer will occur.  It can be past
   // furthestPositionInRecord if moved by an X or T or TR control edit
   // descriptor.
@@ -86,11 +86,12 @@ struct ConnectionState : public ConnectionAttributes {
   std::int64_t furthestPositionInRecord{0}; // max(position+bytes)
 
   // Set at end of non-advancing I/O data transfer
-  std::optional<std::int64_t> leftTabLimit; // offset in current record
+  Fortran::common::optional<std::int64_t>
+      leftTabLimit; // offset in current record
 
   // currentRecordNumber value captured after ENDFILE/REWIND/BACKSPACE statement
   // or an end-of-file READ condition on a sequential access file
-  std::optional<std::int64_t> endfileRecordNumber;
+  Fortran::common::optional<std::int64_t> endfileRecordNumber;
 
   // Mutable modes set at OPEN() that can be overridden in READ/WRITE & FORMAT
   MutableModes modes; // BLANK=, DECIMAL=, SIGN=, ROUND=, PAD=, DELIM=, kP
@@ -111,10 +112,12 @@ class SavedPosition {
 public:
   explicit SavedPosition(IoStatementState &);
   ~SavedPosition();
+  void Cancel() { cancelled_ = true; }
 
 private:
   IoStatementState &io_;
   ConnectionState saved_;
+  bool cancelled_{false};
 };
 
 } // namespace Fortran::runtime::io

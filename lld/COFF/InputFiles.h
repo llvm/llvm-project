@@ -177,7 +177,10 @@ public:
   bool hasSafeSEH() { return feat00Flags & 0x1; }
 
   // True if this file was compiled with /guard:cf.
-  bool hasGuardCF() { return feat00Flags & 0x4800; }
+  bool hasGuardCF() { return feat00Flags & 0x800; }
+
+  // True if this file was compiled with /guard:ehcont.
+  bool hasGuardEHCont() { return feat00Flags & 0x4000; }
 
   // Pointer to the PDB module descriptor builder. Various debug info records
   // will reference object files by "module index", which is here. Things like

@@ -17,10 +17,10 @@
 //   - remove_pointer_t<decltype(data(arr))>(*)[] is convertible to ElementType(*)[].
 //
 
-
-#include <span>
 #include <cassert>
+#include <span>
 #include <string>
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -94,7 +94,11 @@ constexpr bool testSpan()
     assert(s4.data() == val && s4.size() == 2);
 
     std::span<const int> s5 = {{1,2}};
+#if TEST_STD_VER >= 26
+    std::span<const int, 2> s6({1, 2});
+#else
     std::span<const int, 2> s6 = {{1,2}};
+#endif
     assert(s5.size() == 2);  // and it dangles
     assert(s6.size() == 2);  // and it dangles
 
@@ -116,6 +120,43 @@ int main(int, char**)
     static_assert(testSpan<A>());
 
     checkCV();
+
+    // Size wrong
+    {
+        static_assert(!std::is_constructible<std::span<int, 2>, int (&)[3]>::value, "");
+    }
+
+    // Type wrong
+    {
+        static_assert(!std::is_constructible<std::span<float>,    int (&)[3]>::value, "");
+        static_assert(!std::is_constructible<std::span<float, 3>, int (&)[3]>::value, "");
+    }
+
+    // CV wrong (dynamically sized)
+    {
+        static_assert(!std::is_constructible<std::span<int>, const int (&)[3]>::value, "");
+        static_assert(!std::is_constructible<std::span<int>, volatile int (&)[3]>::value, "");
+        static_assert(!std::is_constructible<std::span<int>, const volatile int (&)[3]>::value, "");
+
+        static_assert(!std::is_constructible<std::span<const int>, volatile int (&)[3]>::value, "");
+        static_assert(!std::is_constructible<std::span<const int>, const volatile int (&)[3]>::value, "");
+
+        static_assert(!std::is_constructible<std::span<volatile int>, const int (&)[3]>::value, "");
+        static_assert(!std::is_constructible<std::span<volatile int>, const volatile int (&)[3]>::value, "");
+    }
+
+    // CV wrong (statically sized)
+    {
+        static_assert(!std::is_constructible<std::span<int, 3>, const int (&)[3]>::value, "");
+        static_assert(!std::is_constructible<std::span<int, 3>, volatile int (&)[3]>::value, "");
+        static_assert(!std::is_constructible<std::span<int, 3>, const volatile int (&)[3]>::value, "");
+
+        static_assert(!std::is_constructible<std::span<const int, 3>, volatile int (&)[3]>::value, "");
+        static_assert(!std::is_constructible<std::span<const int, 3>, const volatile int (&)[3]>::value, "");
+
+        static_assert(!std::is_constructible<std::span<volatile int, 3>, const int (&)[3]>::value, "");
+        static_assert(!std::is_constructible<std::span<volatile int, 3>, const volatile int (&)[3]>::value, "");
+    }
 
     return 0;
 }

@@ -20,7 +20,6 @@ define i32 @foo(ptr nocapture %perm, i32 %n) {
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %exit
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
 entry:
   br label %body

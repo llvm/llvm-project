@@ -42,3 +42,9 @@ void f3(void)
   int m = mprotect(p, 1024, PROT_WRITE | PROT_EXEC); // expected-warning{{Both PROT_WRITE and PROT_EXEC flags are set. This can lead to exploitable memory regions, which could be overwritten with malicious code}}
   (void)m;
 }
+
+// gh62285: no crash on non concrete arg 'prot'
+void *gh62285(void *addr, int prot)
+{
+  return mmap(addr, 1, prot, 1, 1, 1);
+}

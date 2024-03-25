@@ -11,16 +11,16 @@
 ## symbols and R_PPC64_TOC in writable sections.
 
 # CHECK:      .rela.dyn {
-# CHECK-NEXT:   0x303B8 R_PPC64_RELATIVE - 0x303B1
+# CHECK-NEXT:   0x303C8 R_PPC64_RELATIVE - 0x303C1
 ## TOC base (0x283b0) + 0x8000 + 1 ---------^
-# CHECK-NEXT:   0x303C0 R_PPC64_RELATIVE - 0x303B9
-# CHECK-NEXT:   0x303C8 R_PPC64_ADDR64 external 0x1
-# CHECK-NEXT:   0x303D0 R_PPC64_ADDR64 global 0x1
+# CHECK-NEXT:   0x303D0 R_PPC64_RELATIVE - 0x303C9
+# CHECK-NEXT:   0x303D8 R_PPC64_ADDR64 external 0x1
+# CHECK-NEXT:   0x303E0 R_PPC64_ADDR64 global 0x1
 # CHECK-NEXT: }
 # CHECK-LABEL: Symbols [
 # CHECK:       Symbol {
 # CHECK:         Name: .TOC. ({{.+}})
-# CHECK-NEXT:    Value: 0x283B0
+# CHECK-NEXT:    Value: 0x283C0
 
 .data
 .globl global

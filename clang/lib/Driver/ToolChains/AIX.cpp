@@ -12,6 +12,7 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Path.h"
@@ -29,6 +30,7 @@ void aix::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfoList &Inputs,
                                   const ArgList &Args,
                                   const char *LinkingOutput) const {
+  const Driver &D = getToolChain().getDriver();
   ArgStringList CmdArgs;
 
   const bool IsArch32Bit = getToolChain().getTriple().isArch32Bit();
@@ -36,6 +38,11 @@ void aix::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   // Only support 32 and 64 bit.
   if (!IsArch32Bit && !IsArch64Bit)
     llvm_unreachable("Unsupported bit width value.");
+
+  if (Arg *A = C.getArgs().getLastArg(options::OPT_G)) {
+    D.Diag(diag::err_drv_unsupported_opt_for_target)
+        << A->getSpelling() << D.getTargetTriple();
+  }
 
   // Specify the mode in which the as(1) command operates.
   if (IsArch32Bit) {
@@ -81,7 +88,7 @@ static bool hasExportListLinkerOpts(const ArgStringList &CmdArgs) {
   for (size_t i = 0, Size = CmdArgs.size(); i < Size; ++i) {
     llvm::StringRef ArgString(CmdArgs[i]);
 
-    if (ArgString.startswith("-bE:") || ArgString.startswith("-bexport:") ||
+    if (ArgString.starts_with("-bE:") || ArgString.starts_with("-bexport:") ||
         ArgString == "-bexpall" || ArgString == "-bexpfull")
       return true;
 
@@ -89,8 +96,8 @@ static bool hasExportListLinkerOpts(const ArgStringList &CmdArgs) {
     if (ArgString == "-b" && i + 1 < Size) {
       ++i;
       llvm::StringRef ArgNextString(CmdArgs[i]);
-      if (ArgNextString.startswith("E:") ||
-          ArgNextString.startswith("export:") || ArgNextString == "expall" ||
+      if (ArgNextString.starts_with("E:") ||
+          ArgNextString.starts_with("export:") || ArgNextString == "expall" ||
           ArgNextString == "expfull")
         return true;
     }
@@ -112,6 +119,11 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!(IsArch32Bit || IsArch64Bit))
     llvm_unreachable("Unsupported bit width value.");
 
+  if (Arg *A = C.getArgs().getLastArg(options::OPT_G)) {
+    D.Diag(diag::err_drv_unsupported_opt_for_target)
+        << A->getSpelling() << D.getTargetTriple();
+  }
+
   // Force static linking when "-static" is present.
   if (Args.hasArg(options::OPT_static))
     CmdArgs.push_back("-bnso");
@@ -120,6 +132,17 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_shared)) {
     CmdArgs.push_back("-bM:SRE");
     CmdArgs.push_back("-bnoentry");
+  }
+
+  if (Args.hasFlag(options::OPT_mxcoff_roptr, options::OPT_mno_xcoff_roptr,
+                   false)) {
+    if (Args.hasArg(options::OPT_shared))
+      D.Diag(diag::err_roptr_cannot_build_shared);
+
+    // The `-mxcoff-roptr` option places constants in RO sections as much as
+    // possible. Then `-bforceimprw` changes such sections to RW if they contain
+    // imported symbols that need to be resolved.
+    CmdArgs.push_back("-bforceimprw");
   }
 
   // PGO instrumentation generates symbols belonging to special sections, and
@@ -143,6 +166,22 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
        Args.hasArg(options::OPT_coverage))
     CmdArgs.push_back("-bdbg:namedsects:ss");
 
+  if (Arg *A =
+          Args.getLastArg(clang::driver::options::OPT_mxcoff_build_id_EQ)) {
+    StringRef BuildId = A->getValue();
+    if (BuildId[0] != '0' || BuildId[1] != 'x' ||
+        BuildId.find_if_not(llvm::isHexDigit, 2) != StringRef::npos)
+      ToolChain.getDriver().Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << BuildId;
+    else {
+      std::string LinkerFlag = "-bdbg:ldrinfo:xcoff_binary_id:0x";
+      if (BuildId.size() % 2) // Prepend a 0 if odd number of digits.
+        LinkerFlag += "0";
+      LinkerFlag += BuildId.drop_front(2).lower();
+      CmdArgs.push_back(Args.MakeArgString(LinkerFlag));
+    }
+  }
+
   // Specify linker output file.
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
@@ -163,19 +202,19 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-bpD:0x110000000");
   }
 
-  auto getCrt0Basename = [&Args, IsArch32Bit] {
-    // Enable gprofiling when "-pg" is specified.
-    if (Args.hasArg(options::OPT_pg))
-      return IsArch32Bit ? "gcrt0.o" : "gcrt0_64.o";
-    // Enable profiling when "-p" is specified.
-    else if (Args.hasArg(options::OPT_p))
-      return IsArch32Bit ? "mcrt0.o" : "mcrt0_64.o";
-    else
-      return IsArch32Bit ? "crt0.o" : "crt0_64.o";
-  };
-
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
-                   options::OPT_shared)) {
+                   options::OPT_shared, options::OPT_r)) {
+    auto getCrt0Basename = [&Args, IsArch32Bit] {
+      if (Arg *A = Args.getLastArgNoClaim(options::OPT_p, options::OPT_pg)) {
+        // Enable gprofiling when "-pg" is specified.
+        if (A->getOption().matches(options::OPT_pg))
+          return IsArch32Bit ? "gcrt0.o" : "gcrt0_64.o";
+        // Enable profiling when "-p" is specified.
+        return IsArch32Bit ? "mcrt0.o" : "mcrt0_64.o";
+      }
+      return IsArch32Bit ? "crt0.o" : "crt0_64.o";
+    };
+
     CmdArgs.push_back(
         Args.MakeArgString(ToolChain.GetFilePath(getCrt0Basename())));
 
@@ -194,7 +233,15 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (D.isUsingLTO()) {
     assert(!Inputs.empty() && "Must have at least one input.");
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs[0],
+    // Find the first filename InputInfo object.
+    auto Input = llvm::find_if(
+        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
+    if (Input == Inputs.end())
+      // For a very rare case, all of the inputs to the linker are
+      // InputArg. If that happens, just use the first InputInfo.
+      Input = Inputs.begin();
+
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, *Input,
                   D.getLTOMode() == LTOK_Thin);
   }
 
@@ -234,51 +281,59 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add directory to library search path.
   Args.AddAllArgs(CmdArgs, options::OPT_L);
-  ToolChain.AddFilePathLibArgs(Args, CmdArgs);
-  ToolChain.addProfileRTLibs(Args, CmdArgs);
+  if (!Args.hasArg(options::OPT_r)) {
+    ToolChain.AddFilePathLibArgs(Args, CmdArgs);
+    ToolChain.addProfileRTLibs(Args, CmdArgs);
 
-  if (getToolChain().ShouldLinkCXXStdlib(Args))
-    getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
+    if (getToolChain().ShouldLinkCXXStdlib(Args))
+      getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
+    if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+      AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
 
-    // Add OpenMP runtime if -fopenmp is specified.
-    if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                     options::OPT_fno_openmp, false)) {
-      switch (ToolChain.getDriver().getOpenMPRuntime(Args)) {
-      case Driver::OMPRT_OMP:
-        CmdArgs.push_back("-lomp");
-        break;
-      case Driver::OMPRT_IOMP5:
-        CmdArgs.push_back("-liomp5");
-        break;
-      case Driver::OMPRT_GOMP:
-        CmdArgs.push_back("-lgomp");
-        break;
-      case Driver::OMPRT_Unknown:
-        // Already diagnosed.
-        break;
+      // Add OpenMP runtime if -fopenmp is specified.
+      if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                       options::OPT_fno_openmp, false)) {
+        switch (ToolChain.getDriver().getOpenMPRuntime(Args)) {
+        case Driver::OMPRT_OMP:
+          CmdArgs.push_back("-lomp");
+          break;
+        case Driver::OMPRT_IOMP5:
+          CmdArgs.push_back("-liomp5");
+          break;
+        case Driver::OMPRT_GOMP:
+          CmdArgs.push_back("-lgomp");
+          break;
+        case Driver::OMPRT_Unknown:
+          // Already diagnosed.
+          break;
+        }
       }
-    }
 
-    // Support POSIX threads if "-pthreads" or "-pthread" is present.
-    if (Args.hasArg(options::OPT_pthreads, options::OPT_pthread))
-      CmdArgs.push_back("-lpthreads");
+      // Support POSIX threads if "-pthreads" or "-pthread" is present.
+      if (Args.hasArg(options::OPT_pthreads, options::OPT_pthread))
+        CmdArgs.push_back("-lpthreads");
 
-    if (D.CCCIsCXX())
-      CmdArgs.push_back("-lm");
+      if (D.CCCIsCXX())
+        CmdArgs.push_back("-lm");
 
-    CmdArgs.push_back("-lc");
+      CmdArgs.push_back("-lc");
 
-    if (Args.hasArg(options::OPT_pg)) {
-      CmdArgs.push_back(Args.MakeArgString((llvm::Twine("-L") + D.SysRoot) +
-                                           "/lib/profiled"));
-      CmdArgs.push_back(Args.MakeArgString((llvm::Twine("-L") + D.SysRoot) +
-                                           "/usr/lib/profiled"));
+      if (Args.hasArgNoClaim(options::OPT_p, options::OPT_pg)) {
+        CmdArgs.push_back(Args.MakeArgString((llvm::Twine("-L") + D.SysRoot) +
+                                             "/lib/profiled"));
+        CmdArgs.push_back(Args.MakeArgString((llvm::Twine("-L") + D.SysRoot) +
+                                             "/usr/lib/profiled"));
+      }
     }
   }
 
+  if (D.IsFlangMode()) {
+    addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
+    addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+    CmdArgs.push_back("-lm");
+    CmdArgs.push_back("-lpthread");
+  }
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Exec, CmdArgs, Inputs, Output));
@@ -287,9 +342,7 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 /// AIX - AIX tool chain which can call as(1) and ld(1) directly.
 AIX::AIX(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : ToolChain(D, Triple, Args) {
-  getProgramPaths().push_back(getDriver().getInstalledDir());
-  if (getDriver().getInstalledDir() != getDriver().Dir)
-    getProgramPaths().push_back(getDriver().Dir);
+  getProgramPaths().push_back(getDriver().Dir);
 
   ParseInlineAsmUsingAsmParser = Args.hasFlag(
       options::OPT_fintegrated_as, options::OPT_fno_integrated_as, true);
@@ -380,13 +433,121 @@ void AIX::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
   llvm_unreachable("Unexpected C++ library type; only libc++ is supported.");
 }
 
+// This function processes all the mtocdata options to build the final
+// simplified toc data options to pass to CC1.
+static void addTocDataOptions(const llvm::opt::ArgList &Args,
+                              llvm::opt::ArgStringList &CC1Args,
+                              const Driver &D) {
+
+  // Check the global toc-data setting. The default is -mno-tocdata.
+  // To enable toc-data globally, -mtocdata must be specified.
+  // Additionally, it must be last to take effect.
+  const bool TOCDataGloballyinEffect = [&Args]() {
+    if (const Arg *LastArg =
+            Args.getLastArg(options::OPT_mtocdata, options::OPT_mno_tocdata))
+      return LastArg->getOption().matches(options::OPT_mtocdata);
+    else
+      return false;
+  }();
+
+  // Currently only supported for small code model.
+  if (TOCDataGloballyinEffect &&
+      (Args.getLastArgValue(options::OPT_mcmodel_EQ).equals("large") ||
+       Args.getLastArgValue(options::OPT_mcmodel_EQ).equals("medium"))) {
+    D.Diag(clang::diag::warn_drv_unsupported_tocdata);
+    return;
+  }
+
+  enum TOCDataSetting {
+    AddressInTOC = 0, // Address of the symbol stored in the TOC.
+    DataInTOC = 1     // Symbol defined in the TOC.
+  };
+
+  const TOCDataSetting DefaultTocDataSetting =
+      TOCDataGloballyinEffect ? DataInTOC : AddressInTOC;
+
+  // Process the list of variables in the explicitly specified options
+  // -mtocdata= and -mno-tocdata= to see which variables are opposite to
+  // the global setting of tocdata in TOCDataGloballyinEffect.
+  // Those that have the opposite setting to TOCDataGloballyinEffect, are added
+  // to ExplicitlySpecifiedGlobals.
+  llvm::StringSet<> ExplicitlySpecifiedGlobals;
+  for (const auto Arg :
+       Args.filtered(options::OPT_mtocdata_EQ, options::OPT_mno_tocdata_EQ)) {
+    TOCDataSetting ArgTocDataSetting =
+        Arg->getOption().matches(options::OPT_mtocdata_EQ) ? DataInTOC
+                                                           : AddressInTOC;
+
+    if (ArgTocDataSetting != DefaultTocDataSetting)
+      for (const char *Val : Arg->getValues())
+        ExplicitlySpecifiedGlobals.insert(Val);
+    else
+      for (const char *Val : Arg->getValues())
+        ExplicitlySpecifiedGlobals.erase(Val);
+  }
+
+  auto buildExceptionList = [](const llvm::StringSet<> &ExplicitValues,
+                               const char *OptionSpelling) {
+    std::string Option(OptionSpelling);
+    bool IsFirst = true;
+    for (const auto &E : ExplicitValues) {
+      if (!IsFirst)
+        Option += ",";
+
+      IsFirst = false;
+      Option += E.first();
+    }
+    return Option;
+  };
+
+  // Pass the final tocdata options to CC1 consisting of the default
+  // tocdata option (-mtocdata/-mno-tocdata) along with the list
+  // option (-mno-tocdata=/-mtocdata=) if there are any explicitly specified
+  // variables which would be exceptions to the default setting.
+  const char *TocDataGlobalOption =
+      TOCDataGloballyinEffect ? "-mtocdata" : "-mno-tocdata";
+  CC1Args.push_back(TocDataGlobalOption);
+
+  const char *TocDataListOption =
+      TOCDataGloballyinEffect ? "-mno-tocdata=" : "-mtocdata=";
+  if (!ExplicitlySpecifiedGlobals.empty())
+    CC1Args.push_back(Args.MakeArgString(llvm::Twine(
+        buildExceptionList(ExplicitlySpecifiedGlobals, TocDataListOption))));
+}
+
+void AIX::addClangTargetOptions(
+    const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadingKind) const {
+  Args.AddLastArg(CC1Args, options::OPT_mignore_xcoff_visibility);
+  Args.AddLastArg(CC1Args, options::OPT_mdefault_visibility_export_mapping_EQ);
+  Args.addOptInFlag(CC1Args, options::OPT_mxcoff_roptr, options::OPT_mno_xcoff_roptr);
+
+  // Forward last mtocdata/mno_tocdata options to -cc1.
+  if (Args.hasArg(options::OPT_mtocdata_EQ, options::OPT_mno_tocdata_EQ,
+                  options::OPT_mtocdata))
+    addTocDataOptions(Args, CC1Args, getDriver());
+
+  if (Args.hasFlag(options::OPT_fxl_pragma_pack,
+                   options::OPT_fno_xl_pragma_pack, true))
+    CC1Args.push_back("-fxl-pragma-pack");
+}
+
 void AIX::addProfileRTLibs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const {
-  // Add linker option -u__llvm_profile_runtime to cause runtime
-  // initialization to occur.
-  if (needsProfileRT(Args))
+  if (needsProfileRT(Args)) {
+    // Add linker option -u__llvm_profile_runtime to cause runtime
+    // initialization to occur.
     CmdArgs.push_back(Args.MakeArgString(
         Twine("-u", llvm::getInstrProfRuntimeHookVarName())));
+
+    if (const auto *A =
+            Args.getLastArgNoClaim(options::OPT_fprofile_update_EQ)) {
+      StringRef Val = A->getValue();
+      if (Val == "atomic" || Val == "prefer-atomic")
+        CmdArgs.push_back("-latomic");
+    }
+  }
+
   ToolChain::addProfileRTLibs(Args, CmdArgs);
 }
 

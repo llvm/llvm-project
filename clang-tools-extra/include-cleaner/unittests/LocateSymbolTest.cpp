@@ -16,15 +16,11 @@
 #include "clang/Testing/TestAST.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Testing/Annotations/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <cstddef>
-#include <memory>
 #include <tuple>
-#include <unordered_map>
-#include <utility>
-#include <variant>
 #include <vector>
 
 namespace clang::include_cleaner {
@@ -34,8 +30,6 @@ using testing::ElementsAre;
 using testing::ElementsAreArray;
 using testing::Eq;
 using testing::Field;
-using testing::Pair;
-using testing::UnorderedElementsAre;
 
 // A helper for building ASTs and getting decls out of it by name. Example usage
 // looks like:
@@ -66,8 +60,8 @@ public:
           ND = TD;
         if (ND->getName() == NameToFind) {
           EXPECT_TRUE(Out == nullptr || Out == ND->getCanonicalDecl())
-              << "Found multiple matches for " << NameToFind;
-          Out = cast<NamedDecl>(ND->getCanonicalDecl());
+              << "Found multiple matches for " << NameToFind.str();
+          Out = llvm::cast<NamedDecl>(ND->getCanonicalDecl());
         }
         return true;
       }
@@ -122,9 +116,17 @@ TEST(LocateSymbol, Decl) {
 }
 
 TEST(LocateSymbol, Stdlib) {
-  LocateExample Test("namespace std { struct vector; }");
-  EXPECT_THAT(locateSymbol(Test.findDecl("vector")),
-              ElementsAre(*tooling::stdlib::Symbol::named("std::", "vector")));
+  {
+    LocateExample Test("namespace std { struct vector; }");
+    EXPECT_THAT(
+        locateSymbol(Test.findDecl("vector")),
+        ElementsAre(*tooling::stdlib::Symbol::named("std::", "vector")));
+  }
+  {
+    LocateExample Test("#define assert(x)\nvoid foo() { assert(true); }");
+    EXPECT_THAT(locateSymbol(Test.findMacro("assert")),
+                ElementsAre(*tooling::stdlib::Symbol::named("", "assert")));
+  }
 }
 
 TEST(LocateSymbol, Macros) {

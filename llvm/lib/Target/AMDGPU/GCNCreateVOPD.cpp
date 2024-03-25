@@ -25,7 +25,6 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -42,6 +41,16 @@ namespace {
 
 class GCNCreateVOPD : public MachineFunctionPass {
 private:
+    class VOPDCombineInfo {
+    public:
+      VOPDCombineInfo() {}
+      VOPDCombineInfo(MachineInstr *First, MachineInstr *Second)
+          : FirstMI(First), SecondMI(Second) {}
+
+      MachineInstr *FirstMI;
+      MachineInstr *SecondMI;
+    };
+
 public:
   static char ID;
   const GCNSubtarget *ST = nullptr;
@@ -57,14 +66,16 @@ public:
     return "GCN Create VOPD Instructions";
   }
 
-  bool doReplace(const SIInstrInfo *SII,
-                 std::pair<MachineInstr *, MachineInstr *> &Pair) {
-    auto *FirstMI = Pair.first;
-    auto *SecondMI = Pair.second;
+  bool doReplace(const SIInstrInfo *SII, VOPDCombineInfo &CI) {
+    auto *FirstMI = CI.FirstMI;
+    auto *SecondMI = CI.SecondMI;
     unsigned Opc1 = FirstMI->getOpcode();
     unsigned Opc2 = SecondMI->getOpcode();
-    int NewOpcode = AMDGPU::getVOPDFull(AMDGPU::getVOPDOpcode(Opc1),
-                                        AMDGPU::getVOPDOpcode(Opc2));
+    unsigned EncodingFamily =
+        AMDGPU::getVOPDEncodingFamily(SII->getSubtarget());
+    int NewOpcode =
+        AMDGPU::getVOPDFull(AMDGPU::getVOPDOpcode(Opc1),
+                            AMDGPU::getVOPDOpcode(Opc2), EncodingFamily);
     assert(NewOpcode != -1 &&
            "Should have previously determined this as a possible VOPD\n");
 
@@ -94,7 +105,7 @@ public:
       VOPDInst.copyImplicitOps(*MI[CompIdx]);
 
     LLVM_DEBUG(dbgs() << "VOPD Fused: " << *VOPDInst << " from\tX: "
-                      << *Pair.first << "\tY: " << *Pair.second << "\n");
+                      << *CI.FirstMI << "\tY: " << *CI.SecondMI << "\n");
 
     for (auto CompIdx : VOPD::COMPONENTS)
       MI[CompIdx]->eraseFromParent();
@@ -114,7 +125,7 @@ public:
     const SIInstrInfo *SII = ST->getInstrInfo();
     bool Changed = false;
 
-    SmallVector<std::pair<MachineInstr *, MachineInstr *>> ReplaceCandidates;
+    SmallVector<VOPDCombineInfo> ReplaceCandidates;
 
     for (auto &MBB : MF) {
       auto MII = MBB.begin(), E = MBB.end();
@@ -130,24 +141,24 @@ public:
         unsigned Opc2 = SecondMI->getOpcode();
         llvm::AMDGPU::CanBeVOPD FirstCanBeVOPD = AMDGPU::getCanBeVOPD(Opc);
         llvm::AMDGPU::CanBeVOPD SecondCanBeVOPD = AMDGPU::getCanBeVOPD(Opc2);
-        std::pair<MachineInstr *, MachineInstr *> Pair;
+        VOPDCombineInfo CI;
 
         if (FirstCanBeVOPD.X && SecondCanBeVOPD.Y)
-          Pair = {FirstMI, SecondMI};
+          CI = VOPDCombineInfo(FirstMI, SecondMI);
         else if (FirstCanBeVOPD.Y && SecondCanBeVOPD.X)
-          Pair = {SecondMI, FirstMI};
+          CI = VOPDCombineInfo(SecondMI, FirstMI);
         else
           continue;
         // checkVOPDRegConstraints cares about program order, but doReplace
         // cares about X-Y order in the constituted VOPD
         if (llvm::checkVOPDRegConstraints(*SII, *FirstMI, *SecondMI)) {
-          ReplaceCandidates.push_back(Pair);
+          ReplaceCandidates.push_back(CI);
           ++MII;
         }
       }
     }
-    for (auto &Pair : ReplaceCandidates) {
-      Changed |= doReplace(SII, Pair);
+    for (auto &CI : ReplaceCandidates) {
+      Changed |= doReplace(SII, CI);
     }
 
     return Changed;

@@ -1,7 +1,8 @@
 ; RUN: opt < %s -passes=tsan -S | FileCheck %s
 ; RUN: opt < %s -passes=tsan -S -mtriple=s390x-unknown-linux | FileCheck --check-prefix=EXT %s
 ; RUN: opt < %s -passes=tsan -S -mtriple=mips-linux-gnu | FileCheck --check-prefix=MIPS_EXT %s
-; REQUIRES: x86-registered-target, systemz-registered-target, mips-registered-target
+; RUN: opt < %s -passes=tsan -S -mtriple=loongarch64-unknown-linux-gnu | FileCheck --check-prefix=LA_EXT %s
+; REQUIRES: x86-registered-target, systemz-registered-target, mips-registered-target, loongarch-registered-target
 ; Check that atomic memory operations are converted to calls into ThreadSanitizer runtime.
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -76,6 +77,26 @@ entry:
 }
 ; CHECK-LABEL: atomic8_xchg_monotonic
 ; CHECK: call i8 @__tsan_atomic8_exchange(ptr %a, i8 0, i32 0), !dbg
+
+define void @atomic8_xchg_monotonic_ptr(ptr %a, ptr %b) nounwind uwtable {
+entry:
+  atomicrmw xchg ptr %a, ptr %b monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic8_xchg_monotonic_ptr
+; CHECK: [[ARG:%.*]] = ptrtoint ptr %b to i64, !dbg
+; CHECK: [[RES:%.*]] = call i64 @__tsan_atomic64_exchange(ptr %a, i64 [[ARG]], i32 0), !dbg
+; CHECK: [[CAST:%.*]] = inttoptr i64 [[RES]] to ptr, !dbg
+
+define void @atomic8_xchg_monotonic_float(ptr %a, float %b) nounwind uwtable {
+entry:
+  atomicrmw xchg ptr %a, float %b monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic8_xchg_monotonic_float
+; CHECK: [[ARG:%.*]] = bitcast float %b to i32, !dbg
+; CHECK: [[RES:%.*]] = call i32 @__tsan_atomic32_exchange(ptr %a, i32 [[ARG]], i32 0), !dbg
+; CHECK: [[CAST:%.*]] = bitcast i32 [[RES]] to float, !dbg
 
 define void @atomic8_add_monotonic(ptr %a) nounwind uwtable {
 entry:
@@ -2102,38 +2123,47 @@ entry:
 ; CHECK:    declare void @__tsan_atomic32_store(ptr, i32, i32)
 ; EXT:      declare void @__tsan_atomic32_store(ptr, i32 signext, i32 signext)
 ; MIPS_EXT: declare void @__tsan_atomic32_store(ptr, i32 signext, i32 signext)
+; LA_EXT:   declare void @__tsan_atomic32_store(ptr, i32 signext, i32 signext)
 
 ; CHECK:    declare i32 @__tsan_atomic32_compare_exchange_val(ptr, i32, i32, i32, i32)
 ; EXT:      declare signext i32 @__tsan_atomic32_compare_exchange_val(ptr, i32 signext, i32 signext, i32 signext, i32 signext)
 ; MIPS_EXT: declare i32 @__tsan_atomic32_compare_exchange_val(ptr, i32 signext, i32 signext, i32 signext, i32 signext)
+; LA_EXT:   declare signext i32 @__tsan_atomic32_compare_exchange_val(ptr, i32 signext, i32 signext, i32 signext, i32 signext)
 
 ; CHECK:    declare i64 @__tsan_atomic64_load(ptr, i32)
 ; EXT:      declare i64 @__tsan_atomic64_load(ptr, i32 signext)
 ; MIPS_EXT: declare i64 @__tsan_atomic64_load(ptr, i32 signext)
+; LA_EXT:   declare i64 @__tsan_atomic64_load(ptr, i32 signext)
 
 ; CHECK:    declare void @__tsan_atomic64_store(ptr, i64, i32)
 ; EXT:      declare void @__tsan_atomic64_store(ptr, i64, i32 signext)
 ; MIPS_EXT: declare void @__tsan_atomic64_store(ptr, i64, i32 signext)
+; LA_EXT:   declare void @__tsan_atomic64_store(ptr, i64, i32 signext)
 
 ; CHECK:    declare i64 @__tsan_atomic64_fetch_add(ptr, i64, i32)
 ; EXT:      declare i64 @__tsan_atomic64_fetch_add(ptr, i64, i32 signext)
 ; MIPS_EXT: declare i64 @__tsan_atomic64_fetch_add(ptr, i64, i32 signext)
+; LA_EXT:   declare i64 @__tsan_atomic64_fetch_add(ptr, i64, i32 signext)
 
 ; CHECK:    declare i64 @__tsan_atomic64_compare_exchange_val(ptr, i64, i64, i32, i32)
 ; EXT:      declare i64 @__tsan_atomic64_compare_exchange_val(ptr, i64, i64, i32 signext, i32 signext)
 ; MIPS_EXT: declare i64 @__tsan_atomic64_compare_exchange_val(ptr, i64, i64, i32 signext, i32 signext)
+; LA_EXT:   declare i64 @__tsan_atomic64_compare_exchange_val(ptr, i64, i64, i32 signext, i32 signext)
 
 ; CHECK:    declare void @__tsan_atomic_thread_fence(i32)
 ; EXT:      declare void @__tsan_atomic_thread_fence(i32 signext)
 ; MIPS_EXT: declare void @__tsan_atomic_thread_fence(i32 signext)
+; LA_EXT:   declare void @__tsan_atomic_thread_fence(i32 signext)
 
 ; CHECK:    declare void @__tsan_atomic_signal_fence(i32)
 ; EXT:      declare void @__tsan_atomic_signal_fence(i32 signext)
 ; MIPS_EXT: declare void @__tsan_atomic_signal_fence(i32 signext)
+; LA_EXT:   declare void @__tsan_atomic_signal_fence(i32 signext)
 
 ; CHECK:    declare ptr @__tsan_memset(ptr, i32, i64)
 ; EXT:      declare ptr @__tsan_memset(ptr, i32 signext, i64)
 ; MIPS_EXT: declare ptr @__tsan_memset(ptr, i32 signext, i64)
+; LA_EXT:   declare ptr @__tsan_memset(ptr, i32 signext, i64)
 
 !llvm.module.flags = !{!0, !1, !2}
 !llvm.dbg.cu = !{!8}

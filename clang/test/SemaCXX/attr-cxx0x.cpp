@@ -50,3 +50,6 @@ static_assert(alignof(int(int)) >= 1, "alignof(function) not positive"); // expe
 void func(void);
 
 alignas(4) auto PR19252 = 0;
+
+// Check the diagnostic message
+class alignas(void) AlignasVoid {}; // expected-error {{invalid application of 'alignas' to an incomplete type 'void'}}

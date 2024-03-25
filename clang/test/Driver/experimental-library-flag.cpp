@@ -1,6 +1,6 @@
 // On some platforms, -stdlib=libc++ is currently ignored, so -lc++experimental is not added.
 // Once -stdlib=libc++ works on those, this XFAIL can be removed.
-// XFAIL: target={{.*-windows.*}}, target={{.*-(ps4|ps5)}}
+// XFAIL: target={{.*-windows-msvc.*}}, target={{.*-(ps4|ps5)}}
 
 // For some reason, this fails with a core dump on AIX. This needs to be investigated.
 // UNSUPPORTED: target={{.*}}-aix{{.*}}

@@ -90,7 +90,7 @@ define i32 @positive_sameconst_shlnuw(i32 %x) {
 
 define i32 @positive_biggerShl_shlnuw(i32 %x) {
 ; CHECK-LABEL: @positive_biggerShl_shlnuw(
-; CHECK-NEXT:    [[RET:%.*]] = shl nuw i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[RET:%.*]] = shl nuw nsw i32 [[X:%.*]], 5
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %t0 = shl nuw i32 %x, 10
@@ -288,7 +288,7 @@ define i32 @positive_biggerShl_shlnuw_multiuse(i32 %x) {
 ; CHECK-LABEL: @positive_biggerShl_shlnuw_multiuse(
 ; CHECK-NEXT:    [[T0:%.*]] = shl nuw i32 [[X:%.*]], 10
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
-; CHECK-NEXT:    [[RET:%.*]] = shl nuw i32 [[X]], 5
+; CHECK-NEXT:    [[RET:%.*]] = shl nuw nsw i32 [[X]], 5
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %t0 = shl nuw i32 %x, 10
@@ -388,7 +388,7 @@ define i32 @negative_oneuse(i32 %x, i32 %y) {
 ; CHECK-LABEL: @negative_oneuse(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
-; CHECK-NEXT:    [[RET:%.*]] = lshr i32 [[T0]], [[Y]]
+; CHECK-NEXT:    [[RET:%.*]] = lshr exact i32 [[T0]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %t0 = shl i32 %x, %y

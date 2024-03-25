@@ -1,7 +1,7 @@
 # This tests that lldb is able to print DW_TAG_variable using DW_AT_const_value.
 
 # RUN: llvm-mc -triple x86_64-unknown-linux-gnu %s -filetype=obj > %t.o
-# RUN: %lldb %t.o -o "p/x magic64" -o exit | FileCheck %s
+# RUN: %lldb %t.o -o "expression/x magic64" -o exit | FileCheck %s
 
 # CHECK: (const long) $0 = 0xed9a924c00011151
 

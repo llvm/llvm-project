@@ -145,6 +145,8 @@ bool MachTask::ExceptionPortIsValid() const {
 //----------------------------------------------------------------------
 void MachTask::Clear() {
   // Do any cleanup needed for this task
+  if (m_exception_thread)
+    ShutDownExcecptionThread();
   m_task = TASK_NULL;
   m_exception_thread = 0;
   m_exception_port = MACH_PORT_NULL;
@@ -670,7 +672,7 @@ kern_return_t MachTask::ShutDownExcecptionThread() {
 
   err = RestoreExceptionPortInfo();
 
-  // NULL our our exception port and let our exception thread exit
+  // NULL our exception port and let our exception thread exit
   mach_port_t exception_port = m_exception_port;
   m_exception_port = 0;
 

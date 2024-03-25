@@ -1,4 +1,4 @@
-//===--- RISCVToolchain.h - RISCV ToolChain Implementations -----*- C++ -*-===//
+//===--- RISCVToolchain.h - RISC-V ToolChain Implementations ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,6 +28,8 @@ public:
   RuntimeLibType GetDefaultRuntimeLibType() const override;
   UnwindLibType
   GetUnwindLibType(const llvm::opt::ArgList &Args) const override;
+  UnwindTableLevel
+  getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override;
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
@@ -46,7 +48,7 @@ private:
 
 namespace tools {
 namespace RISCV {
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("RISCV::Linker", "ld", TC) {}
   bool hasIntegratedCPP() const override { return false; }

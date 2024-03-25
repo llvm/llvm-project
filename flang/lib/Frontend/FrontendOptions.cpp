@@ -23,17 +23,22 @@ bool Fortran::frontend::isFixedFormSuffix(llvm::StringRef suffix) {
 
 bool Fortran::frontend::isFreeFormSuffix(llvm::StringRef suffix) {
   // Note: Keep this list in-sync with flang/test/lit.cfg.py
-  // TODO: Add Cuda Fortan files (i.e. `*.cuf` and `*.CUF`).
   return suffix == "f90" || suffix == "F90" || suffix == "ff90" ||
          suffix == "f95" || suffix == "F95" || suffix == "ff95" ||
          suffix == "f03" || suffix == "F03" || suffix == "f08" ||
-         suffix == "F08" || suffix == "f18" || suffix == "F18";
+         suffix == "F08" || suffix == "f18" || suffix == "F18" ||
+         suffix == "cuf" || suffix == "CUF";
 }
 
 bool Fortran::frontend::isToBePreprocessed(llvm::StringRef suffix) {
   return suffix == "F" || suffix == "FOR" || suffix == "fpp" ||
          suffix == "FPP" || suffix == "F90" || suffix == "F95" ||
-         suffix == "F03" || suffix == "F08" || suffix == "F18";
+         suffix == "F03" || suffix == "F08" || suffix == "F18" ||
+         suffix == "CUF";
+}
+
+bool Fortran::frontend::isCUDAFortranSuffix(llvm::StringRef suffix) {
+  return suffix == "cuf" || suffix == "CUF";
 }
 
 InputKind FrontendOptions::getInputKindForExtension(llvm::StringRef extension) {

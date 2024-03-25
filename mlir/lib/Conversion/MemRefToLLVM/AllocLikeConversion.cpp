@@ -18,7 +18,7 @@ namespace {
 // with SymbolTable trait instead of ModuleOp and make similar change here. This
 // allows call sites to use getParentWithTrait<OpTrait::SymbolTable> instead
 // of getParentOfType<ModuleOp> to pass down the operation.
-LLVM::LLVMFuncOp getNotalignedAllocFn(LLVMTypeConverter *typeConverter,
+LLVM::LLVMFuncOp getNotalignedAllocFn(const LLVMTypeConverter *typeConverter,
                                       ModuleOp module, Type indexType) {
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
@@ -28,7 +28,7 @@ LLVM::LLVMFuncOp getNotalignedAllocFn(LLVMTypeConverter *typeConverter,
   return LLVM::lookupOrCreateMallocFn(module, indexType);
 }
 
-LLVM::LLVMFuncOp getAlignedAllocFn(LLVMTypeConverter *typeConverter,
+LLVM::LLVMFuncOp getAlignedAllocFn(const LLVMTypeConverter *typeConverter,
                                    ModuleOp module, Type indexType) {
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
@@ -50,6 +50,23 @@ Value AllocationOpLLVMLowering::createAligned(
   return rewriter.create<LLVM::SubOp>(loc, bumped, mod);
 }
 
+static Value castAllocFuncResult(ConversionPatternRewriter &rewriter,
+                                 Location loc, Value allocatedPtr,
+                                 MemRefType memRefType, Type elementPtrType,
+                                 const LLVMTypeConverter &typeConverter) {
+  auto allocatedPtrTy = cast<LLVM::LLVMPointerType>(allocatedPtr.getType());
+  FailureOr<unsigned> maybeMemrefAddrSpace =
+      typeConverter.getMemRefAddressSpace(memRefType);
+  if (failed(maybeMemrefAddrSpace))
+    return Value();
+  unsigned memrefAddrSpace = *maybeMemrefAddrSpace;
+  if (allocatedPtrTy.getAddressSpace() != memrefAddrSpace)
+    allocatedPtr = rewriter.create<LLVM::AddrSpaceCastOp>(
+        loc, LLVM::LLVMPointerType::get(rewriter.getContext(), memrefAddrSpace),
+        allocatedPtr);
+  return allocatedPtr;
+}
+
 std::tuple<Value, Value> AllocationOpLLVMLowering::allocateBufferManuallyAlign(
     ConversionPatternRewriter &rewriter, Location loc, Value sizeBytes,
     Operation *op, Value alignment) const {
@@ -64,9 +81,12 @@ std::tuple<Value, Value> AllocationOpLLVMLowering::allocateBufferManuallyAlign(
   LLVM::LLVMFuncOp allocFuncOp = getNotalignedAllocFn(
       getTypeConverter(), op->getParentOfType<ModuleOp>(), getIndexType());
   auto results = rewriter.create<LLVM::CallOp>(loc, allocFuncOp, sizeBytes);
-  Value allocatedPtr = rewriter.create<LLVM::BitcastOp>(loc, elementPtrType,
-                                                        results.getResult());
 
+  Value allocatedPtr =
+      castAllocFuncResult(rewriter, loc, results.getResult(), memRefType,
+                          elementPtrType, *getTypeConverter());
+  if (!allocatedPtr)
+    return std::make_tuple(Value(), Value());
   Value alignedPtr = allocatedPtr;
   if (alignment) {
     // Compute the aligned pointer.
@@ -89,10 +109,10 @@ unsigned AllocationOpLLVMLowering::getMemRefEltSizeInBytes(
     layout = &analysis->getAbove(op);
   }
   Type elementType = memRefType.getElementType();
-  if (auto memRefElementType = elementType.dyn_cast<MemRefType>())
+  if (auto memRefElementType = dyn_cast<MemRefType>(elementType))
     return getTypeConverter()->getMemRefDescriptorSize(memRefElementType,
                                                        *layout);
-  if (auto memRefElementType = elementType.dyn_cast<UnrankedMemRefType>())
+  if (auto memRefElementType = dyn_cast<UnrankedMemRefType>(elementType))
     return getTypeConverter()->getUnrankedMemRefDescriptorSize(
         memRefElementType, *layout);
   return layout->getTypeSize(elementType);
@@ -103,7 +123,7 @@ bool AllocationOpLLVMLowering::isMemRefSizeMultipleOf(
     const DataLayout *defaultLayout) const {
   uint64_t sizeDivisor = getMemRefEltSizeInBytes(type, op, defaultLayout);
   for (unsigned i = 0, e = type.getRank(); i < e; i++) {
-    if (ShapedType::isDynamic(type.getDimSize(i)))
+    if (type.isDynamicDim(i))
       continue;
     sizeDivisor = sizeDivisor * type.getDimSize(i);
   }
@@ -113,7 +133,8 @@ bool AllocationOpLLVMLowering::isMemRefSizeMultipleOf(
 Value AllocationOpLLVMLowering::allocateBufferAutoAlign(
     ConversionPatternRewriter &rewriter, Location loc, Value sizeBytes,
     Operation *op, const DataLayout *defaultLayout, int64_t alignment) const {
-  Value allocAlignment = createIndexConstant(rewriter, loc, alignment);
+  Value allocAlignment =
+      createIndexAttrConstant(rewriter, loc, getIndexType(), alignment);
 
   MemRefType memRefType = getMemRefResultType(op);
   // Function aligned_alloc requires size to be a multiple of alignment; we pad
@@ -126,10 +147,13 @@ Value AllocationOpLLVMLowering::allocateBufferAutoAlign(
       getTypeConverter(), op->getParentOfType<ModuleOp>(), getIndexType());
   auto results = rewriter.create<LLVM::CallOp>(
       loc, allocFuncOp, ValueRange({allocAlignment, sizeBytes}));
-  Value allocatedPtr = rewriter.create<LLVM::BitcastOp>(loc, elementPtrType,
-                                                        results.getResult());
 
-  return allocatedPtr;
+  return castAllocFuncResult(rewriter, loc, results.getResult(), memRefType,
+                             elementPtrType, *getTypeConverter());
+}
+
+void AllocLikeOpLLVMLowering::setRequiresNumElements() {
+  requiresNumElements = true;
 }
 
 LogicalResult AllocLikeOpLLVMLowering::matchAndRewrite(
@@ -145,13 +169,18 @@ LogicalResult AllocLikeOpLLVMLowering::matchAndRewrite(
   // zero-dimensional memref, assume a scalar (size 1).
   SmallVector<Value, 4> sizes;
   SmallVector<Value, 4> strides;
-  Value sizeBytes;
+  Value size;
+
   this->getMemRefDescriptorSizes(loc, memRefType, operands, rewriter, sizes,
-                                 strides, sizeBytes);
+                                 strides, size, !requiresNumElements);
 
   // Allocate the underlying buffer.
   auto [allocatedPtr, alignedPtr] =
-      this->allocateBuffer(rewriter, loc, sizeBytes, op);
+      this->allocateBuffer(rewriter, loc, size, op);
+
+  if (!allocatedPtr || !alignedPtr)
+    return rewriter.notifyMatchFailure(loc,
+                                       "underlying buffer allocation failed");
 
   // Create the MemRef descriptor.
   auto memRefDescriptor = this->createMemRefDescriptor(

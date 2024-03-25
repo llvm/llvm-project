@@ -35,7 +35,7 @@
 template <class It>
 using Range = std::ranges::subrange<It, sentinel_wrapper<It>>;
 
-template <class V, size_t N>
+template <class V, std::size_t N>
 concept HasElementsView = requires { typename std::ranges::elements_view<V, N>; };
 
 static_assert(HasElementsView<Range<std::ranges::subrange<int*>*>, 0>);

@@ -22,5 +22,5 @@ TEST_F(RuntimeCallTest, genMoveAlloc) {
   mlir::Value errMsg = firBuilder->create<fir::UndefOp>(loc, seqTy);
   mlir::Value hasStat = firBuilder->createBool(loc, false);
   fir::runtime::genMoveAlloc(*firBuilder, loc, to, from, hasStat, errMsg);
-  checkCallOpFromResultBox(to, "_FortranAMoveAlloc", 4);
+  checkCallOpFromResultBox(to, "_FortranAMoveAlloc", 5);
 }

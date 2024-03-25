@@ -25,13 +25,13 @@ def riscv_remuw : SDNode<"RISCVISD::REMUW", SDT_RISCVIntBinOpW>;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtMOrZmmul] in {
-def MUL     : ALU_rr<0b0000001, 0b000, "mul", /*Commutable*/1>,
+def MUL     : ALU_rr<0b0000001, 0b000, "mul", Commutable=1>,
               Sched<[WriteIMul, ReadIMul, ReadIMul]>;
-def MULH    : ALU_rr<0b0000001, 0b001, "mulh", /*Commutable*/1>,
+def MULH    : ALU_rr<0b0000001, 0b001, "mulh", Commutable=1>,
               Sched<[WriteIMul, ReadIMul, ReadIMul]>;
 def MULHSU  : ALU_rr<0b0000001, 0b010, "mulhsu">,
               Sched<[WriteIMul, ReadIMul, ReadIMul]>;
-def MULHU   : ALU_rr<0b0000001, 0b011, "mulhu", /*Commutable*/1>,
+def MULHU   : ALU_rr<0b0000001, 0b011, "mulhu", Commutable=1>,
               Sched<[WriteIMul, ReadIMul, ReadIMul]>;
 } // Predicates = [HasStdExtMOrZmmul]
 
@@ -41,13 +41,13 @@ def DIV     : ALU_rr<0b0000001, 0b100, "div">,
 def DIVU    : ALU_rr<0b0000001, 0b101, "divu">,
               Sched<[WriteIDiv, ReadIDiv, ReadIDiv]>;
 def REM     : ALU_rr<0b0000001, 0b110, "rem">,
-              Sched<[WriteIDiv, ReadIDiv, ReadIDiv]>;
+              Sched<[WriteIRem, ReadIRem, ReadIRem]>;
 def REMU    : ALU_rr<0b0000001, 0b111, "remu">,
-              Sched<[WriteIDiv, ReadIDiv, ReadIDiv]>;
+              Sched<[WriteIRem, ReadIRem, ReadIRem]>;
 } // Predicates = [HasStdExtM]
 
 let Predicates = [HasStdExtMOrZmmul, IsRV64], IsSignExtendingOpW = 1 in {
-def MULW    : ALUW_rr<0b0000001, 0b000, "mulw", /*Commutable*/1>,
+def MULW    : ALUW_rr<0b0000001, 0b000, "mulw", Commutable=1>,
               Sched<[WriteIMul32, ReadIMul32, ReadIMul32]>;
 } // Predicates = [HasStdExtMOrZmmul, IsRV64]
 
@@ -57,9 +57,9 @@ def DIVW    : ALUW_rr<0b0000001, 0b100, "divw">,
 def DIVUW   : ALUW_rr<0b0000001, 0b101, "divuw">,
               Sched<[WriteIDiv32, ReadIDiv32, ReadIDiv32]>;
 def REMW    : ALUW_rr<0b0000001, 0b110, "remw">,
-              Sched<[WriteIDiv32, ReadIDiv32, ReadIDiv32]>;
+              Sched<[WriteIRem32, ReadIRem32, ReadIRem32]>;
 def REMUW   : ALUW_rr<0b0000001, 0b111, "remuw">,
-              Sched<[WriteIDiv32, ReadIDiv32, ReadIDiv32]>;
+              Sched<[WriteIRem32, ReadIRem32, ReadIRem32]>;
 } // Predicates = [HasStdExtM, IsRV64]
 
 //===----------------------------------------------------------------------===//
@@ -112,5 +112,20 @@ let Predicates = [HasStdExtMOrZmmul, IsRV64, NotHasStdExtZba] in {
 // inputs left by 32 and use a MULHU. This saves two SRLIs needed to finish
 // zeroing the upper 32 bits.
 def : Pat<(i64 (mul (and GPR:$rs1, 0xffffffff), (and GPR:$rs2, 0xffffffff))),
-          (MULHU (SLLI GPR:$rs1, 32), (SLLI GPR:$rs2, 32))>;
+          (MULHU (i64 (SLLI GPR:$rs1, 32)), (i64 (SLLI GPR:$rs2, 32)))>;
 } // Predicates = [HasStdExtMOrZmmul, IsRV64, NotHasStdExtZba]
+
+//===----------------------------------------------------------------------===//
+// Experimental RV64 i32 legalization patterns.
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtMOrZmmul, IsRV64] in {
+def : PatGprGpr<mul, MULW, i32, i32>;
+}
+
+let Predicates = [HasStdExtM, IsRV64] in {
+def : PatGprGpr<sdiv, DIVW, i32, i32>;
+def : PatGprGpr<udiv, DIVUW, i32, i32>;
+def : PatGprGpr<srem, REMW, i32, i32>;
+def : PatGprGpr<urem, REMUW, i32, i32>;
+}

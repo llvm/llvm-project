@@ -15,7 +15,7 @@
 // void swap(unordered_multiset& x, unordered_multiset& y);
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-debug-mode, c++03
+// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
 
 #include <unordered_set>
 

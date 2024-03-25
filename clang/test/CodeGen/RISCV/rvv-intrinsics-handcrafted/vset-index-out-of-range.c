@@ -1,6 +1,6 @@
 // REQUIRES: riscv-registered-target
 // RUN: %clang_cc1 -triple riscv64 -target-feature +f -target-feature +d \
-// RUN:   -target-feature +v -target-feature +zfh -target-feature +experimental-zvfh \
+// RUN:   -target-feature +v -target-feature +zfh -target-feature +zvfh \
 // RUN:   -fsyntax-only -verify %s
 
 #include <riscv_vector.h>
@@ -338,4 +338,9 @@ vfloat16m8_t test_vset_v_f16m2_f16m8(vfloat16m8_t dest, vfloat16m2_t val) {
 vfloat16m8_t test_vset_v_f16m4_f16m8(vfloat16m8_t dest, vfloat16m4_t val) {
   // expected-error@+1 {{argument value 2 is outside the valid range [0, 1]}}
   return __riscv_vset_v_f16m4_f16m8(dest, 2, val);
+}
+
+vint32m1x2_t test_vset_v_i32m1_i32m1x2(vint32m1x2_t dest, vint32m1_t val) {
+  // expected-error@+1 {{argument value 2 is outside the valid range [0, 1]}}
+  return __riscv_vset_v_i32m1_i32m1x2(dest, 2, val);
 }

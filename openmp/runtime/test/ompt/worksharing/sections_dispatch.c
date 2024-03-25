@@ -2,6 +2,7 @@
 // REQUIRES: ompt
 // UNSUPPORTED: intel-15.0, intel-16.0, intel-17.0, intel-18.0
 // GCC generates code that does not distinguish between sections and loops
+// UNSUPPORTED: gcc
 
 #include "callback.h"
 #include <omp.h>

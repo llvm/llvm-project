@@ -4,7 +4,7 @@ import lldb
 
 
 class value(object):
-    '''A class that wraps an lldb.SBValue object and returns an object that
+    """A class that wraps an lldb.SBValue object and returns an object that
     can be used as an object with attribytes:\n
     argv = a.value(lldb.frame.FindVariable('argv'))\n
     argv.name - return the name of the value that this object contains\n
@@ -24,7 +24,7 @@ class value(object):
     argv.frame - return the lldb.SBFrame for this value
     argv.num_children - return the number of children this value has
     argv.children - return a list of sbvalue objects that represents all of the children of this value
-    '''
+    """
 
     def __init__(self, sbvalue):
         self.sbvalue = sbvalue
@@ -40,55 +40,50 @@ class value(object):
 
     def __getitem__(self, key):
         if isinstance(key, int):
-            return value(
-                self.sbvalue.GetChildAtIndex(
-                    key, lldb.eNoDynamicValues, True))
+            return value(self.sbvalue.GetChildAtIndex(key, lldb.eNoDynamicValues, True))
         raise TypeError
 
     def __getattr__(self, name):
-        if name == 'name':
+        if name == "name":
             return self.sbvalue.GetName()
-        if name == 'type':
+        if name == "type":
             return self.sbvalue.GetType()
-        if name == 'type_name':
+        if name == "type_name":
             return self.sbvalue.GetTypeName()
-        if name == 'size':
+        if name == "size":
             return self.sbvalue.GetByteSize()
-        if name == 'is_in_scope':
+        if name == "is_in_scope":
             return self.sbvalue.IsInScope()
-        if name == 'is_pointer':
+        if name == "is_pointer":
             return self.sbvalue.TypeIsPointerType()
-        if name == 'format':
+        if name == "format":
             return self.sbvalue.GetFormat()
-        if name == 'value':
+        if name == "value":
             return self.sbvalue.GetValue()
-        if name == 'summary':
+        if name == "summary":
             return self.sbvalue.GetSummary()
-        if name == 'description':
+        if name == "description":
             return self.sbvalue.GetObjectDescription()
-        if name == 'location':
+        if name == "location":
             return self.sbvalue.GetLocation()
-        if name == 'target':
+        if name == "target":
             return self.sbvalue.GetTarget()
-        if name == 'process':
+        if name == "process":
             return self.sbvalue.GetProcess()
-        if name == 'thread':
+        if name == "thread":
             return self.sbvalue.GetThread()
-        if name == 'frame':
+        if name == "frame":
             return self.sbvalue.GetFrame()
-        if name == 'num_children':
+        if name == "num_children":
             return self.sbvalue.GetNumChildren()
-        if name == 'children':
+        if name == "children":
             # Returns an array of sbvalue objects, one for each child of
             # the value for the lldb.SBValue
             children = []
             for i in range(self.sbvalue.GetNumChildren()):
                 children.append(
-                    value(
-                        self.sbvalue.GetChildAtIndex(
-                            i,
-                            lldb.eNoDynamicValues,
-                            True)))
+                    value(self.sbvalue.GetChildAtIndex(i, lldb.eNoDynamicValues, True))
+                )
             return children
         raise AttributeError
 
@@ -113,10 +108,7 @@ class variable(object):
     def __getitem__(self, key):
         # Allow array access if this value has children...
         if isinstance(key, int):
-            return variable(
-                self.sbvalue.GetValueForExpressionPath(
-                    "[%i]" %
-                    key))
+            return variable(self.sbvalue.GetValueForExpressionPath("[%i]" % key))
         raise TypeError
 
     def __getattr__(self, name):
@@ -262,7 +254,7 @@ class variable(object):
         return float(self.sbvalue.GetValueAsSigned())
 
     def __oct__(self):
-        return '0%o' % self.sbvalue.GetValueAsSigned()
+        return "0%o" % self.sbvalue.GetValueAsSigned()
 
     def __hex__(self):
-        return '0x%x' % self.sbvalue.GetValueAsSigned()
+        return "0x%x" % self.sbvalue.GetValueAsSigned()

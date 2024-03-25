@@ -163,6 +163,34 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
       return fir::isBoxAddressOrValue(getBase().getType());
     }
 
+    /// Is this variable a Fortran parameter?
+    bool isParameter() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::parameter);
+    }
+
+    /// Is this a host associated variable?
+    bool isHostAssoc() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::host_assoc);
+    }
+
+    /// Is this variable a Fortran target?
+    bool isTarget() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::target);
+    }
+
+    /// Is this variable a Fortran intent(in)?
+    bool isIntentIn() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::intent_in);
+    }
+
     /// Interface verifier imlementation for declare operations.
     mlir::LogicalResult verifyDeclareLikeOpImpl(mlir::Value memRef);
 

@@ -26,6 +26,8 @@ class CFGStmtMap {
   void *M;
 
   CFGStmtMap(ParentMap *pm, void *m) : PM(pm), M(m) {}
+  CFGStmtMap(const CFGStmtMap &) = delete;
+  CFGStmtMap &operator=(const CFGStmtMap &) = delete;
 
 public:
   ~CFGStmtMap();

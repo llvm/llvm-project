@@ -6,64 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Format/Format.h"
-
-#include "../Tooling/ReplacementTest.h"
-#include "FormatTestUtils.h"
+#include "FormatTestBase.h"
 
 #define DEBUG_TYPE "braces-inserter-test"
 
 namespace clang {
 namespace format {
+namespace test {
 namespace {
 
-class BracesInserterTest : public ::testing::Test {
-protected:
-  std::string format(llvm::StringRef Code, const FormatStyle &Style,
-                     const std::vector<tooling::Range> &Ranges) {
-    LLVM_DEBUG(llvm::errs() << "---\n");
-    LLVM_DEBUG(llvm::errs() << Code << "\n\n");
-    auto NonEmptyRanges = Ranges;
-    if (Ranges.empty())
-      NonEmptyRanges = {1, tooling::Range(0, Code.size())};
-    FormattingAttemptStatus Status;
-    tooling::Replacements Replaces =
-        reformat(Style, Code, NonEmptyRanges, "<stdin>", &Status);
-    EXPECT_EQ(true, Status.FormatComplete) << Code << "\n\n";
-    ReplacementCount = Replaces.size();
-    auto Result = applyAllReplacements(Code, Replaces);
-    EXPECT_TRUE(static_cast<bool>(Result));
-    LLVM_DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
-    return *Result;
-  }
-
-  void _verifyFormat(const char *File, int Line, llvm::StringRef Expected,
-                     llvm::StringRef Code,
-                     const FormatStyle &Style = getLLVMStyle(),
-                     const std::vector<tooling::Range> &Ranges = {}) {
-    testing::ScopedTrace t(File, Line, ::testing::Message() << Code.str());
-    EXPECT_EQ(Expected.str(), format(Expected, Style, Ranges))
-        << "Expected code is not stable";
-    EXPECT_EQ(Expected.str(), format(Code, Style, Ranges));
-    if (Style.Language == FormatStyle::LK_Cpp && Ranges.empty()) {
-      // Objective-C++ is a superset of C++, so everything checked for C++
-      // needs to be checked for Objective-C++ as well.
-      FormatStyle ObjCStyle = Style;
-      ObjCStyle.Language = FormatStyle::LK_ObjC;
-      EXPECT_EQ(Expected.str(), format(test::messUp(Code), ObjCStyle, Ranges));
-    }
-  }
-
-  void _verifyFormat(const char *File, int Line, llvm::StringRef Code,
-                     const FormatStyle &Style = getLLVMStyle(),
-                     const std::vector<tooling::Range> &Ranges = {}) {
-    _verifyFormat(File, Line, Code, Code, Style, Ranges);
-  }
-
-  int ReplacementCount;
-};
-
-#define verifyFormat(...) _verifyFormat(__FILE__, __LINE__, __VA_ARGS__)
+class BracesInserterTest : public FormatTestBase {};
 
 TEST_F(BracesInserterTest, InsertBraces) {
   FormatStyle Style = getLLVMStyle();
@@ -328,9 +280,10 @@ TEST_F(BracesInserterTest, InsertBracesRange) {
                "  }",
                Code, Style, {tooling::Range(10, 8)}); // line 2
 
-  verifyFormat(Code, Style, {tooling::Range(19, 11)}); // line 3
+  verifyFormat(Code, Code, Style, {tooling::Range(19, 11)}); // line 3
 }
 
 } // namespace
+} // namespace test
 } // namespace format
 } // namespace clang

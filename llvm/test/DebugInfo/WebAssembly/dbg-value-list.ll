@@ -5,12 +5,11 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; WebAssembly backend does not currently handle DBG_VALUE_LIST instructions
-; correctly. In the meantime, they are converted to 'DBG_VALUE $noreg's in
+; correctly. In the meantime, they are converted to undefs in
 ; WebAssemblyNullifyDebugValueLists pass.
 
-; BEFORE: DBG_VALUE_LIST
-; AFTER-NOT: DBG_VALUE_LIST
-; AFTER: DBG_VALUE $noreg, $noreg
+; BEFORE: DBG_VALUE_LIST !{{[0-9]+}}, !DIExpression(), %{{[0-9]+}}, %{{[0-9]+}}
+; AFTER: DBG_VALUE_LIST !{{[0-9]+}}, !DIExpression(), $noreg, $noreg
 define i32 @dbg_value_list_test() !dbg !6 {
 entry:
   %0 = call i32 @foo(), !dbg !9

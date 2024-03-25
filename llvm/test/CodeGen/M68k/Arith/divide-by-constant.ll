@@ -39,9 +39,9 @@ define zeroext i8 @test3(i8 zeroext %x, i8 zeroext %c) {
 ; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.b (11,%sp), %d0
 ; CHECK-NEXT:    and.l #255, %d0
-; CHECK-NEXT:    mulu #21846, %d0
-; CHECK-NEXT:    lsr.l #8, %d0
-; CHECK-NEXT:    lsr.l #8, %d0
+; CHECK-NEXT:    muls #171, %d0
+; CHECK-NEXT:    move.w #9, %d1
+; CHECK-NEXT:    lsr.w %d1, %d0
 ; CHECK-NEXT:    and.l #65535, %d0
 ; CHECK-NEXT:    rts
 entry:
@@ -125,10 +125,11 @@ define i8 @test8(i8 %x) nounwind {
 ; CHECK-LABEL: test8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    move.b (7,%sp), %d0
+; CHECK-NEXT:    lsr.b #1, %d0
 ; CHECK-NEXT:    and.l #255, %d0
-; CHECK-NEXT:    mulu #841, %d0
-; CHECK-NEXT:    lsr.l #8, %d0
-; CHECK-NEXT:    lsr.l #8, %d0
+; CHECK-NEXT:    muls #211, %d0
+; CHECK-NEXT:    move.w #13, %d1
+; CHECK-NEXT:    lsr.w %d1, %d0
 ; CHECK-NEXT:    ; kill: def $bd0 killed $bd0 killed $d0
 ; CHECK-NEXT:    rts
   %div = udiv i8 %x, 78
@@ -139,10 +140,11 @@ define i8 @test9(i8 %x) nounwind {
 ; CHECK-LABEL: test9:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    move.b (7,%sp), %d0
+; CHECK-NEXT:    lsr.b #2, %d0
 ; CHECK-NEXT:    and.l #255, %d0
-; CHECK-NEXT:    mulu #565, %d0
-; CHECK-NEXT:    lsr.l #8, %d0
-; CHECK-NEXT:    lsr.l #8, %d0
+; CHECK-NEXT:    muls #71, %d0
+; CHECK-NEXT:    move.w #11, %d1
+; CHECK-NEXT:    lsr.w %d1, %d0
 ; CHECK-NEXT:    ; kill: def $bd0 killed $bd0 killed $d0
 ; CHECK-NEXT:    rts
   %div = udiv i8 %x, 116

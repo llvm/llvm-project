@@ -23,9 +23,9 @@
   target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
 
-  %struct.firstStruct = type { i32, i8, %struct.secondStruct* }
-  %struct.secondStruct = type { i32, i8, i8* }
-  %struct.thirdStruct = type { %struct.fourthStruct, i32*, i8* }
+  %struct.firstStruct = type { i32, i8, ptr }
+  %struct.secondStruct = type { i32, i8, ptr }
+  %struct.thirdStruct = type { %struct.fourthStruct, ptr, ptr }
   %struct.fourthStruct = type { i32, i32, i32, i32 }
 
   @.str = private unnamed_addr constant [7 x i8] c"Error:\00", align 1
@@ -38,68 +38,70 @@
     %0 = bitcast i64 %const1 to i64
     call void @llvm.dbg.value(metadata i32 %variable2, metadata !36, metadata !DIExpression()), !dbg !57
     call void @llvm.dbg.value(metadata i32 %variable1, metadata !37, metadata !DIExpression()), !dbg !58
-    %call = tail call %struct.firstStruct* @func1(i32 %variable1)
-    %1 = ptrtoint %struct.firstStruct* %call to i64
+    %call = tail call ptr @func1(i32 %variable1)
+    %1 = ptrtoint ptr %call to i64
     %2 = and i64 %1, %0
     %tobool = icmp eq i64 %2, 0
     br i1 %tobool, label %cleanup, label %if.end
 
   if.end:                                           ; preds = %entry
-    %call1 = tail call %struct.thirdStruct* @func2(i32 %variable2, i32 %variable1)
-    %3 = ptrtoint %struct.thirdStruct* %call1 to i64
+    %call1 = tail call ptr @func2(i32 %variable2, i32 %variable1)
+    %3 = ptrtoint ptr %call1 to i64
     %4 = and i64 %3, -123
     %tobool2 = icmp eq i64 %4, 0
     br i1 %tobool2, label %if.then3, label %private.exit
 
   if.then3:                                         ; preds = %if.end
-    %5 = inttoptr i64 %2 to %struct.firstStruct*
-    %variableLocal11 = bitcast %struct.firstStruct* %5 to i32*
-    %6 = load i32, i32* %variableLocal11, align 8
-    %variableLocal2 = getelementptr inbounds %struct.firstStruct, %struct.firstStruct* %5, i64 0, i32 1
-    %7 = load i8, i8* %variableLocal2, align 4
-    tail call void @func3(i32 %6, i8 zeroext %7, i8 zeroext 5, i8* inttoptr (i64 or (i64 ptrtoint ([7 x i8]* @.str to i64), i64 -92238) to i8*), i32 %variable2)
+    %5 = inttoptr i64 %2 to ptr
+    %variableLocal11 = bitcast ptr %5 to ptr
+    %6 = load i32, ptr %variableLocal11, align 8
+    %variableLocal2 = getelementptr inbounds %struct.firstStruct, ptr %5, i64 0, i32 1
+    %7 = load i8, ptr %variableLocal2, align 4
+    %or = or i64 ptrtoint (ptr @.str to i64), -92238
+    %ptr = inttoptr i64 %or to ptr
+    tail call void @func3(i32 %6, i8 zeroext %7, i8 zeroext 5, ptr %ptr, i32 %variable2)
     br label %cleanup
 
   private.exit:                                     ; preds = %if.end
     %8 = bitcast i64 %const1 to i64
-    %9 = ptrtoint %struct.thirdStruct* %call1 to i64
+    %9 = ptrtoint ptr %call1 to i64
     %10 = or i64 %9, %8
-    %11 = inttoptr i64 %10 to i8*
-    %call5.i = tail call i8* @memset(i8* %11, i32 0, i64 16)
-    %call6 = tail call i32 @func4(%struct.thirdStruct* %call1)
+    %11 = inttoptr i64 %10 to ptr
+    %call5.i = tail call ptr @memset(ptr %11, i32 0, i64 16)
+    %call6 = tail call i32 @func4(ptr %call1)
     %tobool7 = icmp eq i32 %call6, 0
     br i1 %tobool7, label %cleanup, label %if.then8
 
   if.then8:                                         ; preds = %private.exit
-    %12 = inttoptr i64 %2 to %struct.firstStruct*
-    tail call void @func5(%struct.thirdStruct* %call1, i32 0)
-    %rc_db = getelementptr inbounds %struct.firstStruct, %struct.firstStruct* %12, i64 0, i32 2
-    %13 = bitcast %struct.secondStruct** %rc_db to i64*
-    %14 = load i64, i64* %13, align 8
+    %12 = inttoptr i64 %2 to ptr
+    tail call void @func5(ptr %call1, i32 0)
+    %rc_db = getelementptr inbounds %struct.firstStruct, ptr %12, i64 0, i32 2
+    %13 = bitcast ptr %rc_db to ptr
+    %14 = load i64, ptr %13, align 8
     %tobool9 = icmp eq i64 %14, 0
     br i1 %tobool9, label %cleanup, label %land.lhs.true
 
   land.lhs.true:                                    ; preds = %if.then8
-    %15 = inttoptr i64 %4 to %struct.thirdStruct*
-    %tot_perf2 = bitcast %struct.thirdStruct* %15 to i32*
-    %16 = load i32, i32* %tot_perf2, align 8
+    %15 = inttoptr i64 %4 to ptr
+    %tot_perf2 = bitcast ptr %15 to ptr
+    %16 = load i32, ptr %tot_perf2, align 8
     %tobool11 = icmp eq i32 %16, 0
     br i1 %tobool11, label %lor.lhs.false, label %if.then14
 
   lor.lhs.false:                                    ; preds = %land.lhs.true
-    %17 = inttoptr i64 %4 to %struct.thirdStruct*
-    %tot_bw = getelementptr inbounds %struct.thirdStruct, %struct.thirdStruct* %17, i64 0, i32 0, i32 1
-    %18 = load i32, i32* %tot_bw, align 4
+    %17 = inttoptr i64 %4 to ptr
+    %tot_bw = getelementptr inbounds %struct.thirdStruct, ptr %17, i64 0, i32 0, i32 1
+    %18 = load i32, ptr %tot_bw, align 4
     %tobool13 = icmp eq i32 %18, 0
     br i1 %tobool13, label %cleanup, label %if.then14
 
   if.then14:                                        ; preds = %lor.lhs.false, %land.lhs.true
-    %19 = inttoptr i64 %14 to %struct.secondStruct*
-    %mc_origin = getelementptr inbounds %struct.secondStruct, %struct.secondStruct* %19, i64 0, i32 2
-    %20 = bitcast i8** %mc_origin to i64*
-    %21 = load i64, i64* %20, align 8
-    %22 = inttoptr i64 %21 to i8*
-    tail call void @func6(%struct.thirdStruct* %call1, i32 %variable1, i8* %22)
+    %19 = inttoptr i64 %14 to ptr
+    %mc_origin = getelementptr inbounds %struct.secondStruct, ptr %19, i64 0, i32 2
+    %20 = bitcast ptr %mc_origin to ptr
+    %21 = load i64, ptr %20, align 8
+    %22 = inttoptr i64 %21 to ptr
+    tail call void @func6(ptr %call1, i32 %variable1, ptr %22)
     br label %cleanup
 
   cleanup:                                          ; preds = %if.then14, %lor.lhs.false, %if.then8, %private.exit, %if.then3, %entry
@@ -107,27 +109,27 @@
     ret i32 %retval.0
   }
 
-  declare %struct.firstStruct* @func1(i32) local_unnamed_addr
+  declare ptr @func1(i32) local_unnamed_addr
 
-  declare %struct.thirdStruct* @func2(i32, i32) local_unnamed_addr
+  declare ptr @func2(i32, i32) local_unnamed_addr
 
-  declare void @func3(i32, i8 zeroext, i8 zeroext, i8*, i32) local_unnamed_addr
+  declare void @func3(i32, i8 zeroext, i8 zeroext, ptr, i32) local_unnamed_addr
 
-  declare i32 @func4(%struct.thirdStruct*) local_unnamed_addr
+  declare i32 @func4(ptr) local_unnamed_addr
 
-  declare void @func5(%struct.thirdStruct*, i32) local_unnamed_addr
+  declare void @func5(ptr, i32) local_unnamed_addr
 
-  declare void @func6(%struct.thirdStruct*, i32, i8*) local_unnamed_addr
+  declare void @func6(ptr, i32, ptr) local_unnamed_addr
 
-  declare i8* @__memset_to_buf(i64, i8*, i32, i64) local_unnamed_addr
+  declare ptr @__memset_to_buf(i64, ptr, i32, i64) local_unnamed_addr
 
-  declare i8* @memset(i8*, i32, i64) local_unnamed_addr
+  declare ptr @memset(ptr, i32, i64) local_unnamed_addr
 
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #2
+  declare void @llvm.stackprotector(ptr, ptr) #2
 
   attributes #0 = { nounwind uwtable "frame-pointer"="non-leaf" }
   attributes #1 = { nounwind readnone speculatable }
@@ -333,14 +335,14 @@ body:             |
     successors: %bb.6(0x30000000), %bb.7(0x50000000)
     liveins: $rax, $r12, $r15
 
-    CMP32mi8 renamable $r15, 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load (s32) from %ir.tot_perf2, align 8)
+    CMP32mi renamable $r15, 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load (s32) from %ir.tot_perf2, align 8)
     JCC_1 %bb.7, 5, implicit $eflags, debug-location !57
 
   bb.6.lor.lhs.false:
     successors: %bb.8(0x30000000), %bb.7(0x50000000)
     liveins: $rax, $r12, $r15
 
-    CMP32mi8 killed renamable $r15, 1, $noreg, 4, $noreg, 0, implicit-def $eflags :: (load (s32) from %ir.tot_bw)
+    CMP32mi killed renamable $r15, 1, $noreg, 4, $noreg, 0, implicit-def $eflags :: (load (s32) from %ir.tot_bw)
     JCC_1 %bb.8, 4, implicit $eflags, debug-location !57
 
   bb.7.if.then14:
@@ -375,7 +377,7 @@ body:             |
     liveins: $ecx
 
     $eax = MOV32rr killed $ecx
-    $rsp = ADD64ri8 $rsp, 8, implicit-def dead $eflags
+    $rsp = ADD64ri32 $rsp, 8, implicit-def dead $eflags
     $rbx = POP64r implicit-def $rsp, implicit $rsp
     $r12 = POP64r implicit-def $rsp, implicit $rsp
     $r13 = POP64r implicit-def $rsp, implicit $rsp

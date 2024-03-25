@@ -636,7 +636,7 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
         // upper level code will know this is a full match and add the " ".
         const OptionDefinition &opt = opt_defs[opt_defs_index];
         llvm::StringRef long_option = opt.long_option;
-        if (cur_opt_str.startswith("--") && cur_opt_str != long_option) {
+        if (cur_opt_str.starts_with("--") && cur_opt_str != long_option) {
           request.AddCompletion("--" + long_option.str(), opt.usage_text);
           return true;
         } else
@@ -652,7 +652,7 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
         if (cur_opt_str.consume_front("--")) {
           for (auto &def : opt_defs) {
             llvm::StringRef long_option(def.long_option);
-            if (long_option.startswith(cur_opt_str))
+            if (long_option.starts_with(cur_opt_str))
               request.AddCompletion("--" + long_option.str(), def.usage_text);
           }
         }
@@ -714,8 +714,8 @@ void Options::HandleOptionArgumentCompletion(
     }
   }
 
-  if (completion_mask & CommandCompletions::eSourceFileCompletion ||
-      completion_mask & CommandCompletions::eSymbolCompletion) {
+  if (completion_mask & lldb::eSourceFileCompletion ||
+      completion_mask & lldb::eSymbolCompletion) {
     for (size_t i = 0; i < opt_element_vector.size(); i++) {
       int cur_defs_index = opt_element_vector[i].opt_defs_index;
 
@@ -748,7 +748,7 @@ void Options::HandleOptionArgumentCompletion(
     }
   }
 
-  CommandCompletions::InvokeCommonCompletionCallbacks(
+  lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
       interpreter, completion_mask, request, filter_up.get());
 }
 
@@ -778,6 +778,19 @@ void OptionGroupOptions::Append(OptionGroup *group, uint32_t src_mask,
       m_option_defs.push_back(group_option_defs[i]);
       m_option_defs.back().usage_mask = dst_mask;
     }
+  }
+}
+
+void OptionGroupOptions::Append(
+    OptionGroup *group, llvm::ArrayRef<llvm::StringRef> exclude_long_options) {
+  auto group_option_defs = group->GetDefinitions();
+  for (uint32_t i = 0; i < group_option_defs.size(); ++i) {
+    const auto &definition = group_option_defs[i];
+    if (llvm::is_contained(exclude_long_options, definition.long_option))
+      continue;
+
+    m_option_infos.push_back(OptionInfo(group, i));
+    m_option_defs.push_back(definition);
   }
 }
 
@@ -877,8 +890,8 @@ static size_t FindArgumentIndexForOption(const Args &args,
   std::string long_opt =
       std::string(llvm::formatv("--{0}", long_option.definition->long_option));
   for (const auto &entry : llvm::enumerate(args)) {
-    if (entry.value().ref().startswith(short_opt) ||
-        entry.value().ref().startswith(long_opt))
+    if (entry.value().ref().starts_with(short_opt) ||
+        entry.value().ref().starts_with(long_opt))
       return entry.index();
   }
 
@@ -1351,4 +1364,17 @@ llvm::Expected<Args> Options::Parse(const Args &args,
   argv.pop_back();
   argv.erase(argv.begin(), argv.begin() + OptionParser::GetOptionIndex());
   return ReconstituteArgsAfterParsing(argv, args);
+}
+
+llvm::Error lldb_private::CreateOptionParsingError(
+    llvm::StringRef option_arg, const char short_option,
+    llvm::StringRef long_option, llvm::StringRef additional_context) {
+  std::string buffer;
+  llvm::raw_string_ostream stream(buffer);
+  stream << "Invalid value ('" << option_arg << "') for -" << short_option;
+  if (!long_option.empty())
+    stream << " (" << long_option << ")";
+  if (!additional_context.empty())
+    stream << ": " << additional_context;
+  return llvm::createStringError(llvm::inconvertibleErrorCode(), buffer);
 }

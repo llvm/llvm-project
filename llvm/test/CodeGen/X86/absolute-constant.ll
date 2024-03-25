@@ -30,7 +30,8 @@ define void @bar(ptr %x) {
 entry:
   %0 = load i8, ptr %x, align 1
   %conv = sext i8 %0 to i32
-  %and = and i32 %conv, sext (i8 ptrtoint (ptr @foo to i8) to i32)
+  %ext = sext i8 ptrtoint (ptr @foo to i8) to i32
+  %and = and i32 %conv, %ext
   %tobool = icmp eq i32 %and, 0
   br i1 %tobool, label %if.end, label %if.then
 
@@ -44,4 +45,4 @@ if.end:                                           ; preds = %entry, %if.then
 
 declare void @xf(...)
 
-!0 = !{i32 0, i32 256}
+!0 = !{i64 0, i64 256}

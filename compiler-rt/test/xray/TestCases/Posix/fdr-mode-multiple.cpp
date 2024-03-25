@@ -8,7 +8,6 @@
 // RUN: [ $FILES -eq 0 ]
 // RUN: rm -f fdr-inmemory-test-*
 //
-// REQUIRES: x86_64-target-arch
 // REQUIRES: built-in-llvm-tree
 
 #include "xray/xray_log_interface.h"

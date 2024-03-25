@@ -808,3 +808,108 @@ func.func @affine_parallel(%memref_8: memref<4090x2040xf32>, %x: index) {
 
   return
 }
+
+// -----
+
+// CHECK-LABEL: func.func @affine_invariant_use_after_dma
+#map = affine_map<(d0) -> (d0 * 163840)>
+func.func @affine_invariant_use_after_dma(%arg0: memref<10485760xi32>, %arg1: memref<1xi32>, %arg2: memref<10485760xi32>) {
+  %c320 = arith.constant 320 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %alloc = memref.alloc() {alignment = 16 : i64} : memref<0xi32, 2>
+  %alloc_0 = memref.alloc() : memref<1xi32, 2>
+  affine.for %arg3 = 0 to 64 {
+    %0 = affine.apply #map(%arg3)
+    %alloc_1 = memref.alloc() {alignment = 16 : i64} : memref<0xi32, 2>
+    %alloc_2 = memref.alloc() : memref<320xi32, 2>
+    affine.dma_start %arg0[%0], %alloc_2[%c0], %alloc_1[%c0], %c320 : memref<10485760xi32>, memref<320xi32, 2>, memref<0xi32, 2>
+    affine.dma_start %arg1[%c0], %alloc_0[%c0], %alloc[%c0], %c1 : memref<1xi32>, memref<1xi32, 2>, memref<0xi32, 2>
+    affine.dma_wait %alloc_1[%c0], %c320 : memref<0xi32, 2>
+    affine.dma_wait %alloc[%c0], %c1 : memref<0xi32, 2>
+    %1 = affine.apply #map(%arg3)
+    %alloc_3 = memref.alloc() {alignment = 16 : i64} : memref<0xi32, 2>
+    %alloc_4 = memref.alloc() : memref<320xi32, 2>
+    affine.for %arg4 = 0 to 320 {
+      %2 = affine.load %alloc_2[%arg4] : memref<320xi32, 2>
+      %3 = affine.load %alloc_0[0] : memref<1xi32, 2>
+      %4 = arith.addi %2, %3 : i32
+      %5 = arith.addi %4, %2 : i32
+      affine.store %5, %alloc_4[%arg4] : memref<320xi32, 2>
+    }
+    affine.dma_start %alloc_4[%c0], %arg2[%1], %alloc_3[%c0], %c320 : memref<320xi32, 2>, memref<10485760xi32>, memref<0xi32, 2>
+    affine.dma_wait %alloc_3[%c0], %c320 : memref<0xi32, 2>
+  }
+  return
+}
+// CHECK: %[[zero:.*]] = arith.constant 0 : index
+// CHECK: %[[scalar_mem:.*]] = memref.alloc() : memref<1xi32, 2>
+// CHECK: affine.dma_start %arg1[%[[zero]]], %alloc_0[%[[zero]]], %alloc[%[[zero]]], %c1
+// CHECK: affine.load %[[scalar_mem]][0]
+
+// -----
+
+// CHECK-LABEL: func @affine_prefetch_invariant
+func.func @affine_prefetch_invariant() {
+  %0 = memref.alloc() : memref<10x10xf32>
+  affine.for %i0 = 0 to 10 {
+    affine.for %i1 = 0 to 10 {
+      %1 = affine.load %0[%i0, %i1] : memref<10x10xf32>
+      affine.prefetch %0[%i0, %i0], write, locality<0>, data : memref<10x10xf32>
+    }
+  }
+
+  // CHECK:      memref.alloc() : memref<10x10xf32>
+  // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
+  // CHECK-NEXT:   affine.prefetch
+  // CHECK-NEXT:   affine.for %{{.*}} = 0 to 10 {
+  // CHECK-NEXT:     %{{.*}}  = affine.load %{{.*}}[%{{.*}}  : memref<10x10xf32>
+  // CHECK-NEXT:   }
+  // CHECK-NEXT: }
+  return
+}
+
+// Side-effecting ops shouldn't be hoisted.
+
+// CHECK-LABEL: func @side_effecting_ops
+func.func @side_effecting_ops() {
+  %cst = arith.constant 0.0 : f32
+  %m0 = memref.alloc(): memref<1x512x16x16xf32>
+  %0 = gpu.wait async
+  affine.for %arg783 = 0 to 14 {
+    affine.for %arg784 = 0 to 14 {
+      affine.parallel (%arg785) = (0) to (512) {
+        affine.for %arg786 = 0 to 1 {
+          affine.for %arg787 = 0 to 1 {
+            affine.for %arg788 = 0 to 1 {
+              %m1 = memref.alloc() : memref<1xf32, 3>
+              %m2 = memref.alloc() : memref<1xf32, 3>
+              affine.store %cst, %m1[0] : memref<1xf32, 3>
+              affine.store %cst, %m2[0] : memref<1xf32, 3>
+              %memref_2897, %asyncToken_2898 = gpu.alloc async [%0] () : memref<1x512x16x16xf32>
+              %2432 = gpu.memcpy async [%0] %memref_2897, %m0 : memref<1x512x16x16xf32>, memref<1x512x16x16xf32>
+              affine.for %arg789 = 0 to 16 {
+                affine.for %arg790 = 0 to 16 {
+                  affine.store %cst, %memref_2897[0, %arg785 + %arg788, %arg789, %arg790] : memref<1x512x16x16xf32>
+                }
+              }
+              memref.dealloc %m2 : memref<1xf32, 3>
+              memref.dealloc %m1 : memref<1xf32, 3>
+              %2433 = gpu.memcpy async [%0] %m0, %memref_2897 : memref<1x512x16x16xf32>, memref<1x512x16x16xf32>
+              %2434 = gpu.dealloc async [%asyncToken_2898] %memref_2897 : memref<1x512x16x16xf32>
+            }
+          }
+        }
+      }
+    }
+  }
+  // CHECK:      affine.for %{{.*}} = 0 to 1
+  // CHECK-NEXT:   affine.for %{{.*}} = 0 to 1
+  // CHECK:          memref.alloc
+  // CHECK:          memref.alloc
+  // CHECK:          gpu.memcpy
+  // CHECK:          affine.for %{{.*}} = 0 to 16
+  // CHECK:            affine.for %{{.*}} = 0 to 16
+  // CHECK:          memref.dealloc
+  return
+}

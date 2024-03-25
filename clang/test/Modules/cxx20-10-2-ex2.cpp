@@ -11,8 +11,20 @@
 // RUN:  -o  %t/X.pcm
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/std-10-2-ex2-tu2.cpp \
-// RUN: -fmodule-file=%t/std-10-2-ex2-c.pcm -fmodule-file=%t/X.pcm \
+// RUN: -fmodule-file=%t/std-10-2-ex2-c.pcm -fmodule-file=X=%t/X.pcm \
 // RUN: -pedantic-errors -verify -o  %t/M.pcm
+
+// Test again with reduced BMI.
+// RUN: %clang_cc1 -std=c++20 -emit-header-unit -I %t \
+// RUN: -xc++-user-header std-10-2-ex2-c.h -o %t/std-10-2-ex2-c.pcm
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/std-10-2-ex2-tu1.cpp \
+// RUN:  -o  %t/X.pcm
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/std-10-2-ex2-tu2.cpp \
+// RUN: -fmodule-file=%t/std-10-2-ex2-c.pcm -fmodule-file=X=%t/X.pcm \
+// RUN: -pedantic-errors -verify -o  %t/M.pcm
+
 
 //--- std-10-2-ex2-b.h
 int f();
@@ -29,7 +41,7 @@ module;
 #include "std-10-2-ex2-b.h"
 
 export module M;
-import "std-10-2-ex2-c.h";
+import "std-10-2-ex2-c.h";  // expected-warning {{the implementation of header units is in an experimental phase}}
 import X;
 export using ::f, ::g, ::h; // OK
 struct S;                   // expected-note {{target of using declaration}}

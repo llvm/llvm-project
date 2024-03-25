@@ -163,11 +163,11 @@ class R600OpenCLImageTypeLoweringPass : public ModulePass {
 
       Value *Replacement = nullptr;
       StringRef Name = F->getName();
-      if (Name.startswith(GetImageResourceIDFunc)) {
+      if (Name.starts_with(GetImageResourceIDFunc)) {
         Replacement = ConstantInt::get(Int32Type, ResourceID);
-      } else if (Name.startswith(GetImageSizeFunc)) {
+      } else if (Name.starts_with(GetImageSizeFunc)) {
         Replacement = &ImageSizeArg;
-      } else if (Name.startswith(GetImageFormatFunc)) {
+      } else if (Name.starts_with(GetImageFormatFunc)) {
         Replacement = &ImageFormatArg;
       } else {
         continue;

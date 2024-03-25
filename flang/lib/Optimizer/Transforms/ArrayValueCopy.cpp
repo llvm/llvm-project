@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Optimizer/Builder/Array.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Factory.h"
@@ -14,7 +13,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
-#include "flang/Optimizer/Support/FIRContext.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -574,6 +573,8 @@ static bool conflictOnLoad(llvm::ArrayRef<mlir::Operation *> reach,
   for (auto *op : reach)
     if (auto ld = mlir::dyn_cast<ArrayLoadOp>(op)) {
       mlir::Type ldTy = ld.getMemref().getType();
+      auto globalOpName = mlir::OperationName(fir::GlobalOp::getOperationName(),
+                                              ld.getContext());
       if (ld.getMemref() == addr) {
         if (mutuallyExclusiveSliceRange(ld, st))
           continue;
@@ -589,14 +590,17 @@ static bool conflictOnLoad(llvm::ArrayRef<mlir::Operation *> reach,
         if (optimize && !hasPointerType(ldTy) &&
             !valueMayHaveFirAttributes(
                 ld.getMemref(),
-                {getTargetAttrName(), GlobalOp::getTargetAttrNameStr()}))
+                {getTargetAttrName(),
+                 fir::GlobalOp::getTargetAttrName(globalOpName).strref()}))
           continue;
 
         return true;
       } else if (hasPointerType(ldTy)) {
         if (optimize && !storeHasPointerType &&
             !valueMayHaveFirAttributes(
-                addr, {getTargetAttrName(), GlobalOp::getTargetAttrNameStr()}))
+                addr,
+                {getTargetAttrName(),
+                 fir::GlobalOp::getTargetAttrName(globalOpName).strref()}))
           continue;
 
         return true;
@@ -822,6 +826,16 @@ static mlir::Type getEleTy(mlir::Type ty) {
   return ReferenceType::get(eleTy);
 }
 
+// This is an unsafe way to deduce this (won't be true in internal
+// procedure or inside select-rank for assumed-size). Only here to satisfy
+// legacy code until removed.
+static bool isAssumedSize(llvm::SmallVectorImpl<mlir::Value> &extents) {
+  if (extents.empty())
+    return false;
+  auto cstLen = fir::getIntIfConstant(extents.back());
+  return cstLen.has_value() && *cstLen == -1;
+}
+
 // Extract extents from the ShapeOp/ShapeShiftOp into the result vector.
 static bool getAdjustedExtents(mlir::Location loc,
                                mlir::PatternRewriter &rewriter,
@@ -840,7 +854,7 @@ static bool getAdjustedExtents(mlir::Location loc,
     emitFatalError(loc, "not a fir.shape/fir.shape_shift op");
   }
   auto idxTy = rewriter.getIndexType();
-  if (factory::isAssumedSize(result)) {
+  if (isAssumedSize(result)) {
     // Use slice information to compute the extent of the column.
     auto one = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 1);
     mlir::Value size = one;
@@ -850,8 +864,7 @@ static bool getAdjustedExtents(mlir::Location loc,
         auto triples = sliceOp.getTriples();
         const std::size_t tripleSize = triples.size();
         auto module = arrLoad->getParentOfType<mlir::ModuleOp>();
-        fir::KindMapping kindMap = getKindMapping(module);
-        FirOpBuilder builder(rewriter, kindMap);
+        FirOpBuilder builder(rewriter, module);
         size = builder.genExtentFromTriplet(loc, triples[tripleSize - 3],
                                             triples[tripleSize - 2],
                                             triples[tripleSize - 1], idxTy);
@@ -937,8 +950,7 @@ static mlir::Value genCoorOp(mlir::PatternRewriter &rewriter,
   assert(seqTy && seqTy.isa<SequenceType>());
   const auto dimension = seqTy.cast<SequenceType>().getDimension();
   auto module = load->getParentOfType<mlir::ModuleOp>();
-  fir::KindMapping kindMap = getKindMapping(module);
-  FirOpBuilder builder(rewriter, kindMap);
+  FirOpBuilder builder(rewriter, module);
   auto typeparams = getTypeParamsIfRawData(loc, builder, load, alloc.getType());
   mlir::Value result = rewriter.create<ArrayCoorOp>(
       loc, eleTy, alloc, shape, slice,
@@ -1002,8 +1014,7 @@ void genArrayCopy(mlir::Location loc, mlir::PatternRewriter &rewriter,
   // Reverse the indices so they are in column-major order.
   std::reverse(indices.begin(), indices.end());
   auto module = arrLoad->getParentOfType<mlir::ModuleOp>();
-  fir::KindMapping kindMap = getKindMapping(module);
-  FirOpBuilder builder(rewriter, kindMap);
+  FirOpBuilder builder(rewriter, module);
   auto fromAddr = rewriter.create<ArrayCoorOp>(
       loc, getEleTy(src.getType()), src, shapeOp,
       CopyIn && copyUsingSlice ? sliceOp : mlir::Value{},
@@ -1041,8 +1052,7 @@ genArrayLoadTypeParameters(mlir::Location loc, mlir::PatternRewriter &rewriter,
       if (auto charTy = eleTy.dyn_cast<CharacterType>()) {
         assert(load.getMemref().getType().isa<BoxType>());
         auto module = load->getParentOfType<mlir::ModuleOp>();
-        fir::KindMapping kindMap = getKindMapping(module);
-        FirOpBuilder builder(rewriter, kindMap);
+        FirOpBuilder builder(rewriter, module);
         return {getCharacterLen(loc, builder, load, charTy)};
       }
       TODO(loc, "unhandled dynamic type parameters");
@@ -1094,14 +1104,12 @@ allocateArrayTemp(mlir::Location loc, mlir::PatternRewriter &rewriter,
         loc, fir::BoxType::get(allocmem.getType()), allocmem, shape,
         /*slice=*/mlir::Value{}, typeParams);
     auto module = load->getParentOfType<mlir::ModuleOp>();
-    fir::KindMapping kindMap = getKindMapping(module);
-    FirOpBuilder builder(rewriter, kindMap);
+    FirOpBuilder builder(rewriter, module);
     runtime::genDerivedTypeInitialize(builder, loc, box);
     // Any allocatable component that may have been allocated must be
     // deallocated during the clean-up.
     auto cleanup = [=](mlir::PatternRewriter &r) {
-      fir::KindMapping kindMap = getKindMapping(module);
-      FirOpBuilder builder(r, kindMap);
+      FirOpBuilder builder(r, module);
       runtime::genDerivedTypeDestroy(builder, loc, box);
       r.create<FreeMemOp>(loc, allocmem);
     };

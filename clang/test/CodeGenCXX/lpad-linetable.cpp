@@ -1,6 +1,5 @@
 // RUN: %clang_cc1  -fcxx-exceptions -fexceptions -emit-llvm -debug-info-kind=limited -triple x86_64-apple-darwin10 -std=c++98 %s -o - | FileCheck %s
 // The landing pad should have the line number of the closing brace of the function.
-// rdar://problem/13888152
 // CHECK: ret i32
 // CHECK: landingpad {{.*}}
 // CHECK-NEXT: !dbg ![[LPAD:[0-9]+]]

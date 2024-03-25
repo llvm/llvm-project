@@ -19,14 +19,11 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/ManagedStatic.h"
 #include <cassert>
 #include <cstddef>
 #include <utility>
 
 using namespace clang;
-
-LLVM_INSTANTIATE_REGISTRY(ParsedAttrInfoRegistry)
 
 IdentifierLoc *IdentifierLoc::create(ASTContext &Ctx, SourceLocation Loc,
                                      IdentifierInfo *Ident) {
@@ -103,6 +100,12 @@ void AttributePool::takePool(AttributePool &pool) {
   pool.Attrs.clear();
 }
 
+void AttributePool::takeFrom(ParsedAttributesView &List, AttributePool &Pool) {
+  assert(&Pool != this && "AttributePool can't take attributes from itself");
+  llvm::for_each(List.AttrList, [&Pool](ParsedAttr *A) { Pool.remove(A); });
+  Attrs.insert(Attrs.end(), List.AttrList.begin(), List.AttrList.end());
+}
+
 namespace {
 
 #include "clang/Sema/AttrParsedAttrImpl.inc"
@@ -120,13 +123,7 @@ const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
   if (A.getParsedKind() == AttributeCommonInfo::IgnoredAttribute)
     return IgnoredParsedAttrInfo;
 
-  // Otherwise this may be an attribute defined by a plugin. First instantiate
-  // all plugin attributes if we haven't already done so.
-  static llvm::ManagedStatic<std::list<std::unique_ptr<ParsedAttrInfo>>>
-      PluginAttrInstances;
-  if (PluginAttrInstances->empty())
-    for (auto It : ParsedAttrInfoRegistry::entries())
-      PluginAttrInstances->emplace_back(It.instantiate());
+  // Otherwise this may be an attribute defined by a plugin.
 
   // Search for a ParsedAttrInfo whose name and syntax match.
   std::string FullName = A.getNormalizedFullName();
@@ -134,10 +131,9 @@ const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
   if (SyntaxUsed == AttributeCommonInfo::AS_ContextSensitiveKeyword)
     SyntaxUsed = AttributeCommonInfo::AS_Keyword;
 
-  for (auto &Ptr : *PluginAttrInstances)
-    for (auto &S : Ptr->Spellings)
-      if (S.Syntax == SyntaxUsed && S.NormalizedFullName == FullName)
-        return *Ptr;
+  for (auto &Ptr : getAttributePluginInstances())
+    if (Ptr->hasSpelling(SyntaxUsed, FullName))
+      return *Ptr;
 
   // If we failed to find a match then return a default ParsedAttrInfo.
   static const ParsedAttrInfo DefaultParsedAttrInfo(
@@ -203,7 +199,18 @@ bool ParsedAttr::isTypeAttr() const { return getInfo().IsType; }
 bool ParsedAttr::isStmtAttr() const { return getInfo().IsStmt; }
 
 bool ParsedAttr::existsInTarget(const TargetInfo &Target) const {
-  return getInfo().existsInTarget(Target);
+  Kind K = getParsedKind();
+
+  // If the attribute has a target-specific spelling, check that it exists.
+  // Only call this if the attr is not ignored/unknown. For most targets, this
+  // function just returns true.
+  bool HasSpelling = K != IgnoredAttribute && K != UnknownAttribute &&
+                     K != NoSemaHandlerAttribute;
+  bool TargetSpecificSpellingExists =
+      !HasSpelling ||
+      getInfo().spellingExistsInTarget(Target, getAttributeSpellingListIndex());
+
+  return getInfo().existsInTarget(Target) && TargetSpecificSpellingExists;
 }
 
 bool ParsedAttr::isKnownToGCC() const { return getInfo().IsKnownToGCC; }
@@ -213,6 +220,11 @@ bool ParsedAttr::isSupportedByPragmaAttribute() const {
 }
 
 bool ParsedAttr::slidesFromDeclToDeclSpecLegacyBehavior() const {
+  if (isRegularKeywordAttribute())
+    // The appurtenance rules are applied strictly for all regular keyword
+    // atributes.
+    return false;
+
   assert(isStandardAttributeSyntax());
 
   // We have historically allowed some type attributes with standard attribute

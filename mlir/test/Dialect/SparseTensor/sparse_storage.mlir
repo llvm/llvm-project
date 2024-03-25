@@ -1,15 +1,15 @@
-// RUN: mlir-opt %s -sparsification= | FileCheck %s
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification= | FileCheck %s
 
 #SparseVector64 = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed" ],
-  pointerBitWidth = 64,
-  indexBitWidth = 64
+  map = (d0) -> (d0 : compressed),
+  posWidth = 64,
+  crdWidth = 64
 }>
 
 #SparseVector32 = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed" ],
-  pointerBitWidth = 32,
-  indexBitWidth = 32
+  map = (d0) -> (d0 : compressed),
+  posWidth = 32,
+  crdWidth = 32
 }>
 
 #trait_mul = {
@@ -23,8 +23,8 @@
 }
 
 // CHECK-LABEL: func @mul64(
-// CHECK: %[[C0:.*]] = arith.constant 0 : index
-// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
 // CHECK: %[[P0:.*]] = memref.load %{{.*}}[%[[C0]]] : memref<?xi64>
 // CHECK: %[[B0:.*]] = arith.index_cast %[[P0]] : i64 to index
 // CHECK: %[[P1:.*]] = memref.load %{{.*}}[%[[C1]]] : memref<?xi64>
@@ -49,8 +49,8 @@ func.func @mul64(%arga: tensor<32xf64, #SparseVector64>, %argb: tensor<32xf64>, 
 }
 
 // CHECK-LABEL: func @mul32(
-// CHECK: %[[C0:.*]] = arith.constant 0 : index
-// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
 // CHECK: %[[P0:.*]] = memref.load %{{.*}}[%[[C0]]] : memref<?xi32>
 // CHECK: %[[Z0:.*]] = arith.extui %[[P0]] : i32 to i64
 // CHECK: %[[B0:.*]] = arith.index_cast %[[Z0]] : i64 to index

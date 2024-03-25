@@ -31,7 +31,7 @@ cont:                                             ; preds = %for.body
   %tmp2 = extractvalue { i32, i1 } %tmp0, 0
   %cmp = icmp slt i32 %tmp2, 16
   br i1 %cmp, label %for.body, label %for.cond.cleanup
-; CHECK: Loop %for.body: constant max backedge-taken count is 15
+; CHECK: Loop %for.body: constant max backedge-taken count is i32 15
 }
 
 define void @f_sadd_1(ptr %a) {
@@ -44,7 +44,7 @@ for.cond.cleanup:                                 ; preds = %cont
 
 for.body:                                         ; preds = %entry, %cont
 ; CHECK:  %i.04 = phi i32 [ 0, %entry ], [ %tmp2, %cont ]
-; CHECK-NEXT:  -->  {0,+,1}<%for.body> U: [0,16) S: [0,16)
+; CHECK-NEXT:  -->  {0,+,1}<nuw><nsw><%for.body> U: [0,16) S: [0,16)
 
 ; SCEV can prove <nsw> for the above induction variable; but it does
 ; not bother so before it sees the sext below since it is not a 100%
@@ -66,7 +66,7 @@ cont:                                             ; preds = %for.body
   %tmp2 = extractvalue { i32, i1 } %tmp0, 0
   %cmp = icmp slt i32 %tmp2, 16
   br i1 %cmp, label %for.body, label %for.cond.cleanup
-; CHECK: Loop %for.body: constant max backedge-taken count is 15
+; CHECK: Loop %for.body: constant max backedge-taken count is i32 15
 }
 
 define void @f_sadd_2(ptr %a, ptr %c) {
@@ -198,7 +198,7 @@ for.cond.cleanup:                                 ; preds = %cont
 
 for.body:                                         ; preds = %entry, %cont
 ; CHECK:  %i.04 = phi i32 [ 0, %entry ], [ %tmp2, %cont ]
-; CHECK-NEXT:  -->  {0,+,1}<nuw><%for.body> U: [0,16) S: [0,16)
+; CHECK-NEXT:  -->  {0,+,1}<nuw><nsw><%for.body> U: [0,16) S: [0,16)
 
   %i.04 = phi i32 [ 0, %entry ], [ %tmp2, %cont ]
   %idxprom = sext i32 %i.04 to i64
@@ -216,7 +216,7 @@ cont:                                             ; preds = %for.body
   %tmp2 = extractvalue { i32, i1 } %tmp0, 0
   %cmp = icmp slt i32 %tmp2, 16
   br i1 %cmp, label %for.body, label %for.cond.cleanup
-; CHECK: Loop %for.body: constant max backedge-taken count is 15
+; CHECK: Loop %for.body: constant max backedge-taken count is i32 15
 }
 
 define void @f_ssub(ptr nocapture %a) {
@@ -229,7 +229,7 @@ for.cond.cleanup:                                 ; preds = %cont
 
 for.body:                                         ; preds = %entry, %cont
 ; CHECK:  %i.04 = phi i32 [ 15, %entry ], [ %tmp2, %cont ]
-; CHECK-NEXT:  -->  {15,+,-1}<%for.body> U: [0,16) S: [0,16)
+; CHECK-NEXT:  -->  {15,+,-1}<nsw><%for.body> U: [0,16) S: [0,16)
 
   %i.04 = phi i32 [ 15, %entry ], [ %tmp2, %cont ]
   %idxprom = sext i32 %i.04 to i64
@@ -247,7 +247,7 @@ cont:                                             ; preds = %for.body
   %tmp2 = extractvalue { i32, i1 } %tmp0, 0
   %cmp = icmp sgt i32 %tmp2, -1
   br i1 %cmp, label %for.body, label %for.cond.cleanup
-; CHECK: Loop %for.body: constant max backedge-taken count is 15
+; CHECK: Loop %for.body: constant max backedge-taken count is i32 15
 }
 
 define void @f_usub(ptr nocapture %a) {
@@ -260,7 +260,7 @@ for.cond.cleanup:                                 ; preds = %cont
 
 for.body:                                         ; preds = %entry, %cont
 ; CHECK:  %i.04 = phi i32 [ 15, %entry ], [ %tmp2, %cont ]
-; CHECK-NEXT:  -->  {15,+,-1}<%for.body> U: [0,16) S: [0,16)
+; CHECK-NEXT:  -->  {15,+,-1}<nsw><%for.body> U: [0,16) S: [0,16)
 
   %i.04 = phi i32 [ 15, %entry ], [ %tmp2, %cont ]
   %idxprom = sext i32 %i.04 to i64
@@ -278,7 +278,7 @@ cont:                                             ; preds = %for.body
   %tmp2 = extractvalue { i32, i1 } %tmp0, 0
   %cmp = icmp sgt i32 %tmp2, -1
   br i1 %cmp, label %for.body, label %for.cond.cleanup
-; CHECK: Loop %for.body: constant max backedge-taken count is 15
+; CHECK: Loop %for.body: constant max backedge-taken count is i32 15
 }
 
 define i32 @f_smul(i32 %val_a, i32 %val_b) {

@@ -1,5 +1,15 @@
 # REQUIRES: x86
 
+# FIXME: this should be supported on Windows as well. There is a strange issue
+# happening with command line processing though. The command line argument
+#   --export-dynamic-symbol 'f*'
+# does not have the single quotes stripped on some Windows targets (but not
+# all). This causes the glob matching to fail, which means the test fails on
+# some Windows bots and passes on others. However, there's no clear indication
+# as to what's changed to cause this behavior. Marking the test as unsupported
+# so that we have time to investigate the issue without losing postcommit CI.
+# UNSUPPORTED: system-windows
+
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
 
 ## For an executable, --export-dynamic-symbol exports a symbol if it is non-local and defined.

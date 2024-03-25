@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
+// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
 
 //==============================================================================
 // cache policy is not supported for SMRD instructions
@@ -36,3 +36,11 @@ v_and_b32_e64 v0, 0.159154943091895317852646485335, v1
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // CHECK-NEXT:{{^}}v_and_b32_e64 v0, 0.159154943091895317852646485335, v1
 // CHECK-NEXT:{{^}}                  ^
+
+//==============================================================================
+// cache policy is not supported for SMRD instructions
+
+s_load_dword s5, s[2:3], glc
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: cache policy is not supported for SMRD instructions
+// CHECK-NEXT:{{^}}s_load_dword s5, s[2:3], glc
+// CHECK-NEXT:{{^}}                         ^

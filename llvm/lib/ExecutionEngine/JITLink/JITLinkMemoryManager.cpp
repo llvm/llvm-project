@@ -24,11 +24,12 @@ JITLinkMemoryManager::InFlightAlloc::~InFlightAlloc() = default;
 BasicLayout::BasicLayout(LinkGraph &G) : G(G) {
 
   for (auto &Sec : G.sections()) {
-    // Skip empty sections.
-    if (Sec.blocks().empty())
+    // Skip empty sections, and sections with NoAlloc lifetime policies.
+    if (Sec.blocks().empty() ||
+        Sec.getMemLifetime() == orc::MemLifetime::NoAlloc)
       continue;
 
-    auto &Seg = Segments[{Sec.getMemProt(), Sec.getMemDeallocPolicy()}];
+    auto &Seg = Segments[{Sec.getMemProt(), Sec.getMemLifetime()}];
     for (auto *B : Sec.blocks())
       if (LLVM_LIKELY(!B->isZeroFill()))
         Seg.ContentBlocks.push_back(B);
@@ -89,7 +90,7 @@ BasicLayout::getContiguousPageBasedLayoutSizes(uint64_t PageSize) {
                                      inconvertibleErrorCode());
 
     uint64_t SegSize = alignTo(Seg.ContentSize + Seg.ZeroFillSize, PageSize);
-    if (AG.getMemDeallocPolicy() == orc::MemDeallocPolicy::Standard)
+    if (AG.getMemLifetime() == orc::MemLifetime::Standard)
       SegsSizes.StandardSegs += SegSize;
     else
       SegsSizes.FinalizeSegs += SegSize;
@@ -146,7 +147,7 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
                                 const JITLinkDylib *JD, SegmentMap Segments,
                                 OnCreatedFunction OnCreated) {
 
-  static_assert(orc::AllocGroup::NumGroups == 16,
+  static_assert(orc::AllocGroup::NumGroups == 32,
                 "AllocGroup has changed. Section names below must be updated");
   StringRef AGSectionNames[] = {
       "__---.standard", "__R--.standard", "__-W-.standard", "__RW-.standard",
@@ -154,8 +155,8 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
       "__---.finalize", "__R--.finalize", "__-W-.finalize", "__RW-.finalize",
       "__--X.finalize", "__R-X.finalize", "__-WX.finalize", "__RWX.finalize"};
 
-  auto G =
-      std::make_unique<LinkGraph>("", Triple(), 0, support::native, nullptr);
+  auto G = std::make_unique<LinkGraph>("", Triple(), 0,
+                                       llvm::endianness::native, nullptr);
   orc::AllocGroupSmallMap<Block *> ContentBlocks;
 
   orc::ExecutorAddr NextAddr(0x100000);
@@ -163,12 +164,15 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
     auto &AG = KV.first;
     auto &Seg = KV.second;
 
+    assert(AG.getMemLifetime() != orc::MemLifetime::NoAlloc &&
+           "NoAlloc segments are not supported by SimpleSegmentAlloc");
+
     auto AGSectionName =
         AGSectionNames[static_cast<unsigned>(AG.getMemProt()) |
-                       static_cast<bool>(AG.getMemDeallocPolicy()) << 3];
+                       static_cast<bool>(AG.getMemLifetime()) << 3];
 
     auto &Sec = G->createSection(AGSectionName, AG.getMemProt());
-    Sec.setMemDeallocPolicy(AG.getMemDeallocPolicy());
+    Sec.setMemLifetime(AG.getMemLifetime());
 
     if (Seg.ContentSize != 0) {
       NextAddr =
@@ -415,10 +419,9 @@ void InProcessMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
     auto &AG = KV.first;
     auto &Seg = KV.second;
 
-    auto &SegAddr =
-        (AG.getMemDeallocPolicy() == orc::MemDeallocPolicy::Standard)
-            ? NextStandardSegAddr
-            : NextFinalizeSegAddr;
+    auto &SegAddr = (AG.getMemLifetime() == orc::MemLifetime::Standard)
+                        ? NextStandardSegAddr
+                        : NextFinalizeSegAddr;
 
     Seg.WorkingMem = SegAddr.toPtr<char *>();
     Seg.Addr = SegAddr;
@@ -446,8 +449,7 @@ void InProcessMemoryManager::deallocate(std::vector<FinalizedAlloc> Allocs,
     for (auto &Alloc : Allocs) {
       auto *FA = Alloc.release().toPtr<FinalizedAllocInfo *>();
       StandardSegmentsList.push_back(std::move(FA->StandardSegments));
-      if (!FA->DeallocActions.empty())
-        DeallocActionsList.push_back(std::move(FA->DeallocActions));
+      DeallocActionsList.push_back(std::move(FA->DeallocActions));
       FA->~FinalizedAllocInfo();
       FinalizedAllocInfos.Deallocate(FA);
     }

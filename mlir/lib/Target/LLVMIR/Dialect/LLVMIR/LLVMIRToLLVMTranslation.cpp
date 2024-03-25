@@ -12,6 +12,7 @@
 
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMIRToLLVMTranslation.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/ModuleImport.h"
 
@@ -71,8 +72,9 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
 /// dialect attributes.
 static ArrayRef<unsigned> getSupportedMetadataImpl() {
   static const SmallVector<unsigned> convertibleMetadata = {
-      llvm::LLVMContext::MD_prof, llvm::LLVMContext::MD_tbaa,
-      llvm::LLVMContext::MD_access_group};
+      llvm::LLVMContext::MD_prof,         llvm::LLVMContext::MD_tbaa,
+      llvm::LLVMContext::MD_access_group, llvm::LLVMContext::MD_loop,
+      llvm::LLVMContext::MD_noalias,      llvm::LLVMContext::MD_alias_scope};
   return convertibleMetadata;
 }
 
@@ -82,9 +84,9 @@ static ArrayRef<unsigned> getSupportedMetadataImpl() {
 static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
                                       Operation *op,
                                       LLVM::ModuleImport &moduleImport) {
-  // Return success for empty metadata nodes since there is nothing to import.
+  // Return failure for empty metadata nodes since there is nothing to import.
   if (!node->getNumOperands())
-    return success();
+    return failure();
 
   auto *name = dyn_cast<llvm::MDString>(node->getOperand(0));
   if (!name)
@@ -92,17 +94,21 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
 
   // Handle function entry count metadata.
   if (name->getString().equals("function_entry_count")) {
+
     // TODO support function entry count metadata with GUID fields.
     if (node->getNumOperands() != 2)
       return failure();
 
     llvm::ConstantInt *entryCount =
-        llvm::mdconst::extract<llvm::ConstantInt>(node->getOperand(1));
+        llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(1));
+    if (!entryCount)
+      return failure();
     if (auto funcOp = dyn_cast<LLVMFuncOp>(op)) {
       funcOp.setFunctionEntryCount(entryCount->getZExtValue());
       return success();
     }
-    return failure();
+    return op->emitWarning()
+           << "expected function_entry_count to be attached to a function";
   }
 
   if (!name->getString().equals("branch_weights"))
@@ -113,56 +119,113 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
   branchWeights.reserve(node->getNumOperands() - 1);
   for (unsigned i = 1, e = node->getNumOperands(); i != e; ++i) {
     llvm::ConstantInt *branchWeight =
-        llvm::mdconst::extract<llvm::ConstantInt>(node->getOperand(i));
+        llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(i));
+    if (!branchWeight)
+      return failure();
     branchWeights.push_back(branchWeight->getZExtValue());
   }
 
-  // Attach the branch weights to the operations that support it.
-  return llvm::TypeSwitch<Operation *, LogicalResult>(op)
-      .Case<CondBrOp, SwitchOp, CallOp, InvokeOp>([&](auto branchWeightOp) {
-        branchWeightOp.setBranchWeightsAttr(
-            builder.getI32VectorAttr(branchWeights));
+  if (auto iface = dyn_cast<BranchWeightOpInterface>(op)) {
+    iface.setBranchWeights(builder.getDenseI32ArrayAttr(branchWeights));
+    return success();
+  }
+  return failure();
+}
+
+/// Searches for the attribute that maps to the given TBAA metadata `node` and
+/// attaches it to the imported operation if the lookup succeeds. Returns
+/// failure otherwise.
+static LogicalResult setTBAAAttr(const llvm::MDNode *node, Operation *op,
+                                 LLVM::ModuleImport &moduleImport) {
+  Attribute tbaaTagSym = moduleImport.lookupTBAAAttr(node);
+  if (!tbaaTagSym)
+    return failure();
+
+  auto iface = dyn_cast<AliasAnalysisOpInterface>(op);
+  if (!iface)
+    return failure();
+
+  iface.setTBAATags(ArrayAttr::get(iface.getContext(), tbaaTagSym));
+  return success();
+}
+
+/// Looks up all the access group attributes that map to the access group nodes
+/// starting from the access group metadata `node`, and attaches all of them to
+/// the imported operation if the lookups succeed. Returns failure otherwise.
+static LogicalResult setAccessGroupsAttr(const llvm::MDNode *node,
+                                         Operation *op,
+                                         LLVM::ModuleImport &moduleImport) {
+  FailureOr<SmallVector<AccessGroupAttr>> accessGroups =
+      moduleImport.lookupAccessGroupAttrs(node);
+  if (failed(accessGroups))
+    return failure();
+
+  auto iface = dyn_cast<AccessGroupOpInterface>(op);
+  if (!iface)
+    return failure();
+
+  iface.setAccessGroups(ArrayAttr::get(
+      iface.getContext(), llvm::to_vector_of<Attribute>(*accessGroups)));
+  return success();
+}
+
+/// Converts the given loop metadata node to an MLIR loop annotation attribute
+/// and attaches it to the imported operation if the translation succeeds.
+/// Returns failure otherwise.
+static LogicalResult setLoopAttr(const llvm::MDNode *node, Operation *op,
+                                 LLVM::ModuleImport &moduleImport) {
+  LoopAnnotationAttr attr =
+      moduleImport.translateLoopAnnotationAttr(node, op->getLoc());
+  if (!attr)
+    return failure();
+
+  return TypeSwitch<Operation *, LogicalResult>(op)
+      .Case<LLVM::BrOp, LLVM::CondBrOp>([&](auto branchOp) {
+        branchOp.setLoopAnnotationAttr(attr);
         return success();
       })
       .Default([](auto) { return failure(); });
 }
 
-/// Searches the symbol reference pointing to the metadata operation that
-/// maps to the given TBAA metadata `node` and attaches it to the imported
-/// operation if the lookup succeeds. Returns failure otherwise.
-static LogicalResult setTBAAAttr(const llvm::MDNode *node, Operation *op,
-                                 LLVM::ModuleImport &moduleImport) {
-  SymbolRefAttr tbaaTagSym = moduleImport.lookupTBAAAttr(node);
-  if (!tbaaTagSym)
-    return failure();
-
-  op->setAttr(LLVMDialect::getTBAAAttrName(),
-              ArrayAttr::get(op->getContext(), tbaaTagSym));
-  return success();
-}
-
-/// Searches the symbol references pointing to the access group operations that
-/// map to the access group nodes starting from the access group metadata
-/// `node`, and attaches all of them to the imported operation if the lookups
-/// succeed. Returns failure otherwise.
-static LogicalResult setAccessGroupAttr(const llvm::MDNode *node, Operation *op,
+/// Looks up all the alias scope attributes that map to the alias scope nodes
+/// starting from the alias scope metadata `node`, and attaches all of them to
+/// the imported operation if the lookups succeed. Returns failure otherwise.
+static LogicalResult setAliasScopesAttr(const llvm::MDNode *node, Operation *op,
                                         LLVM::ModuleImport &moduleImport) {
-  // An access group node is either access group or an access group list.
-  SmallVector<Attribute> accessGroups;
-  if (!node->getNumOperands())
-    accessGroups.push_back(moduleImport.lookupAccessGroupAttr(node));
-  for (const llvm::MDOperand &operand : node->operands()) {
-    auto *node = cast<llvm::MDNode>(operand.get());
-    accessGroups.push_back(moduleImport.lookupAccessGroupAttr(node));
-  }
-  // Exit if one of the access group node lookups failed.
-  if (llvm::is_contained(accessGroups, nullptr))
+  FailureOr<SmallVector<AliasScopeAttr>> aliasScopes =
+      moduleImport.lookupAliasScopeAttrs(node);
+  if (failed(aliasScopes))
     return failure();
 
-  op->setAttr(LLVMDialect::getAccessGroupsAttrName(),
-              ArrayAttr::get(op->getContext(), accessGroups));
+  auto iface = dyn_cast<AliasAnalysisOpInterface>(op);
+  if (!iface)
+    return failure();
+
+  iface.setAliasScopes(ArrayAttr::get(
+      iface.getContext(), llvm::to_vector_of<Attribute>(*aliasScopes)));
   return success();
 }
+
+/// Looks up all the alias scope attributes that map to the alias scope nodes
+/// starting from the noalias metadata `node`, and attaches all of them to the
+/// imported operation if the lookups succeed. Returns failure otherwise.
+static LogicalResult setNoaliasScopesAttr(const llvm::MDNode *node,
+                                          Operation *op,
+                                          LLVM::ModuleImport &moduleImport) {
+  FailureOr<SmallVector<AliasScopeAttr>> noAliasScopes =
+      moduleImport.lookupAliasScopeAttrs(node);
+  if (failed(noAliasScopes))
+    return failure();
+
+  auto iface = dyn_cast<AliasAnalysisOpInterface>(op);
+  if (!iface)
+    return failure();
+
+  iface.setNoAliasScopes(ArrayAttr::get(
+      iface.getContext(), llvm::to_vector_of<Attribute>(*noAliasScopes)));
+  return success();
+}
+
 namespace {
 
 /// Implementation of the dialect interface that converts operations belonging
@@ -190,7 +253,13 @@ public:
     if (kind == llvm::LLVMContext::MD_tbaa)
       return setTBAAAttr(node, op, moduleImport);
     if (kind == llvm::LLVMContext::MD_access_group)
-      return setAccessGroupAttr(node, op, moduleImport);
+      return setAccessGroupsAttr(node, op, moduleImport);
+    if (kind == llvm::LLVMContext::MD_loop)
+      return setLoopAttr(node, op, moduleImport);
+    if (kind == llvm::LLVMContext::MD_alias_scope)
+      return setAliasScopesAttr(node, op, moduleImport);
+    if (kind == llvm::LLVMContext::MD_noalias)
+      return setNoaliasScopesAttr(node, op, moduleImport);
 
     // A handler for a supported metadata kind is missing.
     llvm_unreachable("unknown metadata type");

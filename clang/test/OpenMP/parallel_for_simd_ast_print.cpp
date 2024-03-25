@@ -104,7 +104,7 @@ template<class T> struct S {
 // CHECK: T val;
 // CHECK: T lin = 0;
     #pragma omp parallel for simd private(val)  safelen(7) linear(lin : -5) lastprivate(res) simdlen(5) if(7) allocate(lin)
-// CHECK-NEXT: #pragma omp parallel for simd private(val) safelen(7) linear(lin: -5) lastprivate(res) simdlen(5) if(7) allocate(lin)
+// CHECK-NEXT: #pragma omp parallel for simd private(val) safelen(7) linear(lin: step(-5)) lastprivate(res) simdlen(5) if(7) allocate(lin)
     for (T i = 7; i < m_a; ++i) {
       val = v[i-7] + m_a;
       res = val;
@@ -145,7 +145,7 @@ template<int LEN> struct S2 {
 // CHECK: template<> struct S2<4> {
 // CHECK-NEXT: static void func(int n, float *a, float *b, float *c)     {
 // CHECK-NEXT:   int k1 = 0, k2 = 0;
-// CHECK-NEXT: #pragma omp parallel for simd allocate(k1) safelen(4) linear(k1,k2: 4) aligned(a: 4) simdlen(4)
+// CHECK-NEXT: #pragma omp parallel for simd allocate(k1) safelen(4) linear(k1,k2: step(4)) aligned(a: 4) simdlen(4)
 // CHECK-NEXT:   for (int i = 0; i < n; i++) {
 // CHECK-NEXT:     c[i] = a[i] + b[i];
 // CHECK-NEXT:     c[k1] = a[k1] + b[k1];
@@ -191,7 +191,7 @@ int main (int argc, char **argv) {
   const int CLEN = 4;
 // CHECK-NEXT: const int CLEN = 4;
   #pragma omp parallel for simd aligned(a:CLEN) linear(a:CLEN) safelen(CLEN) collapse( 1 ) simdlen(CLEN)
-// CHECK-NEXT: #pragma omp parallel for simd aligned(a: CLEN) linear(a: CLEN) safelen(CLEN) collapse(1) simdlen(CLEN)
+// CHECK-NEXT: #pragma omp parallel for simd aligned(a: CLEN) linear(a: step(CLEN)) safelen(CLEN) collapse(1) simdlen(CLEN)
   for (int i = 0; i < 10; ++i)foo();
 // CHECK-NEXT: for (int i = 0; i < 10; ++i)
 // CHECK-NEXT: foo();

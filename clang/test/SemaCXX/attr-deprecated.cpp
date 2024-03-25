@@ -197,7 +197,6 @@ namespace test5 {
   };
 }
 
-// rdar://problem/8518751
 namespace test6 {
   enum __attribute__((deprecated)) A { // expected-note 2 {{'A' has been explicitly marked deprecated here}}
     a0
@@ -251,7 +250,6 @@ namespace test7 {
   }
 }
 
-// rdar://problem/15044218
 typedef struct TDS {
 } TDS __attribute__((deprecated)); // expected-note {{'TDS' has been explicitly marked deprecated here}}
 TDS tds; // expected-warning {{'TDS' is deprecated}}

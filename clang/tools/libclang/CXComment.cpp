@@ -44,43 +44,43 @@ enum CXCommentKind clang_Comment_getKind(CXComment CXC) {
     return CXComment_Null;
 
   switch (C->getCommentKind()) {
-  case Comment::NoCommentKind:
+  case CommentKind::None:
     return CXComment_Null;
 
-  case Comment::TextCommentKind:
+  case CommentKind::TextComment:
     return CXComment_Text;
 
-  case Comment::InlineCommandCommentKind:
+  case CommentKind::InlineCommandComment:
     return CXComment_InlineCommand;
 
-  case Comment::HTMLStartTagCommentKind:
+  case CommentKind::HTMLStartTagComment:
     return CXComment_HTMLStartTag;
 
-  case Comment::HTMLEndTagCommentKind:
+  case CommentKind::HTMLEndTagComment:
     return CXComment_HTMLEndTag;
 
-  case Comment::ParagraphCommentKind:
+  case CommentKind::ParagraphComment:
     return CXComment_Paragraph;
 
-  case Comment::BlockCommandCommentKind:
+  case CommentKind::BlockCommandComment:
     return CXComment_BlockCommand;
 
-  case Comment::ParamCommandCommentKind:
+  case CommentKind::ParamCommandComment:
     return CXComment_ParamCommand;
 
-  case Comment::TParamCommandCommentKind:
+  case CommentKind::TParamCommandComment:
     return CXComment_TParamCommand;
 
-  case Comment::VerbatimBlockCommentKind:
+  case CommentKind::VerbatimBlockComment:
     return CXComment_VerbatimBlockCommand;
 
-  case Comment::VerbatimBlockLineCommentKind:
+  case CommentKind::VerbatimBlockLineComment:
     return CXComment_VerbatimBlockLine;
 
-  case Comment::VerbatimLineCommentKind:
+  case CommentKind::VerbatimLineComment:
     return CXComment_VerbatimLine;
 
-  case Comment::FullCommentKind:
+  case CommentKind::FullComment:
     return CXComment_FullComment;
   }
   llvm_unreachable("unknown CommentKind");
@@ -148,19 +148,19 @@ clang_InlineCommandComment_getRenderKind(CXComment CXC) {
     return CXCommentInlineCommandRenderKind_Normal;
 
   switch (ICC->getRenderKind()) {
-  case InlineCommandComment::RenderNormal:
+  case InlineCommandRenderKind::Normal:
     return CXCommentInlineCommandRenderKind_Normal;
 
-  case InlineCommandComment::RenderBold:
+  case InlineCommandRenderKind::Bold:
     return CXCommentInlineCommandRenderKind_Bold;
 
-  case InlineCommandComment::RenderMonospaced:
+  case InlineCommandRenderKind::Monospaced:
     return CXCommentInlineCommandRenderKind_Monospaced;
 
-  case InlineCommandComment::RenderEmphasized:
+  case InlineCommandRenderKind::Emphasized:
     return CXCommentInlineCommandRenderKind_Emphasized;
 
-  case InlineCommandComment::RenderAnchor:
+  case InlineCommandRenderKind::Anchor:
     return CXCommentInlineCommandRenderKind_Anchor;
   }
   llvm_unreachable("unknown InlineCommandComment::RenderKind");
@@ -296,13 +296,13 @@ enum CXCommentParamPassDirection clang_ParamCommandComment_getDirection(
     return CXCommentParamPassDirection_In;
 
   switch (PCC->getDirection()) {
-  case ParamCommandComment::In:
+  case ParamCommandPassDirection::In:
     return CXCommentParamPassDirection_In;
 
-  case ParamCommandComment::Out:
+  case ParamCommandPassDirection::Out:
     return CXCommentParamPassDirection_Out;
 
-  case ParamCommandComment::InOut:
+  case ParamCommandPassDirection::InOut:
     return CXCommentParamPassDirection_InOut;
   }
   llvm_unreachable("unknown ParamCommandComment::PassDirection");

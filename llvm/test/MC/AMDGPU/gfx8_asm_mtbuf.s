@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s
 
 tbuffer_load_format_x v5, off, s[8:11], s3 offset:4095
 // CHECK: [0xff,0x0f,0x08,0xe8,0x00,0x05,0x02,0x03]

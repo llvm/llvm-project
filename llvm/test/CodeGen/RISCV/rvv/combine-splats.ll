@@ -59,20 +59,15 @@ define <vscale x 2 x i64> @or_and_nxv2i64_fold(<vscale x 2 x i64> %a0) {
 define <vscale x 4 x i32> @combine_vec_shl_shl(<vscale x 4 x i32> %x) {
 ; CHECK-LABEL: combine_vec_shl_shl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 2
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a0
-; CHECK-NEXT:    li a0, 4
-; CHECK-NEXT:    vmv.s.x v12, a0
-; CHECK-NEXT:    vsll.vv v8, v8, v10
-; CHECK-NEXT:    vsll.vv v8, v8, v12
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsll.vi v8, v8, 6
 ; CHECK-NEXT:    ret
   %ins1 = insertelement <vscale x 4 x i32> poison, i32 2, i32 0
   %splat1 = shufflevector <vscale x 4 x i32> %ins1, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %ins2 = insertelement <vscale x 4 x i32> poison, i32 4, i32 0
   %splat2 = shufflevector <vscale x 4 x i32> %ins2, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-  %v1 = shl <vscale x 4 x i32> %x, %ins1
-  %v2 = shl <vscale x 4 x i32> %v1, %ins2
+  %v1 = shl <vscale x 4 x i32> %x, %splat1
+  %v2 = shl <vscale x 4 x i32> %v1, %splat2
   ret <vscale x 4 x i32> %v2
 }
 

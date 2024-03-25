@@ -15,14 +15,23 @@
 #define LLVM_SUPPORT_ENDIANSTREAM_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 namespace support {
 
 namespace endian {
+
+template <typename value_type>
+inline void write_array(raw_ostream &os, ArrayRef<value_type> values,
+                        endianness endian) {
+  for (const auto orig : values) {
+    value_type value = byte_swap<value_type>(orig, endian);
+    os.write((const char *)&value, sizeof(value_type));
+  }
+}
 
 template <typename value_type>
 inline void write(raw_ostream &os, value_type value, endianness endian) {
@@ -32,13 +41,13 @@ inline void write(raw_ostream &os, value_type value, endianness endian) {
 
 template <>
 inline void write<float>(raw_ostream &os, float value, endianness endian) {
-  write(os, FloatToBits(value), endian);
+  write(os, llvm::bit_cast<uint32_t>(value), endian);
 }
 
 template <>
 inline void write<double>(raw_ostream &os, double value,
                           endianness endian) {
-  write(os, DoubleToBits(value), endian);
+  write(os, llvm::bit_cast<uint64_t>(value), endian);
 }
 
 template <typename value_type>
@@ -46,6 +55,12 @@ inline void write(raw_ostream &os, ArrayRef<value_type> vals,
                   endianness endian) {
   for (value_type v : vals)
     write(os, v, endian);
+}
+
+template <typename value_type>
+inline void write(SmallVectorImpl<char> &Out, value_type V, endianness E) {
+  V = byte_swap<value_type>(V, E);
+  Out.append((const char *)&V, (const char *)&V + sizeof(value_type));
 }
 
 /// Adapter to write values to a stream in a particular byte order.

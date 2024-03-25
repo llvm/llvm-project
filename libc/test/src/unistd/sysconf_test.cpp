@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/unistd/sysconf.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <unistd.h>
 
 TEST(LlvmLibcSysconfTest, PagesizeTest) {
-  long pagesize = __llvm_libc::sysconf(_SC_PAGESIZE);
+  long pagesize = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
   ASSERT_GT(pagesize, 0l);
 }

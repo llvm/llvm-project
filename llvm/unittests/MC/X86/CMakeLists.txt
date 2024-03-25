@@ -1,7 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   MC
   MCDisassembler
-  Target
   TargetParser
   X86Desc
   X86Disassembler

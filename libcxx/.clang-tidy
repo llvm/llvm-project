@@ -15,6 +15,7 @@ Checks: >
 
   modernize-loop-convert,
   modernize-redundant-void-arg,
+  modernize-use-nullptr,
   modernize-use-override,
 
   readability-duplicate-include,
@@ -46,6 +47,18 @@ CheckOptions:
     value: __
   - key:   readability-identifier-naming.PrivateMemberSuffix
     value: _
+  - key:   readability-identifier-naming.LocalVariableCase
+    value: lower_case
+  - key:   readability-identifier-naming.LocalVariablePrefix
+    value: __
+  - key:   readability-identifier-naming.TemplateParameterCase
+    value: CamelCase
+  - key:   readability-identifier-naming.TemplateParameterPrefix
+    value: _
+  - key:   readability-identifier-naming.TemplateParameterIgnoredRegexp
+    value: (.*\:auto|expr-type) # This is https://llvm.org/PR56464
+  - key:   readability-identifier-naming.ValueTemplateParameterIgnoredRegexp # TODO: enforce naming of variable parameters
+    value: .*
 
 # TODO: investigate these checks
 # bugprone-branch-clone,
@@ -56,7 +69,6 @@ CheckOptions:
 # modernize-use-default-member-init,
 # modernize-use-equals-default,
 # modernize-use-equals-delete,
-# modernize-use-nullptr,
 # portability-restrict-system-includes,
 # readability-function-cognitive-complexity,
 # readability-implicit-bool-conversion,

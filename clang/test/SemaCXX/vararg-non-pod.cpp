@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -fblocks %s -Wno-error=non-pod-varargs
-// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -std=c++98 %s -Wno-error=non-pod-varargs
-// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -std=c++11 %s -Wno-error=non-pod-varargs
+// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -std=gnu++98 %s -Wno-error=non-pod-varargs
+// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -std=gnu++11 %s -Wno-error=non-pod-varargs
 
 // Check that the warning is still there under -fms-compatibility.
 // RUN: %clang_cc1 -fsyntax-only -verify -fblocks %s -Wno-error=non-pod-varargs -fms-compatibility
-// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -std=c++98 %s -Wno-error=non-pod-varargs -fms-compatibility
-// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -std=c++11 %s -Wno-error=non-pod-varargs -fms-compatibility
+// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -std=gnu++98 %s -Wno-error=non-pod-varargs -fms-compatibility
+// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -std=gnu++11 %s -Wno-error=non-pod-varargs -fms-compatibility
 
 extern char version[];
 
@@ -21,7 +21,7 @@ void g(int a, ...);
 void t1()
 {
   C c(10);
-  
+
   g(10, c);
 #if __cplusplus <= 199711L
   // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic function; call will abort at runtime}}
@@ -56,7 +56,7 @@ void t2()
 #endif
 
   (c.*ptr)(10, version);
- 
+
   C::h(10, c);
 #if __cplusplus <= 199711L
   // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic function; call will abort at runtime}}
@@ -64,7 +64,7 @@ void t2()
 
   C::h(10, version);
 
-  void (*static_ptr)(int, ...) = &C::h; 
+  void (*static_ptr)(int, ...) = &C::h;
   static_ptr(10, c);
 #if __cplusplus <= 199711L
   // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic function; call will abort at runtime}}
@@ -78,7 +78,7 @@ int (^block)(int, ...);
 void t3()
 {
   C c(10);
-  
+
   block(10, c);
 #if __cplusplus <= 199711L
   // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic block; call will abort at runtime}}
@@ -97,7 +97,7 @@ void t4()
   C c(10);
 
   D d;
-  
+
   d(10, c);
 #if __cplusplus <= 199711L
   // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic method; call will abort at runtime}}
@@ -113,7 +113,7 @@ class E {
 void t5()
 {
   C c(10);
-  
+
   E e(10, c);
 #if __cplusplus <= 199711L
   // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic constructor; call will abort at runtime}}
@@ -156,8 +156,7 @@ void test_typeid(Base &base) {
 }
 
 
-// rdar://7985267 - Shouldn't warn, doesn't actually use __builtin_va_start is
-// magic.
+// Shouldn't warn, doesn't actually use __builtin_va_start is magic.
 
 void t6(Foo somearg, ... ) {
   __builtin_va_list list;

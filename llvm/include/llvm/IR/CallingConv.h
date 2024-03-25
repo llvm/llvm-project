@@ -52,8 +52,8 @@ namespace CallingConv {
     /// Used by the High-Performance Erlang Compiler (HiPE).
     HiPE = 11,
 
-    /// Used for stack based JavaScript calls
-    WebKit_JS = 12,
+    /// OBSOLETED - Used for stack based JavaScript calls
+    // WebKit_JS = 12,
 
     /// Used for dynamic register based calls (e.g. stackmap and patchpoint
     /// intrinsics).
@@ -85,6 +85,9 @@ namespace CallingConv {
     /// but guarantees tail calls will be made by making the callee clean up
     /// their stack.
     SwiftTail = 20,
+
+    /// Used for runtime calls that preserves none general registers.
+    PreserveNone = 21,
 
     /// This is the start of the target-specific calling conventions, e.g.
     /// fastcall and thiscall on X86.
@@ -159,13 +162,9 @@ namespace CallingConv {
     /// registers.
     X86_VectorCall = 80,
 
-    /// Used by HipHop Virtual Machine (HHVM) to perform calls to and from
-    /// translation cache, and for calling PHP functions. HHVM calling
-    /// convention supports tail/sibling call elimination.
-    HHVM = 81,
-
-    /// HHVM calling convention for invoking C/C++ helpers.
-    HHVM_C = 82,
+    /// Placeholders for HHVM calling conventions (deprecated, removed).
+    DUMMY_HHVM = 81,
+    DUMMY_HHVM_C = 82,
 
     /// x86 hardware interrupt context. Callee may take one or two parameters,
     /// where the 1st represents a pointer to hardware context frame and the 2nd
@@ -240,6 +239,30 @@ namespace CallingConv {
 
     /// Preserve X2-X15, X19-X29, SP, Z0-Z31, P0-P15.
     AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2 = 103,
+
+    /// Used on AMDGPUs to give the middle-end more control over argument
+    /// placement.
+    AMDGPU_CS_Chain = 104,
+
+    /// Used on AMDGPUs to give the middle-end more control over argument
+    /// placement. Preserves active lane values for input VGPRs.
+    AMDGPU_CS_ChainPreserve = 105,
+
+    /// Used for M68k rtd-based CC (similar to X86's stdcall).
+    M68k_RTD = 106,
+
+    /// Used by GraalVM. Two additional registers are reserved.
+    GRAAL = 107,
+
+    /// Calling convention used in the ARM64EC ABI to implement calls between
+    /// x64 code and thunks. This is basically the x64 calling convention using
+    /// ARM64 register names. The first parameter is mapped to x9.
+    ARM64EC_Thunk_X64 = 108,
+
+    /// Calling convention used in the ARM64EC ABI to implement calls between
+    /// ARM64 code and thunks. This is just the ARM64 calling convention,
+    /// except that the first parameter is mapped to x9.
+    ARM64EC_Thunk_Native = 109,
 
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023

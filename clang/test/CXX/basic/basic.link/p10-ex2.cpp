@@ -5,7 +5,9 @@
 //
 // RUN: %clang_cc1 -std=c++20 M.cpp -fsyntax-only -DTEST_INTERFACE -verify
 // RUN: %clang_cc1 -std=c++20 M.cpp -emit-module-interface -o M.pcm
-// RUN: %clang_cc1 -std=c++20 useM.cpp -fsyntax-only -fmodule-file=M.pcm -verify
+// RUN: %clang_cc1 -std=c++20 M.cpp -emit-reduced-module-interface -o M.reduced.pcm
+// RUN: %clang_cc1 -std=c++20 useM.cpp -fsyntax-only -fmodule-file=M=M.pcm -verify
+// RUN: %clang_cc1 -std=c++20 useM.cpp -fsyntax-only -fmodule-file=M=M.reduced.pcm -verify
 
 //--- decls.h
 int f(); // #1, attached to the global module

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-debug-mode, c++03, c++11, c++14
+// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03, c++11, c++14
 
 // test container debugging
 

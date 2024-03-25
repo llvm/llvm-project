@@ -12,6 +12,7 @@
 
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -19,6 +20,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "moduleutils"
@@ -31,11 +33,9 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
   // Get the current set of static global constructors and add the new ctor
   // to the list.
   SmallVector<Constant *, 16> CurrentCtors;
-  StructType *EltTy = StructType::get(
-      IRB.getInt32Ty(), PointerType::get(FnTy, F->getAddressSpace()),
-      IRB.getInt8PtrTy());
-
+  StructType *EltTy;
   if (GlobalVariable *GVCtor = M.getNamedGlobal(ArrayName)) {
+    EltTy = cast<StructType>(GVCtor->getValueType()->getArrayElementType());
     if (Constant *Init = GVCtor->getInitializer()) {
       unsigned n = Init->getNumOperands();
       CurrentCtors.reserve(n + 1);
@@ -43,14 +43,18 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
         CurrentCtors.push_back(cast<Constant>(Init->getOperand(i)));
     }
     GVCtor->eraseFromParent();
+  } else {
+    EltTy = StructType::get(IRB.getInt32Ty(),
+                            PointerType::get(FnTy, F->getAddressSpace()),
+                            IRB.getPtrTy());
   }
 
   // Build a 3 field global_ctor entry.  We don't take a comdat key.
   Constant *CSVals[3];
   CSVals[0] = IRB.getInt32(Priority);
   CSVals[1] = F;
-  CSVals[2] = Data ? ConstantExpr::getPointerCast(Data, IRB.getInt8PtrTy())
-                   : Constant::getNullValue(IRB.getInt8PtrTy());
+  CSVals[2] = Data ? ConstantExpr::getPointerCast(Data, IRB.getPtrTy())
+                   : Constant::getNullValue(IRB.getPtrTy());
   Constant *RuntimeCtorInit =
       ConstantStruct::get(EltTy, ArrayRef(CSVals, EltTy->getNumElements()));
 
@@ -92,7 +96,7 @@ static void appendToUsedList(Module &M, StringRef Name, ArrayRef<GlobalValue *> 
   if (GV)
     GV->eraseFromParent();
 
-  Type *ArrayEltTy = llvm::Type::getInt8PtrTy(M.getContext());
+  Type *ArrayEltTy = llvm::PointerType::getUnqual(M.getContext());
   for (auto *V : Values)
     Init.insert(ConstantExpr::getPointerBitCastOrAddrSpaceCast(V, ArrayEltTy));
 
@@ -297,7 +301,7 @@ std::string llvm::getUniqueModuleId(Module *M) {
   MD5 Md5;
   bool ExportsSymbols = false;
   auto AddGlobal = [&](GlobalValue &GV) {
-    if (GV.isDeclaration() || GV.getName().startswith("llvm.") ||
+    if (GV.isDeclaration() || GV.getName().starts_with("llvm.") ||
         !GV.hasExternalLinkage() || GV.hasComdat())
       return;
     ExportsSymbols = true;
@@ -323,34 +327,6 @@ std::string llvm::getUniqueModuleId(Module *M) {
   SmallString<32> Str;
   MD5::stringifyResult(R, Str);
   return ("." + Str).str();
-}
-
-void VFABI::setVectorVariantNames(CallInst *CI,
-                                  ArrayRef<std::string> VariantMappings) {
-  if (VariantMappings.empty())
-    return;
-
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  for (const std::string &VariantMapping : VariantMappings)
-    Out << VariantMapping << ",";
-  // Get rid of the trailing ','.
-  assert(!Buffer.str().empty() && "Must have at least one char.");
-  Buffer.pop_back();
-
-  Module *M = CI->getModule();
-#ifndef NDEBUG
-  for (const std::string &VariantMapping : VariantMappings) {
-    LLVM_DEBUG(dbgs() << "VFABI: adding mapping '" << VariantMapping << "'\n");
-    std::optional<VFInfo> VI = VFABI::tryDemangleForVFABI(VariantMapping, *M);
-    assert(VI && "Cannot add an invalid VFABI name.");
-    assert(M->getNamedValue(VI->VectorName) &&
-           "Cannot add variant to attribute: "
-           "vector function declaration is missing.");
-  }
-#endif
-  CI->addFnAttr(
-      Attribute::get(M->getContext(), MappingsAttrName, Buffer.str()));
 }
 
 void llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
@@ -390,9 +366,7 @@ bool llvm::lowerGlobalIFuncUsersAsGlobalCtor(
   const DataLayout &DL = M.getDataLayout();
 
   PointerType *TableEntryTy =
-      Ctx.supportsTypedPointers()
-          ? PointerType::get(Type::getInt8Ty(Ctx), DL.getProgramAddressSpace())
-          : PointerType::get(Ctx, DL.getProgramAddressSpace());
+      PointerType::get(Ctx, DL.getProgramAddressSpace());
 
   ArrayType *FuncPtrTableTy =
       ArrayType::get(TableEntryTy, IFuncsToLower.size());
@@ -462,9 +436,7 @@ bool llvm::lowerGlobalIFuncUsersAsGlobalCtor(
 
   InitBuilder.CreateRetVoid();
 
-  PointerType *ConstantDataTy = Ctx.supportsTypedPointers()
-                                    ? PointerType::get(Type::getInt8Ty(Ctx), 0)
-                                    : PointerType::get(Ctx, 0);
+  PointerType *ConstantDataTy = PointerType::get(Ctx, 0);
 
   // TODO: Is this the right priority? Probably should be before any other
   // constructors?

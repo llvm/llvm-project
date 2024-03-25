@@ -48,16 +48,13 @@ static void removeGlobalCtors(GlobalVariable *GCL, const BitVector &CtorsToRemov
   GlobalVariable *NGV =
       new GlobalVariable(CA->getType(), GCL->isConstant(), GCL->getLinkage(),
                          CA, "", GCL->getThreadLocalMode());
-  GCL->getParent()->getGlobalList().insert(GCL->getIterator(), NGV);
+  GCL->getParent()->insertGlobalVariable(GCL->getIterator(), NGV);
   NGV->takeName(GCL);
 
   // Nuke the old list, replacing any uses with the new one.
-  if (!GCL->use_empty()) {
-    Constant *V = NGV;
-    if (V->getType() != GCL->getType())
-      V = ConstantExpr::getBitCast(V, GCL->getType());
-    GCL->replaceAllUsesWith(V);
-  }
+  if (!GCL->use_empty())
+    GCL->replaceAllUsesWith(NGV);
+
   GCL->eraseFromParent();
 }
 

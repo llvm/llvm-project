@@ -190,10 +190,10 @@
 // Ensure we output the user's specified name in device-only mode.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -### \
-// RUN:        --cuda-gpu-arch=sm_52 --cuda-device-only -c -o foo.o %s 2>&1 \
+// RUN:        --cuda-gpu-arch=sm_52 --cuda-device-only -c -o foo.o --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix=D_ONLY %s
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -### --offload-new-driver \
-// RUN:        --cuda-gpu-arch=sm_52 --cuda-device-only -c -o foo.o %s 2>&1 \
+// RUN:        --cuda-gpu-arch=sm_52 --cuda-device-only -c -o foo.o --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix=D_ONLY %s
 // D_ONLY: "foo.o"
 
@@ -209,7 +209,7 @@
 // MULTI-D-ONLY-NEXT: # "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT]]"], output: "[[PTX_52:.+]]"
 // MULTI-D-ONLY-NEXT: # "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[PTX_52]]"], output: "[[CUBIN_52:.+]]"
 //
-// RUN: %clang -### -target powerpc64le-ibm-linux-gnu --offload-new-driver -ccc-print-bindings \
+// RUN: not %clang -### --target=powerpc64le-ibm-linux-gnu --offload-new-driver -ccc-print-bindings \
 // RUN:        --offload-arch=sm_70 --offload-arch=sm_52 --offload-device-only -c -o %t %s 2>&1 \
 // RUN: | FileCheck -check-prefix=MULTI-D-ONLY-O %s
 // MULTI-D-ONLY-O: error: cannot specify -o when generating multiple output files
@@ -219,7 +219,7 @@
 // driver.
 // 
 // RUN: %clang -### -target powerpc64le-ibm-linux-gnu --offload-new-driver \
-// RUN:        -fsyntax-only --offload-arch=sm_70 --offload-arch=sm_52 -c %s 2>&1 \
+// RUN:        -fsyntax-only --offload-arch=sm_70 --offload-arch=sm_52 -c --cuda-path=%S/Inputs/CUDA_111/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix=SYNTAX-ONLY %s
 // SYNTAX-ONLY: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-fsyntax-only"
 // SYNTAX-ONLY: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-fsyntax-only"
@@ -229,7 +229,7 @@
 // Check to ensure that we can use '-save-temps' when operating in RDC-mode.
 //
 // RUN: %clang -### -target powerpc64le-ibm-linux-gnu -save-temps --offload-new-driver \
-// RUN:        -fgpu-rdc --offload-arch=sm_70 --offload-arch=sm_52 -c %s 2>&1 \
+// RUN:        -fgpu-rdc --offload-arch=sm_70 --offload-arch=sm_52 -c --cuda-path=%S/Inputs/CUDA_111/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix=SAVE-TEMPS %s
 // SAVE-TEMPS: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_52"
 // SAVE-TEMPS: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_70"
@@ -238,7 +238,7 @@
 //
 // Check to ensure that we cannot use '-foffload' when not operating in RDC-mode.
 //
-// RUN: %clang -### -target powerpc64le-ibm-linux-gnu -fno-gpu-rdc --offload-new-driver \
+// RUN: not %clang -### --target=powerpc64le-ibm-linux-gnu -fno-gpu-rdc --offload-new-driver \
 // RUN:        -foffload-lto --offload-arch=sm_70 --offload-arch=sm_52 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix=LTO-NO-RDC %s
 // LTO-NO-RDC: error: unsupported option '-foffload-lto' for language mode '-fno-gpu-rdc'

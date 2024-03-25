@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -ftemplate-depth 16 -fcxx-exceptions -fexceptions %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -ftemplate-depth=16 -fcxx-exceptions -fexceptions %s
 
 template<int N> struct X {
   static int go(int a) noexcept(noexcept(X<N+1>::go(a))); // \

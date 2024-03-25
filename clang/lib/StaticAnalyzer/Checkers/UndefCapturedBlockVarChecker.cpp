@@ -27,7 +27,7 @@ using namespace ento;
 namespace {
 class UndefCapturedBlockVarChecker
   : public Checker< check::PostStmt<BlockExpr> > {
-  mutable std::unique_ptr<BugType> BT;
+  const BugType BT{this, "uninitialized variable captured by block"};
 
 public:
   void checkPostStmt(const BlockExpr *BE, CheckerContext &C) const;
@@ -57,13 +57,10 @@ UndefCapturedBlockVarChecker::checkPostStmt(const BlockExpr *BE,
   ProgramStateRef state = C.getState();
   auto *R = cast<BlockDataRegion>(C.getSVal(BE).getAsRegion());
 
-  BlockDataRegion::referenced_vars_iterator I = R->referenced_vars_begin(),
-                                            E = R->referenced_vars_end();
-
-  for (; I != E; ++I) {
+  for (auto Var : R->referenced_vars()) {
     // This VarRegion is the region associated with the block; we need
     // the one associated with the encompassing context.
-    const VarRegion *VR = I.getCapturedRegion();
+    const VarRegion *VR = Var.getCapturedRegion();
     const VarDecl *VD = VR->getDecl();
 
     if (VD->hasAttr<BlocksAttr>() || !VD->hasLocalStorage())
@@ -71,12 +68,8 @@ UndefCapturedBlockVarChecker::checkPostStmt(const BlockExpr *BE,
 
     // Get the VarRegion associated with VD in the local stack frame.
     if (std::optional<UndefinedVal> V =
-            state->getSVal(I.getOriginalRegion()).getAs<UndefinedVal>()) {
+            state->getSVal(Var.getOriginalRegion()).getAs<UndefinedVal>()) {
       if (ExplodedNode *N = C.generateErrorNode()) {
-        if (!BT)
-          BT.reset(
-              new BuiltinBug(this, "uninitialized variable captured by block"));
-
         // Generate a bug report.
         SmallString<128> buf;
         llvm::raw_svector_ostream os(buf);
@@ -84,7 +77,7 @@ UndefCapturedBlockVarChecker::checkPostStmt(const BlockExpr *BE,
         os << "Variable '" << VD->getName()
            << "' is uninitialized when captured by block";
 
-        auto R = std::make_unique<PathSensitiveBugReport>(*BT, os.str(), N);
+        auto R = std::make_unique<PathSensitiveBugReport>(BT, os.str(), N);
         if (const Expr *Ex = FindBlockDeclRefExpr(BE->getBody(), VD))
           R->addRange(Ex->getSourceRange());
         bugreporter::trackStoredValue(*V, VR, *R,

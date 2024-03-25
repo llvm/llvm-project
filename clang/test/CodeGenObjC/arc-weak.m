@@ -3,7 +3,6 @@
 __attribute((objc_root_class)) @interface A @end
 @interface B : A @end
 
-// rdar://problem/23559789
 //   Ensure that type differences don't cause an assert here.
 void test0(__weak B **src) {
   __weak A *dest = *src;

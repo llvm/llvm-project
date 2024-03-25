@@ -54,7 +54,7 @@ void test_container( std::initializer_list<T>& c)
     assert ( std::data(c)   == c.begin());
 }
 
-template<typename T, size_t Sz>
+template<typename T, std::size_t Sz>
 void test_const_array( const T (&array)[Sz] )
 {
     ASSERT_NOEXCEPT(std::data(array));

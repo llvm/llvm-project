@@ -1,4 +1,5 @@
 ; RUN: opt %s -passes=dce -S | FileCheck %s
+; RUN: opt %s -passes=dce -S --try-experimental-debuginfo-iterators | FileCheck %s
 
 ;; Tests that a DIExpression will only be salvaged up to a certain length, and
 ;; will produce an undef value if an expression would need to exceed that length.

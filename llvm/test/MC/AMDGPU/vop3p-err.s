@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefix=GFX9 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefix=GFX9 --implicit-check-not=error: %s
 
 // GFX9: :[[@LINE+1]]:25: error: invalid operand for instruction
 v_pk_add_u16 v1, v2, v3 op_sel

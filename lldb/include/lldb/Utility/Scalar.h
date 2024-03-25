@@ -101,7 +101,7 @@ public:
 
   const char *GetTypeAsCString() const { return GetValueTypeAsCString(m_type); }
 
-  void GetValue(Stream *s, bool show_type) const;
+  void GetValue(Stream &s, bool show_type) const;
 
   bool IsValid() const { return (m_type >= e_int) && (m_type <= e_float); }
 

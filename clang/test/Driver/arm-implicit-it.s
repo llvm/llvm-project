@@ -13,7 +13,7 @@
 // RUN: %clang -target armv7--none-eabi -mimplicit-it=always -### %s 2>&1 \
 // RUN:    | FileCheck %s -check-prefix CHECK-ALWAYS
 
-// RUN: %clang -target armv7--none-eabi -mimplicit-it=thisisnotavalidoption -### %s 2>&1 \
+// RUN: not %clang --target=armv7--none-eabi -mimplicit-it=thisisnotavalidoption -### %s 2>&1 \
 // RUN:    | FileCheck %s -check-prefix CHECK-INVALID
 
 // CHECK-DEFAULT-NOT: "-arm-implicit-it

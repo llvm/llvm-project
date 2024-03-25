@@ -53,8 +53,8 @@ public:
 
   /// This method registers a callback function that will be called to decompose
   /// a value of a certain type into 0, 1, or multiple values.
-  template <typename FnT,
-            typename T = typename llvm::function_traits<FnT>::template arg_t<2>>
+  template <typename FnT, typename T = typename llvm::function_traits<
+                              std::decay_t<FnT>>::template arg_t<2>>
   void addDecomposeValueConversion(FnT &&callback) {
     decomposeValueConversions.emplace_back(
         wrapDecomposeValueConversionCallback<T>(std::forward<FnT>(callback)));
@@ -73,7 +73,7 @@ private:
         [callback = std::forward<FnT>(callback)](
             OpBuilder &builder, Location loc, Type type, Value value,
             SmallVectorImpl<Value> &newValues) -> std::optional<LogicalResult> {
-          if (T derivedType = type.dyn_cast<T>())
+          if (T derivedType = dyn_cast<T>(type))
             return callback(builder, loc, derivedType, value, newValues);
           return std::nullopt;
         };

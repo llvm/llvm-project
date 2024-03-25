@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple spir64 -fsycl-is-device -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple spir64 -fsycl-is-device -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s
 
 // CHECK: [[ANNOT:.+]] = private unnamed_addr addrspace(1) constant {{.*}}c"my_annotation\00"
 
@@ -11,9 +11,8 @@ struct HasField {
 
 void foo(int *b) {
   struct HasField f;
-  // CHECK: %[[A:.+]] = getelementptr inbounds %struct.HasField, %struct.HasField addrspace(4)* %{{.+}}
-  // CHECK: %[[BITCAST:.+]] = bitcast i32 addrspace(4)* addrspace(4)* %[[A]] to i8 addrspace(4)*
-  // CHECK: %[[CALL:.+]] = call i8 addrspace(4)* @llvm.ptr.annotation.p4i8.p1i8(i8 addrspace(4)* %[[BITCAST]], i8 addrspace(1)* getelementptr inbounds ([14 x i8], [14 x i8] addrspace(1)* [[ANNOT]]
-  // CHECK: bitcast i8 addrspace(4)* %[[CALL]] to i32 addrspace(4)* addrspace(4)*
+  // CHECK: %[[A:.+]] = getelementptr inbounds %struct.HasField, ptr addrspace(4) %{{.+}}
+  // CHECK: %[[CALL:.+]] = call ptr addrspace(4) @llvm.ptr.annotation.p4.p1(ptr addrspace(4) %[[A]], ptr addrspace(1) [[ANNOT]]
+  // CHECK: store ptr addrspace(4) %{{[0-9]+}}, ptr addrspace(4) %[[CALL]]
   f.a = b;
 }

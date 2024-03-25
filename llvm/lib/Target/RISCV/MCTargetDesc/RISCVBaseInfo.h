@@ -1,4 +1,4 @@
-//===-- RISCVBaseInfo.h - Top level definitions for RISCV MC ----*- C++ -*-===//
+//===-- RISCVBaseInfo.h - Top level definitions for RISC-V MC ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains small standalone enum definitions for the RISCV target
+// This file contains small standalone enum definitions for the RISC-V target
 // useful for the compiler back-end and the MC libraries.
 //
 //===----------------------------------------------------------------------===//
@@ -14,11 +14,14 @@
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVBASEINFO_H
 
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 
 namespace llvm {
 
@@ -43,35 +46,37 @@ enum {
   InstFormatCA = 14,
   InstFormatCB = 15,
   InstFormatCJ = 16,
-  InstFormatCSZN = 17,
-  InstFormatOther = 18,
+  InstFormatCU = 17,
+  InstFormatCLB = 18,
+  InstFormatCLH = 19,
+  InstFormatCSB = 20,
+  InstFormatCSH = 21,
+  InstFormatOther = 22,
 
   InstFormatMask = 31,
   InstFormatShift = 0,
 
   ConstraintShift = InstFormatShift + 5,
+  VS2Constraint = 0b001 << ConstraintShift,
+  VS1Constraint = 0b010 << ConstraintShift,
+  VMConstraint = 0b100 << ConstraintShift,
   ConstraintMask = 0b111 << ConstraintShift,
 
   VLMulShift = ConstraintShift + 3,
   VLMulMask = 0b111 << VLMulShift,
 
-  // Do we need to add a dummy mask op when converting RVV Pseudo to MCInst.
-  HasDummyMaskOpShift = VLMulShift + 3,
-  HasDummyMaskOpMask = 1 << HasDummyMaskOpShift,
-
   // Force a tail agnostic policy even this instruction has a tied destination.
-  ForceTailAgnosticShift = HasDummyMaskOpShift + 1,
+  ForceTailAgnosticShift = VLMulShift + 3,
   ForceTailAgnosticMask = 1 << ForceTailAgnosticShift,
 
-  // Does this instruction have a merge operand that must be removed when
-  // converting to MCInst. It will be the first explicit use operand. Used by
-  // RVV Pseudos.
-  HasMergeOpShift = ForceTailAgnosticShift + 1,
-  HasMergeOpMask = 1 << HasMergeOpShift,
+  // Is this a _TIED vector pseudo instruction. For these instructions we
+  // shouldn't skip the tied operand when converting to MC instructions.
+  IsTiedPseudoShift = ForceTailAgnosticShift + 1,
+  IsTiedPseudoMask = 1 << IsTiedPseudoShift,
 
   // Does this instruction have a SEW operand. It will be the last explicit
   // operand unless there is a vector policy operand. Used by RVV Pseudos.
-  HasSEWOpShift = HasMergeOpShift + 1,
+  HasSEWOpShift = IsTiedPseudoShift + 1,
   HasSEWOpMask = 1 << HasSEWOpShift,
 
   // Does this instruction have a VL operand. It will be the second to last
@@ -103,31 +108,21 @@ enum {
   // in bits 63:31. Used by the SExtWRemoval pass.
   IsSignExtendingOpWShift = UsesMaskPolicyShift + 1,
   IsSignExtendingOpWMask = 1ULL << IsSignExtendingOpWShift,
-};
 
-// Match with the definitions in RISCVInstrFormats.td
-enum VConstraintType {
-  NoConstraint = 0,
-  VS2Constraint = 0b001,
-  VS1Constraint = 0b010,
-  VMConstraint = 0b100,
-};
+  HasRoundModeOpShift = IsSignExtendingOpWShift + 1,
+  HasRoundModeOpMask = 1 << HasRoundModeOpShift,
 
-enum VLMUL : uint8_t {
-  LMUL_1 = 0,
-  LMUL_2,
-  LMUL_4,
-  LMUL_8,
-  LMUL_RESERVED,
-  LMUL_F8,
-  LMUL_F4,
-  LMUL_F2
-};
+  UsesVXRMShift = HasRoundModeOpShift + 1,
+  UsesVXRMMask = 1 << UsesVXRMShift,
 
-enum {
-  TAIL_UNDISTURBED_MASK_UNDISTURBED = 0,
-  TAIL_AGNOSTIC = 1,
-  MASK_AGNOSTIC = 2,
+  // Indicates whether these instructions can partially overlap between source
+  // registers and destination registers according to the vector spec.
+  // 0 -> not a vector pseudo
+  // 1 -> default value for vector pseudos. not widening or narrowing.
+  // 2 -> narrowing case
+  // 3 -> widening case
+  TargetOverlapConstraintTypeShift = UsesVXRMShift + 1,
+  TargetOverlapConstraintTypeMask = 3ULL << TargetOverlapConstraintTypeShift,
 };
 
 // Helper functions to read TSFlags.
@@ -135,26 +130,17 @@ enum {
 static inline unsigned getFormat(uint64_t TSFlags) {
   return (TSFlags & InstFormatMask) >> InstFormatShift;
 }
-/// \returns the constraint for the instruction.
-static inline VConstraintType getConstraint(uint64_t TSFlags) {
-  return static_cast<VConstraintType>((TSFlags & ConstraintMask) >>
-                                      ConstraintShift);
-}
 /// \returns the LMUL for the instruction.
 static inline VLMUL getLMul(uint64_t TSFlags) {
   return static_cast<VLMUL>((TSFlags & VLMulMask) >> VLMulShift);
-}
-/// \returns true if there is a dummy mask operand for the instruction.
-static inline bool hasDummyMaskOp(uint64_t TSFlags) {
-  return TSFlags & HasDummyMaskOpMask;
 }
 /// \returns true if tail agnostic is enforced for the instruction.
 static inline bool doesForceTailAgnostic(uint64_t TSFlags) {
   return TSFlags & ForceTailAgnosticMask;
 }
-/// \returns true if there is a merge operand for the instruction.
-static inline bool hasMergeOp(uint64_t TSFlags) {
-  return TSFlags & HasMergeOpMask;
+/// \returns true if this a _TIED pseudo.
+static inline bool isTiedPseudo(uint64_t TSFlags) {
+  return TSFlags & IsTiedPseudoMask;
 }
 /// \returns true if there is a SEW operand for the instruction.
 static inline bool hasSEWOp(uint64_t TSFlags) {
@@ -177,11 +163,13 @@ static inline bool usesMaskPolicy(uint64_t TSFlags) {
   return TSFlags & UsesMaskPolicyMask;
 }
 
-static inline unsigned getMergeOpNum(const MCInstrDesc &Desc) {
-  assert(hasMergeOp(Desc.TSFlags));
-  assert(!Desc.isVariadic());
-  return Desc.getNumDefs();
+/// \returns true if there is a rounding mode operand for this instruction
+static inline bool hasRoundModeOp(uint64_t TSFlags) {
+  return TSFlags & HasRoundModeOpMask;
 }
+
+/// \returns true if this instruction uses vxrm
+static inline bool usesVXRM(uint64_t TSFlags) { return TSFlags & UsesVXRMMask; }
 
 static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
   const uint64_t TSFlags = Desc.TSFlags;
@@ -208,11 +196,48 @@ static inline unsigned getVecPolicyOpNum(const MCInstrDesc &Desc) {
   return Desc.getNumOperands() - 1;
 }
 
+/// \returns  the index to the rounding mode immediate value if any, otherwise
+/// returns -1.
+static inline int getFRMOpNum(const MCInstrDesc &Desc) {
+  const uint64_t TSFlags = Desc.TSFlags;
+  if (!hasRoundModeOp(TSFlags) || usesVXRM(TSFlags))
+    return -1;
+
+  // The operand order
+  // --------------------------------------
+  // | n-1 (if any)   | n-2  | n-3 | n-4 |
+  // | policy         | sew  | vl  | frm |
+  // --------------------------------------
+  return getVLOpNum(Desc) - 1;
+}
+
+/// \returns  the index to the rounding mode immediate value if any, otherwise
+/// returns -1.
+static inline int getVXRMOpNum(const MCInstrDesc &Desc) {
+  const uint64_t TSFlags = Desc.TSFlags;
+  if (!hasRoundModeOp(TSFlags) || !usesVXRM(TSFlags))
+    return -1;
+  // The operand order
+  // --------------------------------------
+  // | n-1 (if any)   | n-2  | n-3 | n-4  |
+  // | policy         | sew  | vl  | vxrm |
+  // --------------------------------------
+  return getVLOpNum(Desc) - 1;
+}
+
+// Is the first def operand tied to the first use operand. This is true for
+// vector pseudo instructions that have a merge operand for tail/mask
+// undisturbed. It's also true for vector FMA instructions where one of the
+// operands is also the destination register.
+static inline bool isFirstDefTiedToFirstUse(const MCInstrDesc &Desc) {
+  return Desc.getNumDefs() < Desc.getNumOperands() &&
+         Desc.getOperandConstraint(Desc.getNumDefs(), MCOI::TIED_TO) == 0;
+}
+
 // RISC-V Specific Machine Operand Flags
 enum {
   MO_None = 0,
   MO_CALL = 1,
-  MO_PLT = 2,
   MO_LO = 3,
   MO_HI = 4,
   MO_PCREL_LO = 5,
@@ -223,26 +248,36 @@ enum {
   MO_TPREL_ADD = 10,
   MO_TLS_GOT_HI = 11,
   MO_TLS_GD_HI = 12,
+  MO_TLSDESC_HI = 13,
+  MO_TLSDESC_LOAD_LO = 14,
+  MO_TLSDESC_ADD_LO = 15,
+  MO_TLSDESC_CALL = 16,
 
   // Used to differentiate between target-specific "direct" flags and "bitmask"
   // flags. A machine operand can only have one "direct" flag, but can have
   // multiple "bitmask" flags.
-  MO_DIRECT_FLAG_MASK = 15
+  MO_DIRECT_FLAG_MASK = 31
 };
 } // namespace RISCVII
 
 namespace RISCVOp {
 enum OperandType : unsigned {
   OPERAND_FIRST_RISCV_IMM = MCOI::OPERAND_FIRST_TARGET,
-  OPERAND_UIMM2 = OPERAND_FIRST_RISCV_IMM,
+  OPERAND_UIMM1 = OPERAND_FIRST_RISCV_IMM,
+  OPERAND_UIMM2,
   OPERAND_UIMM2_LSB0,
   OPERAND_UIMM3,
   OPERAND_UIMM4,
   OPERAND_UIMM5,
+  OPERAND_UIMM6,
   OPERAND_UIMM7,
   OPERAND_UIMM7_LSB00,
   OPERAND_UIMM8_LSB00,
+  OPERAND_UIMM8,
   OPERAND_UIMM8_LSB000,
+  OPERAND_UIMM8_GE32,
+  OPERAND_UIMM9_LSB000,
+  OPERAND_UIMM10_LSB00_NONZERO,
   OPERAND_UIMM12,
   OPERAND_ZERO,
   OPERAND_SIMM5,
@@ -255,11 +290,14 @@ enum OperandType : unsigned {
   OPERAND_UIMM20,
   OPERAND_UIMMLOG2XLEN,
   OPERAND_UIMMLOG2XLEN_NONZERO,
-  OPERAND_UIMM_SHFL,
+  OPERAND_CLUI_IMM,
   OPERAND_VTYPEI10,
   OPERAND_VTYPEI11,
   OPERAND_RVKRNUM,
-  OPERAND_LAST_RISCV_IMM = OPERAND_RVKRNUM,
+  OPERAND_RVKRNUM_0_7,
+  OPERAND_RVKRNUM_1_10,
+  OPERAND_RVKRNUM_2_14,
+  OPERAND_LAST_RISCV_IMM = OPERAND_RVKRNUM_2_14,
   // Operand is either a register or uimm5, this is used by V extension pseudo
   // instructions to represent a value that be passed as AVL to either vsetvli
   // or vsetivli.
@@ -334,6 +372,19 @@ inline static bool isValidRoundingMode(unsigned Mode) {
 }
 } // namespace RISCVFPRndMode
 
+//===----------------------------------------------------------------------===//
+// Floating-point Immediates
+//
+
+namespace RISCVLoadFPImm {
+float getFPImm(unsigned Imm);
+
+/// getLoadFPImm - Return a 5-bit binary encoding of the floating-point
+/// immediate value. If the value cannot be represented as a 5-bit binary
+/// encoding, then return -1.
+int getLoadFPImm(APFloat FPImm);
+} // namespace RISCVLoadFPImm
+
 namespace RISCVSysReg {
 struct SysReg {
   const char *Name;
@@ -387,12 +438,13 @@ enum ABI {
   ABI_LP64,
   ABI_LP64F,
   ABI_LP64D,
+  ABI_LP64E,
   ABI_Unknown
 };
 
 // Returns the target ABI, or else a StringError if the requested ABIName is
 // not supported for the given TT and FeatureBits combination.
-ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
+ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
                      StringRef ABIName);
 
 ABI getTargetABI(StringRef ABIName);
@@ -416,63 +468,128 @@ parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits);
 
 } // namespace RISCVFeatures
 
-namespace RISCVVType {
-// Is this a SEW value that can be encoded into the VTYPE format.
-inline static bool isValidSEW(unsigned SEW) {
-  return isPowerOf2_32(SEW) && SEW >= 8 && SEW <= 1024;
-}
-
-// Is this a LMUL value that can be encoded into the VTYPE format.
-inline static bool isValidLMUL(unsigned LMUL, bool Fractional) {
-  return isPowerOf2_32(LMUL) && LMUL <= 8 && (!Fractional || LMUL != 1);
-}
-
-unsigned encodeVTYPE(RISCVII::VLMUL VLMUL, unsigned SEW, bool TailAgnostic,
-                     bool MaskAgnostic);
-
-inline static RISCVII::VLMUL getVLMUL(unsigned VType) {
-  unsigned VLMUL = VType & 0x7;
-  return static_cast<RISCVII::VLMUL>(VLMUL);
-}
-
-// Decode VLMUL into 1,2,4,8 and fractional indicator.
-std::pair<unsigned, bool> decodeVLMUL(RISCVII::VLMUL VLMUL);
-
-inline static RISCVII::VLMUL encodeLMUL(unsigned LMUL, bool Fractional) {
-  assert(isValidLMUL(LMUL, Fractional) && "Unsupported LMUL");
-  unsigned LmulLog2 = Log2_32(LMUL);
-  return static_cast<RISCVII::VLMUL>(Fractional ? 8 - LmulLog2 : LmulLog2);
-}
-
-inline static unsigned decodeVSEW(unsigned VSEW) {
-  assert(VSEW < 8 && "Unexpected VSEW value");
-  return 1 << (VSEW + 3);
-}
-
-inline static unsigned encodeSEW(unsigned SEW) {
-  assert(isValidSEW(SEW) && "Unexpected SEW value");
-  return Log2_32(SEW) - 3;
-}
-
-inline static unsigned getSEW(unsigned VType) {
-  unsigned VSEW = (VType >> 3) & 0x7;
-  return decodeVSEW(VSEW);
-}
-
-inline static bool isTailAgnostic(unsigned VType) { return VType & 0x40; }
-
-inline static bool isMaskAgnostic(unsigned VType) { return VType & 0x80; }
-
-void printVType(unsigned VType, raw_ostream &OS);
-
-unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul);
-
-} // namespace RISCVVType
-
 namespace RISCVRVC {
 bool compress(MCInst &OutInst, const MCInst &MI, const MCSubtargetInfo &STI);
 bool uncompress(MCInst &OutInst, const MCInst &MI, const MCSubtargetInfo &STI);
 } // namespace RISCVRVC
+
+namespace RISCVZC {
+enum RLISTENCODE {
+  RA = 4,
+  RA_S0,
+  RA_S0_S1,
+  RA_S0_S2,
+  RA_S0_S3,
+  RA_S0_S4,
+  RA_S0_S5,
+  RA_S0_S6,
+  RA_S0_S7,
+  RA_S0_S8,
+  RA_S0_S9,
+  // note - to include s10, s11 must also be included
+  RA_S0_S11,
+  INVALID_RLIST,
+};
+
+inline unsigned encodeRlist(MCRegister EndReg, bool IsRV32E = false) {
+  assert((!IsRV32E || EndReg <= RISCV::X9) && "Invalid Rlist for RV32E");
+  switch (EndReg) {
+  case RISCV::X1:
+    return RLISTENCODE::RA;
+  case RISCV::X8:
+    return RLISTENCODE::RA_S0;
+  case RISCV::X9:
+    return RLISTENCODE::RA_S0_S1;
+  case RISCV::X18:
+    return RLISTENCODE::RA_S0_S2;
+  case RISCV::X19:
+    return RLISTENCODE::RA_S0_S3;
+  case RISCV::X20:
+    return RLISTENCODE::RA_S0_S4;
+  case RISCV::X21:
+    return RLISTENCODE::RA_S0_S5;
+  case RISCV::X22:
+    return RLISTENCODE::RA_S0_S6;
+  case RISCV::X23:
+    return RLISTENCODE::RA_S0_S7;
+  case RISCV::X24:
+    return RLISTENCODE::RA_S0_S8;
+  case RISCV::X25:
+    return RLISTENCODE::RA_S0_S9;
+  case RISCV::X26:
+    return RLISTENCODE::INVALID_RLIST;
+  case RISCV::X27:
+    return RLISTENCODE::RA_S0_S11;
+  default:
+    llvm_unreachable("Undefined input.");
+  }
+}
+
+inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64,
+                                       bool IsEABI) {
+  assert(RlistVal != RLISTENCODE::INVALID_RLIST &&
+         "{ra, s0-s10} is not supported, s11 must be included.");
+  if (IsEABI)
+    return 16;
+  if (!IsRV64) {
+    switch (RlistVal) {
+    case RLISTENCODE::RA:
+    case RLISTENCODE::RA_S0:
+    case RLISTENCODE::RA_S0_S1:
+    case RLISTENCODE::RA_S0_S2:
+      return 16;
+    case RLISTENCODE::RA_S0_S3:
+    case RLISTENCODE::RA_S0_S4:
+    case RLISTENCODE::RA_S0_S5:
+    case RLISTENCODE::RA_S0_S6:
+      return 32;
+    case RLISTENCODE::RA_S0_S7:
+    case RLISTENCODE::RA_S0_S8:
+    case RLISTENCODE::RA_S0_S9:
+      return 48;
+    case RLISTENCODE::RA_S0_S11:
+      return 64;
+    }
+  } else {
+    switch (RlistVal) {
+    case RLISTENCODE::RA:
+    case RLISTENCODE::RA_S0:
+      return 16;
+    case RLISTENCODE::RA_S0_S1:
+    case RLISTENCODE::RA_S0_S2:
+      return 32;
+    case RLISTENCODE::RA_S0_S3:
+    case RLISTENCODE::RA_S0_S4:
+      return 48;
+    case RLISTENCODE::RA_S0_S5:
+    case RLISTENCODE::RA_S0_S6:
+      return 64;
+    case RLISTENCODE::RA_S0_S7:
+    case RLISTENCODE::RA_S0_S8:
+      return 80;
+    case RLISTENCODE::RA_S0_S9:
+      return 96;
+    case RLISTENCODE::RA_S0_S11:
+      return 112;
+    }
+  }
+  llvm_unreachable("Unexpected RlistVal");
+}
+
+inline static bool getSpimm(unsigned RlistVal, unsigned &SpimmVal,
+                            int64_t StackAdjustment, bool IsRV64, bool IsEABI) {
+  if (RlistVal == RLISTENCODE::INVALID_RLIST)
+    return false;
+  unsigned stackAdj = getStackAdjBase(RlistVal, IsRV64, IsEABI);
+  SpimmVal = (StackAdjustment - stackAdj) / 16;
+  if (SpimmVal > 3)
+    return false;
+  return true;
+}
+
+void printRlist(unsigned SlistEncode, raw_ostream &OS);
+void printSpimm(int64_t Spimm, raw_ostream &OS);
+} // namespace RISCVZC
 
 } // namespace llvm
 

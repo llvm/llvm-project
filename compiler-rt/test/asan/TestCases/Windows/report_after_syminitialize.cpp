@@ -1,5 +1,10 @@
-// RUN: %clangxx_asan -O0 %s -o %t
-// RUN: %env_asan_opts=external_symbolizer_path=asdf not %run %t 2>&1 | FileCheck %s
+// This test works on both MSVC and MinGW targets, but they require different
+// build commands. By default we use DWARF debug info on MinGW and dbghelp does
+// not support it, so we need to specify extra flags to get the compiler to
+// generate PDB debug info.
+
+// RUN: %clangxx_asan %if target={{.*-windows-gnu}} %{ -gcodeview -gcolumn-info -Wl,--pdb= -ldbghelp %} -O0 %s -o %t
+// RUN: %env_asan_opts=external_symbolizer_path=non-existent\\\\asdf not %run %t 2>&1 | FileCheck %s
 
 #include <windows.h>
 #include <dbghelp.h>

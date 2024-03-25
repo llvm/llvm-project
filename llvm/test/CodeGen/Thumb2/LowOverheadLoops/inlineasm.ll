@@ -4,11 +4,13 @@
 define i32 @test(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
 ; CHECK-LABEL: test:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    cmp r2, #1
+; CHECK-NEXT:    itt lt
+; CHECK-NEXT:    movlt r0, #0
+; CHECK-NEXT:    bxlt lr
+; CHECK-NEXT:  .LBB0_1: @ %for.body.preheader
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    cmp r2, #1
-; CHECK-NEXT:    blt .LBB0_4
-; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    mov lr, r0
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:  .LBB0_2: @ %for.body
@@ -21,10 +23,7 @@ define i32 @test(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
 ; CHECK-NEXT:    @NO_APP
 ; CHECK-NEXT:    add r0, r3
 ; CHECK-NEXT:    bne .LBB0_2
-; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r7, pc}
-; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp9 = icmp sgt i32 %n, 0
@@ -51,11 +50,13 @@ for.body:                                         ; preds = %entry, %for.body
 define i32 @testlr(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
 ; CHECK-LABEL: testlr:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    cmp r2, #1
+; CHECK-NEXT:    itt lt
+; CHECK-NEXT:    movlt r0, #0
+; CHECK-NEXT:    bxlt lr
+; CHECK-NEXT:  .LBB1_1: @ %for.body.preheader
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    cmp r2, #1
-; CHECK-NEXT:    blt .LBB1_4
-; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:  .LBB1_2: @ %for.body
@@ -68,10 +69,7 @@ define i32 @testlr(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n)
 ; CHECK-NEXT:    @NO_APP
 ; CHECK-NEXT:    add r0, r4
 ; CHECK-NEXT:    bne .LBB1_2
-; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, pc}
-; CHECK-NEXT:  .LBB1_4:
-; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp9 = icmp sgt i32 %n, 0

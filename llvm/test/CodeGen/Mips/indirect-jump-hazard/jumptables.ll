@@ -40,9 +40,9 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; MIPS32R2-NEXT:    addiu $sp, $sp, -16
 ; MIPS32R2-NEXT:    .cfi_def_cfa_offset 16
 ; MIPS32R2-NEXT:    sltiu $1, $4, 7
-; MIPS32R2-NEXT:    beqz $1, $BB0_3
+; MIPS32R2-NEXT:    beqz $1, $BB0_6
 ; MIPS32R2-NEXT:    sw $4, 4($sp)
-; MIPS32R2-NEXT:  $BB0_1: # %entry
+; MIPS32R2-NEXT:  # %bb.1: # %entry
 ; MIPS32R2-NEXT:    sll $1, $4, 2
 ; MIPS32R2-NEXT:    lui $2, %hi($JTI0_0)
 ; MIPS32R2-NEXT:    addu $1, $1, $2
@@ -54,29 +54,29 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; MIPS32R2-NEXT:    addiu $1, $1, %lo($.str)
 ; MIPS32R2-NEXT:    j $BB0_10
 ; MIPS32R2-NEXT:    sw $1, 8($sp)
-; MIPS32R2-NEXT:  $BB0_3: # %sw.epilog
-; MIPS32R2-NEXT:    lui $1, %hi($.str.7)
-; MIPS32R2-NEXT:    addiu $1, $1, %lo($.str.7)
+; MIPS32R2-NEXT:  $BB0_3: # %sw.bb4
+; MIPS32R2-NEXT:    lui $1, %hi($.str.4)
+; MIPS32R2-NEXT:    addiu $1, $1, %lo($.str.4)
 ; MIPS32R2-NEXT:    j $BB0_10
 ; MIPS32R2-NEXT:    sw $1, 8($sp)
-; MIPS32R2-NEXT:  $BB0_4: # %sw.bb1
-; MIPS32R2-NEXT:    lui $1, %hi($.str.1)
-; MIPS32R2-NEXT:    addiu $1, $1, %lo($.str.1)
-; MIPS32R2-NEXT:    j $BB0_10
-; MIPS32R2-NEXT:    sw $1, 8($sp)
-; MIPS32R2-NEXT:  $BB0_5: # %sw.bb2
+; MIPS32R2-NEXT:  $BB0_4: # %sw.bb2
 ; MIPS32R2-NEXT:    lui $1, %hi($.str.2)
 ; MIPS32R2-NEXT:    addiu $1, $1, %lo($.str.2)
 ; MIPS32R2-NEXT:    j $BB0_10
 ; MIPS32R2-NEXT:    sw $1, 8($sp)
-; MIPS32R2-NEXT:  $BB0_6: # %sw.bb3
+; MIPS32R2-NEXT:  $BB0_5: # %sw.bb3
 ; MIPS32R2-NEXT:    lui $1, %hi($.str.3)
 ; MIPS32R2-NEXT:    addiu $1, $1, %lo($.str.3)
 ; MIPS32R2-NEXT:    j $BB0_10
 ; MIPS32R2-NEXT:    sw $1, 8($sp)
-; MIPS32R2-NEXT:  $BB0_7: # %sw.bb4
-; MIPS32R2-NEXT:    lui $1, %hi($.str.4)
-; MIPS32R2-NEXT:    addiu $1, $1, %lo($.str.4)
+; MIPS32R2-NEXT:  $BB0_6: # %sw.epilog
+; MIPS32R2-NEXT:    lui $1, %hi($.str.7)
+; MIPS32R2-NEXT:    addiu $1, $1, %lo($.str.7)
+; MIPS32R2-NEXT:    j $BB0_10
+; MIPS32R2-NEXT:    sw $1, 8($sp)
+; MIPS32R2-NEXT:  $BB0_7: # %sw.bb1
+; MIPS32R2-NEXT:    lui $1, %hi($.str.1)
+; MIPS32R2-NEXT:    addiu $1, $1, %lo($.str.1)
 ; MIPS32R2-NEXT:    j $BB0_10
 ; MIPS32R2-NEXT:    sw $1, 8($sp)
 ; MIPS32R2-NEXT:  $BB0_8: # %sw.bb5
@@ -98,9 +98,9 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; MIPS32R6-NEXT:    addiu $sp, $sp, -16
 ; MIPS32R6-NEXT:    .cfi_def_cfa_offset 16
 ; MIPS32R6-NEXT:    sltiu $1, $4, 7
-; MIPS32R6-NEXT:    beqz $1, $BB0_3
+; MIPS32R6-NEXT:    beqz $1, $BB0_6
 ; MIPS32R6-NEXT:    sw $4, 4($sp)
-; MIPS32R6-NEXT:  $BB0_1: # %entry
+; MIPS32R6-NEXT:  # %bb.1: # %entry
 ; MIPS32R6-NEXT:    sll $1, $4, 2
 ; MIPS32R6-NEXT:    lui $2, %hi($JTI0_0)
 ; MIPS32R6-NEXT:    addu $1, $1, $2
@@ -112,29 +112,29 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; MIPS32R6-NEXT:    addiu $1, $1, %lo($.str)
 ; MIPS32R6-NEXT:    j $BB0_10
 ; MIPS32R6-NEXT:    sw $1, 8($sp)
-; MIPS32R6-NEXT:  $BB0_3: # %sw.epilog
-; MIPS32R6-NEXT:    lui $1, %hi($.str.7)
-; MIPS32R6-NEXT:    addiu $1, $1, %lo($.str.7)
+; MIPS32R6-NEXT:  $BB0_3: # %sw.bb4
+; MIPS32R6-NEXT:    lui $1, %hi($.str.4)
+; MIPS32R6-NEXT:    addiu $1, $1, %lo($.str.4)
 ; MIPS32R6-NEXT:    j $BB0_10
 ; MIPS32R6-NEXT:    sw $1, 8($sp)
-; MIPS32R6-NEXT:  $BB0_4: # %sw.bb1
-; MIPS32R6-NEXT:    lui $1, %hi($.str.1)
-; MIPS32R6-NEXT:    addiu $1, $1, %lo($.str.1)
-; MIPS32R6-NEXT:    j $BB0_10
-; MIPS32R6-NEXT:    sw $1, 8($sp)
-; MIPS32R6-NEXT:  $BB0_5: # %sw.bb2
+; MIPS32R6-NEXT:  $BB0_4: # %sw.bb2
 ; MIPS32R6-NEXT:    lui $1, %hi($.str.2)
 ; MIPS32R6-NEXT:    addiu $1, $1, %lo($.str.2)
 ; MIPS32R6-NEXT:    j $BB0_10
 ; MIPS32R6-NEXT:    sw $1, 8($sp)
-; MIPS32R6-NEXT:  $BB0_6: # %sw.bb3
+; MIPS32R6-NEXT:  $BB0_5: # %sw.bb3
 ; MIPS32R6-NEXT:    lui $1, %hi($.str.3)
 ; MIPS32R6-NEXT:    addiu $1, $1, %lo($.str.3)
 ; MIPS32R6-NEXT:    j $BB0_10
 ; MIPS32R6-NEXT:    sw $1, 8($sp)
-; MIPS32R6-NEXT:  $BB0_7: # %sw.bb4
-; MIPS32R6-NEXT:    lui $1, %hi($.str.4)
-; MIPS32R6-NEXT:    addiu $1, $1, %lo($.str.4)
+; MIPS32R6-NEXT:  $BB0_6: # %sw.epilog
+; MIPS32R6-NEXT:    lui $1, %hi($.str.7)
+; MIPS32R6-NEXT:    addiu $1, $1, %lo($.str.7)
+; MIPS32R6-NEXT:    j $BB0_10
+; MIPS32R6-NEXT:    sw $1, 8($sp)
+; MIPS32R6-NEXT:  $BB0_7: # %sw.bb1
+; MIPS32R6-NEXT:    lui $1, %hi($.str.1)
+; MIPS32R6-NEXT:    addiu $1, $1, %lo($.str.1)
 ; MIPS32R6-NEXT:    j $BB0_10
 ; MIPS32R6-NEXT:    sw $1, 8($sp)
 ; MIPS32R6-NEXT:  $BB0_8: # %sw.bb5
@@ -157,9 +157,9 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; MIPS64R2-NEXT:    .cfi_def_cfa_offset 16
 ; MIPS64R2-NEXT:    dext $2, $4, 0, 32
 ; MIPS64R2-NEXT:    sltiu $1, $2, 7
-; MIPS64R2-NEXT:    beqz $1, .LBB0_3
+; MIPS64R2-NEXT:    beqz $1, .LBB0_6
 ; MIPS64R2-NEXT:    sw $4, 4($sp)
-; MIPS64R2-NEXT:  .LBB0_1: # %entry
+; MIPS64R2-NEXT:  # %bb.1: # %entry
 ; MIPS64R2-NEXT:    dsll $1, $2, 3
 ; MIPS64R2-NEXT:    lui $2, %highest(.LJTI0_0)
 ; MIPS64R2-NEXT:    daddiu $2, $2, %higher(.LJTI0_0)
@@ -179,25 +179,16 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; MIPS64R2-NEXT:    daddiu $1, $1, %lo(.L.str)
 ; MIPS64R2-NEXT:    j .LBB0_10
 ; MIPS64R2-NEXT:    sd $1, 8($sp)
-; MIPS64R2-NEXT:  .LBB0_3: # %sw.epilog
-; MIPS64R2-NEXT:    lui $1, %highest(.L.str.7)
-; MIPS64R2-NEXT:    daddiu $1, $1, %higher(.L.str.7)
+; MIPS64R2-NEXT:  .LBB0_3: # %sw.bb4
+; MIPS64R2-NEXT:    lui $1, %highest(.L.str.4)
+; MIPS64R2-NEXT:    daddiu $1, $1, %higher(.L.str.4)
 ; MIPS64R2-NEXT:    dsll $1, $1, 16
-; MIPS64R2-NEXT:    daddiu $1, $1, %hi(.L.str.7)
+; MIPS64R2-NEXT:    daddiu $1, $1, %hi(.L.str.4)
 ; MIPS64R2-NEXT:    dsll $1, $1, 16
-; MIPS64R2-NEXT:    daddiu $1, $1, %lo(.L.str.7)
+; MIPS64R2-NEXT:    daddiu $1, $1, %lo(.L.str.4)
 ; MIPS64R2-NEXT:    j .LBB0_10
 ; MIPS64R2-NEXT:    sd $1, 8($sp)
-; MIPS64R2-NEXT:  .LBB0_4: # %sw.bb1
-; MIPS64R2-NEXT:    lui $1, %highest(.L.str.1)
-; MIPS64R2-NEXT:    daddiu $1, $1, %higher(.L.str.1)
-; MIPS64R2-NEXT:    dsll $1, $1, 16
-; MIPS64R2-NEXT:    daddiu $1, $1, %hi(.L.str.1)
-; MIPS64R2-NEXT:    dsll $1, $1, 16
-; MIPS64R2-NEXT:    daddiu $1, $1, %lo(.L.str.1)
-; MIPS64R2-NEXT:    j .LBB0_10
-; MIPS64R2-NEXT:    sd $1, 8($sp)
-; MIPS64R2-NEXT:  .LBB0_5: # %sw.bb2
+; MIPS64R2-NEXT:  .LBB0_4: # %sw.bb2
 ; MIPS64R2-NEXT:    lui $1, %highest(.L.str.2)
 ; MIPS64R2-NEXT:    daddiu $1, $1, %higher(.L.str.2)
 ; MIPS64R2-NEXT:    dsll $1, $1, 16
@@ -206,7 +197,7 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; MIPS64R2-NEXT:    daddiu $1, $1, %lo(.L.str.2)
 ; MIPS64R2-NEXT:    j .LBB0_10
 ; MIPS64R2-NEXT:    sd $1, 8($sp)
-; MIPS64R2-NEXT:  .LBB0_6: # %sw.bb3
+; MIPS64R2-NEXT:  .LBB0_5: # %sw.bb3
 ; MIPS64R2-NEXT:    lui $1, %highest(.L.str.3)
 ; MIPS64R2-NEXT:    daddiu $1, $1, %higher(.L.str.3)
 ; MIPS64R2-NEXT:    dsll $1, $1, 16
@@ -215,13 +206,22 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; MIPS64R2-NEXT:    daddiu $1, $1, %lo(.L.str.3)
 ; MIPS64R2-NEXT:    j .LBB0_10
 ; MIPS64R2-NEXT:    sd $1, 8($sp)
-; MIPS64R2-NEXT:  .LBB0_7: # %sw.bb4
-; MIPS64R2-NEXT:    lui $1, %highest(.L.str.4)
-; MIPS64R2-NEXT:    daddiu $1, $1, %higher(.L.str.4)
+; MIPS64R2-NEXT:  .LBB0_6: # %sw.epilog
+; MIPS64R2-NEXT:    lui $1, %highest(.L.str.7)
+; MIPS64R2-NEXT:    daddiu $1, $1, %higher(.L.str.7)
 ; MIPS64R2-NEXT:    dsll $1, $1, 16
-; MIPS64R2-NEXT:    daddiu $1, $1, %hi(.L.str.4)
+; MIPS64R2-NEXT:    daddiu $1, $1, %hi(.L.str.7)
 ; MIPS64R2-NEXT:    dsll $1, $1, 16
-; MIPS64R2-NEXT:    daddiu $1, $1, %lo(.L.str.4)
+; MIPS64R2-NEXT:    daddiu $1, $1, %lo(.L.str.7)
+; MIPS64R2-NEXT:    j .LBB0_10
+; MIPS64R2-NEXT:    sd $1, 8($sp)
+; MIPS64R2-NEXT:  .LBB0_7: # %sw.bb1
+; MIPS64R2-NEXT:    lui $1, %highest(.L.str.1)
+; MIPS64R2-NEXT:    daddiu $1, $1, %higher(.L.str.1)
+; MIPS64R2-NEXT:    dsll $1, $1, 16
+; MIPS64R2-NEXT:    daddiu $1, $1, %hi(.L.str.1)
+; MIPS64R2-NEXT:    dsll $1, $1, 16
+; MIPS64R2-NEXT:    daddiu $1, $1, %lo(.L.str.1)
 ; MIPS64R2-NEXT:    j .LBB0_10
 ; MIPS64R2-NEXT:    sd $1, 8($sp)
 ; MIPS64R2-NEXT:  .LBB0_8: # %sw.bb5
@@ -252,9 +252,9 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; MIPS64R6-NEXT:    .cfi_def_cfa_offset 16
 ; MIPS64R6-NEXT:    dext $2, $4, 0, 32
 ; MIPS64R6-NEXT:    sltiu $1, $2, 7
-; MIPS64R6-NEXT:    beqz $1, .LBB0_3
+; MIPS64R6-NEXT:    beqz $1, .LBB0_6
 ; MIPS64R6-NEXT:    sw $4, 4($sp)
-; MIPS64R6-NEXT:  .LBB0_1: # %entry
+; MIPS64R6-NEXT:  # %bb.1: # %entry
 ; MIPS64R6-NEXT:    dsll $1, $2, 3
 ; MIPS64R6-NEXT:    lui $2, %highest(.LJTI0_0)
 ; MIPS64R6-NEXT:    daddiu $2, $2, %higher(.LJTI0_0)
@@ -274,25 +274,16 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; MIPS64R6-NEXT:    daddiu $1, $1, %lo(.L.str)
 ; MIPS64R6-NEXT:    j .LBB0_10
 ; MIPS64R6-NEXT:    sd $1, 8($sp)
-; MIPS64R6-NEXT:  .LBB0_3: # %sw.epilog
-; MIPS64R6-NEXT:    lui $1, %highest(.L.str.7)
-; MIPS64R6-NEXT:    daddiu $1, $1, %higher(.L.str.7)
+; MIPS64R6-NEXT:  .LBB0_3: # %sw.bb4
+; MIPS64R6-NEXT:    lui $1, %highest(.L.str.4)
+; MIPS64R6-NEXT:    daddiu $1, $1, %higher(.L.str.4)
 ; MIPS64R6-NEXT:    dsll $1, $1, 16
-; MIPS64R6-NEXT:    daddiu $1, $1, %hi(.L.str.7)
+; MIPS64R6-NEXT:    daddiu $1, $1, %hi(.L.str.4)
 ; MIPS64R6-NEXT:    dsll $1, $1, 16
-; MIPS64R6-NEXT:    daddiu $1, $1, %lo(.L.str.7)
+; MIPS64R6-NEXT:    daddiu $1, $1, %lo(.L.str.4)
 ; MIPS64R6-NEXT:    j .LBB0_10
 ; MIPS64R6-NEXT:    sd $1, 8($sp)
-; MIPS64R6-NEXT:  .LBB0_4: # %sw.bb1
-; MIPS64R6-NEXT:    lui $1, %highest(.L.str.1)
-; MIPS64R6-NEXT:    daddiu $1, $1, %higher(.L.str.1)
-; MIPS64R6-NEXT:    dsll $1, $1, 16
-; MIPS64R6-NEXT:    daddiu $1, $1, %hi(.L.str.1)
-; MIPS64R6-NEXT:    dsll $1, $1, 16
-; MIPS64R6-NEXT:    daddiu $1, $1, %lo(.L.str.1)
-; MIPS64R6-NEXT:    j .LBB0_10
-; MIPS64R6-NEXT:    sd $1, 8($sp)
-; MIPS64R6-NEXT:  .LBB0_5: # %sw.bb2
+; MIPS64R6-NEXT:  .LBB0_4: # %sw.bb2
 ; MIPS64R6-NEXT:    lui $1, %highest(.L.str.2)
 ; MIPS64R6-NEXT:    daddiu $1, $1, %higher(.L.str.2)
 ; MIPS64R6-NEXT:    dsll $1, $1, 16
@@ -301,7 +292,7 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; MIPS64R6-NEXT:    daddiu $1, $1, %lo(.L.str.2)
 ; MIPS64R6-NEXT:    j .LBB0_10
 ; MIPS64R6-NEXT:    sd $1, 8($sp)
-; MIPS64R6-NEXT:  .LBB0_6: # %sw.bb3
+; MIPS64R6-NEXT:  .LBB0_5: # %sw.bb3
 ; MIPS64R6-NEXT:    lui $1, %highest(.L.str.3)
 ; MIPS64R6-NEXT:    daddiu $1, $1, %higher(.L.str.3)
 ; MIPS64R6-NEXT:    dsll $1, $1, 16
@@ -310,13 +301,22 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; MIPS64R6-NEXT:    daddiu $1, $1, %lo(.L.str.3)
 ; MIPS64R6-NEXT:    j .LBB0_10
 ; MIPS64R6-NEXT:    sd $1, 8($sp)
-; MIPS64R6-NEXT:  .LBB0_7: # %sw.bb4
-; MIPS64R6-NEXT:    lui $1, %highest(.L.str.4)
-; MIPS64R6-NEXT:    daddiu $1, $1, %higher(.L.str.4)
+; MIPS64R6-NEXT:  .LBB0_6: # %sw.epilog
+; MIPS64R6-NEXT:    lui $1, %highest(.L.str.7)
+; MIPS64R6-NEXT:    daddiu $1, $1, %higher(.L.str.7)
 ; MIPS64R6-NEXT:    dsll $1, $1, 16
-; MIPS64R6-NEXT:    daddiu $1, $1, %hi(.L.str.4)
+; MIPS64R6-NEXT:    daddiu $1, $1, %hi(.L.str.7)
 ; MIPS64R6-NEXT:    dsll $1, $1, 16
-; MIPS64R6-NEXT:    daddiu $1, $1, %lo(.L.str.4)
+; MIPS64R6-NEXT:    daddiu $1, $1, %lo(.L.str.7)
+; MIPS64R6-NEXT:    j .LBB0_10
+; MIPS64R6-NEXT:    sd $1, 8($sp)
+; MIPS64R6-NEXT:  .LBB0_7: # %sw.bb1
+; MIPS64R6-NEXT:    lui $1, %highest(.L.str.1)
+; MIPS64R6-NEXT:    daddiu $1, $1, %higher(.L.str.1)
+; MIPS64R6-NEXT:    dsll $1, $1, 16
+; MIPS64R6-NEXT:    daddiu $1, $1, %hi(.L.str.1)
+; MIPS64R6-NEXT:    dsll $1, $1, 16
+; MIPS64R6-NEXT:    daddiu $1, $1, %lo(.L.str.1)
 ; MIPS64R6-NEXT:    j .LBB0_10
 ; MIPS64R6-NEXT:    sd $1, 8($sp)
 ; MIPS64R6-NEXT:  .LBB0_8: # %sw.bb5
@@ -349,9 +349,9 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; PIC-MIPS32R2-NEXT:    .cfi_def_cfa_offset 16
 ; PIC-MIPS32R2-NEXT:    addu $2, $2, $25
 ; PIC-MIPS32R2-NEXT:    sltiu $1, $4, 7
-; PIC-MIPS32R2-NEXT:    beqz $1, $BB0_3
+; PIC-MIPS32R2-NEXT:    beqz $1, $BB0_6
 ; PIC-MIPS32R2-NEXT:    sw $4, 4($sp)
-; PIC-MIPS32R2-NEXT:  $BB0_1: # %entry
+; PIC-MIPS32R2-NEXT:  # %bb.1: # %entry
 ; PIC-MIPS32R2-NEXT:    sll $1, $4, 2
 ; PIC-MIPS32R2-NEXT:    lw $3, %got($JTI0_0)($2)
 ; PIC-MIPS32R2-NEXT:    addu $1, $1, $3
@@ -364,29 +364,29 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; PIC-MIPS32R2-NEXT:    addiu $1, $1, %lo($.str)
 ; PIC-MIPS32R2-NEXT:    b $BB0_10
 ; PIC-MIPS32R2-NEXT:    sw $1, 8($sp)
-; PIC-MIPS32R2-NEXT:  $BB0_3: # %sw.epilog
-; PIC-MIPS32R2-NEXT:    lw $1, %got($.str.7)($2)
-; PIC-MIPS32R2-NEXT:    addiu $1, $1, %lo($.str.7)
+; PIC-MIPS32R2-NEXT:  $BB0_3: # %sw.bb4
+; PIC-MIPS32R2-NEXT:    lw $1, %got($.str.4)($2)
+; PIC-MIPS32R2-NEXT:    addiu $1, $1, %lo($.str.4)
 ; PIC-MIPS32R2-NEXT:    b $BB0_10
 ; PIC-MIPS32R2-NEXT:    sw $1, 8($sp)
-; PIC-MIPS32R2-NEXT:  $BB0_4: # %sw.bb1
-; PIC-MIPS32R2-NEXT:    lw $1, %got($.str.1)($2)
-; PIC-MIPS32R2-NEXT:    addiu $1, $1, %lo($.str.1)
-; PIC-MIPS32R2-NEXT:    b $BB0_10
-; PIC-MIPS32R2-NEXT:    sw $1, 8($sp)
-; PIC-MIPS32R2-NEXT:  $BB0_5: # %sw.bb2
+; PIC-MIPS32R2-NEXT:  $BB0_4: # %sw.bb2
 ; PIC-MIPS32R2-NEXT:    lw $1, %got($.str.2)($2)
 ; PIC-MIPS32R2-NEXT:    addiu $1, $1, %lo($.str.2)
 ; PIC-MIPS32R2-NEXT:    b $BB0_10
 ; PIC-MIPS32R2-NEXT:    sw $1, 8($sp)
-; PIC-MIPS32R2-NEXT:  $BB0_6: # %sw.bb3
+; PIC-MIPS32R2-NEXT:  $BB0_5: # %sw.bb3
 ; PIC-MIPS32R2-NEXT:    lw $1, %got($.str.3)($2)
 ; PIC-MIPS32R2-NEXT:    addiu $1, $1, %lo($.str.3)
 ; PIC-MIPS32R2-NEXT:    b $BB0_10
 ; PIC-MIPS32R2-NEXT:    sw $1, 8($sp)
-; PIC-MIPS32R2-NEXT:  $BB0_7: # %sw.bb4
-; PIC-MIPS32R2-NEXT:    lw $1, %got($.str.4)($2)
-; PIC-MIPS32R2-NEXT:    addiu $1, $1, %lo($.str.4)
+; PIC-MIPS32R2-NEXT:  $BB0_6: # %sw.epilog
+; PIC-MIPS32R2-NEXT:    lw $1, %got($.str.7)($2)
+; PIC-MIPS32R2-NEXT:    addiu $1, $1, %lo($.str.7)
+; PIC-MIPS32R2-NEXT:    b $BB0_10
+; PIC-MIPS32R2-NEXT:    sw $1, 8($sp)
+; PIC-MIPS32R2-NEXT:  $BB0_7: # %sw.bb1
+; PIC-MIPS32R2-NEXT:    lw $1, %got($.str.1)($2)
+; PIC-MIPS32R2-NEXT:    addiu $1, $1, %lo($.str.1)
 ; PIC-MIPS32R2-NEXT:    b $BB0_10
 ; PIC-MIPS32R2-NEXT:    sw $1, 8($sp)
 ; PIC-MIPS32R2-NEXT:  $BB0_8: # %sw.bb5
@@ -411,9 +411,9 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; PIC-MIPS32R6-NEXT:    .cfi_def_cfa_offset 16
 ; PIC-MIPS32R6-NEXT:    addu $2, $2, $25
 ; PIC-MIPS32R6-NEXT:    sltiu $1, $4, 7
-; PIC-MIPS32R6-NEXT:    beqz $1, $BB0_3
+; PIC-MIPS32R6-NEXT:    beqz $1, $BB0_6
 ; PIC-MIPS32R6-NEXT:    sw $4, 4($sp)
-; PIC-MIPS32R6-NEXT:  $BB0_1: # %entry
+; PIC-MIPS32R6-NEXT:  # %bb.1: # %entry
 ; PIC-MIPS32R6-NEXT:    sll $1, $4, 2
 ; PIC-MIPS32R6-NEXT:    lw $3, %got($JTI0_0)($2)
 ; PIC-MIPS32R6-NEXT:    addu $1, $1, $3
@@ -426,29 +426,29 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; PIC-MIPS32R6-NEXT:    addiu $1, $1, %lo($.str)
 ; PIC-MIPS32R6-NEXT:    b $BB0_10
 ; PIC-MIPS32R6-NEXT:    sw $1, 8($sp)
-; PIC-MIPS32R6-NEXT:  $BB0_3: # %sw.epilog
-; PIC-MIPS32R6-NEXT:    lw $1, %got($.str.7)($2)
-; PIC-MIPS32R6-NEXT:    addiu $1, $1, %lo($.str.7)
+; PIC-MIPS32R6-NEXT:  $BB0_3: # %sw.bb4
+; PIC-MIPS32R6-NEXT:    lw $1, %got($.str.4)($2)
+; PIC-MIPS32R6-NEXT:    addiu $1, $1, %lo($.str.4)
 ; PIC-MIPS32R6-NEXT:    b $BB0_10
 ; PIC-MIPS32R6-NEXT:    sw $1, 8($sp)
-; PIC-MIPS32R6-NEXT:  $BB0_4: # %sw.bb1
-; PIC-MIPS32R6-NEXT:    lw $1, %got($.str.1)($2)
-; PIC-MIPS32R6-NEXT:    addiu $1, $1, %lo($.str.1)
-; PIC-MIPS32R6-NEXT:    b $BB0_10
-; PIC-MIPS32R6-NEXT:    sw $1, 8($sp)
-; PIC-MIPS32R6-NEXT:  $BB0_5: # %sw.bb2
+; PIC-MIPS32R6-NEXT:  $BB0_4: # %sw.bb2
 ; PIC-MIPS32R6-NEXT:    lw $1, %got($.str.2)($2)
 ; PIC-MIPS32R6-NEXT:    addiu $1, $1, %lo($.str.2)
 ; PIC-MIPS32R6-NEXT:    b $BB0_10
 ; PIC-MIPS32R6-NEXT:    sw $1, 8($sp)
-; PIC-MIPS32R6-NEXT:  $BB0_6: # %sw.bb3
+; PIC-MIPS32R6-NEXT:  $BB0_5: # %sw.bb3
 ; PIC-MIPS32R6-NEXT:    lw $1, %got($.str.3)($2)
 ; PIC-MIPS32R6-NEXT:    addiu $1, $1, %lo($.str.3)
 ; PIC-MIPS32R6-NEXT:    b $BB0_10
 ; PIC-MIPS32R6-NEXT:    sw $1, 8($sp)
-; PIC-MIPS32R6-NEXT:  $BB0_7: # %sw.bb4
-; PIC-MIPS32R6-NEXT:    lw $1, %got($.str.4)($2)
-; PIC-MIPS32R6-NEXT:    addiu $1, $1, %lo($.str.4)
+; PIC-MIPS32R6-NEXT:  $BB0_6: # %sw.epilog
+; PIC-MIPS32R6-NEXT:    lw $1, %got($.str.7)($2)
+; PIC-MIPS32R6-NEXT:    addiu $1, $1, %lo($.str.7)
+; PIC-MIPS32R6-NEXT:    b $BB0_10
+; PIC-MIPS32R6-NEXT:    sw $1, 8($sp)
+; PIC-MIPS32R6-NEXT:  $BB0_7: # %sw.bb1
+; PIC-MIPS32R6-NEXT:    lw $1, %got($.str.1)($2)
+; PIC-MIPS32R6-NEXT:    addiu $1, $1, %lo($.str.1)
 ; PIC-MIPS32R6-NEXT:    b $BB0_10
 ; PIC-MIPS32R6-NEXT:    sw $1, 8($sp)
 ; PIC-MIPS32R6-NEXT:  $BB0_8: # %sw.bb5
@@ -474,9 +474,9 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; PIC-MIPS64R2-NEXT:    daddiu $2, $1, %lo(%neg(%gp_rel(_Z3fooi)))
 ; PIC-MIPS64R2-NEXT:    dext $3, $4, 0, 32
 ; PIC-MIPS64R2-NEXT:    sltiu $1, $3, 7
-; PIC-MIPS64R2-NEXT:    beqz $1, .LBB0_3
+; PIC-MIPS64R2-NEXT:    beqz $1, .LBB0_6
 ; PIC-MIPS64R2-NEXT:    sw $4, 4($sp)
-; PIC-MIPS64R2-NEXT:  .LBB0_1: # %entry
+; PIC-MIPS64R2-NEXT:  # %bb.1: # %entry
 ; PIC-MIPS64R2-NEXT:    dsll $1, $3, 3
 ; PIC-MIPS64R2-NEXT:    ld $3, %got_page(.LJTI0_0)($2)
 ; PIC-MIPS64R2-NEXT:    daddu $1, $1, $3
@@ -489,29 +489,29 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; PIC-MIPS64R2-NEXT:    daddiu $1, $1, %got_ofst(.L.str)
 ; PIC-MIPS64R2-NEXT:    b .LBB0_10
 ; PIC-MIPS64R2-NEXT:    sd $1, 8($sp)
-; PIC-MIPS64R2-NEXT:  .LBB0_3: # %sw.epilog
-; PIC-MIPS64R2-NEXT:    ld $1, %got_page(.L.str.7)($2)
-; PIC-MIPS64R2-NEXT:    daddiu $1, $1, %got_ofst(.L.str.7)
+; PIC-MIPS64R2-NEXT:  .LBB0_3: # %sw.bb4
+; PIC-MIPS64R2-NEXT:    ld $1, %got_page(.L.str.4)($2)
+; PIC-MIPS64R2-NEXT:    daddiu $1, $1, %got_ofst(.L.str.4)
 ; PIC-MIPS64R2-NEXT:    b .LBB0_10
 ; PIC-MIPS64R2-NEXT:    sd $1, 8($sp)
-; PIC-MIPS64R2-NEXT:  .LBB0_4: # %sw.bb1
-; PIC-MIPS64R2-NEXT:    ld $1, %got_page(.L.str.1)($2)
-; PIC-MIPS64R2-NEXT:    daddiu $1, $1, %got_ofst(.L.str.1)
-; PIC-MIPS64R2-NEXT:    b .LBB0_10
-; PIC-MIPS64R2-NEXT:    sd $1, 8($sp)
-; PIC-MIPS64R2-NEXT:  .LBB0_5: # %sw.bb2
+; PIC-MIPS64R2-NEXT:  .LBB0_4: # %sw.bb2
 ; PIC-MIPS64R2-NEXT:    ld $1, %got_page(.L.str.2)($2)
 ; PIC-MIPS64R2-NEXT:    daddiu $1, $1, %got_ofst(.L.str.2)
 ; PIC-MIPS64R2-NEXT:    b .LBB0_10
 ; PIC-MIPS64R2-NEXT:    sd $1, 8($sp)
-; PIC-MIPS64R2-NEXT:  .LBB0_6: # %sw.bb3
+; PIC-MIPS64R2-NEXT:  .LBB0_5: # %sw.bb3
 ; PIC-MIPS64R2-NEXT:    ld $1, %got_page(.L.str.3)($2)
 ; PIC-MIPS64R2-NEXT:    daddiu $1, $1, %got_ofst(.L.str.3)
 ; PIC-MIPS64R2-NEXT:    b .LBB0_10
 ; PIC-MIPS64R2-NEXT:    sd $1, 8($sp)
-; PIC-MIPS64R2-NEXT:  .LBB0_7: # %sw.bb4
-; PIC-MIPS64R2-NEXT:    ld $1, %got_page(.L.str.4)($2)
-; PIC-MIPS64R2-NEXT:    daddiu $1, $1, %got_ofst(.L.str.4)
+; PIC-MIPS64R2-NEXT:  .LBB0_6: # %sw.epilog
+; PIC-MIPS64R2-NEXT:    ld $1, %got_page(.L.str.7)($2)
+; PIC-MIPS64R2-NEXT:    daddiu $1, $1, %got_ofst(.L.str.7)
+; PIC-MIPS64R2-NEXT:    b .LBB0_10
+; PIC-MIPS64R2-NEXT:    sd $1, 8($sp)
+; PIC-MIPS64R2-NEXT:  .LBB0_7: # %sw.bb1
+; PIC-MIPS64R2-NEXT:    ld $1, %got_page(.L.str.1)($2)
+; PIC-MIPS64R2-NEXT:    daddiu $1, $1, %got_ofst(.L.str.1)
 ; PIC-MIPS64R2-NEXT:    b .LBB0_10
 ; PIC-MIPS64R2-NEXT:    sd $1, 8($sp)
 ; PIC-MIPS64R2-NEXT:  .LBB0_8: # %sw.bb5
@@ -537,9 +537,9 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; PIC-MIPS64R6-NEXT:    daddiu $2, $1, %lo(%neg(%gp_rel(_Z3fooi)))
 ; PIC-MIPS64R6-NEXT:    dext $3, $4, 0, 32
 ; PIC-MIPS64R6-NEXT:    sltiu $1, $3, 7
-; PIC-MIPS64R6-NEXT:    beqz $1, .LBB0_3
+; PIC-MIPS64R6-NEXT:    beqz $1, .LBB0_6
 ; PIC-MIPS64R6-NEXT:    sw $4, 4($sp)
-; PIC-MIPS64R6-NEXT:  .LBB0_1: # %entry
+; PIC-MIPS64R6-NEXT:  # %bb.1: # %entry
 ; PIC-MIPS64R6-NEXT:    dsll $1, $3, 3
 ; PIC-MIPS64R6-NEXT:    ld $3, %got_page(.LJTI0_0)($2)
 ; PIC-MIPS64R6-NEXT:    daddu $1, $1, $3
@@ -552,29 +552,29 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; PIC-MIPS64R6-NEXT:    daddiu $1, $1, %got_ofst(.L.str)
 ; PIC-MIPS64R6-NEXT:    b .LBB0_10
 ; PIC-MIPS64R6-NEXT:    sd $1, 8($sp)
-; PIC-MIPS64R6-NEXT:  .LBB0_3: # %sw.epilog
-; PIC-MIPS64R6-NEXT:    ld $1, %got_page(.L.str.7)($2)
-; PIC-MIPS64R6-NEXT:    daddiu $1, $1, %got_ofst(.L.str.7)
+; PIC-MIPS64R6-NEXT:  .LBB0_3: # %sw.bb4
+; PIC-MIPS64R6-NEXT:    ld $1, %got_page(.L.str.4)($2)
+; PIC-MIPS64R6-NEXT:    daddiu $1, $1, %got_ofst(.L.str.4)
 ; PIC-MIPS64R6-NEXT:    b .LBB0_10
 ; PIC-MIPS64R6-NEXT:    sd $1, 8($sp)
-; PIC-MIPS64R6-NEXT:  .LBB0_4: # %sw.bb1
-; PIC-MIPS64R6-NEXT:    ld $1, %got_page(.L.str.1)($2)
-; PIC-MIPS64R6-NEXT:    daddiu $1, $1, %got_ofst(.L.str.1)
-; PIC-MIPS64R6-NEXT:    b .LBB0_10
-; PIC-MIPS64R6-NEXT:    sd $1, 8($sp)
-; PIC-MIPS64R6-NEXT:  .LBB0_5: # %sw.bb2
+; PIC-MIPS64R6-NEXT:  .LBB0_4: # %sw.bb2
 ; PIC-MIPS64R6-NEXT:    ld $1, %got_page(.L.str.2)($2)
 ; PIC-MIPS64R6-NEXT:    daddiu $1, $1, %got_ofst(.L.str.2)
 ; PIC-MIPS64R6-NEXT:    b .LBB0_10
 ; PIC-MIPS64R6-NEXT:    sd $1, 8($sp)
-; PIC-MIPS64R6-NEXT:  .LBB0_6: # %sw.bb3
+; PIC-MIPS64R6-NEXT:  .LBB0_5: # %sw.bb3
 ; PIC-MIPS64R6-NEXT:    ld $1, %got_page(.L.str.3)($2)
 ; PIC-MIPS64R6-NEXT:    daddiu $1, $1, %got_ofst(.L.str.3)
 ; PIC-MIPS64R6-NEXT:    b .LBB0_10
 ; PIC-MIPS64R6-NEXT:    sd $1, 8($sp)
-; PIC-MIPS64R6-NEXT:  .LBB0_7: # %sw.bb4
-; PIC-MIPS64R6-NEXT:    ld $1, %got_page(.L.str.4)($2)
-; PIC-MIPS64R6-NEXT:    daddiu $1, $1, %got_ofst(.L.str.4)
+; PIC-MIPS64R6-NEXT:  .LBB0_6: # %sw.epilog
+; PIC-MIPS64R6-NEXT:    ld $1, %got_page(.L.str.7)($2)
+; PIC-MIPS64R6-NEXT:    daddiu $1, $1, %got_ofst(.L.str.7)
+; PIC-MIPS64R6-NEXT:    b .LBB0_10
+; PIC-MIPS64R6-NEXT:    sd $1, 8($sp)
+; PIC-MIPS64R6-NEXT:  .LBB0_7: # %sw.bb1
+; PIC-MIPS64R6-NEXT:    ld $1, %got_page(.L.str.1)($2)
+; PIC-MIPS64R6-NEXT:    daddiu $1, $1, %got_ofst(.L.str.1)
 ; PIC-MIPS64R6-NEXT:    b .LBB0_10
 ; PIC-MIPS64R6-NEXT:    sd $1, 8($sp)
 ; PIC-MIPS64R6-NEXT:  .LBB0_8: # %sw.bb5

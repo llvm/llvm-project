@@ -13,12 +13,13 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
@@ -36,7 +37,7 @@ using StackEntry = std::pair<BasicBlock *, Value *>;
 using StackVector = SmallVector<StackEntry, 16>;
 
 class SIAnnotateControlFlow : public FunctionPass {
-  LegacyDivergenceAnalysis *DA;
+  UniformityInfo *UA;
 
   Type *Boolean;
   Type *Void;
@@ -99,7 +100,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<LegacyDivergenceAnalysis>();
+    AU.addRequired<UniformityInfoWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addRequired<TargetPassConfig>();
@@ -112,7 +113,7 @@ public:
 INITIALIZE_PASS_BEGIN(SIAnnotateControlFlow, DEBUG_TYPE,
                       "Annotate SI Control Flow", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(SIAnnotateControlFlow, DEBUG_TYPE,
                     "Annotate SI Control Flow", false, false)
@@ -146,8 +147,7 @@ void SIAnnotateControlFlow::initialize(Module &M, const GCNSubtarget &ST) {
 /// Is the branch condition uniform or did the StructurizeCFG pass
 /// consider it as such?
 bool SIAnnotateControlFlow::isUniform(BranchInst *T) {
-  return DA->isUniform(T) ||
-         T->getMetadata("structurizecfg.uniform") != nullptr;
+  return UA->isUniform(T) || T->hasMetadata("structurizecfg.uniform");
 }
 
 /// Is BB the last block saved on the stack ?
@@ -206,9 +206,12 @@ bool SIAnnotateControlFlow::openIf(BranchInst *Term) {
   if (isUniform(Term))
     return false;
 
-  Value *Ret = CallInst::Create(If, Term->getCondition(), "", Term);
-  Term->setCondition(ExtractValueInst::Create(Ret, 0, "", Term));
-  push(Term->getSuccessor(1), ExtractValueInst::Create(Ret, 1, "", Term));
+  IRBuilder<> IRB(Term);
+  Value *IfCall = IRB.CreateCall(If, {Term->getCondition()});
+  Value *Cond = IRB.CreateExtractValue(IfCall, {0});
+  Value *Mask = IRB.CreateExtractValue(IfCall, {1});
+  Term->setCondition(Cond);
+  push(Term->getSuccessor(1), Mask);
   return true;
 }
 
@@ -217,15 +220,24 @@ bool SIAnnotateControlFlow::insertElse(BranchInst *Term) {
   if (isUniform(Term)) {
     return false;
   }
-  Value *Ret = CallInst::Create(Else, popSaved(), "", Term);
-  Term->setCondition(ExtractValueInst::Create(Ret, 0, "", Term));
-  push(Term->getSuccessor(1), ExtractValueInst::Create(Ret, 1, "", Term));
+
+  IRBuilder<> IRB(Term);
+  Value *ElseCall = IRB.CreateCall(Else, {popSaved()});
+  Value *Cond = IRB.CreateExtractValue(ElseCall, {0});
+  Value *Mask = IRB.CreateExtractValue(ElseCall, {1});
+  Term->setCondition(Cond);
+  push(Term->getSuccessor(1), Mask);
   return true;
 }
 
 /// Recursively handle the condition leading to a loop
 Value *SIAnnotateControlFlow::handleLoopCondition(
     Value *Cond, PHINode *Broken, llvm::Loop *L, BranchInst *Term) {
+
+  auto CreateBreak = [this, Cond, Broken](Instruction *I) -> CallInst * {
+    return IRBuilder<>(I).CreateCall(IfBreak, {Cond, Broken});
+  };
+
   if (Instruction *Inst = dyn_cast<Instruction>(Cond)) {
     BasicBlock *Parent = Inst->getParent();
     Instruction *Insert;
@@ -235,8 +247,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(
       Insert = L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
     }
 
-    Value *Args[] = { Cond, Broken };
-    return CallInst::Create(IfBreak, Args, "", Insert);
+    return CreateBreak(Insert);
   }
 
   // Insert IfBreak in the loop header TERM for constant COND other than true.
@@ -244,14 +255,12 @@ Value *SIAnnotateControlFlow::handleLoopCondition(
     Instruction *Insert = Cond == BoolTrue ?
       Term : L->getHeader()->getTerminator();
 
-    Value *Args[] = { Cond, Broken };
-    return CallInst::Create(IfBreak, Args, "", Insert);
+    return CreateBreak(Insert);
   }
 
   if (isa<Argument>(Cond)) {
     Instruction *Insert = L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
-    Value *Args[] = { Cond, Broken };
-    return CallInst::Create(IfBreak, Args, "", Insert);
+    return CreateBreak(Insert);
   }
 
   llvm_unreachable("Unhandled loop condition!");
@@ -268,7 +277,8 @@ bool SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
     return false;
 
   BasicBlock *Target = Term->getSuccessor(1);
-  PHINode *Broken = PHINode::Create(IntMask, 0, "phi.broken", &Target->front());
+  PHINode *Broken = PHINode::Create(IntMask, 0, "phi.broken");
+  Broken->insertBefore(Target->begin());
 
   Value *Cond = Term->getCondition();
   Term->setCondition(BoolTrue);
@@ -286,7 +296,8 @@ bool SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
     Broken->addIncoming(PHIValue, Pred);
   }
 
-  Term->setCondition(CallInst::Create(Loop, Arg, "", Term));
+  CallInst *LoopCall = IRBuilder<>(Term).CreateCall(Loop, {Arg});
+  Term->setCondition(LoopCall);
 
   push(Term->getSuccessor(0), Arg);
 
@@ -317,15 +328,16 @@ bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
   }
 
   Value *Exec = popSaved();
-  Instruction *FirstInsertionPt = &*BB->getFirstInsertionPt();
+  BasicBlock::iterator FirstInsertionPt = BB->getFirstInsertionPt();
   if (!isa<UndefValue>(Exec) && !isa<UnreachableInst>(FirstInsertionPt)) {
     Instruction *ExecDef = cast<Instruction>(Exec);
     BasicBlock *DefBB = ExecDef->getParent();
     if (!DT->dominates(DefBB, BB)) {
       // Split edge to make Def dominate Use
-      FirstInsertionPt = &*SplitEdge(DefBB, BB, DT, LI)->getFirstInsertionPt();
+      FirstInsertionPt = SplitEdge(DefBB, BB, DT, LI)->getFirstInsertionPt();
     }
-    CallInst::Create(EndCf, Exec, "", FirstInsertionPt);
+    IRBuilder<>(FirstInsertionPt->getParent(), FirstInsertionPt)
+        .CreateCall(EndCf, {Exec});
   }
 
   return true;
@@ -336,7 +348,7 @@ bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
 bool SIAnnotateControlFlow::runOnFunction(Function &F) {
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  DA = &getAnalysis<LegacyDivergenceAnalysis>();
+  UA = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
   TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
   const TargetMachine &TM = TPC.getTM<TargetMachine>();
 

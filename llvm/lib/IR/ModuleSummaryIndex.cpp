@@ -107,11 +107,15 @@ uint64_t ModuleSummaryIndex::getFlags() const {
     Flags |= 0x40;
   if (withWholeProgramVisibility())
     Flags |= 0x80;
+  if (withSupportsHotColdNew())
+    Flags |= 0x100;
+  if (hasUnifiedLTO())
+    Flags |= 0x200;
   return Flags;
 }
 
 void ModuleSummaryIndex::setFlags(uint64_t Flags) {
-  assert(Flags <= 0xff && "Unexpected bits in flag");
+  assert(Flags <= 0x2ff && "Unexpected bits in flag");
   // 1 bit: WithGlobalValueDeadStripping flag.
   // Set on combined index only.
   if (Flags & 0x1)
@@ -145,6 +149,14 @@ void ModuleSummaryIndex::setFlags(uint64_t Flags) {
   // Set on combined index only.
   if (Flags & 0x80)
     setWithWholeProgramVisibility();
+  // 1 bit: WithSupportsHotColdNew flag.
+  // Set on combined index only.
+  if (Flags & 0x100)
+    setWithSupportsHotColdNew();
+  // 1 bit: WithUnifiedLTO flag.
+  // Set on combined index only.
+  if (Flags & 0x200)
+    setUnifiedLTO();
 }
 
 // Collect for the given module the list of function it defines
@@ -317,7 +329,7 @@ void ModuleSummaryIndex::propagateAttributes(
           }
 }
 
-bool ModuleSummaryIndex::canImportGlobalVar(GlobalValueSummary *S,
+bool ModuleSummaryIndex::canImportGlobalVar(const GlobalValueSummary *S,
                                             bool AnalyzeRefs) const {
   auto HasRefsPreventingImport = [this](const GlobalVarSummary *GVS) {
     // We don't analyze GV references during attribute propagation, so
@@ -542,6 +554,17 @@ void ModuleSummaryIndex::exportToDot(
   std::map<StringRef, GVSOrderedMapTy> ModuleToDefinedGVS;
   collectDefinedGVSummariesPerModule(ModuleToDefinedGVS);
 
+  // Assign an id to each module path for use in graph labels. Since the
+  // StringMap iteration order isn't guaranteed, order by path string before
+  // assigning ids.
+  std::vector<StringRef> ModulePaths;
+  for (auto &[ModPath, _] : modulePaths())
+    ModulePaths.push_back(ModPath);
+  llvm::sort(ModulePaths);
+  DenseMap<StringRef, uint64_t> ModuleIdMap;
+  for (auto &ModPath : ModulePaths)
+    ModuleIdMap.try_emplace(ModPath, ModuleIdMap.size());
+
   // Get node identifier in form MXXX_<GUID>. The MXXX prefix is required,
   // because we may have multiple linkonce functions summaries.
   auto NodeId = [](uint64_t ModId, GlobalValue::GUID Id) {
@@ -577,7 +600,10 @@ void ModuleSummaryIndex::exportToDot(
 
   OS << "digraph Summary {\n";
   for (auto &ModIt : ModuleToDefinedGVS) {
-    auto ModId = getModuleId(ModIt.first);
+    // Will be empty for a just built per-module index, which doesn't setup a
+    // module paths table. In that case use 0 as the module id.
+    assert(ModuleIdMap.count(ModIt.first) || ModuleIdMap.empty());
+    auto ModId = ModuleIdMap.empty() ? 0 : ModuleIdMap[ModIt.first];
     OS << "  // Module: " << ModIt.first << "\n";
     OS << "  subgraph cluster_" << std::to_string(ModId) << " {\n";
     OS << "    style = filled;\n";

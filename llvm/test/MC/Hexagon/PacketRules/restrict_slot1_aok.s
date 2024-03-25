@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -arch=hexagon -filetype=asm %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=hexagon -filetype=asm %s 2>&1 | FileCheck %s
 
 { r0=sub(#1,r0)
   r1=sub(#1, r0)

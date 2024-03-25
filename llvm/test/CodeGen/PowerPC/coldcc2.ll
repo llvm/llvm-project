@@ -7,8 +7,8 @@
 define signext i32 @caller(i32 signext %a, i32 signext %b, i32 signext %cold) {
 entry:
 ; COLDCC: bl callee
-; COLDCC: ld 4, 40(1)
-; COLDCC: ld 5, 32(1)
+; COLDCC: ld 4, 32(1)
+; COLDCC: ld 3, 40(1)
   %call = tail call coldcc { i64, i64 } @callee(i32 signext %a, i32 signext %b)
   %0 = extractvalue { i64, i64 } %call, 0
   %1 = extractvalue { i64, i64 } %call, 1

@@ -2,7 +2,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include <cstddef>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 extern void *memcpy(void *__restrict, const void *__restrict, size_t);
 extern void *memmove(void *, const void *, size_t);
@@ -11,7 +11,7 @@ extern void bzero(void *, size_t);
 extern int memcmp(const void *, const void *, size_t);
 extern int bcmp(const void *, const void *, size_t);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 // List of implementations to test.
 
@@ -23,31 +23,31 @@ using llvm::libc_benchmarks::MemsetConfiguration;
 
 llvm::ArrayRef<MemcpyConfiguration> getMemcpyConfigurations() {
   static constexpr MemcpyConfiguration kMemcpyConfigurations[] = {
-      {__llvm_libc::memcpy, "__llvm_libc::memcpy"}};
+      {LIBC_NAMESPACE::memcpy, "LIBC_NAMESPACE::memcpy"}};
   return llvm::ArrayRef(kMemcpyConfigurations);
 }
 llvm::ArrayRef<MemmoveConfiguration> getMemmoveConfigurations() {
   static constexpr MemmoveConfiguration kMemmoveConfigurations[] = {
-      {__llvm_libc::memmove, "__llvm_libc::memmove"}};
+      {LIBC_NAMESPACE::memmove, "LIBC_NAMESPACE::memmove"}};
   return llvm::ArrayRef(kMemmoveConfigurations);
 }
 llvm::ArrayRef<MemcmpOrBcmpConfiguration> getMemcmpConfigurations() {
   static constexpr MemcmpOrBcmpConfiguration kMemcmpConfiguration[] = {
-      {__llvm_libc::memcmp, "__llvm_libc::memcmp"}};
+      {LIBC_NAMESPACE::memcmp, "LIBC_NAMESPACE::memcmp"}};
   return llvm::ArrayRef(kMemcmpConfiguration);
 }
 llvm::ArrayRef<MemcmpOrBcmpConfiguration> getBcmpConfigurations() {
   static constexpr MemcmpOrBcmpConfiguration kBcmpConfigurations[] = {
-      {__llvm_libc::bcmp, "__llvm_libc::bcmp"}};
+      {LIBC_NAMESPACE::bcmp, "LIBC_NAMESPACE::bcmp"}};
   return llvm::ArrayRef(kBcmpConfigurations);
 }
 llvm::ArrayRef<MemsetConfiguration> getMemsetConfigurations() {
   static constexpr MemsetConfiguration kMemsetConfigurations[] = {
-      {__llvm_libc::memset, "__llvm_libc::memset"}};
+      {LIBC_NAMESPACE::memset, "LIBC_NAMESPACE::memset"}};
   return llvm::ArrayRef(kMemsetConfigurations);
 }
 llvm::ArrayRef<BzeroConfiguration> getBzeroConfigurations() {
   static constexpr BzeroConfiguration kBzeroConfigurations[] = {
-      {__llvm_libc::bzero, "__llvm_libc::bzero"}};
+      {LIBC_NAMESPACE::bzero, "LIBC_NAMESPACE::bzero"}};
   return llvm::ArrayRef(kBzeroConfigurations);
 }

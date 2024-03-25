@@ -1,10 +1,11 @@
-; RUN: llc -enable-fs-discriminator < %s | FileCheck %s
+; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=false < %s | FileCheck %s
+; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true < %s | FileCheck %s
 ;
 ; Check that fs-afdo discriminators are NOT generated, as debugInfoForProfiling is false (not set).
 ; CHECK: .loc    1 7 3 is_stmt 0 discriminator 2 # foo.c:7:3
 ; CHECK: .loc    1 9 5 is_stmt 1 discriminator 2 # foo.c:9:5
-; CHECK-NOT: .loc    1 9 5 is_stmt 0 discriminator 11266 # foo.c:9:5
-; CHECK-NOT: .loc    1 7 3 is_stmt 1 discriminator 11266 # foo.c:7:3
+; CHECK-NOT: .loc    1 9 5 is_stmt 0 discriminator
+; CHECK-NOT: .loc    1 7 3 is_stmt 1 discriminator
 ; Check that variable __llvm_fs_discriminator__ is NOT generated.
 ; CHECK-NOT: __llvm_fs_discriminator__:
 

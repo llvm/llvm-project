@@ -28,7 +28,7 @@ module m1
     character(*), intent(in out) :: iomsg; \
     read(unit, iostat=iostat, iomsg=iomsg) dtv%n; \
   end subroutine name
-  !ERROR: Derived type 't1' already has defined input/output procedure 'read(unformatted)'
+  !ERROR: Derived type 't1' has conflicting type-bound input/output procedure 'read(unformatted)'
   DEFINE_READU(readt1a, t1)
   DEFINE_READU(readt1b, t1)
   DEFINE_READU(readt2a, t2)

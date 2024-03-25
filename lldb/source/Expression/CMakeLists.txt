@@ -1,8 +1,9 @@
-add_lldb_library(lldbExpression
+add_lldb_library(lldbExpression NO_PLUGIN_DEPENDENCIES
   DiagnosticManager.cpp
   DWARFExpression.cpp
   DWARFExpressionList.cpp
   Expression.cpp
+  ExpressionTypeSystemHelper.cpp
   ExpressionVariable.cpp
   FunctionCaller.cpp
   IRExecutionUnit.cpp
@@ -10,6 +11,7 @@ add_lldb_library(lldbExpression
   IRMemoryMap.cpp
   LLVMUserExpression.cpp
   Materializer.cpp
+  ObjectFileJIT.cpp
   REPL.cpp
   UserExpression.cpp
   UtilityFunction.cpp
@@ -24,7 +26,6 @@ add_lldb_library(lldbExpression
     lldbSymbol
     lldbTarget
     lldbUtility
-    lldbPluginObjectFileJIT
 
   LINK_COMPONENTS
     Core

@@ -41,9 +41,9 @@
 #ifndef FORTRAN_RUNTIME_UTF_H_
 #define FORTRAN_RUNTIME_UTF_H_
 
+#include "flang/Common/optional.h"
 #include <cstddef>
 #include <cstdint>
-#include <optional>
 
 namespace Fortran::runtime {
 
@@ -58,7 +58,7 @@ static constexpr std::size_t maxUTF8Bytes{7};
 
 // Ensure that all bytes are present in sequence in the input buffer
 // before calling; use MeasureUTF8Bytes(first byte) to count them.
-std::optional<char32_t> DecodeUTF8(const char *);
+Fortran::common::optional<char32_t> DecodeUTF8(const char *);
 
 // Ensure that at least maxUTF8Bytes remain in the output
 // buffer before calling.

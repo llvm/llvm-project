@@ -351,10 +351,12 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
     case AnyCharTy: {
       if (const auto *ETy = argTy->getAs<EnumType>()) {
         // If the enum is incomplete we know nothing about the underlying type.
-        // Assume that it's 'int'.
+        // Assume that it's 'int'. Do not use the underlying type for a scoped
+        // enumeration.
         if (!ETy->getDecl()->isComplete())
           return NoMatch;
-        argTy = ETy->getDecl()->getIntegerType();
+        if (ETy->isUnscopedEnumerationType())
+          argTy = ETy->getDecl()->getIntegerType();
       }
 
       if (const auto *BT = argTy->getAs<BuiltinType>()) {
@@ -366,8 +368,11 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
         case BuiltinType::SChar:
         case BuiltinType::UChar:
         case BuiltinType::Char_U:
+            return Match;
         case BuiltinType::Bool:
-          return Match;
+          if (!Ptr)
+            return Match;
+          break;
         }
         // "Partially matched" because of promotions?
         if (!Ptr) {
@@ -391,12 +396,17 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
     case SpecificTy: {
       if (const EnumType *ETy = argTy->getAs<EnumType>()) {
         // If the enum is incomplete we know nothing about the underlying type.
-        // Assume that it's 'int'.
+        // Assume that it's 'int'. Do not use the underlying type for a scoped
+        // enumeration as that needs an exact match.
         if (!ETy->getDecl()->isComplete())
           argTy = C.IntTy;
-        else
+        else if (ETy->isUnscopedEnumerationType())
           argTy = ETy->getDecl()->getIntegerType();
       }
+
+      if (argTy->isSaturatedFixedPointType())
+        argTy = C.getCorrespondingUnsaturatedType(argTy);
+
       argTy = C.getCanonicalType(argTy).getUnqualifiedType();
 
       if (T == argTy)
@@ -407,11 +417,14 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
         switch (BT->getKind()) {
           default:
             break;
+          case BuiltinType::Bool:
+            if (Ptr && (T == C.UnsignedCharTy || T == C.SignedCharTy))
+              return NoMatch;
+            [[fallthrough]];
           case BuiltinType::Char_S:
           case BuiltinType::SChar:
           case BuiltinType::Char_U:
           case BuiltinType::UChar:
-          case BuiltinType::Bool:
             if (T == C.UnsignedShortTy || T == C.ShortTy)
               return NoMatchTypeConfusion;
             if (T == C.UnsignedCharTy || T == C.SignedCharTy)
@@ -455,11 +468,32 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
             switch (BT->getKind()) {
             default:
               break;
+            case BuiltinType::Bool:
+              if (T == C.IntTy || T == C.UnsignedIntTy)
+                return MatchPromotion;
+              break;
             case BuiltinType::Int:
             case BuiltinType::UInt:
               if (T == C.SignedCharTy || T == C.UnsignedCharTy ||
                   T == C.ShortTy || T == C.UnsignedShortTy || T == C.WCharTy ||
                   T == C.WideCharTy)
+                return MatchPromotion;
+              break;
+            case BuiltinType::Char_U:
+              if (T == C.UnsignedIntTy)
+                return MatchPromotion;
+              if (T == C.UnsignedShortTy)
+                return NoMatchPromotionTypeConfusion;
+              break;
+            case BuiltinType::Char_S:
+              if (T == C.IntTy)
+                return MatchPromotion;
+              if (T == C.ShortTy)
+                return NoMatchPromotionTypeConfusion;
+              break;
+            case BuiltinType::Half:
+            case BuiltinType::Float:
+              if (T == C.DoubleTy)
                 return MatchPromotion;
               break;
             case BuiltinType::Short:
@@ -731,6 +765,16 @@ const char *ConversionSpecifier::toString() const {
 
   // MS specific specifiers.
   case ZArg: return "Z";
+
+  // ISO/IEC TR 18037 (fixed-point) specific specifiers.
+  case rArg:
+    return "r";
+  case RArg:
+    return "R";
+  case kArg:
+    return "k";
+  case KArg:
+    return "K";
   }
   return nullptr;
 }
@@ -795,6 +839,9 @@ bool FormatSpecifier::hasValidLengthModifier(const TargetInfo &Target,
       if (LO.OpenCL && CS.isDoubleArg())
         return !VectorNumElts.isInvalid();
 
+      if (CS.isFixedPointArg())
+        return true;
+
       if (Target.getTriple().isOSMSVCRT()) {
         switch (CS.getKind()) {
           case ConversionSpecifier::cArg:
@@ -847,7 +894,12 @@ bool FormatSpecifier::hasValidLengthModifier(const TargetInfo &Target,
         return true;
       }
 
+      if (CS.isFixedPointArg())
+        return true;
+
       switch (CS.getKind()) {
+        case ConversionSpecifier::bArg:
+        case ConversionSpecifier::BArg:
         case ConversionSpecifier::dArg:
         case ConversionSpecifier::DArg:
         case ConversionSpecifier::iArg:
@@ -1011,6 +1063,11 @@ bool FormatSpecifier::hasStandardConversionSpecifier(
     case ConversionSpecifier::UArg:
     case ConversionSpecifier::ZArg:
       return false;
+    case ConversionSpecifier::rArg:
+    case ConversionSpecifier::RArg:
+    case ConversionSpecifier::kArg:
+    case ConversionSpecifier::KArg:
+      return LangOpt.FixedPoint;
   }
   llvm_unreachable("Invalid ConversionSpecifier Kind!");
 }

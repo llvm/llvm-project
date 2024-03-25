@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx90a -o - -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX90A %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx908 -o - -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX908 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx90a -o - -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX90A %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx908 -early-live-intervals -o - -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX908 %s
 
 ; GCN-LABEL: {{^}}gws_init_odd_reg:
 ; GFX908-DAG: ds_gws_init v1 gds

@@ -29,6 +29,11 @@ SBModuleSpec::SBModuleSpec(const SBModuleSpec &rhs) {
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
+SBModuleSpec::SBModuleSpec(const lldb_private::ModuleSpec &module_spec)
+    : m_opaque_up(new lldb_private::ModuleSpec(module_spec)) {
+  LLDB_INSTRUMENT_VA(this, module_spec);
+}
+
 const SBModuleSpec &SBModuleSpec::operator=(const SBModuleSpec &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
@@ -143,6 +148,30 @@ bool SBModuleSpec::GetDescription(lldb::SBStream &description) {
 
   m_opaque_up->Dump(description.ref());
   return true;
+}
+
+uint64_t SBModuleSpec::GetObjectOffset() {
+  LLDB_INSTRUMENT_VA(this);
+
+  return m_opaque_up->GetObjectOffset();
+}
+
+void SBModuleSpec::SetObjectOffset(uint64_t object_offset) {
+  LLDB_INSTRUMENT_VA(this, object_offset);
+
+  m_opaque_up->SetObjectOffset(object_offset);
+}
+
+uint64_t SBModuleSpec::GetObjectSize() {
+  LLDB_INSTRUMENT_VA(this);
+
+  return m_opaque_up->GetObjectSize();
+}
+
+void SBModuleSpec::SetObjectSize(uint64_t object_size) {
+  LLDB_INSTRUMENT_VA(this, object_size);
+
+  m_opaque_up->SetObjectSize(object_size);
 }
 
 SBModuleSpecList::SBModuleSpecList() : m_opaque_up(new ModuleSpecList()) {

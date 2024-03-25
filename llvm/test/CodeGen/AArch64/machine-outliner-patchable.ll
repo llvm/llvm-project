@@ -11,7 +11,7 @@ define void @fentry0(i1 %a) nounwind "fentry-call"="true" {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    # FEntry call
 ; CHECK:       // %bb.1:
-; CHECK-NEXT:    bl OUTLINED_FUNCTION_1
+; CHECK-NEXT:    bl [[OUTLINED_FUNCTION:OUTLINED_FUNCTION_[0-9]+]]
 entry:
   br i1 %a, label %if.then, label %if.end
 if.then:
@@ -27,7 +27,7 @@ define void @fentry1(i1 %a) nounwind "fentry-call"="true" {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    # FEntry call
 ; CHECK:       // %bb.1:
-; CHECK-NEXT:    bl OUTLINED_FUNCTION_1
+; CHECK-NEXT:    bl [[OUTLINED_FUNCTION]]
 entry:
   br i1 %a, label %if.then, label %if.end
 if.then:
@@ -47,7 +47,7 @@ define void @patchable0(i1 %a) nounwind "patchable-function-entry"="2" {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    nop
 ; CHECK:       // %bb.1:
-; CHECK-NEXT:    bl OUTLINED_FUNCTION_1
+; CHECK-NEXT:    bl [[OUTLINED_FUNCTION]]
 entry:
   br i1 %a, label %if.then, label %if.end
 if.then:
@@ -65,7 +65,7 @@ define void @patchable1(i1 %a) nounwind "patchable-function-entry"="2" {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    nop
 ; CHECK:       // %bb.1:
-; CHECK-NEXT:    bl OUTLINED_FUNCTION_1
+; CHECK-NEXT:    bl [[OUTLINED_FUNCTION]]
 entry:
   br i1 %a, label %if.then, label %if.end
 if.then:
@@ -84,7 +84,7 @@ define void @xray0(i1 %a) nounwind "function-instrument"="xray-always" {
 ; CHECK-NEXT:  .p2align 2
 ; CHECK-NEXT:  .Lxray_sled_0:
 ; CHECK:       // %bb.1:
-; CHECK-NEXT:    bl OUTLINED_FUNCTION_1
+; CHECK-NEXT:    bl [[OUTLINED_FUNCTION]]
 entry:
   br i1 %a, label %if.then, label %if.end
 if.then:
@@ -102,7 +102,7 @@ define void @xray1(i1 %a) nounwind "function-instrument"="xray-always" {
 ; CHECK-NEXT:  .p2align 2
 ; CHECK-NEXT:  .Lxray_sled_2:
 ; CHECK:       // %bb.1:
-; CHECK-NEXT:    bl OUTLINED_FUNCTION_1
+; CHECK-NEXT:    bl [[OUTLINED_FUNCTION]]
 entry:
   br i1 %a, label %if.then, label %if.end
 if.then:
@@ -112,3 +112,12 @@ if.end:
   call void @foo(i32 5, i32 6, i32 7, i32 8)
   ret void
 }
+
+;; Make sure that OUTLINED_FUNCTION contains the right instructions
+; CHECK: [[OUTLINED_FUNCTION]]:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    mov     w0, #1
+; CHECK-NEXT:    mov     w1, #2
+; CHECK-NEXT:    mov     w2, #3
+; CHECK-NEXT:    mov     w3, #4
+; CHECK-NEXT:    b       foo

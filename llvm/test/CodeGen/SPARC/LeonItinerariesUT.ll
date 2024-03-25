@@ -36,12 +36,12 @@
 ; LEON3_4_ITIN-NEXT:  retl
 ; LEON3_4_ITIN-NEXT:  fdivs
 
-define float @f32_ops(float* byval(float) %a, float* byval(float) %b, float* byval(float) %c, float* byval(float) %d) {
+define float @f32_ops(ptr byval(float) %a, ptr byval(float) %b, ptr byval(float) %c, ptr byval(float) %d) {
 entry:
-  %0 = load float, float* %a, align 8
-  %1 = load float, float* %b, align 8
-  %2 = load float, float* %c, align 8
-  %3 = load float, float* %d, align 8
+  %0 = load float, ptr %a, align 8
+  %1 = load float, ptr %b, align 8
+  %2 = load float, ptr %c, align 8
+  %3 = load float, ptr %d, align 8
   %4 = fadd float %0, %1
   %5 = fsub float %4, %2
   %6 = fmul float %5, %3

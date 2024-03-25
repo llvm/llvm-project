@@ -8,4 +8,9 @@ module {
         %res = standalone.foo %0 : i32
         return
     }
+
+    // CHECK-LABEL: func @standalone_types(%arg0: !standalone.custom<"10">)
+    func.func @standalone_types(%arg0: !standalone.custom<"10">) {
+        return
+    }
 }

@@ -5,7 +5,7 @@
 
         .global func1
 _func1:
-@ CHECK-ERROR: :[[#@LINE+1]]:9: error: unsupported relocation on symbol
+@ CHECK-ERROR: :[[#@LINE+1]]:9: error: unsupported relocation type
         bne _func2
 
 @ CHECK-ELF: f47f affe          bne.w {{.+}} @ imm = #-4

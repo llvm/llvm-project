@@ -1,4 +1,4 @@
-//===-- STLAlgorithmModeling.cpp -----------------------------------*- C++ -*--//
+//===-- STLAlgorithmModeling.cpp ----------------------------------*- C++ -*--//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -61,7 +61,7 @@ class STLAlgorithmModeling : public Checker<eval::Call> {
 public:
   STLAlgorithmModeling() = default;
 
-  bool AggressiveStdFindModeling;
+  bool AggressiveStdFindModeling = false;
 
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
 }; //

@@ -96,6 +96,21 @@ MCOperand M68kMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   case M68kII::MO_PLT:
     RefKind = MCSymbolRefExpr::VK_PLT;
     break;
+  case M68kII::MO_TLSGD:
+    RefKind = MCSymbolRefExpr::VK_TLSGD;
+    break;
+  case M68kII::MO_TLSLD:
+    RefKind = MCSymbolRefExpr::VK_TLSLD;
+    break;
+  case M68kII::MO_TLSLDM:
+    RefKind = MCSymbolRefExpr::VK_TLSLDM;
+    break;
+  case M68kII::MO_TLSIE:
+    RefKind = MCSymbolRefExpr::VK_GOTTPOFF;
+    break;
+  case M68kII::MO_TLSLE:
+    RefKind = MCSymbolRefExpr::VK_TPOFF;
+    break;
   }
 
   if (!Expr) {

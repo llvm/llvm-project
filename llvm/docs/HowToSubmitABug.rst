@@ -153,6 +153,62 @@ Please run this, then file a bug with the instructions and reduced .bc file
 that bugpoint emits.  If something goes wrong with bugpoint, please submit
 the "foo.bc" file and the option that llc crashes with.
 
+LTO bugs
+---------------------------
+
+If you encounter a bug that leads to crashes in the LLVM LTO phase when using
+the ``-flto`` option, follow these steps to diagnose and report the issue:
+
+Compile your source file to a ``.bc`` (Bitcode) file with the following options,
+in addition to your existing compilation options:
+
+.. code-block:: bash
+
+   export CFLAGS="-flto -fuse-ld=lld" CXXFLAGS="-flto -fuse-ld=lld" LDFLAGS="-Wl,-plugin-opt=save-temps"
+
+These options enable LTO and save temporary files generated during compilation
+for later analysis.
+
+On Windows, you should be using lld-link as the linker. Adjust your compilation 
+flags as follows:
+* Add ``/lldsavetemps`` to the linker flags.
+* When linking from the compiler driver, add ``/link /lldsavetemps`` in order to forward that flag to the linker.
+
+Using the specified flags will generate four intermediate bytecode files:
+
+#. a.out.0.0.preopt.bc (Before any link-time optimizations (LTO) are applied)
+#. a.out.0.2.internalize.bc (After initial optimizations are applied)
+#. a.out.0.4.opt.bc (After an extensive set of optimizations)
+#. a.out.0.5.precodegen.bc (After LTO but before translating into machine code)
+
+Execute one of the following commands to identify the source of the problem:
+
+#. ``opt "-passes=lto<O3>" a.out.0.2.internalize.bc``
+#. ``llc a.out.0.5.precodegen.bc``
+
+If one of these do crash, you should be able to reduce
+this with :program:`llvm-reduce`
+command line (use the bc file corresponding to the command above that failed):
+
+.. code-block:: bash
+
+   llvm-reduce --test reduce.sh a.out.0.2.internalize.bc
+
+Example of reduce.sh script
+
+.. code-block:: bash
+
+   $ cat reduce.sh
+   #!/bin/bash -e
+
+   path/to/not --crash path/to/opt "-passes=lto<O3>" $1 -o temp.bc  2> err.log
+   grep -q "It->second == &Insn" err.log
+
+Here we have grepped the failed assert message.
+
+Please run this, then file a bug with the instructions and reduced .bc file
+that llvm-reduce emits.
+
 .. _miscompiling:
 
 Miscompilations

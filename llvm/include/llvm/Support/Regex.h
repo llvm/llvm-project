@@ -85,8 +85,9 @@ namespace llvm {
                std::string *Error = nullptr) const;
 
     /// sub - Return the result of replacing the first match of the regex in
-    /// \p String with the \p Repl string. Backreferences like "\0" in the
-    /// replacement string are replaced with the appropriate match substring.
+    /// \p String with the \p Repl string. Backreferences like "\0" and "\g<1>"
+    /// in the replacement string are replaced with the appropriate match
+    /// substring.
     ///
     /// Note that the replacement string has backslash escaping performed on
     /// it. Invalid backreferences are ignored (replaced by empty strings).

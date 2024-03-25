@@ -201,6 +201,9 @@ enum {
   dwarf_ds_x86_64,
   dwarf_fs_x86_64,
   dwarf_gs_x86_64,
+  // Base registers
+  dwarf_fs_base_x86_64 = 58,
+  dwarf_gs_base_x86_64 = 59,
   // Floating point control registers
   dwarf_mxcsr_x86_64 = 64, // Media Control and Status
   dwarf_fctrl_x86_64,      // x87 control word

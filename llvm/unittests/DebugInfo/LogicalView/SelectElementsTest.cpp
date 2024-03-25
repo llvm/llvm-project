@@ -23,6 +23,11 @@ using namespace llvm::logicalview;
 namespace {
 
 class ReaderTestSelection : public LVReader {
+#define CREATE(VARIABLE, CREATE_FUNCTION, SET_FUNCTION)                        \
+  VARIABLE = CREATE_FUNCTION();                                                \
+  EXPECT_NE(VARIABLE, nullptr);                                                \
+  VARIABLE->SET_FUNCTION();
+
   // Types.
   LVType *IntegerType = nullptr;
 
@@ -47,14 +52,6 @@ class ReaderTestSelection : public LVReader {
 
 protected:
   void add(LVScope *Parent, LVElement *Element);
-  template <typename T, typename F> T *create(F Function) {
-    // 'Function' will update a specific kind of the logical element to
-    // have the ability of kind selection.
-    T *Element = new (std::nothrow) T();
-    EXPECT_NE(Element, nullptr);
-    (Element->*Function)();
-    return Element;
-  }
   void set(LVElement *Element, StringRef Name, LVOffset Offset,
            uint32_t LineNumber = 0, LVElement *Type = nullptr);
 
@@ -104,34 +101,27 @@ void ReaderTestSelection::createElements() {
   EXPECT_NE(Root, nullptr);
 
   // Create the logical types.
-  IntegerType = create<LVType, LVTypeSetFunction>(&LVType::setIsBase);
+  CREATE(IntegerType, createType, setIsBase);
 
   // Create the logical scopes.
-  CompileUnit = create<LVScopeCompileUnit, LVScopeSetFunction>(
-      &LVScope::setIsCompileUnit);
-  Function =
-      create<LVScopeFunction, LVScopeSetFunction>(&LVScope::setIsFunction);
-  NestedScope =
-      create<LVScope, LVScopeSetFunction>(&LVScope::setIsLexicalBlock);
-  Namespace =
-      create<LVScopeNamespace, LVScopeSetFunction>(&LVScope::setIsNamespace);
-  Aggregate =
-      create<LVScopeAggregate, LVScopeSetFunction>(&LVScope::setIsAggregate);
+  CREATE(CompileUnit, createScopeCompileUnit, setIsCompileUnit);
+  CREATE(Function, createScopeFunction, setIsFunction);
+  CREATE(NestedScope, createScope, setIsLexicalBlock);
+  CREATE(Namespace, createScopeNamespace, setIsNamespace);
+  CREATE(Aggregate, createScopeAggregate, setIsAggregate);
 
   // Create the logical symbols.
-  ClassMember = create<LVSymbol, LVSymbolSetFunction>(&LVSymbol::setIsMember);
-  LocalVariable =
-      create<LVSymbol, LVSymbolSetFunction>(&LVSymbol::setIsVariable);
-  NestedVariable =
-      create<LVSymbol, LVSymbolSetFunction>(&LVSymbol::setIsVariable);
-  Parameter = create<LVSymbol, LVSymbolSetFunction>(&LVSymbol::setIsParameter);
+  CREATE(ClassMember, createSymbol, setIsMember);
+  CREATE(LocalVariable, createSymbol, setIsVariable);
+  CREATE(NestedVariable, createSymbol, setIsVariable);
+  CREATE(Parameter, createSymbol, setIsParameter);
 
   // Create the logical lines.
-  LineOne = create<LVLine, LVLineSetFunction>(&LVLine::setIsLineDebug);
-  LineTwo = create<LVLine, LVLineSetFunction>(&LVLine::setIsBasicBlock);
-  LineThree = create<LVLine, LVLineSetFunction>(&LVLine::setIsNewStatement);
-  LineFour = create<LVLine, LVLineSetFunction>(&LVLine::setIsPrologueEnd);
-  LineFive = create<LVLine, LVLineSetFunction>(&LVLine::setIsLineAssembler);
+  CREATE(LineOne, createLine, setIsLineDebug);
+  CREATE(LineTwo, createLine, setIsBasicBlock);
+  CREATE(LineThree, createLine, setIsNewStatement);
+  CREATE(LineFour, createLine, setIsPrologueEnd);
+  CREATE(LineFive, createLine, setIsLineAssembler);
 }
 
 // Create the logical view adding the created logical elements.

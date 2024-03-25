@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=50 -verify=expected,omp50 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -verify=expected,omp51 %s -Wuninitialized
 
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -verify=expected,omp45 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=50 -verify=expected,omp50 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -verify=expected,omp51 %s -Wuninitialized
 
 // expected-error@+1 {{unexpected OpenMP directive '#pragma omp target teams distribute parallel for simd'}}
 #pragma omp target teams distribute parallel for simd
@@ -343,7 +343,7 @@ void test_nontemporal(void) {
 #pragma omp target teams distribute parallel for simd nontemporal(int)
   for (i = 0; i < 16; ++i)
     ;
-// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp target teams distribute parallel for simd'}} omp50-error@+1 {{expected variable name}}
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp target teams distribute parallel for simd'}} omp51-error@+1 {{expected variable name}}
 #pragma omp target teams distribute parallel for simd nontemporal(0)
   for (i = 0; i < 16; ++i)
     ;
@@ -373,8 +373,8 @@ void test_nontemporal(void) {
   for (i = 0; i < 16; ++i)
     ;
 
-// omp50-note@+2 {{defined as nontemporal}}
-// omp45-error@+1 2 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp target teams distribute parallel for simd'}} omp50-error@+1 {{a variable cannot appear in more than one nontemporal clause}}
+// omp51-note@+2 {{defined as nontemporal}}
+// omp45-error@+1 2 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp target teams distribute parallel for simd'}} omp51-error@+1 {{a variable cannot appear in more than one nontemporal clause}}
 #pragma omp target teams distribute parallel for simd nontemporal(x) nontemporal(x)
   for (i = 0; i < 16; ++i)
     ;

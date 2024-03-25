@@ -14,9 +14,10 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_MCTARGETDESC_WEBASSEMBLYMCTARGETDESC_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_MCTARGETDESC_WEBASSEMBLYMCTARGETDESC_H
 
-#include "../WebAssemblySubtarget.h"
 #include "llvm/BinaryFormat/Wasm.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DataTypes.h"
 #include <memory>
 
@@ -28,7 +29,8 @@ class MCInstrInfo;
 class MCObjectTargetWriter;
 class Triple;
 
-MCCodeEmitter *createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII);
+MCCodeEmitter *createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII,
+                                              MCContext &Ctx);
 
 MCAsmBackend *createWebAssemblyAsmBackend(const Triple &TT);
 
@@ -36,6 +38,13 @@ std::unique_ptr<MCObjectTargetWriter>
 createWebAssemblyWasmObjectWriter(bool Is64Bit, bool IsEmscripten);
 
 namespace WebAssembly {
+
+// Exception handling / setjmp-longjmp handling command-line options
+extern cl::opt<bool> WasmEnableEmEH;   // asm.js-style EH
+extern cl::opt<bool> WasmEnableEmSjLj; // asm.js-style SjLJ
+extern cl::opt<bool> WasmEnableEH;     // EH using Wasm EH instructions
+extern cl::opt<bool> WasmEnableSjLj;   // SjLj using Wasm EH instructions
+
 enum OperandType {
   /// Basic block label in a branch construct.
   OPERAND_BASIC_BLOCK = MCOI::OPERAND_FIRST_TARGET,
@@ -272,6 +281,50 @@ inline unsigned GetDefaultP2Align(unsigned Opc) {
   return Align;
 }
 
+inline bool isConst(unsigned Opc) {
+  switch (Opc) {
+  case WebAssembly::CONST_I32:
+  case WebAssembly::CONST_I32_S:
+  case WebAssembly::CONST_I64:
+  case WebAssembly::CONST_I64_S:
+  case WebAssembly::CONST_F32:
+  case WebAssembly::CONST_F32_S:
+  case WebAssembly::CONST_F64:
+  case WebAssembly::CONST_F64_S:
+  case WebAssembly::CONST_V128_I8x16:
+  case WebAssembly::CONST_V128_I8x16_S:
+  case WebAssembly::CONST_V128_I16x8:
+  case WebAssembly::CONST_V128_I16x8_S:
+  case WebAssembly::CONST_V128_I32x4:
+  case WebAssembly::CONST_V128_I32x4_S:
+  case WebAssembly::CONST_V128_I64x2:
+  case WebAssembly::CONST_V128_I64x2_S:
+  case WebAssembly::CONST_V128_F32x4:
+  case WebAssembly::CONST_V128_F32x4_S:
+  case WebAssembly::CONST_V128_F64x2:
+  case WebAssembly::CONST_V128_F64x2_S:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool isScalarConst(unsigned Opc) {
+  switch (Opc) {
+  case WebAssembly::CONST_I32:
+  case WebAssembly::CONST_I32_S:
+  case WebAssembly::CONST_I64:
+  case WebAssembly::CONST_I64_S:
+  case WebAssembly::CONST_F32:
+  case WebAssembly::CONST_F32_S:
+  case WebAssembly::CONST_F64:
+  case WebAssembly::CONST_F64_S:
+    return true;
+  default:
+    return false;
+  }
+}
+
 inline bool isArgument(unsigned Opc) {
   switch (Opc) {
   case WebAssembly::ARGUMENT_i32:
@@ -372,8 +425,8 @@ inline bool isCallIndirect(unsigned Opc) {
   }
 }
 
-inline bool isBrTable(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
+inline bool isBrTable(unsigned Opc) {
+  switch (Opc) {
   case WebAssembly::BR_TABLE_I32:
   case WebAssembly::BR_TABLE_I32_S:
   case WebAssembly::BR_TABLE_I64:
@@ -482,7 +535,18 @@ inline bool isLocalTee(unsigned Opc) {
   }
 }
 
+static const unsigned UnusedReg = -1u;
+
+// For a given stackified WAReg, return the id number to print with push/pop.
+unsigned inline getWARegStackId(unsigned Reg) {
+  assert(Reg & INT32_MIN);
+  return Reg & INT32_MAX;
+}
+
 } // end namespace WebAssembly
 } // end namespace llvm
+
+#define GET_SUBTARGETINFO_ENUM
+#include "WebAssemblyGenSubtargetInfo.inc"
 
 #endif

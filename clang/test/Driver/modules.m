@@ -4,7 +4,7 @@
 // RUN: %clang -fmodules -fno-modules -fmodules -### %s 2>&1 | FileCheck -check-prefix=CHECK-HAS-MODULES %s
 // CHECK-HAS-MODULES: -fmodules
 
-// RUN: %clang -fmodules -fbuild-session-file=doesntexist -### %s 2>&1 | FileCheck -check-prefix=NOFILE %s
+// RUN: not %clang -fmodules -fbuild-session-file=doesntexist -### %s 2>&1 | FileCheck -check-prefix=NOFILE %s
 // NOFILE: no such file or directory: 'doesntexist'
 
 // RUN: touch -m -a -t 201008011501 %t.build-session-file
@@ -13,7 +13,7 @@
 // RUN: %clang -fmodules -fbuild-session-timestamp=1280703457 -### %s 2>&1 | FileCheck -check-prefix=TIMESTAMP_ONLY %s
 // TIMESTAMP_ONLY: -fbuild-session-timestamp=128{{([[:digit:]]{7})[^[:digit:]]}}
 
-// RUN: %clang -fmodules -fbuild-session-file=%t.build-session-file -fbuild-session-timestamp=123 -### %s 2>&1 | FileCheck -check-prefix=CONFLICT %s
+// RUN: not %clang -fmodules -fbuild-session-file=%t.build-session-file -fbuild-session-timestamp=123 -### %s 2>&1 | FileCheck -check-prefix=CONFLICT %s
 // CONFLICT: error: invalid argument '-fbuild-session-file={{.*}}.build-session-file' not allowed with '-fbuild-session-timestamp'
 
 // RUN: %clang -fmodules -fbuild-session-timestamp=123 -fmodules-validate-once-per-build-session -### %s 2>&1 | FileCheck -check-prefix=MODULES_VALIDATE_ONCE %s
@@ -24,7 +24,7 @@
 // MODULES_VALIDATE_ONCE_FILE: -fbuild-session-timestamp=128{{([[:digit:]]{7})[^[:digit:]]}}
 // MODULES_VALIDATE_ONCE_FILE: -fmodules-validate-once-per-build-session
 
-// RUN: %clang -fmodules -fmodules-validate-once-per-build-session -### %s 2>&1 | FileCheck -check-prefix=MODULES_VALIDATE_ONCE_ERR %s
+// RUN: not %clang -fmodules -fmodules-validate-once-per-build-session -### %s 2>&1 | FileCheck -check-prefix=MODULES_VALIDATE_ONCE_ERR %s
 // MODULES_VALIDATE_ONCE_ERR: option '-fmodules-validate-once-per-build-session' requires '-fbuild-session-timestamp=<seconds since Epoch>' or '-fbuild-session-file=<file>'
 
 // RUN: %clang -### %s 2>&1 | FileCheck -check-prefix=MODULES_VALIDATE_SYSTEM_HEADERS_DEFAULT %s
@@ -57,7 +57,21 @@
 // CHECK-MODULE-MAP-FILES: "-fmodule-map-file=foo.map"
 // CHECK-MODULE-MAP-FILES: "-fmodule-map-file=bar.map"
 
-// RUN: %clang -fmodules -fbuiltin-module-map -### %s 2>&1 | FileCheck -check-prefix=CHECK-BUILTIN-MODULE-MAP %s
+// Verify that the driver propagates -fmodule-name and -fmodule-map-file flags when
+// -fmodules-decluse or -fmodules-strict-decluse, as used for layering check.
+// RUN: %clang -fmodules-decluse -fmodule-name=foo -c -### %s 2>&1 | FileCheck -check-prefix=CHECK-DECLUSE-PROPAGATE-MODULE-NAME %s
+// CHECK-DECLUSE-PROPAGATE-MODULE-NAME: -fmodule-name=foo
+
+// RUN: %clang -fmodules-decluse -fmodule-map-file=foo.map -c -### %s 2>&1 | FileCheck -check-prefix=CHECK-DECLUSE-PROPAGATE-MODULE-MAPS %s
+// CHECK-DECLUSE-PROPAGATE-MODULE-MAPS: -fmodule-map-file=foo.map
+
+// RUN: %clang -fmodules-strict-decluse -fmodule-name=foo -c -### %s 2>&1 | FileCheck -check-prefix=CHECK-STRICT-DECLUSE-PROPAGATE-MODULE-NAME %s
+// CHECK-STRICT-DECLUSE-PROPAGATE-MODULE-NAME: -fmodule-name=foo
+
+// RUN: %clang -fmodules-strict-decluse -fmodule-map-file=foo.map -c -### %s 2>&1 | FileCheck -check-prefix=CHECK-STRICT-DECLUSE-PROPAGATE-MODULE-MAPS %s
+// CHECK-STRICT-DECLUSE-PROPAGATE-MODULE-MAPS: -fmodule-map-file=foo.map
+
+    // RUN: %clang -fmodules -fbuiltin-module-map -### %s 2>&1 | FileCheck -check-prefix=CHECK-BUILTIN-MODULE-MAP %s
 // CHECK-BUILTIN-MODULE-MAP: "-fmodules"
 // CHECK-BUILTIN-MODULE-MAP: "-fmodule-map-file={{.*}}include{{/|\\\\}}module.modulemap"
 

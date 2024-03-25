@@ -75,3 +75,36 @@ to specify the target triple:
 Example:
 
 ``-target spirv64v1.0`` can be used to compile for SPIR-V version 1.0 with 64-bit pointer width.
+
+.. _spirv-types:
+
+Representing special types in SPIR-V
+====================================
+
+SPIR-V specifies several kinds of opaque types. These types are represented
+using target extension types. These types are represented as follows:
+
+  .. table:: SPIR-V Opaque Types
+
+     ================== ====================== =========================================================================================
+     SPIR-V Type        LLVM type name         LLVM type arguments
+     ================== ====================== =========================================================================================
+     OpTypeImage        ``spirv.Image``        sampled type, dimensionality, depth, arrayed, MS, sampled, image format, access qualifier
+     OpTypeSampler      ``spirv.Sampler``      (none)
+     OpTypeSampledImage ``spirv.SampledImage`` sampled type, dimensionality, depth, arrayed, MS, sampled, image format, access qualifier
+     OpTypeEvent        ``spirv.Event``        (none)
+     OpTypeDeviceEvent  ``spirv.DeviceEvent``  (none)
+     OpTypeReserveId    ``spirv.ReserveId``    (none)
+     OpTypeQueue        ``spirv.Queue``        (none)
+     OpTypePipe         ``spirv.Pipe``         access qualifier
+     OpTypePipeStorage  ``spirv.PipeStorage``  (none)
+     ================== ====================== =========================================================================================
+
+All integer arguments take the same value as they do in their `corresponding
+SPIR-V instruction <https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_type_declaration_instructions>`_.
+For example, the OpenCL type ``image2d_depth_ro_t`` would be represented in
+SPIR-V IR as ``target("spirv.Image", void, 1, 1, 0, 0, 0, 0, 0)``, with its
+dimensionality parameter as ``1`` meaning 2D. Sampled image types include the
+parameters of its underlying image type, so that a sampled image for the
+previous type has the representation
+``target("spirv.SampledImage, void, 1, 1, 0, 0, 0, 0, 0)``.

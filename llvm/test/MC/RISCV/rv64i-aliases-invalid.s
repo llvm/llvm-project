@@ -5,6 +5,29 @@
 li t5, 0x10000000000000000 # CHECK: :[[@LINE]]:8: error: unknown operand
 li t4, foo                 # CHECK: :[[@LINE]]:8: error: operand must be a constant 64-bit integer
 
+la t5, 0x10000000000000000 # CHECK: :[[@LINE]]:8: error: unknown operand
+la x1, %pcrel_hi(1234) # CHECK: :[[@LINE]]:8: error: operand either must be a constant 64-bit integer or a bare symbol name
+la x1, %pcrel_lo(1234) # CHECK: :[[@LINE]]:8: error: operand either must be a constant 64-bit integer or a bare symbol name
+la x1, %pcrel_hi(foo) # CHECK: :[[@LINE]]:8: error: operand either must be a constant 64-bit integer or a bare symbol name
+la x1, %pcrel_lo(foo) # CHECK: :[[@LINE]]:8: error: operand either must be a constant 64-bit integer or a bare symbol name
+la x1, %hi(1234) # CHECK: :[[@LINE]]:8: error: operand either must be a constant 64-bit integer or a bare symbol name
+la x1, %lo(1234) # CHECK: :[[@LINE]]:8: error: operand either must be a constant 64-bit integer or a bare symbol name
+la x1, %hi(foo) # CHECK: :[[@LINE]]:8: error: operand either must be a constant 64-bit integer or a bare symbol name
+la x1, %lo(foo) # CHECK: :[[@LINE]]:8: error: operand either must be a constant 64-bit integer or a bare symbol name
+la a1, foo+foo # CHECK: :[[@LINE]]:8: error: operand either must be a constant 64-bit integer or a bare symbol name
+
+lla t5, 0x10000000000000000 # CHECK: :[[@LINE]]:9: error: unknown operand
+lla x1, %pcrel_hi(1234) # CHECK: :[[@LINE]]:9: error: operand either must be a constant 64-bit integer or a bare symbol name
+lla x1, %pcrel_lo(1234) # CHECK: :[[@LINE]]:9: error: operand either must be a constant 64-bit integer or a bare symbol name
+lla x1, %pcrel_hi(foo) # CHECK: :[[@LINE]]:9: error: operand either must be a constant 64-bit integer or a bare symbol name
+lla x1, %pcrel_lo(foo) # CHECK: :[[@LINE]]:9: error: operand either must be a constant 64-bit integer or a bare symbol name
+lla x1, %hi(1234) # CHECK: :[[@LINE]]:9: error: operand either must be a constant 64-bit integer or a bare symbol name
+lla x1, %lo(1234) # CHECK: :[[@LINE]]:9: error: operand either must be a constant 64-bit integer or a bare symbol name
+lla x1, %hi(foo) # CHECK: :[[@LINE]]:9: error: operand either must be a constant 64-bit integer or a bare symbol name
+lla x1, %lo(foo) # CHECK: :[[@LINE]]:9: error: operand either must be a constant 64-bit integer or a bare symbol name
+lla a1, foo+foo # CHECK: :[[@LINE]]:9: error: operand either must be a constant 64-bit integer or a bare symbol name
+lla a2, foo@plt # CHECK: :[[@LINE]]:17: error: '@plt' operand not valid for instruction
+
 rdinstreth x29 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set{{$}}
 rdcycleh x27   # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set{{$}}
 rdtimeh x28    # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set{{$}}

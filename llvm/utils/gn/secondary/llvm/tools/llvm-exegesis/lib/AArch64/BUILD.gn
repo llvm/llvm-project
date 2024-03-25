@@ -9,6 +9,7 @@ static_library("AArch64") {
   output_name = "LLVMExegesisAArch64"
   deps = [
     ":AArch64GenExegesis",
+    "//llvm/lib/CodeGen",
 
     # Exegesis reaches inside the Target/AArch64 tablegen internals and must
     # depend on these Target/AArch64-internal build targets.

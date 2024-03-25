@@ -1,0 +1,84 @@
+# REQUIRES: loongarch
+# RUN: rm -rf %t && split-file %s %t
+
+# RUN: yaml2obj %t/blob.yaml -o %t/blob.o
+# RUN: yaml2obj %t/v0-lp64d.yaml -o %t/v0-lp64d.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch64-unknown-gnu %t/start.s -o %t/v1-lp64d.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch64-unknown-gnusf %t/start.s -o %t/v1-lp64s.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch64-unknown-gnu %t/bar.s -o %t/v1-b-lp64d.o
+
+## Check that binary input results in e_flags=0 output.
+# RUN: ld.lld -m elf64loongarch -b binary %t/blob.bin -o %t/blob.out
+# RUN: llvm-readobj -h %t/blob.out | FileCheck --check-prefix=EMPTY %s
+# EMPTY:      Flags [
+# EMPTY-NEXT: ]
+
+## Check that interlink between e_flags=0 and normal input (that contain code)
+## is allowed.
+## Also check that the e_flags logic work as intended regardless of input file
+## order.
+# RUN: ld.lld %t/blob.o %t/v1-lp64d.o -o %t/v1-lp64d.out
+# RUN: ld.lld %t/v1-lp64s.o %t/blob.o -o %t/v1-lp64s.out
+# RUN: llvm-readobj -h %t/v1-lp64d.out | FileCheck --check-prefix=V1-LP64D %s
+# RUN: llvm-readobj -h %t/v1-lp64s.out | FileCheck --check-prefix=V1-LP64S %s
+# V1-LP64D: Flags [ (0x43)
+# V1-LP64S: Flags [ (0x41)
+
+## Check that interlink between different ABIs is disallowed.
+# RUN: not ld.lld %t/v1-lp64s.o %t/v1-b-lp64d.o -o /dev/null 2>&1 | FileCheck -DFILE1=%t/v1-b-lp64d.o -DFILE2=%t/v1-lp64s.o --check-prefix=INTERLINK-ERR %s
+# INTERLINK-ERR: error: [[FILE1]]: cannot link object files with different ABI from [[FILE2]]
+
+## Check that interlink between different object ABI versions is disallowed.
+# RUN: not ld.lld %t/v0-lp64d.o %t/v1-b-lp64d.o %t/blob.o -o /dev/null 2>&1 | FileCheck -DFILE=%t/v0-lp64d.o --check-prefix=VERSION-ERR %s
+# VERSION-ERR: error: [[FILE]]: unsupported object file ABI version
+
+#--- blob.bin
+BLOB
+
+#--- blob.yaml
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_LOONGARCH
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    AddressAlign:    0x1
+    Content:         424C4F42
+Symbols:
+  - Name:            blob
+    Section:         .data
+    Binding:         STB_GLOBAL
+
+#--- v0-lp64d.yaml
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_LOONGARCH
+  Flags:           [ EF_LOONGARCH_ABI_DOUBLE_FLOAT ]
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x4
+    Content:         0000a002
+
+#--- start.s
+.global _start
+_start:
+    la $a0, blob
+    ld.b $a0, $a0, 0
+    li.w $a7, 94
+    syscall 0
+
+#--- bar.s
+bar:
+    move $a0, $zero
+    ret

@@ -415,7 +415,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
 
 Status PlatformWindows::UnloadImage(Process *process, uint32_t image_token) {
   const addr_t address = process->GetImagePtrFromToken(image_token);
-  if (address == LLDB_INVALID_ADDRESS)
+  if (address == LLDB_INVALID_IMAGE_TOKEN)
     return Status("invalid image token");
 
   StreamString expression;
@@ -467,7 +467,7 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
   // mechanisms to do it for us, because it doesn't have the special knowledge
   // required for setting up the background thread or passing the right flags.
   //
-  // Another problem is that that LLDB's standard model for debugging a process
+  // Another problem is that LLDB's standard model for debugging a process
   // is to first launch it, have it stop at the entry point, and then attach to
   // it.  In Windows this doesn't quite work, you have to specify as an
   // argument to CreateProcess() that you're going to debug the process.  So we
@@ -533,9 +533,9 @@ lldb::ProcessSP PlatformWindows::Attach(ProcessAttachInfo &attach_info,
   if (!target || error.Fail())
     return process_sp;
 
-  const char *plugin_name = attach_info.GetProcessPluginName();
-  process_sp = target->CreateProcess(
-      attach_info.GetListenerForProcess(debugger), plugin_name, nullptr, false);
+  process_sp =
+      target->CreateProcess(attach_info.GetListenerForProcess(debugger),
+                            attach_info.GetProcessPluginName(), nullptr, false);
 
   process_sp->HijackProcessEvents(attach_info.GetHijackListener());
   if (process_sp)

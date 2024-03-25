@@ -1,7 +1,7 @@
 // Test how stack frames are reported (not fully implemented yet).
 // RUN: %clang_hwasan %s -o %t
 // RUN: not %run %t 3 2 -1 2>&1 | FileCheck %s --check-prefix=R321
-// REQUIRES: stable-runtime, pointer-tagging
+// REQUIRES: pointer-tagging
 
 #include <stdint.h>
 #include <stdlib.h>

@@ -8,10 +8,10 @@
 
 #define DERP this is an error
 
-void func(...) { // expected-warning {{'...' as the only parameter of a function is incompatible with C standards before C2x}}
-  // Show that va_start doesn't require the second argument in C2x mode.
+void func(...) { // expected-warning {{'...' as the only parameter of a function is incompatible with C standards before C23}}
+  // Show that va_start doesn't require the second argument in C23 mode.
   va_list list;
-  va_start(list); // FIXME: it would be nice to issue a portability warning to C17 and earlier here.
+  va_start(list); // expected-warning {{passing no argument for the '...' parameter of a variadic macro is incompatible with C standards before C23}} expected-note@* {{macro 'va_start' defined here}}
   va_end(list);
 
   // Show that va_start doesn't expand or evaluate the second argument.
@@ -26,13 +26,13 @@ void func(...) { // expected-warning {{'...' as the only parameter of a function
   __builtin_va_start(list); // expected-error {{too few arguments to function call, expected 2, have 1}}
 
   // Verify that the return type of a call to va_start is 'void'.
-  _Static_assert(__builtin_types_compatible_p(__typeof__(va_start(list)), void), "");
+  _Static_assert(__builtin_types_compatible_p(__typeof__(va_start(list)), void), ""); // expected-warning {{passing no argument for the '...' parameter of a variadic macro is incompatible with C standards before C23}} expected-note@* {{macro 'va_start' defined here}}
   _Static_assert(__builtin_types_compatible_p(__typeof__(__builtin_va_start(list, 0)), void), "");
 }
 
 // Show that function pointer types also don't need an argument before the
 // ellipsis.
-typedef void (*fp)(...); // expected-warning {{'...' as the only parameter of a function is incompatible with C standards before C2x}}
+typedef void (*fp)(...); // expected-warning {{'...' as the only parameter of a function is incompatible with C standards before C23}}
 
 // Passing something other than the argument before the ... is still not valid.
 void diag(int a, int b, ...) {
@@ -41,7 +41,7 @@ void diag(int a, int b, ...) {
   // to __builtin_va_start. However, because va_start is not allowed to expand
   // or evaluate the second argument, we can't pass it along to
   // __builtin_va_start to get that diagnostic. So in C17 and earlier, we will
-  // diagnose this use through the macro, but in C2x and later we've lost the
+  // diagnose this use through the macro, but in C23 and later we've lost the
   // diagnostic entirely. GCC has the same issue currently.
   va_start(list, a);
   // However, the builtin itself is under no such constraints regarding

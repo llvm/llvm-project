@@ -1,6 +1,6 @@
-
-// RUN: %clang_cl -LD %s -Fe%t.dll -DHEAP_LIBRARY -MD
-// RUN: %clang_cl %s %t.lib -Fe%t -fsanitize=address -MT
+// RUN: %clang_cl %LD %s %Fe%t.dll -DHEAP_LIBRARY %MD \
+// RUN:   %if target={{.*-windows-gnu}} %{ -Wl,--out-implib,%t.lib %}
+// RUN: %clang_cl_asan %s %t.lib %Fe%t
 // RUN: %run %t 2>&1 | FileCheck %s
 
 // Check that ASan does not fail when releasing allocations that occurred within
@@ -17,6 +17,7 @@ BOOL WINAPI DllMain(PVOID h, DWORD reason, PVOID reserved) {
 
 #else
 
+#include <cstdio>
 #include <memory>
 extern std::unique_ptr<int> __declspec(dllimport) myglobal;
 int main(int argc, char **argv) {

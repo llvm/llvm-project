@@ -48,12 +48,10 @@ void test_map() {
   C c;
 }
 
-int main(int, char**) {
+void f() {
   // expected-no-diagnostics
   test_set<std::unordered_set>();
   test_set<std::unordered_multiset>();
   test_map<std::unordered_map>();
   test_map<std::unordered_multimap>();
-
-  return 0;
 }

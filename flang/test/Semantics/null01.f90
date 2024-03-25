@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! NULL() intrinsic function error tests
 
 subroutine test
@@ -11,6 +11,9 @@ subroutine test
     subroutine canbenull(x, y)
       integer, intent(in), optional :: x
       real, intent(in), pointer :: y
+    end
+    subroutine optionalAllocatable(x)
+      integer, intent(in), allocatable, optional :: x
     end
     function f0()
       real :: f0
@@ -62,12 +65,22 @@ subroutine test
   real(kind=eight) :: r8check
   logical, pointer :: lp
   ip0 => null() ! ok
+  ip0 => null(null()) ! ok
+  ip0 => null(null(null())) ! ok
   ip1 => null() ! ok
+  ip1 => null(null()) ! ok
+  ip1 => null(null(null())) ! ok
   ip2 => null() ! ok
+  ip2 => null(null()) ! ok
+  ip2 => null(null(null())) ! ok
   !ERROR: MOLD= argument to NULL() must be a pointer or allocatable
   ip0 => null(mold=1)
   !ERROR: MOLD= argument to NULL() must be a pointer or allocatable
+  ip0 => null(null(mold=1))
+  !ERROR: MOLD= argument to NULL() must be a pointer or allocatable
   ip0 => null(mold=j)
+  !ERROR: MOLD= argument to NULL() must be a pointer or allocatable
+  ip0 => null(mold=null(mold=j))
   dt0x = dt0(null())
   dt0x = dt0(ip0=null())
   dt0x = dt0(ip0=null(ip0))
@@ -95,6 +108,7 @@ subroutine test
   dt4x = dt4(null(dt2x%pps0))
   call canbenull(null(), null()) ! fine
   call canbenull(null(mold=ip0), null(mold=rp0)) ! fine
+  call optionalAllocatable(null(mold=ip0)) ! fine
   !ERROR: Null pointer argument requires an explicit interface
   call implicit(null())
   !ERROR: Null pointer argument requires an explicit interface
@@ -103,6 +117,8 @@ subroutine test
   print *, sin(null(rp0))
   !ERROR: A NULL() pointer is not allowed for 'source=' intrinsic argument
   print *, transfer(null(rp0),ip0)
+  !WARNING: Source of TRANSFER contains allocatable or pointer component %ra0
+  print *, transfer(dt4(null()),[0])
   !ERROR: NULL() may not be used as an expression in this context
   select case(null(ip0))
   end select
@@ -110,3 +126,22 @@ subroutine test
   if (null(lp)) then
   end if
 end subroutine test
+
+module m
+  type :: pdt(n)
+    integer, len :: n
+  end type
+ contains
+  subroutine s1(x)
+    character(*), pointer, intent(in) :: x
+  end
+  subroutine s2(x)
+    type(pdt(*)), pointer, intent(in) :: x
+  end
+  subroutine test
+    !ERROR: Actual argument associated with dummy argument 'x=' is a NULL() pointer without a MOLD= to provide a character length
+    call s1(null())
+    !ERROR: Actual argument associated with dummy argument 'x=' is a NULL() pointer without a MOLD= to provide a value for the assumed type parameter 'n'
+    call s2(null())
+  end
+end

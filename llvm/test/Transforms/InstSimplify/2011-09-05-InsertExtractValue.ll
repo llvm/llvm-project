@@ -23,7 +23,7 @@ lpad:
   %ex = landingpad { ptr, i32 } cleanup
   %exc_ptr = extractvalue { ptr, i32 } %ex, 0
   %filter = extractvalue { ptr, i32 } %ex, 1
-  %exc_ptr2 = insertvalue { ptr, i32 } undef, ptr %exc_ptr, 0
+  %exc_ptr2 = insertvalue { ptr, i32 } poison, ptr %exc_ptr, 0
   %filter2 = insertvalue { ptr, i32 } %exc_ptr2, i32 %filter, 1
   resume { ptr, i32 } %filter2
 }

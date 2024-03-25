@@ -459,8 +459,8 @@ define i32 @PR28476(i32 %x, i32 %y) {
 ; CHECK-LABEL: @PR28476(
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[Y:%.*]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[CMP0]], [[CMP1]]
-; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    [[AND_NOT:%.*]] = or i1 [[CMP0]], [[CMP1]]
+; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[AND_NOT]] to i32
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp0 = icmp ne i32 %x, 0
@@ -475,8 +475,8 @@ define i32 @PR28476_logical(i32 %x, i32 %y) {
 ; CHECK-LABEL: @PR28476_logical(
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[Y:%.*]], 0
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP0]], i1 true, i1 [[CMP1]]
-; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[AND]] to i32
+; CHECK-NEXT:    [[AND_NOT:%.*]] = select i1 [[CMP0]], i1 true, i1 [[CMP1]]
+; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[AND_NOT]] to i32
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp0 = icmp ne i32 %x, 0

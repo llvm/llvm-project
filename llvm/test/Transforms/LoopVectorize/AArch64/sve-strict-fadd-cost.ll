@@ -7,10 +7,10 @@
 
 target triple="aarch64-unknown-linux-gnu"
 
-; CHECK: Found an estimated cost of 8 for VF vscale x 2 For instruction:   %add = fadd float %0, %sum.07
-; CHECK: Found an estimated cost of 16 for VF vscale x 4 For instruction:   %add = fadd float %0, %sum.07
-; CHECK-CPU-NEOVERSE-N2: Found an estimated cost of 4 for VF vscale x 2 For instruction:   %add = fadd float %0, %sum.07
-; CHECK-CPU-NEOVERSE-N2: Found an estimated cost of 8 for VF vscale x 4 For instruction:   %add = fadd float %0, %sum.07
+; CHECK: Found an estimated cost of 4 for VF vscale x 2 For instruction:   %add = fadd float %0, %sum.07
+; CHECK: Found an estimated cost of 8 for VF vscale x 4 For instruction:   %add = fadd float %0, %sum.07
+; CHECK-CPU-NEOVERSE-N2: Found an estimated cost of 2 for VF vscale x 2 For instruction:   %add = fadd float %0, %sum.07
+; CHECK-CPU-NEOVERSE-N2: Found an estimated cost of 4 for VF vscale x 4 For instruction:   %add = fadd float %0, %sum.07
 
 define float @fadd_strict32(ptr noalias nocapture readonly %a, i64 %n) #0 {
 entry:
@@ -31,8 +31,8 @@ for.end:
 }
 
 
-; CHECK: Found an estimated cost of 8 for VF vscale x 2 For instruction:   %add = fadd double %0, %sum.07
-; CHECK-CPU-NEOVERSE-N2: Found an estimated cost of 4 for VF vscale x 2 For instruction:   %add = fadd double %0, %sum.07
+; CHECK: Found an estimated cost of 4 for VF vscale x 2 For instruction:   %add = fadd double %0, %sum.07
+; CHECK-CPU-NEOVERSE-N2: Found an estimated cost of 2 for VF vscale x 2 For instruction:   %add = fadd double %0, %sum.07
 
 define double @fadd_strict64(ptr noalias nocapture readonly %a, i64 %n) #0 {
 entry:

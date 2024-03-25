@@ -29,7 +29,7 @@ public:
   // This is the list of event types that are shared by all targets, that
   // generic subtarget-agnostic classes (e.g., Pipeline, HWInstructionEvent,
   // ...) and generic Views can manipulate.
-  // Subtargets are free to define additional event types, that are goin to be
+  // Subtargets are free to define additional event types, that are going to be
   // handled by generic components as opaque values, but can still be
   // emitted by subtarget-specific pipeline stages (e.g., ExecuteStage,
   // DispatchStage, ...) and interpreted by subtarget-specific EventListener
@@ -59,8 +59,11 @@ public:
   const InstRef &IR;
 };
 
+// ResourceRef::first is the index of the associated Resource.
+// ResourceRef::second is a bitmask of the referenced sub-unit of the resource.
 using ResourceRef = std::pair<uint64_t, uint64_t>;
-using ResourceUse = std::pair<ResourceRef, ResourceCycles>;
+
+using ResourceUse = std::pair<ResourceRef, ReleaseAtCycles>;
 
 class HWInstructionIssuedEvent : public HWInstructionEvent {
 public:

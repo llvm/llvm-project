@@ -41,6 +41,7 @@ protected:
     EXPECT_TRUE(testMap.begin() == testMap.end());
 
     // Lookup tests
+    EXPECT_FALSE(testMap.contains(testKey));
     EXPECT_EQ(0u, testMap.count(testKey));
     EXPECT_EQ(0u, testMap.count(StringRef(testKeyFirst, testKeyLength)));
     EXPECT_EQ(0u, testMap.count(testKeyStr));
@@ -64,6 +65,7 @@ protected:
     EXPECT_TRUE(it == testMap.end());
 
     // Lookup tests
+    EXPECT_TRUE(testMap.contains(testKey));
     EXPECT_EQ(1u, testMap.count(testKey));
     EXPECT_EQ(1u, testMap.count(StringRef(testKeyFirst, testKeyLength)));
     EXPECT_EQ(1u, testMap.count(testKeyStr));
@@ -203,6 +205,18 @@ TEST_F(StringMapTest, CopyCtorTest) {
   EXPECT_EQ(0, Map2.lookup("drei"));
   EXPECT_EQ(4, Map2.lookup("veir"));
   EXPECT_EQ(5, Map2.lookup("funf"));
+}
+
+TEST_F(StringMapTest, AtTest) {
+  llvm::StringMap<int> Map;
+
+  // keys both found and not found on non-empty map
+  Map["a"] = 1;
+  Map["b"] = 2;
+  Map["c"] = 3;
+  EXPECT_EQ(1, Map.at("a"));
+  EXPECT_EQ(2, Map.at("b"));
+  EXPECT_EQ(3, Map.at("c"));
 }
 
 // A more complex iteration test.
@@ -471,6 +485,17 @@ TEST_F(StringMapTest, NotEqualWithDifferentValues) {
   ASSERT_FALSE(B == A);
   ASSERT_TRUE(A != B);
   ASSERT_TRUE(B != A);
+}
+
+TEST_F(StringMapTest, PrecomputedHash) {
+  StringMap<int> A;
+  StringRef Key = "foo";
+  int Value = 42;
+  uint64_t Hash = StringMap<int>::hash(Key);
+  A.insert({"foo", Value}, Hash);
+  auto I = A.find(Key, Hash);
+  ASSERT_NE(I, A.end());
+  ASSERT_EQ(I->second, Value);
 }
 
 struct Countable {

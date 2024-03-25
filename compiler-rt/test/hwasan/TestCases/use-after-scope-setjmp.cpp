@@ -1,8 +1,7 @@
-// RUN: %clangxx_hwasan  -mllvm -hwasan-use-stack-safety=0 -mllvm -hwasan-use-after-scope -O2 %s -o %t && \
+// RUN: %clangxx_hwasan  -mllvm -hwasan-use-stack-safety=0 -O2 %s -o %t && \
 // RUN:     %run %t 2>&1
 
 // REQUIRES: aarch64-target-arch || riscv64-target-arch
-// REQUIRES: stable-runtime
 
 #include <sanitizer/hwasan_interface.h>
 #include <setjmp.h>

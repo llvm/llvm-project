@@ -1,5 +1,5 @@
-// RUN: %libomptarget-compile-run-and-check-nvptx64-nvidia-cuda
-// REQUIRES: nvptx64-nvidia-cuda
+// RUN: %libomptarget-compile-run-and-check-generic
+// RUN: %libomptarget-compileopt-run-and-check-generic
 
 #include <omp.h>
 #include <stdio.h>

@@ -16,6 +16,5 @@ _start:
 // CHECK: <__AArch64AbsLongThunk_big>:
 // CHECK-NEXT:    210124:       ldr     x16, 0x21012c
 // CHECK-NEXT:    210128:       br      x16
-// CHECK: <$d>:
 // CHECK-NEXT:    21012c:       00 00 00 00     .word   0x00000000
 // CHECK-NEXT:    210130:       10 00 00 00     .word   0x00000010

@@ -32,6 +32,7 @@ public:
     ExecutorAddr WriteUInt32s;
     ExecutorAddr WriteUInt64s;
     ExecutorAddr WriteBuffers;
+    ExecutorAddr WritePointers;
   };
 
   /// Create an EPCGenericMemoryAccess instance from a given set of
@@ -72,6 +73,13 @@ public:
     using namespace shared;
     EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessBufferWrite>)>(
         FAs.WriteBuffers, std::move(OnWriteComplete), Ws);
+  }
+
+  void writePointersAsync(ArrayRef<tpctypes::PointerWrite> Ws,
+                          WriteResultFn OnWriteComplete) override {
+    using namespace shared;
+    EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessPointerWrite>)>(
+        FAs.WritePointers, std::move(OnWriteComplete), Ws);
   }
 
 private:

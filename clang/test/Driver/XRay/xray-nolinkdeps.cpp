@@ -1,8 +1,8 @@
-// RUN: %clang -v -o /dev/null -fxray-instrument -fnoxray-link-deps %s -### \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fxray-instrument -fxray-link-deps -fno-xray-link-deps %s \
 // RUN:     2>&1 | FileCheck --check-prefix DISABLE %s
-// RUN: %clang -v -o /dev/null -fxray-instrument -fxray-link-deps %s -### \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fxray-instrument %s \
 // RUN:     2>&1 | FileCheck --check-prefix ENABLE %s
-// ENABLE: clang_rt.xray
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -shared -fxray-instrument %s \
+// RUN:     2>&1 | FileCheck --check-prefix DISABLE %s
+// ENABLE:      "--whole-archive" "{{.*}}clang_rt.xray{{.*}}"--no-whole-archive"
 // DISABLE-NOT: clang_rt.xray
-// REQUIRES: linux || freebsd
-// REQUIRES: amd64 || x86_64 || x86_64h || arm || aarch64 || arm64

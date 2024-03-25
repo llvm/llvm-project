@@ -34,8 +34,8 @@ public:
 
   static llvm::StringRef GetPluginNameStatic() { return "llvm-mc"; }
 
-  static lldb_private::Disassembler *
-  CreateInstance(const lldb_private::ArchSpec &arch, const char *flavor);
+  static lldb::DisassemblerSP CreateInstance(const lldb_private::ArchSpec &arch,
+                                             const char *flavor);
 
   size_t DecodeInstructions(const lldb_private::Address &base_addr,
                             const lldb_private::DataExtractor &data,

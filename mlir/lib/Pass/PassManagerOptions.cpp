@@ -130,9 +130,9 @@ void mlir::registerPassManagerCLOptions() {
   *options;
 }
 
-void mlir::applyPassManagerCLOptions(PassManager &pm) {
+LogicalResult mlir::applyPassManagerCLOptions(PassManager &pm) {
   if (!options.isConstructed())
-    return;
+    return failure();
 
   // Generate a reproducer on crash/failure.
   if (options->reproducerFile.getNumOccurrences())
@@ -143,8 +143,16 @@ void mlir::applyPassManagerCLOptions(PassManager &pm) {
   if (options->passStatistics)
     pm.enableStatistics(options->passStatisticsDisplayMode);
 
+  if (options->printModuleScope && pm.getContext()->isMultithreadingEnabled()) {
+    emitError(UnknownLoc::get(pm.getContext()))
+        << "IR print for module scope can't be setup on a pass-manager "
+           "without disabling multi-threading first.\n";
+    return failure();
+  }
+
   // Add the IR printing instrumentation.
   options->addPrinterInstrumentation(pm);
+  return success();
 }
 
 void mlir::applyDefaultTimingPassManagerCLOptions(PassManager &pm) {

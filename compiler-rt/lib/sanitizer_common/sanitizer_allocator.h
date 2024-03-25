@@ -62,6 +62,13 @@ inline void RandomShuffle(T *a, u32 n, u32 *rand_state) {
   *rand_state = state;
 }
 
+struct NoOpMapUnmapCallback {
+  void OnMap(uptr p, uptr size) const {}
+  void OnMapSecondary(uptr p, uptr size, uptr user_begin,
+                      uptr user_size) const {}
+  void OnUnmap(uptr p, uptr size) const {}
+};
+
 #include "sanitizer_allocator_size_class_map.h"
 #include "sanitizer_allocator_stats.h"
 #include "sanitizer_allocator_primary64.h"

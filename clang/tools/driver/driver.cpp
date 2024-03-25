@@ -28,6 +28,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
@@ -36,18 +37,17 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
-#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 #include <memory>
 #include <optional>
 #include <set>
@@ -64,7 +64,7 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
       if (llvm::ErrorOr<std::string> P =
               llvm::sys::findProgramByName(ExecutablePath))
         ExecutablePath = *P;
-    return std::string(ExecutablePath.str());
+    return std::string(ExecutablePath);
   }
 
   // This just needs to be some symbol in the binary; C++ doesn't
@@ -73,136 +73,8 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
   return llvm::sys::fs::getMainExecutable(Argv0, P);
 }
 
-static const char *GetStableCStr(std::set<std::string> &SavedStrings,
-                                 StringRef S) {
-  return SavedStrings.insert(std::string(S)).first->c_str();
-}
-
-/// ApplyQAOverride - Apply a list of edits to the input argument lists.
-///
-/// The input string is a space separate list of edits to perform,
-/// they are applied in order to the input argument lists. Edits
-/// should be one of the following forms:
-///
-///  '#': Silence information about the changes to the command line arguments.
-///
-///  '^': Add FOO as a new argument at the beginning of the command line.
-///
-///  '+': Add FOO as a new argument at the end of the command line.
-///
-///  's/XXX/YYY/': Substitute the regular expression XXX with YYY in the command
-///  line.
-///
-///  'xOPTION': Removes all instances of the literal argument OPTION.
-///
-///  'XOPTION': Removes all instances of the literal argument OPTION,
-///  and the following argument.
-///
-///  'Ox': Removes all flags matching 'O' or 'O[sz0-9]' and adds 'Ox'
-///  at the end of the command line.
-///
-/// \param OS - The stream to write edit information to.
-/// \param Args - The vector of command line arguments.
-/// \param Edit - The override command to perform.
-/// \param SavedStrings - Set to use for storing string representations.
-static void ApplyOneQAOverride(raw_ostream &OS,
-                               SmallVectorImpl<const char*> &Args,
-                               StringRef Edit,
-                               std::set<std::string> &SavedStrings) {
-  // This does not need to be efficient.
-
-  if (Edit[0] == '^') {
-    const char *Str =
-      GetStableCStr(SavedStrings, Edit.substr(1));
-    OS << "### Adding argument " << Str << " at beginning\n";
-    Args.insert(Args.begin() + 1, Str);
-  } else if (Edit[0] == '+') {
-    const char *Str =
-      GetStableCStr(SavedStrings, Edit.substr(1));
-    OS << "### Adding argument " << Str << " at end\n";
-    Args.push_back(Str);
-  } else if (Edit[0] == 's' && Edit[1] == '/' && Edit.endswith("/") &&
-             Edit.slice(2, Edit.size() - 1).contains('/')) {
-    StringRef MatchPattern = Edit.substr(2).split('/').first;
-    StringRef ReplPattern = Edit.substr(2).split('/').second;
-    ReplPattern = ReplPattern.slice(0, ReplPattern.size()-1);
-
-    for (unsigned i = 1, e = Args.size(); i != e; ++i) {
-      // Ignore end-of-line response file markers
-      if (Args[i] == nullptr)
-        continue;
-      std::string Repl = llvm::Regex(MatchPattern).sub(ReplPattern, Args[i]);
-
-      if (Repl != Args[i]) {
-        OS << "### Replacing '" << Args[i] << "' with '" << Repl << "'\n";
-        Args[i] = GetStableCStr(SavedStrings, Repl);
-      }
-    }
-  } else if (Edit[0] == 'x' || Edit[0] == 'X') {
-    auto Option = Edit.substr(1);
-    for (unsigned i = 1; i < Args.size();) {
-      if (Option == Args[i]) {
-        OS << "### Deleting argument " << Args[i] << '\n';
-        Args.erase(Args.begin() + i);
-        if (Edit[0] == 'X') {
-          if (i < Args.size()) {
-            OS << "### Deleting argument " << Args[i] << '\n';
-            Args.erase(Args.begin() + i);
-          } else
-            OS << "### Invalid X edit, end of command line!\n";
-        }
-      } else
-        ++i;
-    }
-  } else if (Edit[0] == 'O') {
-    for (unsigned i = 1; i < Args.size();) {
-      const char *A = Args[i];
-      // Ignore end-of-line response file markers
-      if (A == nullptr)
-        continue;
-      if (A[0] == '-' && A[1] == 'O' &&
-          (A[2] == '\0' ||
-           (A[3] == '\0' && (A[2] == 's' || A[2] == 'z' ||
-                             ('0' <= A[2] && A[2] <= '9'))))) {
-        OS << "### Deleting argument " << Args[i] << '\n';
-        Args.erase(Args.begin() + i);
-      } else
-        ++i;
-    }
-    OS << "### Adding argument " << Edit << " at end\n";
-    Args.push_back(GetStableCStr(SavedStrings, '-' + Edit.str()));
-  } else {
-    OS << "### Unrecognized edit: " << Edit << "\n";
-  }
-}
-
-/// ApplyQAOverride - Apply a comma separate list of edits to the
-/// input argument lists. See ApplyOneQAOverride.
-static void ApplyQAOverride(SmallVectorImpl<const char*> &Args,
-                            const char *OverrideStr,
-                            std::set<std::string> &SavedStrings) {
-  raw_ostream *OS = &llvm::errs();
-
-  if (OverrideStr[0] == '#') {
-    ++OverrideStr;
-    OS = &llvm::nulls();
-  }
-
-  *OS << "### CCC_OVERRIDE_OPTIONS: " << OverrideStr << "\n";
-
-  // This does not need to be efficient.
-
-  const char *S = OverrideStr;
-  while (*S) {
-    const char *End = ::strchr(S, ' ');
-    if (!End)
-      End = S + strlen(S);
-    if (End != S)
-      ApplyOneQAOverride(*OS, Args, std::string(S, End), SavedStrings);
-    S = End;
-    if (*S != '\0')
-      ++S;
-  }
+static const char *GetStableCStr(llvm::StringSet<> &SavedStrings, StringRef S) {
+  return SavedStrings.insert(S).first->getKeyData();
 }
 
 extern int cc1_main(ArrayRef<const char *> Argv, const char *Argv0,
@@ -210,11 +82,12 @@ extern int cc1_main(ArrayRef<const char *> Argv, const char *Argv0,
 extern int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0,
                       void *MainAddr);
 extern int cc1gen_reproducer_main(ArrayRef<const char *> Argv,
-                                  const char *Argv0, void *MainAddr);
+                                  const char *Argv0, void *MainAddr,
+                                  const llvm::ToolContext &);
 
 static void insertTargetAndModeArgs(const ParsedClangName &NameParts,
                                     SmallVectorImpl<const char *> &ArgVector,
-                                    std::set<std::string> &SavedStrings) {
+                                    llvm::StringSet<> &SavedStrings) {
   // Put target and mode arguments at the start of argument list so that
   // arguments specified in command line could override them. Avoid putting
   // them at index 0, as an option like '-cc1' must remain the first.
@@ -305,6 +178,9 @@ static bool SetBackdoorDriverOutputsFromEnvVars(Driver &TheDriver) {
   TheDriver.CCPrintProcessStats =
       checkEnvVar<bool>("CC_PRINT_PROC_STAT", "CC_PRINT_PROC_STAT_FILE",
                         TheDriver.CCPrintStatReportFilename);
+  TheDriver.CCPrintInternalStats =
+      checkEnvVar<bool>("CC_PRINT_INTERNAL_STAT", "CC_PRINT_INTERNAL_STAT_FILE",
+                        TheDriver.CCPrintInternalStatReportFilename);
 
   return true;
 }
@@ -319,29 +195,8 @@ static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
   DiagClient->setPrefix(std::string(ExeBasename));
 }
 
-static void SetInstallDir(SmallVectorImpl<const char *> &argv,
-                          Driver &TheDriver, bool CanonicalPrefixes) {
-  // Attempt to find the original path used to invoke the driver, to determine
-  // the installed path. We do this manually, because we want to support that
-  // path being a symlink.
-  SmallString<128> InstalledPath(argv[0]);
-
-  // Do a PATH lookup, if there are no directory components.
-  if (llvm::sys::path::filename(InstalledPath) == InstalledPath)
-    if (llvm::ErrorOr<std::string> Tmp = llvm::sys::findProgramByName(
-            llvm::sys::path::filename(InstalledPath.str())))
-      InstalledPath = *Tmp;
-
-  // FIXME: We don't actually canonicalize this, we just make it absolute.
-  if (CanonicalPrefixes)
-    llvm::sys::fs::make_absolute(InstalledPath);
-
-  StringRef InstalledPathParent(llvm::sys::path::parent_path(InstalledPath));
-  if (llvm::sys::fs::exists(InstalledPathParent))
-    TheDriver.setInstalledDir(InstalledPathParent);
-}
-
-static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV) {
+static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
+                          const llvm::ToolContext &ToolContext) {
   // If we call the cc1 tool from the clangDriver library (through
   // Driver::CC1Main), we need to clean up the options usage count. The options
   // are currently global, and they might have been used previously by the
@@ -362,16 +217,16 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV) {
     return cc1as_main(ArrayRef(ArgV).slice(2), ArgV[0], GetExecutablePathVP);
   if (Tool == "-cc1gen-reproducer")
     return cc1gen_reproducer_main(ArrayRef(ArgV).slice(2), ArgV[0],
-                                  GetExecutablePathVP);
+                                  GetExecutablePathVP, ToolContext);
   // Reject unknown tools.
-  llvm::errs() << "error: unknown integrated tool '" << Tool << "'. "
-               << "Valid tools include '-cc1' and '-cc1as'.\n";
+  llvm::errs()
+      << "error: unknown integrated tool '" << Tool << "'. "
+      << "Valid tools include '-cc1', '-cc1as' and '-cc1gen-reproducer'.\n";
   return 1;
 }
 
-int clang_main(int Argc, char **Argv) {
+int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   noteBottomOfStack();
-  llvm::InitLLVM X(Argc, Argv);
   llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
                         " and include the crash backtrace, preprocessed "
                         "source, and associated run script.\n");
@@ -385,55 +240,20 @@ int clang_main(int Argc, char **Argv) {
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver(A);
 
-  // Parse response files using the GNU syntax, unless we're in CL mode. There
-  // are two ways to put clang in CL compatibility mode: Args[0] is either
-  // clang-cl or cl, or --driver-mode=cl is on the command line. The normal
-  // command line parsing can't happen until after response file parsing, so we
-  // have to manually search for a --driver-mode=cl argument the hard way.
-  // Finally, our -cc1 tools don't care which tokenization mode we use because
-  // response files written by clang will tokenize the same way in either mode.
+  const char *ProgName =
+      ToolContext.NeedsPrependArg ? ToolContext.PrependArg : ToolContext.Path;
+
   bool ClangCLMode =
-      IsClangCL(getDriverMode(Args[0], llvm::ArrayRef(Args).slice(1)));
-  enum { Default, POSIX, Windows } RSPQuoting = Default;
-  for (const char *F : Args) {
-    if (strcmp(F, "--rsp-quoting=posix") == 0)
-      RSPQuoting = POSIX;
-    else if (strcmp(F, "--rsp-quoting=windows") == 0)
-      RSPQuoting = Windows;
-  }
+      IsClangCL(getDriverMode(ProgName, llvm::ArrayRef(Args).slice(1)));
 
-  // Determines whether we want nullptr markers in Args to indicate response
-  // files end-of-lines. We only use this for the /LINK driver argument with
-  // clang-cl.exe on Windows.
-  bool MarkEOLs = ClangCLMode;
-
-  llvm::cl::TokenizerCallback Tokenizer;
-  if (RSPQuoting == Windows || (RSPQuoting == Default && ClangCLMode))
-    Tokenizer = &llvm::cl::TokenizeWindowsCommandLine;
-  else
-    Tokenizer = &llvm::cl::TokenizeGNUCommandLine;
-
-  if (MarkEOLs && Args.size() > 1 && StringRef(Args[1]).startswith("-cc1"))
-    MarkEOLs = false;
-  llvm::cl::ExpansionContext ECtx(A, Tokenizer);
-  ECtx.setMarkEOLs(MarkEOLs);
-  if (llvm::Error Err = ECtx.expandResponseFiles(Args)) {
+  if (llvm::Error Err = expandResponseFiles(Args, ClangCLMode, A)) {
     llvm::errs() << toString(std::move(Err)) << '\n';
     return 1;
   }
 
-  // Handle -cc1 integrated tools, even if -cc1 was expanded from a response
-  // file.
-  auto FirstArg = llvm::find_if(llvm::drop_begin(Args),
-                                [](const char *A) { return A != nullptr; });
-  if (FirstArg != Args.end() && StringRef(*FirstArg).startswith("-cc1")) {
-    // If -cc1 came from a response file, remove the EOL sentinels.
-    if (MarkEOLs) {
-      auto newEnd = std::remove(Args.begin(), Args.end(), nullptr);
-      Args.resize(newEnd - Args.begin());
-    }
-    return ExecuteCC1Tool(Args);
-  }
+  // Handle -cc1 integrated tools.
+  if (Args.size() >= 2 && StringRef(Args[1]).starts_with("-cc1"))
+    return ExecuteCC1Tool(Args, ToolContext);
 
   // Handle options that need handling before the real command line parsing in
   // Driver::BuildCompilation()
@@ -471,15 +291,16 @@ int clang_main(int Argc, char **Argv) {
     }
   }
 
-  std::set<std::string> SavedStrings;
+  llvm::StringSet<> SavedStrings;
   // Handle CCC_OVERRIDE_OPTIONS, used for editing a command line behind the
   // scenes.
   if (const char *OverrideStr = ::getenv("CCC_OVERRIDE_OPTIONS")) {
     // FIXME: Driver shouldn't take extra initial argument.
-    ApplyQAOverride(Args, OverrideStr, SavedStrings);
+    driver::applyOverrideOptions(Args, OverrideStr, SavedStrings,
+                                 &llvm::errs());
   }
 
-  std::string Path = GetExecutablePath(Args[0], CanonicalPrefixes);
+  std::string Path = GetExecutablePath(ToolContext.Path, CanonicalPrefixes);
 
   // Whether the cc1 tool should be called inside the current process, or if we
   // should spawn a new clang subprocess (old behavior).
@@ -497,7 +318,7 @@ int clang_main(int Argc, char **Argv) {
 
   TextDiagnosticPrinter *DiagClient
     = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
-  FixupDiagPrefixExeName(DiagClient, Path);
+  FixupDiagPrefixExeName(DiagClient, ProgName);
 
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
@@ -514,9 +335,15 @@ int clang_main(int Argc, char **Argv) {
   ProcessWarningOptions(Diags, *DiagOpts, /*ReportDiags=*/false);
 
   Driver TheDriver(Path, llvm::sys::getDefaultTargetTriple(), Diags);
-  SetInstallDir(Args, TheDriver, CanonicalPrefixes);
-  auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(Args[0]);
+  auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(ProgName);
   TheDriver.setTargetAndMode(TargetAndMode);
+  // If -canonical-prefixes is set, GetExecutablePath will have resolved Path
+  // to the llvm driver binary, not clang. In this case, we need to use
+  // PrependArg which should be clang-*. Checking just CanonicalPrefixes is
+  // safe even in the normal case because PrependArg will be null so
+  // setPrependArg will be a no-op.
+  if (ToolContext.NeedsPrependArg || CanonicalPrefixes)
+    TheDriver.setPrependArg(ToolContext.PrependArg);
 
   insertTargetAndModeArgs(TargetAndMode, Args, SavedStrings);
 
@@ -524,7 +351,9 @@ int clang_main(int Argc, char **Argv) {
     return 1;
 
   if (!UseNewCC1Process) {
-    TheDriver.CC1Main = &ExecuteCC1Tool;
+    TheDriver.CC1Main = [ToolContext](SmallVectorImpl<const char *> &ArgV) {
+      return ExecuteCC1Tool(ArgV, ToolContext);
+    };
     // Ensure the CC1Command actually catches cc1 crashes
     llvm::CrashRecoveryContext::Enable();
   }

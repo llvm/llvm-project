@@ -11,9 +11,10 @@ unittest("DebugInfoLogicalViewTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "CodeViewReaderTest.cpp",
     "CommandLineOptionsTest.cpp",
     "CompareElementsTest.cpp",
-    "ELFReaderTest.cpp",
+    "DWARFReaderTest.cpp",
     "LocationRangesTest.cpp",
     "LogicalElementsTest.cpp",
     "SelectElementsTest.cpp",

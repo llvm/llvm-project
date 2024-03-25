@@ -59,9 +59,9 @@ static StringRef negatedOperator(const BinaryOperator *BinOp) {
   const BinaryOperatorKind Opcode = BinOp->getOpcode();
   for (auto NegatableOp : Opposites) {
     if (Opcode == NegatableOp.first)
-      return BinOp->getOpcodeStr(NegatableOp.second);
+      return BinaryOperator::getOpcodeStr(NegatableOp.second);
     if (Opcode == NegatableOp.second)
-      return BinOp->getOpcodeStr(NegatableOp.first);
+      return BinaryOperator::getOpcodeStr(NegatableOp.first);
   }
   return {};
 }
@@ -277,7 +277,13 @@ public:
   }
 
   bool dataTraverseStmtPre(Stmt *S) {
-    if (S && !shouldIgnore(S))
+    if (!S) {
+      return true;
+    }
+    if (Check->IgnoreMacros && S->getBeginLoc().isMacroID()) {
+      return false;
+    }
+    if (!shouldIgnore(S))
       StmtStack.push_back(S);
     return true;
   }
@@ -583,6 +589,7 @@ private:
 SimplifyBooleanExprCheck::SimplifyBooleanExprCheck(StringRef Name,
                                                    ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
+      IgnoreMacros(Options.get("IgnoreMacros", false)),
       ChainedConditionalReturn(Options.get("ChainedConditionalReturn", false)),
       ChainedConditionalAssignment(
           Options.get("ChainedConditionalAssignment", false)),
@@ -613,8 +620,8 @@ void SimplifyBooleanExprCheck::reportBinOp(const ASTContext &Context,
   const auto *LHS = Op->getLHS()->IgnoreParenImpCasts();
   const auto *RHS = Op->getRHS()->IgnoreParenImpCasts();
 
-  const CXXBoolLiteralExpr *Bool;
-  const Expr *Other;
+  const CXXBoolLiteralExpr *Bool = nullptr;
+  const Expr *Other = nullptr;
   if ((Bool = dyn_cast<CXXBoolLiteralExpr>(LHS)) != nullptr)
     Other = RHS;
   else if ((Bool = dyn_cast<CXXBoolLiteralExpr>(RHS)) != nullptr)
@@ -671,6 +678,7 @@ void SimplifyBooleanExprCheck::reportBinOp(const ASTContext &Context,
 }
 
 void SimplifyBooleanExprCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
   Options.store(Opts, "ChainedConditionalReturn", ChainedConditionalReturn);
   Options.store(Opts, "ChainedConditionalAssignment",
                 ChainedConditionalAssignment);

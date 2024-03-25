@@ -163,6 +163,21 @@ TEST_F(OverlayCDBTest, Adjustments) {
                                            "-DFallback", "-DAdjust_baz.cc"));
 }
 
+TEST_F(OverlayCDBTest, ExpandedResponseFiles) {
+  SmallString<1024> Path;
+  int FD;
+  ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("args", "", FD, Path));
+  llvm::raw_fd_ostream OutStream(FD, true);
+  OutStream << "-Wall";
+  OutStream.close();
+
+  OverlayCDB CDB(Base.get(), {"-DFallback"});
+  auto Override = cmd(testPath("foo.cc"), ("@" + Path).str());
+  CDB.setCompileCommand(testPath("foo.cc"), Override);
+  EXPECT_THAT(CDB.getCompileCommand(testPath("foo.cc"))->CommandLine,
+              Contains("-Wall"));
+}
+
 TEST(GlobalCompilationDatabaseTest, DiscoveryWithNestedCDBs) {
   const char *const CDBOuter =
       R"cdb(
@@ -228,14 +243,14 @@ TEST(GlobalCompilationDatabaseTest, DiscoveryWithNestedCDBs) {
     DirectoryBasedGlobalCompilationDatabase::Options Opts(FS);
     Opts.ContextProvider = [&](llvm::StringRef Path) {
       Config Cfg;
-      if (Path.endswith("a.cc")) {
+      if (Path.ends_with("a.cc")) {
         // a.cc uses another directory's CDB, so it won't be discovered.
         Cfg.CompileFlags.CDBSearch.Policy = Config::CDBSearchSpec::FixedDir;
         Cfg.CompileFlags.CDBSearch.FixedCDBPath = testPath("foo");
-      } else if (Path.endswith("gen.cc")) {
+      } else if (Path.ends_with("gen.cc")) {
         // gen.cc has CDB search disabled, so it won't be discovered.
         Cfg.CompileFlags.CDBSearch.Policy = Config::CDBSearchSpec::NoCDBSearch;
-      } else if (Path.endswith("gen2.cc")) {
+      } else if (Path.ends_with("gen2.cc")) {
         // gen2.cc explicitly lists this directory, so it will be discovered.
         Cfg.CompileFlags.CDBSearch.Policy = Config::CDBSearchSpec::FixedDir;
         Cfg.CompileFlags.CDBSearch.FixedCDBPath = testRoot();
@@ -420,6 +435,45 @@ TEST_F(OverlayCDBTest, GetProjectInfo) {
   DB.setCompileCommand(File, tooling::CompileCommand());
   EXPECT_EQ(DB.getProjectInfo(File)->SourceRoot, testRoot());
   EXPECT_EQ(DB.getProjectInfo(Header)->SourceRoot, testRoot());
+}
+
+TEST(GlobalCompilationDatabaseTest, InferenceWithResponseFile) {
+  MockFS FS;
+  auto Command = [&](llvm::StringRef Relative) {
+    DirectoryBasedGlobalCompilationDatabase::Options Opts(FS);
+    return DirectoryBasedGlobalCompilationDatabase(Opts)
+        .getCompileCommand(testPath(Relative))
+        .value_or(tooling::CompileCommand())
+        .CommandLine;
+  };
+  EXPECT_THAT(Command("foo.cc"), IsEmpty());
+
+  // Have to use real FS for response file.
+  SmallString<1024> Path;
+  int FD;
+  ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("args", "", FD, Path));
+  llvm::raw_fd_ostream OutStream(FD, true);
+  OutStream << "-DXYZZY";
+  OutStream.close();
+
+  const char *const CDB =
+      R"cdb(
+      [
+        {
+          "file": "{0}/foo.cc",
+          "command": "clang @{1} {0}/foo.cc",
+          "directory": "{0}",
+        }
+      ]
+      )cdb";
+  FS.Files[testPath("compile_commands.json")] =
+      llvm::formatv(CDB, llvm::sys::path::convert_to_slash(testRoot()),
+                    llvm::sys::path::convert_to_slash(Path));
+
+  // File from CDB.
+  EXPECT_THAT(Command("foo.cc"), Contains("-DXYZZY"));
+  // File not in CDB, use inference.
+  EXPECT_THAT(Command("foo.h"), Contains("-DXYZZY"));
 }
 } // namespace
 

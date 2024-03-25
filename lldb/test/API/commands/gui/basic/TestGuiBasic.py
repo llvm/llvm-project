@@ -7,8 +7,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbpexpect import PExpectTest
 
-class BasicGuiCommandTest(PExpectTest):
 
+class BasicGuiCommandTest(PExpectTest):
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
@@ -17,10 +17,11 @@ class BasicGuiCommandTest(PExpectTest):
     def test_gui(self):
         self.build()
 
-        self.launch(executable=self.getBuildArtifact("a.out"), dimensions=(100,500))
-        self.expect('br set -f main.c -p "// Break here"', substrs=["Breakpoint 1", "address ="])
+        self.launch(executable=self.getBuildArtifact("a.out"), dimensions=(100, 500))
+        self.expect(
+            'br set -f main.c -p "// Break here"', substrs=["Breakpoint 1", "address ="]
+        )
         self.expect("run", substrs=["stop reason ="])
-
 
         escape_key = chr(27).encode()
 

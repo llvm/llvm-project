@@ -1,6 +1,6 @@
-// RUN: not llvm-mc -triple aarch64-arm-none-eabi -mattr +rme -show-encoding %s 2> %t | FileCheck %s
+// RUN: not llvm-mc -triple aarch64 -mattr +rme -show-encoding %s 2> %t | FileCheck %s
 // RUN: FileCheck --check-prefix=CHECK-ERROR %s < %t
-// RUN: not llvm-mc -triple aarch64-arm-none-eabi -show-encoding %s 2> %t | FileCheck --check-prefix=CHECK-NO-RME %s
+// RUN: not llvm-mc -triple aarch64 -show-encoding %s 2> %t | FileCheck --check-prefix=CHECK-NO-RME %s
 // RUN: FileCheck --check-prefix=CHECK-NO-RME-ERROR %s < %t
 
 msr MFAR_EL3, x0

@@ -23,51 +23,45 @@
 //   holding a value in the range [1, 12] even if !x.ok(). -end note]
 //   [Example: February + months{11} == January. -end example]
 
-
-
 #include <chrono>
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
 
-template <typename M, typename Ms>
-constexpr bool testConstexpr()
-{
-    M m{1};
-    Ms offset{4};
-    assert(m + offset == M{5});
-    assert(offset + m == M{5});
-    //  Check the example
-    assert(M{2} + Ms{11} == M{1});
-    return true;
+constexpr bool test() {
+  using month  = std::chrono::month;
+  using months = std::chrono::months;
+
+  month my{2};
+  for (unsigned i = 0; i <= 15; ++i) {
+    month m1 = my + months{i};
+    month m2 = months{i} + my;
+    assert(m1.ok());
+    assert(m2.ok());
+    assert(m1 == m2);
+    unsigned exp = i + 2;
+    while (exp > 12)
+      exp -= 12;
+    assert(static_cast<unsigned>(m1) == exp);
+    assert(static_cast<unsigned>(m2) == exp);
+  }
+
+  return true;
 }
 
-int main(int, char**)
-{
-    using month  = std::chrono::month;
-    using months = std::chrono::months;
+int main(int, char**) {
+  using month  = std::chrono::month;
+  using months = std::chrono::months;
 
-    ASSERT_NOEXCEPT(std::declval<month>() + std::declval<months>());
-    ASSERT_NOEXCEPT(std::declval<months>() + std::declval<month>());
+  ASSERT_NOEXCEPT(std::declval<month>() + std::declval<months>());
+  ASSERT_NOEXCEPT(std::declval<months>() + std::declval<month>());
 
-    ASSERT_SAME_TYPE(month, decltype(std::declval<month>()  + std::declval<months>()));
-    ASSERT_SAME_TYPE(month, decltype(std::declval<months>() + std::declval<month>() ));
+  ASSERT_SAME_TYPE(month, decltype(std::declval<month>() + std::declval<months>()));
+  ASSERT_SAME_TYPE(month, decltype(std::declval<months>() + std::declval<month>()));
 
-    static_assert(testConstexpr<month, months>(), "");
+  test();
+  static_assert(test());
 
-    month my{2};
-    for (unsigned i = 0; i <= 15; ++i)
-    {
-        month m1 = my + months{i};
-        month m2 = months{i} + my;
-        assert(m1 == m2);
-        unsigned exp = i + 2;
-        while (exp > 12)
-            exp -= 12;
-        assert(static_cast<unsigned>(m1) == exp);
-        assert(static_cast<unsigned>(m2) == exp);
-    }
-
-    return 0;
+  return 0;
 }

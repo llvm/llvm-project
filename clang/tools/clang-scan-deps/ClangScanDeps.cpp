@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
@@ -17,20 +19,216 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/Timer.h"
+#include "llvm/TargetParser/Host.h"
 #include <mutex>
 #include <optional>
 #include <thread>
+
+#include "Opts.inc"
 
 using namespace clang;
 using namespace tooling::dependencies;
 
 namespace {
+
+using namespace llvm::opt;
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
+
+#define PREFIX(NAME, VALUE)                                                    \
+  constexpr llvm::StringLiteral NAME##_init[] = VALUE;                         \
+  constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                          \
+      NAME##_init, std::size(NAME##_init) - 1);
+#include "Opts.inc"
+#undef PREFIX
+
+const llvm::opt::OptTable::Info InfoTable[] = {
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
+
+class ScanDepsOptTable : public llvm::opt::GenericOptTable {
+public:
+  ScanDepsOptTable() : GenericOptTable(InfoTable) {
+    setGroupedShortOptions(true);
+  }
+};
+
+enum ResourceDirRecipeKind {
+  RDRK_ModifyCompilerPath,
+  RDRK_InvokeCompiler,
+};
+
+static ScanningMode ScanMode = ScanningMode::DependencyDirectivesScan;
+static ScanningOutputFormat Format = ScanningOutputFormat::Make;
+static ScanningOptimizations OptimizeArgs;
+static std::string ModuleFilesDir;
+static bool EagerLoadModules;
+static unsigned NumThreads = 0;
+static std::string CompilationDB;
+static std::string ModuleName;
+static std::vector<std::string> ModuleDepTargets;
+static bool DeprecatedDriverCommand;
+static ResourceDirRecipeKind ResourceDirRecipe;
+static bool Verbose;
+static bool PrintTiming;
+static std::vector<const char *> CommandLine;
+
+#ifndef NDEBUG
+static constexpr bool DoRoundTripDefault = true;
+#else
+static constexpr bool DoRoundTripDefault = false;
+#endif
+
+static bool RoundTripArgs = DoRoundTripDefault;
+
+static void ParseArgs(int argc, char **argv) {
+  ScanDepsOptTable Tbl;
+  llvm::StringRef ToolName = argv[0];
+  llvm::BumpPtrAllocator A;
+  llvm::StringSaver Saver{A};
+  llvm::opt::InputArgList Args =
+      Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
+        llvm::errs() << Msg << '\n';
+        std::exit(1);
+      });
+
+  if (Args.hasArg(OPT_help)) {
+    Tbl.printHelp(llvm::outs(), "clang-scan-deps [options]", "clang-scan-deps");
+    std::exit(0);
+  }
+  if (Args.hasArg(OPT_version)) {
+    llvm::outs() << ToolName << '\n';
+    llvm::cl::PrintVersionMessage();
+    std::exit(0);
+  }
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_mode_EQ)) {
+    auto ModeType =
+        llvm::StringSwitch<std::optional<ScanningMode>>(A->getValue())
+            .Case("preprocess-dependency-directives",
+                  ScanningMode::DependencyDirectivesScan)
+            .Case("preprocess", ScanningMode::CanonicalPreprocessing)
+            .Default(std::nullopt);
+    if (!ModeType) {
+      llvm::errs() << ToolName
+                   << ": for the --mode option: Cannot find option named '"
+                   << A->getValue() << "'\n";
+      std::exit(1);
+    }
+    ScanMode = *ModeType;
+  }
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_format_EQ)) {
+    auto FormatType =
+        llvm::StringSwitch<std::optional<ScanningOutputFormat>>(A->getValue())
+            .Case("make", ScanningOutputFormat::Make)
+            .Case("p1689", ScanningOutputFormat::P1689)
+            .Case("experimental-full", ScanningOutputFormat::Full)
+            .Default(std::nullopt);
+    if (!FormatType) {
+      llvm::errs() << ToolName
+                   << ": for the --format option: Cannot find option named '"
+                   << A->getValue() << "'\n";
+      std::exit(1);
+    }
+    Format = *FormatType;
+  }
+
+  std::vector<std::string> OptimizationFlags =
+      Args.getAllArgValues(OPT_optimize_args_EQ);
+  OptimizeArgs = ScanningOptimizations::None;
+  for (const auto &Arg : OptimizationFlags) {
+    auto Optimization =
+        llvm::StringSwitch<std::optional<ScanningOptimizations>>(Arg)
+            .Case("none", ScanningOptimizations::None)
+            .Case("header-search", ScanningOptimizations::HeaderSearch)
+            .Case("system-warnings", ScanningOptimizations::SystemWarnings)
+            .Case("vfs", ScanningOptimizations::VFS)
+            .Case("canonicalize-macros", ScanningOptimizations::Macros)
+            .Case("all", ScanningOptimizations::All)
+            .Default(std::nullopt);
+    if (!Optimization) {
+      llvm::errs()
+          << ToolName
+          << ": for the --optimize-args option: Cannot find option named '"
+          << Arg << "'\n";
+      std::exit(1);
+    }
+    OptimizeArgs |= *Optimization;
+  }
+  if (OptimizationFlags.empty())
+    OptimizeArgs = ScanningOptimizations::Default;
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_files_dir_EQ))
+    ModuleFilesDir = A->getValue();
+
+  EagerLoadModules = Args.hasArg(OPT_eager_load_pcm);
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_j)) {
+    StringRef S{A->getValue()};
+    if (!llvm::to_integer(S, NumThreads, 0)) {
+      llvm::errs() << ToolName << ": for the -j option: '" << S
+                   << "' value invalid for uint argument!\n";
+      std::exit(1);
+    }
+  }
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_compilation_database_EQ)) {
+    CompilationDB = A->getValue();
+  } else if (Format != ScanningOutputFormat::P1689) {
+    llvm::errs() << ToolName
+                 << ": for the --compiilation-database option: must be "
+                    "specified at least once!";
+    std::exit(1);
+  }
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_name_EQ))
+    ModuleName = A->getValue();
+
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_dependency_target_EQ))
+    ModuleDepTargets.emplace_back(A->getValue());
+
+  DeprecatedDriverCommand = Args.hasArg(OPT_deprecated_driver_command);
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_resource_dir_recipe_EQ)) {
+    auto Kind =
+        llvm::StringSwitch<std::optional<ResourceDirRecipeKind>>(A->getValue())
+            .Case("modify-compiler-path", RDRK_ModifyCompilerPath)
+            .Case("invoke-compiler", RDRK_InvokeCompiler)
+            .Default(std::nullopt);
+    if (!Kind) {
+      llvm::errs() << ToolName
+                   << ": for the --resource-dir-recipe option: Cannot find "
+                      "option named '"
+                   << A->getValue() << "'\n";
+      std::exit(1);
+    }
+    ResourceDirRecipe = *Kind;
+  }
+
+  PrintTiming = Args.hasArg(OPT_print_timing);
+
+  Verbose = Args.hasArg(OPT_verbose);
+
+  RoundTripArgs = Args.hasArg(OPT_round_trip_args);
+
+  if (auto *A = Args.getLastArgNoClaim(OPT_DASH_DASH))
+    CommandLine.insert(CommandLine.end(), A->getValues().begin(),
+                       A->getValues().end());
+}
 
 class SharedStream {
 public:
@@ -88,8 +286,8 @@ public:
         OutputFile.str(),
         ErrorFile.str(),
     };
-    if (const int RC = llvm::sys::ExecuteAndWait(
-            ClangBinaryPath, PrintResourceDirArgs, {}, Redirects)) {
+    if (llvm::sys::ExecuteAndWait(ClangBinaryPath, PrintResourceDirArgs, {},
+                                  Redirects)) {
       auto ErrorBuf = llvm::MemoryBuffer::getFile(ErrorFile.c_str());
       llvm::errs() << ErrorBuf.get()->getBuffer();
       return "";
@@ -108,99 +306,6 @@ private:
   std::map<std::string, std::string> Cache;
   std::mutex CacheLock;
 };
-
-llvm::cl::opt<bool> Help("h", llvm::cl::desc("Alias for -help"),
-                         llvm::cl::Hidden);
-
-llvm::cl::OptionCategory DependencyScannerCategory("Tool options");
-
-static llvm::cl::opt<ScanningMode> ScanMode(
-    "mode",
-    llvm::cl::desc("The preprocessing mode used to compute the dependencies"),
-    llvm::cl::values(
-        clEnumValN(ScanningMode::DependencyDirectivesScan,
-                   "preprocess-dependency-directives",
-                   "The set of dependencies is computed by preprocessing with "
-                   "special lexing after scanning the source files to get the "
-                   "directives that might affect the dependencies"),
-        clEnumValN(ScanningMode::CanonicalPreprocessing, "preprocess",
-                   "The set of dependencies is computed by preprocessing the "
-                   "source files")),
-    llvm::cl::init(ScanningMode::DependencyDirectivesScan),
-    llvm::cl::cat(DependencyScannerCategory));
-
-static llvm::cl::opt<ScanningOutputFormat> Format(
-    "format", llvm::cl::desc("The output format for the dependencies"),
-    llvm::cl::values(clEnumValN(ScanningOutputFormat::Make, "make",
-                                "Makefile compatible dep file"),
-                     clEnumValN(ScanningOutputFormat::Full, "experimental-full",
-                                "Full dependency graph suitable"
-                                " for explicitly building modules. This format "
-                                "is experimental and will change.")),
-    llvm::cl::init(ScanningOutputFormat::Make),
-    llvm::cl::cat(DependencyScannerCategory));
-
-static llvm::cl::opt<std::string> ModuleFilesDir(
-    "module-files-dir",
-    llvm::cl::desc(
-        "The build directory for modules. Defaults to the value of "
-        "'-fmodules-cache-path=' from command lines for implicit modules."),
-    llvm::cl::cat(DependencyScannerCategory));
-
-static llvm::cl::opt<bool> OptimizeArgs(
-    "optimize-args",
-    llvm::cl::desc("Whether to optimize command-line arguments of modules."),
-    llvm::cl::init(false), llvm::cl::cat(DependencyScannerCategory));
-
-static llvm::cl::opt<bool> EagerLoadModules(
-    "eager-load-pcm",
-    llvm::cl::desc("Load PCM files eagerly (instead of lazily on import)."),
-    llvm::cl::init(false), llvm::cl::cat(DependencyScannerCategory));
-
-llvm::cl::opt<unsigned>
-    NumThreads("j", llvm::cl::Optional,
-               llvm::cl::desc("Number of worker threads to use (default: use "
-                              "all concurrent threads)"),
-               llvm::cl::init(0), llvm::cl::cat(DependencyScannerCategory));
-
-llvm::cl::opt<std::string>
-    CompilationDB("compilation-database",
-                  llvm::cl::desc("Compilation database"), llvm::cl::Required,
-                  llvm::cl::cat(DependencyScannerCategory));
-
-llvm::cl::opt<std::string> ModuleName(
-    "module-name", llvm::cl::Optional,
-    llvm::cl::desc("the module of which the dependencies are to be computed"),
-    llvm::cl::cat(DependencyScannerCategory));
-
-llvm::cl::list<std::string> ModuleDepTargets(
-    "dependency-target",
-    llvm::cl::desc("The names of dependency targets for the dependency file"),
-    llvm::cl::cat(DependencyScannerCategory));
-
-enum ResourceDirRecipeKind {
-  RDRK_ModifyCompilerPath,
-  RDRK_InvokeCompiler,
-};
-
-static llvm::cl::opt<ResourceDirRecipeKind> ResourceDirRecipe(
-    "resource-dir-recipe",
-    llvm::cl::desc("How to produce missing '-resource-dir' argument"),
-    llvm::cl::values(
-        clEnumValN(RDRK_ModifyCompilerPath, "modify-compiler-path",
-                   "Construct the resource directory from the compiler path in "
-                   "the compilation database. This assumes it's part of the "
-                   "same toolchain as this clang-scan-deps. (default)"),
-        clEnumValN(RDRK_InvokeCompiler, "invoke-compiler",
-                   "Invoke the compiler with '-print-resource-dir' and use the "
-                   "reported path as the resource directory. (deprecated)")),
-    llvm::cl::init(RDRK_ModifyCompilerPath),
-    llvm::cl::cat(DependencyScannerCategory));
-
-llvm::cl::opt<bool> Verbose("v", llvm::cl::Optional,
-                            llvm::cl::desc("Use verbose output."),
-                            llvm::cl::init(false),
-                            llvm::cl::cat(DependencyScannerCategory));
 
 } // end anonymous namespace
 
@@ -234,11 +339,10 @@ static llvm::json::Array toJSONSorted(const llvm::StringSet<> &Set) {
   return llvm::json::Array(Strings);
 }
 
+// Technically, we don't need to sort the dependency list to get determinism.
+// Leaving these be will simply preserve the import order.
 static llvm::json::Array toJSONSorted(std::vector<ModuleID> V) {
-  llvm::sort(V, [](const ModuleID &A, const ModuleID &B) {
-    return std::tie(A.ModuleName, A.ContextHash) <
-           std::tie(B.ModuleName, B.ContextHash);
-  });
+  llvm::sort(V);
 
   llvm::json::Array Ret;
   for (const ModuleID &MID : V)
@@ -250,29 +354,75 @@ static llvm::json::Array toJSONSorted(std::vector<ModuleID> V) {
 // Thread safe.
 class FullDeps {
 public:
+  FullDeps(size_t NumInputs) : Inputs(NumInputs) {}
+
   void mergeDeps(StringRef Input, TranslationUnitDeps TUDeps,
                  size_t InputIndex) {
+    mergeDeps(std::move(TUDeps.ModuleGraph), InputIndex);
+
     InputDeps ID;
     ID.FileName = std::string(Input);
     ID.ContextHash = std::move(TUDeps.ID.ContextHash);
     ID.FileDeps = std::move(TUDeps.FileDeps);
     ID.ModuleDeps = std::move(TUDeps.ClangModuleDeps);
-    mergeDeps(std::move(TUDeps.ModuleGraph), InputIndex);
     ID.DriverCommandLine = std::move(TUDeps.DriverCommandLine);
     ID.Commands = std::move(TUDeps.Commands);
-    Inputs.push_back(std::move(ID));
+
+    assert(InputIndex < Inputs.size() && "Input index out of bounds");
+    assert(Inputs[InputIndex].FileName.empty() && "Result already populated");
+    Inputs[InputIndex] = std::move(ID);
   }
 
   void mergeDeps(ModuleDepsGraph Graph, size_t InputIndex) {
-    std::unique_lock<std::mutex> ul(Lock);
-    for (const ModuleDeps &MD : Graph) {
-      auto I = Modules.find({MD.ID, 0});
-      if (I != Modules.end()) {
-        I->first.InputIndex = std::min(I->first.InputIndex, InputIndex);
-        continue;
+    std::vector<ModuleDeps *> NewMDs;
+    {
+      std::unique_lock<std::mutex> ul(Lock);
+      for (const ModuleDeps &MD : Graph) {
+        auto I = Modules.find({MD.ID, 0});
+        if (I != Modules.end()) {
+          I->first.InputIndex = std::min(I->first.InputIndex, InputIndex);
+          continue;
+        }
+        auto Res = Modules.insert(I, {{MD.ID, InputIndex}, std::move(MD)});
+        NewMDs.push_back(&Res->second);
       }
-      Modules.insert(I, {{MD.ID, InputIndex}, std::move(MD)});
+      // First call to \c getBuildArguments is somewhat expensive. Let's call it
+      // on the current thread (instead of the main one), and outside the
+      // critical section.
+      for (ModuleDeps *MD : NewMDs)
+        (void)MD->getBuildArguments();
     }
+  }
+
+  bool roundTripCommand(ArrayRef<std::string> ArgStrs,
+                        DiagnosticsEngine &Diags) {
+    if (ArgStrs.empty() || ArgStrs[0] != "-cc1")
+      return false;
+    SmallVector<const char *> Args;
+    for (const std::string &Arg : ArgStrs)
+      Args.push_back(Arg.c_str());
+    return !CompilerInvocation::checkCC1RoundTrip(Args, Diags);
+  }
+
+  // Returns \c true if any command lines fail to round-trip. We expect
+  // commands already be canonical when output by the scanner.
+  bool roundTripCommands(raw_ostream &ErrOS) {
+    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions{};
+    TextDiagnosticPrinter DiagConsumer(ErrOS, &*DiagOpts);
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+        CompilerInstance::createDiagnostics(&*DiagOpts, &DiagConsumer,
+                                            /*ShouldOwnClient=*/false);
+
+    for (auto &&M : Modules)
+      if (roundTripCommand(M.second.getBuildArguments(), *Diags))
+        return true;
+
+    for (auto &&I : Inputs)
+      for (const auto &Cmd : I.Commands)
+        if (roundTripCommand(Cmd.Arguments, *Diags))
+          return true;
+
+    return false;
   }
 
   void printFullOutput(raw_ostream &OS) {
@@ -280,15 +430,7 @@ public:
     std::vector<IndexedModuleID> ModuleIDs;
     for (auto &&M : Modules)
       ModuleIDs.push_back(M.first);
-    llvm::sort(ModuleIDs,
-               [](const IndexedModuleID &A, const IndexedModuleID &B) {
-                 return std::tie(A.ID.ModuleName, A.InputIndex) <
-                        std::tie(B.ID.ModuleName, B.InputIndex);
-               });
-
-    llvm::sort(Inputs, [](const InputDeps &A, const InputDeps &B) {
-      return A.FileName < B.FileName;
-    });
+    llvm::sort(ModuleIDs);
 
     using namespace llvm::json;
 
@@ -301,7 +443,7 @@ public:
           {"file-deps", toJSONSorted(MD.FileDeps)},
           {"clang-module-deps", toJSONSorted(MD.ClangModuleDeps)},
           {"clang-modulemap-file", MD.ClangModuleMapFile},
-          {"command-line", MD.BuildArguments},
+          {"command-line", MD.getBuildArguments()},
       };
       OutModules.push_back(std::move(O));
     }
@@ -348,20 +490,36 @@ public:
 private:
   struct IndexedModuleID {
     ModuleID ID;
+
+    // FIXME: This is mutable so that it can still be updated after insertion
+    //  into an unordered associative container. This is "fine", since this
+    //  field doesn't contribute to the hash, but it's a brittle hack.
     mutable size_t InputIndex;
 
     bool operator==(const IndexedModuleID &Other) const {
-      return ID.ModuleName == Other.ID.ModuleName &&
-             ID.ContextHash == Other.ID.ContextHash;
+      return ID == Other.ID;
     }
-  };
 
-  struct IndexedModuleIDHasher {
-    std::size_t operator()(const IndexedModuleID &IMID) const {
-      using llvm::hash_combine;
-
-      return hash_combine(IMID.ID.ModuleName, IMID.ID.ContextHash);
+    bool operator<(const IndexedModuleID &Other) const {
+      /// We need the output of clang-scan-deps to be deterministic. However,
+      /// the dependency graph may contain two modules with the same name. How
+      /// do we decide which one to print first? If we made that decision based
+      /// on the context hash, the ordering would be deterministic, but
+      /// different across machines. This can happen for example when the inputs
+      /// or the SDKs (which both contribute to the "context" hash) live in
+      /// different absolute locations. We solve that by tracking the index of
+      /// the first input TU that (transitively) imports the dependency, which
+      /// is always the same for the same input, resulting in deterministic
+      /// sorting that's also reproducible across machines.
+      return std::tie(ID.ModuleName, InputIndex) <
+             std::tie(Other.ID.ModuleName, Other.InputIndex);
     }
+
+    struct Hasher {
+      std::size_t operator()(const IndexedModuleID &IMID) const {
+        return llvm::hash_value(IMID.ID);
+      }
+    };
   };
 
   struct InputDeps {
@@ -374,7 +532,7 @@ private:
   };
 
   std::mutex Lock;
-  std::unordered_map<IndexedModuleID, ModuleDeps, IndexedModuleIDHasher>
+  std::unordered_map<IndexedModuleID, ModuleDeps, IndexedModuleID::Hasher>
       Modules;
   std::vector<InputDeps> Inputs;
 };
@@ -414,6 +572,92 @@ static bool handleModuleResult(
   return false;
 }
 
+class P1689Deps {
+public:
+  void printDependencies(raw_ostream &OS) {
+    addSourcePathsToRequires();
+    // Sort the modules by name to get a deterministic order.
+    llvm::sort(Rules, [](const P1689Rule &A, const P1689Rule &B) {
+      return A.PrimaryOutput < B.PrimaryOutput;
+    });
+
+    using namespace llvm::json;
+    Array OutputRules;
+    for (const P1689Rule &R : Rules) {
+      Object O{{"primary-output", R.PrimaryOutput}};
+
+      if (R.Provides) {
+        Array Provides;
+        Object Provided{{"logical-name", R.Provides->ModuleName},
+                        {"source-path", R.Provides->SourcePath},
+                        {"is-interface", R.Provides->IsStdCXXModuleInterface}};
+        Provides.push_back(std::move(Provided));
+        O.insert({"provides", std::move(Provides)});
+      }
+
+      Array Requires;
+      for (const P1689ModuleInfo &Info : R.Requires) {
+        Object RequiredInfo{{"logical-name", Info.ModuleName}};
+        if (!Info.SourcePath.empty())
+          RequiredInfo.insert({"source-path", Info.SourcePath});
+        Requires.push_back(std::move(RequiredInfo));
+      }
+
+      if (!Requires.empty())
+        O.insert({"requires", std::move(Requires)});
+
+      OutputRules.push_back(std::move(O));
+    }
+
+    Object Output{
+        {"version", 1}, {"revision", 0}, {"rules", std::move(OutputRules)}};
+
+    OS << llvm::formatv("{0:2}\n", Value(std::move(Output)));
+  }
+
+  void addRules(P1689Rule &Rule) {
+    std::unique_lock<std::mutex> LockGuard(Lock);
+    Rules.push_back(Rule);
+  }
+
+private:
+  void addSourcePathsToRequires() {
+    llvm::DenseMap<StringRef, StringRef> ModuleSourceMapper;
+    for (const P1689Rule &R : Rules)
+      if (R.Provides && !R.Provides->SourcePath.empty())
+        ModuleSourceMapper[R.Provides->ModuleName] = R.Provides->SourcePath;
+
+    for (P1689Rule &R : Rules) {
+      for (P1689ModuleInfo &Info : R.Requires) {
+        auto Iter = ModuleSourceMapper.find(Info.ModuleName);
+        if (Iter != ModuleSourceMapper.end())
+          Info.SourcePath = Iter->second;
+      }
+    }
+  }
+
+  std::mutex Lock;
+  std::vector<P1689Rule> Rules;
+};
+
+static bool
+handleP1689DependencyToolResult(const std::string &Input,
+                                llvm::Expected<P1689Rule> &MaybeRule,
+                                P1689Deps &PD, SharedStream &Errs) {
+  if (!MaybeRule) {
+    llvm::handleAllErrors(
+        MaybeRule.takeError(), [&Input, &Errs](llvm::StringError &Err) {
+          Errs.applyLocked([&](raw_ostream &OS) {
+            OS << "Error while scanning dependencies for " << Input << ":\n";
+            OS << Err.getMessage();
+          });
+        });
+    return true;
+  }
+  PD.addRules(*MaybeRule);
+  return false;
+}
+
 /// Construct a path for the explicitly built PCM.
 static std::string constructPCMPath(ModuleID MID, StringRef OutputDir) {
   SmallString<256> ExplicitPCMPath(OutputDir);
@@ -450,19 +694,105 @@ static std::string getModuleCachePath(ArrayRef<std::string> Args) {
   return std::string(Path);
 }
 
-int main(int argc, const char **argv) {
-  llvm::InitLLVM X(argc, argv);
-  llvm::cl::HideUnrelatedOptions(DependencyScannerCategory);
-  if (!llvm::cl::ParseCommandLineOptions(argc, argv))
-    return 1;
+// getCompilationDataBase - If -compilation-database is set, load the
+// compilation database from the specified file. Otherwise if the we're
+// generating P1689 format, trying to generate the compilation database
+// form specified command line after the positional parameter "--".
+static std::unique_ptr<tooling::CompilationDatabase>
+getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
+  ParseArgs(argc, argv);
 
+  if (!CompilationDB.empty())
+    return tooling::JSONCompilationDatabase::loadFromFile(
+        CompilationDB, ErrorMessage,
+        tooling::JSONCommandLineSyntax::AutoDetect);
+
+  if (Format != ScanningOutputFormat::P1689) {
+    llvm::errs() << "the --compilation-database option: must be specified at "
+                    "least once!";
+    return nullptr;
+  }
+
+  // Trying to get the input file, the output file and the command line options
+  // from the positional parameter "--".
+  char **DoubleDash = std::find(argv, argv + argc, StringRef("--"));
+  if (DoubleDash == argv + argc) {
+    llvm::errs() << "The command line arguments is required after '--' in "
+                    "P1689 per file mode.";
+    return nullptr;
+  }
+
+  llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+      CompilerInstance::createDiagnostics(new DiagnosticOptions);
+  driver::Driver TheDriver(CommandLine[0], llvm::sys::getDefaultTargetTriple(),
+                           *Diags);
+  std::unique_ptr<driver::Compilation> C(
+      TheDriver.BuildCompilation(CommandLine));
+  if (!C || C->getJobs().empty())
+    return nullptr;
+
+  auto Cmd = C->getJobs().begin();
+  auto CI = std::make_unique<CompilerInvocation>();
+  CompilerInvocation::CreateFromArgs(*CI, Cmd->getArguments(), *Diags,
+                                     CommandLine[0]);
+  if (!CI)
+    return nullptr;
+
+  FrontendOptions &FEOpts = CI->getFrontendOpts();
+  if (FEOpts.Inputs.size() != 1) {
+    llvm::errs() << "Only one input file is allowed in P1689 per file mode.";
+    return nullptr;
+  }
+
+  // There might be multiple jobs for a compilation. Extract the specified
+  // output filename from the last job.
+  auto LastCmd = C->getJobs().end();
+  LastCmd--;
+  if (LastCmd->getOutputFilenames().size() != 1) {
+    llvm::errs() << "The command line should provide exactly one output file "
+                    "in P1689 per file mode.\n";
+  }
+  StringRef OutputFile = LastCmd->getOutputFilenames().front();
+
+  class InplaceCompilationDatabase : public tooling::CompilationDatabase {
+  public:
+    InplaceCompilationDatabase(StringRef InputFile, StringRef OutputFile,
+                               ArrayRef<const char *> CommandLine)
+        : Command(".", InputFile, {}, OutputFile) {
+      for (auto *C : CommandLine)
+        Command.CommandLine.push_back(C);
+    }
+
+    std::vector<tooling::CompileCommand>
+    getCompileCommands(StringRef FilePath) const override {
+      if (FilePath != Command.Filename)
+        return {};
+      return {Command};
+    }
+
+    std::vector<std::string> getAllFiles() const override {
+      return {Command.Filename};
+    }
+
+    std::vector<tooling::CompileCommand>
+    getAllCompileCommands() const override {
+      return {Command};
+    }
+
+  private:
+    tooling::CompileCommand Command;
+  };
+
+  return std::make_unique<InplaceCompilationDatabase>(
+      FEOpts.Inputs[0].getFile(), OutputFile, CommandLine);
+}
+
+int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   std::string ErrorMessage;
-  std::unique_ptr<tooling::JSONCompilationDatabase> Compilations =
-      tooling::JSONCompilationDatabase::loadFromFile(
-          CompilationDB, ErrorMessage,
-          tooling::JSONCommandLineSyntax::AutoDetect);
+  std::unique_ptr<tooling::CompilationDatabase> Compilations =
+      getCompilationDataBase(argc, argv, ErrorMessage);
   if (!Compilations) {
-    llvm::errs() << "error: " << ErrorMessage << "\n";
+    llvm::errs() << ErrorMessage << "\n";
     return 1;
   }
 
@@ -500,9 +830,9 @@ int main(int argc, const char **argv) {
                 // Also, clang-cl adds ".obj" extension if none is found.
                 if ((Arg == "-o" || Arg == "/o") && I != R)
                   LastO = I[-1]; // Next argument (reverse iterator)
-                else if (Arg.startswith("/Fo") || Arg.startswith("-Fo"))
+                else if (Arg.starts_with("/Fo") || Arg.starts_with("-Fo"))
                   LastO = Arg.drop_front(3).str();
-                else if (Arg.startswith("/o") || Arg.startswith("-o"))
+                else if (Arg.starts_with("/o") || Arg.starts_with("-o"))
                   LastO = Arg.drop_front(2).str();
 
                 if (!LastO.empty() && !llvm::sys::path::has_extension(LastO))
@@ -537,83 +867,148 @@ int main(int argc, const char **argv) {
   // Print out the dependency results to STDOUT by default.
   SharedStream DependencyOS(llvm::outs());
 
-  DependencyScanningService Service(ScanMode, Format, OptimizeArgs,
-                                    EagerLoadModules);
-  llvm::ThreadPool Pool(llvm::hardware_concurrency(NumThreads));
-  std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
-  for (unsigned I = 0; I < Pool.getThreadCount(); ++I)
-    WorkerTools.push_back(std::make_unique<DependencyScanningTool>(Service));
-
   std::vector<tooling::CompileCommand> Inputs =
       AdjustingCompilations->getAllCompileCommands();
 
   std::atomic<bool> HadErrors(false);
-  FullDeps FD;
+  std::optional<FullDeps> FD;
+  P1689Deps PD;
+
   std::mutex Lock;
   size_t Index = 0;
-
-  if (Verbose) {
-    llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
-                 << " files using " << Pool.getThreadCount() << " workers\n";
-  }
-  for (unsigned I = 0; I < Pool.getThreadCount(); ++I) {
-    Pool.async([I, &Lock, &Index, &Inputs, &HadErrors, &FD, &WorkerTools,
-                &DependencyOS, &Errs]() {
-      llvm::StringSet<> AlreadySeenModules;
-      while (true) {
-        const tooling::CompileCommand *Input;
-        std::string Filename;
-        std::string CWD;
-        size_t LocalIndex;
-        // Take the next input.
-        {
-          std::unique_lock<std::mutex> LockGuard(Lock);
-          if (Index >= Inputs.size())
-            return;
-          LocalIndex = Index;
-          Input = &Inputs[Index++];
-          Filename = std::move(Input->Filename);
-          CWD = std::move(Input->Directory);
-        }
-        std::optional<StringRef> MaybeModuleName;
-        if (!ModuleName.empty())
-          MaybeModuleName = ModuleName;
-
-        std::string OutputDir(ModuleFilesDir);
-        if (OutputDir.empty())
-          OutputDir = getModuleCachePath(Input->CommandLine);
-        auto LookupOutput = [&](const ModuleID &MID, ModuleOutputKind MOK) {
-          return ::lookupModuleOutput(MID, MOK, OutputDir);
-        };
-
-        // Run the tool on it.
-        if (Format == ScanningOutputFormat::Make) {
-          auto MaybeFile =
-              WorkerTools[I]->getDependencyFile(Input->CommandLine, CWD);
-          if (handleMakeDependencyToolResult(Filename, MaybeFile, DependencyOS,
-                                             Errs))
-            HadErrors = true;
-        } else if (MaybeModuleName) {
-          auto MaybeModuleDepsGraph = WorkerTools[I]->getModuleDependencies(
-              *MaybeModuleName, Input->CommandLine, CWD, AlreadySeenModules,
-              LookupOutput);
-          if (handleModuleResult(*MaybeModuleName, MaybeModuleDepsGraph, FD,
-                                 LocalIndex, DependencyOS, Errs))
-            HadErrors = true;
-        } else {
-          auto MaybeTUDeps = WorkerTools[I]->getTranslationUnitDependencies(
-              Input->CommandLine, CWD, AlreadySeenModules, LookupOutput);
-          if (handleTranslationUnitResult(Filename, MaybeTUDeps, FD, LocalIndex,
-                                          DependencyOS, Errs))
-            HadErrors = true;
-        }
-      }
-    });
-  }
-  Pool.wait();
+  auto GetNextInputIndex = [&]() -> std::optional<size_t> {
+    std::unique_lock<std::mutex> LockGuard(Lock);
+    if (Index < Inputs.size())
+      return Index++;
+    return {};
+  };
 
   if (Format == ScanningOutputFormat::Full)
-    FD.printFullOutput(llvm::outs());
+    FD.emplace(ModuleName.empty() ? Inputs.size() : 0);
+
+  auto ScanningTask = [&](DependencyScanningService &Service) {
+    DependencyScanningTool WorkerTool(Service);
+
+    llvm::DenseSet<ModuleID> AlreadySeenModules;
+    while (auto MaybeInputIndex = GetNextInputIndex()) {
+      size_t LocalIndex = *MaybeInputIndex;
+      const tooling::CompileCommand *Input = &Inputs[LocalIndex];
+      std::string Filename = std::move(Input->Filename);
+      std::string CWD = std::move(Input->Directory);
+
+      std::optional<StringRef> MaybeModuleName;
+      if (!ModuleName.empty())
+        MaybeModuleName = ModuleName;
+
+      std::string OutputDir(ModuleFilesDir);
+      if (OutputDir.empty())
+        OutputDir = getModuleCachePath(Input->CommandLine);
+      auto LookupOutput = [&](const ModuleID &MID, ModuleOutputKind MOK) {
+        return ::lookupModuleOutput(MID, MOK, OutputDir);
+      };
+
+      // Run the tool on it.
+      if (Format == ScanningOutputFormat::Make) {
+        auto MaybeFile = WorkerTool.getDependencyFile(Input->CommandLine, CWD);
+        if (handleMakeDependencyToolResult(Filename, MaybeFile, DependencyOS,
+                                           Errs))
+          HadErrors = true;
+      } else if (Format == ScanningOutputFormat::P1689) {
+        // It is useful to generate the make-format dependency output during
+        // the scanning for P1689. Otherwise the users need to scan again for
+        // it. We will generate the make-format dependency output if we find
+        // `-MF` in the command lines.
+        std::string MakeformatOutputPath;
+        std::string MakeformatOutput;
+
+        auto MaybeRule = WorkerTool.getP1689ModuleDependencyFile(
+            *Input, CWD, MakeformatOutput, MakeformatOutputPath);
+
+        if (handleP1689DependencyToolResult(Filename, MaybeRule, PD, Errs))
+          HadErrors = true;
+
+        if (!MakeformatOutputPath.empty() && !MakeformatOutput.empty() &&
+            !HadErrors) {
+          static std::mutex Lock;
+          // With compilation database, we may open different files
+          // concurrently or we may write the same file concurrently. So we
+          // use a map here to allow multiple compile commands to write to the
+          // same file. Also we need a lock here to avoid data race.
+          static llvm::StringMap<llvm::raw_fd_ostream> OSs;
+          std::unique_lock<std::mutex> LockGuard(Lock);
+
+          auto OSIter = OSs.find(MakeformatOutputPath);
+          if (OSIter == OSs.end()) {
+            std::error_code EC;
+            OSIter =
+                OSs.try_emplace(MakeformatOutputPath, MakeformatOutputPath, EC)
+                    .first;
+            if (EC)
+              llvm::errs() << "Failed to open P1689 make format output file \""
+                           << MakeformatOutputPath << "\" for " << EC.message()
+                           << "\n";
+          }
+
+          SharedStream MakeformatOS(OSIter->second);
+          llvm::Expected<std::string> MaybeOutput(MakeformatOutput);
+          if (handleMakeDependencyToolResult(Filename, MaybeOutput,
+                                             MakeformatOS, Errs))
+            HadErrors = true;
+        }
+      } else if (MaybeModuleName) {
+        auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
+            *MaybeModuleName, Input->CommandLine, CWD, AlreadySeenModules,
+            LookupOutput);
+        if (handleModuleResult(*MaybeModuleName, MaybeModuleDepsGraph, *FD,
+                               LocalIndex, DependencyOS, Errs))
+          HadErrors = true;
+      } else {
+        auto MaybeTUDeps = WorkerTool.getTranslationUnitDependencies(
+            Input->CommandLine, CWD, AlreadySeenModules, LookupOutput);
+        if (handleTranslationUnitResult(Filename, MaybeTUDeps, *FD, LocalIndex,
+                                        DependencyOS, Errs))
+          HadErrors = true;
+      }
+    }
+  };
+
+  DependencyScanningService Service(ScanMode, Format, OptimizeArgs,
+                                    EagerLoadModules);
+
+  llvm::Timer T;
+  T.startTimer();
+
+  if (Inputs.size() == 1) {
+    ScanningTask(Service);
+  } else {
+    llvm::DefaultThreadPool Pool(llvm::hardware_concurrency(NumThreads));
+
+    if (Verbose) {
+      llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
+                   << " files using " << Pool.getMaxConcurrency()
+                   << " workers\n";
+    }
+
+    for (unsigned I = 0; I < Pool.getMaxConcurrency(); ++I)
+      Pool.async([ScanningTask, &Service]() { ScanningTask(Service); });
+
+    Pool.wait();
+  }
+
+  T.stopTimer();
+  if (PrintTiming)
+    llvm::errs() << llvm::format(
+        "clang-scan-deps timing: %0.2fs wall, %0.2fs process\n",
+        T.getTotalTime().getWallTime(), T.getTotalTime().getProcessTime());
+
+  if (RoundTripArgs)
+    if (FD && FD->roundTripCommands(llvm::errs()))
+      HadErrors = true;
+
+  if (Format == ScanningOutputFormat::Full)
+    FD->printFullOutput(llvm::outs());
+  else if (Format == ScanningOutputFormat::P1689)
+    PD.printDependencies(llvm::outs());
 
   return HadErrors;
 }

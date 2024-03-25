@@ -59,6 +59,7 @@ target(tsan_target_type, "rtl") {
     "tsan_ignoreset.h",
     "tsan_ilist.h",
     "tsan_interceptors.h",
+    "tsan_interceptors_memintrinsics.cpp",
     "tsan_interceptors_posix.cpp",
     "tsan_interface.cpp",
     "tsan_interface.h",
@@ -126,6 +127,8 @@ target(tsan_target_type, "rtl") {
     sources += [ "tsan_rtl_mips64.S" ]
   } else if (target_cpu == "powerpc64") {
     sources += [ "tsan_rtl_ppc64.S" ]
+  } else if (target_cpu == "riscv64") {
+    sources += [ "tsan_rtl_riscv64.S" ]
   } else if (target_cpu == "s390x") {
     sources += [ "tsan_rtl_s390x.S" ]
   }
@@ -150,6 +153,7 @@ target(tsan_target_type, "rtl") {
       "-Wl,-U,___sanitizer_sandbox_on_notify",
       "-Wl,-U,___sanitizer_symbolize_code",
       "-Wl,-U,___sanitizer_symbolize_data",
+      "-Wl,-U,___sanitizer_symbolize_frame",
       "-Wl,-U,___sanitizer_symbolize_demangle",
       "-Wl,-U,___sanitizer_symbolize_flush",
       "-Wl,-U,___sanitizer_symbolize_set_demangle",

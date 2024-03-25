@@ -9,14 +9,12 @@ from lldbsuite.test import lldbutil
 
 
 class LLDBIteratorTestCase(TestBase):
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line numbers to break inside main().
-        self.line1 = line_number(
-            'main.cpp', '// Set break point at this line.')
-        self.line2 = line_number('main.cpp', '// And that line.')
+        self.line1 = line_number("main.cpp", "// Set break point at this line.")
+        self.line2 = line_number("main.cpp", "// And that line.")
 
     def test_lldb_iter_module(self):
         """Test module_iter works correctly for SBTarget -> SBModule."""
@@ -30,13 +28,13 @@ class LLDBIteratorTestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         if not process:
             self.fail("SBTarget.LaunchProcess() failed")
 
         from lldbsuite.test.lldbutil import get_description
+
         yours = []
         for i in range(target.GetNumModules()):
             yours.append(target.GetModuleAtIndex(i))
@@ -50,8 +48,10 @@ class LLDBIteratorTestCase(TestBase):
                 print("yours[%d]='%s'" % (i, get_description(yours[i])))
                 print("mine[%d]='%s'" % (i, get_description(mine[i])))
             self.assertEqual(
-                yours[i], mine[i],
-                "UUID+FileSpec of yours[{0}] and mine[{0}] matches".format(i))
+                yours[i],
+                mine[i],
+                "UUID+FileSpec of yours[{0}] and mine[{0}] matches".format(i),
+            )
 
     def test_lldb_iter_breakpoint(self):
         """Test breakpoint_iter works correctly for SBTarget -> SBBreakpoint."""
@@ -69,6 +69,7 @@ class LLDBIteratorTestCase(TestBase):
         self.assertEqual(target.GetNumBreakpoints(), 2)
 
         from lldbsuite.test.lldbutil import get_description
+
         yours = []
         for i in range(target.GetNumBreakpoints()):
             yours.append(target.GetBreakpointAtIndex(i))
@@ -81,10 +82,11 @@ class LLDBIteratorTestCase(TestBase):
             if self.TraceOn():
                 print("yours[%d]='%s'" % (i, get_description(yours[i])))
                 print("mine[%d]='%s'" % (i, get_description(mine[i])))
-            self.assertEqual(yours[i], mine[i],
-                            "ID of yours[{0}] and mine[{0}] matches".format(i))
+            self.assertEqual(
+                yours[i], mine[i], "ID of yours[{0}] and mine[{0}] matches".format(i)
+            )
 
-    @skipIfWindows # This test is flaky on Windows
+    @skipIfWindows  # This test is flaky on Windows
     def test_lldb_iter_frame(self):
         """Test iterator works correctly for SBProcess->SBThread->SBFrame."""
         self.build()
@@ -97,13 +99,13 @@ class LLDBIteratorTestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         if not process:
             self.fail("SBTarget.LaunchProcess() failed")
 
         from lldbsuite.test.lldbutil import print_stacktrace
+
         stopped_due_to_breakpoint = False
         for thread in process:
             if self.TraceOn():

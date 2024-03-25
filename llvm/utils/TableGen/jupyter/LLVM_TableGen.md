@@ -77,6 +77,93 @@ def other_thing : Stuff {}
                       ^
 
 
+You can also configure the default reset behaviour using the `%config` magic.
+
+
+```tablegen
+%config cellreset on
+class Thing {}
+```
+
+    ------------- Classes -----------------
+    class Thing {
+    }
+    ------------- Defs -----------------
+
+
+
+```tablegen
+// The cache is reset here so this is an error.
+def AThing: Thing {}
+```
+
+    <stdin>:2:13: error: Couldn't find class 'Thing'
+    def AThing: Thing {}
+                ^
+
+
+The default value is `off`, meaning cells are connected. If you want to override the default for one cell only, use the `%reset` or `%noreset` magic. These always override the default.
+
+
+```tablegen
+class Thing {}
+```
+
+    ------------- Classes -----------------
+    class Thing {
+    }
+    ------------- Defs -----------------
+
+
+
+```tablegen
+%noreset
+// This works because of the noreset above.
+def AThing: Thing {}
+```
+
+    ------------- Classes -----------------
+    class Thing {
+    }
+    ------------- Defs -----------------
+    def AThing {	// Thing
+    }
+
+
+
+```tablegen
+// This does not because we're not changing the default.
+def AnotherThing: Thing {}
+```
+
+    <stdin>:2:19: error: Couldn't find class 'Thing'
+    def AnotherThing: Thing {}
+                      ^
+
+
+
+```tablegen
+%config cellreset off
+%reset
+// Here we have an empty cache and default reset behaviour.
+```
+
+    ------------- Classes -----------------
+    ------------- Defs -----------------
+
+
+It is not valid to have `%reset` and `%noreset` in the same cell.
+
+
+```tablegen
+%reset
+%noreset
+```
+
+    %reset and %noreset in the same cell is not allowed. Use only one, or neither.
+
+Consider setting `cellreset` to the majority usecase for your notebook. For example a tutorial building a large example across many cells will likely want it `off`. One with many standalone examples, `on`.
+
 There is a "magic" directive `%args` that you can use to send command line arguments to `llvm-tblgen`.
 
 For example, here we have some code that shows a warning.

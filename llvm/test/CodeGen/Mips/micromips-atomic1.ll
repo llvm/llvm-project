@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -filetype=obj --disable-machine-licm -mattr=micromips < %s -o - \
+; RUN: llc -mtriple=mipsel -filetype=obj --disable-machine-licm -mattr=micromips < %s -o - \
 ; RUN:   | llvm-objdump --no-print-imm-hex --no-show-raw-insn -d - | FileCheck %s --check-prefix=MICROMIPS
 
 ; Use llvm-objdump to check wheter the encodings of microMIPS atomic instructions are correct.

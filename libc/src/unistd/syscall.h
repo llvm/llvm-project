@@ -12,11 +12,11 @@
 #include <stdarg.h>
 #include <unistd.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 long __llvm_libc_syscall(long number, long arg1, long arg2, long arg3,
                          long arg4, long arg5, long arg6);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_UNISTD_SYSCALL_H

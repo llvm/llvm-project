@@ -48,3 +48,25 @@ short2 test_global_add_2bf16(__global short2 *addr, short2 x) {
 short2 test_local_add_2bf16(__local short2 *addr, short2 x) {
   return __builtin_amdgcn_ds_atomic_fadd_v2bf16(addr, x);
 }
+
+// CHECK-LABEL: test_local_add_2f16
+// CHECK: call <2 x half> @llvm.amdgcn.ds.fadd.v2f16(ptr addrspace(3) %{{.*}}, <2 x half> %
+// GFX940-LABEL:  test_local_add_2f16
+// GFX940: ds_pk_add_rtn_f16
+half2 test_local_add_2f16(__local half2 *addr, half2 x) {
+  return __builtin_amdgcn_ds_atomic_fadd_v2f16(addr, x);
+}
+
+// CHECK-LABEL: test_local_add_2f16_noret
+// CHECK: call <2 x half> @llvm.amdgcn.ds.fadd.v2f16(ptr addrspace(3) %{{.*}}, <2 x half> %
+// GFX940-LABEL:  test_local_add_2f16_noret
+// GFX940: ds_pk_add_f16
+void test_local_add_2f16_noret(__local half2 *addr, half2 x) {
+  __builtin_amdgcn_ds_atomic_fadd_v2f16(addr, x);
+}
+
+// CHECK-LABEL: @test_global_add_f32
+// CHECK: call float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) %{{.*}}, float %{{.*}})
+void test_global_add_f32(float *rtn, global float *addr, float x) {
+  *rtn = __builtin_amdgcn_global_atomic_fadd_f32(addr, x);
+}

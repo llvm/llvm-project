@@ -13,7 +13,7 @@ a list of open projects that one can start with:
    `LLVM style <https://llvm.org/docs/CodingStandards.html>`_ but differs in a
    few aspects: We use ``snake_case`` for non-constant variable and function
    names,``CamelCase`` for internal type names (those which are not defined in a
-   public header), and ``CAPITILIZED_SNAKE_CASE`` for constants. When we started
+   public header), and ``CAPITALIZED_SNAKE_CASE`` for constants. When we started
    working on the project, we started using the general LLVM style for
    everything. However, for a short period, we switched to the style that is
    currently followed by the `LLD project <https://github.com/llvm/llvm-project/tree/main/lld>`_.
@@ -29,7 +29,7 @@ a list of open projects that one can start with:
    #. One is about adding CMake facilities to optionally link the libc's overlay
       static archive (see :ref:`overlay_mode`) with other LLVM tools/executables.
    #. The other is about putting plumbing in place to release the overlay static
-      archive (see :ref:`overlay_mode`) as part of the LLVM binary releases. 
+      archive (see :ref:`overlay_mode`) as part of the LLVM binary releases.
 
 #. **Implement Linux syscall wrappers** - A large portion of the POSIX API can
    be implemented as syscall wrappers on Linux. A good number have already been
@@ -48,9 +48,9 @@ a list of open projects that one can start with:
    CI builders.
 
 #. **double and higher precision math functions** - These are under active
-   developement but you can take a shot at those not yet implemented. See
+   development but you can take a shot at those not yet implemented. See
    :ref:`math` for more information.
 
 #. **Contribute a new OS/Architecture port** - You can contribute a new
    operating system or target architecture port. See :ref:`porting` for more
-   informaton.
+   information.

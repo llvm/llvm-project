@@ -137,7 +137,7 @@ define i32 @n4_extrause0(i64 %x, i32 %nbits) {
 ; CHECK-NEXT:    call void @use64(i64 [[T0]])
 ; CHECK-NEXT:    call void @use64(i64 [[T1]])
 ; CHECK-NEXT:    call void @use32(i32 [[T2]])
-; CHECK-NEXT:    [[T3:%.*]] = lshr i64 [[T1]], [[T0]]
+; CHECK-NEXT:    [[T3:%.*]] = lshr exact i64 [[T1]], [[T0]]
 ; CHECK-NEXT:    call void @use64(i64 [[T3]])
 ; CHECK-NEXT:    [[T4:%.*]] = trunc i64 [[T3]] to i32
 ; CHECK-NEXT:    [[T5:%.*]] = shl i32 [[T4]], [[T2]]
@@ -166,7 +166,7 @@ define i32 @n5_extrause1(i64 %x, i32 %nbits) {
 ; CHECK-NEXT:    call void @use64(i64 [[T0]])
 ; CHECK-NEXT:    call void @use64(i64 [[T1]])
 ; CHECK-NEXT:    call void @use32(i32 [[T2]])
-; CHECK-NEXT:    [[T3:%.*]] = lshr i64 [[T1]], [[T0]]
+; CHECK-NEXT:    [[T3:%.*]] = lshr exact i64 [[T1]], [[T0]]
 ; CHECK-NEXT:    [[T4:%.*]] = trunc i64 [[T3]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[T4]])
 ; CHECK-NEXT:    [[T5:%.*]] = shl i32 [[T4]], [[T2]]
@@ -195,7 +195,7 @@ define i32 @n6_extrause2(i64 %x, i32 %nbits) {
 ; CHECK-NEXT:    call void @use64(i64 [[T0]])
 ; CHECK-NEXT:    call void @use64(i64 [[T1]])
 ; CHECK-NEXT:    call void @use32(i32 [[T2]])
-; CHECK-NEXT:    [[T3:%.*]] = lshr i64 [[T1]], [[T0]]
+; CHECK-NEXT:    [[T3:%.*]] = lshr exact i64 [[T1]], [[T0]]
 ; CHECK-NEXT:    call void @use64(i64 [[T3]])
 ; CHECK-NEXT:    [[T4:%.*]] = trunc i64 [[T3]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[T4]])

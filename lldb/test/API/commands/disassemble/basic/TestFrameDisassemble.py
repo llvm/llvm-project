@@ -3,14 +3,12 @@ Test to ensure SBFrame::Disassemble produces SOME output
 """
 
 
-
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
 
 class FrameDisassembleTestCase(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_frame_disassemble(self):
@@ -26,10 +24,11 @@ class FrameDisassembleTestCase(TestBase):
         # Now create a breakpoint in main.c at the source matching
         # "Set a breakpoint here"
         breakpoint = target.BreakpointCreateBySourceRegex(
-            "Set a breakpoint here", lldb.SBFileSpec("main.cpp"))
-        self.assertTrue(breakpoint and
-                        breakpoint.GetNumLocations() >= 1,
-                        VALID_BREAKPOINT)
+            "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
+        )
+        self.assertTrue(
+            breakpoint and breakpoint.GetNumLocations() >= 1, VALID_BREAKPOINT
+        )
 
         error = lldb.SBError()
         # This is the launch info.  If you want to launch with arguments or
@@ -42,13 +41,14 @@ class FrameDisassembleTestCase(TestBase):
 
         # Did we hit our breakpoint?
         from lldbsuite.test.lldbutil import get_threads_stopped_at_breakpoint
+
         threads = get_threads_stopped_at_breakpoint(process, breakpoint)
         self.assertEqual(
-            len(threads), 1,
-            "There should be a thread stopped at our breakpoint")
+            len(threads), 1, "There should be a thread stopped at our breakpoint"
+        )
 
         # The hit count for the breakpoint should be 1.
-        self.assertEquals(breakpoint.GetHitCount(), 1)
+        self.assertEqual(breakpoint.GetHitCount(), 1)
 
         frame = threads[0].GetFrameAtIndex(0)
         disassembly = frame.Disassemble()

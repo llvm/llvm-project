@@ -100,11 +100,7 @@
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -212,7 +208,7 @@ static bool isCandidateStore(const MachineInstr &MI, const MachineOperand &MO) {
     // In case we have str xA, [xA, #imm], this is two different uses
     // of xA and we cannot fold, otherwise the xA stored may be wrong,
     // even if #imm == 0.
-    return MI.getOperandNo(&MO) == 1 &&
+    return MO.getOperandNo() == 1 &&
            MI.getOperand(0).getReg() != MI.getOperand(1).getReg();
   }
 }

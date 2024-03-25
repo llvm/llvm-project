@@ -41,7 +41,7 @@ class CodeGenModule;
 ///    for (auto &widget : widgets) {
 ///      auto widgetDesc = widgetArray.beginStruct();
 ///      widgetDesc.addInt(CGM.SizeTy, widget.getPower());
-///      widgetDesc.add(CGM.GetAddrOfConstantString(widget.getName()));
+///      widgetDesc.add(CGM.GetAddrOfConstantStringFromLiteral(widget.getName()));
 ///      widgetDesc.add(CGM.GetAddrOfGlobal(widget.getInitializerDecl()));
 ///      widgetDesc.finishAndAddTo(widgetArray);
 ///    }
@@ -202,11 +202,6 @@ public:
   /// Add a null pointer of a specific type.
   void addNullPointer(llvm::PointerType *ptrTy) {
     add(llvm::ConstantPointerNull::get(ptrTy));
-  }
-
-  /// Add a bitcast of a value to a specific type.
-  void addBitCast(llvm::Constant *value, llvm::Type *type) {
-    add(llvm::ConstantExpr::getBitCast(value, type));
   }
 
   /// Add a bunch of new values to this initializer.

@@ -15,7 +15,7 @@
 
 #include "MipsISelLowering.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
-#include "llvm/Support/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 
 namespace llvm {
 

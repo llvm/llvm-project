@@ -63,7 +63,7 @@ constexpr bool test() {
     assert(&y1 == &(b[3]));
 
     using Iter = decltype(it1);
-    static_assert(canPlusEqual<Iter, intptr_t>);
+    static_assert(canPlusEqual<Iter, std::intptr_t>);
   }
 
   {
@@ -83,7 +83,7 @@ constexpr bool test() {
     assert(&y1 == &(b[2]));
 
     using Iter = decltype(it1);
-    static_assert(canMinusEqual<Iter, intptr_t>);
+    static_assert(canMinusEqual<Iter, std::intptr_t>);
   }
 
   {
@@ -116,12 +116,12 @@ constexpr bool test() {
     // One of the ranges is not random access
     std::ranges::zip_view v(a, b, ForwardSizedView{buffer1});
     using Iter = decltype(v.begin());
-    static_assert(!std::invocable<std::plus<>, Iter, intptr_t>);
-    static_assert(!std::invocable<std::plus<>, intptr_t, Iter>);
-    static_assert(!canPlusEqual<Iter, intptr_t>);
-    static_assert(!std::invocable<std::minus<>, Iter, intptr_t>);
+    static_assert(!std::invocable<std::plus<>, Iter, std::intptr_t>);
+    static_assert(!std::invocable<std::plus<>, std::intptr_t, Iter>);
+    static_assert(!canPlusEqual<Iter, std::intptr_t>);
+    static_assert(!std::invocable<std::minus<>, Iter, std::intptr_t>);
     static_assert(std::invocable<std::minus<>, Iter, Iter>);
-    static_assert(!canMinusEqual<Iter, intptr_t>);
+    static_assert(!canMinusEqual<Iter, std::intptr_t>);
   }
 
   {

@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=GCN
+# RUN: llc -mtriple=amdgcn -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=GCN
 
 ---
 

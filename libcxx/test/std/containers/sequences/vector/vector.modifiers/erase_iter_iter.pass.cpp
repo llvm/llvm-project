@@ -14,9 +14,10 @@
 #include <iterator>
 #include <cassert>
 
-#include "test_macros.h"
-#include "min_allocator.h"
 #include "asan_testing.h"
+#include "min_allocator.h"
+#include "MoveOnly.h"
+#include "test_macros.h"
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
 struct Throws {
@@ -86,6 +87,25 @@ TEST_CONSTEXPR_CXX20 bool tests()
         assert(is_contiguous_container_asan_correct(outer));
         assert(is_contiguous_container_asan_correct(outer[0]));
         assert(is_contiguous_container_asan_correct(outer[1]));
+    }
+    // Make sure vector::erase works with move-only types
+    {
+        // When non-trivial
+        {
+            std::vector<MoveOnly> v;
+            v.emplace_back(1); v.emplace_back(2); v.emplace_back(3);
+            v.erase(v.begin(), v.begin() + 2);
+            assert(v.size() == 1);
+            assert(v[0] == MoveOnly(3));
+        }
+        // When trivial
+        {
+            std::vector<TrivialMoveOnly> v;
+            v.emplace_back(1); v.emplace_back(2); v.emplace_back(3);
+            v.erase(v.begin(), v.begin() + 2);
+            assert(v.size() == 1);
+            assert(v[0] == TrivialMoveOnly(3));
+        }
     }
 #if TEST_STD_VER >= 11
     {

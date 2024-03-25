@@ -1083,7 +1083,7 @@ areFeasible(ConstraintRangeTy Constraints) {
 ///
 /// \returns true if assuming this Sym to be true means equality of operands
 ///          false if it means disequality of operands
-///          None otherwise
+///          std::nullopt otherwise
 std::optional<bool> meansEquality(const SymSymExpr *Sym) {
   switch (Sym->getOpcode()) {
   case BO_Sub:
@@ -1875,6 +1875,12 @@ public:
 
   const llvm::APSInt *getSymVal(ProgramStateRef State,
                                 SymbolRef Sym) const override;
+
+  const llvm::APSInt *getSymMinVal(ProgramStateRef State,
+                                   SymbolRef Sym) const override;
+
+  const llvm::APSInt *getSymMaxVal(ProgramStateRef State,
+                                   SymbolRef Sym) const override;
 
   ProgramStateRef removeDeadBindings(ProgramStateRef State,
                                      SymbolReaper &SymReaper) override;
@@ -2678,7 +2684,18 @@ EquivalenceClass::simplify(SValBuilder &SVB, RangeSet::Factory &F,
       if (OldState == State)
         continue;
 
-      assert(find(State, MemberSym) == find(State, SimplifiedMemberSym));
+      // Be aware that `SimplifiedMemberSym` might refer to an already dead
+      // symbol. In that case, the eqclass of that might not be the same as the
+      // eqclass of `MemberSym`. This is because the dead symbols are not
+      // preserved in the `ClassMap`, hence
+      // `find(State, SimplifiedMemberSym)` will result in a trivial eqclass
+      // compared to the eqclass of `MemberSym`.
+      // These eqclasses should be the same if `SimplifiedMemberSym` is alive.
+      // --> assert(find(State, MemberSym) == find(State, SimplifiedMemberSym))
+      //
+      // Note that `MemberSym` must be alive here since that is from the
+      // `ClassMembers` where all the symbols are alive.
+
       // Remove the old and more complex symbol.
       State = find(State, MemberSym).removeMember(State, MemberSym);
 
@@ -2852,6 +2869,22 @@ const llvm::APSInt *RangeConstraintManager::getSymVal(ProgramStateRef St,
   return T ? T->getConcreteValue() : nullptr;
 }
 
+const llvm::APSInt *RangeConstraintManager::getSymMinVal(ProgramStateRef St,
+                                                         SymbolRef Sym) const {
+  const RangeSet *T = getConstraint(St, Sym);
+  if (!T || T->isEmpty())
+    return nullptr;
+  return &T->getMinValue();
+}
+
+const llvm::APSInt *RangeConstraintManager::getSymMaxVal(ProgramStateRef St,
+                                                         SymbolRef Sym) const {
+  const RangeSet *T = getConstraint(St, Sym);
+  if (!T || T->isEmpty())
+    return nullptr;
+  return &T->getMaxValue();
+}
+
 //===----------------------------------------------------------------------===//
 //                Remove dead symbols from existing constraints
 //===----------------------------------------------------------------------===//
@@ -3005,7 +3038,7 @@ ProgramStateRef RangeConstraintManager::setRange(ProgramStateRef State,
 
 //===------------------------------------------------------------------------===
 // assumeSymX methods: protected interface for RangeConstraintManager.
-//===------------------------------------------------------------------------===/
+//===------------------------------------------------------------------------===
 
 // The syntax for ranges below is mathematical, using [x, y] for closed ranges
 // and (x, y) for open ranges. These ranges are modular, corresponding with
@@ -3237,6 +3270,10 @@ void RangeConstraintManager::printJson(raw_ostream &Out, ProgramStateRef State,
 void RangeConstraintManager::printValue(raw_ostream &Out, ProgramStateRef State,
                                         SymbolRef Sym) {
   const RangeSet RS = getRange(State, Sym);
+  if (RS.isEmpty()) {
+    Out << "<empty rangeset>";
+    return;
+  }
   Out << RS.getBitWidth() << (RS.isUnsigned() ? "u:" : "s:");
   RS.dump(Out);
 }

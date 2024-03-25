@@ -10,8 +10,8 @@ b0:
   %v1 = fptosi double %a0 to i64
   %v2 = tail call i32 @llvm.hexagon.M4.cmpyi.whc(i64 %v1, i32 512)
   %v3 = trunc i32 %v2 to i8
-  store volatile i8 %v3, i8* %v0, align 1
-  %v4 = load volatile i8, i8* %v0, align 1
+  store volatile i8 %v3, ptr %v0, align 1
+  %v4 = load volatile i8, ptr %v0, align 1
   %v5 = zext i8 %v4 to i32
   ret i32 %v5
 }
@@ -27,8 +27,8 @@ b0:
   %v1 = fptosi double %a0 to i64
   %v2 = tail call i32 @llvm.hexagon.M4.cmpyr.whc(i64 %v1, i32 512)
   %v3 = trunc i32 %v2 to i8
-  store volatile i8 %v3, i8* %v0, align 1
-  %v4 = load volatile i8, i8* %v0, align 1
+  store volatile i8 %v3, ptr %v0, align 1
+  %v4 = load volatile i8, ptr %v0, align 1
   %v5 = zext i8 %v4 to i32
   ret i32 %v5
 }
@@ -44,8 +44,8 @@ b0:
   %v1 = fptosi double %a0 to i64
   %v2 = tail call i32 @llvm.hexagon.S5.popcountp(i64 %v1)
   %v3 = trunc i32 %v2 to i8
-  store volatile i8 %v3, i8* %v0, align 1
-  %v4 = load volatile i8, i8* %v0, align 1
+  store volatile i8 %v3, ptr %v0, align 1
+  %v4 = load volatile i8, ptr %v0, align 1
   %v5 = zext i8 %v4 to i32
   ret i32 %v5
 }
@@ -60,8 +60,8 @@ b0:
   %v0 = alloca i8, align 1
   %v1 = tail call i32 @llvm.hexagon.F2.sfclass(float %a0, i32 3)
   %v2 = trunc i32 %v1 to i8
-  store volatile i8 %v2, i8* %v0, align 1
-  %v3 = load volatile i8, i8* %v0, align 1
+  store volatile i8 %v2, ptr %v0, align 1
+  %v3 = load volatile i8, ptr %v0, align 1
   %v4 = zext i8 %v3 to i32
   ret i32 %v4
 }
@@ -77,8 +77,8 @@ b0:
   %v1 = fptosi float %a0 to i64
   %v2 = tail call i32 @llvm.hexagon.S5.asrhub.sat(i64 %v1, i32 3)
   %v3 = trunc i32 %v2 to i8
-  store volatile i8 %v3, i8* %v0, align 1
-  %v4 = load volatile i8, i8* %v0, align 1
+  store volatile i8 %v3, ptr %v0, align 1
+  %v4 = load volatile i8, ptr %v0, align 1
   %v5 = zext i8 %v4 to i32
   ret i32 %v5
 }

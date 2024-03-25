@@ -64,6 +64,21 @@ namespace DependentDefaultCtorExceptionSpec {
   struct A { multimap<int> Map; } a;
 
   static_assert(noexcept(A()));
+
+  template <class> struct NoexceptWithThis {
+    int ca;
+    template <class T> auto foo(T) noexcept(ca) { return true; }
+    // expected-error@-1 {{noexcept specifier argument is not a constant expression}}
+    // expected-note@-2 {{in instantiation of exception specification}}
+    // expected-note@-3 {{implicit use of 'this' pointer is only allowed within the evaluation of a call to a 'constexpr' member function}}
+  };
+  struct InstantiateFromAnotherClass {
+    template <class B, class T = decltype(static_cast<bool (B::*)(int)>(&B::foo))> // expected-note {{in instantiation of function template specialization}}
+    InstantiateFromAnotherClass(B *) {} // expected-note {{in instantiation of default argument}}
+  };
+  NoexceptWithThis<int> f{};
+  // Don't crash here.
+  InstantiateFromAnotherClass b{&f}; // expected-note {{while substituting deduced template arguments into function template}}
 }
 
 #endif
@@ -120,7 +135,9 @@ namespace Builtins {
   extern "C" int strncmp(const char *, const char *, decltype(sizeof(0))) noexcept;
 
   // Check we recognized both as builtins.
-  typedef int arr[strcmp("bar", "foo") + 4 * strncmp("foo", "bar", 4)]; // expected-warning {{variable length array}}
+  typedef int arr[strcmp("bar", "foo") + 4 * strncmp("foo", "bar", 4)]; // expected-warning {{variable length array folded to constant array as an extension}} \
+                                                                           expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                                                                           expected-note {{non-constexpr function 'strcmp' cannot be used in a constant expression}}
   typedef int arr[3];
 }
 

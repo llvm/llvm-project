@@ -526,7 +526,7 @@ TEST(SetTest, divisionNonDivLocals) {
 
   // Triangle with vertices (0, 0), (5, 0), (15, 5).
   // Projected on x, it becomes [0, 13] U {15} as it becomes too narrow towards
-  // the apex and so does not have have any integer point at x = 14.
+  // the apex and so does not have any integer point at x = 14.
   // At x = 15, the apex is an integer point.
   PresburgerSet triangle2{
       parseIntegerPolyhedronAndMakeLocals("(x,y) : (y >= 0, "

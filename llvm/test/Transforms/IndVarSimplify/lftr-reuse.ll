@@ -126,6 +126,8 @@ exit:
 
 ; Force SCEVExpander to look for an existing well-formed phi.
 ; Perform LFTR without generating extra preheader code.
+; TODO: Recover regression after not strengthening AddRec flags during
+; get[Sign,Zero]ExtendExpr for INDVARS_IV_NEXT.
 define void @guardedloop(ptr %matrix, ptr %vector,
 ;
 ; CHECK-LABEL: @guardedloop(

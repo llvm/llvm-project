@@ -6,13 +6,6 @@ set(ISL_CODEGEN_FILES
     CodeGen/IslNodeBuilder.cpp
     CodeGen/CodeGeneration.cpp)
 
-if (GPU_CODEGEN)
-  set (GPGPU_CODEGEN_FILES
-       CodeGen/PPCGCodeGeneration.cpp
-       CodeGen/ManagedMemoryRewrite.cpp
-       )
-endif (GPU_CODEGEN)
-
 # Compile ISL into a separate library.
 add_subdirectory(External)
 
@@ -44,12 +37,6 @@ set(POLLY_COMPONENTS
     Vectorize
 )
 
-# Polly-ACC requires the NVPTX backend to work. Ask LLVM about its libraries.
-if (GPU_CODEGEN)
-  # This call emits an error if they NVPTX backend is not enable.
-  list(APPEND POLLY_COMPONENTS NVPTX)
-endif ()
-
 # Use an object-library to add the same files to multiple libs without requiring
 # the sources them to be recompiled for each of them.
 add_llvm_pass_plugin(Polly
@@ -72,9 +59,7 @@ add_llvm_pass_plugin(Polly
   CodeGen/IRBuilder.cpp
   CodeGen/Utils.cpp
   CodeGen/RuntimeDebugBuilder.cpp
-  CodeGen/CodegenCleanup.cpp
   CodeGen/PerfMonitor.cpp
-  ${GPGPU_CODEGEN_FILES}
   Exchange/JSONExporter.cpp
   Support/GICHelper.cpp
   Support/SCEVAffinator.cpp
@@ -128,19 +113,9 @@ target_link_libraries(Polly PUBLIC
   ${ISL_TARGET}
 )
 
-# Additional dependencies for Polly-ACC.
-if (GPU_CODEGEN)
-  target_link_libraries(Polly PUBLIC PollyPPCG)
-endif ()
-
-if (NOT LLVM_LINK_LLVM_DYLIB AND NOT LLVM_POLLY_LINK_INTO_TOOLS)
-    # Polly-ACC requires the NVPTX target to be present in the executable it is linked to
-    set_property(TARGET bugpoint APPEND PROPERTY LINK_LIBRARIES LLVMTarget)
-endif ()
-
 # Create a loadable module Polly.so that can be loaded using
 # LLVM's/clang's "-load" option.
-if (WIN32 OR NOT LLVM_ENABLE_PIC)
+if (WIN32 OR CYGWIN OR NOT LLVM_ENABLE_PIC)
   # Add dummy target, either because loadable modules are not supported
   # as on Windows or because PIC code has been disabled
   add_custom_target(LLVMPolly)
@@ -155,14 +130,7 @@ else ()
   # to be already available in the address space the module is loaded into.
   # Adding them once more would have the effect that both copies try to register
   # the same command line options, to which LLVM reacts with an error.
-  # If Polly-ACC is enabled, the NVPTX target is also expected to reside in the
-  # hosts. This is not the case for bugpoint. Use LLVM_POLLY_LINK_INTO_TOOLS=ON
-  # instead which will automatically resolve the additional dependencies by
-  # Polly.
   target_link_libraries(LLVMPolly PUBLIC ${ISL_TARGET})
-  if (GPU_CODEGEN)
-    target_link_libraries(LLVMPolly PUBLIC PollyPPCG)
-  endif ()
 
   set_target_properties(LLVMPolly
     PROPERTIES

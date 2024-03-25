@@ -13,6 +13,12 @@
 #define SANITIZER_DEFS_H
 
 #include "sanitizer_platform.h"
+#include "sanitizer_redefine_builtins.h"
+
+// GCC does not understand __has_feature.
+#if !defined(__has_feature)
+#define __has_feature(x) 0
+#endif
 
 #ifndef SANITIZER_DEBUG
 # define SANITIZER_DEBUG 0
@@ -29,22 +35,20 @@
 # define SANITIZER_INTERFACE_ATTRIBUTE __declspec(dllexport)
 #endif
 # define SANITIZER_WEAK_ATTRIBUTE
+#  define SANITIZER_WEAK_IMPORT
 #elif SANITIZER_GO
 # define SANITIZER_INTERFACE_ATTRIBUTE
 # define SANITIZER_WEAK_ATTRIBUTE
+#  define SANITIZER_WEAK_IMPORT
 #else
 # define SANITIZER_INTERFACE_ATTRIBUTE __attribute__((visibility("default")))
 # define SANITIZER_WEAK_ATTRIBUTE  __attribute__((weak))
-#endif
-
-// TLS is handled differently on different platforms
-#if SANITIZER_LINUX || SANITIZER_NETBSD || \
-  SANITIZER_FREEBSD
-# define SANITIZER_TLS_INITIAL_EXEC_ATTRIBUTE \
-    __attribute__((tls_model("initial-exec"))) thread_local
-#else
-# define SANITIZER_TLS_INITIAL_EXEC_ATTRIBUTE
-#endif
+#  if SANITIZER_APPLE
+#    define SANITIZER_WEAK_IMPORT extern "C" __attribute((weak_import))
+#  else
+#    define SANITIZER_WEAK_IMPORT extern "C" SANITIZER_WEAK_ATTRIBUTE
+#  endif  // SANITIZER_APPLE
+#endif    // SANITIZER_WINDOWS
 
 //--------------------------- WEAK FUNCTIONS ---------------------------------//
 // When working with weak functions, to simplify the code and make it more
@@ -187,15 +191,10 @@ typedef uptr OFF_T;
 #endif
 typedef u64  OFF64_T;
 
-#if (SANITIZER_WORDSIZE == 64) || SANITIZER_APPLE
-typedef uptr operator_new_size_type;
+#ifdef __SIZE_TYPE__
+typedef __SIZE_TYPE__ usize;
 #else
-# if defined(__s390__) && !defined(__s390x__)
-// Special case: 31-bit s390 has unsigned long as size_t.
-typedef unsigned long operator_new_size_type;
-# else
-typedef u32 operator_new_size_type;
-# endif
+typedef uptr usize;
 #endif
 
 typedef u64 tid_t;
@@ -226,7 +225,7 @@ typedef u64 tid_t;
 # define WARN_UNUSED_RESULT
 #else  // _MSC_VER
 # define ALWAYS_INLINE inline __attribute__((always_inline))
-# define ALIAS(x) __attribute__((alias(x)))
+# define ALIAS(x) __attribute__((alias(SANITIZER_STRINGIFY(x))))
 // Please only use the ALIGNED macro before the type.
 // Using ALIGNED after the variable declaration is not portable!
 # define ALIGNED(x) __attribute__((aligned(x)))
@@ -265,6 +264,12 @@ typedef u64 tid_t;
 #  define FALLTHROUGH [[fallthrough]]
 #else
 #  define FALLTHROUGH
+#endif
+
+#if __has_attribute(uninitialized)
+#  define UNINITIALIZED __attribute__((uninitialized))
+#else
+#  define UNINITIALIZED
 #endif
 
 // Unaligned versions of basic types.

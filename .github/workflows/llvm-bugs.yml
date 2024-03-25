@@ -1,5 +1,9 @@
 name: LLVM Bugs notifier
 
+permissions:
+  contents: read
+  issues: read
+
 on:
   issues:
     types:
@@ -8,6 +12,7 @@ on:
 jobs:
   auto-subscribe:
     runs-on: ubuntu-latest
+    if: github.repository == 'llvm/llvm-project'
     steps:
       - uses: actions/setup-node@v3
         with:

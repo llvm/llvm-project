@@ -26,11 +26,11 @@ define i32 @foo(ptr nocapture %A, i32 %k) {
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_ELSE:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 10
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x double> [ [[TMP1]], [[IF_ELSE]] ], [ <double 3.000000e+00, double 5.000000e+00>, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[A]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x double> [ [[TMP0]], [[IF_ELSE]] ], [ <double 3.000000e+00, double 5.000000e+00>, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[A]], align 8
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:
@@ -73,19 +73,19 @@ if.end:                                           ; preds = %entry, %if.else
 define i32 @foo2(ptr noalias nocapture %B, ptr noalias nocapture %A, i32 %n, i32 %m) #0 {
 ; CHECK-LABEL: @foo2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_019:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x double> [ [[TMP1]], [[ENTRY]] ], [ [[TMP5:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], <double 1.000000e+01, double 1.000000e+01>
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP3]], <double 4.000000e+00, double 4.000000e+00>
-; CHECK-NEXT:    [[TMP5]] = fadd <2 x double> [[TMP4]], <double 4.000000e+00, double 4.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x double> [ [[TMP0]], [[ENTRY]] ], [ [[TMP4:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], <double 1.000000e+01, double 1.000000e+01>
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], <double 4.000000e+00, double 4.000000e+00>
+; CHECK-NEXT:    [[TMP4]] = fadd <2 x double> [[TMP3]], <double 4.000000e+00, double 4.000000e+00>
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_019]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 100
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[B:%.*]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -138,41 +138,40 @@ define float @foo3(ptr nocapture readonly %A) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> [[TMP4]], float [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[TMP0]], i32 0
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[R_052:%.*]] = phi float [ [[TMP0]], [[ENTRY]] ], [ [[ADD6:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x float> [ [[TMP2]], [[ENTRY]] ], [ [[TMP16:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x float> [ [[TMP5]], [[ENTRY]] ], [ [[TMP12:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[TMP7]], i32 0
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP8]], 7.000000e+00
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x float> [ [[TMP1]], [[ENTRY]] ], [ [[TMP13:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x float> [ [[TMP3]], [[ENTRY]] ], [ [[TMP9:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP5]], i32 0
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP6]], 7.000000e+00
 ; CHECK-NEXT:    [[ADD6]] = fadd float [[R_052]], [[MUL]]
-; CHECK-NEXT:    [[TMP9:%.*]] = add nsw i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr [[ARRAYIDX14]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[INDVARS_IV]], 2
+; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = load float, ptr [[ARRAYIDX14]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 3
 ; CHECK-NEXT:    [[ARRAYIDX19:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    [[TMP12]] = load <2 x float>, ptr [[ARRAYIDX19]], align 4
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> [[TMP12]], <4 x i32> <i32 1, i32 undef, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP13]], float [[TMP10]], i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = fmul <4 x float> [[TMP14]], <float 8.000000e+00, float 9.000000e+00, float 1.000000e+01, float 1.100000e+01>
-; CHECK-NEXT:    [[TMP16]] = fadd <4 x float> [[TMP6]], [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP17]], 121
+; CHECK-NEXT:    [[TMP9]] = load <2 x float>, ptr [[ARRAYIDX19]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> [[TMP9]], <4 x i32> <i32 1, i32 poison, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> [[TMP10]], float [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul <4 x float> [[TMP11]], <float 8.000000e+00, float 9.000000e+00, float 1.000000e+01, float 1.100000e+01>
+; CHECK-NEXT:    [[TMP13]] = fadd <4 x float> [[TMP4]], [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP14]], 121
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x float> [[TMP16]], i32 0
-; CHECK-NEXT:    [[ADD28:%.*]] = fadd float [[ADD6]], [[TMP18]]
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x float> [[TMP16]], i32 1
-; CHECK-NEXT:    [[ADD29:%.*]] = fadd float [[ADD28]], [[TMP19]]
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x float> [[TMP16]], i32 2
-; CHECK-NEXT:    [[ADD30:%.*]] = fadd float [[ADD29]], [[TMP20]]
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x float> [[TMP16]], i32 3
-; CHECK-NEXT:    [[ADD31:%.*]] = fadd float [[ADD30]], [[TMP21]]
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x float> [[TMP13]], i32 0
+; CHECK-NEXT:    [[ADD28:%.*]] = fadd float [[ADD6]], [[TMP15]]
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x float> [[TMP13]], i32 1
+; CHECK-NEXT:    [[ADD29:%.*]] = fadd float [[ADD28]], [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x float> [[TMP13]], i32 2
+; CHECK-NEXT:    [[ADD30:%.*]] = fadd float [[ADD29]], [[TMP17]]
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x float> [[TMP13]], i32 3
+; CHECK-NEXT:    [[ADD31:%.*]] = fadd float [[ADD30]], [[TMP18]]
 ; CHECK-NEXT:    ret float [[ADD31]]
 ;
 entry:

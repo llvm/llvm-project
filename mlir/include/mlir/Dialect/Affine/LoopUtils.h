@@ -22,10 +22,8 @@
 #include <optional>
 
 namespace mlir {
-class AffineForOp;
 class AffineMap;
 class LoopLikeOpInterface;
-struct MemRefRegion;
 class OpBuilder;
 class Value;
 class ValueRange;
@@ -38,6 +36,10 @@ namespace scf {
 class ForOp;
 class ParallelOp;
 } // namespace scf
+
+namespace affine {
+class AffineForOp;
+struct MemRefRegion;
 
 /// Unrolls this for operation completely if the trip count is known to be
 /// constant. Returns failure otherwise.
@@ -104,7 +106,8 @@ void getTileableBands(func::FuncOp f,
                       std::vector<SmallVector<AffineForOp, 6>> *bands);
 
 /// Tiles the specified band of perfectly nested loops creating tile-space loops
-/// and intra-tile loops. A band is a contiguous set of loops.
+/// and intra-tile loops. A band is a contiguous set of loops. This utility
+/// doesn't check for the validity of tiling itself, but just performs it.
 LogicalResult
 tilePerfectlyNested(MutableArrayRef<AffineForOp> input,
                     ArrayRef<unsigned> tileSizes,
@@ -184,7 +187,9 @@ struct AffineCopyOptions {
 /// available for processing this block range. When 'filterMemRef' is specified,
 /// copies are only generated for the provided MemRef. Returns success if the
 /// explicit copying succeeded for all memrefs on which affine load/stores were
-/// encountered.
+/// encountered. For memrefs for whose element types a size in bytes can't be
+/// computed (`index` type), their capacity is not accounted for and the
+/// `fastMemCapacityBytes` copy option would be non-functional in such cases.
 LogicalResult affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
                                      const AffineCopyOptions &copyOptions,
                                      std::optional<Value> filterMemRef,
@@ -342,6 +347,7 @@ LogicalResult coalescePerfectlyNestedLoops(LoopOpTy op) {
   return result;
 }
 
+} // namespace affine
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_LOOPUTILS_H

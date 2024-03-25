@@ -48,17 +48,17 @@ entry:
   br label %while.cond.outer, !dbg !20
 
 while.cond.outer:                                 ; preds = %if.then, %entry
-  %buffer.0.ph = phi i8* [ %incdec.ptr, %if.then ], [ getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), %entry ]
+  %buffer.0.ph = phi ptr [ %incdec.ptr, %if.then ], [ @.str, %entry ]
   %aa.0.ph = phi i32 [ %inc, %if.then ], [ 0, %entry ]
   br label %while.cond, !dbg !21
 
 while.cond:                                       ; preds = %while.cond.outer, %while.cond
-  %buffer.0 = phi i8* [ %incdec.ptr, %while.cond ], [ %buffer.0.ph, %while.cond.outer ], !dbg !22
+  %buffer.0 = phi ptr [ %incdec.ptr, %while.cond ], [ %buffer.0.ph, %while.cond.outer ], !dbg !22
   call void @llvm.dbg.value(metadata i32 %aa.0.ph, metadata !16, metadata !DIExpression()), !dbg !19
-  call void @llvm.dbg.value(metadata i8* %buffer.0, metadata !12, metadata !DIExpression()), !dbg !23
-  %incdec.ptr = getelementptr inbounds i8, i8* %buffer.0, i64 1, !dbg !21
-  call void @llvm.dbg.value(metadata i8* %incdec.ptr, metadata !12, metadata !DIExpression()), !dbg !23
-  %0 = load i8, i8* %buffer.0, align 1, !dbg !24, !tbaa !25
+  call void @llvm.dbg.value(metadata ptr %buffer.0, metadata !12, metadata !DIExpression()), !dbg !23
+  %incdec.ptr = getelementptr inbounds i8, ptr %buffer.0, i64 1, !dbg !21
+  call void @llvm.dbg.value(metadata ptr %incdec.ptr, metadata !12, metadata !DIExpression()), !dbg !23
+  %0 = load i8, ptr %buffer.0, align 1, !dbg !24, !tbaa !25
   call void @llvm.dbg.value(metadata i8 %0, metadata !18, metadata !DIExpression()), !dbg !28
   switch i8 %0, label %while.cond [
     i8 0, label %while.end

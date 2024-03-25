@@ -17,12 +17,9 @@
 #include <span>
 #include <string_view>
 #include <utility>
-#include "test_iterators.h"
 
-template <class View, class T>
-concept CanBePiped = requires (View&& view, T&& t) {
-  { std::forward<View>(view) | std::forward<T>(t) };
-};
+#include "test_iterators.h"
+#include "test_range.h"
 
 struct SizedView : std::ranges::view_base {
   int* begin_ = nullptr;
@@ -172,12 +169,32 @@ constexpr bool test() {
   // `views::take(iota_view, n)` returns an `iota_view`.
   {
     auto iota = std::views::iota(1, 8);
-    // The second template argument of the resulting `iota_view` is different because it has to be able to hold
-    // the `range_difference_t` of the input `iota_view`.
-    using Result = std::ranges::iota_view<int, std::ranges::range_difference_t<decltype(iota)>>;
+    // The second template argument of the resulting `iota_view` is same as the first.
+    using Result                               = std::ranges::iota_view<int, int>;
     std::same_as<Result> decltype(auto) result = iota | std::views::take(3);
     assert(result.size() == 3);
   }
+
+#if TEST_STD_VER >= 23
+  // `views::take(repeat_view, n)` returns a `repeat_view` when `repeat_view` models `sized_range`.
+  {
+    auto repeat                                = std::ranges::repeat_view<int, int>(1, 8);
+    using Result                               = std::ranges::repeat_view<int, int>;
+    std::same_as<Result> decltype(auto) result = repeat | std::views::take(3);
+    static_assert(std::ranges::sized_range<Result>);
+    assert(result.size() == 3);
+    assert(*result.begin() == 1);
+  }
+
+  // `views::take(repeat_view, n)` returns a `repeat_view` when `repeat_view` doesn't model `sized_range`.
+  {
+    auto repeat  = std::ranges::repeat_view<int>(1);
+    using Result = std::ranges::repeat_view<int, std::ranges::range_difference_t<decltype(repeat)>>;
+    std::same_as<Result> decltype(auto) result = repeat | std::views::take(3);
+    assert(result.size() == 3);
+    assert(*result.begin() == 1);
+  }
+#endif
 
   // When the size of the input range `s` is shorter than `n`, only `s` elements are taken.
   {

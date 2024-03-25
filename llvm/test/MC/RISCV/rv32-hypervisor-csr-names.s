@@ -117,3 +117,105 @@ csrrs t2, 0x61E, zero
 csrrs t1, hstateen3h, zero
 # uimm12
 csrrs t2, 0x61F, zero
+
+#########################################
+# Advanced Interrupt Architecture (Smaia and Ssaia)
+#########################################
+
+# hidelegh
+# name
+# CHECK-INST: csrrs t1, hidelegh, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x30,0x61]
+# CHECK-INST-ALIAS: csrr t1, hidelegh
+# uimm12
+# CHECK-INST: csrrs t2, hidelegh, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x30,0x61]
+# CHECK-INST-ALIAS: csrr t2, hidelegh
+# name
+csrrs t1, hidelegh, zero
+# uimm12
+csrrs t2, 0x613, zero
+
+# hvienh
+# name
+# CHECK-INST: csrrs t1, hvienh, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x80,0x61]
+# CHECK-INST-ALIAS: csrr t1, hvienh
+# uimm12
+# CHECK-INST: csrrs t2, hvienh, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x80,0x61]
+# CHECK-INST-ALIAS: csrr t2, hvienh
+# name
+csrrs t1, hvienh, zero
+# uimm12
+csrrs t2, 0x618, zero
+
+# hviph
+# name
+# CHECK-INST: csrrs t1, hviph, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x50,0x65]
+# CHECK-INST-ALIAS: csrr t1, hviph
+# uimm12
+# CHECK-INST: csrrs t2, hviph, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x50,0x65]
+# CHECK-INST-ALIAS: csrr t2, hviph
+# name
+csrrs t1, hviph, zero
+# uimm12
+csrrs t2, 0x655, zero
+
+# hviprio1h
+# name
+# CHECK-INST: csrrs t1, hviprio1h, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x60,0x65]
+# CHECK-INST-ALIAS: csrr t1, hviprio1h
+# uimm12
+# CHECK-INST: csrrs t2, hviprio1h, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x60,0x65]
+# CHECK-INST-ALIAS: csrr t2, hviprio1h
+# name
+csrrs t1, hviprio1h, zero
+# uimm12
+csrrs t2, 0x656, zero
+
+# hviprio2h
+# name
+# CHECK-INST: csrrs t1, hviprio2h, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x65]
+# CHECK-INST-ALIAS: csrr t1, hviprio2h
+# uimm12
+# CHECK-INST: csrrs t2, hviprio2h, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x65]
+# CHECK-INST-ALIAS: csrr t2, hviprio2h
+# name
+csrrs t1, hviprio2h, zero
+# uimm12
+csrrs t2, 0x657, zero
+
+# vsieh
+# name
+# CHECK-INST: csrrs t1, vsieh, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x40,0x21]
+# CHECK-INST-ALIAS: csrr t1, vsieh
+# uimm12
+# CHECK-INST: csrrs t2, vsieh, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x40,0x21]
+# CHECK-INST-ALIAS: csrr t2, vsieh
+# name
+csrrs t1, vsieh, zero
+# uimm12
+csrrs t2, 0x214, zero
+
+# vsiph
+# name
+# CHECK-INST: csrrs t1, vsiph, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x40,0x25]
+# CHECK-INST-ALIAS: csrr t1, vsiph
+# uimm12
+# CHECK-INST: csrrs t2, vsiph, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x40,0x25]
+# CHECK-INST-ALIAS: csrr t2, vsiph
+# name
+csrrs t1, vsiph, zero
+# uimm12
+csrrs t2, 0x254, zero

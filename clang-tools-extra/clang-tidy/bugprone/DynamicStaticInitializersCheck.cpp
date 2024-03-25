@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DynamicStaticInitializersCheck.h"
+#include "../utils/FileExtensionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -24,23 +25,10 @@ AST_MATCHER(clang::VarDecl, hasConstantDeclaration) {
   return false;
 }
 
-DynamicStaticInitializersCheck::DynamicStaticInitializersCheck(StringRef Name,
-                                                               ClangTidyContext *Context)
+DynamicStaticInitializersCheck::DynamicStaticInitializersCheck(
+    StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      RawStringHeaderFileExtensions(Options.getLocalOrGlobal(
-        "HeaderFileExtensions", utils::defaultHeaderFileExtensions())) {
-  if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
-                                  HeaderFileExtensions,
-                                  utils::defaultFileExtensionDelimiters())) {
-    this->configurationDiag("Invalid header file extension: '%0'")
-        << RawStringHeaderFileExtensions;
-  }
-}
-
-void DynamicStaticInitializersCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "HeaderFileExtensions", RawStringHeaderFileExtensions);
-}
+      HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
 
 void DynamicStaticInitializersCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(

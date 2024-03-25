@@ -25,10 +25,10 @@
 #include <array>
 #include <concepts>
 #include <functional>
+#include <random>
 #include <ranges>
 
 #include "almost_satisfies_types.h"
-#include "boolean_testable.h"
 #include "test_iterators.h"
 
 // SFINAE tests.
@@ -58,14 +58,14 @@ static_assert(!HasSortHeapR<UncheckedRange<int*, SentinelForNotWeaklyEqualityCom
 static_assert(!HasSortHeapR<UncheckedRange<int*>, BadComparator>);
 static_assert(!HasSortHeapR<UncheckedRange<const int*>>); // Doesn't satisfy `sortable`.
 
-template <size_t N, class T, class Iter>
+template <std::size_t N, class T, class Iter>
 constexpr void verify_sorted(const std::array<T, N>& sorted, Iter last, std::array<T, N> expected) {
   assert(sorted == expected);
-  assert(base(last) == sorted.data() + sorted.size());
+  assert(std::to_address(base(last)) == sorted.data() + sorted.size());
   assert(std::is_sorted(sorted.begin(), sorted.end()));
 }
 
-template <class Iter, class Sent, size_t N>
+template <class Iter, class Sent, std::size_t N>
 constexpr void test_one(const std::array<int, N> input, std::array<int, N> expected) {
   assert(std::is_heap(input.begin(), input.end()));
 
@@ -130,14 +130,14 @@ constexpr bool test() {
       auto in = input;
       auto last = std::ranges::sort_heap(in.begin(), in.end(), comp);
       assert(in == expected);
-      assert(last == in.data() + in.size());
+      assert(last == in.end());
     }
 
     {
       auto in = input;
       auto last = std::ranges::sort_heap(in, comp);
       assert(in == expected);
-      assert(last == in.data() + in.size());
+      assert(last == in.end());
     }
   }
 
@@ -188,33 +188,76 @@ constexpr bool test() {
     }
   }
 
-  { // The comparator can return any type that's convertible to `bool`.
-    const std::array input = {3, 1, 2};
-    std::array expected = {1, 2, 3};
-    {
-      auto in = input;
-      auto last = std::ranges::sort_heap(in.begin(), in.end(), [](int i, int j) { return BooleanTestable{i < j}; });
-      verify_sorted(in, last, expected);
-    }
-
-    {
-      auto in = input;
-      auto last = std::ranges::sort_heap(in, [](int i, int j) { return BooleanTestable{i < j}; });
-      verify_sorted(in, last, expected);
-    }
-  }
-
   { // `std::ranges::dangling` is returned.
     [[maybe_unused]] std::same_as<std::ranges::dangling> decltype(auto) result =
-        std::ranges::sort_heap(std::array{2, 1, 3});
+        std::ranges::sort_heap(std::array{3, 1, 2});
   }
 
   return true;
 }
 
+struct Stats {
+  int compared = 0;
+  int copied   = 0;
+  int moved    = 0;
+} stats;
+
+struct MyInt {
+  int value;
+  explicit MyInt(int xval) : value(xval) {}
+  MyInt(const MyInt& other) : value(other.value) { ++stats.copied; }
+  MyInt(MyInt&& other) : value(other.value) { ++stats.moved; }
+  MyInt& operator=(const MyInt& other) {
+    value = other.value;
+    ++stats.copied;
+    return *this;
+  }
+  MyInt& operator=(MyInt&& other) {
+    value = other.value;
+    ++stats.moved;
+    return *this;
+  }
+  static bool Comp(const MyInt& a, const MyInt& b) {
+    ++stats.compared;
+    return a.value < b.value;
+  }
+};
+
+void test_complexity() {
+  constexpr int N = (1 << 20);
+  std::vector<MyInt> v;
+  v.reserve(N);
+  std::mt19937 g;
+  for (int i = 0; i < N; ++i) {
+    v.emplace_back(i);
+  }
+  for (int logn = 10; logn <= 20; ++logn) {
+    const int n = (1 << logn);
+    auto first  = v.begin();
+    auto last   = v.begin() + n;
+    const int debug_elements = std::min(100, n);
+    // Multiplier 2 because of comp(a,b) comp(b, a) checks.
+    const int debug_comparisons = 2 * (debug_elements + 1) * debug_elements;
+    (void)debug_comparisons;
+    std::shuffle(first, last, g);
+    std::make_heap(first, last, &MyInt::Comp);
+    // The exact stats of our current implementation are recorded here.
+    stats = {};
+    std::ranges::sort_heap(first, last, &MyInt::Comp);
+    LIBCPP_ASSERT(stats.copied == 0);
+    LIBCPP_ASSERT(stats.moved <= 2 * n + n * logn);
+#if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
+    LIBCPP_ASSERT(stats.compared <= n * logn);
+#else
+    LIBCPP_ASSERT(stats.compared <= 2 * n * logn + debug_comparisons);
+#endif
+    LIBCPP_ASSERT(std::is_sorted(first, last, &MyInt::Comp));
+  }
+}
+
 int main(int, char**) {
   test();
   static_assert(test());
-
+  test_complexity();
   return 0;
 }

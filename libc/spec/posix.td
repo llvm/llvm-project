@@ -42,8 +42,9 @@ def StructDirentPtr : PtrType<StructDirent>;
 def StructDirentPtrPtr : PtrType<StructDirentPtr>;
 def ConstStructDirentPtrPtr : ConstType<StructDirentPtrPtr>;
 
-def StructTimeSpec : NamedType<"struct timespec">;
-def StructTimeSpecPtr : PtrType<StructTimeSpec>;
+def StructSchedParam : NamedType<"struct sched_param">;
+def StructSchedParamPtr : PtrType<StructSchedParam>;
+def ConstStructSchedParamPtr : ConstType<StructSchedParamPtr>;
 
 def ExecArgvT : NamedType<"__exec_argv_t">;
 def ExecEnvpT : NamedType<"__exec_envp_t">;
@@ -75,6 +76,15 @@ def FdSetPtr : PtrType<FdSet>;
 def RestrictedFdSetPtr : RestrictedPtrType<FdSet>;
 
 def GetoptArgvT : NamedType<"__getoptargv_t">;
+
+def SAFamilyType : NamedType<"sa_family_t">;
+def SocklenType : NamedType<"socklen_t">;
+
+def StructSockAddr : NamedType<"struct sockaddr">;
+def StructSockAddrPtr : PtrType<StructSockAddr>;
+def ConstStructSockAddrPtr : ConstType<StructSockAddrPtr>;
+
+def StructSockAddrUn : NamedType<"struct sockaddr_un">;
 
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
@@ -236,6 +246,7 @@ def POSIX : StandardSpec<"POSIX"> {
       [
         SizeTType,
         OffTType,
+        ModeTType,
       ],
       [], // Enumerations
       [
@@ -274,6 +285,41 @@ def POSIX : StandardSpec<"POSIX"> {
             [ArgSpec<VoidPtr>,
              ArgSpec<SizeTType>,
              ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "mlock",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
+        >,
+        FunctionSpec<
+          "munlock",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
+        >,
+        FunctionSpec<
+          "mlockall",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "munlockall",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidType>]
+        >,
+        FunctionSpec<
+          "msync",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidPtr>, ArgSpec<SizeTType>, ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "shm_open",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstCharPtr>, ArgSpec<IntType>, ArgSpec<ModeTType>]
+        >,
+        FunctionSpec<
+          "shm_unlink",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstCharPtr>]
         >,
       ]
   >;
@@ -417,7 +463,7 @@ def POSIX : StandardSpec<"POSIX"> {
         FunctionSpec<
           "ftruncate",
           RetValSpec<IntType>,
-          [ArgSpec<ConstCharPtr>, ArgSpec<OffTType>]
+          [ArgSpec<IntType>, ArgSpec<OffTType>]
         >,
         FunctionSpec<
           "geteuid",
@@ -545,6 +591,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<ConstCharPtr>]
         >,
         FunctionSpec<
+          "swab",
+          RetValSpec<VoidType>,
+          [ArgSpec<ConstVoidRestrictedPtr>, ArgSpec<VoidPtr>, ArgSpec<SSizeTType>]
+        >,
+        FunctionSpec<
           "symlink",
           RetValSpec<IntType>,
           [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>]
@@ -567,7 +618,7 @@ def POSIX : StandardSpec<"POSIX"> {
         FunctionSpec<
           "truncate",
           RetValSpec<IntType>,
-          [ArgSpec<IntType>, ArgSpec<OffTType>]
+          [ArgSpec<ConstCharPtr>, ArgSpec<OffTType>]
         >,
         FunctionSpec<
           "unlink",
@@ -623,6 +674,61 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<ConstCharPtr>]
         >,
     ]
+  >;
+
+  HeaderSpec Sched = HeaderSpec<
+      "sched.h",
+      [], // Macros
+      [PidT, TimeTType, StructTimeSpec, StructSchedParam], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+            "sched_yield",
+            RetValSpec<IntType>,
+            [ArgSpec<VoidType>]
+        >,
+        FunctionSpec<
+            "sched_setparam",
+            RetValSpec<IntType>,
+            [ArgSpec<PidT>, ArgSpec<ConstStructSchedParamPtr>]
+        >,
+
+        FunctionSpec<
+            "sched_getparam",
+            RetValSpec<IntType>,
+            [ArgSpec<PidT>, ArgSpec<StructSchedParamPtr>]
+        >,
+
+        FunctionSpec<
+            "sched_setscheduler",
+            RetValSpec<IntType>,
+            [ArgSpec<PidT>]
+        >,
+
+        FunctionSpec<
+            "sched_getscheduler",
+            RetValSpec<IntType>,
+            [ArgSpec<PidT>, ArgSpec<IntType>, ArgSpec<ConstStructSchedParamPtr>]
+        >,
+
+        FunctionSpec<
+            "sched_get_priority_min",
+            RetValSpec<IntType>,
+            [ArgSpec<IntType>]
+        >,
+
+        FunctionSpec<
+            "sched_get_priority_max",
+            RetValSpec<IntType>,
+            [ArgSpec<IntType>]
+        >,
+
+        FunctionSpec<
+            "sched_rr_get_interval",
+            RetValSpec<IntType>,
+            [ArgSpec<PidT>, ArgSpec<StructTimeSpecPtr>]
+        >,
+      ]
   >;
 
   HeaderSpec String = HeaderSpec<
@@ -798,6 +904,35 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
 
+  HeaderSpec ArpaInet = HeaderSpec<
+      "arpa/inet.h",
+      [], // Macros
+      [], // Types
+      [], // Enumerations
+      [
+          FunctionSpec<
+              "htonl",
+              RetValSpec<UInt32Type>,
+              [ArgSpec<UInt32Type>]
+          >,
+          FunctionSpec<
+              "htons",
+              RetValSpec<UInt16Type>,
+              [ArgSpec<UInt16Type>]
+          >,
+          FunctionSpec<
+              "ntohl",
+              RetValSpec<UInt32Type>,
+              [ArgSpec<UInt32Type>]
+          >,
+          FunctionSpec<
+              "ntohs",
+              RetValSpec<UInt16Type>,
+              [ArgSpec<UInt16Type>]
+          >,
+      ]
+  >;
+
   HeaderSpec PThread = HeaderSpec<
     "pthread.h",
     [], // Macros
@@ -887,7 +1022,7 @@ def POSIX : StandardSpec<"POSIX"> {
       >,
       FunctionSpec<
           "pthread_exit",
-          RetValSpec<VoidType>,
+          RetValSpec<NoReturn>,
           [ArgSpec<VoidPtr>]
       >,
       FunctionSpec<
@@ -1029,6 +1164,16 @@ def POSIX : StandardSpec<"POSIX"> {
               RetValSpec<IntType>,
               [ArgSpec<FILEPtr>]
           >,
+          FunctionSpec<
+              "getchar_unlocked",
+              RetValSpec<IntType>,
+              [ArgSpec<VoidType>]
+          >,
+          FunctionSpec<
+            "fileno",
+            RetValSpec<IntType>,
+            [ArgSpec<FILEPtr>]
+          >,
       ]
   >;
 
@@ -1090,7 +1235,7 @@ def POSIX : StandardSpec<"POSIX"> {
           FunctionSpec<
               "nanosleep",
               RetValSpec<IntType>,
-              [ArgSpec<StructTimeSpecPtr>, ArgSpec<StructTimeSpecPtr>]
+              [ArgSpec<ConstStructTimeSpecPtr>, ArgSpec<StructTimeSpecPtr>]
           >,
       ]
   >;
@@ -1098,7 +1243,7 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec SysWait = HeaderSpec<
     "sys/wait.h",
     [], // Macros
-    [PidT, StructRUsage],
+    [PidT, StructRUsage, SigInfoType],
     [], // Enumerations
     [
       FunctionSpec<
@@ -1163,6 +1308,53 @@ def POSIX : StandardSpec<"POSIX"> {
          ArgSpec<PosixSpawnFileActionsTPtr>, ArgSpec<RestrictedPosixSpawnAttrTPtrType>,
          ArgSpec<ConstCharRestrictedPtrPtr>, ArgSpec<ConstCharRestrictedPtrPtr>]
       >,
+    ]
+  >;
+
+  HeaderSpec Search = HeaderSpec<
+    "search.h",
+    [], // Macros
+    [
+        ActionType,
+        EntryType
+    ], // Types
+    [], // Enumerations
+    [
+        FunctionSpec<
+            "hcreate",
+            RetValSpec<IntType>,
+            [
+                ArgSpec<SizeTType>
+            ]
+        >,
+        FunctionSpec<
+            "hdestroy",
+            RetValSpec<VoidType>,
+            [] // Args
+        >,
+        FunctionSpec<
+            "hsearch",
+            RetValSpec<EntryTypePtr>,
+            [
+                ArgSpec<EntryType>,
+                ArgSpec<ActionType>
+            ]
+        >,
+        FunctionSpec<
+            "insque",
+            RetValSpec<VoidType>,
+            [
+                ArgSpec<VoidPtr>,
+                ArgSpec<VoidPtr>
+            ]
+        >,
+        FunctionSpec<
+            "remque",
+            RetValSpec<VoidType>,
+            [
+                ArgSpec<VoidPtr>
+            ]
+        >,
     ]
   >;
 
@@ -1249,6 +1441,42 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
 
+  HeaderSpec SysSocket = HeaderSpec<
+      "sys/socket.h",
+      [
+        Macro<"AF_UNSPEC">,
+        Macro<"AF_UNIX">,
+        Macro<"AF_LOCAL">,
+        Macro<"AF_INET">,
+        Macro<"AF_INET6">,
+        Macro<"SOCK_STREAM">,
+        Macro<"SOCK_DGRAM">,
+        Macro<"SOCK_RAW">,
+        Macro<"SOCK_RDM">,
+        Macro<"SOCK_SEQPACKET">,
+        Macro<"SOCK_PACKET">,
+      ], // Macros
+      [
+        SAFamilyType,
+        StructSockAddr,
+        StructSockAddrUn,
+        SocklenType,
+      ], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+          "socket",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<IntType>, ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "bind",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<ConstStructSockAddrPtr>, ArgSpec<SocklenType>]
+        >,
+      ]  // Functions
+  >;
+
   HeaderSpec SysTypes = HeaderSpec<
     "sys/types.h",
     [], // Macros
@@ -1260,11 +1488,13 @@ def POSIX : StandardSpec<"POSIX"> {
   >;
 
   let Headers = [
+    ArpaInet,
     CType,
     Dirent,
     Errno,
     FCntl,
     PThread,
+    Sched,
     Signal,
     Spawn,
     StdIO,
@@ -1273,6 +1503,7 @@ def POSIX : StandardSpec<"POSIX"> {
     SysMMan,
     SysResource,
     SysSelect,
+    SysSocket,
     SysStat,
     SysTypes,
     SysUtsName,
@@ -1280,6 +1511,7 @@ def POSIX : StandardSpec<"POSIX"> {
     Time,
     Termios,
     UniStd,
-    String
+    String,
+    Search,
   ];
 }

@@ -45,7 +45,7 @@ define <vscale x 4 x i32> @sub_splat() {
 ; CHECK-LABEL: @sub_splat(
 ; CHECK-NEXT:    ret <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -16, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ;
-  %r = sub <vscale x 4 x i32> zeroinitializer, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 16, i32 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer)
+  %r = sub <vscale x 4 x i32> zeroinitializer, splat (i32 16)
   ret <vscale x 4 x i32> %r
 }
 
@@ -200,19 +200,6 @@ define <vscale x 4 x i32> @shufflevector() {
   %i = insertelement <vscale x 4 x i32> undef, i32 1, i32 0
   %i2 = shufflevector <vscale x 4 x i32> %i, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i32> %i2
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Memory Access and Addressing Operations
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-define <vscale x 2 x double> @load() {
-; CHECK-LABEL: @load(
-; CHECK-NEXT:    [[R:%.*]] = load <vscale x 2 x double>, ptr getelementptr (<vscale x 2 x double>, ptr null, i64 1), align 16
-; CHECK-NEXT:    ret <vscale x 2 x double> [[R]]
-;
-  %r = load <vscale x 2 x double>, ptr getelementptr (<vscale x 2 x double>, ptr null, i64 1)
-  ret <vscale x 2 x double> %r
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

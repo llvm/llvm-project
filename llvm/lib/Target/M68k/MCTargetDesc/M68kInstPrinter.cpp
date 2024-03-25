@@ -147,47 +147,6 @@ void M68kInstPrinter::printDisp(const MCInst *MI, unsigned opNum,
   Op.getExpr()->print(O, &MAI);
 }
 
-void M68kInstPrinter::printARIMem(const MCInst *MI, unsigned opNum,
-                                  raw_ostream &O) {
-  O << '(';
-  printOperand(MI, opNum, O);
-  O << ')';
-}
-
-void M68kInstPrinter::printARIPIMem(const MCInst *MI, unsigned opNum,
-                                    raw_ostream &O) {
-  O << "(";
-  printOperand(MI, opNum, O);
-  O << ")+";
-}
-
-void M68kInstPrinter::printARIPDMem(const MCInst *MI, unsigned opNum,
-                                    raw_ostream &O) {
-  O << "-(";
-  printOperand(MI, opNum, O);
-  O << ")";
-}
-
-void M68kInstPrinter::printARIDMem(const MCInst *MI, unsigned opNum,
-                                   raw_ostream &O) {
-  O << '(';
-  printDisp(MI, opNum + M68k::MemDisp, O);
-  O << ',';
-  printOperand(MI, opNum + M68k::MemBase, O);
-  O << ')';
-}
-
-void M68kInstPrinter::printARIIMem(const MCInst *MI, unsigned opNum,
-                                   raw_ostream &O) {
-  O << '(';
-  printDisp(MI, opNum + M68k::MemDisp, O);
-  O << ',';
-  printOperand(MI, opNum + M68k::MemBase, O);
-  O << ',';
-  printOperand(MI, opNum + M68k::MemIndex, O);
-  O << ')';
-}
-
 // NOTE forcing (W,L) size available since M68020 only
 void M68kInstPrinter::printAbsMem(const MCInst *MI, unsigned opNum,
                                   raw_ostream &O) {
@@ -200,20 +159,4 @@ void M68kInstPrinter::printAbsMem(const MCInst *MI, unsigned opNum,
 
   assert(MO.isImm() && "absolute memory addressing needs an immediate");
   O << format("$%0" PRIx64, (uint64_t)MO.getImm());
-}
-
-void M68kInstPrinter::printPCDMem(const MCInst *MI, uint64_t Address,
-                                  unsigned opNum, raw_ostream &O) {
-  O << '(';
-  printDisp(MI, opNum + M68k::PCRelDisp, O);
-  O << ",%pc)";
-}
-
-void M68kInstPrinter::printPCIMem(const MCInst *MI, uint64_t Address,
-                                  unsigned opNum, raw_ostream &O) {
-  O << '(';
-  printDisp(MI, opNum + M68k::PCRelDisp, O);
-  O << ",%pc,";
-  printOperand(MI, opNum + M68k::PCRelIndex, O);
-  O << ')';
 }

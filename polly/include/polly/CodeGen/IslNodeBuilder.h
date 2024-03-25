@@ -310,7 +310,6 @@ protected:
   /// @returns False, iff a problem occurred and the load was not preloaded.
   bool preloadInvariantEquivClass(InvariantEquivClassTy &IAClass);
 
-  void createForVector(__isl_take isl_ast_node *For, int VectorWidth);
   void createForSequential(isl::ast_node_for For, bool MarkParallel);
 
   /// Create LLVM-IR that executes a for node thread parallel.
@@ -375,10 +374,6 @@ protected:
                                  std::vector<Value *> &IVS,
                                  __isl_take isl_id *IteratorID);
   virtual void createIf(__isl_take isl_ast_node *If);
-  void createUserVector(__isl_take isl_ast_node *User,
-                        std::vector<Value *> &IVS,
-                        __isl_take isl_id *IteratorID,
-                        __isl_take isl_union_map *Schedule);
   virtual void createUser(__isl_take isl_ast_node *User);
   virtual void createBlock(__isl_take isl_ast_node *Block);
 

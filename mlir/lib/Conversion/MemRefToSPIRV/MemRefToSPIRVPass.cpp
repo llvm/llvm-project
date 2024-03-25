@@ -41,17 +41,11 @@ void ConvertMemRefToSPIRVPass::runOnOperation() {
 
   SPIRVConversionOptions options;
   options.boolNumBits = this->boolNumBits;
+  options.use64bitIndex = this->use64bitIndex;
   SPIRVTypeConverter typeConverter(targetAttr, options);
 
   // Use UnrealizedConversionCast as the bridge so that we don't need to pull in
   // patterns for other dialects.
-  auto addUnrealizedCast = [](OpBuilder &builder, Type type, ValueRange inputs,
-                              Location loc) {
-    auto cast = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
-    return std::optional<Value>(cast.getResult(0));
-  };
-  typeConverter.addSourceMaterialization(addUnrealizedCast);
-  typeConverter.addTargetMaterialization(addUnrealizedCast);
   target->addLegalOp<UnrealizedConversionCastOp>();
 
   RewritePatternSet patterns(context);

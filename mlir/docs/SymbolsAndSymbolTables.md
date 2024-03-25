@@ -8,7 +8,7 @@ around this nesting structure; including the processing of operations within the
 [pass manager](PassManagement.md/#pass-manager). One advantage of the MLIR
 design is that it is able to process operations in parallel, utilizing multiple
 threads. This is possible due to a property of the IR known as
-[`IsolatedFromAbove`](Traits.md/#isolatedfromabove).
+[`IsolatedFromAbove`](Traits/#isolatedfromabove).
 
 Without this property, any operation could affect or mutate the use-list of
 operations defined above. Making this thread-safe requires expensive locking in

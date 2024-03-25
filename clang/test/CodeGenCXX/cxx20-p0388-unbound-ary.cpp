@@ -23,4 +23,13 @@ auto &frob2(int (&arp)[1]) {
 
   return r2;
 }
+
+// CHECK-LABEL: @_ZN3One3fooEi
+// CHECK-NEXT: entry:
+// CHECK-NEXT: ret void
+void foo(int a) {
+  auto f = [](int(&&)[]) {};
+  f({a});
+}
+
 } // namespace One

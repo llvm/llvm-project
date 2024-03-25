@@ -231,6 +231,17 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __ubsan_handle_cfi_bad_type(
     CFICheckFailData *Data, ValueHandle Vtable, bool ValidVtable,
     ReportOptions Opts);
 
+struct FunctionTypeMismatchData {
+  SourceLocation Loc;
+  const TypeDescriptor &Type;
+};
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__ubsan_handle_function_type_mismatch(FunctionTypeMismatchData *Data,
+                                      ValueHandle Val);
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__ubsan_handle_function_type_mismatch_abort(FunctionTypeMismatchData *Data,
+                                            ValueHandle Val);
 }
 
 #endif // UBSAN_HANDLERS_H

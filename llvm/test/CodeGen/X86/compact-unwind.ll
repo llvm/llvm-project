@@ -1,17 +1,17 @@
-; RUN: llc < %s -frame-pointer=all -mtriple x86_64-apple-darwin11 -mcpu corei7 | FileCheck -check-prefix=ASM %s
-; RUN: llc < %s -frame-pointer=all -mtriple x86_64-apple-darwin11 -mcpu corei7 -filetype=obj -o - \
+; RUN: llc < %s -frame-pointer=all -mtriple x86_64-apple-darwin11 -mcpu corei7 -emit-compact-unwind-non-canonical=true | FileCheck -check-prefix=ASM %s
+; RUN: llc < %s -frame-pointer=all -mtriple x86_64-apple-darwin11 -mcpu corei7 -filetype=obj -emit-compact-unwind-non-canonical=true -o - \
 ; RUN:  | llvm-objdump --triple=x86_64-apple-darwin11 --unwind-info - \
 ; RUN:  | FileCheck -check-prefix=CU %s
-; RUN: llc < %s -frame-pointer=all -mtriple x86_64-apple-darwin11 -mcpu corei7 \
-; RUN:  | llvm-mc -triple x86_64-apple-darwin11 -filetype=obj -o - \
+; RUN: llc < %s -frame-pointer=all -mtriple x86_64-apple-darwin11 -mcpu corei7 -emit-compact-unwind-non-canonical=true \
+; RUN:  | llvm-mc -triple x86_64-apple-darwin11 -filetype=obj -emit-compact-unwind-non-canonical=true -o - \
 ; RUN:  | llvm-objdump --triple=x86_64-apple-darwin11 --unwind-info - \
 ; RUN:  | FileCheck -check-prefix=FROM-ASM %s
 
-; RUN: llc < %s -mtriple x86_64-apple-macosx10.8.0 -mcpu corei7 -filetype=obj -o - \
+; RUN: llc < %s -mtriple x86_64-apple-macosx10.8.0 -mcpu corei7 -filetype=obj -emit-compact-unwind-non-canonical=true -o - \
 ; RUN:  | llvm-objdump --triple=x86_64-apple-macosx10.8.0 --unwind-info - \
 ; RUN:  | FileCheck -check-prefix=NOFP-CU %s
 ; RUN: llc < %s -mtriple x86_64-apple-darwin11 -mcpu corei7 \
-; RUN:  | llvm-mc -triple x86_64-apple-darwin11 -filetype=obj -o - \
+; RUN:  | llvm-mc -triple x86_64-apple-darwin11 -filetype=obj -emit-compact-unwind-non-canonical=true -o - \
 ; RUN:  | llvm-objdump --triple=x86_64-apple-darwin11 --unwind-info - \
 ; RUN:  | FileCheck -check-prefix=NOFP-FROM-ASM %s
 

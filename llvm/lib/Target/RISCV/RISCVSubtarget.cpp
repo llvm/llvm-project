@@ -1,4 +1,4 @@
-//===-- RISCVSubtarget.cpp - RISCV Subtarget Information ------------------===//
+//===-- RISCVSubtarget.cpp - RISC-V Subtarget Information -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the RISCV specific subclass of TargetSubtargetInfo.
+// This file implements the RISC-V specific subclass of TargetSubtargetInfo.
 //
 //===----------------------------------------------------------------------===//
 
 #include "RISCVSubtarget.h"
-#include "RISCV.h"
-#include "RISCVFrameLowering.h"
-#include "RISCVMacroFusion.h"
-#include "RISCVTargetMachine.h"
 #include "GISel/RISCVCallLowering.h"
 #include "GISel/RISCVLegalizerInfo.h"
 #include "GISel/RISCVRegisterBankInfo.h"
+#include "RISCV.h"
+#include "RISCVFrameLowering.h"
+#include "RISCVTargetMachine.h"
+#include "llvm/CodeGen/MacroFusion.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -29,8 +30,17 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "RISCVGenSubtargetInfo.inc"
 
+#define GET_RISCV_MACRO_FUSION_PRED_IMPL
+#include "RISCVGenMacroFusion.inc"
+
+namespace llvm::RISCVTuneInfoTable {
+
+#define GET_RISCVTuneInfoTable_IMPL
+#include "RISCVGenSearchableTables.inc"
+} // namespace llvm::RISCVTuneInfoTable
+
 static cl::opt<bool> EnableSubRegLiveness("riscv-enable-subreg-liveness",
-                                          cl::init(false), cl::Hidden);
+                                          cl::init(true), cl::Hidden);
 
 static cl::opt<unsigned> RVVVectorLMULMax(
     "riscv-v-fixed-length-vector-lmul-max",
@@ -48,6 +58,13 @@ static cl::opt<unsigned> RISCVMaxBuildIntsCost(
     cl::desc("The maximum cost used for building integers."), cl::init(0),
     cl::Hidden);
 
+static cl::opt<bool> UseAA("riscv-use-aa", cl::init(true),
+                           cl::desc("Enable the use of AA during codegen."));
+
+static cl::opt<unsigned> RISCVMinimumJumpTableEntries(
+    "riscv-min-jump-table-entries", cl::Hidden,
+    cl::desc("Set minimum number of entries to use a jump table on RISCV"));
+
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &
@@ -62,12 +79,13 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
   if (TuneCPU.empty())
     TuneCPU = CPU;
 
-  ParseSubtargetFeatures(CPU, TuneCPU, FS);
-  if (Is64Bit) {
-    XLenVT = MVT::i64;
-    XLen = 64;
-  }
+  TuneInfo = RISCVTuneInfoTable::getRISCVTuneInfo(TuneCPU);
+  // If there is no TuneInfo for this CPU, we fail back to generic.
+  if (!TuneInfo)
+    TuneInfo = RISCVTuneInfoTable::getRISCVTuneInfo("generic");
+  assert(TuneInfo && "TuneInfo shouldn't be nullptr!");
 
+  ParseSubtargetFeatures(CPU, TuneCPU, FS);
   TargetABI = RISCVABI::computeTargetABI(TT, getFeatureBits(), ABIName);
   RISCVFeatures::validate(TT, getFeatureBits());
   return *this;
@@ -86,7 +104,7 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
   CallLoweringInfo.reset(new RISCVCallLowering(*getTargetLowering()));
   Legalizer.reset(new RISCVLegalizerInfo(*this));
 
-  auto *RBI = new RISCVRegisterBankInfo(*getRegisterInfo());
+  auto *RBI = new RISCVRegisterBankInfo(getHwMode());
   RegBankInfo.reset(RBI);
   InstSelector.reset(createRISCVInstructionSelector(
       *static_cast<const RISCVTargetMachine *>(&TM), *this, *RBI));
@@ -155,7 +173,8 @@ unsigned RISCVSubtarget::getMinRVVVectorSizeInBits() const {
 unsigned RISCVSubtarget::getMaxLMULForFixedLengthVectors() const {
   assert(hasVInstructions() &&
          "Tried to get vector length without Zve or V extension support!");
-  assert(RVVVectorLMULMax <= 8 && isPowerOf2_32(RVVVectorLMULMax) &&
+  assert(RVVVectorLMULMax <= 8 &&
+         llvm::has_single_bit<uint32_t>(RVVVectorLMULMax) &&
          "V extension requires a LMUL to be at most 8 and a power of 2!");
   return llvm::bit_floor(std::clamp<unsigned>(RVVVectorLMULMax, 1, 8));
 }
@@ -172,5 +191,15 @@ bool RISCVSubtarget::enableSubRegLiveness() const {
 
 void RISCVSubtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
-  Mutations.push_back(createRISCVMacroFusionDAGMutation());
+  Mutations.push_back(createMacroFusionDAGMutation(getMacroFusions()));
+}
+
+  /// Enable use of alias analysis during code generation (during MI
+  /// scheduling, DAGCombine, etc.).
+bool RISCVSubtarget::useAA() const { return UseAA; }
+
+unsigned RISCVSubtarget::getMinimumJumpTableEntries() const {
+  return RISCVMinimumJumpTableEntries.getNumOccurrences() > 0
+             ? RISCVMinimumJumpTableEntries
+             : TuneInfo->MinimumJumpTableEntries;
 }

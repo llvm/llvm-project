@@ -60,13 +60,3 @@ let Uses = [RAX, ECX] in
 def INVLPGA64 : I<0x01, MRM_DF, (outs), (ins),
                 "invlpga", []>, TB, Requires<[In64BitMode]>;
 } // SchedRW
-
-def : InstAlias<"skinit\t{%eax|eax}", (SKINIT), 0>;
-def : InstAlias<"vmrun\t{%eax|eax}", (VMRUN32), 0>, Requires<[Not64BitMode]>;
-def : InstAlias<"vmrun\t{%rax|rax}", (VMRUN64), 0>, Requires<[In64BitMode]>;
-def : InstAlias<"vmload\t{%eax|eax}", (VMLOAD32), 0>, Requires<[Not64BitMode]>;
-def : InstAlias<"vmload\t{%rax|rax}", (VMLOAD64), 0>, Requires<[In64BitMode]>;
-def : InstAlias<"vmsave\t{%eax|eax}", (VMSAVE32), 0>, Requires<[Not64BitMode]>;
-def : InstAlias<"vmsave\t{%rax|rax}", (VMSAVE64), 0>, Requires<[In64BitMode]>;
-def : InstAlias<"invlpga\t{%eax, %ecx|eax, ecx}", (INVLPGA32), 0>, Requires<[Not64BitMode]>;
-def : InstAlias<"invlpga\t{%rax, %ecx|rax, ecx}", (INVLPGA64), 0>, Requires<[In64BitMode]>;

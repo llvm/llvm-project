@@ -8,8 +8,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// This test uses iterator types from std::filesystem, which were introduced in macOS 10.15.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+// This test uses iterator types from std::filesystem
+// XFAIL: availability-filesystem-missing
 
 // template<class T>
 // struct iterator_traits;
@@ -40,7 +40,7 @@
 #  include <istream>
 #endif
 
-#ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
+#ifndef TEST_HAS_NO_FILESYSTEM
 #  include <filesystem>
 #endif
 
@@ -147,8 +147,13 @@ static_assert(testIOIterator<std::insert_iterator<std::vector<int>>, std::output
 static_assert(testConst<std::istream_iterator<int, char>, std::input_iterator_tag, int>());
 
 #if !defined(TEST_HAS_NO_LOCALIZATION)
-// libc++-specific since pointer type is unspecified:
-LIBCPP_STATIC_ASSERT(test<std::istreambuf_iterator<char>, std::input_iterator_tag, char, long long, char, char*>());
+// We use std::istreambuf_iterator<char>::pointer because it's unspecified, it doesn't have to be char*
+static_assert(test<std::istreambuf_iterator<char>,
+                   std::input_iterator_tag,
+                   char,
+                   std::streamoff,
+                   char,
+                   std::istreambuf_iterator<char>::pointer>());
 static_assert(test<std::move_iterator<int*>, std::random_access_iterator_tag, int, std::ptrdiff_t, int&&, int*>());
 static_assert(testIOIterator<std::ostream_iterator<int, char>, std::output_iterator_tag>());
 static_assert(testIOIterator<std::ostreambuf_iterator<int, char>, std::output_iterator_tag>());
@@ -156,7 +161,7 @@ static_assert(testConst<std::cregex_iterator, std::forward_iterator_tag, std::cm
 static_assert(testConst<std::cregex_token_iterator, std::forward_iterator_tag, std::csub_match>());
 #endif // !TEST_HAS_NO_LOCALIZATION
 
-#ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
+#ifndef TEST_HAS_NO_FILESYSTEM
 static_assert(test<std::filesystem::directory_iterator, std::input_iterator_tag, std::filesystem::directory_entry,
                    std::ptrdiff_t, const std::filesystem::directory_entry&, const std::filesystem::directory_entry*>());
 static_assert(test<std::filesystem::recursive_directory_iterator, std::input_iterator_tag,

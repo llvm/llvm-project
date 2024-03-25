@@ -31,7 +31,7 @@ public:
   };
 
 protected:
-  bool DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
+  void DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
 
 private:
   CommandOptions m_options;

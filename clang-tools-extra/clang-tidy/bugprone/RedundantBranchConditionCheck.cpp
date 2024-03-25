@@ -76,7 +76,7 @@ void RedundantBranchConditionCheck::check(const MatchFinder::MatchResult &Result
   const auto *CondVar = Result.Nodes.getNodeAs<VarDecl>(CondVarStr);
   const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>(FuncStr);
 
-  const DeclRefExpr *OuterIfVar, *InnerIfVar;
+  const DeclRefExpr *OuterIfVar = nullptr, *InnerIfVar = nullptr;
   if (const auto *Inner = Result.Nodes.getNodeAs<DeclRefExpr>(InnerIfVar1Str))
     InnerIfVar = Inner;
   else

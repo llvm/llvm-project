@@ -31,8 +31,8 @@ define <1 x i64> @c(double %y) {
 
 define <1 x i64> @d(i64 %y) {
 ; CHECK-LABEL: @d(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <1 x i64> poison, i64 [[Y:%.*]], i64 0
-; CHECK-NEXT:    ret <1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[C:%.*]] = insertelement <1 x i64> poison, i64 [[Y:%.*]], i64 0
+; CHECK-NEXT:    ret <1 x i64> [[C]]
 ;
   %c = bitcast i64 %y to <1 x i64>
   ret <1 x i64> %c
@@ -154,7 +154,7 @@ define <3 x i64> @bitcast_inselt_undef_from_mmx(x86_mmx %x, i32 %idx) {
 
 define <2 x i64> @PR45748(double %x, double %y) {
 ; CHECK-LABEL: @PR45748(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[Y:%.*]], i64 1
 ; CHECK-NEXT:    [[I1:%.*]] = bitcast <2 x double> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[I1]]

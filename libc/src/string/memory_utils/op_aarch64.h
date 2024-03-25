@@ -13,10 +13,11 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_AARCH64_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_AARCH64_H
 
-#include "src/__support/architectures.h"
+#include "src/__support/macros/properties/architectures.h"
 
-#if defined(LLVM_LIBC_ARCH_AARCH64)
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64)
 
+#include "src/__support/CPP/type_traits.h" // cpp::always_false
 #include "src/__support/common.h"
 #include "src/string/memory_utils/op_generic.h"
 
@@ -24,17 +25,16 @@
 #include <arm_neon.h>
 #endif //__ARM_NEON
 
-namespace __llvm_libc::aarch64 {
+namespace LIBC_NAMESPACE::aarch64 {
 
-static inline constexpr bool kNeon = LLVM_LIBC_IS_DEFINED(__ARM_NEON);
+LIBC_INLINE_VAR constexpr bool kNeon = LLVM_LIBC_IS_DEFINED(__ARM_NEON);
 
 namespace neon {
 
-template <size_t Size> struct BzeroCacheLine {
-  static constexpr size_t SIZE = Size;
+struct BzeroCacheLine {
+  static constexpr size_t SIZE = 64;
 
   LIBC_INLINE static void block(Ptr dst, uint8_t) {
-    static_assert(Size == 64);
 #if __SIZEOF_POINTER__ == 4
     asm("dc zva, %w[dst]" : : [dst] "r"(dst) : "memory");
 #else
@@ -43,19 +43,17 @@ template <size_t Size> struct BzeroCacheLine {
   }
 
   LIBC_INLINE static void loop_and_tail(Ptr dst, uint8_t value, size_t count) {
-    static_assert(Size > 1, "a loop of size 1 does not need tail");
     size_t offset = 0;
     do {
       block(dst + offset, value);
       offset += SIZE;
     } while (offset < count - SIZE);
     // Unaligned store, we can't use 'dc zva' here.
-    static constexpr size_t kMaxSize = kNeon ? 16 : 8;
-    generic::Memset<Size, kMaxSize>::tail(dst, value, count);
+    generic::Memset<generic_v512>::tail(dst, value, count);
   }
 };
 
-LIBC_INLINE static bool hasZva() {
+LIBC_INLINE bool hasZva() {
   uint64_t zva_val;
   asm("mrs %[zva_val], dczid_el0" : [zva_val] "=r"(zva_val));
   // DC ZVA is permitted if DZP, bit [4] is zero.
@@ -108,9 +106,9 @@ template <size_t Size> struct Bcmp {
         if (auto value = Bcmp<BlockSize>::block(p1 + offset, p2 + offset))
           return value;
     } else {
-      deferred_static_assert("SIZE not implemented");
+      static_assert(cpp::always_false<decltype(Size)>, "SIZE not implemented");
     }
-    return BcmpReturnType::ZERO();
+    return BcmpReturnType::zero();
   }
 
   LIBC_INLINE static BcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
@@ -154,9 +152,9 @@ template <size_t Size> struct Bcmp {
       uint32x2_t abnocpdq_reduced = vqmovn_u64(abnocpdq);
       return vmaxv_u32(abnocpdq_reduced);
     } else {
-      deferred_static_assert("SIZE not implemented");
+      static_assert(cpp::always_false<decltype(Size)>, "SIZE not implemented");
     }
-    return BcmpReturnType::ZERO();
+    return BcmpReturnType::zero();
   }
 
   LIBC_INLINE static BcmpReturnType loop_and_tail(CPtr p1, CPtr p2,
@@ -172,8 +170,102 @@ template <size_t Size> struct Bcmp {
   }
 };
 
-} // namespace __llvm_libc::aarch64
+} // namespace LIBC_NAMESPACE::aarch64
 
-#endif // LLVM_LIBC_ARCH_AARCH64
+namespace LIBC_NAMESPACE::generic {
+
+///////////////////////////////////////////////////////////////////////////////
+// Specializations for uint16_t
+template <> struct cmp_is_expensive<uint16_t> : public cpp::false_type {};
+template <> LIBC_INLINE bool eq<uint16_t>(CPtr p1, CPtr p2, size_t offset) {
+  return load<uint16_t>(p1, offset) == load<uint16_t>(p2, offset);
+}
+template <>
+LIBC_INLINE uint32_t neq<uint16_t>(CPtr p1, CPtr p2, size_t offset) {
+  return load<uint16_t>(p1, offset) ^ load<uint16_t>(p2, offset);
+}
+template <>
+LIBC_INLINE MemcmpReturnType cmp<uint16_t>(CPtr p1, CPtr p2, size_t offset) {
+  return static_cast<int32_t>(load_be<uint16_t>(p1, offset)) -
+         static_cast<int32_t>(load_be<uint16_t>(p2, offset));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Specializations for uint32_t
+template <> struct cmp_is_expensive<uint32_t> : cpp::false_type {};
+template <>
+LIBC_INLINE uint32_t neq<uint32_t>(CPtr p1, CPtr p2, size_t offset) {
+  return load<uint32_t>(p1, offset) ^ load<uint32_t>(p2, offset);
+}
+template <>
+LIBC_INLINE MemcmpReturnType cmp<uint32_t>(CPtr p1, CPtr p2, size_t offset) {
+  const auto a = load_be<uint32_t>(p1, offset);
+  const auto b = load_be<uint32_t>(p2, offset);
+  return a > b ? 1 : a < b ? -1 : 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Specializations for uint64_t
+template <> struct cmp_is_expensive<uint64_t> : cpp::false_type {};
+template <>
+LIBC_INLINE uint32_t neq<uint64_t>(CPtr p1, CPtr p2, size_t offset) {
+  return load<uint64_t>(p1, offset) != load<uint64_t>(p2, offset);
+}
+template <>
+LIBC_INLINE MemcmpReturnType cmp<uint64_t>(CPtr p1, CPtr p2, size_t offset) {
+  const auto a = load_be<uint64_t>(p1, offset);
+  const auto b = load_be<uint64_t>(p2, offset);
+  if (a != b)
+    return a > b ? 1 : -1;
+  return MemcmpReturnType::zero();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Specializations for uint8x16_t
+template <> struct is_vector<uint8x16_t> : cpp::true_type {};
+template <> struct cmp_is_expensive<uint8x16_t> : cpp::false_type {};
+template <>
+LIBC_INLINE uint32_t neq<uint8x16_t>(CPtr p1, CPtr p2, size_t offset) {
+  for (size_t i = 0; i < 2; ++i) {
+    auto a = load<uint64_t>(p1, offset);
+    auto b = load<uint64_t>(p2, offset);
+    uint32_t cond = a != b;
+    if (cond)
+      return cond;
+    offset += sizeof(uint64_t);
+  }
+  return 0;
+}
+template <>
+LIBC_INLINE MemcmpReturnType cmp<uint8x16_t>(CPtr p1, CPtr p2, size_t offset) {
+  for (size_t i = 0; i < 2; ++i) {
+    auto a = load_be<uint64_t>(p1, offset);
+    auto b = load_be<uint64_t>(p2, offset);
+    if (a != b)
+      return cmp_neq_uint64_t(a, b);
+    offset += sizeof(uint64_t);
+  }
+  return MemcmpReturnType::zero();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Specializations for uint8x16x2_t
+template <> struct is_vector<uint8x16x2_t> : cpp::true_type {};
+template <> struct cmp_is_expensive<uint8x16x2_t> : cpp::false_type {};
+template <>
+LIBC_INLINE MemcmpReturnType cmp<uint8x16x2_t>(CPtr p1, CPtr p2,
+                                               size_t offset) {
+  for (size_t i = 0; i < 4; ++i) {
+    auto a = load_be<uint64_t>(p1, offset);
+    auto b = load_be<uint64_t>(p2, offset);
+    if (a != b)
+      return cmp_neq_uint64_t(a, b);
+    offset += sizeof(uint64_t);
+  }
+  return MemcmpReturnType::zero();
+}
+} // namespace LIBC_NAMESPACE::generic
+
+#endif // LIBC_TARGET_ARCH_IS_AARCH64
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_AARCH64_H

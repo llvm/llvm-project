@@ -22,7 +22,7 @@
 struct NonCommonSimpleView : std::ranges::view_base {
   int* begin() const;
   sentinel_wrapper<int*> end() const;
-  size_t size() { return 0; }  // deliberately non-const
+  std::size_t size() { return 0; }  // deliberately non-const
 };
 static_assert(std::ranges::sized_range<NonCommonSimpleView>);
 static_assert(!std::ranges::sized_range<const NonCommonSimpleView>);
@@ -69,7 +69,7 @@ constexpr bool test() {
     ASSERT_SAME_TYPE(decltype(tv.begin()), std::counted_iterator<int*>);
   }
 
-  // __simple_view<V> && sized_range<V> && !size_range<!V>
+  // simple-view<V> && sized_range<V> && !size_range<!V>
   {
     std::ranges::take_view<NonCommonSimpleView> tv{};
     ASSERT_SAME_TYPE(decltype(tv.begin()), std::counted_iterator<int*>);

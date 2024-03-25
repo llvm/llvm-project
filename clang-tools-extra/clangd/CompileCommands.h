@@ -12,6 +12,7 @@
 #include "support/Threading.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/CommandLine.h"
 #include <deque>
 #include <optional>
 #include <string>
@@ -50,8 +51,6 @@ struct CommandMangler {
                   llvm::StringRef TargetFile) const;
 
 private:
-  CommandMangler() = default;
-
   Memoize<llvm::StringMap<std::string>> ResolvedDrivers;
   Memoize<llvm::StringMap<std::string>> ResolvedDriversNoFollow;
 };

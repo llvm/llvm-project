@@ -164,6 +164,7 @@ function(add_hwasan_runtimes arch use_aliases)
                 RTSanitizerCommonLibc
                 RTSanitizerCommonCoverage
                 RTSanitizerCommonSymbolizer
+                RTSanitizerCommonSymbolizerInternal
                 RTLSanCommon
                 RTUbsan
     CFLAGS ${hwasan_rtl_flags}
@@ -201,6 +202,7 @@ function(add_hwasan_runtimes arch use_aliases)
             RTSanitizerCommonLibc
             RTSanitizerCommonCoverage
             RTSanitizerCommonSymbolizer
+            RTSanitizerCommonSymbolizerInternal
             RTLSanCommon
             RTUbsan
             RTUbsan_cxx

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - -fblocks -triple x86_64-apple-darwin10 | FileCheck %s
-// rdar://10033986
 
 typedef void (^BLOCK)(void);
 int main (void)

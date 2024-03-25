@@ -1,5 +1,7 @@
 ; RUN: llc %s -o - -stop-after=finalize-isel \
 ; RUN: | FileCheck %s --implicit-check-not=DBG
+; RUN: llc --try-experimental-debuginfo-iterators %s -o - -stop-after=finalize-isel \
+; RUN: | FileCheck %s --implicit-check-not=DBG
 
 ;; In the IR below, for variable n, we get dbg intrinsics that describe this:
 ;;

@@ -35,7 +35,6 @@ void to_cf(id obj) {
 
 template void to_cf<CFTypeRef, CFStringRef>(id);
 
-// rdar://problem/20107345
 typedef const struct __attribute__((objc_bridge(id))) __CFAnnotatedObject *CFAnnotatedObjectRef;
 CFAnnotatedObjectRef CFGetAnnotated();
 

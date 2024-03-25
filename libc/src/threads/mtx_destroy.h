@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_SRC_THREADS_MTX_DESTROY_H
 #define LLVM_LIBC_SRC_THREADS_MTX_DESTROY_H
 
-#include "include/threads.h"
+#include <threads.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 void mtx_destroy(mtx_t *mutex);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_THREADS_MTX_DESTROY_H

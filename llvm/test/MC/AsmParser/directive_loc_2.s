@@ -17,9 +17,9 @@
 # CHECK: file_names[ 1]:
 # CHECK-NEXT: name: "test.c"
 # CHECK-NEXT: dir_index: 0
-# CHECK: 0x{{0+}}0 2 0 1 0 0 is_stmt
-# CHECK: 0x{{0+}}1 4 0 1 0 0 {{$}}
-# CHECK: 0x{{0+}}2 6 0 1 0 0 {{$}}
-# CHECK: 0x{{0+}}3 8 0 1 0 0 is_stmt
-# CHECK: 0x{{0+}}4 10 0 1 0 0 is_stmt
-# CHECK: 0x{{0+}}5 10 0 1 0 0 is_stmt end_sequence
+# CHECK: 0x{{0+}}0 2 0 1 0 0 0 is_stmt
+# CHECK: 0x{{0+}}1 4 0 1 0 0 0 {{$}}
+# CHECK: 0x{{0+}}2 6 0 1 0 0 0 {{$}}
+# CHECK: 0x{{0+}}3 8 0 1 0 0 0 is_stmt
+# CHECK: 0x{{0+}}4 10 0 1 0 0 0 is_stmt
+# CHECK: 0x{{0+}}5 10 0 1 0 0 0 is_stmt end_sequence

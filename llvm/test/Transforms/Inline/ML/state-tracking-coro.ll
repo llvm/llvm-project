@@ -1,9 +1,10 @@
 ; Based on llvm/test/Transforms/Coroutines/coro-split-02.ll
 ; Corosplit will keep f1 and add 3 more functions.
 ; RUN: opt -passes='default<O1>,print<inline-advisor>' -training-log=/dev/null \
-; RUN:   -S -enable-ml-inliner=development -keep-inline-advisor-for-printing < %s 2>&1 | FileCheck %s
+; RUN:   -S -enable-ml-inliner=development -enable-scc-inline-advisor-printing < %s 2>&1 | FileCheck %s
 ; REQUIRES: have_tflite
 ;
+; CHECK: [MLInlineAdvisor] Nodes: 1 Edges: 0
 ; CHECK: [MLInlineAdvisor] Nodes: 4 Edges: 0
 
 %"struct.std::coroutine_handle" = type { ptr }

@@ -21,20 +21,19 @@ namespace dwarf {
 }
 }
 
-typedef uint32_t dw_uleb128_t;
-typedef int32_t dw_sleb128_t;
-typedef uint16_t dw_attr_t;
-typedef uint16_t dw_form_t;
+typedef llvm::dwarf::Attribute dw_attr_t;
+typedef llvm::dwarf::Form dw_form_t;
 typedef llvm::dwarf::Tag dw_tag_t;
 typedef uint64_t dw_addr_t; // Dwarf address define that must be big enough for
                             // any addresses in the compile units that get
                             // parsed
 
-typedef uint32_t dw_offset_t; // Dwarf Debug Information Entry offset for any
+typedef uint64_t dw_offset_t; // Dwarf Debug Information Entry offset for any
                               // offset into the file
 
 /* Constants */
-#define DW_INVALID_OFFSET (~(dw_offset_t)0)
+#define DW_DIE_OFFSET_MAX_BITSIZE 40
+#define DW_INVALID_OFFSET (((uint64_t)1u << DW_DIE_OFFSET_MAX_BITSIZE) - 1)
 #define DW_INVALID_INDEX 0xFFFFFFFFul
 
 // #define DW_ADDR_none 0x0

@@ -10,6 +10,9 @@ executable("clang-extdef-mapping") {
     "//llvm/lib/AsmParser",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
+    "//llvm/lib/Target:AllTargetsAsmParsers",
+    "//llvm/lib/Target:AllTargetsDescs",
+    "//llvm/lib/Target:AllTargetsInfos",
   ]
   sources = [ "ClangExtDefMapGen.cpp" ]
 }

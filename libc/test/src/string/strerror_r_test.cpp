@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strerror_r.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <stddef.h>
 
@@ -18,11 +18,11 @@ TEST(LlvmLibcStrErrorRTest, GnuVariantTests) {
   buffer[0] = '\0';
   // If strerror_r returns a constant string, then it shouldn't affect the
   // buffer.
-  ASSERT_STREQ(__llvm_libc::strerror_r(0, buffer, BUFF_SIZE), "Success");
+  ASSERT_STREQ(LIBC_NAMESPACE::strerror_r(0, buffer, BUFF_SIZE), "Success");
   ASSERT_EQ(buffer[0], '\0');
 
   // Else it should write the result to the provided buffer.
-  ASSERT_STREQ(__llvm_libc::strerror_r(-1, buffer, BUFF_SIZE),
+  ASSERT_STREQ(LIBC_NAMESPACE::strerror_r(-1, buffer, BUFF_SIZE),
                "Unknown error -1");
   ASSERT_STREQ(buffer, "Unknown error -1");
 }

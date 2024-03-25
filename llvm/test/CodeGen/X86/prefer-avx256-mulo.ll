@@ -11,7 +11,7 @@ define <16 x i1> @smulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; AVX256-NEXT:    vpsrlw $8, %ymm0, %ymm1
 ; AVX256-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX256-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
-; AVX256-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX256-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX256-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
 ; AVX256-NEXT:    vpxor %xmm2, %xmm2, %xmm2
@@ -75,7 +75,7 @@ define <16 x i1> @umulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; AVX256-NEXT:    vptestmd %ymm2, %ymm2, %k1
 ; AVX256-NEXT:    vpmovsxbd %xmm1, %ymm1
 ; AVX256-NEXT:    vptestmd %ymm1, %ymm1, %k2
-; AVX256-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX256-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX256-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX256-NEXT:    vmovdqa %xmm0, (%rdi)

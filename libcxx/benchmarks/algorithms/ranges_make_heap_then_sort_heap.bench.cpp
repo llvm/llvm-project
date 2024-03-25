@@ -16,16 +16,14 @@ struct RangesMakeThenSortHeap {
   size_t Quantity;
 
   void run(benchmark::State& state) const {
-    runOpOnCopies<ValueType>(state, Quantity, Order(), BatchSize::CountElements,
-                             [](auto& Copy) {
-                               std::ranges::make_heap(Copy);
-                               std::ranges::sort_heap(Copy);
-                             });
+    runOpOnCopies<ValueType>(state, Quantity, Order(), BatchSize::CountElements, [](auto& Copy) {
+      std::ranges::make_heap(Copy);
+      std::ranges::sort_heap(Copy);
+    });
   }
 
   std::string name() const {
-    return "BM_RangesMakeThenSortHeap" + ValueType::name() + Order::name() + "_" +
-           std::to_string(Quantity);
+    return "BM_RangesMakeThenSortHeap" + ValueType::name() + Order::name() + "_" + std::to_string(Quantity);
   };
 };
 } // namespace

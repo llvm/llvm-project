@@ -19,8 +19,10 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
@@ -30,13 +32,13 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <optional>
@@ -153,6 +155,23 @@ static void cloneFrameInfo(
   }
 }
 
+static void cloneJumpTableInfo(
+    MachineFunction &DstMF, const MachineJumpTableInfo &SrcJTI,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB) {
+
+  auto *DstJTI = DstMF.getOrCreateJumpTableInfo(SrcJTI.getEntryKind());
+
+  std::vector<MachineBasicBlock *> DstBBs;
+
+  for (const MachineJumpTableEntry &Entry : SrcJTI.getJumpTables()) {
+    for (MachineBasicBlock *X : Entry.MBBs)
+      DstBBs.push_back(Src2DstMBB.find(X)->second);
+
+    DstJTI->createJumpTableIndex(DstBBs);
+    DstBBs.clear();
+  }
+}
+
 static void cloneMemOperands(MachineInstr &DstMI, MachineInstr &SrcMI,
                              MachineFunction &SrcMF, MachineFunction &DstMF) {
   // The new MachineMemOperands should be owned by the new function's
@@ -165,7 +184,7 @@ static void cloneMemOperands(MachineInstr &DstMI, MachineInstr &SrcMI,
   for (MachineMemOperand *OldMMO : SrcMI.memoperands()) {
     MachinePointerInfo NewPtrInfo(OldMMO->getPointerInfo());
     if (const PseudoSourceValue *PSV =
-            NewPtrInfo.V.dyn_cast<const PseudoSourceValue *>()) {
+            dyn_cast_if_present<const PseudoSourceValue *>(NewPtrInfo.V)) {
       switch (PSV->kind()) {
       case PseudoSourceValue::Stack:
         NewPtrInfo.V = PSVMgr.getStack();
@@ -225,6 +244,8 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
         DstMF->CreateMachineBasicBlock(SrcMBB.getBasicBlock());
     Src2DstMBB[&SrcMBB] = DstMBB;
 
+    DstMBB->setCallFrameSize(SrcMBB.getCallFrameSize());
+
     if (SrcMBB.isIRBlockAddressTaken())
       DstMBB->setAddressTakenIRBlock(SrcMBB.getAddressTakenIRBlock());
     if (SrcMBB.isMachineBlockAddressTaken())
@@ -263,6 +284,10 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
 
   // Copy stack objects and other info
   cloneFrameInfo(DstMFI, SrcMFI, Src2DstMBB);
+
+  if (MachineJumpTableInfo *SrcJTI = SrcMF->getJumpTableInfo()) {
+    cloneJumpTableInfo(*DstMF, *SrcJTI, Src2DstMBB);
+  }
 
   // Remap the debug info frame index references.
   DstMF->VariableDbgInfos = SrcMF->VariableDbgInfos;
@@ -372,6 +397,7 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
   DstMF->setHasEHCatchret(SrcMF->hasEHCatchret());
   DstMF->setHasEHScopes(SrcMF->hasEHScopes());
   DstMF->setHasEHFunclets(SrcMF->hasEHFunclets());
+  DstMF->setIsOutlined(SrcMF->isOutlined());
 
   if (!SrcMF->getLandingPads().empty() ||
       !SrcMF->getCodeViewAnnotations().empty() ||
@@ -388,7 +414,7 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
   if (!DstMF->cloneInfoFrom(*SrcMF, Src2DstMBB))
     report_fatal_error("target does not implement MachineFunctionInfo cloning");
 
-  DstMRI->freezeReservedRegs(*DstMF);
+  DstMRI->freezeReservedRegs();
 
   DstMF->verify(nullptr, "", /*AbortOnError=*/true);
   return DstMF;
@@ -733,7 +759,8 @@ void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
       Index = std::make_unique<ModuleSummaryIndex>(
           buildModuleSummaryIndex(*M, nullptr, &PSI));
     }
-    WriteBitcodeToFile(getModule(), OutStream, Index.get());
+    WriteBitcodeToFile(getModule(), OutStream,
+                       /*ShouldPreserveUseListOrder=*/true, Index.get());
   }
 }
 
@@ -760,31 +787,17 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
 
     auto SetDataLayout = [&](StringRef DataLayoutTargetTriple,
                              StringRef OldDLStr) -> std::optional<std::string> {
-      // If we are supposed to override the target triple, do so now.
+      // NB: We always call createTargetMachineForTriple() even if an explicit
+      // DataLayout is already set in the module since we want to use this
+      // callback to setup the TargetMachine rather than doing it later.
       std::string IRTargetTriple = DataLayoutTargetTriple.str();
       if (!TargetTriple.empty())
         IRTargetTriple = Triple::normalize(TargetTriple);
       TheTriple = Triple(IRTargetTriple);
       if (TheTriple.getTriple().empty())
         TheTriple.setTriple(sys::getDefaultTargetTriple());
-
-      std::string Error;
-      const Target *TheTarget =
-          TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
-      if (!TheTarget) {
-        WithColor::error(errs(), ToolName) << Error;
-        exit(1);
-      }
-
-      // Hopefully the MIR parsing doesn't depend on any options.
-      TargetOptions Options;
-      std::optional<Reloc::Model> RM = codegen::getExplicitRelocModel();
-      std::string CPUStr = codegen::getCPUStr();
-      std::string FeaturesStr = codegen::getFeaturesStr();
-      TM = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
-          TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM,
-          codegen::getExplicitCodeModel(), CodeGenOpt::Default));
-      assert(TM && "Could not allocate target machine!");
+      ExitOnError ExitOnErr(std::string(ToolName) + ": error: ");
+      TM = ExitOnErr(codegen::createTargetMachineForTriple(TheTriple.str()));
 
       return TM->createDataLayout().getStringRepresentation();
     };

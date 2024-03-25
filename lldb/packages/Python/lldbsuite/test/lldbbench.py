@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 # System modules
 import time
 
@@ -65,8 +63,7 @@ class Stopwatch(object):
         if self.__start__ is None:
             self.__start__ = time.time()
         else:
-            raise Exception(
-                "start() already called, did you forget to stop() first?")
+            raise Exception("start() already called, did you forget to stop() first?")
         # Return self to facilitate the context manager __enter__ protocol.
         return self
 
@@ -96,8 +93,13 @@ class Stopwatch(object):
     #    return numpy.std(self.__nums__)
 
     def __str__(self):
-        return "Avg: %f (Laps: %d, Total Elapsed Time: %f, min=%f, max=%f)" % (self.avg(
-        ), self.__laps__, self.__total_elapsed__, min(self.__nums__), max(self.__nums__))
+        return "Avg: %f (Laps: %d, Total Elapsed Time: %f, min=%f, max=%f)" % (
+            self.avg(),
+            self.__laps__,
+            self.__total_elapsed__,
+            min(self.__nums__),
+            max(self.__nums__),
+        )
 
 
 class BenchBase(TestBase):

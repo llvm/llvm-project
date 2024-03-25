@@ -1,9 +1,10 @@
 // RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -S --sr  - | FileCheck  %s
+// RUN: not llvm-mc -filetype=obj -triple x86_64 --defsym ERR=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 
 // Test that we produce the correct relocation.
 
 
-        .section	.pr23272,"aGw",@progbits,pr23272,comdat
+        .section	.pr23272,"awG",@progbits,pr23272,comdat
 	.globl pr23272
 pr23272:
 pr23272_2:
@@ -110,3 +111,8 @@ weak_sym:
 // CHECK-NEXT:       0x105 R_X86_64_PC32 pr23272 0x0
 // CHECK-NEXT:     ]
 // CHECK-NEXT:   }
+
+.ifdef ERR
+// ERR: [[#@LINE+1]]:7: error: unsupported relocation type
+.long foo@gotoff
+.endif

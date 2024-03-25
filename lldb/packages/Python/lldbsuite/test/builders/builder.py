@@ -47,19 +47,31 @@ class Builder:
 
         # Construct the base make invocation.
         lldb_test = os.environ["LLDB_TEST"]
-        if not (lldb_test and configuration.test_build_dir and test_subdir
-                and test_name and (not os.path.isabs(test_subdir))):
+        if not (
+            lldb_test
+            and configuration.test_build_dir
+            and test_subdir
+            and test_name
+            and (not os.path.isabs(test_subdir))
+        ):
             raise Exception("Could not derive test directories")
-        build_dir = os.path.join(configuration.test_build_dir, test_subdir,
-                                 test_name)
+        build_dir = os.path.join(configuration.test_build_dir, test_subdir, test_name)
         src_dir = os.path.join(configuration.test_src_root, test_subdir)
         # This is a bit of a hack to make inline testcases work.
         makefile = os.path.join(src_dir, "Makefile")
         if not os.path.isfile(makefile):
             makefile = os.path.join(build_dir, "Makefile")
         return [
-            make, "VPATH=" + src_dir, "-C", build_dir, "-I", src_dir, "-I",
-            os.path.join(lldb_test, "make"), "-f", makefile
+            make,
+            "VPATH=" + src_dir,
+            "-C",
+            build_dir,
+            "-I",
+            src_dir,
+            "-I",
+            os.path.join(lldb_test, "make"),
+            "-f",
+            makefile,
         ]
 
     def getCmdLine(self, d):
@@ -76,7 +88,7 @@ class Builder:
             append_vars = ["CFLAGS", "CFLAGS_EXTRAS", "LD_EXTRAS"]
             if k in append_vars and k in os.environ:
                 v = os.environ[k] + " " + v
-            return '%s=%s' % (k, v)
+            return "%s=%s" % (k, v)
 
         cmdline = [setOrAppendVariable(k, v) for k, v in list(d.items())]
 
@@ -98,7 +110,7 @@ class Builder:
         if not cc and configuration.compiler:
             cc = configuration.compiler
         if cc:
-            return ["CC=\"%s\"" % cc]
+            return ['CC="%s"' % cc]
         return []
 
     def getSDKRootSpec(self):
@@ -116,17 +128,23 @@ class Builder:
         module cache used for the make system.
         """
         if configuration.clang_module_cache_dir:
-            return ["CLANG_MODULE_CACHE_DIR={}".format(
-                configuration.clang_module_cache_dir)]
+            return [
+                "CLANG_MODULE_CACHE_DIR={}".format(configuration.clang_module_cache_dir)
+            ]
         return []
 
     def getLibCxxArgs(self):
         if configuration.libcxx_include_dir and configuration.libcxx_library_dir:
-            libcpp_args = ["LIBCPP_INCLUDE_DIR={}".format(configuration.libcxx_include_dir),
-                           "LIBCPP_LIBRARY_DIR={}".format(configuration.libcxx_library_dir)]
+            libcpp_args = [
+                "LIBCPP_INCLUDE_DIR={}".format(configuration.libcxx_include_dir),
+                "LIBCPP_LIBRARY_DIR={}".format(configuration.libcxx_library_dir),
+            ]
             if configuration.libcxx_include_target_dir:
-                libcpp_args.append("LIBCPP_INCLUDE_TARGET_DIR={}".format(
-                    configuration.libcxx_include_target_dir))
+                libcpp_args.append(
+                    "LIBCPP_INCLUDE_TARGET_DIR={}".format(
+                        configuration.libcxx_include_target_dir
+                    )
+                )
             return libcpp_args
         return []
 
@@ -141,19 +159,34 @@ class Builder:
             return ["MAKE_DSYM=NO", "MAKE_GMODULES=YES"]
         return None
 
-    def getBuildCommand(self, debug_info, architecture=None, compiler=None,
-            dictionary=None, testdir=None, testname=None, make_targets=None):
+    def getBuildCommand(
+        self,
+        debug_info,
+        architecture=None,
+        compiler=None,
+        dictionary=None,
+        testdir=None,
+        testname=None,
+        make_targets=None,
+    ):
         debug_info_args = self._getDebugInfoArgs(debug_info)
         if debug_info_args is None:
             return None
         if make_targets is None:
             make_targets = ["all"]
         command_parts = [
-            self.getMake(testdir, testname), debug_info_args, make_targets,
-            self.getArchCFlags(architecture), self.getArchSpec(architecture),
-            self.getCCSpec(compiler), self.getExtraMakeArgs(),
-            self.getSDKRootSpec(), self.getModuleCacheSpec(),
-            self.getLibCxxArgs(), self.getCmdLine(dictionary)]
+            self.getMake(testdir, testname),
+            debug_info_args,
+            make_targets,
+            self.getArchCFlags(architecture),
+            self.getArchSpec(architecture),
+            self.getCCSpec(compiler),
+            self.getExtraMakeArgs(),
+            self.getSDKRootSpec(),
+            self.getModuleCacheSpec(),
+            self.getLibCxxArgs(),
+            self.getCmdLine(dictionary),
+        ]
         command = list(itertools.chain(*command_parts))
 
         return command

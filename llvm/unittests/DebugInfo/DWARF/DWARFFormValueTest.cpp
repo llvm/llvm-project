@@ -9,11 +9,12 @@
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/TargetParser/Host.h"
 #include "gtest/gtest.h"
 #include <climits>
 using namespace llvm;
@@ -30,6 +31,10 @@ TEST(DWARFFormValue, FormClass) {
   EXPECT_FALSE(isFormClass(DW_FORM_data8, DWARFFormValue::FC_Address));
   EXPECT_TRUE(isFormClass(DW_FORM_data8, DWARFFormValue::FC_Constant));
   EXPECT_TRUE(isFormClass(DW_FORM_data8, DWARFFormValue::FC_SectionOffset));
+  EXPECT_TRUE(doesFormBelongToClass(DW_FORM_data8,
+                                    DWARFFormValue::FC_SectionOffset, 3));
+  EXPECT_FALSE(doesFormBelongToClass(DW_FORM_data8,
+                                     DWARFFormValue::FC_SectionOffset, 5));
   EXPECT_TRUE(
       isFormClass(DW_FORM_sec_offset, DWARFFormValue::FC_SectionOffset));
   EXPECT_TRUE(isFormClass(DW_FORM_GNU_str_index, DWARFFormValue::FC_String));
@@ -232,9 +237,11 @@ INSTANTIATE_TEST_SUITE_P(
         ParamType(DW_FORM_ref_sup8, 0, 0, DWARF32, SampleU32, 8, true),
         ParamType(DW_FORM_strx1, 0, 0, DWARF32, SampleU32, 1, true),
         ParamType(DW_FORM_strx2, 0, 0, DWARF32, SampleU32, 2, true),
+        ParamType(DW_FORM_strx3, 0, 0, DWARF32, SampleU32, 3, true),
         ParamType(DW_FORM_strx4, 0, 0, DWARF32, SampleU32, 4, true),
         ParamType(DW_FORM_addrx1, 0, 0, DWARF32, SampleU32, 1, true),
         ParamType(DW_FORM_addrx2, 0, 0, DWARF32, SampleU32, 2, true),
+        ParamType(DW_FORM_addrx3, 0, 0, DWARF32, SampleU32, 3, true),
         ParamType(DW_FORM_addrx4, 0, 0, DWARF32, SampleU32, 4, true),
         ParamType(DW_FORM_sec_offset, 0, 1, DWARF32, SampleU32, 0, false),
         ParamType(DW_FORM_sec_offset, 1, 0, DWARF32, SampleU32, 0, false),

@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck -check-prefix=GFX10-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck -check-prefix=GFX10-ERR --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // Positive tests for legacy format syntax.
@@ -10,6 +10,9 @@ tbuffer_load_format_d16_x v0, off, s[0:3], format:22, 0
 
 // GFX10: tbuffer_load_format_d16_xy v0, off, s[0:3], 0 format:[BUF_FMT_32_FLOAT] ; encoding: [0x00,0x00,0xb1,0xe8,0x00,0x00,0x20,0x80]
 tbuffer_load_format_d16_xy v0, off, s[0:3], format:22, 0
+
+// GFX10: tbuffer_load_format_d16_xyz v[0:1], off, s[0:3], 0 format:[BUF_FMT_32_FLOAT] ; encoding: [0x00,0x00,0xb2,0xe8,0x00,0x00,0x20,0x80]
+tbuffer_load_format_d16_xyz v[0:1], off, s[0:3], format:22, 0
 
 // GFX10: tbuffer_load_format_d16_xyzw v[0:1], off, s[0:3], 0 format:[BUF_FMT_32_FLOAT] ; encoding: [0x00,0x00,0xb3,0xe8,0x00,0x00,0x20,0x80]
 tbuffer_load_format_d16_xyzw v[0:1], off, s[0:3], format:22, 0
@@ -61,6 +64,9 @@ tbuffer_store_format_d16_x v0, v1, s[4:7], format:33, 0 idxen
 
 // GFX10: tbuffer_store_format_d16_xy v0, v1, s[4:7], 0 format:[BUF_FMT_10_11_11_SSCALED] idxen ; encoding: [0x00,0x20,0x0d,0xe9,0x01,0x00,0x21,0x80]
 tbuffer_store_format_d16_xy v0, v1, s[4:7], format:33, 0 idxen
+
+// GFX10: tbuffer_store_format_d16_xyz v[0:1], v2, s[4:7], 0 format:[BUF_FMT_10_11_11_SSCALED] idxen ; encoding: [0x00,0x20,0x0e,0xe9,0x02,0x00,0x21,0x80]
+tbuffer_store_format_d16_xyz v[0:1], v2, s[4:7], format:33, 0 idxen
 
 // GFX10: tbuffer_store_format_d16_xyzw v[0:1], v2, s[4:7], 0 format:[BUF_FMT_10_11_11_SSCALED] idxen ; encoding: [0x00,0x20,0x0f,0xe9,0x02,0x00,0x21,0x80]
 tbuffer_store_format_d16_xyzw v[0:1], v2, s[4:7], format:33, 0 idxen

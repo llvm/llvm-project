@@ -33,12 +33,12 @@ namespace clang {
 class ASTConsumer {
   /// Whether this AST consumer also requires information about
   /// semantic analysis.
-  bool SemaConsumer;
+  bool SemaConsumer = false;
 
   friend class SemaConsumer;
 
 public:
-  ASTConsumer() : SemaConsumer(false) { }
+  ASTConsumer() = default;
 
   virtual ~ASTConsumer() {}
 

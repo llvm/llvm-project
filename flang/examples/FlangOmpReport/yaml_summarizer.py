@@ -77,6 +77,7 @@ from os.path import isdir
 
 from ruamel.yaml import YAML
 
+
 def find_yaml_files(search_directory: Path, search_pattern: str):
     """
     Find all '.yaml' files and returns an iglob iterator to them.
@@ -90,9 +91,12 @@ def find_yaml_files(search_directory: Path, search_pattern: str):
     # been generated with  'flang-omp-report' or not. This might result in the script
     # reading files that it should ignore.
     if search_directory:
-        return glob.iglob(str(search_directory.joinpath(search_pattern)), recursive=True)
+        return glob.iglob(
+            str(search_directory.joinpath(search_pattern)), recursive=True
+        )
 
     return glob.iglob(str("/" + search_pattern), recursive=True)
+
 
 def process_log(data, result: list):
     """
@@ -104,11 +108,16 @@ def process_log(data, result: list):
     result -- Array to add the processed data to.
     """
     for datum in data:
-        items = result.get(datum['file'], [])
-        items.append({"construct" : datum['construct'],
-                        "line" : datum['line'],
-                        "clauses" : datum['clauses']})
-        result[datum['file']] = items
+        items = result.get(datum["file"], [])
+        items.append(
+            {
+                "construct": datum["construct"],
+                "line": datum["line"],
+                "clauses": datum["clauses"],
+            }
+        )
+        result[datum["file"]] = items
+
 
 def add_clause(datum, construct):
     """
@@ -119,8 +128,8 @@ def add_clause(datum, construct):
     datum -- Data construct containing clauses to check.
     construct -- Construct to add or increment clause count.
     """
-    to_check = [i['clause'] for i in construct['clauses']]
-    to_add = [i['clause'] for i in datum['clauses']]
+    to_check = [i["clause"] for i in construct["clauses"]]
+    to_add = [i["clause"] for i in datum["clauses"]]
     clauses = construct["clauses"]
     for item in to_add:
         if item in to_check:
@@ -128,8 +137,8 @@ def add_clause(datum, construct):
                 if clause["clause"] == item:
                     clause["count"] += 1
         else:
-            clauses.append({"clause" : item,
-                            "count" : 1})
+            clauses.append({"clause": item, "count": 1})
+
 
 def process_summary(data, result: dict):
     """
@@ -140,36 +149,39 @@ def process_summary(data, result: dict):
     result -- Dictionary to add the processed data to.
     """
     for datum in data:
-        construct = next((item for item in result
-                            if item["construct"] == datum["construct"]), None)
+        construct = next(
+            (item for item in result if item["construct"] == datum["construct"]), None
+        )
         clauses = []
         # Add the construct and clauses to the summary if
         # they haven't been seen before
         if not construct:
-            for i in datum['clauses']:
-                clauses.append({"clause" : i['clause'],
-                                "count"    : 1})
-            result.append({"construct" : datum['construct'],
-                            "count" : 1,
-                            "clauses" : clauses})
+            for i in datum["clauses"]:
+                clauses.append({"clause": i["clause"], "count": 1})
+            result.append(
+                {"construct": datum["construct"], "count": 1, "clauses": clauses}
+            )
         else:
             construct["count"] += 1
 
             add_clause(datum, construct)
 
+
 def clean_summary(result):
-    """ Cleans the result after processing the yaml files with summary format."""
+    """Cleans the result after processing the yaml files with summary format."""
     # Remove all "clauses" that are empty to keep things compact
     for construct in result:
         if construct["clauses"] == []:
             construct.pop("clauses")
 
+
 def clean_log(result):
-    """ Cleans the result after processing the yaml files with log format."""
+    """Cleans the result after processing the yaml files with log format."""
     for constructs in result.values():
         for construct in constructs:
             if construct["clauses"] == []:
                 construct.pop("clauses")
+
 
 def output_result(yaml: YAML, result, output_file: Path):
     """
@@ -181,7 +193,7 @@ def output_result(yaml: YAML, result, output_file: Path):
                    outputted to 'stdout'.
     """
     if output_file:
-        with open(output_file, 'w+', encoding='utf-8') as file:
+        with open(output_file, "w+", encoding="utf-8") as file:
             if output_file.suffix == ".yaml":
                 yaml.dump(result, file)
             else:
@@ -189,8 +201,10 @@ def output_result(yaml: YAML, result, output_file: Path):
     else:
         yaml.dump(result, sys.stdout)
 
-def process_yaml(search_directories: list, search_pattern: str,
-                 result_format: str, output_file: Path):
+
+def process_yaml(
+    search_directories: list, search_pattern: str, result_format: str, output_file: Path
+):
     """
     Reads each yaml file, calls the appropiate format function for
     the file and then ouputs the result to either 'stdout' or to an output file.
@@ -215,7 +229,7 @@ def process_yaml(search_directories: list, search_pattern: str,
 
     for search_directory in search_directories:
         for file in find_yaml_files(search_directory, search_pattern):
-            with open(file, "r", encoding='utf-8') as yaml_file:
+            with open(file, "r", encoding="utf-8") as yaml_file:
                 data = yaml.load(yaml_file)
                 action(data, result)
 
@@ -224,24 +238,45 @@ def process_yaml(search_directories: list, search_pattern: str,
 
     output_result(yaml, result, output_file)
 
+
 def create_arg_parser():
-    """ Create and return a argparse.ArgumentParser modified for script. """
+    """Create and return a argparse.ArgumentParser modified for script."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--directory", help="Specify a directory to scan",
-                        dest="dir", type=str)
-    parser.add_argument("-o", "--output", help="Writes to a file instead of\
-                                                stdout", dest="output", type=str)
-    parser.add_argument("-r", "--recursive", help="Recursive search for .yaml files",
-                        dest="recursive", type=bool, nargs='?', const=True, default=False)
+    parser.add_argument(
+        "-d", "--directory", help="Specify a directory to scan", dest="dir", type=str
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        help="Writes to a file instead of\
+                                                stdout",
+        dest="output",
+        type=str,
+    )
+    parser.add_argument(
+        "-r",
+        "--recursive",
+        help="Recursive search for .yaml files",
+        dest="recursive",
+        type=bool,
+        nargs="?",
+        const=True,
+        default=False,
+    )
 
     exclusive_parser = parser.add_mutually_exclusive_group()
-    exclusive_parser.add_argument("-l", "--log", help="Modifies report format: "
-                                  "Combines the log '.yaml' files into one file.",
-                                  action='store_true', dest='log')
+    exclusive_parser.add_argument(
+        "-l",
+        "--log",
+        help="Modifies report format: " "Combines the log '.yaml' files into one file.",
+        action="store_true",
+        dest="log",
+    )
     return parser
 
+
 def parse_arguments():
-    """ Parses arguments given to script and returns a tuple of processed arguments. """
+    """Parses arguments given to script and returns a tuple of processed arguments."""
     parser = create_arg_parser()
     args = parser.parse_args()
 
@@ -270,13 +305,15 @@ def parse_arguments():
 
     return (search_directory, search_pattern, result_format, output_file)
 
+
 def main():
-    """ Main function of script. """
+    """Main function of script."""
     (search_directory, search_pattern, result_format, output_file) = parse_arguments()
 
     process_yaml(search_directory, search_pattern, result_format, output_file)
 
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -73,14 +73,14 @@ d:
 // DWARF-DL-5:    include_directories[  0] = "/tmp"
 // DWARF-DL:      file_names[  [[DWFILE]]]:
 // DWARF-DL:      name: "{{(<stdin>|-)}}"
-// DWARF-DL-5:      0x0000000000000000     17      0      0   0   0  is_stmt
-// DWARF-DL-5-NEXT: 0x0000000000000004     17      0      0   0   0  is_stmt end_sequence
-// DWARF-DL-5-NEXT: 0x0000000000000000     21      0      0   0   0  is_stmt
-// DWARF-DL-5-NEXT: 0x0000000000000004     21      0      0   0   0  is_stmt end_sequence
-// DWARF-DL-3:      0x0000000000000000     17      0      1   0   0  is_stmt
-// DWARF-DL-3-NEXT: 0x0000000000000004     17      0      1   0   0  is_stmt end_sequence
-// DWARF-DL-3-NEXT: 0x0000000000000000     21      0      1   0   0  is_stmt
-// DWARF-DL-3-NEXT: 0x0000000000000004     21      0      1   0   0  is_stmt end_sequence
+// DWARF-DL-5:      0x0000000000000000     17      0      0   0   0       0  is_stmt
+// DWARF-DL-5-NEXT: 0x0000000000000004     17      0      0   0   0       0  is_stmt end_sequence
+// DWARF-DL-5-NEXT: 0x0000000000000000     21      0      0   0   0       0  is_stmt
+// DWARF-DL-5-NEXT: 0x0000000000000004     21      0      0   0   0       0  is_stmt end_sequence
+// DWARF-DL-3:      0x0000000000000000     17      0      1   0   0       0  is_stmt
+// DWARF-DL-3-NEXT: 0x0000000000000004     17      0      1   0   0       0  is_stmt end_sequence
+// DWARF-DL-3-NEXT: 0x0000000000000000     21      0      1   0   0       0  is_stmt
+// DWARF-DL-3-NEXT: 0x0000000000000004     21      0      1   0   0       0  is_stmt end_sequence
 // DWARF-DL-EMPTY:
 
 

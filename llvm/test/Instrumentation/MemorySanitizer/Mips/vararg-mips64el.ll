@@ -19,7 +19,10 @@ define i32 @foo(i32 %guard, ...) {
 ; CHECK: [[B:%.*]] = add i64 0, [[A]]
 ; CHECK: [[C:%.*]] = alloca {{.*}} [[B]]
 
-; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[C]], ptr align 8 @__msan_va_arg_tls, i64 [[B]], i1 false)
+; CHECK: call void @llvm.memset.p0.i64(ptr align 8 [[C]], i8 0, i64 [[B]], i1 false)
+
+; CHECK: [[D:%.*]] = call i64 @llvm.umin.i64(i64 [[B]], i64 800)
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[C]], ptr align 8 @__msan_va_arg_tls, i64 [[D]], i1 false)
 
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
 declare void @llvm.va_start(ptr) #2

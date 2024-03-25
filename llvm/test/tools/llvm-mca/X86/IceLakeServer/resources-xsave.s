@@ -42,12 +42,12 @@ xsetbv
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -     19.00  20.50  1.83   1.83   1.00   18.50  46.00  0.33    -      -
+# CHECK-NEXT:  -      -     19.00  20.50  1.50   1.50   0.50   18.50  46.00  0.50   0.50   0.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -     0.50   0.50    -      -      -     xgetbv
 # CHECK-NEXT:  -      -     5.25   6.25   0.50   0.50    -     5.25   13.25   -      -      -     xrstor	(%rax)
 # CHECK-NEXT:  -      -     5.25   6.25   0.50   0.50    -     5.25   13.25   -      -      -     xrstors	(%rax)
-# CHECK-NEXT:  -      -     6.50   6.50   0.83   0.83   1.00   6.50   17.50  0.33    -      -     xsave	(%rax)
+# CHECK-NEXT:  -      -     6.50   6.50   0.50   0.50   0.50   6.50   17.50  0.50   0.50   0.50   xsave	(%rax)
 # CHECK-NEXT:  -      -     1.50   1.00    -      -      -     1.00   1.50    -      -      -     xsetbv

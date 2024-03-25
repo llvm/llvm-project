@@ -1,4 +1,4 @@
-; RUN: opt %s -indvars -loop-instsimplify -loop-reduce
+; RUN: opt %s -passes=indvars,loop-instsimplify,loop-reduce
 ; We are only checking that there is no crash!
 
 ; https://bugs.llvm.org/show_bug.cgi?id=37936

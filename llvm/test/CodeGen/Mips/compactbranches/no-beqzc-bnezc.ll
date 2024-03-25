@@ -1,8 +1,8 @@
-; RUN: llc -march=mipsel -mcpu=mips32r6 -disable-mips-delay-filler < %s | FileCheck %s
-; RUN: llc -march=mips -mcpu=mips32r6 -disable-mips-delay-filler < %s -filetype=obj \
+; RUN: llc -mtriple=mipsel -mcpu=mips32r6 -disable-mips-delay-filler < %s | FileCheck %s
+; RUN: llc -mtriple=mips -mcpu=mips32r6 -disable-mips-delay-filler < %s -filetype=obj \
 ; RUN:     -o - | llvm-objdump -d - | FileCheck %s --check-prefix=ENCODING
-; RUN: llc -march=mipsel -mcpu=mips64r6 -disable-mips-delay-filler -target-abi=n64 < %s | FileCheck %s
-; RUN: llc -march=mips -mcpu=mips64r6 -disable-mips-delay-filler -target-abi=n64 < %s -filetype=obj \
+; RUN: llc -mtriple=mipsel -mcpu=mips64r6 -disable-mips-delay-filler -target-abi=n64 < %s | FileCheck %s
+; RUN: llc -mtriple=mips -mcpu=mips64r6 -disable-mips-delay-filler -target-abi=n64 < %s -filetype=obj \
 ; RUN:     -o - | llvm-objdump -d - | FileCheck %s --check-prefix=ENCODING
 
 ; bnezc and beqzc have restriction that $rt != 0

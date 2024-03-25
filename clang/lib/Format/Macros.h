@@ -39,15 +39,9 @@
 #define CLANG_LIB_FORMAT_MACROS_H
 
 #include <list>
-#include <map>
-#include <string>
-#include <vector>
 
 #include "FormatToken.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace clang {
 namespace format {
@@ -106,17 +100,23 @@ public:
                 IdentifierTable &IdentTable);
   ~MacroExpander();
 
-  /// Returns whether a macro \p Name is defined.
+  /// Returns whether any macro \p Name is defined, regardless of overloads.
   bool defined(llvm::StringRef Name) const;
 
-  /// Returns whether the macro has no arguments and should not consume
-  /// subsequent parentheses.
+  /// Returns whetherh there is an object-like overload, i.e. where the macro
+  /// has no arguments and should not consume subsequent parentheses.
   bool objectLike(llvm::StringRef Name) const;
+
+  /// Returns whether macro \p Name provides an overload with the given arity.
+  bool hasArity(llvm::StringRef Name, unsigned Arity) const;
 
   /// Returns the expanded stream of format tokens for \p ID, where
   /// each element in \p Args is a positional argument to the macro call.
-  llvm::SmallVector<FormatToken *, 8> expand(FormatToken *ID,
-                                             ArgsList Args) const;
+  /// If \p Args is not set, the object-like overload is used.
+  /// If \p Args is set, the overload with the arity equal to \c Args.size() is
+  /// used.
+  llvm::SmallVector<FormatToken *, 8>
+  expand(FormatToken *ID, std::optional<ArgsList> OptionalArgs) const;
 
 private:
   struct Definition;
@@ -129,7 +129,8 @@ private:
   llvm::SpecificBumpPtrAllocator<FormatToken> &Allocator;
   IdentifierTable &IdentTable;
   SmallVector<std::unique_ptr<llvm::MemoryBuffer>> Buffers;
-  llvm::StringMap<Definition> Definitions;
+  llvm::StringMap<llvm::DenseMap<int, Definition>> FunctionLike;
+  llvm::StringMap<Definition> ObjectLike;
 };
 
 /// Converts a sequence of UnwrappedLines containing expanded macros into a
@@ -149,7 +150,7 @@ private:
 ///
 /// After this point, the state of the spelled/expanded stream is "in sync"
 /// (both at the start of an UnwrappedLine, with no macros open), so the
-/// Unexpander can be thrown away and parsing can continue.
+/// Reconstructor can be thrown away and parsing can continue.
 ///
 /// Given a mapping from the macro name identifier token in the macro call
 /// to the tokens of the macro call, for example:
@@ -224,8 +225,9 @@ public:
   UnwrappedLine takeResult() &&;
 
 private:
-  void add(FormatToken *Token, FormatToken *ExpandedParent, bool First);
-  void prepareParent(FormatToken *ExpandedParent, bool First);
+  void add(FormatToken *Token, FormatToken *ExpandedParent, bool First,
+           unsigned Level);
+  void prepareParent(FormatToken *ExpandedParent, bool First, unsigned Level);
   FormatToken *getParentInResult(FormatToken *Parent);
   void reconstruct(FormatToken *Token);
   void startReconstruction(FormatToken *Token);
@@ -265,6 +267,8 @@ private:
   // FIXME: Investigate changing UnwrappedLine to a pointer type and using it
   // instead of rolling our own type.
   struct ReconstructedLine {
+    explicit ReconstructedLine(unsigned Level) : Level(Level) {}
+    unsigned Level;
     llvm::SmallVector<std::unique_ptr<LineNode>> Tokens;
   };
 
@@ -365,9 +369,6 @@ private:
   // |  \- <argument>
   // \- )
   llvm::SmallVector<MacroCallState> MacroCallStructure;
-
-  // Level the generated UnwrappedLine will be at.
-  const unsigned Level;
 
   // Maps from identifier of the macro call to an unwrapped line containing
   // all tokens of the macro call.

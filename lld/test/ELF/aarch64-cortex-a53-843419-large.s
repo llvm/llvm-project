@@ -16,7 +16,6 @@
 // CHECK1:  <__AArch64AbsLongThunk_need_thunk_after_patch>:
 // CHECK1-NEXT:    210000:       58000050        ldr     x16, 0x210008
 // CHECK1-NEXT:    210004:       d61f0200        br      x16
-// CHECK1: <$d>:
 // CHECK1-NEXT:    210008:       0c 10 21 08     .word   0x0821100c
 
         .section .text.01, "ax", %progbits

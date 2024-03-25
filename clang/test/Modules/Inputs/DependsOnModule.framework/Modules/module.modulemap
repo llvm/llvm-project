@@ -1,0 +1,70 @@
+framework module DependsOnModule {
+  umbrella header "DependsOnModule.h"
+  header "other.h"
+  module * {
+    export *
+  }
+  explicit module CXX {
+    requires cplusplus
+    header "cxx_other.h"
+  }
+  explicit module NotCXX {
+    requires !cplusplus
+    header "not_cxx.h"
+  }
+  explicit module NotObjC {
+    requires !objc
+    header "not_objc.h"
+  }
+  explicit module CustomReq1 {
+    requires custom_req1
+  }
+  explicit module CustomReq2 {
+    requires custom_req2
+  }
+  explicit module Coroutines {
+    requires coroutines
+    header "coroutines.h"
+  }
+  explicit module NotCoroutines {
+    requires !coroutines
+    header "not_coroutines.h"
+  }
+  explicit framework module SubFramework {
+    umbrella header "SubFramework.h"
+
+    module * {
+      export *
+    }
+  }
+  explicit module CXX11 {
+    requires cplusplus11
+  }
+  explicit module CXX14 {
+    requires cplusplus14
+  }
+  explicit module CXX17 {
+    requires cplusplus17
+  }
+  explicit module CXX20 {
+    requires cplusplus20
+  }
+  explicit module CXX23 {
+    requires cplusplus23
+  }
+  explicit module CXX26 {
+    requires cplusplus26
+  }
+  explicit module C99 {
+    requires c99
+  }
+  explicit module C11 {
+    requires c11
+  }
+  explicit module C17 {
+    requires c17
+  }
+  explicit module C23 {
+    requires c23
+  }
+}

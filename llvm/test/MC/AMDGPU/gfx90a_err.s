@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx90a %s 2>&1 | FileCheck --check-prefix=GFX90A --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx90a %s 2>&1 | FileCheck --check-prefix=GFX90A --implicit-check-not=error: %s
 
 ds_add_src2_u32 v1
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
@@ -139,16 +139,16 @@ v_mov_b32_dpp v5, v1 row_share:1 row_mask:0x0 bank_mask:0x0
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
 
 v_ceil_f64_dpp v[0:1], v[2:3] quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: 64 bit dpp only supports row_newbcast
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_newbcast
 
 v_ceil_f64_dpp v[0:1], v[2:3] row_shl:1 row_mask:0xf bank_mask:0xf
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: 64 bit dpp only supports row_newbcast
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_newbcast
 
 v_ceil_f64_dpp v[0:1], v[2:3] wave_ror:1 row_mask:0xf bank_mask:0xf
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: 64 bit dpp only supports row_newbcast
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_newbcast
 
 v_cvt_u32_f64 v5, v[0:1] quad_perm:[0,2,1,1] row_mask:0xf bank_mask:0xf
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: 64 bit dpp only supports row_newbcast
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_newbcast
 
 v_ceil_f64_dpp v[0:1], v[2:3] row_share:1 row_mask:0xf bank_mask:0xf
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
@@ -169,12 +169,6 @@ ds_write2_b64 v1, a[4:5], v[2:3] offset1:255
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
 
 ds_write2_b64 v1, v[4:5], a[2:3] offset1:255
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
-
-ds_write2_b64 v1, a[4:5], v[2:3] offset1:255 gds
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
-
-ds_write2_b64 v1, v[4:5], a[2:3] offset1:255 gds
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
 
 ds_wrxchg2st64_rtn_b32 v[6:7], v1, a2, a3 offset0:127
@@ -200,57 +194,6 @@ image_sample_cd v[0:3], v[0:1], s[4:11], s[16:19] dmask:0xf
 
 image_sample_b v[0:3], v[0:1], s[4:11], s[16:19] dmask:0xf
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-global_atomic_add_f32 v0, v[0:1], v2, off glc scc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: scc is not supported on this GPU
-
-global_atomic_add_f32 v[0:1], v2, off scc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: scc is not supported on this GPU
-
-global_atomic_add_f32 v0, v2, s[0:1] scc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: scc is not supported on this GPU
-
-global_atomic_add_f32 v1, v0, v2, s[0:1] glc scc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: scc is not supported on this GPU
-
-global_atomic_pk_add_f16 v0, v[0:1], v2, off glc scc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: scc is not supported on this GPU
-
-flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] glc scc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: scc is not supported on this GPU
-
-flat_atomic_add_f64 v[0:1], v[2:3] scc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: scc is not supported on this GPU
-
-flat_atomic_min_f64 v[0:1], v[2:3] scc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: scc is not supported on this GPU
-
-flat_atomic_max_f64 v[0:1], v[2:3] scc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: scc is not supported on this GPU
-
-global_atomic_add_f64 v[0:1], v[2:3], off scc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: scc is not supported on this GPU
-
-global_atomic_min_f64 v[0:1], v[2:3], off scc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: scc is not supported on this GPU
-
-global_atomic_max_f64 v[0:1], v[2:3], off scc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: scc is not supported on this GPU
-
-buffer_atomic_add_f32 v4, off, s[8:11], s3 scc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: scc is not supported on this GPU
-
-buffer_atomic_pk_add_f16 v4, off, s[8:11], s3 scc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: scc is not supported on this GPU
-
-buffer_atomic_add_f64 v[4:5], off, s[8:11], s3 scc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: scc is not supported on this GPU
-
-buffer_atomic_max_f64 v[4:5], off, s[8:11], s3 scc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: scc is not supported on this GPU
-
-buffer_atomic_min_f64 v[4:5], off, s[8:11], s3 scc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: scc is not supported on this GPU
 
 v_mov_b32_sdwa v1, src_lds_direct dst_sel:DWORD
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: lds_direct is not supported on this GPU
@@ -293,3 +236,6 @@ global_load_lds_dword v[2:3], off
 
 scratch_load_lds_dword v2, off
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_read_b32 v0, v1 gds
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: gds modifier is not supported on this GPU

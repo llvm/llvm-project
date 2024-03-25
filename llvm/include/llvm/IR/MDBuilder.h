@@ -78,7 +78,7 @@ public:
   MDNode *createFunctionSectionPrefix(StringRef Prefix);
 
   /// Return metadata containing the pseudo probe descriptor for a function.
-  MDNode *createPseudoProbeDesc(uint64_t GUID, uint64_t Hash, Function *F);
+  MDNode *createPseudoProbeDesc(uint64_t GUID, uint64_t Hash, StringRef FName);
 
   /// Return metadata containing llvm statistics.
   MDNode *

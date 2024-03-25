@@ -55,6 +55,7 @@ static_library("Target") {
     "QueueList.cpp",
     "RegisterContext.cpp",
     "RegisterContextUnwind.cpp",
+    "RegisterFlags.cpp",
     "RegisterNumber.cpp",
     "RemoteAwarePlatform.cpp",
     "SectionLoadHistory.cpp",

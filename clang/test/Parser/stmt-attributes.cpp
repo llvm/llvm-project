@@ -6,7 +6,7 @@
 
 template <typename T = void>
 class __attribute__((nomerge)) A {
-  // expected-error@-1 {{'nomerge' attribute only applies to functions and statements}}
+  // expected-error@-1 {{'nomerge' attribute only applies to functions, statements and variables}}
 };
 
 class B : public A<> {

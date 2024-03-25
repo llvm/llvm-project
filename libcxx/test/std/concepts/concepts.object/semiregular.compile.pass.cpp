@@ -107,7 +107,7 @@ static_assert(!std::semiregular<has_rvalue_reference_member>);
 static_assert(!std::semiregular<has_function_ref_member>);
 static_assert(!std::semiregular<deleted_assignment_from_const_rvalue>);
 
-// Not default_initialzable
+// Not default_initializable
 static_assert(!std::semiregular<std::runtime_error>);
 static_assert(
     !std::semiregular<std::tuple<std::runtime_error, std::overflow_error> >);
@@ -126,5 +126,3 @@ static_assert(!std::semiregular<has_non_default_initializable>);
 static_assert(!std::semiregular<deleted_default_ctor>);
 static_assert(!std::semiregular<derived_from_deleted_default_ctor>);
 static_assert(!std::semiregular<has_deleted_default_ctor>);
-
-int main(int, char**) { return 0; }

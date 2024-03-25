@@ -98,16 +98,16 @@ body:             |
     ; X86-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; X86-NEXT: [[DEF:%[0-9]+]]:gr16 = IMPLICIT_DEF
     ; X86-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gr16 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_8bit
-    ; X86-NEXT: [[AND16ri8_:%[0-9]+]]:gr16 = AND16ri8 [[INSERT_SUBREG]], 1, implicit-def $eflags
-    ; X86-NEXT: $ax = COPY [[AND16ri8_]]
+    ; X86-NEXT: [[AND16ri_:%[0-9]+]]:gr16 = AND16ri [[INSERT_SUBREG]], 1, implicit-def $eflags
+    ; X86-NEXT: $ax = COPY [[AND16ri_]]
     ; X86-NEXT: RET 0, implicit $ax
     ; X64-LABEL: name: test_zext_i1toi16
     ; X64: [[COPY:%[0-9]+]]:gr32 = COPY $edi
     ; X64-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; X64-NEXT: [[DEF:%[0-9]+]]:gr16 = IMPLICIT_DEF
     ; X64-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gr16 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_8bit
-    ; X64-NEXT: [[AND16ri8_:%[0-9]+]]:gr16 = AND16ri8 [[INSERT_SUBREG]], 1, implicit-def $eflags
-    ; X64-NEXT: $ax = COPY [[AND16ri8_]]
+    ; X64-NEXT: [[AND16ri_:%[0-9]+]]:gr16 = AND16ri [[INSERT_SUBREG]], 1, implicit-def $eflags
+    ; X64-NEXT: $ax = COPY [[AND16ri_]]
     ; X64-NEXT: RET 0, implicit $ax
     %0(s32) = COPY $edi
     %1(s1) = G_TRUNC %0(s32)
@@ -135,16 +135,16 @@ body:             |
     ; X86-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; X86-NEXT: [[DEF:%[0-9]+]]:gr32 = IMPLICIT_DEF
     ; X86-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gr32 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_8bit
-    ; X86-NEXT: [[AND32ri8_:%[0-9]+]]:gr32 = AND32ri8 [[INSERT_SUBREG]], 1, implicit-def $eflags
-    ; X86-NEXT: $eax = COPY [[AND32ri8_]]
+    ; X86-NEXT: [[AND32ri_:%[0-9]+]]:gr32 = AND32ri [[INSERT_SUBREG]], 1, implicit-def $eflags
+    ; X86-NEXT: $eax = COPY [[AND32ri_]]
     ; X86-NEXT: RET 0, implicit $eax
     ; X64-LABEL: name: test_zext_i1
     ; X64: [[COPY:%[0-9]+]]:gr32 = COPY $edi
     ; X64-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; X64-NEXT: [[DEF:%[0-9]+]]:gr32 = IMPLICIT_DEF
     ; X64-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gr32 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_8bit
-    ; X64-NEXT: [[AND32ri8_:%[0-9]+]]:gr32 = AND32ri8 [[INSERT_SUBREG]], 1, implicit-def $eflags
-    ; X64-NEXT: $eax = COPY [[AND32ri8_]]
+    ; X64-NEXT: [[AND32ri_:%[0-9]+]]:gr32 = AND32ri [[INSERT_SUBREG]], 1, implicit-def $eflags
+    ; X64-NEXT: $eax = COPY [[AND32ri_]]
     ; X64-NEXT: RET 0, implicit $eax
     %0(s32) = COPY $edi
     %1(s1) = G_TRUNC %0(s32)

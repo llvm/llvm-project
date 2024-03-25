@@ -3,10 +3,10 @@
 // RUN: %clang   -x c   -fsanitize=implicit-signed-integer-truncation -O2 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
 // RUN: %clang   -x c   -fsanitize=implicit-signed-integer-truncation -O3 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
 
-// RUN: %clang   -x c++ -fsanitize=implicit-signed-integer-truncation -O0 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
-// RUN: %clang   -x c++ -fsanitize=implicit-signed-integer-truncation -O1 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
-// RUN: %clang   -x c++ -fsanitize=implicit-signed-integer-truncation -O2 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
-// RUN: %clang   -x c++ -fsanitize=implicit-signed-integer-truncation -O3 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
+// RUN: %clangxx -x c++ -fsanitize=implicit-signed-integer-truncation -O0 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
+// RUN: %clangxx -x c++ -fsanitize=implicit-signed-integer-truncation -O1 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
+// RUN: %clangxx -x c++ -fsanitize=implicit-signed-integer-truncation -O2 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
+// RUN: %clangxx -x c++ -fsanitize=implicit-signed-integer-truncation -O3 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
 
 void test_unsigned() {
   unsigned char x;

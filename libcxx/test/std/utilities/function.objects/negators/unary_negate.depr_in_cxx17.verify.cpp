@@ -16,16 +16,12 @@
 
 #include <functional>
 
-#include "test_macros.h"
-
 struct Predicate {
     typedef int argument_type;
     bool operator()(argument_type) const { return true; }
 };
 
-int main(int, char**) {
+void test() {
     std::unary_negate<Predicate> f((Predicate())); // expected-warning {{'unary_negate<Predicate>' is deprecated}}
     (void)f;
-
-  return 0;
 }

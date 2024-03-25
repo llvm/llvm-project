@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-use-override %t -- \
-// RUN:   -config="{CheckOptions: [{key: modernize-use-override.AllowOverrideAndFinal, value: true}]}"
+// RUN:   -config="{CheckOptions: {modernize-use-override.AllowOverrideAndFinal: true}}"
 
 struct Base {
   virtual ~Base();

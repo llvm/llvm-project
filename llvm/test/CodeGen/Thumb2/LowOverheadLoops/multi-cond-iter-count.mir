@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=thumbv8.1m.main -mattr=+mve -run-pass=arm-low-overhead-loops %s -o - --verify-machineinstrs | FileCheck %s
 
 --- |
-  define dso_local arm_aapcs_vfpcc void @multi_cond_iter_count(i32* noalias nocapture %0, i32* nocapture readonly %1, i32 %2, i32 %3) {
+  define dso_local arm_aapcs_vfpcc void @multi_cond_iter_count(ptr noalias nocapture %0, ptr nocapture readonly %1, i32 %2, i32 %3) {
     %5 = icmp eq i32 %3, 2
     %6 = select i1 %5, i32 2, i32 4
     %7 = icmp eq i32 %3, 4
@@ -22,20 +22,20 @@
     br label %18
 
   18:                                               ; preds = %18, %17
-    %19 = phi i32* [ %31, %18 ], [ %0, %17 ]
-    %20 = phi i32* [ %30, %18 ], [ %1, %17 ]
+    %19 = phi ptr [ %31, %18 ], [ %0, %17 ]
+    %20 = phi ptr [ %30, %18 ], [ %1, %17 ]
     %21 = phi i32 [ %start, %17 ], [ %32, %18 ]
     %22 = phi i32 [ %9, %17 ], [ %26, %18 ]
-    %23 = bitcast i32* %19 to <4 x i32>*
-    %24 = bitcast i32* %20 to <4 x i32>*
+    %23 = bitcast ptr %19 to ptr
+    %24 = bitcast ptr %20 to ptr
     %25 = call <4 x i1> @llvm.arm.mve.vctp32(i32 %22)
     %26 = sub i32 %22, 4
-    %27 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %24, i32 4, <4 x i1> %25, <4 x i32> undef)
-    %28 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %23, i32 4, <4 x i1> %25, <4 x i32> undef)
+    %27 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %24, i32 4, <4 x i1> %25, <4 x i32> undef)
+    %28 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %23, i32 4, <4 x i1> %25, <4 x i32> undef)
     %29 = mul nsw <4 x i32> %28, %27
-    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %29, <4 x i32>* %23, i32 4, <4 x i1> %25)
-    %30 = getelementptr i32, i32* %20, i32 4
-    %31 = getelementptr i32, i32* %19, i32 4
+    call void @llvm.masked.store.v4i32.p0(<4 x i32> %29, ptr %23, i32 4, <4 x i1> %25)
+    %30 = getelementptr i32, ptr %20, i32 4
+    %31 = getelementptr i32, ptr %19, i32 4
     %32 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %21, i32 1)
     %33 = icmp ne i32 %32, 0
     br i1 %33, label %18, label %34
@@ -43,8 +43,8 @@
   34:                                               ; preds = %18, %4
     ret void
   }
-  declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
-  declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>)
+  declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32 immarg, <4 x i1>, <4 x i32>)
+  declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32 immarg, <4 x i1>)
   declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
   declare <4 x i1> @llvm.arm.mve.vctp32(i32)

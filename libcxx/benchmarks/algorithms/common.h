@@ -19,12 +19,17 @@
 
 enum class ValueType { Uint32, Uint64, Pair, Tuple, String, Float };
 struct AllValueTypes : EnumValuesAsTuple<AllValueTypes, ValueType, 6> {
-  static constexpr const char* Names[] = {"uint32", "uint64", "pair<uint32, uint32>", "tuple<uint32, uint64, uint32>",
-                                          "string", "float"};
+  static constexpr const char* Names[] = {
+      "uint32", "uint64", "pair<uint32, uint32>", "tuple<uint32, uint64, uint32>", "string", "float"};
 };
 
-using Types = std::tuple< uint32_t, uint64_t, std::pair<uint32_t, uint32_t>, std::tuple<uint32_t, uint64_t, uint32_t>,
-                          std::string, float >;
+using Types =
+    std::tuple<uint32_t,
+               uint64_t,
+               std::pair<uint32_t, uint32_t>,
+               std::tuple<uint32_t, uint64_t, uint32_t>,
+               std::string,
+               float>;
 
 template <class V>
 using Value = std::tuple_element_t<(int)V::value, Types>;
@@ -39,10 +44,8 @@ enum class Order {
   QuickSortAdversary,
 };
 struct AllOrders : EnumValuesAsTuple<AllOrders, Order, 7> {
-  static constexpr const char* Names[] = {"Random",     "Ascending",
-                                          "Descending", "SingleElement",
-                                          "PipeOrgan",  "Heap",
-                                          "QuickSortAdversary"};
+  static constexpr const char* Names[] = {
+      "Random", "Ascending", "Descending", "SingleElement", "PipeOrgan", "Heap", "QuickSortAdversary"};
 };
 
 // fillAdversarialQuickSortInput fills the input vector with N int-like values.
@@ -64,7 +67,7 @@ void fillAdversarialQuickSortInput(T& V, size_t N) {
   }
   // Candidate for the pivot position.
   int candidate = 0;
-  int nsolid = 0;
+  int nsolid    = 0;
   // Populate all positions in the generated input to gas.
   std::vector<int> ascVals(V.size());
   // Fill up with ascending values from 0 to V.size()-1.  These will act as
@@ -185,8 +188,7 @@ constexpr size_t TestSetElements =
 #endif
 
 template <class ValueType>
-std::vector<std::vector<Value<ValueType> > > makeOrderedValues(size_t N,
-                                                               Order O) {
+std::vector<std::vector<Value<ValueType> > > makeOrderedValues(size_t N, Order O) {
   std::vector<std::vector<Value<ValueType> > > Ret;
   const size_t NumCopies = std::max(size_t{1}, TestSetElements / N);
   Ret.resize(NumCopies);
@@ -198,8 +200,7 @@ std::vector<std::vector<Value<ValueType> > > makeOrderedValues(size_t N,
 }
 
 template <class T, class U>
-TEST_ALWAYS_INLINE void resetCopies(benchmark::State& state, T& Copies,
-                                    U& Orig) {
+TEST_ALWAYS_INLINE void resetCopies(benchmark::State& state, T& Copies, U& Orig) {
   state.PauseTiming();
   for (auto& Copy : Copies)
     Copy = Orig;
@@ -212,14 +213,11 @@ enum class BatchSize {
 };
 
 template <class ValueType, class F>
-void runOpOnCopies(benchmark::State& state, size_t Quantity, Order O,
-                   BatchSize Count, F Body) {
+void runOpOnCopies(benchmark::State& state, size_t Quantity, Order O, BatchSize Count, F Body) {
   auto Copies = makeOrderedValues<ValueType>(Quantity, O);
-  auto Orig = Copies;
+  auto Orig   = Copies;
 
-  const size_t Batch = Count == BatchSize::CountElements
-                           ? Copies.size() * Quantity
-                           : Copies.size();
+  const size_t Batch = Count == BatchSize::CountElements ? Copies.size() * Quantity : Copies.size();
   while (state.KeepRunningBatch(Batch)) {
     for (auto& Copy : Copies) {
       Body(Copy);
@@ -231,13 +229,18 @@ void runOpOnCopies(benchmark::State& state, size_t Quantity, Order O,
   }
 }
 
-
-const std::vector<size_t> Quantities = {1 << 0, 1 << 2,  1 << 4,  1 << 6,
-                                        1 << 8, 1 << 10, 1 << 14,
-    // Running each benchmark in parallel consumes too much memory with MSAN
-    // and can lead to the test process being killed.
+const std::vector<size_t> Quantities = {
+    1 << 0,
+    1 << 2,
+    1 << 4,
+    1 << 6,
+    1 << 8,
+    1 << 10,
+    1 << 14,
+// Running each benchmark in parallel consumes too much memory with MSAN
+// and can lead to the test process being killed.
 #if !TEST_HAS_FEATURE(memory_sanitizer)
-                                        1 << 18
+    1 << 18
 #endif
 };
 

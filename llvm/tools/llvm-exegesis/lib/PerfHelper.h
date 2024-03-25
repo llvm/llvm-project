@@ -23,6 +23,12 @@
 #include <functional>
 #include <memory>
 
+#ifdef _MSC_VER
+typedef int pid_t;
+#else
+#include <sys/types.h>
+#endif // _MSC_VER
+
 struct perf_event_attr;
 
 namespace llvm {
@@ -37,6 +43,9 @@ void pfmTerminate();
 // NOTE: pfm_initialize() must be called before creating PerfEvent objects.
 class PerfEvent {
 public:
+  // Dummy event that does not require access to counters (for tests).
+  static const char *const DummyEventString;
+
   // http://perfmon2.sourceforge.net/manv4/libpfm.html
   // Events are expressed as strings. e.g. "INSTRUCTION_RETIRED"
   explicit PerfEvent(StringRef PfmEventString);
@@ -63,19 +72,48 @@ protected:
   std::string EventString;
   std::string FullQualifiedEventString;
   perf_event_attr *Attr;
+
+private:
+  void initRealEvent(StringRef PfmEventString);
 };
 
-// Uses a valid PerfEvent to configure the Kernel so we can measure the
-// underlying event.
-class Counter {
+// Represents a single event that has been configured in the Linux perf
+// subsystem.
+class ConfiguredEvent {
+public:
+  ConfiguredEvent(PerfEvent &&EventToConfigure);
+
+  void initRealEvent(const pid_t ProcessID, const int GroupFD = -1);
+  Expected<SmallVector<int64_t>> readOrError(StringRef FunctionBytes) const;
+  int getFileDescriptor() const { return FileDescriptor; }
+  bool isDummyEvent() const {
+    return Event.name() == PerfEvent::DummyEventString;
+  }
+
+  ConfiguredEvent(const ConfiguredEvent &) = delete;
+  ConfiguredEvent(ConfiguredEvent &&other) = default;
+
+  ~ConfiguredEvent();
+
+private:
+  PerfEvent Event;
+  int FileDescriptor = -1;
+};
+
+// Consists of a counter measuring a specific event and associated validation
+// counters measuring execution conditions. All counters in a group are part
+// of a single event group and are thus scheduled on and off the CPU as a single
+// unit.
+class CounterGroup {
 public:
   // event: the PerfEvent to measure.
-  explicit Counter(PerfEvent &&event);
+  explicit CounterGroup(PerfEvent &&event, std::vector<PerfEvent> &&ValEvents,
+                        pid_t ProcessID = 0);
 
-  Counter(const Counter &) = delete;
-  Counter(Counter &&other) = default;
+  CounterGroup(const CounterGroup &) = delete;
+  CounterGroup(CounterGroup &&other) = default;
 
-  virtual ~Counter();
+  virtual ~CounterGroup() = default;
 
   /// Starts the measurement of the event.
   virtual void start();
@@ -83,25 +121,28 @@ public:
   /// Stops the measurement of the event.
   void stop();
 
-  /// Returns the current value of the counter or -1 if it cannot be read.
-  int64_t read() const;
-
   /// Returns the current value of the counter or error if it cannot be read.
   /// FunctionBytes: The benchmark function being executed.
   /// This is used to filter out the measurements to ensure they are only
   /// within the benchmarked code.
   /// If empty (or not specified), then no filtering will be done.
   /// Not all counters choose to use this.
-  virtual llvm::Expected<llvm::SmallVector<int64_t, 4>>
+  virtual Expected<SmallVector<int64_t, 4>>
   readOrError(StringRef FunctionBytes = StringRef()) const;
+
+  virtual Expected<SmallVector<int64_t>> readValidationCountersOrError() const;
 
   virtual int numValues() const;
 
+  int getFileDescriptor() const { return EventCounter.getFileDescriptor(); }
+
 protected:
-  PerfEvent Event;
-#ifdef HAVE_LIBPFM
-  int FileDescriptor = -1;
-#endif
+  ConfiguredEvent EventCounter;
+  bool IsDummyEvent;
+  std::vector<ConfiguredEvent> ValidationEventCounters;
+
+private:
+  void initRealEvent(pid_t ProcessID);
 };
 
 } // namespace pfm

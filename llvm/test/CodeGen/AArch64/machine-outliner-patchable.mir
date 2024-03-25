@@ -1,0 +1,162 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass machine-outliner -verify-machineinstrs -enable-machine-outliner %s -o - | FileCheck %s
+--- |
+  ; Function Attrs: minsize
+  declare void @foo(i32, i32, i32, i32) #0
+    
+  ; Function Attrs: nounwind
+  define void @xray0(i1 %a) #1 {
+  entry:
+    br i1 %a, label %if.then, label %if.end
+  
+  if.then:                                          ; preds = %entry
+    call void @foo(i32 1, i32 2, i32 3, i32 4)
+    br label %if.end
+  
+  if.end:                                           ; preds = %if.then, %entry
+    call void @foo(i32 5, i32 6, i32 7, i32 8)
+    ret void
+  }
+  
+  ; Function Attrs: nounwind
+  define void @xray1(i1 %a) #1 {
+  entry:
+    br i1 %a, label %if.then, label %if.end
+  
+  if.then:                                          ; preds = %entry
+    call void @foo(i32 1, i32 2, i32 3, i32 4)
+    br label %if.end
+  
+  if.end:                                           ; preds = %if.then, %entry
+    call void @foo(i32 5, i32 6, i32 7, i32 8)
+    ret void
+  }
+  
+  attributes #0 = { minsize }
+  attributes #1 = { nounwind "function-instrument"="xray-always" }
+
+...
+---
+name:            xray0
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0', virtual-reg: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16, 
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  ; CHECK-LABEL: name: xray0
+  ; CHECK:       bb.0.entry:
+  ; CHECK:         PATCHABLE_FUNCTION_ENTER
+  ; CHECK:       bb.1.if.then:
+  ; CHECK:         BL @[[OUTLINED_FUNCTION:OUTLINED_FUNCTION_[0-9]]]
+  ; CHECK:       bb.2.if.end:
+  ; CHECK-NEXT:    $w0 = MOVZWi 5, 0
+  ; CHECK-NEXT:    $w1 = MOVZWi 6, 0
+  ; CHECK-NEXT:    $w2 = MOVZWi 7, 0
+  ; CHECK-NEXT:    $w3 = MOVZWi 8, 0
+  ; CHECK-NEXT:    BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit killed $w3, implicit-def $sp
+  ; CHECK:         $w0 = MOVZWi 5, 0
+  ; CHECK-NEXT:    $w1 = MOVZWi 6, 0
+  ; CHECK-NEXT:    PATCHABLE_FUNCTION_EXIT
+  ; CHECK-NEXT:    RET undef $lr
+
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $w0, $lr
+  
+    PATCHABLE_FUNCTION_ENTER
+    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
+    TBZW killed renamable $w0, 0, %bb.2
+  
+  bb.1.if.then:
+    successors: %bb.2(0x80000000)
+  
+    $w0 = MOVZWi 1, 0
+    $w1 = MOVZWi 2, 0
+    $w2 = MOVZWi 3, 0
+    $w3 = MOVZWi 4, 0
+    BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit killed $w3, implicit-def $sp
+  
+  bb.2.if.end:
+    $w0 = MOVZWi 5, 0
+    $w1 = MOVZWi 6, 0
+    $w2 = MOVZWi 7, 0
+    $w3 = MOVZWi 8, 0
+    BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit killed $w3, implicit-def $sp
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
+    $w0 = MOVZWi 5, 0
+    $w1 = MOVZWi 6, 0
+    PATCHABLE_FUNCTION_EXIT
+    RET undef $lr
+
+...
+---
+name:            xray1
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0', virtual-reg: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16, 
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  ; CHECK-LABEL: name: xray1
+  ; CHECK:       bb.0.entry:
+  ; CHECK:         PATCHABLE_FUNCTION_ENTER
+  ; CHECK:       bb.1.if.then:
+  ; CHECK:         BL @[[OUTLINED_FUNCTION]]
+  ; CHECK:       bb.2.if.end:
+  ; CHECK-NEXT:    $w0 = MOVZWi 5, 0
+  ; CHECK-NEXT:    $w1 = MOVZWi 6, 0
+  ; CHECK-NEXT:    $w2 = MOVZWi 7, 0
+  ; CHECK-NEXT:    $w3 = MOVZWi 8, 0
+  ; CHECK-NEXT:    BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit killed $w3, implicit-def $sp
+  ; CHECK:         $w0 = MOVZWi 5, 0
+  ; CHECK-NEXT:    $w1 = MOVZWi 6, 0
+  ; CHECK-NEXT:    PATCHABLE_FUNCTION_EXIT
+  ; CHECK-NEXT:    RET undef $lr
+
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $w0, $lr
+  
+    PATCHABLE_FUNCTION_ENTER
+    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
+    TBZW killed renamable $w0, 0, %bb.2
+  
+  bb.1.if.then:
+    successors: %bb.2(0x80000000)
+  
+    $w0 = MOVZWi 1, 0
+    $w1 = MOVZWi 2, 0
+    $w2 = MOVZWi 3, 0
+    $w3 = MOVZWi 4, 0
+    BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit killed $w3, implicit-def $sp
+  
+  bb.2.if.end:
+    $w0 = MOVZWi 5, 0
+    $w1 = MOVZWi 6, 0
+    $w2 = MOVZWi 7, 0
+    $w3 = MOVZWi 8, 0
+    BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit killed $w3, implicit-def $sp
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
+    $w0 = MOVZWi 5, 0
+    $w1 = MOVZWi 6, 0
+    PATCHABLE_FUNCTION_EXIT
+    RET undef $lr
+
+  ; CHECK: name: [[OUTLINED_FUNCTION]]
+  ; CHECK:     bb.0:
+  ; CHECK:       $w0 = MOVZWi 1, 0
+  ; CHECK-NEXT:  $w1 = MOVZWi 2, 0
+  ; CHECK-NEXT:  $w2 = MOVZWi 3, 0
+  ; CHECK-NEXT:  $w3 = MOVZWi 4, 0
+  ; CHECK-NEXT:  TCRETURNdi @foo, 0, implicit $sp
+
+...
+

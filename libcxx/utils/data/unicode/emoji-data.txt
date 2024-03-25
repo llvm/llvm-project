@@ -9,8 +9,8 @@
 #
 # For documentation and usage, see https://www.unicode.org/reports/tr51
 #
-# Format: 
-# <codepoint(s)> ; <property> # <comments> 
+# Format:
+# <codepoint(s)> ; <property> # <comments>
 # Note: there is no guarantee as to the structure of whitespace or comments
 #
 # Characters and sequences are listed in code point order. Users should be shown a more natural order.

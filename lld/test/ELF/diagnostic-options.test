@@ -1,0 +1,19 @@
+# RUN: ld.lld -o %t.out -shared /dev/null -m elf_x86_64 \
+# RUN:   --print-archive-stats=%t --why-extract=%t --dependency-file=%t -Map=%t
+# RUN: FileCheck -DOUT_FILE=%t.out --input-file=%t %s
+
+# RUN: ld.lld -o %t.out -shared /dev/null -m elf_x86_64 \
+# RUN:   --print-archive-stats=- --why-extract=- --dependency-file=- -Map=- \
+# RUN:   | FileCheck -DOUT_FILE=%t.out %s
+
+## From --print-archive-stats
+# CHECK: members extracted archive
+
+## From --why-extract
+# CHECK: reference extracted symbol
+
+## From --dependency-file
+# CHECK: [[OUT_FILE]]: \
+
+## From -Map
+# CHECK: VMA LMA Size

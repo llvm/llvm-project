@@ -6,7 +6,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 @G = external dso_local global i32, align 4
 
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external dso_local global i32, align 4
+; CHECK: @G = external dso_local global i32, align 4
 ;.
 define void @foo(i32) {
 ; CHECK-LABEL: @foo(
@@ -15,7 +15,7 @@ define void @foo(i32) {
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[CODEREPL:%.*]], label [[EXIT:%.*]]
 ; CHECK:       codeRepl:
 ; CHECK-NEXT:    call void @foo.cold.1() #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -39,7 +39,7 @@ define void @bar(i32) {
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[CODEREPL:%.*]], label [[EXIT:%.*]]
 ; CHECK:       codeRepl:
 ; CHECK-NEXT:    call void @bar.cold.1() #[[ATTR2]]
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -56,10 +56,10 @@ exit:
   ret void
 }
 
-declare void @llvm.trap() noreturn cold
+declare void @llvm.trap() noreturn cold memory(inaccessiblemem: write)
 declare void @_Z10sideeffectv()
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { cold noreturn nounwind }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { cold minsize noreturn }
 ; CHECK: attributes #[[ATTR2]] = { noinline }
 ;.

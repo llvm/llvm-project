@@ -15,6 +15,7 @@ static_library("lib") {
     "Analysis.cpp",
     "FindHeaders.cpp",
     "HTMLReport.cpp",
+    "IncludeSpeller.cpp",
     "LocateSymbol.cpp",
     "Record.cpp",
     "Types.cpp",

@@ -26,7 +26,6 @@ static_library("Symbol") {
     "Function.cpp",
     "LineEntry.cpp",
     "LineTable.cpp",
-    "LocateSymbolFile.cpp",
     "ObjectContainer.cpp",
     "ObjectFile.cpp",
     "PostfixExpression.cpp",
@@ -34,6 +33,7 @@ static_library("Symbol") {
     "SymbolContext.cpp",
     "SymbolFile.cpp",
     "SymbolFileOnDemand.cpp",
+    "SymbolLocator.cpp",
     "SymbolVendor.cpp",
     "Symtab.cpp",
     "Type.cpp",
@@ -45,7 +45,4 @@ static_library("Symbol") {
     "Variable.cpp",
     "VariableList.cpp",
   ]
-  if (current_os == "mac") {
-    sources += [ "LocateSymbolFileMacOSX.cpp" ]
-  }
 }

@@ -7,16 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/inttypes/imaxabs.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcImaxAbsTest, Zero) {
-  EXPECT_EQ(__llvm_libc::imaxabs(0), intmax_t(0));
+  EXPECT_EQ(LIBC_NAMESPACE::imaxabs(0), intmax_t(0));
 }
 
 TEST(LlvmLibcImaxAbsTest, Positive) {
-  EXPECT_EQ(__llvm_libc::imaxabs(1), intmax_t(1));
+  EXPECT_EQ(LIBC_NAMESPACE::imaxabs(1), intmax_t(1));
 }
 
 TEST(LlvmLibcImaxAbsTest, Negative) {
-  EXPECT_EQ(__llvm_libc::imaxabs(-1), intmax_t(1));
+  EXPECT_EQ(LIBC_NAMESPACE::imaxabs(-1), intmax_t(1));
 }

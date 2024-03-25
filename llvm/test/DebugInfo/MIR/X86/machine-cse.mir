@@ -15,34 +15,34 @@
   target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-unknown"
   
-  %struct.s2 = type { i32, i8*, i8*, [256 x %struct.s1*], [8 x i32], i64, i8*, i32, i64, i64, i32, %struct.s3*, %struct.s3*, [49 x i64] }
+  %struct.s2 = type { i32, ptr, ptr, [256 x ptr], [8 x i32], i64, ptr, i32, i64, i64, i32, ptr, ptr, [49 x i64] }
   %struct.s1 = type { %ptr, %ptr }
-  %ptr = type { i8* }
-  %struct.s3 = type { %struct.s3*, %struct.s3*, i32, i32, i32 }
+  %ptr = type { ptr }
+  %struct.s3 = type { ptr, ptr, i32, i32, i32 }
   
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.value(metadata, metadata, metadata) #0
   
-  define fastcc i8* @t(i32 %base) !dbg !3 {
+  define fastcc ptr @t(i32 %base) !dbg !3 {
   entry:
     %0 = zext i32 %base to i64
-    %1 = getelementptr inbounds %struct.s2, %struct.s2* null, i64 %0
+    %1 = getelementptr inbounds %struct.s2, ptr null, i64 %0
     br i1 undef, label %bb1, label %bb2
   
   bb1:                                              ; preds = %entry
-    %2 = getelementptr inbounds %struct.s2, %struct.s2* null, i64 %0, i32 0
-    call void @llvm.dbg.value(metadata i32* %2, metadata !4, metadata !DIExpression()), !dbg !7
-    call void @bar(i32* %2)
+    %2 = getelementptr inbounds %struct.s2, ptr null, i64 %0, i32 0
+    call void @llvm.dbg.value(metadata ptr %2, metadata !4, metadata !DIExpression()), !dbg !7
+    call void @bar(ptr %2)
     unreachable
   
   bb2:                                              ; preds = %entry
-    %3 = ptrtoint %struct.s2* %1 to i64
+    %3 = ptrtoint ptr %1 to i64
     call void @baz(i64 %3)
     unreachable
   }
   
   ; This is a stub replicating bb structure of @t
-  define fastcc i8* @u(i32 %base) !dbg !33 {
+  define fastcc ptr @u(i32 %base) !dbg !33 {
   entry:
     br i1 undef, label %bb1, label %bb2
   
@@ -54,14 +54,14 @@
   }
  
 
-  declare void @bar(i32*)
+  declare void @bar(ptr)
   
   declare void @baz(i64)
   
-  declare i8* @foo(%struct.s2*)
+  declare ptr @foo(ptr)
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
   
   attributes #0 = { nounwind readnone speculatable }
   attributes #1 = { nounwind }

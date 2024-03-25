@@ -95,6 +95,10 @@
 ; OBJ:   SubSectionType: Symbols (0xF1)
 ; OBJ:   GlobalProcIdSym {
 ; OBJ:     Kind: S_GPROC32_ID (0x1147)
+; OBJ:     Flags [ (0x81)
+; OBJ:       HasFP (0x1)
+; OBJ:       HasOptimizedDebugInfo (0x80)
+; OBJ:     ]
 ; OBJ:     DisplayName: realign_with_csrs
 ; OBJ:     LinkageName: _realign_with_csrs
 ; OBJ:   }

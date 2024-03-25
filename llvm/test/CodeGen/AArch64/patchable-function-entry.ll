@@ -48,7 +48,7 @@ define void @f3() "patchable-function-entry"="3" comdat {
 ; CHECK-NEXT: .Lfunc_begin3:
 ; CHECK-COUNT-3: nop
 ; CHECK-NEXT:  ret
-; CHECK:       .section __patchable_function_entries,"aGwo",@progbits,f3,comdat,f3{{$}}
+; CHECK:       .section __patchable_function_entries,"awoG",@progbits,f3,f3,comdat{{$}}
 ; CHECK-NEXT:  .p2align 3
 ; CHECK-NEXT:  .xword .Lfunc_begin3
   ret void
@@ -60,7 +60,7 @@ define void @f5() "patchable-function-entry"="5" comdat {
 ; CHECK-NEXT: .Lfunc_begin4:
 ; CHECK-COUNT-5: nop
 ; CHECK-NEXT:  sub sp, sp, #16
-; CHECK:       .section __patchable_function_entries,"aGwo",@progbits,f5,comdat,f5{{$}}
+; CHECK:       .section __patchable_function_entries,"awoG",@progbits,f5,f5,comdat{{$}}
 ; CHECK:       .p2align 3
 ; CHECK-NEXT:  .xword .Lfunc_begin4
   %frame = alloca i8, i32 16
@@ -71,10 +71,10 @@ define void @f5() "patchable-function-entry"="5" comdat {
 ;; "patchable-function-prefix" emits data before the function entry label.
 define void @f3_2() "patchable-function-entry"="1" "patchable-function-prefix"="2" {
 ; CHECK-LABEL: .type f3_2,@function
-; CHECK-NEXT: .Ltmp1: // @f3_2
+; CHECK-NEXT: .Ltmp1:
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  nop
-; CHECK-NEXT: f3_2:
+; CHECK-NEXT: f3_2:  // @f3_2
 ; CHECK:      // %bb.0:
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  ret
@@ -90,10 +90,10 @@ define void @f3_2() "patchable-function-entry"="1" "patchable-function-prefix"="
 ;; When prefix data is used, arbitrarily place NOPs after prefix data.
 define void @prefix() "patchable-function-entry"="0" "patchable-function-prefix"="1" prefix i32 1 {
 ; CHECK-LABEL: .type prefix,@function
-; CHECK-NEXT: .word 1 // @prefix
+; CHECK-NEXT: .word 1  // 0x1
 ; CHECK:      .Ltmp2:
 ; CHECK:       nop
-; CHECK-NEXT: prefix:
+; CHECK-NEXT: prefix:  // @prefix
 ;; Emit a __patchable_function_entries entry even if "patchable-function-entry" is 0.
 ; CHECK:      .section __patchable_function_entries,"awo",@progbits,prefix{{$}}
 ; CHECK:      .p2align 3

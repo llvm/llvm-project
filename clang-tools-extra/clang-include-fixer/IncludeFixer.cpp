@@ -307,18 +307,19 @@ std::string IncludeFixerSemaSource::minimizeInclude(
 
   // Get the FileEntry for the include.
   StringRef StrippedInclude = Include.trim("\"<>");
-  auto Entry = SourceManager.getFileManager().getFile(StrippedInclude);
+  auto Entry =
+      SourceManager.getFileManager().getOptionalFileRef(StrippedInclude);
 
   // If the file doesn't exist return the path from the database.
   // FIXME: This should never happen.
   if (!Entry)
     return std::string(Include);
 
-  bool IsSystem = false;
+  bool IsAngled = false;
   std::string Suggestion =
-      HeaderSearch.suggestPathToFileForDiagnostics(*Entry, "", &IsSystem);
+      HeaderSearch.suggestPathToFileForDiagnostics(*Entry, "", &IsAngled);
 
-  return IsSystem ? '<' + Suggestion + '>' : '"' + Suggestion + '"';
+  return IsAngled ? '<' + Suggestion + '>' : '"' + Suggestion + '"';
 }
 
 /// Get the include fixer context for the queried symbol.

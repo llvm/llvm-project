@@ -32,13 +32,13 @@ directly into :program:`llvm-mca` for analysis:
 
 .. code-block:: bash
 
-  $ clang foo.c -O2 -target x86_64-unknown-unknown -S -o - | llvm-mca -mcpu=btver2
+  $ clang foo.c -O2 --target=x86_64 -S -o - | llvm-mca -mcpu=btver2
 
 Or for Intel syntax:
 
 .. code-block:: bash
 
-  $ clang foo.c -O2 -target x86_64-unknown-unknown -mllvm -x86-asm-syntax=intel -S -o - | llvm-mca -mcpu=btver2
+  $ clang foo.c -O2 --target=x86_64 -masm=intel -S -o - | llvm-mca -mcpu=btver2
 
 (:program:`llvm-mca` detects Intel syntax by the presence of an `.intel_syntax`
 directive at the beginning of the input.  By default its output syntax matches
@@ -52,7 +52,7 @@ By design, the quality of the analysis conducted by :program:`llvm-mca` is
 inevitably affected by the quality of the scheduling models in LLVM.
 
 If you see that the performance report is not accurate for a processor,
-please `file a bug <https://bugs.llvm.org/enter_bug.cgi?product=libraries>`_
+please `file a bug <https://github.com/llvm/llvm-project/issues>`_
 against the appropriate backend.
 
 OPTIONS
@@ -350,7 +350,7 @@ an InstrumentRegion does not need a comment to end the region.
 Comments that are prefixed with `LLVM-MCA-` but do not correspond to
 a valid `INSTRUMENT_TYPE` for the target cause an error, except for
 `BEGIN` and `END`, since those correspond to AnalysisRegions. Comments
-that do not start with `LLVM-MCA-` are ignored by :program `llvm-mca`.
+that do not start with `LLVM-MCA-` are ignored by :program:`llvm-mca`.
 
 An instruction (a MCInst) is added to an InstrumentRegion R only
 if its location is in range [R.RangeStart, R.RangeEnd].
@@ -908,6 +908,7 @@ process instructions.
 * Retire (Instruction is retired; writes are architecturally committed).
 
 The in-order pipeline implements the following sequence of stages:
+
 * InOrderIssue (Instruction is issued to the processor pipelines).
 * Retire (Instruction is retired; writes are architecturally committed).
 

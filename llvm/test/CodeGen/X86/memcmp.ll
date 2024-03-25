@@ -234,16 +234,12 @@ define i1 @length4_eq(ptr %X, ptr %Y) nounwind {
 define i1 @length4_lt(ptr %X, ptr %Y) nounwind {
 ; X64-LABEL: length4_lt:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl (%rdi), %ecx
-; X64-NEXT:    movl (%rsi), %edx
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    movl (%rsi), %ecx
+; X64-NEXT:    bswapl %eax
 ; X64-NEXT:    bswapl %ecx
-; X64-NEXT:    bswapl %edx
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpl %edx, %ecx
-; X64-NEXT:    seta %al
-; X64-NEXT:    sbbl $0, %eax
-; X64-NEXT:    shrl $31, %eax
-; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    cmpl %ecx, %eax
+; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 4) nounwind
   %c = icmp slt i32 %m, 0
@@ -257,12 +253,8 @@ define i1 @length4_gt(ptr %X, ptr %Y) nounwind {
 ; X64-NEXT:    movl (%rsi), %ecx
 ; X64-NEXT:    bswapl %eax
 ; X64-NEXT:    bswapl %ecx
-; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    cmpl %ecx, %eax
-; X64-NEXT:    seta %dl
-; X64-NEXT:    sbbl $0, %edx
-; X64-NEXT:    testl %edx, %edx
-; X64-NEXT:    setg %al
+; X64-NEXT:    seta %al
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 4) nounwind
   %c = icmp sgt i32 %m, 0
@@ -1023,7 +1015,7 @@ define i1 @length24_eq_const(ptr %X) nounwind {
 ; X64-MIC-AVX:       # %bb.0:
 ; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %xmm0
 ; X64-MIC-AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [959985462,858927408,0,0]
+; X64-MIC-AVX-NEXT:    vmovq {{.*#+}} xmm2 = [959985462,858927408,0,0]
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm2, %zmm1, %k0
 ; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [858927408,926299444,825243960,892613426]
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
@@ -1868,23 +1860,14 @@ define i1 @length64_eq(ptr %x, ptr %y) nounwind {
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 ;
-; X64-AVX512BW-LABEL: length64_eq:
-; X64-AVX512BW:       # %bb.0:
-; X64-AVX512BW-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512BW-NEXT:    vpcmpneqb (%rsi), %zmm0, %k0
-; X64-AVX512BW-NEXT:    kortestq %k0, %k0
-; X64-AVX512BW-NEXT:    setne %al
-; X64-AVX512BW-NEXT:    vzeroupper
-; X64-AVX512BW-NEXT:    retq
-;
-; X64-AVX512F-LABEL: length64_eq:
-; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512F-NEXT:    vpcmpneqd (%rsi), %zmm0, %k0
-; X64-AVX512F-NEXT:    kortestw %k0, %k0
-; X64-AVX512F-NEXT:    setne %al
-; X64-AVX512F-NEXT:    vzeroupper
-; X64-AVX512F-NEXT:    retq
+; X64-AVX512-LABEL: length64_eq:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-AVX512-NEXT:    vpcmpneqd (%rsi), %zmm0, %k0
+; X64-AVX512-NEXT:    kortestw %k0, %k0
+; X64-AVX512-NEXT:    setne %al
+; X64-AVX512-NEXT:    vzeroupper
+; X64-AVX512-NEXT:    retq
 ;
 ; X64-MIC-AVX2-LABEL: length64_eq:
 ; X64-MIC-AVX2:       # %bb.0:
@@ -1978,23 +1961,14 @@ define i1 @length64_eq_const(ptr %X) nounwind {
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 ;
-; X64-AVX512BW-LABEL: length64_eq_const:
-; X64-AVX512BW:       # %bb.0:
-; X64-AVX512BW-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512BW-NEXT:    vpcmpneqb .L.str(%rip), %zmm0, %k0
-; X64-AVX512BW-NEXT:    kortestq %k0, %k0
-; X64-AVX512BW-NEXT:    sete %al
-; X64-AVX512BW-NEXT:    vzeroupper
-; X64-AVX512BW-NEXT:    retq
-;
-; X64-AVX512F-LABEL: length64_eq_const:
-; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512F-NEXT:    vpcmpneqd .L.str(%rip), %zmm0, %k0
-; X64-AVX512F-NEXT:    kortestw %k0, %k0
-; X64-AVX512F-NEXT:    sete %al
-; X64-AVX512F-NEXT:    vzeroupper
-; X64-AVX512F-NEXT:    retq
+; X64-AVX512-LABEL: length64_eq_const:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-AVX512-NEXT:    vpcmpneqd .L.str(%rip), %zmm0, %k0
+; X64-AVX512-NEXT:    kortestw %k0, %k0
+; X64-AVX512-NEXT:    sete %al
+; X64-AVX512-NEXT:    vzeroupper
+; X64-AVX512-NEXT:    retq
 ;
 ; X64-MIC-AVX2-LABEL: length64_eq_const:
 ; X64-MIC-AVX2:       # %bb.0:

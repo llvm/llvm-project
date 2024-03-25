@@ -798,7 +798,6 @@ public:
 
 protected:
   // Used by Memory SSA dumpers and wrapper pass
-  friend class MemorySSAPrinterLegacyPass;
   friend class MemorySSAUpdater;
 
   void verifyOrderingDominationAndDefUses(
@@ -919,18 +918,6 @@ protected:
                                   AliasAnalysis &AA);
 };
 
-// This pass does eager building and then printing of MemorySSA. It is used by
-// the tests to be able to build, dump, and verify Memory SSA.
-class MemorySSAPrinterLegacyPass : public FunctionPass {
-public:
-  MemorySSAPrinterLegacyPass();
-
-  bool runOnFunction(Function &) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  static char ID;
-};
-
 /// An analysis that produces \c MemorySSA for a function.
 ///
 class MemorySSAAnalysis : public AnalysisInfoMixin<MemorySSAAnalysis> {
@@ -959,11 +946,15 @@ public:
 /// Printer pass for \c MemorySSA.
 class MemorySSAPrinterPass : public PassInfoMixin<MemorySSAPrinterPass> {
   raw_ostream &OS;
+  bool EnsureOptimizedUses;
 
 public:
-  explicit MemorySSAPrinterPass(raw_ostream &OS) : OS(OS) {}
+  explicit MemorySSAPrinterPass(raw_ostream &OS, bool EnsureOptimizedUses)
+      : OS(OS), EnsureOptimizedUses(EnsureOptimizedUses) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// Printer pass for \c MemorySSA via the walker.
@@ -975,11 +966,14 @@ public:
   explicit MemorySSAWalkerPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for \c MemorySSA.
 struct MemorySSAVerifierPass : PassInfoMixin<MemorySSAVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes \c MemorySSA.
@@ -1272,11 +1266,11 @@ private:
           const_cast<Value *>(Location.Ptr),
           OriginalAccess->getBlock()->getModule()->getDataLayout(), nullptr);
 
-      if (!Translator.translateValue(OriginalAccess->getBlock(),
-                                     DefIterator.getPhiArgBlock(), DT, true))
-        if (Translator.getAddr() != CurrentPair.second.Ptr)
-          CurrentPair.second =
-              CurrentPair.second.getWithNewPtr(Translator.getAddr());
+      if (Value *Addr =
+              Translator.translateValue(OriginalAccess->getBlock(),
+                                        DefIterator.getPhiArgBlock(), DT, true))
+        if (Addr != CurrentPair.second.Ptr)
+          CurrentPair.second = CurrentPair.second.getWithNewPtr(Addr);
 
       // Mark size as unknown, if the location is not guaranteed to be
       // loop-invariant for any possible loop in the function. Setting the size

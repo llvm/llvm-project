@@ -6,14 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-PICOLIBC-FIXME
+
 // <iostream>
 
-// istream clog;
+// ostream clog;
 
-// UNSUPPORTED: executor-has-no-bash
-// FILE_DEPENDENCIES: ../check-stderr.sh
 // RUN: %{build}
-// RUN: %{exec} bash check-stderr.sh "%t.exe" "1234"
+// RUN: %{exec} %t.exe 2> %t.actual
+// RUN: echo -n 1234 > %t.expected
+// RUN: diff %t.expected %t.actual
 
 #include <iostream>
 

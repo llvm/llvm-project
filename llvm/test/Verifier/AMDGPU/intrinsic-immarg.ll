@@ -142,44 +142,6 @@ define i64 @invalid_nonconstant_fcmp_code(float %a, float %b, i32 %c) {
   ret i64 %result
 }
 
-declare i32 @llvm.amdgcn.atomic.inc.i32.p3(ptr addrspace(3) nocapture, i32, i32, i32, i1)
-define amdgpu_kernel void @invalid_atomic_inc(ptr addrspace(1) %out, ptr addrspace(3) %ptr, i32 %var, i1 %bool) {
-  ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i32 %var
-  ; CHECK-NEXT: %result0 = call i32 @llvm.amdgcn.atomic.inc.i32.p3(ptr addrspace(3) %ptr, i32 42, i32 %var, i32 0, i1 false)
-  %result0 = call i32 @llvm.amdgcn.atomic.inc.i32.p3(ptr addrspace(3) %ptr, i32 42, i32 %var, i32 0, i1 false)
-
-  ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i32 %var
-  ; CHECK-NEXT: %result1 = call i32 @llvm.amdgcn.atomic.inc.i32.p3(ptr addrspace(3) %ptr, i32 42, i32 0, i32 %var, i1 false)
-  %result1 = call i32 @llvm.amdgcn.atomic.inc.i32.p3(ptr addrspace(3) %ptr, i32 42, i32 0, i32 %var, i1 false)
-
-  ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i1 %bool
-  ; CHECK-NEXT: %result2 = call i32 @llvm.amdgcn.atomic.inc.i32.p3(ptr addrspace(3) %ptr, i32 42, i32 0, i32 0, i1 %bool)
-  %result2 = call i32 @llvm.amdgcn.atomic.inc.i32.p3(ptr addrspace(3) %ptr, i32 42, i32 0, i32 0, i1 %bool)
-  ret void
-}
-
-declare i32 @llvm.amdgcn.atomic.dec.i32.p3(ptr addrspace(3) nocapture, i32, i32, i32, i1)
-define amdgpu_kernel void @invalid_atomic_dec(ptr addrspace(1) %out, ptr addrspace(3) %ptr, i32 %var, i1 %bool) {
-  ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i32 %var
-  ; CHECK-NEXT: %result0 = call i32 @llvm.amdgcn.atomic.dec.i32.p3(ptr addrspace(3) %ptr, i32 42, i32 %var, i32 0, i1 false)
-  %result0 = call i32 @llvm.amdgcn.atomic.dec.i32.p3(ptr addrspace(3) %ptr, i32 42, i32 %var, i32 0, i1 false)
-
-   ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i32 %var
-  ; CHECK-NEXT: %result1 = call i32 @llvm.amdgcn.atomic.dec.i32.p3(ptr addrspace(3) %ptr, i32 42, i32 0, i32 %var, i1 false)
-  %result1 = call i32 @llvm.amdgcn.atomic.dec.i32.p3(ptr addrspace(3) %ptr, i32 42, i32 0, i32 %var, i1 false)
-
-  ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i1 %bool
-  ; CHECK-NEXT: %result2 = call i32 @llvm.amdgcn.atomic.dec.i32.p3(ptr addrspace(3) %ptr, i32 42, i32 0, i32 0, i1 %bool)
-  %result2 = call i32 @llvm.amdgcn.atomic.dec.i32.p3(ptr addrspace(3) %ptr, i32 42, i32 0, i32 0, i1 %bool)
-  ret void
-}
-
 declare { float, i1 } @llvm.amdgcn.div.scale.f32(float, float, i1)
 define amdgpu_kernel void @test_div_scale_f32_val_undef_undef(ptr addrspace(1) %out) {
   ; CHECK: immarg operand has non-immediate parameter

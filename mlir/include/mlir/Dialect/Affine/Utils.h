@@ -15,16 +15,14 @@
 
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/IR/OpDefinition.h"
 #include <optional>
 
 namespace mlir {
-
-class AffineForOp;
-class AffineIfOp;
-class AffineParallelOp;
 class DominanceInfo;
 class Operation;
 class PostDominanceInfo;
+class ImplicitLocOpBuilder;
 
 namespace func {
 class FuncOp;
@@ -36,6 +34,11 @@ class AllocOp;
 
 struct LogicalResult;
 
+namespace affine {
+class AffineForOp;
+class AffineIfOp;
+class AffineParallelOp;
+
 using ReductionLoopMap = DenseMap<Operation *, SmallVector<LoopReduction, 2>>;
 
 /// Replaces a parallel affine.for op with a 1-d affine.parallel op. `forOp`'s
@@ -43,10 +46,11 @@ using ReductionLoopMap = DenseMap<Operation *, SmallVector<LoopReduction, 2>>;
 /// (mlir::isLoopParallel can be used to detect a parallel affine.for op.) The
 /// reductions specified in `parallelReductions` are also parallelized.
 /// Parallelization will fail in the presence of loop iteration arguments that
-/// are not listed in `parallelReductions`.
-LogicalResult
-affineParallelize(AffineForOp forOp,
-                  ArrayRef<LoopReduction> parallelReductions = {});
+/// are not listed in `parallelReductions`. `resOp` if non-null is set to the
+/// newly created affine.parallel op.
+LogicalResult affineParallelize(AffineForOp forOp,
+                                ArrayRef<LoopReduction> parallelReductions = {},
+                                AffineParallelOp *resOp = nullptr);
 
 /// Hoists out affine.if/else to as high as possible, i.e., past all invariant
 /// affine.fors/parallel's. Returns success if any hoisting happened; folded` is
@@ -247,20 +251,7 @@ LogicalResult normalizeMemRef(memref::AllocOp *op);
 /// transformed to an identity map with a new shape being computed for the
 /// normalized memref type and returns it. The old memref type is simplify
 /// returned if the normalization failed.
-MemRefType normalizeMemRefType(MemRefType memrefType,
-                               unsigned numSymbolicOperands);
-
-/// Creates and inserts into 'builder' a new AffineApplyOp, with the number of
-/// its results equal to the number of operands, as a composition
-/// of all other AffineApplyOps reachable from input parameter 'operands'. If
-/// different operands were drawing results from multiple affine apply ops,
-/// these will also be collected into a single (multi-result) affine apply op.
-/// The final results of the composed AffineApplyOp are returned in output
-/// parameter 'results'. Returns the affine apply op created.
-Operation *createComposedAffineApplyOp(OpBuilder &builder, Location loc,
-                                       ArrayRef<Value> operands,
-                                       ArrayRef<Operation *> affineApplyOps,
-                                       SmallVectorImpl<Value> *results);
+MemRefType normalizeMemRefType(MemRefType memrefType);
 
 /// Given an operation, inserts one or more single result affine apply
 /// operations, results of which are exclusively used by this operation.
@@ -320,6 +311,11 @@ DivModValue getDivMod(OpBuilder &b, Location loc, Value lhs, Value rhs);
 FailureOr<SmallVector<Value>> delinearizeIndex(OpBuilder &b, Location loc,
                                                Value linearIndex,
                                                ArrayRef<Value> basis);
+// Generate IR that extracts the linear index from a multi-index according to
+// a basis/shape.
+OpFoldResult linearizeIndex(ArrayRef<OpFoldResult> multiIndex,
+                            ArrayRef<OpFoldResult> basis,
+                            ImplicitLocOpBuilder &builder);
 
 /// Ensure that all operations that could be executed after `start`
 /// (noninclusive) and prior to `memOp` (e.g. on a control flow/op path
@@ -384,6 +380,7 @@ private:
   Location loc;
 };
 
+} // namespace affine
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_UTILS_H

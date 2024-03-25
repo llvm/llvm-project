@@ -8,6 +8,7 @@
 
 #include "Standalone/StandaloneDialect.h"
 #include "Standalone/StandaloneOps.h"
+#include "Standalone/StandaloneTypes.h"
 
 using namespace mlir;
 using namespace mlir::standalone;
@@ -23,4 +24,5 @@ void StandaloneDialect::initialize() {
 #define GET_OP_LIST
 #include "Standalone/StandaloneOps.cpp.inc"
       >();
+  registerTypes();
 }

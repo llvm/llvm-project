@@ -132,8 +132,8 @@ body: |
     ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV3]], [[UMIN1]]
     ; GFX6-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[OR]](s32)
     ; GFX6-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C]], [[UMIN]]
-    ; GFX6-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[SITOFP]](s32), [[SUB1]](s32)
-    ; GFX6-NEXT: $vgpr0 = COPY [[INT1]](s32)
+    ; GFX6-NEXT: [[FLDEXP:%[0-9]+]]:_(s32) = G_FLDEXP [[SITOFP]], [[SUB1]](s32)
+    ; GFX6-NEXT: $vgpr0 = COPY [[FLDEXP]](s32)
     ; GFX8-LABEL: name: test_sitofp_s64_to_s32
     ; GFX8: liveins: $vgpr0_vgpr1
     ; GFX8-NEXT: {{  $}}
@@ -154,8 +154,8 @@ body: |
     ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV3]], [[UMIN1]]
     ; GFX8-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[OR]](s32)
     ; GFX8-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C]], [[UMIN]]
-    ; GFX8-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[SITOFP]](s32), [[SUB1]](s32)
-    ; GFX8-NEXT: $vgpr0 = COPY [[INT1]](s32)
+    ; GFX8-NEXT: [[FLDEXP:%[0-9]+]]:_(s32) = G_FLDEXP [[SITOFP]], [[SUB1]](s32)
+    ; GFX8-NEXT: $vgpr0 = COPY [[FLDEXP]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_SITOFP %0
     $vgpr0 = COPY %1
@@ -175,8 +175,8 @@ body: |
     ; GFX6-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; GFX6-NEXT: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[UV1]](s32)
     ; GFX6-NEXT: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[UV]](s32)
-    ; GFX6-NEXT: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[SITOFP]](s64), [[C]](s32)
-    ; GFX6-NEXT: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[INT]], [[UITOFP]]
+    ; GFX6-NEXT: [[FLDEXP:%[0-9]+]]:_(s64) = G_FLDEXP [[SITOFP]], [[C]](s32)
+    ; GFX6-NEXT: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[FLDEXP]], [[UITOFP]]
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[FADD]](s64)
     ; GFX8-LABEL: name: test_sitofp_s64_to_s64
     ; GFX8: liveins: $vgpr0_vgpr1
@@ -186,8 +186,8 @@ body: |
     ; GFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; GFX8-NEXT: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[UV1]](s32)
     ; GFX8-NEXT: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[UV]](s32)
-    ; GFX8-NEXT: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[SITOFP]](s64), [[C]](s32)
-    ; GFX8-NEXT: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[INT]], [[UITOFP]]
+    ; GFX8-NEXT: [[FLDEXP:%[0-9]+]]:_(s64) = G_FLDEXP [[SITOFP]], [[C]](s32)
+    ; GFX8-NEXT: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[FLDEXP]], [[UITOFP]]
     ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[FADD]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_SITOFP %0
@@ -476,8 +476,8 @@ body: |
     ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV3]], [[UMIN1]]
     ; GFX6-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[OR]](s32)
     ; GFX6-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C]], [[UMIN]]
-    ; GFX6-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[SITOFP]](s32), [[SUB1]](s32)
-    ; GFX6-NEXT: $vgpr0 = COPY [[INT1]](s32)
+    ; GFX6-NEXT: [[FLDEXP:%[0-9]+]]:_(s32) = G_FLDEXP [[SITOFP]], [[SUB1]](s32)
+    ; GFX6-NEXT: $vgpr0 = COPY [[FLDEXP]](s32)
     ; GFX8-LABEL: name: test_sitofp_s33_to_s32
     ; GFX8: liveins: $vgpr0_vgpr1
     ; GFX8-NEXT: {{  $}}
@@ -499,8 +499,8 @@ body: |
     ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV3]], [[UMIN1]]
     ; GFX8-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[OR]](s32)
     ; GFX8-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C]], [[UMIN]]
-    ; GFX8-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[SITOFP]](s32), [[SUB1]](s32)
-    ; GFX8-NEXT: $vgpr0 = COPY [[INT1]](s32)
+    ; GFX8-NEXT: [[FLDEXP:%[0-9]+]]:_(s32) = G_FLDEXP [[SITOFP]], [[SUB1]](s32)
+    ; GFX8-NEXT: $vgpr0 = COPY [[FLDEXP]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s33) = G_TRUNC %0
     %2:_(s32) = G_SITOFP %1
@@ -533,8 +533,8 @@ body: |
     ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV3]], [[UMIN1]]
     ; GFX6-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[OR]](s32)
     ; GFX6-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C]], [[UMIN]]
-    ; GFX6-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[SITOFP]](s32), [[SUB1]](s32)
-    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[INT1]](s32)
+    ; GFX6-NEXT: [[FLDEXP:%[0-9]+]]:_(s32) = G_FLDEXP [[SITOFP]], [[SUB1]](s32)
+    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FLDEXP]](s32)
     ; GFX6-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
     ; GFX6-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX8-LABEL: name: test_sitofp_s64_to_s16
@@ -557,8 +557,8 @@ body: |
     ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV3]], [[UMIN1]]
     ; GFX8-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[OR]](s32)
     ; GFX8-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C]], [[UMIN]]
-    ; GFX8-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[SITOFP]](s32), [[SUB1]](s32)
-    ; GFX8-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[INT1]](s32)
+    ; GFX8-NEXT: [[FLDEXP:%[0-9]+]]:_(s32) = G_FLDEXP [[SITOFP]], [[SUB1]](s32)
+    ; GFX8-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FLDEXP]](s32)
     ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
     ; GFX8-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
@@ -594,14 +594,14 @@ body: |
     ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV5]], [[UMIN1]]
     ; GFX6-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[OR]](s32)
     ; GFX6-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C]], [[UMIN]]
-    ; GFX6-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[SITOFP]](s32), [[SUB1]](s32)
-    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[INT1]](s32)
+    ; GFX6-NEXT: [[FLDEXP:%[0-9]+]]:_(s32) = G_FLDEXP [[SITOFP]], [[SUB1]](s32)
+    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FLDEXP]](s32)
     ; GFX6-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV1]](s64)
     ; GFX6-NEXT: [[XOR1:%[0-9]+]]:_(s32) = G_XOR [[UV6]], [[UV7]]
     ; GFX6-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[XOR1]], [[C2]](s32)
     ; GFX6-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[C]], [[ASHR1]]
-    ; GFX6-NEXT: [[INT2:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sffbh), [[UV7]](s32)
-    ; GFX6-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB [[INT2]], [[C1]]
+    ; GFX6-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sffbh), [[UV7]](s32)
+    ; GFX6-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB [[INT1]], [[C1]]
     ; GFX6-NEXT: [[UMIN2:%[0-9]+]]:_(s32) = G_UMIN [[SUB2]], [[ADD1]]
     ; GFX6-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[UV1]], [[UMIN2]](s32)
     ; GFX6-NEXT: [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SHL1]](s64)
@@ -609,8 +609,8 @@ body: |
     ; GFX6-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[UV9]], [[UMIN3]]
     ; GFX6-NEXT: [[SITOFP1:%[0-9]+]]:_(s32) = G_SITOFP [[OR1]](s32)
     ; GFX6-NEXT: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[C]], [[UMIN2]]
-    ; GFX6-NEXT: [[INT3:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[SITOFP1]](s32), [[SUB3]](s32)
-    ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[INT3]](s32)
+    ; GFX6-NEXT: [[FLDEXP1:%[0-9]+]]:_(s32) = G_FLDEXP [[SITOFP1]], [[SUB3]](s32)
+    ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FLDEXP1]](s32)
     ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC]](s16)
     ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
     ; GFX6-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
@@ -639,14 +639,14 @@ body: |
     ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV5]], [[UMIN1]]
     ; GFX8-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[OR]](s32)
     ; GFX8-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C]], [[UMIN]]
-    ; GFX8-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[SITOFP]](s32), [[SUB1]](s32)
-    ; GFX8-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[INT1]](s32)
+    ; GFX8-NEXT: [[FLDEXP:%[0-9]+]]:_(s32) = G_FLDEXP [[SITOFP]], [[SUB1]](s32)
+    ; GFX8-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FLDEXP]](s32)
     ; GFX8-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV1]](s64)
     ; GFX8-NEXT: [[XOR1:%[0-9]+]]:_(s32) = G_XOR [[UV6]], [[UV7]]
     ; GFX8-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[XOR1]], [[C2]](s32)
     ; GFX8-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[C]], [[ASHR1]]
-    ; GFX8-NEXT: [[INT2:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sffbh), [[UV7]](s32)
-    ; GFX8-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB [[INT2]], [[C1]]
+    ; GFX8-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sffbh), [[UV7]](s32)
+    ; GFX8-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB [[INT1]], [[C1]]
     ; GFX8-NEXT: [[UMIN2:%[0-9]+]]:_(s32) = G_UMIN [[SUB2]], [[ADD1]]
     ; GFX8-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[UV1]], [[UMIN2]](s32)
     ; GFX8-NEXT: [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SHL1]](s64)
@@ -654,8 +654,8 @@ body: |
     ; GFX8-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[UV9]], [[UMIN3]]
     ; GFX8-NEXT: [[SITOFP1:%[0-9]+]]:_(s32) = G_SITOFP [[OR1]](s32)
     ; GFX8-NEXT: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[C]], [[UMIN2]]
-    ; GFX8-NEXT: [[INT3:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[SITOFP1]](s32), [[SUB3]](s32)
-    ; GFX8-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[INT3]](s32)
+    ; GFX8-NEXT: [[FLDEXP1:%[0-9]+]]:_(s32) = G_FLDEXP [[SITOFP1]], [[SUB3]](s32)
+    ; GFX8-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FLDEXP1]](s32)
     ; GFX8-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC]](s16)
     ; GFX8-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
     ; GFX8-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 16

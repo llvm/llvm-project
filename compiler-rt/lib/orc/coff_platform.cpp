@@ -509,7 +509,6 @@ Error COFFPlatformRuntimeState::deregisterObjectSections(
               << HeaderAddr.getValue();
     return make_error<StringError>(ErrStream.str());
   }
-  auto &JDState = I->second;
   for (auto &KV : Secs) {
     if (auto Err = deregisterBlockRange(HeaderAddr, KV.second))
       return Err;
@@ -595,19 +594,19 @@ void *COFFPlatformRuntimeState::findJITDylibBaseByPC(uint64_t PC) {
   return Range.Header;
 }
 
-ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
 __orc_rt_coff_platform_bootstrap(char *ArgData, size_t ArgSize) {
   COFFPlatformRuntimeState::initialize();
   return WrapperFunctionResult().release();
 }
 
-ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
 __orc_rt_coff_platform_shutdown(char *ArgData, size_t ArgSize) {
   COFFPlatformRuntimeState::destroy();
   return WrapperFunctionResult().release();
 }
 
-ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
 __orc_rt_coff_register_jitdylib(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSString, SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
@@ -618,7 +617,7 @@ __orc_rt_coff_register_jitdylib(char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
 __orc_rt_coff_deregister_jitdylib(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
@@ -629,7 +628,7 @@ __orc_rt_coff_deregister_jitdylib(char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
 __orc_rt_coff_register_object_sections(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr, SPSCOFFObjectSectionsMap,
                                   bool)>::
@@ -644,7 +643,7 @@ __orc_rt_coff_register_object_sections(char *ArgData, size_t ArgSize) {
           .release();
 }
 
-ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
 __orc_rt_coff_deregister_object_sections(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr, SPSCOFFObjectSectionsMap)>::
       handle(ArgData, ArgSize,
@@ -687,7 +686,14 @@ struct ThrowInfo {
 
 ORC_RT_INTERFACE void __stdcall __orc_rt_coff_cxx_throw_exception(
     void *pExceptionObject, ThrowInfo *pThrowInfo) {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmultichar"
+#endif
   constexpr uint32_t EH_EXCEPTION_NUMBER = 'msc' | 0xE0000000;
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   constexpr uint32_t EH_MAGIC_NUMBER1 = 0x19930520;
   auto BaseAddr = COFFPlatformRuntimeState::get().findJITDylibBaseByPC(
       reinterpret_cast<uint64_t>(pThrowInfo));

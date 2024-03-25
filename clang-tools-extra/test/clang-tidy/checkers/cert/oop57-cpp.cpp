@@ -1,8 +1,8 @@
 // RUN: %check_clang_tidy %s cert-oop57-cpp %t -- \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: cert-oop57-cpp.MemSetNames, value: mymemset}, \
-// RUN:  {key: cert-oop57-cpp.MemCpyNames, value: mymemcpy}, \
-// RUN:  {key: cert-oop57-cpp.MemCmpNames, value: mymemcmp}]}' \
+// RUN:  {cert-oop57-cpp.MemSetNames: mymemset, \
+// RUN:  cert-oop57-cpp.MemCpyNames: mymemcpy, \
+// RUN:  cert-oop57-cpp.MemCmpNames: mymemcmp}}' \
 // RUN: --
 
 void mymemset(void *, unsigned char, decltype(sizeof(int)));

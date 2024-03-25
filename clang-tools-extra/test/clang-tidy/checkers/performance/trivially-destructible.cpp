@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s performance-trivially-destructible %t
 // RUN: grep -Ev "// *[A-Z-]+:" %s > %t.cpp
-// RUN: clang-tidy %t.cpp -checks='-*,performance-trivially-destructible' -fix
-// RUN: clang-tidy %t.cpp -checks='-*,performance-trivially-destructible' -warnings-as-errors='-*,performance-trivially-destructible'
+// RUN: clang-tidy %t.cpp -checks='-*,performance-trivially-destructible' -fix --
+// RUN: clang-tidy %t.cpp -checks='-*,performance-trivially-destructible' -warnings-as-errors='-*,performance-trivially-destructible' --
 
 struct TriviallyDestructible1 {
   int a;

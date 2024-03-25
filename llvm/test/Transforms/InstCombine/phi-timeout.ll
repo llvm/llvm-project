@@ -5,12 +5,12 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 ; We are really checking that this doesn't loop forever. We would never
 ; actually get to the checks here if it did.
 
-define void @timeout(ptr nocapture readonly %cinfo) {
+define void @timeout(ptr nocapture readonly %cinfo, ptr %ptr) {
 ; CHECK-LABEL: @timeout(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i16, ptr [[CINFO:%.*]], i32 2
+; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i8, ptr [[CINFO:%.*]], i32 4
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[ARRAYIDX15]], align 2
 ; CHECK-NEXT:    [[CMP17:%.*]] = icmp eq i16 [[L]], 0
 ; CHECK-NEXT:    [[EXTRACT_T1:%.*]] = trunc i16 [[L]] to i8
@@ -22,7 +22,7 @@ define void @timeout(ptr nocapture readonly %cinfo) {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[P_OFF0:%.*]] = phi i8 [ [[EXTRACT_T]], [[IF_THEN]] ], [ [[EXTRACT_T1]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[P_OFF0]], -1
-; CHECK-NEXT:    store i8 [[SUB]], ptr undef, align 1
+; CHECK-NEXT:    store i8 [[SUB]], ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br label [[FOR_BODY]]
 ;
 entry:
@@ -42,6 +42,6 @@ if.end:
   %p = phi i16 [ %.pre, %if.then ], [ %l, %for.body ]
   %conv19 = trunc i16 %p to i8
   %sub = add i8 %conv19, -1
-  store i8 %sub, ptr undef, align 1
+  store i8 %sub, ptr %ptr, align 1
   br label %for.body
 }

@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -std=c++11 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
 
 // Check that IR gen doesn't try to do an lvalue-to-rvalue conversion
-// on a volatile reference result.  rdar://problem/8338198
+// on a volatile reference result.
 namespace test0 {
   struct A {
     A(const A& t);

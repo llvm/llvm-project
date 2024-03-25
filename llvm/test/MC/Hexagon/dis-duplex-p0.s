@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=hexagon -filetype=obj -o - %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
+// RUN: llvm-mc -triple=hexagon -filetype=obj -o - %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 { r7 = #-1
   r6 = #-1 }

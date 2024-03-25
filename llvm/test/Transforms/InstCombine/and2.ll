@@ -34,8 +34,8 @@ define i32 @test3(i32 %X, i32 %Y) {
 define i1 @test7(i32 %i, i1 %b) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[I:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[AND2]]
 ;
   %cmp1 = icmp slt i32 %i, 1
   %cmp2 = icmp sgt i32 %i, -1
@@ -47,8 +47,8 @@ define i1 @test7(i32 %i, i1 %b) {
 define i1 @test7_logical(i32 %i, i1 %b) {
 ; CHECK-LABEL: @test7_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[I:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 [[B:%.*]], i1 false
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[TMP1]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    ret i1 [[AND2]]
 ;
   %cmp1 = icmp slt i32 %i, 1
   %cmp2 = icmp sgt i32 %i, -1
@@ -60,8 +60,8 @@ define i1 @test7_logical(i32 %i, i1 %b) {
 define i1 @test8(i32 %i) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[I:%.*]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 13
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[TMP1]], 13
+; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = icmp ne i32 %i, 0
   %cmp2 = icmp ult i32 %i, 14
@@ -72,8 +72,8 @@ define i1 @test8(i32 %i) {
 define i1 @test8_logical(i32 %i) {
 ; CHECK-LABEL: @test8_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[I:%.*]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 13
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[TMP1]], 13
+; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = icmp ne i32 %i, 0
   %cmp2 = icmp ult i32 %i, 14
@@ -84,8 +84,8 @@ define i1 @test8_logical(i32 %i) {
 define <2 x i1> @test8vec(<2 x i32> %i) {
 ; CHECK-LABEL: @test8vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[I:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 13, i32 13>
-; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 13, i32 13>
+; CHECK-NEXT:    ret <2 x i1> [[COND]]
 ;
   %cmp1 = icmp ne <2 x i32> %i, zeroinitializer
   %cmp2 = icmp ult <2 x i32> %i, <i32 14, i32 14>

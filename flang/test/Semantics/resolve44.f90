@@ -11,7 +11,7 @@ program main
     type(recursive1), pointer :: ok1
     type(recursive1), allocatable :: ok2
     !ERROR: Recursive use of the derived type requires POINTER or ALLOCATABLE
-    !ERROR: CLASS entity 'bad2' must be a dummy argument or have ALLOCATABLE or POINTER attribute
+    !ERROR: CLASS entity 'bad2' must be a dummy argument, allocatable, or object pointer
     class(recursive1) :: bad2
     class(recursive1), pointer :: ok3
     class(recursive1), allocatable :: ok4
@@ -24,7 +24,7 @@ program main
     type(recursive2(kind,len)), pointer :: ok1
     type(recursive2(kind,len)), allocatable :: ok2
     !ERROR: Recursive use of the derived type requires POINTER or ALLOCATABLE
-    !ERROR: CLASS entity 'bad2' must be a dummy argument or have ALLOCATABLE or POINTER attribute
+    !ERROR: CLASS entity 'bad2' must be a dummy argument, allocatable, or object pointer
     class(recursive2(kind,len)) :: bad2
     class(recursive2(kind,len)), pointer :: ok3
     class(recursive2(kind,len)), allocatable :: ok4
@@ -37,7 +37,7 @@ program main
     type(recursive3), pointer :: ok1
     type(recursive3), allocatable :: ok2
     !ERROR: Recursive use of the derived type requires POINTER or ALLOCATABLE
-    !ERROR: CLASS entity 'bad2' must be a dummy argument or have ALLOCATABLE or POINTER attribute
+    !ERROR: CLASS entity 'bad2' must be a dummy argument, allocatable, or object pointer
     class(recursive3) :: bad2
     class(recursive3), pointer :: ok3
     class(recursive3), allocatable :: ok4

@@ -4,7 +4,6 @@
 // RUN: %clang_cc1 -x objective-c++ -Wno-return-type -fblocks -fms-extensions -rewrite-objc %s -o %t-modern-rw.cpp
 // RUN: %clang_cc1 -fsyntax-only -Wno-address-of-temporary -D"id=void*" -D"SEL=void*" -D"__declspec(X)=" %t-modern-rw.cpp
 // grep "static void __FUNC_block_copy_" %t-modern-rw.cpp | count 2
-// rdar://8499592
 
 typedef unsigned long size_t;
 void Outer(void (^bk)());

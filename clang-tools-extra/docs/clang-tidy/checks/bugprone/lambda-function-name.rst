@@ -25,3 +25,11 @@ Likely intended output::
 
   Called from FancyFunction
   Now called from FancyFunction
+
+Options
+-------
+
+.. option::  IgnoreMacros
+
+  The value `true` specifies that attempting to get the name of a function from
+  within a macro should not be diagnosed. The default value is `false`.

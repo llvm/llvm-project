@@ -11,9 +11,8 @@ import json
 
 
 class MTCSimpleTestCase(TestBase):
-
     @skipUnlessDarwin
-    @skipIf(compiler="clang", compiler_version=['<', '9.0'])
+    @skipIf(compiler="clang", compiler_version=["<", "9.0"])
     def test(self):
         self.mtc_dylib_path = findMainThreadCheckerDylib()
         if self.mtc_dylib_path == "":
@@ -22,8 +21,8 @@ class MTCSimpleTestCase(TestBase):
         self.build()
         self.mtc_tests()
 
-    @skipIf(archs=['i386'])
-    @skipIf(compiler="clang", compiler_version=['<', '9.0'])
+    @skipIf(archs=["i386"])
+    @skipIf(compiler="clang", compiler_version=["<", "9.0"])
     def mtc_tests(self):
         self.assertNotEqual(self.mtc_dylib_path, "")
 
@@ -40,9 +39,14 @@ class MTCSimpleTestCase(TestBase):
 
         view = "NSView" if lldbplatformutil.getPlatform() == "macosx" else "UIView"
 
-        self.expect("thread info",
-                    substrs=['stop reason = -[' + view +
-                             ' superview] must be used from main thread only'])
+        self.expect(
+            "thread info",
+            substrs=[
+                "stop reason = -["
+                + view
+                + " superview] must be used from main thread only"
+            ],
+        )
 
         self.expect(
             "thread info -s",
@@ -51,14 +55,18 @@ class MTCSimpleTestCase(TestBase):
                 "class_name",
                 "description",
                 "instrumentation_class",
-                "selector"
-            ])
+                "selector",
+            ],
+        )
         self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonInstrumentation)
-        output_lines = self.res.GetOutput().split('\n')
-        json_line = '\n'.join(output_lines[2:])
+        output_lines = self.res.GetOutput().split("\n")
+        json_line = "\n".join(output_lines[2:])
         data = json.loads(json_line)
         self.assertEqual(data["instrumentation_class"], "MainThreadChecker")
         self.assertEqual(data["api_name"], "-[" + view + " superview]")
         self.assertEqual(data["class_name"], view)
         self.assertEqual(data["selector"], "superview")
-        self.assertEqual(data["description"], "-[" + view + " superview] must be used from main thread only")
+        self.assertEqual(
+            data["description"],
+            "-[" + view + " superview] must be used from main thread only",
+        )

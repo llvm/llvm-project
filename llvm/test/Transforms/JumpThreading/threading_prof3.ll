@@ -26,4 +26,4 @@ bb9:
   ret void
 }
 
-;CHECK: ![[PROF]] = !{!"branch_weights", i32 0, i32 0}
+;CHECK: ![[PROF]] = !{!"branch_weights", i32 -2147483648, i32 0}

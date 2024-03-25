@@ -256,4 +256,3 @@ define i64 @neg_abs64_multiuse(i64 %x, ptr %y) {
   %neg = sub nsw i64 0, %abs
   ret i64 %neg
 }
-

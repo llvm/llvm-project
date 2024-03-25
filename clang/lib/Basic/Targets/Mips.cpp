@@ -149,6 +149,10 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("_MIPS_FPSET", Twine(32));
   else
     Builder.defineMacro("_MIPS_FPSET", Twine(16));
+  if (NoOddSpreg)
+    Builder.defineMacro("_MIPS_SPFPSET", Twine(16));
+  else
+    Builder.defineMacro("_MIPS_SPFPSET", Twine(32));
 
   if (IsMips16)
     Builder.defineMacro("__mips16", Twine(1));
@@ -192,7 +196,7 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
   else
     Builder.defineMacro("_MIPS_ARCH_" + StringRef(CPU).upper());
 
-  if (StringRef(CPU).startswith("octeon"))
+  if (StringRef(CPU).starts_with("octeon"))
     Builder.defineMacro("__OCTEON__");
 
   if (CPU != "mips1") {
@@ -238,34 +242,10 @@ bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
     Diags.Report(diag::err_target_unsupported_cpu_for_micromips) << CPU;
     return false;
   }
-  // FIXME: It's valid to use O32 on a 64-bit CPU but the backend can't handle
-  //        this yet. It's better to fail here than on the backend assertion.
-  if (processorSupportsGPR64() && ABI == "o32") {
-    Diags.Report(diag::err_target_unsupported_abi) << ABI << CPU;
-    return false;
-  }
 
   // 64-bit ABI's require 64-bit CPU's.
   if (!processorSupportsGPR64() && (ABI == "n32" || ABI == "n64")) {
     Diags.Report(diag::err_target_unsupported_abi) << ABI << CPU;
-    return false;
-  }
-
-  // FIXME: It's valid to use O32 on a mips64/mips64el triple but the backend
-  //        can't handle this yet. It's better to fail here than on the
-  //        backend assertion.
-  if (getTriple().isMIPS64() && ABI == "o32") {
-    Diags.Report(diag::err_target_unsupported_abi_for_triple)
-        << ABI << getTriple().str();
-    return false;
-  }
-
-  // FIXME: It's valid to use N32/N64 on a mips/mipsel triple but the backend
-  //        can't handle this yet. It's better to fail here than on the
-  //        backend assertion.
-  if (getTriple().isMIPS32() && (ABI == "n32" || ABI == "n64")) {
-    Diags.Report(diag::err_target_unsupported_abi_for_triple)
-        << ABI << getTriple().str();
     return false;
   }
 

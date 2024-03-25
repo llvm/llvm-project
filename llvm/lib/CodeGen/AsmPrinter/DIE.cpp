@@ -173,9 +173,7 @@ void DIEAbbrevSet::Emit(const AsmPrinter *AP, MCSection *Section) const {
 // DIE Implementation
 //===----------------------------------------------------------------------===//
 
-DIE *DIE::getParent() const {
-  return Owner.dyn_cast<DIE*>();
-}
+DIE *DIE::getParent() const { return dyn_cast_if_present<DIE *>(Owner); }
 
 DIEAbbrev DIE::generateAbbrev() const {
   DIEAbbrev Abbrev(Tag, hasChildren());
@@ -209,7 +207,7 @@ const DIE *DIE::getUnitDie() const {
 DIEUnit *DIE::getUnit() const {
   const DIE *UnitDie = getUnitDie();
   if (UnitDie)
-    return UnitDie->Owner.dyn_cast<DIEUnit*>();
+    return dyn_cast_if_present<DIEUnit *>(UnitDie->Owner);
   return nullptr;
 }
 
@@ -385,6 +383,7 @@ void DIEInteger::emitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
   case dwarf::DW_FORM_strx2:
   case dwarf::DW_FORM_addrx2:
   case dwarf::DW_FORM_strx3:
+  case dwarf::DW_FORM_addrx3:
   case dwarf::DW_FORM_strp:
   case dwarf::DW_FORM_ref4:
   case dwarf::DW_FORM_data4:

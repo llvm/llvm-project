@@ -92,7 +92,7 @@ let NumMicroOps = 0 in {
   def : WriteRes<VecMul,  [Z14_VecUnit]>;
   def : WriteRes<VecStr,  [Z14_VecUnit]>;
   def : WriteRes<VecXsPm, [Z14_VecUnit]>;
-  foreach Num = 2-5 in { let ResourceCycles = [Num] in {
+  foreach Num = 2-5 in { let ReleaseAtCycles = [Num] in {
     def : WriteRes<!cast<SchedWrite>("FXa"#Num), [Z14_FXaUnit]>;
     def : WriteRes<!cast<SchedWrite>("FXb"#Num), [Z14_FXbUnit]>;
     def : WriteRes<!cast<SchedWrite>("LSU"#Num), [Z14_LSUnit]>;
@@ -104,7 +104,7 @@ let NumMicroOps = 0 in {
     def : WriteRes<!cast<SchedWrite>("VecXsPm"#Num), [Z14_VecUnit]>;
   }}
 
-  def : WriteRes<VecFPd,  [Z14_VecFPdUnit]> { let ResourceCycles = [30]; }
+  def : WriteRes<VecFPd,  [Z14_VecFPdUnit]> { let ReleaseAtCycles = [30]; }
 
   def : WriteRes<VBU,     [Z14_VBUnit]>; // Virtual Branching Unit
 }
@@ -804,9 +804,7 @@ def : InstRW<[WLat2, FXb2, GroupAlone], (instregex "LXR$")>;
 
 // Load and Test
 def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "LT(E|D)BR$")>;
-def : InstRW<[WLat3, VecXsPm, NormalGr], (instregex "LT(E|D)BRCompare$")>;
-def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone],
-             (instregex "LTXBR(Compare)?$")>;
+def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone], (instregex "LTXBR$")>;
 
 // Copy sign
 def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "CPSDR(d|s)(d|s)$")>;

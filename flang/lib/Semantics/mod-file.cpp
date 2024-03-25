@@ -41,13 +41,16 @@ struct ModHeader {
   static constexpr const char magic[magicLen + 1]{"!mod$ v1 sum:"};
   static constexpr char terminator{'\n'};
   static constexpr int len{magicLen + 1 + sumLen};
+  static constexpr int needLen{7};
+  static constexpr const char need[needLen + 1]{"!need$ "};
 };
 
 static std::optional<SourceName> GetSubmoduleParent(const parser::Program &);
-static void CollectSymbols(const Scope &, SymbolVector &, SymbolVector &);
+static void CollectSymbols(const Scope &, SymbolVector &, SymbolVector &,
+    std::map<const Symbol *, SourceName> &, UnorderedSymbolSet &);
 static void PutPassName(llvm::raw_ostream &, const std::optional<SourceName> &);
 static void PutInit(llvm::raw_ostream &, const Symbol &, const MaybeExpr &,
-    const parser::Expr *);
+    const parser::Expr *, const std::map<const Symbol *, SourceName> &);
 static void PutInit(llvm::raw_ostream &, const MaybeIntExpr &);
 static void PutBound(llvm::raw_ostream &, const Bound &);
 static void PutShapeSpec(llvm::raw_ostream &, const ShapeSpec &);
@@ -57,11 +60,12 @@ static void PutShape(
 static llvm::raw_ostream &PutAttr(llvm::raw_ostream &, Attr);
 static llvm::raw_ostream &PutType(llvm::raw_ostream &, const DeclTypeSpec &);
 static llvm::raw_ostream &PutLower(llvm::raw_ostream &, std::string_view);
-static std::error_code WriteFile(
-    const std::string &, const std::string &, bool = true);
+static std::error_code WriteFile(const std::string &, const std::string &,
+    ModuleCheckSumType &, bool debug = true);
 static bool FileContentsMatch(
     const std::string &, const std::string &, const std::string &);
-static std::string CheckSum(const std::string_view &);
+static ModuleCheckSumType ComputeCheckSum(const std::string_view &);
+static std::string CheckSumString(ModuleCheckSumType);
 
 // Collect symbols needed for a subprogram interface
 class SubprogramSymbolCollector {
@@ -128,17 +132,23 @@ static std::string ModFileName(const SourceName &name,
 
 // Write the module file for symbol, which must be a module or submodule.
 void ModFileWriter::Write(const Symbol &symbol) {
-  auto *ancestor{symbol.get<ModuleDetails>().ancestor()};
+  auto &module{symbol.get<ModuleDetails>()};
+  if (module.moduleFileHash()) {
+    return; // already written
+  }
+  auto *ancestor{module.ancestor()};
   isSubmodule_ = ancestor != nullptr;
   auto ancestorName{ancestor ? ancestor->GetName().value().ToString() : ""s};
   auto path{context_.moduleDirectory() + '/' +
       ModFileName(symbol.name(), ancestorName, context_.moduleFileSuffix())};
   PutSymbols(DEREF(symbol.scope()));
-  if (std::error_code error{
-          WriteFile(path, GetAsString(symbol), context_.debugModuleWriter())}) {
+  ModuleCheckSumType checkSum;
+  if (std::error_code error{WriteFile(
+          path, GetAsString(symbol), checkSum, context_.debugModuleWriter())}) {
     context_.Say(
         symbol.name(), "Error writing %s: %s"_err_en_US, path, error.message());
   }
+  const_cast<ModuleDetails &>(module).set_moduleFileHash(checkSum);
 }
 
 // Return the entire body of the module file
@@ -146,6 +156,8 @@ void ModFileWriter::Write(const Symbol &symbol) {
 std::string ModFileWriter::GetAsString(const Symbol &symbol) {
   std::string buf;
   llvm::raw_string_ostream all{buf};
+  all << needs_.str();
+  needs_.str().clear();
   auto &details{symbol.get<ModuleDetails>()};
   if (!details.isSubmodule()) {
     all << "module " << symbol.name();
@@ -173,11 +185,101 @@ std::string ModFileWriter::GetAsString(const Symbol &symbol) {
   return all.str();
 }
 
+// Collect symbols from initializations that are being referenced directly
+// from other modules; they may require new USE associations.
+static void HarvestInitializerSymbols(
+    SourceOrderedSymbolSet &set, const Scope &scope) {
+  for (const auto &[_, symbol] : scope) {
+    if (symbol->has<DerivedTypeDetails>()) {
+      if (symbol->scope()) {
+        HarvestInitializerSymbols(set, *symbol->scope());
+      }
+    } else if (const auto &generic{symbol->detailsIf<GenericDetails>()};
+               generic && generic->derivedType()) {
+      const Symbol &dtSym{*generic->derivedType()};
+      if (dtSym.has<DerivedTypeDetails>()) {
+        if (dtSym.scope()) {
+          HarvestInitializerSymbols(set, *dtSym.scope());
+        }
+      } else {
+        CHECK(dtSym.has<UseErrorDetails>());
+      }
+    } else if (IsNamedConstant(*symbol) || scope.IsDerivedType()) {
+      if (const auto *object{symbol->detailsIf<ObjectEntityDetails>()}) {
+        if (object->init()) {
+          for (SymbolRef ref : evaluate::CollectSymbols(*object->init())) {
+            set.emplace(*ref);
+          }
+        }
+      } else if (const auto *proc{symbol->detailsIf<ProcEntityDetails>()}) {
+        if (proc->init() && *proc->init()) {
+          set.emplace(**proc->init());
+        }
+      }
+    }
+  }
+}
+
+void ModFileWriter::PrepareRenamings(const Scope &scope) {
+  SourceOrderedSymbolSet symbolsInInits;
+  HarvestInitializerSymbols(symbolsInInits, scope);
+  for (SymbolRef s : symbolsInInits) {
+    const Scope *sMod{FindModuleContaining(s->owner())};
+    if (!sMod) {
+      continue;
+    }
+    SourceName rename{s->name()};
+    if (const Symbol * found{scope.FindSymbol(s->name())}) {
+      if (found == &*s) {
+        continue; // available in scope
+      }
+      if (const auto *generic{found->detailsIf<GenericDetails>()}) {
+        if (generic->derivedType() == &*s || generic->specific() == &*s) {
+          continue;
+        }
+      } else if (found->has<UseDetails>()) {
+        if (&found->GetUltimate() == &*s) {
+          continue; // already use-associated with same name
+        }
+      }
+      if (&s->owner() != &found->owner()) { // Symbol needs renaming
+        rename = scope.context().SaveTempName(
+            DEREF(sMod->symbol()).name().ToString() + "$" +
+            s->name().ToString());
+      }
+    }
+    // Symbol is used in this scope but not visible under its name
+    if (sMod->parent().IsIntrinsicModules()) {
+      uses_ << "use,intrinsic::";
+    } else {
+      uses_ << "use ";
+    }
+    uses_ << DEREF(sMod->symbol()).name() << ",only:";
+    if (rename != s->name()) {
+      uses_ << rename << "=>";
+    }
+    uses_ << s->name() << '\n';
+    useExtraAttrs_ << "private::" << rename << '\n';
+    renamings_.emplace(&*s, rename);
+  }
+}
+
 // Put out the visible symbols from scope.
 void ModFileWriter::PutSymbols(const Scope &scope) {
   SymbolVector sorted;
   SymbolVector uses;
-  CollectSymbols(scope, sorted, uses);
+  PrepareRenamings(scope);
+  UnorderedSymbolSet modules;
+  CollectSymbols(scope, sorted, uses, renamings_, modules);
+  // Write module files for dependencies first so that their
+  // hashes are known.
+  for (auto ref : modules) {
+    Write(*ref);
+    needs_ << ModHeader::need
+           << CheckSumString(ref->get<ModuleDetails>().moduleFileHash().value())
+           << (ref->owner().IsIntrinsicModules() ? " i " : " n ")
+           << ref->name().ToString() << '\n';
+  }
   std::string buf; // stuff after CONTAINS in derived type
   llvm::raw_string_ostream typeBindings{buf};
   for (const Symbol &symbol : sorted) {
@@ -244,6 +346,14 @@ bool ModFileWriter::PutComponents(const Symbol &typeSymbol) {
   }
 }
 
+// Return the symbol's attributes that should be written
+// into the mod file.
+static Attrs getSymbolAttrsToWrite(const Symbol &symbol) {
+  // Is SAVE attribute is implicit, it should be omitted
+  // to not violate F202x C862 for a common block member.
+  return symbol.attrs() & ~(symbol.implicitAttrs() & Attrs{Attr::SAVE});
+}
+
 static llvm::raw_ostream &PutGenericName(
     llvm::raw_ostream &os, const Symbol &symbol) {
   if (IsGenericDefinedOp(symbol)) {
@@ -271,13 +381,6 @@ void ModFileWriter::PutSymbol(
               }
             } else {
               PutGeneric(symbol);
-              if (x.specific() && &x.specific()->owner() == &symbol.owner()) {
-                PutSymbol(typeBindings, *x.specific());
-              }
-              if (x.derivedType() &&
-                  &x.derivedType()->owner() == &symbol.owner()) {
-                PutSymbol(typeBindings, *x.derivedType());
-              }
             }
           },
           [&](const UseDetails &) { PutUse(symbol); },
@@ -321,7 +424,8 @@ void ModFileWriter::PutSymbol(
             }
             decls_ << '\n';
             if (symbol.attrs().test(Attr::BIND_C)) {
-              PutAttrs(decls_, symbol.attrs(), x.bindName(), ""s);
+              PutAttrs(decls_, getSymbolAttrsToWrite(symbol), x.bindName(),
+                  x.isExplicitBindName(), ""s);
               decls_ << "::/" << symbol.name() << "/\n";
             }
           },
@@ -329,9 +433,7 @@ void ModFileWriter::PutSymbol(
           [](const MiscDetails &) {},
           [&](const auto &) {
             PutEntity(decls_, symbol);
-            if (symbol.test(Symbol::Flag::OmpThreadprivate)) {
-              decls_ << "!$omp threadprivate(" << symbol.name() << ")\n";
-            }
+            PutDirective(decls_, symbol);
           },
       },
       symbol.details());
@@ -404,7 +506,7 @@ void ModFileWriter::PutDECStructure(
         }
         decls_ << ref->name();
         PutShape(decls_, object->shape(), '(', ')');
-        PutInit(decls_, *ref, object->init(), nullptr);
+        PutInit(decls_, *ref, object->init(), nullptr, renamings_);
         emittedDECFields_.insert(*ref);
       } else if (any) {
         break; // any later use of this structure will use RECORD/str/
@@ -419,6 +521,55 @@ void ModFileWriter::PutDECStructure(
 // Attributes that may be in a subprogram prefix
 static const Attrs subprogramPrefixAttrs{Attr::ELEMENTAL, Attr::IMPURE,
     Attr::MODULE, Attr::NON_RECURSIVE, Attr::PURE, Attr::RECURSIVE};
+
+static void PutOpenACCDeviceTypeRoutineInfo(
+    llvm::raw_ostream &os, const OpenACCRoutineDeviceTypeInfo &info) {
+  if (info.isSeq()) {
+    os << " seq";
+  }
+  if (info.isGang()) {
+    os << " gang";
+    if (info.gangDim() > 0) {
+      os << "(dim: " << info.gangDim() << ")";
+    }
+  }
+  if (info.isVector()) {
+    os << " vector";
+  }
+  if (info.isWorker()) {
+    os << " worker";
+  }
+  if (info.bindName()) {
+    os << " bind(" << *info.bindName() << ")";
+  }
+}
+
+static void PutOpenACCRoutineInfo(
+    llvm::raw_ostream &os, const SubprogramDetails &details) {
+  for (auto info : details.openACCRoutineInfos()) {
+    os << "!$acc routine";
+
+    PutOpenACCDeviceTypeRoutineInfo(os, info);
+
+    if (info.isNohost()) {
+      os << " nohost";
+    }
+
+    for (auto dtype : info.deviceTypeInfos()) {
+      os << " device_type(";
+      if (dtype.dType() == common::OpenACCDeviceType::Star) {
+        os << "*";
+      } else {
+        os << parser::ToLowerCaseLetters(common::EnumToString(dtype.dType()));
+      }
+      os << ")";
+
+      PutOpenACCDeviceTypeRoutineInfo(os, dtype);
+    }
+
+    os << "\n";
+  }
+}
 
 void ModFileWriter::PutSubprogram(const Symbol &symbol) {
   auto &details{symbol.get<SubprogramDetails>()};
@@ -455,7 +606,32 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
   if (isInterface) {
     os << (isAbstract ? "abstract " : "") << "interface\n";
   }
-  PutAttrs(os, prefixAttrs, nullptr, ""s, " "s);
+  PutAttrs(os, prefixAttrs, nullptr, false, ""s, " "s);
+  if (auto attrs{details.cudaSubprogramAttrs()}) {
+    if (*attrs == common::CUDASubprogramAttrs::HostDevice) {
+      os << "attributes(host,device) ";
+    } else {
+      PutLower(os << "attributes(", common::EnumToString(*attrs)) << ") ";
+    }
+    if (!details.cudaLaunchBounds().empty()) {
+      os << "launch_bounds";
+      char sep{'('};
+      for (auto x : details.cudaLaunchBounds()) {
+        os << sep << x;
+        sep = ',';
+      }
+      os << ") ";
+    }
+    if (!details.cudaClusterDims().empty()) {
+      os << "cluster_dims";
+      char sep{'('};
+      for (auto x : details.cudaClusterDims()) {
+        os << sep << x;
+        sep = ',';
+      }
+      os << ") ";
+    }
+  }
   os << (details.isFunction() ? "function " : "subroutine ");
   os << symbol.name() << '(';
   int n = 0;
@@ -470,7 +646,8 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
     }
   }
   os << ')';
-  PutAttrs(os, bindAttrs, details.bindName(), " "s, ""s);
+  PutAttrs(os, bindAttrs, details.bindName(), details.isExplicitBindName(),
+      " "s, ""s);
   if (details.isFunction()) {
     const Symbol &result{details.result()};
     if (result.name() != symbol.name()) {
@@ -478,7 +655,6 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
     }
   }
   os << '\n';
-
   // walk symbols, collect ones needed for interface
   const Scope &scope{
       details.entryScope() ? *details.entryScope() : DEREF(symbol.scope())};
@@ -496,6 +672,7 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
     decls_ << "import::" << import << "\n";
   }
   os << writer.decls_.str();
+  PutOpenACCRoutineInfo(os, details);
   os << "end\n";
   if (isInterface) {
     os << "end interface\n";
@@ -559,21 +736,8 @@ void ModFileWriter::PutUseExtraAttr(
   }
 }
 
-// When a generic interface has the same name as a derived type
-// in the same scope, the generic shadows the derived type.
-// If the derived type were declared first, emit the generic
-// interface at the position of derived type's declaration.
-// (ReplaceName() is not used for this purpose because doing so
-// would confusingly position error messages pertaining to the generic
-// interface upon the derived type's declaration.)
 static inline SourceName NameInModuleFile(const Symbol &symbol) {
-  if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
-    if (const auto *derivedTypeOverload{generic->derivedType()}) {
-      if (derivedTypeOverload->name().begin() < symbol.name().begin()) {
-        return derivedTypeOverload->name();
-      }
-    }
-  } else if (const auto *use{symbol.detailsIf<UseDetails>()}) {
+  if (const auto *use{symbol.detailsIf<UseDetails>()}) {
     if (use->symbol().attrs().test(Attr::PRIVATE)) {
       // Avoid the use in sorting of names created to access private
       // specific procedures as a result of generic resolution;
@@ -585,30 +749,48 @@ static inline SourceName NameInModuleFile(const Symbol &symbol) {
 }
 
 // Collect the symbols of this scope sorted by their original order, not name.
-// Namelists are an exception: they are sorted after other symbols.
-void CollectSymbols(
-    const Scope &scope, SymbolVector &sorted, SymbolVector &uses) {
-  SymbolVector namelist;
-  std::size_t commonSize{scope.commonBlocks().size()};
+// Generics and namelists are exceptions: they are sorted after other symbols.
+void CollectSymbols(const Scope &scope, SymbolVector &sorted,
+    SymbolVector &uses, std::map<const Symbol *, SourceName> &renamings,
+    UnorderedSymbolSet &modules) {
+  SymbolVector namelist, generics;
   auto symbols{scope.GetSymbols()};
+  std::size_t commonSize{scope.commonBlocks().size()};
   sorted.reserve(symbols.size() + commonSize);
   for (SymbolRef symbol : symbols) {
-    if (!symbol->test(Symbol::Flag::ParentComp)) {
-      if (symbol->has<NamelistDetails>()) {
-        namelist.push_back(symbol);
-      } else {
-        sorted.push_back(symbol);
+    const auto *generic{symbol->detailsIf<GenericDetails>()};
+    if (generic) {
+      uses.insert(uses.end(), generic->uses().begin(), generic->uses().end());
+      for (auto ref : generic->uses()) {
+        modules.insert(GetUsedModule(ref->get<UseDetails>()));
       }
-      if (const auto *details{symbol->detailsIf<GenericDetails>()}) {
-        uses.insert(uses.end(), details->uses().begin(), details->uses().end());
+    } else if (const auto *use{symbol->detailsIf<UseDetails>()}) {
+      modules.insert(GetUsedModule(*use));
+    }
+    if (symbol->test(Symbol::Flag::ParentComp)) {
+    } else if (symbol->has<NamelistDetails>()) {
+      namelist.push_back(symbol);
+    } else if (generic) {
+      if (generic->specific() &&
+          &generic->specific()->owner() == &symbol->owner()) {
+        sorted.push_back(*generic->specific());
+      } else if (generic->derivedType() &&
+          &generic->derivedType()->owner() == &symbol->owner()) {
+        sorted.push_back(*generic->derivedType());
       }
+      generics.push_back(symbol);
+    } else {
+      sorted.push_back(symbol);
     }
   }
   // Sort most symbols by name: use of Symbol::ReplaceName ensures the source
   // location of a symbol's name is the first "real" use.
-  std::sort(sorted.begin(), sorted.end(), [](SymbolRef x, SymbolRef y) {
-    return NameInModuleFile(x).begin() < NameInModuleFile(y).begin();
-  });
+  auto sorter{[](SymbolRef x, SymbolRef y) {
+    return NameInModuleFile(*x).begin() < NameInModuleFile(*y).begin();
+  }};
+  std::sort(sorted.begin(), sorted.end(), sorter);
+  std::sort(generics.begin(), generics.end(), sorter);
+  sorted.insert(sorted.end(), generics.begin(), generics.end());
   sorted.insert(sorted.end(), namelist.begin(), namelist.end());
   for (const auto &pair : scope.commonBlocks()) {
     sorted.push_back(*pair.second);
@@ -677,11 +859,52 @@ void ModFileWriter::PutObjectEntity(
   }
   PutEntity(
       os, symbol, [&]() { PutType(os, DEREF(symbol.GetType())); },
-      symbol.attrs());
+      getSymbolAttrsToWrite(symbol));
   PutShape(os, details.shape(), '(', ')');
   PutShape(os, details.coshape(), '[', ']');
-  PutInit(os, symbol, details.init(), details.unanalyzedPDTComponentInit());
+  PutInit(os, symbol, details.init(), details.unanalyzedPDTComponentInit(),
+      renamings_);
   os << '\n';
+  if (auto tkr{GetIgnoreTKR(symbol)}; !tkr.empty()) {
+    os << "!dir$ ignore_tkr(";
+    tkr.IterateOverMembers([&](common::IgnoreTKR tkr) {
+      switch (tkr) {
+        SWITCH_COVERS_ALL_CASES
+      case common::IgnoreTKR::Type:
+        os << 't';
+        break;
+      case common::IgnoreTKR::Kind:
+        os << 'k';
+        break;
+      case common::IgnoreTKR::Rank:
+        os << 'r';
+        break;
+      case common::IgnoreTKR::Device:
+        os << 'd';
+        break;
+      case common::IgnoreTKR::Managed:
+        os << 'm';
+        break;
+      case common::IgnoreTKR::Contiguous:
+        os << 'c';
+        break;
+      }
+    });
+    os << ") " << symbol.name() << '\n';
+  }
+  if (auto attr{details.cudaDataAttr()}) {
+    PutLower(os << "attributes(", common::EnumToString(*attr))
+        << ") " << symbol.name() << '\n';
+  }
+  if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointer)) {
+    if (!symbol.owner().crayPointers().empty()) {
+      for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
+        if (pointer == symbol) {
+          os << "pointer(" << symbol.name() << "," << pointee << ")\n";
+        }
+      }
+    }
+  }
 }
 
 void ModFileWriter::PutProcEntity(llvm::raw_ostream &os, const Symbol &symbol) {
@@ -701,8 +924,8 @@ void ModFileWriter::PutProcEntity(llvm::raw_ostream &os, const Symbol &symbol) {
       os, symbol,
       [&]() {
         os << "procedure(";
-        if (details.procInterface()) {
-          os << details.procInterface()->name();
+        if (details.rawProcInterface()) {
+          os << details.rawProcInterface()->name();
         } else if (details.type()) {
           PutType(os, *details.type());
         }
@@ -734,12 +957,25 @@ void ModFileWriter::PutTypeParam(llvm::raw_ostream &os, const Symbol &symbol) {
 }
 
 void PutInit(llvm::raw_ostream &os, const Symbol &symbol, const MaybeExpr &init,
-    const parser::Expr *unanalyzed) {
-  if (symbol.attrs().test(Attr::PARAMETER) || symbol.owner().IsDerivedType()) {
+    const parser::Expr *unanalyzed,
+    const std::map<const Symbol *, SourceName> &renamings) {
+  if (IsNamedConstant(symbol) || symbol.owner().IsDerivedType()) {
     const char *assign{symbol.attrs().test(Attr::POINTER) ? "=>" : "="};
     if (unanalyzed) {
       parser::Unparse(os << assign, *unanalyzed);
     } else if (init) {
+      if (const auto *dtConst{
+              evaluate::UnwrapExpr<evaluate::Constant<evaluate::SomeDerived>>(
+                  *init)}) {
+        const Symbol &dtSym{dtConst->result().derivedTypeSpec().typeSymbol()};
+        if (auto iter{renamings.find(&dtSym)}; iter != renamings.end()) {
+          // Initializer is a constant whose derived type's name has
+          // been brought into scope from a module under a new name
+          // to avoid a conflict.
+          dtConst->AsFortran(os << assign, &iter->second);
+          return;
+        }
+      }
       init->AsFortran(os << assign);
     }
   }
@@ -766,7 +1002,7 @@ void PutBound(llvm::raw_ostream &os, const Bound &x) {
 void ModFileWriter::PutEntity(llvm::raw_ostream &os, const Symbol &symbol,
     std::function<void()> writeType, Attrs attrs) {
   writeType();
-  PutAttrs(os, attrs, symbol.GetBindName());
+  PutAttrs(os, attrs, symbol.GetBindName(), symbol.GetIsExplicitBindName());
   if (symbol.owner().kind() == Scope::Kind::DerivedType &&
       context_.IsTempName(symbol.name().ToString())) {
     os << "::%FILL";
@@ -778,14 +1014,19 @@ void ModFileWriter::PutEntity(llvm::raw_ostream &os, const Symbol &symbol,
 // Put out each attribute to os, surrounded by `before` and `after` and
 // mapped to lower case.
 llvm::raw_ostream &ModFileWriter::PutAttrs(llvm::raw_ostream &os, Attrs attrs,
-    const std::string *bindName, std::string before, std::string after) const {
+    const std::string *bindName, bool isExplicitBindName, std::string before,
+    std::string after) const {
   attrs.set(Attr::PUBLIC, false); // no need to write PUBLIC
   attrs.set(Attr::EXTERNAL, false); // no need to write EXTERNAL
   if (isSubmodule_) {
     attrs.set(Attr::PRIVATE, false);
   }
-  if (bindName) {
-    os << before << "bind(c, name=\"" << *bindName << "\")" << after;
+  if (bindName || isExplicitBindName) {
+    os << before << "bind(c";
+    if (isExplicitBindName) {
+      os << ",name=\"" << (bindName ? *bindName : ""s) << '"';
+    }
+    os << ')' << after;
     attrs.set(Attr::BIND_C, false);
   }
   for (std::size_t i{0}; i < Attr_enumSize; ++i) {
@@ -810,6 +1051,46 @@ llvm::raw_ostream &PutLower(llvm::raw_ostream &os, std::string_view str) {
     os << parser::ToLowerCaseLetter(c);
   }
   return os;
+}
+
+void PutOpenACCDirective(llvm::raw_ostream &os, const Symbol &symbol) {
+  if (symbol.test(Symbol::Flag::AccDeclare)) {
+    os << "!$acc declare ";
+    if (symbol.test(Symbol::Flag::AccCopy)) {
+      os << "copy";
+    } else if (symbol.test(Symbol::Flag::AccCopyIn) ||
+        symbol.test(Symbol::Flag::AccCopyInReadOnly)) {
+      os << "copyin";
+    } else if (symbol.test(Symbol::Flag::AccCopyOut)) {
+      os << "copyout";
+    } else if (symbol.test(Symbol::Flag::AccCreate)) {
+      os << "create";
+    } else if (symbol.test(Symbol::Flag::AccPresent)) {
+      os << "present";
+    } else if (symbol.test(Symbol::Flag::AccDevicePtr)) {
+      os << "deviceptr";
+    } else if (symbol.test(Symbol::Flag::AccDeviceResident)) {
+      os << "device_resident";
+    } else if (symbol.test(Symbol::Flag::AccLink)) {
+      os << "link";
+    }
+    os << "(";
+    if (symbol.test(Symbol::Flag::AccCopyInReadOnly)) {
+      os << "readonly: ";
+    }
+    os << symbol.name() << ")\n";
+  }
+}
+
+void PutOpenMPDirective(llvm::raw_ostream &os, const Symbol &symbol) {
+  if (symbol.test(Symbol::Flag::OmpThreadprivate)) {
+    os << "!$omp threadprivate(" << symbol.name() << ")\n";
+  }
+}
+
+void ModFileWriter::PutDirective(llvm::raw_ostream &os, const Symbol &symbol) {
+  PutOpenACCDirective(os, symbol);
+  PutOpenMPDirective(os, symbol);
 }
 
 struct Temp {
@@ -847,10 +1128,11 @@ static llvm::ErrorOr<Temp> MkTemp(const std::string &path) {
 
 // Write the module file at path, prepending header. If an error occurs,
 // return errno, otherwise 0.
-static std::error_code WriteFile(
-    const std::string &path, const std::string &contents, bool debug) {
+static std::error_code WriteFile(const std::string &path,
+    const std::string &contents, ModuleCheckSumType &checkSum, bool debug) {
+  checkSum = ComputeCheckSum(contents);
   auto header{std::string{ModHeader::bom} + ModHeader::magic +
-      CheckSum(contents) + ModHeader::terminator};
+      CheckSumString(checkSum) + ModHeader::terminator};
   if (debug) {
     llvm::dbgs() << "Processing module " << path << ": ";
   }
@@ -902,12 +1184,16 @@ static bool FileContentsMatch(const std::string &path,
 // Compute a simple hash of the contents of a module file and
 // return it as a string of hex digits.
 // This uses the Fowler-Noll-Vo hash function.
-static std::string CheckSum(const std::string_view &contents) {
-  std::uint64_t hash{0xcbf29ce484222325ull};
+static ModuleCheckSumType ComputeCheckSum(const std::string_view &contents) {
+  ModuleCheckSumType hash{0xcbf29ce484222325ull};
   for (char c : contents) {
     hash ^= c & 0xff;
     hash *= 0x100000001b3;
   }
+  return hash;
+}
+
+static std::string CheckSumString(ModuleCheckSumType hash) {
   static const char *digits = "0123456789abcdef";
   std::string result(ModHeader::sumLen, '0');
   for (size_t i{ModHeader::sumLen}; hash != 0; hash >>= 4) {
@@ -916,20 +1202,76 @@ static std::string CheckSum(const std::string_view &contents) {
   return result;
 }
 
-static bool VerifyHeader(llvm::ArrayRef<char> content) {
-  std::string_view sv{content.data(), content.size()};
-  if (sv.substr(0, ModHeader::magicLen) != ModHeader::magic) {
-    return false;
+std::optional<ModuleCheckSumType> ExtractCheckSum(const std::string_view &str) {
+  if (str.size() == ModHeader::sumLen) {
+    ModuleCheckSumType hash{0};
+    for (size_t j{0}; j < ModHeader::sumLen; ++j) {
+      hash <<= 4;
+      char ch{str.at(j)};
+      if (ch >= '0' && ch <= '9') {
+        hash += ch - '0';
+      } else if (ch >= 'a' && ch <= 'f') {
+        hash += ch - 'a' + 10;
+      } else {
+        return std::nullopt;
+      }
+    }
+    return hash;
   }
-  std::string_view expectSum{sv.substr(ModHeader::magicLen, ModHeader::sumLen)};
-  std::string actualSum{CheckSum(sv.substr(ModHeader::len))};
-  return expectSum == actualSum;
+  return std::nullopt;
 }
 
-Scope *ModFileReader::Read(const SourceName &name,
-    std::optional<bool> isIntrinsic, Scope *ancestor, bool silent) {
+static std::optional<ModuleCheckSumType> VerifyHeader(
+    llvm::ArrayRef<char> content) {
+  std::string_view sv{content.data(), content.size()};
+  if (sv.substr(0, ModHeader::magicLen) != ModHeader::magic) {
+    return std::nullopt;
+  }
+  ModuleCheckSumType checkSum{ComputeCheckSum(sv.substr(ModHeader::len))};
+  std::string_view expectSum{sv.substr(ModHeader::magicLen, ModHeader::sumLen)};
+  if (auto extracted{ExtractCheckSum(expectSum)};
+      extracted && *extracted == checkSum) {
+    return checkSum;
+  } else {
+    return std::nullopt;
+  }
+}
+
+static void GetModuleDependences(
+    ModuleDependences &dependences, llvm::ArrayRef<char> content) {
+  std::size_t limit{content.size()};
+  std::string_view str{content.data(), limit};
+  for (std::size_t j{ModHeader::len};
+       str.substr(j, ModHeader::needLen) == ModHeader::need; ++j) {
+    j += 7;
+    auto checkSum{ExtractCheckSum(str.substr(j, ModHeader::sumLen))};
+    if (!checkSum) {
+      break;
+    }
+    j += ModHeader::sumLen;
+    bool intrinsic{false};
+    if (str.substr(j, 3) == " i ") {
+      intrinsic = true;
+    } else if (str.substr(j, 3) != " n ") {
+      break;
+    }
+    j += 3;
+    std::size_t start{j};
+    for (; j < limit && str.at(j) != '\n'; ++j) {
+    }
+    if (j > start && j < limit && str.at(j) == '\n') {
+      std::string depModName{str.substr(start, j - start)};
+      dependences.AddDependence(std::move(depModName), intrinsic, *checkSum);
+    } else {
+      break;
+    }
+  }
+}
+
+Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
+    Scope *ancestor, bool silent) {
   std::string ancestorName; // empty for module
-  Symbol *notAModule{nullptr};
+  const Symbol *notAModule{nullptr};
   bool fatalError{false};
   if (ancestor) {
     if (auto *scope{ancestor->FindSubmodule(name)}) {
@@ -937,19 +1279,35 @@ Scope *ModFileReader::Read(const SourceName &name,
     }
     ancestorName = ancestor->GetName().value().ToString();
   }
+  auto requiredHash{context_.moduleDependences().GetRequiredHash(
+      name.ToString(), isIntrinsic.value_or(false))};
   if (!isIntrinsic.value_or(false) && !ancestor) {
     // Already present in the symbol table as a usable non-intrinsic module?
     auto it{context_.globalScope().find(name)};
     if (it != context_.globalScope().end()) {
       Scope *scope{it->second->scope()};
       if (scope->kind() == Scope::Kind::Module) {
-        return scope;
+        for (const Symbol *found{scope->symbol()}; found;) {
+          if (const auto *module{found->detailsIf<ModuleDetails>()}) {
+            if (!requiredHash ||
+                *requiredHash ==
+                    module->moduleFileHash().value_or(*requiredHash)) {
+              return const_cast<Scope *>(found->scope());
+            }
+            found = module->previous(); // same name, distinct hash
+          } else {
+            notAModule = found;
+            break;
+          }
+        }
       } else {
         notAModule = scope->symbol();
-        // USE, NON_INTRINSIC global name isn't a module?
-        fatalError = isIntrinsic.has_value();
       }
     }
+  }
+  if (notAModule) {
+    // USE, NON_INTRINSIC global name isn't a module?
+    fatalError = isIntrinsic.has_value();
   }
   auto path{ModFileName(name, ancestorName, context_.moduleFileSuffix())};
   parser::Parsing parsing{context_.allCookedSources()};
@@ -957,6 +1315,7 @@ Scope *ModFileReader::Read(const SourceName &name,
   options.isModuleFile = true;
   options.features.Enable(common::LanguageFeature::BackslashEscapes);
   options.features.Enable(common::LanguageFeature::OpenMP);
+  options.features.Enable(common::LanguageFeature::CUDA);
   if (!isIntrinsic.value_or(false) && !notAModule) {
     // The search for this module file will scan non-intrinsic module
     // directories.  If a directory is in both the intrinsic and non-intrinsic
@@ -995,6 +1354,25 @@ Scope *ModFileReader::Read(const SourceName &name,
     for (const auto &dir : context_.intrinsicModuleDirectories()) {
       options.searchDirectories.push_back(dir);
     }
+    if (!requiredHash) {
+      requiredHash =
+          context_.moduleDependences().GetRequiredHash(name.ToString(), true);
+    }
+  }
+
+  // Look for the right module file if its hash is known
+  if (requiredHash && !fatalError) {
+    for (const std::string &maybe :
+        parser::LocateSourceFileAll(path, options.searchDirectories)) {
+      if (const auto *srcFile{context_.allCookedSources().allSources().OpenPath(
+              maybe, llvm::errs())}) {
+        if (auto checkSum{VerifyHeader(srcFile->content())};
+            checkSum && *checkSum == *requiredHash) {
+          path = maybe;
+          break;
+        }
+      }
+    }
   }
   const auto *sourceFile{fatalError ? nullptr : parsing.Prescan(path, options)};
   if (fatalError || parsing.messages().AnyFatalError()) {
@@ -1016,9 +1394,16 @@ Scope *ModFileReader::Read(const SourceName &name,
     return nullptr;
   }
   CHECK(sourceFile);
-  if (!VerifyHeader(sourceFile->content())) {
+  std::optional<ModuleCheckSumType> checkSum{
+      VerifyHeader(sourceFile->content())};
+  if (!checkSum) {
     Say(name, ancestorName, "File has invalid checksum: %s"_warn_en_US,
         sourceFile->path());
+    return nullptr;
+  } else if (requiredHash && *requiredHash != *checkSum) {
+    Say(name, ancestorName,
+        "File is not the right module file for %s"_warn_en_US,
+        "'"s + name.ToString() + "': "s + sourceFile->path());
     return nullptr;
   }
   llvm::raw_null_ostream NullStream;
@@ -1043,33 +1428,68 @@ Scope *ModFileReader::Read(const SourceName &name,
   }
   Scope &topScope{isIntrinsic.value_or(false) ? context_.intrinsicModulesScope()
                                               : context_.globalScope()};
-  if (!ancestor) {
+  Symbol *moduleSymbol{nullptr};
+  const Symbol *previousModuleSymbol{nullptr};
+  if (!ancestor) { // module, not submodule
     parentScope = &topScope;
+    auto pair{parentScope->try_emplace(name, UnknownDetails{})};
+    if (!pair.second) {
+      // There is already a global symbol or intrinsic module of the same name.
+      previousModuleSymbol = &*pair.first->second;
+      if (const auto *details{
+              previousModuleSymbol->detailsIf<ModuleDetails>()}) {
+        if (!details->moduleFileHash().has_value()) {
+          return nullptr;
+        }
+      } else {
+        return nullptr;
+      }
+      CHECK(parentScope->erase(name) != 0);
+      pair = parentScope->try_emplace(name, UnknownDetails{});
+      CHECK(pair.second);
+    }
+    moduleSymbol = &*pair.first->second;
+    moduleSymbol->set(Symbol::Flag::ModFile);
   } else if (std::optional<SourceName> parent{GetSubmoduleParent(parseTree)}) {
+    // submodule with submodule parent
     parentScope = Read(*parent, false /*not intrinsic*/, ancestor, silent);
   } else {
+    // submodule with module parent
     parentScope = ancestor;
   }
-  auto pair{parentScope->try_emplace(name, UnknownDetails{})};
-  if (!pair.second) {
-    return nullptr;
-  }
   // Process declarations from the module file
-  Symbol &modSymbol{*pair.first->second};
-  modSymbol.set(Symbol::Flag::ModFile);
   bool wasInModuleFile{context_.foldingContext().inModuleFile()};
   context_.foldingContext().set_inModuleFile(true);
+  GetModuleDependences(context_.moduleDependences(), sourceFile->content());
   ResolveNames(context_, parseTree, topScope);
   context_.foldingContext().set_inModuleFile(wasInModuleFile);
-  CHECK(modSymbol.has<ModuleDetails>());
-  CHECK(modSymbol.test(Symbol::Flag::ModFile));
-  if (isIntrinsic.value_or(false)) {
-    modSymbol.attrs().set(Attr::INTRINSIC);
+  if (!moduleSymbol) {
+    // Submodule symbols' storage are owned by their parents' scopes,
+    // but their names are not in their parents' dictionaries -- we
+    // don't want to report bogus errors about clashes between submodule
+    // names and other objects in the parent scopes.
+    if (Scope * submoduleScope{ancestor->FindSubmodule(name)}) {
+      moduleSymbol = submoduleScope->symbol();
+      if (moduleSymbol) {
+        moduleSymbol->set(Symbol::Flag::ModFile);
+      }
+    }
   }
-  return modSymbol.scope();
+  if (moduleSymbol) {
+    CHECK(moduleSymbol->test(Symbol::Flag::ModFile));
+    auto &details{moduleSymbol->get<ModuleDetails>()};
+    details.set_moduleFileHash(checkSum.value());
+    details.set_previous(previousModuleSymbol);
+    if (isIntrinsic.value_or(false)) {
+      moduleSymbol->attrs().set(Attr::INTRINSIC);
+    }
+    return moduleSymbol->scope();
+  } else {
+    return nullptr;
+  }
 }
 
-parser::Message &ModFileReader::Say(const SourceName &name,
+parser::Message &ModFileReader::Say(SourceName name,
     const std::string &ancestor, parser::MessageFixedText &&msg,
     const std::string &arg) {
   return context_.Say(name, "Cannot read module file for %s: %s"_err_en_US,
@@ -1195,11 +1615,14 @@ void SubprogramSymbolCollector::DoSymbol(
                       }
                     },
                     [this](const ProcEntityDetails &details) {
-                      if (details.procInterface()) {
-                        DoSymbol(*details.procInterface());
+                      if (details.rawProcInterface()) {
+                        DoSymbol(*details.rawProcInterface());
                       } else {
                         DoType(details.type());
                       }
+                    },
+                    [this](const ProcBindingDetails &details) {
+                      DoSymbol(details.symbol());
                     },
                     [](const auto &) {},
                 },
@@ -1226,17 +1649,21 @@ void SubprogramSymbolCollector::DoType(const DeclTypeSpec *type) {
   default:
     if (const DerivedTypeSpec * derived{type->AsDerived()}) {
       const auto &typeSymbol{derived->typeSymbol()};
-      if (const DerivedTypeSpec * extends{typeSymbol.GetParentTypeSpec()}) {
-        DoSymbol(extends->name(), extends->typeSymbol());
-      }
       for (const auto &pair : derived->parameters()) {
         DoParamValue(pair.second);
       }
-      for (const auto &pair : *typeSymbol.scope()) {
-        const Symbol &comp{*pair.second};
-        DoSymbol(comp);
+      // The components of the type (including its parent component, if
+      // any) matter to IMPORT symbol collection only for derived types
+      // defined in the subprogram.
+      if (typeSymbol.owner() == scope_) {
+        if (const DerivedTypeSpec * extends{typeSymbol.GetParentTypeSpec()}) {
+          DoSymbol(extends->name(), extends->typeSymbol());
+        }
+        for (const auto &pair : *typeSymbol.scope()) {
+          DoSymbol(*pair.second);
+        }
       }
-      DoSymbol(derived->name(), derived->typeSymbol());
+      DoSymbol(derived->name(), typeSymbol);
     }
   }
 }
@@ -1268,8 +1695,8 @@ bool SubprogramSymbolCollector::NeedImport(
     // detect import from ancestor of use-associated symbol
     return found->has<UseDetails>() && found->owner() != scope_;
   } else {
-    // "found" can be null in the case of a use-associated derived type's parent
-    // type
+    // "found" can be null in the case of a use-associated derived type's
+    // parent type
     CHECK(symbol.has<DerivedTypeDetails>());
     return false;
   }

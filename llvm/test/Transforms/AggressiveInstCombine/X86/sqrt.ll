@@ -5,6 +5,7 @@ declare float @sqrtf(float)
 declare double @sqrt(double)
 declare fp128 @sqrtl(fp128)
 declare float @llvm.fabs.f32(float)
+declare void @llvm.assume(i1 noundef)
 
 ; "nnan" implies no setting of errno and the target can lower this to an
 ; instruction, so transform to an intrinsic.
@@ -46,7 +47,7 @@ define fp128 @sqrt_call_nnan_f128(fp128 %x) {
 
 define float @sqrt_call_nnan_f32_nobuiltin(float %x) {
 ; CHECK-LABEL: @sqrt_call_nnan_f32_nobuiltin(
-; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @sqrtf(float [[X:%.*]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @sqrtf(float [[X:%.*]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
   %sqrt = call nnan float @sqrtf(float %x) nobuiltin
@@ -72,5 +73,18 @@ define float @sqrt_call_f32_fabs(float %x) {
 ;
   %a = call float @llvm.fabs.f32(float %x)
   %sqrt = call float @sqrtf(float %a)
+  ret float %sqrt
+}
+
+define float @sqrt_call_f32_assume_oge_n0(float %x) {
+; CHECK-LABEL: @sqrt_call_f32_assume_oge_n0(
+; CHECK-NEXT:    [[IS_POS:%.*]] = fcmp oge float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_POS]])
+; CHECK-NEXT:    [[SQRT1:%.*]] = call float @llvm.sqrt.f32(float [[X]])
+; CHECK-NEXT:    ret float [[SQRT1]]
+;
+  %is.pos = fcmp oge float %x, -0.0
+  call void @llvm.assume(i1 %is.pos)
+  %sqrt = call float @sqrtf(float %x)
   ret float %sqrt
 }

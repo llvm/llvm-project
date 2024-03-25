@@ -719,7 +719,7 @@ define <vscale x 8 x i1> @icmp_slt_vi_nxv8i8_2(<vscale x 8 x i8> %va) {
 ; CHECK-LABEL: icmp_slt_vi_nxv8i8_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmslt.vx v0, v8, zero
+; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i8> poison, i8 0, i32 0
   %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
@@ -1439,7 +1439,7 @@ define <vscale x 8 x i1> @icmp_slt_vi_nxv8i16_2(<vscale x 8 x i16> %va) {
 ; CHECK-LABEL: icmp_slt_vi_nxv8i16_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmslt.vx v0, v8, zero
+; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i16> poison, i16 0, i32 0
   %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
@@ -2159,7 +2159,7 @@ define <vscale x 8 x i1> @icmp_slt_vi_nxv8i32_2(<vscale x 8 x i32> %va) {
 ; CHECK-LABEL: icmp_slt_vi_nxv8i32_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmslt.vx v0, v8, zero
+; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> poison, i32 0, i32 0
   %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
@@ -3113,7 +3113,7 @@ define <vscale x 8 x i1> @icmp_slt_vi_nxv8i64_2(<vscale x 8 x i64> %va) {
 ; CHECK-LABEL: icmp_slt_vi_nxv8i64_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vmslt.vx v0, v8, zero
+; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i64> poison, i64 0, i32 0
   %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
@@ -3235,7 +3235,7 @@ define <vscale x 16 x i1> @icmp_eq_vi_nx16i64(<vscale x 16 x i64> %va) {
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vi v24, v16, 0
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, tu, ma
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vx v0, v24, a0
 ; CHECK-NEXT:    ret
   %vc = icmp eq <vscale x 16 x i64> %va, zeroinitializer

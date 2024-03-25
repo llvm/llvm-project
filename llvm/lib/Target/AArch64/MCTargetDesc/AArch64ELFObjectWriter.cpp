@@ -39,6 +39,8 @@ public:
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
+  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
+                               unsigned Type) const override;
   bool IsILP32;
 };
 
@@ -118,7 +120,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
 
   assert((!Target.getSymA() ||
           Target.getSymA()->getKind() == MCSymbolRefExpr::VK_None ||
-          Target.getSymA()->getKind() == MCSymbolRefExpr::VK_PLT) &&
+          Target.getSymA()->getKind() == MCSymbolRefExpr::VK_PLT ||
+          Target.getSymA()->getKind() == MCSymbolRefExpr::VK_GOTPCREL) &&
          "Should only be expression-level modifiers here");
 
   assert((!Target.getSymB() ||
@@ -184,6 +187,10 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       return R_CLS(LD_PREL_LO19);
     case AArch64::fixup_aarch64_pcrel_branch14:
       return R_CLS(TSTBR14);
+    case AArch64::fixup_aarch64_pcrel_branch16:
+      Ctx.reportError(Fixup.getLoc(),
+                      "relocation of PAC/AUT instructions is not supported");
+      return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_pcrel_branch19:
       return R_CLS(CONDBR19);
     default:
@@ -200,15 +207,22 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
     case FK_Data_2:
       return R_CLS(ABS16);
     case FK_Data_4:
-      return R_CLS(ABS32);
+      return (!IsILP32 &&
+              Target.getAccessVariant() == MCSymbolRefExpr::VK_GOTPCREL)
+                 ? ELF::R_AARCH64_GOTPCREL32
+                 : R_CLS(ABS32);
     case FK_Data_8:
       if (IsILP32) {
         Ctx.reportError(Fixup.getLoc(),
                         "ILP32 8 byte absolute data "
                         "relocation not supported (LP64 eqv: ABS64)");
         return ELF::R_AARCH64_NONE;
-      } else
+      } else {
+        if (RefKind == AArch64MCExpr::VK_AUTH ||
+            RefKind == AArch64MCExpr::VK_AUTHADDR)
+          return ELF::R_AARCH64_AUTH_ABS64;
         return ELF::R_AARCH64_ABS64;
+      }
     case AArch64::fixup_aarch64_add_imm12:
       if (RefKind == AArch64MCExpr::VK_DTPREL_HI12)
         return R_CLS(TLSLD_ADD_DTPREL_HI12);
@@ -453,6 +467,12 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 
   llvm_unreachable("Unimplemented fixup -> relocation");
+}
+
+bool AArch64ELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
+                                                     const MCSymbol &,
+                                                     unsigned) const {
+  return (Val.getRefKind() & AArch64MCExpr::VK_GOT) == AArch64MCExpr::VK_GOT;
 }
 
 MCSectionELF *

@@ -42,7 +42,6 @@ def uint32_trunc(x):
 
 
 class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
-
     @skipIfWindows
     @add_test_categories(["llgs"])
     def test_platform_file_rdonly(self):
@@ -100,11 +99,13 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
         # attempt to open the file without O_CREAT
         self.do_handshake()
         self.test_sequence.add_log_lines(
-            ["read packet: $vFile:open:%s,1,0#00" % (
-                binascii.b2a_hex(temp_path.encode()).decode(),),
-             {"direction": "send",
-             "regex": r"^\$F-1,[0-9a-fA-F]+#[0-9a-fA-F]{2}$"}],
-            True)
+            [
+                "read packet: $vFile:open:%s,1,0#00"
+                % (binascii.b2a_hex(temp_path.encode()).decode(),),
+                {"direction": "send", "regex": r"^\$F-1,[0-9a-fA-F]+#[0-9a-fA-F]{2}$"},
+            ],
+            True,
+        )
         self.expect_gdbremote_sequence()
 
     @skipIfWindows
@@ -120,11 +121,13 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
         # attempt to open the file with O_CREAT|O_EXCL
         self.do_handshake()
         self.test_sequence.add_log_lines(
-            ["read packet: $vFile:open:%s,a01,0#00" % (
-                binascii.b2a_hex(temp_file.encode()).decode(),),
-             {"direction": "send",
-             "regex": r"^\$F-1,[0-9a-fA-F]+#[0-9a-fA-F]{2}$"}],
-            True)
+            [
+                "read packet: $vFile:open:%s,a01,0#00"
+                % (binascii.b2a_hex(temp_file.encode()).decode(),),
+                {"direction": "send", "regex": r"^\$F-1,[0-9a-fA-F]+#[0-9a-fA-F]{2}$"},
+            ],
+            True,
+        )
         self.expect_gdbremote_sequence()
 
     @skipIfWindows
@@ -140,12 +143,17 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
 
         self.do_handshake()
         self.test_sequence.add_log_lines(
-            ["read packet: $vFile:size:%s#00" % (
-                binascii.b2a_hex(temp_path.encode()).decode(),),
-             {"direction": "send",
-             "regex": r"^\$F([0-9a-fA-F]+)+#[0-9a-fA-F]{2}$",
-             "capture": {1: "size"}}],
-            True)
+            [
+                "read packet: $vFile:size:%s#00"
+                % (binascii.b2a_hex(temp_path.encode()).decode(),),
+                {
+                    "direction": "send",
+                    "regex": r"^\$F([0-9a-fA-F]+)+#[0-9a-fA-F]{2}$",
+                    "capture": {1: "size"},
+                },
+            ],
+            True,
+        )
         context = self.expect_gdbremote_sequence()
         self.assertEqual(int(context["size"], 16), len(test_data))
 
@@ -163,12 +171,17 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
 
         self.do_handshake()
         self.test_sequence.add_log_lines(
-            ["read packet: $vFile:mode:%s#00" % (
-                binascii.b2a_hex(temp_path.encode()).decode(),),
-             {"direction": "send",
-             "regex": r"^\$F([0-9a-fA-F]+)+#[0-9a-fA-F]{2}$",
-             "capture": {1: "mode"}}],
-            True)
+            [
+                "read packet: $vFile:mode:%s#00"
+                % (binascii.b2a_hex(temp_path.encode()).decode(),),
+                {
+                    "direction": "send",
+                    "regex": r"^\$F([0-9a-fA-F]+)+#[0-9a-fA-F]{2}$",
+                    "capture": {1: "mode"},
+                },
+            ],
+            True,
+        )
         context = self.expect_gdbremote_sequence()
         self.assertEqual(int(context["mode"], 16), test_mode)
 
@@ -182,11 +195,13 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
 
         self.do_handshake()
         self.test_sequence.add_log_lines(
-            ["read packet: $vFile:mode:%s#00" % (
-                binascii.b2a_hex(temp_path.encode()).decode(),),
-             {"direction": "send",
-             "regex": r"^\$F-1,0*2+#[0-9a-fA-F]{2}$"}],
-            True)
+            [
+                "read packet: $vFile:mode:%s#00"
+                % (binascii.b2a_hex(temp_path.encode()).decode(),),
+                {"direction": "send", "regex": r"^\$F-1,0*2+#[0-9a-fA-F]{2}$"},
+            ],
+            True,
+        )
         self.expect_gdbremote_sequence()
 
     @skipIfWindows
@@ -201,10 +216,13 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
 
         self.do_handshake()
         self.test_sequence.add_log_lines(
-            ["read packet: $vFile:exists:%s#00" % (
-                binascii.b2a_hex(temp_path.encode()).decode(),),
-             "send packet: $F,1#00"],
-            True)
+            [
+                "read packet: $vFile:exists:%s#00"
+                % (binascii.b2a_hex(temp_path.encode()).decode(),),
+                "send packet: $F,1#00",
+            ],
+            True,
+        )
         self.expect_gdbremote_sequence()
 
     @skipIfWindows
@@ -216,10 +234,13 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
         test_path = self.getBuildArtifact("nonexist")
         self.do_handshake()
         self.test_sequence.add_log_lines(
-            ["read packet: $vFile:exists:%s#00" % (
-                binascii.b2a_hex(test_path.encode()).decode(),),
-             "send packet: $F,0#00"],
-            True)
+            [
+                "read packet: $vFile:exists:%s#00"
+                % (binascii.b2a_hex(test_path.encode()).decode(),),
+                "send packet: $F,0#00",
+            ],
+            True,
+        )
         self.expect_gdbremote_sequence()
 
     @skipIfWindows
@@ -234,12 +255,17 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
 
             self.do_handshake()
             self.test_sequence.add_log_lines(
-                ["read packet: $vFile:open:%s,0,0#00" % (
-                    binascii.b2a_hex(temp_file.name.encode()).decode(),),
-                 {"direction": "send",
-                 "regex": r"^\$F([0-9a-fA-F]+)#[0-9a-fA-F]{2}$",
-                 "capture": {1: "fd"}}],
-                True)
+                [
+                    "read packet: $vFile:open:%s,0,0#00"
+                    % (binascii.b2a_hex(temp_file.name.encode()).decode(),),
+                    {
+                        "direction": "send",
+                        "regex": r"^\$F([0-9a-fA-F]+)#[0-9a-fA-F]{2}$",
+                        "capture": {1: "fd"},
+                    },
+                ],
+                True,
+            )
 
             context = self.expect_gdbremote_sequence()
             self.assertIsNotNone(context)
@@ -247,19 +273,26 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
 
             self.reset_test_sequence()
             self.test_sequence.add_log_lines(
-                ["read packet: $vFile:fstat:%x#00" % (fd,),
-                 {"direction": "send",
-                 "regex": r"^\$F([0-9a-fA-F]+);(.*)#[0-9a-fA-F]{2}$",
-                 "capture": {1: "size", 2: "data"}}],
-                True)
+                [
+                    "read packet: $vFile:fstat:%x#00" % (fd,),
+                    {
+                        "direction": "send",
+                        "regex": r"^\$F([0-9a-fA-F]+);(.*)#[0-9a-fA-F]{2}$",
+                        "capture": {1: "size", 2: "data"},
+                    },
+                ],
+                True,
+            )
             context = self.expect_gdbremote_sequence()
             self.assertEqual(int(context["size"], 16), 64)
             # NB: we're using .encode() as a hack because the test suite
             # is wrongly using (unicode) str instead of bytes
             gdb_stat = GDBStat(
-                *struct.unpack(">IIIIIIIQQQIII",
-                               self.decode_gdbremote_binary(context["data"])
-                                .encode("iso-8859-1")))
+                *struct.unpack(
+                    ">IIIIIIIQQQIII",
+                    self.decode_gdbremote_binary(context["data"]).encode("iso-8859-1"),
+                )
+            )
             sys_stat = os.fstat(temp_file.fileno())
 
             self.assertEqual(gdb_stat.st_dev, uint32_or_zero(sys_stat.st_dev))
@@ -272,29 +305,32 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
             self.assertEqual(gdb_stat.st_size, sys_stat.st_size)
             self.assertEqual(gdb_stat.st_blksize, sys_stat.st_blksize)
             self.assertEqual(gdb_stat.st_blocks, sys_stat.st_blocks)
-            self.assertEqual(gdb_stat.st_atime,
-                             uint32_or_zero(int(sys_stat.st_atime)))
-            self.assertEqual(gdb_stat.st_mtime,
-                             uint32_or_zero(int(sys_stat.st_mtime)))
-            self.assertEqual(gdb_stat.st_ctime,
-                             uint32_or_zero(int(sys_stat.st_ctime)))
+            self.assertEqual(gdb_stat.st_atime, uint32_or_zero(int(sys_stat.st_atime)))
+            self.assertEqual(gdb_stat.st_mtime, uint32_or_zero(int(sys_stat.st_mtime)))
+            self.assertEqual(gdb_stat.st_ctime, uint32_or_zero(int(sys_stat.st_ctime)))
 
             self.reset_test_sequence()
             self.test_sequence.add_log_lines(
-                ["read packet: $vFile:close:%x#00" % (fd,),
-                 "send packet: $F0#00"],
-                True)
+                ["read packet: $vFile:close:%x#00" % (fd,), "send packet: $F0#00"], True
+            )
             self.expect_gdbremote_sequence()
 
     def expect_error(self):
         self.test_sequence.add_log_lines(
-            [{"direction": "send",
-             "regex": r"^\$F-1,[0-9a-fA-F]+#[0-9a-fA-F]{2}$"}],
-            True)
+            [{"direction": "send", "regex": r"^\$F-1,[0-9a-fA-F]+#[0-9a-fA-F]{2}$"}],
+            True,
+        )
         self.expect_gdbremote_sequence()
 
-    def vFile_test(self, read=False, write=False, append=False, trunc=False,
-                   creat=False, excl=False):
+    def vFile_test(
+        self,
+        read=False,
+        write=False,
+        append=False,
+        trunc=False,
+        creat=False,
+        excl=False,
+    ):
         if read and write:
             mode = 2
         elif write:
@@ -319,7 +355,7 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
 
         # create a temporary file with some data
         temp_path = self.getBuildArtifact("test")
-        test_data = 'some test data longer than 16 bytes\n'
+        test_data = "some test data longer than 16 bytes\n"
 
         if creat:
             self.assertFalse(os.path.exists(temp_path))
@@ -330,13 +366,17 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
         # open the file for reading
         self.do_handshake()
         self.test_sequence.add_log_lines(
-            ["read packet: $vFile:open:%s,%x,1a0#00" % (
-                binascii.b2a_hex(temp_path.encode()).decode(),
-                mode),
-             {"direction": "send",
-             "regex": r"^\$F([0-9a-fA-F]+)#[0-9a-fA-F]{2}$",
-             "capture": {1: "fd"}}],
-            True)
+            [
+                "read packet: $vFile:open:%s,%x,1a0#00"
+                % (binascii.b2a_hex(temp_path.encode()).decode(), mode),
+                {
+                    "direction": "send",
+                    "regex": r"^\$F([0-9a-fA-F]+)#[0-9a-fA-F]{2}$",
+                    "capture": {1: "fd"},
+                },
+            ],
+            True,
+        )
 
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
@@ -345,14 +385,19 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
         # read data from the file
         self.reset_test_sequence()
         self.test_sequence.add_log_lines(
-            ["read packet: $vFile:pread:%x,11,10#00" % (fd,)],
-            True)
+            ["read packet: $vFile:pread:%x,11,10#00" % (fd,)], True
+        )
         if read:
             self.test_sequence.add_log_lines(
-                [{"direction": "send",
-                 "regex": r"^\$F([0-9a-fA-F]+);(.*)#[0-9a-fA-F]{2}$",
-                 "capture": {1: "size", 2: "data"}}],
-                True)
+                [
+                    {
+                        "direction": "send",
+                        "regex": r"^\$F([0-9a-fA-F]+);(.*)#[0-9a-fA-F]{2}$",
+                        "capture": {1: "size", 2: "data"},
+                    }
+                ],
+                True,
+            )
             context = self.expect_gdbremote_sequence()
             self.assertIsNotNone(context)
             if trunc:
@@ -360,7 +405,7 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
                 self.assertEqual(context["data"], "")
             else:
                 self.assertEqual(context["size"], "11")  # hex
-                self.assertEqual(context["data"], test_data[0x10:0x10 + 0x11])
+                self.assertEqual(context["data"], test_data[0x10 : 0x10 + 0x11])
         else:
             self.expect_error()
 
@@ -368,25 +413,28 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
         if read and not trunc:
             self.reset_test_sequence()
             self.test_sequence.add_log_lines(
-                ["read packet: $vFile:pread:%x,6,3#00" % (fd,),
-                 {"direction": "send",
-                 "regex": r"^\$F([0-9a-fA-F]+);(.+)#[0-9a-fA-F]{2}$",
-                 "capture": {1: "size", 2: "data"}}],
-                True)
+                [
+                    "read packet: $vFile:pread:%x,6,3#00" % (fd,),
+                    {
+                        "direction": "send",
+                        "regex": r"^\$F([0-9a-fA-F]+);(.+)#[0-9a-fA-F]{2}$",
+                        "capture": {1: "size", 2: "data"},
+                    },
+                ],
+                True,
+            )
             context = self.expect_gdbremote_sequence()
             self.assertIsNotNone(context)
             self.assertEqual(context["size"], "6")  # hex
-            self.assertEqual(context["data"], test_data[3:3 + 6])
+            self.assertEqual(context["data"], test_data[3 : 3 + 6])
 
         # write data to the file
         self.reset_test_sequence()
         self.test_sequence.add_log_lines(
-            ["read packet: $vFile:pwrite:%x,6,somedata#00" % (fd,)],
-            True)
+            ["read packet: $vFile:pwrite:%x,6,somedata#00" % (fd,)], True
+        )
         if write:
-            self.test_sequence.add_log_lines(
-                ["send packet: $F8#00"],
-                True)
+            self.test_sequence.add_log_lines(["send packet: $F8#00"], True)
             self.expect_gdbremote_sequence()
         else:
             self.expect_error()
@@ -394,22 +442,22 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
         # close the file
         self.reset_test_sequence()
         self.test_sequence.add_log_lines(
-            ["read packet: $vFile:close:%x#00" % (fd,),
-             "send packet: $F0#00"],
-            True)
+            ["read packet: $vFile:close:%x#00" % (fd,), "send packet: $F0#00"], True
+        )
         self.expect_gdbremote_sequence()
 
         if write:
             # check if the data was actually written
             with open(temp_path, "rb") as temp_file:
                 if creat:
-                    self.assertEqual(os.fstat(temp_file.fileno()).st_mode & 0o7777,
-                                     0o640)
+                    self.assertEqual(
+                        os.fstat(temp_file.fileno()).st_mode & 0o7777, 0o640
+                    )
                 data = test_data.encode()
                 if trunc or creat:
                     data = b"\0" * 6 + b"somedata"
                 elif append:
                     data += b"somedata"
                 else:
-                    data = data[:6] + b"somedata" + data[6 + 8:]
+                    data = data[:6] + b"somedata" + data[6 + 8 :]
                 self.assertEqual(temp_file.read(), data)

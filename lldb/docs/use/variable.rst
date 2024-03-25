@@ -1,9 +1,6 @@
 Variable Formatting
 ===================
 
-.. contents::
-   :local:
-
 LLDB has a data formatters subsystem that allows users to define custom display
 options for their variables.
 
@@ -132,8 +129,8 @@ This is done by typing
 
 at the LLDB command line.
 
-The ``--format`` (which you can shorten to -f) option accepts a :doc:`format
-name<formatting>`. Then, you provide one or more types to which you want the
+The ``--format`` (which you can shorten to -f) option accepts a `format
+name`_. Then, you provide one or more types to which you want the
 new format applied.
 
 A frequent scenario is that your program has a typedef for a numeric type that
@@ -248,6 +245,8 @@ format or till you let your program run again.
 
 Finally, this is a list of formatting options available out of which you can
 pick:
+
+.. _`format name`:
 
 +-----------------------------------------------+------------------+--------------------------------------------------------------------------+
 | **Format name**                               | **Abbreviation** | **Description**                                                          |
@@ -969,7 +968,7 @@ functions. It is possible to declare this synthetic child without
 including it in the range of children displayed by LLDB. For example,
 this subset of a synthetic children provider class would allow the
 synthetic value to be dereferenced without actually showing any
-synthtic children in the UI:
+synthetic children in the UI:
 
 .. code-block:: python
 

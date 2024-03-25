@@ -13,13 +13,13 @@
   target triple = "riscv64"
 
   ; Function Attrs: nounwind
-  define <vscale x 8 x i64> @masked_load_nxv8i64(<vscale x 8 x i64>* %a, <vscale x 8 x i1> %mask) #0 {
-    %load = call <vscale x 8 x i64> @llvm.masked.load.nxv8i64.p0nxv8i64(<vscale x 8 x i64>* %a, i32 8, <vscale x 8 x i1> %mask, <vscale x 8 x i64> undef)
+  define <vscale x 8 x i64> @masked_load_nxv8i64(ptr %a, <vscale x 8 x i1> %mask) #0 {
+    %load = call <vscale x 8 x i64> @llvm.masked.load.nxv8i64.p0(ptr %a, i32 8, <vscale x 8 x i1> %mask, <vscale x 8 x i64> undef)
     ret <vscale x 8 x i64> %load
   }
 
   ; Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
-  declare <vscale x 8 x i64> @llvm.masked.load.nxv8i64.p0nxv8i64(<vscale x 8 x i64>*, i32 immarg, <vscale x 8 x i1>, <vscale x 8 x i64>) #1
+  declare <vscale x 8 x i64> @llvm.masked.load.nxv8i64.p0(ptr, i32 immarg, <vscale x 8 x i1>, <vscale x 8 x i64>) #1
 
   attributes #0 = { nounwind "target-features"="+v" }
   attributes #1 = { argmemonly nofree nosync nounwind readonly willreturn "target-features"="+v" }

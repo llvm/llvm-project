@@ -13,15 +13,15 @@ define <2 x i64> @v2si64_cmp(<2 x i64> %x, <2 x i64> %y) nounwind readnone {
 ; CHECK-NEXT:    vcmpequw 2, 2, 3
 ; CHECK-NEXT:    addi 3, 3, .LCPI0_0@toc@l
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    xxswapd 35, 0
-; CHECK-NEXT:    vperm 3, 2, 2, 3
+; CHECK-NEXT:    xxswapd 36, 0
+; CHECK-NEXT:    vperm 3, 2, 2, 4
 ; CHECK-NEXT:    xxland 34, 35, 34
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: v2si64_cmp:
 ; CHECK-BE:       # %bb.0:
-; CHECK-BE-NEXT:    vcmpequw 2, 2, 3
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
+; CHECK-BE-NEXT:    vcmpequw 2, 2, 3
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI0_0@toc@l
 ; CHECK-BE-NEXT:    lxvw4x 35, 0, 3
 ; CHECK-BE-NEXT:    vperm 3, 2, 2, 3
@@ -38,10 +38,10 @@ define <2 x i64> @v2si64_cmp_gt(<2 x i64> %x, <2 x i64> %y) nounwind readnone {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxswapd 0, 35
 ; CHECK-NEXT:    addi 3, 1, -32
-; CHECK-NEXT:    addi 4, 1, -48
 ; CHECK-NEXT:    xxswapd 1, 34
 ; CHECK-NEXT:    stxvd2x 0, 0, 3
-; CHECK-NEXT:    stxvd2x 1, 0, 4
+; CHECK-NEXT:    addi 3, 1, -48
+; CHECK-NEXT:    stxvd2x 1, 0, 3
 ; CHECK-NEXT:    ld 3, -24(1)
 ; CHECK-NEXT:    ld 4, -40(1)
 ; CHECK-NEXT:    ld 6, -48(1)
@@ -62,9 +62,9 @@ define <2 x i64> @v2si64_cmp_gt(<2 x i64> %x, <2 x i64> %y) nounwind readnone {
 ; CHECK-BE-LABEL: v2si64_cmp_gt:
 ; CHECK-BE:       # %bb.0:
 ; CHECK-BE-NEXT:    addi 3, 1, -32
-; CHECK-BE-NEXT:    addi 4, 1, -48
 ; CHECK-BE-NEXT:    stxvd2x 35, 0, 3
-; CHECK-BE-NEXT:    stxvd2x 34, 0, 4
+; CHECK-BE-NEXT:    addi 3, 1, -48
+; CHECK-BE-NEXT:    stxvd2x 34, 0, 3
 ; CHECK-BE-NEXT:    ld 3, -24(1)
 ; CHECK-BE-NEXT:    ld 4, -40(1)
 ; CHECK-BE-NEXT:    ld 6, -48(1)
@@ -91,10 +91,10 @@ define <2 x i64> @v2ui64_cmp_gt(<2 x i64> %x, <2 x i64> %y) nounwind readnone {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxswapd 0, 35
 ; CHECK-NEXT:    addi 3, 1, -32
-; CHECK-NEXT:    addi 4, 1, -48
 ; CHECK-NEXT:    xxswapd 1, 34
 ; CHECK-NEXT:    stxvd2x 0, 0, 3
-; CHECK-NEXT:    stxvd2x 1, 0, 4
+; CHECK-NEXT:    addi 3, 1, -48
+; CHECK-NEXT:    stxvd2x 1, 0, 3
 ; CHECK-NEXT:    ld 3, -24(1)
 ; CHECK-NEXT:    ld 4, -40(1)
 ; CHECK-NEXT:    ld 6, -48(1)
@@ -115,9 +115,9 @@ define <2 x i64> @v2ui64_cmp_gt(<2 x i64> %x, <2 x i64> %y) nounwind readnone {
 ; CHECK-BE-LABEL: v2ui64_cmp_gt:
 ; CHECK-BE:       # %bb.0:
 ; CHECK-BE-NEXT:    addi 3, 1, -32
-; CHECK-BE-NEXT:    addi 4, 1, -48
 ; CHECK-BE-NEXT:    stxvd2x 35, 0, 3
-; CHECK-BE-NEXT:    stxvd2x 34, 0, 4
+; CHECK-BE-NEXT:    addi 3, 1, -48
+; CHECK-BE-NEXT:    stxvd2x 34, 0, 3
 ; CHECK-BE-NEXT:    ld 3, -24(1)
 ; CHECK-BE-NEXT:    ld 4, -40(1)
 ; CHECK-BE-NEXT:    ld 6, -48(1)
@@ -179,11 +179,11 @@ define i32 @test_vcmpgtsd_p(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: test_vcmpgtsd_p:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpgtuw 4, 2, 3
-; CHECK-NEXT:    vcmpequw 5, 2, 3
+; CHECK-NEXT:    xxsldwi 0, 36, 36, 1
+; CHECK-NEXT:    vcmpequw 4, 2, 3
 ; CHECK-NEXT:    vcmpgtsw 2, 2, 3
 ; CHECK-NEXT:    xxlxor 35, 35, 35
-; CHECK-NEXT:    xxsldwi 0, 36, 36, 1
-; CHECK-NEXT:    xxland 0, 0, 37
+; CHECK-NEXT:    xxland 0, 0, 36
 ; CHECK-NEXT:    xxlor 0, 34, 0
 ; CHECK-NEXT:    xxspltw 1, 0, 2
 ; CHECK-NEXT:    xxspltw 0, 0, 0
@@ -196,11 +196,11 @@ define i32 @test_vcmpgtsd_p(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-BE-LABEL: test_vcmpgtsd_p:
 ; CHECK-BE:       # %bb.0:
 ; CHECK-BE-NEXT:    vcmpgtuw 4, 2, 3
-; CHECK-BE-NEXT:    vcmpequw 5, 2, 3
+; CHECK-BE-NEXT:    xxsldwi 0, 36, 36, 1
+; CHECK-BE-NEXT:    vcmpequw 4, 2, 3
 ; CHECK-BE-NEXT:    vcmpgtsw 2, 2, 3
 ; CHECK-BE-NEXT:    xxlxor 35, 35, 35
-; CHECK-BE-NEXT:    xxsldwi 0, 36, 36, 1
-; CHECK-BE-NEXT:    xxland 0, 0, 37
+; CHECK-BE-NEXT:    xxland 0, 0, 36
 ; CHECK-BE-NEXT:    xxlor 0, 34, 0
 ; CHECK-BE-NEXT:    xxspltw 1, 0, 2
 ; CHECK-BE-NEXT:    xxspltw 0, 0, 0

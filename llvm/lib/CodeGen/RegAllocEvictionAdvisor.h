@@ -121,7 +121,7 @@ public:
 protected:
   RegAllocEvictionAdvisor(const MachineFunction &MF, const RAGreedy &RA);
 
-  Register canReassign(const LiveInterval &VirtReg, Register PrevReg) const;
+  bool canReassign(const LiveInterval &VirtReg, MCRegister FromReg) const;
 
   // Get the upper limit of elements in the given Order we need to analize.
   // TODO: is this heuristic,  we could consider learning it.

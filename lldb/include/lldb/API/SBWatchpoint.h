@@ -10,6 +10,16 @@
 #define LLDB_API_SBWATCHPOINT_H
 
 #include "lldb/API/SBDefines.h"
+#include "lldb/API/SBType.h"
+
+namespace lldb_private {
+namespace python {
+class SWIGBridge;
+}
+namespace lua {
+class SWIGBridge;
+}
+} // namespace lldb_private
 
 namespace lldb {
 
@@ -18,8 +28,6 @@ public:
   SBWatchpoint();
 
   SBWatchpoint(const lldb::SBWatchpoint &rhs);
-
-  SBWatchpoint(const lldb::WatchpointSP &wp_sp);
 
   ~SBWatchpoint();
 
@@ -37,7 +45,7 @@ public:
 
   watch_id_t GetID();
 
-  /// With -1 representing an invalid hardware index.
+  LLDB_DEPRECATED("Hardware index is not available, always returns -1")
   int32_t GetHardwareIndex();
 
   lldb::addr_t GetWatchAddress();
@@ -62,16 +70,32 @@ public:
 
   void Clear();
 
-  lldb::WatchpointSP GetSP() const;
-
-  void SetSP(const lldb::WatchpointSP &sp);
-
   static bool EventIsWatchpointEvent(const lldb::SBEvent &event);
 
   static lldb::WatchpointEventType
   GetWatchpointEventTypeFromEvent(const lldb::SBEvent &event);
 
   static lldb::SBWatchpoint GetWatchpointFromEvent(const lldb::SBEvent &event);
+
+  lldb::SBType GetType();
+
+  WatchpointValueKind GetWatchValueKind();
+
+  const char *GetWatchSpec();
+
+  bool IsWatchingReads();
+
+  bool IsWatchingWrites();
+
+protected:
+  friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::lua::SWIGBridge;
+
+  SBWatchpoint(const lldb::WatchpointSP &wp_sp);
+
+  lldb::WatchpointSP GetSP() const;
+
+  void SetSP(const lldb::WatchpointSP &sp);
 
 private:
   friend class SBTarget;

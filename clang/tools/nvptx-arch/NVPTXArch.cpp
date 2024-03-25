@@ -11,13 +11,25 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/Version.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <cstdio>
 #include <memory>
 
-#if DYNAMIC_CUDA
+using namespace llvm;
+
+static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
+
+static void PrintVersion(raw_ostream &OS) {
+  OS << clang::getClangToolFullVersion("nvptx-arch") << '\n';
+}
+// Mark all our options with this category, everything else (except for -version
+// and -help) will be hidden.
+static cl::OptionCategory NVPTXArchCategory("nvptx-arch options");
+
 typedef enum cudaError_enum {
   CUDA_SUCCESS = 0,
   CUDA_ERROR_NO_DEVICE = 100,
@@ -36,7 +48,7 @@ CUresult (*cuGetErrorString)(CUresult, const char **);
 CUresult (*cuDeviceGet)(CUdevice *, int);
 CUresult (*cuDeviceGetAttribute)(int *, CUdevice_attribute, CUdevice);
 
-constexpr const char *DynamicCudaPath = "libcuda.so";
+constexpr const char *DynamicCudaPath = "libcuda.so.1";
 
 llvm::Error loadCUDA() {
   std::string ErrMsg;
@@ -62,12 +74,6 @@ llvm::Error loadCUDA() {
 #undef DYNAMIC_INIT
   return llvm::Error::success();
 }
-#else
-
-#include "cuda.h"
-llvm::Error loadCUDA() { return llvm::Error::success(); }
-
-#endif
 
 static int handleError(CUresult Err) {
   const char *ErrStr = nullptr;
@@ -79,6 +85,21 @@ static int handleError(CUresult Err) {
 }
 
 int main(int argc, char *argv[]) {
+  cl::HideUnrelatedOptions(NVPTXArchCategory);
+
+  cl::SetVersionPrinter(PrintVersion);
+  cl::ParseCommandLineOptions(
+      argc, argv,
+      "A tool to detect the presence of NVIDIA devices on the system. \n\n"
+      "The tool will output each detected GPU architecture separated by a\n"
+      "newline character. If multiple GPUs of the same architecture are found\n"
+      "a string will be printed for each\n");
+
+  if (Help) {
+    cl::PrintHelpMessage();
+    return 0;
+  }
+
   // Attempt to load the NVPTX driver runtime.
   if (llvm::Error Err = loadCUDA()) {
     logAllUnhandledErrors(std::move(Err), llvm::errs());

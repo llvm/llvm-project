@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: can-create-symlinks
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -14,18 +17,15 @@
 // void create_symlink(const path& existing_symlink, const path& new_symlink,
 //                   error_code& ec) noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <cassert>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
-TEST_SUITE(filesystem_create_symlink_test_suite)
-
-TEST_CASE(test_signatures)
+static void test_signatures()
 {
     const path p; ((void)p);
     std::error_code ec; ((void)ec);
@@ -33,7 +33,7 @@ TEST_CASE(test_signatures)
     ASSERT_NOEXCEPT(fs::create_symlink(p, p, ec));
 }
 
-TEST_CASE(test_error_reporting)
+static void test_error_reporting()
 {
     scoped_test_env env;
     const path file = env.create_file("file1", 42);
@@ -42,11 +42,11 @@ TEST_CASE(test_error_reporting)
     { // destination exists
         std::error_code ec;
         fs::create_symlink(sym, file2, ec);
-        TEST_REQUIRE(ec);
+        assert(ec);
     }
 }
 
-TEST_CASE(create_symlink_basic)
+static void create_symlink_basic()
 {
     scoped_test_env env;
     const path file = env.create_file("file", 42);
@@ -57,21 +57,21 @@ TEST_CASE(create_symlink_basic)
         const path dest = env.make_env_path("dest1");
         std::error_code ec;
         fs::create_symlink(file_sym, dest, ec);
-        TEST_REQUIRE(!ec);
-        TEST_CHECK(is_symlink(dest));
-        TEST_CHECK(equivalent(dest, file));
+        assert(!ec);
+        assert(is_symlink(dest));
+        assert(equivalent(dest, file));
     }
     {
         const path dest = env.make_env_path("dest2");
         std::error_code ec;
         fs::create_directory_symlink(dir_sym, dest, ec);
-        TEST_REQUIRE(!ec);
-        TEST_CHECK(is_symlink(dest));
-        TEST_CHECK(equivalent(dest, dir));
+        assert(!ec);
+        assert(is_symlink(dest));
+        assert(equivalent(dest, dir));
     }
 }
 
-TEST_CASE(create_symlink_dest_cleanup)
+static void create_symlink_dest_cleanup()
 {
     scoped_test_env env;
     const path dir = env.create_dir("dir");
@@ -84,12 +84,18 @@ TEST_CASE(create_symlink_dest_cleanup)
     sym_target_normalized.make_preferred();
     std::error_code ec;
     fs::create_symlink(sym_target, sym, ec);
-    TEST_REQUIRE(!ec);
-    TEST_CHECK(equivalent(sym, file, ec));
+    assert(!ec);
+    assert(equivalent(sym, file, ec));
     const path ret = fs::read_symlink(sym, ec);
-    TEST_CHECK(!ec);
-    TEST_CHECK(ret.native() == sym_target_normalized.native());
+    assert(!ec);
+    assert(ret.native() == sym_target_normalized.native());
 }
 
+int main(int, char**) {
+    test_signatures();
+    test_error_reporting();
+    create_symlink_basic();
+    create_symlink_dest_cleanup();
 
-TEST_SUITE_END()
+    return 0;
+}

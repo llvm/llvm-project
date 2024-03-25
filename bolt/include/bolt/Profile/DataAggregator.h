@@ -199,10 +199,10 @@ private:
   /// execution order.
   ///
   /// Return true if the trace is valid, false otherwise.
-  bool recordTrace(
-      BinaryFunction &BF, const LBREntry &First, const LBREntry &Second,
-      uint64_t Count = 1,
-      SmallVector<std::pair<uint64_t, uint64_t>, 16> *Branches = nullptr) const;
+  bool
+  recordTrace(BinaryFunction &BF, const LBREntry &First, const LBREntry &Second,
+              uint64_t Count,
+              SmallVector<std::pair<uint64_t, uint64_t>, 16> &Branches) const;
 
   /// Return a vector of offsets corresponding to a trace in a function
   /// (see recordTrace() above).
@@ -301,7 +301,7 @@ private:
   ErrorOr<AggregatedLBREntry> parseAggregatedLBREntry();
 
   /// Parse either buildid:offset or just offset, representing a location in the
-  /// binary. Used exclusevely for pre-aggregated LBR samples.
+  /// binary. Used exclusively for pre-aggregated LBR samples.
   ErrorOr<Location> parseLocationOrOffset();
 
   /// Check if a field separator is the next char to parse and, if yes, consume
@@ -315,8 +315,17 @@ private:
   /// consume it (peek only).
   bool checkNewLine();
 
+  using PerfProcessErrorCallbackTy = std::function<void(int, StringRef)>;
+  /// Prepare to parse data from a given perf script invocation.
+  /// Returns an invocation exit code.
+  int prepareToParse(StringRef Name, PerfProcessInfo &Process,
+                     PerfProcessErrorCallbackTy Callback);
+
   /// Parse a single LBR entry as output by perf script -Fbrstack
   ErrorOr<LBREntry> parseLBREntry();
+
+  /// Parse LBR sample, returns the number of traces.
+  uint64_t parseLBRSample(const PerfBranchSample &Sample, bool NeedsSkylakeFix);
 
   /// Parse and pre-aggregate branch events.
   std::error_code parseBranchEvents();
@@ -453,6 +462,10 @@ private:
 
   /// Dump data structures into a file readable by llvm-bolt
   std::error_code writeAggregatedFile(StringRef OutputFilename) const;
+
+  /// Dump translated data structures into YAML
+  std::error_code writeBATYAML(BinaryContext &BC,
+                               StringRef OutputFilename) const;
 
   /// Filter out binaries based on PID
   void filterBinaryMMapInfo();

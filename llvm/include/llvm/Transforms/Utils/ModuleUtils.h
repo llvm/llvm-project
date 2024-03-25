@@ -143,12 +143,6 @@ void embedBufferInModule(Module &M, MemoryBufferRef Buf, StringRef SectionName,
 bool lowerGlobalIFuncUsersAsGlobalCtor(
     Module &M, ArrayRef<GlobalIFunc *> IFuncsToLower = {});
 
-class CallInst;
-namespace VFABI {
-/// Overwrite the Vector Function ABI variants attribute with the names provide
-/// in \p VariantMappings.
-void setVectorVariantNames(CallInst *CI, ArrayRef<std::string> VariantMappings);
-} // End VFABI namespace
 } // End llvm namespace
 
 #endif // LLVM_TRANSFORMS_UTILS_MODULEUTILS_H

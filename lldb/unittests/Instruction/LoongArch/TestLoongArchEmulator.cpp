@@ -170,7 +170,7 @@ TEST_F(LoongArch64EmulatorTester, testJIRL) {
   addr_t old_pc = 0x12000600;
   WritePC(old_pc);
   // JIRL r1, r12, 0x10
-  // | 31       26 | 25                           15 | 9       5 | 4       0 |
+  // | 31       26 | 25                           10 | 9       5 | 4       0 |
   // | 0 1 0 0 1 1 | 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 | 0 1 1 0 0 | 0 0 0 0 1 |
   uint32_t inst = 0b01001100000000000100000110000001;
   uint32_t offs16 = 0x10;

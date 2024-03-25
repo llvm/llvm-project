@@ -125,8 +125,7 @@ define i32 @pow2_32_br(i32 %x) {
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[FALSE:%.*]], label [[TRUE:%.*]]
 ; CHECK:       True:
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X]], 4
-; CHECK-NEXT:    ret i32 [[OR]]
+; CHECK-NEXT:    ret i32 [[X]]
 ; CHECK:       False:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -167,8 +166,7 @@ define i64 @pow2_64_br(i64 %x) {
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[AND]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[FALSE:%.*]], label [[TRUE:%.*]]
 ; CHECK:       True:
-; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[X]], 1
-; CHECK-NEXT:    ret i64 [[AND2]]
+; CHECK-NEXT:    ret i64 1
 ; CHECK:       False:
 ; CHECK-NEXT:    ret i64 0
 ;
@@ -209,8 +207,7 @@ define i16 @pow2_16_br(i16 %x) {
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[AND]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[FALSE:%.*]], label [[TRUE:%.*]]
 ; CHECK:       True:
-; CHECK-NEXT:    [[OR:%.*]] = or i16 [[X]], 16384
-; CHECK-NEXT:    ret i16 [[OR]]
+; CHECK-NEXT:    ret i16 [[X]]
 ; CHECK:       False:
 ; CHECK-NEXT:    ret i16 0
 ;
@@ -250,8 +247,7 @@ define i8 @pow2_8_br(i8 %x) {
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp sgt i8 [[X:%.*]], -1
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[FALSE:%.*]], label [[TRUE:%.*]]
 ; CHECK:       True:
-; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[X]], -128
-; CHECK-NEXT:    ret i8 [[AND2]]
+; CHECK-NEXT:    ret i8 -128
 ; CHECK:       False:
 ; CHECK-NEXT:    ret i8 0
 ;

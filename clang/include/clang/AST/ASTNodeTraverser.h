@@ -23,7 +23,9 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateArgumentVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeLocVisitor.h"
 #include "clang/AST/TypeVisitor.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 namespace clang {
 
@@ -48,6 +50,7 @@ struct {
   void Visit(const Stmt *Node);
   void Visit(const Type *T);
   void Visit(QualType T);
+  void Visit(TypeLoc);
   void Visit(const Decl *D);
   void Visit(const CXXCtorInitializer *Init);
   void Visit(const OMPClause *C);
@@ -64,12 +67,21 @@ class ASTNodeTraverser
       public comments::ConstCommentVisitor<Derived, void,
                                            const comments::FullComment *>,
       public TypeVisitor<Derived>,
+      public TypeLocVisitor<Derived>,
       public ConstAttrVisitor<Derived>,
       public ConstTemplateArgumentVisitor<Derived> {
 
   /// Indicates whether we should trigger deserialization of nodes that had
   /// not already been loaded.
   bool Deserialize = false;
+
+  /// Tracks whether we should dump TypeLocs etc.
+  ///
+  /// Detailed location information such as TypeLoc nodes is not usually
+  /// included in the dump (too verbose).
+  /// But when explicitly asked to dump a Loc node, we do so recursively,
+  /// including e.g. FunctionTypeLoc => ParmVarDecl => TypeLoc.
+  bool VisitLocs = false;
 
   TraversalKind Traversal = TraversalKind::TK_AsIs;
 
@@ -85,7 +97,7 @@ public:
   void SetTraversalKind(TraversalKind TK) { Traversal = TK; }
   TraversalKind GetTraversalKind() const { return Traversal; }
 
-  void Visit(const Decl *D) {
+  void Visit(const Decl *D, bool VisitLocs = false) {
     if (Traversal == TK_IgnoreUnlessSpelledInSource && D->isImplicit())
       return;
 
@@ -94,7 +106,10 @@ public:
       if (!D)
         return;
 
-      ConstDeclVisitor<Derived>::Visit(D);
+      {
+        llvm::SaveAndRestore RestoreVisitLocs(this->VisitLocs, VisitLocs);
+        ConstDeclVisitor<Derived>::Visit(D);
+      }
 
       for (const auto &A : D->attrs())
         Visit(A);
@@ -104,7 +119,7 @@ public:
         Visit(Comment, Comment);
 
       // Decls within functions are visited by the body.
-      if (!isa<FunctionDecl>(*D) && !isa<ObjCMethodDecl>(*D)) {
+      if (!isa<FunctionDecl, ObjCMethodDecl, BlockDecl>(*D)) {
         if (Traversal != TK_AsIs) {
           if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
             auto SK = CTSD->getSpecializationKind();
@@ -181,6 +196,17 @@ public:
     });
   }
 
+  void Visit(TypeLoc T) {
+    getNodeDelegate().AddChild([=] {
+      getNodeDelegate().Visit(T);
+      if (T.isNull())
+        return;
+      TypeLocVisitor<Derived>::Visit(T);
+      if (auto Inner = T.getNextTypeLoc())
+        Visit(Inner);
+    });
+  }
+
   void Visit(const Attr *A) {
     getNodeDelegate().AddChild([=] {
       getNodeDelegate().Visit(A);
@@ -252,6 +278,10 @@ public:
     });
   }
 
+  void Visit(const ConceptReference *R) {
+    getNodeDelegate().AddChild([=] { getNodeDelegate().Visit(R); });
+  }
+
   void Visit(const APValue &Value, QualType Ty) {
     getNodeDelegate().AddChild([=] { getNodeDelegate().Visit(Value, Ty); });
   }
@@ -282,12 +312,16 @@ public:
       Visit(*QT);
     else if (const auto *T = N.get<Type>())
       Visit(T);
+    else if (const auto *TL = N.get<TypeLoc>())
+      Visit(*TL);
     else if (const auto *C = N.get<CXXCtorInitializer>())
       Visit(C);
     else if (const auto *C = N.get<OMPClause>())
       Visit(C);
     else if (const auto *T = N.get<TemplateArgument>())
       Visit(*T);
+    else if (const auto *CR = N.get<ConceptReference>())
+      Visit(CR);
   }
 
   void dumpDeclContext(const DeclContext *DC) {
@@ -340,7 +374,7 @@ public:
 
   void VisitComplexType(const ComplexType *T) { Visit(T->getElementType()); }
   void VisitLocInfoType(const LocInfoType *T) {
-    Visit(T->getTypeSourceInfo()->getType());
+    Visit(T->getTypeSourceInfo()->getTypeLoc());
   }
   void VisitPointerType(const PointerType *T) { Visit(T->getPointeeType()); }
   void VisitBlockPointerType(const BlockPointerType *T) {
@@ -379,12 +413,19 @@ public:
   void VisitDecltypeType(const DecltypeType *T) {
     Visit(T->getUnderlyingExpr());
   }
+
+  void VisitPackIndexingType(const PackIndexingType *T) {
+    Visit(T->getPattern());
+    Visit(T->getIndexExpr());
+  }
+
   void VisitUnaryTransformType(const UnaryTransformType *T) {
     Visit(T->getBaseType());
   }
   void VisitAttributedType(const AttributedType *T) {
     // FIXME: AttrKind
-    Visit(T->getModifiedType());
+    if (T->getModifiedType() != T->getEquivalentType())
+      Visit(T->getModifiedType());
   }
   void VisitBTFTagAttributedType(const BTFTagAttributedType *T) {
     Visit(T->getWrappedType());
@@ -408,8 +449,54 @@ public:
     if (!T->isSugared())
       Visit(T->getPattern());
   }
+  void VisitAutoType(const AutoType *T) {
+    for (const auto &Arg : T->getTypeConstraintArguments())
+      Visit(Arg);
+  }
   // FIXME: ElaboratedType, DependentNameType,
   // DependentTemplateSpecializationType, ObjCObjectType
+
+  // For TypeLocs, we automatically visit the inner type loc (pointee type etc).
+  // We must explicitly visit other lexically-nested nodes.
+  void VisitFunctionProtoTypeLoc(FunctionProtoTypeLoc TL) {
+    TypeLocVisitor<Derived>::VisitFunctionTypeLoc(TL);
+    for (const auto *Param : TL.getParams())
+      Visit(Param, /*VisitTypeLocs=*/true);
+  }
+  void VisitAutoTypeLoc(AutoTypeLoc TL) {
+    if (const auto *CR = TL.getConceptReference()) {
+      if (auto *Args = CR->getTemplateArgsAsWritten())
+        for (const auto &Arg : Args->arguments())
+          dumpTemplateArgumentLoc(Arg);
+    }
+  }
+  void VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
+    Visit(TL.getClassTInfo()->getTypeLoc());
+  }
+  void VisitVariableArrayTypeLoc(VariableArrayTypeLoc TL) {
+    Visit(TL.getSizeExpr());
+  }
+  void VisitDependentSizedArrayTypeLoc(DependentSizedArrayTypeLoc TL) {
+    Visit(TL.getSizeExpr());
+  }
+  void VisitDependentSizedExtVectorTypeLoc(DependentSizedExtVectorTypeLoc TL) {
+    Visit(cast<DependentSizedExtVectorType>(TL.getType())->getSizeExpr());
+  }
+  void VisitTypeOfExprTypeLoc(TypeOfExprTypeLoc TL) {
+    Visit(TL.getUnderlyingExpr());
+  }
+  void VisitDecltypeType(DecltypeType TL) {
+    Visit(TL.getUnderlyingExpr());
+  }
+  void VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL) {
+    for (unsigned I=0, N=TL.getNumArgs(); I < N; ++I)
+      dumpTemplateArgumentLoc(TL.getArgLoc(I));
+  }
+  void VisitDependentTemplateSpecializationTypeLoc(
+      DependentTemplateSpecializationTypeLoc TL) {
+    for (unsigned I=0, N=TL.getNumArgs(); I < N; ++I)
+      dumpTemplateArgumentLoc(TL.getArgLoc(I));
+  }
 
   void VisitTypedefDecl(const TypedefDecl *D) { Visit(D->getUnderlyingType()); }
 
@@ -419,8 +506,12 @@ public:
   }
 
   void VisitFunctionDecl(const FunctionDecl *D) {
-    if (const auto *FTSI = D->getTemplateSpecializationInfo())
+    if (FunctionTemplateSpecializationInfo *FTSI =
+            D->getTemplateSpecializationInfo())
       dumpTemplateArgumentList(*FTSI->TemplateArguments);
+    else if (DependentFunctionTemplateSpecializationInfo *DFTSI =
+                 D->getDependentSpecializationInfo())
+      dumpASTTemplateArgumentListInfo(DFTSI->TemplateArgumentsAsWritten);
 
     if (D->param_begin())
       for (const auto *Parameter : D->parameters())
@@ -451,6 +542,8 @@ public:
     if (Traversal == TK_IgnoreUnlessSpelledInSource && D->isCXXForRangeDecl())
       return;
 
+    if (const auto *TSI = D->getTypeSourceInfo(); VisitLocs && TSI)
+      Visit(TSI->getTypeLoc());
     if (D->hasInit())
       Visit(D->getInit());
   }
@@ -571,11 +664,6 @@ public:
     dumpTemplateParameters(D->getTemplateParameters());
   }
 
-  void VisitClassScopeFunctionSpecializationDecl(
-      const ClassScopeFunctionSpecializationDecl *D) {
-    Visit(D->getSpecialization());
-    dumpASTTemplateArgumentListInfo(D->getTemplateArgsAsWritten());
-  }
   void VisitVarTemplateDecl(const VarTemplateDecl *D) { dumpTemplateDecl(D); }
 
   void VisitBuiltinTemplateDecl(const BuiltinTemplateDecl *D) {
@@ -731,8 +819,11 @@ public:
   }
 
   void VisitGenericSelectionExpr(const GenericSelectionExpr *E) {
-    Visit(E->getControllingExpr());
-    Visit(E->getControllingExpr()->getType()); // FIXME: remove
+    if (E->isExprPredicate()) {
+      Visit(E->getControllingExpr());
+      Visit(E->getControllingExpr()->getType()); // FIXME: remove
+    } else
+      Visit(E->getControllingType()->getType());
 
     for (const auto Assoc : E->associations()) {
       Visit(Assoc);

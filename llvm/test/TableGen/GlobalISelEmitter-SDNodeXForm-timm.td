@@ -18,19 +18,19 @@ def int_mytarget_foo : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [Imm
 def SLEEP : I<(outs), (ins i32imm:$src0), []>;
 def FOO : I<(outs GPR32:$dst), (ins GPR32:$src0, i32imm:$src1), []>;
 
-// GISEL: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_INTRINSIC,
-// GISEL: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/1, Intrinsic::mytarget_foo,
+// GISEL: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_INTRINSIC),
+// GISEL: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/1, GIMT_Encode2(Intrinsic::mytarget_foo),
 // GISEL: GIM_CheckIsImm, /*MI*/0, /*Op*/3,
-// GISEL: GIR_CustomOperandRenderer, /*InsnID*/0, /*OldInsnID*/0, /*OpIdx*/3, /*OperandRenderer*/GICR_renderShiftImml1, // src1
+// GISEL: GIR_CustomOperandRenderer, /*InsnID*/0, /*OldInsnID*/0, /*OpIdx*/3, /*OperandRenderer*/GIMT_Encode2(GICR_renderShiftImml1), // src1
 def : Pat<
   (int_mytarget_foo i32:$src0, (i32 timm:$src1)),
   (FOO GPR32:$src0, (shiftl_1 $src1))
 >;
 
-// GISEL: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS,
-// GISEL: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/0, Intrinsic::mytarget_sleep,
+// GISEL: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS),
+// GISEL: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/0, GIMT_Encode2(Intrinsic::mytarget_sleep),
 // GISEL: GIM_CheckIsImm, /*MI*/0, /*Op*/1,
-// GISEL: GIR_CustomOperandRenderer, /*InsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, /*OperandRenderer*/GICR_renderShiftImml1, // src0
+// GISEL: GIR_CustomOperandRenderer, /*InsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, /*OperandRenderer*/GIMT_Encode2(GICR_renderShiftImml1), // src0
 def : Pat<
   (int_mytarget_sleep (i32 timm:$src0)),
   (SLEEP (shiftl_1 $src0))

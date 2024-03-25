@@ -34,8 +34,8 @@ AST_POLYMORPHIC_MATCHER(
   SourceLocation Loc = SourceManager.getSpellingLoc(Node.getBeginLoc());
   if (Loc.isInvalid())
     return false;
-  const FileEntry *FileEntry =
-      SourceManager.getFileEntryForID(SourceManager.getFileID(Loc));
+  OptionalFileEntryRef FileEntry =
+      SourceManager.getFileEntryRefForID(SourceManager.getFileID(Loc));
   if (!FileEntry)
     return false;
   // Determine whether filepath contains "absl/[absl-library]" substring, where
@@ -52,7 +52,7 @@ AST_POLYMORPHIC_MATCHER(
       "profiling", "random",   "status",    "strings",   "synchronization",
       "time",      "types",    "utility"};
   return llvm::any_of(AbseilLibraries, [&](const char *Library) {
-    return Path.startswith(Library);
+    return Path.starts_with(Library);
   });
 }
 

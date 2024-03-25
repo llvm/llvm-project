@@ -25,39 +25,6 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
-namespace {
-class ModuleDebugInfoLegacyPrinter : public ModulePass {
-  DebugInfoFinder Finder;
-
-public:
-  static char ID; // Pass identification, replacement for typeid
-  ModuleDebugInfoLegacyPrinter() : ModulePass(ID) {
-    initializeModuleDebugInfoLegacyPrinterPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-  void print(raw_ostream &O, const Module *M) const override;
-};
-}
-
-char ModuleDebugInfoLegacyPrinter::ID = 0;
-INITIALIZE_PASS(ModuleDebugInfoLegacyPrinter, "module-debuginfo",
-                "Decodes module-level debug info", false, true)
-
-ModulePass *llvm::createModuleDebugInfoPrinterPass() {
-  return new ModuleDebugInfoLegacyPrinter();
-}
-
-bool ModuleDebugInfoLegacyPrinter::runOnModule(Module &M) {
-  Finder.processModule(M);
-  return false;
-}
-
 static void printFile(raw_ostream &O, StringRef Filename, StringRef Directory,
                       unsigned Line = 0) {
   if (Filename.empty())
@@ -130,11 +97,6 @@ static void printModuleDebugInfo(raw_ostream &O, const Module *M,
     }
     O << '\n';
   }
-}
-
-void ModuleDebugInfoLegacyPrinter::print(raw_ostream &O,
-                                         const Module *M) const {
-  printModuleDebugInfo(O, M, Finder);
 }
 
 ModuleDebugInfoPrinterPass::ModuleDebugInfoPrinterPass(raw_ostream &OS)

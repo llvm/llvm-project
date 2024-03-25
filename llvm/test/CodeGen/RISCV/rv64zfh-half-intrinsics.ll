@@ -5,6 +5,12 @@
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+d \
 ; RUN:   -mattr=+zfh -verify-machineinstrs -target-abi lp64d | \
 ; RUN:   FileCheck -check-prefix=RV64IDZFH %s
+; RUN: llc < %s -mtriple=riscv64 -mattr=+zhinx \
+; RUN:   -verify-machineinstrs -target-abi lp64 | \
+; RUN:   FileCheck -check-prefix=RV64IZHINX %s
+; RUN: llc < %s -mtriple=riscv64 -mattr=+zdinx \
+; RUN:   -mattr=+zhinx -verify-machineinstrs -target-abi lp64 | \
+; RUN:   FileCheck -check-prefix=RV64IZDINXZHINX %s
 
 ; These intrinsics require half and i64 to be legal types.
 
@@ -20,6 +26,16 @@ define i64 @llrint_f16(half %a) nounwind {
 ; RV64IDZFH:       # %bb.0:
 ; RV64IDZFH-NEXT:    fcvt.l.h a0, fa0
 ; RV64IDZFH-NEXT:    ret
+;
+; RV64IZHINX-LABEL: llrint_f16:
+; RV64IZHINX:       # %bb.0:
+; RV64IZHINX-NEXT:    fcvt.l.h a0, a0
+; RV64IZHINX-NEXT:    ret
+;
+; RV64IZDINXZHINX-LABEL: llrint_f16:
+; RV64IZDINXZHINX:       # %bb.0:
+; RV64IZDINXZHINX-NEXT:    fcvt.l.h a0, a0
+; RV64IZDINXZHINX-NEXT:    ret
   %1 = call i64 @llvm.llrint.i64.f16(half %a)
   ret i64 %1
 }
@@ -36,6 +52,16 @@ define i64 @llround_f16(half %a) nounwind {
 ; RV64IDZFH:       # %bb.0:
 ; RV64IDZFH-NEXT:    fcvt.l.h a0, fa0, rmm
 ; RV64IDZFH-NEXT:    ret
+;
+; RV64IZHINX-LABEL: llround_f16:
+; RV64IZHINX:       # %bb.0:
+; RV64IZHINX-NEXT:    fcvt.l.h a0, a0, rmm
+; RV64IZHINX-NEXT:    ret
+;
+; RV64IZDINXZHINX-LABEL: llround_f16:
+; RV64IZDINXZHINX:       # %bb.0:
+; RV64IZDINXZHINX-NEXT:    fcvt.l.h a0, a0, rmm
+; RV64IZDINXZHINX-NEXT:    ret
   %1 = call i64 @llvm.llround.i64.f16(half %a)
   ret i64 %1
 }

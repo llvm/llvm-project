@@ -33,12 +33,12 @@ unwind_sources = [
   "Unwind-EHABI.h",
   "Unwind-seh.cpp",
   "Unwind-sjlj.c",
+  "Unwind-wasm.c",
   "UnwindCursor.hpp",
   "UnwindLevel1-gcc-ext.c",
   "UnwindLevel1.c",
   "UnwindRegistersRestore.S",
   "UnwindRegistersSave.S",
-  "Unwind_AIXExtras.cpp",
   "assembly.h",
   "cet_unwind.h",
   "config.h",
@@ -46,8 +46,8 @@ unwind_sources = [
   "libunwind.cpp",
   "libunwind_ext.h",
 ]
-if (current_os == "mac") {
-  unwind_sources += [ "Unwind_AppleExtras.cpp" ]
+if (current_os == "aix") {
+  unwind_sources += [ "Unwind_AIXExtras.cpp" ]
 }
 
 if (current_os == "android") {
@@ -55,6 +55,10 @@ if (current_os == "android") {
     unwind_output_dir = "$crt_current_out_dir/aarch64"
   } else if (current_cpu == "arm") {
     unwind_output_dir = "$crt_current_out_dir/arm"
+  } else if (current_cpu == "x64") {
+    unwind_output_dir = "$crt_current_out_dir/x86_64"
+  } else if (current_cpu == "x86") {
+    unwind_output_dir = "$crt_current_out_dir/i386"
   }
 } else {
   unwind_output_dir = runtimes_dir
@@ -87,6 +91,7 @@ if (libunwind_enable_shared && current_os != "android") {
       ]
     }
     if (current_os == "mac") {
+      cflags += [ "-fno-stack-protector" ]
       ldflags += [
         "-Wl,-compatibility_version,1",
         "-Wl,-install_name,/usr/lib/libunwind.1.dylib",

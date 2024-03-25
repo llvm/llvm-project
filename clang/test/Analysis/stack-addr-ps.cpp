@@ -30,13 +30,13 @@ const int &get_reference1() { return get_value(); } // expected-warning{{Address
 
 const int &get_reference2() {
   const int &x = get_value(); // expected-note {{binding reference variable 'x' here}}
-  return x; // expected-warning{{Address of stack memory associated with temporary object of type 'int' returned}} expected-warning {{returning reference to local temporary}}
+  return x; // expected-warning{{Address of stack memory associated with temporary object of type 'int' lifetime extended by local variable 'x' returned to caller}} expected-warning {{returning reference to local temporary}} 
 }
 
 const int &get_reference3() {
   const int &x1 = get_value(); // expected-note {{binding reference variable 'x1' here}}
   const int &x2 = x1; // expected-note {{binding reference variable 'x2' here}}
-  return x2; // expected-warning{{Address of stack memory associated with temporary object of type 'int' returned}} expected-warning {{returning reference to local temporary}}
+  return x2; // expected-warning{{Address of stack memory associated with temporary object of type 'int' lifetime extended by local variable 'x1' returned to caller}} expected-warning {{returning reference to local temporary}}
 }
 
 int global_var;
@@ -60,7 +60,7 @@ int *f3() {
 const int *f4() {
   const int &x1 = get_value(); // expected-note {{binding reference variable 'x1' here}}
   const int &x2 = x1; // expected-note {{binding reference variable 'x2' here}}
-  return &x2; // expected-warning{{Address of stack memory associated with temporary object of type 'int' returned}} expected-warning {{returning address of local temporary}}
+  return &x2; // expected-warning{{Address of stack memory associated with temporary object of type 'int' lifetime extended by local variable 'x1' returned to caller}} expected-warning {{returning address of local temporary}}
 }
 
 struct S {
@@ -89,7 +89,6 @@ struct TS {
   }
 };
 
-// rdar://11345441
 int* f5() {
   int& i = i; // expected-warning {{Assigned value is garbage or undefined}} expected-warning{{reference 'i' is not yet bound to a value when used within its own initialization}}
   return &i;

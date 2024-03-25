@@ -16,6 +16,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -248,6 +249,8 @@ uint32_t MSFBuilder::computeDirectoryByteSize() const {
 }
 
 Expected<MSFLayout> MSFBuilder::generateLayout() {
+  llvm::TimeTraceScope timeScope("MSF: Generate layout");
+
   SuperBlock *SB = Allocator.Allocate<SuperBlock>();
   MSFLayout L;
   L.SB = SB;
@@ -336,6 +339,8 @@ static void commitFpm(WritableBinaryStream &MsfBuffer, const MSFLayout &Layout,
 
 Expected<FileBufferByteStream> MSFBuilder::commit(StringRef Path,
                                                   MSFLayout &Layout) {
+  llvm::TimeTraceScope timeScope("Commit MSF");
+
   Expected<MSFLayout> L = generateLayout();
   if (!L)
     return L.takeError();
@@ -364,12 +369,24 @@ Expected<FileBufferByteStream> MSFBuilder::commit(StringRef Path,
                 FileSize, Layout.SB->BlockSize));
   }
 
+  uint64_t NumDirectoryBlocks =
+      bytesToBlocks(Layout.SB->NumDirectoryBytes, Layout.SB->BlockSize);
+  uint64_t DirectoryBlockMapSize =
+      NumDirectoryBlocks * sizeof(support::ulittle32_t);
+  if (DirectoryBlockMapSize > Layout.SB->BlockSize) {
+    return make_error<MSFError>(msf_error_code::stream_directory_overflow,
+                                formatv("The directory block map ({0} bytes) "
+                                        "doesn't fit in a block ({1} bytes)",
+                                        DirectoryBlockMapSize,
+                                        Layout.SB->BlockSize));
+  }
+
   auto OutFileOrError = FileOutputBuffer::create(Path, FileSize);
   if (auto EC = OutFileOrError.takeError())
     return std::move(EC);
 
   FileBufferByteStream Buffer(std::move(*OutFileOrError),
-                              llvm::support::little);
+                              llvm::endianness::little);
   BinaryStreamWriter Writer(Buffer);
 
   if (auto EC = Writer.writeObject(*Layout.SB))

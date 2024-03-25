@@ -690,7 +690,7 @@ define <4 x i1> @vec_4xi32_nonsplat_undef2_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 ; X86-SSE2-LABEL: vec_4xi32_nonsplat_undef2_eq:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pshuflw {{.*#+}} xmm3 = xmm1[2,3,3,3,4,5,6,7]
-; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = <1,1,u,1>
+; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,u,1]
 ; X86-SSE2-NEXT:    movdqa %xmm2, %xmm4
 ; X86-SSE2-NEXT:    psrld %xmm3, %xmm4
 ; X86-SSE2-NEXT:    pshuflw {{.*#+}} xmm3 = xmm1[0,1,1,1,4,5,6,7]
@@ -722,7 +722,7 @@ define <4 x i1> @vec_4xi32_nonsplat_undef2_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 ; X64-SSE2-LABEL: vec_4xi32_nonsplat_undef2_eq:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm1[2,3,3,3,4,5,6,7]
-; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm3 = <1,1,u,1>
+; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [1,1,u,1]
 ; X64-SSE2-NEXT:    movdqa %xmm3, %xmm4
 ; X64-SSE2-NEXT:    psrld %xmm2, %xmm4
 ; X64-SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm1[0,1,1,1,4,5,6,7]

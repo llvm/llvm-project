@@ -2,8 +2,8 @@
 // RUN: FileCheck %s < %t
 
 // Both predicates should be tested
-// CHECK-DAG: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIPFP_MI_Predicate_pat_frag_b,
-// CHECK-DAG: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIPFP_MI_Predicate_pat_frag_a,
+// CHECK-DAG: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_pat_frag_b),
+// CHECK-DAG: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_pat_frag_a),
 
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"
@@ -37,4 +37,3 @@ def : Pat <
   (pat_frag_b GPR32:$src),
   (inst_b GPR32:$src)
 >;
-

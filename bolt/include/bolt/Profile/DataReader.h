@@ -21,6 +21,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <map>
 #include <unordered_map>
 #include <vector>
 
@@ -349,9 +350,9 @@ protected:
   ///
   /// The examples records branches from local symbol func (from t2.c), offset
   /// 11, to global symbol globalfunc, offset 1d, with 1775 branches, no
-  /// mispreds. Of these branches, 1002 were preceeded by a sequence of
+  /// mispreds. Of these branches, 1002 were preceded by a sequence of
   /// branches from func, offset 18 to offset 20 and then from offset 31 to
-  /// offset d. The rest 773 branches were preceeded by a different sequence
+  /// offset d. The rest 773 branches were preceded by a different sequence
   /// of branches, from func, offset 18 to offset 60 and then from offset 71 to
   /// offset d.
   std::error_code parse();
@@ -426,9 +427,9 @@ protected:
     FuncsToMemData[&BF] = FMD;
   }
 
-  using NamesToBranchesMapTy = StringMap<FuncBranchData>;
-  using NamesToSamplesMapTy = StringMap<FuncSampleData>;
-  using NamesToMemEventsMapTy = StringMap<FuncMemData>;
+  using NamesToBranchesMapTy = std::map<StringRef, FuncBranchData>;
+  using NamesToSamplesMapTy = std::map<StringRef, FuncSampleData>;
+  using NamesToMemEventsMapTy = std::map<StringRef, FuncMemData>;
   using FuncsToBranchesMapTy =
       std::unordered_map<const BinaryFunction *, FuncBranchData *>;
   using FuncsToMemDataMapTy =

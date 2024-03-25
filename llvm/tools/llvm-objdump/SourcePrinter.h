@@ -151,6 +151,10 @@ private:
                     StringRef ObjectFilename, StringRef Delimiter,
                     LiveVariablePrinter &LVP);
 
+  // Returns line source code corresponding to `LineInfo`.
+  // Returns empty string if source code cannot be found.
+  StringRef getLine(const DILineInfo &LineInfo, StringRef ObjectFilename);
+
 public:
   SourcePrinter() = default;
   SourcePrinter(const object::ObjectFile *Obj, StringRef DefaultArch);

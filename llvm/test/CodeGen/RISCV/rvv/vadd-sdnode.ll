@@ -870,8 +870,9 @@ define <vscale x 8 x i64> @vadd_xx_nxv8i64(i64 %a, i64 %b) nounwind {
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v8, (a0), zero
-; RV32-NEXT:    sw a3, 12(sp)
-; RV32-NEXT:    sw a2, 8(sp)
+; RV32-NEXT:    sw a3, 4(sp)
+; RV32-NEXT:    sw a2, 0(sp)
+; RV32-NEXT:    mv a0, sp
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    vadd.vv v8, v8, v16
 ; RV32-NEXT:    addi sp, sp, 16

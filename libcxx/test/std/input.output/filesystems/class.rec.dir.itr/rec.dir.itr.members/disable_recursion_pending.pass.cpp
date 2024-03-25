@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: can-create-symlinks
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -14,30 +17,31 @@
 
 // void disable_recursion_pending();
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <set>
 #include <cassert>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
-
-TEST_SUITE(recursive_directory_iterator_disable_recursion_pending_tests)
 
 // NOTE: The main semantics of disable_recursion_pending are tested
 // in the 'recursion_pending()' tests.
-TEST_CASE(basic_test)
+static void basic_test()
 {
     static_test_env static_env;
     recursive_directory_iterator it(static_env.Dir);
-    TEST_REQUIRE(it.recursion_pending() == true);
+    assert(it.recursion_pending() == true);
     it.disable_recursion_pending();
-    TEST_CHECK(it.recursion_pending() == false);
+    assert(it.recursion_pending() == false);
     it.disable_recursion_pending();
-    TEST_CHECK(it.recursion_pending() == false);
+    assert(it.recursion_pending() == false);
 }
 
-TEST_SUITE_END()
+int main(int, char**) {
+    basic_test();
+
+    return 0;
+}

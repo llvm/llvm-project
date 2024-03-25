@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_ACCESS_H
 #define LLVM_LIBC_SRC_UNISTD_ACCESS_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int access(const char *path, int mode);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_UNISTD_ACCESS_H

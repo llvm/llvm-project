@@ -16,10 +16,11 @@
 
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
-#include "llvm/CodeGen/ValueTypes.h"
 
 namespace llvm {
 
+class MachineInstrBuilder;
+class MachineIRBuilder;
 class RISCVTargetLowering;
 
 class RISCVCallLowering : public CallLowering {
@@ -37,6 +38,15 @@ public:
 
   bool lowerCall(MachineIRBuilder &MIRBuilder,
                  CallLoweringInfo &Info) const override;
+
+private:
+  bool lowerReturnVal(MachineIRBuilder &MIRBuilder, const Value *Val,
+                      ArrayRef<Register> VRegs, MachineInstrBuilder &Ret) const;
+
+  void saveVarArgRegisters(MachineIRBuilder &MIRBuilder,
+                           CallLowering::IncomingValueHandler &Handler,
+                           IncomingValueAssigner &Assigner,
+                           CCState &CCInfo) const;
 };
 
 } // end namespace llvm

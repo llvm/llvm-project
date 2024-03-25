@@ -45,7 +45,6 @@ typedef NSObject <XCElementP> XCElement; // expected-note {{previous definition 
 @end
 
 
-// rdar://9653341
 @class B; // expected-note {{forward declaration of class here}}
 @interface A : B {} // expected-error {{attempting to use the forward class 'B' as superclass of 'A'}}
 @end

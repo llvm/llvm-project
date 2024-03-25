@@ -13,7 +13,7 @@
 #include "llvm/TextAPI/Platform.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 namespace MachO {
@@ -49,7 +49,13 @@ PlatformType mapToPlatformType(const Triple &Target) {
   case Triple::WatchOS:
     return Target.isSimulatorEnvironment() ? PLATFORM_WATCHOSSIMULATOR
                                            : PLATFORM_WATCHOS;
-    // TODO: add bridgeOS & driverKit once in llvm::Triple
+  case Triple::BridgeOS:
+    return PLATFORM_BRIDGEOS;
+  case Triple::DriverKit:
+    return PLATFORM_DRIVERKIT;
+  case Triple::XROS:
+    return Target.isSimulatorEnvironment() ? PLATFORM_XROS_SIMULATOR
+                                           : PLATFORM_XROS;
   }
 }
 
@@ -62,44 +68,22 @@ PlatformSet mapToPlatformSet(ArrayRef<Triple> Targets) {
 
 StringRef getPlatformName(PlatformType Platform) {
   switch (Platform) {
-  case PLATFORM_UNKNOWN:
-    return "unknown";
-  case PLATFORM_MACOS:
-    return "macOS";
-  case PLATFORM_IOS:
-    return "iOS";
-  case PLATFORM_TVOS:
-    return "tvOS";
-  case PLATFORM_WATCHOS:
-    return "watchOS";
-  case PLATFORM_BRIDGEOS:
-    return "bridgeOS";
-  case PLATFORM_MACCATALYST:
-    return "macCatalyst";
-  case PLATFORM_IOSSIMULATOR:
-    return "iOS Simulator";
-  case PLATFORM_TVOSSIMULATOR:
-    return "tvOS Simulator";
-  case PLATFORM_WATCHOSSIMULATOR:
-    return "watchOS Simulator";
-  case PLATFORM_DRIVERKIT:
-    return "DriverKit";
+#define PLATFORM(platform, id, name, build_name, target, tapi_target,          \
+                 marketing)                                                    \
+  case PLATFORM_##platform:                                                    \
+    return #marketing;
+#include "llvm/BinaryFormat/MachO.def"
   }
   llvm_unreachable("Unknown llvm::MachO::PlatformType enum");
 }
 
 PlatformType getPlatformFromName(StringRef Name) {
   return StringSwitch<PlatformType>(Name)
-      .Case("macos", PLATFORM_MACOS)
-      .Case("ios", PLATFORM_IOS)
-      .Case("tvos", PLATFORM_TVOS)
-      .Case("watchos", PLATFORM_WATCHOS)
-      .Case("bridgeos", PLATFORM_BRIDGEOS)
-      .Case("ios-macabi", PLATFORM_MACCATALYST)
-      .Case("ios-simulator", PLATFORM_IOSSIMULATOR)
-      .Case("tvos-simulator", PLATFORM_TVOSSIMULATOR)
-      .Case("watchos-simulator", PLATFORM_WATCHOSSIMULATOR)
-      .Case("driverkit", PLATFORM_DRIVERKIT)
+      .Case("osx", PLATFORM_MACOS)
+#define PLATFORM(platform, id, name, build_name, target, tapi_target,          \
+                 marketing)                                                    \
+  .Case(#target, PLATFORM_##platform)
+#include "llvm/BinaryFormat/MachO.def"
       .Default(PLATFORM_UNKNOWN);
 }
 
@@ -128,8 +112,19 @@ std::string getOSAndEnvironmentName(PlatformType Platform,
     return "watchos" + Version + "-simulator";
   case PLATFORM_DRIVERKIT:
     return "driverkit" + Version;
+  case PLATFORM_XROS:
+    return "xros" + Version;
+  case PLATFORM_XROS_SIMULATOR:
+    return "xros" + Version + "-simulator";
   }
   llvm_unreachable("Unknown llvm::MachO::PlatformType enum");
+}
+
+VersionTuple mapToSupportedOSVersion(const Triple &Triple) {
+  const VersionTuple MinSupportedOS = Triple.getMinimumSupportedOSVersion();
+  if (MinSupportedOS > Triple.getOSVersion())
+    return MinSupportedOS;
+  return Triple.getOSVersion();
 }
 
 } // end namespace MachO.

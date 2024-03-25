@@ -18,5 +18,5 @@ body: |
   ; CHECK: bb.0.entry:
   ; CHECK:   STW killed $r3, killed $x5, 100
   ; CHECK:   renamable $x4 = exact RLDICL killed renamable $x4, 62, 2
-  ; CHECK:   STD killed $x4, $x4, 100
+  ; CHECK:   STD killed $x4, killed $x4, 100
   ; CHECK:   BLR8 implicit $lr8, implicit $rm

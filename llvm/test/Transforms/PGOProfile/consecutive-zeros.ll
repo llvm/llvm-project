@@ -5,7 +5,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 define void @foo(ptr %dst, ptr %src, ptr %a, i32 %n) {
-; CHECK: Invalid Profile
+; CHECK: warning: Invalid Profile
 entry:
   br label %for.cond
 

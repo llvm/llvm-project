@@ -121,13 +121,13 @@ poly64x1_t test_vcreate_p64(uint64_t a) {
 }
 
 // CHECK-LABEL: define{{.*}} <1 x i64> @test_vdup_n_p64(i64 noundef %a) #0 {
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x i64> undef, i64 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x i64> poison, i64 %a, i32 0
 // CHECK:   ret <1 x i64> [[VECINIT_I]]
 poly64x1_t test_vdup_n_p64(poly64_t a) {
   return vdup_n_p64(a);
 }
 // CHECK-LABEL: define{{.*}} <2 x i64> @test_vdupq_n_p64(i64 noundef %a) #0 {
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i64> undef, i64 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i64> poison, i64 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i64> [[VECINIT_I]], i64 %a, i32 1
 // CHECK:   ret <2 x i64> [[VECINIT1_I]]
 poly64x2_t test_vdupq_n_p64(poly64_t a) {
@@ -135,14 +135,14 @@ poly64x2_t test_vdupq_n_p64(poly64_t a) {
 }
 
 // CHECK-LABEL: define{{.*}} <1 x i64> @test_vmov_n_p64(i64 noundef %a) #0 {
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x i64> undef, i64 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x i64> poison, i64 %a, i32 0
 // CHECK:   ret <1 x i64> [[VECINIT_I]]
 poly64x1_t test_vmov_n_p64(poly64_t a) {
   return vmov_n_p64(a);
 }
 
 // CHECK-LABEL: define{{.*}} <2 x i64> @test_vmovq_n_p64(i64 noundef %a) #0 {
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i64> undef, i64 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i64> poison, i64 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i64> [[VECINIT_I]], i64 %a, i32 1
 // CHECK:   ret <2 x i64> [[VECINIT1_I]]
 poly64x2_t test_vmovq_n_p64(poly64_t a) {
@@ -287,7 +287,7 @@ poly64x2x4_t test_vld4q_p64(poly64_t const * ptr) {
   return vld4q_p64(ptr);
 }
 
-// CHECK-LABEL: define{{.*}} void @test_vst2_p64(ptr noundef %ptr, [2 x <1 x i64>] %val.coerce) #0 {
+// CHECK-LABEL: define{{.*}} void @test_vst2_p64(ptr noundef %ptr, [2 x <1 x i64>] alignstack(8) %val.coerce) #0 {
 // CHECK:   [[VAL:%.*]] = alloca %struct.poly64x1x2_t, align 8
 // CHECK:   [[__S1:%.*]] = alloca %struct.poly64x1x2_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x1x2_t, ptr [[VAL]], i32 0, i32 0
@@ -309,7 +309,7 @@ void test_vst2_p64(poly64_t * ptr, poly64x1x2_t val) {
   return vst2_p64(ptr, val);
 }
 
-// CHECK-LABEL: define{{.*}} void @test_vst2q_p64(ptr noundef %ptr, [2 x <2 x i64>] %val.coerce) #0 {
+// CHECK-LABEL: define{{.*}} void @test_vst2q_p64(ptr noundef %ptr, [2 x <2 x i64>] alignstack(16) %val.coerce) #0 {
 // CHECK:   [[VAL:%.*]] = alloca %struct.poly64x2x2_t, align 16
 // CHECK:   [[__S1:%.*]] = alloca %struct.poly64x2x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x2x2_t, ptr [[VAL]], i32 0, i32 0
@@ -331,7 +331,7 @@ void test_vst2q_p64(poly64_t * ptr, poly64x2x2_t val) {
   return vst2q_p64(ptr, val);
 }
 
-// CHECK-LABEL: define{{.*}} void @test_vst3_p64(ptr noundef %ptr, [3 x <1 x i64>] %val.coerce) #0 {
+// CHECK-LABEL: define{{.*}} void @test_vst3_p64(ptr noundef %ptr, [3 x <1 x i64>] alignstack(8) %val.coerce) #0 {
 // CHECK:   [[VAL:%.*]] = alloca %struct.poly64x1x3_t, align 8
 // CHECK:   [[__S1:%.*]] = alloca %struct.poly64x1x3_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x1x3_t, ptr [[VAL]], i32 0, i32 0
@@ -358,7 +358,7 @@ void test_vst3_p64(poly64_t * ptr, poly64x1x3_t val) {
   return vst3_p64(ptr, val);
 }
 
-// CHECK-LABEL: define{{.*}} void @test_vst3q_p64(ptr noundef %ptr, [3 x <2 x i64>] %val.coerce) #0 {
+// CHECK-LABEL: define{{.*}} void @test_vst3q_p64(ptr noundef %ptr, [3 x <2 x i64>] alignstack(16) %val.coerce) #0 {
 // CHECK:   [[VAL:%.*]] = alloca %struct.poly64x2x3_t, align 16
 // CHECK:   [[__S1:%.*]] = alloca %struct.poly64x2x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x2x3_t, ptr [[VAL]], i32 0, i32 0
@@ -385,7 +385,7 @@ void test_vst3q_p64(poly64_t * ptr, poly64x2x3_t val) {
   return vst3q_p64(ptr, val);
 }
 
-// CHECK-LABEL: define{{.*}} void @test_vst4_p64(ptr noundef %ptr, [4 x <1 x i64>] %val.coerce) #0 {
+// CHECK-LABEL: define{{.*}} void @test_vst4_p64(ptr noundef %ptr, [4 x <1 x i64>] alignstack(8) %val.coerce) #0 {
 // CHECK:   [[VAL:%.*]] = alloca %struct.poly64x1x4_t, align 8
 // CHECK:   [[__S1:%.*]] = alloca %struct.poly64x1x4_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x1x4_t, ptr [[VAL]], i32 0, i32 0
@@ -417,7 +417,7 @@ void test_vst4_p64(poly64_t * ptr, poly64x1x4_t val) {
   return vst4_p64(ptr, val);
 }
 
-// CHECK-LABEL: define{{.*}} void @test_vst4q_p64(ptr noundef %ptr, [4 x <2 x i64>] %val.coerce) #0 {
+// CHECK-LABEL: define{{.*}} void @test_vst4q_p64(ptr noundef %ptr, [4 x <2 x i64>] alignstack(16) %val.coerce) #0 {
 // CHECK:   [[VAL:%.*]] = alloca %struct.poly64x2x4_t, align 16
 // CHECK:   [[__S1:%.*]] = alloca %struct.poly64x2x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x2x4_t, ptr [[VAL]], i32 0, i32 0

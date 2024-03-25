@@ -208,12 +208,12 @@ define void @shl_i32_16_ptr(i32 %a, ptr %ptr) {
 ; CHECK-LABEL: shl_i32_16_ptr:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    movw r30, r20
-; CHECK-NEXT:    std Z+2, r22
 ; CHECK-NEXT:    std Z+3, r23
+; CHECK-NEXT:    std Z+2, r22
 ; CHECK-NEXT:    ldi r24, 0
 ; CHECK-NEXT:    ldi r25, 0
-; CHECK-NEXT:    st Z, r24
 ; CHECK-NEXT:    std Z+1, r25
+; CHECK-NEXT:    st Z, r24
 ; CHECK-NEXT:    ret
   %res = shl i32 %a, 16
   store i32 %res, ptr %ptr
@@ -525,10 +525,10 @@ define i32 @ashr_i32_22(i32 %a) {
 ; CHECK-NEXT:    sbc r18, r18
 ; CHECK-NEXT:    lsl r24
 ; CHECK-NEXT:    rol r25
+; CHECK-NEXT:    mov r19, r18
 ; CHECK-NEXT:    mov r23, r18
 ; CHECK-NEXT:    rol r23
 ; CHECK-NEXT:    mov r22, r25
-; CHECK-NEXT:    mov r19, r18
 ; CHECK-NEXT:    movw r24, r18
 ; CHECK-NEXT:    ret
   %res = ashr i32 %a, 22

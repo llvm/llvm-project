@@ -78,7 +78,7 @@ void testBlockWithCaptureByReference() {
 // CHECK-NEXT:   1: 5
 // WARNINGS-NEXT:   2: [B1.1] (CXXConstructExpr, StructWithCopyConstructor)
 // ANALYZER-NEXT:   2: [B1.1] (CXXConstructExpr, [B1.3], StructWithCopyConstructor)
-// CHECK-NEXT:   3: StructWithCopyConstructor s(5) __attribute__((blocks("byref")));
+// CHECK-NEXT:   3: __attribute__((blocks("byref"))) StructWithCopyConstructor s(5);
 // CHECK-NEXT:   4: ^{ }
 // CHECK-NEXT:   5: (void)([B1.4]) (CStyleCastExpr, ToVoid, void)
 // CHECK-NEXT:   Preds (1): B2

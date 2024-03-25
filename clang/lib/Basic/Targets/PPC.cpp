@@ -21,6 +21,8 @@ using namespace clang::targets;
 static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
   {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
   {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsPPC.def"
@@ -51,7 +53,7 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     } else if (Feature == "+htm") {
       HasHTM = true;
     } else if (Feature == "+float128") {
-      HasFloat128 = true;
+      HasFloat128 = !getTriple().isOSAIX();
     } else if (Feature == "+power9-vector") {
       HasP9Vector = true;
     } else if (Feature == "+power10-vector") {
@@ -75,6 +77,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasROPProtect = true;
     } else if (Feature == "+privileged") {
       HasPrivileged = true;
+    } else if (Feature == "+aix-small-local-exec-tls") {
+      HasAIXSmallLocalExecTLS = true;
     } else if (Feature == "+isa-v206-instructions") {
       IsISA2_06 = true;
     } else if (Feature == "+isa-v207-instructions") {
@@ -208,6 +212,7 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__darn_32", "__builtin_darn_32");
   Builder.defineMacro("__darn_raw", "__builtin_darn_raw");
   Builder.defineMacro("__dcbf", "__builtin_dcbf");
+  Builder.defineMacro("__fence", "__builtin_ppc_fence");
   Builder.defineMacro("__fmadd", "__builtin_fma");
   Builder.defineMacro("__fmadds", "__builtin_fmaf");
   Builder.defineMacro("__abs", "__builtin_abs");
@@ -260,6 +265,10 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__builtin_minfe", "__builtin_ppc_minfe");
   Builder.defineMacro("__builtin_minfl", "__builtin_ppc_minfl");
   Builder.defineMacro("__builtin_minfs", "__builtin_ppc_minfs");
+  Builder.defineMacro("__builtin_mffs", "__builtin_ppc_mffs");
+  Builder.defineMacro("__builtin_mffsl", "__builtin_ppc_mffsl");
+  Builder.defineMacro("__builtin_mtfsf", "__builtin_ppc_mtfsf");
+  Builder.defineMacro("__builtin_set_fpscr_rn", "__builtin_ppc_set_fpscr_rn");
 }
 
 /// PPCTargetInfo::getTargetDefines - Return a set of the PowerPC-specific
@@ -336,9 +345,8 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__LONGDOUBLE64");
   }
 
-  // Define this for elfv2 (64-bit only) or 64-bit darwin.
-  if (ABI == "elfv2" ||
-      (getTriple().getOS() == llvm::Triple::Darwin && PointerWidth == 64))
+  // Define this for elfv2 (64-bit only).
+  if (ABI == "elfv2")
     Builder.defineMacro("__STRUCT_PARM_ALIGN__", "16");
 
   if (ArchDefs & ArchDefineName)
@@ -434,19 +442,44 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
   //   _CALL_DARWIN
 }
 
-// Handle explicit options being passed to the compiler here: if we've
-// explicitly turned off vsx and turned on any of:
-// - power8-vector
-// - direct-move
-// - float128
-// - power9-vector
-// - paired-vector-memops
-// - mma
-// - power10-vector
+// Handle explicit options being passed to the compiler here:
+// - if we've explicitly turned off vsx and turned on any of:
+//   - power8-vector
+//   - direct-move
+//   - float128
+//   - power9-vector
+//   - paired-vector-memops
+//   - mma
+//   - power10-vector
+// - if we've explicitly turned on vsx and turned off altivec.
+// - if we've explicitly turned off hard-float and turned on altivec.
 // then go ahead and error since the customer has expressed an incompatible
 // set of options.
 static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
                                  const std::vector<std::string> &FeaturesVec) {
+  // Cannot allow soft-float with Altivec.
+  if (llvm::is_contained(FeaturesVec, "-hard-float") &&
+      llvm::is_contained(FeaturesVec, "+altivec")) {
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-msoft-float"
+                                                   << "-maltivec";
+    return false;
+  }
+
+  // Cannot allow soft-float with VSX.
+  if (llvm::is_contained(FeaturesVec, "-hard-float") &&
+      llvm::is_contained(FeaturesVec, "+vsx")) {
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-msoft-float"
+                                                   << "-mvsx";
+    return false;
+  }
+
+  // Cannot allow VSX with no Altivec.
+  if (llvm::is_contained(FeaturesVec, "+vsx") &&
+      llvm::is_contained(FeaturesVec, "-altivec")) {
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mvsx"
+                                                   << "-mno-altivec";
+    return false;
+  }
 
   // vsx was not explicitly turned off.
   if (!llvm::is_contained(FeaturesVec, "-vsx"))
@@ -539,6 +572,10 @@ bool PPCTargetInfo::initFeatureMap(
   Features["rop-protect"] = false;
   // Privileged instructions are off by default.
   Features["privileged"] = false;
+
+  // The code generated by the -maix-small-local-exec-tls option is turned
+  // off by default.
+  Features["aix-small-local-exec-tls"] = false;
 
   Features["spe"] = llvm::StringSwitch<bool>(CPU)
                         .Case("8548", true)
@@ -675,6 +712,7 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("mma", HasMMA)
       .Case("rop-protect", HasROPProtect)
       .Case("privileged", HasPrivileged)
+      .Case("aix-small-local-exec-tls", HasAIXSmallLocalExecTLS)
       .Case("isa-v206-instructions", IsISA2_06)
       .Case("isa-v207-instructions", IsISA2_07)
       .Case("isa-v30-instructions", IsISA3_0)
@@ -737,6 +775,8 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   }
 }
 
+// Make sure that registers are added in the correct array index which should be
+// the DWARF number for PPC registers.
 const char *const PPCTargetInfo::GCCRegNames[] = {
     "r0",  "r1",     "r2",   "r3",      "r4",      "r5",  "r6",  "r7",  "r8",
     "r9",  "r10",    "r11",  "r12",     "r13",     "r14", "r15", "r16", "r17",
@@ -788,12 +828,13 @@ ArrayRef<TargetInfo::GCCRegAlias> PPCTargetInfo::getGCCRegAliases() const {
   return llvm::ArrayRef(GCCRegAliases);
 }
 
-// PPC ELFABIv2 DWARF Definitoin "Table 2.26. Mappings of Common Registers".
+// PPC ELFABIv2 DWARF Definition "Table 2.26. Mappings of Common Registers".
 // vs0 ~ vs31 is mapping to 32 - 63,
-// vs32 ~ vs63 is mapping to 77 - 108. 
+// vs32 ~ vs63 is mapping to 77 - 108.
+// And this mapping applies to all OSes which run on powerpc.
 const TargetInfo::AddlRegName GCCAddlRegNames[] = {
     // Table of additional register names to use in user input.
-    {{"vs0"}, 32},   {{"vs1"}, 33},   {{"vs2"}, 34},   {{"vs3"}, 35}, 
+    {{"vs0"}, 32},   {{"vs1"}, 33},   {{"vs2"}, 34},   {{"vs3"}, 35},
     {{"vs4"}, 36},   {{"vs5"}, 37},   {{"vs6"}, 38},   {{"vs7"}, 39},
     {{"vs8"}, 40},   {{"vs9"}, 41},   {{"vs10"}, 42},  {{"vs11"}, 43},
     {{"vs12"}, 44},  {{"vs13"}, 45},  {{"vs14"}, 46},  {{"vs15"}, 47},
@@ -812,10 +853,7 @@ const TargetInfo::AddlRegName GCCAddlRegNames[] = {
 };
 
 ArrayRef<TargetInfo::AddlRegName> PPCTargetInfo::getGCCAddlRegNames() const {
-  if (ABI == "elfv2")
-    return llvm::ArrayRef(GCCAddlRegNames);
-  else 
-    return TargetInfo::getGCCAddlRegNames(); 
+  return llvm::ArrayRef(GCCAddlRegNames);
 }
 
 static constexpr llvm::StringLiteral ValidCPUNames[] = {
@@ -856,4 +894,28 @@ void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
 ArrayRef<Builtin::Info> PPCTargetInfo::getTargetBuiltins() const {
   return llvm::ArrayRef(BuiltinInfo,
                         clang::PPC::LastTSBuiltin - Builtin::FirstTSBuiltin);
+}
+
+bool PPCTargetInfo::validateCpuSupports(StringRef FeatureStr) const {
+#define PPC_LNX_FEATURE(NAME, DESC, ENUMNAME, ENUMVAL, HWCAPN) .Case(NAME, true)
+  return llvm::StringSwitch<bool>(FeatureStr)
+#include "llvm/TargetParser/PPCTargetParser.def"
+      .Default(false);
+}
+
+bool PPCTargetInfo::validateCpuIs(StringRef CPUName) const {
+  llvm::Triple Triple = getTriple();
+  if (Triple.isOSAIX()) {
+#define PPC_AIX_CPU(NAME, SUPPORT, INDEX, OP, VALUE) .Case(NAME, true)
+    return llvm::StringSwitch<bool>(CPUName)
+#include "llvm/TargetParser/PPCTargetParser.def"
+        .Default(false);
+  }
+
+  assert(Triple.isOSLinux() &&
+         "__builtin_cpu_is() is only supported for AIX and Linux.");
+#define PPC_LNX_CPU(NAME, NUM) .Case(NAME, true)
+  return llvm::StringSwitch<bool>(CPUName)
+#include "llvm/TargetParser/PPCTargetParser.def"
+      .Default(false);
 }

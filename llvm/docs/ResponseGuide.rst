@@ -1,3 +1,7 @@
+..
+   This work is licensed under a Creative Commons Attribution 3.0 Unported License.
+   SPDX-License-Identifier: CC-BY-3.0
+
 ===============
 Response Guide
 ===============
@@ -290,11 +294,22 @@ A transparency report consists of 2 parts:
 
 These reports will be published on the LLVM website.
 
+Thanks!
+=======
+
 
 This guide was created and inspired by the following: the `Django Project`_,
 `Carpentries Response Guide`_, and the `Write The Docs Response Guide`_.
 
+License
+=======
+
+All content on this page is licensed under a `Creative Commons Attribution 3.0
+Unported License`_.
+
+
 .. _Django Project: https://www.djangoproject.com/conduct/
 .. _Carpentries Response Guide: https://docs.carpentries.org/topic_folders/policies/enforcement-guidelines.html
 .. _Write The Docs Response Guide: https://www.writethedocs.org/code-of-conduct/#guidelines-for-reporting-incidents
+.. _Creative Commons Attribution 3.0 Unported License: http://creativecommons.org/licenses/by/3.0/
 

@@ -7,10 +7,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
-// UNSUPPORTED: libcpp-has-no-incomplete-format
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// TODO FMT It seems GCC uses too much memory in the CI and fails.
-// UNSUPPORTED: gcc-12
+// TODO FMT This test should not require std::to_chars(floating-point)
+// XFAIL: availability-fp_to_chars-missing
 
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ja_JP.UTF-8
@@ -71,41 +71,41 @@ static void test_invalid_values() {
 
   // Weekday name conversion
   check_exception(
-      "formatting a weekday name needs a valid weekday",
+      "Formatting a weekday name needs a valid weekday",
       SV("{:%a}"),
       std::chrono::year_month_weekday_last{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_last{std::chrono::weekday{8}}});
   check_exception(
-      "formatting a weekday name needs a valid weekday",
+      "Formatting a weekday name needs a valid weekday",
       SV("{:%A}"),
       std::chrono::year_month_weekday_last{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_last{std::chrono::weekday{8}}});
 
   // Weekday conversion
   check_exception(
-      "formatting a weekday needs a valid weekday",
+      "Formatting a weekday needs a valid weekday",
       SV("{:%u}"),
       std::chrono::year_month_weekday_last{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_last{std::chrono::weekday{8}}});
   check_exception(
-      "formatting a weekday needs a valid weekday",
+      "Formatting a weekday needs a valid weekday",
       SV("{:%w}"),
       std::chrono::year_month_weekday_last{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_last{std::chrono::weekday{8}}});
   check_exception(
-      "formatting a weekday needs a valid weekday",
+      "Formatting a weekday needs a valid weekday",
       SV("{:%Ou}"),
       std::chrono::year_month_weekday_last{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_last{std::chrono::weekday{8}}});
   check_exception(
-      "formatting a weekday needs a valid weekday",
+      "Formatting a weekday needs a valid weekday",
       SV("{:%Ow}"),
       std::chrono::year_month_weekday_last{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_last{std::chrono::weekday{8}}});
 
   // Day of year field
   check_exception(
-      "formatting a day of year needs a valid date",
+      "Formatting a day of year needs a valid date",
       SV("{:%j}"),
       std::chrono::year_month_weekday_last{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_last{std::chrono::weekday{8}}});
@@ -155,24 +155,24 @@ static void test_invalid_values() {
 
   // Day of year field
   check_exception(
-      "formatting a day of year needs a valid date",
+      "Formatting a day of year needs a valid date",
       SV("{:%j}"),
       std::chrono::year_month_weekday_last{
           std::chrono::year{1970}, std::chrono::month{0}, std::chrono::weekday_last{std::chrono::weekday{1}}});
 
   // Month name conversion
   check_exception(
-      "formatting a month name from an invalid month number",
+      "Formatting a month name from an invalid month number",
       SV("{:%b}"),
       std::chrono::year_month_weekday_last{
           std::chrono::year{1970}, std::chrono::month{0}, std::chrono::weekday_last{std::chrono::weekday{1}}});
   check_exception(
-      "formatting a month name from an invalid month number",
+      "Formatting a month name from an invalid month number",
       SV("{:%h}"),
       std::chrono::year_month_weekday_last{
           std::chrono::year{1970}, std::chrono::month{0}, std::chrono::weekday_last{std::chrono::weekday{1}}});
   check_exception(
-      "formatting a month name from an invalid month number",
+      "Formatting a month name from an invalid month number",
       SV("{:%B}"),
       std::chrono::year_month_weekday_last{
           std::chrono::year{1970}, std::chrono::month{0}, std::chrono::weekday_last{std::chrono::weekday{1}}});
@@ -209,7 +209,7 @@ static void test_invalid_values() {
 
   // Day of year field
   check_exception(
-      "formatting a day of year needs a valid date",
+      "Formatting a day of year needs a valid date",
       SV("{:%j}"),
       std::chrono::year_month_weekday_last{
           std::chrono::year{-32768}, std::chrono::month{1}, std::chrono::weekday_last{std::chrono::weekday{1}}});

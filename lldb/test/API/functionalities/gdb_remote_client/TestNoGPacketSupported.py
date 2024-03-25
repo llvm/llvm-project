@@ -16,12 +16,12 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 # Forcing lldb to use the expedited registers in the stop packet and
 # marking it an error to request that register value is to prevent
 # performance regressions.
-# 
+#
 # Some gdb RSP stubs only implement p/P, they do not support g/G.
 # lldb must be able to work with either.
 
-class TestNoGPacketSupported(GDBRemoteTestBase):
 
+class TestNoGPacketSupported(GDBRemoteTestBase):
     @skipIfXmlSupportMissing
     def test(self):
         class MyResponder(MockGDBServerResponder):
@@ -48,7 +48,7 @@ class TestNoGPacketSupported(GDBRemoteTestBase):
                 if regnum == 0:
                     return "5555555555555555"
                 if regnum == 2:
-                    return "c04825ebfe7f0000" # 0x00007ffeeb2548c0
+                    return "c04825ebfe7f0000"  # 0x00007ffeeb2548c0
 
                 return "E03"
 
@@ -57,7 +57,8 @@ class TestNoGPacketSupported(GDBRemoteTestBase):
 
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
-                    return """<?xml version="1.0"?>
+                    return (
+                        """<?xml version="1.0"?>
                         <target version="1.0">
                           <architecture>i386:x86-64</architecture>
                           <feature name="org.gnu.gdb.i386.core">
@@ -66,16 +67,17 @@ class TestNoGPacketSupported(GDBRemoteTestBase):
                             <reg name="rsi" bitsize="64" regnum="2" type="code_ptr" group="general"/>
                             <reg name="rip" bitsize="64" regnum="3" type="code_ptr" group="general" altname="pc" generic="pc"/>
                           </feature>
-                        </target>""", False
+                        </target>""",
+                        False,
+                    )
                 else:
                     return None, False
 
         self.server.responder = MyResponder()
-        target = self.dbg.CreateTarget('')
+        target = self.dbg.CreateTarget("")
         if self.TraceOn():
-          self.runCmd("log enable gdb-remote packets")
-          self.addTearDownHook(
-                lambda: self.runCmd("log disable gdb-remote packets"))
+            self.runCmd("log enable gdb-remote packets")
+            self.addTearDownHook(lambda: self.runCmd("log disable gdb-remote packets"))
         process = self.connect(target)
 
         thread = process.GetThreadAtIndex(0)
@@ -87,10 +89,13 @@ class TestNoGPacketSupported(GDBRemoteTestBase):
         rip = frame.FindRegister("rip").GetValueAsUnsigned()
 
         if self.TraceOn():
-            print("Register values: rax == 0x%x, rbx == 0x%x, rsi == 0x%x, pc == 0x%x, rip == 0x%x" % (rax, rbx, rsi, pc, rip))
+            print(
+                "Register values: rax == 0x%x, rbx == 0x%x, rsi == 0x%x, pc == 0x%x, rip == 0x%x"
+                % (rax, rbx, rsi, pc, rip)
+            )
 
-        self.assertEqual(rax, 0xffffffe03c778278)
+        self.assertEqual(rax, 0xFFFFFFE03C778278)
         self.assertEqual(rbx, 0x8877665544332211)
-        self.assertEqual(rsi, 0x00007ffeeb2548c0)
-        self.assertEqual(pc, 0x10001bc00)
-        self.assertEqual(rip, 0x10001bc00)
+        self.assertEqual(rsi, 0x00007FFEEB2548C0)
+        self.assertEqual(pc, 0x10001BC00)
+        self.assertEqual(rip, 0x10001BC00)

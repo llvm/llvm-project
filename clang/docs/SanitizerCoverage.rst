@@ -496,7 +496,7 @@ offsets in the corresponding binary/DSO that were executed during the run.
 Sancov Tool
 -----------
 
-An simple ``sancov`` tool is provided to process coverage files.
+A simple ``sancov`` tool is provided to process coverage files.
 The tool is part of LLVM project and is currently supported only on Linux.
 It can handle symbolization tasks autonomously without any extra support
 from the environment. You need to pass .sancov files (named

@@ -213,3 +213,12 @@ template <typename T, template <typename> class U> class Bar {};
 // We used to report Q unsued, because we only checked the first template
 // argument.
 Bar<int, Q> *bar;
+
+namespace gh69714 {
+struct StructGH69714_1 {};
+struct StructGH69714_2 {};
+} // namespace gh69714
+using gh69714::StructGH69714_1;
+using gh69714::StructGH69714_2;
+struct StructGH69714_1 a;
+struct StructGH69714_2 *b;

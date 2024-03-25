@@ -15,6 +15,7 @@
 
 #include "Context.h"
 #include "Function.h"
+#include "InterpFrame.h"
 #include "InterpStack.h"
 #include "State.h"
 #include "clang/AST/APValue.h"
@@ -38,10 +39,15 @@ public:
 
   ~InterpState();
 
+  InterpState(const InterpState &) = delete;
+  InterpState &operator=(const InterpState &) = delete;
+
   // Stack frame accessors.
   Frame *getSplitFrame() { return Parent.getCurrentFrame(); }
   Frame *getCurrentFrame() override;
-  unsigned getCallStackDepth() override { return CallStackDepth; }
+  unsigned getCallStackDepth() override {
+    return Current ? (Current->getDepth() + 1) : 1;
+  }
   const Frame *getBottomFrame() const override {
     return Parent.getBottomFrame();
   }
@@ -86,6 +92,8 @@ public:
     return M ? M->getSource(F, PC) : F->getSource(PC);
   }
 
+  Context &getContext() const { return Ctx; }
+
 private:
   /// AST Walker state.
   State &Parent;
@@ -103,8 +111,6 @@ public:
   Context &Ctx;
   /// The current frame.
   InterpFrame *Current = nullptr;
-  /// Call stack depth.
-  unsigned CallStackDepth;
 };
 
 } // namespace interp

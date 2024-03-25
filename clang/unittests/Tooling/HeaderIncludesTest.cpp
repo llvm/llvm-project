@@ -23,9 +23,9 @@ protected:
   std::string insert(llvm::StringRef Code, llvm::StringRef Header,
                      IncludeDirective Directive = IncludeDirective::Include) {
     HeaderIncludes Includes(FileName, Code, Style);
-    assert(Header.startswith("\"") || Header.startswith("<"));
-    auto R =
-        Includes.insert(Header.trim("\"<>"), Header.startswith("<"), Directive);
+    assert(Header.starts_with("\"") || Header.starts_with("<"));
+    auto R = Includes.insert(Header.trim("\"<>"), Header.starts_with("<"),
+                             Directive);
     if (!R)
       return std::string(Code);
     auto Result = applyAllReplacements(Code, Replacements(*R));
@@ -35,8 +35,9 @@ protected:
 
   std::string remove(llvm::StringRef Code, llvm::StringRef Header) {
     HeaderIncludes Includes(FileName, Code, Style);
-    assert(Header.startswith("\"") || Header.startswith("<"));
-    auto Replaces = Includes.remove(Header.trim("\"<>"), Header.startswith("<"));
+    assert(Header.starts_with("\"") || Header.starts_with("<"));
+    auto Replaces =
+        Includes.remove(Header.trim("\"<>"), Header.starts_with("<"));
     auto Result = applyAllReplacements(Code, Replaces);
     EXPECT_TRUE(static_cast<bool>(Result));
     return *Result;
@@ -141,6 +142,19 @@ TEST_F(HeaderIncludesTest, InsertAfterMainHeader) {
 
   FileName = "bar.cpp";
   EXPECT_NE(Expected, insert(Code, "<a>")) << "Not main header";
+}
+
+TEST_F(HeaderIncludesTest, InsertMainHeader) {
+  Style = format::getGoogleStyle(format::FormatStyle::LanguageKind::LK_Cpp)
+              .IncludeStyle;
+  FileName = "fix.cpp";
+  EXPECT_EQ(R"cpp(#include "fix.h"
+#include "a.h")cpp", insert("#include \"a.h\"", "\"fix.h\""));
+
+  // Respect the original main-file header.
+  EXPECT_EQ(R"cpp(#include "z/fix.h"
+#include "a/fix.h"
+)cpp", insert("#include \"z/fix.h\"", "\"a/fix.h\""));
 }
 
 TEST_F(HeaderIncludesTest, InsertBeforeSystemHeaderLLVM) {

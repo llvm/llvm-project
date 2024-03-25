@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -mv65 -filetype=asm -mhvx %s | FileCheck %s
+# RUN: llvm-mc -triple=hexagon -mv65 -filetype=asm -mhvx %s | FileCheck %s
 
 # CHECK-NOT: error: register `{{.+}}' modified more than once
 

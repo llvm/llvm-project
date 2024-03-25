@@ -4,23 +4,35 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
-class TestTraceEvents(TraceIntelPTTestCaseBase):
 
+class TestTraceEvents(TraceIntelPTTestCaseBase):
     @testSBAPIAndCommands
     def testCPUEvents(self):
-      trace_description_file_path = os.path.join(self.getSourceDir(), "intelpt-multi-core-trace", "trace_missing_threads.json")
-      self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
+        trace_description_file_path = os.path.join(
+            self.getSourceDir(),
+            "intelpt-multi-core-trace",
+            "trace_missing_threads.json",
+        )
+        self.traceLoad(
+            traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"]
+        )
 
-      self.expect("thread trace dump instructions 3 -e --forward -c 5",
-        substrs=['''thread #3: tid = 3497496
+        self.expect(
+            "thread trace dump instructions 3 -e --forward -c 5",
+            substrs=[
+                """thread #3: tid = 3497496
     0: (event) HW clock tick [40450075477621505]
     1: (event) CPU core changed [new CPU=51]
     2: (event) HW clock tick [40450075477657246]
     3: (event) trace synchronization point [offset = 0x0x1331]
-  m.out`foo() + 65 at multi_thread.cpp:12:21'''])
+  m.out`foo() + 65 at multi_thread.cpp:12:21"""
+            ],
+        )
 
-      self.expect("thread trace dump instructions 3 -e --forward -c 5 -J",
-        substrs=['''{
+        self.expect(
+            "thread trace dump instructions 3 -e --forward -c 5 -J",
+            substrs=[
+                """{
     "id": 0,
     "event": "HW clock tick",
     "hwClock": 40450075477621505
@@ -29,28 +41,34 @@ class TestTraceEvents(TraceIntelPTTestCaseBase):
     "id": 1,
     "event": "CPU core changed",
     "cpuId": 51
-  }'''])
+  }"""
+            ],
+        )
 
     @testSBAPIAndCommands
     def testPauseEvents(self):
-      '''
+        """
         Everytime the target stops running on the CPU, a 'disabled' event will
         be emitted, which is represented by the TraceCursor API as a 'paused'
         event.
-      '''
-      self.expect("target create " +
-            os.path.join(self.getSourceDir(), "intelpt-trace-multi-file", "a.out"))
-      self.expect("b 12")
-      self.expect("r")
-      self.traceStartThread()
-      self.expect("n")
-      self.expect("n")
-      self.expect("si")
-      self.expect("si")
-      self.expect("si")
-      # We ensure that the paused events are printed correctly forward
-      self.expect("thread trace dump instructions -e -f",
-        patterns=[f'''thread #1: tid = .*
+        """
+        self.expect(
+            "target create "
+            + os.path.join(self.getSourceDir(), "intelpt-trace-multi-file", "a.out")
+        )
+        self.expect("b 12")
+        self.expect("r")
+        self.traceStartThread()
+        self.expect("n")
+        self.expect("n")
+        self.expect("si")
+        self.expect("si")
+        self.expect("si")
+        # We ensure that the paused events are printed correctly forward
+        self.expect(
+            "thread trace dump instructions -e -f",
+            patterns=[
+                f"""thread #1: tid = .*
     0: \(event\) trace synchronization point \[offset \= 0x0xec0\]
     1: \(event\) hardware disabled tracing
   a.out`main \+ 23 at main.cpp:12
@@ -76,11 +94,15 @@ class TestTraceEvents(TraceIntelPTTestCaseBase):
     16: {ADDRESS_REGEX}    callq  .* ; symbol stub for: foo\(\)
     17: \(event\) software disabled tracing
   a.out`symbol stub for: foo\(\)
-    18: {ADDRESS_REGEX}    jmpq'''])
+    18: {ADDRESS_REGEX}    jmpq"""
+            ],
+        )
 
-      # We ensure that the paused events are printed correctly backward
-      self.expect("thread trace dump instructions -e --id 18",
-        patterns=[f'''thread #1: tid = .*
+        # We ensure that the paused events are printed correctly backward
+        self.expect(
+            "thread trace dump instructions -e --id 18",
+            patterns=[
+                f"""thread #1: tid = .*
   a.out`symbol stub for: foo\(\)
     18: {ADDRESS_REGEX}    jmpq .*
     17: \(event\) software disabled tracing
@@ -106,4 +128,6 @@ class TestTraceEvents(TraceIntelPTTestCaseBase):
     3: \(event\) software disabled tracing
     2: {ADDRESS_REGEX}    movl .*
     1: \(event\) hardware disabled tracing
-    0: \(event\) trace synchronization point \[offset \= 0x0xec0\]'''])
+    0: \(event\) trace synchronization point \[offset \= 0x0xec0\]"""
+            ],
+        )

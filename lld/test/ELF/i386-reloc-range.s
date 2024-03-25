@@ -17,7 +17,7 @@
 
 // RUN: not ld.lld -Ttext 0x200 %t.o %t2.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s
 
-// ERR: {{.*}}:(.text+0x1): relocation R_386_PC16 out of range: 65536 is not in [-65536, 65535]; references foo
+// ERR: {{.*}}:(.text+0x1): relocation R_386_PC16 out of range: 65536 is not in [-65536, 65535]; references 'foo'
 
         .global _start
 _start:

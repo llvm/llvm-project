@@ -135,7 +135,7 @@ program test_co_sum
   !ERROR: 'errmsg=' argument has unacceptable rank 1
   call co_sum(d, errmsg=character_array)
 
-  !ERROR: too many actual arguments for intrinsic 'co_sum'
+  !ERROR: actual argument #5 without a keyword may not follow an actual argument with a keyword
   call co_sum(r, result_image=1, stat=status, errmsg=message, 3.4)
 
   ! keyword argument with incorrect name

@@ -1,4 +1,4 @@
-//===- RISCVTargetDefEmitter.cpp - Generate lists of RISCV CPUs -----------===//
+//===- RISCVTargetDefEmitter.cpp - Generate lists of RISC-V CPUs ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,23 +11,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TableGenBackends.h"
 #include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TableGenBackend.h"
 
 using namespace llvm;
 
 using ISAInfoTy = llvm::Expected<std::unique_ptr<RISCVISAInfo>>;
 
 // We can generate march string from target features as what has been described
-// in RISCV ISA specification (version 20191213) 'Chapter 27. ISA Extension
+// in RISC-V ISA specification (version 20191213) 'Chapter 27. ISA Extension
 // Naming Conventions'.
 //
 // This is almost the same as RISCVFeatures::parseFeatureBits, except that we
 // get feature name from feature records instead of feature bits.
 static std::string getMArch(const Record &Rec) {
   std::vector<std::string> FeatureVector;
-  int XLen = 32;
+  unsigned XLen = 32;
 
   // Convert features to FeatureVector.
   for (auto *Feature : Rec.getValueAsListOfDefs("Features")) {
@@ -47,12 +47,11 @@ static std::string getMArch(const Record &Rec) {
   return (*ISAInfo)->toString();
 }
 
-void llvm::EmitRISCVTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
+static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   OS << "#ifndef PROC\n"
-     << "#define PROC(ENUM, NAME, DEFAULT_MARCH)\n"
+     << "#define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_UNALIGNED_ACCESS)\n"
      << "#endif\n\n";
 
-  OS << "PROC(INVALID, {\"invalid\"}, {\"\"})\n";
   // Iterate on all definition records.
   for (const Record *Rec : RK.getAllDerivedDefinitions("RISCVProcessorModel")) {
     std::string MArch = Rec->getValueAsString("DefaultMarch").str();
@@ -61,9 +60,14 @@ void llvm::EmitRISCVTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
     if (MArch.empty())
       MArch = getMArch(*Rec);
 
+    const bool FastUnalignedAccess =
+        any_of(Rec->getValueAsListOfDefs("Features"), [&](auto &Feature) {
+          return Feature->getValueAsString("Name") == "fast-unaligned-access";
+        });
+
     OS << "PROC(" << Rec->getName() << ", "
        << "{\"" << Rec->getValueAsString("Name") << "\"}, "
-       << "{\"" << MArch << "\"})\n";
+       << "{\"" << MArch << "\"}, " << FastUnalignedAccess << ")\n";
   }
   OS << "\n#undef PROC\n";
   OS << "\n";
@@ -80,3 +84,6 @@ void llvm::EmitRISCVTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
 
   OS << "\n#undef TUNE_PROC\n";
 }
+
+static TableGen::Emitter::Opt X("gen-riscv-target-def", EmitRISCVTargetDef,
+                                "Generate the list of CPU for RISCV");

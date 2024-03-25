@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-none-eabi -mcpu=cortex-a57 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64 -mcpu=cortex-a57 2>&1 | FileCheck %s
 
 define i64 @read_encoded_register() nounwind {
 entry:

@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // directory_iterator, recursive_directory_iterator
 
-#include "filesystem_include.h"
+#include <filesystem>
 
 #include <iterator>
+namespace fs = std::filesystem;
 
 using value_type = fs::directory_entry;
 

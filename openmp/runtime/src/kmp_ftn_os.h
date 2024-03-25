@@ -116,6 +116,8 @@
 #define FTN_TARGET_IS_PRESENT omp_target_is_present
 #define FTN_TARGET_MEMCPY omp_target_memcpy
 #define FTN_TARGET_MEMCPY_RECT omp_target_memcpy_rect
+#define FTN_TARGET_MEMSET omp_target_memset
+#define FTN_TARGET_MEMSET_ASYNC omp_target_memset_async
 #define FTN_TARGET_ASSOCIATE_PTR omp_target_associate_ptr
 #define FTN_TARGET_DISASSOCIATE_PTR omp_target_disassociate_ptr
 #endif

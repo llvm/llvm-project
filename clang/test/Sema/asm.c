@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 %s -Wno-private-extern -triple i386-pc-linux-gnu -verify -fsyntax-only
 
-
 void f(void) {
   int i;
 
@@ -40,14 +39,12 @@ void clobbers(void) {
   asm ("nop" : "=a" (a) : "b" (b) : "%rcx", "%rbx"); // expected-error {{asm-specifier for input or output variable conflicts with asm clobber list}} 
 }
 
-// rdar://6094010
 void test3(void) {
   int x;
   asm(L"foo" : "=r"(x)); // expected-error {{wide string}}
   asm("foo" : L"=r"(x)); // expected-error {{wide string}}
 }
 
-// <rdar://problem/6156893>
 void test4(const volatile void *addr)
 {
     asm ("nop" : : "r"(*addr)); /* expected-error {{invalid type 'const volatile void' in asm input for constraint 'r'}}
@@ -60,7 +57,6 @@ void test4(const volatile void *addr)
     asm ("nop" : : "m"(f())); // expected-error {{invalid lvalue in asm input for constraint 'm'}}
 }
 
-// <rdar://problem/6512595>
 void test5(void) {
   asm("nop" : : "X" (8));
 }
@@ -119,7 +115,6 @@ void test10(void){
 
 // This is just an assert because of the boolean conversion.
 // Feel free to change the assembly to something sensible if it causes a problem.
-// rdar://problem/9414925
 void test11(void) {
   _Bool b;
   asm volatile ("movb %%gs:%P2,%b0" : "=q"(b) : "0"(0), "i"(5L));
@@ -135,7 +130,6 @@ void test13(void) {
   __asm__ volatile ("mov %%esp, %o" : "=r"(esp) : : ); // expected-error {{invalid % escape in inline assembly string}}
 }
 
-// <rdar://problem/12700799>
 struct S;  // expected-note 2 {{forward declaration of 'struct S'}}
 void test14(struct S *s) {
   __asm("": : "a"(*s)); // expected-error {{dereference of pointer to incomplete type 'struct S'}}

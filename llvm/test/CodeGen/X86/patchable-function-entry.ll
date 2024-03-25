@@ -50,7 +50,7 @@ define void @f3() "patchable-function-entry"="3" comdat {
 ; 32-NEXT:     nop
 ; 64:          nopl (%rax)
 ; CHECK:       ret
-; CHECK:       .section __patchable_function_entries,"aGwo",@progbits,f3,comdat,f3{{$}}
+; CHECK:       .section __patchable_function_entries,"awoG",@progbits,f3,f3,comdat{{$}}
 ; 32:          .p2align 2
 ; 32-NEXT:     .long .Lfunc_begin3
 ; 64:          .p2align 3
@@ -66,7 +66,7 @@ define void @f5() "patchable-function-entry"="5" comdat {
 ; 32-NEXT:     nop
 ; 64:          nopl 8(%rax,%rax)
 ; CHECK-NEXT:  ret
-; CHECK:       .section __patchable_function_entries,"aGwo",@progbits,f5,comdat,f5{{$}}
+; CHECK:       .section __patchable_function_entries,"awoG",@progbits,f5,f5,comdat{{$}}
 ; 32:          .p2align 2
 ; 32-NEXT:     .long .Lfunc_begin4
 ; 64:          .p2align 3
@@ -80,10 +80,10 @@ define void @f5() "patchable-function-entry"="5" comdat {
 ;; the remaining instructions do not need to be modified.
 define void @f3_2() "patchable-function-entry"="1" "patchable-function-prefix"="2" {
 ; CHECK-LABEL: .type f3_2,@function
-; CHECK-NEXT: .Ltmp0: # @f3_2
+; CHECK-NEXT: .Ltmp0:
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  nop
-; CHECK-NEXT: f3_2:
+; CHECK-NEXT: f3_2: # @f3_2
 ; CHECK:      # %bb.0:
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  ret

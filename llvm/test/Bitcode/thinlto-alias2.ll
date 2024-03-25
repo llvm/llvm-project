@@ -5,10 +5,9 @@
 ; CHECK:       <GLOBALVAL_SUMMARY_BLOCK
 ; CHECK-NEXT:    <VERSION
 ; CHECK-NEXT:    <FLAGS
-; CHECK-NEXT:    <PERMODULE {{.*}} op4=0 op5=0 op6=0 op7=[[ALIASID:[0-9]+]]/>
-; CHECK-NEXT:    <PERMODULE {{.*}} op0=[[ALIASEEID:[0-9]+]]
+; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op4=0 op5=0 op6=0 op7=[[ALIASID:[0-9]+]]
+; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op0=[[ALIASEEID:[0-9]+]]
 ; CHECK-NEXT:    <ALIAS {{.*}} op0=[[ALIASID]] {{.*}} op2=[[ALIASEEID]]/>
-; CHECK-NEXT:    <BLOCK_COUNT op0=2/>
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 
 ; ModuleID = 'thinlto-alias2.ll'

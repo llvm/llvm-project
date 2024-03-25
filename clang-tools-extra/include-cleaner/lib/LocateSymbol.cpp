@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AnalysisInternal.h"
+#include "clang-include-cleaner/Types.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -53,6 +54,12 @@ std::vector<Hinted<SymbolLocation>> locateDecl(const Decl &D) {
   return Result;
 }
 
+std::vector<Hinted<SymbolLocation>> locateMacro(const Macro &M) {
+  // FIXME: Should we also provide physical locations?
+  if (auto SS = tooling::stdlib::Symbol::named("", M.Name->getName()))
+    return {{*SS, Hints::CompleteSymbol}};
+  return {{M.Definition, Hints::CompleteSymbol}};
+}
 } // namespace
 
 std::vector<Hinted<SymbolLocation>> locateSymbol(const Symbol &S) {
@@ -60,7 +67,7 @@ std::vector<Hinted<SymbolLocation>> locateSymbol(const Symbol &S) {
   case Symbol::Declaration:
     return locateDecl(S.declaration());
   case Symbol::Macro:
-    return {{S.macro().Definition, Hints::CompleteSymbol}};
+    return locateMacro(S.macro());
   }
   llvm_unreachable("Unknown Symbol::Kind enum");
 }

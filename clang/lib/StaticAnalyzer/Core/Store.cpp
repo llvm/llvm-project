@@ -144,6 +144,7 @@ std::optional<const MemRegion *> StoreManager::castRegion(const MemRegion *R,
     case MemRegion::NonParamVarRegionKind:
     case MemRegion::ParamVarRegionKind:
     case MemRegion::CXXTempObjectRegionKind:
+    case MemRegion::CXXLifetimeExtendedObjectRegionKind:
     case MemRegion::CXXBaseObjectRegionKind:
     case MemRegion::CXXDerivedObjectRegionKind:
       return MakeElementRegion(cast<SubRegion>(R), PointeeTy);
@@ -256,10 +257,8 @@ SVal StoreManager::evalDerivedToBase(SVal Derived, const CastExpr *Cast) {
 
   // Walk through the cast path to create nested CXXBaseRegions.
   SVal Result = Derived;
-  for (CastExpr::path_const_iterator I = Cast->path_begin(),
-                                     E = Cast->path_end();
-       I != E; ++I) {
-    Result = evalDerivedToBase(Result, (*I)->getType(), (*I)->isVirtual());
+  for (const CXXBaseSpecifier *Base : Cast->path()) {
+    Result = evalDerivedToBase(Result, Base->getType(), Base->isVirtual());
   }
   return Result;
 }
@@ -403,7 +402,7 @@ SVal StoreManager::getLValueFieldOrIvar(const Decl *D, SVal Base) {
   Loc BaseL = Base.castAs<Loc>();
   const SubRegion* BaseR = nullptr;
 
-  switch (BaseL.getSubKind()) {
+  switch (BaseL.getKind()) {
   case loc::MemRegionValKind:
     BaseR = cast<SubRegion>(BaseL.castAs<loc::MemRegionVal>().getRegion());
     break;

@@ -114,7 +114,7 @@ void LPPassManager::markLoopAsDeleted(Loop &L) {
   // there. However, we have to be careful to not remove the back of the queue
   // as that is assumed to match the current loop.
   assert(LQ.back() == CurrentLoop && "Loop queue back isn't the current loop!");
-  llvm::erase_value(LQ, &L);
+  llvm::erase(LQ, &L);
 
   if (&L == CurrentLoop) {
     CurrentLoopDeleted = true;

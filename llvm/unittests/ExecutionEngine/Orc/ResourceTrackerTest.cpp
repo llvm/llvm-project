@@ -170,7 +170,7 @@ TEST_F(ResourceTrackerStandardTest, BasicDefineAndRemoveAllAfterMaterializing) {
         cantFail(R->withResourceKeyDo(
             [&](ResourceKey K) { SRM.recordResource(K); }));
         cantFail(R->notifyResolved({{Foo, FooSym}}));
-        cantFail(R->notifyEmitted());
+        cantFail(R->notifyEmitted({}));
       });
 
   auto RT = JD.createResourceTracker();
@@ -252,7 +252,7 @@ TEST_F(ResourceTrackerStandardTest, JITDylibClear) {
         cantFail(R->withResourceKeyDo(
             [&](ResourceKey K) { ++SRM.getRecordedResources()[K]; }));
         cantFail(R->notifyResolved({{Foo, FooSym}}));
-        cantFail(R->notifyEmitted());
+        cantFail(R->notifyEmitted({}));
       })));
 
   // Add materializer for Bar.
@@ -262,7 +262,7 @@ TEST_F(ResourceTrackerStandardTest, JITDylibClear) {
         cantFail(R->withResourceKeyDo(
             [&](ResourceKey K) { ++SRM.getRecordedResources()[K]; }));
         cantFail(R->notifyResolved({{Bar, BarSym}}));
-        cantFail(R->notifyEmitted());
+        cantFail(R->notifyEmitted({}));
       })));
 
   EXPECT_TRUE(SRM.getRecordedResources().empty())
@@ -298,14 +298,14 @@ TEST_F(ResourceTrackerStandardTest,
         EXPECT_EQ(RR.size(), 0U) << "Expected no resources recorded yet";
       });
 
-  auto MakeMU = [&](SymbolStringPtr Name, JITEvaluatedSymbol Sym) {
+  auto MakeMU = [&](SymbolStringPtr Name, ExecutorSymbolDef Sym) {
     return std::make_unique<SimpleMaterializationUnit>(
         SymbolFlagsMap({{Name, Sym.getFlags()}}),
         [=, &SRM](std::unique_ptr<MaterializationResponsibility> R) {
           cantFail(R->withResourceKeyDo(
               [&](ResourceKey K) { SRM.recordResource(K); }));
           cantFail(R->notifyResolved({{Name, Sym}}));
-          cantFail(R->notifyEmitted());
+          cantFail(R->notifyEmitted({}));
         });
   };
 
@@ -348,14 +348,14 @@ TEST_F(ResourceTrackerStandardTest,
         SRM.transferResources(JD, DstKey, SrcKey);
       });
 
-  auto MakeMU = [&](SymbolStringPtr Name, JITEvaluatedSymbol Sym) {
+  auto MakeMU = [&](SymbolStringPtr Name, ExecutorSymbolDef Sym) {
     return std::make_unique<SimpleMaterializationUnit>(
         SymbolFlagsMap({{Name, Sym.getFlags()}}),
         [=, &SRM](std::unique_ptr<MaterializationResponsibility> R) {
           cantFail(R->withResourceKeyDo(
               [&](ResourceKey K) { SRM.recordResource(K, 1); }));
           cantFail(R->notifyResolved({{Name, Sym}}));
-          cantFail(R->notifyEmitted());
+          cantFail(R->notifyEmitted({}));
         });
   };
 
@@ -446,7 +446,7 @@ TEST_F(ResourceTrackerStandardTest,
       << "Expected Resource value for BarRT to be '2' here";
 
   cantFail(FooMR->notifyResolved({{Foo, FooSym}}));
-  cantFail(FooMR->notifyEmitted());
+  cantFail(FooMR->notifyEmitted({}));
 }
 
 } // namespace

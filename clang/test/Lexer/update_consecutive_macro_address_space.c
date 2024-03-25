@@ -1,5 +1,5 @@
 // RUN: %clang -cc1 -print-stats %s 2>&1 | FileCheck %s
-// CHECK: 6 local SLocEntry's allocated
+// CHECK: 6 local SLocEntries allocated
 //
 // Verify that the macro arg expansion is split to two file ids, we have 6 file
 // ids rather than 5:

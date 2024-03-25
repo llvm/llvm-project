@@ -496,9 +496,9 @@ static bool decodeFPUV3Instruction(MCInst &MI, uint32_t insn, uint64_t Address,
                                    const MCDisassembler *DisAsm,
                                    const MCSubtargetInfo &STI) {
   LLVM_DEBUG(dbgs() << "Trying CSKY 32-bit fpuv3 table :\n");
-  if (!STI.getFeatureBits()[CSKY::FeatureFPUV3_HF] &&
-      !STI.getFeatureBits()[CSKY::FeatureFPUV3_SF] &&
-      !STI.getFeatureBits()[CSKY::FeatureFPUV3_DF])
+  if (!STI.hasFeature(CSKY::FeatureFPUV3_HF) &&
+      !STI.hasFeature(CSKY::FeatureFPUV3_SF) &&
+      !STI.hasFeature(CSKY::FeatureFPUV3_DF))
     return false;
 
   DecodeStatus Result =

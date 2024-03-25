@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -emit-llvm-only %s
-// RUN: %clang_cc1 -std=c++2a -verify -verify=expected-cxx2a -fsyntax-only -fblocks -emit-llvm-only %s
+// RUN: %clang_cc1 -std=c++2a -verify -verify=expected-cxx2a -fsyntax-only -fblocks -emit-llvm-only -Wno-deprecated-this-capture %s
 // RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -emit-llvm-only -triple i386-windows-pc %s
-// RUN: %clang_cc1 -std=c++2a -verify -verify=expected-cxx2a -fsyntax-only -fblocks -emit-llvm-only -triple i386-windows-pc %s
+// RUN: %clang_cc1 -std=c++2a -verify -verify=expected-cxx2a -fsyntax-only -fblocks -emit-llvm-only -triple i386-windows-pc -Wno-deprecated-this-capture %s
 // DONTRUNYET: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -fdelayed-template-parsing %s -DDELAYED_TEMPLATE_PARSING
 // DONTRUNYET: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -fms-extensions %s -DMS_EXTENSIONS
 // DONTRUNYET: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -fdelayed-template-parsing -fms-extensions %s -DMS_EXTENSIONS -DDELAYED_TEMPLATE_PARSING
@@ -563,8 +563,8 @@ struct X {
   
   int g() {
     auto L = [=](auto a) {
-      return [](int i) { // expected-note {{explicitly capture 'this'}}
-        return [=](auto b) {
+      return [](int i) { // expected-note {{explicitly capture 'this'}} expected-note {{while substituting into a lambda}}
+        return [=](auto b) { // expected-note {{while substituting into a lambda}}
           f(decltype(a){}); //expected-error{{this}}
           int x = i;
         };
@@ -587,8 +587,8 @@ struct X {
   
   int g() {
     auto L = [=](auto a) {
-      return [](auto b) { // expected-note {{explicitly capture 'this'}}
-        return [=](int i) {
+      return [](auto b) { // expected-note {{explicitly capture 'this'}} expected-note {{while substituting into a lambda}}
+        return [=](int i) { // expected-note {{while substituting into a lambda}}
           f(b); 
           f(decltype(a){}); //expected-error{{this}}
         };
@@ -612,7 +612,7 @@ struct X {
   int g() {
     auto L = [=](auto a) {
       return [](auto b) { // expected-note {{explicitly capture 'this'}}
-        return [=](int i) {
+        return [=](int i) { // expected-note {{while substituting into a lambda}}
           f(b); //expected-error{{this}}
           f(decltype(a){}); 
         };

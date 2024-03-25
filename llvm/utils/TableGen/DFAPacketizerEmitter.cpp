@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenSchedule.h"
-#include "CodeGenTarget.h"
+#include "Common/CodeGenSchedule.h"
+#include "Common/CodeGenTarget.h"
 #include "DFAEmitter.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
@@ -24,6 +24,7 @@
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cassert>
 #include <cstdint>
+#include <deque>
 #include <map>
 #include <set>
 #include <string>
@@ -71,8 +72,7 @@ public:
   DFAPacketizerEmitter(RecordKeeper &R);
 
   // Construct a map of function unit names to bits.
-  int collectAllFuncUnits(
-      ArrayRef<const CodeGenProcModel *> ProcModels);
+  int collectAllFuncUnits(ArrayRef<const CodeGenProcModel *> ProcModels);
 
   // Construct a map from a combo function unit bit to the bits of all included
   // functional units.
@@ -128,7 +128,8 @@ int DFAPacketizerEmitter::collectAllFuncUnits(
   return totalFUs;
 }
 
-int DFAPacketizerEmitter::collectAllComboFuncs(ArrayRef<Record *> ComboFuncList) {
+int DFAPacketizerEmitter::collectAllComboFuncs(
+    ArrayRef<Record *> ComboFuncList) {
   LLVM_DEBUG(dbgs() << "-------------------------------------------------------"
                        "----------------------\n");
   LLVM_DEBUG(dbgs() << "collectAllComboFuncs");
@@ -205,6 +206,7 @@ void DFAPacketizerEmitter::createScheduleClasses(unsigned ItineraryIdx,
 // Run the worklist algorithm to generate the DFA.
 //
 void DFAPacketizerEmitter::run(raw_ostream &OS) {
+  emitSourceFileHeader("Target DFA Packetizer Tables", OS);
   OS << "\n"
      << "#include \"llvm/CodeGen/DFAPacketizer.h\"\n";
   OS << "namespace llvm {\n";
@@ -352,11 +354,5 @@ void DFAPacketizerEmitter::emitForItineraries(
      << "\n}\n\n";
 }
 
-namespace llvm {
-
-void EmitDFAPacketizer(RecordKeeper &RK, raw_ostream &OS) {
-  emitSourceFileHeader("Target DFA Packetizer Tables", OS);
-  DFAPacketizerEmitter(RK).run(OS);
-}
-
-} // end namespace llvm
+static TableGen::Emitter::OptClass<DFAPacketizerEmitter>
+    X("gen-dfa-packetizer", "Generate DFA Packetizer for VLIW targets");

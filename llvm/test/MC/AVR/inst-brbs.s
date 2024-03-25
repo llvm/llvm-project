@@ -16,9 +16,9 @@ foo:
 ; CHECK: brcs .Ltmp1-12             ; encoding: [0bAAAAA000,0b111100AA]
 ; CHECK:                            ; fixup A - offset: 0, value: .Ltmp1-12, kind: fixup_7_pcrel
 
-; INST: brvs .+0
-; INST: brlo .+0
-; INST: breq .-42
-; INST  brmi .-44
-; INST  brlt .-46
-; InST: brie .+28
+; INST: 23 f0   brvs .+8
+; INST: d0 f3   brlo .-12
+; INST: 59 f3   breq .-42
+; INST: 52 f3   brmi .-44
+; INST: 4c f3   brlt .-46
+; INST: 77 f0   brie .+28

@@ -57,7 +57,7 @@
 // RUN: FileCheck -check-prefix=MISC-FLAGS-2-POS %s < %t
 // RUN: FileCheck -check-prefix=MISC-FLAGS-2-NEG %s < %t
 // MISC-FLAGS-2-POS: "{{.*}}msp430-elf-ld"
-// MISC-FLAGS-2-POS: "-e" "EntryPoint" "-s" "-u" "__undef"
+// MISC-FLAGS-2-POS: "-s" "-u" "__undef"{{.*}} "-e" "EntryPoint"
 // MISC-FLAGS-2-NEG: "{{.*}}msp430-elf-ld"
 // MISC-FLAGS-2-NEG-NOT: "-r"
 // MISC-FLAGS-2-NEG-NOT: "-t"

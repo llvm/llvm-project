@@ -253,7 +253,7 @@ public:
   /// (files with a ".c", ".cpp", ".m", ".mm" (many more) extension).
   ///
   /// \return
-  ///     \b true if the filespec represents an implementation source
+  ///     \b true if the FileSpec represents an implementation source
   ///     file, \b false otherwise.
   bool IsSourceImplementationFile() const;
 
@@ -327,10 +327,10 @@ public:
   /// Returns a ConstString that represents the extension of the filename for
   /// this FileSpec object. If this object does not represent a file, or the
   /// filename has no extension, ConstString(nullptr) is returned. The dot
-  /// ('.') character is not returned as part of the extension
+  /// ('.') character is the first character in the returned string.
   ///
-  /// \return Returns the extension of the file as a ConstString object.
-  ConstString GetFileNameExtension() const;
+  /// \return Returns the extension of the file as a StringRef.
+  llvm::StringRef GetFileNameExtension() const;
 
   /// Return the filename without the extension part
   ///
@@ -377,21 +377,6 @@ public:
   ///     The triple which is used to set the Path style.
   void SetFile(llvm::StringRef path, const llvm::Triple &triple);
 
-  bool IsResolved() const { return m_is_resolved; }
-
-  /// Set if the file path has been resolved or not.
-  ///
-  /// If you know a file path is already resolved and avoided passing a \b
-  /// true parameter for any functions that take a "bool resolve_path"
-  /// parameter, you can set the value manually using this call to make sure
-  /// we don't try and resolve it later, or try and resolve a path that has
-  /// already been resolved.
-  ///
-  /// \param[in] is_resolved
-  ///     A boolean value that will replace the current value that
-  ///     indicates if the paths in this object have been resolved.
-  void SetIsResolved(bool is_resolved) { m_is_resolved = is_resolved; }
-
   FileSpec CopyByAppendingPathComponent(llvm::StringRef component) const;
   FileSpec CopyByRemovingLastPathComponent() const;
 
@@ -408,7 +393,17 @@ public:
   ///     A boolean value indicating whether the path was updated.
   bool RemoveLastPathComponent();
 
-  ConstString GetLastPathComponent() const;
+  /// Gets the components of the FileSpec's path.
+  /// For example, given the path:
+  ///   /System/Library/PrivateFrameworks/UIFoundation.framework/UIFoundation
+  ///
+  /// This function returns:
+  ///   {"System", "Library", "PrivateFrameworks", "UIFoundation.framework",
+  ///   "UIFoundation"}
+  /// \return
+  ///   A std::vector of llvm::StringRefs for each path component.
+  ///   The lifetime of the StringRefs is tied to the lifetime of the FileSpec.
+  std::vector<llvm::StringRef> GetComponents() const;
 
 protected:
   // Convenience method for setting the file without changing the style.
@@ -416,10 +411,7 @@ protected:
 
   /// Called anytime m_directory or m_filename is changed to clear any cached
   /// state in this object.
-  void PathWasModified() {
-    m_is_resolved = false;
-    m_absolute = Absolute::Calculate;
-  }
+  void PathWasModified() { m_absolute = Absolute::Calculate; }
 
   enum class Absolute : uint8_t {
     Calculate,
@@ -427,12 +419,17 @@ protected:
     No
   };
 
-  // Member variables
-  ConstString m_directory;            ///< The uniqued directory path
-  ConstString m_filename;             ///< The uniqued filename path
-  mutable bool m_is_resolved = false; ///< True if this path has been resolved.
-  mutable Absolute m_absolute = Absolute::Calculate; ///< Cache absoluteness.
-  Style m_style; ///< The syntax that this path uses (e.g. Windows / Posix)
+  /// The unique'd directory path.
+  ConstString m_directory;
+
+  /// The unique'd filename path.
+  ConstString m_filename;
+
+  /// Cache whether this path is absolute.
+  mutable Absolute m_absolute = Absolute::Calculate;
+
+  /// The syntax that this path uses. (e.g. Windows / Posix)
+  Style m_style;
 };
 
 /// Dump a FileSpec object to a stream

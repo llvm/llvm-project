@@ -30,16 +30,16 @@ define <32 x half> @sitofp_v32i1_v32f16(<32 x i1> %x) #0 {
 define <32 x half> @uitofp_v32i1_v32f16(<32 x i1> %x) #0 {
 ; X86-LABEL: uitofp_v32i1_v32f16:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %ymm0, %ymm0
 ; X86-NEXT:    vpmovzxbw {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[16],zero,ymm0[17],zero,ymm0[18],zero,ymm0[19],zero,ymm0[20],zero,ymm0[21],zero,ymm0[22],zero,ymm0[23],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31],zero
-; X86-NEXT:    vcvtuw2ph %zmm0, %zmm0
+; X86-NEXT:    vcvtw2ph %zmm0, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: uitofp_v32i1_v32f16:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; X64-NEXT:    vpmovzxbw {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[16],zero,ymm0[17],zero,ymm0[18],zero,ymm0[19],zero,ymm0[20],zero,ymm0[21],zero,ymm0[22],zero,ymm0[23],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31],zero
-; X64-NEXT:    vcvtuw2ph %zmm0, %zmm0
+; X64-NEXT:    vcvtw2ph %zmm0, %zmm0
 ; X64-NEXT:    retq
  %result = call <32 x half> @llvm.experimental.constrained.uitofp.v32f16.v32i1(<32 x i1> %x,
                                                               metadata !"round.dynamic",
@@ -63,7 +63,7 @@ define <32 x half> @uitofp_v32i8_v32f16(<32 x i8> %x) #0 {
 ; CHECK-LABEL: uitofp_v32i8_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxbw {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[16],zero,ymm0[17],zero,ymm0[18],zero,ymm0[19],zero,ymm0[20],zero,ymm0[21],zero,ymm0[22],zero,ymm0[23],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31],zero
-; CHECK-NEXT:    vcvtuw2ph %zmm0, %zmm0
+; CHECK-NEXT:    vcvtw2ph %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
  %result = call <32 x half> @llvm.experimental.constrained.uitofp.v32f16.v32i8(<32 x i8> %x,
                                                               metadata !"round.dynamic",

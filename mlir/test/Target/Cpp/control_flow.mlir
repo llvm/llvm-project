@@ -8,12 +8,12 @@ func.func @simple(i64, i1) -> i64 {
 ^bb1:
   cf.br ^bb3(%a: i64)
 ^bb2:
-  %b = emitc.call "add"(%a, %a) : (i64, i64) -> i64
+  %b = emitc.call_opaque "add"(%a, %a) : (i64, i64) -> i64
   cf.br ^bb3(%b: i64)
 ^bb3(%c: i64):
   cf.br ^bb4(%c, %a : i64, i64)
 ^bb4(%d : i64, %e : i64):
-  %0 = emitc.call "add"(%d, %e) : (i64, i64) -> i64
+  %0 = emitc.call_opaque "add"(%d, %e) : (i64, i64) -> i64
   return %0 : i64
 }
   // CPP-DECLTOP: int64_t simple(int64_t [[A:[^ ]*]], bool [[COND:[^ ]*]]) {

@@ -12,13 +12,16 @@
 
 #include <__config>
 #include <__type_traits/conditional.h>
-#include <__type_traits/is_copy_constructible.h>
-#include <__type_traits/is_nothrow_move_constructible.h>
+#include <__type_traits/is_constructible.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/remove_reference.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -40,5 +43,7 @@ move_if_noexcept(_LIBCPP_LIFETIMEBOUND _Tp& __x) _NOEXCEPT {
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___UTILITY_MOVE_H

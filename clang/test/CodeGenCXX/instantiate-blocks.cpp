@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fblocks -emit-llvm -o - %s
-// rdar : // 6182276
 
 template <typename T> T foo(T t)
 {

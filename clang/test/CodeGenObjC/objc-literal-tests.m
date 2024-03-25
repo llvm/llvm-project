@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -x objective-c -triple x86_64-apple-darwin10 -fblocks -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -x objective-c++ -triple x86_64-apple-darwin10 -fblocks -emit-llvm %s -o - | FileCheck %s
-// rdar://10111397
 
 #if __has_feature(objc_bool)
 #define YES __objc_yes
@@ -86,7 +85,6 @@ NSDictionary *dictionary = @{@"name" : NSUserName(),
   return __objc_yes == __objc_no;
 }
 
-// rdar://10579122
 typedef BOOL (^foo)(void);
 extern void bar(foo a);
 

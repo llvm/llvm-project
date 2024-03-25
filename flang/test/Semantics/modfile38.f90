@@ -20,14 +20,14 @@ end module
 
 !Expect: m.mod
 !module m
-!interface t
-!procedure::f
-!end interface
 !type::t
 !end type
 !type::t2
 !type(t)::c
 !end type
+!interface t
+!procedure::f
+!end interface
 !contains
 !function f()
 !type(t)::f

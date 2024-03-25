@@ -1,7 +1,7 @@
 # REQUIRES: x86, aarch64
 # RUN: rm -rf %t; mkdir %t
 
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos10.15 %s -o %t/eh-frame-x86_64.o
+# RUN: llvm-mc -emit-compact-unwind-non-canonical=true -filetype=obj -triple=x86_64-apple-macos10.15 %s -o %t/eh-frame-x86_64.o
 # RUN: %lld -lSystem -lc++ %t/eh-frame-x86_64.o -o %t/eh-frame-x86_64
 # RUN: llvm-objdump --macho --syms --indirect-symbols --unwind-info \
 # RUN:   --dwarf=frames %t/eh-frame-x86_64 | FileCheck %s -D#BASE=0x100000000 -D#DWARF_ENC=4
@@ -20,7 +20,7 @@
 # RUN: llvm-nm -m %t/eh-frame-x86_64-r | FileCheck %s --check-prefix NO-EH-SYMS
 # RUN: llvm-readobj --section-headers %t/eh-frame-x86_64-r | FileCheck %s --check-prefix=ALIGN -D#ALIGN=3
 
-# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos11.0 %s -o %t/eh-frame-arm64.o
+# RUN: llvm-mc -filetype=obj -emit-compact-unwind-non-canonical=true -triple=arm64-apple-macos11.0 %s -o %t/eh-frame-arm64.o
 # RUN: %lld -arch arm64 -lSystem -lc++ %t/eh-frame-arm64.o -o %t/eh-frame-arm64
 # RUN: llvm-objdump --macho --syms --indirect-symbols --unwind-info \
 # RUN:   --dwarf=frames %t/eh-frame-arm64 | FileCheck %s -D#BASE=0x100000000 -D#DWARF_ENC=3
@@ -56,22 +56,21 @@
 # CHECK-DAG: [[#%x,MY_PERSONALITY:]] g   F __TEXT,__text _my_personality
 # CHECK: Contents of __unwind_info section:
 # CHECK:   Version:                                   0x1
-# CHECK:   Number of personality functions in array:  0x2
+# CHECK:   Number of personality functions in array:  0x1
 # CHECK:   Number of indices in array:                0x2
-# CHECK:   Personality functions: (count = 2)
+# CHECK:   Personality functions: (count = 1)
 # CHECK:     personality[1]: 0x[[#%.8x,GXX_PERSONALITY_GOT - BASE]]
-# CHECK:     personality[2]: 0x[[#%.8x,MY_PERSONALITY_GOT - BASE]]
 # CHECK:   LSDA descriptors:
 # CHECK:     [0]: function offset=0x[[#%.8x,F - BASE]], LSDA offset=0x[[#%.8x,EXCEPT0 - BASE]]
 # CHECK:     [1]: function offset=0x[[#%.8x,G - BASE]], LSDA offset=0x[[#%.8x,EXCEPT1 - BASE]]
 # CHECK:     [2]: function offset=0x[[#%.8x,H - BASE]], LSDA offset=0x[[#%.8x,EXCEPT2 - BASE]]
 # CHECK:   Second level indices:
 # CHECK:     Second level index[0]:
-# CHECK:       [0]: function offset=0x[[#%.8x,F - BASE]],              encoding[{{.*}}]=0x52{{.*}}
-# CHECK:       [1]: function offset=0x[[#%.8x,NO_UNWIND - BASE]],      encoding[{{.*}}]=0x00000000
-# CHECK:       [2]: function offset=0x[[#%.8x,G - BASE]],              encoding[{{.*}}]=0x1[[#%x,DWARF_ENC]][[#%.6x, G_DWARF_OFF:]]
-# CHECK:       [3]: function offset=0x[[#%.8x,H - BASE]],              encoding[{{.*}}]=0x2[[#%x,DWARF_ENC]][[#%.6x, H_DWARF_OFF:]]
-# CHECK:       [4]: function offset=0x[[#%.8x,MY_PERSONALITY - BASE]], encoding[{{.*}}]=0x00000000
+# CHECK       [0]: function offset=0x[[#%.8x,F - BASE]],              encoding[{{.*}}]=0x52{{.*}}
+# CHECK       [1]: function offset=0x[[#%.8x,NO_UNWIND - BASE]],      encoding[{{.*}}]=0x00000000
+# CHECK:      [2]: function offset=0x[[#%.8x,G - BASE]],              encoding[{{.*}}]=0x0[[#%x,DWARF_ENC]][[#%.6x, G_DWARF_OFF:]]
+# CHECK:      [3]: function offset=0x[[#%.8x,H - BASE]],              encoding[{{.*}}]=0x0[[#%x,DWARF_ENC]][[#%.6x, H_DWARF_OFF:]]
+# CHECK:      [4]: function offset=0x[[#%.8x,MY_PERSONALITY - BASE]], encoding[{{.*}}]=0x00000000
 
 # CHECK: .debug_frame contents:
 # CHECK: .eh_frame contents:

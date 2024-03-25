@@ -447,3 +447,138 @@ declare double @llvm.nearbyint.f64(double)
 declare double @llvm.round.f64(double)
 declare double @llvm.roundeven.f64(double)
 declare double @llvm.arithmetic.fence.f64(double)
+
+
+define i1 @isKnownNeverNaN_nofpclass_nan_arg(double nofpclass(nan) %arg) {
+; CHECK-LABEL: @isKnownNeverNaN_nofpclass_nan_arg(
+; CHECK-NEXT:    ret i1 true
+;
+  %tmp = fcmp ord double %arg, %arg
+  ret i1 %tmp
+}
+
+; Not enough nan tested
+define i1 @isKnownNeverNaN_nofpclass_qnan_arg(double nofpclass(qnan) %arg) {
+; CHECK-LABEL: @isKnownNeverNaN_nofpclass_qnan_arg(
+; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[ARG:%.*]], [[ARG]]
+; CHECK-NEXT:    ret i1 [[TMP]]
+;
+  %tmp = fcmp ord double %arg, %arg
+  ret i1 %tmp
+}
+
+; Not enough nan tested
+define i1 @isKnownNeverNaN_nofpclass_snan_arg(double nofpclass(snan) %arg) {
+; CHECK-LABEL: @isKnownNeverNaN_nofpclass_snan_arg(
+; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[ARG:%.*]], [[ARG]]
+; CHECK-NEXT:    ret i1 [[TMP]]
+;
+  %tmp = fcmp ord double %arg, %arg
+  ret i1 %tmp
+}
+
+; Wrong test
+define i1 @isKnownNeverNaN_nofpclass_zero_arg(double nofpclass(zero) %arg) {
+; CHECK-LABEL: @isKnownNeverNaN_nofpclass_zero_arg(
+; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[ARG:%.*]], [[ARG]]
+; CHECK-NEXT:    ret i1 [[TMP]]
+;
+  %tmp = fcmp ord double %arg, %arg
+  ret i1 %tmp
+}
+
+declare nofpclass(nan) double @declare_no_nan_return()
+declare double @unknown_return()
+
+define i1 @isKnownNeverNaN_nofpclass_call_decl() {
+; CHECK-LABEL: @isKnownNeverNaN_nofpclass_call_decl(
+; CHECK-NEXT:    [[CALL:%.*]] = call double @declare_no_nan_return()
+; CHECK-NEXT:    ret i1 true
+;
+  %call = call double @declare_no_nan_return()
+  %tmp = fcmp ord double %call, %call
+  ret i1 %tmp
+}
+
+define i1 @isKnownNeverNaN_nofpclass_callsite() {
+; CHECK-LABEL: @isKnownNeverNaN_nofpclass_callsite(
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) double @unknown_return()
+; CHECK-NEXT:    ret i1 true
+;
+  %call = call nofpclass(nan) double @unknown_return()
+  %tmp = fcmp ord double %call, %call
+  ret i1 %tmp
+}
+
+declare nofpclass(sub norm zero inf) double @only_nans()
+
+; TODO: Could simplify to false
+define i1 @isKnownNeverNaN_only_nans() {
+; CHECK-LABEL: @isKnownNeverNaN_only_nans(
+; CHECK-NEXT:    [[CALL:%.*]] = call double @only_nans()
+; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[CALL]], [[CALL]]
+; CHECK-NEXT:    ret i1 [[TMP]]
+;
+  %call = call double @only_nans()
+  %tmp = fcmp ord double %call, %call
+  ret i1 %tmp
+}
+
+define i1 @isKnownNeverNaN_nofpclass_indirect_callsite(ptr %fptr) {
+; CHECK-LABEL: @isKnownNeverNaN_nofpclass_indirect_callsite(
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) double [[FPTR:%.*]]()
+; CHECK-NEXT:    ret i1 true
+;
+  %call = call nofpclass(nan) double %fptr()
+  %tmp = fcmp ord double %call, %call
+  ret i1 %tmp
+}
+
+define i1 @isKnownNeverNaN_invoke_callsite(ptr %ptr) personality i8 1 {
+; CHECK-LABEL: @isKnownNeverNaN_invoke_callsite(
+; CHECK-NEXT:    [[INVOKE:%.*]] = invoke nofpclass(nan) float [[PTR:%.*]]()
+; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[UNWIND:%.*]]
+; CHECK:       normal:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       unwind:
+; CHECK-NEXT:    [[TMP1:%.*]] = landingpad ptr
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    resume ptr null
+;
+  %invoke = invoke nofpclass(nan) float %ptr() to label %normal unwind label %unwind
+
+normal:
+  %ord = fcmp ord float %invoke, 0.0
+  ret i1 %ord
+
+unwind:
+  landingpad ptr cleanup
+  resume ptr null
+}
+
+; This should not fold to false because fmul 0 * inf = nan
+define i1 @issue63316(i64 %arg) {
+; CHECK-LABEL: @issue63316(
+; CHECK-NEXT:    [[SITOFP:%.*]] = sitofp i64 [[ARG:%.*]] to float
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[SITOFP]], 0x7FF0000000000000
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno float [[FMUL]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[FCMP]]
+;
+  %sitofp = sitofp i64 %arg to float
+  %fmul = fmul float %sitofp, 0x7FF0000000000000
+  %fcmp = fcmp uno float %fmul, 0.000000e+00
+  ret i1 %fcmp
+}
+
+define i1 @issue63316_commute(i64 %arg) {
+; CHECK-LABEL: @issue63316_commute(
+; CHECK-NEXT:    [[SITOFP:%.*]] = sitofp i64 [[ARG:%.*]] to float
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float 0x7FF0000000000000, [[SITOFP]]
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno float [[FMUL]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[FCMP]]
+;
+  %sitofp = sitofp i64 %arg to float
+  %fmul = fmul float 0x7FF0000000000000, %sitofp
+  %fcmp = fcmp uno float %fmul, 0.000000e+00
+  ret i1 %fcmp
+}

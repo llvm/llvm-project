@@ -1,6 +1,6 @@
 ; RUN: opt -passes='loop(simple-loop-unswitch<nontrivial>),verify<loops>' -simple-loop-unswitch-guards -S < %s | FileCheck %s
 ; RUN: opt -passes='simple-loop-unswitch<nontrivial>' -simple-loop-unswitch-guards -S < %s | FileCheck %s
-; RUN: opt -passes='loop-mssa(simple-loop-unswitch<nontrivial>),verify<loops>' -simple-loop-unswitch-guards  -verify-memoryssa -S < %s | FileCheck %s
+; RUN: opt -passes='loop-mssa(simple-loop-unswitch<nontrivial>),verify<loops>' -simple-loop-unswitch-guards  -verify-memoryssa -verify-loop-info -S < %s | FileCheck %s
 
 declare void @llvm.experimental.guard(i1, ...)
 

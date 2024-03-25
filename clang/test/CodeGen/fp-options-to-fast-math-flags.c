@@ -18,13 +18,13 @@ float test(float a) {
 // CHECK-PRECISE: [[CALL_RES:%.+]] = call float @fn(float noundef {{%.+}})
 // CHECK-PRECISE: {{%.+}} = fadd float {{%.+}}, [[CALL_RES]]
 
-// CHECK-NO-NANS: [[CALL_RES:%.+]] = call nnan float @fn(float noundef {{%.+}})
+// CHECK-NO-NANS: [[CALL_RES:%.+]] = call nnan nofpclass(nan) float @fn(float noundef nofpclass(nan) {{%.+}})
 // CHECK-NO-NANS: {{%.+}} = fadd nnan float {{%.+}}, [[CALL_RES]]
 
-// CHECK-NO-INFS: [[CALL_RES:%.+]] = call ninf float @fn(float noundef {{%.+}})
+// CHECK-NO-INFS: [[CALL_RES:%.+]] = call ninf nofpclass(inf) float @fn(float noundef nofpclass(inf) {{%.+}})
 // CHECK-NO-INFS: {{%.+}} = fadd ninf float {{%.+}}, [[CALL_RES]]
 
-// CHECK-FINITE: [[CALL_RES:%.+]] = call nnan ninf float @fn(float noundef {{%.+}})
+// CHECK-FINITE: [[CALL_RES:%.+]] = call nnan ninf nofpclass(nan inf) float @fn(float noundef nofpclass(nan inf) {{%.+}})
 // CHECK-FINITE: {{%.+}} = fadd nnan ninf float {{%.+}}, [[CALL_RES]]
 
 // CHECK-NO-SIGNED-ZEROS: [[CALL_RES:%.+]] = call nsz float @fn(float noundef {{%.+}})
@@ -42,5 +42,5 @@ float test(float a) {
 // CHECK-UNSAFE: [[CALL_RES:%.+]] = call reassoc nsz arcp afn float @fn(float noundef {{%.+}})
 // CHECK-UNSAFE: {{%.+}} = fadd reassoc nsz arcp afn float {{%.+}}, [[CALL_RES]]
 
-// CHECK-FAST: [[CALL_RES:%.+]] = call reassoc nnan ninf nsz arcp afn float @fn(float noundef {{%.+}})
+// CHECK-FAST: [[CALL_RES:%.+]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) float @fn(float noundef nofpclass(nan inf) {{%.+}})
 // CHECK-FAST: {{%.+}} = fadd reassoc nnan ninf nsz arcp afn float {{%.+}}, [[CALL_RES]]

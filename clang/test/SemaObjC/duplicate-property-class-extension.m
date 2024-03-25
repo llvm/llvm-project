@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only -verify %s
-// rdar://7629420
 
 @interface Foo 
 @property (readonly) char foo; 

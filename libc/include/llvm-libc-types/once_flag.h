@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_ONCE_FLAG_H__
-#define __LLVM_LIBC_TYPES_ONCE_FLAG_H__
+#ifndef LLVM_LIBC_TYPES_ONCE_FLAG_H
+#define LLVM_LIBC_TYPES_ONCE_FLAG_H
 
-#include <llvm-libc-types/__futex_word.h>
+#include "llvm-libc-types/__futex_word.h"
 
-#ifdef __unix__
+#ifdef __linux__
 typedef __futex_word once_flag;
 #else
 #error "Once flag type not defined for the target platform."
 #endif
 
-#endif // __LLVM_LIBC_TYPES_ONCE_FLAG_H__
+#endif // LLVM_LIBC_TYPES_ONCE_FLAG_H

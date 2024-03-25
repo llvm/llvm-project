@@ -120,7 +120,7 @@ program test_co_max
   !ERROR: 'errmsg=' argument has unacceptable rank 1
   call co_max(d, errmsg=character_array)
 
-  !ERROR: too many actual arguments for intrinsic 'co_max'
+  !ERROR: actual argument #5 without a keyword may not follow an actual argument with a keyword
   call co_max(r, result_image=1, stat=status, errmsg=message, 3.4)
 
   !ERROR: unknown keyword argument to intrinsic 'co_max'

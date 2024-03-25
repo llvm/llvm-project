@@ -22,7 +22,6 @@
 #include <optional>
 
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -103,38 +102,15 @@ static Status save_socket_id_to_file(const std::string &socket_id,
     return Status("Failed to create directory %s: %s",
                   temp_file_spec.GetPath().c_str(), error.AsCString());
 
-  llvm::SmallString<64> temp_file_path;
-  temp_file_spec.AppendPathComponent("port-file.%%%%%%");
-  temp_file_path = temp_file_spec.GetPath();
-
   Status status;
-  if (auto Err =
-          handleErrors(llvm::writeFileAtomically(
-                           temp_file_path, file_spec.GetPath(), socket_id),
-                       [&status, &file_spec](const AtomicFileWriteError &E) {
-                         std::string ErrorMsgBuffer;
-                         llvm::raw_string_ostream S(ErrorMsgBuffer);
-                         E.log(S);
-
-                         switch (E.Error) {
-                         case atomic_write_error::failed_to_create_uniq_file:
-                           status = Status("Failed to create temp file: %s",
-                                           ErrorMsgBuffer.c_str());
-                           break;
-                         case atomic_write_error::output_stream_error:
-                           status = Status("Failed to write to port file.");
-                           break;
-                         case atomic_write_error::failed_to_rename_temp_file:
-                           status = Status("Failed to rename file %s to %s: %s",
-                                           ErrorMsgBuffer.c_str(),
-                                           file_spec.GetPath().c_str(),
-                                           ErrorMsgBuffer.c_str());
-                           break;
-                         }
-                       })) {
-    return Status("Failed to atomically write file %s",
-                  file_spec.GetPath().c_str());
-  }
+  if (auto Err = llvm::writeToOutput(file_spec.GetPath(),
+                                     [&socket_id](llvm::raw_ostream &OS) {
+                                       OS << socket_id;
+                                       return llvm::Error::success();
+                                     }))
+    return Status("Failed to atomically write file %s: %s",
+                  file_spec.GetPath().c_str(),
+                  llvm::toString(std::move(Err)).c_str());
   return status;
 }
 

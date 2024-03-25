@@ -7,6 +7,7 @@ typedef vector int __attribute__((aligned(8))) UnderAlignedVI;
 UnderAlignedVI TypedefedGlobal;
 
 vector int V __attribute__((aligned(8))); // expected-warning {{requested alignment is less than minimum alignment of 16 for type '__vector int' (vector of 4 'int' values)}}
+vector int V __attribute__((aligned(8))); // expected-warning {{requested alignment is less than minimum alignment of 16 for type '__vector int' (vector of 4 'int' values)}}
 
 int localTypedefed(void) {
   UnderAlignedVI TypedefedLocal;

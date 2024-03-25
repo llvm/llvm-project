@@ -1,1 +1,1 @@
-print sum(buf0, 1)
+expression sum(buf0, 1)

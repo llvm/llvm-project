@@ -107,14 +107,12 @@ define <32 x i8> @combine_v32i8_abs_abs(<32 x i8> %a) {
 define <4 x i64> @combine_v4i64_abs_abs(<4 x i64> %a) {
 ; SSE2-LABEL: combine_v4i64_abs_abs:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    psubq %xmm2, %xmm0
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    psubq %xmm2, %xmm1
 ; SSE2-NEXT:    retq
@@ -166,10 +164,20 @@ define <16 x i8> @combine_v16i8_abs_constant(<16 x i8> %a) {
 ; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: combine_v16i8_abs_constant:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX2-LABEL: combine_v16i8_abs_constant:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: combine_v16i8_abs_constant:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: combine_v16i8_abs_constant:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512VL-NEXT:    retq
   %1 = insertelement <16 x i8> undef, i8 15, i32 0
   %2 = shufflevector <16 x i8> %1, <16 x i8> undef, <16 x i32> zeroinitializer
   %3 = and <16 x i8> %a, %2

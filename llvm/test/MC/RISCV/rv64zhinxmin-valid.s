@@ -7,6 +7,9 @@
 # CHECK-ASM-AND-OBJ: fcvt.d.h a0, a2
 # CHECK-ASM: encoding: [0x53,0x05,0x26,0x42]
 fcvt.d.h a0, a2
+# CHECK-ASM-AND-OBJ: fcvt.d.h a0, a2, rup
+# CHECK-ASM: encoding: [0x53,0x35,0x26,0x42]
+fcvt.d.h a0, a2, rup
 
 # CHECK-ASM-AND-OBJ: fcvt.h.d a0, a2, dyn
 # CHECK-ASM: encoding: [0x53,0x75,0x16,0x44]

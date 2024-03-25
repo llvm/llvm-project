@@ -38,7 +38,6 @@ public:
     FC_Exprloc
   };
 
-private:
   struct ValueType {
     ValueType() { uval = 0; }
     ValueType(int64_t V) : sval(V) {}
@@ -51,10 +50,11 @@ private:
       const char *cstr;
     };
     const uint8_t *data = nullptr;
-    uint64_t SectionIndex;      /// Section index for reference forms.
+    uint64_t SectionIndex; /// Section index for reference forms.
   };
 
-  dwarf::Form Form;             /// Form for this value.
+private:
+  dwarf::Form Form; /// Form for this value.
   dwarf::DwarfFormat Format =
       dwarf::DWARF32;           /// Remember the DWARF format at extract time.
   ValueType Value;              /// Contains all data for the form.
@@ -73,6 +73,9 @@ public:
                                              ArrayRef<uint8_t> D);
   static DWARFFormValue createFromUnit(dwarf::Form F, const DWARFUnit *Unit,
                                        uint64_t *OffsetPtr);
+  static std::optional<object::SectionedAddress>
+  getAsSectionedAddress(const ValueType &Val, const dwarf::Form Form,
+                        const DWARFUnit *U);
 
   dwarf::Form getForm() const { return Form; }
   uint64_t getRawUValue() const { return Value.uval; }
@@ -348,6 +351,14 @@ toBlock(const std::optional<DWARFFormValue> &V) {
     return V->getAsBlock();
   return std::nullopt;
 }
+
+/// Check whether specified \p Form belongs to the \p FC class.
+/// \param Form an attribute form.
+/// \param FC an attribute form class to check.
+/// \param DwarfVersion the version of DWARF debug info keeping the attribute.
+/// \returns true if specified \p Form belongs to the \p FC class.
+bool doesFormBelongToClass(dwarf::Form Form, DWARFFormValue::FormClass FC,
+                           uint16_t DwarfVersion);
 
 } // end namespace dwarf
 

@@ -248,10 +248,9 @@ define i16 @bitcast_i16(i16 zeroext %arg0, i16 zeroext %arg1) {
 ; CHECK-LABEL: @bitcast_i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[ARG0:%.*]] to i32
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast i16 12345 to i16
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[CAST]] to i32
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast i32 12345 to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[TMP0]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[ADD]], [[TMP1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[ADD]], [[CAST]]
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i16 [[ARG1:%.*]], i16 32657
 ; CHECK-NEXT:    ret i16 [[RES]]
 ;
@@ -1104,4 +1103,31 @@ if.end:
 exit:
   %res = phi float [ 0.0, %entry ], [ %div, %if.end ]
   ret float %res
+}
+
+define i32 @bitcasted() {
+; CHECK-LABEL: @bitcasted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[T157_PH:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[T145_OLD:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[T157_PH]] to i64
+; CHECK-NEXT:    br label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[T145_OLD]] = bitcast i32 8 to i32
+; CHECK-NEXT:    [[T146_OLD:%.*]] = bitcast i32 [[T145_OLD]] to i32
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %t157.ph = phi i32 [ 0, %entry ], [ %t145.old, %latch ]
+  %ext = zext i32 %t157.ph to i64
+  br label %latch
+
+latch:
+  %t145.old = bitcast i32 8 to i32
+  %t146.old = bitcast i32 %t145.old to i32
+  br label %loop
 }

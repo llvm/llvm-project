@@ -14,7 +14,7 @@ from threading import Thread
 
 
 class DebuggerDriver(Thread):
-    """ Drives the debugger and responds to events. """
+    """Drives the debugger and responds to events."""
 
     def __init__(self, debugger, event_queue):
         Thread.__init__(self)
@@ -31,41 +31,45 @@ class DebuggerDriver(Thread):
         if not self.listener.IsValid():
             raise "Invalid listener"
 
-        self.listener.StartListeningForEventClass(self.debugger,
-                                                  lldb.SBTarget.GetBroadcasterClassName(),
-                                                  lldb.SBTarget.eBroadcastBitBreakpointChanged
-                                                  #| lldb.SBTarget.eBroadcastBitModuleLoaded
-                                                  #| lldb.SBTarget.eBroadcastBitModuleUnloaded
-                                                  | lldb.SBTarget.eBroadcastBitWatchpointChanged
-                                                  #| lldb.SBTarget.eBroadcastBitSymbolLoaded
-                                                  )
+        self.listener.StartListeningForEventClass(
+            self.debugger,
+            lldb.SBTarget.GetBroadcasterClassName(),
+            lldb.SBTarget.eBroadcastBitBreakpointChanged
+            # | lldb.SBTarget.eBroadcastBitModuleLoaded
+            # | lldb.SBTarget.eBroadcastBitModuleUnloaded
+            | lldb.SBTarget.eBroadcastBitWatchpointChanged
+            # | lldb.SBTarget.eBroadcastBitSymbolLoaded
+        )
 
-        self.listener.StartListeningForEventClass(self.debugger,
-                                                  lldb.SBThread.GetBroadcasterClassName(),
-                                                  lldb.SBThread.eBroadcastBitStackChanged
-                                                  #  lldb.SBThread.eBroadcastBitBreakpointChanged
-                                                  | lldb.SBThread.eBroadcastBitThreadSuspended
-                                                  | lldb.SBThread.eBroadcastBitThreadResumed
-                                                  | lldb.SBThread.eBroadcastBitSelectedFrameChanged
-                                                  | lldb.SBThread.eBroadcastBitThreadSelected
-                                                  )
+        self.listener.StartListeningForEventClass(
+            self.debugger,
+            lldb.SBThread.GetBroadcasterClassName(),
+            lldb.SBThread.eBroadcastBitStackChanged
+            #  lldb.SBThread.eBroadcastBitBreakpointChanged
+            | lldb.SBThread.eBroadcastBitThreadSuspended
+            | lldb.SBThread.eBroadcastBitThreadResumed
+            | lldb.SBThread.eBroadcastBitSelectedFrameChanged
+            | lldb.SBThread.eBroadcastBitThreadSelected,
+        )
 
-        self.listener.StartListeningForEventClass(self.debugger,
-                                                  lldb.SBProcess.GetBroadcasterClassName(),
-                                                  lldb.SBProcess.eBroadcastBitStateChanged
-                                                  | lldb.SBProcess.eBroadcastBitInterrupt
-                                                  | lldb.SBProcess.eBroadcastBitSTDOUT
-                                                  | lldb.SBProcess.eBroadcastBitSTDERR
-                                                  | lldb.SBProcess.eBroadcastBitProfileData
-                                                  )
-        self.listener.StartListeningForEventClass(self.debugger,
-                                                  lldb.SBCommandInterpreter.GetBroadcasterClass(),
-                                                  lldb.SBCommandInterpreter.eBroadcastBitThreadShouldExit
-                                                  | lldb.SBCommandInterpreter.eBroadcastBitResetPrompt
-                                                  | lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived
-                                                  | lldb.SBCommandInterpreter.eBroadcastBitAsynchronousOutputData
-                                                  | lldb.SBCommandInterpreter.eBroadcastBitAsynchronousErrorData
-                                                  )
+        self.listener.StartListeningForEventClass(
+            self.debugger,
+            lldb.SBProcess.GetBroadcasterClassName(),
+            lldb.SBProcess.eBroadcastBitStateChanged
+            | lldb.SBProcess.eBroadcastBitInterrupt
+            | lldb.SBProcess.eBroadcastBitSTDOUT
+            | lldb.SBProcess.eBroadcastBitSTDERR
+            | lldb.SBProcess.eBroadcastBitProfileData,
+        )
+        self.listener.StartListeningForEventClass(
+            self.debugger,
+            lldb.SBCommandInterpreter.GetBroadcasterClass(),
+            lldb.SBCommandInterpreter.eBroadcastBitThreadShouldExit
+            | lldb.SBCommandInterpreter.eBroadcastBitResetPrompt
+            | lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived
+            | lldb.SBCommandInterpreter.eBroadcastBitAsynchronousOutputData
+            | lldb.SBCommandInterpreter.eBroadcastBitAsynchronousErrorData,
+        )
 
     def createTarget(self, target_image, args=None):
         self.handleCommand("target create %s" % target_image)

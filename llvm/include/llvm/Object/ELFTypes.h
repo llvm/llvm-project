@@ -13,6 +13,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
@@ -23,8 +25,6 @@
 
 namespace llvm {
 namespace object {
-
-using support::endianness;
 
 template <class ELFT> struct Elf_Ehdr_Impl;
 template <class ELFT> struct Elf_Shdr_Impl;
@@ -92,10 +92,10 @@ public:
   using Off = packed<uint>;
 };
 
-using ELF32LE = ELFType<support::little, false>;
-using ELF32BE = ELFType<support::big, false>;
-using ELF64LE = ELFType<support::little, true>;
-using ELF64BE = ELFType<support::big, true>;
+using ELF32LE = ELFType<llvm::endianness::little, false>;
+using ELF32BE = ELFType<llvm::endianness::big, false>;
+using ELF64LE = ELFType<llvm::endianness::little, true>;
+using ELF64BE = ELFType<llvm::endianness::big, true>;
 
 // Use an alignment of 2 for the typedefs since that is the worst case for
 // ELF files in archives.
@@ -599,15 +599,13 @@ struct Elf_Nhdr_Impl {
   Elf_Word n_descsz;
   Elf_Word n_type;
 
-  /// The alignment of the name and descriptor.
-  ///
-  /// Implementations differ from the specification here: in practice all
-  /// variants align both the name and descriptor to 4-bytes.
-  static const unsigned int Align = 4;
-
-  /// Get the size of the note, including name, descriptor, and padding.
-  size_t getSize() const {
-    return sizeof(*this) + alignTo<Align>(n_namesz) + alignTo<Align>(n_descsz);
+  /// Get the size of the note, including name, descriptor, and padding. Both
+  /// the start and the end of the descriptor are aligned by the section
+  /// alignment. In practice many 64-bit systems deviate from the generic ABI by
+  /// using sh_addralign=4.
+  size_t getSize(size_t Align) const {
+    return alignToPowerOf2(sizeof(*this) + n_namesz, Align) +
+           alignToPowerOf2(n_descsz, Align);
   }
 };
 
@@ -635,18 +633,18 @@ public:
   }
 
   /// Get the note's descriptor.
-  ArrayRef<uint8_t> getDesc() const {
+  ArrayRef<uint8_t> getDesc(size_t Align) const {
     if (!Nhdr.n_descsz)
       return ArrayRef<uint8_t>();
     return ArrayRef<uint8_t>(
-        reinterpret_cast<const uint8_t *>(&Nhdr) + sizeof(Nhdr) +
-          alignTo<Elf_Nhdr_Impl<ELFT>::Align>(Nhdr.n_namesz),
+        reinterpret_cast<const uint8_t *>(&Nhdr) +
+            alignToPowerOf2(sizeof(Nhdr) + Nhdr.n_namesz, Align),
         Nhdr.n_descsz);
   }
 
   /// Get the note's descriptor as StringRef
-  StringRef getDescAsStringRef() const {
-    ArrayRef<uint8_t> Desc = getDesc();
+  StringRef getDescAsStringRef(size_t Align) const {
+    ArrayRef<uint8_t> Desc = getDesc(Align);
     return StringRef(reinterpret_cast<const char *>(Desc.data()), Desc.size());
   }
 
@@ -666,6 +664,7 @@ private:
   // Nhdr being a nullptr marks the end of iteration.
   const Elf_Nhdr_Impl<ELFT> *Nhdr = nullptr;
   size_t RemainingSize = 0u;
+  size_t Align = 0;
   Error *Err = nullptr;
 
   template <class ELFFileELFT> friend class ELFFile;
@@ -693,7 +692,7 @@ private:
       stopWithOverflowError();
     else {
       Nhdr = reinterpret_cast<const Elf_Nhdr_Impl<ELFT> *>(NhdrPos + NoteSize);
-      if (Nhdr->getSize() > RemainingSize)
+      if (Nhdr->getSize(Align) > RemainingSize)
         stopWithOverflowError();
       else
         *Err = Error::success();
@@ -702,8 +701,9 @@ private:
 
   Elf_Note_Iterator_Impl() = default;
   explicit Elf_Note_Iterator_Impl(Error &Err) : Err(&Err) {}
-  Elf_Note_Iterator_Impl(const uint8_t *Start, size_t Size, Error &Err)
-      : RemainingSize(Size), Err(&Err) {
+  Elf_Note_Iterator_Impl(const uint8_t *Start, size_t Size, size_t Align,
+                         Error &Err)
+      : RemainingSize(Size), Align(Align), Err(&Err) {
     consumeError(std::move(Err));
     assert(Start && "ELF note iterator starting at NULL");
     advanceNhdr(Start, 0u);
@@ -713,7 +713,7 @@ public:
   Elf_Note_Iterator_Impl &operator++() {
     assert(Nhdr && "incremented ELF note end iterator");
     const uint8_t *NhdrPos = reinterpret_cast<const uint8_t *>(Nhdr);
-    size_t NoteSize = Nhdr->getSize();
+    size_t NoteSize = Nhdr->getSize(Align);
     advanceNhdr(NhdrPos, NoteSize);
     return *this;
   }
@@ -742,7 +742,7 @@ template <class ELFT> struct Elf_CGProfile_Impl {
 template <class ELFT>
 struct Elf_Mips_RegInfo;
 
-template <support::endianness TargetEndianness>
+template <llvm::endianness TargetEndianness>
 struct Elf_Mips_RegInfo<ELFType<TargetEndianness, false>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
   Elf_Word ri_gprmask;     // bit-mask of used general registers
@@ -750,7 +750,7 @@ struct Elf_Mips_RegInfo<ELFType<TargetEndianness, false>> {
   Elf_Addr ri_gp_value;    // gp register value
 };
 
-template <support::endianness TargetEndianness>
+template <llvm::endianness TargetEndianness>
 struct Elf_Mips_RegInfo<ELFType<TargetEndianness, true>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
   Elf_Word ri_gprmask;     // bit-mask of used general registers
@@ -796,37 +796,204 @@ template <class ELFT> struct Elf_Mips_ABIFlags {
 
 // Struct representing the BBAddrMap for one function.
 struct BBAddrMap {
-  uint64_t Addr; // Function address
+
+  // Bitfield of optional features to control the extra information
+  // emitted/encoded in the the section.
+  struct Features {
+    bool FuncEntryCount : 1;
+    bool BBFreq : 1;
+    bool BrProb : 1;
+    bool MultiBBRange : 1;
+
+    bool hasPGOAnalysis() const { return FuncEntryCount || BBFreq || BrProb; }
+
+    bool hasPGOAnalysisBBData() const { return BBFreq || BrProb; }
+
+    // Encodes to minimum bit width representation.
+    uint8_t encode() const {
+      return (static_cast<uint8_t>(FuncEntryCount) << 0) |
+             (static_cast<uint8_t>(BBFreq) << 1) |
+             (static_cast<uint8_t>(BrProb) << 2) |
+             (static_cast<uint8_t>(MultiBBRange) << 3);
+    }
+
+    // Decodes from minimum bit width representation and validates no
+    // unnecessary bits are used.
+    static Expected<Features> decode(uint8_t Val) {
+      Features Feat{
+          static_cast<bool>(Val & (1 << 0)), static_cast<bool>(Val & (1 << 1)),
+          static_cast<bool>(Val & (1 << 2)), static_cast<bool>(Val & (1 << 3))};
+      if (Feat.encode() != Val)
+        return createStringError(
+            std::error_code(), "invalid encoding for BBAddrMap::Features: 0x%x",
+            Val);
+      return Feat;
+    }
+
+    bool operator==(const Features &Other) const {
+      return std::tie(FuncEntryCount, BBFreq, BrProb, MultiBBRange) ==
+             std::tie(Other.FuncEntryCount, Other.BBFreq, Other.BrProb,
+                      Other.MultiBBRange);
+    }
+  };
+
   // Struct representing the BBAddrMap information for one basic block.
   struct BBEntry {
-    uint32_t ID;     // Unique ID of this basic block.
-    uint32_t Offset; // Offset of basic block relative to function start.
-    uint32_t Size;   // Size of the basic block.
+    struct Metadata {
+      bool HasReturn : 1;         // If this block ends with a return (or tail
+                                  // call).
+      bool HasTailCall : 1;       // If this block ends with a tail call.
+      bool IsEHPad : 1;           // If this is an exception handling block.
+      bool CanFallThrough : 1;    // If this block can fall through to its next.
+      bool HasIndirectBranch : 1; // If this block ends with an indirect branch
+                                  // (branch via a register).
 
-    // The following fields are decoded from the Metadata field. The encoding
-    // happens in AsmPrinter.cpp:getBBAddrMapMetadata.
-    bool HasReturn;      // If this block ends with a return (or tail call).
-    bool HasTailCall;    // If this block ends with a tail call.
-    bool IsEHPad;        // If this is an exception handling block.
-    bool CanFallThrough; // If this block can fall through to its next.
+      bool operator==(const Metadata &Other) const {
+        return HasReturn == Other.HasReturn &&
+               HasTailCall == Other.HasTailCall && IsEHPad == Other.IsEHPad &&
+               CanFallThrough == Other.CanFallThrough &&
+               HasIndirectBranch == Other.HasIndirectBranch;
+      }
 
-    BBEntry(uint32_t ID, uint32_t Offset, uint32_t Size, uint32_t Metadata)
-        : ID(ID), Offset(Offset), Size(Size), HasReturn(Metadata & 1),
-          HasTailCall(Metadata & (1 << 1)), IsEHPad(Metadata & (1 << 2)),
-          CanFallThrough(Metadata & (1 << 3)){};
+      // Encodes this struct as a uint32_t value.
+      uint32_t encode() const {
+        return static_cast<uint32_t>(HasReturn) |
+               (static_cast<uint32_t>(HasTailCall) << 1) |
+               (static_cast<uint32_t>(IsEHPad) << 2) |
+               (static_cast<uint32_t>(CanFallThrough) << 3) |
+               (static_cast<uint32_t>(HasIndirectBranch) << 4);
+      }
+
+      // Decodes and returns a Metadata struct from a uint32_t value.
+      static Expected<Metadata> decode(uint32_t V) {
+        Metadata MD{/*HasReturn=*/static_cast<bool>(V & 1),
+                    /*HasTailCall=*/static_cast<bool>(V & (1 << 1)),
+                    /*IsEHPad=*/static_cast<bool>(V & (1 << 2)),
+                    /*CanFallThrough=*/static_cast<bool>(V & (1 << 3)),
+                    /*HasIndirectBranch=*/static_cast<bool>(V & (1 << 4))};
+        if (MD.encode() != V)
+          return createStringError(
+              std::error_code(), "invalid encoding for BBEntry::Metadata: 0x%x",
+              V);
+        return MD;
+      }
+    };
+
+    uint32_t ID = 0;     // Unique ID of this basic block.
+    uint32_t Offset = 0; // Offset of basic block relative to the base address.
+    uint32_t Size = 0;   // Size of the basic block.
+    Metadata MD = {false, false, false, false,
+                   false}; // Metdata for this basic block.
+
+    BBEntry(uint32_t ID, uint32_t Offset, uint32_t Size, Metadata MD)
+        : ID(ID), Offset(Offset), Size(Size), MD(MD){};
 
     bool operator==(const BBEntry &Other) const {
       return ID == Other.ID && Offset == Other.Offset && Size == Other.Size &&
-             HasReturn == Other.HasReturn && HasTailCall == Other.HasTailCall &&
-             IsEHPad == Other.IsEHPad && CanFallThrough == Other.CanFallThrough;
+             MD == Other.MD;
+    }
+
+    bool hasReturn() const { return MD.HasReturn; }
+    bool hasTailCall() const { return MD.HasTailCall; }
+    bool isEHPad() const { return MD.IsEHPad; }
+    bool canFallThrough() const { return MD.CanFallThrough; }
+    bool hasIndirectBranch() const { return MD.HasIndirectBranch; }
+  };
+
+  // Struct representing the BBAddrMap information for a contiguous range of
+  // basic blocks (a function or a basic block section).
+  struct BBRangeEntry {
+    uint64_t BaseAddress = 0;       // Base address of the range.
+    std::vector<BBEntry> BBEntries; // Basic block entries for this range.
+
+    // Equality operator for unit testing.
+    bool operator==(const BBRangeEntry &Other) const {
+      return BaseAddress == Other.BaseAddress &&
+             std::equal(BBEntries.begin(), BBEntries.end(),
+                        Other.BBEntries.begin());
     }
   };
-  std::vector<BBEntry> BBEntries; // Basic block entries for this function.
+
+  // All ranges for this function. Cannot be empty. The first range always
+  // corresponds to the function entry.
+  std::vector<BBRangeEntry> BBRanges;
+
+  // Returns the function address associated with this BBAddrMap, which is
+  // stored as the `BaseAddress` of its first BBRangeEntry.
+  uint64_t getFunctionAddress() const {
+    assert(!BBRanges.empty());
+    return BBRanges.front().BaseAddress;
+  }
+
+  // Returns the total number of bb entries in all bb ranges.
+  size_t getNumBBEntries() const {
+    size_t NumBBEntries = 0;
+    for (const auto &BBR : BBRanges)
+      NumBBEntries += BBR.BBEntries.size();
+    return NumBBEntries;
+  }
+
+  // Returns the index of the bb range with the given base address, or
+  // `std::nullopt` if no such range exists.
+  std::optional<size_t>
+  getBBRangeIndexForBaseAddress(uint64_t BaseAddress) const {
+    for (size_t I = 0; I < BBRanges.size(); ++I)
+      if (BBRanges[I].BaseAddress == BaseAddress)
+        return I;
+    return {};
+  }
+
+  // Returns bb entries in the first range.
+  const std::vector<BBEntry> &getBBEntries() const {
+    return BBRanges.front().BBEntries;
+  }
+
+  const std::vector<BBRangeEntry> &getBBRanges() const { return BBRanges; }
 
   // Equality operator for unit testing.
   bool operator==(const BBAddrMap &Other) const {
-    return Addr == Other.Addr && std::equal(BBEntries.begin(), BBEntries.end(),
-                                            Other.BBEntries.begin());
+    return std::equal(BBRanges.begin(), BBRanges.end(), Other.BBRanges.begin());
+  }
+};
+
+/// A feature extension of BBAddrMap that holds information relevant to PGO.
+struct PGOAnalysisMap {
+  /// Extra basic block data with fields for block frequency and branch
+  /// probability.
+  struct PGOBBEntry {
+    /// Single successor of a given basic block that contains the tag and branch
+    /// probability associated with it.
+    struct SuccessorEntry {
+      /// Unique ID of this successor basic block.
+      uint32_t ID;
+      /// Branch Probability of the edge to this successor taken from MBPI.
+      BranchProbability Prob;
+
+      bool operator==(const SuccessorEntry &Other) const {
+        return std::tie(ID, Prob) == std::tie(Other.ID, Other.Prob);
+      }
+    };
+
+    /// Block frequency taken from MBFI
+    BlockFrequency BlockFreq;
+    /// List of successors of the current block
+    llvm::SmallVector<SuccessorEntry, 2> Successors;
+
+    bool operator==(const PGOBBEntry &Other) const {
+      return std::tie(BlockFreq, Successors) ==
+             std::tie(Other.BlockFreq, Other.Successors);
+    }
+  };
+
+  uint64_t FuncEntryCount;           // Prof count from IR function
+  std::vector<PGOBBEntry> BBEntries; // Extended basic block entries
+
+  // Flags to indicate if each PGO related info was enabled in this function
+  BBAddrMap::Features FeatEnable;
+
+  bool operator==(const PGOAnalysisMap &Other) const {
+    return std::tie(FuncEntryCount, BBEntries, FeatEnable) ==
+           std::tie(Other.FuncEntryCount, Other.BBEntries, Other.FeatEnable);
   }
 };
 

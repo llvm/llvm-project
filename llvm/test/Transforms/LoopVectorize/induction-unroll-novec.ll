@@ -9,6 +9,8 @@ define void @test_nonconst_start_and_step(ptr %dst, i32 %start, i32 %step, i64 %
 ; CHECK:         [[NEG_STEP:%.+]] = sub i32 0, %step
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[INDUCTION3:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[INDUCTION4:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP2]], [[NEG_STEP]]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 %start, [[TMP3]]
@@ -16,8 +18,6 @@ define void @test_nonconst_start_and_step(ptr %dst, i32 %start, i32 %step, i64 %
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add i32 [[OFFSET_IDX]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 1, [[NEG_STEP]]
 ; CHECK-NEXT:    [[INDUCTION2:%.*]] = add i32 [[OFFSET_IDX]], [[TMP5]]
-; CHECK-NEXT:    [[INDUCTION3:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[INDUCTION4:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw i32 [[INDUCTION]], %step
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub nsw i32 [[INDUCTION2]], %step
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[INDUCTION3]]

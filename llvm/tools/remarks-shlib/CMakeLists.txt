@@ -9,9 +9,7 @@ if(LLVM_ENABLE_PIC)
     libremarks.cpp
     )
 
-  if (LLVM_LINK_LLVM_DYLIB)
-    set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/Remarks.dylib.exports)
-  else()
+  if (NOT (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB))
     set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/Remarks.exports)
   endif()
 

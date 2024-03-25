@@ -32,7 +32,7 @@ entry:
                                                                            ptr @callee,
                                                                            ptr %5, i64 0, i64 0, ptr %0)
   %7 = load ptr, ptr %1, align 8
-  %8 = getelementptr inbounds <{ ptr, ptr }>, <{ ptr, ptr }>* %7, i32 0, i32 1
+  %8 = getelementptr inbounds <{ ptr, ptr }>, ptr %7, i32 0, i32 1
   %9 = load ptr, ptr %8, align 8
   %10 = load ptr, ptr %1, align 8
 

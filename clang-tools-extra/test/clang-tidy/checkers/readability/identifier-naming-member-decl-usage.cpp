@@ -1,10 +1,10 @@
 // RUN: %check_clang_tidy %s readability-identifier-naming %t -- \
-// RUN:   -config='{CheckOptions: [ \
-// RUN:     {key: readability-identifier-naming.MemberCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.ParameterCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.MethodCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.AggressiveDependentMemberLookup, value: true} \
-// RUN:  ]}' -- -fno-delayed-template-parsing
+// RUN:   -config='{CheckOptions: { \
+// RUN:     readability-identifier-naming.MemberCase: CamelCase, \
+// RUN:     readability-identifier-naming.ParameterCase: CamelCase, \
+// RUN:     readability-identifier-naming.MethodCase: camelBack, \
+// RUN:     readability-identifier-naming.AggressiveDependentMemberLookup: true \
+// RUN:  }}' -- -fno-delayed-template-parsing
 
 int set_up(int);
 int clear(int);

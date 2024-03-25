@@ -33,8 +33,8 @@ public:
   /// arm.neon.intr.sdot
   LogicalResult matchAndRewrite(Sdot2dOp op,
                                 PatternRewriter &rewriter) const override {
-    Type elemType = op.getB().getType().cast<VectorType>().getElementType();
-    int length = op.getB().getType().cast<VectorType>().getShape()[0] *
+    Type elemType = cast<VectorType>(op.getB().getType()).getElementType();
+    int length = cast<VectorType>(op.getB().getType()).getShape()[0] *
                  Sdot2dOp::kReductionSize;
     VectorType flattenedVectorType = VectorType::get({length}, elemType);
     Value b2d = op.getB();

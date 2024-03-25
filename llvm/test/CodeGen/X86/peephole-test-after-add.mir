@@ -38,6 +38,54 @@
     ret void
   }
 
+  define i16 @erase_test16(i16 %0, i16 %1, ptr nocapture %2) {
+  entry:
+    %3 = icmp ne i16 %0, 0
+    %4 = and i16 %1, 123
+    %5 = icmp eq i16 %4, 0
+    %6 = select i1 %3, i1 %5, i1 false
+    br i1 %6, label %if.then, label %if.end
+
+  if.then:                                          ; preds = %entry
+    store i16 %0, ptr %2, align 4
+    br label %if.end
+
+  if.end:                                           ; preds = %if.then, %entry
+    ret i16 0
+  }
+
+  define i16 @erase_test16_bigimm(i16 %0, i32 %1, ptr nocapture %2) {
+  entry:
+    %3 = icmp ne i16 %0, 0
+    %4 = and i32 %1, 123456
+    %trunc = trunc i32 %4 to i16
+    %5 = icmp eq i16 %trunc, 0
+    %6 = select i1 %3, i1 %5, i1 false
+    br i1 %6, label %if.then, label %if.end
+
+  if.then:                                          ; preds = %entry
+    store i32 %4, ptr %2, align 4
+    br label %if.end
+
+  if.end:                                           ; preds = %if.then, %entry
+    ret i16 0
+  }
+
+  define i16 @erase_test16_sf(i16 %0, i16 %1, ptr nocapture %2) {
+  entry:
+    %3 = icmp ne i16 %0, 0
+    %4 = and i16 %1, 1234
+    %5 = icmp slt i16 %4, 0
+    %6 = select i1 %3, i1 %5, i1 false
+    br i1 %6, label %if.then, label %if.end
+
+  if.then:                                          ; preds = %entry
+    store i16 %4, ptr %2, align 4
+    br label %if.end
+
+  if.end:                                           ; preds = %if.then, %entry
+    ret i16 0
+  }
 ...
 ---
 name:            test_erased
@@ -192,5 +240,382 @@ body:             |
     MOV64mr %0, 1, $noreg, 0, $noreg, killed %10 :: (store (s64) into %ir.0)
     MOV64mr %4, 1, $noreg, 0, $noreg, killed %9 :: (store (s64) into %ir.4)
     RET 0
+
+...
+---
+name:            erase_test16
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   true
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gr32, preferred-register: '' }
+  - { id: 1, class: gr32, preferred-register: '' }
+  - { id: 2, class: gr64, preferred-register: '' }
+  - { id: 3, class: gr16, preferred-register: '' }
+  - { id: 4, class: gr16, preferred-register: '' }
+  - { id: 5, class: gr32, preferred-register: '' }
+  - { id: 6, class: gr32, preferred-register: '' }
+  - { id: 7, class: gr16, preferred-register: '' }
+liveins:
+  - { reg: '$edi', virtual-reg: '%0' }
+  - { reg: '$esi', virtual-reg: '%1' }
+  - { reg: '$rdx', virtual-reg: '%2' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  ; CHECK-LABEL: name: erase_test16
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x60000000), %bb.3(0x20000000)
+  ; CHECK-NEXT:   liveins: $edi, $esi, $rdx
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdx
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY $edi
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr16 = COPY [[COPY2]].sub_16bit
+  ; CHECK-NEXT:   TEST16rr [[COPY3]], [[COPY3]], implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.3, 4, implicit $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.entry:
+  ; CHECK-NEXT:   successors: %bb.2(0x55555555), %bb.3(0x2aaaaaab)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[AND32ri:%[0-9]+]]:gr32 = AND32ri [[COPY1]], 123, implicit-def $eflags
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gr16 = COPY [[AND32ri]].sub_16bit
+  ; CHECK-NEXT:   JCC_1 %bb.3, 5, implicit $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.if.then:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   MOV16mr [[COPY]], 1, $noreg, 0, $noreg, [[COPY3]] :: (store (s16) into %ir.2, align 4)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3.if.end:
+  ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gr16 = COPY [[MOV32r0_]].sub_16bit
+  ; CHECK-NEXT:   $ax = COPY [[COPY5]]
+  ; CHECK-NEXT:   RET 0, $ax
+  bb.0.entry:
+    successors: %bb.3(0x60000000), %bb.2(0x20000000)
+    liveins: $edi, $esi, $rdx
+
+    %2:gr64 = COPY $rdx
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    %3:gr16 = COPY %0.sub_16bit
+    TEST16rr %3, %3, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
+    JMP_1 %bb.3
+
+  bb.3.entry:
+    successors: %bb.1(0x55555555), %bb.2(0x2aaaaaab)
+
+    %5:gr32 = AND32ri %1, 123, implicit-def dead $eflags
+    %4:gr16 = COPY %5.sub_16bit
+    TEST16rr %4, %4, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1.if.then:
+    successors: %bb.2(0x80000000)
+
+    MOV16mr %2, 1, $noreg, 0, $noreg, %3 :: (store (s16) into %ir.2, align 4)
+
+  bb.2.if.end:
+    %6:gr32 = MOV32r0 implicit-def dead $eflags
+    %7:gr16 = COPY %6.sub_16bit
+    $ax = COPY %7
+    RET 0, $ax
+
+...
+---
+name:            erase_test16_bigimm
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   true
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gr32, preferred-register: '' }
+  - { id: 1, class: gr32, preferred-register: '' }
+  - { id: 2, class: gr32, preferred-register: '' }
+  - { id: 3, class: gr64, preferred-register: '' }
+  - { id: 4, class: gr16, preferred-register: '' }
+  - { id: 5, class: gr16, preferred-register: '' }
+  - { id: 6, class: gr32, preferred-register: '' }
+  - { id: 7, class: gr16, preferred-register: '' }
+liveins:
+  - { reg: '$edi', virtual-reg: '%1' }
+  - { reg: '$esi', virtual-reg: '%2' }
+  - { reg: '$rdx', virtual-reg: '%3' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  ; CHECK-LABEL: name: erase_test16_bigimm
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x60000000), %bb.3(0x20000000)
+  ; CHECK-NEXT:   liveins: $edi, $esi, $rdx
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdx
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY $edi
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr16 = COPY [[COPY2]].sub_16bit
+  ; CHECK-NEXT:   TEST16rr [[COPY3]], [[COPY3]], implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.3, 4, implicit $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.entry:
+  ; CHECK-NEXT:   successors: %bb.2(0x55555555), %bb.3(0x2aaaaaab)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[AND32ri:%[0-9]+]]:gr32 = AND32ri [[COPY1]], 123456, implicit-def dead $eflags
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gr16 = COPY [[AND32ri]].sub_16bit
+  ; CHECK-NEXT:   TEST16rr [[COPY4]], [[COPY4]], implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.3, 5, implicit $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.if.then:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   MOV32mr [[COPY]], 1, $noreg, 0, $noreg, [[AND32ri]] :: (store (s32) into %ir.2)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3.if.end:
+  ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gr16 = COPY [[MOV32r0_]].sub_16bit
+  ; CHECK-NEXT:   $ax = COPY [[COPY5]]
+  ; CHECK-NEXT:   RET 0, $ax
+  bb.0.entry:
+    successors: %bb.3(0x60000000), %bb.2(0x20000000)
+    liveins: $edi, $esi, $rdx
+
+    %3:gr64 = COPY $rdx
+    %2:gr32 = COPY $esi
+    %1:gr32 = COPY $edi
+    %5:gr16 = COPY %1.sub_16bit
+    TEST16rr %5, %5, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
+    JMP_1 %bb.3
+
+  bb.3.entry:
+    successors: %bb.1(0x55555555), %bb.2(0x2aaaaaab)
+
+    %0:gr32 = AND32ri %2, 123456, implicit-def dead $eflags
+    %4:gr16 = COPY %0.sub_16bit
+    TEST16rr %4, %4, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1.if.then:
+    successors: %bb.2(0x80000000)
+
+    MOV32mr %3, 1, $noreg, 0, $noreg, %0 :: (store (s32) into %ir.2)
+
+  bb.2.if.end:
+    %6:gr32 = MOV32r0 implicit-def dead $eflags
+    %7:gr16 = COPY %6.sub_16bit
+    $ax = COPY %7
+    RET 0, $ax
+
+...
+---
+name:            erase_test16_sf
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   true
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gr16, preferred-register: '' }
+  - { id: 1, class: gr32, preferred-register: '' }
+  - { id: 2, class: gr32, preferred-register: '' }
+  - { id: 3, class: gr64, preferred-register: '' }
+  - { id: 4, class: gr16, preferred-register: '' }
+  - { id: 5, class: gr32, preferred-register: '' }
+  - { id: 6, class: gr32, preferred-register: '' }
+  - { id: 7, class: gr16, preferred-register: '' }
+liveins:
+  - { reg: '$edi', virtual-reg: '%1' }
+  - { reg: '$esi', virtual-reg: '%2' }
+  - { reg: '$rdx', virtual-reg: '%3' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  ; CHECK-LABEL: name: erase_test16_sf
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x60000000), %bb.3(0x20000000)
+  ; CHECK-NEXT:   liveins: $edi, $esi, $rdx
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdx
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY $edi
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr16 = COPY [[COPY2]].sub_16bit
+  ; CHECK-NEXT:   TEST16rr [[COPY3]], [[COPY3]], implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.3, 4, implicit $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.entry:
+  ; CHECK-NEXT:   successors: %bb.2(0x55555555), %bb.3(0x2aaaaaab)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[AND32ri:%[0-9]+]]:gr32 = AND32ri [[COPY1]], 1234, implicit-def dead $eflags
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gr16 = COPY [[AND32ri]].sub_16bit
+  ; CHECK-NEXT:   TEST16rr [[COPY4]], [[COPY4]], implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.3, 9, implicit $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.if.then:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   MOV16mr [[COPY]], 1, $noreg, 0, $noreg, [[COPY4]] :: (store (s16) into %ir.2, align 4)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3.if.end:
+  ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gr16 = COPY [[MOV32r0_]].sub_16bit
+  ; CHECK-NEXT:   $ax = COPY [[COPY5]]
+  ; CHECK-NEXT:   RET 0, $ax
+  bb.0.entry:
+    successors: %bb.3(0x60000000), %bb.2(0x20000000)
+    liveins: $edi, $esi, $rdx
+
+    %3:gr64 = COPY $rdx
+    %2:gr32 = COPY $esi
+    %1:gr32 = COPY $edi
+    %4:gr16 = COPY %1.sub_16bit
+    TEST16rr %4, %4, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
+    JMP_1 %bb.3
+
+  bb.3.entry:
+    successors: %bb.1(0x55555555), %bb.2(0x2aaaaaab)
+
+    %5:gr32 = AND32ri %2, 1234, implicit-def dead $eflags
+    %0:gr16 = COPY %5.sub_16bit
+    TEST16rr %0, %0, implicit-def $eflags
+    JCC_1 %bb.2, 9, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1.if.then:
+    successors: %bb.2(0x80000000)
+
+    MOV16mr %3, 1, $noreg, 0, $noreg, %0 :: (store (s16) into %ir.2, align 4)
+
+  bb.2.if.end:
+    %6:gr32 = MOV32r0 implicit-def dead $eflags
+    %7:gr16 = COPY %6.sub_16bit
+    $ax = COPY %7
+    RET 0, $ax
 
 ...

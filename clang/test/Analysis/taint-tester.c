@@ -122,7 +122,7 @@ void stdinTest2(FILE *pIn) {
   fscanf(pp, "%d", &ii);
   int jj = ii;// expected-warning + {{tainted}}
 
-  fscanf(p, "%d", &ii);
+  fscanf(p, "%d", &ii);// expected-warning + {{tainted}}
   int jj2 = ii;// expected-warning + {{tainted}}
 
   ii = 3;
@@ -154,7 +154,6 @@ void getwTest(void) {
   int i = getw(stdin); // expected-warning + {{tainted}}
 }
 
-typedef long ssize_t;
 ssize_t getline(char ** __restrict, size_t * __restrict, FILE * __restrict);
 int  printf(const char * __restrict, ...);
 void free(void *ptr);

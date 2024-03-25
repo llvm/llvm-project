@@ -24,7 +24,7 @@ void JITLoaderList::Append(const JITLoaderSP &jit_loader_sp) {
 
 void JITLoaderList::Remove(const JITLoaderSP &jit_loader_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_jit_loaders_mutex);
-  llvm::erase_value(m_jit_loaders_vec, jit_loader_sp);
+  llvm::erase(m_jit_loaders_vec, jit_loader_sp);
 }
 
 size_t JITLoaderList::GetSize() const { return m_jit_loaders_vec.size(); }

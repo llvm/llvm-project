@@ -1,4 +1,5 @@
 # RUN: dsymutil -statistics -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s
+# RUN: dsymutil --linker parallel -statistics -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s
 #
 # CHECK: -------------------------------------------------------------------------------
 # CHECK-NEXT: Filename                                           Object         dSYM   Change

@@ -29,7 +29,6 @@ const char *BoltRevision =
 namespace opts {
 
 bool HeatmapMode = false;
-bool LinuxKernelMode = false;
 
 cl::OptionCategory BoltCategory("BOLT generic options");
 cl::OptionCategory BoltDiffCategory("BOLTDIFF generic options");
@@ -160,8 +159,12 @@ cl::opt<ProfileFormatKind> ProfileFormat(
         "format to dump profile output in aggregation mode, default is fdata"),
     cl::init(PF_Fdata),
     cl::values(clEnumValN(PF_Fdata, "fdata", "offset-based plaintext format"),
-               clEnumValN(PF_YAML, "yaml", "dense YAML reprensentation")),
+               clEnumValN(PF_YAML, "yaml", "dense YAML representation")),
     cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
+
+cl::opt<std::string> SaveProfile("w",
+                                 cl::desc("save recorded profile to a file"),
+                                 cl::cat(BoltOutputCategory));
 
 cl::opt<bool> SplitEH("split-eh", cl::desc("split C++ exception handling code"),
                       cl::Hidden, cl::cat(BoltOptCategory));
@@ -172,9 +175,9 @@ cl::opt<bool>
 
                cl::cat(BoltCategory));
 
-llvm::cl::opt<bool> TimeOpts("time-opts",
-                             cl::desc("print time spent in each optimization"),
-                             cl::cat(BoltOptCategory));
+cl::opt<bool> TimeOpts("time-opts",
+                       cl::desc("print time spent in each optimization"),
+                       cl::cat(BoltOptCategory));
 
 cl::opt<bool> UseOldText(
     "use-old-text",

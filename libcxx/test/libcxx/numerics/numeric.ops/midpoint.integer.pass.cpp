@@ -22,14 +22,14 @@
 
 //  Users are not supposed to provide template argument lists for
 //  functions in the standard library (there's an exception for min and max)
-//  However, libc++ protects against this for pointers, so we check to make
-//  sure that our protection is working here.
-//  In some cases midpoint<int>(0,0) might get deduced as the pointer overload.
+//  However, libc++ protects against this for pointers. The use of T(0)
+//  in the test cases resolves potential ambiguity in template argument deduction
+//  for the std::midpoint function.
 
 template <typename T>
 void test()
 {
-    ASSERT_SAME_TYPE(T, decltype(std::midpoint<T>(0, 0)));
+  ASSERT_SAME_TYPE(T, decltype(std::midpoint<T>(T(0), T(0))));
 }
 
 int main(int, char**)
@@ -40,10 +40,10 @@ int main(int, char**)
     test<long>();
     test<long long>();
 
-    test<int8_t>();
-    test<int16_t>();
-    test<int32_t>();
-    test<int64_t>();
+    test<std::int8_t>();
+    test<std::int16_t>();
+    test<std::int32_t>();
+    test<std::int64_t>();
 
     test<unsigned char>();
     test<unsigned short>();
@@ -51,10 +51,10 @@ int main(int, char**)
     test<unsigned long>();
     test<unsigned long long>();
 
-    test<uint8_t>();
-    test<uint16_t>();
-    test<uint32_t>();
-    test<uint64_t>();
+    test<std::uint8_t>();
+    test<std::uint16_t>();
+    test<std::uint32_t>();
+    test<std::uint64_t>();
 
 #ifndef TEST_HAS_NO_INT128
     test<__int128_t>();
@@ -62,8 +62,8 @@ int main(int, char**)
 #endif
 
     test<char>();
-    test<ptrdiff_t>();
-    test<size_t>();
+    test<std::ptrdiff_t>();
+    test<std::size_t>();
 
     return 0;
 }

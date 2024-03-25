@@ -5,13 +5,13 @@
 // RUN: sed -e "s|DIR|%/t|g" -e "s|DEFINES|-DINCLUDE_B|g"             %S/Inputs/header-search-pruning/cdb.json > %t/cdb_b.json
 // RUN: sed -e "s|DIR|%/t|g" -e "s|DEFINES|-DINCLUDE_A -DINCLUDE_B|g" %S/Inputs/header-search-pruning/cdb.json > %t/cdb_ab.json
 //
-// RUN: clang-scan-deps -compilation-database %t/cdb_a.json -format experimental-full -optimize-args >> %t/result_a.json
+// RUN: clang-scan-deps -compilation-database %t/cdb_a.json -format experimental-full -optimize-args=header-search >> %t/result_a.json
 // RUN: cat %t/result_a.json | sed 's:\\\\\?:/:g' | FileCheck --check-prefixes=CHECK_A %s
 //
-// RUN: clang-scan-deps -compilation-database %t/cdb_b.json -format experimental-full -optimize-args >> %t/result_b.json
+// RUN: clang-scan-deps -compilation-database %t/cdb_b.json -format experimental-full -optimize-args=header-search >> %t/result_b.json
 // RUN: cat %t/result_b.json | sed 's:\\\\\?:/:g' | FileCheck --check-prefixes=CHECK_B %s
 //
-// RUN: clang-scan-deps -compilation-database %t/cdb_ab.json -format experimental-full -optimize-args >> %t/result_ab.json
+// RUN: clang-scan-deps -compilation-database %t/cdb_ab.json -format experimental-full -optimize-args=header-search >> %t/result_ab.json
 // RUN: cat %t/result_ab.json | sed 's:\\\\\?:/:g' | FileCheck --check-prefixes=CHECK_AB %s
 
 #include "mod.h"

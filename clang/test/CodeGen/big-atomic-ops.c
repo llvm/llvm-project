@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=x86_64-apple-macosx10.9.0 | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -triple=x86_64-apple-macosx10.9.0 | FileCheck %s
 // REQUIRES: x86-registered-target
 // Also test serialization of atomic operations here, to avoid duplicating the
 // test.
-// RUN: %clang_cc1 -no-opaque-pointers %s -emit-pch -o %t -triple=x86_64-apple-macosx10.9.0
-// RUN: %clang_cc1 -no-opaque-pointers %s -include-pch %t -triple=x86_64-apple-macosx10.9.0 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-pch -o %t -triple=x86_64-apple-macosx10.9.0
+// RUN: %clang_cc1 %s -include-pch %t -triple=x86_64-apple-macosx10.9.0 -emit-llvm -o - | FileCheck %s
 #ifndef ALREADY_INCLUDED
 #define ALREADY_INCLUDED
 
@@ -16,13 +16,13 @@ typedef enum memory_order {
 
 int fi1(_Atomic(int) *i) {
   // CHECK: @fi1
-  // CHECK: load atomic i32, i32* {{.*}} seq_cst, align 4
+  // CHECK: load atomic i32, ptr {{.*}} seq_cst, align 4
   return __c11_atomic_load(i, memory_order_seq_cst);
 }
 
 int fi1a(int *i) {
   // CHECK: @fi1a
-  // CHECK: load atomic i32, i32* {{.*}} seq_cst, align 4
+  // CHECK: load atomic i32, ptr {{.*}} seq_cst, align 4
   int v;
   __atomic_load(i, &v, memory_order_seq_cst);
   return v;
@@ -30,7 +30,7 @@ int fi1a(int *i) {
 
 int fi1b(int *i) {
   // CHECK: @fi1b
-  // CHECK: load atomic i32, i32* {{.*}} seq_cst, align 4
+  // CHECK: load atomic i32, ptr {{.*}} seq_cst, align 4
   return __atomic_load_n(i, memory_order_seq_cst);
 }
 
@@ -91,14 +91,14 @@ int fi3d(int *i) {
 
 _Bool fi4(_Atomic(int) *i) {
   // CHECK: @fi4
-  // CHECK: cmpxchg i32* {{.*}} acquire acquire, align 4
+  // CHECK: cmpxchg ptr {{.*}} acquire acquire, align 4
   int cmp = 0;
   return __c11_atomic_compare_exchange_strong(i, &cmp, 1, memory_order_acquire, memory_order_acquire);
 }
 
 _Bool fi4a(int *i) {
   // CHECK: @fi4
-  // CHECK: cmpxchg i32* {{.*}} acquire acquire, align 4
+  // CHECK: cmpxchg ptr {{.*}} acquire acquire, align 4
   int cmp = 0;
   int desired = 1;
   return __atomic_compare_exchange(i, &cmp, &desired, 0, memory_order_acquire, memory_order_acquire);
@@ -106,14 +106,14 @@ _Bool fi4a(int *i) {
 
 _Bool fi4b(int *i) {
   // CHECK: @fi4
-  // CHECK: cmpxchg weak i32* {{.*}} acquire acquire, align 4
+  // CHECK: cmpxchg weak ptr {{.*}} acquire acquire, align 4
   int cmp = 0;
   return __atomic_compare_exchange_n(i, &cmp, 1, 1, memory_order_acquire, memory_order_acquire);
 }
 
 float ff1(_Atomic(float) *d) {
   // CHECK: @ff1
-  // CHECK: load atomic i32, i32* {{.*}} monotonic, align 4
+  // CHECK: load atomic i32, ptr {{.*}} monotonic, align 4
   return __c11_atomic_load(d, memory_order_relaxed);
 }
 
@@ -129,7 +129,7 @@ float ff3(_Atomic(float) *d) {
 
 int* fp1(_Atomic(int*) *p) {
   // CHECK: @fp1
-  // CHECK: load atomic i64, i64* {{.*}} seq_cst, align 8
+  // CHECK: load atomic i64, ptr {{.*}} seq_cst, align 8
   return __c11_atomic_load(p, memory_order_seq_cst);
 }
 
@@ -150,20 +150,20 @@ int *fp2a(int **p) {
 
 _Complex float fc(_Atomic(_Complex float) *c) {
   // CHECK: @fc
-  // CHECK: atomicrmw xchg i64* {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw xchg ptr {{.*}} seq_cst, align 8
   return __c11_atomic_exchange(c, 2, memory_order_seq_cst);
 }
 
 typedef struct X { int x; } X;
 X fs(_Atomic(X) *c) {
   // CHECK: @fs
-  // CHECK: atomicrmw xchg i32* {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw xchg ptr {{.*}} seq_cst, align 4
   return __c11_atomic_exchange(c, (X){2}, memory_order_seq_cst);
 }
 
 X fsa(X *c, X *d) {
   // CHECK: @fsa
-  // CHECK: atomicrmw xchg i32* {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw xchg ptr {{.*}} seq_cst, align 4
   X ret;
   __atomic_exchange(c, d, &ret, memory_order_seq_cst);
   return ret;
@@ -171,20 +171,20 @@ X fsa(X *c, X *d) {
 
 _Bool fsb(_Bool *c) {
   // CHECK: @fsb
-  // CHECK: atomicrmw xchg i8* {{.*}} seq_cst, align 1
+  // CHECK: atomicrmw xchg ptr {{.*}} seq_cst, align 1
   return __atomic_exchange_n(c, 1, memory_order_seq_cst);
 }
 
 char flag1;
 volatile char flag2;
 void test_and_set(void) {
-  // CHECK: atomicrmw xchg i8* @flag1, i8 1 seq_cst, align 1
+  // CHECK: atomicrmw xchg ptr @flag1, i8 1 seq_cst, align 1
   __atomic_test_and_set(&flag1, memory_order_seq_cst);
-  // CHECK: atomicrmw volatile xchg i8* @flag2, i8 1 acquire, align 1
+  // CHECK: atomicrmw volatile xchg ptr @flag2, i8 1 acquire, align 1
   __atomic_test_and_set(&flag2, memory_order_acquire);
-  // CHECK: store atomic volatile i8 0, i8* @flag2 release, align 1
+  // CHECK: store atomic volatile i8 0, ptr @flag2 release, align 1
   __atomic_clear(&flag2, memory_order_release);
-  // CHECK: store atomic i8 0, i8* @flag1 seq_cst, align 1
+  // CHECK: store atomic i8 0, ptr @flag1 seq_cst, align 1
   __atomic_clear(&flag1, memory_order_seq_cst);
 }
 
@@ -198,13 +198,13 @@ struct Seventeen {
 int lock_free(struct Incomplete *incomplete) {
   // CHECK: @lock_free
 
-  // CHECK: call zeroext i1 @__atomic_is_lock_free(i64 noundef 3, i8* noundef null)
+  // CHECK: call zeroext i1 @__atomic_is_lock_free(i64 noundef 3, ptr noundef null)
   __c11_atomic_is_lock_free(3);
 
-  // CHECK: call zeroext i1 @__atomic_is_lock_free(i64 noundef 16, i8* noundef {{.*}}@sixteen{{.*}})
+  // CHECK: call zeroext i1 @__atomic_is_lock_free(i64 noundef 16, ptr noundef {{.*}}@sixteen{{.*}})
   __atomic_is_lock_free(16, &sixteen);
 
-  // CHECK: call zeroext i1 @__atomic_is_lock_free(i64 noundef 17, i8* noundef {{.*}}@seventeen{{.*}})
+  // CHECK: call zeroext i1 @__atomic_is_lock_free(i64 noundef 17, ptr noundef {{.*}}@seventeen{{.*}})
   __atomic_is_lock_free(17, &seventeen);
 
   // CHECK: call zeroext i1 @__atomic_is_lock_free(i64 noundef 4, {{.*}})
@@ -247,36 +247,36 @@ void structAtomicStore(void) {
   // CHECK: @structAtomicStore
   struct foo f = {0};
   __c11_atomic_store(&bigAtomic, f, 5);
-  // CHECK: call void @__atomic_store(i64 noundef 512, i8* noundef bitcast ({{.*}} @bigAtomic to i8*),
+  // CHECK: call void @__atomic_store(i64 noundef 512, ptr noundef @bigAtomic,
 
   struct bar b = {0};
   __atomic_store(&smallThing, &b, 5);
-  // CHECK: call void @__atomic_store(i64 noundef 3, i8* noundef {{.*}} @smallThing
+  // CHECK: call void @__atomic_store(i64 noundef 3, ptr noundef @smallThing
 
   __atomic_store(&bigThing, &f, 5);
-  // CHECK: call void @__atomic_store(i64 noundef 512, i8* noundef {{.*}} @bigThing
+  // CHECK: call void @__atomic_store(i64 noundef 512, ptr noundef @bigThing
 }
 void structAtomicLoad(void) {
   // CHECK: @structAtomicLoad
   struct foo f = __c11_atomic_load(&bigAtomic, 5);
-  // CHECK: call void @__atomic_load(i64 noundef 512, i8* noundef bitcast ({{.*}} @bigAtomic to i8*),
+  // CHECK: call void @__atomic_load(i64 noundef 512, ptr noundef @bigAtomic,
 
   struct bar b;
   __atomic_load(&smallThing, &b, 5);
-  // CHECK: call void @__atomic_load(i64 noundef 3, i8* noundef {{.*}} @smallThing
+  // CHECK: call void @__atomic_load(i64 noundef 3, ptr noundef @smallThing
 
   __atomic_load(&bigThing, &f, 5);
-  // CHECK: call void @__atomic_load(i64 noundef 512, i8* noundef {{.*}} @bigThing
+  // CHECK: call void @__atomic_load(i64 noundef 512, ptr noundef @bigThing
 }
 struct foo structAtomicExchange(void) {
   // CHECK: @structAtomicExchange
   struct foo f = {0};
   struct foo old;
   __atomic_exchange(&f, &bigThing, &old, 5);
-  // CHECK: call void @__atomic_exchange(i64 noundef 512, {{.*}}, i8* noundef bitcast ({{.*}} @bigThing to i8*),
+  // CHECK: call void @__atomic_exchange(i64 noundef 512, {{.*}}, ptr noundef @bigThing,
 
   return __c11_atomic_exchange(&bigAtomic, f, 5);
-  // CHECK: call void @__atomic_exchange(i64 noundef 512, i8* noundef bitcast ({{.*}} @bigAtomic to i8*),
+  // CHECK: call void @__atomic_exchange(i64 noundef 512, ptr noundef @bigAtomic,
 }
 int structAtomicCmpExchange(void) {
   // CHECK: @structAtomicCmpExchange
@@ -287,7 +287,7 @@ int structAtomicCmpExchange(void) {
   struct foo g = {0};
   g.big[12] = 12;
   return x & __c11_atomic_compare_exchange_strong(&bigAtomic, &f, g, 5, 5);
-  // CHECK: call zeroext i1 @__atomic_compare_exchange(i64 noundef 512, i8* noundef bitcast ({{.*}} @bigAtomic to i8*),
+  // CHECK: call zeroext i1 @__atomic_compare_exchange(i64 noundef 512, ptr noundef @bigAtomic,
 }
 
 // Check that no atomic operations are used in any initialisation of _Atomic

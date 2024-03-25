@@ -6,16 +6,14 @@ define void @test() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i1> [ [[TMP8:%.*]], [[TMP1:%.*]] ], [ zeroinitializer, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i1> [ [[TMP6:%.*]], [[TMP1:%.*]] ], [ zeroinitializer, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[TMP1]]
 ; CHECK:       1:
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i1> [[TMP0]] to <2 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = or i8 0, 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i8> <i8 poison, i8 0>, i8 [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = and <2 x i8> [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = or <2 x i8> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <2 x i8> [[TMP6]], zeroinitializer
-; CHECK-NEXT:    [[TMP8]] = and <2 x i1> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i8> zeroinitializer, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i8> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <2 x i8> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP6]] = and <2 x i1> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    br label [[FOR_BODY]]
 ;
 entry:

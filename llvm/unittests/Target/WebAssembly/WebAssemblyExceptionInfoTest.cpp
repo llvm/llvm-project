@@ -23,8 +23,8 @@ namespace {
 
 std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
   auto TT(Triple::normalize("wasm32-unknown-unknown"));
-  std::string CPU("");
-  std::string FS("");
+  std::string CPU;
+  std::string FS;
 
   LLVMInitializeWebAssemblyTargetInfo();
   LLVMInitializeWebAssemblyTarget();
@@ -36,7 +36,7 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
 
   return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
       TheTarget->createTargetMachine(TT, CPU, FS, TargetOptions(), std::nullopt,
-                                     std::nullopt, CodeGenOpt::Default)));
+                                     std::nullopt, CodeGenOptLevel::Default)));
 }
 
 std::unique_ptr<Module> parseMIR(LLVMContext &Context,

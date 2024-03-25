@@ -1,7 +1,7 @@
 function(add_fp_unittest name)
   cmake_parse_arguments(
     "MATH_UNITTEST"
-    "NEED_MPFR" # Optional arguments
+    "NEED_MPFR;UNIT_TEST_ONLY;HERMETIC_TEST_ONLY" # Optional arguments
     "" # Single value arguments
     "LINK_LIBRARIES" # Multi-value arguments
     ${ARGN}
@@ -9,18 +9,28 @@ function(add_fp_unittest name)
 
   if(MATH_UNITTEST_NEED_MPFR)
     if(NOT LIBC_TESTS_CAN_USE_MPFR)
-      message("WARNING: Math test ${name} will be skipped as MPFR library is not available.")
+      message(VERBOSE "Math test ${name} will be skipped as MPFR library is not available.")
       return()
     endif()
   endif()
 
+  if(MATH_UNITTEST_HERMETIC_TEST_ONLY)
+    set(test_type HERMETIC_TEST_ONLY)
+  elseif(MATH_UNITTEST_UNIT_TEST_ONLY)
+    set(test_type UNIT_TEST_ONLY)
+  endif()
   if(MATH_UNITTEST_NEED_MPFR)
-    list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper -lmpfr -lgmp)
+    if(MATH_UNITTEST_HERMETIC_TEST_ONLY)
+      message(FATAL_ERROR "Hermetic math test cannot require MPFR.")
+    endif()
+    set(test_type UNIT_TEST_ONLY)
+    list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper libc_math_test_utils -lmpfr -lgmp)
   endif()
   list(APPEND MATH_UNITTEST_LINK_LIBRARIES LibcFPTestHelpers)
 
-  add_libc_unittest(
+  add_libc_test(
     ${name}
+    ${test_type}
     LINK_LIBRARIES "${MATH_UNITTEST_LINK_LIBRARIES}"
     "${MATH_UNITTEST_UNPARSED_ARGUMENTS}"
   )
@@ -31,10 +41,16 @@ add_subdirectory(ctype)
 add_subdirectory(errno)
 add_subdirectory(fenv)
 add_subdirectory(math)
-add_subdirectory(string)
-add_subdirectory(stdlib)
-add_subdirectory(inttypes)
+add_subdirectory(search)
+add_subdirectory(stdbit)
+add_subdirectory(stdfix)
 add_subdirectory(stdio)
+add_subdirectory(stdlib)
+add_subdirectory(string)
+add_subdirectory(wchar)
+
+# Depends on utilities in stdlib
+add_subdirectory(inttypes)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(fcntl)
@@ -48,8 +64,10 @@ if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
 
-add_subdirectory(dirent)
 add_subdirectory(assert)
+add_subdirectory(compiler)
+add_subdirectory(dirent)
+add_subdirectory(network)
 add_subdirectory(setjmp)
 add_subdirectory(signal)
 add_subdirectory(spawn)
@@ -96,8 +114,10 @@ add_custom_command(
 )
 
 add_custom_target(libc-api-test)
+add_dependencies(check-libc libc-api-test)
+
 set(
-  allocator_entrypoints 
+  allocator_entrypoints
     libc.src.stdlib.malloc
     libc.src.stdlib.calloc
     libc.src.stdlib.realloc
@@ -112,8 +132,6 @@ add_integration_test(
     libc-api-test
   SRCS
     ${public_test}
-  STARTUP
-    libc.startup.linux.crt1
   DEPENDS
     ${api-test-entrypoints}
 )
@@ -122,7 +140,7 @@ if(COMPILER_RESOURCE_DIR AND LLVM_LIBC_ENABLE_LINTING)
   add_custom_target(
     libc-api-test-tidy
     VERBATIM
-    COMMAND $<TARGET_FILE:clang-tidy> --system-headers
+    COMMAND ${LLVM_LIBC_CLANG_TIDY} --system-headers
       --checks=-*,llvmlibc-restrict-system-libc-headers
       "--extra-arg=-resource-dir=${COMPILER_RESOURCE_DIR}"
       --header-filter=.*

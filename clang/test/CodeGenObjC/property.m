@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 
 // TODO: actually test most of this instead of just emitting it
 
@@ -57,24 +57,20 @@ int printf(const char *, ...);
 // CHECK-LABEL: define{{.*}} void @test2
 A *test2_helper(void);
 void test2(void) {
-  // CHECK:      [[BASE:%.*]] = call [[A:%.*]]* @test2_helper()
-  // CHECK-NEXT: [[BASETMP:%.*]] = bitcast [[A]]* [[BASE]] to i8*
-  // CHECK-NEXT: [[SEL:%.*]] = load i8*, i8**
-  // CHECK-NEXT: [[LD:%.*]] = call i32 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 (i8*, i8*)*)(i8* noundef [[BASETMP]], i8* noundef [[SEL]])
+  // CHECK:      [[BASE:%.*]] = call ptr @test2_helper()
+  // CHECK-NEXT: [[SEL:%.*]] = load ptr, ptr
+  // CHECK-NEXT: [[LD:%.*]] = call i32 @objc_msgSend(ptr noundef [[BASE]], ptr noundef [[SEL]])
   // CHECK-NEXT: [[ADD:%.*]] = add nsw i32 [[LD]], 1
-  // CHECK-NEXT: [[BASETMP:%.*]] = bitcast [[A]]* [[BASE]] to i8*
-  // CHECK-NEXT: [[SEL:%.*]] = load i8*, i8**
-  // CHECK-NEXT: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i32)*)(i8* noundef [[BASETMP]], i8* noundef [[SEL]], i32 noundef [[ADD]])
+  // CHECK-NEXT: [[SEL:%.*]] = load ptr, ptr
+  // CHECK-NEXT: call void @objc_msgSend(ptr noundef [[BASE]], ptr noundef [[SEL]], i32 noundef [[ADD]])
   test2_helper().dyn++;
 
-  // CHECK:      [[BASE:%.*]] = call [[A]]* @test2_helper()
-  // CHECK-NEXT: [[BASETMP:%.*]] = bitcast [[A]]* [[BASE]] to i8*
-  // CHECK-NEXT: [[SEL:%.*]] = load i8*, i8**
-  // CHECK-NEXT: [[LD:%.*]] = call i32 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 (i8*, i8*)*)(i8* noundef [[BASETMP]], i8* noundef [[SEL]])
+  // CHECK:      [[BASE:%.*]] = call ptr @test2_helper()
+  // CHECK-NEXT: [[SEL:%.*]] = load ptr, ptr
+  // CHECK-NEXT: [[LD:%.*]] = call i32 @objc_msgSend(ptr noundef [[BASE]], ptr noundef [[SEL]])
   // CHECK-NEXT: [[ADD:%.*]] = mul nsw i32 [[LD]], 10
-  // CHECK-NEXT: [[BASETMP:%.*]] = bitcast [[A]]* [[BASE]] to i8*
-  // CHECK-NEXT: [[SEL:%.*]] = load i8*, i8**
-  // CHECK-NEXT: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i32)*)(i8* noundef [[BASETMP]], i8* noundef [[SEL]], i32 noundef [[ADD]])
+  // CHECK-NEXT: [[SEL:%.*]] = load ptr, ptr
+  // CHECK-NEXT: call void @objc_msgSend(ptr noundef [[BASE]], ptr noundef [[SEL]], i32 noundef [[ADD]])
   test2_helper().dyn *= 10;
 }
 
@@ -97,9 +93,9 @@ void test3(test3_object *p) {
 // CHECK-LABEL: define{{.*}} void @test4
 void test4(Test4 *t) {
   extern int test4_printf(const char *, ...);
-  // CHECK: [[TMP:%.*]] = call float {{.*}} @objc_msgSend
+  // CHECK: [[TMP:%.*]] = call float @objc_msgSend
   // CHECK-NEXT: [[EXT:%.*]] = fpext float [[TMP]] to double
-  // CHECK-NEXT: call i32 (i8*, ...) @test4_printf(i8* {{.*}}, double noundef [[EXT]])
+  // CHECK-NEXT: call i32 (ptr, ...) @test4_printf(ptr {{.*}}, double noundef [[EXT]])
   // CHECK-NEXT: ret void
   test4_printf("%.2f", t.f);
 }
@@ -113,7 +109,6 @@ void test4(Test4 *t) {
 @synthesize x = _x;
 @end
 
-// rdar://problem/10410531
 @interface Test6
 @property void (*prop)(void);
 @end
@@ -123,7 +118,6 @@ void test6(Test6 *a) {
   a.prop = test6_func;
 }
 
-// rdar://problem/10507455
 @interface Test7
 @property unsigned char x;
 @end
@@ -132,37 +126,31 @@ void test7(Test7 *t) {
   t.x |= 5;
   t.x ^= 8;
 }
-// CHECK:    define{{.*}} void @test7([[TEST7:%.*]]*
-// CHECK:      [[T:%.*]] = alloca [[TEST7]]*,
+// CHECK:    define{{.*}} void @test7(ptr
+// CHECK:      [[T:%.*]] = alloca ptr,
 // CHECK-NEXT: store
-// CHECK-NEXT: [[T0:%.*]] = load [[TEST7]]*, [[TEST7]]** [[T]], align
-// CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST7]]* [[T0]] to i8*
-// CHECK-NEXT: load i8*, i8** @OBJC_SELECTOR_REFERENCES
-// CHECK-NEXT: [[T2:%.*]] = call zeroext i8 bitcast
+// CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[T]], align
+// CHECK-NEXT: load ptr, ptr @OBJC_SELECTOR_REFERENCES
+// CHECK-NEXT: [[T2:%.*]] = call zeroext i8
 // CHECK-NEXT: [[T3:%.*]] = zext i8 [[T2]] to i32
 // CHECK-NEXT: [[T4:%.*]] = and i32 [[T3]], 2
 // CHECK-NEXT: [[T5:%.*]] = trunc i32 [[T4]] to i8
-// CHECK-NEXT: [[T6:%.*]] = bitcast [[TEST7]]* [[T0]] to i8*
-// CHECK-NEXT: load i8*, i8** @OBJC_SELECTOR_REFERENCES
-// CHECK-NEXT: call void bitcast
-// CHECK-NEXT: [[T0:%.*]] = load [[TEST7]]*, [[TEST7]]** [[T]], align
-// CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST7]]* [[T0]] to i8*
-// CHECK-NEXT: load i8*, i8** @OBJC_SELECTOR_REFERENCES
-// CHECK-NEXT: [[T2:%.*]] = call zeroext i8 bitcast
+// CHECK-NEXT: load ptr, ptr @OBJC_SELECTOR_REFERENCES
+// CHECK-NEXT: call void
+// CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[T]], align
+// CHECK-NEXT: load ptr, ptr @OBJC_SELECTOR_REFERENCES
+// CHECK-NEXT: [[T2:%.*]] = call zeroext i8
 // CHECK-NEXT: [[T3:%.*]] = zext i8 [[T2]] to i32
 // CHECK-NEXT: [[T4:%.*]] = or i32 [[T3]], 5
 // CHECK-NEXT: [[T5:%.*]] = trunc i32 [[T4]] to i8
-// CHECK-NEXT: [[T6:%.*]] = bitcast [[TEST7]]* [[T0]] to i8*
-// CHECK-NEXT: load i8*, i8** @OBJC_SELECTOR_REFERENCES
-// CHECK-NEXT: call void bitcast
-// CHECK-NEXT: [[T0:%.*]] = load [[TEST7]]*, [[TEST7]]** [[T]], align
-// CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST7]]* [[T0]] to i8*
-// CHECK-NEXT: load i8*, i8** @OBJC_SELECTOR_REFERENCES
-// CHECK-NEXT: [[T2:%.*]] = call zeroext i8 bitcast
+// CHECK-NEXT: load ptr, ptr @OBJC_SELECTOR_REFERENCES
+// CHECK-NEXT: call void
+// CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[T]], align
+// CHECK-NEXT: load ptr, ptr @OBJC_SELECTOR_REFERENCES
+// CHECK-NEXT: [[T2:%.*]] = call zeroext i8
 // CHECK-NEXT: [[T3:%.*]] = zext i8 [[T2]] to i32
 // CHECK-NEXT: [[T4:%.*]] = xor i32 [[T3]], 8
 // CHECK-NEXT: [[T5:%.*]] = trunc i32 [[T4]] to i8
-// CHECK-NEXT: [[T6:%.*]] = bitcast [[TEST7]]* [[T0]] to i8*
-// CHECK-NEXT: load i8*, i8** @OBJC_SELECTOR_REFERENCES
-// CHECK-NEXT: call void bitcast
+// CHECK-NEXT: load ptr, ptr @OBJC_SELECTOR_REFERENCES
+// CHECK-NEXT: call void
 // CHECK-NEXT: ret void

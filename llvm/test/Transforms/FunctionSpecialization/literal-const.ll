@@ -1,8 +1,8 @@
 ; RUN: opt -S --passes="ipsccp<func-spec>" \
-; RUN:        -force-function-specialization < %s | FileCheck %s -check-prefix CHECK-NOLIT
+; RUN:        -force-specialization < %s | FileCheck %s -check-prefix CHECK-NOLIT
 ; RUN: opt -S --passes="ipsccp<func-spec>" \
-; RUN:        -function-specialization-for-literal-constant \
-; RUN:        -force-function-specialization < %s | FileCheck %s -check-prefix CHECK-LIT
+; RUN:        -funcspec-for-literal-constant \
+; RUN:        -force-specialization < %s | FileCheck %s -check-prefix CHECK-LIT
 
 define i32 @f0(i32 noundef %x) {
 entry:
@@ -66,27 +66,27 @@ entry:
 ; CHECK-NOLIT-NOT: @addf.
 
 ; CHECK-LIT-LABEL: define i32 @f0
-; CHECK-LIT: call i32 @neg.[[#A:]]
+; CHECK-LIT: call i32 @neg.specialized.[[#A:]]
 
 ; CHECK-LIT-LABEL: define i32 @f1
-; CHECK-LIT: call i32 @neg.[[#B:]]
+; CHECK-LIT: call i32 @neg.specialized.[[#B:]]
 
 ; CHECK-LIT-LABEL: define i32 @g0
-; CHECK-LIT: call i32 @add.[[#C:]]
+; CHECK-LIT: call i32 @add.specialized.[[#C:]]
 
 ; CHECK-LIT-LABEL: define i32 @g1
-; CHECK-LIT: call i32 @add.[[#D:]]
+; CHECK-LIT: call i32 @add.specialized.[[#D:]]
 
 ; CHECK-LIT-LABEL: define float @h0
-; CHECK-LIT: call float @addf.[[#E:]]
+; CHECK-LIT: call float @addf.specialized.[[#E:]]
 
 ; CHECK-LIT-LABEL: define float @h1
-; CHECK-LIT: call float @addf.[[#F:]]
+; CHECK-LIT: call float @addf.specialized.[[#F:]]
 
 ; Check all of `neg`, `add`, and `addf` were specialised.
-; CHECK-LIT-DAG: @neg.[[#A]]
-; CHECK-LIT-DAG: @neg.[[#B]]
-; CHECK-LIT-DAG: @add.[[#C]]
-; CHECK-LIT-DAG: @add.[[#D]]
-; CHECK-LIT-DAG: @addf.[[#E]]
-; CHECK-LIT-DAG: @addf.[[#F]]
+; CHECK-LIT-DAG: @neg.specialized.[[#A]]
+; CHECK-LIT-DAG: @neg.specialized.[[#B]]
+; CHECK-LIT-DAG: @add.specialized.[[#C]]
+; CHECK-LIT-DAG: @add.specialized.[[#D]]
+; CHECK-LIT-DAG: @addf.specialized.[[#E]]
+; CHECK-LIT-DAG: @addf.specialized.[[#F]]

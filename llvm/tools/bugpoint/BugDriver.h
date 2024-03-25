@@ -25,7 +25,6 @@
 
 namespace llvm {
 
-class PassInfo;
 class Module;
 class GlobalVariable;
 class Function;
@@ -100,15 +99,6 @@ public:
   /// crashing, but the generated output is semantically different from the
   /// input.
   Error debugMiscompilation();
-
-  /// debugPassMiscompilation - This method is called when the specified pass
-  /// miscompiles Program as input.  It tries to reduce the testcase to
-  /// something that smaller that still miscompiles the program.
-  /// ReferenceOutput contains the filename of the file containing the output we
-  /// are to match.
-  ///
-  bool debugPassMiscompilation(const PassInfo *ThePass,
-                               const std::string &ReferenceOutput);
 
   /// compileSharedObject - This method creates a SharedObject from a given
   /// BitcodeFile for debugging a code generator.

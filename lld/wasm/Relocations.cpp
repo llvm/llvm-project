@@ -16,11 +16,10 @@
 using namespace llvm;
 using namespace llvm::wasm;
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 
 static bool requiresGOTAccess(const Symbol *sym) {
-  if (!config->isPic &&
+  if (!ctx.isPic &&
       config->unresolvedSymbols != UnresolvedPolicy::ImportDynamic)
     return false;
   if (sym->isHidden() || sym->isLocal())
@@ -33,9 +32,9 @@ static bool requiresGOTAccess(const Symbol *sym) {
 }
 
 static bool allowUndefined(const Symbol* sym) {
-  // Symbols with explicit import names are always allowed to be undefined at
+  // Symbols that are explicitly imported are always allowed to be undefined at
   // link time.
-  if (sym->importName)
+  if (sym->isImported())
     return true;
   if (isa<UndefinedFunction>(sym) && config->importUndefined)
     return true;
@@ -55,20 +54,21 @@ static void reportUndefined(Symbol *sym) {
     case UnresolvedPolicy::Ignore:
       LLVM_DEBUG(dbgs() << "ignoring undefined symbol: " + toString(*sym) +
                                "\n");
-      if (!config->importUndefined) {
-        if (auto *f = dyn_cast<UndefinedFunction>(sym)) {
-          if (!f->stubFunction) {
-            f->stubFunction = symtab->createUndefinedStub(*f->getSignature());
-            f->stubFunction->markLive();
-            // Mark the function itself as a stub which prevents it from being
-            // assigned a table entry.
-            f->isStub = true;
-          }
-        }
-      }
       break;
     case UnresolvedPolicy::ImportDynamic:
       break;
+    }
+
+    if (auto *f = dyn_cast<UndefinedFunction>(sym)) {
+      if (!f->stubFunction &&
+          config->unresolvedSymbols != UnresolvedPolicy::ImportDynamic &&
+          !config->importUndefined) {
+        f->stubFunction = symtab->createUndefinedStub(*f->getSignature());
+        f->stubFunction->markLive();
+        // Mark the function itself as a stub which prevents it from being
+        // assigned a table entry.
+        f->isStub = true;
+      }
     }
   }
 }
@@ -142,7 +142,7 @@ void scanRelocations(InputChunk *chunk) {
       break;
     }
 
-    if (config->isPic ||
+    if (ctx.isPic ||
         (sym->isUndefined() &&
          config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic)) {
       switch (reloc.Type) {
@@ -176,5 +176,4 @@ void scanRelocations(InputChunk *chunk) {
   }
 }
 
-} // namespace wasm
-} // namespace lld
+} // namespace lld::wasm

@@ -23,7 +23,7 @@ class InputArgList;
 namespace lld {
 namespace args {
 
-llvm::CodeGenOpt::Level getCGOptLevel(int optLevelLTO);
+int getCGOptLevel(int optLevelLTO);
 
 int64_t getInteger(llvm::opt::InputArgList &args, unsigned key,
                    int64_t Default);

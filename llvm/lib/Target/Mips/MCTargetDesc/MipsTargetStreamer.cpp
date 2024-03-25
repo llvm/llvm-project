@@ -16,10 +16,10 @@
 #include "MipsInstPrinter.h"
 #include "MipsMCExpr.h"
 #include "MipsMCTargetDesc.h"
-#include "MipsTargetObjectFile.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
@@ -37,11 +37,11 @@ static cl::opt<bool> RoundSectionSizes(
 } // end anonymous namespace
 
 static bool isMicroMips(const MCSubtargetInfo *STI) {
-  return STI->getFeatureBits()[Mips::FeatureMicroMips];
+  return STI->hasFeature(Mips::FeatureMicroMips);
 }
 
 static bool isMips32r6(const MCSubtargetInfo *STI) {
-  return STI->getFeatureBits()[Mips::FeatureMips32r6];
+  return STI->hasFeature(Mips::FeatureMips32r6);
 }
 
 MipsTargetStreamer::MipsTargetStreamer(MCStreamer &S)
@@ -1255,25 +1255,6 @@ void MipsTargetELFStreamer::emitDirectiveCpsetup(unsigned RegNo,
     emitRRI(Mips::SD, GPReg, Mips::SP, RegOrOffset, SMLoc(), &STI);
   }
 
-  if (getABI().IsN32()) {
-    MCSymbol *GPSym = MCA.getContext().getOrCreateSymbol("__gnu_local_gp");
-    const MipsMCExpr *HiExpr = MipsMCExpr::create(
-        MipsMCExpr::MEK_HI, MCSymbolRefExpr::create(GPSym, MCA.getContext()),
-        MCA.getContext());
-    const MipsMCExpr *LoExpr = MipsMCExpr::create(
-        MipsMCExpr::MEK_LO, MCSymbolRefExpr::create(GPSym, MCA.getContext()),
-        MCA.getContext());
-
-    // lui $gp, %hi(__gnu_local_gp)
-    emitRX(Mips::LUi, GPReg, MCOperand::createExpr(HiExpr), SMLoc(), &STI);
-
-    // addiu  $gp, $gp, %lo(__gnu_local_gp)
-    emitRRX(Mips::ADDiu, GPReg, GPReg, MCOperand::createExpr(LoExpr), SMLoc(),
-            &STI);
-
-    return;
-  }
-
   const MipsMCExpr *HiExpr = MipsMCExpr::createGpOff(
       MipsMCExpr::MEK_HI, MCSymbolRefExpr::create(&Sym, MCA.getContext()),
       MCA.getContext());
@@ -1288,8 +1269,11 @@ void MipsTargetELFStreamer::emitDirectiveCpsetup(unsigned RegNo,
   emitRRX(Mips::ADDiu, GPReg, GPReg, MCOperand::createExpr(LoExpr), SMLoc(),
           &STI);
 
-  // daddu  $gp, $gp, $funcreg
-  emitRRR(Mips::DADDu, GPReg, GPReg, RegNo, SMLoc(), &STI);
+  // (d)addu  $gp, $gp, $funcreg
+  if (getABI().IsN32())
+    emitRRR(Mips::ADDu, GPReg, GPReg, RegNo, SMLoc(), &STI);
+  else
+    emitRRR(Mips::DADDu, GPReg, GPReg, RegNo, SMLoc(), &STI);
 }
 
 void MipsTargetELFStreamer::emitDirectiveCpreturn(unsigned SaveLocation,

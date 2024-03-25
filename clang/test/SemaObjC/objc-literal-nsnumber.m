@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only -fblocks -triple x86_64-apple-darwin10 -verify %s
-// rdar://10111397
 
 #if __LP64__
 typedef unsigned long NSUInteger;
@@ -47,7 +46,6 @@ void checkNSNumberFDDiagnostic(void) {
 + (NSNumber *)numberWithUnsignedInteger:(NSUInteger)value ;
 @end
 
-// rdar://16417427
 int big = 1391126400;
 int thousand = 1000;
 int main(void) {
@@ -66,7 +64,7 @@ int main(void) {
   @-five; // expected-error{{@- must be followed by a number to form an NSNumber object}}
   @+five; // expected-error{{@+ must be followed by a number to form an NSNumber object}}
   NSNumber *av = @(1391126400000);
-  NSNumber *bv = @(1391126400 * 1000); // expected-warning {{overflow in expression; result is -443003904 with type 'int'}}
+  NSNumber *bv = @(1391126400 * 1000); // expected-warning {{overflow in expression; result is -443'003'904 with type 'int'}}
   NSNumber *cv = @(big * thousand);
 }
 
@@ -113,7 +111,6 @@ NSDictionary * warn(void) {
   return dictionary3;
 }
 
-// rdar:// 11231426
 typedef float BOOL;
 
 BOOL radar11231426(void) {

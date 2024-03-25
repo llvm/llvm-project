@@ -10,10 +10,10 @@
 
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, isascii, (int c)) {
   return static_cast<int>((c & (~0x7f)) == 0);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

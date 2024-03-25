@@ -29,13 +29,29 @@ template<typename T> struct S {
 S<char> s1; // expected-note {{in instantiation of template class 'S<char>' requested here}}
 S<int> s2;
 
-static_assert(false, L"\xFFFFFFFF"); // expected-error {{static assertion failed: L"\xFFFFFFFF"}}
-static_assert(false, u"\U000317FF"); // expected-error {{static assertion failed: u"\U000317FF"}}
+static_assert(false, L"\xFFFFFFFF"); // expected-warning {{encoding prefix 'L' on an unevaluated string literal has no effect and is incompatible with c++2c}} \
+                                     // expected-error {{invalid escape sequence '\xFFFFFFFF' in an unevaluated string literal}} \
+                                     // expected-error {{hex escape sequence out of range}}
+static_assert(false, u"\U000317FF"); // expected-warning {{encoding prefix 'u' on an unevaluated string literal has no effect and is incompatible with c++2c}} \
+                                     // expected-error {{static assertion failed}}
 
-static_assert(false, u8"Ω"); // expected-error {{static assertion failed: u8"\316\251"}}
-static_assert(false, L"\u1234"); // expected-error {{static assertion failed: L"\x1234"}}
-static_assert(false, L"\x1ff" "0\x123" "fx\xfffff" "goop"); // expected-error {{static assertion failed: L"\x1FF""0\x123""fx\xFFFFFgoop"}}
+static_assert(false, u8"Ω");     // expected-warning {{encoding prefix 'u8' on an unevaluated string literal has no effect and is incompatible with c++2c}} \
+                                 // expected-error {{static assertion failed: Ω}}
+static_assert(false, L"\u1234"); // expected-warning {{encoding prefix 'L' on an unevaluated string literal has no effect and is incompatible with c++2c}} \
+                                 // expected-error {{static assertion failed: ሴ}}
 
+static_assert(false, L"\x1ff"    // expected-warning {{encoding prefix 'L' on an unevaluated string literal has no effect and is incompatible with c++2c}} \
+                                 // expected-error {{hex escape sequence out of range}} \
+                                 // expected-error {{invalid escape sequence '\x1ff' in an unevaluated string literal}}
+                     "0\x123"    // expected-error {{invalid escape sequence '\x123' in an unevaluated string literal}}
+                     "fx\xfffff" // expected-error {{invalid escape sequence '\xfffff' in an unevaluated string literal}}
+                     "goop");
+
+static_assert(false, "\'\"\?\\\a\b\f\n\r\t\v"); // expected-error {{'"?\<U+0007><U+0008>}}
+static_assert(true, "\xFF"); // expected-error {{invalid escape sequence '\xFF' in an unevaluated string literal}}
+static_assert(true, "\123"); // expected-error {{invalid escape sequence '\123' in an unevaluated string literal}}
+static_assert(true, "\pOh no, a Pascal string!"); // expected-warning {{unknown escape sequence '\p'}} \
+                                                  // expected-error {{invalid escape sequence '\p' in an unevaluated string literal}}
 static_assert(false, R"(a
 \tb
 c
@@ -52,9 +68,11 @@ static_assert(false, "🏳️‍🌈 🏴󠁧󠁢󠁥󠁮󠁧󠁿 🇪🇺"); //
 
 template<typename T> struct AlwaysFails {
   // Only give one error here.
-  static_assert(false, ""); // expected-error {{static assertion failed}}
+  static_assert(false, ""); // expected-error 2{{static assertion failed}}
 };
-AlwaysFails<int> alwaysFails;
+AlwaysFails<int> alwaysFails; // expected-note {{instantiation}}
+AlwaysFails<double> alwaysFails2; // expected-note {{instantiation}}
+
 
 template<typename T> struct StaticAssertProtected {
   static_assert(__is_literal(T), ""); // expected-error {{static assertion failed}}
@@ -179,7 +197,7 @@ struct NestedTemplates1 {
 template <typename T, typename U, int a>
 void foo2() {
   static_assert(::ns::NestedTemplates1<T, a>::NestedTemplates2::template NestedTemplates3<U>::value, "message");
-  // expected-error@-1{{static assertion failed due to requirement '::ns::NestedTemplates1<int, 3>::NestedTemplates2::NestedTemplates3<float>::value': message}}
+  // expected-error@-1{{static assertion failed due to requirement '::ns::NestedTemplates1<int, 3>::NestedTemplates2::template NestedTemplates3<float>::value': message}}
 }
 template void foo2<int, float, 3>();
 // expected-note@-1{{in instantiation of function template specialization 'foo2<int, float, 3>' requested here}}
@@ -217,6 +235,23 @@ static_assert(constexprNotBool, "message"); // expected-error {{value of type 'c
 
 static_assert(1 , "") // expected-error {{expected ';' after 'static_assert'}}
 
+namespace DependentAlwaysFalse {
+template <typename Ty>
+struct S {
+  static_assert(false); // expected-error{{static assertion failed}} \
+                        // expected-warning {{C++17 extension}}
+};
+
+template <typename Ty>
+struct T {
+  static_assert(false, "test"); // expected-error{{static assertion failed: test}}
+};
+
+int f() {
+  S<double> s; //expected-note {{in instantiation of template class 'DependentAlwaysFalse::S<double>' requested here}}
+  T<double> t; //expected-note {{in instantiation of template class 'DependentAlwaysFalse::T<double>' requested here}}
+}
+}
 
 namespace Diagnostics {
   /// No notes for literals.
@@ -233,14 +268,44 @@ namespace Diagnostics {
     return 'c';
   }
   static_assert(getChar() == 'a', ""); // expected-error {{failed}} \
-                                       // expected-note {{evaluates to ''c' == 'a''}}
+                                       // expected-note {{evaluates to ''c' (0x63, 99) == 'a' (0x61, 97)'}}
+  static_assert((char)9 == '\x61', ""); // expected-error {{failed}} \
+                                        // expected-note {{evaluates to ''\t' (0x09, 9) == 'a' (0x61, 97)'}}
+  static_assert((char)10 == '\0', ""); // expected-error {{failed}} \
+                                       // expected-note {{n' (0x0A, 10) == '<U+0000>' (0x00, 0)'}}
+  // The note above is intended to match "evaluates to '\n' (0x0A, 10) == '<U+0000>' (0x00, 0)'", but if we write it as it is,
+  // the "\n" cannot be consumed by the diagnostic consumer.
+  static_assert((signed char)10 == (char)-123, ""); // expected-error {{failed}} \
+                                                    // expected-note {{evaluates to '10 == '<85>' (0x85, -123)'}}
+  static_assert((char)-4 == (unsigned char)-8, ""); // expected-error {{failed}} \
+                                                    // expected-note {{evaluates to ''<FC>' (0xFC, -4) == 248'}}
+  static_assert((char)-128 == (char)-123, ""); // expected-error {{failed}} \
+                                               // expected-note {{evaluates to ''<80>' (0x80, -128) == '<85>' (0x85, -123)'}}
+  static_assert('\xA0' == (char)'\x20', ""); // expected-error {{failed}} \
+                                             // expected-note {{evaluates to ''<A0>' (0xA0, -96) == ' ' (0x20, 32)'}}
+  static_assert((char16_t)L'ゆ' == L"C̵̭̯̠̎͌ͅť̺"[1], ""); // expected-error {{failed}} \
+                                                  // expected-note {{evaluates to 'u'ゆ' (0x3086, 12422) == L'̵' (0x335, 821)'}}
+  static_assert(L"＼／"[1] == u'\xFFFD', ""); // expected-error {{failed}} \
+                                              // expected-note {{evaluates to 'L'／' (0xFF0F, 65295) == u'�' (0xFFFD, 65533)'}}
+  static_assert(L"⚾"[0] == U'🌍', ""); // expected-error {{failed}} \
+                                         // expected-note {{evaluates to 'L'⚾' (0x26BE, 9918) == U'🌍' (0x1F30D, 127757)'}}
+  static_assert(U"\a"[0] == (wchar_t)9, ""); // expected-error {{failed}} \
+                                             // expected-note {{evaluates to 'U'\a' (0x07, 7) == L'\t' (0x09, 9)'}}
+  static_assert(L"§"[0] == U'Ö', ""); // expected-error {{failed}} \
+                                      // expected-note {{evaluates to 'L'§' (0xA7, 167) == U'Ö' (0xD6, 214)'}}
 
   /// Bools are printed as bools.
   constexpr bool invert(bool b) {
     return !b;
   }
-  static_assert(invert(true) == invert(false), ""); // expected-error {{failed}} \
+
+  static_assert(invert(true) || invert(true), ""); // expected-error {{static assertion failed due to requirement 'invert(true) || invert(true)'}}
+  static_assert(invert(true) == invert(false), ""); // expected-error {{static assertion failed due to requirement 'invert(true) == invert(false)'}} \
                                                     // expected-note {{evaluates to 'false == true'}}
+  static_assert(true && false, ""); // expected-error {{static assertion failed due to requirement 'true && false'}}
+  static_assert(invert(true) || invert(true) || false, ""); // expected-error {{static assertion failed due to requirement 'invert(true) || invert(true) || false'}}
+  static_assert((true && invert(true)) || false, ""); // expected-error {{static assertion failed due to requirement '(true && invert(true)) || false'}}
+  static_assert(true && invert(false) && invert(true), ""); // expected-error {{static assertion failed due to requirement 'invert(true)'}}
 
   /// No notes here since we compare a bool expression with a bool literal.
   static_assert(invert(true) == true, ""); // expected-error {{failed}}
@@ -262,5 +327,38 @@ namespace Diagnostics {
   static_assert(CHECK_4(a) && A_IS_B, ""); // expected-error {{failed}} \
                                            // expected-note {{evaluates to '4 == 5'}}
 
+  static_assert(
+    false, // expected-error {{static assertion failed}}
+    ""
+  );
 
+  static_assert(
+    true && false, // expected-error {{static assertion failed due to requirement 'true && false'}}
+    ""
+  );
+
+  static_assert(
+    // with a comment here
+    true && false, // expected-error {{static assertion failed due to requirement 'true && false'}}
+    ""
+  );
+
+  static_assert(
+    // with a comment here
+    (true && // expected-error {{static assertion failed due to requirement '(true && false) || false'}}
+    false)
+    || false,
+    ""
+  );
+
+  static_assert(1 + 1 != 2, ""); // expected-error {{failed}} \
+                                 // expected-note {{evaluates to '2 != 2'}}
+  static_assert(1 - 1 == 2, ""); // expected-error {{failed}} \
+                                 // expected-note {{evaluates to '0 == 2'}}
+  static_assert(1 * 1 == 2, ""); // expected-error {{failed}} \
+                                 // expected-note {{evaluates to '1 == 2'}}
+  static_assert(1 / 1 == 2, ""); // expected-error {{failed}} \
+                                 // expected-note {{evaluates to '1 == 2'}}
+  static_assert(1 << 3 != 8, ""); // expected-error {{failed}} \
+                                 // expected-note {{evaluates to '8 != 8'}}
 }

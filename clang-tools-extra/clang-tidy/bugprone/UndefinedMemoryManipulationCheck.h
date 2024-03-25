@@ -14,7 +14,7 @@
 namespace clang::tidy::bugprone {
 
 /// Finds calls of memory manipulation functions ``memset()``, ``memcpy()`` and
-/// ``memmove()`` on not TriviallyCopyable objects resulting in undefined
+/// ``memmove()`` on non-TriviallyCopyable objects resulting in undefined
 /// behavior.
 ///
 /// For the user-facing documentation see:

@@ -3,14 +3,16 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class TestCase(TestBase):
 
+class TestCase(TestBase):
     # FIXME: Clang on Windows somehow thinks static_assert is a C keyword.
     @skipIfWindows
     @no_debug_info_test
     def test(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.c"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.c")
+        )
 
         # Test several variables with C++ keyword names and make sure they
         # work as intended in the expression parser.

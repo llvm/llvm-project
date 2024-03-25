@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-freebsd10.0 -emit-llvm < %s | FileCheck -check-prefix=FREEBSD %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-win32 -emit-llvm < %s | FileCheck -check-prefix=WIN64 %s
+// RUN: %clang_cc1 -triple x86_64-unknown-freebsd10.0 -emit-llvm < %s | FileCheck -check-prefix=FREEBSD %s
+// RUN: %clang_cc1 -triple x86_64-pc-win32 -emit-llvm < %s | FileCheck -check-prefix=WIN64 %s
 
 struct foo {
   int x;
@@ -32,47 +32,41 @@ void __attribute__((ms_abi)) f4(int a, ...) {
   // WIN64-LABEL: define dso_local void @f4
   __builtin_ms_va_list ap;
   __builtin_ms_va_start(ap, a);
-  // FREEBSD: %[[AP:.*]] = alloca i8*
+  // FREEBSD: %[[AP:.*]] = alloca ptr
   // FREEBSD: call void @llvm.va_start
-  // WIN64: %[[AP:.*]] = alloca i8*
+  // WIN64: %[[AP:.*]] = alloca ptr
   // WIN64: call void @llvm.va_start
   int b = __builtin_va_arg(ap, int);
-  // FREEBSD: %[[AP_CUR:.*]] = load i8*, i8** %[[AP]]
-  // FREEBSD-NEXT: %[[AP_NEXT:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR]], i64 8
-  // FREEBSD-NEXT: store i8* %[[AP_NEXT]], i8** %[[AP]]
-  // FREEBSD-NEXT: bitcast i8* %[[AP_CUR]] to i32*
-  // WIN64: %[[AP_CUR:.*]] = load i8*, i8** %[[AP]]
-  // WIN64-NEXT: %[[AP_NEXT:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR]], i64 8
-  // WIN64-NEXT: store i8* %[[AP_NEXT]], i8** %[[AP]]
-  // WIN64-NEXT: bitcast i8* %[[AP_CUR]] to i32*
+  // FREEBSD: %[[AP_CUR:.*]] = load ptr, ptr %[[AP]]
+  // FREEBSD-NEXT: %[[AP_NEXT:.*]] = getelementptr inbounds i8, ptr %[[AP_CUR]], i64 8
+  // FREEBSD-NEXT: store ptr %[[AP_NEXT]], ptr %[[AP]]
+  // WIN64: %[[AP_CUR:.*]] = load ptr, ptr %[[AP]]
+  // WIN64-NEXT: %[[AP_NEXT:.*]] = getelementptr inbounds i8, ptr %[[AP_CUR]], i64 8
+  // WIN64-NEXT: store ptr %[[AP_NEXT]], ptr %[[AP]]
   double _Complex c = __builtin_va_arg(ap, double _Complex);
-  // FREEBSD: %[[AP_CUR2:.*]] = load i8*, i8** %[[AP]]
-  // FREEBSD-NEXT: %[[AP_NEXT2:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR2]], i64 8
-  // FREEBSD-NEXT: store i8* %[[AP_NEXT2]], i8** %[[AP]]
-  // FREEBSD-NEXT: %[[CUR2:.*]] = bitcast i8* %[[AP_CUR2]] to { double, double }**
-  // FREEBSD-NEXT: load { double, double }*, { double, double }** %[[CUR2]]
-  // WIN64: %[[AP_CUR2:.*]] = load i8*, i8** %[[AP]]
-  // WIN64-NEXT: %[[AP_NEXT2:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR2]], i64 8
-  // WIN64-NEXT: store i8* %[[AP_NEXT2]], i8** %[[AP]]
-  // WIN64-NEXT: %[[CUR2:.*]] = bitcast i8* %[[AP_CUR2]] to { double, double }**
-  // WIN64-NEXT: load { double, double }*, { double, double }** %[[CUR2]]
+  // FREEBSD: %[[AP_CUR2:.*]] = load ptr, ptr %[[AP]]
+  // FREEBSD-NEXT: %[[AP_NEXT2:.*]] = getelementptr inbounds i8, ptr %[[AP_CUR2]], i64 8
+  // FREEBSD-NEXT: store ptr %[[AP_NEXT2]], ptr %[[AP]]
+  // FREEBSD-NEXT: load ptr, ptr %[[AP_CUR2]]
+  // WIN64: %[[AP_CUR2:.*]] = load ptr, ptr %[[AP]]
+  // WIN64-NEXT: %[[AP_NEXT2:.*]] = getelementptr inbounds i8, ptr %[[AP_CUR2]], i64 8
+  // WIN64-NEXT: store ptr %[[AP_NEXT2]], ptr %[[AP]]
+  // WIN64-NEXT: load ptr, ptr %[[AP_CUR2]]
   struct foo d = __builtin_va_arg(ap, struct foo);
-  // FREEBSD: %[[AP_CUR3:.*]] = load i8*, i8** %[[AP]]
-  // FREEBSD-NEXT: %[[AP_NEXT3:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR3]], i64 8
-  // FREEBSD-NEXT: store i8* %[[AP_NEXT3]], i8** %[[AP]]
-  // FREEBSD-NEXT: %[[CUR3:.*]] = bitcast i8* %[[AP_CUR3]] to %[[STRUCT_FOO]]*
-  // FREEBSD-NEXT: load %[[STRUCT_FOO]]*, %[[STRUCT_FOO]]** %[[CUR3]]
-  // WIN64: %[[AP_CUR3:.*]] = load i8*, i8** %[[AP]]
-  // WIN64-NEXT: %[[AP_NEXT3:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR3]], i64 8
-  // WIN64-NEXT: store i8* %[[AP_NEXT3]], i8** %[[AP]]
-  // WIN64-NEXT: %[[CUR3:.*]] = bitcast i8* %[[AP_CUR3]] to %[[STRUCT_FOO]]*
-  // WIN64-NEXT: load %[[STRUCT_FOO]]*, %[[STRUCT_FOO]]** %[[CUR3]]
+  // FREEBSD: %[[AP_CUR3:.*]] = load ptr, ptr %[[AP]]
+  // FREEBSD-NEXT: %[[AP_NEXT3:.*]] = getelementptr inbounds i8, ptr %[[AP_CUR3]], i64 8
+  // FREEBSD-NEXT: store ptr %[[AP_NEXT3]], ptr %[[AP]]
+  // FREEBSD-NEXT: load ptr, ptr %[[AP_CUR3]]
+  // WIN64: %[[AP_CUR3:.*]] = load ptr, ptr %[[AP]]
+  // WIN64-NEXT: %[[AP_NEXT3:.*]] = getelementptr inbounds i8, ptr %[[AP_CUR3]], i64 8
+  // WIN64-NEXT: store ptr %[[AP_NEXT3]], ptr %[[AP]]
+  // WIN64-NEXT: load ptr, ptr %[[AP_CUR3]]
   __builtin_ms_va_list ap2;
   __builtin_ms_va_copy(ap2, ap);
-  // FREEBSD: %[[AP_VAL:.*]] = load i8*, i8** %[[AP]]
-  // FREEBSD-NEXT: store i8* %[[AP_VAL]], i8** %[[AP2:.*]]
-  // WIN64: %[[AP_VAL:.*]] = load i8*, i8** %[[AP]]
-  // WIN64-NEXT: store i8* %[[AP_VAL]], i8** %[[AP2:.*]]
+  // FREEBSD: %[[AP_VAL:.*]] = load ptr, ptr %[[AP]]
+  // FREEBSD-NEXT: store ptr %[[AP_VAL]], ptr %[[AP2:.*]]
+  // WIN64: %[[AP_VAL:.*]] = load ptr, ptr %[[AP]]
+  // WIN64-NEXT: store ptr %[[AP_VAL]], ptr %[[AP2:.*]]
   __builtin_ms_va_end(ap);
   // FREEBSD: call void @llvm.va_end
   // WIN64: call void @llvm.va_end
@@ -83,23 +77,20 @@ void f5(int a, ...) {
   // WIN64-LABEL: define dso_local void @f5
   __builtin_va_list ap;
   __builtin_va_start(ap, a);
-  // WIN64: %[[AP:.*]] = alloca i8*
+  // WIN64: %[[AP:.*]] = alloca ptr
   // WIN64: call void @llvm.va_start
   int b = __builtin_va_arg(ap, int);
-  // WIN64: %[[AP_CUR:.*]] = load i8*, i8** %[[AP]]
-  // WIN64-NEXT: %[[AP_NEXT:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR]], i64 8
-  // WIN64-NEXT: store i8* %[[AP_NEXT]], i8** %[[AP]]
-  // WIN64-NEXT: bitcast i8* %[[AP_CUR]] to i32*
+  // WIN64: %[[AP_CUR:.*]] = load ptr, ptr %[[AP]]
+  // WIN64-NEXT: %[[AP_NEXT:.*]] = getelementptr inbounds i8, ptr %[[AP_CUR]], i64 8
+  // WIN64-NEXT: store ptr %[[AP_NEXT]], ptr %[[AP]]
   double _Complex c = __builtin_va_arg(ap, double _Complex);
-  // WIN64: %[[AP_CUR2:.*]] = load i8*, i8** %[[AP]]
-  // WIN64-NEXT: %[[AP_NEXT2:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR2]], i64 8
-  // WIN64-NEXT: store i8* %[[AP_NEXT2]], i8** %[[AP]]
-  // WIN64-NEXT: bitcast i8* %[[AP_CUR2]] to { double, double }*
+  // WIN64: %[[AP_CUR2:.*]] = load ptr, ptr %[[AP]]
+  // WIN64-NEXT: %[[AP_NEXT2:.*]] = getelementptr inbounds i8, ptr %[[AP_CUR2]], i64 8
+  // WIN64-NEXT: store ptr %[[AP_NEXT2]], ptr %[[AP]]
   struct foo d = __builtin_va_arg(ap, struct foo);
-  // WIN64: %[[AP_CUR3:.*]] = load i8*, i8** %[[AP]]
-  // WIN64-NEXT: %[[AP_NEXT3:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR3]], i64 8
-  // WIN64-NEXT: store i8* %[[AP_NEXT3]], i8** %[[AP]]
-  // WIN64-NEXT: bitcast i8* %[[AP_CUR3]] to %[[STRUCT_FOO]]*
+  // WIN64: %[[AP_CUR3:.*]] = load ptr, ptr %[[AP]]
+  // WIN64-NEXT: %[[AP_NEXT3:.*]] = getelementptr inbounds i8, ptr %[[AP_CUR3]], i64 8
+  // WIN64-NEXT: store ptr %[[AP_NEXT3]], ptr %[[AP]]
   __builtin_va_list ap2;
   __builtin_va_copy(ap2, ap);
   // WIN64: call void @llvm.va_copy
@@ -110,42 +101,36 @@ void f5(int a, ...) {
 // Verify that using a Win64 va_list from a System V function works.
 void __attribute__((sysv_abi)) f6(__builtin_ms_va_list ap) {
   // FREEBSD-LABEL: define{{.*}} void @f6
-  // FREEBSD: store i8* %ap, i8** %[[AP:.*]]
+  // FREEBSD: store ptr %ap, ptr %[[AP:.*]]
   // WIN64-LABEL: define dso_local x86_64_sysvcc void @f6
-  // WIN64: store i8* %ap, i8** %[[AP:.*]]
+  // WIN64: store ptr %ap, ptr %[[AP:.*]]
   int b = __builtin_va_arg(ap, int);
-  // FREEBSD: %[[AP_CUR:.*]] = load i8*, i8** %[[AP]]
-  // FREEBSD-NEXT: %[[AP_NEXT:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR]], i64 8
-  // FREEBSD-NEXT: store i8* %[[AP_NEXT]], i8** %[[AP]]
-  // FREEBSD-NEXT: bitcast i8* %[[AP_CUR]] to i32*
-  // WIN64: %[[AP_CUR:.*]] = load i8*, i8** %[[AP]]
-  // WIN64-NEXT: %[[AP_NEXT:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR]], i64 8
-  // WIN64-NEXT: store i8* %[[AP_NEXT]], i8** %[[AP]]
-  // WIN64-NEXT: bitcast i8* %[[AP_CUR]] to i32*
+  // FREEBSD: %[[AP_CUR:.*]] = load ptr, ptr %[[AP]]
+  // FREEBSD-NEXT: %[[AP_NEXT:.*]] = getelementptr inbounds i8, ptr %[[AP_CUR]], i64 8
+  // FREEBSD-NEXT: store ptr %[[AP_NEXT]], ptr %[[AP]]
+  // WIN64: %[[AP_CUR:.*]] = load ptr, ptr %[[AP]]
+  // WIN64-NEXT: %[[AP_NEXT:.*]] = getelementptr inbounds i8, ptr %[[AP_CUR]], i64 8
+  // WIN64-NEXT: store ptr %[[AP_NEXT]], ptr %[[AP]]
   double _Complex c = __builtin_va_arg(ap, double _Complex);
-  // FREEBSD: %[[AP_CUR2:.*]] = load i8*, i8** %[[AP]]
-  // FREEBSD-NEXT: %[[AP_NEXT2:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR2]], i64 8
-  // FREEBSD-NEXT: store i8* %[[AP_NEXT2]], i8** %[[AP]]
-  // FREEBSD-NEXT: bitcast i8* %[[AP_CUR2]] to { double, double }**
-  // WIN64: %[[AP_CUR2:.*]] = load i8*, i8** %[[AP]]
-  // WIN64-NEXT: %[[AP_NEXT2:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR2]], i64 8
-  // WIN64-NEXT: store i8* %[[AP_NEXT2]], i8** %[[AP]]
-  // WIN64-NEXT: bitcast i8* %[[AP_CUR2]] to { double, double }**
+  // FREEBSD: %[[AP_CUR2:.*]] = load ptr, ptr %[[AP]]
+  // FREEBSD-NEXT: %[[AP_NEXT2:.*]] = getelementptr inbounds i8, ptr %[[AP_CUR2]], i64 8
+  // FREEBSD-NEXT: store ptr %[[AP_NEXT2]], ptr %[[AP]]
+  // WIN64: %[[AP_CUR2:.*]] = load ptr, ptr %[[AP]]
+  // WIN64-NEXT: %[[AP_NEXT2:.*]] = getelementptr inbounds i8, ptr %[[AP_CUR2]], i64 8
+  // WIN64-NEXT: store ptr %[[AP_NEXT2]], ptr %[[AP]]
   struct foo d = __builtin_va_arg(ap, struct foo);
-  // FREEBSD: %[[AP_CUR3:.*]] = load i8*, i8** %[[AP]]
-  // FREEBSD-NEXT: %[[AP_NEXT3:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR3]], i64 8
-  // FREEBSD-NEXT: store i8* %[[AP_NEXT3]], i8** %[[AP]]
-  // FREEBSD-NEXT: bitcast i8* %[[AP_CUR3]] to %[[STRUCT_FOO]]**
-  // WIN64: %[[AP_CUR3:.*]] = load i8*, i8** %[[AP]]
-  // WIN64-NEXT: %[[AP_NEXT3:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR3]], i64 8
-  // WIN64-NEXT: store i8* %[[AP_NEXT3]], i8** %[[AP]]
-  // WIN64-NEXT: bitcast i8* %[[AP_CUR3]] to %[[STRUCT_FOO]]**
+  // FREEBSD: %[[AP_CUR3:.*]] = load ptr, ptr %[[AP]]
+  // FREEBSD-NEXT: %[[AP_NEXT3:.*]] = getelementptr inbounds i8, ptr %[[AP_CUR3]], i64 8
+  // FREEBSD-NEXT: store ptr %[[AP_NEXT3]], ptr %[[AP]]
+  // WIN64: %[[AP_CUR3:.*]] = load ptr, ptr %[[AP]]
+  // WIN64-NEXT: %[[AP_NEXT3:.*]] = getelementptr inbounds i8, ptr %[[AP_CUR3]], i64 8
+  // WIN64-NEXT: store ptr %[[AP_NEXT3]], ptr %[[AP]]
   __builtin_ms_va_list ap2;
   __builtin_ms_va_copy(ap2, ap);
-  // FREEBSD: %[[AP_VAL:.*]] = load i8*, i8** %[[AP]]
-  // FREEBSD-NEXT: store i8* %[[AP_VAL]], i8** %[[AP2:.*]]
-  // WIN64: %[[AP_VAL:.*]] = load i8*, i8** %[[AP]]
-  // WIN64-NEXT: store i8* %[[AP_VAL]], i8** %[[AP2:.*]]
+  // FREEBSD: %[[AP_VAL:.*]] = load ptr, ptr %[[AP]]
+  // FREEBSD-NEXT: store ptr %[[AP_VAL]], ptr %[[AP2:.*]]
+  // WIN64: %[[AP_VAL:.*]] = load ptr, ptr %[[AP]]
+  // WIN64-NEXT: store ptr %[[AP_VAL]], ptr %[[AP2:.*]]
 }
 
 // This test checks if structs are passed according to Win64 calling convention
@@ -156,7 +141,7 @@ struct i128 {
 };
 
 __attribute__((ms_abi)) struct i128 f7(struct i128 a) {
-  // WIN64: define dso_local void @f7(%struct.i128* noalias sret(%struct.i128) align 8 %agg.result, %struct.i128* noundef %a)
-  // FREEBSD: define{{.*}} win64cc void @f7(%struct.i128* noalias sret(%struct.i128) align 8 %agg.result, %struct.i128* noundef %a)
+  // WIN64: define dso_local void @f7(ptr dead_on_unwind noalias writable sret(%struct.i128) align 8 %agg.result, ptr noundef %a)
+  // FREEBSD: define{{.*}} win64cc void @f7(ptr dead_on_unwind noalias writable sret(%struct.i128) align 8 %agg.result, ptr noundef %a)
   return a;
 }

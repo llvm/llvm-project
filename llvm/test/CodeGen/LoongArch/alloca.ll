@@ -17,8 +17,7 @@ define void @simple_alloca(i32 %n) nounwind {
 ; LA32-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
 ; LA32-NEXT:    addi.w $fp, $sp, 16
 ; LA32-NEXT:    addi.w $a0, $a0, 15
-; LA32-NEXT:    addi.w $a1, $zero, -16
-; LA32-NEXT:    and $a0, $a0, $a1
+; LA32-NEXT:    bstrins.w $a0, $zero, 3, 0
 ; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    move $sp, $a0
 ; LA32-NEXT:    bl %plt(notdead)
@@ -34,11 +33,10 @@ define void @simple_alloca(i32 %n) nounwind {
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $fp, $sp, 0 # 8-byte Folded Spill
 ; LA64-NEXT:    addi.d $fp, $sp, 16
-; LA64-NEXT:    addi.w $a1, $zero, -16
-; LA64-NEXT:    lu32i.d $a1, 1
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; LA64-NEXT:    addi.d $a0, $a0, 15
-; LA64-NEXT:    and $a0, $a0, $a1
+; LA64-NEXT:    bstrpick.d $a0, $a0, 32, 4
+; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    sub.d $a0, $sp, $a0
 ; LA64-NEXT:    move $sp, $a0
 ; LA64-NEXT:    bl %plt(notdead)
@@ -63,10 +61,9 @@ define void @scoped_alloca(i32 %n) nounwind {
 ; LA32-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $s0, $sp, 4 # 4-byte Folded Spill
 ; LA32-NEXT:    addi.w $fp, $sp, 16
-; LA32-NEXT:    addi.w $a0, $a0, 15
-; LA32-NEXT:    addi.w $a1, $zero, -16
-; LA32-NEXT:    and $a0, $a0, $a1
 ; LA32-NEXT:    move $s0, $sp
+; LA32-NEXT:    addi.w $a0, $a0, 15
+; LA32-NEXT:    bstrins.w $a0, $zero, 3, 0
 ; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    move $sp, $a0
 ; LA32-NEXT:    bl %plt(notdead)
@@ -85,12 +82,11 @@ define void @scoped_alloca(i32 %n) nounwind {
 ; LA64-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    addi.d $fp, $sp, 32
-; LA64-NEXT:    addi.w $a1, $zero, -16
-; LA64-NEXT:    lu32i.d $a1, 1
+; LA64-NEXT:    move $s0, $sp
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; LA64-NEXT:    addi.d $a0, $a0, 15
-; LA64-NEXT:    and $a0, $a0, $a1
-; LA64-NEXT:    move $s0, $sp
+; LA64-NEXT:    bstrpick.d $a0, $a0, 32, 4
+; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    sub.d $a0, $sp, $a0
 ; LA64-NEXT:    move $sp, $a0
 ; LA64-NEXT:    bl %plt(notdead)
@@ -120,8 +116,7 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; LA32-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
 ; LA32-NEXT:    addi.w $fp, $sp, 16
 ; LA32-NEXT:    addi.w $a0, $a0, 15
-; LA32-NEXT:    addi.w $a1, $zero, -16
-; LA32-NEXT:    and $a0, $a0, $a1
+; LA32-NEXT:    bstrins.w $a0, $zero, 3, 0
 ; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    move $sp, $a0
 ; LA32-NEXT:    addi.w $sp, $sp, -16
@@ -131,8 +126,7 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; LA32-NEXT:    st.w $a1, $sp, 8
 ; LA32-NEXT:    ori $a1, $zero, 10
 ; LA32-NEXT:    st.w $a1, $sp, 4
-; LA32-NEXT:    ori $a1, $zero, 9
-; LA32-NEXT:    st.w $a1, $sp, 0
+; LA32-NEXT:    ori $t0, $zero, 9
 ; LA32-NEXT:    ori $a1, $zero, 2
 ; LA32-NEXT:    ori $a2, $zero, 3
 ; LA32-NEXT:    ori $a3, $zero, 4
@@ -140,6 +134,7 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; LA32-NEXT:    ori $a5, $zero, 6
 ; LA32-NEXT:    ori $a6, $zero, 7
 ; LA32-NEXT:    ori $a7, $zero, 8
+; LA32-NEXT:    st.w $t0, $sp, 0
 ; LA32-NEXT:    bl %plt(func)
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    addi.w $sp, $fp, -16
@@ -154,11 +149,10 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $fp, $sp, 0 # 8-byte Folded Spill
 ; LA64-NEXT:    addi.d $fp, $sp, 16
-; LA64-NEXT:    addi.w $a1, $zero, -16
-; LA64-NEXT:    lu32i.d $a1, 1
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; LA64-NEXT:    addi.d $a0, $a0, 15
-; LA64-NEXT:    and $a0, $a0, $a1
+; LA64-NEXT:    bstrpick.d $a0, $a0, 32, 4
+; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    sub.d $a0, $sp, $a0
 ; LA64-NEXT:    move $sp, $a0
 ; LA64-NEXT:    addi.d $sp, $sp, -32
@@ -168,8 +162,7 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; LA64-NEXT:    st.d $a1, $sp, 16
 ; LA64-NEXT:    ori $a1, $zero, 10
 ; LA64-NEXT:    st.d $a1, $sp, 8
-; LA64-NEXT:    ori $a1, $zero, 9
-; LA64-NEXT:    st.d $a1, $sp, 0
+; LA64-NEXT:    ori $t0, $zero, 9
 ; LA64-NEXT:    ori $a1, $zero, 2
 ; LA64-NEXT:    ori $a2, $zero, 3
 ; LA64-NEXT:    ori $a3, $zero, 4
@@ -177,6 +170,7 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; LA64-NEXT:    ori $a5, $zero, 6
 ; LA64-NEXT:    ori $a6, $zero, 7
 ; LA64-NEXT:    ori $a7, $zero, 8
+; LA64-NEXT:    st.d $t0, $sp, 0
 ; LA64-NEXT:    bl %plt(func)
 ; LA64-NEXT:    addi.d $sp, $sp, 32
 ; LA64-NEXT:    addi.d $sp, $fp, -16

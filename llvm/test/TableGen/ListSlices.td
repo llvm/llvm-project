@@ -123,3 +123,42 @@ def Rec10 {
   int Zero = Class1<[?, ?, 2, 3, ?, 5, ?]>.Zero;
   list<int> TwoFive = Class1<[?, ?, 2, 3, ?, 5, ?]>.TwoFive;
 }
+
+// Test list[list] and list[int]
+// CHECK: def Rec11
+def Rec11 {
+  list<int> s5 = Var1[0...4];
+
+  // list[expr]
+  // CHECK:   list<int> rev = [4, 3, 2, 1, 0];
+  list<int> rev = !foreach(i, s5, Var1[!sub(4, i)]);
+
+  // Slice by list[foreach]
+  // CHECK:   list<int> revf = [4, 3, 2, 1, 0];
+  list<int> revf = Var1[!foreach(i, s5, !sub(4, i))];
+
+  // Simple slice
+  // CHECK:   list<int> rr = [0, 1, 2, 3, 4];
+  list<int> rr  = rev[rev];
+
+  // Trailing comma is acceptable
+  // CHECK:   list<int> rr_ = [0, 1, 2, 3, 4];
+  list<int> rr_ = rev[rev,];
+
+  // Concatenation in slice
+  // CHECK:   list<int> rrr = [1, 2, 4, 3, 2, 1, 0, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 8];
+  list<int> empty = [];
+  list<int> rrr = Var1[1, 2, rev, 3...6, 7, empty, rr, 8];
+
+  // Recognized as slice by the trailing comma
+  // CHECK:   list<list<int>> rl1 = {{\[}}[0], [1], [2], [3], [4]];
+  list<list<int>> rl1 = !foreach(i, rev, rev[i,]);
+
+  // Slice by pair<int,int>
+  // CHECK:   list<list<int>> rll = {{\[}}[0, 4], [1, 3], [2, 2], [3, 1], [4, 0]];
+  list<list<int>> rll = !foreach(i, rev, rev[i, !sub(4, i)]);
+
+  // Slice by dynamic range
+  // CHECK:   list<list<int>> rlr = {{\[}}[4, 3, 2, 1, 0], [3, 2, 1], [2], [1, 2, 3], [0, 1, 2, 3, 4]];
+  list<list<int>> rlr = !foreach(i, s5, rev[i...!sub(4, i)]);
+}

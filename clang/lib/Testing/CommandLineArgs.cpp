@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Testing/CommandLineArgs.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace clang {
@@ -35,6 +36,9 @@ std::vector<std::string> getCommandLineArgsForTesting(TestLanguage Lang) {
     break;
   case Lang_CXX20:
     Args = {"-std=c++20", "-frtti"};
+    break;
+  case Lang_CXX23:
+    Args = {"-std=c++23", "-frtti"};
     break;
   case Lang_OBJC:
     Args = {"-x", "objective-c", "-frtti", "-fobjc-nonfragile-abi"};
@@ -72,6 +76,9 @@ std::vector<std::string> getCC1ArgsForTesting(TestLanguage Lang) {
   case Lang_CXX20:
     Args = {"-std=c++20"};
     break;
+  case Lang_CXX23:
+    Args = {"-std=c++23"};
+    break;
   case Lang_OBJC:
     Args = {"-xobjective-c"};
     break;
@@ -95,6 +102,7 @@ StringRef getFilenameForTesting(TestLanguage Lang) {
   case Lang_CXX14:
   case Lang_CXX17:
   case Lang_CXX20:
+  case Lang_CXX23:
     return "input.cc";
 
   case Lang_OpenCL:
@@ -107,6 +115,20 @@ StringRef getFilenameForTesting(TestLanguage Lang) {
     return "input.mm";
   }
   llvm_unreachable("Unhandled TestLanguage enum");
+}
+
+std::string getAnyTargetForTesting() {
+  for (const auto &Target : llvm::TargetRegistry::targets()) {
+    std::string Error;
+    StringRef TargetName(Target.getName());
+    if (TargetName == "x86-64")
+      TargetName = "x86_64";
+    if (llvm::TargetRegistry::lookupTarget(std::string(TargetName), Error) ==
+        &Target) {
+      return std::string(TargetName);
+    }
+  }
+  return "";
 }
 
 } // end namespace clang

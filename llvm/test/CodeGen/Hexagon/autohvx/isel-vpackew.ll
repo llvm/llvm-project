@@ -5,7 +5,7 @@ define void @f0(ptr %a0, ptr %a1, ptr %a2) #0 {
 ; CHECK-LABEL: f0:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r7 = #-4
+; CHECK-NEXT:     r7 = #124
 ; CHECK-NEXT:     v0 = vmem(r0+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {

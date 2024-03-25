@@ -13,11 +13,11 @@ define <4 x double> @test(ptr %p2, double %i1754, double %i1781, double %i1778) 
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> [[TMP0]], double [[I1778:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[I1781]], i32 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[I1772]], i32 3
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x double> [[TMP0]], <4 x double> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <4 x double> [[TMP3]], [[SHUFFLE]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double poison>, double [[I1797]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <4 x double> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    ret <4 x double> [[TMP6]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x double> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double poison>, double [[I1797]], i32 3
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <4 x double> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    ret <4 x double> [[TMP7]]
 ;
 entry:
   %i1771 = getelementptr inbounds double, ptr %p2, i64 54

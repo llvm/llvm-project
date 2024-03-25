@@ -13,6 +13,7 @@
 #ifndef LLVM_CODEGEN_MACHINESSAUPDATER_H
 #define LLVM_CODEGEN_MACHINESSAUPDATER_H
 
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Register.h"
 
 namespace llvm {
@@ -40,15 +41,15 @@ private:
   //typedef DenseMap<MachineBasicBlock*, Register> AvailableValsTy;
   void *AV = nullptr;
 
-  /// VRC - Register class of the current virtual register.
-  const TargetRegisterClass *VRC;
+  /// Register class or bank and LLT of current virtual register.
+  MachineRegisterInfo::VRegAttrs RegAttrs;
 
   /// InsertedPHIs - If this is non-null, the MachineSSAUpdater adds all PHI
   /// nodes that it creates to the vector.
   SmallVectorImpl<MachineInstr*> *InsertedPHIs;
 
-  const TargetInstrInfo *TII;
-  MachineRegisterInfo *MRI;
+  const TargetInstrInfo *TII = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
 
 public:
   /// MachineSSAUpdater constructor.  If InsertedPHIs is specified, it will be
@@ -62,7 +63,6 @@ public:
   /// Initialize - Reset this object to get ready for a new set of SSA
   /// updates.
   void Initialize(Register V);
-  void Initialize(const TargetRegisterClass *RC);
 
   /// AddAvailableValue - Indicate that a rewritten value is available at the
   /// end of the specified block with the specified value.

@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=tonga -mattr=-xnack -run-pass post-RA-sched -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-xnack -run-pass post-RA-sched -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN:      FLAT_LOAD_DWORD
 # GCN-NEXT: FLAT_LOAD_DWORD

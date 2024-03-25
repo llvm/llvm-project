@@ -52,6 +52,63 @@ void test_snprintf(void) {
   __builtin_snprintf(buf, 20, "%.Lf", x);
 }
 
+// IEEE128-LABEL: define dso_local void @test_scanf
+// IEEE128: call signext i32 (ptr, ...) @__scanfieee128
+// PPC128-LABEL: define dso_local void @test_scanf
+// PPC128: call signext i32 (ptr, ...) @scanf
+void test_scanf(int *x) {
+  __builtin_scanf("%d", x);
+}
+
+// IEEE128-LABEL: define dso_local void @test_sscanf
+// IEEE128: call signext i32 (ptr, ptr, ...) @__sscanfieee128
+// PPC128-LABEL: define dso_local void @test_sscanf
+// PPC128: call signext i32 (ptr, ptr, ...) @sscanf
+void test_sscanf(int *x) {
+  __builtin_sscanf(buf, "%d", x);
+}
+
+// IEEE128-LABEL: define dso_local void @test_vprintf
+// IEEE128: call signext i32 @__vprintfieee128
+// PPC128-LABEL: define dso_local void @test_vprintf
+// PPC128: call signext i32 @vprintf
+void test_vprintf(const char *fmt, ...) {
+  __builtin_va_list args;
+  __builtin_va_start(args, fmt);
+  __builtin_vprintf(fmt, args);
+  __builtin_va_end(args);
+}
+
+// IEEE128-LABEL: define dso_local void @test_vscanf
+// IEEE128: call signext i32 @__vscanfieee128
+// PPC128-LABEL: define dso_local void @test_vscanf
+// PPC128: call signext i32 @vscanf
+void test_vscanf(const char *fmt, ...) {
+  __builtin_va_list args;
+  __builtin_va_start(args, fmt);
+  __builtin_vscanf(fmt, args);
+  __builtin_va_end(args);
+}
+
+// IEEE128-LABEL: define dso_local void @test_vsscanf
+// IEEE128: call signext i32 @__vsscanfieee128
+// PPC128-LABEL: define dso_local void @test_vsscanf
+// PPC128: call signext i32 @vsscanf
+void test_vsscanf(const char *fmt, ...) {
+  __builtin_va_list args;
+  __builtin_va_start(args, fmt);
+  __builtin_vsscanf(buf, fmt, args);
+  __builtin_va_end(args);
+}
+
+// IEEE128-LABEL: define dso_local void @test_snprintf_chk
+// IEEE128: call signext i32 (ptr, i64, i32, i64, ptr, ...) @__snprintf_chkieee128
+// PPC128-LABEL: define dso_local void @test_snprintf_chk
+// PPC128: call signext i32 (ptr, i64, i32, i64, ptr, ...) @__snprintf_chk
+void test_snprintf_chk(long double x) {
+  __builtin___snprintf_chk(buf, 20, 1, 20, "%.Lf", x);
+}
+
 // GLIBC has special handling of 'nexttoward'
 
 // IEEE128-LABEL: define dso_local fp128 @test_nexttoward

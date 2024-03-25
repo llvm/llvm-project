@@ -128,16 +128,16 @@
 # CHECK-LE: b .+1024                        # encoding: [0x00,0x04,0x00,0x48]
             b 1024
 
-# CHECK-BE: ba 1024                         # encoding: [0x48,0x00,0x04,0x02]
-# CHECK-LE: ba 1024                         # encoding: [0x02,0x04,0x00,0x48]
+# CHECK-BE: ba 0x400                        # encoding: [0x48,0x00,0x04,0x02]
+# CHECK-LE: ba 0x400                        # encoding: [0x02,0x04,0x00,0x48]
             ba 1024
 
 # CHECK-BE: beq 0, .+1024                   # encoding: [0x41,0x82,0x04,0x00]
 # CHECK-LE: beq 0, .+1024                   # encoding: [0x00,0x04,0x82,0x41]
             beq 1024
 
-# CHECK-BE: beqa 0, 1024                    # encoding: [0x41,0x82,0x04,0x02]
-# CHECK-LE: beqa 0, 1024                    # encoding: [0x02,0x04,0x82,0x41]
+# CHECK-BE: beqa 0, 0x400                   # encoding: [0x41,0x82,0x04,0x02]
+# CHECK-LE: beqa 0, 0x400                   # encoding: [0x02,0x04,0x82,0x41]
             beqa 1024
 
 # CHECK-BE:                                 # encoding: [0x42,0x9f,A,0bAAAAAA01]

@@ -161,7 +161,6 @@ define float @ds_fadd_f32_vv(ptr addrspace(3) %ptr, float %val) {
 ; GFX10PLUS-LABEL: ds_fadd_f32_vv:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    ds_add_rtn_f32 v0, v0, v1
 ; GFX10PLUS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -188,7 +187,6 @@ define float @ds_fadd_f32_vv_offset(ptr addrspace(3) %ptr, float %val) {
 ; GFX10PLUS-LABEL: ds_fadd_f32_vv_offset:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    ds_add_rtn_f32 v0, v0, v1 offset:512
 ; GFX10PLUS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -216,7 +214,6 @@ define void @ds_fadd_f32_vv_nortn(ptr addrspace(3) %ptr, float %val) {
 ; GFX10PLUS-LABEL: ds_fadd_f32_vv_nortn:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    ds_add_f32 v0, v1
 ; GFX10PLUS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -243,7 +240,6 @@ define void @ds_fadd_f32_vv_offset_nortn(ptr addrspace(3) %ptr, float %val) {
 ; GFX10PLUS-LABEL: ds_fadd_f32_vv_offset_nortn:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    ds_add_f32 v0, v1 offset:512
 ; GFX10PLUS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -271,7 +267,6 @@ define float @ds_fadd_f32_vv_volatile(ptr addrspace(3) %ptr, float %val) {
 ; GFX10PLUS-LABEL: ds_fadd_f32_vv_volatile:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    ds_add_rtn_f32 v0, v0, v1
 ; GFX10PLUS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]

@@ -65,15 +65,13 @@ end:
 define i32 @test_sroa_phi_gep_poison(i1 %cond) {
 ; CHECK-LABEL: @test_sroa_phi_gep_poison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = alloca [[PAIR:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[END:%.*]]
 ; CHECK:       if.then:
+; CHECK-NEXT:    [[PHI_SROA_PHI_SROA_SPECULATE_LOAD_IF_THEN:%.*]] = load i32, ptr poison, align 4
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ poison, [[IF_THEN]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[PHI]], i32 0, i32 1
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    ret i32 [[LOAD]]
+; CHECK-NEXT:    [[PHI_SROA_PHI_SROA_SPECULATED:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[PHI_SROA_PHI_SROA_SPECULATE_LOAD_IF_THEN]], [[IF_THEN]] ]
+; CHECK-NEXT:    ret i32 [[PHI_SROA_PHI_SROA_SPECULATED]]
 ;
 entry:
   %a = alloca %pair, align 4
@@ -94,17 +92,13 @@ end:
 define i32 @test_sroa_phi_gep_global(i1 %cond) {
 ; CHECK-LABEL: @test_sroa_phi_gep_global(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = alloca [[PAIR:%.*]], align 4
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds [[PAIR]], ptr [[A]], i32 0, i32 1
-; CHECK-NEXT:    store i32 1, ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[END:%.*]]
 ; CHECK:       if.then:
+; CHECK-NEXT:    [[PHI_SROA_PHI_SROA_SPECULATE_LOAD_IF_THEN:%.*]] = load i32, ptr getelementptr inbounds ([[PAIR:%.*]], ptr @g, i32 0, i32 1), align 4
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ @g, [[IF_THEN]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[PHI]], i32 0, i32 1
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    ret i32 [[LOAD]]
+; CHECK-NEXT:    [[PHI_SROA_PHI_SROA_SPECULATED:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[PHI_SROA_PHI_SROA_SPECULATE_LOAD_IF_THEN]], [[IF_THEN]] ]
+; CHECK-NEXT:    ret i32 [[PHI_SROA_PHI_SROA_SPECULATED]]
 ;
 entry:
   %a = alloca %pair, align 4
@@ -228,7 +222,7 @@ for:
   %phi_i = phi i32 [ 0, %entry ], [ %i, %for ]
   %phi = phi ptr [ %gep_a, %entry], [ %gep_for, %for ]
   %i = add i32 %phi_i, 1
-  %gep_for = getelementptr inbounds i32, i32* %phi, i32 0
+  %gep_for = getelementptr inbounds i32, ptr %phi, i32 0
   %loop.cond = icmp ult i32 %i, 10
   br i1 %loop.cond, label %for, label %end
 
@@ -245,7 +239,7 @@ define i32 @test_sroa_invoke_phi_gep(i1 %cond) personality ptr @__gxx_personalit
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[CALL:%.*]], label [[END:%.*]]
 ; CHECK:       call:
 ; CHECK-NEXT:    [[B:%.*]] = invoke ptr @foo()
-; CHECK-NEXT:    to label [[END]] unwind label [[INVOKE_CATCH:%.*]]
+; CHECK-NEXT:            to label [[END]] unwind label [[INVOKE_CATCH:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[B]], [[CALL]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[PHI]], i32 0, i32 1
@@ -253,7 +247,7 @@ define i32 @test_sroa_invoke_phi_gep(i1 %cond) personality ptr @__gxx_personalit
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ; CHECK:       invoke_catch:
 ; CHECK-NEXT:    [[RES:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -397,7 +391,7 @@ for:
   %phi_i = phi i32 [ 0, %entry ], [ %i, %for ]
   %phi = phi ptr [ %gep_a, %entry], [ %gep_for, %for ]
   %i = add i32 %phi_i, 1
-  %gep_for = getelementptr inbounds float, float* %phi, i32 0
+  %gep_for = getelementptr inbounds float, ptr %phi, i32 0
   %loop.cond = icmp ult i32 %i, 10
   br i1 %loop.cond, label %for, label %end
 
@@ -468,10 +462,10 @@ define i32 @test_sroa_phi_gep_multiple_values_from_same_block(i32 %arg) {
 ; CHECK-LABEL: @test_sroa_phi_gep_multiple_values_from_same_block(
 ; CHECK-NEXT:  bb.1:
 ; CHECK-NEXT:    switch i32 [[ARG:%.*]], label [[BB_3:%.*]] [
-; CHECK-NEXT:    i32 1, label [[BB_2:%.*]]
-; CHECK-NEXT:    i32 2, label [[BB_2]]
-; CHECK-NEXT:    i32 3, label [[BB_4:%.*]]
-; CHECK-NEXT:    i32 4, label [[BB_4]]
+; CHECK-NEXT:      i32 1, label [[BB_2:%.*]]
+; CHECK-NEXT:      i32 2, label [[BB_2]]
+; CHECK-NEXT:      i32 3, label [[BB_4:%.*]]
+; CHECK-NEXT:      i32 4, label [[BB_4]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb.2:
 ; CHECK-NEXT:    br label [[BB_4]]
@@ -503,6 +497,221 @@ bb.4:                                                ; preds = %bb.1, %bb.1, %bb
   %load = load i32, ptr %gep, align 4
   ret i32 %load
 }
+
+define i64 @test_phi_idx_mem2reg_const(i1 %arg) {
+; CHECK-LABEL: @test_phi_idx_mem2reg_const(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI_SROA_PHI_SROA_SPECULATED:%.*]] = phi i64 [ 2, [[BB1]] ], [ 3, [[BB2]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 0, [[BB1]] ], [ 1, [[BB2]] ]
+; CHECK-NEXT:    ret i64 [[PHI_SROA_PHI_SROA_SPECULATED]]
+;
+bb:
+  %alloca = alloca [2 x i64], align 8
+  %gep1 = getelementptr inbounds i64, ptr %alloca, i64 1
+  store i64 2, ptr %alloca
+  store i64 3, ptr %gep1
+  br i1 %arg, label %bb1, label %bb2
+
+bb1:
+  br label %end
+
+bb2:
+  br label %end
+
+end:
+  %phi = phi i64 [ 0, %bb1 ], [ 1, %bb2 ]
+  %getelementptr = getelementptr inbounds i64, ptr %alloca, i64 %phi
+  %load = load i64, ptr %getelementptr
+  ret i64 %load
+}
+
+define i64 @test_phi_idx_mem2reg_not_const(i1 %arg, i64 %idx) {
+; CHECK-LABEL: @test_phi_idx_mem2reg_not_const(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x i64], align 8
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i64, ptr [[ALLOCA]], i64 1
+; CHECK-NEXT:    store i64 2, ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    store i64 3, ptr [[GEP1]], align 4
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 0, [[BB1]] ], [ [[IDX:%.*]], [[BB2]] ]
+; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr inbounds i64, ptr [[ALLOCA]], i64 [[PHI]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GETELEMENTPTR]], align 4
+; CHECK-NEXT:    ret i64 [[LOAD]]
+;
+bb:
+  %alloca = alloca [2 x i64], align 8
+  %gep1 = getelementptr inbounds i64, ptr %alloca, i64 1
+  store i64 2, ptr %alloca
+  store i64 3, ptr %gep1
+  br i1 %arg, label %bb1, label %bb2
+
+bb1:
+  br label %end
+
+bb2:
+  br label %end
+
+end:
+  %phi = phi i64 [ 0, %bb1 ], [ %idx, %bb2 ]
+  %getelementptr = getelementptr inbounds i64, ptr %alloca, i64 %phi
+  %load = load i64, ptr %getelementptr
+  ret i64 %load
+}
+
+define i64 @test_phi_mem2reg_pointer_op_is_non_const_gep(i1 %arg, i64 %idx) {
+; CHECK-LABEL: @test_phi_mem2reg_pointer_op_is_non_const_gep(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x i64], align 8
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i64, ptr [[ALLOCA]], i64 1
+; CHECK-NEXT:    store i64 2, ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    store i64 3, ptr [[GEP1]], align 4
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 0, [[BB1]] ], [ 1, [[BB2]] ]
+; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr inbounds i64, ptr [[ALLOCA]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[GETELEMENTPTR2:%.*]] = getelementptr inbounds i64, ptr [[GETELEMENTPTR]], i64 [[PHI]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GETELEMENTPTR]], align 4
+; CHECK-NEXT:    ret i64 [[LOAD]]
+;
+bb:
+  %alloca = alloca [2 x i64], align 8
+  %gep1 = getelementptr inbounds i64, ptr %alloca, i64 1
+  store i64 2, ptr %alloca
+  store i64 3, ptr %gep1
+  br i1 %arg, label %bb1, label %bb2
+
+bb1:
+  br label %end
+
+bb2:
+  br label %end
+
+end:
+  %phi = phi i64 [ 0, %bb1 ], [ 1, %bb2 ]
+  %getelementptr = getelementptr inbounds i64, ptr %alloca, i64 %idx
+  %getelementptr2 = getelementptr inbounds i64, ptr %getelementptr, i64 %phi
+  %load = load i64, ptr %getelementptr
+  ret i64 %load
+}
+
+define i1 @test_phi_mem2reg_entry_block_alloca_not_at_beginning(i1 %arg) {
+; CHECK-LABEL: @test_phi_mem2reg_entry_block_alloca_not_at_beginning(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    call void @f()
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    [[PHI_SROA_GEP:%.*]] = getelementptr i64, ptr [[ALLOCA]], i64 1
+; CHECK-NEXT:    [[PHI_SROA_GEP1:%.*]] = getelementptr i64, ptr [[ALLOCA]], i64 2
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB2:%.*]], label [[BB3:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[PHI_SROA_PHI:%.*]] = phi ptr [ [[PHI_SROA_GEP]], [[BB:%.*]] ], [ [[PHI_SROA_GEP1]], [[BB2]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 1, [[BB]] ], [ 2, [[BB2]] ]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq ptr [[PHI_SROA_PHI]], null
+; CHECK-NEXT:    ret i1 [[ICMP]]
+;
+bb:
+  call void @f()
+  %alloca = alloca i64
+  br i1 %arg, label %bb2, label %bb3
+bb2:
+  br label %bb3
+bb3:
+  %phi = phi i64 [ 1, %bb ], [ 2, %bb2 ]
+  %gep = getelementptr i64, ptr %alloca, i64 %phi
+  %icmp = icmp eq ptr %gep, null
+  ret i1 %icmp
+}
+
+define i32 @test_phi_mem2reg_alloca_not_in_entry_block(i1 %arg) {
+; CHECK-LABEL: @test_phi_mem2reg_alloca_not_in_entry_block(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i64 123, ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    br label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[ALLOCA2:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i64 124, ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB3:%.*]], label [[BB4:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb4:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[ALLOCA]], [[BB2]] ], [ [[ALLOCA2]], [[BB3]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PHI]], i64 1
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[LOAD]]
+;
+bb:
+  %alloca = alloca i64
+  store i64 123, ptr %alloca
+  br label %bb2
+bb2:
+  %alloca2 = alloca i64
+  store i64 124, ptr %alloca
+  br i1 %arg, label %bb3, label %bb4
+bb3:
+  br label %bb4
+bb4:
+  %phi = phi ptr [ %alloca, %bb2 ], [ %alloca2, %bb3 ]
+  %gep = getelementptr i32, ptr %phi, i64 1
+  %load = load i32, ptr %gep
+  ret i32 %load
+}
+
+define i64 @test_unfold_phi_duplicate_phi_entry(ptr %arg, i8 %arg1, i1 %arg2) {
+; CHECK-LABEL: @test_unfold_phi_duplicate_phi_entry(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[ALLOCA_SROA_0:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    [[PHI_SROA_GEP:%.*]] = getelementptr i64, ptr [[ARG:%.*]], i64 1
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB5:%.*]], label [[BB3:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    switch i8 [[ARG1:%.*]], label [[BB4:%.*]] [
+; CHECK-NEXT:      i8 0, label [[BB5]]
+; CHECK-NEXT:      i8 1, label [[BB5]]
+; CHECK-NEXT:    ]
+; CHECK:       bb4:
+; CHECK-NEXT:    ret i64 0
+; CHECK:       bb5:
+; CHECK-NEXT:    [[PHI_SROA_PHI:%.*]] = phi ptr [ [[PHI_SROA_GEP]], [[BB3]] ], [ [[PHI_SROA_GEP]], [[BB3]] ], [ [[ALLOCA_SROA_0]], [[BB:%.*]] ]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[PHI_SROA_PHI]], align 4
+; CHECK-NEXT:    ret i64 [[LOAD]]
+;
+bb:
+  %alloca = alloca [2 x i64], align 8
+  br i1 %arg2, label %bb5, label %bb3
+
+bb3:                                              ; preds = %bb
+  switch i8 %arg1, label %bb4 [
+  i8 0, label %bb5
+  i8 1, label %bb5
+  ]
+
+bb4:                                              ; preds = %bb5, %bb3
+  ret i64 0
+
+bb5:                                              ; preds = %bb3, %bb3, %bb
+  %phi = phi ptr [ %arg, %bb3 ], [ %arg, %bb3 ], [ %alloca, %bb ]
+  %getelementptr = getelementptr i64, ptr %phi, i64 1
+  %load = load i64, ptr %getelementptr
+  ret i64 %load
+}
+
+declare void @f()
 
 declare ptr @foo()
 

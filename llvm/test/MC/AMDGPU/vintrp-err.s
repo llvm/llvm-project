@@ -1,19 +1,19 @@
-// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck -check-prefix=GCN --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=GCN --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn %s 2>&1 | FileCheck -check-prefix=GCN --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=GCN --implicit-check-not=error: %s
 
 v_interp_p1_f32 v0, v1
 // GCN: :[[@LINE-1]]:{{[0-9]+}}: error: too few operands for instruction
 
-v_interp_p1_f32 v0, v1, attr64.w
+v_interp_p1_f32 v0, v1, attr33.w
 // GCN: :[[@LINE-1]]:{{[0-9]+}}: error: out of bounds interpolation attribute number
 
-v_interp_p1_f32 v0, v1, attr64.x
+v_interp_p1_f32 v0, v1, attr33.x
 // GCN: :[[@LINE-1]]:{{[0-9]+}}: error: out of bounds interpolation attribute number
 
-v_interp_p2_f32 v9, v1, attr64.x
+v_interp_p2_f32 v9, v1, attr33.x
 // GCN: :[[@LINE-1]]:{{[0-9]+}}: error: out of bounds interpolation attribute number
 
-v_interp_p2_f32 v0, v1, attr64.x
+v_interp_p2_f32 v0, v1, attr33.x
 // GCN: :[[@LINE-1]]:{{[0-9]+}}: error: out of bounds interpolation attribute number
 
 v_interp_p2_f32 v0, v1, attr0.q

@@ -1,5 +1,5 @@
 # REQUIRES: default_triple
-# RUN: rm -f reduced.ll reduced.bc
+# RUN: rm -rf %t.dir && mkdir %t.dir  && cd %t.dir
 
 # RUN: llvm-as -o test-output-format.bc %p/Inputs/test-output-format.ll
 

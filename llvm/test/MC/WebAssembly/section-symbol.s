@@ -3,7 +3,7 @@
 # check that we can refer to section symbols of other sections.
 # getWasmSection currently forces the section symbol to have a suffix.
 
-# TODO: fix the 0-suffix: https://bugs.llvm.org/show_bug.cgi?id=49252
+# TODO: fix the 0-suffix: https://github.com/llvm/llvm-project/issues/48596
 
     .section    .debug_abbrev,"",@
     .int8       1

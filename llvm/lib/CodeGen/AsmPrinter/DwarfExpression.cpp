@@ -117,10 +117,10 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
 
   // Walk up the super-register chain until we find a valid number.
   // For example, EAX on x86_64 is a 32-bit fragment of RAX with offset 0.
-  for (MCSuperRegIterator SR(MachineReg, &TRI); SR.isValid(); ++SR) {
-    Reg = TRI.getDwarfRegNum(*SR, false);
+  for (MCPhysReg SR : TRI.superregs(MachineReg)) {
+    Reg = TRI.getDwarfRegNum(SR, false);
     if (Reg >= 0) {
-      unsigned Idx = TRI.getSubRegIndex(*SR, MachineReg);
+      unsigned Idx = TRI.getSubRegIndex(SR, MachineReg);
       unsigned Size = TRI.getSubRegIdxSize(Idx);
       unsigned RegOffset = TRI.getSubRegIdxOffset(Idx);
       DwarfRegs.push_back(Register::createRegister(Reg, "super-register"));
@@ -142,11 +142,11 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
   // this doesn't find a combination of subregisters that fully cover
   // the register (even though one may exist).
   SmallBitVector Coverage(RegSize, false);
-  for (MCSubRegIterator SR(MachineReg, &TRI); SR.isValid(); ++SR) {
-    unsigned Idx = TRI.getSubRegIndex(MachineReg, *SR);
+  for (MCPhysReg SR : TRI.subregs(MachineReg)) {
+    unsigned Idx = TRI.getSubRegIndex(MachineReg, SR);
     unsigned Size = TRI.getSubRegIdxSize(Idx);
     unsigned Offset = TRI.getSubRegIdxOffset(Idx);
-    Reg = TRI.getDwarfRegNum(*SR, false);
+    Reg = TRI.getDwarfRegNum(SR, false);
     if (Reg < 0)
       continue;
 
@@ -414,6 +414,7 @@ void DwarfExpression::beginEntryValueExpression(
 
   SavedLocationKind = LocationKind;
   LocationKind = Register;
+  LocationFlags |= EntryValue;
   IsEmittingEntryValue = true;
   enableTemporaryBuffer();
 }
@@ -566,6 +567,12 @@ bool DwarfExpression::addExpression(
     case dwarf::DW_OP_dup:
     case dwarf::DW_OP_push_object_address:
     case dwarf::DW_OP_over:
+    case dwarf::DW_OP_eq:
+    case dwarf::DW_OP_ne:
+    case dwarf::DW_OP_gt:
+    case dwarf::DW_OP_ge:
+    case dwarf::DW_OP_lt:
+    case dwarf::DW_OP_le:
       emitOp(OpNum);
       break;
     case dwarf::DW_OP_deref:

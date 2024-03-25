@@ -11,13 +11,13 @@
 # Edited by adding a redundant, empty last range.
 # The line table (llvm-dwarfdump --debug-line) looks like:
 #
-# Address            Line   Column File   ISA Discriminator Flags
-# ------------------ ------ ------ ------ --- ------------- -------------
-# 0x0000000000000000      1      0      1   0             0  is_stmt
-# 0x0000000000000000      2     12      1   0             0  is_stmt prologue_end
-# 0x0000000000000003      2      3      1   0             0
-# 0x0000000000000003      3      3      1   0             0
-# 0x0000000000000004      3      3      1   0             0  end_sequence
+# Address            Line   Column File   ISA Discriminator OpIndex Flags
+# ------------------ ------ ------ ------ --- ------------- ------- -------------
+# 0x0000000000000000      1      0      1   0             0       0  is_stmt
+# 0x0000000000000000      2     12      1   0             0       0  is_stmt prologue_end
+# 0x0000000000000003      2      3      1   0             0       0
+# 0x0000000000000003      3      3      1   0             0       0
+# 0x0000000000000004      3      3      1   0             0       0  end_sequence
 #
 # 0x0 should pick the second line in the table - line 2, col 12
 # CHECK:    func

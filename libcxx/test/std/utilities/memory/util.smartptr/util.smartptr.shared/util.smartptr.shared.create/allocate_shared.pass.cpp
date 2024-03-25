@@ -90,22 +90,6 @@ struct Three
 
 int Three::count = 0;
 
-template<class T>
-struct AllocNoConstruct : std::allocator<T>
-{
-    AllocNoConstruct() = default;
-
-    template <class T1>
-    AllocNoConstruct(AllocNoConstruct<T1>) {}
-
-    template <class T1>
-    struct rebind {
-        typedef AllocNoConstruct<T1> other;
-    };
-
-    void construct(void*) { assert(false); }
-};
-
 template <class Alloc>
 void test()
 {
@@ -181,13 +165,6 @@ int main(int, char**)
         assert(p1 != nullptr);
         assert(p2 != nullptr);
     }
-
-    // Test that we don't call construct before C++20.
-#if TEST_STD_VER < 20
-    {
-    (void)std::allocate_shared<int>(AllocNoConstruct<int>());
-    }
-#endif // TEST_STD_VER < 20
 
   return 0;
 }

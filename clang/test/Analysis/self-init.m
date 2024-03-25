@@ -224,7 +224,7 @@ extern id _commonInit(MyObj *self);
 @end
 
 
-// Test for radar://10973514 : self should not be invalidated by a method call.
+// Self should not be invalidated by a method call.
 @interface Test : NSObject {
     NSInvocation *invocation_;
 }
@@ -238,7 +238,7 @@ extern id _commonInit(MyObj *self);
 }
 @end
 
-// Test radar:11235991 - passing self to a call to super.
+// Passing self to a call to super.
 @protocol MyDelegate
 @end
 @interface Object : NSObject
@@ -257,7 +257,7 @@ extern id _commonInit(MyObj *self);
 }
 @end
 
-// Test for radar://11125870: init constructing a special instance.
+// Init constructing a special instance.
 typedef signed char BOOL;
 @interface MyClass : NSObject
 @end
@@ -281,7 +281,6 @@ typedef signed char BOOL;
 }
 @end
 
-// Test for radar://12838705.
 @interface ABCClass : NSObject
 @property (nonatomic, strong) NSString *foo;
 @property (nonatomic, strong) NSString *bar;

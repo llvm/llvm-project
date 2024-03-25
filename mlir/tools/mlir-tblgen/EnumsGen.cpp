@@ -123,7 +123,7 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
   // case value to determine when to print in the string form.
   if (nonKeywordCases.any()) {
     os << "  switch (value) {\n";
-    for (auto &it : llvm::enumerate(cases)) {
+    for (auto it : llvm::enumerate(cases)) {
       if (nonKeywordCases.test(it.index()))
         continue;
       StringRef symbol = it.value().getSymbol();
@@ -516,7 +516,7 @@ static void emitSpecializedAttrDef(const Record &enumDef, raw_ostream &os) {
   os << formatv("  ::mlir::IntegerAttr baseAttr = "
                 "::mlir::IntegerAttr::get(intType, static_cast<{0}>(val));\n",
                 underlyingType);
-  os << formatv("  return baseAttr.cast<{0}>();\n", attrClassName);
+  os << formatv("  return ::llvm::cast<{0}>(baseAttr);\n", attrClassName);
 
   os << "}\n";
 
@@ -643,7 +643,7 @@ public:
 }
 
 static bool emitEnumDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  llvm::emitSourceFileHeader("Enum Utility Declarations", os);
+  llvm::emitSourceFileHeader("Enum Utility Declarations", os, recordKeeper);
 
   auto defs = recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo");
   for (const auto *def : defs)
@@ -681,7 +681,7 @@ static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
 }
 
 static bool emitEnumDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  llvm::emitSourceFileHeader("Enum Utility Definitions", os);
+  llvm::emitSourceFileHeader("Enum Utility Definitions", os, recordKeeper);
 
   auto defs = recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo");
   for (const auto *def : defs)

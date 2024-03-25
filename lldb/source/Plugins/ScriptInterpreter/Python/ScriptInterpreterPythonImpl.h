@@ -83,6 +83,9 @@ public:
                            std::string &error_str,
                            lldb::ThreadPlanSP thread_plan) override;
 
+  StructuredData::ObjectSP
+  CreateStructuredDataFromScriptObject(ScriptObject obj) override;
+
   bool ScriptedThreadPlanExplainsStop(StructuredData::ObjectSP implementor_sp,
                                       Event *event,
                                       bool &script_error) override;
@@ -95,6 +98,11 @@ public:
 
   lldb::StateType
   ScriptedThreadPlanGetRunState(StructuredData::ObjectSP implementor_sp,
+                                bool &script_error) override;
+
+  bool
+  ScriptedThreadPlanGetStopDescription(StructuredData::ObjectSP implementor_sp,
+                                lldb_private::Stream *s,
                                 bool &script_error) override;
 
   StructuredData::GenericSP
@@ -124,23 +132,11 @@ public:
   GetRecognizedArguments(const StructuredData::ObjectSP &implementor,
                          lldb::StackFrameSP frame_sp) override;
 
-  StructuredData::GenericSP
-  OSPlugin_CreatePluginObject(const char *class_name,
-                              lldb::ProcessSP process_sp) override;
+  lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() override;
 
-  StructuredData::DictionarySP
-  OSPlugin_RegisterInfo(StructuredData::ObjectSP os_plugin_object_sp) override;
+  lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
 
-  StructuredData::ArraySP
-  OSPlugin_ThreadsInfo(StructuredData::ObjectSP os_plugin_object_sp) override;
-
-  StructuredData::StringSP
-  OSPlugin_RegisterContextData(StructuredData::ObjectSP os_plugin_object_sp,
-                               lldb::tid_t thread_id) override;
-
-  StructuredData::DictionarySP
-  OSPlugin_CreateThread(StructuredData::ObjectSP os_plugin_object_sp,
-                        lldb::tid_t tid, lldb::addr_t context) override;
+  lldb::OperatingSystemInterfaceSP CreateOperatingSystemInterface() override;
 
   StructuredData::ObjectSP
   LoadPluginModule(const FileSpec &file_spec,
@@ -186,16 +182,24 @@ public:
       lldb_private::CommandReturnObject &cmd_retobj, Status &error,
       const lldb_private::ExecutionContext &exe_ctx) override;
 
-  Status GenerateFunction(const char *signature,
-                          const StringList &input) override;
+    virtual bool RunScriptBasedParsedCommand(
+      StructuredData::GenericSP impl_obj_sp, Args& args,
+      ScriptedCommandSynchronicity synchronicity,
+      lldb_private::CommandReturnObject &cmd_retobj, Status &error,
+      const lldb_private::ExecutionContext &exe_ctx) override;
 
-  Status GenerateBreakpointCommandCallbackData(
-      StringList &input,
-      std::string &output,
-      bool has_extra_args) override;
+  
+  Status GenerateFunction(const char *signature, const StringList &input,
+                          bool is_callback) override;
+
+  Status GenerateBreakpointCommandCallbackData(StringList &input,
+                                               std::string &output,
+                                               bool has_extra_args,
+                                               bool is_callback) override;
 
   bool GenerateWatchpointCommandCallbackData(StringList &input,
-                                             std::string &output) override;
+                                             std::string &output,
+                                             bool is_callback) override;
 
   bool GetScriptedSummary(const char *function_name, lldb::ValueObjectSP valobj,
                           StructuredData::ObjectSP &callee_wrapper_sp,
@@ -215,6 +219,20 @@ public:
 
   bool GetLongHelpForCommandObject(StructuredData::GenericSP cmd_obj_sp,
                                    std::string &dest) override;
+                                   
+  StructuredData::ObjectSP
+  GetOptionsForCommandObject(StructuredData::GenericSP cmd_obj_sp) override;
+
+  StructuredData::ObjectSP
+  GetArgumentsForCommandObject(StructuredData::GenericSP cmd_obj_sp) override;
+
+  bool SetOptionValueForCommandObject(StructuredData::GenericSP cmd_obj_sp,
+                                      ExecutionContext *exe_ctx,
+                                      llvm::StringRef long_option, 
+                                      llvm::StringRef value) override;
+
+  void OptionParsingStartedForCommandObject(
+      StructuredData::GenericSP cmd_obj_sp) override;
 
   bool CheckObjectExists(const char *name) override {
     if (!name || !name[0])
@@ -258,7 +276,8 @@ public:
 
   /// Set the callback body text into the callback for the breakpoint.
   Status SetBreakpointCommandCallback(BreakpointOptions &bp_options,
-                                      const char *callback_body) override;
+                                      const char *callback_body,
+                                      bool is_callback) override;
 
   Status SetBreakpointCommandCallbackFunction(
       BreakpointOptions &bp_options, const char *function_name,
@@ -272,11 +291,13 @@ public:
   Status SetBreakpointCommandCallback(BreakpointOptions &bp_options,
                                       const char *command_body_text,
                                       StructuredData::ObjectSP extra_args_sp,
-                                      bool uses_extra_args);
+                                      bool uses_extra_args,
+                                      bool is_callback);
 
   /// Set a one-liner as the callback for the watchpoint.
   void SetWatchpointCommandCallback(WatchpointOptions *wp_options,
-                                    const char *oneliner) override;
+                                    const char *user_input,
+                                    bool is_callback) override;
 
   const char *GetDictionaryName() { return m_dictionary_name.c_str(); }
 
@@ -367,11 +388,18 @@ public:
 
   void LeaveSession();
 
-  uint32_t IsExecutingPython() const { return m_lock_count > 0; }
+  uint32_t IsExecutingPython() {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    return m_lock_count > 0;
+  }
 
-  uint32_t IncrementLockCount() { return ++m_lock_count; }
+  uint32_t IncrementLockCount() {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    return ++m_lock_count;
+  }
 
   uint32_t DecrementLockCount() {
+    std::lock_guard<std::mutex> guard(m_mutex);
     if (m_lock_count > 0)
       --m_lock_count;
     return m_lock_count;
@@ -411,6 +439,7 @@ public:
   bool m_pty_secondary_is_open;
   bool m_valid_session;
   uint32_t m_lock_count;
+  std::mutex m_mutex;
   PyThreadState *m_command_thread_state;
 };
 
@@ -423,10 +452,11 @@ public:
 
   ~IOHandlerPythonInterpreter() override = default;
 
-  ConstString GetControlSequence(char ch) override {
+  llvm::StringRef GetControlSequence(char ch) override {
+    static constexpr llvm::StringLiteral control_sequence("quit()\n");
     if (ch == 'd')
-      return ConstString("quit()\n");
-    return ConstString();
+      return control_sequence;
+    return {};
   }
 
   void Run() override {

@@ -333,6 +333,7 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
 
   setMinFunctionAlignment(Align(2));
   setPrefFunctionAlignment(Align(2));
+  setMaxAtomicSizeInBitsSupported(0);
 }
 
 SDValue MSP430TargetLowering::LowerOperation(SDValue Op,
@@ -631,7 +632,7 @@ SDValue MSP430TargetLowering::LowerCCCArguments(
 
   // Create frame index for the start of the first vararg value
   if (isVarArg) {
-    unsigned Offset = CCInfo.getNextStackOffset();
+    unsigned Offset = CCInfo.getStackSize();
     FuncInfo->setVarArgsFrameIndex(MFI.CreateFixedObject(1, Offset, true));
   }
 
@@ -645,7 +646,7 @@ SDValue MSP430TargetLowering::LowerCCCArguments(
         {
 #ifndef NDEBUG
           errs() << "LowerFormalArguments Unhandled argument type: "
-               << RegVT.getEVTString() << "\n";
+                 << RegVT << "\n";
 #endif
           llvm_unreachable(nullptr);
         }
@@ -686,8 +687,7 @@ SDValue MSP430TargetLowering::LowerCCCArguments(
         unsigned ObjSize = VA.getLocVT().getSizeInBits()/8;
         if (ObjSize > 2) {
             errs() << "LowerFormalArguments Unhandled argument type: "
-                << EVT(VA.getLocVT()).getEVTString()
-                << "\n";
+                << VA.getLocVT() << "\n";
         }
         // Create the frame index object for this incoming parameter...
         int FI = MFI.CreateFixedObject(ObjSize, VA.getLocMemOffset(), true);
@@ -754,7 +754,7 @@ MSP430TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // Analize return values.
   AnalyzeReturnValues(CCInfo, RVLocs, Outs);
 
-  SDValue Flag;
+  SDValue Glue;
   SmallVector<SDValue, 4> RetOps(1, Chain);
 
   // Copy the result values into the output registers.
@@ -763,11 +763,11 @@ MSP430TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     assert(VA.isRegLoc() && "Can only return in registers!");
 
     Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(),
-                             OutVals[i], Flag);
+                             OutVals[i], Glue);
 
     // Guarantee that all emitted copies are stuck together,
     // avoiding something bad.
-    Flag = Chain.getValue(1);
+    Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
@@ -783,19 +783,19 @@ MSP430TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       DAG.getCopyFromReg(Chain, dl, Reg, PtrVT);
     unsigned R12 = MSP430::R12;
 
-    Chain = DAG.getCopyToReg(Chain, dl, R12, Val, Flag);
-    Flag = Chain.getValue(1);
+    Chain = DAG.getCopyToReg(Chain, dl, R12, Val, Glue);
+    Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(R12, PtrVT));
   }
 
   unsigned Opc = (CallConv == CallingConv::MSP430_INTR ?
-                  MSP430ISD::RETI_FLAG : MSP430ISD::RET_FLAG);
+                  MSP430ISD::RETI_GLUE : MSP430ISD::RET_GLUE);
 
   RetOps[0] = Chain;  // Update chain.
 
-  // Add the flag if we have it.
-  if (Flag.getNode())
-    RetOps.push_back(Flag);
+  // Add the glue if we have it.
+  if (Glue.getNode())
+    RetOps.push_back(Glue);
 
   return DAG.getNode(Opc, dl, MVT::Other, RetOps);
 }
@@ -815,7 +815,7 @@ SDValue MSP430TargetLowering::LowerCCCCallTo(
   AnalyzeArguments(CCInfo, ArgLocs, Outs);
 
   // Get a count of how many bytes are to be pushed on the stack.
-  unsigned NumBytes = CCInfo.getNextStackOffset();
+  unsigned NumBytes = CCInfo.getStackSize();
   MVT PtrVT = getFrameIndexTy(DAG.getDataLayout());
 
   Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
@@ -883,13 +883,13 @@ SDValue MSP430TargetLowering::LowerCCCCallTo(
     Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, MemOpChains);
 
   // Build a sequence of copy-to-reg nodes chained together with token chain and
-  // flag operands which copy the outgoing args into registers.  The InFlag in
+  // flag operands which copy the outgoing args into registers.  The InGlue in
   // necessary since all emitted instructions must be stuck together.
-  SDValue InFlag;
+  SDValue InGlue;
   for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
     Chain = DAG.getCopyToReg(Chain, dl, RegsToPass[i].first,
-                             RegsToPass[i].second, InFlag);
-    InFlag = Chain.getValue(1);
+                             RegsToPass[i].second, InGlue);
+    InGlue = Chain.getValue(1);
   }
 
   // If the callee is a GlobalAddress node (quite common, every direct call is)
@@ -912,19 +912,19 @@ SDValue MSP430TargetLowering::LowerCCCCallTo(
     Ops.push_back(DAG.getRegister(RegsToPass[i].first,
                                   RegsToPass[i].second.getValueType()));
 
-  if (InFlag.getNode())
-    Ops.push_back(InFlag);
+  if (InGlue.getNode())
+    Ops.push_back(InGlue);
 
   Chain = DAG.getNode(MSP430ISD::CALL, dl, NodeTys, Ops);
-  InFlag = Chain.getValue(1);
+  InGlue = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
-  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InFlag, dl);
-  InFlag = Chain.getValue(1);
+  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InGlue, dl);
+  InGlue = Chain.getValue(1);
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.
-  return LowerCallResult(Chain, InFlag, CallConv, isVarArg, Ins, dl,
+  return LowerCallResult(Chain, InGlue, CallConv, isVarArg, Ins, dl,
                          DAG, InVals);
 }
 
@@ -932,7 +932,7 @@ SDValue MSP430TargetLowering::LowerCCCCallTo(
 /// appropriate copies out of appropriate physical registers.
 ///
 SDValue MSP430TargetLowering::LowerCallResult(
-    SDValue Chain, SDValue InFlag, CallingConv::ID CallConv, bool isVarArg,
+    SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
 
@@ -946,8 +946,8 @@ SDValue MSP430TargetLowering::LowerCallResult(
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {
     Chain = DAG.getCopyFromReg(Chain, dl, RVLocs[i].getLocReg(),
-                               RVLocs[i].getValVT(), InFlag).getValue(1);
-    InFlag = Chain.getValue(2);
+                               RVLocs[i].getValVT(), InGlue).getValue(1);
+    InGlue = Chain.getValue(2);
     InVals.push_back(Chain.getValue(0));
   }
 
@@ -965,7 +965,7 @@ SDValue MSP430TargetLowering::LowerShifts(SDValue Op,
   if (!isa<ConstantSDNode>(N->getOperand(1)))
     return Op;
 
-  uint64_t ShiftAmount = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  uint64_t ShiftAmount = N->getConstantOperandVal(1);
 
   // Expand the stuff into sequence of shifts.
   SDValue Victim = N->getOperand(0);
@@ -1149,15 +1149,10 @@ SDValue MSP430TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   // but they are different from CMP.
   // FIXME: since we're doing a post-processing, use a pseudoinstr here, so
   // lowering & isel wouldn't diverge.
-  bool andCC = false;
-  if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS)) {
-    if (RHSC->isZero() && LHS.hasOneUse() &&
-        (LHS.getOpcode() == ISD::AND ||
-         (LHS.getOpcode() == ISD::TRUNCATE &&
-          LHS.getOperand(0).getOpcode() == ISD::AND))) {
-      andCC = true;
-    }
-  }
+  bool andCC = isNullConstant(RHS) && LHS.hasOneUse() &&
+               (LHS.getOpcode() == ISD::AND ||
+                (LHS.getOpcode() == ISD::TRUNCATE &&
+                 LHS.getOperand(0).getOpcode() == ISD::AND));
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
   SDValue TargetCC;
   SDValue Flag = EmitCMP(LHS, RHS, TargetCC, CC, dl, DAG);
@@ -1169,8 +1164,8 @@ SDValue MSP430TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   bool Invert = false;
   bool Shift = false;
   bool Convert = true;
-  switch (cast<ConstantSDNode>(TargetCC)->getZExtValue()) {
-   default:
+  switch (TargetCC->getAsZExtVal()) {
+  default:
     Convert = false;
     break;
    case MSP430CC::COND_HS:
@@ -1194,7 +1189,7 @@ SDValue MSP430TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
      // C = ~Z for AND instruction, thus we can put Res = ~(SR & 1), however,
      // Res = (SR >> 1) & 1 is 1 word shorter.
      break;
-  }
+   }
   EVT VT = Op.getValueType();
   SDValue One  = DAG.getConstant(1, dl, VT);
   if (Convert) {
@@ -1270,7 +1265,7 @@ SDValue MSP430TargetLowering::LowerRETURNADDR(SDValue Op,
   if (verifyReturnAddressArgumentIsConstant(Op, DAG))
     return SDValue();
 
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
   SDLoc dl(Op);
   EVT PtrVT = Op.getValueType();
 
@@ -1296,7 +1291,7 @@ SDValue MSP430TargetLowering::LowerFRAMEADDR(SDValue Op,
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);  // FIXME probably not meaningful
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
   SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), dl,
                                          MSP430::R4, VT);
   while (Depth--)
@@ -1370,8 +1365,8 @@ bool MSP430TargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
 const char *MSP430TargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((MSP430ISD::NodeType)Opcode) {
   case MSP430ISD::FIRST_NUMBER:       break;
-  case MSP430ISD::RET_FLAG:           return "MSP430ISD::RET_FLAG";
-  case MSP430ISD::RETI_FLAG:          return "MSP430ISD::RETI_FLAG";
+  case MSP430ISD::RET_GLUE:           return "MSP430ISD::RET_GLUE";
+  case MSP430ISD::RETI_GLUE:          return "MSP430ISD::RETI_GLUE";
   case MSP430ISD::RRA:                return "MSP430ISD::RRA";
   case MSP430ISD::RLA:                return "MSP430ISD::RLA";
   case MSP430ISD::RRC:                return "MSP430ISD::RRC";
@@ -1411,10 +1406,6 @@ bool MSP430TargetLowering::isZExtFree(Type *Ty1, Type *Ty2) const {
 bool MSP430TargetLowering::isZExtFree(EVT VT1, EVT VT2) const {
   // MSP430 implicitly zero-extends 8-bit results in 16-bit registers.
   return false && VT1 == MVT::i8 && VT2 == MVT::i16;
-}
-
-bool MSP430TargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
-  return isZExtFree(Val.getValueType(), VT2);
 }
 
 //===----------------------------------------------------------------------===//

@@ -22,8 +22,8 @@ define dso_local i32 @used_gpr_arg(i32 noundef %a, i32 noundef %b, i32 noundef %
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mul w8, w1, w0
 ; CHECK-NEXT:    orr w0, w8, w2
-; CHECK-NEXT:    mov x1, #0
-; CHECK-NEXT:    mov x2, #0
+; CHECK-NEXT:    mov x1, #0 // =0x0
+; CHECK-NEXT:    mov x2, #0 // =0x0
 ; CHECK-NEXT:    ret
 
 entry:
@@ -37,9 +37,9 @@ define dso_local i32 @used_gpr(i32 noundef %a, i32 noundef %b, i32 noundef %c) l
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mul w8, w1, w0
 ; CHECK-NEXT:    orr w0, w8, w2
-; CHECK-NEXT:    mov x1, #0
-; CHECK-NEXT:    mov x2, #0
-; CHECK-NEXT:    mov x8, #0
+; CHECK-NEXT:    mov x1, #0 // =0x0
+; CHECK-NEXT:    mov x2, #0 // =0x0
+; CHECK-NEXT:    mov x8, #0 // =0x0
 ; CHECK-NEXT:    ret
 
 entry:
@@ -53,8 +53,8 @@ define dso_local i32 @used_arg(i32 noundef %a, i32 noundef %b, i32 noundef %c) l
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mul w8, w1, w0
 ; CHECK-NEXT:    orr w0, w8, w2
-; CHECK-NEXT:    mov x1, #0
-; CHECK-NEXT:    mov x2, #0
+; CHECK-NEXT:    mov x1, #0 // =0x0
+; CHECK-NEXT:    mov x2, #0 // =0x0
 ; CHECK-NEXT:    ret
 
 entry:
@@ -68,9 +68,9 @@ define dso_local i32 @used(i32 noundef %a, i32 noundef %b, i32 noundef %c) local
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mul w8, w1, w0
 ; CHECK-NEXT:    orr w0, w8, w2
-; CHECK-NEXT:    mov x1, #0
-; CHECK-NEXT:    mov x2, #0
-; CHECK-NEXT:    mov x8, #0
+; CHECK-NEXT:    mov x1, #0 // =0x0
+; CHECK-NEXT:    mov x2, #0 // =0x0
+; CHECK-NEXT:    mov x8, #0 // =0x0
 ; CHECK-NEXT:    ret
 
 entry:
@@ -83,16 +83,16 @@ define dso_local i32 @all_gpr_arg(i32 noundef %a, i32 noundef %b, i32 noundef %c
 ; CHECK-LABEL: all_gpr_arg:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mul w8, w1, w0
-; CHECK-NEXT:    mov x1, #0
-; CHECK-NEXT:    mov x3, #0
-; CHECK-NEXT:    mov x4, #0
+; CHECK-NEXT:    mov x1, #0 // =0x0
+; CHECK-NEXT:    mov x3, #0 // =0x0
+; CHECK-NEXT:    mov x4, #0 // =0x0
+; CHECK-NEXT:    mov x5, #0 // =0x0
+; CHECK-NEXT:    mov x6, #0 // =0x0
+; CHECK-NEXT:    mov x7, #0 // =0x0
+; CHECK-NEXT:    mov x18, #0 // =0x0
 ; CHECK-NEXT:    orr w0, w8, w2
-; CHECK-NEXT:    mov x2, #0
-; CHECK-NEXT:    mov x5, #0
-; CHECK-NEXT:    mov x6, #0
-; CHECK-NEXT:    mov x7, #0
-; CHECK-NEXT:    mov x8, #0
-; CHECK-NEXT:    mov x18, #0
+; CHECK-NEXT:    mov x2, #0 // =0x0
+; CHECK-NEXT:    mov x8, #0 // =0x0
 ; CHECK-NEXT:    ret
 
 entry:
@@ -105,25 +105,25 @@ define dso_local i32 @all_gpr(i32 noundef %a, i32 noundef %b, i32 noundef %c) lo
 ; CHECK-LABEL: all_gpr:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mul w8, w1, w0
-; CHECK-NEXT:    mov x1, #0
-; CHECK-NEXT:    mov x3, #0
-; CHECK-NEXT:    mov x4, #0
+; CHECK-NEXT:    mov x1, #0 // =0x0
+; CHECK-NEXT:    mov x3, #0 // =0x0
+; CHECK-NEXT:    mov x4, #0 // =0x0
+; CHECK-NEXT:    mov x5, #0 // =0x0
+; CHECK-NEXT:    mov x6, #0 // =0x0
+; CHECK-NEXT:    mov x7, #0 // =0x0
+; CHECK-NEXT:    mov x9, #0 // =0x0
+; CHECK-NEXT:    mov x10, #0 // =0x0
 ; CHECK-NEXT:    orr w0, w8, w2
-; CHECK-NEXT:    mov x2, #0
-; CHECK-NEXT:    mov x5, #0
-; CHECK-NEXT:    mov x6, #0
-; CHECK-NEXT:    mov x7, #0
-; CHECK-NEXT:    mov x8, #0
-; CHECK-NEXT:    mov x9, #0
-; CHECK-NEXT:    mov x10, #0
-; CHECK-NEXT:    mov x11, #0
-; CHECK-NEXT:    mov x12, #0
-; CHECK-NEXT:    mov x13, #0
-; CHECK-NEXT:    mov x14, #0
-; CHECK-NEXT:    mov x15, #0
-; CHECK-NEXT:    mov x16, #0
-; CHECK-NEXT:    mov x17, #0
-; CHECK-NEXT:    mov x18, #0
+; CHECK-NEXT:    mov x2, #0 // =0x0
+; CHECK-NEXT:    mov x8, #0 // =0x0
+; CHECK-NEXT:    mov x11, #0 // =0x0
+; CHECK-NEXT:    mov x12, #0 // =0x0
+; CHECK-NEXT:    mov x13, #0 // =0x0
+; CHECK-NEXT:    mov x14, #0 // =0x0
+; CHECK-NEXT:    mov x15, #0 // =0x0
+; CHECK-NEXT:    mov x16, #0 // =0x0
+; CHECK-NEXT:    mov x17, #0 // =0x0
+; CHECK-NEXT:    mov x18, #0 // =0x0
 ; CHECK-NEXT:    ret
 
 entry:
@@ -136,17 +136,17 @@ define dso_local i32 @all_arg(i32 noundef %a, i32 noundef %b, i32 noundef %c) lo
 ; DEFAULT-LABEL: all_arg:
 ; DEFAULT:       // %bb.0: // %entry
 ; DEFAULT-NEXT:    mul w8, w1, w0
-; DEFAULT-NEXT:    mov x1, #0
-; DEFAULT-NEXT:    mov x3, #0
-; DEFAULT-NEXT:    mov x4, #0
-; DEFAULT-NEXT:    orr w0, w8, w2
-; DEFAULT-NEXT:    mov x2, #0
-; DEFAULT-NEXT:    mov x5, #0
-; DEFAULT-NEXT:    mov x6, #0
-; DEFAULT-NEXT:    mov x7, #0
-; DEFAULT-NEXT:    mov x8, #0
-; DEFAULT-NEXT:    mov x18, #0
+; DEFAULT-NEXT:    mov x1, #0 // =0x0
+; DEFAULT-NEXT:    mov x3, #0 // =0x0
+; DEFAULT-NEXT:    mov x4, #0 // =0x0
+; DEFAULT-NEXT:    mov x5, #0 // =0x0
+; DEFAULT-NEXT:    mov x6, #0 // =0x0
+; DEFAULT-NEXT:    mov x7, #0 // =0x0
+; DEFAULT-NEXT:    mov x18, #0 // =0x0
 ; DEFAULT-NEXT:    movi v0.2d, #0000000000000000
+; DEFAULT-NEXT:    orr w0, w8, w2
+; DEFAULT-NEXT:    mov x2, #0 // =0x0
+; DEFAULT-NEXT:    mov x8, #0 // =0x0
 ; DEFAULT-NEXT:    movi v1.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v2.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v3.2d, #0000000000000000
@@ -159,17 +159,17 @@ define dso_local i32 @all_arg(i32 noundef %a, i32 noundef %b, i32 noundef %c) lo
 ; SVE-LABEL: all_arg:
 ; SVE:       // %bb.0: // %entry
 ; SVE-NEXT:    mul w8, w1, w0
-; SVE-NEXT:    mov x1, #0
-; SVE-NEXT:    mov x3, #0
-; SVE-NEXT:    mov x4, #0
-; SVE-NEXT:    orr w0, w8, w2
-; SVE-NEXT:    mov x2, #0
-; SVE-NEXT:    mov x5, #0
-; SVE-NEXT:    mov x6, #0
-; SVE-NEXT:    mov x7, #0
-; SVE-NEXT:    mov x8, #0
-; SVE-NEXT:    mov x18, #0
+; SVE-NEXT:    mov x1, #0 // =0x0
+; SVE-NEXT:    mov x3, #0 // =0x0
+; SVE-NEXT:    mov x4, #0 // =0x0
+; SVE-NEXT:    mov x5, #0 // =0x0
+; SVE-NEXT:    mov x6, #0 // =0x0
+; SVE-NEXT:    mov x7, #0 // =0x0
+; SVE-NEXT:    mov x18, #0 // =0x0
 ; SVE-NEXT:    mov z0.d, #0 // =0x0
+; SVE-NEXT:    orr w0, w8, w2
+; SVE-NEXT:    mov x2, #0 // =0x0
+; SVE-NEXT:    mov x8, #0 // =0x0
 ; SVE-NEXT:    mov z1.d, #0 // =0x0
 ; SVE-NEXT:    mov z2.d, #0 // =0x0
 ; SVE-NEXT:    mov z3.d, #0 // =0x0
@@ -193,25 +193,25 @@ define dso_local i32 @all(i32 noundef %a, i32 noundef %b, i32 noundef %c) local_
 ; DEFAULT-LABEL: all:
 ; DEFAULT:       // %bb.0: // %entry
 ; DEFAULT-NEXT:    mul w8, w1, w0
-; DEFAULT-NEXT:    mov x1, #0
-; DEFAULT-NEXT:    mov x3, #0
-; DEFAULT-NEXT:    mov x4, #0
+; DEFAULT-NEXT:    mov x1, #0 // =0x0
+; DEFAULT-NEXT:    mov x3, #0 // =0x0
+; DEFAULT-NEXT:    mov x4, #0 // =0x0
+; DEFAULT-NEXT:    mov x5, #0 // =0x0
+; DEFAULT-NEXT:    mov x6, #0 // =0x0
+; DEFAULT-NEXT:    mov x7, #0 // =0x0
+; DEFAULT-NEXT:    mov x9, #0 // =0x0
+; DEFAULT-NEXT:    mov x10, #0 // =0x0
 ; DEFAULT-NEXT:    orr w0, w8, w2
-; DEFAULT-NEXT:    mov x2, #0
-; DEFAULT-NEXT:    mov x5, #0
-; DEFAULT-NEXT:    mov x6, #0
-; DEFAULT-NEXT:    mov x7, #0
-; DEFAULT-NEXT:    mov x8, #0
-; DEFAULT-NEXT:    mov x9, #0
-; DEFAULT-NEXT:    mov x10, #0
-; DEFAULT-NEXT:    mov x11, #0
-; DEFAULT-NEXT:    mov x12, #0
-; DEFAULT-NEXT:    mov x13, #0
-; DEFAULT-NEXT:    mov x14, #0
-; DEFAULT-NEXT:    mov x15, #0
-; DEFAULT-NEXT:    mov x16, #0
-; DEFAULT-NEXT:    mov x17, #0
-; DEFAULT-NEXT:    mov x18, #0
+; DEFAULT-NEXT:    mov x2, #0 // =0x0
+; DEFAULT-NEXT:    mov x8, #0 // =0x0
+; DEFAULT-NEXT:    mov x11, #0 // =0x0
+; DEFAULT-NEXT:    mov x12, #0 // =0x0
+; DEFAULT-NEXT:    mov x13, #0 // =0x0
+; DEFAULT-NEXT:    mov x14, #0 // =0x0
+; DEFAULT-NEXT:    mov x15, #0 // =0x0
+; DEFAULT-NEXT:    mov x16, #0 // =0x0
+; DEFAULT-NEXT:    mov x17, #0 // =0x0
+; DEFAULT-NEXT:    mov x18, #0 // =0x0
 ; DEFAULT-NEXT:    movi v0.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v1.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v2.2d, #0000000000000000
@@ -241,25 +241,25 @@ define dso_local i32 @all(i32 noundef %a, i32 noundef %b, i32 noundef %c) local_
 ; SVE-LABEL: all:
 ; SVE:       // %bb.0: // %entry
 ; SVE-NEXT:    mul w8, w1, w0
-; SVE-NEXT:    mov x1, #0
-; SVE-NEXT:    mov x3, #0
-; SVE-NEXT:    mov x4, #0
+; SVE-NEXT:    mov x1, #0 // =0x0
+; SVE-NEXT:    mov x3, #0 // =0x0
+; SVE-NEXT:    mov x4, #0 // =0x0
+; SVE-NEXT:    mov x5, #0 // =0x0
+; SVE-NEXT:    mov x6, #0 // =0x0
+; SVE-NEXT:    mov x7, #0 // =0x0
+; SVE-NEXT:    mov x9, #0 // =0x0
+; SVE-NEXT:    mov x10, #0 // =0x0
 ; SVE-NEXT:    orr w0, w8, w2
-; SVE-NEXT:    mov x2, #0
-; SVE-NEXT:    mov x5, #0
-; SVE-NEXT:    mov x6, #0
-; SVE-NEXT:    mov x7, #0
-; SVE-NEXT:    mov x8, #0
-; SVE-NEXT:    mov x9, #0
-; SVE-NEXT:    mov x10, #0
-; SVE-NEXT:    mov x11, #0
-; SVE-NEXT:    mov x12, #0
-; SVE-NEXT:    mov x13, #0
-; SVE-NEXT:    mov x14, #0
-; SVE-NEXT:    mov x15, #0
-; SVE-NEXT:    mov x16, #0
-; SVE-NEXT:    mov x17, #0
-; SVE-NEXT:    mov x18, #0
+; SVE-NEXT:    mov x2, #0 // =0x0
+; SVE-NEXT:    mov x8, #0 // =0x0
+; SVE-NEXT:    mov x11, #0 // =0x0
+; SVE-NEXT:    mov x12, #0 // =0x0
+; SVE-NEXT:    mov x13, #0 // =0x0
+; SVE-NEXT:    mov x14, #0 // =0x0
+; SVE-NEXT:    mov x15, #0 // =0x0
+; SVE-NEXT:    mov x16, #0 // =0x0
+; SVE-NEXT:    mov x17, #0 // =0x0
+; SVE-NEXT:    mov x18, #0 // =0x0
 ; SVE-NEXT:    mov z0.d, #0 // =0x0
 ; SVE-NEXT:    mov z1.d, #0 // =0x0
 ; SVE-NEXT:    mov z2.d, #0 // =0x0
@@ -394,16 +394,16 @@ define dso_local double @all_gpr_arg_float(double noundef %a, float noundef %b) 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvt d1, s1
 ; CHECK-NEXT:    fmul d0, d1, d0
-; CHECK-NEXT:    mov x0, #0
-; CHECK-NEXT:    mov x1, #0
-; CHECK-NEXT:    mov x2, #0
-; CHECK-NEXT:    mov x3, #0
-; CHECK-NEXT:    mov x4, #0
-; CHECK-NEXT:    mov x5, #0
-; CHECK-NEXT:    mov x6, #0
-; CHECK-NEXT:    mov x7, #0
-; CHECK-NEXT:    mov x8, #0
-; CHECK-NEXT:    mov x18, #0
+; CHECK-NEXT:    mov x0, #0 // =0x0
+; CHECK-NEXT:    mov x1, #0 // =0x0
+; CHECK-NEXT:    mov x2, #0 // =0x0
+; CHECK-NEXT:    mov x3, #0 // =0x0
+; CHECK-NEXT:    mov x4, #0 // =0x0
+; CHECK-NEXT:    mov x5, #0 // =0x0
+; CHECK-NEXT:    mov x6, #0 // =0x0
+; CHECK-NEXT:    mov x7, #0 // =0x0
+; CHECK-NEXT:    mov x8, #0 // =0x0
+; CHECK-NEXT:    mov x18, #0 // =0x0
 ; CHECK-NEXT:    ret
 
 entry:
@@ -417,25 +417,25 @@ define dso_local double @all_gpr_float(double noundef %a, float noundef %b) loca
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvt d1, s1
 ; CHECK-NEXT:    fmul d0, d1, d0
-; CHECK-NEXT:    mov x0, #0
-; CHECK-NEXT:    mov x1, #0
-; CHECK-NEXT:    mov x2, #0
-; CHECK-NEXT:    mov x3, #0
-; CHECK-NEXT:    mov x4, #0
-; CHECK-NEXT:    mov x5, #0
-; CHECK-NEXT:    mov x6, #0
-; CHECK-NEXT:    mov x7, #0
-; CHECK-NEXT:    mov x8, #0
-; CHECK-NEXT:    mov x9, #0
-; CHECK-NEXT:    mov x10, #0
-; CHECK-NEXT:    mov x11, #0
-; CHECK-NEXT:    mov x12, #0
-; CHECK-NEXT:    mov x13, #0
-; CHECK-NEXT:    mov x14, #0
-; CHECK-NEXT:    mov x15, #0
-; CHECK-NEXT:    mov x16, #0
-; CHECK-NEXT:    mov x17, #0
-; CHECK-NEXT:    mov x18, #0
+; CHECK-NEXT:    mov x0, #0 // =0x0
+; CHECK-NEXT:    mov x1, #0 // =0x0
+; CHECK-NEXT:    mov x2, #0 // =0x0
+; CHECK-NEXT:    mov x3, #0 // =0x0
+; CHECK-NEXT:    mov x4, #0 // =0x0
+; CHECK-NEXT:    mov x5, #0 // =0x0
+; CHECK-NEXT:    mov x6, #0 // =0x0
+; CHECK-NEXT:    mov x7, #0 // =0x0
+; CHECK-NEXT:    mov x8, #0 // =0x0
+; CHECK-NEXT:    mov x9, #0 // =0x0
+; CHECK-NEXT:    mov x10, #0 // =0x0
+; CHECK-NEXT:    mov x11, #0 // =0x0
+; CHECK-NEXT:    mov x12, #0 // =0x0
+; CHECK-NEXT:    mov x13, #0 // =0x0
+; CHECK-NEXT:    mov x14, #0 // =0x0
+; CHECK-NEXT:    mov x15, #0 // =0x0
+; CHECK-NEXT:    mov x16, #0 // =0x0
+; CHECK-NEXT:    mov x17, #0 // =0x0
+; CHECK-NEXT:    mov x18, #0 // =0x0
 ; CHECK-NEXT:    ret
 
 entry:
@@ -449,16 +449,16 @@ define dso_local double @all_arg_float(double noundef %a, float noundef %b) loca
 ; DEFAULT:       // %bb.0: // %entry
 ; DEFAULT-NEXT:    fcvt d1, s1
 ; DEFAULT-NEXT:    fmul d0, d1, d0
-; DEFAULT-NEXT:    mov x0, #0
-; DEFAULT-NEXT:    mov x1, #0
-; DEFAULT-NEXT:    mov x2, #0
-; DEFAULT-NEXT:    mov x3, #0
-; DEFAULT-NEXT:    mov x4, #0
-; DEFAULT-NEXT:    mov x5, #0
-; DEFAULT-NEXT:    mov x6, #0
-; DEFAULT-NEXT:    mov x7, #0
-; DEFAULT-NEXT:    mov x8, #0
-; DEFAULT-NEXT:    mov x18, #0
+; DEFAULT-NEXT:    mov x0, #0 // =0x0
+; DEFAULT-NEXT:    mov x1, #0 // =0x0
+; DEFAULT-NEXT:    mov x2, #0 // =0x0
+; DEFAULT-NEXT:    mov x3, #0 // =0x0
+; DEFAULT-NEXT:    mov x4, #0 // =0x0
+; DEFAULT-NEXT:    mov x5, #0 // =0x0
+; DEFAULT-NEXT:    mov x6, #0 // =0x0
+; DEFAULT-NEXT:    mov x7, #0 // =0x0
+; DEFAULT-NEXT:    mov x8, #0 // =0x0
+; DEFAULT-NEXT:    mov x18, #0 // =0x0
 ; DEFAULT-NEXT:    movi v1.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v2.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v3.2d, #0000000000000000
@@ -472,16 +472,16 @@ define dso_local double @all_arg_float(double noundef %a, float noundef %b) loca
 ; SVE:       // %bb.0: // %entry
 ; SVE-NEXT:    fcvt d1, s1
 ; SVE-NEXT:    fmul d0, d1, d0
-; SVE-NEXT:    mov x0, #0
-; SVE-NEXT:    mov x1, #0
-; SVE-NEXT:    mov x2, #0
-; SVE-NEXT:    mov x3, #0
-; SVE-NEXT:    mov x4, #0
-; SVE-NEXT:    mov x5, #0
-; SVE-NEXT:    mov x6, #0
-; SVE-NEXT:    mov x7, #0
-; SVE-NEXT:    mov x8, #0
-; SVE-NEXT:    mov x18, #0
+; SVE-NEXT:    mov x0, #0 // =0x0
+; SVE-NEXT:    mov x1, #0 // =0x0
+; SVE-NEXT:    mov x2, #0 // =0x0
+; SVE-NEXT:    mov x3, #0 // =0x0
+; SVE-NEXT:    mov x4, #0 // =0x0
+; SVE-NEXT:    mov x5, #0 // =0x0
+; SVE-NEXT:    mov x6, #0 // =0x0
+; SVE-NEXT:    mov x7, #0 // =0x0
+; SVE-NEXT:    mov x8, #0 // =0x0
+; SVE-NEXT:    mov x18, #0 // =0x0
 ; SVE-NEXT:    mov z1.d, #0 // =0x0
 ; SVE-NEXT:    mov z2.d, #0 // =0x0
 ; SVE-NEXT:    mov z3.d, #0 // =0x0
@@ -506,25 +506,25 @@ define dso_local double @all_float(double noundef %a, float noundef %b) local_un
 ; DEFAULT:       // %bb.0: // %entry
 ; DEFAULT-NEXT:    fcvt d1, s1
 ; DEFAULT-NEXT:    fmul d0, d1, d0
-; DEFAULT-NEXT:    mov x0, #0
-; DEFAULT-NEXT:    mov x1, #0
-; DEFAULT-NEXT:    mov x2, #0
-; DEFAULT-NEXT:    mov x3, #0
-; DEFAULT-NEXT:    mov x4, #0
-; DEFAULT-NEXT:    mov x5, #0
-; DEFAULT-NEXT:    mov x6, #0
-; DEFAULT-NEXT:    mov x7, #0
-; DEFAULT-NEXT:    mov x8, #0
-; DEFAULT-NEXT:    mov x9, #0
-; DEFAULT-NEXT:    mov x10, #0
-; DEFAULT-NEXT:    mov x11, #0
-; DEFAULT-NEXT:    mov x12, #0
-; DEFAULT-NEXT:    mov x13, #0
-; DEFAULT-NEXT:    mov x14, #0
-; DEFAULT-NEXT:    mov x15, #0
-; DEFAULT-NEXT:    mov x16, #0
-; DEFAULT-NEXT:    mov x17, #0
-; DEFAULT-NEXT:    mov x18, #0
+; DEFAULT-NEXT:    mov x0, #0 // =0x0
+; DEFAULT-NEXT:    mov x1, #0 // =0x0
+; DEFAULT-NEXT:    mov x2, #0 // =0x0
+; DEFAULT-NEXT:    mov x3, #0 // =0x0
+; DEFAULT-NEXT:    mov x4, #0 // =0x0
+; DEFAULT-NEXT:    mov x5, #0 // =0x0
+; DEFAULT-NEXT:    mov x6, #0 // =0x0
+; DEFAULT-NEXT:    mov x7, #0 // =0x0
+; DEFAULT-NEXT:    mov x8, #0 // =0x0
+; DEFAULT-NEXT:    mov x9, #0 // =0x0
+; DEFAULT-NEXT:    mov x10, #0 // =0x0
+; DEFAULT-NEXT:    mov x11, #0 // =0x0
+; DEFAULT-NEXT:    mov x12, #0 // =0x0
+; DEFAULT-NEXT:    mov x13, #0 // =0x0
+; DEFAULT-NEXT:    mov x14, #0 // =0x0
+; DEFAULT-NEXT:    mov x15, #0 // =0x0
+; DEFAULT-NEXT:    mov x16, #0 // =0x0
+; DEFAULT-NEXT:    mov x17, #0 // =0x0
+; DEFAULT-NEXT:    mov x18, #0 // =0x0
 ; DEFAULT-NEXT:    movi v1.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v2.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v3.2d, #0000000000000000
@@ -554,25 +554,25 @@ define dso_local double @all_float(double noundef %a, float noundef %b) local_un
 ; SVE:       // %bb.0: // %entry
 ; SVE-NEXT:    fcvt d1, s1
 ; SVE-NEXT:    fmul d0, d1, d0
-; SVE-NEXT:    mov x0, #0
-; SVE-NEXT:    mov x1, #0
-; SVE-NEXT:    mov x2, #0
-; SVE-NEXT:    mov x3, #0
-; SVE-NEXT:    mov x4, #0
-; SVE-NEXT:    mov x5, #0
-; SVE-NEXT:    mov x6, #0
-; SVE-NEXT:    mov x7, #0
-; SVE-NEXT:    mov x8, #0
-; SVE-NEXT:    mov x9, #0
-; SVE-NEXT:    mov x10, #0
-; SVE-NEXT:    mov x11, #0
-; SVE-NEXT:    mov x12, #0
-; SVE-NEXT:    mov x13, #0
-; SVE-NEXT:    mov x14, #0
-; SVE-NEXT:    mov x15, #0
-; SVE-NEXT:    mov x16, #0
-; SVE-NEXT:    mov x17, #0
-; SVE-NEXT:    mov x18, #0
+; SVE-NEXT:    mov x0, #0 // =0x0
+; SVE-NEXT:    mov x1, #0 // =0x0
+; SVE-NEXT:    mov x2, #0 // =0x0
+; SVE-NEXT:    mov x3, #0 // =0x0
+; SVE-NEXT:    mov x4, #0 // =0x0
+; SVE-NEXT:    mov x5, #0 // =0x0
+; SVE-NEXT:    mov x6, #0 // =0x0
+; SVE-NEXT:    mov x7, #0 // =0x0
+; SVE-NEXT:    mov x8, #0 // =0x0
+; SVE-NEXT:    mov x9, #0 // =0x0
+; SVE-NEXT:    mov x10, #0 // =0x0
+; SVE-NEXT:    mov x11, #0 // =0x0
+; SVE-NEXT:    mov x12, #0 // =0x0
+; SVE-NEXT:    mov x13, #0 // =0x0
+; SVE-NEXT:    mov x14, #0 // =0x0
+; SVE-NEXT:    mov x15, #0 // =0x0
+; SVE-NEXT:    mov x16, #0 // =0x0
+; SVE-NEXT:    mov x17, #0 // =0x0
+; SVE-NEXT:    mov x18, #0 // =0x0
 ; SVE-NEXT:    mov z1.d, #0 // =0x0
 ; SVE-NEXT:    mov z2.d, #0 // =0x0
 ; SVE-NEXT:    mov z3.d, #0 // =0x0

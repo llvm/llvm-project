@@ -5,17 +5,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
-// UNSUPPORTED: libcpp-has-no-incomplete-format
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+
+// TODO FMT This test should not require std::to_chars(floating-point)
+// XFAIL: availability-fp_to_chars-missing
 
 // TODO FMT Investigate Windows issues.
-// UNSUPPORTED: msvc, target={{.+}}-windows-gnu
-
-// TODO FMT It seems GCC uses too much memory in the CI and fails.
-// UNSUPPORTED: gcc-12
+// XFAIL: msvc
 
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ja_JP.UTF-8
@@ -140,7 +138,7 @@ static void test_valid_values() {
 
   // Use supplied locale (ja_JP).
   // This locale has a different alternate, but not on all platforms
-#if defined(_WIN32) || defined(__APPLE__) || defined(_AIX)
+#if defined(_WIN32) || defined(__APPLE__) || defined(_AIX) || defined(__FreeBSD__)
   check(loc,
         SV("%u='7'\t%Ou='7'\t%w='0'\t%Ow='0'\t%a='日'\t%A='日曜日'\n"),
         lfmt,
@@ -173,7 +171,7 @@ static void test_valid_values() {
         SV("%u='7'\t%Ou='7'\t%w='0'\t%Ow='0'\t%a='日'\t%A='日曜日'\n"),
         lfmt,
         std::chrono::weekday_last{std::chrono::weekday(7)});
-#else  // defined(_WIN32) || defined(__APPLE__) || defined(_AIX)
+#else  // defined(_WIN32) || defined(__APPLE__) || defined(_AIX) || defined(__FreeBSD__)
   check(loc,
         SV("%u='7'\t%Ou='七'\t%w='0'\t%Ow='〇'\t%a='日'\t%A='日曜日'\n"),
         lfmt,
@@ -206,7 +204,7 @@ static void test_valid_values() {
         SV("%u='7'\t%Ou='七'\t%w='0'\t%Ow='〇'\t%a='日'\t%A='日曜日'\n"),
         lfmt,
         std::chrono::weekday_last{std::chrono::weekday(7)});
-#endif // defined(_WIN32) || defined(__APPLE__) || defined(_AIX)
+#endif // defined(_WIN32) || defined(__APPLE__) || defined(_AIX) || defined(__FreeBSD__)
 
   std::locale::global(std::locale::classic());
 }
@@ -214,16 +212,16 @@ static void test_valid_values() {
 template <class CharT>
 static void test_invalid_values() {
   // Test that %a and %A throw an exception.
-  check_exception("formatting a weekday name needs a valid weekday",
+  check_exception("Formatting a weekday name needs a valid weekday",
                   SV("{:%a}"),
                   std::chrono::weekday_last{std::chrono::weekday(8)});
-  check_exception("formatting a weekday name needs a valid weekday",
+  check_exception("Formatting a weekday name needs a valid weekday",
                   SV("{:%a}"),
                   std::chrono::weekday_last{std::chrono::weekday(255)});
-  check_exception("formatting a weekday name needs a valid weekday",
+  check_exception("Formatting a weekday name needs a valid weekday",
                   SV("{:%A}"),
                   std::chrono::weekday_last{std::chrono::weekday(8)});
-  check_exception("formatting a weekday name needs a valid weekday",
+  check_exception("Formatting a weekday name needs a valid weekday",
                   SV("{:%A}"),
                   std::chrono::weekday_last{std::chrono::weekday(255)});
 
@@ -233,7 +231,7 @@ static void test_invalid_values() {
   const std::locale loc(LOCALE_ja_JP_UTF_8);
   std::locale::global(std::locale(LOCALE_fr_FR_UTF_8));
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__FreeBSD__)
   // Non localized output using C-locale
   check(SV("%u='8'\t%Ou='8'\t%w='8'\t%Ow='8'\n"), fmt, std::chrono::weekday_last{std::chrono::weekday(8)});
   check(SV("%u='255'\t%Ou='255'\t%w='255'\t%Ow='255'\n"), fmt, std::chrono::weekday_last{std::chrono::weekday(255)});
@@ -248,7 +246,19 @@ static void test_invalid_values() {
         SV("%u='255'\t%Ou='255'\t%w='255'\t%Ow='255'\n"),
         lfmt,
         std::chrono::weekday_last{std::chrono::weekday(255)});
-#elif defined(_AIX) // defined(__APPLE__)
+#elif defined(_WIN32) // defined(__APPLE__) || defined(__FreeBSD__)
+  // Non localized output using C-locale
+  check(SV("%u=''\t%Ou=''\t%w=''\t%Ow=''\n"), fmt, std::chrono::weekday_last{std::chrono::weekday(8)});
+  check(SV("%u=''\t%Ou=''\t%w=''\t%Ow=''\n"), fmt, std::chrono::weekday_last{std::chrono::weekday(255)});
+
+  // Use the global locale (fr_FR)
+  check(SV("%u=''\t%Ou=''\t%w=''\t%Ow=''\n"), lfmt, std::chrono::weekday_last{std::chrono::weekday(8)});
+  check(SV("%u=''\t%Ou=''\t%w=''\t%Ow=''\n"), lfmt, std::chrono::weekday_last{std::chrono::weekday(255)});
+
+  // Use supplied locale (ja_JP). This locale has a different alternate.
+  check(loc, SV("%u=''\t%Ou=''\t%w=''\t%Ow=''\n"), lfmt, std::chrono::weekday_last{std::chrono::weekday(8)});
+  check(loc, SV("%u=''\t%Ou=''\t%w=''\t%Ow=''\n"), lfmt, std::chrono::weekday_last{std::chrono::weekday(255)});
+#elif defined(_AIX)   // defined(__APPLE__) || defined(__FreeBSD__)
   // Non localized output using C-locale
   check(SV("%u='8'\t%Ou='8'\t%w='8'\t%Ow='8'\n"), fmt, std::chrono::weekday_last{std::chrono::weekday(8)});
   check(SV("%u='5'\t%Ou='5'\t%w='5'\t%Ow='5'\n"), fmt, std::chrono::weekday_last{std::chrono::weekday(255)});
@@ -260,7 +270,7 @@ static void test_invalid_values() {
   // Use supplied locale (ja_JP). This locale has a different alternate.
   check(loc, SV("%u='8'\t%Ou='8'\t%w='8'\t%Ow='8'\n"), lfmt, std::chrono::weekday_last{std::chrono::weekday(8)});
   check(loc, SV("%u='5'\t%Ou='5'\t%w='5'\t%Ow='5'\n"), lfmt, std::chrono::weekday_last{std::chrono::weekday(255)});
-#else               //  defined(__APPLE__)
+#else                 //  defined(__APPLE__) || defined(__FreeBSD__)
   // Non localized output using C-locale
   check(SV("%u='1'\t%Ou='1'\t%w='8'\t%Ow='8'\n"), fmt, std::chrono::weekday_last{std::chrono::weekday(8)});
   check(SV("%u='3'\t%Ou='3'\t%w='255'\t%Ow='255'\n"), fmt, std::chrono::weekday_last{std::chrono::weekday(255)});
@@ -272,7 +282,7 @@ static void test_invalid_values() {
   // Use supplied locale (ja_JP). This locale has a different alternate.
   check(loc, SV("%u='1'\t%Ou='一'\t%w='8'\t%Ow='八'\n"), lfmt, std::chrono::weekday_last{std::chrono::weekday(8)});
   check(loc, SV("%u='3'\t%Ou='三'\t%w='255'\t%Ow='255'\n"), lfmt, std::chrono::weekday_last{std::chrono::weekday(255)});
-#endif              // defined(__APPLE__)
+#endif                // defined(__APPLE__) || defined(__FreeBSD__)
 
   std::locale::global(std::locale::classic());
 }
@@ -286,9 +296,10 @@ static void test() {
                              std::chrono::weekday_last{std::chrono::weekday(0)});
 
   check_exception(
-      "Expected '%' or '}' in the chrono format-string", SV("{:A"), std::chrono::weekday_last{std::chrono::weekday(0)});
-  check_exception("The chrono-specs contains a '{'", SV("{:%%{"), std::chrono::weekday_last{std::chrono::weekday(0)});
-  check_exception("End of input while parsing the modifier chrono conversion-spec",
+      "The format specifier expects a '%' or a '}'", SV("{:A"), std::chrono::weekday_last{std::chrono::weekday(0)});
+  check_exception(
+      "The chrono specifiers contain a '{'", SV("{:%%{"), std::chrono::weekday_last{std::chrono::weekday(0)});
+  check_exception("End of input while parsing a conversion specifier",
                   SV("{:%"),
                   std::chrono::weekday_last{std::chrono::weekday(0)});
   check_exception(
@@ -297,9 +308,8 @@ static void test() {
       "End of input while parsing the modifier O", SV("{:%O"), std::chrono::weekday_last{std::chrono::weekday(0)});
 
   // Precision not allowed
-  check_exception("Expected '%' or '}' in the chrono format-string",
-                  SV("{:.3}"),
-                  std::chrono::weekday_last{std::chrono::weekday(0)});
+  check_exception(
+      "The format specifier expects a '%' or a '}'", SV("{:.3}"), std::chrono::weekday_last{std::chrono::weekday(0)});
 }
 
 int main(int, char**) {

@@ -28,7 +28,7 @@ std::string FormatExtensionFlags(uint64_t Flags) {
 
   Features.erase(std::remove_if(Features.begin(), Features.end(),
                                 [](StringRef extension) {
-                                  return extension.startswith("-");
+                                  return extension.starts_with("-");
                                 }),
                  Features.end());
 

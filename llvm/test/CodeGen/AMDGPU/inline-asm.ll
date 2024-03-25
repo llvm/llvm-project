@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck  --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck  --check-prefix=CHECK %s
 
 ; CHECK-LABEL: {{^}}inline_asm:
 ; CHECK: s_endpgm
@@ -205,9 +205,8 @@ entry:
 
 ; FIXME: Should not have intermediate sgprs
 ; CHECK-LABEL: {{^}}i64_imm_input_phys_vgpr:
-; CHECK: s_mov_b64 s[0:1], 0x1e240
-; CHECK: v_mov_b32_e32 v0, s0
-; CHECK: v_mov_b32_e32 v1, s1
+; CHECK: v_mov_b32_e32 v0, 0x1e240
+; CHECK: v_mov_b32_e32 v1, 0
 ; CHECK: use v[0:1]
 define amdgpu_kernel void @i64_imm_input_phys_vgpr() {
 entry:
@@ -299,9 +298,9 @@ entry:
 ; Check aggregate types are handled properly.
 ; CHECK-LABEL: mad_u64
 ; CHECK: v_mad_u64_u32
-define void @mad_u64(i32 %x) {
+define void @mad_u64(i32 %x, i1 %c0) {
 entry:
-  br i1 undef, label %exit, label %false
+  br i1 %c0, label %exit, label %false
 
 false:
   %s0 = tail call { i64, i64 } asm sideeffect "v_mad_u64_u32 $0, $1, $2, $3, $4", "=v,=s,v,v,v"(i32 -766435501, i32 %x, i64 0)

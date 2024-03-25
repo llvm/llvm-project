@@ -87,6 +87,18 @@ struct Builder : RecursiveASTVisitor<Builder> {
 ASTImporterLookupTable::ASTImporterLookupTable(TranslationUnitDecl &TU) {
   Builder B(*this);
   B.TraverseDecl(&TU);
+  // The VaList declaration may be created on demand only or not traversed.
+  // To ensure it is present and found during import, add it to the table now.
+  if (auto *D =
+          dyn_cast_or_null<NamedDecl>(TU.getASTContext().getVaListTagDecl())) {
+    // On some platforms (AArch64) the VaList declaration can be inside a 'std'
+    // namespace. This is handled specially and not visible by AST traversal.
+    // ASTImporter must be able to find this namespace to import the VaList
+    // declaration (and the namespace) correctly.
+    if (auto *Ns = dyn_cast<NamespaceDecl>(D->getDeclContext()))
+      add(&TU, Ns);
+    add(D->getDeclContext(), D);
+  }
 }
 
 void ASTImporterLookupTable::add(DeclContext *DC, NamedDecl *ND) {

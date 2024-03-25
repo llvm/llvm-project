@@ -13,7 +13,7 @@
 
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -64,10 +64,17 @@ static ISD::NodeType getPreferredExtendForValue(const Instruction *I) {
   // can be exposed.
   ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
   unsigned NumOfSigned = 0, NumOfUnsigned = 0;
-  for (const User *U : I->users()) {
-    if (const auto *CI = dyn_cast<CmpInst>(U)) {
+  for (const Use &U : I->uses()) {
+    if (const auto *CI = dyn_cast<CmpInst>(U.getUser())) {
       NumOfSigned += CI->isSigned();
       NumOfUnsigned += CI->isUnsigned();
+    }
+    if (const auto *CallI = dyn_cast<CallBase>(U.getUser())) {
+      if (!CallI->isArgOperand(&U))
+        continue;
+      unsigned ArgNo = CallI->getArgOperandNo(&U);
+      NumOfUnsigned += CallI->paramHasAttr(ArgNo, Attribute::ZExt);
+      NumOfSigned += CallI->paramHasAttr(ArgNo, Attribute::SExt);
     }
   }
   if (NumOfSigned > NumOfUnsigned)
@@ -83,7 +90,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   TLI = MF->getSubtarget().getTargetLowering();
   RegInfo = &MF->getRegInfo();
   const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
-  DA = DAG->getDivergenceAnalysis();
+  UA = DAG->getUniformityInfo();
 
   // Check whether the function can return without sret-demotion.
   SmallVector<ISD::OutputArg, 4> Outs;
@@ -128,20 +135,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (const Instruction &I : BB) {
       if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
         Type *Ty = AI->getAllocatedType();
-        Align TyPrefAlign = MF->getDataLayout().getPrefTypeAlign(Ty);
-        // The "specified" alignment is the alignment written on the alloca,
-        // or the preferred alignment of the type if none is specified.
-        //
-        // (Unspecified alignment on allocas will be going away soon.)
-        Align SpecifiedAlign = AI->getAlign();
-
-        // If the preferred alignment of the type is higher than the specified
-        // alignment of the alloca, promote the alignment, as long as it doesn't
-        // require realigning the stack.
-        //
-        // FIXME: Do we really want to second-guess the IR in isel?
-        Align Alignment =
-            std::max(std::min(TyPrefAlign, StackAlign), SpecifiedAlign);
+        Align Alignment = AI->getAlign();
 
         // Static allocas can be folded into the initial stack frame
         // adjustment. For targets that don't realign the stack, don't
@@ -165,9 +159,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
                                                               false, AI);
           }
 
-          // Scalable vectors may need a special StackID to distinguish
-          // them from other (fixed size) stack objects.
-          if (isa<ScalableVectorType>(Ty))
+          // Scalable vectors and structures that contain scalable vectors may
+          // need a special StackID to distinguish them from other (fixed size)
+          // stack objects.
+          if (Ty->isScalableTy())
             MF->getFrameInfo().setStackID(FrameIndex,
                                           TFI->getStackIDForScalableVectors());
 
@@ -254,7 +249,8 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
                "WinEHPrepare failed to remove PHIs from imaginary BBs");
         continue;
       }
-      if (isa<FuncletPadInst>(PadInst))
+      if (isa<FuncletPadInst>(PadInst) &&
+          Personality != EHPersonality::Wasm_CXX)
         assert(&*BB.begin() == PadInst && "WinEHPrepare failed to demote PHIs");
     }
 
@@ -305,18 +301,18 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
       for (WinEHHandlerType &H : TBME.HandlerArray) {
         if (H.Handler)
-          H.Handler = MBBMap[H.Handler.get<const BasicBlock *>()];
+          H.Handler = MBBMap[cast<const BasicBlock *>(H.Handler)];
       }
     }
     for (CxxUnwindMapEntry &UME : EHInfo.CxxUnwindMap)
       if (UME.Cleanup)
-        UME.Cleanup = MBBMap[UME.Cleanup.get<const BasicBlock *>()];
+        UME.Cleanup = MBBMap[cast<const BasicBlock *>(UME.Cleanup)];
     for (SEHUnwindMapEntry &UME : EHInfo.SEHUnwindMap) {
-      const auto *BB = UME.Handler.get<const BasicBlock *>();
+      const auto *BB = cast<const BasicBlock *>(UME.Handler);
       UME.Handler = MBBMap[BB];
     }
     for (ClrEHUnwindMapEntry &CME : EHInfo.ClrEHUnwindMap) {
-      const auto *BB = CME.Handler.get<const BasicBlock *>();
+      const auto *BB = cast<const BasicBlock *>(CME.Handler);
       CME.Handler = MBBMap[BB];
     }
   } else if (Personality == EHPersonality::Wasm_CXX) {
@@ -326,18 +322,18 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     // Map all BB references in the Wasm EH data to MBBs.
     DenseMap<BBOrMBB, BBOrMBB> SrcToUnwindDest;
     for (auto &KV : EHInfo.SrcToUnwindDest) {
-      const auto *Src = KV.first.get<const BasicBlock *>();
-      const auto *Dest = KV.second.get<const BasicBlock *>();
+      const auto *Src = cast<const BasicBlock *>(KV.first);
+      const auto *Dest = cast<const BasicBlock *>(KV.second);
       SrcToUnwindDest[MBBMap[Src]] = MBBMap[Dest];
     }
     EHInfo.SrcToUnwindDest = std::move(SrcToUnwindDest);
     DenseMap<BBOrMBB, SmallPtrSet<BBOrMBB, 4>> UnwindDestToSrcs;
     for (auto &KV : EHInfo.UnwindDestToSrcs) {
-      const auto *Dest = KV.first.get<const BasicBlock *>();
+      const auto *Dest = cast<const BasicBlock *>(KV.first);
       UnwindDestToSrcs[MBBMap[Dest]] = SmallPtrSet<BBOrMBB, 4>();
       for (const auto P : KV.second)
         UnwindDestToSrcs[MBBMap[Dest]].insert(
-            MBBMap[P.get<const BasicBlock *>()]);
+            MBBMap[cast<const BasicBlock *>(P)]);
     }
     EHInfo.UnwindDestToSrcs = std::move(UnwindDestToSrcs);
   }
@@ -361,6 +357,8 @@ void FunctionLoweringInfo::clear() {
   StatepointStackSlots.clear();
   StatepointRelocationMaps.clear();
   PreferredExtendType.clear();
+  PreprocessedDbgDeclares.clear();
+  PreprocessedDVRDeclares.clear();
 }
 
 /// CreateReg - Allocate a single virtual register for the given type.
@@ -380,8 +378,7 @@ Register FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
   ComputeValueVTs(*TLI, MF->getDataLayout(), Ty, ValueVTs);
 
   Register FirstReg;
-  for (unsigned Value = 0, e = ValueVTs.size(); Value != e; ++Value) {
-    EVT ValueVT = ValueVTs[Value];
+  for (EVT ValueVT : ValueVTs) {
     MVT RegisterVT = TLI->getRegisterType(Ty->getContext(), ValueVT);
 
     unsigned NumRegs = TLI->getNumRegisters(Ty->getContext(), ValueVT);
@@ -394,8 +391,18 @@ Register FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
 }
 
 Register FunctionLoweringInfo::CreateRegs(const Value *V) {
-  return CreateRegs(V->getType(), DA && DA->isDivergent(V) &&
-                    !TLI->requiresUniformRegister(*MF, V));
+  return CreateRegs(V->getType(), UA && UA->isDivergent(V) &&
+                                      !TLI->requiresUniformRegister(*MF, V));
+}
+
+Register FunctionLoweringInfo::InitializeRegForValue(const Value *V) {
+  // Tokens live in vregs only when used for convergence control.
+  if (V->getType()->isTokenTy() && !isa<ConvergenceControlInst>(V))
+    return 0;
+  Register &R = ValueMap[V];
+  assert(R == Register() && "Already initialized this value register!");
+  assert(VirtReg2Value.empty());
+  return R = CreateRegs(V);
 }
 
 /// GetLiveOutRegInfo - Gets LiveOutInfo for a register, returning NULL if the
@@ -435,7 +442,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
 
   if (TLI->getNumRegisters(PN->getContext(), IntVT) != 1)
     return;
-  IntVT = TLI->getTypeToTransformTo(PN->getContext(), IntVT);
+  IntVT = TLI->getRegisterType(PN->getContext(), IntVT);
   unsigned BitWidth = IntVT.getSizeInBits();
 
   auto It = ValueMap.find(PN);
@@ -517,7 +524,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
       return;
     }
     DestLOI.NumSignBits = std::min(DestLOI.NumSignBits, SrcLOI->NumSignBits);
-    DestLOI.Known = KnownBits::commonBits(DestLOI.Known, SrcLOI->Known);
+    DestLOI.Known = DestLOI.Known.intersectWith(SrcLOI->Known);
   }
 }
 

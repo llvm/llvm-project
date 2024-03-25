@@ -8,9 +8,9 @@
 
 #include "clang/Basic/TargetID.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/Triple.h"
 #include <map>
 #include <optional>
 
@@ -133,7 +133,7 @@ std::string getCanonicalTargetID(llvm::StringRef Processor,
   std::map<const llvm::StringRef, bool> OrderedMap;
   for (const auto &F : Features)
     OrderedMap[F.first()] = F.second;
-  for (auto F : OrderedMap)
+  for (const auto &F : OrderedMap)
     TargetID = TargetID + ':' + F.first.str() + (F.second ? "+" : "-");
   return TargetID;
 }

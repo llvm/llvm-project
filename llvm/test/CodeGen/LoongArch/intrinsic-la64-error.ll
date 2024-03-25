@@ -8,76 +8,76 @@ declare i64 @llvm.loongarch.csrwr.d(i64, i32 immarg)
 declare i64 @llvm.loongarch.csrxchg.d(i64, i64, i32 immarg)
 
 define i64 @csrrd_d_imm_out_of_hi_range() nounwind {
-; CHECK: argument to 'llvm.loongarch.csrrd.d' out of range
+; CHECK: llvm.loongarch.csrrd.d: argument out of range
 entry:
   %0 = call i64 @llvm.loongarch.csrrd.d(i32 16384)
   ret i64 %0
 }
 
 define i64 @csrrd_d_imm_out_of_lo_range() nounwind {
-; CHECK: argument to 'llvm.loongarch.csrrd.d' out of range
+; CHECK: llvm.loongarch.csrrd.d: argument out of range
 entry:
   %0 = call i64 @llvm.loongarch.csrrd.d(i32 -1)
   ret i64 %0
 }
 
 define i64 @csrwr_d_imm_out_of_hi_range(i64 %a) nounwind {
-; CHECK: argument to 'llvm.loongarch.csrwr.d' out of range
+; CHECK: llvm.loongarch.csrwr.d: argument out of range
 entry:
   %0 = call i64 @llvm.loongarch.csrwr.d(i64 %a, i32 16384)
   ret i64 %0
 }
 
 define i64 @csrwr_d_imm_out_of_lo_range(i64 %a) nounwind {
-; CHECK: argument to 'llvm.loongarch.csrwr.d' out of range
+; CHECK: llvm.loongarch.csrwr.d: argument out of range
 entry:
   %0 = call i64 @llvm.loongarch.csrwr.d(i64 %a, i32 -1)
   ret i64 %0
 }
 
 define i64 @csrxchg_d_imm_out_of_hi_range(i64 %a, i64 %b) nounwind {
-; CHECK: argument to 'llvm.loongarch.csrxchg.d' out of range
+; CHECK: llvm.loongarch.csrxchg.d: argument out of range
 entry:
   %0 = call i64 @llvm.loongarch.csrxchg.d(i64 %a, i64 %b, i32 16384)
   ret i64 %0
 }
 
 define i64 @csrxchg_d_imm_out_of_lo_range(i64 %a, i64 %b) nounwind {
-; CHECK: argument to 'llvm.loongarch.csrxchg.d' out of range
+; CHECK: llvm.loongarch.csrxchg.d: argument out of range
 entry:
   %0 = call i64 @llvm.loongarch.csrxchg.d(i64 %a, i64 %b, i32 -1)
   ret i64 %0
 }
 
 define void @cacop_w(i32 %a) nounwind {
-; CHECK: llvm.loongarch.cacop.w requires target: loongarch32
+; CHECK: llvm.loongarch.cacop.w: requires loongarch32
   call void @llvm.loongarch.cacop.w(i32 1, i32 %a, i32 4)
   ret void
 }
 
 define void @cacop_arg0_out_of_hi_range(i64 %a) nounwind {
-; CHECK: argument to 'llvm.loongarch.cacop.d' out of range
+; CHECK: llvm.loongarch.cacop.d: argument out of range
 entry:
   call void @llvm.loongarch.cacop.d(i64 32, i64 %a, i64 1024)
   ret void
 }
 
 define void @cacop_arg0_out_of_lo_range(i64 %a) nounwind {
-; CHECK: argument to 'llvm.loongarch.cacop.d' out of range
+; CHECK: llvm.loongarch.cacop.d: argument out of range
 entry:
   call void @llvm.loongarch.cacop.d(i64 -1, i64 %a, i64 1024)
   ret void
 }
 
 define void @cacop_arg2_out_of_hi_range(i64 %a) nounwind {
-; CHECK: argument to 'llvm.loongarch.cacop.d' out of range
+; CHECK: llvm.loongarch.cacop.d: argument out of range
 entry:
   call void @llvm.loongarch.cacop.d(i64 1, i64 %a, i64 4096)
   ret void
 }
 
 define void @cacop_arg2_out_of_lo_range(i64 %a) nounwind {
-; CHECK: argument to 'llvm.loongarch.cacop.d' out of range
+; CHECK: llvm.loongarch.cacop.d: argument out of range
 entry:
   call void @llvm.loongarch.cacop.d(i64 1, i64 %a, i64 -4096)
   ret void

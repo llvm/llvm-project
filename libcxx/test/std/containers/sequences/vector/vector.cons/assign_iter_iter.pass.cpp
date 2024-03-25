@@ -71,7 +71,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
     std::vector<int> dst(10);
 
-    size_t n = dst.capacity() * 2;
+    std::size_t n = dst.capacity() * 2;
     std::vector<int> src(n);
 
     dst.assign(It(src.data()), It(src.data() + src.size()));

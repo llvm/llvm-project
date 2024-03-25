@@ -63,23 +63,23 @@
 # CHECK-NEXT: --------------
 # CHECK-NEXT: DW_LNE_set_address (0xffffffff)
 # CHECK-NEXT: DW_LNS_copy
-# CHECK-NEXT: DW_LNS_advance_pc (1)
+# CHECK-NEXT: DW_LNS_advance_pc (addr += 1, op-index += 0)
 # CHECK-NEXT: DW_LNE_end_sequence
 # CHECK-NEXT: DW_LNE_set_address (0x00000042)
 # CHECK-NEXT: DW_LNS_copy
 # CHECK-NEXT:   0x0000000000000042 1
-# CHECK-NEXT: DW_LNS_advance_pc (1)
+# CHECK-NEXT: DW_LNS_advance_pc (addr += 1, op-index += 0)
 # CHECK-NEXT: DW_LNE_end_sequence
 # CHECK:      Address Line
 # CHECK-NEXT: --------------
 # CHECK-NEXT: DW_LNE_set_address (0xffffffffffffffff)
 # CHECK-NEXT: DW_LNS_copy
-# CHECK-NEXT: DW_LNS_advance_pc (1)
+# CHECK-NEXT: DW_LNS_advance_pc (addr += 1, op-index += 0)
 # CHECK-NEXT: DW_LNE_end_sequence
 # CHECK-NEXT: DW_LNE_set_address (0x0000000000000042)
 # CHECK-NEXT: DW_LNS_copy
 # CHECK-NEXT:   0x0000000000000042 1
-# CHECK-NEXT: DW_LNS_advance_pc (1)
+# CHECK-NEXT: DW_LNS_advance_pc (addr += 1, op-index += 0)
 # CHECK-NEXT: DW_LNE_end_sequence
 
 # Dumping of the debug_addr, ranges, and rnglists sections don't do anything

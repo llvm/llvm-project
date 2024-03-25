@@ -1,5 +1,5 @@
 ;RUN: llc %s -o - -verify-machineinstrs | FileCheck %s
-target triple = "aarch64-arm-none-eabi"
+target triple = "aarch64"
 
 ;CHECK-LABEL: @wmemcpy
 ;CHECK: lsl

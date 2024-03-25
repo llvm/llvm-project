@@ -1180,7 +1180,7 @@ void HexagonPacketizerList::unpacketizeSoloInstrs(MachineFunction &MF) {
       bool InsertBeforeBundle;
       if (MI.isInlineAsm())
         InsertBeforeBundle = !hasWriteToReadDep(MI, *BundleIt, HRI);
-      else if (MI.isDebugValue())
+      else if (MI.isDebugInstr())
         InsertBeforeBundle = true;
       else
         continue;
@@ -1318,7 +1318,7 @@ bool HexagonPacketizerList::hasDualStoreDependence(const MachineInstr &I,
   return (StoreJ && HII->isDeallocRet(I)) || (StoreI && HII->isDeallocRet(J));
 }
 
-// SUI is the current instruction that is out side of the current packet.
+// SUI is the current instruction that is outside of the current packet.
 // SUJ is the current instruction inside the current packet against which that
 // SUI will be packetized.
 bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {

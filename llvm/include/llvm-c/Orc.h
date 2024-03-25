@@ -182,6 +182,15 @@ typedef struct {
 typedef LLVMOrcCDependenceMapPair *LLVMOrcCDependenceMapPairs;
 
 /**
+ * A set of symbols that share dependencies.
+ */
+typedef struct {
+  LLVMOrcCSymbolsList Symbols;
+  LLVMOrcCDependenceMapPairs Dependencies;
+  size_t NumDependencies;
+} LLVMOrcCSymbolDependenceGroup;
+
+/**
  * Lookup kind. This can be used by definition generators when deciding whether
  * to produce a definition for a requested symbol.
  *
@@ -346,7 +355,7 @@ typedef struct LLVMOrcOpaqueLookupState *LLVMOrcLookupStateRef;
  * into.
  *
  * The JDLookupFlags argument can be inspected to determine whether the original
- * lookup included non-exported symobls.
+ * lookup included non-exported symbols.
  *
  * Finally, the LookupSet argument contains the set of symbols that could not
  * be found in JD already (the set of generation candidates).
@@ -508,7 +517,7 @@ void LLVMOrcSymbolStringPoolClearDeadEntries(LLVMOrcSymbolStringPoolRef SSP);
  * Intern a string in the ExecutionSession's SymbolStringPool and return a
  * reference to it. This increments the ref-count of the pool entry, and the
  * returned value should be released once the client is done with it by
- * calling LLVMOrReleaseSymbolStringPoolEntry.
+ * calling LLVMOrcReleaseSymbolStringPoolEntry.
  *
  * Since strings are uniqued within the SymbolStringPool
  * LLVMOrcSymbolStringPoolEntryRefs can be compared by value to test string
@@ -796,7 +805,7 @@ void LLVMOrcDisposeSymbols(LLVMOrcSymbolStringPoolEntryRef *Symbols);
  * method returns an error then clients should log it and call
  * LLVMOrcMaterializationResponsibilityFailMaterialization. If no dependencies
  * have been registered for the symbols covered by this
- * MaterializationResponsibiility then this method is guaranteed to return
+ * MaterializationResponsibility then this method is guaranteed to return
  * LLVMErrorSuccess.
  */
 LLVMErrorRef LLVMOrcMaterializationResponsibilityNotifyResolved(
@@ -808,16 +817,30 @@ LLVMErrorRef LLVMOrcMaterializationResponsibilityNotifyResolved(
  * that all symbols covered by this MaterializationResponsibility instance
  * have been emitted.
  *
+ * This function takes ownership of the symbols in the Dependencies struct.
+ * This allows the following pattern...
+ *
+ *   LLVMOrcSymbolStringPoolEntryRef Names[] = {...};
+ *   LLVMOrcCDependenceMapPair Dependence = {JD, {Names, sizeof(Names)}}
+ *   LLVMOrcMaterializationResponsibilityAddDependencies(JD, Name, &Dependence,
+ * 1);
+ *
+ * ... without requiring cleanup of the elements of the Names array afterwards.
+ *
+ * The client is still responsible for deleting the Dependencies.Names arrays,
+ * and the Dependencies array itself.
+ *
  * This method will return an error if any symbols being resolved have been
  * moved to the error state due to the failure of a dependency. If this
  * method returns an error then clients should log it and call
  * LLVMOrcMaterializationResponsibilityFailMaterialization.
  * If no dependencies have been registered for the symbols covered by this
- * MaterializationResponsibiility then this method is guaranteed to return
+ * MaterializationResponsibility then this method is guaranteed to return
  * LLVMErrorSuccess.
  */
 LLVMErrorRef LLVMOrcMaterializationResponsibilityNotifyEmitted(
-    LLVMOrcMaterializationResponsibilityRef MR);
+    LLVMOrcMaterializationResponsibilityRef MR,
+    LLVMOrcCSymbolDependenceGroup *SymbolDepGroups, size_t NumSymbolDepGroups);
 
 /**
  * Attempt to claim responsibility for new definitions. This method can be
@@ -839,7 +862,7 @@ LLVMErrorRef LLVMOrcMaterializationResponsibilityDefineMaterializing(
 /**
  * Notify all not-yet-emitted covered by this MaterializationResponsibility
  * instance that an error has occurred.
- * This will remove all symbols covered by this MaterializationResponsibilty
+ * This will remove all symbols covered by this MaterializationResponsibility
  * from the target JITDylib, and send an error to any queries waiting on
  * these symbols.
  */
@@ -869,38 +892,6 @@ LLVMErrorRef LLVMOrcMaterializationResponsibilityDelegate(
     LLVMOrcMaterializationResponsibilityRef MR,
     LLVMOrcSymbolStringPoolEntryRef *Symbols, size_t NumSymbols,
     LLVMOrcMaterializationResponsibilityRef *Result);
-
-/**
- * Adds dependencies to a symbol that the MaterializationResponsibility is
- * responsible for.
- *
- * This function takes ownership of Dependencies struct. The Names
- * array have been retained for this function. This allows the following
- * pattern...
- *
- *   LLVMOrcSymbolStringPoolEntryRef Names[] = {...};
- *   LLVMOrcCDependenceMapPair Dependence = {JD, {Names, sizeof(Names)}}
- *   LLVMOrcMaterializationResponsibilityAddDependencies(JD, Name, &Dependence,
- * 1);
- *
- * ... without requiring cleanup of the elements of the Names array afterwards.
- *
- * The client is still responsible for deleting the Dependencies.Names array
- * itself.
- */
-void LLVMOrcMaterializationResponsibilityAddDependencies(
-    LLVMOrcMaterializationResponsibilityRef MR,
-    LLVMOrcSymbolStringPoolEntryRef Name,
-    LLVMOrcCDependenceMapPairs Dependencies, size_t NumPairs);
-
-/**
- * Adds dependencies to all symbols that the MaterializationResponsibility is
- * responsible for. See LLVMOrcMaterializationResponsibilityAddDependencies for
- * notes about memory responsibility.
- */
-void LLVMOrcMaterializationResponsibilityAddDependenciesForAll(
-    LLVMOrcMaterializationResponsibilityRef MR,
-    LLVMOrcCDependenceMapPairs Dependencies, size_t NumPairs);
 
 /**
  * Create a "bare" JITDylib.

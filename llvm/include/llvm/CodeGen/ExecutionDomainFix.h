@@ -118,9 +118,9 @@ class ExecutionDomainFix : public MachineFunctionPass {
   SmallVector<DomainValue *, 16> Avail;
 
   const TargetRegisterClass *const RC;
-  MachineFunction *MF;
-  const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
+  MachineFunction *MF = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
   std::vector<SmallVector<int, 1>> AliasMap;
   const unsigned NumRegs;
   /// Value currently in each register, or NULL when no value is being tracked.
@@ -133,7 +133,7 @@ class ExecutionDomainFix : public MachineFunctionPass {
   using OutRegsInfoMap = SmallVector<LiveRegsDVInfo, 4>;
   OutRegsInfoMap MBBOutRegsInfos;
 
-  ReachingDefAnalysis *RDA;
+  ReachingDefAnalysis *RDA = nullptr;
 
 public:
   ExecutionDomainFix(char &PassID, const TargetRegisterClass &RC)

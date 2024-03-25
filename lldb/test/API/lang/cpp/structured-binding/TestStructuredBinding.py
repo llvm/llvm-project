@@ -3,35 +3,52 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class TestStructuredBinding(TestBase):
 
+class TestStructuredBinding(TestBase):
     @skipIf(oslist=["linux"], archs=["arm"])
-    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(compiler="clang", compiler_version=["<", "14.0"])
     def test(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
 
-        self.expect_expr("a1", result_type="A",
-            result_children=[ValueCheck(name="x", type="int"),
-                             ValueCheck(name="y", type="int")])
+        self.expect_expr(
+            "a1",
+            result_type="A",
+            result_children=[
+                ValueCheck(name="x", type="int"),
+                ValueCheck(name="y", type="int"),
+            ],
+        )
         self.expect_expr("b1", result_type="char", result_value="'a'")
         self.expect_expr("c1", result_type="char", result_value="'b'")
         self.expect_expr("d1", result_type="short", result_value="50")
         self.expect_expr("e1", result_type="int", result_value="60")
         self.expect_expr("f1", result_type="char", result_value="'c'")
 
-        self.expect_expr("a2", result_type="A",
-            result_children=[ValueCheck(name="x", type="int"),
-                             ValueCheck(name="y", type="int")])
+        self.expect_expr(
+            "a2",
+            result_type="A",
+            result_children=[
+                ValueCheck(name="x", type="int"),
+                ValueCheck(name="y", type="int"),
+            ],
+        )
         self.expect_expr("b2", result_type="char", result_value="'a'")
         self.expect_expr("c2", result_type="char", result_value="'b'")
         self.expect_expr("d2", result_type="short", result_value="50")
         self.expect_expr("e2", result_type="int", result_value="60")
         self.expect_expr("f2", result_type="char", result_value="'c'")
 
-        self.expect_expr("a3", result_type="A",
-            result_children=[ValueCheck(name="x", type="int"),
-                             ValueCheck(name="y", type="int")])
+        self.expect_expr(
+            "a3",
+            result_type="A",
+            result_children=[
+                ValueCheck(name="x", type="int"),
+                ValueCheck(name="y", type="int"),
+            ],
+        )
         self.expect_expr("b3", result_type="char", result_value="'a'")
         self.expect_expr("c3", result_type="char", result_value="'b'")
         self.expect_expr("d3", result_type="short", result_value="50")

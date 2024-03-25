@@ -68,6 +68,21 @@ class K {
 };
 void f(K k) {}
 
+// CHECK-DAG: !DICompositeType({{.*}}name: "DeletedCtors",{{.*}}DIFlagTypePassBy
+struct NonTrivial {
+  NonTrivial();
+};
+struct DeletedCtors {
+  DeletedCtors() = delete;
+  DeletedCtors(const DeletedCtors &) = default;
+  void f1();
+  NonTrivial t;
+};
+
+const NonTrivial &f(const DeletedCtors &D) {
+  return D.t;
+}
+
 // Test that we don't use constructor homing on lambdas.
 // CHECK-DAG: ![[L:.*]] ={{.*}}!DISubprogram({{.*}}name: "L"
 // CHECK-DAG: !DICompositeType({{.*}}scope: ![[L]], {{.*}}DIFlagTypePassByValue
@@ -89,3 +104,4 @@ VTableAndCtor::VTableAndCtor() {
 }
 
 // ITANIUM-DAG: !DICompositeType({{.*}}name: "VTableAndCtor", {{.*}}flags: DIFlagFwdDecl
+

@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
+
 
 static_assert(__is_literal(int), "fail");
 static_assert(__is_literal_type(int), "fail"); // alternate spelling for GCC
@@ -75,3 +77,34 @@ template <typename T> class HasConstExprCtorT {
 static_assert(__is_literal(HasConstExprCtor), "fail");
 static_assert(__is_literal(HasConstExprCtorTemplate<int>), "fail");
 static_assert(__is_literal(HasConstExprCtorT<NonLiteral>), "fail");
+
+
+#if __cplusplus >= 202003L
+namespace GH77924 {
+
+struct A { A(); };
+template <class T>
+struct opt {
+  union Data {
+      constexpr Data() : x{} {}
+      constexpr ~Data() {}
+      char x;
+      T data;
+  };
+
+  constexpr opt() : data{} {}
+  constexpr ~opt() { if (engaged) data.data.~T(); }
+  Data data;
+  bool engaged = false;
+};
+
+consteval void foo() {
+  opt<A> a;
+}
+
+void test() {
+  foo();
+}
+
+}
+#endif

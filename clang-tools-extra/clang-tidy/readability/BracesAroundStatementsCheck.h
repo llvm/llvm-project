@@ -57,7 +57,6 @@ private:
     return TK_IgnoreUnlessSpelledInSource;
   }
 
-private:
   std::set<const Stmt *> ForceBracesStmts;
   const unsigned ShortStatementLines;
 };

@@ -19,7 +19,7 @@ using D = SecretlyAbstract<char>[1];
 B b; // expected-error {{abstract class}}
 D d; // expected-error {{abstract class}}
 
-template<int> struct N;
+template<int> struct N{};
 
 // Note: C is not instantiated anywhere in this file, so we never discover that
 // it is in fact abstract. The C++ standard suggests that we need to
@@ -35,21 +35,21 @@ template<int> struct N;
 
 //  - as a parameter type
 void f(A&);
-void f(A); // expected-error {{abstract class}}
-void f(A[1]); // expected-error {{abstract class}}
-void f(B); // expected-error {{abstract class}}
-void f(B[1]); // expected-error {{abstract class}}
+void f(A){} // expected-error {{abstract class}}
+void f(A[1]){} // expected-error {{abstract class}}
+void f(B){} // expected-error {{abstract class}}
+void f(B[1]){} // expected-error {{abstract class}}
 void f(C);
 void f(C[1]);
-void f(D); // expected-error {{abstract class}}
-void f(D[1]); // expected-error {{abstract class}}
+void f(D){} // expected-error {{abstract class}}
+void f(D[1]){} // expected-error {{abstract class}}
 
 //  - as a function return type
 A &f(N<0>);
 A *f(N<1>);
-A f(N<2>); // expected-error {{abstract class}}
+A f(N<2>){} // expected-error {{abstract class}}
 A (&f(N<3>))[2]; // expected-error {{abstract class}}
-B f(N<4>); // expected-error {{abstract class}}
+B f(N<4>){} // expected-error {{abstract class}}
 B (&f(N<5>))[2]; // expected-error {{abstract class}}
 C f(N<6>);
 C (&f(N<7>))[2];
@@ -72,13 +72,10 @@ void h() {
   (D){0}; // expected-error {{abstract class}}
 }
 
-template<typename T> void t(T); // expected-note 2{{abstract class}}
+template<typename T> void t(T);
 void i(A &a, B &b, C &c, D &d) {
-  // FIXME: These should be handled consistently. We currently reject the first
-  // two early because we (probably incorrectly, depending on dr1640) take
-  // abstractness into account in forming implicit conversion sequences.
-  t(a); // expected-error {{no matching function}}
-  t(b); // expected-error {{no matching function}}
+  t(a); // expected-error {{allocating an object of abstract class type 'A'}}
+  t(b); // expected-error {{allocating an object of abstract class type 'SecretlyAbstract<int>'}}
   t(c); // expected-error {{allocating an object of abstract class type}}
   t(d); // ok, decays to pointer
 }

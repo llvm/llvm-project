@@ -22,7 +22,9 @@ add_lv_impl_folder(Core
 add_lv_impl_folder(Readers
   LVReaderHandler.cpp
   Readers/LVBinaryReader.cpp
-  Readers/LVELFReader.cpp
+  Readers/LVCodeViewReader.cpp
+  Readers/LVCodeViewVisitor.cpp
+  Readers/LVDWARFReader.cpp
   )
 
 list(APPEND LIBLV_ADDITIONAL_HEADER_DIRS
@@ -39,9 +41,12 @@ add_llvm_component_library(LLVMDebugInfoLogicalView
 
   LINK_COMPONENTS
   BinaryFormat
+  Demangle
   Object
   MC
   Support
   TargetParser
   DebugInfoDWARF
+  DebugInfoCodeView
+  DebugInfoPDB
   )

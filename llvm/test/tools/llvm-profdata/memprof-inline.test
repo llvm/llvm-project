@@ -1,56 +1,21 @@
 REQUIRES: x86_64-linux
 
-The input raw profile test has been generated from the following source code:
-
-```
-#include <stdlib.h>
-#include <string.h>
-
-__attribute__((always_inline))
-void qux(int x) {
-  char *ptr = malloc(x);
-  memset(ptr, 0, x);
-  free(ptr);
-}
-
-__attribute__((noinline))
-void foo(int x){ qux(x); }
-
-__attribute__((noinline))
-void bar(int x) { foo(x); }
-
-int main(int argc, char **argv) {
-  bar(argc);
-  return 0;
-}
-```
-
-Compile and run with the following commands:
-
-```
-bin/clang -fuse-ld=lld -Wl,--no-rosegment -gmlt -fdebug-info-for-profiling \
-          -fmemory-profile -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer \
-          -fno-optimize-sibling-calls -m64 -Wl,-build-id -no-pie \
-          inline.c -o inline.memprofexe
-
-env MEMPROF_OPTIONS=log_path=stdout ./inline.memprofexe > inline.memprofraw
-```
-
+To update the inputs used below run Inputs/update_memprof_inputs.sh /path/to/updated/clang
 RUN: llvm-profdata show --memory %p/Inputs/inline.memprofraw --profiled-binary %p/Inputs/inline.memprofexe | FileCheck %s
 
 CHECK:  MemprofProfile:
 CHECK-NEXT:  Summary:
-CHECK-NEXT:    Version: 2
+CHECK-NEXT:    Version: 3
 CHECK-NEXT:    NumSegments: {{[0-9]+}}
 CHECK-NEXT:    NumMibInfo: 2
 CHECK-NEXT:    NumAllocFunctions: 2
 CHECK-NEXT:    NumStackOffsets: 1
 CHECK-NEXT:  Segments:
 CHECK-NEXT:  -
-CHECK-NEXT:    BuildId: <None>
-CHECK-NEXT:    Start: 0x{{[0-9]+}}
-CHECK-NEXT:    End: 0x{{[0-9]+}}
-CHECK-NEXT:    Offset: 0x{{[0-9]+}}
+CHECK-NEXT:    BuildId: {{[[:xdigit:]]+}}
+CHECK-NEXT:    Start: 0x{{[[:xdigit:]]+}}
+CHECK-NEXT:    End: 0x{{[[:xdigit:]]+}}
+CHECK-NEXT:    Offset: 0x{{[[:xdigit:]]+}}
 CHECK-NEXT:  -
 
 CHECK:  Records:

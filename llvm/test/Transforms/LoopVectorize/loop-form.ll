@@ -38,7 +38,7 @@ define void @bottom_tested(ptr %p, i32 %n) {
 ; CHECK-NEXT:    store i16 0, ptr [[B]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_COND]], label [[IF_END]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_COND]], label [[IF_END]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -92,7 +92,7 @@ define void @bottom_tested(ptr %p, i32 %n) {
 ; TAILFOLD-NEXT:    store i16 0, ptr [[B]], align 4
 ; TAILFOLD-NEXT:    [[INC]] = add nsw i32 [[I]], 1
 ; TAILFOLD-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], [[N]]
-; TAILFOLD-NEXT:    br i1 [[CMP]], label [[FOR_COND]], label [[IF_END]], !llvm.loop [[LOOP2:![0-9]+]]
+; TAILFOLD-NEXT:    br i1 [[CMP]], label [[FOR_COND]], label [[IF_END]], !llvm.loop [[LOOP3:![0-9]+]]
 ; TAILFOLD:       if.end:
 ; TAILFOLD-NEXT:    ret void
 ;
@@ -199,7 +199,6 @@ define i32 @early_exit_with_live_out(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store <2 x i32> <i32 10, i32 10>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 998

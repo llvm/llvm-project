@@ -30,7 +30,7 @@
                       GPR_OFFSET(reg), eEncodingUint, eFormatHex,              \
                                  {kind1, kind2, kind3, kind4,                  \
                                   gpr_##reg##_mips64 },                        \
-                                  NULL, NULL                                   \
+                                  NULL, NULL, NULL,                            \
   }
 
 #define DEFINE_FPR(reg, alt, kind1, kind2, kind3)                              \
@@ -39,7 +39,7 @@
                       FPR_OFFSET(reg), eEncodingIEEE754, eFormatFloat,         \
                                  {kind1, kind2, kind3, LLDB_INVALID_REGNUM,    \
                                   fpr_##reg##_mips64 },                        \
-                                  NULL, NULL,                                  \
+                                  NULL, NULL, NULL,                            \
   }
 
 #define DEFINE_FPR_INFO(reg, alt, kind1, kind2, kind3)                         \
@@ -48,7 +48,7 @@
                       FPR_OFFSET(reg), eEncodingUint, eFormatHex,              \
                                  {kind1, kind2, kind3, LLDB_INVALID_REGNUM,    \
                                   fpr_##reg##_mips64 },                        \
-                                  NULL, NULL,                                  \
+                                  NULL, NULL, NULL,                            \
   }
 
 

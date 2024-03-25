@@ -44,7 +44,7 @@ Command Line Options
 
   This option specifies a comma-separated list of globs describing the list of
   callbacks that should be traced. Globs are processed in order of appearance.
-  Positive globs add matched callbacks to the set, netative globs (those with
+  Positive globs add matched callbacks to the set, negative globs (those with
   the '-' prefix) remove callacks from the set.
 
   * FileChanged

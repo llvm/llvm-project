@@ -24,5 +24,5 @@ class FooAllocator {
 };
 
 void func() {
-  std::vector<int, FooAllocator> v; //expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}This allocator has to implement rebind}}
+  std::vector<int, FooAllocator> v; //expected-error-re@*:* {{static assertion failed {{.*}}This allocator has to implement rebind}}
 }

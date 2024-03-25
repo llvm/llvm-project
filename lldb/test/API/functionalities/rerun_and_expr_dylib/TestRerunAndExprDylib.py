@@ -43,54 +43,72 @@ class TestRerunExprDylib(TestBase):
            the latest definition of 'struct Foo' in the scratch AST.
         """
 
-        DYLIB_NAME = 'foo'
-        FULL_DYLIB_NAME = 'libfoo.dylib' if self.platformIsDarwin() else 'libfoo.so'
+        DYLIB_NAME = "foo"
+        FULL_DYLIB_NAME = "libfoo.dylib" if self.platformIsDarwin() else "libfoo.so"
 
         # Build libfoo.dylib
-        self.build(dictionary={'DYLIB_CXX_SOURCES':'lib.cpp',
-                               'DYLIB_ONLY':'YES',
-                               'DYLIB_NAME':DYLIB_NAME,
-                               'USE_LIBDL':'1',
-                               'LD_EXTRAS':'-L.'})
+        self.build(
+            dictionary={
+                "DYLIB_CXX_SOURCES": "lib.cpp",
+                "DYLIB_ONLY": "YES",
+                "DYLIB_NAME": DYLIB_NAME,
+                "USE_LIBDL": "1",
+                "LD_EXTRAS": "-L.",
+            }
+        )
 
         # Build a.out
-        self.build(dictionary={'EXE':'a.out',
-                               'CXX_SOURCES':'main.cpp',
-                               'USE_LIBDL':'1',
-                               'CXXFLAGS_EXTRAS':f'-DLIB_NAME=\\"{FULL_DYLIB_NAME}\\"',
-                               'LD_EXTRAS':'-L.'})
+        self.build(
+            dictionary={
+                "EXE": "a.out",
+                "CXX_SOURCES": "main.cpp",
+                "USE_LIBDL": "1",
+                "CXXFLAGS_EXTRAS": f'-DLIB_NAME=\\"{FULL_DYLIB_NAME}\\"',
+                "LD_EXTRAS": "-L.",
+            }
+        )
 
         exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe) 
-        target.BreakpointCreateBySourceRegex('dlclose', lldb.SBFileSpec('main.cpp'))
-        target.BreakpointCreateBySourceRegex('return', lldb.SBFileSpec('main.cpp'))
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())  
+        target = self.dbg.CreateTarget(exe)
+        target.BreakpointCreateBySourceRegex("dlclose", lldb.SBFileSpec("main.cpp"))
+        target.BreakpointCreateBySourceRegex("return", lldb.SBFileSpec("main.cpp"))
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
-        self.expect_expr('*foo', result_type='Foo', result_children=[
-                ValueCheck(name='m_val', value='42')
-            ])
+        self.expect_expr(
+            "*foo",
+            result_type="Foo",
+            result_children=[ValueCheck(name="m_val", value="42")],
+        )
 
         # Delete the dylib to force make to rebuild it.
         remove_file(self.getBuildArtifact(FULL_DYLIB_NAME))
 
         # Re-build libfoo.dylib
-        self.build(dictionary={'DYLIB_CXX_SOURCES':'rebuild.cpp',
-                               'DYLIB_ONLY':'YES',
-                               'DYLIB_NAME':DYLIB_NAME,
-                               'USE_LIBDL':'1',
-                               'LD_EXTRAS':'-L.'})
+        self.build(
+            dictionary={
+                "DYLIB_CXX_SOURCES": "rebuild.cpp",
+                "DYLIB_ONLY": "YES",
+                "DYLIB_NAME": DYLIB_NAME,
+                "USE_LIBDL": "1",
+                "LD_EXTRAS": "-L.",
+            }
+        )
 
         # Rerun program within the same target
         process.Continue()
         process.Destroy()
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())  
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
-        self.expect_expr('*foo', result_type='Foo', result_children=[
-            ValueCheck(name='Base', children=[
-                ValueCheck(name='m_base_val', value='42')
-            ]),
-            ValueCheck(name='m_derived_val', value='137')
-        ])
+        self.expect_expr(
+            "*foo",
+            result_type="Foo",
+            result_children=[
+                ValueCheck(
+                    name="Base", children=[ValueCheck(name="m_base_val", value="42")]
+                ),
+                ValueCheck(name="m_derived_val", value="137"),
+            ],
+        )
 
         self.filecheck("target module dump ast", __file__)
 
@@ -103,4 +121,3 @@ class TestRerunExprDylib(TestBase):
 
         # ...but the original definition of 'struct Foo' is not in the scratch AST anymore
         # CHECK-NOT: FieldDecl {{.*}} m_val 'int'
-

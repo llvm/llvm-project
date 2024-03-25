@@ -15,6 +15,7 @@ declare float @llvm.fma.f32(float, float, float)
 declare float @llvm.fmuladd.f32(float, float, float)
 
 declare void @use(float)
+declare void @usebool(i1)
 
 define float @replace_fabs_call_f32(float %x) {
 ; CHECK-LABEL: @replace_fabs_call_f32(
@@ -253,8 +254,8 @@ define double @multi_use_fabs_fpext(float %x) {
 
 define double @select_fcmp_ole_zero(double %x) {
 ; CHECK-LABEL: @select_fcmp_ole_zero(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    [[FABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[FABS]]
 ;
   %lezero = fcmp ole double %x, 0.0
   %negx = fsub double 0.0, %x
@@ -264,8 +265,8 @@ define double @select_fcmp_ole_zero(double %x) {
 
 define double @select_fcmp_nnan_ole_zero(double %x) {
 ; CHECK-LABEL: @select_fcmp_nnan_ole_zero(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    [[FABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[FABS]]
 ;
   %lezero = fcmp ole double %x, 0.0
   %negx = fsub nnan double 0.0, %x
@@ -275,8 +276,8 @@ define double @select_fcmp_nnan_ole_zero(double %x) {
 
 define double @select_nnan_fcmp_nnan_ole_zero(double %x) {
 ; CHECK-LABEL: @select_nnan_fcmp_nnan_ole_zero(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    [[FABS:%.*]] = call nnan double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[FABS]]
 ;
   %lezero = fcmp ole double %x, 0.0
   %negx = fsub nnan double 0.0, %x
@@ -288,8 +289,8 @@ define double @select_nnan_fcmp_nnan_ole_zero(double %x) {
 
 define double @select_fcmp_nnan_ule_zero(double %x) {
 ; CHECK-LABEL: @select_fcmp_nnan_ule_zero(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    [[FABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[FABS]]
 ;
   %lezero = fcmp ule double %x, 0.0
   %negx = fsub nnan double 0.0, %x
@@ -316,8 +317,8 @@ define double @select_fcmp_nnan_olt_zero(double %x) {
 
 define <2 x float> @select_fcmp_nnan_ole_negzero(<2 x float> %x) {
 ; CHECK-LABEL: @select_fcmp_nnan_ole_negzero(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    ret <2 x float> [[TMP1]]
+; CHECK-NEXT:    [[FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
   %lezero = fcmp ole <2 x float> %x, <float -0.0, float -0.0>
   %negx = fsub nnan <2 x float> <float 0.0, float undef>, %x
@@ -327,8 +328,8 @@ define <2 x float> @select_fcmp_nnan_ole_negzero(<2 x float> %x) {
 
 define <2 x float> @select_nnan_fcmp_nnan_ole_negzero(<2 x float> %x) {
 ; CHECK-LABEL: @select_nnan_fcmp_nnan_ole_negzero(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    ret <2 x float> [[TMP1]]
+; CHECK-NEXT:    [[FABS:%.*]] = call nnan <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
   %lezero = fcmp ole <2 x float> %x, <float -0.0, float -0.0>
   %negx = fsub nnan <2 x float> <float 0.0, float undef>, %x
@@ -340,8 +341,8 @@ define <2 x float> @select_nnan_fcmp_nnan_ole_negzero(<2 x float> %x) {
 
 define fp128 @select_fcmp_ogt_zero(fp128 %x) {
 ; CHECK-LABEL: @select_fcmp_ogt_zero(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fp128 @llvm.fabs.f128(fp128 [[X:%.*]])
-; CHECK-NEXT:    ret fp128 [[TMP1]]
+; CHECK-NEXT:    [[FABS:%.*]] = call fp128 @llvm.fabs.f128(fp128 [[X:%.*]])
+; CHECK-NEXT:    ret fp128 [[FABS]]
 ;
   %gtzero = fcmp ogt fp128 %x, zeroinitializer
   %negx = fsub fp128 zeroinitializer, %x
@@ -367,8 +368,8 @@ define float @select_nsz_fcmp_ogt_fneg(float %a) {
 
 define float @select_nsz_nnan_fcmp_ogt_fneg(float %a) {
 ; CHECK-LABEL: @select_nsz_nnan_fcmp_ogt_fneg(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz float @llvm.fabs.f32(float [[A:%.*]])
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = call nnan nsz float @llvm.fabs.f32(float [[A:%.*]])
+; CHECK-NEXT:    ret float [[R]]
 ;
   %fneg = fneg float %a
   %cmp = fcmp ogt float %a, %fneg
@@ -378,8 +379,8 @@ define float @select_nsz_nnan_fcmp_ogt_fneg(float %a) {
 
 define fp128 @select_fcmp_nnan_ogt_zero(fp128 %x) {
 ; CHECK-LABEL: @select_fcmp_nnan_ogt_zero(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fp128 @llvm.fabs.f128(fp128 [[X:%.*]])
-; CHECK-NEXT:    ret fp128 [[TMP1]]
+; CHECK-NEXT:    [[FABS:%.*]] = call fp128 @llvm.fabs.f128(fp128 [[X:%.*]])
+; CHECK-NEXT:    ret fp128 [[FABS]]
 ;
   %gtzero = fcmp ogt fp128 %x, zeroinitializer
   %negx = fsub nnan fp128 zeroinitializer, %x
@@ -389,8 +390,8 @@ define fp128 @select_fcmp_nnan_ogt_zero(fp128 %x) {
 
 define fp128 @select_nnan_fcmp_nnan_ogt_zero(fp128 %x) {
 ; CHECK-LABEL: @select_nnan_fcmp_nnan_ogt_zero(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan fp128 @llvm.fabs.f128(fp128 [[X:%.*]])
-; CHECK-NEXT:    ret fp128 [[TMP1]]
+; CHECK-NEXT:    [[FABS:%.*]] = call nnan fp128 @llvm.fabs.f128(fp128 [[X:%.*]])
+; CHECK-NEXT:    ret fp128 [[FABS]]
 ;
   %gtzero = fcmp ogt fp128 %x, zeroinitializer
   %negx = fsub nnan fp128 zeroinitializer, %x
@@ -402,8 +403,8 @@ define fp128 @select_nnan_fcmp_nnan_ogt_zero(fp128 %x) {
 
 define half @select_fcmp_nnan_ogt_negzero(half %x) {
 ; CHECK-LABEL: @select_fcmp_nnan_ogt_negzero(
-; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
-; CHECK-NEXT:    ret half [[TMP1]]
+; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    ret half [[FABS]]
 ;
   %gtzero = fcmp ogt half %x, -0.0
   %negx = fsub nnan half 0.0, %x
@@ -413,8 +414,8 @@ define half @select_fcmp_nnan_ogt_negzero(half %x) {
 
 define half @select_nnan_fcmp_nnan_ogt_negzero(half %x) {
 ; CHECK-LABEL: @select_nnan_fcmp_nnan_ogt_negzero(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan half @llvm.fabs.f16(half [[X:%.*]])
-; CHECK-NEXT:    ret half [[TMP1]]
+; CHECK-NEXT:    [[FABS:%.*]] = call nnan half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    ret half [[FABS]]
 ;
   %gtzero = fcmp ogt half %x, -0.0
   %negx = fsub nnan half 0.0, %x
@@ -426,8 +427,8 @@ define half @select_nnan_fcmp_nnan_ogt_negzero(half %x) {
 
 define half @select_fcmp_nnan_ugt_negzero(half %x) {
 ; CHECK-LABEL: @select_fcmp_nnan_ugt_negzero(
-; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
-; CHECK-NEXT:    ret half [[TMP1]]
+; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    ret half [[FABS]]
 ;
   %gtzero = fcmp ugt half %x, -0.0
   %negx = fsub nnan half 0.0, %x
@@ -470,8 +471,8 @@ define double @select_nsz_fcmp_olt_zero_unary_fneg(double %x) {
 
 define double @select_nsz_nnan_fcmp_olt_zero_unary_fneg(double %x) {
 ; CHECK-LABEL: @select_nsz_nnan_fcmp_olt_zero_unary_fneg(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    [[FABS:%.*]] = call nnan nsz double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[FABS]]
 ;
   %ltzero = fcmp olt double %x, 0.0
   %negx = fneg double %x
@@ -494,8 +495,8 @@ define double @select_fcmp_nnan_nsz_olt_zero(double %x) {
 
 define double @select_nnan_nsz_fcmp_nnan_nsz_olt_zero(double %x) {
 ; CHECK-LABEL: @select_nnan_nsz_fcmp_nnan_nsz_olt_zero(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    [[FABS:%.*]] = call nnan nsz double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[FABS]]
 ;
   %ltzero = fcmp olt double %x, 0.0
   %negx = fsub nnan nsz double -0.0, %x
@@ -563,8 +564,8 @@ define float @select_fcmp_nnan_nsz_olt_negzero(float %x) {
 
 define float @select_nnan_ninf_nsz_fcmp_nnan_nsz_olt_negzero(float %x) {
 ; CHECK-LABEL: @select_nnan_ninf_nsz_fcmp_nnan_nsz_olt_negzero(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz float @llvm.fabs.f32(float [[X:%.*]])
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[FABS:%.*]] = call nnan ninf nsz float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    ret float [[FABS]]
 ;
   %ltzero = fcmp olt float %x, -0.0
   %negx = fsub nnan nsz float -0.0, %x
@@ -632,8 +633,8 @@ define double @select_fcmp_nnan_nsz_ole_zero(double %x) {
 
 define double @select_fast_fcmp_nnan_nsz_ole_zero(double %x) {
 ; CHECK-LABEL: @select_fast_fcmp_nnan_nsz_ole_zero(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    [[FABS:%.*]] = call fast double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[FABS]]
 ;
   %lezero = fcmp ole double %x, 0.0
   %negx = fsub nnan nsz double -0.0, %x
@@ -701,8 +702,8 @@ define float @select_fcmp_nnan_nsz_ole_negzero(float %x) {
 
 define float @select_nnan_nsz_fcmp_nnan_nsz_ole_negzero(float %x) {
 ; CHECK-LABEL: @select_nnan_nsz_fcmp_nnan_nsz_ole_negzero(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz float @llvm.fabs.f32(float [[X:%.*]])
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[FABS:%.*]] = call nnan nsz float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    ret float [[FABS]]
 ;
   %lezero = fcmp ole float %x, -0.0
   %negx = fsub nnan nsz float -0.0, %x
@@ -773,8 +774,8 @@ define <2 x float> @select_nsz_fcmp_ogt_zero_unary_fneg(<2 x float> %x) {
 
 define <2 x float> @select_nsz_nnan_fcmp_ogt_zero_unary_fneg(<2 x float> %x) {
 ; CHECK-LABEL: @select_nsz_nnan_fcmp_ogt_zero_unary_fneg(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    ret <2 x float> [[TMP1]]
+; CHECK-NEXT:    [[FABS:%.*]] = call nnan nsz <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
   %gtzero = fcmp ogt <2 x float> %x, zeroinitializer
   %negx = fneg <2 x float> %x
@@ -1033,4 +1034,210 @@ define <2 x float> @select_fneg_vec(<2 x i1> %c, <2 x float> %x) {
   %s = select fast <2 x i1> %c, <2 x float> %x, <2 x float> %n
   %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %s)
   ret <2 x float> %fabs
+}
+
+define float @test_select_neg_negx_x(float %value) {
+; CHECK-LABEL: @test_select_neg_negx_x(
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = call float @llvm.fabs.f32(float [[VALUE:%.*]])
+; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
+;
+  %a0 = bitcast float %value to i32
+  %a1 = icmp slt i32 %a0, 0
+  %fneg.i = fneg float %value
+  %value.addr.0.i = select i1 %a1, float %fneg.i, float %value
+  ret float %value.addr.0.i
+}
+
+define float @test_select_nneg_negx_x(float %value) {
+; CHECK-LABEL: @test_select_nneg_negx_x(
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[VALUE:%.*]])
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
+;
+  %a0 = bitcast float %value to i32
+  %a1 = icmp sgt i32 %a0, -1
+  %fneg.i = fneg float %value
+  %value.addr.0.i = select i1 %a1, float %fneg.i, float %value
+  ret float %value.addr.0.i
+}
+
+define float @test_select_neg_x_negx(float %value) {
+; CHECK-LABEL: @test_select_neg_x_negx(
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[VALUE:%.*]])
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
+;
+  %a0 = bitcast float %value to i32
+  %a1 = icmp slt i32 %a0, 0
+  %fneg.i = fneg float %value
+  %value.addr.0.i = select i1 %a1, float %value, float %fneg.i
+  ret float %value.addr.0.i
+}
+
+define float @test_select_nneg_x_negx(float %value) {
+; CHECK-LABEL: @test_select_nneg_x_negx(
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = call float @llvm.fabs.f32(float [[VALUE:%.*]])
+; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
+;
+  %a0 = bitcast float %value to i32
+  %a1 = icmp sgt i32 %a0, -1
+  %fneg.i = fneg float %value
+  %value.addr.0.i = select i1 %a1, float %value, float %fneg.i
+  ret float %value.addr.0.i
+}
+
+define float @test_select_neg_negx_x_multiuse1(float %value) {
+; CHECK-LABEL: @test_select_neg_negx_x_multiuse1(
+; CHECK-NEXT:    [[A0:%.*]] = bitcast float [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[A1:%.*]] = icmp slt i32 [[A0]], 0
+; CHECK-NEXT:    call void @usebool(i1 [[A1]])
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = call float @llvm.fabs.f32(float [[VALUE]])
+; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
+;
+  %a0 = bitcast float %value to i32
+  %a1 = icmp slt i32 %a0, 0
+  call void @usebool(i1 %a1)
+  %fneg.i = fneg float %value
+  %value.addr.0.i = select i1 %a1, float %fneg.i, float %value
+  ret float %value.addr.0.i
+}
+
+define float @test_select_neg_negx_x_multiuse2(float %value) {
+; CHECK-LABEL: @test_select_neg_negx_x_multiuse2(
+; CHECK-NEXT:    [[FNEG_I:%.*]] = fneg float [[VALUE:%.*]]
+; CHECK-NEXT:    call void @use(float [[FNEG_I]])
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = call float @llvm.fabs.f32(float [[VALUE]])
+; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
+;
+  %a0 = bitcast float %value to i32
+  %a1 = icmp slt i32 %a0, 0
+  %fneg.i = fneg float %value
+  call void @use(float %fneg.i)
+  %value.addr.0.i = select i1 %a1, float %fneg.i, float %value
+  ret float %value.addr.0.i
+}
+
+define float @test_select_neg_negx_x_multiuse3(float %value) {
+; CHECK-LABEL: @test_select_neg_negx_x_multiuse3(
+; CHECK-NEXT:    [[A0:%.*]] = bitcast float [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[A1:%.*]] = icmp slt i32 [[A0]], 0
+; CHECK-NEXT:    call void @usebool(i1 [[A1]])
+; CHECK-NEXT:    [[FNEG_I:%.*]] = fneg float [[VALUE]]
+; CHECK-NEXT:    call void @use(float [[FNEG_I]])
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = call float @llvm.fabs.f32(float [[VALUE]])
+; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
+;
+  %a0 = bitcast float %value to i32
+  %a1 = icmp slt i32 %a0, 0
+  call void @usebool(i1 %a1)
+  %fneg.i = fneg float %value
+  call void @use(float %fneg.i)
+  %value.addr.0.i = select i1 %a1, float %fneg.i, float %value
+  ret float %value.addr.0.i
+}
+
+define float @test_select_neg_negx_x_fmf(float %value) {
+; CHECK-LABEL: @test_select_neg_negx_x_fmf(
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = call nnan ninf nsz float @llvm.fabs.f32(float [[VALUE:%.*]])
+; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
+;
+  %a0 = bitcast float %value to i32
+  %a1 = icmp slt i32 %a0, 0
+  %fneg.i = fneg float %value
+  %value.addr.0.i = select nsz nnan ninf i1 %a1, float %fneg.i, float %value
+  ret float %value.addr.0.i
+}
+
+define float @test_select_nneg_negx_x_fmf(float %value) {
+; CHECK-LABEL: @test_select_nneg_negx_x_fmf(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz float @llvm.fabs.f32(float [[VALUE:%.*]])
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = fneg nnan ninf nsz float [[TMP1]]
+; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
+;
+  %a0 = bitcast float %value to i32
+  %a1 = icmp sgt i32 %a0, -1
+  %fneg.i = fneg float %value
+  %value.addr.0.i = select nsz nnan ninf i1 %a1, float %fneg.i, float %value
+  ret float %value.addr.0.i
+}
+
+; Negative tests
+
+define float @test_select_nneg_negx_x_multiuse4(float %value) {
+; CHECK-LABEL: @test_select_nneg_negx_x_multiuse4(
+; CHECK-NEXT:    [[A0:%.*]] = bitcast float [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[A1:%.*]] = icmp sgt i32 [[A0]], -1
+; CHECK-NEXT:    call void @usebool(i1 [[A1]])
+; CHECK-NEXT:    [[FNEG_I:%.*]] = fneg float [[VALUE]]
+; CHECK-NEXT:    call void @use(float [[FNEG_I]])
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = select i1 [[A1]], float [[FNEG_I]], float [[VALUE]]
+; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
+;
+  %a0 = bitcast float %value to i32
+  %a1 = icmp sgt i32 %a0, -1
+  call void @usebool(i1 %a1)
+  %fneg.i = fneg float %value
+  call void @use(float %fneg.i)
+  %value.addr.0.i = select i1 %a1, float %fneg.i, float %value
+  ret float %value.addr.0.i
+}
+
+define float @test_select_neg_negx_x_mismatched1(float %value, float %y) {
+; CHECK-LABEL: @test_select_neg_negx_x_mismatched1(
+; CHECK-NEXT:    [[A0:%.*]] = bitcast float [[Y:%.*]] to i32
+; CHECK-NEXT:    [[A1:%.*]] = icmp slt i32 [[A0]], 0
+; CHECK-NEXT:    [[FNEG_I:%.*]] = fneg float [[VALUE:%.*]]
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = select i1 [[A1]], float [[FNEG_I]], float [[VALUE]]
+; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
+;
+  %a0 = bitcast float %y to i32
+  %a1 = icmp slt i32 %a0, 0
+  %fneg.i = fneg float %value
+  %value.addr.0.i = select i1 %a1, float %fneg.i, float %value
+  ret float %value.addr.0.i
+}
+
+define float @test_select_neg_negx_x_mismatched2(float %value, float %y) {
+; CHECK-LABEL: @test_select_neg_negx_x_mismatched2(
+; CHECK-NEXT:    [[A0:%.*]] = bitcast float [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[A1:%.*]] = icmp slt i32 [[A0]], 0
+; CHECK-NEXT:    [[FNEG_I:%.*]] = fneg float [[Y:%.*]]
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = select i1 [[A1]], float [[FNEG_I]], float [[VALUE]]
+; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
+;
+  %a0 = bitcast float %value to i32
+  %a1 = icmp slt i32 %a0, 0
+  %fneg.i = fneg float %y
+  %value.addr.0.i = select i1 %a1, float %fneg.i, float %value
+  ret float %value.addr.0.i
+}
+
+define float @test_select_neg_negx_x_mismatched3(float %value, float %y) {
+; CHECK-LABEL: @test_select_neg_negx_x_mismatched3(
+; CHECK-NEXT:    [[A0:%.*]] = bitcast float [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[A1:%.*]] = icmp slt i32 [[A0]], 0
+; CHECK-NEXT:    [[FNEG_I:%.*]] = fneg float [[VALUE]]
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = select i1 [[A1]], float [[FNEG_I]], float [[Y:%.*]]
+; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
+;
+  %a0 = bitcast float %value to i32
+  %a1 = icmp slt i32 %a0, 0
+  %fneg.i = fneg float %value
+  %value.addr.0.i = select i1 %a1, float %fneg.i, float %y
+  ret float %value.addr.0.i
+}
+
+define <2 x float> @test_select_neg_negx_x_wrong_type(<2 x float> %value) {
+; CHECK-LABEL: @test_select_neg_negx_x_wrong_type(
+; CHECK-NEXT:    [[A0:%.*]] = bitcast <2 x float> [[VALUE:%.*]] to i64
+; CHECK-NEXT:    [[A1:%.*]] = icmp slt i64 [[A0]], 0
+; CHECK-NEXT:    [[FNEG_I:%.*]] = fneg <2 x float> [[VALUE]]
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = select i1 [[A1]], <2 x float> [[FNEG_I]], <2 x float> [[VALUE]]
+; CHECK-NEXT:    ret <2 x float> [[VALUE_ADDR_0_I]]
+;
+  %a0 = bitcast <2 x float> %value to i64
+  %a1 = icmp slt i64 %a0, 0
+  %fneg.i = fneg <2 x float> %value
+  %value.addr.0.i = select i1 %a1, <2 x float> %fneg.i, <2 x float> %value
+  ret <2 x float> %value.addr.0.i
 }

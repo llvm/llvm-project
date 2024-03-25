@@ -317,7 +317,7 @@ bool MemOPSizeOpt::perform(MemOp MO) {
     }
 
     if (!SeenSizeId.insert(V).second) {
-      errs() << "Invalid Profile Data in Function " << Func.getName()
+      errs() << "warning: Invalid Profile Data in Function " << Func.getName()
              << ": Two identical values in MemOp value counts.\n";
       return false;
     }
@@ -378,7 +378,7 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   assert(It != DefaultBB->end());
   BasicBlock *MergeBB = SplitBlock(DefaultBB, &(*It), DT);
   MergeBB->setName("MemOP.Merge");
-  BFI.setBlockFreq(MergeBB, OrigBBFreq.getFrequency());
+  BFI.setBlockFreq(MergeBB, OrigBBFreq);
   DefaultBB->setName("MemOP.Default");
 
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);

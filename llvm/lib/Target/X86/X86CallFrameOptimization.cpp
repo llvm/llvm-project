@@ -285,15 +285,15 @@ X86CallFrameOptimization::classifyInstruction(
   // The instructions we actually care about are movs onto the stack or special
   // cases of constant-stores to stack
   switch (MI->getOpcode()) {
-    case X86::AND16mi8:
-    case X86::AND32mi8:
-    case X86::AND64mi8: {
+    case X86::AND16mi:
+    case X86::AND32mi:
+    case X86::AND64mi32: {
       const MachineOperand &ImmOp = MI->getOperand(X86::AddrNumOperands);
       return ImmOp.getImm() == 0 ? Convert : Exit;
     }
-    case X86::OR16mi8:
-    case X86::OR32mi8:
-    case X86::OR64mi8: {
+    case X86::OR16mi:
+    case X86::OR32mi:
+    case X86::OR64mi32: {
       const MachineOperand &ImmOp = MI->getOperand(X86::AddrNumOperands);
       return ImmOp.getImm() == -1 ? Convert : Exit;
     }
@@ -512,24 +512,15 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
     switch (Store->getOpcode()) {
     default:
       llvm_unreachable("Unexpected Opcode!");
-    case X86::AND16mi8:
-    case X86::AND32mi8:
-    case X86::AND64mi8:
-    case X86::OR16mi8:
-    case X86::OR32mi8:
-    case X86::OR64mi8:
+    case X86::AND16mi:
+    case X86::AND32mi:
+    case X86::AND64mi32:
+    case X86::OR16mi:
+    case X86::OR32mi:
+    case X86::OR64mi32:
     case X86::MOV32mi:
     case X86::MOV64mi32:
-      PushOpcode = Is64Bit ? X86::PUSH64i32 : X86::PUSHi32;
-      // If the operand is a small (8-bit) immediate, we can use a
-      // PUSH instruction with a shorter encoding.
-      // Note that isImm() may fail even though this is a MOVmi, because
-      // the operand can also be a symbol.
-      if (PushOp.isImm()) {
-        int64_t Val = PushOp.getImm();
-        if (isInt<8>(Val))
-          PushOpcode = Is64Bit ? X86::PUSH64i8 : X86::PUSH32i8;
-      }
+      PushOpcode = Is64Bit ? X86::PUSH64i32 : X86::PUSH32i;
       Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode)).add(PushOp);
       Push->cloneMemRefs(MF, *Store);
       break;

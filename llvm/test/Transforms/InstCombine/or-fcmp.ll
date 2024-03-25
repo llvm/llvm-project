@@ -3,8 +3,8 @@
 
 define i1 @PR1738(double %x, double %y) {
 ; CHECK-LABEL: @PR1738(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[OR:%.*]] = fcmp uno double [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %cmp1 = fcmp uno double %x, 0.0
   %cmp2 = fcmp uno double %y, 0.0
@@ -28,8 +28,8 @@ define i1 @PR1738_logical(double %x, double %y) {
 
 define <2 x i1> @PR1738_vec_undef(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: @PR1738_vec_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno <2 x double> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+; CHECK-NEXT:    [[OR:%.*]] = fcmp uno <2 x double> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %cmp1 = fcmp uno <2 x double> %x, <double 0.0, double undef>
   %cmp2 = fcmp uno <2 x double> %y, <double undef, double 0.0>
@@ -131,8 +131,8 @@ define <2 x i1> @PR41069_vec_commute(<2 x i1> %z, <2 x float> %c, <2 x float> %d
 
 define i1 @fcmp_uno_nonzero(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_uno_nonzero(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[OR:%.*]] = fcmp uno float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %cmp1 = fcmp uno float %x, 1.0
   %cmp2 = fcmp uno float %y, 2.0
@@ -156,8 +156,8 @@ define i1 @fcmp_uno_nonzero_logical(float %x, float %y) {
 
 define <3 x i1> @fcmp_uno_nonzero_vec(<3 x float> %x, <3 x float> %y) {
 ; CHECK-LABEL: @fcmp_uno_nonzero_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno <3 x float> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret <3 x i1> [[TMP1]]
+; CHECK-NEXT:    [[OR:%.*]] = fcmp uno <3 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <3 x i1> [[OR]]
 ;
   %cmp1 = fcmp uno <3 x float> %x, <float 1.0, float 2.0, float 3.0>
   %cmp2 = fcmp uno <3 x float> %y, <float 3.0, float 2.0, float 1.0>
@@ -230,8 +230,8 @@ define i1 @auto_gen_1_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_2(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_2(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp oeq double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -241,8 +241,8 @@ define i1 @auto_gen_2(double %a, double %b) {
 
 define i1 @auto_gen_2_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_2_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp oeq double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -252,8 +252,8 @@ define i1 @auto_gen_2_logical(double %a, double %b) {
 
 define i1 @auto_gen_2_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_2_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp oeq double %a, %b
   %cmp1 = fcmp fast oeq double %a, %b
@@ -296,8 +296,8 @@ define i1 @auto_gen_3_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_4(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_4(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ogt double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -307,8 +307,8 @@ define i1 @auto_gen_4(double %a, double %b) {
 
 define i1 @auto_gen_4_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_4_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ogt double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -318,8 +318,8 @@ define i1 @auto_gen_4_logical(double %a, double %b) {
 
 define i1 @auto_gen_4_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_4_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ogt double %a, %b
   %cmp1 = fcmp fast oeq double %a, %b
@@ -329,8 +329,8 @@ define i1 @auto_gen_4_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_5(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_5(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ogt double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -340,8 +340,8 @@ define i1 @auto_gen_5(double %a, double %b) {
 
 define i1 @auto_gen_5_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_5_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ogt double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -351,8 +351,8 @@ define i1 @auto_gen_5_logical(double %a, double %b) {
 
 define i1 @auto_gen_5_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_5_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast ogt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast ogt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast ogt double %a, %b
   %cmp1 = fcmp fast ogt double %a, %b
@@ -395,8 +395,8 @@ define i1 @auto_gen_6_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_7(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_7(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp oge double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -406,8 +406,8 @@ define i1 @auto_gen_7(double %a, double %b) {
 
 define i1 @auto_gen_7_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_7_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp oge double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -417,8 +417,8 @@ define i1 @auto_gen_7_logical(double %a, double %b) {
 
 define i1 @auto_gen_7_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_7_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast oge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast oge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast oge double %a, %b
   %cmp1 = fcmp fast oeq double %a, %b
@@ -428,8 +428,8 @@ define i1 @auto_gen_7_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_8(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_8(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp oge double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -439,8 +439,8 @@ define i1 @auto_gen_8(double %a, double %b) {
 
 define i1 @auto_gen_8_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_8_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp oge double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -450,8 +450,8 @@ define i1 @auto_gen_8_logical(double %a, double %b) {
 
 define i1 @auto_gen_8_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_8_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp oge double %a, %b
   %cmp1 = fcmp fast ogt double %a, %b
@@ -461,8 +461,8 @@ define i1 @auto_gen_8_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_9(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_9(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp oge double %a, %b
   %cmp1 = fcmp oge double %a, %b
@@ -472,8 +472,8 @@ define i1 @auto_gen_9(double %a, double %b) {
 
 define i1 @auto_gen_9_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_9_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp oge double %a, %b
   %cmp1 = fcmp oge double %a, %b
@@ -483,8 +483,8 @@ define i1 @auto_gen_9_logical(double %a, double %b) {
 
 define i1 @auto_gen_9_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_9_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast oge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast oge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast oge double %a, %b
   %cmp1 = fcmp fast oge double %a, %b
@@ -527,8 +527,8 @@ define i1 @auto_gen_10_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_11(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_11(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp olt double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -538,8 +538,8 @@ define i1 @auto_gen_11(double %a, double %b) {
 
 define i1 @auto_gen_11_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_11_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp olt double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -549,8 +549,8 @@ define i1 @auto_gen_11_logical(double %a, double %b) {
 
 define i1 @auto_gen_11_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_11_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast ole double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast ole double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast olt double %a, %b
   %cmp1 = fcmp fast oeq double %a, %b
@@ -560,8 +560,8 @@ define i1 @auto_gen_11_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_12(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_12(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp olt double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -571,8 +571,8 @@ define i1 @auto_gen_12(double %a, double %b) {
 
 define i1 @auto_gen_12_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_12_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp olt double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -582,8 +582,8 @@ define i1 @auto_gen_12_logical(double %a, double %b) {
 
 define i1 @auto_gen_12_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_12_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp olt double %a, %b
   %cmp1 = fcmp fast ogt double %a, %b
@@ -593,8 +593,8 @@ define i1 @auto_gen_12_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_13(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_13(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp olt double %a, %b
   %cmp1 = fcmp oge double %a, %b
@@ -604,8 +604,8 @@ define i1 @auto_gen_13(double %a, double %b) {
 
 define i1 @auto_gen_13_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_13_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp olt double %a, %b
   %cmp1 = fcmp oge double %a, %b
@@ -625,8 +625,8 @@ define i1 @auto_gen_13_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_14(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_14(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp olt double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -636,8 +636,8 @@ define i1 @auto_gen_14(double %a, double %b) {
 
 define i1 @auto_gen_14_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_14_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp olt double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -647,8 +647,8 @@ define i1 @auto_gen_14_logical(double %a, double %b) {
 
 define i1 @auto_gen_14_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_14_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp olt double %a, %b
   %cmp1 = fcmp fast olt double %a, %b
@@ -691,8 +691,8 @@ define i1 @auto_gen_15_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_16(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_16(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ole double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -702,8 +702,8 @@ define i1 @auto_gen_16(double %a, double %b) {
 
 define i1 @auto_gen_16_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_16_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ole double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -713,8 +713,8 @@ define i1 @auto_gen_16_logical(double %a, double %b) {
 
 define i1 @auto_gen_16_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_16_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ole double %a, %b
   %cmp1 = fcmp fast oeq double %a, %b
@@ -724,8 +724,8 @@ define i1 @auto_gen_16_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_17(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_17(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ole double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -735,8 +735,8 @@ define i1 @auto_gen_17(double %a, double %b) {
 
 define i1 @auto_gen_17_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_17_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ole double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -756,8 +756,8 @@ define i1 @auto_gen_17_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_18(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_18(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ole double %a, %b
   %cmp1 = fcmp oge double %a, %b
@@ -767,8 +767,8 @@ define i1 @auto_gen_18(double %a, double %b) {
 
 define i1 @auto_gen_18_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_18_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ole double %a, %b
   %cmp1 = fcmp oge double %a, %b
@@ -778,8 +778,8 @@ define i1 @auto_gen_18_logical(double %a, double %b) {
 
 define i1 @auto_gen_18_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_18_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ole double %a, %b
   %cmp1 = fcmp fast oge double %a, %b
@@ -789,8 +789,8 @@ define i1 @auto_gen_18_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_19(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_19(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ole double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -800,8 +800,8 @@ define i1 @auto_gen_19(double %a, double %b) {
 
 define i1 @auto_gen_19_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_19_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ole double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -811,8 +811,8 @@ define i1 @auto_gen_19_logical(double %a, double %b) {
 
 define i1 @auto_gen_19_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_19_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast ole double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast ole double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast ole double %a, %b
   %cmp1 = fcmp fast olt double %a, %b
@@ -822,8 +822,8 @@ define i1 @auto_gen_19_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_20(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_20(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ole double %a, %b
   %cmp1 = fcmp ole double %a, %b
@@ -833,8 +833,8 @@ define i1 @auto_gen_20(double %a, double %b) {
 
 define i1 @auto_gen_20_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_20_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ole double %a, %b
   %cmp1 = fcmp ole double %a, %b
@@ -844,8 +844,8 @@ define i1 @auto_gen_20_logical(double %a, double %b) {
 
 define i1 @auto_gen_20_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_20_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ole double %a, %b
   %cmp1 = fcmp fast ole double %a, %b
@@ -888,8 +888,8 @@ define i1 @auto_gen_21_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_22(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_22(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp one double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -899,8 +899,8 @@ define i1 @auto_gen_22(double %a, double %b) {
 
 define i1 @auto_gen_22_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_22_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp one double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -910,8 +910,8 @@ define i1 @auto_gen_22_logical(double %a, double %b) {
 
 define i1 @auto_gen_22_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_22_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp one double %a, %b
   %cmp1 = fcmp fast oeq double %a, %b
@@ -921,8 +921,8 @@ define i1 @auto_gen_22_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_23(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_23(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp one double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -932,8 +932,8 @@ define i1 @auto_gen_23(double %a, double %b) {
 
 define i1 @auto_gen_23_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_23_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp one double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -943,8 +943,8 @@ define i1 @auto_gen_23_logical(double %a, double %b) {
 
 define i1 @auto_gen_23_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_23_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast one double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast one double %a, %b
   %cmp1 = fcmp fast ogt double %a, %b
@@ -954,8 +954,8 @@ define i1 @auto_gen_23_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_24(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_24(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp one double %a, %b
   %cmp1 = fcmp oge double %a, %b
@@ -965,8 +965,8 @@ define i1 @auto_gen_24(double %a, double %b) {
 
 define i1 @auto_gen_24_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_24_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp one double %a, %b
   %cmp1 = fcmp oge double %a, %b
@@ -976,8 +976,8 @@ define i1 @auto_gen_24_logical(double %a, double %b) {
 
 define i1 @auto_gen_24_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_24_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp one double %a, %b
   %cmp1 = fcmp fast oge double %a, %b
@@ -987,8 +987,8 @@ define i1 @auto_gen_24_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_25(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_25(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp one double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -998,8 +998,8 @@ define i1 @auto_gen_25(double %a, double %b) {
 
 define i1 @auto_gen_25_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_25_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp one double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -1009,8 +1009,8 @@ define i1 @auto_gen_25_logical(double %a, double %b) {
 
 define i1 @auto_gen_25_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_25_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast one double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast one double %a, %b
   %cmp1 = fcmp fast olt double %a, %b
@@ -1020,8 +1020,8 @@ define i1 @auto_gen_25_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_26(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_26(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp one double %a, %b
   %cmp1 = fcmp ole double %a, %b
@@ -1031,8 +1031,8 @@ define i1 @auto_gen_26(double %a, double %b) {
 
 define i1 @auto_gen_26_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_26_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp one double %a, %b
   %cmp1 = fcmp ole double %a, %b
@@ -1042,8 +1042,8 @@ define i1 @auto_gen_26_logical(double %a, double %b) {
 
 define i1 @auto_gen_26_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_26_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp one double %a, %b
   %cmp1 = fcmp fast ole double %a, %b
@@ -1053,8 +1053,8 @@ define i1 @auto_gen_26_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_27(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_27(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp one double %a, %b
   %cmp1 = fcmp one double %a, %b
@@ -1064,8 +1064,8 @@ define i1 @auto_gen_27(double %a, double %b) {
 
 define i1 @auto_gen_27_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_27_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp one double %a, %b
   %cmp1 = fcmp one double %a, %b
@@ -1075,8 +1075,8 @@ define i1 @auto_gen_27_logical(double %a, double %b) {
 
 define i1 @auto_gen_27_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_27_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast one double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast one double %a, %b
   %cmp1 = fcmp fast one double %a, %b
@@ -1119,8 +1119,8 @@ define i1 @auto_gen_28_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_29(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_29(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -1130,8 +1130,8 @@ define i1 @auto_gen_29(double %a, double %b) {
 
 define i1 @auto_gen_29_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_29_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -1151,8 +1151,8 @@ define i1 @auto_gen_29_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_30(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_30(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -1162,8 +1162,8 @@ define i1 @auto_gen_30(double %a, double %b) {
 
 define i1 @auto_gen_30_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_30_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -1173,8 +1173,8 @@ define i1 @auto_gen_30_logical(double %a, double %b) {
 
 define i1 @auto_gen_30_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_30_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp fast ogt double %a, %b
@@ -1184,8 +1184,8 @@ define i1 @auto_gen_30_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_31(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_31(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp oge double %a, %b
@@ -1195,8 +1195,8 @@ define i1 @auto_gen_31(double %a, double %b) {
 
 define i1 @auto_gen_31_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_31_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp oge double %a, %b
@@ -1216,8 +1216,8 @@ define i1 @auto_gen_31_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_32(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_32(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -1227,8 +1227,8 @@ define i1 @auto_gen_32(double %a, double %b) {
 
 define i1 @auto_gen_32_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_32_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -1238,8 +1238,8 @@ define i1 @auto_gen_32_logical(double %a, double %b) {
 
 define i1 @auto_gen_32_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_32_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp fast olt double %a, %b
@@ -1249,8 +1249,8 @@ define i1 @auto_gen_32_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_33(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_33(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp ole double %a, %b
@@ -1260,8 +1260,8 @@ define i1 @auto_gen_33(double %a, double %b) {
 
 define i1 @auto_gen_33_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_33_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp ole double %a, %b
@@ -1281,8 +1281,8 @@ define i1 @auto_gen_33_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_34(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_34(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp one double %a, %b
@@ -1292,8 +1292,8 @@ define i1 @auto_gen_34(double %a, double %b) {
 
 define i1 @auto_gen_34_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_34_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp one double %a, %b
@@ -1303,8 +1303,8 @@ define i1 @auto_gen_34_logical(double %a, double %b) {
 
 define i1 @auto_gen_34_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_34_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp fast one double %a, %b
@@ -1314,8 +1314,8 @@ define i1 @auto_gen_34_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_35(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_35(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp ord double %a, %b
@@ -1325,8 +1325,8 @@ define i1 @auto_gen_35(double %a, double %b) {
 
 define i1 @auto_gen_35_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_35_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp ord double %a, %b
@@ -1379,8 +1379,8 @@ define i1 @auto_gen_36_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_37(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_37(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -1390,8 +1390,8 @@ define i1 @auto_gen_37(double %a, double %b) {
 
 define i1 @auto_gen_37_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_37_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -1401,8 +1401,8 @@ define i1 @auto_gen_37_logical(double %a, double %b) {
 
 define i1 @auto_gen_37_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_37_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast ueq double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast ueq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast ueq double %a, %b
   %cmp1 = fcmp fast oeq double %a, %b
@@ -1412,8 +1412,8 @@ define i1 @auto_gen_37_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_38(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_38(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -1423,8 +1423,8 @@ define i1 @auto_gen_38(double %a, double %b) {
 
 define i1 @auto_gen_38_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_38_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -1434,8 +1434,8 @@ define i1 @auto_gen_38_logical(double %a, double %b) {
 
 define i1 @auto_gen_38_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_38_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp fast ogt double %a, %b
@@ -1445,8 +1445,8 @@ define i1 @auto_gen_38_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_39(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_39(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp oge double %a, %b
@@ -1456,8 +1456,8 @@ define i1 @auto_gen_39(double %a, double %b) {
 
 define i1 @auto_gen_39_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_39_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp oge double %a, %b
@@ -1467,8 +1467,8 @@ define i1 @auto_gen_39_logical(double %a, double %b) {
 
 define i1 @auto_gen_39_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_39_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast ueq double %a, %b
   %cmp1 = fcmp fast oge double %a, %b
@@ -1478,8 +1478,8 @@ define i1 @auto_gen_39_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_40(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_40(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -1489,8 +1489,8 @@ define i1 @auto_gen_40(double %a, double %b) {
 
 define i1 @auto_gen_40_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_40_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -1500,8 +1500,8 @@ define i1 @auto_gen_40_logical(double %a, double %b) {
 
 define i1 @auto_gen_40_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_40_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp fast olt double %a, %b
@@ -1511,8 +1511,8 @@ define i1 @auto_gen_40_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_41(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_41(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp ole double %a, %b
@@ -1522,8 +1522,8 @@ define i1 @auto_gen_41(double %a, double %b) {
 
 define i1 @auto_gen_41_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_41_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp ole double %a, %b
@@ -1533,8 +1533,8 @@ define i1 @auto_gen_41_logical(double %a, double %b) {
 
 define i1 @auto_gen_41_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_41_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast ueq double %a, %b
   %cmp1 = fcmp fast ole double %a, %b
@@ -1604,8 +1604,8 @@ define i1 @auto_gen_43_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_44(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_44(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp ueq double %a, %b
@@ -1615,8 +1615,8 @@ define i1 @auto_gen_44(double %a, double %b) {
 
 define i1 @auto_gen_44_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_44_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp ueq double %a, %b
@@ -1626,8 +1626,8 @@ define i1 @auto_gen_44_logical(double %a, double %b) {
 
 define i1 @auto_gen_44_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_44_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp fast ueq double %a, %b
@@ -1670,8 +1670,8 @@ define i1 @auto_gen_45_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_46(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_46(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -1681,8 +1681,8 @@ define i1 @auto_gen_46(double %a, double %b) {
 
 define i1 @auto_gen_46_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_46_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -1692,8 +1692,8 @@ define i1 @auto_gen_46_logical(double %a, double %b) {
 
 define i1 @auto_gen_46_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_46_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp fast oeq double %a, %b
@@ -1703,8 +1703,8 @@ define i1 @auto_gen_46_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_47(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_47(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -1714,8 +1714,8 @@ define i1 @auto_gen_47(double %a, double %b) {
 
 define i1 @auto_gen_47_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_47_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -1725,8 +1725,8 @@ define i1 @auto_gen_47_logical(double %a, double %b) {
 
 define i1 @auto_gen_47_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_47_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast ugt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast ugt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast ugt double %a, %b
   %cmp1 = fcmp fast ogt double %a, %b
@@ -1736,8 +1736,8 @@ define i1 @auto_gen_47_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_48(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_48(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp oge double %a, %b
@@ -1747,8 +1747,8 @@ define i1 @auto_gen_48(double %a, double %b) {
 
 define i1 @auto_gen_48_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_48_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp oge double %a, %b
@@ -1758,8 +1758,8 @@ define i1 @auto_gen_48_logical(double %a, double %b) {
 
 define i1 @auto_gen_48_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_48_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp fast oge double %a, %b
@@ -1769,8 +1769,8 @@ define i1 @auto_gen_48_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_49(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_49(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -1780,8 +1780,8 @@ define i1 @auto_gen_49(double %a, double %b) {
 
 define i1 @auto_gen_49_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_49_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -1791,8 +1791,8 @@ define i1 @auto_gen_49_logical(double %a, double %b) {
 
 define i1 @auto_gen_49_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_49_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast ugt double %a, %b
   %cmp1 = fcmp fast olt double %a, %b
@@ -1832,8 +1832,8 @@ define i1 @auto_gen_50_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_51(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_51(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp one double %a, %b
@@ -1843,8 +1843,8 @@ define i1 @auto_gen_51(double %a, double %b) {
 
 define i1 @auto_gen_51_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_51_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp one double %a, %b
@@ -1854,8 +1854,8 @@ define i1 @auto_gen_51_logical(double %a, double %b) {
 
 define i1 @auto_gen_51_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_51_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast ugt double %a, %b
   %cmp1 = fcmp fast one double %a, %b
@@ -1895,8 +1895,8 @@ define i1 @auto_gen_52_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_53(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_53(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp ueq double %a, %b
@@ -1906,8 +1906,8 @@ define i1 @auto_gen_53(double %a, double %b) {
 
 define i1 @auto_gen_53_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_53_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp ueq double %a, %b
@@ -1917,8 +1917,8 @@ define i1 @auto_gen_53_logical(double %a, double %b) {
 
 define i1 @auto_gen_53_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_53_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast ugt double %a, %b
   %cmp1 = fcmp fast ueq double %a, %b
@@ -1928,8 +1928,8 @@ define i1 @auto_gen_53_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_54(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_54(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp ugt double %a, %b
@@ -1939,8 +1939,8 @@ define i1 @auto_gen_54(double %a, double %b) {
 
 define i1 @auto_gen_54_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_54_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp ugt double %a, %b
@@ -1950,8 +1950,8 @@ define i1 @auto_gen_54_logical(double %a, double %b) {
 
 define i1 @auto_gen_54_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_54_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp fast ugt double %a, %b
@@ -1994,8 +1994,8 @@ define i1 @auto_gen_55_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_56(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_56(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -2005,8 +2005,8 @@ define i1 @auto_gen_56(double %a, double %b) {
 
 define i1 @auto_gen_56_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_56_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -2016,8 +2016,8 @@ define i1 @auto_gen_56_logical(double %a, double %b) {
 
 define i1 @auto_gen_56_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_56_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp fast oeq double %a, %b
@@ -2027,8 +2027,8 @@ define i1 @auto_gen_56_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_57(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_57(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -2038,8 +2038,8 @@ define i1 @auto_gen_57(double %a, double %b) {
 
 define i1 @auto_gen_57_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_57_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -2049,8 +2049,8 @@ define i1 @auto_gen_57_logical(double %a, double %b) {
 
 define i1 @auto_gen_57_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_57_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast uge double %a, %b
   %cmp1 = fcmp fast ogt double %a, %b
@@ -2060,8 +2060,8 @@ define i1 @auto_gen_57_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_58(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_58(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp oge double %a, %b
@@ -2071,8 +2071,8 @@ define i1 @auto_gen_58(double %a, double %b) {
 
 define i1 @auto_gen_58_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_58_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp oge double %a, %b
@@ -2082,8 +2082,8 @@ define i1 @auto_gen_58_logical(double %a, double %b) {
 
 define i1 @auto_gen_58_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_58_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp fast oge double %a, %b
@@ -2213,8 +2213,8 @@ define i1 @auto_gen_62_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_63(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_63(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp ueq double %a, %b
@@ -2224,8 +2224,8 @@ define i1 @auto_gen_63(double %a, double %b) {
 
 define i1 @auto_gen_63_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_63_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp ueq double %a, %b
@@ -2235,8 +2235,8 @@ define i1 @auto_gen_63_logical(double %a, double %b) {
 
 define i1 @auto_gen_63_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_63_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast uge double %a, %b
   %cmp1 = fcmp fast ueq double %a, %b
@@ -2246,8 +2246,8 @@ define i1 @auto_gen_63_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_64(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_64(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp ugt double %a, %b
@@ -2257,8 +2257,8 @@ define i1 @auto_gen_64(double %a, double %b) {
 
 define i1 @auto_gen_64_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_64_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp ugt double %a, %b
@@ -2268,8 +2268,8 @@ define i1 @auto_gen_64_logical(double %a, double %b) {
 
 define i1 @auto_gen_64_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_64_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp fast ugt double %a, %b
@@ -2279,8 +2279,8 @@ define i1 @auto_gen_64_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_65(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_65(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp uge double %a, %b
@@ -2290,8 +2290,8 @@ define i1 @auto_gen_65(double %a, double %b) {
 
 define i1 @auto_gen_65_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_65_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp uge double %a, %b
@@ -2301,8 +2301,8 @@ define i1 @auto_gen_65_logical(double %a, double %b) {
 
 define i1 @auto_gen_65_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_65_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast uge double %a, %b
   %cmp1 = fcmp fast uge double %a, %b
@@ -2345,8 +2345,8 @@ define i1 @auto_gen_66_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_67(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_67(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -2356,8 +2356,8 @@ define i1 @auto_gen_67(double %a, double %b) {
 
 define i1 @auto_gen_67_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_67_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -2367,8 +2367,8 @@ define i1 @auto_gen_67_logical(double %a, double %b) {
 
 define i1 @auto_gen_67_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_67_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast ult double %a, %b
   %cmp1 = fcmp fast oeq double %a, %b
@@ -2378,8 +2378,8 @@ define i1 @auto_gen_67_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_68(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_68(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -2389,8 +2389,8 @@ define i1 @auto_gen_68(double %a, double %b) {
 
 define i1 @auto_gen_68_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_68_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -2400,8 +2400,8 @@ define i1 @auto_gen_68_logical(double %a, double %b) {
 
 define i1 @auto_gen_68_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_68_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp fast ogt double %a, %b
@@ -2441,8 +2441,8 @@ define i1 @auto_gen_69_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_70(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_70(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -2452,8 +2452,8 @@ define i1 @auto_gen_70(double %a, double %b) {
 
 define i1 @auto_gen_70_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_70_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -2463,8 +2463,8 @@ define i1 @auto_gen_70_logical(double %a, double %b) {
 
 define i1 @auto_gen_70_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_70_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp fast olt double %a, %b
@@ -2474,8 +2474,8 @@ define i1 @auto_gen_70_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_71(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_71(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp ole double %a, %b
@@ -2485,8 +2485,8 @@ define i1 @auto_gen_71(double %a, double %b) {
 
 define i1 @auto_gen_71_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_71_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp ole double %a, %b
@@ -2496,8 +2496,8 @@ define i1 @auto_gen_71_logical(double %a, double %b) {
 
 define i1 @auto_gen_71_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_71_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast ult double %a, %b
   %cmp1 = fcmp fast ole double %a, %b
@@ -2507,8 +2507,8 @@ define i1 @auto_gen_71_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_72(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_72(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp one double %a, %b
@@ -2518,8 +2518,8 @@ define i1 @auto_gen_72(double %a, double %b) {
 
 define i1 @auto_gen_72_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_72_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp one double %a, %b
@@ -2529,8 +2529,8 @@ define i1 @auto_gen_72_logical(double %a, double %b) {
 
 define i1 @auto_gen_72_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_72_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp fast one double %a, %b
@@ -2570,8 +2570,8 @@ define i1 @auto_gen_73_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_74(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_74(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp ueq double %a, %b
@@ -2581,8 +2581,8 @@ define i1 @auto_gen_74(double %a, double %b) {
 
 define i1 @auto_gen_74_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_74_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp ueq double %a, %b
@@ -2592,8 +2592,8 @@ define i1 @auto_gen_74_logical(double %a, double %b) {
 
 define i1 @auto_gen_74_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_74_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp fast ueq double %a, %b
@@ -2603,8 +2603,8 @@ define i1 @auto_gen_74_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_75(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_75(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp ugt double %a, %b
@@ -2614,8 +2614,8 @@ define i1 @auto_gen_75(double %a, double %b) {
 
 define i1 @auto_gen_75_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_75_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp ugt double %a, %b
@@ -2625,8 +2625,8 @@ define i1 @auto_gen_75_logical(double %a, double %b) {
 
 define i1 @auto_gen_75_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_75_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast ult double %a, %b
   %cmp1 = fcmp fast ugt double %a, %b
@@ -2666,8 +2666,8 @@ define i1 @auto_gen_76_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_77(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_77(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp ult double %a, %b
@@ -2677,8 +2677,8 @@ define i1 @auto_gen_77(double %a, double %b) {
 
 define i1 @auto_gen_77_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_77_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp ult double %a, %b
@@ -2688,8 +2688,8 @@ define i1 @auto_gen_77_logical(double %a, double %b) {
 
 define i1 @auto_gen_77_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_77_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast ult double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast ult double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast ult double %a, %b
   %cmp1 = fcmp fast ult double %a, %b
@@ -2732,8 +2732,8 @@ define i1 @auto_gen_78_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_79(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_79(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -2743,8 +2743,8 @@ define i1 @auto_gen_79(double %a, double %b) {
 
 define i1 @auto_gen_79_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_79_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -2754,8 +2754,8 @@ define i1 @auto_gen_79_logical(double %a, double %b) {
 
 define i1 @auto_gen_79_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_79_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast ule double %a, %b
   %cmp1 = fcmp fast oeq double %a, %b
@@ -2825,8 +2825,8 @@ define i1 @auto_gen_81_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_82(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_82(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -2836,8 +2836,8 @@ define i1 @auto_gen_82(double %a, double %b) {
 
 define i1 @auto_gen_82_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_82_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -2847,8 +2847,8 @@ define i1 @auto_gen_82_logical(double %a, double %b) {
 
 define i1 @auto_gen_82_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_82_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp fast olt double %a, %b
@@ -2858,8 +2858,8 @@ define i1 @auto_gen_82_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_83(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_83(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp ole double %a, %b
@@ -2869,8 +2869,8 @@ define i1 @auto_gen_83(double %a, double %b) {
 
 define i1 @auto_gen_83_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_83_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp ole double %a, %b
@@ -2880,8 +2880,8 @@ define i1 @auto_gen_83_logical(double %a, double %b) {
 
 define i1 @auto_gen_83_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_83_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast ule double %a, %b
   %cmp1 = fcmp fast ole double %a, %b
@@ -2951,8 +2951,8 @@ define i1 @auto_gen_85_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_86(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_86(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp ueq double %a, %b
@@ -2962,8 +2962,8 @@ define i1 @auto_gen_86(double %a, double %b) {
 
 define i1 @auto_gen_86_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_86_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp ueq double %a, %b
@@ -2973,8 +2973,8 @@ define i1 @auto_gen_86_logical(double %a, double %b) {
 
 define i1 @auto_gen_86_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_86_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp fast ueq double %a, %b
@@ -3044,8 +3044,8 @@ define i1 @auto_gen_88_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_89(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_89(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp ult double %a, %b
@@ -3055,8 +3055,8 @@ define i1 @auto_gen_89(double %a, double %b) {
 
 define i1 @auto_gen_89_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_89_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp ult double %a, %b
@@ -3066,8 +3066,8 @@ define i1 @auto_gen_89_logical(double %a, double %b) {
 
 define i1 @auto_gen_89_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_89_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast ule double %a, %b
   %cmp1 = fcmp fast ult double %a, %b
@@ -3077,8 +3077,8 @@ define i1 @auto_gen_89_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_90(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_90(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp ule double %a, %b
@@ -3088,8 +3088,8 @@ define i1 @auto_gen_90(double %a, double %b) {
 
 define i1 @auto_gen_90_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_90_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp ule double %a, %b
@@ -3099,8 +3099,8 @@ define i1 @auto_gen_90_logical(double %a, double %b) {
 
 define i1 @auto_gen_90_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_90_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp fast ule double %a, %b
@@ -3173,8 +3173,8 @@ define i1 @auto_gen_92_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_93(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_93(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -3184,8 +3184,8 @@ define i1 @auto_gen_93(double %a, double %b) {
 
 define i1 @auto_gen_93_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_93_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -3195,8 +3195,8 @@ define i1 @auto_gen_93_logical(double %a, double %b) {
 
 define i1 @auto_gen_93_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_93_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast une double %a, %b
   %cmp1 = fcmp fast ogt double %a, %b
@@ -3236,8 +3236,8 @@ define i1 @auto_gen_94_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_95(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_95(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -3247,8 +3247,8 @@ define i1 @auto_gen_95(double %a, double %b) {
 
 define i1 @auto_gen_95_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_95_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -3258,8 +3258,8 @@ define i1 @auto_gen_95_logical(double %a, double %b) {
 
 define i1 @auto_gen_95_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_95_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast une double %a, %b
   %cmp1 = fcmp fast olt double %a, %b
@@ -3299,8 +3299,8 @@ define i1 @auto_gen_96_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_97(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_97(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp one double %a, %b
@@ -3310,8 +3310,8 @@ define i1 @auto_gen_97(double %a, double %b) {
 
 define i1 @auto_gen_97_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_97_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp one double %a, %b
@@ -3321,8 +3321,8 @@ define i1 @auto_gen_97_logical(double %a, double %b) {
 
 define i1 @auto_gen_97_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_97_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast une double %a, %b
   %cmp1 = fcmp fast one double %a, %b
@@ -3392,8 +3392,8 @@ define i1 @auto_gen_99_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_100(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_100(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp ugt double %a, %b
@@ -3403,8 +3403,8 @@ define i1 @auto_gen_100(double %a, double %b) {
 
 define i1 @auto_gen_100_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_100_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp ugt double %a, %b
@@ -3414,8 +3414,8 @@ define i1 @auto_gen_100_logical(double %a, double %b) {
 
 define i1 @auto_gen_100_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_100_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp fast ugt double %a, %b
@@ -3455,8 +3455,8 @@ define i1 @auto_gen_101_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_102(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_102(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp ult double %a, %b
@@ -3466,8 +3466,8 @@ define i1 @auto_gen_102(double %a, double %b) {
 
 define i1 @auto_gen_102_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_102_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp ult double %a, %b
@@ -3477,8 +3477,8 @@ define i1 @auto_gen_102_logical(double %a, double %b) {
 
 define i1 @auto_gen_102_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_102_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp fast ult double %a, %b
@@ -3518,8 +3518,8 @@ define i1 @auto_gen_103_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_104(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_104(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp une double %a, %b
@@ -3529,8 +3529,8 @@ define i1 @auto_gen_104(double %a, double %b) {
 
 define i1 @auto_gen_104_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_104_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp une double %a, %b
@@ -3540,8 +3540,8 @@ define i1 @auto_gen_104_logical(double %a, double %b) {
 
 define i1 @auto_gen_104_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_104_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp fast une double %a, %b
@@ -3583,8 +3583,8 @@ define i1 @auto_gen_105_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_106(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_106(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -3594,8 +3594,8 @@ define i1 @auto_gen_106(double %a, double %b) {
 
 define i1 @auto_gen_106_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_106_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp oeq double %a, %b
@@ -3605,8 +3605,8 @@ define i1 @auto_gen_106_logical(double %a, double %b) {
 
 define i1 @auto_gen_106_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_106_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp fast oeq double %a, %b
@@ -3616,8 +3616,8 @@ define i1 @auto_gen_106_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_107(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_107(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -3627,8 +3627,8 @@ define i1 @auto_gen_107(double %a, double %b) {
 
 define i1 @auto_gen_107_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_107_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -3649,8 +3649,8 @@ define i1 @auto_gen_107_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_108(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_108(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp oge double %a, %b
@@ -3660,8 +3660,8 @@ define i1 @auto_gen_108(double %a, double %b) {
 
 define i1 @auto_gen_108_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_108_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp oge double %a, %b
@@ -3671,8 +3671,8 @@ define i1 @auto_gen_108_logical(double %a, double %b) {
 
 define i1 @auto_gen_108_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_108_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp fast oge double %a, %b
@@ -3682,8 +3682,8 @@ define i1 @auto_gen_108_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_109(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_109(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -3693,8 +3693,8 @@ define i1 @auto_gen_109(double %a, double %b) {
 
 define i1 @auto_gen_109_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_109_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp olt double %a, %b
@@ -3715,8 +3715,8 @@ define i1 @auto_gen_109_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_110(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_110(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp ole double %a, %b
@@ -3726,8 +3726,8 @@ define i1 @auto_gen_110(double %a, double %b) {
 
 define i1 @auto_gen_110_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_110_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp ole double %a, %b
@@ -3737,8 +3737,8 @@ define i1 @auto_gen_110_logical(double %a, double %b) {
 
 define i1 @auto_gen_110_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_110_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp fast ole double %a, %b
@@ -3748,8 +3748,8 @@ define i1 @auto_gen_110_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_111(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_111(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp one double %a, %b
@@ -3759,8 +3759,8 @@ define i1 @auto_gen_111(double %a, double %b) {
 
 define i1 @auto_gen_111_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_111_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp one double %a, %b
@@ -3811,8 +3811,8 @@ define i1 @auto_gen_112_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_113(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_113(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp ueq double %a, %b
@@ -3822,8 +3822,8 @@ define i1 @auto_gen_113(double %a, double %b) {
 
 define i1 @auto_gen_113_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_113_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp ueq double %a, %b
@@ -3844,8 +3844,8 @@ define i1 @auto_gen_113_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_114(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_114(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp ugt double %a, %b
@@ -3855,8 +3855,8 @@ define i1 @auto_gen_114(double %a, double %b) {
 
 define i1 @auto_gen_114_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_114_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp ugt double %a, %b
@@ -3866,8 +3866,8 @@ define i1 @auto_gen_114_logical(double %a, double %b) {
 
 define i1 @auto_gen_114_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_114_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp fast ugt double %a, %b
@@ -3877,8 +3877,8 @@ define i1 @auto_gen_114_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_115(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_115(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp uge double %a, %b
@@ -3888,8 +3888,8 @@ define i1 @auto_gen_115(double %a, double %b) {
 
 define i1 @auto_gen_115_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_115_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp uge double %a, %b
@@ -3910,8 +3910,8 @@ define i1 @auto_gen_115_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_116(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_116(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp ult double %a, %b
@@ -3921,8 +3921,8 @@ define i1 @auto_gen_116(double %a, double %b) {
 
 define i1 @auto_gen_116_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_116_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp ult double %a, %b
@@ -3932,8 +3932,8 @@ define i1 @auto_gen_116_logical(double %a, double %b) {
 
 define i1 @auto_gen_116_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_116_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp fast ult double %a, %b
@@ -3943,8 +3943,8 @@ define i1 @auto_gen_116_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_117(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_117(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp ule double %a, %b
@@ -3954,8 +3954,8 @@ define i1 @auto_gen_117(double %a, double %b) {
 
 define i1 @auto_gen_117_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_117_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp ule double %a, %b
@@ -3976,8 +3976,8 @@ define i1 @auto_gen_117_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_118(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_118(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp une double %a, %b
@@ -3987,8 +3987,8 @@ define i1 @auto_gen_118(double %a, double %b) {
 
 define i1 @auto_gen_118_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_118_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp une double %a, %b
@@ -3998,8 +3998,8 @@ define i1 @auto_gen_118_logical(double %a, double %b) {
 
 define i1 @auto_gen_118_logical_fmf(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_118_logical_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp fast une double %a, %b
@@ -4009,8 +4009,8 @@ define i1 @auto_gen_118_logical_fmf(double %a, double %b) {
 
 define i1 @auto_gen_119(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_119(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp uno double %a, %b
@@ -4020,8 +4020,8 @@ define i1 @auto_gen_119(double %a, double %b) {
 
 define i1 @auto_gen_119_logical(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_119_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp uno double %a, %b
@@ -4521,8 +4521,8 @@ define i1 @auto_gen_135_logical_fmf(double %a, double %b) {
 
 define i1 @intersect_fmf_1(double %a, double %b) {
 ; CHECK-LABEL: @intersect_fmf_1(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast one double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp fast one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast olt double %a, %b
   %cmp1 = fcmp fast ogt double %a, %b
@@ -4532,8 +4532,8 @@ define i1 @intersect_fmf_1(double %a, double %b) {
 
 define i1 @intersect_fmf_2(double %a, double %b) {
 ; CHECK-LABEL: @intersect_fmf_2(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp fast olt double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -4543,8 +4543,8 @@ define i1 @intersect_fmf_2(double %a, double %b) {
 
 define i1 @intersect_fmf_3(double %a, double %b) {
 ; CHECK-LABEL: @intersect_fmf_3(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp olt double %a, %b
   %cmp1 = fcmp fast ogt double %a, %b
@@ -4554,8 +4554,8 @@ define i1 @intersect_fmf_3(double %a, double %b) {
 
 define i1 @intersect_fmf_4(double %a, double %b) {
 ; CHECK-LABEL: @intersect_fmf_4(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ninf olt double %a, %b
   %cmp1 = fcmp nnan ogt double %a, %b

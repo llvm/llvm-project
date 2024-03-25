@@ -66,7 +66,7 @@ public:
   /// Determine if a declaration should be included in the graph.
   static bool includeInGraph(const Decl *D);
 
-  /// Determine if a declaration should be included in the graph for the 
+  /// Determine if a declaration should be included in the graph for the
   /// purposes of being a callee. This is similar to includeInGraph except
   /// it permits declarations, not just definitions.
   static bool includeCalleeInGraph(const Decl *D);

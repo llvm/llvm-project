@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10.0.0 -fsyntax-only -verify %s -Winvalid-offsetof -std=c++98
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10.0.0 -fsyntax-only -verify %s -Winvalid-offsetof -std=c++98 -fexperimental-new-constant-interpreter
 
 struct NonPOD {
   virtual void f();
@@ -26,7 +27,7 @@ struct HasArray {
 // Constant and non-constant offsetof expressions
 void test_ice(int i) {
   int array0[__builtin_offsetof(HasArray, array[5])];
-  int array1[__builtin_offsetof(HasArray, array[i])];
+  int array1[__builtin_offsetof(HasArray, array[i])]; // expected-warning {{variable length arrays in C++ are a Clang extension}}
 }
 
 // Bitfields
@@ -38,7 +39,7 @@ struct has_bitfields {
 int test3 = __builtin_offsetof(struct has_bitfields, j); // expected-error{{cannot compute offset of bit-field 'j'}}
 
 // offsetof referring to members of a base class.
-struct Base1 { 
+struct Base1 {
   int x;
 };
 
@@ -47,12 +48,12 @@ struct Base2 {
 };
 
 struct Derived2 : public Base1, public Base2 {
-  int z; 
+  int z;
 };
 
-int derived1[__builtin_offsetof(Derived2, x) == 0? 1 : -1];
-int derived2[__builtin_offsetof(Derived2, y)  == 4? 1 : -1];
-int derived3[__builtin_offsetof(Derived2, z)  == 8? 1 : -1];
+int derived1[__builtin_offsetof(Derived2, x) == 0? 1 : -1]; // expected-warning{{offset of on non-POD type 'Derived2'}}
+int derived2[__builtin_offsetof(Derived2, y)  == 4? 1 : -1]; // expected-warning{{offset of on non-POD type 'Derived2'}}
+int derived3[__builtin_offsetof(Derived2, z)  == 8? 1 : -1]; // expected-warning{{offset of on non-POD type 'Derived2'}}
 
 // offsetof referring to anonymous struct in base.
 // PR7769
@@ -65,7 +66,8 @@ struct foo {
 struct bar : public foo  {
 };
 
-int anonstruct[__builtin_offsetof(bar, x) == 0 ? 1 : -1];
+int anonstruct[__builtin_offsetof(bar, x) == 0 ? 1 : -1]; // expected-warning{{offset of on non-POD type 'bar'}}
+
 
 struct LtoRCheck {
   int a[10];

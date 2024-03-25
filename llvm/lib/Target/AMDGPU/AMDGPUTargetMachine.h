@@ -37,11 +37,12 @@ public:
   static bool EnableLateStructurizeCFG;
   static bool EnableFunctionCalls;
   static bool EnableLowerModuleLDS;
+  static bool DisableStructurizer;
 
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                      StringRef FS, TargetOptions Options,
+                      StringRef FS, const TargetOptions &Options,
                       std::optional<Reloc::Model> RM,
-                      std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL);
+                      std::optional<CodeModel::Model> CM, CodeGenOptLevel OL);
   ~AMDGPUTargetMachine() override;
 
   const TargetSubtargetInfo *getSubtargetImpl() const;
@@ -51,7 +52,8 @@ public:
     return TLOF.get();
   }
 
-  void registerPassBuilderCallbacks(PassBuilder &PB) override;
+  void registerPassBuilderCallbacks(PassBuilder &PB,
+                                    bool PopulateClassToPassNames) override;
   void registerDefaultAliasAnalyses(AAManager &) override;
 
   /// Get the integer value of a null pointer in the given address space.
@@ -77,9 +79,9 @@ private:
 
 public:
   GCNTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                   StringRef FS, TargetOptions Options,
+                   StringRef FS, const TargetOptions &Options,
                    std::optional<Reloc::Model> RM,
-                   std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                   std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                    bool JIT);
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
@@ -91,6 +93,8 @@ public:
   bool useIPRA() const override {
     return true;
   }
+
+  void registerMachineRegisterInfoCallback(MachineFunction &MF) const override;
 
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
@@ -135,7 +139,7 @@ public:
   /// be used given that a pass shall work at an optimization \p Level
   /// minimum.
   bool isPassEnabled(const cl::opt<bool> &Opt,
-                     CodeGenOpt::Level Level = CodeGenOpt::Default) const {
+                     CodeGenOptLevel Level = CodeGenOptLevel::Default) const {
     if (Opt.getNumOccurrences())
       return Opt;
     if (TM->getOptLevel() < Level)

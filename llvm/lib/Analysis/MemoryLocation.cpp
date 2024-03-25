@@ -257,7 +257,7 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
 
     case LibFunc_memset_chk:
       assert(ArgIdx == 0 && "Invalid argument index for memset_chk");
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case LibFunc_memcpy_chk: {
       assert((ArgIdx == 0 || ArgIdx == 1) &&
              "Invalid argument index for memcpy_chk");

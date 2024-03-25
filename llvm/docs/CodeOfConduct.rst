@@ -1,3 +1,9 @@
+..
+   This work is licensed under a Creative Commons Attribution 3.0 Unported License.
+   SPDX-License-Identifier: CC-BY-3.0
+
+.. _LLVM Community Code of Conduct:
+
 ==============================
 LLVM Community Code of Conduct
 ==============================
@@ -129,10 +135,21 @@ events as part of each events' information. In person reports will still be
 kept confidential exactly as above, but also feel free to (anonymously if
 needed) email conduct@llvm.org.
 
+Bans
+====
+
+The code of conduct committee may decide to ban an individual from the
+community for violating the code of conduct. The goal of a ban is to protect
+community members from having to interact with people who are consistently not
+respecting the code of conduct. Please refer to the
+:doc:`Developer Policy<DeveloperPolicy>` section on Bans for how to handle
+interactions with former community members. If you need further guidance,
+please contact conduct@llvm.org.
+
 Code of Conduct Committee
 =========================
 
-The committee will consist of a mininum of 5 members and members are asked to
+The committee will consist of a minimum of 5 members and members are asked to
 serve at least a 1 year term. New committee members will be selected by the
 current committee and the LLVM Foundation Board of Directors.
 
@@ -144,18 +161,18 @@ The current committee members are:
 
 * Kit Barton (kbarton\@llvm.org)
 * Kristof Beyls (kristof.beyls\@llvm.org)
+* Stella Stamenova (sstamenova\@llvm.org)
+* David Blaikie (dblaikie\@llvm.org)
 * Mike Edwards (medwards\@llvm.org)
-* Hal Finkel (hfinkel\@llvm.org)
 * Cyndy Ishida (cishida\@llvm.org)
-* Anton Korobeynikov (anton.korobeynikov\@llvm.org)
 * Tanya Lattner (tanyalattner\@llvm.org)
-* Chris Lattner (clattner\@llvm.org)
-* Tom Stellard (tstellar\@llvm.org)
 
 
 Transparency Reports
 ====================
 
+* `July 15, 2023 <https://llvm.org/coc-reports/2023-07-15-report.html>`_
+* `July 15, 2022 <https://llvm.org/coc-reports/2022-07-15-report.html>`_
 * `April 28, 2022 <https://llvm.org/coc-reports/2022-04-28-report.html>`_
 
 For details about what a Transparency Report is and what it contains, please see the :doc:`Response Guide<ResponseGuide>`.
@@ -166,12 +183,21 @@ Questions?
 If you have questions, please feel free to contact the LLVM Foundation Code of
 Conduct Committee by emailing conduct@llvm.org.
 
+Thanks!
+=======
 
-(This text is based on the `Django Project`_ Code of Conduct, which is in turn
-based on wording from the `Speak Up! project`_.)
+This text is based on the `Django Project`_ Code of Conduct, which is in turn
+based on wording from the `Speak Up! project`_.
+
+License
+=======
+
+All content on this page is licensed under a `Creative Commons Attribution 3.0
+Unported License`_.
 
 .. _Django Project: https://www.djangoproject.com/conduct/
 .. _Speak Up! project: http://speakup.io/coc.html
 .. _sexual and gender-based violence:
 .. _hate crimes: https://hatecrime.osce.org
 .. _hate speech: https://www.un.org/en/genocideprevention/documents/UN%20Strategy%20and%20Plan%20of%20Action%20on%20Hate%20Speech%2018%20June%20SYNOPSIS.pdf
+.. _Creative Commons Attribution 3.0 Unported License: http://creativecommons.org/licenses/by/3.0/

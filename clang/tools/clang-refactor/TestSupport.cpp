@@ -176,11 +176,11 @@ std::pair<unsigned, unsigned> getLineColumn(StringRef Filename,
 
 bool TestRefactoringResultConsumer::handleAllResults() {
   bool Failed = false;
-  for (auto &Group : llvm::enumerate(Results)) {
+  for (const auto &Group : llvm::enumerate(Results)) {
     // All ranges in the group must produce the same result.
     std::optional<tooling::AtomicChanges> CanonicalResult;
     std::optional<std::string> CanonicalErrorMessage;
-    for (auto &I : llvm::enumerate(Group.value())) {
+    for (const auto &I : llvm::enumerate(Group.value())) {
       Expected<tooling::AtomicChanges> &Result = I.value();
       std::string ErrorMessage;
       bool HasResult = !!Result;

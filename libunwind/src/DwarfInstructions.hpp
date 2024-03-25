@@ -68,7 +68,7 @@ private:
       return (pint_t)((sint_t)registers.getRegister((int)prolog.cfaRegister) +
              prolog.cfaRegisterOffset);
     if (prolog.cfaExpression != 0)
-      return evaluateExpression((pint_t)prolog.cfaExpression, addressSpace, 
+      return evaluateExpression((pint_t)prolog.cfaExpression, addressSpace,
                                 registers, 0);
     assert(0 && "getCFA(): unknown location");
     __builtin_unreachable();
@@ -224,7 +224,8 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
         p &= ~0xfULL;
         // CFA is the bottom of the current stack frame.
         for (; p < cfa; p += 16) {
-          __asm__ __volatile__(".arch_extension memtag\n"
+          __asm__ __volatile__(".arch armv8.5-a\n"
+                               ".arch_extension memtag\n"
                                "stg %[Ptr], [%[Ptr]]\n"
                                :
                                : [Ptr] "r"(p)

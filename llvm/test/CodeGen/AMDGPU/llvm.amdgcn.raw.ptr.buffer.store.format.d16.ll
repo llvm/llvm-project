@@ -1,0 +1,81 @@
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,UNPACKED %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx810 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED %s
+
+; GCN-LABEL: {{^}}buffer_store_format_d16_x:
+; GCN: s_load_dword s[[LO:[0-9]+]]
+; GCN: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[LO]]
+; GCN: buffer_store_format_d16_x v[[V_LO]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
+define amdgpu_kernel void @buffer_store_format_d16_x(ptr addrspace(8) %rsrc, [8 x i32], half %data, [8 x i32], i32 %voffset) {
+main_body:
+  call void @llvm.amdgcn.raw.ptr.buffer.store.format.f16(half %data, ptr addrspace(8) %rsrc, i32 %voffset, i32 0, i32 0)
+  ret void
+}
+
+; GCN-LABEL: {{^}}buffer_store_format_d16_xy:
+
+; UNPACKED: s_load_dwordx2 s[[[S_DATA:[0-9]+]]:{{[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}}, 0x10
+; UNPACKED-DAG: s_lshr_b32 [[SHR:s[0-9]+]], s[[S_DATA]], 16
+; UNPACKED-DAG: s_and_b32 [[MASKED:s[0-9]+]], s[[S_DATA]], 0xffff{{$}}
+; UNPACKED-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], [[MASKED]]
+; UNPACKED-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], [[SHR]]
+; UNPACKED: buffer_store_format_d16_xy v[[[V_LO]]:[[V_HI]]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
+
+; PACKED: buffer_store_format_d16_xy v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
+define amdgpu_kernel void @buffer_store_format_d16_xy(ptr addrspace(8) %rsrc, <2 x half> %data, i32 %voffset) {
+main_body:
+  call void @llvm.amdgcn.raw.ptr.buffer.store.format.v2f16(<2 x half> %data, ptr addrspace(8) %rsrc, i32 %voffset, i32 0, i32 0)
+  ret void
+}
+
+; GCN-LABEL: {{^}}buffer_store_format_d16_xyz:
+; GCN-DAG: s_load_dwordx2 s[[[S_DATA_0:[0-9]+]]:[[S_DATA_1:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, 0x10
+
+; UNPACKED-DAG: s_lshr_b32 [[SHR0:s[0-9]+]], s[[S_DATA_0]], 16
+; UNPACKED-DAG: s_and_b32 [[MASKED0:s[0-9]+]], s[[S_DATA_0]], 0xffff{{$}}
+; UNPACKED-DAG: s_and_b32 [[MASKED1:s[0-9]+]], s[[S_DATA_1]], 0xffff{{$}}
+
+; UNPACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], [[MASKED0]]
+; UNPACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[MASKED1]]
+
+; UNPACKED: buffer_store_format_d16_xyz v[[[LO]]:[[HI]]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
+
+; PACKED: s_and_b32 [[MASKED0:s[0-9]+]], s[[S_DATA_1]], 0xffff{{$}}
+; PACKED: v_mov_b32_e32 v[[LO:[0-9]+]], s[[S_DATA_0]]
+; PACKED: v_mov_b32_e32 v[[HI:[0-9]+]], [[MASKED0]]
+
+; PACKED: buffer_store_format_d16_xyz v[[[LO]]:[[HI]]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
+define amdgpu_kernel void @buffer_store_format_d16_xyz(ptr addrspace(8) %rsrc, <4 x half> %data, i32 %voffset) {
+main_body:
+  %data_subvec = shufflevector <4 x half> %data, <4 x half> undef, <3 x i32> <i32 0, i32 1, i32 2>
+  call void @llvm.amdgcn.raw.ptr.buffer.store.format.v3f16(<3 x half> %data_subvec, ptr addrspace(8) %rsrc, i32 %voffset, i32 0, i32 0)
+  ret void
+}
+
+; GCN-LABEL: {{^}}buffer_store_format_d16_xyzw:
+; GCN-DAG: s_load_dwordx2 s[[[S_DATA_0:[0-9]+]]:[[S_DATA_1:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, 0x10
+
+; UNPACKED-DAG: s_lshr_b32 [[SHR0:s[0-9]+]], s[[S_DATA_0]], 16
+; UNPACKED-DAG: s_and_b32 [[MASKED0:s[0-9]+]], s[[S_DATA_0]], 0xffff{{$}}
+; UNPACKED-DAG: s_lshr_b32 [[SHR1:s[0-9]+]], s[[S_DATA_1]], 16
+; UNPACKED-DAG: s_and_b32 [[MASKED1:s[0-9]+]], s[[S_DATA_1]], 0xffff{{$}}
+
+; UNPACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], [[MASKED0]]
+; UNPACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[SHR1]]
+
+; UNPACKED: buffer_store_format_d16_xyzw v[[[LO]]:[[HI]]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
+
+; PACKED: v_mov_b32_e32 v[[LO:[0-9]+]], s[[S_DATA_0]]
+; PACKED: v_mov_b32_e32 v[[HI:[0-9]+]], s[[S_DATA_1]]
+
+; PACKED: buffer_store_format_d16_xyzw v[[[LO]]:[[HI]]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
+define amdgpu_kernel void @buffer_store_format_d16_xyzw(ptr addrspace(8) %rsrc, <4 x half> %data, i32 %voffset) {
+main_body:
+  call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f16(<4 x half> %data, ptr addrspace(8) %rsrc, i32 %voffset, i32 0, i32 0)
+  ret void
+}
+
+declare void @llvm.amdgcn.raw.ptr.buffer.store.format.f16(half, ptr addrspace(8), i32, i32, i32)
+declare void @llvm.amdgcn.raw.ptr.buffer.store.format.v2f16(<2 x half>, ptr addrspace(8), i32, i32, i32)
+declare void @llvm.amdgcn.raw.ptr.buffer.store.format.v3f16(<3 x half>, ptr addrspace(8), i32, i32, i32)
+declare void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f16(<4 x half>, ptr addrspace(8), i32, i32, i32)

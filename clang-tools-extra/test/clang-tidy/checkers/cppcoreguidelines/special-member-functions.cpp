@@ -3,7 +3,7 @@
 class DefinesDestructor {
   ~DefinesDestructor();
 };
-// CHECK-MESSAGES: [[@LINE-3]]:7: warning: class 'DefinesDestructor' defines a non-default destructor but does not define a copy constructor, a copy assignment operator, a move constructor or a move assignment operator [cppcoreguidelines-special-member-functions]
+// CHECK-MESSAGES: [[@LINE-3]]:7: warning: class 'DefinesDestructor' defines a destructor but does not define a copy constructor, a copy assignment operator, a move constructor or a move assignment operator [cppcoreguidelines-special-member-functions]
 
 class DefinesDefaultedDestructor {
   ~DefinesDefaultedDestructor() = default;

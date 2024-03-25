@@ -39,7 +39,6 @@
 ; BACKEND2-NEXT: <FLAGS
 ; BACKEND2-NEXT: <VALUE_GUID op0=1 op1=-5300342847281564238
 ; BACKEND2-NEXT: <COMBINED
-; BACKEND2-NEXT: <BLOCK_COUNT op0=2/>
 ; BACKEND2-NEXT: </GLOBALVAL_SUMMARY_BLOCK
 
 ; Thin archive tests. Check that the module paths point to the original files.
@@ -50,8 +49,8 @@
 ; RUN: llvm-ar rcsT %t5.lib %t/bar.obj %t3.obj
 ; RUN: lld-link -thinlto-index-only -entry:main %t/foo.obj %t5.lib
 ; RUN: llvm-dis -o - %t/foo.obj.thinlto.bc | FileCheck %s --check-prefix=THINARCHIVE
-; THINARCHIVE: ^0 = module: (path: "{{.*}}foo.obj",
-; THINARCHIVE: ^1 = module: (path: "{{.*}}bar.obj",
+; THINARCHIVE: ^0 = module: (path: "{{.*}}bar.obj",
+; THINARCHIVE: ^1 = module: (path: "{{.*}}foo.obj",
 
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.0.24215"

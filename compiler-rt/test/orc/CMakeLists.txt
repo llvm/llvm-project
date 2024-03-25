@@ -9,7 +9,7 @@ set(ORC_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
 #       regression testing entirely when it's not available.
 if (NOT ANDROID AND NOT COMPILER_RT_STANDALONE_BUILD AND
     NOT LLVM_RUNTIMES_BUILD)
-  list(APPEND ORC_TEST_DEPS llvm-jitlink)
+  list(APPEND ORC_TEST_DEPS llvm-jitlink lli)
 endif()
 
 set(ORC_TEST_ARCH ${ORC_SUPPORTED_ARCH})

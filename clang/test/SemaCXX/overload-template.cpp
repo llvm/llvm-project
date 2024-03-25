@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++23 -verify -fsyntax-only %s
 
 enum copy_traits { movable = 1 };
 
@@ -33,3 +34,27 @@ void ReproducesBugSimply() {
   InsertRow(3, B{}); // expected-error {{no matching function for call to 'InsertRow'}}
 }
 
+#if __cplusplus >= 202302L
+namespace overloadCheck{
+  template<typename T>
+  concept AlwaysTrue = true;
+
+  struct S {
+    int f(AlwaysTrue auto) { return 1; }
+    void f(this S&&, auto) {}
+
+    void g(auto) {}
+    int g(this S&&,AlwaysTrue auto) {return 1;}
+
+    int h(AlwaysTrue auto) { return 1; } //expected-note {{previous definition is here}}
+    int h(this S&&,AlwaysTrue auto) { // expected-error {{class member cannot be redeclared}} 
+      return 1;
+    }
+  };
+
+  int main() {
+    int x = S{}.f(0);
+    int y = S{}.g(0);
+  }
+}
+#endif

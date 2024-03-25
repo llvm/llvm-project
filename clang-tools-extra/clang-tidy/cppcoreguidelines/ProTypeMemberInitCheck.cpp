@@ -31,7 +31,7 @@ AST_MATCHER(CXXRecordDecl, hasDefaultConstructor) {
 // Iterate over all the fields in a record type, both direct and indirect (e.g.
 // if the record contains an anonymous struct).
 template <typename T, typename Func>
-void forEachField(const RecordDecl &Record, const T &Fields, Func &&Fn) {
+void forEachField(const RecordDecl &Record, const T &Fields, const Func &Fn) {
   for (const FieldDecl *F : Fields) {
     if (F->isAnonymousStructOrUnion()) {
       if (const CXXRecordDecl *R = F->getType()->getAsCXXRecordDecl())
@@ -44,7 +44,7 @@ void forEachField(const RecordDecl &Record, const T &Fields, Func &&Fn) {
 
 template <typename T, typename Func>
 void forEachFieldWithFilter(const RecordDecl &Record, const T &Fields,
-                            bool &AnyMemberHasInitPerUnion, Func &&Fn) {
+                            bool &AnyMemberHasInitPerUnion, const Func &Fn) {
   for (const FieldDecl *F : Fields) {
     if (F->isAnonymousStructOrUnion()) {
       if (const CXXRecordDecl *R = F->getType()->getAsCXXRecordDecl()) {
@@ -281,8 +281,14 @@ ProTypeMemberInitCheck::ProTypeMemberInitCheck(StringRef Name,
 
 void ProTypeMemberInitCheck::registerMatchers(MatchFinder *Finder) {
   auto IsUserProvidedNonDelegatingConstructor =
-      allOf(isUserProvided(),
-            unless(anyOf(isInstantiated(), isDelegatingConstructor())));
+      allOf(isUserProvided(), unless(isInstantiated()),
+            unless(isDelegatingConstructor()),
+            ofClass(cxxRecordDecl().bind("parent")),
+            unless(hasAnyConstructorInitializer(cxxCtorInitializer(
+                isWritten(), unless(isMemberInitializer()),
+                hasTypeLoc(loc(
+                    qualType(hasDeclaration(equalsBoundNode("parent")))))))));
+
   auto IsNonTrivialDefaultConstructor = allOf(
       isDefaultConstructor(), unless(isUserProvided()),
       hasParent(cxxRecordDecl(unless(isTriviallyDefaultConstructible()))));
@@ -375,8 +381,7 @@ static const char *getInitializer(QualType QT, bool UseAssignment) {
   if (QT->isPointerType())
     return " = nullptr";
 
-  const BuiltinType *BT =
-      dyn_cast<BuiltinType>(QT.getCanonicalType().getTypePtr());
+  const auto *BT = dyn_cast<BuiltinType>(QT.getCanonicalType().getTypePtr());
   if (!BT)
     return DefaultInitializer;
 

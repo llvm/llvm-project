@@ -10,13 +10,13 @@
 # RUN: not llvm-libtool-darwin -static %t.input 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=NO-OUTPUT
 
-# NO-OUTPUT: for the -o option: must be specified
+# NO-OUTPUT: -o option: must be specified
 
 ## Missing argument to -o:
 # RUN: not llvm-libtool-darwin -static %t.input -o 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=MISSING
 
-# MISSING: for the -o option: requires a value!
+# MISSING: -o: missing argument
 
 ## Input file not found:
 # RUN: not llvm-libtool-darwin -static -o %t.lib %t.missing 2>&1 | \

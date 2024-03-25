@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Operator.h"
+#include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Predicate.h"
 #include "mlir/TableGen/Trait.h"
 #include "mlir/TableGen/Type.h"
@@ -322,14 +323,23 @@ auto Operator::getTraits() const -> llvm::iterator_range<const_trait_iterator> {
   return {trait_begin(), trait_end()};
 }
 
-auto Operator::attribute_begin() const -> attribute_iterator {
+auto Operator::attribute_begin() const -> const_attribute_iterator {
   return attributes.begin();
 }
-auto Operator::attribute_end() const -> attribute_iterator {
+auto Operator::attribute_end() const -> const_attribute_iterator {
   return attributes.end();
 }
 auto Operator::getAttributes() const
-    -> llvm::iterator_range<attribute_iterator> {
+    -> llvm::iterator_range<const_attribute_iterator> {
+  return {attribute_begin(), attribute_end()};
+}
+auto Operator::attribute_begin() -> attribute_iterator {
+  return attributes.begin();
+}
+auto Operator::attribute_end() -> attribute_iterator {
+  return attributes.end();
+}
+auto Operator::getAttributes() -> llvm::iterator_range<attribute_iterator> {
   return {attribute_begin(), attribute_end()};
 }
 
@@ -374,7 +384,7 @@ void Operator::populateTypeInferenceInfo(
   if (getTrait("::mlir::OpTrait::SameOperandsAndResultType")) {
     // Check for a non-variable length operand to use as the type anchor.
     auto *operandI = llvm::find_if(arguments, [](const Argument &arg) {
-      NamedTypeConstraint *operand = arg.dyn_cast<NamedTypeConstraint *>();
+      NamedTypeConstraint *operand = llvm::dyn_cast_if_present<NamedTypeConstraint *>(arg);
       return operand && !operand->isVariableLength();
     });
     if (operandI == arguments.end())
@@ -408,7 +418,7 @@ void Operator::populateTypeInferenceInfo(
 
   // For all results whose types are buildable, initialize their type inference
   // nodes with an edge to themselves. Mark those nodes are fully-inferred.
-  for (auto &[idx, infer] : llvm::enumerate(inference)) {
+  for (auto [idx, infer] : llvm::enumerate(inference)) {
     if (getResult(idx).constraint.getBuilderCall()) {
       infer.sources.emplace_back(InferredResultType::mapResultIndex(idx),
                                  "$_self");
@@ -542,6 +552,7 @@ void Operator::populateOpStructure() {
   auto &recordKeeper = def.getRecords();
   auto *typeConstraintClass = recordKeeper.getClass("TypeConstraint");
   auto *attrClass = recordKeeper.getClass("Attr");
+  auto *propertyClass = recordKeeper.getClass("Property");
   auto *derivedAttrClass = recordKeeper.getClass("DerivedAttr");
   auto *opVarClass = recordKeeper.getClass("OpVariable");
   numNativeAttributes = 0;
@@ -576,9 +587,14 @@ void Operator::populateOpStructure() {
                         "derived attributes not allowed in argument list");
       attributes.push_back({givenName, Attribute(argDef)});
       ++numNativeAttributes;
+    } else if (argDef->isSubClassOf(propertyClass)) {
+      if (givenName.empty())
+        PrintFatalError(argDef->getLoc(), "properties must be named");
+      properties.push_back({givenName, Property(argDef)});
     } else {
-      PrintFatalError(def.getLoc(), "unexpected def type; only defs deriving "
-                                    "from TypeConstraint or Attr are allowed");
+      PrintFatalError(def.getLoc(),
+                      "unexpected def type; only defs deriving "
+                      "from TypeConstraint or Attr or Property are allowed");
     }
     if (!givenName.empty())
       argumentsAndResultsIndex[givenName] = i;
@@ -608,7 +624,7 @@ void Operator::populateOpStructure() {
   // `attributes` because we will put their elements' pointers in `arguments`.
   // SmallVector may perform re-allocation under the hood when adding new
   // elements.
-  int operandIndex = 0, attrIndex = 0;
+  int operandIndex = 0, attrIndex = 0, propIndex = 0;
   for (unsigned i = 0; i != numArgs; ++i) {
     Record *argDef = dyn_cast<DefInit>(argumentValues->getArg(i))->getDef();
     if (argDef->isSubClassOf(opVarClass))
@@ -618,11 +634,13 @@ void Operator::populateOpStructure() {
       attrOrOperandMapping.push_back(
           {OperandOrAttribute::Kind::Operand, operandIndex});
       arguments.emplace_back(&operands[operandIndex++]);
-    } else {
-      assert(argDef->isSubClassOf(attrClass));
+    } else if (argDef->isSubClassOf(attrClass)) {
       attrOrOperandMapping.push_back(
           {OperandOrAttribute::Kind::Attribute, attrIndex});
       arguments.emplace_back(&attributes[attrIndex++]);
+    } else {
+      assert(argDef->isSubClassOf(propertyClass));
+      arguments.emplace_back(&properties[propIndex++]);
     }
   }
 
@@ -693,7 +711,7 @@ void Operator::populateOpStructure() {
     auto verifyTraitValidity = [&](Record *trait) {
       auto *dependentTraits = trait->getValueAsListInit("dependentTraits");
       for (auto *traitInit : *dependentTraits)
-        if (traitSet.find(traitInit) == traitSet.end())
+        if (!traitSet.contains(traitInit))
           PrintFatalError(
               def.getLoc(),
               trait->getValueAsString("trait") + " requires " +
@@ -806,7 +824,7 @@ StringRef Operator::getAssemblyFormat() const {
 void Operator::print(llvm::raw_ostream &os) const {
   os << "op '" << getOperationName() << "'\n";
   for (Argument arg : arguments) {
-    if (auto *attr = arg.dyn_cast<NamedAttribute *>())
+    if (auto *attr = llvm::dyn_cast_if_present<NamedAttribute *>(arg))
       os << "[attribute] " << attr->name << '\n';
     else
       os << "[operand] " << arg.get<NamedTypeConstraint *>()->name << '\n';
@@ -836,3 +854,7 @@ std::string Operator::getRemoverName(StringRef name) const {
 }
 
 bool Operator::hasFolder() const { return def.getValueAsBit("hasFolder"); }
+
+bool Operator::useCustomPropertiesEncoding() const {
+  return def.getValueAsBit("useCustomPropertiesEncoding");
+}

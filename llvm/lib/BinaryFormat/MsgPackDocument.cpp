@@ -80,6 +80,10 @@ DocNode &DocNode::operator=(StringRef Val) {
   *this = getDocument()->getNode(Val);
   return *this;
 }
+DocNode &DocNode::operator=(MemoryBufferRef Val) {
+  *this = getDocument()->getNode(Val);
+  return *this;
+}
 DocNode &DocNode::operator=(bool Val) {
   *this = getDocument()->getNode(Val);
   return *this;
@@ -139,7 +143,13 @@ bool Document::readFromBlob(
     // On to next element (or key if doing a map key next).
     // Read the value.
     Object Obj;
-    if (!MPReader.read(Obj)) {
+    Expected<bool> ReadObj = MPReader.read(Obj);
+    if (!ReadObj) {
+      // FIXME: Propagate the Error to the caller.
+      consumeError(ReadObj.takeError());
+      return false;
+    }
+    if (!ReadObj.get()) {
       if (Multi && Stack.size() == 1) {
         // OK to finish here as we've just done a top-level element with Multi
         break;
@@ -166,6 +176,9 @@ bool Document::readFromBlob(
       break;
     case Type::String:
       Node = getNode(Obj.Raw);
+      break;
+    case Type::Binary:
+      Node = getNode(MemoryBufferRef(Obj.Raw, ""));
       break;
     case Type::Map:
       Node = getMapNode();
@@ -276,6 +289,9 @@ void Document::writeToBlob(std::string &Blob) {
       break;
     case Type::String:
       MPWriter.write(Node.getString());
+      break;
+    case Type::Binary:
+      MPWriter.write(Node.getBinary());
       break;
     case Type::Empty:
       llvm_unreachable("unhandled empty msgpack node");

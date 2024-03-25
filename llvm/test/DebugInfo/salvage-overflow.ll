@@ -1,4 +1,5 @@
 ; RUN: opt %s -passes='sroa,early-cse' -S | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -passes='sroa,early-cse' -S | FileCheck %s
 ; CHECK: DIExpression(DW_OP_constu, 9223372036854775808, DW_OP_minus, DW_OP_stack_value)
 ; Created from the following C input (and then delta-reduced the IR):
 ;

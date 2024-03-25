@@ -29,6 +29,11 @@ class ScopedInterceptor {
   void EnableIgnoresImpl();
 };
 
+struct TsanInterceptorContext {
+  ThreadState *thr;
+  const uptr pc;
+};
+
 LibIgnore *libignore();
 
 #if !SANITIZER_GO
@@ -82,7 +87,7 @@ inline bool MustIgnoreInterceptor(ThreadState *thr) {
 #if SANITIZER_FREEBSD
 #  define TSAN_INTERCEPTOR_FREEBSD_ALIAS(ret, func, ...) \
     TSAN_INTERCEPTOR(ret, _pthread_##func, __VA_ARGS__)  \
-    ALIAS(WRAPPER_NAME(pthread_##func));
+    ALIAS(WRAP(pthread_##func));
 #else
 #  define TSAN_INTERCEPTOR_FREEBSD_ALIAS(ret, func, ...)
 #endif
@@ -90,17 +95,38 @@ inline bool MustIgnoreInterceptor(ThreadState *thr) {
 #if SANITIZER_NETBSD
 # define TSAN_INTERCEPTOR_NETBSD_ALIAS(ret, func, ...) \
   TSAN_INTERCEPTOR(ret, __libc_##func, __VA_ARGS__) \
-  ALIAS(WRAPPER_NAME(pthread_##func));
+  ALIAS(WRAP(pthread_##func));
 # define TSAN_INTERCEPTOR_NETBSD_ALIAS_THR(ret, func, ...) \
   TSAN_INTERCEPTOR(ret, __libc_thr_##func, __VA_ARGS__) \
-  ALIAS(WRAPPER_NAME(pthread_##func));
+  ALIAS(WRAP(pthread_##func));
 # define TSAN_INTERCEPTOR_NETBSD_ALIAS_THR2(ret, func, func2, ...) \
   TSAN_INTERCEPTOR(ret, __libc_thr_##func, __VA_ARGS__) \
-  ALIAS(WRAPPER_NAME(pthread_##func2));
+  ALIAS(WRAP(pthread_##func2));
 #else
 # define TSAN_INTERCEPTOR_NETBSD_ALIAS(ret, func, ...)
 # define TSAN_INTERCEPTOR_NETBSD_ALIAS_THR(ret, func, ...)
 # define TSAN_INTERCEPTOR_NETBSD_ALIAS_THR2(ret, func, func2, ...)
 #endif
+
+#define COMMON_INTERCEPT_FUNCTION(name) INTERCEPT_FUNCTION(name)
+
+#define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED \
+  (!cur_thread_init()->is_inited)
+
+#define COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, size)                    \
+  MemoryAccessRange(((TsanInterceptorContext *)ctx)->thr,                 \
+                    ((TsanInterceptorContext *)ctx)->pc, (uptr)ptr, size, \
+                    true)
+
+#define COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, size)                       \
+  MemoryAccessRange(((TsanInterceptorContext *) ctx)->thr,                  \
+                    ((TsanInterceptorContext *) ctx)->pc, (uptr) ptr, size, \
+                    false)
+
+#define COMMON_INTERCEPTOR_ENTER(ctx, func, ...) \
+  SCOPED_TSAN_INTERCEPTOR(func, __VA_ARGS__);    \
+  TsanInterceptorContext _ctx = {thr, pc};       \
+  ctx = (void *)&_ctx;                           \
+  (void)ctx;
 
 #endif  // TSAN_INTERCEPTORS_H

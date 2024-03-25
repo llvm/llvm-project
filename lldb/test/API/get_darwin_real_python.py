@@ -5,10 +5,12 @@
 # a Homebrew python3 binary, which also appears to be some kind of shim.
 def getDarwinRealPythonExecutable():
     import ctypes
-    dyld = ctypes.cdll.LoadLibrary('/usr/lib/system/libdyld.dylib')
+
+    dyld = ctypes.cdll.LoadLibrary("/usr/lib/system/libdyld.dylib")
     namelen = ctypes.c_ulong(1024)
-    name = ctypes.create_string_buffer(b'\000', namelen.value)
+    name = ctypes.create_string_buffer(b"\000", namelen.value)
     dyld._NSGetExecutablePath(ctypes.byref(name), ctypes.byref(namelen))
-    return name.value.decode('utf-8').strip()
+    return name.value.decode("utf-8").strip()
+
 
 print(getDarwinRealPythonExecutable())

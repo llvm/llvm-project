@@ -36,6 +36,8 @@ public:
   std::string getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
                             FileType Type) const override;
 
+  bool HasNativeLLVMSupport() const override { return true; }
+
 protected:
   Tool *buildLinker() const override;
 
@@ -47,7 +49,7 @@ private:
 
 namespace tools {
 namespace AVR {
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const llvm::Triple &Triple, const ToolChain &TC)
       : Tool("AVR::Linker", "avr-ld", TC), Triple(Triple) {}

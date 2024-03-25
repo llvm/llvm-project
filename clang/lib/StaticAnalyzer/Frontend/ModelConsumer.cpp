@@ -28,11 +28,10 @@ using namespace ento;
 ModelConsumer::ModelConsumer(llvm::StringMap<Stmt *> &Bodies)
     : Bodies(Bodies) {}
 
-bool ModelConsumer::HandleTopLevelDecl(DeclGroupRef D) {
-  for (DeclGroupRef::iterator I = D.begin(), E = D.end(); I != E; ++I) {
-
+bool ModelConsumer::HandleTopLevelDecl(DeclGroupRef DeclGroup) {
+  for (const Decl *D : DeclGroup) {
     // Only interested in definitions.
-    const FunctionDecl *func = llvm::dyn_cast<FunctionDecl>(*I);
+    const auto *func = llvm::dyn_cast<FunctionDecl>(D);
     if (func && func->hasBody()) {
       Bodies.insert(std::make_pair(func->getName(), func->getBody()));
     }

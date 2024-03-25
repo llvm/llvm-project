@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 %s -fsyntax-only -fdouble-square-bracket-attributes -verify
+// RUN: %clang_cc1 %s -fsyntax-only -verify
 
 void __attribute__((annotate("foo"))) foo(float *a) {
   __attribute__((annotate("bar"))) int x;
   [[clang::annotate("bar")]] int x2;
-  __attribute__((annotate(1))) int y; // expected-error {{'annotate' attribute requires a string}}
-  [[clang::annotate(1)]] int y2; // expected-error {{'annotate' attribute requires a string}}
+  __attribute__((annotate(1))) int y; // expected-error {{expected string literal as argument of 'annotate' attribute}}
+  [[clang::annotate(1)]] int y2; // expected-error {{expected string literal as argument of 'annotate' attribute}}
   __attribute__((annotate("bar", 1))) int z;
   [[clang::annotate("bar", 1)]] int z2;
 

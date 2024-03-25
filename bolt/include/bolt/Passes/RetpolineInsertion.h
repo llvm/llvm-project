@@ -30,14 +30,7 @@ public:
   bool isJump() const { return !IsCall; }
   bool isTailCall() const { return IsTailCall; }
 
-  struct MemOpInfo {
-    unsigned BaseRegNum;
-    int64_t ScaleValue;
-    unsigned IndexRegNum;
-    int64_t DispValue;
-    unsigned SegRegNum;
-    const MCExpr *DispExpr{nullptr};
-  };
+  using MemOpInfo = MCPlusBuilder::X86MemOperand;
 
   union {
     // Register branch information
@@ -69,7 +62,7 @@ public:
 
   const char *getName() const override { return "retpoline-insertion"; }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 } // namespace bolt

@@ -48,7 +48,7 @@ define i32 @foo_f() {
 @A = alias i64, ptr @bar
 
 @structvar = private global {i32, i32} {i32 1, i32 2}
-@elem0 = alias i32, getelementptr({i32, i32}, ptr  @structvar, i32 0, i32 0)
+@elem0 = alias i32, ptr @structvar
 @elem1 = alias i32, getelementptr({i32, i32}, ptr  @structvar, i32 0, i32 1)
 
 define i32 @test() {

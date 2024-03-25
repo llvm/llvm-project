@@ -20,7 +20,7 @@ template <class Derived>
 struct ForwardIterBase {
   using iterator_concept = std::forward_iterator_tag;
   using value_type       = int;
-  using difference_type  = intptr_t;
+  using difference_type  = std::intptr_t;
 
   constexpr int operator*() const { return 5; }
 

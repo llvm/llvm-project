@@ -8,12 +8,14 @@
 #include "AST.h"
 #include "Annotations.h"
 #include "CollectMacros.h"
+#include "Matchers.h"
 #include "SourceCode.h"
 #include "TestTU.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -21,19 +23,26 @@ namespace {
 
 using testing::UnorderedElementsAreArray;
 
+MATCHER_P(rangeIs, R, "") {
+  return arg.StartOffset == R.Begin && arg.EndOffset == R.End;
+}
+MATCHER(isDef, "") { return arg.IsDefinition; }
+MATCHER(inConditionalDirective, "") { return arg.InConditionalDirective; }
+
 TEST(CollectMainFileMacros, SelectedMacros) {
   // References of the same symbol must have the ranges with the same
   // name(integer). If there are N different symbols then they must be named
   // from 1 to N. Macros for which SymbolID cannot be computed must be named
-  // "Unknown".
+  // "Unknown". The payload of the annotation describes the extra bit
+  // information of the MacroOccurrence (e.g. $1(def) => IsDefinition).
   const char *Tests[] = {
       R"cpp(// Macros: Cursor on definition.
-        #define $1[[FOO]](x,y) (x + y)
+        #define $1(def)[[FOO]](x,y) (x + y)
         int main() { int x = $1[[FOO]]($1[[FOO]](3, 4), $1[[FOO]](5, 6)); }
       )cpp",
       R"cpp(
-        #define $1[[M]](X) X;
-        #define $2[[abc]] 123
+        #define $1(def)[[M]](X) X;
+        #define $2(def)[[abc]] 123
         int s = $1[[M]]($2[[abc]]);
       )cpp",
       // FIXME: Locating macro in duplicate definitions doesn't work. Enable
@@ -48,45 +57,73 @@ TEST(CollectMainFileMacros, SelectedMacros) {
       //   #undef $2[[abc]]
       // )cpp",
       R"cpp(
-        #ifdef $Unknown[[UNDEFINED]]
+        #ifdef $Unknown(condit)[[UNDEFINED]]
+        #elifdef $Unknown(condit)[[UNDEFINED]]
+        #endif
+
+        #ifdef $Unknown(condit)[[UNDEFINED]]
+        #elifndef $Unknown(condit)[[UNDEFINED]]
+        #endif
+
+        #ifndef $Unknown(condit)[[UNDEFINED]]
+        #endif
+
+        #if defined($Unknown(condit)[[UNDEFINED]])
         #endif
       )cpp",
       R"cpp(
-        #ifndef $Unknown[[abc]]
-        #define $1[[abc]]
-        #ifdef $1[[abc]]
+        #ifndef $Unknown(condit)[[abc]]
+        #define $1(def)[[abc]]
+        #ifdef $1(condit)[[abc]]
         #endif
         #endif
       )cpp",
       R"cpp(
         // Macros from token concatenations not included.
-        #define $1[[CONCAT]](X) X##A()
-        #define $2[[PREPEND]](X) MACRO##X()
-        #define $3[[MACROA]]() 123
+        #define $1(def)[[CONCAT]](X) X##A()
+        #define $2(def)[[PREPEND]](X) MACRO##X()
+        #define $3(def)[[MACROA]]() 123
         int B = $1[[CONCAT]](MACRO);
         int D = $2[[PREPEND]](A);
       )cpp",
       R"cpp(
-        // FIXME: Macro names in a definition are not detected.
-        #define $1[[MACRO_ARGS2]](X, Y) X Y
-        #define $2[[FOO]] BAR
-        #define $3[[BAR]] 1
+        #define $1(def)[[MACRO_ARGS2]](X, Y) X Y
+        #define $3(def)[[BAR]] 1
+        #define $2(def)[[FOO]] $3[[BAR]]
         int A = $2[[FOO]];
       )cpp"};
+  auto ExpectedResults = [](const llvm::Annotations &T, StringRef Name) {
+    std::vector<Matcher<MacroOccurrence>> ExpectedLocations;
+    for (const auto &[R, Bits] : T.rangesWithPayload(Name)) {
+      if (Bits == "def")
+        ExpectedLocations.push_back(testing::AllOf(rangeIs(R), isDef()));
+      else if (Bits == "condit")
+        ExpectedLocations.push_back(
+            testing::AllOf(rangeIs(R), inConditionalDirective()));
+      else
+        ExpectedLocations.push_back(testing::AllOf(rangeIs(R)));
+    }
+    return ExpectedLocations;
+  };
+
   for (const char *Test : Tests) {
-    Annotations T(Test);
-    auto AST = TestTU::withCode(T.code()).build();
+    llvm::Annotations T(Test);
+    auto Inputs = TestTU::withCode(T.code());
+    Inputs.ExtraArgs.push_back("-std=c++2b");
+    auto AST = Inputs.build();
     auto ActualMacroRefs = AST.getMacros();
     auto &SM = AST.getSourceManager();
     auto &PP = AST.getPreprocessor();
+    for (const auto &[Name, Ranges] : T.all_ranges()) {
+      if (Name == "Unknown") {
+        EXPECT_THAT(ActualMacroRefs.UnknownMacros,
+                    UnorderedElementsAreArray(ExpectedResults(T, "Unknown")))
+            << "Unknown macros doesn't match in " << Test;
+        continue;
+      }
 
-    // Known macros.
-    for (int I = 1;; I++) {
-      const auto ExpectedRefs = T.ranges(llvm::to_string(I));
-      if (ExpectedRefs.empty())
-        break;
-
-      auto Loc = sourceLocationInMainFile(SM, ExpectedRefs.begin()->start);
+      auto Loc = sourceLocationInMainFile(
+          SM, offsetToPosition(T.code(), Ranges.front().Begin));
       ASSERT_TRUE(bool(Loc));
       const auto *Id = syntax::spelledIdentifierTouching(*Loc, AST.getTokens());
       ASSERT_TRUE(Id);
@@ -94,19 +131,11 @@ TEST(CollectMainFileMacros, SelectedMacros) {
       assert(Macro);
       auto SID = getSymbolID(Macro->Name, Macro->Info, SM);
 
-      std::vector<Range> Ranges;
-      for (const auto &Ref : ActualMacroRefs.MacroRefs[SID])
-        Ranges.push_back(Ref.Rng);
-      EXPECT_THAT(ExpectedRefs, UnorderedElementsAreArray(Ranges))
-          << "Annotation=" << I << ", MacroName=" << Macro->Name
+      EXPECT_THAT(ActualMacroRefs.MacroRefs[SID],
+                  UnorderedElementsAreArray(ExpectedResults(T, Name)))
+          << "Annotation=" << Name << ", MacroName=" << Macro->Name
           << ", Test = " << Test;
     }
-    // Unknown macros.
-    std::vector<Range> Ranges;
-    for (const auto &Ref : AST.getMacros().UnknownMacros)
-      Ranges.push_back(Ref.Rng);
-    EXPECT_THAT(Ranges, UnorderedElementsAreArray(T.ranges("Unknown")))
-        << "Unknown macros doesn't match in " << Test;
   }
 }
 } // namespace

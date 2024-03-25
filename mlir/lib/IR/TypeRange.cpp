@@ -27,9 +27,9 @@ TypeRange::TypeRange(ValueRange values) : TypeRange(OwnerT(), values.size()) {
   if (count == 0)
     return;
   ValueRange::OwnerT owner = values.begin().getBase();
-  if (auto *result = owner.dyn_cast<detail::OpResultImpl *>())
+  if (auto *result = llvm::dyn_cast_if_present<detail::OpResultImpl *>(owner))
     this->base = result;
-  else if (auto *operand = owner.dyn_cast<OpOperand *>())
+  else if (auto *operand = llvm::dyn_cast_if_present<OpOperand *>(owner))
     this->base = operand;
   else
     this->base = owner.get<const Value *>();
@@ -37,22 +37,22 @@ TypeRange::TypeRange(ValueRange values) : TypeRange(OwnerT(), values.size()) {
 
 /// See `llvm::detail::indexed_accessor_range_base` for details.
 TypeRange::OwnerT TypeRange::offset_base(OwnerT object, ptrdiff_t index) {
-  if (const auto *value = object.dyn_cast<const Value *>())
+  if (const auto *value = llvm::dyn_cast_if_present<const Value *>(object))
     return {value + index};
-  if (auto *operand = object.dyn_cast<OpOperand *>())
+  if (auto *operand = llvm::dyn_cast_if_present<OpOperand *>(object))
     return {operand + index};
-  if (auto *result = object.dyn_cast<detail::OpResultImpl *>())
+  if (auto *result = llvm::dyn_cast_if_present<detail::OpResultImpl *>(object))
     return {result->getNextResultAtOffset(index)};
-  return {object.dyn_cast<const Type *>() + index};
+  return {llvm::dyn_cast_if_present<const Type *>(object) + index};
 }
 
 /// See `llvm::detail::indexed_accessor_range_base` for details.
 Type TypeRange::dereference_iterator(OwnerT object, ptrdiff_t index) {
-  if (const auto *value = object.dyn_cast<const Value *>())
+  if (const auto *value = llvm::dyn_cast_if_present<const Value *>(object))
     return (value + index)->getType();
-  if (auto *operand = object.dyn_cast<OpOperand *>())
+  if (auto *operand = llvm::dyn_cast_if_present<OpOperand *>(object))
     return (operand + index)->get().getType();
-  if (auto *result = object.dyn_cast<detail::OpResultImpl *>())
+  if (auto *result = llvm::dyn_cast_if_present<detail::OpResultImpl *>(object))
     return result->getNextResultAtOffset(index)->getType();
-  return object.dyn_cast<const Type *>()[index];
+  return llvm::dyn_cast_if_present<const Type *>(object)[index];
 }

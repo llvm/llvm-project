@@ -21,8 +21,8 @@ define dso_local signext i32 @caller1(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR8-NEXT:    #APP
 ; CHECK-PWR8-NEXT:    add r3, r3, r4
 ; CHECK-PWR8-NEXT:    #NO_APP
-; CHECK-PWR8-NEXT:    std r0, 192(r1)
 ; CHECK-PWR8-NEXT:    extsw r3, r3
+; CHECK-PWR8-NEXT:    std r0, 192(r1)
 ; CHECK-PWR8-NEXT:    bl callee
 ; CHECK-PWR8-NEXT:    nop
 ; CHECK-PWR8-NEXT:    addi r1, r1, 176
@@ -75,8 +75,8 @@ define dso_local signext i32 @caller2(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR8-NEXT:    #APP
 ; CHECK-PWR8-NEXT:    add r3, r3, r4
 ; CHECK-PWR8-NEXT:    #NO_APP
-; CHECK-PWR8-NEXT:    std r0, 192(r1)
 ; CHECK-PWR8-NEXT:    extsw r3, r3
+; CHECK-PWR8-NEXT:    std r0, 192(r1)
 ; CHECK-PWR8-NEXT:    bl callee
 ; CHECK-PWR8-NEXT:    nop
 ; CHECK-PWR8-NEXT:    addi r1, r1, 176

@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! 15.5.1 procedure reference constraints and restrictions
 
 subroutine s01(elem, subr)
@@ -8,6 +8,7 @@ subroutine s01(elem, subr)
       real, intent(in), value :: x
     end function
     subroutine subr(dummy)
+      !PORTABILITY: A dummy procedure should not have an ELEMENTAL intrinsic as its interface
       procedure(sin) :: dummy
     end subroutine
     subroutine badsubr(dummy)
@@ -16,9 +17,11 @@ subroutine s01(elem, subr)
       procedure(elem) :: dummy
     end subroutine
     subroutine optionalsubr(dummy)
+      !PORTABILITY: A dummy procedure should not have an ELEMENTAL intrinsic as its interface
       procedure(sin), optional :: dummy
     end subroutine
     subroutine ptrsubr(dummy)
+      !PORTABILITY: A dummy procedure should not have an ELEMENTAL intrinsic as its interface
       procedure(sin), pointer, intent(in) :: dummy
     end subroutine
   end interface

@@ -1,4 +1,4 @@
-; RUN: llc -march=bpfel -filetype=obj -o - %s \
+; RUN: llc -mtriple=bpfel -filetype=obj -o - %s \
 ; RUN:     | llvm-objdump --no-print-imm-hex --arch=bpfel --section=foo -d - \
 ; RUN:     | FileCheck %s
 

@@ -19,6 +19,7 @@
 #include <__ranges/concepts.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/remove_cvref.h>
+#include <__type_traits/remove_reference.h> // TODO(modules): This should not be required
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -26,7 +27,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 namespace ranges {
 
@@ -36,8 +37,7 @@ namespace ranges {
 // at the address pointed-to by the iterator, which requires an lvalue.
 template <class _Ip>
 concept __nothrow_input_iterator =
-    input_iterator<_Ip> &&
-    is_lvalue_reference_v<iter_reference_t<_Ip>> &&
+    input_iterator<_Ip> && is_lvalue_reference_v<iter_reference_t<_Ip>> &&
     same_as<remove_cvref_t<iter_reference_t<_Ip>>, iter_value_t<_Ip>>;
 
 template <class _Sp, class _Ip>
@@ -45,24 +45,18 @@ concept __nothrow_sentinel_for = sentinel_for<_Sp, _Ip>;
 
 template <class _Rp>
 concept __nothrow_input_range =
-    range<_Rp> &&
-    __nothrow_input_iterator<iterator_t<_Rp>> &&
-    __nothrow_sentinel_for<sentinel_t<_Rp>, iterator_t<_Rp>>;
+    range<_Rp> && __nothrow_input_iterator<iterator_t<_Rp>> && __nothrow_sentinel_for<sentinel_t<_Rp>, iterator_t<_Rp>>;
 
 template <class _Ip>
 concept __nothrow_forward_iterator =
-    __nothrow_input_iterator<_Ip> &&
-    forward_iterator<_Ip> &&
-    __nothrow_sentinel_for<_Ip, _Ip>;
+    __nothrow_input_iterator<_Ip> && forward_iterator<_Ip> && __nothrow_sentinel_for<_Ip, _Ip>;
 
 template <class _Rp>
-concept __nothrow_forward_range =
-    __nothrow_input_range<_Rp> &&
-    __nothrow_forward_iterator<iterator_t<_Rp>>;
+concept __nothrow_forward_range = __nothrow_input_range<_Rp> && __nothrow_forward_iterator<iterator_t<_Rp>>;
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

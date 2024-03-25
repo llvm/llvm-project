@@ -1,7 +1,4 @@
 // RUN: %clangxx_lsan %s -o %t
-
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
 // The globs below do not work in the lit shell.
 
 // Regular run.
@@ -30,4 +27,4 @@ int main() {
 
 // CHECK-ERROR: LeakSanitizer: detected memory leaks
 // CHECK-ERROR: Direct leak of 1337 byte(s) in 1 object(s) allocated from
-// CHECK-ERROR: SUMMARY: {{(Leak|Address)}}Sanitizer:
+// CHECK-ERROR: SUMMARY: {{.*}}Sanitizer:

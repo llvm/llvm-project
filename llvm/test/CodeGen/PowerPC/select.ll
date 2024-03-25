@@ -9,21 +9,19 @@
 define i64 @f0(i64 %x) {
 ; CHECK-LE-LABEL: f0:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    li r4, 125
 ; CHECK-LE-NEXT:    cmpdi r3, 0
-; CHECK-LE-NEXT:    li r3, -3
-; CHECK-LE-NEXT:    isellt r3, r3, r4
+; CHECK-LE-NEXT:    li r3, 125
+; CHECK-LE-NEXT:    li r4, -3
+; CHECK-LE-NEXT:    isellt r3, r4, r3
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-32-LABEL: f0:
 ; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    li r4, 125
-; CHECK-32-NEXT:    li r5, -3
 ; CHECK-32-NEXT:    cmpwi r3, 0
-; CHECK-32-NEXT:    bc 12, lt, .LBB0_1
-; CHECK-32-NEXT:    b .LBB0_2
-; CHECK-32-NEXT:  .LBB0_1:
-; CHECK-32-NEXT:    addi r4, r5, 0
+; CHECK-32-NEXT:    li r4, -3
+; CHECK-32-NEXT:    blt cr0, .LBB0_2
+; CHECK-32-NEXT:  # %bb.1:
+; CHECK-32-NEXT:    li r4, 125
 ; CHECK-32-NEXT:  .LBB0_2:
 ; CHECK-32-NEXT:    srawi r3, r3, 31
 ; CHECK-32-NEXT:    blr
@@ -35,21 +33,19 @@ define i64 @f0(i64 %x) {
 define i64 @f1(i64 %x) {
 ; CHECK-LE-LABEL: f1:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    li r4, 512
 ; CHECK-LE-NEXT:    cmpdi r3, 0
-; CHECK-LE-NEXT:    li r3, 64
-; CHECK-LE-NEXT:    isellt r3, r3, r4
+; CHECK-LE-NEXT:    li r3, 512
+; CHECK-LE-NEXT:    li r4, 64
+; CHECK-LE-NEXT:    isellt r3, r4, r3
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-32-LABEL: f1:
 ; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    li r4, 512
 ; CHECK-32-NEXT:    cmpwi r3, 0
-; CHECK-32-NEXT:    li r3, 64
-; CHECK-32-NEXT:    bc 12, lt, .LBB1_1
-; CHECK-32-NEXT:    b .LBB1_2
-; CHECK-32-NEXT:  .LBB1_1:
-; CHECK-32-NEXT:    addi r4, r3, 0
+; CHECK-32-NEXT:    li r4, 64
+; CHECK-32-NEXT:    blt cr0, .LBB1_2
+; CHECK-32-NEXT:  # %bb.1:
+; CHECK-32-NEXT:    li r4, 512
 ; CHECK-32-NEXT:  .LBB1_2:
 ; CHECK-32-NEXT:    li r3, 0
 ; CHECK-32-NEXT:    blr
@@ -61,22 +57,19 @@ define i64 @f1(i64 %x) {
 define i64 @f2(i64 %x) {
 ; CHECK-LE-LABEL: f2:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    li r4, 1024
 ; CHECK-LE-NEXT:    cmpdi r3, 0
-; CHECK-LE-NEXT:    iseleq r3, 0, r4
+; CHECK-LE-NEXT:    li r3, 1024
+; CHECK-LE-NEXT:    iseleq r3, 0, r3
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-32-LABEL: f2:
 ; CHECK-32:       # %bb.0:
 ; CHECK-32-NEXT:    or. r3, r4, r3
-; CHECK-32-NEXT:    li r3, 1024
+; CHECK-32-NEXT:    li r4, 0
 ; CHECK-32-NEXT:    bc 12, eq, .LBB2_2
 ; CHECK-32-NEXT:  # %bb.1:
-; CHECK-32-NEXT:    ori r4, r3, 0
-; CHECK-32-NEXT:    b .LBB2_3
+; CHECK-32-NEXT:    li r4, 1024
 ; CHECK-32-NEXT:  .LBB2_2:
-; CHECK-32-NEXT:    li r4, 0
-; CHECK-32-NEXT:  .LBB2_3:
 ; CHECK-32-NEXT:    li r3, 0
 ; CHECK-32-NEXT:    blr
   %c = icmp eq i64 %x, 0
@@ -93,15 +86,17 @@ define i64 @f3(i64 %x, i64 %y) {
 ;
 ; CHECK-32-LABEL: f3:
 ; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    or. r3, r4, r3
-; CHECK-32-NEXT:    bc 12, eq, .LBB3_2
-; CHECK-32-NEXT:  # %bb.1:
-; CHECK-32-NEXT:    ori r3, r5, 0
-; CHECK-32-NEXT:    ori r4, r6, 0
-; CHECK-32-NEXT:    blr
-; CHECK-32-NEXT:  .LBB3_2:
-; CHECK-32-NEXT:    li r3, 0
+; CHECK-32-NEXT:    mr r7, r4
+; CHECK-32-NEXT:    or. r3, r7, r3
 ; CHECK-32-NEXT:    li r4, 0
+; CHECK-32-NEXT:    li r3, 0
+; CHECK-32-NEXT:    beq cr0, .LBB3_2
+; CHECK-32-NEXT:  # %bb.1:
+; CHECK-32-NEXT:    mr r3, r5
+; CHECK-32-NEXT:  .LBB3_2:
+; CHECK-32-NEXT:    beqlr cr0
+; CHECK-32-NEXT:  # %bb.3:
+; CHECK-32-NEXT:    mr r4, r6
 ; CHECK-32-NEXT:    blr
   %c = icmp eq i64 %x, 0
   %r = select i1 %c, i64 0, i64 %y
@@ -133,21 +128,25 @@ define i64 @f4(i64 %x) {
 define i64 @f4_sge_0(i64 %x) {
 ; CHECK-LE-LABEL: f4_sge_0:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    neg r4, r3
 ; CHECK-LE-NEXT:    cmpdi r3, -1
+; CHECK-LE-NEXT:    neg r4, r3
 ; CHECK-LE-NEXT:    iselgt r3, r4, r3
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-32-LABEL: f4_sge_0:
 ; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    subfic r5, r4, 0
-; CHECK-32-NEXT:    subfze r6, r3
+; CHECK-32-NEXT:    mr r5, r4
+; CHECK-32-NEXT:    subfic r4, r4, 0
+; CHECK-32-NEXT:    mr r6, r3
 ; CHECK-32-NEXT:    cmpwi r3, -1
-; CHECK-32-NEXT:    bc 12, gt, .LBB5_1
-; CHECK-32-NEXT:    blr
-; CHECK-32-NEXT:  .LBB5_1:
-; CHECK-32-NEXT:    addi r3, r6, 0
-; CHECK-32-NEXT:    addi r4, r5, 0
+; CHECK-32-NEXT:    subfze r3, r3
+; CHECK-32-NEXT:    bgt cr0, .LBB5_2
+; CHECK-32-NEXT:  # %bb.1:
+; CHECK-32-NEXT:    mr r3, r6
+; CHECK-32-NEXT:  .LBB5_2:
+; CHECK-32-NEXT:    bgtlr cr0
+; CHECK-32-NEXT:  # %bb.3:
+; CHECK-32-NEXT:    mr r4, r5
 ; CHECK-32-NEXT:    blr
   %c = icmp sge i64 %x, 0
   %x.neg = sub i64 0, %x
@@ -180,8 +179,8 @@ define i64 @f4_slt_0(i64 %x) {
 define i64 @f4_sle_0(i64 %x) {
 ; CHECK-LE-LABEL: f4_sle_0:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    neg r4, r3
 ; CHECK-LE-NEXT:    cmpdi r3, 1
+; CHECK-LE-NEXT:    neg r4, r3
 ; CHECK-LE-NEXT:    isellt r3, r3, r4
 ; CHECK-LE-NEXT:    blr
 ;
@@ -191,14 +190,17 @@ define i64 @f4_sle_0(i64 %x) {
 ; CHECK-32-NEXT:    cmpwi cr1, r3, 0
 ; CHECK-32-NEXT:    crandc 4*cr5+lt, 4*cr1+lt, eq
 ; CHECK-32-NEXT:    cmpwi cr1, r4, 0
-; CHECK-32-NEXT:    subfic r5, r4, 0
 ; CHECK-32-NEXT:    crand 4*cr5+gt, eq, 4*cr1+eq
+; CHECK-32-NEXT:    subfic r5, r4, 0
 ; CHECK-32-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
 ; CHECK-32-NEXT:    subfze r6, r3
-; CHECK-32-NEXT:    bclr 12, 4*cr5+lt, 0
+; CHECK-32-NEXT:    bc 12, 4*cr5+lt, .LBB7_2
 ; CHECK-32-NEXT:  # %bb.1:
-; CHECK-32-NEXT:    ori r3, r6, 0
-; CHECK-32-NEXT:    ori r4, r5, 0
+; CHECK-32-NEXT:    mr r3, r6
+; CHECK-32-NEXT:  .LBB7_2:
+; CHECK-32-NEXT:    bclr 12, 4*cr5+lt, 0
+; CHECK-32-NEXT:  # %bb.3:
+; CHECK-32-NEXT:    mr r4, r5
 ; CHECK-32-NEXT:    blr
   %c = icmp sle i64 %x, 0
   %x.neg = sub i64 0, %x
@@ -231,23 +233,27 @@ define i64 @f4_sgt_m1(i64 %x) {
 define i64 @f5(i64 %x, i64 %y) {
 ; CHECK-LE-LABEL: f5:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    li r5, 0
 ; CHECK-LE-NEXT:    cmpldi r3, 0
-; CHECK-LE-NEXT:    iseleq r3, r4, r5
+; CHECK-LE-NEXT:    li r3, 0
+; CHECK-LE-NEXT:    iseleq r3, r4, r3
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-32-LABEL: f5:
 ; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    li r7, 0
 ; CHECK-32-NEXT:    or. r3, r4, r3
-; CHECK-32-NEXT:    bc 12, eq, .LBB9_2
+; CHECK-32-NEXT:    mr r3, r5
+; CHECK-32-NEXT:    bne cr0, .LBB9_3
 ; CHECK-32-NEXT:  # %bb.1:
-; CHECK-32-NEXT:    ori r3, r7, 0
-; CHECK-32-NEXT:    ori r4, r7, 0
-; CHECK-32-NEXT:    blr
+; CHECK-32-NEXT:    bne cr0, .LBB9_4
 ; CHECK-32-NEXT:  .LBB9_2:
-; CHECK-32-NEXT:    addi r3, r5, 0
-; CHECK-32-NEXT:    addi r4, r6, 0
+; CHECK-32-NEXT:    mr r4, r6
+; CHECK-32-NEXT:    blr
+; CHECK-32-NEXT:  .LBB9_3:
+; CHECK-32-NEXT:    li r3, 0
+; CHECK-32-NEXT:    beq cr0, .LBB9_2
+; CHECK-32-NEXT:  .LBB9_4:
+; CHECK-32-NEXT:    li r6, 0
+; CHECK-32-NEXT:    mr r4, r6
 ; CHECK-32-NEXT:    blr
   %c = icmp eq i64 %x, 0
   %r = select i1 %c, i64 %y, i64 0
@@ -257,21 +263,18 @@ define i64 @f5(i64 %x, i64 %y) {
 define i32 @f5_i32(i32 %x, i32 %y) {
 ; CHECK-LE-LABEL: f5_i32:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    li r5, 0
 ; CHECK-LE-NEXT:    cmplwi r3, 0
-; CHECK-LE-NEXT:    iseleq r3, r4, r5
+; CHECK-LE-NEXT:    li r3, 0
+; CHECK-LE-NEXT:    iseleq r3, r4, r3
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-32-LABEL: f5_i32:
 ; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    li r5, 0
 ; CHECK-32-NEXT:    cmplwi r3, 0
-; CHECK-32-NEXT:    bc 12, eq, .LBB10_2
+; CHECK-32-NEXT:    mr r3, r4
+; CHECK-32-NEXT:    beqlr cr0
 ; CHECK-32-NEXT:  # %bb.1:
-; CHECK-32-NEXT:    ori r3, r5, 0
-; CHECK-32-NEXT:    blr
-; CHECK-32-NEXT:  .LBB10_2:
-; CHECK-32-NEXT:    addi r3, r4, 0
+; CHECK-32-NEXT:    li r3, 0
 ; CHECK-32-NEXT:    blr
   %c = icmp eq i32 %x, 0
   %r = select i1 %c, i32 %y, i32 0

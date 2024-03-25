@@ -10,57 +10,51 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/Hypot.h"
 #include "src/math/hypotf.h"
+#include "test/UnitTest/FPMatcher.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
 
-using FPBits = __llvm_libc::fputil::FPBits<float>;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+struct HypotfChecker : public virtual LIBC_NAMESPACE::testing::Test {
+  using FloatType = float;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
+  using StorageType = typename FPBits::StorageType;
 
-struct LlvmLibcHypotfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
-  bool check(uint32_t start, uint32_t stop,
-             mpfr::RoundingMode rounding) override {
+  uint64_t check(uint32_t start, uint32_t stop, mpfr::RoundingMode rounding) {
     // Range of the second input: [2^37, 2^48).
     constexpr uint32_t Y_START = (37U + 127U) << 23;
     constexpr uint32_t Y_STOP = (48U + 127U) << 23;
 
     mpfr::ForceRoundingMode r(rounding);
+    if (!r.success)
+      return true;
     uint32_t xbits = start;
-    bool result = true;
+    uint64_t failed = 0;
     do {
-      float x = float(FPBits(xbits));
+      float x = FPBits(xbits).get_val();
       uint32_t ybits = Y_START;
       do {
-        float y = float(FPBits(ybits));
-        result &= EXPECT_FP_EQ(__llvm_libc::fputil::hypot(x, y),
-                               __llvm_libc::hypotf(x, y));
+        float y = FPBits(ybits).get_val();
+        bool correct = TEST_FP_EQ(LIBC_NAMESPACE::fputil::hypot(x, y),
+                                  LIBC_NAMESPACE::hypotf(x, y));
         // Using MPFR will be much slower.
         // mpfr::BinaryInput<float> input{x, y};
-        // EXPECT_MPFR_MATCH(mpfr::Operation::Hypot, input,
-        // __llvm_libc::hypotf(x, y), 0.5,
-        //                   rounding);
+        // bool correct = TEST_MPFR_MATCH_ROUNDING_SILENTLY(
+        //     mpfr::Operation::Hypot, input, LIBC_NAMESPACE::hypotf(x, y), 0.5,
+        //     rounding);
+        failed += (!correct);
       } while (ybits++ < Y_STOP);
     } while (xbits++ < stop);
-    return result;
+    return failed;
   }
 };
+
+using LlvmLibcHypotfExhaustiveTest = LlvmLibcExhaustiveMathTest<HypotfChecker>;
 
 // Range of the first input: [2^23, 2^24);
 static constexpr uint32_t START = (23U + 127U) << 23;
 static constexpr uint32_t STOP = ((23U + 127U) << 23) + 1;
 
-TEST_F(LlvmLibcHypotfExhaustiveTest, RoundNearestTieToEven) {
-  test_full_range(START, STOP, mpfr::RoundingMode::Nearest);
-}
-
-TEST_F(LlvmLibcHypotfExhaustiveTest, RoundUp) {
-  test_full_range(START, STOP, mpfr::RoundingMode::Upward);
-}
-
-TEST_F(LlvmLibcHypotfExhaustiveTest, RoundDown) {
-  test_full_range(START, STOP, mpfr::RoundingMode::Downward);
-}
-
-TEST_F(LlvmLibcHypotfExhaustiveTest, RoundTowardZero) {
-  test_full_range(START, STOP, mpfr::RoundingMode::TowardZero);
+TEST_F(LlvmLibcHypotfExhaustiveTest, PositiveRange) {
+  test_full_range_all_roundings(START, STOP);
 }

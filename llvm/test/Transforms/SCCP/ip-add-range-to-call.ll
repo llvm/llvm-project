@@ -4,7 +4,7 @@
 ; Test 1.
 ; Both arguments and return value of @callee can be tracked. The inferred range
 ; can be added to call sites.
-define internal noundef i32 @callee(i32 %x) {
+define internal i32 @callee(i32 %x) {
 ; CHECK-LABEL: @callee(
 ; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
@@ -42,7 +42,7 @@ define i32 @caller2(i32 %x) {
 
 declare void @use_cb1(ptr)
 
-define internal noundef i32 @callee2(i32 %x) {
+define internal i32 @callee2(i32 %x) {
 ; CHECK-LABEL: @callee2(
 ; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
@@ -69,7 +69,7 @@ define void @caller_cb1() {
 
 declare void @use_cb2(ptr)
 
-define internal noundef i32 @callee3(i32 %x) {
+define internal i32 @callee3(i32 %x) {
 ; CHECK-LABEL: @callee3(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 10
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 500, i32 600
@@ -99,7 +99,7 @@ define void @caller_cb2() {
 
 declare void @use_cb3(ptr)
 
-define internal noundef i32 @callee4(i32 %x, i32 %y) {
+define internal i32 @callee4(i32 %x, i32 %y) {
 ; CHECK-LABEL: @callee4(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 10
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 500, i32 [[Y:%.*]]
@@ -128,7 +128,7 @@ define void @caller_cb3() {
 ; Test 5.
 ; Range for the return value of callee5 includes undef. No range metadata
 ; should be added at call sites.
-define internal noundef i32 @callee5(i32 %x, i32 %y) {
+define internal i32 @callee5(i32 %x, i32 %y) {
 ; CHECK-LABEL: @callee5(
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[X:%.*]], 15
 ; CHECK-NEXT:    br i1 [[C]], label [[BB1:%.*]], label [[BB2:%.*]]
@@ -169,5 +169,26 @@ define i32 @caller5() {
   ret i32 %a
 }
 
+define internal <2 x i64> @ctlz(<2 x i64> %arg) {
+; CHECK-LABEL: @ctlz(
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> [[ARG:%.*]], i1 false)
+; CHECK-NEXT:    ret <2 x i64> [[RES]]
+;
+  %res = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %arg, i1 false)
+  ret <2 x i64> %res
+}
+
+define <2 x i64> @ctlz_caller(<2 x i64> %arg) {
+; CHECK-LABEL: @ctlz_caller(
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @ctlz(<2 x i64> [[ARG:%.*]]), !range [[RNG2:![0-9]+]]
+; CHECK-NEXT:    ret <2 x i64> [[RES]]
+;
+  %res = call <2 x i64> @ctlz(<2 x i64> %arg)
+  ret <2 x i64> %res
+}
+
+declare <2 x i64> @llvm.ctlz.v2i64(<2 x i64>, i1)
+
 ; CHECK: [[RNG0]] = !{i32 0, i32 21}
 ; CHECK: [[RNG1]] = !{i32 500, i32 601}
+; CHECK: [[RNG2]] = !{i64 0, i64 65}

@@ -61,17 +61,22 @@ Example:
 
 The affine dialect imposes certain restrictions on dimension and symbolic
 identifiers to enable powerful analysis and transformation. An SSA value's use
-can be bound to a symbolic identifier if that SSA value is either 1. a region
-argument for an op with trait `AffineScope` (eg. `FuncOp`), 2. a value defined
-at the top level of an `AffineScope` op (i.e., immediately enclosed by the
-latter), 3. a value that dominates the `AffineScope` op enclosing the value's
-use, 4. the result of a
-constant operation, 5. the result of an
+can be bound to a symbolic identifier if that SSA value is either:
+
+1. a region argument for an op with trait `AffineScope` (eg. `FuncOp`),
+2. a value defined at the top level of an `AffineScope` op (i.e., 
+immediately enclosed by the latter),
+3. a value that dominates the `AffineScope` op enclosing the value's
+use,
+4. the result of a constant operation,
+5. the result of an
 [`affine.apply` operation](#affineapply-mliraffineapplyop) that recursively takes as
-arguments any valid symbolic identifiers, or 6. the result of a
+arguments any valid symbolic identifiers, or
+6. the result of a
 [`dim` operation](MemRef.md/#memrefdim-mlirmemrefdimop) on either a memref that
 is an argument to a `AffineScope` op or a memref where the corresponding
 dimension is either static or a dynamic one in turn bound to a valid symbol.
+
 *Note:* if the use of an SSA value is not contained in any op with the
 `AffineScope` trait, only the rules 4-6 can be applied.
 
@@ -142,7 +147,7 @@ Syntax:
 
 ```
 affine-map-inline
-   ::= dim-and-symbol-id-lists `->` multi-dim-affine-expr
+   ::= dim-and-symbol-value-lists `->` multi-dim-affine-expr
 ```
 
 The identifiers in the dimensions and symbols lists must be unique. These are
@@ -227,7 +232,7 @@ Syntax of semi-affine maps:
 
 ```
 semi-affine-map-inline
-   ::= dim-and-symbol-id-lists `->` multi-dim-semi-affine-expr
+   ::= dim-and-symbol-value-lists `->` multi-dim-semi-affine-expr
 ```
 
 Semi-affine maps may be defined inline at the point of use, or may be hoisted to
@@ -271,7 +276,7 @@ name.
 integer-set-id ::= `#` suffix-id
 
 integer-set-inline
-   ::= dim-and-symbol-id-lists `:` '(' affine-constraint-conjunction? ')'
+   ::= dim-and-symbol-value-lists `:` '(' affine-constraint-conjunction? ')'
 
 // Declarations of integer sets are at the top of the file.
 integer-set-decl ::= integer-set-id `=` integer-set-inline

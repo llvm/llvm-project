@@ -1,12 +1,13 @@
-# This reproduces a bug with jump table identification where jump table has
-# entries pointing to code in function and its cold fragment.
+## This reproduces a bug with jump table identification where jump table has
+## entries pointing to code in function and its cold fragment.
 
 # REQUIRES: system-linux
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.out --lite=0 -v=1 2>&1 | FileCheck %s
+# RUN: llvm-bolt %t.exe -o %t.out --lite=0 -v=1 --print-cfg --print-only=main \
+# RUN:   2>&1 | FileCheck %s
 
 # CHECK-NOT: unclaimed PC-relative relocations left in data
 # CHECK: BOLT-INFO: marking main.cold.1 as a fragment of main
@@ -36,13 +37,14 @@ LBB3:
   ret
 .size main, .-main
 
+# Insert padding between functions, so that the next instruction cannot be
+# treated as __builtin_unreachable destination for the jump table.
+  .quad 0
+
   .globl main.cold.1
   .type main.cold.1, %function
   .p2align 2
 main.cold.1:
-  # load bearing nop: pad LBB4 so that it can't be treated
-  # as __builtin_unreachable by analyzeJumpTable
-  nop
 LBB4:
   callq abort
 .size main.cold.1, .-main.cold.1
@@ -55,3 +57,12 @@ JUMP_TABLE:
   .long LBB3-JUMP_TABLE
   .long LBB4-JUMP_TABLE
   .long LBB3-JUMP_TABLE
+
+## Verify that the entry corresponding to the cold fragment was added to
+## the jump table.
+
+# CHECK:      PIC Jump table
+# CHECK-NEXT: 0x{{.*}} :
+# CHECK-NEXT: 0x{{.*}} :
+# CHECK-NEXT: 0x{{.*}} : main.cold.1
+# CHECK-NEXT: 0x{{.*}} :

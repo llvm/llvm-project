@@ -1,4 +1,4 @@
-//===--- Mips.h - Mips-specific Tool Helpers ----------------------*- C++ -*-===//
+//===--- Mips.h - Mips-specific Tool Helpers --------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 
 #include "clang/Driver/Driver.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Option/Option.h"
+#include "llvm/TargetParser/Triple.h"
 #include <string>
 #include <vector>
 

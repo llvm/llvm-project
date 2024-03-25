@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=redwood -verify-machineinstrs < %s | \
+; RUN: llc -mtriple=r600 -mcpu=redwood -verify-machineinstrs < %s | \
 ; RUN: FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}tgid_x:

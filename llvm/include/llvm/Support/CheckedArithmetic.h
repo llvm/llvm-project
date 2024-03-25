@@ -25,8 +25,7 @@ namespace {
 /// \p RHS.
 /// \return Empty optional if the operation overflows, or result otherwise.
 template <typename T, typename F>
-std::enable_if_t<std::is_integral<T>::value && sizeof(T) * 8 <= 64,
-                 std::optional<T>>
+std::enable_if_t<std::is_integral_v<T> && sizeof(T) * 8 <= 64, std::optional<T>>
 checkedOp(T LHS, T RHS, F Op, bool Signed = true) {
   llvm::APInt ALHS(sizeof(T) * 8, LHS, Signed);
   llvm::APInt ARHS(sizeof(T) * 8, RHS, Signed);
@@ -44,8 +43,8 @@ namespace llvm {
 /// \return Optional of sum if no signed overflow occurred,
 /// \c std::nullopt otherwise.
 template <typename T>
-std::enable_if_t<std::is_signed<T>::value, std::optional<T>>
-checkedAdd(T LHS, T RHS) {
+std::enable_if_t<std::is_signed_v<T>, std::optional<T>> checkedAdd(T LHS,
+                                                                   T RHS) {
   return checkedOp(LHS, RHS, &llvm::APInt::sadd_ov);
 }
 
@@ -53,8 +52,8 @@ checkedAdd(T LHS, T RHS) {
 /// \return Optional of sum if no signed overflow occurred,
 /// \c std::nullopt otherwise.
 template <typename T>
-std::enable_if_t<std::is_signed<T>::value, std::optional<T>>
-checkedSub(T LHS, T RHS) {
+std::enable_if_t<std::is_signed_v<T>, std::optional<T>> checkedSub(T LHS,
+                                                                   T RHS) {
   return checkedOp(LHS, RHS, &llvm::APInt::ssub_ov);
 }
 
@@ -62,8 +61,8 @@ checkedSub(T LHS, T RHS) {
 /// \return Optional of product if no signed overflow occurred,
 /// \c std::nullopt otherwise.
 template <typename T>
-std::enable_if_t<std::is_signed<T>::value, std::optional<T>>
-checkedMul(T LHS, T RHS) {
+std::enable_if_t<std::is_signed_v<T>, std::optional<T>> checkedMul(T LHS,
+                                                                   T RHS) {
   return checkedOp(LHS, RHS, &llvm::APInt::smul_ov);
 }
 
@@ -71,8 +70,8 @@ checkedMul(T LHS, T RHS) {
 /// \return Optional of result if no signed overflow occurred,
 /// \c std::nullopt otherwise.
 template <typename T>
-std::enable_if_t<std::is_signed<T>::value, std::optional<T>>
-checkedMulAdd(T A, T B, T C) {
+std::enable_if_t<std::is_signed_v<T>, std::optional<T>> checkedMulAdd(T A, T B,
+                                                                      T C) {
   if (auto Product = checkedMul(A, B))
     return checkedAdd(*Product, C);
   return std::nullopt;
@@ -82,7 +81,7 @@ checkedMulAdd(T A, T B, T C) {
 /// \return Optional of sum if no unsigned overflow occurred,
 /// \c std::nullopt otherwise.
 template <typename T>
-std::enable_if_t<std::is_unsigned<T>::value, std::optional<T>>
+std::enable_if_t<std::is_unsigned_v<T>, std::optional<T>>
 checkedAddUnsigned(T LHS, T RHS) {
   return checkedOp(LHS, RHS, &llvm::APInt::uadd_ov, /*Signed=*/false);
 }
@@ -91,7 +90,7 @@ checkedAddUnsigned(T LHS, T RHS) {
 /// \return Optional of product if no unsigned overflow occurred,
 /// \c std::nullopt otherwise.
 template <typename T>
-std::enable_if_t<std::is_unsigned<T>::value, std::optional<T>>
+std::enable_if_t<std::is_unsigned_v<T>, std::optional<T>>
 checkedMulUnsigned(T LHS, T RHS) {
   return checkedOp(LHS, RHS, &llvm::APInt::umul_ov, /*Signed=*/false);
 }
@@ -100,7 +99,7 @@ checkedMulUnsigned(T LHS, T RHS) {
 /// \return Optional of result if no unsigned overflow occurred,
 /// \c std::nullopt otherwise.
 template <typename T>
-std::enable_if_t<std::is_unsigned<T>::value, std::optional<T>>
+std::enable_if_t<std::is_unsigned_v<T>, std::optional<T>>
 checkedMulAddUnsigned(T A, T B, T C) {
   if (auto Product = checkedMulUnsigned(A, B))
     return checkedAddUnsigned(*Product, C);

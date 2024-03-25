@@ -1,12 +1,12 @@
-; RUN: opt -passes="ipsccp<func-spec>" -force-function-specialization -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<func-spec>" -force-specialization -S < %s | FileCheck %s
 
 ; Check that function foo does not gets specialised as it contains an intrinsic
 ; that is marked as NoDuplicate.
 ; Please note that the use of the hardwareloop intrinsic is arbitrary; it's
 ; just an easy to use intrinsic that has NoDuplicate.
 
-; CHECK-NOT: @foo.1(
-; CHECK-NOT: @foo.2(
+; CHECK-NOT: @foo.specialized.1(
+; CHECK-NOT: @foo.specialized.2(
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 

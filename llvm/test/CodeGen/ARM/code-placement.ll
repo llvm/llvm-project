@@ -2,35 +2,34 @@
 ; PHI elimination shouldn't break backedge.
 
 %struct.list_data_s = type { i16, i16 }
-%struct.list_head = type { %struct.list_head*, %struct.list_data_s* }
+%struct.list_head = type { ptr, ptr }
 
-define arm_apcscc %struct.list_head* @t1(%struct.list_head* %list) nounwind {
+define arm_apcscc ptr @t1(ptr %list) nounwind {
 entry:
 ; CHECK-LABEL: t1:
-  %0 = icmp eq %struct.list_head* %list, null
+  %0 = icmp eq ptr %list, null
   br i1 %0, label %bb2, label %bb
 
 bb:
-; CHECK: LBB0_1:
 ; CHECK: LBB0_[[LABEL:[0-9]]]:
 ; CHECK: bne LBB0_[[LABEL]]
 ; CHECK-NOT: b LBB0_[[LABEL]]
 ; CHECK: bx lr
-  %list_addr.05 = phi %struct.list_head* [ %2, %bb ], [ %list, %entry ]
-  %next.04 = phi %struct.list_head* [ %list_addr.05, %bb ], [ null, %entry ]
-  %1 = getelementptr inbounds %struct.list_head, %struct.list_head* %list_addr.05, i32 0, i32 0
-  %2 = load %struct.list_head*, %struct.list_head** %1, align 4
-  store %struct.list_head* %next.04, %struct.list_head** %1, align 4
-  %3 = icmp eq %struct.list_head* %2, null
+  %list_addr.05 = phi ptr [ %2, %bb ], [ %list, %entry ]
+  %next.04 = phi ptr [ %list_addr.05, %bb ], [ null, %entry ]
+  %1 = getelementptr inbounds %struct.list_head, ptr %list_addr.05, i32 0, i32 0
+  %2 = load ptr, ptr %1, align 4
+  store ptr %next.04, ptr %1, align 4
+  %3 = icmp eq ptr %2, null
   br i1 %3, label %bb2, label %bb
 
 bb2:
-  %next.0.lcssa = phi %struct.list_head* [ null, %entry ], [ %list_addr.05, %bb ]
-  ret %struct.list_head* %next.0.lcssa
+  %next.0.lcssa = phi ptr [ null, %entry ], [ %list_addr.05, %bb ]
+  ret ptr %next.0.lcssa
 }
 
 ; Optimize loop entry, eliminate intra loop branches
-define i32 @t2(i32 %passes, i32* nocapture %src, i32 %size) nounwind readonly {
+define i32 @t2(i32 %passes, ptr nocapture %src, i32 %size) nounwind readonly {
 entry:
 ; CHECK-LABEL: t2:
   %0 = icmp eq i32 %passes, 0                     ; <i1> [#uses=1]
@@ -43,8 +42,8 @@ bb1:                                              ; preds = %bb2.preheader, %bb1
   %indvar = phi i32 [ %indvar.next, %bb1 ], [ 0, %bb2.preheader ] ; <i32> [#uses=2]
   %sum.08 = phi i32 [ %2, %bb1 ], [ %sum.110, %bb2.preheader ] ; <i32> [#uses=1]
   %tmp17 = sub i32 %i.07, %indvar                 ; <i32> [#uses=1]
-  %scevgep = getelementptr i32, i32* %src, i32 %tmp17  ; <i32*> [#uses=1]
-  %1 = load i32, i32* %scevgep, align 4                ; <i32> [#uses=1]
+  %scevgep = getelementptr i32, ptr %src, i32 %tmp17  ; <i32*> [#uses=1]
+  %1 = load i32, ptr %scevgep, align 4                ; <i32> [#uses=1]
   %2 = add nsw i32 %1, %sum.08                    ; <i32> [#uses=2]
   %indvar.next = add i32 %indvar, 1               ; <i32> [#uses=2]
   %exitcond = icmp eq i32 %indvar.next, %size     ; <i1> [#uses=1]

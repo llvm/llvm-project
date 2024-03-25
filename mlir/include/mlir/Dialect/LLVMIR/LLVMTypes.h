@@ -16,6 +16,7 @@
 
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include <optional>
 
 namespace llvm {
@@ -57,18 +58,19 @@ namespace LLVM {
 //===----------------------------------------------------------------------===//
 
 // Batch-define trivial types.
-#define DEFINE_TRIVIAL_LLVM_TYPE(ClassName)                                    \
+#define DEFINE_TRIVIAL_LLVM_TYPE(ClassName, TypeName)                          \
   class ClassName : public Type::TypeBase<ClassName, Type, TypeStorage> {      \
   public:                                                                      \
     using Base::Base;                                                          \
+    static constexpr StringLiteral name = TypeName;                            \
   }
 
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMVoidType);
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMPPCFP128Type);
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMX86MMXType);
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMTokenType);
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMLabelType);
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMMetadataType);
+DEFINE_TRIVIAL_LLVM_TYPE(LLVMVoidType, "llvm.void");
+DEFINE_TRIVIAL_LLVM_TYPE(LLVMPPCFP128Type, "llvm.ppc_fp128");
+DEFINE_TRIVIAL_LLVM_TYPE(LLVMX86MMXType, "llvm.x86_mmx");
+DEFINE_TRIVIAL_LLVM_TYPE(LLVMTokenType, "llvm.token");
+DEFINE_TRIVIAL_LLVM_TYPE(LLVMLabelType, "llvm.label");
+DEFINE_TRIVIAL_LLVM_TYPE(LLVMMetadataType, "llvm.metadata");
 
 #undef DEFINE_TRIVIAL_LLVM_TYPE
 
@@ -103,10 +105,13 @@ DEFINE_TRIVIAL_LLVM_TYPE(LLVMMetadataType);
 class LLVMStructType
     : public Type::TypeBase<LLVMStructType, Type, detail::LLVMStructTypeStorage,
                             DataLayoutTypeInterface::Trait,
+                            DestructurableTypeInterface::Trait,
                             TypeTrait::IsMutable> {
 public:
   /// Inherit base constructors.
   using Base::Base;
+
+  static constexpr StringLiteral name = "llvm.struct";
 
   /// Checks if the given type can be contained in a structure type.
   static bool isValidElementType(Type type);
@@ -184,13 +189,13 @@ public:
 
   /// Hooks for DataLayoutTypeInterface. Should not be called directly. Obtain a
   /// DataLayout instance and query it instead.
-  unsigned getTypeSizeInBits(const DataLayout &dataLayout,
-                             DataLayoutEntryListRef params) const;
+  llvm::TypeSize getTypeSizeInBits(const DataLayout &dataLayout,
+                                   DataLayoutEntryListRef params) const;
 
-  unsigned getABIAlignment(const DataLayout &dataLayout,
+  uint64_t getABIAlignment(const DataLayout &dataLayout,
                            DataLayoutEntryListRef params) const;
 
-  unsigned getPreferredAlignment(const DataLayout &dataLayout,
+  uint64_t getPreferredAlignment(const DataLayout &dataLayout,
                                  DataLayoutEntryListRef params) const;
 
   bool areCompatible(DataLayoutEntryListRef oldLayout,
@@ -198,6 +203,12 @@ public:
 
   LogicalResult verifyEntries(DataLayoutEntryListRef entries,
                               Location loc) const;
+
+  /// Destructs the struct into its indexed field types.
+  std::optional<DenseMap<Attribute, Type>> getSubelementIndexMap();
+
+  /// Returns which type is stored at a given integer index within the struct.
+  Type getTypeAtIndex(Attribute index);
 };
 
 //===----------------------------------------------------------------------===//
@@ -280,7 +291,7 @@ enum class PtrDLEntryPos { Size = 0, Abi = 1, Preferred = 2, Index = 3 };
 /// Returns `std::nullopt` if `pos` is not present in the entry.
 /// Currently only `PtrDLEntryPos::Index` is optional, and all other positions
 /// may be assumed to be present.
-std::optional<unsigned> extractPointerSpecValue(Attribute attr,
+std::optional<uint64_t> extractPointerSpecValue(Attribute attr,
                                                 PtrDLEntryPos pos);
 
 } // namespace LLVM

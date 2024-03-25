@@ -2,6 +2,7 @@
 
 # RUN: yaml2obj %s -o %t.o
 # RUN: llvm-readobj --symbols %t.o | FileCheck %s --strict-whitespace --check-prefix=MIPS-LLVM
+# RUN: llvm-readobj --symbols %t.o --elf-output-style=JSON --pretty-print | FileCheck %s --check-prefix=MIPS-JSON
 # RUN: llvm-readelf --symbols %t.o | FileCheck %s --strict-whitespace --check-prefix=MIPS-GNU
 
 #      MIPS-LLVM:Name: foo
@@ -22,6 +23,39 @@
 # MIPS-GNU-NEXT:    0: 00000000     0 NOTYPE  LOCAL  DEFAULT                UND
 # MIPS-GNU-NEXT:    1: 00000000     0 NOTYPE  LOCAL  DEFAULT [<other: 0xac>] UND foo
 # MIPS-GNU-NEXT:    2: 00000000     0 NOTYPE  LOCAL  DEFAULT [<other: 0xf0>] UND bar
+
+# MIPS-JSON:      "Name": "foo",
+# MIPS-JSON:      "Other": {
+# MIPS-JSON-NEXT:   "Value": 172,
+# MIPS-JSON-NEXT:   "Flags": [
+# MIPS-JSON-NEXT:     {
+# MIPS-JSON-NEXT:       "Name": "STO_MIPS_MICROMIPS",
+# MIPS-JSON-NEXT:       "Value": 128
+# MIPS-JSON-NEXT:     },
+# MIPS-JSON-NEXT:     {
+# MIPS-JSON-NEXT:       "Name": "STO_MIPS_OPTIONAL",
+# MIPS-JSON-NEXT:       "Value": 4
+# MIPS-JSON-NEXT:     },
+# MIPS-JSON-NEXT:     {
+# MIPS-JSON-NEXT:       "Name": "STO_MIPS_PIC",
+# MIPS-JSON-NEXT:       "Value": 32
+# MIPS-JSON-NEXT:     },
+# MIPS-JSON-NEXT:     {
+# MIPS-JSON-NEXT:       "Name": "STO_MIPS_PLT",
+# MIPS-JSON-NEXT:       "Value": 8
+# MIPS-JSON-NEXT:     }
+# MIPS-JSON-NEXT:   ]
+# MIPS-JSON-NEXT: },
+# MIPS-JSON:      "Name": "bar",
+# MIPS-JSON:      "Other": {
+# MIPS-JSON-NEXT:   "Value": 240,
+# MIPS-JSON-NEXT:   "Flags": [
+# MIPS-JSON-NEXT:     {
+# MIPS-JSON-NEXT:       "Name": "STO_MIPS_MIPS16",
+# MIPS-JSON-NEXT:       "Value": 240
+# MIPS-JSON-NEXT:     }
+# MIPS-JSON-NEXT:   ]
+# MIPS-JSON-NEXT: },
 
 --- !ELF
 FileHeader:

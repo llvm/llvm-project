@@ -1,6 +1,10 @@
-// RUN: %clang_cc1 -std=c++17 -verify %s
-// RUN: %clang_cc1 -std=c++17 -verify %s -DNO_CONSTEXPR
-// RUN: %clang_cc1 -std=c++20 -verify %s
+// RUN: %clang_cc1 -std=c++17 -verify=cxx17,expected %s
+// RUN: %clang_cc1 -std=c++17 -verify=cxx17,expected %s -DNO_CONSTEXPR
+// RUN: %clang_cc1 -std=c++20 -verify=cxx20,expected %s
+//
+// RUN: %clang_cc1 -std=c++17 -verify=cxx17,expected %s -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -std=c++17 -verify=cxx17,expected %s -fexperimental-new-constant-interpreter -DNEW_INTERP -DNO_CONSTEXPR
+// RUN: %clang_cc1 -std=c++20 -verify=cxx20,expected %s -fexperimental-new-constant-interpreter -DNEW_INTERP
 
 namespace std {
 #ifndef NO_CONSTEXPR
@@ -12,6 +16,7 @@ namespace std {
   template<typename T> CONSTEXPR T &&move(T &x) {
     static_assert(T::moveable, "instantiated move"); // expected-error {{no member named 'moveable' in 'B'}}
                                                      // expected-error@-1 {{no member named 'moveable' in 'C'}}
+                                                     // expected-error@-2 {{no member named 'moveable' in 'D'}}
     return static_cast<T&&>(x);
   }
 
@@ -23,6 +28,7 @@ namespace std {
 
   template<typename T> CONSTEXPR auto move_if_noexcept(T &x) -> typename ref<T, noexcept(T(static_cast<T&&>(x)))>::type {
     static_assert(T::moveable, "instantiated move_if_noexcept"); // expected-error {{no member named 'moveable' in 'B'}}
+                                                                 // expected-error@-1 {{no member named 'moveable' in 'D'}}
     return static_cast<typename ref<T, noexcept(T(static_cast<T&&>(x)))>::type>(x);
   }
 
@@ -36,6 +42,7 @@ namespace std {
   template<typename T> CONSTEXPR T &&forward(typename remove_reference<T>::type &x) {
     static_assert(T::moveable, "instantiated forward"); // expected-error {{no member named 'moveable' in 'B'}}
                                                         // expected-error@-1 {{no member named 'moveable' in 'C'}}
+                                                        // expected-error@-2 {{no member named 'moveable' in 'D'}}
     return static_cast<T&&>(x);
   }
   template<typename T> CONSTEXPR T &&forward(typename remove_reference<T>::type &&x) {
@@ -67,21 +74,25 @@ namespace std {
   CONSTEXPR auto forward_like(T &&t) -> ForwardLikeRetType<U, T> {
     using TT = typename remove_reference<T>::type;
     static_assert(TT::moveable, "instantiated as_const"); // expected-error {{no member named 'moveable' in 'B'}}
+                                                          // expected-error@-1 {{no member named 'moveable' in 'D'}}
     return static_cast<ForwardLikeRetType<U, T>>(t);
   }
 
   template<typename T> CONSTEXPR const T &as_const(T &x) {
     static_assert(T::moveable, "instantiated as_const"); // expected-error {{no member named 'moveable' in 'B'}}
+                                                         // expected-error@-1 {{no member named 'moveable' in 'D'}}
     return x;
   }
 
   template<typename T> CONSTEXPR T *addressof(T &x) {
     static_assert(T::moveable, "instantiated addressof"); // expected-error {{no member named 'moveable' in 'B'}}
+                                                          // expected-error@-1 {{no member named 'moveable' in 'D'}}
     return __builtin_addressof(x);
   }
 
   template<typename T> CONSTEXPR T *__addressof(T &x) {
     static_assert(T::moveable, "instantiated __addressof"); // expected-error {{no member named 'moveable' in 'B'}}
+                                                            // expected-error@-1 {{no member named 'moveable' in 'D'}}
     return __builtin_addressof(x);
   }
 }
@@ -105,7 +116,7 @@ constexpr bool f(A a) { // #f
 
 #ifndef NO_CONSTEXPR
 static_assert(f({}), "should be constexpr");
-#else
+#elif !defined(NEW_INTERP)
 // expected-error@#f {{never produces a constant expression}}
 // expected-note@#call {{}}
 #endif
@@ -116,41 +127,19 @@ A &forward_rval_as_lval() {
 }
 
 struct B {};
-B &&(*pMove)(B&) = std::move; // #1 expected-note {{instantiation of}}
-B &&(*pMoveIfNoexcept)(B&) = &std::move_if_noexcept; // #2 expected-note {{instantiation of}}
-B &&(*pForward)(B&) = &std::forward<B>; // #3 expected-note {{instantiation of}}
-B &&(*pForwardLike)(B&) = &std::forward_like<int&&, B&>; // #4 expected-note {{instantiation of}}
-const B &(*pAsConst)(B&) = &std::as_const; // #5 expected-note {{instantiation of}}
-B *(*pAddressof)(B&) = &std::addressof; // #6 expected-note {{instantiation of}}
-B *(*pUnderUnderAddressof)(B&) = &std::__addressof; // #7 expected-note {{instantiation of}}
+B &&(*pMove)(B&) = std::move;                            // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+B &&(*pMoveIfNoexcept)(B&) = &std::move_if_noexcept;     // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+B &&(*pForward)(B&) = &std::forward<B>;                  // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+B &&(*pForwardLike)(B&) = &std::forward_like<int&&, B&>; // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+const B &(*pAsConst)(B&) = &std::as_const;               // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+B *(*pAddressof)(B&) = &std::addressof;                  // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+B *(*pUnderUnderAddressof)(B&) = &std::__addressof;      // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
 int (*pUnrelatedMove)(B, B) = std::move;
 
 struct C {};
-C &&(&rMove)(C&) = std::move; // #8 expected-note {{instantiation of}}
-C &&(&rForward)(C&) = std::forward<C>; // #9 expected-note {{instantiation of}}
+C &&(&rMove)(C&) = std::move;          // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+C &&(&rForward)(C&) = std::forward<C>; // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
 int (&rUnrelatedMove)(B, B) = std::move;
-
-#if __cplusplus <= 201703L
-// expected-warning@#1 {{non-addressable}}
-// expected-warning@#2 {{non-addressable}}
-// expected-warning@#3 {{non-addressable}}
-// expected-warning@#4 {{non-addressable}}
-// expected-warning@#5 {{non-addressable}}
-// expected-warning@#6 {{non-addressable}}
-// expected-warning@#7 {{non-addressable}}
-// expected-warning@#8 {{non-addressable}}
-// expected-warning@#9 {{non-addressable}}
-#else
-// expected-error@#1 {{non-addressable}}
-// expected-error@#2 {{non-addressable}}
-// expected-error@#3 {{non-addressable}}
-// expected-error@#4 {{non-addressable}}
-// expected-error@#5 {{non-addressable}}
-// expected-error@#6 {{non-addressable}}
-// expected-error@#7 {{non-addressable}}
-// expected-error@#8 {{non-addressable}}
-// expected-error@#9 {{non-addressable}}
-#endif
 
 void attribute_const() {
   int n;
@@ -161,6 +150,22 @@ void attribute_const() {
   std::addressof(n); // expected-warning {{ignoring return value}}
   std::__addressof(n); // expected-warning {{ignoring return value}}
   std::as_const(n); // expected-warning {{ignoring return value}}
+}
+
+struct D {
+  void* operator new(__SIZE_TYPE__, D&&(*)(D&));
+  void* operator new(__SIZE_TYPE__, D*(*)(D&));
+  void* operator new(__SIZE_TYPE__, const D&(*)(D&));
+};
+
+void placement_new() {
+  new (std::move<D>) D;             // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+  new (std::move_if_noexcept<D>) D; // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+  new (std::forward<D>) D;          // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+  new (std::forward_like<D>) D;     // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+  new (std::addressof<D>) D;        // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+  new (std::__addressof<D>) D;      // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+  new (std::as_const<D>) D;         // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
 }
 
 namespace std {

@@ -1,4 +1,4 @@
-// RUN: c-index-test -test-load-source all -c %s -fsyntax-only -target x86_64-apple-darwin9 -fcoroutines-ts -std=c++1z -I%S/../SemaCXX/Inputs | FileCheck %s
+// RUN: c-index-test -test-load-source all -c %s -fsyntax-only -target x86_64-apple-darwin9 -std=c++20 -I%S/../SemaCXX/Inputs | FileCheck %s
 #include "std-coroutine.h"
 
 using std::suspend_always;

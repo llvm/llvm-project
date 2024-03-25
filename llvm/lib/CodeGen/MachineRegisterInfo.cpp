@@ -96,18 +96,18 @@ MachineRegisterInfo::constrainRegAttrs(Register Reg,
   if (RegTy.isValid() && ConstrainingRegTy.isValid() &&
       RegTy != ConstrainingRegTy)
     return false;
-  const auto ConstrainingRegCB = getRegClassOrRegBank(ConstrainingReg);
+  const auto &ConstrainingRegCB = getRegClassOrRegBank(ConstrainingReg);
   if (!ConstrainingRegCB.isNull()) {
-    const auto RegCB = getRegClassOrRegBank(Reg);
+    const auto &RegCB = getRegClassOrRegBank(Reg);
     if (RegCB.isNull())
       setRegClassOrRegBank(Reg, ConstrainingRegCB);
-    else if (RegCB.is<const TargetRegisterClass *>() !=
-             ConstrainingRegCB.is<const TargetRegisterClass *>())
+    else if (isa<const TargetRegisterClass *>(RegCB) !=
+             isa<const TargetRegisterClass *>(ConstrainingRegCB))
       return false;
-    else if (RegCB.is<const TargetRegisterClass *>()) {
+    else if (isa<const TargetRegisterClass *>(RegCB)) {
       if (!::constrainRegClass(
-              *this, Reg, RegCB.get<const TargetRegisterClass *>(),
-              ConstrainingRegCB.get<const TargetRegisterClass *>(), MinNumRegs))
+              *this, Reg, cast<const TargetRegisterClass *>(RegCB),
+              cast<const TargetRegisterClass *>(ConstrainingRegCB), MinNumRegs))
         return false;
     } else if (RegCB != ConstrainingRegCB)
       return false;
@@ -163,6 +163,15 @@ MachineRegisterInfo::createVirtualRegister(const TargetRegisterClass *RegClass,
   // New virtual register number.
   Register Reg = createIncompleteVirtualRegister(Name);
   VRegInfo[Reg].first = RegClass;
+  noteNewVirtualRegister(Reg);
+  return Reg;
+}
+
+Register MachineRegisterInfo::createVirtualRegister(VRegAttrs RegAttr,
+                                                    StringRef Name) {
+  Register Reg = createIncompleteVirtualRegister(Name);
+  VRegInfo[Reg].first = RegAttr.RCOrRB;
+  setType(Reg, RegAttr.Ty);
   noteNewVirtualRegister(Reg);
   return Reg;
 }
@@ -508,8 +517,8 @@ LLVM_DUMP_METHOD void MachineRegisterInfo::dumpUses(Register Reg) const {
 }
 #endif
 
-void MachineRegisterInfo::freezeReservedRegs(const MachineFunction &MF) {
-  ReservedRegs = getTargetRegisterInfo()->getReservedRegs(MF);
+void MachineRegisterInfo::freezeReservedRegs() {
+  ReservedRegs = getTargetRegisterInfo()->getReservedRegs(*MF);
   assert(ReservedRegs.size() == getTargetRegisterInfo()->getNumRegs() &&
          "Invalid ReservedRegs vector from target");
 }
@@ -619,7 +628,7 @@ void MachineRegisterInfo::disableCalleeSavedRegister(MCRegister Reg) {
 
   // Remove the register (and its aliases from the list).
   for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
-    llvm::erase_value(UpdatedCSRs, *AI);
+    llvm::erase(UpdatedCSRs, *AI);
 }
 
 const MCPhysReg *MachineRegisterInfo::getCalleeSavedRegs() const {
@@ -644,32 +653,9 @@ void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {
 bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
-    bool IsRootReserved = true;
-    for (MCSuperRegIterator Super(*Root, TRI, /*IncludeSelf=*/true);
-         Super.isValid(); ++Super) {
-      MCRegister Reg = *Super;
-      if (!isReserved(Reg)) {
-        IsRootReserved = false;
-        break;
-      }
-    }
-    if (IsRootReserved)
+    if (all_of(TRI->superregs_inclusive(*Root),
+               [&](MCPhysReg Super) { return isReserved(Super); }))
       return true;
   }
   return false;
-}
-
-bool MachineRegisterInfo::isArgumentRegister(const MachineFunction &MF,
-                                             MCRegister Reg) const {
-  return getTargetRegisterInfo()->isArgumentRegister(MF, Reg);
-}
-
-bool MachineRegisterInfo::isFixedRegister(const MachineFunction &MF,
-                                          MCRegister Reg) const {
-  return getTargetRegisterInfo()->isFixedRegister(MF, Reg);
-}
-
-bool MachineRegisterInfo::isGeneralPurposeRegister(const MachineFunction &MF,
-                                                   MCRegister Reg) const {
-  return getTargetRegisterInfo()->isGeneralPurposeRegister(MF, Reg);
 }

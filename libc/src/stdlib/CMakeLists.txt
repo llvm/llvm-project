@@ -5,6 +5,7 @@ add_entrypoint_object(
   HDRS
     atoi.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_integer
 )
 
@@ -15,6 +16,7 @@ add_entrypoint_object(
   HDRS
     atof.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_float
 )
 
@@ -25,6 +27,7 @@ add_entrypoint_object(
   HDRS
     atol.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_integer
 )
 
@@ -35,6 +38,7 @@ add_entrypoint_object(
   HDRS
     atoll.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_integer
 )
 
@@ -49,12 +53,55 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strfromf
+  SRCS
+    strfromf.cpp
+  HDRS
+    strfromf.h
+  DEPENDS
+    .str_from_util
+)
+
+add_entrypoint_object(
+  strfromd
+  SRCS
+    strfromd.cpp
+  HDRS
+    strfromd.h
+  DEPENDS
+    .str_from_util
+)
+
+add_entrypoint_object(
+  strfroml
+  SRCS
+    strfroml.cpp
+  HDRS
+    strfroml.h
+  DEPENDS
+    .str_from_util
+)
+
+add_header_library(
+  str_from_util
+  HDRS
+    str_from_util.h
+  DEPENDS
+    libc.src.stdio.printf_core.converter
+    libc.src.stdio.printf_core.core_structs
+    libc.src.stdio.printf_core.writer
+    libc.src.__support.str_to_integer
+    libc.src.__support.CPP.type_traits
+)
+
+add_entrypoint_object(
   strtof
   SRCS
     strtof.cpp
   HDRS
     strtof.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_float
 )
 
@@ -65,6 +112,7 @@ add_entrypoint_object(
   HDRS
     strtod.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_float
 )
 
@@ -75,6 +123,7 @@ add_entrypoint_object(
   HDRS
     strtold.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_float
 )
 
@@ -85,6 +134,7 @@ add_entrypoint_object(
   HDRS
     strtol.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_integer
 )
 
@@ -95,6 +145,7 @@ add_entrypoint_object(
   HDRS
     strtoll.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_integer
 )
 
@@ -105,6 +156,7 @@ add_entrypoint_object(
   HDRS
     strtoul.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_integer
 )
 
@@ -115,6 +167,7 @@ add_entrypoint_object(
   HDRS
     strtoull.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_integer
 )
 
@@ -191,6 +244,14 @@ add_entrypoint_object(
     libc.include.stdlib
 )
 
+add_header_library(
+  qsort_util
+  HDRS
+    qsort_util.h
+  DEPENDS
+    libc.include.stdlib
+)
+
 add_entrypoint_object(
   qsort
   SRCS
@@ -198,6 +259,18 @@ add_entrypoint_object(
   HDRS
     qsort.h
   DEPENDS
+    .qsort_util
+    libc.include.stdlib
+)
+
+add_entrypoint_object(
+  qsort_r
+  SRCS
+    qsort_r.cpp
+  HDRS
+    qsort_r.h
+  DEPENDS
+    .qsort_util
     libc.include.stdlib
 )
 
@@ -207,6 +280,8 @@ add_object_library(
     rand_util.cpp
   HDRS
     rand_util.h
+  DEPENDS
+    libc.src.__support.common
 )
 
 add_entrypoint_object(
@@ -235,20 +310,29 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
   set(SCUDO_DEPS "")
 
   include(${LIBC_SOURCE_DIR}/../compiler-rt/cmake/Modules/AllSupportedArchDefs.cmake)
-  if(NOT (LIBC_TARGET_ARCHITECTURE IN_LIST ALL_SCUDO_STANDALONE_SUPPORTED_ARCH))
-    message(FATAL_ERROR "Architecture ${LIBC_TARGET_ARCHITECTURE} is not supported by SCUDO. 
+
+  # scudo distinguishes riscv32 and riscv64, so we need to translate the architecture
+  set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO ${LIBC_TARGET_ARCHITECTURE})
+  if(LIBC_TARGET_ARCHITECTURE_IS_RISCV64)
+    set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO riscv64)
+  elseif(LIBC_TARGET_ARCHITECTURE_IS_RISCV32)
+    set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO riscv32)
+  endif()
+
+  if(NOT (LIBC_TARGET_ARCHITECTURE_FOR_SCUDO IN_LIST ALL_SCUDO_STANDALONE_SUPPORTED_ARCH))
+    message(FATAL_ERROR "Architecture ${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO} is not supported by SCUDO.
       Either disable LLVM_LIBC_INCLUDE_SCUDO or change your target architecture.")
   endif()
 
-  list(APPEND SCUDO_DEPS RTScudoStandalone.${LIBC_TARGET_ARCHITECTURE}
-      RTScudoStandaloneCWrappers.${LIBC_TARGET_ARCHITECTURE})
+  list(APPEND SCUDO_DEPS RTScudoStandalone.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
+      RTScudoStandaloneCWrappers.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO})
 
   list(APPEND SCUDO_DEPS
-    RTGwpAsan.${LIBC_TARGET_ARCHITECTURE}
-    RTGwpAsanBacktraceLibc.${LIBC_TARGET_ARCHITECTURE}
-    RTGwpAsanSegvHandler.${LIBC_TARGET_ARCHITECTURE}
+    RTGwpAsan.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
+    RTGwpAsanBacktraceLibc.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
+    RTGwpAsanSegvHandler.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
     )
-  
+
   add_entrypoint_external(
     malloc
     DEPENDS
@@ -273,12 +357,25 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
     free
     DEPENDS
       ${SCUDO_DEPS}
+  )
+elseif(LIBC_TARGET_OS_IS_GPU)
+  add_entrypoint_external(
+    calloc
+  )
+  add_entrypoint_external(
+    realloc
+  )
+  add_entrypoint_external(
+    aligned_alloc
   )
 else()
   add_entrypoint_external(
     malloc
   )
   add_entrypoint_external(
+    free
+  )
+  add_entrypoint_external(
     calloc
   )
   add_entrypoint_external(
@@ -286,9 +383,6 @@ else()
   )
   add_entrypoint_external(
     aligned_alloc
-  )
-  add_entrypoint_external(
-    free
   )
 endif()
 
@@ -302,9 +396,13 @@ endif()
 
 add_entrypoint_object(
   _Exit
-  ALIAS
+  SRCS
+    _Exit.cpp
+  HDRS
+    _Exit.h
   DEPENDS
-    .${LIBC_TARGET_OS}._Exit
+    libc.include.stdlib
+    libc.src.__support.OSUtil.osutil
 )
 
 add_entrypoint_object(
@@ -319,6 +417,7 @@ add_entrypoint_object(
     libc.src.__support.fixedvector
     libc.src.__support.blockstore
     libc.src.__support.threads.mutex
+    libc.src.__support.CPP.new
 )
 
 add_entrypoint_object(
@@ -330,6 +429,7 @@ add_entrypoint_object(
   DEPENDS
     ._Exit
     .atexit
+    libc.src.__support.OSUtil.osutil
 )
 
 add_entrypoint_object(
@@ -338,3 +438,19 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.abort
 )
+
+if(LIBC_TARGET_OS_IS_GPU)
+  add_entrypoint_object(
+    malloc
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.malloc
+  )
+
+  add_entrypoint_object(
+    free
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.free
+  )
+endif()

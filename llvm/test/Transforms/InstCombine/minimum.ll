@@ -149,8 +149,8 @@ define float @minimum_f32_val_nan(float %x) {
 
 define float @minimum_f32_1_minimum_val_p0(float %x) {
 ; CHECK-LABEL: @minimum_f32_1_minimum_val_p0(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float 0.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    ret float [[Z]]
 ;
   %y = call float @llvm.minimum.f32(float %x, float 0.0)
   %z = call float @llvm.minimum.f32(float %y, float 1.0)
@@ -159,8 +159,8 @@ define float @minimum_f32_1_minimum_val_p0(float %x) {
 
 define float @minimum_f32_1_minimum_p0_val_fast(float %x) {
 ; CHECK-LABEL: @minimum_f32_1_minimum_p0_val_fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float 0.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    ret float [[Z]]
 ;
   %y = call float @llvm.minimum.f32(float 0.0, float %x)
   %z = call fast float @llvm.minimum.f32(float %y, float 1.0)
@@ -169,8 +169,8 @@ define float @minimum_f32_1_minimum_p0_val_fast(float %x) {
 
 define float @minimum_f32_1_minimum_p0_val_fmf1(float %x) {
 ; CHECK-LABEL: @minimum_f32_1_minimum_p0_val_fmf1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float 0.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    ret float [[Z]]
 ;
   %y = call float @llvm.minimum.f32(float 0.0, float %x)
   %z = call nnan ninf float @llvm.minimum.f32(float %y, float 1.0)
@@ -179,8 +179,8 @@ define float @minimum_f32_1_minimum_p0_val_fmf1(float %x) {
 
 define float @minimum_f32_1_minimum_p0_val_fmf2(float %x) {
 ; CHECK-LABEL: @minimum_f32_1_minimum_p0_val_fmf2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float 0.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    ret float [[Z]]
 ;
   %y = call nnan ninf float @llvm.minimum.f32(float 0.0, float %x)
   %z = call float @llvm.minimum.f32(float %y, float 1.0)
@@ -189,8 +189,8 @@ define float @minimum_f32_1_minimum_p0_val_fmf2(float %x) {
 
 define float @minimum_f32_1_minimum_p0_val_fmf3(float %x) {
 ; CHECK-LABEL: @minimum_f32_1_minimum_p0_val_fmf3(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf float @llvm.minimum.f32(float [[X:%.*]], float 0.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[Z:%.*]] = call nnan ninf float @llvm.minimum.f32(float [[X:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    ret float [[Z]]
 ;
   %y = call nnan ninf float @llvm.minimum.f32(float 0.0, float %x)
   %z = call nnan ninf float @llvm.minimum.f32(float %y, float 1.0)
@@ -199,8 +199,8 @@ define float @minimum_f32_1_minimum_p0_val_fmf3(float %x) {
 
 define float @minimum_f32_p0_minimum_val_n0(float %x) {
 ; CHECK-LABEL: @minimum_f32_p0_minimum_val_n0(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float -0.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float -0.000000e+00)
+; CHECK-NEXT:    ret float [[Z]]
 ;
   %y = call float @llvm.minimum.f32(float %x, float -0.0)
   %z = call float @llvm.minimum.f32(float %y, float 0.0)
@@ -209,8 +209,8 @@ define float @minimum_f32_p0_minimum_val_n0(float %x) {
 
 define float @minimum_f32_1_minimum_p0_val(float %x) {
 ; CHECK-LABEL: @minimum_f32_1_minimum_p0_val(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float 0.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    ret float [[Z]]
 ;
   %y = call float @llvm.minimum.f32(float 0.0, float %x)
   %z = call float @llvm.minimum.f32(float %y, float 1.0)
@@ -219,8 +219,8 @@ define float @minimum_f32_1_minimum_p0_val(float %x) {
 
 define <2 x float> @minimum_f32_1_minimum_val_p0_val_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @minimum_f32_1_minimum_val_p0_val_v2f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.minimum.v2f32(<2 x float> [[X:%.*]], <2 x float> zeroinitializer)
-; CHECK-NEXT:    ret <2 x float> [[TMP1]]
+; CHECK-NEXT:    [[Z:%.*]] = call <2 x float> @llvm.minimum.v2f32(<2 x float> [[X:%.*]], <2 x float> zeroinitializer)
+; CHECK-NEXT:    ret <2 x float> [[Z]]
 ;
   %y = call <2 x float> @llvm.minimum.v2f32(<2 x float> %x, <2 x float> zeroinitializer)
   %z = call <2 x float> @llvm.minimum.v2f32(<2 x float> %y, <2 x float><float 1.0, float 1.0>)
@@ -415,8 +415,8 @@ define double @unary_neg_neg_extra_use_x_and_y(double %x, double %y) {
 
 define float @reduce_precision(float %x, float %y) {
 ; CHECK-LABEL: @reduce_precision(
-; CHECK-NEXT:    [[MINIMUM:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    ret float [[MINIMUM]]
+; CHECK-NEXT:    [[MINIMUM1:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[MINIMUM1]]
 ;
   %x.ext = fpext float %x to double
   %y.ext = fpext float %y to double
@@ -427,8 +427,8 @@ define float @reduce_precision(float %x, float %y) {
 
 define float @reduce_precision_fmf(float %x, float %y) {
 ; CHECK-LABEL: @reduce_precision_fmf(
-; CHECK-NEXT:    [[MINIMUM:%.*]] = call nnan float @llvm.minimum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    ret float [[MINIMUM]]
+; CHECK-NEXT:    [[MINIMUM1:%.*]] = call nnan float @llvm.minimum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[MINIMUM1]]
 ;
   %x.ext = fpext float %x to double
   %y.ext = fpext float %y to double
@@ -440,8 +440,8 @@ define float @reduce_precision_fmf(float %x, float %y) {
 define float @negated_op(float %x) {
 ; CHECK-LABEL: @negated_op(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = fneg float [[TMP1]]
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    ret float [[R]]
 ;
   %negx = fneg float %x
   %r = call float @llvm.minimum.f32(float %x, float %negx)
@@ -451,8 +451,8 @@ define float @negated_op(float %x) {
 define <2 x double> @negated_op_fmf_commute_vec(<2 x double> %x) {
 ; CHECK-LABEL: @negated_op_fmf_commute_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz <2 x double> @llvm.fabs.v2f64(<2 x double> [[X:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = fneg nnan ninf nsz <2 x double> [[TMP1]]
-; CHECK-NEXT:    ret <2 x double> [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = fneg nnan ninf nsz <2 x double> [[TMP1]]
+; CHECK-NEXT:    ret <2 x double> [[R]]
 ;
   %negx = fneg <2 x double> %x
   %r = call nsz nnan ninf <2 x double> @llvm.minimum.v2f64(<2 x double> %negx, <2 x double> %x)
@@ -471,3 +471,29 @@ define double @negated_op_extra_use(double %x) {
   %r = call double @llvm.minimum.f64(double %negx, double %x)
   ret double %r
 }
+
+; Testcase from PR 71548.
+define void @pr71548() {
+; CHECK-LABEL: @pr71548(
+; CHECK-NEXT:    [[C0:%.*]] = load atomic double, ptr addrspace(1) null unordered, align 8
+; CHECK-NEXT:    [[C1:%.*]] = load atomic i32, ptr addrspace(1) null unordered, align 4
+; CHECK-NEXT:    [[C2:%.*]] = sitofp i32 [[C1]] to double
+; CHECK-NEXT:    [[CRES_I:%.*]] = call noundef double @llvm.minimum.f64(double [[C0]], double [[C2]])
+; CHECK-NEXT:    [[C3:%.*]] = fcmp ult double [[CRES_I]], 0.000000e+00
+; CHECK-NEXT:    [[C_NOT16:%.*]] = icmp eq i32 [[C1]], 0
+; CHECK-NEXT:    [[COR_COND45:%.*]] = or i1 [[C3]], [[C_NOT16]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COR_COND45]])
+; CHECK-NEXT:    ret void
+;
+  %c0 = load atomic double, ptr addrspace(1) null unordered, align 8
+  %c1 = load atomic i32, ptr addrspace(1) null unordered, align 4
+  %c2 = sitofp i32 %c1 to double
+  %cres.i = call noundef double @llvm.minimum.f64(double %c0, double %c2)
+  %c3 = fcmp ult double %cres.i, 0.000000e+00
+  %c.not16 = icmp eq i32 %c1, 0
+  %cor.cond45 = or i1 %c3, %c.not16
+  call void @llvm.assume(i1 %cor.cond45)
+  ret void
+}
+
+declare void @llvm.assume(i1)

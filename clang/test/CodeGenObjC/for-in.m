@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -verify -o /dev/null
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-apple-darwin -emit-llvm -fsanitize=objc-cast -o - | FileCheck %s
+// RUN: %clang_cc1 %s -verify -o /dev/null
+// RUN: %clang_cc1 %s -triple x86_64-apple-darwin -emit-llvm -fsanitize=objc-cast -o - | FileCheck %s
 
 void p(const char*, ...);
 
@@ -27,17 +27,15 @@ void t0(void) {
   unsigned index = 0;
   for (NSString *i in array) {	// expected-warning {{collection expression type 'NSArray *' may not respond}}
 
-    // CHECK:      [[expectedCls:%.*]] = load %struct._class_t*, {{.*}}, !nosanitize
-    // CHECK-NEXT: [[kindOfClassSel:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES{{.*}}, !nosanitize
-    // CHECK-NEXT: [[expectedClsI8:%.*]] = bitcast %struct._class_t* [[expectedCls]] to i8*, !nosanitize
-    // CHECK-NEXT: [[isCls:%.*]] = call zeroext i1 bitcast {{.*}}@objc_msgSend to i1 (i8*, i8*, {{.*}})(i8* noundef [[theItem:%.*]], i8* noundef [[kindOfClassSel]], i8* noundef [[expectedClsI8]]), !nosanitize
+    // CHECK:      [[expectedCls:%.*]] = load ptr, {{.*}}, !nosanitize
+    // CHECK-NEXT: [[kindOfClassSel:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES{{.*}}, !nosanitize
+    // CHECK-NEXT: [[isCls:%.*]] = call zeroext i1 @objc_msgSend(ptr noundef [[theItem:%.*]], ptr noundef [[kindOfClassSel]], ptr noundef [[expectedCls]]), !nosanitize
     // CHECK: br i1 [[isCls]]
 
-    // CHECK: ptrtoint i8* [[theItem]] to i64, !nosanitize
+    // CHECK: ptrtoint ptr [[theItem]] to i64, !nosanitize
     // CHECK-NEXT: call void @__ubsan_handle_invalid_objc_cast
     // CHECK-NEXT: unreachable, !nosanitize
 
-    // CHECK: bitcast i8* [[theItem]]
 
     p("element %d: %s\n", index++, [i cString]);
   }
@@ -58,7 +56,6 @@ void t1(void) {
   }
 }
 
-// rdar://problem/9027663
 void t2(NSArray *array) {
   for (NSArray *array in array) { // expected-warning {{collection expression type 'NSArray *' may not respond}}
   }

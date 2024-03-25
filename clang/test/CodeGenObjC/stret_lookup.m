@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -DSTRET -triple x86_64-pc-linux-gnu -fobjc-runtime=objfw -emit-llvm -o - %s | FileCheck -check-prefix=HASSTRET %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-linux-gnu -fobjc-runtime=gcc -emit-llvm -o - %s | FileCheck -check-prefix=NOSTRET %s
+// RUN: %clang_cc1 -DSTRET -triple x86_64-pc-linux-gnu -fobjc-runtime=objfw -emit-llvm -o - %s | FileCheck -check-prefix=HASSTRET %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fobjc-runtime=gcc -emit-llvm -o - %s | FileCheck -check-prefix=NOSTRET %s
 
 // Test stret lookup
 
@@ -19,11 +19,9 @@ void test0(void) {
 }
 
 // HASSTRET-LABEL: define{{.*}} void @test0()
-// HASSTRET: [[T0:%.*]] = call i8* (i8*, i8*, ...)* @objc_msg_lookup_stret(i8* bitcast (i64* @_OBJC_CLASS_Test0 to i8*),
-// HASSTRET-NEXT: [[T1:%.*]] = bitcast i8* (i8*, i8*, ...)* [[T0]] to void (%struct.test*, i8*, i8*)*
-// HASSTRET-NEXT: call void [[T1]](%struct.test* sret(%struct.test) {{.*}}, i8* noundef bitcast (i64* @_OBJC_CLASS_Test0 to i8*),
+// HASSTRET: [[T0:%.*]] = call ptr @objc_msg_lookup_stret(ptr @_OBJC_CLASS_Test0,
+// HASSTRET-NEXT: call void [[T0]](ptr dead_on_unwind writable sret(%struct.test) {{.*}}, ptr noundef @_OBJC_CLASS_Test0,
 
 // NOSTRET-LABEL: define{{.*}} void @test0()
-// NOSTRET: [[T0:%.*]] = call i8* (i8*, i8*, ...)* @objc_msg_lookup(i8*
-// NOSTRET-NEXT: [[T1:%.*]] = bitcast i8* (i8*, i8*, ...)* [[T0]] to void (%struct.test*, i8*, i8*)*
-// NOSTRET-NEXT: call void [[T1]](%struct.test* sret(%struct.test) {{.*}}, i8* {{.*}}, i8* noundef bitcast ([2 x { i8*, i8* }]*
+// NOSTRET: [[T0:%.*]] = call ptr @objc_msg_lookup(ptr
+// NOSTRET-NEXT: call void [[T0]](ptr dead_on_unwind writable sret(%struct.test) {{.*}}, ptr {{.*}}, ptr noundef

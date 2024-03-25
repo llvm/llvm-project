@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s
 
-// rdar://7309675
 // PR4678
 namespace test0 {
   // test1 should be compmiled to be a varargs function in the IR even

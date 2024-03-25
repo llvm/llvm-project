@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_ENDIAN_H
-#define LLVM_LIBC_SRC_SUPPORT_ENDIAN_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_ENDIAN_H
+#define LLVM_LIBC_SRC___SUPPORT_ENDIAN_H
 
 #include "common.h"
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // We rely on compiler preprocessor defines to allow for cross compilation.
 #if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__) ||           \
@@ -32,8 +32,8 @@ namespace internal {
 template <unsigned ORDER> struct Endian {
   static constexpr const bool IS_LITTLE = ORDER == __ORDER_LITTLE_ENDIAN__;
   static constexpr const bool IS_BIG = ORDER == __ORDER_BIG_ENDIAN__;
-  template <typename T> static T to_big_endian(T value);
-  template <typename T> static T to_little_endian(T value);
+  template <typename T> LIBC_INLINE static T to_big_endian(T value);
+  template <typename T> LIBC_INLINE static T to_little_endian(T value);
 };
 
 // Little Endian specializations
@@ -140,6 +140,6 @@ Endian<__ORDER_BIG_ENDIAN__>::to_little_endian<uint64_t>(uint64_t v) {
 
 using Endian = internal::Endian<__BYTE_ORDER__>;
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_ENDIAN_H
+#endif // LLVM_LIBC_SRC___SUPPORT_ENDIAN_H

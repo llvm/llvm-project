@@ -20,23 +20,23 @@
 #include <iterator>
 #include <type_traits>
 
-template <size_t Extent>
+template <std::size_t Extent>
 constexpr void test_constructibility() {
   struct Other {};
-  static_assert(std::is_constructible_v<std::span<int, Extent>, int*, size_t>);
-  static_assert(!std::is_constructible_v<std::span<int, Extent>, const int*, size_t>);
-  static_assert(std::is_constructible_v<std::span<const int, Extent>, int*, size_t>);
-  static_assert(std::is_constructible_v<std::span<const int, Extent>, const int*, size_t>);
-  static_assert(!std::is_constructible_v<std::span<int, Extent>, volatile int*, size_t>);
-  static_assert(!std::is_constructible_v<std::span<int, Extent>, const volatile int*, size_t>);
-  static_assert(!std::is_constructible_v<std::span<const int, Extent>, volatile int*, size_t>);
-  static_assert(!std::is_constructible_v<std::span<const int, Extent>, const volatile int*, size_t>);
-  static_assert(!std::is_constructible_v<std::span<volatile int, Extent>, const int*, size_t>);
-  static_assert(!std::is_constructible_v<std::span<volatile int, Extent>, const volatile int*, size_t>);
+  static_assert(std::is_constructible_v<std::span<int, Extent>, int*, std::size_t>);
+  static_assert(!std::is_constructible_v<std::span<int, Extent>, const int*, std::size_t>);
+  static_assert(std::is_constructible_v<std::span<const int, Extent>, int*, std::size_t>);
+  static_assert(std::is_constructible_v<std::span<const int, Extent>, const int*, std::size_t>);
+  static_assert(!std::is_constructible_v<std::span<int, Extent>, volatile int*, std::size_t>);
+  static_assert(!std::is_constructible_v<std::span<int, Extent>, const volatile int*, std::size_t>);
+  static_assert(!std::is_constructible_v<std::span<const int, Extent>, volatile int*, std::size_t>);
+  static_assert(!std::is_constructible_v<std::span<const int, Extent>, const volatile int*, std::size_t>);
+  static_assert(!std::is_constructible_v<std::span<volatile int, Extent>, const int*, std::size_t>);
+  static_assert(!std::is_constructible_v<std::span<volatile int, Extent>, const volatile int*, std::size_t>);
   static_assert(
-      !std::is_constructible_v<std::span<int, Extent>, double*, size_t>); // iterator type differs from span type
-  static_assert(!std::is_constructible_v<std::span<int, Extent>, size_t, size_t>);
-  static_assert(!std::is_constructible_v<std::span<int, Extent>, Other*, size_t>); // unrelated iterator type
+      !std::is_constructible_v<std::span<int, Extent>, double*, std::size_t>); // iterator type differs from span type
+  static_assert(!std::is_constructible_v<std::span<int, Extent>, std::size_t, size_t>);
+  static_assert(!std::is_constructible_v<std::span<int, Extent>, Other*, std::size_t>); // unrelated iterator type
 }
 
 template <class T>

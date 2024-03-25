@@ -1,5 +1,5 @@
-; RUN: opt -opaque-pointers=0 < %s -mattr=+mve,+mve.fp -passes=loop-vectorize -tail-predication=disabled -S | FileCheck %s --check-prefixes=DEFAULT
-; RUN: opt -opaque-pointers=0 < %s -mattr=+mve,+mve.fp -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue -S | FileCheck %s --check-prefixes=TAILPRED
+; RUN: opt < %s -mattr=+mve,+mve.fp -passes=loop-vectorize -tail-predication=disabled -S | FileCheck %s --check-prefixes=DEFAULT
+; RUN: opt < %s -mattr=+mve,+mve.fp -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue -S | FileCheck %s --check-prefixes=TAILPRED
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8.1m.main-arm-none-eabi"
@@ -7,20 +7,20 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 ; When TP is disabled, this test can vectorize with a VF of 16.
 ; When TP is enabled, this test should vectorize with a VF of 8.
 ;
-; DEFAULT: load <16 x i8>, <16 x i8>*
+; DEFAULT: load <16 x i8>, ptr
 ; DEFAULT: sext <16 x i8> %{{.*}} to <16 x i16>
 ; DEFAULT: add <16 x i16>
 ; DEFAULT-NOT: llvm.masked.load
 ; DEFAULT-NOT: llvm.masked.store
 ;
-; TAILPRED: llvm.masked.load.v8i8.p0v8i8
+; TAILPRED: llvm.masked.load.v8i8.p0
 ; TAILPRED: sext <8 x i8> %{{.*}} to <8 x i16>
 ; TAILPRED: add <8 x i16>
-; TAILPRED: call void @llvm.masked.store.v8i8.p0v8i8
-; TAILPRED-NOT: load <16 x i8>, <16 x i8>*
+; TAILPRED: call void @llvm.masked.store.v8i8.p0
+; TAILPRED-NOT: load <16 x i8>, ptr
 
-define i32 @tp_reduces_vf(i8* nocapture %0, i32 %1, i8** %input) {
-  %3 = load i8*, i8** %input, align 8
+define i32 @tp_reduces_vf(ptr nocapture %0, i32 %1, ptr %input) {
+  %3 = load ptr, ptr %input, align 8
   %4 = sext i32 %1 to i64
   %5 = icmp eq i32 %1, 0
   br i1 %5, label %._crit_edge, label %.preheader47.preheader
@@ -48,39 +48,39 @@ define i32 @tp_reduces_vf(i8* nocapture %0, i32 %1, i8** %input) {
   %8 = add nuw nsw i32 %6, %indvars.iv
   %9 = add nsw i32 %8, -320
   %10 = add nsw i32 %8, -321
-  %11 = getelementptr inbounds i8, i8* %3, i32 %10
-  %12 = load i8, i8* %11, align 1
+  %11 = getelementptr inbounds i8, ptr %3, i32 %10
+  %12 = load i8, ptr %11, align 1
   %13 = sext i8 %12 to i32
-  %14 = getelementptr inbounds i8, i8* %3, i32 %9
-  %15 = load i8, i8* %14, align 1
+  %14 = getelementptr inbounds i8, ptr %3, i32 %9
+  %15 = load i8, ptr %14, align 1
   %16 = sext i8 %15 to i32
   %17 = add nsw i32 %8, -319
-  %18 = getelementptr inbounds i8, i8* %3, i32 %17
-  %19 = load i8, i8* %18, align 1
+  %18 = getelementptr inbounds i8, ptr %3, i32 %17
+  %19 = load i8, ptr %18, align 1
   %20 = sext i8 %19 to i32
   %21 = add nsw i32 %8, -1
-  %22 = getelementptr inbounds i8, i8* %3, i32 %21
-  %23 = load i8, i8* %22, align 1
+  %22 = getelementptr inbounds i8, ptr %3, i32 %21
+  %23 = load i8, ptr %22, align 1
   %24 = sext i8 %23 to i32
-  %25 = getelementptr inbounds i8, i8* %3, i32 %8
-  %26 = load i8, i8* %25, align 1
+  %25 = getelementptr inbounds i8, ptr %3, i32 %8
+  %26 = load i8, ptr %25, align 1
   %27 = sext i8 %26 to i32
   %28 = mul nsw i32 %27, 255
   %29 = add nuw nsw i32 %8, 1
-  %30 = getelementptr inbounds i8, i8* %3, i32 %29
-  %31 = load i8, i8* %30, align 1
+  %30 = getelementptr inbounds i8, ptr %3, i32 %29
+  %31 = load i8, ptr %30, align 1
   %32 = sext i8 %31 to i32
   %33 = add nuw nsw i32 %8, 320
   %34 = add nuw nsw i32 %8, 319
-  %35 = getelementptr inbounds i8, i8* %3, i32 %34
-  %36 = load i8, i8* %35, align 1
+  %35 = getelementptr inbounds i8, ptr %3, i32 %34
+  %36 = load i8, ptr %35, align 1
   %37 = sext i8 %36 to i32
-  %38 = getelementptr inbounds i8, i8* %3, i32 %33
-  %39 = load i8, i8* %38, align 1
+  %38 = getelementptr inbounds i8, ptr %3, i32 %33
+  %39 = load i8, ptr %38, align 1
   %40 = sext i8 %39 to i32
   %41 = add nuw nsw i32 %8, 321
-  %42 = getelementptr inbounds i8, i8* %3, i32 %41
-  %43 = load i8, i8* %42, align 1
+  %42 = getelementptr inbounds i8, ptr %3, i32 %41
+  %43 = load i8, ptr %42, align 1
   %44 = sext i8 %43 to i32
   %reass.add = add nsw i32 %16, %13
   %reass.add44 = add nsw i32 %reass.add, %20
@@ -93,8 +93,8 @@ define i32 @tp_reduces_vf(i8* nocapture %0, i32 %1, i8** %input) {
   %48 = add nsw i32 %reass.mul, %28
   %49 = lshr i32 %48, 8
   %50 = trunc i32 %49 to i8
-  %51 = getelementptr inbounds i8, i8* %0, i32 %8
-  store i8 %50, i8* %51, align 1
+  %51 = getelementptr inbounds i8, ptr %0, i32 %8
+  store i8 %50, ptr %51, align 1
   %indvars.iv.next = add nuw nsw i32 %indvars.iv, 1
   %exitcond = icmp eq i32 %indvars.iv.next, 319
   br i1 %exitcond, label %52, label %7

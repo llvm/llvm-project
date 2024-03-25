@@ -11,7 +11,7 @@
 
 ; RUN: llvm-profdata merge %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdata
 
-; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.memprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S 2>&1 | FileCheck %s
 
 ; CHECK: memprof record not found for function hash {{.*}} _Z16funcnotinprofilev
 

@@ -16,14 +16,12 @@ struct SortHeap {
   size_t Quantity;
 
   void run(benchmark::State& state) const {
-    runOpOnCopies<ValueType>(
-        state, Quantity, Order::Heap, BatchSize::CountElements,
-        [](auto& Copy) { std::sort_heap(Copy.begin(), Copy.end()); });
+    runOpOnCopies<ValueType>(state, Quantity, Order::Heap, BatchSize::CountElements, [](auto& Copy) {
+      std::sort_heap(Copy.begin(), Copy.end());
+    });
   }
 
-  std::string name() const {
-    return "BM_SortHeap" + ValueType::name() + "_" + std::to_string(Quantity);
-  };
+  std::string name() const { return "BM_SortHeap" + ValueType::name() + "_" + std::to_string(Quantity); };
 };
 } // namespace
 

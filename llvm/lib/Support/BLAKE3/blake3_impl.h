@@ -11,15 +11,7 @@
 // For \p LLVM_LIBRARY_VISIBILITY
 #include "llvm/Support/Compiler.h"
 
-// Remove the 'llvm_' prefix for the rest of the internal implementation.
-#define BLAKE3_VERSION_STRING LLVM_BLAKE3_VERSION_STRING
-#define BLAKE3_KEY_LEN LLVM_BLAKE3_KEY_LEN
-#define BLAKE3_OUT_LEN LLVM_BLAKE3_OUT_LEN
-#define BLAKE3_BLOCK_LEN LLVM_BLAKE3_BLOCK_LEN
-#define BLAKE3_CHUNK_LEN LLVM_BLAKE3_CHUNK_LEN
-#define BLAKE3_MAX_DEPTH LLVM_BLAKE3_MAX_DEPTH
-#define blake3_hasher llvm_blake3_hasher
-#define blake3_chunk_state llvm_blake3_chunk_state
+#include "llvm_blake3_prefix.h"
 
 // internal flags
 enum blake3_flags {
@@ -62,8 +54,9 @@ enum blake3_flags {
 #endif
 
 #if !defined(BLAKE3_USE_NEON) 
-  // If BLAKE3_USE_NEON not manually set, autodetect based on AArch64ness
-  #if defined(IS_AARCH64)
+  // If BLAKE3_USE_NEON not manually set, autodetect based on
+  // AArch64ness and endianness.
+  #if defined(IS_AARCH64) && !defined(__ARM_BIG_ENDIAN)
     #define BLAKE3_USE_NEON 1
   #else
     #define BLAKE3_USE_NEON 0

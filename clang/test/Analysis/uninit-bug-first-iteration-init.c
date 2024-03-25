@@ -1,6 +1,4 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s
-
-// rdar://problem/44978988
 // expected-no-diagnostics
 
 int foo(void);

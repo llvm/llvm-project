@@ -13,12 +13,29 @@
 #ifndef MLIR_DIALECT_EMITC_IR_EMITC_H
 #define MLIR_DIALECT_EMITC_IR_EMITC_H
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/EmitC/IR/EmitCTraits.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/Interfaces/CastInterfaces.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/Dialect/EmitC/IR/EmitCDialect.h.inc"
+#include "mlir/Dialect/EmitC/IR/EmitCEnums.h.inc"
+
+namespace mlir {
+namespace emitc {
+void buildTerminatedBody(OpBuilder &builder, Location loc);
+/// Determines whether \p type is a valid integer type in EmitC.
+bool isSupportedIntegerType(mlir::Type type);
+/// Determines whether \p type is a valid floating-point type in EmitC.
+bool isSupportedFloatType(mlir::Type type);
+} // namespace emitc
+} // namespace mlir
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/EmitC/IR/EmitCAttributes.h.inc"

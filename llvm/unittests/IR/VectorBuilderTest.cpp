@@ -221,9 +221,8 @@ TEST_F(VectorBuilderTest, TestCreateLoadStore) {
 
   auto *FloatVecTy =
       FixedVectorType::get(Type::getFloatTy(Context), VectorNumElements);
-  auto *FloatVecPtrTy = FloatVecTy->getPointerTo();
 
-  Value *FloatVecPtr = UndefValue::get(FloatVecPtrTy);
+  Value *FloatVecPtr = UndefValue::get(Builder.getPtrTy(0));
   Value *FloatVec = UndefValue::get(FloatVecTy);
 
   // vp.load

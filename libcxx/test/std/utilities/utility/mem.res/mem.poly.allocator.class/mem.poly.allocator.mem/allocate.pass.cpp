@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{11.0|12.0}}
+// TODO: Change to XFAIL once https://github.com/llvm/llvm-project/issues/40340 is fixed
+// UNSUPPORTED: availability-pmr-missing
 
 // test_memory_resource requires RTTI for dynamic_cast
 // UNSUPPORTED: no-rtti
@@ -29,7 +29,7 @@
 #include "test_macros.h"
 #include "test_std_memory_resource.h"
 
-template <size_t S, size_t Align>
+template <std::size_t S, size_t Align>
 void testForSizeAndAlign() {
   struct T {
     alignas(Align) std::byte buf[S];
@@ -48,7 +48,7 @@ void testForSizeAndAlign() {
 }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
-template <size_t S>
+template <std::size_t S>
 void testAllocForSizeThrows() {
   struct T {
     std::byte buf[S];
@@ -60,8 +60,8 @@ void testAllocForSizeThrows() {
   Alloc a(&R);
 
   // Test that allocating exactly the max size does not throw.
-  size_t maxSize = Traits::max_size(a);
-  size_t sizeTypeMax = std::numeric_limits<std::size_t>::max();
+  std::size_t maxSize = Traits::max_size(a);
+  std::size_t sizeTypeMax = std::numeric_limits<std::size_t>::max();
   if (maxSize != sizeTypeMax) {
     // Test that allocating size_t(~0) throws bad alloc.
     try {
@@ -71,7 +71,7 @@ void testAllocForSizeThrows() {
     }
 
     // Test that allocating even one more than the max size does throw.
-    size_t overSize = maxSize + 1;
+    std::size_t overSize = maxSize + 1;
     try {
       (void)a.allocate(overSize);
       assert(false);

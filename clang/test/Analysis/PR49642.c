@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -Wno-implicit-function-declaration -Wno-implicit-int -w -verify %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctions
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions
 
 // expected-no-diagnostics
 

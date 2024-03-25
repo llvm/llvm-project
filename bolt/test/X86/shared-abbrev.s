@@ -13,13 +13,13 @@
 # CHECK-NEXT: 		DW_AT_low_pc
 # CHECK-NEXT: 		DW_AT_ranges
 # CHECK: 0x0000001c:
-# CHECK-SAME: abbr_offset = 0x0017
+# CHECK-SAME: abbr_offset = 0x0000
 # CHECK-EMPTY:
 # CHECK:		DW_TAG_compile_unit
 # CHECK-NEXT: 		DW_AT_stmt_list
 # CHECK-NEXT: 		DW_AT_low_pc
 # CHECK-NEXT: 		DW_AT_ranges
-# CHECK: 0x00000039:
+# CHECK: 0x00000038:
 # CHECK-SAME: abbr_offset = 0x0000
 # CHECK-EMPTY:
 # CHECK-NEXT: 		DW_TAG_compile_unit

@@ -62,9 +62,9 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
   clang::DeclContext *context = const_cast<DeclContext *>(m_decl_context);
 
   if (extern_c) {
-    context = LinkageSpecDecl::Create(
-        ast, context, SourceLocation(), SourceLocation(),
-        clang::LinkageSpecDecl::LanguageIDs::lang_c, false);
+    context = LinkageSpecDecl::Create(ast, context, SourceLocation(),
+                                      SourceLocation(),
+                                      clang::LinkageSpecLanguageIDs::C, false);
     // FIXME: The LinkageSpecDecl here should be added to m_decl_context.
   }
 

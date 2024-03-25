@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: can-create-symlinks
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -14,43 +17,40 @@
 
 // directory_iterator& operator=(directory_iterator const&);
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <set>
 #include <cassert>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
-TEST_SUITE(directory_iterator_copy_assign_tests)
-
-TEST_CASE(test_assignment_signature)
+static void test_assignment_signature()
 {
     using D = directory_iterator;
     static_assert(std::is_copy_assignable<D>::value, "");
 }
 
-TEST_CASE(test_copy_to_end_iterator)
+static void test_copy_to_end_iterator()
 {
     static_test_env static_env;
     const path testDir = static_env.Dir;
 
     const directory_iterator from(testDir);
-    TEST_REQUIRE(from != directory_iterator{});
+    assert(from != directory_iterator{});
     const path entry = *from;
 
     directory_iterator to{};
     to = from;
-    TEST_REQUIRE(to == from);
-    TEST_CHECK(*to == entry);
-    TEST_CHECK(*from == entry);
+    assert(to == from);
+    assert(*to == entry);
+    assert(*from == entry);
 }
 
 
-TEST_CASE(test_copy_from_end_iterator)
+static void test_copy_from_end_iterator()
 {
     static_test_env static_env;
     const path testDir = static_env.Dir;
@@ -58,14 +58,14 @@ TEST_CASE(test_copy_from_end_iterator)
     const directory_iterator from{};
 
     directory_iterator to(testDir);
-    TEST_REQUIRE(to != directory_iterator{});
+    assert(to != directory_iterator{});
 
     to = from;
-    TEST_REQUIRE(to == from);
-    TEST_CHECK(to == directory_iterator{});
+    assert(to == from);
+    assert(to == directory_iterator{});
 }
 
-TEST_CASE(test_copy_valid_iterator)
+static void test_copy_valid_iterator()
 {
     static_test_env static_env;
     const path testDir = static_env.Dir;
@@ -73,28 +73,35 @@ TEST_CASE(test_copy_valid_iterator)
 
     directory_iterator it_obj(testDir);
     const directory_iterator& it = it_obj;
-    TEST_REQUIRE(it != endIt);
+    assert(it != endIt);
     ++it_obj;
-    TEST_REQUIRE(it != endIt);
+    assert(it != endIt);
     const path entry = *it;
 
     directory_iterator it2(testDir);
-    TEST_REQUIRE(it2 != it);
+    assert(it2 != it);
     const path entry2 = *it2;
-    TEST_CHECK(entry2 != entry);
+    assert(entry2 != entry);
 
     it2 = it;
-    TEST_REQUIRE(it2 == it);
-    TEST_CHECK(*it2 == entry);
+    assert(it2 == it);
+    assert(*it2 == entry);
 }
 
-TEST_CASE(test_returns_reference_to_self)
+static void test_returns_reference_to_self()
 {
     const directory_iterator it;
     directory_iterator it2;
     directory_iterator& ref = (it2 = it);
-    TEST_CHECK(&ref == &it2);
+    assert(&ref == &it2);
 }
 
+int main(int, char**) {
+    test_assignment_signature();
+    test_copy_to_end_iterator();
+    test_copy_from_end_iterator();
+    test_copy_valid_iterator();
+    test_returns_reference_to_self();
 
-TEST_SUITE_END()
+    return 0;
+}

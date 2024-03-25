@@ -1,7 +1,8 @@
 import os
 from clang.cindex import Config
-if 'CLANG_LIBRARY_PATH' in os.environ:
-    Config.set_library_path(os.environ['CLANG_LIBRARY_PATH'])
+
+if "CLANG_LIBRARY_PATH" in os.environ:
+    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
 import clang.cindex
 from clang.cindex import ExceptionSpecificationKind
@@ -24,12 +25,12 @@ class TestExceptionSpecificationKind(unittest.TestCase):
                     int square2(int x) noexcept;
                     int square3(int x) noexcept(noexcept(x * x));"""
 
-        tu = get_tu(source, lang='cpp', flags=['-std=c++14'])
+        tu = get_tu(source, lang="cpp", flags=["-std=c++14"])
 
         declarations = find_function_declarations(tu.cursor)
         expected = [
-            ('square1', ExceptionSpecificationKind.NONE),
-            ('square2', ExceptionSpecificationKind.BASIC_NOEXCEPT),
-            ('square3', ExceptionSpecificationKind.COMPUTED_NOEXCEPT)
+            ("square1", ExceptionSpecificationKind.NONE),
+            ("square2", ExceptionSpecificationKind.BASIC_NOEXCEPT),
+            ("square3", ExceptionSpecificationKind.COMPUTED_NOEXCEPT),
         ]
         self.assertListEqual(declarations, expected)

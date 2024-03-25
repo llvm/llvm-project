@@ -19,7 +19,6 @@
 #ifndef LLVM_CODEGEN_TILESHAPEINFO_H
 #define LLVM_CODEGEN_TILESHAPEINFO_H
 
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -87,8 +86,8 @@ private:
   static constexpr int64_t InvalidImmShape = -1;
   MachineOperand *Row;
   MachineOperand *Col;
-  int64_t RowImm;
-  int64_t ColImm;
+  int64_t RowImm = -1;
+  int64_t ColImm = -1;
 };
 
 } // namespace llvm

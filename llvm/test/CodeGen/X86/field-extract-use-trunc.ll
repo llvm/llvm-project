@@ -73,7 +73,7 @@ define i64 @test4(i64 %f12) nounwind {
 define i16 @test5(i16 %f12) nounwind {
 ; i686-LABEL: test5:
 ; i686:       # %bb.0:
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; i686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; i686-NEXT:    shrl $6, %eax
 ; i686-NEXT:    movsbl %al, %eax
 ; i686-NEXT:    # kill: def $ax killed $ax killed $eax

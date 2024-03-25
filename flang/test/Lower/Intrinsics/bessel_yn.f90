@@ -1,9 +1,9 @@
-! RUN: bbc -emit-fir %s -o - --math-runtime=fast | FileCheck --check-prefixes=ALL %s
-! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=fast %s -o - | FileCheck --check-prefixes=ALL %s
-! RUN: bbc -emit-fir %s -o - --math-runtime=relaxed | FileCheck --check-prefixes=ALL %s
-! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=relaxed %s -o - | FileCheck --check-prefixes=ALL %s
-! RUN: bbc -emit-fir %s -o - --math-runtime=precise | FileCheck --check-prefixes=ALL %s
-! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=precise %s -o - | FileCheck --check-prefixes=ALL %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - --math-runtime=fast | FileCheck --check-prefixes=ALL %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -mllvm -math-runtime=fast %s -o - | FileCheck --check-prefixes=ALL %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - --math-runtime=relaxed | FileCheck --check-prefixes=ALL %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -mllvm -math-runtime=relaxed %s -o - | FileCheck --check-prefixes=ALL %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - --math-runtime=precise | FileCheck --check-prefixes=ALL %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -mllvm -math-runtime=precise %s -o - | FileCheck --check-prefixes=ALL %s
 
 ! ALL-LABEL: @_QPtest_real4
 ! ALL-SAME: (%[[argx:.*]]: !fir.ref<f32>{{.*}}, %[[argn:.*]]: !fir.ref<i32>{{.*}}) -> f32
@@ -42,7 +42,7 @@ subroutine test_transformational_real4(x, n1, n2, r)
   ! ALL-DAG: %[[x:.*]] = fir.load %[[argx]] : !fir.ref<f32>
   ! ALL-DAG: %[[n1:.*]] = fir.load %[[argn1]] : !fir.ref<i32>
   ! ALL-DAG: %[[n2:.*]] = fir.load %[[argn2]] : !fir.ref<i32>
-  ! ALL-DAG: %[[xeq0:.*]] = arith.cmpf ueq, %[[x]], %[[zero]] : f32
+  ! ALL-DAG: %[[xeq0:.*]] = arith.cmpf ueq, %[[x]], %[[zero]] {{.*}} : f32
   ! ALL-DAG: %[[n1ltn2:.*]] = arith.cmpi slt, %[[n1]], %[[n2]] : i32
   ! ALL-DAG: %[[n1eqn2:.*]] = arith.cmpi eq, %[[n1]], %[[n2]] : i32
   ! ALL: fir.if %[[xeq0]] {
@@ -85,7 +85,7 @@ subroutine test_transformational_real8(x, n1, n2, r)
   ! ALL-DAG: %[[x:.*]] = fir.load %[[argx]] : !fir.ref<f64>
   ! ALL-DAG: %[[n1:.*]] = fir.load %[[argn1]] : !fir.ref<i32>
   ! ALL-DAG: %[[n2:.*]] = fir.load %[[argn2]] : !fir.ref<i32>
-  ! ALL-DAG: %[[xeq0:.*]] = arith.cmpf ueq, %[[x]], %[[zero]] : f64
+  ! ALL-DAG: %[[xeq0:.*]] = arith.cmpf ueq, %[[x]], %[[zero]] {{.*}} : f64
   ! ALL-DAG: %[[n1ltn2:.*]] = arith.cmpi slt, %[[n1]], %[[n2]] : i32
   ! ALL-DAG: %[[n1eqn2:.*]] = arith.cmpi eq, %[[n1]], %[[n2]] : i32
   ! ALL: fir.if %[[xeq0]] {

@@ -11,11 +11,23 @@
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Mangled.h"
+#include "lldb/Core/Section.h"
 #include "lldb/Symbol/SymbolContextScope.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
+#include "llvm/Support/JSON.h"
 
 namespace lldb_private {
+
+struct JSONSymbol {
+  std::optional<uint64_t> address;
+  std::optional<uint64_t> value;
+  std::optional<uint64_t> size;
+  std::optional<uint64_t> id;
+  std::optional<lldb::SymbolType> type;
+  std::string name;
+};
 
 class Symbol : public SymbolContextScope {
 public:
@@ -38,6 +50,9 @@ public:
   Symbol(const Symbol &rhs);
 
   const Symbol &operator=(const Symbol &rhs);
+
+  static llvm::Expected<Symbol> FromJSON(const JSONSymbol &symbol,
+                                         SectionList *section_list);
 
   void Clear();
 
@@ -160,8 +175,9 @@ public:
 
   void SetFlags(uint32_t flags) { m_flags = flags; }
 
-  void GetDescription(Stream *s, lldb::DescriptionLevel level,
-                      Target *target) const;
+  void GetDescription(
+      Stream *s, lldb::DescriptionLevel level, Target *target,
+      std::optional<Stream::HighlightSettings> settings = std::nullopt) const;
 
   bool IsSynthetic() const { return m_is_synthetic; }
 
@@ -187,7 +203,7 @@ public:
 
   bool IsWeak() const { return m_is_weak; }
 
-  void SetIsWeak (bool b) { m_is_weak = b; }
+  void SetIsWeak(bool b) { m_is_weak = b; }
 
   bool GetByteSizeIsValid() const { return m_size_is_valid; }
 
@@ -331,5 +347,17 @@ protected:
 };
 
 } // namespace lldb_private
+
+namespace llvm {
+namespace json {
+
+bool fromJSON(const llvm::json::Value &value, lldb_private::JSONSymbol &symbol,
+              llvm::json::Path path);
+
+bool fromJSON(const llvm::json::Value &value, lldb::SymbolType &type,
+              llvm::json::Path path);
+
+} // namespace json
+} // namespace llvm
 
 #endif // LLDB_SYMBOL_SYMBOL_H

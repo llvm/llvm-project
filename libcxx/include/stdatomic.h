@@ -121,16 +121,16 @@ using std::atomic_signal_fence                         // see below
 #  pragma GCC system_header
 #endif
 
-#if defined(__cplusplus) && _LIBCPP_STD_VER > 20
+#if defined(__cplusplus) && _LIBCPP_STD_VER >= 23
 
-#include <atomic>
-#include <version>
+#  include <atomic>
+#  include <version>
 
-#ifdef _Atomic
-# undef _Atomic
-#endif
+#  ifdef _Atomic
+#    undef _Atomic
+#  endif
 
-#define _Atomic(_Tp) ::std::atomic<_Tp>
+#  define _Atomic(_Tp) ::std::atomic<_Tp>
 
 using std::memory_order _LIBCPP_USING_IF_EXISTS;
 using std::memory_order_relaxed _LIBCPP_USING_IF_EXISTS;
@@ -226,10 +226,10 @@ using std::atomic_thread_fence _LIBCPP_USING_IF_EXISTS;
 // the header. We do this because Clang has historically shipped a <stdatomic.h>
 // header that would be available in all Standard modes, and we don't want to
 // break that use case.
-# if __has_include_next(<stdatomic.h>)
-#   include_next <stdatomic.h>
-# endif
+#  if __has_include_next(<stdatomic.h>)
+#    include_next <stdatomic.h>
+#  endif
 
-#endif // defined(__cplusplus) && _LIBCPP_STD_VER > 20
+#endif // defined(__cplusplus) && _LIBCPP_STD_VER >= 23
 
 #endif // _LIBCPP_STDATOMIC_H

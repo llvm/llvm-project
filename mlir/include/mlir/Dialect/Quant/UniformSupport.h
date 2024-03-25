@@ -67,7 +67,7 @@ public:
             static_cast<double>(uniformType.getStorageTypeMin()),
             static_cast<double>(uniformType.getStorageTypeMax()),
             uniformType.getStorageTypeIntegralWidth(), uniformType.isSigned()) {
-    assert(uniformType.getExpressedType().isa<FloatType>());
+    assert(isa<FloatType>(uniformType.getExpressedType()));
     assert(uniformType.getStorageType().isSignlessInteger());
   }
 
@@ -171,7 +171,7 @@ private:
 
 /// An utility class to quantize an attribute by the per-axis quantization
 /// parameters. The size of the quantization dim in the converted elements
-/// attribute should matche the size of of scales/zeroPoints vectors in the
+/// attribute should match the size of scales/zeroPoints vectors in the
 /// quantization parameters.
 class UniformQuantizedPerAxisValueConverter {
 public:
@@ -184,7 +184,7 @@ public:
         storageBitWidth(uniformType.getStorageTypeIntegralWidth()),
         isSigned(uniformType.isSigned()),
         quantizationDim(uniformType.getQuantizedDimension()) {
-    assert(uniformType.getExpressedType().isa<FloatType>());
+    assert(isa<FloatType>(uniformType.getExpressedType()));
     assert(uniformType.getStorageType().isSignlessInteger());
     assert(scales.size() == zeroPoints.size());
   }

@@ -10,12 +10,14 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H
 
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/stdio/printf_core/printf_config.h"
 
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 // These length modifiers match the length modifiers in the format string, which
@@ -46,14 +48,14 @@ struct FormatSection {
   int precision = -1;
 
   // Needs to be large enough to hold a long double.
-  fputil::FPBits<long double>::UIntType conv_val_raw;
+  fputil::FPBits<long double>::StorageType conv_val_raw;
   void *conv_val_ptr;
 
   char conv_name;
 
   // This operator is only used for testing and should be automatically
   // optimized out for release builds.
-  bool operator==(const FormatSection &other) {
+  LIBC_INLINE bool operator==(const FormatSection &other) const {
     if (has_conv != other.has_conv)
       return false;
 
@@ -77,6 +79,43 @@ struct FormatSection {
   }
 };
 
+enum PrimaryType : uint8_t {
+  Unknown = 0,
+  Float = 1,
+  Pointer = 2,
+  Integer = 3,
+  FixedPoint = 4,
+};
+
+// TypeDesc stores the information about a type that is relevant to printf in
+// a relatively compact manner.
+struct TypeDesc {
+  uint8_t size;
+  PrimaryType primary_type;
+  LIBC_INLINE constexpr bool operator==(const TypeDesc &other) const {
+    return (size == other.size) && (primary_type == other.primary_type);
+  }
+};
+
+template <typename T> LIBC_INLINE constexpr TypeDesc type_desc_from_type() {
+  if constexpr (cpp::is_same_v<T, void>) {
+    return TypeDesc{0, PrimaryType::Unknown};
+  } else {
+    constexpr bool IS_POINTER = cpp::is_pointer_v<T>;
+    constexpr bool IS_FLOAT = cpp::is_floating_point_v<T>;
+#ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+    constexpr bool IS_FIXED_POINT = cpp::is_fixed_point_v<T>;
+#else
+    constexpr bool IS_FIXED_POINT = false;
+#endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+
+    return TypeDesc{sizeof(T), IS_POINTER       ? PrimaryType::Pointer
+                               : IS_FLOAT       ? PrimaryType::Float
+                               : IS_FIXED_POINT ? PrimaryType::FixedPoint
+                                                : PrimaryType::Integer};
+  }
+}
+
 // This is the value to be returned by conversions when no error has occurred.
 constexpr int WRITE_OK = 0;
 // These are the printf return values for when an error has occurred. They are
@@ -85,8 +124,9 @@ constexpr int FILE_WRITE_ERROR = -1;
 constexpr int FILE_STATUS_ERROR = -2;
 constexpr int NULLPTR_WRITE_ERROR = -3;
 constexpr int INT_CONVERSION_ERROR = -4;
+constexpr int FIXED_POINT_CONVERSION_ERROR = -5;
 
 } // namespace printf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H

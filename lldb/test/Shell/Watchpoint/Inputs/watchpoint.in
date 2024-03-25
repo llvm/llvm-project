@@ -1,0 +1,13 @@
+breakpoint set -p "Break here"
+r
+watchpoint set variable val
+watchpoint modify -c "val == 1"
+c
+# CHECK: Watchpoint 1 hit:
+# CHECK-NEXT: old value: 0
+# CHECK-NEXT: new value: 1
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: {{.*}} stop reason = watchpoint 1
+c
+# CHECK: Process {{[0-9]+}} exited with status = 0 (0x00000000)

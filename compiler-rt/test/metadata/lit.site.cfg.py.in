@@ -11,4 +11,5 @@ lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configu
 # Load tool-specific config that would do the real work.
 lit_config.load_config(config, "@METADATA_LIT_SOURCE_DIR@/lit.cfg.py")
 
-config.substitutions.append(("%clangxx ", " " + config.clang + " " + config.target_cflags + " "))
+clangxx = [config.clang] + config.cxx_mode_flags + ["-Wall", config.target_cflags]
+config.substitutions.append(("%clangxx ", " ".join([""] + clangxx + [""])))

@@ -16,8 +16,6 @@
 
 namespace lldb_private {
 
-class ClangASTImporter;
-
 namespace formatters {
 
 /// Summary provider for `std::coroutine_handle<T>` from  libc++, libstdc++ and
@@ -36,11 +34,11 @@ public:
 
   ~StdlibCoroutineHandleSyntheticFrontEnd() override;
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -50,7 +48,6 @@ private:
   lldb::ValueObjectSP m_resume_ptr_sp;
   lldb::ValueObjectSP m_destroy_ptr_sp;
   lldb::ValueObjectSP m_promise_ptr_sp;
-  std::unique_ptr<lldb_private::ClangASTImporter> m_ast_importer;
 };
 
 SyntheticChildrenFrontEnd *

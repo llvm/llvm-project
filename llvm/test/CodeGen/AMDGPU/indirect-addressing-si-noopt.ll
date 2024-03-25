@@ -1,4 +1,4 @@
-; RUN: llc -O0 -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -O0 -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck %s
 
 ; FIXME: Merge into indirect-addressing-si.ll
 

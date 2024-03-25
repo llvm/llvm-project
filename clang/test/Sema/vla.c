@@ -113,14 +113,14 @@ void test_fold_to_constant_array(void) {
  jump_over_a2:;
 
   goto jump_over_a3;
-  char a3[ksize] = {}; // expected-warning {{variable length array folded to constant array as an extension}} expected-warning{{use of GNU empty initializer}}
+  char a3[ksize] = {}; // expected-warning {{variable length array folded to constant array as an extension}} expected-warning{{use of an empty initializer is a C23 extension}}
  jump_over_a3:;
 
   goto jump_over_a4; // expected-error{{cannot jump from this goto statement to its label}}
   char a4[ksize][2]; // expected-note{{variable length array}}
  jump_over_a4:;
 
-  char a5[ksize][2] = {}; // expected-warning {{variable length array folded to constant array as an extension}} expected-warning{{use of GNU empty initializer}}
+  char a5[ksize][2] = {}; // expected-warning {{variable length array folded to constant array as an extension}} expected-warning{{use of an empty initializer is a C23 extension}}
 
   int a6[ksize] = {1,2,3,4}; // expected-warning{{variable length array folded to constant array as an extension}}
 

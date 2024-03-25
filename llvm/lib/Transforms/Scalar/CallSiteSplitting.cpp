@@ -62,10 +62,8 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 
@@ -374,10 +372,10 @@ static void splitCallSite(CallBase &CB,
     return;
   }
 
-  auto *OriginalBegin = &*TailBB->begin();
+  BasicBlock::iterator OriginalBegin = TailBB->begin();
   // Replace users of the original call with a PHI mering call-sites split.
   if (CallPN) {
-    CallPN->insertBefore(OriginalBegin);
+    CallPN->insertBefore(*TailBB, OriginalBegin);
     CB.replaceAllUsesWith(CallPN);
   }
 
@@ -389,6 +387,7 @@ static void splitCallSite(CallBase &CB,
   // do not introduce unnecessary PHI nodes for def-use chains from the call
   // instruction to the beginning of the block.
   auto I = CB.getReverseIterator();
+  Instruction *OriginalBeginInst = &*OriginalBegin;
   while (I != TailBB->rend()) {
     Instruction *CurrentI = &*I++;
     if (!CurrentI->use_empty()) {
@@ -401,12 +400,13 @@ static void splitCallSite(CallBase &CB,
       for (auto &Mapping : ValueToValueMaps)
         NewPN->addIncoming(Mapping[CurrentI],
                            cast<Instruction>(Mapping[CurrentI])->getParent());
-      NewPN->insertBefore(&*TailBB->begin());
+      NewPN->insertBefore(*TailBB, TailBB->begin());
       CurrentI->replaceAllUsesWith(NewPN);
     }
+    CurrentI->dropDbgRecords();
     CurrentI->eraseFromParent();
     // We are done once we handled the first original instruction in TailBB.
-    if (CurrentI == OriginalBegin)
+    if (CurrentI == OriginalBeginInst)
       break;
   }
 }
@@ -533,45 +533,6 @@ static bool doCallSiteSplitting(Function &F, TargetLibraryInfo &TLI,
     }
   }
   return Changed;
-}
-
-namespace {
-struct CallSiteSplittingLegacyPass : public FunctionPass {
-  static char ID;
-  CallSiteSplittingLegacyPass() : FunctionPass(ID) {
-    initializeCallSiteSplittingLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    FunctionPass::getAnalysisUsage(AU);
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-
-    auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    return doCallSiteSplitting(F, TLI, TTI, DT);
-  }
-};
-} // namespace
-
-char CallSiteSplittingLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(CallSiteSplittingLegacyPass, "callsite-splitting",
-                      "Call-site splitting", false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(CallSiteSplittingLegacyPass, "callsite-splitting",
-                    "Call-site splitting", false, false)
-FunctionPass *llvm::createCallSiteSplittingPass() {
-  return new CallSiteSplittingLegacyPass();
 }
 
 PreservedAnalyses CallSiteSplittingPass::run(Function &F,

@@ -11,6 +11,9 @@
 #include "Mips.h"
 #include "MipsRegisterInfo.h"
 
+#define GET_AVAILABLE_OPCODE_CHECKER
+#include "MipsGenInstrInfo.inc"
+
 namespace llvm {
 namespace exegesis {
 
@@ -51,10 +54,11 @@ static void setMemOp(InstructionTemplate &IT, int OpIdx,
 namespace {
 class ExegesisMipsTarget : public ExegesisTarget {
 public:
-  ExegesisMipsTarget() : ExegesisTarget(MipsCpuPfmCounters) {}
+  ExegesisMipsTarget()
+      : ExegesisTarget(MipsCpuPfmCounters, Mips_MC::isOpcodeAvailable) {}
 
 private:
-  unsigned getScratchMemoryRegister(const llvm::Triple &TT) const override;
+  unsigned getScratchMemoryRegister(const Triple &TT) const override;
   unsigned getMaxMemoryAccessSize() const override { return 64; }
   void fillMemoryOperands(InstructionTemplate &IT, unsigned Reg,
                           unsigned Offset) const override;

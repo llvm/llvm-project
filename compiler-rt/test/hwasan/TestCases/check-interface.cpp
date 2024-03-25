@@ -1,8 +1,6 @@
 // RUN: %clangxx_hwasan -mllvm -hwasan-instrument-with-calls=1 -O0 %s -o %t
 // RUN: %clangxx_hwasan -mllvm -hwasan-instrument-with-calls=1 -O0 %s -o %t -fsanitize-recover=hwaddress
 
-// REQUIRES: stable-runtime
-
 // Utilizes all flavors of __hwasan_load/store interface functions to verify
 // that the instrumentation and the interface provided by HWASan do match.
 // In case of a discrepancy, this test fails to link.

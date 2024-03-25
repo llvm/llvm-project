@@ -126,7 +126,7 @@ body:             |
   ; ALL-NEXT:   [[COPY2:%[0-9]+]]:gr8 = COPY [[COPY1]].sub_8bit
   ; ALL-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY $edx
   ; ALL-NEXT:   [[COPY4:%[0-9]+]]:gr8 = COPY [[COPY3]].sub_8bit
-  ; ALL-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def $eflags
+  ; ALL-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
   ; ALL-NEXT:   CMP32rr [[COPY]], [[MOV32r0_]], implicit-def $eflags
   ; ALL-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 15, implicit $eflags
   ; ALL-NEXT:   TEST8ri [[SETCCr]], 1, implicit-def $eflags
@@ -134,7 +134,6 @@ body:             |
   ; ALL-NEXT: {{  $}}
   ; ALL-NEXT: bb.1.cond.false:
   ; ALL-NEXT:   successors: %bb.2(0x80000000)
-  ; ALL-NEXT: {{  $}}
   ; ALL-NEXT: {{  $}}
   ; ALL-NEXT: bb.2.cond.end:
   ; ALL-NEXT:   [[PHI:%[0-9]+]]:gr8 = PHI [[COPY4]], %bb.1, [[COPY2]], %bb.0
@@ -190,7 +189,7 @@ body:             |
   ; ALL-NEXT:   [[COPY2:%[0-9]+]]:gr16 = COPY [[COPY1]].sub_16bit
   ; ALL-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY $edx
   ; ALL-NEXT:   [[COPY4:%[0-9]+]]:gr16 = COPY [[COPY3]].sub_16bit
-  ; ALL-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def $eflags
+  ; ALL-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
   ; ALL-NEXT:   CMP32rr [[COPY]], [[MOV32r0_]], implicit-def $eflags
   ; ALL-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 15, implicit $eflags
   ; ALL-NEXT:   TEST8ri [[SETCCr]], 1, implicit-def $eflags
@@ -198,7 +197,6 @@ body:             |
   ; ALL-NEXT: {{  $}}
   ; ALL-NEXT: bb.1.cond.false:
   ; ALL-NEXT:   successors: %bb.2(0x80000000)
-  ; ALL-NEXT: {{  $}}
   ; ALL-NEXT: {{  $}}
   ; ALL-NEXT: bb.2.cond.end:
   ; ALL-NEXT:   [[PHI:%[0-9]+]]:gr16 = PHI [[COPY4]], %bb.1, [[COPY2]], %bb.0
@@ -251,7 +249,7 @@ body:             |
   ; ALL-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
   ; ALL-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
   ; ALL-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY $edx
-  ; ALL-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def $eflags
+  ; ALL-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
   ; ALL-NEXT:   CMP32rr [[COPY]], [[MOV32r0_]], implicit-def $eflags
   ; ALL-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 15, implicit $eflags
   ; ALL-NEXT:   TEST8ri [[SETCCr]], 1, implicit-def $eflags
@@ -265,7 +263,6 @@ body:             |
   ; ALL-NEXT: {{  $}}
   ; ALL-NEXT: bb.2.cond.false:
   ; ALL-NEXT:   successors: %bb.3(0x80000000)
-  ; ALL-NEXT: {{  $}}
   ; ALL-NEXT: {{  $}}
   ; ALL-NEXT: bb.3.cond.end:
   ; ALL-NEXT:   [[PHI:%[0-9]+]]:gr32 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
@@ -322,7 +319,7 @@ body:             |
   ; ALL-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
   ; ALL-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
   ; ALL-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY $rdx
-  ; ALL-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def $eflags
+  ; ALL-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
   ; ALL-NEXT:   CMP32rr [[COPY]], [[MOV32r0_]], implicit-def $eflags
   ; ALL-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 15, implicit $eflags
   ; ALL-NEXT:   TEST8ri [[SETCCr]], 1, implicit-def $eflags
@@ -336,7 +333,6 @@ body:             |
   ; ALL-NEXT: {{  $}}
   ; ALL-NEXT: bb.2.cond.false:
   ; ALL-NEXT:   successors: %bb.3(0x80000000)
-  ; ALL-NEXT: {{  $}}
   ; ALL-NEXT: {{  $}}
   ; ALL-NEXT: bb.3.cond.end:
   ; ALL-NEXT:   [[PHI:%[0-9]+]]:gr64 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
@@ -401,7 +397,7 @@ body:             |
   ; ALL-NEXT:   [[COPY2:%[0-9]+]]:fr32 = COPY [[COPY1]]
   ; ALL-NEXT:   [[COPY3:%[0-9]+]]:vr128 = COPY $xmm1
   ; ALL-NEXT:   [[COPY4:%[0-9]+]]:fr32 = COPY [[COPY3]]
-  ; ALL-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def $eflags
+  ; ALL-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
   ; ALL-NEXT:   CMP32rr [[COPY]], [[MOV32r0_]], implicit-def $eflags
   ; ALL-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 15, implicit $eflags
   ; ALL-NEXT:   TEST8ri [[SETCCr]], 1, implicit-def $eflags
@@ -409,7 +405,6 @@ body:             |
   ; ALL-NEXT: {{  $}}
   ; ALL-NEXT: bb.1.cond.false:
   ; ALL-NEXT:   successors: %bb.2(0x80000000)
-  ; ALL-NEXT: {{  $}}
   ; ALL-NEXT: {{  $}}
   ; ALL-NEXT: bb.2.cond.end:
   ; ALL-NEXT:   [[PHI:%[0-9]+]]:fr32 = PHI [[COPY4]], %bb.1, [[COPY2]], %bb.0
@@ -467,7 +462,7 @@ body:             |
   ; ALL-NEXT:   [[COPY2:%[0-9]+]]:fr64 = COPY [[COPY1]]
   ; ALL-NEXT:   [[COPY3:%[0-9]+]]:vr128 = COPY $xmm1
   ; ALL-NEXT:   [[COPY4:%[0-9]+]]:fr64 = COPY [[COPY3]]
-  ; ALL-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def $eflags
+  ; ALL-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
   ; ALL-NEXT:   CMP32rr [[COPY]], [[MOV32r0_]], implicit-def $eflags
   ; ALL-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 15, implicit $eflags
   ; ALL-NEXT:   TEST8ri [[SETCCr]], 1, implicit-def $eflags
@@ -475,7 +470,6 @@ body:             |
   ; ALL-NEXT: {{  $}}
   ; ALL-NEXT: bb.1.cond.false:
   ; ALL-NEXT:   successors: %bb.2(0x80000000)
-  ; ALL-NEXT: {{  $}}
   ; ALL-NEXT: {{  $}}
   ; ALL-NEXT: bb.2.cond.end:
   ; ALL-NEXT:   [[PHI:%[0-9]+]]:fr64 = PHI [[COPY4]], %bb.1, [[COPY2]], %bb.0

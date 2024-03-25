@@ -12,7 +12,9 @@
 
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
-#include <cassert>
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ScaledNumber.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -38,46 +40,25 @@ BlockFrequency BlockFrequency::operator/(BranchProbability Prob) const {
   return Freq;
 }
 
-BlockFrequency &BlockFrequency::operator+=(BlockFrequency Freq) {
-  uint64_t Before = Freq.Frequency;
-  Frequency += Freq.Frequency;
-
-  // If overflow, set frequency to the maximum value.
-  if (Frequency < Before)
-    Frequency = UINT64_MAX;
-
-  return *this;
+std::optional<BlockFrequency> BlockFrequency::mul(uint64_t Factor) const {
+  bool Overflow;
+  uint64_t ResultFrequency = SaturatingMultiply(Frequency, Factor, &Overflow);
+  if (Overflow)
+    return {};
+  return BlockFrequency(ResultFrequency);
 }
 
-BlockFrequency BlockFrequency::operator+(BlockFrequency Freq) const {
-  BlockFrequency NewFreq(Frequency);
-  NewFreq += Freq;
-  return NewFreq;
-}
-
-BlockFrequency &BlockFrequency::operator-=(BlockFrequency Freq) {
-  // If underflow, set frequency to 0.
-  if (Frequency <= Freq.Frequency)
-    Frequency = 0;
-  else
-    Frequency -= Freq.Frequency;
-  return *this;
-}
-
-BlockFrequency BlockFrequency::operator-(BlockFrequency Freq) const {
-  BlockFrequency NewFreq(Frequency);
-  NewFreq -= Freq;
-  return NewFreq;
-}
-
-BlockFrequency &BlockFrequency::operator>>=(const unsigned count) {
-  // Frequency can never be 0 by design.
-  assert(Frequency != 0);
-
-  // Shift right by count.
-  Frequency >>= count;
-
-  // Saturate to 1 if we are 0.
-  Frequency |= Frequency == 0;
-  return *this;
+void llvm::printRelativeBlockFreq(raw_ostream &OS, BlockFrequency EntryFreq,
+                                  BlockFrequency Freq) {
+  if (Freq == BlockFrequency(0)) {
+    OS << "0";
+    return;
+  }
+  if (EntryFreq == BlockFrequency(0)) {
+    OS << "<invalid BFI>";
+    return;
+  }
+  ScaledNumber<uint64_t> Block(Freq.getFrequency(), 0);
+  ScaledNumber<uint64_t> Entry(EntryFreq.getFrequency(), 0);
+  OS << Block / Entry;
 }

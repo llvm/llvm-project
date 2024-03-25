@@ -47,7 +47,6 @@ function:
 // CODE-NEXT:    101a4:        e59f2008       ldr     r2, [pc, #8]
 // CODE-NEXT:    101a8:        e08f0003       add     r0, pc, r3
 // CODE-NEXT:    101ac:        e12fff1e       bx      lr
-// CODE: <$d.1>:
 // (_GLOBAL_OFFSET_TABLE_ = 0x220c) - (0x11a8 + 8) = 0x105c
 // CODE-NEXT:    101b0:        5c 00 01 00
 // (Got(function) - GotBase = 0x0

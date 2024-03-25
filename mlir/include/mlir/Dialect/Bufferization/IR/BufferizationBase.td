@@ -17,16 +17,19 @@ def Bufferization_Dialect : Dialect {
   let description = [{
     Bufferization in MLIR is the process of converting the `tensor` type to the
     `memref` type.
-    The `bufferization` dialect is intended to collect operations/interfaces
-    specific to the bufferization passes.
+    Simply put, bufferization is the process of converting computations on the
+    mathematical tensor construct to computations on physical memory buffers.
+    The `bufferization` dialect contains operations/interfaces specific to the
+    bufferization passes.
 
-    Overview of the bufferization infrastructure and important conceptual
+    An overview of the bufferization infrastructure and important conceptual
     details related to using the MLIR dialect conversion infrastructure can be
     found in [bufferization](/docs/Bufferization/) and [buffer
     deallocation](/docs/BufferDeallocationInternals/).
   }];
   let dependentDialects = [
-    "AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
+    "affine::AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect",
+    "arith::ArithDialect"
   ];
 
   let extraClassDeclaration = [{
@@ -58,18 +61,18 @@ def Bufferization_Dialect : Dialect {
     constexpr const static ::llvm::StringLiteral
         kBufferLayoutAttrName = "bufferization.buffer_layout";
 
-    /// Attribute name used to mark escaping behavior of buffer allocations.
-    /// Escaping allocations cannot be deallocated in the same block and must
-    /// be treated specially: They are currently deallocated with the
-    /// BufferDeallocation pass.
-    ///
-    /// Note: Only ops with at least one OpResult that bufferizes to a buffer
-    /// allocation (as per BufferizableOpInterface) may have this attribute.
+    /// An attribute that can be attached to ops with an allocation and/or
+    /// deallocation side effect. It indicates that the op is under a "manual
+    /// deallocation" scheme. In the case of an allocation op, the returned
+    /// value is *not* an automatically managed allocation and assigned an
+    /// ownership of "false". Furthermore, only deallocation ops that are
+    /// guaranteed to deallocate a buffer under "manual deallocation" are
+    /// allowed to have this attribute. (Deallocation ops without this
+    /// attribute are rejected by the ownership-based buffer deallocation pass.)
     constexpr const static ::llvm::StringLiteral
-        kEscapeAttrName = "bufferization.escape";
+        kManualDeallocation = "bufferization.manual_deallocation";
   }];
   let hasOperationAttrVerify = 1;
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 #endif // BUFFERIZATION_BASE

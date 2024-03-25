@@ -1,4 +1,7 @@
 // RUN: %libomp-cxx-compile-and-run
+//
+// AIX runs out of resource in 32-bit with 4*omp_get_max_threads() threads.
+// XFAIL: aix && ppc
 
 #include <omp.h>
 

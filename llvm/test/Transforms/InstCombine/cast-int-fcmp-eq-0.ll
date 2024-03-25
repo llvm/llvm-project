@@ -509,3 +509,61 @@ define i1 @i128_cast_cmp_oeq_int_inf_uitofp(i128 %i) {
   %cmp = fcmp oeq float %f, 0x7FF0000000000000
   ret i1 %cmp
 }
+
+define <2 x i1> @i32_vec_cast_cmp_oeq_vec_int_0_sitofp(<2 x i32> %i) {
+; CHECK-LABEL: @i32_vec_cast_cmp_oeq_vec_int_0_sitofp(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[I:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %f = sitofp <2 x i32> %i to <2 x float>
+  %cmp = fcmp oeq <2 x float> %f, <float 0.0, float 0.0>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @i32_vec_cast_cmp_oeq_vec_int_n0_sitofp(<2 x i32> %i) {
+; CHECK-LABEL: @i32_vec_cast_cmp_oeq_vec_int_n0_sitofp(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[I:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %f = sitofp <2 x i32> %i to <2 x float>
+  %cmp = fcmp oeq <2 x float> %f, <float -0.0, float -0.0>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @i32_vec_cast_cmp_oeq_vec_int_i32imax_sitofp(<2 x i32> %i) {
+; CHECK-LABEL: @i32_vec_cast_cmp_oeq_vec_int_i32imax_sitofp(
+; CHECK-NEXT:    [[F:%.*]] = sitofp <2 x i32> [[I:%.*]] to <2 x float>
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[F]], <float 0x41E0000000000000, float 0x41E0000000000000>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %f = sitofp <2 x i32> %i to <2 x float>
+  %cmp = fcmp oeq <2 x float> %f, <float 0x41E0000000000000, float 0x41E0000000000000>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @i32_vec_cast_cmp_oeq_vec_int_negi32umax_sitofp(<2 x i32> %i) {
+; CHECK-LABEL: @i32_vec_cast_cmp_oeq_vec_int_negi32umax_sitofp(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %f = sitofp <2 x i32> %i to <2 x float>
+  %cmp = fcmp oeq <2 x float> %f, <float 0xC1F0000000000000, float 0xC1F0000000000000>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @i32_vec_cast_cmp_oeq_vec_half_sitofp(<2 x i32> %i) {
+; CHECK-LABEL: @i32_vec_cast_cmp_oeq_vec_half_sitofp(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %f = sitofp <2 x i32> %i to <2 x float>
+  %cmp = fcmp oeq <2 x float> %f, <float 0.5, float 0.5>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @i32_vec_cast_cmp_oeq_vec_int_inf_sitofp(<2 x i32> %i) {
+; CHECK-LABEL: @i32_vec_cast_cmp_oeq_vec_int_inf_sitofp(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %f = sitofp <2 x i32> %i to <2 x float>
+  %cmp = fcmp oeq <2 x float> %f, <float 0x7FF0000000000000, float 0x7FF0000000000000>
+  ret <2 x i1> %cmp
+}

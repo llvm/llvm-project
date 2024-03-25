@@ -27,9 +27,8 @@ define <2 x half> @v_constained_fma_v2f16_fpexcept_strict(<2 x half> %x, <2 x ha
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
 ; GFX8-NEXT:    v_fma_f16 v0, v0, v1, v2
 ; GFX8-NEXT:    v_fma_f16 v1, v3, v4, v5
-; GFX8-NEXT:    v_mov_b32_e32 v2, 16
-; GFX8-NEXT:    v_lshlrev_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX8-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
   %val = call <2 x half> @llvm.experimental.constrained.fma.v2f16(<2 x half> %x, <2 x half> %y, <2 x half> %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <2 x half> %val
@@ -51,11 +50,9 @@ define <3 x half> @v_constained_fma_v3f16_fpexcept_strict(<3 x half> %x, <3 x ha
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v8, 16, v4
 ; GFX8-NEXT:    v_fma_f16 v0, v0, v2, v4
 ; GFX8-NEXT:    v_fma_f16 v2, v6, v7, v8
+; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX8-NEXT:    v_fma_f16 v1, v1, v3, v5
-; GFX8-NEXT:    v_mov_b32_e32 v3, 16
-; GFX8-NEXT:    v_lshlrev_b32_sdwa v2, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX8-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX8-NEXT:    v_bfe_u32 v1, v1, 0, 16
+; GFX8-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
   %val = call <3 x half> @llvm.experimental.constrained.fma.v3f16(<3 x half> %x, <3 x half> %y, <3 x half> %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <3 x half> %val
@@ -80,13 +77,12 @@ define <4 x half> @v_constained_fma_v4f16_fpexcept_strict(<4 x half> %x, <4 x ha
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v11, 16, v5
 ; GFX8-NEXT:    v_fma_f16 v0, v0, v2, v4
 ; GFX8-NEXT:    v_fma_f16 v2, v6, v8, v10
-; GFX8-NEXT:    v_mov_b32_e32 v4, 16
 ; GFX8-NEXT:    v_fma_f16 v1, v1, v3, v5
 ; GFX8-NEXT:    v_fma_f16 v3, v7, v9, v11
-; GFX8-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX8-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX8-NEXT:    v_lshlrev_b32_sdwa v2, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX8-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX8-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
+; GFX8-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
   %val = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> %x, <4 x half> %y, <4 x half> %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <4 x half> %val
@@ -121,8 +117,8 @@ define half @v_constained_fma_f16_fpexcept_strict_fabs_fabs(half %x, half %y, ha
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_fma_f16 v0, |v0|, |v1|, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %neg.x = call half @llvm.fabs.f16(half %x)
-  %neg.y = call half @llvm.fabs.f16(half %y)
+  %neg.x = call half @llvm.fabs.f16(half %x) #0
+  %neg.y = call half @llvm.fabs.f16(half %y) #0
   %val = call half @llvm.experimental.constrained.fma.f16(half %neg.x, half %neg.y, half %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret half %val
 }
@@ -144,9 +140,8 @@ define <2 x half> @v_constained_fma_v2f16_fpexcept_strict_fneg_fneg(<2 x half> %
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
 ; GFX8-NEXT:    v_fma_f16 v0, v0, v1, v2
 ; GFX8-NEXT:    v_fma_f16 v1, v3, v4, v5
-; GFX8-NEXT:    v_mov_b32_e32 v2, 16
-; GFX8-NEXT:    v_lshlrev_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX8-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = fneg <2 x half> %x
   %neg.y = fneg <2 x half> %y
@@ -154,11 +149,10 @@ define <2 x half> @v_constained_fma_v2f16_fpexcept_strict_fneg_fneg(<2 x half> %
   ret <2 x half> %val
 }
 
-declare half @llvm.fabs.f16(half) #1
-declare half @llvm.experimental.constrained.fma.f16(half, half, half, metadata, metadata) #1
-declare <2 x half> @llvm.experimental.constrained.fma.v2f16(<2 x half>, <2 x half>, <2 x half>, metadata, metadata) #1
-declare <3 x half> @llvm.experimental.constrained.fma.v3f16(<3 x half>, <3 x half>, <3 x half>, metadata, metadata) #1
-declare <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half>, <4 x half>, <4 x half>, metadata, metadata) #1
+declare half @llvm.fabs.f16(half)
+declare half @llvm.experimental.constrained.fma.f16(half, half, half, metadata, metadata)
+declare <2 x half> @llvm.experimental.constrained.fma.v2f16(<2 x half>, <2 x half>, <2 x half>, metadata, metadata)
+declare <3 x half> @llvm.experimental.constrained.fma.v3f16(<3 x half>, <3 x half>, <3 x half>, metadata, metadata)
+declare <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half>, <4 x half>, <4 x half>, metadata, metadata)
 
 attributes #0 = { strictfp }
-attributes #1 = { inaccessiblememonly nounwind willreturn }

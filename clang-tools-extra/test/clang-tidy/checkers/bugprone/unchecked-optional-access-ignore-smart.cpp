@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s bugprone-unchecked-optional-access %t -- \
-// RUN:   -config="{CheckOptions: [ \
-// RUN:     {key: bugprone-unchecked-optional-access.IgnoreSmartPointerDereference, value: true}]}" -- \
+// RUN:   -config="{CheckOptions:  \
+// RUN:     {bugprone-unchecked-optional-access.IgnoreSmartPointerDereference: true}}" -- \
 // RUN:   -I %S/Inputs/unchecked-optional-access
 
 #include "absl/types/optional.h"

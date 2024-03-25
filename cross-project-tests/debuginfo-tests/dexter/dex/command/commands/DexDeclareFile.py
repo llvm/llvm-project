@@ -14,9 +14,8 @@ from dex.command.CommandBase import CommandBase
 
 class DexDeclareFile(CommandBase):
     def __init__(self, declared_file):
-
         if not isinstance(declared_file, str):
-            raise TypeError('invalid argument type')
+            raise TypeError("invalid argument type")
 
         # Use PurePath to create a cannonical platform path.
         # TODO: keep paths as PurePath objects for 'longer'

@@ -118,14 +118,14 @@ class alignas(IdentifierInfoAlignment) CXXLiteralOperatorIdName
   friend class clang::DeclarationName;
   friend class clang::DeclarationNameTable;
 
-  IdentifierInfo *ID;
+  const IdentifierInfo *ID;
 
   /// Extra information associated with this operator name that
   /// can be used by the front end. All bits are really needed
   /// so it is not possible to stash something in the low order bits.
   void *FETokenInfo;
 
-  CXXLiteralOperatorIdName(IdentifierInfo *II)
+  CXXLiteralOperatorIdName(const IdentifierInfo *II)
       : DeclarationNameExtra(CXXLiteralOperatorName), ID(II),
         FETokenInfo(nullptr) {}
 
@@ -362,7 +362,8 @@ public:
   }
 
   /// Construct a declaration name from an Objective-C selector.
-  DeclarationName(Selector Sel) : Ptr(Sel.InfoPtr) {}
+  DeclarationName(Selector Sel)
+      : Ptr(reinterpret_cast<uintptr_t>(Sel.InfoPtr.getOpaqueValue())) {}
 
   /// Returns the name for all C++ using-directives.
   static DeclarationName getUsingDirectiveName() {
@@ -478,7 +479,7 @@ public:
 
   /// If this name is the name of a literal operator,
   /// retrieve the identifier associated with it.
-  IdentifierInfo *getCXXLiteralIdentifier() const {
+  const IdentifierInfo *getCXXLiteralIdentifier() const {
     if (getNameKind() == CXXLiteralOperatorName) {
       assert(getPtr() && "getCXXLiteralIdentifier on a null DeclarationName!");
       return castAsCXXLiteralOperatorIdName()->ID;
@@ -650,7 +651,7 @@ public:
   }
 
   /// Get the name of the literal operator function with II as the identifier.
-  DeclarationName getCXXLiteralOperatorName(IdentifierInfo *II);
+  DeclarationName getCXXLiteralOperatorName(const IdentifierInfo *II);
 };
 
 /// DeclarationNameLoc - Additional source/type location info
@@ -763,7 +764,7 @@ public:
 };
 
 /// DeclarationNameInfo - A collector data type for bundling together
-/// a DeclarationName and the correspnding source/type location info.
+/// a DeclarationName and the corresponding source/type location info.
 struct DeclarationNameInfo {
 private:
   /// Name - The declaration name, also encoding name kind.

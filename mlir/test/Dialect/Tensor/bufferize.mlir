@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -tensor-bufferize -cse -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s -tensor-bufferize -cse -split-input-file | FileCheck %s
 
 // CHECK-LABEL:   func @dim(
 // CHECK-SAME:              %[[TENSOR:.*]]: tensor<*xf32>,
@@ -62,9 +62,12 @@ func.func @tensor.cast_to_unranked(%arg0: tensor<2xf32>) -> tensor<*xf32> {
 }
 
 // -----
+
+// CHECK-LABEL:   func @tensor.empty(
+// CHECK:           %[[ALLOC:.*]] = memref.alloc() {{.*}} : memref<5xf32>
+// CHECK:           %[[RET:.*]] = bufferization.to_tensor %[[ALLOC]] : memref<5xf32>
+// CHECK:           return %[[RET]] : tensor<5xf32>
 func.func @tensor.empty() -> tensor<5xf32> {
-  // expected-error@+2 {{failed to bufferize op}}
-  // expected-error@+1 {{cannot be bufferized, but can be converted to bufferization.alloc_tensor}}
   %0 = tensor.empty() : tensor<5xf32>
   return %0 : tensor<5xf32>
 }
@@ -547,7 +550,7 @@ func.func @tensor.reshape(%t1: tensor<?x10xf32>) -> tensor<2x2x5xf32> {
 
 // -----
 
-// CHECK:       #[[$sum_map_1:.+]] = affine_map<()[s0, s1] -> (s1 + s0 + 5)>
+// CHECK:       #[[$sum_map_1:.+]] = affine_map<()[s0, s1] -> (s0 + s1 + 5)>
 // CHECK:       #[[$sum_map_2:.+]] = affine_map<()[s0, s1] -> (s0 + s1 + 10)>
 // CHECK-LABEL: func @tensor.pad(
 //  CHECK-SAME:   %[[t1:.*]]: tensor<?x10xindex>, %[[l2:.*]]: index, %[[h1:.*]]: index, %[[h2:.*]]: index
@@ -582,3 +585,40 @@ func.func @tensor.pad(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
   // CHECK:     return %[[r]] : tensor<?x?xindex>
   return %0 : tensor<?x?xindex>
 }
+
+// -----
+
+// CHECK-LABEL:   func @tensor.splat(
+// CHECK-SAME:        %[[F:.*]]: f32)
+// CHECK-DAG:       %[[ALLOC:.*]] = memref.alloc() {{.*}} : memref<10x2x4xf32>
+// CHECK:           %[[ALLOC_T:.*]] = bufferization.to_tensor %[[ALLOC]]
+// CHECK:           %[[MAPPED:.*]] = linalg.map
+// CHECK:                 outs(%[[ALLOC_T]] : tensor<10x2x4xf32>)
+// CHECK:             linalg.yield %[[F]]
+// CHECK:           }
+// CHECK:           return %[[MAPPED]] : tensor<10x2x4xf32>
+// CHECK:         }
+func.func @tensor.splat(%f: f32) -> tensor<10x2x4xf32> {
+  %t = tensor.splat %f : tensor<10x2x4xf32>
+  return %t : tensor<10x2x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @tensor.splat_dynamic(
+// CHECK-SAME:  %[[F:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:  %[[M:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:  %[[N:[a-zA-Z0-9_]+]]: index
+// CHECK-DAG:     %[[ALLOC:.*]] = memref.alloc(%[[M]], %[[N]]) {{.*}} : memref<?x3x?xf32>
+// CHECK:         %[[ALLOC_T:.*]] = bufferization.to_tensor %[[ALLOC]]
+// CHECK:         %[[MAPPED:.*]] = linalg.map outs(%[[ALLOC_T]] : tensor<?x3x?xf32>)
+// CHECK:         () {
+// CHECK:           linalg.yield %[[F]] : f32
+// CHECK:         }
+// CHECK:         return %[[MAPPED]] : tensor<?x3x?xf32>
+// CHECK:       }
+func.func @tensor.splat_dynamic(%f: f32, %m: index, %n: index) -> tensor<?x3x?xf32> {
+  %0 = tensor.splat %f[%m, %n] : tensor<?x3x?xf32>
+  return %0 : tensor<?x3x?xf32>
+}
+

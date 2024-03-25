@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def ArithBufferize : Pass<"arith-bufferize", "ModuleOp"> {
+def ArithBufferizePass : Pass<"arith-bufferize", "ModuleOp"> {
   let summary = "Bufferize Arith dialect ops.";
   let description = [{
     This pass bufferizes arith dialect ops.
@@ -21,16 +21,19 @@ def ArithBufferize : Pass<"arith-bufferize", "ModuleOp"> {
     multi-threading. Most other bufferization passes can run in parallel at
     function granularity.
   }];
-  let constructor = "mlir::arith::createArithBufferizePass()";
   let options = [
     Option<"alignment", "alignment", "unsigned", /*default=*/"0",
            "Create global memrefs with a specified alignment">,
   ];
 }
 
-def ArithExpandOps : Pass<"arith-expand"> {
+def ArithExpandOpsPass : Pass<"arith-expand"> {
   let summary = "Legalize Arith ops to be convertible to LLVM.";
-  let constructor = "mlir::arith::createArithExpandOpsPass()";
+  let dependentDialects = ["vector::VectorDialect"];
+  let options = [
+    Option<"includeBf16", "include-bf16", "bool", /*default=*/"false",
+           "Enable the BF16 expansion patterns">,
+  ];
 }
 
 def ArithUnsignedWhenEquivalent : Pass<"arith-unsigned-when-equivalent"> {
@@ -58,6 +61,28 @@ def ArithIntRangeOpts : Pass<"int-range-optimizations"> {
   }];
 }
 
+def ArithEmulateUnsupportedFloats : Pass<"arith-emulate-unsupported-floats"> {
+  let summary = "Emulate operations on unsupported floats with extf/truncf";
+  let description = [{
+    Emulate arith and vector floating point operations that use float types
+    which are unspported on a target by inserting extf/truncf pairs around all
+    such operations in order to produce arithmetic that can be performed while
+    preserving the original rounding behavior.
+
+    This pass does not attempt to reason about the operations being performed
+    to determine when type conversions can be elided.
+  }];
+
+  let options = [
+    ListOption<"sourceTypeStrs", "source-types", "std::string",
+      "MLIR types without arithmetic support on a given target">,
+    Option<"targetTypeStr", "target-type", "std::string", "\"f32\"",
+      "MLIR type to convert the unsupported source types to">,
+  ];
+
+  let dependentDialects = ["vector::VectorDialect"];
+}
+
 def ArithEmulateWideInt : Pass<"arith-emulate-wide-int"> {
   let summary = "Emulate 2*N-bit integer operations using N-bit operations";
   let description = [{
@@ -77,5 +102,19 @@ def ArithEmulateWideInt : Pass<"arith-emulate-wide-int"> {
   ];
   let dependentDialects = ["vector::VectorDialect"];
 }
+
+def ArithIntNarrowing : Pass<"arith-int-narrowing"> {
+  let summary = "Reduce integer operation bitwidth";
+  let description = [{
+    Reduce bitwidths of integer types used in arith operations. This pass
+    prefers the narrowest available integer bitwidths that are guaranteed to
+    produce the same results.
+  }];
+  let dependentDialects = ["vector::VectorDialect"];
+  let options = [
+    ListOption<"bitwidthsSupported", "int-bitwidths-supported", "unsigned",
+               "Integer bitwidths supported">,
+  ];
+ }
 
 #endif // MLIR_DIALECT_ARITH_TRANSFORMS_PASSES

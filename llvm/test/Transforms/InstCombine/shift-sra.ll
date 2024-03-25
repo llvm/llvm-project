@@ -4,7 +4,7 @@
 
 define i32 @test1(i32 %X, i8 %A) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[SHIFT_UPGRD_1:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[SHIFT_UPGRD_1:%.*]] = zext nneg i8 [[A:%.*]] to i32
 ; CHECK-NEXT:    [[Y1:%.*]] = lshr i32 [[X:%.*]], [[SHIFT_UPGRD_1]]
 ; CHECK-NEXT:    [[Z:%.*]] = and i32 [[Y1]], 1
 ; CHECK-NEXT:    ret i32 [[Z]]
@@ -20,8 +20,8 @@ define i32 @test2(i8 %a) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[B:%.*]] = zext i8 [[A:%.*]] to i32
 ; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i32 [[B]], 7
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[C]], 3
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[D:%.*]] = lshr i32 [[C]], 3
+; CHECK-NEXT:    ret i32 [[D]]
 ;
   %b = zext i8 %a to i32
   %c = add i32 %b, 7

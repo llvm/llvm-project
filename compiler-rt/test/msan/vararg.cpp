@@ -1,23 +1,17 @@
-// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -fsanitize-memory-track-origins=0 -O3 %s -o %t && \
-// RUN:     not %run %t va_arg_tls >%t.out 2>&1
-// RUN: FileCheck %s --check-prefix=CHECK < %t.out
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -fsanitize-memory-track-origins=0 -O3 %s -o %t
 
-// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -fsanitize-memory-track-origins=0 -O3 %s -o %t && \
-// RUN:     not %run %t overflow >%t.out 2>&1
-// RUN: FileCheck %s --check-prefix=CHECK < %t.out
+// RUN: not %run %t va_arg_tls 2>&1 | FileCheck %s --check-prefix=CHECK
+// RUN: not %run %t overflow 2>&1 | FileCheck %s --check-prefix=CHECK
 
-// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -fsanitize-memory-track-origins=2 -O3 %s -o %t && \
-// RUN:     not %run %t va_arg_tls >%t.out 2>&1
-// RUN: FileCheck %s --check-prefixes=CHECK,CHECK-ORIGIN < %t.out
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -fsanitize-memory-track-origins=2 -O3 %s -o %t
 
-// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -fsanitize-memory-track-origins=2 -O3 %s -o %t && \
-// RUN:     not %run %t overflow >%t.out 2>&1
-// RUN: FileCheck %s --check-prefixes=CHECK,CHECK-ORIGIN < %t.out
+// RUN: not %run %t va_arg_tls 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-ORIGIN
+// RUN: not %run %t overflow 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-ORIGIN
 
 // Check that shadow and origin are passed through va_args.
 
-// Copying origins on AArch64, MIPS and PowerPC isn't supported yet.
-// XFAIL: target={{(aarch64|mips|powerpc64).*}}
+// Copying origins on AArch64, LoongArch64, MIPS and PowerPC isn't supported yet.
+// XFAIL: target={{(aarch64|loongarch64|mips|powerpc64).*}}
 
 #include <stdarg.h>
 #include <string.h>

@@ -9,11 +9,12 @@
 #
 
 project (libompd)
-cmake_minimum_required(VERSION 3.13.4)
+cmake_minimum_required(VERSION 3.20.0)
 
 add_library (ompd SHARED TargetValue.cpp omp-debug.cpp omp-state.cpp omp-icv.cpp)
 
-target_link_libraries(ompd omp) # ensure generated import library is created first
+# libompd must not link against libomp, there is no code dependency.
+add_dependencies(ompd omp) # ensure generated import library is created first
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 

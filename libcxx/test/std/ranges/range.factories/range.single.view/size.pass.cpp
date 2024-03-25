@@ -20,28 +20,28 @@ constexpr bool test() {
     auto sv = std::ranges::single_view<int>(42);
     assert(sv.size() == 1);
 
-    ASSERT_SAME_TYPE(decltype(sv.size()), size_t);
+    ASSERT_SAME_TYPE(decltype(sv.size()), std::size_t);
     static_assert(noexcept(sv.size()));
   }
   {
     const auto sv = std::ranges::single_view<int>(42);
     assert(sv.size() == 1);
 
-    ASSERT_SAME_TYPE(decltype(sv.size()), size_t);
+    ASSERT_SAME_TYPE(decltype(sv.size()), std::size_t);
     static_assert(noexcept(sv.size()));
   }
   {
     auto sv = std::ranges::single_view<int>(42);
     assert(std::ranges::size(sv) == 1);
 
-    ASSERT_SAME_TYPE(decltype(std::ranges::size(sv)), size_t);
+    ASSERT_SAME_TYPE(decltype(std::ranges::size(sv)), std::size_t);
     static_assert(noexcept(std::ranges::size(sv)));
   }
   {
     const auto sv = std::ranges::single_view<int>(42);
     assert(std::ranges::size(sv) == 1);
 
-    ASSERT_SAME_TYPE(decltype(std::ranges::size(sv)), size_t);
+    ASSERT_SAME_TYPE(decltype(std::ranges::size(sv)), std::size_t);
     static_assert(noexcept(std::ranges::size(sv)));
   }
 
@@ -49,7 +49,7 @@ constexpr bool test() {
   {
     assert(std::ranges::single_view<int>::size() == 1);
 
-    ASSERT_SAME_TYPE(decltype(std::ranges::single_view<int>::size()), size_t);
+    ASSERT_SAME_TYPE(decltype(std::ranges::single_view<int>::size()), std::size_t);
     static_assert(noexcept(std::ranges::single_view<int>::size()));
   }
 

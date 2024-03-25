@@ -17,7 +17,7 @@
 #include "MCTargetDesc/HexagonFixupKinds.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -49,11 +49,11 @@ public:
   HexagonMCCodeEmitter(MCInstrInfo const &MII, MCContext &MCT)
     : MCT(MCT), MCII(MII) {}
 
-  void encodeInstruction(MCInst const &MI, raw_ostream &OS,
+  void encodeInstruction(MCInst const &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
                          MCSubtargetInfo const &STI) const override;
 
-  void EncodeSingleInstruction(const MCInst &MI, raw_ostream &OS,
+  void encodeSingleInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                                SmallVectorImpl<MCFixup> &Fixups,
                                const MCSubtargetInfo &STI,
                                uint32_t Parse) const;

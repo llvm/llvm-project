@@ -1,8 +1,18 @@
-executable("llvm-gsymutil") {
+import("//llvm/utils/TableGen/tablegen.gni")
+import("//llvm/utils/gn/build/driver_executable.gni")
+
+tablegen("Opts") {
+  visibility = [ ":llvm-gsymutil" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
+driver_executable("llvm-gsymutil") {
   deps = [
+    ":Opts",
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/DebugInfo/GSYM",
     "//llvm/lib/Object",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:TargetsToBuild",

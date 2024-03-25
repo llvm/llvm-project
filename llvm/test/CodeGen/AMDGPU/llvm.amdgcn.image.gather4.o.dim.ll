@@ -1,5 +1,8 @@
-; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefixes=GFX11-ERR %s
+
+; GFX11-ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.image.gather4
 
 ; GCN-LABEL: {{^}}gather4_o_2d:
 ; GCN: image_gather4_o v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1{{$}}

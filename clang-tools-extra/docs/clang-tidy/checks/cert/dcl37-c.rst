@@ -5,6 +5,6 @@
 cert-dcl37-c
 ============
 
-The cert-dcl37-c check is an alias, please see
-`bugprone-reserved-identifier <../bugprone/reserved-identifier.html>`_ for more
+The `cert-dcl37-c` check is an alias, please see
+:doc:`bugprone-reserved-identifier <../bugprone/reserved-identifier>` for more
 information.

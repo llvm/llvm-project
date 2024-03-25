@@ -535,9 +535,9 @@ define { i32, i1 } @umul_canonicalize_constant_arg0(i32 %x) nounwind {
 
 define { i8, i1 } @uadd_always_overflow(i8 %x) nounwind {
 ; CHECK-LABEL: @uadd_always_overflow(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], 63
-; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i8, i1 } { i8 poison, i1 true }, i8 [[TMP1]], 0
-; CHECK-NEXT:    ret { i8, i1 } [[TMP2]]
+; CHECK-NEXT:    [[A:%.*]] = and i8 [[X:%.*]], 63
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8, i1 } { i8 poison, i1 true }, i8 [[A]], 0
+; CHECK-NEXT:    ret { i8, i1 } [[TMP1]]
 ;
   %y = or i8 %x, 192
   %a = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 %y, i8 64)
@@ -569,10 +569,10 @@ define { i8, i1 } @umul_always_overflow(i8 %x) nounwind {
 
 define { i8, i1 } @sadd_always_overflow(i8 %x) nounwind {
 ; CHECK-LABEL: @sadd_always_overflow(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 100)
-; CHECK-NEXT:    [[A:%.*]] = add nuw i8 [[TMP1]], 28
-; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i8, i1 } { i8 poison, i1 true }, i8 [[A]], 0
-; CHECK-NEXT:    ret { i8, i1 } [[TMP2]]
+; CHECK-NEXT:    [[Y:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 100)
+; CHECK-NEXT:    [[A:%.*]] = add nuw i8 [[Y]], 28
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8, i1 } { i8 poison, i1 true }, i8 [[A]], 0
+; CHECK-NEXT:    ret { i8, i1 } [[TMP1]]
 ;
   %c = icmp sgt i8 %x, 100
   %y = select i1 %c, i8 %x, i8 100
@@ -582,10 +582,10 @@ define { i8, i1 } @sadd_always_overflow(i8 %x) nounwind {
 
 define { i8, i1 } @ssub_always_overflow(i8 %x) nounwind {
 ; CHECK-LABEL: @ssub_always_overflow(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 29)
-; CHECK-NEXT:    [[A:%.*]] = sub nuw i8 -100, [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i8, i1 } { i8 poison, i1 true }, i8 [[A]], 0
-; CHECK-NEXT:    ret { i8, i1 } [[TMP2]]
+; CHECK-NEXT:    [[Y:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 29)
+; CHECK-NEXT:    [[A:%.*]] = sub nuw i8 -100, [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8, i1 } { i8 poison, i1 true }, i8 [[A]], 0
+; CHECK-NEXT:    ret { i8, i1 } [[TMP1]]
 ;
   %c = icmp sgt i8 %x, 29
   %y = select i1 %c, i8 %x, i8 29
@@ -595,8 +595,8 @@ define { i8, i1 } @ssub_always_overflow(i8 %x) nounwind {
 
 define { i8, i1 } @smul_always_overflow(i8 %x) nounwind {
 ; CHECK-LABEL: @smul_always_overflow(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 100)
-; CHECK-NEXT:    [[A:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[TMP1]], i8 2)
+; CHECK-NEXT:    [[Y:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 100)
+; CHECK-NEXT:    [[A:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[Y]], i8 2)
 ; CHECK-NEXT:    ret { i8, i1 } [[A]]
 ;
   %c = icmp sgt i8 %x, 100

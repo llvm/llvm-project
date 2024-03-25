@@ -140,7 +140,7 @@ float func_15(float x, float y) {
 // CHECK:         FunctionDecl {{.*}} func_14 'float (float, float)'
 // CHECK:           CompoundStmt
 // CHECK-NEXT:        ReturnStmt
-// CHECK-NEXT:          BinaryOperator {{.*}} 'float':'float' '+' ConstRoundingMode=towardzero
+// CHECK-NEXT:          BinaryOperator {{.*}} 'float' '+' ConstRoundingMode=towardzero
 
 float func_16(float x, float y) {
 #pragma STDC FENV_ROUND FE_TOWARDZERO

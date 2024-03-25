@@ -6,24 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: can-create-symlinks
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
 // void rename(const path& old_p, const path& new_p);
 // void rename(const path& old_p,  const path& new_p, error_code& ec) noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
-TEST_SUITE(filesystem_rename_test_suite)
-
-TEST_CASE(test_signatures)
+static void test_signatures()
 {
     const path p; ((void)p);
     std::error_code ec; ((void)ec);
@@ -34,7 +34,7 @@ TEST_CASE(test_signatures)
     ASSERT_NOEXCEPT(fs::rename(p, p, ec));
 }
 
-TEST_CASE(test_error_reporting)
+static void test_error_reporting()
 {
     auto checkThrow = [](path const& f, path const& t, const std::error_code& ec)
     {
@@ -75,14 +75,14 @@ TEST_CASE(test_error_reporting)
         auto to_before = status(TC.to);
         std::error_code ec;
         rename(TC.from, TC.to, ec);
-        TEST_REQUIRE(ec);
-        TEST_CHECK(from_before.type() == status(TC.from).type());
-        TEST_CHECK(to_before.type() == status(TC.to).type());
-        TEST_CHECK(checkThrow(TC.from, TC.to, ec));
+        assert(ec);
+        assert(from_before.type() == status(TC.from).type());
+        assert(to_before.type() == status(TC.to).type());
+        assert(checkThrow(TC.from, TC.to, ec));
     }
 }
 
-TEST_CASE(basic_rename_test)
+static void basic_rename_test()
 {
     scoped_test_env env;
 
@@ -91,28 +91,28 @@ TEST_CASE(basic_rename_test)
     { // same file
         std::error_code ec = set_ec;
         rename(file, file, ec);
-        TEST_CHECK(!ec);
-        TEST_CHECK(is_regular_file(file));
-        TEST_CHECK(file_size(file) == 42);
+        assert(!ec);
+        assert(is_regular_file(file));
+        assert(file_size(file) == 42);
     }
     const path sym = env.create_symlink(file, "sym");
     { // file -> symlink
         std::error_code ec = set_ec;
         rename(file, sym, ec);
-        TEST_CHECK(!ec);
-        TEST_CHECK(!exists(file));
-        TEST_CHECK(is_regular_file(symlink_status(sym)));
-        TEST_CHECK(file_size(sym) == 42);
+        assert(!ec);
+        assert(!exists(file));
+        assert(is_regular_file(symlink_status(sym)));
+        assert(file_size(sym) == 42);
     }
     const path file2 = env.create_file("file2", 42);
     const path file3 = env.create_file("file3", 100);
     { // file -> file
         std::error_code ec = set_ec;
         rename(file2, file3, ec);
-        TEST_CHECK(!ec);
-        TEST_CHECK(!exists(file2));
-        TEST_CHECK(is_regular_file(file3));
-        TEST_CHECK(file_size(file3) == 42);
+        assert(!ec);
+        assert(!exists(file2));
+        assert(is_regular_file(file3));
+        assert(file_size(file3) == 42);
     }
     const path dne = env.make_env_path("dne");
     const path bad_sym = env.create_symlink(dne, "bad_sym");
@@ -120,14 +120,14 @@ TEST_CASE(basic_rename_test)
     { // bad-symlink
         std::error_code ec = set_ec;
         rename(bad_sym, bad_sym_dest, ec);
-        TEST_CHECK(!ec);
-        TEST_CHECK(!exists(symlink_status(bad_sym)));
-        TEST_CHECK(is_symlink(bad_sym_dest));
-        TEST_CHECK(read_symlink(bad_sym_dest) == dne);
+        assert(!ec);
+        assert(!exists(symlink_status(bad_sym)));
+        assert(is_symlink(bad_sym_dest));
+        assert(read_symlink(bad_sym_dest) == dne);
     }
 }
 
-TEST_CASE(basic_rename_dir_test)
+static void basic_rename_dir_test()
 {
     static_test_env env;
     const std::error_code set_ec = std::make_error_code(std::errc::address_in_use);
@@ -135,10 +135,10 @@ TEST_CASE(basic_rename_dir_test)
     { // dir -> dir (with contents)
         std::error_code ec = set_ec;
         rename(env.Dir, new_dir, ec);
-        TEST_CHECK(!ec);
-        TEST_CHECK(!exists(env.Dir));
-        TEST_CHECK(is_directory(new_dir));
-        TEST_CHECK(exists(new_dir / "file1"));
+        assert(!ec);
+        assert(!exists(env.Dir));
+        assert(is_directory(new_dir));
+        assert(exists(new_dir / "file1"));
     }
 #ifdef _WIN32
     // On Windows, renaming a directory over a file isn't an error (this
@@ -146,12 +146,19 @@ TEST_CASE(basic_rename_dir_test)
     { // dir -> file
         std::error_code ec = set_ec;
         rename(new_dir, env.NonEmptyFile, ec);
-        TEST_CHECK(!ec);
-        TEST_CHECK(!exists(new_dir));
-        TEST_CHECK(is_directory(env.NonEmptyFile));
-        TEST_CHECK(exists(env.NonEmptyFile / "file1"));
+        assert(!ec);
+        assert(!exists(new_dir));
+        assert(is_directory(env.NonEmptyFile));
+        assert(exists(env.NonEmptyFile / "file1"));
     }
 #endif
 }
 
-TEST_SUITE_END()
+int main(int, char**) {
+    test_signatures();
+    test_error_reporting();
+    basic_rename_test();
+    basic_rename_dir_test();
+
+    return 0;
+}

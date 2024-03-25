@@ -8,7 +8,7 @@ define <16 x i8> @usat_trunc_wb_256(<16 x i16> %i) {
 ; AVX-LABEL: usat_trunc_wb_256:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
 ; AVX-NEXT:    vpminuw %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpminuw %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
@@ -30,7 +30,7 @@ define <8 x i16> @usat_trunc_dw_256(<8 x i32> %i) {
 ; AVX-LABEL: usat_trunc_dw_256:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [65535,65535,65535,65535]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [65535,65535,65535,65535]
 ; AVX-NEXT:    vpminud %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpminud %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0

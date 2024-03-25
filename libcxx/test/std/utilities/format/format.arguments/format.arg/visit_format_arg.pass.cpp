@@ -6,16 +6,14 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-format
-
-// This test requires the dylib support introduced in D92214.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // <format>
 
 // template<class Visitor, class Context>
-//   see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg);
+//   see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg); // Deprecated in C++26
 
+#include <algorithm>
 #include <format>
 #include <cassert>
 #include <type_traits>
@@ -24,6 +22,10 @@
 #include "test_macros.h"
 #include "make_string.h"
 #include "min_allocator.h"
+
+#if TEST_STD_VER >= 26 && defined(TEST_HAS_EXPLICIT_THIS_PARAMETER)
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
+#endif
 
 template <class Context, class To, class From>
 void test(From value) {

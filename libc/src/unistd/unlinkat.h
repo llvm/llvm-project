@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_UNLINKAT_H
 #define LLVM_LIBC_SRC_UNISTD_UNLINKAT_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int unlinkat(int dfd, const char *path, int flags);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_UNISTD_UNLINKAT_H

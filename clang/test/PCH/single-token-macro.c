@@ -1,5 +1,3 @@
-// rdar://10588825
-
 // Test this without pch.
 // RUN: %clang_cc1 %s -include %s -verify -fsyntax-only
 

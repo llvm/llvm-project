@@ -5,14 +5,14 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define void @fadd() {
 ; CHECK-LABEL: 'fadd'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F16 = fadd <vscale x 4 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F16 = fadd <vscale x 8 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F16 = fadd <vscale x 16 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F32 = fadd <vscale x 2 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F32 = fadd <vscale x 4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F32 = fadd <vscale x 8 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F64 = fadd <vscale x 2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F64 = fadd <vscale x 4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F16 = fadd <vscale x 4 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F16 = fadd <vscale x 8 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F16 = fadd <vscale x 16 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fadd <vscale x 2 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fadd <vscale x 4 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F32 = fadd <vscale x 8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fadd <vscale x 2 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F64 = fadd <vscale x 4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %V4F16 = fadd <vscale x 4 x half> undef, undef
@@ -31,14 +31,14 @@ define void @fadd() {
 
 define void @fsub() {
 ; CHECK-LABEL: 'fsub'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F16 = fsub <vscale x 4 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F16 = fsub <vscale x 8 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F16 = fsub <vscale x 16 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F32 = fsub <vscale x 2 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F32 = fsub <vscale x 4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F32 = fsub <vscale x 8 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F64 = fsub <vscale x 2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F64 = fsub <vscale x 4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F16 = fsub <vscale x 4 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F16 = fsub <vscale x 8 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F16 = fsub <vscale x 16 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fsub <vscale x 2 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fsub <vscale x 4 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F32 = fsub <vscale x 8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fsub <vscale x 2 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F64 = fsub <vscale x 4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %V4F16 = fsub <vscale x 4 x half> undef, undef
@@ -57,15 +57,15 @@ define void @fsub() {
 
 define void @fneg() {
 ; CHECK-LABEL: 'fneg'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F16 = fneg <vscale x 2 x half> undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F16 = fneg <vscale x 4 x half> undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F16 = fneg <vscale x 8 x half> undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F16 = fneg <vscale x 16 x half> undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F32 = fneg <vscale x 2 x float> undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F32 = fneg <vscale x 4 x float> undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F32 = fneg <vscale x 8 x float> undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F64 = fneg <vscale x 2 x double> undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F64 = fneg <vscale x 4 x double> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F16 = fneg <vscale x 2 x half> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F16 = fneg <vscale x 4 x half> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F16 = fneg <vscale x 8 x half> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F16 = fneg <vscale x 16 x half> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fneg <vscale x 2 x float> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fneg <vscale x 4 x float> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F32 = fneg <vscale x 8 x float> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fneg <vscale x 2 x double> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F64 = fneg <vscale x 4 x double> undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %V2F16 = fneg <vscale x 2 x half> undef

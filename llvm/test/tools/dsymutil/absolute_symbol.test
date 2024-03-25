@@ -1,5 +1,7 @@
 RUN: dsymutil -dump-debug-map -oso-prepend-path %p %p/Inputs/absolute_sym.macho.i386 | FileCheck %s
 
+RUN: dsymutil --linker parallel -dump-debug-map -oso-prepend-path %p %p/Inputs/absolute_sym.macho.i386 | FileCheck %s
+
 The tested object file has been created by the dummy Objective-C code:
 @interface Foo
 @end
@@ -15,3 +17,4 @@ might conflict with other real symbols in the same file.
 
 CHECK: objc_class_name_Foo
 CHECK-NOT: objAddr
+CHECK: }

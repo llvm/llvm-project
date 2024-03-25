@@ -443,24 +443,23 @@ define arm_aapcs_vfpcc <8 x i16> @ext_ops_trunc_i16(<8 x i16> %a, <8 x i16> %b) 
 ; CHECK-NEXT:    vshl.s32 q4, q4, q5
 ; CHECK-NEXT:    vneg.s32 q5, q3
 ; CHECK-NEXT:    vsub.i32 q4, q4, q2
-; CHECK-NEXT:    vcmp.i32 eq, q3, q2
 ; CHECK-NEXT:    vmul.i32 q4, q4, q2
 ; CHECK-NEXT:    vmovlb.u16 q1, q1
 ; CHECK-NEXT:    vshl.u32 q4, q4, q5
 ; CHECK-NEXT:    vmovlb.s16 q0, q0
-; CHECK-NEXT:    vshl.u32 q4, q4, q2
+; CHECK-NEXT:    vpt.i32 eq, q3, q2
+; CHECK-NEXT:    vshlt.u32 q2, q4, q2
 ; CHECK-NEXT:    vadd.i32 q3, q0, q1
-; CHECK-NEXT:    vpsel q2, q4, q2
 ; CHECK-NEXT:    vneg.s32 q4, q1
 ; CHECK-NEXT:    vshl.s32 q3, q3, q4
 ; CHECK-NEXT:    vneg.s32 q4, q0
 ; CHECK-NEXT:    vsub.i32 q3, q3, q1
-; CHECK-NEXT:    vcmp.i32 eq, q0, q1
 ; CHECK-NEXT:    vmul.i32 q3, q3, q1
 ; CHECK-NEXT:    vshl.u32 q3, q3, q4
-; CHECK-NEXT:    vshl.u32 q3, q3, q1
-; CHECK-NEXT:    vpsel q0, q3, q1
-; CHECK-NEXT:    vmovnt.i32 q0, q2
+; CHECK-NEXT:    vpt.i32 eq, q0, q1
+; CHECK-NEXT:    vshlt.u32 q1, q3, q1
+; CHECK-NEXT:    vmovnt.i32 q1, q2
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    bx lr
 entry:
@@ -490,24 +489,23 @@ define arm_aapcs_vfpcc <16 x i8> @ext_ops_trunc_i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NEXT:    vshl.s16 q4, q4, q5
 ; CHECK-NEXT:    vneg.s16 q5, q3
 ; CHECK-NEXT:    vsub.i16 q4, q4, q2
-; CHECK-NEXT:    vcmp.i16 eq, q3, q2
 ; CHECK-NEXT:    vmul.i16 q4, q4, q2
 ; CHECK-NEXT:    vmovlb.u8 q1, q1
 ; CHECK-NEXT:    vshl.u16 q4, q4, q5
 ; CHECK-NEXT:    vmovlb.s8 q0, q0
-; CHECK-NEXT:    vshl.u16 q4, q4, q2
+; CHECK-NEXT:    vpt.i16 eq, q3, q2
+; CHECK-NEXT:    vshlt.u16 q2, q4, q2
 ; CHECK-NEXT:    vadd.i16 q3, q0, q1
-; CHECK-NEXT:    vpsel q2, q4, q2
 ; CHECK-NEXT:    vneg.s16 q4, q1
 ; CHECK-NEXT:    vshl.s16 q3, q3, q4
 ; CHECK-NEXT:    vneg.s16 q4, q0
 ; CHECK-NEXT:    vsub.i16 q3, q3, q1
-; CHECK-NEXT:    vcmp.i16 eq, q0, q1
 ; CHECK-NEXT:    vmul.i16 q3, q3, q1
 ; CHECK-NEXT:    vshl.u16 q3, q3, q4
-; CHECK-NEXT:    vshl.u16 q3, q3, q1
-; CHECK-NEXT:    vpsel q0, q3, q1
-; CHECK-NEXT:    vmovnt.i16 q0, q2
+; CHECK-NEXT:    vpt.i16 eq, q0, q1
+; CHECK-NEXT:    vshlt.u16 q1, q3, q1
+; CHECK-NEXT:    vmovnt.i16 q1, q2
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    bx lr
 entry:
@@ -532,7 +530,7 @@ define arm_aapcs_vfpcc <8 x i16> @ext_intrinsics_trunc_i16(<8 x i16> %a, <8 x i1
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmovlb.u16 q2, q1
 ; CHECK-NEXT:    vmovlb.s16 q3, q0
-; CHECK-NEXT:    vqadd.s32 q4, q3, q2
+; CHECK-NEXT:    vadd.i32 q4, q3, q2
 ; CHECK-NEXT:    vmovlt.u16 q1, q1
 ; CHECK-NEXT:    vqadd.u32 q4, q4, q2
 ; CHECK-NEXT:    vmovlt.s16 q0, q0
@@ -542,7 +540,7 @@ define arm_aapcs_vfpcc <8 x i16> @ext_intrinsics_trunc_i16(<8 x i16> %a, <8 x i1
 ; CHECK-NEXT:    vmin.s32 q4, q4, q3
 ; CHECK-NEXT:    vmax.s32 q4, q4, q2
 ; CHECK-NEXT:    vmin.u32 q3, q4, q3
-; CHECK-NEXT:    vqadd.s32 q4, q0, q1
+; CHECK-NEXT:    vadd.i32 q4, q0, q1
 ; CHECK-NEXT:    vqadd.u32 q4, q4, q1
 ; CHECK-NEXT:    vqsub.s32 q4, q4, q0
 ; CHECK-NEXT:    vqsub.u32 q4, q4, q1

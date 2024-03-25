@@ -67,18 +67,17 @@ llvm::Error decodeRecord(const Record &R, AccessSpecifier &Field,
 
 llvm::Error decodeRecord(const Record &R, TagTypeKind &Field,
                          llvm::StringRef Blob) {
-  switch (R[0]) {
-  case TTK_Struct:
-  case TTK_Interface:
-  case TTK_Union:
-  case TTK_Class:
-  case TTK_Enum:
-    Field = (TagTypeKind)R[0];
+  switch (static_cast<TagTypeKind>(R[0])) {
+  case TagTypeKind::Struct:
+  case TagTypeKind::Interface:
+  case TagTypeKind::Union:
+  case TagTypeKind::Class:
+  case TagTypeKind::Enum:
+    Field = static_cast<TagTypeKind>(R[0]);
     return llvm::Error::success();
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "invalid value for TagTypeKind");
   }
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "invalid value for TagTypeKind");
 }
 
 llvm::Error decodeRecord(const Record &R, std::optional<Location> &Field,

@@ -6,24 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: can-create-symlinks
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
 // bool remove(const path& p);
 // bool remove(const path& p, error_code& ec) noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
-TEST_SUITE(filesystem_remove_test_suite)
-
-TEST_CASE(test_signatures)
+static void test_signatures()
 {
     const path p; ((void)p);
     std::error_code ec; ((void)ec);
@@ -34,7 +34,7 @@ TEST_CASE(test_signatures)
     ASSERT_NOEXCEPT(fs::remove(p, ec));
 }
 
-TEST_CASE(test_error_reporting)
+static void test_error_reporting()
 {
     auto checkThrow = [](path const& f, const std::error_code& ec)
     {
@@ -71,9 +71,9 @@ TEST_CASE(test_error_reporting)
     for (auto& p : testCases) {
         std::error_code ec;
 
-        TEST_CHECK(!fs::remove(p, ec));
-        TEST_CHECK(ec);
-        TEST_CHECK(checkThrow(p, ec));
+        assert(!fs::remove(p, ec));
+        assert(ec);
+        assert(checkThrow(p, ec));
     }
 
     // PR#35780
@@ -85,12 +85,12 @@ TEST_CASE(test_error_reporting)
     for (auto& p : testCasesNonexistant) {
         std::error_code ec;
 
-        TEST_CHECK(!fs::remove(p, ec));
-        TEST_CHECK(!ec);
+        assert(!fs::remove(p, ec));
+        assert(!ec);
     }
 }
 
-TEST_CASE(basic_remove_test)
+static void basic_remove_test()
 {
     scoped_test_env env;
     const path dne = env.make_env_path("dne");
@@ -105,10 +105,15 @@ TEST_CASE(basic_remove_test)
     };
     for (auto& p : testCases) {
         std::error_code ec = std::make_error_code(std::errc::address_in_use);
-        TEST_CHECK(remove(p, ec));
-        TEST_CHECK(!ec);
-        TEST_CHECK(!exists(symlink_status(p)));
+        assert(remove(p, ec));
+        assert(!ec);
+        assert(!exists(symlink_status(p)));
     }
 }
 
-TEST_SUITE_END()
+int main(int, char**) {
+    test_signatures();
+    test_error_reporting();
+    basic_remove_test();
+    return 0;
+}

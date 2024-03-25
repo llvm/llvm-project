@@ -7,37 +7,37 @@ from ._mlir_libs import _mlirExecutionEngine as _execution_engine
 import ctypes
 
 __all__ = [
-  "ExecutionEngine",
+    "ExecutionEngine",
 ]
 
+
 class ExecutionEngine(_execution_engine.ExecutionEngine):
+    def lookup(self, name):
+        """Lookup a function emitted with the `llvm.emit_c_interface`
+        attribute and returns a ctype callable.
+        Raise a RuntimeError if the function isn't found.
+        """
+        func = self.raw_lookup("_mlir_ciface_" + name)
+        if not func:
+            raise RuntimeError("Unknown function " + name)
+        prototype = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
+        return prototype(func)
 
-  def lookup(self, name):
-    """Lookup a function emitted with the `llvm.emit_c_interface`
-    attribute and returns a ctype callable.
-    Raise a RuntimeError if the function isn't found.
-    """
-    func = self.raw_lookup("_mlir_ciface_" + name)
-    if not func:
-      raise RuntimeError("Unknown function " + name)
-    prototype = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
-    return prototype(func)
+    def invoke(self, name, *ctypes_args):
+        """Invoke a function with the list of ctypes arguments.
+        All arguments must be pointers.
+        Raise a RuntimeError if the function isn't found.
+        """
+        func = self.lookup(name)
+        packed_args = (ctypes.c_void_p * len(ctypes_args))()
+        for argNum in range(len(ctypes_args)):
+            packed_args[argNum] = ctypes.cast(ctypes_args[argNum], ctypes.c_void_p)
+        func(packed_args)
 
-  def invoke(self, name, *ctypes_args):
-    """Invoke a function with the list of ctypes arguments.
-    All arguments must be pointers.
-    Raise a RuntimeError if the function isn't found.
-    """
-    func = self.lookup(name)
-    packed_args = (ctypes.c_void_p * len(ctypes_args))()
-    for argNum in range(len(ctypes_args)):
-      packed_args[argNum] = ctypes.cast(ctypes_args[argNum], ctypes.c_void_p)
-    func(packed_args)
-
-  def register_runtime(self, name, ctypes_callback):
-    """Register a runtime function available to the jitted code
-    under the provided `name`. The `ctypes_callback` must be a
-    `CFuncType` that outlives the execution engine.
-    """
-    callback = ctypes.cast(ctypes_callback, ctypes.c_void_p)
-    self.raw_register_runtime("_mlir_ciface_" + name, callback)
+    def register_runtime(self, name, ctypes_callback):
+        """Register a runtime function available to the jitted code
+        under the provided `name`. The `ctypes_callback` must be a
+        `CFuncType` that outlives the execution engine.
+        """
+        callback = ctypes.cast(ctypes_callback, ctypes.c_void_p)
+        self.raw_register_runtime("_mlir_ciface_" + name, callback)

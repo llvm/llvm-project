@@ -9,14 +9,13 @@ from lldbsuite.test import lldbutil
 
 
 class PrintObjTestCase(TestBase):
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # My source program.
         self.source = "blocked.m"
         # Find the line numbers to break at.
-        self.line = line_number(self.source, '// Set a breakpoint here.')
+        self.line = line_number(self.source, "// Set a breakpoint here.")
 
     def test_print_obj(self):
         """
@@ -27,10 +26,10 @@ class PrintObjTestCase(TestBase):
         try to get the lock already gotten by my_pthread_routime thread, it will
         have to switch to running all threads, and that should then succeed.
         """
-        d = {'EXE': 'b.out'}
+        d = {"EXE": "b.out"}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
-        exe = self.getBuildArtifact('b.out')
+        exe = self.getBuildArtifact("b.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -40,16 +39,15 @@ class PrintObjTestCase(TestBase):
         self.runCmd("breakpoint list")
 
         # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         self.runCmd("thread backtrace all")
 
         # Let's get the current stopped thread.  We'd like to switch to the
         # other thread to issue our 'po lock_me' command.
         import lldbsuite.test.lldbutil as lldbutil
-        this_thread = lldbutil.get_stopped_thread(
-            process, lldb.eStopReasonBreakpoint)
+
+        this_thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertTrue(this_thread)
 
         # Find the other thread.  The iteration protocol of SBProcess and the
@@ -75,11 +73,12 @@ class PrintObjTestCase(TestBase):
         for i in range(depth):
             frame = other_thread.GetFrameAtIndex(i)
             name = frame.GetFunctionName()
-            if name == 'main':
+            if name == "main":
                 other_thread.SetSelectedFrame(i)
                 if self.TraceOn():
                     print("selected frame:" + lldbutil.get_description(frame))
                 break
 
-        self.expect("po lock_me", OBJECT_PRINTED_CORRECTLY,
-                    substrs=['I am pretty special.'])
+        self.expect(
+            "po lock_me", OBJECT_PRINTED_CORRECTLY, substrs=["I am pretty special."]
+        )

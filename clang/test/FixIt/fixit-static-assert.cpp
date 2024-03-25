@@ -11,8 +11,6 @@ static_assert(true && "String");
 // String literal prefixes are good.
 static_assert(true && R"(RawString)");
 // CHECK-DAG: {[[@LINE-1]]:20-[[@LINE-1]]:22}:","
-static_assert(true && L"RawString");
-// CHECK-DAG: {[[@LINE-1]]:20-[[@LINE-1]]:22}:","
 
 static_assert(true);
 // CHECK-DAG: {[[@LINE-1]]:19-[[@LINE-1]]:19}:", \"\""

@@ -22,5 +22,5 @@ CHECK-NEXT:   Address Range Header: length = 0x0000002c, format = DWARF32, versi
 CHECK-NEXT:   [0x0000000000[[#ADDR]], 0x0000000000[[#ADDR+4]])
 
 # Check line number info was updated
-CHECK:       0x0000000000[[#ADDR]]   13      0      0   0             0  is_stmt
-CHECK-NEXT:  0x0000000000[[#ADDR+4]] 13      0      0   0             0  is_stmt end_sequence
+CHECK:       0x0000000000[[#ADDR]]   13      0      0   0             0       0  is_stmt
+CHECK-NEXT:  0x0000000000[[#ADDR+4]] 13      0      0   0             0       0  is_stmt end_sequence

@@ -110,19 +110,18 @@ define void @test8() {
   store i32 1, ptr %arr2, align 4
 
 ; %arr2 is in range, but this element of it is not
-; CHECK-DAG: ldr [[RA:r[0-9]+]], .LCPI7_2
-; CHECK-DAG: add [[RA]], sp
-; CHECK-DAG: str [[REG]], [{{r[0-9]+}}]
+; CHECK-DAG: add [[RA:r[0-9]+]], sp, #900
+; CHECK-DAG: str [[REG]], [{{r[0-9]+}}, #124]
   %arr2idx2 = getelementptr inbounds [224 x i32], ptr %arr2, i32 0, i32 32
   store i32 1, ptr %arr2idx2, align 4
 
 ; %arr3 is not in range
-; CHECK-DAG: ldr [[RB:r[0-9]+]], .LCPI7_3
+; CHECK-DAG: ldr [[RB:r[0-9]+]], .LCPI7_2
 ; CHECK-DAG: add [[RB]], sp
 ; CHECK-DAG: str [[REG]], [{{r[0-9]+}}]
   store i32 1, ptr %arr3, align 4
 
-; CHECK-DAG: ldr [[RC:r[0-9]+]], .LCPI7_4
+; CHECK-DAG: ldr [[RC:r[0-9]+]], .LCPI7_3
 ; CHECK-DAG: add [[RC]], sp
 ; CHECK-DAG: str [[REG]], [{{r[0-9]+}}]
   %arr3idx2 = getelementptr inbounds [224 x i32], ptr %arr3, i32 0, i32 32

@@ -8,13 +8,13 @@
 
 #include "src/string/memset.h"
 #include "src/__support/common.h"
-#include "src/string/memory_utils/memset_implementations.h"
+#include "src/string/memory_utils/inline_memset.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void *, memset, (void *dst, int value, size_t count)) {
   inline_memset(dst, static_cast<uint8_t>(value), count);
   return dst;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

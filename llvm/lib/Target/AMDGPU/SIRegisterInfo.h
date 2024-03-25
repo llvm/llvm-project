@@ -14,6 +14,8 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 
+#include "llvm/ADT/BitVector.h"
+
 #define GET_REGINFO_HEADER
 #include "AMDGPUGenRegisterInfo.inc"
 
@@ -23,7 +25,7 @@ namespace llvm {
 
 class GCNSubtarget;
 class LiveIntervals;
-class LivePhysRegs;
+class LiveRegUnits;
 class RegisterBank;
 struct SGPRSpillBuilder;
 
@@ -70,6 +72,12 @@ public:
     return SpillSGPRToVGPR;
   }
 
+  /// Return the largest available SGPR aligned to \p Align for the register
+  /// class \p RC.
+  MCRegister getAlignedHighSGPRForRC(const MachineFunction &MF,
+                                     const unsigned Align,
+                                     const TargetRegisterClass *RC) const;
+
   /// Return the end register initially reserved for the scratch buffer in case
   /// spilling is needed.
   MCRegister reservedPrivateSegmentBufferReg(const MachineFunction &MF) const;
@@ -83,6 +91,11 @@ public:
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
   const uint32_t *getNoPreservedMask() const override;
+
+  // Functions with the amdgpu_cs_chain or amdgpu_cs_chain_preserve calling
+  // conventions are free to use certain VGPRs without saving and restoring any
+  // lanes (not even inactive ones).
+  static bool isChainScratchRegister(Register VGPR);
 
   // Stack access is very expensive. CSRs are also the high registers, and we
   // want to minimize the number of used registers.
@@ -136,31 +149,30 @@ public:
   void buildVGPRSpillLoadStore(SGPRSpillBuilder &SB, int Index, int Offset,
                                bool IsLoad, bool IsKill = true) const;
 
-  /// If \p OnlyToVGPR is true, this will only succeed if this
+  /// If \p OnlyToVGPR is true, this will only succeed if this manages to find a
+  /// free VGPR lane to spill.
   bool spillSGPR(MachineBasicBlock::iterator MI, int FI, RegScavenger *RS,
                  SlotIndexes *Indexes = nullptr, LiveIntervals *LIS = nullptr,
-                 bool OnlyToVGPR = false) const;
+                 bool OnlyToVGPR = false,
+                 bool SpillToPhysVGPRLane = false) const;
 
   bool restoreSGPR(MachineBasicBlock::iterator MI, int FI, RegScavenger *RS,
                    SlotIndexes *Indexes = nullptr, LiveIntervals *LIS = nullptr,
-                   bool OnlyToVGPR = false) const;
+                   bool OnlyToVGPR = false,
+                   bool SpillToPhysVGPRLane = false) const;
 
   bool spillEmergencySGPR(MachineBasicBlock::iterator MI,
                           MachineBasicBlock &RestoreMBB, Register SGPR,
                           RegScavenger *RS) const;
 
-  bool supportsBackwardScavenger() const override {
-    return true;
-  }
-
   bool eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS) const override;
 
-  bool eliminateSGPRToVGPRSpillFrameIndex(MachineBasicBlock::iterator MI,
-                                          int FI, RegScavenger *RS,
-                                          SlotIndexes *Indexes = nullptr,
-                                          LiveIntervals *LIS = nullptr) const;
+  bool eliminateSGPRToVGPRSpillFrameIndex(
+      MachineBasicBlock::iterator MI, int FI, RegScavenger *RS,
+      SlotIndexes *Indexes = nullptr, LiveIntervals *LIS = nullptr,
+      bool SpillToPhysVGPRLane = false) const;
 
   StringRef getRegAsmName(MCRegister Reg) const override;
 
@@ -286,9 +298,16 @@ public:
     return isVGPR(MRI, Reg) || isAGPR(MRI, Reg);
   }
 
+  // FIXME: SGPRs are assumed to be uniform, but this is not true for i1 SGPRs
+  // (such as VCC) which hold a wave-wide vector of boolean values. Examining
+  // just the register class is not suffcient; it needs to be combined with a
+  // value type. The next predicate isUniformReg() does this correctly.
   bool isDivergentRegClass(const TargetRegisterClass *RC) const override {
     return !isSGPRClass(RC);
   }
+
+  bool isUniformReg(const MachineRegisterInfo &MRI, const RegisterBankInfo &RBI,
+                    Register Reg) const override;
 
   ArrayRef<int16_t> getRegSplitParts(const TargetRegisterClass *RC,
                                      unsigned EltSize) const;
@@ -403,15 +422,39 @@ public:
   // Insert spill or restore instructions.
   // When lowering spill pseudos, the RegScavenger should be set.
   // For creating spill instructions during frame lowering, where no scavenger
-  // is available, LiveRegs can be used.
+  // is available, LiveUnits can be used.
   void buildSpillLoadStore(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MI, const DebugLoc &DL,
                            unsigned LoadStoreOp, int Index, Register ValueReg,
                            bool ValueIsKill, MCRegister ScratchOffsetReg,
                            int64_t InstrOffset, MachineMemOperand *MMO,
                            RegScavenger *RS,
-                           LivePhysRegs *LiveRegs = nullptr) const;
+                           LiveRegUnits *LiveUnits = nullptr) const;
+
+  // Return alignment in register file of first register in a register tuple.
+  unsigned getRegClassAlignmentNumBits(const TargetRegisterClass *RC) const {
+    return (RC->TSFlags & SIRCFlags::RegTupleAlignUnitsMask) * 32;
+  }
+
+  // Check if register class RC has required alignment.
+  bool isRegClassAligned(const TargetRegisterClass *RC,
+                         unsigned AlignNumBits) const {
+    assert(AlignNumBits != 0);
+    unsigned RCAlign = getRegClassAlignmentNumBits(RC);
+    return RCAlign == AlignNumBits ||
+           (RCAlign > AlignNumBits && (RCAlign % AlignNumBits) == 0);
+  }
+
+  // Return alignment of a SubReg relative to start of a register in RC class.
+  // No check if the subreg is supported by the current RC is made.
+  unsigned getSubRegAlignmentNumBits(const TargetRegisterClass *RC,
+                                     unsigned SubReg) const;
 };
+
+namespace AMDGPU {
+/// Get the size in bits of a register from the register class \p RC.
+unsigned getRegBitWidth(const TargetRegisterClass &RC);
+} // namespace AMDGPU
 
 } // End namespace llvm
 

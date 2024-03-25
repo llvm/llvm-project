@@ -23,19 +23,20 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-int __libcpp_ctz(unsigned __x)           _NOEXCEPT { return __builtin_ctz(__x); }
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_ctz(unsigned __x) _NOEXCEPT {
+  return __builtin_ctz(__x);
+}
 
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-int __libcpp_ctz(unsigned long __x)      _NOEXCEPT { return __builtin_ctzl(__x); }
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_ctz(unsigned long __x) _NOEXCEPT {
+  return __builtin_ctzl(__x);
+}
 
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-int __libcpp_ctz(unsigned long long __x) _NOEXCEPT { return __builtin_ctzll(__x); }
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_ctz(unsigned long long __x) _NOEXCEPT {
+  return __builtin_ctzll(__x);
+}
 
-#if _LIBCPP_STD_VER >= 20
-
-template <__libcpp_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr int countr_zero(_Tp __t) noexcept {
+template <class _Tp>
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countr_zero(_Tp __t) _NOEXCEPT {
   if (__t == 0)
     return numeric_limits<_Tp>::digits;
 
@@ -46,7 +47,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr int countr_zero(_Tp __t) noexcept {
   else if (sizeof(_Tp) <= sizeof(unsigned long long))
     return std::__libcpp_ctz(static_cast<unsigned long long>(__t));
   else {
-    int __ret = 0;
+    int __ret                      = 0;
     const unsigned int __ulldigits = numeric_limits<unsigned long long>::digits;
     while (static_cast<unsigned long long>(__t) == 0uLL) {
       __ret += __ulldigits;
@@ -56,8 +57,15 @@ _LIBCPP_HIDE_FROM_ABI constexpr int countr_zero(_Tp __t) noexcept {
   }
 }
 
+#if _LIBCPP_STD_VER >= 20
+
 template <__libcpp_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr int countr_one(_Tp __t) noexcept {
+_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr int countr_zero(_Tp __t) noexcept {
+  return std::__countr_zero(__t);
+}
+
+template <__libcpp_unsigned_integer _Tp>
+_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr int countr_one(_Tp __t) noexcept {
   return __t != numeric_limits<_Tp>::max() ? std::countr_zero(static_cast<_Tp>(~__t)) : numeric_limits<_Tp>::digits;
 }
 

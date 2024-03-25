@@ -22,10 +22,10 @@
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=C-OR-ZCA-EXT-RELAX-RELOC %s
 
 # Relaxation enabled with Zca extension:
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-zca,+relax < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-zca -d -M no-aliases - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zca,+relax < %s \
+# RUN:     | llvm-objdump --mattr=+zca -d -M no-aliases - \
 # RUN:     | FileCheck -check-prefix=C-OR-ZCA-EXT-RELAX-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-zca,+relax < %s \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zca,+relax < %s \
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=C-OR-ZCA-EXT-RELAX-RELOC %s
 
 # Relaxation disabled with C extension:
@@ -36,10 +36,10 @@
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=C-OR-ZCA-EXT-NORELAX-RELOC %s
 
 # Relaxation disabled with ZCA extension:
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-zca,-relax < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-zca -d -M no-aliases - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zca,-relax < %s \
+# RUN:     | llvm-objdump --mattr=+zca -d -M no-aliases - \
 # RUN:     | FileCheck -check-prefix=C-OR-ZCA-EXT-NORELAX-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-zca,-relax < %s \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zca,-relax < %s \
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=C-OR-ZCA-EXT-NORELAX-RELOC %s
 
 # We need to insert N-MinNopSize bytes NOPs and R_RISCV_ALIGN relocation

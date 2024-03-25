@@ -1,7 +1,7 @@
-; RUN: opt -opaque-pointers=0 %loadPolly -polly-print-import-jscop \
+; RUN: opt %loadPolly -polly-print-import-jscop \
 ; RUN:                -disable-output < %s | FileCheck %s
 
-; RUN: opt -opaque-pointers=0 %loadPolly -polly-import-jscop \
+; RUN: opt %loadPolly -polly-import-jscop \
 ; RUN:                -polly-codegen -S < %s \
 ; RUN:                -polly-parallel \
 ; RUN:                | FileCheck %s -check-prefix=IR
@@ -20,19 +20,19 @@
 ; CHECK:    new: [n, m] -> { Stmt_bb4[i0, i1] -> MemRef_A[i0, 43 + i1] };
 
 ; IR: %polly.access.mul.polly.subfunc.arg.A = mul nsw i64 %polly.indvar, %polly.subfunc.arg.m
-; IR: %6 = add nsw i64 %polly.indvar5, 13
+; IR: %6 = add nsw i64 %polly.indvar4, 13
 ; IR: %polly.access.add.polly.subfunc.arg.A = add nsw i64 %polly.access.mul.polly.subfunc.arg.A, %6
-; IR: %polly.access.polly.subfunc.arg.A = getelementptr float, float* %polly.subfunc.arg.A, i64 %polly.access.add.polly.subfunc.arg.A
-; IR: %tmp10_p_scalar_ = load float, float* %polly.access.polly.subfunc.arg.A, align 4, !alias.scope !0, !noalias !3, !llvm.access.group !4
+; IR: %polly.access.polly.subfunc.arg.A = getelementptr float, ptr %polly.subfunc.arg.A, i64 %polly.access.add.polly.subfunc.arg.A
+; IR: %tmp10_p_scalar_ = load float, ptr %polly.access.polly.subfunc.arg.A, align 4, !alias.scope !0, !noalias !3, !llvm.access.group !4
 
-; IR: %polly.access.mul.polly.subfunc.arg.A8 = mul nsw i64 %polly.indvar, %polly.subfunc.arg.m
-; IR: %7 = add nsw i64 %polly.indvar5, 43
-; IR: %polly.access.add.polly.subfunc.arg.A9 = add nsw i64 %polly.access.mul.polly.subfunc.arg.A8, %7
-; IR: %polly.access.polly.subfunc.arg.A10 = getelementptr float, float* %polly.subfunc.arg.A, i64 %polly.access.add.polly.subfunc.arg.A9
-; IR: store float %p_tmp11, float* %polly.access.polly.subfunc.arg.A10, align 4, !alias.scope !0, !noalias !3, !llvm.access.group !4
+; IR: %polly.access.mul.polly.subfunc.arg.A7 = mul nsw i64 %polly.indvar, %polly.subfunc.arg.m
+; IR: %7 = add nsw i64 %polly.indvar4, 43
+; IR: %polly.access.add.polly.subfunc.arg.A8 = add nsw i64 %polly.access.mul.polly.subfunc.arg.A7, %7
+; IR: %polly.access.polly.subfunc.arg.A9 = getelementptr float, ptr %polly.subfunc.arg.A, i64 %polly.access.add.polly.subfunc.arg.A8
+; IR: store float %p_tmp11, ptr %polly.access.polly.subfunc.arg.A9, align 4, !alias.scope !0, !noalias !3, !llvm.access.group !4
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @new_multidim_access(i64 %n, i64 %m, float* %A) {
+define void @new_multidim_access(i64 %n, i64 %m, ptr %A) {
 bb:
   br label %bb1
 
@@ -55,10 +55,10 @@ bb4:                                              ; preds = %bb3
   %tmp7 = shl nsw i64 %j.0, 1
   %tmp8 = mul nsw i64 %i.0, %m
   %.sum = add i64 %tmp8, %tmp7
-  %tmp9 = getelementptr inbounds float, float* %A, i64 %.sum
-  %tmp10 = load float, float* %tmp9, align 4
+  %tmp9 = getelementptr inbounds float, ptr %A, i64 %.sum
+  %tmp10 = load float, ptr %tmp9, align 4
   %tmp11 = fadd float %tmp10, %tmp6
-  store float %tmp11, float* %tmp9, align 4
+  store float %tmp11, ptr %tmp9, align 4
   br label %bb12
 
 bb12:                                             ; preds = %bb4

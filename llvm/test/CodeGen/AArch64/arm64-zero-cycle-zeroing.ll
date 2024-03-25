@@ -19,7 +19,7 @@ define void @t1() nounwind ssp {
 entry:
 ; ALL-LABEL: t1:
 ; ALL-NOT: fmov
-; NONEFP-DAG: ldr h0,{{.*}}
+; NONEFP-DAG: fmov s0, wzr
 ; NONEFP-DAG: fmov s1, wzr
 ; NONEFP-DAG: fmov d2, xzr
 ; NONEFP-DAG: movi{{(.16b)?}} v3{{(.2d)?}}, #0
@@ -27,7 +27,7 @@ entry:
 ; NONE16: fmov s1, wzr
 ; NONE16: fmov d2, xzr
 ; NONE16: movi{{(.16b)?}} v3{{(.2d)?}}, #0
-; ZEROFP-DAG: ldr h0,{{.*}}
+; ZEROFP-DAG: movi d0, #0
 ; ZEROFP-DAG: movi d1, #0
 ; ZEROFP-DAG: movi d2, #0
 ; ZEROFP-DAG: movi v3.2d, #0

@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: can-create-symlinks
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -15,20 +18,17 @@
 // recursive_directory_iterator begin(recursive_directory_iterator iter) noexcept;
 // recursive_directory_iterator end(recursive_directory_iterator iter) noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <set>
 #include <cassert>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
-TEST_SUITE(recursive_directory_iterator_begin_end_tests)
-
-TEST_CASE(test_function_signatures)
+static void test_function_signatures()
 {
     recursive_directory_iterator d;
 
@@ -43,7 +43,7 @@ TEST_CASE(test_function_signatures)
     ASSERT_NOEXCEPT(end(std::move(d)));
 }
 
-TEST_CASE(test_ranged_for_loop)
+static void test_ranged_for_loop()
 {
     static_test_env static_env;
     const path testDir = static_env.Dir;
@@ -52,12 +52,17 @@ TEST_CASE(test_ranged_for_loop)
 
     std::error_code ec;
     recursive_directory_iterator it(testDir, ec);
-    TEST_REQUIRE(!ec);
+    assert(!ec);
 
     for (auto& elem : it) {
-        TEST_CHECK(dir_contents.erase(elem) == 1);
+        assert(dir_contents.erase(elem) == 1);
     }
-    TEST_CHECK(dir_contents.empty());
+    assert(dir_contents.empty());
 }
 
-TEST_SUITE_END()
+int main(int, char**) {
+    test_function_signatures();
+    test_ranged_for_loop();
+
+    return 0;
+}

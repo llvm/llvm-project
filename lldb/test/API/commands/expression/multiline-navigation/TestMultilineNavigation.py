@@ -7,8 +7,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbpexpect import PExpectTest
 
-class TestCase(PExpectTest):
 
+class TestCase(PExpectTest):
     arrow_up = "\033[A"
     arrow_down = "\033[B"
 
@@ -16,8 +16,8 @@ class TestCase(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfEditlineSupportMissing
-    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr48316')
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48316")
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
     def test_nav_arrow_up(self):
         """Tests that we can navigate back to the previous line with the up arrow"""
         self.launch()
@@ -40,8 +40,8 @@ class TestCase(PExpectTest):
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
-    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr48316')
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48316")
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
     def test_nav_arrow_down(self):
         """Tests that we can navigate to the next line with the down arrow"""
         self.launch()
@@ -72,7 +72,7 @@ class TestCase(PExpectTest):
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
     def test_nav_arrow_up_empty(self):
         """
         Tests that navigating with the up arrow doesn't crash and skips

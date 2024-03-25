@@ -117,6 +117,11 @@ class SchedMachineModel {
   list<Predicate> UnsupportedFeatures = [];
 
   bit NoModel = false; // Special tag to indicate missing machine model.
+
+  // Tells the MachineScheduler whether or not to track resource usage
+  // using intervals via ResourceSegments (see
+  // llvm/include/llvm/CodeGen/MachineScheduler.h).
+  bit EnableIntervals = false;
 }
 
 def NoSchedModel : SchedMachineModel {
@@ -142,7 +147,7 @@ class ProcResourceKind;
 // changes this to an in-order issue/dispatch resource. In this case,
 // the scheduler counts down from the cycle that the instruction
 // issues in-order, forcing a stall whenever a subsequent instruction
-// requires the same resource until the number of ResourceCycles
+// requires the same resource until the number of ReleaseAtCycles
 // specified in WriteRes expire. Setting BufferSize=1 changes this to
 // an in-order latency resource. In this case, the scheduler models
 // producer/consumer stalls between instructions that use the
@@ -187,15 +192,10 @@ class ProcResourceUnits<ProcResourceKind kind, int num> {
   SchedMachineModel SchedModel = ?;
 }
 
-// EponymousProcResourceKind helps implement ProcResourceUnits by
-// allowing a ProcResourceUnits definition to reference itself. It
-// should not be referenced anywhere else.
-def EponymousProcResourceKind : ProcResourceKind;
-
 // Subtargets typically define processor resource kind and number of
 // units in one place.
 class ProcResource<int num> : ProcResourceKind,
-  ProcResourceUnits<EponymousProcResourceKind, num>;
+  ProcResourceUnits<!cast<ProcResourceKind>(NAME), num>;
 
 class ProcResGroup<list<ProcResource> resources> : ProcResourceKind {
   list<ProcResource> Resources = resources;
@@ -249,7 +249,14 @@ class WriteSequence<list<SchedWrite> writes, int rep = 1> : SchedWrite {
 // SchedModel ties these resources to a processor.
 class ProcWriteResources<list<ProcResourceKind> resources> {
   list<ProcResourceKind> ProcResources = resources;
-  list<int> ResourceCycles = [];
+  /// Cycle at which the resource will be released by an instruction,
+  /// relatively to the cycle in which the instruction is issued
+  /// (assuming no stalls inbetween).
+  list<int> ReleaseAtCycles = [];
+  /// Cycle at which the resource will be aquired by an instruction,
+  /// relatively to the cycle in which the instruction is issued
+  /// (assuming no stalls inbetween).
+  list<int> AcquireAtCycles = [];
   int Latency = 1;
   int NumMicroOps = 1;
   bit BeginGroup = false;
@@ -279,12 +286,12 @@ class ProcWriteResources<list<ProcResourceKind> resources> {
 // itinerary classes to the subtarget's SchedWrites.
 //
 // ProcResources indicates the set of resources consumed by the write.
-// Optionally, ResourceCycles indicates the number of cycles the
-// resource is consumed. Each ResourceCycles item is paired with the
-// ProcResource item at the same position in its list. ResourceCycles
+// Optionally, ReleaseAtCycles indicates the number of cycles the
+// resource is consumed. Each ReleaseAtCycles item is paired with the
+// ProcResource item at the same position in its list. ReleaseAtCycles
 // can be `[]`: in that case, all resources are consumed for a single
 // cycle, regardless of latency, which models a fully pipelined processing
-// unit. A value of 0 for ResourceCycles means that the resource must
+// unit. A value of 0 for ReleaseAtCycles means that the resource must
 // be available but is not consumed, which is only relevant for
 // unbuffered resources.
 //
@@ -392,6 +399,8 @@ def NoSchedPred : MCSchedPredicate<TruePred>;
 class SchedVar<SchedPredicateBase pred, list<SchedReadWrite> selected> {
   SchedPredicateBase Predicate = pred;
   list<SchedReadWrite> Selected = selected;
+  // SchedModel silences warnings but is ignored.
+  SchedMachineModel SchedModel = ?;
 }
 
 // SchedModel silences warnings but is ignored.

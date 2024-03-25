@@ -2,10 +2,10 @@
 // constants and that printing works. Emulate i16 ops with i8 ops.
 
 // RUN: mlir-opt %s --test-arith-emulate-wide-int="widest-int-supported=8" \
-// RUN:             --convert-scf-to-cf --convert-cf-to-llvm --convert-vector-to-llvm \
-// RUN:             --convert-func-to-llvm --convert-arith-to-llvm | \
+// RUN:             --convert-vector-to-scf --convert-scf-to-cf --convert-cf-to-llvm --convert-vector-to-llvm \
+// RUN:             --convert-func-to-llvm --convert-arith-to-llvm --reconcile-unrealized-casts | \
 // RUN:   mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:                   --shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:                   --shared-libs=%mlir_c_runner_utils | \
 // RUN:   FileCheck %s --match-full-lines --check-prefix=EMULATED
 
 func.func @entry() {

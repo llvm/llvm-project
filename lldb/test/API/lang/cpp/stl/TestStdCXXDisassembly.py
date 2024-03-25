@@ -8,18 +8,19 @@ from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
 
-class StdCXXDisassembleTestCase(TestBase):
 
+class StdCXXDisassembleTestCase(TestBase):
     @skipIfWindows
     def test_stdcxx_disasm(self):
         """Do 'disassemble' on each and every 'Code' symbol entry from the std c++ lib."""
         self.build()
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self, "// Set break point at this line", lldb.SBFileSpec("main.cpp"))
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "// Set break point at this line", lldb.SBFileSpec("main.cpp")
+        )
 
         # Disassemble the functions on the call stack.
         self.runCmd("thread backtrace")
-        thread = lldbutil.get_stopped_thread(
-            process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
         depth = thread.GetNumFrames()
         for i in range(depth - 1):
@@ -33,16 +34,18 @@ class StdCXXDisassembleTestCase(TestBase):
         for i in range(target.GetNumModules()):
             module = target.GetModuleAtIndex(i)
             fs = module.GetFileSpec()
-            if (fs.GetFilename().startswith("libstdc++")
-                    or fs.GetFilename().startswith("libc++")):
+            if fs.GetFilename().startswith("libstdc++") or fs.GetFilename().startswith(
+                "libc++"
+            ):
                 lib_stdcxx = str(fs)
                 break
 
         # At this point, lib_stdcxx is the full path to the stdc++ library and
         # module is the corresponding SBModule.
 
-        self.expect(lib_stdcxx, "Libraray StdC++ is located", exe=False,
-                    substrs=["lib"])
+        self.expect(
+            lib_stdcxx, "Libraray StdC++ is located", exe=False, substrs=["lib"]
+        )
 
         self.runCmd("image dump symtab '%s'" % lib_stdcxx)
         raw_output = self.res.GetOutput()
@@ -53,13 +56,16 @@ class StdCXXDisassembleTestCase(TestBase):
         #
         # The load address column comes after the file address column, with both
         # looks like '0xhhhhhhhh', i.e., 8 hexadecimal digits.
-        codeRE = re.compile(r"""
+        codeRE = re.compile(
+            r"""
                              \ Code\ {9}      # ' Code' followed by 9 SPCs,
                              0x[0-9a-f]{16}   # the file address column, and
                              \                # a SPC, and
                              (0x[0-9a-f]{16}) # the load address column, and
                              .*               # the rest.
-                             """, re.VERBOSE)
+                             """,
+            re.VERBOSE,
+        )
         # Maintain a start address variable; if we arrive at a consecutive Code
         # entry, then the load address of the that entry is fed as the end
         # address to the 'disassemble -s SA -e LA' command.

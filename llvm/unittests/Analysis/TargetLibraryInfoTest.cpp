@@ -9,7 +9,6 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
@@ -69,6 +68,16 @@ TEST_F(TargetLibraryInfoTest, InvalidProto) {
     auto *F = cast<Function>(
         M->getOrInsertFunction(TLI.getName(LF), InvalidFTy).getCallee());
     EXPECT_FALSE(isLibFunc(F, LF));
+  }
+
+  // i64 @labs(i32)
+  {
+    auto *InvalidLabsFTy = FunctionType::get(Type::getInt64Ty(Context),
+                                             {Type::getInt32Ty(Context)},
+                                             /*isVarArg=*/false);
+    auto *F = cast<Function>(
+        M->getOrInsertFunction("labs", InvalidLabsFTy).getCallee());
+    EXPECT_FALSE(isLibFunc(F, LibFunc_labs));
   }
 }
 
@@ -255,6 +264,9 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare double @pow(double, double)\n"
       "declare float @powf(float, float)\n"
       "declare x86_fp80 @powl(x86_fp80, x86_fp80)\n"
+      "declare double @erf(double)\n"
+      "declare float @erff(float)\n"
+      "declare x86_fp80 @erfl(x86_fp80)\n"
       "declare i32 @printf(i8*, ...)\n"
       "declare i32 @putc(i32, %struct*)\n"
       "declare i32 @putc_unlocked(i32, %struct*)\n"
@@ -433,17 +445,27 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare i8* @_ZnajSt11align_val_t(i32, i32)\n"
       "declare i8* @_ZnajSt11align_val_tRKSt9nothrow_t(i32, i32, %struct*)\n"
       "declare i8* @_Znam(i64)\n"
+      "declare i8* @_Znam12__hot_cold_t(i64, i8)\n"
       "declare i8* @_ZnamRKSt9nothrow_t(i64, %struct*)\n"
+      "declare i8* @_ZnamRKSt9nothrow_t12__hot_cold_t(i64, %struct*, i8)\n"
       "declare i8* @_ZnamSt11align_val_t(i64, i64)\n"
+      "declare i8* @_ZnamSt11align_val_t12__hot_cold_t(i64, i64, i8)\n"
       "declare i8* @_ZnamSt11align_val_tRKSt9nothrow_t(i64, i64, %struct*)\n"
+      "declare i8* @_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64, i64, "
+      "%struct*, i8)\n"
       "declare i8* @_Znwj(i32)\n"
       "declare i8* @_ZnwjRKSt9nothrow_t(i32, %struct*)\n"
       "declare i8* @_ZnwjSt11align_val_t(i32, i32)\n"
       "declare i8* @_ZnwjSt11align_val_tRKSt9nothrow_t(i32, i32, %struct*)\n"
       "declare i8* @_Znwm(i64)\n"
+      "declare i8* @_Znwm12__hot_cold_t(i64, i8)\n"
       "declare i8* @_ZnwmRKSt9nothrow_t(i64, %struct*)\n"
+      "declare i8* @_ZnwmRKSt9nothrow_t12__hot_cold_t(i64, %struct*, i8)\n"
       "declare i8* @_ZnwmSt11align_val_t(i64, i64)\n"
+      "declare i8* @_ZnwmSt11align_val_t12__hot_cold_t(i64, i64, i8)\n"
       "declare i8* @_ZnwmSt11align_val_tRKSt9nothrow_t(i64, i64, %struct*)\n"
+      "declare i8* @_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64, i64, "
+      "%struct*, i8)\n"
 
       "declare void @\"??3@YAXPEAX@Z\"(i8*)\n"
       "declare void @\"??3@YAXPEAXAEBUnothrow_t@std@@@Z\"(i8*, %struct*)\n"
@@ -601,4 +623,39 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
     Function *F = M->getFunction(TLI.getName(LF));
     EXPECT_TRUE(isLibFunc(F, LF));
   }
+}
+
+namespace {
+
+/// Creates TLI for AArch64 and uses it to get the LibFunc names for the given
+/// Instruction opcode and Type.
+class TLITestAarch64 : public ::testing::Test {
+private:
+  const Triple TargetTriple;
+
+protected:
+  LLVMContext Ctx;
+  std::unique_ptr<TargetLibraryInfoImpl> TLII;
+  std::unique_ptr<TargetLibraryInfo> TLI;
+
+  /// Create TLI for AArch64
+  TLITestAarch64() : TargetTriple(Triple("aarch64-unknown-linux-gnu")) {
+    TLII = std::make_unique<TargetLibraryInfoImpl>(
+        TargetLibraryInfoImpl(TargetTriple));
+    TLI = std::make_unique<TargetLibraryInfo>(TargetLibraryInfo(*TLII));
+  }
+
+  /// Returns the TLI function name for the given \p Opcode and type \p Ty.
+  StringRef getScalarName(unsigned int Opcode, Type *Ty) {
+    LibFunc Func;
+    if (!TLI->getLibFunc(Opcode, Ty, Func))
+      return "";
+    return TLI->getName(Func);
+  }
+};
+} // end anonymous namespace
+
+TEST_F(TLITestAarch64, TestFrem) {
+  EXPECT_EQ(getScalarName(Instruction::FRem, Type::getDoubleTy(Ctx)), "fmod");
+  EXPECT_EQ(getScalarName(Instruction::FRem, Type::getFloatTy(Ctx)), "fmodf");
 }

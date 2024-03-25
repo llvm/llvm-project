@@ -46,7 +46,7 @@ build_script:
   - cmake -G "%GENERATOR%" %CMAKE_OPTIONS%
     "-DCMAKE_BUILD_TYPE=%configuration%"
     "-DLLVM_PATH=C:\projects\deps\llvm"
-    -DLLVM_LIT_ARGS="-sv --show-xfail --show-unsupported"
+    -DLLVM_LIT_ARGS="-v --show-xfail --show-unsupported"
     %APPVEYOR_BUILD_FOLDER%
 
   #############################################################################

@@ -92,10 +92,10 @@ declare half @callee_f16()
 define  half @check_f16() {
   ; PTX-LABEL: check_f16
   ; PTX-DAG: { // callseq {{[0-9]+}}, {{[0-9]+}}
-  ; PTX-DAG: ld.param.b16 [[LD:%h[0-9]+]], [retval0+0];
+  ; PTX-DAG: ld.param.b16 [[LD:%rs[0-9]+]], [retval0+0];
   ; PTX-DAG: } // callseq {{[0-9]+}}
 
-  ; PTX-WITHOUT-DAG: mov.b16 [[PROXY:%h[0-9]+]], [[LD]];
+  ; PTX-WITHOUT-DAG: mov.b16 [[PROXY:%rs[0-9]+]], [[LD]];
   ; PTX-WITHOUT-DAG: st.param.b16 [func_retval0+0], [[PROXY]];
   ; PTX-WITH-DAG:    st.param.b16 [func_retval0+0], [[LD]];
 
@@ -155,10 +155,10 @@ declare <2 x half> @callee_vec_f16()
 define  <2 x half> @check_vec_f16() {
   ; PTX-LABEL: check_vec_f16
   ; PTX-DAG: { // callseq {{[0-9]+}}, {{[0-9]+}}
-  ; PTX-DAG: ld.param.b32 [[LD:%hh[0-9]+]], [retval0+0];
+  ; PTX-DAG: ld.param.b32 [[LD:%r[0-9]+]], [retval0+0];
   ; PTX-DAG: } // callseq {{[0-9]+}}
 
-  ; PTX-WITHOUT-DAG: mov.b32 [[PROXY:%hh[0-9]+]], [[LD]];
+  ; PTX-WITHOUT-DAG: mov.b32 [[PROXY:%r[0-9]+]], [[LD]];
   ; PTX-WITHOUT-DAG: st.param.b32 [func_retval0+0], [[PROXY]];
   ; PTX-WITH-DAG:    st.param.b32 [func_retval0+0], [[LD]];
 

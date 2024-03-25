@@ -16,41 +16,31 @@
 
 extern void *a;
 extern volatile char *c_addr;
+extern char *ptr;
 extern char c;
+extern int i;
+extern vector unsigned char vuc;
 
-void test_icbt() {
-// CHECK-LABEL: @test_icbt(
-
+void test_xlcompat() {
+  // CHECK-PWR8-LABEL: @test_xlcompat(
+  // CHECK-PWR8: call void @llvm.ppc.icbt(ptr %{{[0-9]+}})
+  // CHECK-NOPWR8: error: '__builtin_ppc_icbt' needs target feature isa-v207-instructions
   __icbt(a);
-// CHECK-PWR8: call void @llvm.ppc.icbt(ptr %0)
-// CHECK-NOPWR8: error: this builtin is only valid on POWER8 or later CPUs
-}
 
-void test_builtin_ppc_icbt() {
-// CHECK-LABEL: @test_builtin_ppc_icbt(
-
+  // CHECK-PWR8: call void @llvm.ppc.icbt(ptr %{{[0-9]+}})
+  // CHECK-NOPWR8: error: '__builtin_ppc_icbt' needs target feature isa-v207-instructions
   __builtin_ppc_icbt(a);
-// CHECK-PWR8: call void @llvm.ppc.icbt(ptr %0)
-// CHECK-NOPWR8: error: this builtin is only valid on POWER8 or later CPUs
-}
 
-int test_builtin_ppc_stbcx() {
-// CHECK-PWR8-LABEL: @test_builtin_ppc_stbcx(
-// CHECK-PWR8:         [[TMP0:%.*]] = load ptr, ptr @c_addr, align {{[0-9]+}}
-// CHECK-PWR8-NEXT:    [[TMP1:%.*]] = load i8, ptr @c, align 1
-// CHECK-PWR8-NEXT:    [[TMP2:%.*]] = sext i8 [[TMP1]] to i32
-// CHECK-PWR8-NEXT:    [[TMP3:%.*]] = call i32 @llvm.ppc.stbcx(ptr [[TMP0]], i32 [[TMP2]])
-// CHECK-PWR8-NEXT:    ret i32 [[TMP3]]
-// CHECK-NOPWR8: error: this builtin is only valid on POWER8 or later CPUs
-  return __builtin_ppc_stbcx(c_addr, c);
-}
+  // CHECK-PWR8:         [[TMP0:%.*]] = load ptr, ptr @c_addr, align {{[0-9]+}}
+  // CHECK-PWR8-NEXT:    [[TMP1:%.*]] = load i8, ptr @c, align 1
+  // CHECK-PWR8-NEXT:    [[TMP2:%.*]] = sext i8 [[TMP1]] to i32
+  // CHECK-PWR8-NEXT:    [[TMP3:%.*]] = call i32 @llvm.ppc.stbcx(ptr [[TMP0]], i32 [[TMP2]])
+  // CHECK-NOPWR8: error: '__builtin_ppc_stbcx' needs target feature isa-v207-instructions
+  i = __builtin_ppc_stbcx(c_addr, c);
 
-vector unsigned char test_ldrmb(char *ptr) {
-  // CHECK-NOPWR8: error: this builtin is only valid on POWER8 or later CPUs
-  return __builtin_vsx_ldrmb(ptr, 14);
-}
+  // CHECK-NOPWR8: error: '__builtin_vsx_ldrmb' needs target feature isa-v207-instructions
+  vuc = __builtin_vsx_ldrmb(ptr, 14);
 
-void test_strmbb(char *ptr, vector unsigned char data) {
-  // CHECK-NOPWR8: error: this builtin is only valid on POWER8 or later CPUs
-  __builtin_vsx_strmb(ptr, 14, data);
+  // CHECK-NOPWR8: error: '__builtin_vsx_strmb' needs target feature isa-v207-instructions
+  __builtin_vsx_strmb(ptr, 14, vuc);
 }

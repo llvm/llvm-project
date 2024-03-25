@@ -7,7 +7,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestMultiprocess(GDBRemoteTestBase):
-
     def base_test(self, variant, follow_child=False):
         class MyResponder(MockGDBServerResponder):
             def __init__(self):
@@ -20,7 +19,8 @@ class TestMultiprocess(GDBRemoteTestBase):
                 assert "multiprocess+" in client_supported
                 assert self.property in client_supported
                 return "{};multiprocess+;{}".format(
-                    super().qSupported(client_supported), self.property)
+                    super().qSupported(client_supported), self.property
+                )
 
             def qfThreadInfo(self):
                 return "mp400.10200"
@@ -28,8 +28,9 @@ class TestMultiprocess(GDBRemoteTestBase):
             def cont(self):
                 if self.first:
                     self.first = False
-                    return ("T0fthread:p400.10200;reason:{0};{0}:p401.10400;"
-                            .format(variant))
+                    return "T0fthread:p400.10200;reason:{0};{0}:p401.10400;".format(
+                        variant
+                    )
                 return "W00"
 
             def D(self, packet):
@@ -37,20 +38,19 @@ class TestMultiprocess(GDBRemoteTestBase):
                 return "OK"
 
         self.server.responder = MyResponder()
-        target = self.dbg.CreateTarget('')
+        target = self.dbg.CreateTarget("")
         if self.TraceOn():
-          self.runCmd("log enable gdb-remote packets")
-          self.addTearDownHook(
-                lambda: self.runCmd("log disable gdb-remote packets"))
+            self.runCmd("log enable gdb-remote packets")
+            self.addTearDownHook(lambda: self.runCmd("log disable gdb-remote packets"))
         if follow_child:
             self.runCmd("settings set target.process.follow-fork-mode child")
         process = self.connect(target)
         self.assertEqual(process.GetProcessID(), 1024)
         process.Continue()
-        self.assertRegex(self.server.responder.detached,
-                         r"D;0*400" if follow_child else r"D;0*401")
-        self.assertEqual(process.GetProcessID(),
-                         1025 if follow_child else 1024)
+        self.assertRegex(
+            self.server.responder.detached, r"D;0*400" if follow_child else r"D;0*401"
+        )
+        self.assertEqual(process.GetProcessID(), 1025 if follow_child else 1024)
 
     def test_fork(self):
         self.base_test("fork")

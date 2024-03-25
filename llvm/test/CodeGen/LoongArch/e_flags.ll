@@ -19,7 +19,7 @@
 ; RUN: llc --mtriple=loongarch64 --filetype=obj %s --target-abi=lp64f -o %t-lp64f
 ; RUN: llvm-readelf -h %t-lp64f | FileCheck %s --check-prefixes=LP64,ABI-F --match-full-lines
 
-; RUN: llc --mtriple=loongarch64 --filetype=obj %s --target-abi=lp64d -o %t-lp64d
+; RUN: llc --mtriple=loongarch64 --filetype=obj %s --mattr=+d --target-abi=lp64d -o %t-lp64d
 ; RUN: llvm-readelf -h %t-lp64d | FileCheck %s --check-prefixes=LP64,ABI-D --match-full-lines
 
 ; LP64: Class: ELF64

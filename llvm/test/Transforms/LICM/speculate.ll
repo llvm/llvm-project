@@ -1,5 +1,5 @@
 ; RUN: opt -S -passes=licm < %s | FileCheck %s
-; RUN: opt -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' -S %s | FileCheck %s
+; RUN: opt -passes='require<aa>,require<target-ir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' -S %s | FileCheck %s
 
 ; UDiv is safe to speculate if the denominator is known non-zero.
 

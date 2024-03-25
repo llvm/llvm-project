@@ -45,7 +45,7 @@ public:
         lldb::eLanguageTypeC_plus_plus);
     if (auto err = type_system_or_err.takeError()) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), std::move(err),
-                     "Failed to get scratch TypeSystemClang");
+                     "Failed to get scratch TypeSystemClang: {0}");
       return;
     }
 
@@ -53,18 +53,6 @@ public:
     auto clang_ast_context = ts.dyn_cast_or_null<TypeSystemClang>();
     if (!clang_ast_context)
       return;
-
-    std::shared_ptr<ClangASTImporter> clang_ast_importer;
-    auto *state = target_sp->GetPersistentExpressionStateForLanguage(
-        lldb::eLanguageTypeC_plus_plus);
-    if (state) {
-      auto *persistent_vars = llvm::cast<ClangPersistentVariables>(state);
-      clang_ast_importer = persistent_vars->GetClangASTImporter();
-    }
-
-    if (!clang_ast_importer) {
-      return;
-    }
 
     const char *const isa_name("__isa");
     const CompilerType isa_type =
@@ -78,25 +66,25 @@ public:
     const char *const FuncPtr_name("__FuncPtr");
 
     m_block_struct_type = clang_ast_context->CreateStructForIdentifier(
-        ConstString(), {{isa_name, isa_type},
-                        {flags_name, flags_type},
-                        {reserved_name, reserved_type},
-                        {FuncPtr_name, function_pointer_type}});
+        llvm::StringRef(), {{isa_name, isa_type},
+                            {flags_name, flags_type},
+                            {reserved_name, reserved_type},
+                            {FuncPtr_name, function_pointer_type}});
   }
 
   ~BlockPointerSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override {
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
     const bool omit_empty_base_classes = false;
     return m_block_struct_type.GetNumChildren(omit_empty_base_classes, nullptr);
   }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     if (!m_block_struct_type.IsValid()) {
       return lldb::ValueObjectSP();
     }
 
-    if (idx >= CalculateNumChildren()) {
+    if (idx >= CalculateNumChildrenIgnoringErrors()) {
       return lldb::ValueObjectSP();
     }
 
@@ -148,7 +136,9 @@ public:
 
   // return true if this object is now safe to use forever without ever
   // updating again; the typical (and tested) answer here is 'false'
-  bool Update() override { return false; }
+  lldb::ChildCacheState Update() override {
+    return lldb::ChildCacheState::eRefetch;
+  }
 
   // maybe return false if the block pointer is, say, null
   bool MightHaveChildren() override { return true; }

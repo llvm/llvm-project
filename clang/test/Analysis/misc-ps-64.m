@@ -1,9 +1,8 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -analyzer-checker=core,alpha.core -verify -fblocks %s
 // expected-no-diagnostics
 
-// <rdar://problem/6440393> - A bunch of misc. failures involving evaluating
-//  these expressions and building CFGs.  These tests are here to prevent
-//  regressions.
+// A bunch of misc. failures involving evaluating these expressions and
+// building CFGs. These tests are here to prevent regressions.
 typedef long long int64_t;
 @class NSString, NSDictionary;
 typedef long NSInteger;
@@ -22,13 +21,12 @@ void rdar_6440393_1(NSDictionary *dict) {
   shazam(x, &bufptr);
 }
 
-// <rdar://problem/6845148> - In this example we got a signedness
-// mismatch between the literal '0' and the value of 'scrooge'.  The
-// trick is to have the evaluator convert the literal to an unsigned
-// integer when doing a comparison with the pointer.  This happens
-// because of the transfer function logic of
-// OSAtomicCompareAndSwap64Barrier, which doesn't have special casts
-// in place to do this for us.
+// In this example we got a signedness mismatch between the literal '0' and the
+// value of 'scrooge'. The trick is to have the evaluator convert the literal
+// to an unsigned integer when doing a comparison with the pointer. This
+// happens because of the transfer function logic of
+// OSAtomicCompareAndSwap64Barrier, which doesn't have special casts in place
+// to do this for us.
 _Bool OSAtomicCompareAndSwap64Barrier( int64_t __oldValue, int64_t __newValue, volatile int64_t *__theValue );
 extern id objc_lookUpClass(const char *name);
 void rdar_6845148(id debug_yourself) {

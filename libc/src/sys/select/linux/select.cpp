@@ -12,13 +12,13 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <signal.h>
 #include <stddef.h> // For size_t
 #include <sys/select.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 struct pselect6_sigset_t {
   sigset_t *ss;
@@ -53,13 +53,20 @@ LLVM_LIBC_FUNCTION(int, select,
     }
   }
   pselect6_sigset_t pss{nullptr, sizeof(sigset_t)};
-  long ret = __llvm_libc::syscall_impl(SYS_pselect6, nfds, read_set, write_set,
-                                       error_set, &ts, &pss);
+#if SYS_pselect6
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_pselect6, nfds, read_set,
+                                              write_set, error_set, &ts, &pss);
+#elif defined(SYS_pselect6_time64)
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(
+      SYS_pselect6_time64, nfds, read_set, write_set, error_set, &ts, &pss);
+#else
+#error "SYS_pselect6 and SYS_pselect6_time64 syscalls not available."
+#endif
   if (ret < 0) {
-    errno = -ret;
+    libc_errno = -ret;
     return -1;
   }
   return ret;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

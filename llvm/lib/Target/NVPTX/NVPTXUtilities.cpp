@@ -262,6 +262,10 @@ bool getMaxNTIDz(const Function &F, unsigned &z) {
   return findOneNVVMAnnotation(&F, "maxntidz", z);
 }
 
+bool getMaxClusterRank(const Function &F, unsigned &x) {
+  return findOneNVVMAnnotation(&F, "maxclusterrank", x);
+}
+
 bool getReqNTIDx(const Function &F, unsigned &x) {
   return findOneNVVMAnnotation(&F, "reqntidx", x);
 }
@@ -346,6 +350,10 @@ bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {
   return F->doesNotReturn() &&
          F->getFunctionType()->getReturnType()->isVoidTy() &&
          !isKernelFunction(*F);
+}
+
+bool Isv2x16VT(EVT VT) {
+  return (VT == MVT::v2f16 || VT == MVT::v2bf16 || VT == MVT::v2i16);
 }
 
 } // namespace llvm

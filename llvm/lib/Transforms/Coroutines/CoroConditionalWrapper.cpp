@@ -26,7 +26,7 @@ PreservedAnalyses CoroConditionalWrapper::run(Module &M,
 void CoroConditionalWrapper::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   OS << "coro-cond";
-  OS << "(";
+  OS << '(';
   PM.printPipeline(OS, MapClassName2PassName);
-  OS << ")";
+  OS << ')';
 }

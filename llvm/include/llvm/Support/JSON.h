@@ -47,9 +47,10 @@
 #define LLVM_SUPPORT_JSON_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -73,6 +74,11 @@ namespace json {
 //
 //   - When retrieving strings from Values (e.g. asString()), the result will
 //     always be valid UTF-8.
+
+template <typename T>
+constexpr bool is_uint_64_bit_v =
+    std::is_integral_v<T> && std::is_unsigned_v<T> &&
+    sizeof(T) == sizeof(uint64_t);
 
 /// Returns true if \p S is valid UTF-8, which is required for use as JSON.
 /// If it returns false, \p Offset is set to a byte offset near the first error.
@@ -329,40 +335,37 @@ public:
   Value(std::nullptr_t) : Type(T_Null) {}
   // Boolean (disallow implicit conversions).
   // (The last template parameter is a dummy to keep templates distinct.)
-  template <typename T,
-            typename = std::enable_if_t<std::is_same<T, bool>::value>,
+  template <typename T, typename = std::enable_if_t<std::is_same_v<T, bool>>,
             bool = false>
   Value(T B) : Type(T_Boolean) {
     create<bool>(B);
   }
 
-  // Unsigned 64-bit long integers.
-  template <typename T,
-            typename = std::enable_if_t<std::is_same<T, uint64_t>::value>,
-            bool = false, bool = false>
+  // Unsigned 64-bit integers.
+  template <typename T, typename = std::enable_if_t<is_uint_64_bit_v<T>>>
   Value(T V) : Type(T_UINT64) {
     create<uint64_t>(uint64_t{V});
   }
 
   // Integers (except boolean and uint64_t).
   // Must be non-narrowing convertible to int64_t.
-  template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>,
-            typename = std::enable_if_t<!std::is_same<T, bool>::value>,
-            typename = std::enable_if_t<!std::is_same<T, uint64_t>::value>>
+  template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>,
+            typename = std::enable_if_t<!std::is_same_v<T, bool>>,
+            typename = std::enable_if_t<!is_uint_64_bit_v<T>>>
   Value(T I) : Type(T_Integer) {
     create<int64_t>(int64_t{I});
   }
   // Floating point. Must be non-narrowing convertible to double.
   template <typename T,
-            typename = std::enable_if_t<std::is_floating_point<T>::value>,
+            typename = std::enable_if_t<std::is_floating_point_v<T>>,
             double * = nullptr>
   Value(T D) : Type(T_Double) {
     create<double>(double{D});
   }
   // Serializable types: with a toJSON(const T&)->Value function, found by ADL.
   template <typename T,
-            typename = std::enable_if_t<std::is_same<
-                Value, decltype(toJSON(*(const T *)nullptr))>::value>,
+            typename = std::enable_if_t<
+                std::is_same_v<Value, decltype(toJSON(*(const T *)nullptr))>>,
             Value * = nullptr>
   Value(const T &V) : Value(toJSON(V)) {}
 
@@ -424,6 +427,12 @@ public:
   std::optional<int64_t> getAsInteger() const {
     if (LLVM_LIKELY(Type == T_Integer))
       return as<int64_t>();
+    if (LLVM_LIKELY(Type == T_UINT64)) {
+      uint64_t U = as<uint64_t>();
+      if (LLVM_LIKELY(U <= uint64_t(std::numeric_limits<int64_t>::max()))) {
+        return U;
+      }
+    }
     if (LLVM_LIKELY(Type == T_Double)) {
       double D = as<double>();
       if (LLVM_LIKELY(std::modf(D, &D) == 0.0 &&
@@ -474,6 +483,18 @@ private:
   friend class Object;
 
   template <typename T, typename... U> void create(U &&... V) {
+#if LLVM_ADDRESS_SANITIZER_BUILD
+    // Unpoisoning to prevent overwriting poisoned object (e.g., annotated short
+    // string). Objects that have had their memory poisoned may cause an ASan
+    // error if their memory is reused without calling their destructor.
+    // Unpoisoning the memory prevents this error from occurring.
+    // FIXME: This is a temporary solution to prevent buildbots from failing.
+    //  The more appropriate approach would be to call the object's destructor
+    //  to unpoison memory. This would prevent any potential memory leaks (long
+    //  strings). Read for details:
+    //  https://github.com/llvm/llvm-project/pull/79065#discussion_r1462621761
+    __asan_unpoison_memory_region(&Union, sizeof(T));
+#endif
     new (reinterpret_cast<T *>(&Union)) T(std::forward<U>(V)...);
   }
   template <typename T> T &as() const {
@@ -767,7 +788,7 @@ bool fromJSON(const Value &E, std::optional<T> &Out, Path P) {
     Out = std::nullopt;
     return true;
   }
-  T Result;
+  T Result = {};
   if (!fromJSON(E, Result, P))
     return false;
   Out = std::move(Result);

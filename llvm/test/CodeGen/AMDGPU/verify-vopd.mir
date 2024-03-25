@@ -1,11 +1,11 @@
-# RUN: not --crash llc -march=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX11-ERR %s
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX11-ERR %s
 
 # GFX11-ERR: *** Bad machine code: VOP* instruction violates constant bus restriction ***
-# GFX11-ERR: $vgpr2, $vgpr3 = V_DUAL_CNDMASK_B32_e32_X_MUL_F32_e32 $sgpr0, $vgpr0, $sgpr1, $vgpr1, implicit $exec, implicit $mode, implicit $vcc, implicit $vcc_lo
+# GFX11-ERR: $vgpr2, $vgpr3 = V_DUAL_CNDMASK_B32_e32_X_MUL_F32_e32_gfx11 $sgpr0, $vgpr0, $sgpr1, $vgpr1, implicit $exec, implicit $mode, implicit $vcc, implicit $vcc_lo
 ---
 name: vopd_cndmask_2sgpr
 body:            |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
-    $vgpr2, $vgpr3 = V_DUAL_CNDMASK_B32_e32_X_MUL_F32_e32 $sgpr0, $vgpr0, $sgpr1, $vgpr1, implicit $exec, implicit $mode, implicit $vcc, implicit $vcc_lo
+    $vgpr2, $vgpr3 = V_DUAL_CNDMASK_B32_e32_X_MUL_F32_e32_gfx11 $sgpr0, $vgpr0, $sgpr1, $vgpr1, implicit $exec, implicit $mode, implicit $vcc, implicit $vcc_lo
 ...

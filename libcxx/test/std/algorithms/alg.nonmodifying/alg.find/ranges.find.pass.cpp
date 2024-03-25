@@ -10,6 +10,11 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-sign-compare
+// MSVC warning C4242: 'argument': conversion from 'const _Ty' to 'ElementT', possible loss of data
+// MSVC warning C4244: 'argument': conversion from 'const _Ty' to 'ElementT', possible loss of data
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4242 /wd4244
+
 // template<input_iterator I, sentinel_for<I> S, class T, class Proj = identity>
 //   requires indirect_binary_predicate<ranges::equal_to, projected<I, Proj>, const T*>
 //   constexpr I ranges::find(I first, S last, const T& value, Proj proj = {});
@@ -21,10 +26,11 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <deque>
 #include <ranges>
+#include <vector>
 
 #include "almost_satisfies_types.h"
-#include "boolean_testable.h"
 #include "test_iterators.h"
 
 struct NotEqualityComparable {};
@@ -53,64 +59,88 @@ static_assert(!HasFindR<InputRangeNotInputOrOutputIterator, int>);
 static_assert(!HasFindR<InputRangeNotSentinelSemiregular, int>);
 static_assert(!HasFindR<InputRangeNotSentinelEqualityComparableWith, int>);
 
+static std::vector<int> comparable_data;
+
 template <class It, class Sent = It>
 constexpr void test_iterators() {
-  {
-    int a[] = {1, 2, 3, 4};
-    std::same_as<It> auto ret = std::ranges::find(It(a), Sent(It(a + 4)), 4);
-    assert(base(ret) == a + 3);
-    assert(*ret == 4);
+  using ValueT = std::iter_value_t<It>;
+  { // simple test
+    {
+      ValueT a[] = {1, 2, 3, 4};
+      std::same_as<It> auto ret = std::ranges::find(It(a), Sent(It(a + 4)), 4);
+      assert(base(ret) == a + 3);
+      assert(*ret == 4);
+    }
+    {
+      ValueT a[] = {1, 2, 3, 4};
+      auto range = std::ranges::subrange(It(a), Sent(It(a + 4)));
+      std::same_as<It> auto ret = std::ranges::find(range, 4);
+      assert(base(ret) == a + 3);
+      assert(*ret == 4);
+    }
   }
-  {
-    int a[] = {1, 2, 3, 4};
-    auto range = std::ranges::subrange(It(a), Sent(It(a + 4)));
-    std::same_as<It> auto ret = std::ranges::find(range, 4);
-    assert(base(ret) == a + 3);
-    assert(*ret == 4);
+
+  { // check that an empty range works
+    {
+      std::array<ValueT, 0> a = {};
+      auto ret = std::ranges::find(It(a.data()), Sent(It(a.data())), 1);
+      assert(base(ret) == a.data());
+    }
+    {
+      std::array<ValueT, 0> a = {};
+      auto range = std::ranges::subrange(It(a.data()), Sent(It(a.data())));
+      auto ret = std::ranges::find(range, 1);
+      assert(base(ret) == a.data());
+    }
   }
+
+  { // check that last is returned with no match
+    {
+      ValueT a[] = {1, 1, 1};
+      auto ret = std::ranges::find(a, a + 3, 0);
+      assert(ret == a + 3);
+    }
+    {
+      ValueT a[] = {1, 1, 1};
+      auto ret = std::ranges::find(a, 0);
+      assert(ret == a + 3);
+    }
+  }
+
+  if (!std::is_constant_evaluated())
+    comparable_data.clear();
 }
 
-struct OneWayComparable {
-  bool isLeft;
-  friend constexpr bool operator==(OneWayComparable l, OneWayComparable) { return l.isLeft; }
-};
+template <class ElementT>
+class TriviallyComparable {
+  ElementT el_;
 
-struct NonConstComparableLValue {
-  friend constexpr bool operator==(const NonConstComparableLValue&, const NonConstComparableLValue&) { return false; }
-  friend constexpr bool operator==(NonConstComparableLValue&, NonConstComparableLValue&) { return false; }
-  friend constexpr bool operator==(const NonConstComparableLValue&, NonConstComparableLValue&) { return false; }
-  friend constexpr bool operator==(NonConstComparableLValue&, const NonConstComparableLValue&) { return true; }
-};
-
-struct NonConstComparableRValue {
-  friend constexpr bool operator==(const NonConstComparableRValue&, const NonConstComparableRValue&) { return false; }
-  friend constexpr bool operator==(const NonConstComparableRValue&&, const NonConstComparableRValue&&) { return false; }
-  friend constexpr bool operator==(NonConstComparableRValue&&, NonConstComparableRValue&&) { return false; }
-  friend constexpr bool operator==(NonConstComparableRValue&&, const NonConstComparableRValue&) { return true; }
+public:
+  TEST_CONSTEXPR TriviallyComparable(ElementT el) : el_(el) {}
+  bool operator==(const TriviallyComparable&) const = default;
 };
 
 constexpr bool test() {
-  test_iterators<int*>();
-  test_iterators<const int*>();
-  test_iterators<cpp20_input_iterator<int*>, sentinel_wrapper<cpp20_input_iterator<int*>>>();
-  test_iterators<bidirectional_iterator<int*>>();
-  test_iterators<forward_iterator<int*>>();
-  test_iterators<random_access_iterator<int*>>();
-  test_iterators<contiguous_iterator<int*>>();
+  types::for_each(types::type_list<char, wchar_t, int, long, TriviallyComparable<char>, TriviallyComparable<wchar_t>>{},
+                  []<class T> {
+                    types::for_each(types::cpp20_input_iterator_list<T*>{}, []<class Iter> {
+                      if constexpr (std::forward_iterator<Iter>)
+                        test_iterators<Iter>();
+                      test_iterators<Iter, sentinel_wrapper<Iter>>();
+                      test_iterators<Iter, sized_sentinel<Iter>>();
+                    });
+                  });
 
+  // TODO: Remove the `_LIBCPP_ENABLE_EXPERIMENTAL` check once we have the FTM guarded or views::join isn't
+  // experimental anymore
+#if TEST_STD_VER >= 20 && (!defined(_LIBCPP_VERSION) || defined(_LIBCPP_ENABLE_EXPERIMENTAL))
   {
-    // check that projections are used properly and that they are called with the iterator directly
-    {
-      int a[] = {1, 2, 3, 4};
-      auto ret = std::ranges::find(a, a + 4, a + 3, [](int& i) { return &i; });
-      assert(ret == a + 3);
-    }
-    {
-      int a[] = {1, 2, 3, 4};
-      auto ret = std::ranges::find(a, a + 3, [](int& i) { return &i; });
-      assert(ret == a + 3);
-    }
+    std::vector<std::vector<int>> vec = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+    auto view                         = vec | std::views::join;
+    assert(std::ranges::find(view.begin(), view.end(), 4) == std::next(view.begin(), 3));
+    assert(std::ranges::find(view, 4) == std::next(view.begin(), 3));
   }
+#endif
 
   { // check that the first element is returned
     {
@@ -137,39 +167,12 @@ constexpr bool test() {
     }
   }
 
-  { // check that end + 1 iterator is returned with no match
-    {
-      int a[] = {1, 1, 1};
-      auto ret = std::ranges::find(a, a + 3, 0);
-      assert(ret == a + 3);
-    }
-    {
-      int a[] = {1, 1, 1};
-      auto ret = std::ranges::find(a, 0);
-      assert(ret == a + 3);
-    }
-  }
-
-  {
-    // check that ranges::dangling is returned
-    [[maybe_unused]] std::same_as<std::ranges::dangling> auto ret =
-      std::ranges::find(std::array{1, 2}, 3);
-  }
-
   {
     // check that an iterator is returned with a borrowing range
     int a[] = {1, 2, 3, 4};
     std::same_as<int*> auto ret = std::ranges::find(std::views::all(a), 1);
     assert(ret == a);
     assert(*ret == 1);
-  }
-
-  {
-    // check that std::invoke is used
-    struct S { int i; };
-    S a[] = { S{1}, S{3}, S{2} };
-    std::same_as<S*> auto ret = std::ranges::find(a, 4, &S::i);
-    assert(ret == a + 3);
   }
 
   {
@@ -192,81 +195,95 @@ constexpr bool test() {
     }
   }
 
-  {
-    // check comparison order
-    {
-      OneWayComparable a[] = { OneWayComparable{true} };
-      auto ret = std::ranges::find(a, a + 1, OneWayComparable{false});
-      assert(ret == a);
-    }
-    {
-      OneWayComparable a[] = { OneWayComparable{true} };
-      auto ret = std::ranges::find(a, OneWayComparable{false});
-      assert(ret == a);
-    }
-  }
-
-  {
-    // check that the return type of `iter::operator*` doesn't change
-    {
-      NonConstComparableLValue a[] = { NonConstComparableLValue{} };
-      auto ret = std::ranges::find(a, a + 1, NonConstComparableLValue{});
-      assert(ret == a);
-    }
-    {
-      using It = std::move_iterator<NonConstComparableRValue*>;
-      NonConstComparableRValue a[] = { NonConstComparableRValue{} };
-      auto ret = std::ranges::find(It(a), It(a + 1), NonConstComparableRValue{});
-      assert(ret.base() == a);
-    }
-    {
-      NonConstComparableLValue a[] = { NonConstComparableLValue{} };
-      auto ret = std::ranges::find(a, NonConstComparableLValue{});
-      assert(ret == a);
-    }
-    {
-      using It = std::move_iterator<NonConstComparableRValue*>;
-      NonConstComparableRValue a[] = { NonConstComparableRValue{} };
-      auto range = std::ranges::subrange(It(a), It(a + 1));
-      auto ret = std::ranges::find(range, NonConstComparableRValue{});
-      assert(ret.base() == a);
-    }
-  }
-
-  {
-    // check that an empty range works
-    {
-      std::array<int ,0> a = {};
-      auto ret = std::ranges::find(a.begin(), a.end(), 1);
-      assert(ret == a.begin());
-    }
-    {
-      std::array<int, 0> a = {};
-      auto ret = std::ranges::find(a, 1);
-      assert(ret == a.begin());
-    }
-  }
-
-  {
-    // check that the implicit conversion to bool works
-    {
-      StrictComparable<int> a[] = {1, 2, 3, 4};
-      auto ret = std::ranges::find(a, a + 4, StrictComparable<int>{2});
-      assert(ret == a + 1);
-    }
-    {
-      StrictComparable<int> a[] = {1, 2, 3, 4};
-      auto ret = std::ranges::find(a, StrictComparable<int>{2});
-      assert(ret == a + 1);
-    }
-  }
-
   return true;
 }
 
+template <class IndexT>
+class Comparable {
+  IndexT index_;
+
+public:
+  Comparable(IndexT i)
+      : index_([&]() {
+          IndexT size = static_cast<IndexT>(comparable_data.size());
+          comparable_data.push_back(i);
+          return size;
+        }()) {}
+
+  bool operator==(const Comparable& other) const {
+    return comparable_data[other.index_] == comparable_data[index_];
+  }
+
+  friend bool operator==(const Comparable& lhs, long long rhs) { return comparable_data[lhs.index_] == rhs; }
+};
+
+void test_deque() {
+  { // empty deque
+    std::deque<int> data;
+    assert(std::ranges::find(data, 4) == data.end());
+    assert(std::ranges::find(data.begin(), data.end(), 4) == data.end());
+  }
+
+  { // single element - match
+    std::deque<int> data = {4};
+    assert(std::ranges::find(data, 4) == data.begin());
+    assert(std::ranges::find(data.begin(), data.end(), 4) == data.begin());
+  }
+
+  { // single element - no match
+    std::deque<int> data = {3};
+    assert(std::ranges::find(data, 4) == data.end());
+    assert(std::ranges::find(data.begin(), data.end(), 4) == data.end());
+  }
+
+  // many elements
+  for (auto size : {2, 3, 1023, 1024, 1025, 2047, 2048, 2049}) {
+    { // last element match
+      std::deque<int> data;
+      data.resize(size);
+      std::fill(data.begin(), data.end(), 3);
+      data[size - 1] = 4;
+      assert(std::ranges::find(data, 4) == data.end() - 1);
+      assert(std::ranges::find(data.begin(), data.end(), 4) == data.end() - 1);
+    }
+
+    { // second-last element match
+      std::deque<int> data;
+      data.resize(size);
+      std::fill(data.begin(), data.end(), 3);
+      data[size - 2] = 4;
+      assert(std::ranges::find(data, 4) == data.end() - 2);
+      assert(std::ranges::find(data.begin(), data.end(), 4) == data.end() - 2);
+    }
+
+    { // no match
+      std::deque<int> data;
+      data.resize(size);
+      std::fill(data.begin(), data.end(), 3);
+      assert(std::ranges::find(data, 4) == data.end());
+      assert(std::ranges::find(data.begin(), data.end(), 4) == data.end());
+    }
+  }
+}
+
 int main(int, char**) {
+  test_deque();
   test();
   static_assert(test());
+
+  types::for_each(types::cpp20_input_iterator_list<Comparable<char>*>{}, []<class Iter> {
+    if constexpr (std::forward_iterator<Iter>)
+      test_iterators<Iter>();
+    test_iterators<Iter, sentinel_wrapper<Iter>>();
+    test_iterators<Iter, sized_sentinel<Iter>>();
+  });
+
+  types::for_each(types::cpp20_input_iterator_list<Comparable<wchar_t>*>{}, []<class Iter> {
+    if constexpr (std::forward_iterator<Iter>)
+      test_iterators<Iter>();
+    test_iterators<Iter, sentinel_wrapper<Iter>>();
+    test_iterators<Iter, sized_sentinel<Iter>>();
+  });
 
   return 0;
 }

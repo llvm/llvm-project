@@ -1,9 +1,6 @@
 Testing
 =======
 
-.. contents::
-   :local:
-
 Test Suite Structure
 --------------------
 
@@ -20,8 +17,8 @@ The LLDB test suite consists of three different kinds of test:
   the output.
 * **API tests**: Integration tests that interact with the debugger through the
   SB API. These are written in Python and use LLDB's ``dotest.py`` testing
-  framework on top of Python's `unittest2
-  <https://docs.python.org/2/library/unittest.html>`_.
+  framework on top of Python's `unittest
+  <https://docs.python.org/3/library/unittest.html>`_.
 
 All three test suites use ``lit`` (`LLVM Integrated Tester
 <https://llvm.org/docs/CommandGuide/lit.html>`_ ) as the test driver. The test
@@ -97,7 +94,7 @@ programs from source, run them, and debug the processes.
 As mentioned before, ``dotest.py`` is LLDB's testing framework. The
 implementation is located under ``lldb/packages/Python/lldbsuite``. We have
 several extensions and custom test primitives on top of what's offered by
-`unittest2 <https://docs.python.org/2/library/unittest.html>`_. Those can be
+`unittest <https://docs.python.org/3/library/unittest.html>`_. Those can be
 found  in
 `lldbtest.py <https://github.com/llvm/llvm-project/blob/main/lldb/packages/Python/lldbsuite/test/lldbtest.py>`_.
 
@@ -149,7 +146,7 @@ the test should be run or not.
 
 ::
 
-  @expectedFailure(checking_function_name)
+  @skipTestIfFn(checking_function_name)
 
 In addition to providing a lot more flexibility when it comes to writing the
 test, the API test also allow for much more complex scenarios when it comes to
@@ -409,6 +406,21 @@ The 'child_send1.txt' file gets generated during the test run, so it makes sense
 TestSTTYBeforeAndAfter.py file to do the cleanup instead of artificially adding it as part of the default cleanup action which serves to
 cleanup those intermediate and a.out files.
 
+CI
+--
+
+LLVM Buildbot is the place where volunteers provide machines for building and
+testing. Everyone can `add a buildbot for LLDB <https://llvm.org/docs/HowToAddABuilder.html>`_.
+
+An overview of all LLDB builders can be found here:
+
+`https://lab.llvm.org/buildbot/#/builders?tags=lldb <https://lab.llvm.org/buildbot/#/builders?tags=lldb>`_
+
+Building and testing for macOS uses a different platform called GreenDragon. It
+has a dedicated tab for LLDB: `https://green.lab.llvm.org/green/view/LLDB/
+<https://green.lab.llvm.org/green/view/LLDB/>`_
+
+
 Running The Tests
 -----------------
 
@@ -471,7 +483,7 @@ run as part of a test suite.
 
 ::
 
-   $ ./bin/llvm-lit -sv tools/lldb/test --filter <test>
+   $ ./bin/llvm-lit -sv <llvm-project-root>/lldb/test --filter <test>
 
 
 Because lit automatically scans a directory for tests, it's also possible to
@@ -479,7 +491,7 @@ pass a subdirectory to run a specific subset of the tests.
 
 ::
 
-   $ ./bin/llvm-lit -sv tools/lldb/test/Shell/Commands/CommandScriptImmediateOutput
+   $ ./bin/llvm-lit -sv <llvm-project-root>/lldb/test/Shell/Commands/CommandScriptImmediateOutput
 
 
 For the SB API tests it is possible to forward arguments to ``dotest.py`` by
@@ -487,7 +499,7 @@ passing ``--param`` to lit and setting a value for ``dotest-args``.
 
 ::
 
-   $ ./bin/llvm-lit -sv tools/lldb/test --param dotest-args='-C gcc'
+   $ ./bin/llvm-lit -sv <llvm-project-root>/lldb/test --param dotest-args='-C gcc'
 
 
 Below is an overview of running individual test in the unit and API test suites
@@ -577,9 +589,9 @@ Running tests in QEMU System Emulation Environment
 ``````````````````````````````````````````````````
 
 QEMU can be used to test LLDB in an emulation environment in the absence of
-actual hardware. `QEMU based testing <https://lldb.llvm.org/use/qemu-testing.html>`_
-page describes how to setup an emulation environment using QEMU helper scripts
-found under llvm-project/lldb/scripts/lldb-test-qemu. These scripts currently
+actual hardware. :doc:`/use/qemu-testing` describes how to setup an
+emulation environment using QEMU helper scripts found in
+``llvm-project/lldb/scripts/lldb-test-qemu``. These scripts currently
 work with Arm or AArch64, but support for other architectures can be added easily.
 
 Debugging Test Failures

@@ -69,7 +69,7 @@ public:
   MachineOptimizationRemarkEmitter *ORE = nullptr;
   const MachineLoopInfo *MLI = nullptr;
   const MachineDominatorTree *MDT = nullptr;
-  const InstrItineraryData *InstrItins;
+  const InstrItineraryData *InstrItins = nullptr;
   const TargetInstrInfo *TII = nullptr;
   RegisterClassInfo RegClassInfo;
   bool disabledByPragma = false;
@@ -168,7 +168,7 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
     SmallVector<SmallVector<int, 4>, 16> AdjK;
     // Node to Index from ScheduleDAGTopologicalSort
     std::vector<int> *Node2Idx;
-    unsigned NumPaths;
+    unsigned NumPaths = 0u;
     static unsigned MaxPaths;
 
   public:
@@ -179,7 +179,8 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
       for (const auto &NodeNum : Topo)
         Node2Idx->at(NodeNum) = Idx++;
     }
-
+    Circuits &operator=(const Circuits &other) = delete;
+    Circuits(const Circuits &other) = delete;
     ~Circuits() { delete Node2Idx; }
 
     /// Reset the data structures used in the circuit algorithm.
@@ -272,8 +273,8 @@ public:
 
   /// Return the new base register that was stored away for the changed
   /// instruction.
-  unsigned getInstrBaseReg(SUnit *SU) {
-    DenseMap<SUnit *, std::pair<unsigned, int64_t>>::iterator It =
+  unsigned getInstrBaseReg(SUnit *SU) const {
+    DenseMap<SUnit *, std::pair<unsigned, int64_t>>::const_iterator It =
         InstrChanges.find(SU);
     if (It != InstrChanges.end())
       return It->second.first;
@@ -310,7 +311,7 @@ private:
   bool canUseLastOffsetValue(MachineInstr *MI, unsigned &BasePos,
                              unsigned &OffsetPos, unsigned &NewBase,
                              int64_t &NewOffset);
-  void postprocessDAG();
+  void postProcessDAG();
   /// Set the Minimum Initiation Interval for this schedule attempt.
   void setMII(unsigned ResMII, unsigned RecMII);
   /// Set the Maximum Initiation Interval for this schedule attempt.
@@ -464,7 +465,7 @@ private:
   /// processor resource masks. There is exactly one element per each processor
   /// resource declared by the scheduling model.
   llvm::SmallVector<uint64_t, DefaultProcResSize> ProcResourceMasks;
-  int InitiationInterval;
+  int InitiationInterval = 0;
   /// The number of micro operations that can be scheduled at a cycle.
   int IssueWidth;
 
@@ -638,16 +639,20 @@ public:
   computeUnpipelineableNodes(SwingSchedulerDAG *SSD,
                              TargetInstrInfo::PipelinerLoopInfo *PLI);
 
+  std::deque<SUnit *>
+  reorderInstructions(const SwingSchedulerDAG *SSD,
+                      const std::deque<SUnit *> &Instrs) const;
+
   bool
   normalizeNonPipelinedInstructions(SwingSchedulerDAG *SSD,
                                     TargetInstrInfo::PipelinerLoopInfo *PLI);
   bool isValidSchedule(SwingSchedulerDAG *SSD);
   void finalizeSchedule(SwingSchedulerDAG *SSD);
-  void orderDependence(SwingSchedulerDAG *SSD, SUnit *SU,
-                       std::deque<SUnit *> &Insts);
-  bool isLoopCarried(SwingSchedulerDAG *SSD, MachineInstr &Phi);
-  bool isLoopCarriedDefOfUse(SwingSchedulerDAG *SSD, MachineInstr *Def,
-                             MachineOperand &MO);
+  void orderDependence(const SwingSchedulerDAG *SSD, SUnit *SU,
+                       std::deque<SUnit *> &Insts) const;
+  bool isLoopCarried(const SwingSchedulerDAG *SSD, MachineInstr &Phi) const;
+  bool isLoopCarriedDefOfUse(const SwingSchedulerDAG *SSD, MachineInstr *Def,
+                             MachineOperand &MO) const;
   void print(raw_ostream &os) const;
   void dump() const;
 };

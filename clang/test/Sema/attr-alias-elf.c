@@ -5,9 +5,10 @@ void g1(void) {
 }
 
 void f2(void) __attribute__((alias("g2"))); // expected-error {{alias must point to a defined variable or function}}
-
+// expected-note@-1 {{must refer to its mangled name}}
 
 void f3(void) __attribute__((alias("g3"))); // expected-error {{alias must point to a defined variable or function}}
+// expected-note@-1 {{must refer to its mangled name}}
 void g3(void);
 
 
@@ -46,11 +47,14 @@ extern int a1 __attribute__((alias("b1")));
 int b1 = 42;
 
 extern int a2 __attribute__((alias("b2"))); // expected-error {{alias must point to a defined variable or function}}
+// expected-note@-1 {{must refer to its mangled name}}
 
 extern int a3 __attribute__((alias("b3"))); // expected-error {{alias must point to a defined variable or function}}
+// expected-note@-1 {{must refer to its mangled name}}
 extern int b3;
 
 extern int a4 __attribute__((alias("b4"))); // expected-error {{alias must point to a defined variable or function}}
+// expected-note@-1 {{must refer to its mangled name}}
 typedef int b4;
 
 void test2_bar() {}

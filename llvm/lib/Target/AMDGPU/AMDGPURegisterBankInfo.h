@@ -53,40 +53,39 @@ public:
     MachineRegisterInfo &MRI,
     ArrayRef<unsigned> OpIndices) const;
 
-  bool executeInWaterfallLoop(
-    MachineIRBuilder &B,
-    iterator_range<MachineBasicBlock::iterator> Range,
-    SmallSet<Register, 4> &SGPROperandRegs,
-    MachineRegisterInfo &MRI) const;
+  bool executeInWaterfallLoop(MachineIRBuilder &B,
+                              iterator_range<MachineBasicBlock::iterator> Range,
+                              SmallSet<Register, 4> &SGPROperandRegs) const;
 
   Register buildReadFirstLane(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                               Register Src) const;
 
-  bool executeInWaterfallLoop(MachineIRBuilder &B,
-                              MachineInstr &MI,
-                              MachineRegisterInfo &MRI,
-                              ArrayRef<unsigned> OpIndices) const;
-  bool executeInWaterfallLoop(MachineInstr &MI,
-                              MachineRegisterInfo &MRI,
+  bool executeInWaterfallLoop(MachineIRBuilder &B, MachineInstr &MI,
                               ArrayRef<unsigned> OpIndices) const;
 
-  void constrainOpWithReadfirstlane(MachineInstr &MI, MachineRegisterInfo &MRI,
+  void constrainOpWithReadfirstlane(MachineIRBuilder &B, MachineInstr &MI,
                                     unsigned OpIdx) const;
-  bool applyMappingDynStackAlloc(MachineInstr &MI,
+  bool applyMappingDynStackAlloc(MachineIRBuilder &B,
                                  const OperandsMapper &OpdMapper,
-                                 MachineRegisterInfo &MRI) const;
-  bool applyMappingLoad(MachineInstr &MI,
-                        const OperandsMapper &OpdMapper,
-                        MachineRegisterInfo &MRI) const;
-  bool
-  applyMappingImage(MachineInstr &MI,
-                    const OperandsMapper &OpdMapper,
-                    MachineRegisterInfo &MRI, int RSrcIdx) const;
-  bool applyMappingSBufferLoad(const OperandsMapper &OpdMapper) const;
+                                 MachineInstr &MI) const;
+  bool applyMappingLoad(MachineIRBuilder &B, const OperandsMapper &OpdMapper,
+                        MachineInstr &MI) const;
+  bool applyMappingImage(MachineIRBuilder &B, MachineInstr &MI,
+                         const OperandsMapper &OpdMapper, int RSrcIdx) const;
+  unsigned setBufferOffsets(MachineIRBuilder &B, Register CombinedOffset,
+                            Register &VOffsetReg, Register &SOffsetReg,
+                            int64_t &InstOffsetVal, Align Alignment) const;
+  bool applyMappingSBufferLoad(MachineIRBuilder &B,
+                               const OperandsMapper &OpdMapper) const;
 
-  bool applyMappingBFE(const OperandsMapper &OpdMapper, bool Signed) const;
+  bool applyMappingBFE(MachineIRBuilder &B, const OperandsMapper &OpdMapper,
+                       bool Signed) const;
 
-  bool applyMappingMAD_64_32(const OperandsMapper &OpdMapper) const;
+  bool applyMappingMAD_64_32(MachineIRBuilder &B,
+                             const OperandsMapper &OpdMapper) const;
+
+  void applyMappingSMULU64(MachineIRBuilder &B,
+                           const OperandsMapper &OpdMapper) const;
 
   Register handleD16VData(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                           Register Reg) const;
@@ -95,7 +94,8 @@ public:
   splitBufferOffsets(MachineIRBuilder &B, Register Offset) const;
 
   /// See RegisterBankInfo::applyMapping.
-  void applyMappingImpl(const OperandsMapper &OpdMapper) const override;
+  void applyMappingImpl(MachineIRBuilder &Builder,
+                        const OperandsMapper &OpdMapper) const override;
 
   const ValueMapping *getValueMappingForPtr(const MachineRegisterInfo &MRI,
                                             Register Ptr) const;
@@ -165,14 +165,18 @@ public:
 public:
   AMDGPURegisterBankInfo(const GCNSubtarget &STI);
 
+  bool isDivergentRegBank(const RegisterBank *RB) const override;
+
   unsigned copyCost(const RegisterBank &A, const RegisterBank &B,
-                    unsigned Size) const override;
+                    TypeSize Size) const override;
 
   unsigned getBreakDownCost(const ValueMapping &ValMapping,
                             const RegisterBank *CurBank = nullptr) const override;
 
   const RegisterBank &getRegBankFromRegClass(const TargetRegisterClass &RC,
                                              LLT) const override;
+
+  bool isScalarLoadLegal(const MachineInstr &MI) const;
 
   InstructionMappings
   getInstrAlternativeMappings(const MachineInstr &MI) const override;
@@ -181,12 +185,9 @@ public:
   getInstrMapping(const MachineInstr &MI) const override;
 
 private:
-
-  bool foldExtractEltToCmpSelect(MachineInstr &MI,
-                                 MachineRegisterInfo &MRI,
+  bool foldExtractEltToCmpSelect(MachineIRBuilder &B, MachineInstr &MI,
                                  const OperandsMapper &OpdMapper) const;
-  bool foldInsertEltToCmpSelect(MachineInstr &MI,
-                                MachineRegisterInfo &MRI,
+  bool foldInsertEltToCmpSelect(MachineIRBuilder &B, MachineInstr &MI,
                                 const OperandsMapper &OpdMapper) const;
 };
 } // End llvm namespace.

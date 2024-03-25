@@ -56,10 +56,8 @@ void test2(void) {
 }
 @end
 
-// rdar://10777111
 static NSString *x = @"hi"; // expected-warning {{unused variable 'x'}}
 
-// rdar://12233989
 @interface TestTransitiveUnused
 - (void) a __attribute__((unused));
 - (void) b __attribute__((unused));
@@ -104,7 +102,6 @@ void test5(id <P> p)
     [p property]; // No warning. property name used in direct method call.
 }
 
-// rdar://19773512
 @interface Model
 @property (nonatomic, retain, setter=setOrCreateGroup:, getter=getOrCreateGroup) id group;
 @end

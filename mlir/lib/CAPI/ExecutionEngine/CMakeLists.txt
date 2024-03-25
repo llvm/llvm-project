@@ -8,6 +8,7 @@ add_mlir_upstream_c_api_library(MLIRCAPIExecutionEngine
   ExecutionEngine.cpp
 
   LINK_LIBS PUBLIC
+  MLIRBuiltinToLLVMIRTranslation
   MLIRExecutionEngine
   MLIRLLVMToLLVMIRTranslation
 )

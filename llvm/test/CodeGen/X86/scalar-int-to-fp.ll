@@ -653,7 +653,7 @@ define double @u64_to_d(i64 %a) nounwind {
 ; AVX512F_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX512F_32-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; AVX512F_32-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; AVX512F_32-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512F_32-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX512F_32-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
 ; AVX512F_32-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX512F_32-NEXT:    fldl (%esp)

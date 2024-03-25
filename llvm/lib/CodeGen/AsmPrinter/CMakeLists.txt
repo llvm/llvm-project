@@ -34,10 +34,10 @@ add_llvm_component_library(LLVMAsmPrinter
   Analysis
   BinaryFormat
   CodeGen
+  CodeGenTypes
   Core
   DebugInfoCodeView
   DebugInfoDWARF
-  DebugInfoMSF
   MC
   MCParser
   Remarks

@@ -13,11 +13,15 @@ class StepValueInfo(object):
         self.expected_value = expected_value
 
     def __str__(self):
-        return '{}:{}: expected value:{}'.format(self.step_index, self.watch_info, self.expected_value)
+        return "{}:{}: expected value:{}".format(
+            self.step_index, self.watch_info, self.expected_value
+        )
 
     def __eq__(self, other):
-        return (self.watch_info.expression == other.watch_info.expression
-                and self.expected_value == other.expected_value)
+        return (
+            self.watch_info.expression == other.watch_info.expression
+            and self.expected_value == other.expected_value
+        )
 
     def __hash__(self):
         return hash(self.watch_info.expression, self.expected_value)

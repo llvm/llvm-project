@@ -690,7 +690,6 @@ void comment_to_html_conversion_34();
 // CHECK-NEXT:         (CXComment_Text Text=[i])
 // CHECK-NEXT:         (CXComment_HTMLEndTag Name=[em])))]
 
-// rdar://12392215
 /// &copy; the copyright symbol
 /// &trade; the trade mark symbol
 /// &reg; the registered trade mark symbol
@@ -965,7 +964,6 @@ void comment_to_xml_conversion_unsafe_html_07();
 
 //===---
 // Check that we attach comments from the base class to derived classes if they don't have a comment.
-// rdar://13647476
 //===---
 
 /// BaseToSuper1_Base

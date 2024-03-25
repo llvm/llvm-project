@@ -47,6 +47,10 @@
 # RUN:   | llvm-readobj --file-headers - \
 # RUN:   | FileCheck -check-prefix=CHECK-RVE %s
 
+# RUN: llvm-mc -triple=riscv64 -target-abi lp64e -filetype=obj < %s \
+# RUN:   | llvm-readobj --file-headers - \
+# RUN:   | FileCheck -check-prefix=CHECK-RVE %s
+
 # CHECK-NONE:               Flags [ (0x0)
 # CHECK-NONE-NEXT:          ]
 

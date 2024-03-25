@@ -40,17 +40,17 @@ def HasFdivdu : Predicate<"Subtarget->hasFdivdu()">,
 
 def FeatureFPUV3_HI
     : SubtargetFeature<"fpuv3_hi", "HasFPUv3HalfWord", "true",
-                       "Enable FPUv3 harf word converting instructions">;
+                       "Enable FPUv3 half word converting instructions">;
 def HasFPUv3_HI : Predicate<"Subtarget->hasFPUv3HalfWord()">,
                   AssemblerPredicate<(all_of FeatureFPUV3_HI),
-                  "Enable FPUv3 harf word converting instructions">;
+                  "Enable FPUv3 half word converting instructions">;
 
 def FeatureFPUV3_HF
     : SubtargetFeature<"fpuv3_hf", "HasFPUv3HalfFloat", "true",
-                       "Enable FPUv3 harf precision operate instructions">;
+                       "Enable FPUv3 half precision operate instructions">;
 def HasFPUv3_HF : Predicate<"Subtarget->hasFPUv3HalfFloat()">,
                   AssemblerPredicate<(all_of FeatureFPUV3_HF),
-                  "Enable FPUv3 harf precision operate instructions">;
+                  "Enable FPUv3 half precision operate instructions">;
 
 def FeatureFPUV3_SF
     : SubtargetFeature<"fpuv3_sf", "HasFPUv3SingleFloat", "true",

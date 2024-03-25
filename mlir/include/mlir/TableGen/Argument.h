@@ -22,6 +22,7 @@
 #define MLIR_TABLEGEN_ARGUMENT_H_
 
 #include "mlir/TableGen/Attribute.h"
+#include "mlir/TableGen/Property.h"
 #include "mlir/TableGen/Type.h"
 #include "llvm/ADT/PointerUnion.h"
 #include <string>
@@ -58,8 +59,9 @@ struct NamedTypeConstraint {
   TypeConstraint constraint;
 };
 
-// Operation argument: either attribute or operand
-using Argument = llvm::PointerUnion<NamedAttribute *, NamedTypeConstraint *>;
+// Operation argument: either attribute, property, or operand
+using Argument = llvm::PointerUnion<NamedAttribute *, NamedProperty *,
+                                    NamedTypeConstraint *>;
 
 } // namespace tblgen
 } // namespace mlir

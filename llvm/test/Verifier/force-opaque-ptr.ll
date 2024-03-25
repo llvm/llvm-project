@@ -1,4 +1,4 @@
-; RUN: not opt -passes=verify -opaque-pointers -S < %s 2>&1 | FileCheck %s
+; RUN: not opt -passes=verify -S < %s 2>&1 | FileCheck %s
 
 declare i32 @llvm.umax.i32(i32, i32)
 

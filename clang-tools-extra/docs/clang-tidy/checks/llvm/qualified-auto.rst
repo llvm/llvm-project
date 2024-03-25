@@ -5,6 +5,6 @@
 llvm-qualified-auto
 ===================
 
-The llvm-qualified-auto check is an alias, please see
-`readability-qualified-auto <../readability/qualified-auto.html>`_
+The `llvm-qualified-auto check` is an alias, please see
+:doc:`readability-qualified-auto <../readability/qualified-auto>`
 for more information.

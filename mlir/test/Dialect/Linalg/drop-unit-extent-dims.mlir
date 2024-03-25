@@ -59,24 +59,24 @@ func.func @drop_one_trip_loops(%arg0 : tensor<?x1x?xf32>, %arg1 : f32, %shape: t
   library_call = "some_external_func"
 }
 
-func.func @drop_one_trip_loops_all_ones(%arg0 : tensor<1x1x1xf32>, %arg1 : f32, %shape: tensor<?x1x?x1x?xf32>) -> tensor<?x1x?x1x?xf32> {
+func.func @drop_one_trip_loops_all_ones(%arg0 : tensor<1x1x1xf32>, %arg1 : f32, %shape: tensor<1x1x?x1x1xf32>) -> tensor<1x1x?x1x1xf32> {
   %0 = linalg.generic #trait
      ins(%arg0, %arg1 : tensor<1x1x1xf32>, f32)
-    outs(%shape : tensor<?x1x?x1x?xf32>) {
+    outs(%shape : tensor<1x1x?x1x1xf32>) {
        ^bb0(%arg2 : f32, %arg3 : f32, %arg4 : f32) :
          linalg.yield %arg3 : f32
-       } -> tensor<?x1x?x1x?xf32>
-  return %0 : tensor<?x1x?x1x?xf32>
+       } -> tensor<1x1x?x1x1xf32>
+  return %0 : tensor<1x1x?x1x1xf32>
 }
 //   CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0) -> ()>
-//   CHECK-DAG: #[[$MAP2:.*]] = affine_map<(d0) -> (0, d0, 0)>
+//   CHECK-DAG: #[[$MAP2:.*]] = affine_map<(d0) -> (d0)>
 // CHECK-LABEL: func @drop_one_trip_loops_all_ones
 //       CHECK: tensor.collapse_shape %{{.*}} []
-//       CHECK: tensor.collapse_shape %{{.*}} {{\[}}[0, 1], [2, 3], [4]]
+//       CHECK: tensor.collapse_shape %{{.*}} {{\[}}[0, 1, 2, 3, 4]]
 //       CHECK: linalg.generic
 //  CHECK-SAME:   indexing_maps = [#[[$MAP1]], #[[$MAP1]], #[[$MAP2]]]
 //  CHECK-SAME:   iterator_types = ["parallel"]
-//       CHECK: tensor.expand_shape %{{.*}} {{\[}}[0, 1], [2, 3], [4]]
+//       CHECK: tensor.expand_shape %{{.*}} {{\[}}[0, 1, 2, 3, 4]]
 
 // -----
 
@@ -489,6 +489,18 @@ func.func @slice_unit_dims(%arg0: tensor<1x3xf32>) -> tensor<1x1xf32> {
 
 // -----
 
+func.func @rank_reduced_extract_slice(%arg0: tensor<1x1x3x1x3xf32>) -> tensor<1x3x3xf32> {
+  %0 = tensor.extract_slice %arg0[0, 0, 0, 0, 0] [1, 1, 3, 1, 3] [1, 1, 1, 1, 1] : tensor<1x1x3x1x3xf32> to tensor<1x3x3xf32>
+  return %0 : tensor<1x3x3xf32>
+}
+// CHECK-LABEL: func @rank_reduced_extract_slice
+//       CHECK:   %[[SLICE:.+]] = tensor.extract_slice
+//  CHECK-SAME:     tensor<1x1x3x1x3xf32> to tensor<3x3xf32>
+//       CHECK:   %[[RESULT:.+]] = tensor.expand_shape %[[SLICE]] {{\[}}[0, 1], [2]]
+//       CHECK:   return %[[RESULT]]
+
+// -----
+
 func.func @insert_slice_unit_dims(%arg0: tensor<1x3xf32>, %arg1: tensor<1x1xf32>) -> tensor<1x3xf32> {
   %0 = tensor.insert_slice %arg1 into %arg0[0, 2] [1, 1] [1, 1] : tensor<1x1xf32> into tensor<1x3xf32>
   return %0 : tensor<1x3xf32>
@@ -497,6 +509,18 @@ func.func @insert_slice_unit_dims(%arg0: tensor<1x3xf32>, %arg1: tensor<1x1xf32>
 //       CHECK:   %[[RESHAPE:.+]] = tensor.collapse_shape %{{.+}} []
 //       CHECK:   %[[RESULT:.+]] = tensor.insert_slice %[[RESHAPE]]
 //  CHECK-SAME:     tensor<f32> into tensor<1x3xf32>
+//       CHECK:   return %[[RESULT]]
+
+// -----
+
+func.func @rank_reduced_insert_slice(%arg0: tensor<1x1x3x1x3xf32>, %arg1: tensor<1x3x3xf32>) -> tensor<1x1x3x1x3xf32> {
+  %0 = tensor.insert_slice %arg1 into %arg0[0, 0, 0, 0, 0] [1, 1, 3, 1, 3] [1, 1, 1, 1, 1] : tensor<1x3x3xf32> into tensor<1x1x3x1x3xf32>
+  return %0 : tensor<1x1x3x1x3xf32>
+}
+// CHECK-LABEL: func @rank_reduced_insert_slice
+//       CHECK:   %[[RESHAPE:.+]] = tensor.collapse_shape %{{.+}} {{\[}}[0, 1], [2]]
+//       CHECK:   %[[RESULT:.+]] = tensor.insert_slice %[[RESHAPE]]
+//  CHECK-SAME:     tensor<3x3xf32> into tensor<1x1x3x1x3xf32>
 //       CHECK:   return %[[RESULT]]
 
 // -----
@@ -854,7 +878,7 @@ func.func @input_stays_same(%arg0 : memref<?x1x?xf32, strided<[?, 1, 1]>>, %arg1
   iterator_types = ["parallel", "reduction"]
 }
 
-#CSR = #sparse_tensor.encoding<{ dimLevelType = ["dense", "compressed"] }>
+#CSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 : compressed) }>
 
 func.func @sparse_case(%arg0: tensor<8x8xf32, #CSR>, %arg1: tensor<8xf32>) -> tensor<8xf32> {
     %0 = tensor.empty() : tensor<8xf32>
@@ -880,10 +904,10 @@ func.func @reduce_dispatch_0() -> tensor<4x2xf32> {
   %c4 = arith.constant 4 : index
   %cst = arith.constant 0.000000e+00 : f32
   %0 = tensor.empty() : tensor<4x2xf32>
-  %res = scf.foreach_thread (%arg0, %arg1) in (%c4, %c2) shared_outs(%o = %0) -> (tensor<4x2xf32>) {
+  %res = scf.forall (%arg0, %arg1) in (%c4, %c2) shared_outs(%o = %0) -> (tensor<4x2xf32>) {
     %1 = tensor.empty() : tensor<1x1xf32>
     %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<1x1xf32>) -> tensor<1x1xf32>
-    scf.foreach_thread.perform_concurrently {
+    scf.forall.in_parallel {
       //      CHECK: tensor.parallel_insert_slice %{{[0-9a-z]*}} into %{{[0-9a-z]*}}
       // CHECK-SAME: [%{{.*}}, %{{.*}}] [1, 1] [1, 1] : tensor<f32> into tensor<4x2xf32>
       tensor.parallel_insert_slice %2 into %o[%arg0, %arg1] [1, 1] [1, 1] :
@@ -923,3 +947,109 @@ func.func @drop_all_loops(%arg0 : memref<1x1xf32, 3>) -> memref<1x1xf32, 3>
 //       CHECK-SLICES:   memref.subview %{{.*}}[0, 0] [1, 1] [1, 1] : memref<1x1xf32, 3> to memref<f32, strided<[]>, 3>
 //       CHECK-SLICES:   linalg.generic{{.*}}memref<f32, strided<[]>, 3>
 
+// -----
+
+func.func @drop_unit_pad_dims(%arg0: tensor<1x1x3x1x1xf32>) -> tensor<1x2x3x1x3xf32>
+{
+  %c0 = arith.constant 0 : index
+  %cst0 = arith.constant 0.0 : f32
+  %0 = tensor.pad %arg0 low[0, 1, 0, %c0, 0] high[0, 0, 0, %c0, 2] {
+    ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index):
+      tensor.yield %cst0 : f32
+  } : tensor<1x1x3x1x1xf32> to tensor<1x2x3x1x3xf32>
+  return %0 : tensor<1x2x3x1x3xf32>
+}
+
+// CHECK-LABEL: func @drop_unit_pad_dims
+//       CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape
+//  CHECK-SAME:     {{\[}}[0, 1], [2, 3], [4]{{\]}} : tensor<1x1x3x1x1xf32> into tensor<1x3x1xf32>
+//       CHECK:   %[[PADDED:.+]] = tensor.pad %[[COLLAPSE]] low[1, 0, 0] high[0, 0, 2]
+//       CHECK:   } : tensor<1x3x1xf32> to tensor<2x3x3xf32>
+//       CHECK:   tensor.expand_shape %[[PADDED]]
+//  CHECK-SAME:     {{\[}}[0, 1], [2, 3], [4]{{\]}} : tensor<2x3x3xf32> into tensor<1x2x3x1x3xf32>
+
+// CHECK-SLICES-LABEL: func @drop_unit_pad_dims
+//       CHECK-SLICES:   %[[EXTRACT:.+]] = tensor.extract_slice
+//  CHECK-SLICES-SAME:     [0, 0, 0, 0, 0] [1, 1, 3, 1, 1] [1, 1, 1, 1, 1] : tensor<1x1x3x1x1xf32> to tensor<1x3x1xf32>
+//       CHECK-SLICES:   %[[PADDED:.+]] = tensor.pad %[[EXTRACT]] low[1, 0, 0] high[0, 0, 2]
+//       CHECK-SLICES:   } : tensor<1x3x1xf32> to tensor<2x3x3xf32>
+//       CHECK-SLICES:   tensor.insert_slice %[[PADDED]]
+//  CHECK-SLICES-SAME:     [0, 0, 0, 0, 0] [1, 2, 3, 1, 3] [1, 1, 1, 1, 1] : tensor<2x3x3xf32> into tensor<1x2x3x1x3xf32>
+
+// -----
+
+func.func @drop_unit_pad_dynamic_dims(%arg0: tensor<1x?xf32>) -> tensor<1x?xf32>
+{
+  %c0 = arith.constant 0 : index
+  %cst0 = arith.constant 0.0 : f32
+  %0 = tensor.pad %arg0 low[0, 5] high[0, 6] {
+    ^bb0(%arg1: index, %arg2: index):
+      tensor.yield %cst0 : f32
+  } : tensor<1x?xf32> to tensor<1x?xf32>
+  return %0 : tensor<1x?xf32>
+}
+
+// CHECK-LABEL: func @drop_unit_pad_dynamic_dims
+//       CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape
+//  CHECK-SAME:     {{\[}}[0, 1]{{\]}} : tensor<1x?xf32> into tensor<?xf32>
+//       CHECK:   %[[PADDED:.+]] = tensor.pad %[[COLLAPSE]] low[5] high[6]
+//       CHECK:   } : tensor<?xf32> to tensor<?xf32>
+//       CHECK:   tensor.expand_shape %[[PADDED]]
+//  CHECK-SAME:     {{\[}}[0, 1]{{\]}} : tensor<?xf32> into tensor<1x?xf32>
+
+// CHECK-SLICES: #[[$MAP:.+]] = affine_map<()[s0] -> (s0 + 11)>
+
+// CHECK-SLICES-LABEL: func @drop_unit_pad_dynamic_dims
+//  CHECK-SLICES-SAME:   %[[ARG0:[A-Za-z0-9]+]]: tensor<1x?xf32>
+//       CHECK-SLICES:   %[[DIM:.+]] = tensor.dim %[[ARG0]], %c1
+//       CHECK-SLICES:   %[[EXTRACT:.+]] = tensor.extract_slice
+//  CHECK-SLICES-SAME:     [0, 0] [1, %[[DIM]]] [1, 1] : tensor<1x?xf32> to tensor<?xf32>
+//       CHECK-SLICES:   %[[PADDED:.+]] = tensor.pad %[[EXTRACT]] low[5] high[6]
+//       CHECK-SLICES:   } : tensor<?xf32> to tensor<?xf32>
+//       CHECK-SLICES:   %[[PADDED_DIM:.+]] = affine.apply #[[$MAP]]()[%[[DIM]]]
+//       CHECK-SLICES:   %[[EMPTY:.+]] = tensor.empty(%[[PADDED_DIM]]) : tensor<1x?xf32>
+//       CHECK-SLICES:   tensor.insert_slice %[[PADDED]] into %[[EMPTY]]
+//  CHECK-SLICES-SAME:     [0, 0] [1, %[[PADDED_DIM]]] [1, 1] : tensor<?xf32> into tensor<1x?xf32>
+
+// -----
+
+func.func @do_not_drop_non_constant_padding(%arg0: tensor<1x1x3x1x1xf32>, %pad: f32) -> tensor<1x2x3x1x3xf32>
+{
+  %c0 = arith.constant 0 : index
+  %0 = tensor.pad %arg0 low[0, 1, 0, %c0, 0] high[0, 0, 0, %c0, 2] {
+    ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index):
+      %0 = arith.index_cast %arg3 : index to i64
+      %1 = arith.sitofp %0 : i64 to f32
+      %add = arith.addf %pad, %1 : f32
+      tensor.yield %add : f32
+  } : tensor<1x1x3x1x1xf32> to tensor<1x2x3x1x3xf32>
+  return %0 : tensor<1x2x3x1x3xf32>
+}
+
+// CHECK-LABEL: func @do_not_drop_non_constant_padding
+//       CHECK:   tensor.pad %{{.*}} low[0, 1, 0, %c0, 0] high[0, 0, 0, %c0, 2]
+//       CHECK:   } : tensor<1x1x3x1x1xf32> to tensor<1x2x3x1x3xf32>
+
+// CHECK-SLICES-LABEL: func @do_not_drop_non_constant_padding
+//       CHECK-SLICES:   tensor.pad %{{.*}} low[0, 1, 0, %c0, 0] high[0, 0, 0, %c0, 2]
+//       CHECK-SLICES:   } : tensor<1x1x3x1x1xf32> to tensor<1x2x3x1x3xf32>
+
+// -----
+
+func.func @drop_known_unit_constant_low_high(%arg0: tensor<1x383x128xf32>) -> tensor<1x384x128xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %padded = tensor.pad %arg0 low[%c0, %c1, %c0] high[%c0, %c0, %c0] {
+  ^bb0(%arg1: index, %arg2: index, %arg3: index):
+    tensor.yield %cst : f32
+  } : tensor<1x383x128xf32> to tensor<1x384x128xf32>
+  return %padded : tensor<1x384x128xf32>
+}
+// CHECK-LABEL: func @drop_known_unit_constant_low_high
+//       CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape
+//  CHECK-SAME:     {{\[}}[0, 1], [2]] : tensor<1x383x128xf32> into tensor<383x128xf32>
+//       CHECK:   %[[PADDED:.+]] = tensor.pad %[[COLLAPSE]] low[1, 0] high[0, 0]
+//       CHECK:   } : tensor<383x128xf32> to tensor<384x128xf32>
+//       CHECK:   tensor.expand_shape %[[PADDED]]
+//  CHECK-SAME:     {{\[}}[0, 1], [2]] : tensor<384x128xf32> into tensor<1x384x128xf32>

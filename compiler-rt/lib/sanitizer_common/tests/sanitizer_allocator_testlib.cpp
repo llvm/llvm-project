@@ -165,13 +165,13 @@ void *valloc(size_t size) {
 }
 
 #if SANITIZER_INTERCEPT_CFREE
-void cfree(void *p) ALIAS("free");
+void cfree(void *p) ALIAS(free);
 #endif // SANITIZER_INTERCEPT_CFREE
 #if SANITIZER_INTERCEPT_PVALLOC
-void *pvalloc(size_t size) ALIAS("valloc");
+void *pvalloc(size_t size) ALIAS(valloc);
 #endif // SANITIZER_INTERCEPT_PVALLOC
 #if SANITIZER_INTERCEPT_MEMALIGN
-void *__libc_memalign(size_t alignment, size_t size) ALIAS("memalign");
+void *__libc_memalign(size_t alignment, size_t size) ALIAS(memalign);
 #endif // SANITIZER_INTERCEPT_MEMALIGN
 
 void malloc_usable_size() {
@@ -190,11 +190,11 @@ namespace std {
   struct nothrow_t;
 }
 
-void *operator new(size_t size) ALIAS("malloc");
-void *operator new[](size_t size) ALIAS("malloc");
-void *operator new(size_t size, std::nothrow_t const&) ALIAS("malloc");
-void *operator new[](size_t size, std::nothrow_t const&) ALIAS("malloc");
-void operator delete(void *ptr) throw() ALIAS("free");
-void operator delete[](void *ptr) throw() ALIAS("free");
-void operator delete(void *ptr, std::nothrow_t const&) ALIAS("free");
-void operator delete[](void *ptr, std::nothrow_t const&) ALIAS("free");
+void *operator new(size_t size) ALIAS(malloc);
+void *operator new[](size_t size) ALIAS(malloc);
+void *operator new(size_t size, std::nothrow_t const&) ALIAS(malloc);
+void *operator new[](size_t size, std::nothrow_t const&) ALIAS(malloc);
+void operator delete(void *ptr) throw() ALIAS(free);
+void operator delete[](void *ptr) throw() ALIAS(free);
+void operator delete(void *ptr, std::nothrow_t const&) ALIAS(free);
+void operator delete[](void *ptr, std::nothrow_t const&) ALIAS(free);

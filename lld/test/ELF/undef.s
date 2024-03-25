@@ -3,11 +3,12 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/undef.s -o %t2.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/undef-debug.s -o %t3.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/undef-bad-debug.s -o %t4.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/undef-debug2.s -o %t5.o
 # RUN: rm -f %t2.a
 # RUN: llvm-ar rc %t2.a %t2.o
-# RUN: not ld.lld --threads=1 %t.o %t2.a %t3.o %t4.o -o /dev/null 2>&1 \
+# RUN: not ld.lld --threads=1 %t.o %t2.a %t3.o %t4.o %t5.o -o /dev/null 2>&1 \
 # RUN:   | FileCheck %s --implicit-check-not="error:" --implicit-check-not="warning:"
-# RUN: not ld.lld --threads=1 -pie %t.o %t2.a %t3.o %t4.o -o /dev/null 2>&1 \
+# RUN: not ld.lld --threads=1 -pie %t.o %t2.a %t3.o %t4.o %t5.o -o /dev/null 2>&1 \
 # RUN:   | FileCheck %s --implicit-check-not="error:" --implicit-check-not="warning:"
 
 # CHECK:      error: undefined symbol: foo
@@ -81,6 +82,10 @@
 # CHECK:      error: undefined symbol: zed8
 # CHECK-NEXT: >>> referenced by undef-bad-debug2.s:11 (dir2{{/|\\}}undef-bad-debug2.s:11)
 # CHECK-NEXT: >>>               {{.*}}tmp4.o:(.text+0x18)
+
+# CHECK:      error: undefined symbol: zed9
+# CHECK-NEXT: >>> referenced by undef-debug2.cc:3 (dir{{/|\\}}undef-debug2.cc:3)
+# CHECK-NEXT: >>>               {{.*}}tmp5.o:(ns::var)
 
 # RUN: not ld.lld %t.o %t2.a -o /dev/null -no-demangle 2>&1 | \
 # RUN:   FileCheck -check-prefix=NO-DEMANGLE %s

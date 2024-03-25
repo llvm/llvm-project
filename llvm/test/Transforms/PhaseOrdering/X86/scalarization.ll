@@ -18,16 +18,15 @@ define <4 x i32> @square(<4 x i32> %num, i32 %y, i32 %x, i32 %h, i32 %k, i32 %w,
 ; CHECK-NEXT:    [[MUL13:%.*]] = mul nsw i32 [[W:%.*]], 53
 ; CHECK-NEXT:    [[DIV17:%.*]] = sdiv i32 [[X:%.*]], 820
 ; CHECK-NEXT:    [[MUL21:%.*]] = shl nsw i32 [[U:%.*]], 2
-; CHECK-NEXT:    [[DOTSCALAR:%.*]] = add i32 [[Y:%.*]], 1
-; CHECK-NEXT:    [[DOTSCALAR1:%.*]] = add i32 [[DOTSCALAR]], [[DIV17]]
-; CHECK-NEXT:    [[DOTSCALAR2:%.*]] = add i32 [[DOTSCALAR1]], [[MUL5]]
-; CHECK-NEXT:    [[DOTSCALAR3:%.*]] = add i32 [[DOTSCALAR2]], [[DIV]]
-; CHECK-NEXT:    [[DOTSCALAR4:%.*]] = add i32 [[DOTSCALAR3]], [[MUL13]]
-; CHECK-NEXT:    [[DOTSCALAR5:%.*]] = add i32 [[DOTSCALAR4]], [[MUL]]
-; CHECK-NEXT:    [[DOTSCALAR6:%.*]] = add i32 [[DOTSCALAR5]], [[DIV9]]
-; CHECK-NEXT:    [[DOTSCALAR7:%.*]] = add i32 [[DOTSCALAR6]], [[MUL21]]
-; CHECK-NEXT:    [[DOTSCALAR8:%.*]] = add i32 [[DOTSCALAR7]], 317425
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 undef, i32 poison, i32 poison, i32 poison>, i32 [[DOTSCALAR8]], i64 0
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add nsw i32 [[DIV17]], 317426
+; CHECK-NEXT:    [[OP_RDX9:%.*]] = add nsw i32 [[DIV]], [[DIV9]]
+; CHECK-NEXT:    [[OP_RDX10:%.*]] = add i32 [[MUL5]], [[MUL13]]
+; CHECK-NEXT:    [[OP_RDX11:%.*]] = add i32 [[MUL]], [[MUL21]]
+; CHECK-NEXT:    [[OP_RDX12:%.*]] = add i32 [[OP_RDX]], [[OP_RDX9]]
+; CHECK-NEXT:    [[OP_RDX13:%.*]] = add i32 [[OP_RDX10]], [[OP_RDX11]]
+; CHECK-NEXT:    [[OP_RDX14:%.*]] = add i32 [[OP_RDX12]], [[OP_RDX13]]
+; CHECK-NEXT:    [[OP_RDX15:%.*]] = add i32 [[OP_RDX14]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[OP_RDX15]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[ADD29:%.*]] = add <4 x i32> [[TMP2]], [[NUM:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[ADD29]]

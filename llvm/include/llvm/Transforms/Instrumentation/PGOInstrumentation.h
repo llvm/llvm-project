@@ -18,10 +18,13 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/CommandLine.h"
 #include <cstdint>
 #include <string>
 
 namespace llvm {
+
+extern cl::opt<bool> DebugInfoCorrelate;
 
 class Function;
 class Instruction;
@@ -42,7 +45,7 @@ class PGOInstrumentationGenCreateVar
 public:
   PGOInstrumentationGenCreateVar(std::string CSInstrName = "")
       : CSInstrName(CSInstrName) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
 private:
   std::string CSInstrName;
@@ -52,7 +55,7 @@ private:
 class PGOInstrumentationGen : public PassInfoMixin<PGOInstrumentationGen> {
 public:
   PGOInstrumentationGen(bool IsCS = false) : IsCS(IsCS) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
 private:
   // If this is a context sensitive instrumentation.
@@ -66,7 +69,7 @@ public:
                         std::string RemappingFilename = "", bool IsCS = false,
                         IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
 private:
   std::string ProfileFileName;
@@ -82,7 +85,7 @@ public:
   PGOIndirectCallPromotion(bool IsInLTO = false, bool SamplePGO = false)
       : InLTO(IsInLTO), SamplePGO(SamplePGO) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
 private:
   bool InLTO;
@@ -94,7 +97,7 @@ class PGOMemOPSizeOpt : public PassInfoMixin<PGOMemOPSizeOpt> {
 public:
   PGOMemOPSizeOpt() = default;
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &MAM);
 };
 
 void setProfMetadata(Module *M, Instruction *TI, ArrayRef<uint64_t> EdgeCounts,

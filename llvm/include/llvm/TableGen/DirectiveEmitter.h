@@ -1,8 +1,13 @@
 #ifndef LLVM_TABLEGEN_DIRECTIVEEMITTER_H
 #define LLVM_TABLEGEN_DIRECTIVEEMITTER_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/TableGen/Record.h"
+#include <algorithm>
+#include <string>
+#include <vector>
 
 namespace llvm {
 
@@ -44,6 +49,10 @@ public:
 
   bool hasEnableBitmaskEnumInNamespace() const {
     return Def->getValueAsBit("enableBitmaskEnumInNamespace");
+  }
+
+  std::vector<Record *> getAssociations() const {
+    return Records.getAllDerivedDefinitions("Association");
   }
 
   std::vector<Record *> getDirectives() const {
@@ -116,6 +125,12 @@ public:
   std::vector<Record *> getRequiredClauses() const {
     return Def->getValueAsListOfDefs("requiredClauses");
   }
+
+  std::vector<Record *> getLeafConstructs() const {
+    return Def->getValueAsListOfDefs("leafConstructs");
+  }
+
+  Record *getAssociation() const { return Def->getValueAsDef("association"); }
 };
 
 // Wrapper class that contains Clause's information defined in DirectiveBase.td
@@ -152,7 +167,7 @@ public:
       }
       return C;
     });
-    llvm::erase_value(N, '_');
+    llvm::erase(N, '_');
     return N;
   }
 

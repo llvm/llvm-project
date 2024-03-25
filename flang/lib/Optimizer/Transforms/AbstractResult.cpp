@@ -11,7 +11,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/Support/FIRContext.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Diagnostics.h"
@@ -173,8 +173,7 @@ public:
     if (isResultBuiltinCPtr) {
       mlir::Value save = saveResult.getMemref();
       auto module = op->template getParentOfType<mlir::ModuleOp>();
-      fir::KindMapping kindMap = fir::getKindMapping(module);
-      FirOpBuilder builder(rewriter, kindMap);
+      FirOpBuilder builder(rewriter, module);
       mlir::Value saveAddr = fir::factory::genCPtrOrCFunptrAddr(
           builder, loc, save, result.getType());
       rewriter.create<fir::StoreOp>(loc, newOp->getResult(0), saveAddr);
@@ -217,13 +216,16 @@ public:
     if (auto *op = returnedValue.getDefiningOp())
       if (auto load = mlir::dyn_cast<fir::LoadOp>(op)) {
         auto resultStorage = load.getMemref();
+        // The result alloca may be behind a fir.declare, if any.
+        if (auto declare = mlir::dyn_cast_or_null<fir::DeclareOp>(
+                resultStorage.getDefiningOp()))
+          resultStorage = declare.getMemref();
         // TODO: This should be generalized for derived types, and it is
         // architecture and OS dependent.
         if (fir::isa_builtin_cptr_type(returnedValue.getType())) {
           rewriter.eraseOp(load);
           auto module = ret->getParentOfType<mlir::ModuleOp>();
-          fir::KindMapping kindMap = fir::getKindMapping(module);
-          FirOpBuilder builder(rewriter, kindMap);
+          FirOpBuilder builder(rewriter, module);
           mlir::Value retAddr = fir::factory::genCPtrOrCFunptrAddr(
               builder, loc, resultStorage, returnedValue.getType());
           mlir::Value retValue = rewriter.create<fir::LoadOp>(
@@ -232,7 +234,7 @@ public:
               ret, mlir::ValueRange{retValue});
           return mlir::success();
         }
-        load.getMemref().replaceAllUsesWith(newArg);
+        resultStorage.replaceAllUsesWith(newArg);
         replacedStorage = true;
         if (auto *alloc = resultStorage.getDefiningOp())
           if (alloc->use_empty())

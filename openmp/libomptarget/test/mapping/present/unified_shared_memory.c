@@ -1,4 +1,4 @@
-// RUN: %libomptarget-compile-generic -fopenmp-version=51
+// RUN: %libomptarget-compile-generic
 // RUN: %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic
 
@@ -12,7 +12,7 @@
 int main() {
   int i;
 
-  // CHECK-NOT: Libomptarget
+  // CHECK-NOT: omptarget
 #pragma omp target data map(alloc : i)
 #pragma omp target map(present, alloc : i)
   ;
@@ -20,7 +20,7 @@ int main() {
   // CHECK: i is present
   fprintf(stderr, "i is present\n");
 
-  // CHECK-NOT: Libomptarget
+  // CHECK-NOT: omptarget
 #pragma omp target map(present, alloc : i)
   ;
 

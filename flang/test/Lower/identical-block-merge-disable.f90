@@ -1,6 +1,6 @@
 ! Test disable identical block merge in the canonicalizer pass in bbc.
 ! Temporary fix for issue #1021.
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false %s -o - | FileCheck %s
 
 MODULE DMUMPS_SOL_LR
 IMPLICIT NONE

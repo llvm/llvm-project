@@ -1,7 +1,5 @@
 Checks: readability-identifier-naming
 CheckOptions:
-  - key:             readability-identifier-naming.GlobalFunctionCase
-    value:           UPPER_CASE
-  - key:             readability-identifier-naming.IgnoreMainLikeFunctions
-    value:           false
+  readability-identifier-naming.GlobalFunctionCase: UPPER_CASE
+  readability-identifier-naming.IgnoreMainLikeFunctions: false
 

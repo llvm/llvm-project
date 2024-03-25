@@ -594,12 +594,12 @@ TEST(IntegerPolyhedronTest, removeRedundantConstraintsTest) {
 
 TEST(IntegerPolyhedronTest, addConstantUpperBound) {
   IntegerPolyhedron poly(PresburgerSpace::getSetSpace(2));
-  poly.addBound(IntegerPolyhedron::UB, 0, 1);
+  poly.addBound(BoundType::UB, 0, 1);
   EXPECT_EQ(poly.atIneq(0, 0), -1);
   EXPECT_EQ(poly.atIneq(0, 1), 0);
   EXPECT_EQ(poly.atIneq(0, 2), 1);
 
-  poly.addBound(IntegerPolyhedron::UB, {1, 2, 3}, 1);
+  poly.addBound(BoundType::UB, {1, 2, 3}, 1);
   EXPECT_EQ(poly.atIneq(1, 0), -1);
   EXPECT_EQ(poly.atIneq(1, 1), -2);
   EXPECT_EQ(poly.atIneq(1, 2), -2);
@@ -607,12 +607,12 @@ TEST(IntegerPolyhedronTest, addConstantUpperBound) {
 
 TEST(IntegerPolyhedronTest, addConstantLowerBound) {
   IntegerPolyhedron poly(PresburgerSpace::getSetSpace(2));
-  poly.addBound(IntegerPolyhedron::LB, 0, 1);
+  poly.addBound(BoundType::LB, 0, 1);
   EXPECT_EQ(poly.atIneq(0, 0), 1);
   EXPECT_EQ(poly.atIneq(0, 1), 0);
   EXPECT_EQ(poly.atIneq(0, 2), -1);
 
-  poly.addBound(IntegerPolyhedron::LB, {1, 2, 3}, 1);
+  poly.addBound(BoundType::LB, {1, 2, 3}, 1);
   EXPECT_EQ(poly.atIneq(1, 0), 1);
   EXPECT_EQ(poly.atIneq(1, 1), 2);
   EXPECT_EQ(poly.atIneq(1, 2), 2);
@@ -1198,13 +1198,13 @@ void expectSymbolicIntegerLexMin(
   ASSERT_NE(poly.getNumDimVars(), 0u);
   ASSERT_NE(poly.getNumSymbolVars(), 0u);
 
-  SymbolicLexMin result = poly.findSymbolicIntegerLexMin();
+  SymbolicLexOpt result = poly.findSymbolicIntegerLexMin();
 
   if (expectedLexminRepr.empty()) {
-    EXPECT_TRUE(result.lexmin.getDomain().isIntegerEmpty());
+    EXPECT_TRUE(result.lexopt.getDomain().isIntegerEmpty());
   } else {
     PWMAFunction expectedLexmin = parsePWMAF(expectedLexminRepr);
-    EXPECT_TRUE(result.lexmin.isEqual(expectedLexmin));
+    EXPECT_TRUE(result.lexopt.isEqual(expectedLexmin));
   }
 
   if (expectedUnboundedDomainRepr.empty()) {

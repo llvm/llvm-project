@@ -62,7 +62,7 @@ CommandObjectThreadTraceExportCTF::CommandOptions::GetDefinitions() {
   return llvm::ArrayRef(g_thread_trace_export_ctf_options);
 }
 
-bool CommandObjectThreadTraceExportCTF::DoExecute(Args &command,
+void CommandObjectThreadTraceExportCTF::DoExecute(Args &command,
                                                   CommandReturnObject &result) {
   const TraceSP &trace_sp = m_exe_ctx.GetTargetSP()->GetTrace();
   Process *process = m_exe_ctx.GetProcessPtr();
@@ -78,7 +78,6 @@ bool CommandObjectThreadTraceExportCTF::DoExecute(Args &command,
     result.AppendErrorWithFormatv(
         "Thread index {0} is out of range (valid values are 1 - {1}).\n", tid,
         num_threads);
-    return false;
   } else {
     auto do_work = [&]() -> Error {
       Expected<TraceCursorSP> cursor = trace_sp->CreateNewCursor(*thread);
@@ -91,9 +90,6 @@ bool CommandObjectThreadTraceExportCTF::DoExecute(Args &command,
 
     if (llvm::Error err = do_work()) {
       result.AppendErrorWithFormat("%s\n", toString(std::move(err)).c_str());
-      return false;
-    } else {
-      return true;
     }
   }
 }

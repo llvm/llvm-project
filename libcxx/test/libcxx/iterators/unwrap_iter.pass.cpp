@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// When the debug mode is enabled, we don't unwrap iterators in std::copy
-// so we don't get this optimization.
-// UNSUPPORTED: libcpp-has-debug-mode
-
 // check that std::__unwrap_iter() returns the correct type
 
 #include <algorithm>

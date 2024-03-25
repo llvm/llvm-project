@@ -3,10 +3,10 @@
 # RUN: llvm-mc %s -triple riscv64 -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 < %s \
-# RUN:     | llvm-objdump -M no-aliases -d -r - \
+# RUN:     | llvm-objdump -M no-aliases --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-OBJ32,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 < %s \
-# RUN:     | llvm-objdump -M no-aliases -d -r - \
+# RUN:     | llvm-objdump -M no-aliases --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-OBJ64,CHECK-ASM-AND-OBJ %s
 
 .equ CONST, 30
@@ -361,10 +361,10 @@ csrrs s0, 0xc00, x0
 # CHECK-ASM-AND-OBJ: csrrs s3, fflags, s5
 # CHECK-ASM: encoding: [0xf3,0xa9,0x1a,0x00]
 csrrs s3, 0x001, s5
-# CHECK-ASM-AND-OBJ: csrrc sp, ustatus, ra
+# CHECK-ASM-AND-OBJ: csrrc sp, 0, ra
 # CHECK-ASM: encoding: [0x73,0xb1,0x00,0x00]
 csrrc sp, 0x000, ra
-# CHECK-ASM-AND-OBJ: csrrwi a5, ustatus, 0
+# CHECK-ASM-AND-OBJ: csrrwi a5, 0, 0
 # CHECK-ASM: encoding: [0xf3,0x57,0x00,0x00]
 csrrwi a5, 0x000, 0
 # CHECK-ASM-AND-OBJ: csrrsi t2, 4095, 31

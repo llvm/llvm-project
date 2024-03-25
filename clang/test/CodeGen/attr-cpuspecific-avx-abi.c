@@ -24,5 +24,5 @@ __m256d foo(void) { return bar_avx2(); }
 
 // CHECK: attributes #[[A]] = {{.*}}"target-features"="+avx,+crc32,+cx8,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
 // CHECK-SAME: "tune-cpu"="generic"
-// CHECK: attributes #[[V]] = {{.*}}"target-features"="+avx,+avx2,+bmi,+cmov,+crc32,+cx8,+f16c,+fma,+lzcnt,+mmx,+movbe,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
-// CHECK-SAME: "tune-cpu"="haswell"
+// CHECK: attributes #[[V]] = {{.*}}"target-features"="+avx,+avx2,+bmi,+bmi2,+cmov,+crc32,+cx16,+cx8,+f16c,+fma,+fsgsbase,+fxsr,+invpcid,+lzcnt,+mmx,+movbe,+pclmul,+popcnt,+rdrnd,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt"
+// CHECK-SAME: "tune-cpu"="core_4th_gen_avx"

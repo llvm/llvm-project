@@ -87,6 +87,7 @@ liveins:
   - { reg: '$edi', virtual-reg: '%0' }
   - { reg: '$xmm0', virtual-reg: '%1' }
 frameInfo:
+  adjustsStack:    true
   hasCalls:        true
 body:             |
   bb.0.if.then:

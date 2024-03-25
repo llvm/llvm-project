@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-ios6.0.0 -emit-llvm -o - %s | FileCheck %s
-// rdar://18150301
 
 @interface Query
 + (void)_configureCI;

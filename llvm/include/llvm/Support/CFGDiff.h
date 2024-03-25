@@ -139,7 +139,7 @@ public:
     VectRet Res = VectRet(detail::reverse_if<!InverseEdge>(R));
 
     // Remove nullptr children for clang.
-    llvm::erase_value(Res, nullptr);
+    llvm::erase(Res, nullptr);
 
     auto &Children = (InverseEdge != InverseGraph) ? Pred : Succ;
     auto It = Children.find(N);
@@ -148,7 +148,7 @@ public:
 
     // Remove children present in the CFG but not in the snapshot.
     for (auto *Child : It->second.DI[0])
-      llvm::erase_value(Res, Child);
+      llvm::erase(Res, Child);
 
     // Add children present in the snapshot for not in the real CFG.
     auto &AddedChildren = It->second.DI[1];

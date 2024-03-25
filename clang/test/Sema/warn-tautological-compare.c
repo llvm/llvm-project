@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -verify  %s
-// rdar://18716393
 
 extern int a[] __attribute__((weak));
 int b[] = {8,13,21};
@@ -77,7 +76,6 @@ void test3(void) {
        (!array && array[0])) {} // expected-warning {{address of array 'array' will always evaluate to 'true'}}
  }
 
-// rdar://19256338
 #define SAVE_READ(PTR) if( (PTR) && (&result) ) *result=*PTR;
 void _HTTPClientErrorHandler(int me)
 {
@@ -92,4 +90,9 @@ void test_conditional_operator(void) {
   x = str ? 1 : 0;   // expected-warning {{address of array}}
   x = array ? 1 : 0; // expected-warning {{address of array}}
   x = &x ? 1 : 0;    // expected-warning {{address of 'x'}}
+}
+
+void test4(void) {
+  int *a = (void *) 0;
+  int b = (&a) == ((void *) 0); // expected-warning {{comparison of address of 'a' equal to a null pointer is always false}}
 }

@@ -498,7 +498,7 @@ static std::tuple<APInt, APInt>
 widenBitwiseBounds(const ConstantIntRanges &bound) {
   APInt leftVal = bound.umin(), rightVal = bound.umax();
   unsigned bitwidth = leftVal.getBitWidth();
-  unsigned differingBits = bitwidth - (leftVal ^ rightVal).countLeadingZeros();
+  unsigned differingBits = bitwidth - (leftVal ^ rightVal).countl_zero();
   leftVal.clearLowBits(differingBits);
   rightVal.setLowBits(differingBits);
   return std::make_tuple(std::move(leftVal), std::move(rightVal));

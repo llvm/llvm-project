@@ -125,6 +125,25 @@ llvm::raw_ostream &operator<<(
   if (x.moduleInterface_) {
     os << " moduleInterface: " << *x.moduleInterface_;
   }
+  if (x.defaultIgnoreTKR_) {
+    os << " defaultIgnoreTKR";
+  }
+  if (x.cudaSubprogramAttrs_) {
+    os << " cudaSubprogramAttrs: "
+       << common::EnumToString(*x.cudaSubprogramAttrs_);
+  }
+  if (!x.cudaLaunchBounds_.empty()) {
+    os << " cudaLaunchBounds:";
+    for (auto x : x.cudaLaunchBounds_) {
+      os << ' ' << x;
+    }
+  }
+  if (!x.cudaClusterDims_.empty()) {
+    os << " cudaClusterDims:";
+    for (auto x : x.cudaClusterDims_) {
+      os << ' ' << x;
+    }
+  }
   return os;
 }
 
@@ -134,6 +153,8 @@ void EntityDetails::set_type(const DeclTypeSpec &type) {
 }
 
 void AssocEntityDetails::set_rank(int rank) { rank_ = rank; }
+void AssocEntityDetails::set_IsAssumedSize() { rank_ = isAssumedSize; }
+void AssocEntityDetails::set_IsAssumedRank() { rank_ = isAssumedRank; }
 void EntityDetails::ReplaceType(const DeclTypeSpec &type) { type_ = &type; }
 
 ObjectEntityDetails::ObjectEntityDetails(EntityDetails &&d)
@@ -171,12 +192,10 @@ void GenericDetails::AddSpecificProc(
 }
 void GenericDetails::set_specific(Symbol &specific) {
   CHECK(!specific_);
-  CHECK(!derivedType_);
   specific_ = &specific;
 }
 void GenericDetails::clear_specific() { specific_ = nullptr; }
 void GenericDetails::set_derivedType(Symbol &derivedType) {
-  CHECK(!specific_);
   CHECK(!derivedType_);
   derivedType_ = &derivedType;
 }
@@ -190,7 +209,7 @@ const Symbol *GenericDetails::CheckSpecific() const {
   return const_cast<GenericDetails *>(this)->CheckSpecific();
 }
 Symbol *GenericDetails::CheckSpecific() {
-  if (specific_) {
+  if (specific_ && !specific_->has<UseErrorDetails>()) {
     for (const Symbol &proc : specificProcs_) {
       if (&proc == specific_) {
         return nullptr;
@@ -332,6 +351,30 @@ void Symbol::SetBindName(std::string &&name) {
       details_);
 }
 
+bool Symbol::GetIsExplicitBindName() const {
+  return common::visit(
+      [&](auto &x) -> bool {
+        if constexpr (HasBindName<decltype(&x)>) {
+          return x.isExplicitBindName();
+        } else {
+          return false;
+        }
+      },
+      details_);
+}
+
+void Symbol::SetIsExplicitBindName(bool yes) {
+  common::visit(
+      [&](auto &x) {
+        if constexpr (HasBindName<decltype(&x)>) {
+          x.set_isExplicitBindName(yes);
+        } else {
+          DIE("bind name not allowed on this kind of symbol");
+        }
+      },
+      details_);
+}
+
 bool Symbol::IsFuncResult() const {
   return common::visit(
       common::visitors{[](const EntityDetails &x) { return x.isFuncResult(); },
@@ -383,14 +426,24 @@ llvm::raw_ostream &operator<<(
   if (x.unanalyzedPDTComponentInit()) {
     os << " (has unanalyzedPDTComponentInit)";
   }
+  if (!x.ignoreTKR_.empty()) {
+    x.ignoreTKR_.Dump(os << ' ', common::EnumToString);
+  }
+  if (x.cudaDataAttr()) {
+    os << " cudaDataAttr: " << common::EnumToString(*x.cudaDataAttr());
+  }
   return os;
 }
 
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const AssocEntityDetails &x) {
   os << *static_cast<const EntityDetails *>(&x);
-  if (auto assocRank{x.rank()}) {
-    os << " rank: " << *assocRank;
+  if (x.IsAssumedSize()) {
+    os << " RANK(*)";
+  } else if (x.IsAssumedRank()) {
+    os << " RANK DEFAULT";
+  } else if (auto assocRank{x.rank()}) {
+    os << " RANK(" << *assocRank << ')';
   }
   DumpExpr(os, "expr", x.expr());
   return os;
@@ -399,6 +452,9 @@ llvm::raw_ostream &operator<<(
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const ProcEntityDetails &x) {
   if (x.procInterface_) {
+    if (x.rawProcInterface_ != x.procInterface_) {
+      os << ' ' << x.rawProcInterface_->name() << " ->";
+    }
     os << ' ' << x.procInterface_->name();
   } else {
     DumpType(os, x.type());
@@ -411,6 +467,9 @@ llvm::raw_ostream &operator<<(
     } else {
       os << " => NULL()";
     }
+  }
+  if (x.isCUDAKernel()) {
+    os << " isCUDAKernel";
   }
   return os;
 }
@@ -463,6 +522,9 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
               }
               os << ")";
             }
+            if (x.isDefaultPrivate()) {
+              os << " isDefaultPrivate";
+            }
           },
           [&](const SubprogramNameDetails &x) {
             os << ' ' << EnumToString(x.kind());
@@ -484,6 +546,10 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
           [&](const ProcBindingDetails &x) {
             os << " => " << x.symbol().name();
             DumpOptional(os, "passName", x.passName());
+            if (x.numPrivatesNotOverridden() > 0) {
+              os << " numPrivatesNotOverridden: "
+                 << x.numPrivatesNotOverridden();
+            }
           },
           [&](const NamelistDetails &x) {
             os << ':';
@@ -668,49 +734,73 @@ bool GenericKind::IsOperator() const {
 
 std::string GenericKind::ToString() const {
   return common::visit(
-      common::visitors {
-        [](const OtherKind &x) { return std::string{EnumToString(x)}; },
-            [](const DefinedIo &x) { return AsFortran(x).ToString(); },
-#if !__clang__ && __GNUC__ == 7 && __GNUC_MINOR__ == 2
-            [](const common::NumericOperator &x) {
-              return std::string{common::EnumToString(x)};
-            },
-            [](const common::LogicalOperator &x) {
-              return std::string{common::EnumToString(x)};
-            },
-            [](const common::RelationalOperator &x) {
-              return std::string{common::EnumToString(x)};
-            },
-#else
-            [](const auto &x) { return std::string{common::EnumToString(x)}; },
-#endif
+      common::visitors{
+          [](const OtherKind &x) { return std::string{EnumToString(x)}; },
+          [](const common::DefinedIo &x) { return AsFortran(x).ToString(); },
+          [](const auto &x) { return std::string{common::EnumToString(x)}; },
       },
       u);
 }
 
-SourceName GenericKind::AsFortran(DefinedIo x) {
-  const char *name{nullptr};
-  switch (x) {
-    SWITCH_COVERS_ALL_CASES
-  case DefinedIo::ReadFormatted:
-    name = "read(formatted)";
-    break;
-  case DefinedIo::ReadUnformatted:
-    name = "read(unformatted)";
-    break;
-  case DefinedIo::WriteFormatted:
-    name = "write(formatted)";
-    break;
-  case DefinedIo::WriteUnformatted:
-    name = "write(unformatted)";
-    break;
-  }
+SourceName GenericKind::AsFortran(common::DefinedIo x) {
+  const char *name{common::AsFortran(x)};
   return {name, std::strlen(name)};
 }
 
 bool GenericKind::Is(GenericKind::OtherKind x) const {
   const OtherKind *y{std::get_if<OtherKind>(&u)};
   return y && *y == x;
+}
+
+std::string Symbol::OmpFlagToClauseName(Symbol::Flag ompFlag) {
+  std::string clauseName;
+  switch (ompFlag) {
+  case Symbol::Flag::OmpShared:
+    clauseName = "SHARED";
+    break;
+  case Symbol::Flag::OmpPrivate:
+    clauseName = "PRIVATE";
+    break;
+  case Symbol::Flag::OmpLinear:
+    clauseName = "LINEAR";
+    break;
+  case Symbol::Flag::OmpFirstPrivate:
+    clauseName = "FIRSTPRIVATE";
+    break;
+  case Symbol::Flag::OmpLastPrivate:
+    clauseName = "LASTPRIVATE";
+    break;
+  case Symbol::Flag::OmpMapTo:
+  case Symbol::Flag::OmpMapFrom:
+  case Symbol::Flag::OmpMapToFrom:
+  case Symbol::Flag::OmpMapAlloc:
+  case Symbol::Flag::OmpMapRelease:
+  case Symbol::Flag::OmpMapDelete:
+    clauseName = "MAP";
+    break;
+  case Symbol::Flag::OmpUseDevicePtr:
+    clauseName = "USE_DEVICE_PTR";
+    break;
+  case Symbol::Flag::OmpUseDeviceAddr:
+    clauseName = "USE_DEVICE_ADDR";
+    break;
+  case Symbol::Flag::OmpCopyIn:
+    clauseName = "COPYIN";
+    break;
+  case Symbol::Flag::OmpCopyPrivate:
+    clauseName = "COPYPRIVATE";
+    break;
+  case Symbol::Flag::OmpIsDevicePtr:
+    clauseName = "IS_DEVICE_PTR";
+    break;
+  case Symbol::Flag::OmpHasDeviceAddr:
+    clauseName = "HAS_DEVICE_ADDR";
+    break;
+  default:
+    clauseName = "";
+    break;
+  }
+  return clauseName;
 }
 
 bool SymbolOffsetCompare::operator()(

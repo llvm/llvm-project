@@ -300,12 +300,12 @@ entry:
 define <4 x float> @_e2(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: _e2:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    vmovaps {{.*#+}} xmm0 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
+; X86-NEXT:    vbroadcastss {{.*#+}} xmm0 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: _e2:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
+; X64-NEXT:    vbroadcastss {{.*#+}} xmm0 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
 ; X64-NEXT:    retq
 entry:
    %vecinit.i = insertelement <4 x float> undef, float       0xbf80000000000000, i32 0
@@ -624,12 +624,12 @@ entry:
 define <4 x i32> @H(<4 x i32> %a) {
 ; X86-LABEL: H:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: H:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X64-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X64-NEXT:    retq
 entry:
   %x = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -882,7 +882,7 @@ define double @broadcast_scale_xyz(ptr nocapture readonly, ptr nocapture readonl
 ; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X86-NEXT:    vmulpd (%eax), %xmm0, %xmm1
 ; X86-NEXT:    vmulsd 16(%eax), %xmm0, %xmm0
-; X86-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
+; X86-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
 ; X86-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
 ; X86-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovsd %xmm0, (%esp)
@@ -895,7 +895,7 @@ define double @broadcast_scale_xyz(ptr nocapture readonly, ptr nocapture readonl
 ; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    vmulpd (%rsi), %xmm0, %xmm1
 ; X64-NEXT:    vmulsd 16(%rsi), %xmm0, %xmm0
-; X64-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
+; X64-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
 ; X64-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
@@ -912,6 +912,48 @@ define double @broadcast_scale_xyz(ptr nocapture readonly, ptr nocapture readonl
   %13 = fadd double %11, %12
   %14 = fadd double %10, %13
   ret double %14
+}
+
+;
+; Broadcast v2f32 non-uniform constant via vmovddup
+;
+define void @fmul_by_v2f32_broadcast() nounwind {
+; X86-LABEL: fmul_by_v2f32_broadcast:
+; X86:       ## %bb.0:
+; X86-NEXT:    vmovddup {{.*#+}} xmm0 = [3.1E+1,0.0E+0,3.1E+1,0.0E+0]
+; X86-NEXT:    ## xmm0 = mem[0,0]
+; X86-NEXT:    ## implicit-def: $xmm1
+; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:  LBB42_1: ## =>This Inner Loop Header: Depth=1
+; X86-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; X86-NEXT:    vmulps %xmm0, %xmm2, %xmm2
+; X86-NEXT:    vmovlps %xmm2, (%eax)
+; X86-NEXT:    vmulps %xmm0, %xmm1, %xmm1
+; X86-NEXT:    vmovlps %xmm1, (%eax)
+; X86-NEXT:    jmp LBB42_1
+;
+; X64-LABEL: fmul_by_v2f32_broadcast:
+; X64:       ## %bb.0:
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = [3.1E+1,0.0E+0,3.1E+1,0.0E+0]
+; X64-NEXT:    ## xmm0 = mem[0,0]
+; X64-NEXT:    ## implicit-def: $xmm1
+; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:  LBB42_1: ## =>This Inner Loop Header: Depth=1
+; X64-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; X64-NEXT:    vmulps %xmm0, %xmm2, %xmm2
+; X64-NEXT:    vmovlps %xmm2, (%rax)
+; X64-NEXT:    vmulps %xmm0, %xmm1, %xmm1
+; X64-NEXT:    vmovlps %xmm1, (%rax)
+; X64-NEXT:    jmp LBB42_1
+  br label %1
+1:
+  %2 = phi <2 x float> [ undef, %0 ], [ %5, %1 ]
+  %3 = load <2 x float>, ptr poison, align 8
+  %4 = fmul <2 x float> %3, <float 3.100000e+01, float 0.000000e+00>
+  store <2 x float> %4, ptr poison, align 8
+  %5 = fmul <2 x float> %2, <float 3.100000e+01, float 0.000000e+00>
+  store <2 x float> %5, ptr poison, align 8
+  br label %1
 }
 
 ;
@@ -982,7 +1024,7 @@ define <8 x i16> @broadcast_x86_mmx(x86_mmx %tmp) nounwind {
 ; X64:       ## %bb.0: ## %bb
 ; X64-NEXT:    movdq2q %xmm0, %mm0
 ; X64-NEXT:    movq2dq %mm0, %xmm0
-; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X64-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X64-NEXT:    retq
 bb:
   %tmp1 = bitcast x86_mmx %tmp to i64

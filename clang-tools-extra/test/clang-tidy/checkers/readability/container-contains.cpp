@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s readability-container-contains %t
+// RUN: %check_clang_tidy -std=c++20-or-later %s readability-container-contains %t
 
 // Some *very* simplified versions of `map` etc.
 namespace std {
@@ -173,6 +173,37 @@ int nonRewrittenCount(std::multimap<int, int> &MyMap) {
   // CHECK-FIXES: bool C4 = MyMap.count(1) + 4 > 4;
 
   return C1 + C2 + C3 + C4;
+}
+
+// Check different integer literal suffixes
+int testDifferentIntegerLiteralSuffixes(std::map<int, int> &MyMap) {
+
+  auto C1 = MyMap.count(2) != 0U;
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: auto C1 = MyMap.contains(2);
+  auto C2 = MyMap.count(2) != 0UL;
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: auto C2 = MyMap.contains(2);
+  auto C3 = 0U != MyMap.count(2);
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: auto C3 = MyMap.contains(2);
+  auto C4 = 0UL != MyMap.count(2);
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: auto C4 = MyMap.contains(2);
+  auto C5 = MyMap.count(2) < 1U;
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: auto C5 = !MyMap.contains(2);
+  auto C6 = MyMap.count(2) < 1UL;
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: auto C6 = !MyMap.contains(2);
+  auto C7 = 1U > MyMap.count(2);
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: auto C7 = !MyMap.contains(2);
+  auto C8 = 1UL > MyMap.count(2);
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: auto C8 = !MyMap.contains(2);
+
+  return C1 + C2 + C3 + C4 + C5 + C6 + C7 + C8;
 }
 
 // We don't want to rewrite if the `contains` call is from a macro expansion

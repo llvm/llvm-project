@@ -183,19 +183,17 @@ entry:
 define i16 @btc15() nounwind {
 ; X86-LABEL: btc15:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    lock btcw $15, v16
-; X86-NEXT:    setb %al
-; X86-NEXT:    shll $15, %eax
+; X86-NEXT:    movw $-32768, %ax # imm = 0x8000
+; X86-NEXT:    lock xaddw %ax, v16
+; X86-NEXT:    andl $32768, %eax # imm = 0x8000
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: btc15:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    lock btcw $15, v16(%rip)
-; X64-NEXT:    setb %al
-; X64-NEXT:    shll $15, %eax
+; X64-NEXT:    movw $-32768, %ax # imm = 0x8000
+; X64-NEXT:    lock xaddw %ax, v16(%rip)
+; X64-NEXT:    andl $32768, %eax # imm = 0x8000
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
@@ -207,18 +205,16 @@ entry:
 define i32 @btc31() nounwind {
 ; X86-LABEL: btc31:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    lock btcl $31, v32
-; X86-NEXT:    setb %al
-; X86-NEXT:    shll $31, %eax
+; X86-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; X86-NEXT:    lock xaddl %eax, v32
+; X86-NEXT:    andl $-2147483648, %eax # imm = 0x80000000
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: btc31:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    lock btcl $31, v32(%rip)
-; X64-NEXT:    setb %al
-; X64-NEXT:    shll $31, %eax
+; X64-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; X64-NEXT:    lock xaddl %eax, v32(%rip)
+; X64-NEXT:    andl $-2147483648, %eax # imm = 0x80000000
 ; X64-NEXT:    retq
 entry:
   %0 = atomicrmw xor ptr @v32, i32 2147483648 monotonic, align 4
@@ -251,10 +247,10 @@ define i64 @btc63() nounwind {
 ;
 ; X64-LABEL: btc63:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    lock btcq $63, v64(%rip)
-; X64-NEXT:    setb %al
-; X64-NEXT:    shlq $63, %rax
+; X64-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    lock xaddq %rax, v64(%rip)
+; X64-NEXT:    andq %rcx, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = atomicrmw xor ptr @v64, i64 -9223372036854775808 monotonic, align 8

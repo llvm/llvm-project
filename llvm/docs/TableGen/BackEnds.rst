@@ -506,6 +506,12 @@ following fixed keys:
   specified by the TableGen input (if it is ``false``), or invented by
   TableGen itself (if ``true``).
 
+* ``!locs``: an array of strings giving the source locations associated with
+  this record. For records instantiated from a ``multiclass``, this gives the
+  location of each ``def`` or ``defm``, starting with the inner-most
+  ``multiclass``, and ending with the top-level ``defm``. Each string contains
+  the file name and line number, separated by a colon.
+
 For each variable defined in a record, the ``def`` object for that
 record also has a key for the variable name. The corresponding value
 is a translation into JSON of the variable's value, using the
@@ -689,6 +695,11 @@ This class provides six fields.
 * ``string FilterClass``. The table will have one entry for each record
   that derives from this class.
 
+* ``string FilterClassField``. This is an optional field of ``FilterClass``
+  which should be `bit` type. If specified, only those records with this field
+  being true will have corresponding entries in the table. This field won't be
+  included in generated C++ fields if it isn't included in ``Fields`` list.
+
 * ``string CppTypeName``. The name of the C++ struct/class type of the
   table that holds the entries. If unspecified, the ``FilterClass`` name is
   used.
@@ -734,22 +745,25 @@ irrelevant.
 
   def ATable : GenericTable {
     let FilterClass = "AEntry";
+    let FilterClassField = "IsNeeded";
     let Fields = ["Str", "Val1", "Val2"];
     let PrimaryKey = ["Val1", "Val2"];
     let PrimaryKeyName = "lookupATableByValues";
   }
 
-  class AEntry<string str, int val1, int val2> {
+  class AEntry<string str, int val1, int val2, bit isNeeded> {
     string Str = str;
     bits<8> Val1 = val1;
     bits<10> Val2 = val2;
+    bit IsNeeded = isNeeded;
   }
 
-  def : AEntry<"Bob",   5, 3>;
-  def : AEntry<"Carol", 2, 6>;
-  def : AEntry<"Ted",   4, 4>;
-  def : AEntry<"Alice", 4, 5>;
-  def : AEntry<"Costa", 2, 1>;
+  def : AEntry<"Bob",   5, 3, 1>;
+  def : AEntry<"Carol", 2, 6, 1>;
+  def : AEntry<"Ted",   4, 4, 1>;
+  def : AEntry<"Alice", 4, 5, 1>;
+  def : AEntry<"Costa", 2, 1, 1>;
+  def : AEntry<"Dale",  2, 1, 0>;
 
 Here is the generated C++ code. The declaration of ``lookupATableByValues``
 is guarded by ``GET_ATable_DECL``, while the definitions are guarded by
@@ -768,6 +782,7 @@ is guarded by ``GET_ATable_DECL``, while the definitions are guarded by
     { "Ted", 0x4, 0x4 }, // 2
     { "Alice", 0x4, 0x5 }, // 3
     { "Bob", 0x5, 0x3 }, // 4
+    /* { "Dale", 0x2, 0x1 }, // 5 */ // We don't generate this line as `IsNeeded` is 0.
   };
 
   const AEntry *lookupATableByValues(uint8_t Val1, uint16_t Val2) {
@@ -802,7 +817,9 @@ The table entries in ``ATable`` are sorted in order by ``Val1``, and within
 each of those values, by ``Val2``. This allows a binary search of the table,
 which is performed in the lookup function by ``std::lower_bound``. The
 lookup function returns a reference to the found table entry, or the null
-pointer if no entry is found.
+pointer if no entry is found. If the table has a single primary key field
+which is integral and densely numbered, a direct lookup is generated rather
+than a binary search.
 
 This example includes a field whose type TableGen cannot deduce. The ``Kind``
 field uses the enumerated type ``CEnum`` defined above. To inform TableGen
@@ -897,6 +914,63 @@ causes the lookup function to change as follows:
 
     struct KeyType {
     ...
+
+We can construct two GenericTables with the same ``FilterClass``, so that they
+select from the same overall set of records, but assign them with different
+``FilterClassField`` values so that they include different subsets of the
+records of that class.
+
+For example, we can create two tables that contain only even or odd records.
+Fields ``IsEven`` and ``IsOdd`` won't be included in generated C++ fields
+because they aren't included in ``Fields`` list.
+
+.. code-block:: text
+
+  class EEntry<bits<8> value> {
+    bits<8> Value = value;
+    bit IsEven = !eq(!and(value, 1), 0);
+    bit IsOdd = !not(IsEven);
+  }
+
+  foreach i = {1-10} in {
+    def : EEntry<i>;
+  }
+
+  def EEntryEvenTable : GenericTable {
+    let FilterClass = "EEntry";
+    let FilterClassField = "IsEven";
+    let Fields = ["Value"];
+    let PrimaryKey = ["Value"];
+    let PrimaryKeyName = "lookupEEntryEvenTableByValue";
+  }
+
+  def EEntryOddTable : GenericTable {
+    let FilterClass = "EEntry";
+    let FilterClassField = "IsOdd";
+    let Fields = ["Value"];
+    let PrimaryKey = ["Value"];
+    let PrimaryKeyName = "lookupEEntryOddTableByValue";
+  }
+
+The generated tables are:
+
+.. code-block:: text
+
+  constexpr EEntry EEntryEvenTable[] = {
+    { 0x2 }, // 0
+    { 0x4 }, // 1
+    { 0x6 }, // 2
+    { 0x8 }, // 3
+    { 0xA }, // 4
+  };
+
+  constexpr EEntry EEntryOddTable[] = {
+    { 0x1 }, // 0
+    { 0x3 }, // 1
+    { 0x5 }, // 2
+    { 0x7 }, // 3
+    { 0x9 }, // 4
+  };
 
 Search Indexes
 ~~~~~~~~~~~~~~

@@ -3,10 +3,10 @@
 // RUN: %clang   -x c   -fsanitize=implicit-integer-sign-change -O2 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
 // RUN: %clang   -x c   -fsanitize=implicit-integer-sign-change -O3 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
 
-// RUN: %clang   -x c++ -fsanitize=implicit-integer-sign-change -O0 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
-// RUN: %clang   -x c++ -fsanitize=implicit-integer-sign-change -O1 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
-// RUN: %clang   -x c++ -fsanitize=implicit-integer-sign-change -O2 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
-// RUN: %clang   -x c++ -fsanitize=implicit-integer-sign-change -O3 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
+// RUN: %clangxx -x c++ -fsanitize=implicit-integer-sign-change -O0 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
+// RUN: %clangxx -x c++ -fsanitize=implicit-integer-sign-change -O1 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
+// RUN: %clangxx -x c++ -fsanitize=implicit-integer-sign-change -O2 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
+// RUN: %clangxx -x c++ -fsanitize=implicit-integer-sign-change -O3 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK
 
 void test_unsigned() {
   unsigned char x;

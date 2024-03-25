@@ -1,4 +1,4 @@
-//===-- RISCVRegisterInfo.h - RISCV Register Information Impl ---*- C++ -*-===//
+//===-- RISCVRegisterInfo.h - RISC-V Register Information Impl --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the RISCV implementation of the TargetRegisterInfo class.
+// This file contains the RISC-V implementation of the TargetRegisterInfo class.
 //
 //===----------------------------------------------------------------------===//
 
@@ -34,9 +34,6 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
                         MCRegister PhysReg) const override;
 
   const uint32_t *getNoPreservedMask() const override;
-
-  bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,
-                            int &FrameIdx) const override;
 
   // Update DestReg to have the value SrcReg plus an offset.  This is
   // used during frame layout, and we may need to ensure that if we
@@ -99,6 +96,49 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
                              SmallVectorImpl<MCPhysReg> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
+
+  const TargetRegisterClass *
+  getLargestSuperClass(const TargetRegisterClass *RC) const override {
+    if (RISCV::VRM8RegClass.hasSubClassEq(RC))
+      return &RISCV::VRM8RegClass;
+    if (RISCV::VRM4RegClass.hasSubClassEq(RC))
+      return &RISCV::VRM4RegClass;
+    if (RISCV::VRM2RegClass.hasSubClassEq(RC))
+      return &RISCV::VRM2RegClass;
+    if (RISCV::VRRegClass.hasSubClassEq(RC))
+      return &RISCV::VRRegClass;
+    return RC;
+  }
+
+  bool doesRegClassHavePseudoInitUndef(
+      const TargetRegisterClass *RC) const override {
+    return isVRRegClass(RC);
+  }
+
+  static bool isVRRegClass(const TargetRegisterClass *RC) {
+    return RISCV::VRRegClass.hasSubClassEq(RC) ||
+           RISCV::VRM2RegClass.hasSubClassEq(RC) ||
+           RISCV::VRM4RegClass.hasSubClassEq(RC) ||
+           RISCV::VRM8RegClass.hasSubClassEq(RC);
+  }
+
+  static bool isVRNRegClass(const TargetRegisterClass *RC) {
+    return RISCV::VRN2M1RegClass.hasSubClassEq(RC) ||
+           RISCV::VRN2M2RegClass.hasSubClassEq(RC) ||
+           RISCV::VRN2M4RegClass.hasSubClassEq(RC) ||
+           RISCV::VRN3M1RegClass.hasSubClassEq(RC) ||
+           RISCV::VRN3M2RegClass.hasSubClassEq(RC) ||
+           RISCV::VRN4M1RegClass.hasSubClassEq(RC) ||
+           RISCV::VRN4M2RegClass.hasSubClassEq(RC) ||
+           RISCV::VRN5M1RegClass.hasSubClassEq(RC) ||
+           RISCV::VRN6M1RegClass.hasSubClassEq(RC) ||
+           RISCV::VRN7M1RegClass.hasSubClassEq(RC) ||
+           RISCV::VRN8M1RegClass.hasSubClassEq(RC);
+  }
+
+  static bool isRVVRegClass(const TargetRegisterClass *RC) {
+    return isVRRegClass(RC) || isVRNRegClass(RC);
+  }
 };
 }
 

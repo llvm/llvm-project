@@ -28,6 +28,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 23
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -108,24 +111,24 @@ namespace views {
 namespace __as_rvalue {
 struct __fn : __range_adaptor_closure<__fn> {
   template <class _Range>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range) const
-      noexcept(noexcept(/**/ as_rvalue_view(std::forward<_Range>(__range))))
-          -> decltype(/*--*/ as_rvalue_view(std::forward<_Range>(__range))) {
-    return /*-------------*/ as_rvalue_view(std::forward<_Range>(__range));
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  operator()(_Range&& __range) noexcept(noexcept(as_rvalue_view(std::forward<_Range>(__range))))
+      -> decltype(/*--------------------------*/ as_rvalue_view(std::forward<_Range>(__range))) {
+    return /*---------------------------------*/ as_rvalue_view(std::forward<_Range>(__range));
   }
 
   template <class _Range>
     requires same_as<range_rvalue_reference_t<_Range>, range_reference_t<_Range>>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range) const
-      noexcept(noexcept(/**/ views::all(std::forward<_Range>(__range))))
-          -> decltype(/*--*/ views::all(std::forward<_Range>(__range))) {
-    return /*-------------*/ views::all(std::forward<_Range>(__range));
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  operator()(_Range&& __range) noexcept(noexcept(views::all(std::forward<_Range>(__range))))
+      -> decltype(/*--------------------------*/ views::all(std::forward<_Range>(__range))) {
+    return /*---------------------------------*/ views::all(std::forward<_Range>(__range));
   }
 };
 } // namespace __as_rvalue
 
 inline namespace __cpo {
-constexpr auto as_rvalue = __as_rvalue::__fn{};
+inline constexpr auto as_rvalue = __as_rvalue::__fn{};
 } // namespace __cpo
 } // namespace views
 } // namespace ranges
@@ -133,5 +136,7 @@ constexpr auto as_rvalue = __as_rvalue::__fn{};
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 23
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_AS_RVALUE_H

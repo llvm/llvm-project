@@ -50,8 +50,8 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
   llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagOpts =
       new clang::DiagnosticOptions();
   clang::DiagnosticsEngine diags(diagID, &*diagOpts, diagsBuffer);
-  bool success =
-      CompilerInvocation::createFromArgs(flang->getInvocation(), argv, diags);
+  bool success = CompilerInvocation::createFromArgs(flang->getInvocation(),
+                                                    argv, diags, argv0);
 
   // Initialize targets first, so that --version shows registered targets.
   llvm::InitializeAllTargets();

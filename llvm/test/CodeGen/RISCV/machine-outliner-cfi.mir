@@ -1,6 +1,6 @@
-# RUN: llc -march=riscv32 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
+# RUN: llc -mtriple=riscv32 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
 # RUN: | FileCheck -check-prefixes=OUTLINED,RV32I-MO %s
-# RUN: llc -march=riscv64 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
+# RUN: llc -mtriple=riscv64 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
 # RUN: | FileCheck -check-prefixes=OUTLINED,RV64I-MO %s
 
 # CFIs are invisible (they can be outlined, but won't actually impact the outlining result) if there

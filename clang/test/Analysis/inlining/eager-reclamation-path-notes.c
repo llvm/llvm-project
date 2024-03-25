@@ -11,7 +11,7 @@ int compute(void) {
   // Do something that will take enough processing to trigger trimming.
   // FIXME: This is actually really sensitive. If the interval timing is just
   // wrong, the node for the actual dereference may also be collected, and all
-  // the path notes will disappear. <rdar://problem/12511814>
+  // the path notes will disappear.
   return 2 + 3 + 4 + 5 + 6;
 }
 

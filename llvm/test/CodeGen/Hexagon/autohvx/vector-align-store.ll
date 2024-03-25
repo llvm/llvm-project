@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon -hvc-va-full-stores < %s | FileCheck %s
 
 ; Make sure we generate 3 aligned stores.
 ; CHECK: vmem({{.*}}) =
@@ -17,4 +17,4 @@ b0:
   ret void
 }
 
-attributes #0 = { nounwind "target-cpu"="hexagonv66" "target-features"="+hvx,+hvx-length128b" }
+attributes #0 = { nounwind "target-cpu"="hexagonv66" "target-features"="+hvxv66,+hvx-length128b" }

@@ -10,6 +10,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/LoadStoreOpt.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -18,7 +20,7 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -115,8 +117,8 @@ bool GISelAddressing::aliasIsKnownForLoadStore(const MachineInstr &MI1,
   if (!BasePtr0.BaseReg.isValid() || !BasePtr1.BaseReg.isValid())
     return false;
 
-  int64_t Size1 = LdSt1->getMemSize();
-  int64_t Size2 = LdSt2->getMemSize();
+  LocationSize Size1 = LdSt1->getMemSize();
+  LocationSize Size2 = LdSt2->getMemSize();
 
   int64_t PtrDiff;
   if (BasePtr0.BaseReg == BasePtr1.BaseReg) {
@@ -126,20 +128,18 @@ bool GISelAddressing::aliasIsKnownForLoadStore(const MachineInstr &MI1,
     // vector objects on the stack.
     // BasePtr1 is PtrDiff away from BasePtr0. They alias if none of the
     // following situations arise:
-    if (PtrDiff >= 0 &&
-        Size1 != static_cast<int64_t>(MemoryLocation::UnknownSize)) {
+    if (PtrDiff >= 0 && Size1.hasValue() && !Size1.isScalable()) {
       // [----BasePtr0----]
       //                         [---BasePtr1--]
       // ========PtrDiff========>
-      IsAlias = !(Size1 <= PtrDiff);
+      IsAlias = !((int64_t)Size1.getValue() <= PtrDiff);
       return true;
     }
-    if (PtrDiff < 0 &&
-        Size2 != static_cast<int64_t>(MemoryLocation::UnknownSize)) {
+    if (PtrDiff < 0 && Size2.hasValue() && !Size2.isScalable()) {
       //                     [----BasePtr0----]
       // [---BasePtr1--]
       // =====(-PtrDiff)====>
-      IsAlias = !((PtrDiff + Size2) <= 0);
+      IsAlias = !((PtrDiff + (int64_t)Size2.getValue()) <= 0);
       return true;
     }
     return false;
@@ -194,7 +194,7 @@ bool GISelAddressing::instMayAlias(const MachineInstr &MI,
     bool IsAtomic;
     Register BasePtr;
     int64_t Offset;
-    uint64_t NumBytes;
+    LocationSize NumBytes;
     MachineMemOperand *MMO;
   };
 
@@ -210,16 +210,17 @@ bool GISelAddressing::instMayAlias(const MachineInstr &MI,
         Offset = 0;
       }
 
-      uint64_t Size = MemoryLocation::getSizeOrUnknown(
-          LS->getMMO().getMemoryType().getSizeInBytes());
-      return {LS->isVolatile(),       LS->isAtomic(),          BaseReg,
-              Offset /*base offset*/, Size, &LS->getMMO()};
+      LocationSize Size = LS->getMMO().getSize();
+      return {LS->isVolatile(),       LS->isAtomic(), BaseReg,
+              Offset /*base offset*/, Size,           &LS->getMMO()};
     }
     // FIXME: support recognizing lifetime instructions.
     // Default.
     return {false /*isvolatile*/,
-            /*isAtomic*/ false,          Register(),
-            (int64_t)0 /*offset*/,       0 /*size*/,
+            /*isAtomic*/ false,
+            Register(),
+            (int64_t)0 /*offset*/,
+            LocationSize::beforeOrAfterPointer() /*size*/,
             (MachineMemOperand *)nullptr};
   };
   MemUseCharacteristics MUC0 = getCharacteristics(&MI),
@@ -247,10 +248,20 @@ bool GISelAddressing::instMayAlias(const MachineInstr &MI,
       return false;
   }
 
+  // If NumBytes is scalable and offset is not 0, conservatively return may
+  // alias
+  if ((MUC0.NumBytes.isScalable() && MUC0.Offset != 0) ||
+      (MUC1.NumBytes.isScalable() && MUC1.Offset != 0))
+    return true;
+
+  const bool BothNotScalable =
+      !MUC0.NumBytes.isScalable() && !MUC1.NumBytes.isScalable();
+
   // Try to prove that there is aliasing, or that there is no aliasing. Either
   // way, we can return now. If nothing can be proved, proceed with more tests.
   bool IsAlias;
-  if (GISelAddressing::aliasIsKnownForLoadStore(MI, Other, IsAlias, MRI))
+  if (BothNotScalable &&
+      GISelAddressing::aliasIsKnownForLoadStore(MI, Other, IsAlias, MRI))
     return IsAlias;
 
   // The following all rely on MMO0 and MMO1 being valid.
@@ -260,19 +271,24 @@ bool GISelAddressing::instMayAlias(const MachineInstr &MI,
   // FIXME: port the alignment based alias analysis from SDAG's isAlias().
   int64_t SrcValOffset0 = MUC0.MMO->getOffset();
   int64_t SrcValOffset1 = MUC1.MMO->getOffset();
-  uint64_t Size0 = MUC0.NumBytes;
-  uint64_t Size1 = MUC1.NumBytes;
-  if (AA && MUC0.MMO->getValue() && MUC1.MMO->getValue() &&
-      Size0 != MemoryLocation::UnknownSize &&
-      Size1 != MemoryLocation::UnknownSize) {
+  LocationSize Size0 = MUC0.NumBytes;
+  LocationSize Size1 = MUC1.NumBytes;
+  if (AA && MUC0.MMO->getValue() && MUC1.MMO->getValue() && Size0.hasValue() &&
+      Size1.hasValue()) {
     // Use alias analysis information.
     int64_t MinOffset = std::min(SrcValOffset0, SrcValOffset1);
-    int64_t Overlap0 = Size0 + SrcValOffset0 - MinOffset;
-    int64_t Overlap1 = Size1 + SrcValOffset1 - MinOffset;
-    if (AA->isNoAlias(MemoryLocation(MUC0.MMO->getValue(), Overlap0,
-                                     MUC0.MMO->getAAInfo()),
-                      MemoryLocation(MUC1.MMO->getValue(), Overlap1,
-                                     MUC1.MMO->getAAInfo())))
+    int64_t Overlap0 =
+        Size0.getValue().getKnownMinValue() + SrcValOffset0 - MinOffset;
+    int64_t Overlap1 =
+        Size1.getValue().getKnownMinValue() + SrcValOffset1 - MinOffset;
+    LocationSize Loc0 =
+        Size0.isScalable() ? Size0 : LocationSize::precise(Overlap0);
+    LocationSize Loc1 =
+        Size1.isScalable() ? Size1 : LocationSize::precise(Overlap1);
+
+    if (AA->isNoAlias(
+            MemoryLocation(MUC0.MMO->getValue(), Loc0, MUC0.MMO->getAAInfo()),
+            MemoryLocation(MUC1.MMO->getValue(), Loc1, MUC1.MMO->getAAInfo())))
       return false;
   }
 
@@ -400,7 +416,9 @@ bool LoadStoreOpt::doSingleStoreMerge(SmallVectorImpl<GStore *> &Stores) {
   auto NewStore =
       Builder.buildStore(WideReg, FirstStore->getPointerReg(), *WideMMO);
   (void) NewStore;
-  LLVM_DEBUG(dbgs() << "Created merged store: " << *NewStore);
+  LLVM_DEBUG(dbgs() << "Merged " << Stores.size()
+                    << " stores into merged store: " << *NewStore);
+  LLVM_DEBUG(for (auto *MI : Stores) dbgs() << "  " << *MI;);
   NumStoresMerged += Stores.size();
 
   MachineOptimizationRemarkEmitter MORE(*MF, nullptr);
@@ -445,19 +463,18 @@ bool LoadStoreOpt::processMergeCandidate(StoreMergeCandidate &C) {
     for (auto AliasInfo : reverse(C.PotentialAliases)) {
       MachineInstr *PotentialAliasOp = AliasInfo.first;
       unsigned PreCheckedIdx = AliasInfo.second;
-      if (static_cast<unsigned>(Idx) > PreCheckedIdx) {
-        // Need to check this alias.
-        if (GISelAddressing::instMayAlias(CheckStore, *PotentialAliasOp, *MRI,
-                                          AA)) {
-          LLVM_DEBUG(dbgs() << "Potential alias " << *PotentialAliasOp
-                            << " detected\n");
-          return true;
-        }
-      } else {
+      if (static_cast<unsigned>(Idx) < PreCheckedIdx) {
         // Once our store index is lower than the index associated with the
         // potential alias, we know that we've already checked for this alias
         // and all of the earlier potential aliases too.
         return false;
+      }
+      // Need to check this alias.
+      if (GISelAddressing::instMayAlias(CheckStore, *PotentialAliasOp, *MRI,
+                                        AA)) {
+        LLVM_DEBUG(dbgs() << "Potential alias " << *PotentialAliasOp
+                          << " detected\n");
+        return true;
       }
     }
     return false;
@@ -616,11 +633,304 @@ bool LoadStoreOpt::mergeBlockStores(MachineBasicBlock &MBB) {
   return Changed;
 }
 
+/// Check if the store \p Store is a truncstore that can be merged. That is,
+/// it's a store of a shifted value of \p SrcVal. If \p SrcVal is an empty
+/// Register then it does not need to match and SrcVal is set to the source
+/// value found.
+/// On match, returns the start byte offset of the \p SrcVal that is being
+/// stored.
+static std::optional<int64_t>
+getTruncStoreByteOffset(GStore &Store, Register &SrcVal,
+                        MachineRegisterInfo &MRI) {
+  Register TruncVal;
+  if (!mi_match(Store.getValueReg(), MRI, m_GTrunc(m_Reg(TruncVal))))
+    return std::nullopt;
+
+  // The shift amount must be a constant multiple of the narrow type.
+  // It is translated to the offset address in the wide source value "y".
+  //
+  // x = G_LSHR y, ShiftAmtC
+  // s8 z = G_TRUNC x
+  // store z, ...
+  Register FoundSrcVal;
+  int64_t ShiftAmt;
+  if (!mi_match(TruncVal, MRI,
+                m_any_of(m_GLShr(m_Reg(FoundSrcVal), m_ICst(ShiftAmt)),
+                         m_GAShr(m_Reg(FoundSrcVal), m_ICst(ShiftAmt))))) {
+    if (!SrcVal.isValid() || TruncVal == SrcVal) {
+      if (!SrcVal.isValid())
+        SrcVal = TruncVal;
+      return 0; // If it's the lowest index store.
+    }
+    return std::nullopt;
+  }
+
+  unsigned NarrowBits = Store.getMMO().getMemoryType().getScalarSizeInBits();
+  if (ShiftAmt % NarrowBits != 0)
+    return std::nullopt;
+  const unsigned Offset = ShiftAmt / NarrowBits;
+
+  if (SrcVal.isValid() && FoundSrcVal != SrcVal)
+    return std::nullopt;
+
+  if (!SrcVal.isValid())
+    SrcVal = FoundSrcVal;
+  else if (MRI.getType(SrcVal) != MRI.getType(FoundSrcVal))
+    return std::nullopt;
+  return Offset;
+}
+
+/// Match a pattern where a wide type scalar value is stored by several narrow
+/// stores. Fold it into a single store or a BSWAP and a store if the targets
+/// supports it.
+///
+/// Assuming little endian target:
+///  i8 *p = ...
+///  i32 val = ...
+///  p[0] = (val >> 0) & 0xFF;
+///  p[1] = (val >> 8) & 0xFF;
+///  p[2] = (val >> 16) & 0xFF;
+///  p[3] = (val >> 24) & 0xFF;
+/// =>
+///  *((i32)p) = val;
+///
+///  i8 *p = ...
+///  i32 val = ...
+///  p[0] = (val >> 24) & 0xFF;
+///  p[1] = (val >> 16) & 0xFF;
+///  p[2] = (val >> 8) & 0xFF;
+///  p[3] = (val >> 0) & 0xFF;
+/// =>
+///  *((i32)p) = BSWAP(val);
+bool LoadStoreOpt::mergeTruncStore(GStore &StoreMI,
+                                   SmallPtrSetImpl<GStore *> &DeletedStores) {
+  LLT MemTy = StoreMI.getMMO().getMemoryType();
+
+  // We only handle merging simple stores of 1-4 bytes.
+  if (!MemTy.isScalar())
+    return false;
+  switch (MemTy.getSizeInBits()) {
+  case 8:
+  case 16:
+  case 32:
+    break;
+  default:
+    return false;
+  }
+  if (!StoreMI.isSimple())
+    return false;
+
+  // We do a simple search for mergeable stores prior to this one.
+  // Any potential alias hazard along the way terminates the search.
+  SmallVector<GStore *> FoundStores;
+
+  // We're looking for:
+  // 1) a (store(trunc(...)))
+  // 2) of an LSHR/ASHR of a single wide value, by the appropriate shift to get
+  //    the partial value stored.
+  // 3) where the offsets form either a little or big-endian sequence.
+
+  auto &LastStore = StoreMI;
+
+  // The single base pointer that all stores must use.
+  Register BaseReg;
+  int64_t LastOffset;
+  if (!mi_match(LastStore.getPointerReg(), *MRI,
+                m_GPtrAdd(m_Reg(BaseReg), m_ICst(LastOffset)))) {
+    BaseReg = LastStore.getPointerReg();
+    LastOffset = 0;
+  }
+
+  GStore *LowestIdxStore = &LastStore;
+  int64_t LowestIdxOffset = LastOffset;
+
+  Register WideSrcVal;
+  auto LowestShiftAmt = getTruncStoreByteOffset(LastStore, WideSrcVal, *MRI);
+  if (!LowestShiftAmt)
+    return false; // Didn't match a trunc.
+  assert(WideSrcVal.isValid());
+
+  LLT WideStoreTy = MRI->getType(WideSrcVal);
+  // The wide type might not be a multiple of the memory type, e.g. s48 and s32.
+  if (WideStoreTy.getSizeInBits() % MemTy.getSizeInBits() != 0)
+    return false;
+  const unsigned NumStoresRequired =
+      WideStoreTy.getSizeInBits() / MemTy.getSizeInBits();
+
+  SmallVector<int64_t, 8> OffsetMap(NumStoresRequired, INT64_MAX);
+  OffsetMap[*LowestShiftAmt] = LastOffset;
+  FoundStores.emplace_back(&LastStore);
+
+  const int MaxInstsToCheck = 10;
+  int NumInstsChecked = 0;
+  for (auto II = ++LastStore.getReverseIterator();
+       II != LastStore.getParent()->rend() && NumInstsChecked < MaxInstsToCheck;
+       ++II) {
+    NumInstsChecked++;
+    GStore *NewStore;
+    if ((NewStore = dyn_cast<GStore>(&*II))) {
+      if (NewStore->getMMO().getMemoryType() != MemTy || !NewStore->isSimple())
+        break;
+    } else if (II->isLoadFoldBarrier() || II->mayLoad()) {
+      break;
+    } else {
+      continue; // This is a safe instruction we can look past.
+    }
+
+    Register NewBaseReg;
+    int64_t MemOffset;
+    // Check we're storing to the same base + some offset.
+    if (!mi_match(NewStore->getPointerReg(), *MRI,
+                  m_GPtrAdd(m_Reg(NewBaseReg), m_ICst(MemOffset)))) {
+      NewBaseReg = NewStore->getPointerReg();
+      MemOffset = 0;
+    }
+    if (BaseReg != NewBaseReg)
+      break;
+
+    auto ShiftByteOffset = getTruncStoreByteOffset(*NewStore, WideSrcVal, *MRI);
+    if (!ShiftByteOffset)
+      break;
+    if (MemOffset < LowestIdxOffset) {
+      LowestIdxOffset = MemOffset;
+      LowestIdxStore = NewStore;
+    }
+
+    // Map the offset in the store and the offset in the combined value, and
+    // early return if it has been set before.
+    if (*ShiftByteOffset < 0 || *ShiftByteOffset >= NumStoresRequired ||
+        OffsetMap[*ShiftByteOffset] != INT64_MAX)
+      break;
+    OffsetMap[*ShiftByteOffset] = MemOffset;
+
+    FoundStores.emplace_back(NewStore);
+    // Reset counter since we've found a matching inst.
+    NumInstsChecked = 0;
+    if (FoundStores.size() == NumStoresRequired)
+      break;
+  }
+
+  if (FoundStores.size() != NumStoresRequired) {
+    if (FoundStores.size() == 1)
+      return false;
+    // We didn't find enough stores to merge into the size of the original
+    // source value, but we may be able to generate a smaller store if we
+    // truncate the source value.
+    WideStoreTy = LLT::scalar(FoundStores.size() * MemTy.getScalarSizeInBits());
+  }
+
+  unsigned NumStoresFound = FoundStores.size();
+
+  const auto &DL = LastStore.getMF()->getDataLayout();
+  auto &C = LastStore.getMF()->getFunction().getContext();
+  // Check that a store of the wide type is both allowed and fast on the target
+  unsigned Fast = 0;
+  bool Allowed = TLI->allowsMemoryAccess(
+      C, DL, WideStoreTy, LowestIdxStore->getMMO(), &Fast);
+  if (!Allowed || !Fast)
+    return false;
+
+  // Check if the pieces of the value are going to the expected places in memory
+  // to merge the stores.
+  unsigned NarrowBits = MemTy.getScalarSizeInBits();
+  auto checkOffsets = [&](bool MatchLittleEndian) {
+    if (MatchLittleEndian) {
+      for (unsigned i = 0; i != NumStoresFound; ++i)
+        if (OffsetMap[i] != i * (NarrowBits / 8) + LowestIdxOffset)
+          return false;
+    } else { // MatchBigEndian by reversing loop counter.
+      for (unsigned i = 0, j = NumStoresFound - 1; i != NumStoresFound;
+           ++i, --j)
+        if (OffsetMap[j] != i * (NarrowBits / 8) + LowestIdxOffset)
+          return false;
+    }
+    return true;
+  };
+
+  // Check if the offsets line up for the native data layout of this target.
+  bool NeedBswap = false;
+  bool NeedRotate = false;
+  if (!checkOffsets(DL.isLittleEndian())) {
+    // Special-case: check if byte offsets line up for the opposite endian.
+    if (NarrowBits == 8 && checkOffsets(DL.isBigEndian()))
+      NeedBswap = true;
+    else if (NumStoresFound == 2 && checkOffsets(DL.isBigEndian()))
+      NeedRotate = true;
+    else
+      return false;
+  }
+
+  if (NeedBswap &&
+      !isLegalOrBeforeLegalizer({TargetOpcode::G_BSWAP, {WideStoreTy}}, *MF))
+    return false;
+  if (NeedRotate &&
+      !isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_ROTR, {WideStoreTy, WideStoreTy}}, *MF))
+    return false;
+
+  Builder.setInstrAndDebugLoc(StoreMI);
+
+  if (WideStoreTy != MRI->getType(WideSrcVal))
+    WideSrcVal = Builder.buildTrunc(WideStoreTy, WideSrcVal).getReg(0);
+
+  if (NeedBswap) {
+    WideSrcVal = Builder.buildBSwap(WideStoreTy, WideSrcVal).getReg(0);
+  } else if (NeedRotate) {
+    assert(WideStoreTy.getSizeInBits() % 2 == 0 &&
+           "Unexpected type for rotate");
+    auto RotAmt =
+        Builder.buildConstant(WideStoreTy, WideStoreTy.getSizeInBits() / 2);
+    WideSrcVal =
+        Builder.buildRotateRight(WideStoreTy, WideSrcVal, RotAmt).getReg(0);
+  }
+
+  Builder.buildStore(WideSrcVal, LowestIdxStore->getPointerReg(),
+                     LowestIdxStore->getMMO().getPointerInfo(),
+                     LowestIdxStore->getMMO().getAlign());
+
+  // Erase the old stores.
+  for (auto *ST : FoundStores) {
+    ST->eraseFromParent();
+    DeletedStores.insert(ST);
+  }
+  return true;
+}
+
+bool LoadStoreOpt::mergeTruncStoresBlock(MachineBasicBlock &BB) {
+  bool Changed = false;
+  SmallVector<GStore *, 16> Stores;
+  SmallPtrSet<GStore *, 8> DeletedStores;
+  // Walk up the block so we can see the most eligible stores.
+  for (MachineInstr &MI : llvm::reverse(BB))
+    if (auto *StoreMI = dyn_cast<GStore>(&MI))
+      Stores.emplace_back(StoreMI);
+
+  for (auto *StoreMI : Stores) {
+    if (DeletedStores.count(StoreMI))
+      continue;
+    if (mergeTruncStore(*StoreMI, DeletedStores))
+      Changed = true;
+  }
+  return Changed;
+}
+
 bool LoadStoreOpt::mergeFunctionStores(MachineFunction &MF) {
   bool Changed = false;
-  for (auto &BB : MF) {
+  for (auto &BB : MF){
     Changed |= mergeBlockStores(BB);
+    Changed |= mergeTruncStoresBlock(BB);
   }
+
+  // Erase all dead instructions left over by the merging.
+  if (Changed) {
+    for (auto &BB : MF) {
+      for (auto &I : make_early_inc_range(make_range(BB.rbegin(), BB.rend()))) {
+        if (isTriviallyDead(I, *MRI))
+          I.eraseFromParent();
+      }
+    }
+  }
+
   return Changed;
 }
 
@@ -638,9 +948,8 @@ void LoadStoreOpt::initializeStoreMergeTargetInfo(unsigned AddrSpace) {
   BitVector LegalSizes(MaxStoreSizeToForm * 2);
   const auto &LI = *MF->getSubtarget().getLegalizerInfo();
   const auto &DL = MF->getFunction().getParent()->getDataLayout();
-  Type *IntPtrIRTy =
-      DL.getIntPtrType(MF->getFunction().getContext(), AddrSpace);
-  LLT PtrTy = getLLTForType(*IntPtrIRTy->getPointerTo(AddrSpace), DL);
+  Type *IRPtrTy = PointerType::get(MF->getFunction().getContext(), AddrSpace);
+  LLT PtrTy = getLLTForType(*IRPtrTy, DL);
   // We assume that we're not going to be generating any stores wider than
   // MaxStoreSizeToForm bits for now.
   for (unsigned Size = 2; Size <= MaxStoreSizeToForm; Size *= 2) {

@@ -154,6 +154,20 @@ define i32 @gc_intr() gc "statepoint-example" {
    ret i32 %ret
 }
 
+declare void @llvm.assume(i1)
+
+; FALLBACK-WITH-REPORT-ERR: <unknown>:0:0: unable to translate instruction: call: '  %0 = tail call { i64, i32 } asm "subs $0, $0, #3", "=r,={@cchi},0,~{dirflag},~{fpsr},~{flags}"(i64 %a)' (in function: inline_asm_with_output_constraint)
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for inline_asm_with_output_constraint
+; FALLBACK-WITH-REPORT-OUT-LABEL: inline_asm_with_output_constraint
+define i32 @inline_asm_with_output_constraint(i64 %a) {
+entry:
+  %0 = tail call { i64, i32 } asm "subs $0, $0, #3", "=r,={@cchi},0,~{dirflag},~{fpsr},~{flags}"(i64 %a)
+  %asmresult1 = extractvalue { i64, i32 } %0, 1
+  %1 = icmp ult i32 %asmresult1, 2
+  tail call void @llvm.assume(i1 %1)
+  ret i32 %asmresult1
+}
+
 attributes #1 = { "target-features"="+sve" }
 attributes #2 = { "target-features"="+ls64" }
 

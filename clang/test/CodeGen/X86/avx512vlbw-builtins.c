@@ -2832,7 +2832,7 @@ __m256i test_mm256_maskz_broadcastw_epi16(__mmask16 __M, __m128i __A) {
 }
 __m128i test_mm_mask_set1_epi8 (__m128i __O, __mmask16 __M, char __A){
   // CHECK-LABEL: @test_mm_mask_set1_epi8
-  // CHECK: insertelement <16 x i8> undef, i8 %{{.*}}, i32 0
+  // CHECK: insertelement <16 x i8> poison, i8 %{{.*}}, i32 0
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 1
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 2
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 3
@@ -2853,7 +2853,7 @@ __m128i test_mm_mask_set1_epi8 (__m128i __O, __mmask16 __M, char __A){
 }
 __m128i test_mm_maskz_set1_epi8 ( __mmask16 __M, char __A){
   // CHECK-LABEL: @test_mm_maskz_set1_epi8
-  // CHECK: insertelement <16 x i8> undef, i8 %{{.*}}, i32 0
+  // CHECK: insertelement <16 x i8> poison, i8 %{{.*}}, i32 0
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 1
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 2
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 3
@@ -2875,7 +2875,7 @@ __m128i test_mm_maskz_set1_epi8 ( __mmask16 __M, char __A){
 
 __m256i test_mm256_mask_set1_epi8(__m256i __O, __mmask32 __M, char __A) {
   // CHECK-LABEL: @test_mm256_mask_set1_epi8
-  // CHECK: insertelement <32 x i8> undef, i8 %{{.*}}, i32 0
+  // CHECK: insertelement <32 x i8> poison, i8 %{{.*}}, i32 0
   // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, i32 1
   // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, i32 2
   // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, i32 3
@@ -2913,7 +2913,7 @@ __m256i test_mm256_mask_set1_epi8(__m256i __O, __mmask32 __M, char __A) {
 
 __m256i test_mm256_maskz_set1_epi8( __mmask32 __M, char __A) {
   // CHECK-LABEL: @test_mm256_maskz_set1_epi8
-  // CHECK: insertelement <32 x i8> undef, i8 %{{.*}}, i32 0
+  // CHECK: insertelement <32 x i8> poison, i8 %{{.*}}, i32 0
   // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, i32 1
   // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, i32 2
   // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, i32 3
@@ -2952,7 +2952,7 @@ __m256i test_mm256_maskz_set1_epi8( __mmask32 __M, char __A) {
 
 __m256i test_mm256_mask_set1_epi16(__m256i __O, __mmask16 __M, short __A) {
   // CHECK-LABEL: @test_mm256_mask_set1_epi16
-  // CHECK: insertelement <16 x i16> undef, i16 %{{.*}}, i32 0
+  // CHECK: insertelement <16 x i16> poison, i16 %{{.*}}, i32 0
   // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, i32 1
   // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, i32 2
   // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, i32 3
@@ -2974,7 +2974,7 @@ __m256i test_mm256_mask_set1_epi16(__m256i __O, __mmask16 __M, short __A) {
 
 __m256i test_mm256_maskz_set1_epi16(__mmask16 __M, short __A) {
   // CHECK-LABEL: @test_mm256_maskz_set1_epi16
-  // CHECK: insertelement <16 x i16> undef, i16 %{{.*}}, i32 0
+  // CHECK: insertelement <16 x i16> poison, i16 %{{.*}}, i32 0
   // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, i32 1
   // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, i32 2
   // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, i32 3
@@ -2996,7 +2996,7 @@ __m256i test_mm256_maskz_set1_epi16(__mmask16 __M, short __A) {
 
 __m128i test_mm_mask_set1_epi16(__m128i __O, __mmask8 __M, short __A) {
   // CHECK-LABEL: @test_mm_mask_set1_epi16
-  // CHECK: insertelement <8 x i16> undef, i16 %{{.*}}, i32 0
+  // CHECK: insertelement <8 x i16> poison, i16 %{{.*}}, i32 0
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 %{{.*}}, i32 1
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 %{{.*}}, i32 2
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 %{{.*}}, i32 3
@@ -3010,7 +3010,7 @@ __m128i test_mm_mask_set1_epi16(__m128i __O, __mmask8 __M, short __A) {
 
 __m128i test_mm_maskz_set1_epi16(__mmask8 __M, short __A) {
   // CHECK-LABEL: @test_mm_maskz_set1_epi16
-  // CHECK: insertelement <8 x i16> undef, i16 %{{.*}}, i32 0
+  // CHECK: insertelement <8 x i16> poison, i16 %{{.*}}, i32 0
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 %{{.*}}, i32 1
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 %{{.*}}, i32 2
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 %{{.*}}, i32 3

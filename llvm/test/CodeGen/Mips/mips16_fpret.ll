@@ -34,7 +34,7 @@ entry:
 define { float, float } @foocx()  {
 entry:
   %retval = alloca { float, float }, align 4
-  %cx.real = load float, ptr getelementptr inbounds ({ float, float }, ptr @cx, i32 0, i32 0)
+  %cx.real = load float, ptr @cx
   %cx.imag = load float, ptr getelementptr inbounds ({ float, float }, ptr @cx, i32 0, i32 1)
   %real = getelementptr inbounds { float, float }, ptr %retval, i32 0, i32 0
   %imag = getelementptr inbounds { float, float }, ptr %retval, i32 0, i32 1
@@ -53,7 +53,7 @@ entry:
 define { double, double } @foodcx()  {
 entry:
   %retval = alloca { double, double }, align 8
-  %dcx.real = load double, ptr getelementptr inbounds ({ double, double }, ptr @dcx, i32 0, i32 0)
+  %dcx.real = load double, ptr @dcx
   %dcx.imag = load double, ptr getelementptr inbounds ({ double, double }, ptr @dcx, i32 0, i32 1)
   %real = getelementptr inbounds { double, double }, ptr %retval, i32 0, i32 0
   %imag = getelementptr inbounds { double, double }, ptr %retval, i32 0, i32 1

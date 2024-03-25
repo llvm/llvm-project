@@ -11,7 +11,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorOr.h"
@@ -215,6 +215,7 @@ class DependencyScanningFilesystemLocalCache {
 public:
   /// Returns entry associated with the filename or nullptr if none is found.
   const CachedFileSystemEntry *findEntryByFilename(StringRef Filename) const {
+    assert(llvm::sys::path::is_absolute_gnu(Filename));
     auto It = Cache.find(Filename);
     return It == Cache.end() ? nullptr : It->getValue();
   }
@@ -224,6 +225,7 @@ public:
   const CachedFileSystemEntry &
   insertEntryForFilename(StringRef Filename,
                          const CachedFileSystemEntry &Entry) {
+    assert(llvm::sys::path::is_absolute_gnu(Filename));
     const auto *InsertedEntry = Cache.insert({Filename, &Entry}).first->second;
     assert(InsertedEntry == &Entry && "entry already present");
     return *InsertedEntry;
@@ -239,6 +241,8 @@ class EntryRef {
 
   /// The underlying cached entry.
   const CachedFileSystemEntry &Entry;
+
+  friend class DependencyScanningWorkerFilesystem;
 
 public:
   EntryRef(StringRef Name, const CachedFileSystemEntry &Entry)
@@ -278,39 +282,43 @@ public:
 /// This is not a thread safe VFS. A single instance is meant to be used only in
 /// one thread. Multiple instances are allowed to service multiple threads
 /// running in parallel.
-class DependencyScanningWorkerFilesystem : public llvm::vfs::ProxyFileSystem {
+class DependencyScanningWorkerFilesystem
+    : public llvm::RTTIExtends<DependencyScanningWorkerFilesystem,
+                               llvm::vfs::ProxyFileSystem> {
 public:
+  static const char ID;
+
   DependencyScanningWorkerFilesystem(
       DependencyScanningFilesystemSharedCache &SharedCache,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-      : ProxyFileSystem(std::move(FS)), SharedCache(SharedCache) {}
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
   llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override;
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
   openFileForRead(const Twine &Path) override;
 
+  std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
+
   /// Returns entry for the given filename.
   ///
   /// Attempts to use the local and shared caches first, then falls back to
   /// using the underlying filesystem.
-  llvm::ErrorOr<EntryRef>
-  getOrCreateFileSystemEntry(StringRef Filename,
-                             bool DisableDirectivesScanning = false);
+  llvm::ErrorOr<EntryRef> getOrCreateFileSystemEntry(StringRef Filename);
+
+  /// Ensure the directive tokens are populated for this file entry.
+  ///
+  /// Returns true if the directive tokens are populated for this file entry,
+  /// false if not (i.e. this entry is not a file or its scan fails).
+  bool ensureDirectiveTokensArePopulated(EntryRef Entry);
 
 private:
-  /// Check whether the file should be scanned for preprocessor directives.
-  bool shouldScanForDirectives(StringRef Filename);
-
   /// For a filename that's not yet associated with any entry in the caches,
   /// uses the underlying filesystem to either look up the entry based in the
   /// shared cache indexed by unique ID, or creates new entry from scratch.
+  /// \p FilenameForLookup will always be an absolute path, and different than
+  /// \p OriginalFilename if \p OriginalFilename is relative.
   llvm::ErrorOr<const CachedFileSystemEntry &>
-  computeAndStoreResult(StringRef Filename);
-
-  /// Scan for preprocessor directives for the given entry if necessary and
-  /// returns a wrapper object with reference semantics.
-  EntryRef scanForDirectivesIfNecessary(const CachedFileSystemEntry &Entry,
-                                        StringRef Filename, bool Disable);
+  computeAndStoreResult(StringRef OriginalFilename,
+                        StringRef FilenameForLookup);
 
   /// Represents a filesystem entry that has been stat-ed (and potentially read)
   /// and that's about to be inserted into the cache as `CachedFileSystemEntry`.
@@ -388,6 +396,12 @@ private:
   /// The local cache is used by the worker thread to cache file system queries
   /// locally instead of querying the global cache every time.
   DependencyScanningFilesystemLocalCache LocalCache;
+
+  /// The working directory to use for making relative paths absolute before
+  /// using them for cache lookups.
+  llvm::ErrorOr<std::string> WorkingDirForCacheLookup;
+
+  void updateWorkingDirForCacheLookup();
 };
 
 } // end namespace dependencies

@@ -62,7 +62,7 @@ void foo() {
 }
 }
 
-namespace PR7742 { // Also rdar://8250764
+namespace PR7742 {
   struct s2 {
     float a[2];
   };
@@ -107,8 +107,8 @@ namespace test5 {
   X getX();
   int takeY(const Y&, int y);
   void g() {
-    // rdar://8340348 - The temporary for the X object needs to have a defined
-    // address when passed into X::f as 'this'.
+    // The temporary for the X object needs to have a defined address when
+    // passed into X::f as 'this'.
     takeY(getX().f(), 42);
   }
   // CHECK: void @_ZN5test51gEv()
@@ -117,8 +117,6 @@ namespace test5 {
   // CHECK: alloca %"struct.test5::Y"
 }
 
-
-// rdar://8360877
 namespace test6 {
   struct outer {
     int x;
@@ -138,7 +136,6 @@ namespace test7 {
   A x(A, A, long, long, StringRef) { return A(); }
   // Check that the StringRef is passed byval instead of expanded
   // (which would split it between registers and memory).
-  // rdar://problem/9686430
   // CHECK: define{{.*}} void @_ZN5test71xENS_1AES0_llNS_9StringRefE({{.*}} byval({{.*}}) align 8 {{%.*}})
 
   // And a couple extra related tests:
@@ -176,7 +173,7 @@ namespace test9 {
   // CHECK: define{{.*}} void @_ZN5test93fooEPNS_1SEPNS_1TE(ptr %0, ptr %1)
   void foo(S*, T*) {}
 
-  // CHECK: define{{.*}} void @_ZN5test91aEiiiiNS_1TEPv(ptr noalias sret([[S:%.*]]) align 8 {{%.*}}, i32 %0, i32 %1, i32 %2, i32 %3, ptr byval([[T:%.*]]) align 8 %4, ptr %5)
+  // CHECK: define{{.*}} void @_ZN5test91aEiiiiNS_1TEPv(ptr dead_on_unwind noalias writable sret([[S:%.*]]) align 8 {{%.*}}, i32 %0, i32 %1, i32 %2, i32 %3, ptr byval([[T:%.*]]) align 8 %4, ptr %5)
   S a(int, int, int, int, T, void*) {
     return S();
   }
@@ -186,7 +183,7 @@ namespace test9 {
     return sret;
   }
 
-  // CHECK: define{{.*}} void @_ZN5test91cEiiiNS_1TEPv(ptr noalias sret([[S]]) align 8 {{%.*}}, i32 %0, i32 %1, i32 %2, ptr {{%.*}}, ptr {{%.*}}, ptr %3)
+  // CHECK: define{{.*}} void @_ZN5test91cEiiiNS_1TEPv(ptr dead_on_unwind noalias writable sret([[S]]) align 8 {{%.*}}, i32 %0, i32 %1, i32 %2, ptr {{%.*}}, ptr {{%.*}}, ptr %3)
   S c(int, int, int, T, void*) {
     return S();
   }

@@ -4,6 +4,7 @@ add_llvm_library(LLVMBOLTProfile
   DataReader.cpp
   Heatmap.cpp
   ProfileReaderBase.cpp
+  StaleProfileMatching.cpp
   YAMLProfileReader.cpp
   YAMLProfileWriter.cpp
 
@@ -11,6 +12,7 @@ add_llvm_library(LLVMBOLTProfile
 
   LINK_COMPONENTS
   Support
+  TransformUtils
   )
 
 target_link_libraries(LLVMBOLTProfile

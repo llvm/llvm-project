@@ -195,7 +195,7 @@ define i64 @and64_0x7fffffff00000000(i64 %x) {
 ; RV64I-LABEL: and64_0x7fffffff00000000:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 524288
-; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    slli a1, a1, 32
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    ret

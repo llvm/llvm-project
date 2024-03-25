@@ -42,6 +42,16 @@ void MCSectionXCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     return;
   }
 
+  if (getKind().isReadOnlyWithRel()) {
+    if (getMappingClass() != XCOFF::XMC_RW &&
+        getMappingClass() != XCOFF::XMC_RO &&
+        getMappingClass() != XCOFF::XMC_TD)
+      report_fatal_error(
+          "Unexepected storage-mapping class for ReadOnlyWithRel kind");
+    printCsectDirective(OS);
+    return;
+  }
+
   // Initialized TLS data.
   if (getKind().isThreadData()) {
     // We only expect XMC_TL here for initialized TLS data.
@@ -72,9 +82,12 @@ void MCSectionXCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   }
 
   if (isCsect() && getMappingClass() == XCOFF::XMC_TD) {
-    assert((getKind().isBSSExtern() || getKind().isBSSLocal() ||
-            getKind().isReadOnlyWithRel()) &&
-           "Unexepected section kind for toc-data");
+    // Common csect type (uninitialized storage) does not have to print csect
+    // directive for section switching unless it is local.
+    if (getKind().isCommon() && !getKind().isBSSLocal())
+      return;
+
+    assert(getKind().isBSS() && "Unexpected section kind for toc-data");
     printCsectDirective(OS);
     return;
   }
@@ -126,5 +139,7 @@ bool MCSectionXCOFF::isVirtualSection() const {
     return false;
   assert(isCsect() &&
          "Handling for isVirtualSection not implemented for this section!");
-  return XCOFF::XTY_CM == CsectProp->Type;
+  // XTY_CM sections are virtual except for toc-data symbols.
+  return (XCOFF::XTY_CM == CsectProp->Type) &&
+         (getMappingClass() != XCOFF::XMC_TD);
 }

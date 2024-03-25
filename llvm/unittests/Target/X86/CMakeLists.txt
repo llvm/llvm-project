@@ -5,10 +5,14 @@ include_directories(
 
 set(LLVM_LINK_COMPONENTS
   Analysis
+  AsmParser
   CodeGen
+  CodeGenTypes
   Core
+  InstCombine
   MC
   MIRParser
+  Passes
   Support
   Target
   TargetParser
@@ -19,6 +23,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(X86Tests
   MachineSizeOptsTest.cpp
+  TernlogTest.cpp
   )
 
 set_property(TARGET X86Tests PROPERTY FOLDER "Tests/UnitTests/TargetTests")

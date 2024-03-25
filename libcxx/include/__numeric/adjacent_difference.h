@@ -18,55 +18,51 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _OutputIterator>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
-_OutputIterator
-adjacent_difference(_InputIterator __first, _InputIterator __last, _OutputIterator __result)
-{
-    if (__first != __last)
-    {
-        typename iterator_traits<_InputIterator>::value_type __acc(*__first);
-        *__result = __acc;
-        for (++__first, (void) ++__result; __first != __last; ++__first, (void) ++__result)
-        {
-            typename iterator_traits<_InputIterator>::value_type __val(*__first);
-#if _LIBCPP_STD_VER > 17
-            *__result = __val - _VSTD::move(__acc);
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
+adjacent_difference(_InputIterator __first, _InputIterator __last, _OutputIterator __result) {
+  if (__first != __last) {
+    typename iterator_traits<_InputIterator>::value_type __acc(*__first);
+    *__result = __acc;
+    for (++__first, (void)++__result; __first != __last; ++__first, (void)++__result) {
+      typename iterator_traits<_InputIterator>::value_type __val(*__first);
+#if _LIBCPP_STD_VER >= 20
+      *__result = __val - std::move(__acc);
 #else
-            *__result = __val - __acc;
+      *__result = __val - __acc;
 #endif
-            __acc = _VSTD::move(__val);
-        }
+      __acc = std::move(__val);
     }
-    return __result;
+  }
+  return __result;
 }
 
 template <class _InputIterator, class _OutputIterator, class _BinaryOperation>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
-_OutputIterator
-adjacent_difference(_InputIterator __first, _InputIterator __last, _OutputIterator __result,
-                      _BinaryOperation __binary_op)
-{
-    if (__first != __last)
-    {
-        typename iterator_traits<_InputIterator>::value_type __acc(*__first);
-        *__result = __acc;
-        for (++__first, (void) ++__result; __first != __last; ++__first, (void) ++__result)
-        {
-            typename iterator_traits<_InputIterator>::value_type __val(*__first);
-#if _LIBCPP_STD_VER > 17
-            *__result = __binary_op(__val, _VSTD::move(__acc));
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator adjacent_difference(
+    _InputIterator __first, _InputIterator __last, _OutputIterator __result, _BinaryOperation __binary_op) {
+  if (__first != __last) {
+    typename iterator_traits<_InputIterator>::value_type __acc(*__first);
+    *__result = __acc;
+    for (++__first, (void)++__result; __first != __last; ++__first, (void)++__result) {
+      typename iterator_traits<_InputIterator>::value_type __val(*__first);
+#if _LIBCPP_STD_VER >= 20
+      *__result = __binary_op(__val, std::move(__acc));
 #else
-            *__result = __binary_op(__val, __acc);
+      *__result = __binary_op(__val, __acc);
 #endif
-            __acc = _VSTD::move(__val);
-        }
+      __acc = std::move(__val);
     }
-    return __result;
+  }
+  return __result;
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___NUMERIC_ADJACENT_DIFFERENCE_H

@@ -10,6 +10,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/WithColor.h"
@@ -78,35 +79,43 @@ bool EVT::isExtendedVector() const {
 }
 
 bool EVT::isExtended16BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 16;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(16);
 }
 
 bool EVT::isExtended32BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 32;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(32);
 }
 
 bool EVT::isExtended64BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 64;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(64);
 }
 
 bool EVT::isExtended128BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 128;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(128);
 }
 
 bool EVT::isExtended256BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 256;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(256);
 }
 
 bool EVT::isExtended512BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 512;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(512);
 }
 
 bool EVT::isExtended1024BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 1024;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(1024);
 }
 
 bool EVT::isExtended2048BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 2048;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(2048);
 }
 
 bool EVT::isExtendedFixedLengthVector() const {
@@ -142,7 +151,7 @@ ElementCount EVT::getExtendedVectorElementCount() const {
 TypeSize EVT::getExtendedSizeInBits() const {
   assert(isExtended() && "Type is not extended!");
   if (IntegerType *ITy = dyn_cast<IntegerType>(LLVMTy))
-    return TypeSize::Fixed(ITy->getBitWidth());
+    return TypeSize::getFixed(ITy->getBitWidth());
   if (VectorType *VTy = dyn_cast<VectorType>(LLVMTy))
     return VTy->getPrimitiveSizeInBits();
   llvm_unreachable("Unrecognized extended type!");
@@ -173,8 +182,19 @@ std::string EVT::getEVTString() const {
   case MVT::Untyped:   return "Untyped";
   case MVT::funcref:   return "funcref";
   case MVT::externref: return "externref";
+  case MVT::aarch64svcount:
+    return "aarch64svcount";
+  case MVT::spirvbuiltin:
+    return "spirvbuiltin";
   }
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void EVT::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
+#endif
 
 /// getTypeForEVT - This method returns an LLVM type corresponding to the
 /// specified EVT.  For integer types, this returns an unsigned type.  Note
@@ -202,6 +222,8 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::f128:    return Type::getFP128Ty(Context);
   case MVT::ppcf128: return Type::getPPC_FP128Ty(Context);
   case MVT::x86mmx:  return Type::getX86_MMXTy(Context);
+  case MVT::aarch64svcount:
+    return TargetExtType::get(Context, "aarch64.svcount");
   case MVT::x86amx:  return Type::getX86_AMXTy(Context);
   case MVT::i64x8:   return IntegerType::get(Context, 512);
   case MVT::externref: return Type::getWasm_ExternrefTy(Context);
@@ -210,6 +232,8 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return FixedVectorType::get(Type::getInt1Ty(Context), 1);
   case MVT::v2i1:
     return FixedVectorType::get(Type::getInt1Ty(Context), 2);
+  case MVT::v3i1:
+    return FixedVectorType::get(Type::getInt1Ty(Context), 3);
   case MVT::v4i1:
     return FixedVectorType::get(Type::getInt1Ty(Context), 4);
   case MVT::v8i1:
@@ -242,6 +266,8 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return FixedVectorType::get(Type::getInt8Ty(Context), 1);
   case MVT::v2i8:
     return FixedVectorType::get(Type::getInt8Ty(Context), 2);
+  case MVT::v3i8:
+    return FixedVectorType::get(Type::getInt8Ty(Context), 3);
   case MVT::v4i8:
     return FixedVectorType::get(Type::getInt8Ty(Context), 4);
   case MVT::v8i8:
@@ -557,6 +583,7 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
 /// pointers as MVT::iPTR.  If HandleUnknown is true, unknown types are returned
 /// as Other, otherwise they are invalid.
 MVT MVT::getVT(Type *Ty, bool HandleUnknown){
+  assert(Ty != nullptr && "Invalid type");
   switch (Ty->getTypeID()) {
   default:
     if (HandleUnknown) return MVT(MVT::Other);
@@ -571,6 +598,16 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   case Type::DoubleTyID:    return MVT(MVT::f64);
   case Type::X86_FP80TyID:  return MVT(MVT::f80);
   case Type::X86_MMXTyID:   return MVT(MVT::x86mmx);
+  case Type::TargetExtTyID: {
+    TargetExtType *TargetExtTy = cast<TargetExtType>(Ty);
+    if (TargetExtTy->getName() == "aarch64.svcount")
+      return MVT(MVT::aarch64svcount);
+    else if (TargetExtTy->getName().starts_with("spirv."))
+      return MVT(MVT::spirvbuiltin);
+    if (HandleUnknown)
+      return MVT(MVT::Other);
+    llvm_unreachable("Unknown target ext type!");
+  }
   case Type::X86_AMXTyID:   return MVT(MVT::x86amx);
   case Type::FP128TyID:     return MVT(MVT::f128);
   case Type::PPC_FP128TyID: return MVT(MVT::ppcf128);
@@ -592,6 +629,8 @@ EVT EVT::getEVT(Type *Ty, bool HandleUnknown){
   switch (Ty->getTypeID()) {
   default:
     return MVT::getVT(Ty, HandleUnknown);
+  case Type::TokenTyID:
+    return MVT::Untyped;
   case Type::IntegerTyID:
     return getIntegerVT(Ty->getContext(), cast<IntegerType>(Ty)->getBitWidth());
   case Type::FixedVectorTyID:
@@ -603,3 +642,18 @@ EVT EVT::getEVT(Type *Ty, bool HandleUnknown){
   }
   }
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void MVT::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
+void MVT::print(raw_ostream &OS) const {
+  if (SimpleTy == INVALID_SIMPLE_VALUE_TYPE)
+    OS << "invalid";
+  else
+    OS << EVT(*this).getEVTString();
+}
+

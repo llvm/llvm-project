@@ -13,8 +13,6 @@ enum {
 typedef struct { void *a, *b; } pointer_pair_t;
 typedef struct { void *a, *b, *c, *d; } pointer_quad_t;
 
-// rdar://13489679
-
 extern _Atomic(_Bool) a_bool;
 extern _Atomic(float) a_float;
 extern _Atomic(void*) a_pointer;

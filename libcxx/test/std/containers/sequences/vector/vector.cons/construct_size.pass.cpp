@@ -59,6 +59,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
 #if TEST_STD_VER >= 11
     test<std::vector<int, min_allocator<int>>>(0);
     test<std::vector<int, min_allocator<int>>>(50);
+    test<std::vector<int, safe_allocator<int>>>(0);
+    test<std::vector<int, safe_allocator<int>>>(50);
 #endif
 
     return true;
@@ -76,6 +78,8 @@ int main(int, char**) {
 #if TEST_STD_VER >= 11
     test<std::vector<DefaultOnly, min_allocator<DefaultOnly>>>(0);
     test<std::vector<DefaultOnly, min_allocator<DefaultOnly>>>(500);
+    test<std::vector<DefaultOnly, safe_allocator<DefaultOnly>>>(0);
+    test<std::vector<DefaultOnly, safe_allocator<DefaultOnly>>>(500);
     test<std::vector<DefaultOnly, test_allocator<DefaultOnly>>>(0, test_allocator<DefaultOnly>(23));
     test<std::vector<DefaultOnly, test_allocator<DefaultOnly>>>(100, test_allocator<DefaultOnly>(23));
     assert(DefaultOnly::count == 0);

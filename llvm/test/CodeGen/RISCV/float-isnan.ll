@@ -3,6 +3,10 @@
 ; RUN:   < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+f -target-abi lp64f -verify-machineinstrs \
 ; RUN:   < %s | FileCheck %s
+; RUN: llc -mtriple=riscv32 -mattr=+zfinx -target-abi ilp32 -verify-machineinstrs \
+; RUN:   < %s | FileCheck --check-prefix=CHECKZFINX %s
+; RUN: llc -mtriple=riscv64 -mattr=+zfinx -target-abi lp64 -verify-machineinstrs \
+; RUN:   < %s | FileCheck --check-prefix=CHECKZFINX %s
 
 define zeroext i1 @float_is_nan(float %a) nounwind {
 ; CHECK-LABEL: float_is_nan:
@@ -10,6 +14,12 @@ define zeroext i1 @float_is_nan(float %a) nounwind {
 ; CHECK-NEXT:    feq.s a0, fa0, fa0
 ; CHECK-NEXT:    xori a0, a0, 1
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: float_is_nan:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    feq.s a0, a0, a0
+; CHECKZFINX-NEXT:    xori a0, a0, 1
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp uno float %a, 0.000000e+00
   ret i1 %1
 }
@@ -19,6 +29,11 @@ define zeroext i1 @float_not_nan(float %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    feq.s a0, fa0, fa0
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: float_not_nan:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    feq.s a0, a0, a0
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp ord float %a, 0.000000e+00
   ret i1 %1
 }

@@ -27,7 +27,7 @@ public:
   LogicalResult
   matchAndRewrite(test::TestTypeProducerOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<LLVM::NullOp>(op, getVoidPtrType());
+    rewriter.replaceOpWithNewOp<LLVM::ZeroOp>(op, getVoidPtrType());
     return success();
   }
 };
@@ -48,10 +48,12 @@ struct TestConvertCallOp
   void runOnOperation() override {
     ModuleOp m = getOperation();
 
+    LowerToLLVMOptions options(m.getContext());
+
     // Populate type conversions.
-    LLVMTypeConverter typeConverter(m.getContext());
+    LLVMTypeConverter typeConverter(m.getContext(), options);
     typeConverter.addConversion([&](test::TestType type) {
-      return LLVM::LLVMPointerType::get(IntegerType::get(m.getContext(), 8));
+      return LLVM::LLVMPointerType::get(m.getContext());
     });
     typeConverter.addConversion([&](test::SimpleAType type) {
       return IntegerType::get(type.getContext(), 42);

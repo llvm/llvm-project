@@ -12,8 +12,8 @@ define i1 @test_eq(i1 %cond) {
 ; CHECK:       merge:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
-; CHECK-NEXT:    ret i1 [[TMP0]]
+; CHECK-NEXT:    [[COMPARE:%.*]] = xor i1 [[COND]], true
+; CHECK-NEXT:    ret i1 [[COMPARE]]
 ;
 entry:
   br i1 %cond, label %if.true, label %if.false
@@ -166,7 +166,7 @@ define <2 x i1> @test_ne_int_vector(i1 %cond) {
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[COMPARE:%.*]] = phi <2 x i1> [ <i1 true, i1 false>, [[IF_FALSE]] ], [ <i1 false, i1 true>, [[IF_TRUE]] ]
+; CHECK-NEXT:    [[COMPARE:%.*]] = phi <2 x i1> [ <i1 false, i1 true>, [[IF_TRUE]] ], [ <i1 true, i1 false>, [[IF_FALSE]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret <2 x i1> [[COMPARE]]
@@ -199,11 +199,9 @@ define i1 @test_ne_float(i1 %cond) {
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[PHI:%.*]] = phi float [ 1.000000e+00, [[IF_TRUE]] ], [ 1.250000e+00, [[IF_FALSE]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[COMPARE:%.*]] = fcmp one float [[PHI]], 1.250000e+00
-; CHECK-NEXT:    ret i1 [[COMPARE]]
+; CHECK-NEXT:    ret i1 [[COND]]
 ;
 entry:
   br i1 %cond, label %if.true, label %if.false
@@ -263,11 +261,10 @@ define <2 x i1> @test_ne_float_vector(i1 %cond) {
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[PHI:%.*]] = phi <2 x float> [ <float 1.232500e+02, float 1.232500e+02>, [[IF_TRUE]] ], [ <float 4.562500e+02, float 4.562500e+02>, [[IF_FALSE]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi <2 x i1> [ <i1 false, i1 true>, [[IF_TRUE]] ], [ <i1 true, i1 false>, [[IF_FALSE]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[COMPARE:%.*]] = fcmp one <2 x float> [[PHI]], <float 1.232500e+02, float 4.562500e+02>
-; CHECK-NEXT:    ret <2 x i1> [[COMPARE]]
+; CHECK-NEXT:    ret <2 x i1> [[PHI]]
 ;
 entry:
   br i1 %cond, label %if.true, label %if.false

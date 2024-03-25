@@ -41,3 +41,6 @@ bt all
 # CHECK-NEXT:    frame #2: 0x0000000100ec5a87 multithread-test`compute_pow{{.*}} [artificial]
 # CHECK:    frame #{{[0-9]+}}: 0x000000019cc7e06b{{.*}} [artificial]
 # CHECK:    frame #{{[0-9]+}}: 0x000000019cc78e2b{{.*}} [artificial]
+
+image list
+# CHECK: 11111111-2222-3333-4444-555555555555 {{.*}}bogus.dylib

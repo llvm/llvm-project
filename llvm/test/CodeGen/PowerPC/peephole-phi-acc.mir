@@ -674,6 +674,7 @@ registers:
   - { id: 52, class: vsrprc, preferred-register: '' }
   - { id: 53, class: vsrc, preferred-register: '' }
   - { id: 54, class: vsrprc, preferred-register: '' }
+  - { id: 55, class: crrc, preferred-register: '' }
 liveins:
   - { reg: '$x3', virtual-reg: '%7' }
   - { reg: '$v2', virtual-reg: '%8' }
@@ -767,22 +768,24 @@ body:             |
     %37:g8rc_and_g8rc_nox0 = RLDICL killed %35, 0, 32
     %38:g8rc = nuw nsw ADDI8 killed %37, 1
     MTCTR8loop killed %38, implicit-def dead $ctr8
+    B %bb.5
 
   bb.5.for.body.epil:
     successors: %bb.3(0x40000000), %bb.5(0x7c000000)
-    ; We check that no phi node is inserted in the block.
+    ; We check that no [u]acc phi node is inserted in the block.
     ; CHECK-LABEL: bb.{{[0-9]}}.for.body.epil:
     ; CHECK-NEXT: successors: %bb.{{[0-9]}}(0x{{[0-9a-f]+}}), %bb.{{[0-9]}}(0x{{[0-9a-f]+}})
-    ; CHECK-NEXT: {{ }}
-    ; CHECK-NEXT: %2:uaccrc = PHI
+    ; CHECK-NOT: uaccrc = PHI
+    ; CHECK-NOT: accrc = PHI
+    ; CHECK: %2:uaccrc = PHI
     ; CHECK-NEXT: %39:vsrc
     %2:uaccrc = PHI %1, %bb.4, %3, %bb.5
     %39:vsrc = COPY %8
     %41:accrc = COPY %2
     %40:accrc = XVF32GERPP %41, %39, %39
     %3:uaccrc = COPY %40
-    %15:crrc = CMPLWI %14, 7
-    BCC 12, killed %15, %bb.5
+    %55:crrc = CMPLWI %14, 7
+    BCC 12, killed %55, %bb.5
     B %bb.3
 
   bb.6.for.cond.cleanup:

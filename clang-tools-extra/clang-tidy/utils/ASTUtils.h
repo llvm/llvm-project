@@ -36,6 +36,15 @@ bool rangeContainsMacroExpansion(SourceRange Range, const SourceManager *SM);
 // FIXME: false-negative if the entire range is fully expanded from a macro.
 bool rangeCanBeFixed(SourceRange Range, const SourceManager *SM);
 
+// Check if statements are same
+bool areStatementsIdentical(const Stmt *FirstStmt, const Stmt *SecondStmt,
+                            const ASTContext &Context, bool Canonical = false);
+
+// Given a field of an anonymous record, find its corresponding
+// IndirectFieldDecl in the outermost possible scope.
+const IndirectFieldDecl *
+findOutermostIndirectFieldDeclForField(const FieldDecl *FD);
+
 } // namespace clang::tidy::utils
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ASTUTILS_H

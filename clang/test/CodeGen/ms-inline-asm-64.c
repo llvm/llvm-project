@@ -60,15 +60,27 @@ int t4(void) {
 }
 
 void bar() {}
+static void (*fptr)();
 
 void t5(void) {
   __asm {
     call bar
     jmp bar
+    call fptr
+    jmp fptr
   }
   // CHECK: t5
   // CHECK: call void asm sideeffect inteldialect
-  // CHECK-SAME: call qword ptr ${0:P}
-  // CHECK-SAME: jmp qword ptr ${1:P}
-  // CHECK-SAME: "*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(void (...)) @bar, ptr elementtype(void (...)) @bar)
+  // CHECK-SAME: call ${0:P}
+  // CHECK-SAME: jmp ${1:P}
+  // CHECK-SAME: call $2
+  // CHECK-SAME: jmp $3
+  // CHECK-SAME: "*m,*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(void (...)) @bar, ptr elementtype(void (...)) @bar, ptr elementtype(ptr) @fptr, ptr elementtype(ptr) @fptr)
+}
+
+void t47(void) {
+  // CHECK-LABEL: define{{.*}} void @t47
+  int arr[1000];
+  __asm movdir64b rax, zmmword ptr [arr]
+  // CHECK: call void asm sideeffect inteldialect "movdir64b rax, zmmword ptr $0", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype([1000 x i32]) %arr)
 }

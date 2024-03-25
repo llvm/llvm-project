@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple powerpc64le < %s | FileCheck %s
 
 ; Check constrained ops converted to call
-define void @test(ptr %cast) {
+define void @test(ptr %cast) strictfp {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %root
 ; CHECK-NEXT:    mflr 0
@@ -13,18 +13,18 @@ define void @test(ptr %cast) {
 ; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu 1, -64(1)
-; CHECK-NEXT:    li 30, 255
-; CHECK-NEXT:    addi 29, 3, -8
+; CHECK-NEXT:    addi 30, 3, -8
+; CHECK-NEXT:    li 29, 255
 ; CHECK-NEXT:    std 0, 80(1)
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lfdu 1, 8(29)
+; CHECK-NEXT:    lfdu 1, 8(30)
 ; CHECK-NEXT:    bl cos
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    addi 30, 30, -1
-; CHECK-NEXT:    stfd 1, 0(29)
-; CHECK-NEXT:    cmpldi 30, 0
+; CHECK-NEXT:    addi 29, 29, -1
+; CHECK-NEXT:    stfd 1, 0(30)
+; CHECK-NEXT:    cmpldi 29, 0
 ; CHECK-NEXT:    bc 12, 1, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    addi 1, 1, 64
@@ -51,7 +51,7 @@ for.body:
 }
 
 ; Check constrained ops converted to native instruction
-define void @test2(ptr %cast) {
+define void @test2(ptr %cast) strictfp {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 255

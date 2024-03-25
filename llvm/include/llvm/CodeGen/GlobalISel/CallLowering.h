@@ -19,12 +19,12 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LowLevelTypeImpl.h"
-#include "llvm/Support/MachineValueType.h"
 #include <cstdint>
 #include <functional>
 
@@ -117,6 +117,9 @@ public:
     /// vreg that the swifterror should be copied into after the call.
     Register SwiftErrorVReg;
 
+    /// Valid if the call is a controlled convergent operation.
+    Register ConvergenceCtrlToken;
+
     /// Original IR callsite corresponding to this call, if available.
     const CallBase *CB = nullptr;
 
@@ -147,6 +150,9 @@ public:
 
     /// Expected type identifier for indirect calls with a CFI check.
     const ConstantInt *CFIType = nullptr;
+
+    /// True if this call results in convergent operations.
+    bool IsConvergent = true;
   };
 
   /// Argument handling is mostly uniform between the four places that
@@ -188,7 +194,7 @@ public:
       if (getAssignFn(State.isVarArg())(ValNo, ValVT, LocVT, LocInfo, Flags,
                                         State))
         return true;
-      StackOffset = State.getNextStackOffset();
+      StackSize = State.getStackSize();
       return false;
     }
 
@@ -199,9 +205,8 @@ public:
     /// as AssignFn on most targets.
     CCAssignFn *AssignFnVarArg;
 
-    /// Stack offset for next argument. At the end of argument evaluation, this
-    /// is typically the total stack size.
-    uint64_t StackOffset = 0;
+    /// The size of the currently allocated portion of the stack.
+    uint64_t StackSize = 0;
 
     /// Select the appropriate assignment function depending on whether this is
     /// a variadic call.
@@ -266,22 +271,22 @@ public:
     /// handle the appropriate COPY (either to or from) and mark any
     /// relevant uses/defines as needed.
     virtual void assignValueToReg(Register ValVReg, Register PhysReg,
-                                  CCValAssign VA) = 0;
+                                  const CCValAssign &VA) = 0;
 
     /// The specified value has been assigned to a stack
     /// location. Load or store it there, with appropriate extension
     /// if necessary.
     virtual void assignValueToAddress(Register ValVReg, Register Addr,
-                                      LLT MemTy, MachinePointerInfo &MPO,
-                                      CCValAssign &VA) = 0;
+                                      LLT MemTy, const MachinePointerInfo &MPO,
+                                      const CCValAssign &VA) = 0;
 
     /// An overload which takes an ArgInfo if additional information about the
     /// arg is needed. \p ValRegIndex is the index in \p Arg.Regs for the value
     /// to store.
     virtual void assignValueToAddress(const ArgInfo &Arg, unsigned ValRegIndex,
                                       Register Addr, LLT MemTy,
-                                      MachinePointerInfo &MPO,
-                                      CCValAssign &VA) {
+                                      const MachinePointerInfo &MPO,
+                                      const CCValAssign &VA) {
       assignValueToAddress(Arg.Regs[ValRegIndex], Addr, MemTy, MPO, VA);
     }
 
@@ -289,8 +294,8 @@ public:
     /// \p If the handler wants the assignments to be delayed until after
     /// mem loc assignments, then it sets \p Thunk to the thunk to do the
     /// assignment.
-    /// \return The number of \p VAs that have been assigned after the first
-    ///         one, and which should therefore be skipped from further
+    /// \return The number of \p VAs that have been assigned including the
+    ///         first one, and which should therefore be skipped from further
     ///         processing.
     virtual unsigned assignCustomValue(ArgInfo &Arg, ArrayRef<CCValAssign> VAs,
                                        std::function<void()> *Thunk = nullptr) {
@@ -309,7 +314,7 @@ public:
 
     /// Extend a register to the location type given in VA, capped at extending
     /// to at most MaxSize bits. If MaxSizeBits is 0 then no maximum is set.
-    Register extendRegister(Register ValReg, CCValAssign &VA,
+    Register extendRegister(Register ValReg, const CCValAssign &VA,
                             unsigned MaxSizeBits = 0);
   };
 
@@ -321,11 +326,12 @@ public:
 
     /// Insert G_ASSERT_ZEXT/G_ASSERT_SEXT or other hint instruction based on \p
     /// VA, returning the new register if a hint was inserted.
-    Register buildExtensionHint(CCValAssign &VA, Register SrcReg, LLT NarrowTy);
+    Register buildExtensionHint(const CCValAssign &VA, Register SrcReg,
+                                LLT NarrowTy);
 
     /// Provides a default implementation for argument handling.
     void assignValueToReg(Register ValVReg, Register PhysReg,
-                          CCValAssign VA) override;
+                          const CCValAssign &VA) override;
   };
 
   /// Base class for ValueHandlers used for arguments passed to a function call,
@@ -581,6 +587,7 @@ public:
   bool lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &Call,
                  ArrayRef<Register> ResRegs,
                  ArrayRef<ArrayRef<Register>> ArgRegs, Register SwiftErrorVReg,
+                 Register ConvergenceCtrlToken,
                  std::function<unsigned()> GetCalleeReg) const;
 
   /// For targets which want to use big-endian can enable it with

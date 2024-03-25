@@ -4,8 +4,8 @@
 // RUN: %clang_cc1 -target-feature +altivec -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-LE
 // RUN: %clang_cc1 -target-feature +altivec -mabi=vec-extabi -target-cpu pwr8 -triple powerpc-unknown-aix -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 // RUN: %clang_cc1 -target-feature +altivec -mabi=vec-extabi -target-cpu pwr8 -triple powerpc64-unknown-aix -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
-// RUN: %clang_cc1 -target-feature +altivec -mabi=vec-default -target-cpu pwr8 -triple powerpc-unknown-aix -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
-// RUN: %clang_cc1 -target-feature +altivec -mabi=vec-default -target-cpu pwr8 -triple powerpc64-unknown-aix -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
+// RUN: %clang_cc1 -target-feature +altivec -target-cpu pwr8 -triple powerpc-unknown-aix -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
+// RUN: %clang_cc1 -target-feature +altivec -target-cpu pwr8 -triple powerpc64-unknown-aix -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 // RUN: %clang -S -emit-llvm -maltivec -mabi=vec-extabi -mcpu=pwr8 --target=powerpc-unknown-aix %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 // RUN: %clang -S -emit-llvm -maltivec -mabi=vec-extabi -mcpu=pwr8 --target=powerpc64-unknown-aix %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 // RUN: %clang -S -emit-llvm -maltivec -mabi=vec-default -mcpu=pwr8 --target=powerpc-unknown-aix -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE

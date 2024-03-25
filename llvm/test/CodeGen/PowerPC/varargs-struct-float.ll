@@ -7,7 +7,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define void @foo(float inreg %s.coerce) nounwind {
 entry:
-  %s = alloca %struct.Sf1, align 4
+  %s = alloca %struct.Sf1, align 8
   store float %s.coerce, ptr %s, align 1
   %0 = load float, ptr %s, align 1
   call void (i32, ...) @testvaSf1(i32 1, float inreg %0)

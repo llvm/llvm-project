@@ -9,9 +9,8 @@
 #ifndef MLIR_ASMPARSER_ASMPARSERSTATE_H
 #define MLIR_ASMPARSER_ASMPARSERSTATE_H
 
-#include "mlir/Support/LLVM.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/Types.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstddef>
 
@@ -94,6 +93,39 @@ public:
     SmallVector<SMDefinition> arguments;
   };
 
+  /// This class represents the information for an attribute alias definition
+  /// within the input file.
+  struct AttributeAliasDefinition {
+    AttributeAliasDefinition(StringRef name, SMRange loc = {},
+                             Attribute value = {})
+        : name(name), definition(loc), value(value) {}
+
+    /// The name of the attribute alias.
+    StringRef name;
+
+    /// The source location for the alias.
+    SMDefinition definition;
+
+    /// The value of the alias.
+    Attribute value;
+  };
+
+  /// This class represents the information for type definition within the input
+  /// file.
+  struct TypeAliasDefinition {
+    TypeAliasDefinition(StringRef name, SMRange loc, Type value)
+        : name(name), definition(loc), value(value) {}
+
+    /// The name of the attribute alias.
+    StringRef name;
+
+    /// The source location for the alias.
+    SMDefinition definition;
+
+    /// The value of the alias.
+    Type value;
+  };
+
   AsmParserState();
   ~AsmParserState();
   AsmParserState &operator=(AsmParserState &&other);
@@ -106,6 +138,10 @@ public:
       ArrayRef<std::unique_ptr<BlockDefinition>>::iterator>;
   using OperationDefIterator = llvm::pointee_iterator<
       ArrayRef<std::unique_ptr<OperationDefinition>>::iterator>;
+  using AttributeDefIterator = llvm::pointee_iterator<
+      ArrayRef<std::unique_ptr<AttributeAliasDefinition>>::iterator>;
+  using TypeDefIterator = llvm::pointee_iterator<
+      ArrayRef<std::unique_ptr<TypeAliasDefinition>>::iterator>;
 
   /// Return a range of the BlockDefinitions held by the current parser state.
   iterator_range<BlockDefIterator> getBlockDefs() const;
@@ -121,6 +157,22 @@ public:
   /// Return the definition for the given operation, or nullptr if the given
   /// operation does not have a definition.
   const OperationDefinition *getOpDef(Operation *op) const;
+
+  /// Return a range of the AttributeAliasDefinitions held by the current parser
+  /// state.
+  iterator_range<AttributeDefIterator> getAttributeAliasDefs() const;
+
+  /// Return the definition for the given attribute alias, or nullptr if the
+  /// given alias does not have a definition.
+  const AttributeAliasDefinition *getAttributeAliasDef(StringRef name) const;
+
+  /// Return a range of the TypeAliasDefinitions held by the current parser
+  /// state.
+  iterator_range<TypeDefIterator> getTypeAliasDefs() const;
+
+  /// Return the definition for the given type alias, or nullptr if the given
+  /// alias does not have a definition.
+  const TypeAliasDefinition *getTypeAliasDef(StringRef name) const;
 
   /// Returns (heuristically) the range of an identifier given a SMLoc
   /// corresponding to the start of an identifier location.
@@ -154,10 +206,15 @@ public:
   /// Add a definition of the given entity.
   void addDefinition(Block *block, SMLoc location);
   void addDefinition(BlockArgument blockArg, SMLoc location);
+  void addAttrAliasDefinition(StringRef name, SMRange location,
+                              Attribute value);
+  void addTypeAliasDefinition(StringRef name, SMRange location, Type value);
 
   /// Add a source uses of the given value.
   void addUses(Value value, ArrayRef<SMLoc> locations);
   void addUses(Block *block, ArrayRef<SMLoc> locations);
+  void addAttrAliasUses(StringRef name, SMRange locations);
+  void addTypeAliasUses(StringRef name, SMRange locations);
 
   /// Add source uses for all the references nested under `refAttr`. The
   /// provided `locations` should match 1-1 with the number of references in

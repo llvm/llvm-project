@@ -12,9 +12,14 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/FormattedStream.h"
+#include <functional>
+#include <memory>
 
 namespace llvm {
 class StringRef;
@@ -27,6 +32,12 @@ class Arg;
 namespace object {
 class RelocationRef;
 struct VersionEntry;
+
+class COFFObjectFile;
+class ELFObjectFileBase;
+class MachOObjectFile;
+class WasmObjectFile;
+class XCOFFObjectFile;
 } // namespace object
 
 namespace objdump {
@@ -55,64 +66,44 @@ extern bool SectionHeaders;
 extern bool SectionContents;
 extern bool ShowRawInsn;
 extern bool SymbolDescription;
+extern bool TracebackTable;
 extern bool SymbolTable;
 extern std::string TripleName;
 extern bool UnwindInfo;
 
 extern StringSet<> FoundSectionSet;
 
-typedef std::function<bool(llvm::object::SectionRef const &)> FilterPredicate;
+class Dumper {
+  const object::ObjectFile &O;
+  StringSet<> Warnings;
 
-/// A filtered iterator for SectionRefs that skips sections based on some given
-/// predicate.
-class SectionFilterIterator {
+protected:
+  std::function<Error(const Twine &Msg)> WarningHandler;
+
 public:
-  SectionFilterIterator(FilterPredicate P,
-                        llvm::object::section_iterator const &I,
-                        llvm::object::section_iterator const &E)
-      : Predicate(std::move(P)), Iterator(I), End(E) {
-    ScanPredicate();
-  }
-  const llvm::object::SectionRef &operator*() const { return *Iterator; }
-  SectionFilterIterator &operator++() {
-    ++Iterator;
-    ScanPredicate();
-    return *this;
-  }
-  bool operator!=(SectionFilterIterator const &Other) const {
-    return Iterator != Other.Iterator;
-  }
+  Dumper(const object::ObjectFile &O);
+  virtual ~Dumper() {}
 
-private:
-  void ScanPredicate() {
-    while (Iterator != End && !Predicate(*Iterator)) {
-      ++Iterator;
-    }
-  }
-  FilterPredicate Predicate;
-  llvm::object::section_iterator Iterator;
-  llvm::object::section_iterator End;
+  void reportUniqueWarning(Error Err);
+  void reportUniqueWarning(const Twine &Msg);
+
+  virtual void printPrivateHeaders();
+  virtual void printDynamicRelocations() {}
+  void printSymbolTable(StringRef ArchiveName,
+                        StringRef ArchitectureName = StringRef(),
+                        bool DumpDynamic = false);
+  void printSymbol(const object::SymbolRef &Symbol,
+                   ArrayRef<object::VersionEntry> SymbolVersions,
+                   StringRef FileName, StringRef ArchiveName,
+                   StringRef ArchitectureName, bool DumpDynamic);
+  void printRelocations();
 };
 
-/// Creates an iterator range of SectionFilterIterators for a given Object and
-/// predicate.
-class SectionFilter {
-public:
-  SectionFilter(FilterPredicate P, llvm::object::ObjectFile const &O)
-      : Predicate(std::move(P)), Object(O) {}
-  SectionFilterIterator begin() {
-    return SectionFilterIterator(Predicate, Object.section_begin(),
-                                 Object.section_end());
-  }
-  SectionFilterIterator end() {
-    return SectionFilterIterator(Predicate, Object.section_end(),
-                                 Object.section_end());
-  }
-
-private:
-  FilterPredicate Predicate;
-  llvm::object::ObjectFile const &Object;
-};
+std::unique_ptr<Dumper> createCOFFDumper(const object::COFFObjectFile &Obj);
+std::unique_ptr<Dumper> createELFDumper(const object::ELFObjectFileBase &Obj);
+std::unique_ptr<Dumper> createMachODumper(const object::MachOObjectFile &Obj);
+std::unique_ptr<Dumper> createWasmDumper(const object::WasmObjectFile &Obj);
+std::unique_ptr<Dumper> createXCOFFDumper(const object::XCOFFObjectFile &Obj);
 
 // Various helper functions.
 
@@ -122,21 +113,12 @@ private:
 /// Idx is an optional output parameter that keeps track of which section index
 /// this is. This may be different than the actual section number, as some
 /// sections may be filtered (e.g. symbol tables).
-SectionFilter ToolSectionFilter(llvm::object::ObjectFile const &O,
-                                uint64_t *Idx = nullptr);
+object::SectionFilter ToolSectionFilter(const llvm::object::ObjectFile &O,
+                                        uint64_t *Idx = nullptr);
 
 bool isRelocAddressLess(object::RelocationRef A, object::RelocationRef B);
-void printRelocations(const object::ObjectFile *O);
-void printDynamicRelocations(const object::ObjectFile *O);
 void printSectionHeaders(object::ObjectFile &O);
 void printSectionContents(const object::ObjectFile *O);
-void printSymbolTable(const object::ObjectFile &O, StringRef ArchiveName,
-                      StringRef ArchitectureName = StringRef(),
-                      bool DumpDynamic = false);
-void printSymbol(const object::ObjectFile &O, const object::SymbolRef &Symbol,
-                 ArrayRef<object::VersionEntry> SymbolVersions,
-                 StringRef FileName, StringRef ArchiveName,
-                 StringRef ArchitectureName, bool DumpDynamic);
 [[noreturn]] void reportError(StringRef File, const Twine &Message);
 [[noreturn]] void reportError(Error E, StringRef FileName,
                               StringRef ArchiveName = "",
@@ -155,7 +137,12 @@ void invalidArgValue(const opt::Arg *A);
 std::string getFileNameForError(const object::Archive::Child &C,
                                 unsigned Index);
 SymbolInfoTy createSymbolInfo(const object::ObjectFile &Obj,
-                              const object::SymbolRef &Symbol);
+                              const object::SymbolRef &Symbol,
+                              bool IsMappingSymbol = false);
+unsigned getInstStartColumn(const MCSubtargetInfo &STI);
+void printRawData(llvm::ArrayRef<uint8_t> Bytes, uint64_t Address,
+                  llvm::formatted_raw_ostream &OS,
+                  llvm::MCSubtargetInfo const &STI);
 
 } // namespace objdump
 } // end namespace llvm

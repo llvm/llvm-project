@@ -30,7 +30,7 @@
 # 0x00000056:   NULL
 
 
-# RUN: yaml2obj %s | not llvm-dwarfdump --verify - | FileCheck %s --implicit-check-not=error:
+# RUN: yaml2obj %s | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --implicit-check-not=error:
 
 # CHECK: Verifying -:	file format Mach-O 64-bit x86-64
 # CHECK: Verifying .debug_abbrev...

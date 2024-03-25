@@ -41,7 +41,7 @@ spirv.func @bitcast_vector_to_vector(%arg0 : vector<4xf32>) "None" {
 
 // CHECK-LABEL: @bitcast_pointer
 spirv.func @bitcast_pointer(%arg0: !spirv.ptr<f32, Function>) "None" {
-  // CHECK: llvm.bitcast %{{.*}} : !llvm.ptr<f32> to !llvm.ptr<i32>
+  // CHECK-NOT: llvm.bitcast
   %0 = spirv.Bitcast %arg0 : !spirv.ptr<f32, Function> to !spirv.ptr<i32, Function>
   spirv.Return
 }

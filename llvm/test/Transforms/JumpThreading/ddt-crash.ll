@@ -20,10 +20,10 @@ define void @blam() {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @wombat.2()
 ; CHECK-NEXT:    switch i32 [[TMP3]], label [[BB10:%.*]] [
-; CHECK-NEXT:    i32 0, label [[BB7:%.*]]
-; CHECK-NEXT:    i32 1, label [[BB10]]
-; CHECK-NEXT:    i32 2, label [[BB10]]
-; CHECK-NEXT:    i32 3, label [[BB11]]
+; CHECK-NEXT:      i32 0, label [[BB7:%.*]]
+; CHECK-NEXT:      i32 1, label [[BB10]]
+; CHECK-NEXT:      i32 2, label [[BB10]]
+; CHECK-NEXT:      i32 3, label [[BB11]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 @wombat.2()
@@ -41,10 +41,10 @@ bb:
 bb2:
   %tmp3 = tail call i32 @wombat.2()
   switch i32 %tmp3, label %bb4 [
-    i32 0, label %bb5
-    i32 1, label %bb7
-    i32 2, label %bb7
-    i32 3, label %bb11
+  i32 0, label %bb5
+  i32 1, label %bb7
+  i32 2, label %bb7
+  i32 3, label %bb11
   ]
 
 bb4:
@@ -71,10 +71,10 @@ define void @spam(ptr %arg) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = load i8, ptr undef, align 8
 ; CHECK-NEXT:    switch i8 [[TMP]], label [[BB11:%.*]] [
-; CHECK-NEXT:    i8 1, label [[BB11]]
-; CHECK-NEXT:    i8 2, label [[BB11]]
-; CHECK-NEXT:    i8 3, label [[BB1:%.*]]
-; CHECK-NEXT:    i8 4, label [[BB1]]
+; CHECK-NEXT:      i8 1, label [[BB11]]
+; CHECK-NEXT:      i8 2, label [[BB11]]
+; CHECK-NEXT:      i8 3, label [[BB1:%.*]]
+; CHECK-NEXT:      i8 4, label [[BB1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
@@ -84,20 +84,20 @@ define void @spam(ptr %arg) {
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr undef, align 8
 ; CHECK-NEXT:    switch i8 [[TMP5]], label [[BB11]] [
-; CHECK-NEXT:    i8 0, label [[BB11]]
-; CHECK-NEXT:    i8 1, label [[BB10:%.*]]
-; CHECK-NEXT:    i8 2, label [[BB10]]
-; CHECK-NEXT:    i8 3, label [[BB8]]
-; CHECK-NEXT:    i8 4, label [[BB8]]
+; CHECK-NEXT:      i8 0, label [[BB11]]
+; CHECK-NEXT:      i8 1, label [[BB10:%.*]]
+; CHECK-NEXT:      i8 2, label [[BB10]]
+; CHECK-NEXT:      i8 3, label [[BB8]]
+; CHECK-NEXT:      i8 4, label [[BB8]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq ptr undef, [[ARG:%.*]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[BB10]], label [[BB2]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    switch i32 [[TMP3]], label [[BB4]] [
-; CHECK-NEXT:    i32 0, label [[BB16:%.*]]
-; CHECK-NEXT:    i32 1, label [[BB11]]
-; CHECK-NEXT:    i32 2, label [[BB12:%.*]]
+; CHECK-NEXT:      i32 0, label [[BB16:%.*]]
+; CHECK-NEXT:      i32 1, label [[BB11]]
+; CHECK-NEXT:      i32 2, label [[BB12:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    unreachable
@@ -108,9 +108,9 @@ define void @spam(ptr %arg) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = phi ptr [ [[TMP13]], [[BB12]] ], [ null, [[BB10]] ]
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i8, ptr undef, align 8
 ; CHECK-NEXT:    switch i8 [[TMP17]], label [[BB11]] [
-; CHECK-NEXT:    i8 0, label [[BB11]]
-; CHECK-NEXT:    i8 11, label [[BB23:%.*]]
-; CHECK-NEXT:    i8 12, label [[BB23]]
+; CHECK-NEXT:      i8 0, label [[BB11]]
+; CHECK-NEXT:      i8 11, label [[BB23:%.*]]
+; CHECK-NEXT:      i8 12, label [[BB23]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb23:
 ; CHECK-NEXT:    [[TMP21:%.*]] = load ptr, ptr undef, align 8
@@ -148,10 +148,10 @@ define void @spam(ptr %arg) {
 bb:
   %tmp = load i8, ptr undef, align 8
   switch i8 %tmp, label %bb11 [
-    i8 1, label %bb11
-    i8 2, label %bb11
-    i8 3, label %bb1
-    i8 4, label %bb1
+  i8 1, label %bb11
+  i8 2, label %bb11
+  i8 3, label %bb1
+  i8 4, label %bb1
   ]
 
 bb1:
@@ -164,11 +164,11 @@ bb2:
 bb4:
   %tmp5 = load i8, ptr undef, align 8
   switch i8 %tmp5, label %bb11 [
-    i8 0, label %bb11
-    i8 1, label %bb10
-    i8 2, label %bb10
-    i8 3, label %bb6
-    i8 4, label %bb6
+  i8 0, label %bb11
+  i8 1, label %bb10
+  i8 2, label %bb10
+  i8 3, label %bb6
+  i8 4, label %bb6
   ]
 
 bb6:
@@ -183,9 +183,9 @@ bb8:
 
 bb10:
   switch i32 %tmp3, label %bb4 [
-    i32 0, label %bb14
-    i32 1, label %bb11
-    i32 2, label %bb12
+  i32 0, label %bb14
+  i32 1, label %bb11
+  i32 2, label %bb12
   ]
 
 bb11:
@@ -202,9 +202,9 @@ bb14:
 bb16:
   %tmp17 = load i8, ptr undef, align 8
   switch i8 %tmp17, label %bb11 [
-    i8 0, label %bb11
-    i8 11, label %bb18
-    i8 12, label %bb18
+  i8 0, label %bb11
+  i8 11, label %bb18
+  i8 12, label %bb18
   ]
 
 bb18:
@@ -216,9 +216,9 @@ bb19:
 bb20:
   %tmp21 = load ptr, ptr undef
   switch i8 undef, label %bb22 [
-    i8 0, label %bb4
-    i8 11, label %bb10
-    i8 12, label %bb10
+  i8 0, label %bb4
+  i8 11, label %bb10
+  i8 12, label %bb10
   ]
 
 bb22:
@@ -271,76 +271,76 @@ define void @zot() align 2 personality ptr @foo {
 ; CHECK-LABEL: @zot(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    invoke void @bar()
-; CHECK-NEXT:    to label [[BB1:%.*]] unwind label [[BB3:%.*]]
+; CHECK-NEXT:            to label [[BB1:%.*]] unwind label [[BB3:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    invoke void @bar()
-; CHECK-NEXT:    to label [[BB2:%.*]] unwind label [[BB4:%.*]]
+; CHECK-NEXT:            to label [[BB2:%.*]] unwind label [[BB4:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    invoke void @bar()
-; CHECK-NEXT:    to label [[BB6:%.*]] unwind label [[BB17:%.*]]
+; CHECK-NEXT:            to label [[BB6:%.*]] unwind label [[BB17:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr @global.1
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr @global.1
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr @global.1
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr @global.1
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb6:
 ; CHECK-NEXT:    invoke void @bar()
-; CHECK-NEXT:    to label [[BB7:%.*]] unwind label [[BB19:%.*]]
+; CHECK-NEXT:            to label [[BB7:%.*]] unwind label [[BB19:%.*]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    invoke void @bar()
-; CHECK-NEXT:    to label [[BB10:%.*]] unwind label [[BB8:%.*]]
+; CHECK-NEXT:            to label [[BB10:%.*]] unwind label [[BB8:%.*]]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    catch ptr @global.1
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:            catch ptr @global.1
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[TMP11:%.*]] = load ptr, ptr undef, align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = invoke i32 [[TMP11]](ptr nonnull undef)
-; CHECK-NEXT:    to label [[BB13:%.*]] unwind label [[BB21:%.*]]
+; CHECK-NEXT:            to label [[BB13:%.*]] unwind label [[BB21:%.*]]
 ; CHECK:       bb13:
 ; CHECK-NEXT:    invoke void @bar()
-; CHECK-NEXT:    to label [[BB14:%.*]] unwind label [[BB30:%.*]]
+; CHECK-NEXT:            to label [[BB14:%.*]] unwind label [[BB30:%.*]]
 ; CHECK:       bb14:
 ; CHECK-NEXT:    [[TMP15:%.*]] = load ptr, ptr undef, align 8
 ; CHECK-NEXT:    [[TMP16:%.*]] = invoke i32 [[TMP15]](ptr nonnull undef)
-; CHECK-NEXT:    to label [[BB26:%.*]] unwind label [[BB30_THREAD:%.*]]
+; CHECK-NEXT:            to label [[BB26:%.*]] unwind label [[BB30_THREAD:%.*]]
 ; CHECK:       bb17:
 ; CHECK-NEXT:    [[TMP18:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr @global.1
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr @global.1
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb19:
 ; CHECK-NEXT:    [[TMP20:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr @global.1
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr @global.1
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb21:
 ; CHECK-NEXT:    [[TMP22:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr @global.1
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr @global.1
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb26:
 ; CHECK-NEXT:    [[TMP27:%.*]] = load ptr, ptr undef, align 8
 ; CHECK-NEXT:    [[TMP28:%.*]] = invoke i32 [[TMP27]](ptr nonnull undef)
-; CHECK-NEXT:    to label [[BB29:%.*]] unwind label [[BB30_THREAD]]
+; CHECK-NEXT:            to label [[BB29:%.*]] unwind label [[BB30_THREAD]]
 ; CHECK:       bb29:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb30.thread:
 ; CHECK-NEXT:    [[LPAD_THR_COMM:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr @global.1
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr @global.1
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    br label [[BB32:%.*]]
 ; CHECK:       bb30:
 ; CHECK-NEXT:    [[LPAD_THR_COMM_SPLIT_LP:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr @global.1
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr @global.1
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    br label [[BB32]]
 ; CHECK:       bb32:
 ; CHECK-NEXT:    unreachable

@@ -73,12 +73,6 @@ protected:
   // for multiple underlying IRs (Polly?) by providing a new VPlan front-end,
   // back-end and analysis information for the new IR.
 
-  // Set \p Val as the underlying Value of this VPValue.
-  void setUnderlyingValue(Value *Val) {
-    assert(!UnderlyingVal && "Underlying Value is already set.");
-    UnderlyingVal = Val;
-  }
-
 public:
   /// Return the underlying Value attached to this VPValue.
   Value *getUnderlyingValue() { return UnderlyingVal; }
@@ -121,18 +115,11 @@ public:
 
   /// Remove a single \p User from the list of users.
   void removeUser(VPUser &User) {
-    bool Found = false;
     // The same user can be added multiple times, e.g. because the same VPValue
     // is used twice by the same VPUser. Remove a single one.
-    erase_if(Users, [&User, &Found](VPUser *Other) {
-      if (Found)
-        return false;
-      if (Other == &User) {
-        Found = true;
-        return true;
-      }
-      return false;
-    });
+    auto *I = find(Users, &User);
+    if (I != Users.end())
+      Users.erase(I);
   }
 
   typedef SmallVectorImpl<VPUser *>::iterator user_iterator;
@@ -163,6 +150,13 @@ public:
 
   void replaceAllUsesWith(VPValue *New);
 
+  /// Go through the uses list for this VPValue and make each use point to \p
+  /// New if the callback ShouldReplace returns true for the given use specified
+  /// by a pair of (VPUser, the use index).
+  void replaceUsesWithIf(
+      VPValue *New,
+      llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace);
+
   /// Returns the recipe defining this VPValue or nullptr if it is not defined
   /// by a recipe, i.e. is a live-in.
   VPRecipeBase *getDefiningRecipe();
@@ -171,16 +165,19 @@ public:
   /// Returns true if this VPValue is defined by a recipe.
   bool hasDefiningRecipe() const { return getDefiningRecipe(); }
 
+  /// Returns true if this VPValue is a live-in, i.e. defined outside the VPlan.
+  bool isLiveIn() const { return !hasDefiningRecipe(); }
+
   /// Returns the underlying IR value, if this VPValue is defined outside the
   /// scope of VPlan. Returns nullptr if the VPValue is defined by a VPDef
   /// inside a VPlan.
   Value *getLiveInIRValue() {
-    assert(!hasDefiningRecipe() &&
+    assert(isLiveIn() &&
            "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
     return getUnderlyingValue();
   }
   const Value *getLiveInIRValue() const {
-    assert(!hasDefiningRecipe() &&
+    assert(isLiveIn() &&
            "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
     return getUnderlyingValue();
   }
@@ -189,6 +186,12 @@ public:
   /// is a live-in value.
   /// TODO: Also handle recipes defined in pre-header blocks.
   bool isDefinedOutsideVectorRegions() const { return !hasDefiningRecipe(); }
+
+  // Set \p Val as the underlying Value of this VPValue.
+  void setUnderlyingValue(Value *Val) {
+    assert(!UnderlyingVal && "Underlying Value is already set.");
+    UnderlyingVal = Val;
+  }
 };
 
 typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
@@ -293,6 +296,14 @@ public:
            "Op must be an operand of the recipe");
     return false;
   }
+
+  /// Returns true if the VPUser only uses the first part of operand \p Op.
+  /// Conservatively returns false.
+  virtual bool onlyFirstPartUsed(const VPValue *Op) const {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return false;
+  }
 };
 
 /// This class augments a recipe with a set of VPValues defined by the recipe.
@@ -322,7 +333,7 @@ class VPDef {
     assert(V->Def == this && "can only remove VPValue linked with this VPDef");
     assert(is_contained(DefinedValues, V) &&
            "VPValue to remove must be in DefinedValues");
-    erase_value(DefinedValues, V);
+    llvm::erase(DefinedValues, V);
     V->Def = nullptr;
   }
 
@@ -339,27 +350,33 @@ public:
     VPInterleaveSC,
     VPReductionSC,
     VPReplicateSC,
+    VPScalarCastSC,
     VPScalarIVStepsSC,
+    VPVectorPointerSC,
     VPWidenCallSC,
     VPWidenCanonicalIVSC,
+    VPWidenCastSC,
     VPWidenGEPSC,
     VPWidenMemoryInstructionSC,
     VPWidenSC,
     VPWidenSelectSC,
-
-    // Phi-like recipes. Need to be kept together.
+    // START: Phi-like recipes. Need to be kept together.
     VPBlendSC,
+    VPWidenPHISC,
     VPPredInstPHISC,
-    // Header-phi recipes. Need to be kept together.
+    // START: SubclassID for recipes that inherit VPHeaderPHIRecipe.
+    // VPHeaderPHIRecipe need to be kept together.
     VPCanonicalIVPHISC,
     VPActiveLaneMaskPHISC,
     VPFirstOrderRecurrencePHISC,
-    VPWidenPHISC,
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
     VPReductionPHISC,
+    // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
+    // END: Phi-like recipes
     VPFirstPHISC = VPBlendSC,
     VPFirstHeaderPHISC = VPCanonicalIVPHISC,
+    VPLastHeaderPHISC = VPReductionPHISC,
     VPLastPHISC = VPReductionPHISC,
   };
 
@@ -434,6 +451,7 @@ class VPSlotTracker {
 
   void assignSlot(const VPValue *V);
   void assignSlots(const VPlan &Plan);
+  void assignSlots(const VPBasicBlock *VPBB);
 
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {

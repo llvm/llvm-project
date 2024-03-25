@@ -156,6 +156,39 @@ TEST_F(ObjectFileELFTest, GetModuleSpecifications_EarlySectionHeaders) {
   EXPECT_EQ(Spec.GetUUID(), Uuid);
 }
 
+TEST_F(ObjectFileELFTest, GetModuleSpecifications_OffsetSizeWithNormalFile) {
+  std::string SO = GetInputFilePath("liboffset-test.so");
+  ModuleSpecList Specs;
+  ASSERT_EQ(1u, ObjectFile::GetModuleSpecifications(FileSpec(SO), 0, 0, Specs));
+  ModuleSpec Spec;
+  ASSERT_TRUE(Specs.GetModuleSpecAtIndex(0, Spec)) ;
+  UUID Uuid;
+  Uuid.SetFromStringRef("7D6E4738");
+  EXPECT_EQ(Spec.GetUUID(), Uuid);
+  EXPECT_EQ(Spec.GetObjectOffset(), 0UL);
+  EXPECT_EQ(Spec.GetObjectSize(), 3600UL);
+  EXPECT_EQ(FileSystem::Instance().GetByteSize(FileSpec(SO)), 3600UL);
+}
+
+TEST_F(ObjectFileELFTest, GetModuleSpecifications_OffsetSizeWithOffsetFile) {
+  // The contents of offset-test.bin are
+  // -    0-1023: \0
+  // - 1024-4623: liboffset-test.so (offset: 1024, size: 3600, CRC32: 7D6E4738)
+  // - 4624-4639: \0
+  std::string SO = GetInputFilePath("offset-test.bin");
+  ModuleSpecList Specs;
+  ASSERT_EQ(
+      1u, ObjectFile::GetModuleSpecifications(FileSpec(SO), 1024, 3600, Specs));
+  ModuleSpec Spec;
+  ASSERT_TRUE(Specs.GetModuleSpecAtIndex(0, Spec)) ;
+  UUID Uuid;
+  Uuid.SetFromStringRef("7D6E4738");
+  EXPECT_EQ(Spec.GetUUID(), Uuid);
+  EXPECT_EQ(Spec.GetObjectOffset(), 1024UL);
+  EXPECT_EQ(Spec.GetObjectSize(), 3600UL);
+  EXPECT_EQ(FileSystem::Instance().GetByteSize(FileSpec(SO)), 4640UL);
+}
+
 TEST_F(ObjectFileELFTest, GetSymtab_NoSymEntryPointArmThumbAddressClass) {
   /*
   // nosym-entrypoint-arm-thumb.s

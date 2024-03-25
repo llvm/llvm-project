@@ -1,5 +1,7 @@
 ; RUN: opt -passes=mem2reg -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -passes=mem2reg -S %s -o - \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; Test assignment tracking debug info when mem2reg promotes an alloca with
 ;; stores requiring insertion of a phi. Check the output when the stores are
@@ -8,14 +10,14 @@
 
 ; CHECK: entry:
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a, metadata ![[B:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %a, metadata ![[A:[0-9]+]], {{.*}}, metadata ptr undef
+; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a, metadata ![[A:[0-9]+]]
 ; CHECK: if.then:
 ; CHECK-NEXT: %add =
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %add, metadata ![[B]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %add, metadata ![[A]], {{.*}}, metadata ptr undef
+; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %add, metadata ![[A]]
 ; CHECK: if.else:
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 -1, metadata ![[B]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 -1, metadata ![[A]], {{.*}}, metadata ptr undef
+; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 -1, metadata ![[A]]
 ; CHECK: if.end:
 ; CHECK-NEXT: %a.addr.0 = phi i32
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a.addr.0, metadata ![[A]]

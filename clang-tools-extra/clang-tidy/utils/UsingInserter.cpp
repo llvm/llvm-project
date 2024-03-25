@@ -53,7 +53,7 @@ std::optional<FixItHint> UsingInserter::createUsingDeclaration(
              Statement, Context)
            .empty();
   if (AlreadyHasUsingDecl) {
-    AddedUsing.emplace(NameInFunction(Function, QualifiedName.str()));
+    AddedUsing.emplace(Function, QualifiedName.str());
     return std::nullopt;
   }
   // Find conflicting declarations and references.
@@ -69,7 +69,7 @@ std::optional<FixItHint> UsingInserter::createUsingDeclaration(
   std::string Declaration =
       (llvm::Twine("\nusing ") + QualifiedName + ";").str();
 
-  AddedUsing.emplace(std::make_pair(Function, QualifiedName.str()));
+  AddedUsing.emplace(Function, QualifiedName.str());
   return FixItHint::CreateInsertion(InsertLoc, Declaration);
 }
 

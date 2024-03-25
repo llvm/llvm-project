@@ -1,7 +1,7 @@
-// RUN: %clang_dfsan -g3 -DDATA_BYTES=3 %s -fno-exceptions -latomic -o %t && %run %t
-// RUN: %clang_dfsan -g3 -DDATA_BYTES=3 -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 %s -fno-exceptions -latomic -o %t && %run %t
-// RUN: %clang_dfsan -g3 -DDATA_BYTES=32 %s -fno-exceptions -latomic -o %t && %run %t
-// RUN: %clang_dfsan -g3 -DDATA_BYTES=32 -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 %s -fno-exceptions -latomic -o %t && %run %t
+// RUN: %clang_dfsan -g3 -DDATA_BYTES=3 %s -fno-exceptions %libatomic -o %t && %run %t
+// RUN: %clang_dfsan -g3 -DDATA_BYTES=3 -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 %s -fno-exceptions %libatomic -o %t && %run %t
+// RUN: %clang_dfsan -g3 -DDATA_BYTES=32 %s -fno-exceptions %libatomic -o %t && %run %t
+// RUN: %clang_dfsan -g3 -DDATA_BYTES=32 -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 %s -fno-exceptions %libatomic -o %t && %run %t
 
 #include <assert.h>
 #include <sanitizer/dfsan_interface.h>

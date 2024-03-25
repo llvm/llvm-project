@@ -1120,5 +1120,3 @@ static_assert(
 static_assert(
     !check_equality_comparable_with<one_way_ne, explicit_operators>());
 } // namespace types_fit_for_purpose
-
-int main(int, char**) { return 0; }

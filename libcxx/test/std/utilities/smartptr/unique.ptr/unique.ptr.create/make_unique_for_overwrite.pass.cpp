@@ -42,21 +42,21 @@ static_assert(!HasMakeUniqueForOverwrite<Foo, Foo>);
 
 // template<class T>
 //   constexpr unique_ptr<T> make_unique_for_overwrite(size_t n);
-static_assert(HasMakeUniqueForOverwrite<int[], size_t>);
-static_assert(HasMakeUniqueForOverwrite<Foo[], size_t>);
+static_assert(HasMakeUniqueForOverwrite<int[], std::size_t>);
+static_assert(HasMakeUniqueForOverwrite<Foo[], std::size_t>);
 static_assert(!HasMakeUniqueForOverwrite<int[]>);
 static_assert(!HasMakeUniqueForOverwrite<Foo[]>);
-static_assert(!HasMakeUniqueForOverwrite<int[], size_t, int>);
-static_assert(!HasMakeUniqueForOverwrite<Foo[], size_t, int>);
+static_assert(!HasMakeUniqueForOverwrite<int[], std::size_t, int>);
+static_assert(!HasMakeUniqueForOverwrite<Foo[], std::size_t, int>);
 
 // template<class T, class... Args>
 //   unspecified make_unique_for_overwrite(Args&&...) = delete;
 static_assert(!HasMakeUniqueForOverwrite<int[2]>);
-static_assert(!HasMakeUniqueForOverwrite<int[2], size_t>);
+static_assert(!HasMakeUniqueForOverwrite<int[2], std::size_t>);
 static_assert(!HasMakeUniqueForOverwrite<int[2], int>);
 static_assert(!HasMakeUniqueForOverwrite<int[2], int, int>);
 static_assert(!HasMakeUniqueForOverwrite<Foo[2]>);
-static_assert(!HasMakeUniqueForOverwrite<Foo[2], size_t>);
+static_assert(!HasMakeUniqueForOverwrite<Foo[2], std::size_t>);
 static_assert(!HasMakeUniqueForOverwrite<Foo[2], int>);
 static_assert(!HasMakeUniqueForOverwrite<Foo[2], int, int>);
 
@@ -108,13 +108,13 @@ struct WithCustomNew {
   inline static bool customNewCalled    = false;
   inline static bool customNewArrCalled = false;
 
-  static void* operator new(size_t n) {
+  static void* operator new(std::size_t n) {
     customNewCalled = true;
     return ::operator new(n);
     ;
   }
 
-  static void* operator new[](size_t n) {
+  static void* operator new[](std::size_t n) {
     customNewArrCalled = true;
     return ::operator new[](n);
   }

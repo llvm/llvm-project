@@ -85,7 +85,8 @@ ExecutionContext::ExecutionContext(Target *t,
       if (m_process_sp) {
         m_thread_sp = m_process_sp->GetThreadList().GetSelectedThread();
         if (m_thread_sp)
-          m_frame_sp = m_thread_sp->GetSelectedFrame();
+          m_frame_sp =
+              m_thread_sp->GetSelectedFrame(DoNoSelectMostRelevantFrame);
       }
     }
   }
@@ -517,7 +518,8 @@ void ExecutionContextRef::SetTargetPtr(Target *target, bool adopt_selected) {
 
               if (thread_sp) {
                 SetThreadSP(thread_sp);
-                lldb::StackFrameSP frame_sp(thread_sp->GetSelectedFrame());
+                lldb::StackFrameSP frame_sp(
+                    thread_sp->GetSelectedFrame(DoNoSelectMostRelevantFrame));
                 if (!frame_sp)
                   frame_sp = thread_sp->GetStackFrameAtIndex(0);
                 if (frame_sp)

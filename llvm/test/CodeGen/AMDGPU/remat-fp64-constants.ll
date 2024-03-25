@@ -3,8 +3,8 @@
 
 ; GCN-LABEL: {{^}}test_remat_sgpr:
 ; GCN-NOT:     v_writelane_b32
+; GCN-COUNT-4: s_mov_b32 s{{[0-9]+}}, 0x
 ; GCN:         {{^}}[[LOOP:.LBB[0-9_]+]]:
-; GCN-COUNT-6: s_mov_b32 s{{[0-9]+}}, 0x
 ; GCN-NOT:     v_writelane_b32
 ; GCN:         s_cbranch_{{[^ ]+}} [[LOOP]]
 ; GCN: .sgpr_spill_count: 0

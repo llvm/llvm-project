@@ -324,7 +324,7 @@ public:
   bool ExpandMOVEM(MachineInstrBuilder &MIB, const MCInstrDesc &Desc,
                    bool IsRM) const;
 
-  /// Return a virtual register initialized with the the global base register
+  /// Return a virtual register initialized with the global base register
   /// value. Output instructions required to initialize the register in the
   /// function entry block, if necessary.
   unsigned getGlobalBaseReg(MachineFunction *MF) const;

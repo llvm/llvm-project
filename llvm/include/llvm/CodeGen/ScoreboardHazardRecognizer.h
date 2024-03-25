@@ -49,7 +49,8 @@ class ScoreboardHazardRecognizer : public ScheduleHazardRecognizer {
 
   public:
     Scoreboard() = default;
-
+    Scoreboard &operator=(const Scoreboard &other) = delete;
+    Scoreboard(const Scoreboard &other) = delete;
     ~Scoreboard() {
       delete[] Data;
     }

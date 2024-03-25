@@ -3,20 +3,20 @@
 // RUN: %clang -x c   -fsanitize=pointer-overflow -O2 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK-UB-C
 // RUN: %clang -x c   -fsanitize=pointer-overflow -O3 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK-UB-C
 
-// RUN: %clang -x c++ -fsanitize=pointer-overflow -O0 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK
-// RUN: %clang -x c++ -fsanitize=pointer-overflow -O1 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK
-// RUN: %clang -x c++ -fsanitize=pointer-overflow -O2 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK
-// RUN: %clang -x c++ -fsanitize=pointer-overflow -O3 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK
+// RUN: %clangxx -x c++ -fsanitize=pointer-overflow -O0 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK
+// RUN: %clangxx -x c++ -fsanitize=pointer-overflow -O1 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK
+// RUN: %clangxx -x c++ -fsanitize=pointer-overflow -O2 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK
+// RUN: %clangxx -x c++ -fsanitize=pointer-overflow -O3 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK
 
 // RUN: %clang -x c   -fsanitize=pointer-overflow -O0 %s -o %t && %run %t I_AM_UB 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK-UB
 // RUN: %clang -x c   -fsanitize=pointer-overflow -O1 %s -o %t && %run %t I_AM_UB 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK-UB
 // RUN: %clang -x c   -fsanitize=pointer-overflow -O2 %s -o %t && %run %t I_AM_UB 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK-UB
 // RUN: %clang -x c   -fsanitize=pointer-overflow -O3 %s -o %t && %run %t I_AM_UB 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK-UB
 
-// RUN: %clang -x c++ -fsanitize=pointer-overflow -O0 %s -o %t && %run %t I_AM_UB 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK-UB
-// RUN: %clang -x c++ -fsanitize=pointer-overflow -O1 %s -o %t && %run %t I_AM_UB 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK-UB
-// RUN: %clang -x c++ -fsanitize=pointer-overflow -O2 %s -o %t && %run %t I_AM_UB 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK-UB
-// RUN: %clang -x c++ -fsanitize=pointer-overflow -O3 %s -o %t && %run %t I_AM_UB 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK-UB
+// RUN: %clangxx -x c++ -fsanitize=pointer-overflow -O0 %s -o %t && %run %t I_AM_UB 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK-UB
+// RUN: %clangxx -x c++ -fsanitize=pointer-overflow -O1 %s -o %t && %run %t I_AM_UB 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK-UB
+// RUN: %clangxx -x c++ -fsanitize=pointer-overflow -O2 %s -o %t && %run %t I_AM_UB 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK-UB
+// RUN: %clangxx -x c++ -fsanitize=pointer-overflow -O3 %s -o %t && %run %t I_AM_UB 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=CHECK-UB
 
 #include <stdint.h>
 #include <stdio.h>

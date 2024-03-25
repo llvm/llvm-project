@@ -4,10 +4,9 @@
 [![bazel](https://github.com/google/benchmark/actions/workflows/bazel.yml/badge.svg)](https://github.com/google/benchmark/actions/workflows/bazel.yml)
 [![pylint](https://github.com/google/benchmark/workflows/pylint/badge.svg)](https://github.com/google/benchmark/actions?query=workflow%3Apylint)
 [![test-bindings](https://github.com/google/benchmark/workflows/test-bindings/badge.svg)](https://github.com/google/benchmark/actions?query=workflow%3Atest-bindings)
-
-[![Build Status](https://travis-ci.org/google/benchmark.svg?branch=master)](https://travis-ci.org/google/benchmark)
 [![Coverage Status](https://coveralls.io/repos/google/benchmark/badge.svg)](https://coveralls.io/r/google/benchmark)
 
+[![Discord](https://discordapp.com/api/guilds/1125694995928719494/widget.png?style=shield)](https://discord.gg/cz7UX7wKC2)
 
 A library to benchmark code snippets, similar to unit tests. Example:
 
@@ -33,7 +32,7 @@ To get started, see [Requirements](#requirements) and
 [Installation](#installation). See [Usage](#usage) for a full example and the
 [User Guide](docs/user_guide.md) for a more comprehensive feature overview.
 
-It may also help to read the [Google Test documentation](https://github.com/google/googletest/blob/master/docs/primer.md)
+It may also help to read the [Google Test documentation](https://github.com/google/googletest/blob/main/docs/primer.md)
 as some of the structural aspects of the APIs are similar.
 
 ## Resources
@@ -46,6 +45,8 @@ IRC channels:
 [Additional Tooling Documentation](docs/tools.md)
 
 [Assembly Testing Documentation](docs/AssemblyTests.md)
+
+[Building and installing Python bindings](docs/python_bindings.md)
 
 ## Requirements
 
@@ -136,6 +137,12 @@ cache variables, if autodetection fails.
 
 If you are using clang, you may need to set `LLVMAR_EXECUTABLE`,
 `LLVMNM_EXECUTABLE` and `LLVMRANLIB_EXECUTABLE` cmake cache variables.
+
+To enable sanitizer checks (eg., `asan` and `tsan`), add:
+```
+ -DCMAKE_C_FLAGS="-g -O2 -fno-omit-frame-pointer -fsanitize=address -fsanitize=thread -fno-sanitize-recover=all"
+ -DCMAKE_CXX_FLAGS="-g -O2 -fno-omit-frame-pointer -fsanitize=address -fsanitize=thread -fno-sanitize-recover=all "  
+```
 
 ### Stable and Experimental Library Versions
 

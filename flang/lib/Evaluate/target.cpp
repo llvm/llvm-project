@@ -102,6 +102,8 @@ void TargetCharacteristics::set_isBigEndian(bool isBig) {
   isBigEndian_ = isBig;
 }
 
+void TargetCharacteristics::set_isPPC(bool isPowerPC) { isPPC_ = isPowerPC; }
+
 void TargetCharacteristics::set_areSubnormalsFlushedToZero(bool yes) {
   areSubnormalsFlushedToZero_ = yes;
 }
@@ -135,6 +137,36 @@ private:
 int TargetCharacteristics::SelectedIntKind(std::int64_t precision) const {
   if (auto kind{
           common::SearchTypes(SelectedIntKindVisitor{*this, precision})}) {
+    return *kind;
+  } else {
+    return -1;
+  }
+}
+
+// SELECTED_LOGICAL_KIND() -- F'2023 16.9.182
+class SelectedLogicalKindVisitor {
+public:
+  SelectedLogicalKindVisitor(
+      const TargetCharacteristics &targetCharacteristics, std::int64_t bits)
+      : targetCharacteristics_{targetCharacteristics}, bits_{bits} {}
+  using Result = std::optional<int>;
+  using Types = LogicalTypes;
+  template <typename T> Result Test() const {
+    if (Scalar<T>::bits >= bits_ &&
+        targetCharacteristics_.IsTypeEnabled(T::category, T::kind)) {
+      return T::kind;
+    } else {
+      return std::nullopt;
+    }
+  }
+
+private:
+  const TargetCharacteristics &targetCharacteristics_;
+  std::int64_t bits_;
+};
+
+int TargetCharacteristics::SelectedLogicalKind(std::int64_t bits) const {
+  if (auto kind{common::SearchTypes(SelectedLogicalKindVisitor{*this, bits})}) {
     return *kind;
   } else {
     return -1;

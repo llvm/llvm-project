@@ -17,7 +17,7 @@ config.host_arch = "@HOST_ARCH@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.bolt_clang = "@BOLT_CLANG_EXE@"
 config.bolt_lld = "@BOLT_LLD_EXE@"
-config.targets_to_build = "@TARGETS_TO_BUILD@"
+config.targets_to_build = "@BOLT_TARGETS_TO_BUILD@"
 config.gnu_ld = "@GNU_LD_EXECUTABLE@"
 
 import lit.llvm

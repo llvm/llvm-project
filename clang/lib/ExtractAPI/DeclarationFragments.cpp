@@ -12,12 +12,53 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ExtractAPI/DeclarationFragments.h"
-#include "TypedefUnderlyingTypeResolver.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/QualTypeNames.h"
+#include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
+#include "clang/Basic/OperatorKinds.h"
+#include "clang/ExtractAPI/TypedefUnderlyingTypeResolver.h"
 #include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/StringSwitch.h"
+#include <typeinfo>
 
 using namespace clang::extractapi;
 using namespace llvm;
+
+namespace {
+
+void findTypeLocForBlockDecl(const clang::TypeSourceInfo *TSInfo,
+                             clang::FunctionTypeLoc &Block,
+                             clang::FunctionProtoTypeLoc &BlockProto) {
+  if (!TSInfo)
+    return;
+
+  clang::TypeLoc TL = TSInfo->getTypeLoc().getUnqualifiedLoc();
+  while (true) {
+    // Look through qualified types
+    if (auto QualifiedTL = TL.getAs<clang::QualifiedTypeLoc>()) {
+      TL = QualifiedTL.getUnqualifiedLoc();
+      continue;
+    }
+
+    if (auto AttrTL = TL.getAs<clang::AttributedTypeLoc>()) {
+      TL = AttrTL.getModifiedLoc();
+      continue;
+    }
+
+    // Try to get the function prototype behind the block pointer type,
+    // then we're done.
+    if (auto BlockPtr = TL.getAs<clang::BlockPointerTypeLoc>()) {
+      TL = BlockPtr.getPointeeLoc().IgnoreParens();
+      Block = TL.getAs<clang::FunctionTypeLoc>();
+      BlockProto = TL.getAs<clang::FunctionProtoTypeLoc>();
+    }
+    break;
+  }
+}
+
+} // namespace
 
 DeclarationFragments &DeclarationFragments::appendSpace() {
   if (!Fragments.empty()) {
@@ -82,6 +123,58 @@ DeclarationFragments::parseFragmentKindFromString(StringRef S) {
       .Case("externalParam", DeclarationFragments::FragmentKind::ExternalParam)
       .Case("text", DeclarationFragments::FragmentKind::Text)
       .Default(DeclarationFragments::FragmentKind::None);
+}
+
+DeclarationFragments DeclarationFragments::getExceptionSpecificationString(
+    ExceptionSpecificationType ExceptionSpec) {
+  DeclarationFragments Fragments;
+  switch (ExceptionSpec) {
+  case ExceptionSpecificationType::EST_None:
+    return Fragments;
+  case ExceptionSpecificationType::EST_DynamicNone:
+    return Fragments.append(" ", DeclarationFragments::FragmentKind::Text)
+        .append("throw", DeclarationFragments::FragmentKind::Keyword)
+        .append("(", DeclarationFragments::FragmentKind::Text)
+        .append(")", DeclarationFragments::FragmentKind::Text);
+  case ExceptionSpecificationType::EST_Dynamic:
+    // FIXME: throw(int), get types of inner expression
+    return Fragments;
+  case ExceptionSpecificationType::EST_BasicNoexcept:
+    return Fragments.append(" ", DeclarationFragments::FragmentKind::Text)
+        .append("noexcept", DeclarationFragments::FragmentKind::Keyword);
+  case ExceptionSpecificationType::EST_DependentNoexcept:
+    // FIXME: throw(conditional-expression), get expression
+    break;
+  case ExceptionSpecificationType::EST_NoexceptFalse:
+    return Fragments.append(" ", DeclarationFragments::FragmentKind::Text)
+        .append("noexcept", DeclarationFragments::FragmentKind::Keyword)
+        .append("(", DeclarationFragments::FragmentKind::Text)
+        .append("false", DeclarationFragments::FragmentKind::Keyword)
+        .append(")", DeclarationFragments::FragmentKind::Text);
+  case ExceptionSpecificationType::EST_NoexceptTrue:
+    return Fragments.append(" ", DeclarationFragments::FragmentKind::Text)
+        .append("noexcept", DeclarationFragments::FragmentKind::Keyword)
+        .append("(", DeclarationFragments::FragmentKind::Text)
+        .append("true", DeclarationFragments::FragmentKind::Keyword)
+        .append(")", DeclarationFragments::FragmentKind::Text);
+  default:
+    return Fragments;
+  }
+
+  llvm_unreachable("Unhandled exception specification");
+}
+
+DeclarationFragments
+DeclarationFragments::getStructureTypeFragment(const RecordDecl *Record) {
+  DeclarationFragments Fragments;
+  if (Record->isStruct())
+    Fragments.append("struct", DeclarationFragments::FragmentKind::Keyword);
+  else if (Record->isUnion())
+    Fragments.append("union", DeclarationFragments::FragmentKind::Keyword);
+  else
+    Fragments.append("class", DeclarationFragments::FragmentKind::Keyword);
+
+  return Fragments;
 }
 
 // NNS stores C++ nested name specifiers, which are prefixes to qualified names.
@@ -159,15 +252,67 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
 
   DeclarationFragments Fragments;
 
+  // An ElaboratedType is a sugar for types that are referred to using an
+  // elaborated keyword, e.g., `struct S`, `enum E`, or (in C++) via a
+  // qualified name, e.g., `N::M::type`, or both.
+  if (const ElaboratedType *ET = dyn_cast<ElaboratedType>(T)) {
+    ElaboratedTypeKeyword Keyword = ET->getKeyword();
+    if (Keyword != ElaboratedTypeKeyword::None) {
+      Fragments
+          .append(ElaboratedType::getKeywordName(Keyword),
+                  DeclarationFragments::FragmentKind::Keyword)
+          .appendSpace();
+    }
+
+    if (const NestedNameSpecifier *NNS = ET->getQualifier())
+      Fragments.append(getFragmentsForNNS(NNS, Context, After));
+
+    // After handling the elaborated keyword or qualified name, build
+    // declaration fragments for the desugared underlying type.
+    return Fragments.append(getFragmentsForType(ET->desugar(), Context, After));
+  }
+
+  // If the type is a typedefed type, get the underlying TypedefNameDecl for a
+  // direct reference to the typedef instead of the wrapped type.
+
+  // 'id' type is a typedef for an ObjCObjectPointerType
+  //  we treat it as a typedef
+  if (const TypedefType *TypedefTy = dyn_cast<TypedefType>(T)) {
+    const TypedefNameDecl *Decl = TypedefTy->getDecl();
+    TypedefUnderlyingTypeResolver TypedefResolver(Context);
+    std::string USR = TypedefResolver.getUSRForType(QualType(T, 0));
+
+    if (T->isObjCIdType()) {
+      return Fragments.append(Decl->getName(),
+                              DeclarationFragments::FragmentKind::Keyword);
+    }
+
+    return Fragments.append(
+        Decl->getName(), DeclarationFragments::FragmentKind::TypeIdentifier,
+        USR, TypedefResolver.getUnderlyingTypeDecl(QualType(T, 0)));
+  }
+
   // Declaration fragments of a pointer type is the declaration fragments of
-  // the pointee type followed by a `*`, except for Objective-C `id` and `Class`
-  // pointers, where we do not spell out the `*`.
-  if (T->isPointerType() ||
-      (T->isObjCObjectPointerType() &&
-       !T->getAs<ObjCObjectPointerType>()->isObjCIdOrClassType())) {
+  // the pointee type followed by a `*`,
+  if (T->isPointerType() && !T->isFunctionPointerType())
     return Fragments
         .append(getFragmentsForType(T->getPointeeType(), Context, After))
         .append(" *", DeclarationFragments::FragmentKind::Text);
+
+  // For Objective-C `id` and `Class` pointers
+  // we do not spell out the `*`.
+  if (T->isObjCObjectPointerType() &&
+      !T->getAs<ObjCObjectPointerType>()->isObjCIdOrClassType()) {
+
+    Fragments.append(getFragmentsForType(T->getPointeeType(), Context, After));
+
+    // id<protocol> is an qualified id type
+    // id<protocol>* is not an qualified id type
+    if (!T->getAs<ObjCObjectPointerType>()->isObjCQualifiedIdType()) {
+      Fragments.append(" *", DeclarationFragments::FragmentKind::Text);
+    }
+
+    return Fragments;
   }
 
   // Declaration fragments of a lvalue reference type is the declaration
@@ -197,12 +342,12 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
     After.append("[", DeclarationFragments::FragmentKind::Text);
 
     switch (AT->getSizeModifier()) {
-    case ArrayType::Normal:
+    case ArraySizeModifier::Normal:
       break;
-    case ArrayType::Static:
+    case ArraySizeModifier::Static:
       Fragments.append("static", DeclarationFragments::FragmentKind::Keyword);
       break;
-    case ArrayType::Star:
+    case ArraySizeModifier::Star:
       Fragments.append("*", DeclarationFragments::FragmentKind::Text);
       break;
     }
@@ -223,45 +368,9 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
         getFragmentsForType(AT->getElementType(), Context, After));
   }
 
-  // An ElaboratedType is a sugar for types that are referred to using an
-  // elaborated keyword, e.g., `struct S`, `enum E`, or (in C++) via a
-  // qualified name, e.g., `N::M::type`, or both.
-  if (const ElaboratedType *ET = dyn_cast<ElaboratedType>(T)) {
-    ElaboratedTypeKeyword Keyword = ET->getKeyword();
-    if (Keyword != ETK_None) {
-      Fragments
-          .append(ElaboratedType::getKeywordName(Keyword),
-                  DeclarationFragments::FragmentKind::Keyword)
-          .appendSpace();
-    }
-
-    if (const NestedNameSpecifier *NNS = ET->getQualifier())
-      Fragments.append(getFragmentsForNNS(NNS, Context, After));
-
-    // After handling the elaborated keyword or qualified name, build
-    // declaration fragments for the desugared underlying type.
-    return Fragments.append(getFragmentsForType(ET->desugar(), Context, After));
-  }
-
   // Everything we care about has been handled now, reduce to the canonical
   // unqualified base type.
   QualType Base = T->getCanonicalTypeUnqualified();
-
-  // Render Objective-C `id`/`instancetype` as keywords.
-  if (T->isObjCIdType())
-    return Fragments.append(Base.getAsString(),
-                            DeclarationFragments::FragmentKind::Keyword);
-
-  // If the type is a typedefed type, get the underlying TypedefNameDecl for a
-  // direct reference to the typedef instead of the wrapped type.
-  if (const TypedefType *TypedefTy = dyn_cast<TypedefType>(T)) {
-    const TypedefNameDecl *Decl = TypedefTy->getDecl();
-    TypedefUnderlyingTypeResolver TypedefResolver(Context);
-    std::string USR = TypedefResolver.getUSRForType(QualType(T, 0));
-    return Fragments.append(
-        Decl->getName(), DeclarationFragments::FragmentKind::TypeIdentifier,
-        USR, TypedefResolver.getUnderlyingTypeDecl(QualType(T, 0)));
-  }
 
   // If the base type is a TagType (struct/interface/union/class/enum), let's
   // get the underlying Decl for better names and USRs.
@@ -324,6 +433,9 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
   DeclarationFragments QualsFragments = getFragmentsForQualifiers(SQT.Quals),
                        TypeFragments =
                            getFragmentsForType(SQT.Ty, Context, After);
+  if (QT.getAsString() == "_Bool")
+    TypeFragments.replace("bool", 0);
+
   if (QualsFragments.getFragments().empty())
     return TypeFragments;
 
@@ -350,19 +462,29 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
   return QualsFragments.appendSpace().append(std::move(TypeFragments));
 }
 
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForNamespace(
+    const NamespaceDecl *Decl) {
+  DeclarationFragments Fragments;
+  Fragments.append("namespace", DeclarationFragments::FragmentKind::Keyword);
+  if (!Decl->isAnonymousNamespace())
+    Fragments.appendSpace().append(
+        Decl->getName(), DeclarationFragments::FragmentKind::Identifier);
+  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
+}
+
 DeclarationFragments
 DeclarationFragmentsBuilder::getFragmentsForVar(const VarDecl *Var) {
   DeclarationFragments Fragments;
+  if (Var->isConstexpr())
+    Fragments.append("constexpr", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace();
+
   StorageClass SC = Var->getStorageClass();
   if (SC != SC_None)
     Fragments
         .append(VarDecl::getStorageClassSpecifierString(SC),
                 DeclarationFragments::FragmentKind::Keyword)
         .appendSpace();
-  QualType T =
-      Var->getTypeSourceInfo()
-          ? Var->getTypeSourceInfo()->getType()
-          : Var->getASTContext().getUnqualifiedObjCPointerType(Var->getType());
 
   // Capture potential fragments that needs to be placed after the variable name
   // ```
@@ -370,35 +492,147 @@ DeclarationFragmentsBuilder::getFragmentsForVar(const VarDecl *Var) {
   // char (*ptr_to_array)[6];
   // ```
   DeclarationFragments After;
-  return Fragments.append(getFragmentsForType(T, Var->getASTContext(), After))
+  FunctionTypeLoc BlockLoc;
+  FunctionProtoTypeLoc BlockProtoLoc;
+  findTypeLocForBlockDecl(Var->getTypeSourceInfo(), BlockLoc, BlockProtoLoc);
+
+  if (!BlockLoc) {
+    QualType T = Var->getTypeSourceInfo()
+                     ? Var->getTypeSourceInfo()->getType()
+                     : Var->getASTContext().getUnqualifiedObjCPointerType(
+                           Var->getType());
+
+    Fragments.append(getFragmentsForType(T, Var->getASTContext(), After))
+        .appendSpace();
+  } else {
+    Fragments.append(getFragmentsForBlock(Var, BlockLoc, BlockProtoLoc, After));
+  }
+
+  return Fragments
+      .append(Var->getName(), DeclarationFragments::FragmentKind::Identifier)
+      .append(std::move(After))
+      .append(";", DeclarationFragments::FragmentKind::Text);
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForVarTemplate(const VarDecl *Var) {
+  DeclarationFragments Fragments;
+  if (Var->isConstexpr())
+    Fragments.append("constexpr", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace();
+  QualType T =
+      Var->getTypeSourceInfo()
+          ? Var->getTypeSourceInfo()->getType()
+          : Var->getASTContext().getUnqualifiedObjCPointerType(Var->getType());
+
+  // Might be a member, so might be static.
+  if (Var->isStaticDataMember())
+    Fragments.append("static", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace();
+
+  DeclarationFragments After;
+  DeclarationFragments ArgumentFragment =
+      getFragmentsForType(T, Var->getASTContext(), After);
+  if (StringRef(ArgumentFragment.begin()->Spelling)
+          .starts_with("type-parameter")) {
+    std::string ProperArgName = getNameForTemplateArgument(
+        Var->getDescribedVarTemplate()->getTemplateParameters()->asArray(),
+        ArgumentFragment.begin()->Spelling);
+    ArgumentFragment.begin()->Spelling.swap(ProperArgName);
+  }
+  Fragments.append(std::move(ArgumentFragment))
       .appendSpace()
       .append(Var->getName(), DeclarationFragments::FragmentKind::Identifier)
-      .append(std::move(After));
+      .append(";", DeclarationFragments::FragmentKind::Text);
+  return Fragments;
 }
 
 DeclarationFragments
 DeclarationFragmentsBuilder::getFragmentsForParam(const ParmVarDecl *Param) {
   DeclarationFragments Fragments, After;
 
-  QualType T = Param->getTypeSourceInfo()
-                   ? Param->getTypeSourceInfo()->getType()
-                   : Param->getASTContext().getUnqualifiedObjCPointerType(
-                         Param->getType());
+  auto *TSInfo = Param->getTypeSourceInfo();
 
-  DeclarationFragments TypeFragments =
-      getFragmentsForType(T, Param->getASTContext(), After);
+  QualType T = TSInfo ? TSInfo->getType()
+                      : Param->getASTContext().getUnqualifiedObjCPointerType(
+                            Param->getType());
 
-  if (Param->isObjCMethodParameter())
+  FunctionTypeLoc BlockLoc;
+  FunctionProtoTypeLoc BlockProtoLoc;
+  findTypeLocForBlockDecl(TSInfo, BlockLoc, BlockProtoLoc);
+
+  DeclarationFragments TypeFragments;
+  if (BlockLoc)
+    TypeFragments.append(
+        getFragmentsForBlock(Param, BlockLoc, BlockProtoLoc, After));
+  else
+    TypeFragments.append(getFragmentsForType(T, Param->getASTContext(), After));
+
+  if (StringRef(TypeFragments.begin()->Spelling)
+          .starts_with("type-parameter")) {
+    std::string ProperArgName = getNameForTemplateArgument(
+        dyn_cast<FunctionDecl>(Param->getDeclContext())
+            ->getDescribedFunctionTemplate()
+            ->getTemplateParameters()
+            ->asArray(),
+        TypeFragments.begin()->Spelling);
+    TypeFragments.begin()->Spelling.swap(ProperArgName);
+  }
+
+  if (Param->isObjCMethodParameter()) {
     Fragments.append("(", DeclarationFragments::FragmentKind::Text)
         .append(std::move(TypeFragments))
-        .append(") ", DeclarationFragments::FragmentKind::Text);
-  else
-    Fragments.append(std::move(TypeFragments)).appendSpace();
+        .append(std::move(After))
+        .append(") ", DeclarationFragments::FragmentKind::Text)
+        .append(Param->getName(),
+                DeclarationFragments::FragmentKind::InternalParam);
+  } else {
+    Fragments.append(std::move(TypeFragments));
+    if (!T->isBlockPointerType())
+      Fragments.appendSpace();
+    Fragments
+        .append(Param->getName(),
+                DeclarationFragments::FragmentKind::InternalParam)
+        .append(std::move(After));
+  }
+  return Fragments;
+}
 
-  return Fragments
-      .append(Param->getName(),
-              DeclarationFragments::FragmentKind::InternalParam)
-      .append(std::move(After));
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForBlock(
+    const NamedDecl *BlockDecl, FunctionTypeLoc &Block,
+    FunctionProtoTypeLoc &BlockProto, DeclarationFragments &After) {
+  DeclarationFragments Fragments;
+
+  DeclarationFragments RetTyAfter;
+  auto ReturnValueFragment = getFragmentsForType(
+      Block.getTypePtr()->getReturnType(), BlockDecl->getASTContext(), After);
+
+  Fragments.append(std::move(ReturnValueFragment))
+      .append(std::move(RetTyAfter))
+      .appendSpace()
+      .append("(^", DeclarationFragments::FragmentKind::Text);
+
+  After.append(")", DeclarationFragments::FragmentKind::Text);
+  unsigned NumParams = Block.getNumParams();
+
+  if (!BlockProto || NumParams == 0) {
+    if (BlockProto && BlockProto.getTypePtr()->isVariadic())
+      After.append("(...)", DeclarationFragments::FragmentKind::Text);
+    else
+      After.append("()", DeclarationFragments::FragmentKind::Text);
+  } else {
+    After.append("(", DeclarationFragments::FragmentKind::Text);
+    for (unsigned I = 0; I != NumParams; ++I) {
+      if (I)
+        After.append(", ", DeclarationFragments::FragmentKind::Text);
+      After.append(getFragmentsForParam(Block.getParam(I)));
+      if (I == NumParams - 1 && BlockProto.getTypePtr()->isVariadic())
+        After.append(", ...", DeclarationFragments::FragmentKind::Text);
+    }
+    After.append(")", DeclarationFragments::FragmentKind::Text);
+  }
+
+  return Fragments;
 }
 
 DeclarationFragments
@@ -421,27 +655,64 @@ DeclarationFragmentsBuilder::getFragmentsForFunction(const FunctionDecl *Func) {
   case SC_Register:
     llvm_unreachable("invalid for functions");
   }
-  // FIXME: Handle C++ function specifiers: constexpr, consteval, explicit, etc.
+  if (Func->isConsteval()) // if consteval, it is also constexpr
+    Fragments.append("consteval", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace();
+  else if (Func->isConstexpr())
+    Fragments.append("constexpr", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace();
 
   // FIXME: Is `after` actually needed here?
   DeclarationFragments After;
-  Fragments
-      .append(getFragmentsForType(Func->getReturnType(), Func->getASTContext(),
-                                  After))
+  auto ReturnValueFragment =
+      getFragmentsForType(Func->getReturnType(), Func->getASTContext(), After);
+  if (StringRef(ReturnValueFragment.begin()->Spelling)
+          .starts_with("type-parameter")) {
+    std::string ProperArgName =
+        getNameForTemplateArgument(Func->getDescribedFunctionTemplate()
+                                       ->getTemplateParameters()
+                                       ->asArray(),
+                                   ReturnValueFragment.begin()->Spelling);
+    ReturnValueFragment.begin()->Spelling.swap(ProperArgName);
+  }
+
+  Fragments.append(std::move(ReturnValueFragment))
       .appendSpace()
-      .append(Func->getName(), DeclarationFragments::FragmentKind::Identifier)
-      .append(std::move(After));
+      .append(Func->getName(), DeclarationFragments::FragmentKind::Identifier);
+
+  if (Func->getTemplateSpecializationInfo()) {
+    Fragments.append("<", DeclarationFragments::FragmentKind::Text);
+
+    for (unsigned i = 0, end = Func->getNumParams(); i != end; ++i) {
+      if (i)
+        Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
+      Fragments.append(
+          getFragmentsForType(Func->getParamDecl(i)->getType(),
+                              Func->getParamDecl(i)->getASTContext(), After));
+    }
+    Fragments.append(">", DeclarationFragments::FragmentKind::Text);
+  }
+  Fragments.append(std::move(After));
 
   Fragments.append("(", DeclarationFragments::FragmentKind::Text);
-  for (unsigned i = 0, end = Func->getNumParams(); i != end; ++i) {
+  unsigned NumParams = Func->getNumParams();
+  for (unsigned i = 0; i != NumParams; ++i) {
     if (i)
       Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
     Fragments.append(getFragmentsForParam(Func->getParamDecl(i)));
   }
+
+  if (Func->isVariadic()) {
+    if (NumParams > 0)
+      Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
+    Fragments.append("...", DeclarationFragments::FragmentKind::Text);
+  }
   Fragments.append(")", DeclarationFragments::FragmentKind::Text);
 
-  // FIXME: Handle exception specifiers: throw, noexcept
-  return Fragments;
+  Fragments.append(DeclarationFragments::getExceptionSpecificationString(
+      Func->getExceptionSpecType()));
+
+  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
 }
 
 DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForEnumConstant(
@@ -470,30 +741,425 @@ DeclarationFragmentsBuilder::getFragmentsForEnum(const EnumDecl *EnumDecl) {
             getFragmentsForType(IntegerType, EnumDecl->getASTContext(), After))
         .append(std::move(After));
 
-  return Fragments;
+  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
 }
 
 DeclarationFragments
 DeclarationFragmentsBuilder::getFragmentsForField(const FieldDecl *Field) {
   DeclarationFragments After;
-  return getFragmentsForType(Field->getType(), Field->getASTContext(), After)
+  DeclarationFragments Fragments;
+  if (Field->isMutable())
+    Fragments.append("mutable", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace();
+  return Fragments
+      .append(
+          getFragmentsForType(Field->getType(), Field->getASTContext(), After))
       .appendSpace()
       .append(Field->getName(), DeclarationFragments::FragmentKind::Identifier)
-      .append(std::move(After));
+      .append(std::move(After))
+      .append(";", DeclarationFragments::FragmentKind::Text);
 }
 
-DeclarationFragments
-DeclarationFragmentsBuilder::getFragmentsForStruct(const RecordDecl *Record) {
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForRecordDecl(
+    const RecordDecl *Record) {
   if (const auto *TypedefNameDecl = Record->getTypedefNameForAnonDecl())
     return getFragmentsForTypedef(TypedefNameDecl);
 
   DeclarationFragments Fragments;
-  Fragments.append("struct", DeclarationFragments::FragmentKind::Keyword);
+  if (Record->isUnion())
+    Fragments.append("union", DeclarationFragments::FragmentKind::Keyword);
+  else
+    Fragments.append("struct", DeclarationFragments::FragmentKind::Keyword);
 
   if (!Record->getName().empty())
     Fragments.appendSpace().append(
         Record->getName(), DeclarationFragments::FragmentKind::Identifier);
+
+  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
+}
+
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForCXXClass(
+    const CXXRecordDecl *Record) {
+  if (const auto *TypedefNameDecl = Record->getTypedefNameForAnonDecl())
+    return getFragmentsForTypedef(TypedefNameDecl);
+
+  DeclarationFragments Fragments;
+  Fragments.append(DeclarationFragments::getStructureTypeFragment(Record));
+
+  if (!Record->getName().empty())
+    Fragments.appendSpace().append(
+        Record->getName(), DeclarationFragments::FragmentKind::Identifier);
+
+  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForSpecialCXXMethod(
+    const CXXMethodDecl *Method) {
+  DeclarationFragments Fragments;
+  std::string Name;
+  if (const auto *Constructor = dyn_cast<CXXConstructorDecl>(Method)) {
+    Name = Method->getNameAsString();
+    if (Constructor->isExplicit())
+      Fragments.append("explicit", DeclarationFragments::FragmentKind::Keyword)
+          .appendSpace();
+  } else if (isa<CXXDestructorDecl>(Method))
+    Name = Method->getNameAsString();
+
+  DeclarationFragments After;
+  Fragments.append(Name, DeclarationFragments::FragmentKind::Identifier)
+      .append(std::move(After));
+  Fragments.append("(", DeclarationFragments::FragmentKind::Text);
+  for (unsigned i = 0, end = Method->getNumParams(); i != end; ++i) {
+    if (i)
+      Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
+    Fragments.append(getFragmentsForParam(Method->getParamDecl(i)));
+  }
+  Fragments.append(")", DeclarationFragments::FragmentKind::Text);
+
+  Fragments.append(DeclarationFragments::getExceptionSpecificationString(
+      Method->getExceptionSpecType()));
+
+  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
+}
+
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForCXXMethod(
+    const CXXMethodDecl *Method) {
+  DeclarationFragments Fragments;
+  StringRef Name = Method->getName();
+  if (Method->isStatic())
+    Fragments.append("static", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace();
+  if (Method->isConstexpr())
+    Fragments.append("constexpr", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace();
+  if (Method->isVolatile())
+    Fragments.append("volatile", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace();
+
+  // Build return type
+  DeclarationFragments After;
+  Fragments
+      .append(getFragmentsForType(Method->getReturnType(),
+                                  Method->getASTContext(), After))
+      .appendSpace()
+      .append(Name, DeclarationFragments::FragmentKind::Identifier)
+      .append(std::move(After));
+  Fragments.append("(", DeclarationFragments::FragmentKind::Text);
+  for (unsigned i = 0, end = Method->getNumParams(); i != end; ++i) {
+    if (i)
+      Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
+    Fragments.append(getFragmentsForParam(Method->getParamDecl(i)));
+  }
+  Fragments.append(")", DeclarationFragments::FragmentKind::Text);
+
+  if (Method->isConst())
+    Fragments.appendSpace().append("const",
+                                   DeclarationFragments::FragmentKind::Keyword);
+
+  Fragments.append(DeclarationFragments::getExceptionSpecificationString(
+      Method->getExceptionSpecType()));
+
+  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForConversionFunction(
+    const CXXConversionDecl *ConversionFunction) {
+  DeclarationFragments Fragments;
+
+  if (ConversionFunction->isExplicit())
+    Fragments.append("explicit", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace();
+
+  Fragments.append("operator", DeclarationFragments::FragmentKind::Keyword)
+      .appendSpace();
+
+  Fragments
+      .append(ConversionFunction->getConversionType().getAsString(),
+              DeclarationFragments::FragmentKind::TypeIdentifier)
+      .append("(", DeclarationFragments::FragmentKind::Text);
+  for (unsigned i = 0, end = ConversionFunction->getNumParams(); i != end;
+       ++i) {
+    if (i)
+      Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
+    Fragments.append(getFragmentsForParam(ConversionFunction->getParamDecl(i)));
+  }
+  Fragments.append(")", DeclarationFragments::FragmentKind::Text);
+
+  if (ConversionFunction->isConst())
+    Fragments.appendSpace().append("const",
+                                   DeclarationFragments::FragmentKind::Keyword);
+
+  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForOverloadedOperator(
+    const CXXMethodDecl *Method) {
+  DeclarationFragments Fragments;
+
+  // Build return type
+  DeclarationFragments After;
+  Fragments
+      .append(getFragmentsForType(Method->getReturnType(),
+                                  Method->getASTContext(), After))
+      .appendSpace()
+      .append(Method->getNameAsString(),
+              DeclarationFragments::FragmentKind::Identifier)
+      .append(std::move(After));
+  Fragments.append("(", DeclarationFragments::FragmentKind::Text);
+  for (unsigned i = 0, end = Method->getNumParams(); i != end; ++i) {
+    if (i)
+      Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
+    Fragments.append(getFragmentsForParam(Method->getParamDecl(i)));
+  }
+  Fragments.append(")", DeclarationFragments::FragmentKind::Text);
+
+  if (Method->isConst())
+    Fragments.appendSpace().append("const",
+                                   DeclarationFragments::FragmentKind::Keyword);
+
+  Fragments.append(DeclarationFragments::getExceptionSpecificationString(
+      Method->getExceptionSpecType()));
+
+  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
+}
+
+// Get fragments for template parameters, e.g. T in tempalte<typename T> ...
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForTemplateParameters(
+    ArrayRef<NamedDecl *> ParameterArray) {
+  DeclarationFragments Fragments;
+  for (unsigned i = 0, end = ParameterArray.size(); i != end; ++i) {
+    if (i)
+      Fragments.append(",", DeclarationFragments::FragmentKind::Text)
+          .appendSpace();
+
+    const auto *TemplateParam =
+        dyn_cast<TemplateTypeParmDecl>(ParameterArray[i]);
+    if (!TemplateParam)
+      continue;
+    if (TemplateParam->hasTypeConstraint())
+      Fragments.append(TemplateParam->getTypeConstraint()
+                           ->getNamedConcept()
+                           ->getName()
+                           .str(),
+                       DeclarationFragments::FragmentKind::TypeIdentifier);
+    else if (TemplateParam->wasDeclaredWithTypename())
+      Fragments.append("typename", DeclarationFragments::FragmentKind::Keyword);
+    else
+      Fragments.append("class", DeclarationFragments::FragmentKind::Keyword);
+
+    if (TemplateParam->isParameterPack())
+      Fragments.append("...", DeclarationFragments::FragmentKind::Text);
+
+    Fragments.appendSpace().append(
+        TemplateParam->getName(),
+        DeclarationFragments::FragmentKind::GenericParameter);
+  }
   return Fragments;
+}
+
+// Find the name of a template argument from the template's parameters.
+std::string DeclarationFragmentsBuilder::getNameForTemplateArgument(
+    const ArrayRef<NamedDecl *> TemplateParameters, std::string TypeParameter) {
+  // The arg is a generic parameter from a partial spec, e.g.
+  // T in template<typename T> Foo<T, int>.
+  //
+  // Those names appear as "type-parameter-<index>-<depth>", so we must find its
+  // name from the template's parameter list.
+  for (unsigned i = 0; i < TemplateParameters.size(); ++i) {
+    const auto *Parameter =
+        dyn_cast<TemplateTypeParmDecl>(TemplateParameters[i]);
+    if (TypeParameter.compare("type-parameter-" +
+                              std::to_string(Parameter->getDepth()) + "-" +
+                              std::to_string(Parameter->getIndex())) == 0)
+      return std::string(TemplateParameters[i]->getName());
+  }
+  llvm_unreachable("Could not find the name of a template argument.");
+}
+
+// Get fragments for template arguments, e.g. int in template<typename T>
+// Foo<int>;
+//
+// Note: TemplateParameters is only necessary if the Decl is a
+// PartialSpecialization, where we need the parameters to deduce the name of the
+// generic arguments.
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForTemplateArguments(
+    const ArrayRef<TemplateArgument> TemplateArguments, ASTContext &Context,
+    const std::optional<ArrayRef<NamedDecl *>> TemplateParameters) {
+  DeclarationFragments Fragments;
+  for (unsigned i = 0, end = TemplateArguments.size(); i != end; ++i) {
+    if (i)
+      Fragments.append(",", DeclarationFragments::FragmentKind::Text)
+          .appendSpace();
+
+    std::string Type = TemplateArguments[i].getAsType().getAsString();
+    DeclarationFragments After;
+    DeclarationFragments ArgumentFragment =
+        getFragmentsForType(TemplateArguments[i].getAsType(), Context, After);
+
+    if (StringRef(ArgumentFragment.begin()->Spelling)
+            .starts_with("type-parameter")) {
+      std::string ProperArgName = getNameForTemplateArgument(
+          TemplateParameters.value(), ArgumentFragment.begin()->Spelling);
+      ArgumentFragment.begin()->Spelling.swap(ProperArgName);
+    }
+    Fragments.append(std::move(ArgumentFragment));
+
+    if (TemplateArguments[i].isPackExpansion())
+      Fragments.append("...", DeclarationFragments::FragmentKind::Text);
+  }
+  return Fragments;
+}
+
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForConcept(
+    const ConceptDecl *Concept) {
+  DeclarationFragments Fragments;
+  return Fragments
+      .append("template", DeclarationFragments::FragmentKind::Keyword)
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      .append(getFragmentsForTemplateParameters(
+          Concept->getTemplateParameters()->asArray()))
+      .append("> ", DeclarationFragments::FragmentKind::Text)
+      .append("concept", DeclarationFragments::FragmentKind::Keyword)
+      .appendSpace()
+      .append(Concept->getName().str(),
+              DeclarationFragments::FragmentKind::Identifier)
+      .append(";", DeclarationFragments::FragmentKind::Text);
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForRedeclarableTemplate(
+    const RedeclarableTemplateDecl *RedeclarableTemplate) {
+  DeclarationFragments Fragments;
+  Fragments.append("template", DeclarationFragments::FragmentKind::Keyword)
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      .append(getFragmentsForTemplateParameters(
+          RedeclarableTemplate->getTemplateParameters()->asArray()))
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .appendSpace();
+
+  if (isa<TypeAliasTemplateDecl>(RedeclarableTemplate))
+    Fragments.appendSpace()
+        .append("using", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace()
+        .append(RedeclarableTemplate->getName(),
+                DeclarationFragments::FragmentKind::Identifier);
+  // the templated records will be resposbible for injecting their templates
+  return Fragments.appendSpace();
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForClassTemplateSpecialization(
+    const ClassTemplateSpecializationDecl *Decl) {
+  DeclarationFragments Fragments;
+  return Fragments
+      .append("template", DeclarationFragments::FragmentKind::Keyword)
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .appendSpace()
+      .append(DeclarationFragmentsBuilder::getFragmentsForCXXClass(
+          cast<CXXRecordDecl>(Decl)))
+      .pop_back() // there is an extra semicolon now
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      .append(
+          getFragmentsForTemplateArguments(Decl->getTemplateArgs().asArray(),
+                                           Decl->getASTContext(), std::nullopt))
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .append(";", DeclarationFragments::FragmentKind::Text);
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForClassTemplatePartialSpecialization(
+    const ClassTemplatePartialSpecializationDecl *Decl) {
+  DeclarationFragments Fragments;
+  return Fragments
+      .append("template", DeclarationFragments::FragmentKind::Keyword)
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      .append(getFragmentsForTemplateParameters(
+          Decl->getTemplateParameters()->asArray()))
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .appendSpace()
+      .append(DeclarationFragmentsBuilder::getFragmentsForCXXClass(
+          cast<CXXRecordDecl>(Decl)))
+      .pop_back() // there is an extra semicolon now
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      .append(getFragmentsForTemplateArguments(
+          Decl->getTemplateArgs().asArray(), Decl->getASTContext(),
+          Decl->getTemplateParameters()->asArray()))
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .append(";", DeclarationFragments::FragmentKind::Text);
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForVarTemplateSpecialization(
+    const VarTemplateSpecializationDecl *Decl) {
+  DeclarationFragments Fragments;
+  return Fragments
+      .append("template", DeclarationFragments::FragmentKind::Keyword)
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .appendSpace()
+      .append(DeclarationFragmentsBuilder::getFragmentsForVarTemplate(Decl))
+      .pop_back() // there is an extra semicolon now
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      .append(
+          getFragmentsForTemplateArguments(Decl->getTemplateArgs().asArray(),
+                                           Decl->getASTContext(), std::nullopt))
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .append(";", DeclarationFragments::FragmentKind::Text);
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForVarTemplatePartialSpecialization(
+    const VarTemplatePartialSpecializationDecl *Decl) {
+  DeclarationFragments Fragments;
+  return Fragments
+      .append("template", DeclarationFragments::FragmentKind::Keyword)
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      // Partial specs may have new params.
+      .append(getFragmentsForTemplateParameters(
+          Decl->getTemplateParameters()->asArray()))
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .appendSpace()
+      .append(DeclarationFragmentsBuilder::getFragmentsForVarTemplate(Decl))
+      .pop_back() // there is an extra semicolon now
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      .append(getFragmentsForTemplateArguments(
+          Decl->getTemplateArgs().asArray(), Decl->getASTContext(),
+          Decl->getTemplateParameters()->asArray()))
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .append(";", DeclarationFragments::FragmentKind::Text);
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForFunctionTemplate(
+    const FunctionTemplateDecl *Decl) {
+  DeclarationFragments Fragments;
+  return Fragments
+      .append("template", DeclarationFragments::FragmentKind::Keyword)
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      // Partial specs may have new params.
+      .append(getFragmentsForTemplateParameters(
+          Decl->getTemplateParameters()->asArray()))
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .appendSpace()
+      .append(DeclarationFragmentsBuilder::getFragmentsForFunction(
+          Decl->getAsFunction()));
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForFunctionTemplateSpecialization(
+    const FunctionDecl *Decl) {
+  DeclarationFragments Fragments;
+  return Fragments
+      .append("template", DeclarationFragments::FragmentKind::Keyword)
+      .append("<>", DeclarationFragments::FragmentKind::Text)
+      .appendSpace()
+      .append(DeclarationFragmentsBuilder::getFragmentsForFunction(Decl));
 }
 
 DeclarationFragments
@@ -621,7 +1287,7 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCProperty(
   // Build the Objective-C property keyword.
   Fragments.append("@property", DeclarationFragments::FragmentKind::Keyword);
 
-  const auto Attributes = Property->getPropertyAttributes();
+  const auto Attributes = Property->getPropertyAttributesAsWritten();
   // Build the attributes if there is any associated with the property.
   if (Attributes != ObjCPropertyAttribute::kind_noattr) {
     // No leading comma for the first attribute.
@@ -692,14 +1358,27 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCProperty(
     Fragments.append(")", DeclarationFragments::FragmentKind::Text);
   }
 
-  // Build the property type and name, and return the completed fragments.
-  return Fragments.appendSpace()
-      .append(getFragmentsForType(Property->getType(),
-                                  Property->getASTContext(), After))
-      .appendSpace()
+  Fragments.appendSpace();
+
+  FunctionTypeLoc BlockLoc;
+  FunctionProtoTypeLoc BlockProtoLoc;
+  findTypeLocForBlockDecl(Property->getTypeSourceInfo(), BlockLoc,
+                          BlockProtoLoc);
+
+  auto PropType = Property->getType();
+  if (!BlockLoc)
+    Fragments
+        .append(getFragmentsForType(PropType, Property->getASTContext(), After))
+        .appendSpace();
+  else
+    Fragments.append(
+        getFragmentsForBlock(Property, BlockLoc, BlockProtoLoc, After));
+
+  return Fragments
       .append(Property->getName(),
               DeclarationFragments::FragmentKind::Identifier)
-      .append(std::move(After));
+      .append(std::move(After))
+      .append(";", DeclarationFragments::FragmentKind::Text);
 }
 
 DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCProtocol(
@@ -743,25 +1422,7 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForTypedef(
       .appendSpace()
       .append(Decl->getName(), DeclarationFragments::FragmentKind::Identifier);
 
-  return Fragments;
-}
-
-template <typename FunctionT>
-FunctionSignature
-DeclarationFragmentsBuilder::getFunctionSignature(const FunctionT *Function) {
-  FunctionSignature Signature;
-
-  DeclarationFragments ReturnType, After;
-  ReturnType
-      .append(getFragmentsForType(Function->getReturnType(),
-                                  Function->getASTContext(), After))
-      .append(std::move(After));
-  Signature.setReturnType(ReturnType);
-
-  for (const auto *Param : Function->parameters())
-    Signature.addParameter(Param->getName(), getFragmentsForParam(Param));
-
-  return Signature;
+  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
 }
 
 // Instantiate template for FunctionDecl.
@@ -776,7 +1437,18 @@ DeclarationFragmentsBuilder::getFunctionSignature(const ObjCMethodDecl *);
 DeclarationFragments
 DeclarationFragmentsBuilder::getSubHeading(const NamedDecl *Decl) {
   DeclarationFragments Fragments;
-  if (!Decl->getName().empty())
+  if (isa<CXXConstructorDecl>(Decl) || isa<CXXDestructorDecl>(Decl))
+    Fragments.append(cast<CXXRecordDecl>(Decl->getDeclContext())->getName(),
+                     DeclarationFragments::FragmentKind::Identifier);
+  else if (isa<CXXConversionDecl>(Decl)) {
+    Fragments.append(
+        cast<CXXConversionDecl>(Decl)->getConversionType().getAsString(),
+        DeclarationFragments::FragmentKind::Identifier);
+  } else if (isa<CXXMethodDecl>(Decl) &&
+             cast<CXXMethodDecl>(Decl)->isOverloadedOperator()) {
+    Fragments.append(Decl->getNameAsString(),
+                     DeclarationFragments::FragmentKind::Identifier);
+  } else if (!Decl->getName().empty())
     Fragments.append(Decl->getName(),
                      DeclarationFragments::FragmentKind::Identifier);
   return Fragments;

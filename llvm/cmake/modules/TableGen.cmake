@@ -4,8 +4,18 @@
 # Adds the name of the generated file to TABLEGEN_OUTPUT.
 include(LLVMDistributionSupport)
 
+# Clear out any pre-existing compile_commands file before processing. This
+# allows for generating a clean compile_commands on each configure.
+file(REMOVE ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml)
+
 function(tablegen project ofn)
   cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES" ${ARGN})
+
+  # Override ${project} with ${project}_TABLEGEN_PROJECT
+  if(NOT "${${project}_TABLEGEN_PROJECT}" STREQUAL "")
+    set(project ${${project}_TABLEGEN_PROJECT})
+  endif()
+
   # Validate calling context.
   if(NOT ${project}_TABLEGEN_EXE)
     message(FATAL_ERROR "${project}_TABLEGEN_EXE not set")
@@ -85,12 +95,41 @@ function(tablegen project ofn)
   # but lets us having smaller and cleaner code here.
   get_directory_property(tblgen_includes INCLUDE_DIRECTORIES)
   list(APPEND tblgen_includes ${ARG_EXTRA_INCLUDES})
+
+  # Get the current set of include paths for this td file.
+  cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES" ${ARGN})
+  get_directory_property(tblgen_includes INCLUDE_DIRECTORIES)
+  list(APPEND tblgen_includes ${ARG_EXTRA_INCLUDES})
+  # Filter out any empty include items.
+  list(REMOVE_ITEM tblgen_includes "")
+
+  # Build the absolute path for the current input file.
+  if (IS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
+    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
+  else()
+    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${CMAKE_CURRENT_SOURCE_DIR}/${LLVM_TARGET_DEFINITIONS})
+  endif()
+
+  # Append this file and its includes to the compile commands file.
+  # This file is used by the TableGen LSP Language Server (tblgen-lsp-server).
+  file(APPEND ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml
+      "--- !FileInfo:\n"
+      "  filepath: \"${LLVM_TARGET_DEFINITIONS_ABSOLUTE}\"\n"
+      "  includes: \"${CMAKE_CURRENT_SOURCE_DIR};${tblgen_includes}\"\n"
+  )
+
   # Filter out empty items before prepending each entry with -I
   list(REMOVE_ITEM tblgen_includes "")
   list(TRANSFORM tblgen_includes PREPEND -I)
 
   set(tablegen_exe ${${project}_TABLEGEN_EXE})
   set(tablegen_depends ${${project}_TABLEGEN_TARGET} ${tablegen_exe})
+
+  if(LLVM_PARALLEL_TABLEGEN_JOBS)
+    set(LLVM_TABLEGEN_JOB_POOL JOB_POOL tablegen_job_pool)
+  else()
+    set(LLVM_TABLEGEN_JOB_POOL "")
+  endif()
 
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
     COMMAND ${tablegen_exe} ${ARG_UNPARSED_ARGUMENTS} -I ${CMAKE_CURRENT_SOURCE_DIR}
@@ -106,6 +145,7 @@ function(tablegen project ofn)
       ${local_tds} ${global_tds}
     ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
     ${LLVM_TARGET_DEPENDS}
+    ${LLVM_TABLEGEN_JOB_POOL}
     COMMENT "Building ${ofn}..."
     )
 
@@ -137,12 +177,6 @@ macro(add_tablegen target project)
   set(${target}_OLD_LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS})
   set(LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS} TableGen)
 
-  # CMake doesn't let compilation units depend on their dependent libraries on some generators.
-  if(NOT CMAKE_GENERATOR MATCHES "Ninja" AND NOT XCODE)
-    # FIXME: It leaks to user, callee of add_tablegen.
-    set(LLVM_ENABLE_OBJLIB ON)
-  endif()
-
   add_llvm_executable(${target} DISABLE_LLVM_LINK_LLVM_DYLIB
     ${ADD_TABLEGEN_UNPARSED_ARGUMENTS})
   set(LLVM_LINK_COMPONENTS ${${target}_OLD_LLVM_LINK_COMPONENTS})
@@ -153,8 +187,22 @@ macro(add_tablegen target project)
       set(${project}_TABLEGEN_DEFAULT "${LLVM_NATIVE_TOOL_DIR}/${target}${LLVM_HOST_EXECUTABLE_SUFFIX}")
     endif()
   endif()
-  set(${project}_TABLEGEN "${${project}_TABLEGEN_DEFAULT}" CACHE
+
+  # FIXME: Quick fix to reflect LLVM_TABLEGEN to llvm-min-tblgen
+  if("${target}" STREQUAL "llvm-min-tblgen"
+      AND NOT "${LLVM_TABLEGEN}" STREQUAL ""
+      AND NOT "${LLVM_TABLEGEN}" STREQUAL "llvm-tblgen")
+    set(${project}_TABLEGEN_DEFAULT "${LLVM_TABLEGEN}")
+  endif()
+
+  if(ADD_TABLEGEN_EXPORT)
+    set(${project}_TABLEGEN "${${project}_TABLEGEN_DEFAULT}" CACHE
       STRING "Native TableGen executable. Saves building one when cross-compiling.")
+  else()
+    # Internal tablegen
+    set(${project}_TABLEGEN "${${project}_TABLEGEN_DEFAULT}")
+    set_target_properties(${target} PROPERTIES EXCLUDE_FROM_ALL ON)
+  endif()
 
   # Effective tblgen executable to be used:
   set(${project}_TABLEGEN_EXE ${${project}_TABLEGEN} PARENT_SCOPE)
@@ -168,16 +216,8 @@ macro(add_tablegen target project)
       build_native_tool(${target} ${project}_TABLEGEN_EXE DEPENDS ${target})
       set(${project}_TABLEGEN_EXE ${${project}_TABLEGEN_EXE} PARENT_SCOPE)
 
-      add_custom_target(${project}-tablegen-host DEPENDS ${${project}_TABLEGEN_EXE})
-      set(${project}_TABLEGEN_TARGET ${project}-tablegen-host PARENT_SCOPE)
-
-      # Create an artificial dependency between tablegen projects, because they
-      # compile the same dependencies, thus using the same build folders.
-      # FIXME: A proper fix requires sequentially chaining tablegens.
-      if (NOT ${project} STREQUAL LLVM AND TARGET ${project}-tablegen-host AND
-          TARGET LLVM-tablegen-host)
-        add_dependencies(${project}-tablegen-host LLVM-tablegen-host)
-      endif()
+      add_custom_target(${target}-host DEPENDS ${${project}_TABLEGEN_EXE})
+      set(${project}_TABLEGEN_TARGET ${target}-host PARENT_SCOPE)
 
       # If we're using the host tablegen, and utils were not requested, we have no
       # need to build this tablegen.

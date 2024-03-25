@@ -49,12 +49,12 @@
 using namespace std;
 
 void initialize_randomness(mt19937_64& mt64, const int argc, char** const /*argv*/) {
-    constexpr size_t n = mt19937_64::state_size;
-    constexpr size_t w = mt19937_64::word_size;
+    constexpr std::size_t n = mt19937_64::state_size;
+    constexpr std::size_t w = mt19937_64::word_size;
     static_assert(w % 32 == 0);
-    constexpr size_t k = w / 32;
+    constexpr std::size_t k = w / 32;
 
-    vector<uint32_t> vec(n * k);
+    vector<std::uint32_t> vec(n * k);
 
     puts("USAGE:");
     puts("test.exe              : generates seed data from random_device.");
@@ -70,7 +70,7 @@ void initialize_randomness(mt19937_64& mt64, const int argc, char** const /*argv
 
     puts("SEED DATA:");
     for (const auto& elem : vec) {
-        printf("%zu ", static_cast<size_t>(elem));
+        printf("%zu ", static_cast<std::size_t>(elem));
     }
     printf("\n");
 
@@ -103,14 +103,14 @@ void test_common_to_chars(
     // without attempting to write to extra chars even when they're available. Finally, we also verify that we aren't
     // underrunning the buffer. This is a concern because sometimes we walk backwards when rounding.
 
-    constexpr size_t BufferPrefix = 20; // detect buffer underruns (specific value isn't important)
+    constexpr std::size_t BufferPrefix = 20; // detect buffer underruns (specific value isn't important)
 
-    constexpr size_t Space = is_integral_v<T> ? 1 + 64 // worst case: -2^63 in binary
+    constexpr std::size_t Space = is_integral_v<T> ? 1 + 64 // worst case: -2^63 in binary
                            : is_same_v<T, float>
                                ? 1 + 151 // worst case: negative min subnormal float, fixed notation
                                : 1 + 1076; // worst case: negative min subnormal double, fixed notation
 
-    constexpr size_t BufferSuffix = 30; // detect buffer overruns (specific value isn't important)
+    constexpr std::size_t BufferSuffix = 30; // detect buffer overruns (specific value isn't important)
 
     array<char, BufferPrefix + Space + BufferSuffix> buff;
 
@@ -118,12 +118,12 @@ void test_common_to_chars(
     char* const first      = buff_begin + BufferPrefix;
     char* const buff_end   = buff_begin + buff.size();
 
-    constexpr size_t ExtraChars = 3;
+    constexpr std::size_t ExtraChars = 3;
     static_assert(ExtraChars + 10 < BufferSuffix,
         "The specific values aren't important, but there should be plenty of room to detect buffer overruns.");
 
-    for (size_t n = 0; n <= correct.size() + ExtraChars; ++n) {
-        assert(n <= static_cast<size_t>(buff_end - first));
+    for (std::size_t n = 0; n <= correct.size() + ExtraChars; ++n) {
+        assert(n <= static_cast<std::size_t>(buff_end - first));
         char* const last = first + n;
 
         buff.fill('@');
@@ -187,12 +187,12 @@ constexpr const char* output_max_digit[] = {"skip0", "skip1", "11", "12", "13", 
     "1t", "1u", "1v", "1w", "1x", "1y", "1z"};
 
 // https://www.wolframalpha.com : Table[BaseForm[k, n], {k, {MEOW, MEOW, MEOW}}, {n, 2, 36}]
-constexpr uint64_t stress_chunks_positive                          = 12000000345000678900ULL;
-constexpr pair<uint64_t, array<const char*, 37>> output_positive[] = {
+constexpr std::uint64_t stress_chunks_positive                          = 12000000345000678900ULL;
+constexpr pair<std::uint64_t, array<const char*, 37>> output_positive[] = {
     {123U, {{"skip0", "skip1", "1111011", "11120", "1323", "443", "323", "234", "173", "146", "123", "102", "a3", "96",
                "8b", "83", "7b", "74", "6f", "69", "63", "5i", "5d", "58", "53", "4n", "4j", "4f", "4b", "47", "43",
                "3u", "3r", "3o", "3l", "3i", "3f"}}},
-    {uint64_t{INT8_MAX}, {{"skip0", "skip1", "1111111", "11201", "1333", "1002", "331", "241", "177", "151", "127",
+    {std::uint64_t{INT8_MAX}, {{"skip0", "skip1", "1111111", "11201", "1333", "1002", "331", "241", "177", "151", "127",
                              "106", "a7", "9a", "91", "87", "7f", "78", "71", "6d", "67", "61", "5h", "5c", "57", "52",
                              "4n", "4j", "4f", "4b", "47", "43", "3v", "3s", "3p", "3m", "3j"}}},
     {161U, {{"skip0", "skip1", "10100001", "12222", "2201", "1121", "425", "320", "241", "188", "161", "137", "115",
@@ -204,7 +204,7 @@ constexpr pair<uint64_t, array<const char*, 37>> output_positive[] = {
     {1729U, {{"skip0", "skip1", "11011000001", "2101001", "123001", "23404", "12001", "5020", "3301", "2331", "1729",
                 "1332", "1001", "a30", "8b7", "7a4", "6c1", "5gc", "561", "4f0", "469", "3j7", "3cd", "364", "301",
                 "2j4", "2ed", "2a1", "25l", "21i", "1rj", "1oo", "1m1", "1jd", "1gt", "1ee", "1c1"}}},
-    {uint64_t{INT16_MAX}, {{"skip0", "skip1", "111111111111111", "1122221121", "13333333", "2022032", "411411",
+    {std::uint64_t{INT16_MAX}, {{"skip0", "skip1", "111111111111111", "1122221121", "13333333", "2022032", "411411",
                               "164350", "77777", "48847", "32767", "22689", "16b67", "11bb7", "bd27", "9a97", "7fff",
                               "6b68", "5b27", "4eeb", "41i7", "3b67", "31f9", "2flf", "28l7", "22ah", "1mc7", "1hpg",
                               "1dm7", "19rq", "16c7", "1330", "vvv", "u2v", "sbp", "qq7", "pa7"}}},
@@ -221,7 +221,7 @@ constexpr pair<uint64_t, array<const char*, 37>> output_positive[] = {
                     "1b9a06b2", "11973ba8", "9636514", "639e338", "43d49e6", "2g19gfb", "21b9d18", "19dec94", "124addi",
                     "h8f25b", "dhdfa6", "b13hg2", "8m91he", "7720j3", "5pgj58", "4pmelq", "43k17i", "3dg8ek", "2ro898",
                     "2f0et8", "23qif6", "1qw5lh", "1j7l7s", "1cdvli", "16cgrq"}}},
-    {uint64_t{INT32_MAX},
+    {std::uint64_t{INT32_MAX},
         {{"skip0", "skip1", "1111111111111111111111111111111", "12112122212110202101", "1333333333333333",
             "13344223434042", "553032005531", "104134211161", "17777777777", "5478773671", "2147483647", "a02220281",
             "4bb2308a7", "282ba4aaa", "1652ca931", "c87e66b7", "7fffffff", "53g7f548", "3928g3h1", "27c57h32",
@@ -247,7 +247,7 @@ constexpr pair<uint64_t, array<const char*, 37>> output_positive[] = {
             "4d0d5e232c53", "2d63h403i580", "1bf5h8185hdj", "kc3g550fkcg", "d41id5k9984", "8ef5n0him4g", "5i2dijfe1la",
             "3me22fm5fhi", "2hfmhgg73kd", "1ngpfabr53c", "18i7220bh11", "rm0lcjngpa", "kk1elesni1", "fgfge3c3fg",
             "bp4q5l6bjg", "8xna46jp0k", "6wejomvji5", "5di2s1qhv4"}}},
-    {uint64_t{INT64_MAX},
+    {std::uint64_t{INT64_MAX},
         {{"skip0", "skip1", "111111111111111111111111111111111111111111111111111111111111111",
             "2021110011022210012102010021220101220221", "13333333333333333333333333333333",
             "1104332401304422434310311212", "1540241003031030222122211", "22341010611245052052300",
@@ -290,8 +290,8 @@ constexpr pair<uint64_t, array<const char*, 37>> output_positive[] = {
 };
 
 // https://www.wolframalpha.com : Table[BaseForm[k, n], {k, {MEOW, MEOW, MEOW}}, {n, 2, 36}]
-constexpr int64_t stress_chunks_negative                          = -9000876000000054321LL;
-constexpr pair<int64_t, array<const char*, 37>> output_negative[] = {
+constexpr std::int64_t stress_chunks_negative                          = -9000876000000054321LL;
+constexpr pair<std::int64_t, array<const char*, 37>> output_negative[] = {
     {-85, {{"skip0", "skip1", "-1010101", "-10011", "-1111", "-320", "-221", "-151", "-125", "-104", "-85", "-78",
               "-71", "-67", "-61", "-5a", "-55", "-50", "-4d", "-49", "-45", "-41", "-3j", "-3g", "-3d", "-3a", "-37",
               "-34", "-31", "-2r", "-2p", "-2n", "-2l", "-2j", "-2h", "-2f", "-2d"}}},
@@ -360,8 +360,8 @@ void test_integer_to_chars() {
         test_integer_to_chars(static_cast<T>(base * 2 - 1), base, output_max_digit[base]);
 
         for (const auto& p : output_positive) {
-            if (p.first <= static_cast<uint64_t>(numeric_limits<T>::max())) {
-                test_integer_to_chars(static_cast<T>(p.first), base, p.second[static_cast<size_t>(base)]);
+            if (p.first <= static_cast<std::uint64_t>(numeric_limits<T>::max())) {
+                test_integer_to_chars(static_cast<T>(p.first), base, p.second[static_cast<std::size_t>(base)]);
             }
         }
 
@@ -369,8 +369,8 @@ void test_integer_to_chars() {
             test_integer_to_chars(static_cast<T>(-1), base, "-1");
 
             for (const auto& p : output_negative) {
-                if (p.first >= static_cast<int64_t>(numeric_limits<T>::min())) {
-                    test_integer_to_chars(static_cast<T>(p.first), base, p.second[static_cast<size_t>(base)]);
+                if (p.first >= static_cast<std::int64_t>(numeric_limits<T>::min())) {
+                    test_integer_to_chars(static_cast<T>(p.first), base, p.second[static_cast<std::size_t>(base)]);
                 }
             }
         }
@@ -382,7 +382,7 @@ void test_integer_to_chars() {
 enum class TestFromCharsMode { Normal, SignalingNaN };
 
 template <typename T, typename BaseOrFmt>
-void test_from_chars(const string_view input, const BaseOrFmt base_or_fmt, const size_t correct_idx,
+void test_from_chars(const string_view input, const BaseOrFmt base_or_fmt, const std::size_t correct_idx,
     const errc correct_ec, const optional<T> opt_correct = nullopt,
     const TestFromCharsMode mode = TestFromCharsMode::Normal) {
 
@@ -402,7 +402,7 @@ void test_from_chars(const string_view input, const BaseOrFmt base_or_fmt, const
     if (correct_ec == errc{} || (is_floating_point_v<T> && correct_ec == errc::result_out_of_range)) {
         if constexpr (is_floating_point_v<T>) {
             if (mode == TestFromCharsMode::Normal) {
-                using Uint = conditional_t<is_same_v<T, float>, uint32_t, uint64_t>;
+                using Uint = conditional_t<is_same_v<T, float>, std::uint32_t, std::uint64_t>;
                 assert(opt_correct.has_value());
                 assert(_Bit_cast<Uint>(dest) == _Bit_cast<Uint>(opt_correct.value()));
             } else {
@@ -543,9 +543,9 @@ void all_integer_tests() {
     test_from_chars<int>("-2147483650", 10, 11, out_ran); // beyond risky
 }
 
-void assert_message_bits(const bool b, const char* const msg, const uint32_t bits) {
+void assert_message_bits(const bool b, const char* const msg, const std::uint32_t bits) {
     if (!b) {
-        fprintf(stderr, "%s failed for 0x%08zX\n", msg, static_cast<size_t>(bits));
+        fprintf(stderr, "%s failed for 0x%08zX\n", msg, static_cast<std::size_t>(bits));
         fprintf(stderr, "This is a randomized test.\n");
         fprintf(stderr, "DO NOT IGNORE/RERUN THIS FAILURE.\n");
         fprintf(stderr, "You must report it to the STL maintainers.\n");
@@ -553,7 +553,7 @@ void assert_message_bits(const bool b, const char* const msg, const uint32_t bit
     }
 }
 
-void assert_message_bits(const bool b, const char* const msg, const uint64_t bits) {
+void assert_message_bits(const bool b, const char* const msg, const std::uint64_t bits) {
     if (!b) {
         // libc++ uses long for 64-bit values.
         fprintf(stderr, "%s failed for 0x%016llX\n", msg, static_cast<unsigned long long>(bits));
@@ -564,30 +564,30 @@ void assert_message_bits(const bool b, const char* const msg, const uint64_t bit
     }
 }
 
-constexpr uint32_t FractionBits = 10; // Tunable for test coverage vs. performance.
+constexpr std::uint32_t FractionBits = 10; // Tunable for test coverage vs. performance.
 static_assert(FractionBits >= 1, "Must test at least 1 fraction bit.");
 static_assert(FractionBits <= 23, "There are only 23 fraction bits in a float.");
 
-constexpr uint32_t Fractions = 1U << FractionBits;
-constexpr uint32_t Mask32    = ~((1U << FractionBits) - 1U);
-constexpr uint64_t Mask64    = ~((1ULL << FractionBits) - 1ULL);
+constexpr std::uint32_t Fractions = 1U << FractionBits;
+constexpr std::uint32_t Mask32    = ~((1U << FractionBits) - 1U);
+constexpr std::uint64_t Mask64    = ~((1ULL << FractionBits) - 1ULL);
 
-constexpr uint32_t PrefixesToTest = 100; // Tunable for test coverage vs. performance.
+constexpr std::uint32_t PrefixesToTest = 100; // Tunable for test coverage vs. performance.
 static_assert(PrefixesToTest >= 1, "Must test at least 1 prefix.");
 
-constexpr uint32_t PrefixLimit = 2 // sign bit
+constexpr std::uint32_t PrefixLimit = 2 // sign bit
                                * 255 // non-INF/NAN exponents for float
                                * (1U << (23 - FractionBits)); // fraction bits in prefix
 static_assert(PrefixesToTest <= PrefixLimit, "Too many prefixes.");
 
 template <bool IsDouble>
-void test_floating_prefix(const conditional_t<IsDouble, uint64_t, uint32_t> prefix) {
+void test_floating_prefix(const conditional_t<IsDouble, std::uint64_t, std::uint32_t> prefix) {
 
-    using UIntType     = conditional_t<IsDouble, uint64_t, uint32_t>;
+    using UIntType     = conditional_t<IsDouble, std::uint64_t, std::uint32_t>;
     using FloatingType = conditional_t<IsDouble, double, float>;
 
     // "-1.2345678901234567e-100" or "-1.23456789e-10"
-    constexpr size_t buffer_size = IsDouble ? 24 : 15;
+    constexpr std::size_t buffer_size = IsDouble ? 24 : 15;
     char buffer[buffer_size];
 // TODO Enable once std::from_chars has floating point support.
 #if 0
@@ -600,14 +600,14 @@ void test_floating_prefix(const conditional_t<IsDouble, uint64_t, uint32_t> pref
     // 1 character for a negative sign
     // + 325 (for double; 46 for float) characters in the "0.000~~~000" prefix of the min subnormal
     // + 17 (for double; 9 for float) characters for round-trip digits
-    constexpr size_t fixed_buffer_size = IsDouble ? 1 + 325 + 17 : 1 + 46 + 9;
+    constexpr std::size_t fixed_buffer_size = IsDouble ? 1 + 325 + 17 : 1 + 46 + 9;
     char fixed_buffer[fixed_buffer_size];
 
     // worst case: negative sign + max normal + null terminator
-    constexpr size_t stdio_buffer_size = 1 + (IsDouble ? 309 : 39) + 1;
+    constexpr std::size_t stdio_buffer_size = 1 + (IsDouble ? 309 : 39) + 1;
     char stdio_buffer[stdio_buffer_size];
 
-    for (uint32_t frac = 0; frac < Fractions; ++frac) {
+    for (std::uint32_t frac = 0; frac < Fractions; ++frac) {
         const UIntType bits      = prefix + frac;
         const FloatingType input = _Bit_cast<FloatingType>(bits);
 
@@ -630,7 +630,7 @@ void test_floating_prefix(const conditional_t<IsDouble, uint64_t, uint32_t> pref
             // Also verify that to_chars() and sprintf_s() emit the same output for integers in fixed notation.
             const auto fixed_result = to_chars(fixed_buffer, end(fixed_buffer), input, chars_format::fixed);
             assert_message_bits(fixed_result.ec == errc{}, "fixed_result.ec", bits);
-            const string_view fixed_sv(fixed_buffer, static_cast<size_t>(fixed_result.ptr - fixed_buffer));
+            const string_view fixed_sv(fixed_buffer, static_cast<std::size_t>(fixed_result.ptr - fixed_buffer));
 
             if (find(fixed_sv.begin(), fixed_sv.end(), '.') == fixed_sv.end()) {
                 const int stdio_ret = sprintf_s(stdio_buffer, size(stdio_buffer), "%.0f", input);
@@ -643,9 +643,9 @@ void test_floating_prefix(const conditional_t<IsDouble, uint64_t, uint32_t> pref
 }
 
 template <bool IsDouble>
-void test_floating_hex_prefix(const conditional_t<IsDouble, uint64_t, uint32_t> prefix) {
+void test_floating_hex_prefix(const conditional_t<IsDouble, std::uint64_t, std::uint32_t> prefix) {
 
-    using UIntType     = conditional_t<IsDouble, uint64_t, uint32_t>;
+    using UIntType     = conditional_t<IsDouble, std::uint64_t, std::uint32_t>;
     using FloatingType = conditional_t<IsDouble, double, float>;
 
     // The precision is the number of hexits after the decimal point.
@@ -654,14 +654,14 @@ void test_floating_hex_prefix(const conditional_t<IsDouble, uint64_t, uint32_t> 
     // float explicitly stores 23 fraction bits. 23 / 4 == 5.75, so we need 6 hexits.
 
     // "-1.fffffffffffffp+1023" or "-1.fffffep+127"
-    constexpr size_t buffer_size = IsDouble ? 22 : 14;
+    constexpr std::size_t buffer_size = IsDouble ? 22 : 14;
     char buffer[buffer_size];
 // TODO Enable once std::from_chars has floating point support.
 #if 0
     FloatingType val;
 #endif
 
-    for (uint32_t frac = 0; frac < Fractions; ++frac) {
+    for (std::uint32_t frac = 0; frac < Fractions; ++frac) {
         const UIntType bits      = prefix + frac;
         const FloatingType input = _Bit_cast<FloatingType>(bits);
 
@@ -681,9 +681,9 @@ void test_floating_hex_prefix(const conditional_t<IsDouble, uint64_t, uint32_t> 
 }
 
 template <bool IsDouble>
-void test_floating_precision_prefix(const conditional_t<IsDouble, uint64_t, uint32_t> prefix) {
+void test_floating_precision_prefix(const conditional_t<IsDouble, std::uint64_t, std::uint32_t> prefix) {
 
-    using UIntType     = conditional_t<IsDouble, uint64_t, uint32_t>;
+    using UIntType     = conditional_t<IsDouble, std::uint64_t, std::uint32_t>;
     using FloatingType = conditional_t<IsDouble, double, float>;
 
     // Precision for min subnormal in fixed notation. (More than enough for scientific notation.)
@@ -693,28 +693,28 @@ void test_floating_precision_prefix(const conditional_t<IsDouble, uint64_t, uint
     constexpr int max_integer_length = IsDouble ? 309 : 39;
 
     // Size for fixed notation. (More than enough for scientific notation.)
-    constexpr size_t charconv_buffer_size = 1 // negative sign
+    constexpr std::size_t charconv_buffer_size = 1 // negative sign
                                           + max_integer_length // integer digits
                                           + 1 // decimal point
                                           + precision; // fractional digits
     char charconv_buffer[charconv_buffer_size];
 
-    constexpr size_t stdio_buffer_size = charconv_buffer_size + 1; // null terminator
+    constexpr std::size_t stdio_buffer_size = charconv_buffer_size + 1; // null terminator
     char stdio_buffer[stdio_buffer_size];
 
     // 1 character for a negative sign
     // + worst cases: 0x1.fffffffffffffp-1022 and 0x1.fffffep-126f
-    constexpr size_t general_buffer_size = 1 + (IsDouble ? 773 : 117);
+    constexpr std::size_t general_buffer_size = 1 + (IsDouble ? 773 : 117);
     char general_buffer[general_buffer_size];
     char general_stdio_buffer[general_buffer_size + 1]; // + null terminator
 
-    for (uint32_t frac = 0; frac < Fractions; ++frac) {
+    for (std::uint32_t frac = 0; frac < Fractions; ++frac) {
         const UIntType bits      = prefix + frac;
         const FloatingType input = _Bit_cast<FloatingType>(bits);
 
         auto result = to_chars(charconv_buffer, end(charconv_buffer), input, chars_format::fixed, precision);
         assert_message_bits(result.ec == errc{}, "to_chars fixed precision", bits);
-        string_view charconv_sv(charconv_buffer, static_cast<size_t>(result.ptr - charconv_buffer));
+        string_view charconv_sv(charconv_buffer, static_cast<std::size_t>(result.ptr - charconv_buffer));
 
         int stdio_ret = sprintf_s(stdio_buffer, size(stdio_buffer), "%.*f", precision, input);
         assert_message_bits(stdio_ret != -1, "sprintf_s fixed precision", bits);
@@ -725,7 +725,7 @@ void test_floating_precision_prefix(const conditional_t<IsDouble, uint64_t, uint
 
         result = to_chars(charconv_buffer, end(charconv_buffer), input, chars_format::scientific, precision);
         assert_message_bits(result.ec == errc{}, "to_chars scientific precision", bits);
-        charconv_sv = string_view(charconv_buffer, static_cast<size_t>(result.ptr - charconv_buffer));
+        charconv_sv = string_view(charconv_buffer, static_cast<std::size_t>(result.ptr - charconv_buffer));
 
         stdio_ret = sprintf_s(stdio_buffer, size(stdio_buffer), "%.*e", precision, input);
         assert_message_bits(stdio_ret != -1, "sprintf_s scientific precision", bits);
@@ -736,7 +736,7 @@ void test_floating_precision_prefix(const conditional_t<IsDouble, uint64_t, uint
 
         result = to_chars(general_buffer, end(general_buffer), input, chars_format::general, 5000);
         assert_message_bits(result.ec == errc{}, "to_chars general precision", bits);
-        charconv_sv = string_view(general_buffer, static_cast<size_t>(result.ptr - general_buffer));
+        charconv_sv = string_view(general_buffer, static_cast<std::size_t>(result.ptr - general_buffer));
 
         stdio_ret = sprintf_s(general_stdio_buffer, size(general_stdio_buffer), "%.5000g", input);
         assert_message_bits(stdio_ret != -1, "sprintf_s general precision", bits);
@@ -748,10 +748,10 @@ void test_floating_precision_prefix(const conditional_t<IsDouble, uint64_t, uint
 
 void test_floating_prefixes(mt19937_64& mt64) {
     {
-        set<uint64_t> prefixes64;
+        set<std::uint64_t> prefixes64;
 
         while (prefixes64.size() < PrefixesToTest) {
-            const uint64_t val = mt64();
+            const std::uint64_t val = mt64();
 
             if ((val & 0x7FF0000000000000ULL) != 0x7FF0000000000000ULL) { // skip INF/NAN
                 prefixes64.insert(val & Mask64);
@@ -767,10 +767,10 @@ void test_floating_prefixes(mt19937_64& mt64) {
     }
 
     {
-        set<uint32_t> prefixes32;
+        set<std::uint32_t> prefixes32;
 
         while (prefixes32.size() < PrefixesToTest) {
-            const uint32_t val = static_cast<uint32_t>(mt64());
+            const std::uint32_t val = static_cast<std::uint32_t>(mt64());
 
             if ((val & 0x7F800000U) != 0x7F800000U) { // skip INF/NAN
                 prefixes32.insert(val & Mask32);
@@ -1072,7 +1072,7 @@ int main(int argc, char** argv) {
     const long long ms = chrono::duration_cast<chrono::milliseconds>(finish - start).count();
 
     puts("PASS");
-    printf("Randomized test cases: %zu\n", static_cast<size_t>(PrefixesToTest * Fractions));
+    printf("Randomized test cases: %zu\n", static_cast<std::size_t>(PrefixesToTest * Fractions));
     printf("Total time: %lld ms\n", ms);
 
     if (ms < 3'000) {

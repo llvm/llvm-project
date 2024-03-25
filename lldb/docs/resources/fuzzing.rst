@@ -1,5 +1,5 @@
-Fuzzing LLDB
-============
+Fuzzing
+=======
 
 Overview
 --------
@@ -9,7 +9,7 @@ LLDB has fuzzers that provide automated `fuzz testing <https://en.wikipedia.org/
 Building the fuzzers
 --------------------
 
-Building the LLDB fuzzers requires a build configuration that has the address sanitizer and sanitizer coverage enabled. In addition to your regular CMake arguments, you will need these argumets to build the fuzzers:
+Building the LLDB fuzzers requires a build configuration that has the address sanitizer and sanitizer coverage enabled. In addition to your regular CMake arguments, you will need these arguments to build the fuzzers:
 
 ::
 

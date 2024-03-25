@@ -13,13 +13,13 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
 namespace {
@@ -119,6 +119,7 @@ static void addByteCountSuffix(raw_ostream &OS, const Function *F,
 void Mangler::getNameWithPrefix(raw_ostream &OS, const GlobalValue *GV,
                                 bool CannotUsePrivateLabel) const {
   ManglerPrefixTy PrefixTy = Default;
+  assert(GV != nullptr && "Invalid Global Value");
   if (GV->hasPrivateLinkage()) {
     if (CannotUsePrivateLabel)
       PrefixTy = LinkerPrivate;
@@ -148,8 +149,8 @@ void Mangler::getNameWithPrefix(raw_ostream &OS, const GlobalValue *GV,
 
   // Don't add byte count suffixes when '\01' or '?' are in the first
   // character.
-  if (Name.startswith("\01") ||
-      (DL.doNotMangleLeadingQuestionMark() && Name.startswith("?")))
+  if (Name.starts_with("\01") ||
+      (DL.doNotMangleLeadingQuestionMark() && Name.starts_with("?")))
     MSFunc = nullptr;
 
   CallingConv::ID CC =

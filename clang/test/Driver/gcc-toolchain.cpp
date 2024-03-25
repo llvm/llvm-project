@@ -3,12 +3,12 @@
 /// Without --rtlib=libgcc the driver may pick clang_rt.crtbegin.o if
 /// -DCLANG_DEFAULT_RTLIB=compiler-rt.
 // RUN: %clangxx %s -### --target=x86_64-linux-gnu --sysroot= \
-// RUN:   --gcc-toolchain=%S/Inputs/ubuntu_14.04_multiarch_tree/usr -stdlib=libstdc++ --rtlib=libgcc -no-pie 2>&1 | \
+// RUN:   --gcc-toolchain=%S/Inputs/ubuntu_14.04_multiarch_tree/usr -stdlib=libstdc++ --rtlib=libgcc --unwindlib=libgcc -no-pie 2>&1 | \
 // RUN:   FileCheck %s
 //
 // Additionally check that the legacy spelling of the flag works.
 // RUN: %clangxx %s -### --target=x86_64-linux-gnu --sysroot= \
-// RUN:   --gcc-toolchain=%S/Inputs/ubuntu_14.04_multiarch_tree/usr -stdlib=libstdc++ --rtlib=libgcc -no-pie 2>&1 | \
+// RUN:   --gcc-toolchain=%S/Inputs/ubuntu_14.04_multiarch_tree/usr -stdlib=libstdc++ --rtlib=libgcc --unwindlib=libgcc -no-pie 2>&1 | \
 // RUN:   FileCheck %s
 //
 // Test for header search toolchain detection.

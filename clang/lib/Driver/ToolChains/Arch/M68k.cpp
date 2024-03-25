@@ -14,8 +14,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/TargetParser/Host.h"
 #include <sstream>
 
 using namespace clang::driver;
@@ -65,13 +65,35 @@ std::string m68k::getM68kTargetCPU(const ArgList &Args) {
   return "";
 }
 
+static void addFloatABIFeatures(const llvm::opt::ArgList &Args,
+                                std::vector<llvm::StringRef> &Features) {
+  Arg *A = Args.getLastArg(options::OPT_msoft_float, options::OPT_mhard_float,
+                           options::OPT_m68881);
+  // Opt out FPU even for newer CPUs.
+  if (A && A->getOption().matches(options::OPT_msoft_float)) {
+    Features.push_back("-isa-68881");
+    Features.push_back("-isa-68882");
+    return;
+  }
+
+  std::string CPU = m68k::getM68kTargetCPU(Args);
+  // Only enable M68881 for CPU < 68020 if the related flags are present.
+  if ((A && (CPU == "M68000" || CPU == "M68010")) ||
+      // Otherwise, by default we assume newer CPUs have M68881/2.
+      CPU == "M68020")
+    Features.push_back("+isa-68881");
+  else if (CPU == "M68030" || CPU == "M68040" || CPU == "M68060")
+    // Note that although CPU >= M68040 imply M68882, we still add `isa-68882`
+    // anyway so that it's easier to add or not add the corresponding macro
+    // definitions later, in case we want to disable 68881/2 in newer CPUs
+    // (with -msoft-float, for instance).
+    Features.push_back("+isa-68882");
+}
+
 void m68k::getM68kTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                  const ArgList &Args,
                                  std::vector<StringRef> &Features) {
-
-  m68k::FloatABI FloatABI = m68k::getM68kFloatABI(D, Args);
-  if (FloatABI == m68k::FloatABI::Soft)
-    Features.push_back("-hard-float");
+  addFloatABIFeatures(Args, Features);
 
   // Handle '-ffixed-<register>' flags
   if (Args.hasArg(options::OPT_ffixed_a0))
@@ -104,22 +126,4 @@ void m68k::getM68kTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("+reserve-d6");
   if (Args.hasArg(options::OPT_ffixed_d7))
     Features.push_back("+reserve-d7");
-}
-
-m68k::FloatABI m68k::getM68kFloatABI(const Driver &D, const ArgList &Args) {
-  m68k::FloatABI ABI = m68k::FloatABI::Invalid;
-  if (Arg *A =
-          Args.getLastArg(options::OPT_msoft_float, options::OPT_mhard_float)) {
-
-    if (A->getOption().matches(options::OPT_msoft_float))
-      ABI = m68k::FloatABI::Soft;
-    else if (A->getOption().matches(options::OPT_mhard_float))
-      ABI = m68k::FloatABI::Hard;
-  }
-
-  // If unspecified, choose the default based on the platform.
-  if (ABI == m68k::FloatABI::Invalid)
-    ABI = m68k::FloatABI::Hard;
-
-  return ABI;
 }

@@ -1,5 +1,4 @@
 ;; Check that static counters are allocated for value profiler
-
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC
 ; RUN: opt < %s -mtriple=powerpc-unknown-linux -passes=instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC
 ; RUN: opt < %s -mtriple=sparc-unknown-linux -passes=instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC
@@ -10,7 +9,11 @@
 ; RUN: opt < %s -mtriple=mips64-unknown-linux -passes=instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC-SEXT
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=instrprof -vp-static-alloc=false -S | FileCheck %s --check-prefix=DYN
 
-
+;; Check that counters have the correct alignments.
+; RUN: opt %s -mtriple=powerpc64-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefix=ALIGN
+; RUN: opt %s -mtriple=powerpc-ibm-aix -passes=instrprof -S | FileCheck %s --check-prefix=ALIGN
+; RUN: opt %s -mtriple=powerpc64-ibm-aix -passes=instrprof -S | FileCheck %s --check-prefix=ALIGN
+; RUN: opt %s -mtriple=x86_64-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefix=ALIGN
 
 @__profn_foo = private constant [3 x i8] c"foo"
 @__profn_bar = private constant [3 x i8] c"bar"
@@ -42,8 +45,8 @@ declare void @llvm.instrprof.value.profile(ptr, i64, i64, i32, i32) #0
 
 attributes #0 = { nounwind }
 
-; STATIC: @__profvp_foo = private global [1 x i64] zeroinitializer, section "{{[^"]+}}", comdat($__profc_foo)
-; STATIC: @__profvp_bar = private global [1 x i64] zeroinitializer, section "{{[^"]+}}", comdat($__profc_bar)
+; STATIC: @__profvp_foo = private global [1 x i64] zeroinitializer, section "{{[^"]+}}",{{.*}} comdat($__profc_foo)
+; STATIC: @__profvp_bar = private global [1 x i64] zeroinitializer, section "{{[^"]+}}",{{.*}} comdat($__profc_bar)
 ; STATIC: @__llvm_prf_vnodes
 
 ; DYN-NOT: @__profvp_foo
@@ -62,3 +65,12 @@ attributes #0 = { nounwind }
 ; STATIC: declare void @__llvm_profile_instrument_target(i64, ptr, i32)
 ; STATIC-EXT: declare void @__llvm_profile_instrument_target(i64, ptr, i32 zeroext)
 ; STATIC-SEXT: declare void @__llvm_profile_instrument_target(i64, ptr, i32 signext)
+
+; ALIGN: @__profc_foo = private global {{.*}} section "__llvm_prf_cnts",{{.*}} align 8
+; ALIGN: @__profvp_foo = private global {{.*}} section "__llvm_prf_vals",{{.*}} align 8
+; ALIGN: @__profd_foo = private global {{.*}} section "__llvm_prf_data",{{.*}} align 8
+; ALIGN: @__profc_bar = private global {{.*}} section "__llvm_prf_cnts",{{.*}} align 8
+; ALIGN: @__profvp_bar = private global {{.*}} section "__llvm_prf_vals",{{.*}}  align 8
+; ALIGN: @__profd_bar = private global {{.*}} section "__llvm_prf_data",{{.*}} align 8
+; ALIGN: @__llvm_prf_vnodes = private global {{.*}} section "__llvm_prf_vnds",{{.*}} align 8
+; ALIGN: @__llvm_prf_nm = private constant {{.*}} section "__llvm_prf_names",{{.*}} align 1

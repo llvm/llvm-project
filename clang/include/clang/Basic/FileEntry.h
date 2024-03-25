@@ -70,7 +70,7 @@ public:
   const FileEntry &getFileEntry() const {
     return *getBaseMapEntry().second->V.get<FileEntry *>();
   }
-  DirectoryEntryRef getDir() const { return *getBaseMapEntry().second->Dir; }
+  DirectoryEntryRef getDir() const { return ME->second->Dir; }
 
   inline off_t getSize() const;
   inline unsigned getUID() const;
@@ -118,17 +118,14 @@ public:
     /// VFSs that use external names. In that case, the \c FileEntryRef
     /// returned by the \c FileManager will have the external name, and not the
     /// name that was used to lookup the file.
-    ///
-    /// The second type is really a `const MapEntry *`, but that confuses
-    /// gcc5.3.  Once that's no longer supported, change this back.
-    llvm::PointerUnion<FileEntry *, const void *> V;
+    llvm::PointerUnion<FileEntry *, const MapEntry *> V;
 
-    /// Directory the file was found in. Set if and only if V is a FileEntry.
-    OptionalDirectoryEntryRef Dir;
+    /// Directory the file was found in.
+    DirectoryEntryRef Dir;
 
     MapValue() = delete;
     MapValue(FileEntry &FE, DirectoryEntryRef Dir) : V(&FE), Dir(Dir) {}
-    MapValue(MapEntry &ME) : V(&ME) {}
+    MapValue(MapEntry &ME, DirectoryEntryRef Dir) : V(&ME), Dir(Dir) {}
   };
 
   /// Check if RHS referenced the file in exactly the same way.
@@ -165,10 +162,10 @@ public:
 
   /// Retrieve the base MapEntry after redirects.
   const MapEntry &getBaseMapEntry() const {
-    const MapEntry *ME = this->ME;
-    while (const void *Next = ME->second->V.dyn_cast<const void *>())
-      ME = static_cast<const MapEntry *>(Next);
-    return *ME;
+    const MapEntry *Base = ME;
+    while (const auto *Next = Base->second->V.dyn_cast<const MapEntry *>())
+      Base = Next;
+    return *Base;
   }
 
 private:
@@ -237,6 +234,7 @@ static_assert(std::is_trivially_copyable<OptionalFileEntryRef>::value,
 } // namespace clang
 
 namespace llvm {
+
 /// Specialisation of DenseMapInfo for FileEntryRef.
 template <> struct DenseMapInfo<clang::FileEntryRef> {
   static inline clang::FileEntryRef getEmptyKey() {
@@ -263,77 +261,23 @@ template <> struct DenseMapInfo<clang::FileEntryRef> {
     // It's safe to use operator==.
     return LHS == RHS;
   }
+
+  /// Support for finding `const FileEntry *` in a `DenseMap<FileEntryRef, T>`.
+  /// @{
+  static unsigned getHashValue(const clang::FileEntry *Val) {
+    return llvm::hash_value(Val);
+  }
+  static bool isEqual(const clang::FileEntry *LHS, clang::FileEntryRef RHS) {
+    if (RHS.isSpecialDenseMapKey())
+      return false;
+    return LHS == RHS;
+  }
+  /// @}
 };
 
 } // end namespace llvm
 
 namespace clang {
-
-/// Wrapper around OptionalFileEntryRef that degrades to 'const FileEntry*',
-/// facilitating incremental patches to propagate FileEntryRef.
-///
-/// This class can be used as return value or field where it's convenient for
-/// an OptionalFileEntryRef to degrade to a 'const FileEntry*'. The purpose
-/// is to avoid code churn due to dances like the following:
-/// \code
-/// // Old code.
-/// lvalue = rvalue;
-///
-/// // Temporary code from an incremental patch.
-/// OptionalFileEntryRef MaybeF = rvalue;
-/// lvalue = MaybeF ? &MaybeF.getFileEntry() : nullptr;
-///
-/// // Final code.
-/// lvalue = rvalue;
-/// \endcode
-///
-/// FIXME: Once FileEntryRef is "everywhere" and FileEntry::LastRef and
-/// FileEntry::getName have been deleted, delete this class and replace
-/// instances with OptionalFileEntryRef.
-class OptionalFileEntryRefDegradesToFileEntryPtr : public OptionalFileEntryRef {
-public:
-  OptionalFileEntryRefDegradesToFileEntryPtr() = default;
-  OptionalFileEntryRefDegradesToFileEntryPtr(
-      OptionalFileEntryRefDegradesToFileEntryPtr &&) = default;
-  OptionalFileEntryRefDegradesToFileEntryPtr(
-      const OptionalFileEntryRefDegradesToFileEntryPtr &) = default;
-  OptionalFileEntryRefDegradesToFileEntryPtr &
-  operator=(OptionalFileEntryRefDegradesToFileEntryPtr &&) = default;
-  OptionalFileEntryRefDegradesToFileEntryPtr &
-  operator=(const OptionalFileEntryRefDegradesToFileEntryPtr &) = default;
-
-  OptionalFileEntryRefDegradesToFileEntryPtr(std::nullopt_t) {}
-  OptionalFileEntryRefDegradesToFileEntryPtr(FileEntryRef Ref)
-      : OptionalFileEntryRef(Ref) {}
-  OptionalFileEntryRefDegradesToFileEntryPtr(OptionalFileEntryRef MaybeRef)
-      : OptionalFileEntryRef(MaybeRef) {}
-
-  OptionalFileEntryRefDegradesToFileEntryPtr &operator=(std::nullopt_t) {
-    OptionalFileEntryRef::operator=(std::nullopt);
-    return *this;
-  }
-  OptionalFileEntryRefDegradesToFileEntryPtr &operator=(FileEntryRef Ref) {
-    OptionalFileEntryRef::operator=(Ref);
-    return *this;
-  }
-  OptionalFileEntryRefDegradesToFileEntryPtr &
-  operator=(OptionalFileEntryRef MaybeRef) {
-    OptionalFileEntryRef::operator=(MaybeRef);
-    return *this;
-  }
-
-  /// Degrade to 'const FileEntry *' to allow  FileEntry::LastRef and
-  /// FileEntry::getName have been deleted, delete this class and replace
-  /// instances with OptionalFileEntryRef
-  operator const FileEntry *() const {
-    return has_value() ? &(*this)->getFileEntry() : nullptr;
-  }
-};
-
-static_assert(
-    std::is_trivially_copyable<
-        OptionalFileEntryRefDegradesToFileEntryPtr>::value,
-    "OptionalFileEntryRefDegradesToFileEntryPtr should be trivially copyable");
 
 inline bool operator==(const FileEntry *LHS, const OptionalFileEntryRef &RHS) {
   return LHS == (RHS ? &RHS->getFileEntry() : nullptr);
@@ -374,18 +318,8 @@ class FileEntry {
   /// The file content, if it is owned by the \p FileEntry.
   std::unique_ptr<llvm::MemoryBuffer> Content;
 
-  // First access name for this FileEntry.
-  //
-  // This is Optional only to allow delayed construction (FileEntryRef has no
-  // default constructor). It should always have a value in practice.
-  //
-  // TODO: remove this once everyone that needs a name uses FileEntryRef.
-  OptionalFileEntryRef LastRef;
-
 public:
   ~FileEntry();
-  StringRef getName() const { return LastRef->getName(); }
-  FileEntryRef getLastRef() const { return *LastRef; }
 
   StringRef tryGetRealPathName() const { return RealPathName; }
   off_t getSize() const { return Size; }

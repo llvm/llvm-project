@@ -1,4 +1,5 @@
 ; RUN: opt -passes=instcombine -S %s -o - | FileCheck %s
+; RUN: opt -passes=instcombine -S %s -o - --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; In this example, the cast from ptr to ptr becomes trivially dead. We should
 ; salvage its debug info.

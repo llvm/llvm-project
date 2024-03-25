@@ -1,4 +1,4 @@
-// REQUIRES: arch=x86_64
+// REQUIRES: target={{x86_64.*}}
 //
 // RUN: %clangxx -fsanitize=builtin -w %s -O3 -o %t
 // RUN: %run %t 2>&1 | FileCheck %s --check-prefix=RECOVER

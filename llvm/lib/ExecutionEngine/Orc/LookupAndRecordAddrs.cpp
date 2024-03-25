@@ -31,8 +31,8 @@ void lookupAndRecordAddrs(
           return OnRec(Result.takeError());
         for (auto &KV : Pairs) {
           auto I = Result->find(KV.first);
-          KV.second->setValue((I != Result->end()) ? I->second.getAddress()
-                                                   : 0);
+          *KV.second =
+              I != Result->end() ? I->second.getAddress() : orc::ExecutorAddr();
         }
         OnRec(Error::success());
       },
@@ -73,7 +73,7 @@ Error lookupAndRecordAddrs(
                                    inconvertibleErrorCode());
 
   for (unsigned I = 0; I != Pairs.size(); ++I)
-    *Pairs[I].second = Result->front()[I];
+    *Pairs[I].second = Result->front()[I].getAddress();
 
   return Error::success();
 }

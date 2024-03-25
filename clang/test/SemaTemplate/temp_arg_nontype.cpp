@@ -204,8 +204,8 @@ namespace EntityReferenced {
 }
 
 namespace PR6964 {
-  template <typename ,int, int = 9223372036854775807L > // expected-warning 2{{non-type template argument value '9223372036854775807' truncated to '-1' for template parameter of type 'int'}} \
-  // expected-note 2{{template parameter is declared here}}
+  template <typename ,int, int = 9223372036854775807L > // expected-warning {{non-type template argument value '9223372036854775807' truncated to '-1' for template parameter of type 'int'}} \
+  // expected-note {{template parameter is declared here}}
   struct as_nview { };
 
   template <typename Sequence, int I0> 
@@ -213,7 +213,6 @@ namespace PR6964 {
   { };
 }
 
-// rdar://problem/8302138
 namespace test8 {
   template <int* ip> struct A {
     int* p;

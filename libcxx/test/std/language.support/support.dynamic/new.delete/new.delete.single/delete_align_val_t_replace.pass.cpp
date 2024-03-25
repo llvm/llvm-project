@@ -10,12 +10,9 @@
 
 // UNSUPPORTED: sanitizer-new-delete, c++03, c++11, c++14
 
-// Aligned allocation was not provided before macosx10.14 and as a result we
-// get availability errors when the deployment target is older than macosx10.14.
-
-// Libcxx when built for z/OS doesn't contain the aligned allocation functions,
+// Libc++ when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.
-// UNSUPPORTED: target={{.+}}-zos{{.*}}
+// XFAIL: target={{.+}}-zos{{.*}}
 
 #include <new>
 #include <cstddef>

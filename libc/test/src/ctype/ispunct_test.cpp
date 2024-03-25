@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/ctype/ispunct.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 // Helper function to mark the sections of the ASCII table that are
 // punctuation characters. These are listed below:
@@ -25,10 +25,10 @@ static inline int is_punctuation_character(int c) {
 TEST(LlvmLibcIsPunct, DefaultLocale) {
   // Loops through all characters, verifying that punctuation characters
   // return a non-zero integer, and everything else returns zero.
-  for (int ch = 0; ch < 255; ++ch) {
+  for (int ch = -255; ch < 255; ++ch) {
     if (is_punctuation_character(ch))
-      EXPECT_NE(__llvm_libc::ispunct(ch), 0);
+      EXPECT_NE(LIBC_NAMESPACE::ispunct(ch), 0);
     else
-      EXPECT_EQ(__llvm_libc::ispunct(ch), 0);
+      EXPECT_EQ(LIBC_NAMESPACE::ispunct(ch), 0);
   }
 }

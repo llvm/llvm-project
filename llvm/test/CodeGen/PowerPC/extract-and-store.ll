@@ -484,8 +484,8 @@ define dso_local void @test_consecutive_i32(<4 x i32> %a, ptr nocapture %b) loca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsldwi vs0, vs34, vs34, 2
 ; CHECK-NEXT:    li r3, 4
-; CHECK-NEXT:    stxsiwx vs34, r5, r3
 ; CHECK-NEXT:    stfiwx f0, 0, r5
+; CHECK-NEXT:    stxsiwx vs34, r5, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test_consecutive_i32:
@@ -571,7 +571,6 @@ define dso_local void @test_stores_exceed_vec_size(<4 x i32> %a, ptr nocapture %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, .LCPI16_0@toc@ha
 ; CHECK-NEXT:    xxsldwi vs1, vs34, vs34, 1
-; CHECK-NEXT:    li r4, 20
 ; CHECK-NEXT:    addi r3, r3, .LCPI16_0@toc@l
 ; CHECK-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-NEXT:    li r3, 16
@@ -580,19 +579,20 @@ define dso_local void @test_stores_exceed_vec_size(<4 x i32> %a, ptr nocapture %
 ; CHECK-NEXT:    xxswapd vs0, vs35
 ; CHECK-NEXT:    stxvd2x vs0, 0, r5
 ; CHECK-NEXT:    stfiwx f1, r5, r3
-; CHECK-NEXT:    stxsiwx vs34, r5, r4
+; CHECK-NEXT:    li r3, 20
+; CHECK-NEXT:    stxsiwx vs34, r5, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test_stores_exceed_vec_size:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI16_0@toc@ha
 ; CHECK-BE-NEXT:    xxsldwi vs0, vs34, vs34, 1
-; CHECK-BE-NEXT:    li r4, 20
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI16_0@toc@l
 ; CHECK-BE-NEXT:    lxvw4x vs35, 0, r3
 ; CHECK-BE-NEXT:    li r3, 16
 ; CHECK-BE-NEXT:    stxsiwx vs34, r5, r3
-; CHECK-BE-NEXT:    stfiwx f0, r5, r4
+; CHECK-BE-NEXT:    li r3, 20
+; CHECK-BE-NEXT:    stfiwx f0, r5, r3
 ; CHECK-BE-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-BE-NEXT:    stxvw4x vs35, 0, r5
 ; CHECK-BE-NEXT:    blr
@@ -649,16 +649,16 @@ define void @test_5_consecutive_stores_of_bytes(<16 x i8> %a, ptr nocapture %b) 
 ; CHECK-NEXT:    xxswapd vs0, vs34
 ; CHECK-NEXT:    mfvsrd r3, vs34
 ; CHECK-NEXT:    rldicl r6, r3, 32, 56
-; CHECK-NEXT:    rldicl r3, r3, 56, 56
 ; CHECK-NEXT:    mffprd r4, f0
-; CHECK-NEXT:    stb r6, 1(r5)
+; CHECK-NEXT:    rldicl r3, r3, 56, 56
 ; CHECK-NEXT:    stb r3, 2(r5)
-; CHECK-NEXT:    rldicl r6, r4, 32, 56
 ; CHECK-NEXT:    rldicl r3, r4, 8, 56
-; CHECK-NEXT:    rldicl r4, r4, 16, 56
-; CHECK-NEXT:    stb r6, 0(r5)
+; CHECK-NEXT:    stb r6, 1(r5)
+; CHECK-NEXT:    rldicl r6, r4, 32, 56
 ; CHECK-NEXT:    stb r3, 3(r5)
-; CHECK-NEXT:    stb r4, 4(r5)
+; CHECK-NEXT:    rldicl r3, r4, 16, 56
+; CHECK-NEXT:    stb r6, 0(r5)
+; CHECK-NEXT:    stb r3, 4(r5)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test_5_consecutive_stores_of_bytes:
@@ -670,11 +670,11 @@ define void @test_5_consecutive_stores_of_bytes(<16 x i8> %a, ptr nocapture %b) 
 ; CHECK-BE-NEXT:    stb r6, 0(r5)
 ; CHECK-BE-NEXT:    rldicl r6, r4, 40, 56
 ; CHECK-BE-NEXT:    rldicl r4, r4, 16, 56
-; CHECK-BE-NEXT:    stb r6, 1(r5)
-; CHECK-BE-NEXT:    clrldi r6, r3, 56
-; CHECK-BE-NEXT:    rldicl r3, r3, 56, 56
 ; CHECK-BE-NEXT:    stb r4, 2(r5)
-; CHECK-BE-NEXT:    stb r6, 3(r5)
+; CHECK-BE-NEXT:    clrldi r4, r3, 56
+; CHECK-BE-NEXT:    rldicl r3, r3, 56, 56
+; CHECK-BE-NEXT:    stb r6, 1(r5)
+; CHECK-BE-NEXT:    stb r4, 3(r5)
 ; CHECK-BE-NEXT:    stb r3, 4(r5)
 ; CHECK-BE-NEXT:    blr
 ;
@@ -733,33 +733,33 @@ entry:
 define void @test_13_consecutive_stores_of_bytes(<16 x i8> %a, ptr nocapture %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_13_consecutive_stores_of_bytes:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxswapd vs0, vs34
 ; CHECK-NEXT:    mfvsrd r3, vs34
-; CHECK-NEXT:    rldicl r4, r3, 32, 56
+; CHECK-NEXT:    xxswapd vs0, vs34
+; CHECK-NEXT:    rldicl r6, r3, 32, 56
+; CHECK-NEXT:    mffprd r4, f0
+; CHECK-NEXT:    stb r6, 1(r5)
 ; CHECK-NEXT:    rldicl r6, r3, 56, 56
-; CHECK-NEXT:    stb r4, 1(r5)
-; CHECK-NEXT:    rldicl r4, r3, 40, 56
-; CHECK-NEXT:    mffprd r7, f0
 ; CHECK-NEXT:    stb r6, 2(r5)
+; CHECK-NEXT:    rldicl r6, r3, 40, 56
+; CHECK-NEXT:    stb r6, 6(r5)
 ; CHECK-NEXT:    rldicl r6, r3, 24, 56
-; CHECK-NEXT:    stb r4, 6(r5)
-; CHECK-NEXT:    rldicl r4, r3, 8, 56
 ; CHECK-NEXT:    stb r6, 7(r5)
+; CHECK-NEXT:    rldicl r6, r3, 8, 56
 ; CHECK-NEXT:    rldicl r3, r3, 16, 56
-; CHECK-NEXT:    stb r4, 9(r5)
-; CHECK-NEXT:    rldicl r4, r7, 32, 56
-; CHECK-NEXT:    rldicl r6, r7, 8, 56
+; CHECK-NEXT:    stb r6, 9(r5)
+; CHECK-NEXT:    rldicl r6, r4, 32, 56
 ; CHECK-NEXT:    stb r3, 12(r5)
-; CHECK-NEXT:    stb r4, 0(r5)
-; CHECK-NEXT:    rldicl r4, r7, 16, 56
+; CHECK-NEXT:    stb r6, 0(r5)
+; CHECK-NEXT:    rldicl r6, r4, 8, 56
 ; CHECK-NEXT:    stb r6, 3(r5)
-; CHECK-NEXT:    clrldi r6, r7, 56
-; CHECK-NEXT:    stb r4, 4(r5)
-; CHECK-NEXT:    rldicl r4, r7, 48, 56
+; CHECK-NEXT:    rldicl r6, r4, 16, 56
+; CHECK-NEXT:    stb r6, 4(r5)
+; CHECK-NEXT:    clrldi r6, r4, 56
 ; CHECK-NEXT:    stb r6, 5(r5)
-; CHECK-NEXT:    rldicl r6, r7, 56, 56
-; CHECK-NEXT:    stb r4, 8(r5)
-; CHECK-NEXT:    rldicl r4, r7, 24, 56
+; CHECK-NEXT:    rldicl r6, r4, 48, 56
+; CHECK-NEXT:    stb r6, 8(r5)
+; CHECK-NEXT:    rldicl r6, r4, 56, 56
+; CHECK-NEXT:    rldicl r4, r4, 24, 56
 ; CHECK-NEXT:    stb r6, 10(r5)
 ; CHECK-NEXT:    stb r4, 11(r5)
 ; CHECK-NEXT:    blr
@@ -768,33 +768,33 @@ define void @test_13_consecutive_stores_of_bytes(<16 x i8> %a, ptr nocapture %b)
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    mfvsrd r3, vs34
 ; CHECK-BE-NEXT:    xxswapd vs0, vs34
-; CHECK-BE-NEXT:    rldicl r4, r3, 40, 56
+; CHECK-BE-NEXT:    rldicl r6, r3, 40, 56
+; CHECK-BE-NEXT:    mffprd r4, f0
+; CHECK-BE-NEXT:    stb r6, 0(r5)
 ; CHECK-BE-NEXT:    clrldi r6, r3, 56
-; CHECK-BE-NEXT:    stb r4, 0(r5)
-; CHECK-BE-NEXT:    rldicl r4, r3, 56, 56
-; CHECK-BE-NEXT:    mffprd r7, f0
 ; CHECK-BE-NEXT:    stb r6, 3(r5)
+; CHECK-BE-NEXT:    rldicl r6, r3, 56, 56
+; CHECK-BE-NEXT:    stb r6, 4(r5)
 ; CHECK-BE-NEXT:    rldicl r6, r3, 8, 56
-; CHECK-BE-NEXT:    stb r4, 4(r5)
-; CHECK-BE-NEXT:    rldicl r4, r3, 24, 56
 ; CHECK-BE-NEXT:    stb r6, 5(r5)
+; CHECK-BE-NEXT:    rldicl r6, r3, 24, 56
+; CHECK-BE-NEXT:    stb r6, 8(r5)
 ; CHECK-BE-NEXT:    rldicl r6, r3, 16, 56
-; CHECK-BE-NEXT:    stb r4, 8(r5)
-; CHECK-BE-NEXT:    rldicl r4, r7, 40, 56
-; CHECK-BE-NEXT:    stb r6, 10(r5)
-; CHECK-BE-NEXT:    rldicl r6, r7, 16, 56
-; CHECK-BE-NEXT:    stb r4, 1(r5)
-; CHECK-BE-NEXT:    rldicl r4, r7, 32, 56
-; CHECK-BE-NEXT:    stb r6, 2(r5)
-; CHECK-BE-NEXT:    rldicl r6, r7, 48, 56
-; CHECK-BE-NEXT:    stb r4, 6(r5)
-; CHECK-BE-NEXT:    clrldi r4, r7, 56
-; CHECK-BE-NEXT:    stb r6, 7(r5)
 ; CHECK-BE-NEXT:    rldicl r3, r3, 48, 56
-; CHECK-BE-NEXT:    rldicl r6, r7, 56, 56
-; CHECK-BE-NEXT:    stb r4, 9(r5)
+; CHECK-BE-NEXT:    stb r6, 10(r5)
+; CHECK-BE-NEXT:    rldicl r6, r4, 40, 56
 ; CHECK-BE-NEXT:    stb r3, 11(r5)
-; CHECK-BE-NEXT:    stb r6, 12(r5)
+; CHECK-BE-NEXT:    rldicl r3, r4, 56, 56
+; CHECK-BE-NEXT:    stb r6, 1(r5)
+; CHECK-BE-NEXT:    rldicl r6, r4, 16, 56
+; CHECK-BE-NEXT:    stb r3, 12(r5)
+; CHECK-BE-NEXT:    stb r6, 2(r5)
+; CHECK-BE-NEXT:    rldicl r6, r4, 32, 56
+; CHECK-BE-NEXT:    stb r6, 6(r5)
+; CHECK-BE-NEXT:    rldicl r6, r4, 48, 56
+; CHECK-BE-NEXT:    stb r6, 7(r5)
+; CHECK-BE-NEXT:    clrldi r6, r4, 56
+; CHECK-BE-NEXT:    stb r6, 9(r5)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test_13_consecutive_stores_of_bytes:
@@ -967,24 +967,24 @@ entry:
 define dso_local void @test_elements_from_three_vec(<4 x float> %a, <4 x float> %b, <4 x float> %c, ptr nocapture %d) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_elements_from_three_vec:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li r3, 4
 ; CHECK-NEXT:    xxsldwi vs0, vs34, vs34, 3
 ; CHECK-NEXT:    xxsldwi vs1, vs36, vs36, 1
-; CHECK-NEXT:    li r3, 4
-; CHECK-NEXT:    li r4, 8
 ; CHECK-NEXT:    stxsiwx vs35, r9, r3
+; CHECK-NEXT:    li r3, 8
 ; CHECK-NEXT:    stfiwx f0, 0, r9
-; CHECK-NEXT:    stfiwx f1, r9, r4
+; CHECK-NEXT:    stfiwx f1, r9, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test_elements_from_three_vec:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxsldwi vs0, vs34, vs34, 2
 ; CHECK-BE-NEXT:    xxsldwi vs1, vs35, vs35, 1
 ; CHECK-BE-NEXT:    li r3, 4
-; CHECK-BE-NEXT:    li r4, 8
-; CHECK-BE-NEXT:    stxsiwx vs36, r9, r4
+; CHECK-BE-NEXT:    xxsldwi vs0, vs34, vs34, 2
 ; CHECK-BE-NEXT:    stfiwx f1, r9, r3
+; CHECK-BE-NEXT:    li r3, 8
 ; CHECK-BE-NEXT:    stfiwx f0, 0, r9
+; CHECK-BE-NEXT:    stxsiwx vs36, r9, r3
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test_elements_from_three_vec:

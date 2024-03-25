@@ -15,13 +15,12 @@
 #ifndef LLVM_DEBUGINFO_SYMBOLIZE_MARKUPFILTER_H
 #define LLVM_DEBUGINFO_SYMBOLIZE_MARKUPFILTER_H
 
-#include "Markup.h"
-
-#include <map>
-
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/DebugInfo/Symbolize/Markup.h"
+#include "llvm/Object/BuildID.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include <map>
 
 namespace llvm {
 namespace symbolize {
@@ -40,7 +39,7 @@ public:
   ///
   /// Invalid or unimplemented markup elements are removed. Some output may be
   /// deferred until future filter() or finish() call.
-  void filter(StringRef Line);
+  void filter(std::string &&InputLine);
 
   /// Records that the input stream has ended and writes any deferred output.
   void finish();
@@ -116,7 +115,7 @@ private:
   std::optional<uint64_t> parseAddr(StringRef Str) const;
   std::optional<uint64_t> parseModuleID(StringRef Str) const;
   std::optional<uint64_t> parseSize(StringRef Str) const;
-  std::optional<SmallVector<uint8_t>> parseBuildID(StringRef Str) const;
+  object::BuildID parseBuildID(StringRef Str) const;
   std::optional<std::string> parseMode(StringRef Str) const;
   std::optional<PCType> parsePCType(StringRef Str) const;
   std::optional<uint64_t> parseFrameNumber(StringRef Str) const;
@@ -124,7 +123,7 @@ private:
   bool checkTag(const MarkupNode &Node) const;
   bool checkNumFields(const MarkupNode &Element, size_t Size) const;
   bool checkNumFieldsAtLeast(const MarkupNode &Element, size_t Size) const;
-  bool checkNumFieldsAtMost(const MarkupNode &Element, size_t Size) const;
+  void warnNumFieldsAtMost(const MarkupNode &Element, size_t Size) const;
 
   void reportTypeError(StringRef Str, StringRef TypeName) const;
   void reportLocation(StringRef::iterator Loc) const;
@@ -143,7 +142,7 @@ private:
   MarkupParser Parser;
 
   // Current line being filtered.
-  StringRef Line;
+  std::string Line;
 
   // A module info line currently being built. This incorporates as much mmap
   // information as possible before being emitted.

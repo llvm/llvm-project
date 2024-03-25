@@ -63,18 +63,21 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolLocation &);
 /// Hints are sorted in ascending order of relevance.
 enum class Hints : uint8_t {
   None = 0x00,
-  /// Provides a generally-usable definition for the symbol. (a function decl,
-  /// or class definition and not a forward declaration of a template).
-  CompleteSymbol = 1 << 0,
-  /// Symbol is provided by a public file. Only absent in the cases where file
-  /// is explicitly marked as such, non self-contained or IWYU private
-  /// pragmas.
-  PublicHeader = 1 << 1,
+  /// Symbol is directly originating from this header, rather than being
+  /// exported or included transitively.
+  OriginHeader = 1 << 0,
   /// Header providing the symbol is explicitly marked as preferred, with an
   /// IWYU private pragma that points at this provider or header and symbol has
   /// ~the same name.
-  PreferredHeader = 1 << 2,
-  LLVM_MARK_AS_BITMASK_ENUM(PreferredHeader),
+  PreferredHeader = 1 << 1,
+  /// Provides a generally-usable definition for the symbol. (a function decl,
+  /// or class definition and not a forward declaration of a template).
+  CompleteSymbol = 1 << 2,
+  /// Symbol is provided by a public file. Only absent in the cases where file
+  /// is explicitly marked as such, non self-contained or IWYU private
+  /// pragmas.
+  PublicHeader = 1 << 3,
+  LLVM_MARK_AS_BITMASK_ENUM(PublicHeader),
 };
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 /// A wrapper to augment values with hints.
@@ -85,6 +88,11 @@ template <typename T> struct Hinted : public T {
   /// Since hints are sorted by relevance, use it directly.
   bool operator<(const Hinted<T> &Other) const {
     return static_cast<int>(Hint) < static_cast<int>(Other.Hint);
+  }
+
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                       const Hinted<T> &H) {
+    return OS << static_cast<int>(H.Hint) << " - " << static_cast<T>(H);
   }
 };
 

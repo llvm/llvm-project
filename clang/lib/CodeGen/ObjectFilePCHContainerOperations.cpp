@@ -158,8 +158,11 @@ public:
     // When building a module MainFileName is the name of the modulemap file.
     CodeGenOpts.MainFileName =
         LangOpts.CurrentModule.empty() ? MainFileName : LangOpts.CurrentModule;
-    CodeGenOpts.setDebugInfo(codegenoptions::FullDebugInfo);
+    CodeGenOpts.setDebugInfo(llvm::codegenoptions::FullDebugInfo);
     CodeGenOpts.setDebuggerTuning(CI.getCodeGenOpts().getDebuggerTuning());
+    CodeGenOpts.DwarfVersion = CI.getCodeGenOpts().DwarfVersion;
+    CodeGenOpts.DebugCompilationDir =
+        CI.getInvocation().getCodeGenOpts().DebugCompilationDir;
     CodeGenOpts.DebugPrefixMap =
         CI.getInvocation().getCodeGenOpts().DebugPrefixMap;
     CodeGenOpts.DebugStrictDwarf = CI.getCodeGenOpts().DebugStrictDwarf;
@@ -347,6 +350,11 @@ ObjectFilePCHContainerWriter::CreatePCHContainerGenerator(
     std::shared_ptr<PCHBuffer> Buffer) const {
   return std::make_unique<PCHContainerGenerator>(
       CI, MainFileName, OutputFileName, std::move(OS), Buffer);
+}
+
+ArrayRef<StringRef> ObjectFilePCHContainerReader::getFormats() const {
+  static StringRef Formats[] = {"obj", "raw"};
+  return Formats;
 }
 
 StringRef

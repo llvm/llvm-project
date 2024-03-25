@@ -9,20 +9,20 @@
 #include "pthread_attr_init.h"
 
 #include "src/__support/common.h"
+#include "src/__support/threads/thread.h" // For thread::DEFAULT_*
 
-#include <linux/param.h> // For EXEC_PAGESIZE.
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, pthread_attr_init, (pthread_attr_t * attr)) {
   *attr = pthread_attr_t{
-      false,         // Not detached
-      nullptr,       // Let the thread manage its stack
-      1 << 16,       // 64KB stack size
-      EXEC_PAGESIZE, // Default page size for the guard size.
+      PTHREAD_CREATE_JOINABLE,   // Not detached
+      nullptr,                   // Let the thread manage its stack
+      Thread::DEFAULT_STACKSIZE, // stack size.
+      Thread::DEFAULT_GUARDSIZE, // Default page size for the guard size.
   };
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

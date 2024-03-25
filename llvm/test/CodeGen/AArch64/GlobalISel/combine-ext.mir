@@ -6,12 +6,30 @@ body:             |
   bb.1:
   liveins: $x0
     ; CHECK-LABEL: name: test_combine_anyext_trunc
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: $x1 = COPY [[COPY]](s64)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: $x1 = COPY [[COPY]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s32) = G_TRUNC %0(s64)
     %2:_(s64) = G_ANYEXT %1(s32)
     $x1 = COPY %2(s64)
+...
+---
+name:            test_combine_anyext_trunc_with_hint
+body:             |
+  bb.1:
+  liveins: $x0
+    ; CHECK-LABEL: name: test_combine_anyext_trunc_with_hint
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: $x1 = COPY [[COPY]](s64)
+    %0:_(s64) = COPY $x0
+    %1:_(s32) = G_TRUNC %0(s64)
+    %2:_(s32) = G_ASSERT_ZEXT %1(s32), 11
+    %3:_(s64) = G_ANYEXT %2(s32)
+    $x1 = COPY %3(s64)
 ...
 ---
 name:            test_combine_anyext_trunc_vec
@@ -19,8 +37,10 @@ body:             |
   bb.1:
   liveins: $q0
     ; CHECK-LABEL: name: test_combine_anyext_trunc_vec
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: $q0 = COPY [[COPY]](<2 x s64>)
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: $q0 = COPY [[COPY]](<2 x s64>)
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s32>) = G_TRUNC %0(<2 x s64>)
     %2:_(<2 x s64>) = G_ANYEXT %1(<2 x s32>)
@@ -32,13 +52,32 @@ body:             |
   bb.1:
   liveins: $h0
     ; CHECK-LABEL: name: test_combine_anyext_anyext
-    ; CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY]](s16)
-    ; CHECK: $x0 = COPY [[ANYEXT]](s64)
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY]](s16)
+    ; CHECK-NEXT: $x0 = COPY [[ANYEXT]](s64)
     %0:_(s16) = COPY $h0
     %1:_(s32) = G_ANYEXT %0(s16)
     %2:_(s64) = G_ANYEXT %1(s32)
     $x0 = COPY %2(s64)
+...
+---
+name:            test_combine_anyext_anyext_with_hint
+body:             |
+  bb.1:
+  liveins: $h0
+    ; CHECK-LABEL: name: test_combine_anyext_anyext_with_hint
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY]](s16)
+    ; CHECK-NEXT: $x0 = COPY [[ANYEXT]](s64)
+    %0:_(s16) = COPY $h0
+    %1:_(s32) = G_ANYEXT %0(s16)
+    %2:_(s32) = G_ASSERT_ZEXT %1(s32), 11
+    %3:_(s64) = G_ANYEXT %2(s32)
+    $x0 = COPY %3(s64)
 ...
 ---
 name:            test_combine_anyext_anyext_vec
@@ -46,9 +85,11 @@ body:             |
   bb.1:
   liveins: $s0
     ; CHECK-LABEL: name: test_combine_anyext_anyext_vec
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $s0
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(<2 x s64>) = G_ANYEXT [[COPY]](<2 x s16>)
-    ; CHECK: $q0 = COPY [[ANYEXT]](<2 x s64>)
+    ; CHECK: liveins: $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $s0
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(<2 x s64>) = G_ANYEXT [[COPY]](<2 x s16>)
+    ; CHECK-NEXT: $q0 = COPY [[ANYEXT]](<2 x s64>)
     %0:_(<2 x s16>) = COPY $s0
     %1:_(<2 x s32>) = G_ANYEXT %0(<2 x s16>)
     %2:_(<2 x s64>) = G_ANYEXT %1(<2 x s32>)
@@ -60,13 +101,32 @@ body:             |
   bb.1:
   liveins: $h0
     ; CHECK-LABEL: name: test_combine_anyext_sext
-    ; CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
-    ; CHECK: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY]](s16)
-    ; CHECK: $x0 = COPY [[SEXT]](s64)
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY]](s16)
+    ; CHECK-NEXT: $x0 = COPY [[SEXT]](s64)
     %0:_(s16) = COPY $h0
     %1:_(s32) = G_SEXT %0(s16)
     %2:_(s64) = G_ANYEXT %1(s32)
     $x0 = COPY %2(s64)
+...
+---
+name:            test_combine_anyext_sext_with_hint
+body:             |
+  bb.1:
+  liveins: $h0
+    ; CHECK-LABEL: name: test_combine_anyext_sext_with_hint
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY]](s16)
+    ; CHECK-NEXT: $x0 = COPY [[SEXT]](s64)
+    %0:_(s16) = COPY $h0
+    %1:_(s32) = G_SEXT %0(s16)
+    %2:_(s32) = G_ASSERT_ZEXT %1(s32), 11
+    %3:_(s64) = G_ANYEXT %2(s32)
+    $x0 = COPY %3(s64)
 ...
 ---
 name:            test_combine_anyext_sext_vec
@@ -74,9 +134,11 @@ body:             |
   bb.1:
   liveins: $s0
     ; CHECK-LABEL: name: test_combine_anyext_sext_vec
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $s0
-    ; CHECK: [[SEXT:%[0-9]+]]:_(<2 x s64>) = G_SEXT [[COPY]](<2 x s16>)
-    ; CHECK: $q0 = COPY [[SEXT]](<2 x s64>)
+    ; CHECK: liveins: $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $s0
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(<2 x s64>) = G_SEXT [[COPY]](<2 x s16>)
+    ; CHECK-NEXT: $q0 = COPY [[SEXT]](<2 x s64>)
     %0:_(<2 x s16>) = COPY $s0
     %1:_(<2 x s32>) = G_SEXT %0(<2 x s16>)
     %2:_(<2 x s64>) = G_ANYEXT %1(<2 x s32>)
@@ -88,13 +150,32 @@ body:             |
   bb.1:
   liveins: $h0
     ; CHECK-LABEL: name: test_combine_anyext_zext
-    ; CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s16)
-    ; CHECK: $x0 = COPY [[ZEXT]](s64)
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s16)
+    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](s64)
     %0:_(s16) = COPY $h0
     %1:_(s32) = G_ZEXT %0(s16)
     %2:_(s64) = G_ANYEXT %1(s32)
     $x0 = COPY %2(s64)
+...
+---
+name:            test_combine_anyext_zext_with_hint
+body:             |
+  bb.1:
+  liveins: $h0
+    ; CHECK-LABEL: name: test_combine_anyext_zext_with_hint
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s16)
+    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](s64)
+    %0:_(s16) = COPY $h0
+    %1:_(s32) = G_ZEXT %0(s16)
+    %2:_(s32) = G_ASSERT_ZEXT %1(s32), 11
+    %3:_(s64) = G_ANYEXT %2(s32)
+    $x0 = COPY %3(s64)
 ...
 ---
 name:            test_combine_anyext_zext_vec
@@ -102,9 +183,11 @@ body:             |
   bb.1:
   liveins: $s0
     ; CHECK-LABEL: name: test_combine_anyext_zext_vec
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $s0
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(<2 x s64>) = G_ZEXT [[COPY]](<2 x s16>)
-    ; CHECK: $q0 = COPY [[ZEXT]](<2 x s64>)
+    ; CHECK: liveins: $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $s0
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(<2 x s64>) = G_ZEXT [[COPY]](<2 x s16>)
+    ; CHECK-NEXT: $q0 = COPY [[ZEXT]](<2 x s64>)
     %0:_(<2 x s16>) = COPY $s0
     %1:_(<2 x s32>) = G_ZEXT %0(<2 x s16>)
     %2:_(<2 x s64>) = G_ANYEXT %1(<2 x s32>)
@@ -116,13 +199,32 @@ body:             |
   bb.1:
   liveins: $h0
     ; CHECK-LABEL: name: test_combine_sext_sext
-    ; CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
-    ; CHECK: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY]](s16)
-    ; CHECK: $x0 = COPY [[SEXT]](s64)
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY]](s16)
+    ; CHECK-NEXT: $x0 = COPY [[SEXT]](s64)
     %0:_(s16) = COPY $h0
     %1:_(s32) = G_SEXT %0(s16)
     %2:_(s64) = G_SEXT %1(s32)
     $x0 = COPY %2(s64)
+...
+---
+name:            test_combine_sext_sext_with_hint
+body:             |
+  bb.1:
+  liveins: $h0
+    ; CHECK-LABEL: name: test_combine_sext_sext_with_hint
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY]](s16)
+    ; CHECK-NEXT: $x0 = COPY [[SEXT]](s64)
+    %0:_(s16) = COPY $h0
+    %1:_(s32) = G_SEXT %0(s16)
+    %2:_(s32) = G_ASSERT_SEXT %1(s32), 11
+    %3:_(s64) = G_SEXT %2(s32)
+    $x0 = COPY %3(s64)
 ...
 ---
 name:            test_combine_sext_sext_vec
@@ -130,9 +232,11 @@ body:             |
   bb.1:
   liveins: $s0
     ; CHECK-LABEL: name: test_combine_sext_sext_vec
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $s0
-    ; CHECK: [[SEXT:%[0-9]+]]:_(<2 x s64>) = G_SEXT [[COPY]](<2 x s16>)
-    ; CHECK: $q0 = COPY [[SEXT]](<2 x s64>)
+    ; CHECK: liveins: $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $s0
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(<2 x s64>) = G_SEXT [[COPY]](<2 x s16>)
+    ; CHECK-NEXT: $q0 = COPY [[SEXT]](<2 x s64>)
     %0:_(<2 x s16>) = COPY $s0
     %1:_(<2 x s32>) = G_SEXT %0(<2 x s16>)
     %2:_(<2 x s64>) = G_SEXT %1(<2 x s32>)
@@ -144,13 +248,32 @@ body:             |
   bb.1:
   liveins: $h0
     ; CHECK-LABEL: name: test_combine_sext_zext
-    ; CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s16)
-    ; CHECK: $x0 = COPY [[ZEXT]](s64)
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s16)
+    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](s64)
     %0:_(s16) = COPY $h0
     %1:_(s32) = G_ZEXT %0(s16)
     %2:_(s64) = G_SEXT %1(s32)
     $x0 = COPY %2(s64)
+...
+---
+name:            test_combine_sext_zext_with_hint
+body:             |
+  bb.1:
+  liveins: $h0
+    ; CHECK-LABEL: name: test_combine_sext_zext_with_hint
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s16)
+    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](s64)
+    %0:_(s16) = COPY $h0
+    %1:_(s32) = G_ZEXT %0(s16)
+    %2:_(s32) = G_ASSERT_ZEXT %1(s32), 11
+    %3:_(s64) = G_SEXT %2(s32)
+    $x0 = COPY %3(s64)
 ...
 ---
 name:            test_combine_sext_zext_vec
@@ -158,9 +281,11 @@ body:             |
   bb.1:
   liveins: $s0
     ; CHECK-LABEL: name: test_combine_sext_zext_vec
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $s0
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(<2 x s64>) = G_ZEXT [[COPY]](<2 x s16>)
-    ; CHECK: $q0 = COPY [[ZEXT]](<2 x s64>)
+    ; CHECK: liveins: $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $s0
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(<2 x s64>) = G_ZEXT [[COPY]](<2 x s16>)
+    ; CHECK-NEXT: $q0 = COPY [[ZEXT]](<2 x s64>)
     %0:_(<2 x s16>) = COPY $s0
     %1:_(<2 x s32>) = G_ZEXT %0(<2 x s16>)
     %2:_(<2 x s64>) = G_SEXT %1(<2 x s32>)
@@ -172,13 +297,32 @@ body:             |
   bb.1:
   liveins: $h0
     ; CHECK-LABEL: name: test_combine_zext_zext
-    ; CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s16)
-    ; CHECK: $x0 = COPY [[ZEXT]](s64)
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s16)
+    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](s64)
     %0:_(s16) = COPY $h0
     %1:_(s32) = G_ZEXT %0(s16)
     %2:_(s64) = G_ZEXT %1(s32)
     $x0 = COPY %2(s64)
+...
+---
+name:            test_combine_zext_zext_with_hint
+body:             |
+  bb.1:
+  liveins: $h0
+    ; CHECK-LABEL: name: test_combine_zext_zext_with_hint
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s16)
+    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](s64)
+    %0:_(s16) = COPY $h0
+    %1:_(s32) = G_ZEXT %0(s16)
+    %2:_(s32) = G_ASSERT_ZEXT %1(s32), 11
+    %3:_(s64) = G_ZEXT %2(s32)
+    $x0 = COPY %3(s64)
 ...
 ---
 name:            test_combine_zext_zext_vec
@@ -186,9 +330,11 @@ body:             |
   bb.1:
   liveins: $s0
     ; CHECK-LABEL: name: test_combine_zext_zext_vec
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $s0
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(<2 x s64>) = G_ZEXT [[COPY]](<2 x s16>)
-    ; CHECK: $q0 = COPY [[ZEXT]](<2 x s64>)
+    ; CHECK: liveins: $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $s0
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(<2 x s64>) = G_ZEXT [[COPY]](<2 x s16>)
+    ; CHECK-NEXT: $q0 = COPY [[ZEXT]](<2 x s64>)
     %0:_(<2 x s16>) = COPY $s0
     %1:_(<2 x s32>) = G_ZEXT %0(<2 x s16>)
     %2:_(<2 x s64>) = G_ZEXT %1(<2 x s32>)

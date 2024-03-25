@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
+#include "llvm/MC/MCSymbol.h"
 #include <cassert>
 #include <optional>
 
@@ -164,9 +165,20 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// SignWithBKey modifies the default PAC-RET mode to signing with the B key.
   bool SignWithBKey = false;
 
+  /// SigningInstrOffset captures the offset of the PAC-RET signing instruction
+  /// within the prologue, so it can be re-used for authentication in the
+  /// epilogue when using PC as a second salt (FEAT_PAuth_LR)
+  MCSymbol *SignInstrLabel = nullptr;
+
   /// BranchTargetEnforcement enables placing BTI instructions at potential
   /// indirect branch destinations.
   bool BranchTargetEnforcement = false;
+
+  /// Indicates that SP signing should be diversified with PC as-per PAuthLR.
+  /// This is set by -mbranch-protection and will emit NOP instructions unless
+  /// the subtarget feature +pauthlr is also used (in which case non-NOP
+  /// instructions are emitted).
+  bool BranchProtectionPAuthLR = false;
 
   /// Whether this function has an extended frame record [Ctx, FP, LR]. If so,
   /// bit 60 of the in-memory FP will be 1 to enable other tools to detect the
@@ -185,12 +197,20 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// The frame-index for the TPIDR2 object used for lazy saves.
   Register LazySaveTPIDR2Obj = 0;
 
+  /// Whether this function changes streaming mode within the function.
+  bool HasStreamingModeChanges = false;
 
   /// True if the function need unwind information.
   mutable std::optional<bool> NeedsDwarfUnwindInfo;
 
   /// True if the function need asynchronous unwind information.
   mutable std::optional<bool> NeedsAsyncDwarfUnwindInfo;
+
+  int64_t StackProbeSize = 0;
+
+  // Holds a register containing pstate.sm. This is set
+  // on function entry to record the initial pstate of a function.
+  Register PStateSMReg = MCRegister::NoRegister;
 
 public:
   AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
@@ -199,6 +219,9 @@ public:
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
         const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
       const override;
+
+  Register getPStateSMReg() const { return PStateSMReg; };
+  void setPStateSMReg(Register Reg) { PStateSMReg = Reg; };
 
   bool isSVECC() const { return IsSVECC; };
   void setIsSVECC(bool s) { IsSVECC = s; };
@@ -429,10 +452,18 @@ public:
   bool shouldSignReturnAddress(const MachineFunction &MF) const;
   bool shouldSignReturnAddress(bool SpillsLR) const;
 
+  bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF) const;
+
   bool shouldSignWithBKey() const { return SignWithBKey; }
+
+  MCSymbol *getSigningInstrLabel() const { return SignInstrLabel; }
+  void setSigningInstrLabel(MCSymbol *Label) { SignInstrLabel = Label; }
+
   bool isMTETagged() const { return IsMTETagged; }
 
   bool branchTargetEnforcement() const { return BranchTargetEnforcement; }
+
+  bool branchProtectionPAuthLR() const { return BranchProtectionPAuthLR; }
 
   void setHasSwiftAsyncContext(bool HasContext) {
     HasSwiftAsyncContext = HasContext;
@@ -446,6 +477,15 @@ public:
 
   bool needsDwarfUnwindInfo(const MachineFunction &MF) const;
   bool needsAsyncDwarfUnwindInfo(const MachineFunction &MF) const;
+
+  bool hasStreamingModeChanges() const { return HasStreamingModeChanges; }
+  void setHasStreamingModeChanges(bool HasChanges) {
+    HasStreamingModeChanges = HasChanges;
+  }
+
+  bool hasStackProbing() const { return StackProbeSize != 0; }
+
+  int64_t getStackProbeSize() const { return StackProbeSize; }
 
 private:
   // Hold the lists of LOHs.

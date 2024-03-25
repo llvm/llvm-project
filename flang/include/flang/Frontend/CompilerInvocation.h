@@ -26,6 +26,10 @@
 #include "llvm/Option/ArgList.h"
 #include <memory>
 
+namespace llvm {
+class TargetMachine;
+}
+
 namespace Fortran::frontend {
 
 /// Fill out Opts based on the options given in Args.
@@ -82,8 +86,10 @@ class CompilerInvocation : public CompilerInvocationBase {
   /// Options controlling language dialect.
   Fortran::frontend::LangOptions langOpts;
 
-  // Semantics context
-  std::unique_ptr<Fortran::semantics::SemanticsContext> semanticsContext;
+  // The original invocation of the compiler driver.
+  // This string will be set as the return value from the COMPILER_OPTIONS
+  // intrinsic of iso_fortran_env.
+  std::string allCompilerInvocOpts;
 
   /// Semantic options
   // TODO: Merge with or translate to frontendOpts. We shouldn't need two sets
@@ -96,6 +102,9 @@ class CompilerInvocation : public CompilerInvocationBase {
 
   bool warnAsErr = false;
 
+  // Executable name
+  const char *argv0;
+
   /// This flag controls the unparsing and is used to decide whether to print
   /// out the semantically analyzed version of an object or expression or the
   /// plain version that does not include any information from semantic
@@ -106,6 +115,7 @@ class CompilerInvocation : public CompilerInvocationBase {
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;
 
   bool enableConformanceChecks = false;
+  bool enableUsageChecks = false;
 
   /// Used in e.g. unparsing to dump the analyzed rather than the original
   /// parse-tree objects.
@@ -153,12 +163,10 @@ public:
     return loweringOpts;
   }
 
-  Fortran::semantics::SemanticsContext &getSemanticsContext() {
-    return *semanticsContext;
-  }
-  const Fortran::semantics::SemanticsContext &getSemanticsContext() const {
-    return *semanticsContext;
-  }
+  /// Creates and configures semantics context based on the compilation flags.
+  std::unique_ptr<Fortran::semantics::SemanticsContext>
+  getSemanticsCtx(Fortran::parser::AllCookedSources &allCookedSources,
+                  const llvm::TargetMachine &);
 
   std::string &getModuleDir() { return moduleDir; }
   const std::string &getModuleDir() const { return moduleDir; }
@@ -184,6 +192,11 @@ public:
     return enableConformanceChecks;
   }
 
+  const char *getArgv0() { return argv0; }
+
+  bool &getEnableUsageChecks() { return enableUsageChecks; }
+  const bool &getEnableUsageChecks() const { return enableUsageChecks; }
+
   Fortran::parser::AnalyzedObjectsAsFortran &getAsFortran() {
     return asFortran;
   }
@@ -204,12 +217,18 @@ public:
   /// \param [out] res - The resulting invocation.
   static bool createFromArgs(CompilerInvocation &res,
                              llvm::ArrayRef<const char *> commandLineArgs,
-                             clang::DiagnosticsEngine &diags);
+                             clang::DiagnosticsEngine &diags,
+                             const char *argv0 = nullptr);
 
   // Enables the std=f2018 conformance check
   void setEnableConformanceChecks() { enableConformanceChecks = true; }
 
+  // Enables the usage checks
+  void setEnableUsageChecks() { enableUsageChecks = true; }
+
   /// Useful setters
+  void setArgv0(const char *dir) { argv0 = dir; }
+
   void setModuleDir(std::string &dir) { moduleDir = dir; }
 
   void setModuleFileSuffix(const char *suffix) {

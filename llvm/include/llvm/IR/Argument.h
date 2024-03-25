@@ -16,8 +16,11 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Value.h"
+#include <optional>
 
 namespace llvm {
+
+class ConstantRange;
 
 /// This class represents an incoming formal argument to a Function. A formal
 /// argument, since it is ``formal'', does not contain an actual value but
@@ -62,6 +65,14 @@ public:
   /// If this argument has the dereferenceable_or_null attribute, return the
   /// number of bytes known to be dereferenceable. Otherwise, zero is returned.
   uint64_t getDereferenceableOrNullBytes() const;
+
+  /// If this argument has nofpclass attribute, return the mask representing
+  /// disallowed floating-point values. Otherwise, fcNone is returned.
+  FPClassTest getNoFPClass() const;
+
+  /// If this argument has a range attribute, return the value range of the
+  /// argument. Otherwise, std::nullopt is returned.
+  std::optional<ConstantRange> getRange() const;
 
   /// Return true if this argument has the byval attribute.
   bool hasByValAttr() const;

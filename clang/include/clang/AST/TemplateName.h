@@ -55,7 +55,7 @@ protected:
   };
 
   struct BitsTag {
-    /// A Kind.
+    LLVM_PREFERRED_TYPE(Kind)
     unsigned Kind : 2;
 
     // The template parameter index.
@@ -351,9 +351,7 @@ public:
   /// error.
   void dump() const;
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    ID.AddPointer(Storage.getOpaqueValue());
-  }
+  void Profile(llvm::FoldingSetNodeID &ID);
 
   /// Retrieve the template name as a void pointer.
   void *getAsVoidPointer() const { return Storage.getOpaqueValue(); }

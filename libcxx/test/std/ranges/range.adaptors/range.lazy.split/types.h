@@ -10,6 +10,7 @@
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_LAZY_SPLIT_TYPES_H
 
 #include <concepts>
+#include <cstddef>
 #include <ranges>
 #include <string>
 #include <string_view>
@@ -66,10 +67,10 @@ struct ForwardDiffView : std::ranges::view_base {
   constexpr ForwardDiffView& operator=(ForwardDiffView&&) = default;
   constexpr ForwardDiffView(const ForwardDiffView&) = default;
   constexpr ForwardDiffView& operator=(const ForwardDiffView&) = default;
-  constexpr forward_iterator<char*> begin() { return forward_iterator<char*>(buffer_.begin().base()); }
-  constexpr forward_iterator<char*> end()  { return forward_iterator<char*>(buffer_.end().base()); }
-  constexpr forward_iterator<const char*> begin() const { return forward_iterator<const char*>(buffer_.begin().base()); }
-  constexpr forward_iterator<const char*> end() const { return forward_iterator<const char*>(buffer_.end().base()); }
+  constexpr forward_iterator<char*> begin() { return forward_iterator<char*>(buffer_.data()); }
+  constexpr forward_iterator<char*> end()  { return forward_iterator<char*>(buffer_.data() + buffer_.size()); }
+  constexpr forward_iterator<const char*> begin() const { return forward_iterator<const char*>(buffer_.data()); }
+  constexpr forward_iterator<const char*> end() const { return forward_iterator<const char*>(buffer_.data() + buffer_.size()); }
 };
 static_assert( std::ranges::forward_range<ForwardView>);
 static_assert( std::ranges::forward_range<const ForwardView>);
@@ -147,15 +148,15 @@ struct InputView : std::ranges::view_base {
     buffer_ = v;
   }
 
-  constexpr cpp20_input_iterator<char*> begin() { return cpp20_input_iterator<char*>(buffer_.begin().base()); }
+  constexpr cpp20_input_iterator<char*> begin() { return cpp20_input_iterator<char*>(buffer_.data()); }
   constexpr sentinel_wrapper<cpp20_input_iterator<char*>> end() {
-    return sentinel_wrapper(cpp20_input_iterator<char*>(buffer_.end().base()));
+    return sentinel_wrapper(cpp20_input_iterator<char*>(buffer_.data() + buffer_.size()));
   }
   constexpr cpp20_input_iterator<const char*> begin() const {
-    return cpp20_input_iterator<const char*>(buffer_.begin().base());
+    return cpp20_input_iterator<const char*>(buffer_.data());
   }
   constexpr sentinel_wrapper<cpp20_input_iterator<const char*>> end() const {
-    return sentinel_wrapper(cpp20_input_iterator<const char*>(buffer_.end().base()));
+    return sentinel_wrapper(cpp20_input_iterator<const char*>(buffer_.data() + buffer_.size()));
   }
   friend constexpr bool operator==(const InputView& lhs, const InputView& rhs) {
     return lhs.buffer_ == rhs.buffer_;
@@ -174,7 +175,7 @@ struct ForwardTinyView : std::ranges::view_base {
   constexpr ForwardTinyView(char c) { *c_ = c; }
   constexpr forward_iterator<const char*> begin() const { return forward_iterator<const char*>(c_); }
   constexpr forward_iterator<const char*> end() const { return forward_iterator<const char*>(c_ + 1); }
-  constexpr static size_t size() { return 1; }
+  constexpr static std::size_t size() { return 1; }
 };
 static_assert(std::ranges::forward_range<ForwardTinyView>);
 static_assert(std::ranges::view<ForwardTinyView>);

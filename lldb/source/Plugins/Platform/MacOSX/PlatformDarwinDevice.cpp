@@ -34,8 +34,8 @@ bool PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
   std::lock_guard<std::mutex> guard(m_sdk_dir_mutex);
   if (m_sdk_directory_infos.empty()) {
     // A --sysroot option was supplied - add it to our list of SDKs to check
-    if (m_sdk_sysroot) {
-      FileSpec sdk_sysroot_fspec(m_sdk_sysroot.GetCString());
+    if (!m_sdk_sysroot.empty()) {
+      FileSpec sdk_sysroot_fspec(m_sdk_sysroot.c_str());
       FileSystem::Instance().Resolve(sdk_sysroot_fspec);
       const SDKDirectoryInfo sdk_sysroot_directory_info(sdk_sysroot_fspec);
       m_sdk_directory_infos.push_back(sdk_sysroot_directory_info);
@@ -43,7 +43,7 @@ bool PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
         LLDB_LOGF(log,
                   "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded added "
                   "--sysroot SDK directory %s",
-                  m_sdk_sysroot.GetCString());
+                  m_sdk_sysroot.c_str());
       }
       return true;
     }
@@ -152,20 +152,20 @@ PlatformDarwinDevice::GetSDKDirectoryForCurrentOSVersion() {
     std::vector<bool> check_sdk_info(num_sdk_infos, true);
 
     // Prefer the user SDK build string.
-    ConstString build = GetSDKBuild();
+    std::string build = GetSDKBuild();
 
     // Fall back to the platform's build string.
-    if (!build) {
-      if (std::optional<std::string> os_build_str = GetOSBuildString()) {
-        build = ConstString(*os_build_str);
-      }
+    if (build.empty()) {
+      if (std::optional<std::string> os_build_str = GetOSBuildString())
+        build.assign(*os_build_str);
     }
 
     // If we have a build string, only check platforms for which the build
     // string matches.
-    if (build) {
+    if (!build.empty()) {
       for (i = 0; i < num_sdk_infos; ++i)
-        check_sdk_info[i] = m_sdk_directory_infos[i].build == build;
+        check_sdk_info[i] = m_sdk_directory_infos[i].build.GetStringRef() ==
+                            llvm::StringRef(build);
     }
 
     // If we are connected we can find the version of the OS the platform us
@@ -201,7 +201,7 @@ PlatformDarwinDevice::GetSDKDirectoryForCurrentOSVersion() {
           }
         }
       }
-    } else if (build) {
+    } else if (!build.empty()) {
       // No version, just a build number, return the first one that matches.
       for (i = 0; i < num_sdk_infos; ++i)
         if (check_sdk_info[i])
@@ -248,8 +248,8 @@ const char *PlatformDarwinDevice::GetDeviceSupportDirectory() {
 }
 
 const char *PlatformDarwinDevice::GetDeviceSupportDirectoryForOSVersion() {
-  if (m_sdk_sysroot)
-    return m_sdk_sysroot.GetCString();
+  if (!m_sdk_sysroot.empty())
+    return m_sdk_sysroot.c_str();
 
   if (m_device_support_directory_for_os_version.empty()) {
     const PlatformDarwinDevice::SDKDirectoryInfo *sdk_dir_info =

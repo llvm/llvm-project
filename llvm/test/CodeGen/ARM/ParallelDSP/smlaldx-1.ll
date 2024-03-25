@@ -1,6 +1,6 @@
-; RUN: opt -mtriple=thumbv8m.main -mcpu=cortex-m33 -arm-parallel-dsp %s -S -o - | FileCheck %s
-; RUN: opt -mtriple=arm-none-none-eabi -mcpu=cortex-m0 < %s -arm-parallel-dsp -S | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
-; RUN: opt -mtriple=arm-none-none-eabi -mcpu=cortex-m33 -mattr=-dsp < %s -arm-parallel-dsp -S | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
+; RUN: opt -mtriple=armv8m.main-none-none-eabi -mattr=+dsp -arm-parallel-dsp %s -S -o - | FileCheck %s
+; RUN: opt -mtriple=armv6m-none-none-eabi < %s -arm-parallel-dsp -S | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
+; RUN: opt -mtriple=armv8m.main-none-none-eabi -mattr=-dsp < %s -arm-parallel-dsp -S | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
 
 define i64 @smlaldx(ptr nocapture readonly %pIn1, ptr nocapture readonly %pIn2, i32 %j, i32 %limit) {
 
@@ -68,17 +68,17 @@ for.body:
   %In2 = load i16, ptr %pIn2Base, align 2
   %pIn1.0 = getelementptr inbounds i16, ptr %pIn1, i32 %i.011
   %In1 = load i16, ptr %pIn1.0, align 2
-  %inc = or i32 %i.011, 1
+  %inc = or disjoint i32 %i.011, 1
   %pIn2.1 = getelementptr inbounds i16, ptr %pIn2Base, i32 -1
   %In2.1 = load i16, ptr %pIn2.1, align 2
   %pIn1.1 = getelementptr inbounds i16, ptr %pIn1, i32 %inc
   %In1.1 = load i16, ptr %pIn1.1, align 2
-  %inc.1 = or i32 %i.011, 2
+  %inc.1 = or disjoint i32 %i.011, 2
   %pIn2.2 = getelementptr inbounds i16, ptr %pIn2Base, i32 -2
   %In2.2 = load i16, ptr %pIn2.2, align 2
   %pIn1.2 = getelementptr inbounds i16, ptr %pIn1, i32 %inc.1
   %In1.2 = load i16, ptr %pIn1.2, align 2
-  %inc.2 = or i32 %i.011, 3
+  %inc.2 = or disjoint i32 %i.011, 3
   %pIn2.3 = getelementptr inbounds i16, ptr %pIn2Base, i32 -3
   %In2.3 = load i16, ptr %pIn2.3, align 2
   %pIn1.3 = getelementptr inbounds i16, ptr %pIn1, i32 %inc.2

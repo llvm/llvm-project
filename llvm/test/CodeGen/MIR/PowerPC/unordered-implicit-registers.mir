@@ -2,11 +2,11 @@
 # PR24724
 
 --- |
-  define signext i32 @main(i32* %p) #0 {
+  define signext i32 @main(ptr %p) #0 {
   entry:
-    %0 = load i32, i32* %p, align 4
+    %0 = load i32, ptr %p, align 4
     %or = or i32 0, %0
-    store i32 %or, i32* %p, align 4
+    store i32 %or, ptr %p, align 4
     %lnot.1 = icmp eq i32 undef, 0
     %lnot.ext.1 = zext i1 %lnot.1 to i32
     %shr.i.1 = lshr i32 2072, %lnot.ext.1

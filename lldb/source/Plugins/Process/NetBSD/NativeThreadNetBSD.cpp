@@ -90,8 +90,7 @@ void NativeThreadNetBSD::SetStoppedBySignal(uint32_t signo,
     case SIGBUS:
     case SIGFPE:
     case SIGILL:
-      const auto reason = GetCrashReason(*info);
-      m_stop_description = GetCrashReasonString(reason, *info);
+      m_stop_description = GetCrashReasonString(*info);
       break;
     }
   }

@@ -5,8 +5,8 @@
 
 define i1 @test(i32 %c.3.i, i32 %d.292.2.i) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sle i32 [[C_3_I:%.*]], [[D_292_2_I:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[SEL_TMP80:%.*]] = icmp sle i32 [[C_3_I:%.*]], [[D_292_2_I:%.*]]
+; CHECK-NEXT:    ret i1 [[SEL_TMP80]]
 ;
   %tmp266.i = icmp slt i32 %c.3.i, %d.292.2.i
   %tmp276.i = icmp eq i32 %c.3.i, %d.292.2.i
@@ -16,8 +16,8 @@ define i1 @test(i32 %c.3.i, i32 %d.292.2.i) {
 
 define i1 @test_logical(i32 %c.3.i, i32 %d.292.2.i) {
 ; CHECK-LABEL: @test_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sle i32 [[C_3_I:%.*]], [[D_292_2_I:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[SEL_TMP80:%.*]] = icmp sle i32 [[C_3_I:%.*]], [[D_292_2_I:%.*]]
+; CHECK-NEXT:    ret i1 [[SEL_TMP80]]
 ;
   %tmp266.i = icmp slt i32 %c.3.i, %d.292.2.i
   %tmp276.i = icmp eq i32 %c.3.i, %d.292.2.i

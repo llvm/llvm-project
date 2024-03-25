@@ -195,7 +195,7 @@ for.end:
   ret void
 }
 
-declare float @atan2f(float) nounwind readnone
+declare float @atan2f(float, float) nounwind readnone
 define void @atan2f_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @atan2f_v4f32(
 ; CHECK: call <4 x float> @_simd_atan2_f4(
@@ -208,7 +208,7 @@ for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
   %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
   %lv = load float, ptr %gep.y, align 4
-  %call = tail call float @atan2f(float %lv)
+  %call = tail call float @atan2f(float %lv, float %lv)
   %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
   store float %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
@@ -219,7 +219,7 @@ for.end:
   ret void
 }
 
-declare double @atan2(double) nounwind readnone
+declare double @atan2(double, double) nounwind readnone
 define void @atan2_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @atan2_v2f64(
 ; CHECK: call <2 x double> @_simd_atan2_d2(
@@ -232,7 +232,7 @@ for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
   %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
   %lv = load double, ptr %gep.y, align 4
-  %call = tail call double @atan2(double %lv)
+  %call = tail call double @atan2(double %lv, double %lv)
   %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
   store double %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
@@ -387,7 +387,7 @@ for.end:
   ret void
 }
 
-declare float @powf(float) nounwind readnone
+declare float @powf(float, float) nounwind readnone
 define void @powf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @powf_v4f32(
 ; CHECK: call <4 x float> @_simd_pow_f4(
@@ -400,7 +400,7 @@ for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
   %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
   %lv = load float, ptr %gep.y, align 4
-  %call = tail call float @powf(float %lv)
+  %call = tail call float @powf(float %lv, float %lv)
   %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
   store float %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
@@ -411,7 +411,7 @@ for.end:
   ret void
 }
 
-declare double @pow(double) nounwind readnone
+declare double @pow(double, double) nounwind readnone
 define void @pow_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @pow_v2f64(
 ; CHECK: call <2 x double> @_simd_pow_d2(
@@ -424,7 +424,7 @@ for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
   %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
   %lv = load double, ptr %gep.y, align 4
-  %call = tail call double @pow(double %lv)
+  %call = tail call double @pow(double %lv, double %lv)
   %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
   store double %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1

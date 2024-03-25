@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -std=c++20 -O1 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -O1 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
 
 #include "Inputs/coroutine.h"
 
@@ -79,7 +79,7 @@ Task bar() {
 }
 
 // CHECK-LABEL: define{{.*}} void @_Z3barv
-// CHECK:         %[[MODE:.+]] = load i32, i32* %mode
+// CHECK:         %[[MODE:.+]] = load i32, ptr %mode
 // CHECK-NEXT:    switch i32 %[[MODE]], label %{{.+}} [
 // CHECK-NEXT:      i32 1, label %[[CASE1:.+]]
 // CHECK-NEXT:      i32 2, label %[[CASE2:.+]]
@@ -88,13 +88,9 @@ Task bar() {
 // CHECK:       [[CASE1]]:
 // CHECK:         br i1 %{{.+}}, label %[[CASE1_AWAIT_READY:.+]], label %[[CASE1_AWAIT_SUSPEND:.+]]
 // CHECK:       [[CASE1_AWAIT_SUSPEND]]:
-// CHECK-NEXT:    %{{.+}} = call token @llvm.coro.save(i8* null)
-// CHECK-NEXT:    %[[HANDLE11:.+]] = bitcast %"struct.std::coroutine_handle"* %[[TMP1:.+]] to i8*
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* %[[HANDLE11]])
-
-// CHECK:         %[[HANDLE12:.+]] = bitcast %"struct.std::coroutine_handle"* %[[TMP1]] to i8*
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* %[[HANDLE12]])
-// CHECK-NEXT:    call void @llvm.coro.resume
+// CHECK-NEXT:    %{{.+}} = call token @llvm.coro.save(ptr null)
+// CHECK-NEXT:    %[[HANDLE1_PTR:.+]] = call ptr @llvm.coro.await.suspend.handle
+// CHECK-NEXT:    call void @llvm.coro.resume(ptr %[[HANDLE1_PTR]])
 // CHECK-NEXT:    %{{.+}} = call i8 @llvm.coro.suspend
 // CHECK-NEXT:    switch i8 %{{.+}}, label %coro.ret [
 // CHECK-NEXT:      i8 0, label %[[CASE1_AWAIT_READY]]
@@ -107,13 +103,9 @@ Task bar() {
 // CHECK:       [[CASE2]]:
 // CHECK:         br i1 %{{.+}}, label %[[CASE2_AWAIT_READY:.+]], label %[[CASE2_AWAIT_SUSPEND:.+]]
 // CHECK:       [[CASE2_AWAIT_SUSPEND]]:
-// CHECK-NEXT:    %{{.+}} = call token @llvm.coro.save(i8* null)
-// CHECK-NEXT:    %[[HANDLE21:.+]] = bitcast %"struct.std::coroutine_handle"* %[[TMP2:.+]] to i8*
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* %[[HANDLE21]])
-
-// CHECK:         %[[HANDLE22:.+]] = bitcast %"struct.std::coroutine_handle"* %[[TMP2]] to i8*
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* %[[HANDLE22]])
-// CHECK-NEXT:    call void @llvm.coro.resume
+// CHECK-NEXT:    %{{.+}} = call token @llvm.coro.save(ptr null)
+// CHECK-NEXT:    %[[HANDLE2_PTR:.+]] = call ptr @llvm.coro.await.suspend.handle
+// CHECK-NEXT:    call void @llvm.coro.resume(ptr %[[HANDLE2_PTR]])
 // CHECK-NEXT:    %{{.+}} = call i8 @llvm.coro.suspend
 // CHECK-NEXT:    switch i8 %{{.+}}, label %coro.ret [
 // CHECK-NEXT:      i8 0, label %[[CASE2_AWAIT_READY]]

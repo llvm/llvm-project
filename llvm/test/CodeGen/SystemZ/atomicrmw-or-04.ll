@@ -93,11 +93,11 @@ define i64 @f9(i64 %dummy, ptr %src) {
   ret i64 %res
 }
 
-; Check the next value up, which must use a register.  (We could use
-; combinations of OIH* and OIL* instead, but that isn't implemented.)
+; Check the next value up, which must use a register.
 define i64 @f10(i64 %dummy, ptr %src) {
 ; CHECK-LABEL: f10:
-; CHECK: ogr
+; CHECK: oihl %r0, 1
+; CHECK: oill %r0, 1
 ; CHECK: br %r14
   %res = atomicrmw or ptr %src, i64 4294967297 seq_cst
   ret i64 %res
@@ -139,10 +139,11 @@ define i64 @f14(i64 %dummy, ptr %src) {
   ret i64 %res
 }
 
-; Check the next value up, which must use a register.
+; Check the next value up.
 define i64 @f15(i64 %dummy, ptr %src) {
 ; CHECK-LABEL: f15:
-; CHECK: ogr
+; CHECK: oihh %r0, 65535
+; CHECK: oill %r0, 1
 ; CHECK: br %r14
   %res = atomicrmw or ptr %src, i64 18446462598732840961 seq_cst
   ret i64 %res

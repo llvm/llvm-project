@@ -15,6 +15,17 @@
 
 #include "mlir/IR/Builders.h"
 
+namespace mlir {
+// Enum class representing different hoisting kinds for the allocation
+// operation
+enum class HoistingKind : uint8_t {
+  None = 0,       // No hoisting kind selected
+  Loop = 1 << 0,  // Indicates loop hoisting kind
+  Block = 1 << 1, // Indicates dominated block hoisting kind
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ Block)
+};
+} // namespace mlir
+
 #include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h.inc"
 
 #endif // MLIR_DIALECT_BUFFERIZATION_IR_ALLOCATIONOPINTERFACE_H_

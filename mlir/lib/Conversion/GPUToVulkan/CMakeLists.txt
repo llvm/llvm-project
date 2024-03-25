@@ -7,7 +7,7 @@ add_mlir_conversion_library(MLIRGPUToVulkanTransforms
 
   LINK_LIBS PUBLIC
   MLIRFuncDialect
-  MLIRGPUOps
+  MLIRGPUDialect
   MLIRIR
   MLIRLLVMDialect
   MLIRPass

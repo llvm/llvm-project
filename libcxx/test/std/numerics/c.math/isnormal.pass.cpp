@@ -63,8 +63,8 @@ struct TestInt {
 };
 
 int main(int, char**) {
-  meta::for_each(meta::floating_point_types(), TestFloat());
-  meta::for_each(meta::integral_types(), TestInt());
+  types::for_each(types::floating_point_types(), TestFloat());
+  types::for_each(types::integral_types(), TestInt());
 
   return 0;
 }

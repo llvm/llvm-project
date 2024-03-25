@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx803 -run-pass=simple-register-coalescing -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx803 -run-pass=register-coalescer -o - %s | FileCheck -check-prefix=GCN %s
 
 # With one version of the D48102 fix, this test failed with
 # Assertion failed: (Id != S.end() && T != S.end() && T->valno == Id->valno), function pruneSubRegValues, file ../lib/CodeGen/RegisterCoalescer.cpp, line 2870.

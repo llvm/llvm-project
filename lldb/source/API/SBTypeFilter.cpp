@@ -85,13 +85,13 @@ uint32_t SBTypeFilter::GetNumberOfExpressionPaths() {
 const char *SBTypeFilter::GetExpressionPathAtIndex(uint32_t i) {
   LLDB_INSTRUMENT_VA(this, i);
 
-  if (IsValid()) {
-    const char *item = m_opaque_sp->GetExpressionPathAtIndex(i);
-    if (item && *item == '.')
-      item++;
-    return item;
-  }
-  return nullptr;
+  if (!IsValid())
+    return nullptr;
+
+  const char *item = m_opaque_sp->GetExpressionPathAtIndex(i);
+  if (item && *item == '.')
+    item++;
+  return ConstString(item).GetCString();
 }
 
 bool SBTypeFilter::ReplaceExpressionPathAtIndex(uint32_t i, const char *item) {
@@ -166,7 +166,7 @@ SBTypeFilter::SBTypeFilter(const lldb::TypeFilterImplSP &typefilter_impl_sp)
 bool SBTypeFilter::CopyOnWrite_Impl() {
   if (!IsValid())
     return false;
-  if (m_opaque_sp.unique())
+  if (m_opaque_sp.use_count() == 1)
     return true;
 
   TypeFilterImplSP new_sp(new TypeFilterImpl(GetOptions()));

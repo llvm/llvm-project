@@ -592,8 +592,8 @@ define <2 x double> @testDouble1(<2 x double> %a, double %b, i32 zeroext %idx1) 
 ;
 ; CHECK-32-P10-LABEL: testDouble1:
 ; CHECK-32-P10:       # %bb.0: # %entry
-; CHECK-32-P10-NEXT:    rlwinm 3, 5, 3, 28, 28
 ; CHECK-32-P10-NEXT:    addi 4, 1, -16
+; CHECK-32-P10-NEXT:    rlwinm 3, 5, 3, 28, 28
 ; CHECK-32-P10-NEXT:    stxv 34, -16(1)
 ; CHECK-32-P10-NEXT:    stfdx 1, 4, 3
 ; CHECK-32-P10-NEXT:    lxv 34, -16(1)
@@ -650,8 +650,8 @@ define <2 x double> @testDouble2(<2 x double> %a, ptr %b, i32 zeroext %idx1, i32
 ; CHECK-32-P10-LABEL: testDouble2:
 ; CHECK-32-P10:       # %bb.0: # %entry
 ; CHECK-32-P10-NEXT:    lfd 0, 0(3)
-; CHECK-32-P10-NEXT:    rlwinm 4, 4, 3, 28, 28
 ; CHECK-32-P10-NEXT:    addi 6, 1, -32
+; CHECK-32-P10-NEXT:    rlwinm 4, 4, 3, 28, 28
 ; CHECK-32-P10-NEXT:    stxv 34, -32(1)
 ; CHECK-32-P10-NEXT:    rlwinm 5, 5, 3, 28, 28
 ; CHECK-32-P10-NEXT:    stfdx 0, 6, 4
@@ -723,8 +723,8 @@ define <2 x double> @testDouble3(<2 x double> %a, ptr %b, i32 zeroext %idx1, i32
 ; CHECK-32-P10-LABEL: testDouble3:
 ; CHECK-32-P10:       # %bb.0: # %entry
 ; CHECK-32-P10-NEXT:    plfd 0, 65536(3), 0
-; CHECK-32-P10-NEXT:    rlwinm 4, 4, 3, 28, 28
 ; CHECK-32-P10-NEXT:    addi 6, 1, -32
+; CHECK-32-P10-NEXT:    rlwinm 4, 4, 3, 28, 28
 ; CHECK-32-P10-NEXT:    stxv 34, -32(1)
 ; CHECK-32-P10-NEXT:    rlwinm 5, 5, 3, 28, 28
 ; CHECK-32-P10-NEXT:    stfdx 0, 6, 4

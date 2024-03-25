@@ -23,6 +23,7 @@ class DiagnosticInfo;
 /// which remarks are enabled.
 struct DiagnosticHandler {
   void *DiagnosticContext = nullptr;
+  bool HasErrors = false;
   DiagnosticHandler(void *DiagContext = nullptr)
       : DiagnosticContext(DiagContext) {}
   virtual ~DiagnosticHandler() = default;

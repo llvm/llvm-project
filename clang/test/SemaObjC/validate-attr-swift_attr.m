@@ -5,7 +5,7 @@ __attribute__((swift_attr))
 @interface I
 @end
 
-// expected-error@+1 {{'swift_attr' attribute requires a string}}
+// expected-error@+1 {{expected string literal as argument of 'swift_attr' attribute}}
 __attribute__((swift_attr(1)))
 @interface J
 @end

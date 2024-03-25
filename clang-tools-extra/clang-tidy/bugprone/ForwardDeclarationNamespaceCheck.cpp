@@ -147,7 +147,7 @@ void ForwardDeclarationNamespaceCheck::onEndOfTranslationUnit() {
       }
       // Check if a definition in another namespace exists.
       const auto DeclName = CurDecl->getName();
-      if (DeclNameToDefinitions.find(DeclName) == DeclNameToDefinitions.end()) {
+      if (!DeclNameToDefinitions.contains(DeclName)) {
         continue; // No definition in this translation unit, we can skip it.
       }
       // Make a warning for each definition with the same name (in other

@@ -4,10 +4,11 @@
 define arm_aapcs_vfpcc void @float_float_mul(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr nocapture %c, i32 %N) {
 ; CHECK-LABEL: float_float_mul:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    beq .LBB0_10
-; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    bxeq lr
+; CHECK-NEXT:  .LBB0_1: @ %for.body.preheader
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
 ; CHECK-NEXT:    cmp r3, #3
 ; CHECK-NEXT:    bhi .LBB0_3
 ; CHECK-NEXT:  @ %bb.2:
@@ -32,23 +33,24 @@ define arm_aapcs_vfpcc void @float_float_mul(ptr nocapture readonly %a, ptr noca
 ; CHECK-NEXT:    beq .LBB0_11
 ; CHECK-NEXT:  .LBB0_4: @ %for.body.preheader22
 ; CHECK-NEXT:    mvn.w r7, r12
-; CHECK-NEXT:    adds r4, r7, r3
-; CHECK-NEXT:    and r7, r3, #3
-; CHECK-NEXT:    wls lr, r7, .LBB0_7
+; CHECK-NEXT:    add.w r8, r7, r3
+; CHECK-NEXT:    and r5, r3, #3
+; CHECK-NEXT:    wls lr, r5, .LBB0_7
 ; CHECK-NEXT:  @ %bb.5: @ %for.body.prol.preheader
+; CHECK-NEXT:    add.w r4, r12, r5
 ; CHECK-NEXT:    add.w r5, r0, r12, lsl #2
 ; CHECK-NEXT:    add.w r6, r1, r12, lsl #2
 ; CHECK-NEXT:    add.w r7, r2, r12, lsl #2
+; CHECK-NEXT:    mov r12, r4
 ; CHECK-NEXT:  .LBB0_6: @ %for.body.prol
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldmia r6!, {s0}
-; CHECK-NEXT:    add.w r12, r12, #1
 ; CHECK-NEXT:    vldmia r5!, {s2}
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
 ; CHECK-NEXT:    vstmia r7!, {s0}
 ; CHECK-NEXT:    le lr, .LBB0_6
 ; CHECK-NEXT:  .LBB0_7: @ %for.body.prol.loopexit
-; CHECK-NEXT:    cmp r4, #3
+; CHECK-NEXT:    cmp.w r8, #3
 ; CHECK-NEXT:    blo .LBB0_10
 ; CHECK-NEXT:  @ %bb.8: @ %for.body.preheader1
 ; CHECK-NEXT:    sub.w r3, r3, r12
@@ -79,8 +81,9 @@ define arm_aapcs_vfpcc void @float_float_mul(ptr nocapture readonly %a, ptr noca
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
 ; CHECK-NEXT:    vstr s0, [r5, #12]
 ; CHECK-NEXT:    bne .LBB0_9
-; CHECK-NEXT:  .LBB0_10: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-NEXT:  .LBB0_10:
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:  .LBB0_11: @ %vector.ph
 ; CHECK-NEXT:    bic r12, r3, #3
 ; CHECK-NEXT:    movs r6, #1
@@ -214,10 +217,11 @@ for.body:                                         ; preds = %for.body.prol.loope
 define arm_aapcs_vfpcc void @float_float_add(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr nocapture %c, i32 %N) {
 ; CHECK-LABEL: float_float_add:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    beq .LBB1_10
-; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    bxeq lr
+; CHECK-NEXT:  .LBB1_1: @ %for.body.preheader
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
 ; CHECK-NEXT:    cmp r3, #3
 ; CHECK-NEXT:    bhi .LBB1_3
 ; CHECK-NEXT:  @ %bb.2:
@@ -242,23 +246,24 @@ define arm_aapcs_vfpcc void @float_float_add(ptr nocapture readonly %a, ptr noca
 ; CHECK-NEXT:    beq .LBB1_11
 ; CHECK-NEXT:  .LBB1_4: @ %for.body.preheader22
 ; CHECK-NEXT:    mvn.w r7, r12
-; CHECK-NEXT:    adds r4, r7, r3
-; CHECK-NEXT:    and r7, r3, #3
-; CHECK-NEXT:    wls lr, r7, .LBB1_7
+; CHECK-NEXT:    add.w r8, r7, r3
+; CHECK-NEXT:    and r5, r3, #3
+; CHECK-NEXT:    wls lr, r5, .LBB1_7
 ; CHECK-NEXT:  @ %bb.5: @ %for.body.prol.preheader
+; CHECK-NEXT:    add.w r4, r12, r5
 ; CHECK-NEXT:    add.w r5, r0, r12, lsl #2
 ; CHECK-NEXT:    add.w r6, r1, r12, lsl #2
 ; CHECK-NEXT:    add.w r7, r2, r12, lsl #2
+; CHECK-NEXT:    mov r12, r4
 ; CHECK-NEXT:  .LBB1_6: @ %for.body.prol
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldmia r6!, {s0}
-; CHECK-NEXT:    add.w r12, r12, #1
 ; CHECK-NEXT:    vldmia r5!, {s2}
 ; CHECK-NEXT:    vadd.f32 s0, s2, s0
 ; CHECK-NEXT:    vstmia r7!, {s0}
 ; CHECK-NEXT:    le lr, .LBB1_6
 ; CHECK-NEXT:  .LBB1_7: @ %for.body.prol.loopexit
-; CHECK-NEXT:    cmp r4, #3
+; CHECK-NEXT:    cmp.w r8, #3
 ; CHECK-NEXT:    blo .LBB1_10
 ; CHECK-NEXT:  @ %bb.8: @ %for.body.preheader1
 ; CHECK-NEXT:    sub.w r3, r3, r12
@@ -289,8 +294,9 @@ define arm_aapcs_vfpcc void @float_float_add(ptr nocapture readonly %a, ptr noca
 ; CHECK-NEXT:    vadd.f32 s0, s2, s0
 ; CHECK-NEXT:    vstr s0, [r5, #12]
 ; CHECK-NEXT:    bne .LBB1_9
-; CHECK-NEXT:  .LBB1_10: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-NEXT:  .LBB1_10:
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:  .LBB1_11: @ %vector.ph
 ; CHECK-NEXT:    bic r12, r3, #3
 ; CHECK-NEXT:    movs r6, #1
@@ -424,10 +430,11 @@ for.body:                                         ; preds = %for.body.prol.loope
 define arm_aapcs_vfpcc void @float_float_sub(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr nocapture %c, i32 %N) {
 ; CHECK-LABEL: float_float_sub:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    beq .LBB2_10
-; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    bxeq lr
+; CHECK-NEXT:  .LBB2_1: @ %for.body.preheader
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
 ; CHECK-NEXT:    cmp r3, #3
 ; CHECK-NEXT:    bhi .LBB2_3
 ; CHECK-NEXT:  @ %bb.2:
@@ -452,23 +459,24 @@ define arm_aapcs_vfpcc void @float_float_sub(ptr nocapture readonly %a, ptr noca
 ; CHECK-NEXT:    beq .LBB2_11
 ; CHECK-NEXT:  .LBB2_4: @ %for.body.preheader22
 ; CHECK-NEXT:    mvn.w r7, r12
-; CHECK-NEXT:    adds r4, r7, r3
-; CHECK-NEXT:    and r7, r3, #3
-; CHECK-NEXT:    wls lr, r7, .LBB2_7
+; CHECK-NEXT:    add.w r8, r7, r3
+; CHECK-NEXT:    and r5, r3, #3
+; CHECK-NEXT:    wls lr, r5, .LBB2_7
 ; CHECK-NEXT:  @ %bb.5: @ %for.body.prol.preheader
+; CHECK-NEXT:    add.w r4, r12, r5
 ; CHECK-NEXT:    add.w r5, r0, r12, lsl #2
 ; CHECK-NEXT:    add.w r6, r1, r12, lsl #2
 ; CHECK-NEXT:    add.w r7, r2, r12, lsl #2
+; CHECK-NEXT:    mov r12, r4
 ; CHECK-NEXT:  .LBB2_6: @ %for.body.prol
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldmia r6!, {s0}
-; CHECK-NEXT:    add.w r12, r12, #1
 ; CHECK-NEXT:    vldmia r5!, {s2}
 ; CHECK-NEXT:    vsub.f32 s0, s2, s0
 ; CHECK-NEXT:    vstmia r7!, {s0}
 ; CHECK-NEXT:    le lr, .LBB2_6
 ; CHECK-NEXT:  .LBB2_7: @ %for.body.prol.loopexit
-; CHECK-NEXT:    cmp r4, #3
+; CHECK-NEXT:    cmp.w r8, #3
 ; CHECK-NEXT:    blo .LBB2_10
 ; CHECK-NEXT:  @ %bb.8: @ %for.body.preheader1
 ; CHECK-NEXT:    sub.w r3, r3, r12
@@ -499,8 +507,9 @@ define arm_aapcs_vfpcc void @float_float_sub(ptr nocapture readonly %a, ptr noca
 ; CHECK-NEXT:    vsub.f32 s0, s2, s0
 ; CHECK-NEXT:    vstr s0, [r5, #12]
 ; CHECK-NEXT:    bne .LBB2_9
-; CHECK-NEXT:  .LBB2_10: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-NEXT:  .LBB2_10:
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:  .LBB2_11: @ %vector.ph
 ; CHECK-NEXT:    bic r12, r3, #3
 ; CHECK-NEXT:    movs r6, #1
@@ -634,10 +643,11 @@ for.body:                                         ; preds = %for.body.prol.loope
 define arm_aapcs_vfpcc void @float_int_mul(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr nocapture %c, i32 %N) {
 ; CHECK-LABEL: float_int_mul:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    beq.w .LBB3_13
-; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    bxeq lr
+; CHECK-NEXT:  .LBB3_1: @ %for.body.preheader
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
 ; CHECK-NEXT:    cmp r3, #3
 ; CHECK-NEXT:    bls .LBB3_6
 ; CHECK-NEXT:  @ %bb.2: @ %vector.memcheck
@@ -672,16 +682,17 @@ define arm_aapcs_vfpcc void @float_int_mul(ptr nocapture readonly %a, ptr nocapt
 ; CHECK-NEXT:  .LBB3_7: @ %for.body.preheader16
 ; CHECK-NEXT:    mvn.w r7, r12
 ; CHECK-NEXT:    add.w r8, r7, r3
-; CHECK-NEXT:    and r7, r3, #3
-; CHECK-NEXT:    wls lr, r7, .LBB3_10
+; CHECK-NEXT:    and r5, r3, #3
+; CHECK-NEXT:    wls lr, r5, .LBB3_10
 ; CHECK-NEXT:  @ %bb.8: @ %for.body.prol.preheader
+; CHECK-NEXT:    add.w r4, r12, r5
 ; CHECK-NEXT:    add.w r5, r0, r12, lsl #2
 ; CHECK-NEXT:    add.w r6, r1, r12, lsl #2
 ; CHECK-NEXT:    add.w r7, r2, r12, lsl #2
+; CHECK-NEXT:    mov r12, r4
 ; CHECK-NEXT:  .LBB3_9: @ %for.body.prol
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr r4, [r6], #4
-; CHECK-NEXT:    add.w r12, r12, #1
 ; CHECK-NEXT:    vldmia r5!, {s2}
 ; CHECK-NEXT:    vmov s0, r4
 ; CHECK-NEXT:    vcvt.f32.s32 s0, s0
@@ -725,8 +736,9 @@ define arm_aapcs_vfpcc void @float_int_mul(ptr nocapture readonly %a, ptr nocapt
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
 ; CHECK-NEXT:    vstr s0, [r6, #12]
 ; CHECK-NEXT:    bne .LBB3_12
-; CHECK-NEXT:  .LBB3_13: @ %for.cond.cleanup
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
+; CHECK-NEXT:  .LBB3_13:
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    bx lr
 entry:
   %cmp8 = icmp eq i32 %N, 0
   br i1 %cmp8, label %for.cond.cleanup, label %for.body.preheader
@@ -1405,7 +1417,7 @@ define arm_aapcs_vfpcc float @half_half_mac(ptr nocapture readonly %a, ptr nocap
 ; CHECK-NEXT:    b .LBB9_6
 ; CHECK-NEXT:  .LBB9_3:
 ; CHECK-NEXT:    vldr s0, .LCPI9_0
-; CHECK-NEXT:    b .LBB9_9
+; CHECK-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-NEXT:  .LBB9_4: @ %for.body.preheader.new
 ; CHECK-NEXT:    bic r2, r2, #3
 ; CHECK-NEXT:    movs r3, #1
@@ -1514,7 +1526,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %mul = fmul half %4, %5
   %conv = fpext half %mul to float
   %add = fadd float %res.09, %conv
-  %inc = or i32 %i.010, 1
+  %inc = or disjoint i32 %i.010, 1
   %arrayidx.1 = getelementptr inbounds half, ptr %a, i32 %inc
   %6 = load half, ptr %arrayidx.1, align 2
   %arrayidx1.1 = getelementptr inbounds half, ptr %b, i32 %inc
@@ -1522,7 +1534,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %mul.1 = fmul half %6, %7
   %conv.1 = fpext half %mul.1 to float
   %add.1 = fadd float %add, %conv.1
-  %inc.1 = or i32 %i.010, 2
+  %inc.1 = or disjoint i32 %i.010, 2
   %arrayidx.2 = getelementptr inbounds half, ptr %a, i32 %inc.1
   %8 = load half, ptr %arrayidx.2, align 2
   %arrayidx1.2 = getelementptr inbounds half, ptr %b, i32 %inc.1
@@ -1530,7 +1542,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %mul.2 = fmul half %8, %9
   %conv.2 = fpext half %mul.2 to float
   %add.2 = fadd float %add.1, %conv.2
-  %inc.2 = or i32 %i.010, 3
+  %inc.2 = or disjoint i32 %i.010, 3
   %arrayidx.3 = getelementptr inbounds half, ptr %a, i32 %inc.2
   %10 = load half, ptr %arrayidx.3, align 2
   %arrayidx1.3 = getelementptr inbounds half, ptr %b, i32 %inc.2
@@ -1560,7 +1572,7 @@ define arm_aapcs_vfpcc float @half_half_acc(ptr nocapture readonly %a, ptr nocap
 ; CHECK-NEXT:    b .LBB10_6
 ; CHECK-NEXT:  .LBB10_3:
 ; CHECK-NEXT:    vldr s0, .LCPI10_0
-; CHECK-NEXT:    b .LBB10_9
+; CHECK-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-NEXT:  .LBB10_4: @ %for.body.preheader.new
 ; CHECK-NEXT:    bic r2, r2, #3
 ; CHECK-NEXT:    movs r3, #1
@@ -1669,7 +1681,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %add = fadd half %4, %5
   %conv = fpext half %add to float
   %add2 = fadd float %res.010, %conv
-  %inc = or i32 %i.011, 1
+  %inc = or disjoint i32 %i.011, 1
   %arrayidx.1 = getelementptr inbounds half, ptr %a, i32 %inc
   %6 = load half, ptr %arrayidx.1, align 2
   %arrayidx1.1 = getelementptr inbounds half, ptr %b, i32 %inc
@@ -1677,7 +1689,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %add.1 = fadd half %6, %7
   %conv.1 = fpext half %add.1 to float
   %add2.1 = fadd float %add2, %conv.1
-  %inc.1 = or i32 %i.011, 2
+  %inc.1 = or disjoint i32 %i.011, 2
   %arrayidx.2 = getelementptr inbounds half, ptr %a, i32 %inc.1
   %8 = load half, ptr %arrayidx.2, align 2
   %arrayidx1.2 = getelementptr inbounds half, ptr %b, i32 %inc.1
@@ -1685,7 +1697,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %add.2 = fadd half %8, %9
   %conv.2 = fpext half %add.2 to float
   %add2.2 = fadd float %add2.1, %conv.2
-  %inc.2 = or i32 %i.011, 3
+  %inc.2 = or disjoint i32 %i.011, 3
   %arrayidx.3 = getelementptr inbounds half, ptr %a, i32 %inc.2
   %10 = load half, ptr %arrayidx.3, align 2
   %arrayidx1.3 = getelementptr inbounds half, ptr %b, i32 %inc.2
@@ -1715,7 +1727,7 @@ define arm_aapcs_vfpcc float @half_short_mac(ptr nocapture readonly %a, ptr noca
 ; CHECK-NEXT:    b .LBB11_6
 ; CHECK-NEXT:  .LBB11_3:
 ; CHECK-NEXT:    vldr s0, .LCPI11_0
-; CHECK-NEXT:    b .LBB11_9
+; CHECK-NEXT:    pop {r4, r5, r6, pc}
 ; CHECK-NEXT:  .LBB11_4: @ %for.body.preheader.new
 ; CHECK-NEXT:    bic r2, r2, #3
 ; CHECK-NEXT:    movs r3, #1
@@ -1834,7 +1846,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %mul = fmul half %4, %conv2
   %conv3 = fpext half %mul to float
   %add = fadd float %res.011, %conv3
-  %inc = or i32 %i.012, 1
+  %inc = or disjoint i32 %i.012, 1
   %arrayidx.1 = getelementptr inbounds half, ptr %a, i32 %inc
   %6 = load half, ptr %arrayidx.1, align 2
   %arrayidx1.1 = getelementptr inbounds i16, ptr %b, i32 %inc
@@ -1843,7 +1855,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %mul.1 = fmul half %6, %conv2.1
   %conv3.1 = fpext half %mul.1 to float
   %add.1 = fadd float %add, %conv3.1
-  %inc.1 = or i32 %i.012, 2
+  %inc.1 = or disjoint i32 %i.012, 2
   %arrayidx.2 = getelementptr inbounds half, ptr %a, i32 %inc.1
   %8 = load half, ptr %arrayidx.2, align 2
   %arrayidx1.2 = getelementptr inbounds i16, ptr %b, i32 %inc.1
@@ -1852,7 +1864,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %mul.2 = fmul half %8, %conv2.2
   %conv3.2 = fpext half %mul.2 to float
   %add.2 = fadd float %add.1, %conv3.2
-  %inc.2 = or i32 %i.012, 3
+  %inc.2 = or disjoint i32 %i.012, 3
   %arrayidx.3 = getelementptr inbounds half, ptr %a, i32 %inc.2
   %10 = load half, ptr %arrayidx.3, align 2
   %arrayidx1.3 = getelementptr inbounds i16, ptr %b, i32 %inc.2

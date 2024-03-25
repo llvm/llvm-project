@@ -99,7 +99,7 @@ entry:
 
 vector.body:
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
-   %offset.idx = or i64 %index, 1
+   %offset.idx = or disjoint i64 %index, 1
   %0 = getelementptr %_elem_type_of_x, ptr %x_rvo_based_addr_3, i64 %offset.idx, i32 0
   %1 = getelementptr %_elem_type_of_a, ptr %a_rvo_based_addr_5, i64 %offset.idx, i32 0
   %wide.load = load <4 x double>, ptr %1, align 8

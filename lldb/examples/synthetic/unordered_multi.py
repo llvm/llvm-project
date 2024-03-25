@@ -4,7 +4,6 @@ _map_capping_size = 255
 
 
 class libcxx_hash_table_SynthProvider:
-
     def __init__(self, valobj, dict):
         self.valobj = valobj
         self.num_elements = None
@@ -34,23 +33,38 @@ class libcxx_hash_table_SynthProvider:
             #
             # We will calculate other values about the map because they will be useful for the summary.
             #
-            table = self.valobj.GetChildMemberWithName('__table_')
+            table = self.valobj.GetChildMemberWithName("__table_")
 
             bl_ptr = table.GetChildMemberWithName(
-                '__bucket_list_').GetChildMemberWithName('__ptr_')
+                "__bucket_list_"
+            ).GetChildMemberWithName("__ptr_")
             self.bucket_array_ptr = bl_ptr.GetChildMemberWithName(
-                '__first_').GetValueAsUnsigned(0)
-            self.bucket_count = bl_ptr.GetChildMemberWithName('__second_').GetChildMemberWithName(
-                '__data_').GetChildMemberWithName('__first_').GetValueAsUnsigned(0)
+                "__first_"
+            ).GetValueAsUnsigned(0)
+            self.bucket_count = (
+                bl_ptr.GetChildMemberWithName("__second_")
+                .GetChildMemberWithName("__data_")
+                .GetChildMemberWithName("__first_")
+                .GetValueAsUnsigned(0)
+            )
             logger >> "Bucket count = %r" % self.bucket_count
 
-            self.begin_ptr = table.GetChildMemberWithName('__p1_').GetChildMemberWithName(
-                '__first_').GetChildMemberWithName('__next_')
+            self.begin_ptr = (
+                table.GetChildMemberWithName("__p1_")
+                .GetChildMemberWithName("__first_")
+                .GetChildMemberWithName("__next_")
+            )
 
-            self.num_elements = table.GetChildMemberWithName(
-                '__p2_').GetChildMemberWithName('__first_').GetValueAsUnsigned(0)
-            self.max_load_factor = table.GetChildMemberWithName(
-                '__p3_').GetChildMemberWithName('__first_').GetValueAsUnsigned(0)
+            self.num_elements = (
+                table.GetChildMemberWithName("__p2_")
+                .GetChildMemberWithName("__first_")
+                .GetValueAsUnsigned(0)
+            )
+            self.max_load_factor = (
+                table.GetChildMemberWithName("__p3_")
+                .GetChildMemberWithName("__first_")
+                .GetValueAsUnsigned(0)
+            )
             logger >> "Num elements = %r" % self.num_elements
 
             # save the pointers as we get them
@@ -78,7 +92,7 @@ class libcxx_hash_table_SynthProvider:
     def get_child_index(self, name):
         logger = lldb.formatters.Logger.Logger()
         try:
-            return int(name.lstrip('[').rstrip(']'))
+            return int(name.lstrip("[").rstrip("]"))
         except:
             return -1
 
@@ -91,8 +105,7 @@ class libcxx_hash_table_SynthProvider:
             return None
 
         # extend
-        logger >> " : cache size starts with %d elements" % len(
-            self.elements_cache)
+        logger >> " : cache size starts with %d elements" % len(self.elements_cache)
         while index >= len(self.elements_cache):
             # if we hit the end before we get the index, give up:
             if not self.next_element:
@@ -101,24 +114,23 @@ class libcxx_hash_table_SynthProvider:
 
             node = self.next_element.Dereference()
 
-            value = node.GetChildMemberWithName('__value_')
-            hash_value = node.GetChildMemberWithName(
-                '__hash_').GetValueAsUnsigned()
+            value = node.GetChildMemberWithName("__value_")
+            hash_value = node.GetChildMemberWithName("__hash_").GetValueAsUnsigned()
             self.elements_cache.append((value, hash_value))
 
-            self.next_element = node.GetChildMemberWithName('__next_')
+            self.next_element = node.GetChildMemberWithName("__next_")
             if not self.next_element.GetValueAsUnsigned(0):
                 self.next_element = None
 
         # hit the index! so we have the value
-        logger >> " : cache size ends with %d elements" % len(
-            self.elements_cache)
+        logger >> " : cache size ends with %d elements" % len(self.elements_cache)
         value, hash_value = self.elements_cache[index]
         return self.valobj.CreateValueFromData(
-            '[%d] <hash %d>' %
-            (index, hash_value), value.GetData(), value.GetType())
+            "[%d] <hash %d>" % (index, hash_value), value.GetData(), value.GetType()
+        )
 
 
 def __lldb_init_module(debugger, dict):
     debugger.HandleCommand(
-        'type synthetic add -l unordered_multi.libcxx_hash_table_SynthProvider -x "^(std::__1::)unordered_(multi)?(map|set)<.+> >$" -w libcxx')
+        'type synthetic add -l unordered_multi.libcxx_hash_table_SynthProvider -x "^(std::__1::)unordered_(multi)?(map|set)<.+> >$" -w libcxx'
+    )

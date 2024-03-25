@@ -456,8 +456,16 @@ public:
     return parser.parseAffineMapReference(map);
   }
 
+  /// Parse an affine expr instance into 'expr' using the already computed
+  /// mapping from symbols to affine expressions in 'symbolSet'.
+  ParseResult
+  parseAffineExpr(ArrayRef<std::pair<StringRef, AffineExpr>> symbolSet,
+                  AffineExpr &expr) override {
+    return parser.parseAffineExprReference(symbolSet, expr);
+  }
+
   /// Parse an integer set instance into 'set'.
-  ParseResult printIntegerSet(IntegerSet &set) override {
+  ParseResult parseIntegerSet(IntegerSet &set) override {
     return parser.parseIntegerSetReference(set);
   }
 
@@ -560,6 +568,14 @@ public:
 
   ParseResult parseXInDimensionList() override {
     return parser.parseXInDimensionList();
+  }
+
+  LogicalResult pushCyclicParsing(const void *opaquePointer) override {
+    return success(parser.getState().cyclicParsingStack.insert(opaquePointer));
+  }
+
+  void popCyclicParsing() override {
+    parser.getState().cyclicParsingStack.pop_back();
   }
 
   //===--------------------------------------------------------------------===//

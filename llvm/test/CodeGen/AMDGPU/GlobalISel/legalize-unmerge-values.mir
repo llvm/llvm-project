@@ -27,11 +27,51 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; CHECK-NEXT: $vgpr0 = COPY [[UV]](s32)
-    ; CHECK-NEXT: $vgpr21 = COPY [[UV1]](s32)
+    ; CHECK-NEXT: $vgpr1 = COPY [[UV1]](s32)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(s32), %2:_(s32) = G_UNMERGE_VALUES %0
     $vgpr0 = COPY %1
-    $vgpr21= COPY %2
+    $vgpr1 = COPY %2
+...
+
+---
+name: test_unmerge_s32_v7s64
+body: |
+  bb.0:
+    liveins:
+    ; CHECK-LABEL: name: test_unmerge_s32_v7s64
+    ; CHECK: [[DEF:%[0-9]+]]:_(<7 x s64>) = IMPLICIT_DEF
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<7 x s64>)
+    ; CHECK-NEXT: $vgpr0 = COPY [[UV]](s32)
+    ; CHECK-NEXT: $vgpr1 = COPY [[UV1]](s32)
+    ; CHECK-NEXT: $vgpr2 = COPY [[UV2]](s32)
+    ; CHECK-NEXT: $vgpr3 = COPY [[UV3]](s32)
+    ; CHECK-NEXT: $vgpr4 = COPY [[UV4]](s32)
+    ; CHECK-NEXT: $vgpr5 = COPY [[UV5]](s32)
+    ; CHECK-NEXT: $vgpr6 = COPY [[UV6]](s32)
+    ; CHECK-NEXT: $vgpr7 = COPY [[UV7]](s32)
+    ; CHECK-NEXT: $vgpr8 = COPY [[UV8]](s32)
+    ; CHECK-NEXT: $vgpr9 = COPY [[UV9]](s32)
+    ; CHECK-NEXT: $vgpr10 = COPY [[UV10]](s32)
+    ; CHECK-NEXT: $vgpr11 = COPY [[UV11]](s32)
+    ; CHECK-NEXT: $vgpr12 = COPY [[UV12]](s32)
+    ; CHECK-NEXT: $vgpr13 = COPY [[UV13]](s32)
+    %0:_(<7 x s64>) = IMPLICIT_DEF
+    %1:_(s32), %2:_(s32), %3:_(s32), %4:_(s32), %5:_(s32), %6:_(s32), %7:_(s32), %8:_(s32), %9:_(s32), %10:_(s32), %11:_(s32), %12:_(s32), %13:_(s32), %14:_(s32) = G_UNMERGE_VALUES %0
+    $vgpr0 = COPY %1
+    $vgpr1 = COPY %2
+    $vgpr2 = COPY %3
+    $vgpr3 = COPY %4
+    $vgpr4 = COPY %5
+    $vgpr5 = COPY %6
+    $vgpr6 = COPY %7
+    $vgpr7 = COPY %8
+    $vgpr8 = COPY %9
+    $vgpr9 = COPY %10
+    $vgpr10 = COPY %11
+    $vgpr11 = COPY %12
+    $vgpr12 = COPY %13
+    $vgpr13 = COPY %14
 ...
 
 ---
@@ -223,10 +263,9 @@ body: |
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[UV]], [[C2]]
     ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[AND]], [[COPY1]](s32)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C2]]
-    ; CHECK-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[AND1]], [[COPY2]](s32)
-    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C2]]
-    ; CHECK-NEXT: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[AND2]], [[C1]](s32)
+    ; CHECK-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[LSHR]], [[COPY2]](s32)
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C2]]
+    ; CHECK-NEXT: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[AND1]], [[C1]](s32)
     ; CHECK-NEXT: $vgpr0 = COPY [[UV]](s32)
     ; CHECK-NEXT: $vgpr1 = COPY [[LSHR1]](s32)
     ; CHECK-NEXT: $vgpr2 = COPY [[LSHR]](s32)
@@ -295,13 +334,11 @@ body: |
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[UV]], [[C2]]
     ; CHECK-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[AND]], [[COPY1]](s32)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C2]]
-    ; CHECK-NEXT: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[AND1]], [[COPY2]](s32)
+    ; CHECK-NEXT: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[LSHR]], [[COPY2]](s32)
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C2]]
-    ; CHECK-NEXT: [[LSHR4:%[0-9]+]]:_(s32) = G_LSHR [[AND2]], [[COPY3]](s32)
-    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C2]]
-    ; CHECK-NEXT: [[LSHR5:%[0-9]+]]:_(s32) = G_LSHR [[AND3]], [[C1]](s32)
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C2]]
+    ; CHECK-NEXT: [[LSHR4:%[0-9]+]]:_(s32) = G_LSHR [[AND1]], [[COPY3]](s32)
+    ; CHECK-NEXT: [[LSHR5:%[0-9]+]]:_(s32) = G_LSHR [[LSHR1]], [[C1]](s32)
     ; CHECK-NEXT: $vgpr0 = COPY [[UV]](s32)
     ; CHECK-NEXT: $vgpr1 = COPY [[LSHR2]](s32)
     ; CHECK-NEXT: $vgpr2 = COPY [[LSHR]](s32)
@@ -349,13 +386,11 @@ body: |
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[UV]], [[C2]]
     ; CHECK-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[AND]], [[COPY1]](s32)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C2]]
-    ; CHECK-NEXT: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[AND1]], [[COPY2]](s32)
+    ; CHECK-NEXT: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[LSHR]], [[COPY2]](s32)
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C2]]
-    ; CHECK-NEXT: [[LSHR4:%[0-9]+]]:_(s32) = G_LSHR [[AND2]], [[COPY3]](s32)
-    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C2]]
-    ; CHECK-NEXT: [[LSHR5:%[0-9]+]]:_(s32) = G_LSHR [[AND3]], [[C1]](s32)
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C2]]
+    ; CHECK-NEXT: [[LSHR4:%[0-9]+]]:_(s32) = G_LSHR [[AND1]], [[COPY3]](s32)
+    ; CHECK-NEXT: [[LSHR5:%[0-9]+]]:_(s32) = G_LSHR [[LSHR1]], [[C1]](s32)
     ; CHECK-NEXT: $vgpr0 = COPY [[UV]](s32)
     ; CHECK-NEXT: $vgpr1 = COPY [[LSHR2]](s32)
     ; CHECK-NEXT: $vgpr2 = COPY [[LSHR]](s32)
@@ -411,29 +446,23 @@ body: |
     ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[UV]], [[C2]]
     ; CHECK-NEXT: [[LSHR4:%[0-9]+]]:_(s32) = G_LSHR [[AND2]], [[COPY3]](s32)
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C2]]
-    ; CHECK-NEXT: [[LSHR5:%[0-9]+]]:_(s32) = G_LSHR [[AND3]], [[COPY4]](s32)
+    ; CHECK-NEXT: [[LSHR5:%[0-9]+]]:_(s32) = G_LSHR [[LSHR]], [[COPY4]](s32)
     ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s32) = COPY [[C3]](s32)
-    ; CHECK-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C2]]
-    ; CHECK-NEXT: [[LSHR6:%[0-9]+]]:_(s32) = G_LSHR [[AND4]], [[COPY5]](s32)
+    ; CHECK-NEXT: [[LSHR6:%[0-9]+]]:_(s32) = G_LSHR [[LSHR]], [[COPY5]](s32)
     ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s32) = COPY [[C4]](s32)
-    ; CHECK-NEXT: [[AND5:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C2]]
-    ; CHECK-NEXT: [[LSHR7:%[0-9]+]]:_(s32) = G_LSHR [[AND5]], [[COPY6]](s32)
+    ; CHECK-NEXT: [[LSHR7:%[0-9]+]]:_(s32) = G_LSHR [[LSHR]], [[COPY6]](s32)
     ; CHECK-NEXT: [[COPY7:%[0-9]+]]:_(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[AND6:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C2]]
-    ; CHECK-NEXT: [[LSHR8:%[0-9]+]]:_(s32) = G_LSHR [[AND6]], [[COPY7]](s32)
+    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C2]]
+    ; CHECK-NEXT: [[LSHR8:%[0-9]+]]:_(s32) = G_LSHR [[AND3]], [[COPY7]](s32)
     ; CHECK-NEXT: [[COPY8:%[0-9]+]]:_(s32) = COPY [[C3]](s32)
-    ; CHECK-NEXT: [[AND7:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C2]]
-    ; CHECK-NEXT: [[LSHR9:%[0-9]+]]:_(s32) = G_LSHR [[AND7]], [[COPY8]](s32)
+    ; CHECK-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C2]]
+    ; CHECK-NEXT: [[LSHR9:%[0-9]+]]:_(s32) = G_LSHR [[AND4]], [[COPY8]](s32)
     ; CHECK-NEXT: [[COPY9:%[0-9]+]]:_(s32) = COPY [[C4]](s32)
-    ; CHECK-NEXT: [[AND8:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C2]]
-    ; CHECK-NEXT: [[LSHR10:%[0-9]+]]:_(s32) = G_LSHR [[AND8]], [[COPY9]](s32)
-    ; CHECK-NEXT: [[AND9:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C2]]
-    ; CHECK-NEXT: [[LSHR11:%[0-9]+]]:_(s32) = G_LSHR [[AND9]], [[C1]](s32)
-    ; CHECK-NEXT: [[AND10:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C2]]
-    ; CHECK-NEXT: [[LSHR12:%[0-9]+]]:_(s32) = G_LSHR [[AND10]], [[C3]](s32)
-    ; CHECK-NEXT: [[AND11:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C2]]
-    ; CHECK-NEXT: [[LSHR13:%[0-9]+]]:_(s32) = G_LSHR [[AND11]], [[C4]](s32)
+    ; CHECK-NEXT: [[AND5:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C2]]
+    ; CHECK-NEXT: [[LSHR10:%[0-9]+]]:_(s32) = G_LSHR [[AND5]], [[COPY9]](s32)
+    ; CHECK-NEXT: [[LSHR11:%[0-9]+]]:_(s32) = G_LSHR [[LSHR1]], [[C1]](s32)
+    ; CHECK-NEXT: [[LSHR12:%[0-9]+]]:_(s32) = G_LSHR [[LSHR1]], [[C3]](s32)
+    ; CHECK-NEXT: [[LSHR13:%[0-9]+]]:_(s32) = G_LSHR [[LSHR1]], [[C4]](s32)
     ; CHECK-NEXT: $vgpr0 = COPY [[UV]](s32)
     ; CHECK-NEXT: $vgpr1 = COPY [[LSHR2]](s32)
     ; CHECK-NEXT: $vgpr2 = COPY [[LSHR3]](s32)

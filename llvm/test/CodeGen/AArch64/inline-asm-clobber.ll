@@ -1,4 +1,4 @@
-; RUN: llc <%s -mtriple=aarch64-none-eabi 2>&1  | FileCheck %s
+; RUN: llc <%s -mtriple=aarch64 2>&1  | FileCheck %s
 
 ; CHECK: warning: inline asm clobber list contains reserved registers: SP
 

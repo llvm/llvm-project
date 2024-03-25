@@ -7,14 +7,15 @@
 //===----------------------------------------------------------------------===//
 // This file reports various statistics about analyzer visitation.
 //===----------------------------------------------------------------------===//
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
@@ -52,9 +53,8 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
   const Decl *D = LC->getDecl();
 
   // Iterate over the exploded graph.
-  for (ExplodedGraph::node_iterator I = G.nodes_begin();
-      I != G.nodes_end(); ++I) {
-    const ProgramPoint &P = I->getLocation();
+  for (const ExplodedNode &N : G.nodes()) {
+    const ProgramPoint &P = N.getLocation();
 
     // Only check the coverage in the top level function (optimization).
     if (D != P.getLocationContext()->getDecl())
@@ -115,11 +115,8 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
                     output.str(), PathDiagnosticLocation(D, SM));
 
   // Emit warning for each block we bailed out on.
-  typedef CoreEngine::BlocksExhausted::const_iterator ExhaustedIterator;
   const CoreEngine &CE = Eng.getCoreEngine();
-  for (ExhaustedIterator I = CE.blocks_exhausted_begin(),
-      E = CE.blocks_exhausted_end(); I != E; ++I) {
-    const BlockEdge &BE =  I->first;
+  for (const BlockEdge &BE : make_first_range(CE.exhausted_blocks())) {
     const CFGBlock *Exit = BE.getDst();
     if (Exit->empty())
       continue;

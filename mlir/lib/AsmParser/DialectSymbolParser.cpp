@@ -12,10 +12,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "AsmParserImpl.h"
+#include "Parser.h"
+#include "mlir/AsmParser/AsmParserState.h"
+#include "mlir/IR/AsmState.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
+#include <cassert>
+#include <cstddef>
+#include <utility>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -157,7 +170,8 @@ ParseResult Parser::parseDialectSymbolBody(StringRef &body,
 
 /// Parse an extended dialect symbol.
 template <typename Symbol, typename SymbolAliasMap, typename CreateFn>
-static Symbol parseExtendedSymbol(Parser &p, SymbolAliasMap &aliases,
+static Symbol parseExtendedSymbol(Parser &p, AsmParserState *asmState,
+                                  SymbolAliasMap &aliases,
                                   CreateFn &&createSymbol) {
   Token tok = p.getToken();
 
@@ -167,6 +181,7 @@ static Symbol parseExtendedSymbol(Parser &p, SymbolAliasMap &aliases,
     return p.codeCompleteDialectSymbol(aliases);
 
   // Parse the dialect namespace.
+  SMRange range = p.getToken().getLocRange();
   SMLoc loc = p.getToken().getLoc();
   p.consumeToken();
 
@@ -189,6 +204,12 @@ static Symbol parseExtendedSymbol(Parser &p, SymbolAliasMap &aliases,
       return (p.emitWrongTokenError("undefined symbol alias id '" + identifier +
                                     "'"),
               nullptr);
+    if (asmState) {
+      if constexpr (std::is_same_v<Symbol, Type>)
+        asmState->addTypeAliasUses(identifier, range);
+      else
+        asmState->addAttrAliasUses(identifier, range);
+    }
     return aliasIt->second;
   }
 
@@ -232,7 +253,7 @@ static Symbol parseExtendedSymbol(Parser &p, SymbolAliasMap &aliases,
 Attribute Parser::parseExtendedAttr(Type type) {
   MLIRContext *ctx = getContext();
   Attribute attr = parseExtendedSymbol<Attribute>(
-      *this, state.symbols.attributeAliasDefinitions,
+      *this, state.asmState, state.symbols.attributeAliasDefinitions,
       [&](StringRef dialectName, StringRef symbolData, SMLoc loc) -> Attribute {
         // Parse an optional trailing colon type.
         Type attrType = type;
@@ -260,7 +281,7 @@ Attribute Parser::parseExtendedAttr(Type type) {
       });
 
   // Ensure that the attribute has the same type as requested.
-  auto typedAttr = attr.dyn_cast_or_null<TypedAttr>();
+  auto typedAttr = dyn_cast_or_null<TypedAttr>(attr);
   if (type && typedAttr && typedAttr.getType() != type) {
     emitError("attribute type different than expected: expected ")
         << type << ", but got " << typedAttr.getType();
@@ -279,7 +300,7 @@ Attribute Parser::parseExtendedAttr(Type type) {
 Type Parser::parseExtendedType() {
   MLIRContext *ctx = getContext();
   return parseExtendedSymbol<Type>(
-      *this, state.symbols.typeAliasDefinitions,
+      *this, state.asmState, state.symbols.typeAliasDefinitions,
       [&](StringRef dialectName, StringRef symbolData, SMLoc loc) -> Type {
         // If we found a registered dialect, then ask it to parse the type.
         if (auto *dialect = ctx->getOrLoadDialect(dialectName)) {
@@ -306,15 +327,19 @@ Type Parser::parseExtendedType() {
 //===----------------------------------------------------------------------===//
 
 /// Parses a symbol, of type 'T', and returns it if parsing was successful. If
-/// parsing failed, nullptr is returned. The number of bytes read from the input
-/// string is returned in 'numRead'.
+/// parsing failed, nullptr is returned.
 template <typename T, typename ParserFn>
-static T parseSymbol(StringRef inputStr, MLIRContext *context, size_t &numRead,
+static T parseSymbol(StringRef inputStr, MLIRContext *context,
+                     size_t *numReadOut, bool isKnownNullTerminated,
                      ParserFn &&parserFn) {
+  // Set the buffer name to the string being parsed, so that it appears in error
+  // diagnostics.
+  auto memBuffer =
+      isKnownNullTerminated
+          ? MemoryBuffer::getMemBuffer(inputStr,
+                                       /*BufferName=*/inputStr)
+          : MemoryBuffer::getMemBufferCopy(inputStr, /*BufferName=*/inputStr);
   SourceMgr sourceMgr;
-  auto memBuffer = MemoryBuffer::getMemBuffer(
-      inputStr, /*BufferName=*/"<mlir_parser_buffer>",
-      /*RequiresNullTerminator=*/false);
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
   SymbolState aliasState;
   ParserConfig config(context);
@@ -322,9 +347,6 @@ static T parseSymbol(StringRef inputStr, MLIRContext *context, size_t &numRead,
                     /*codeCompleteContext=*/nullptr);
   Parser parser(state);
 
-  SourceMgrDiagnosticHandler handler(
-      const_cast<llvm::SourceMgr &>(parser.getSourceMgr()),
-      parser.getContext());
   Token startTok = parser.getToken();
   T symbol = parserFn(parser);
   if (!symbol)
@@ -332,38 +354,27 @@ static T parseSymbol(StringRef inputStr, MLIRContext *context, size_t &numRead,
 
   // Provide the number of bytes that were read.
   Token endTok = parser.getToken();
-  numRead = static_cast<size_t>(endTok.getLoc().getPointer() -
-                                startTok.getLoc().getPointer());
+  size_t numRead =
+      endTok.getLoc().getPointer() - startTok.getLoc().getPointer();
+  if (numReadOut) {
+    *numReadOut = numRead;
+  } else if (numRead != inputStr.size()) {
+    parser.emitError(endTok.getLoc()) << "found trailing characters: '"
+                                      << inputStr.drop_front(numRead) << "'";
+    return T();
+  }
   return symbol;
 }
 
-Attribute mlir::parseAttribute(StringRef attrStr, MLIRContext *context) {
-  size_t numRead = 0;
-  return parseAttribute(attrStr, context, numRead);
-}
-Attribute mlir::parseAttribute(StringRef attrStr, Type type) {
-  size_t numRead = 0;
-  return parseAttribute(attrStr, type, numRead);
-}
-
 Attribute mlir::parseAttribute(StringRef attrStr, MLIRContext *context,
-                               size_t &numRead) {
-  return parseSymbol<Attribute>(attrStr, context, numRead, [](Parser &parser) {
-    return parser.parseAttribute();
-  });
-}
-Attribute mlir::parseAttribute(StringRef attrStr, Type type, size_t &numRead) {
+                               Type type, size_t *numRead,
+                               bool isKnownNullTerminated) {
   return parseSymbol<Attribute>(
-      attrStr, type.getContext(), numRead,
+      attrStr, context, numRead, isKnownNullTerminated,
       [type](Parser &parser) { return parser.parseAttribute(type); });
 }
-
-Type mlir::parseType(StringRef typeStr, MLIRContext *context) {
-  size_t numRead = 0;
-  return parseType(typeStr, context, numRead);
-}
-
-Type mlir::parseType(StringRef typeStr, MLIRContext *context, size_t &numRead) {
-  return parseSymbol<Type>(typeStr, context, numRead,
+Type mlir::parseType(StringRef typeStr, MLIRContext *context, size_t *numRead,
+                     bool isKnownNullTerminated) {
+  return parseSymbol<Type>(typeStr, context, numRead, isKnownNullTerminated,
                            [](Parser &parser) { return parser.parseType(); });
 }

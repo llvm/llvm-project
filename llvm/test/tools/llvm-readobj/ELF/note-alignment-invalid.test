@@ -1,0 +1,21 @@
+# RUN: yaml2obj --docnum=1 %s -o %t1.so
+# RUN: llvm-readelf --notes %t1.so 2>&1 | FileCheck %s -DFILE=%t1.so
+# RUN: llvm-readobj --notes %t1.so 2>&1 | FileCheck %s -DFILE=%t1.so
+
+# CHECK: warning: '[[FILE]]': unable to read notes from the SHT_NOTE section with index 1: alignment (6) is not 4 or 8
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_EXEC
+Sections:
+  - Name:         .note.invalid
+    Type:         SHT_NOTE
+    AddressAlign: 0x0000000000000006
+    Content:      0400000004000000cdab0000474E550061626364
+ProgramHeaders:
+  - Type:     PT_NOTE
+    FileSize: 0x20
+    FirstSec: .note.invalid
+    LastSec:  .note.invalid

@@ -1,4 +1,4 @@
-;RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
+;RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s
 
 ;Test that a select with reversed True/False values is correctly lowered
 ;to a SETNE_INT.  There should only be one SETNE_INT instruction.

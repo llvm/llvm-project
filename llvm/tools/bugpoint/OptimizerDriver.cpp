@@ -141,7 +141,7 @@ bool BugDriver::runPasses(Module &Program,
            << ": Error making unique filename: " << EC.message() << "\n";
     return true;
   }
-  OutputFilename = std::string(UniqueFilename.str());
+  OutputFilename = std::string(UniqueFilename);
 
   // set up the input file name
   Expected<sys::fs::TempFile> Temp =
@@ -207,7 +207,7 @@ bool BugDriver::runPasses(Module &Program,
     Args.push_back(OptArgs[i]);
   // Pin to legacy PM since bugpoint has lots of infra and hacks revolving
   // around the legacy PM.
-  Args.push_back("-enable-new-pm=0");
+  Args.push_back("-bugpoint-enable-legacy-pm");
   Args.push_back("-disable-symbolication");
   Args.push_back("-o");
   Args.push_back(OutputFilename);

@@ -18,13 +18,12 @@
 // CHECK:   DW_TAG_namespace
 namespace N {
 int blah = 42;
-// This is actually a dsymutil-classic bug that we reproduced
 // CHECK: DW_TAG_variable
-// CHECK: DW_AT_location
+// CHECK-NOT: DW_AT_location
 
 __attribute__((always_inline)) int foo() { return blah; }
 // CHECK: DW_TAG_subprogram
-// CHECK:   DW_AT_frame_base
+// CHECK-NOT:  DW_AT_frame_base
 
 // CHECK: DW_TAG_subprogram
 
@@ -35,7 +34,7 @@ int bar(unsigned i) {
 	return foo();
 }
 // CHECK: DW_TAG_subprogram
-// CHECK:   DW_AT_frame_base
+// CHECK-NOT:  DW_AT_frame_base
 // CHECK:   DW_TAG_formal_parameter
 // CHECK:   DW_TAG_variable
 // CHECK:   DW_TAG_inlined_subroutine

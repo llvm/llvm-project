@@ -94,12 +94,12 @@ int main(int, char**)
 #endif
   check_integral_types<char16_t, int>();
   // On some platforms, unsigned int and long are the same size.  These
-  // platforms have a choice of making uint32_t an int or a long.  However
+  // platforms have a choice of making std::uint32_t an int or a long.  However
   // char32_t must promote to an unsigned int on these platforms [conv.prom].
   // Use the following logic to make the test work on such platforms.
-  // (sizeof(uint32_t) == sizeof(unsigned int)) ? unsigned int : uint32_t;
-  typedef std::conditional<sizeof(uint32_t) == sizeof(unsigned int),
-                           unsigned int, uint32_t>::type char_integral;
+  // (sizeof(std::uint32_t) == sizeof(unsigned int)) ? unsigned int : std::uint32_t;
+  typedef std::conditional<sizeof(std::uint32_t) == sizeof(unsigned int),
+                           unsigned int, std::uint32_t>::type char_integral;
   check_integral_types<char32_t, char_integral>();
   check_integral_types<short, int>();
   check_integral_types<unsigned short, int>();

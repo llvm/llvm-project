@@ -16,9 +16,9 @@ foo:
 ; CHECK: brcc .Ltmp1-16             ; encoding: [0bAAAAA000,0b111101AA]
 ; CHECK:                            ; fixup A - offset: 0, value: .Ltmp1-16, kind: fixup_7_pcrel
 
-; INST: brvc .+0
-; INST: brsh .+0
-; INST: brne .-42
-; INST: brpl .-44
-; INST: brge .-46
-; INST: brid .+48
+; INST: 23 f4   brvc .+8
+; INST: c0 f7   brsh .-16
+; INST: 59 f7   brne .-42
+; INST: 52 f7   brpl .-44
+; INST: 4c f7   brge .-46
+; INST: c7 f4   brid .+48

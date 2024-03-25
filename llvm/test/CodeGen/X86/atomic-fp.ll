@@ -207,28 +207,28 @@ define dso_local void @fadd_32g() nounwind {
 ;
 ; X86-SSE2-LABEL: fadd_32g:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X86-SSE2-NEXT:    addss glob32, %xmm0
 ; X86-SSE2-NEXT:    movss %xmm0, glob32
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: fadd_32g:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX-NEXT:    vmovss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X86-AVX-NEXT:    vaddss glob32, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vmovss %xmm0, glob32
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fadd_32g:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-SSE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-SSE-NEXT:    addss glob32(%rip), %xmm0
 ; X64-SSE-NEXT:    movss %xmm0, glob32(%rip)
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: fadd_32g:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-AVX-NEXT:    vmovss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-AVX-NEXT:    vaddss glob32(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmovss %xmm0, glob32(%rip)
 ; X64-AVX-NEXT:    retq
@@ -319,14 +319,14 @@ define dso_local void @fadd_64g() nounwind {
 ;
 ; X64-SSE-LABEL: fadd_64g:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-SSE-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
 ; X64-SSE-NEXT:    addsd glob64(%rip), %xmm0
 ; X64-SSE-NEXT:    movsd %xmm0, glob64(%rip)
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: fadd_64g:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
 ; X64-AVX-NEXT:    vaddsd glob64(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmovsd %xmm0, glob64(%rip)
 ; X64-AVX-NEXT:    retq
@@ -368,14 +368,14 @@ define dso_local void @fadd_32imm() nounwind {
 ;
 ; X86-SSE2-LABEL: fadd_32imm:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X86-SSE2-NEXT:    addss -559038737, %xmm0
 ; X86-SSE2-NEXT:    movss %xmm0, -559038737
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: fadd_32imm:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX-NEXT:    vmovss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X86-AVX-NEXT:    vaddss -559038737, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vmovss %xmm0, -559038737
 ; X86-AVX-NEXT:    retl
@@ -383,7 +383,7 @@ define dso_local void @fadd_32imm() nounwind {
 ; X64-SSE-LABEL: fadd_32imm:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movl $3735928559, %eax # imm = 0xDEADBEEF
-; X64-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-SSE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-SSE-NEXT:    addss (%rax), %xmm0
 ; X64-SSE-NEXT:    movss %xmm0, (%rax)
 ; X64-SSE-NEXT:    retq
@@ -391,7 +391,7 @@ define dso_local void @fadd_32imm() nounwind {
 ; X64-AVX-LABEL: fadd_32imm:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    movl $3735928559, %eax # imm = 0xDEADBEEF
-; X64-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-AVX-NEXT:    vmovss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-AVX-NEXT:    vaddss (%rax), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmovss %xmm0, (%rax)
 ; X64-AVX-NEXT:    retq
@@ -483,7 +483,7 @@ define dso_local void @fadd_64imm() nounwind {
 ; X64-SSE-LABEL: fadd_64imm:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movl $3735928559, %eax # imm = 0xDEADBEEF
-; X64-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-SSE-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
 ; X64-SSE-NEXT:    addsd (%rax), %xmm0
 ; X64-SSE-NEXT:    movsd %xmm0, (%rax)
 ; X64-SSE-NEXT:    retq
@@ -491,7 +491,7 @@ define dso_local void @fadd_64imm() nounwind {
 ; X64-AVX-LABEL: fadd_64imm:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    movl $3735928559, %eax # imm = 0xDEADBEEF
-; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
 ; X64-AVX-NEXT:    vaddsd (%rax), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmovsd %xmm0, (%rax)
 ; X64-AVX-NEXT:    retq
@@ -534,7 +534,7 @@ define dso_local void @fadd_32stack() nounwind {
 ; X86-SSE2-LABEL: fadd_32stack:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %eax
-; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X86-SSE2-NEXT:    addss (%esp), %xmm0
 ; X86-SSE2-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE2-NEXT:    popl %eax
@@ -543,7 +543,7 @@ define dso_local void @fadd_32stack() nounwind {
 ; X86-AVX-LABEL: fadd_32stack:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    pushl %eax
-; X86-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX-NEXT:    vmovss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X86-AVX-NEXT:    vaddss (%esp), %xmm0, %xmm0
 ; X86-AVX-NEXT:    vmovss %xmm0, (%esp)
 ; X86-AVX-NEXT:    popl %eax
@@ -551,14 +551,14 @@ define dso_local void @fadd_32stack() nounwind {
 ;
 ; X64-SSE-LABEL: fadd_32stack:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-SSE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-SSE-NEXT:    addss -{{[0-9]+}}(%rsp), %xmm0
 ; X64-SSE-NEXT:    movss %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: fadd_32stack:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-AVX-NEXT:    vmovss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-AVX-NEXT:    vaddss -{{[0-9]+}}(%rsp), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmovss %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    retq
@@ -650,14 +650,14 @@ define dso_local void @fadd_64stack() nounwind {
 ;
 ; X64-SSE-LABEL: fadd_64stack:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-SSE-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
 ; X64-SSE-NEXT:    addsd -{{[0-9]+}}(%rsp), %xmm0
 ; X64-SSE-NEXT:    movsd %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: fadd_64stack:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
 ; X64-AVX-NEXT:    vaddsd -{{[0-9]+}}(%rsp), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmovsd %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    retq

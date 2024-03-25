@@ -13,6 +13,7 @@
 // XFAIL: target=powerpc64{{.*}}
 // XFAIL: target=s390x{{.*}}
 // XFAIL: target=loongarch64{{.*}}
+// XFAIL: target=riscv64{{.*}}
 
 // MAP_32BIT doesn't exist on OS X and NetBSD.
 // UNSUPPORTED: darwin,target={{.*netbsd.*}}

@@ -48,7 +48,7 @@ bool FrontendAction::beginSourceFile(CompilerInstance &ci,
       unsigned diagID;
       if (llvm::vfs::getRealFileSystem()->exists(input.getFile())) {
         ci.getDiagnostics().Report(clang::diag::err_fe_error_reading)
-            << input.getFile();
+            << input.getFile() << "not a regular file";
         diagID = ci.getDiagnostics().getCustomDiagID(
             clang::DiagnosticsEngine::Error, "%0 is not a regular file");
       } else {
@@ -84,6 +84,15 @@ bool FrontendAction::beginSourceFile(CompilerInstance &ci,
        getCurrentInput().getMustBePreprocessed())) {
     invoc.setDefaultPredefinitions();
     invoc.collectMacroDefinitions();
+  }
+
+  if (!invoc.getFortranOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::CUDA)) {
+    // Enable CUDA Fortran if source file is *.cuf/*.CUF and not already
+    // enabled.
+    invoc.getFortranOpts().features.Enable(
+        Fortran::common::LanguageFeature::CUDA,
+        getCurrentInput().getIsCUDAFortran());
   }
 
   // Decide between fixed and free form (if the user didn't express any
@@ -167,7 +176,7 @@ bool FrontendAction::runSemanticChecks() {
 
   // Prepare semantics
   ci.setSemantics(std::make_unique<Fortran::semantics::Semantics>(
-      ci.getInvocation().getSemanticsContext(), *parseTree,
+      ci.getSemanticsContext(), *parseTree,
       ci.getInvocation().getDebugModuleDir()));
   auto &semantics = ci.getSemantics();
 
@@ -187,8 +196,7 @@ bool FrontendAction::runSemanticChecks() {
 bool FrontendAction::generateRtTypeTables() {
   getInstance().setRtTyTables(
       std::make_unique<Fortran::semantics::RuntimeDerivedTypeTables>(
-          BuildRuntimeDerivedTypeTables(
-              getInstance().getInvocation().getSemanticsContext())));
+          BuildRuntimeDerivedTypeTables(getInstance().getSemanticsContext())));
 
   // The runtime derived type information table builder may find additional
   // semantic errors. Report them.

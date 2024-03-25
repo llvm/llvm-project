@@ -154,6 +154,16 @@ TEST(YAMLRemarks, ParsingGood) {
             "  - String: ' because its definition is unavailable'\n"
             "Pass: inline\n"
             "");
+
+  // Block Remark.
+  parseGood("\n"
+            "--- !Missed\n"
+            "Function: foo\n"
+            "Name: NoDefinition\n"
+            "Args:\n"
+            "  - String:           |\n      \n      \n      blocks\n"
+            "Pass: inline\n"
+            "");
 }
 
 // Mandatory common part of a remark.

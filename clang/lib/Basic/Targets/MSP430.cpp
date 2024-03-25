@@ -29,6 +29,5 @@ void MSP430TargetInfo::getTargetDefines(const LangOptions &Opts,
                                         MacroBuilder &Builder) const {
   Builder.defineMacro("MSP430");
   Builder.defineMacro("__MSP430__");
-  Builder.defineMacro("__ELF__");
   // FIXME: defines for different 'flavours' of MCU
 }

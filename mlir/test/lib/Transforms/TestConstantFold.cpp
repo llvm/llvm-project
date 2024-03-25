@@ -13,8 +13,8 @@ using namespace mlir;
 
 namespace {
 /// Simple constant folding pass.
-struct TestConstantFold
-    : public PassWrapper<TestConstantFold, OperationPass<>> {
+struct TestConstantFold : public PassWrapper<TestConstantFold, OperationPass<>>,
+                          public RewriterBase::Listener {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestConstantFold)
 
   StringRef getArgument() const final { return "test-constant-fold"; }
@@ -26,17 +26,23 @@ struct TestConstantFold
 
   void foldOperation(Operation *op, OperationFolder &helper);
   void runOnOperation() override;
+
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override {
+    existingConstants.push_back(op);
+  }
+  void notifyOperationErased(Operation *op) override {
+    auto *it = llvm::find(existingConstants, op);
+    if (it != existingConstants.end())
+      existingConstants.erase(it);
+  }
 };
 } // namespace
 
 void TestConstantFold::foldOperation(Operation *op, OperationFolder &helper) {
-  auto processGeneratedConstants = [this](Operation *op) {
-    existingConstants.push_back(op);
-  };
-
   // Attempt to fold the specified operation, including handling unused or
   // duplicated constants.
-  (void)helper.tryToFold(op, processGeneratedConstants);
+  (void)helper.tryToFold(op);
 }
 
 void TestConstantFold::runOnOperation() {
@@ -44,13 +50,13 @@ void TestConstantFold::runOnOperation() {
 
   // Collect and fold the operations within the operation.
   SmallVector<Operation *, 8> ops;
-  getOperation()->walk([&](Operation *op) { ops.push_back(op); });
+  getOperation()->walk<mlir::WalkOrder::PreOrder>([&](Operation *op) { ops.push_back(op); });
 
   // Fold the constants in reverse so that the last generated constants from
   // folding are at the beginning. This creates somewhat of a linear ordering to
   // the newly generated constants that matches the operation order and improves
   // the readability of test cases.
-  OperationFolder helper(&getContext());
+  OperationFolder helper(&getContext(), /*listener=*/this);
   for (Operation *op : llvm::reverse(ops))
     foldOperation(op, helper);
 

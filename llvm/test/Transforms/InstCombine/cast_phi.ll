@@ -16,9 +16,9 @@ define void @MainKernel(i32 %iNumSteps, i32 %tid, i32 %base) {
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp eq i32 [[TID]], 0
 ; CHECK-NEXT:    br i1 [[CMP7]], label [[DOTBB1:%.*]], label [[DOTBB2:%.*]]
 ; CHECK:       .bb1:
-; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds [258 x float], ptr [[CALLA]], i64 0, i64 256
+; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i8, ptr [[CALLA]], i64 1024
 ; CHECK-NEXT:    store float [[CONV_I]], ptr [[ARRAYIDX10]], align 4
-; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [258 x float], ptr [[CALLB]], i64 0, i64 256
+; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i8, ptr [[CALLB]], i64 1024
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[ARRAYIDX11]], align 4
 ; CHECK-NEXT:    br label [[DOTBB2]]
 ; CHECK:       .bb2:
@@ -248,13 +248,13 @@ define i64 @zext_from_legal_to_legal_type(i32 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @get_i32()
-; CHECK-NEXT:    [[PHI_CAST:%.*]] = zext i32 [[Y]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[Y]] to i64
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       f:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[PHI_CAST]], [[T]] ], [ 3, [[F]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[TMP0]], [[T]] ], [ 3, [[F]] ]
 ; CHECK-NEXT:    ret i64 [[P]]
 ;
 entry:
@@ -282,13 +282,13 @@ define i64 @zext_from_illegal_to_legal_type(i32 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    [[Y:%.*]] = call i3 @get_i3()
-; CHECK-NEXT:    [[PHI_CAST:%.*]] = zext i3 [[Y]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i3 [[Y]] to i64
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       f:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[PHI_CAST]], [[T]] ], [ 3, [[F]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[TMP0]], [[T]] ], [ 3, [[F]] ]
 ; CHECK-NEXT:    ret i64 [[P]]
 ;
 entry:
@@ -319,7 +319,7 @@ define i8 @trunc_in_loop_exit_block() {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV]], 100
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT:%.*]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[PHI]] to i8

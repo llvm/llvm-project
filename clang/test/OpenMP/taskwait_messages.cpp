@@ -38,7 +38,7 @@ T tmain(T argc) {
   switch (argc) {
 #pragma omp taskwait
   case 1:
-#pragma omp taskwait
+#pragma omp taskwait // expected-error {{'#pragma omp taskwait' cannot be an immediate substatement}}
     break;
   default: {
 #pragma omp taskwait
@@ -50,7 +50,7 @@ T tmain(T argc) {
 #pragma omp taskwait
     }
 label:
-#pragma omp taskwait
+#pragma omp taskwait // expected-error {{'#pragma omp taskwait' cannot be an immediate substatement}}
 label1 : {
 #pragma omp taskwait
 }
@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
   switch (argc) {
 #pragma omp taskwait
   case 1:
-#pragma omp taskwait
+#pragma omp taskwait // expected-error {{'#pragma omp taskwait' cannot be an immediate substatement}}
     break;
   default: {
 #pragma omp taskwait
@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
 #pragma omp taskwait
     }
 label:
-#pragma omp taskwait
+#pragma omp taskwait // expected-error {{'#pragma omp taskwait' cannot be an immediate substatement}}
 label1 : {
 #pragma omp taskwait
 }

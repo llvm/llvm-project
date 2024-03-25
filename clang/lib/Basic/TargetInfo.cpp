@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file implements the TargetInfo and TargetInfoImpl interfaces.
+//  This file implements the TargetInfo interface.
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,7 +19,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <cstdlib>
 using namespace clang;
 
@@ -47,6 +47,7 @@ static const LangASMap FakeAddrSpaceMap = {
     11, // ptr32_uptr
     12, // ptr64
     13, // hlsl_groupshared
+    20, // wasm_funcref
 };
 
 // TargetInfo Constructor.
@@ -63,6 +64,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   HasIbm128 = false;
   HasFloat16 = false;
   HasBFloat16 = false;
+  HasFullBFloat16 = false;
   HasLongDouble = true;
   HasFPReturn = true;
   HasStrictFP = false;
@@ -98,7 +100,8 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   // https://www.gnu.org/software/libc/manual/html_node/Malloc-Examples.html.
   // This alignment guarantee also applies to Windows and Android. On Darwin
   // and OpenBSD, the alignment is 16 bytes on both 64-bit and 32-bit systems.
-  if (T.isGNUEnvironment() || T.isWindowsMSVCEnvironment() || T.isAndroid())
+  if (T.isGNUEnvironment() || T.isWindowsMSVCEnvironment() || T.isAndroid() ||
+      T.isOHOSFamily())
     NewAlign = Triple.isArch64Bit() ? 128 : Triple.isArch32Bit() ? 64 : 0;
   else if (T.isOSDarwin() || T.isOSOpenBSD())
     NewAlign = 128;
@@ -119,7 +122,6 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 0;
   MaxVectorAlign = 0;
   MaxTLSAlign = 0;
-  SimdDefaultAlign = 0;
   SizeType = UnsignedLong;
   PtrDiffType = SignedLong;
   IntMaxType = SignedLongLong;
@@ -549,26 +551,26 @@ ParsedTargetAttr TargetInfo::parseTargetAttr(StringRef Features) const {
     // TODO: Support the fpmath option. It will require checking
     // overall feature validity for the function with the rest of the
     // attributes on the function.
-    if (Feature.startswith("fpmath="))
+    if (Feature.starts_with("fpmath="))
       continue;
 
-    if (Feature.startswith("branch-protection=")) {
+    if (Feature.starts_with("branch-protection=")) {
       Ret.BranchProtection = Feature.split('=').second.trim();
       continue;
     }
 
     // While we're here iterating check for a different target cpu.
-    if (Feature.startswith("arch=")) {
+    if (Feature.starts_with("arch=")) {
       if (!Ret.CPU.empty())
         Ret.Duplicate = "arch=";
       else
         Ret.CPU = Feature.split("=").second.trim();
-    } else if (Feature.startswith("tune=")) {
+    } else if (Feature.starts_with("tune=")) {
       if (!Ret.Tune.empty())
         Ret.Duplicate = "tune=";
       else
         Ret.Tune = Feature.split("=").second.trim();
-    } else if (Feature.startswith("no-"))
+    } else if (Feature.starts_with("no-"))
       Ret.Features.push_back("-" + Feature.split("-").second.str());
     else
       Ret.Features.push_back("+" + Feature.str());
@@ -921,6 +923,10 @@ bool TargetInfo::validateInputConstraint(
   }
 
   return true;
+}
+
+bool TargetInfo::validatePointerAuthKey(const llvm::APSInt &value) const {
+  return false;
 }
 
 void TargetInfo::CheckFixedPointBits() const {

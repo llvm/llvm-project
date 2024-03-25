@@ -37,7 +37,7 @@ In addition, this check ignores functions that
 * are templated or part of a class template
 * have an empty body
 * do not (implicitly) use ``this`` at all
-  (see `readability-convert-member-functions-to-static <../readability/convert-member-functions-to-static.html>`_).
+  (see :doc:`readability-convert-member-functions-to-static <../readability/convert-member-functions-to-static>`).
 
 The following real-world examples will be preserved by the check:
 

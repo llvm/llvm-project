@@ -53,4 +53,4 @@ void printdbg(const char *format, ...);
 
 #define ORC_RT_DEBUG(X) ORC_RT_DEBUG_WITH_TYPE(DEBUG_TYPE, X)
 
-#endif // ORC_RT_COMMON_H
+#endif // ORC_RT_DEBUG_H

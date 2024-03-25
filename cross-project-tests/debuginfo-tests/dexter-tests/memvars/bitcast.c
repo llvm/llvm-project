@@ -3,8 +3,8 @@
 
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
-// RUN: %dexter --fail-lt 1.0 -w --debugger lldb \
-// RUN:     --builder 'clang-c' --cflags "-O3 -glldb" -- %s
+// RUN: %clang -std=gnu11 -O3 -glldb %s -o %t
+// RUN: %dexter --fail-lt 1.0 -w --debugger lldb --binary %t -- %s
 
 //// Adapted from https://bugs.llvm.org/show_bug.cgi?id=34136#c1
 //// LowerDbgDeclare has since been updated to look through bitcasts. We still

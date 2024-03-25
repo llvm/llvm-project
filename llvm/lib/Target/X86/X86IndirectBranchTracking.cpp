@@ -169,7 +169,7 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
           break;
         } else if (I->isEHLabel()) {
           // Old Landingpad BB (is not Landingpad now) with
-          // the the old "callee" EHLabel.
+          // the old "callee" EHLabel.
           MCSymbol *Sym = I->getOperand(0).getMCSymbol();
           if (!MF.hasCallSiteLandingPad(Sym))
             continue;

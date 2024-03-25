@@ -7,13 +7,12 @@ target triple = "powerpc64le-grtev4-linux-gnu"
 define void @foo(ptr %p1, i64 %v1, i8 %v2, i64 %v3) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li 7, 0
+; CHECK-NEXT:    std 7, 0(3)
 ; CHECK-NEXT:    mr 7, 5
 ; CHECK-NEXT:    rldimi. 7, 4, 8, 0
-; CHECK-NEXT:    mcrf 1, 0
+; CHECK-NEXT:    crnot 20, 2
 ; CHECK-NEXT:    andi. 5, 5, 1
-; CHECK-NEXT:    li 5, 0
-; CHECK-NEXT:    std 5, 0(3)
-; CHECK-NEXT:    crnot 20, 6
 ; CHECK-NEXT:    bc 4, 1, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    std 4, 0(3)

@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_fenv_unittests)
+add_custom_target(libc_fenv_unittests)
 
 add_libc_unittest(
   rounding_mode_test
@@ -87,13 +87,14 @@ add_libc_unittest(
 
 if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
          OR (${LIBC_TARGET_OS} STREQUAL "darwin")))
-  # Sanitizers don't like SIGFPE. So, we will run the 
+  # Sanitizers don't like SIGFPE. So, we will run the
   # tests which raise SIGFPE only in non-sanitizer builds.
   # The tests are also disabled for Windows and MacOS as they fail currently.
   # TODO: Investigate and fix the windows failures and enable them for Windows
   # and MacOS.
   add_fp_unittest(
     enabled_exceptions_test
+    UNIT_TEST_ONLY
     SUITE
       libc_fenv_unittests
     SRCS
@@ -104,10 +105,13 @@ if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
       libc.src.fenv.feraiseexcept
       libc.src.fenv.fetestexcept
       libc.src.__support.FPUtil.fenv_impl
+    LINK_LIBRARIES
+      LibcFPExceptionHelpers
   )
 
   add_fp_unittest(
     feholdexcept_test
+    UNIT_TEST_ONLY
     SUITE
       libc_fenv_unittests
     SRCS
@@ -116,5 +120,7 @@ if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
       libc.include.fenv
       libc.src.fenv.feholdexcept
       libc.src.__support.FPUtil.fenv_impl
+    LINK_LIBRARIES
+      LibcFPExceptionHelpers
   )
 endif()

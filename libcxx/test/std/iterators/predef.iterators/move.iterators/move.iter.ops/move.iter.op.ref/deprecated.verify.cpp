@@ -12,9 +12,6 @@
 
 #include <iterator>
 
-int main(int, char**) {
-  (void)std::move_iterator<int*>().operator->();
-  // expected-warning@-1{{'operator->' is deprecated}}
-
-  return 0;
+void f() {
+  (void)std::move_iterator<int*>().operator->(); // expected-warning {{'operator->' is deprecated}}
 }

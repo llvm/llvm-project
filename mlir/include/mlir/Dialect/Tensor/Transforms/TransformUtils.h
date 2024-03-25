@@ -209,7 +209,7 @@ private:
 /// either take the place of the source, allowing for a new, simpler
 /// `collapse_shape` op to replace `op`, or the `collapse_shape` op will be
 /// completely replaced by the `extract_slice` result. Either way, `op` is
-/// replaced and new new op is returned.
+/// replaced and the new op is returned.
 ///
 /// ### Example:
 /// ```

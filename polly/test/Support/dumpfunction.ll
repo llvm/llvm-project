@@ -1,9 +1,9 @@
 ; New pass manager
-; RUN: opt %loadNPMPolly -enable-new-pm=1 -O3 -polly -polly-position=before-vectorizer -polly-dump-before --disable-output %s
+; RUN: opt %loadNPMPolly -O3 -polly -polly-position=before-vectorizer -polly-dump-before --disable-output %s
 ; RUN: FileCheck --input-file=dumpfunction-callee-before.ll --check-prefix=CHECK --check-prefix=CALLEE %s
 ; RUN: FileCheck --input-file=dumpfunction-caller-before.ll --check-prefix=CHECK --check-prefix=CALLER %s
 ;
-; RUN: opt %loadNPMPolly -enable-new-pm=1 -O3 -polly -polly-position=before-vectorizer -polly-dump-after --disable-output %s
+; RUN: opt %loadNPMPolly -O3 -polly -polly-position=before-vectorizer -polly-dump-after --disable-output %s
 ; RUN: FileCheck --input-file=dumpfunction-callee-after.ll --check-prefix=CHECK --check-prefix=CALLEE %s
 ; RUN: FileCheck --input-file=dumpfunction-caller-after.ll --check-prefix=CHECK --check-prefix=CALLER %s
 
@@ -19,8 +19,6 @@
 
 
 %unrelated_type = type { i32 }
-
-@callee_alias = dso_local unnamed_addr alias void(i32, ptr, i32), ptr @callee
 
 define internal void @callee(i32 %n, ptr noalias nonnull %A, i32 %i) #0 {
 entry:

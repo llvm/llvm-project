@@ -12,7 +12,6 @@
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/CompletionRequest.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/Stream.h"
@@ -107,7 +106,7 @@ public:
   }
   bool SetPrompt(const char *) = delete;
 
-  virtual ConstString GetControlSequence(char ch) { return ConstString(); }
+  virtual llvm::StringRef GetControlSequence(char ch) { return {}; }
 
   virtual const char *GetCommandPrefix() { return nullptr; }
 
@@ -271,9 +270,7 @@ public:
     return true;
   }
 
-  virtual ConstString IOHandlerGetControlSequence(char ch) {
-    return ConstString();
-  }
+  virtual llvm::StringRef IOHandlerGetControlSequence(char ch) { return {}; }
 
   virtual const char *IOHandlerGetCommandPrefix() { return nullptr; }
 
@@ -295,24 +292,25 @@ protected:
 // the last line is equal to "end_line" which is specified in the constructor.
 class IOHandlerDelegateMultiline : public IOHandlerDelegate {
 public:
-  IOHandlerDelegateMultiline(const char *end_line,
+  IOHandlerDelegateMultiline(llvm::StringRef end_line,
                              Completion completion = Completion::None)
-      : IOHandlerDelegate(completion),
-        m_end_line((end_line && end_line[0]) ? end_line : "") {}
+      : IOHandlerDelegate(completion), m_end_line(end_line.str() + "\n") {}
 
   ~IOHandlerDelegateMultiline() override = default;
 
-  ConstString IOHandlerGetControlSequence(char ch) override {
+  llvm::StringRef IOHandlerGetControlSequence(char ch) override {
     if (ch == 'd')
-      return ConstString(m_end_line + "\n");
-    return ConstString();
+      return m_end_line;
+    return {};
   }
 
   bool IOHandlerIsInputComplete(IOHandler &io_handler,
                                 StringList &lines) override {
     // Determine whether the end of input signal has been entered
     const size_t num_lines = lines.GetSize();
-    if (num_lines > 0 && lines[num_lines - 1] == m_end_line) {
+    const llvm::StringRef end_line =
+        llvm::StringRef(m_end_line).drop_back(1); // Drop '\n'
+    if (num_lines > 0 && llvm::StringRef(lines[num_lines - 1]) == end_line) {
       // Remove the terminal line from "lines" so it doesn't appear in the
       // resulting input and return true to indicate we are done getting lines
       lines.PopBack();
@@ -330,7 +328,7 @@ public:
   IOHandlerEditline(Debugger &debugger, IOHandler::Type type,
                     const char *editline_name, // Used for saving history files
                     llvm::StringRef prompt, llvm::StringRef continuation_prompt,
-                    bool multi_line, bool color_prompts,
+                    bool multi_line, bool color,
                     uint32_t line_number_start, // If non-zero show line numbers
                                                 // starting at
                                                 // 'line_number_start'
@@ -342,7 +340,7 @@ public:
                     const lldb::StreamFileSP &error_sp, uint32_t flags,
                     const char *editline_name, // Used for saving history files
                     llvm::StringRef prompt, llvm::StringRef continuation_prompt,
-                    bool multi_line, bool color_prompts,
+                    bool multi_line, bool color,
                     uint32_t line_number_start, // If non-zero show line numbers
                                                 // starting at
                                                 // 'line_number_start'
@@ -373,7 +371,7 @@ public:
 
   void TerminalSizeChanged() override;
 
-  ConstString GetControlSequence(char ch) override {
+  llvm::StringRef GetControlSequence(char ch) override {
     return m_delegate.IOHandlerGetControlSequence(ch);
   }
 
@@ -405,7 +403,7 @@ public:
 
   void SetInterruptExits(bool b) { m_interrupt_exits = b; }
 
-  const StringList *GetCurrentLines() const { return m_current_lines_ptr; }
+  StringList GetCurrentLines() const;
 
   uint32_t GetCurrentLineIndex() const;
 
@@ -434,7 +432,7 @@ protected:
   uint32_t m_base_line_number; // If non-zero, then show line numbers in prompt
   uint32_t m_curr_line_idx;
   bool m_multi_line;
-  bool m_color_prompts;
+  bool m_color;
   bool m_interrupt_exits;
   std::string m_line_buffer;
 };
@@ -522,8 +520,9 @@ public:
             m_stack[num_io_handlers - 2]->GetType() == second_top_type);
   }
 
-  ConstString GetTopIOHandlerControlSequence(char ch) {
-    return ((m_top != nullptr) ? m_top->GetControlSequence(ch) : ConstString());
+  llvm::StringRef GetTopIOHandlerControlSequence(char ch) {
+    return ((m_top != nullptr) ? m_top->GetControlSequence(ch)
+                               : llvm::StringRef());
   }
 
   const char *GetTopIOHandlerCommandPrefix() {

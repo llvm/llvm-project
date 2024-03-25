@@ -9,11 +9,16 @@
 #include "src/stdlib/atof.h"
 #include "src/__support/common.h"
 #include "src/__support/str_to_float.h"
+#include "src/errno/libc_errno.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, atof, (const char *str)) {
-  return internal::strtofloatingpoint<double>(str, nullptr);
+  auto result = internal::strtofloatingpoint<double>(str);
+  if (result.has_error())
+    libc_errno = result.error;
+
+  return result.value;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

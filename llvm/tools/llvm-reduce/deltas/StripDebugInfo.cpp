@@ -18,7 +18,7 @@ using namespace llvm;
 static void stripDebugInfoImpl(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
   bool HasDebugInfo = any_of(Program.named_metadata(), [](NamedMDNode &NMD) {
-    return NMD.getName().startswith("llvm.dbg.");
+    return NMD.getName().starts_with("llvm.dbg.");
   });
   if (HasDebugInfo && !O.shouldKeep())
     StripDebugInfo(Program);

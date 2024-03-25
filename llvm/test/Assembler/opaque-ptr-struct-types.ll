@@ -1,4 +1,4 @@
-; RUN: opt -S -opaque-pointers < %s | opt -S -opaque-pointers | FileCheck %s
+; RUN: opt -S < %s | opt -S | FileCheck %s
 
 ; CHECK-DAG: %T1 = type { i8 }
 ; CHECK-DAG: %T2 = type { i8 }

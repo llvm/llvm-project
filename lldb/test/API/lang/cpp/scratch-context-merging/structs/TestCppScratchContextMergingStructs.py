@@ -16,7 +16,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-
     def common_setup(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -47,7 +46,7 @@ class TestCase(TestBase):
         self.do_pass(self.second_pass, var, type, children)
 
     def do_tests(self):
-        """ Just forwards all the variables/types/childrens to pull_in_and_merge. """
+        """Just forwards all the variables/types/childrens to pull_in_and_merge."""
         self.pull_in_and_merge(
             "decl_in_func", type="DeclInFunc", children=[ValueCheck(name="member")]
         )

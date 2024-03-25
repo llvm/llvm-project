@@ -1,12 +1,14 @@
 ! This test checks lowering of OpenACC init directive.
 
-! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 subroutine acc_init
+  implicit none
   logical :: ifCondition = .TRUE.
+  integer :: ifInt = 1
 
   !$acc init
-!CHECK: acc.init{{$}}
+!CHECK: acc.init{{ *}}{{$}}
 
   !$acc init if(.true.)
 !CHECK: [[IF1:%.*]] = arith.constant true
@@ -21,10 +23,16 @@ subroutine acc_init
 !CHECK: [[DEVNUM:%.*]] = arith.constant 1 : i32
 !CHECK: acc.init device_num([[DEVNUM]] : i32){{$}}
 
-  !$acc init device_num(1) device_type(1, 2)
+  !$acc init device_num(1) device_type(host, multicore)
 !CHECK: [[DEVNUM:%.*]] = arith.constant 1 : i32
-!CHECK: [[DEVTYPE1:%.*]] = arith.constant 1 : i32
-!CHECK: [[DEVTYPE2:%.*]] = arith.constant 2 : i32
-!CHECK: acc.init device_type([[DEVTYPE1]], [[DEVTYPE2]] : i32, i32) device_num([[DEVNUM]] : i32){{$}}
+!CHECK: acc.init device_num([[DEVNUM]] : i32) attributes {device_types = [#acc.device_type<host>, #acc.device_type<multicore>]}
+
+  !$acc init if(ifInt)
+!CHECK: %[[IFINT:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+!CHECK: %[[CONV:.*]] = fir.convert %[[IFINT]] : (i32) -> i1
+!CHECK: acc.init if(%[[CONV]])
+
+   !$acc init device_type(nvidia)
+!CHECK: acc.init attributes {device_types = [#acc.device_type<nvidia>]}
 
 end subroutine acc_init

@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-pc-linux -o %t.o
 # RUN: llvm-dwarfdump -v %t.o | FileCheck %s
 
-# CHECK-NOT: error
+# CHECK-NOT: error:
 # CHECK: DW_AT_location [DW_FORM_exprloc] (DW_OP_const8u 0x0, DW_OP_GNU_push_tls_address)
 # CHECK: DW_AT_location [DW_FORM_exprloc] (DW_OP_const4u 0x0, DW_OP_GNU_push_tls_address)
 

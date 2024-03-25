@@ -13,6 +13,8 @@
 #include "gtest/gtest.h"
 #include <optional>
 
+#include "../../test/lib/Dialect/Test/TestDialect.h"
+
 using namespace mlir;
 using namespace mlir::detail;
 
@@ -71,6 +73,20 @@ TEST(DenseSplatTest, BoolSplatRawRoundtrip) {
       DenseElementsAttr::getFromRawBuffer(shape, trueSplat.getRawData());
   EXPECT_TRUE(trueSplatFromRaw.isSplat());
 
+  EXPECT_EQ(trueSplat, trueSplatFromRaw);
+}
+
+TEST(DenseSplatTest, BoolSplatSmall) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  // Check that splats that don't fill entire byte are handled properly.
+  auto tensorType = RankedTensorType::get({4}, builder.getI1Type());
+  std::vector<char> data{0b00001111};
+  auto trueSplatFromRaw =
+      DenseIntOrFPElementsAttr::getFromRawBuffer(tensorType, data);
+  EXPECT_TRUE(trueSplatFromRaw.isSplat());
+  DenseElementsAttr trueSplat = DenseElementsAttr::get(tensorType, true);
   EXPECT_EQ(trueSplat, trueSplatFromRaw);
 }
 
@@ -278,7 +294,7 @@ static void checkNativeAccess(MLIRContext *ctx, ArrayRef<T> data,
 
   // Check that we cast to this attribute when possible.
   Attribute genericAttr = attr;
-  EXPECT_TRUE(genericAttr.template isa<AttrT>());
+  EXPECT_TRUE(isa<AttrT>(genericAttr));
 }
 template <typename AttrT, typename T>
 static void checkNativeIntAccess(Builder &builder, size_t intWidth) {
@@ -330,9 +346,9 @@ TEST(DenseResourceElementsAttrTest, CheckNoCast) {
   Attribute i32ResourceAttr = DenseI32ResourceElementsAttr::get(
       type, "resource", UnmanagedAsmResourceBlob::allocateInferAlign(data));
 
-  EXPECT_TRUE(i32ResourceAttr.isa<DenseI32ResourceElementsAttr>());
-  EXPECT_FALSE(i32ResourceAttr.isa<DenseF32ResourceElementsAttr>());
-  EXPECT_FALSE(i32ResourceAttr.isa<DenseBoolResourceElementsAttr>());
+  EXPECT_TRUE(isa<DenseI32ResourceElementsAttr>(i32ResourceAttr));
+  EXPECT_FALSE(isa<DenseF32ResourceElementsAttr>(i32ResourceAttr));
+  EXPECT_FALSE(isa<DenseBoolResourceElementsAttr>(i32ResourceAttr));
 }
 
 TEST(DenseResourceElementsAttrTest, CheckInvalidData) {
@@ -407,18 +423,18 @@ TEST(SparseElementsAttrTest, GetZero) {
   // Only index (0, 0) contains an element, others are supposed to return
   // the zero/empty value.
   auto zeroIntValue =
-      sparseInt.getValues<Attribute>()[{1, 1}].cast<IntegerAttr>();
+      cast<IntegerAttr>(sparseInt.getValues<Attribute>()[{1, 1}]);
   EXPECT_EQ(zeroIntValue.getInt(), 0);
   EXPECT_TRUE(zeroIntValue.getType() == intTy);
 
   auto zeroFloatValue =
-      sparseFloat.getValues<Attribute>()[{1, 1}].cast<FloatAttr>();
+      cast<FloatAttr>(sparseFloat.getValues<Attribute>()[{1, 1}]);
   EXPECT_EQ(zeroFloatValue.getValueAsDouble(), 0.0f);
   EXPECT_TRUE(zeroFloatValue.getType() == floatTy);
 
   auto zeroStringValue =
-      sparseString.getValues<Attribute>()[{1, 1}].cast<StringAttr>();
-  EXPECT_TRUE(zeroStringValue.getValue().empty());
+      cast<StringAttr>(sparseString.getValues<Attribute>()[{1, 1}]);
+  EXPECT_TRUE(zeroStringValue.empty());
   EXPECT_TRUE(zeroStringValue.getType() == stringTy);
 }
 
@@ -445,4 +461,44 @@ TEST(SubElementTest, Nested) {
             ArrayRef<Attribute>(
                 {strAttr, trueAttr, falseAttr, boolArrayAttr, dictAttr}));
 }
+
+// Test how many times we call copy-ctor when building an attribute.
+TEST(CopyCountAttr, CopyCount) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+
+  test::CopyCount::counter = 0;
+  test::CopyCount copyCount("hello");
+  test::TestCopyCountAttr::get(&context, std::move(copyCount));
+  int counter1 = test::CopyCount::counter;
+  test::CopyCount::counter = 0;
+  test::TestCopyCountAttr::get(&context, std::move(copyCount));
+#ifndef NDEBUG
+  // One verification enabled only in assert-mode requires a copy.
+  EXPECT_EQ(counter1, 1);
+  EXPECT_EQ(test::CopyCount::counter, 1);
+#else
+  EXPECT_EQ(counter1, 0);
+  EXPECT_EQ(test::CopyCount::counter, 0);
+#endif
+}
+
+// Test stripped printing using test dialect attribute.
+TEST(CopyCountAttr, PrintStripped) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+  // Doesn't matter which dialect attribute is used, just chose TestCopyCount
+  // given proximity.
+  test::CopyCount::counter = 0;
+  test::CopyCount copyCount("hello");
+  Attribute res = test::TestCopyCountAttr::get(&context, std::move(copyCount));
+
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  os << "|" << res << "|";
+  res.printStripped(os << "[");
+  os << "]";
+  EXPECT_EQ(os.str(), "|#test.copy_count<hello>|[copy_count<hello>]");
+}
+
 } // namespace

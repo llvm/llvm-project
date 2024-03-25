@@ -139,9 +139,8 @@ define <16 x i32> @PR42819(ptr %a0) {
 ; AVX512-LABEL: PR42819:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovdqu (%rdi), %ymm0
-; AVX512-NEXT:    movw $-8192, %ax # imm = 0xE000
-; AVX512-NEXT:    kmovw %eax, %k1
-; AVX512-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
+; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    valignd {{.*#+}} zmm0 = zmm1[3,4,5,6,7,8,9,10,11,12,13,14,15],zmm0[0,1,2]
 ; AVX512-NEXT:    retq
   %1 = load <8 x i32>, ptr %a0, align 4
   %2 = shufflevector <8 x i32> %1, <8 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -158,35 +157,35 @@ define void @PR42833() {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movl b(%rip), %eax
 ; SSE2-NEXT:    movdqa c+128(%rip), %xmm0
-; SSE2-NEXT:    movdqa c+144(%rip), %xmm1
+; SSE2-NEXT:    movdqa c+144(%rip), %xmm2
 ; SSE2-NEXT:    addl c+128(%rip), %eax
-; SSE2-NEXT:    movd %eax, %xmm2
+; SSE2-NEXT:    movd %eax, %xmm1
 ; SSE2-NEXT:    movd %eax, %xmm3
 ; SSE2-NEXT:    paddd %xmm0, %xmm3
 ; SSE2-NEXT:    movdqa d+144(%rip), %xmm4
-; SSE2-NEXT:    psubd %xmm1, %xmm4
-; SSE2-NEXT:    paddd %xmm1, %xmm1
+; SSE2-NEXT:    psubd %xmm2, %xmm4
+; SSE2-NEXT:    paddd %xmm2, %xmm2
 ; SSE2-NEXT:    movdqa %xmm0, %xmm5
 ; SSE2-NEXT:    paddd %xmm0, %xmm5
 ; SSE2-NEXT:    movss {{.*#+}} xmm5 = xmm3[0],xmm5[1,2,3]
-; SSE2-NEXT:    movdqa %xmm1, c+144(%rip)
+; SSE2-NEXT:    movdqa %xmm2, c+144(%rip)
 ; SSE2-NEXT:    movaps %xmm5, c+128(%rip)
-; SSE2-NEXT:    movdqa c+160(%rip), %xmm1
+; SSE2-NEXT:    movdqa c+160(%rip), %xmm2
 ; SSE2-NEXT:    movdqa c+176(%rip), %xmm3
 ; SSE2-NEXT:    movdqa d+160(%rip), %xmm5
 ; SSE2-NEXT:    movdqa d+176(%rip), %xmm6
 ; SSE2-NEXT:    movdqa d+128(%rip), %xmm7
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE2-NEXT:    psubd %xmm0, %xmm7
 ; SSE2-NEXT:    psubd %xmm3, %xmm6
-; SSE2-NEXT:    psubd %xmm1, %xmm5
+; SSE2-NEXT:    psubd %xmm2, %xmm5
 ; SSE2-NEXT:    movdqa %xmm5, d+160(%rip)
 ; SSE2-NEXT:    movdqa %xmm6, d+176(%rip)
 ; SSE2-NEXT:    movdqa %xmm4, d+144(%rip)
 ; SSE2-NEXT:    movdqa %xmm7, d+128(%rip)
 ; SSE2-NEXT:    paddd %xmm3, %xmm3
-; SSE2-NEXT:    paddd %xmm1, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, c+160(%rip)
+; SSE2-NEXT:    paddd %xmm2, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, c+160(%rip)
 ; SSE2-NEXT:    movdqa %xmm3, c+176(%rip)
 ; SSE2-NEXT:    retq
 ;

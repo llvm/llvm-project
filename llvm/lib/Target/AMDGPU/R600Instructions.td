@@ -782,7 +782,7 @@ def SETNE_DX10 : R600_2OP <
 def FRACT : R600_1OP_Helper <0x10, "FRACT", AMDGPUfract>;
 def TRUNC : R600_1OP_Helper <0x11, "TRUNC", ftrunc>;
 def CEIL : R600_1OP_Helper <0x12, "CEIL", fceil>;
-def RNDNE : R600_1OP_Helper <0x13, "RNDNE", frint>;
+def RNDNE : R600_1OP_Helper <0x13, "RNDNE", froundeven>;
 def FLOOR : R600_1OP_Helper <0x14, "FLOOR", ffloor>;
 
 def MOV : R600_1OP <0x19, "MOV", []>;
@@ -1090,7 +1090,7 @@ multiclass CUBE_Common <bits<11> inst> {
 } // End mayLoad = 0, mayStore = 0, hasSideEffects = 0
 
 class EXP_IEEE_Common <bits<11> inst> : R600_1OP_Helper <
-  inst, "EXP_IEEE", fexp2
+  inst, "EXP_IEEE", AMDGPUexp
 > {
   let Itinerary = TransALU;
 }
@@ -1124,7 +1124,7 @@ class LOG_CLAMPED_Common <bits<11> inst> : R600_1OP <
 >;
 
 class LOG_IEEE_Common <bits<11> inst> : R600_1OP_Helper <
-  inst, "LOG_IEEE", flog2
+  inst, "LOG_IEEE", AMDGPUlog
 > {
   let Itinerary = TransALU;
 }

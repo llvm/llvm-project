@@ -39,10 +39,10 @@ static bool IsCFError(QualType T, IdentifierInfo *II);
 namespace {
 class NSErrorMethodChecker
     : public Checker< check::ASTDecl<ObjCMethodDecl> > {
-  mutable IdentifierInfo *II;
+  mutable IdentifierInfo *II = nullptr;
 
 public:
-  NSErrorMethodChecker() : II(nullptr) {}
+  NSErrorMethodChecker() = default;
 
   void checkASTDecl(const ObjCMethodDecl *D,
                     AnalysisManager &mgr, BugReporter &BR) const;

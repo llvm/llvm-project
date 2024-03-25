@@ -48,6 +48,10 @@ defm codepage : LongShort<"c", "codepage", "Default codepage to use">;
 
 defm language : LongShort<"l", "language", "Default language to use (0x0-0xffff)">;
 
+def use_temp_file: Flag<["--"], "use-temp-file">,
+                   HelpText<"Mimic GNU windres preprocessor option handling "
+                            "(don't unescape preprocessor options)">;
+
 defm verbose : F<"v", "verbose", "Enable verbose output">;
 defm version : F<"V", "version", "Display version">;
 
@@ -57,6 +61,3 @@ defm help : F<"h", "help", "Display this message and exit">;
 def _HASH_HASH_HASH : Flag<["-"], "###">;
 
 def no_preprocess : Flag<["--"], "no-preprocess">;
-
-// Unimplemented options for compatibility
-def use_temp_file: Flag<["--"], "use-temp-file">;

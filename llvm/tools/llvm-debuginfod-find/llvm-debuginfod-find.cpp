@@ -15,6 +15,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Debuginfod/BuildIDFetcher.h"
 #include "llvm/Debuginfod/Debuginfod.h"
 #include "llvm/Debuginfod/HTTPClient.h"
@@ -122,6 +123,6 @@ std::string fetchDebugInfo(object::BuildIDRef BuildID) {
           DebuginfodFetcher(DebugFileDirectory).fetch(BuildID))
     return *Path;
   errs() << "Build ID " << llvm::toHex(BuildID, /*Lowercase=*/true)
-         << " could not be found.";
+         << " could not be found.\n";
   exit(1);
 }

@@ -80,7 +80,6 @@ namespace lldb_private {
 class Breakpoint : public std::enable_shared_from_this<Breakpoint>,
                    public Stoppoint {
 public:
-  static ConstString GetEventIdentifier();
   static const char *
       BreakpointEventTypeAsCString(lldb::BreakpointEventType type);
 
@@ -106,11 +105,11 @@ public:
 
     ~BreakpointEventData() override;
 
-    static ConstString GetFlavorString();
-    
+    static llvm::StringRef GetFlavorString();
+
     Log *GetLogChannel() override;
 
-    ConstString GetFlavor() const override;
+    llvm::StringRef GetFlavor() const override;
 
     lldb::BreakpointEventType GetBreakpointEventType() const;
 
@@ -524,9 +523,8 @@ public:
 
   lldb::SearchFilterSP GetSearchFilter() { return m_filter_sp; }
 
-private: // The target needs to manage adding & removing names.  It will do the
-         // checking for name validity as well.
-  bool AddName(llvm::StringRef new_name);
+private:
+  void AddName(llvm::StringRef new_name);
 
   void RemoveName(const char *name_to_remove) {
     if (name_to_remove)
@@ -639,7 +637,6 @@ private:
   Breakpoint(Target &new_target, const Breakpoint &bp_to_copy_from);
 
   // For Breakpoint only
-  bool m_being_created;
   bool
       m_hardware; // If this breakpoint is required to use a hardware breakpoint
   Target &m_target; // The target that holds this breakpoint.
@@ -674,7 +671,7 @@ private:
 
   void SendBreakpointChangedEvent(lldb::BreakpointEventType eventKind);
 
-  void SendBreakpointChangedEvent(BreakpointEventData *data);
+  void SendBreakpointChangedEvent(const lldb::EventDataSP &breakpoint_data_sp);
 
   Breakpoint(const Breakpoint &) = delete;
   const Breakpoint &operator=(const Breakpoint &) = delete;

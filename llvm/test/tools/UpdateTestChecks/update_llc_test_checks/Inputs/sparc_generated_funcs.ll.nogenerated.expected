@@ -15,12 +15,12 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    st %g0, [%fp+-4]
 ; CHECK-NEXT:    cmp %g0, 0
 ; CHECK-NEXT:    st %g0, [%fp+-8]
-; CHECK-NEXT:    be .LBB0_1
+; CHECK-NEXT:    be .LBB0_2
 ; CHECK-NEXT:    mov 1, %i0
-; CHECK-NEXT:  ! %bb.2:
+; CHECK-NEXT:  ! %bb.1:
 ; CHECK-NEXT:    ba .LBB0_3
 ; CHECK-NEXT:    st %i0, [%fp+-16]
-; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    st %i0, [%fp+-8]
 ; CHECK-NEXT:    mov 2, %i0
 ; CHECK-NEXT:    st %i0, [%fp+-12]
@@ -31,13 +31,13 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    ld [%fp+-8], %i0
 ; CHECK-NEXT:    cmp %i0, 0
-; CHECK-NEXT:    be .LBB0_4
+; CHECK-NEXT:    be .LBB0_5
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:  ! %bb.5:
+; CHECK-NEXT:  ! %bb.4:
 ; CHECK-NEXT:    mov 1, %i0
 ; CHECK-NEXT:    ba .LBB0_6
 ; CHECK-NEXT:    st %i0, [%fp+-16]
-; CHECK-NEXT:  .LBB0_4:
+; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    mov 1, %i0
 ; CHECK-NEXT:    st %i0, [%fp+-8]
 ; CHECK-NEXT:    mov 2, %i0

@@ -1,10 +1,9 @@
 // This is the ASAN test of the same name ported to HWAsan.
 
-// RUN: %clangxx_hwasan -mllvm -hwasan-use-after-scope -std=c++11 -O1 %s -o %t && \
+// RUN: %clangxx_hwasan -std=c++11 -O1 %s -o %t && \
 // RUN:     not %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: aarch64-target-arch || riscv64-target-arch
-// REQUIRES: stable-runtime
 
 struct IntHolder {
   __attribute__((noinline)) const IntHolder &Self() const {

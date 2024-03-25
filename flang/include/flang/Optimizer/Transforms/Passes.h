@@ -10,6 +10,8 @@
 #define FORTRAN_OPTIMIZER_TRANSFORMS_PASSES_H
 
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
 #include <memory>
@@ -20,6 +22,7 @@ class GreedyRewriteConfig;
 class Operation;
 class Pass;
 class Region;
+class ModuleOp;
 } // namespace mlir
 
 namespace fir {
@@ -35,13 +38,16 @@ namespace fir {
 #define GEN_PASS_DECL_ANNOTATECONSTANTOPERANDS
 #define GEN_PASS_DECL_ARRAYVALUECOPY
 #define GEN_PASS_DECL_CHARACTERCONVERSION
-#define GEN_PASS_DECL_CFGCONVERSION
+#define GEN_PASS_DECL_CFGCONVERSIONONFUNC
+#define GEN_PASS_DECL_CFGCONVERSIONONREDUCTION
 #define GEN_PASS_DECL_EXTERNALNAMECONVERSION
 #define GEN_PASS_DECL_MEMREFDATAFLOWOPT
 #define GEN_PASS_DECL_SIMPLIFYINTRINSICS
 #define GEN_PASS_DECL_MEMORYALLOCATIONOPT
 #define GEN_PASS_DECL_SIMPLIFYREGIONLITE
 #define GEN_PASS_DECL_ALGEBRAICSIMPLIFICATION
+#define GEN_PASS_DECL_POLYMORPHICOPCONVERSION
+#define GEN_PASS_DECL_OPENACCDATAOPERANDCONVERSION
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
 std::unique_ptr<mlir::Pass> createAbstractResultOnFuncOptPass();
@@ -49,14 +55,20 @@ std::unique_ptr<mlir::Pass> createAbstractResultOnGlobalOptPass();
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
 std::unique_ptr<mlir::Pass>
 createArrayValueCopyPass(fir::ArrayValueCopyOptions options = {});
-std::unique_ptr<mlir::Pass> createFirToCfgPass();
+std::unique_ptr<mlir::Pass> createFirToCfgOnFuncPass();
+std::unique_ptr<mlir::Pass> createFirToCfgOnReductionPass();
 std::unique_ptr<mlir::Pass> createCharacterConversionPass();
 std::unique_ptr<mlir::Pass> createExternalNameConversionPass();
+std::unique_ptr<mlir::Pass>
+createExternalNameConversionPass(bool appendUnderscore);
 std::unique_ptr<mlir::Pass> createMemDataFlowOptPass();
 std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
 std::unique_ptr<mlir::Pass> createMemoryAllocationPass();
+std::unique_ptr<mlir::Pass> createStackArraysPass();
+std::unique_ptr<mlir::Pass> createAliasTagsPass();
 std::unique_ptr<mlir::Pass> createSimplifyIntrinsicsPass();
 std::unique_ptr<mlir::Pass> createAddDebugFoundationPass();
+std::unique_ptr<mlir::Pass> createLoopVersioningPass();
 
 std::unique_ptr<mlir::Pass>
 createMemoryAllocationPass(bool dynOnHeap, std::size_t maxStackSize);
@@ -65,6 +77,30 @@ std::unique_ptr<mlir::Pass> createSimplifyRegionLitePass();
 std::unique_ptr<mlir::Pass> createAlgebraicSimplificationPass();
 std::unique_ptr<mlir::Pass>
 createAlgebraicSimplificationPass(const mlir::GreedyRewriteConfig &config);
+std::unique_ptr<mlir::Pass> createPolymorphicOpConversionPass();
+
+std::unique_ptr<mlir::Pass> createOMPDescriptorMapInfoGenPass();
+std::unique_ptr<mlir::Pass> createOMPFunctionFilteringPass();
+std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
+createOMPMarkDeclareTargetPass();
+
+std::unique_ptr<mlir::Pass> createVScaleAttrPass();
+std::unique_ptr<mlir::Pass>
+createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr);
+
+struct FunctionAttrTypes {
+  mlir::LLVM::framePointerKind::FramePointerKind framePointerKind =
+      mlir::LLVM::framePointerKind::FramePointerKind::None;
+};
+
+std::unique_ptr<mlir::Pass> createFunctionAttrPass();
+std::unique_ptr<mlir::Pass>
+createFunctionAttrPass(FunctionAttrTypes &functionAttr, bool noInfsFPMath,
+                       bool noNaNsFPMath, bool approxFuncFPMath,
+                       bool noSignedZerosFPMath, bool unsafeFPMath);
+
+void populateCfgConversionRewrites(mlir::RewritePatternSet &patterns,
+                                   bool forceLoopToExecuteOnce = false);
 
 // declarative passes
 #define GEN_PASS_REGISTRATION

@@ -14,23 +14,13 @@
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
+
+class ConversionTarget;
+class TypeConverter;
+
 namespace scf {
-/// Generate a pipelined version of the scf.for loop based on the schedule given
-/// as option. This applies the mechanical transformation of changing the loop
-/// and generating the prologue/epilogue for the pipelining and doesn't make any
-/// decision regarding the schedule.
-/// Based on the options the loop is split into several stages.
-/// The transformation assumes that the scheduling given by user is valid.
-/// For example if we break a loop into 3 stages named S0, S1, S2 we would
-/// generate the following code with the number in parenthesis as the iteration
-/// index:
-/// S0(0)                        // Prologue
-/// S0(1) S1(0)                  // Prologue
-/// scf.for %I = %C0 to %N - 2 {
-///  S0(I+2) S1(I+1) S2(I)       // Pipelined kernel
-/// }
-/// S1(N) S2(N-1)                // Epilogue
-/// S2(N)                        // Epilogue
+
+// TODO: such patterns should be auto-generated.
 class ForLoopPipeliningPattern : public OpRewritePattern<ForOp> {
 public:
   ForLoopPipeliningPattern(const PipeliningOption &options,
@@ -42,11 +32,52 @@ public:
   }
 
   FailureOr<ForOp> returningMatchAndRewrite(ForOp forOp,
-                                            PatternRewriter &rewriter) const;
+                                            PatternRewriter &rewriter) const {
+    return pipelineForLoop(rewriter, forOp, options);
+  }
 
 protected:
   PipeliningOption options;
 };
+
+/// Populates patterns for SCF structural type conversions and sets up the
+/// provided ConversionTarget with the appropriate legality configuration for
+/// the ops to get converted properly.
+///
+/// A "structural" type conversion is one where the underlying ops are
+/// completely agnostic to the actual types involved and simply need to update
+/// their types. An example of this is scf.if -- the scf.if op and the
+/// corresponding scf.yield ops need to update their types accordingly to the
+/// TypeConverter, but otherwise don't care what type conversions are happening.
+void populateSCFStructuralTypeConversionsAndLegality(
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    ConversionTarget &target);
+
+/// Similar to `populateSCFStructuralTypeConversionsAndLegality` but does not
+/// populate the conversion target.
+void populateSCFStructuralTypeConversions(TypeConverter &typeConverter,
+                                          RewritePatternSet &patterns);
+
+/// Updates the ConversionTarget with dynamic legality of SCF operations based
+/// on the provided type converter.
+void populateSCFStructuralTypeConversionTarget(
+    const TypeConverter &typeConverter, ConversionTarget &target);
+
+/// Populates the provided pattern set with patterns that do 1:N type
+/// conversions on (some) SCF ops. This is intended to be used with
+/// applyPartialOneToNConversion.
+void populateSCFStructuralOneToNTypeConversions(TypeConverter &typeConverter,
+                                                RewritePatternSet &patterns);
+
+/// Populate patterns for SCF software pipelining transformation. See the
+/// ForLoopPipeliningPattern for the transformation details.
+void populateSCFLoopPipeliningPatterns(RewritePatternSet &patterns,
+                                       const PipeliningOption &options);
+
+/// Populate patterns for canonicalizing operations inside SCF loop bodies.
+/// At the moment, only affine.min/max computations with iteration variables,
+/// loop bounds and loop steps are canonicalized.
+void populateSCFForLoopCanonicalizationPatterns(RewritePatternSet &patterns);
 
 } // namespace scf
 } // namespace mlir

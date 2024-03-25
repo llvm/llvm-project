@@ -7,8 +7,8 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
-class TestArtificialFrameThreadStepOut1(TestBase):
 
+class TestArtificialFrameThreadStepOut1(TestBase):
     # If your test case doesn't stress debug info, then
     # set this to true.  That way it won't be run once for
     # each debug info format.
@@ -21,11 +21,12 @@ class TestArtificialFrameThreadStepOut1(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
-        breakpoint = target.BreakpointCreateBySourceRegex("break here",
-                lldb.SBFileSpec("main.cpp"))
-        self.assertTrue(breakpoint and
-                        breakpoint.GetNumLocations() == 1,
-                        VALID_BREAKPOINT)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            "break here", lldb.SBFileSpec("main.cpp")
+        )
+        self.assertTrue(
+            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
+        )
 
         error = lldb.SBError()
         launch_info = target.GetLaunchInfo()
@@ -33,11 +34,10 @@ class TestArtificialFrameThreadStepOut1(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Did we hit our breakpoint?
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process,
-                breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
         self.assertEqual(
-            len(threads), 1,
-            "There should be a thread stopped at our breakpoint")
+            len(threads), 1, "There should be a thread stopped at our breakpoint"
+        )
 
         self.assertEqual(breakpoint.GetHitCount(), 1)
 
@@ -88,4 +88,3 @@ class TestArtificialFrameThreadStepOut1(TestBase):
         frame4 = thread.GetSelectedFrame()
         self.assertEqual(frame4.GetDisplayFunctionName(), "main")
         self.assertFalse(frame2.IsArtificial())
-

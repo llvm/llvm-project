@@ -35,8 +35,8 @@ define i8 @calli8_stack() {
 ; CHECK-LABEL: calli8_stack:
 ; CHECK: ldi [[REG1:r[0-9]+]], 10
 ; CHECK: ldi [[REG2:r[0-9]+]], 11
-; CHECK: std Z+1, [[REG1]]
 ; CHECK: std Z+2, [[REG2]]
+; CHECK: std Z+1, [[REG1]]
 ; AVR6:  call foo8_3
 ; AVR2:  rcall foo8_3
     %result1 = call i8 @foo8_3(i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11)
@@ -59,12 +59,12 @@ define i16 @calli16_stack() {
 ; CHECK-LABEL: calli16_stack:
 ; CHECK: ldi [[REG1:r[0-9]+]], 10
 ; CHECK: ldi [[REG2:r[0-9]+]], 2
-; CHECK: std Z+3, [[REG1]]
 ; CHECK: std Z+4, [[REG2]]
+; CHECK: std Z+3, [[REG1]]
 ; CHECK: ldi [[REG1:r[0-9]+]], 9
 ; CHECK: ldi [[REG2:r[0-9]+]], 2
-; CHECK: std Z+1, [[REG1]]
 ; CHECK: std Z+2, [[REG2]]
+; CHECK: std Z+1, [[REG1]]
 ; AVR6:  call foo16_2
 ; AVR2:  rcall foo16_2
     %result1 = call i16 @foo16_2(i16 512, i16 513, i16 514, i16 515, i16 516, i16 517, i16 518, i16 519, i16 520, i16 521, i16 522)
@@ -91,12 +91,12 @@ define i32 @calli32_stack() {
 ; CHECK-LABEL: calli32_stack:
 ; CHECK: ldi [[REG1:r[0-9]+]], 15
 ; CHECK: ldi [[REG2:r[0-9]+]], 2
-; CHECK: std Z+3, [[REG1]]
 ; CHECK: std Z+4, [[REG2]]
+; CHECK: std Z+3, [[REG1]]
 ; CHECK: ldi [[REG1:r[0-9]+]], 64
 ; CHECK: ldi [[REG2:r[0-9]+]], 66
-; CHECK: std Z+1, [[REG1]]
 ; CHECK: std Z+2, [[REG2]]
+; CHECK: std Z+1, [[REG1]]
 ; AVR6:  call foo32_2
 ; AVR2:  rcall foo32_2
     %result1 = call i32 @foo32_2(i32 1, i32 2, i32 3, i32 4, i32 34554432)
@@ -124,20 +124,20 @@ define i64 @calli64_stack() {
 
 ; CHECK: ldi [[REG1:r[0-9]+]], 31
 ; CHECK: ldi [[REG2:r[0-9]+]], 242
-; CHECK: std Z+7, [[REG1]]
 ; CHECK: std Z+8, [[REG2]]
+; CHECK: std Z+7, [[REG1]]
 ; CHECK: ldi [[REG1:r[0-9]+]], 76
 ; CHECK: ldi [[REG2:r[0-9]+]], 73
-; CHECK: std Z+5, [[REG1]]
 ; CHECK: std Z+6, [[REG2]]
+; CHECK: std Z+5, [[REG1]]
 ; CHECK: ldi [[REG1:r[0-9]+]], 155
 ; CHECK: ldi [[REG2:r[0-9]+]], 88
-; CHECK: std Z+3, [[REG1]]
 ; CHECK: std Z+4, [[REG2]]
+; CHECK: std Z+3, [[REG1]]
 ; CHECK: ldi [[REG1:r[0-9]+]], 255
 ; CHECK: ldi [[REG2:r[0-9]+]], 255
-; CHECK: std Z+1, [[REG1]]
 ; CHECK: std Z+2, [[REG2]]
+; CHECK: std Z+1, [[REG1]]
 ; AVR6:  call foo64_2
 ; AVR2:  rcall foo64_2
     %result1 = call i64 @foo64_2(i64 1, i64 2, i64 17446744073709551615)
@@ -146,7 +146,7 @@ define i64 @calli64_stack() {
 
 ; Test passing arguments through the stack when the call frame is allocated
 ; in the prologue.
-declare void @foo64_3(i64, i64, i64, i8, i16*)
+declare void @foo64_3(i64, i64, i64, i8, ptr)
 
 define void @testcallprologue() {
 ; CHECK-LABEL: testcallprologue:
@@ -157,29 +157,29 @@ define void @testcallprologue() {
 ; CHECK: std Y+9, [[REG1]]
 ; CHECK: ldi [[REG1:r[0-9]+]], 11
 ; CHECK: ldi [[REG2:r[0-9]+]], 10
-; CHECK: std Y+7, [[REG1]]
 ; CHECK: std Y+8, [[REG2]]
+; CHECK: std Y+7, [[REG1]]
 ; CHECK: ldi [[REG1:r[0-9]+]], 13
 ; CHECK: ldi [[REG2:r[0-9]+]], 12
-; CHECK: std Y+5, [[REG1]]
 ; CHECK: std Y+6, [[REG2]]
+; CHECK: std Y+5, [[REG1]]
 ; CHECK: ldi [[REG1:r[0-9]+]], 15
 ; CHECK: ldi [[REG2:r[0-9]+]], 14
-; CHECK: std Y+3, [[REG1]]
 ; CHECK: std Y+4, [[REG2]]
+; CHECK: std Y+3, [[REG1]]
 ; CHECK: ldi [[REG1:r[0-9]+]], 8
 ; CHECK: ldi [[REG2:r[0-9]+]], 9
-; CHECK: std Y+1, [[REG1]]
 ; CHECK: std Y+2, [[REG2]]
+; CHECK: std Y+1, [[REG1]]
 ; CHECK: pop r29
 ; CHECK: pop r28
   %p = alloca [8 x i16]
-  %arraydecay = getelementptr inbounds [8 x i16], [8 x i16]* %p, i16 0, i16 0
-  call void @foo64_3(i64 723685415333071112, i64 723685415333071112, i64 723685415333071112, i8 88, i16* %arraydecay)
+  %arraydecay = getelementptr inbounds [8 x i16], ptr %p, i16 0, i16 0
+  call void @foo64_3(i64 723685415333071112, i64 723685415333071112, i64 723685415333071112, i8 88, ptr %arraydecay)
   ret void
 }
 
-define i32 @icall(i32 (i32) addrspace(1)* %foo) {
+define i32 @icall(ptr addrspace(1) %foo) {
 ; CHECK-LABEL: icall:
 ; AVR6:  movw r30, r24
 ; AVR2:  mov r30, r24

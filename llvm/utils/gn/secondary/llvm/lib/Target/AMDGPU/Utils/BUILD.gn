@@ -14,6 +14,7 @@ static_library("Utils") {
     # includes the generated AMDGPUGenRegisterBank.inc file :/
     "../:AMDGPUGenRegisterBank",
     "//llvm/lib/BinaryFormat",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
     "//llvm/lib/Support",

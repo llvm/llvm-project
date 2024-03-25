@@ -13,7 +13,6 @@ define float @v_constained_fadd_f32_fpexcept_strict(float %x, float %y) #0 {
 ; GFX10PLUS-LABEL: v_constained_fadd_f32_fpexcept_strict:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %val = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -30,7 +29,6 @@ define float @v_constained_fadd_f32_fpexcept_ignore(float %x, float %y) #0 {
 ; GFX10PLUS-LABEL: v_constained_fadd_f32_fpexcept_ignore:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %val = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -47,7 +45,6 @@ define float @v_constained_fadd_f32_fpexcept_maytrap(float %x, float %y) #0 {
 ; GFX10PLUS-LABEL: v_constained_fadd_f32_fpexcept_maytrap:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %val = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
@@ -65,7 +62,6 @@ define <2 x float> @v_constained_fadd_v2f32_fpexcept_strict(<2 x float> %x, <2 x
 ; GFX10-LABEL: v_constained_fadd_v2f32_fpexcept_strict:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f32_e32 v0, v0, v2
 ; GFX10-NEXT:    v_add_f32_e32 v1, v1, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -73,7 +69,6 @@ define <2 x float> @v_constained_fadd_v2f32_fpexcept_strict(<2 x float> %x, <2 x
 ; GFX11-LABEL: v_constained_fadd_v2f32_fpexcept_strict:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_add_f32 v0, v0, v2 :: v_dual_add_f32 v1, v1, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> %x, <2 x float> %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -91,7 +86,6 @@ define <2 x float> @v_constained_fadd_v2f32_fpexcept_ignore(<2 x float> %x, <2 x
 ; GFX10-LABEL: v_constained_fadd_v2f32_fpexcept_ignore:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f32_e32 v0, v0, v2
 ; GFX10-NEXT:    v_add_f32_e32 v1, v1, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -99,7 +93,6 @@ define <2 x float> @v_constained_fadd_v2f32_fpexcept_ignore(<2 x float> %x, <2 x
 ; GFX11-LABEL: v_constained_fadd_v2f32_fpexcept_ignore:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_add_f32 v0, v0, v2 :: v_dual_add_f32 v1, v1, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> %x, <2 x float> %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -117,7 +110,6 @@ define <2 x float> @v_constained_fadd_v2f32_fpexcept_maytrap(<2 x float> %x, <2 
 ; GFX10-LABEL: v_constained_fadd_v2f32_fpexcept_maytrap:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f32_e32 v0, v0, v2
 ; GFX10-NEXT:    v_add_f32_e32 v1, v1, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -125,7 +117,6 @@ define <2 x float> @v_constained_fadd_v2f32_fpexcept_maytrap(<2 x float> %x, <2 
 ; GFX11-LABEL: v_constained_fadd_v2f32_fpexcept_maytrap:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_add_f32 v0, v0, v2 :: v_dual_add_f32 v1, v1, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> %x, <2 x float> %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
@@ -144,7 +135,6 @@ define <3 x float> @v_constained_fadd_v3f32_fpexcept_strict(<3 x float> %x, <3 x
 ; GFX10-LABEL: v_constained_fadd_v3f32_fpexcept_strict:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f32_e32 v0, v0, v3
 ; GFX10-NEXT:    v_add_f32_e32 v1, v1, v4
 ; GFX10-NEXT:    v_add_f32_e32 v2, v2, v5
@@ -153,7 +143,6 @@ define <3 x float> @v_constained_fadd_v3f32_fpexcept_strict(<3 x float> %x, <3 x
 ; GFX11-LABEL: v_constained_fadd_v3f32_fpexcept_strict:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_add_f32 v0, v0, v3 :: v_dual_add_f32 v1, v1, v4
 ; GFX11-NEXT:    v_add_f32_e32 v2, v2, v5
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -186,10 +175,9 @@ define float @v_constained_fadd_f32_fpexcept_strict_fabs_lhs(float %x, float %y)
 ; GFX10PLUS-LABEL: v_constained_fadd_f32_fpexcept_strict_fabs_lhs:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_add_f32_e64 v0, |v0|, v1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
-  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %fabs.x = call float @llvm.fabs.f32(float %x) #0
   %val = call float @llvm.experimental.constrained.fadd.f32(float %fabs.x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %val
 }
@@ -204,10 +192,9 @@ define float @v_constained_fadd_f32_fpexcept_strict_fabs_rhs(float %x, float %y)
 ; GFX10PLUS-LABEL: v_constained_fadd_f32_fpexcept_strict_fabs_rhs:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_add_f32_e64 v0, v0, |v1|
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
-  %fabs.y = call float @llvm.fabs.f32(float %y)
+  %fabs.y = call float @llvm.fabs.f32(float %y) #0
   %val = call float @llvm.experimental.constrained.fadd.f32(float %x, float %fabs.y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %val
 }
@@ -222,19 +209,17 @@ define float @v_constained_fadd_f32_fpexcept_strict_fneg_fabs_lhs(float %x, floa
 ; GFX10PLUS-LABEL: v_constained_fadd_f32_fpexcept_strict_fneg_fabs_lhs:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_sub_f32_e64 v0, v1, |v0|
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
-  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %fabs.x = call float @llvm.fabs.f32(float %x) #0
   %neg.fabs.x = fneg float %fabs.x
   %val = call float @llvm.experimental.constrained.fadd.f32(float %neg.fabs.x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %val
 }
 
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata) #1
-declare <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float>, <2 x float>, metadata, metadata) #1
-declare <3 x float> @llvm.experimental.constrained.fadd.v3f32(<3 x float>, <3 x float>, metadata, metadata) #1
+declare float @llvm.fabs.f32(float)
+declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
+declare <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float>, <2 x float>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.fadd.v3f32(<3 x float>, <3 x float>, metadata, metadata)
 
 attributes #0 = { strictfp }
-attributes #1 = { inaccessiblememonly nounwind willreturn }

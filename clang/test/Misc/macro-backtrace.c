@@ -16,7 +16,7 @@
 
 void f(int *ip, float *fp) {
   if (M12(ip, fp)) { }
-  // RUN: %clang_cc1 -fsyntax-only -fmacro-backtrace-limit 5 %s 2>&1 \
+  // RUN: %clang_cc1 -fsyntax-only -fmacro-backtrace-limit=5 %s 2>&1 \
   // RUN:   | FileCheck %s -check-prefix=CHECK-LIMIT
   // CHECK-LIMIT: macro-backtrace.c:18:7: warning: comparison of distinct pointer types ('int *' and 'float *')
   // CHECK-LIMIT: if (M12(ip, fp)) { }

@@ -49,6 +49,9 @@ struct TestInputs {
   /// Keys are plain filenames ("foo.h"), values are file content.
   llvm::StringMap<std::string> ExtraFiles = {};
 
+  /// Filename to use for translation unit. A default will be used when empty.
+  std::string FileName;
+
   /// By default, error diagnostics during parsing are reported as gtest errors.
   /// To suppress this, set ErrorOK or include "error-ok" in a comment in Code.
   /// In either case, all diagnostics appear in TestAST::diagnostics().

@@ -51,7 +51,6 @@ __attribute__ (( __objc_root_class__ ))
 }
 @end
 
-// rdar://problem/33102722
 // Typo correction for a property when it has as correction candidates
 // synthesized ivar and a class name, both at the same edit distance.
 @class TypoCandidate;

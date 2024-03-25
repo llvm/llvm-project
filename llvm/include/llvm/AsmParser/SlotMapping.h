@@ -14,6 +14,7 @@
 #define LLVM_ASMPARSER_SLOTMAPPING_H
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/AsmParser/NumberedValues.h"
 #include "llvm/IR/TrackingMDRef.h"
 #include <map>
 #include <vector>
@@ -30,7 +31,7 @@ class Type;
 /// textual references to the values in the module can be parsed outside of the
 /// module's source.
 struct SlotMapping {
-  std::vector<GlobalValue *> GlobalValues;
+  NumberedValues<GlobalValue *> GlobalValues;
   std::map<unsigned, TrackingMDNodeRef> MetadataNodes;
   StringMap<Type *> NamedTypes;
   std::map<unsigned, Type *> Types;

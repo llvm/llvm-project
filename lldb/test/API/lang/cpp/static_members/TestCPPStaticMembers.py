@@ -3,7 +3,6 @@ Tests that C++ member and static variables have correct layout and scope.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -11,12 +10,13 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-
     # We fail to lookup static members on Windows.
     @expectedFailureAll(oslist=["windows"])
     def test_access_from_main(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// stop in main", lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// stop in main", lldb.SBFileSpec("main.cpp")
+        )
 
         self.expect_expr("my_a.m_a", result_type="short", result_value="1")
         self.expect_expr("my_a.s_b", result_type="long", result_value="2")
@@ -26,7 +26,9 @@ class TestCase(TestBase):
     @expectedFailureAll(oslist=["windows"])
     def test_access_from_member_function(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// stop in member function", lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// stop in member function", lldb.SBFileSpec("main.cpp")
+        )
         self.expect_expr("m_a", result_type="short", result_value="1")
         self.expect_expr("s_b", result_type="long", result_value="2")
         self.expect_expr("s_c", result_type="int", result_value="3")
@@ -36,8 +38,11 @@ class TestCase(TestBase):
     def test_access_without_scope(self):
         self.build()
         self.createTestTarget()
-        self.expect("expression s_c", error=True,
-                    startstr="error: use of undeclared identifier 's_d'")
+        self.expect(
+            "expression s_c",
+            error=True,
+            startstr="error: use of undeclared identifier 's_d'",
+        )
 
     # We fail to lookup static members on Windows.
     @expectedFailureAll(oslist=["windows"])
@@ -48,7 +53,9 @@ class TestCase(TestBase):
         See https://bugs.llvm.org/show_bug.cgi?id=52449
         """
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// stop in main", lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// stop in main", lldb.SBFileSpec("main.cpp")
+        )
 
         # This expression contains the following IR code:
         # ... i64 ptrtoint (i32* @_ZN1A3s_cE to i64)) ...
@@ -63,7 +70,8 @@ class TestCase(TestBase):
         self.assertTrue(value.GetError().Fail())
         self.assertIn(
             "Can't evaluate the expression without a running target",
-            value.GetError().GetCString())
+            value.GetError().GetCString(),
+        )
 
         # Evaluating the expression via JIT should work fine.
         value = self.target().EvaluateExpression(expr)
@@ -71,7 +79,9 @@ class TestCase(TestBase):
 
     def test_IR_interpreter_can_handle_getelementptr_constants_args(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// stop in main", lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// stop in main", lldb.SBFileSpec("main.cpp")
+        )
 
         # This expression contains the following IR code:
         # ... getelementptr inbounds [2 x i32], [2 x i32]* %4, i64 0, i64 0

@@ -68,7 +68,7 @@ A vector is a consecutive sequence of items that are operated on simultaneously.
 
 Because of this, the instruction ``LD1`` performs a vector load but performs byte swapping not on the entire 64 bits, but on the individual items within the vector. This means that the register content is the same as it would have been on a little endian system.
 
-It may seem that ``LD1`` should suffice to peform vector loads on a big endian machine. However there are pros and cons to the two approaches that make it less than simple which register format to pick.
+It may seem that ``LD1`` should suffice to perform vector loads on a big endian machine. However there are pros and cons to the two approaches that make it less than simple which register format to pick.
 
 There are two options:
 

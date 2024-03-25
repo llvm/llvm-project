@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck %s --check-prefix=VI
-// RUN: llvm-mc -arch=amdgcn -mcpu=fiji -filetype=obj %s | llvm-objdump -d --mcpu=fiji - | FileCheck %s --check-prefix=BIN
+// RUN: llvm-mc -triple=amdgcn -mcpu=fiji -show-encoding %s | FileCheck %s --check-prefix=VI
+// RUN: llvm-mc -triple=amdgcn -mcpu=fiji -filetype=obj %s | llvm-objdump -d --mcpu=fiji - | FileCheck %s --check-prefix=BIN
 
 loop_start:
 s_branch loop_start

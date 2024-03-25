@@ -28,12 +28,16 @@ void describeFuzzerControlFlowOps(std::vector<fuzzerop::OpDescriptor> &Ops);
 void describeFuzzerPointerOps(std::vector<fuzzerop::OpDescriptor> &Ops);
 void describeFuzzerAggregateOps(std::vector<fuzzerop::OpDescriptor> &Ops);
 void describeFuzzerVectorOps(std::vector<fuzzerop::OpDescriptor> &Ops);
+void describeFuzzerUnaryOperations(std::vector<fuzzerop::OpDescriptor> &Ops);
+void describeFuzzerOtherOps(std::vector<fuzzerop::OpDescriptor> &Ops);
 /// @}
 
 namespace fuzzerop {
 
 /// Descriptors for individual operations.
 /// @{
+OpDescriptor selectDescriptor(unsigned Weight);
+OpDescriptor fnegDescriptor(unsigned Weight);
 OpDescriptor binOpDescriptor(unsigned Weight, Instruction::BinaryOps Op);
 OpDescriptor cmpOpDescriptor(unsigned Weight, Instruction::OtherOps CmpOp,
                              CmpInst::Predicate Pred);
@@ -44,6 +48,7 @@ OpDescriptor insertValueDescriptor(unsigned Weight);
 OpDescriptor extractElementDescriptor(unsigned Weight);
 OpDescriptor insertElementDescriptor(unsigned Weight);
 OpDescriptor shuffleVectorDescriptor(unsigned Weight);
+
 /// @}
 
 } // namespace fuzzerop

@@ -50,4 +50,4 @@ tail foo@plt
 # RELOC: R_RISCV_CALL_PLT foo 0x0
 # INSTR: auipc t1, 0
 # INSTR: jr  t1
-# FIXUP: fixup A - offset: 0, value: foo@plt, kind:
+# FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_call_plt

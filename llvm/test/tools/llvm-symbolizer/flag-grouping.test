@@ -3,8 +3,8 @@ RUN: llvm-symbolizer -apCie %p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck 
 RUN: llvm-symbolizer -apCie=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck %s
 RUN: llvm-symbolizer -apCie%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck %s
 
-CHECK: some text
+CHECK: ?? at ??:0:0
 CHECK: 0x40054d: inctwo
 CHECK: (inlined by) inc
 CHECK  (inlined by) main
-CHECK: some text2
+CHECK: ?? at ??:0:0

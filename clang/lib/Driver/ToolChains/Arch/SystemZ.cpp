@@ -11,7 +11,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -71,4 +71,12 @@ void systemz::getSystemZTargetFeatures(const Driver &D, const ArgList &Args,
   systemz::FloatABI FloatABI = systemz::getSystemZFloatABI(D, Args);
   if (FloatABI == systemz::FloatABI::Soft)
     Features.push_back("+soft-float");
+
+  if (const Arg *A = Args.getLastArg(options::OPT_munaligned_symbols,
+                                     options::OPT_mno_unaligned_symbols)) {
+    if (A->getOption().matches(options::OPT_munaligned_symbols))
+      Features.push_back("+unaligned-symbols");
+    else
+      Features.push_back("-unaligned-symbols");
+  }
 }

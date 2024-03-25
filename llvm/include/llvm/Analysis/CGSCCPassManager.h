@@ -159,7 +159,7 @@ struct RequireAnalysisPass<AnalysisT, LazyCallGraph::SCC, CGSCCAnalysisManager,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
     auto ClassName = AnalysisT::name();
     auto PassName = MapClassName2PassName(ClassName);
-    OS << "require<" << PassName << ">";
+    OS << "require<" << PassName << '>';
   }
 };
 
@@ -357,7 +357,7 @@ public:
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
     OS << "cgscc(";
     Pass->printPipeline(OS, MapClassName2PassName);
-    OS << ")";
+    OS << ')';
   }
 
   static bool isRequired() { return true; }
@@ -371,9 +371,9 @@ private:
 template <typename CGSCCPassT>
 ModuleToPostOrderCGSCCPassAdaptor
 createModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT &&Pass) {
-  using PassModelT = detail::PassModel<LazyCallGraph::SCC, CGSCCPassT,
-                                       PreservedAnalyses, CGSCCAnalysisManager,
-                                       LazyCallGraph &, CGSCCUpdateResult &>;
+  using PassModelT =
+      detail::PassModel<LazyCallGraph::SCC, CGSCCPassT, CGSCCAnalysisManager,
+                        LazyCallGraph &, CGSCCUpdateResult &>;
   // Do not use make_unique, it causes too many template instantiations,
   // causing terrible compile times.
   return ModuleToPostOrderCGSCCPassAdaptor(
@@ -487,11 +487,19 @@ public:
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
     OS << "function";
-    if (EagerlyInvalidate)
-      OS << "<eager-inv>";
-    OS << "(";
+    if (EagerlyInvalidate || NoRerun) {
+      OS << "<";
+      if (EagerlyInvalidate)
+        OS << "eager-inv";
+      if (EagerlyInvalidate && NoRerun)
+        OS << ";";
+      if (NoRerun)
+        OS << "no-rerun";
+      OS << ">";
+    }
+    OS << '(';
     Pass->printPipeline(OS, MapClassName2PassName);
-    OS << ")";
+    OS << ')';
   }
 
   static bool isRequired() { return true; }
@@ -510,8 +518,7 @@ createCGSCCToFunctionPassAdaptor(FunctionPassT &&Pass,
                                  bool EagerlyInvalidate = false,
                                  bool NoRerun = false) {
   using PassModelT =
-      detail::PassModel<Function, FunctionPassT, PreservedAnalyses,
-                        FunctionAnalysisManager>;
+      detail::PassModel<Function, FunctionPassT, FunctionAnalysisManager>;
   // Do not use make_unique, it causes too many template instantiations,
   // causing terrible compile times.
   return CGSCCToFunctionPassAdaptor(
@@ -567,7 +574,7 @@ public:
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
     OS << "devirt<" << MaxIterations << ">(";
     Pass->printPipeline(OS, MapClassName2PassName);
-    OS << ")";
+    OS << ')';
   }
 
 private:
@@ -580,9 +587,9 @@ private:
 template <typename CGSCCPassT>
 DevirtSCCRepeatedPass createDevirtSCCRepeatedPass(CGSCCPassT &&Pass,
                                                   int MaxIterations) {
-  using PassModelT = detail::PassModel<LazyCallGraph::SCC, CGSCCPassT,
-                                       PreservedAnalyses, CGSCCAnalysisManager,
-                                       LazyCallGraph &, CGSCCUpdateResult &>;
+  using PassModelT =
+      detail::PassModel<LazyCallGraph::SCC, CGSCCPassT, CGSCCAnalysisManager,
+                        LazyCallGraph &, CGSCCUpdateResult &>;
   // Do not use make_unique, it causes too many template instantiations,
   // causing terrible compile times.
   return DevirtSCCRepeatedPass(

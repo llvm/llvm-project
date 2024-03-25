@@ -6,12 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/AliasAnalysisEvaluator.h"
-#include "llvm/Analysis/Passes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
@@ -36,7 +33,7 @@ static StoreInst *getFunctionWithSingleStore(Module *M, StringRef Name) {
   auto *F = Function::Create(FTy, Function::ExternalLinkage, Name, M);
   auto *BB = BasicBlock::Create(C, "entry", F);
   auto *IntType = Type::getInt32Ty(C);
-  auto *PtrType = Type::getInt32PtrTy(C);
+  auto *PtrType = PointerType::get(C, 0);
   auto *SI = new StoreInst(ConstantInt::get(IntType, 42),
                            ConstantPointerNull::get(PtrType), BB);
   ReturnInst::Create(C, nullptr, BB);
@@ -62,7 +59,7 @@ TEST_F(TBAATest, checkVerifierBehaviorForOldTBAA) {
 
   EXPECT_TRUE(verifyFunction(*F, &Outs));
   EXPECT_TRUE(StringRef(ErrorMsg.begin(), ErrorMsg.size())
-                  .startswith(ExpectedFailureMsg));
+                  .starts_with(ExpectedFailureMsg));
 }
 
 TEST_F(TBAATest, checkTBAAMerging) {

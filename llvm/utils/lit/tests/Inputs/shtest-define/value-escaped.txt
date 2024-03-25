@@ -6,11 +6,11 @@
 
 # DEFINE: %{escape} = \g<0>\n
 # RUN: echo '%{escape}'
-# CHECK: {{\\?}}\g<0>{{\\?}}\n
+# CHECK:# | {{\\?}}\g<0>{{\\?}}\n
 
 # REDEFINE: %{escape} = \n                                                     \
 # REDEFINE:             \g<param>
 # RUN: echo '%{escape}'
-# CHECK: {{\\?}}\n {{\\?}}\g<param>
+# CHECK:# | {{\\?}}\n {{\\?}}\g<param>
 
-# CHECK: Passed: 1
+# CHECK: Passed: 1 {{\([0-9]*.[0-9]*%\)}}

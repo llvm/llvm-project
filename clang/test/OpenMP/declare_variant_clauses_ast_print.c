@@ -1,16 +1,16 @@
-//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 //RUN:   -Wno-source-uses-openmp -Wno-openmp-clauses                       \
 //RUN:   -ast-print -o - %s | FileCheck %s --check-prefix=PRINT
 
-//RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fopenmp -fopenmp-version=51 \
+//RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fopenmp \
 //RUN:   -Wno-source-uses-openmp -Wno-openmp-clauses -DWIN -fms-compatibility \
 //RUN:   -ast-print -o - %s | FileCheck %s --check-prefixes=PRINT,PRINTW
 
-//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 //RUN:   -Wno-source-uses-openmp -Wno-openmp-clauses                       \
 //RUN:   -ast-dump -o - %s | FileCheck %s --check-prefix=DUMP
 
-//RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fopenmp -fopenmp-version=51 \
+//RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fopenmp \
 //RUN:   -Wno-source-uses-openmp -Wno-openmp-clauses -DWIN -fms-compatibility \
 //RUN:   -ast-dump -o - %s | FileCheck %s --check-prefixes=DUMP,DUMPW
 

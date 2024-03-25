@@ -310,7 +310,7 @@ namespace init_list_default {
   B b {}; // calls default constructor
 }
 
-// PR13470, <rdar://problem/11974632>
+// PR13470
 namespace PR13470 {
   struct W {
     explicit W(int); // expected-note {{here}}

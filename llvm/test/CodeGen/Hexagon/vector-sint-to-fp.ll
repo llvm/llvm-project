@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s -verify-machineinstrs | FileCheck %s
 
 ; Test that code is generated for the vector sint_to_fp node.
 

@@ -26,9 +26,9 @@ static std::optional<uint64_t> tryEvaluateSizeExpr(const Expr *SizeExpr,
 
 void SuspiciousMemoryComparisonCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      callExpr(allOf(callee(namedDecl(
-                         anyOf(hasName("::memcmp"), hasName("::std::memcmp")))),
-                     unless(isInstantiationDependent())))
+      callExpr(callee(namedDecl(
+                   anyOf(hasName("::memcmp"), hasName("::std::memcmp")))),
+               unless(isInstantiationDependent()))
           .bind("call"),
       this);
 }

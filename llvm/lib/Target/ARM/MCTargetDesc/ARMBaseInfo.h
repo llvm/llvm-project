@@ -255,7 +255,7 @@ namespace ARMII {
 
     /// MO_OPTION_MASK - Most flags are mutually exclusive; this mask selects
     /// just that part of the flag set.
-    MO_OPTION_MASK = 0x3,
+    MO_OPTION_MASK = 0xf03,
 
     /// MO_COFFSTUB - On a symbol operand "FOO", this indicates that the
     /// reference is actually to the ".refptr.FOO" symbol.  This is used for
@@ -287,11 +287,27 @@ namespace ARMII {
     /// example).
     MO_NONLAZY = 0x80,
 
-    // It's undefined behaviour if an enum overflows the range between its
-    // smallest and largest values, but since these are |ed together, it can
-    // happen. Put a sentinel in (values of this enum are stored as "unsigned
-    // char").
-    MO_UNUSED_MAXIMUM = 0xff
+    /// MO_LO_0_7 - On a symbol operand, this represents a relocation containing
+    /// bits 0 through 7 of the address. Used only with Thumb1 MOV and ADD
+    // instructions.
+    MO_LO_0_7 = 0x100,
+
+    /// MO_LO_8_15 - On a symbol operand, this represents a relocation
+    /// containing
+    /// bits 8 through 15 of the address. Used only with Thumb1 MOV and ADD
+    // instructions.
+    MO_LO_8_15 = 0x200,
+
+    /// MO_HI_0_7 - On a symbol operand, this represents a relocation containing
+    /// bits 16 through 23 of the address. Used only with Thumb1 MOV and ADD
+    // instructions.
+    MO_HI_0_7 = 0x400,
+
+    /// MO_HI_8_15 - On a symbol operand, this represents a relocation
+    /// containing
+    /// bits 24 through 31 of the address. Used only with Thumb1 MOV and ADD
+    // instructions.
+    MO_HI_8_15 = 0x800
   };
 
   enum {

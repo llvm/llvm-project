@@ -1,0 +1,57 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t 
+; RUN: not llvm-readtapi --remove -arch arm64 %t/libslim.tbd 2>&1 | FileCheck %s
+
+CHECK: {{.*}}libslim.tbd' cannot remove last architecture slice 'arm64'
+
+//--- libslim.tbd
+{
+  "libraries": [
+    {
+      "exported_symbols": [
+        {
+          "data": {
+            "global": [
+              "_sym1"
+            ]
+          }
+        }
+      ],
+      "install_names": [
+        {
+          "name": "/usr/lib/internal/libfat.dylib"
+        }
+      ],
+      "parent_umbrellas": [
+        {
+          "umbrella": "fat"
+        }
+      ],
+      "target_info": [
+        {
+          "target": "arm64-macos"
+        }
+      ]
+    }
+  ],
+  "main_library": {
+    "install_names": [
+      {
+        "name": "/usr/lib/libfat.dylib"
+      }
+    ],
+    "reexported_libraries": [
+      {
+        "names": [
+          "/usr/lib/internal/libfat.dylib"
+        ]
+      }
+    ],
+    "target_info": [
+      {
+        "target": "arm64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}

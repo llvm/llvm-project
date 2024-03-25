@@ -9,16 +9,15 @@
 # LLVM-NEXT:    NoteSection {
 # LLVM-NEXT:      Name: .note.nt_amdgpu_metadata
 # LLVM-NEXT:      Offset: 0x40
-# LLVM-NEXT:      Size: 0x28
+# LLVM-NEXT:      Size: 0x38
 # LLVM-NEXT:      Note {
 # LLVM-NEXT:        Owner: AMDGPU
-# LLVM-NEXT:        Data size: 0x11
+# LLVM-NEXT:        Data size: 0x24
 # LLVM-NEXT:        Type: NT_AMDGPU_METADATA (AMDGPU Metadata)
 # LLVM-NEXT:        AMDGPU Metadata: Invalid AMDGPU Metadata
 # LLVM-NEXT:  ---
-# LLVM-NEXT:  0:               0
-# LLVM-NEXT:  amdhsa.kernels:
-# LLVM-NEXT:    - 0
+# LLVM-NEXT: amdhsa.kernels:
+# LLVM-NEXT:  - .name:           test_kernel
 # LLVM-NEXT:  ...
 # LLVM-EMPTY:
 # LLVM-NEXT:      }
@@ -27,13 +26,12 @@
 
 # GNU:      Displaying notes found in: .note.nt_amdgpu_metadata
 # GNU-NEXT:   Owner                Data size        Description
-# GNU-NEXT:   AMDGPU               0x00000011       NT_AMDGPU_METADATA (AMDGPU Metadata)
+# GNU-NEXT:   AMDGPU               0x00000024       NT_AMDGPU_METADATA (AMDGPU Metadata)
 # GNU-NEXT:     AMDGPU Metadata:
 # GNU-NEXT:         Invalid AMDGPU Metadata
 # GNU-NEXT: ---
-# GNU-NEXT: 0:               0
 # GNU-NEXT: amdhsa.kernels:
-# GNU-NEXT:   - 0
+# GNU-NEXT:  - .name:           test_kernel
 # GNU-NEXT: ...
 
 --- !ELF
@@ -48,4 +46,4 @@ Sections:
       - Name: AMDGPU
         Type: NT_AMDGPU_METADATA
         ## Desc contains 'amdhsa.kernels' without valid entries.
-        Desc: '82ae616d646873612e6b65726e656c7391'
+        Desc: '81ae616d646873612e6b65726e656c739181a52e6e616d65ab746573745f6b65726e656c'

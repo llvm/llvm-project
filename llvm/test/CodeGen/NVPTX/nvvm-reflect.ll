@@ -41,15 +41,15 @@ exit:
   ret float %ret
 }
 
-declare i32 @llvm.nvvm.reflect.p0(ptr)
+declare i32 @llvm.nvvm.reflect(ptr)
 
-; CHECK-LABEL: define i32 @intrinsic
+; CHECK-LABEL: define noundef i32 @intrinsic
 define i32 @intrinsic() {
 ; CHECK-NOT: call i32 @llvm.nvvm.reflect
 ; USE_FTZ_0: ret i32 0
 ; USE_FTZ_1: ret i32 1
   %ptr = tail call ptr @llvm.nvvm.ptr.constant.to.gen.p0.p4(ptr addrspace(4) @str)
-  %reflect = tail call i32 @llvm.nvvm.reflect.p0(ptr %ptr)
+  %reflect = tail call i32 @llvm.nvvm.reflect(ptr %ptr)
   ret i32 %reflect
 }
 

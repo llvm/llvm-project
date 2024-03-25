@@ -1,7 +1,7 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -S -o - %s | FileCheck %s
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' -S -o - %s | FileCheck %s
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
+target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
 
 ; Check position of the inserted vector load/store.  Vectorized loads should be
 ; inserted at the position of the first load in the chain, and stores should be
@@ -85,21 +85,14 @@ define float @insert_store_point_alias(ptr addrspace(1) nocapture %a, i64 %idx) 
   ret float %x
 }
 
-; Here we have four stores, with an aliasing load before the last one.  We
-; could vectorize two of the stores before the load (although we currently
-; don't), but the important thing is that we *don't* sink the store to
-; a[idx + 1] below the load.
+; Here we have four stores, with an aliasing load before the last one.  We can
+; vectorize three of the stores before the load, but the important thing is that
+; we *don't* sink the store to a[idx + 1] below the load.
 ;
 ; CHECK-LABEL: @insert_store_point_alias_ooo
-; CHECK: store float
-; CHECK-SAME: %a.idx.3
-; CHECK: store float
-; CHECK-SAME: %a.idx.1
-; CHECK: store float
-; CHECK-SAME: %a.idx.2
+; CHECK: store <3 x float>{{.*}} %a.idx.1
 ; CHECK: load float, ptr addrspace(1) %a.idx.2
-; CHECK: store float
-; CHECK-SAME: %a.idx
+; CHECK: store float{{.*}} %a.idx
 define float @insert_store_point_alias_ooo(ptr addrspace(1) nocapture %a, i64 %idx) {
   %a.idx = getelementptr inbounds float, ptr addrspace(1) %a, i64 %idx
   %a.idx.1 = getelementptr inbounds float, ptr addrspace(1) %a.idx, i64 1

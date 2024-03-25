@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -disassemble -show-encoding %s | FileCheck -check-prefix=GFX9 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -disassemble -show-encoding %s | FileCheck -check-prefix=GFX9 %s
 
 # GFX9: buffer_atomic_add v0, off, s[0:3], src_scc offset:4095 ; encoding: [0xff,0x0f,0x08,0xe1,0x00,0x00,0x00,0xfd]
 0xff,0x0f,0x08,0xe1,0x00,0x00,0x00,0xfd

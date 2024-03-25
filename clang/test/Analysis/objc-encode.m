@@ -3,7 +3,7 @@
 
 void clang_analyzer_eval(int);
 
-// rdar://problem/34831581: Used to crash.
+// Used to crash.
 void foo(void) {
   char buf1[] = @encode(int **);
 }

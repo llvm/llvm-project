@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/FunctionInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
@@ -35,13 +35,13 @@ struct TestFuncInsertArg
       SmallVector<Location, 4> locsToInsert;
       for (auto insert : inserts.getAsRange<ArrayAttr>()) {
         indicesToInsert.push_back(
-            insert[0].cast<IntegerAttr>().getValue().getZExtValue());
-        typesToInsert.push_back(insert[1].cast<TypeAttr>().getValue());
+            cast<IntegerAttr>(insert[0]).getValue().getZExtValue());
+        typesToInsert.push_back(cast<TypeAttr>(insert[1]).getValue());
         attrsToInsert.push_back(insert.size() > 2
-                                    ? insert[2].cast<DictionaryAttr>()
+                                    ? cast<DictionaryAttr>(insert[2])
                                     : DictionaryAttr::get(&getContext()));
         locsToInsert.push_back(insert.size() > 3
-                                   ? Location(insert[3].cast<LocationAttr>())
+                                   ? Location(cast<LocationAttr>(insert[3]))
                                    : unknownLoc);
       }
       func->removeAttr("test.insert_args");
@@ -72,10 +72,10 @@ struct TestFuncInsertResult
       SmallVector<DictionaryAttr, 4> attrsToInsert;
       for (auto insert : inserts.getAsRange<ArrayAttr>()) {
         indicesToInsert.push_back(
-            insert[0].cast<IntegerAttr>().getValue().getZExtValue());
-        typesToInsert.push_back(insert[1].cast<TypeAttr>().getValue());
+            cast<IntegerAttr>(insert[0]).getValue().getZExtValue());
+        typesToInsert.push_back(cast<TypeAttr>(insert[1]).getValue());
         attrsToInsert.push_back(insert.size() > 2
-                                    ? insert[2].cast<DictionaryAttr>()
+                                    ? cast<DictionaryAttr>(insert[2])
                                     : DictionaryAttr::get(&getContext()));
       }
       func->removeAttr("test.insert_results");

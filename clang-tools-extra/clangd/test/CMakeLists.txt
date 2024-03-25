@@ -28,6 +28,13 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
   )
 
+# Copy an empty compile_flags.txt to make sure tests don't pick up arbitrary
+# commands from parents.
+file(
+  TOUCH
+  ${CMAKE_CURRENT_BINARY_DIR}/compile_flags.txt
+)
+
 add_lit_testsuite(check-clangd "Running the Clangd regression tests"
   # clangd doesn't put unittest configs in test/unit like every other project.
   # Because of that, this needs to pass two folders here, while every other

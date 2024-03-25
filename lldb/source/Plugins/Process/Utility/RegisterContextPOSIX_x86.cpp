@@ -374,15 +374,15 @@ static const RegisterSet g_reg_sets_x86_64[k_num_register_sets] = {
      g_avx_regnums_x86_64}};
 
 bool RegisterContextPOSIX_x86::IsGPR(unsigned reg) {
-  return reg <= m_reg_info.last_gpr; // GPR's come first.
+  return reg <= GetRegInfo().last_gpr; // GPR's come first.
 }
 
 bool RegisterContextPOSIX_x86::IsFPR(unsigned reg) {
-  return (m_reg_info.first_fpr <= reg && reg <= m_reg_info.last_fpr);
+  return (GetRegInfo().first_fpr <= reg && reg <= GetRegInfo().last_fpr);
 }
 
 bool RegisterContextPOSIX_x86::IsAVX(unsigned reg) {
-  return (m_reg_info.first_ymm <= reg && reg <= m_reg_info.last_ymm);
+  return (GetRegInfo().first_ymm <= reg && reg <= GetRegInfo().last_ymm);
 }
 
 bool RegisterContextPOSIX_x86::IsFPR(unsigned reg, FPRType fpr_type) {
@@ -398,50 +398,6 @@ RegisterContextPOSIX_x86::RegisterContextPOSIX_x86(
     RegisterInfoInterface *register_info)
     : RegisterContext(thread, concrete_frame_idx) {
   m_register_info_up.reset(register_info);
-
-  switch (register_info->GetTargetArchitecture().GetMachine()) {
-  case llvm::Triple::x86:
-    m_reg_info.num_registers = k_num_registers_i386;
-    m_reg_info.num_gpr_registers = k_num_gpr_registers_i386;
-    m_reg_info.num_fpr_registers = k_num_fpr_registers_i386;
-    m_reg_info.num_avx_registers = k_num_avx_registers_i386;
-    m_reg_info.last_gpr = k_last_gpr_i386;
-    m_reg_info.first_fpr = k_first_fpr_i386;
-    m_reg_info.last_fpr = k_last_fpr_i386;
-    m_reg_info.first_st = lldb_st0_i386;
-    m_reg_info.last_st = lldb_st7_i386;
-    m_reg_info.first_mm = lldb_mm0_i386;
-    m_reg_info.last_mm = lldb_mm7_i386;
-    m_reg_info.first_xmm = lldb_xmm0_i386;
-    m_reg_info.last_xmm = lldb_xmm7_i386;
-    m_reg_info.first_ymm = lldb_ymm0_i386;
-    m_reg_info.last_ymm = lldb_ymm7_i386;
-    m_reg_info.first_dr = lldb_dr0_i386;
-    m_reg_info.gpr_flags = lldb_eflags_i386;
-    break;
-  case llvm::Triple::x86_64:
-    m_reg_info.num_registers = k_num_registers_x86_64;
-    m_reg_info.num_gpr_registers = k_num_gpr_registers_x86_64;
-    m_reg_info.num_fpr_registers = k_num_fpr_registers_x86_64;
-    m_reg_info.num_avx_registers = k_num_avx_registers_x86_64;
-    m_reg_info.last_gpr = k_last_gpr_x86_64;
-    m_reg_info.first_fpr = k_first_fpr_x86_64;
-    m_reg_info.last_fpr = k_last_fpr_x86_64;
-    m_reg_info.first_st = lldb_st0_x86_64;
-    m_reg_info.last_st = lldb_st7_x86_64;
-    m_reg_info.first_mm = lldb_mm0_x86_64;
-    m_reg_info.last_mm = lldb_mm7_x86_64;
-    m_reg_info.first_xmm = lldb_xmm0_x86_64;
-    m_reg_info.last_xmm = lldb_xmm15_x86_64;
-    m_reg_info.first_ymm = lldb_ymm0_x86_64;
-    m_reg_info.last_ymm = lldb_ymm15_x86_64;
-    m_reg_info.first_dr = lldb_dr0_x86_64;
-    m_reg_info.gpr_flags = lldb_rflags_x86_64;
-    break;
-  default:
-    assert(false && "Unhandled target architecture.");
-    break;
-  }
 
   ::memset(&m_fpr, 0, sizeof(FPR));
   ::memset(&m_ymm_set, 0, sizeof(YMM));
@@ -466,20 +422,26 @@ void RegisterContextPOSIX_x86::Invalidate() {}
 void RegisterContextPOSIX_x86::InvalidateAllRegisters() {}
 
 unsigned RegisterContextPOSIX_x86::GetRegisterOffset(unsigned reg) {
-  assert(reg < m_reg_info.num_registers && "Invalid register number.");
+  assert(reg < GetRegInfo().num_registers && "Invalid register number.");
   return GetRegisterInfo()[reg].byte_offset;
 }
 
+RegInfo &RegisterContextPOSIX_x86::GetRegInfo() {
+  return GetRegInfoShared(
+      m_register_info_up->GetTargetArchitecture().GetMachine(),
+      /*with_base=*/false);
+}
+
 unsigned RegisterContextPOSIX_x86::GetRegisterSize(unsigned reg) {
-  assert(reg < m_reg_info.num_registers && "Invalid register number.");
+  assert(reg < GetRegInfo().num_registers && "Invalid register number.");
   return GetRegisterInfo()[reg].byte_size;
 }
 
 size_t RegisterContextPOSIX_x86::GetRegisterCount() {
   size_t num_registers =
-      m_reg_info.num_gpr_registers + m_reg_info.num_fpr_registers;
+      GetRegInfo().num_gpr_registers + GetRegInfo().num_fpr_registers;
   if (GetFPRType() == eXSAVE)
-    return num_registers + m_reg_info.num_avx_registers;
+    return num_registers + GetRegInfo().num_avx_registers;
   return num_registers;
 }
 
@@ -488,7 +450,7 @@ size_t RegisterContextPOSIX_x86::GetGPRSize() {
 }
 
 size_t RegisterContextPOSIX_x86::GetFXSAVEOffset() {
-  return GetRegisterInfo()[m_reg_info.first_fpr].byte_offset;
+  return GetRegisterInfo()[GetRegInfo().first_fpr].byte_offset;
 }
 
 const RegisterInfo *RegisterContextPOSIX_x86::GetRegisterInfo() {
@@ -500,7 +462,7 @@ const RegisterInfo *RegisterContextPOSIX_x86::GetRegisterInfo() {
 
 const RegisterInfo *
 RegisterContextPOSIX_x86::GetRegisterInfoAtIndex(size_t reg) {
-  if (reg < m_reg_info.num_registers)
+  if (reg < GetRegInfo().num_registers)
     return &GetRegisterInfo()[reg];
   else
     return nullptr;
@@ -532,7 +494,7 @@ const RegisterSet *RegisterContextPOSIX_x86::GetRegisterSet(size_t set) {
 }
 
 const char *RegisterContextPOSIX_x86::GetRegisterName(unsigned reg) {
-  assert(reg < m_reg_info.num_registers && "Invalid register offset.");
+  assert(reg < GetRegInfo().num_registers && "Invalid register offset.");
   return GetRegisterInfo()[reg].name;
 }
 
@@ -543,10 +505,9 @@ bool RegisterContextPOSIX_x86::CopyYMMtoXSTATE(uint32_t reg,
     return false;
 
   if (byte_order == eByteOrderLittle) {
-    uint32_t reg_no = reg - m_reg_info.first_ymm;
-    YMMToXState(m_ymm_set.ymm[reg_no],
-        m_fpr.fxsave.xmm[reg_no].bytes,
-        m_fpr.xsave.ymmh[reg_no].bytes);
+    uint32_t reg_no = reg - GetRegInfo().first_ymm;
+    YMMToXState(m_ymm_set.ymm[reg_no], m_fpr.fxsave.xmm[reg_no].bytes,
+                m_fpr.xsave.ymmh[reg_no].bytes);
     return true;
   }
 
@@ -560,10 +521,9 @@ bool RegisterContextPOSIX_x86::CopyXSTATEtoYMM(uint32_t reg,
     return false;
 
   if (byte_order == eByteOrderLittle) {
-    uint32_t reg_no = reg - m_reg_info.first_ymm;
-    m_ymm_set.ymm[reg_no] = XStateToYMM(
-        m_fpr.fxsave.xmm[reg_no].bytes,
-        m_fpr.xsave.ymmh[reg_no].bytes);
+    uint32_t reg_no = reg - GetRegInfo().first_ymm;
+    m_ymm_set.ymm[reg_no] = XStateToYMM(m_fpr.fxsave.xmm[reg_no].bytes,
+                                        m_fpr.xsave.ymmh[reg_no].bytes);
     return true;
   }
 

@@ -46,7 +46,15 @@ public:
   uint32_t SetSelectedFrame(lldb_private::StackFrame *frame);
 
   /// Get the currently selected frame index.
-  uint32_t GetSelectedFrameIndex() const;
+  /// We should only call SelectMostRelevantFrame if (a) the user hasn't already
+  /// selected a frame, and (b) if this really is a user facing
+  /// "GetSelectedFrame".  SMRF runs the frame recognizers which can do
+  /// arbitrary work that ends up being dangerous to do internally.  Also,
+  /// for most internal uses we don't actually want the frame changed by the
+  /// SMRF logic.  So unless this is in a command or SB API, you should
+  /// pass false here.
+  uint32_t
+  GetSelectedFrameIndex(SelectMostRelevant select_most_relevant_frame);
 
   /// Mark a stack frame as the currently selected frame using the frame index
   /// \p idx. Like \ref GetFrameAtIndex, invisible frames cannot be selected.
@@ -92,7 +100,11 @@ protected:
 
   bool SetFrameAtIndex(uint32_t idx, lldb::StackFrameSP &frame_sp);
 
-  void GetFramesUpTo(uint32_t end_idx);
+  /// Realizes frames up to (and including) end_idx (which can be greater than  
+  /// the actual number of frames.)  
+  /// Returns true if the function was interrupted, false otherwise.
+  bool GetFramesUpTo(uint32_t end_idx, 
+      InterruptionControl allow_interrupt = AllowInterruption);
 
   void GetOnlyConcreteFramesUpTo(uint32_t end_idx, Unwind &unwinder);
 
@@ -109,6 +121,8 @@ protected:
   uint32_t GetCurrentInlinedDepth();
 
   void SetCurrentInlinedDepth(uint32_t new_depth);
+
+  void SelectMostRelevantFrame();
 
   typedef std::vector<lldb::StackFrameSP> collection;
   typedef collection::iterator iterator;
@@ -134,8 +148,10 @@ protected:
   /// changes.
   collection m_frames;
 
-  /// The currently selected frame.
-  uint32_t m_selected_frame_idx;
+  /// The currently selected frame. An optional is used to record whether anyone
+  /// has set the selected frame on this stack yet. We only let recognizers
+  /// change the frame if this is the first time GetSelectedFrame is called.
+  std::optional<uint32_t> m_selected_frame_idx;
 
   /// The number of concrete frames fetched while filling the frame list. This
   /// is only used when synthetic frames are enabled.

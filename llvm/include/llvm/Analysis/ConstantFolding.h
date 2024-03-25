@@ -22,6 +22,11 @@
 #include <stdint.h>
 
 namespace llvm {
+
+namespace Intrinsic {
+using ID = unsigned;
+}
+
 class APInt;
 template <typename T> class ArrayRef;
 class CallBase;
@@ -68,28 +73,26 @@ Constant *ConstantFoldInstOperands(Instruction *I, ArrayRef<Constant *> Ops,
                                    const TargetLibraryInfo *TLI = nullptr);
 
 /// Attempt to constant fold a compare instruction (icmp/fcmp) with the
-/// specified operands.  If it fails, it returns a constant expression of the
-/// specified operands.
+/// specified operands. Returns null or a constant expression of the specified
+/// operands on failure.
 /// Denormal inputs may be flushed based on the denormal handling mode.
 Constant *ConstantFoldCompareInstOperands(
     unsigned Predicate, Constant *LHS, Constant *RHS, const DataLayout &DL,
     const TargetLibraryInfo *TLI = nullptr, const Instruction *I = nullptr);
 
-/// Attempt to constant fold a unary operation with the specified
-/// operand. If it fails, it returns a constant expression of the specified
-/// operands.
+/// Attempt to constant fold a unary operation with the specified operand.
+/// Returns null on failure.
 Constant *ConstantFoldUnaryOpOperand(unsigned Opcode, Constant *Op,
                                      const DataLayout &DL);
 
-/// Attempt to constant fold a binary operation with the specified
-/// operands.  If it fails, it returns a constant expression of the specified
-/// operands.
+/// Attempt to constant fold a binary operation with the specified operands.
+/// Returns null or a constant expression of the specified operands on failure.
 Constant *ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
                                        Constant *RHS, const DataLayout &DL);
 
 /// Attempt to constant fold a floating point binary operation with the
-/// specified operands, applying the denormal handling mod to the operands.  If
-/// it fails, it returns a constant expression of the specified operands.
+/// specified operands, applying the denormal handling mod to the operands.
+/// Returns null or a constant expression of the specified operands on failure.
 Constant *ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
                                      Constant *RHS, const DataLayout &DL,
                                      const Instruction *I);
@@ -99,6 +102,9 @@ Constant *ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
 /// correct sign, otherwise return the original constant. Inputs and outputs to
 /// floating point instructions can have their mode set separately, so the
 /// direction is also needed.
+///
+/// If the calling function's "denormal-fp-math" input mode is "dynamic" for the
+/// floating-point type, returns nullptr for denormal inputs.
 Constant *FlushFPConstant(Constant *Operand, const Instruction *I,
                           bool IsOutput);
 
@@ -111,6 +117,11 @@ Constant *ConstantFoldSelectInstruction(Constant *Cond, Constant *V1,
 /// Attempt to constant fold a cast with the specified operand.  If it
 /// fails, it returns a constant expression of the specified operand.
 Constant *ConstantFoldCastOperand(unsigned Opcode, Constant *C, Type *DestTy,
+                                  const DataLayout &DL);
+
+/// Constant fold a zext, sext or trunc, depending on IsSigned and whether the
+/// DestTy is wider or narrower than C. Returns nullptr on failure.
+Constant *ConstantFoldIntegerCast(Constant *C, Type *DestTy, bool IsSigned,
                                   const DataLayout &DL);
 
 /// ConstantFoldInsertValueInstruction - Attempt to constant fold an insertvalue
@@ -168,7 +179,8 @@ Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
 /// ones, all undef or all poison), return the corresponding uniform value in
 /// the new type. If the value is not uniform or the result cannot be
 /// represented, return null.
-Constant *ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty);
+Constant *ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty,
+                                           const DataLayout &DL);
 
 /// canConstantFoldCallTo - Return true if its even possible to fold a call to
 /// the specified function.
@@ -179,6 +191,10 @@ bool canConstantFoldCallTo(const CallBase *Call, const Function *F);
 Constant *ConstantFoldCall(const CallBase *Call, Function *F,
                            ArrayRef<Constant *> Operands,
                            const TargetLibraryInfo *TLI = nullptr);
+
+Constant *ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
+                                      Constant *RHS, Type *Ty,
+                                      Instruction *FMFSource);
 
 /// ConstantFoldLoadThroughBitcast - try to cast constant to destination type
 /// returning null if unsuccessful. Can cast pointer to pointer or pointer to

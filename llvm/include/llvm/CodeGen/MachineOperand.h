@@ -253,6 +253,9 @@ public:
   ///
   void clearParent() { ParentMI = nullptr; }
 
+  /// Returns the index of this operand in the instruction that it belongs to.
+  unsigned getOperandNo() const;
+
   /// Print a subreg index operand.
   /// MO_Immediate operands can also be subreg idices. If it's the case, the
   /// subreg index name will be printed. MachineInstr::isOperandSubregIdx can be
@@ -777,6 +780,10 @@ public:
 
   /// ChangeToGA - Replace this operand with a new global address operand.
   void ChangeToGA(const GlobalValue *GV, int64_t Offset,
+                  unsigned TargetFlags = 0);
+
+  /// ChangeToBA - Replace this operand with a new block address operand.
+  void ChangeToBA(const BlockAddress *BA, int64_t Offset,
                   unsigned TargetFlags = 0);
 
   /// ChangeToMCSymbol - Replace this operand with a new MC symbol operand.

@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Confirm enforcement of constraints and restrictions in 7.5.7.3
 ! and C733, C734 and C779, C780, C782, C783, C784, and C785.
 
@@ -232,6 +232,66 @@ module m8 ! C1529 - warning only
     call a%pp
   end subroutine
 end module
+
+module m9
+  type t1
+   contains
+    procedure, public :: tbp => sub1
+  end type
+  type, extends(t1) :: t2
+   contains
+    !ERROR: A PRIVATE procedure may not override a PUBLIC procedure
+    procedure, private :: tbp => sub2
+  end type
+ contains
+  subroutine sub1(x)
+    class(t1), intent(in) :: x
+  end subroutine
+  subroutine sub2(x)
+    class(t2), intent(in) :: x
+  end subroutine
+end module
+
+module m10a
+  type t1
+   contains
+    procedure :: tbp => sub1
+  end type
+ contains
+  subroutine sub1(x)
+    class(t1), intent(in) :: x
+  end subroutine
+end module
+module m10b
+  use m10a
+  type, extends(t1) :: t2
+   contains
+    !ERROR: A PRIVATE procedure may not override an accessible procedure
+    procedure, private :: tbp => sub2
+  end type
+ contains
+  subroutine sub2(x)
+    class(t2), intent(in) :: x
+  end subroutine
+end module
+
+module m11
+  type t1
+   contains
+    procedure, nopass :: tbp => t1p
+  end type
+  type, extends(t1) :: t2
+   contains
+    private
+    !ERROR: A PRIVATE procedure may not override a PUBLIC procedure
+    procedure, nopass :: tbp => t2p
+  end type
+ contains
+  subroutine t1p
+  end
+  subroutine t2p
+  end
+end
 
 program test
   use m1

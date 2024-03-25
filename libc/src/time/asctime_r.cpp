@@ -10,13 +10,13 @@
 #include "src/__support/common.h"
 #include "src/time/time_utils.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
-using __llvm_libc::time_utils::TimeConstants;
+using LIBC_NAMESPACE::time_utils::TimeConstants;
 
 LLVM_LIBC_FUNCTION(char *, asctime_r,
                    (const struct tm *timeptr, char *buffer)) {
   return time_utils::asctime(timeptr, buffer, TimeConstants::ASCTIME_MAX_BYTES);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

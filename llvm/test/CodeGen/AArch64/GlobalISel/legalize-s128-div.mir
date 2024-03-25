@@ -4,9 +4,9 @@
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-apple-ios"
 
-  define void @udiv_test(i128* %v1ptr, i128* %v2ptr) { ret void }
+  define void @udiv_test(ptr %v1ptr, ptr %v2ptr) { ret void }
 
-  define void @sdiv_test(i128* %v1ptr, i128* %v2ptr) { ret void }
+  define void @sdiv_test(ptr %v1ptr, ptr %v2ptr) { ret void }
 
 ...
 ---
@@ -36,10 +36,10 @@ body:             |
     ; CHECK-NEXT: $x2 = COPY [[UV2]](s64)
     ; CHECK-NEXT: $x3 = COPY [[UV3]](s64)
     ; CHECK-NEXT: BL &__udivti3, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit-def $x0, implicit-def $x1
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x1
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY2]](s64), [[COPY3]](s64)
-    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: G_STORE [[MV]](s128), [[COPY]](p0) :: (store (s128) into %ir.v1ptr)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
@@ -78,10 +78,10 @@ body:             |
     ; CHECK-NEXT: $x2 = COPY [[UV2]](s64)
     ; CHECK-NEXT: $x3 = COPY [[UV3]](s64)
     ; CHECK-NEXT: BL &__divti3, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit-def $x0, implicit-def $x1
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x1
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY2]](s64), [[COPY3]](s64)
-    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: G_STORE [[MV]](s128), [[COPY]](p0) :: (store (s128) into %ir.v1ptr)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0

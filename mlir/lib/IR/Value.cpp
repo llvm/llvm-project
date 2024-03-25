@@ -18,7 +18,7 @@ using namespace mlir::detail;
 /// If this value is the result of an Operation, return the operation that
 /// defines it.
 Operation *Value::getDefiningOp() const {
-  if (auto result = dyn_cast<OpResult>())
+  if (auto result = llvm::dyn_cast<OpResult>(*this))
     return result.getOwner();
   return nullptr;
 }
@@ -27,28 +27,28 @@ Location Value::getLoc() const {
   if (auto *op = getDefiningOp())
     return op->getLoc();
 
-  return cast<BlockArgument>().getLoc();
+  return llvm::cast<BlockArgument>(*this).getLoc();
 }
 
 void Value::setLoc(Location loc) {
   if (auto *op = getDefiningOp())
     return op->setLoc(loc);
 
-  return cast<BlockArgument>().setLoc(loc);
+  return llvm::cast<BlockArgument>(*this).setLoc(loc);
 }
 
 /// Return the Region in which this Value is defined.
 Region *Value::getParentRegion() {
   if (auto *op = getDefiningOp())
     return op->getParentRegion();
-  return cast<BlockArgument>().getOwner()->getParent();
+  return llvm::cast<BlockArgument>(*this).getOwner()->getParent();
 }
 
 /// Return the Block in which this Value is defined.
 Block *Value::getParentBlock() {
   if (Operation *op = getDefiningOp())
     return op->getBlock();
-  return cast<BlockArgument>().getOwner();
+  return llvm::cast<BlockArgument>(*this).getOwner();
 }
 
 //===----------------------------------------------------------------------===//
@@ -59,7 +59,7 @@ Block *Value::getParentBlock() {
 /// the IR that uses 'this' to use the other value instead except if the user is
 /// listed in 'exceptions' .
 void Value::replaceAllUsesExcept(
-    Value newValue, const SmallPtrSetImpl<Operation *> &exceptions) const {
+    Value newValue, const SmallPtrSetImpl<Operation *> &exceptions) {
   for (OpOperand &use : llvm::make_early_inc_range(getUses())) {
     if (exceptions.count(use.getOwner()) == 0)
       use.set(newValue);
@@ -69,8 +69,7 @@ void Value::replaceAllUsesExcept(
 /// Replace all uses of 'this' value with 'newValue', updating anything in the
 /// IR that uses 'this' to use the other value instead except if the user is
 /// 'exceptedUser'.
-void Value::replaceAllUsesExcept(Value newValue,
-                                 Operation *exceptedUser) const {
+void Value::replaceAllUsesExcept(Value newValue, Operation *exceptedUser) {
   for (OpOperand &use : llvm::make_early_inc_range(getUses())) {
     if (use.getOwner() != exceptedUser)
       use.set(newValue);
@@ -87,10 +86,15 @@ void Value::replaceUsesWithIf(Value newValue,
 }
 
 /// Returns true if the value is used outside of the given block.
-bool Value::isUsedOutsideOfBlock(Block *block) {
+bool Value::isUsedOutsideOfBlock(Block *block) const {
   return llvm::any_of(getUsers(), [block](Operation *user) {
     return user->getBlock() != block;
   });
+}
+
+/// Shuffles the use-list order according to the provided indices.
+void Value::shuffleUseList(ArrayRef<unsigned> indices) {
+  getImpl()->shuffleUseList(indices);
 }
 
 //===----------------------------------------------------------------------===//

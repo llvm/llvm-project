@@ -1,6 +1,6 @@
 ; Test handling of llvm.lifetime intrinsics.
-; RUN: opt < %s -passes=asan -asan-use-after-scope -asan-use-after-return=never -S | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT
-; RUN: opt < %s -passes=asan -asan-use-after-scope -asan-use-after-return=never -asan-instrument-dynamic-allocas=0 -S | FileCheck %s --check-prefixes=CHECK,CHECK-NO-DYNAMIC
+; RUN: opt < %s -passes=asan -asan-use-after-scope -asan-use-after-return=never -asan-use-stack-safety=0 -S | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT
+; RUN: opt < %s -passes=asan -asan-use-after-scope -asan-use-after-return=never -asan-use-stack-safety=0 -asan-instrument-dynamic-allocas=0 -S | FileCheck %s --check-prefixes=CHECK,CHECK-NO-DYNAMIC
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -8,23 +8,24 @@ target triple = "x86_64-unknown-linux-gnu"
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
 
-define void @lifetime_no_size() sanitize_address {
-  ; CHECK-LABEL: define void @lifetime_no_size()
+; CHECK-LABEL: define void @lifetime_no_size(
+define void @lifetime_no_size(i64 %i) sanitize_address {
 entry:
-  %i = alloca i32, align 4
+  %a = alloca [2 x i32], align 4
 
-  ; Poison memory in prologue: F1F1F1F104F3F3F3
-  ; CHECK: store i64 -868083100587789839, ptr %{{[0-9]+}}
+  ; Poison memory in prologue: 0xf3f3f300f1f1f1f1
+  ; CHECK: store i64 -868083117767659023, ptr %[[#]]
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %i)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a)
   ; Check that lifetime with no size are ignored.
   ; CHECK-NOT: store
   ; CHECK: call void @llvm.lifetime.start
 
-  store volatile i8 0, ptr %i
+  %ai = getelementptr inbounds [2 x i32], ptr %a, i64 0, i64 %i
+  store volatile i8 0, ptr %ai, align 4
   ; CHECK: store volatile
 
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %i)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a)
   ; Check that lifetime with no size are ignored.
   ; CHECK-NOT: store
   ; CHECK: call void @llvm.lifetime.end
@@ -128,24 +129,26 @@ bb1:
 }
 
 ; Check that arguments of lifetime may come from getelementptr nodes.
-define void @getelementptr_args() sanitize_address{
+define void @getelementptr_args(i64 %i) sanitize_address{
   ; CHECK-LABEL: define void @getelementptr_args
 entry:
   %x = alloca [1024 x i8], align 16
-  %d = alloca ptr, align 8
+  %a = alloca [2 x ptr], align 8
 
   ; F1F1F1F1
   ; CHECK: store i32 -235802127, ptr %{{[0-9]+}}
-  ; F3F3F3F3F3F3F3F3
-  ; CHECK: store i64 -868082074056920077, ptr %{{[0-9]+}}
-  ; F3F3F3F3F3F3F3F3
-  ; CHECK: store i64 -868082074056920077, ptr %{{[0-9]+}}
+  ; CHECK: call void @__asan_set_shadow_f8(i64 %[[#]], i64 128)
+  ; 0xf2f2f2f2f2f2f2f2
+  ; CHECK: store i64 -940422246894996750, ptr %[[#]]
+  ; 0xf2f2f2f2f2f2f2f2
+  ; CHECK: store i64 -940422246894996750, ptr %[[#]]
 
   call void @llvm.lifetime.start.p0(i64 1024, ptr %x)
   ; CHECK: call void @__asan_set_shadow_00(i64 %{{[0-9]+}}, i64 128)
   ; CHECK-NEXT: call void @llvm.lifetime.start
 
-  store ptr %x, ptr %d, align 8
+  %ai = getelementptr inbounds [2 x ptr], ptr %a, i64 0, i64 %i
+  store ptr %x, ptr %ai, align 8
   ; CHECK: store ptr
 
   call void @llvm.lifetime.end.p0(i64 1024, ptr %x)
@@ -154,6 +157,7 @@ entry:
 
   ret void
   ; CHECK: call void @__asan_set_shadow_00(i64 %{{[0-9]+}}, i64 148)
+  ; CHECK: store i16 0, ptr %[[#]], align 1
   ; CHECK-NEXT: ret void
 }
 

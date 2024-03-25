@@ -322,7 +322,9 @@ enum ValueType {
   eValueTypeRegister = 5,         ///< stack frame register value
   eValueTypeRegisterSet = 6, ///< A collection of stack frame register values
   eValueTypeConstResult = 7, ///< constant result variables
-  eValueTypeVariableThreadLocal = 8 ///< thread local storage variable
+  eValueTypeVariableThreadLocal = 8, ///< thread local storage variable
+  eValueTypeVTable = 9,              ///< virtual function table
+  eValueTypeVTableEntry = 10, ///< function pointer in virtual function table
 };
 
 /// Token size/granularities for Input Readers.
@@ -431,6 +433,21 @@ FLAGS_ENUM(WatchpointEventType){
     eWatchpointEventTypeThreadChanged = (1u << 11),
     eWatchpointEventTypeTypeChanged = (1u << 12)};
 
+enum WatchpointWriteType {
+  /// Don't stop when the watched memory region is written to.
+  eWatchpointWriteTypeDisabled,
+  /// Stop on any write access to the memory region, even if
+  /// the value doesn't change.  On some architectures, a write
+  /// near the memory region may be falsely reported as a match,
+  /// and notify this spurious stop as a watchpoint trap.
+  eWatchpointWriteTypeAlways,
+  /// Stop on a write to the memory region that changes its value.
+  /// This is most likely the behavior a user expects, and is the
+  /// behavior in gdb.  lldb can silently ignore writes near the
+  /// watched memory region that are reported as accesses to lldb.
+  eWatchpointWriteTypeOnModify
+};
+
 /// Programming language type.
 ///
 /// These enumerations use the same language enumerations as the DWARF
@@ -479,13 +496,30 @@ enum LanguageType {
   eLanguageTypeC_plus_plus_14 = 0x0021, ///< ISO C++:2014.
   eLanguageTypeFortran03 = 0x0022,      ///< ISO Fortran 2003.
   eLanguageTypeFortran08 = 0x0023,      ///< ISO Fortran 2008.
+  eLanguageTypeRenderScript = 0x0024,
+  eLanguageTypeBLISS = 0x0025,
+  eLanguageTypeKotlin = 0x0026,
+  eLanguageTypeZig = 0x0027,
+  eLanguageTypeCrystal = 0x0028,
+  eLanguageTypeC_plus_plus_17 = 0x002a, ///< ISO C++:2017.
+  eLanguageTypeC_plus_plus_20 = 0x002b, ///< ISO C++:2020.
+  eLanguageTypeC17 = 0x002c,
+  eLanguageTypeFortran18 = 0x002d,
+  eLanguageTypeAda2005 = 0x002e,
+  eLanguageTypeAda2012 = 0x002f,
+  eLanguageTypeHIP = 0x0030,
+  eLanguageTypeAssembly = 0x0031,
+  eLanguageTypeC_sharp = 0x0032,
+  eLanguageTypeMojo = 0x0033,
+
   // Vendor Extensions
   // Note: Language::GetNameForLanguageType
   // assumes these can be used as indexes into array language_names, and
   // Language::SetLanguageFromCString and Language::AsCString assume these can
   // be used as indexes into array g_languages.
-  eLanguageTypeMipsAssembler = 0x0024,   ///< Mips_Assembler.
-  eLanguageTypeExtRenderScript = 0x0025, ///< RenderScript.
+  eLanguageTypeMipsAssembler, ///< Mips_Assembler.
+  // Mojo will move to the common list of languages once the DWARF committee
+  // creates a language code for it.
   eNumLanguageTypes
 };
 
@@ -495,6 +529,7 @@ enum InstrumentationRuntimeType {
   eInstrumentationRuntimeTypeUndefinedBehaviorSanitizer = 0x0002,
   eInstrumentationRuntimeTypeMainThreadChecker = 0x0003,
   eInstrumentationRuntimeTypeSwiftRuntimeReporting = 0x0004,
+  eInstrumentationRuntimeTypeLibsanitizersAsan = 0x0005,
   eNumInstrumentationRuntimeTypes
 };
 
@@ -615,6 +650,10 @@ enum CommandArgumentType {
   eArgTypeConnectURL,
   eArgTypeTargetID,
   eArgTypeStopHookID,
+  eArgTypeCompletionType,
+  eArgTypeRemotePath,
+  eArgTypeRemoteFilename,
+  eArgTypeModule,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -720,6 +759,8 @@ enum SectionType {
   eSectionTypeDWARFDebugLocDwo,
   eSectionTypeDWARFDebugLocListsDwo,
   eSectionTypeDWARFDebugTuIndex,
+  eSectionTypeCTF,
+  eSectionTypeSwiftModules,
 };
 
 FLAGS_ENUM(EmulateInstructionOptions){
@@ -805,7 +846,9 @@ enum StructuredDataType {
   eStructuredDataTypeFloat,
   eStructuredDataTypeBoolean,
   eStructuredDataTypeString,
-  eStructuredDataTypeDictionary
+  eStructuredDataTypeDictionary,
+  eStructuredDataTypeSignedInteger,
+  eStructuredDataTypeUnsignedInteger = eStructuredDataTypeInteger,
 };
 
 FLAGS_ENUM(TypeClass){
@@ -835,6 +878,7 @@ enum TemplateArgumentKind {
   eTemplateArgumentKindExpression,
   eTemplateArgumentKindPack,
   eTemplateArgumentKindNullPtr,
+  eTemplateArgumentKindStructuralValue,
 };
 
 /// Type of match to be performed when looking for a formatter for a data type.
@@ -1218,6 +1262,81 @@ enum DWIMPrintVerbosity {
   /// Always print a message indicating how `dwim-print` is evaluating its
   /// expression.
   eDWIMPrintVerbosityFull,
+};
+
+enum WatchpointValueKind {
+  eWatchPointValueKindInvalid = 0,
+  ///< Watchpoint was created watching a variable
+  eWatchPointValueKindVariable = 1,
+  ///< Watchpoint was created watching the result of an expression that was
+  ///< evaluated at creation time.
+  eWatchPointValueKindExpression = 2,
+};
+
+enum CompletionType {
+  eNoCompletion = 0ul,
+  eSourceFileCompletion = (1ul << 0),
+  eDiskFileCompletion = (1ul << 1),
+  eDiskDirectoryCompletion = (1ul << 2),
+  eSymbolCompletion = (1ul << 3),
+  eModuleCompletion = (1ul << 4),
+  eSettingsNameCompletion = (1ul << 5),
+  ePlatformPluginCompletion = (1ul << 6),
+  eArchitectureCompletion = (1ul << 7),
+  eVariablePathCompletion = (1ul << 8),
+  eRegisterCompletion = (1ul << 9),
+  eBreakpointCompletion = (1ul << 10),
+  eProcessPluginCompletion = (1ul << 11),
+  eDisassemblyFlavorCompletion = (1ul << 12),
+  eTypeLanguageCompletion = (1ul << 13),
+  eFrameIndexCompletion = (1ul << 14),
+  eModuleUUIDCompletion = (1ul << 15),
+  eStopHookIDCompletion = (1ul << 16),
+  eThreadIndexCompletion = (1ul << 17),
+  eWatchpointIDCompletion = (1ul << 18),
+  eBreakpointNameCompletion = (1ul << 19),
+  eProcessIDCompletion = (1ul << 20),
+  eProcessNameCompletion = (1ul << 21),
+  eRemoteDiskFileCompletion = (1ul << 22),
+  eRemoteDiskDirectoryCompletion = (1ul << 23),
+  eTypeCategoryNameCompletion = (1ul << 24),
+  eCustomCompletion = (1ul << 25),
+  eThreadIDCompletion = (1ul << 26),
+  // This last enum element is just for input validation.
+  // Add new completions before this element,
+  // and then increment eTerminatorCompletion's shift value
+  eTerminatorCompletion = (1ul << 27)
+};
+
+/// Specifies if children need to be re-computed
+/// after a call to \ref SyntheticChildrenFrontEnd::Update.
+enum class ChildCacheState {
+  eRefetch = 0, ///< Children need to be recomputed dynamically.
+
+  eReuse = 1, ///< Children did not change and don't need to be recomputed;
+              ///< re-use what we computed the last time we called Update.
+};
+
+enum SymbolDownload {
+  eSymbolDownloadOff = 0,
+  eSymbolDownloadBackground = 1,
+  eSymbolDownloadForeground = 2,
+};
+
+/// Used in the SBProcess AddressMask/FixAddress methods.
+enum AddressMaskType {
+  eAddressMaskTypeCode = 0,
+  eAddressMaskTypeData,
+  eAddressMaskTypeAny,
+  eAddressMaskTypeAll = eAddressMaskTypeAny
+};
+
+/// Used in the SBProcess AddressMask/FixAddress methods.
+enum AddressMaskRange {
+  eAddressMaskRangeLow = 0,
+  eAddressMaskRangeHigh,
+  eAddressMaskRangeAny,
+  eAddressMaskRangeAll = eAddressMaskRangeAny,
 };
 
 } // namespace lldb

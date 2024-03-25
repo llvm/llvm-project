@@ -20,7 +20,6 @@
 #include "xray-registry.h"
 
 #include "xray-color-helper.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/XRay/Trace.h"

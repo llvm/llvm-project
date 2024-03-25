@@ -10,14 +10,16 @@ from ObjCNewSyntaxTest import ObjCNewSyntaxTest
 
 
 class ObjCNewSyntaxTestCaseLiteral(ObjCNewSyntaxTest):
-
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_char_literal(self):
         self.runToBreakpoint()
 
-        self.expect("expr --object-description -- @'a'",
-                    VARIABLES_DISPLAYED_CORRECTLY, substrs=[str(ord('a'))])
+        self.expect(
+            "expr --object-description -- @'a'",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[str(ord("a"))],
+        )
 
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
@@ -27,27 +29,32 @@ class ObjCNewSyntaxTestCaseLiteral(ObjCNewSyntaxTest):
         self.expect(
             "expr --object-description -- @1",
             VARIABLES_DISPLAYED_CORRECTLY,
-            substrs=["1"])
+            substrs=["1"],
+        )
 
         self.expect(
             "expr --object-description -- @1l",
             VARIABLES_DISPLAYED_CORRECTLY,
-            substrs=["1"])
+            substrs=["1"],
+        )
 
         self.expect(
             "expr --object-description -- @1ul",
             VARIABLES_DISPLAYED_CORRECTLY,
-            substrs=["1"])
+            substrs=["1"],
+        )
 
         self.expect(
             "expr --object-description -- @1ll",
             VARIABLES_DISPLAYED_CORRECTLY,
-            substrs=["1"])
+            substrs=["1"],
+        )
 
         self.expect(
             "expr --object-description -- @1ull",
             VARIABLES_DISPLAYED_CORRECTLY,
-            substrs=["1"])
+            substrs=["1"],
+        )
 
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
@@ -56,8 +63,11 @@ class ObjCNewSyntaxTestCaseLiteral(ObjCNewSyntaxTest):
 
         self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
 
-        self.expect("expr -- @123.45", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs=["NSNumber", "123.45"])
+        self.expect(
+            "expr -- @123.45",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=["NSNumber", "123.45"],
+        )
 
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
@@ -69,10 +79,10 @@ class ObjCNewSyntaxTestCaseLiteral(ObjCNewSyntaxTest):
         self.expect(
             "expr --object-description -- @( 1 + 3 )",
             VARIABLES_DISPLAYED_CORRECTLY,
-            substrs=["4"])
+            substrs=["4"],
+        )
         self.expect(
-            "expr -- @((char*)\"Hello world\" + 6)",
+            'expr -- @((char*)"Hello world" + 6)',
             VARIABLES_DISPLAYED_CORRECTLY,
-            substrs=[
-                "NSString",
-                "world"])
+            substrs=["NSString", "world"],
+        )

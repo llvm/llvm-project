@@ -6,5 +6,13 @@ executable("llvm-remarkutil") {
     "//llvm/lib/Remarks",
     "//llvm/lib/Support",
   ]
-  sources = [ "RemarkUtil.cpp" ]
+  sources = [
+    "RemarkConvert.cpp",
+    "RemarkCount.cpp",
+    "RemarkCounter.cpp",
+    "RemarkSizeDiff.cpp",
+    "RemarkUtil.cpp",
+    "RemarkUtilHelpers.cpp",
+    "RemarkUtilRegistry.cpp",
+  ]
 }

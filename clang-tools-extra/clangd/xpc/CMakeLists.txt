@@ -22,4 +22,5 @@ add_clang_library(clangdXpcJsonConversions
 add_clang_library(clangdXpcTransport
   XPCTransport.cpp
   LINK_LIBS clangDaemon clangdSupport clangdXpcJsonConversions
+  DEPENDS ClangDriverOptions
   )

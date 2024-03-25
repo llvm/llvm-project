@@ -16,7 +16,6 @@
 #define LLVM_CLANG_LIB_FORMAT_ENCODING_H
 
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Unicode.h"
 

@@ -28,6 +28,8 @@ class A
     int data_;
 public:
     explicit A(int data) : data_(data) {}
+    A(const A&) = default;
+    A& operator=(const A&) = default;
     virtual ~A() TEST_NOEXCEPT {}
 
     friend bool operator==(const A& x, const A& y) {return x.data_ == y.data_;}

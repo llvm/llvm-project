@@ -1,4 +1,5 @@
 ; RUN: opt -passes=instcombine < %s -S | FileCheck %s
+; RUN: opt -passes=instcombine < %s -S --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; This tests dbg.declare lowering for CallInst users of an alloca. The
 ; resulting dbg.value expressions should add a deref to the declare's expression.

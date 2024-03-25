@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-msvc -debug-info-kind=limited -gcodeview -fdeclspec -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -debug-info-kind=limited -gcodeview -fdeclspec -S -emit-llvm %s -o - | FileCheck %s
 
 struct Foo;
 struct Bar;
@@ -14,10 +14,10 @@ void call_alloc(void) {
 }
 
 // CHECK-LABEL: define {{.*}}void @call_alloc
-// CHECK: call i8* {{.*}}@alloc_void{{.*}} !heapallocsite [[DBG1:!.*]]
-// CHECK: call %struct.Foo* {{.*}}@alloc_foo{{.*}} !heapallocsite [[DBG2:!.*]]
-// CHECK: call i8* {{.*}}@alloc_void{{.*}} !heapallocsite [[DBG2]]
-// CHECK: call i8* {{.*}}@alloc_void{{.*}} !heapallocsite [[DBG3:!.*]]
+// CHECK: call ptr {{.*}}@alloc_void{{.*}} !heapallocsite [[DBG1:!.*]]
+// CHECK: call ptr {{.*}}@alloc_foo{{.*}} !heapallocsite [[DBG2:!.*]]
+// CHECK: call ptr {{.*}}@alloc_void{{.*}} !heapallocsite [[DBG2]]
+// CHECK: call ptr {{.*}}@alloc_void{{.*}} !heapallocsite [[DBG3:!.*]]
 
 // CHECK: [[DBG2]] = !DICompositeType(tag: DW_TAG_structure_type,
 // CHECK-SAME:                                 name: "Foo"

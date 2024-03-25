@@ -1,15 +1,12 @@
 // This file contains various failure test cases related to the structure of
 // a bytecode file.
 
-// Bytecode currently does not support big-endian platforms
-// UNSUPPORTED: target=s390x-{{.*}}
-
 //===--------------------------------------------------------------------===//
 // Version
 //===--------------------------------------------------------------------===//
 
 // RUN: not mlir-opt %S/invalid-structure-version.mlirbc 2>&1 | FileCheck %s --check-prefix=VERSION
-// VERSION: bytecode version 127 is newer than the current version 0
+// VERSION: bytecode version 127 is newer than the current version {{[0-9]+}}
 
 //===--------------------------------------------------------------------===//
 // Producer

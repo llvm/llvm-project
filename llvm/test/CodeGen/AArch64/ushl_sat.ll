@@ -74,7 +74,7 @@ define i16 @combine_shlsat_by_zero(i16 %x, i16 %y) nounwind {
 define i16 @combine_shlsat_constfold(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shlsat_constfold:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w0, #32
+; CHECK-NEXT:    mov w0, #32 // =0x20
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.ushl.sat.i16(i16 8, i16 2)
   ret i16 %tmp
@@ -84,7 +84,7 @@ define i16 @combine_shlsat_constfold(i16 %x, i16 %y) nounwind {
 define i16 @combine_shlsat_satmax(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shlsat_satmax:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w0, #65535
+; CHECK-NEXT:    mov w0, #65535 // =0xffff
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.ushl.sat.i16(i16 8, i16 15)
   ret i16 %tmp
@@ -98,8 +98,8 @@ define void @combine_shlsat_vector() nounwind {
 ; CHECK-LABEL: combine_shlsat_vector:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    mov w0, #32
-; CHECK-NEXT:    mov w1, #65535
+; CHECK-NEXT:    mov w0, #32 // =0x20
+; CHECK-NEXT:    mov w1, #65535 // =0xffff
 ; CHECK-NEXT:    bl sink2xi16
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -128,9 +128,9 @@ define i16 @combine_shlsat_to_shl(i16 %x) nounwind {
 define i16 @combine_shlsat_to_shl_no_fold(i16 %x) nounwind {
 ; CHECK-LABEL: combine_shlsat_to_shl_no_fold:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xfffc
-; CHECK-NEXT:    lsl w9, w8, #17
-; CHECK-NEXT:    lsl w8, w8, #14
+; CHECK-NEXT:    lsl w8, w0, #14
+; CHECK-NEXT:    and w8, w8, #0x3fff0000
+; CHECK-NEXT:    lsl w9, w8, #3
 ; CHECK-NEXT:    cmp w8, w9, lsr #3
 ; CHECK-NEXT:    csinv w8, w9, wzr, eq
 ; CHECK-NEXT:    lsr w0, w8, #16

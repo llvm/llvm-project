@@ -32,7 +32,7 @@ static_assert(std::same_as<std::ranges::iterator_t<range const>, range::const_it
 static_assert(std::ranges::bidirectional_range<range const>);
 static_assert(!std::ranges::random_access_range<range const>);
 static_assert(std::ranges::common_range<range const>);
-static_assert(std::ranges::input_range<range>);
+static_assert(std::ranges::input_range<range const>);
 static_assert(!std::ranges::view<range const>);
 static_assert(std::ranges::sized_range<range const>);
 static_assert(!std::ranges::borrowed_range<range const>);

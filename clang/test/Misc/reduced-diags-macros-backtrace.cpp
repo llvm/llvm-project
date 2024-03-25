@@ -1,5 +1,5 @@
-// RUN: not %clang_cc1 -fsyntax-only -fmacro-backtrace-limit 0 %s 2>&1 | FileCheck %s --check-prefix=ALL
-// RUN: not %clang_cc1 -fsyntax-only -fmacro-backtrace-limit 2 %s 2>&1 | FileCheck %s --check-prefix=SKIP
+// RUN: not %clang_cc1 -fsyntax-only -fmacro-backtrace-limit=0 %s 2>&1 | FileCheck %s --check-prefix=ALL
+// RUN: not %clang_cc1 -fsyntax-only -fmacro-backtrace-limit=2 %s 2>&1 | FileCheck %s --check-prefix=SKIP
 
 #define F(x) x + 1
 #define G(x) F(x) + 2

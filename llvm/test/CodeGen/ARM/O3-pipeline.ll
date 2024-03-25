@@ -61,11 +61,11 @@
 ; CHECK-NEXT:      Lazy Block Frequency Analysis
 ; CHECK-NEXT:      Optimization Remark Emitter
 ; CHECK-NEXT:      Hardware Loop Insertion
-; CHECK-NEXT:      Scalar Evolution Analysis
 ; CHECK-NEXT:      Loop Pass Manager
 ; CHECK-NEXT:        Transform predicated vector loops to use MVE tail predication
 ; CHECK-NEXT:      A No-Op Barrier Pass
 ; CHECK-NEXT:      FunctionPass Manager
+; CHECK-NEXT:      Prepare callbr
 ; CHECK-NEXT:      Safe Stack instrumentation pass
 ; CHECK-NEXT:      Insert stack protectors
 ; CHECK-NEXT:      Module Verifier
@@ -113,6 +113,7 @@
 ; CHECK-NEXT:      ARM pre- register allocation load / store optimization pass
 ; CHECK-NEXT:      ARM A15 S->D optimizer
 ; CHECK-NEXT:      Detect Dead Lanes
+; CHECK-NEXT:      Init Undef Pass
 ; CHECK-NEXT:      Process Implicit Definitions
 ; CHECK-NEXT:      Remove unreachable machine basic blocks
 ; CHECK-NEXT:      Live Variable Analysis
@@ -122,7 +123,7 @@
 ; CHECK-NEXT:      Two-Address instruction pass
 ; CHECK-NEXT:      Slot index numbering
 ; CHECK-NEXT:      Live Interval Analysis
-; CHECK-NEXT:      Simple Register Coalescing
+; CHECK-NEXT:      Register Coalescer
 ; CHECK-NEXT:      Rename Disconnected Subregister Components
 ; CHECK-NEXT:      Machine Instruction Scheduler
 ; CHECK-NEXT:      Machine Block Frequency Analysis

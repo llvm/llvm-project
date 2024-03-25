@@ -321,8 +321,7 @@ int X86OptimizeLEAPass::calcInstrDist(const MachineInstr &First,
   // presented in InstrPos.
   assert(Last.getParent() == First.getParent() &&
          "Instructions are in different basic blocks");
-  assert(InstrPos.find(&First) != InstrPos.end() &&
-         InstrPos.find(&Last) != InstrPos.end() &&
+  assert(InstrPos.contains(&First) && InstrPos.contains(&Last) &&
          "Instructions' positions are undefined");
 
   return InstrPos[&Last] - InstrPos[&First];

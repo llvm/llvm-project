@@ -22,6 +22,7 @@
 namespace clang {
 
 class IdentifierInfo;
+class LangOptions;
 
 /// Token - This structure provides full information about a lexed token.
 /// It is not intended to be space efficient, it is intended to return as much
@@ -117,8 +118,13 @@ public:
   }
 
   /// Return true if this is any of tok::annot_* kind tokens.
-  bool isAnnotation() const {
-    return tok::isAnnotation(getKind());
+  bool isAnnotation() const { return tok::isAnnotation(getKind()); }
+
+  /// Return true if the token is a keyword that is parsed in the same
+  /// position as a standard attribute, but that has semantic meaning
+  /// and so cannot be a true attribute.
+  bool isRegularKeywordAttribute() const {
+    return tok::isRegularKeywordAttribute(getKind());
   }
 
   /// Return a source location identifier for the specified
@@ -282,6 +288,8 @@ public:
 
   /// Return the ObjC keyword kind.
   tok::ObjCKeywordKind getObjCKeywordID() const;
+
+  bool isSimpleTypeSpecifier(const LangOptions &LangOpts) const;
 
   /// Return true if this token has trigraphs or escaped newlines in it.
   bool needsCleaning() const { return getFlag(NeedsCleaning); }

@@ -8,7 +8,7 @@
 
 #include "src/stdlib/bsearch.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <stdlib.h>
 
@@ -25,13 +25,14 @@ static int int_compare(const void *l, const void *r) {
 
 TEST(LlvmLibcBsearchTest, ErrorInputs) {
   int val = 123;
-  EXPECT_TRUE(__llvm_libc::bsearch(nullptr, &val, 1, sizeof(int),
-                                   int_compare) == nullptr);
-  EXPECT_TRUE(__llvm_libc::bsearch(&val, nullptr, 1, sizeof(int),
-                                   int_compare) == nullptr);
-  EXPECT_TRUE(__llvm_libc::bsearch(&val, &val, 0, sizeof(int), int_compare) ==
+  EXPECT_TRUE(LIBC_NAMESPACE::bsearch(nullptr, &val, 1, sizeof(int),
+                                      int_compare) == nullptr);
+  EXPECT_TRUE(LIBC_NAMESPACE::bsearch(&val, nullptr, 1, sizeof(int),
+                                      int_compare) == nullptr);
+  EXPECT_TRUE(LIBC_NAMESPACE::bsearch(&val, &val, 0, sizeof(int),
+                                      int_compare) == nullptr);
+  EXPECT_TRUE(LIBC_NAMESPACE::bsearch(&val, &val, 1, 0, int_compare) ==
               nullptr);
-  EXPECT_TRUE(__llvm_libc::bsearch(&val, &val, 1, 0, int_compare) == nullptr);
 }
 
 TEST(LlvmLibcBsearchTest, IntegerArray) {
@@ -45,7 +46,7 @@ TEST(LlvmLibcBsearchTest, IntegerArray) {
     for (size_t i = 0; i < s; ++i) {
       int key = ARRAY[i];
       void *elem =
-          __llvm_libc::bsearch(&key, ARRAY, s, sizeof(int), int_compare);
+          LIBC_NAMESPACE::bsearch(&key, ARRAY, s, sizeof(int), int_compare);
       ASSERT_EQ(*reinterpret_cast<int *>(elem), key);
     }
   }
@@ -53,26 +54,26 @@ TEST(LlvmLibcBsearchTest, IntegerArray) {
   // Non existent keys
   for (size_t s = 1; s <= ARRAY_SIZE; ++s) {
     int key = 5;
-    ASSERT_TRUE(__llvm_libc::bsearch(&key, &ARRAY, s, sizeof(int),
-                                     int_compare) == nullptr);
+    ASSERT_TRUE(LIBC_NAMESPACE::bsearch(&key, &ARRAY, s, sizeof(int),
+                                        int_compare) == nullptr);
 
     key = 125;
-    ASSERT_TRUE(__llvm_libc::bsearch(&key, &ARRAY, s, sizeof(int),
-                                     int_compare) == nullptr);
+    ASSERT_TRUE(LIBC_NAMESPACE::bsearch(&key, &ARRAY, s, sizeof(int),
+                                        int_compare) == nullptr);
 
     key = 136;
-    ASSERT_TRUE(__llvm_libc::bsearch(&key, &ARRAY, s, sizeof(int),
-                                     int_compare) == nullptr);
+    ASSERT_TRUE(LIBC_NAMESPACE::bsearch(&key, &ARRAY, s, sizeof(int),
+                                        int_compare) == nullptr);
     key = 12345;
-    ASSERT_TRUE(__llvm_libc::bsearch(&key, &ARRAY, s, sizeof(int),
-                                     int_compare) == nullptr);
+    ASSERT_TRUE(LIBC_NAMESPACE::bsearch(&key, &ARRAY, s, sizeof(int),
+                                        int_compare) == nullptr);
   }
 }
 
 TEST(LlvmLibcBsearchTest, SameKeyAndArray) {
   constexpr int ARRAY[5] = {1, 2, 3, 4, 5};
   constexpr size_t ARRAY_SIZE = sizeof(ARRAY) / sizeof(int);
-  void *elem =
-      __llvm_libc::bsearch(ARRAY, ARRAY, ARRAY_SIZE, sizeof(int), int_compare);
+  void *elem = LIBC_NAMESPACE::bsearch(ARRAY, ARRAY, ARRAY_SIZE, sizeof(int),
+                                       int_compare);
   EXPECT_EQ(*reinterpret_cast<int *>(elem), ARRAY[0]);
 }

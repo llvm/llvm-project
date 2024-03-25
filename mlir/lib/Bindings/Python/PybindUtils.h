@@ -10,6 +10,7 @@
 #define MLIR_BINDINGS_PYTHON_PYBINDUTILS_H
 
 #include "mlir-c/Support.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DataTypes.h"
 
@@ -18,13 +19,6 @@
 
 namespace mlir {
 namespace python {
-
-// Sets a python error, ready to be thrown to return control back to the
-// python runtime.
-// Correct usage:
-//   throw SetPyError(PyExc_ValueError, "Foobar'd");
-pybind11::error_already_set SetPyError(PyObject *excClass,
-                                       const llvm::Twine &message);
 
 /// CRTP template for special wrapper types that are allowed to be passed in as
 /// 'None' function arguments and can be resolved by some global mechanic if
@@ -235,6 +229,11 @@ protected:
     return linearIndex;
   }
 
+  /// Trait to check if T provides a `maybeDownCast` method.
+  /// Note, you need the & to detect inherited members.
+  template <typename T, typename... Args>
+  using has_maybe_downcast = decltype(&T::maybeDownCast);
+
   /// Returns the element at the given slice index. Supports negative indices
   /// by taking elements in inverse order. Returns a nullptr object if out
   /// of bounds.
@@ -246,8 +245,13 @@ protected:
       return {};
     }
 
-    return pybind11::cast(
-        static_cast<Derived *>(this)->getRawElement(linearizeIndex(index)));
+    if constexpr (llvm::is_detected<has_maybe_downcast, ElementTy>::value)
+      return static_cast<Derived *>(this)
+          ->getRawElement(linearizeIndex(index))
+          .maybeDownCast();
+    else
+      return pybind11::cast(
+          static_cast<Derived *>(this)->getRawElement(linearizeIndex(index)));
   }
 
   /// Returns a new instance of the pseudo-container restricted to the given
@@ -360,5 +364,26 @@ private:
 };
 
 } // namespace mlir
+
+namespace llvm {
+
+template <>
+struct DenseMapInfo<MlirTypeID> {
+  static inline MlirTypeID getEmptyKey() {
+    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    return mlirTypeIDCreate(pointer);
+  }
+  static inline MlirTypeID getTombstoneKey() {
+    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    return mlirTypeIDCreate(pointer);
+  }
+  static inline unsigned getHashValue(const MlirTypeID &val) {
+    return mlirTypeIDHashValue(val);
+  }
+  static inline bool isEqual(const MlirTypeID &lhs, const MlirTypeID &rhs) {
+    return mlirTypeIDEqual(lhs, rhs);
+  }
+};
+} // namespace llvm
 
 #endif // MLIR_BINDINGS_PYTHON_PYBINDUTILS_H

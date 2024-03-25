@@ -94,7 +94,7 @@ DataLayoutEntryAttr DataLayoutEntryAttr::parse(AsmParser &parser) {
 
 void DataLayoutEntryAttr::print(AsmPrinter &os) const {
   os << DataLayoutEntryAttr::kAttrKeyword << "<";
-  if (auto type = getKey().dyn_cast<Type>())
+  if (auto type = llvm::dyn_cast_if_present<Type>(getKey()))
     os << type;
   else
     os << "\"" << getKey().get<StringAttr>().strref() << "\"";
@@ -106,6 +106,14 @@ void DataLayoutEntryAttr::print(AsmPrinter &os) const {
 //===----------------------------------------------------------------------===//
 //
 constexpr const StringLiteral mlir::DataLayoutSpecAttr::kAttrKeyword;
+constexpr const StringLiteral
+    mlir::DLTIDialect::kDataLayoutAllocaMemorySpaceKey;
+constexpr const StringLiteral
+    mlir::DLTIDialect::kDataLayoutProgramMemorySpaceKey;
+constexpr const StringLiteral
+    mlir::DLTIDialect::kDataLayoutGlobalMemorySpaceKey;
+
+constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutStackAlignmentKey;
 
 namespace mlir {
 namespace impl {
@@ -148,7 +156,7 @@ DataLayoutSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   DenseSet<Type> types;
   DenseSet<StringAttr> ids;
   for (DataLayoutEntryInterface entry : entries) {
-    if (auto type = entry.getKey().dyn_cast<Type>()) {
+    if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
       if (!types.insert(type).second)
         return emitError() << "repeated layout entry key: " << type;
     } else {
@@ -212,7 +220,7 @@ combineOneSpec(DataLayoutSpecInterface spec,
                typeSample.getContext()->getLoadedDialect<BuiltinDialect>() &&
            "unexpected data layout entry for built-in type");
 
-    auto interface = typeSample.cast<DataLayoutTypeInterface>();
+    auto interface = llvm::cast<DataLayoutTypeInterface>(typeSample);
     if (!interface.areCompatible(entriesForType.lookup(kvp.first), kvp.second))
       return failure();
 
@@ -247,7 +255,7 @@ DataLayoutSpecAttr::combineWith(ArrayRef<DataLayoutSpecInterface> specs) const {
   // Only combine with attributes of the same kind.
   // TODO: reconsider this when the need arises.
   if (llvm::any_of(specs, [](DataLayoutSpecInterface spec) {
-        return !spec.isa<DataLayoutSpecAttr>();
+        return !llvm::isa<DataLayoutSpecAttr>(spec);
       }))
     return {};
 
@@ -271,6 +279,29 @@ DataLayoutSpecAttr::combineWith(ArrayRef<DataLayoutSpecInterface> specs) const {
 
 DataLayoutEntryListRef DataLayoutSpecAttr::getEntries() const {
   return getImpl()->entries;
+}
+
+StringAttr
+DataLayoutSpecAttr::getAllocaMemorySpaceIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutAllocaMemorySpaceKey);
+}
+
+StringAttr DataLayoutSpecAttr::getProgramMemorySpaceIdentifier(
+    MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutProgramMemorySpaceKey);
+}
+
+StringAttr
+DataLayoutSpecAttr::getGlobalMemorySpaceIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutGlobalMemorySpaceKey);
+}
+StringAttr
+DataLayoutSpecAttr::getStackAlignmentIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutStackAlignmentKey);
 }
 
 /// Parses an attribute with syntax
@@ -319,7 +350,7 @@ public:
                             Location loc) const final {
     StringRef entryName = entry.getKey().get<StringAttr>().strref();
     if (entryName == DLTIDialect::kDataLayoutEndiannessKey) {
-      auto value = entry.getValue().dyn_cast<StringAttr>();
+      auto value = llvm::dyn_cast<StringAttr>(entry.getValue());
       if (value &&
           (value.getValue() == DLTIDialect::kDataLayoutEndiannessBig ||
            value.getValue() == DLTIDialect::kDataLayoutEndiannessLittle))
@@ -329,6 +360,11 @@ public:
                             << DLTIDialect::kDataLayoutEndiannessBig << "' or '"
                             << DLTIDialect::kDataLayoutEndiannessLittle << "'";
     }
+    if (entryName == DLTIDialect::kDataLayoutAllocaMemorySpaceKey ||
+        entryName == DLTIDialect::kDataLayoutProgramMemorySpaceKey ||
+        entryName == DLTIDialect::kDataLayoutGlobalMemorySpaceKey ||
+        entryName == DLTIDialect::kDataLayoutStackAlignmentKey)
+      return success();
     return emitError(loc) << "unknown data layout entry name: " << entryName;
   }
 };
@@ -365,7 +401,7 @@ void DLTIDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
 LogicalResult DLTIDialect::verifyOperationAttribute(Operation *op,
                                                     NamedAttribute attr) {
   if (attr.getName() == DLTIDialect::kDataLayoutAttrName) {
-    if (!attr.getValue().isa<DataLayoutSpecAttr>()) {
+    if (!llvm::isa<DataLayoutSpecAttr>(attr.getValue())) {
       return op->emitError() << "'" << DLTIDialect::kDataLayoutAttrName
                              << "' is expected to be a #dlti.dl_spec attribute";
     }

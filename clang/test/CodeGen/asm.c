@@ -128,7 +128,6 @@ void t17(void) {
 // CHECK: call void asm "nop", "=*m,
 }
 
-// <rdar://problem/6841383>
 int t18(unsigned data) {
   int a, b;
 
@@ -171,7 +170,7 @@ float t21(long double x) {
   // CHECK-NEXT: fptrunc x86_fp80 {{.*}} to float
 }
 
-// <rdar://problem/8348447> - accept 'l' constraint
+// accept 'l' constraint
 unsigned char t22(unsigned char a, unsigned char b) {
   unsigned int la = a;
   unsigned int lb = b;
@@ -183,7 +182,7 @@ unsigned char t22(unsigned char a, unsigned char b) {
   return res;
 }
 
-// <rdar://problem/8348447> - accept 'l' constraint
+// accept 'l' constraint
 unsigned char t23(unsigned char a, unsigned char b) {
   unsigned int la = a;
   unsigned int lb = b;
@@ -215,7 +214,7 @@ void t25(void)
 							   );
 }
 
-// rdar://10510405 - AVX registers
+// AVX registers
 typedef long long __m256i __attribute__((__vector_size__(32)));
 void t26 (__m256i *p) {
   __asm__ volatile("vmovaps  %0, %%ymm0" :: "m" (*(__m256i*)p) : "ymm0");

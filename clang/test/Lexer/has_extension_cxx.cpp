@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++98 -E %s -o - | FileCheck %s
 // RUN: %clang_cc1 -std=c++11 -E %s -o - | FileCheck %s --check-prefix=CHECK11
+// RUN: %clang_cc1 -std=c++20 -E %s -o - | FileCheck %s --check-prefix=CHECK20
+// RUN: %clang_cc1 -std=c++23 -E %s -o - | FileCheck %s --check-prefix=CHECK23
 
 // CHECK: c_static_assert
 #if __has_extension(c_static_assert)
@@ -11,6 +13,16 @@ int c_static_assert();
 int c_generic_selections();
 #endif
 
+// CHECK: has_default_function_template_args
+#if __has_extension(cxx_default_function_template_args)
+int has_default_function_template_args();
+#endif
+
+// CHECK: has_defaulted_functions
+#if __has_extension(cxx_defaulted_functions)
+int has_defaulted_functions();
+#endif
+
 // CHECK: has_deleted_functions
 #if __has_extension(cxx_deleted_functions)
 int has_deleted_functions();
@@ -19,6 +31,11 @@ int has_deleted_functions();
 // CHECK: has_inline_namespaces
 #if __has_extension(cxx_inline_namespaces)
 int has_inline_namespaces();
+#endif
+
+// CHECK: has_lambdas
+#if __has_extension(cxx_lambdas)
+int has_lambdas();
 #endif
 
 // CHECK: has_override_control
@@ -65,4 +82,18 @@ int has_variable_templates();
 // CHECK11: has_init_captures
 #if __has_extension(cxx_init_captures)
 int has_init_captures();
+#endif
+
+
+// CHECK11-NOT: has_generalized_nttp
+// CHECK20: has_generalized_nttp
+#if __has_extension(cxx_generalized_nttp)
+int has_generalized_nttp();
+#endif
+
+
+// CHECK20-NOT: has_explicit_this_parameter
+// CHECK23: has_explicit_this_parameter
+#if __has_extension(cxx_explicit_this_parameter)
+int has_explicit_this_parameter();
 #endif

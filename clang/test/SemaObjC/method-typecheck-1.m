@@ -35,7 +35,6 @@
 + (int) cCat: (int) x { return 0; }	//  expected-warning {{conflicting return type in implementation of 'cCat:': 'void' vs 'int'}}
 @end
 
-// rdar://12519216
 // test that when implementation implements method in a category, types match.
 @interface testObject {}
 @end

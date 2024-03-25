@@ -17,19 +17,19 @@
   
   %"class.std::vector.534" = type { %"struct.std::_Vector_base.535" }
   %"struct.std::_Vector_base.535" = type { %"struct.std::_Vector_base<unsigned char, std::allocator<unsigned char>>::_Vector_impl" }
-  %"struct.std::_Vector_base<unsigned char, std::allocator<unsigned char>>::_Vector_impl" = type { i8*, i8*, i8* }
+  %"struct.std::_Vector_base<unsigned char, std::allocator<unsigned char>>::_Vector_impl" = type { ptr, ptr, ptr }
   
   ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
   declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
   
   define hidden fastcc void @soup() unnamed_addr !dbg !3 {
   _ZN4llvm11raw_ostreamlsEPKc.exit2752:
-    %0 = load %"class.std::vector.534"*, %"class.std::vector.534"** undef, align 8, !dbg !7
-    %1 = load i8*, i8** undef, align 8, !dbg !7
-    %_M_start.i2756 = getelementptr inbounds %"class.std::vector.534", %"class.std::vector.534"* %0, i64 undef, i32 0, i32 0, i32 0, !dbg !7
-    %2 = load i8*, i8** %_M_start.i2756, align 8, !dbg !7
-    %sub.ptr.lhs.cast.i2757 = ptrtoint i8* %1 to i64, !dbg !7
-    %sub.ptr.rhs.cast.i2758 = ptrtoint i8* %2 to i64, !dbg !7
+    %0 = load ptr, ptr undef, align 8, !dbg !7
+    %1 = load ptr, ptr undef, align 8, !dbg !7
+    %_M_start.i2756 = getelementptr inbounds %"class.std::vector.534", ptr %0, i64 undef, i32 0, i32 0, i32 0, !dbg !7
+    %2 = load ptr, ptr %_M_start.i2756, align 8, !dbg !7
+    %sub.ptr.lhs.cast.i2757 = ptrtoint ptr %1 to i64, !dbg !7
+    %sub.ptr.rhs.cast.i2758 = ptrtoint ptr %2 to i64, !dbg !7
     %sub.ptr.sub.i2759 = sub i64 %sub.ptr.lhs.cast.i2757, %sub.ptr.rhs.cast.i2758, !dbg !7
     %conv373 = trunc i64 %sub.ptr.sub.i2759 to i32, !dbg !7
     call void @llvm.dbg.value(metadata i32 %conv373, metadata !8, metadata !DIExpression()), !dbg !7
@@ -80,7 +80,7 @@ body:             |
     successors: %bb.1(0x30000000), %bb.2(0x50000000)
   
     %1:gr64 = IMPLICIT_DEF
-    %0:gr64 = MOV64rm killed %1, 1, $noreg, 0, $noreg, debug-location !7 :: (load (s64) from `i8** undef`)
+    %0:gr64 = MOV64rm killed %1, 1, $noreg, 0, $noreg, debug-location !7 :: (load (s64) from `ptr undef`)
     %2:gr32 = COPY %0.sub_32bit, debug-location !7
     %3:gr32 = SUB32rm %2, %0, 1, $noreg, 0, $noreg, implicit-def $eflags, debug-instr-number 1, debug-location !7 :: (load (s32) from %ir._M_start.i2756, align 8)
     DBG_INSTR_REF !8, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !7

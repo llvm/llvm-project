@@ -1,7 +1,7 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32r5 -mattr=+virt | \
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r5 -mattr=+virt | \
 # RUN:   FileCheck %s -check-prefix=CHECK-ASM
 #
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32r5 -filetype=obj -o - -mattr=+virt | \
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r5 -filetype=obj -o - -mattr=+virt | \
 # RUN:   llvm-readobj -A - | \
 # RUN:   FileCheck %s -check-prefix=CHECK-OBJ
 

@@ -144,7 +144,6 @@ define i32 @ctz3(i32 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X]], i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[TMP0]], [[IF_END]] ], [ 32, [[ENTRY:%.*]] ]

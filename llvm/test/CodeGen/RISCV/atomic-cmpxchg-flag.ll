@@ -15,7 +15,7 @@ define i1 @cmpxchg_i32_seq_cst_seq_cst(ptr %ptr, i32 signext %cmp,
 ; RV64IA-NEXT:    bne a3, a1, .LBB0_3
 ; RV64IA-NEXT:  # %bb.2: # %entry
 ; RV64IA-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; RV64IA-NEXT:    sc.w.aqrl a4, a2, (a0)
+; RV64IA-NEXT:    sc.w.rl a4, a2, (a0)
 ; RV64IA-NEXT:    bnez a4, .LBB0_1
 ; RV64IA-NEXT:  .LBB0_3: # %entry
 ; RV64IA-NEXT:    xor a1, a3, a1

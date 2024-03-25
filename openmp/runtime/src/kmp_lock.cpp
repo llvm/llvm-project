@@ -2689,7 +2689,7 @@ void __kmp_spin_backoff(kmp_backoff_t *boff) {
 // lock word.
 static void __kmp_init_direct_lock(kmp_dyna_lock_t *lck,
                                    kmp_dyna_lockseq_t seq) {
-  TCW_4(*lck, KMP_GET_D_TAG(seq));
+  TCW_4(((kmp_base_tas_lock_t *)lck)->poll, KMP_GET_D_TAG(seq));
   KA_TRACE(
       20,
       ("__kmp_init_direct_lock: initialized direct lock with type#%d\n", seq));
@@ -3180,8 +3180,8 @@ kmp_indirect_lock_t *__kmp_allocate_indirect_lock(void **user_lock,
   lck->type = tag;
 
   if (OMP_LOCK_T_SIZE < sizeof(void *)) {
-    *((kmp_lock_index_t *)user_lock) = idx
-                                       << 1; // indirect lock word must be even
+    *(kmp_lock_index_t *)&(((kmp_base_tas_lock_t *)user_lock)->poll) =
+        idx << 1; // indirect lock word must be even
   } else {
     *((kmp_indirect_lock_t **)user_lock) = lck;
   }
@@ -3809,7 +3809,7 @@ static kmp_lock_index_t __kmp_lock_table_insert(kmp_user_lock_p lck) {
                sizeof(kmp_user_lock_p) * (__kmp_user_lock_table.used - 1));
     table[0] = (kmp_user_lock_p)__kmp_user_lock_table.table;
     // We cannot free the previous table now, since it may be in use by other
-    // threads. So save the pointer to the previous table in in the first
+    // threads. So save the pointer to the previous table in the first
     // element of the new table. All the tables will be organized into a list,
     // and could be freed when library shutting down.
     __kmp_user_lock_table.table = table;

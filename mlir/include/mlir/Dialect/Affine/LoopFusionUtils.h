@@ -21,12 +21,11 @@
 #include "llvm/ADT/SmallVector.h"
 
 namespace mlir {
-class AffineForOp;
-struct ComputationSliceState;
 class Operation;
 
-// TODO: Extend this module to include utility functions for querying fusion
-// cost/storage reduction, and for performing the loop fusion transformation.
+namespace affine {
+class AffineForOp;
+struct ComputationSliceState;
 
 struct FusionResult {
   enum ResultEnum {
@@ -47,7 +46,6 @@ struct FusionResult {
 /// strategies are also limited to scenarios where a single memref is involved
 /// in the producer-consume or sibling relationship between the candidate
 /// loops. We use 'memref' to keep track of such a memref.
-// TODO: Remove 'memref' when we support more generic scenarios.
 // TODO: Generalize utilities so that producer-consumer and sibling fusion
 // strategies can be used without the assumptions made in the AffineLoopFusion
 // pass.
@@ -108,7 +106,6 @@ private:
 /// returns a FusionResult explaining why fusion is not feasible.
 /// NOTE: This function is not feature complete and should only be used in
 /// testing.
-/// TODO: Update comments when this function is fully implemented.
 FusionResult
 canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp, unsigned dstLoopDepth,
              ComputationSliceState *srcSlice,
@@ -144,7 +141,6 @@ bool getLoopNestStats(AffineForOp forOp, LoopNestStats *stats);
 /// Currently, the total cost is computed by counting the total operation
 /// instance count (i.e. total number of operations in the loop body * loop
 /// trip count) for the entire loop nest.
-// TODO: Improve this cost model.
 int64_t getComputeCost(AffineForOp forOp, LoopNestStats &stats);
 
 /// Computes and returns in 'computeCost', the total compute cost of fusing the
@@ -153,7 +149,6 @@ int64_t getComputeCost(AffineForOp forOp, LoopNestStats &stats);
 /// (i.e. total number of operations in the loop body * loop trip count) for
 /// the entire loop nest.
 /// Returns true on success, failure otherwise (e.g. non-constant trip counts).
-// TODO: Improve this cost model.
 bool getFusionComputeCost(AffineForOp srcForOp, LoopNestStats &srcStats,
                           AffineForOp dstForOp, LoopNestStats &dstStats,
                           const ComputationSliceState &slice,
@@ -165,6 +160,8 @@ bool getFusionComputeCost(AffineForOp srcForOp, LoopNestStats &srcStats,
 void gatherProducerConsumerMemrefs(ArrayRef<Operation *> srcOps,
                                    ArrayRef<Operation *> dstOps,
                                    DenseSet<Value> &producerConsumerMemrefs);
+
+} // namespace affine
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_LOOPFUSIONUTILS_H

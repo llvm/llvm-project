@@ -1,4 +1,4 @@
-; RUN: llc -asm-verbose=0 -mtriple aarch64-arm-none-eabi < %s | FileCheck %s
+; RUN: llc -asm-verbose=0 -mtriple aarch64 < %s | FileCheck %s
 
 ; The following code previously broke in the DAGCombiner. Specifically, trying to combine:
 ; extract_vector_elt (concat_vectors v4i16:a, v4i16:b), x

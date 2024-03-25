@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=arm-apple-darwin  | FileCheck %s -check-prefix=DARWIN
-; RUN: llc < %s -mtriple=arm-apple-darwin -lower-global-dtors-via-cxa-atexit=false  | FileCheck %s -check-prefix=DARWIN-OLD
+; RUN: llc < %s -mtriple=arm-apple-darwin -disable-atexit-based-global-dtor-lowering  | FileCheck %s -check-prefix=DARWIN-LEGACY
 ; RUN: llc < %s -mtriple=arm-linux-gnu -target-abi=apcs  | FileCheck %s -check-prefix=ELF
 ; RUN: llc < %s -mtriple=arm-linux-gnueabi | FileCheck %s -check-prefix=GNUEABI
 
@@ -8,8 +8,9 @@
 ; DARWIN: .section	__DATA,__mod_init_func,mod_init_funcs
 ; DARWIN-NOT: __mod_term_func
 
-; DARWIN-OLD: .section	__DATA,__mod_init_func,mod_init_funcs
-; DARWIN-OLD: .section	__DATA,__mod_term_func,mod_term_funcs
+; DARWIN-LEGACY-NOT: atexit
+; DARWIN-LEGACY: .section	__DATA,__mod_init_func,mod_init_funcs
+; DARWIN-LEGACY: .section	__DATA,__mod_term_func,mod_term_funcs
 
 ; ELF: .section .ctors,"aw",%progbits
 ; ELF: .section .dtors,"aw",%progbits

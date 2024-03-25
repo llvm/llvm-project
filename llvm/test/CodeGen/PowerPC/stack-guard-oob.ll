@@ -419,3 +419,6 @@ define i32 @multi_dimensional_array() #0 {
 }
 
 attributes #0 = { sspstrong }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 7, !"direct-access-external-data", i32 1}

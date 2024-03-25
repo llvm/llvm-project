@@ -24,7 +24,6 @@ namespace __xray {
 // The machine codes for some instructions used in runtime patching.
 enum class PatchOpcodes : uint32_t {
   PO_StpX0X30SP_m16e = 0xA9BF7BE0, // STP X0, X30, [SP, #-16]!
-  PO_LdrW0_12 = 0x18000060,        // LDR W0, #12
   PO_LdrX16_12 = 0x58000070,       // LDR X16, #12
   PO_BlrX16 = 0xD63F0200,          // BLR X16
   PO_LdpX0X30SP_16 = 0xA8C17BE0,   // LDP X0, X30, [SP], #16
@@ -45,7 +44,7 @@ inline static bool patchSled(const bool Enable, const uint32_t FuncId,
   //
   // xray_sled_n:
   //   STP X0, X30, [SP, #-16]! ; PUSH {r0, lr}
-  //   LDR W0, #12 ; W0 := function ID
+  //   LDR W17, #12 ; W17 := function ID
   //   LDR X16,#12 ; X16 := address of the trampoline
   //   BLR X16
   //   ;DATA: 32 bits of function ID
@@ -64,8 +63,7 @@ inline static bool patchSled(const bool Enable, const uint32_t FuncId,
   uint32_t *FirstAddress = reinterpret_cast<uint32_t *>(Sled.address());
   uint32_t *CurAddress = FirstAddress + 1;
   if (Enable) {
-    *CurAddress = uint32_t(PatchOpcodes::PO_LdrW0_12);
-    CurAddress++;
+    *CurAddress++ = 0x18000071; // ldr w17, #12
     *CurAddress = uint32_t(PatchOpcodes::PO_LdrX16_12);
     CurAddress++;
     *CurAddress = uint32_t(PatchOpcodes::PO_BlrX16);
@@ -105,15 +103,37 @@ bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
   return patchSled(Enable, FuncId, Sled, __xray_FunctionTailExit);
 }
 
+// AArch64AsmPrinter::LowerPATCHABLE_EVENT_CALL generates this code sequence:
+//
+// .Lxray_event_sled_N:
+//   b 1f
+//   save x0 and x1 (and also x2 for TYPED_EVENT_CALL)
+//   set up x0 and x1 (and also x2 for TYPED_EVENT_CALL)
+//   bl __xray_CustomEvent or __xray_TypedEvent
+//   restore x0 and x1 (and also x2 for TYPED_EVENT_CALL)
+// 1f
+//
+// There are 6 instructions for EVENT_CALL and 9 for TYPED_EVENT_CALL.
+//
+// Enable: b .+24 => nop
+// Disable: nop => b .+24
 bool patchCustomEvent(const bool Enable, const uint32_t FuncId,
-                      const XRaySledEntry &Sled)
-    XRAY_NEVER_INSTRUMENT { // FIXME: Implement in aarch64?
+                      const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
+  uint32_t Inst = Enable ? 0xd503201f : 0x14000006;
+  std::atomic_store_explicit(
+      reinterpret_cast<std::atomic<uint32_t> *>(Sled.address()), Inst,
+      std::memory_order_release);
   return false;
 }
 
+// Enable: b +36 => nop
+// Disable: nop => b +36
 bool patchTypedEvent(const bool Enable, const uint32_t FuncId,
                      const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
-  // FIXME: Implement in aarch64?
+  uint32_t Inst = Enable ? 0xd503201f : 0x14000009;
+  std::atomic_store_explicit(
+      reinterpret_cast<std::atomic<uint32_t> *>(Sled.address()), Inst,
+      std::memory_order_release);
   return false;
 }
 
@@ -121,7 +141,3 @@ bool patchTypedEvent(const bool Enable, const uint32_t FuncId,
 bool probeRequiredCPUFeatures() XRAY_NEVER_INSTRUMENT { return true; }
 
 } // namespace __xray
-
-extern "C" void __xray_ArgLoggerEntry() XRAY_NEVER_INSTRUMENT {
-  // FIXME: this will have to be implemented in the trampoline assembly file
-}

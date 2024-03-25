@@ -1,12 +1,22 @@
 // RUN: %check_clang_tidy %s readability-function-size %t -- \
-// RUN:     -config='{CheckOptions: [ \
-// RUN:         {key: readability-function-size.LineThreshold, value: 0}, \
-// RUN:         {key: readability-function-size.StatementThreshold, value: 0}, \
-// RUN:         {key: readability-function-size.BranchThreshold, value: 0}, \
-// RUN:         {key: readability-function-size.ParameterThreshold, value: 5}, \
-// RUN:         {key: readability-function-size.NestingThreshold, value: 2}, \
-// RUN:         {key: readability-function-size.VariableThreshold, value: 1} \
-// RUN:     ]}'
+// RUN:     -config='{CheckOptions: { \
+// RUN:         readability-function-size.LineThreshold: 0, \
+// RUN:         readability-function-size.StatementThreshold: 0, \
+// RUN:         readability-function-size.BranchThreshold: 0, \
+// RUN:         readability-function-size.ParameterThreshold: 5, \
+// RUN:         readability-function-size.NestingThreshold: 2, \
+// RUN:         readability-function-size.VariableThreshold: 1 \
+// RUN:     }}'
+
+
+// RUN: %check_clang_tidy -check-suffixes=OPTIONAL %s readability-function-size %t -- \
+// RUN:     -config='{CheckOptions: { \
+// RUN:         readability-function-size.StatementThreshold: "-1", \
+// RUN:         readability-function-size.BranchThreshold: "5", \
+// RUN:         readability-function-size.ParameterThreshold: "none", \
+// RUN:         readability-function-size.NestingThreshold: "", \
+// RUN:         readability-function-size.VariableThreshold: "" \
+// RUN:     }}'
 
 // Bad formatting is intentional, don't run clang-format over the whole file!
 
@@ -103,9 +113,11 @@ void baz0() { // 1
 // check that nested if's are not reported. this was broken initially
 void nesting_if() { // 1
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'nesting_if' exceeds recommended size/complexity
-  // CHECK-MESSAGES: :[[@LINE-2]]:6: note: 23 lines including whitespace and comments (threshold 0)
+  // CHECK-MESSAGES: :[[@LINE-2]]:6: note: 25 lines including whitespace and comments (threshold 0)
   // CHECK-MESSAGES: :[[@LINE-3]]:6: note: 18 statements (threshold 0)
   // CHECK-MESSAGES: :[[@LINE-4]]:6: note: 6 branches (threshold 0)
+  // CHECK-MESSAGES-OPTIONAL: :[[@LINE-5]]:6: warning: function 'nesting_if' exceeds recommended size/complexity
+  // CHECK-MESSAGES-OPTIONAL: :[[@LINE-6]]:6: note: 6 branches (threshold 5)
   if (true) { // 2
      int j;
   } else if (true) { // 2
@@ -123,7 +135,7 @@ void nesting_if() { // 1
   } else if (true) { // 2
      int j;
   }
-  // CHECK-MESSAGES: :[[@LINE-22]]:6: note: 6 variables (threshold 1)
+  // CHECK-MESSAGES: :[[@LINE-24]]:6: note: 6 variables (threshold 1)
 }
 
 // however this should warn

@@ -21,6 +21,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InIter1, class _InIter2, class _OutIter>
@@ -89,11 +92,12 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator set_i
              std::move(__first2),
              std::move(__last2),
              std::move(__result),
-             __less<typename iterator_traits<_InputIterator1>::value_type,
-                    typename iterator_traits<_InputIterator2>::value_type>())
+             __less<>())
       .__out_;
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_SET_INTERSECTION_H

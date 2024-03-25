@@ -14,7 +14,9 @@
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
 #include "SPIRVInstrInfo.h"
+#include "SPIRVSubtarget.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -77,24 +79,22 @@ std::string getStringImm(const MachineInstr &MI, unsigned StartIndex) {
 
 void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
   const auto Bitwidth = Imm.getBitWidth();
-  switch (Bitwidth) {
-  case 1:
-    break; // Already handled.
-  case 8:
-  case 16:
-  case 32:
+  if (Bitwidth == 1)
+    return; // Already handled
+  else if (Bitwidth <= 32) {
     MIB.addImm(Imm.getZExtValue());
-    break;
-  case 64: {
+    // Asm Printer needs this info to print floating-type correctly
+    if (Bitwidth == 16)
+      MIB.getInstr()->setAsmPrinterFlag(SPIRV::ASM_PRINTER_WIDTH16);
+    return;
+  } else if (Bitwidth <= 64) {
     uint64_t FullImm = Imm.getZExtValue();
     uint32_t LowBits = FullImm & 0xffffffff;
     uint32_t HighBits = (FullImm >> 32) & 0xffffffff;
     MIB.addImm(LowBits).addImm(HighBits);
-    break;
+    return;
   }
-  default:
-    report_fatal_error("Unsupported constant bitwidth");
-  }
+  report_fatal_error("Unsupported constant bitwidth");
 }
 
 void buildOpName(Register Target, const StringRef &Name,
@@ -147,15 +147,19 @@ unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
     return 3;
   case SPIRV::StorageClass::Generic:
     return 4;
+  case SPIRV::StorageClass::DeviceOnlyINTEL:
+    return 5;
+  case SPIRV::StorageClass::HostOnlyINTEL:
+    return 6;
   case SPIRV::StorageClass::Input:
     return 7;
   default:
-    llvm_unreachable("Unable to get address space id");
+    report_fatal_error("Unable to get address space id");
   }
 }
 
 SPIRV::StorageClass::StorageClass
-addressSpaceToStorageClass(unsigned AddrSpace) {
+addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
   switch (AddrSpace) {
   case 0:
     return SPIRV::StorageClass::Function;
@@ -167,10 +171,18 @@ addressSpaceToStorageClass(unsigned AddrSpace) {
     return SPIRV::StorageClass::Workgroup;
   case 4:
     return SPIRV::StorageClass::Generic;
+  case 5:
+    return STI.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)
+               ? SPIRV::StorageClass::DeviceOnlyINTEL
+               : SPIRV::StorageClass::CrossWorkgroup;
+  case 6:
+    return STI.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)
+               ? SPIRV::StorageClass::HostOnlyINTEL
+               : SPIRV::StorageClass::CrossWorkgroup;
   case 7:
     return SPIRV::StorageClass::Input;
   default:
-    llvm_unreachable("Unknown address space");
+    report_fatal_error("Unknown address space");
   }
 }
 
@@ -208,20 +220,22 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
   case AtomicOrdering::NotAtomic:
     return SPIRV::MemorySemantics::None;
   }
+  llvm_unreachable(nullptr);
 }
 
 MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
                                        const MachineRegisterInfo *MRI) {
   MachineInstr *ConstInstr = MRI->getVRegDef(ConstReg);
-  if (ConstInstr->getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS &&
-      ConstInstr->getIntrinsicID() == Intrinsic::spv_track_constant) {
-    ConstReg = ConstInstr->getOperand(2).getReg();
-    ConstInstr = MRI->getVRegDef(ConstReg);
+  if (auto *GI = dyn_cast<GIntrinsic>(ConstInstr)) {
+    if (GI->is(Intrinsic::spv_track_constant)) {
+      ConstReg = ConstInstr->getOperand(2).getReg();
+      return MRI->getVRegDef(ConstReg);
+    }
   } else if (ConstInstr->getOpcode() == SPIRV::ASSIGN_TYPE) {
     ConstReg = ConstInstr->getOperand(1).getReg();
-    ConstInstr = MRI->getVRegDef(ConstReg);
+    return MRI->getVRegDef(ConstReg);
   }
-  return ConstInstr;
+  return MRI->getVRegDef(ConstReg);
 }
 
 uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI) {
@@ -230,9 +244,10 @@ uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI) {
   return MI->getOperand(1).getCImm()->getValue().getZExtValue();
 }
 
-bool isSpvIntrinsic(MachineInstr &MI, Intrinsic::ID IntrinsicID) {
-  return MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS &&
-         MI.getIntrinsicID() == IntrinsicID;
+bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID) {
+  if (const auto *GI = dyn_cast<GIntrinsic>(&MI))
+    return GI->is(IntrinsicID);
+  return false;
 }
 
 Type *getMDOperandAsType(const MDNode *N, unsigned I) {
@@ -280,7 +295,7 @@ static bool isKernelQueryBI(const StringRef MangledName) {
 }
 
 static bool isNonMangledOCLBuiltin(StringRef Name) {
-  if (!Name.startswith("__"))
+  if (!Name.starts_with("__"))
     return false;
 
   return isEnqueueKernelBI(Name) || isKernelQueryBI(Name) ||
@@ -290,23 +305,18 @@ static bool isNonMangledOCLBuiltin(StringRef Name) {
 
 std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
   bool IsNonMangledOCL = isNonMangledOCLBuiltin(Name);
-  bool IsNonMangledSPIRV = Name.startswith("__spirv_");
-  bool IsMangled = Name.startswith("_Z");
+  bool IsNonMangledSPIRV = Name.starts_with("__spirv_");
+  bool IsMangled = Name.starts_with("_Z");
 
   if (!IsNonMangledOCL && !IsNonMangledSPIRV && !IsMangled)
     return std::string();
 
   // Try to use the itanium demangler.
-  size_t n;
-  int Status;
-  char *DemangledName = itaniumDemangle(Name.data(), nullptr, &n, &Status);
-
-  if (Status == demangle_success) {
+  if (char *DemangledName = itaniumDemangle(Name.data())) {
     std::string Result = DemangledName;
     free(DemangledName);
     return Result;
   }
-  free(DemangledName);
   // Otherwise use simple demangling to return the function name.
   if (IsNonMangledOCL || IsNonMangledSPIRV)
     return Name.str();
@@ -317,7 +327,7 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
   // Similar to ::std:: in C++.
   size_t Start, Len = 0;
   size_t DemangledNameLenStart = 2;
-  if (Name.startswith("_ZN")) {
+  if (Name.starts_with("_ZN")) {
     // Skip CV and ref qualifiers.
     size_t NameSpaceStart = Name.find_first_not_of("rVKRO", 3);
     // All built-ins are in the ::cl:: namespace.
@@ -331,26 +341,57 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
   return Name.substr(Start, Len).str();
 }
 
-static bool isOpenCLBuiltinType(const StructType *SType) {
-  return SType->isOpaque() && SType->hasName() &&
-         SType->getName().startswith("opencl.");
-}
-
-static bool isSPIRVBuiltinType(const StructType *SType) {
-  return SType->isOpaque() && SType->hasName() &&
-         SType->getName().startswith("spirv.");
-}
-
-const Type *getTypedPtrEltType(const Type *Ty) {
-  auto PType = dyn_cast<PointerType>(Ty);
-  if (!PType || PType->isOpaque())
-    return Ty;
-  return PType->getNonOpaquePointerElementType();
+bool hasBuiltinTypePrefix(StringRef Name) {
+  if (Name.starts_with("opencl.") || Name.starts_with("ocl_") ||
+      Name.starts_with("spirv."))
+    return true;
+  return false;
 }
 
 bool isSpecialOpaqueType(const Type *Ty) {
-  if (auto SType = dyn_cast<StructType>(getTypedPtrEltType(Ty)))
-    return isOpenCLBuiltinType(SType) || isSPIRVBuiltinType(SType);
+  if (const TargetExtType *EType = dyn_cast<TargetExtType>(Ty))
+    return hasBuiltinTypePrefix(EType->getName());
+
   return false;
 }
+
+bool isEntryPoint(const Function &F) {
+  // OpenCL handling: any function with the SPIR_KERNEL
+  // calling convention will be a potential entry point.
+  if (F.getCallingConv() == CallingConv::SPIR_KERNEL)
+    return true;
+
+  // HLSL handling: special attribute are emitted from the
+  // front-end.
+  if (F.getFnAttribute("hlsl.shader").isValid())
+    return true;
+
+  return false;
+}
+
+Type *parseBasicTypeName(StringRef TypeName, LLVMContext &Ctx) {
+  TypeName.consume_front("atomic_");
+  if (TypeName.consume_front("void"))
+    return Type::getVoidTy(Ctx);
+  else if (TypeName.consume_front("bool"))
+    return Type::getIntNTy(Ctx, 1);
+  else if (TypeName.consume_front("char") || TypeName.consume_front("uchar"))
+    return Type::getInt8Ty(Ctx);
+  else if (TypeName.consume_front("short") || TypeName.consume_front("ushort"))
+    return Type::getInt16Ty(Ctx);
+  else if (TypeName.consume_front("int") || TypeName.consume_front("uint"))
+    return Type::getInt32Ty(Ctx);
+  else if (TypeName.consume_front("long") || TypeName.consume_front("ulong"))
+    return Type::getInt64Ty(Ctx);
+  else if (TypeName.consume_front("half"))
+    return Type::getHalfTy(Ctx);
+  else if (TypeName.consume_front("float"))
+    return Type::getFloatTy(Ctx);
+  else if (TypeName.consume_front("double"))
+    return Type::getDoubleTy(Ctx);
+
+  // Unable to recognize SPIRV type name
+  return nullptr;
+}
+
 } // namespace llvm

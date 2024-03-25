@@ -3,7 +3,7 @@
       {
          "name" : "MemRef_A",
          "sizes" : [ "*" ],
-         "type" : "float*"
+         "type" : "ptr"
       },
       {
          "name" : "MemRef_ptr",

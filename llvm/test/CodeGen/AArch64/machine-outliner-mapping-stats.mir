@@ -7,10 +7,11 @@
 # terminate the string with a single illegal character. Debug instructions are
 # always invisible, and don't contribute to the length of the string.
 
-# CHECK: 1 machine-outliner - Number of illegal instrs in unsigned vector
-# CHECK: 1 machine-outliner - Number of invisible instrs in unsigned vector
-# CHECK: 5 machine-outliner - Number of legal instrs in unsigned vector
-# CHECK: 6 machine-outliner - Size of unsigned vector
+# CHECK: 1 machine-outliner - Unoutlinable instructions mapped + number of sentinel values
+# CHECK: 1 machine-outliner - Invisible instructions skipped during mapping
+# CHECK: 5 machine-outliner - Outlinable instructions mapped
+# CHECK: 1 machine-outliner - Sentinel values inserted during mapping
+# CHECK: 6 machine-outliner - Total number of instructions mapped and saved to mapping vector
 
 ...
 ---

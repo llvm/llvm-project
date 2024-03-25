@@ -11,10 +11,10 @@
 
 #include <inttypes.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 intmax_t imaxabs(intmax_t j);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_INTTYPES_IMAXABS_H

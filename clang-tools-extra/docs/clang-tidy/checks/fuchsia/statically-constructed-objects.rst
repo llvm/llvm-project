@@ -22,8 +22,8 @@ For example:
 
   class C {
   public:
-    C(int Val) : Val(Val) {}
-    constexpr C() : Val(0) {}
+    constexpr C(int Val) : Val(Val) {}
+    C(int Val1, int Val2) : Val(Val1+Val2) {}
 
   private:
     int Val;
@@ -38,6 +38,6 @@ For example:
   static int i;       // No warning, as it is trivial
 
   extern int get_i();
-  static C(get_i())   // Warning, as the constructor is dynamically initialized
+  static C c3(get_i());// Warning, as the constructor is dynamically initialized
 
-See the features disallowed in Fuchsia at https://fuchsia.googlesource.com/zircon/+/master/docs/cxx.md
+See the features disallowed in Fuchsia at https://fuchsia.dev/fuchsia-src/development/languages/c-cpp/cxx?hl=en

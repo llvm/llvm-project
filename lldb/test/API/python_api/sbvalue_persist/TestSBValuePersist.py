@@ -1,7 +1,6 @@
 """Test SBValue::Persist"""
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -23,17 +22,19 @@ class SBValuePersistTestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
         # This is the function to remove the custom formats in order to have a
         # clean slate for the next test case.
         def cleanup():
-            self.runCmd('type format clear', check=False)
-            self.runCmd('type summary clear', check=False)
-            self.runCmd('type filter clear', check=False)
-            self.runCmd('type synthetic clear', check=False)
+            self.runCmd("type format clear", check=False)
+            self.runCmd("type summary clear", check=False)
+            self.runCmd("type filter clear", check=False)
+            self.runCmd("type synthetic clear", check=False)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
@@ -54,13 +55,9 @@ class SBValuePersistTestCase(TestBase):
         self.assertTrue(barPersist.IsValid(), "barPersist is not valid")
         self.assertTrue(bazPersist.IsValid(), "bazPersist is not valid")
 
-        self.assertEqual(
-            fooPersist.GetValueAsUnsigned(0), 10,
-            "fooPersist != 10")
-        self.assertEqual(
-            barPersist.GetPointeeData().sint32[0], 4,
-            "barPersist != 4")
-        self.assertEquals(bazPersist.GetSummary(), '"85"', "bazPersist != 85")
+        self.assertEqual(fooPersist.GetValueAsUnsigned(0), 10, "fooPersist != 10")
+        self.assertEqual(barPersist.GetPointeeData().sint32[0], 4, "barPersist != 4")
+        self.assertEqual(bazPersist.GetSummary(), '"85"', "bazPersist != 85")
 
         self.runCmd("continue")
 
@@ -68,12 +65,8 @@ class SBValuePersistTestCase(TestBase):
         self.assertTrue(barPersist.IsValid(), "barPersist is not valid")
         self.assertTrue(bazPersist.IsValid(), "bazPersist is not valid")
 
-        self.assertEqual(
-            fooPersist.GetValueAsUnsigned(0), 10,
-            "fooPersist != 10")
-        self.assertEqual(
-            barPersist.GetPointeeData().sint32[0], 4,
-            "barPersist != 4")
-        self.assertEquals(bazPersist.GetSummary(), '"85"', "bazPersist != 85")
+        self.assertEqual(fooPersist.GetValueAsUnsigned(0), 10, "fooPersist != 10")
+        self.assertEqual(barPersist.GetPointeeData().sint32[0], 4, "barPersist != 4")
+        self.assertEqual(bazPersist.GetSummary(), '"85"', "bazPersist != 85")
 
-        self.expect("expr *(%s)" % (barPersist.GetName()), substrs=['= 4'])
+        self.expect("expr *(%s)" % (barPersist.GetName()), substrs=["= 4"])

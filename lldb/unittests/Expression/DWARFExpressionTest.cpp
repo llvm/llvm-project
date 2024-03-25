@@ -25,6 +25,7 @@
 
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr,
                                        lldb::ModuleSP module_sp = {},
@@ -500,21 +501,33 @@ DWARF:
                                             platform_sp, target_sp);
 
   ExecutionContext exe_ctx(target_sp, false);
-  // DW_OP_addrx takes a single leb128 operand, the index in the addr table:
-  uint8_t expr[] = {DW_OP_addrx, 0x01};
-  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
-                          /*addr_size*/ 4);
-  Value result;
-  Status status;
-  ASSERT_TRUE(DWARFExpression::Evaluate(
-      &exe_ctx, /*reg_ctx*/ nullptr, /*module_sp*/ {}, extractor, dwarf_cu,
-      lldb::eRegisterKindLLDB,
-      /*initial_value_ptr*/ nullptr,
-      /*object_address_ptr*/ nullptr, result, &status))
-      << status.ToError();
 
+  auto evaluate = [&](DWARFExpression &expr, Status &status, Value &result) {
+    DataExtractor extractor;
+    expr.GetExpressionData(extractor);
+    return DWARFExpression::Evaluate(
+        &exe_ctx, /*reg_ctx*/ nullptr, /*module_sp*/ {}, extractor, dwarf_cu,
+        lldb::eRegisterKindLLDB,
+        /*initial_value_ptr*/ nullptr,
+        /*object_address_ptr*/ nullptr, result, &status);
+  };
+
+  // DW_OP_addrx takes a single leb128 operand, the index in the addr table:
+  uint8_t expr_data[] = {DW_OP_addrx, 0x01};
+  DataExtractor extractor(expr_data, sizeof(expr_data), lldb::eByteOrderLittle,
+                          /*addr_size*/ 4);
+  DWARFExpression expr(extractor);
+
+  Status status;
+  Value result;
+  ASSERT_TRUE(evaluate(expr, status, result)) << status.ToError();
   ASSERT_EQ(result.GetValueType(), Value::ValueType::LoadAddress);
   ASSERT_EQ(result.GetScalar().UInt(), 0x5678u);
+
+  ASSERT_TRUE(expr.Update_DW_OP_addr(dwarf_cu, 0xdeadbeef));
+  ASSERT_TRUE(evaluate(expr, status, result)) << status.ToError();
+  ASSERT_EQ(result.GetValueType(), Value::ValueType::LoadAddress);
+  ASSERT_EQ(result.GetScalar().UInt(), 0xdeadbeefu);
 }
 
 class CustomSymbolFileDWARF : public SymbolFileDWARF {
@@ -713,7 +726,7 @@ DWARF:
   //       Entries:
   //         - AbbrCode:        0x1
   //           Values:
-  //             - Value:           0x01020304
+  //             - Value:           0x0120304
   //         - AbbrCode:        0x0
   const char *dwo_yamldata = R"(
 --- !ELF
@@ -750,7 +763,7 @@ Sections:
   auto dwo_module_sp = std::make_shared<Module>(dwo_file->moduleSpec());
   SymbolFileDWARFDwo dwo_symfile(
       skeleton_symfile, dwo_module_sp->GetObjectFile()->shared_from_this(),
-      0x01020304);
+      0x0120304);
   auto *dwo_dwarf_unit = dwo_symfile.DebugInfo().GetUnitAtIndex(0);
 
   testExpressionVendorExtensions(dwo_module_sp, *dwo_dwarf_unit);

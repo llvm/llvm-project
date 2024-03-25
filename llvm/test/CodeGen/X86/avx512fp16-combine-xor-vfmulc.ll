@@ -66,6 +66,23 @@ entry:
   ret <8 x half> %4
 }
 
+define dso_local <32 x half> @test5(<32 x half> noundef %a, <32 x half> noundef %b) local_unnamed_addr #0 {
+; CHECK-LABEL: test5:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} zmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vpxorq %zmm2, %zmm1, %zmm2
+; CHECK-NEXT:    vfmulcph %zmm2, %zmm0, %zmm1
+; CHECK-NEXT:    vmovaps %zmm1, %zmm0
+; CHECK-NEXT:    retq
+entry:
+  %fneg = fneg <32 x half> %b
+  %0 = bitcast <32 x half> %a to <16 x float>
+  %1 = bitcast <32 x half> %fneg to <16 x float>
+  %2 = tail call <16 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.512(<16 x float> %0, <16 x float> %1, <16 x float> zeroinitializer, i16 -1, i32 4)
+  %3 = bitcast <16 x float> %2 to <32 x half>
+  ret <32 x half> %3
+}
+
 declare <16 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.512(<16 x float>, <16 x float>, <16 x float>, i16, i32 immarg)
 declare <8 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.256(<8 x float>, <8 x float>, <8 x float>, i8)
 declare <4 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.128(<4 x float>, <4 x float>, <4 x float>, i8)

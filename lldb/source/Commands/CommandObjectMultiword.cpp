@@ -159,25 +159,25 @@ llvm::Error CommandObjectMultiword::RemoveUserSubcommand(llvm::StringRef cmd_nam
   return llvm::Error::success();
 }
 
-bool CommandObjectMultiword::Execute(const char *args_string,
+void CommandObjectMultiword::Execute(const char *args_string,
                                      CommandReturnObject &result) {
   Args args(args_string);
   const size_t argc = args.GetArgumentCount();
   if (argc == 0) {
     this->CommandObject::GenerateHelpText(result);
-    return result.Succeeded();
+    return;
   }
 
   auto sub_command = args[0].ref();
   if (sub_command.empty()) {
     result.AppendError("Need to specify a non-empty subcommand.");
-    return result.Succeeded();
+    return;
   }
 
   if (m_subcommand_dict.empty()) {
     result.AppendErrorWithFormat("'%s' does not have any subcommands.\n",
                                  GetCommandName().str().c_str());
-    return false;
+    return;
   }
 
   StringList matches;
@@ -189,7 +189,7 @@ bool CommandObjectMultiword::Execute(const char *args_string,
 
     args.Shift();
     sub_cmd_obj->Execute(args_string, result);
-    return result.Succeeded();
+    return;
   }
 
   std::string error_msg;
@@ -214,7 +214,6 @@ bool CommandObjectMultiword::Execute(const char *args_string,
   }
   error_msg.append("\n");
   result.AppendRawError(error_msg.c_str());
-  return false;
 }
 
 void CommandObjectMultiword::GenerateHelpText(Stream &output_stream) {
@@ -274,10 +273,10 @@ void CommandObjectMultiword::HandleCompletion(CompletionRequest &request) {
 
   StringList new_matches;
   CommandObject *sub_command_object = GetSubcommandObject(arg0, &new_matches);
-  if (sub_command_object == nullptr) {
-    request.AddCompletions(new_matches);
+
+  // The subcommand is ambiguous. The completion isn't meaningful.
+  if (!sub_command_object)
     return;
-  }
 
   // Remove the one match that we got from calling GetSubcommandObject.
   new_matches.DeleteStringAtIndex(0);
@@ -429,11 +428,10 @@ llvm::StringRef CommandObjectProxy::GetUnsupportedError() {
   return "command is not implemented";
 }
 
-bool CommandObjectProxy::Execute(const char *args_string,
+void CommandObjectProxy::Execute(const char *args_string,
                                  CommandReturnObject &result) {
-  CommandObject *proxy_command = GetProxyCommandObject();
-  if (proxy_command)
-    return proxy_command->Execute(args_string, result);
-  result.AppendError(GetUnsupportedError());
-  return false;
+  if (CommandObject *proxy_command = GetProxyCommandObject())
+    proxy_command->Execute(args_string, result);
+  else
+    result.AppendError(GetUnsupportedError());
 }

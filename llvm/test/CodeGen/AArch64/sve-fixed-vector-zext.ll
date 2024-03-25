@@ -1,31 +1,29 @@
 
-; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-v1 -O3 -opaque-pointers -aarch64-sve-vector-bits-min=256 -verify-machineinstrs | FileCheck %s --check-prefixes=SVE256
-; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-v1 -O3 -opaque-pointers -aarch64-sve-vector-bits-min=128 -verify-machineinstrs | FileCheck %s --check-prefixes=NEON
-; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-n1 -O3 -opaque-pointers -verify-machineinstrs | FileCheck %s --check-prefixes=NEON
-; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-v2 -O3 -opaque-pointers -verify-machineinstrs | FileCheck %s --check-prefixes=NEON
+; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-v1 -O3 -aarch64-sve-vector-bits-min=256 -verify-machineinstrs | FileCheck %s --check-prefixes=SVE256
+; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-v1 -O3 -aarch64-sve-vector-bits-min=128 -verify-machineinstrs | FileCheck %s --check-prefixes=NEON
+; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-n1 -O3 -verify-machineinstrs | FileCheck %s --check-prefixes=NEON
+; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-v2 -O3 -verify-machineinstrs | FileCheck %s --check-prefixes=NEON
 
 define internal i32 @test(ptr nocapture readonly %p1, i32 %i1, ptr nocapture readonly %p2, i32 %i2) {
 ; SVE256-LABEL: test:
-; SVE256:       ld1b	{ z0.h }, p0/z,
-; SVE256:       ld1b	{ z1.h }, p0/z,
-; SVE256:       sub	z0.h, z0.h, z1.h
-; SVE256-NEXT:  sunpklo	z1.s, z0.h
-; SVE256-NEXT:  ext	z0.b, z0.b, z0.b, #16
-; SVE256-NEXT:  sunpklo	z0.s, z0.h
-; SVE256-NEXT:  add	z0.s, z1.s, z0.s
-; SVE256-NEXT:  uaddv	d0, p1, z0.s
+; SVE256:       ld1b    { z0.h }, p0/z,
+; SVE256:       ld1b    { z1.h }, p0/z,
+; SVE256:       sub z0.h, z0.h, z1.h
+; SVE256-NEXT:  sunpklo z1.s, z0.h
+; SVE256-NEXT:  ext z0.b, z0.b, z0.b, #16
+; SVE256-NEXT:  sunpklo z0.s, z0.h
+; SVE256-NEXT:  add z0.s, z1.s, z0.s
+; SVE256-NEXT:  uaddv   d0, p1, z0.s
 
 ; NEON-LABEL: test:
-; NEON:         tbl
-; NEON-NEXT:    tbl
-; NEON-NEXT:    tbl
-; NEON-NEXT:    tbl
-; NEON-NEXT:    tbl
-; NEON-NEXT:    tbl
-; NEON-NEXT:    tbl
-; NEON-NEXT:    tbl
-; NEON:         addv
-
+; NEON:       ldr q0, [x0, w9, sxtw]
+; NEON:       ldr q1, [x2, w10, sxtw]
+; NEON:       usubl2  v2.8h, v0.16b, v1.16b
+; NEON-NEXT:  usubl   v0.8h, v0.8b, v1.8b
+; NEON:       saddl2  v1.4s, v0.8h, v2.8h
+; NEON-NEXT:  saddl   v0.4s, v0.4h, v2.4h
+; NEON-NEXT:  add v0.4s, v0.4s, v1.4s
+; NEON-NEXT:  addv    s0, v0.4s
 
 L.entry:
   br label %L1

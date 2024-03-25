@@ -154,7 +154,101 @@ define double @pow_wrapper_minsize(double %a) minsize {
   ret double %ret
 }
 
+define <2 x float> @powi_v2f32(<2 x float> %a) minsize {
+; X86-X87-LABEL: powi_v2f32:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %esi
+; X86-X87-NEXT:    .cfi_def_cfa_offset 8
+; X86-X87-NEXT:    subl $16, %esp
+; X86-X87-NEXT:    .cfi_def_cfa_offset 24
+; X86-X87-NEXT:    .cfi_offset %esi, -8
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    pushl $15
+; X86-X87-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-X87-NEXT:    popl %esi
+; X86-X87-NEXT:    .cfi_adjust_cfa_offset -4
+; X86-X87-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __powisf2
+; X86-X87-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-X87-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __powisf2
+; X86-X87-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    addl $16, %esp
+; X86-X87-NEXT:    .cfi_def_cfa_offset 8
+; X86-X87-NEXT:    popl %esi
+; X86-X87-NEXT:    .cfi_def_cfa_offset 4
+; X86-X87-NEXT:    retl
+;
+; X86-SSE-LABEL: powi_v2f32:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    pushl %esi
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE-NEXT:    subl $32, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 40
+; X86-SSE-NEXT:    .cfi_offset %esi, -8
+; X86-SSE-NEXT:    movups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-SSE-NEXT:    pushl $15
+; X86-SSE-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE-NEXT:    popl %esi
+; X86-SSE-NEXT:    .cfi_adjust_cfa_offset -4
+; X86-SSE-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    movss %xmm0, (%esp)
+; X86-SSE-NEXT:    calll __powisf2
+; X86-SSE-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    movups {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE-NEXT:    movss %xmm0, (%esp)
+; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    calll __powisf2
+; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-SSE-NEXT:    addl $32, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE-NEXT:    popl %esi
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; X64-LABEL: powi_v2f32:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    subq $32, %rsp
+; X64-NEXT:    .cfi_def_cfa_offset 48
+; X64-NEXT:    .cfi_offset %rbx, -16
+; X64-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; X64-NEXT:    pushq $15
+; X64-NEXT:    .cfi_adjust_cfa_offset 8
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    .cfi_adjust_cfa_offset -8
+; X64-NEXT:    movl %ebx, %edi
+; X64-NEXT:    callq __powisf2@PLT
+; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X64-NEXT:    movl %ebx, %edi
+; X64-NEXT:    callq __powisf2@PLT
+; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X64-NEXT:    movaps %xmm1, %xmm0
+; X64-NEXT:    addq $32, %rsp
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    retq
+  %ret = tail call < 2 x float> @llvm.powi.v2f32.i32(<2 x float> %a, i32 15) nounwind ;
+  ret <2 x float> %ret
+}
+
 declare double @llvm.powi.f64.i32(double, i32) nounwind readonly
+declare < 2 x float> @llvm.powi.v2f32.i32(<2 x float>, i32) nounwind readonly
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}

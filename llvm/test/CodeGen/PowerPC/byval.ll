@@ -34,7 +34,7 @@ define dso_local i32 @bar() {
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 entry:
-  %x = alloca %struct, align 4
+  %x = alloca %struct, align 8
   call void @foo(ptr %x)
   %r = call i32 @foo1(ptr byval(%struct) %x)
   ret i32 %r

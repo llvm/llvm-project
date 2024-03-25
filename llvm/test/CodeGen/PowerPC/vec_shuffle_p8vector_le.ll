@@ -28,9 +28,9 @@ define void @VPKUDUM(ptr %A, ptr %B) {
 ; CHECK-LABEL: VPKUDUM:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    lxvd2x 1, 0, 4
 ; CHECK-NEXT:    xxswapd 34, 0
-; CHECK-NEXT:    xxswapd 35, 1
+; CHECK-NEXT:    lxvd2x 0, 0, 4
+; CHECK-NEXT:    xxswapd 35, 0
 ; CHECK-NEXT:    vpkudum 2, 3, 2
 ; CHECK-NEXT:    xxswapd 0, 34
 ; CHECK-NEXT:    stxvd2x 0, 0, 3

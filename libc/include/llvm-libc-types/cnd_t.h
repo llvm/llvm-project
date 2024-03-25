@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_CND_T_H__
-#define __LLVM_LIBC_TYPES_CND_T_H__
+#ifndef LLVM_LIBC_TYPES_CND_T_H
+#define LLVM_LIBC_TYPES_CND_T_H
 
 #include "mtx_t.h"
 
@@ -17,4 +17,4 @@ typedef struct {
   mtx_t __qmtx;
 } cnd_t;
 
-#endif // __LLVM_LIBC_TYPES_CND_T_H__
+#endif // LLVM_LIBC_TYPES_CND_T_H

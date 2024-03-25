@@ -197,7 +197,7 @@ Example usage for a project using a compile commands database:
     llvm::sys::path::native(AssetsPath, IndexJS);
     llvm::sys::path::append(IndexJS, "index.js");
     CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
-                                 std::string(DefaultStylesheet.str()));
+                                 std::string(DefaultStylesheet));
     CDCtx.FilesToCopy.emplace_back(IndexJS.str());
   }
 
@@ -238,7 +238,7 @@ Example usage for a project using a compile commands database:
   Error = false;
   llvm::sys::Mutex IndexMutex;
   // ExecutorConcurrency is a flag exposed by AllTUsExecution.h
-  llvm::ThreadPool Pool(llvm::hardware_concurrency(ExecutorConcurrency));
+  llvm::DefaultThreadPool Pool(llvm::hardware_concurrency(ExecutorConcurrency));
   for (auto &Group : USRToBitcode) {
     Pool.async([&]() {
       std::vector<std::unique_ptr<doc::Info>> Infos;

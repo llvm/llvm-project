@@ -1,5 +1,5 @@
 ! Test lowering of elemental calls in array expressions.
-! RUN: bbc -o - -emit-fir %s | FileCheck %s
+! RUN: bbc -o - -emit-fir -hlfir=false %s | FileCheck %s
 
 module scalar_in_elem
 

@@ -1,8 +1,8 @@
-#ifndef __LLVM_LIBC_MACROS_FCNTL_MACROS_H
-#define __LLVM_LIBC_MACROS_FCNTL_MACROS_H
+#ifndef LLVM_LIBC_MACROS_FCNTL_MACROS_H
+#define LLVM_LIBC_MACROS_FCNTL_MACROS_H
 
-#ifdef __unix__
+#ifdef __linux__
 #include "linux/fcntl-macros.h"
 #endif
 
-#endif // __LLVM_LIBC_MACROS_FCNTL_MACROS_H
+#endif // LLVM_LIBC_MACROS_FCNTL_MACROS_H

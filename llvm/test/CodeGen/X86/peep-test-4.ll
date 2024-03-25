@@ -8,10 +8,8 @@ define void @neg(i32 %x) nounwind {
 ; CHECK-LABEL: neg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    negl %edi
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %bb
-; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB0_1: # %return
+; CHECK-NEXT:    jne foo # TAILCALL
+; CHECK-NEXT:  # %bb.1: # %return
 ; CHECK-NEXT:    retq
   %sub = sub i32 0, %x
   %cmp = icmp eq i32 %sub, 0
@@ -29,10 +27,8 @@ define void @sar(i32 %x) nounwind {
 ; CHECK-LABEL: sar:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sarl %edi
-; CHECK-NEXT:    je .LBB1_1
-; CHECK-NEXT:  # %bb.2: # %bb
-; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB1_1: # %return
+; CHECK-NEXT:    jne foo # TAILCALL
+; CHECK-NEXT:  # %bb.1: # %return
 ; CHECK-NEXT:    retq
   %ashr = ashr i32 %x, 1
   %cmp = icmp eq i32 %ashr, 0
@@ -50,10 +46,8 @@ define void @shr(i32 %x) nounwind {
 ; CHECK-LABEL: shr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    shrl %edi
-; CHECK-NEXT:    je .LBB2_1
-; CHECK-NEXT:  # %bb.2: # %bb
-; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB2_1: # %return
+; CHECK-NEXT:    jne foo # TAILCALL
+; CHECK-NEXT:  # %bb.1: # %return
 ; CHECK-NEXT:    retq
   %ashr = lshr i32 %x, 1
   %cmp = icmp eq i32 %ashr, 0
@@ -71,10 +65,8 @@ define void @shri(i32 %x) nounwind {
 ; CHECK-LABEL: shri:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    shrl $3, %edi
-; CHECK-NEXT:    je .LBB3_1
-; CHECK-NEXT:  # %bb.2: # %bb
-; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB3_1: # %return
+; CHECK-NEXT:    jne foo # TAILCALL
+; CHECK-NEXT:  # %bb.1: # %return
 ; CHECK-NEXT:    retq
   %ashr = lshr i32 %x, 3
   %cmp = icmp eq i32 %ashr, 0
@@ -92,10 +84,8 @@ define void @shl(i32 %x) nounwind {
 ; CHECK-LABEL: shl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addl %edi, %edi
-; CHECK-NEXT:    je .LBB4_1
-; CHECK-NEXT:  # %bb.2: # %bb
-; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB4_1: # %return
+; CHECK-NEXT:    jne foo # TAILCALL
+; CHECK-NEXT:  # %bb.1: # %return
 ; CHECK-NEXT:    retq
   %shl = shl i32 %x, 1
   %cmp = icmp eq i32 %shl, 0
@@ -113,10 +103,8 @@ define void @shli(i32 %x) nounwind {
 ; CHECK-LABEL: shli:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    shll $4, %edi
-; CHECK-NEXT:    je .LBB5_1
-; CHECK-NEXT:  # %bb.2: # %bb
-; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB5_1: # %return
+; CHECK-NEXT:    jne foo # TAILCALL
+; CHECK-NEXT:  # %bb.1: # %return
 ; CHECK-NEXT:    retq
   %shl = shl i32 %x, 4
   %cmp = icmp eq i32 %shl, 0
@@ -159,10 +147,8 @@ define void @andn(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: andn:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andnl %esi, %edi, %edi
-; CHECK-NEXT:    je .LBB8_1
-; CHECK-NEXT:  # %bb.2: # %bb
-; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB8_1: # %return
+; CHECK-NEXT:    jne foo # TAILCALL
+; CHECK-NEXT:  # %bb.1: # %return
 ; CHECK-NEXT:    retq
   %not = xor i32 %x, -1
   %andn = and i32 %y, %not
@@ -182,10 +168,8 @@ define void @bextr(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: bextr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bextrl %esi, %edi, %edi
-; CHECK-NEXT:    je .LBB9_1
-; CHECK-NEXT:  # %bb.2: # %bb
-; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB9_1: # %return
+; CHECK-NEXT:    jne foo # TAILCALL
+; CHECK-NEXT:  # %bb.1: # %return
 ; CHECK-NEXT:    retq
   %bextr = tail call i32 @llvm.x86.bmi.bextr.32(i32 %x, i32 %y)
   %cmp = icmp eq i32 %bextr, 0
@@ -204,10 +188,8 @@ define void @popcnt(i32 %x) nounwind {
 ; CHECK-LABEL: popcnt:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    popcntl %edi, %edi
-; CHECK-NEXT:    je .LBB10_1
-; CHECK-NEXT:  # %bb.2: # %bb
-; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB10_1: # %return
+; CHECK-NEXT:    jne foo # TAILCALL
+; CHECK-NEXT:  # %bb.1: # %return
 ; CHECK-NEXT:    retq
   %popcnt = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp eq i32 %popcnt, 0

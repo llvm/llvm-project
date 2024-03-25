@@ -10,7 +10,6 @@
 // Copyright (c) Microsoft Corporation.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-
 // Copyright 2018 Ulf Adams
 // Copyright (c) Microsoft Corporation. All rights reserved.
 
@@ -47,8 +46,7 @@
 #include <__charconv/chars_format.h>
 #include <__charconv/to_chars_result.h>
 #include <__config>
-#include <__debug>
-#include <__errc>
+#include <__system_error/errc.h>
 #include <cstdint>
 #include <cstring>
 #include <type_traits>

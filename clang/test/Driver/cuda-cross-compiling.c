@@ -43,6 +43,8 @@
 //
 // RUN: %clang -target nvptx64-nvidia-cuda -march=sm_61 -c -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=OBJECT %s
+// RUN: %clang -target nvptx64-nvidia-cuda -save-temps -march=sm_61 -c -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=OBJECT %s
 
 //      OBJECT: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu" "sm_61" "-target-feature" "+ptx{{[0-9]+}}" {{.*}} "-o" "[[PTX:.+]].s"
 // OBJECT-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_61" "--output-file" "[[OBJ:.+]].o" "[[PTX]].s" "-c"
@@ -58,11 +60,35 @@
 // LINK: nvlink{{.*}}"-o" "a.out" "-arch" "sm_61" {{.*}} "{{.*}}.cubin"
 
 //
-// Test the generated arguments default to a value with no architecture. 
+// Test to ensure that we enable handling global constructors in a freestanding
+// Nvidia compilation.
 //
-// RUN: %clang -target nvptx64-nvidia-cuda -### %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=DEFAULT %s
+// RUN: %clang -target nvptx64-nvidia-cuda -march=sm_70 %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=LOWERING %s
 
-//      DEFAULT: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu" "sm_35" "-target-feature" "+ptx{{[0-9]+}}" {{.*}} "-o" "[[PTX:.+]].s"
-// DEFAULT-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_35" "--output-file" "[[CUBIN:.+]].cubin" "[[PTX]].s" "-c"
-// DEFAULT-NEXT: nvlink{{.*}}"-o" "a.out" "-arch" "sm_35" {{.*}} "[[CUBIN]].cubin"
+// LOWERING: -cc1" "-triple" "nvptx64-nvidia-cuda" {{.*}} "-mllvm" "--nvptx-lower-global-ctor-dtor"
+
+//
+// Test passing arguments directly to nvlink.
+//
+// RUN: %clang -target nvptx64-nvidia-cuda -Wl,-v -Wl,a,b -march=sm_52 -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=LINKER-ARGS %s
+
+// LINKER-ARGS: nvlink{{.*}}"-v"{{.*}}"a" "b"
+
+// Tests for handling a missing architecture.
+//
+// RUN: not %clang -target nvptx64-nvidia-cuda %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=MISSING %s
+// RUN: not %clang -target nvptx64-nvidia-cuda -march=generic %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=MISSING %s
+
+// MISSING: error: Must pass in an explicit nvptx64 gpu architecture to 'ptxas'
+// MISSING: error: Must pass in an explicit nvptx64 gpu architecture to 'nvlink'
+
+// RUN: %clang -target nvptx64-nvidia-cuda -flto -c %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=GENERIC %s
+// RUN: %clang -target nvptx64-nvidia-cuda -march=sm_52 -march=generic -flto -c %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=GENERIC %s
+
+// GENERIC-NOT: -cc1" "-triple" "nvptx64-nvidia-cuda" {{.*}} "-target-cpu"

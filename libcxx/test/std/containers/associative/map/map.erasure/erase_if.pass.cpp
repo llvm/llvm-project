@@ -30,7 +30,7 @@ M make (Init vals)
 }
 
 template <typename M, typename Pred>
-void test0(Init vals, Pred p, Init expected, size_t expected_erased_count) {
+void test0(Init vals, Pred p, Init expected, std::size_t expected_erased_count) {
   M s = make<M>(vals);
   ASSERT_SAME_TYPE(typename M::size_type, decltype(std::erase_if(s, p)));
   assert(expected_erased_count == std::erase_if(s, p));

@@ -1,8 +1,5 @@
 Checks: '-*,modernize-loop-convert,modernize-use-using'
 CheckOptions:
-  - key:             modernize-loop-convert.MaxCopySize
-    value:           '10'
-  - key:             modernize-loop-convert.MinConfidence
-    value:           reasonable
-  - key:             modernize-use-using.IgnoreMacros
-    value:           true
+  modernize-loop-convert.MaxCopySize: '10'
+  modernize-loop-convert.MinConfidence: reasonable
+  modernize-use-using.IgnoreMacros: true

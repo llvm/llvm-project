@@ -4,11 +4,7 @@
 // RUN: %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-DUMP
 //
 // FIXME: Implement.
-// UNSUPPORTED: asan
-// UNSUPPORTED: lsan
-// UNSUPPORTED: msan
-// UNSUPPORTED: tsan
-// UNSUPPORTED: ubsan
+// XFAIL: *
 
 #include <signal.h>
 

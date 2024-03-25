@@ -270,20 +270,22 @@ struct LlvmLibcFmaTest : public FmaTestTemplate<double> {
         double c = (signs & 1) ? -INPUTS[i].c : INPUTS[i].c;
         mpfr::TernaryInput<double> input{a, b, c};
         ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input,
-                                       __llvm_libc::fma(a, b, c), 0.5);
+                                       LIBC_NAMESPACE::fma(a, b, c), 0.5);
       }
     }
   }
 };
 
 TEST_F(LlvmLibcFmaTest, SpecialNumbers) {
-  test_special_numbers(&__llvm_libc::fma);
+  test_special_numbers(&LIBC_NAMESPACE::fma);
 }
 
 TEST_F(LlvmLibcFmaTest, SubnormalRange) {
-  test_subnormal_range(&__llvm_libc::fma);
+  test_subnormal_range(&LIBC_NAMESPACE::fma);
 }
 
-TEST_F(LlvmLibcFmaTest, NormalRange) { test_normal_range(&__llvm_libc::fma); }
+TEST_F(LlvmLibcFmaTest, NormalRange) {
+  test_normal_range(&LIBC_NAMESPACE::fma);
+}
 
 TEST_F(LlvmLibcFmaTest, ExtraValues) { test_more_values(); }

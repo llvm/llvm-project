@@ -8,9 +8,9 @@ define void @fextr(ptr %ptr) {
 ; CHECK-NEXT:    [[LD:%.*]] = load <8 x i16>, ptr undef, align 16
 ; CHECK-NEXT:    br label [[T:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i16> [[LD]], <8 x i16> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = add <8 x i16> [[LD]], [[SHUFFLE]]
-; CHECK-NEXT:    store <8 x i16> [[TMP0]], ptr [[PTR:%.*]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i16> [[LD]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = add <8 x i16> [[LD]], [[TMP0]]
+; CHECK-NEXT:    store <8 x i16> [[TMP1]], ptr [[PTR:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
 ; YAML:      Pass:            slp-vectorizer

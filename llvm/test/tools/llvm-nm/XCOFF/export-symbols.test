@@ -52,6 +52,10 @@
 # RUN: yaml2obj -DFLAG=0x2000 --docnum=2 %s -o %t_shared.o
 # RUN: llvm-nm --export-symbols %t_shared.o | count 0
 
+## Test that llvm-nm ignores AIX linker import files when using --export-symbols. These start with "#!".
+# RUN: echo -e "#!\n bar\n foo " > %t_imp.txt
+# RUN: llvm-nm --export-symbols %t_imp.txt 2>&1 | count 0
+
 --- !XCOFF
 FileHeader:
   MagicNumber:       0x1DF

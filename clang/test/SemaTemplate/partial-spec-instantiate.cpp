@@ -41,7 +41,6 @@ namespace WonkyAccess {
   }
 }
 
-// <rdar://problem/9169404>
 namespace rdar9169404 {
   template<typename T, T N> struct X { };
   template<bool C> struct X<bool, C> {
@@ -54,7 +53,6 @@ namespace rdar9169404 {
 #endif
 }
 
-// rdar://problem/39524996
 namespace rdar39524996 {
   template <typename T, typename U>
   struct enable_if_not_same
@@ -133,4 +131,24 @@ namespace IgnorePartialSubstitution {
   void f() { helper<S>(); }
 
   _Static_assert(S::value, "");
+}
+
+namespace GH60778 {
+  template <bool B = false> class ClassTemplate {
+  public:
+      template <typename T, typename = void> class Nested {};
+  };
+
+  template <typename DerivedType> class Base {};
+
+  template <>
+  template <typename T>
+  class ClassTemplate<>::Nested<T> : public Base<ClassTemplate<>::Nested<T> > {};
+
+  void use() {
+    // This should instantiate the body of Nested with the template arguments
+    // from the Partial Specialization. This would previously get confused and
+    // get the template arguments from the primary template instead.
+    ClassTemplate<>::Nested<int> instantiation;
+  }
 }

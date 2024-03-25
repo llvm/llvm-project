@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
 #pragma omp target data map(ompx_hold, alloc : X)
 #endif
   {
-    //      CHECK: Libomptarget error: Trying to disassociate a pointer with a
+    //      CHECK: omptarget error: Trying to disassociate a pointer with a
     // CHECK-SAME: non-zero hold reference count
     // CHECK-NEXT: omp_target_disassociate_ptr failed
     if (omp_target_disassociate_ptr(&X, DevNum)) {

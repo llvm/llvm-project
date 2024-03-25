@@ -1,47 +1,5 @@
-// RUN: %check_clang_tidy %s bugprone-assert-side-effect %t -- -config="{CheckOptions: [{key: bugprone-assert-side-effect.CheckFunctionCalls, value: true}, {key: bugprone-assert-side-effect.AssertMacros, value: 'assert,assert2,my_assert,convoluted_assert,msvc_assert'}, {key: bugprone-assert-side-effect.IgnoredFunctions, value: 'MyClass::badButIgnoredFunc'}]}" -- -fexceptions
-
-//===--- assert definition block ------------------------------------------===//
-int abort() { return 0; }
-
-#ifdef NDEBUG
-#define assert(x) 1
-#else
-#define assert(x)                                                              \
-  if (!(x))                                                                    \
-  (void)abort()
-#endif
-
-void print(...);
-#define assert2(e) (__builtin_expect(!(e), 0) ?                                \
-                       print (#e, __FILE__, __LINE__) : (void)0)
-
-#ifdef NDEBUG
-#define my_assert(x) 1
-#else
-#define my_assert(x)                                                           \
-  ((void)((x) ? 1 : abort()))
-#endif
-
-#ifdef NDEBUG
-#define not_my_assert(x) 1
-#else
-#define not_my_assert(x)                                                       \
-  if (!(x))                                                                    \
-  (void)abort()
-#endif
-
-#define real_assert(x) ((void)((x) ? 1 : abort()))
-#define wrap1(x) real_assert(x)
-#define wrap2(x) wrap1(x)
-#define convoluted_assert(x) wrap2(x)
-
-#define msvc_assert(expression) (void)(                                        \
-            (!!(expression)) ||                                                \
-            (abort(), 0)                                                       \
-        )
-
-
-//===----------------------------------------------------------------------===//
+// RUN: %check_clang_tidy %s bugprone-assert-side-effect %t -- -config="{CheckOptions: {bugprone-assert-side-effect.CheckFunctionCalls: true, bugprone-assert-side-effect.AssertMacros: 'assert,assert2,my_assert,convoluted_assert,msvc_assert', bugprone-assert-side-effect.IgnoredFunctions: 'MyClass::badButIgnoredFunc'}}" -- -fexceptions -I %S/Inputs/assert-side-effect
+#include <assert.h>
 
 bool badButIgnoredFunc(int a, int b) { return a * b > 0; }
 
@@ -126,5 +84,51 @@ int main() {
   msvc_assert(mc2 = mc);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in msvc_assert() condition discarded in release builds
 
+  struct OperatorTest {
+    int operator<<(int i) const { return i; }
+    int operator<<(int i) { return i; }
+    int operator+=(int i) const { return i; }
+    int operator+=(int i) { return i; }
+  };
+
+  const OperatorTest const_instance;
+  assert(const_instance << 1);
+  assert(const_instance += 1);
+
+  OperatorTest non_const_instance;
+  assert(static_cast<const OperatorTest>(non_const_instance) << 1);
+  assert(static_cast<const OperatorTest>(non_const_instance) += 1);
+  assert(non_const_instance << 1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in assert() condition discarded in release builds
+  assert(non_const_instance += 1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in assert() condition discarded in release builds
+
+  assert(5<<1);
+  assert(5>>1);
+
   return 0;
 }
+
+namespace parameter_anaylysis {
+
+struct S {
+  bool value(int) const;
+  bool leftValueRef(int &) const;
+  bool constRef(int const &) const;
+  bool rightValueRef(int &&) const;
+};
+
+void foo() {
+  S s{};
+  int i = 0;
+  assert(s.value(0));
+  assert(s.value(i));
+  assert(s.leftValueRef(i));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in assert() condition discarded in release builds
+  assert(s.constRef(0));
+  assert(s.constRef(i));
+  assert(s.rightValueRef(0));
+  assert(s.rightValueRef(static_cast<int &&>(i)));
+}
+
+} // namespace parameter_anaylysis

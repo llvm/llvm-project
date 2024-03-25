@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=i386-pc-linux-gnu -aa-pipeline=basic-aa -passes=inferattrs,aa-eval -print-all-alias-modref-info -disable-output 2>&1 %s | FileCheck %s
+; RUN: opt -mtriple=x86_64-pc-linux-gnu -aa-pipeline=basic-aa -passes=inferattrs,aa-eval -print-all-alias-modref-info -disable-output 2>&1 %s | FileCheck %s
 
 ; CHECK-LABEL: Function: test_memcmp_const_size
 ; CHECK:      Just Ref:  Ptr: i8* %a	<->  %res = tail call i32 @memcmp(ptr %a, ptr %b, i64 4)

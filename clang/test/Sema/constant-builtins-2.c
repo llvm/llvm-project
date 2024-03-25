@@ -124,6 +124,86 @@ char isnormal_inf_neg[!__builtin_isnormal(-__builtin_inf()) ? 1 : -1];
 char isnormal_nan    [!__builtin_isnormal(__builtin_nan("")) ? 1 : -1];
 char isnormal_snan   [!__builtin_isnormal(__builtin_nans("")) ? 1 : -1];
 
+char iszero_inf_pos[!__builtin_iszero(__builtin_inf()) ? 1 : -1];
+char iszero_pos    [!__builtin_iszero(1.0) ? 1 : -1];
+char iszero_normf  [!__builtin_iszero(1e-37f) ? 1 : -1];
+char iszero_denormf[!__builtin_iszero(1e-38f) ? 1 : -1];
+char iszero_norm   [!__builtin_iszero(1e-307) ? 1 : -1];
+char iszero_denorm [!__builtin_iszero(1e-308) ? 1 : -1];
+char iszero_zero   [__builtin_iszero(0.0) ? 1 : -1];
+char iszero_negzero[__builtin_iszero(-0.0) ? 1 : -1];
+char iszero_neg    [!__builtin_iszero(-1.0) ? 1 : -1];
+char iszero_inf_neg[!__builtin_iszero(-__builtin_inf()) ? 1 : -1];
+char iszero_nan    [!__builtin_iszero(__builtin_nan("")) ? 1 : -1];
+char iszero_snan   [!__builtin_iszero(__builtin_nans("")) ? 1 : -1];
+
+char issubnormal_inf_pos[!__builtin_issubnormal(__builtin_inf()) ? 1 : -1];
+char issubnormal_pos    [!__builtin_issubnormal(1.0) ? 1 : -1];
+char issubnormal_normf  [!__builtin_issubnormal(1e-37f) ? 1 : -1];
+char issubnormal_denormf[__builtin_issubnormal(1e-38f) ? 1 : -1];
+char issubnormal_norm   [!__builtin_issubnormal(1e-307) ? 1 : -1];
+char issubnormal_denorm [__builtin_issubnormal(1e-308) ? 1 : -1];
+char issubnormal_zero   [!__builtin_issubnormal(0.0) ? 1 : -1];
+char issubnormal_negzero[!__builtin_issubnormal(-0.0) ? 1 : -1];
+char issubnormal_neg    [!__builtin_issubnormal(-1.0) ? 1 : -1];
+char issubnormal_inf_neg[!__builtin_issubnormal(-__builtin_inf()) ? 1 : -1];
+char issubnormal_nan    [!__builtin_issubnormal(__builtin_nan("")) ? 1 : -1];
+char issubnormal_snan   [!__builtin_issubnormal(__builtin_nans("")) ? 1 : -1];
+
+char issignaling_inf_pos[!__builtin_issignaling(__builtin_inf()) ? 1 : -1];
+char issignaling_pos    [!__builtin_issignaling(1.0) ? 1 : -1];
+char issignaling_normf  [!__builtin_issignaling(1e-37f) ? 1 : -1];
+char issignaling_denormf[!__builtin_issignaling(1e-38f) ? 1 : -1];
+char issignaling_norm   [!__builtin_issignaling(1e-307) ? 1 : -1];
+char issignaling_denorm [!__builtin_issignaling(1e-308) ? 1 : -1];
+char issignaling_zero   [!__builtin_issignaling(0.0) ? 1 : -1];
+char issignaling_negzero[!__builtin_issignaling(-0.0) ? 1 : -1];
+char issignaling_neg    [!__builtin_issignaling(-1.0) ? 1 : -1];
+char issignaling_inf_neg[!__builtin_issignaling(-__builtin_inf()) ? 1 : -1];
+char issignaling_nan    [!__builtin_issignaling(__builtin_nan("")) ? 1 : -1];
+char issignaling_snan   [__builtin_issignaling(__builtin_nans("")) ? 1 : -1];
+
+char isfpclass_inf_pos_0[__builtin_isfpclass(__builtin_inf(), 0x0200) ? 1 : -1]; // fcPosInf
+char isfpclass_inf_pos_1[!__builtin_isfpclass(__builtin_inff(), 0x0004) ? 1 : -1]; // fcNegInf
+char isfpclass_inf_pos_2[__builtin_isfpclass(__builtin_infl(), 0x0207) ? 1 : -1]; // fcSNan|fcQNan|fcNegInf|fcPosInf
+char isfpclass_inf_pos_3[!__builtin_isfpclass(__builtin_inf(), 0x01F8) ? 1 : -1]; // fcFinite
+char isfpclass_pos_0    [__builtin_isfpclass(1.0, 0x0100) ? 1 : -1]; // fcPosNormal
+char isfpclass_pos_1    [!__builtin_isfpclass(1.0f, 0x0008) ? 1 : -1]; // fcNegNormal
+char isfpclass_pos_2    [__builtin_isfpclass(1.0L, 0x01F8) ? 1 : -1]; // fcFinite
+char isfpclass_pos_3    [!__builtin_isfpclass(1.0, 0x0003) ? 1 : -1]; // fcSNan|fcQNan
+char isfpclass_pdenorm_0[__builtin_isfpclass(1.0e-40f, 0x0080) ? 1 : -1]; // fcPosSubnormal
+char isfpclass_pdenorm_1[__builtin_isfpclass(1.0e-310, 0x01F8) ? 1 : -1]; // fcFinite
+char isfpclass_pdenorm_2[!__builtin_isfpclass(1.0e-40f, 0x003C) ? 1 : -1]; // fcNegative
+char isfpclass_pdenorm_3[!__builtin_isfpclass(1.0e-310, 0x0207) ? 1 : -1]; // ~fcFinite
+char isfpclass_pzero_0  [__builtin_isfpclass(0.0f, 0x0060) ? 1 : -1]; // fcZero
+char isfpclass_pzero_1  [__builtin_isfpclass(0.0, 0x01F8) ? 1 : -1]; // fcFinite
+char isfpclass_pzero_2  [!__builtin_isfpclass(0.0L, 0x0020) ? 1 : -1]; // fcNegZero
+char isfpclass_pzero_3  [!__builtin_isfpclass(0.0, 0x0003) ? 1 : -1]; // fcNan
+char isfpclass_nzero_0  [__builtin_isfpclass(-0.0f, 0x0060) ? 1 : -1]; // fcZero
+char isfpclass_nzero_1  [__builtin_isfpclass(-0.0, 0x01F8) ? 1 : -1]; // fcFinite
+char isfpclass_nzero_2  [!__builtin_isfpclass(-0.0L, 0x0040) ? 1 : -1]; // fcPosZero
+char isfpclass_nzero_3  [!__builtin_isfpclass(-0.0, 0x0003) ? 1 : -1]; // fcNan
+char isfpclass_ndenorm_0[__builtin_isfpclass(-1.0e-40f, 0x0010) ? 1 : -1]; // fcNegSubnormal
+char isfpclass_ndenorm_1[__builtin_isfpclass(-1.0e-310, 0x01F8) ? 1 : -1]; // fcFinite
+char isfpclass_ndenorm_2[!__builtin_isfpclass(-1.0e-40f, 0x03C0) ? 1 : -1]; // fcPositive
+char isfpclass_ndenorm_3[!__builtin_isfpclass(-1.0e-310, 0x0207) ? 1 : -1]; // ~fcFinite
+char isfpclass_neg_0    [__builtin_isfpclass(-1.0, 0x0008) ? 1 : -1]; // fcNegNormal
+char isfpclass_neg_1    [!__builtin_isfpclass(-1.0f, 0x00100) ? 1 : -1]; // fcPosNormal
+char isfpclass_neg_2    [__builtin_isfpclass(-1.0L, 0x01F8) ? 1 : -1]; // fcFinite
+char isfpclass_neg_3    [!__builtin_isfpclass(-1.0, 0x0003) ? 1 : -1]; // fcSNan|fcQNan
+char isfpclass_inf_neg_0[__builtin_isfpclass(-__builtin_inf(), 0x0004) ? 1 : -1]; // fcNegInf
+char isfpclass_inf_neg_1[!__builtin_isfpclass(-__builtin_inff(), 0x0200) ? 1 : -1]; // fcPosInf
+char isfpclass_inf_neg_2[__builtin_isfpclass(-__builtin_infl(), 0x0207) ? 1 : -1]; // ~fcFinite
+char isfpclass_inf_neg_3[!__builtin_isfpclass(-__builtin_inf(), 0x03C0) ? 1 : -1]; // fcPositive
+char isfpclass_qnan_0   [__builtin_isfpclass(__builtin_nan(""), 0x0002) ? 1 : -1]; // fcQNan
+char isfpclass_qnan_1   [!__builtin_isfpclass(__builtin_nanf(""), 0x0001) ? 1 : -1]; // fcSNan
+char isfpclass_qnan_2   [__builtin_isfpclass(__builtin_nanl(""), 0x0207) ? 1 : -1]; // ~fcFinite
+char isfpclass_qnan_3   [!__builtin_isfpclass(__builtin_nan(""), 0x01F8) ? 1 : -1]; // fcFinite
+char isfpclass_snan_0   [__builtin_isfpclass(__builtin_nansf(""), 0x0001) ? 1 : -1]; // fcSNan
+char isfpclass_snan_1   [!__builtin_isfpclass(__builtin_nans(""), 0x0002) ? 1 : -1]; // fcQNan
+char isfpclass_snan_2   [__builtin_isfpclass(__builtin_nansl(""), 0x0207) ? 1 : -1]; // ~fcFinite
+char isfpclass_snan_3   [!__builtin_isfpclass(__builtin_nans(""), 0x01F8) ? 1 : -1]; // fcFinite
+
 //double       g19 = __builtin_powi(2.0, 4);
 //float        g20 = __builtin_powif(2.0f, 4);
 //long double  g21 = __builtin_powil(2.0L, 4);
@@ -157,6 +237,15 @@ char popcount7[__builtin_popcountl(~0L) == BITSIZE(long) ? 1 : -1];
 char popcount8[__builtin_popcountll(0LL) == 0 ? 1 : -1];
 char popcount9[__builtin_popcountll(0xF0F0LL) == 8 ? 1 : -1];
 char popcount10[__builtin_popcountll(~0LL) == BITSIZE(long long) ? 1 : -1];
+char popcount11[__builtin_popcountg(0U) == 0 ? 1 : -1];
+char popcount12[__builtin_popcountg(0xF0F0U) == 8 ? 1 : -1];
+char popcount13[__builtin_popcountg(~0U) == BITSIZE(int) ? 1 : -1];
+char popcount14[__builtin_popcountg(~0UL) == BITSIZE(long) ? 1 : -1];
+char popcount15[__builtin_popcountg(~0ULL) == BITSIZE(long long) ? 1 : -1];
+#ifdef __SIZEOF_INT128__
+char popcount16[__builtin_popcountg(~(unsigned __int128)0) == BITSIZE(__int128) ? 1 : -1];
+#endif
+char popcount17[__builtin_popcountg(~(unsigned _BitInt(128))0) == BITSIZE(_BitInt(128)) ? 1 : -1];
 
 char parity1[__builtin_parity(0) == 0 ? 1 : -1];
 char parity2[__builtin_parity(0xb821) == 0 ? 1 : -1];
@@ -176,13 +265,13 @@ char bitreverse4[__builtin_bitreverse64(0x0123456789ABCDEFULL) == 0xF7B3D591E6A2
 
 char rotateleft1[__builtin_rotateleft8(0x01, 5) == 0x20 ? 1 : -1];
 char rotateleft2[__builtin_rotateleft16(0x3210, 11) == 0x8190 ? 1 : -1];
-char rotateleft2[__builtin_rotateleft32(0x76543210, 22) == 0x841D950C ? 1 : -1];
-char rotateleft2[__builtin_rotateleft64(0xFEDCBA9876543210ULL, 55) == 0x87F6E5D4C3B2A19ULL ? 1 : -1];
+char rotateleft3[__builtin_rotateleft32(0x76543210, 22) == 0x841D950C ? 1 : -1];
+char rotateleft4[__builtin_rotateleft64(0xFEDCBA9876543210ULL, 55) == 0x87F6E5D4C3B2A19ULL ? 1 : -1];
 
 char rotateright1[__builtin_rotateright8(0x01, 5) == 0x08 ? 1 : -1];
 char rotateright2[__builtin_rotateright16(0x3210, 11) == 0x4206 ? 1 : -1];
-char rotateright2[__builtin_rotateright32(0x76543210, 22) == 0x50C841D9 ? 1 : -1];
-char rotateright2[__builtin_rotateright64(0xFEDCBA9876543210ULL, 55) == 0xB97530ECA86421FDULL ? 1 : -1];
+char rotateright3[__builtin_rotateright32(0x76543210, 22) == 0x50C841D9 ? 1 : -1];
+char rotateright4[__builtin_rotateright64(0xFEDCBA9876543210ULL, 55) == 0xB97530ECA86421FDULL ? 1 : -1];
 
 char ffs1[__builtin_ffs(0) == 0 ? 1 : -1];
 char ffs2[__builtin_ffs(1) == 1 ? 1 : -1];

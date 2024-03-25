@@ -105,5 +105,9 @@ constexpr auto progUnitEndStmtErrorRecovery{
     (many(!"END"_tok >> SkipPast<'\n'>{}) >>
         ("END"_tok >> SkipTo<'\n'>{} || consumedAllInput)) >>
     missingOptionalName};
+
+constexpr auto beginDirective{skipStuffBeforeStatement >> "!"_ch};
+constexpr auto endDirective{space >> endOfLine};
+
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_STMT_PARSER_H_

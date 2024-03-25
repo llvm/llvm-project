@@ -1,3 +1,9 @@
+if(MLIR_ENABLE_PDL_IN_PATTERNMATCH)
+  set(pdl_src
+    PDL/PDLPatternMatch.cpp
+  )
+endif()
+
 add_mlir_library(MLIRIR
   AffineExpr.cpp
   AffineMap.cpp
@@ -17,11 +23,10 @@ add_mlir_library(MLIRIR
   DialectResourceBlobManager.cpp
   Dominance.cpp
   ExtensibleDialect.cpp
-  FunctionImplementation.cpp
-  FunctionInterfaces.cpp
   IntegerSet.cpp
   Location.cpp
   MLIRContext.cpp
+  ODSSupport.cpp
   Operation.cpp
   OperationSupport.cpp
   PatternMatch.cpp
@@ -32,10 +37,12 @@ add_mlir_library(MLIRIR
   Types.cpp
   TypeRange.cpp
   TypeUtilities.cpp
+  Unit.cpp
   Value.cpp
   ValueRange.cpp
   Verifier.cpp
   Visitors.cpp
+  ${pdl_src}
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/IR
@@ -43,6 +50,7 @@ add_mlir_library(MLIRIR
   DEPENDS
   MLIRBuiltinAttributesIncGen
   MLIRBuiltinAttributeInterfacesIncGen
+  MLIRBuiltinDialectBytecodeIncGen
   MLIRBuiltinDialectIncGen
   MLIRBuiltinLocationAttributesIncGen
   MLIRBuiltinOpsIncGen
@@ -60,3 +68,4 @@ add_mlir_library(MLIRIR
   LINK_LIBS PUBLIC
   MLIRSupport
   )
+

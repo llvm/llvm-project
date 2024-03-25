@@ -1,4 +1,4 @@
-; RUN: not --crash llc -march=amdgcn -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck %s
 
 ; The alloca has the wrong address space and is passed to a call. The
 ; FrameIndex was created with the natural 32-bit pointer type instead

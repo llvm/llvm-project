@@ -5,12 +5,10 @@ define void @value_finder_bug(ptr addrspace(5) %store_ptr, ptr addrspace(4) %ptr
 ; GFX10-LABEL: value_finder_bug:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx4 v[1:4], v[1:2], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen
 ; GFX10-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:4
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %vec = load <4 x float>, ptr addrspace(4) %ptr, align 4
   %vec.3 = extractelement <4 x float> %vec, i32 3

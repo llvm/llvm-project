@@ -1,11 +1,11 @@
-# RUN: llvm-mc %s --triple=loongarch32 --mattr=+f --show-encoding \
+# RUN: llvm-mc %s --triple=loongarch32 --show-encoding \
 # RUN:     | FileCheck --check-prefixes=ASM-AND-OBJ,ASM %s
-# RUN: llvm-mc %s --triple=loongarch64 --mattr=+f --show-encoding \
+# RUN: llvm-mc %s --triple=loongarch64 --show-encoding \
 # RUN:     | FileCheck --check-prefixes=ASM-AND-OBJ,ASM %s
-# RUN: llvm-mc %s --triple=loongarch32 --mattr=+f --filetype=obj \
+# RUN: llvm-mc %s --triple=loongarch32 --filetype=obj \
 # RUN:     | llvm-objdump -d - \
 # RUN:     | FileCheck --check-prefix=ASM-AND-OBJ %s
-# RUN: llvm-mc %s --triple=loongarch64 --mattr=+f --filetype=obj \
+# RUN: llvm-mc %s --triple=loongarch64 --filetype=obj \
 # RUN:     | llvm-objdump -d - \
 # RUN:     | FileCheck --check-prefix=ASM-AND-OBJ %s
 
@@ -73,9 +73,17 @@ fsqrt.s $fs3, $ft10
 # ASM: encoding: [0x71,0x57,0x14,0x01]
 frecip.s $ft9, $fs3
 
+# ASM-AND-OBJ: frecipe.s $fa0, $fa0
+# ASM: encoding: [0x00,0x74,0x14,0x01]
+frecipe.s $fa0, $fa0
+
 # ASM-AND-OBJ: frsqrt.s $fs1, $ft4
 # ASM: encoding: [0x99,0x65,0x14,0x01]
 frsqrt.s $fs1, $ft4
+
+# ASM-AND-OBJ: frsqrte.s $fa1, $fa1
+# ASM: encoding: [0x21,0x84,0x14,0x01]
+frsqrte.s $fa1, $fa1
 
 # ASM-AND-OBJ: fscaleb.s $ft13, $ft15, $fa6
 # ASM: encoding: [0xf5,0x9a,0x10,0x01]

@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
 #
 # CHECK:        ldi.b   $w8, 198                # encoding: [0x7b,0x06,0x32,0x07]
 # CHECK:        ldi.h   $w20, 313               # encoding: [0x7b,0x29,0xcd,0x07]

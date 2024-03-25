@@ -1,8 +1,5 @@
 // RUN: mlir-opt -emit-bytecode -allow-unregistered-dialect %s | mlir-opt -allow-unregistered-dialect -mlir-print-local-scope | FileCheck %s
 
-// Bytecode currently does not support big-endian platforms
-// UNSUPPORTED: target=s390x-{{.*}}
-
 //===----------------------------------------------------------------------===//
 // ArrayAttr
 //===----------------------------------------------------------------------===//
@@ -126,6 +123,20 @@ module @TestSymbolRef attributes {
 module @TestType attributes {
   // CHECK: bytecode.type = i178
   bytecode.type = i178
+} {}
+
+//===----------------------------------------------------------------------===//
+// DistinctAttr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestDistinct
+module @TestDistinct attributes {
+  // CHECK: bytecode.distinct = distinct[0]<42 : i32>
+  // CHECK: bytecode.distinct2 = distinct[0]<42 : i32>
+  // CHECK: bytecode.distinct3 = distinct[1]<42 : i32>
+  bytecode.distinct = distinct[0]<42 : i32>,
+  bytecode.distinct2 = distinct[0]<42 : i32>,
+  bytecode.distinct3 = distinct[1]<42 : i32>
 } {}
 
 //===----------------------------------------------------------------------===//

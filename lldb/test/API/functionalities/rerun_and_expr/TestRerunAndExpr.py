@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
+
 class TestRerunExpr(TestBase):
     # FIXME: on Windows rebuilding the binary isn't enough to unload it
     #        on progrem restart. One will have to try hard to evict
@@ -29,32 +30,38 @@ class TestRerunExpr(TestBase):
         4. Evaluate the same expression in (1). We expect to have only
            the latest definition of 'struct Foo' in the scratch AST.
         """
-        self.build(dictionary={'CXX_SOURCES':'main.cpp', 'EXE':'a.out'})
+        self.build(dictionary={"CXX_SOURCES": "main.cpp", "EXE": "a.out"})
 
         exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe) 
-        target.BreakpointCreateBySourceRegex('return', lldb.SBFileSpec('rebuild.cpp'))
-        target.BreakpointCreateBySourceRegex('return', lldb.SBFileSpec('main.cpp'))
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())  
+        target = self.dbg.CreateTarget(exe)
+        target.BreakpointCreateBySourceRegex("return", lldb.SBFileSpec("rebuild.cpp"))
+        target.BreakpointCreateBySourceRegex("return", lldb.SBFileSpec("main.cpp"))
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
-        self.expect_expr('foo', result_type='Foo', result_children=[
-                ValueCheck(name='m_val', value='42')
-            ])
+        self.expect_expr(
+            "foo",
+            result_type="Foo",
+            result_children=[ValueCheck(name="m_val", value="42")],
+        )
 
         # Delete the executable to force make to rebuild it.
         remove_file(exe)
-        self.build(dictionary={'CXX_SOURCES':'rebuild.cpp', 'EXE':'a.out'})
+        self.build(dictionary={"CXX_SOURCES": "rebuild.cpp", "EXE": "a.out"})
 
         # Rerun program within the same target
         process.Destroy()
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())  
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
-        self.expect_expr('foo', result_type='Foo', result_children=[
-            ValueCheck(name='Base', children=[
-                ValueCheck(name='m_base_val', value='42')
-            ]),
-            ValueCheck(name='m_derived_val', value='137')
-        ])
+        self.expect_expr(
+            "foo",
+            result_type="Foo",
+            result_children=[
+                ValueCheck(
+                    name="Base", children=[ValueCheck(name="m_base_val", value="42")]
+                ),
+                ValueCheck(name="m_derived_val", value="137"),
+            ],
+        )
 
         self.filecheck("target module dump ast", __file__)
 
@@ -67,4 +74,3 @@ class TestRerunExpr(TestBase):
 
         # ...but the original definition of 'struct Foo' is not in the scratch AST anymore
         # CHECK-NOT: FieldDecl {{.*}} m_val 'int'
-

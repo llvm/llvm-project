@@ -11,11 +11,10 @@
 //===----------------------------------------------------------------------===//
 #include "sanitizer_common/sanitizer_thread_registry.h"
 
-#include "sanitizer_pthread_wrappers.h"
+#include <vector>
 
 #include "gtest/gtest.h"
-
-#include <vector>
+#include "sanitizer_pthread_wrappers.h"
 
 namespace __sanitizer {
 

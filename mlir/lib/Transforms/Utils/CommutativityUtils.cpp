@@ -304,7 +304,7 @@ public:
       sortedOperands.push_back(commOperand->operand);
     if (sortedOperands == operands)
       return failure();
-    rewriter.updateRootInPlace(op, [&] { op->setOperands(sortedOperands); });
+    rewriter.modifyOpInPlace(op, [&] { op->setOperands(sortedOperands); });
     return success();
   }
 };

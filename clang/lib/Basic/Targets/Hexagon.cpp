@@ -24,8 +24,6 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__qdsp6__", "1");
   Builder.defineMacro("__hexagon__", "1");
 
-  Builder.defineMacro("__ELF__");
-
   // The macro __HVXDBL__ is deprecated.
   bool DefineHvxDbl = false;
 

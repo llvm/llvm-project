@@ -116,8 +116,8 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
 
       // Emit DBG_VALUEs for register definitions.
       SmallVector<MachineOperand *, 4> RegDefs;
-      for (MachineOperand &MO : MI.operands())
-        if (MO.isReg() && MO.isDef() && MO.getReg())
+      for (MachineOperand &MO : MI.all_defs())
+        if (MO.getReg())
           RegDefs.push_back(&MO);
       for (MachineOperand *MO : RegDefs)
         BuildMI(MBB, InsertBeforeIt, MI.getDebugLoc(), DbgValDesc,

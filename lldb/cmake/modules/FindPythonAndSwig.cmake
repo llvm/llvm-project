@@ -40,7 +40,7 @@ else()
   if (LLDB_ENABLE_SWIG)
     FindPython3()
   else()
-    message(STATUS "SWIG 3 or later is required for Python support in LLDB but could not be found")
+    message(STATUS "SWIG 4 or later is required for Python support in LLDB but could not be found")
   endif()
 
   get_property(MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)

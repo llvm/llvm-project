@@ -11,8 +11,8 @@ define void @callee(ppc_fp128 %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
 ; CHECK-NEXT:    stfd 2, -8(1)
-; CHECK-NEXT:    stfd 1, -16(1)
 ; CHECK-NEXT:    ld 3, .LC0@toc@l(3)
+; CHECK-NEXT:    stfd 1, -16(1)
 ; CHECK-NEXT:    stfd 2, 8(3)
 ; CHECK-NEXT:    stfd 1, 0(3)
 ; CHECK-NEXT:    blr
@@ -59,9 +59,9 @@ define void @caller_const() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LCPI2_0@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LCPI2_1@toc@ha
 ; CHECK-NEXT:    lfs 1, .LCPI2_0@toc@l(3)
-; CHECK-NEXT:    lfs 2, .LCPI2_1@toc@l(4)
+; CHECK-NEXT:    addis 3, 2, .LCPI2_1@toc@ha
+; CHECK-NEXT:    lfs 2, .LCPI2_1@toc@l(3)
 ; CHECK-NEXT:    bl test
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi 1, 1, 32
@@ -167,8 +167,8 @@ define ppc_fp128 @convert_to2(i128 %x) {
 ; CHECK-NEXT:    sldi 3, 3, 1
 ; CHECK-NEXT:    rldimi 5, 4, 1, 0
 ; CHECK-NEXT:    std 3, -16(1)
-; CHECK-NEXT:    std 5, -8(1)
 ; CHECK-NEXT:    lfd 1, -16(1)
+; CHECK-NEXT:    std 5, -8(1)
 ; CHECK-NEXT:    lfd 2, -8(1)
 ; CHECK-NEXT:    blr
 entry:
@@ -198,13 +198,13 @@ define double @vararg(i32 %a, ...) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi 3, 1, 55
 ; CHECK-NEXT:    std 4, 40(1)
-; CHECK-NEXT:    rldicr 3, 3, 0, 59
 ; CHECK-NEXT:    std 5, 48(1)
-; CHECK-NEXT:    ori 4, 3, 8
 ; CHECK-NEXT:    std 6, 56(1)
+; CHECK-NEXT:    rldicr 3, 3, 0, 59
 ; CHECK-NEXT:    std 7, 64(1)
 ; CHECK-NEXT:    std 8, 72(1)
 ; CHECK-NEXT:    std 9, 80(1)
+; CHECK-NEXT:    ori 4, 3, 8
 ; CHECK-NEXT:    std 10, 88(1)
 ; CHECK-NEXT:    std 4, -8(1)
 ; CHECK-NEXT:    lfd 1, 0(3)

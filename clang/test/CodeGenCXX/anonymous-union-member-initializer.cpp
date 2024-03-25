@@ -1,6 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s
 
-// rdar://8818236
 namespace rdar8818236 {
 struct S {
   char c2;
@@ -35,14 +34,14 @@ namespace PR7021 {
   void f(X x, X z) {
     X x1;
 
-    // CHECK: store i64 1, i64
+    // CHECK: store i64 1, ptr
     x1.l = 1;
 
-    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64
+    // CHECK: call void @llvm.memcpy.p0.p0.i64
     X x2(x1);
 
     X x3;
-    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64
+    // CHECK: call void @llvm.memcpy.p0.p0.i64
     x3 = x1;
 
     // CHECK: ret void
@@ -80,36 +79,36 @@ namespace PR10512 {
   };
 
   // CHECK-LABEL: define{{.*}} void @_ZN7PR105121AC2Ev
-  // CHECK: [[THISADDR:%[a-zA-Z0-9.]+]] = alloca [[A:%"struct[A-Za-z0-9:.]+"]]
-  // CHECK-NEXT: store [[A]]* [[THIS:%[a-zA-Z0-9.]+]], [[A]]** [[THISADDR]]
-  // CHECK-NEXT: [[THIS1:%[a-zA-Z0-9.]+]] = load [[A]]*, [[A]]** [[THISADDR]]
+  // CHECK: [[THISADDR:%[a-zA-Z0-9.]+]] = alloca ptr
+  // CHECK-NEXT: store ptr [[THIS:%[a-zA-Z0-9.]+]], ptr [[THISADDR]]
+  // CHECK-NEXT: [[THIS1:%[a-zA-Z0-9.]+]] = load ptr, ptr [[THISADDR]]
   // CHECK-NEXT: ret void
   A::A() {}
 
   // CHECK-LABEL: define{{.*}} void @_ZN7PR105121AC2Ei
-  // CHECK: [[THISADDR:%[a-zA-Z0-9.]+]] = alloca [[A:%"struct[A-Za-z0-9:.]+"]]
+  // CHECK: [[THISADDR:%[a-zA-Z0-9.]+]] = alloca ptr
   // CHECK-NEXT: [[XADDR:%[a-zA-Z0-9.]+]] = alloca i32
-  // CHECK-NEXT: store [[A]]* [[THIS:%[a-zA-Z0-9.]+]], [[A]]** [[THISADDR]]
-  // CHECK-NEXT: store i32 [[X:%[a-zA-Z0-9.]+]], i32* [[XADDR]]
-  // CHECK-NEXT: [[THIS1:%[a-zA-Z0-9.]+]] = load [[A]]*, [[A]]** [[THISADDR]]
+  // CHECK-NEXT: store ptr [[THIS:%[a-zA-Z0-9.]+]], ptr [[THISADDR]]
+  // CHECK-NEXT: store i32 [[X:%[a-zA-Z0-9.]+]], ptr [[XADDR]]
+  // CHECK-NEXT: [[THIS1:%[a-zA-Z0-9.]+]] = load ptr, ptr [[THISADDR]]
   // CHECK-NEXT: {{getelementptr inbounds.*i32 0, i32 0}}
   // CHECK-NEXT: {{getelementptr inbounds.*i32 0, i32 0}}
   // CHECK-NEXT: {{getelementptr inbounds.*i32 0, i32 0}}
-  // CHECK-NEXT: [[TMP:%[a-zA-Z0-9.]+]] = load i32, i32* [[XADDR]]
+  // CHECK-NEXT: [[TMP:%[a-zA-Z0-9.]+]] = load i32, ptr [[XADDR]]
   // CHECK-NEXT: store i32 [[TMP]]
   // CHECK-NEXT: ret void
   A::A(int x) : x(x) { }
 
   // CHECK-LABEL: define{{.*}} void @_ZN7PR105121AC2El
-  // CHECK: [[THISADDR:%[a-zA-Z0-9.]+]] = alloca [[A:%"struct[A-Za-z0-9:.]+"]]
+  // CHECK: [[THISADDR:%[a-zA-Z0-9.]+]] = alloca ptr
   // CHECK-NEXT: [[XADDR:%[a-zA-Z0-9.]+]] = alloca i64
-  // CHECK-NEXT: store [[A]]* [[THIS:%[a-zA-Z0-9.]+]], [[A]]** [[THISADDR]]
-  // CHECK-NEXT: store i64 [[X:%[a-zA-Z0-9.]+]], i64* [[XADDR]]
-  // CHECK-NEXT: [[THIS1:%[a-zA-Z0-9.]+]] = load [[A]]*, [[A]]** [[THISADDR]]
+  // CHECK-NEXT: store ptr [[THIS:%[a-zA-Z0-9.]+]], ptr [[THISADDR]]
+  // CHECK-NEXT: store i64 [[X:%[a-zA-Z0-9.]+]], ptr [[XADDR]]
+  // CHECK-NEXT: [[THIS1:%[a-zA-Z0-9.]+]] = load ptr, ptr [[THISADDR]]
   // CHECK-NEXT: {{getelementptr inbounds.*i32 0, i32 0}}
   // CHECK-NEXT: {{getelementptr inbounds.*i32 0, i32 1}}
   // CHECK-NEXT: {{getelementptr inbounds.*i32 0, i32 0}}
-  // CHECK-NEXT: [[TMP:%[a-zA-Z0-9.]+]] = load i64, i64* [[XADDR]]
+  // CHECK-NEXT: [[TMP:%[a-zA-Z0-9.]+]] = load i64, ptr [[XADDR]]
   // CHECK-NEXT: [[CONV:%[a-zA-Z0-9.]+]] = trunc i64 [[TMP]] to i32
   // CHECK-NEXT: store i32 [[CONV]]
   // CHECK-NEXT: ret void
@@ -133,13 +132,11 @@ namespace test3 {
   // CHECK-LABEL: define{{.*}} void @_ZN5test31AC2Ev(
   // CHECK: [[THIS:%.*]] = load
   // CHECK-NEXT: [[UNION:%.*]] = getelementptr inbounds {{.*}} [[THIS]], i32 0, i32 0
-  // CHECK-NEXT: [[STRUCT:%.*]] = bitcast {{.*}}* [[UNION]] to 
-  // CHECK-NEXT: [[CALLBACK:%.*]] = getelementptr inbounds {{.*}} [[STRUCT]], i32 0, i32 0
+  // CHECK-NEXT: [[CALLBACK:%.*]] = getelementptr inbounds {{.*}} [[UNION]], i32 0, i32 0
   // CHECK: store 
   // CHECK-NEXT: [[UNION:%.*]] = getelementptr inbounds {{.*}} [[THIS]], i32 0, i32 0
-  // CHECK-NEXT: [[STRUCT:%.*]] = bitcast {{.*}}* [[UNION]] to 
-  // CHECK-NEXT: [[CVALUE:%.*]] = getelementptr inbounds {{.*}} [[STRUCT]], i32 0, i32 1
-  // CHECK-NEXT: store i8* null, i8** [[CVALUE]]
+  // CHECK-NEXT: [[CVALUE:%.*]] = getelementptr inbounds {{.*}} [[UNION]], i32 0, i32 1
+  // CHECK-NEXT: store ptr null, ptr [[CVALUE]]
 }
 
 struct S {

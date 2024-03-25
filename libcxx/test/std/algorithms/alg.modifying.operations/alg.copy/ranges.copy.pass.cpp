@@ -100,13 +100,13 @@ constexpr void test_iterators() {
 // clang-format on
 
 constexpr bool test() {
-  meta::for_each(meta::forward_iterator_list<int*>{}, []<class Out>() {
+  types::for_each(types::forward_iterator_list<int*>{}, []<class Out>() {
     test_iterators<cpp20_input_iterator<int*>, Out, sentinel_wrapper<cpp20_input_iterator<int*>>>();
     test_iterators<ProxyIterator<cpp20_input_iterator<int*>>,
                    ProxyIterator<Out>,
                    sentinel_wrapper<ProxyIterator<cpp20_input_iterator<int*>>>>();
 
-    meta::for_each(meta::forward_iterator_list<int*>{}, []<class In>() {
+    types::for_each(types::forward_iterator_list<int*>{}, []<class In>() {
       test_iterators<In, Out>();
       test_iterators<In, Out, sized_sentinel<In>>();
       test_iterators<In, Out, sentinel_wrapper<In>>();
@@ -128,8 +128,9 @@ constexpr bool test() {
   { // check that an iterator is returned with a borrowing range
     std::array in{1, 2, 3, 4};
     std::array<int, 4> out;
-    std::same_as<std::ranges::in_out_result<int*, int*>> auto ret = std::ranges::copy(std::views::all(in), out.data());
-    assert(ret.in == in.data() + 4);
+    std::same_as<std::ranges::in_out_result<std::array<int, 4>::iterator, int*>> auto ret =
+        std::ranges::copy(std::views::all(in), out.data());
+    assert(ret.in == in.end());
     assert(ret.out == out.data() + 4);
     assert(in == out);
   }

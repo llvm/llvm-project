@@ -18,12 +18,11 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
 #ifndef TEST_HAS_NO_CHAR8_T
-    assert(std::char_traits<char8_t>::to_char_type(u8'a') == u8'a');
-    assert(std::char_traits<char8_t>::to_char_type(u8'A') == u8'A');
-    assert(std::char_traits<char8_t>::to_char_type(0) == 0);
+  assert(std::char_traits<char8_t>::to_char_type(u8'a') == u8'a');
+  assert(std::char_traits<char8_t>::to_char_type(u8'A') == u8'A');
+  assert(std::char_traits<char8_t>::to_char_type(0) == 0);
 #endif
 
   return 0;

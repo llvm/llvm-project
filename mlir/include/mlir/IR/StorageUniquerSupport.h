@@ -14,6 +14,7 @@
 #define MLIR_IR_STORAGEUNIQUERSUPPORT_H
 
 #include "mlir/IR/AttrTypeSubElements.h"
+#include "mlir/IR/DialectRegistry.h"
 #include "mlir/Support/InterfaceSupport.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/StorageUniquer.h"
@@ -160,6 +161,12 @@ public:
       llvm::report_fatal_error("Registering an interface for an attribute/type "
                                "that is not itself registered.");
 
+    // Handle the case where the models resolve a promised interface.
+    (dialect_extension_detail::handleAdditionOfUndefinedPromisedInterface(
+         abstract->getDialect(), abstract->getTypeID(),
+         IfaceModels::Interface::getInterfaceID()),
+     ...);
+
     (checkInterfaceTarget<IfaceModels>(), ...);
     abstract->interfaceMap.template insertModels<IfaceModels...>();
   }
@@ -168,11 +175,11 @@ public:
   /// function is guaranteed to return a non null object and will assert if
   /// the arguments provided are invalid.
   template <typename... Args>
-  static ConcreteT get(MLIRContext *ctx, Args... args) {
+  static ConcreteT get(MLIRContext *ctx, Args &&...args) {
     // Ensure that the invariants are correct for construction.
     assert(
         succeeded(ConcreteT::verify(getDefaultDiagnosticEmitFn(ctx), args...)));
-    return UniquerT::template get<ConcreteT>(ctx, args...);
+    return UniquerT::template get<ConcreteT>(ctx, std::forward<Args>(args)...);
   }
 
   /// Get or create a new ConcreteT instance within the ctx, defined at
@@ -180,8 +187,9 @@ public:
   /// invalid, errors are emitted using the provided location and a null object
   /// is returned.
   template <typename... Args>
-  static ConcreteT getChecked(const Location &loc, Args... args) {
-    return ConcreteT::getChecked(getDefaultDiagnosticEmitFn(loc), args...);
+  static ConcreteT getChecked(const Location &loc, Args &&...args) {
+    return ConcreteT::getChecked(getDefaultDiagnosticEmitFn(loc),
+                                 std::forward<Args>(args)...);
   }
 
   /// Get or create a new ConcreteT instance within the ctx. If the arguments

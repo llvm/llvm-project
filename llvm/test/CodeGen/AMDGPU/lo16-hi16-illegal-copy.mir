@@ -1,13 +1,13 @@
-# RUN: not llc -march=amdgcn -mcpu=gfx802 -start-before postrapseudos -asm-verbose=0 -amdgpu-keep-16-bit-reg-suffixes -verify-machineinstrs %s -o - 2>&1 | FileCheck -check-prefixes=ERR,GFX8-ERR %s
-# RUN: not llc -march=amdgcn -mcpu=gfx802 -start-before postrapseudos -asm-verbose=0 -amdgpu-keep-16-bit-reg-suffixes -verify-machineinstrs %s -o - 2>&1 | FileCheck -check-prefix=GCN %s
-# RUN: not llc -march=amdgcn -mcpu=gfx900 -start-before postrapseudos -asm-verbose=0 -amdgpu-keep-16-bit-reg-suffixes -verify-machineinstrs %s -o - 2>&1 | FileCheck -check-prefix=ERR %s
-# RUN: not llc -march=amdgcn -mcpu=gfx900 -start-before postrapseudos -asm-verbose=0 -amdgpu-keep-16-bit-reg-suffixes -verify-machineinstrs %s -o - 2>&1 | FileCheck -check-prefixes=GCN,GFX9 %s
+# RUN: not llc -mtriple=amdgcn -mcpu=gfx802 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - 2>&1 | FileCheck -check-prefixes=ERR,GFX8-ERR %s
+# RUN: not llc -mtriple=amdgcn -mcpu=gfx802 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - 2>&1 | FileCheck -check-prefix=GCN %s
+# RUN: not llc -mtriple=amdgcn -mcpu=gfx900 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - 2>&1 | FileCheck -check-prefix=ERR %s
+# RUN: not llc -mtriple=amdgcn -mcpu=gfx900 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - 2>&1 | FileCheck -check-prefixes=GCN,GFX9 %s
 
 # Note: GFX8 did not allow SDWA SGPR sources. Therefor no HI16 subregs can be used there.
 
 # GCN-LABEL: {{^}}lo_to_lo_illegal_vgpr_to_sgpr:
 # GCN: ; illegal copy v0.l to s1.l
-# ERR: error: <unknown>:0:0: in function lo_to_lo_illegal_vgpr_to_sgpr void (): illegal SGPR to VGPR copy
+# ERR: error: <unknown>:0:0: in function lo_to_lo_illegal_vgpr_to_sgpr void (): illegal VGPR to SGPR copy
 name: lo_to_lo_illegal_vgpr_to_sgpr
 tracksRegLiveness: true
 body:             |
@@ -32,7 +32,7 @@ body:             |
 
 # GCN-LABEL: {{^}}lo_to_lo_illegal_agpr_to_sgpr:
 # GCN: ; illegal copy a0.l to s1.l
-# ERR: error: <unknown>:0:0: in function lo_to_lo_illegal_agpr_to_sgpr void (): illegal SGPR to VGPR copy
+# ERR: error: <unknown>:0:0: in function lo_to_lo_illegal_agpr_to_sgpr void (): illegal VGPR to SGPR copy
 name: lo_to_lo_illegal_agpr_to_sgpr
 tracksRegLiveness: true
 body:             |

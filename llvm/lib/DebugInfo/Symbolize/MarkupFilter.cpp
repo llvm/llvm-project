@@ -41,8 +41,8 @@ MarkupFilter::MarkupFilter(raw_ostream &OS, LLVMSymbolizer &Symbolizer,
       ColorsEnabled(
           ColorsEnabled.value_or(WithColor::defaultAutoDetectFunction()(OS))) {}
 
-void MarkupFilter::filter(StringRef Line) {
-  this->Line = Line;
+void MarkupFilter::filter(std::string &&InputLine) {
+  Line = std::move(InputLine);
   resetColor();
 
   Parser.parseLine(Line);
@@ -133,9 +133,8 @@ bool MarkupFilter::tryReset(const MarkupNode &Node,
     endAnyModuleInfoLine();
     for (const MarkupNode &Node : DeferredNodes)
       filterNode(Node);
-    highlight();
-    OS << "[[[reset]]]" << lineEnding();
-    restoreColor();
+    printRawElement(Node);
+    OS << lineEnding();
 
     Modules.clear();
     MMaps.clear();
@@ -239,8 +238,7 @@ bool MarkupFilter::tryPC(const MarkupNode &Node) {
     return false;
   if (!checkNumFieldsAtLeast(Node, 1))
     return true;
-  if (!checkNumFieldsAtMost(Node, 2))
-    return true;
+  warnNumFieldsAtMost(Node, 2);
 
   std::optional<uint64_t> Addr = parseAddr(Node.Fields[0]);
   if (!Addr)
@@ -293,8 +291,7 @@ bool MarkupFilter::tryBackTrace(const MarkupNode &Node) {
     return false;
   if (!checkNumFieldsAtLeast(Node, 2))
     return true;
-  if (!checkNumFieldsAtMost(Node, 3))
-    return true;
+  warnNumFieldsAtMost(Node, 3);
 
   std::optional<uint64_t> FrameNumber = parseFrameNumber(Node.Fields[0]);
   if (!FrameNumber)
@@ -513,8 +510,9 @@ MarkupFilter::parseModule(const MarkupNode &Element) const {
   }
   if (!checkNumFields(Element, 4))
     return std::nullopt;
-  ASSIGN_OR_RETURN_NONE(SmallVector<uint8_t>, BuildID,
-                        parseBuildID(Element.Fields[3]));
+  SmallVector<uint8_t> BuildID = parseBuildID(Element.Fields[3]);
+  if (BuildID.empty())
+    return std::nullopt;
   return Module{ID, Name.str(), std::move(BuildID)};
 }
 
@@ -554,7 +552,7 @@ std::optional<uint64_t> MarkupFilter::parseAddr(StringRef Str) const {
   }
   if (all_of(Str, [](char C) { return C == '0'; }))
     return 0;
-  if (!Str.startswith("0x")) {
+  if (!Str.starts_with("0x")) {
     reportTypeError(Str, "address");
     return std::nullopt;
   }
@@ -597,16 +595,11 @@ std::optional<uint64_t> MarkupFilter::parseFrameNumber(StringRef Str) const {
 }
 
 // Parse a build ID (%x in the spec).
-std::optional<SmallVector<uint8_t>>
-MarkupFilter::parseBuildID(StringRef Str) const {
-  std::string Bytes;
-  if (Str.empty() || Str.size() % 2 || !tryGetFromHex(Str, Bytes)) {
+object::BuildID MarkupFilter::parseBuildID(StringRef Str) const {
+  object::BuildID BID = llvm::object::parseBuildID(Str);
+  if (BID.empty())
     reportTypeError(Str, "build ID");
-    return std::nullopt;
-  }
-  ArrayRef<uint8_t> BuildID(reinterpret_cast<const uint8_t *>(Bytes.data()),
-                            Bytes.size());
-  return SmallVector<uint8_t>(BuildID.begin(), BuildID.end());
+  return BID;
 }
 
 // Parses the mode string for an mmap element.
@@ -618,12 +611,9 @@ std::optional<std::string> MarkupFilter::parseMode(StringRef Str) const {
 
   // Pop off each of r/R, w/W, and x/X from the front, in that order.
   StringRef Remainder = Str;
-  if (!Remainder.empty() && tolower(Remainder.front()) == 'r')
-    Remainder = Remainder.drop_front();
-  if (!Remainder.empty() && tolower(Remainder.front()) == 'w')
-    Remainder = Remainder.drop_front();
-  if (!Remainder.empty() && tolower(Remainder.front()) == 'x')
-    Remainder = Remainder.drop_front();
+  Remainder.consume_front_insensitive("r");
+  Remainder.consume_front_insensitive("w");
+  Remainder.consume_front_insensitive("x");
 
   // If anything remains, then the string wasn't a mode.
   if (!Remainder.empty()) {
@@ -659,10 +649,12 @@ bool MarkupFilter::checkTag(const MarkupNode &Node) const {
 bool MarkupFilter::checkNumFields(const MarkupNode &Element,
                                   size_t Size) const {
   if (Element.Fields.size() != Size) {
-    WithColor::error(errs()) << "expected " << Size << " field(s); found "
-                             << Element.Fields.size() << "\n";
+    bool Warn = Element.Fields.size() > Size;
+    WithColor(errs(), Warn ? HighlightColor::Warning : HighlightColor::Error)
+        << (Warn ? "warning: " : "error: ") << "expected " << Size
+        << " field(s); found " << Element.Fields.size() << "\n";
     reportLocation(Element.Tag.end());
-    return false;
+    return Warn;
   }
   return true;
 }
@@ -679,16 +671,14 @@ bool MarkupFilter::checkNumFieldsAtLeast(const MarkupNode &Element,
   return true;
 }
 
-bool MarkupFilter::checkNumFieldsAtMost(const MarkupNode &Element,
-                                        size_t Size) const {
-  if (Element.Fields.size() > Size) {
-    WithColor::error(errs())
-        << "expected at most " << Size << " field(s); found "
-        << Element.Fields.size() << "\n";
-    reportLocation(Element.Tag.end());
-    return false;
-  }
-  return true;
+void MarkupFilter::warnNumFieldsAtMost(const MarkupNode &Element,
+                                       size_t Size) const {
+  if (Element.Fields.size() <= Size)
+    return;
+  WithColor::warning(errs())
+      << "expected at most " << Size << " field(s); found "
+      << Element.Fields.size() << "\n";
+  reportLocation(Element.Tag.end());
 }
 
 void MarkupFilter::reportTypeError(StringRef Str, StringRef TypeName) const {
@@ -702,7 +692,9 @@ void MarkupFilter::reportTypeError(StringRef Str, StringRef TypeName) const {
 // passed to beginLine().
 void MarkupFilter::reportLocation(StringRef::iterator Loc) const {
   errs() << Line;
-  WithColor(errs().indent(Loc - Line.begin()), HighlightColor::String) << '^';
+  WithColor(errs().indent(Loc - StringRef(Line).begin()),
+            HighlightColor::String)
+      << '^';
   errs() << '\n';
 }
 
@@ -748,7 +740,7 @@ uint64_t MarkupFilter::adjustAddr(uint64_t Addr, PCType Type) const {
 }
 
 StringRef MarkupFilter::lineEnding() const {
-  return Line.endswith("\r\n") ? "\r\n" : "\n";
+  return StringRef(Line).ends_with("\r\n") ? "\r\n" : "\n";
 }
 
 bool MarkupFilter::MMap::contains(uint64_t Addr) const {

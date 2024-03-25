@@ -213,15 +213,15 @@ user is determined by the specific pattern driver.
 This method replaces an operation's results with a set of provided values, and
 erases the operation.
 
-*   Update an Operation in-place : `(start|cancel|finalize)RootUpdate`
+*   Update an Operation in-place : `(start|cancel|finalize)OpModification`
 
 This is a collection of methods that provide a transaction-like API for updating
 the attributes, location, operands, or successors of an operation in-place
 within a pattern. An in-place update transaction is started with
-`startRootUpdate`, and may either be canceled or finalized with
-`cancelRootUpdate` and `finalizeRootUpdate` respectively. A convenience wrapper,
-`updateRootInPlace`, is provided that wraps a `start` and `finalize` around a
-callback.
+`startOpModification`, and may either be canceled or finalized with
+`cancelOpModification` and `finalizeOpModification` respectively. A convenience
+wrapper, `modifyOpInPlace`, is provided that wraps a `start` and `finalize`
+around a callback.
 
 *   OpBuilder API
 
@@ -366,7 +366,7 @@ Note: This driver listens for IR changes via the callbacks provided by
 rewriter and do not bypass the rewriter API by modifying ops directly.
 
 Note: This driver is the one used by the [canonicalization](Canonicalization.md)
-[pass](Passes.md/#-canonicalize-canonicalize-operations) in MLIR.
+[pass](Passes.md/#-canonicalize) in MLIR.
 
 ### Debugging
 
@@ -383,7 +383,7 @@ Example output is shown below:
 ```
 //===-------------------------------------------===//
 Processing operation : 'cf.cond_br'(0x60f000001120) {
-  "cf.cond_br"(%arg0)[^bb2, ^bb2] {operand_segment_sizes = array<i32: 1, 0, 0>} : (i1) -> ()
+  "cf.cond_br"(%arg0)[^bb2, ^bb2] {operandSegmentSizes = array<i32: 1, 0, 0>} : (i1) -> ()
 
   * Pattern SimplifyConstCondBranchPred : 'cf.cond_br -> ()' {
   } -> failure : pattern failed to match

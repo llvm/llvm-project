@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,debug.ExprInspection %s -std=c++11 -verify
+// RUN: %clang_analyze_cc1 -triple x86_64-pc-windows-msvc19.11.0 -fms-extensions -analyzer-checker=core,debug.ExprInspection %s -std=c++11 -verify
 
 void clang_analyzer_eval(bool);
 void clang_analyzer_warnIfReached();
@@ -64,6 +65,23 @@ void g(int i) {
                                     // We give up the analysis on this path.
   }
 }
+
+#ifdef _WIN32
+namespace ms {
+void f(int i) {
+  __assume(i < 10);
+  clang_analyzer_eval(i < 15); // expected-warning {{TRUE}}
+}
+
+void g(int i) {
+  if (i > 5) {
+    __assume(i < 5);
+    clang_analyzer_warnIfReached(); // Assumtion contradicts constraints.
+                                    // We give up the analysis on this path.
+  }
+}
+} // namespace ms
+#endif
 
 void test_constant_p(void *ptr) {
   int i = 1;

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -ast-dump -fdouble-square-bracket-attributes | FileCheck %s
+// RUN: %clang_cc1 %s -ast-dump | FileCheck %s
 
 // Verify that we print the [[clang::annotate_type]] attribute.
 // FIXME: The arguments are currently not printed -- see also comments in

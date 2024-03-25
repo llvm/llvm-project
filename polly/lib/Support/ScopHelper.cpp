@@ -328,8 +328,9 @@ private:
     Value *LHS = expandCodeFor(LHSScev, E->getType(), IP);
     Value *RHS = expandCodeFor(RHSScev, E->getType(), IP);
 
-    Inst = BinaryOperator::Create((Instruction::BinaryOps)Inst->getOpcode(),
-                                  LHS, RHS, Inst->getName() + Name, IP);
+    Inst =
+        BinaryOperator::Create((Instruction::BinaryOps)Inst->getOpcode(), LHS,
+                               RHS, Inst->getName() + Name, IP->getIterator());
     return SE.getSCEV(Inst);
   }
 
@@ -338,6 +339,7 @@ private:
   ///
   ///{
   const SCEV *visitConstant(const SCEVConstant *E) { return E; }
+  const SCEV *visitVScale(const SCEVVScale *E) { return E; }
   const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
     return SE.getPtrToIntExpr(visit(E->getOperand()), E->getType());
   }

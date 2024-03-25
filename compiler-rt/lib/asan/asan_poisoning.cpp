@@ -160,10 +160,6 @@ void __asan_unpoison_memory_region(void const volatile *addr, uptr size) {
     return;
   }
   CHECK_LT(beg.chunk, end.chunk);
-  if (beg.offset > 0) {
-    *beg.chunk = 0;
-    beg.chunk++;
-  }
   REAL(memset)(beg.chunk, 0, end.chunk - beg.chunk);
   if (end.offset > 0 && end.value != 0) {
     *end.chunk = Max(end.value, end.offset);
@@ -449,11 +445,14 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
   // FIXME: Two of these three checks are disabled until we fix
   // https://github.com/google/sanitizers/issues/258.
   // if (d1 != d2)
-  //  CHECK_EQ(*(u8*)MemToShadow(d1), old_mid - d1);
-  if (a + granularity <= d1)
-    CHECK_EQ(*(u8 *)MemToShadow(a), 0);
+  //  DCHECK_EQ(*(u8*)MemToShadow(d1), old_mid - d1);
+  //
+  // NOTE: curly brackets for the "if" below to silence a MSVC warning.
+  if (a + granularity <= d1) {
+    DCHECK_EQ(*(u8 *)MemToShadow(a), 0);
+  }
   // if (d2 + granularity <= c && c <= end)
-  //   CHECK_EQ(*(u8 *)MemToShadow(c - granularity),
+  //   DCHECK_EQ(*(u8 *)MemToShadow(c - granularity),
   //            kAsanContiguousContainerOOBMagic);
 
   uptr b1 = RoundDownTo(new_end, granularity);

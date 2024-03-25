@@ -18,12 +18,14 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/TypeOrdering.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
+#include "clang/Analysis/FlowSensitive/Arena.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <memory>
@@ -34,6 +36,7 @@
 
 namespace clang {
 namespace dataflow {
+class Logger;
 
 /// Skip past nodes that the CFG does not emit. These nodes are invisible to
 /// flow-sensitive analysis, and should be ignored as they will effectively not
@@ -48,8 +51,16 @@ namespace dataflow {
 const Expr &ignoreCFGOmittedNodes(const Expr &E);
 const Stmt &ignoreCFGOmittedNodes(const Stmt &S);
 
+/// A set of `FieldDecl *`. Use `SmallSetVector` to guarantee deterministic
+/// iteration order.
+using FieldSet = llvm::SmallSetVector<const FieldDecl *, 4>;
+
 /// Returns the set of all fields in the type.
-llvm::DenseSet<const FieldDecl *> getObjectFields(QualType Type);
+FieldSet getObjectFields(QualType Type);
+
+/// Returns whether `Fields` and `FieldLocs` contain the same fields.
+bool containsSameFields(const FieldSet &Fields,
+                        const RecordStorageLocation::FieldToLoc &FieldLocs);
 
 struct ContextSensitiveOptions {
   /// The maximum depth to analyze. A value of zero is equivalent to disabling
@@ -67,6 +78,11 @@ public:
     /// fundamentally limited: some constructs, such as recursion, are
     /// explicitly unsupported.
     std::optional<ContextSensitiveOptions> ContextSensitiveOpts;
+
+    /// If provided, analysis details will be recorded here.
+    /// (This is always non-null within an AnalysisContext, the framework
+    /// provides a fallback no-op logger).
+    Logger *Log = nullptr;
   };
 
   /// Constructs a dataflow analysis context.
@@ -76,36 +92,25 @@ public:
   ///  `S` must not be null.
   DataflowAnalysisContext(std::unique_ptr<Solver> S,
                           Options Opts = Options{
-                              /*ContextSensitiveOpts=*/std::nullopt})
-      : S(std::move(S)), TrueVal(createAtomicBoolValue()),
-        FalseVal(createAtomicBoolValue()), Opts(Opts) {
-    assert(this->S != nullptr);
-  }
+                              /*ContextSensitiveOpts=*/std::nullopt,
+                              /*Logger=*/nullptr});
+  ~DataflowAnalysisContext();
 
-  /// Takes ownership of `Loc` and returns a reference to it.
+  /// Sets a callback that returns the names and types of the synthetic fields
+  /// to add to a `RecordStorageLocation` of a given type.
+  /// Typically, this is called from the constructor of a `DataflowAnalysis`
   ///
-  /// Requirements:
+  /// The field types returned by the callback may not have reference type.
   ///
-  ///  `Loc` must not be null.
-  template <typename T>
-  std::enable_if_t<std::is_base_of<StorageLocation, T>::value, T &>
-  takeOwnership(std::unique_ptr<T> Loc) {
-    assert(Loc != nullptr);
-    Locs.push_back(std::move(Loc));
-    return *cast<T>(Locs.back().get());
-  }
-
-  /// Takes ownership of `Val` and returns a reference to it.
-  ///
-  /// Requirements:
-  ///
-  ///  `Val` must not be null.
-  template <typename T>
-  std::enable_if_t<std::is_base_of<Value, T>::value, T &>
-  takeOwnership(std::unique_ptr<T> Val) {
-    assert(Val != nullptr);
-    Vals.push_back(std::move(Val));
-    return *cast<T>(Vals.back().get());
+  /// To maintain the invariant that all `RecordStorageLocation`s of a given
+  /// type have the same fields:
+  /// *  The callback must always return the same result for a given type
+  /// *  `setSyntheticFieldCallback()` must be called before any
+  //     `RecordStorageLocation`s are created.
+  void setSyntheticFieldCallback(
+      std::function<llvm::StringMap<QualType>(QualType)> CB) {
+    assert(!RecordStorageLocationCreated);
+    SyntheticFieldCallback = CB;
   }
 
   /// Returns a new storage location appropriate for `Type`.
@@ -113,164 +118,108 @@ public:
   /// A null `Type` is interpreted as the pointee type of `std::nullptr_t`.
   StorageLocation &createStorageLocation(QualType Type);
 
+  /// Creates a `RecordStorageLocation` for the given type and with the given
+  /// fields.
+  ///
+  /// Requirements:
+  ///
+  ///  `FieldLocs` must contain exactly the fields returned by
+  ///  `getModeledFields(Type)`.
+  ///  `SyntheticFields` must contain exactly the fields returned by
+  ///  `getSyntheticFields(Type)`.
+  RecordStorageLocation &createRecordStorageLocation(
+      QualType Type, RecordStorageLocation::FieldToLoc FieldLocs,
+      RecordStorageLocation::SyntheticFieldMap SyntheticFields);
+
   /// Returns a stable storage location for `D`.
-  StorageLocation &getStableStorageLocation(const VarDecl &D);
+  StorageLocation &getStableStorageLocation(const ValueDecl &D);
 
   /// Returns a stable storage location for `E`.
   StorageLocation &getStableStorageLocation(const Expr &E);
-
-  /// Assigns `Loc` as the storage location of `D`.
-  ///
-  /// Requirements:
-  ///
-  ///  `D` must not be assigned a storage location.
-  void setStorageLocation(const ValueDecl &D, StorageLocation &Loc) {
-    assert(DeclToLoc.find(&D) == DeclToLoc.end());
-    DeclToLoc[&D] = &Loc;
-  }
-
-  /// Returns the storage location assigned to `D` or null if `D` has no
-  /// assigned storage location.
-  StorageLocation *getStorageLocation(const ValueDecl &D) const {
-    auto It = DeclToLoc.find(&D);
-    return It == DeclToLoc.end() ? nullptr : It->second;
-  }
-
-  /// Assigns `Loc` as the storage location of `E`.
-  ///
-  /// Requirements:
-  ///
-  ///  `E` must not be assigned a storage location.
-  void setStorageLocation(const Expr &E, StorageLocation &Loc) {
-    const Expr &CanonE = ignoreCFGOmittedNodes(E);
-    assert(ExprToLoc.find(&CanonE) == ExprToLoc.end());
-    ExprToLoc[&CanonE] = &Loc;
-  }
-
-  /// Returns the storage location assigned to `E` or null if `E` has no
-  /// assigned storage location.
-  StorageLocation *getStorageLocation(const Expr &E) const {
-    auto It = ExprToLoc.find(&ignoreCFGOmittedNodes(E));
-    return It == ExprToLoc.end() ? nullptr : It->second;
-  }
 
   /// Returns a pointer value that represents a null pointer. Calls with
   /// `PointeeType` that are canonically equivalent will return the same result.
   /// A null `PointeeType` can be used for the pointee of `std::nullptr_t`.
   PointerValue &getOrCreateNullPointerValue(QualType PointeeType);
 
-  /// Returns a symbolic boolean value that models a boolean literal equal to
-  /// `Value`.
-  AtomicBoolValue &getBoolLiteralValue(bool Value) const {
-    return Value ? TrueVal : FalseVal;
-  }
-
-  /// Creates an atomic boolean value.
-  AtomicBoolValue &createAtomicBoolValue() {
-    return takeOwnership(std::make_unique<AtomicBoolValue>());
-  }
-
-  /// Creates a Top value for booleans. Each instance is unique and can be
-  /// assigned a distinct truth value during solving.
+  /// Adds `Constraint` to current and future flow conditions in this context.
   ///
-  /// FIXME: `Top iff Top` is true when both Tops are identical (by pointer
-  /// equality), but not when they are distinct values. We should improve the
-  /// implementation so that `Top iff Top` has a consistent meaning, regardless
-  /// of the identity of `Top`. Moreover, I think the meaning should be
-  /// `false`.
-  TopBoolValue &createTopBoolValue() {
-    return takeOwnership(std::make_unique<TopBoolValue>());
-  }
-
-  /// Returns a boolean value that represents the conjunction of `LHS` and
-  /// `RHS`. Subsequent calls with the same arguments, regardless of their
-  /// order, will return the same result. If the given boolean values represent
-  /// the same value, the result will be the value itself.
-  BoolValue &getOrCreateConjunction(BoolValue &LHS, BoolValue &RHS);
-
-  /// Returns a boolean value that represents the disjunction of `LHS` and
-  /// `RHS`. Subsequent calls with the same arguments, regardless of their
-  /// order, will return the same result. If the given boolean values represent
-  /// the same value, the result will be the value itself.
-  BoolValue &getOrCreateDisjunction(BoolValue &LHS, BoolValue &RHS);
-
-  /// Returns a boolean value that represents the negation of `Val`. Subsequent
-  /// calls with the same argument will return the same result.
-  BoolValue &getOrCreateNegation(BoolValue &Val);
-
-  /// Returns a boolean value that represents `LHS => RHS`. Subsequent calls
-  /// with the same arguments, will return the same result. If the given boolean
-  /// values represent the same value, the result will be a value that
-  /// represents the true boolean literal.
-  BoolValue &getOrCreateImplication(BoolValue &LHS, BoolValue &RHS);
-
-  /// Returns a boolean value that represents `LHS <=> RHS`. Subsequent calls
-  /// with the same arguments, regardless of their order, will return the same
-  /// result. If the given boolean values represent the same value, the result
-  /// will be a value that represents the true boolean literal.
-  BoolValue &getOrCreateIff(BoolValue &LHS, BoolValue &RHS);
-
-  /// Creates a fresh flow condition and returns a token that identifies it. The
-  /// token can be used to perform various operations on the flow condition such
-  /// as adding constraints to it, forking it, joining it with another flow
-  /// condition, or checking implications.
-  AtomicBoolValue &makeFlowConditionToken();
+  /// Invariants must contain only flow-insensitive information, i.e. facts that
+  /// are true on all paths through the program.
+  /// Information can be added eagerly (when analysis begins), or lazily (e.g.
+  /// when values are first used). The analysis must be careful that the same
+  /// information is added regardless of which order blocks are analyzed in.
+  void addInvariant(const Formula &Constraint);
 
   /// Adds `Constraint` to the flow condition identified by `Token`.
-  void addFlowConditionConstraint(AtomicBoolValue &Token,
-                                  BoolValue &Constraint);
+  void addFlowConditionConstraint(Atom Token, const Formula &Constraint);
 
   /// Creates a new flow condition with the same constraints as the flow
   /// condition identified by `Token` and returns its token.
-  AtomicBoolValue &forkFlowCondition(AtomicBoolValue &Token);
+  Atom forkFlowCondition(Atom Token);
 
   /// Creates a new flow condition that represents the disjunction of the flow
   /// conditions identified by `FirstToken` and `SecondToken`, and returns its
   /// token.
-  AtomicBoolValue &joinFlowConditions(AtomicBoolValue &FirstToken,
-                                      AtomicBoolValue &SecondToken);
+  Atom joinFlowConditions(Atom FirstToken, Atom SecondToken);
 
-  // FIXME: This function returns the flow condition expressed directly as its
-  // constraints: (C1 AND C2 AND ...). This differs from the general approach in
-  // the framework where a flow condition is represented as a token (an atomic
-  // boolean) with dependencies and constraints tracked in `FlowConditionDeps`
-  // and `FlowConditionConstraints`: (FC <=> C1 AND C2 AND ...).
-  // Consider if we should make the representation of flow condition consistent,
-  // returning an atomic boolean token with separate constraints instead.
-  //
-  /// Builds and returns the logical formula defining the flow condition
-  /// identified by `Token`. If a value in the formula is present as a key in
-  /// `Substitutions`, it will be substituted with the value it maps to.
-  /// As an example, say we have flow condition tokens FC1, FC2, FC3 and
-  /// FlowConditionConstraints: { FC1: C1,
-  ///                             FC2: C2,
-  ///                             FC3: (FC1 v FC2) ^ C3 }
-  /// buildAndSubstituteFlowCondition(FC3, {{C1 -> C1'}}) will return a value
-  /// corresponding to (C1' v C2) ^ C3.
-  BoolValue &buildAndSubstituteFlowCondition(
-      AtomicBoolValue &Token,
-      llvm::DenseMap<AtomicBoolValue *, BoolValue *> Substitutions);
+  /// Returns true if the constraints of the flow condition identified by
+  /// `Token` imply that `F` is true.
+  /// Returns false if the flow condition does not imply `F` or if the solver
+  /// times out.
+  bool flowConditionImplies(Atom Token, const Formula &F);
 
-  /// Returns true if and only if the constraints of the flow condition
-  /// identified by `Token` imply that `Val` is true.
-  bool flowConditionImplies(AtomicBoolValue &Token, BoolValue &Val);
-
-  /// Returns true if and only if the constraints of the flow condition
-  /// identified by `Token` are always true.
-  bool flowConditionIsTautology(AtomicBoolValue &Token);
+  /// Returns true if the constraints of the flow condition identified by
+  /// `Token` still allow `F` to be true.
+  /// Returns false if the flow condition implies that `F` is false or if the
+  /// solver times out.
+  bool flowConditionAllows(Atom Token, const Formula &F);
 
   /// Returns true if `Val1` is equivalent to `Val2`.
   /// Note: This function doesn't take into account constraints on `Val1` and
   /// `Val2` imposed by the flow condition.
-  bool equivalentBoolValues(BoolValue &Val1, BoolValue &Val2);
+  bool equivalentFormulas(const Formula &Val1, const Formula &Val2);
 
-  LLVM_DUMP_METHOD void dumpFlowCondition(AtomicBoolValue &Token);
+  LLVM_DUMP_METHOD void dumpFlowCondition(Atom Token,
+                                          llvm::raw_ostream &OS = llvm::dbgs());
 
-  /// Returns the `ControlFlowContext` registered for `F`, if any. Otherwise,
+  /// Returns the `AdornedCFG` registered for `F`, if any. Otherwise,
   /// returns null.
-  const ControlFlowContext *getControlFlowContext(const FunctionDecl *F);
+  const AdornedCFG *getAdornedCFG(const FunctionDecl *F);
 
   const Options &getOptions() { return Opts; }
+
+  Arena &arena() { return *A; }
+
+  /// Returns the outcome of satisfiability checking on `Constraints`.
+  ///
+  /// Flow conditions are not incorporated, so they may need to be manually
+  /// included in `Constraints` to provide contextually-accurate results, e.g.
+  /// if any definitions or relationships of the values in `Constraints` have
+  /// been stored in flow conditions.
+  Solver::Result querySolver(llvm::SetVector<const Formula *> Constraints);
+
+  /// Returns the fields of `Type`, limited to the set of fields modeled by this
+  /// context.
+  FieldSet getModeledFields(QualType Type);
+
+  /// Returns the names and types of the synthetic fields for the given record
+  /// type.
+  llvm::StringMap<QualType> getSyntheticFields(QualType Type) {
+    assert(Type->isRecordType());
+    if (SyntheticFieldCallback) {
+      llvm::StringMap<QualType> Result = SyntheticFieldCallback(Type);
+      // Synthetic fields are not allowed to have reference type.
+      assert([&Result] {
+        for (const auto &Entry : Result)
+          if (Entry.getValue()->isReferenceType())
+            return false;
+        return true;
+      }());
+      return Result;
+    }
+    return {};
+  }
 
 private:
   friend class Environment;
@@ -287,56 +236,30 @@ private:
   };
 
   // Extends the set of modeled field declarations.
-  void addModeledFields(const llvm::DenseSet<const FieldDecl *> &Fields);
-
-  /// Returns the fields of `Type`, limited to the set of fields modeled by this
-  /// context.
-  llvm::DenseSet<const FieldDecl *> getReferencedFields(QualType Type);
+  void addModeledFields(const FieldSet &Fields);
 
   /// Adds all constraints of the flow condition identified by `Token` and all
-  /// of its transitive dependencies to `Constraints`. `VisitedTokens` is used
-  /// to track tokens of flow conditions that were already visited by recursive
-  /// calls.
-  void addTransitiveFlowConditionConstraints(
-      AtomicBoolValue &Token, llvm::DenseSet<BoolValue *> &Constraints,
-      llvm::DenseSet<AtomicBoolValue *> &VisitedTokens);
+  /// of its transitive dependencies to `Constraints`.
+  void
+  addTransitiveFlowConditionConstraints(Atom Token,
+                                        llvm::SetVector<const Formula *> &Out);
 
-  /// Returns the outcome of satisfiability checking on `Constraints`.
-  /// Possible outcomes are:
-  /// - `Satisfiable`: A satisfying assignment exists and is returned.
-  /// - `Unsatisfiable`: A satisfying assignment does not exist.
-  /// - `TimedOut`: The search for a satisfying assignment was not completed.
-  Solver::Result querySolver(llvm::DenseSet<BoolValue *> Constraints);
+  /// Returns true if the solver is able to prove that there is a satisfying
+  /// assignment for `Constraints`.
+  bool isSatisfiable(llvm::SetVector<const Formula *> Constraints) {
+    return querySolver(std::move(Constraints)).getStatus() ==
+           Solver::Result::Status::Satisfiable;
+  }
 
   /// Returns true if the solver is able to prove that there is no satisfying
   /// assignment for `Constraints`
-  bool isUnsatisfiable(llvm::DenseSet<BoolValue *> Constraints) {
+  bool isUnsatisfiable(llvm::SetVector<const Formula *> Constraints) {
     return querySolver(std::move(Constraints)).getStatus() ==
            Solver::Result::Status::Unsatisfiable;
   }
 
-  /// Returns a boolean value as a result of substituting `Val` and its sub
-  /// values based on entries in `SubstitutionsCache`. Intermediate results are
-  /// stored in `SubstitutionsCache` to avoid reprocessing values that have
-  /// already been visited.
-  BoolValue &substituteBoolValue(
-      BoolValue &Val,
-      llvm::DenseMap<BoolValue *, BoolValue *> &SubstitutionsCache);
-
-  /// Builds and returns the logical formula defining the flow condition
-  /// identified by `Token`, sub values may be substituted based on entries in
-  /// `SubstitutionsCache`. Intermediate results are stored in
-  /// `SubstitutionsCache` to avoid reprocessing values that have already been
-  /// visited.
-  BoolValue &buildAndSubstituteFlowConditionWithCache(
-      AtomicBoolValue &Token,
-      llvm::DenseMap<BoolValue *, BoolValue *> &SubstitutionsCache);
-
   std::unique_ptr<Solver> S;
-
-  // Storage for the state of a program.
-  std::vector<std::unique_ptr<StorageLocation>> Locs;
-  std::vector<std::unique_ptr<Value>> Vals;
+  std::unique_ptr<Arena> A;
 
   // Maps from program declarations and statements to storage locations that are
   // assigned to them. These assignments are global (aggregated across all basic
@@ -355,22 +278,7 @@ private:
   llvm::DenseMap<QualType, PointerValue *, NullableQualTypeDenseMapInfo>
       NullPointerVals;
 
-  AtomicBoolValue &TrueVal;
-  AtomicBoolValue &FalseVal;
-
   Options Opts;
-
-  // Indices that are used to avoid recreating the same composite boolean
-  // values.
-  llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, ConjunctionValue *>
-      ConjunctionVals;
-  llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, DisjunctionValue *>
-      DisjunctionVals;
-  llvm::DenseMap<BoolValue *, NegationValue *> NegationVals;
-  llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, ImplicationValue *>
-      ImplicationVals;
-  llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, BiconditionalValue *>
-      BiconditionalVals;
 
   // Flow conditions are tracked symbolically: each unique flow condition is
   // associated with a fresh symbolic variable (token), bound to the clause that
@@ -384,14 +292,21 @@ private:
   // Flow conditions depend on other flow conditions if they are created using
   // `forkFlowCondition` or `joinFlowConditions`. The graph of flow condition
   // dependencies is stored in the `FlowConditionDeps` map.
-  llvm::DenseMap<AtomicBoolValue *, llvm::DenseSet<AtomicBoolValue *>>
-      FlowConditionDeps;
-  llvm::DenseMap<AtomicBoolValue *, BoolValue *> FlowConditionConstraints;
+  llvm::DenseMap<Atom, llvm::DenseSet<Atom>> FlowConditionDeps;
+  llvm::DenseMap<Atom, const Formula *> FlowConditionConstraints;
+  const Formula *Invariant = nullptr;
 
-  llvm::DenseMap<const FunctionDecl *, ControlFlowContext> FunctionContexts;
+  llvm::DenseMap<const FunctionDecl *, AdornedCFG> FunctionContexts;
 
   // Fields modeled by environments covered by this context.
-  llvm::DenseSet<const FieldDecl *> ModeledFields;
+  FieldSet ModeledFields;
+
+  std::unique_ptr<Logger> LogOwner; // If created via flags.
+
+  std::function<llvm::StringMap<QualType>(QualType)> SyntheticFieldCallback;
+
+  /// Has any `RecordStorageLocation` been created yet?
+  bool RecordStorageLocationCreated = false;
 };
 
 } // namespace dataflow

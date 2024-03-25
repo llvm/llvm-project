@@ -17,11 +17,13 @@ define i64 @iv_wider_type_rc_two_narrow_types(i32 %offA, i16 %offB, ptr %arrA, p
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i16 16, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i16 [[OFFB]], [[LENGTHB]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[LENGTHA]], [[OFFA:%.*]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule i32 16, [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i32 [[OFFA]], [[LENGTHA]]
-; CHECK-NEXT:    [[TMP7:%.*]] = and i1 [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = and i1 [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze i1 [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[LENGTHA]], [[OFFA:%.*]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule i32 16, [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[OFFA]], [[LENGTHA]]
+; CHECK-NEXT:    [[TMP8:%.*]] = and i1 [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = freeze i1 [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = and i1 [[TMP4]], [[TMP9]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -32,7 +34,7 @@ define i64 @iv_wider_type_rc_two_narrow_types(i32 %offA, i16 %offB, ptr %arrA, p
 ; CHECK-NEXT:    [[RCA:%.*]] = icmp ult i32 [[INDEXA]], [[LENGTHA]]
 ; CHECK-NEXT:    [[RCB:%.*]] = icmp ult i16 [[INDEXB]], [[LENGTHB]]
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[RCA]], [[RCB]]
-; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP8]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP10]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WIDE_CHK]])
 ; CHECK-NEXT:    [[INDEXA_EXT:%.*]] = zext i32 [[INDEXA]] to i64
 ; CHECK-NEXT:    [[ADDRA:%.*]] = getelementptr inbounds i8, ptr [[ARRA]], i64 [[INDEXA_EXT]]
@@ -89,17 +91,20 @@ define i64 @iv_rc_different_types(i32 %offA, i32 %offB, ptr %arrA, ptr %arrB, i6
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i32 15, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[OFFB]], [[LENGTHB]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i1 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[MAX:%.*]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule i64 15, [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i64 0, [[MAX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = and i1 [[TMP7]], [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[LENGTHA]], -1
-; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[TMP9]], [[OFFA:%.*]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ule i32 15, [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult i32 [[OFFA]], [[LENGTHA]]
-; CHECK-NEXT:    [[TMP13:%.*]] = and i1 [[TMP12]], [[TMP11]]
-; CHECK-NEXT:    [[TMP14:%.*]] = and i1 [[TMP4]], [[TMP8]]
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze i1 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[MAX:%.*]], -1
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ule i64 15, [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i64 0, [[MAX]]
+; CHECK-NEXT:    [[TMP9:%.*]] = and i1 [[TMP8]], [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = freeze i1 [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[LENGTHA]], -1
+; CHECK-NEXT:    [[TMP12:%.*]] = sub i32 [[TMP11]], [[OFFA:%.*]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ule i32 15, [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ult i32 [[OFFA]], [[LENGTHA]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = and i1 [[TMP14]], [[TMP13]]
+; CHECK-NEXT:    [[TMP16:%.*]] = freeze i1 [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = and i1 [[TMP5]], [[TMP10]]
+; CHECK-NEXT:    [[TMP18:%.*]] = and i1 [[TMP17]], [[TMP16]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -111,7 +116,7 @@ define i64 @iv_rc_different_types(i32 %offA, i32 %offB, ptr %arrA, ptr %arrB, i6
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[RCA]], [[RCIV]]
 ; CHECK-NEXT:    [[RCB:%.*]] = icmp ult i32 [[INDEXB]], [[LENGTHB]]
 ; CHECK-NEXT:    [[WIDE_CHK_FINAL:%.*]] = and i1 [[WIDE_CHK]], [[RCB]]
-; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP15]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP18]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WIDE_CHK_FINAL]])
 ; CHECK-NEXT:    [[INDEXA_EXT:%.*]] = zext i32 [[INDEXA]] to i64
 ; CHECK-NEXT:    [[ADDRA:%.*]] = getelementptr inbounds i8, ptr [[ARRA]], i64 [[INDEXA_EXT]]

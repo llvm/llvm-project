@@ -759,6 +759,40 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
 }
 
+
+define arm_aapcs_vfpcc i16 @vmulhs_reduce_v16i8(<16 x i8> %s0, <16 x i8> %s1) {
+; CHECK-LABEL: vmulhs_reduce_v16i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmulh.s8 q0, q0, q1
+; CHECK-NEXT:    vaddv.s8 r0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = sext <16 x i8> %s0 to <16 x i16>
+  %s1s = sext <16 x i8> %s1 to <16 x i16>
+  %m = mul <16 x i16> %s0s, %s1s
+  %s = ashr <16 x i16> %m, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %result = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %s)
+  ret i16 %result
+}
+
+define arm_aapcs_vfpcc i16 @vmulhu_reduce_v16i8(<16 x i8> %s0, <16 x i8> %s1) {
+; CHECK-LABEL: vmulhu_reduce_v16i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmulh.u8 q0, q0, q1
+; CHECK-NEXT:    vaddv.s8 r0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = zext <16 x i8> %s0 to <16 x i16>
+  %s1s = zext <16 x i8> %s1 to <16 x i16>
+  %m = mul <16 x i16> %s0s, %s1s
+  %s = ashr <16 x i16> %m, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %result = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %s)
+  ret i16 %result
+}
+
+declare i16 @llvm.vector.reduce.add.v16i16(<16 x i16>)
+
+
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
 declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32 immarg, <4 x i1>, <4 x i32>)
 declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32 immarg, <4 x i1>)

@@ -1,5 +1,7 @@
 ; RUN: llc -split-dwarf-file=foo.dwo -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
 ; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s --check-prefix=CHECK-DWO
+; RUN: llc --try-experimental-debuginfo-iterators -split-dwarf-file=foo.dwo -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s --check-prefix=CHECK-DWO
 
 ; Based on the debuginfo-tests/sret.cpp code.
 
@@ -8,6 +10,10 @@
 
 ; RUN: llc -O0 -fast-isel=true -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -debug-info - | FileCheck -check-prefixes=CHECK,FASTISEL %s
 ; RUN: llc -O0 -fast-isel=false -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -debug-info - | FileCheck -check-prefixes=CHECK,SDAG %s
+
+; RUN: llc --try-experimental-debuginfo-iterators -O0 -fast-isel=true -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -debug-info - | FileCheck -check-prefixes=CHECK,FASTISEL %s
+; RUN: llc --try-experimental-debuginfo-iterators -O0 -fast-isel=false -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -debug-info - | FileCheck -check-prefixes=CHECK,SDAG %s
+
 ; CHECK: _ZN1B9AInstanceEv
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT:   DW_AT_location (0x00000000
@@ -102,7 +108,7 @@ entry:
 define void @_ZN1B9AInstanceEv(ptr noalias sret(%class.A) %agg.result, ptr %this) #2 align 2 !dbg !53 {
 entry:
   %this.addr = alloca ptr, align 8
-  %nrvo = alloca i1
+  %nrvo = alloca i1, align 1
   %cleanup.dest.slot = alloca i32
   store ptr %this, ptr %this.addr, align 8
   call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !89, metadata !DIExpression()), !dbg !91
@@ -139,7 +145,7 @@ entry:
   %retval = alloca i32, align 4
   %argc.addr = alloca i32, align 4
   %argv.addr = alloca ptr, align 8
-  %b = alloca %class.B, align 1
+  %b = alloca %class.B, align 8
   %return_val = alloca i32, align 4
   %temp.lvalue = alloca %class.A, align 8
   %exn.slot = alloca ptr
@@ -226,7 +232,7 @@ define linkonce_odr void @_ZN1AD0Ev(ptr %this) unnamed_addr #2 align 2 personali
 entry:
   %this.addr = alloca ptr, align 8
   %exn.slot = alloca ptr
-  %ehselector.slot = alloca i32
+  %ehselector.slot = alloca i32, align 4
   store ptr %this, ptr %this.addr, align 8
   call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !126, metadata !DIExpression()), !dbg !127
   %this1 = load ptr, ptr %this.addr

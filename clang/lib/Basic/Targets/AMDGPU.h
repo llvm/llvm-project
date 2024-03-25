@@ -17,9 +17,10 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
 namespace clang {
@@ -29,19 +30,18 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   static const char *const GCCRegNames[];
 
-  enum AddrSpace {
-    Generic = 0,
-    Global = 1,
-    Local = 3,
-    Constant = 4,
-    Private = 5
-  };
   static const LangASMap AMDGPUDefIsGenMap;
   static const LangASMap AMDGPUDefIsPrivMap;
 
   llvm::AMDGPU::GPUKind GPUKind;
   unsigned GPUFeatures;
   unsigned WavefrontSize;
+
+  /// Whether to use cumode or WGP mode. True for cumode. False for WGP mode.
+  bool CUMode;
+
+  /// Whether having image instructions.
+  bool HasImage = false;
 
   /// Target ID is device name followed by optional feature name postfixed
   /// by plus or minus sign delimitted by colon, e.g. gfx908:xnack+:sramecc-.
@@ -100,7 +100,8 @@ public:
       return 32;
     unsigned TargetAS = getTargetAddressSpace(AS);
 
-    if (TargetAS == Private || TargetAS == Local)
+    if (TargetAS == llvm::AMDGPUAS::PRIVATE_ADDRESS ||
+        TargetAS == llvm::AMDGPUAS::LOCAL_ADDRESS)
       return 32;
 
     return 64;
@@ -115,9 +116,8 @@ public:
   }
 
   bool hasBFloat16Type() const override { return isAMDGCN(getTriple()); }
-  const char *getBFloat16Mangling() const override { return "u6__bf16"; };
 
-  const char *getClobbers() const override { return ""; }
+  std::string_view getClobbers() const override { return ""; }
 
   ArrayRef<const char *> getGCCRegNames() const override;
 
@@ -168,11 +168,7 @@ public:
       return true;
     }
 
-    bool HasLeftParen = false;
-    if (S.front() == '{') {
-      HasLeftParen = true;
-      S = S.drop_front();
-    }
+    bool HasLeftParen = S.consume_front("{");
     if (S.empty())
       return false;
     if (S.front() != 'v' && S.front() != 's' && S.front() != 'a') {
@@ -198,30 +194,23 @@ public:
       Name = S.data() - 1;
       return true;
     }
-    bool HasLeftBracket = false;
-    if (!S.empty() && S.front() == '[') {
-      HasLeftBracket = true;
-      S = S.drop_front();
-    }
+    bool HasLeftBracket = S.consume_front("[");
     unsigned long long N;
     if (S.empty() || consumeUnsignedInteger(S, 10, N))
       return false;
-    if (!S.empty() && S.front() == ':') {
+    if (S.consume_front(":")) {
       if (!HasLeftBracket)
         return false;
-      S = S.drop_front();
       unsigned long long M;
       if (consumeUnsignedInteger(S, 10, M) || N >= M)
         return false;
     }
     if (HasLeftBracket) {
-      if (S.empty() || S.front() != ']')
+      if (!S.consume_front("]"))
         return false;
-      S = S.drop_front();
     }
-    if (S.empty() || S.front() != '}')
+    if (!S.consume_front("}"))
       return false;
-    S = S.drop_front();
     if (!S.empty())
       return false;
     // Found {vn}, {sn}, {an}, {v[n]}, {s[n]}, {a[n]}, {v[n:m]}, {s[n:m]}
@@ -371,7 +360,7 @@ public:
   }
 
   std::optional<LangAS> getConstantAddressSpace() const override {
-    return getLangASFromTargetAS(Constant);
+    return getLangASFromTargetAS(llvm::AMDGPUAS::CONSTANT_ADDRESS);
   }
 
   const llvm::omp::GV &getGridValue() const override {
@@ -387,7 +376,7 @@ public:
 
   /// \returns Target specific vtbl ptr address space.
   unsigned getVtblPtrAddressSpace() const override {
-    return static_cast<unsigned>(Constant);
+    return static_cast<unsigned>(llvm::AMDGPUAS::CONSTANT_ADDRESS);
   }
 
   /// \returns If a target requires an address within a target specific address
@@ -400,9 +389,9 @@ public:
   getDWARFAddressSpace(unsigned AddressSpace) const override {
     const unsigned DWARF_Private = 1;
     const unsigned DWARF_Local = 2;
-    if (AddressSpace == Private) {
+    if (AddressSpace == llvm::AMDGPUAS::PRIVATE_ADDRESS) {
       return DWARF_Private;
-    } else if (AddressSpace == Local) {
+    } else if (AddressSpace == llvm::AMDGPUAS::LOCAL_ADDRESS) {
       return DWARF_Local;
     } else {
       return std::nullopt;
@@ -425,8 +414,10 @@ public:
   // value ~0.
   uint64_t getNullPointerValue(LangAS AS) const override {
     // FIXME: Also should handle region.
-    return (AS == LangAS::opencl_local || AS == LangAS::opencl_private)
-      ? ~0 : 0;
+    return (AS == LangAS::opencl_local || AS == LangAS::opencl_private ||
+            AS == LangAS::sycl_local || AS == LangAS::sycl_private)
+               ? ~0
+               : 0;
   }
 
   void setAuxTarget(const TargetInfo *Aux) override;
@@ -443,11 +434,17 @@ public:
       assert(F.front() == '+' || F.front() == '-');
       if (F == "+wavefrontsize64")
         WavefrontSize = 64;
+      else if (F == "+cumode")
+        CUMode = true;
+      else if (F == "-cumode")
+        CUMode = false;
+      else if (F == "+image-insts")
+        HasImage = true;
       bool IsOn = F.front() == '+';
       StringRef Name = StringRef(F).drop_front();
       if (!llvm::is_contained(TargetIDFeatures, Name))
         continue;
-      assert(OffloadArchFeatures.find(Name) == OffloadArchFeatures.end());
+      assert(!OffloadArchFeatures.contains(Name));
       OffloadArchFeatures[Name] = IsOn;
     }
     return true;
@@ -463,6 +460,8 @@ public:
     return getCanonicalTargetID(getArchNameAMDGCN(GPUKind),
                                 OffloadArchFeatures);
   }
+
+  bool hasHIPImageSupport() const override { return HasImage; }
 };
 
 } // namespace targets

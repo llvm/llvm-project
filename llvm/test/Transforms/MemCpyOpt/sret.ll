@@ -6,7 +6,7 @@ target triple = "i686-apple-darwin9"
 
 %0 = type { x86_fp80, x86_fp80 }
 
-define void @ccosl(ptr noalias sret(%0) %agg.result, ptr byval(%0) align 8 %z) nounwind {
+define void @ccosl(ptr noalias writable sret(%0) %agg.result, ptr byval(%0) align 8 %z) nounwind {
 ; CHECK-LABEL: @ccosl(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IZ:%.*]] = alloca [[TMP0:%.*]], align 16

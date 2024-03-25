@@ -204,7 +204,6 @@ void test_f11() {
   float &fr2a = f11(weak_id); // expected-error {{no match}}
 }
 
-// rdar://9790531
 void f9790531(void *inClientData); // expected-note {{candidate function not viable: cannot implicitly convert argument of type 'MixerEQGraphTestDelegate *const __strong' to 'void *' for 1st argument under ARC}}
 void f9790531_1(struct S*inClientData); // expected-note {{candidate function not viable}}
 void f9790531_2(char * inClientData); // expected-note {{candidate function not viable}}

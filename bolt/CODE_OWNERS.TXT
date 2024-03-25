@@ -20,3 +20,7 @@ D: DWARF support
 N: Vladislav Khmelevsky
 E: och95@yandex.ru
 D: AArch64 backend
+
+N: Job Noorman
+E: jnoorman@igalia.com
+D: RISC-V backend

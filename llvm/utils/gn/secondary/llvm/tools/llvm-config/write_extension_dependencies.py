@@ -9,8 +9,7 @@ import sys
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('-o', '--output', required=True,
-                        help='output file')
+    parser.add_argument("-o", "--output", required=True, help="output file")
     args = parser.parse_args()
 
     source = """\
@@ -21,8 +20,8 @@ struct ExtensionDescriptor {
 };
 std::array<ExtensionDescriptor, 0>  AvailableExtensions{};
 """
-    open(args.output, 'w').write(source)
+    open(args.output, "w").write(source)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

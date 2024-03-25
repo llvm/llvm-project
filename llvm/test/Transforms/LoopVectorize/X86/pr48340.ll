@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %0 = type { i32 }
 %1 = type { i64 }
 
-define void @foo(ptr %p, ptr %p.last) unnamed_addr #0 {
+define ptr @foo(ptr %p, ptr %p.last) unnamed_addr #0 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P3:%.*]] = ptrtoint ptr [[P:%.*]] to i64
@@ -40,6 +40,7 @@ define void @foo(ptr %p, ptr %p.last) unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr> [[WIDE_MASKED_GATHER6]], i32 3
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -50,9 +51,10 @@ define void @foo(ptr %p, ptr %p.last) unnamed_addr #0 {
 ; CHECK-NEXT:    [[P_INC]] = getelementptr inbounds i64, ptr [[P2]], i64 128
 ; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[P2]], align 8
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq ptr [[P_INC]], [[P_LAST]]
-; CHECK-NEXT:    br i1 [[B]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[B]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[V_LCSSA:%.*]] = phi ptr [ [[V]], [[LOOP]] ], [ [[TMP10]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret ptr [[V_LCSSA]]
 ;
 entry:
   br label %loop
@@ -65,10 +67,10 @@ loop:
   br i1 %b, label %exit, label %loop
 
 exit:
-  ret void
+  ret ptr %v
 }
 
-define void @bar(ptr %p, ptr %p.last) unnamed_addr #0 {
+define ptr @bar(ptr %p, ptr %p.last) unnamed_addr #0 {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P3:%.*]] = ptrtoint ptr [[P:%.*]] to i64
@@ -101,6 +103,7 @@ define void @bar(ptr %p, ptr %p.last) unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr> [[WIDE_MASKED_GATHER6]], i32 3
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -113,7 +116,8 @@ define void @bar(ptr %p, ptr %p.last) unnamed_addr #0 {
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq ptr [[P_INC]], [[P_LAST]]
 ; CHECK-NEXT:    br i1 [[B]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[V_LCSSA:%.*]] = phi ptr [ [[V]], [[LOOP]] ], [ [[TMP10]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret ptr [[V_LCSSA]]
 ;
 entry:
   br label %loop
@@ -126,7 +130,7 @@ loop:
   br i1 %b, label %exit, label %loop
 
 exit:
-  ret void
+  ret ptr %v
 }
 
 attributes #0 = { "target-cpu"="skylake" }

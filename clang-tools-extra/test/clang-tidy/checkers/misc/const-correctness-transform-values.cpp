@@ -1,9 +1,9 @@
 // RUN: %check_clang_tidy %s misc-const-correctness %t -- \
-// RUN:   -config="{CheckOptions: [\
-// RUN:   {key: 'misc-const-correctness.TransformValues', value: true},\
-// RUN:   {key: 'misc-const-correctness.WarnPointersAsValues', value: false}, \
-// RUN:   {key: 'misc-const-correctness.TransformPointersAsValues', value: false}, \
-// RUN:   ]}" -- -fno-delayed-template-parsing
+// RUN:   -config="{CheckOptions: {\
+// RUN:   misc-const-correctness.TransformValues: true,\
+// RUN:   misc-const-correctness.WarnPointersAsValues: false, \
+// RUN:   misc-const-correctness.TransformPointersAsValues: false} \
+// RUN:   }" -- -fno-delayed-template-parsing
 
 bool global;
 char np_global = 0; // globals can't be known to be const

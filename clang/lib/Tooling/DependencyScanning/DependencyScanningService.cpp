@@ -14,8 +14,8 @@ using namespace tooling;
 using namespace dependencies;
 
 DependencyScanningService::DependencyScanningService(
-    ScanningMode Mode, ScanningOutputFormat Format, bool OptimizeArgs,
-    bool EagerLoadModules)
+    ScanningMode Mode, ScanningOutputFormat Format,
+    ScanningOptimizations OptimizeArgs, bool EagerLoadModules)
     : Mode(Mode), Format(Format), OptimizeArgs(OptimizeArgs),
       EagerLoadModules(EagerLoadModules) {
   // Initialize targets for object file support.

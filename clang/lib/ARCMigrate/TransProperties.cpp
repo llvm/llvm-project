@@ -45,7 +45,7 @@ namespace {
 class PropertiesRewriter {
   MigrationContext &MigrateCtx;
   MigrationPass &Pass;
-  ObjCImplementationDecl *CurImplD;
+  ObjCImplementationDecl *CurImplD = nullptr;
 
   enum PropActionKind {
     PropAction_None,

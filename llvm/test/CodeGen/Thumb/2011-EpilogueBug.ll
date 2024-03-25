@@ -5,13 +5,16 @@
 %struct.info = type { i32, i32, i32, i32, i32, i32, i32, ptr }
 
 define void @t1(ptr %v) {
-; CHECK: push {r4
   %tmp6 = load i32, ptr null
   %tmp8 = alloca float, i32 %tmp6
   store i32 1, ptr null
   br label %return
 
 return:                                           ; preds = %0
-; CHECK: mov sp, r4
+; CHECK: subs [[SCRATCH:r[0-7]]], r7, #7
+; CHECK: subs [[SCRATCH]], #1
+; CHECK: mov sp, [[SCRATCH]]
+; CHECK-NEXT: pop
+; CHECK-SAME: [[SCRATCH]]
   ret void
 }

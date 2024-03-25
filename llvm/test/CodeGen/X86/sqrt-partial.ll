@@ -14,23 +14,19 @@ define float @f(float %val) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm1, %xmm1
 ; SSE-NEXT:    ucomiss %xmm1, %xmm0
-; SSE-NEXT:    jb .LBB0_2
+; SSE-NEXT:    jb sqrtf # TAILCALL
 ; SSE-NEXT:  # %bb.1: # %.split
 ; SSE-NEXT:    sqrtss %xmm0, %xmm0
 ; SSE-NEXT:    retq
-; SSE-NEXT:  .LBB0_2: # %call.sqrt
-; SSE-NEXT:    jmp sqrtf # TAILCALL
 ;
 ; AVX-LABEL: f:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vucomiss %xmm1, %xmm0
-; AVX-NEXT:    jb .LBB0_2
+; AVX-NEXT:    jb sqrtf # TAILCALL
 ; AVX-NEXT:  # %bb.1: # %.split
 ; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-; AVX-NEXT:  .LBB0_2: # %call.sqrt
-; AVX-NEXT:    jmp sqrtf # TAILCALL
   %res = tail call float @sqrtf(float %val)
   ret float %res
 }
@@ -40,23 +36,19 @@ define double @d(double %val) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    xorpd %xmm1, %xmm1
 ; SSE-NEXT:    ucomisd %xmm1, %xmm0
-; SSE-NEXT:    jb .LBB1_2
+; SSE-NEXT:    jb sqrt # TAILCALL
 ; SSE-NEXT:  # %bb.1: # %.split
 ; SSE-NEXT:    sqrtsd %xmm0, %xmm0
 ; SSE-NEXT:    retq
-; SSE-NEXT:  .LBB1_2: # %call.sqrt
-; SSE-NEXT:    jmp sqrt # TAILCALL
 ;
 ; AVX-LABEL: d:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vucomisd %xmm1, %xmm0
-; AVX-NEXT:    jb .LBB1_2
+; AVX-NEXT:    jb sqrt # TAILCALL
 ; AVX-NEXT:  # %bb.1: # %.split
 ; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-; AVX-NEXT:  .LBB1_2: # %call.sqrt
-; AVX-NEXT:    jmp sqrt # TAILCALL
   %res = tail call double @sqrt(double %val)
   ret double %res
 }

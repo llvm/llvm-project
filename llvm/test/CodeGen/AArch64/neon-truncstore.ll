@@ -104,7 +104,7 @@ define void @v4i32_v4i8(<4 x i32> %a, ptr %result) {
 ; CHECK-LABEL: v4i32_v4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
   %b = trunc <4 x i32> %a to <4 x i8>
@@ -141,10 +141,10 @@ define void @v32i32_v32i8(<32 x i32> %a, ptr %result) {
 ; CHECK-LABEL: v32i32_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uzp1 v6.8h, v6.8h, v7.8h
+; CHECK-NEXT:    uzp1 v4.8h, v4.8h, v5.8h
 ; CHECK-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
-; CHECK-NEXT:    uzp1 v3.8h, v4.8h, v5.8h
 ; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    uzp1 v1.16b, v3.16b, v6.16b
+; CHECK-NEXT:    uzp1 v1.16b, v4.16b, v6.16b
 ; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
@@ -170,8 +170,7 @@ define void @v2i16_v2i8(<2 x i16> %a, ptr %result) {
 define void @v4i16_v4i8(<4 x i16> %a, ptr %result) {
 ; CHECK-LABEL: v4i16_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
   %b = trunc <4 x i16> %a to <4 x i8>

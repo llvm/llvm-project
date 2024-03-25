@@ -8,7 +8,7 @@ import lldb
 def fuzz_obj(obj):
     obj.GetFrameID()
     obj.GetPC()
-    obj.SetPC(0xffffffff)
+    obj.SetPC(0xFFFFFFFF)
     obj.GetSP()
     obj.GetFP()
     obj.GetPCAddress()
@@ -32,9 +32,6 @@ def fuzz_obj(obj):
     obj.FindVariable("my_var")
     obj.FindVariable("my_var", lldb.eDynamicCanRunTarget)
     obj.FindValue("your_var", lldb.eValueTypeVariableGlobal)
-    obj.FindValue(
-        "your_var",
-        lldb.eValueTypeVariableStatic,
-        lldb.eDynamicCanRunTarget)
+    obj.FindValue("your_var", lldb.eValueTypeVariableStatic, lldb.eDynamicCanRunTarget)
     obj.GetDescription(lldb.SBStream())
     obj.Clear()

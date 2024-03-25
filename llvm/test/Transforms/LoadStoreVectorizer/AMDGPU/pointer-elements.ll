@@ -1,6 +1,6 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -S -o - %s | FileCheck %s
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
+target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
@@ -38,6 +38,54 @@ entry:
 
   store ptr addrspace(3) null, ptr addrspace(3) %a, align 4
   store ptr addrspace(3) null, ptr addrspace(3) %a.1, align 4
+
+  ret void
+}
+
+; CHECK-LABEL: @merge_ptr_i32(
+; CHECK: load <4 x i32>
+; CHECK: store <4 x i32>
+define amdgpu_kernel void @merge_ptr_i32(ptr addrspace(3) nocapture %a, ptr addrspace(3) nocapture readonly %b) #0 {
+entry:
+  %a.0 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %a, i64 0
+  %a.1 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %a, i64 1
+  %a.2 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %a, i64 2
+
+  %b.0 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %b, i64 0
+  %b.1 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %b, i64 1
+  %b.2 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %b, i64 2
+
+  %ld.0 = load i32, ptr addrspace(3) %b.0, align 16
+  %ld.1 = load ptr addrspace(3), ptr addrspace(3) %b.1, align 4
+  %ld.2 = load <2 x i32>, ptr addrspace(3) %b.2, align 8
+
+  store i32 0, ptr addrspace(3) %a.0, align 16
+  store ptr addrspace(3) null, ptr addrspace(3) %a.1, align 4
+  store <2 x i32> <i32 0, i32 0>, ptr addrspace(3) %a.2, align 8
+
+  ret void
+}
+
+; CHECK-LABEL: @merge_ptr_i32_vec_first(
+; CHECK: load <4 x i32>
+; CHECK: store <4 x i32>
+define amdgpu_kernel void @merge_ptr_i32_vec_first(ptr addrspace(3) nocapture %a, ptr addrspace(3) nocapture readonly %b) #0 {
+entry:
+  %a.0 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %a, i64 0
+  %a.1 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %a, i64 2
+  %a.2 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %a, i64 3
+
+  %b.0 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %b, i64 0
+  %b.1 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %b, i64 2
+  %b.2 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %b, i64 3
+
+  %ld.0 = load <2 x i32>, ptr addrspace(3) %b.0, align 16
+  %ld.1 = load ptr addrspace(3), ptr addrspace(3) %b.1, align 8
+  %ld.2 = load i32, ptr addrspace(3) %b.2, align 4
+
+  store <2 x i32> <i32 0, i32 0>, ptr addrspace(3) %a.0, align 16
+  store ptr addrspace(3) null, ptr addrspace(3) %a.1, align 8
+  store i32 0, ptr addrspace(3) %a.2, align 4
 
   ret void
 }

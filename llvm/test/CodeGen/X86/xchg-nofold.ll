@@ -9,7 +9,6 @@
 define zeroext i1 @_Z3fooRSt6atomicIbEb(ptr nocapture dereferenceable(1) %a, i1 returned zeroext %b) nounwind {
 ; CHECK-LABEL: _Z3fooRSt6atomicIbEb:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    movq %rdi, %rcx
 ; CHECK-NEXT:    shrq $3, %rcx
@@ -25,9 +24,9 @@ define zeroext i1 @_Z3fooRSt6atomicIbEb(ptr nocapture dereferenceable(1) %a, i1 
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    xchgb %cl, (%rdi)
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __asan_report_store1@PLT
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP

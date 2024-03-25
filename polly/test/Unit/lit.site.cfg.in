@@ -11,7 +11,6 @@ config.polly_obj_root = "@POLLY_BINARY_DIR@"
 config.polly_lib_dir = "@POLLY_LIB_DIR@"
 config.shlibdir = "@SHLIBDIR@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
-config.enable_gpgpu_codegen = "@GPU_CODEGEN@"
 config.llvm_polly_link_into_tools = "@LLVM_POLLY_LINK_INTO_TOOLS@"
 config.has_unittests = @POLLY_GTEST_AVAIL@
 

@@ -10,6 +10,7 @@
 #define _LIBCPP___RANDOM_LOGNORMAL_DISTRIBUTION_H
 
 #include <__config>
+#include <__random/is_valid.h>
 #include <__random/normal_distribution.h>
 #include <cmath>
 #include <iosfwd>
@@ -24,273 +25,99 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifdef _LIBCPP_ABI_OLD_LOGNORMAL_DISTRIBUTION
+template <class _RealType = double>
+class _LIBCPP_TEMPLATE_VIS lognormal_distribution {
+  static_assert(__libcpp_random_is_valid_realtype<_RealType>::value,
+                "RealType must be a supported floating-point type");
 
-template<class _RealType = double>
-class _LIBCPP_TEMPLATE_VIS lognormal_distribution
-{
 public:
-    // types
-    typedef _RealType result_type;
+  // types
+  typedef _RealType result_type;
 
-    class _LIBCPP_TEMPLATE_VIS param_type
-    {
-        normal_distribution<result_type> __nd_;
-    public:
-        typedef lognormal_distribution distribution_type;
+  class _LIBCPP_TEMPLATE_VIS param_type {
+    result_type __m_;
+    result_type __s_;
 
-        _LIBCPP_INLINE_VISIBILITY
-        explicit param_type(result_type __m = 0, result_type __s = 1)
-            : __nd_(__m, __s) {}
+  public:
+    typedef lognormal_distribution distribution_type;
 
-        _LIBCPP_INLINE_VISIBILITY
-        result_type m() const {return __nd_.mean();}
-        _LIBCPP_INLINE_VISIBILITY
-        result_type s() const {return __nd_.stddev();}
+    _LIBCPP_HIDE_FROM_ABI explicit param_type(result_type __m = 0, result_type __s = 1) : __m_(__m), __s_(__s) {}
 
-        friend _LIBCPP_INLINE_VISIBILITY
-            bool operator==(const param_type& __x, const param_type& __y)
-            {return __x.__nd_ == __y.__nd_;}
-        friend _LIBCPP_INLINE_VISIBILITY
-            bool operator!=(const param_type& __x, const param_type& __y)
-            {return !(__x == __y);}
-        friend class lognormal_distribution;
+    _LIBCPP_HIDE_FROM_ABI result_type m() const { return __m_; }
+    _LIBCPP_HIDE_FROM_ABI result_type s() const { return __s_; }
 
-        template <class _CharT, class _Traits, class _RT>
-        friend
-        basic_ostream<_CharT, _Traits>&
-        operator<<(basic_ostream<_CharT, _Traits>& __os,
-                   const lognormal_distribution<_RT>& __x);
-
-        template <class _CharT, class _Traits, class _RT>
-        friend
-        basic_istream<_CharT, _Traits>&
-        operator>>(basic_istream<_CharT, _Traits>& __is,
-                   lognormal_distribution<_RT>& __x);
-    };
+    friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
+      return __x.__m_ == __y.__m_ && __x.__s_ == __y.__s_;
+    }
+    friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
+  };
 
 private:
-    param_type __p_;
+  normal_distribution<result_type> __nd_;
 
 public:
-    // constructor and reset functions
+  // constructor and reset functions
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
-    lognormal_distribution() : lognormal_distribution(0) {}
-    _LIBCPP_INLINE_VISIBILITY
-    explicit lognormal_distribution(result_type __m, result_type __s = 1)
-        : __p_(param_type(__m, __s)) {}
+  _LIBCPP_HIDE_FROM_ABI lognormal_distribution() : lognormal_distribution(0) {}
+  _LIBCPP_HIDE_FROM_ABI explicit lognormal_distribution(result_type __m, result_type __s = 1) : __nd_(__m, __s) {}
 #else
-    _LIBCPP_INLINE_VISIBILITY
-    explicit lognormal_distribution(result_type __m = 0,
-                                    result_type __s = 1)
-        : __p_(param_type(__m, __s)) {}
+  _LIBCPP_HIDE_FROM_ABI explicit lognormal_distribution(result_type __m = 0, result_type __s = 1) : __nd_(__m, __s) {}
 #endif
-    _LIBCPP_INLINE_VISIBILITY
-    explicit lognormal_distribution(const param_type& __p)
-        : __p_(__p) {}
-    _LIBCPP_INLINE_VISIBILITY
-    void reset() {__p_.__nd_.reset();}
+  _LIBCPP_HIDE_FROM_ABI explicit lognormal_distribution(const param_type& __p) : __nd_(__p.m(), __p.s()) {}
+  _LIBCPP_HIDE_FROM_ABI void reset() { __nd_.reset(); }
 
-    // generating functions
-    template<class _URNG>
-        _LIBCPP_INLINE_VISIBILITY
-        result_type operator()(_URNG& __g)
-        {return (*this)(__g, __p_);}
-    template<class _URNG>
-        _LIBCPP_INLINE_VISIBILITY
-        result_type operator()(_URNG& __g, const param_type& __p)
-        {return _VSTD::exp(const_cast<normal_distribution<result_type>&>(__p.__nd_)(__g));}
+  // generating functions
+  template <class _URNG>
+  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+    return std::exp(__nd_(__g));
+  }
 
-    // property functions
-    _LIBCPP_INLINE_VISIBILITY
-    result_type m() const {return __p_.m();}
-    _LIBCPP_INLINE_VISIBILITY
-    result_type s() const {return __p_.s();}
+  template <class _URNG>
+  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p) {
+    typename normal_distribution<result_type>::param_type __pn(__p.m(), __p.s());
+    return std::exp(__nd_(__g, __pn));
+  }
 
-    _LIBCPP_INLINE_VISIBILITY
-    param_type param() const {return __p_;}
-    _LIBCPP_INLINE_VISIBILITY
-    void param(const param_type& __p) {__p_ = __p;}
+  // property functions
+  _LIBCPP_HIDE_FROM_ABI result_type m() const { return __nd_.mean(); }
+  _LIBCPP_HIDE_FROM_ABI result_type s() const { return __nd_.stddev(); }
 
-    _LIBCPP_INLINE_VISIBILITY
-    result_type min() const {return 0;}
-    _LIBCPP_INLINE_VISIBILITY
-    result_type max() const {return numeric_limits<result_type>::infinity();}
+  _LIBCPP_HIDE_FROM_ABI param_type param() const { return param_type(__nd_.mean(), __nd_.stddev()); }
+  _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) {
+    typename normal_distribution<result_type>::param_type __pn(__p.m(), __p.s());
+    __nd_.param(__pn);
+  }
 
-    friend _LIBCPP_INLINE_VISIBILITY
-        bool operator==(const lognormal_distribution& __x,
-                        const lognormal_distribution& __y)
-        {return __x.__p_ == __y.__p_;}
-    friend _LIBCPP_INLINE_VISIBILITY
-        bool operator!=(const lognormal_distribution& __x,
-                        const lognormal_distribution& __y)
-        {return !(__x == __y);}
+  _LIBCPP_HIDE_FROM_ABI result_type min() const { return 0; }
+  _LIBCPP_HIDE_FROM_ABI result_type max() const { return numeric_limits<result_type>::infinity(); }
 
-    template <class _CharT, class _Traits, class _RT>
-    friend
-    basic_ostream<_CharT, _Traits>&
-    operator<<(basic_ostream<_CharT, _Traits>& __os,
-               const lognormal_distribution<_RT>& __x);
+  friend _LIBCPP_HIDE_FROM_ABI bool operator==(const lognormal_distribution& __x, const lognormal_distribution& __y) {
+    return __x.__nd_ == __y.__nd_;
+  }
+  friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const lognormal_distribution& __x, const lognormal_distribution& __y) {
+    return !(__x == __y);
+  }
 
-    template <class _CharT, class _Traits, class _RT>
-    friend
-    basic_istream<_CharT, _Traits>&
-    operator>>(basic_istream<_CharT, _Traits>& __is,
-               lognormal_distribution<_RT>& __x);
+  template <class _CharT, class _Traits, class _RT>
+  friend basic_ostream<_CharT, _Traits>&
+  operator<<(basic_ostream<_CharT, _Traits>& __os, const lognormal_distribution<_RT>& __x);
+
+  template <class _CharT, class _Traits, class _RT>
+  friend basic_istream<_CharT, _Traits>&
+  operator>>(basic_istream<_CharT, _Traits>& __is, lognormal_distribution<_RT>& __x);
 };
 
 template <class _CharT, class _Traits, class _RT>
-inline _LIBCPP_INLINE_VISIBILITY
-basic_ostream<_CharT, _Traits>&
-operator<<(basic_ostream<_CharT, _Traits>& __os,
-           const lognormal_distribution<_RT>& __x)
-{
-    return __os << __x.__p_.__nd_;
+inline _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const lognormal_distribution<_RT>& __x) {
+  return __os << __x.__nd_;
 }
 
 template <class _CharT, class _Traits, class _RT>
-inline _LIBCPP_INLINE_VISIBILITY
-basic_istream<_CharT, _Traits>&
-operator>>(basic_istream<_CharT, _Traits>& __is,
-           lognormal_distribution<_RT>& __x)
-{
-    return __is >> __x.__p_.__nd_;
+inline _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
+operator>>(basic_istream<_CharT, _Traits>& __is, lognormal_distribution<_RT>& __x) {
+  return __is >> __x.__nd_;
 }
-
-#else // _LIBCPP_ABI_OLD_LOGNORMAL_DISTRIBUTION
-
-template<class _RealType = double>
-class _LIBCPP_TEMPLATE_VIS lognormal_distribution
-{
-public:
-    // types
-    typedef _RealType result_type;
-
-    class _LIBCPP_TEMPLATE_VIS param_type
-    {
-        result_type __m_;
-        result_type __s_;
-    public:
-        typedef lognormal_distribution distribution_type;
-
-        _LIBCPP_INLINE_VISIBILITY
-        explicit param_type(result_type __m = 0, result_type __s = 1)
-            : __m_(__m), __s_(__s) {}
-
-        _LIBCPP_INLINE_VISIBILITY
-        result_type m() const {return __m_;}
-        _LIBCPP_INLINE_VISIBILITY
-        result_type s() const {return __s_;}
-
-        friend _LIBCPP_INLINE_VISIBILITY
-        bool operator==(const param_type& __x, const param_type& __y)
-            {return __x.__m_ == __y.__m_ && __x.__s_ == __y.__s_;}
-        friend _LIBCPP_INLINE_VISIBILITY
-        bool operator!=(const param_type& __x, const param_type& __y)
-            {return !(__x == __y);}
-    };
-
-private:
-    normal_distribution<result_type> __nd_;
-
-public:
-    // constructor and reset functions
-#ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
-    lognormal_distribution() : lognormal_distribution(0) {}
-    _LIBCPP_INLINE_VISIBILITY
-    explicit lognormal_distribution(result_type __m, result_type __s = 1)
-        : __nd_(__m, __s) {}
-#else
-    _LIBCPP_INLINE_VISIBILITY
-    explicit lognormal_distribution(result_type __m = 0,
-                                    result_type __s = 1)
-        : __nd_(__m, __s) {}
-#endif
-    _LIBCPP_INLINE_VISIBILITY
-    explicit lognormal_distribution(const param_type& __p)
-        : __nd_(__p.m(), __p.s()) {}
-    _LIBCPP_INLINE_VISIBILITY
-    void reset() {__nd_.reset();}
-
-    // generating functions
-    template<class _URNG>
-    _LIBCPP_INLINE_VISIBILITY
-    result_type operator()(_URNG& __g)
-    {
-        return _VSTD::exp(__nd_(__g));
-    }
-
-    template<class _URNG>
-    _LIBCPP_INLINE_VISIBILITY
-    result_type operator()(_URNG& __g, const param_type& __p)
-    {
-        typename normal_distribution<result_type>::param_type __pn(__p.m(), __p.s());
-        return _VSTD::exp(__nd_(__g, __pn));
-    }
-
-    // property functions
-    _LIBCPP_INLINE_VISIBILITY
-    result_type m() const {return __nd_.mean();}
-    _LIBCPP_INLINE_VISIBILITY
-    result_type s() const {return __nd_.stddev();}
-
-    _LIBCPP_INLINE_VISIBILITY
-    param_type param() const {return param_type(__nd_.mean(), __nd_.stddev());}
-    _LIBCPP_INLINE_VISIBILITY
-    void param(const param_type& __p)
-    {
-        typename normal_distribution<result_type>::param_type __pn(__p.m(), __p.s());
-        __nd_.param(__pn);
-    }
-
-    _LIBCPP_INLINE_VISIBILITY
-    result_type min() const {return 0;}
-    _LIBCPP_INLINE_VISIBILITY
-    result_type max() const {return numeric_limits<result_type>::infinity();}
-
-    friend _LIBCPP_INLINE_VISIBILITY
-        bool operator==(const lognormal_distribution& __x,
-                        const lognormal_distribution& __y)
-        {return __x.__nd_ == __y.__nd_;}
-    friend _LIBCPP_INLINE_VISIBILITY
-        bool operator!=(const lognormal_distribution& __x,
-                        const lognormal_distribution& __y)
-        {return !(__x == __y);}
-
-    template <class _CharT, class _Traits, class _RT>
-    friend
-    basic_ostream<_CharT, _Traits>&
-    operator<<(basic_ostream<_CharT, _Traits>& __os,
-               const lognormal_distribution<_RT>& __x);
-
-    template <class _CharT, class _Traits, class _RT>
-    friend
-    basic_istream<_CharT, _Traits>&
-    operator>>(basic_istream<_CharT, _Traits>& __is,
-               lognormal_distribution<_RT>& __x);
-};
-
-template <class _CharT, class _Traits, class _RT>
-inline _LIBCPP_INLINE_VISIBILITY
-basic_ostream<_CharT, _Traits>&
-operator<<(basic_ostream<_CharT, _Traits>& __os,
-           const lognormal_distribution<_RT>& __x)
-{
-    return __os << __x.__nd_;
-}
-
-template <class _CharT, class _Traits, class _RT>
-inline _LIBCPP_INLINE_VISIBILITY
-basic_istream<_CharT, _Traits>&
-operator>>(basic_istream<_CharT, _Traits>& __is,
-           lognormal_distribution<_RT>& __x)
-{
-    return __is >> __x.__nd_;
-}
-
-#endif // _LIBCPP_ABI_OLD_LOGNORMAL_DISTRIBUTION
 
 _LIBCPP_END_NAMESPACE_STD
 

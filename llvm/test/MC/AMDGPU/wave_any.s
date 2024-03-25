@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 
 v_cmp_ge_i32_e32 s0, v0
 // GFX10: v_cmp_ge_i32_e32 vcc, s0, v0 ; encoding: [0x00,0x00,0x0c,0x7d]

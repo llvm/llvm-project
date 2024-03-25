@@ -6,9 +6,19 @@
 // RUN:  -o %t/M.pcm
 
 // RUN: %clang_cc1 -std=c++20 -S %t/std10-3-ex2-tu2.cpp \
-// RUN:  -fmodule-file=%t/M.pcm -o %t/tu_8.s -verify
+// RUN:  -fmodule-file=M=%t/M.pcm -o %t/tu_8.s -verify
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/std10-3-ex2-tu3.cpp \
+// RUN:  -o %t/M.pcm -verify
+
+// Test again with reduced BMI.
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/std10-3-ex2-tu1.cpp \
+// RUN:  -o %t/M.pcm
+
+// RUN: %clang_cc1 -std=c++20 -S %t/std10-3-ex2-tu2.cpp \
+// RUN:  -fmodule-file=M=%t/M.pcm -o %t/tu_8.s -verify
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/std10-3-ex2-tu3.cpp \
 // RUN:  -o %t/M.pcm -verify
 
 //--- std10-3-ex2-tu1.cpp

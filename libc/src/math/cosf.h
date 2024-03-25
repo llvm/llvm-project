@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_COSF_H
 #define LLVM_LIBC_SRC_MATH_COSF_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 float cosf(float x);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_COSF_H

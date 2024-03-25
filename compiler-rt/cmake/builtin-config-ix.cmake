@@ -1,4 +1,5 @@
 include(BuiltinTests)
+include(CheckIncludeFiles)
 include(CheckCSourceCompiles)
 
 # Make all the tests only check the compiler
@@ -13,6 +14,13 @@ builtin_check_c_compiler_flag(-fvisibility=hidden   COMPILER_RT_HAS_VISIBILITY_H
 builtin_check_c_compiler_flag(-fomit-frame-pointer  COMPILER_RT_HAS_OMIT_FRAME_POINTER_FLAG)
 builtin_check_c_compiler_flag(-ffreestanding        COMPILER_RT_HAS_FFREESTANDING_FLAG)
 builtin_check_c_compiler_flag(-fxray-instrument     COMPILER_RT_HAS_XRAY_COMPILER_FLAG)
+builtin_check_c_compiler_flag(-fno-lto              COMPILER_RT_HAS_FNO_LTO_FLAG)
+builtin_check_c_compiler_flag(-fno-profile-generate COMPILER_RT_HAS_FNO_PROFILE_GENERATE_FLAG)
+builtin_check_c_compiler_flag(-fno-profile-instr-generate COMPILER_RT_HAS_FNO_PROFILE_INSTR_GENERATE_FLAG)
+builtin_check_c_compiler_flag(-fno-profile-instr-use COMPILER_RT_HAS_FNO_PROFILE_INSTR_USE_FLAG)
+builtin_check_c_compiler_flag(-Wno-pedantic         COMPILER_RT_HAS_WNO_PEDANTIC)
+builtin_check_c_compiler_flag(-Wbuiltin-declaration-mismatch COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG)
+builtin_check_c_compiler_flag(/Zl COMPILER_RT_HAS_ZL_FLAG)
 
 builtin_check_c_compiler_source(COMPILER_RT_HAS_ATOMIC_KEYWORD
 "
@@ -22,30 +30,30 @@ int foo(int x, int y) {
 }
 ")
 
-builtin_check_c_compiler_source(COMPILER_RT_HAS_FLOAT16
-"
-_Float16 foo(_Float16 x) {
- return x;
-}
-"
-)
-
-builtin_check_c_compiler_source(COMPILER_RT_HAS_BFLOAT16
-"
-__bf16 foo(__bf16 x) {
- return x;
-}
-"
-)
-
 builtin_check_c_compiler_source(COMPILER_RT_HAS_ASM_LSE
 "
 asm(\".arch armv8-a+lse\");
 asm(\"cas w0, w1, [x2]\");
 ")
 
+builtin_check_c_compiler_source(COMPILER_RT_HAS_AARCH64_SME
+"
+void foo(void)  __arm_streaming_compatible {
+  asm(\".arch armv9-a+sme\");
+  asm(\"smstart\");
+}
+")
+
+check_include_files("sys/auxv.h"    COMPILER_RT_HAS_AUXV)
+
+if(ANDROID)
+  set(OS_NAME "Android")
+else()
+  set(OS_NAME "${CMAKE_SYSTEM_NAME}")
+endif()
+
 set(ARM64 aarch64)
-set(ARM32 arm armhf armv4t armv5te armv6 armv6m armv7m armv7em armv7 armv7s armv7k armv8m.main armv8.1m.main)
+set(ARM32 arm armhf armv4t armv5te armv6 armv6m armv7m armv7em armv7 armv7s armv7k armv8m.base armv8m.main armv8.1m.main)
 set(AVR avr)
 set(HEXAGON hexagon)
 set(X86 i386)
@@ -87,6 +95,8 @@ if(APPLE)
   find_darwin_sdk_dir(DARWIN_watchos_SYSROOT watchos)
   find_darwin_sdk_dir(DARWIN_tvossim_SYSROOT appletvsimulator)
   find_darwin_sdk_dir(DARWIN_tvos_SYSROOT appletvos)
+  find_darwin_sdk_dir(DARWIN_xrossim_SYSROOT xrsimulator)
+  find_darwin_sdk_dir(DARWIN_xros_SYSROOT xros)
 
   # Get supported architecture from SDKSettings.
   function(sdk_has_arch_support sdk_path os arch has_support)
@@ -156,6 +166,11 @@ if(APPLE)
     if ("${tvossim_sdk_version}" VERSION_GREATER 14.0 OR "${tvossim_sdk_version}" VERSION_EQUAL 14.0)
       list(APPEND DARWIN_tvossim_BUILTIN_ALL_POSSIBLE_ARCHS arm64)
     endif()
+  endif()
+  if(COMPILER_RT_ENABLE_XROS)
+    list(APPEND DARWIN_EMBEDDED_PLATFORMS xros)
+    set(DARWIN_xros_BUILTIN_ALL_POSSIBLE_ARCHS ${ARM64} ${ARM32})
+    set(DARWIN_xrossim_BUILTIN_ALL_POSSIBLE_ARCHS arm64)
   endif()
 
   set(BUILTIN_SUPPORTED_OS osx)
@@ -228,6 +243,12 @@ else()
   # Architectures supported by compiler-rt libraries.
   filter_available_targets(BUILTIN_SUPPORTED_ARCH
     ${ALL_BUILTIN_SUPPORTED_ARCH})
+endif()
+
+if (OS_NAME MATCHES "Linux|SerenityOS" AND NOT LLVM_USE_SANITIZER)
+  set(COMPILER_RT_HAS_CRT TRUE)
+else()
+  set(COMPILER_RT_HAS_CRT FALSE)
 endif()
 
 message(STATUS "Builtin supported architectures: ${BUILTIN_SUPPORTED_ARCH}")

@@ -28,10 +28,10 @@ define i32 @add_red(ptr %A, i32 %n) {
 ; CHECK-NEXT:    [[SUM_032:%.*]] = phi float [ 0.000000e+00, [[FOR_BODY_LR_PH]] ], [ [[ADD17:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i64 [[I_033]], 2
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[MUL]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP2]], <float 7.000000e+00, float 7.000000e+00, float 7.000000e+00, float 7.000000e+00>
-; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP3]])
-; CHECK-NEXT:    [[ADD17]] = fadd fast float [[SUM_032]], [[TMP4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x float> [[TMP1]], <float 7.000000e+00, float 7.000000e+00, float 7.000000e+00, float 7.000000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
+; CHECK-NEXT:    [[ADD17]] = fadd fast float [[SUM_032]], [[TMP3]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_033]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_FOR_END_CRIT_EDGE:%.*]], label [[FOR_BODY]]
@@ -57,17 +57,17 @@ for.body:
   %arrayidx = getelementptr inbounds float, ptr %A, i64 %mul
   %1 = load float, ptr %arrayidx, align 4
   %mul2 = fmul float %1, 7.000000e+00
-  %add28 = or i64 %mul, 1
+  %add28 = or disjoint i64 %mul, 1
   %arrayidx4 = getelementptr inbounds float, ptr %A, i64 %add28
   %2 = load float, ptr %arrayidx4, align 4
   %mul5 = fmul float %2, 7.000000e+00
   %add6 = fadd fast float %mul2, %mul5
-  %add829 = or i64 %mul, 2
+  %add829 = or disjoint i64 %mul, 2
   %arrayidx9 = getelementptr inbounds float, ptr %A, i64 %add829
   %3 = load float, ptr %arrayidx9, align 4
   %mul10 = fmul float %3, 7.000000e+00
   %add11 = fadd fast float %add6, %mul10
-  %add1330 = or i64 %mul, 3
+  %add1330 = or disjoint i64 %mul, 3
   %arrayidx14 = getelementptr inbounds float, ptr %A, i64 %add1330
   %4 = load float, ptr %arrayidx14, align 4
   %mul15 = fmul float %4, 7.000000e+00
@@ -103,20 +103,20 @@ define i32 @mul_red(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; CHECK-NEXT:    [[CMP38:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP38]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_040:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SUM_039:%.*]] = phi float [ 0.000000e+00, [[FOR_BODY_LR_PH]] ], [ [[MUL21:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i64 [[I_040]], 2
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[MUL]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul <4 x float> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP5]])
-; CHECK-NEXT:    [[MUL21]] = fmul float [[SUM_039]], [[TMP6]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP3]])
+; CHECK-NEXT:    [[MUL21]] = fmul float [[SUM_039]], [[TMP4]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_040]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP2]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_FOR_END_CRIT_EDGE:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.cond.for.end_crit_edge:
 ; CHECK-NEXT:    [[PHITMP:%.*]] = fptosi float [[MUL21]] to i32
@@ -147,17 +147,17 @@ for.body:
   %arrayidx2 = getelementptr inbounds float, ptr %A, i64 %mul
   %5 = load float, ptr %arrayidx2, align 4
   %mul3 = fmul float %0, %5
-  %add35 = or i64 %mul, 1
+  %add35 = or disjoint i64 %mul, 1
   %arrayidx6 = getelementptr inbounds float, ptr %A, i64 %add35
   %6 = load float, ptr %arrayidx6, align 4
   %mul7 = fmul float %1, %6
   %add8 = fadd fast float %mul3, %mul7
-  %add1136 = or i64 %mul, 2
+  %add1136 = or disjoint i64 %mul, 2
   %arrayidx12 = getelementptr inbounds float, ptr %A, i64 %add1136
   %7 = load float, ptr %arrayidx12, align 4
   %mul13 = fmul float %2, %7
   %add14 = fadd fast float %add8, %mul13
-  %add1737 = or i64 %mul, 3
+  %add1737 = or disjoint i64 %mul, 3
   %arrayidx18 = getelementptr inbounds float, ptr %A, i64 %add1737
   %8 = load float, ptr %arrayidx18, align 4
   %mul19 = fmul float %3, %8
@@ -198,27 +198,27 @@ define i32 @long_red(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; CHECK-NEXT:    [[CMP81:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP81]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX45:%.*]] = getelementptr inbounds float, ptr [[B]], i64 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX45]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX45]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_083:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SUM_082:%.*]] = phi float [ 0.000000e+00, [[FOR_BODY_LR_PH]] ], [ [[ADD51:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[I_083]], 6
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[MUL]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load <8 x float>, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <8 x float> [[TMP1]], [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x float>, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <8 x float> [[TMP0]], [[TMP3]]
 ; CHECK-NEXT:    [[ADD47:%.*]] = add nsw i64 [[MUL]], 8
 ; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[ADD47]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[ARRAYIDX48]], align 4
-; CHECK-NEXT:    [[MUL49:%.*]] = fmul fast float [[TMP2]], [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP6]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP8]], [[MUL49]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[ARRAYIDX48]], align 4
+; CHECK-NEXT:    [[MUL49:%.*]] = fmul fast float [[TMP1]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP4]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP6]], [[MUL49]]
 ; CHECK-NEXT:    [[ADD51]] = fadd fast float [[SUM_082]], [[OP_RDX]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_083]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP3]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_FOR_END_CRIT_EDGE:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.cond.for.end_crit_edge:
 ; CHECK-NEXT:    [[PHITMP:%.*]] = fptosi float [[ADD51]] to i32
@@ -259,7 +259,7 @@ for.body:
   %arrayidx2 = getelementptr inbounds float, ptr %A, i64 %mul
   %10 = load float, ptr %arrayidx2, align 4
   %mul3 = fmul fast float %0, %10
-  %add80 = or i64 %mul, 1
+  %add80 = or disjoint i64 %mul, 1
   %arrayidx6 = getelementptr inbounds float, ptr %A, i64 %add80
   %11 = load float, ptr %arrayidx6, align 4
   %mul7 = fmul fast float %1, %11
@@ -330,20 +330,20 @@ define i32 @chain_red(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; CHECK-NEXT:    [[CMP41:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP41]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_043:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SUM_042:%.*]] = phi float [ 0.000000e+00, [[FOR_BODY_LR_PH]] ], [ [[OP_RDX:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i64 [[I_043]], 2
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[MUL]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP5]])
-; CHECK-NEXT:    [[OP_RDX]] = fadd fast float [[TMP6]], [[SUM_042]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP3]])
+; CHECK-NEXT:    [[OP_RDX]] = fadd fast float [[TMP4]], [[SUM_042]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_043]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP2]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_FOR_END_CRIT_EDGE:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.cond.for.end_crit_edge:
 ; CHECK-NEXT:    [[PHITMP:%.*]] = fptosi float [[OP_RDX]] to i32
@@ -375,17 +375,17 @@ for.body:
   %5 = load float, ptr %arrayidx2, align 4
   %mul3 = fmul fast float %0, %5
   %add = fadd fast float %sum.042, %mul3
-  %add638 = or i64 %mul, 1
+  %add638 = or disjoint i64 %mul, 1
   %arrayidx7 = getelementptr inbounds float, ptr %A, i64 %add638
   %6 = load float, ptr %arrayidx7, align 4
   %mul8 = fmul fast float %1, %6
   %add9 = fadd fast float %add, %mul8
-  %add1239 = or i64 %mul, 2
+  %add1239 = or disjoint i64 %mul, 2
   %arrayidx13 = getelementptr inbounds float, ptr %A, i64 %add1239
   %7 = load float, ptr %arrayidx13, align 4
   %mul14 = fmul fast float %2, %7
   %add15 = fadd fast float %add9, %mul14
-  %add1840 = or i64 %mul, 3
+  %add1840 = or disjoint i64 %mul, 3
   %arrayidx19 = getelementptr inbounds float, ptr %A, i64 %add1840
   %8 = load float, ptr %arrayidx19, align 4
   %mul20 = fmul fast float %3, %8
@@ -441,13 +441,13 @@ define void @foo(ptr nocapture readonly %arg_A, i32 %arg_B, ptr nocapture %array
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[ARRAY:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[ARRAY]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX4]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr [[ARRAY]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[ARRAYIDX8]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = or i64 [[TMP0]], 3
+; CHECK-NEXT:    [[TMP6:%.*]] = or disjoint i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds float, ptr [[ARRAY]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[ARRAYIDX12]], align 4
 ; CHECK-NEXT:    br i1 [[CMP1495]], label [[FOR_COND_CLEANUP15]], label [[FOR_BODY16_LR_PH:%.*]]
@@ -502,13 +502,13 @@ for.body:                                         ; preds = %for.cond.cleanup15,
   %0 = shl i64 %indvars.iv, 2
   %arrayidx = getelementptr inbounds float, ptr %array, i64 %0
   %1 = load float, ptr %arrayidx, align 4
-  %2 = or i64 %0, 1
+  %2 = or disjoint i64 %0, 1
   %arrayidx4 = getelementptr inbounds float, ptr %array, i64 %2
   %3 = load float, ptr %arrayidx4, align 4
-  %4 = or i64 %0, 2
+  %4 = or disjoint i64 %0, 2
   %arrayidx8 = getelementptr inbounds float, ptr %array, i64 %4
   %5 = load float, ptr %arrayidx8, align 4
-  %6 = or i64 %0, 3
+  %6 = or disjoint i64 %0, 3
   %arrayidx12 = getelementptr inbounds float, ptr %array, i64 %6
   %7 = load float, ptr %arrayidx12, align 4
   br i1 %cmp1495, label %for.cond.cleanup15, label %for.body16.lr.ph
@@ -569,22 +569,22 @@ define void @store_red_double(ptr noalias %A, ptr noalias %B, ptr noalias %C, i3
 ; CHECK-NEXT:    [[CMP17:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP17]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_018:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i64 [[I_018]], 2
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[MUL]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[ARRAYIDX2]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <2 x double> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP5]], i32 1
-; CHECK-NEXT:    [[ADD8:%.*]] = fadd fast double [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[ARRAYIDX2]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <2 x double> [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i32 1
+; CHECK-NEXT:    [[ADD8:%.*]] = fadd fast double [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds double, ptr [[C:%.*]], i64 [[I_018]]
 ; CHECK-NEXT:    store double [[ADD8]], ptr [[ARRAYIDX9]], align 8
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_018]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP2]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -606,7 +606,7 @@ for.body:
   %arrayidx2 = getelementptr inbounds double, ptr %A, i64 %mul
   %3 = load double, ptr %arrayidx2, align 8
   %mul3 = fmul fast double %0, %3
-  %add16 = or i64 %mul, 1
+  %add16 = or disjoint i64 %mul, 1
   %arrayidx6 = getelementptr inbounds double, ptr %A, i64 %add16
   %4 = load double, ptr %arrayidx6, align 8
   %mul7 = fmul fast double %1, %4
@@ -645,11 +645,11 @@ define i32 @store_red(ptr noalias %A, ptr noalias %B, ptr noalias %C, i32 %n) {
 ; CHECK-NEXT:    [[C_ADDR_038:%.*]] = phi ptr [ [[C:%.*]], [[FOR_BODY_LR_PH]] ], [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i64 [[I_039]], 2
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[MUL]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP5]])
-; CHECK-NEXT:    store float [[TMP6]], ptr [[C_ADDR_038]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP3]])
+; CHECK-NEXT:    store float [[TMP4]], ptr [[C_ADDR_038]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, ptr [[C_ADDR_038]], i64 1
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_039]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP0]]
@@ -677,19 +677,19 @@ for.body:
   %2 = load float, ptr %arrayidx2, align 4
   %mul3 = fmul fast float %1, %2
   %3 = load float, ptr %arrayidx4, align 4
-  %add34 = or i64 %mul, 1
+  %add34 = or disjoint i64 %mul, 1
   %arrayidx6 = getelementptr inbounds float, ptr %A, i64 %add34
   %4 = load float, ptr %arrayidx6, align 4
   %mul7 = fmul fast float %3, %4
   %add8 = fadd fast float %mul3, %mul7
   %5 = load float, ptr %arrayidx9, align 4
-  %add1135 = or i64 %mul, 2
+  %add1135 = or disjoint i64 %mul, 2
   %arrayidx12 = getelementptr inbounds float, ptr %A, i64 %add1135
   %6 = load float, ptr %arrayidx12, align 4
   %mul13 = fmul fast float %5, %6
   %add14 = fadd fast float %add8, %mul13
   %7 = load float, ptr %arrayidx15, align 4
-  %add1736 = or i64 %mul, 3
+  %add1736 = or disjoint i64 %mul, 3
   %arrayidx18 = getelementptr inbounds float, ptr %A, i64 %add1736
   %8 = load float, ptr %arrayidx18, align 4
   %mul19 = fmul fast float %7, %8
@@ -1003,10 +1003,10 @@ define void @i32_red_invoke(i32 %val) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr @arr_i32, align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[RES:%.*]] = invoke i32 @foobar(i32 [[TMP1]])
-; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
+; CHECK-NEXT:            to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
 ; CHECK:       exception:
 ; CHECK-NEXT:    [[CLEANUP:%.*]] = landingpad i8
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    br label [[NORMAL]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
@@ -1041,11 +1041,11 @@ define i32 @reduction_result_used_in_phi(ptr nocapture readonly %data, i1 zeroex
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[DATA:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[DATA:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP0]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[SUM_1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP2]], [[BB]] ]
+; CHECK-NEXT:    [[SUM_1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP1]], [[BB]] ]
 ; CHECK-NEXT:    ret i32 [[SUM_1]]
 ;
 entry:
@@ -1074,11 +1074,11 @@ define i32 @reduction_result_used_in_phi_loop(ptr nocapture readonly %data, i1 z
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[DATA:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[DATA:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP0]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[SUM_1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP2]], [[BB]] ]
+; CHECK-NEXT:    [[SUM_1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP1]], [[BB]] ]
 ; CHECK-NEXT:    ret i32 [[SUM_1]]
 ;
 entry:
@@ -1131,11 +1131,11 @@ bb.1:
 
 define float @fadd_v4f32_fmf(ptr %p) {
 ; CHECK-LABEL: @fadd_v4f32_fmf(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
-; CHECK-NEXT:    ret float [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP1]])
+; CHECK-NEXT:    ret float [[TMP2]]
 ;
-  %p1 = getelementptr inbounds float, float* %p, i64 1
+  %p1 = getelementptr inbounds float, ptr %p, i64 1
   %p2 = getelementptr inbounds float, ptr %p, i64 2
   %p3 = getelementptr inbounds float, ptr %p, i64 3
   %t0 = load float, ptr %p, align 4
@@ -1154,11 +1154,11 @@ define float @fadd_v4f32_fmf(ptr %p) {
 
 define float @fadd_v4f32_fmf_intersect(ptr %p) {
 ; CHECK-LABEL: @fadd_v4f32_fmf_intersect(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = call reassoc ninf nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
-; CHECK-NEXT:    ret float [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc ninf nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP1]])
+; CHECK-NEXT:    ret float [[TMP2]]
 ;
-  %p1 = getelementptr inbounds float, float* %p, i64 1
+  %p1 = getelementptr inbounds float, ptr %p, i64 1
   %p2 = getelementptr inbounds float, ptr %p, i64 2
   %p3 = getelementptr inbounds float, ptr %p, i64 3
   %t0 = load float, ptr %p, align 4

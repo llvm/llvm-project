@@ -12,4 +12,4 @@
 
 #include <stdlib.h>
 
-LIST_DIV_TESTS(int, div_t, __llvm_libc::div)
+LIST_DIV_TESTS(int, div_t, LIBC_NAMESPACE::div)

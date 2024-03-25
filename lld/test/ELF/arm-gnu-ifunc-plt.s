@@ -37,7 +37,6 @@
 // DISASM: <_start>:
 // DISASM-NEXT:    201e4:       bl      0x20240
 // DISASM-NEXT:    201e8:       bl      0x20250
-// DISASM: <$d.1>:
 // DISASM-NEXT:    201ec:       00 00 00 00     .word   0x00000000
 // DISASM-NEXT:    201f0:       04 00 00 00     .word   0x00000004
 // DISASM:         201f4:       bl      0x20220
@@ -45,39 +44,31 @@
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:
-// DISASM-NEXT: <$a>:
+// DISASM-NEXT: <.plt>:
 // DISASM-NEXT:    20200:       str     lr, [sp, #-4]!
 // DISASM-NEXT:    20204:       add     lr, pc, #0, #12
 // DISASM-NEXT:    20208:       add     lr, lr, #32
 // DISASM-NEXT:    2020c:       ldr     pc, [lr, #236]!
-// DISASM: <$d>:
 // DISASM-NEXT:    20210:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DISASM-NEXT:    20214:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DISASM-NEXT:    20218:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DISASM-NEXT:    2021c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DISASM: <$a>:
 // DISASM-NEXT:    20220:       add     r12, pc, #0, #12
 // DISASM-NEXT:    20224:       add     r12, r12, #32
 // DISASM-NEXT:    20228:       ldr     pc, [r12, #212]!
-// DISASM: <$d>:
 // DISASM-NEXT:    2022c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DISASM: <$a>:
 // DISASM-NEXT:    20230:       add     r12, pc, #0, #12
 // DISASM-NEXT:    20234:       add     r12, r12, #32
 // DISASM-NEXT:    20238:       ldr     pc, [r12, #200]!
-// DISASM: <$d>:
 // DISASM-NEXT:    2023c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DISASM: <$a>:
+// DISASM:       <.iplt>:
 // DISASM-NEXT:    20240:       add     r12, pc, #0, #12
 // DISASM-NEXT:    20244:       add     r12, r12, #16
 // DISASM-NEXT:    20248:       ldr     pc, [r12, #160]!
-// DISASM: <$d>:
 // DISASM-NEXT:    2024c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DISASM: <$a>:
 // DISASM-NEXT:    20250:       add     r12, pc, #0, #12
 // DISASM-NEXT:    20254:       add     r12, r12, #16
 // DISASM-NEXT:    20258:       ldr     pc, [r12, #148]!
-// DISASM: <$d>:
 // DISASM-NEXT:    2025c:	d4 d4 d4 d4 	.word	0xd4d4d4d4
 
 .syntax unified

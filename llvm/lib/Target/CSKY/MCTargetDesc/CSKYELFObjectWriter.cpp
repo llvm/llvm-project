@@ -117,6 +117,12 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
         return ELF::R_CKCORE_GOTOFF;
       case MCSymbolRefExpr::VK_PLT:
         return ELF::R_CKCORE_PLT32;
+      case MCSymbolRefExpr::VK_TLSGD:
+        return ELF::R_CKCORE_TLS_GD32;
+      case MCSymbolRefExpr::VK_TLSLDM:
+        return ELF::R_CKCORE_TLS_LDM32;
+      case MCSymbolRefExpr::VK_TPOFF:
+        return ELF::R_CKCORE_TLS_LE32;
       case MCSymbolRefExpr::VK_None:
         return ELF::R_CKCORE_ADDR32;
       }

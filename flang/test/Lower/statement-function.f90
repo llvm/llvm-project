@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -outline-intrinsics %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -outline-intrinsics %s -o - | FileCheck %s
 
 ! Test statement function lowering
 
@@ -92,9 +92,11 @@ integer function test_stmt_character(c, j)
   integer :: i, j, func, argj
   character(10) :: c, argc
   ! CHECK-DAG: %[[unboxed:.*]]:2 = fir.unboxchar %arg0 :
+  ! CHECK-DAG: %[[ref:.*]] = fir.convert %[[unboxed]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,10>>
   ! CHECK-DAG: %[[c10:.*]] = arith.constant 10 :
+  ! CHECK-DAG: %[[ref_cast:.*]] = fir.convert %[[ref]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,?>>
   ! CHECK: %[[c10_cast:.*]] = fir.convert %[[c10]] : (i32) -> index
-  ! CHECK: %[[c:.*]] = fir.emboxchar %[[unboxed]]#0, %[[c10_cast]]
+  ! CHECK: %[[c:.*]] = fir.emboxchar %[[ref_cast]], %[[c10_cast]]
 
   func(argc, argj) = len_trim(argc, 4) + argj
   ! CHECK: addi %{{.*}}, %{{.*}} : i
@@ -157,7 +159,7 @@ end subroutine
 
 ! CHECK-LABEL: @_QPtruncate_arg
 ! CHECK: %[[c4:.*]] = arith.constant 4 : i32
-! CHECK: %[[arg:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,10>>
+! CHECK: %[[arg:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,10>>
 ! CHECK: %[[cast_arg:.*]] = fir.convert %[[arg]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK: %[[c10:.*]] = arith.constant 10 : i64
 ! CHECK: %[[temp:.*]] = fir.alloca !fir.char<1,10> {bindc_name = ".chrtmp"}

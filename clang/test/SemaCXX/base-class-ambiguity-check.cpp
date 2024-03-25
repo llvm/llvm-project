@@ -3,7 +3,7 @@
 template <typename T> class Foo {
   struct Base : T {};
 
-  // Test that this code no longer causes a crash in Sema. rdar://23291875
+  // Test that this code no longer causes a crash in Sema.
   struct Derived : Base, T {};
 };
 

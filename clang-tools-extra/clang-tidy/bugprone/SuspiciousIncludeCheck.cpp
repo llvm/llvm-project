@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SuspiciousIncludeCheck.h"
+#include "../utils/FileExtensionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Lex/Preprocessor.h"
 #include <optional>
@@ -25,7 +26,8 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
 
 private:
@@ -37,30 +39,8 @@ private:
 SuspiciousIncludeCheck::SuspiciousIncludeCheck(StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      RawStringHeaderFileExtensions(Options.getLocalOrGlobal(
-          "HeaderFileExtensions", utils::defaultHeaderFileExtensions())),
-      RawStringImplementationFileExtensions(Options.getLocalOrGlobal(
-          "ImplementationFileExtensions",
-          utils::defaultImplementationFileExtensions())) {
-  if (!utils::parseFileExtensions(RawStringImplementationFileExtensions,
-                                  ImplementationFileExtensions,
-                                  utils::defaultFileExtensionDelimiters())) {
-    this->configurationDiag("Invalid implementation file extension: '%0'")
-        << RawStringImplementationFileExtensions;
-  }
-
-  if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
-                                  HeaderFileExtensions,
-                                  utils::defaultFileExtensionDelimiters())) {
-    this->configurationDiag("Invalid header file extension: '%0'")
-        << RawStringHeaderFileExtensions;
-  }
-}
-
-void SuspiciousIncludeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "ImplementationFileExtensions",
-                RawStringImplementationFileExtensions);
-  Options.store(Opts, "HeaderFileExtensions", RawStringHeaderFileExtensions);
+      HeaderFileExtensions(Context->getHeaderFileExtensions()),
+      ImplementationFileExtensions(Context->getImplementationFileExtensions()) {
 }
 
 void SuspiciousIncludeCheck::registerPPCallbacks(
@@ -72,8 +52,8 @@ void SuspiciousIncludeCheck::registerPPCallbacks(
 void SuspiciousIncludePPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
   if (IncludeTok.getIdentifierInfo()->getPPKeywordID() == tok::pp_import)
     return;
 
@@ -90,7 +70,7 @@ void SuspiciousIncludePPCallbacks::InclusionDirective(
   for (const auto &HFE : Check.HeaderFileExtensions) {
     SmallString<128> GuessedFileName(FileName);
     llvm::sys::path::replace_extension(GuessedFileName,
-                                       (HFE.size() ? "." : "") + HFE);
+                                       (!HFE.empty() ? "." : "") + HFE);
 
     OptionalFileEntryRef File =
         PP->LookupFile(DiagLoc, GuessedFileName, IsAngled, nullptr, nullptr,

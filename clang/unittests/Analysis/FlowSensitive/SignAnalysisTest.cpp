@@ -88,8 +88,7 @@ void transferUninitializedInt(const DeclStmt *D,
                               LatticeTransferState &State) {
   const auto *Var = M.Nodes.getNodeAs<clang::VarDecl>(kVar);
   assert(Var != nullptr);
-  const StorageLocation *Loc =
-      State.Env.getStorageLocation(*Var, SkipPast::None);
+  const StorageLocation *Loc = State.Env.getStorageLocation(*Var);
   Value *Val = State.Env.getValue(*Loc);
   initUnknown(*Val, State.Env);
 }
@@ -110,17 +109,15 @@ getValueAndSignProperties(const UnaryOperator *UO,
   // The DeclRefExpr refers to this variable in the operand.
   const auto *OperandVar = M.Nodes.getNodeAs<clang::VarDecl>(kVar);
   assert(OperandVar != nullptr);
-  const auto *OperandValue = State.Env.getValue(*OperandVar, SkipPast::None);
+  const auto *OperandValue = State.Env.getValue(*OperandVar);
   if (!OperandValue)
     return {nullptr, {}, {}};
 
   // Value of the unary op.
-  auto *UnaryOpValue = State.Env.getValue(*UO, SkipPast::None);
+  auto *UnaryOpValue = State.Env.getValue(*UO);
   if (!UnaryOpValue) {
-    auto &Loc = State.Env.createStorageLocation(*UO);
-    State.Env.setStorageLocation(*UO, Loc);
     UnaryOpValue = &State.Env.makeAtomicBoolValue();
-    State.Env.setValue(Loc, *UnaryOpValue);
+    State.Env.setValue(*UO, *UnaryOpValue);
   }
 
   // Properties for the operand (sub expression).
@@ -134,22 +131,20 @@ getValueAndSignProperties(const UnaryOperator *UO,
 
 void transferBinary(const BinaryOperator *BO, const MatchFinder::MatchResult &M,
                     LatticeTransferState &State) {
-  StorageLocation *Loc = State.Env.getStorageLocation(*BO, SkipPast::None);
-  if (!Loc) {
-    Loc = &State.Env.createStorageLocation(*BO);
-    State.Env.setStorageLocation(*BO, *Loc);
-  }
-  BoolValue *Comp = cast_or_null<BoolValue>(State.Env.getValue(*Loc));
-  if (!Comp) {
-    Comp = &State.Env.makeAtomicBoolValue();
-    State.Env.setValue(*Loc, *Comp);
+  auto &A = State.Env.arena();
+  const Formula *Comp;
+  if (BoolValue *V = State.Env.get<BoolValue>(*BO)) {
+    Comp = &V->formula();
+  } else {
+    Comp = &A.makeAtomRef(A.makeAtom());
+    State.Env.setValue(*BO, A.makeBoolValue(*Comp));
   }
 
   // FIXME Use this as well:
   // auto *NegatedComp = &State.Env.makeNot(*Comp);
 
-  auto *LHS = State.Env.getValue(*BO->getLHS(), SkipPast::None);
-  auto *RHS = State.Env.getValue(*BO->getRHS(), SkipPast::None);
+  auto *LHS = State.Env.getValue(*BO->getLHS());
+  auto *RHS = State.Env.getValue(*BO->getRHS());
 
   if (!LHS || !RHS)
     return;
@@ -162,37 +157,46 @@ void transferBinary(const BinaryOperator *BO, const MatchFinder::MatchResult &M,
   switch (BO->getOpcode()) {
   case BO_GT:
     // pos > pos
-    State.Env.addToFlowCondition(State.Env.makeImplication(
-        *Comp, State.Env.makeImplication(*RHSProps.Pos, *LHSProps.Pos)));
+    State.Env.assume(
+        A.makeImplies(*Comp, A.makeImplies(RHSProps.Pos->formula(),
+                                           LHSProps.Pos->formula())));
     // pos > zero
-    State.Env.addToFlowCondition(State.Env.makeImplication(
-        *Comp, State.Env.makeImplication(*RHSProps.Zero, *LHSProps.Pos)));
+    State.Env.assume(
+        A.makeImplies(*Comp, A.makeImplies(RHSProps.Zero->formula(),
+                                           LHSProps.Pos->formula())));
     break;
   case BO_LT:
     // neg < neg
-    State.Env.addToFlowCondition(State.Env.makeImplication(
-        *Comp, State.Env.makeImplication(*RHSProps.Neg, *LHSProps.Neg)));
+    State.Env.assume(
+        A.makeImplies(*Comp, A.makeImplies(RHSProps.Neg->formula(),
+                                           LHSProps.Neg->formula())));
     // neg < zero
-    State.Env.addToFlowCondition(State.Env.makeImplication(
-        *Comp, State.Env.makeImplication(*RHSProps.Zero, *LHSProps.Neg)));
+    State.Env.assume(
+        A.makeImplies(*Comp, A.makeImplies(RHSProps.Zero->formula(),
+                                           LHSProps.Neg->formula())));
     break;
   case BO_GE:
     // pos >= pos
-    State.Env.addToFlowCondition(State.Env.makeImplication(
-        *Comp, State.Env.makeImplication(*RHSProps.Pos, *LHSProps.Pos)));
+    State.Env.assume(
+        A.makeImplies(*Comp, A.makeImplies(RHSProps.Pos->formula(),
+                                           LHSProps.Pos->formula())));
     break;
   case BO_LE:
     // neg <= neg
-    State.Env.addToFlowCondition(State.Env.makeImplication(
-        *Comp, State.Env.makeImplication(*RHSProps.Neg, *LHSProps.Neg)));
+    State.Env.assume(
+        A.makeImplies(*Comp, A.makeImplies(RHSProps.Neg->formula(),
+                                           LHSProps.Neg->formula())));
     break;
   case BO_EQ:
-    State.Env.addToFlowCondition(State.Env.makeImplication(
-        *Comp, State.Env.makeImplication(*RHSProps.Neg, *LHSProps.Neg)));
-    State.Env.addToFlowCondition(State.Env.makeImplication(
-        *Comp, State.Env.makeImplication(*RHSProps.Zero, *LHSProps.Zero)));
-    State.Env.addToFlowCondition(State.Env.makeImplication(
-        *Comp, State.Env.makeImplication(*RHSProps.Pos, *LHSProps.Pos)));
+    State.Env.assume(
+        A.makeImplies(*Comp, A.makeImplies(RHSProps.Neg->formula(),
+                                           LHSProps.Neg->formula())));
+    State.Env.assume(
+        A.makeImplies(*Comp, A.makeImplies(RHSProps.Zero->formula(),
+                                           LHSProps.Zero->formula())));
+    State.Env.assume(
+        A.makeImplies(*Comp, A.makeImplies(RHSProps.Pos->formula(),
+                                           LHSProps.Pos->formula())));
     break;
   case BO_NE: // Noop.
     break;
@@ -204,60 +208,86 @@ void transferBinary(const BinaryOperator *BO, const MatchFinder::MatchResult &M,
 void transferUnaryMinus(const UnaryOperator *UO,
                         const MatchFinder::MatchResult &M,
                         LatticeTransferState &State) {
+  auto &A = State.Env.arena();
   auto [UnaryOpValue, UnaryOpProps, OperandProps] =
       getValueAndSignProperties(UO, M, State);
   if (!UnaryOpValue)
     return;
 
   // a is pos ==> -a is neg
-  State.Env.addToFlowCondition(
-      State.Env.makeImplication(*OperandProps.Pos, *UnaryOpProps.Neg));
+  State.Env.assume(
+      A.makeImplies(OperandProps.Pos->formula(), UnaryOpProps.Neg->formula()));
   // a is neg ==> -a is pos
-  State.Env.addToFlowCondition(
-      State.Env.makeImplication(*OperandProps.Neg, *UnaryOpProps.Pos));
+  State.Env.assume(
+      A.makeImplies(OperandProps.Neg->formula(), UnaryOpProps.Pos->formula()));
   // a is zero ==> -a is zero
-  State.Env.addToFlowCondition(
-      State.Env.makeImplication(*OperandProps.Zero, *UnaryOpProps.Zero));
+  State.Env.assume(A.makeImplies(OperandProps.Zero->formula(),
+                                 UnaryOpProps.Zero->formula()));
 }
 
 void transferUnaryNot(const UnaryOperator *UO,
                       const MatchFinder::MatchResult &M,
                       LatticeTransferState &State) {
+  auto &A = State.Env.arena();
   auto [UnaryOpValue, UnaryOpProps, OperandProps] =
       getValueAndSignProperties(UO, M, State);
   if (!UnaryOpValue)
     return;
 
   // a is neg or pos ==> !a is zero
-  State.Env.addToFlowCondition(State.Env.makeImplication(
-      State.Env.makeOr(*OperandProps.Pos, *OperandProps.Neg),
-      *UnaryOpProps.Zero));
+  State.Env.assume(A.makeImplies(
+      A.makeOr(OperandProps.Pos->formula(), OperandProps.Neg->formula()),
+      UnaryOpProps.Zero->formula()));
 
   // FIXME Handle this logic universally, not just for unary not. But Where to
   // put the generic handler, transferExpr maybe?
   if (auto *UOBoolVal = dyn_cast<BoolValue>(UnaryOpValue)) {
     // !a <==> a is zero
-    State.Env.addToFlowCondition(
-        State.Env.makeIff(*UOBoolVal, *OperandProps.Zero));
+    State.Env.assume(
+        A.makeEquals(UOBoolVal->formula(), OperandProps.Zero->formula()));
     // !a <==> !a is not zero
-    State.Env.addToFlowCondition(
-        State.Env.makeIff(*UOBoolVal, State.Env.makeNot(*UnaryOpProps.Zero)));
+    State.Env.assume(A.makeEquals(UOBoolVal->formula(),
+                                  A.makeNot(UnaryOpProps.Zero->formula())));
   }
+}
+
+// Returns the `Value` associated with `E` (which may be either a prvalue or
+// glvalue). Creates a `Value` or `StorageLocation` as needed if `E` does not
+// have either of these associated with it yet.
+//
+// If this functionality turns out to be needed in more cases, this function
+// should be moved to a more central location.
+Value *getOrCreateValue(const Expr *E, Environment &Env) {
+  Value *Val = nullptr;
+  if (E->isGLValue()) {
+    StorageLocation *Loc = Env.getStorageLocation(*E);
+    if (!Loc) {
+      Loc = &Env.createStorageLocation(*E);
+      Env.setStorageLocation(*E, *Loc);
+    }
+    Val = Env.getValue(*Loc);
+    if (!Val) {
+      Val = Env.createValue(E->getType());
+      Env.setValue(*Loc, *Val);
+    }
+  } else {
+    Val = Env.getValue(*E);
+    if (!Val) {
+      Val = Env.createValue(E->getType());
+      Env.setValue(*E, *Val);
+    }
+  }
+  assert(Val != nullptr);
+
+  return Val;
 }
 
 void transferExpr(const Expr *E, const MatchFinder::MatchResult &M,
                   LatticeTransferState &State) {
   const ASTContext &Context = *M.Context;
-  StorageLocation *Loc = State.Env.getStorageLocation(*E, SkipPast::None);
-  if (!Loc) {
-    Loc = &State.Env.createStorageLocation(*E);
-    State.Env.setStorageLocation(*E, *Loc);
-  }
-  Value *Val = State.Env.getValue(*Loc);
-  if (!Val) {
-    Val = State.Env.createValue(Context.IntTy);
-    State.Env.setValue(*Loc, *Val);
-  }
+
+  Value *Val = getOrCreateValue(E, State.Env);
+
   // The sign symbolic values have been initialized already.
   if (Val->getProperty("neg"))
     return;
@@ -330,61 +360,62 @@ public:
 
   static NoopLattice initialElement() { return {}; }
 
-  void transfer(const CFGElement *Elt, NoopLattice &L, Environment &Env) {
+  void transfer(const CFGElement &Elt, NoopLattice &L, Environment &Env) {
     LatticeTransferState State(L, Env);
-    TransferMatchSwitch(*Elt, getASTContext(), State);
+    TransferMatchSwitch(Elt, getASTContext(), State);
   }
-  bool merge(QualType Type, const Value &Val1, const Environment &Env1,
-             const Value &Val2, const Environment &Env2, Value &MergedVal,
-             Environment &MergedEnv) override;
+  void join(QualType Type, const Value &Val1, const Environment &Env1,
+            const Value &Val2, const Environment &Env2, Value &MergedVal,
+            Environment &MergedEnv) override;
 
 private:
   CFGMatchSwitch<TransferState<NoopLattice>> TransferMatchSwitch;
 };
 
-// Copied from crubit.
-BoolValue &mergeBoolValues(BoolValue &Bool1, const Environment &Env1,
-                           BoolValue &Bool2, const Environment &Env2,
-                           Environment &MergedEnv) {
+BoolValue &joinBoolValues(BoolValue &Bool1, const Environment &Env1,
+                          BoolValue &Bool2, const Environment &Env2,
+                          Environment &JoinedEnv) {
   if (&Bool1 == &Bool2) {
     return Bool1;
   }
 
-  auto &MergedBool = MergedEnv.makeAtomicBoolValue();
+  auto &B1 = Bool1.formula();
+  auto &B2 = Bool2.formula();
+
+  auto &A = JoinedEnv.arena();
+  auto &JoinedBool = JoinedEnv.makeAtomicBoolValue();
 
   // If `Bool1` and `Bool2` is constrained to the same true / false value,
-  // `MergedBool` can be constrained similarly without needing to consider the
-  // path taken - this simplifies the flow condition tracked in `MergedEnv`.
+  // `JoinedBool` can be constrained similarly without needing to consider the
+  // path taken - this simplifies the flow condition tracked in `JoinedEnv`.
   // Otherwise, information about which path was taken is used to associate
-  // `MergedBool` with `Bool1` and `Bool2`.
-  if (Env1.flowConditionImplies(Bool1) && Env2.flowConditionImplies(Bool2)) {
-    MergedEnv.addToFlowCondition(MergedBool);
-  } else if (Env1.flowConditionImplies(Env1.makeNot(Bool1)) &&
-             Env2.flowConditionImplies(Env2.makeNot(Bool2))) {
-    MergedEnv.addToFlowCondition(MergedEnv.makeNot(MergedBool));
+  // `JoinedBool` with `Bool1` and `Bool2`.
+  if (Env1.proves(B1) && Env2.proves(B2)) {
+    JoinedEnv.assume(JoinedBool.formula());
+  } else if (Env1.proves(A.makeNot(B1)) && Env2.proves(A.makeNot(B2))) {
+    JoinedEnv.assume(A.makeNot(JoinedBool.formula()));
   }
-  return MergedBool;
+  return JoinedBool;
 }
 
-bool SignPropagationAnalysis::merge(QualType Type, const Value &Val1,
-                                    const Environment &Env1, const Value &Val2,
-                                    const Environment &Env2, Value &MergedVal,
-                                    Environment &MergedEnv) {
+void SignPropagationAnalysis::join(QualType Type, const Value &Val1,
+                                   const Environment &Env1, const Value &Val2,
+                                   const Environment &Env2, Value &JoinedVal,
+                                   Environment &JoinedEnv) {
   if (!Type->isIntegerType())
-    return false;
+    return;
   SignProperties Ps1 = getSignProperties(Val1, Env1);
   SignProperties Ps2 = getSignProperties(Val2, Env2);
   if (!Ps1.Neg || !Ps2.Neg)
-    return false;
-  BoolValue &MergedNeg =
-      mergeBoolValues(*Ps1.Neg, Env1, *Ps2.Neg, Env2, MergedEnv);
-  BoolValue &MergedZero =
-      mergeBoolValues(*Ps1.Zero, Env1, *Ps2.Zero, Env2, MergedEnv);
-  BoolValue &MergedPos =
-      mergeBoolValues(*Ps1.Pos, Env1, *Ps2.Pos, Env2, MergedEnv);
-  setSignProperties(MergedVal,
-                    SignProperties{&MergedNeg, &MergedZero, &MergedPos});
-  return true;
+    return;
+  BoolValue &JoinedNeg =
+      joinBoolValues(*Ps1.Neg, Env1, *Ps2.Neg, Env2, JoinedEnv);
+  BoolValue &JoinedZero =
+      joinBoolValues(*Ps1.Zero, Env1, *Ps2.Zero, Env2, JoinedEnv);
+  BoolValue &JoinedPos =
+      joinBoolValues(*Ps1.Pos, Env1, *Ps2.Pos, Env2, JoinedEnv);
+  setSignProperties(JoinedVal,
+                    SignProperties{&JoinedNeg, &JoinedZero, &JoinedPos});
 }
 
 template <typename Matcher>
@@ -427,7 +458,7 @@ getProperty(const Environment &Env, ASTContext &ASTCtx, const Node *N,
             StringRef Property) {
   if (!N)
     return {testing::AssertionFailure() << "No node", nullptr};
-  const StorageLocation *Loc = Env.getStorageLocation(*N, SkipPast::None);
+  const StorageLocation *Loc = Env.getStorageLocation(*N);
   if (!isa_and_nonnull<ScalarStorageLocation>(Loc))
     return {testing::AssertionFailure() << "No location", nullptr};
   const Value *Val = Env.getValue(*Loc);
@@ -450,7 +481,7 @@ testing::AssertionResult isPropertyImplied(const Environment &Env,
   if (!Prop)
     return Result;
   auto *BVProp = cast<BoolValue>(Prop);
-  if (Env.flowConditionImplies(*BVProp) != Implies)
+  if (Env.proves(BVProp->formula()) != Implies)
     return testing::AssertionFailure()
            << Property << " is " << (Implies ? "not" : "") << " implied"
            << ", but should " << (Implies ? "" : "not ") << "be";
@@ -858,6 +889,33 @@ TEST(SignAnalysisTest, BinaryEQ) {
         EXPECT_TRUE(isZero(A, ASTCtx, EnvZ));
         // p
         EXPECT_TRUE(isPositive(A, ASTCtx, EnvP));
+      },
+      LangStandard::lang_cxx17);
+}
+
+TEST(SignAnalysisTest, ComplexLoopCondition) {
+  std::string Code = R"(
+    int foo();
+    void fun() {
+      int a, b;
+      while ((a = foo()) > 0 && (b = foo()) > 0) {
+        a;
+        b;
+        // [[p]]
+      }
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *A = findValueDecl(ASTCtx, "a");
+        const ValueDecl *B = findValueDecl(ASTCtx, "b");
+
+        EXPECT_TRUE(isPositive(A, ASTCtx, Env));
+        EXPECT_TRUE(isPositive(B, ASTCtx, Env));
       },
       LangStandard::lang_cxx17);
 }

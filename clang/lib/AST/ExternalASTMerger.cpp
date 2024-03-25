@@ -187,10 +187,7 @@ public:
   /// Implements the ASTImporter interface for tracking back a declaration
   /// to its original declaration it came from.
   Decl *GetOriginalDecl(Decl *To) override {
-    auto It = ToOrigin.find(To);
-    if (It != ToOrigin.end())
-      return It->second;
-    return nullptr;
+    return ToOrigin.lookup(To);
   }
 
   /// Whenever a DeclContext is imported, ensure that ExternalASTSource's origin
@@ -541,4 +538,3 @@ void ExternalASTMerger::FindExternalLexicalDecls(
     return false;
   });
 }
-

@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -fsyntax-only -fmessage-length=75 -o /dev/null -x c < %s 2>&1 | FileCheck %s -strict-whitespace
+// RUN: not %clang_cc1 -fsyntax-only -fno-diagnostics-show-line-numbers -fmessage-length=75 -o /dev/null -x c < %s 2>&1 | FileCheck %s -strict-whitespace
 // REQUIRES: utf8-capable-terminal
 
 // Test case for the text diagnostics source column conversion crash.

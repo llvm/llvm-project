@@ -156,6 +156,8 @@ public:
 
   void getNameWithPrefix(SmallVectorImpl<char> &OutName, const GlobalValue *GV,
                          const TargetMachine &TM) const override;
+
+  MCSection *getSectionForCommandLines() const override;
 };
 
 class TargetLoweringObjectFileCOFF : public TargetLoweringObjectFile {
@@ -177,6 +179,9 @@ public:
 
   MCSection *getSectionForJumpTable(const Function &F,
                                     const TargetMachine &TM) const override;
+
+  bool shouldPutJumpTableInFunctionSection(bool UsesLabelDifference,
+                                           const Function &F) const override;
 
   /// Emit Obj-C garbage collection and linker options.
   void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;
@@ -202,10 +207,13 @@ private:
 
 class TargetLoweringObjectFileWasm : public TargetLoweringObjectFile {
   mutable unsigned NextUniqueID = 0;
+  SmallPtrSet<GlobalObject *, 2> Used;
 
 public:
   TargetLoweringObjectFileWasm() = default;
   ~TargetLoweringObjectFileWasm() override = default;
+
+  void getModuleMetadata(Module &M) override;
 
   MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
                                       const TargetMachine &TM) const override;
@@ -304,6 +312,8 @@ public:
                                     const TargetMachine &TM) const override;
   MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
                                       const TargetMachine &TM) const override;
+  MCSection *getSectionForLSDA(const Function &F, const MCSymbol &FnSym,
+                               const TargetMachine &TM) const override;
 };
 
 } // end namespace llvm

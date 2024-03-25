@@ -15,7 +15,7 @@ define void @test(ptr %arg) {
 ; CHECK-NEXT:    %ptr1.next = phi ptr [ %ptr2, %loop.header ], [ %ptr1.next.next, %loop2.latch ]
 ; CHECK-NEXT:    --> {%ptr2,+,8}<nuw><%loop2.header> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2.header: Computable, %loop.header: Variant }
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %loop.header ], [ %iv.next, %loop2.latch ]
-; CHECK-NEXT:    --> {0,+,1}<%loop2.header> U: [0,1) S: [0,1) Exits: <<Unknown>> LoopDispositions: { %loop2.header: Computable, %loop.header: Variant }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop2.header> U: [0,1) S: [0,1) Exits: <<Unknown>> LoopDispositions: { %loop2.header: Computable, %loop.header: Variant }
 ; CHECK-NEXT:    %ptr1.dummy = getelementptr inbounds i64, ptr %ptr1.next, i64 0
 ; CHECK-NEXT:    --> {%ptr2,+,8}<nuw><%loop2.header> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2.header: Computable, %loop.header: Variant }
 ; CHECK-NEXT:    %val = load i64, ptr %ptr1.dummy, align 8
@@ -23,22 +23,20 @@ define void @test(ptr %arg) {
 ; CHECK-NEXT:    %ptr1.next.next = getelementptr inbounds i64, ptr %ptr1.next, i64 1
 ; CHECK-NEXT:    --> {(8 + %ptr2),+,8}<nw><%loop2.header> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2.header: Computable, %loop.header: Variant }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop2.header> U: [1,2) S: [1,2) Exits: <<Unknown>> LoopDispositions: { %loop2.header: Computable, %loop.header: Variant }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop2.header> U: [1,2) S: [1,2) Exits: <<Unknown>> LoopDispositions: { %loop2.header: Computable, %loop.header: Variant }
 ; CHECK-NEXT:    %ptr2.next = phi ptr [ %ptr1, %if ], [ %arg, %else ]
 ; CHECK-NEXT:    --> %ptr2.next U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop.header: Variant, %loop2.header: Invariant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test
 ; CHECK-NEXT:  Loop %loop2.header: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop2.header: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    exit count for loop2.latch: false
-; CHECK-NEXT:  Loop %loop2.header: constant max backedge-taken count is false
-; CHECK-NEXT:  Loop %loop2.header: symbolic max backedge-taken count is false
+; CHECK-NEXT:    exit count for loop2.latch: i1 false
+; CHECK-NEXT:  Loop %loop2.header: constant max backedge-taken count is i1 false
+; CHECK-NEXT:  Loop %loop2.header: symbolic max backedge-taken count is i1 false
 ; CHECK-NEXT:    symbolic max exit count for loop2.header: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    symbolic max exit count for loop2.latch: false
-; CHECK-NEXT:  Loop %loop2.header: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:    symbolic max exit count for loop2.latch: i1 false
 ; CHECK-NEXT:  Loop %loop.header: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop.header: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop.header: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop.header: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop.header

@@ -61,7 +61,7 @@ define <8 x float> @permute_hadd_hadd_256(<8 x float> %a0, <8 x float> %a1, <8 x
 ; CHECK-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vhaddps %ymm3, %ymm2, %ymm1
 ; CHECK-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,2,3,0,5,6,7,4]
+; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,2,3,0,5,6,7,4]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %a0, <8 x float> %a1)
   %2 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %a2, <8 x float> %a3)

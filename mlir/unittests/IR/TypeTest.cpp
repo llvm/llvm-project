@@ -19,6 +19,9 @@ struct LeafType;
 
 struct MiddleType : Type::TypeBase<MiddleType, Type, TypeStorage> {
   using Base::Base;
+
+  static constexpr StringLiteral name = "test.middle";
+
   static bool classof(Type ty) {
     return ty.getTypeID() == TypeID::get<LeafType>() || Base::classof(ty);
   }
@@ -26,6 +29,8 @@ struct MiddleType : Type::TypeBase<MiddleType, Type, TypeStorage> {
 
 struct LeafType : Type::TypeBase<LeafType, MiddleType, TypeStorage> {
   using Base::Base;
+
+  static constexpr StringLiteral name = "test.leaf";
 };
 
 struct FakeDialect : Dialect {
@@ -50,7 +55,7 @@ TEST(Type, Casting) {
 
   EXPECT_TRUE(isa<IntegerType>(intTy));
   EXPECT_FALSE(isa<FunctionType>(intTy));
-  EXPECT_FALSE(llvm::isa_and_present<IntegerType>(nullTy));
+  EXPECT_FALSE(isa_and_present<IntegerType>(nullTy));
   EXPECT_TRUE(isa<MiddleType>(middleTy));
   EXPECT_FALSE(isa<LeafType>(middleTy));
   EXPECT_TRUE(isa<MiddleType>(leafTy));
@@ -59,9 +64,8 @@ TEST(Type, Casting) {
 
   EXPECT_TRUE(static_cast<bool>(dyn_cast<IntegerType>(intTy)));
   EXPECT_FALSE(static_cast<bool>(dyn_cast<FunctionType>(intTy)));
-  EXPECT_FALSE(static_cast<bool>(llvm::cast_if_present<FunctionType>(nullTy)));
-  EXPECT_FALSE(
-      static_cast<bool>(llvm::dyn_cast_if_present<IntegerType>(nullTy)));
+  EXPECT_FALSE(static_cast<bool>(cast_if_present<FunctionType>(nullTy)));
+  EXPECT_FALSE(static_cast<bool>(dyn_cast_if_present<IntegerType>(nullTy)));
 
   EXPECT_EQ(8u, cast<IntegerType>(intTy).getWidth());
 }

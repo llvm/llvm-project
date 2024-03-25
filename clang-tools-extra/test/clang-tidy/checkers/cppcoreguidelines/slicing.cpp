@@ -98,3 +98,25 @@ void negatives() {
   a = h;
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: slicing object from type 'DerivedThatOverridesH' to 'Base' discards override 'h'
 }
+
+namespace PR31187 {
+// Don't warn when calling constructor of base virtual class, from
+// initialization list of derived class constructor.
+
+struct BaseA {
+virtual ~BaseA() {}
+virtual void foo() {}
+
+int i;
+};
+
+struct BaseB : virtual BaseA {
+virtual void foo() {}
+};
+
+struct ClassWithVirtualBases : BaseB {
+  ClassWithVirtualBases(const BaseB& other) : BaseA(other), BaseB(other) {}
+  ClassWithVirtualBases(const ClassWithVirtualBases& other) : BaseA(other), BaseB(other) {}
+};
+
+}

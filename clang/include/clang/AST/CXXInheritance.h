@@ -20,7 +20,6 @@
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -131,6 +130,7 @@ class CXXBasePaths {
   /// class subobjects for that class type. The key of the map is
   /// the cv-unqualified canonical type of the base class subobject.
   struct IsVirtBaseAndNumberNonVirtBases {
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsVirtBase : 1;
     unsigned NumberOfNonVirtBases : 31;
   };
@@ -315,7 +315,7 @@ public:
 /// virtual function; in abstract classes, the final overrider for at
 /// least one virtual function is a pure virtual function. Due to
 /// multiple, virtual inheritance, it is possible for a class to have
-/// more than one final overrider. Athough this is an error (per C++
+/// more than one final overrider. Although this is an error (per C++
 /// [class.virtual]p2), it is not considered an error here: the final
 /// overrider map can represent multiple final overriders for a
 /// method, and it is up to the client to determine whether they are

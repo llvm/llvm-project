@@ -1,26 +1,26 @@
 // expected-no-diagnostics
 
-//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 //RUN:   -x c++ -std=c++14 -fexceptions -fcxx-exceptions                   \
 //RUN:   -Wno-source-uses-openmp -Wno-openmp-clauses                       \
 //RUN:   -ast-print %s | FileCheck %s --check-prefix=PRINT
 
-//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 //RUN:   -x c++ -std=c++14 -fexceptions -fcxx-exceptions                   \
 //RUN:   -Wno-source-uses-openmp -Wno-openmp-clauses                       \
 //RUN:   -ast-dump %s | FileCheck %s --check-prefix=DUMP
 
-//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 //RUN:   -x c++ -std=c++14 -fexceptions -fcxx-exceptions                   \
 //RUN:   -Wno-source-uses-openmp -Wno-openmp-clauses                       \
 //RUN:   -emit-pch -o %t %s
 
-//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 //RUN:   -x c++ -std=c++14 -fexceptions -fcxx-exceptions                   \
 //RUN:   -Wno-source-uses-openmp -Wno-openmp-clauses                       \
 //RUN:   -include-pch %t -ast-print %s | FileCheck %s --check-prefix=PRINT
 
-//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 //RUN:   -x c++ -std=c++14 -fexceptions -fcxx-exceptions                   \
 //RUN:   -Wno-source-uses-openmp -Wno-openmp-clauses                       \
 //RUN:   -include-pch %t -ast-dump-all %s | FileCheck %s --check-prefix=DUMP
@@ -122,7 +122,7 @@ int template_test() {
 // DUMP: NonTypeTemplateParmDecl {{.*}}'unsigned int' depth 0 index 1 size
 // DUMP: IntegerLiteral {{.*}}'unsigned int' 1
 // DUMP: OMPAllocateDecl {{.*}}
-// DUMP: DeclRefExpr {{.*}}'double':'double' lvalue Var {{.*}} 'foo' 'double':'double'
+// DUMP: DeclRefExpr {{.*}}'double' lvalue Var {{.*}} 'foo' 'double'
 // DUMP: OMPAlignClause {{.*}}
 // DUMP: ConstantExpr {{.*}}'unsigned int'
 // DUMP: value: Int 1

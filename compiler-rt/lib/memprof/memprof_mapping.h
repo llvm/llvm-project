@@ -29,8 +29,6 @@ extern uptr kHighMemEnd; // Initialized in __memprof_init.
 
 } // namespace __memprof
 
-#define SHADOW_ENTRY_SIZE 8
-
 // Size of memory block mapped to a single shadow location
 #define MEM_GRANULARITY 64ULL
 
@@ -38,6 +36,8 @@ extern uptr kHighMemEnd; // Initialized in __memprof_init.
 
 #define MEM_TO_SHADOW(mem)                                                     \
   ((((mem) & SHADOW_MASK) >> SHADOW_SCALE) + (SHADOW_OFFSET))
+
+#define SHADOW_ENTRY_SIZE (MEM_GRANULARITY >> SHADOW_SCALE)
 
 #define kLowMemBeg 0
 #define kLowMemEnd (SHADOW_OFFSET ? SHADOW_OFFSET - 1 : 0)

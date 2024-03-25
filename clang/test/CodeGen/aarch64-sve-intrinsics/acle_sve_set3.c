@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -DTEST_SME -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -15,6 +16,11 @@
 #define SVE_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
 #endif
 
+#ifndef TEST_SME
+#define ATTR
+#else
+#define ATTR __arm_streaming
+#endif
 
 // NOTE: For these tests clang converts the struct parameter into
 // several parameters, one for each member of the original struct.
@@ -28,7 +34,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 48 x i8> @llvm.vector.insert.nxv48i8.nxv16i8(<vscale x 48 x i8> [[TUPLE:%.*]], <vscale x 16 x i8> [[X:%.*]], i64 16)
 // CPP-CHECK-NEXT:    ret <vscale x 48 x i8> [[TMP0]]
 //
-svint8x3_t test_svset3_s8(svint8x3_t tuple, svint8_t x)
+svint8x3_t test_svset3_s8(svint8x3_t tuple, svint8_t x) ATTR
 {
   return SVE_ACLE_FUNC(svset3,_s8,,)(tuple, 1, x);
 }
@@ -43,7 +49,7 @@ svint8x3_t test_svset3_s8(svint8x3_t tuple, svint8_t x)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 24 x i16> @llvm.vector.insert.nxv24i16.nxv8i16(<vscale x 24 x i16> [[TUPLE:%.*]], <vscale x 8 x i16> [[X:%.*]], i64 16)
 // CPP-CHECK-NEXT:    ret <vscale x 24 x i16> [[TMP0]]
 //
-svint16x3_t test_svset3_s16(svint16x3_t tuple, svint16_t x)
+svint16x3_t test_svset3_s16(svint16x3_t tuple, svint16_t x) ATTR
 {
   return SVE_ACLE_FUNC(svset3,_s16,,)(tuple, 2, x);
 }
@@ -58,7 +64,7 @@ svint16x3_t test_svset3_s16(svint16x3_t tuple, svint16_t x)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 12 x i32> @llvm.vector.insert.nxv12i32.nxv4i32(<vscale x 12 x i32> [[TUPLE:%.*]], <vscale x 4 x i32> [[X:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 12 x i32> [[TMP0]]
 //
-svint32x3_t test_svset3_s32(svint32x3_t tuple, svint32_t x)
+svint32x3_t test_svset3_s32(svint32x3_t tuple, svint32_t x) ATTR
 {
   return SVE_ACLE_FUNC(svset3,_s32,,)(tuple, 0, x);
 }
@@ -73,7 +79,7 @@ svint32x3_t test_svset3_s32(svint32x3_t tuple, svint32_t x)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 6 x i64> @llvm.vector.insert.nxv6i64.nxv2i64(<vscale x 6 x i64> [[TUPLE:%.*]], <vscale x 2 x i64> [[X:%.*]], i64 2)
 // CPP-CHECK-NEXT:    ret <vscale x 6 x i64> [[TMP0]]
 //
-svint64x3_t test_svset3_s64(svint64x3_t tuple, svint64_t x)
+svint64x3_t test_svset3_s64(svint64x3_t tuple, svint64_t x) ATTR
 {
   return SVE_ACLE_FUNC(svset3,_s64,,)(tuple, 1, x);
 }
@@ -88,7 +94,7 @@ svint64x3_t test_svset3_s64(svint64x3_t tuple, svint64_t x)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 48 x i8> @llvm.vector.insert.nxv48i8.nxv16i8(<vscale x 48 x i8> [[TUPLE:%.*]], <vscale x 16 x i8> [[X:%.*]], i64 32)
 // CPP-CHECK-NEXT:    ret <vscale x 48 x i8> [[TMP0]]
 //
-svuint8x3_t test_svset3_u8(svuint8x3_t tuple, svuint8_t x)
+svuint8x3_t test_svset3_u8(svuint8x3_t tuple, svuint8_t x) ATTR
 {
   return SVE_ACLE_FUNC(svset3,_u8,,)(tuple, 2, x);
 }
@@ -103,7 +109,7 @@ svuint8x3_t test_svset3_u8(svuint8x3_t tuple, svuint8_t x)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 24 x i16> @llvm.vector.insert.nxv24i16.nxv8i16(<vscale x 24 x i16> [[TUPLE:%.*]], <vscale x 8 x i16> [[X:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 24 x i16> [[TMP0]]
 //
-svuint16x3_t test_svset3_u16(svuint16x3_t tuple, svuint16_t x)
+svuint16x3_t test_svset3_u16(svuint16x3_t tuple, svuint16_t x) ATTR
 {
   return SVE_ACLE_FUNC(svset3,_u16,,)(tuple, 0, x);
 }
@@ -118,7 +124,7 @@ svuint16x3_t test_svset3_u16(svuint16x3_t tuple, svuint16_t x)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 12 x i32> @llvm.vector.insert.nxv12i32.nxv4i32(<vscale x 12 x i32> [[TUPLE:%.*]], <vscale x 4 x i32> [[X:%.*]], i64 4)
 // CPP-CHECK-NEXT:    ret <vscale x 12 x i32> [[TMP0]]
 //
-svuint32x3_t test_svset3_u32(svuint32x3_t tuple, svuint32_t x)
+svuint32x3_t test_svset3_u32(svuint32x3_t tuple, svuint32_t x) ATTR
 {
   return SVE_ACLE_FUNC(svset3,_u32,,)(tuple, 1, x);
 }
@@ -133,7 +139,7 @@ svuint32x3_t test_svset3_u32(svuint32x3_t tuple, svuint32_t x)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 6 x i64> @llvm.vector.insert.nxv6i64.nxv2i64(<vscale x 6 x i64> [[TUPLE:%.*]], <vscale x 2 x i64> [[X:%.*]], i64 4)
 // CPP-CHECK-NEXT:    ret <vscale x 6 x i64> [[TMP0]]
 //
-svuint64x3_t test_svset3_u64(svuint64x3_t tuple, svuint64_t x)
+svuint64x3_t test_svset3_u64(svuint64x3_t tuple, svuint64_t x) ATTR
 {
   return SVE_ACLE_FUNC(svset3,_u64,,)(tuple, 2, x);
 }
@@ -148,7 +154,7 @@ svuint64x3_t test_svset3_u64(svuint64x3_t tuple, svuint64_t x)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 24 x half> @llvm.vector.insert.nxv24f16.nxv8f16(<vscale x 24 x half> [[TUPLE:%.*]], <vscale x 8 x half> [[X:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 24 x half> [[TMP0]]
 //
-svfloat16x3_t test_svset3_f16(svfloat16x3_t tuple, svfloat16_t x)
+svfloat16x3_t test_svset3_f16(svfloat16x3_t tuple, svfloat16_t x) ATTR
 {
   return SVE_ACLE_FUNC(svset3,_f16,,)(tuple, 0, x);
 }
@@ -163,7 +169,7 @@ svfloat16x3_t test_svset3_f16(svfloat16x3_t tuple, svfloat16_t x)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 12 x float> @llvm.vector.insert.nxv12f32.nxv4f32(<vscale x 12 x float> [[TUPLE:%.*]], <vscale x 4 x float> [[X:%.*]], i64 4)
 // CPP-CHECK-NEXT:    ret <vscale x 12 x float> [[TMP0]]
 //
-svfloat32x3_t test_svset3_f32(svfloat32x3_t tuple, svfloat32_t x)
+svfloat32x3_t test_svset3_f32(svfloat32x3_t tuple, svfloat32_t x) ATTR
 {
   return SVE_ACLE_FUNC(svset3,_f32,,)(tuple, 1, x);
 }
@@ -178,7 +184,7 @@ svfloat32x3_t test_svset3_f32(svfloat32x3_t tuple, svfloat32_t x)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 6 x double> @llvm.vector.insert.nxv6f64.nxv2f64(<vscale x 6 x double> [[TUPLE:%.*]], <vscale x 2 x double> [[X:%.*]], i64 4)
 // CPP-CHECK-NEXT:    ret <vscale x 6 x double> [[TMP0]]
 //
-svfloat64x3_t test_svset3_f64(svfloat64x3_t tuple, svfloat64_t x)
+svfloat64x3_t test_svset3_f64(svfloat64x3_t tuple, svfloat64_t x) ATTR
 {
   return SVE_ACLE_FUNC(svset3,_f64,,)(tuple, 2, x);
 }

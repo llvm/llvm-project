@@ -44,8 +44,8 @@ define <vscale x 2 x i64> @index_ii_i64() {
 define <vscale x 2 x i64> @index_ii_range() {
 ; CHECK-LABEL: index_ii_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #16
-; CHECK-NEXT:    mov x9, #-17
+; CHECK-NEXT:    mov w8, #16 // =0x10
+; CHECK-NEXT:    mov x9, #-17 // =0xffffffffffffffef
 ; CHECK-NEXT:    index z0.d, x9, x8
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.index.nxv2i64(i64 -17, i64 16)
@@ -109,7 +109,7 @@ define <vscale x 2 x i64> @index_ir_i64(i64 %a) {
 define <vscale x 4 x i32> @index_ir_range(i32 %a) {
 ; CHECK-LABEL: index_ir_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-17
+; CHECK-NEXT:    mov w8, #-17 // =0xffffffef
 ; CHECK-NEXT:    index z0.s, w8, w0
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.index.nxv4i32(i32 -17, i32 %a)
@@ -174,7 +174,7 @@ define <vscale x 2 x i64> @index_ri_i64(i64 %a) {
 define <vscale x 8 x i16> @index_ri_range(i16 %a) {
 ; CHECK-LABEL: index_ri_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #16
+; CHECK-NEXT:    mov w8, #16 // =0x10
 ; CHECK-NEXT:    index z0.h, w0, w8
 ; CHECK-NEXT:    ret
   %out = call <vscale x 8 x i16> @llvm.aarch64.sve.index.nxv8i16(i16 %a, i16 16)
@@ -239,10 +239,10 @@ define <vscale x 4 x i32> @index_rr_i32_combine(i32 %a, i32 %b) {
 define <vscale x 4 x i32> @index_rr_i32_not_combine(i32 %a, i32 %b) {
 ; CHECK-LABEL: index_rr_i32_not_combine:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    index z0.s, #0, #1
 ; CHECK-NEXT:    mov z1.s, w0
 ; CHECK-NEXT:    mov z2.s, w1
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mla z1.s, p0/m, z0.s, z2.s
 ; CHECK-NEXT:    add z0.s, z1.s, z0.s
 ; CHECK-NEXT:    ret

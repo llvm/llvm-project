@@ -26,7 +26,6 @@
 
 
 // Implementations without interface declarations.
-// rdar://6804402
 @class foo;
 @implementation foo 
 @end

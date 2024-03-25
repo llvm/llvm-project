@@ -3,7 +3,7 @@
 
 define i32 @ctpop_bitreverse(i32 %x) {
 ; CHECK-LABEL: @ctpop_bitreverse(
-; CHECK-NEXT:    [[B:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range !0
+; CHECK-NEXT:    [[B:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   %a = tail call i32 @llvm.bitreverse.i32(i32 %x)
@@ -13,7 +13,7 @@ define i32 @ctpop_bitreverse(i32 %x) {
 
 define <2 x i64> @ctpop_bitreverse_vec(<2 x i64> %x) {
 ; CHECK-LABEL: @ctpop_bitreverse_vec(
-; CHECK-NEXT:    [[B:%.*]] = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[X:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[X:%.*]]), !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    ret <2 x i64> [[B]]
 ;
   %a = tail call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> %x)
@@ -23,7 +23,7 @@ define <2 x i64> @ctpop_bitreverse_vec(<2 x i64> %x) {
 
 define i32 @ctpop_bswap(i32 %x) {
 ; CHECK-LABEL: @ctpop_bswap(
-; CHECK-NEXT:    [[B:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range !0
+; CHECK-NEXT:    [[B:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   %a = tail call i32 @llvm.bswap.i32(i32 %x)
@@ -33,7 +33,7 @@ define i32 @ctpop_bswap(i32 %x) {
 
 define <2 x i64> @ctpop_bswap_vec(<2 x i64> %x) {
 ; CHECK-LABEL: @ctpop_bswap_vec(
-; CHECK-NEXT:    [[B:%.*]] = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[X:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[X:%.*]]), !range [[RNG1]]
 ; CHECK-NEXT:    ret <2 x i64> [[B]]
 ;
   %a = tail call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %x)

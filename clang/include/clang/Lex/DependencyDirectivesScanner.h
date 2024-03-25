@@ -68,6 +68,7 @@ enum DirectiveKind : uint8_t {
   pp_pragma_push_macro,
   pp_pragma_pop_macro,
   pp_pragma_include_alias,
+  pp_pragma_system_header,
   pp_include_next,
   pp_if,
   pp_ifdef,

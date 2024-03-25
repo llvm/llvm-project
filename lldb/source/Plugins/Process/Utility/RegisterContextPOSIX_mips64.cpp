@@ -98,26 +98,15 @@ RegisterContextPOSIX_mips64::GetRegisterInfoAtIndex(size_t reg) {
 }
 
 size_t RegisterContextPOSIX_mips64::GetRegisterSetCount() {
-  ArchSpec target_arch = m_register_info_up->GetTargetArchitecture();
-  switch (target_arch.GetTriple().getOS()) {
-  default: {
-    const auto *context = static_cast<const RegisterContextFreeBSD_mips64 *>(
-        m_register_info_up.get());
-    return context->GetRegisterSetCount();
-  }
-                       
-  }
+  const auto *context = static_cast<const RegisterContextFreeBSD_mips64 *>(
+      m_register_info_up.get());
+  return context->GetRegisterSetCount();
 }
 
 const RegisterSet *RegisterContextPOSIX_mips64::GetRegisterSet(size_t set) {
-  ArchSpec target_arch = m_register_info_up->GetTargetArchitecture();
-  switch (target_arch.GetTriple().getOS()) {
-  default: {
-    const auto *context = static_cast<const RegisterContextFreeBSD_mips64 *>(
-        m_register_info_up.get());
-    return context->GetRegisterSet(set);
-  }
-  }
+  const auto *context = static_cast<const RegisterContextFreeBSD_mips64 *>(
+      m_register_info_up.get());
+  return context->GetRegisterSet(set);
 }
 
 const char *RegisterContextPOSIX_mips64::GetRegisterName(unsigned reg) {

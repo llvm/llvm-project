@@ -10,7 +10,6 @@
 #include <sys/types.h>
 
 #include "lldb/Core/Module.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/IRExecutionUnit.h"
@@ -21,6 +20,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb_private;
@@ -64,11 +64,13 @@ FunctionCaller *UtilityFunction::MakeFunctionCaller(
     error.SetErrorString("Can't make a function caller without a process.");
     return nullptr;
   }
-  // Since we might need to call allocate memory and maybe call code to make
+  // Since we might need to allocate memory and maybe call code to make
   // the caller, we need to be stopped.
   if (process_sp->GetState() != lldb::eStateStopped) {
-    error.SetErrorString("Can't make a function caller while the process is " 
-                         "running");
+    error.SetErrorStringWithFormatv(
+        "Can't make a function caller while the process is {0}: the process "
+        "must be stopped to allocate memory.",
+        StateAsCString(process_sp->GetState()));
     return nullptr;
   }
 

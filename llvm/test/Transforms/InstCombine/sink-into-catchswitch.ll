@@ -9,8 +9,8 @@ target triple = "x86_64-pc-windows-msvc18.0.0"
 define void @test1(ptr %p) personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  invoke.cont:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[TMP0]], i64 0
 ; CHECK-NEXT:    invoke void @throw()
 ; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       catch.dispatch:
@@ -20,7 +20,7 @@ define void @test1(ptr %p) personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    invoke void @throw() [ "funclet"(token [[CATCH]]) ]
 ; CHECK-NEXT:    to label [[UNREACHABLE]] unwind label [[EHCLEANUP]]
 ; CHECK:       ehcleanup:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[TMP2]], [[CATCH_DISPATCH]] ], [ 9, [[INVOKE_CONT1:%.*]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[TMP1]], [[CATCH_DISPATCH]] ], [ 9, [[INVOKE_CONT1:%.*]] ]
 ; CHECK-NEXT:    [[CLEANUP:%.*]] = cleanuppad within none []
 ; CHECK-NEXT:    call void @release(i64 [[PHI]]) [ "funclet"(token [[CLEANUP]]) ]
 ; CHECK-NEXT:    cleanupret from [[CLEANUP]] unwind to caller

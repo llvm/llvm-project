@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(scf-parallel-loop-collapsing{collapsed-indices-0=0,1}, canonicalize))' | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(test-scf-parallel-loop-collapsing{collapsed-indices-0=0,1}, canonicalize))' | FileCheck %s
 
 func.func @collapse_to_single() {
   %c0 = arith.constant 3 : index
@@ -29,6 +29,6 @@ func.func @collapse_to_single() {
 // CHECK:           [[V1:%.*]] = arith.muli [[I1_COUNT]], [[C3]] : index
 // CHECK:           [[I0:%.*]] = arith.addi [[V1]], [[C3]] : index
 // CHECK:           "magic.op"([[I0]], [[I1]]) : (index, index) -> index
-// CHECK:           scf.yield
+// CHECK:           scf.reduce
 // CHECK-NEXT:    }
 // CHECK-NEXT:    return

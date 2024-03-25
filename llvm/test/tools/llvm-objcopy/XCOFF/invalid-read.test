@@ -5,7 +5,7 @@
 # RUN: yaml2obj %s --docnum=1 -o %t1
 # RUN: not llvm-objcopy %t1 %t1.out 2>&1 | FileCheck %s -DFILE=%t1 --check-prefix=ERROR1
 
-# ERROR1: error: '[[FILE]]': The end of the file was unexpectedly encountered: section data with offset 0x70 and size 0x4 goes past the end of the file
+# ERROR1: error: '[[FILE]]': The end of the file was unexpectedly encountered: section data with offset 0x70 and size 0x20 goes past the end of the file
 
 --- !XCOFF
 FileHeader:
@@ -13,6 +13,7 @@ FileHeader:
 Sections:
   - SectionData:      '00007400'
     FileOffsetToData: 0x70
+    Size: 0x20
 
 ## Failed to read relocations.
 # RUN: yaml2obj %s --docnum=2 -o %t2
@@ -35,12 +36,13 @@ Sections:
 # RUN: yaml2obj %s --docnum=3 -o %t3
 # RUN: not llvm-objcopy %t3 %t3.out 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=ERROR3
 
-# ERROR3: error: '[[FILE]]': The end of the file was unexpectedly encountered: symbol table with offset 0x15 and size 0x24 goes past the end of the file
+# ERROR3: error: '[[FILE]]': The end of the file was unexpectedly encountered: symbol table with offset 0x15 and size 0x36 goes past the end of the file
 
 --- !XCOFF
 FileHeader:
   MagicNumber:         0x01DF
   OffsetToSymbolTable: 0x15
+  EntriesInSymbolTable: 3
 Symbols:
   - Name:         foo
     AuxEntries:

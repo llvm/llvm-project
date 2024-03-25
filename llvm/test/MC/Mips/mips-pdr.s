@@ -1,7 +1,7 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 -filetype=asm | \
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r2 -filetype=asm | \
 # RUN:   FileCheck %s -check-prefix=ASMOUT
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 -filetype=obj -o - | \
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r2 -filetype=obj -o - | \
 # RUN:   llvm-readobj -S --section-data -r - | \
 # RUN:     FileCheck %s -check-prefix=OBJOUT
 

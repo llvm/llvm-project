@@ -23,7 +23,7 @@ define void @execute_only_fn() #1 {
 ; RWPI:       movw    [[REG0:r[0-9]+]], :lower16:bar
 ; RWPI-NEXT:  movt    [[REG0]], :upper16:bar
 ; RWPI-NEXT:  blx     [[REG0]]
-; RWPI-NOT:   .LCPI0_0:
+; RWPI-NOT:   .LCPI1_0:
 entry:
   call void @bar()
   ret void

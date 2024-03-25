@@ -84,8 +84,6 @@ bool M68kSubtarget::isPositionIndependent() const {
 
 bool M68kSubtarget::isLegalToCallImmediateAddr() const { return true; }
 
-bool M68kSubtarget::abiUsesSoftFloat() const { return true; }
-
 M68kSubtarget &M68kSubtarget::initializeSubtargetDependencies(
     StringRef CPU, Triple TT, StringRef FS, const M68kTargetMachine &TM) {
   std::string CPUName = selectM68kCPU(TT, CPU).str();
@@ -177,7 +175,7 @@ M68kSubtarget::classifyLocalReference(const GlobalValue *GV) const {
 }
 
 unsigned char M68kSubtarget::classifyExternalReference(const Module &M) const {
-  if (TM.shouldAssumeDSOLocal(M, nullptr))
+  if (TM.shouldAssumeDSOLocal(nullptr))
     return classifyLocalReference(nullptr);
 
   if (isPositionIndependent())
@@ -193,7 +191,7 @@ M68kSubtarget::classifyGlobalReference(const GlobalValue *GV) const {
 
 unsigned char M68kSubtarget::classifyGlobalReference(const GlobalValue *GV,
                                                      const Module &M) const {
-  if (TM.shouldAssumeDSOLocal(M, GV))
+  if (TM.shouldAssumeDSOLocal(GV))
     return classifyLocalReference(GV);
 
   switch (TM.getCodeModel()) {
@@ -242,7 +240,7 @@ unsigned char
 M68kSubtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
                                                const Module &M) const {
   // local always use pc-rel referencing
-  if (TM.shouldAssumeDSOLocal(M, GV))
+  if (TM.shouldAssumeDSOLocal(GV))
     return M68kII::MO_NO_FLAG;
 
   // If the function is marked as non-lazy, generate an indirect call

@@ -2,6 +2,8 @@
 ; RUN: llvm-dwarfdump -v %t | FileCheck %s
 
 ; Ported from generic test to cover 2-byte address size case
+; Check that 16-bit addresses of MSP430 are properly stored
+; in 32-bit DWARF fields
 
 ; Check that we emit ranges for this which has a non-traditional section and a normal section.
 
@@ -15,8 +17,8 @@
 ; CHECK: DW_AT_high_pc
 
 ; CHECK: .debug_ranges contents:
-; CHECK-NEXT: 00000000 0000 0030
-; CHECK-NEXT: 00000000 0000 0030
+; CHECK-NEXT: 00000000 00000000 00000030
+; CHECK-NEXT: 00000000 00000000 00000030
 ; CHECK-NEXT: 00000000 <End of list>
 
 ; Function Attrs: nounwind uwtable

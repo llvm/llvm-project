@@ -56,12 +56,10 @@ BreakpointResolverName::BreakpointResolverName(
   }
 }
 
-BreakpointResolverName::BreakpointResolverName(const BreakpointSP &bkpt,
-                                               std::vector<std::string> names,
-                                               FunctionNameType name_type_mask,
-                                               LanguageType language,
-                                               lldb::addr_t offset,
-                                               bool skip_prologue)
+BreakpointResolverName::BreakpointResolverName(
+    const BreakpointSP &bkpt, const std::vector<std::string> &names,
+    FunctionNameType name_type_mask, LanguageType language, lldb::addr_t offset,
+    bool skip_prologue)
     : BreakpointResolver(bkpt, BreakpointResolver::NameResolver, offset),
       m_match_type(Breakpoint::Exact), m_language(language),
       m_skip_prologue(skip_prologue) {
@@ -88,9 +86,8 @@ BreakpointResolverName::BreakpointResolverName(
       m_regex(rhs.m_regex), m_match_type(rhs.m_match_type),
       m_language(rhs.m_language), m_skip_prologue(rhs.m_skip_prologue) {}
 
-BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
-    const BreakpointSP &bkpt, const StructuredData::Dictionary &options_dict,
-    Status &error) {
+BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
+    const StructuredData::Dictionary &options_dict, Status &error) {
   LanguageType language = eLanguageTypeUnknown;
   llvm::StringRef language_name;
   bool success = options_dict.GetValueForKeyAsString(
@@ -104,7 +101,7 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
     }
   }
 
-  lldb::addr_t offset = 0;
+  lldb::offset_t offset = 0;
   success =
       options_dict.GetValueForKeyAsInteger(GetKey(OptionNames::Offset), offset);
   if (!success) {
@@ -124,8 +121,9 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsString(
       GetKey(OptionNames::RegexString), regex_text);
   if (success) {
-    return new BreakpointResolverName(bkpt, RegularExpression(regex_text),
-                                      language, offset, skip_prologue);
+    return std::make_shared<BreakpointResolverName>(
+        nullptr, RegularExpression(regex_text), language, offset,
+        skip_prologue);
   } else {
     StructuredData::Array *names_array;
     success = options_dict.GetValueForKeyAsArray(
@@ -157,30 +155,30 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
     std::vector<std::string> names;
     std::vector<FunctionNameType> name_masks;
     for (size_t i = 0; i < num_elem; i++) {
-      llvm::StringRef name;
-
-      success = names_array->GetItemAtIndexAsString(i, name);
-      if (!success) {
+      std::optional<llvm::StringRef> maybe_name =
+          names_array->GetItemAtIndexAsString(i);
+      if (!maybe_name) {
         error.SetErrorString("BRN::CFSD: name entry is not a string.");
         return nullptr;
       }
-      std::underlying_type<FunctionNameType>::type fnt;
-      success = names_mask_array->GetItemAtIndexAsInteger(i, fnt);
-      if (!success) {
+      auto maybe_fnt = names_mask_array->GetItemAtIndexAsInteger<
+          std::underlying_type<FunctionNameType>::type>(i);
+      if (!maybe_fnt) {
         error.SetErrorString("BRN::CFSD: name mask entry is not an integer.");
         return nullptr;
       }
-      names.push_back(std::string(name));
-      name_masks.push_back(static_cast<FunctionNameType>(fnt));
+      names.push_back(std::string(*maybe_name));
+      name_masks.push_back(static_cast<FunctionNameType>(*maybe_fnt));
     }
 
-    BreakpointResolverName *resolver = new BreakpointResolverName(
-        bkpt, names[0].c_str(), name_masks[0], language,
-        Breakpoint::MatchType::Exact, offset, skip_prologue);
+    std::shared_ptr<BreakpointResolverName> resolver_sp =
+        std::make_shared<BreakpointResolverName>(
+            nullptr, names[0].c_str(), name_masks[0], language,
+            Breakpoint::MatchType::Exact, offset, skip_prologue);
     for (size_t i = 1; i < num_elem; i++) {
-      resolver->AddNameLookup(ConstString(names[i]), name_masks[i]);
+      resolver_sp->AddNameLookup(ConstString(names[i]), name_masks[i]);
     }
-    return resolver;
+    return resolver_sp;
   }
 }
 
@@ -197,8 +195,8 @@ StructuredData::ObjectSP BreakpointResolverName::SerializeToStructuredData() {
     for (auto lookup : m_lookups) {
       names_sp->AddItem(StructuredData::StringSP(
           new StructuredData::String(lookup.GetName().GetStringRef())));
-      name_masks_sp->AddItem(StructuredData::IntegerSP(
-          new StructuredData::Integer(lookup.GetNameTypeMask())));
+      name_masks_sp->AddItem(StructuredData::UnsignedIntegerSP(
+          new StructuredData::UnsignedInteger(lookup.GetNameTypeMask())));
     }
     options_dict_sp->AddItem(GetKey(OptionNames::SymbolNameArray), names_sp);
     options_dict_sp->AddItem(GetKey(OptionNames::NameMaskArray), name_masks_sp);
@@ -331,14 +329,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
   Address break_addr;
 
   // Remove any duplicates between the function list and the symbol list
-  SymbolContext sc;
-  if (!func_list.GetSize())
-    return Searcher::eCallbackReturnContinue;
-
-  for (uint32_t i = 0; i < func_list.GetSize(); i++) {
-    if (!func_list.GetContextAtIndex(i, sc))
-      continue;
-
+  for (const SymbolContext &sc : func_list) {
     bool is_reexported = false;
 
     if (sc.block && sc.block->GetInlinedFunctionInfo()) {

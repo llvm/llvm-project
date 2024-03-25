@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -Wno-conversion -Wno-tautological-constant-compare \
-// RUN:   -analyzer-checker=core,apiModeling,alpha.core.Conversion \
+// RUN:   -analyzer-checker=core,apiModeling,unix.StdCLibraryFunctions,alpha.core.Conversion \
 // RUN:   -verify
 
 unsigned char U8;
@@ -187,7 +187,7 @@ char dontwarn10(long long x) {
 }
 
 
-// C library functions, handled via apiModeling.StdCLibraryFunctions
+// C library functions, handled via unix.StdCLibraryFunctions
 
 int isascii(int c);
 void libraryFunction1(void) {

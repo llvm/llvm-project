@@ -8,21 +8,67 @@
 
 #include "src/__support/CPP/optional.h"
 #include "src/__support/UInt.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
-#include "utils/UnitTest/Test.h"
+#include "include/llvm-libc-macros/math-macros.h" // HUGE_VALF, HUGE_VALF
+#include "test/UnitTest/Test.h"
 
-// We want to test __llvm_libc::cpp::UInt<128> explicitly. So, for convenience,
-// we use a sugar which does not conflict with the UInt128 type which can
-// resolve to __uint128_t if the platform has it.
-using LL_UInt128 = __llvm_libc::cpp::UInt<128>;
-using LL_UInt192 = __llvm_libc::cpp::UInt<192>;
-using LL_UInt256 = __llvm_libc::cpp::UInt<256>;
-using LL_UInt320 = __llvm_libc::cpp::UInt<320>;
-using LL_UInt512 = __llvm_libc::cpp::UInt<512>;
-using LL_UInt1024 = __llvm_libc::cpp::UInt<1024>;
+namespace LIBC_NAMESPACE {
+
+using LL_UInt64 = UInt<64>;
+// We want to test UInt<128> explicitly. So, for
+// convenience, we use a sugar which does not conflict with the UInt128 type
+// which can resolve to __uint128_t if the platform has it.
+using LL_UInt128 = UInt<128>;
+using LL_UInt192 = UInt<192>;
+using LL_UInt256 = UInt<256>;
+using LL_UInt320 = UInt<320>;
+using LL_UInt512 = UInt<512>;
+using LL_UInt1024 = UInt<1024>;
+
+using LL_Int128 = Int<128>;
+using LL_Int192 = Int<192>;
+
+TEST(LlvmLibcUIntClassTest, BitCastToFromDouble) {
+  static_assert(cpp::is_trivially_copyable<LL_UInt64>::value);
+  static_assert(sizeof(LL_UInt64) == sizeof(double));
+  const double inf = HUGE_VAL;
+  const double max = DBL_MAX;
+  const double array[] = {0.0, 0.1, 1.0, max, inf};
+  for (double value : array) {
+    LL_UInt64 back = cpp::bit_cast<LL_UInt64>(value);
+    double forth = cpp::bit_cast<double>(back);
+    EXPECT_TRUE(value == forth);
+  }
+}
+
+#ifdef LIBC_TYPES_HAS_INT128
+TEST(LlvmLibcUIntClassTest, BitCastToFromNativeUint128) {
+  static_assert(cpp::is_trivially_copyable<LL_UInt128>::value);
+  static_assert(sizeof(LL_UInt128) == sizeof(__uint128_t));
+  const __uint128_t array[] = {0, 1, ~__uint128_t(0)};
+  for (__uint128_t value : array) {
+    LL_UInt128 back = cpp::bit_cast<LL_UInt128>(value);
+    __uint128_t forth = cpp::bit_cast<__uint128_t>(back);
+    EXPECT_TRUE(value == forth);
+  }
+}
+#endif // LIBC_TYPES_HAS_INT128
+
+#ifdef LIBC_TYPES_HAS_FLOAT128
+TEST(LlvmLibcUIntClassTest, BitCastToFromNativeFloat128) {
+  static_assert(cpp::is_trivially_copyable<LL_UInt128>::value);
+  static_assert(sizeof(LL_UInt128) == sizeof(float128));
+  const float128 array[] = {0, 0.1, 1};
+  for (float128 value : array) {
+    LL_UInt128 back = cpp::bit_cast<LL_UInt128>(value);
+    float128 forth = cpp::bit_cast<float128>(back);
+    EXPECT_TRUE(value == forth);
+  }
+}
+#endif // LIBC_TYPES_HAS_FLOAT128
 
 TEST(LlvmLibcUIntClassTest, BasicInit) {
-  LL_UInt128 empty;
   LL_UInt128 half_val(12345);
   LL_UInt128 full_val({12345, 67890});
   ASSERT_TRUE(half_val != full_val);
@@ -526,3 +572,157 @@ TEST(LlvmLibcUIntClassTest, QuickMulHiTests) {
   TEST_QUICK_MUL_HI(256, 3);
   TEST_QUICK_MUL_HI(512, 7);
 }
+
+TEST(LlvmLibcUIntClassTest, ConstexprInitTests) {
+  constexpr LL_UInt128 add = LL_UInt128(1) + LL_UInt128(2);
+  ASSERT_EQ(add, LL_UInt128(3));
+  constexpr LL_UInt128 sub = LL_UInt128(5) - LL_UInt128(4);
+  ASSERT_EQ(sub, LL_UInt128(1));
+}
+
+#define TEST_QUICK_DIV_UINT32_POW2(x, e)                                       \
+  do {                                                                         \
+    LL_UInt320 y({0x8899aabbccddeeffULL, 0x0011223344556677ULL,                \
+                  0x583715f4d3b29171ULL, 0xffeeddccbbaa9988ULL,                \
+                  0x1f2f3f4f5f6f7f8fULL});                                     \
+    LL_UInt320 d = LL_UInt320(x);                                              \
+    d <<= e;                                                                   \
+    LL_UInt320 q1 = y / d;                                                     \
+    LL_UInt320 r1 = y % d;                                                     \
+    LL_UInt320 r2 = *y.div_uint_half_times_pow_2(x, e);                        \
+    EXPECT_EQ(q1, y);                                                          \
+    EXPECT_EQ(r1, r2);                                                         \
+  } while (0)
+
+TEST(LlvmLibcUIntClassTest, DivUInt32TimesPow2Tests) {
+  for (size_t i = 0; i < 320; i += 32) {
+    TEST_QUICK_DIV_UINT32_POW2(1, i);
+    TEST_QUICK_DIV_UINT32_POW2(13151719, i);
+  }
+
+  TEST_QUICK_DIV_UINT32_POW2(1, 75);
+  TEST_QUICK_DIV_UINT32_POW2(1, 101);
+
+  TEST_QUICK_DIV_UINT32_POW2(1000000000, 75);
+  TEST_QUICK_DIV_UINT32_POW2(1000000000, 101);
+}
+
+TEST(LlvmLibcUIntClassTest, ComparisonInt128Tests) {
+  LL_Int128 a(123);
+  LL_Int128 b(0);
+  LL_Int128 c(-1);
+
+  ASSERT_TRUE(a == a);
+  ASSERT_TRUE(b == b);
+  ASSERT_TRUE(c == c);
+
+  ASSERT_TRUE(a != b);
+  ASSERT_TRUE(a != c);
+  ASSERT_TRUE(b != a);
+  ASSERT_TRUE(b != c);
+  ASSERT_TRUE(c != a);
+  ASSERT_TRUE(c != b);
+
+  ASSERT_TRUE(a > b);
+  ASSERT_TRUE(a >= b);
+  ASSERT_TRUE(a > c);
+  ASSERT_TRUE(a >= c);
+  ASSERT_TRUE(b > c);
+  ASSERT_TRUE(b >= c);
+
+  ASSERT_TRUE(b < a);
+  ASSERT_TRUE(b <= a);
+  ASSERT_TRUE(c < a);
+  ASSERT_TRUE(c <= a);
+  ASSERT_TRUE(c < b);
+  ASSERT_TRUE(c <= b);
+}
+
+TEST(LlvmLibcUIntClassTest, BasicArithmeticInt128Tests) {
+  LL_Int128 a(123);
+  LL_Int128 b(0);
+  LL_Int128 c(-3);
+
+  ASSERT_EQ(a * a, LL_Int128(123 * 123));
+  ASSERT_EQ(a * c, LL_Int128(-369));
+  ASSERT_EQ(c * a, LL_Int128(-369));
+  ASSERT_EQ(c * c, LL_Int128(9));
+  ASSERT_EQ(a * b, b);
+  ASSERT_EQ(b * a, b);
+  ASSERT_EQ(b * c, b);
+  ASSERT_EQ(c * b, b);
+}
+
+#ifdef LIBC_TYPES_HAS_INT128
+
+TEST(LlvmLibcUIntClassTest, ConstructorFromUInt128Tests) {
+  __uint128_t a = (__uint128_t(123) << 64) + 1;
+  __int128_t b = -static_cast<__int128_t>(a);
+  LL_Int128 c(a);
+  LL_Int128 d(b);
+
+  LL_Int192 e(a);
+  LL_Int192 f(b);
+
+  ASSERT_EQ(static_cast<int>(c), 1);
+  ASSERT_EQ(static_cast<int>(c >> 64), 123);
+  ASSERT_EQ(static_cast<uint64_t>(d), static_cast<uint64_t>(b));
+  ASSERT_EQ(static_cast<uint64_t>(d >> 64), static_cast<uint64_t>(b >> 64));
+  ASSERT_EQ(c + d, LL_Int128(a + b));
+
+  ASSERT_EQ(static_cast<int>(e), 1);
+  ASSERT_EQ(static_cast<int>(e >> 64), 123);
+  ASSERT_EQ(static_cast<uint64_t>(f), static_cast<uint64_t>(b));
+  ASSERT_EQ(static_cast<uint64_t>(f >> 64), static_cast<uint64_t>(b >> 64));
+  ASSERT_EQ(LL_UInt192(e + f), LL_UInt192(a + b));
+}
+
+TEST(LlvmLibcUIntClassTest, WordTypeUInt128Tests) {
+  using LL_UInt256_128 = BigInt<256, false, __uint128_t>;
+  using LL_UInt128_128 = BigInt<128, false, __uint128_t>;
+
+  LL_UInt256_128 a(1);
+
+  ASSERT_EQ(static_cast<int>(a), 1);
+  a = (a << 128) + 2;
+  ASSERT_EQ(static_cast<int>(a), 2);
+  ASSERT_EQ(static_cast<uint64_t>(a), uint64_t(2));
+  a = (a << 32) + 3;
+  ASSERT_EQ(static_cast<int>(a), 3);
+  ASSERT_EQ(static_cast<uint64_t>(a), uint64_t(0x2'0000'0003));
+  ASSERT_EQ(static_cast<int>(a >> 32), 2);
+  ASSERT_EQ(static_cast<int>(a >> (128 + 32)), 1);
+
+  LL_UInt128_128 b(__uint128_t(1) << 127);
+  LL_UInt128_128 c(b);
+  a = b.ful_mul(c);
+
+  ASSERT_EQ(static_cast<int>(a >> 254), 1);
+
+  LL_UInt256_128 d = LL_UInt256_128(123) << 4;
+  ASSERT_EQ(static_cast<int>(d), 123 << 4);
+  LL_UInt256_128 e = a / d;
+  LL_UInt256_128 f = a % d;
+  LL_UInt256_128 r = *a.div_uint_half_times_pow_2(123, 4);
+  EXPECT_TRUE(e == a);
+  EXPECT_TRUE(f == r);
+}
+
+#endif // LIBC_TYPES_HAS_INT128
+
+TEST(LlvmLibcUIntClassTest, OtherWordTypeTests) {
+  using LL_UInt96 = BigInt<96, false, uint32_t>;
+
+  LL_UInt96 a(1);
+
+  ASSERT_EQ(static_cast<int>(a), 1);
+  a = (a << 32) + 2;
+  ASSERT_EQ(static_cast<int>(a), 2);
+  ASSERT_EQ(static_cast<uint64_t>(a), uint64_t(0x1'0000'0002));
+  a = (a << 32) + 3;
+  ASSERT_EQ(static_cast<int>(a), 3);
+  ASSERT_EQ(static_cast<int>(a >> 32), 2);
+  ASSERT_EQ(static_cast<int>(a >> 64), 1);
+}
+
+} // namespace LIBC_NAMESPACE

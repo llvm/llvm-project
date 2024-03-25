@@ -4,13 +4,15 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDescs
   AllTargetsInfos
   Analysis
-  AsmParser
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
+  IRPrinter
   IRReader
   MC
   MIRParser
+  Passes
   Remarks
   ScalarOpts
   SelectionDAG
@@ -23,6 +25,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(llc
   llc.cpp
+  NewPMDriver.cpp
 
   DEPENDS
   intrinsics_gen

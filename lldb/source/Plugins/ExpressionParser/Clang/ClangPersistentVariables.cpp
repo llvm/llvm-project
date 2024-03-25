@@ -26,10 +26,11 @@
 using namespace lldb;
 using namespace lldb_private;
 
+char ClangPersistentVariables::ID;
+
 ClangPersistentVariables::ClangPersistentVariables(
     std::shared_ptr<Target> target_sp)
-    : lldb_private::PersistentExpressionState(LLVMCastKind::eKindClang),
-      m_target_sp(target_sp) {}
+    : m_target_sp(target_sp) {}
 
 ExpressionVariableSP ClangPersistentVariables::CreatePersistentVariable(
     const lldb::ValueObjectSP &valobj_sp) {

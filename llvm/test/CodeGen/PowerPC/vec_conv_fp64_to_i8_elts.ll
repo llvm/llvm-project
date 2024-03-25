@@ -12,13 +12,13 @@
 define i16 @test2elt(<2 x double> %a) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: test2elt:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    xscvdpsxws f1, v2
+; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P8-NEXT:    mffprwz r3, f1
 ; CHECK-P8-NEXT:    mtvsrd v2, r3
-; CHECK-P8-NEXT:    mffprwz r4, f0
-; CHECK-P8-NEXT:    mtvsrd v3, r4
+; CHECK-P8-NEXT:    mffprwz r3, f0
+; CHECK-P8-NEXT:    mtvsrd v3, r3
 ; CHECK-P8-NEXT:    vmrghb v2, v2, v3
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    mffprd r3, f0
@@ -70,25 +70,25 @@ entry:
 define i32 @test4elt(ptr nocapture readonly) local_unnamed_addr #1 {
 ; CHECK-P8-LABEL: test4elt:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    li r4, 16
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    lxvd2x vs1, r3, r4
-; CHECK-P8-NEXT:    xscvdpsxws f2, f0
-; CHECK-P8-NEXT:    xxswapd vs0, vs0
-; CHECK-P8-NEXT:    xscvdpsxws f3, f1
-; CHECK-P8-NEXT:    xxswapd vs1, vs1
+; CHECK-P8-NEXT:    li r4, 16
+; CHECK-P8-NEXT:    lxvd2x vs2, r3, r4
+; CHECK-P8-NEXT:    xxswapd vs1, vs0
 ; CHECK-P8-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P8-NEXT:    xscvdpsxws f1, f1
-; CHECK-P8-NEXT:    mffprwz r3, f2
-; CHECK-P8-NEXT:    mffprwz r4, f3
+; CHECK-P8-NEXT:    mffprwz r3, f0
+; CHECK-P8-NEXT:    xscvdpsxws f0, f2
+; CHECK-P8-NEXT:    mffprwz r4, f1
 ; CHECK-P8-NEXT:    mtvsrd v2, r3
 ; CHECK-P8-NEXT:    mtvsrd v3, r4
-; CHECK-P8-NEXT:    mffprwz r3, f0
-; CHECK-P8-NEXT:    mffprwz r4, f1
+; CHECK-P8-NEXT:    xxswapd vs3, vs2
+; CHECK-P8-NEXT:    xscvdpsxws f3, f3
+; CHECK-P8-NEXT:    mffprwz r3, f3
 ; CHECK-P8-NEXT:    mtvsrd v4, r3
-; CHECK-P8-NEXT:    mtvsrd v5, r4
-; CHECK-P8-NEXT:    vmrghb v2, v4, v2
-; CHECK-P8-NEXT:    vmrghb v3, v5, v3
+; CHECK-P8-NEXT:    mffprwz r3, f0
+; CHECK-P8-NEXT:    vmrghb v2, v3, v2
+; CHECK-P8-NEXT:    mtvsrd v3, r3
+; CHECK-P8-NEXT:    vmrghb v3, v4, v3
 ; CHECK-P8-NEXT:    vmrglh v2, v3, v2
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    mffprwz r3, f0
@@ -157,45 +157,45 @@ define i64 @test8elt(ptr nocapture readonly) local_unnamed_addr #1 {
 ; CHECK-P8-LABEL: test8elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    li r4, 16
-; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    lxvd2x vs1, r3, r4
+; CHECK-P8-NEXT:    lxvd2x vs1, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, r3, r4
 ; CHECK-P8-NEXT:    li r4, 32
-; CHECK-P8-NEXT:    lxvd2x vs2, r3, r4
+; CHECK-P8-NEXT:    lxvd2x vs4, r3, r4
 ; CHECK-P8-NEXT:    li r4, 48
-; CHECK-P8-NEXT:    lxvd2x vs3, r3, r4
-; CHECK-P8-NEXT:    xscvdpsxws f4, f0
-; CHECK-P8-NEXT:    xxswapd vs0, vs0
-; CHECK-P8-NEXT:    xscvdpsxws f5, f1
-; CHECK-P8-NEXT:    xxswapd vs1, vs1
-; CHECK-P8-NEXT:    xscvdpsxws f6, f2
-; CHECK-P8-NEXT:    xxswapd vs2, vs2
-; CHECK-P8-NEXT:    xscvdpsxws f7, f3
-; CHECK-P8-NEXT:    xxswapd vs3, vs3
-; CHECK-P8-NEXT:    xscvdpsxws f0, f0
+; CHECK-P8-NEXT:    lxvd2x vs6, r3, r4
+; CHECK-P8-NEXT:    xxswapd vs3, vs1
 ; CHECK-P8-NEXT:    xscvdpsxws f1, f1
-; CHECK-P8-NEXT:    xscvdpsxws f2, f2
 ; CHECK-P8-NEXT:    xscvdpsxws f3, f3
-; CHECK-P8-NEXT:    mffprwz r3, f4
-; CHECK-P8-NEXT:    mffprwz r4, f5
+; CHECK-P8-NEXT:    mffprwz r3, f1
 ; CHECK-P8-NEXT:    mtvsrd v2, r3
-; CHECK-P8-NEXT:    mffprwz r3, f6
+; CHECK-P8-NEXT:    xxswapd vs2, vs0
+; CHECK-P8-NEXT:    xscvdpsxws f0, f0
+; CHECK-P8-NEXT:    mffprwz r4, f0
+; CHECK-P8-NEXT:    xscvdpsxws f2, f2
+; CHECK-P8-NEXT:    xscvdpsxws f0, f6
 ; CHECK-P8-NEXT:    mtvsrd v3, r4
-; CHECK-P8-NEXT:    mffprwz r4, f7
-; CHECK-P8-NEXT:    mtvsrd v4, r3
-; CHECK-P8-NEXT:    mtvsrd v5, r4
-; CHECK-P8-NEXT:    mffprwz r3, f0
-; CHECK-P8-NEXT:    mffprwz r4, f1
-; CHECK-P8-NEXT:    mtvsrd v0, r3
-; CHECK-P8-NEXT:    mtvsrd v1, r4
-; CHECK-P8-NEXT:    mffprwz r3, f2
 ; CHECK-P8-NEXT:    mffprwz r4, f3
-; CHECK-P8-NEXT:    vmrghb v2, v0, v2
-; CHECK-P8-NEXT:    vmrghb v3, v1, v3
+; CHECK-P8-NEXT:    mtvsrd v5, r4
+; CHECK-P8-NEXT:    xxswapd vs5, vs4
+; CHECK-P8-NEXT:    xscvdpsxws f4, f4
+; CHECK-P8-NEXT:    mffprwz r3, f4
+; CHECK-P8-NEXT:    xscvdpsxws f5, f5
+; CHECK-P8-NEXT:    mtvsrd v4, r3
+; CHECK-P8-NEXT:    mffprwz r3, f2
+; CHECK-P8-NEXT:    mffprwz r4, f5
+; CHECK-P8-NEXT:    xxswapd vs7, vs6
+; CHECK-P8-NEXT:    xscvdpsxws f7, f7
+; CHECK-P8-NEXT:    vmrghb v2, v5, v2
+; CHECK-P8-NEXT:    mtvsrd v5, r3
+; CHECK-P8-NEXT:    mffprwz r3, f7
 ; CHECK-P8-NEXT:    mtvsrd v0, r3
-; CHECK-P8-NEXT:    mtvsrd v1, r4
-; CHECK-P8-NEXT:    vmrghb v4, v0, v4
-; CHECK-P8-NEXT:    vmrghb v5, v1, v5
+; CHECK-P8-NEXT:    mffprwz r3, f0
+; CHECK-P8-NEXT:    vmrghb v3, v5, v3
+; CHECK-P8-NEXT:    mtvsrd v5, r4
 ; CHECK-P8-NEXT:    vmrglh v2, v3, v2
+; CHECK-P8-NEXT:    vmrghb v4, v5, v4
+; CHECK-P8-NEXT:    mtvsrd v5, r3
+; CHECK-P8-NEXT:    vmrghb v5, v0, v5
 ; CHECK-P8-NEXT:    vmrglh v3, v5, v4
 ; CHECK-P8-NEXT:    xxmrglw vs0, v3, v2
 ; CHECK-P8-NEXT:    xxswapd vs0, vs0
@@ -302,91 +302,91 @@ entry:
 define <16 x i8> @test16elt(ptr nocapture readonly) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test16elt:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    li r4, 16
-; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    lxvd2x vs1, r3, r4
-; CHECK-P8-NEXT:    li r4, 32
-; CHECK-P8-NEXT:    lxvd2x vs2, r3, r4
-; CHECK-P8-NEXT:    li r4, 48
-; CHECK-P8-NEXT:    lxvd2x vs3, r3, r4
-; CHECK-P8-NEXT:    li r4, 64
-; CHECK-P8-NEXT:    xscvdpsxws f4, f0
-; CHECK-P8-NEXT:    xxswapd vs0, vs0
-; CHECK-P8-NEXT:    lxvd2x vs5, r3, r4
 ; CHECK-P8-NEXT:    li r4, 80
-; CHECK-P8-NEXT:    xscvdpsxws f6, f1
-; CHECK-P8-NEXT:    xxswapd vs1, vs1
+; CHECK-P8-NEXT:    lxvd2x vs4, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs3, r3, r4
+; CHECK-P8-NEXT:    li r4, 48
+; CHECK-P8-NEXT:    lxvd2x vs6, r3, r4
+; CHECK-P8-NEXT:    li r4, 16
 ; CHECK-P8-NEXT:    lxvd2x vs7, r3, r4
-; CHECK-P8-NEXT:    li r4, 96
-; CHECK-P8-NEXT:    xscvdpsxws f8, f2
-; CHECK-P8-NEXT:    xxswapd vs2, vs2
+; CHECK-P8-NEXT:    li r4, 32
 ; CHECK-P8-NEXT:    lxvd2x vs9, r3, r4
+; CHECK-P8-NEXT:    li r4, 64
+; CHECK-P8-NEXT:    lxvd2x vs12, r3, r4
+; CHECK-P8-NEXT:    li r4, 96
+; CHECK-P8-NEXT:    lxvd2x vs2, r3, r4
 ; CHECK-P8-NEXT:    li r4, 112
-; CHECK-P8-NEXT:    xscvdpsxws f10, f3
-; CHECK-P8-NEXT:    xxswapd vs3, vs3
-; CHECK-P8-NEXT:    lxvd2x vs11, r3, r4
-; CHECK-P8-NEXT:    xscvdpsxws f12, f5
-; CHECK-P8-NEXT:    xxswapd vs5, vs5
-; CHECK-P8-NEXT:    xscvdpsxws f13, f7
-; CHECK-P8-NEXT:    xxswapd vs7, vs7
-; CHECK-P8-NEXT:    xscvdpsxws v2, f9
-; CHECK-P8-NEXT:    xxswapd vs9, vs9
-; CHECK-P8-NEXT:    xscvdpsxws v3, f11
-; CHECK-P8-NEXT:    xxswapd vs11, vs11
+; CHECK-P8-NEXT:    lxvd2x vs0, r3, r4
+; CHECK-P8-NEXT:    xxswapd vs5, vs4
+; CHECK-P8-NEXT:    xscvdpsxws f4, f4
 ; CHECK-P8-NEXT:    mffprwz r3, f4
-; CHECK-P8-NEXT:    mffprwz r4, f6
-; CHECK-P8-NEXT:    xscvdpsxws f0, f0
-; CHECK-P8-NEXT:    xscvdpsxws f1, f1
+; CHECK-P8-NEXT:    xscvdpsxws f5, f5
 ; CHECK-P8-NEXT:    mtvsrd v4, r3
-; CHECK-P8-NEXT:    mffprwz r3, f8
+; CHECK-P8-NEXT:    xxswapd vs13, vs3
+; CHECK-P8-NEXT:    xscvdpsxws f3, f3
+; CHECK-P8-NEXT:    xscvdpsxws f13, f13
+; CHECK-P8-NEXT:    xxswapd vs10, vs6
+; CHECK-P8-NEXT:    xscvdpsxws f6, f6
+; CHECK-P8-NEXT:    xscvdpsxws f10, f10
+; CHECK-P8-NEXT:    xxswapd vs8, vs7
+; CHECK-P8-NEXT:    xscvdpsxws f7, f7
+; CHECK-P8-NEXT:    mffprwz r4, f7
+; CHECK-P8-NEXT:    xscvdpsxws f8, f8
 ; CHECK-P8-NEXT:    mtvsrd v5, r4
+; CHECK-P8-NEXT:    mffprwz r4, f6
+; CHECK-P8-NEXT:    mtvsrd v1, r4
+; CHECK-P8-NEXT:    mffprwz r4, f3
+; CHECK-P8-NEXT:    xxswapd vs11, vs9
+; CHECK-P8-NEXT:    xscvdpsxws f9, f9
+; CHECK-P8-NEXT:    mffprwz r3, f9
+; CHECK-P8-NEXT:    mtvsrd v0, r3
+; CHECK-P8-NEXT:    xscvdpsxws f11, f11
+; CHECK-P8-NEXT:    mtvsrd v7, r4
+; CHECK-P8-NEXT:    mffprwz r4, f8
+; CHECK-P8-NEXT:    mtvsrd v9, r4
+; CHECK-P8-NEXT:    xxswapd v2, vs12
+; CHECK-P8-NEXT:    xscvdpsxws f12, f12
+; CHECK-P8-NEXT:    mffprwz r3, f12
+; CHECK-P8-NEXT:    mtvsrd v6, r3
+; CHECK-P8-NEXT:    mffprwz r3, f5
+; CHECK-P8-NEXT:    xscvdpsxws v2, v2
+; CHECK-P8-NEXT:    mtvsrd v8, r3
+; CHECK-P8-NEXT:    mffprwz r3, f11
+; CHECK-P8-NEXT:    xxswapd v3, vs2
+; CHECK-P8-NEXT:    xscvdpsxws v3, v3
 ; CHECK-P8-NEXT:    mffprwz r4, f10
 ; CHECK-P8-NEXT:    xscvdpsxws f2, f2
-; CHECK-P8-NEXT:    xscvdpsxws f3, f3
-; CHECK-P8-NEXT:    mtvsrd v0, r3
-; CHECK-P8-NEXT:    mffprwz r3, f12
-; CHECK-P8-NEXT:    mtvsrd v1, r4
-; CHECK-P8-NEXT:    mffprwz r4, f13
-; CHECK-P8-NEXT:    xscvdpsxws f5, f5
-; CHECK-P8-NEXT:    xscvdpsxws f7, f7
-; CHECK-P8-NEXT:    mtvsrd v6, r3
+; CHECK-P8-NEXT:    xxswapd vs1, vs0
+; CHECK-P8-NEXT:    xscvdpsxws f1, f1
+; CHECK-P8-NEXT:    xscvdpsxws f0, f0
+; CHECK-P8-NEXT:    vmrghb v4, v8, v4
+; CHECK-P8-NEXT:    mtvsrd v8, r3
 ; CHECK-P8-NEXT:    mfvsrwz r3, v2
 ; CHECK-P8-NEXT:    mtvsrd v2, r4
-; CHECK-P8-NEXT:    mfvsrwz r4, v3
-; CHECK-P8-NEXT:    xscvdpsxws f9, f9
-; CHECK-P8-NEXT:    xscvdpsxws f11, f11
-; CHECK-P8-NEXT:    mtvsrd v3, r3
-; CHECK-P8-NEXT:    mtvsrd v7, r4
-; CHECK-P8-NEXT:    mffprwz r3, f0
-; CHECK-P8-NEXT:    mffprwz r4, f1
-; CHECK-P8-NEXT:    mtvsrd v8, r3
-; CHECK-P8-NEXT:    mtvsrd v9, r4
-; CHECK-P8-NEXT:    mffprwz r3, f2
-; CHECK-P8-NEXT:    mffprwz r4, f3
-; CHECK-P8-NEXT:    vmrghb v4, v8, v4
+; CHECK-P8-NEXT:    mffprwz r4, f13
 ; CHECK-P8-NEXT:    vmrghb v5, v9, v5
-; CHECK-P8-NEXT:    mtvsrd v8, r3
-; CHECK-P8-NEXT:    mtvsrd v9, r4
-; CHECK-P8-NEXT:    mffprwz r3, f5
-; CHECK-P8-NEXT:    mffprwz r4, f7
 ; CHECK-P8-NEXT:    vmrghb v0, v8, v0
-; CHECK-P8-NEXT:    vmrghb v1, v9, v1
 ; CHECK-P8-NEXT:    mtvsrd v8, r3
-; CHECK-P8-NEXT:    mtvsrd v9, r4
-; CHECK-P8-NEXT:    mffprwz r3, f9
-; CHECK-P8-NEXT:    mffprwz r4, f11
-; CHECK-P8-NEXT:    vmrghb v6, v8, v6
-; CHECK-P8-NEXT:    vmrghb v2, v9, v2
-; CHECK-P8-NEXT:    mtvsrd v8, r3
-; CHECK-P8-NEXT:    mtvsrd v9, r4
-; CHECK-P8-NEXT:    vmrghb v3, v8, v3
-; CHECK-P8-NEXT:    vmrghb v7, v9, v7
+; CHECK-P8-NEXT:    mfvsrwz r3, v3
 ; CHECK-P8-NEXT:    vmrglh v4, v5, v4
-; CHECK-P8-NEXT:    vmrglh v5, v1, v0
-; CHECK-P8-NEXT:    vmrglh v2, v2, v6
-; CHECK-P8-NEXT:    vmrglh v3, v7, v3
-; CHECK-P8-NEXT:    xxmrglw vs0, v5, v4
-; CHECK-P8-NEXT:    xxmrglw vs1, v3, v2
+; CHECK-P8-NEXT:    mtvsrd v3, r4
+; CHECK-P8-NEXT:    vmrghb v2, v2, v1
+; CHECK-P8-NEXT:    vmrghb v1, v8, v6
+; CHECK-P8-NEXT:    mtvsrd v6, r3
+; CHECK-P8-NEXT:    mffprwz r3, f2
+; CHECK-P8-NEXT:    vmrglh v2, v2, v0
+; CHECK-P8-NEXT:    vmrghb v3, v3, v7
+; CHECK-P8-NEXT:    mtvsrd v7, r3
+; CHECK-P8-NEXT:    mffprwz r3, f1
+; CHECK-P8-NEXT:    vmrglh v3, v3, v1
+; CHECK-P8-NEXT:    vmrghb v6, v6, v7
+; CHECK-P8-NEXT:    mtvsrd v7, r3
+; CHECK-P8-NEXT:    mffprwz r3, f0
+; CHECK-P8-NEXT:    xxmrglw vs0, v2, v4
+; CHECK-P8-NEXT:    mtvsrd v8, r3
+; CHECK-P8-NEXT:    vmrghb v7, v7, v8
+; CHECK-P8-NEXT:    vmrglh v5, v7, v6
+; CHECK-P8-NEXT:    xxmrglw vs1, v5, v3
 ; CHECK-P8-NEXT:    xxmrgld v2, vs1, vs0
 ; CHECK-P8-NEXT:    blr
 ;
@@ -567,13 +567,13 @@ entry:
 define i16 @test2elt_signed(<2 x double> %a) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: test2elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    xscvdpsxws f1, v2
+; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P8-NEXT:    mffprwz r3, f1
 ; CHECK-P8-NEXT:    mtvsrd v2, r3
-; CHECK-P8-NEXT:    mffprwz r4, f0
-; CHECK-P8-NEXT:    mtvsrd v3, r4
+; CHECK-P8-NEXT:    mffprwz r3, f0
+; CHECK-P8-NEXT:    mtvsrd v3, r3
 ; CHECK-P8-NEXT:    vmrghb v2, v2, v3
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    mffprd r3, f0
@@ -625,25 +625,25 @@ entry:
 define i32 @test4elt_signed(ptr nocapture readonly) local_unnamed_addr #1 {
 ; CHECK-P8-LABEL: test4elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    li r4, 16
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    lxvd2x vs1, r3, r4
-; CHECK-P8-NEXT:    xscvdpsxws f2, f0
-; CHECK-P8-NEXT:    xxswapd vs0, vs0
-; CHECK-P8-NEXT:    xscvdpsxws f3, f1
-; CHECK-P8-NEXT:    xxswapd vs1, vs1
+; CHECK-P8-NEXT:    li r4, 16
+; CHECK-P8-NEXT:    lxvd2x vs2, r3, r4
+; CHECK-P8-NEXT:    xxswapd vs1, vs0
 ; CHECK-P8-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P8-NEXT:    xscvdpsxws f1, f1
-; CHECK-P8-NEXT:    mffprwz r3, f2
-; CHECK-P8-NEXT:    mffprwz r4, f3
+; CHECK-P8-NEXT:    mffprwz r3, f0
+; CHECK-P8-NEXT:    xscvdpsxws f0, f2
+; CHECK-P8-NEXT:    mffprwz r4, f1
 ; CHECK-P8-NEXT:    mtvsrd v2, r3
 ; CHECK-P8-NEXT:    mtvsrd v3, r4
-; CHECK-P8-NEXT:    mffprwz r3, f0
-; CHECK-P8-NEXT:    mffprwz r4, f1
+; CHECK-P8-NEXT:    xxswapd vs3, vs2
+; CHECK-P8-NEXT:    xscvdpsxws f3, f3
+; CHECK-P8-NEXT:    mffprwz r3, f3
 ; CHECK-P8-NEXT:    mtvsrd v4, r3
-; CHECK-P8-NEXT:    mtvsrd v5, r4
-; CHECK-P8-NEXT:    vmrghb v2, v4, v2
-; CHECK-P8-NEXT:    vmrghb v3, v5, v3
+; CHECK-P8-NEXT:    mffprwz r3, f0
+; CHECK-P8-NEXT:    vmrghb v2, v3, v2
+; CHECK-P8-NEXT:    mtvsrd v3, r3
+; CHECK-P8-NEXT:    vmrghb v3, v4, v3
 ; CHECK-P8-NEXT:    vmrglh v2, v3, v2
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    mffprwz r3, f0
@@ -712,45 +712,45 @@ define i64 @test8elt_signed(ptr nocapture readonly) local_unnamed_addr #1 {
 ; CHECK-P8-LABEL: test8elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    li r4, 16
-; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    lxvd2x vs1, r3, r4
+; CHECK-P8-NEXT:    lxvd2x vs1, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, r3, r4
 ; CHECK-P8-NEXT:    li r4, 32
-; CHECK-P8-NEXT:    lxvd2x vs2, r3, r4
+; CHECK-P8-NEXT:    lxvd2x vs4, r3, r4
 ; CHECK-P8-NEXT:    li r4, 48
-; CHECK-P8-NEXT:    lxvd2x vs3, r3, r4
-; CHECK-P8-NEXT:    xscvdpsxws f4, f0
-; CHECK-P8-NEXT:    xxswapd vs0, vs0
-; CHECK-P8-NEXT:    xscvdpsxws f5, f1
-; CHECK-P8-NEXT:    xxswapd vs1, vs1
-; CHECK-P8-NEXT:    xscvdpsxws f6, f2
-; CHECK-P8-NEXT:    xxswapd vs2, vs2
-; CHECK-P8-NEXT:    xscvdpsxws f7, f3
-; CHECK-P8-NEXT:    xxswapd vs3, vs3
-; CHECK-P8-NEXT:    xscvdpsxws f0, f0
+; CHECK-P8-NEXT:    lxvd2x vs6, r3, r4
+; CHECK-P8-NEXT:    xxswapd vs3, vs1
 ; CHECK-P8-NEXT:    xscvdpsxws f1, f1
-; CHECK-P8-NEXT:    xscvdpsxws f2, f2
 ; CHECK-P8-NEXT:    xscvdpsxws f3, f3
-; CHECK-P8-NEXT:    mffprwz r3, f4
-; CHECK-P8-NEXT:    mffprwz r4, f5
+; CHECK-P8-NEXT:    mffprwz r3, f1
 ; CHECK-P8-NEXT:    mtvsrd v2, r3
-; CHECK-P8-NEXT:    mffprwz r3, f6
+; CHECK-P8-NEXT:    xxswapd vs2, vs0
+; CHECK-P8-NEXT:    xscvdpsxws f0, f0
+; CHECK-P8-NEXT:    mffprwz r4, f0
+; CHECK-P8-NEXT:    xscvdpsxws f2, f2
+; CHECK-P8-NEXT:    xscvdpsxws f0, f6
 ; CHECK-P8-NEXT:    mtvsrd v3, r4
-; CHECK-P8-NEXT:    mffprwz r4, f7
-; CHECK-P8-NEXT:    mtvsrd v4, r3
-; CHECK-P8-NEXT:    mtvsrd v5, r4
-; CHECK-P8-NEXT:    mffprwz r3, f0
-; CHECK-P8-NEXT:    mffprwz r4, f1
-; CHECK-P8-NEXT:    mtvsrd v0, r3
-; CHECK-P8-NEXT:    mtvsrd v1, r4
-; CHECK-P8-NEXT:    mffprwz r3, f2
 ; CHECK-P8-NEXT:    mffprwz r4, f3
-; CHECK-P8-NEXT:    vmrghb v2, v0, v2
-; CHECK-P8-NEXT:    vmrghb v3, v1, v3
+; CHECK-P8-NEXT:    mtvsrd v5, r4
+; CHECK-P8-NEXT:    xxswapd vs5, vs4
+; CHECK-P8-NEXT:    xscvdpsxws f4, f4
+; CHECK-P8-NEXT:    mffprwz r3, f4
+; CHECK-P8-NEXT:    xscvdpsxws f5, f5
+; CHECK-P8-NEXT:    mtvsrd v4, r3
+; CHECK-P8-NEXT:    mffprwz r3, f2
+; CHECK-P8-NEXT:    mffprwz r4, f5
+; CHECK-P8-NEXT:    xxswapd vs7, vs6
+; CHECK-P8-NEXT:    xscvdpsxws f7, f7
+; CHECK-P8-NEXT:    vmrghb v2, v5, v2
+; CHECK-P8-NEXT:    mtvsrd v5, r3
+; CHECK-P8-NEXT:    mffprwz r3, f7
 ; CHECK-P8-NEXT:    mtvsrd v0, r3
-; CHECK-P8-NEXT:    mtvsrd v1, r4
-; CHECK-P8-NEXT:    vmrghb v4, v0, v4
-; CHECK-P8-NEXT:    vmrghb v5, v1, v5
+; CHECK-P8-NEXT:    mffprwz r3, f0
+; CHECK-P8-NEXT:    vmrghb v3, v5, v3
+; CHECK-P8-NEXT:    mtvsrd v5, r4
 ; CHECK-P8-NEXT:    vmrglh v2, v3, v2
+; CHECK-P8-NEXT:    vmrghb v4, v5, v4
+; CHECK-P8-NEXT:    mtvsrd v5, r3
+; CHECK-P8-NEXT:    vmrghb v5, v0, v5
 ; CHECK-P8-NEXT:    vmrglh v3, v5, v4
 ; CHECK-P8-NEXT:    xxmrglw vs0, v3, v2
 ; CHECK-P8-NEXT:    xxswapd vs0, vs0
@@ -857,91 +857,91 @@ entry:
 define <16 x i8> @test16elt_signed(ptr nocapture readonly) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test16elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    li r4, 16
-; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    lxvd2x vs1, r3, r4
-; CHECK-P8-NEXT:    li r4, 32
-; CHECK-P8-NEXT:    lxvd2x vs2, r3, r4
-; CHECK-P8-NEXT:    li r4, 48
-; CHECK-P8-NEXT:    lxvd2x vs3, r3, r4
-; CHECK-P8-NEXT:    li r4, 64
-; CHECK-P8-NEXT:    xscvdpsxws f4, f0
-; CHECK-P8-NEXT:    xxswapd vs0, vs0
-; CHECK-P8-NEXT:    lxvd2x vs5, r3, r4
 ; CHECK-P8-NEXT:    li r4, 80
-; CHECK-P8-NEXT:    xscvdpsxws f6, f1
-; CHECK-P8-NEXT:    xxswapd vs1, vs1
+; CHECK-P8-NEXT:    lxvd2x vs4, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs3, r3, r4
+; CHECK-P8-NEXT:    li r4, 48
+; CHECK-P8-NEXT:    lxvd2x vs6, r3, r4
+; CHECK-P8-NEXT:    li r4, 16
 ; CHECK-P8-NEXT:    lxvd2x vs7, r3, r4
-; CHECK-P8-NEXT:    li r4, 96
-; CHECK-P8-NEXT:    xscvdpsxws f8, f2
-; CHECK-P8-NEXT:    xxswapd vs2, vs2
+; CHECK-P8-NEXT:    li r4, 32
 ; CHECK-P8-NEXT:    lxvd2x vs9, r3, r4
+; CHECK-P8-NEXT:    li r4, 64
+; CHECK-P8-NEXT:    lxvd2x vs12, r3, r4
+; CHECK-P8-NEXT:    li r4, 96
+; CHECK-P8-NEXT:    lxvd2x vs2, r3, r4
 ; CHECK-P8-NEXT:    li r4, 112
-; CHECK-P8-NEXT:    xscvdpsxws f10, f3
-; CHECK-P8-NEXT:    xxswapd vs3, vs3
-; CHECK-P8-NEXT:    lxvd2x vs11, r3, r4
-; CHECK-P8-NEXT:    xscvdpsxws f12, f5
-; CHECK-P8-NEXT:    xxswapd vs5, vs5
-; CHECK-P8-NEXT:    xscvdpsxws f13, f7
-; CHECK-P8-NEXT:    xxswapd vs7, vs7
-; CHECK-P8-NEXT:    xscvdpsxws v2, f9
-; CHECK-P8-NEXT:    xxswapd vs9, vs9
-; CHECK-P8-NEXT:    xscvdpsxws v3, f11
-; CHECK-P8-NEXT:    xxswapd vs11, vs11
+; CHECK-P8-NEXT:    lxvd2x vs0, r3, r4
+; CHECK-P8-NEXT:    xxswapd vs5, vs4
+; CHECK-P8-NEXT:    xscvdpsxws f4, f4
 ; CHECK-P8-NEXT:    mffprwz r3, f4
-; CHECK-P8-NEXT:    mffprwz r4, f6
-; CHECK-P8-NEXT:    xscvdpsxws f0, f0
-; CHECK-P8-NEXT:    xscvdpsxws f1, f1
+; CHECK-P8-NEXT:    xscvdpsxws f5, f5
 ; CHECK-P8-NEXT:    mtvsrd v4, r3
-; CHECK-P8-NEXT:    mffprwz r3, f8
+; CHECK-P8-NEXT:    xxswapd vs13, vs3
+; CHECK-P8-NEXT:    xscvdpsxws f3, f3
+; CHECK-P8-NEXT:    xscvdpsxws f13, f13
+; CHECK-P8-NEXT:    xxswapd vs10, vs6
+; CHECK-P8-NEXT:    xscvdpsxws f6, f6
+; CHECK-P8-NEXT:    xscvdpsxws f10, f10
+; CHECK-P8-NEXT:    xxswapd vs8, vs7
+; CHECK-P8-NEXT:    xscvdpsxws f7, f7
+; CHECK-P8-NEXT:    mffprwz r4, f7
+; CHECK-P8-NEXT:    xscvdpsxws f8, f8
 ; CHECK-P8-NEXT:    mtvsrd v5, r4
+; CHECK-P8-NEXT:    mffprwz r4, f6
+; CHECK-P8-NEXT:    mtvsrd v1, r4
+; CHECK-P8-NEXT:    mffprwz r4, f3
+; CHECK-P8-NEXT:    xxswapd vs11, vs9
+; CHECK-P8-NEXT:    xscvdpsxws f9, f9
+; CHECK-P8-NEXT:    mffprwz r3, f9
+; CHECK-P8-NEXT:    mtvsrd v0, r3
+; CHECK-P8-NEXT:    xscvdpsxws f11, f11
+; CHECK-P8-NEXT:    mtvsrd v7, r4
+; CHECK-P8-NEXT:    mffprwz r4, f8
+; CHECK-P8-NEXT:    mtvsrd v9, r4
+; CHECK-P8-NEXT:    xxswapd v2, vs12
+; CHECK-P8-NEXT:    xscvdpsxws f12, f12
+; CHECK-P8-NEXT:    mffprwz r3, f12
+; CHECK-P8-NEXT:    mtvsrd v6, r3
+; CHECK-P8-NEXT:    mffprwz r3, f5
+; CHECK-P8-NEXT:    xscvdpsxws v2, v2
+; CHECK-P8-NEXT:    mtvsrd v8, r3
+; CHECK-P8-NEXT:    mffprwz r3, f11
+; CHECK-P8-NEXT:    xxswapd v3, vs2
+; CHECK-P8-NEXT:    xscvdpsxws v3, v3
 ; CHECK-P8-NEXT:    mffprwz r4, f10
 ; CHECK-P8-NEXT:    xscvdpsxws f2, f2
-; CHECK-P8-NEXT:    xscvdpsxws f3, f3
-; CHECK-P8-NEXT:    mtvsrd v0, r3
-; CHECK-P8-NEXT:    mffprwz r3, f12
-; CHECK-P8-NEXT:    mtvsrd v1, r4
-; CHECK-P8-NEXT:    mffprwz r4, f13
-; CHECK-P8-NEXT:    xscvdpsxws f5, f5
-; CHECK-P8-NEXT:    xscvdpsxws f7, f7
-; CHECK-P8-NEXT:    mtvsrd v6, r3
+; CHECK-P8-NEXT:    xxswapd vs1, vs0
+; CHECK-P8-NEXT:    xscvdpsxws f1, f1
+; CHECK-P8-NEXT:    xscvdpsxws f0, f0
+; CHECK-P8-NEXT:    vmrghb v4, v8, v4
+; CHECK-P8-NEXT:    mtvsrd v8, r3
 ; CHECK-P8-NEXT:    mfvsrwz r3, v2
 ; CHECK-P8-NEXT:    mtvsrd v2, r4
-; CHECK-P8-NEXT:    mfvsrwz r4, v3
-; CHECK-P8-NEXT:    xscvdpsxws f9, f9
-; CHECK-P8-NEXT:    xscvdpsxws f11, f11
-; CHECK-P8-NEXT:    mtvsrd v3, r3
-; CHECK-P8-NEXT:    mtvsrd v7, r4
-; CHECK-P8-NEXT:    mffprwz r3, f0
-; CHECK-P8-NEXT:    mffprwz r4, f1
-; CHECK-P8-NEXT:    mtvsrd v8, r3
-; CHECK-P8-NEXT:    mtvsrd v9, r4
-; CHECK-P8-NEXT:    mffprwz r3, f2
-; CHECK-P8-NEXT:    mffprwz r4, f3
-; CHECK-P8-NEXT:    vmrghb v4, v8, v4
+; CHECK-P8-NEXT:    mffprwz r4, f13
 ; CHECK-P8-NEXT:    vmrghb v5, v9, v5
-; CHECK-P8-NEXT:    mtvsrd v8, r3
-; CHECK-P8-NEXT:    mtvsrd v9, r4
-; CHECK-P8-NEXT:    mffprwz r3, f5
-; CHECK-P8-NEXT:    mffprwz r4, f7
 ; CHECK-P8-NEXT:    vmrghb v0, v8, v0
-; CHECK-P8-NEXT:    vmrghb v1, v9, v1
 ; CHECK-P8-NEXT:    mtvsrd v8, r3
-; CHECK-P8-NEXT:    mtvsrd v9, r4
-; CHECK-P8-NEXT:    mffprwz r3, f9
-; CHECK-P8-NEXT:    mffprwz r4, f11
-; CHECK-P8-NEXT:    vmrghb v6, v8, v6
-; CHECK-P8-NEXT:    vmrghb v2, v9, v2
-; CHECK-P8-NEXT:    mtvsrd v8, r3
-; CHECK-P8-NEXT:    mtvsrd v9, r4
-; CHECK-P8-NEXT:    vmrghb v3, v8, v3
-; CHECK-P8-NEXT:    vmrghb v7, v9, v7
+; CHECK-P8-NEXT:    mfvsrwz r3, v3
 ; CHECK-P8-NEXT:    vmrglh v4, v5, v4
-; CHECK-P8-NEXT:    vmrglh v5, v1, v0
-; CHECK-P8-NEXT:    vmrglh v2, v2, v6
-; CHECK-P8-NEXT:    vmrglh v3, v7, v3
-; CHECK-P8-NEXT:    xxmrglw vs0, v5, v4
-; CHECK-P8-NEXT:    xxmrglw vs1, v3, v2
+; CHECK-P8-NEXT:    mtvsrd v3, r4
+; CHECK-P8-NEXT:    vmrghb v2, v2, v1
+; CHECK-P8-NEXT:    vmrghb v1, v8, v6
+; CHECK-P8-NEXT:    mtvsrd v6, r3
+; CHECK-P8-NEXT:    mffprwz r3, f2
+; CHECK-P8-NEXT:    vmrglh v2, v2, v0
+; CHECK-P8-NEXT:    vmrghb v3, v3, v7
+; CHECK-P8-NEXT:    mtvsrd v7, r3
+; CHECK-P8-NEXT:    mffprwz r3, f1
+; CHECK-P8-NEXT:    vmrglh v3, v3, v1
+; CHECK-P8-NEXT:    vmrghb v6, v6, v7
+; CHECK-P8-NEXT:    mtvsrd v7, r3
+; CHECK-P8-NEXT:    mffprwz r3, f0
+; CHECK-P8-NEXT:    xxmrglw vs0, v2, v4
+; CHECK-P8-NEXT:    mtvsrd v8, r3
+; CHECK-P8-NEXT:    vmrghb v7, v7, v8
+; CHECK-P8-NEXT:    vmrglh v5, v7, v6
+; CHECK-P8-NEXT:    xxmrglw vs1, v5, v3
 ; CHECK-P8-NEXT:    xxmrgld v2, vs1, vs0
 ; CHECK-P8-NEXT:    blr
 ;

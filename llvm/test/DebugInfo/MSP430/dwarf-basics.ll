@@ -21,7 +21,7 @@
 ; CHECK: file format elf32-msp430
 
 ; CHECK: .debug_info contents:
-; CHECK: Compile Unit: length = 0x{{.*}}, format = DWARF32, version = 0x0003, abbr_offset = 0x0000, addr_size = 0x02 (next unit at 0x{{.*}})
+; CHECK: Compile Unit: length = 0x{{.*}}, format = DWARF32, version = 0x0003, abbr_offset = 0x0000, addr_size = 0x04 (next unit at 0x{{.*}})
 
 ; CHECK: DW_TAG_compile_unit
 ; CHECK:   DW_AT_producer    ("clang version 11.0.0 (git@...)")
@@ -35,7 +35,7 @@
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:     DW_AT_low_pc    (0x{{.*}})
 ; CHECK:     DW_AT_high_pc   (0x{{.*}})
-; CHECK:     DW_AT_frame_base        (DW_OP_reg1 SPB)
+; CHECK:     DW_AT_frame_base        (DW_OP_reg1 SP)
 ; CHECK:     DW_AT_name      ("f")
 ; CHECK:     DW_AT_decl_file ("/tmp{{[/\\]}}dwarf-basics.c")
 ; CHECK:     DW_AT_decl_line (5)
@@ -45,14 +45,14 @@
 
 ; CHECK:       DW_TAG_formal_parameter
 ; CHECK:         DW_AT_location        (0x{{.*}}:
-; CHECK:            [0x0000, 0x0004): DW_OP_reg12 R12B)
+; CHECK:            [0x00000000, 0x00000004): DW_OP_reg12 R12)
 ; CHECK:         DW_AT_name    ("y")
 ; CHECK:         DW_AT_decl_file       ("/tmp{{[/\\]}}dwarf-basics.c")
 ; CHECK:         DW_AT_decl_line       (5)
 ; CHECK:         DW_AT_type    (0x{{.*}} "long int")
 
 ; CHECK:       DW_TAG_formal_parameter
-; CHECK:         DW_AT_location        (DW_OP_reg14 R14B)
+; CHECK:         DW_AT_location        (DW_OP_reg14 R14)
 ; CHECK:         DW_AT_name    ("p")
 ; CHECK:         DW_AT_decl_file       ("/tmp{{[/\\]}}dwarf-basics.c")
 ; CHECK:         DW_AT_decl_line       (5)
@@ -97,12 +97,12 @@ source_filename = "dwarf-basics.c"
 target datalayout = "e-m:e-p:16:16-i32:16-i64:16-f32:16-f64:16-a:8-n8:16-S16"
 target triple = "msp430"
 
-%struct.X = type { i8* }
+%struct.X = type { ptr }
 
-define i16 @f(i32 %y, %struct.X* %p) !dbg !7 {
+define i16 @f(i32 %y, ptr %p) !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata i32 %y, metadata !18, metadata !DIExpression()), !dbg !20
-  call void @llvm.dbg.value(metadata %struct.X* %p, metadata !19, metadata !DIExpression()), !dbg !20
+  call void @llvm.dbg.value(metadata ptr %p, metadata !19, metadata !DIExpression()), !dbg !20
   ret i16 42, !dbg !21
 }
 

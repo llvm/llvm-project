@@ -28,7 +28,7 @@ TEST(ExecutionUtilsTest, JITTargetMachineBuilder) {
   JTMB.setCPU("");
   JTMB.setRelocationModel(std::nullopt);
   JTMB.setCodeModel(std::nullopt);
-  JTMB.setCodeGenOptLevel(CodeGenOpt::None);
+  JTMB.setCodeGenOptLevel(CodeGenOptLevel::None);
   JTMB.addFeatures(std::vector<std::string>());
   SubtargetFeatures &STF = JTMB.getFeatures();
   (void)STF;

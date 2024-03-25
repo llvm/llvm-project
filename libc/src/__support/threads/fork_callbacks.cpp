@@ -12,7 +12,7 @@
 
 #include <stddef.h> // For size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 namespace {
 
@@ -87,4 +87,4 @@ void invoke_prepare_callbacks() { cb_manager.invoke_prepare(); }
 
 void invoke_parent_callbacks() { cb_manager.invoke_parent(); }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

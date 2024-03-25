@@ -14,8 +14,7 @@ define void @foo() {
 ; CHECK-NEXT:    vpmovsxdq %xmm1, %xmm2
 ; CHECK-NEXT:    # implicit-def: $ymm0
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
-; CHECK-NEXT:    vpmovsxdq %xmm1, %xmm1
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,2,3,3]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; CHECK-NEXT:  # %bb.2: # %BB1
 ; CHECK-NEXT:    vzeroupper

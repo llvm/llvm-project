@@ -1,8 +1,6 @@
 """Module for supporting unit testing of the lldb-server debug monitor exe.
 """
 
-from __future__ import division, print_function
-
 import binascii
 import os
 import os.path
@@ -15,6 +13,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import configuration
 from textwrap import dedent
 import shutil
+
 
 def _get_support_exe(basename):
     support_dir = lldb.SBHostOS.GetLLDBPath(lldb.ePathTypeSupportExecutableDir)
@@ -40,14 +39,19 @@ def get_debugserver_exe():
         A path to the debugserver exe if it is found to exist; otherwise,
         returns None.
     """
-    if configuration.arch and configuration.arch == "x86_64" and \
-       platform.machine().startswith("arm64"):
-        return '/Library/Apple/usr/libexec/oah/debugserver'
+    if (
+        configuration.arch
+        and configuration.arch == "x86_64"
+        and platform.machine().startswith("arm64")
+    ):
+        return "/Library/Apple/usr/libexec/oah/debugserver"
 
     return _get_support_exe("debugserver")
 
-_LOG_LINE_REGEX = re.compile(r'^(lldb-server|debugserver)\s+<\s*(\d+)>' +
-                             '\s+(read|send)\s+packet:\s+(.+)$')
+
+_LOG_LINE_REGEX = re.compile(
+    r"^(lldb-server|debugserver)\s+<\s*(\d+)>" + "\s+(read|send)\s+packet:\s+(.+)$"
+)
 
 
 def _is_packet_lldb_gdbserver_input(packet_type, llgs_input_is_read):
@@ -65,11 +69,11 @@ def _is_packet_lldb_gdbserver_input(packet_type, llgs_input_is_read):
         True if the packet should be considered input for lldb-gdbserver; False
         otherwise.
     """
-    if packet_type == 'read':
+    if packet_type == "read":
         # when llgs is the read side, then a read packet is meant for
         # input to llgs (when captured from the llgs/debugserver exe).
         return llgs_input_is_read
-    elif packet_type == 'send':
+    elif packet_type == "send":
         # when llgs is the send side, then a send packet is meant to
         # be input to llgs (when captured from the lldb exe).
         return not llgs_input_is_read
@@ -78,7 +82,7 @@ def _is_packet_lldb_gdbserver_input(packet_type, llgs_input_is_read):
         raise "Unknown packet type: {}".format(packet_type)
 
 
-_STRIP_CHECKSUM_REGEX = re.compile(r'#[0-9a-fA-F]{2}$')
+_STRIP_CHECKSUM_REGEX = re.compile(r"#[0-9a-fA-F]{2}$")
 _STRIP_COMMAND_PREFIX_REGEX = re.compile(r"^\$")
 _STRIP_COMMAND_PREFIX_M_REGEX = re.compile(r"^\$m")
 
@@ -87,17 +91,14 @@ def assert_packets_equal(asserter, actual_packet, expected_packet):
     # strip off the checksum digits of the packet.  When we're in
     # no-ack mode, the # checksum is ignored, and should not be cause
     # for a mismatched packet.
-    actual_stripped = _STRIP_CHECKSUM_REGEX.sub('', actual_packet)
-    expected_stripped = _STRIP_CHECKSUM_REGEX.sub('', expected_packet)
+    actual_stripped = _STRIP_CHECKSUM_REGEX.sub("", actual_packet)
+    expected_stripped = _STRIP_CHECKSUM_REGEX.sub("", expected_packet)
     asserter.assertEqual(actual_stripped, expected_stripped)
 
 
 def expect_lldb_gdbserver_replay(
-        asserter,
-        server,
-        test_sequence,
-        timeout_seconds,
-        logger=None):
+    asserter, server, test_sequence, timeout_seconds, logger=None
+):
     """Replay socket communication with lldb-gdbserver and verify responses.
 
     Args:
@@ -149,8 +150,7 @@ def expect_lldb_gdbserver_replay(
                     packet_desc = "^C"
                 else:
                     packet_desc = send_packet
-                logger.info(
-                    "sending packet to remote: {}".format(packet_desc))
+                logger.info("sending packet to remote: {}".format(packet_desc))
             server.send_raw(send_packet.encode())
         else:
             # This is an entry expecting to receive content from the remote
@@ -168,14 +168,16 @@ def expect_lldb_gdbserver_replay(
                 content = seven.bitcast_to_string(content)
             except socket.timeout:
                 asserter.fail(
-                        "timed out while waiting for '{}':\n{}".format(sequence_entry, server))
+                    "timed out while waiting for '{}':\n{}".format(
+                        sequence_entry, server
+                    )
+                )
 
             # Give the sequence entry the opportunity to match the content.
             # Output matchers might match or pass after more output accumulates.
             # Other packet types generally must match.
             asserter.assertIsNotNone(content)
-            context = sequence_entry.assert_match(
-                asserter, content, context=context)
+            context = sequence_entry.assert_match(asserter, content, context=context)
 
         # Move on to next sequence entry as needed.  Some sequence entries support executing multiple
         # times in different states (for looping over query/response
@@ -194,9 +196,9 @@ def expect_lldb_gdbserver_replay(
 
 
 def gdbremote_hex_encode_string(str):
-    output = ''
+    output = ""
     for c in str:
-        output += '{0:02x}'.format(ord(c))
+        output += "{0:02x}".format(ord(c))
     return output
 
 
@@ -208,12 +210,11 @@ def gdbremote_packet_encode_string(str):
     checksum = 0
     for c in str:
         checksum += ord(c)
-    return '$' + str + '#{0:02x}'.format(checksum % 256)
+    return "$" + str + "#{0:02x}".format(checksum % 256)
 
 
 def build_gdbremote_A_packet(args_list):
-    """Given a list of args, create a properly-formed $A packet containing each arg.
-    """
+    """Given a list of args, create a properly-formed $A packet containing each arg."""
     payload = "A"
 
     # build the arg content
@@ -221,7 +222,7 @@ def build_gdbremote_A_packet(args_list):
     for arg in args_list:
         # Comma-separate the args.
         if arg_index > 0:
-            payload += ','
+            payload += ","
 
         # Hex-encode the arg.
         hex_arg = gdbremote_hex_encode_string(arg)
@@ -249,7 +250,7 @@ def parse_reg_info_response(response_packet):
     for kv in response_packet.split(";"):
         if len(kv) < 1:
             continue
-        (key, val) = kv.split(':')
+        (key, val) = kv.split(":")
         values[key] = val
 
     return values
@@ -280,15 +281,15 @@ def unpack_endian_binary_string(endian, value_string):
     if not value_string or len(value_string) < 1:
         raise Exception("value_string cannot be None or empty")
 
-    if endian == 'little':
+    if endian == "little":
         value = 0
         i = 0
         while len(value_string) > 0:
-            value += (ord(value_string[0]) << i)
+            value += ord(value_string[0]) << i
             value_string = value_string[1:]
             i += 8
         return value
-    elif endian == 'big':
+    elif endian == "big":
         value = 0
         while len(value_string) > 0:
             value = (value << 8) + ord(value_string[0])
@@ -306,15 +307,15 @@ def unpack_register_hex_unsigned(endian, value_string):
     if not value_string or len(value_string) < 1:
         raise Exception("value_string cannot be None or empty")
 
-    if endian == 'little':
+    if endian == "little":
         value = 0
         i = 0
         while len(value_string) > 0:
-            value += (int(value_string[0:2], 16) << i)
+            value += int(value_string[0:2], 16) << i
             value_string = value_string[2:]
             i += 8
         return value
-    elif endian == 'big':
+    elif endian == "big":
         return int(value_string, 16)
     else:
         # pdp is valid but need to add parse code once needed.
@@ -326,21 +327,21 @@ def pack_register_hex(endian, value, byte_size=None):
     if not endian:
         raise Exception("endian cannot be None")
 
-    if endian == 'little':
+    if endian == "little":
         # Create the litt-endian return value.
         retval = ""
         while value != 0:
-            retval = retval + "{:02x}".format(value & 0xff)
+            retval = retval + "{:02x}".format(value & 0xFF)
             value = value >> 8
         if byte_size:
             # Add zero-fill to the right/end (MSB side) of the value.
             retval += "00" * (byte_size - len(retval) // 2)
         return retval
 
-    elif endian == 'big':
+    elif endian == "big":
         retval = ""
         while value != 0:
-            retval = "{:02x}".format(value & 0xff) + retval
+            retval = "{:02x}".format(value & 0xFF) + retval
             value = value >> 8
         if byte_size:
             # Add zero-fill to the left/front (MSB side) of the value.
@@ -353,19 +354,14 @@ def pack_register_hex(endian, value, byte_size=None):
 
 
 class GdbRemoteEntryBase(object):
-
     def is_output_matcher(self):
         return False
 
 
 class GdbRemoteEntry(GdbRemoteEntryBase):
-
     def __init__(
-            self,
-            is_send_to_remote=True,
-            exact_payload=None,
-            regex=None,
-            capture=None):
+        self, is_send_to_remote=True, exact_payload=None, regex=None, capture=None
+    ):
         """Create an entry representing one piece of the I/O to/from a gdb remote debug monitor.
 
         Args:
@@ -413,10 +409,12 @@ class GdbRemoteEntry(GdbRemoteEntryBase):
     def get_send_packet(self):
         if not self.is_send_to_remote():
             raise Exception(
-                "get_send_packet() called on GdbRemoteEntry that is not a send-to-remote packet")
+                "get_send_packet() called on GdbRemoteEntry that is not a send-to-remote packet"
+            )
         if not self.exact_payload:
             raise Exception(
-                "get_send_packet() called on GdbRemoteEntry but it doesn't have an exact payload")
+                "get_send_packet() called on GdbRemoteEntry but it doesn't have an exact payload"
+            )
         return self.exact_payload
 
     def _assert_exact_payload_match(self, asserter, actual_packet):
@@ -429,7 +427,9 @@ class GdbRemoteEntry(GdbRemoteEntryBase):
         if not match:
             asserter.fail(
                 "regex '{}' failed to match against content '{}'".format(
-                    self.regex.pattern, actual_packet))
+                    self.regex.pattern, actual_packet
+                )
+            )
 
         if self.capture:
             # Handle captures.
@@ -447,7 +447,8 @@ class GdbRemoteEntry(GdbRemoteEntryBase):
         # remote debug monitor.
         if self.is_send_to_remote():
             raise Exception(
-                "Attempted to match a packet being sent to the remote debug monitor, doesn't make sense.")
+                "Attempted to match a packet being sent to the remote debug monitor, doesn't make sense."
+            )
 
         # Create a new context if needed.
         if not context:
@@ -463,7 +464,8 @@ class GdbRemoteEntry(GdbRemoteEntryBase):
             return self._assert_regex_match(asserter, actual_packet, context)
         else:
             raise Exception(
-                "Don't know how to match a remote-sent packet when exact_payload isn't specified.")
+                "Don't know how to match a remote-sent packet when exact_payload isn't specified."
+            )
 
 
 class MultiResponseGdbRemoteEntry(GdbRemoteEntryBase):
@@ -507,13 +509,11 @@ class MultiResponseGdbRemoteEntry(GdbRemoteEntryBase):
             raise "either next_query or query key must be specified for MultiResponseGdbRemoteEntry"
 
         self._first_query = params.get("first_query", self._next_query)
-        self._append_iteration_suffix = params.get(
-            "append_iteration_suffix", False)
+        self._append_iteration_suffix = params.get("append_iteration_suffix", False)
         self._iteration = 0
         self._end_regex = params["end_regex"]
         self._save_key = params["save_key"]
-        self._runaway_response_count = params.get(
-            "runaway_response_count", 10000)
+        self._runaway_response_count = params.get("runaway_response_count", 10000)
         self._is_send_to_remote = True
         self._end_matched = False
 
@@ -523,10 +523,12 @@ class MultiResponseGdbRemoteEntry(GdbRemoteEntryBase):
     def get_send_packet(self):
         if not self.is_send_to_remote():
             raise Exception(
-                "get_send_packet() called on MultiResponseGdbRemoteEntry that is not in the send state")
+                "get_send_packet() called on MultiResponseGdbRemoteEntry that is not in the send state"
+            )
         if self._end_matched:
             raise Exception(
-                "get_send_packet() called on MultiResponseGdbRemoteEntry but end of query/response sequence has already been seen.")
+                "get_send_packet() called on MultiResponseGdbRemoteEntry but end of query/response sequence has already been seen."
+            )
 
         # Choose the first or next query for the base payload.
         if self._iteration == 0 and self._first_query:
@@ -556,11 +558,13 @@ class MultiResponseGdbRemoteEntry(GdbRemoteEntryBase):
         # monitor.
         if self.is_send_to_remote():
             raise Exception(
-                "assert_match() called on MultiResponseGdbRemoteEntry but state is set to send a query packet.")
+                "assert_match() called on MultiResponseGdbRemoteEntry but state is set to send a query packet."
+            )
 
         if self._end_matched:
             raise Exception(
-                "assert_match() called on MultiResponseGdbRemoteEntry but end of query/response sequence has already been seen.")
+                "assert_match() called on MultiResponseGdbRemoteEntry but end of query/response sequence has already been seen."
+            )
 
         # Set up a context as needed.
         if not context:
@@ -580,12 +584,9 @@ class MultiResponseGdbRemoteEntry(GdbRemoteEntryBase):
         # Check for a runaway response cycle.
         if len(context[self._save_key]) >= self._runaway_response_count:
             raise Exception(
-                "runaway query/response cycle detected: %d responses captured so far. Last response: %s" %
-                (len(
-                    context[
-                        self._save_key]), context[
-                    self._save_key][
-                    -1]))
+                "runaway query/response cycle detected: %d responses captured so far. Last response: %s"
+                % (len(context[self._save_key]), context[self._save_key][-1])
+            )
 
         # Flip the mode to send for generating the query.
         self._is_send_to_remote = True
@@ -630,8 +631,10 @@ class MatchRemoteOutputEntry(GdbRemoteEntryBase):
 
         if not self._regex_mode in ["match", "search"]:
             raise Exception(
-                "unsupported regex mode \"{}\": must be \"match\" or \"search\"".format(
-                    self._regex_mode))
+                'unsupported regex mode "{}": must be "match" or "search"'.format(
+                    self._regex_mode
+                )
+            )
 
     def is_output_matcher(self):
         return True
@@ -653,7 +656,8 @@ class MatchRemoteOutputEntry(GdbRemoteEntryBase):
         # Validate that we haven't already matched.
         if self._matched:
             raise Exception(
-                "invalid state - already matched, attempting to match again")
+                "invalid state - already matched, attempting to match again"
+            )
 
         # If we don't have any content yet, we don't match.
         if len(accumulated_output) < 1:
@@ -665,9 +669,7 @@ class MatchRemoteOutputEntry(GdbRemoteEntryBase):
         elif self._regex_mode == "search":
             match = self._regex.search(accumulated_output)
         else:
-            raise Exception(
-                "Unexpected regex mode: {}".format(
-                    self._regex_mode))
+            raise Exception("Unexpected regex mode: {}".format(self._regex_mode))
 
         # If we don't match, wait to try again after next $O content, or time
         # out.
@@ -685,16 +687,14 @@ class MatchRemoteOutputEntry(GdbRemoteEntryBase):
             for group_index, var_name in list(self._capture.items()):
                 capture_text = match.group(group_index)
                 if not capture_text:
-                    raise Exception(
-                        "No content for group index {}".format(group_index))
+                    raise Exception("No content for group index {}".format(group_index))
                 context[var_name] = capture_text
 
         return context
 
 
 class GdbRemoteTestSequence(object):
-
-    _LOG_LINE_REGEX = re.compile(r'^.*(read|send)\s+packet:\s+(.+)$')
+    _LOG_LINE_REGEX = re.compile(r"^.*(read|send)\s+packet:\s+(.+)$")
 
     def __init__(self, logger):
         self.entries = []
@@ -713,26 +713,26 @@ class GdbRemoteTestSequence(object):
                 if match:
                     playback_packet = match.group(2)
                     direction = match.group(1)
-                    if _is_packet_lldb_gdbserver_input(
-                            direction, remote_input_is_read):
+                    if _is_packet_lldb_gdbserver_input(direction, remote_input_is_read):
                         # Handle as something to send to the remote debug monitor.
                         # if self.logger:
                         #     self.logger.info("processed packet to send to remote: {}".format(playback_packet))
                         self.entries.append(
                             GdbRemoteEntry(
-                                is_send_to_remote=True,
-                                exact_payload=playback_packet))
+                                is_send_to_remote=True, exact_payload=playback_packet
+                            )
+                        )
                     else:
                         # Log line represents content to be expected from the remote debug monitor.
                         # if self.logger:
                         #     self.logger.info("receiving packet from llgs, should match: {}".format(playback_packet))
                         self.entries.append(
                             GdbRemoteEntry(
-                                is_send_to_remote=False,
-                                exact_payload=playback_packet))
+                                is_send_to_remote=False, exact_payload=playback_packet
+                            )
+                        )
                 else:
-                    raise Exception(
-                        "failed to interpret log line: {}".format(line))
+                    raise Exception("failed to interpret log line: {}".format(line))
             elif isinstance(line, dict):
                 entry_type = line.get("type", "regex_capture")
                 if entry_type == "regex_capture":
@@ -745,29 +745,27 @@ class GdbRemoteTestSequence(object):
                     if regex and (isinstance(regex, str)):
                         regex = re.compile(regex, re.DOTALL)
 
-                    if _is_packet_lldb_gdbserver_input(
-                            direction, remote_input_is_read):
+                    if _is_packet_lldb_gdbserver_input(direction, remote_input_is_read):
                         # Handle as something to send to the remote debug monitor.
                         # if self.logger:
                         #     self.logger.info("processed dict sequence to send to remote")
                         self.entries.append(
                             GdbRemoteEntry(
-                                is_send_to_remote=True,
-                                regex=regex,
-                                capture=capture))
+                                is_send_to_remote=True, regex=regex, capture=capture
+                            )
+                        )
                     else:
                         # Log line represents content to be expected from the remote debug monitor.
                         # if self.logger:
                         #     self.logger.info("processed dict sequence to match receiving from remote")
                         self.entries.append(
                             GdbRemoteEntry(
-                                is_send_to_remote=False,
-                                regex=regex,
-                                capture=capture))
+                                is_send_to_remote=False, regex=regex, capture=capture
+                            )
+                        )
                 elif entry_type == "multi_response":
                     self.entries.append(MultiResponseGdbRemoteEntry(line))
                 elif entry_type == "output_match":
-
                     regex = line.get("regex", None)
                     # Compile the regex.
                     if regex and (isinstance(regex, str)):
@@ -777,11 +775,11 @@ class GdbRemoteTestSequence(object):
                     capture = line.get("capture", None)
                     self.entries.append(
                         MatchRemoteOutputEntry(
-                            regex=regex,
-                            regex_mode=regex_mode,
-                            capture=capture))
+                            regex=regex, regex_mode=regex_mode, capture=capture
+                        )
+                    )
                 else:
-                    raise Exception("unknown entry type \"%s\"" % entry_type)
+                    raise Exception('unknown entry type "%s"' % entry_type)
 
 
 def process_is_running(pid, unknown_value=True):
@@ -804,8 +802,8 @@ def process_is_running(pid, unknown_value=True):
     """
     if not isinstance(pid, int):
         raise Exception(
-            "pid must be an integral type (actual type: %s)" % str(
-                type(pid)))
+            "pid must be an integral type (actual type: %s)" % str(type(pid))
+        )
 
     process_ids = []
 
@@ -813,20 +811,21 @@ def process_is_running(pid, unknown_value=True):
         # Don't know how to get list of running process IDs on a remote
         # platform
         return unknown_value
-    elif platform.system() in ['Darwin', 'Linux', 'FreeBSD', 'NetBSD']:
+    elif platform.system() in ["Darwin", "Linux", "FreeBSD", "NetBSD"]:
         # Build the list of running process ids
         output = subprocess.check_output(
-            "ps ax | awk '{ print $1; }'", shell=True).decode("utf-8")
-        text_process_ids = output.split('\n')[1:]
+            "ps ax | awk '{ print $1; }'", shell=True
+        ).decode("utf-8")
+        text_process_ids = output.split("\n")[1:]
         # Convert text pids to ints
-        process_ids = [int(text_pid)
-                       for text_pid in text_process_ids if text_pid != '']
-    elif platform.system() == 'Windows':
+        process_ids = [int(text_pid) for text_pid in text_process_ids if text_pid != ""]
+    elif platform.system() == "Windows":
         output = subprocess.check_output(
-            "for /f \"tokens=2 delims=,\" %F in ('tasklist /nh /fi \"PID ne 0\" /fo csv') do @echo %~F", shell=True).decode("utf-8")
-        text_process_ids = output.split('\n')[1:]
-        process_ids = [int(text_pid)
-                       for text_pid in text_process_ids if text_pid != '']
+            'for /f "tokens=2 delims=," %F in (\'tasklist /nh /fi "PID ne 0" /fo csv\') do @echo %~F',
+            shell=True,
+        ).decode("utf-8")
+        text_process_ids = output.split("\n")[1:]
+        process_ids = [int(text_pid) for text_pid in text_process_ids if text_pid != ""]
     # elif {your_platform_here}:
     #   fill in process_ids as a list of int type process IDs running on
     #   the local system.
@@ -851,13 +850,12 @@ def _handle_output_packet_string(packet_contents):
 
 
 class Server(object):
-
-    _GDB_REMOTE_PACKET_REGEX = re.compile(br'^([\$%][^\#]*)#[0-9a-fA-F]{2}')
+    _GDB_REMOTE_PACKET_REGEX = re.compile(rb"^([\$%][^\#]*)#[0-9a-fA-F]{2}")
 
     class ChecksumMismatch(Exception):
         pass
 
-    def __init__(self, sock, proc = None):
+    def __init__(self, sock, proc=None):
         self._accumulated_output = b""
         self._receive_buffer = b""
         self._normal_queue = []
@@ -872,7 +870,7 @@ class Server(object):
         self.send_raw(b"+")
 
     def send_packet(self, packet):
-        self.send_raw(b'$%s#%02x'%(packet, self._checksum(packet)))
+        self.send_raw(b"$%s#%02x" % (packet, self._checksum(packet)))
 
     @staticmethod
     def _checksum(packet):
@@ -901,13 +899,13 @@ class Server(object):
                 self._normal_queue += [b"+"]
                 self._receive_buffer = self._receive_buffer[1:]
             else:
-                packet_match = self._GDB_REMOTE_PACKET_REGEX.match(
-                    self._receive_buffer)
+                packet_match = self._GDB_REMOTE_PACKET_REGEX.match(self._receive_buffer)
                 if packet_match:
                     # Our receive buffer matches a packet at the
                     # start of the receive buffer.
                     new_output_content = _handle_output_packet_string(
-                        packet_match.group(1))
+                        packet_match.group(1)
+                    )
                     if new_output_content:
                         # This was an $O packet with new content.
                         self._accumulated_output += new_output_content
@@ -919,7 +917,8 @@ class Server(object):
                     # Remove the parsed packet from the receive
                     # buffer.
                     self._receive_buffer = self._receive_buffer[
-                        len(packet_match.group(0)):]
+                        len(packet_match.group(0)) :
+                    ]
                 else:
                     # We don't have enough in the receive bufferto make a full
                     # packet. Stop trying until we read more.
@@ -941,7 +940,8 @@ class Server(object):
 
     def get_normal_packet(self):
         frame = self.get_raw_normal_packet()
-        if frame == b"+": return frame
+        if frame == b"+":
+            return frame
         return self._get_payload(frame)
 
     def get_accumulated_output(self):
@@ -953,12 +953,19 @@ class Server(object):
         return output
 
     def __str__(self):
-        return dedent("""\
+        return dedent(
+            """\
             server '{}' on '{}'
             _receive_buffer: {}
             _normal_queue: {}
             _output_queue: {}
             _accumulated_output: {}
-            """).format(self._proc, self._sock, self._receive_buffer,
-                    self._normal_queue, self._output_queue,
-                    self._accumulated_output)
+            """
+        ).format(
+            self._proc,
+            self._sock,
+            self._receive_buffer,
+            self._normal_queue,
+            self._output_queue,
+            self._accumulated_output,
+        )

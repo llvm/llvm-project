@@ -7,6 +7,6 @@ REQUIRES: system-linux
 
 RUN: %clang %cflags %S/Inputs/icf-jump-tables.c -g -o %t
 RUN: llvm-objcopy --only-keep-debug %t %t.debuginfo
-RUN: not llvm-bolt %t.debuginfo -o /dev/null 2>&1 | FileCheck %s
+RUN: not llvm-bolt %t.debuginfo -o %t.null 2>&1 | FileCheck %s
 
 CHECK: input binary is not a valid ELF executable

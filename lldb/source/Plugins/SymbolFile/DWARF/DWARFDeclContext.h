@@ -9,11 +9,15 @@
 #ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDECLCONTEXT_H
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDECLCONTEXT_H
 
-#include <string>
-#include <vector>
 #include "lldb/Utility/ConstString.h"
 #include "DWARFDefines.h"
 
+#include <cassert>
+#include <string>
+#include <vector>
+
+namespace lldb_private::plugin {
+namespace dwarf {
 // DWARFDeclContext
 //
 // A class that represents a declaration context all the way down to a
@@ -43,6 +47,10 @@ public:
 
   DWARFDeclContext() : m_entries() {}
 
+  DWARFDeclContext(llvm::ArrayRef<Entry> entries) {
+    llvm::append_range(m_entries, entries);
+  }
+
   void AppendDeclContext(dw_tag_t tag, const char *name) {
     m_entries.push_back(Entry(tag, name));
   }
@@ -53,12 +61,12 @@ public:
   uint32_t GetSize() const { return m_entries.size(); }
 
   Entry &operator[](uint32_t idx) {
-    // "idx" must be valid
+    assert(idx < m_entries.size() && "invalid index");
     return m_entries[idx];
   }
 
   const Entry &operator[](uint32_t idx) const {
-    // "idx" must be valid
+    assert(idx < m_entries.size() && "invalid index");
     return m_entries[idx];
   }
 
@@ -66,8 +74,8 @@ public:
 
   // Same as GetQualifiedName, but the life time of the returned string will
   // be that of the LLDB session.
-  lldb_private::ConstString GetQualifiedNameAsConstString() const {
-    return lldb_private::ConstString(GetQualifiedName());
+  ConstString GetQualifiedNameAsConstString() const {
+    return ConstString(GetQualifiedName());
   }
 
   void Clear() {
@@ -80,5 +88,7 @@ protected:
   collection m_entries;
   mutable std::string m_qualified_name;
 };
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDECLCONTEXT_H

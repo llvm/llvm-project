@@ -37,6 +37,44 @@ static_assert(sizeof(void *) != 8 ||
               "instances of it");
 
 std::vector<ConcatInputSection *> macho::inputSections;
+int macho::inputSectionsOrder = 0;
+
+// Call this function to add a new InputSection and have it routed to the
+// appropriate container. Depending on its type and current config, it will
+// either be added to 'inputSections' vector or to a synthetic section.
+void lld::macho::addInputSection(InputSection *inputSection) {
+  if (auto *isec = dyn_cast<ConcatInputSection>(inputSection)) {
+    if (isec->isCoalescedWeak())
+      return;
+    if (config->emitInitOffsets &&
+        sectionType(isec->getFlags()) == S_MOD_INIT_FUNC_POINTERS) {
+      in.initOffsets->addInput(isec);
+      return;
+    }
+    isec->outSecOff = inputSectionsOrder++;
+    auto *osec = ConcatOutputSection::getOrCreateForInput(isec);
+    isec->parent = osec;
+    inputSections.push_back(isec);
+  } else if (auto *isec = dyn_cast<CStringInputSection>(inputSection)) {
+    if (isec->getName() == section_names::objcMethname) {
+      if (in.objcMethnameSection->inputOrder == UnspecifiedInputOrder)
+        in.objcMethnameSection->inputOrder = inputSectionsOrder++;
+      in.objcMethnameSection->addInput(isec);
+    } else {
+      if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
+        in.cStringSection->inputOrder = inputSectionsOrder++;
+      in.cStringSection->addInput(isec);
+    }
+  } else if (auto *isec = dyn_cast<WordLiteralInputSection>(inputSection)) {
+    if (in.wordLiteralSection->inputOrder == UnspecifiedInputOrder)
+      in.wordLiteralSection->inputOrder = inputSectionsOrder++;
+    in.wordLiteralSection->addInput(isec);
+  } else {
+    llvm_unreachable("unexpected input section kind");
+  }
+
+  assert(inputSectionsOrder <= UnspecifiedInputOrder);
+}
 
 uint64_t InputSection::getFileSize() const {
   return isZeroFill(getFlags()) ? 0 : getSize();
@@ -135,6 +173,14 @@ std::string InputSection::getSourceLocation(uint64_t off) const {
   return {};
 }
 
+const Reloc *InputSection::getRelocAt(uint32_t off) const {
+  auto it = llvm::find_if(
+      relocs, [=](const macho::Reloc &r) { return r.offset == off; });
+  if (it == relocs.end())
+    return nullptr;
+  return &*it;
+}
+
 void ConcatInputSection::foldIdentical(ConcatInputSection *copy) {
   align = std::max(align, copy->align);
   copy->live = false;
@@ -189,7 +235,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
           !referentSym->isInGot())
         target->relaxGotLoad(loc, r.type);
       // For dtrace symbols, do not handle them as normal undefined symbols
-      if (referentSym->getName().startswith("___dtrace_")) {
+      if (referentSym->getName().starts_with("___dtrace_")) {
         // Change dtrace call site to pre-defined instructions
         target->handleDtraceReloc(referentSym, r, loc);
         continue;
@@ -238,7 +284,7 @@ void CStringInputSection::splitIntoPieces() {
     size_t end = s.find(0);
     if (end == StringRef::npos)
       fatal(getLocation(off) + ": string is not null terminated");
-    uint32_t hash = deduplicateLiterals ? xxHash64(s.take_front(end)) : 0;
+    uint32_t hash = deduplicateLiterals ? xxh3_64bits(s.take_front(end)) : 0;
     pieces.emplace_back(off, hash);
     size_t size = end + 1; // include null terminator
     s = s.substr(size);
@@ -257,6 +303,15 @@ StringPiece &CStringInputSection::getStringPiece(uint64_t off) {
 
 const StringPiece &CStringInputSection::getStringPiece(uint64_t off) const {
   return const_cast<CStringInputSection *>(this)->getStringPiece(off);
+}
+
+size_t CStringInputSection::getStringPieceIndex(uint64_t off) const {
+  if (off >= data.size())
+    fatal(toString(this) + ": offset is outside the section");
+
+  auto it =
+      partition_point(pieces, [=](StringPiece p) { return p.inSecOff <= off; });
+  return std::distance(pieces.begin(), it) - 1;
 }
 
 uint64_t CStringInputSection::getOffset(uint64_t off) const {

@@ -26,7 +26,7 @@ class RuntimeArrayType;
 class StructType;
 } // namespace spirv
 
-/// According to the Vulkan spec "14.5.4. Offset and Stride Assignment":
+/// According to the Vulkan spec "15.6.4. Offset and Stride Assignment":
 /// "There are different alignment requirements depending on the specific
 /// resources and on the features enabled on the device."
 ///

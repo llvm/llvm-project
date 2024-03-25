@@ -59,8 +59,7 @@ define <8 x i32> @strict_vector_fptoui_v8f16_to_v8i32(<8 x half> %a) #0 {
 define <16 x i16> @strict_vector_fptosi_v16f16_to_v16i16(<16 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptosi_v16f16_to_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvttph2dq %ymm0, %zmm0
-; CHECK-NEXT:    vpmovdw %zmm0, %ymm0
+; CHECK-NEXT:    vcvttph2w %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <16 x i16> @llvm.experimental.constrained.fptosi.v16i16.v16f16(<16 x half> %a,
                                               metadata !"fpexcept.strict") #0
@@ -70,8 +69,7 @@ define <16 x i16> @strict_vector_fptosi_v16f16_to_v16i16(<16 x half> %a) #0 {
 define <16 x i16> @strict_vector_fptoui_v16f16_to_v16i16(<16 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptoui_v16f16_to_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvttph2dq %ymm0, %zmm0
-; CHECK-NEXT:    vpmovdw %zmm0, %ymm0
+; CHECK-NEXT:    vcvttph2uw %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <16 x i16> @llvm.experimental.constrained.fptoui.v16i16.v16f16(<16 x half> %a,
                                               metadata !"fpexcept.strict") #0

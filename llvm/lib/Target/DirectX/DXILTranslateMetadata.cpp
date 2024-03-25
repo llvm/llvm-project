@@ -14,11 +14,11 @@
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -53,8 +53,8 @@ bool DXILTranslateMetadata::runOnModule(Module &M) {
       getAnalysis<DXILResourceWrapper>().getDXILResource();
   Res.write(M);
 
-  const uint64_t Flags =
-      (uint64_t)(getAnalysis<ShaderFlagsAnalysisWrapper>().getShaderFlags());
+  const uint64_t Flags = static_cast<uint64_t>(
+      getAnalysis<ShaderFlagsAnalysisWrapper>().getShaderFlags());
   dxil::createEntryMD(M, Flags);
 
   return false;

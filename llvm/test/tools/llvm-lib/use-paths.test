@@ -13,12 +13,12 @@ RUN: llvm-lib -out:foo.lib foo/a.obj foo/b.obj
 RUN: llvm-ar t foo.lib | FileCheck %s
 
 FIXME: We should probably use backslashes on Windows to better match MSVC tools.
-CHECK: foo/a.obj
 CHECK: foo/b.obj
+CHECK: foo/a.obj
 
 Do it again with absolute paths and see that we get something.
 RUN: llvm-lib -out:foo.lib %t/foo/a.obj %t/foo/b.obj
 RUN: llvm-ar t foo.lib | FileCheck %s --check-prefix=ABS
 
-ABS: {{.*}}/foo/a.obj
 ABS: {{.*}}/foo/b.obj
+ABS: {{.*}}/foo/a.obj

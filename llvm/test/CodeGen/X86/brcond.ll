@@ -9,10 +9,8 @@ define i32 @test1(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    xorb {{[0-9]+}}(%esp), %al
 ; CHECK-NEXT:    testb $64, %al
-; CHECK-NEXT:    je LBB0_1
-; CHECK-NEXT:  ## %bb.2: ## %bb1
-; CHECK-NEXT:    jmp _bar ## TAILCALL
-; CHECK-NEXT:  LBB0_1: ## %bb
+; CHECK-NEXT:    jne _bar ## TAILCALL
+; CHECK-NEXT:  ## %bb.1: ## %bb
 ; CHECK-NEXT:    jmp _foo ## TAILCALL
 entry:
   %0 = and i32 %a, 16384

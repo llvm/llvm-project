@@ -7,20 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/architectures.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "src/sys/utsname/uname.h"
-#include "test/ErrnoSetterMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
+#include "test/UnitTest/Test.h"
 
 #include <errno.h>
 #include <sys/utsname.h>
 
 TEST(LlvmLibcUnameTest, GetMachineName) {
   struct utsname names;
-  ASSERT_GE(__llvm_libc::uname(&names), 0);
-#ifdef LLVM_LIBC_ARCH_X86_64
+  ASSERT_GE(LIBC_NAMESPACE::uname(&names), 0);
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
   ASSERT_STREQ(names.machine, "x86_64");
-#elif defined(LLVM_LIBC_ARCH_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
   ASSERT_STREQ(names.machine, "aarch64");
 #endif
 }

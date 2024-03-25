@@ -25,6 +25,7 @@ class AMDGPU final : public TargetInfo {
 private:
   uint32_t calcEFlagsV3() const;
   uint32_t calcEFlagsV4() const;
+  uint32_t calcEFlagsV6() const;
 
 public:
   AMDGPU();
@@ -34,6 +35,7 @@ public:
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
+  int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
 };
 } // namespace
 
@@ -105,6 +107,24 @@ uint32_t AMDGPU::calcEFlagsV4() const {
   return retMach | retXnack | retSramEcc;
 }
 
+uint32_t AMDGPU::calcEFlagsV6() const {
+  uint32_t flags = calcEFlagsV4();
+
+  uint32_t genericVersion =
+      getEFlags(ctx.objectFiles[0]) & EF_AMDGPU_GENERIC_VERSION;
+
+  // Verify that all input files have compatible generic version.
+  for (InputFile *f : ArrayRef(ctx.objectFiles).slice(1)) {
+    if (genericVersion != (getEFlags(f) & EF_AMDGPU_GENERIC_VERSION)) {
+      error("incompatible generic version: " + toString(f));
+      return 0;
+    }
+  }
+
+  flags |= genericVersion;
+  return flags;
+}
+
 uint32_t AMDGPU::calcEFlags() const {
   if (ctx.objectFiles.empty())
     return 0;
@@ -120,6 +140,8 @@ uint32_t AMDGPU::calcEFlags() const {
   case ELFABIVERSION_AMDGPU_HSA_V4:
   case ELFABIVERSION_AMDGPU_HSA_V5:
     return calcEFlagsV4();
+  case ELFABIVERSION_AMDGPU_HSA_V6:
+    return calcEFlagsV6();
   default:
     error("unknown abi version: " + Twine(abiVersion));
     return 0;
@@ -181,6 +203,20 @@ RelType AMDGPU::getDynRel(RelType type) const {
   if (type == R_AMDGPU_ABS64)
     return type;
   return R_AMDGPU_NONE;
+}
+
+int64_t AMDGPU::getImplicitAddend(const uint8_t *buf, RelType type) const {
+  switch (type) {
+  case R_AMDGPU_NONE:
+    return 0;
+  case R_AMDGPU_ABS64:
+  case R_AMDGPU_RELATIVE64:
+    return read64(buf);
+  default:
+    internalLinkerError(getErrorLocation(buf),
+                        "cannot read addend for relocation " + toString(type));
+    return 0;
+  }
 }
 
 TargetInfo *elf::getAMDGPUTargetInfo() {

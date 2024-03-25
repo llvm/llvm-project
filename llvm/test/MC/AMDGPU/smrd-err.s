@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=tahiti %s | FileCheck -check-prefix=SI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=NOVI --implicit-check-not=error: %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=tahiti %s | FileCheck -check-prefix=SI %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=NOVI --implicit-check-not=error: %s
 
 s_load_dwordx4 s[100:103], s[2:3], s4
 // NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU

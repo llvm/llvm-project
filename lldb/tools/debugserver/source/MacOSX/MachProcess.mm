@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <chrono>
 #include <map>
+#include <unordered_set>
 
 #include <TargetConditionals.h>
 #import <Foundation/Foundation.h>
@@ -69,6 +70,14 @@
 
 #ifndef PLATFORM_DRIVERKIT
 #define PLATFORM_DRIVERKIT 10
+#endif
+
+#ifndef PLATFORM_XROS
+#define PLATFORM_XROS 11
+#endif
+
+#ifndef PLATFORM_XR_SIMULATOR
+#define PLATFORM_XR_SIMULATOR 12
 #endif
 
 #ifdef WITH_SPRINGBOARD
@@ -463,6 +472,8 @@ FBSCreateOptionsDictionary(const char *app_bundle_path,
   // And there are some other options at the top level in this dictionary:
   [options setObject:[NSNumber numberWithBool:YES]
               forKey:FBSOpenApplicationOptionKeyUnlockDevice];
+  [options setObject:[NSNumber numberWithBool:YES]
+              forKey:FBSOpenApplicationOptionKeyPromptUnlockDevice];
 
   // We have to get the "sequence ID & UUID" for this app bundle path and send
   // them to FBS:
@@ -745,6 +756,10 @@ MachProcess::GetPlatformString(unsigned char platform) {
     return "bridgeos";
   case PLATFORM_DRIVERKIT:
     return "driverkit";
+  case PLATFORM_XROS:
+    return "xros";
+  case PLATFORM_XR_SIMULATOR:
+    return "xrossimulator";
   default:
     DNBLogError("Unknown platform %u found for one binary", platform);
     return std::nullopt;
@@ -912,21 +927,33 @@ bool MachProcess::GetMachOInformationFromMemory(
 // create a JSONGenerator object
 // with all the details we want to send to lldb.
 JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
-    const std::vector<struct binary_image_information> &image_infos) {
+    const std::vector<struct binary_image_information> &image_infos,
+    bool report_load_commands) {
 
   JSONGenerator::ArraySP image_infos_array_sp(new JSONGenerator::Array());
 
   const size_t image_count = image_infos.size();
 
   for (size_t i = 0; i < image_count; i++) {
-    if (!image_infos[i].is_valid_mach_header)
+    // If we should report the Mach-O header and load commands,
+    // and those were unreadable, don't report anything about this
+    // binary.
+    if (report_load_commands && !image_infos[i].is_valid_mach_header)
       continue;
     JSONGenerator::DictionarySP image_info_dict_sp(
         new JSONGenerator::Dictionary());
     image_info_dict_sp->AddIntegerItem("load_address",
                                        image_infos[i].load_address);
-    image_info_dict_sp->AddIntegerItem("mod_date", image_infos[i].mod_date);
+    // TODO: lldb currently rejects a response without this, but it
+    // is always zero from dyld.  It can be removed once we've had time
+    // for lldb's that require it to be present are obsolete.
+    image_info_dict_sp->AddIntegerItem("mod_date", 0);
     image_info_dict_sp->AddStringItem("pathname", image_infos[i].filename);
+
+    if (!report_load_commands) {
+      image_infos_array_sp->AddItem(image_info_dict_sp);
+      continue;
+    }
 
     uuid_string_t uuidstr;
     uuid_unparse_upper(image_infos[i].macho_info.uuid, uuidstr);
@@ -1000,109 +1027,6 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
   return reply_sp;
 }
 
-// Get the shared library information using the old (pre-macOS 10.12, pre-iOS
-// 10, pre-tvOS 10, pre-watchOS 3)
-// code path.  We'll be given the address of an array of structures in the form
-// {void* load_addr, void* mod_date, void* pathname}
-//
-// In macOS 10.12 etc and newer, we'll use SPI calls into dyld to gather this
-// information.
-JSONGenerator::ObjectSP MachProcess::GetLoadedDynamicLibrariesInfos(
-    nub_process_t pid, nub_addr_t image_list_address, nub_addr_t image_count) {
-
-  JSONGenerator::ObjectSP empty_reply_sp(new JSONGenerator::Dictionary());
-  int pointer_size = GetInferiorAddrSize(pid);
-
-  std::vector<struct binary_image_information> image_infos;
-  size_t image_infos_size = image_count * 3 * pointer_size;
-
-  uint8_t *image_info_buf = (uint8_t *)malloc(image_infos_size);
-  if (image_info_buf == NULL) {
-    return empty_reply_sp;
-  }
-  if (ReadMemory(image_list_address, image_infos_size, image_info_buf) !=
-      image_infos_size) {
-    return empty_reply_sp;
-  }
-
-  /// First the image_infos array with (load addr, pathname, mod date)
-  /// tuples
-
-  for (size_t i = 0; i < image_count; i++) {
-    struct binary_image_information info;
-    nub_addr_t pathname_address;
-    if (pointer_size == 4) {
-      uint32_t load_address_32;
-      uint32_t pathname_address_32;
-      uint32_t mod_date_32;
-      ::memcpy(&load_address_32, image_info_buf + (i * 3 * pointer_size), 4);
-      ::memcpy(&pathname_address_32,
-               image_info_buf + (i * 3 * pointer_size) + pointer_size, 4);
-      ::memcpy(&mod_date_32,
-               image_info_buf + (i * 3 * pointer_size) + pointer_size +
-                   pointer_size,
-               4);
-      info.load_address = load_address_32;
-      info.mod_date = mod_date_32;
-      pathname_address = pathname_address_32;
-    } else {
-      uint64_t load_address_64;
-      uint64_t pathname_address_64;
-      uint64_t mod_date_64;
-      ::memcpy(&load_address_64, image_info_buf + (i * 3 * pointer_size), 8);
-      ::memcpy(&pathname_address_64,
-               image_info_buf + (i * 3 * pointer_size) + pointer_size, 8);
-      ::memcpy(&mod_date_64,
-               image_info_buf + (i * 3 * pointer_size) + pointer_size +
-                   pointer_size,
-               8);
-      info.load_address = load_address_64;
-      info.mod_date = mod_date_64;
-      pathname_address = pathname_address_64;
-    }
-    char strbuf[17];
-    info.filename = "";
-    uint64_t pathname_ptr = pathname_address;
-    bool still_reading = true;
-    while (still_reading && ReadMemory(pathname_ptr, sizeof(strbuf) - 1,
-                                       strbuf) == sizeof(strbuf) - 1) {
-      strbuf[sizeof(strbuf) - 1] = '\0';
-      info.filename += strbuf;
-      pathname_ptr += sizeof(strbuf) - 1;
-      // Stop if we found nul byte indicating the end of the string
-      for (size_t i = 0; i < sizeof(strbuf) - 1; i++) {
-        if (strbuf[i] == '\0') {
-          still_reading = false;
-          break;
-        }
-      }
-    }
-    uuid_clear(info.macho_info.uuid);
-    image_infos.push_back(info);
-  }
-  if (image_infos.size() == 0) {
-    return empty_reply_sp;
-  }
-
-  free(image_info_buf);
-
-  ///  Second, read the mach header / load commands for all the dylibs
-
-  for (size_t i = 0; i < image_count; i++) {
-    // The SPI to provide platform is not available on older systems.
-    uint32_t platform = 0;
-    if (GetMachOInformationFromMemory(platform, image_infos[i].load_address,
-                                      pointer_size,
-                                      image_infos[i].macho_info)) {
-      image_infos[i].is_valid_mach_header = true;
-    }
-  }
-
-  ///  Third, format all of the above in the JSONGenerator object.
-
-  return FormatDynamicLibrariesIntoJSON(image_infos);
-}
-
 /// From dyld SPI header dyld_process_info.h
 typedef void *dyld_process_info;
 struct dyld_process_cache_info {
@@ -1144,9 +1068,16 @@ void MachProcess::GetAllLoadedBinariesViaDYLDSPI(
     dyld_process_info info =
         m_dyld_process_info_create(m_task.TaskPort(), 0, &kern_ret);
     if (info) {
+      // There's a bug in the interaction between dyld and older dyld_sim's
+      // (e.g. from the iOS 15 simulator) that causes dyld to report the same
+      // binary twice.  We use this set to eliminate the duplicates.
+      __block std::unordered_set<uint64_t> seen_header_addrs;
       m_dyld_process_info_for_each_image(
           info,
           ^(uint64_t mach_header_addr, const uuid_t uuid, const char *path) {
+            auto res_pair = seen_header_addrs.insert(mach_header_addr);
+            if (!res_pair.second)
+              return;
             struct binary_image_information image;
             image.filename = path;
             uuid_copy(image.macho_info.uuid, uuid);
@@ -1162,21 +1093,41 @@ void MachProcess::GetAllLoadedBinariesViaDYLDSPI(
 // in
 // macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer.
 JSONGenerator::ObjectSP
-MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid) {
+MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid,
+                                        bool report_load_commands) {
 
   int pointer_size = GetInferiorAddrSize(pid);
   std::vector<struct binary_image_information> image_infos;
   GetAllLoadedBinariesViaDYLDSPI(image_infos);
-  uint32_t platform = GetPlatform();
-  const size_t image_count = image_infos.size();
-  for (size_t i = 0; i < image_count; i++) {
-    if (GetMachOInformationFromMemory(platform, image_infos[i].load_address,
-                                      pointer_size,
-                                      image_infos[i].macho_info)) {
-      image_infos[i].is_valid_mach_header = true;
+  if (report_load_commands) {
+    uint32_t platform = GetPlatform();
+    const size_t image_count = image_infos.size();
+    for (size_t i = 0; i < image_count; i++) {
+      if (GetMachOInformationFromMemory(platform, image_infos[i].load_address,
+                                        pointer_size,
+                                        image_infos[i].macho_info)) {
+        image_infos[i].is_valid_mach_header = true;
+      }
     }
   }
-    return FormatDynamicLibrariesIntoJSON(image_infos);
+  return FormatDynamicLibrariesIntoJSON(image_infos, report_load_commands);
+}
+
+std::optional<std::pair<cpu_type_t, cpu_subtype_t>>
+MachProcess::GetMainBinaryCPUTypes(nub_process_t pid) {
+  int pointer_size = GetInferiorAddrSize(pid);
+  std::vector<struct binary_image_information> image_infos;
+  GetAllLoadedBinariesViaDYLDSPI(image_infos);
+  uint32_t platform = GetPlatform();
+  for (auto &image_info : image_infos)
+    if (GetMachOInformationFromMemory(platform, image_info.load_address,
+                                      pointer_size, image_info.macho_info))
+      if (image_info.macho_info.mach_header.filetype == MH_EXECUTE)
+        return {
+            {static_cast<cpu_type_t>(image_info.macho_info.mach_header.cputype),
+             static_cast<cpu_subtype_t>(
+                 image_info.macho_info.mach_header.cpusubtype)}};
+  return {};
 }
 
 // Fetch information about the shared libraries at the given load addresses
@@ -1226,7 +1177,8 @@ JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
         image_infos[i].is_valid_mach_header = true;
       }
     }
-    return FormatDynamicLibrariesIntoJSON(image_infos);
+    return FormatDynamicLibrariesIntoJSON(image_infos,
+                                          /* report_load_commands =  */ true);
 }
 
 // From dyld's internal podyld_process_info.h:
@@ -1277,6 +1229,8 @@ bool MachProcess::GetThreadStoppedReason(nub_thread_t tid,
   if (m_thread_list.GetThreadStoppedReason(tid, stop_info)) {
     if (m_did_exec)
       stop_info->reason = eStopTypeExec;
+    if (stop_info->reason == eStopTypeWatchpoint)
+      RefineWatchpointStopInfo(tid, stop_info);
     return true;
   }
   return false;
@@ -1418,6 +1372,135 @@ void MachProcess::StopProfileThread() {
   pthread_join(m_profile_thread, NULL);
   m_profile_thread = NULL;
   m_profile_events.ResetEvents(eMachProcessProfileCancel);
+}
+
+/// return 1 if bit position \a bit is set in \a value
+static uint32_t bit(uint32_t value, uint32_t bit) {
+  return (value >> bit) & 1u;
+}
+
+// return the bitfield "value[msbit:lsbit]".
+static uint64_t bits(uint64_t value, uint32_t msbit, uint32_t lsbit) {
+  assert(msbit >= lsbit);
+  uint64_t shift_left = sizeof(value) * 8 - 1 - msbit;
+  value <<=
+      shift_left; // shift anything above the msbit off of the unsigned edge
+  value >>= shift_left + lsbit; // shift it back again down to the lsbit
+                                // (including undoing any shift from above)
+  return value;                 // return our result
+}
+
+void MachProcess::RefineWatchpointStopInfo(
+    nub_thread_t tid, struct DNBThreadStopInfo *stop_info) {
+  const DNBBreakpoint *wp = m_watchpoints.FindNearestWatchpoint(
+      stop_info->details.watchpoint.mach_exception_addr);
+  if (wp) {
+    stop_info->details.watchpoint.addr = wp->Address();
+    stop_info->details.watchpoint.hw_idx = wp->GetHardwareIndex();
+    DNBLogThreadedIf(LOG_WATCHPOINTS,
+                     "MachProcess::RefineWatchpointStopInfo "
+                     "mach exception addr 0x%llx moved in to nearest "
+                     "watchpoint, 0x%llx-0x%llx",
+                     stop_info->details.watchpoint.mach_exception_addr,
+                     wp->Address(), wp->Address() + wp->ByteSize() - 1);
+  } else {
+    stop_info->details.watchpoint.addr =
+        stop_info->details.watchpoint.mach_exception_addr;
+  }
+
+  stop_info->details.watchpoint.esr_fields_set = false;
+  std::optional<uint64_t> esr, far;
+  nub_size_t num_reg_sets = 0;
+  const DNBRegisterSetInfo *reg_sets = GetRegisterSetInfo(tid, &num_reg_sets);
+  for (nub_size_t set = 0; set < num_reg_sets; set++) {
+    if (reg_sets[set].registers == NULL)
+      continue;
+    for (uint32_t reg = 0; reg < reg_sets[set].num_registers; ++reg) {
+      if (strcmp(reg_sets[set].registers[reg].name, "esr") == 0) {
+        DNBRegisterValue reg_value;
+        if (GetRegisterValue(tid, set, reg, &reg_value)) {
+          esr = reg_value.value.uint64;
+        }
+      }
+      if (strcmp(reg_sets[set].registers[reg].name, "far") == 0) {
+        DNBRegisterValue reg_value;
+        if (GetRegisterValue(tid, set, reg, &reg_value)) {
+          far = reg_value.value.uint64;
+        }
+      }
+    }
+  }
+
+  if (esr && far) {
+    if (*far != stop_info->details.watchpoint.mach_exception_addr) {
+      // AFAIK the kernel is going to put the FAR value in the mach
+      // exception, if they don't match, it's interesting enough to log it.
+      DNBLogThreadedIf(LOG_WATCHPOINTS,
+                       "MachProcess::RefineWatchpointStopInfo mach exception "
+                       "addr 0x%llx but FAR register has value 0x%llx",
+                       stop_info->details.watchpoint.mach_exception_addr, *far);
+    }
+    uint32_t exception_class = bits(*esr, 31, 26);
+
+    // "Watchpoint exception from a lower Exception level"
+    if (exception_class == 0b110100) {
+      stop_info->details.watchpoint.esr_fields_set = true;
+      // Documented in the ARM ARM A-Profile Dec 2022 edition
+      // Section D17.2 ("General system control registers"),
+      // Section D17.2.37 "ESR_EL1, Exception Syndrome Register (EL1)",
+      // "Field Descriptions"
+      // "ISS encoding for an exception from a Watchpoint exception"
+      uint32_t iss = bits(*esr, 23, 0);
+      stop_info->details.watchpoint.esr_fields.iss = iss;
+      stop_info->details.watchpoint.esr_fields.wpt =
+          bits(iss, 23, 18); // Watchpoint number
+      stop_info->details.watchpoint.esr_fields.wptv =
+          bit(iss, 17); // Watchpoint number Valid
+      stop_info->details.watchpoint.esr_fields.wpf =
+          bit(iss, 16); // Watchpoint might be false-positive
+      stop_info->details.watchpoint.esr_fields.fnp =
+          bit(iss, 15); // FAR not Precise
+      stop_info->details.watchpoint.esr_fields.vncr =
+          bit(iss, 13); // watchpoint from use of VNCR_EL2 reg by EL1
+      stop_info->details.watchpoint.esr_fields.fnv =
+          bit(iss, 10); // FAR not Valid
+      stop_info->details.watchpoint.esr_fields.cm =
+          bit(iss, 6); // Cache maintenance
+      stop_info->details.watchpoint.esr_fields.wnr =
+          bit(iss, 6); // Write not Read
+      stop_info->details.watchpoint.esr_fields.dfsc =
+          bits(iss, 5, 0); // Data Fault Status Code
+
+      DNBLogThreadedIf(LOG_WATCHPOINTS,
+                       "ESR watchpoint fields parsed: "
+                       "iss = 0x%x, wpt = %u, wptv = %d, wpf = %d, fnp = %d, "
+                       "vncr = %d, fnv = %d, cm = %d, wnr = %d, dfsc = 0x%x",
+                       stop_info->details.watchpoint.esr_fields.iss,
+                       stop_info->details.watchpoint.esr_fields.wpt,
+                       stop_info->details.watchpoint.esr_fields.wptv,
+                       stop_info->details.watchpoint.esr_fields.wpf,
+                       stop_info->details.watchpoint.esr_fields.fnp,
+                       stop_info->details.watchpoint.esr_fields.vncr,
+                       stop_info->details.watchpoint.esr_fields.fnv,
+                       stop_info->details.watchpoint.esr_fields.cm,
+                       stop_info->details.watchpoint.esr_fields.wnr,
+                       stop_info->details.watchpoint.esr_fields.dfsc);
+
+      if (stop_info->details.watchpoint.esr_fields.wptv) {
+        DNBLogThreadedIf(LOG_WATCHPOINTS,
+                         "Watchpoint Valid field true, "
+                         "finding startaddr of watchpoint %d",
+                         stop_info->details.watchpoint.esr_fields.wpt);
+        stop_info->details.watchpoint.hw_idx =
+            stop_info->details.watchpoint.esr_fields.wpt;
+        const DNBBreakpoint *wp = m_watchpoints.FindByHardwareIndex(
+            stop_info->details.watchpoint.esr_fields.wpt);
+        if (wp) {
+          stop_info->details.watchpoint.addr = wp->Address();
+        }
+      }
+    }
+  }
 }
 
 bool MachProcess::StartProfileThread() {
@@ -2777,16 +2860,21 @@ pid_t MachProcess::AttachForDebug(
           "attach to pid %d",
           getpid(), pid);
 
-      struct kinfo_proc kinfo;
-      int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
-      size_t len = sizeof(struct kinfo_proc);
-      if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), &kinfo, &len, NULL, 0) == 0 && len > 0) {
-        if (kinfo.kp_proc.p_flag & P_TRACED) {
-          ::snprintf(err_str, err_len, "%s - process %d is already being debugged", err.AsString(), pid);
+      if (ProcessIsBeingDebugged(pid)) {
+        nub_process_t ppid = GetParentProcessID(pid);
+        if (ppid == getpid()) {
+          snprintf(err_str, err_len,
+                   "%s - Failed to attach to pid %d, AttachForDebug() "
+                   "unable to ptrace(PT_ATTACHEXC)",
+                   err.AsString(), m_pid);
+        } else {
+          snprintf(err_str, err_len,
+                   "%s - process %d is already being debugged by pid %d",
+                   err.AsString(), pid, ppid);
           DNBLogError(
               "[LaunchAttach] (%d) MachProcess::AttachForDebug pid %d is "
-              "already being debugged",
-              getpid(), pid);
+              "already being debugged by pid %d",
+              getpid(), pid, ppid);
         }
       }
     }
@@ -2833,6 +2921,26 @@ std::string MachProcess::GetMacCatalystVersionString() {
       return version_str;
   }
   return {};
+}
+
+nub_process_t MachProcess::GetParentProcessID(nub_process_t child_pid) {
+  struct proc_bsdshortinfo proc;
+  if (proc_pidinfo(child_pid, PROC_PIDT_SHORTBSDINFO, 0, &proc,
+                   PROC_PIDT_SHORTBSDINFO_SIZE) == sizeof(proc)) {
+    return proc.pbsi_ppid;
+  }
+  return INVALID_NUB_PROCESS;
+}
+
+bool MachProcess::ProcessIsBeingDebugged(nub_process_t pid) {
+  struct kinfo_proc kinfo;
+  int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
+  size_t len = sizeof(struct kinfo_proc);
+  if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), &kinfo, &len, NULL, 0) == 0 &&
+      (kinfo.kp_proc.p_flag & P_TRACED))
+    return true;
+  else
+    return false;
 }
 
 #if defined(WITH_SPRINGBOARD) || defined(WITH_BKS) || defined(WITH_FBS)
@@ -3267,7 +3375,7 @@ pid_t MachProcess::LaunchForDebug(
         return m_pid; // A successful SBLaunchForDebug() returns and assigns a
                       // non-zero m_pid.
     }
-    DNBLog("Failed to launch '%s' with FBS", app_bundle_path);
+    DNBLog("Failed to launch '%s' with FBS", app_bundle_path.c_str());
   } break;
 #endif
 #ifdef WITH_BKS
@@ -3281,7 +3389,7 @@ pid_t MachProcess::LaunchForDebug(
         return m_pid; // A successful SBLaunchForDebug() returns and assigns a
                       // non-zero m_pid.
     }
-    DNBLog("Failed to launch '%s' with BKS", app_bundle_path);
+    DNBLog("Failed to launch '%s' with BKS", app_bundle_path.c_str());
   } break;
 #endif
 #ifdef WITH_SPRINGBOARD
@@ -3293,7 +3401,7 @@ pid_t MachProcess::LaunchForDebug(
         return m_pid; // A successful SBLaunchForDebug() returns and assigns a
                       // non-zero m_pid.
     }
-    DNBLog("Failed to launch '%s' with SpringBoard", app_bundle_path);
+    DNBLog("Failed to launch '%s' with SpringBoard", app_bundle_path.c_str());
   } break;
 
 #endif
@@ -3357,7 +3465,13 @@ pid_t MachProcess::LaunchForDebug(
                                       "%d (err = %i, errno = %i (%s))",
                          m_pid, err, ptrace_err.Status(),
                          ptrace_err.AsString());
-        launch_err.SetError(NUB_GENERIC_ERROR, DNBError::Generic);
+        char err_msg[PATH_MAX];
+
+        snprintf(err_msg, sizeof(err_msg),
+                 "Failed to attach to pid %d, LaunchForDebug() unable to "
+                 "ptrace(PT_ATTACHEXC)",
+                 m_pid);
+        launch_err.SetErrorString(err_msg);
       }
     } else {
       launch_err.Clear();
@@ -3733,6 +3847,10 @@ pid_t MachProcess::SBLaunchForDebug(const char *path, char const *argv[],
       m_flags |= eMachProcessFlagsAttached;
       DNBLogThreadedIf(LOG_PROCESS, "successfully attached to pid %d", m_pid);
     } else {
+      launch_err.SetErrorString(
+          "Failed to attach to pid %d, SBLaunchForDebug() unable to "
+          "ptrace(PT_ATTACHEXC)",
+          m_pid);
       SetState(eStateExited);
       DNBLogThreadedIf(LOG_PROCESS, "error: failed to attach to pid %d", m_pid);
     }
@@ -3952,6 +4070,10 @@ pid_t MachProcess::BoardServiceLaunchForDebug(
       m_flags |= eMachProcessFlagsAttached;
       DNBLog("[LaunchAttach] successfully attached to pid %d", m_pid);
     } else {
+      launch_err.SetErrorString(
+          "Failed to attach to pid %d, BoardServiceLaunchForDebug() unable to "
+          "ptrace(PT_ATTACHEXC)",
+          m_pid);
       SetState(eStateExited);
       DNBLog("[LaunchAttach] END (%d) error: failed to attach to pid %d",
              getpid(), m_pid);

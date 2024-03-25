@@ -1,4 +1,4 @@
-; RUN: opt -opaque-pointers=0 %loadPolly -polly-stmt-granularity=bb -polly-parallel -polly-delicm -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-parallel -polly-delicm -polly-codegen -S < %s | FileCheck %s
 ;
 ; Verify that -polly-parallel can handle mapped scalar MemoryAccesses.
 ;
@@ -7,23 +7,21 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; Function Attrs: nounwind uwtable
 define void @main() local_unnamed_addr #0 {
 entry:
-  %0 = load i8*, i8** undef, align 8, !tbaa !1
-  %1 = load i8*, i8** undef, align 8, !tbaa !1
-  %arraydecay16 = bitcast i8* %1 to double*
-  %arraydecay20 = bitcast i8* %0 to [4000 x double]*
+  %0 = load ptr, ptr undef, align 8, !tbaa !1
+  %1 = load ptr, ptr undef, align 8, !tbaa !1
   br label %for.body65.i226
 
 for.body65.i226:                                  ; preds = %for.inc85.i238, %entry
   %indvars.iv8.i223 = phi i64 [ 0, %entry ], [ %indvars.iv.next9.i236, %for.inc85.i238 ]
-  %arrayidx70.i224 = getelementptr inbounds double, double* %arraydecay16, i64 %indvars.iv8.i223
+  %arrayidx70.i224 = getelementptr inbounds double, ptr %1, i64 %indvars.iv8.i223
   br label %for.body68.i235
 
 for.body68.i235:                                  ; preds = %for.body68.i235, %for.body65.i226
   %2 = phi double [ undef, %for.body65.i226 ], [ undef, %for.body68.i235 ]
   %indvars.iv.i227 = phi i64 [ 0, %for.body65.i226 ], [ %indvars.iv.next.i233, %for.body68.i235 ]
-  %arrayidx74.i228 = getelementptr inbounds [4000 x double], [4000 x double]* %arraydecay20, i64 %indvars.iv8.i223, i64 %indvars.iv.i227
-  %3 = load double, double* %arrayidx74.i228, align 8, !tbaa !5
-  store double undef, double* %arrayidx70.i224, align 8, !tbaa !5
+  %arrayidx74.i228 = getelementptr inbounds [4000 x double], ptr %0, i64 %indvars.iv8.i223, i64 %indvars.iv.i227
+  %3 = load double, ptr %arrayidx74.i228, align 8, !tbaa !5
+  store double undef, ptr %arrayidx70.i224, align 8, !tbaa !5
   %indvars.iv.next.i233 = add nuw nsw i64 %indvars.iv.i227, 1
   %exitcond.i234 = icmp eq i64 %indvars.iv.next.i233, 4000
   br i1 %exitcond.i234, label %for.inc85.i238, label %for.body68.i235
@@ -50,9 +48,8 @@ attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="fals
 !6 = !{!"double", !3, i64 0}
 
 
-; CHECK-LABEL: define internal void @main_polly_subfn(i8* %polly.par.userContext)
+; CHECK-LABEL: define internal void @main_polly_subfn(ptr %polly.par.userContext)
 ;
 ; CHECK:       polly.stmt.for.body65.i226:
-; CHECK-NEXT:    %polly.access.cast.polly.subfunc.arg.[[R0:[0-9]*]] = bitcast i8* %polly.subfunc.arg.{{[0-9]*}} to double*
-; CHECK-NEXT:    %polly.access.polly.subfunc.arg.[[R1:[0-9]*]] = getelementptr double, double* %polly.access.cast.polly.subfunc.arg.[[R0]], i64 %polly.indvar
-; CHECK-NEXT:    store double undef, double* %polly.access.polly.subfunc.arg.[[R1]]
+; CHECK-NEXT:    %polly.access.polly.subfunc.arg.[[R1:[0-9]*]] = getelementptr double, ptr %polly.subfunc.arg.[[R0:[0-9]*]], i64 %polly.indvar
+; CHECK-NEXT:    store double undef, ptr %polly.access.polly.subfunc.arg.[[R1]]

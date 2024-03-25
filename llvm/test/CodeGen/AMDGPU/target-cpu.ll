@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -disable-promote-alloca-to-vector -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -disable-promote-alloca-to-vector -verify-machineinstrs < %s | FileCheck %s
 
 declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #1
 

@@ -108,6 +108,10 @@ protected:
 
   void updateCallsiteSamples();
 
+  void filterAmbiguousProfile(SampleProfileMap &Profiles);
+
+  bool filterAmbiguousProfile(FunctionSamples &FS);
+
   StringRef getCalleeNameForAddress(uint64_t TargetAddress);
 
   void computeSummaryAndThreshold(SampleProfileMap &ProfileMap);
@@ -127,6 +131,10 @@ protected:
   // Collect profiled Functions for llvm sample profile input.
   virtual bool collectFunctionsFromLLVMProfile(
       std::unordered_set<const BinaryFunction *> &ProfiledFunctions) = 0;
+
+  // List of function prefix to filter out.
+  static constexpr const char *FuncPrefixsToFilter[] = {"__cxx_global_var_init",
+                                                        "__tls_init"};
 
   // Thresholds from profile summary to answer isHotCount/isColdCount queries.
   uint64_t HotCountThreshold;
@@ -157,7 +165,7 @@ private:
   void generateLineNumBasedProfile();
   void generateProbeBasedProfile();
   RangeSample preprocessRangeCounter(const RangeSample &RangeCounter);
-  FunctionSamples &getTopLevelFunctionProfile(StringRef FuncName);
+  FunctionSamples &getTopLevelFunctionProfile(FunctionId FuncName);
   // Helper function to get the leaf frame's FunctionProfile by traversing the
   // inline stack and meanwhile it adds the total samples for each frame's
   // function profile.

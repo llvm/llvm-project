@@ -1,5 +1,5 @@
-// RUN:     %clang_cc1 -std=c++1z -fmodules-ts -emit-module-interface %s -o %t.pcm -verify
-// RUN:     %clang_cc1 -std=c++1z -fmodules-ts -emit-module-interface %s -o %t.pcm -verify -DERRORS
+// RUN:     %clang_cc1 -std=c++20 -emit-module-interface %s -o %t.pcm -verify
+// RUN:     %clang_cc1 -std=c++20 -emit-module-interface %s -o %t.pcm -verify -DERRORS
 
 export module foo;
 #ifndef ERRORS

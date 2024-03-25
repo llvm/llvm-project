@@ -4,11 +4,12 @@ include_directories(
   )
 
 set(LLVM_LINK_COMPONENTS
+  CodeGen
+  CodeGenTypes
+  Core
   LoongArchCodeGen
   LoongArchDesc
   LoongArchInfo
-  CodeGen
-  Core
   MC
   MIRParser
   SelectionDAG
@@ -19,6 +20,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_target_unittest(LoongArchTests
   InstSizes.cpp
+  MCInstrAnalysisTest.cpp
   )
 
 set_property(TARGET LoongArchTests PROPERTY FOLDER "Tests/UnitTests/TargetTests")

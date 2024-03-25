@@ -30,7 +30,7 @@ define <8 x i32> @trivial_nop(<8 x i32> %vec, <8 x i32> %subvec) {
 
 define <8 x i32> @valid_insertion_a(<8 x i32> %vec, <2 x i32> %subvec) {
 ; CHECK-LABEL: @valid_insertion_a(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[SUBVEC:%.*]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[SUBVEC:%.*]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[VEC:%.*]], <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    ret <8 x i32> [[TMP2]]
 ;
@@ -40,7 +40,7 @@ define <8 x i32> @valid_insertion_a(<8 x i32> %vec, <2 x i32> %subvec) {
 
 define <8 x i32> @valid_insertion_b(<8 x i32> %vec, <2 x i32> %subvec) {
 ; CHECK-LABEL: @valid_insertion_b(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[SUBVEC:%.*]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[SUBVEC:%.*]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    ret <8 x i32> [[TMP2]]
 ;
@@ -50,7 +50,7 @@ define <8 x i32> @valid_insertion_b(<8 x i32> %vec, <2 x i32> %subvec) {
 
 define <8 x i32> @valid_insertion_c(<8 x i32> %vec, <2 x i32> %subvec) {
 ; CHECK-LABEL: @valid_insertion_c(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[SUBVEC:%.*]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[SUBVEC:%.*]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 6, i32 7>
 ; CHECK-NEXT:    ret <8 x i32> [[TMP2]]
 ;
@@ -60,7 +60,7 @@ define <8 x i32> @valid_insertion_c(<8 x i32> %vec, <2 x i32> %subvec) {
 
 define <8 x i32> @valid_insertion_d(<8 x i32> %vec, <2 x i32> %subvec) {
 ; CHECK-LABEL: @valid_insertion_d(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[SUBVEC:%.*]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[SUBVEC:%.*]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
 ; CHECK-NEXT:    ret <8 x i32> [[TMP2]]
 ;
@@ -70,7 +70,7 @@ define <8 x i32> @valid_insertion_d(<8 x i32> %vec, <2 x i32> %subvec) {
 
 define <8 x i32> @valid_insertion_e(<8 x i32> %vec, <4 x i32> %subvec) {
 ; CHECK-LABEL: @valid_insertion_e(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[SUBVEC:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[SUBVEC:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[VEC:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    ret <8 x i32> [[TMP2]]
 ;
@@ -80,7 +80,7 @@ define <8 x i32> @valid_insertion_e(<8 x i32> %vec, <4 x i32> %subvec) {
 
 define <8 x i32> @valid_insertion_f(<8 x i32> %vec, <4 x i32> %subvec) {
 ; CHECK-LABEL: @valid_insertion_f(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[SUBVEC:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[SUBVEC:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    ret <8 x i32> [[TMP2]]
 ;
@@ -90,7 +90,7 @@ define <8 x i32> @valid_insertion_f(<8 x i32> %vec, <4 x i32> %subvec) {
 
 define <8 x i32> @valid_insertion_g(<8 x i32> %vec, <3 x i32> %subvec) {
 ; CHECK-LABEL: @valid_insertion_g(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i32> [[SUBVEC:%.*]], <3 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i32> [[SUBVEC:%.*]], <3 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[VEC:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    ret <8 x i32> [[TMP2]]
 ;
@@ -100,7 +100,7 @@ define <8 x i32> @valid_insertion_g(<8 x i32> %vec, <3 x i32> %subvec) {
 
 define <8 x i32> @valid_insertion_h(<8 x i32> %vec, <3 x i32> %subvec) {
 ; CHECK-LABEL: @valid_insertion_h(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i32> [[SUBVEC:%.*]], <3 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i32> [[SUBVEC:%.*]], <3 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 8, i32 9, i32 10, i32 6, i32 7>
 ; CHECK-NEXT:    ret <8 x i32> [[TMP2]]
 ;

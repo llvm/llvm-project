@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple spir64-unknown-unknown-sycldevice -fsycl-is-device -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple spir64-unknown-unknown-sycldevice -fsycl-is-device -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s
 // CHECK: @[[LAMBDA_KERNEL3:[^\w]+]] = private unnamed_addr addrspace(1) constant [[LAMBDA_K3_SIZE:\[[0-9]+ x i8\]]] c"_ZTSZ4mainEUlPZ4mainEUlvE_E_\00"
 // CHECK: @[[INT1:[^\w]+]] = private unnamed_addr addrspace(1) constant [[INT_SIZE:\[[0-9]+ x i8\]]] c"_ZTSi\00"
 // CHECK: @[[STRING:[^\w]+]] = private unnamed_addr addrspace(1) constant [[STRING_SIZE:\[[0-9]+ x i8\]]] c"_ZTSAppL_ZZ4mainE1jE_i\00",
@@ -67,48 +67,48 @@ template <typename KernelName, typename KernelType>
 
 int main() {
   kernel_single_task<class kernel2>(func<Derp>);
-  // CHECK: call spir_func void @_Z18kernel_single_taskIZ4mainE7kernel2PFPKcvEEvT0_(i8 addrspace(4)* ()* noundef @_Z4funcI4DerpEDTu33__builtin_sycl_unique_stable_nameDtsrT_3strEEEv)
+  // CHECK: call spir_func void @_Z18kernel_single_taskIZ4mainE7kernel2PFPKcvEEvT0_(ptr noundef @_Z4funcI4DerpEDTu33__builtin_sycl_unique_stable_nameDtsrT_3strEEEv)
 
   auto l1 = []() { return 1; };
   auto l2 = [](decltype(l1) *l = nullptr) { return 2; };
   kernel_single_task<class kernel3>(l2);
   puts(__builtin_sycl_unique_stable_name(decltype(l2)));
   // CHECK: call spir_func void @_Z18kernel_single_taskIZ4mainE7kernel3Z4mainEUlPZ4mainEUlvE_E_EvT0_
-  // CHECK: call spir_func void @puts(i8 addrspace(4)* noundef addrspacecast (i8 addrspace(1)* getelementptr inbounds ([[LAMBDA_K3_SIZE]], [[LAMBDA_K3_SIZE]] addrspace(1)* @[[LAMBDA_KERNEL3]], i32 0, i32 0) to i8 addrspace(4)*))
+  // CHECK: call spir_func void @puts(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @[[LAMBDA_KERNEL3]] to ptr addrspace(4)))
 
   constexpr const char str[] = "lalala";
   static_assert(__builtin_strcmp(__builtin_sycl_unique_stable_name(decltype(str)), "_ZTSA7_Kc\0") == 0, "unexpected mangling");
 
   int i = 0;
   puts(__builtin_sycl_unique_stable_name(decltype(i++)));
-  // CHECK: call spir_func void @puts(i8 addrspace(4)* noundef addrspacecast (i8 addrspace(1)* getelementptr inbounds ([[INT_SIZE]], [[INT_SIZE]] addrspace(1)* @[[INT1]], i32 0, i32 0) to i8 addrspace(4)*))
+  // CHECK: call spir_func void @puts(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @[[INT1]] to ptr addrspace(4)))
 
   // FIXME: Ensure that j is incremented because VLAs are terrible.
   int j = 55;
   puts(__builtin_sycl_unique_stable_name(int[++j]));
-  // CHECK: call spir_func void @puts(i8 addrspace(4)* noundef addrspacecast (i8 addrspace(1)* getelementptr inbounds ([[STRING_SIZE]], [[STRING_SIZE]] addrspace(1)* @[[STRING]], i32 0, i32 0) to i8 addrspace(4)*))
+  // CHECK: call spir_func void @puts(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @[[STRING]] to ptr addrspace(4)))
 
   // CHECK: define internal spir_func void @_Z18kernel_single_taskIZ4mainE7kernel2PFPKcvEEvT0_
-  // CHECK: declare spir_func noundef i8 addrspace(4)* @_Z4funcI4DerpEDTu33__builtin_sycl_unique_stable_nameDtsrT_3strEEEv
+  // CHECK: declare spir_func noundef ptr addrspace(4) @_Z4funcI4DerpEDTu33__builtin_sycl_unique_stable_nameDtsrT_3strEEEv
   // CHECK: define internal spir_func void @_Z18kernel_single_taskIZ4mainE7kernel3Z4mainEUlPZ4mainEUlvE_E_EvT0_
   // CHECK: define internal spir_func void @_Z18kernel_single_taskIZ4mainE6kernelZ4mainEUlvE0_EvT0_
 
   kernel_single_task<class kernel>(
       []() {
         puts(__builtin_sycl_unique_stable_name(int));
-        // CHECK: call spir_func void @puts(i8 addrspace(4)* noundef addrspacecast (i8 addrspace(1)* getelementptr inbounds ([[INT_SIZE]], [[INT_SIZE]] addrspace(1)* @[[INT2]], i32 0, i32 0) to i8 addrspace(4)*))
+        // CHECK: call spir_func void @puts(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @[[INT2]] to ptr addrspace(4)))
 
         auto x = []() {};
         puts(__builtin_sycl_unique_stable_name(decltype(x)));
-        // CHECK: call spir_func void @puts(i8 addrspace(4)* noundef addrspacecast (i8 addrspace(1)* getelementptr inbounds ([[LAMBDA_X_SIZE]], [[LAMBDA_X_SIZE]] addrspace(1)* @[[LAMBDA_X]], i32 0, i32 0) to i8 addrspace(4)*))
+        // CHECK: call spir_func void @puts(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @[[LAMBDA_X]] to ptr addrspace(4)))
 
         DEF_IN_MACRO();
-        // CHECK: call spir_func void @puts(i8 addrspace(4)* noundef addrspacecast (i8 addrspace(1)* getelementptr inbounds ([[MACRO_SIZE]], [[MACRO_SIZE]] addrspace(1)* @[[MACRO_X]], i32 0, i32 0) to i8 addrspace(4)*))
-        // CHECK: call spir_func void @puts(i8 addrspace(4)* noundef addrspacecast (i8 addrspace(1)* getelementptr inbounds ([[MACRO_SIZE]], [[MACRO_SIZE]] addrspace(1)* @[[MACRO_Y]], i32 0, i32 0) to i8 addrspace(4)*))
+        // CHECK: call spir_func void @puts(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @[[MACRO_X]] to ptr addrspace(4)))
+        // CHECK: call spir_func void @puts(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @[[MACRO_Y]] to ptr addrspace(4)))
 
         MACRO_CALLS_MACRO();
-        // CHECK: call spir_func void @puts(i8 addrspace(4)* noundef addrspacecast (i8 addrspace(1)* getelementptr inbounds ([[MACRO_MACRO_SIZE]], [[MACRO_MACRO_SIZE]] addrspace(1)* @[[MACRO_MACRO_X]], i32 0, i32 0) to i8 addrspace(4)*))
-        // CHECK: call spir_func void @puts(i8 addrspace(4)* noundef addrspacecast (i8 addrspace(1)* getelementptr inbounds ([[MACRO_MACRO_SIZE]], [[MACRO_MACRO_SIZE]] addrspace(1)* @[[MACRO_MACRO_Y]], i32 0, i32 0) to i8 addrspace(4)*))
+        // CHECK: call spir_func void @puts(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @[[MACRO_MACRO_X]] to ptr addrspace(4)))
+        // CHECK: call spir_func void @puts(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @[[MACRO_MACRO_Y]] to ptr addrspace(4)))
 
         template_param<int>();
         // CHECK: call spir_func void @_Z14template_paramIiEvv
@@ -138,22 +138,22 @@ int main() {
 }
 
 // CHECK: define linkonce_odr spir_func void @_Z14template_paramIiEvv
-// CHECK: call spir_func void @puts(i8 addrspace(4)* noundef addrspacecast (i8 addrspace(1)* getelementptr inbounds ([[INT_SIZE]], [[INT_SIZE]] addrspace(1)* @[[INT3]], i32 0, i32 0) to i8 addrspace(4)*))
+// CHECK: call spir_func void @puts(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @[[INT3]] to ptr addrspace(4)))
 
 // CHECK: define internal spir_func void @_Z14template_paramIZZ4mainENKUlvE0_clEvEUlvE_Evv
-// CHECK: call spir_func void @puts(i8 addrspace(4)* noundef addrspacecast (i8 addrspace(1)* getelementptr inbounds ([[LAMBDA_SIZE]], [[LAMBDA_SIZE]] addrspace(1)* @[[LAMBDA]], i32 0, i32 0) to i8 addrspace(4)*))
+// CHECK: call spir_func void @puts(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @[[LAMBDA]] to ptr addrspace(4)))
 
 // CHECK: define linkonce_odr spir_func void @_Z28lambda_in_dependent_functionIiEvv
-// CHECK: call spir_func void @puts(i8 addrspace(4)* noundef addrspacecast (i8 addrspace(1)* getelementptr inbounds ([[DEP_INT_SIZE]], [[DEP_INT_SIZE]] addrspace(1)* @[[LAMBDA_IN_DEP_INT]], i32 0, i32 0) to i8 addrspace(4)*))
+// CHECK: call spir_func void @puts(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @[[LAMBDA_IN_DEP_INT]] to ptr addrspace(4)))
 
 // CHECK: define internal spir_func void @_Z28lambda_in_dependent_functionIZZ4mainENKUlvE0_clEvEUlvE_Evv
-// CHECK: call spir_func void @puts(i8 addrspace(4)* noundef addrspacecast (i8 addrspace(1)* getelementptr inbounds ([[DEP_LAMBDA_SIZE]], [[DEP_LAMBDA_SIZE]] addrspace(1)* @[[LAMBDA_IN_DEP_X]], i32 0, i32 0) to i8 addrspace(4)*))
+// CHECK: call spir_func void @puts(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @[[LAMBDA_IN_DEP_X]] to ptr addrspace(4)))
 
 // CHECK: define linkonce_odr spir_func void @_Z13lambda_no_depIidEvT_T0_(i32 noundef %a, double noundef %b)
-// CHECK: call spir_func void @puts(i8 addrspace(4)* noundef addrspacecast (i8 addrspace(1)* getelementptr inbounds ([[NO_DEP_LAMBDA_SIZE]], [[NO_DEP_LAMBDA_SIZE]] addrspace(1)* @[[LAMBDA_NO_DEP]], i32 0, i32 0) to i8 addrspace(4)*))
+// CHECK: call spir_func void @puts(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @[[LAMBDA_NO_DEP]] to ptr addrspace(4)))
 
 // CHECK: define internal spir_func void @_Z14lambda_two_depIZZ4mainENKUlvE0_clEvEUliE_ZZ4mainENKS0_clEvEUldE_Evv
-// CHECK: call spir_func void @puts(i8 addrspace(4)* noundef addrspacecast (i8 addrspace(1)* getelementptr inbounds ([[DEP_LAMBDA1_SIZE]], [[DEP_LAMBDA1_SIZE]] addrspace(1)* @[[LAMBDA_TWO_DEP]], i32 0, i32 0) to i8 addrspace(4)*))
+// CHECK: call spir_func void @puts(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @[[LAMBDA_TWO_DEP]] to ptr addrspace(4)))
 
 // CHECK: define internal spir_func void @_Z14lambda_two_depIZZ4mainENKUlvE0_clEvEUldE_ZZ4mainENKS0_clEvEUliE_Evv
-// CHECK: call spir_func void @puts(i8 addrspace(4)* noundef addrspacecast (i8 addrspace(1)* getelementptr inbounds ([[DEP_LAMBDA2_SIZE]], [[DEP_LAMBDA2_SIZE]] addrspace(1)* @[[LAMBDA_TWO_DEP2]], i32 0, i32 0) to i8 addrspace(4)*))
+// CHECK: call spir_func void @puts(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @[[LAMBDA_TWO_DEP2]] to ptr addrspace(4)))

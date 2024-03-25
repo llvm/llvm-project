@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// rdar: //7824372
+// RUN: %clang_cc1 -fsyntax-only -Wno-objc-root-class -verify %s
 
 @interface A // expected-note {{class started here}}
--(void) im0;
+-(void) im0; // expected-note {{method 'im0' declared here}}
 
+// expected-warning@+1 {{method definition for 'im0' not found}}
 @implementation A // expected-error {{missing '@end'}}
 @end
 
@@ -13,7 +13,8 @@
 @implementation B // expected-error {{missing '@end'}}
 @end
 
-@interface C // expected-note 2 {{class started here}}
+@interface C // expected-note 1 {{class started here}}
 @property int P;
 
+// expected-note@+1 {{implementation started here}}
 @implementation C // expected-error 2 {{missing '@end'}}

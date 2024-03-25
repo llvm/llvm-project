@@ -1,8 +1,10 @@
 ; RUN: opt %s -verify-debuginfo-preserve -passes=instcombine -disable-output 2>&1 | FileCheck --check-prefix=VERIFY %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -verify-debuginfo-preserve -passes=instcombine -disable-output 2>&1 | FileCheck --check-prefix=VERIFY %s
 
 ; VERIFY: CheckModuleDebugify (original debuginfo):
 
 ; RUN: opt %s -verify-each-debuginfo-preserve -O2 -disable-output 2>&1 | FileCheck --check-prefix=VERIFY-EACH %s
+; RUN: opt %s  --try-experimental-debuginfo-iterators -verify-each-debuginfo-preserve -O2 -disable-output 2>&1 | FileCheck --check-prefix=VERIFY-EACH %s
 
 ; VERIFY-EACH: DeadArgumentEliminationPass
 ; VERIFY-EACH: GlobalDCEPass

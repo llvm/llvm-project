@@ -2,9 +2,9 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-version=51 -DOMP51 -fopenmp -ferror-limit 100 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -DOMP50 -fopenmp -fopenmp-version=50 -ferror-limit 100 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-version=51 -DOMP51 -fopenmp-simd -ferror-limit 100 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -DOMP50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 -o - %s -Wuninitialized
 
 void foo();
 
@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
   #pragma omp parallel default(shared)
   ++argc; // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
 
-#ifndef OMP51
+#ifdef OMP50
 #pragma omp target parallel default(firstprivate) // expected-error {{data-sharing attribute 'firstprivate' in 'default' clause requires OpenMP version 5.1 or above}}
   {
     ++x;
@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
     ++x;
     ++y;
   }
-#endif
+#endif // OMP50
 
   return 0;
 }

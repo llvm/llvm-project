@@ -94,4 +94,21 @@ program openacc_serial_loop_validity
   !ERROR: Unmatched END PARALLEL LOOP directive
   !$acc end parallel loop
 
+  !$acc serial loop
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end serial loop
+
+  !$acc serial loop
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end serial
+
+  !$acc serial loop
+  do i = 1, n
+    if(i == 10) cycle
+  end do
+
 end program openacc_serial_loop_validity

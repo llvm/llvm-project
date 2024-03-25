@@ -1,6 +1,7 @@
 ;;; tablegen-mode.el --- Major mode for TableGen description files (part of LLVM project)
 
 ;; Maintainer:  The LLVM team, http://llvm.org/
+;; Version: 1.0
 
 ;;; Commentary:
 ;; A major mode for TableGen description files in LLVM.
@@ -19,7 +20,7 @@
 (defvar tablegen-font-lock-keywords
   (let ((kw (regexp-opt '("class" "defm" "def" "field" "include" "in"
                          "let" "multiclass" "foreach" "if" "then" "else"
-                         "defvar" "defset")
+                         "defvar" "defset" "dump" "assert")
                         'words))
         (type-kw (regexp-opt '("bit" "bits" "code" "dag" "int" "list" "string")
                              'words))

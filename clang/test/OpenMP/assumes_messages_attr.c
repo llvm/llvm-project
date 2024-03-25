@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify -fopenmp -fopenmp-version=51 -std=c99 -fms-extensions -fdouble-square-bracket-attributes -Wno-pragma-pack %s
-// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify -fopenmp-simd -fopenmp-version=51 -std=c99 -fms-extensions -fdouble-square-bracket-attributes -Wno-pragma-pack %s
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify -fopenmp -std=c99 -fms-extensions -Wno-pragma-pack %s
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify -fopenmp-simd -std=c99 -fms-extensions -Wno-pragma-pack %s
 
 [[omp::directive(assumes)]]; // expected-error {{expected at least one 'ext_', 'absent', 'contains', 'holds', 'no_openmp', 'no_openmp_routines', 'no_parallelism' clause for '#pragma omp assumes'}}
 [[omp::directive(begin)]]; // expected-error {{expected an OpenMP directive}}

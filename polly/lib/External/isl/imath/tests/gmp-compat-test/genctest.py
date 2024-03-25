@@ -73,8 +73,12 @@ class APITest(object):
         code = "\t"
         if ty == mpz_t or ty == mpq_t:
             code += self.api_call_prefix(ty) + "init(" + var + ");\n\t"
-            code += self.api_call_prefix(ty) + "set_str(" + ",".join(
-                [var, param, "10"]) + ")"
+            code += (
+                self.api_call_prefix(ty)
+                + "set_str("
+                + ",".join([var, param, "10"])
+                + ")"
+            )
             if ty == mpq_t:
                 code += ";\n\t"
                 code += self.api_call_prefix(ty) + "canonicalize(" + var + ")"
@@ -101,8 +105,12 @@ class APITest(object):
         ret = "\t"
         ret_ty = self.api.ret_ty
         if ret_ty != void:
-            ret += self.test_var_type(ret_ty) + " " + self.test_var_name(
-                ret_ty, "_ret") + " = "
+            ret += (
+                self.test_var_type(ret_ty)
+                + " "
+                + self.test_var_name(ret_ty, "_ret")
+                + " = "
+            )
         # call mpq or mpz function
         if self.api.name.startswith("mpz_"):
             prefix = self.api_call_prefix(mpz_t)
@@ -118,34 +126,35 @@ class APITest(object):
 	  {var} = 1;
 	else if ({var} < 0)
 	  {var} = -1;\n\t
-""".format(var=cmpval)
+""".format(
+            var=cmpval
+        )
         return code
 
     def extract_result(self, ty, pos):
         code = ""
         if ty == mpz_t or ty == mpq_t:
             var = self.test_var_name(ty, pos)
-            code += self.api_call_prefix(
-                ty) + "get_str(out+offset, 10," + var + ");\n"
+            code += self.api_call_prefix(ty) + "get_str(out+offset, 10," + var + ");\n"
             code += "\toffset = offset + strlen(out); "
             code += "out[offset] = ' '; out[offset+1] = 0; offset += 1;"
         else:
             assert pos == -1, "expected a return value, not a param value"
             if ty == ilong:
                 var = self.test_var_name(ty, "_ret")
-                code += 'offset = sprintf(out+offset, " %ld ", ' + var + ');'
+                code += 'offset = sprintf(out+offset, " %ld ", ' + var + ");"
             elif ty == ulong:
                 var = self.test_var_name(ty, "_ret")
-                code += 'offset = sprintf(out+offset, " %lu ", ' + var + ');'
+                code += 'offset = sprintf(out+offset, " %lu ", ' + var + ");"
             elif ty == iint:
                 var = self.test_var_name(ty, "_ret")
-                code += 'offset = sprintf(out+offset, " %d ", ' + var + ');'
+                code += 'offset = sprintf(out+offset, " %d ", ' + var + ");"
             elif ty == size_t:
                 var = self.test_var_name(ty, "_ret")
-                code += 'offset = sprintf(out+offset, " %zu ", ' + var + ');'
+                code += 'offset = sprintf(out+offset, " %zu ", ' + var + ");"
             elif ty == charp:
                 var = self.test_var_name(ty, "_ret")
-                code += 'offset = sprintf(out+offset, " %s ", ' + var + ');'
+                code += 'offset = sprintf(out+offset, " %s ", ' + var + ");"
             else:
                 raise RuntimeError("Unknown param type: " + str(ty))
         return code
@@ -160,9 +169,12 @@ class APITest(object):
 
         # call canonicalize for mpq_set_ui
         if self.api.name == "mpq_set_ui":
-            code += self.api_call_prefix(
-                mpq_t) + "canonicalize(" + self.test_var_name(mpq_t,
-                                                              0) + ");\n\t"
+            code += (
+                self.api_call_prefix(mpq_t)
+                + "canonicalize("
+                + self.test_var_name(mpq_t, 0)
+                + ");\n\t"
+            )
 
         # get return value
         if ret_ty != void:
@@ -180,8 +192,7 @@ class APITest(object):
         for (i, p) in enumerate(self.api.params):
             if p == mpz_t or p == mpq_t:
                 var = self.test_var_name(p, i)
-                code += "\t" + self.api_call_prefix(
-                    p) + "clear(" + var + ");\n"
+                code += "\t" + self.api_call_prefix(p) + "clear(" + var + ");\n"
         return code
 
     def print_test_code(self, outf):
@@ -190,8 +201,9 @@ class APITest(object):
             self.test_param_type(p) + " " + self.test_param_name(p, i)
             for (i, p) in enumerate(api.params)
         ]
-        code = "void {}_{}(char *out, {})".format(self.test_prefix(), api.name,
-                                                  ", ".join(params))
+        code = "void {}_{}(char *out, {})".format(
+            self.test_prefix(), api.name, ", ".join(params)
+        )
         code += "{\n"
         code += self.init_vars_from_params()
         code += self.make_api_call()

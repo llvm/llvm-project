@@ -827,10 +827,10 @@ void ChangeNamespaceTool::replaceQualifiedSymbolInDeclContext(
       // "IsVisibleInNewNs" matcher.
       if (AliasQualifiedName != AliasName) {
         // The alias is defined in some namespace.
-        assert(StringRef(AliasQualifiedName).endswith("::" + AliasName));
+        assert(StringRef(AliasQualifiedName).ends_with("::" + AliasName));
         llvm::StringRef AliasNs =
             StringRef(AliasQualifiedName).drop_back(AliasName.size() + 2);
-        if (!llvm::StringRef(OldNs).startswith(AliasNs))
+        if (!llvm::StringRef(OldNs).starts_with(AliasNs))
           continue;
       }
       std::string NameWithAliasNamespace =
@@ -862,7 +862,7 @@ void ChangeNamespaceTool::replaceQualifiedSymbolInDeclContext(
   // If the new nested name in the new namespace is the same as it was in the
   // old namespace, we don't create replacement unless there can be ambiguity.
   if ((NestedName == ReplaceName && !Conflict) ||
-      (NestedName.startswith("::") && NestedName.drop_front(2) == ReplaceName))
+      (NestedName.starts_with("::") && NestedName.drop_front(2) == ReplaceName))
     return;
   // If the reference need to be fully-qualified, add a leading "::" unless
   // NewNamespace is the global namespace.
@@ -891,7 +891,7 @@ void ChangeNamespaceTool::fixTypeLoc(
   // a typedef type, we need to use the typedef type instead.
   auto IsInMovedNs = [&](const NamedDecl *D) {
     if (!llvm::StringRef(D->getQualifiedNameAsString())
-             .startswith(OldNamespace + "::"))
+             .starts_with(OldNamespace + "::"))
       return false;
     auto ExpansionLoc = Result.SourceManager->getExpansionLoc(D->getBeginLoc());
     if (ExpansionLoc.isInvalid())

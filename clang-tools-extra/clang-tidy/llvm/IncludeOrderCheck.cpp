@@ -21,13 +21,14 @@ class IncludeOrderPPCallbacks : public PPCallbacks {
 public:
   explicit IncludeOrderPPCallbacks(ClangTidyCheck &Check,
                                    const SourceManager &SM)
-      : LookForMainModule(true), Check(Check), SM(SM) {}
+      : Check(Check), SM(SM) {}
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
   void EndOfMainFile() override;
 
@@ -40,9 +41,9 @@ private:
     bool IsMainModule;     ///< true if this was the first include in a file
   };
 
-  typedef std::vector<IncludeDirective> FileIncludes;
+  using FileIncludes = std::vector<IncludeDirective>;
   std::map<clang::FileID, FileIncludes> IncludeDirectives;
-  bool LookForMainModule;
+  bool LookForMainModule = true;
 
   ClangTidyCheck &Check;
   const SourceManager &SM;
@@ -61,13 +62,13 @@ static int getPriority(StringRef Filename, bool IsAngled, bool IsMainModule) {
     return 0;
 
   // LLVM and clang headers are in the penultimate position.
-  if (Filename.startswith("llvm/") || Filename.startswith("llvm-c/") ||
-      Filename.startswith("clang/") || Filename.startswith("clang-c/"))
+  if (Filename.starts_with("llvm/") || Filename.starts_with("llvm-c/") ||
+      Filename.starts_with("clang/") || Filename.starts_with("clang-c/"))
     return 2;
 
   // Put these between system and llvm headers to be consistent with LLVM
   // clang-format style.
-  if (Filename.startswith("gtest/") || Filename.startswith("gmock/"))
+  if (Filename.starts_with("gtest/") || Filename.starts_with("gmock/"))
     return 3;
 
   // System headers are sorted to the end.
@@ -81,8 +82,8 @@ static int getPriority(StringRef Filename, bool IsAngled, bool IsMainModule) {
 void IncludeOrderPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
   // We recognize the first include as a special main module header and want
   // to leave it in the top position.
   IncludeDirective ID = {HashLoc, FilenameRange, std::string(FileName),
@@ -143,7 +144,7 @@ void IncludeOrderPPCallbacks::EndOfMainFile() {
     // block.
     for (unsigned BI = 0, BE = Blocks.size() - 1; BI != BE; ++BI) {
       // Find the first include that's not in the right position.
-      unsigned I, E;
+      unsigned I = 0, E = 0;
       for (I = Blocks[BI], E = Blocks[BI + 1]; I != E; ++I)
         if (IncludeIndices[I] != I)
           break;

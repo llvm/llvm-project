@@ -14,8 +14,7 @@
 #include "llvm/Transforms/Utils/LowerAtomic.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "loweratomic"
@@ -102,6 +101,9 @@ Value *llvm::buildAtomicRMWValue(AtomicRMWInst::BinOp Op,
 
 bool llvm::lowerAtomicRMWInst(AtomicRMWInst *RMWI) {
   IRBuilder<> Builder(RMWI);
+  Builder.setIsFPConstrained(
+      RMWI->getFunction()->hasFnAttribute(Attribute::StrictFP));
+
   Value *Ptr = RMWI->getPointerOperand();
   Value *Val = RMWI->getValOperand();
 

@@ -23,7 +23,6 @@ static_library("MachO") {
     "//libunwind/include",
   ]
   sources = [
-    "Arch/ARM.cpp",
     "Arch/ARM64.cpp",
     "Arch/ARM64Common.cpp",
     "Arch/ARM64_32.cpp",

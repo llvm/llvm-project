@@ -73,10 +73,6 @@ lldb_plugins += [
     "AppleObjCRuntime",
   ],
   [
-    "//lldb/source/Plugins/LanguageRuntime/RenderScript/RenderScriptRuntime",
-    "RenderScriptRuntime",
-  ],
-  [
     "//lldb/source/Plugins/ObjectContainer/BSD-Archive",
     "ObjectContainerBSDArchive",
   ],
@@ -93,10 +89,6 @@ lldb_plugins += [
     "ObjectFileELF",
   ],
   [
-    "//lldb/source/Plugins/ObjectFile/JIT",
-    "ObjectFileJIT",
-  ],
-  [
     "//lldb/source/Plugins/ObjectFile/Mach-O",
     "ObjectFileMachO",
   ],
@@ -107,6 +99,10 @@ lldb_plugins += [
   [
     "//lldb/source/Plugins/ObjectFile/PECOFF",
     "ObjectFilePECOFF",
+  ],
+  [
+    "//lldb/source/Plugins/ObjectFile/Placeholder",
+    "ObjectFilePlaceholder",
   ],
   [
     "//lldb/source/Plugins/ObjectFile/wasm",
@@ -164,12 +160,22 @@ lldb_plugins += [
     "//lldb/source/Plugins/SymbolFile/Symtab",
     "SymbolFileSymtab",
   ],
+  [
+    "//lldb/source/Plugins/SymbolLocator/Default",
+    "SymbolLocatorDefault",
+  ],
 ]
 if (current_os == "mac") {
-  lldb_plugins += [ [
-        "//lldb/source/Plugins/SymbolVendor/MacOSX",
-        "SymbolVendorMacOSX",
-      ] ]
+  lldb_plugins += [
+    [
+      "//lldb/source/Plugins/SymbolLocator/DebugSymbols",
+      "SymbolLocatorDebugSymbols",
+    ],
+    [
+      "//lldb/source/Plugins/SymbolVendor/MacOSX",
+      "SymbolVendorMacOSX",
+    ],
+  ]
 }
 lldb_plugins += [
   [

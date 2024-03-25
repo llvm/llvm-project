@@ -3,10 +3,18 @@
 ; RUN:     | FileCheck --check-prefix=RV32IZFHMIN %s
 ; RUN: llc -mtriple=riscv32 -target-abi ilp32d -mattr=+zfhmin,+d < %s \
 ; RUN:     | FileCheck --check-prefix=RV32IDZFHMIN %s
+; RUN: llc -mtriple=riscv32 -target-abi ilp32 -mattr=+zhinxmin < %s \
+; RUN:     | FileCheck --check-prefix=RV32IZHINXMIN %s
+; RUN: llc -mtriple=riscv32 -target-abi ilp32 -mattr=+zhinxmin,+zdinx < %s \
+; RUN:     | FileCheck --check-prefix=RV32IZDINXZHINXMIN %s
 ; RUN: llc -mtriple=riscv64 -target-abi lp64f -mattr=+zfhmin < %s \
 ; RUN:     | FileCheck --check-prefix=RV64IZFHMIN %s
 ; RUN: llc -mtriple=riscv64 -target-abi lp64d -mattr=+zfhmin,+d < %s \
 ; RUN:     | FileCheck --check-prefix=RV64IDZFHMIN %s
+; RUN: llc -mtriple=riscv64 -target-abi lp64 -mattr=+zhinxmin < %s \
+; RUN:     | FileCheck --check-prefix=RV64IZHINXMIN %s
+; RUN: llc -mtriple=riscv64 -target-abi lp64 -mattr=+zhinxmin,+zdinx < %s \
+; RUN:     | FileCheck --check-prefix=RV64IZDINXZHINXMIN %s
 
 define half @f16_positive_zero(ptr %pf) nounwind {
 ; RV32IZFHMIN-LABEL: f16_positive_zero:
@@ -19,6 +27,16 @@ define half @f16_positive_zero(ptr %pf) nounwind {
 ; RV32IDZFHMIN-NEXT:    fmv.h.x fa0, zero
 ; RV32IDZFHMIN-NEXT:    ret
 ;
+; RV32IZHINXMIN-LABEL: f16_positive_zero:
+; RV32IZHINXMIN:       # %bb.0:
+; RV32IZHINXMIN-NEXT:    li a0, 0
+; RV32IZHINXMIN-NEXT:    ret
+;
+; RV32IZDINXZHINXMIN-LABEL: f16_positive_zero:
+; RV32IZDINXZHINXMIN:       # %bb.0:
+; RV32IZDINXZHINXMIN-NEXT:    li a0, 0
+; RV32IZDINXZHINXMIN-NEXT:    ret
+;
 ; RV64IZFHMIN-LABEL: f16_positive_zero:
 ; RV64IZFHMIN:       # %bb.0:
 ; RV64IZFHMIN-NEXT:    fmv.h.x fa0, zero
@@ -28,36 +46,62 @@ define half @f16_positive_zero(ptr %pf) nounwind {
 ; RV64IDZFHMIN:       # %bb.0:
 ; RV64IDZFHMIN-NEXT:    fmv.h.x fa0, zero
 ; RV64IDZFHMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: f16_positive_zero:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    li a0, 0
+; RV64IZHINXMIN-NEXT:    ret
+;
+; RV64IZDINXZHINXMIN-LABEL: f16_positive_zero:
+; RV64IZDINXZHINXMIN:       # %bb.0:
+; RV64IZDINXZHINXMIN-NEXT:    li a0, 0
+; RV64IZDINXZHINXMIN-NEXT:    ret
   ret half 0.0
 }
 
 define half @f16_negative_zero(ptr %pf) nounwind {
 ; RV32IZFHMIN-LABEL: f16_negative_zero:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fmv.w.x ft0, zero
-; RV32IZFHMIN-NEXT:    fneg.s ft0, ft0
-; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; RV32IZFHMIN-NEXT:    lui a0, 1048568
+; RV32IZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32IZFHMIN-NEXT:    ret
 ;
 ; RV32IDZFHMIN-LABEL: f16_negative_zero:
 ; RV32IDZFHMIN:       # %bb.0:
-; RV32IDZFHMIN-NEXT:    fmv.w.x ft0, zero
-; RV32IDZFHMIN-NEXT:    fneg.s ft0, ft0
-; RV32IDZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; RV32IDZFHMIN-NEXT:    lui a0, 1048568
+; RV32IDZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32IDZFHMIN-NEXT:    ret
+;
+; RV32IZHINXMIN-LABEL: f16_negative_zero:
+; RV32IZHINXMIN:       # %bb.0:
+; RV32IZHINXMIN-NEXT:    lui a0, 1048568
+; RV32IZHINXMIN-NEXT:    ret
+;
+; RV32IZDINXZHINXMIN-LABEL: f16_negative_zero:
+; RV32IZDINXZHINXMIN:       # %bb.0:
+; RV32IZDINXZHINXMIN-NEXT:    lui a0, 1048568
+; RV32IZDINXZHINXMIN-NEXT:    ret
 ;
 ; RV64IZFHMIN-LABEL: f16_negative_zero:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fmv.w.x ft0, zero
-; RV64IZFHMIN-NEXT:    fneg.s ft0, ft0
-; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; RV64IZFHMIN-NEXT:    lui a0, 1048568
+; RV64IZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV64IDZFHMIN-LABEL: f16_negative_zero:
 ; RV64IDZFHMIN:       # %bb.0:
-; RV64IDZFHMIN-NEXT:    fmv.w.x ft0, zero
-; RV64IDZFHMIN-NEXT:    fneg.s ft0, ft0
-; RV64IDZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; RV64IDZFHMIN-NEXT:    lui a0, 1048568
+; RV64IDZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64IDZFHMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: f16_negative_zero:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    lui a0, 1048568
+; RV64IZHINXMIN-NEXT:    ret
+;
+; RV64IZDINXZHINXMIN-LABEL: f16_negative_zero:
+; RV64IZDINXZHINXMIN:       # %bb.0:
+; RV64IZDINXZHINXMIN-NEXT:    lui a0, 1048568
+; RV64IZDINXZHINXMIN-NEXT:    ret
   ret half -0.0
 }

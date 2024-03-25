@@ -42,9 +42,9 @@ template <typename B, typename S> struct Range {
     size = 0;
   }
 
-  // Set the start value for the range, and keep the same size
   BaseType GetRangeBase() const { return base; }
 
+  /// Set the start value for the range, and keep the same size
   void SetRangeBase(BaseType b) { base = b; }
 
   void Slide(BaseType slide) { base += slide; }
@@ -244,7 +244,7 @@ public:
     if (first_intersect == m_entries.end())
       return;
 
-    // We we can combine at least one entry, then we make a new collection and
+    // We can combine at least one entry, then we make a new collection and
     // populate it accordingly, and then swap it into place.
     auto pos = std::next(first_intersect);
     Collection minimal_ranges(m_entries.begin(), pos);
@@ -501,7 +501,7 @@ public:
       }
     }
 
-    // We we can combine at least one entry, then we make a new collection and
+    // We can combine at least one entry, then we make a new collection and
     // populate it accordingly, and then swap it into place.
     if (can_combine) {
       Collection minimal_ranges;

@@ -21,7 +21,7 @@ inline constexpr double double_nan_payload = __builtin_nan("1729");
 struct FloatFromCharsTestCase {
     const char* input;
     chars_format fmt;
-    size_t correct_idx;
+    std::size_t correct_idx;
     errc correct_ec;
     float correct_value;
 };
@@ -42,7 +42,7 @@ struct FloatPrecisionToCharsTestCase {
 struct DoubleFromCharsTestCase {
     const char* input;
     chars_format fmt;
-    size_t correct_idx;
+    std::size_t correct_idx;
     errc correct_ec;
     double correct_value;
 };

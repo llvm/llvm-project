@@ -13,13 +13,12 @@
 // test op*()
 
 #include <memory>
-#include <cassert>
 
-int main(int, char**) {
+#include "test_macros.h"
+
+void f() {
   std::unique_ptr<int[]> p(new int(3));
   const std::unique_ptr<int[]>& cp = p;
   TEST_IGNORE_NODISCARD(*p);  // expected-error-re {{indirection requires pointer operand ('std::unique_ptr<int{{[ ]*}}[]>' invalid)}}
   TEST_IGNORE_NODISCARD(*cp); // expected-error-re {{indirection requires pointer operand ('const std::unique_ptr<int{{[ ]*}}[]>' invalid)}}
-
-  return 0;
 }

@@ -416,6 +416,16 @@ define <vscale x 2 x i32> @sshl_sat_v2i32_scalable_zeroinitializer(<vscale x 2 x
   ret <vscale x 2 x i32> %freeze
 }
 
+define i1 @widenable_condition() {
+; CHECK-LABEL: @widenable_condition(
+; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    ret i1 [[WC]]
+;
+  %wc = call i1 @llvm.experimental.widenable.condition()
+  %freeze = freeze i1 %wc
+  ret i1 %freeze
+}
+
 declare i32 @llvm.ctlz.i32(i32, i1 immarg)
 declare i32 @llvm.cttz.i32(i32, i1 immarg)
 declare i32 @llvm.abs.i32(i32, i1 immarg)
@@ -440,3 +450,4 @@ declare <2 x i32> @llvm.sshl.sat.v2i32(<2 x i32>, <2 x i32>)
 declare <2 x i32> @llvm.ushl.sat.v2i32(<2 x i32>, <2 x i32>)
 declare <vscale x 2 x i32> @llvm.sshl.sat.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i32>)
 declare <vscale x 2 x i32> @llvm.ushl.sat.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i32>)
+declare i1 @llvm.experimental.widenable.condition()

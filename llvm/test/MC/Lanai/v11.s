@@ -1,4 +1,4 @@
-! RUN: llvm-mc -arch=lanai -show-encoding %s | FileCheck %s
+! RUN: llvm-mc -triple=lanai -show-encoding %s | FileCheck %s
 
 add %r17, 0, %r21
 ! CHECK: 0x0a,0xc4,0x00,0x00

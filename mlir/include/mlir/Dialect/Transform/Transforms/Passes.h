@@ -1,4 +1,4 @@
-//===- CheckUses.h - Expensive transform value validity checks --*- C++ -*-===//
+//===- Passes.h - Transform dialect pass entry points -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,8 +9,8 @@
 #ifndef MLIR_DIALECT_TRANSFORM_TRANSFORMS_PASSES_H
 #define MLIR_DIALECT_TRANSFORM_TRANSFORMS_PASSES_H
 
+#include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Pass/Pass.h"
-#include <memory>
 
 namespace mlir {
 class Pass;

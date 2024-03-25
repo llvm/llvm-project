@@ -313,6 +313,17 @@ private:
 
   void UndoBumpHitCount();
 
+  /// Updates the thread ID internally.
+  ///
+  /// This method was created to handle actually mutating the thread ID
+  /// internally because SetThreadID broadcasts an event in addition to mutating
+  /// state. The constructor calls this instead of SetThreadID to avoid the
+  /// broadcast.
+  ///
+  /// \param[in] thread_id
+  ///   The new thread ID.
+  void SetThreadIDInternal(lldb::tid_t thread_id);
+
   // Constructors and Destructors
   //
   // Only the Breakpoint can make breakpoint locations, and it owns them.
@@ -337,7 +348,6 @@ private:
                      bool check_for_resolver = true);
 
   // Data members:
-  bool m_being_created;
   bool m_should_resolve_indirect_functions;
   bool m_is_reexported;
   bool m_is_indirect;

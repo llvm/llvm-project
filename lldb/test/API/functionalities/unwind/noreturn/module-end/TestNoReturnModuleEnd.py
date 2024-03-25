@@ -4,7 +4,6 @@ be at the end of the stack.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -37,6 +36,6 @@ class TestNoreturnModuleEnd(TestBase):
             self.assertTrue(symbol.IsValid())
             self.assertEqual(symbol.GetName(), backtrace[i][0])
             function_start = symbol.GetStartAddress().GetLoadAddress(target)
-            self.assertEquals(function_start + backtrace[i][1], frame.GetPC())
+            self.assertEqual(function_start + backtrace[i][1], frame.GetPC())
 
         self.dbg.DeleteTarget(target)

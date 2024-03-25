@@ -33,17 +33,24 @@ def TDLC_ClauseB : Clause<"clauseb"> {
   let isDefault = 1;
 }
 
+def TDLC_ClauseC : Clause<"clausec"> {
+  let flangClass = "IntExpr";
+  let isValueList = 1;
+}
+
 def TDL_DirA : Directive<"dira"> {
   let allowedClauses = [
     VersionedClause<TDLC_ClauseA>,
     VersionedClause<TDLC_ClauseB>
   ];
   let isDefault = 1;
+  let association = AS_None;
 }
 
 // CHECK:       #ifndef LLVM_Tdl_INC
 // CHECK-NEXT:  #define LLVM_Tdl_INC
 // CHECK-EMPTY:
+// CHECK-NEXT:  #include "llvm/ADT/ArrayRef.h"
 // CHECK-NEXT:  #include "llvm/ADT/BitmaskEnum.h"
 // CHECK-EMPTY:
 // CHECK-NEXT:  namespace llvm {
@@ -51,6 +58,17 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  namespace tdl {
 // CHECK-EMPTY:
 // CHECK-NEXT:  LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+// CHECK-EMPTY:
+// CHECK-NEXT:  enum class Association {
+// CHECK-NEXT:    Block,
+// CHECK-NEXT:    Declaration,
+// CHECK-NEXT:    Delimited,
+// CHECK-NEXT:    Loop,
+// CHECK-NEXT:    None,
+// CHECK-NEXT:    Separating,
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  static constexpr std::size_t Association_enumSize = 6;
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Directive {
 // CHECK-NEXT:    TDLD_dira,
@@ -63,12 +81,14 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  enum class Clause {
 // CHECK-NEXT:    TDLC_clausea,
 // CHECK-NEXT:    TDLC_clauseb,
+// CHECK-NEXT:    TDLC_clausec,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
-// CHECK-NEXT:  static constexpr std::size_t Clause_enumSize = 2;
+// CHECK-NEXT:  static constexpr std::size_t Clause_enumSize = 3;
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr auto TDLC_clausea = llvm::tdl::Clause::TDLC_clausea;
 // CHECK-NEXT:  constexpr auto TDLC_clauseb = llvm::tdl::Clause::TDLC_clauseb;
+// CHECK-NEXT:  constexpr auto TDLC_clausec = llvm::tdl::Clause::TDLC_clausec;
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class AKind {
 // CHECK-NEXT:    TDLCV_vala=1,
@@ -92,6 +112,8 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  /// Return true if \p C is a valid clause for \p D in version \p Version.
 // CHECK-NEXT:  bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
 // CHECK-EMPTY:
+// CHECK-NEXT:  llvm::ArrayRef<Directive> getLeafConstructs(Directive D);
+// CHECK-NEXT:  Association getDirectiveAssociation(Directive D);
 // CHECK-NEXT:  AKind getAKind(StringRef);
 // CHECK-NEXT:  llvm::StringRef getTdlAKindName(AKind);
 // CHECK-EMPTY:
@@ -147,6 +169,7 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-EMPTY:
 // IMPL-NEXT:  EMPTY_CLASS(Clausea);
 // IMPL-NEXT:  WRAPPER_CLASS(Clauseb, std::optional<IntExpr>);
+// IMPL-NEXT:  WRAPPER_CLASS(Clausec, std::list<IntExpr>);
 // IMPL-EMPTY:
 // IMPL-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_CLASSES
 // IMPL-EMPTY:
@@ -155,6 +178,7 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-EMPTY:
 // IMPL-NEXT:  Clausea
 // IMPL-NEXT:  , Clauseb
+// IMPL-NEXT:  , Clausec
 // IMPL-EMPTY:
 // IMPL-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
 // IMPL-EMPTY:
@@ -163,6 +187,7 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-EMPTY:
 // IMPL-NEXT:  NODE(TdlClause, Clausea)
 // IMPL-NEXT:  NODE(TdlClause, Clauseb)
+// IMPL-NEXT:  NODE(TdlClause, Clausec)
 // IMPL-EMPTY:
 // IMPL-NEXT:  #endif // GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
 // IMPL-EMPTY:
@@ -174,6 +199,12 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:    Word("CLAUSEB");
 // IMPL-NEXT:    Walk("(", x.v, ")");
 // IMPL-NEXT:  }
+// IMPL-NEXT:  void Unparse(const TdlClause::Clausec &x) {
+// IMPL-NEXT:    Word("CLAUSEC");
+// IMPL-NEXT:    Put("(");
+// IMPL-NEXT:    Walk(x.v, ",");
+// IMPL-NEXT:    Put(")");
+// IMPL-NEXT:  }
 // IMPL-EMPTY:
 // IMPL-NEXT:  #endif // GEN_FLANG_CLAUSE_UNPARSE
 // IMPL-EMPTY:
@@ -182,6 +213,7 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-EMPTY:
 // IMPL-NEXT:  void Enter(const parser::TdlClause::Clausea &);
 // IMPL-NEXT:  void Enter(const parser::TdlClause::Clauseb &);
+// IMPL-NEXT:  void Enter(const parser::TdlClause::Clausec &);
 // IMPL-EMPTY:
 // IMPL-NEXT:  #endif // GEN_FLANG_CLAUSE_CHECK_ENTER
 // IMPL-EMPTY:
@@ -192,6 +224,8 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:    return llvm::tdl::Clause::TDLC_clausea;
 // IMPL-NEXT:  if constexpr (std::is_same_v<A, parser::TdlClause::Clauseb>)
 // IMPL-NEXT:    return llvm::tdl::Clause::TDLC_clauseb;
+// IMPL-NEXT:  if constexpr (std::is_same_v<A, parser::TdlClause::Clausec>)
+// IMPL-NEXT:    return llvm::tdl::Clause::TDLC_clausec;
 // IMPL-NEXT:  llvm_unreachable("Invalid Tdl Parser clause");
 // IMPL-EMPTY:
 // IMPL-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_KIND_MAP
@@ -200,6 +234,7 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT: #undef GEN_FLANG_CLAUSES_PARSER
 // IMPL-EMPTY:
 // IMPL-NEXT:  TYPE_PARSER(
+// IMPL-NEXT:    "clausec" >> construct<TdlClause>(construct<TdlClause::Clausec>(parenthesized(nonemptyList(Parser<IntExpr>{})))) || 
 // IMPL-NEXT:    "clauseb" >> construct<TdlClause>(construct<TdlClause::Clauseb>(maybe(parenthesized(Parser<IntExpr>{})))) ||
 // IMPL-NEXT:    "clausea" >> construct<TdlClause>(construct<TdlClause::Clausea>())
 // IMPL-NEXT:  )
@@ -234,9 +269,11 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-EMPTY:
 // IMPL-NEXT:  __CLAUSE_NO_CLASS(clausea)
 // IMPL-NEXT:  __CLAUSE_NO_CLASS(clauseb)
+// IMPL-NEXT:  __CLAUSE_NO_CLASS(clausec)
 // IMPL-EMPTY:
 // IMPL-NEXT:  #undef __IMPLICIT_CLAUSE_NO_CLASS
 // IMPL-NEXT:  #undef __IMPLICIT_CLAUSE_CLASS
+// IMPL-NEXT:  #undef __CLAUSE_NO_CLASS
 // IMPL-NEXT:  #undef __CLAUSE
 // IMPL-NEXT:  #undef CLAUSE_NO_CLASS
 // IMPL-NEXT:  #undef CLAUSE_CLASS
@@ -247,6 +284,8 @@ def TDL_DirA : Directive<"dira"> {
 
 // IMPL:       #ifdef GEN_DIRECTIVES_IMPL
 // IMPL-NEXT:  #undef GEN_DIRECTIVES_IMPL
+// IMPL-EMPTY:
+// IMPL-NEXT:  #include "llvm/Support/ErrorHandling.h"
 // IMPL-EMPTY:
 // IMPL-NEXT:  Directive llvm::tdl::getTdlDirectiveKind(llvm::StringRef Str) {
 // IMPL-NEXT:    return llvm::StringSwitch<Directive>(Str)
@@ -266,6 +305,7 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:    return llvm::StringSwitch<Clause>(Str)
 // IMPL-NEXT:      .Case("clausea",TDLC_clausea)
 // IMPL-NEXT:      .Case("clauseb",TDLC_clauseb)
+// IMPL-NEXT:      .Case("clausec",TDLC_clausec)
 // IMPL-NEXT:      .Default(TDLC_clauseb);
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
@@ -275,6 +315,8 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:        return "clausea";
 // IMPL-NEXT:      case TDLC_clauseb:
 // IMPL-NEXT:        return "clauseb";
+// IMPL-NEXT:      case TDLC_clausec:
+// IMPL-NEXT:        return "clausec";
 // IMPL-NEXT:    }
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Clause kind");
 // IMPL-NEXT:  }
@@ -315,6 +357,21 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:        break;
 // IMPL-NEXT:    }
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Directive kind");
+// IMPL-NEXT:  }
+// IMPL-EMPTY:
+// IMPL-NEXT:  llvm::ArrayRef<llvm::tdl::Directive> llvm::tdl::getLeafConstructs(llvm::tdl::Directive Dir) {
+// IMPL-NEXT:    switch (Dir) {
+// IMPL-NEXT:    default:
+// IMPL-NEXT:      return ArrayRef<llvm::tdl::Directive>{};
+// IMPL-NEXT:    } // switch (Dir)
+// IMPL-NEXT:  }
+// IMPL-EMPTY:
+// IMPL-NEXT:  llvm::tdl::Association llvm::tdl::getDirectiveAssociation(llvm::tdl::Directive Dir) {
+// IMPL-NEXT:    switch (Dir) {
+// IMPL-NEXT:    case llvm::tdl::Directive::TDLD_dira:
+// IMPL-NEXT:      return llvm::tdl::Association::None;
+// IMPL-NEXT:    } // switch(Dir)
+// IMPL-NEXT:    llvm_unreachable("Unexpected directive");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
 // IMPL-NEXT:  #endif // GEN_DIRECTIVES_IMPL

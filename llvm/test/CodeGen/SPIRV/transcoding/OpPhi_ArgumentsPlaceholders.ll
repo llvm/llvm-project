@@ -13,6 +13,7 @@
 ;; }
 
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; XFAIL: *
 
 %struct.Node = type { %struct.Node.0 addrspace(1)* }
 %struct.Node.0 = type opaque

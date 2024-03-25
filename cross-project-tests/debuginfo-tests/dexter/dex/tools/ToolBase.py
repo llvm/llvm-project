@@ -40,74 +40,86 @@ class ToolBase(object, metaclass=abc.ABCMeta):
             pass
 
         pparser = ExtArgParse.ExtArgumentParser(
-            self.context, add_help=False, prog=self.name)
+            self.context, add_help=False, prog=self.name
+        )
 
         pparser.add_argument(
-            '--no-color-output',
-            action='store_true',
+            "--no-color-output",
+            action="store_true",
             default=False,
-            help='do not use colored output on stdout/stderr')
+            help="do not use colored output on stdout/stderr",
+        )
         pparser.add_argument(
-            '--time-report',
-            action='store_true',
+            "--time-report",
+            action="store_true",
             default=False,
-            help='display timing statistics')
+            help="display timing statistics",
+        )
 
         self.parser = ExtArgParse.ExtArgumentParser(
-            self.context, parents=[pparser], prog=self.name)
+            self.context, parents=[pparser], prog=self.name
+        )
         self.parser.add_argument(
-            '-v',
-            '--verbose',
-            action='store_true',
+            "-v",
+            "--verbose",
+            action="store_true",
             default=False,
-            help='enable verbose output')
+            help="enable verbose output (overrides --no-warnings)",
+        )
         self.parser.add_argument(
-            '-V',
-            '--version',
-            action='store_true',
+            "-V",
+            "--version",
+            action="store_true",
             default=False,
-            help='display the DExTer version and exit')
+            help="display the DExTer version and exit",
+        )
         self.parser.add_argument(
-            '-w',
-            '--no-warnings',
-            action='store_true',
+            "-w",
+            "--no-warnings",
+            action="store_true",
             default=False,
-            help='suppress warning output')
+            help="suppress warning output",
+        )
         self.parser.add_argument(
-            '--unittest',
+            "--unittest",
             type=str,
-            choices=['off', 'show-failures', 'show-all'],
-            default='off',
-            help='run the DExTer codebase unit tests')
+            choices=["off", "show-failures", "show-all"],
+            default="off",
+            help="run the DExTer codebase unit tests",
+        )
 
         suppress = ExtArgParse.SUPPRESS  # pylint: disable=no-member
         self.parser.add_argument(
-            '--colortest', action='store_true', default=False, help=suppress)
+            "--colortest", action="store_true", default=False, help=suppress
+        )
         self.parser.add_argument(
-            '--error-debug', action='store_true', default=False, help=suppress)
-        defaults.working_directory = os.path.join(tempfile.gettempdir(),
-                                                  'dexter')
+            "--error-debug", action="store_true", default=False, help=suppress
+        )
+        defaults.working_directory = os.path.join(tempfile.gettempdir(), "dexter")
         self.parser.add_argument(
-            '--indent-timer-level', type=int, default=1, help=suppress)
+            "--indent-timer-level", type=int, default=1, help=suppress
+        )
         self.parser.add_argument(
-            '--working-directory',
+            "--working-directory",
             type=str,
-            metavar='<file>',
+            metavar="<file>",
             default=None,
             display_default=defaults.working_directory,
-            help='location of working directory')
+            help="location of working directory",
+        )
         self.parser.add_argument(
-            '--save-temps',
-            action='store_true',
+            "--save-temps",
+            action="store_true",
             default=False,
-            help='save temporary files')
+            help="save temporary files",
+        )
 
         self.add_tool_arguments(self.parser, defaults)
 
         # If an error is encountered during pparser, show the full usage text
         # including self.parser options. Strip the preceding 'usage: ' to avoid
         # having it appear twice.
-        pparser.usage = self.parser.format_usage().lstrip('usage: ')
+        pparser.usage = self.parser.format_usage().lstrip("usage: ")
 
         options, args = pparser.parse_known_args(args)
 

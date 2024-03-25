@@ -11,8 +11,6 @@
 define signext i32 @wobble() nounwind {
 ; CHECK-LABEL: wobble:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    lui a0, %hi(global)
 ; CHECK-NEXT:    lbu a0, %lo(global)(a0)
 ; CHECK-NEXT:    lui a1, %hi(global.2)
@@ -29,14 +27,12 @@ define signext i32 @wobble() nounwind {
 ; CHECK-NEXT:    lui a2, %hi(global.3)
 ; CHECK-NEXT:    li a3, 5
 ; CHECK-NEXT:    sw a1, %lo(global.3)(a2)
-; CHECK-NEXT:    bltu a0, a3, .LBB0_2
-; CHECK-NEXT:  # %bb.1: # %bb10
-; CHECK-NEXT:    call quux@plt
-; CHECK-NEXT:  .LBB0_2: # %bb12
+; CHECK-NEXT:    bgeu a0, a3, .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %bb12
 ; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB0_2: # %bb10
+; CHECK-NEXT:    tail quux
 bb:
   %tmp = load i8, ptr @global, align 1
   %tmp1 = zext i8 %tmp to i32

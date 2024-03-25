@@ -50,4 +50,9 @@ TEST(DepthFirstIteratorTest, ActuallyUpdateIterator) {
 
   EXPECT_EQ(3, S.InsertVisited);
 }
+
+static_assert(
+    std::is_convertible_v<decltype(*std::declval<df_iterator<Graph<3>>>()),
+                          typename df_iterator<Graph<3>>::reference>);
+
 }

@@ -489,7 +489,7 @@ DecodeStatus AVRDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       return MCDisassembler::Fail;
 
     // Try to decode AVRTiny instructions.
-    if (STI.getFeatureBits()[AVR::FeatureTinyEncoding]) {
+    if (STI.hasFeature(AVR::FeatureTinyEncoding)) {
       Result = decodeInstruction(DecoderTableAVRTiny16, Instr, Insn, Address,
                                  this, STI);
       if (Result != MCDisassembler::Fail)

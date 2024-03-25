@@ -1,7 +1,6 @@
 """Test SBValue::GetValueDidChange"""
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -9,25 +8,27 @@ from lldbsuite.test import lldbutil
 
 
 class ValueVarUpdateTestCase(TestBase):
-
     def test_with_process_launch_api(self):
         """Test SBValue::GetValueDidChange"""
         # Get the full path to our executable to be attached/debugged.
         exe = self.getBuildArtifact(self.testMethodName)
-        d = {'EXE': exe}
+        d = {"EXE": exe}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
         target = self.dbg.CreateTarget(exe)
 
         breakpoint = target.BreakpointCreateBySourceRegex(
-            "break here", lldb.SBFileSpec("main.c"))
+            "break here", lldb.SBFileSpec("main.c")
+        )
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
         i = self.frame().FindVariable("i")
         i_val = i.GetValueAsUnsigned(0)
@@ -48,12 +49,13 @@ class ValueVarUpdateTestCase(TestBase):
             self.runCmd("frame variable")
 
         self.assertNotEqual(
-            i_val, i.GetValueAsUnsigned(0),
-            "GetValue() is saying a lie")
-        self.assertTrue(
-            i.GetValueDidChange(),
-            "GetValueDidChange() is saying a lie")
+            i_val, i.GetValueAsUnsigned(0), "GetValue() is saying a lie"
+        )
+        self.assertTrue(i.GetValueDidChange(), "GetValueDidChange() is saying a lie")
 
         # Check complex type
-        self.assertTrue(c.GetChildAtIndex(0).GetChildAtIndex(0).GetValueDidChange(
-        ) and not c.GetChildAtIndex(1).GetValueDidChange(), "GetValueDidChange() is saying a lie")
+        self.assertTrue(
+            c.GetChildAtIndex(0).GetChildAtIndex(0).GetValueDidChange()
+            and not c.GetChildAtIndex(1).GetValueDidChange(),
+            "GetValueDidChange() is saying a lie",
+        )

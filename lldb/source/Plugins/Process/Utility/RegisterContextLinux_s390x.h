@@ -23,14 +23,10 @@ public:
 
   uint32_t GetUserRegisterCount() const override;
 
-  const std::vector<lldb_private::RegisterInfo> *
-  GetDynamicRegisterInfoP() const override;
-
 private:
   const lldb_private::RegisterInfo *m_register_info_p;
   uint32_t m_register_info_count;
   uint32_t m_user_register_count;
-  std::vector<lldb_private::RegisterInfo> d_register_infos;
 };
 
 #endif

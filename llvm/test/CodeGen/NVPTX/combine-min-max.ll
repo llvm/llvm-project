@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 -O2 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 -O2 | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -O2 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -O2 | %ptxas-verify %}
 
 ; *************************************
 ; * Cases with no min/max

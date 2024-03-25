@@ -1,4 +1,5 @@
 set (FILES
+  AlarmTest.cpp
   ConnectionFileDescriptorTest.cpp
   FileActionTest.cpp
   FileSystemTest.cpp
@@ -38,3 +39,5 @@ add_lldb_unittest(HostTests
     LLVMTestingSupport
     LLVMTargetParser
   )
+
+add_subdirectory(common)

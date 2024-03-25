@@ -79,8 +79,8 @@ define ptr @test_simplify4_tail() {
 define ptr @test_simplify5() {
 ; CHECK-LABEL: @test_simplify5(
 ; CHECK-NEXT:    [[LEN:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false)
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @__memcpy_chk(ptr nonnull @a, ptr nonnull @.str, i32 12, i32 [[LEN]])
-; CHECK-NEXT:    ret ptr [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = call ptr @__memcpy_chk(ptr nonnull @a, ptr nonnull @.str, i32 12, i32 [[LEN]])
+; CHECK-NEXT:    ret ptr [[RET]]
 ;
 
   %len = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false)

@@ -38,9 +38,9 @@ static std::string maybeDemangleSymbol(const COFFLinkerContext &ctx,
     StringRef demangleInput = prefixless;
     if (ctx.config.machine == I386)
       demangleInput.consume_front("_");
-    std::string demangled = demangle(demangleInput.str());
+    std::string demangled = demangle(demangleInput);
     if (demangled != demangleInput)
-      return prefix + demangle(demangleInput.str());
+      return prefix + demangled;
     return (prefix + prefixless).str();
   }
   return std::string(symName);

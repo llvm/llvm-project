@@ -1,7 +1,7 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -fp-contract=fast | FileCheck %s --check-prefix=FAST
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 | FileCheck %s --check-prefix=DEFAULT
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -fp-contract=fast | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_30 | %ptxas-verify %if !ptxas-11.0 %{-arch=sm_30%} %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_30 | %ptxas-verify %}
 
 target triple = "nvptx64-unknown-cuda"
 

@@ -86,7 +86,7 @@ define <vscale x 2 x i32> @combine_mul_self_demandedbits_vector2(<vscale x 2 x i
 ;
   %1 = freeze <vscale x 2 x i32> %x
   %2 = mul <vscale x 2 x i32> %1, %1
-  %3 = and <vscale x 2 x i32> %2, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 -3, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+  %3 = and <vscale x 2 x i32> %2, splat (i32 -3)
   ret <vscale x 2 x i32> %3
 }
 
@@ -155,7 +155,7 @@ define i33 @squared_demanded_2_low_bits(i33 %x) {
 define <2 x i8> @squared_demanded_2_low_bits_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @squared_demanded_2_low_bits_splat(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[AND:%.*]] = or <2 x i8> [[TMP1]], <i8 -4, i8 -4>
+; CHECK-NEXT:    [[AND:%.*]] = or disjoint <2 x i8> [[TMP1]], <i8 -4, i8 -4>
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;
   %mul = mul <2 x i8> %x, %x

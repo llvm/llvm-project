@@ -6,21 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SUPPORT_BLOCKSTORE_H
-#define LLVM_LIBC_SUPPORT_BLOCKSTORE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_BLOCKSTORE_H
+#define LLVM_LIBC_SRC___SUPPORT_BLOCKSTORE_H
 
 #include <src/__support/CPP/new.h>
+#include <src/__support/libc_assert.h>
 
 #include <stddef.h>
 #include <stdint.h>
 
-// TODO: fix our assert.h to make it useable
-#define assert(x)                                                              \
-  if (!(x))                                                                    \
-  __builtin_trap()
-
-namespace __llvm_libc {
-namespace cpp {
+namespace LIBC_NAMESPACE {
 
 // The difference between BlockStore a traditional vector types is that,
 // when more capacity is desired, a new block is added instead of allocating
@@ -49,31 +44,31 @@ protected:
   struct Pair {
     Block *first, *second;
   };
-  Pair getLastBlocks() {
+  Pair get_last_blocks() {
     if (REVERSE_ORDER)
       return {current, current->next};
     Block *prev = nullptr;
     Block *curr = &first;
     for (; curr->next; prev = curr, curr = curr->next)
       ;
-    assert(curr == current);
+    LIBC_ASSERT(curr == current);
     return {curr, prev};
   }
 
-  Block *getLastBlock() { return getLastBlocks().first; }
+  Block *get_last_block() { return get_last_blocks().first; }
 
 public:
   constexpr BlockStore() = default;
   ~BlockStore() = default;
 
-  class iterator {
+  class Iterator {
     Block *block;
     size_t index;
 
   public:
-    constexpr iterator(Block *b, size_t i) : block(b), index(i) {}
+    constexpr Iterator(Block *b, size_t i) : block(b), index(i) {}
 
-    iterator &operator++() {
+    Iterator &operator++() {
       if (REVERSE_ORDER) {
         if (index == 0)
           return *this;
@@ -102,11 +97,11 @@ public:
       return *reinterpret_cast<T *>(block->data + sizeof(T) * true_index);
     }
 
-    bool operator==(const iterator &rhs) const {
+    bool operator==(const Iterator &rhs) const {
       return block == rhs.block && index == rhs.index;
     }
 
-    bool operator!=(const iterator &rhs) const {
+    bool operator!=(const Iterator &rhs) const {
       return block != rhs.block || index != rhs.index;
     }
   };
@@ -142,7 +137,7 @@ public:
   }
 
   T &back() {
-    return *reinterpret_cast<T *>(getLastBlock()->data +
+    return *reinterpret_cast<T *>(get_last_block()->data +
                                   sizeof(T) * (fill_count - 1));
   }
 
@@ -150,12 +145,12 @@ public:
     fill_count--;
     if (fill_count || current == &first)
       return;
-    auto [last, prev] = getLastBlocks();
+    auto [last, prev] = get_last_blocks();
     if (REVERSE_ORDER) {
-      assert(last == current);
+      LIBC_ASSERT(last == current);
       current = current->next;
     } else {
-      assert(prev->next == last);
+      LIBC_ASSERT(prev->next == last);
       current = prev;
       current->next = nullptr;
     }
@@ -166,18 +161,18 @@ public:
 
   bool empty() const { return current == &first && !fill_count; }
 
-  iterator begin() {
+  Iterator begin() {
     if (REVERSE_ORDER)
-      return iterator(current, fill_count);
+      return Iterator(current, fill_count);
     else
-      return iterator(&first, 0);
+      return Iterator(&first, 0);
   }
 
-  iterator end() {
+  Iterator end() {
     if (REVERSE_ORDER)
-      return iterator(&first, 0);
+      return Iterator(&first, 0);
     else
-      return iterator(current, fill_count);
+      return Iterator(current, fill_count);
   }
 };
 
@@ -207,7 +202,6 @@ void BlockStore<T, BLOCK_SIZE, REVERSE_ORDER>::destroy(
 template <typename T, size_t BLOCK_SIZE>
 using ReverseOrderBlockStore = BlockStore<T, BLOCK_SIZE, true>;
 
-} // namespace cpp
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SUPPORT_BLOCKSTORE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_BLOCKSTORE_H

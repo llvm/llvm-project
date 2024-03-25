@@ -25,6 +25,7 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -75,7 +76,7 @@ bool diagsContainErrors(const std::vector<Diag> &Diagnostics) {
 class ErrorCheckingCallbacks : public ClangdServer::Callbacks {
 public:
   void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
-                          std::vector<Diag> Diagnostics) override {
+                          llvm::ArrayRef<Diag> Diagnostics) override {
     bool HadError = diagsContainErrors(Diagnostics);
     std::lock_guard<std::mutex> Lock(Mutex);
     HadErrorInLastDiags = HadError;
@@ -96,7 +97,7 @@ private:
 class MultipleErrorCheckingCallbacks : public ClangdServer::Callbacks {
 public:
   void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
-                          std::vector<Diag> Diagnostics) override {
+                          llvm::ArrayRef<Diag> Diagnostics) override {
     bool HadError = diagsContainErrors(Diagnostics);
 
     std::lock_guard<std::mutex> Lock(Mutex);
@@ -305,7 +306,7 @@ TEST(ClangdServerTest, PropagatesContexts) {
   } FS;
   struct Callbacks : public ClangdServer::Callbacks {
     void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
-                            std::vector<Diag> Diagnostics) override {
+                            llvm::ArrayRef<Diag> Diagnostics) override {
       Got = Context::current().getExisting(Secret);
     }
     int Got;
@@ -371,7 +372,7 @@ TEST(ClangdServerTest, PropagatesVersion) {
   MockFS FS;
   struct Callbacks : public ClangdServer::Callbacks {
     void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
-                            std::vector<Diag> Diagnostics) override {
+                            llvm::ArrayRef<Diag> Diagnostics) override {
       Got = Version.str();
     }
     std::string Got = "";
@@ -688,7 +689,7 @@ int d;
     TestDiagConsumer() : Stats(FilesCount, FileStat()) {}
 
     void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
-                            std::vector<Diag> Diagnostics) override {
+                            llvm::ArrayRef<Diag> Diagnostics) override {
       StringRef FileIndexStr = llvm::sys::path::stem(File);
       ASSERT_TRUE(FileIndexStr.consume_front("Foo"));
 
@@ -867,7 +868,7 @@ TEST(ClangdThreadingTest, NoConcurrentDiagnostics) {
         : StartSecondReparse(std::move(StartSecondReparse)) {}
 
     void onDiagnosticsReady(PathRef, llvm::StringRef,
-                            std::vector<Diag>) override {
+                            llvm::ArrayRef<Diag>) override {
       ++Count;
       std::unique_lock<std::mutex> Lock(Mutex, std::try_to_lock_t());
       ASSERT_TRUE(Lock.owns_lock())
@@ -1204,7 +1205,7 @@ TEST(ClangdServer, TidyOverrideTest) {
   struct DiagsCheckingCallback : public ClangdServer::Callbacks {
   public:
     void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
-                            std::vector<Diag> Diagnostics) override {
+                            llvm::ArrayRef<Diag> Diagnostics) override {
       std::lock_guard<std::mutex> Lock(Mutex);
       HadDiagsInLastCallback = !Diagnostics.empty();
     }
@@ -1310,6 +1311,55 @@ TEST(ClangdServer, RespectsTweakFormatting) {
   });
   N.wait();
 }
+
+TEST(ClangdServer, InactiveRegions) {
+  struct InactiveRegionsCallback : ClangdServer::Callbacks {
+    std::vector<std::vector<Range>> FoundInactiveRegions;
+
+    void onInactiveRegionsReady(PathRef FIle,
+                                std::vector<Range> InactiveRegions) override {
+      FoundInactiveRegions.push_back(std::move(InactiveRegions));
+    }
+  };
+
+  MockFS FS;
+  MockCompilationDatabase CDB;
+  CDB.ExtraClangFlags.push_back("-DCMDMACRO");
+  auto Opts = ClangdServer::optsForTest();
+  Opts.PublishInactiveRegions = true;
+  InactiveRegionsCallback Callback;
+  ClangdServer Server(CDB, FS, Opts, &Callback);
+  Annotations Source(R"cpp(
+#define PREAMBLEMACRO 42
+#if PREAMBLEMACRO > 40
+  #define ACTIVE
+#else
+$inactive1[[  #define INACTIVE]]
+#endif
+int endPreamble;
+#ifndef CMDMACRO
+$inactive2[[    int inactiveInt;]]
+#endif
+#undef CMDMACRO
+#ifdef CMDMACRO
+$inactive3[[  int inactiveInt2;]]
+#elif PREAMBLEMACRO > 0
+  int activeInt1;
+  int activeInt2;
+#else
+$inactive4[[  int inactiveInt3;]]
+#endif
+#ifdef CMDMACRO
+#endif  // empty inactive range, gets dropped
+  )cpp");
+  Server.addDocument(testPath("foo.cpp"), Source.code());
+  ASSERT_TRUE(Server.blockUntilIdleForTest());
+  EXPECT_THAT(Callback.FoundInactiveRegions,
+              ElementsAre(ElementsAre(
+                  Source.range("inactive1"), Source.range("inactive2"),
+                  Source.range("inactive3"), Source.range("inactive4"))));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

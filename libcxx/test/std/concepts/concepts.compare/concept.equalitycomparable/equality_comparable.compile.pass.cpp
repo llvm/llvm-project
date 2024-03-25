@@ -141,5 +141,3 @@ static_assert(std::equality_comparable<ge_returns_explicit_bool>);
 static_assert(std::equality_comparable<returns_true_type>);
 static_assert(std::equality_comparable<returns_int_ptr>);
 } // namespace types_fit_for_purpose
-
-int main(int, char**) { return 0; }

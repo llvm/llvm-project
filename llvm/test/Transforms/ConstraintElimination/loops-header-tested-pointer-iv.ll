@@ -17,7 +17,6 @@ define void @loop_pointer_iv(ptr %start, ptr %end, ptr %upper) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule ptr [[IV]], [[END]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult ptr [[IV]], [[UPPER]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr inbounds i8, ptr [[IV]], i8 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
@@ -56,12 +55,10 @@ define void @loop_pointer_iv_null_start(ptr %end, ptr %upper) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ null, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule ptr [[IV]], [[END]]
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
-; CHECK-NEXT:    [[C_2:%.*]] = icmp uge ptr [[IV]], null
-; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ule ptr [[IV]], [[END]]
 ; CHECK-NEXT:    br i1 [[C_3]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[C_4:%.*]] = icmp ult ptr [[IV]], [[UPPER]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr inbounds i8, ptr [[IV]], i8 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]

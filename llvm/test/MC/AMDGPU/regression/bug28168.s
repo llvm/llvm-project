@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefix=CI
-// RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=VI
+// RUN: llvm-mc -triple=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefix=CI
+// RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=VI
 
 v_mqsad_pk_u16_u8 v[2:3], s[0:1], 1, v[254:255]
 // CI: [0x02,0x00,0xe6,0xd2,0x00,0x02,0xf9,0x07]

@@ -63,11 +63,15 @@ enum CXCursorKind clang_getTemplateCursorKind(CXCursor C) {
           = dyn_cast_or_null<ClassTemplatePartialSpecializationDecl>(
                                                             getCursorDecl(C))) {
       switch (PartialSpec->getTagKind()) {
-      case TTK_Interface:
-      case TTK_Struct: return CXCursor_StructDecl;
-      case TTK_Class: return CXCursor_ClassDecl;
-      case TTK_Union: return CXCursor_UnionDecl;
-      case TTK_Enum: return CXCursor_NoDeclFound;
+      case TagTypeKind::Interface:
+      case TagTypeKind::Struct:
+        return CXCursor_StructDecl;
+      case TagTypeKind::Class:
+        return CXCursor_ClassDecl;
+      case TagTypeKind::Union:
+        return CXCursor_UnionDecl;
+      case TagTypeKind::Enum:
+        return CXCursor_NoDeclFound;
       }
     }
     break;

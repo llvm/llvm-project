@@ -12,7 +12,7 @@
 #include "lldb/Utility/XcodeSDK.h"
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <tuple>
 
@@ -27,6 +27,8 @@ TEST(XcodeSDKTest, ParseTest) {
   EXPECT_EQ(XcodeSDK("AppleTVOS.sdk").GetType(), XcodeSDK::AppleTVOS);
   EXPECT_EQ(XcodeSDK("WatchSimulator.sdk").GetType(), XcodeSDK::WatchSimulator);
   EXPECT_EQ(XcodeSDK("WatchOS.sdk").GetType(), XcodeSDK::watchOS);
+  EXPECT_EQ(XcodeSDK("XRSimulator.sdk").GetType(), XcodeSDK::XRSimulator);
+  EXPECT_EQ(XcodeSDK("XROS.sdk").GetType(), XcodeSDK::XROS);
   EXPECT_EQ(XcodeSDK("Linux.sdk").GetType(), XcodeSDK::Linux);
   EXPECT_EQ(XcodeSDK("MacOSX.sdk").GetVersion(), llvm::VersionTuple());
   EXPECT_EQ(XcodeSDK("MacOSX10.9.sdk").GetVersion(), llvm::VersionTuple(10, 9));
@@ -127,6 +129,14 @@ TEST(XcodeSDKTest, GetCanonicalNameAndConstruct) {
   EXPECT_EQ("watchos", XcodeSDK::GetCanonicalName(info));
   EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
+  info.type = XcodeSDK::Type::XRSimulator;
+  EXPECT_EQ("xrsimulator", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
+
+  info.type = XcodeSDK::Type::XROS;
+  EXPECT_EQ("xros", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
+
   info.type = XcodeSDK::Type::Linux;
   EXPECT_EQ("linux", XcodeSDK::GetCanonicalName(info));
   EXPECT_EQ(XcodeSDK(info).Parse(), info);
@@ -164,6 +174,13 @@ TEST(XcodeSDKTest, GetCanonicalNameAndConstruct) {
   EXPECT_EQ("watchos.internal", XcodeSDK::GetCanonicalName(info));
   EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
+  info.type = XcodeSDK::Type::XRSimulator;
+  EXPECT_EQ("xrsimulator.internal", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
+
+  info.type = XcodeSDK::Type::XROS;
+  EXPECT_EQ("xros.internal", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
   info.type = XcodeSDK::Type::MacOSX;
   info.version = llvm::VersionTuple(10, 9);
   EXPECT_EQ("macosx10.9.internal", XcodeSDK::GetCanonicalName(info));
@@ -199,6 +216,11 @@ TEST(XcodeSDKTest, GetSDKTypeForTriple) {
             XcodeSDK::Type::WatchSimulator);
   EXPECT_EQ(XcodeSDK::GetSDKTypeForTriple(llvm::Triple("arm64-apple-watchos")),
             XcodeSDK::Type::watchOS);
+  EXPECT_EQ(XcodeSDK::GetSDKTypeForTriple(
+                llvm::Triple("arm64e-apple-xros-simulator")),
+            XcodeSDK::Type::XRSimulator);
+  EXPECT_EQ(XcodeSDK::GetSDKTypeForTriple(llvm::Triple("arm64e-apple-xros")),
+            XcodeSDK::Type::XROS);
   EXPECT_EQ(XcodeSDK::GetSDKTypeForTriple(llvm::Triple("x86_64-unknown-linux")),
             XcodeSDK::Type::Linux);
   EXPECT_EQ(XcodeSDK::GetSDKTypeForTriple(llvm::Triple("i386-unknown-netbsd")),

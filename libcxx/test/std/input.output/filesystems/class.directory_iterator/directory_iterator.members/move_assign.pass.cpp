@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: can-create-symlinks
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -14,46 +17,43 @@
 
 // directory_iterator& operator=(directory_iterator const&);
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <set>
 #include <cassert>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
+namespace fs = std::filesystem;
+using namespace fs;
 
 // The filesystem specification explicitly allows for self-move on
 // the directory iterators. Turn off this warning so we can test it.
 TEST_CLANG_DIAGNOSTIC_IGNORED("-Wself-move")
 
-using namespace fs;
-
-TEST_SUITE(directory_iterator_move_assign_tests)
-
-TEST_CASE(test_assignment_signature)
+static void test_assignment_signature()
 {
     using D = directory_iterator;
     static_assert(std::is_nothrow_move_assignable<D>::value, "");
 }
 
-TEST_CASE(test_move_to_end_iterator)
+static void test_move_to_end_iterator()
 {
     static_test_env static_env;
     const path testDir = static_env.Dir;
 
     directory_iterator from(testDir);
-    TEST_REQUIRE(from != directory_iterator{});
+    assert(from != directory_iterator{});
     const path entry = *from;
 
     directory_iterator to{};
     to = std::move(from);
-    TEST_REQUIRE(to != directory_iterator{});
-    TEST_CHECK(*to == entry);
+    assert(to != directory_iterator{});
+    assert(*to == entry);
 }
 
 
-TEST_CASE(test_move_from_end_iterator)
+static void test_move_from_end_iterator()
 {
     static_test_env static_env;
     const path testDir = static_env.Dir;
@@ -61,57 +61,65 @@ TEST_CASE(test_move_from_end_iterator)
     directory_iterator from{};
 
     directory_iterator to(testDir);
-    TEST_REQUIRE(to != from);
+    assert(to != from);
 
     to = std::move(from);
-    TEST_REQUIRE(to == directory_iterator{});
-    TEST_REQUIRE(from == directory_iterator{});
+    assert(to == directory_iterator{});
+    assert(from == directory_iterator{});
 }
 
-TEST_CASE(test_move_valid_iterator)
+static void test_move_valid_iterator()
 {
     static_test_env static_env;
     const path testDir = static_env.Dir;
     const directory_iterator endIt{};
 
     directory_iterator it(testDir);
-    TEST_REQUIRE(it != endIt);
+    assert(it != endIt);
     ++it;
-    TEST_REQUIRE(it != endIt);
+    assert(it != endIt);
     const path entry = *it;
 
     directory_iterator it2(testDir);
-    TEST_REQUIRE(it2 != it);
+    assert(it2 != it);
     const path entry2 = *it2;
-    TEST_CHECK(entry2 != entry);
+    assert(entry2 != entry);
 
     it2 = std::move(it);
-    TEST_REQUIRE(it2 != directory_iterator{});
-    TEST_CHECK(*it2 == entry);
+    assert(it2 != directory_iterator{});
+    assert(*it2 == entry);
 }
 
-TEST_CASE(test_returns_reference_to_self)
+static void test_returns_reference_to_self()
 {
     directory_iterator it;
     directory_iterator it2;
     directory_iterator& ref = (it2 = it);
-    TEST_CHECK(&ref == &it2);
+    assert(&ref == &it2);
 }
 
 
-TEST_CASE(test_self_move)
+static void test_self_move()
 {
     static_test_env static_env;
     // Create two non-equal iterators that have exactly the same state.
     directory_iterator it(static_env.Dir);
     directory_iterator it2(static_env.Dir);
     ++it; ++it2;
-    TEST_CHECK(it != it2);
-    TEST_CHECK(*it2 == *it);
+    assert(it != it2);
+    assert(*it2 == *it);
 
     it = std::move(it);
-    TEST_CHECK(*it2 == *it);
+    assert(*it2 == *it);
 }
 
+int main(int, char**) {
+    test_assignment_signature();
+    test_move_to_end_iterator();
+    test_move_from_end_iterator();
+    test_move_valid_iterator();
+    test_returns_reference_to_self();
+    test_self_move();
 
-TEST_SUITE_END()
+    return 0;
+}

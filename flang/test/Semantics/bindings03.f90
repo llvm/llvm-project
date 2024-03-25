@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -Werror
+! RUN: %python %S/test_errors.py %s %flang_fc1 -Werror -pedantic
 ! Confirm a portability warning on use of a procedure binding apart from a call
 module m
   type t

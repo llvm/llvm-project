@@ -14,13 +14,13 @@
 
 #include <atomic>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 
 template <typename T>
 void checkAlwaysLockFree() {
   if (std::atomic<T>::is_always_lock_free) {
-    LIBCPP_ASSERT(sizeof(std::atomic<T>) == sizeof(T)); // technically not required, but libc++ does it that way
     assert(std::atomic<T>().is_lock_free());
   }
 }
@@ -78,6 +78,7 @@ void run()
     CHECK_ALWAYS_LOCK_FREE(struct Empty {});
     CHECK_ALWAYS_LOCK_FREE(struct OneInt { int i; });
     CHECK_ALWAYS_LOCK_FREE(struct IntArr2 { int i[2]; });
+    CHECK_ALWAYS_LOCK_FREE(struct FloatArr3 { float i[3]; });
     CHECK_ALWAYS_LOCK_FREE(struct LLIArr2 { long long int i[2]; });
     CHECK_ALWAYS_LOCK_FREE(struct LLIArr4 { long long int i[4]; });
     CHECK_ALWAYS_LOCK_FREE(struct LLIArr8 { long long int i[8]; });

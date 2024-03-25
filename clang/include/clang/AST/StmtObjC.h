@@ -177,7 +177,8 @@ class ObjCAtTryStmt final
   unsigned NumCatchStmts : 16;
 
   // Whether this statement has a \@finally statement.
-  bool HasFinally : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasFinally : 1;
 
   /// Retrieve the statements that are stored after this \@try statement.
   ///

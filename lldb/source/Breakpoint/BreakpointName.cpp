@@ -28,13 +28,6 @@ const Flags::ValueType BreakpointName::Permissions::permissions_mask
       (0x5u)
 };
 
-BreakpointName::BreakpointName(ConstString name, const Breakpoint &bkpt,
-                 const char *help) :
-      m_name(name), m_options(bkpt.GetOptions())
-{
-  SetHelp(help);
-}
-
 bool BreakpointName::Permissions::GetDescription(Stream *s,
                                                  lldb::DescriptionLevel level) {
     if (!AnySet())

@@ -1,4 +1,4 @@
-; RUN: opt -opaque-pointers=0 %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-codegen -S < %s | FileCheck %s
 ;
 ; Partial write of an array access.
 ;
@@ -6,7 +6,7 @@
 ;   A[0] = 42.0
 ;
 
-define void @partial_write_array(i32 %n, double* noalias nonnull %A) {
+define void @partial_write_array(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -16,7 +16,7 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      store double 42.0, double* %A
+      store double 42.0, ptr %A
       br label %inc
 
 inc:
@@ -37,8 +37,8 @@ return:
 ; CHECK-NEXT:   br i1 %polly.Stmt_body_Write0.cond, label %polly.stmt.body.Stmt_body_Write0.partial, label %polly.stmt.body.cont
 
 ; CHECK:      polly.stmt.body.Stmt_body_Write0.partial:
-; CHECK-NEXT:   %polly.access.A = getelementptr double, double* %A, i64 0
-; CHECK-NEXT:   store double 4.200000e+01, double* %polly.access.A, align 8, !alias.scope !0, !noalias !3
+; CHECK-NEXT:   %polly.access.A = getelementptr double, ptr %A, i64 0
+; CHECK-NEXT:   store double 4.200000e+01, ptr %polly.access.A, align 8, !alias.scope !0, !noalias !3
 ; CHECK-NEXT:   br label %polly.stmt.body.cont
 
 ; CHECK:      polly.stmt.body.cont:

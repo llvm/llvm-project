@@ -19,7 +19,6 @@
 // TODO: investigation needed
 // TODO(netbsd): incomplete support for locales
 // XFAIL: target={{.*}}-linux-gnu{{.*}}, netbsd, freebsd
-// XFAIL: LIBCXX-AIX-FIXME
 // REQUIRES: locale.cs_CZ.ISO8859-2
 
 #include <regex>
@@ -35,8 +34,15 @@ int main(int, char**)
     {
         std::cmatch m;
         const char s[] = "m";
+// AIX supports character equivalence classes. What the contents of the class are depends
+// on the locale and the standards do not specify any locale other than C/POSIX.
+#if defined(_AIX)
+        assert(std::regex_match(s, m,
+                      std::regex("[a[=m=]z]", std::regex_constants::awk)));
+#else
         assert(std::regex_match(s, m,
                       std::regex("[a[=M=]z]", std::regex_constants::awk)));
+#endif
         assert(m.size() == 1);
         assert(!m.prefix().matched);
         assert(m.prefix().first == s);
@@ -44,7 +50,7 @@ int main(int, char**)
         assert(!m.suffix().matched);
         assert(m.suffix().first == m[0].second);
         assert(m.suffix().second == m[0].second);
-        assert((size_t)m.length(0) == std::char_traits<char>::length(s));
+        assert((std::size_t)m.length(0) == std::char_traits<char>::length(s));
         assert(m.position(0) == 0);
         assert(m.str(0) == s);
     }
@@ -60,7 +66,7 @@ int main(int, char**)
         assert(!m.suffix().matched);
         assert(m.suffix().first == m[0].second);
         assert(m.suffix().second == m[0].second);
-        assert((size_t)m.length(0) == std::char_traits<char>::length(s));
+        assert((std::size_t)m.length(0) == std::char_traits<char>::length(s));
         assert(m.position(0) == 0);
         assert(m.str(0) == s);
     }
@@ -78,8 +84,13 @@ int main(int, char**)
     {
         std::wcmatch m;
         const wchar_t s[] = L"m";
+#if defined(_AIX)
+        assert(std::regex_match(s, m, std::wregex(L"[a[=m=]z]",
+                                                 std::regex_constants::awk)));
+#else
         assert(std::regex_match(s, m, std::wregex(L"[a[=M=]z]",
                                                  std::regex_constants::awk)));
+#endif
         assert(m.size() == 1);
         assert(!m.prefix().matched);
         assert(m.prefix().first == s);
@@ -87,10 +98,12 @@ int main(int, char**)
         assert(!m.suffix().matched);
         assert(m.suffix().first == m[0].second);
         assert(m.suffix().second == m[0].second);
-        assert((size_t)m.length(0) == std::char_traits<wchar_t>::length(s));
+        assert((std::size_t)m.length(0) == std::char_traits<wchar_t>::length(s));
         assert(m.position(0) == 0);
         assert(m.str(0) == s);
     }
+//TODO: Need to be investigated for AIX OS
+#if !defined(_AIX)
     {
         std::wcmatch m;
         const wchar_t s[] = L"Ch";
@@ -103,10 +116,11 @@ int main(int, char**)
         assert(!m.suffix().matched);
         assert(m.suffix().first == m[0].second);
         assert(m.suffix().second == m[0].second);
-        assert((size_t)m.length(0) == std::char_traits<wchar_t>::length(s));
+        assert((std::size_t)m.length(0) == std::char_traits<wchar_t>::length(s));
         assert(m.position(0) == 0);
         assert(m.str(0) == s);
     }
+#endif
     std::locale::global(std::locale("C"));
     {
         std::wcmatch m;

@@ -57,29 +57,27 @@ class BitcodeAnalyzer {
   unsigned NumTopBlocks = 0;
 
   struct PerRecordStats {
-    unsigned NumInstances;
-    unsigned NumAbbrev;
-    uint64_t TotalBits;
-    PerRecordStats() : NumInstances(0), NumAbbrev(0), TotalBits(0) {}
+    unsigned NumInstances = 0;
+    unsigned NumAbbrev = 0;
+    uint64_t TotalBits = 0;
+    PerRecordStats() = default;
   };
 
   struct PerBlockIDStats {
     /// NumInstances - This the number of times this block ID has been seen.
-    unsigned NumInstances;
+    unsigned NumInstances = 0;
     /// NumBits - The total size in bits of all of these blocks.
-    uint64_t NumBits;
+    uint64_t NumBits = 0;
     /// NumSubBlocks - The total number of blocks these blocks contain.
-    unsigned NumSubBlocks;
+    unsigned NumSubBlocks = 0;
     /// NumAbbrevs - The total number of abbreviations.
-    unsigned NumAbbrevs;
+    unsigned NumAbbrevs = 0;
     /// NumRecords - The total number of records these blocks contain, and the
     /// number that are abbreviated.
-    unsigned NumRecords, NumAbbreviatedRecords;
+    unsigned NumRecords = 0, NumAbbreviatedRecords = 0;
     /// CodeFreq - Keep track of the number of times we see each code.
     std::vector<PerRecordStats> CodeFreq;
-    PerBlockIDStats()
-        : NumInstances(0), NumBits(0), NumSubBlocks(0), NumAbbrevs(0),
-          NumRecords(0), NumAbbreviatedRecords(0) {}
+    PerBlockIDStats() = default;
   };
 
   std::map<unsigned, PerBlockIDStats> BlockIDStats;

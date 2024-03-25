@@ -1,6 +1,6 @@
-// RUN: %clang -### -target amdgcn-amd-amdhsa -x cl -c -emit-llvm %s 2>&1 | FileCheck -check-prefix=DEFAULT %s
-// RUN: %clang -### -target amdgcn-amd-amdhsa -x cl -c -emit-llvm -fvisibility=protected  %s 2>&1 | FileCheck -check-prefix=OVERRIDE-PROTECTED  %s
-// RUN: %clang -### -target amdgcn-amd-amdhsa -x cl -c -emit-llvm -fvisibility-ms-compat  %s 2>&1 | FileCheck -check-prefix=OVERRIDE-MS  %s
+// RUN: %clang -### -target amdgcn-amd-amdhsa -x cl -c -emit-llvm -nogpulib %s 2>&1 | FileCheck -check-prefix=DEFAULT %s
+// RUN: %clang -### -target amdgcn-amd-amdhsa -x cl -c -emit-llvm -fvisibility=protected -nogpulib %s 2>&1 | FileCheck -check-prefix=OVERRIDE-PROTECTED  %s
+// RUN: %clang -### -target amdgcn-amd-amdhsa -x cl -c -emit-llvm -fvisibility-ms-compat -nogpulib %s 2>&1 | FileCheck -check-prefix=OVERRIDE-MS  %s
 
 // RUN: %clang -### -target amdgcn-mesa-mesa3d -x cl -c -emit-llvm %s 2>&1 | FileCheck -check-prefix=DEFAULT %s
 // RUN: %clang -### -target amdgcn-mesa-mesa3d -x cl -c -emit-llvm -fvisibility=protected  %s 2>&1 | FileCheck -check-prefix=OVERRIDE-PROTECTED  %s

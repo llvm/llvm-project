@@ -7,3 +7,5 @@ unsigned long long ull1 = // expected-warning {{'long long' is a C++11 extension
 
 enum struct E1 { A, B }; // expected-warning {{scoped enumerations are a C++11 extension}}
 enum class E2 { C, D }; // expected-warning {{scoped enumerations are a C++11 extension}}
+
+[[]] void func(); // expected-warning {{[[]] attributes are a C++11 extension}}

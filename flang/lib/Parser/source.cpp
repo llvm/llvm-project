@@ -9,34 +9,36 @@
 #include "flang/Parser/source.h"
 #include "flang/Common/idioms.h"
 #include "flang/Parser/char-buffer.h"
+#include "flang/Parser/characters.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cstring>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace Fortran::parser {
 
 SourceFile::~SourceFile() { Close(); }
 
-static std::vector<std::size_t> FindLineStarts(llvm::StringRef source) {
-  std::vector<std::size_t> result;
-  if (source.size() > 0) {
-    CHECK(source.back() == '\n' && "missing ultimate newline");
-    std::size_t at{0};
-    do {
-      result.push_back(at);
-      at = source.find('\n', at) + 1;
-    } while (at < source.size());
-    result.shrink_to_fit();
-  }
-  return result;
-}
-
 void SourceFile::RecordLineStarts() {
-  lineStart_ = FindLineStarts({content().data(), bytes()});
+  if (std::size_t chars{bytes()}; chars > 0) {
+    origins_.emplace(1, SourcePositionOrigin{path_, 1});
+    const char *source{content().data()};
+    CHECK(source[chars - 1] == '\n' && "missing ultimate newline");
+    std::size_t at{0};
+    do { // "at" is always at the beginning of a source line
+      lineStart_.push_back(at);
+      at = reinterpret_cast<const char *>(
+               std::memchr(source + at, '\n', chars - at)) -
+          source + 1;
+    } while (at < chars);
+    CHECK(at == chars);
+    lineStart_.shrink_to_fit();
+  }
 }
 
 // Check for a Unicode byte order mark (BOM).
@@ -44,7 +46,7 @@ void SourceFile::RecordLineStarts() {
 void SourceFile::IdentifyPayload() {
   llvm::StringRef content{buf_->getBufferStart(), buf_->getBufferSize()};
   constexpr llvm::StringLiteral UTF8_BOM{"\xef\xbb\xbf"};
-  if (content.startswith(UTF8_BOM)) {
+  if (content.starts_with(UTF8_BOM)) {
     bom_end_ = UTF8_BOM.size();
     encoding_ = Encoding::UTF_8;
   }
@@ -71,6 +73,24 @@ std::optional<std::string> LocateSourceFile(
     }
   }
   return std::nullopt;
+}
+
+std::vector<std::string> LocateSourceFileAll(
+    std::string name, const std::vector<std::string> &searchPath) {
+  if (name == "-" || llvm::sys::path::is_absolute(name)) {
+    return {name};
+  }
+  std::vector<std::string> result;
+  for (const std::string &dir : searchPath) {
+    llvm::SmallString<128> path{dir};
+    llvm::sys::path::append(path, name);
+    bool isDir{false};
+    auto er = llvm::sys::fs::is_directory(path, isDir);
+    if (!er && !isDir) {
+      result.emplace_back(path.str().str());
+    }
+  }
+  return result;
 }
 
 std::size_t RemoveCarriageReturns(llvm::MutableArrayRef<char> buf) {
@@ -157,14 +177,43 @@ void SourceFile::ReadFile() {
 void SourceFile::Close() {
   path_.clear();
   buf_.reset();
+  distinctPaths_.clear();
+  origins_.clear();
 }
 
-SourcePosition SourceFile::FindOffsetLineAndColumn(std::size_t at) const {
+SourcePosition SourceFile::GetSourcePosition(std::size_t at) const {
   CHECK(at < bytes());
+  auto it{llvm::upper_bound(lineStart_, at)};
+  auto trueLineNumber{std::distance(lineStart_.begin(), it - 1) + 1};
+  auto ub{origins_.upper_bound(trueLineNumber)};
+  auto column{static_cast<int>(at - lineStart_[trueLineNumber - 1] + 1)};
+  if (ub == origins_.begin()) {
+    return {*this, path_, static_cast<int>(trueLineNumber), column,
+        static_cast<int>(trueLineNumber)};
+  } else {
+    --ub;
+    const SourcePositionOrigin &origin{ub->second};
+    auto lineNumber{
+        trueLineNumber - ub->first + static_cast<std::size_t>(origin.line)};
+    return {*this, origin.path, static_cast<int>(lineNumber), column,
+        static_cast<int>(trueLineNumber)};
+  }
+}
 
-  auto it = llvm::upper_bound(lineStart_, at);
-  auto low = std::distance(lineStart_.begin(), it - 1);
-  return {*this, static_cast<int>(low + 1),
-      static_cast<int>(at - lineStart_[low] + 1)};
+const std::string &SourceFile::SavePath(std::string &&path) {
+  return *distinctPaths_.emplace(std::move(path)).first;
+}
+
+void SourceFile::LineDirective(
+    int trueLineNumber, const std::string &path, int lineNumber) {
+  origins_.emplace(trueLineNumber, SourcePositionOrigin{path, lineNumber});
+}
+
+llvm::raw_ostream &SourceFile::Dump(llvm::raw_ostream &o) const {
+  o << "SourceFile '" << path_ << "'\n";
+  for (const auto &[at, spo] : origins_) {
+    o << "  origin_[" << at << "] -> '" << spo.path << "' " << spo.line << '\n';
+  }
+  return o;
 }
 } // namespace Fortran::parser

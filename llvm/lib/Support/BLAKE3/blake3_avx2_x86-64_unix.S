@@ -1,6 +1,8 @@
 #if defined(__x86_64__)
 
-#if defined(__ELF__) && defined(__linux__)
+#include "llvm_blake3_prefix.h"
+
+#if defined(__ELF__) && !(defined(__sun__) && defined(__svr4__))
 .section .note.GNU-stack,"",%progbits
 #endif
 

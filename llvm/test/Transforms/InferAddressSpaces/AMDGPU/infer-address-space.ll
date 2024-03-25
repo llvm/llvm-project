@@ -166,10 +166,12 @@ exit:                                             ; preds = %loop
 }
 
 ; CHECK-LABEL: @select_bug(
-; CHECK: %add.ptr157 = getelementptr inbounds i64, ptr undef, i64 select (i1 icmp ne (ptr inttoptr (i64 4873 to ptr), ptr null), i64 73, i64 93)
+; CHECK: %sel = select i1 icmp ne (ptr inttoptr (i64 4873 to ptr), ptr null), i64 73, i64 93
+; CHECK: %add.ptr157 = getelementptr inbounds i64, ptr undef, i64 %sel
 ; CHECK: %cmp169 = icmp uge ptr undef, %add.ptr157
 define void @select_bug() #0 {
-  %add.ptr157 = getelementptr inbounds i64, ptr undef, i64 select (i1 icmp ne (ptr inttoptr (i64 4873 to ptr), ptr null), i64 73, i64 93)
+  %sel = select i1 icmp ne (ptr inttoptr (i64 4873 to ptr), ptr null), i64 73, i64 93
+  %add.ptr157 = getelementptr inbounds i64, ptr undef, i64 %sel
   %cmp169 = icmp uge ptr undef, %add.ptr157
   unreachable
 }

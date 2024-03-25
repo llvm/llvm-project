@@ -11,10 +11,12 @@
 // template<class F, class I1, class I2 = I1>
 // concept indirect_equivalence_relation;
 
-#include <iterator>
 #include <concepts>
+#include <functional>
+#include <iterator>
 
 #include "indirectly_readable.h"
+#include "test_macros.h"
 
 using It1 = IndirectlyReadable<struct Token1>;
 using It2 = IndirectlyReadable<struct Token2>;
@@ -95,3 +97,11 @@ struct BadRelation6 {
     bool operator()(std::iter_common_reference_t<It1>, std::iter_common_reference_t<It2>) const = delete;
 };
 static_assert(!std::indirect_equivalence_relation<BadRelation6, It1, It2>);
+
+// Test ADL-proofing (P2538R1)
+#if TEST_STD_VER >= 26 || defined(_LIBCPP_VERSION)
+struct Incomplete;
+template<class T> struct Holder { T t; };
+static_assert(std::indirect_equivalence_relation<std::equal_to<Holder<Incomplete>*>, Holder<Incomplete>**, Holder<Incomplete>**>);
+static_assert(!std::indirect_equivalence_relation<Holder<Incomplete>*, Holder<Incomplete>**, Holder<Incomplete>**>);
+#endif

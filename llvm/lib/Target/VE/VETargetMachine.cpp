@@ -88,7 +88,7 @@ VETargetMachine::VETargetMachine(const Target &T, const Triple &TT,
                                  const TargetOptions &Options,
                                  std::optional<Reloc::Model> RM,
                                  std::optional<CodeModel::Model> CM,
-                                 CodeGenOpt::Level OL, bool JIT)
+                                 CodeGenOptLevel OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         getEffectiveRelocModel(RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
@@ -134,7 +134,7 @@ TargetPassConfig *VETargetMachine::createPassConfig(PassManagerBase &PM) {
 
 void VEPassConfig::addIRPasses() {
   // VE requires atomic expand pass.
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
   TargetPassConfig::addIRPasses();
 }
 

@@ -87,11 +87,11 @@ define internal void @static_symb_backslash_b() #0 {
 ; INSTR_CHECK: Exec Count  : 1
 ; INSTR_CHECK: {{([[:xdigit:]]+)}}:   callq   "symb whitespace" # Count: 1
 
-; PREAGR_FDATA_CHECK: 1 symb\ backslash\\ 0 1 symb\ whitespace 0 0 2
 ; PREAGR_FDATA_CHECK: 1 main 0 1 static\ symb\ backslash\\/1 0 0 1
-; PREAGR_FDATA_CHECK: 1 main 0 1 symb\ whitespace 0 0 1
 ; PREAGR_FDATA_CHECK: 1 main 0 1 symb\ backslash\\ 0 0 2
+; PREAGR_FDATA_CHECK: 1 main 0 1 symb\ whitespace 0 0 1
 ; PREAGR_FDATA_CHECK: 1 static\ symb\ backslash\\/1 0 1 symb\ whitespace 0 0 1
+; PREAGR_FDATA_CHECK: 1 symb\ backslash\\ 0 1 symb\ whitespace 0 0 2
 
 ; PREAGR_CHECK: Binary Function "symb whitespace"
 ; PREAGR_CHECK-DAG: Exec Count  : 4

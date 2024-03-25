@@ -104,8 +104,7 @@ bool SIShrinkInstructions::foldImmediates(MachineInstr &MI,
         bool ConstantFolded = false;
 
         if (TII->isOperandLegal(MI, Src0Idx, &MovSrc)) {
-          if (MovSrc.isImm() &&
-              (isInt<32>(MovSrc.getImm()) || isUInt<32>(MovSrc.getImm()))) {
+          if (MovSrc.isImm()) {
             Src0.ChangeToImmediate(MovSrc.getImm());
             ConstantFolded = true;
           } else if (MovSrc.isFI()) {
@@ -160,20 +159,18 @@ bool SIShrinkInstructions::shouldShrinkTrue16(MachineInstr &MI) const {
 }
 
 bool SIShrinkInstructions::isKImmOperand(const MachineOperand &Src) const {
-  return isInt<16>(Src.getImm()) &&
-    !TII->isInlineConstant(*Src.getParent(),
-                           Src.getParent()->getOperandNo(&Src));
+  return isInt<16>(SignExtend64(Src.getImm(), 32)) &&
+         !TII->isInlineConstant(*Src.getParent(), Src.getOperandNo());
 }
 
 bool SIShrinkInstructions::isKUImmOperand(const MachineOperand &Src) const {
   return isUInt<16>(Src.getImm()) &&
-    !TII->isInlineConstant(*Src.getParent(),
-                           Src.getParent()->getOperandNo(&Src));
+         !TII->isInlineConstant(*Src.getParent(), Src.getOperandNo());
 }
 
 bool SIShrinkInstructions::isKImmOrKUImmOperand(const MachineOperand &Src,
                                                 bool &IsUnsigned) const {
-  if (isInt<16>(Src.getImm())) {
+  if (isInt<16>(SignExtend64(Src.getImm(), 32))) {
     IsUnsigned = false;
     return !TII->isInlineConstant(Src);
   }
@@ -214,6 +211,9 @@ void SIShrinkInstructions::copyExtraImplicitOps(MachineInstr &NewMI,
 }
 
 void SIShrinkInstructions::shrinkScalarCompare(MachineInstr &MI) const {
+  if (!ST->hasSCmpK())
+    return;
+
   // cmpk instructions do scc = dst <cc op> imm16, so commute the instruction to
   // get constants on the RHS.
   if (!MI.getOperand(0).isReg())
@@ -224,7 +224,7 @@ void SIShrinkInstructions::shrinkScalarCompare(MachineInstr &MI) const {
   if (!Src0.isReg())
     return;
 
-  const MachineOperand &Src1 = MI.getOperand(1);
+  MachineOperand &Src1 = MI.getOperand(1);
   if (!Src1.isImm())
     return;
 
@@ -240,6 +240,7 @@ void SIShrinkInstructions::shrinkScalarCompare(MachineInstr &MI) const {
       if (!HasUImm) {
         SOPKOpc = (SOPKOpc == AMDGPU::S_CMPK_EQ_U32) ?
           AMDGPU::S_CMPK_EQ_I32 : AMDGPU::S_CMPK_LG_I32;
+        Src1.setImm(SignExtend32(Src1.getImm(), 32));
       }
 
       MI.setDesc(TII->get(SOPKOpc));
@@ -250,8 +251,10 @@ void SIShrinkInstructions::shrinkScalarCompare(MachineInstr &MI) const {
 
   const MCInstrDesc &NewDesc = TII->get(SOPKOpc);
 
-  if ((TII->sopkIsZext(SOPKOpc) && isKUImmOperand(Src1)) ||
-      (!TII->sopkIsZext(SOPKOpc) && isKImmOperand(Src1))) {
+  if ((SIInstrInfo::sopkIsZext(SOPKOpc) && isKUImmOperand(Src1)) ||
+      (!SIInstrInfo::sopkIsZext(SOPKOpc) && isKImmOperand(Src1))) {
+    if (!SIInstrInfo::sopkIsZext(SOPKOpc))
+      Src1.setImm(SignExtend64(Src1.getImm(), 32));
     MI.setDesc(NewDesc);
   }
 }
@@ -310,7 +313,10 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) const {
   unsigned NextVgpr = 0;
   bool IsUndef = true;
   bool IsKill = NewAddrDwords == Info->VAddrDwords;
-  for (unsigned Idx = 0; Idx < Info->VAddrOperands; ++Idx) {
+  const unsigned NSAMaxSize = ST->getNSAMaxSize();
+  const bool IsPartialNSA = NewAddrDwords > NSAMaxSize;
+  const unsigned EndVAddr = IsPartialNSA ? NSAMaxSize : Info->VAddrOperands;
+  for (unsigned Idx = 0; Idx < EndVAddr; ++Idx) {
     const MachineOperand &Op = MI.getOperand(VAddr0Idx + Idx);
     unsigned Vgpr = TRI->getHWRegIndex(Op.getReg());
     unsigned Dwords = TRI->getRegSizeInBits(Op.getReg(), *MRI) / 32;
@@ -363,13 +369,13 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) const {
   MI.getOperand(VAddr0Idx).setIsUndef(IsUndef);
   MI.getOperand(VAddr0Idx).setIsKill(IsKill);
 
-  for (int i = 1; i < Info->VAddrOperands; ++i)
+  for (unsigned i = 1; i < EndVAddr; ++i)
     MI.removeOperand(VAddr0Idx + 1);
 
   if (ToUntie >= 0) {
     MI.tieOperands(
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdata),
-        ToUntie - (Info->VAddrOperands - 1));
+        ToUntie - (EndVAddr - 1));
   }
 }
 
@@ -475,7 +481,7 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
   }
 }
 
-/// Attempt to shink AND/OR/XOR operations requiring non-inlineable literals.
+/// Attempt to shrink AND/OR/XOR operations requiring non-inlineable literals.
 /// For AND or OR, try using S_BITSET{0,1} to clear or set bits.
 /// If the inverse of the immediate is legal, use ANDN2, ORN2 or
 /// XNOR (as a ^ b == ~(a ^ ~b)).
@@ -838,6 +844,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
             unsigned Opc = (MI.getOpcode() == AMDGPU::S_ADD_I32) ?
               AMDGPU::S_ADDK_I32 : AMDGPU::S_MULK_I32;
 
+            Src1->setImm(SignExtend64(Src1->getImm(), 32));
             MI.setDesc(TII->get(Opc));
             MI.tieOperands(0, 1);
           }
@@ -857,9 +864,10 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
 
         if (Src.isImm() && Dst.getReg().isPhysical()) {
           int32_t ReverseImm;
-          if (isKImmOperand(Src))
+          if (isKImmOperand(Src)) {
             MI.setDesc(TII->get(AMDGPU::S_MOVK_I32));
-          else if (isReverseInlineImm(Src, ReverseImm)) {
+            Src.setImm(SignExtend64(Src.getImm(), 32));
+          } else if (isReverseInlineImm(Src, ReverseImm)) {
             MI.setDesc(TII->get(AMDGPU::S_BREV_B32));
             Src.setImm(ReverseImm);
           }

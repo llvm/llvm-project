@@ -1267,8 +1267,6 @@ static void ioctl_table_fill() {
   _(TIOCGFLAGS, WRITE, sizeof(int));
   _(TIOCSFLAGS, READ, sizeof(int));
   _(TIOCDCDTIMESTAMP, WRITE, struct_timeval_sz);
-  _(TIOCRCVFRAME, READ, sizeof(uptr));
-  _(TIOCXMTFRAME, READ, sizeof(uptr));
   _(TIOCPTMGET, WRITE, struct_ptmget_sz);
   _(TIOCGRANTPT, NONE, 0);
   _(TIOCPTSNAME, WRITE, struct_ptmget_sz);

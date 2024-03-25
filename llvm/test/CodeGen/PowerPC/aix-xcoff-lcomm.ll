@@ -29,7 +29,7 @@
 ; OBJ-NEXT:     TimeStamp:
 ; OBJ32-NEXT:   SymbolTableOffset: 0x64
 ; OBJ64-NEXT:   SymbolTableOffset: 0xA8
-; OBJ-NEXT:     SymbolTableEntries: 9
+; OBJ-NEXT:     SymbolTableEntries: 11
 ; OBJ-NEXT:     OptionalHeaderSize: 0x0
 ; OBJ-NEXT:     Flags: 0x0
 ; OBJ-NEXT:   }

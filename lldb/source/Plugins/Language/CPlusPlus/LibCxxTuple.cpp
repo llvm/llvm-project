@@ -25,9 +25,11 @@ public:
   }
 
   bool MightHaveChildren() override { return true; }
-  bool Update() override;
-  size_t CalculateNumChildren() override { return m_elements.size(); }
-  ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ChildCacheState Update() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
+    return m_elements.size();
+  }
+  ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
 private:
   // The lifetime of a ValueObject and all its derivative ValueObjects
@@ -40,25 +42,25 @@ private:
 };
 }
 
-bool TupleFrontEnd::Update() {
+lldb::ChildCacheState TupleFrontEnd::Update() {
   m_elements.clear();
   m_base = nullptr;
 
   ValueObjectSP base_sp;
-  base_sp = m_backend.GetChildMemberWithName(ConstString("__base_"), true);
+  base_sp = m_backend.GetChildMemberWithName("__base_");
   if (!base_sp) {
     // Pre r304382 name of the base element.
-    base_sp = m_backend.GetChildMemberWithName(ConstString("base_"), true);
+    base_sp = m_backend.GetChildMemberWithName("base_");
   }
   if (!base_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_base = base_sp.get();
   m_elements.assign(base_sp->GetCompilerType().GetNumDirectBaseClasses(),
                     nullptr);
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
-ValueObjectSP TupleFrontEnd::GetChildAtIndex(size_t idx) {
+ValueObjectSP TupleFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (idx >= m_elements.size())
     return ValueObjectSP();
   if (!m_base)
@@ -70,11 +72,11 @@ ValueObjectSP TupleFrontEnd::GetChildAtIndex(size_t idx) {
       m_base->GetCompilerType().GetDirectBaseClassAtIndex(idx, nullptr);
   if (!holder_type)
     return ValueObjectSP();
-  ValueObjectSP holder_sp = m_base->GetChildAtIndex(idx, true);
+  ValueObjectSP holder_sp = m_base->GetChildAtIndex(idx);
   if (!holder_sp)
     return ValueObjectSP();
 
-  ValueObjectSP elem_sp = holder_sp->GetChildAtIndex(0, true);
+  ValueObjectSP elem_sp = holder_sp->GetChildAtIndex(0);
   if (elem_sp)
     m_elements[idx] =
         elem_sp->Clone(ConstString(llvm::formatv("[{0}]", idx).str())).get();

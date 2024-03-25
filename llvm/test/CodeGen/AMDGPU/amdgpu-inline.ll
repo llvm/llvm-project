@@ -30,6 +30,8 @@ if.end:                                           ; preds = %if.then, %entry
 
 define coldcc void @foo_private_ptr2(ptr addrspace(5) nocapture %p1, ptr addrspace(5) nocapture %p2) {
 entry:
+  call void @forbid_sroa(ptr addrspace(5) %p1)
+  call void @forbid_sroa(ptr addrspace(5) %p2)
   %tmp1 = load float, ptr addrspace(5) %p1, align 4
   %cmp = fcmp ogt float %tmp1, 1.000000e+00
   br i1 %cmp, label %if.then, label %if.end
@@ -171,6 +173,7 @@ bb.2:
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare float @_Z3sinf(float) #1
+declare void @forbid_sroa(ptr addrspace(5) nocapture %p)
 
 attributes #0 = { noinline }
 attributes #1 = { nounwind readnone }

@@ -29,8 +29,11 @@ TEST_CONSTEXPR_CXX20 inline typename std::allocator_traits<Alloc>::size_type all
 struct test_allocator_statistics {
   int time_to_throw = 0;
   int throw_after = INT_MAX;
-  int count = 0;
-  int alloc_count = 0;
+  int count           = 0; // the number of active instances
+  int alloc_count     = 0; // the number of allocations not deallocating
+  int allocated_size  = 0; // the size of allocated elements
+  int construct_count = 0; // the number of times that ::construct was called
+  int destroy_count = 0; // the number of times that ::destroy was called
   int copied = 0;
   int moved = 0;
   int converted = 0;
@@ -40,6 +43,9 @@ struct test_allocator_statistics {
     count = 0;
     time_to_throw = 0;
     alloc_count = 0;
+    allocated_size  = 0;
+    construct_count = 0;
+    destroy_count = 0;
     throw_after = INT_MAX;
     clear_ctor_counters();
   }
@@ -144,21 +150,24 @@ public:
   TEST_CONSTEXPR pointer address(reference x) const { return &x; }
   TEST_CONSTEXPR const_pointer address(const_reference x) const { return &x; }
 
-  TEST_CONSTEXPR_CXX14 pointer allocate(size_type n, const void* = 0) {
+  TEST_CONSTEXPR_CXX14 pointer allocate(size_type n, const void* = nullptr) {
     assert(data_ != test_alloc_base::destructed_value);
     if (stats_ != nullptr) {
       if (stats_->time_to_throw >= stats_->throw_after)
         TEST_THROW(std::bad_alloc());
       ++stats_->time_to_throw;
       ++stats_->alloc_count;
+      stats_->allocated_size += n;
     }
     return std::allocator<value_type>().allocate(n);
   }
 
   TEST_CONSTEXPR_CXX14 void deallocate(pointer p, size_type s) {
     assert(data_ != test_alloc_base::destructed_value);
-    if (stats_ != nullptr)
+    if (stats_ != nullptr) {
       --stats_->alloc_count;
+      stats_->allocated_size -= s;
+    }
     std::allocator<value_type>().deallocate(p, s);
   }
 
@@ -166,6 +175,8 @@ public:
 
   template <class U>
   TEST_CONSTEXPR_CXX20 void construct(pointer p, U&& val) {
+    if (stats_ != nullptr)
+      ++stats_->construct_count;
 #if TEST_STD_VER > 17
     std::construct_at(std::to_address(p), std::forward<U>(val));
 #else
@@ -173,94 +184,16 @@ public:
 #endif
   }
 
-  TEST_CONSTEXPR_CXX14 void destroy(pointer p) { p->~T(); }
+  TEST_CONSTEXPR_CXX14 void destroy(pointer p) {
+    if (stats_ != nullptr)
+      ++stats_->destroy_count;
+    p->~T();
+  }
   TEST_CONSTEXPR friend bool operator==(const test_allocator& x, const test_allocator& y) { return x.data_ == y.data_; }
   TEST_CONSTEXPR friend bool operator!=(const test_allocator& x, const test_allocator& y) { return !(x == y); }
 
   TEST_CONSTEXPR int get_data() const { return data_; }
   TEST_CONSTEXPR int get_id() const { return id_; }
-};
-
-template <class T>
-class non_default_test_allocator {
-  int data_ = 0;
-  test_allocator_statistics* stats_ = nullptr;
-
-  template <class U>
-  friend class non_default_test_allocator;
-
-public:
-  typedef unsigned size_type;
-  typedef int difference_type;
-  typedef T value_type;
-  typedef value_type* pointer;
-  typedef const value_type* const_pointer;
-  typedef typename std::add_lvalue_reference<value_type>::type reference;
-  typedef typename std::add_lvalue_reference<const value_type>::type const_reference;
-
-  template <class U>
-  struct rebind {
-    typedef non_default_test_allocator<U> other;
-  };
-
-  TEST_CONSTEXPR_CXX14
-  explicit non_default_test_allocator(int i, test_allocator_statistics* stats = nullptr) TEST_NOEXCEPT
-      : data_(i), stats_(stats) {
-    if (stats_ != nullptr) {
-      ++stats_->count;
-    }
-  }
-
-  TEST_CONSTEXPR_CXX14
-  non_default_test_allocator(const non_default_test_allocator& a) TEST_NOEXCEPT : data_(a.data_), stats_(a.stats_) {
-    if (stats_ != nullptr)
-      ++stats_->count;
-  }
-
-  template <class U>
-  TEST_CONSTEXPR_CXX14 non_default_test_allocator(const non_default_test_allocator<U>& a) TEST_NOEXCEPT
-      : data_(a.data_), stats_(a.stats_) {
-    if (stats_ != nullptr)
-      ++stats_->count;
-  }
-
-  TEST_CONSTEXPR_CXX20 ~non_default_test_allocator() TEST_NOEXCEPT {
-    assert(data_ != test_alloc_base::destructed_value);
-    if (stats_ != nullptr)
-      --stats_->count;
-    data_ = test_alloc_base::destructed_value;
-  }
-
-  TEST_CONSTEXPR pointer address(reference x) const { return &x; }
-  TEST_CONSTEXPR const_pointer address(const_reference x) const { return &x; }
-
-  TEST_CONSTEXPR_CXX20 pointer allocate(size_type n, const void* = nullptr) {
-    assert(data_ != test_alloc_base::destructed_value);
-    if (stats_ != nullptr) {
-      if (stats_->time_to_throw >= stats_->throw_after)
-        TEST_THROW(std::bad_alloc());
-      ++stats_->time_to_throw;
-      ++stats_->alloc_count;
-    }
-    return std::allocator<value_type>().allocate(n);
-  }
-
-  TEST_CONSTEXPR_CXX20 void deallocate(pointer p, size_type n) {
-    assert(data_ != test_alloc_base::destructed_value);
-    if (stats_ != nullptr)
-      --stats_->alloc_count;
-    std::allocator<value_type>().deallocate(p, n);
-  }
-
-  TEST_CONSTEXPR size_type max_size() const TEST_NOEXCEPT { return UINT_MAX / sizeof(T); }
-
-  TEST_CONSTEXPR friend bool operator==(const non_default_test_allocator& x, const non_default_test_allocator& y) {
-    return x.data_ == y.data_;
-  }
-
-  TEST_CONSTEXPR friend bool operator!=(const non_default_test_allocator& x, const non_default_test_allocator& y) {
-    return !(x == y);
-  }
 };
 
 template <>
@@ -347,6 +280,7 @@ public:
   }
 
   TEST_CONSTEXPR_CXX14 friend bool operator!=(const other_allocator& x, const other_allocator& y) { return !(x == y); }
+  TEST_CONSTEXPR int get_data() const { return data_; }
 
   typedef std::true_type propagate_on_container_copy_assignment;
   typedef std::true_type propagate_on_container_move_assignment;
@@ -477,7 +411,7 @@ private:
   struct control_block {
     template <class... Args>
     TEST_CONSTEXPR control_block(Args... args) : content(std::forward<Args>(args)...) {}
-    size_t ref_count = 1;
+    std::size_t ref_count = 1;
     T content;
   };
 
@@ -546,5 +480,30 @@ template <class T, class U, std::size_t N>
 TEST_CONSTEXPR inline bool operator!=(limited_allocator<T, N> const& LHS, limited_allocator<U, N> const& RHS) {
   return !(LHS == RHS);
 }
+
+// Track the "provenance" of this allocator instance: how many times was
+// select_on_container_copy_construction called in order to produce it?
+//
+template <class T>
+struct SocccAllocator {
+  using value_type = T;
+
+  int count_ = 0;
+  explicit SocccAllocator(int i) : count_(i) {}
+
+  template <class U>
+  SocccAllocator(const SocccAllocator<U>& a) : count_(a.count_) {}
+
+  T* allocate(std::size_t n) { return std::allocator<T>().allocate(n); }
+  void deallocate(T* p, std::size_t n) { std::allocator<T>().deallocate(p, n); }
+
+  SocccAllocator select_on_container_copy_construction() const { return SocccAllocator(count_ + 1); }
+
+  bool operator==(const SocccAllocator&) const { return true; }
+
+  using propagate_on_container_copy_assignment = std::false_type;
+  using propagate_on_container_move_assignment = std::false_type;
+  using propagate_on_container_swap            = std::false_type;
+};
 
 #endif // TEST_ALLOCATOR_H

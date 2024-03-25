@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// Throwing bad_variant_access is supported starting in macosx10.13
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}} && !no-exceptions
-
 // <variant>
 
 // template <class ...Types> class variant;
@@ -322,7 +319,7 @@ void test_copy_assignment_empty_non_empty() {
 #endif // TEST_HAS_NO_EXCEPTIONS
 }
 
-template <typename T> struct Result { size_t index; T value; };
+template <typename T> struct Result { std::size_t index; T value; };
 
 void test_copy_assignment_same_index() {
   {
@@ -550,7 +547,7 @@ void test_copy_assignment_different_index() {
   }
 }
 
-template <size_t NewIdx, class ValueType>
+template <std::size_t NewIdx, class ValueType>
 constexpr bool test_constexpr_assign_imp(
     std::variant<long, void*, int>&& v, ValueType&& new_value)
 {

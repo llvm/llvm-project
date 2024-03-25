@@ -6,22 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This header is not part of the public API.  It is placed in the
-// includes directory only because that's required by the implementations
-// of template-classes.
-//
-// This file is part of the lightweight runtime support library for sparse
-// tensor manipulations.  The functionality of the support library is meant
-// to simplify benchmarking, testing, and debugging MLIR code operating on
-// sparse tensors.  However, the provided functionality is **not** part of
-// core MLIR itself.
+// A collection of "safe" arithmetic helper methods.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_EXECUTIONENGINE_SPARSETENSOR_ARITHMETICUTILS_H
 #define MLIR_EXECUTIONENGINE_SPARSETENSOR_ARITHMETICUTILS_H
-
-#include "mlir/ExecutionEngine/SparseTensor/Attributes.h"
 
 #include <cassert>
 #include <cinttypes>
@@ -108,12 +98,6 @@ constexpr bool safelyGE(T t, U u) noexcept {
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: we would like to be able to pass in custom error messages, to
-// improve the user experience.  We should be able to use something like
-// `assert(((void)(msg ? msg : defaultMsg), cond))`; but I'm not entirely
-// sure that'll work as intended when done within a function-definition
-// rather than within a macro-definition.
-
 /// A version of `static_cast<To>` which checks for overflow/underflow.
 /// The implementation avoids performing runtime assertions whenever
 /// the types alone are sufficient to statically prove that overflow
@@ -137,19 +121,9 @@ template <typename To, typename From>
 /// A version of `operator*` on `uint64_t` which guards against overflows
 /// (when assertions are enabled).
 inline uint64_t checkedMul(uint64_t lhs, uint64_t rhs) {
-  // If assertions are enabled and we have the intrinsic, then use it to
-  // avoid the expensive division.  If assertions are disabled, then don't
-  // bother with intrinsics (to avoid any possible slowdown vs `operator*`).
-#if !defined(NDEBUG) && MLIR_SPARSETENSOR_HAS_BUILTIN(__builtin_mul_overflow)
-  uint64_t result;
-  bool overflowed = __builtin_mul_overflow(lhs, rhs, &result);
-  assert(!overflowed && "Integer overflow");
-  return result;
-#else
   assert((lhs == 0 || rhs <= std::numeric_limits<uint64_t>::max() / lhs) &&
          "Integer overflow");
   return lhs * rhs;
-#endif
 }
 
 } // namespace detail

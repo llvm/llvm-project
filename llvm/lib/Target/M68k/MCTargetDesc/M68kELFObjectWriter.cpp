@@ -70,6 +70,57 @@ unsigned M68kELFObjectWriter::getRelocType(MCContext &Ctx,
   switch (Modifier) {
   default:
     llvm_unreachable("Unimplemented");
+
+  case MCSymbolRefExpr::VK_TLSGD:
+    switch (Type) {
+    case RT_32:
+      return ELF::R_68K_TLS_GD32;
+    case RT_16:
+      return ELF::R_68K_TLS_GD16;
+    case RT_8:
+      return ELF::R_68K_TLS_GD8;
+    }
+    llvm_unreachable("Unrecognized size");
+  case MCSymbolRefExpr::VK_TLSLDM:
+    switch (Type) {
+    case RT_32:
+      return ELF::R_68K_TLS_LDM32;
+    case RT_16:
+      return ELF::R_68K_TLS_LDM16;
+    case RT_8:
+      return ELF::R_68K_TLS_LDM8;
+    }
+    llvm_unreachable("Unrecognized size");
+  case MCSymbolRefExpr::VK_TLSLD:
+    switch (Type) {
+    case RT_32:
+      return ELF::R_68K_TLS_LDO32;
+    case RT_16:
+      return ELF::R_68K_TLS_LDO16;
+    case RT_8:
+      return ELF::R_68K_TLS_LDO8;
+    }
+    llvm_unreachable("Unrecognized size");
+  case MCSymbolRefExpr::VK_GOTTPOFF:
+    switch (Type) {
+    case RT_32:
+      return ELF::R_68K_TLS_IE32;
+    case RT_16:
+      return ELF::R_68K_TLS_IE16;
+    case RT_8:
+      return ELF::R_68K_TLS_IE8;
+    }
+    llvm_unreachable("Unrecognized size");
+  case MCSymbolRefExpr::VK_TPOFF:
+    switch (Type) {
+    case RT_32:
+      return ELF::R_68K_TLS_LE32;
+    case RT_16:
+      return ELF::R_68K_TLS_LE16;
+    case RT_8:
+      return ELF::R_68K_TLS_LE8;
+    }
+    llvm_unreachable("Unrecognized size");
   case MCSymbolRefExpr::VK_None:
     switch (Type) {
     case RT_32:

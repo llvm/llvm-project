@@ -69,7 +69,7 @@ void dumpScope(const semantics::Scope *scope, int depth = -1);
 #endif
 
 /// The instantiation of a parse tree visitor (Pre and Post) is extremely
-/// expensive in terms of compile and link time.  So one goal here is to
+/// expensive in terms of compile and link time. So one goal here is to
 /// limit the bridge to one such instantiation.
 class PFTBuilder {
 public:
@@ -105,6 +105,13 @@ public:
       } else if constexpr (std::is_same_v<T, parser::ActionStmt>) {
         return std::visit(
             common::visitors{
+                [&](const common::Indirection<parser::CallStmt> &x) {
+                  addEvaluation(lower::pft::Evaluation{
+                      removeIndirection(x), pftParentStack.back(),
+                      stmt.position, stmt.label});
+                  checkForFPEnvironmentCalls(x.value());
+                  return true;
+                },
                 [&](const common::Indirection<parser::IfStmt> &x) {
                   convertIfStmt(x.value(), stmt.position, stmt.label);
                   return false;
@@ -122,14 +129,53 @@ public:
     return true;
   }
 
+  /// Check for calls that could modify the floating point environment.
+  /// See F18 Clauses
+  ///  - 17.1p3 (Overview of IEEE arithmetic support)
+  ///  - 17.3p3 (The exceptions)
+  ///  - 17.4p5 (The rounding modes)
+  ///  - 17.6p1 (Halting)
+  void checkForFPEnvironmentCalls(const parser::CallStmt &callStmt) {
+    const auto *callName = std::get_if<parser::Name>(
+        &std::get<parser::ProcedureDesignator>(callStmt.call.t).u);
+    if (!callName)
+      return;
+    const Fortran::semantics::Symbol &procSym = callName->symbol->GetUltimate();
+    if (!procSym.owner().IsModule())
+      return;
+    const Fortran::semantics::Symbol &modSym = *procSym.owner().symbol();
+    if (!modSym.attrs().test(Fortran::semantics::Attr::INTRINSIC))
+      return;
+    // Modules IEEE_FEATURES, IEEE_EXCEPTIONS, and IEEE_ARITHMETIC get common
+    // declarations from several __fortran_... support module files.
+    llvm::StringRef modName = toStringRef(modSym.name());
+    if (!modName.starts_with("ieee_") && !modName.starts_with("__fortran_"))
+      return;
+    llvm::StringRef procName = toStringRef(procSym.name());
+    if (!procName.starts_with("ieee_"))
+      return;
+    lower::pft::FunctionLikeUnit *proc =
+        evaluationListStack.back()->back().getOwningProcedure();
+    proc->hasIeeeAccess = true;
+    if (!procName.starts_with("ieee_set_"))
+      return;
+    if (procName.starts_with("ieee_set_modes_") ||
+        procName.starts_with("ieee_set_status_"))
+      proc->mayModifyHaltingMode = proc->mayModifyRoundingMode = true;
+    else if (procName.starts_with("ieee_set_halting_mode_"))
+      proc->mayModifyHaltingMode = true;
+    else if (procName.starts_with("ieee_set_rounding_mode_"))
+      proc->mayModifyRoundingMode = true;
+  }
+
   /// Convert an IfStmt into an IfConstruct, retaining the IfStmt as the
   /// first statement of the construct.
   void convertIfStmt(const parser::IfStmt &ifStmt, parser::CharBlock position,
                      std::optional<parser::Label> label) {
-    // Generate a skeleton IfConstruct parse node.  Its components are never
-    // referenced.  The actual components are available via the IfConstruct
+    // Generate a skeleton IfConstruct parse node. Its components are never
+    // referenced. The actual components are available via the IfConstruct
     // evaluation's nested evaluationList, with the ifStmt in the position of
-    // the otherwise normal IfThenStmt.  Caution: All other PFT nodes reference
+    // the otherwise normal IfThenStmt. Caution: All other PFT nodes reference
     // front end generated parse nodes; this is an exceptional case.
     static const auto ifConstruct = parser::IfConstruct{
         parser::Statement<parser::IfThenStmt>{
@@ -211,6 +257,17 @@ public:
     if (pftParentStack.back().isA<lower::pft::Program>()) {
       addUnit(
           lower::pft::CompilerDirectiveUnit(directive, pftParentStack.back()));
+      return false;
+    }
+    return enterConstructOrDirective(directive);
+  }
+
+  bool Pre(const parser::OpenACCRoutineConstruct &directive) {
+    assert(pftParentStack.size() > 0 &&
+           "At least the Program must be a parent");
+    if (pftParentStack.back().isA<lower::pft::Program>()) {
+      addUnit(
+          lower::pft::OpenACCDirectiveUnit(directive, pftParentStack.back()));
       return false;
     }
     return enterConstructOrDirective(directive);
@@ -324,11 +381,21 @@ private:
   }
 
   void exitConstructOrDirective() {
+    auto isOpenMPLoopConstruct = [](Fortran::lower::pft::Evaluation *eval) {
+      if (const auto *ompConstruct = eval->getIf<parser::OpenMPConstruct>())
+        if (std::holds_alternative<parser::OpenMPLoopConstruct>(
+                ompConstruct->u))
+          return true;
+      return false;
+    };
+
     rewriteIfGotos();
     auto *eval = constructAndDirectiveStack.back();
-    if (eval->isExecutableDirective()) {
+    if (eval->isExecutableDirective() && !isOpenMPLoopConstruct(eval)) {
       // A construct at the end of an (unstructured) OpenACC or OpenMP
       // construct region must have an exit target inside the region.
+      // This is not applicable to the OpenMP loop construct since the
+      // end of the loop is an available target inside the region.
       Fortran::lower::pft::EvaluationList &evaluationList =
           *eval->evaluationList;
       if (!evaluationList.empty() && evaluationList.back().isConstruct()) {
@@ -445,7 +512,7 @@ private:
   }
 
   /// Rewrite IfConstructs containing a GotoStmt or CycleStmt to eliminate an
-  /// unstructured branch and a trivial basic block.  The pre-branch-analysis
+  /// unstructured branch and a trivial basic block. The pre-branch-analysis
   /// code:
   ///
   ///       <<IfConstruct>>
@@ -467,22 +534,22 @@ private:
   ///       <<End IfConstruct>>
   ///       6 Statement: L ...
   ///
-  /// The If[Then]Stmt condition is implicitly negated.  It is not modified
-  /// in the PFT.  It must be negated when generating FIR.  The GotoStmt or
+  /// The If[Then]Stmt condition is implicitly negated. It is not modified
+  /// in the PFT. It must be negated when generating FIR. The GotoStmt or
   /// CycleStmt is deleted.
   ///
   /// The transformation is only valid for forward branch targets at the same
-  /// construct nesting level as the IfConstruct.  The result must not violate
-  /// construct nesting requirements or contain an EntryStmt.  The result
-  /// is subject to normal un/structured code classification analysis.  The
-  /// result is allowed to violate the F18 Clause 11.1.2.1 prohibition on
-  /// transfer of control into the interior of a construct block, as that does
-  /// not compromise correct code generation.  When two transformation
-  /// candidates overlap, at least one must be disallowed.  In such cases,
-  /// the current heuristic favors simple code generation, which happens to
-  /// favor later candidates over earlier candidates.  That choice is probably
-  /// not significant, but could be changed.
-  ///
+  /// construct nesting level as the IfConstruct. The result must not violate
+  /// construct nesting requirements or contain an EntryStmt. The result
+  /// is subject to normal un/structured code classification analysis. Except
+  /// for a branch to the EndIfStmt, the result is allowed to violate the F18
+  /// Clause 11.1.2.1 prohibition on transfer of control into the interior of
+  /// a construct block, as that does not compromise correct code generation.
+  /// When two transformation candidates overlap, at least one must be
+  /// disallowed. In such cases, the current heuristic favors simple code
+  /// generation, which happens to favor later candidates over earlier
+  /// candidates. That choice is probably not significant, but could be
+  /// changed.
   void rewriteIfGotos() {
     auto &evaluationList = *evaluationListStack.back();
     if (!evaluationList.size())
@@ -511,7 +578,7 @@ private:
       auto branchTargetMatch = [&]() {
         if (const parser::Label targetLabel =
                 ifCandidateStack.back().ifTargetLabel)
-          if (targetLabel == *targetEval.label)
+          if (targetEval.label && targetLabel == *targetEval.label)
             return true; // goto target match
         if (targetEvalIsEndDoStmt && ifCandidateStack.back().isCycleStmt)
           return true; // cycle target match
@@ -549,7 +616,8 @@ private:
       if (eval.isA<parser::IfConstruct>() && eval.evaluationList->size() == 3) {
         const auto bodyEval = std::next(eval.evaluationList->begin());
         if (const auto *gotoStmt = bodyEval->getIf<parser::GotoStmt>()) {
-          ifCandidateStack.push_back({it, gotoStmt->v});
+          if (!bodyEval->lexicalSuccessor->label)
+            ifCandidateStack.push_back({it, gotoStmt->v});
         } else if (doStmt) {
           if (const auto *cycleStmt = bodyEval->getIf<parser::CycleStmt>()) {
             std::string cycleName = getConstructName(*cycleStmt);
@@ -726,7 +794,7 @@ private:
           [&](const parser::CallStmt &s) {
             // Look for alternate return specifiers.
             const auto &args =
-                std::get<std::list<parser::ActualArgSpec>>(s.v.t);
+                std::get<std::list<parser::ActualArgSpec>>(s.call.t);
             for (const auto &arg : args) {
               const auto &actual = std::get<parser::ActualArg>(arg.t);
               if (const auto *altReturn =
@@ -799,8 +867,8 @@ private:
           },
           [&](const parser::AssignedGotoStmt &) {
             // Although this statement is a branch, it doesn't have any
-            // explicit control successors.  So the code at the end of the
-            // loop won't mark the successor.  Do that here.
+            // explicit control successors. So the code at the end of the
+            // loop won't mark the successor. Do that here.
             eval.isUnstructured = true;
             markSuccessorAsNewBlock(eval);
           },
@@ -1022,7 +1090,7 @@ private:
   const semantics::SemanticsContext &semanticsContext;
 
   /// functionList points to the internal or module procedure function list
-  /// of a FunctionLikeUnit or a ModuleLikeUnit.  It may be null.
+  /// of a FunctionLikeUnit or a ModuleLikeUnit. It may be null.
   std::list<lower::pft::FunctionLikeUnit> *functionList{};
   std::vector<lower::pft::Evaluation *> constructAndDirectiveStack{};
   std::vector<lower::pft::Evaluation *> doConstructStack{};
@@ -1059,7 +1127,10 @@ void dumpScope(const semantics::Scope *scope, int depth) {
         LLVM_DEBUG(llvm::dbgs() << "IntrinsicModules (no detail)\n");
         return;
       }
-      LLVM_DEBUG(llvm::dbgs() << "[anonymous]\n");
+      if (scope->kind() == Fortran::semantics::Scope::Kind::BlockConstruct)
+        LLVM_DEBUG(llvm::dbgs() << "[block]\n");
+      else
+        LLVM_DEBUG(llvm::dbgs() << "[anonymous]\n");
     }
   }
   for (const auto &scp : scope->children())
@@ -1094,6 +1165,9 @@ public:
                      },
                      [&](const lower::pft::CompilerDirectiveUnit &unit) {
                        dumpCompilerDirectiveUnit(outputStream, unit);
+                     },
+                     [&](const lower::pft::OpenACCDirectiveUnit &unit) {
+                       dumpOpenACCDirectiveUnit(outputStream, unit);
                      },
                  },
                  unit);
@@ -1242,6 +1316,16 @@ public:
     outputStream << "\nEnd CompilerDirective\n\n";
   }
 
+  void
+  dumpOpenACCDirectiveUnit(llvm::raw_ostream &outputStream,
+                           const lower::pft::OpenACCDirectiveUnit &directive) {
+    outputStream << getNodeIndex(directive) << " ";
+    outputStream << "OpenACCDirective: !$acc ";
+    outputStream << directive.get<Fortran::parser::OpenACCRoutineConstruct>()
+                        .source.ToString();
+    outputStream << "\nEnd OpenACCDirective\n\n";
+  }
+
   template <typename T>
   std::size_t getNodeIndex(const T &node) {
     auto addr = static_cast<const void *>(&node);
@@ -1310,6 +1394,10 @@ bool Fortran::lower::pft::Evaluation::lowerAsStructured() const {
 
 bool Fortran::lower::pft::Evaluation::lowerAsUnstructured() const {
   return isUnstructured || clDisableStructuredFir;
+}
+
+bool Fortran::lower::pft::Evaluation::forceAsUnstructured() const {
+  return clDisableStructuredFir;
 }
 
 lower::pft::FunctionLikeUnit *
@@ -1387,7 +1475,7 @@ private:
   void analyzeLocalEquivalenceSets(const semantics::Scope &scope) {
     if (scope.equivalenceSets().empty())
       return; // no equivalence sets to analyze
-    if (analyzedScopes.find(&scope) != analyzedScopes.end())
+    if (analyzedScopes.contains(&scope))
       return; // equivalence sets already analyzed
 
     analyzedScopes.insert(&scope);
@@ -1441,9 +1529,17 @@ private:
         (semantics::IsProcedure(sym) && IsDummy(sym));
     // A procedure argument in a subprogram with multiple entry points might
     // need a layeredVarList entry to trigger creation of a symbol map entry
-    // in some cases.  Non-dummy procedures don't.
+    // in some cases. Non-dummy procedures don't.
     if (semantics::IsProcedure(sym) && !isProcedurePointerOrDummy)
       return 0;
+    // Derived type component symbols may be collected by "CollectSymbols"
+    // below when processing something like "real :: x(derived%component)". The
+    // symbol "component" has "ObjectEntityDetails", but it should not be
+    // instantiated: it is part of "derived" that should be the only one to
+    // be instantiated.
+    if (sym.owner().IsDerivedType())
+      return 0;
+
     semantics::Symbol ultimate = sym.GetUltimate();
     if (const auto *details =
             ultimate.detailsIf<semantics::NamelistDetails>()) {
@@ -1495,8 +1591,14 @@ private:
       // Handle any symbols in initialization expressions.
       if (auto e = details->init())
         for (const auto &s : evaluate::CollectSymbols(*e))
-          depth = std::max(analyze(s) + 1, depth);
+          if (!s->has<semantics::DerivedTypeDetails>())
+            depth = std::max(analyze(s) + 1, depth);
     }
+
+    // Make sure cray pointer is instantiated even if it is not visible.
+    if (ultimate.test(Fortran::semantics::Symbol::Flag::CrayPointee))
+      depth = std::max(
+          analyze(Fortran::semantics::GetCrayPointer(ultimate)) + 1, depth);
     adjustSize(depth + 1);
     bool global = lower::symbolIsGlobal(sym);
     layeredVarList[depth].emplace_back(sym, global, depth);
@@ -1535,7 +1637,7 @@ private:
     const semantics::Scope &scope = ultimate.owner();
     // Expect the total number of EQUIVALENCE sets to be small for a typical
     // Fortran program.
-    if (aliasSyms.find(&ultimate) != aliasSyms.end()) {
+    if (aliasSyms.contains(&ultimate)) {
       LLVM_DEBUG(llvm::dbgs() << "found aggregate containing " << &ultimate
                               << " " << ultimate.name() << " in <" << &scope
                               << "> " << scope.GetName() << '\n');
@@ -1592,9 +1694,8 @@ private:
 Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
     const parser::MainProgram &func, const lower::pft::PftNode &parent,
     const semantics::SemanticsContext &semanticsContext)
-    : ProgramUnit{func, parent}, endStmt{
-                                     getFunctionStmt<parser::EndProgramStmt>(
-                                         func)} {
+    : ProgramUnit{func, parent},
+      endStmt{getFunctionStmt<parser::EndProgramStmt>(func)} {
   const auto &programStmt =
       std::get<std::optional<parser::Statement<parser::ProgramStmt>>>(func.t);
   if (programStmt.has_value()) {
@@ -1664,9 +1765,7 @@ parser::CharBlock
 Fortran::lower::pft::FunctionLikeUnit::getStartingSourceLoc() const {
   if (beginStmt)
     return stmtSourceLoc(*beginStmt);
-  if (!evaluationList.empty())
-    return evaluationList.front().position;
-  return stmtSourceLoc(endStmt);
+  return scope->sourceRange();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1680,8 +1779,8 @@ Fortran::lower::pft::ModuleLikeUnit::ModuleLikeUnit(
 
 Fortran::lower::pft::ModuleLikeUnit::ModuleLikeUnit(
     const parser::Submodule &m, const lower::pft::PftNode &parent)
-    : ProgramUnit{m, parent}, beginStmt{getModuleStmt<parser::SubmoduleStmt>(
-                                  m)},
+    : ProgramUnit{m, parent},
+      beginStmt{getModuleStmt<parser::SubmoduleStmt>(m)},
       endStmt{getModuleStmt<parser::EndSubmoduleStmt>(m)} {}
 
 parser::CharBlock
@@ -1707,6 +1806,27 @@ Fortran::lower::pft::BlockDataUnit::BlockDataUnit(
       symTab{semanticsContext.FindScope(
           std::get<parser::Statement<parser::EndBlockDataStmt>>(bd.t).source)} {
 }
+
+//===----------------------------------------------------------------------===//
+// Variable implementation
+//===----------------------------------------------------------------------===//
+
+bool Fortran::lower::pft::Variable::isRuntimeTypeInfoData() const {
+  // So far, use flags to detect if this symbol were generated during
+  // semantics::BuildRuntimeDerivedTypeTables(). Scope cannot be used since the
+  // symbols are injected in the user scopes defining the described derived
+  // types. A robustness improvement for this test could be to get hands on the
+  // semantics::RuntimeDerivedTypeTables and to check if the symbol names
+  // belongs to this structure.
+  using Flags = Fortran::semantics::Symbol::Flag;
+  const auto *nominal = std::get_if<Nominal>(&var);
+  return nominal && nominal->symbol->test(Flags::CompilerCreated) &&
+         nominal->symbol->test(Flags::ReadOnly);
+}
+
+//===----------------------------------------------------------------------===//
+// API implementation
+//===----------------------------------------------------------------------===//
 
 std::unique_ptr<lower::pft::Program>
 Fortran::lower::createPFT(const parser::Program &root,
@@ -1887,6 +2007,10 @@ struct SymbolVisitor {
         }
       }
     }
+    // - CrayPointer needs to be available whenever a CrayPointee is used.
+    if (symbol.GetUltimate().test(
+            Fortran::semantics::Symbol::Flag::CrayPointee))
+      visitSymbol(Fortran::semantics::GetCrayPointer(symbol));
   }
 
   template <typename A>

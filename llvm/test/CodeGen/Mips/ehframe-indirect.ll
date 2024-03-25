@@ -1,12 +1,8 @@
 ; RUN: llc -mtriple=mipsel-linux-gnu < %s -asm-verbose -relocation-model=pic | \
 ; RUN:     FileCheck -check-prefixes=ALL,LINUX,LINUX-O32,O32 %s
-; RUN: llc -mtriple=mipsel-linux-android < %s -asm-verbose -relocation-model=pic | \
-; RUN:     FileCheck -check-prefixes=ALL,LINUX,LINUX-O32,O32 %s
 ; RUN: llc -mtriple=mips64el-linux-gnu -target-abi=n32 < %s -asm-verbose -relocation-model=pic | \
 ; RUN:     FileCheck -check-prefixes=ALL,LINUX,LINUX-NEW,N32 %s
 ; RUN: llc -mtriple=mips64el-linux-gnu < %s -asm-verbose -relocation-model=pic | \
-; RUN:     FileCheck -check-prefixes=ALL,LINUX,LINUX-NEW,N64 %s
-; RUN: llc -mtriple=mips64el-linux-android < %s -asm-verbose -relocation-model=pic | \
 ; RUN:     FileCheck -check-prefixes=ALL,LINUX,LINUX-NEW,N64 %s
 ; RUN: llc -mtriple=mips64el-linux-gnu < %s -asm-verbose -relocation-model=pic | \
 ; RUN:     FileCheck -check-prefixes=ALL,LINUX,LINUX-NEW,N64 %s
@@ -66,7 +62,7 @@ declare void @foo()
 ; N64: .8byte _ZTISt9exception
 ; ALL: .hidden DW.ref.__gxx_personality_v0
 ; ALL: .weak DW.ref.__gxx_personality_v0
-; ALL: .section .data.DW.ref.__gxx_personality_v0,"aGw",@progbits,DW.ref.__gxx_personality_v0,comdat
+; ALL: .section .data.DW.ref.__gxx_personality_v0,"awG",@progbits,DW.ref.__gxx_personality_v0,comdat
 ; O32: .p2align 2
 ; N32: .p2align 2
 ; N64: .p2align 3

@@ -16,6 +16,13 @@
 ; CONFLICT-ILP32D: warning: triple-implied ABI conflicts with provided target-abi 'ilp32d', using target-abi
 ; CONFLICT-LP64D:  warning: triple-implied ABI conflicts with provided target-abi 'lp64d', using target-abi
 
+;; Check that no warning is reported when there is no environment component in
+;; triple-supplied ABI modifiers and --target-abi is used.
+; RUN: llc --mtriple=loongarch64-linux --target-abi=lp64d --mattr=+d < %s 2>&1 \
+; RUN:   | FileCheck %s --check-prefixes=LP64D,NO-WARNING
+
+; NO-WARNING-NOT:  warning: triple-implied ABI conflicts with provided target-abi 'lp64d', using target-abi
+
 ;; Check that ILP32-on-LA64 and LP64-on-LA32 combinations are handled properly.
 ; RUN: llc --mtriple=loongarch64 --target-abi=ilp32d --mattr=+d < %s 2>&1 \
 ; RUN:   | FileCheck %s --check-prefixes=LP64D,32ON64

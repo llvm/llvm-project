@@ -1,5 +1,5 @@
-; RUN: opt %s -S -passes=inline -o - \
-; RUN: | FileCheck %s
+; RUN: opt %s -S -passes=inline -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=inline -o - | FileCheck %s
 
 ;; Check that all DIAssignID metadata that are inlined are replaced with new
 ;; versions. Otherwise two inlined instances of an assignment will be considered
@@ -32,18 +32,18 @@ entry:
   %val = alloca i32, align 4, !DIAssignID !13
   call void @llvm.dbg.assign(metadata i1 undef, metadata !12, metadata !DIExpression(), metadata !13, metadata ptr %val, metadata !DIExpression()), !dbg !14
   %0 = bitcast ptr %val to ptr, !dbg !15
-  call void @llvm.lifetime.start.p0i8(i64 4, ptr %0), !dbg !15
+  call void @llvm.lifetime.start.p0(i64 4, ptr %0), !dbg !15
   store i32 5, ptr %val, align 4, !dbg !16, !DIAssignID !21
   call void @llvm.dbg.assign(metadata i32 5, metadata !12, metadata !DIExpression(), metadata !21, metadata ptr %val, metadata !DIExpression()), !dbg !14
   %1 = load i32, ptr %val, align 4, !dbg !22
   %2 = bitcast ptr %val to ptr, !dbg !23
-  call void @llvm.lifetime.end.p0i8(i64 4, ptr %2), !dbg !23
+  call void @llvm.lifetime.end.p0(i64 4, ptr %2), !dbg !23
   ret i32 %1, !dbg !24
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 ; Function Attrs: nounwind uwtable mustprogress

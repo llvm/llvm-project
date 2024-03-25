@@ -1,4 +1,5 @@
 ; RUN: opt -passes='module(debugify),function(dce)' -S < %s | FileCheck %s
+; RUN: opt -passes='module(debugify),function(dce)' -S < %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; CHECK-LABEL: @test
 define void @test() {

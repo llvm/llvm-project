@@ -1,0 +1,141 @@
+# RUN: llc -o - %s -mtriple=x86_64-pc-windows-msvc -run-pass=machinelicm | FileCheck %s
+#
+# This test checks that MachineLICM doesn't hoist loads out of funclets.
+# Manually modified from the IR of the following C++ function by running
+# llc -stop-after=machine-cp.
+#
+# void may_throw();
+# void use(int);
+#
+# void test(int n, int arg)
+# {
+#    for (int i = 0 ; i < n ; i++)
+#        try {
+#            may_throw();
+#        }
+#        catch (...) {
+#            // Two uses to get 'arg' allocated to a register
+#            use(arg);
+#            use(arg);
+#        }
+# }
+
+--- |
+  target triple = "x86_64-pc-windows-msvc"
+
+  define void @test(i32 %n, i32 %arg) personality ptr @__CxxFrameHandler3 {
+  entry:
+    %cmp3 = icmp sgt i32 %n, 0
+    br i1 %cmp3, label %for.body.preheader, label %for.cond.cleanup
+
+  for.body.preheader:                               ; preds = %entry
+    br label %for.body
+
+  for.cond.cleanup:                                 ; preds = %for.inc, %entry
+    ret void
+
+  for.body:                                         ; preds = %for.body.preheader, %for.inc
+    %lsr.iv = phi i32 [ %n, %for.body.preheader ], [ %lsr.iv.next, %for.inc ]
+    invoke void @may_throw()
+            to label %for.inc unwind label %catch.dispatch
+
+  catch.dispatch:                                   ; preds = %for.body
+    %0 = catchswitch within none [label %catch] unwind to caller
+
+  catch:                                            ; preds = %catch.dispatch
+    %1 = catchpad within %0 [ptr null, i32 64, ptr null]
+    call void @use(i32 %arg) [ "funclet"(token %1) ]
+    call void @use(i32 %arg) [ "funclet"(token %1) ]
+    catchret from %1 to label %for.inc
+
+  for.inc:                                          ; preds = %catch, %for.body
+    %lsr.iv.next = add i32 %lsr.iv, -1
+    %exitcond.not = icmp eq i32 %lsr.iv.next, 0
+    br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  }
+
+  declare i32 @__CxxFrameHandler3(...)
+
+  declare void @may_throw()
+
+  declare void @use(i32)
+
+...
+---
+name:            test
+alignment:       16
+tracksRegLiveness: true
+hasEHCatchret:   true
+hasEHScopes:     true
+hasEHFunclets:   true
+debugInstrRef:   true
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$ecx' }
+  - { reg: '$edx' }
+frameInfo:
+  maxAlignment:    8
+  hasCalls:        true
+  hasOpaqueSPAdjustment: true
+stack:
+  - { id: 0, type: spill-slot, size: 4, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 4, alignment: 4 }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $ecx, $edx
+
+    MOV32mr %stack.1, 1, $noreg, 0, $noreg, $edx :: (store (s32) into %stack.1)
+    TEST32rr renamable $ecx, renamable $ecx, implicit-def $eflags
+    JCC_1 %bb.2, 14, implicit killed $eflags
+
+  bb.1:
+    liveins: $ecx
+
+    JMP_1 %bb.3
+
+  bb.2.for.cond.cleanup:
+    RET 0
+
+  bb.3.for.body:
+    successors: %bb.5, %bb.4
+    liveins: $ecx
+
+    EH_LABEL <mcsymbol .Leh1>
+    MOV32mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $ecx :: (store (s32) into %stack.0)
+    ADJCALLSTACKDOWN64 32, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CALL64pcrel32 @may_throw, csr_win64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 32, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    EH_LABEL <mcsymbol .Leh2>
+    JMP_1 %bb.5
+
+  bb.4.catch (landing-pad, ehfunclet-entry):
+    successors: %bb.5
+
+    ADJCALLSTACKDOWN64 32, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    renamable $esi = MOV32rm %stack.1, 1, $noreg, 0, $noreg :: (load (s32) from %stack.1)
+    $ecx = COPY renamable $esi
+    CALL64pcrel32 @use, csr_win64, implicit $rsp, implicit $ssp, implicit $ecx, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 32, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    ADJCALLSTACKDOWN64 32, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $ecx = COPY killed renamable $esi
+    CALL64pcrel32 @use, csr_win64, implicit $rsp, implicit $ssp, implicit $ecx, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 32, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CATCHRET %bb.5, %bb.0
+
+  bb.5.for.inc:
+    successors: %bb.2, %bb.3
+
+    renamable $ecx = MOV32rm %stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %stack.0)
+    renamable $ecx = DEC32r killed renamable $ecx, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+    JMP_1 %bb.3
+
+...
+#
+# CHECK: bb.4.catch
+# CHECK: ADJCALLSTACKDOWN64
+# CHECK-NEXT: renamable [[REG:\$[a-z0-9]+]] = MOV32rm %stack.1
+# CHECK-NEXT: $ecx = COPY renamable [[REG]]
+# CHECK-NEXT: CALL64pcrel32 @use

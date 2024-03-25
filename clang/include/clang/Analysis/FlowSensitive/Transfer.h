@@ -17,6 +17,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 
 namespace clang {
 namespace dataflow {
@@ -24,12 +25,27 @@ namespace dataflow {
 /// Maps statements to the environments of basic blocks that contain them.
 class StmtToEnvMap {
 public:
-  virtual ~StmtToEnvMap() = default;
+  // `CurBlockID` is the ID of the block currently being processed, and
+  // `CurState` is the pending state currently associated with this block. These
+  // are supplied separately as the pending state for the current block may not
+  // yet be represented in `BlockToState`.
+  StmtToEnvMap(const AdornedCFG &ACFG,
+               llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>>
+                   BlockToState,
+               unsigned CurBlockID,
+               const TypeErasedDataflowAnalysisState &CurState)
+      : ACFG(ACFG), BlockToState(BlockToState), CurBlockID(CurBlockID),
+        CurState(CurState) {}
 
-  /// Returns the environment of the basic block that contains `S` or nullptr if
-  /// there isn't one.
-  /// FIXME: Ensure that the result can't be null and return a const reference.
-  virtual const Environment *getEnvironment(const Stmt &S) const = 0;
+  /// Returns the environment of the basic block that contains `S`.
+  /// The result is guaranteed never to be null.
+  const Environment *getEnvironment(const Stmt &S) const;
+
+private:
+  const AdornedCFG &ACFG;
+  llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>> BlockToState;
+  unsigned CurBlockID;
+  const TypeErasedDataflowAnalysisState &CurState;
 };
 
 /// Evaluates `S` and updates `Env` accordingly.

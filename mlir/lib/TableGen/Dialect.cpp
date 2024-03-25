@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Dialect.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
@@ -33,7 +32,7 @@ StringRef Dialect::getCppNamespace() const {
 std::string Dialect::getCppClassName() const {
   // Simply use the name and remove any '_' tokens.
   std::string cppName = def->getName().str();
-  llvm::erase_value(cppName, '_');
+  llvm::erase(cppName, '_');
   return cppName;
 }
 
@@ -103,19 +102,12 @@ bool Dialect::isExtensible() const {
   return def->getValueAsBit("isExtensible");
 }
 
-Dialect::FolderAPI Dialect::getFolderAPI() const {
-  llvm::Record *value = def->getValueAsDef("useFoldAPI");
-  auto converted =
-      llvm::StringSwitch<std::optional<Dialect::FolderAPI>>(value->getName())
-          .Case("kEmitRawAttributesFolder", FolderAPI::RawAttributes)
-          .Case("kEmitFoldAdaptorFolder", FolderAPI::FolderAdaptor)
-          .Default(std::nullopt);
+bool Dialect::usePropertiesForAttributes() const {
+  return def->getValueAsBit("usePropertiesForAttributes");
+}
 
-  if (!converted)
-    llvm::PrintFatalError(def->getLoc(),
-                          "Invalid value for dialect field `useFoldAPI`");
-
-  return *converted;
+llvm::DagInit *Dialect::getDiscardableAttributes() const {
+  return def->getValueAsDag("discardableAttrs");
 }
 
 bool Dialect::operator==(const Dialect &other) const {

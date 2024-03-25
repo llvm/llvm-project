@@ -69,9 +69,15 @@ public:
   std::vector<std::string> Includes;
   std::vector<std::string> MacroIncludes;
 
+  /// Perform extra checks when loading PCM files for mutable file systems.
+  bool ModulesCheckRelocated = true;
+
   /// Initialize the preprocessor with the compiler and target specific
   /// predefines.
   bool UsePredefines = true;
+
+  /// Indicates whether to predefine target OS macros.
+  bool DefineTargetOSMacros = false;
 
   /// Whether we should maintain a detailed record of all macro
   /// definitions and expansions.

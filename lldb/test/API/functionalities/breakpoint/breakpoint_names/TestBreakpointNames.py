@@ -3,7 +3,6 @@ Test breakpoint names.
 """
 
 
-
 import os
 import lldb
 from lldbsuite.test.decorators import *
@@ -14,7 +13,7 @@ from lldbsuite.test import lldbutil
 class BreakpointNames(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @add_test_categories(['pyapi'])
+    @add_test_categories(["pyapi"])
     def test_setting_names(self):
         """Use Python APIs to test that we can set breakpoint names."""
         self.build()
@@ -58,7 +57,9 @@ class BreakpointNames(TestBase):
         # Create a targets we are making breakpoint in and copying to:
         self.target = self.dbg.CreateTarget(exe)
         self.assertTrue(self.target, VALID_TARGET)
-        self.main_file_spec = lldb.SBFileSpec(os.path.join(self.getSourceDir(), "main.c"))
+        self.main_file_spec = lldb.SBFileSpec(
+            os.path.join(self.getSourceDir(), "main.c")
+        )
 
     def check_name_in_target(self, bkpt_name):
         name_list = lldb.SBStringList()
@@ -68,7 +69,9 @@ class BreakpointNames(TestBase):
             if name == bkpt_name:
                 found_it = True
                 break
-        self.assertTrue(found_it, "Didn't find the name %s in the target's name list:"%(bkpt_name))
+        self.assertTrue(
+            found_it, "Didn't find the name %s in the target's name list:" % (bkpt_name)
+        )
 
     def setUp(self):
         # Call super's setUp().
@@ -80,7 +83,7 @@ class BreakpointNames(TestBase):
         self.ignore_count = 1000
         self.condition = "1 == 2"
         self.auto_continue = True
-        self.tid = 0xaaaa
+        self.tid = 0xAAAA
         self.tidx = 10
         self.thread_name = "Fooey"
         self.queue_name = "Blooey"
@@ -88,7 +91,6 @@ class BreakpointNames(TestBase):
         self.cmd_list.AppendString("frame var")
         self.cmd_list.AppendString("bt")
         self.help_string = "I do something interesting"
-
 
     def do_check_names(self):
         """Use Python APIs to check that we can set & retrieve breakpoint names"""
@@ -114,40 +116,60 @@ class BreakpointNames(TestBase):
         bkpt.AddNameWithErrorHandling(other_bkpt_name)
 
         matches = bkpt.MatchesName(bkpt_name)
-        self.assertTrue(matches, "Adding a name means we didn't match the name we just set")
+        self.assertTrue(
+            matches, "Adding a name means we didn't match the name we just set"
+        )
         self.check_name_in_target(other_bkpt_name)
 
         # Remove the name and make sure we no longer match it:
         bkpt.RemoveName(bkpt_name)
         matches = bkpt.MatchesName(bkpt_name)
-        self.assertTrue(not matches,"We still match a name after removing it.")
+        self.assertTrue(not matches, "We still match a name after removing it.")
 
         # Make sure the name list has the remaining name:
         name_list = lldb.SBStringList()
         bkpt.GetNames(name_list)
         num_names = name_list.GetSize()
-        self.assertEquals(num_names, 1, "Name list has %d items, expected 1."%(num_names))
+        self.assertEqual(
+            num_names, 1, "Name list has %d items, expected 1." % (num_names)
+        )
 
         name = name_list.GetStringAtIndex(0)
-        self.assertEquals(name, other_bkpt_name, "Remaining name was: %s expected %s."%(name, other_bkpt_name))
+        self.assertEqual(
+            name,
+            other_bkpt_name,
+            "Remaining name was: %s expected %s." % (name, other_bkpt_name),
+        )
 
     def do_check_illegal_names(self):
         """Use Python APIs to check that we reject illegal names."""
         bkpt = self.target.BreakpointCreateByLocation(self.main_file_spec, 10)
-        bad_names = ["-CantStartWithADash",
-                     "1CantStartWithANumber",
-                     "^CantStartWithNonAlpha",
-                     "CantHave-ADash",
-                     "Cant Have Spaces"]
+        bad_names = [
+            "-CantStartWithADash",
+            "1CantStartWithANumber",
+            "^CantStartWithNonAlpha",
+            "CantHave-ADash",
+            "Cant Have Spaces",
+        ]
         for bad_name in bad_names:
             success = bkpt.AddNameWithErrorHandling(bad_name)
-            self.assertTrue(success.Fail(), "We allowed an illegal name: %s"%(bad_name))
+            self.assertTrue(
+                success.Fail(), "We allowed an illegal name: %s" % (bad_name)
+            )
             bp_name = lldb.SBBreakpointName(self.target, bad_name)
-            self.assertFalse(bp_name.IsValid(), "We made a breakpoint name with an illegal name: %s"%(bad_name));
+            self.assertFalse(
+                bp_name.IsValid(),
+                "We made a breakpoint name with an illegal name: %s" % (bad_name),
+            )
 
-            retval =lldb.SBCommandReturnObject()
-            self.dbg.GetCommandInterpreter().HandleCommand("break set -n whatever -N '%s'"%(bad_name), retval)
-            self.assertTrue(not retval.Succeeded(), "break set succeeded with: illegal name: %s"%(bad_name))
+            retval = lldb.SBCommandReturnObject()
+            self.dbg.GetCommandInterpreter().HandleCommand(
+                "break set -n whatever -N '%s'" % (bad_name), retval
+            )
+            self.assertTrue(
+                not retval.Succeeded(),
+                "break set succeeded with: illegal name: %s" % (bad_name),
+            )
 
     def do_check_using_names(self):
         """Use Python APIs to check names work in place of breakpoint ID's."""
@@ -159,7 +181,7 @@ class BreakpointNames(TestBase):
         bkpt = self.target.BreakpointCreateByLocation(self.main_file_spec, 10)
         bkpt_name = "ABreakpoint"
         bkpt_id = bkpt.GetID()
-        other_bkpt_name= "_AnotherBreakpoint"
+        other_bkpt_name = "_AnotherBreakpoint"
 
         # Add a name and make sure we match it:
         success = bkpt.AddNameWithErrorHandling(bkpt_name)
@@ -168,35 +190,53 @@ class BreakpointNames(TestBase):
         bkpts = lldb.SBBreakpointList(self.target)
         self.target.FindBreakpointsByName(bkpt_name, bkpts)
 
-        self.assertEquals(bkpts.GetSize(), 1, "One breakpoint matched.")
+        self.assertEqual(bkpts.GetSize(), 1, "One breakpoint matched.")
         found_bkpt = bkpts.GetBreakpointAtIndex(0)
-        self.assertEquals(bkpt.GetID(), found_bkpt.GetID(),"The right breakpoint.")
-        self.assertEquals(bkpt.GetID(), bkpt_id,"With the same ID as before.")
+        self.assertEqual(bkpt.GetID(), found_bkpt.GetID(), "The right breakpoint.")
+        self.assertEqual(bkpt.GetID(), bkpt_id, "With the same ID as before.")
 
         retval = lldb.SBCommandReturnObject()
-        self.dbg.GetCommandInterpreter().HandleCommand("break disable %s"%(bkpt_name), retval)
-        self.assertTrue(retval.Succeeded(), "break disable failed with: %s."%(retval.GetError()))
+        self.dbg.GetCommandInterpreter().HandleCommand(
+            "break disable %s" % (bkpt_name), retval
+        )
+        self.assertTrue(
+            retval.Succeeded(), "break disable failed with: %s." % (retval.GetError())
+        )
         self.assertTrue(not bkpt.IsEnabled(), "We didn't disable the breakpoint.")
 
         # Also make sure we don't apply commands to non-matching names:
-        self.dbg.GetCommandInterpreter().HandleCommand("break modify --one-shot 1 %s"%(other_bkpt_name), retval)
-        self.assertTrue(retval.Succeeded(), "break modify failed with: %s."%(retval.GetError()))
-        self.assertTrue(not bkpt.IsOneShot(), "We applied one-shot to the wrong breakpoint.")
+        self.dbg.GetCommandInterpreter().HandleCommand(
+            "break modify --one-shot 1 %s" % (other_bkpt_name), retval
+        )
+        self.assertTrue(
+            retval.Succeeded(), "break modify failed with: %s." % (retval.GetError())
+        )
+        self.assertTrue(
+            not bkpt.IsOneShot(), "We applied one-shot to the wrong breakpoint."
+        )
 
     def check_option_values(self, bp_object):
         self.assertEqual(bp_object.IsOneShot(), self.is_one_shot, "IsOneShot")
         self.assertEqual(bp_object.GetIgnoreCount(), self.ignore_count, "IgnoreCount")
         self.assertEqual(bp_object.GetCondition(), self.condition, "Condition")
-        self.assertEqual(bp_object.GetAutoContinue(), self.auto_continue, "AutoContinue")
+        self.assertEqual(
+            bp_object.GetAutoContinue(), self.auto_continue, "AutoContinue"
+        )
         self.assertEqual(bp_object.GetThreadID(), self.tid, "Thread ID")
         self.assertEqual(bp_object.GetThreadIndex(), self.tidx, "Thread Index")
         self.assertEqual(bp_object.GetThreadName(), self.thread_name, "Thread Name")
         self.assertEqual(bp_object.GetQueueName(), self.queue_name, "Queue Name")
         set_cmds = lldb.SBStringList()
         bp_object.GetCommandLineCommands(set_cmds)
-        self.assertEqual(set_cmds.GetSize(), self.cmd_list.GetSize(), "Size of command line commands")
+        self.assertEqual(
+            set_cmds.GetSize(), self.cmd_list.GetSize(), "Size of command line commands"
+        )
         for idx in range(0, set_cmds.GetSize()):
-            self.assertEqual(self.cmd_list.GetStringAtIndex(idx), set_cmds.GetStringAtIndex(idx), "Command %d"%(idx))
+            self.assertEqual(
+                self.cmd_list.GetStringAtIndex(idx),
+                set_cmds.GetStringAtIndex(idx),
+                "Command %d" % (idx),
+            )
 
     def make_a_dummy_name(self):
         "This makes a breakpoint name in the dummy target to make sure it gets copied over"
@@ -204,7 +244,7 @@ class BreakpointNames(TestBase):
         dummy_target = self.dbg.GetDummyTarget()
         self.assertTrue(dummy_target.IsValid(), "Dummy target was not valid.")
 
-        def cleanup ():
+        def cleanup():
             self.dbg.GetDummyTarget().DeleteBreakpointName(self.bp_name_string)
 
         # Execute the cleanup function during test case tear down.
@@ -213,7 +253,11 @@ class BreakpointNames(TestBase):
         # Now find it in the dummy target, and make sure these settings took:
         bp_name = lldb.SBBreakpointName(dummy_target, self.bp_name_string)
         # Make sure the name is right:
-        self.assertEqual(bp_name.GetName(), self.bp_name_string, "Wrong bp_name: %s"%(bp_name.GetName()))
+        self.assertEqual(
+            bp_name.GetName(),
+            self.bp_name_string,
+            "Wrong bp_name: %s" % (bp_name.GetName()),
+        )
         bp_name.SetOneShot(self.is_one_shot)
         bp_name.SetIgnoreCount(self.ignore_count)
         bp_name.SetCondition(self.condition)
@@ -247,36 +291,53 @@ class BreakpointNames(TestBase):
 
         # Now make a name from this breakpoint, and make sure the new name is properly configured:
         new_name = lldb.SBBreakpointName(bkpt, other_bp_name_string)
-        self.assertTrue(new_name.IsValid(), "Couldn't make a valid bp_name from a breakpoint.")
+        self.assertTrue(
+            new_name.IsValid(), "Couldn't make a valid bp_name from a breakpoint."
+        )
         self.check_option_values(bkpt)
 
         # Now change the name's option and make sure it gets propagated to
         # the breakpoint:
         new_auto_continue = not self.auto_continue
         bp_name.SetAutoContinue(new_auto_continue)
-        self.assertEqual(bp_name.GetAutoContinue(), new_auto_continue, "Couldn't change auto-continue on the name")
-        self.assertEqual(bkpt.GetAutoContinue(), new_auto_continue, "Option didn't propagate to the breakpoint.")
+        self.assertEqual(
+            bp_name.GetAutoContinue(),
+            new_auto_continue,
+            "Couldn't change auto-continue on the name",
+        )
+        self.assertEqual(
+            bkpt.GetAutoContinue(),
+            new_auto_continue,
+            "Option didn't propagate to the breakpoint.",
+        )
 
         # Now make this same breakpoint name - but from the command line
-        cmd_str = "breakpoint name configure %s -o %d -i %d -c '%s' -G %d -t %d -x %d -T '%s' -q '%s' -H '%s'"%(cl_bp_name_string,
-                                                                             self.is_one_shot,
-                                                                             self.ignore_count,
-                                                                             self.condition,
-                                                                             self.auto_continue,
-                                                                             self.tid,
-                                                                             self.tidx,
-                                                                             self.thread_name,
-                                                                             self.queue_name,
-                                                                             self.help_string)
+        cmd_str = (
+            "breakpoint name configure %s -o %d -i %d -c '%s' -G %d -t %d -x %d -T '%s' -q '%s' -H '%s'"
+            % (
+                cl_bp_name_string,
+                self.is_one_shot,
+                self.ignore_count,
+                self.condition,
+                self.auto_continue,
+                self.tid,
+                self.tidx,
+                self.thread_name,
+                self.queue_name,
+                self.help_string,
+            )
+        )
         for cmd in self.cmd_list:
-            cmd_str += " -C '%s'"%(cmd)
+            cmd_str += " -C '%s'" % (cmd)
 
         self.runCmd(cmd_str, check=True)
         # Now look up this name again and check its options:
         cl_name = lldb.SBBreakpointName(self.target, cl_bp_name_string)
         self.check_option_values(cl_name)
         # Also check the help string:
-        self.assertEqual(self.help_string, cl_name.GetHelpString(), "Help string didn't match")
+        self.assertEqual(
+            self.help_string, cl_name.GetHelpString(), "Help string didn't match"
+        )
         # Change the name and make sure that works:
         new_help = "I do something even more interesting"
         cl_name.SetHelpString(new_help)
@@ -285,17 +346,30 @@ class BreakpointNames(TestBase):
         # We should have three names now, make sure the target can list them:
         name_list = lldb.SBStringList()
         self.target.GetBreakpointNames(name_list)
-        for name_string in [self.bp_name_string, other_bp_name_string, cl_bp_name_string]:
-            self.assertIn(name_string, name_list, "Didn't find %s in names"%(name_string))
+        for name_string in [
+            self.bp_name_string,
+            other_bp_name_string,
+            cl_bp_name_string,
+        ]:
+            self.assertIn(
+                name_string, name_list, "Didn't find %s in names" % (name_string)
+            )
 
         # Delete the name from the current target.  Make sure that works and deletes the
         # name from the breakpoint as well:
         self.target.DeleteBreakpointName(self.bp_name_string)
         name_list.Clear()
         self.target.GetBreakpointNames(name_list)
-        self.assertNotIn(self.bp_name_string, name_list, "Didn't delete %s from a real target"%(self.bp_name_string))
+        self.assertNotIn(
+            self.bp_name_string,
+            name_list,
+            "Didn't delete %s from a real target" % (self.bp_name_string),
+        )
         # Also make sure the name got removed from breakpoints holding it:
-        self.assertFalse(bkpt.MatchesName(self.bp_name_string), "Didn't remove the name from the breakpoint.")
+        self.assertFalse(
+            bkpt.MatchesName(self.bp_name_string),
+            "Didn't remove the name from the breakpoint.",
+        )
 
         # Test that deleting the name we injected into the dummy target works (there's also a
         # cleanup that will do this, but that won't test the result...
@@ -303,56 +377,87 @@ class BreakpointNames(TestBase):
         dummy_target.DeleteBreakpointName(self.bp_name_string)
         name_list.Clear()
         dummy_target.GetBreakpointNames(name_list)
-        self.assertNotIn(self.bp_name_string, name_list, "Didn't delete %s from the dummy target"%(self.bp_name_string))
+        self.assertNotIn(
+            self.bp_name_string,
+            name_list,
+            "Didn't delete %s from the dummy target" % (self.bp_name_string),
+        )
         # Also make sure the name got removed from breakpoints holding it:
-        self.assertFalse(bkpt.MatchesName(self.bp_name_string), "Didn't remove the name from the breakpoint.")
+        self.assertFalse(
+            bkpt.MatchesName(self.bp_name_string),
+            "Didn't remove the name from the breakpoint.",
+        )
 
     def check_permission_results(self, bp_name):
-        self.assertEqual(bp_name.GetAllowDelete(), False, "Didn't set allow delete.")
+        self.assertFalse(bp_name.GetAllowDelete(), "Didn't set allow delete.")
         protected_bkpt = self.target.BreakpointCreateByLocation(self.main_file_spec, 10)
         protected_id = protected_bkpt.GetID()
 
-        unprotected_bkpt = self.target.BreakpointCreateByLocation(self.main_file_spec, 10)
+        unprotected_bkpt = self.target.BreakpointCreateByLocation(
+            self.main_file_spec, 10
+        )
         unprotected_id = unprotected_bkpt.GetID()
 
         success = protected_bkpt.AddNameWithErrorHandling(self.bp_name_string)
         self.assertSuccess(success, "Couldn't add this name to the breakpoint")
 
         self.target.DisableAllBreakpoints()
-        self.assertEqual(protected_bkpt.IsEnabled(), True, "Didnt' keep breakpoint from being disabled")
-        self.assertEqual(unprotected_bkpt.IsEnabled(), False, "Protected too many breakpoints from disabling.")
+        self.assertTrue(
+            protected_bkpt.IsEnabled(), "Didnt' keep breakpoint from being disabled"
+        )
+        self.assertFalse(
+            unprotected_bkpt.IsEnabled(),
+            "Protected too many breakpoints from disabling.",
+        )
 
         # Try from the command line too:
         unprotected_bkpt.SetEnabled(True)
         result = lldb.SBCommandReturnObject()
         self.dbg.GetCommandInterpreter().HandleCommand("break disable", result)
         self.assertTrue(result.Succeeded())
-        self.assertEqual(protected_bkpt.IsEnabled(), True, "Didnt' keep breakpoint from being disabled")
-        self.assertEqual(unprotected_bkpt.IsEnabled(), False, "Protected too many breakpoints from disabling.")
+        self.assertTrue(
+            protected_bkpt.IsEnabled(), "Didnt' keep breakpoint from being disabled"
+        )
+        self.assertFalse(
+            unprotected_bkpt.IsEnabled(),
+            "Protected too many breakpoints from disabling.",
+        )
 
         self.target.DeleteAllBreakpoints()
         bkpt = self.target.FindBreakpointByID(protected_id)
-        self.assertTrue(bkpt.IsValid(), "Didn't keep the breakpoint from being deleted.")
+        self.assertTrue(
+            bkpt.IsValid(), "Didn't keep the breakpoint from being deleted."
+        )
         bkpt = self.target.FindBreakpointByID(unprotected_id)
-        self.assertFalse(bkpt.IsValid(), "Protected too many breakpoints from deletion.")
+        self.assertFalse(
+            bkpt.IsValid(), "Protected too many breakpoints from deletion."
+        )
 
         # Remake the unprotected breakpoint and try again from the command line:
-        unprotected_bkpt = self.target.BreakpointCreateByLocation(self.main_file_spec, 10)
+        unprotected_bkpt = self.target.BreakpointCreateByLocation(
+            self.main_file_spec, 10
+        )
         unprotected_id = unprotected_bkpt.GetID()
 
         self.dbg.GetCommandInterpreter().HandleCommand("break delete -f", result)
         self.assertTrue(result.Succeeded())
         bkpt = self.target.FindBreakpointByID(protected_id)
-        self.assertTrue(bkpt.IsValid(), "Didn't keep the breakpoint from being deleted.")
+        self.assertTrue(
+            bkpt.IsValid(), "Didn't keep the breakpoint from being deleted."
+        )
         bkpt = self.target.FindBreakpointByID(unprotected_id)
-        self.assertFalse(bkpt.IsValid(), "Protected too many breakpoints from deletion.")
+        self.assertFalse(
+            bkpt.IsValid(), "Protected too many breakpoints from deletion."
+        )
 
     def do_check_configuring_permissions_sb(self):
         bp_name = lldb.SBBreakpointName(self.target, self.bp_name_string)
 
         # Make a breakpoint name with delete disallowed:
         bp_name = lldb.SBBreakpointName(self.target, self.bp_name_string)
-        self.assertTrue(bp_name.IsValid(), "Failed to make breakpoint name for valid name.")
+        self.assertTrue(
+            bp_name.IsValid(), "Failed to make breakpoint name for valid name."
+        )
 
         bp_name.SetAllowDelete(False)
         bp_name.SetAllowDisable(False)
@@ -361,8 +466,13 @@ class BreakpointNames(TestBase):
 
     def do_check_configuring_permissions_cli(self):
         # Make the name with the right options using the command line:
-        self.runCmd("breakpoint name configure -L 0 -D 0 -A 0 %s"%(self.bp_name_string), check=True)
+        self.runCmd(
+            "breakpoint name configure -L 0 -D 0 -A 0 %s" % (self.bp_name_string),
+            check=True,
+        )
         # Now look up the breakpoint we made, and check that it works.
         bp_name = lldb.SBBreakpointName(self.target, self.bp_name_string)
-        self.assertTrue(bp_name.IsValid(), "Didn't make a breakpoint name we could find.")
+        self.assertTrue(
+            bp_name.IsValid(), "Didn't make a breakpoint name we could find."
+        )
         self.check_permission_results(bp_name)

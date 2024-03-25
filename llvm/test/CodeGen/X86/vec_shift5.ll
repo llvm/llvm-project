@@ -258,8 +258,8 @@ define i32 @extelt1_add_psrai_v4i32_uses(<4 x i32> %x, <4 x i32> %y){
 ; CHECK-NEXT:    movd %xmm1, %ecx
 ; CHECK-NEXT:    addl $3, %ecx
 ; CHECK-NEXT:    movd %ecx, %xmm1
-; CHECK-NEXT:    psrad %xmm1, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; CHECK-NEXT:    psrad %xmm1, %xmm0
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    imull %ecx, %eax
 ; CHECK-NEXT:    ret{{[l|q]}}

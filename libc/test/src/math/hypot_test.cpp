@@ -13,13 +13,13 @@
 using LlvmLibcHypotTest = HypotTestTemplate<double>;
 
 TEST_F(LlvmLibcHypotTest, SpecialNumbers) {
-  test_special_numbers(&__llvm_libc::hypot);
+  test_special_numbers(&LIBC_NAMESPACE::hypot);
 }
 
 TEST_F(LlvmLibcHypotTest, SubnormalRange) {
-  test_subnormal_range(&__llvm_libc::hypot);
+  test_subnormal_range(&LIBC_NAMESPACE::hypot);
 }
 
 TEST_F(LlvmLibcHypotTest, NormalRange) {
-  test_normal_range(&__llvm_libc::hypot);
+  test_normal_range(&LIBC_NAMESPACE::hypot);
 }

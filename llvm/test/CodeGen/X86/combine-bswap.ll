@@ -255,6 +255,158 @@ define i32 @test_bswap32_shift17(i32 %a0) {
   ret i32 %b
 }
 
+define i32 @bs_and_lhs_bs32(i32 %a, i32 %b) #0 {
+; X86-LABEL: bs_and_lhs_bs32:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: bs_and_lhs_bs32:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    bswapl %eax
+; X64-NEXT:    andl %edi, %eax
+; X64-NEXT:    retq
+  %1 = tail call i32 @llvm.bswap.i32(i32 %a)
+  %2 = and i32 %1, %b
+  %3 = tail call i32 @llvm.bswap.i32(i32 %2)
+  ret i32 %3
+}
+
+define i64 @bs_or_lhs_bs64(i64 %a, i64 %b) #0 {
+; X86-LABEL: bs_or_lhs_bs64:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    bswapl %edx
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    retl
+;
+; X64-LABEL: bs_or_lhs_bs64:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rsi, %rax
+; X64-NEXT:    bswapq %rax
+; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    retq
+  %1 = tail call i64 @llvm.bswap.i64(i64 %a)
+  %2 = or i64 %1, %b
+  %3 = tail call i64 @llvm.bswap.i64(i64 %2)
+  ret i64 %3
+}
+
+define i64 @bs_xor_rhs_bs64(i64 %a, i64 %b) #0 {
+; X86-LABEL: bs_xor_rhs_bs64:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    bswapl %edx
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    retl
+;
+; X64-LABEL: bs_xor_rhs_bs64:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    bswapq %rax
+; X64-NEXT:    xorq %rsi, %rax
+; X64-NEXT:    retq
+  %1 = tail call i64 @llvm.bswap.i64(i64 %b)
+  %2 = xor i64 %a, %1
+  %3 = tail call i64 @llvm.bswap.i64(i64 %2)
+  ret i64 %3
+}
+
+define i32 @bs_and_all_operand_multiuse(i32 %a, i32 %b) #0 {
+; X86-LABEL: bs_and_all_operand_multiuse:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    bswapl %edx
+; X86-NEXT:    andl %ecx, %eax
+; X86-NEXT:    bswapl %ecx
+; X86-NEXT:    imull %edx, %eax
+; X86-NEXT:    imull %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: bs_and_all_operand_multiuse:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    bswapl %eax
+; X64-NEXT:    andl %esi, %edi
+; X64-NEXT:    bswapl %esi
+; X64-NEXT:    imull %edi, %eax
+; X64-NEXT:    imull %esi, %eax
+; X64-NEXT:    retq
+  %1 = tail call i32 @llvm.bswap.i32(i32 %a)
+  %2 = tail call i32 @llvm.bswap.i32(i32 %b)
+  %3 = and i32 %1, %2
+  %4 = tail call i32 @llvm.bswap.i32(i32 %3)
+  %5 = mul i32 %1, %4 ;increase use of left bswap
+  %6 = mul i32 %2, %5 ;increase use of right bswap
+
+  ret i32 %6
+}
+
+; negative test
+define i32 @bs_and_rhs_bs32_multiuse1(i32 %a, i32 %b) #0 {
+; X86-LABEL: bs_and_rhs_bs32_multiuse1:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    bswapl %ecx
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    imull %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: bs_and_rhs_bs32_multiuse1:
+; X64:       # %bb.0:
+; X64-NEXT:    bswapl %esi
+; X64-NEXT:    andl %edi, %esi
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    bswapl %eax
+; X64-NEXT:    imull %esi, %eax
+; X64-NEXT:    retq
+  %1 = tail call i32 @llvm.bswap.i32(i32 %b)
+  %2 = and i32 %1, %a
+  %3 = tail call i32 @llvm.bswap.i32(i32 %2)
+  %4 = mul i32 %2, %3 ;increase use of logical op
+  ret i32 %4
+}
+
+; negative test
+define i32 @bs_and_rhs_bs32_multiuse2(i32 %a, i32 %b) #0 {
+; X86-LABEL: bs_and_rhs_bs32_multiuse2:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    bswapl %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl %ecx, %eax
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    imull %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: bs_and_rhs_bs32_multiuse2:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    bswapl %esi
+; X64-NEXT:    andl %esi, %eax
+; X64-NEXT:    bswapl %eax
+; X64-NEXT:    imull %esi, %eax
+; X64-NEXT:    retq
+  %1 = tail call i32 @llvm.bswap.i32(i32 %b)
+  %2 = and i32 %1, %a
+  %3 = tail call i32 @llvm.bswap.i32(i32 %2)
+  %4 = mul i32 %1, %3 ;increase use of inner bswap
+  ret i32 %4
+}
+
 ; negative test
 define i64 @test_bswap64_shift17(i64 %a0) {
 ; X86-LABEL: test_bswap64_shift17:

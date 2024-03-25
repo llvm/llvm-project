@@ -13,6 +13,7 @@
 #include "lldb/Target/Language.h"
 
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Target/Target.h"
@@ -26,6 +27,35 @@ using namespace lldb_private::formatters;
 
 typedef std::unique_ptr<Language> LanguageUP;
 typedef std::map<lldb::LanguageType, LanguageUP> LanguagesMap;
+
+#define LLDB_PROPERTIES_language
+#include "TargetProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_language
+#include "TargetPropertiesEnum.inc"
+};
+
+LanguageProperties &Language::GetGlobalLanguageProperties() {
+  static LanguageProperties g_settings;
+  return g_settings;
+}
+
+llvm::StringRef LanguageProperties::GetSettingName() {
+  static constexpr llvm::StringLiteral g_setting_name("language");
+  return g_setting_name;
+}
+
+LanguageProperties::LanguageProperties() {
+  m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
+  m_collection_sp->Initialize(g_language_properties);
+}
+
+bool LanguageProperties::GetEnableFilterForLineBreakpoints() const {
+  const uint32_t idx = ePropertyEnableFilterForLineBreakpoints;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_language_properties[idx].default_uint_value != 0);
+}
 
 static LanguagesMap &GetLanguagesMap() {
   static LanguagesMap *g_map = nullptr;
@@ -194,9 +224,27 @@ struct language_name_pair language_names[] = {
     {"c++14", eLanguageTypeC_plus_plus_14},
     {"fortran03", eLanguageTypeFortran03},
     {"fortran08", eLanguageTypeFortran08},
+    {"renderscript", eLanguageTypeRenderScript},
+    {"bliss", eLanguageTypeBLISS},
+    {"kotlin", eLanguageTypeKotlin},
+    {"zig", eLanguageTypeZig},
+    {"crystal", eLanguageTypeCrystal},
+    {"<invalid language>",
+     static_cast<LanguageType>(
+         0x0029)}, // Not yet taken by any language in the DWARF spec
+                   // and thus has no entry in LanguageType
+    {"c++17", eLanguageTypeC_plus_plus_17},
+    {"c++20", eLanguageTypeC_plus_plus_20},
+    {"c17", eLanguageTypeC17},
+    {"fortran18", eLanguageTypeFortran18},
+    {"ada2005", eLanguageTypeAda2005},
+    {"ada2012", eLanguageTypeAda2012},
+    {"HIP", eLanguageTypeHIP},
+    {"assembly", eLanguageTypeAssembly},
+    {"c-sharp", eLanguageTypeC_sharp},
+    {"mojo", eLanguageTypeMojo},
     // Vendor Extensions
     {"assembler", eLanguageTypeMipsAssembler},
-    {"renderscript", eLanguageTypeExtRenderScript},
     // Now synonyms, in arbitrary order
     {"objc", eLanguageTypeObjC},
     {"objc++", eLanguageTypeObjC_plus_plus},
@@ -253,6 +301,8 @@ bool Language::LanguageIsCPlusPlus(LanguageType language) {
   case eLanguageTypeC_plus_plus_03:
   case eLanguageTypeC_plus_plus_11:
   case eLanguageTypeC_plus_plus_14:
+  case eLanguageTypeC_plus_plus_17:
+  case eLanguageTypeC_plus_plus_20:
   case eLanguageTypeObjC_plus_plus:
     return true;
   default:
@@ -292,6 +342,8 @@ bool Language::LanguageIsCFamily(LanguageType language) {
   case eLanguageTypeC_plus_plus_03:
   case eLanguageTypeC_plus_plus_11:
   case eLanguageTypeC_plus_plus_14:
+  case eLanguageTypeC_plus_plus_17:
+  case eLanguageTypeC_plus_plus_20:
   case eLanguageTypeObjC_plus_plus:
   case eLanguageTypeObjC:
     return true;
@@ -315,6 +367,8 @@ LanguageType Language::GetPrimaryLanguage(LanguageType language) {
   case eLanguageTypeC_plus_plus_03:
   case eLanguageTypeC_plus_plus_11:
   case eLanguageTypeC_plus_plus_14:
+  case eLanguageTypeC_plus_plus_17:
+  case eLanguageTypeC_plus_plus_20:
     return eLanguageTypeC_plus_plus;
   case eLanguageTypeC:
   case eLanguageTypeC89:
@@ -350,7 +404,7 @@ LanguageType Language::GetPrimaryLanguage(LanguageType language) {
   case eLanguageTypeJulia:
   case eLanguageTypeDylan:
   case eLanguageTypeMipsAssembler:
-  case eLanguageTypeExtRenderScript:
+  case eLanguageTypeMojo:
   case eLanguageTypeUnknown:
   default:
     return language;
@@ -410,12 +464,10 @@ bool Language::ImageListTypeScavenger::Find_Impl(
   Target *target = exe_scope->CalculateTarget().get();
   if (target) {
     const auto &images(target->GetImages());
-    ConstString cs_key(key);
-    llvm::DenseSet<SymbolFile *> searched_sym_files;
-    TypeList matches;
-    images.FindTypes(nullptr, cs_key, false, UINT32_MAX, searched_sym_files,
-                     matches);
-    for (const auto &match : matches.Types()) {
+    TypeQuery query(key);
+    TypeResults type_results;
+    images.FindTypes(nullptr, query, type_results);
+    for (const auto &match : type_results.GetTypeMap().Types()) {
       if (match) {
         CompilerType compiler_type(match->GetFullCompilerType());
         compiler_type = AdjustForInclusion(compiler_type);
@@ -432,19 +484,17 @@ bool Language::ImageListTypeScavenger::Find_Impl(
   return result;
 }
 
-bool Language::GetFormatterPrefixSuffix(ValueObject &valobj,
-                                        ConstString type_hint,
-                                        std::string &prefix,
-                                        std::string &suffix) {
-  return false;
+std::pair<llvm::StringRef, llvm::StringRef>
+Language::GetFormatterPrefixSuffix(llvm::StringRef type_hint) {
+  return std::pair<llvm::StringRef, llvm::StringRef>();
 }
 
-bool Language::DemangledNameContainsPath(llvm::StringRef path, 
+bool Language::DemangledNameContainsPath(llvm::StringRef path,
                                          ConstString demangled) const {
   // The base implementation does a simple contains comparision:
   if (path.empty())
     return false;
-  return demangled.GetStringRef().contains(path);                                         
+  return demangled.GetStringRef().contains(path);
 }
 
 DumpValueObjectOptions::DeclPrintingHelper Language::GetDeclPrintingHelper() {

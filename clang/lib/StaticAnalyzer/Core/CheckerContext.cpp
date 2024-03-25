@@ -14,6 +14,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
 using namespace ento;
@@ -104,10 +105,11 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
   if (FName.equals(Name))
     return true;
 
-  if (FName.startswith("__inline") && FName.contains(Name))
+  if (FName.starts_with("__inline") && FName.contains(Name))
     return true;
 
-  if (FName.startswith("__") && FName.endswith("_chk") && FName.contains(Name))
+  if (FName.starts_with("__") && FName.ends_with("_chk") &&
+      FName.contains(Name))
     return true;
 
   return false;

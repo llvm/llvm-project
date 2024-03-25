@@ -7,10 +7,10 @@ int __attribute__((target("no-x87"))) bar(int a) { return 4; }
 // CHECK: foo{{.*}} #0
 // CHECK: bar{{.*}} #1
 
-// CHECK: #0 = {{.*}}"target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87"
+// CHECK: #0 = {{.*}}"target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87"
 // HARD-NOT: "use-soft-float"
 // SOFT: "use-soft-float"="true"
 
-// CHECK: #1 = {{.*}}"target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,-x87"
+// CHECK: #1 = {{.*}}"target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,-x87"
 // HARD-NOT: "use-soft-float"
 // SOFT: "use-soft-float"="true"

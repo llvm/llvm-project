@@ -15,14 +15,7 @@ exit:
   ret void
 }
 
-; CHECK:      add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
+; CHECK: add{{.*}}, 8
 ; CHECK-NEXT: icmp
 
 ; Partial unroll 16 times for this loop.
@@ -57,20 +50,5 @@ exit:
 
 
 
-; CHECK:      add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
+; CHECK: add{{.*}}, 16
 ; CHECK-NEXT: icmp

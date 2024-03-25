@@ -6,26 +6,31 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: can-create-symlinks
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
+
+// Starting in Android N (API 24), SELinux policy prevents the shell user from
+// creating a hard link.
+// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api={{21|22|23}}
 
 // <filesystem>
 
 // bool equivalent(path const& lhs, path const& rhs);
 // bool equivalent(path const& lhs, path const& rhs, std::error_code& ec) noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
+#include "assert_macros.h"
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
-TEST_SUITE(equivalent_test_suite)
-
-TEST_CASE(signature_test) {
+static void signature_test() {
   const path p;
   ((void)p);
   std::error_code ec;
@@ -34,7 +39,7 @@ TEST_CASE(signature_test) {
   ASSERT_NOT_NOEXCEPT(equivalent(p, p));
 }
 
-TEST_CASE(equivalent_test) {
+static void equivalent_test() {
   static_test_env static_env;
   struct TestCase {
     path lhs;
@@ -51,65 +56,75 @@ TEST_CASE(equivalent_test) {
   };
   for (auto& TC : testCases) {
     std::error_code ec;
-    TEST_CHECK(equivalent(TC.lhs, TC.rhs, ec) == TC.expect);
-    TEST_CHECK(!ec);
+    assert(equivalent(TC.lhs, TC.rhs, ec) == TC.expect);
+    assert(!ec);
   }
 }
 
-TEST_CASE(equivalent_reports_error_if_input_dne) {
+static void equivalent_reports_error_if_input_dne() {
   static_test_env static_env;
   const path E = static_env.File;
   const path DNE = static_env.DNE;
   { // Test that an error is reported when either of the paths don't exist
     std::error_code ec = GetTestEC();
-    TEST_CHECK(equivalent(E, DNE, ec) == false);
-    TEST_CHECK(ec);
-    TEST_CHECK(ec != GetTestEC());
+    assert(equivalent(E, DNE, ec) == false);
+    assert(ec);
+    assert(ec != GetTestEC());
   }
   {
     std::error_code ec = GetTestEC();
-    TEST_CHECK(equivalent(DNE, E, ec) == false);
-    TEST_CHECK(ec);
-    TEST_CHECK(ec != GetTestEC());
+    assert(equivalent(DNE, E, ec) == false);
+    assert(ec);
+    assert(ec != GetTestEC());
   }
   {
-    TEST_CHECK_THROW(filesystem_error, equivalent(DNE, E));
-    TEST_CHECK_THROW(filesystem_error, equivalent(E, DNE));
+    TEST_THROWS_TYPE(filesystem_error, equivalent(DNE, E));
+    TEST_THROWS_TYPE(filesystem_error, equivalent(E, DNE));
   }
   { // Test that an exception is thrown if both paths do not exist.
-    TEST_CHECK_THROW(filesystem_error, equivalent(DNE, DNE));
+    TEST_THROWS_TYPE(filesystem_error, equivalent(DNE, DNE));
   }
   {
     std::error_code ec = GetTestEC();
-    TEST_CHECK(equivalent(DNE, DNE, ec) == false);
-    TEST_CHECK(ec);
-    TEST_CHECK(ec != GetTestEC());
+    assert(equivalent(DNE, DNE, ec) == false);
+    assert(ec);
+    assert(ec != GetTestEC());
   }
 }
 
-TEST_CASE(equivalent_hardlink_succeeds) {
+static void equivalent_hardlink_succeeds() {
   scoped_test_env env;
   path const file = env.create_file("file", 42);
   const path hl1 = env.create_hardlink(file, "hl1");
   const path hl2 = env.create_hardlink(file, "hl2");
-  TEST_CHECK(equivalent(file, hl1));
-  TEST_CHECK(equivalent(file, hl2));
-  TEST_CHECK(equivalent(hl1, hl2));
+  assert(equivalent(file, hl1));
+  assert(equivalent(file, hl2));
+  assert(equivalent(hl1, hl2));
 }
 
 #ifndef _WIN32
-TEST_CASE(equivalent_is_other_succeeds) {
+static void equivalent_is_other_succeeds() {
   scoped_test_env env;
   path const file = env.create_file("file", 42);
   const path fifo1 = env.create_fifo("fifo1");
   const path fifo2 = env.create_fifo("fifo2");
   // Required to test behavior for inputs where is_other(p) is true.
-  TEST_REQUIRE(is_other(fifo1));
-  TEST_CHECK(!equivalent(file, fifo1));
-  TEST_CHECK(!equivalent(fifo2, file));
-  TEST_CHECK(!equivalent(fifo1, fifo2));
-  TEST_CHECK(equivalent(fifo1, fifo1));
+  assert(is_other(fifo1));
+  assert(!equivalent(file, fifo1));
+  assert(!equivalent(fifo2, file));
+  assert(!equivalent(fifo1, fifo2));
+  assert(equivalent(fifo1, fifo1));
 }
+#endif // _WIN32
+
+int main(int, char**) {
+  signature_test();
+  equivalent_test();
+  equivalent_reports_error_if_input_dne();
+  equivalent_hardlink_succeeds();
+#ifndef _WIN32
+  equivalent_is_other_succeeds();
 #endif
 
-TEST_SUITE_END()
+  return 0;
+}

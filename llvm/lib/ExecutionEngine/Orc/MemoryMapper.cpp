@@ -241,8 +241,7 @@ void SharedMemoryMapper::reserve(size_t NumBytes,
 
         int SharedMemoryFile = shm_open(SharedMemoryName.c_str(), O_RDWR, 0700);
         if (SharedMemoryFile < 0) {
-          return OnReserved(errorCodeToError(
-              std::error_code(errno, std::generic_category())));
+          return OnReserved(errorCodeToError(errnoAsErrorCode()));
         }
 
         // this prevents other processes from accessing it by name
@@ -251,8 +250,7 @@ void SharedMemoryMapper::reserve(size_t NumBytes,
         LocalAddr = mmap(nullptr, NumBytes, PROT_READ | PROT_WRITE, MAP_SHARED,
                          SharedMemoryFile, 0);
         if (LocalAddr == MAP_FAILED) {
-          return OnReserved(errorCodeToError(
-              std::error_code(errno, std::generic_category())));
+          return OnReserved(errorCodeToError(errnoAsErrorCode()));
         }
 
         close(SharedMemoryFile);
@@ -322,7 +320,8 @@ void SharedMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
     std::memset(Base + Segment.ContentSize, 0, Segment.ZeroFillSize);
 
     tpctypes::SharedMemorySegFinalizeRequest SegReq;
-    SegReq.AG = Segment.AG;
+    SegReq.RAG = {Segment.AG.getMemProt(),
+                  Segment.AG.getMemLifetime() == MemLifetime::Finalize};
     SegReq.Addr = AI.MappingBase + Segment.Offset;
     SegReq.Size = Segment.ContentSize + Segment.ZeroFillSize;
 
@@ -375,8 +374,7 @@ void SharedMemoryMapper::release(ArrayRef<ExecutorAddr> Bases,
 #if defined(LLVM_ON_UNIX)
 
       if (munmap(Reservations[Base].LocalAddr, Reservations[Base].Size) != 0)
-        Err = joinErrors(std::move(Err), errorCodeToError(std::error_code(
-                                             errno, std::generic_category())));
+        Err = joinErrors(std::move(Err), errorCodeToError(errnoAsErrorCode()));
 
 #elif defined(_WIN32)
 

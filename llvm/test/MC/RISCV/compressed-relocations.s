@@ -17,6 +17,7 @@ c.jal foo
 
 c.bnez a0, foo
 # A compressed branch (c.bnez) to an unresolved symbol will be relaxed to a (bnez).
-# RELOC: R_RISCV_BRANCH
+# The (bnez) to an unresolved symbol will in turn be relaxed to (beqz; jal)
+# RELOC: R_RISCV_JAL
 # INSTR: c.bnez a0, foo
 # FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_rvc_branch

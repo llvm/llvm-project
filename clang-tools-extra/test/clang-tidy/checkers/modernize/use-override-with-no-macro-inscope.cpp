@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-use-override %t -- \
-// RUN:   -config="{CheckOptions: [{key: modernize-use-override.OverrideSpelling, value: 'CUSTOM_OVERRIDE'},{key: modernize-use-override.FinalSpelling, value: 'CUSTOM_FINAL'}]}"
+// RUN:   -config="{CheckOptions: {modernize-use-override.OverrideSpelling: 'CUSTOM_OVERRIDE',modernize-use-override.FinalSpelling: 'CUSTOM_FINAL'}}"
 
 // As if the macro was not defined.
 //#define CUSTOM_OVERRIDE override

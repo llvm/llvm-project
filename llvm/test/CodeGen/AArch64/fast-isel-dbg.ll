@@ -1,4 +1,6 @@
 ; RUN: llc -o - %s -fast-isel -stop-before=finalize-isel | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -o - %s -fast-isel -stop-before=finalize-isel | FileCheck %s
+
 ; Make sure fast-isel produces DBG_VALUE instructions even if no debug printer
 ; is scheduled because of -stop-before.
 target triple="aarch64--"

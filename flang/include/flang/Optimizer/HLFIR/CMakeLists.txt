@@ -5,8 +5,12 @@ mlir_tablegen(HLFIRDialect.h.inc -gen-dialect-decls -dialect=hlfir)
 mlir_tablegen(HLFIRDialect.cpp.inc -gen-dialect-defs -dialect=hlfir)
 mlir_tablegen(HLFIRAttributes.h.inc -gen-attrdef-decls -attrdefs-dialect=hlfir)
 mlir_tablegen(HLFIRAttributes.cpp.inc -gen-attrdef-defs -attrdefs-dialect=hlfir)
+mlir_tablegen(HLFIREnums.h.inc -gen-enum-decls)
+mlir_tablegen(HLFIREnums.cpp.inc -gen-enum-defs)
 
 set(LLVM_TARGET_DEFINITIONS HLFIROps.td)
+mlir_tablegen(HLFIROpInterfaces.h.inc -gen-op-interface-decls)
+mlir_tablegen(HLFIROpInterfaces.cpp.inc -gen-op-interface-defs)
 mlir_tablegen(HLFIROps.h.inc -gen-op-decls)
 mlir_tablegen(HLFIROps.cpp.inc -gen-op-defs)
 

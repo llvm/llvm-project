@@ -5,10 +5,10 @@ class OperatingSystemPlugIn(object):
     """Class that provides data for an instance of a LLDB 'OperatingSystemPython' plug-in class"""
 
     def __init__(self, process):
-        '''Initialization needs a valid.SBProcess object.
+        """Initialization needs a valid.SBProcess object.
 
         This plug-in will get created after a live process is valid and has stopped for the first time.
-        '''
+        """
         self.process = None
         self.registers = None
         self.threads = None
@@ -22,24 +22,28 @@ class OperatingSystemPlugIn(object):
     def get_thread_info(self):
         if not self.threads:
             # FIXME: LLDB is not actually parsing thread stop reasons.
-            self.threads = [{
-                'tid': 0x111111111,
-                'name': 'one',
-                'queue': 'queue1',
-                'state': 'stopped',
-                'stop_reason': 'not parsed'
-            }, {
-                'tid': 0x222222222,
-                'name': 'two',
-                'queue': 'queue2',
-                'state': 'stopped',
-                'stop_reason': 'not parsed'
-            }, {
-                'tid': 0x333333333,
-                'name': 'three',
-                'queue': 'queue3',
-                'state': 'stopped',
-                'stop_reason': 'not parsed - should be "sigstop" though',
-                'core': 0
-            }]
+            self.threads = [
+                {
+                    "tid": 0x111111111,
+                    "name": "one",
+                    "queue": "queue1",
+                    "state": "stopped",
+                    "stop_reason": "not parsed",
+                },
+                {
+                    "tid": 0x222222222,
+                    "name": "two",
+                    "queue": "queue2",
+                    "state": "stopped",
+                    "stop_reason": "not parsed",
+                },
+                {
+                    "tid": 0x333333333,
+                    "name": "three",
+                    "queue": "queue3",
+                    "state": "stopped",
+                    "stop_reason": 'not parsed - should be "sigstop" though',
+                    "core": 0,
+                },
+            ]
         return self.threads

@@ -1,0 +1,16 @@
+REQUIRES: system-darwin,arm-registered-target,aarch64-registered-target
+
+RUN: dsymutil -oso-prepend-path %p %p/Inputs/fat-test.arm.dylib -o %t.fat32.dSYM
+RUN: llvm-objdump -m --universal-headers %t.fat32.dSYM/Contents/Resources/DWARF/fat-test.arm.dylib | FileCheck %s -check-prefixes=FAT32
+
+RUN: dsymutil --linker parallel -oso-prepend-path %p %p/Inputs/fat-test.arm.dylib -o %t.fat32.dSYM
+RUN: llvm-objdump -m --universal-headers %t.fat32.dSYM/Contents/Resources/DWARF/fat-test.arm.dylib | FileCheck %s -check-prefixes=FAT32
+
+RUN: dsymutil -oso-prepend-path %p %p/Inputs/fat-test.arm.dylib -o %t.fat64.dSYM -fat64
+RUN: llvm-objdump -m --universal-headers %t.fat64.dSYM/Contents/Resources/DWARF/fat-test.arm.dylib | FileCheck %s -check-prefixes=FAT64
+
+RUN: dsymutil --linker parallel -oso-prepend-path %p %p/Inputs/fat-test.arm.dylib -o %t.fat64.dSYM -fat64
+RUN: llvm-objdump -m --universal-headers %t.fat64.dSYM/Contents/Resources/DWARF/fat-test.arm.dylib | FileCheck %s -check-prefixes=FAT64
+
+FAT32: fat_magic FAT_MAGIC
+FAT64: fat_magic FAT_MAGIC_64

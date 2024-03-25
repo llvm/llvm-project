@@ -99,6 +99,12 @@ void printHeader(Error E, uintptr_t AccessPtr,
          ThreadBuffer);
 }
 
+static bool HasReportedBadPoolAccess = false;
+static const char *kUnknownCrashText =
+    "GWP-ASan cannot provide any more information about this error. This may "
+    "occur due to a wild memory access into the GWP-ASan pool, or an "
+    "overflow/underflow that is > 512B in length.\n";
+
 void dumpReport(uintptr_t ErrorPtr, const gwp_asan::AllocatorState *State,
                 const gwp_asan::AllocationMetadata *Metadata,
                 SegvBacktrace_t SegvBacktrace, Printf_t Printf,
@@ -117,6 +123,15 @@ void dumpReport(uintptr_t ErrorPtr, const gwp_asan::AllocatorState *State,
   const gwp_asan::AllocationMetadata *AllocMeta =
       __gwp_asan_get_metadata(State, Metadata, ErrorPtr);
 
+  if (AllocMeta == nullptr) {
+    if (HasReportedBadPoolAccess) return;
+    HasReportedBadPoolAccess = true;
+    Printf("*** GWP-ASan detected a memory error ***\n");
+    ScopedEndOfReportDecorator Decorator(Printf);
+    Printf(kUnknownCrashText);
+    return;
+  }
+
   // It's unusual for a signal handler to be invoked multiple times for the same
   // allocation, but it's possible in various scenarios, like:
   //  1. A double-free or invalid-free was invoked in one thread at the same
@@ -132,9 +147,7 @@ void dumpReport(uintptr_t ErrorPtr, const gwp_asan::AllocatorState *State,
 
   Error E = __gwp_asan_diagnose_error(State, Metadata, ErrorPtr);
   if (E == Error::UNKNOWN) {
-    Printf("GWP-ASan cannot provide any more information about this error. "
-           "This may occur due to a wild memory access into the GWP-ASan pool, "
-           "or an overflow/underflow that is > 512B in length.\n");
+    Printf(kUnknownCrashText);
     return;
   }
 
@@ -148,9 +161,6 @@ void dumpReport(uintptr_t ErrorPtr, const gwp_asan::AllocatorState *State,
       SegvBacktrace(Trace, kMaximumStackFramesForCrashTrace, Context);
 
   PrintBacktrace(Trace, TraceLength, Printf);
-
-  if (AllocMeta == nullptr)
-    return;
 
   // Maybe print the deallocation trace.
   if (__gwp_asan_is_deallocated(AllocMeta)) {

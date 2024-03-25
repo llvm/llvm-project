@@ -9,9 +9,6 @@
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11
 
-// dylib support for shared_mutex was added in macosx10.12
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
-
 // <shared_mutex>
 
 // class timed_mutex;
@@ -23,6 +20,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <chrono>
 #include <cstdlib>
 #include <shared_mutex>
 #include <vector>
@@ -48,9 +46,9 @@ std::atomic<unsigned> CountDown(Threads);
 void f1()
 {
   // Preemptive scheduling means that one cannot make assumptions about when
-  // code executes and therefore we cannot assume anthing about when the mutex
+  // code executes and therefore we cannot assume anything about when the mutex
   // starts waiting relative to code in the main thread. We can however prove
-  // that a timeout occured and that implies that this code is waiting.
+  // that a timeout occurred and that implies that this code is waiting.
   // See f2() below.
   //
   // Nevertheless, we should at least try to ensure that the mutex waits and

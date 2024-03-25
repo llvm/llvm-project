@@ -325,21 +325,11 @@ define <2 x i64> @and_or_v2i64(<2 x i64> %a0) {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [8,8]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: and_or_v2i64:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [8,8]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: and_or_v2i64:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [8,8]
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: and_or_v2i64:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovddup {{.*#+}} xmm0 = [8,8]
-; AVX512-NEXT:    # xmm0 = mem[0,0]
-; AVX512-NEXT:    retq
+; AVX-LABEL: and_or_v2i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = [8,8]
+; AVX-NEXT:    # xmm0 = mem[0,0]
+; AVX-NEXT:    retq
   %1 = or <2 x i64> %a0, <i64 255, i64 255>
   %2 = and <2 x i64> %1, <i64 8, i64 8>
   ret <2 x i64> %2
@@ -351,20 +341,10 @@ define <4 x i32> @and_or_v4i32(<4 x i32> %a0) {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [3,3,3,3]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: and_or_v4i32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [3,3,3,3]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: and_or_v4i32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm0 = [3,3,3,3]
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: and_or_v4i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm0 = [3,3,3,3]
-; AVX512-NEXT:    retq
+; AVX-LABEL: and_or_v4i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [3,3,3,3]
+; AVX-NEXT:    retq
   %1 = or <4 x i32> %a0, <i32 15, i32 15, i32 15, i32 15>
   %2 = and <4 x i32> %1, <i32 3, i32 3, i32 3, i32 3>
   ret <4 x i32> %2
@@ -546,12 +526,26 @@ define <16 x i8> @PR34620(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE-NEXT:    paddb %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: PR34620:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: PR34620:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsrlw $1, %xmm0, %xmm0
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR34620:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsrlw $1, %xmm0, %xmm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: PR34620:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsrlw $1, %xmm0, %xmm0
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %1 = lshr <16 x i8> %a0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %2 = and <16 x i8> %1, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %3 = add <16 x i8> %2, %a1
@@ -624,10 +618,10 @@ define <8 x i64> @neg_scalar_broadcast_v8i64(i64 %a0, <2 x i64> %a1) {
 ; AVX1-LABEL: neg_scalar_broadcast_v8i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,3]
+; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1,0,3,3]
 ; AVX1-NEXT:    vmovq %rdi, %xmm2
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm2, %ymm2
@@ -650,7 +644,7 @@ define <8 x i64> @neg_scalar_broadcast_v8i64(i64 %a0, <2 x i64> %a1) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512-NEXT:    vpbroadcastq %rdi, %zmm1
-; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [1,0,1,1,0,1,0,0]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [1,0,1,1,0,1,0,0]
 ; AVX512-NEXT:    vpermq %zmm0, %zmm2, %zmm0
 ; AVX512-NEXT:    vpandnq %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
@@ -718,7 +712,7 @@ define <4 x i64> @neg_scalar_broadcast_v4i64(i64 %a0, <2 x i64> %a1) {
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,3]
+; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1,0,3,3]
 ; AVX1-NEXT:    vandnpd %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -790,7 +784,7 @@ define <2 x i64> @casted_neg_scalar_broadcast_v2i64(<2 x i32> %a0, <2 x i64> %a1
 ;
 ; AVX1-LABEL: casted_neg_scalar_broadcast_v2i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vandnps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -1175,4 +1169,73 @@ define <4 x i32> @neg_scalar_broadcast_two_uses(i32 %a0, <4 x i32> %a1, ptr %a2)
   store <4 x i32> %3, ptr %a2, align 16
   %4 = and <4 x i32> %3, %a1
   ret <4 x i32> %4
+}
+
+; PR84660 - check for illegal types
+define <2 x i128> @neg_scalar_broadcast_illegaltype(i128 %arg) {
+; CHECK-LABEL: neg_scalar_broadcast_illegaltype:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    notl %esi
+; CHECK-NEXT:    andl $1, %esi
+; CHECK-NEXT:    movq %rsi, 16(%rdi)
+; CHECK-NEXT:    movq %rsi, (%rdi)
+; CHECK-NEXT:    movq $0, 24(%rdi)
+; CHECK-NEXT:    movq $0, 8(%rdi)
+; CHECK-NEXT:    retq
+  %i = xor i128 %arg, 1
+  %i1 = insertelement <2 x i128> zeroinitializer, i128 %i, i64 0
+  %i2 = shufflevector <2 x i128> %i1, <2 x i128> zeroinitializer, <2 x i32> zeroinitializer
+  %i3 = and <2 x i128> <i128 1, i128 1>, %i2
+  ret <2 x i128> %i3
+}
+
+define <2 x i64> @andnp_xx(<2 x i64> %v0) nounwind {
+; SSE-LABEL: andnp_xx:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: andnp_xx:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %x = xor <2 x i64> %v0, <i64 -1, i64 -1>
+  %y = and <2 x i64> %v0, %x
+  ret <2 x i64> %y
+}
+
+define <2 x i64> @andnp_xx_2(<2 x i64> %v0) nounwind {
+; SSE-LABEL: andnp_xx_2:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: andnp_xx_2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %x = xor <2 x i64> %v0, <i64 -1, i64 -1>
+  %y = and <2 x i64> %x, %v0
+  ret <2 x i64> %y
+}
+
+define i64 @andn_xx(i64 %v0) nounwind {
+; CHECK-LABEL: andn_xx:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+  %x = xor i64 %v0, -1
+  %y = and i64 %v0, %x
+  ret i64 %y
+}
+
+define i64 @andn_xx_2(i64 %v0) nounwind {
+; CHECK-LABEL: andn_xx_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+  %x = xor i64 %v0, -1
+  %y = and i64 %x, %v0
+  ret i64 %y
 }

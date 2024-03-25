@@ -29,9 +29,9 @@ class CombinedAllocator {
                          LargeMmapAllocatorPtrArray,
                          typename PrimaryAllocator::AddressSpaceView>;
 
-  void InitLinkerInitialized(s32 release_to_os_interval_ms) {
-    stats_.InitLinkerInitialized();
-    primary_.Init(release_to_os_interval_ms);
+  void InitLinkerInitialized(s32 release_to_os_interval_ms,
+                             uptr heap_start = 0) {
+    primary_.Init(release_to_os_interval_ms, heap_start);
     secondary_.InitLinkerInitialized();
   }
 

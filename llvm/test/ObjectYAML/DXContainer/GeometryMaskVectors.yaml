@@ -1,0 +1,174 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  FileSize:        3836
+  PartCount:       7
+  PartOffsets:     [ 60, 76, 204, 292, 584, 2092, 2120 ]
+Parts:
+  - Name:            SFI0
+    Size:            8
+    Flags:
+      Doubles:         false
+      ComputeShadersPlusRawAndStructuredBuffers: false
+      UAVsAtEveryStage: false
+      Max64UAVs:       false
+      MinimumPrecision: false
+      DX11_1_DoubleExtensions: false
+      DX11_1_ShaderExtensions: false
+      LEVEL9ComparisonFiltering: false
+      TiledResources:  false
+      StencilRef:      false
+      InnerCoverage:   false
+      TypedUAVLoadAdditionalFormats: false
+      ROVs:            false
+      ViewportAndRTArrayIndexFromAnyShaderFeedingRasterizer: false
+      WaveOps:         false
+      Int64Ops:        false
+      ViewID:          true
+      Barycentrics:    false
+      NativeLowPrecision: false
+      ShadingRate:     false
+      Raytracing_Tier_1_1: false
+      SamplerFeedback: false
+      AtomicInt64OnTypedResource: false
+      AtomicInt64OnGroupShared: false
+      DerivativesInMeshAndAmpShaders: false
+      ResourceDescriptorHeapIndexing: false
+      SamplerDescriptorHeapIndexing: false
+      RESERVED:        false
+      AtomicInt64OnHeapResource: false
+      AdvancedTextureOps: false
+      WriteableMSAATextures: false
+      NextUnusedBit:   false
+  - Name:            ISG1
+    Size:            120
+  - Name:            OSG1
+    Size:            80
+  - Name:            PSV0
+    Size:            284
+    PSVInfo:
+      Version:         2
+      ShaderStage:     2
+      InputPrimitive:  3
+      OutputTopology:  1
+      OutputStreamMask: 3
+      OutputPositionPresent: 0
+      MinimumWaveLaneCount: 0
+      MaximumWaveLaneCount: 4294967295
+      UsesViewID:      1
+      MaxVertexCount:  3
+      SigInputVectors: 3
+      SigOutputVectors: [ 1, 1, 0, 0 ]
+      NumThreadsX:     0
+      NumThreadsY:     0
+      NumThreadsZ:     0
+      ResourceStride:  24
+      Resources:       []
+      SigInputElements:
+        - Name:            ''
+          Indices:         [ 0 ]
+          StartRow:        0
+          Cols:            4
+          StartCol:        0
+          Allocated:       true
+          Kind:            Position
+          ComponentType:   Float32
+          Interpolation:   LinearNoperspective
+          DynamicMask:     0x0
+          Stream:          0
+        - Name:            AAA
+          Indices:         [ 2 ]
+          StartRow:        1
+          Cols:            2
+          StartCol:        0
+          Allocated:       true
+          Kind:            Arbitrary
+          ComponentType:   Float32
+          Interpolation:   Linear
+          DynamicMask:     0x0
+          Stream:          0
+        - Name:            AAA
+          Indices:         [ 3 ]
+          StartRow:        2
+          Cols:            4
+          StartCol:        0
+          Allocated:       true
+          Kind:            Arbitrary
+          ComponentType:   Float32
+          Interpolation:   Linear
+          DynamicMask:     0x0
+          Stream:          0
+      SigOutputElements:
+        - Name:            BBB
+          Indices:         [ 0 ]
+          StartRow:        0
+          Cols:            4
+          StartCol:        0
+          Allocated:       true
+          Kind:            Arbitrary
+          ComponentType:   Float32
+          Interpolation:   Linear
+          DynamicMask:     0x0
+          Stream:          0
+        - Name:            CCC
+          Indices:         [ 0 ]
+          StartRow:        0
+          Cols:            4
+          StartCol:        0
+          Allocated:       true
+          Kind:            Arbitrary
+          ComponentType:   Float32
+          Interpolation:   Linear
+          DynamicMask:     0x0
+          Stream:          1
+      SigPatchOrPrimElements: []
+      OutputVectorMasks:
+        - [ 0xE ]
+        - [ 0x5 ]
+        - [  ]
+        - [  ]
+      InputOutputMap:
+        - [ 0x2, 0x4, 0x8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+        - [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x2, 0x4, 0x8 ]
+        - [  ]
+        - [  ]
+  - Name:            STAT
+    Size:            1500
+  - Name:            HASH
+    Size:            20
+    Hash:
+      IncludesSource:  false
+      Digest:          [ 0x10, 0xA2, 0x84, 0xA5, 0x76, 0xA6, 0x28, 0x82, 
+                         0x21, 0x39, 0x1, 0xE0, 0x53, 0x19, 0xBE, 0x79 ]
+  - Name:            DXIL
+    Size:            24
+    Program:
+      MajorVersion:    6
+      MinorVersion:    1
+      ShaderKind:      2
+      Size:            6
+      DXILMajorVersion: 1
+      DXILMinorVersion: 1
+      DXILSize:        0
+...
+
+# Verify the vector sizes.
+# CHECK: SigInputVectors: 3
+# CHECK-NEXT: SigOutputVectors: [ 1, 1, 0, 0 ]
+
+# Verify the vector mask encodings.
+# CHECK: OutputVectorMasks:
+# CHECK-NEXT:   - [ 0xE ]
+# CHECK-NEXT:   - [ 0x5 ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT: InputOutputMap:
+# CHECK-NEXT:   - [ 0x2, 0x4, 0x8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+# CHECK-NEXT:   - [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x2, 0x4, 0x8 ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]

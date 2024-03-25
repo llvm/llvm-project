@@ -4,15 +4,17 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-
-    @skipIf # rdar://problem/53931074
+    @skipIf  # rdar://problem/53931074
     def test(self):
         self.build()
         target = self.createTestTarget()
         callee_break = target.BreakpointCreateByName(
-            "SomeClass::SomeClass(ParamClass)", None)
-        self.assertTrue(callee_break.GetNumLocations() > 0)
+            "SomeClass::SomeClass(ParamClass)", None
+        )
+        self.assertGreater(callee_break.GetNumLocations(), 0)
         self.runCmd("run", RUN_SUCCEEDED)
 
         to_complete = "e ParamClass"
-        self.dbg.GetCommandInterpreter().HandleCompletion(to_complete, len(to_complete), 0, -1, lldb.SBStringList())
+        self.dbg.GetCommandInterpreter().HandleCompletion(
+            to_complete, len(to_complete), 0, -1, lldb.SBStringList()
+        )

@@ -9,8 +9,6 @@
 #ifndef LLDB_LLDB_PRIVATE_INTERFACES_H
 #define LLDB_LLDB_PRIVATE_INTERFACES_H
 
-#if defined(__cplusplus)
-
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -30,8 +28,8 @@ typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp,
                                          const ArchSpec &arch);
 typedef std::unique_ptr<Architecture> (*ArchitectureCreateInstance)(
     const ArchSpec &arch);
-typedef Disassembler *(*DisassemblerCreateInstance)(const ArchSpec &arch,
-                                                    const char *flavor);
+typedef lldb::DisassemblerSP (*DisassemblerCreateInstance)(const ArchSpec &arch,
+                                                           const char *flavor);
 typedef DynamicLoader *(*DynamicLoaderCreateInstance)(Process *process,
                                                       bool force);
 typedef lldb::JITLoaderSP (*JITLoaderCreateInstance)(Process *process,
@@ -82,6 +80,8 @@ typedef lldb::PlatformSP (*PlatformCreateInstance)(bool force,
 typedef lldb::ProcessSP (*ProcessCreateInstance)(
     lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
     const FileSpec *crash_file_path, bool can_connect);
+typedef lldb::RegisterTypeBuilderSP (*RegisterTypeBuilderCreateInstance)(
+    Target &target);
 typedef lldb::ScriptInterpreterSP (*ScriptInterpreterCreateInstance)(
     Debugger &debugger);
 typedef SymbolFile *(*SymbolFileCreateInstance)(lldb::ObjectFileSP objfile_sp);
@@ -89,6 +89,16 @@ typedef SymbolVendor *(*SymbolVendorCreateInstance)(
     const lldb::ModuleSP &module_sp,
     lldb_private::Stream
         *feedback_strm); // Module can be NULL for default system symbol vendor
+typedef SymbolLocator *(*SymbolLocatorCreateInstance)();
+typedef std::optional<ModuleSpec> (*SymbolLocatorLocateExecutableObjectFile)(
+    const ModuleSpec &module_spec);
+typedef std::optional<FileSpec> (*SymbolLocatorFindSymbolFileInBundle)(
+    const FileSpec &dsym_bundle_fspec, const UUID *uuid, const ArchSpec *arch);
+typedef std::optional<FileSpec> (*SymbolLocatorLocateExecutableSymbolFile)(
+    const ModuleSpec &module_spec, const FileSpecList &default_search_paths);
+typedef bool (*SymbolLocatorDownloadObjectAndSymbolFile)(
+    ModuleSpec &module_spec, Status &error, bool force_lookup,
+    bool copy_executable);
 typedef bool (*BreakpointHitCallback)(void *baton,
                                       StoppointCallbackContext *context,
                                       lldb::user_id_t break_id,
@@ -128,7 +138,5 @@ typedef lldb::CommandObjectSP (*ThreadTraceExportCommandCreator)(
     CommandInterpreter &interpreter);
 /// \}
 } // namespace lldb_private
-
-#endif // #if defined(__cplusplus)
 
 #endif // LLDB_LLDB_PRIVATE_INTERFACES_H

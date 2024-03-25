@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=arm64-apple-ios -filetype=obj < %s | \
+// RUN: llvm-mc -triple=arm64-apple-ios -filetype=obj -emit-compact-unwind-non-canonical=true < %s | \
 // RUN: llvm-objdump --macho --unwind-info - | \
 // RUN: FileCheck %s
 //

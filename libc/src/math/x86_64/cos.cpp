@@ -9,11 +9,11 @@
 #include "src/math/cos.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, cos, (double x)) {
   __asm__ __volatile__("fcos" : "+t"(x));
   return x;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

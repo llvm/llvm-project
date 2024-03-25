@@ -32,13 +32,13 @@ class SettingsCommandTestCase(TestBase):
         self.expect_args("'a b\\' c", "a b\\\0c\0")
         # Double quote escape.
         self.expect_args('"a b\\" c"', 'a b" c\0')
-        self.expect_args('"a b\\\\" c', 'a b\\\0c\0')
+        self.expect_args('"a b\\\\" c', "a b\\\0c\0")
         # Single quote in double quotes.
         self.expect_args('"a\'b"', "a'b\0")
         # Double quotes in single quote.
         self.expect_args("'a\"b'", 'a"b\0')
         # Combined quotes.
-        self.expect_args('"a b"c\'d e\'', 'a bcd e\0')
+        self.expect_args("\"a b\"c'd e'", "a bcd e\0")
         # Bare single/double quotes.
         self.expect_args("a\\'b", "a'b\0")
         self.expect_args('a\\"b', 'a"b\0')
@@ -51,7 +51,9 @@ class SettingsCommandTestCase(TestBase):
         outfile = self.getBuildArtifact(filename)
 
         if lldb.remote_platform:
-            outfile_arg = os.path.join(lldb.remote_platform.GetWorkingDirectory(), filename)
+            outfile_arg = os.path.join(
+                lldb.remote_platform.GetWorkingDirectory(), filename
+            )
         else:
             outfile_arg = outfile
 
@@ -62,7 +64,7 @@ class SettingsCommandTestCase(TestBase):
             dst_file_spec = lldb.SBFileSpec(outfile, True)
             lldb.remote_platform.Get(src_file_spec, dst_file_spec)
 
-        with open(outfile, 'r') as f:
+        with open(outfile, "r") as f:
             output = f.read()
 
         self.RemoveTempFile(outfile)

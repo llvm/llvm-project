@@ -40,7 +40,7 @@ fir.global internal @_QEmasklogical : !fir.array<32768x!fir.logical<4>> {
 // CHECK: llvm.mlir.global internal @_QEmasklogical() {addr_space = 0 : i32} : !llvm.array<32768 x i32> {
 // CHECK:   [[VAL0:%.*]] = llvm.mlir.constant(true) : i1
 // CHECK:   [[VAL1:%.*]] = llvm.mlir.undef : !llvm.array<32768 x i32>
-// CHECK:   [[VAL2:%.*]] = llvm.zext [[VAL0]] : i1 to i32
+// CHECK:   [[VAL2:%.*]] = llvm.mlir.constant(1 : i64) : i32
 // CHECK:   [[VAL3:%.*]] = llvm.mlir.constant(dense<true> : vector<32768xi1>) : !llvm.array<32768 x i32>
 // CHECK:   llvm.return [[VAL3]] : !llvm.array<32768 x i32>
 // CHECK: }

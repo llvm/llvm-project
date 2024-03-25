@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
-; RUN: opt -stats -passes="ipsccp<func-spec>" -S -force-function-specialization < %s 2>&1 | FileCheck %s
+; RUN: opt -stats -passes="ipsccp<func-spec>" -S -force-specialization < %s 2>&1 | FileCheck %s
 
-; CHECK: 2 function-specialization - Number of functions specialized
+; CHECK: 2 function-specialization - Number of specializations created
 
 define i64 @main(i64 %x, i1 %flag) {
 entry:

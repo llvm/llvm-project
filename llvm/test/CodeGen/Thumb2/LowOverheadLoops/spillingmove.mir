@@ -336,7 +336,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: %bb.5(0x04000000), %bb.2(0x7c000000)
-  ; CHECK-NEXT:   liveins: $q0, $r0, $r1, $r2, $r3, $r6, $r12
+  ; CHECK-NEXT:   liveins: $d0, $d1, $r0, $r1, $r2, $r3, $r6, $r12
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $r3, dead $cpsr = nuw nsw tADDi8 killed renamable $r3, 1, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   renamable $r0 = tADDhirr killed renamable $r0, renamable $r1, 14 /* CC::al */, $noreg

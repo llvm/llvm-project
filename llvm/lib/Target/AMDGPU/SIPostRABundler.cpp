@@ -101,8 +101,8 @@ void SIPostRABundler::collectUsedRegUnits(const MachineInstr &MI,
     assert(!Op.getSubReg() &&
            "subregister indexes should not be present after RA");
 
-    for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units)
-      UsedRegUnits.set(*Units);
+    for (MCRegUnit Unit : TRI->regunits(Reg))
+      UsedRegUnits.set(Unit);
   }
 }
 

@@ -183,17 +183,16 @@ static void convertToParamAS(Value *OldUser, Value *Param) {
     }
     if (auto *GEP = dyn_cast<GetElementPtrInst>(I.OldInstruction)) {
       SmallVector<Value *, 4> Indices(GEP->indices());
-      auto *NewGEP = GetElementPtrInst::Create(GEP->getSourceElementType(),
-                                               I.NewParam, Indices,
-                                               GEP->getName(), GEP);
+      auto *NewGEP = GetElementPtrInst::Create(
+          GEP->getSourceElementType(), I.NewParam, Indices, GEP->getName(),
+          GEP->getIterator());
       NewGEP->setIsInBounds(GEP->isInBounds());
       return NewGEP;
     }
     if (auto *BC = dyn_cast<BitCastInst>(I.OldInstruction)) {
-      auto *NewBCType = PointerType::getWithSamePointeeType(
-          cast<PointerType>(BC->getType()), ADDRESS_SPACE_PARAM);
+      auto *NewBCType = PointerType::get(BC->getContext(), ADDRESS_SPACE_PARAM);
       return BitCastInst::Create(BC->getOpcode(), I.NewParam, NewBCType,
-                                 BC->getName(), BC);
+                                 BC->getName(), BC->getIterator());
     }
     if (auto *ASC = dyn_cast<AddrSpaceCastInst>(I.OldInstruction)) {
       assert(ASC->getDestAddressSpace() == ADDRESS_SPACE_PARAM);
@@ -317,7 +316,7 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
 void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
                                       Argument *Arg) {
   Function *Func = Arg->getParent();
-  Instruction *FirstInst = &(Func->getEntryBlock().front());
+  BasicBlock::iterator FirstInst = Func->getEntryBlock().begin();
   Type *StructType = Arg->getParamByValType();
   assert(StructType && "Missing byval type");
 
@@ -407,12 +406,10 @@ void NVPTXLowerArgs::markPointerAsGlobal(Value *Ptr) {
   }
 
   Instruction *PtrInGlobal = new AddrSpaceCastInst(
-      Ptr,
-      PointerType::getWithSamePointeeType(cast<PointerType>(Ptr->getType()),
-                                          ADDRESS_SPACE_GLOBAL),
-      Ptr->getName(), &*InsertPt);
+      Ptr, PointerType::get(Ptr->getContext(), ADDRESS_SPACE_GLOBAL),
+      Ptr->getName(), InsertPt);
   Value *PtrInGeneric = new AddrSpaceCastInst(PtrInGlobal, Ptr->getType(),
-                                              Ptr->getName(), &*InsertPt);
+                                              Ptr->getName(), InsertPt);
   // Replace with PtrInGeneric all uses of Ptr except PtrInGlobal.
   Ptr->replaceAllUsesWith(PtrInGeneric);
   PtrInGlobal->setOperand(0, Ptr);
@@ -430,7 +427,8 @@ bool NVPTXLowerArgs::runOnKernelFunction(const NVPTXTargetMachine &TM,
   auto HandleIntToPtr = [this](Value &V) {
     if (llvm::all_of(V.users(), [](User *U) { return isa<IntToPtrInst>(U); })) {
       SmallVector<User *, 16> UsersToUpdate(V.users());
-      llvm::for_each(UsersToUpdate, [&](User *U) { markPointerAsGlobal(U); });
+      for (User *U : UsersToUpdate)
+        markPointerAsGlobal(U);
     }
   };
   if (TM.getDrvInterface() == NVPTX::CUDA) {

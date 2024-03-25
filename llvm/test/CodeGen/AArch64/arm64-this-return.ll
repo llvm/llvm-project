@@ -26,8 +26,8 @@ define ptr @C_ctor_base(ptr returned %this, i32 %x) {
   ; GISEL-MIR:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; GISEL-MIR:   $x0 = COPY [[COPY]](p0)
   ; GISEL-MIR:   BL @A_ctor_base, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0
-  ; GISEL-MIR:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; GISEL-MIR:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; GISEL-MIR:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; GISEL-MIR:   $x0 = COPY [[COPY]](p0)
   ; GISEL-MIR:   $w1 = COPY [[COPY1]](s32)
   ; GISEL-MIR:   TCRETURNdi @B_ctor_base, 0, csr_aarch64_aapcs, implicit $sp, implicit $x0, implicit $w1
@@ -51,14 +51,14 @@ define ptr @C_ctor_base_nothisret(ptr %this, i32 %x) {
   ; GISEL-MIR:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; GISEL-MIR:   $x0 = COPY [[COPY]](p0)
   ; GISEL-MIR:   BL @A_ctor_base_nothisret, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit-def $x0
-  ; GISEL-MIR:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x0
   ; GISEL-MIR:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; GISEL-MIR:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x0
   ; GISEL-MIR:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; GISEL-MIR:   $x0 = COPY [[COPY]](p0)
   ; GISEL-MIR:   $w1 = COPY [[COPY1]](s32)
   ; GISEL-MIR:   BL @B_ctor_base_nothisret, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1, implicit-def $x0
-  ; GISEL-MIR:   [[COPY3:%[0-9]+]]:_(p0) = COPY $x0
   ; GISEL-MIR:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; GISEL-MIR:   [[COPY3:%[0-9]+]]:_(p0) = COPY $x0
   ; GISEL-MIR:   $x0 = COPY [[COPY]](p0)
   ; GISEL-MIR:   RET_ReallyLR implicit $x0
 entry:
@@ -98,8 +98,8 @@ define ptr @C_ctor_complete_nothisret(ptr %this, i32 %x) {
   ; GISEL-MIR:   $x0 = COPY [[COPY]](p0)
   ; GISEL-MIR:   $w1 = COPY [[COPY1]](s32)
   ; GISEL-MIR:   BL @C_ctor_base_nothisret, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1, implicit-def $x0
-  ; GISEL-MIR:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x0
   ; GISEL-MIR:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; GISEL-MIR:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x0
   ; GISEL-MIR:   $x0 = COPY [[COPY]](p0)
   ; GISEL-MIR:   RET_ReallyLR implicit $x0
 entry:
@@ -119,8 +119,8 @@ define ptr @D_ctor_base(ptr %this, i32 %x) {
   ; GISEL-MIR:   $x0 = COPY [[COPY]](p0)
   ; GISEL-MIR:   $w1 = COPY [[COPY1]](s32)
   ; GISEL-MIR:   BL @B_ctor_complete, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1
-  ; GISEL-MIR:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; GISEL-MIR:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; GISEL-MIR:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; GISEL-MIR:   $x0 = COPY [[COPY]](p0)
   ; GISEL-MIR:   $w1 = COPY [[COPY1]](s32)
   ; GISEL-MIR:   TCRETURNdi @B_ctor_complete, 0, csr_aarch64_aapcs, implicit $sp, implicit $x0, implicit $w1
@@ -145,16 +145,16 @@ define ptr @E_ctor_base(ptr %this, i32 %x) {
   ; GISEL-MIR:   $x0 = COPY [[COPY]](p0)
   ; GISEL-MIR:   $w1 = COPY [[COPY1]](s32)
   ; GISEL-MIR:   BL @B_ctor_complete, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1
-  ; GISEL-MIR:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; GISEL-MIR:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; GISEL-MIR:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; GISEL-MIR:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; GISEL-MIR:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; GISEL-MIR:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C]](s64)
   ; GISEL-MIR:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; GISEL-MIR:   $x0 = COPY [[PTR_ADD]](p0)
   ; GISEL-MIR:   $w1 = COPY [[COPY1]](s32)
   ; GISEL-MIR:   BL @B_ctor_complete, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1
-  ; GISEL-MIR:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
   ; GISEL-MIR:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; GISEL-MIR:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
   ; GISEL-MIR:   $x0 = COPY [[COPY]](p0)
   ; GISEL-MIR:   RET_ReallyLR implicit $x0
 entry:

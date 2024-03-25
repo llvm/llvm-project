@@ -5,6 +5,12 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+f -verify-machineinstrs < %s \
 ; RUN:   -disable-strictnode-mutation -target-abi=lp64f \
 ; RUN:   | FileCheck -check-prefix=CHECKIF %s
+; RUN: llc -mtriple=riscv32 -mattr=+zfinx -verify-machineinstrs < %s \
+; RUN:   -disable-strictnode-mutation -target-abi=ilp32 \
+; RUN:   | FileCheck -check-prefix=CHECKIZFINX %s
+; RUN: llc -mtriple=riscv64 -mattr=+zfinx -verify-machineinstrs < %s \
+; RUN:   -disable-strictnode-mutation -target-abi=lp64 \
+; RUN:   | FileCheck -check-prefix=CHECKIZFINX %s
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   -disable-strictnode-mutation | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
@@ -16,11 +22,16 @@ define i32 @fcmp_oeq(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    feq.s a0, fa0, fa1
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmp_oeq:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    feq.s a0, a0, a1
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmp_oeq:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __eqsf2@plt
+; RV32I-NEXT:    call __eqsf2
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -30,7 +41,7 @@ define i32 @fcmp_oeq(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __eqsf2@plt
+; RV64I-NEXT:    call __eqsf2
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -50,11 +61,20 @@ define i32 @fcmp_ogt(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    feq.s zero, fa1, fa0
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmp_ogt:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    csrr a3, fflags
+; CHECKIZFINX-NEXT:    flt.s a2, a1, a0
+; CHECKIZFINX-NEXT:    csrw fflags, a3
+; CHECKIZFINX-NEXT:    feq.s zero, a1, a0
+; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmp_ogt:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __gtsf2@plt
+; RV32I-NEXT:    call __gtsf2
 ; RV32I-NEXT:    sgtz a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -64,7 +84,7 @@ define i32 @fcmp_ogt(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __gtsf2@plt
+; RV64I-NEXT:    call __gtsf2
 ; RV64I-NEXT:    sgtz a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -83,11 +103,20 @@ define i32 @fcmp_oge(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    feq.s zero, fa1, fa0
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmp_oge:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    csrr a3, fflags
+; CHECKIZFINX-NEXT:    fle.s a2, a1, a0
+; CHECKIZFINX-NEXT:    csrw fflags, a3
+; CHECKIZFINX-NEXT:    feq.s zero, a1, a0
+; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmp_oge:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __gesf2@plt
+; RV32I-NEXT:    call __gesf2
 ; RV32I-NEXT:    slti a0, a0, 0
 ; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -98,7 +127,7 @@ define i32 @fcmp_oge(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __gesf2@plt
+; RV64I-NEXT:    call __gesf2
 ; RV64I-NEXT:    slti a0, a0, 0
 ; RV64I-NEXT:    xori a0, a0, 1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -118,11 +147,20 @@ define i32 @fcmp_olt(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    feq.s zero, fa0, fa1
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmp_olt:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    csrr a3, fflags
+; CHECKIZFINX-NEXT:    flt.s a2, a0, a1
+; CHECKIZFINX-NEXT:    csrw fflags, a3
+; CHECKIZFINX-NEXT:    feq.s zero, a0, a1
+; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmp_olt:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __ltsf2@plt
+; RV32I-NEXT:    call __ltsf2
 ; RV32I-NEXT:    slti a0, a0, 0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -132,7 +170,7 @@ define i32 @fcmp_olt(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __ltsf2@plt
+; RV64I-NEXT:    call __ltsf2
 ; RV64I-NEXT:    slti a0, a0, 0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -151,11 +189,20 @@ define i32 @fcmp_ole(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    feq.s zero, fa0, fa1
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmp_ole:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    csrr a3, fflags
+; CHECKIZFINX-NEXT:    fle.s a2, a0, a1
+; CHECKIZFINX-NEXT:    csrw fflags, a3
+; CHECKIZFINX-NEXT:    feq.s zero, a0, a1
+; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmp_ole:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __lesf2@plt
+; RV32I-NEXT:    call __lesf2
 ; RV32I-NEXT:    slti a0, a0, 1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -165,7 +212,7 @@ define i32 @fcmp_ole(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __lesf2@plt
+; RV64I-NEXT:    call __lesf2
 ; RV64I-NEXT:    slti a0, a0, 1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -191,6 +238,20 @@ define i32 @fcmp_one(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    feq.s zero, fa1, fa0
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmp_one:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    csrr a2, fflags
+; CHECKIZFINX-NEXT:    flt.s a3, a0, a1
+; CHECKIZFINX-NEXT:    csrw fflags, a2
+; CHECKIZFINX-NEXT:    feq.s zero, a0, a1
+; CHECKIZFINX-NEXT:    csrr a2, fflags
+; CHECKIZFINX-NEXT:    flt.s a4, a1, a0
+; CHECKIZFINX-NEXT:    csrw fflags, a2
+; CHECKIZFINX-NEXT:    or a2, a4, a3
+; CHECKIZFINX-NEXT:    feq.s zero, a1, a0
+; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmp_one:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -200,11 +261,11 @@ define i32 @fcmp_one(float %a, float %b) nounwind strictfp {
 ; RV32I-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    call __eqsf2@plt
+; RV32I-NEXT:    call __eqsf2
 ; RV32I-NEXT:    snez s2, a0
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    call __unordsf2@plt
+; RV32I-NEXT:    call __unordsf2
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    and a0, a0, s2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -223,11 +284,11 @@ define i32 @fcmp_one(float %a, float %b) nounwind strictfp {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
-; RV64I-NEXT:    call __eqsf2@plt
+; RV64I-NEXT:    call __eqsf2
 ; RV64I-NEXT:    snez s2, a0
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    mv a1, s0
-; RV64I-NEXT:    call __unordsf2@plt
+; RV64I-NEXT:    call __unordsf2
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    and a0, a0, s2
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -249,11 +310,18 @@ define i32 @fcmp_ord(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    and a0, a1, a0
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmp_ord:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    feq.s a1, a1, a1
+; CHECKIZFINX-NEXT:    feq.s a0, a0, a0
+; CHECKIZFINX-NEXT:    and a0, a0, a1
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmp_ord:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __unordsf2@plt
+; RV32I-NEXT:    call __unordsf2
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -263,7 +331,7 @@ define i32 @fcmp_ord(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __unordsf2@plt
+; RV64I-NEXT:    call __unordsf2
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -290,6 +358,21 @@ define i32 @fcmp_ueq(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    feq.s zero, fa1, fa0
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmp_ueq:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    csrr a2, fflags
+; CHECKIZFINX-NEXT:    flt.s a3, a0, a1
+; CHECKIZFINX-NEXT:    csrw fflags, a2
+; CHECKIZFINX-NEXT:    feq.s zero, a0, a1
+; CHECKIZFINX-NEXT:    csrr a2, fflags
+; CHECKIZFINX-NEXT:    flt.s a4, a1, a0
+; CHECKIZFINX-NEXT:    csrw fflags, a2
+; CHECKIZFINX-NEXT:    or a3, a4, a3
+; CHECKIZFINX-NEXT:    xori a2, a3, 1
+; CHECKIZFINX-NEXT:    feq.s zero, a1, a0
+; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmp_ueq:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -299,11 +382,11 @@ define i32 @fcmp_ueq(float %a, float %b) nounwind strictfp {
 ; RV32I-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    call __eqsf2@plt
+; RV32I-NEXT:    call __eqsf2
 ; RV32I-NEXT:    seqz s2, a0
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    call __unordsf2@plt
+; RV32I-NEXT:    call __unordsf2
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    or a0, a0, s2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -322,11 +405,11 @@ define i32 @fcmp_ueq(float %a, float %b) nounwind strictfp {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
-; RV64I-NEXT:    call __eqsf2@plt
+; RV64I-NEXT:    call __eqsf2
 ; RV64I-NEXT:    seqz s2, a0
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    mv a1, s0
-; RV64I-NEXT:    call __unordsf2@plt
+; RV64I-NEXT:    call __unordsf2
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    or a0, a0, s2
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -350,11 +433,21 @@ define i32 @fcmp_ugt(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    feq.s zero, fa0, fa1
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmp_ugt:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    csrr a2, fflags
+; CHECKIZFINX-NEXT:    fle.s a3, a0, a1
+; CHECKIZFINX-NEXT:    csrw fflags, a2
+; CHECKIZFINX-NEXT:    xori a2, a3, 1
+; CHECKIZFINX-NEXT:    feq.s zero, a0, a1
+; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmp_ugt:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __lesf2@plt
+; RV32I-NEXT:    call __lesf2
 ; RV32I-NEXT:    sgtz a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -364,7 +457,7 @@ define i32 @fcmp_ugt(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __lesf2@plt
+; RV64I-NEXT:    call __lesf2
 ; RV64I-NEXT:    sgtz a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -384,11 +477,21 @@ define i32 @fcmp_uge(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    feq.s zero, fa0, fa1
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmp_uge:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    csrr a2, fflags
+; CHECKIZFINX-NEXT:    flt.s a3, a0, a1
+; CHECKIZFINX-NEXT:    csrw fflags, a2
+; CHECKIZFINX-NEXT:    xori a2, a3, 1
+; CHECKIZFINX-NEXT:    feq.s zero, a0, a1
+; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmp_uge:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __ltsf2@plt
+; RV32I-NEXT:    call __ltsf2
 ; RV32I-NEXT:    slti a0, a0, 0
 ; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -399,7 +502,7 @@ define i32 @fcmp_uge(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __ltsf2@plt
+; RV64I-NEXT:    call __ltsf2
 ; RV64I-NEXT:    slti a0, a0, 0
 ; RV64I-NEXT:    xori a0, a0, 1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -420,11 +523,21 @@ define i32 @fcmp_ult(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    feq.s zero, fa1, fa0
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmp_ult:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    csrr a2, fflags
+; CHECKIZFINX-NEXT:    fle.s a3, a1, a0
+; CHECKIZFINX-NEXT:    csrw fflags, a2
+; CHECKIZFINX-NEXT:    xori a2, a3, 1
+; CHECKIZFINX-NEXT:    feq.s zero, a1, a0
+; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmp_ult:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __gesf2@plt
+; RV32I-NEXT:    call __gesf2
 ; RV32I-NEXT:    slti a0, a0, 0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -434,7 +547,7 @@ define i32 @fcmp_ult(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __gesf2@plt
+; RV64I-NEXT:    call __gesf2
 ; RV64I-NEXT:    slti a0, a0, 0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -454,11 +567,21 @@ define i32 @fcmp_ule(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    feq.s zero, fa1, fa0
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmp_ule:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    csrr a2, fflags
+; CHECKIZFINX-NEXT:    flt.s a3, a1, a0
+; CHECKIZFINX-NEXT:    csrw fflags, a2
+; CHECKIZFINX-NEXT:    xori a2, a3, 1
+; CHECKIZFINX-NEXT:    feq.s zero, a1, a0
+; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmp_ule:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __gtsf2@plt
+; RV32I-NEXT:    call __gtsf2
 ; RV32I-NEXT:    slti a0, a0, 1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -468,7 +591,7 @@ define i32 @fcmp_ule(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __gtsf2@plt
+; RV64I-NEXT:    call __gtsf2
 ; RV64I-NEXT:    slti a0, a0, 1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -485,11 +608,17 @@ define i32 @fcmp_une(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    xori a0, a0, 1
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmp_une:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    feq.s a0, a0, a1
+; CHECKIZFINX-NEXT:    xori a0, a0, 1
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmp_une:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __nesf2@plt
+; RV32I-NEXT:    call __nesf2
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -499,7 +628,7 @@ define i32 @fcmp_une(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __nesf2@plt
+; RV64I-NEXT:    call __nesf2
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -518,11 +647,19 @@ define i32 @fcmp_uno(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    xori a0, a0, 1
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmp_uno:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    feq.s a1, a1, a1
+; CHECKIZFINX-NEXT:    feq.s a0, a0, a0
+; CHECKIZFINX-NEXT:    and a0, a0, a1
+; CHECKIZFINX-NEXT:    xori a0, a0, 1
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmp_uno:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __unordsf2@plt
+; RV32I-NEXT:    call __unordsf2
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -532,7 +669,7 @@ define i32 @fcmp_uno(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __unordsf2@plt
+; RV64I-NEXT:    call __unordsf2
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -550,11 +687,18 @@ define i32 @fcmps_oeq(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    and a0, a1, a0
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmps_oeq:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fle.s a2, a1, a0
+; CHECKIZFINX-NEXT:    fle.s a0, a0, a1
+; CHECKIZFINX-NEXT:    and a0, a0, a2
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmps_oeq:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __eqsf2@plt
+; RV32I-NEXT:    call __eqsf2
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -564,7 +708,7 @@ define i32 @fcmps_oeq(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __eqsf2@plt
+; RV64I-NEXT:    call __eqsf2
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -581,11 +725,16 @@ define i32 @fcmps_ogt(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    flt.s a0, fa1, fa0
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmps_ogt:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    flt.s a0, a1, a0
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmps_ogt:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __gtsf2@plt
+; RV32I-NEXT:    call __gtsf2
 ; RV32I-NEXT:    sgtz a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -595,7 +744,7 @@ define i32 @fcmps_ogt(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __gtsf2@plt
+; RV64I-NEXT:    call __gtsf2
 ; RV64I-NEXT:    sgtz a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -611,11 +760,16 @@ define i32 @fcmps_oge(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    fle.s a0, fa1, fa0
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmps_oge:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fle.s a0, a1, a0
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmps_oge:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __gesf2@plt
+; RV32I-NEXT:    call __gesf2
 ; RV32I-NEXT:    slti a0, a0, 0
 ; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -626,7 +780,7 @@ define i32 @fcmps_oge(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __gesf2@plt
+; RV64I-NEXT:    call __gesf2
 ; RV64I-NEXT:    slti a0, a0, 0
 ; RV64I-NEXT:    xori a0, a0, 1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -643,11 +797,16 @@ define i32 @fcmps_olt(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    flt.s a0, fa0, fa1
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmps_olt:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    flt.s a0, a0, a1
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmps_olt:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __ltsf2@plt
+; RV32I-NEXT:    call __ltsf2
 ; RV32I-NEXT:    slti a0, a0, 0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -657,7 +816,7 @@ define i32 @fcmps_olt(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __ltsf2@plt
+; RV64I-NEXT:    call __ltsf2
 ; RV64I-NEXT:    slti a0, a0, 0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -673,11 +832,16 @@ define i32 @fcmps_ole(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    fle.s a0, fa0, fa1
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmps_ole:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fle.s a0, a0, a1
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmps_ole:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __lesf2@plt
+; RV32I-NEXT:    call __lesf2
 ; RV32I-NEXT:    slti a0, a0, 1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -687,7 +851,7 @@ define i32 @fcmps_ole(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __lesf2@plt
+; RV64I-NEXT:    call __lesf2
 ; RV64I-NEXT:    slti a0, a0, 1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -705,6 +869,13 @@ define i32 @fcmps_one(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    or a0, a1, a0
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmps_one:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    flt.s a2, a0, a1
+; CHECKIZFINX-NEXT:    flt.s a0, a1, a0
+; CHECKIZFINX-NEXT:    or a0, a0, a2
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmps_one:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -714,11 +885,11 @@ define i32 @fcmps_one(float %a, float %b) nounwind strictfp {
 ; RV32I-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    call __eqsf2@plt
+; RV32I-NEXT:    call __eqsf2
 ; RV32I-NEXT:    snez s2, a0
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    call __unordsf2@plt
+; RV32I-NEXT:    call __unordsf2
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    and a0, a0, s2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -737,11 +908,11 @@ define i32 @fcmps_one(float %a, float %b) nounwind strictfp {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
-; RV64I-NEXT:    call __eqsf2@plt
+; RV64I-NEXT:    call __eqsf2
 ; RV64I-NEXT:    snez s2, a0
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    mv a1, s0
-; RV64I-NEXT:    call __unordsf2@plt
+; RV64I-NEXT:    call __unordsf2
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    and a0, a0, s2
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -763,11 +934,18 @@ define i32 @fcmps_ord(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    and a0, a1, a0
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmps_ord:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fle.s a1, a1, a1
+; CHECKIZFINX-NEXT:    fle.s a0, a0, a0
+; CHECKIZFINX-NEXT:    and a0, a0, a1
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmps_ord:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __unordsf2@plt
+; RV32I-NEXT:    call __unordsf2
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -777,7 +955,7 @@ define i32 @fcmps_ord(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __unordsf2@plt
+; RV64I-NEXT:    call __unordsf2
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -796,6 +974,14 @@ define i32 @fcmps_ueq(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    xori a0, a0, 1
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmps_ueq:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    flt.s a2, a0, a1
+; CHECKIZFINX-NEXT:    flt.s a0, a1, a0
+; CHECKIZFINX-NEXT:    or a0, a0, a2
+; CHECKIZFINX-NEXT:    xori a0, a0, 1
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmps_ueq:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -805,11 +991,11 @@ define i32 @fcmps_ueq(float %a, float %b) nounwind strictfp {
 ; RV32I-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    call __eqsf2@plt
+; RV32I-NEXT:    call __eqsf2
 ; RV32I-NEXT:    seqz s2, a0
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    call __unordsf2@plt
+; RV32I-NEXT:    call __unordsf2
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    or a0, a0, s2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -828,11 +1014,11 @@ define i32 @fcmps_ueq(float %a, float %b) nounwind strictfp {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
-; RV64I-NEXT:    call __eqsf2@plt
+; RV64I-NEXT:    call __eqsf2
 ; RV64I-NEXT:    seqz s2, a0
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    mv a1, s0
-; RV64I-NEXT:    call __unordsf2@plt
+; RV64I-NEXT:    call __unordsf2
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    or a0, a0, s2
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -853,11 +1039,17 @@ define i32 @fcmps_ugt(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    xori a0, a0, 1
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmps_ugt:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fle.s a0, a0, a1
+; CHECKIZFINX-NEXT:    xori a0, a0, 1
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmps_ugt:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __lesf2@plt
+; RV32I-NEXT:    call __lesf2
 ; RV32I-NEXT:    sgtz a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -867,7 +1059,7 @@ define i32 @fcmps_ugt(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __lesf2@plt
+; RV64I-NEXT:    call __lesf2
 ; RV64I-NEXT:    sgtz a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -884,11 +1076,17 @@ define i32 @fcmps_uge(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    xori a0, a0, 1
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmps_uge:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    flt.s a0, a0, a1
+; CHECKIZFINX-NEXT:    xori a0, a0, 1
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmps_uge:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __ltsf2@plt
+; RV32I-NEXT:    call __ltsf2
 ; RV32I-NEXT:    slti a0, a0, 0
 ; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -899,7 +1097,7 @@ define i32 @fcmps_uge(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __ltsf2@plt
+; RV64I-NEXT:    call __ltsf2
 ; RV64I-NEXT:    slti a0, a0, 0
 ; RV64I-NEXT:    xori a0, a0, 1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -917,11 +1115,17 @@ define i32 @fcmps_ult(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    xori a0, a0, 1
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmps_ult:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fle.s a0, a1, a0
+; CHECKIZFINX-NEXT:    xori a0, a0, 1
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmps_ult:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __gesf2@plt
+; RV32I-NEXT:    call __gesf2
 ; RV32I-NEXT:    slti a0, a0, 0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -931,7 +1135,7 @@ define i32 @fcmps_ult(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __gesf2@plt
+; RV64I-NEXT:    call __gesf2
 ; RV64I-NEXT:    slti a0, a0, 0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -948,11 +1152,17 @@ define i32 @fcmps_ule(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    xori a0, a0, 1
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmps_ule:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    flt.s a0, a1, a0
+; CHECKIZFINX-NEXT:    xori a0, a0, 1
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmps_ule:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __gtsf2@plt
+; RV32I-NEXT:    call __gtsf2
 ; RV32I-NEXT:    slti a0, a0, 1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -962,7 +1172,7 @@ define i32 @fcmps_ule(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __gtsf2@plt
+; RV64I-NEXT:    call __gtsf2
 ; RV64I-NEXT:    slti a0, a0, 1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -981,11 +1191,19 @@ define i32 @fcmps_une(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    xori a0, a0, 1
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmps_une:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fle.s a2, a1, a0
+; CHECKIZFINX-NEXT:    fle.s a0, a0, a1
+; CHECKIZFINX-NEXT:    and a0, a0, a2
+; CHECKIZFINX-NEXT:    xori a0, a0, 1
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmps_une:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __nesf2@plt
+; RV32I-NEXT:    call __nesf2
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -995,7 +1213,7 @@ define i32 @fcmps_une(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __nesf2@plt
+; RV64I-NEXT:    call __nesf2
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -1014,11 +1232,19 @@ define i32 @fcmps_uno(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    xori a0, a0, 1
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcmps_uno:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fle.s a1, a1, a1
+; CHECKIZFINX-NEXT:    fle.s a0, a0, a0
+; CHECKIZFINX-NEXT:    and a0, a0, a1
+; CHECKIZFINX-NEXT:    xori a0, a0, 1
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcmps_uno:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __unordsf2@plt
+; RV32I-NEXT:    call __unordsf2
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -1028,7 +1254,7 @@ define i32 @fcmps_uno(float %a, float %b) nounwind strictfp {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __unordsf2@plt
+; RV64I-NEXT:    call __unordsf2
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16

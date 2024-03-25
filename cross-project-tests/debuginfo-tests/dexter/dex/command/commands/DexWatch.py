@@ -22,11 +22,11 @@ class DexWatch(CommandBase):
 
     def __init__(self, *args):
         if not args:
-            raise TypeError('expected some arguments')
+            raise TypeError("expected some arguments")
 
         for arg in args:
             if not isinstance(arg, str):
-                raise TypeError('invalid argument type')
+                raise TypeError("invalid argument type")
 
         self._args = args
         super(DexWatch, self).__init__()

@@ -12,7 +12,7 @@ define void @foo(i32) {
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[CODEREPL:%.*]], label [[EXIT:%.*]]
 ; CHECK:       codeRepl:
 ; CHECK-NEXT:    call void @foo.cold.1() #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -36,7 +36,7 @@ define void @bar(i32) {
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[CODEREPL:%.*]], label [[EXIT:%.*]]
 ; CHECK:       codeRepl:
 ; CHECK-NEXT:    call void @bar.cold.1() #[[ATTR2]]
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -53,5 +53,5 @@ exit:
   ret void
 }
 
-declare void @llvm.trap() noreturn cold
+declare void @llvm.trap() noreturn cold memory(inaccessiblemem: write)
 declare void @_Z10sideeffectv()

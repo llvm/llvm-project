@@ -24,11 +24,14 @@ static_library("IR") {
     "ConstantFold.cpp",
     "ConstantRange.cpp",
     "Constants.cpp",
+    "ConvergenceVerifier.cpp",
     "Core.cpp",
+    "CycleInfo.cpp",
     "DIBuilder.cpp",
     "DataLayout.cpp",
     "DebugInfo.cpp",
     "DebugInfoMetadata.cpp",
+    "DebugProgramInstruction.cpp",
     "DebugLoc.cpp",
     "DiagnosticHandler.cpp",
     "DiagnosticInfo.cpp",
@@ -80,5 +83,6 @@ static_library("IR") {
     "ValueSymbolTable.cpp",
     "VectorBuilder.cpp",
     "Verifier.cpp",
+    "VFABIDemangler.cpp",
   ]
 }

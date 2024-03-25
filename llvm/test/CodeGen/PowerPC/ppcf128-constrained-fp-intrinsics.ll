@@ -1293,11 +1293,11 @@ define i32 @test_fptoui_ppc_i32_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-NEXT:    xxlxor 3, 3, 3
 ; PC64LE-NEXT:    std 0, 64(1)
 ; PC64LE-NEXT:    lfs 0, .LCPI31_0@toc@l(3)
+; PC64LE-NEXT:    fcmpo 1, 2, 3
 ; PC64LE-NEXT:    lis 3, -32768
-; PC64LE-NEXT:    fcmpo 0, 2, 3
-; PC64LE-NEXT:    fcmpo 1, 1, 0
-; PC64LE-NEXT:    crand 20, 6, 0
-; PC64LE-NEXT:    crandc 21, 4, 6
+; PC64LE-NEXT:    fcmpo 0, 1, 0
+; PC64LE-NEXT:    crand 20, 2, 4
+; PC64LE-NEXT:    crandc 21, 0, 2
 ; PC64LE-NEXT:    cror 20, 21, 20
 ; PC64LE-NEXT:    isel 30, 0, 3, 20
 ; PC64LE-NEXT:    bc 12, 20, .LBB31_2
@@ -1383,19 +1383,18 @@ define i32 @test_fptoui_ppc_i32_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    mffs 0
 ; PC64-NEXT:    mtfsb1 31
-; PC64-NEXT:    lis 4, -32768
-; PC64-NEXT:    bc 12, 8, .LBB31_3
-; PC64-NEXT:    b .LBB31_4
-; PC64-NEXT:  .LBB31_3: # %entry
-; PC64-NEXT:    li 4, 0
-; PC64-NEXT:  .LBB31_4: # %entry
+; PC64-NEXT:    li 3, 0
 ; PC64-NEXT:    mtfsb0 30
 ; PC64-NEXT:    fadd 1, 2, 1
 ; PC64-NEXT:    mtfsf 1, 0
 ; PC64-NEXT:    fctiwz 0, 1
 ; PC64-NEXT:    stfd 0, 120(1)
-; PC64-NEXT:    lwz 3, 124(1)
-; PC64-NEXT:    xor 3, 3, 4
+; PC64-NEXT:    bc 12, 8, .LBB31_4
+; PC64-NEXT:  # %bb.3: # %entry
+; PC64-NEXT:    lis 3, -32768
+; PC64-NEXT:  .LBB31_4: # %entry
+; PC64-NEXT:    lwz 4, 124(1)
+; PC64-NEXT:    xor 3, 4, 3
 ; PC64-NEXT:    addi 1, 1, 128
 ; PC64-NEXT:    ld 0, 16(1)
 ; PC64-NEXT:    lwz 12, 8(1)
@@ -1424,10 +1423,10 @@ define void @test_constrained_libcall_multichain(ptr %firstptr, ptr %result) #0 
 ; PC64LE-NEXT:    std 0, 96(1)
 ; PC64LE-NEXT:    mr 29, 3
 ; PC64LE-NEXT:    xxlxor 2, 2, 2
+; PC64LE-NEXT:    xxlxor 4, 4, 4
+; PC64LE-NEXT:    lfs 31, 0(3)
 ; PC64LE-NEXT:    li 3, 0
 ; PC64LE-NEXT:    mr 30, 4
-; PC64LE-NEXT:    lfs 31, 0(29)
-; PC64LE-NEXT:    xxlxor 4, 4, 4
 ; PC64LE-NEXT:    std 3, 8(4)
 ; PC64LE-NEXT:    fmr 1, 31
 ; PC64LE-NEXT:    fmr 3, 31
@@ -1436,10 +1435,10 @@ define void @test_constrained_libcall_multichain(ptr %firstptr, ptr %result) #0 
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    fmr 3, 1
 ; PC64LE-NEXT:    fmr 4, 2
-; PC64LE-NEXT:    fmr 30, 1
-; PC64LE-NEXT:    fmr 29, 2
 ; PC64LE-NEXT:    stfd 2, 24(30)
 ; PC64LE-NEXT:    stfd 1, 16(30)
+; PC64LE-NEXT:    fmr 30, 1
+; PC64LE-NEXT:    fmr 29, 2
 ; PC64LE-NEXT:    bl __gcc_qmul
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    fmr 1, 31

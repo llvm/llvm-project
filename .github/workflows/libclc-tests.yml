@@ -1,9 +1,11 @@
 name: libclc Tests
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
   push:
-    ignore-forks: true
     branches:
       - 'release/**'
     paths:
@@ -13,7 +15,6 @@ on:
       - '!clang/**'
       - '!llvm/**'
   pull_request:
-    ignore-forks: true
     branches:
       - 'release/**'
     paths:
@@ -35,5 +36,4 @@ jobs:
     name: Test libclc
     uses: ./.github/workflows/llvm-project-tests.yml
     with:
-      build_target: ''
       projects: clang;libclc

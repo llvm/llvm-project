@@ -445,7 +445,7 @@ bool LiveRange::overlaps(const LiveRange &Other, const CoalescerPair &CP,
 
   while (true) {
     // J has just been advanced to satisfy:
-    assert(J->end >= I->start);
+    assert(J->end > I->start);
     // Check for an overlap.
     if (J->start < I->end) {
       // I and J are overlapping. Find the later start.
@@ -460,11 +460,11 @@ bool LiveRange::overlaps(const LiveRange &Other, const CoalescerPair &CP,
       std::swap(I, J);
       std::swap(IE, JE);
     }
-    // Advance J until J->end >= I->start.
+    // Advance J until J->end > I->start.
     do
       if (++J == JE)
         return false;
-    while (J->end < I->start);
+    while (J->end <= I->start);
   }
 }
 
@@ -563,13 +563,15 @@ VNInfo *LiveRange::extendInBlock(SlotIndex StartIdx, SlotIndex Kill) {
   return CalcLiveRangeUtilVector(this).extendInBlock(StartIdx, Kill);
 }
 
-/// Remove the specified segment from this range.  Note that the segment must
-/// be in a single Segment in its entirety.
 void LiveRange::removeSegment(SlotIndex Start, SlotIndex End,
                               bool RemoveDeadValNo) {
   // Find the Segment containing this span.
   iterator I = find(Start);
-  assert(I != end() && "Segment is not in range!");
+
+  // No Segment found, so nothing to do.
+  if (I == end())
+    return;
+
   assert(I->containsInterval(Start, End)
          && "Segment is not entirely in range!");
 
@@ -629,6 +631,7 @@ void LiveRange::join(LiveRange &Other,
                      const int *RHSValNoAssignments,
                      SmallVectorImpl<VNInfo *> &NewVNInfo) {
   verify();
+  Other.verify();
 
   // Determine if any of our values are mapped.  This is uncommon, so we want
   // to avoid the range scan if not.

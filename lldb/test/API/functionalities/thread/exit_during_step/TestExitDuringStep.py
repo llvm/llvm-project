@@ -3,7 +3,6 @@ Test number of threads.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -11,40 +10,36 @@ from lldbsuite.test import lldbutil
 
 
 class ExitDuringStepTestCase(TestBase):
-
-    @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
+    @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
     def test(self):
         """Test thread exit during step handling."""
         self.build()
         self.exit_during_step_base(
-            "thread step-inst -m all-threads",
-            'stop reason = instruction step',
-            True)
+            "thread step-inst -m all-threads", "stop reason = instruction step", True
+        )
 
-    @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
+    @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
     def test_step_over(self):
         """Test thread exit during step-over handling."""
         self.build()
         self.exit_during_step_base(
-            "thread step-over -m all-threads",
-            'stop reason = step over',
-            False)
+            "thread step-over -m all-threads", "stop reason = step over", False
+        )
 
-    @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
+    @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
     def test_step_in(self):
         """Test thread exit during step-in handling."""
         self.build()
         self.exit_during_step_base(
-            "thread step-in -m all-threads",
-            'stop reason = step in',
-            False)
+            "thread step-in -m all-threads", "stop reason = step in", False
+        )
 
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line numbers to break and continue.
-        self.breakpoint = line_number('main.cpp', '// Set breakpoint here')
-        self.continuepoint = line_number('main.cpp', '// Continue from here')
+        self.breakpoint = line_number("main.cpp", "// Set breakpoint here")
+        self.continuepoint = line_number("main.cpp", "// Continue from here")
 
     def exit_during_step_base(self, step_cmd, step_stop_reason, by_instruction):
         """Test thread exit during step handling."""
@@ -53,23 +48,28 @@ class ExitDuringStepTestCase(TestBase):
 
         # This should create a breakpoint in the main thread.
         self.bp_num = lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", self.breakpoint, num_expected_locations=1)
+            self, "main.cpp", self.breakpoint, num_expected_locations=1
+        )
 
         # The breakpoint list should show 1 location.
         self.expect(
             "breakpoint list -f",
             "Breakpoint location shown correctly",
             substrs=[
-                "1: file = 'main.cpp', line = %d, exact_match = 0, locations = 1" %
-                self.breakpoint])
+                "1: file = 'main.cpp', line = %d, exact_match = 0, locations = 1"
+                % self.breakpoint
+            ],
+        )
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
         # Get the target process
         target = self.dbg.GetSelectedTarget()
@@ -80,20 +80,23 @@ class ExitDuringStepTestCase(TestBase):
         self.assertGreaterEqual(
             num_threads,
             3,
-            'Number of expected threads and actual threads do not match.')
+            "Number of expected threads and actual threads do not match.",
+        )
 
         stepping_thread = lldbutil.get_one_thread_stopped_at_breakpoint_id(
-            process, self.bp_num)
+            process, self.bp_num
+        )
         self.assertIsNotNone(
-            stepping_thread,
-            "Could not find a thread stopped at the breakpoint")
+            stepping_thread, "Could not find a thread stopped at the breakpoint"
+        )
 
         current_line = self.breakpoint
         stepping_frame = stepping_thread.GetFrameAtIndex(0)
         self.assertEqual(
             current_line,
             stepping_frame.GetLineEntry().GetLine(),
-            "Starting line for stepping doesn't match breakpoint line.")
+            "Starting line for stepping doesn't match breakpoint line.",
+        )
 
         # Keep stepping until we've reached our designated continue point
         while current_line != self.continuepoint:
@@ -115,13 +118,13 @@ class ExitDuringStepTestCase(TestBase):
             self.assertGreaterEqual(
                 current_line,
                 self.breakpoint,
-                "Stepped to unexpected line, " +
-                str(current_line))
+                "Stepped to unexpected line, " + str(current_line),
+            )
             self.assertLessEqual(
                 current_line,
                 self.continuepoint,
-                "Stepped to unexpected line, " +
-                str(current_line))
+                "Stepped to unexpected line, " + str(current_line),
+            )
 
         self.runCmd("thread list")
 
@@ -132,11 +135,14 @@ class ExitDuringStepTestCase(TestBase):
         self.assertEqual(
             new_num_threads,
             num_threads - 1,
-            'Number of threads did not reduce by 1 after thread exit.')
+            "Number of threads did not reduce by 1 after thread exit.",
+        )
 
-        self.expect("thread list", 'Process state is stopped due to step',
-                    substrs=['stopped',
-                             step_stop_reason])
+        self.expect(
+            "thread list",
+            "Process state is stopped due to step",
+            substrs=["stopped", step_stop_reason],
+        )
 
         # Run to completion
         self.runCmd("continue")

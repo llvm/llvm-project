@@ -9,14 +9,16 @@
 class ValueIR:
     """Data class to store the result of an expression evaluation."""
 
-    def __init__(self,
-                 expression: str,
-                 value: str,
-                 type_name: str,
-                 could_evaluate: bool,
-                 error_string: str = None,
-                 is_optimized_away: bool = False,
-                 is_irretrievable: bool = False):
+    def __init__(
+        self,
+        expression: str,
+        value: str,
+        type_name: str,
+        could_evaluate: bool,
+        error_string: str = None,
+        is_optimized_away: bool = False,
+        is_irretrievable: bool = False,
+    ):
         self.expression = expression
         self.value = value
         self.type_name = type_name
@@ -30,9 +32,10 @@ class ValueIR:
         if self.error_string is not None:
             return prefix + self.error_string
         if self.value is not None:
-            return prefix + '({}) {}'.format(self.type_name, self.value)
-        return (prefix +
-                'could_evaluate: {}; irretrievable: {}; optimized_away: {};'
-                    .format(self.could_evaluate, self.is_irretrievable,
-                            self.is_optimized_away))
-
+            return prefix + "({}) {}".format(self.type_name, self.value)
+        return (
+            prefix
+            + "could_evaluate: {}; irretrievable: {}; optimized_away: {};".format(
+                self.could_evaluate, self.is_irretrievable, self.is_optimized_away
+            )
+        )

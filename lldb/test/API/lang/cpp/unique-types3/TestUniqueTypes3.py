@@ -7,11 +7,14 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
+
 class UniqueTypesTestCase3(TestBase):
     def do_test(self, debug_flags):
         """Test that we display the correct template instantiation."""
         self.build(dictionary=debug_flags)
-        lldbutil.run_to_source_breakpoint(self, "// Set breakpoint here", lldb.SBFileSpec("a.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// Set breakpoint here", lldb.SBFileSpec("a.cpp")
+        )
         self.expect_expr("a", result_type="S<int>")
 
     @skipIf(compiler=no_match("clang"))

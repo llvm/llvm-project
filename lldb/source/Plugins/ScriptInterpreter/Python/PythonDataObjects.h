@@ -194,6 +194,8 @@ template <typename T, char F> struct PassthroughFormat {
 };
 
 template <> struct PythonFormat<char *> : PassthroughFormat<char *, 's'> {};
+template <> struct PythonFormat<const char *> : 
+    PassthroughFormat<const char *, 's'> {};
 template <> struct PythonFormat<char> : PassthroughFormat<char, 'b'> {};
 template <>
 struct PythonFormat<unsigned char> : PassthroughFormat<unsigned char, 'B'> {};
@@ -201,6 +203,7 @@ template <> struct PythonFormat<short> : PassthroughFormat<short, 'h'> {};
 template <>
 struct PythonFormat<unsigned short> : PassthroughFormat<unsigned short, 'H'> {};
 template <> struct PythonFormat<int> : PassthroughFormat<int, 'i'> {};
+template <> struct PythonFormat<bool> : PassthroughFormat<bool, 'p'> {};
 template <>
 struct PythonFormat<unsigned int> : PassthroughFormat<unsigned int, 'I'> {};
 template <> struct PythonFormat<long> : PassthroughFormat<long, 'l'> {};
@@ -342,6 +345,15 @@ public:
     return python::Take<PythonObject>(obj);
   }
 
+  llvm::Expected<PythonObject> GetType() const {
+    if (!m_py_obj)
+      return nullDeref();
+    PyObject *obj = PyObject_Type(m_py_obj);
+    if (!obj)
+      return exception();
+    return python::Take<PythonObject>(obj);
+  }
+
   llvm::Expected<bool> IsTrue() {
     if (!m_py_obj)
       return nullDeref();
@@ -353,7 +365,7 @@ public:
 
   llvm::Expected<long long> AsLongLong() const;
 
-  llvm::Expected<long long> AsUnsignedLongLong() const;
+  llvm::Expected<unsigned long long> AsUnsignedLongLong() const;
 
   // wraps on overflow, instead of raising an error.
   llvm::Expected<unsigned long long> AsModuloUnsignedLongLong() const;
@@ -479,6 +491,10 @@ public:
   void SetInteger(int64_t value);
 
   StructuredData::IntegerSP CreateStructuredInteger() const;
+
+  StructuredData::UnsignedIntegerSP CreateStructuredUnsignedInteger() const;
+
+  StructuredData::SignedIntegerSP CreateStructuredSignedInteger() const;
 };
 
 class PythonBoolean : public TypedPythonObject<PythonBoolean> {
@@ -547,6 +563,8 @@ public:
   explicit PythonDictionary(PyInitialValue value);
 
   static bool Check(PyObject *py_obj);
+
+  bool HasKey(const llvm::Twine &key) const;
 
   uint32_t GetSize() const;
 

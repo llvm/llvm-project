@@ -1,10 +1,10 @@
 // Test without serialization:
-// RUN: %clang_cc1 -std=c++2b -triple x86_64-linux-gnu -fcxx-exceptions -ast-dump %s \
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-linux-gnu -fcxx-exceptions -ast-dump %s \
 // RUN: | FileCheck -strict-whitespace %s
 //
 // Test with serialization:
-// RUN: %clang_cc1 -std=c++2b -triple x86_64-linux-gnu -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -x c++ -std=c++2b -triple x86_64-linux-gnu -fcxx-exceptions -include-pch %t -ast-dump-all /dev/null \
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-linux-gnu -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c++ -std=c++23 -triple x86_64-linux-gnu -fcxx-exceptions -include-pch %t -ast-dump-all /dev/null \
 // RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
 // RUN: | FileCheck -strict-whitespace %s
 
@@ -99,8 +99,8 @@ void TestUnionInitList()
   U us[3] = {1};
 // CHECK: VarDecl {{.+}} <col:3, col:15> col:5 us 'U[3]' cinit
 // CHECK-NEXT: `-InitListExpr {{.+}} <col:13, col:15> 'U[3]'
-// CHECK-NEXT:   |-array_filler: InitListExpr {{.+}} <col:15> 'U':'U' field Field {{.+}} 'i' 'int'
-// CHECK-NEXT:   `-InitListExpr {{.+}} <col:14> 'U':'U' field Field {{.+}} 'i' 'int'
+// CHECK-NEXT:   |-array_filler: InitListExpr {{.+}} <col:15> 'U' field Field {{.+}} 'i' 'int'
+// CHECK-NEXT:   `-InitListExpr {{.+}} <col:14> 'U' field Field {{.+}} 'i' 'int'
 // CHECK-NEXT:     `-IntegerLiteral {{.+}} <col:14> 'int' 1
 }
 
@@ -198,28 +198,28 @@ void TestIteration() {
   // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:16> col:16 implicit used __range1 'int (&)[10]' cinit
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:16> 'int[10]' lvalue Var 0x{{[^ ]*}} 'vals' 'int[10]'
   // CHECK-NEXT: DeclStmt
-  // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:14> col:14 implicit used __begin1 'int *':'int *' cinit
+  // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:14> col:14 implicit used __begin1 'int *' cinit
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int[10]' lvalue Var 0x{{[^ ]*}} '__range1' 'int (&)[10]'
   // CHECK-NEXT: DeclStmt
-  // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:14, col:16> col:14 implicit used __end1 'int *':'int *' cinit
+  // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:14, col:16> col:14 implicit used __end1 'int *' cinit
   // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:14, col:16> 'int *' '+'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int[10]' lvalue Var 0x{{[^ ]*}} '__range1' 'int (&)[10]'
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:16> 'long' 10
   // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:14> 'bool' '!='
   // CHECK-NEXT: ImplicitCastExpr
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *':'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *':'int *'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *'
   // CHECK-NEXT: ImplicitCastExpr
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *':'int *' lvalue Var 0x{{[^ ]*}} '__end1' 'int *':'int *'
-  // CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:14> 'int *':'int *' lvalue prefix '++'
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *':'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *':'int *'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *' lvalue Var 0x{{[^ ]*}} '__end1' 'int *'
+  // CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:14> 'int *' lvalue prefix '++'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *'
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:8, col:14> col:12 v 'int' cinit
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:14> 'int' lvalue prefix '*' cannot overflow
   // CHECK-NEXT: ImplicitCastExpr
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *':'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *':'int *'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *'
   // CHECK-NEXT: NullStmt
 
   Container C;
@@ -229,32 +229,32 @@ void TestIteration() {
   // CHECK-NEXT: <<<NULL>>>
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:16> col:16 implicit used __range1 'Container &' cinit
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:16> 'Container':'Container' lvalue Var 0x{{[^ ]*}} 'C' 'Container':'Container'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:16> 'Container' lvalue Var 0x{{[^ ]*}} 'C' 'Container'
   // CHECK-NEXT: DeclStmt
-  // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:14> col:14 implicit used __begin1 'int *':'int *' cinit
+  // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:14> col:14 implicit used __begin1 'int *' cinit
   // CHECK-NEXT: CXXMemberCallExpr 0x{{[^ ]*}} <col:14> 'int *'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:14> '<bound member function type>' .begin 0x{{[^ ]*}}
   // CHECK-NEXT: ImplicitCastExpr
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'Container':'Container' lvalue Var 0x{{[^ ]*}} '__range1' 'Container &'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'Container' lvalue Var 0x{{[^ ]*}} '__range1' 'Container &'
   // CHECK-NEXT: DeclStmt
-  // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:14> col:14 implicit used __end1 'int *':'int *' cinit
+  // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:14> col:14 implicit used __end1 'int *' cinit
   // CHECK-NEXT: CXXMemberCallExpr 0x{{[^ ]*}} <col:14> 'int *'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:14> '<bound member function type>' .end 0x{{[^ ]*}}
   // CHECK-NEXT: ImplicitCastExpr
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'Container':'Container' lvalue Var 0x{{[^ ]*}} '__range1' 'Container &'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'Container' lvalue Var 0x{{[^ ]*}} '__range1' 'Container &'
   // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:14> 'bool' '!='
   // CHECK-NEXT: ImplicitCastExpr
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *':'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *':'int *'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *'
   // CHECK-NEXT: ImplicitCastExpr
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *':'int *' lvalue Var 0x{{[^ ]*}} '__end1' 'int *':'int *'
-  // CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:14> 'int *':'int *' lvalue prefix '++'
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *':'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *':'int *'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *' lvalue Var 0x{{[^ ]*}} '__end1' 'int *'
+  // CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:14> 'int *' lvalue prefix '++'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *'
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:8, col:14> col:12 v 'int' cinit
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:14> 'int' lvalue prefix '*' cannot overflow
   // CHECK-NEXT: ImplicitCastExpr
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *':'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *':'int *'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *'
   // CHECK-NEXT: NullStmt
 
   for (int a; int v : vals)
@@ -266,27 +266,27 @@ void TestIteration() {
   // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:23> col:23 implicit used __range1 'int (&)[10]' cinit
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:23> 'int[10]' lvalue Var 0x{{[^ ]*}} 'vals' 'int[10]'
   // CHECK-NEXT: DeclStmt
-  // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:21> col:21 implicit used __begin1 'int *':'int *' cinit
+  // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:21> col:21 implicit used __begin1 'int *' cinit
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:21> 'int[10]' lvalue Var 0x{{[^ ]*}} '__range1' 'int (&)[10]'
   // CHECK-NEXT: DeclStmt
-  // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:21, col:23> col:21 implicit used __end1 'int *':'int *' cinit
+  // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:21, col:23> col:21 implicit used __end1 'int *' cinit
   // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:21, col:23> 'int *' '+'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:21> 'int[10]' lvalue Var 0x{{[^ ]*}} '__range1' 'int (&)[10]'
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:23> 'long' 10
   // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:21> 'bool' '!='
   // CHECK-NEXT: ImplicitCastExpr
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:21> 'int *':'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *':'int *'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:21> 'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *'
   // CHECK-NEXT: ImplicitCastExpr
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:21> 'int *':'int *' lvalue Var 0x{{[^ ]*}} '__end1' 'int *':'int *'
-  // CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:21> 'int *':'int *' lvalue prefix '++'
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:21> 'int *':'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *':'int *'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:21> 'int *' lvalue Var 0x{{[^ ]*}} '__end1' 'int *'
+  // CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:21> 'int *' lvalue prefix '++'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:21> 'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *'
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:15, col:21> col:19 v 'int' cinit
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:21> 'int' lvalue prefix '*' cannot overflow
   // CHECK-NEXT: ImplicitCastExpr
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:21> 'int *':'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *':'int *'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:21> 'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *'
   // CHECK-NEXT: NullStmt
 }

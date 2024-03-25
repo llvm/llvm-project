@@ -16,7 +16,7 @@
   ; Function Attrs: nounwind
   define void @main() local_unnamed_addr #0 {
   entry:
-    %0 = load i32, i32* @g_74, align 4
+    %0 = load i32, ptr @g_74, align 4
     %conv478.i.i = sext i32 %0 to i64
     %cond.i15.i.i = lshr i32 1, 0
     %conv2.i16.i.i = zext i32 %cond.i15.i.i to i64
@@ -67,8 +67,8 @@ body:             |
     undef %3.subreg_l64:gr128bit = LGHI 1
     %3.subreg_h64:gr128bit = LLILL 0
     %3:gr128bit = DLGR %3, %0
-    CLFIMux %3.subreg_hl32, 3631842929, implicit-def $cc
-    %6:grx32bit = LOCRMux undef %6, %3.subreg_hl32, 14, 4, implicit killed $cc
+    CLFIMux %3.subreg_l32, 3631842929, implicit-def $cc
+    %6:grx32bit = LOCRMux undef %6, %3.subreg_l32, 14, 4, implicit killed $cc
     CHIMux %6, 0, implicit-def $cc
     BRC 14, 8, %bb.2.for.inc591.1.i.i, implicit killed $cc
     J %bb.1.cleanup584.i.i

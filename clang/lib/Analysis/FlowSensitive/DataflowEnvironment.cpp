@@ -20,11 +20,10 @@
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
-#include <memory>
 #include <utility>
 
 namespace clang {
@@ -37,16 +36,51 @@ static constexpr int MaxCompositeValueDepth = 3;
 static constexpr int MaxCompositeValueSize = 1000;
 
 /// Returns a map consisting of key-value entries that are present in both maps.
-template <typename K, typename V>
-llvm::DenseMap<K, V> intersectDenseMaps(const llvm::DenseMap<K, V> &Map1,
-                                        const llvm::DenseMap<K, V> &Map2) {
-  llvm::DenseMap<K, V> Result;
-  for (auto &Entry : Map1) {
-    auto It = Map2.find(Entry.first);
-    if (It != Map2.end() && Entry.second == It->second)
+static llvm::DenseMap<const ValueDecl *, StorageLocation *> intersectDeclToLoc(
+    const llvm::DenseMap<const ValueDecl *, StorageLocation *> &DeclToLoc1,
+    const llvm::DenseMap<const ValueDecl *, StorageLocation *> &DeclToLoc2) {
+  llvm::DenseMap<const ValueDecl *, StorageLocation *> Result;
+  for (auto &Entry : DeclToLoc1) {
+    auto It = DeclToLoc2.find(Entry.first);
+    if (It != DeclToLoc2.end() && Entry.second == It->second)
       Result.insert({Entry.first, Entry.second});
   }
   return Result;
+}
+
+// Performs a join on either `ExprToLoc` or `ExprToVal`.
+// The maps must be consistent in the sense that any entries for the same
+// expression must map to the same location / value. This is the case if we are
+// performing a join for control flow within a full-expression (which is the
+// only case when this function should be used).
+template <typename MapT> MapT joinExprMaps(const MapT &Map1, const MapT &Map2) {
+  MapT Result = Map1;
+
+  for (const auto &Entry : Map2) {
+    [[maybe_unused]] auto [It, Inserted] = Result.insert(Entry);
+    // If there was an existing entry, its value should be the same as for the
+    // entry we were trying to insert.
+    assert(It->second == Entry.second);
+  }
+
+  return Result;
+}
+
+// Whether to consider equivalent two values with an unknown relation.
+//
+// FIXME: this function is a hack enabling unsoundness to support
+// convergence. Once we have widening support for the reference/pointer and
+// struct built-in models, this should be unconditionally `false` (and inlined
+// as such at its call sites).
+static bool equateUnknownValues(Value::Kind K) {
+  switch (K) {
+  case Value::Kind::Integer:
+  case Value::Kind::Pointer:
+  case Value::Kind::Record:
+    return true;
+  default:
+    return false;
+  }
 }
 
 static bool compareDistinctValues(QualType Type, Value &Val1,
@@ -65,32 +99,20 @@ static bool compareDistinctValues(QualType Type, Value &Val1,
   case ComparisonResult::Different:
     return false;
   case ComparisonResult::Unknown:
-    switch (Val1.getKind()) {
-    case Value::Kind::Integer:
-    case Value::Kind::Reference:
-    case Value::Kind::Pointer:
-    case Value::Kind::Struct:
-      // FIXME: this choice intentionally introduces unsoundness to allow
-      // for convergence. Once we have widening support for the
-      // reference/pointer and struct built-in models, this should be
-      // `false`.
-      return true;
-    default:
-      return false;
-    }
+    return equateUnknownValues(Val1.getKind());
   }
   llvm_unreachable("All cases covered in switch");
 }
 
-/// Attempts to merge distinct values `Val1` and `Val2` in `Env1` and `Env2`,
-/// respectively, of the same type `Type`. Merging generally produces a single
+/// Attempts to join distinct values `Val1` and `Val2` in `Env1` and `Env2`,
+/// respectively, of the same type `Type`. Joining generally produces a single
 /// value that (soundly) approximates the two inputs, although the actual
 /// meaning depends on `Model`.
-static Value *mergeDistinctValues(QualType Type, Value &Val1,
-                                  const Environment &Env1, Value &Val2,
-                                  const Environment &Env2,
-                                  Environment &MergedEnv,
-                                  Environment::ValueModel &Model) {
+static Value *joinDistinctValues(QualType Type, Value &Val1,
+                                 const Environment &Env1, Value &Val2,
+                                 const Environment &Env2,
+                                 Environment &JoinedEnv,
+                                 Environment::ValueModel &Model) {
   // Join distinct boolean values preserving information about the constraints
   // in the respective path conditions.
   if (isa<BoolValue>(&Val1) && isa<BoolValue>(&Val2)) {
@@ -107,26 +129,41 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
     // if (o.has_value())
     //   x = o.value();
     // ```
-    auto *Expr1 = cast<BoolValue>(&Val1);
-    auto *Expr2 = cast<BoolValue>(&Val2);
-    auto &MergedVal = MergedEnv.makeAtomicBoolValue();
-    MergedEnv.addToFlowCondition(MergedEnv.makeOr(
-        MergedEnv.makeAnd(Env1.getFlowConditionToken(),
-                          MergedEnv.makeIff(MergedVal, *Expr1)),
-        MergedEnv.makeAnd(Env2.getFlowConditionToken(),
-                          MergedEnv.makeIff(MergedVal, *Expr2))));
-    return &MergedVal;
+    auto &Expr1 = cast<BoolValue>(Val1).formula();
+    auto &Expr2 = cast<BoolValue>(Val2).formula();
+    auto &A = JoinedEnv.arena();
+    auto &JoinedVal = A.makeAtomRef(A.makeAtom());
+    JoinedEnv.assume(
+        A.makeOr(A.makeAnd(A.makeAtomRef(Env1.getFlowConditionToken()),
+                           A.makeEquals(JoinedVal, Expr1)),
+                 A.makeAnd(A.makeAtomRef(Env2.getFlowConditionToken()),
+                           A.makeEquals(JoinedVal, Expr2))));
+    return &A.makeBoolValue(JoinedVal);
   }
 
-  // FIXME: Consider destroying `MergedValue` immediately if `ValueModel::merge`
-  // returns false to avoid storing unneeded values in `DACtx`.
-  // FIXME: Creating the value based on the type alone creates misshapen values
-  // for lvalues, since the type does not reflect the need for `ReferenceValue`.
-  if (Value *MergedVal = MergedEnv.createValue(Type))
-    if (Model.merge(Type, Val1, Env1, Val2, Env2, *MergedVal, MergedEnv))
-      return MergedVal;
+  Value *JoinedVal = nullptr;
+  if (auto *RecordVal1 = dyn_cast<RecordValue>(&Val1)) {
+    auto *RecordVal2 = cast<RecordValue>(&Val2);
 
-  return nullptr;
+    if (&RecordVal1->getLoc() == &RecordVal2->getLoc())
+      // `RecordVal1` and `RecordVal2` may have different properties associated
+      // with them. Create a new `RecordValue` with the same location but
+      // without any properties so that we soundly approximate both values. If a
+      // particular analysis needs to join properties, it should do so in
+      // `DataflowAnalysis::join()`.
+      JoinedVal = &JoinedEnv.create<RecordValue>(RecordVal1->getLoc());
+    else
+      // If the locations for the two records are different, need to create a
+      // completely new value.
+      JoinedVal = JoinedEnv.createValue(Type);
+  } else {
+    JoinedVal = JoinedEnv.createValue(Type);
+  }
+
+  if (JoinedVal)
+    Model.join(Type, Val1, Env1, Val2, Env2, *JoinedVal, JoinedEnv);
+
+  return JoinedVal;
 }
 
 // When widening does not change `Current`, return value will equal `&Prev`.
@@ -135,12 +172,25 @@ static Value &widenDistinctValues(QualType Type, Value &Prev,
                                   Environment &CurrentEnv,
                                   Environment::ValueModel &Model) {
   // Boolean-model widening.
-  if (isa<BoolValue>(&Prev)) {
-    assert(isa<BoolValue>(Current));
-    // Widen to Top, because we know they are different values. If previous was
-    // already Top, re-use that to (implicitly) indicate that no change occured.
+  if (auto *PrevBool = dyn_cast<BoolValue>(&Prev)) {
+    // If previous value was already Top, re-use that to (implicitly) indicate
+    // that no change occurred.
     if (isa<TopBoolValue>(Prev))
       return Prev;
+
+    // We may need to widen to Top, but before we do so, check whether both
+    // values are implied to be either true or false in the current environment.
+    // In that case, we can simply return a literal instead.
+    auto &CurBool = cast<BoolValue>(Current);
+    bool TruePrev = PrevEnv.proves(PrevBool->formula());
+    bool TrueCur = CurrentEnv.proves(CurBool.formula());
+    if (TruePrev && TrueCur)
+      return CurrentEnv.getBoolLiteralValue(true);
+    if (!TruePrev && !TrueCur &&
+        PrevEnv.proves(PrevEnv.arena().makeNot(PrevBool->formula())) &&
+        CurrentEnv.proves(CurrentEnv.arena().makeNot(CurBool.formula())))
+      return CurrentEnv.getBoolLiteralValue(false);
+
     return CurrentEnv.makeTopBoolValue();
   }
 
@@ -150,23 +200,141 @@ static Value &widenDistinctValues(QualType Type, Value &Prev,
   if (auto *W = Model.widen(Type, Prev, PrevEnv, Current, CurrentEnv))
     return *W;
 
-  // Default of widening is a no-op: leave the current value unchanged.
-  return Current;
+  return equateUnknownValues(Prev.getKind()) ? Prev : Current;
+}
+
+// Returns whether the values in `Map1` and `Map2` compare equal for those
+// keys that `Map1` and `Map2` have in common.
+template <typename Key>
+bool compareKeyToValueMaps(const llvm::MapVector<Key, Value *> &Map1,
+                           const llvm::MapVector<Key, Value *> &Map2,
+                           const Environment &Env1, const Environment &Env2,
+                           Environment::ValueModel &Model) {
+  for (auto &Entry : Map1) {
+    Key K = Entry.first;
+    assert(K != nullptr);
+
+    Value *Val = Entry.second;
+    assert(Val != nullptr);
+
+    auto It = Map2.find(K);
+    if (It == Map2.end())
+      continue;
+    assert(It->second != nullptr);
+
+    if (!areEquivalentValues(*Val, *It->second) &&
+        !compareDistinctValues(K->getType(), *Val, Env1, *It->second, Env2,
+                               Model))
+      return false;
+  }
+
+  return true;
+}
+
+// Perform a join on two `LocToVal` maps.
+static llvm::MapVector<const StorageLocation *, Value *>
+joinLocToVal(const llvm::MapVector<const StorageLocation *, Value *> &LocToVal,
+             const llvm::MapVector<const StorageLocation *, Value *> &LocToVal2,
+             const Environment &Env1, const Environment &Env2,
+             Environment &JoinedEnv, Environment::ValueModel &Model) {
+  llvm::MapVector<const StorageLocation *, Value *> Result;
+  for (auto &Entry : LocToVal) {
+    const StorageLocation *Loc = Entry.first;
+    assert(Loc != nullptr);
+
+    Value *Val = Entry.second;
+    assert(Val != nullptr);
+
+    auto It = LocToVal2.find(Loc);
+    if (It == LocToVal2.end())
+      continue;
+    assert(It->second != nullptr);
+
+    if (areEquivalentValues(*Val, *It->second)) {
+      Result.insert({Loc, Val});
+      continue;
+    }
+
+    if (Value *JoinedVal = joinDistinctValues(
+            Loc->getType(), *Val, Env1, *It->second, Env2, JoinedEnv, Model)) {
+      Result.insert({Loc, JoinedVal});
+    }
+  }
+
+  return Result;
+}
+
+// Perform widening on either `LocToVal` or `ExprToVal`. `Key` must be either
+// `const StorageLocation *` or `const Expr *`.
+template <typename Key>
+llvm::MapVector<Key, Value *>
+widenKeyToValueMap(const llvm::MapVector<Key, Value *> &CurMap,
+                   const llvm::MapVector<Key, Value *> &PrevMap,
+                   Environment &CurEnv, const Environment &PrevEnv,
+                   Environment::ValueModel &Model, LatticeJoinEffect &Effect) {
+  llvm::MapVector<Key, Value *> WidenedMap;
+  for (auto &Entry : CurMap) {
+    Key K = Entry.first;
+    assert(K != nullptr);
+
+    Value *Val = Entry.second;
+    assert(Val != nullptr);
+
+    auto PrevIt = PrevMap.find(K);
+    if (PrevIt == PrevMap.end())
+      continue;
+    assert(PrevIt->second != nullptr);
+
+    if (areEquivalentValues(*Val, *PrevIt->second)) {
+      WidenedMap.insert({K, Val});
+      continue;
+    }
+
+    Value &WidenedVal = widenDistinctValues(K->getType(), *PrevIt->second,
+                                            PrevEnv, *Val, CurEnv, Model);
+    WidenedMap.insert({K, &WidenedVal});
+    if (&WidenedVal != PrevIt->second)
+      Effect = LatticeJoinEffect::Changed;
+  }
+
+  return WidenedMap;
 }
 
 /// Initializes a global storage value.
 static void insertIfGlobal(const Decl &D,
-                           llvm::DenseSet<const FieldDecl *> &Fields,
                            llvm::DenseSet<const VarDecl *> &Vars) {
   if (auto *V = dyn_cast<VarDecl>(&D))
     if (V->hasGlobalStorage())
       Vars.insert(V);
 }
 
-static void getFieldsAndGlobalVars(const Decl &D,
-                                   llvm::DenseSet<const FieldDecl *> &Fields,
-                                   llvm::DenseSet<const VarDecl *> &Vars) {
-  insertIfGlobal(D, Fields, Vars);
+static void insertIfFunction(const Decl &D,
+                             llvm::DenseSet<const FunctionDecl *> &Funcs) {
+  if (auto *FD = dyn_cast<FunctionDecl>(&D))
+    Funcs.insert(FD);
+}
+
+static MemberExpr *getMemberForAccessor(const CXXMemberCallExpr &C) {
+  // Use getCalleeDecl instead of getMethodDecl in order to handle
+  // pointer-to-member calls.
+  const auto *MethodDecl = dyn_cast_or_null<CXXMethodDecl>(C.getCalleeDecl());
+  if (!MethodDecl)
+    return nullptr;
+  auto *Body = dyn_cast_or_null<CompoundStmt>(MethodDecl->getBody());
+  if (!Body || Body->size() != 1)
+    return nullptr;
+  if (auto *RS = dyn_cast<ReturnStmt>(*Body->body_begin()))
+    if (auto *Return = RS->getRetValue())
+      return dyn_cast<MemberExpr>(Return->IgnoreParenImpCasts());
+  return nullptr;
+}
+
+static void
+getFieldsGlobalsAndFuncs(const Decl &D, FieldSet &Fields,
+                         llvm::DenseSet<const VarDecl *> &Vars,
+                         llvm::DenseSet<const FunctionDecl *> &Funcs) {
+  insertIfGlobal(D, Vars);
+  insertIfFunction(D, Funcs);
   if (const auto *Decomp = dyn_cast<DecompositionDecl>(&D))
     for (const auto *B : Decomp->bindings())
       if (auto *ME = dyn_cast_or_null<MemberExpr>(B->getBinding()))
@@ -175,117 +343,161 @@ static void getFieldsAndGlobalVars(const Decl &D,
           Fields.insert(FD);
 }
 
-/// Traverses `S` and inserts into `Vars` any global storage values that are
-/// declared in or referenced from sub-statements.
-static void getFieldsAndGlobalVars(const Stmt &S,
-                                   llvm::DenseSet<const FieldDecl *> &Fields,
-                                   llvm::DenseSet<const VarDecl *> &Vars) {
+/// Traverses `S` and inserts into `Fields`, `Vars` and `Funcs` any fields,
+/// global variables and functions that are declared in or referenced from
+/// sub-statements.
+static void
+getFieldsGlobalsAndFuncs(const Stmt &S, FieldSet &Fields,
+                         llvm::DenseSet<const VarDecl *> &Vars,
+                         llvm::DenseSet<const FunctionDecl *> &Funcs) {
   for (auto *Child : S.children())
     if (Child != nullptr)
-      getFieldsAndGlobalVars(*Child, Fields, Vars);
+      getFieldsGlobalsAndFuncs(*Child, Fields, Vars, Funcs);
+  if (const auto *DefaultInit = dyn_cast<CXXDefaultInitExpr>(&S))
+    getFieldsGlobalsAndFuncs(*DefaultInit->getExpr(), Fields, Vars, Funcs);
 
   if (auto *DS = dyn_cast<DeclStmt>(&S)) {
     if (DS->isSingleDecl())
-      getFieldsAndGlobalVars(*DS->getSingleDecl(), Fields, Vars);
+      getFieldsGlobalsAndFuncs(*DS->getSingleDecl(), Fields, Vars, Funcs);
     else
       for (auto *D : DS->getDeclGroup())
-          getFieldsAndGlobalVars(*D, Fields, Vars);
+        getFieldsGlobalsAndFuncs(*D, Fields, Vars, Funcs);
   } else if (auto *E = dyn_cast<DeclRefExpr>(&S)) {
-    insertIfGlobal(*E->getDecl(), Fields, Vars);
+    insertIfGlobal(*E->getDecl(), Vars);
+    insertIfFunction(*E->getDecl(), Funcs);
+  } else if (const auto *C = dyn_cast<CXXMemberCallExpr>(&S)) {
+    // If this is a method that returns a member variable but does nothing else,
+    // model the field of the return value.
+    if (MemberExpr *E = getMemberForAccessor(*C))
+      if (const auto *FD = dyn_cast<FieldDecl>(E->getMemberDecl()))
+        Fields.insert(FD);
   } else if (auto *E = dyn_cast<MemberExpr>(&S)) {
     // FIXME: should we be using `E->getFoundDecl()`?
     const ValueDecl *VD = E->getMemberDecl();
-    insertIfGlobal(*VD, Fields, Vars);
+    insertIfGlobal(*VD, Vars);
+    insertIfFunction(*VD, Funcs);
     if (const auto *FD = dyn_cast<FieldDecl>(VD))
       Fields.insert(FD);
-  }
-}
-
-// FIXME: Add support for resetting globals after function calls to enable
-// the implementation of sound analyses.
-void Environment::initVars(llvm::DenseSet<const VarDecl *> Vars) {
-  for (const VarDecl *D : Vars) {
-    if (getStorageLocation(*D, SkipPast::None) != nullptr)
-      continue;
-    auto &Loc = createStorageLocation(*D);
-    setStorageLocation(*D, Loc);
-    if (auto *Val = createValue(D->getType()))
-      setValue(Loc, *Val);
+  } else if (auto *InitList = dyn_cast<InitListExpr>(&S)) {
+    if (InitList->getType()->isRecordType())
+      for (const auto *FD : getFieldsForInitListExpr(InitList))
+        Fields.insert(FD);
   }
 }
 
 Environment::Environment(DataflowAnalysisContext &DACtx)
-    : DACtx(&DACtx), FlowConditionToken(&DACtx.makeFlowConditionToken()) {}
-
-Environment::Environment(const Environment &Other)
-    : DACtx(Other.DACtx), CallStack(Other.CallStack),
-      ReturnLoc(Other.ReturnLoc), ThisPointeeLoc(Other.ThisPointeeLoc),
-      DeclToLoc(Other.DeclToLoc), ExprToLoc(Other.ExprToLoc),
-      LocToVal(Other.LocToVal), MemberLocToStruct(Other.MemberLocToStruct),
-      FlowConditionToken(&DACtx->forkFlowCondition(*Other.FlowConditionToken)) {
-}
-
-Environment &Environment::operator=(const Environment &Other) {
-  Environment Copy(Other);
-  *this = std::move(Copy);
-  return *this;
-}
+    : DACtx(&DACtx),
+      FlowConditionToken(DACtx.arena().makeFlowConditionToken()) {}
 
 Environment::Environment(DataflowAnalysisContext &DACtx,
                          const DeclContext &DeclCtx)
     : Environment(DACtx) {
   CallStack.push_back(&DeclCtx);
+}
 
-  if (const auto *FuncDecl = dyn_cast<FunctionDecl>(&DeclCtx)) {
-    assert(FuncDecl->getBody() != nullptr);
+void Environment::initialize() {
+  const DeclContext *DeclCtx = getDeclCtx();
+  if (DeclCtx == nullptr)
+    return;
 
-    llvm::DenseSet<const FieldDecl *> Fields;
-    llvm::DenseSet<const VarDecl *> Vars;
+  if (const auto *FuncDecl = dyn_cast<FunctionDecl>(DeclCtx)) {
+    assert(FuncDecl->doesThisDeclarationHaveABody());
 
-    // Look for global variable references in the constructor-initializers.
-    if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(&DeclCtx)) {
-      for (const auto *Init : CtorDecl->inits()) {
-        if (const auto *M = Init->getAnyMember())
-          Fields.insert(M);
-        const Expr *E = Init->getInit();
-        assert(E != nullptr);
-        getFieldsAndGlobalVars(*E, Fields, Vars);
-      }
-    }
-    getFieldsAndGlobalVars(*FuncDecl->getBody(), Fields, Vars);
-
-    // These have to be added before the lines that follow to ensure that
-    // `create*` work correctly for structs.
-    DACtx.addModeledFields(Fields);
-
-    initVars(Vars);
+    initFieldsGlobalsAndFuncs(FuncDecl);
 
     for (const auto *ParamDecl : FuncDecl->parameters()) {
       assert(ParamDecl != nullptr);
-      auto &ParamLoc = createStorageLocation(*ParamDecl);
-      setStorageLocation(*ParamDecl, ParamLoc);
-      if (Value *ParamVal = createValue(ParamDecl->getType()))
-        setValue(ParamLoc, *ParamVal);
+      setStorageLocation(*ParamDecl, createObject(*ParamDecl, nullptr));
     }
-
-    QualType ReturnType = FuncDecl->getReturnType();
-    ReturnLoc = &createStorageLocation(ReturnType);
   }
 
-  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(&DeclCtx)) {
+  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(DeclCtx)) {
     auto *Parent = MethodDecl->getParent();
     assert(Parent != nullptr);
-    if (Parent->isLambda())
-      MethodDecl = dyn_cast<CXXMethodDecl>(Parent->getDeclContext());
 
-    // FIXME: Initialize the ThisPointeeLoc of lambdas too.
-    if (MethodDecl && !MethodDecl->isStatic()) {
-      QualType ThisPointeeType = MethodDecl->getThisObjectType();
-      ThisPointeeLoc = &createStorageLocation(ThisPointeeType);
-      if (Value *ThisPointeeVal = createValue(ThisPointeeType))
-        setValue(*ThisPointeeLoc, *ThisPointeeVal);
+    if (Parent->isLambda()) {
+      for (auto Capture : Parent->captures()) {
+        if (Capture.capturesVariable()) {
+          const auto *VarDecl = Capture.getCapturedVar();
+          assert(VarDecl != nullptr);
+          setStorageLocation(*VarDecl, createObject(*VarDecl, nullptr));
+        } else if (Capture.capturesThis()) {
+          const auto *SurroundingMethodDecl =
+              cast<CXXMethodDecl>(DeclCtx->getNonClosureAncestor());
+          QualType ThisPointeeType =
+              SurroundingMethodDecl->getFunctionObjectParameterType();
+          setThisPointeeStorageLocation(
+              cast<RecordStorageLocation>(createObject(ThisPointeeType)));
+        }
+      }
+    } else if (MethodDecl->isImplicitObjectMemberFunction()) {
+      QualType ThisPointeeType = MethodDecl->getFunctionObjectParameterType();
+      auto &ThisLoc =
+          cast<RecordStorageLocation>(createStorageLocation(ThisPointeeType));
+      setThisPointeeStorageLocation(ThisLoc);
+      refreshRecordValue(ThisLoc, *this);
+      // Initialize fields of `*this` with values, but only if we're not
+      // analyzing a constructor; after all, it's the constructor's job to do
+      // this (and we want to be able to test that).
+      if (!isa<CXXConstructorDecl>(MethodDecl))
+        initializeFieldsWithValues(ThisLoc);
     }
   }
+}
+
+// FIXME: Add support for resetting globals after function calls to enable
+// the implementation of sound analyses.
+void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
+  assert(FuncDecl->doesThisDeclarationHaveABody());
+
+  FieldSet Fields;
+  llvm::DenseSet<const VarDecl *> Vars;
+  llvm::DenseSet<const FunctionDecl *> Funcs;
+
+  // Look for global variable and field references in the
+  // constructor-initializers.
+  if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(FuncDecl)) {
+    for (const auto *Init : CtorDecl->inits()) {
+      if (Init->isMemberInitializer()) {
+        Fields.insert(Init->getMember());
+      } else if (Init->isIndirectMemberInitializer()) {
+        for (const auto *I : Init->getIndirectMember()->chain())
+          Fields.insert(cast<FieldDecl>(I));
+      }
+      const Expr *E = Init->getInit();
+      assert(E != nullptr);
+      getFieldsGlobalsAndFuncs(*E, Fields, Vars, Funcs);
+    }
+    // Add all fields mentioned in default member initializers.
+    for (const FieldDecl *F : CtorDecl->getParent()->fields())
+      if (const auto *I = F->getInClassInitializer())
+          getFieldsGlobalsAndFuncs(*I, Fields, Vars, Funcs);
+  }
+  getFieldsGlobalsAndFuncs(*FuncDecl->getBody(), Fields, Vars, Funcs);
+
+  // These have to be added before the lines that follow to ensure that
+  // `create*` work correctly for structs.
+  DACtx->addModeledFields(Fields);
+
+  for (const VarDecl *D : Vars) {
+    if (getStorageLocation(*D) != nullptr)
+      continue;
+
+    setStorageLocation(*D, createObject(*D));
+  }
+
+  for (const FunctionDecl *FD : Funcs) {
+    if (getStorageLocation(*FD) != nullptr)
+      continue;
+    auto &Loc = createStorageLocation(FD->getType());
+    setStorageLocation(*FD, Loc);
+  }
+}
+
+Environment Environment::fork() const {
+  Environment Copy(*this);
+  Copy.FlowConditionToken = DACtx->forkFlowCondition(FlowConditionToken);
+  return Copy;
 }
 
 bool Environment::canDescend(unsigned MaxDepth,
@@ -296,13 +508,11 @@ bool Environment::canDescend(unsigned MaxDepth,
 Environment Environment::pushCall(const CallExpr *Call) const {
   Environment Env(*this);
 
-  // FIXME: Support references here.
-  Env.ReturnLoc = getStorageLocation(*Call, SkipPast::Reference);
-
   if (const auto *MethodCall = dyn_cast<CXXMemberCallExpr>(Call)) {
     if (const Expr *Arg = MethodCall->getImplicitObjectArgument()) {
       if (!isa<CXXThisExpr>(Arg))
-        Env.ThisPointeeLoc = getStorageLocation(*Arg, SkipPast::Reference);
+          Env.ThisPointeeLoc =
+              cast<RecordStorageLocation>(getStorageLocation(*Arg));
       // Otherwise (when the argument is `this`), retain the current
       // environment's `ThisPointeeLoc`.
     }
@@ -317,10 +527,7 @@ Environment Environment::pushCall(const CallExpr *Call) const {
 Environment Environment::pushCall(const CXXConstructExpr *Call) const {
   Environment Env(*this);
 
-  // FIXME: Support references here.
-  Env.ReturnLoc = getStorageLocation(*Call, SkipPast::Reference);
-
-  Env.ThisPointeeLoc = Env.ReturnLoc;
+  Env.ThisPointeeLoc = &Env.getResultObjectLocation(*Call);
 
   Env.pushCallInternal(Call->getConstructor(),
                        llvm::ArrayRef(Call->getArgs(), Call->getNumArgs()));
@@ -330,28 +537,15 @@ Environment Environment::pushCall(const CXXConstructExpr *Call) const {
 
 void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
                                    ArrayRef<const Expr *> Args) {
+  // Canonicalize to the definition of the function. This ensures that we're
+  // putting arguments into the same `ParamVarDecl`s` that the callee will later
+  // be retrieving them from.
+  assert(FuncDecl->getDefinition() != nullptr);
+  FuncDecl = FuncDecl->getDefinition();
+
   CallStack.push_back(FuncDecl);
 
-  // FIXME: Share this code with the constructor, rather than duplicating it.
-  llvm::DenseSet<const FieldDecl *> Fields;
-  llvm::DenseSet<const VarDecl *> Vars;
-  // Look for global variable references in the constructor-initializers.
-  if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(FuncDecl)) {
-    for (const auto *Init : CtorDecl->inits()) {
-      if (const auto *M = Init->getAnyMember())
-        Fields.insert(M);
-      const Expr *E = Init->getInit();
-      assert(E != nullptr);
-      getFieldsAndGlobalVars(*E, Fields, Vars);
-    }
-  }
-  getFieldsAndGlobalVars(*FuncDecl->getBody(), Fields, Vars);
-
-  // These have to be added before the lines that follow to ensure that
-  // `create*` work correctly for structs.
-  DACtx->addModeledFields(Fields);
-
-  initVars(Vars);
+  initFieldsGlobalsAndFuncs(FuncDecl);
 
   const auto *ParamIt = FuncDecl->param_begin();
 
@@ -359,44 +553,48 @@ void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
   // overloaded operators implemented as member functions, and parameter packs.
   for (unsigned ArgIndex = 0; ArgIndex < Args.size(); ++ParamIt, ++ArgIndex) {
     assert(ParamIt != FuncDecl->param_end());
-
-    const Expr *Arg = Args[ArgIndex];
-    auto *ArgLoc = getStorageLocation(*Arg, SkipPast::Reference);
-    if (ArgLoc == nullptr)
-      continue;
-
     const VarDecl *Param = *ParamIt;
-    auto &Loc = createStorageLocation(*Param);
-    setStorageLocation(*Param, Loc);
-
-    QualType ParamType = Param->getType();
-    if (ParamType->isReferenceType()) {
-      auto &Val = takeOwnership(std::make_unique<ReferenceValue>(*ArgLoc));
-      setValue(Loc, Val);
-    } else if (auto *ArgVal = getValue(*ArgLoc)) {
-      setValue(Loc, *ArgVal);
-    } else if (Value *Val = createValue(ParamType)) {
-      setValue(Loc, *Val);
-    }
+    setStorageLocation(*Param, createObject(*Param, Args[ArgIndex]));
   }
 }
 
-void Environment::popCall(const Environment &CalleeEnv) {
-  // We ignore `DACtx` because it's already the same in both. We don't want the
-  // callee's `DeclCtx`, `ReturnLoc` or `ThisPointeeLoc`. We don't bring back
-  // `DeclToLoc` and `ExprToLoc` because we want to be able to later analyze the
-  // same callee in a different context, and `setStorageLocation` requires there
-  // to not already be a storage location assigned. Conceptually, these maps
-  // capture information from the local scope, so when popping that scope, we do
-  // not propagate the maps.
+void Environment::popCall(const CallExpr *Call, const Environment &CalleeEnv) {
+  // We ignore some entries of `CalleeEnv`:
+  // - `DACtx` because is already the same in both
+  // - We don't want the callee's `DeclCtx`, `ReturnVal`, `ReturnLoc` or
+  //   `ThisPointeeLoc` because they don't apply to us.
+  // - `DeclToLoc`, `ExprToLoc`, and `ExprToVal` capture information from the
+  //   callee's local scope, so when popping that scope, we do not propagate
+  //   the maps.
   this->LocToVal = std::move(CalleeEnv.LocToVal);
-  this->MemberLocToStruct = std::move(CalleeEnv.MemberLocToStruct);
   this->FlowConditionToken = std::move(CalleeEnv.FlowConditionToken);
+
+  if (Call->isGLValue()) {
+    if (CalleeEnv.ReturnLoc != nullptr)
+      setStorageLocation(*Call, *CalleeEnv.ReturnLoc);
+  } else if (!Call->getType()->isVoidType()) {
+    if (CalleeEnv.ReturnVal != nullptr)
+      setValue(*Call, *CalleeEnv.ReturnVal);
+  }
+}
+
+void Environment::popCall(const CXXConstructExpr *Call,
+                          const Environment &CalleeEnv) {
+  // See also comment in `popCall(const CallExpr *, const Environment &)` above.
+  this->LocToVal = std::move(CalleeEnv.LocToVal);
+  this->FlowConditionToken = std::move(CalleeEnv.FlowConditionToken);
+
+  if (Value *Val = CalleeEnv.getValue(*CalleeEnv.ThisPointeeLoc)) {
+    setValue(*Call, *Val);
+  }
 }
 
 bool Environment::equivalentTo(const Environment &Other,
                                Environment::ValueModel &Model) const {
   assert(DACtx == Other.DACtx);
+
+  if (ReturnVal != Other.ReturnVal)
+    return false;
 
   if (ReturnLoc != Other.ReturnLoc)
     return false;
@@ -410,24 +608,11 @@ bool Environment::equivalentTo(const Environment &Other,
   if (ExprToLoc != Other.ExprToLoc)
     return false;
 
-  // Compare the contents for the intersection of their domains.
-  for (auto &Entry : LocToVal) {
-    const StorageLocation *Loc = Entry.first;
-    assert(Loc != nullptr);
+  if (!compareKeyToValueMaps(ExprToVal, Other.ExprToVal, *this, Other, Model))
+    return false;
 
-    Value *Val = Entry.second;
-    assert(Val != nullptr);
-
-    auto It = Other.LocToVal.find(Loc);
-    if (It == Other.LocToVal.end())
-      continue;
-    assert(It->second != nullptr);
-
-    if (!areEquivalentValues(*Val, *It->second) &&
-        !compareDistinctValues(Loc->getType(), *Val, *this, *It->second, Other,
-                               Model))
-      return false;
-  }
+  if (!compareKeyToValueMaps(LocToVal, Other.LocToVal, *this, Other, Model))
+    return false;
 
   return true;
 }
@@ -435,6 +620,7 @@ bool Environment::equivalentTo(const Environment &Other,
 LatticeJoinEffect Environment::widen(const Environment &PrevEnv,
                                      Environment::ValueModel &Model) {
   assert(DACtx == PrevEnv.DACtx);
+  assert(ReturnVal == PrevEnv.ReturnVal);
   assert(ReturnLoc == PrevEnv.ReturnLoc);
   assert(ThisPointeeLoc == PrevEnv.ThisPointeeLoc);
   assert(CallStack == PrevEnv.CallStack);
@@ -444,126 +630,90 @@ LatticeJoinEffect Environment::widen(const Environment &PrevEnv,
   // By the API, `PrevEnv` is a previous version of the environment for the same
   // block, so we have some guarantees about its shape. In particular, it will
   // be the result of a join or widen operation on previous values for this
-  // block. For `DeclToLoc` and `ExprToLoc`, join guarantees that these maps are
-  // subsets of the maps in `PrevEnv`. So, as long as we maintain this property
-  // here, we don't need change their current values to widen.
-  //
-  // FIXME: `MemberLocToStruct` does not share the above property, because
-  // `join` can cause the map size to increase (when we add fresh data in places
-  // of conflict). Once this issue with join is resolved, re-enable the
-  // assertion below or replace with something that captures the desired
-  // invariant.
+  // block. For `DeclToLoc`, `ExprToVal`, and `ExprToLoc`, join guarantees that
+  // these maps are subsets of the maps in `PrevEnv`. So, as long as we maintain
+  // this property here, we don't need change their current values to widen.
   assert(DeclToLoc.size() <= PrevEnv.DeclToLoc.size());
+  assert(ExprToVal.size() <= PrevEnv.ExprToVal.size());
   assert(ExprToLoc.size() <= PrevEnv.ExprToLoc.size());
-  // assert(MemberLocToStruct.size() <= PrevEnv.MemberLocToStruct.size());
 
-  llvm::DenseMap<const StorageLocation *, Value *> WidenedLocToVal;
-  for (auto &Entry : LocToVal) {
-    const StorageLocation *Loc = Entry.first;
-    assert(Loc != nullptr);
+  ExprToVal = widenKeyToValueMap(ExprToVal, PrevEnv.ExprToVal, *this, PrevEnv,
+                                 Model, Effect);
 
-    Value *Val = Entry.second;
-    assert(Val != nullptr);
-
-    auto PrevIt = PrevEnv.LocToVal.find(Loc);
-    if (PrevIt == PrevEnv.LocToVal.end())
-      continue;
-    assert(PrevIt->second != nullptr);
-
-    if (areEquivalentValues(*Val, *PrevIt->second)) {
-      WidenedLocToVal.insert({Loc, Val});
-      continue;
-    }
-
-    Value &WidenedVal = widenDistinctValues(Loc->getType(), *PrevIt->second,
-                                            PrevEnv, *Val, *this, Model);
-    WidenedLocToVal.insert({Loc, &WidenedVal});
-    if (&WidenedVal != PrevIt->second)
-      Effect = LatticeJoinEffect::Changed;
-  }
-  LocToVal = std::move(WidenedLocToVal);
-  // FIXME: update the equivalence calculation for `MemberLocToStruct`, once we
-  // have a systematic way of soundly comparing this map.
+  LocToVal = widenKeyToValueMap(LocToVal, PrevEnv.LocToVal, *this, PrevEnv,
+                                Model, Effect);
   if (DeclToLoc.size() != PrevEnv.DeclToLoc.size() ||
       ExprToLoc.size() != PrevEnv.ExprToLoc.size() ||
-      LocToVal.size() != PrevEnv.LocToVal.size() ||
-      MemberLocToStruct.size() != PrevEnv.MemberLocToStruct.size())
+      ExprToVal.size() != PrevEnv.ExprToVal.size() ||
+      LocToVal.size() != PrevEnv.LocToVal.size())
     Effect = LatticeJoinEffect::Changed;
 
   return Effect;
 }
 
-LatticeJoinEffect Environment::join(const Environment &Other,
-                                    Environment::ValueModel &Model) {
-  assert(DACtx == Other.DACtx);
-  assert(ReturnLoc == Other.ReturnLoc);
-  assert(ThisPointeeLoc == Other.ThisPointeeLoc);
-  assert(CallStack == Other.CallStack);
+Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
+                              Environment::ValueModel &Model,
+                              ExprJoinBehavior ExprBehavior) {
+  assert(EnvA.DACtx == EnvB.DACtx);
+  assert(EnvA.ThisPointeeLoc == EnvB.ThisPointeeLoc);
+  assert(EnvA.CallStack == EnvB.CallStack);
 
-  auto Effect = LatticeJoinEffect::Unchanged;
+  Environment JoinedEnv(*EnvA.DACtx);
 
-  Environment JoinedEnv(*DACtx);
+  JoinedEnv.CallStack = EnvA.CallStack;
+  JoinedEnv.ThisPointeeLoc = EnvA.ThisPointeeLoc;
 
-  JoinedEnv.CallStack = CallStack;
-  JoinedEnv.ReturnLoc = ReturnLoc;
-  JoinedEnv.ThisPointeeLoc = ThisPointeeLoc;
+  if (EnvA.ReturnVal == nullptr || EnvB.ReturnVal == nullptr) {
+    // `ReturnVal` might not always get set -- for example if we have a return
+    // statement of the form `return some_other_func()` and we decide not to
+    // analyze `some_other_func()`.
+    // In this case, we can't say anything about the joined return value -- we
+    // don't simply want to propagate the return value that we do have, because
+    // it might not be the correct one.
+    // This occurs for example in the test `ContextSensitiveMutualRecursion`.
+    JoinedEnv.ReturnVal = nullptr;
+  } else if (areEquivalentValues(*EnvA.ReturnVal, *EnvB.ReturnVal)) {
+    JoinedEnv.ReturnVal = EnvA.ReturnVal;
+  } else {
+    assert(!EnvA.CallStack.empty());
+    // FIXME: Make `CallStack` a vector of `FunctionDecl` so we don't need this
+    // cast.
+    auto *Func = dyn_cast<FunctionDecl>(EnvA.CallStack.back());
+    assert(Func != nullptr);
+    if (Value *JoinedVal =
+            joinDistinctValues(Func->getReturnType(), *EnvA.ReturnVal, EnvA,
+                               *EnvB.ReturnVal, EnvB, JoinedEnv, Model))
+      JoinedEnv.ReturnVal = JoinedVal;
+  }
 
-  JoinedEnv.DeclToLoc = intersectDenseMaps(DeclToLoc, Other.DeclToLoc);
-  if (DeclToLoc.size() != JoinedEnv.DeclToLoc.size())
-    Effect = LatticeJoinEffect::Changed;
+  if (EnvA.ReturnLoc == EnvB.ReturnLoc)
+    JoinedEnv.ReturnLoc = EnvA.ReturnLoc;
+  else
+    JoinedEnv.ReturnLoc = nullptr;
 
-  JoinedEnv.ExprToLoc = intersectDenseMaps(ExprToLoc, Other.ExprToLoc);
-  if (ExprToLoc.size() != JoinedEnv.ExprToLoc.size())
-    Effect = LatticeJoinEffect::Changed;
+  JoinedEnv.DeclToLoc = intersectDeclToLoc(EnvA.DeclToLoc, EnvB.DeclToLoc);
 
-  JoinedEnv.MemberLocToStruct =
-      intersectDenseMaps(MemberLocToStruct, Other.MemberLocToStruct);
-  if (MemberLocToStruct.size() != JoinedEnv.MemberLocToStruct.size())
-    Effect = LatticeJoinEffect::Changed;
-
-  // FIXME: set `Effect` as needed.
   // FIXME: update join to detect backedges and simplify the flow condition
   // accordingly.
-  JoinedEnv.FlowConditionToken = &DACtx->joinFlowConditions(
-      *FlowConditionToken, *Other.FlowConditionToken);
+  JoinedEnv.FlowConditionToken = EnvA.DACtx->joinFlowConditions(
+      EnvA.FlowConditionToken, EnvB.FlowConditionToken);
 
-  for (auto &Entry : LocToVal) {
-    const StorageLocation *Loc = Entry.first;
-    assert(Loc != nullptr);
+  JoinedEnv.LocToVal =
+      joinLocToVal(EnvA.LocToVal, EnvB.LocToVal, EnvA, EnvB, JoinedEnv, Model);
 
-    Value *Val = Entry.second;
-    assert(Val != nullptr);
-
-    auto It = Other.LocToVal.find(Loc);
-    if (It == Other.LocToVal.end())
-      continue;
-    assert(It->second != nullptr);
-
-    if (areEquivalentValues(*Val, *It->second)) {
-      JoinedEnv.LocToVal.insert({Loc, Val});
-      continue;
-    }
-
-    if (Value *MergedVal =
-            mergeDistinctValues(Loc->getType(), *Val, *this, *It->second, Other,
-                                JoinedEnv, Model)) {
-      JoinedEnv.LocToVal.insert({Loc, MergedVal});
-      Effect = LatticeJoinEffect::Changed;
-    }
+  if (ExprBehavior == KeepExprState) {
+    JoinedEnv.ExprToVal = joinExprMaps(EnvA.ExprToVal, EnvB.ExprToVal);
+    JoinedEnv.ExprToLoc = joinExprMaps(EnvA.ExprToLoc, EnvB.ExprToLoc);
   }
-  if (LocToVal.size() != JoinedEnv.LocToVal.size())
-    Effect = LatticeJoinEffect::Changed;
 
-  *this = std::move(JoinedEnv);
-
-  return Effect;
+  return JoinedEnv;
 }
 
 StorageLocation &Environment::createStorageLocation(QualType Type) {
   return DACtx->createStorageLocation(Type);
 }
 
-StorageLocation &Environment::createStorageLocation(const VarDecl &D) {
+StorageLocation &Environment::createStorageLocation(const ValueDecl &D) {
   // Evaluated declarations are always assigned the same storage locations to
   // ensure that the environment stabilizes across loop iterations. Storage
   // locations for evaluated declarations are stored in the analysis context.
@@ -578,91 +728,154 @@ StorageLocation &Environment::createStorageLocation(const Expr &E) {
 }
 
 void Environment::setStorageLocation(const ValueDecl &D, StorageLocation &Loc) {
-  assert(DeclToLoc.find(&D) == DeclToLoc.end());
+  assert(!DeclToLoc.contains(&D));
   DeclToLoc[&D] = &Loc;
 }
 
-StorageLocation *Environment::getStorageLocation(const ValueDecl &D,
-                                                 SkipPast SP) const {
+StorageLocation *Environment::getStorageLocation(const ValueDecl &D) const {
   auto It = DeclToLoc.find(&D);
-  return It == DeclToLoc.end() ? nullptr : &skip(*It->second, SP);
+  if (It == DeclToLoc.end())
+    return nullptr;
+
+  StorageLocation *Loc = It->second;
+
+  return Loc;
 }
 
+void Environment::removeDecl(const ValueDecl &D) { DeclToLoc.erase(&D); }
+
 void Environment::setStorageLocation(const Expr &E, StorageLocation &Loc) {
+  // `DeclRefExpr`s to builtin function types aren't glvalues, for some reason,
+  // but we still want to be able to associate a `StorageLocation` with them,
+  // so allow these as an exception.
+  assert(E.isGLValue() ||
+         E.getType()->isSpecificBuiltinType(BuiltinType::BuiltinFn));
   const Expr &CanonE = ignoreCFGOmittedNodes(E);
-  assert(ExprToLoc.find(&CanonE) == ExprToLoc.end());
+  assert(!ExprToLoc.contains(&CanonE));
   ExprToLoc[&CanonE] = &Loc;
 }
 
-StorageLocation *Environment::getStorageLocation(const Expr &E,
-                                                 SkipPast SP) const {
-  // FIXME: Add a test with parens.
+StorageLocation *Environment::getStorageLocation(const Expr &E) const {
+  // See comment in `setStorageLocation()`.
+  assert(E.isGLValue() ||
+         E.getType()->isSpecificBuiltinType(BuiltinType::BuiltinFn));
   auto It = ExprToLoc.find(&ignoreCFGOmittedNodes(E));
-  return It == ExprToLoc.end() ? nullptr : &skip(*It->second, SP);
+  return It == ExprToLoc.end() ? nullptr : &*It->second;
 }
 
-StorageLocation *Environment::getThisPointeeStorageLocation() const {
-  return ThisPointeeLoc;
+// Returns whether a prvalue of record type is the one that originally
+// constructs the object (i.e. it doesn't propagate it from one of its
+// children).
+static bool isOriginalRecordConstructor(const Expr &RecordPRValue) {
+  if (auto *Init = dyn_cast<InitListExpr>(&RecordPRValue))
+    return !Init->isSemanticForm() || !Init->isTransparent();
+  return isa<CXXConstructExpr>(RecordPRValue) || isa<CallExpr>(RecordPRValue) ||
+         isa<LambdaExpr>(RecordPRValue) ||
+         isa<CXXDefaultArgExpr>(RecordPRValue) ||
+         isa<CXXDefaultInitExpr>(RecordPRValue) ||
+         // The framework currently does not propagate the objects created in
+         // the two branches of a `ConditionalOperator` because there is no way
+         // to reconcile their storage locations, which are different. We
+         // therefore claim that the `ConditionalOperator` is the expression
+         // that originally constructs the object.
+         // Ultimately, this will be fixed by propagating locations down from
+         // the result object, rather than up from the original constructor as
+         // we do now (see also the FIXME in the documentation for
+         // `getResultObjectLocation()`).
+         isa<ConditionalOperator>(RecordPRValue);
 }
 
-StorageLocation *Environment::getReturnStorageLocation() const {
-  return ReturnLoc;
+RecordStorageLocation &
+Environment::getResultObjectLocation(const Expr &RecordPRValue) const {
+  assert(RecordPRValue.getType()->isRecordType());
+  assert(RecordPRValue.isPRValue());
+
+  // Returns a storage location that we can use if assertions fail.
+  auto FallbackForAssertFailure =
+      [this, &RecordPRValue]() -> RecordStorageLocation & {
+    return cast<RecordStorageLocation>(
+        DACtx->getStableStorageLocation(RecordPRValue));
+  };
+
+  if (isOriginalRecordConstructor(RecordPRValue)) {
+    auto *Val = cast_or_null<RecordValue>(getValue(RecordPRValue));
+    // The builtin transfer function should have created a `RecordValue` for all
+    // original record constructors.
+    assert(Val);
+    if (!Val)
+      return FallbackForAssertFailure();
+    return Val->getLoc();
+  }
+
+  if (auto *Op = dyn_cast<BinaryOperator>(&RecordPRValue);
+      Op && Op->isCommaOp()) {
+    return getResultObjectLocation(*Op->getRHS());
+  }
+
+  // All other expression nodes that propagate a record prvalue should have
+  // exactly one child.
+  llvm::SmallVector<const Stmt *> children(RecordPRValue.child_begin(),
+                                           RecordPRValue.child_end());
+  assert(children.size() == 1);
+  if (children.empty())
+    return FallbackForAssertFailure();
+
+  return getResultObjectLocation(*cast<Expr>(children[0]));
 }
 
 PointerValue &Environment::getOrCreateNullPointerValue(QualType PointeeType) {
   return DACtx->getOrCreateNullPointerValue(PointeeType);
 }
 
+void Environment::initializeFieldsWithValues(RecordStorageLocation &Loc) {
+  llvm::DenseSet<QualType> Visited;
+  int CreatedValuesCount = 0;
+  initializeFieldsWithValues(Loc, Visited, 0, CreatedValuesCount);
+  if (CreatedValuesCount > MaxCompositeValueSize) {
+    llvm::errs() << "Attempting to initialize a huge value of type: "
+                 << Loc.getType() << '\n';
+  }
+}
+
 void Environment::setValue(const StorageLocation &Loc, Value &Val) {
+  assert(!isa<RecordValue>(&Val) || &cast<RecordValue>(&Val)->getLoc() == &Loc);
+
   LocToVal[&Loc] = &Val;
+}
 
-  if (auto *StructVal = dyn_cast<StructValue>(&Val)) {
-    auto &AggregateLoc = *cast<AggregateStorageLocation>(&Loc);
+void Environment::setValue(const Expr &E, Value &Val) {
+  const Expr &CanonE = ignoreCFGOmittedNodes(E);
 
-    const QualType Type = AggregateLoc.getType();
-    assert(Type->isStructureOrClassType() || Type->isUnionType());
-
-    for (const FieldDecl *Field : DACtx->getReferencedFields(Type)) {
-      assert(Field != nullptr);
-      StorageLocation &FieldLoc = AggregateLoc.getChild(*Field);
-      MemberLocToStruct[&FieldLoc] = std::make_pair(StructVal, Field);
-      if (auto *FieldVal = StructVal->getChild(*Field))
-        setValue(FieldLoc, *FieldVal);
-    }
+  if (auto *RecordVal = dyn_cast<RecordValue>(&Val)) {
+    assert(isOriginalRecordConstructor(CanonE) ||
+           &RecordVal->getLoc() == &getResultObjectLocation(CanonE));
   }
 
-  auto It = MemberLocToStruct.find(&Loc);
-  if (It != MemberLocToStruct.end()) {
-    // `Loc` is the location of a struct member so we need to also update the
-    // value of the member in the corresponding `StructValue`.
-
-    assert(It->second.first != nullptr);
-    StructValue &StructVal = *It->second.first;
-
-    assert(It->second.second != nullptr);
-    const ValueDecl &Member = *It->second.second;
-
-    StructVal.setChild(Member, Val);
-  }
+  assert(CanonE.isPRValue());
+  ExprToVal[&CanonE] = &Val;
 }
 
 Value *Environment::getValue(const StorageLocation &Loc) const {
-  auto It = LocToVal.find(&Loc);
-  return It == LocToVal.end() ? nullptr : It->second;
+  return LocToVal.lookup(&Loc);
 }
 
-Value *Environment::getValue(const ValueDecl &D, SkipPast SP) const {
-  auto *Loc = getStorageLocation(D, SP);
+Value *Environment::getValue(const ValueDecl &D) const {
+  auto *Loc = getStorageLocation(D);
   if (Loc == nullptr)
     return nullptr;
   return getValue(*Loc);
 }
 
-Value *Environment::getValue(const Expr &E, SkipPast SP) const {
-  auto *Loc = getStorageLocation(E, SP);
-  if (Loc == nullptr)
+Value *Environment::getValue(const Expr &E) const {
+  if (E.isPRValue()) {
+    auto It = ExprToVal.find(&ignoreCFGOmittedNodes(E));
+    return It == ExprToVal.end() ? nullptr : It->second;
+  }
+
+  auto It = ExprToLoc.find(&ignoreCFGOmittedNodes(E));
+  if (It == ExprToLoc.end())
     return nullptr;
-  return getValue(*Loc);
+  return getValue(*It->second);
 }
 
 Value *Environment::createValue(QualType Type) {
@@ -681,6 +894,7 @@ Value *Environment::createValueUnlessSelfReferential(
     QualType Type, llvm::DenseSet<QualType> &Visited, int Depth,
     int &CreatedValuesCount) {
   assert(!Type.isNull());
+  assert(!Type->isReferenceType());
 
   // Allow unlimited fields at depth 1; only cap at deeper nesting levels.
   if ((Depth > 1 && CreatedValuesCount > MaxCompositeValueSize) ||
@@ -697,121 +911,295 @@ Value *Environment::createValueUnlessSelfReferential(
     // with integers, and so distinguishing them serves no purpose, but could
     // prevent convergence.
     CreatedValuesCount++;
-    return &takeOwnership(std::make_unique<IntegerValue>());
-  }
-
-  if (Type->isReferenceType()) {
-    CreatedValuesCount++;
-    QualType PointeeType = Type->castAs<ReferenceType>()->getPointeeType();
-    auto &PointeeLoc = createStorageLocation(PointeeType);
-
-    if (Visited.insert(PointeeType.getCanonicalType()).second) {
-      Value *PointeeVal = createValueUnlessSelfReferential(
-          PointeeType, Visited, Depth, CreatedValuesCount);
-      Visited.erase(PointeeType.getCanonicalType());
-
-      if (PointeeVal != nullptr)
-        setValue(PointeeLoc, *PointeeVal);
-    }
-
-    return &takeOwnership(std::make_unique<ReferenceValue>(PointeeLoc));
+    return &arena().create<IntegerValue>();
   }
 
   if (Type->isPointerType()) {
     CreatedValuesCount++;
-    QualType PointeeType = Type->castAs<PointerType>()->getPointeeType();
-    auto &PointeeLoc = createStorageLocation(PointeeType);
+    QualType PointeeType = Type->getPointeeType();
+    StorageLocation &PointeeLoc =
+        createLocAndMaybeValue(PointeeType, Visited, Depth, CreatedValuesCount);
 
-    if (Visited.insert(PointeeType.getCanonicalType()).second) {
-      Value *PointeeVal = createValueUnlessSelfReferential(
-          PointeeType, Visited, Depth, CreatedValuesCount);
-      Visited.erase(PointeeType.getCanonicalType());
-
-      if (PointeeVal != nullptr)
-        setValue(PointeeLoc, *PointeeVal);
-    }
-
-    return &takeOwnership(std::make_unique<PointerValue>(PointeeLoc));
+    return &arena().create<PointerValue>(PointeeLoc);
   }
 
-  if (Type->isStructureOrClassType() || Type->isUnionType()) {
+  if (Type->isRecordType()) {
     CreatedValuesCount++;
-    llvm::DenseMap<const ValueDecl *, Value *> FieldValues;
-    for (const FieldDecl *Field : DACtx->getReferencedFields(Type)) {
-      assert(Field != nullptr);
+    auto &Loc = cast<RecordStorageLocation>(createStorageLocation(Type));
+    initializeFieldsWithValues(Loc, Visited, Depth, CreatedValuesCount);
 
-      QualType FieldType = Field->getType();
-      if (Visited.contains(FieldType.getCanonicalType()))
-        continue;
-
-      Visited.insert(FieldType.getCanonicalType());
-      if (auto *FieldValue = createValueUnlessSelfReferential(
-              FieldType, Visited, Depth + 1, CreatedValuesCount))
-        FieldValues.insert({Field, FieldValue});
-      Visited.erase(FieldType.getCanonicalType());
-    }
-
-    return &takeOwnership(
-        std::make_unique<StructValue>(std::move(FieldValues)));
+    return &refreshRecordValue(Loc, *this);
   }
 
   return nullptr;
 }
 
-StorageLocation &Environment::skip(StorageLocation &Loc, SkipPast SP) const {
-  switch (SP) {
-  case SkipPast::None:
-    return Loc;
-  case SkipPast::Reference:
-    // References cannot be chained so we only need to skip past one level of
-    // indirection.
-    if (auto *Val = dyn_cast_or_null<ReferenceValue>(getValue(Loc)))
-      return Val->getReferentLoc();
-    return Loc;
-  case SkipPast::ReferenceThenPointer:
-    StorageLocation &LocPastRef = skip(Loc, SkipPast::Reference);
-    if (auto *Val = dyn_cast_or_null<PointerValue>(getValue(LocPastRef)))
-      return Val->getPointeeLoc();
-    return LocPastRef;
+StorageLocation &
+Environment::createLocAndMaybeValue(QualType Ty,
+                                    llvm::DenseSet<QualType> &Visited,
+                                    int Depth, int &CreatedValuesCount) {
+  if (!Visited.insert(Ty.getCanonicalType()).second)
+    return createStorageLocation(Ty.getNonReferenceType());
+  Value *Val = createValueUnlessSelfReferential(
+      Ty.getNonReferenceType(), Visited, Depth, CreatedValuesCount);
+  Visited.erase(Ty.getCanonicalType());
+
+  Ty = Ty.getNonReferenceType();
+
+  if (Val == nullptr)
+    return createStorageLocation(Ty);
+
+  if (Ty->isRecordType())
+    return cast<RecordValue>(Val)->getLoc();
+
+  StorageLocation &Loc = createStorageLocation(Ty);
+  setValue(Loc, *Val);
+  return Loc;
+}
+
+void Environment::initializeFieldsWithValues(RecordStorageLocation &Loc,
+                                             llvm::DenseSet<QualType> &Visited,
+                                             int Depth,
+                                             int &CreatedValuesCount) {
+  auto initField = [&](QualType FieldType, StorageLocation &FieldLoc) {
+    if (FieldType->isRecordType()) {
+      auto &FieldRecordLoc = cast<RecordStorageLocation>(FieldLoc);
+      setValue(FieldRecordLoc, create<RecordValue>(FieldRecordLoc));
+      initializeFieldsWithValues(FieldRecordLoc, Visited, Depth + 1,
+                                 CreatedValuesCount);
+    } else {
+      if (!Visited.insert(FieldType.getCanonicalType()).second)
+        return;
+      if (Value *Val = createValueUnlessSelfReferential(
+              FieldType, Visited, Depth + 1, CreatedValuesCount))
+        setValue(FieldLoc, *Val);
+      Visited.erase(FieldType.getCanonicalType());
+    }
+  };
+
+  for (const auto &[Field, FieldLoc] : Loc.children()) {
+    assert(Field != nullptr);
+    QualType FieldType = Field->getType();
+
+    if (FieldType->isReferenceType()) {
+      Loc.setChild(*Field,
+                   &createLocAndMaybeValue(FieldType, Visited, Depth + 1,
+                                           CreatedValuesCount));
+    } else {
+      assert(FieldLoc != nullptr);
+      initField(FieldType, *FieldLoc);
+    }
   }
-  llvm_unreachable("bad SkipPast kind");
+  for (const auto &[FieldName, FieldLoc] : Loc.synthetic_fields()) {
+    assert(FieldLoc != nullptr);
+    QualType FieldType = FieldLoc->getType();
+
+    // Synthetic fields cannot have reference type, so we don't need to deal
+    // with this case.
+    assert(!FieldType->isReferenceType());
+    initField(FieldType, Loc.getSyntheticField(FieldName));
+  }
 }
 
-const StorageLocation &Environment::skip(const StorageLocation &Loc,
-                                         SkipPast SP) const {
-  return skip(*const_cast<StorageLocation *>(&Loc), SP);
+StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
+                                                   QualType Ty,
+                                                   const Expr *InitExpr) {
+  if (Ty->isReferenceType()) {
+    // Although variables of reference type always need to be initialized, it
+    // can happen that we can't see the initializer, so `InitExpr` may still
+    // be null.
+    if (InitExpr) {
+      if (auto *InitExprLoc = getStorageLocation(*InitExpr))
+          return *InitExprLoc;
+    }
+
+    // Even though we have an initializer, we might not get an
+    // InitExprLoc, for example if the InitExpr is a CallExpr for which we
+    // don't have a function body. In this case, we just invent a storage
+    // location and value -- it's the best we can do.
+    return createObjectInternal(D, Ty.getNonReferenceType(), nullptr);
+  }
+
+  Value *Val = nullptr;
+  if (InitExpr) {
+    // In the (few) cases where an expression is intentionally
+    // "uninterpreted", `InitExpr` is not associated with a value.  There are
+    // two ways to handle this situation: propagate the status, so that
+    // uninterpreted initializers result in uninterpreted variables, or
+    // provide a default value. We choose the latter so that later refinements
+    // of the variable can be used for reasoning about the surrounding code.
+    // For this reason, we let this case be handled by the `createValue()`
+    // call below.
+    //
+    // FIXME. If and when we interpret all language cases, change this to
+    // assert that `InitExpr` is interpreted, rather than supplying a
+    // default value (assuming we don't update the environment API to return
+    // references).
+    Val = getValue(*InitExpr);
+
+    if (!Val && isa<ImplicitValueInitExpr>(InitExpr) &&
+        InitExpr->getType()->isPointerType())
+      Val = &getOrCreateNullPointerValue(InitExpr->getType()->getPointeeType());
+  }
+  if (!Val)
+    Val = createValue(Ty);
+
+  if (Ty->isRecordType())
+    return cast<RecordValue>(Val)->getLoc();
+
+  StorageLocation &Loc =
+      D ? createStorageLocation(*D) : createStorageLocation(Ty);
+
+  if (Val)
+    setValue(Loc, *Val);
+
+  return Loc;
 }
 
-void Environment::addToFlowCondition(BoolValue &Val) {
-  DACtx->addFlowConditionConstraint(*FlowConditionToken, Val);
+void Environment::assume(const Formula &F) {
+  DACtx->addFlowConditionConstraint(FlowConditionToken, F);
 }
 
-bool Environment::flowConditionImplies(BoolValue &Val) const {
-  return DACtx->flowConditionImplies(*FlowConditionToken, Val);
+bool Environment::proves(const Formula &F) const {
+  return DACtx->flowConditionImplies(FlowConditionToken, F);
+}
+
+bool Environment::allows(const Formula &F) const {
+  return DACtx->flowConditionAllows(FlowConditionToken, F);
 }
 
 void Environment::dump(raw_ostream &OS) const {
-  // FIXME: add printing for remaining fields and allow caller to decide what
-  // fields are printed.
-  OS << "DeclToLoc:\n";
-  for (auto [D, L] : DeclToLoc)
-    OS << "  [" << D->getName() << ", " << L << "]\n";
+  llvm::DenseMap<const StorageLocation *, std::string> LocToName;
+  if (ThisPointeeLoc != nullptr)
+    LocToName[ThisPointeeLoc] = "this";
 
+  OS << "DeclToLoc:\n";
+  for (auto [D, L] : DeclToLoc) {
+    auto Iter = LocToName.insert({L, D->getNameAsString()}).first;
+    OS << "  [" << Iter->second << ", " << L << "]\n";
+  }
   OS << "ExprToLoc:\n";
   for (auto [E, L] : ExprToLoc)
     OS << "  [" << E << ", " << L << "]\n";
 
+  OS << "ExprToVal:\n";
+  for (auto [E, V] : ExprToVal)
+    OS << "  [" << E << ", " << V << ": " << *V << "]\n";
+
   OS << "LocToVal:\n";
   for (auto [L, V] : LocToVal) {
-    OS << "  [" << L << ", " << V << ": " << *V << "]\n";
+    OS << "  [" << L;
+    if (auto Iter = LocToName.find(L); Iter != LocToName.end())
+      OS << " (" << Iter->second << ")";
+    OS << ", " << V << ": " << *V << "]\n";
   }
 
-  OS << "FlowConditionToken:\n";
-  DACtx->dumpFlowCondition(*FlowConditionToken);
+  if (const FunctionDecl *Func = getCurrentFunc()) {
+    if (Func->getReturnType()->isReferenceType()) {
+      OS << "ReturnLoc: " << ReturnLoc;
+      if (auto Iter = LocToName.find(ReturnLoc); Iter != LocToName.end())
+        OS << " (" << Iter->second << ")";
+      OS << "\n";
+    } else if (!Func->getReturnType()->isVoidType()) {
+      if (ReturnVal == nullptr)
+        OS << "ReturnVal: nullptr\n";
+      else
+        OS << "ReturnVal: " << *ReturnVal << "\n";
+    }
+
+    if (isa<CXXMethodDecl>(Func)) {
+      OS << "ThisPointeeLoc: " << ThisPointeeLoc << "\n";
+    }
+  }
+
+  OS << "\n";
+  DACtx->dumpFlowCondition(FlowConditionToken, OS);
 }
 
 void Environment::dump() const {
   dump(llvm::dbgs());
+}
+
+RecordStorageLocation *getImplicitObjectLocation(const CXXMemberCallExpr &MCE,
+                                                 const Environment &Env) {
+  Expr *ImplicitObject = MCE.getImplicitObjectArgument();
+  if (ImplicitObject == nullptr)
+    return nullptr;
+  if (ImplicitObject->getType()->isPointerType()) {
+    if (auto *Val = Env.get<PointerValue>(*ImplicitObject))
+      return &cast<RecordStorageLocation>(Val->getPointeeLoc());
+    return nullptr;
+  }
+  return cast_or_null<RecordStorageLocation>(
+      Env.getStorageLocation(*ImplicitObject));
+}
+
+RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
+                                             const Environment &Env) {
+  Expr *Base = ME.getBase();
+  if (Base == nullptr)
+    return nullptr;
+  if (ME.isArrow()) {
+    if (auto *Val = Env.get<PointerValue>(*Base))
+      return &cast<RecordStorageLocation>(Val->getPointeeLoc());
+    return nullptr;
+  }
+  return Env.get<RecordStorageLocation>(*Base);
+}
+
+std::vector<const FieldDecl *>
+getFieldsForInitListExpr(const InitListExpr *InitList) {
+  const RecordDecl *RD = InitList->getType()->getAsRecordDecl();
+  assert(RD != nullptr);
+
+  std::vector<const FieldDecl *> Fields;
+
+  if (InitList->getType()->isUnionType()) {
+    Fields.push_back(InitList->getInitializedFieldInUnion());
+    return Fields;
+  }
+
+  // Unnamed bitfields are only used for padding and do not appear in
+  // `InitListExpr`'s inits. However, those fields do appear in `RecordDecl`'s
+  // field list, and we thus need to remove them before mapping inits to
+  // fields to avoid mapping inits to the wrongs fields.
+  llvm::copy_if(
+      RD->fields(), std::back_inserter(Fields),
+      [](const FieldDecl *Field) { return !Field->isUnnamedBitfield(); });
+  return Fields;
+}
+
+RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env) {
+  auto &NewVal = Env.create<RecordValue>(Loc);
+  Env.setValue(Loc, NewVal);
+  return NewVal;
+}
+
+RecordValue &refreshRecordValue(const Expr &Expr, Environment &Env) {
+  assert(Expr.getType()->isRecordType());
+
+  if (Expr.isPRValue()) {
+    if (auto *ExistingVal = Env.get<RecordValue>(Expr)) {
+      auto &NewVal = Env.create<RecordValue>(ExistingVal->getLoc());
+      Env.setValue(Expr, NewVal);
+      Env.setValue(NewVal.getLoc(), NewVal);
+      return NewVal;
+    }
+
+    auto &NewVal = *cast<RecordValue>(Env.createValue(Expr.getType()));
+    Env.setValue(Expr, NewVal);
+    return NewVal;
+  }
+
+  if (auto *Loc = Env.get<RecordStorageLocation>(Expr)) {
+    auto &NewVal = Env.create<RecordValue>(*Loc);
+    Env.setValue(*Loc, NewVal);
+    return NewVal;
+  }
+
+  auto &NewVal = *cast<RecordValue>(Env.createValue(Expr.getType()));
+  Env.setStorageLocation(Expr, NewVal.getLoc());
+  return NewVal;
 }
 
 } // namespace dataflow

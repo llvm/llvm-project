@@ -29,7 +29,7 @@ struct IterNoDefaultCtrView : std::ranges::view_base {
   sentinel_wrapper<cpp20_input_iterator<std::tuple<int>*>> end() const;
 };
 
-template <class View, size_t N>
+template <class View, std::size_t N>
 using ElementsIter = std::ranges::iterator_t<std::ranges::elements_view<View, N>>;
 
 static_assert(!std::default_initializable<ElementsIter<IterNoDefaultCtrView, 0>>);

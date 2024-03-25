@@ -9,10 +9,12 @@
 #ifndef LLVM_CLANG_BASIC_ATTRSUBJECTMATCHRULES_H
 #define LLVM_CLANG_BASIC_ATTRSUBJECTMATCHRULES_H
 
-#include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 
 namespace clang {
+
+class SourceRange;
+
 namespace attr {
 
 /// A list of all the recognized kinds of attributes.

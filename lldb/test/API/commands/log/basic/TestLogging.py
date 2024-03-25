@@ -3,7 +3,6 @@ Test lldb logging.  This test just makes sure logging doesn't crash, and produce
 """
 
 
-
 import os
 import lldb
 from lldbsuite.test.decorators import *
@@ -18,14 +17,12 @@ class LogTestCase(TestBase):
         super(LogTestCase, self).setUp()
         self.log_file = self.getBuildArtifact("log-file.txt")
 
-
     def test_file_writing(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
-        self.expect("file " + exe,
-                    patterns=["Current executable set to .*a.out"])
+        self.expect("file " + exe, patterns=["Current executable set to .*a.out"])
 
-        if (os.path.exists(self.log_file)):
+        if os.path.exists(self.log_file):
             os.remove(self.log_file)
 
         # By default, Debugger::EnableLog() will set log options to
@@ -43,14 +40,11 @@ class LogTestCase(TestBase):
 
         self.assertTrue(os.path.isfile(self.log_file))
 
-        with open(self.log_file, 'r') as f:
+        with open(self.log_file, "r") as f:
             log_lines = f.read()
         os.remove(self.log_file)
 
-        self.assertGreater(
-            len(log_lines),
-            0,
-            "Something was written to the log file.")
+        self.assertGreater(len(log_lines), 0, "Something was written to the log file.")
 
     # Check that lldb truncates its log files
     def test_log_truncate(self):
@@ -68,7 +62,7 @@ class LogTestCase(TestBase):
             contents = f.read()
 
         # check that it got removed
-        self.assertEquals(contents.find("bacon"), -1)
+        self.assertEqual(contents.find("bacon"), -1)
 
     # Check that lldb can append to a log file
     def test_log_append(self):
@@ -76,24 +70,26 @@ class LogTestCase(TestBase):
         with open(self.log_file, "w") as f:
             f.write("bacon\n")
 
-        self.runCmd( "log enable -a -f '%s' lldb commands" % self.log_file)
+        self.runCmd("log enable -a -f '%s' lldb commands" % self.log_file)
         self.runCmd("help log")
         self.runCmd("log disable lldb")
 
         self.assertTrue(os.path.isfile(self.log_file))
-        with open(self.log_file, 'r') as f:
+        with open(self.log_file, "r") as f:
             contents = f.read()
 
         # check that it is still there
-        self.assertEquals(contents.find("bacon"), 0)
+        self.assertEqual(contents.find("bacon"), 0)
 
     # Enable all log options and check that nothing crashes.
     @skipIfWindows
     def test_all_log_options(self):
-        if (os.path.exists(self.log_file)):
+        if os.path.exists(self.log_file):
             os.remove(self.log_file)
 
-        self.runCmd("log enable -v -s -T -p -n -S -F -f '%s' lldb commands" % self.log_file)
+        self.runCmd(
+            "log enable -v -s -T -p -n -S -F -f '%s' lldb commands" % self.log_file
+        )
         self.runCmd("help log")
         self.runCmd("log disable lldb")
 

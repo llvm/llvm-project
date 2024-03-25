@@ -1,7 +1,6 @@
 """Test that lldb can invoke blocks and access variables inside them"""
 
 
-
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
@@ -15,9 +14,9 @@ class BlocksTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line numbers to break at.
-        self.lines.append(line_number('main.c', '// Set breakpoint 0 here.'))
-        self.lines.append(line_number('main.c', '// Set breakpoint 1 here.'))
-        self.lines.append(line_number('main.c', '// Set breakpoint 2 here.'))
+        self.lines.append(line_number("main.c", "// Set breakpoint 0 here."))
+        self.lines.append(line_number("main.c", "// Set breakpoint 1 here."))
+        self.lines.append(line_number("main.c", "// Set breakpoint 2 here."))
 
     def launch_common(self):
         self.build()
@@ -29,7 +28,8 @@ class BlocksTestCase(TestBase):
         # Break inside the foo function which takes a bar_ptr argument.
         for line in self.lines:
             lldbutil.run_break_set_by_file_and_line(
-                self, "main.c", line, num_expected_locations=1, loc_exact=True)
+                self, "main.c", line, num_expected_locations=1, loc_exact=True
+            )
 
         self.wait_for_breakpoint()
 
@@ -37,17 +37,16 @@ class BlocksTestCase(TestBase):
     def test_expr(self):
         self.launch_common()
 
-        self.expect("expression a + b", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs=["= 7"])
+        self.expect("expression a + b", VARIABLES_DISPLAYED_CORRECTLY, substrs=["= 7"])
 
-        self.expect("expression c", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs=["= 1"])
+        self.expect("expression c", VARIABLES_DISPLAYED_CORRECTLY, substrs=["= 1"])
 
         self.wait_for_breakpoint()
 
         # This should display correctly.
-        self.expect("expression (int)neg (-12)", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs=["= 12"])
+        self.expect(
+            "expression (int)neg (-12)", VARIABLES_DISPLAYED_CORRECTLY, substrs=["= 12"]
+        )
 
         self.wait_for_breakpoint()
 
@@ -58,17 +57,18 @@ class BlocksTestCase(TestBase):
         self.launch_common()
 
         self.runCmd(
-            "expression int (^$add)(int, int) = ^int(int a, int b) { return a + b; };")
+            "expression int (^$add)(int, int) = ^int(int a, int b) { return a + b; };"
+        )
         self.expect(
-            "expression $add(2,3)",
-            VARIABLES_DISPLAYED_CORRECTLY,
-            substrs=[" = 5"])
+            "expression $add(2,3)", VARIABLES_DISPLAYED_CORRECTLY, substrs=[" = 5"]
+        )
 
         self.runCmd("expression int $a = 3")
         self.expect(
             "expression int (^$addA)(int) = ^int(int b) { return $a + b; };",
             "Proper error is reported on capture",
-            error=True)
+            error=True,
+        )
 
     def wait_for_breakpoint(self):
         if not self.is_started:
@@ -78,6 +78,8 @@ class BlocksTestCase(TestBase):
             self.runCmd("process continue", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )

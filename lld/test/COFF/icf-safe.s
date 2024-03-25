@@ -5,26 +5,24 @@
 # RUN: lld-link /dll /noentry /out:%t.dll /verbose /opt:noref,icf /export:g3 /export:g4 %t1.obj %t2.obj 2>&1 | FileCheck --check-prefix=EXPORT %s
 # RUN: lld-link /dll /noentry /out:%t.dll /verbose /opt:noref,safeicf %t1.obj %t2.obj 2>&1 | FileCheck %s --check-prefix=SAFEICF
 
-# CHECK-NOT: Selected
-# CHECK: Selected g3
-# CHECK-NEXT:   Removed g4
-# CHECK: Selected f1
+# CHECK-NOT:  Selected
+# CHECK:      Selected f1
 # CHECK-NEXT:   Removed f2
 # CHECK-NEXT:   Removed f3
 # CHECK-NEXT:   Removed f4
-# CHECK-NOT: Removed
-# CHECK-NOT: Selected
+# CHECK-NEXT: Selected g3
+# CHECK-NEXT:   Removed g4
+# CHECK-NOT:  {{.}}
 
 # EXPORT-NOT: Selected g3
 # EXPORT-NOT: Selected g4
 
-# SAFEICF-NOT: Selected
-# SAFEICF: Selected g3
-# SAFEICF-NEXT:   Removed g4
-# SAFEICF: Selected f3
+# SAFEICF-NOT:  Selected
+# SAFEICF:      Selected f3
 # SAFEICF-NEXT:   Removed f4
-# SAFEICF-NOT: Removed
-# SAFEICF-NOT: Selected
+# SAFEICF-NEXT: Selected g3
+# SAFEICF-NEXT:   Removed g4
+# SAFEICF-NOT:  {{.}}
 
 .section .rdata,"dr",one_only,g1
 .globl g1

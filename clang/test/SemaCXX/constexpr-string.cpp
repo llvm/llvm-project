@@ -676,3 +676,24 @@ namespace MemcpyEtc {
   }
   static_assert(test_address_of_incomplete_struct_type()); // expected-error {{constant}} expected-note {{in call}}
 }
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wconstant-conversion"
+namespace GH64876 {
+void f() {
+  __builtin_strncmp(0, 0, 0xffffffffffffffff);
+  __builtin_memcmp(0, 0, 0xffffffffffffffff);
+  __builtin_bcmp(0, 0, 0xffffffffffffffff);
+  __builtin_wmemcmp(0, 0, 0xffffffffffffffff);
+  __builtin_memchr((const void*)0, 1, 0xffffffffffffffff);
+  __builtin_wmemchr((const wchar_t*)0, 1, 0xffffffffffffffff);
+
+  __builtin_strncmp(0, 0, -511LL);
+  __builtin_memcmp(0, 0, -511LL);
+  __builtin_bcmp(0, 0, -511LL);
+  __builtin_wmemcmp(0, 0, -511LL);
+  __builtin_memchr((const void*)0, 1, -511LL);
+  __builtin_wmemchr((const wchar_t*)0, 1, -511LL);
+}
+}
+#pragma clang diagnostic pop

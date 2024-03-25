@@ -424,7 +424,6 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::StaticAssert:
   case Decl::Block:
   case Decl::Captured:
-  case Decl::ClassScopeFunctionSpecialization:
   case Decl::Import:
   case Decl::OMPThreadPrivate:
   case Decl::OMPAllocate:
@@ -484,8 +483,7 @@ bool serialization::needsAnonymousDeclarationNumber(const NamedDecl *D) {
   }
 
   // Otherwise, we only care about anonymous class members / block-scope decls.
-  // FIXME: We need to handle lambdas and blocks within inline / templated
-  // variables too.
+  // FIXME: We need to handle blocks within inline / templated variables too.
   if (D->getDeclName())
     return false;
   if (!isa<RecordDecl, ObjCInterfaceDecl>(D->getLexicalDeclContext()))

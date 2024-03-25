@@ -1,4 +1,4 @@
-; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ;; constant sampler_t constSampl = CLK_FILTER_LINEAR;
 ;;
@@ -15,9 +15,6 @@
 ;;   *results = read_imagei(input, argSampl, coords);
 ;;   *results = read_imagei(input, CLK_FILTER_NEAREST|CLK_ADDRESS_REPEAT, coords);
 ;; }
-
-%opencl.image2d_ro_t = type opaque
-%opencl.sampler_t = type opaque
 
 ; CHECK-SPIRV: OpCapability LiteralSampler
 ; CHECK-SPIRV: OpName %[[#sample_kernel_float:]] "sample_kernel_float"
@@ -43,22 +40,22 @@
 ; CHECK-SPIRV: %[[#SampledImage3:]] = OpSampledImage %[[#SampledImageTy]] %[[#InputImage]] %[[#ConstSampler2]]
 ; CHECK-SPIRV: %[[#]] = OpImageSampleExplicitLod %[[#]] %[[#SampledImage3]]
 
-define dso_local spir_kernel void @sample_kernel_float(%opencl.image2d_ro_t addrspace(1)* %input, <2 x float> noundef %coords, <4 x float> addrspace(1)* nocapture noundef writeonly %results, %opencl.sampler_t addrspace(2)* %argSampl) local_unnamed_addr {
+define dso_local spir_kernel void @sample_kernel_float(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %input, <2 x float> noundef %coords, <4 x float> addrspace(1)* nocapture noundef writeonly %results, target("spirv.Sampler") %argSampl) local_unnamed_addr {
 entry:
-  %0 = tail call spir_func %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32 32)
-  %call = tail call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)* %input, %opencl.sampler_t addrspace(2)* %0, <2 x float> noundef %coords)
+  %0 = tail call spir_func target("spirv.Sampler") @__translate_sampler_initializer(i32 32)
+  %call = tail call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %input, target("spirv.Sampler") %0, <2 x float> noundef %coords)
   store <4 x float> %call, <4 x float> addrspace(1)* %results, align 16
-  %call1 = tail call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)* %input, %opencl.sampler_t addrspace(2)* %argSampl, <2 x float> noundef %coords)
+  %call1 = tail call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %input, target("spirv.Sampler") %argSampl, <2 x float> noundef %coords)
   store <4 x float> %call1, <4 x float> addrspace(1)* %results, align 16
-  %1 = tail call spir_func %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32 22)
-  %call2 = tail call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)* %input, %opencl.sampler_t addrspace(2)* %1, <2 x float> noundef %coords)
+  %1 = tail call spir_func target("spirv.Sampler") @__translate_sampler_initializer(i32 22)
+  %call2 = tail call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %input, target("spirv.Sampler") %1, <2 x float> noundef %coords)
   store <4 x float> %call2, <4 x float> addrspace(1)* %results, align 16
   ret void
 }
 
-declare spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)*, %opencl.sampler_t addrspace(2)*, <2 x float> noundef) local_unnamed_addr
+declare spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0), target("spirv.Sampler"), <2 x float> noundef) local_unnamed_addr
 
-declare spir_func %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32) local_unnamed_addr
+declare spir_func target("spirv.Sampler") @__translate_sampler_initializer(i32) local_unnamed_addr
 
 ; CHECK-SPIRV: %[[#sample_kernel_int]] = OpFunction %{{.*}}
 ; CHECK-SPIRV: %[[#InputImage:]] = OpFunctionParameter %{{.*}}
@@ -73,17 +70,17 @@ declare spir_func %opencl.sampler_t addrspace(2)* @__translate_sampler_initializ
 ; CHECK-SPIRV: %[[#SampledImage6:]] = OpSampledImage %[[#SampledImageTy]] %[[#InputImage]] %[[#ConstSampler4]]
 ; CHECK-SPIRV: %[[#]] = OpImageSampleExplicitLod %[[#]] %[[#SampledImage6]]
 
-define dso_local spir_kernel void @sample_kernel_int(%opencl.image2d_ro_t addrspace(1)* %input, <2 x float> noundef %coords, <4 x i32> addrspace(1)* nocapture noundef writeonly %results, %opencl.sampler_t addrspace(2)* %argSampl) local_unnamed_addr {
+define dso_local spir_kernel void @sample_kernel_int(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %input, <2 x float> noundef %coords, <4 x i32> addrspace(1)* nocapture noundef writeonly %results, target("spirv.Sampler") %argSampl) local_unnamed_addr {
 entry:
-  %0 = tail call spir_func %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32 32)
-  %call = tail call spir_func <4 x i32> @_Z11read_imagei14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)* %input, %opencl.sampler_t addrspace(2)* %0, <2 x float> noundef %coords)
+  %0 = tail call spir_func target("spirv.Sampler") @__translate_sampler_initializer(i32 32)
+  %call = tail call spir_func <4 x i32> @_Z11read_imagei14ocl_image2d_ro11ocl_samplerDv2_f(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %input, target("spirv.Sampler") %0, <2 x float> noundef %coords)
   store <4 x i32> %call, <4 x i32> addrspace(1)* %results, align 16
-  %call1 = tail call spir_func <4 x i32> @_Z11read_imagei14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)* %input, %opencl.sampler_t addrspace(2)* %argSampl, <2 x float> noundef %coords)
+  %call1 = tail call spir_func <4 x i32> @_Z11read_imagei14ocl_image2d_ro11ocl_samplerDv2_f(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %input, target("spirv.Sampler") %argSampl, <2 x float> noundef %coords)
   store <4 x i32> %call1, <4 x i32> addrspace(1)* %results, align 16
-  %1 = tail call spir_func %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32 22)
-  %call2 = tail call spir_func <4 x i32> @_Z11read_imagei14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)* %input, %opencl.sampler_t addrspace(2)* %1, <2 x float> noundef %coords)
+  %1 = tail call spir_func target("spirv.Sampler") @__translate_sampler_initializer(i32 22)
+  %call2 = tail call spir_func <4 x i32> @_Z11read_imagei14ocl_image2d_ro11ocl_samplerDv2_f(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %input, target("spirv.Sampler") %1, <2 x float> noundef %coords)
   store <4 x i32> %call2, <4 x i32> addrspace(1)* %results, align 16
   ret void
 }
 
-declare spir_func <4 x i32> @_Z11read_imagei14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)*, %opencl.sampler_t addrspace(2)*, <2 x float> noundef) local_unnamed_addr
+declare spir_func <4 x i32> @_Z11read_imagei14ocl_image2d_ro11ocl_samplerDv2_f(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0), target("spirv.Sampler"), <2 x float> noundef) local_unnamed_addr

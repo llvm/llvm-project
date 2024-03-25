@@ -14,10 +14,10 @@ import lldb.formatters.metrics
 import lldb.formatters.Logger
 
 statistics = lldb.formatters.metrics.Metrics()
-statistics.add_metric('invalid_isa')
-statistics.add_metric('invalid_pointer')
-statistics.add_metric('unknown_class')
-statistics.add_metric('code_notrun')
+statistics.add_metric("invalid_isa")
+statistics.add_metric("invalid_pointer")
+statistics.add_metric("unknown_class")
+statistics.add_metric("code_notrun")
 
 # despite the similary to synthetic children providers, these classes are not
 # trying to provide anything but the length for an CFBag, so they need not
@@ -25,7 +25,6 @@ statistics.add_metric('code_notrun')
 
 
 class CFBagRef_SummaryProvider:
-
     def adjust_for_architecture(self):
         pass
 
@@ -33,13 +32,15 @@ class CFBagRef_SummaryProvider:
         logger = lldb.formatters.Logger.Logger()
         self.valobj = valobj
         self.sys_params = params
-        if not(self.sys_params.types_cache.NSUInteger):
+        if not (self.sys_params.types_cache.NSUInteger):
             if self.sys_params.is_64_bit:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedLong)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedLong)
+                )
             else:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedInt)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedInt)
+                )
         self.update()
 
     def update(self):
@@ -59,12 +60,12 @@ class CFBagRef_SummaryProvider:
     def length(self):
         logger = lldb.formatters.Logger.Logger()
         size = self.valobj.CreateChildAtOffset(
-            "count", self.offset(), self.sys_params.types_cache.NSUInteger)
+            "count", self.offset(), self.sys_params.types_cache.NSUInteger
+        )
         return size.GetValueAsUnsigned(0)
 
 
 class CFBagUnknown_SummaryProvider:
-
     def adjust_for_architecture(self):
         pass
 
@@ -83,7 +84,8 @@ class CFBagUnknown_SummaryProvider:
         stream = lldb.SBStream()
         self.valobj.GetExpressionPath(stream)
         num_children_vo = self.valobj.CreateValueFromExpression(
-            "count", "(int)CFBagGetCount(" + stream.GetData() + " )")
+            "count", "(int)CFBagGetCount(" + stream.GetData() + " )"
+        )
         if num_children_vo.IsValid():
             return num_children_vo.GetValueAsUnsigned(0)
         return "<variable is not CFBag>"
@@ -92,16 +94,21 @@ class CFBagUnknown_SummaryProvider:
 def GetSummary_Impl(valobj):
     logger = lldb.formatters.Logger.Logger()
     global statistics
-    class_data, wrapper = lldb.runtime.objc.objc_runtime.Utilities.prepare_class_detection(
-        valobj, statistics)
+    (
+        class_data,
+        wrapper,
+    ) = lldb.runtime.objc.objc_runtime.Utilities.prepare_class_detection(
+        valobj, statistics
+    )
     if wrapper:
         return wrapper
 
     name_string = class_data.class_name()
     actual_name = name_string
 
-    logger >> "name string got was " + \
-        str(name_string) + " but actual name is " + str(actual_name)
+    logger >> "name string got was " + str(name_string) + " but actual name is " + str(
+        actual_name
+    )
 
     if class_data.is_cftype():
         # CFBag does not expose an actual NSWrapper type, so we have to check that this is
@@ -111,17 +118,12 @@ def GetSummary_Impl(valobj):
             valobj_type = valobj_type.GetPointeeType()
             if valobj_type.IsValid():
                 actual_name = valobj_type.GetName()
-        if actual_name == '__CFBag' or \
-           actual_name == 'const struct __CFBag':
+        if actual_name == "__CFBag" or actual_name == "const struct __CFBag":
             wrapper = CFBagRef_SummaryProvider(valobj, class_data.sys_params)
-            statistics.metric_hit('code_notrun', valobj)
+            statistics.metric_hit("code_notrun", valobj)
             return wrapper
     wrapper = CFBagUnknown_SummaryProvider(valobj, class_data.sys_params)
-    statistics.metric_hit(
-        'unknown_class',
-        valobj.GetName() +
-        " seen as " +
-        actual_name)
+    statistics.metric_hit("unknown_class", valobj.GetName() + " seen as " + actual_name)
     return wrapper
 
 
@@ -130,8 +132,8 @@ def CFBag_SummaryProvider(valobj, dict):
     provider = GetSummary_Impl(valobj)
     if provider is not None:
         if isinstance(
-                provider,
-                lldb.runtime.objc.objc_runtime.SpecialSituation_Description):
+            provider, lldb.runtime.objc.objc_runtime.SpecialSituation_Description
+        ):
             return provider.message()
         try:
             summary = provider.length()
@@ -144,20 +146,21 @@ def CFBag_SummaryProvider(valobj, dict):
         # (if counts start looking weird, then most probably
         #  the mask needs to be changed)
         if summary is None:
-            summary = '<variable is not CFBag>'
+            summary = "<variable is not CFBag>"
         elif isinstance(summary, str):
             pass
         else:
             if provider.sys_params.is_64_bit:
-                summary = summary & ~0x1fff000000000000
+                summary = summary & ~0x1FFF000000000000
             if summary == 1:
                 summary = '@"1 value"'
             else:
                 summary = '@"' + str(summary) + ' values"'
         return summary
-    return 'Summary Unavailable'
+    return "Summary Unavailable"
 
 
 def __lldb_init_module(debugger, dict):
     debugger.HandleCommand(
-        "type summary add -F CFBag.CFBag_SummaryProvider CFBagRef CFMutableBagRef")
+        "type summary add -F CFBag.CFBag_SummaryProvider CFBagRef CFMutableBagRef"
+    )

@@ -40,8 +40,8 @@
 # HEADER:       .debug_line contents:
 
 # FIRST:        debug_line[0x00000000]
-# VERBOSE:        Address            Line   Column File   ISA Discriminator Flags
-# VERBOSE-NEXT:   ------------------ ------ ------ ------ --- ------------- -------------
+# VERBOSE:        Address            Line   Column File   ISA Discriminator OpIndex Flags
+# VERBOSE-NEXT:   ------------------ ------ ------ ------ --- ------------- ------- -------------
 # VERBOSE-NEXT: DW_LNE_set_address (0x000000000badbeef)
 # VERBOSE-NEXT: DW_LNE_end_sequence
 # FIRST:        0x000000000badbeef {{.*}} end_sequence

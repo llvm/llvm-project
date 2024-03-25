@@ -1,4 +1,4 @@
-// RUN: %clang_cl_asan -Od %s -Fe%t
+// RUN: %clang_cl_asan %Od %s %Fe%t
 // RUN: %env_asan_opts=handle_sigfpe=1 not %run %t 2>&1 | FileCheck %s
 
 // Test the error output from dividing by zero.

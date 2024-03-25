@@ -64,7 +64,7 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
 
   // Maybe broadcasts scalar value into vector type compatible with `op`.
   auto bcast = [&](Value value) -> Value {
-    if (auto vec = op.getType().dyn_cast<VectorType>())
+    if (auto vec = dyn_cast<VectorType>(op.getType()))
       return rewriter.create<vector::BroadcastOp>(op.getLoc(), vec, value);
     return value;
   };
@@ -167,7 +167,7 @@ PowIStrengthReduction<PowIOpTy, DivOpTy, MulOpTy>::matchAndRewrite(
 
   // Maybe broadcasts scalar value into vector type compatible with `op`.
   auto bcast = [&loc, &op, &rewriter](Value value) -> Value {
-    if (auto vec = op.getType().template dyn_cast<VectorType>())
+    if (auto vec = dyn_cast<VectorType>(op.getType()))
       return rewriter.create<vector::BroadcastOp>(loc, vec, value);
     return value;
   };

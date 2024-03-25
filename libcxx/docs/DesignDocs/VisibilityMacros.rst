@@ -14,19 +14,22 @@ Libc++ uses various "visibility" macros in order to provide a stable ABI in
 both the library and the headers. These macros work by changing the
 visibility and inlining characteristics of the symbols they are applied to.
 
+The std namespace also has visibility attributes applied to avoid having to
+add visibility macros in as many places. Namespace std has default
+type_visibility to export RTTI and other type-specific information. Note that
+type_visibility is only supported by Clang, so this doesn't replace
+type-specific attributes. The only exception are enums, which GCC always gives
+default visibility, thus removing the need for any annotations.
+
 Visibility Macros
 =================
 
 **_LIBCPP_HIDDEN**
   Mark a symbol as hidden so it will not be exported from shared libraries.
 
-**_LIBCPP_FUNC_VIS**
-  Mark a symbol as being exported by the libc++ library. This attribute must
-  be applied to the declaration of all functions exported by the libc++ dylib.
-
 **_LIBCPP_EXPORTED_FROM_ABI**
-  Mark a symbol as being exported by the libc++ library. This attribute may
-  only be applied to objects defined in the libc++ runtime library. On Windows,
+  Mark a symbol as being part of our ABI. This includes functions that are part
+  of the libc++ library, type information and other symbols. On Windows,
   this macro applies `dllimport`/`dllexport` to the symbol, and on other
   platforms it gives the symbol default visibility.
 
@@ -46,10 +49,6 @@ Visibility Macros
   Mark a function as not being part of the ABI of any final linked image that
   uses it.
 
-**_LIBCPP_INLINE_VISIBILITY**
-  Historical predecessor of ``_LIBCPP_HIDE_FROM_ABI`` -- please use
-  ``_LIBCPP_HIDE_FROM_ABI`` instead.
-
 **_LIBCPP_HIDE_FROM_ABI_AFTER_V1**
   Mark a function as being hidden from the ABI (per `_LIBCPP_HIDE_FROM_ABI`)
   when libc++ is built with an ABI version after ABI v1. This macro is used to
@@ -65,10 +64,6 @@ Visibility Macros
   ABI, we should create a new _LIBCPP_HIDE_FROM_ABI_AFTER_XXX macro, and we can
   use it to start removing symbols from the ABI after that stable version.
 
-**_LIBCPP_TYPE_VIS**
-  Mark a type's typeinfo, vtable and members as having default visibility.
-  This attribute cannot be used on class templates.
-
 **_LIBCPP_TEMPLATE_VIS**
   Mark a type's typeinfo and vtable as having default visibility.
   This macro has no effect on the visibility of the type's member functions.
@@ -79,19 +74,6 @@ Visibility Macros
 
   **Windows Behavior**: DLLs do not support dllimport/export on class templates.
   The macro has an empty definition on this platform.
-
-
-**_LIBCPP_ENUM_VIS**
-  Mark the typeinfo of an enum as having default visibility. This attribute
-  should be applied to all enum declarations.
-
-  **Windows Behavior**: DLLs do not support importing or exporting enumeration
-  typeinfo. The macro has an empty definition on this platform.
-
-  **GCC Behavior**: GCC un-hides the typeinfo for enumerations by default, even
-  if `-fvisibility=hidden` is specified. Additionally applying a visibility
-  attribute to an enum class results in a warning. The macro has an empty
-  definition with GCC.
 
 **_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS**
   Mark the member functions, typeinfo, and vtable of the type named in
@@ -151,13 +133,6 @@ Visibility Macros
   `bad-visibility-finder <https://github.com/smeenai/bad-visibility-finder>`_
   against the libc++ headers after making `_LIBCPP_TYPE_VIS` and
   `_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS` expand to default visibility.
-
-**_LIBCPP_EXCEPTION_ABI**
-  Mark the member functions, typeinfo, and vtable of the type as being exported
-  by the libc++ library. This macro must be applied to all *exception types*.
-  Exception types should be defined directly in namespace `std` and not the
-  versioning namespace. This allows throwing and catching some exception types
-  between libc++ and libstdc++.
 
 Links
 =====

@@ -26,12 +26,13 @@ class AssertMessagesTestCase(TestBase):
     @expectedFailureAll(remote=True)
     def test_createTestTarget(self):
         try:
-           self.createTestTarget("doesnt_exist")
+            self.createTestTarget("doesnt_exist")
         except AssertionError as e:
-           self.assertIn("Couldn't create target for path 'doesnt_exist': "
-                         "error: unable to find executable for 'doesnt_exist'",
-                         str(e))
-
+            self.assertIn(
+                "Couldn't create target for path 'doesnt_exist': "
+                "error: unable to find executable for 'doesnt_exist'",
+                str(e),
+            )
 
     def test_expect(self):
         """Test format of messages produced by expect(...)"""
@@ -42,7 +43,8 @@ class AssertMessagesTestCase(TestBase):
         # content for the trace log too.
 
         # Will stop at startstr fail
-        self.assert_expect_fails_with("settings list prompt",
+        self.assert_expect_fails_with(
+            "settings list prompt",
             dict(startstr="dog", endstr="cat"),
             """\
                Ran command:
@@ -51,11 +53,13 @@ class AssertMessagesTestCase(TestBase):
                Got output:
                  prompt -- The debugger command line prompt displayed for the user.
 
-               Expecting start string: "dog" (was not found)""")
+               Expecting start string: "dog" (was not found)""",
+        )
 
         # startstr passes, endstr fails
         # We see both reported
-        self.assert_expect_fails_with("settings list prompt",
+        self.assert_expect_fails_with(
+            "settings list prompt",
             dict(startstr="  prompt -- ", endstr="foo"),
             """\
                Ran command:
@@ -65,26 +69,34 @@ class AssertMessagesTestCase(TestBase):
                  prompt -- The debugger command line prompt displayed for the user.
 
                Expecting start string: "  prompt -- " (was found)
-               Expecting end string: "foo" (was not found)""")
+               Expecting end string: "foo" (was not found)""",
+        )
 
         # Same thing for substrs, regex patterns ignored because of substr failure
         # Any substr after the first missing is also ignored
-        self.assert_expect_fails_with("abcdefg",
-            dict(substrs=["abc", "ijk", "xyz"],
-            patterns=["foo", "bar"], exe=False),
+        self.assert_expect_fails_with(
+            "abcdefg",
+            dict(substrs=["abc", "ijk", "xyz"], patterns=["foo", "bar"], exe=False),
             """\
                Checking string:
                "abcdefg"
 
                Expecting sub string: "abc" (was found)
-               Expecting sub string: "ijk" (was not found)""")
+               Expecting sub string: "ijk" (was not found)""",
+        )
 
         # Regex patterns also stop at first failure, subsequent patterns ignored
         # They are last in the chain so no other check gets skipped
         # Including the rest of the conditions here to prove they are run and shown
-        self.assert_expect_fails_with("0123456789",
-            dict(startstr="012", endstr="789", substrs=["345", "678"],
-            patterns=["[0-9]+", "[a-f]+", "a|b|c"], exe=False),
+        self.assert_expect_fails_with(
+            "0123456789",
+            dict(
+                startstr="012",
+                endstr="789",
+                substrs=["345", "678"],
+                patterns=["[0-9]+", "[a-f]+", "a|b|c"],
+                exe=False,
+            ),
             """\
                Checking string:
                "0123456789"
@@ -94,13 +106,21 @@ class AssertMessagesTestCase(TestBase):
                Expecting sub string: "345" (was found)
                Expecting sub string: "678" (was found)
                Expecting regex pattern: "[0-9]+" (was found, matched "0123456789")
-               Expecting regex pattern: "[a-f]+" (was not found)""")
+               Expecting regex pattern: "[a-f]+" (was not found)""",
+        )
 
         # This time we dont' want matches but we do get them
-        self.assert_expect_fails_with("the quick brown fox",
+        self.assert_expect_fails_with(
+            "the quick brown fox",
             # Note that the second pattern *will* match
-            dict(patterns=["[0-9]+", "fox"], exe=False, matching=False,
-            startstr="cat", endstr="rabbit", substrs=["abc", "def"]),
+            dict(
+                patterns=["[0-9]+", "fox"],
+                exe=False,
+                matching=False,
+                startstr="cat",
+                endstr="rabbit",
+                substrs=["abc", "def"],
+            ),
             """\
                Checking string:
                "the quick brown fox"
@@ -110,32 +130,43 @@ class AssertMessagesTestCase(TestBase):
                Not expecting sub string: "abc" (was not found)
                Not expecting sub string: "def" (was not found)
                Not expecting regex pattern: "[0-9]+" (was not found)
-               Not expecting regex pattern: "fox" (was found, matched "fox")""")
+               Not expecting regex pattern: "fox" (was found, matched "fox")""",
+        )
 
         # Extra assert messages are only printed when we get a failure
         # So I can't test that from here, just how it looks when it's printed
-        self.assert_expect_fails_with("mouse",
+        self.assert_expect_fails_with(
+            "mouse",
             dict(startstr="cat", exe=False, msg="Reason for check goes here!"),
             """\
                Checking string:
                "mouse"
 
                Expecting start string: "cat" (was not found)
-               Reason for check goes here!""")
+               Reason for check goes here!""",
+        )
 
         # Verify expect() preconditions.
         # Both `patterns` and `substrs` cannot be of type string.
-        self.assert_expect_fails_with("any command",
+        self.assert_expect_fails_with(
+            "any command",
             dict(patterns="some substring"),
-            "patterns must be a collection of strings")
-        self.assert_expect_fails_with("any command",
+            "patterns must be a collection of strings",
+        )
+        self.assert_expect_fails_with(
+            "any command",
             dict(substrs="some substring"),
-            "substrs must be a collection of strings")
+            "substrs must be a collection of strings",
+        )
         # Prevent `self.expect("cmd", "substr")`
-        self.assert_expect_fails_with("any command",
+        self.assert_expect_fails_with(
+            "any command",
             dict(msg="some substring"),
-            "expect() missing a matcher argument")
+            "expect() missing a matcher argument",
+        )
         # Prevent `self.expect("cmd", "msg", "substr")`
-        self.assert_expect_fails_with("any command",
+        self.assert_expect_fails_with(
+            "any command",
             dict(msg="a message", patterns="some substring"),
-            "must be a collection of strings")
+            "must be a collection of strings",
+        )

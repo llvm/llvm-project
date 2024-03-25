@@ -12,6 +12,9 @@ module m
   subroutine extendedSub(x)
     class(extended), intent(in) :: x
   end
+  subroutine baseSubmono(x)
+    type(base), intent(in) :: x
+  end
   subroutine test
     procedure(baseSub), pointer :: basePtr
     procedure(extendedSub), pointer :: extendedPtr
@@ -28,5 +31,7 @@ module m
     extendedVar = extended(extendedSub)
     !ERROR: Procedure pointer 'basecomponent' associated with incompatible procedure designator 'extendedptr': incompatible dummy argument #1: incompatible dummy data object types: CLASS(extended) vs CLASS(base)
     extendedVar = extended(extendedPtr)
+    !ERROR: Procedure pointer 'baseptr' associated with incompatible procedure designator 'basesubmono': incompatible dummy argument #1: incompatible dummy data object polymorphism: base vs CLASS(base)
+    basePtr => baseSubmono
   end
 end

@@ -15,7 +15,7 @@
 
 ## Regular errors should occur when an operation is specified.
 # RUN: not llvm-libtool-darwin -V -static 2>&1 | FileCheck --check-prefix=ERROR %s
-# ERROR: for the -o option: must be specified
+# ERROR: -o option: must be specified
 
 ## A valid command line should print the version and perform the operation.
 # RUN: yaml2obj %S/Inputs/input1.yaml -o %t-input1.o

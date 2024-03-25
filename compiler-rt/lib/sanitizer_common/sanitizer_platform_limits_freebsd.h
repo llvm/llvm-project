@@ -249,8 +249,14 @@ struct __sanitizer_dirent {
   unsigned int d_fileno;
 #  endif
   unsigned short d_reclen;
-  // more fields that we don't care about
+  u8 d_type;
+  u8 d_pad0;
+  u16 d_namlen;
+  u16 d_pad1;
+  char d_name[256];
 };
+
+u16 __sanitizer_dirsiz(const __sanitizer_dirent *dp);
 
 // 'clock_t' is 32 bits wide on x64 FreeBSD
 typedef int __sanitizer_clock_t;
@@ -295,10 +301,28 @@ struct __sanitizer_sigset_t {
 
 typedef __sanitizer_sigset_t __sanitizer_kernel_sigset_t;
 
-struct __sanitizer_siginfo {
-  // The size is determined by looking at sizeof of real siginfo_t on linux.
-  u64 opaque[128 / sizeof(u64)];
+union __sanitizer_sigval {
+  int sival_int;
+  void *sival_ptr;
 };
+
+struct __sanitizer_siginfo {
+  int si_signo;
+  int si_errno;
+  int si_code;
+  pid_t si_pid;
+  u32 si_uid;
+  int si_status;
+  void *si_addr;
+  union __sanitizer_sigval si_value;
+#  if SANITIZER_WORDSIZE == 64
+  char data[40];
+#  else
+  char data[32];
+#  endif
+};
+
+typedef __sanitizer_siginfo __sanitizer_siginfo_t;
 
 using __sanitizer_sighandler_ptr = void (*)(int sig);
 using __sanitizer_sigactionhandler_ptr = void (*)(int sig,
@@ -709,6 +733,19 @@ extern unsigned struct_cap_rights_sz;
 
 extern unsigned struct_fstab_sz;
 extern unsigned struct_StringList_sz;
+
+struct __sanitizer_cpuset {
+#if __FreeBSD_version >= 1400090
+  long __bits[(1024 + (sizeof(long) * 8) - 1) / (sizeof(long) * 8)];
+#else
+  long __bits[(256 + (sizeof(long) * 8) - 1) / (sizeof(long) * 8)];
+#endif
+};
+
+typedef struct __sanitizer_cpuset __sanitizer_cpuset_t;
+extern unsigned struct_cpuset_sz;
+
+typedef unsigned long long __sanitizer_eventfd_t;
 }  // namespace __sanitizer
 
 #  define CHECK_TYPE_SIZE(TYPE) \

@@ -8,9 +8,10 @@
 
 # Implementation of `Intrinsic` types in f18
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 Intrinsic types are integer, real, complex, character, and logical.
@@ -73,8 +74,7 @@ COMPLEX 8
 
 #### Modifying the default kind with default-integer-8:  
 INTEGER 8
-
-There is no option to modify the default logical kind.
+LOGICAL 8
 
 Modules compiled with different default-real and default-integer kinds
 may be freely mixed.
@@ -98,7 +98,7 @@ use LOGICAL values to interface with other languages.
 
 ### Representations of LOGICAL variables in other compilers
 
-##### Intel ifort / NVIDA nvfortran / PGI pgf90
+#### Intel ifort / NVIDA nvfortran / PGI pgf90
 .TRUE. is represented as -1_kind  
 .FALSE. is represented as 0_kind  
 Any other values result in undefined behavior.  
@@ -106,7 +106,7 @@ Any other values result in undefined behavior.
 Values with a low-bit set are treated as .TRUE..  
 Values with a low-bit clear are treated as .FALSE..  
 
-##### IBM XLF
+#### IBM XLF
 .TRUE. is represented as 1_kind  
 .FALSE. is represented as 0_kind  
 

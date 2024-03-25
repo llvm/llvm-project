@@ -75,12 +75,12 @@ define i32 @j(i32 inreg %a, i32 inreg %b) nounwind {
 ; CHECK:       ! %bb.0: ! %entry
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
-; CHECK-NEXT:    sub.f %r6, %r7, %rv
-; CHECK-NEXT:    bne .LBB4_2
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
+; CHECK-NEXT:    sub.f %r6, %r7, %r0
+; CHECK-NEXT:    bne .LBB4_2
+; CHECK-NEXT:    sub %r6, %r7, %rv
 ; CHECK-NEXT:  .LBB4_1: ! %if.then
-; CHECK-NEXT:    sub.f %r7, %r6, %r0
-; CHECK-NEXT:    sel.gt %rv, %r6, %rv
+; CHECK-NEXT:    sel.lt %rv, %r6, %rv
 ; CHECK-NEXT:  .LBB4_2: ! %if.else
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
@@ -129,7 +129,7 @@ define i32 @cmp_ult0(i32 inreg %a, i32 inreg %b, i32 inreg %x, i32 inreg %y) {
 ; CHECK-NEXT:    bt exit
 ; CHECK-NEXT:    nop
 entry:
-  %load = load i32, i32* @t, align 4
+  %load = load i32, ptr @t, align 4
   %sub = sub i32 %load, 17
   %cmp = icmp ult i32 %sub, 0
   br i1 %cmp, label %if.then, label %if.else
@@ -169,7 +169,7 @@ define i32 @cmp_gt0(i32 inreg %a, i32 inreg %b, i32 inreg %x, i32 inreg %y) {
 ; CHECK-NEXT:    bt exit
 ; CHECK-NEXT:    nop
 entry:
-  %load = load i32, i32* @t, align 4
+  %load = load i32, ptr @t, align 4
   %sub = sub i32 %load, 17
   %cmp = icmp sgt i32 %sub, 0
   br i1 %cmp, label %if.then, label %if.else

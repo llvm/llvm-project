@@ -7,7 +7,7 @@ define double @foo(ptr nocapture readonly) #0 {
 ; CHECK-NEXT:    movq (%rax), %rax
 ; CHECK-NEXT:    vcvtsi2sd %rax, %xmm0, %xmm1
 ; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
 ; CHECK-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %2 = load i64, ptr undef, align 8

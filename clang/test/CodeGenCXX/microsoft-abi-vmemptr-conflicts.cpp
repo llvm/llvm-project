@@ -65,7 +65,7 @@ void f(C *c) {
 
 // CHECK-LABEL: define dso_local void @"?f@sret@@YAXPAUC@1@@Z"(ptr noundef %c)
 // CHECK: call x86_thiscallcc noundef i32 @"??_9C@sret@@$BA@AE"(ptr {{[^,]*}} %{{.*}})
-// CHECK: call x86_thiscallcc void @"??_9C@sret@@$BA@AE"(ptr {{[^,]*}} %{{.*}}, ptr sret(%"struct.sret::Big") align 4 %{{.*}})
+// CHECK: call x86_thiscallcc void @"??_9C@sret@@$BA@AE"(ptr {{[^,]*}} %{{.*}}, ptr dead_on_unwind writable sret(%"struct.sret::Big") align 4 %{{.*}})
 
 // CHECK-LABEL: define linkonce_odr x86_thiscallcc void @"??_9C@sret@@$BA@AE"(ptr noundef %this, ...) {{.*}} comdat
 // CHECK: musttail call x86_thiscallcc void (ptr, ...) %{{.*}}(ptr noundef %{{.*}}, ...)

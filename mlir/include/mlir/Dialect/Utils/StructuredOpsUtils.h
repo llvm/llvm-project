@@ -20,6 +20,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Location.h"
+#include "mlir/IR/TypeRange.h"
 #include "mlir/Support/LLVM.h"
 
 // Pull in all enum type definitions and utility function declarations.
@@ -28,8 +29,6 @@
 namespace mlir {
 
 class OpBuilder;
-class TypeRange;
-class ValueRange;
 class RewriterBase;
 
 /// Tests whether the given maps describe a row major matmul. The test is
@@ -49,6 +48,30 @@ bool isColumnMajorMatmul(ArrayAttr indexingMaps);
 /// operation, so does not perform any checks on the math being performed within
 /// the reduction.
 bool isRowMajorBatchMatmul(ArrayAttr indexingMaps);
+
+/// Tests whether the given maps describe a vector matrix multiplication. The
+/// test is permutation-invariant. Note that this only checks the affine maps
+/// from an operation, so does not perform any checks on the math being
+/// performed within the reduction.
+bool isVecmat(ArrayAttr indexingMaps);
+
+/// Tests whether the given maps describe a batch vector matrix multiplication.
+/// The test is permutation-invariant. Note that this only checks the affine
+/// maps from an operation, so does not perform any checks on the math being
+/// performed within the reduction.
+bool isBatchVecmat(ArrayAttr indexingMaps);
+
+/// Tests whether the given maps describe a matrix vector multiplication. The
+/// test is permutation-invariant. Note that this only checks the affine maps
+/// from an operation, so does not perform any checks on the math being
+/// performed within the reduction.
+bool isMatvec(ArrayAttr indexingMaps);
+
+/// Tests whether the given maps describe a batch matrix vector multiplication.
+/// The test is permutation-invariant. Note that this only checks the affine
+/// maps from an operation, so does not perform any checks on the math being
+/// performed within the reduction.
+bool isBatchMatvec(ArrayAttr indexingMaps);
 
 /// Return positions in `iteratorTypes` that match `iteratorTypeName`.
 inline void findPositionsOfType(ArrayRef<utils::IteratorType> iteratorTypes,
@@ -98,7 +121,9 @@ public:
   }
 
   bool layout(MapList l) {
-    auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
+    auto infer = [&](MapList m) {
+      return AffineMap::inferFromExprList(m, ctx);
+    };
     return maps == infer(l);
   }
 
@@ -116,12 +141,22 @@ protected:
 // Note: this is a true builder that notifies the OpBuilder listener.
 Operation *clone(OpBuilder &b, Operation *op, TypeRange newResultTypes,
                  ValueRange newOperands);
+template <typename OpT>
+OpT clone(OpBuilder &b, OpT op, TypeRange newResultTypes,
+          ValueRange newOperands) {
+  return cast<OpT>(clone(b, op.getOperation(), newResultTypes, newOperands));
+}
 
 // Clone the current operation with the operands but leave the regions empty.
 // Note: this is a true builder that notifies the OpBuilder listener.
 Operation *cloneWithoutRegions(OpBuilder &b, Operation *op,
                                TypeRange newResultTypes,
                                ValueRange newOperands);
+
+// Get the list of attributes associated with the op, ignoring
+// those with the provided name.
+SmallVector<NamedAttribute>
+getPrunedAttributeList(Operation *op, ArrayRef<StringRef> elidedAttrs);
 
 } // namespace mlir
 

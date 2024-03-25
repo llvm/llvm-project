@@ -6,10 +6,11 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-format
 
-// TODO FMT Fix this test using GCC, it currently times out.
-// UNSUPPORTED: gcc-12
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+
+// TODO FMT This test should not require std::to_chars(floating-point)
+// XFAIL: availability-fp_to_chars-missing
 
 // <vector>
 
@@ -29,13 +30,14 @@
 #include "test_format_string.h"
 #include "test_macros.h"
 #include "assert_macros.h"
+#include "concat_macros.h"
 
 auto test = []<class CharT, class... Args>(
                 std::basic_string_view<CharT> expected, test_format_string<CharT, Args...> fmt, Args&&... args) {
   std::basic_string<CharT> out = std::format(fmt, std::forward<Args>(args)...);
-  TEST_REQUIRE(
-      out == expected,
-      test_concat_message("\nFormat string   ", fmt, "\nExpected output ", expected, "\nActual output   ", out, '\n'));
+  TEST_REQUIRE(out == expected,
+               TEST_WRITE_CONCATENATED(
+                   "\nFormat string   ", fmt, "\nExpected output ", expected, "\nActual output   ", out, '\n'));
 };
 
 auto test_exception = []<class CharT, class... Args>(std::string_view, std::basic_string_view<CharT>, Args&&...) {

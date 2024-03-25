@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -Werror
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Confirm enforcement of constraint C723 in F2018 for procedure pointers
 
       module m
@@ -6,7 +6,7 @@
         subroutine subr(parg)
           !PORTABILITY: A dummy procedure pointer should not have assumed-length CHARACTER(*) result type
           procedure(character(*)), pointer :: parg
-          !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, named constant, or external function result
+          !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, character named constant, or external function result
           procedure(character(*)), pointer :: plocal
           print *, parg()
           plocal => parg

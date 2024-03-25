@@ -10,12 +10,12 @@ from lldbsuite.test import lldbutil
 
 
 class TestInlineNamespace(TestBase):
-
     def test(self):
         self.build()
 
-        lldbutil.run_to_source_breakpoint(self,
-            "// Set break point at this line.", lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// Set break point at this line.", lldb.SBFileSpec("main.cpp")
+        )
 
         # The 'A::B::f' function must be found via 'A::f' as 'B' is an inline
         # namespace.
@@ -41,12 +41,32 @@ class TestInlineNamespace(TestBase):
         self.expect_expr("A::E::F::other_var", result_type="int", result_value="3")
         self.expect_expr("A::E::other_var", result_type="int", result_value="3")
 
-        self.expect("expr A::E::global_var", error=True, substrs=["no member named 'global_var' in namespace 'A::E'"])
-        self.expect("expr A::E::F::global_var", error=True, substrs=["no member named 'global_var' in namespace 'A::E::F'"])
+        self.expect(
+            "expr A::E::global_var",
+            error=True,
+            substrs=["no member named 'global_var' in namespace 'A::E'"],
+        )
+        self.expect(
+            "expr A::E::F::global_var",
+            error=True,
+            substrs=["no member named 'global_var' in namespace 'A::E::F'"],
+        )
 
-        self.expect("expr A::other_var", error=True, substrs=["no member named 'other_var' in namespace 'A'"])
-        self.expect("expr A::B::other_var", error=True, substrs=["no member named 'other_var' in namespace 'A::B'"])
-        self.expect("expr B::other_var", error=True, substrs=["no member named 'other_var' in namespace 'A::B'"])
+        self.expect(
+            "expr A::other_var",
+            error=True,
+            substrs=["no member named 'other_var' in namespace 'A'"],
+        )
+        self.expect(
+            "expr A::B::other_var",
+            error=True,
+            substrs=["no member named 'other_var' in namespace 'A::B'"],
+        )
+        self.expect(
+            "expr B::other_var",
+            error=True,
+            substrs=["no member named 'other_var' in namespace 'A::B'"],
+        )
 
         # 'frame variable' can correctly distinguish between A::B::global_var and A::global_var
         gvars = self.target().FindGlobalVariables("A::global_var", 10)
@@ -54,4 +74,6 @@ class TestInlineNamespace(TestBase):
         self.assertEqual(gvars[0].GetValueAsSigned(), 4)
 
         self.expect("frame variable A::global_var", substrs=["(int) A::global_var = 4"])
-        self.expect("frame variable A::B::global_var", substrs=["(int) A::B::global_var = 0"])
+        self.expect(
+            "frame variable A::B::global_var", substrs=["(int) A::B::global_var = 0"]
+        )

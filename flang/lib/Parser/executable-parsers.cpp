@@ -9,6 +9,7 @@
 // Per-type parsers for executable statements
 
 #include "basic-parsers.h"
+#include "debug-parser.h"
 #include "expr-parsers.h"
 #include "misc-parsers.h"
 #include "stmt-parser.h"
@@ -30,29 +31,30 @@ namespace Fortran::parser {
 //        action-stmt | associate-construct | block-construct |
 //        case-construct | change-team-construct | critical-construct |
 //        do-construct | if-construct | select-rank-construct |
-//        select-type-construct | where-construct | forall-construct
-constexpr auto executableConstruct{
-    first(construct<ExecutableConstruct>(CapturedLabelDoStmt{}),
-        construct<ExecutableConstruct>(EndDoStmtForCapturedLabelDoStmt{}),
-        construct<ExecutableConstruct>(indirect(Parser<DoConstruct>{})),
-        // Attempt DO statements before assignment statements for better
-        // error messages in cases like "DO10I=1,(error)".
-        construct<ExecutableConstruct>(statement(actionStmt)),
-        construct<ExecutableConstruct>(indirect(Parser<AssociateConstruct>{})),
-        construct<ExecutableConstruct>(indirect(Parser<BlockConstruct>{})),
-        construct<ExecutableConstruct>(indirect(Parser<CaseConstruct>{})),
-        construct<ExecutableConstruct>(indirect(Parser<ChangeTeamConstruct>{})),
-        construct<ExecutableConstruct>(indirect(Parser<CriticalConstruct>{})),
-        construct<ExecutableConstruct>(indirect(Parser<IfConstruct>{})),
-        construct<ExecutableConstruct>(indirect(Parser<SelectRankConstruct>{})),
-        construct<ExecutableConstruct>(indirect(Parser<SelectTypeConstruct>{})),
-        construct<ExecutableConstruct>(indirect(whereConstruct)),
-        construct<ExecutableConstruct>(indirect(forallConstruct)),
-        construct<ExecutableConstruct>(indirect(ompEndLoopDirective)),
-        construct<ExecutableConstruct>(indirect(openmpConstruct)),
-        construct<ExecutableConstruct>(indirect(accEndCombinedDirective)),
-        construct<ExecutableConstruct>(indirect(openaccConstruct)),
-        construct<ExecutableConstruct>(indirect(compilerDirective)))};
+//        select-type-construct | where-construct | forall-construct |
+// (CUDA) CUF-kernel-do-construct
+constexpr auto executableConstruct{first(
+    construct<ExecutableConstruct>(CapturedLabelDoStmt{}),
+    construct<ExecutableConstruct>(EndDoStmtForCapturedLabelDoStmt{}),
+    construct<ExecutableConstruct>(indirect(Parser<DoConstruct>{})),
+    // Attempt DO statements before assignment statements for better
+    // error messages in cases like "DO10I=1,(error)".
+    construct<ExecutableConstruct>(statement(actionStmt)),
+    construct<ExecutableConstruct>(indirect(Parser<AssociateConstruct>{})),
+    construct<ExecutableConstruct>(indirect(Parser<BlockConstruct>{})),
+    construct<ExecutableConstruct>(indirect(Parser<CaseConstruct>{})),
+    construct<ExecutableConstruct>(indirect(Parser<ChangeTeamConstruct>{})),
+    construct<ExecutableConstruct>(indirect(Parser<CriticalConstruct>{})),
+    construct<ExecutableConstruct>(indirect(Parser<IfConstruct>{})),
+    construct<ExecutableConstruct>(indirect(Parser<SelectRankConstruct>{})),
+    construct<ExecutableConstruct>(indirect(Parser<SelectTypeConstruct>{})),
+    construct<ExecutableConstruct>(indirect(whereConstruct)),
+    construct<ExecutableConstruct>(indirect(forallConstruct)),
+    construct<ExecutableConstruct>(indirect(ompEndLoopDirective)),
+    construct<ExecutableConstruct>(indirect(openmpConstruct)),
+    construct<ExecutableConstruct>(indirect(Parser<OpenACCConstruct>{})),
+    construct<ExecutableConstruct>(indirect(compilerDirective)),
+    construct<ExecutableConstruct>(indirect(Parser<CUFKernelDoConstruct>{})))};
 
 // R510 execution-part-construct ->
 //        executable-construct | format-stmt | entry-stmt | data-stmt
@@ -90,9 +92,9 @@ TYPE_CONTEXT_PARSER("execution part"_en_US,
 //        close-stmt | continue-stmt | cycle-stmt | deallocate-stmt |
 //        endfile-stmt | error-stop-stmt | event-post-stmt | event-wait-stmt |
 //        exit-stmt | fail-image-stmt | flush-stmt | form-team-stmt |
-//        goto-stmt | if-stmt | inquire-stmt | lock-stmt | nullify-stmt |
-//        open-stmt | pointer-assignment-stmt | print-stmt | read-stmt |
-//        return-stmt | rewind-stmt | stop-stmt | sync-all-stmt |
+//        goto-stmt | if-stmt | inquire-stmt | lock-stmt | notify-wait-stmt |
+//        nullify-stmt | open-stmt | pointer-assignment-stmt | print-stmt |
+//        read-stmt | return-stmt | rewind-stmt | stop-stmt | sync-all-stmt |
 //        sync-images-stmt | sync-memory-stmt | sync-team-stmt | unlock-stmt |
 //        wait-stmt | where-stmt | write-stmt | computed-goto-stmt | forall-stmt
 // R1159 continue-stmt -> CONTINUE
@@ -117,6 +119,7 @@ TYPE_PARSER(first(construct<ActionStmt>(indirect(Parser<AllocateStmt>{})),
     construct<ActionStmt>(indirect(Parser<IfStmt>{})),
     construct<ActionStmt>(indirect(Parser<InquireStmt>{})),
     construct<ActionStmt>(indirect(Parser<LockStmt>{})),
+    construct<ActionStmt>(indirect(Parser<NotifyWaitStmt>{})),
     construct<ActionStmt>(indirect(Parser<NullifyStmt>{})),
     construct<ActionStmt>(indirect(Parser<OpenStmt>{})),
     construct<ActionStmt>(indirect(Parser<PrintStmt>{})),
@@ -277,13 +280,17 @@ TYPE_CONTEXT_PARSER("loop control"_en_US,
                 many(Parser<LocalitySpec>{})))))
 
 // R1121 label-do-stmt -> [do-construct-name :] DO label [loop-control]
+// A label-do-stmt with a do-construct-name is parsed as a nonlabel-do-stmt
+// with an optional label.
 TYPE_CONTEXT_PARSER("label DO statement"_en_US,
-    construct<LabelDoStmt>(
-        maybe(name / ":"), "DO" >> label, maybe(loopControl)))
+    construct<LabelDoStmt>("DO" >> label, maybe(loopControl)))
 
 // R1122 nonlabel-do-stmt -> [do-construct-name :] DO [loop-control]
 TYPE_CONTEXT_PARSER("nonlabel DO statement"_en_US,
-    construct<NonLabelDoStmt>(maybe(name / ":"), "DO" >> maybe(loopControl)))
+    construct<NonLabelDoStmt>(
+        name / ":", "DO" >> maybe(label), maybe(loopControl)) ||
+        construct<NonLabelDoStmt>(construct<std::optional<Name>>(),
+            construct<std::optional<Label>>(), "DO" >> maybe(loopControl)))
 
 // R1132 end-do-stmt -> END DO [do-construct-name]
 TYPE_CONTEXT_PARSER("END DO statement"_en_US,
@@ -305,7 +312,8 @@ TYPE_CONTEXT_PARSER(
 TYPE_CONTEXT_PARSER("IF construct"_en_US,
     construct<IfConstruct>(
         statement(construct<IfThenStmt>(maybe(name / ":"),
-            "IF" >> parenthesized(scalarLogicalExpr) / "THEN")),
+            "IF" >> parenthesized(scalarLogicalExpr) /
+                    recovery("THEN"_tok, lookAhead(endOfStmt)))),
         block,
         many(construct<IfConstruct::ElseIfBlock>(
             unambiguousStatement(construct<ElseIfStmt>(
@@ -446,6 +454,13 @@ TYPE_CONTEXT_PARSER("STOP statement"_en_US,
 // parse time.
 TYPE_PARSER(construct<StopCode>(scalar(expr)))
 
+// F2030: R1166 notify-wait-stmt ->
+//         NOTIFY WAIT ( notify-variable [, event-wait-spec-list] )
+TYPE_CONTEXT_PARSER("NOTIFY WAIT statement"_en_US,
+    construct<NotifyWaitStmt>(
+        "NOTIFY WAIT"_sptok >> "("_tok >> scalar(variable),
+        defaulted("," >> nonemptyList(Parser<EventWaitSpec>{})) / ")"))
+
 // R1164 sync-all-stmt -> SYNC ALL [( [sync-stat-list] )]
 TYPE_CONTEXT_PARSER("SYNC ALL statement"_en_US,
     construct<SyncAllStmt>("SYNC ALL"_sptok >>
@@ -479,15 +494,14 @@ TYPE_CONTEXT_PARSER("EVENT POST statement"_en_US,
 //         EVENT WAIT ( event-variable [, event-wait-spec-list] )
 TYPE_CONTEXT_PARSER("EVENT WAIT statement"_en_US,
     construct<EventWaitStmt>("EVENT WAIT"_sptok >> "("_tok >> scalar(variable),
-        defaulted("," >> nonemptyList(Parser<EventWaitStmt::EventWaitSpec>{})) /
-            ")"))
+        defaulted("," >> nonemptyList(Parser<EventWaitSpec>{})) / ")"))
 
 // R1174 until-spec -> UNTIL_COUNT = scalar-int-expr
 constexpr auto untilSpec{"UNTIL_COUNT =" >> scalarIntExpr};
 
 // R1173 event-wait-spec -> until-spec | sync-stat
-TYPE_PARSER(construct<EventWaitStmt::EventWaitSpec>(untilSpec) ||
-    construct<EventWaitStmt::EventWaitSpec>(statOrErrmsg))
+TYPE_PARSER(construct<EventWaitSpec>(untilSpec) ||
+    construct<EventWaitSpec>(statOrErrmsg))
 
 // R1177 team-variable -> scalar-variable
 constexpr auto teamVariable{scalar(variable)};
@@ -523,5 +537,29 @@ TYPE_PARSER(
 TYPE_CONTEXT_PARSER("UNLOCK statement"_en_US,
     construct<UnlockStmt>("UNLOCK (" >> lockVariable,
         defaulted("," >> nonemptyList(statOrErrmsg)) / ")"))
+
+// CUF-kernel-do-construct -> CUF-kernel-do-directive do-construct
+// CUF-kernel-do-directive ->
+//     !$CUF KERNEL DO [ (scalar-int-constant-expr) ] <<< grid, block [, stream]
+//     >>> do-construct
+// star-or-expr -> * | scalar-int-expr
+// grid -> * | scalar-int-expr | ( star-or-expr-list )
+// block -> * | scalar-int-expr | ( star-or-expr-list )
+// stream -> ( 0, | STREAM = ) scalar-int-expr
+constexpr auto starOrExpr{construct<CUFKernelDoConstruct::StarOrExpr>(
+    "*" >> pure<std::optional<ScalarIntExpr>>() ||
+    applyFunction(presentOptional<ScalarIntExpr>, scalarIntExpr))};
+constexpr auto gridOrBlock{parenthesized(nonemptyList(starOrExpr)) ||
+    applyFunction(singletonList<CUFKernelDoConstruct::StarOrExpr>, starOrExpr)};
+TYPE_PARSER(sourced(beginDirective >> "$CUF KERNEL DO"_tok >>
+    construct<CUFKernelDoConstruct::Directive>(
+        maybe(parenthesized(scalarIntConstantExpr)), "<<<" >> gridOrBlock,
+        "," >> gridOrBlock,
+        maybe((", 0 ,"_tok || ", STREAM ="_tok) >> scalarIntExpr) / ">>>" /
+            endDirective)))
+TYPE_CONTEXT_PARSER("!$CUF KERNEL DO construct"_en_US,
+    extension<LanguageFeature::CUDA>(construct<CUFKernelDoConstruct>(
+        Parser<CUFKernelDoConstruct::Directive>{},
+        maybe(Parser<DoConstruct>{}))))
 
 } // namespace Fortran::parser

@@ -12,8 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_FLANG_FRONTEND_LANGOPTIONS_H
-#define LLVM_FLANG_FRONTEND_LANGOPTIONS_H
+#ifndef FORTRAN_FRONTEND_LANGOPTIONS_H
+#define FORTRAN_FRONTEND_LANGOPTIONS_H
+
+#include <string>
 
 namespace Fortran::frontend {
 
@@ -52,9 +54,13 @@ public:
   void set##Name(Type Value) { Name = static_cast<unsigned>(Value); }
 #include "flang/Frontend/LangOptions.def"
 
+  /// Name of the IR file that contains the result of the OpenMP target
+  /// host code generation.
+  std::string OMPHostIRFile;
+
   LangOptions();
 };
 
 } // end namespace Fortran::frontend
 
-#endif
+#endif // FORTRAN_FRONTEND_LANGOPTIONS_H

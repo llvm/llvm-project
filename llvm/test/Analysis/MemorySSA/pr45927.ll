@@ -24,7 +24,7 @@
 ; CHECK-NEXT: store i16 %inc.i.lcssa, ptr @c, align 1
 ; CHECK-NEXT: ; [[NO2:.*]] = MemoryDef([[NO6]])
 ; CHECK-NEXT: store i16 1, ptr @a, align 1
-; CHECK-NEXT: ; MemoryUse([[NO2]])
+; CHECK-NEXT: ; MemoryUse([[NO6]])
 ; CHECK-NEXT: %tmp2 = load i16, ptr @c, align 1
 ; CHECK-NEXT: br label %g.exit
 

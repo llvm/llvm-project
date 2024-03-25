@@ -102,7 +102,6 @@
 
 @implementation SubClass @end
 
-// rdar://7920807
 @interface C @end
 @interface C (Category)
 @property int p; // expected-note 2 {{property declared here}}
@@ -125,7 +124,6 @@
 #endif
 @end
 
-// rdar://10567333
 @protocol MyProtocol 
 @property (nonatomic, strong) NSString *requiredString; // expected-note {{property declared here}}
 
@@ -139,7 +137,6 @@
 @implementation MyClass // expected-warning {{auto property synthesis will not synthesize property 'requiredString' declared in protocol 'MyProtocol'}}
 @end // expected-note {{add a '@synthesize' directive}}
 
-// rdar://18152478
 @protocol NSObject @end
 @protocol TMSourceManagerDelegate<NSObject>
 @end
@@ -161,7 +158,6 @@
 @implementation TimeZoneManager
 @end
 
-// rdar://18179833
 @protocol BaseProt
 @property (assign) id prot;
 @end

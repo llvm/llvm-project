@@ -10,6 +10,7 @@
 
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/Driver.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -51,11 +52,14 @@ static bool DefaultComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
   Log *log = GetLog(LLDBLog::Host);
   std::string raw_path = lldb_shlib_spec.GetPath();
   llvm::StringRef parent_dir = llvm::sys::path::parent_path(raw_path);
+  static const std::string clang_resource_path =
+      clang::driver::Driver::GetResourcesPath("bin/lldb", CLANG_RESOURCE_DIR);
 
   static const llvm::StringRef kResourceDirSuffixes[] = {
       // LLVM.org's build of LLDB uses the clang resource directory placed
-      // in $install_dir/lib{,64}/clang/$clang_version.
-      CLANG_INSTALL_LIBDIR_BASENAME "/clang/" CLANG_VERSION_MAJOR_STRING,
+      // in $install_dir/lib{,64}/clang/$clang_version or
+      // $install_dir/bin/$CLANG_RESOURCE_DIR
+      clang_resource_path,
       // swift-lldb uses the clang resource directory copied from swift, which
       // by default is placed in $install_dir/lib{,64}/lldb/clang. LLDB places
       // it there, so we use LLDB_INSTALL_LIBDIR_BASENAME.
@@ -82,7 +86,8 @@ static bool DefaultComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
 }
 
 bool lldb_private::ComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
-                                         FileSpec &file_spec, bool verify) {
+                                                 FileSpec &file_spec,
+                                                 bool verify) {
 #if !defined(__APPLE__)
   return DefaultComputeClangResourceDirectory(lldb_shlib_spec, file_spec,
                                               verify);

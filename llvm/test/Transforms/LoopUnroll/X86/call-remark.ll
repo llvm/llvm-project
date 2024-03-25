@@ -1,5 +1,8 @@
 ; RUN: opt -passes=debugify,loop-unroll -mcpu=znver3 -pass-remarks=loop-unroll -pass-remarks-analysis=loop-unroll < %s -S 2>&1 | FileCheck --check-prefixes=ALL,UNROLL %s
 ; RUN: opt -passes=debugify,loop-unroll -mcpu=znver3 -pass-remarks=TTI -pass-remarks-analysis=TTI  < %s -S 2>&1 | FileCheck --check-prefixes=ALL,TTI %s
+; RUN: opt -passes=debugify,loop-unroll -mcpu=znver4 -pass-remarks=loop-unroll -pass-remarks-analysis=loop-unroll < %s -S 2>&1 | FileCheck --check-prefixes=ALL,UNROLL %s
+
+; RUN: opt -passes=debugify,loop-unroll -mcpu=znver3 -pass-remarks=loop-unroll -pass-remarks-analysis=loop-unroll < %s -S 2>&1 --try-experimental-debuginfo-iterators | FileCheck --check-prefixes=ALL,UNROLL %s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

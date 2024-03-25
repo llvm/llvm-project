@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -std=c++11 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -ferror-limit 200 %s -Wuninitialized
-// RUN: %clang_cc1 -std=c++11 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -ferror-limit 200 %s -Wuninitialized
+// RUN: %clang_cc1 -std=c++11 -verify=expected,omp51 -fopenmp -ferror-limit 200 %s -Wuninitialized
 
 // RUN: %clang_cc1 -std=c++11 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 200 %s -Wuninitialized
-// RUN: %clang_cc1 -std=c++11 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 200 %s -Wuninitialized
+// RUN: %clang_cc1 -std=c++11 -verify=expected,omp51 -fopenmp-simd -ferror-limit 200 %s -Wuninitialized
 struct ST {
   int *a;
 };

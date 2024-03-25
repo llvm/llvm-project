@@ -194,9 +194,20 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_ppc646jumptoEv)
   addi  4, 3, PPC64_OFFS_FP
 
 // load VS register
+#ifdef __LITTLE_ENDIAN__
+// For little-endian targets, we need a swap since lxvd2x will load the register
+// in the incorrect doubleword order.
+// FIXME: when supporting targets older than Power9 on LE is no longer required,
+//        this can be changed to simply `lxv n, (16 * n)(4)`.
+#define PPC64_LVS(n)         \
+  lxvd2x  n, 0, 4           ;\
+  xxswapd n, n              ;\
+  addi    4, 4, 16
+#else
 #define PPC64_LVS(n)         \
   lxvd2x  n, 0, 4           ;\
   addi    4, 4, 16
+#endif
 
   // restore the first 32 VS regs (and also all floating point regs)
   PPC64_LVS(0)
@@ -232,9 +243,16 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_ppc646jumptoEv)
   PPC64_LVS(30)
   PPC64_LVS(31)
 
+#ifdef __LITTLE_ENDIAN__
+#define PPC64_CLVS_RESTORE(n)                    \
+  addi   4, 3, PPC64_OFFS_FP + n * 16           ;\
+  lxvd2x n, 0, 4                                ;\
+  xxswapd n, n
+#else
 #define PPC64_CLVS_RESTORE(n)                    \
   addi   4, 3, PPC64_OFFS_FP + n * 16           ;\
   lxvd2x n, 0, 4
+#endif
 
 #if !defined(_AIX)
   // use VRSAVE to conditionally restore the remaining VS regs, that are
@@ -655,7 +673,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldr    d30,     [x0, #0x200]
   ldr    d31,     [x0, #0x208]
 
-  // Finally, restore sp. This must be done after the the last read from the
+  // Finally, restore sp. This must be done after the last read from the
   // context struct, because it is allocated on the stack, and an exception
   // could clobber the de-allocated portion of the stack after sp has been
   // restored.
@@ -975,11 +993,13 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind18Registers_mips_o326jumptoEv)
   ldc1  $f31, (4 * 36 + 8 * 31)($4)
 #endif
 #endif
+#if __mips_isa_rev < 6
   // restore hi and lo
   lw    $8, (4 * 33)($4)
   mthi  $8
   lw    $8, (4 * 34)($4)
   mtlo  $8
+#endif
   // r0 is zero
   lw    $1, (4 * 1)($4)
   lw    $2, (4 * 2)($4)
@@ -1036,11 +1056,13 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind21Registers_mips_newabi6jumptoEv)
     ldc1 $f\i, (280+8*\i)($4)
   .endr
 #endif
+#if __mips_isa_rev < 6
   // restore hi and lo
   ld    $8, (8 * 33)($4)
   mthi  $8
   ld    $8, (8 * 34)($4)
   mtlo  $8
+#endif
   // r0 is zero
   ld    $1, (8 * 1)($4)
   ld    $2, (8 * 2)($4)
@@ -1203,8 +1225,8 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind19Registers_loongarch6jumptoEv)
     ld.d $r\i, $a0, (8 * \i)
   .endr
 
-  ld.d    $r4,  $a0, (8 * 4)   // restore $a0 last
-  ld.d    $r1,  $a0, (8 * 32)  // load new pc into $ra
+  ld.d    $ra,  $a0, (8 * 32)  // load new pc into $ra
+  ld.d    $a0,  $a0, (8 * 4)   // restore $a0 last
 
   jr      $ra
 

@@ -3,6 +3,12 @@
 
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
+import lit.util
+if lit.util.isAIXTriple(config.target_triple):
+  # Add the AIX version to the triple here because there currently isn't a good
+  # way to retrieve the AIX version in the driver.
+  config.target_triple = lit.util.addAIXVersion(config.target_triple)
+
 config.substitutions.append(('%{flags}', ''))
 config.substitutions.append(('%{compile_flags}',
     '-nostdinc++ -I %{include}'
@@ -16,8 +22,8 @@ config.substitutions.append(('%{exec}',
 
 import os, site
 site.addsitedir(os.path.join('@LIBUNWIND_LIBCXX_PATH@', 'utils'))
-import libcxx.test.params, libcxx.test.newconfig, libcxx.test.newconfig
-libcxx.test.newconfig.configure(
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
     libcxx.test.params.DEFAULT_PARAMETERS,
     libcxx.test.features.DEFAULT_FEATURES,
     config,

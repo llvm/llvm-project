@@ -5,28 +5,32 @@
 ## kinds of handling of the relocation by the linker (no relaxation, pic, and
 ## non-pic).
 
-# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux \
-# RUN:   -relax-relocations %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe -q
 # RUN: ld.lld %t.o -o %t.pie.exe -q -pie
 # RUN: ld.lld %t.o -o %t.no-relax.exe -q --no-relax
 # RUN: llvm-bolt %t.exe --relocs -o %t.out --print-cfg --print-only=_start \
 # RUN:   |& FileCheck --check-prefix=BOLT %s
-# RUN: llvm-bolt %t.pie.exe -o /dev/null --print-cfg --print-only=_start \
+# RUN: llvm-bolt %t.pie.exe -o %t.null --print-cfg --print-only=_start \
 # RUN:   |& FileCheck --check-prefix=PIE-BOLT %s
-# RUN: llvm-bolt %t.no-relax.exe -o /dev/null --print-cfg --print-only=_start \
+# RUN: llvm-bolt %t.no-relax.exe -o %t.null --print-cfg --print-only=_start \
 # RUN:   |& FileCheck --check-prefix=NO-RELAX-BOLT %s
 # RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex \
 # RUN:   %t.out | FileCheck --check-prefix=DISASM %s
+
+## Relocate foo only and check that code references from _start (that is
+## otherwise preserved) are updated.
+
+# RUN: llvm-bolt %t.exe --relocs -o %t.lite.out --funcs=foo
+# RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex \
+# RUN:   %t.lite.out | FileCheck --check-prefix=DISASM %s
 
   .text
   .globl _start
   .type _start, %function
 _start:
   .cfi_startproc
-# DISASM:      Disassembly of section .text:
-# DISASM-EMPTY:
-# DISASM-NEXT: <_start>:
+# DISASM: <_start>:
 
                       call *foo@GOTPCREL(%rip)
 # NO-RELAX-BOLT:      callq *{{.*}}(%rip)
@@ -63,6 +67,8 @@ _start:
 # BOLT-NEXT:          jmp foo
 # PIE-BOLT-NEXT:      jmp foo
 # DISASM-NEXT:        jmp 0x[[#ADDR]]
+
+# DISASM: [[#ADDR]] <foo>:
 
   ret
   .cfi_endproc

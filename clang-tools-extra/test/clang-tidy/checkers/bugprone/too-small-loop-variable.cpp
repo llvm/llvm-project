@@ -1,7 +1,6 @@
 // RUN: %check_clang_tidy %s bugprone-too-small-loop-variable %t -- \
 // RUN:   -config="{CheckOptions: \
-// RUN:             [{key: bugprone-too-small-loop-variable.MagnitudeBitsUpperLimit, \
-// RUN:               value: 1024}]}" \
+// RUN:             {bugprone-too-small-loop-variable.MagnitudeBitsUpperLimit: 1024}}" \
 // RUN:   -- --target=x86_64-linux
 
 long size() { return 294967296l; }
@@ -46,6 +45,16 @@ void voidBadForLoop6() {
   }
 }
 
+void voidBadForLoop7() {
+    struct Int  {
+        int value;
+    } i;
+
+  for (i.value = 0; i.value < size(); ++i.value) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: loop variable has narrower type 'int' than iteration's upper bound 'long' [bugprone-too-small-loop-variable]
+  }
+}
+
 void voidForLoopUnsignedBound() {
   unsigned size = 3147483647;
   for (int i = 0; i < size; ++i) {
@@ -81,6 +90,18 @@ void voidForLoopInstantiation() {
 void voidBadForLoopWithMacroBound() {
   for (short i = 0; i < SUSPICIOUS_SIZE; ++i) {
     // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: loop variable has narrower type 'short' than iteration's upper bound 'long' [bugprone-too-small-loop-variable]
+  }
+}
+
+unsigned int getVal() {
+    return 300;
+}
+
+// The iteration's upper bound has a function declaration.
+void voidBadForLoop8() {
+  const unsigned int l = getVal();
+  for (unsigned char i = 0; i < l; ++i) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: loop variable has narrower type 'unsigned char' than iteration's upper bound 'const unsigned int' [bugprone-too-small-loop-variable]
   }
 }
 
@@ -251,5 +272,132 @@ void voidForLoopWithConstBound() {
 void voidForLoopWithBigConstBound() {
   const long size = 294967296l;
   for (short i = 0; i < size; ++i) { // no warning
+  }
+}
+
+// Should detect proper size of upper bound bitfield
+void voidForLoopWithBitfieldOnUpperBound() {
+  struct StructWithBitField {
+      unsigned bitfield : 5;
+  } value = {};
+
+  for(unsigned char i = 0U; i < value.bitfield; ++i) { // no warning
+  }
+}
+
+// Should detect proper size of loop variable bitfield
+void voidForLoopWithBitfieldOnLoopVar() {
+  struct StructWithBitField {
+      unsigned bitfield : 9;
+  } value = {};
+
+  unsigned char upperLimit = 100U;
+
+  for(value.bitfield = 0U; value.bitfield < upperLimit; ++value.bitfield) {
+  }
+}
+
+// Should detect proper size of loop variable and upper bound
+void voidForLoopWithBitfieldOnLoopVarAndUpperBound() {
+  struct StructWithBitField {
+      unsigned var : 5, limit : 4;
+  } value = {};
+
+  for(value.var = 0U; value.var < value.limit; ++value.var) {
+  }
+}
+
+// Should detect proper size of loop variable and upper bound on integers
+void voidForLoopWithBitfieldOnLoopVarAndUpperBoundOnInt() {
+  struct StructWithBitField {
+      unsigned var : 5;
+      int limit : 6;
+  } value = {};
+
+  for(value.var = 0U; value.var < value.limit; ++value.var) {
+  }
+}
+
+void badForLoopWithBitfieldOnUpperBound() {
+  struct StructWithBitField {
+      unsigned bitfield : 9;
+  } value = {};
+
+  for(unsigned char i = 0U; i < value.bitfield; ++i) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: loop variable has narrower type 'unsigned char' than iteration's upper bound 'unsigned int:9' [bugprone-too-small-loop-variable]
+  }
+}
+
+void badForLoopWithBitfieldOnLoopVar() {
+  struct StructWithBitField {
+      unsigned bitfield : 7;
+  } value = {};
+
+  unsigned char upperLimit = 100U;
+
+  for(value.bitfield = 0U; value.bitfield < upperLimit; ++value.bitfield) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: loop variable has narrower type 'unsigned int:7' than iteration's upper bound 'unsigned char' [bugprone-too-small-loop-variable]
+  }
+}
+
+void badForLoopWithBitfieldOnLoopVarAndUpperBound() {
+  struct StructWithBitField {
+      unsigned var : 5, limit : 6;
+  } value = {};
+
+  for(value.var = 0U; value.var < value.limit; ++value.var) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: loop variable has narrower type 'unsigned int:5' than iteration's upper bound 'unsigned int:6' [bugprone-too-small-loop-variable]
+  }
+}
+
+void badForLoopWithBitfieldOnLoopVarOnIntAndUpperBound() {
+  struct StructWithBitField {
+      int var : 5;
+      unsigned limit : 5;
+  } value = {};
+
+  for(value.var = 0U; value.var < value.limit; ++value.var) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: loop variable has narrower type 'int:5' than iteration's upper bound 'unsigned int:5' [bugprone-too-small-loop-variable]
+  }
+}
+
+void badForLoopWithBitfieldOnLoopVarAndUpperBoundOnInt() {
+  struct StructWithBitField {
+      unsigned var : 5;
+      int limit : 7;
+  } value = {};
+
+  for(value.var = 0U; value.var < value.limit; ++value.var) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: loop variable has narrower type 'unsigned int:5' than iteration's upper bound 'int:7' [bugprone-too-small-loop-variable]
+  }
+}
+
+void badForLoopWithBitfieldOnLoopVarAndUpperBoundOnPtr() {
+  struct StructWithBitField {
+      unsigned var : 5, limit : 6;
+  } value = {};
+
+  StructWithBitField* ptr = &value;
+
+  for(ptr->var = 0U; ptr->var < ptr->limit; ++ptr->var) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: loop variable has narrower type 'unsigned int:5' than iteration's upper bound 'unsigned int:6' [bugprone-too-small-loop-variable]
+  }
+}
+
+void goodForLoopWithBitfieldOnUpperBoundOnly() {
+  struct S {
+    int x : 4;
+  } s;
+
+  for (int i = 10; i > s.x; --i) {
+  }
+}
+
+void goodForLoopWithIntegersOnUpperBoundOnly() {
+  struct S {
+    short x;
+  } s;
+
+  for (int i = 10; i > s.x; --i) {
   }
 }

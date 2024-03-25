@@ -11,7 +11,7 @@
 # MACOS-10-14-NEXT: sdk 10.15
 # MACOS-10-14-NEXT: minos 10.14
 # MACOS-10-14-NEXT: ntools 1
-# MACOS-10-14-NEXT: tool ld
+# MACOS-10-14-NEXT: tool lld
 # MACOS-10-14-NEXT: version {{[0-9\.]+}}
 
 # RUN: %lld -platform_version macos 10.13 10.15 -o %t.macos-10-13 %t.o
@@ -63,6 +63,13 @@
 # RUN: llvm-objdump --macho --all-headers %t.watchos-sim-5-0 | FileCheck %s --check-prefix=WATCHOS-4-0
 
 # WATCHOS-4-0: cmd LC_VERSION_MIN_WATCHOS
+
+# RUN: %no-arg-lld -arch x86_64 -platform_version xros 1.0 1.1 -o %t.xros-1-0 %t.o
+# RUN: llvm-objdump --macho --all-headers %t.xros-1-0 | FileCheck %s --check-prefix=XROS-1-0
+# RUN: %no-arg-lld -arch x86_64 -platform_version xros-simulator 1.0 1.1 -o %t.xros-sim-1-0 %t.o
+# RUN: llvm-objdump --macho --all-headers %t.xros-sim-1-0 | FileCheck %s --check-prefix=XROS-1-0
+
+# XROS-1-0: cmd LC_BUILD_VERSION
 
 .text
 .global _main

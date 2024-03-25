@@ -30,9 +30,16 @@ struct Metadata {
 
 struct DFsanMapUnmapCallback {
   void OnMap(uptr p, uptr size) const { dfsan_set_label(0, (void *)p, size); }
+  void OnMapSecondary(uptr p, uptr size, uptr user_begin,
+                      uptr user_size) const {
+    OnMap(p, size);
+  }
   void OnUnmap(uptr p, uptr size) const { dfsan_set_label(0, (void *)p, size); }
 };
 
+// Note: to ensure that the allocator is compatible with the application memory
+// layout (especially with high-entropy ASLR), kSpaceBeg and kSpaceSize must be
+// duplicated as MappingDesc::ALLOCATOR in dfsan_platform.h.
 #if defined(__aarch64__)
 const uptr kAllocatorSpace = 0xE00000000000ULL;
 #else
@@ -174,6 +181,20 @@ void *DFsanCalloc(uptr nmemb, uptr size) {
   return DFsanAllocate(nmemb * size, sizeof(u64), true /*zeroise*/);
 }
 
+static const void *AllocationBegin(const void *p) {
+  if (!p)
+    return nullptr;
+  void *beg = allocator.GetBlockBegin(p);
+  if (!beg)
+    return nullptr;
+  Metadata *b = (Metadata *)allocator.GetMetaData(beg);
+  if (!b)
+    return nullptr;
+  if (b->requested_size == 0)
+    return nullptr;
+  return (const void *)beg;
+}
+
 static uptr AllocationSize(const void *p) {
   if (!p)
     return 0;
@@ -182,6 +203,10 @@ static uptr AllocationSize(const void *p) {
     return 0;
   Metadata *b = (Metadata *)allocator.GetMetaData(p);
   return b->requested_size;
+}
+
+static uptr AllocationSizeFast(const void *p) {
+  return reinterpret_cast<Metadata *>(allocator.GetMetaData(p))->requested_size;
 }
 
 void *dfsan_malloc(uptr size) {
@@ -294,4 +319,15 @@ uptr __sanitizer_get_estimated_allocated_size(uptr size) { return size; }
 
 int __sanitizer_get_ownership(const void *p) { return AllocationSize(p) != 0; }
 
+const void *__sanitizer_get_allocated_begin(const void *p) {
+  return AllocationBegin(p);
+}
+
 uptr __sanitizer_get_allocated_size(const void *p) { return AllocationSize(p); }
+
+uptr __sanitizer_get_allocated_size_fast(const void *p) {
+  DCHECK_EQ(p, __sanitizer_get_allocated_begin(p));
+  uptr ret = AllocationSizeFast(p);
+  DCHECK_EQ(ret, __sanitizer_get_allocated_size(p));
+  return ret;
+}

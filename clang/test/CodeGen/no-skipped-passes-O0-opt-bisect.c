@@ -1,7 +1,7 @@
 // Test that no passes are skipped under NPM with -O0/opt-bisect
 //
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -O0 %s -fdebug-pass-manager -emit-llvm -o /dev/null 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -O0 %s -fdebug-pass-manager -emit-llvm -o /dev/null -fcoroutines-ts 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -O0 %s -fdebug-pass-manager -emit-llvm -o /dev/null -fcoroutines 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -O0 %s -fdebug-pass-manager -emit-llvm -o /dev/null -fsanitize=address 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -O0 %s -fdebug-pass-manager -emit-llvm -o /dev/null -fsanitize=hwaddress 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -O0 %s -fdebug-pass-manager -emit-llvm -o /dev/null -fsanitize=memory 2>&1 | FileCheck %s
@@ -12,7 +12,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -O0 %s -fdebug-pass-manager -emit-llvm -o /dev/null -fmemory-profile 2>&1 | FileCheck %s
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -mllvm -opt-bisect-limit=0 %s -fdebug-pass-manager -emit-llvm -o /dev/null 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -mllvm -opt-bisect-limit=0 %s -fdebug-pass-manager -emit-llvm -o /dev/null -fcoroutines-ts 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -mllvm -opt-bisect-limit=0 %s -fdebug-pass-manager -emit-llvm -o /dev/null -fcoroutines 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -mllvm -opt-bisect-limit=0 %s -fdebug-pass-manager -emit-llvm -o /dev/null -fsanitize=address 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -mllvm -opt-bisect-limit=0 %s -fdebug-pass-manager -emit-llvm -o /dev/null -fsanitize=hwaddress 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -mllvm -opt-bisect-limit=0 %s -fdebug-pass-manager -emit-llvm -o /dev/null -fsanitize=memory 2>&1 | FileCheck %s

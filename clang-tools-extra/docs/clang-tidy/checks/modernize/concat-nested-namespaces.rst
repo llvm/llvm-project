@@ -30,6 +30,13 @@ For example:
   }
   }
 
+  // in c++20
+  namespace n8 {
+  inline namespace n9 {
+  void t();
+  }
+  }
+
 Will be modified to:
 
 .. code-block:: c++
@@ -45,5 +52,10 @@ Will be modified to:
   namespace n6::n7 {
   void t();
   }
+  }
+
+  // in c++20
+  namespace n8::inline n9 {
+  void t();
   }
 

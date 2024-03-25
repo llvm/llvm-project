@@ -1,6 +1,6 @@
 ; RUN: rm -rf %t
 ; RUN: mkdir -p %t
-; RUN: opt %loadNPMPolly -polly-import-jscop-dir=%t -enable-new-pm=1 -polly -O2 -polly-export -S < %s
+; RUN: opt %loadNPMPolly -polly-import-jscop-dir=%t -polly -O2 -polly-export -S < %s
 ; RUN: FileCheck %s -input-file %t/exportjson___%entry.split---%return.jscop
 ;
 ; for (int j = 0; j < n; j += 1) {

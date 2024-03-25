@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected,cxx20_2b,cxx2b    %s
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected,cxx20_2b,cxx2b    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,since-cxx20,since-cxx14,cxx20_23,cxx23    %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,since-cxx20,since-cxx14,cxx20_23,cxx23    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_2b %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_2b %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx20,since-cxx20,since-cxx14,cxx14_20,cxx20_23 %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx20,since-cxx20,since-cxx14,cxx14_20,cxx20_23 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,since-cxx14,cxx14_20,cxx14    %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,since-cxx14,cxx14_20,cxx14    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
 auto f(); // expected-note {{previous}}
 int f(); // expected-error {{differ only in their return type}}
@@ -129,14 +129,14 @@ namespace Templates {
     return T() + 1;
   }
   template<typename T> auto &f2(T &&v) { return v; }
-  // cxx2b-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
-  // cxx2b-error@-2 {{non-const lvalue reference to type 'double' cannot bind to a temporary of type 'double'}}
-  // cxx2b-note@-3  {{candidate template ignored: substitution failure [with T = double]}}
+  // cxx23-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
+  // cxx23-error@-2 {{non-const lvalue reference to type 'double' cannot bind to a temporary of type 'double'}}
+  // cxx23-note@-3  {{candidate template ignored: substitution failure [with T = double]}}
   int a = f1<int>();
-  const int &b = f2(0); // cxx2b-note {{in instantiation of function template specialization 'Templates::f2<int>' requested here}}
+  const int &b = f2(0); // cxx23-note {{in instantiation of function template specialization 'Templates::f2<int>' requested here}}
   double d;
   float &c = f2(0.0); // expected-error {{non-const lvalue reference to type 'float' cannot bind to a value of unrelated type 'double'}}
-  // cxx2b-note@-1 {{in instantiation of function template specialization 'Templates::f2<double>' requested here}}
+  // cxx23-note@-1 {{in instantiation of function template specialization 'Templates::f2<double>' requested here}}
 
   template<typename T> auto fwd_decl(); // expected-note {{declared here}}
   int e = fwd_decl<int>(); // expected-error {{cannot be used before it is defined}}
@@ -150,7 +150,7 @@ namespace Templates {
   auto (*q)() = f1<int>; // ok
 
   typedef decltype(f2(1.2)) dbl; // cxx14_20-note {{previous}}
-  // cxx2b-error@-1 {{no matching function for call to 'f2'}}
+  // cxx23-error@-1 {{no matching function for call to 'f2'}}
   typedef float dbl; // cxx14_20-error {{typedef redefinition with different types ('float' vs 'decltype(f2(1.2))' (aka 'double &'))}}
 
   extern template auto fwd_decl<double>();
@@ -296,11 +296,11 @@ namespace Constexpr {
   void f() {
     X<int>().f();
     Y<void>().f();
-    constexpr int q = Y<int>().f(); // expected-error {{must be initialized by a constant expression}} expected-note {{in call to '&Y<int>()->f()'}}
+    constexpr int q = Y<int>().f(); // expected-error {{must be initialized by a constant expression}} expected-note {{in call to 'Y<int>().f()'}}
   }
   struct NonLiteral { ~NonLiteral(); } nl; // cxx14-note {{user-provided destructor}}
-  // cxx20_2b-note@-1 {{'NonLiteral' is not literal because its destructor is not constexpr}}
-  constexpr auto f2(int n) { return nl; } // expected-error {{return type 'struct NonLiteral' is not a literal type}}
+  // cxx20-note@-1 {{'NonLiteral' is not literal because its destructor is not constexpr}}
+  constexpr auto f2(int n) { return nl; } // cxx14_20-error {{constexpr function's return type 'struct NonLiteral' is not a literal type}}
 }
 
 // It's not really clear whether these are valid, but this matches g++.
@@ -639,4 +639,97 @@ namespace PR46637 {
   template<auto (*)() -> auto> struct X {}; // cxx14-error {{'auto' not allowed in template parameter until C++17}}
   template<typename T> struct Y { T x; };
   Y<auto() -> auto> y; // expected-error {{'auto' not allowed in template argument}}
+}
+
+namespace GH71015 {
+
+// Check that there is no error in case a templated function is recursive and
+// has a placeholder return type.
+struct Node {
+  int value;
+  Node* left;
+  Node* right;
+};
+
+bool parse(const char*);
+Node* parsePrimaryExpr();
+
+auto parseMulExpr(auto node) { // cxx14-error {{'auto' not allowed in function prototype}} \
+                               // cxx14-note {{not viable}}
+  if (node == nullptr) node = parsePrimaryExpr();
+  if (!parse("*")) return node;
+  return parseMulExpr(new Node{.left = node, .right = parsePrimaryExpr()});
+}
+
+template <typename T>
+auto parseMulExpr2(T node) {
+  if (node == nullptr) node = parsePrimaryExpr();
+  if (!parse("*")) return node;
+  return parseMulExpr2(new Node{.left = node, .right = parsePrimaryExpr()});
+}
+
+template <typename T>
+auto parseMulExpr3(T node) { // expected-note {{declared here}}
+  if (node == nullptr) node = parsePrimaryExpr();
+  return parseMulExpr3(new Node{.left = node, .right = parsePrimaryExpr()}); // expected-error {{cannot be used before it is defined}}
+}
+
+void foo() {
+  parseMulExpr(new Node{}); // cxx14-error {{no matching function}}
+  parseMulExpr2(new Node{});
+  parseMulExpr3(new Node{}); // expected-note {{in instantiation}}
+}
+
+auto f(auto x) { // cxx14-error {{'auto' not allowed in function prototype}}
+  if (x == 0) return 0;
+  return f(1) + 1;
+}
+
+}
+
+#if __cplusplus >= 202002L
+template <typename T>
+concept C = true;
+#endif
+
+struct DeducedTargetTypeOfConversionFunction {
+  operator auto() const { return char(); }
+  operator const auto() const { return float(); }
+  operator const auto&() const { return int(); }
+  // expected-warning@-1 {{returning reference to local temporary object}}
+  operator decltype(auto)() const { return double(); }
+#if __cplusplus >= 202002L
+  operator C auto() const { return unsigned(); }
+  operator C decltype(auto)() const { return long(); }
+#endif
+
+  template <typename T>
+  operator auto() const { return short(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator const auto() const { return int(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator const auto&() const { return char(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator decltype(auto)() const { return unsigned(); }
+  // since-cxx14-error@-1 {{'decltype(auto)' not allowed in declaration of conversion function template}}
+#if __cplusplus >= 202002L
+  template <typename T>
+  operator C auto() const { return float(); }
+  // since-cxx20-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator C decltype(auto)() const { return double(); }
+  // since-cxx20-error@-1 {{'decltype(auto)' not allowed in declaration of conversion function template}}
+#endif
+};
+
+namespace GH79745 {
+template <typename = int> struct a; // expected-note {{template is declared here}}
+auto f() {
+  a c; // cxx20_23-error {{implicit instantiation of undefined template}} \
+       // cxx14-error {{use of class template 'a' requires template arguments}}
+  return c;
+}
 }

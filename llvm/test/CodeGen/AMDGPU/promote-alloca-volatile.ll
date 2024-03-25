@@ -25,6 +25,17 @@ entry:
  ret void
 }
 
+; CHECK-LABEL: @volatile_store_vec(
+; CHECK: alloca [4 x i32]
+; CHECK: store volatile <4 x i32>
+define amdgpu_kernel void @volatile_store_vec(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) {
+entry:
+  %stack = alloca [4 x i32], align 4, addrspace(5)
+  %tmp = load <4 x i32>, ptr addrspace(1) %in, align 16
+  store volatile <4 x i32> %tmp, ptr addrspace(5) %stack
+  ret void
+}
+
 ; Has on OK non-volatile user but also a volatile user
 ; CHECK-LABEL: @volatile_and_non_volatile_load(
 ; CHECK: alloca double

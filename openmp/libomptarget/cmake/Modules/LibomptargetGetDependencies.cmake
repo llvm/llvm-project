@@ -14,7 +14,6 @@
 # libffi : required to launch target kernels given function and argument
 #          pointers.
 # CUDA : required to control offloading to NVIDIA GPUs.
-# VEOS : required to control offloading to NEC Aurora.
 
 include (FindPackageHandleStandardArgs)
 
@@ -51,52 +50,8 @@ endif()
 ################################################################################
 # Looking for libffi...
 ################################################################################
-find_package(PkgConfig)
-
-pkg_check_modules(LIBOMPTARGET_SEARCH_LIBFFI QUIET libffi)
-
-find_path (
-  LIBOMPTARGET_DEP_LIBFFI_INCLUDE_DIR
-  NAMES
-    ffi.h
-  HINTS
-    ${LIBOMPTARGET_SEARCH_LIBFFI_INCLUDEDIR}
-    ${LIBOMPTARGET_SEARCH_LIBFFI_INCLUDE_DIRS}
-  PATHS
-    /usr/include
-    /usr/local/include
-    /opt/local/include
-    /sw/include
-    ENV CPATH)
-
-# Don't bother look for the library if the header files were not found.
-if (LIBOMPTARGET_DEP_LIBFFI_INCLUDE_DIR)
-  find_library (
-      LIBOMPTARGET_DEP_LIBFFI_LIBRARIES
-    NAMES
-      ffi
-    HINTS
-      ${LIBOMPTARGET_SEARCH_LIBFFI_LIBDIR}
-      ${LIBOMPTARGET_SEARCH_LIBFFI_LIBRARY_DIRS}
-    PATHS
-      /usr/lib
-      /usr/local/lib
-      /opt/local/lib
-      /sw/lib
-      ENV LIBRARY_PATH
-      ENV LD_LIBRARY_PATH)
-endif()
-
-set(LIBOMPTARGET_DEP_LIBFFI_INCLUDE_DIRS ${LIBOMPTARGET_DEP_LIBFFI_INCLUDE_DIR})
-find_package_handle_standard_args(
-  LIBOMPTARGET_DEP_LIBFFI
-  DEFAULT_MSG
-  LIBOMPTARGET_DEP_LIBFFI_LIBRARIES
-  LIBOMPTARGET_DEP_LIBFFI_INCLUDE_DIRS)
-
-mark_as_advanced(
-  LIBOMPTARGET_DEP_LIBFFI_INCLUDE_DIRS
-  LIBOMPTARGET_DEP_LIBFFI_LIBRARIES)
+find_package(FFI QUIET)
+set(LIBOMPTARGET_DEP_LIBFFI_FOUND ${FFI_FOUND})
 
 ################################################################################
 # Looking for CUDA...
@@ -110,17 +65,22 @@ set(LIBOMPTARGET_DEP_CUDA_FOUND ${CUDAToolkit_FOUND})
 ################################################################################
 set(LIBOMPTARGET_DEP_CUDA_ARCH "sm_35")
 
-find_program(LIBOMPTARGET_NVPTX_ARCH NAMES nvptx-arch PATHS ${LLVM_BINARY_DIR}/bin)
+if(TARGET nvptx-arch)
+  get_property(LIBOMPTARGET_NVPTX_ARCH TARGET nvptx-arch PROPERTY LOCATION)
+else()
+  find_program(LIBOMPTARGET_NVPTX_ARCH NAMES nvptx-arch
+               PATHS ${LLVM_TOOLS_BINARY_DIR}/bin)
+endif()
+
 if(LIBOMPTARGET_NVPTX_ARCH)
   execute_process(COMMAND ${LIBOMPTARGET_NVPTX_ARCH}
                   OUTPUT_VARIABLE LIBOMPTARGET_NVPTX_ARCH_OUTPUT
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
-  string(FIND "${LIBOMPTARGET_NVPTX_ARCH_OUTPUT}" "\n" first_arch_string)
-  string(SUBSTRING "${LIBOMPTARGET_NVPTX_ARCH_OUTPUT}" 0 ${first_arch_string}
-         arch_string)
-  if(arch_string)
+  string(REPLACE "\n" ";" nvptx_arch_list "${LIBOMPTARGET_NVPTX_ARCH_OUTPUT}")
+  if(nvptx_arch_list)
     set(LIBOMPTARGET_FOUND_NVIDIA_GPU TRUE)
-    set(LIBOMPTARGET_DEP_CUDA_ARCH "${arch_string}")
+    set(LIBOMPTARGET_NVPTX_DETECTED_ARCH_LIST "${nvptx_arch_list}")
+    list(GET nvptx_arch_list 0 LIBOMPTARGET_DEP_CUDA_ARCH)
   endif()
 endif()
 
@@ -129,75 +89,22 @@ endif()
 # Looking for AMD GPUs...
 ################################################################################
 
-find_program(LIBOMPTARGET_AMDGPU_ARCH NAMES amdgpu-arch PATHS ${LLVM_BINARY_DIR}/bin)
+if(TARGET amdgpu-arch)
+  get_property(LIBOMPTARGET_AMDGPU_ARCH TARGET amdgpu-arch PROPERTY LOCATION)
+else()
+  find_program(LIBOMPTARGET_AMDGPU_ARCH NAMES amdgpu-arch
+               PATHS ${LLVM_TOOLS_BINARY_DIR}/bin)
+endif()
+
 if(LIBOMPTARGET_AMDGPU_ARCH)
   execute_process(COMMAND ${LIBOMPTARGET_AMDGPU_ARCH}
                   OUTPUT_VARIABLE LIBOMPTARGET_AMDGPU_ARCH_OUTPUT
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
-  string(FIND "${LIBOMPTARGET_AMDGPU_ARCH_OUTPUT}" "\n" first_arch_string)
-  string(SUBSTRING "${LIBOMPTARGET_AMDGPU_ARCH_OUTPUT}" 0 ${first_arch_string}
-         arch_string)
-  if(arch_string)
+  string(REPLACE "\n" ";" amdgpu_arch_list "${LIBOMPTARGET_AMDGPU_ARCH_OUTPUT}")
+  if(amdgpu_arch_list)
     set(LIBOMPTARGET_FOUND_AMDGPU_GPU TRUE)
-    set(LIBOMPTARGET_DEP_AMDGPU_ARCH "${arch_string}")
+    set(LIBOMPTARGET_AMDGPU_DETECTED_ARCH_LIST "${amdgpu_arch_list}")
   endif()
 endif()
-
-
-################################################################################
-# Looking for VEO...
-################################################################################
-
-find_path (
-  LIBOMPTARGET_DEP_VEO_INCLUDE_DIR
-  NAMES
-    ve_offload.h
-  PATHS
-    /usr/include
-    /usr/local/include
-    /opt/local/include
-    /sw/include
-    /opt/nec/ve/veos/include
-    ENV CPATH
-  PATH_SUFFIXES
-    libveo)
-
-find_library (
-  LIBOMPTARGET_DEP_VEO_LIBRARIES
-  NAMES
-    veo
-  PATHS
-    /usr/lib
-    /usr/local/lib
-    /opt/local/lib
-    /sw/lib
-    /opt/nec/ve/veos/lib64
-    ENV LIBRARY_PATH
-    ENV LD_LIBRARY_PATH)
-
-find_library(
-  LIBOMPTARGET_DEP_VEOSINFO_LIBRARIES
-  NAMES
-    veosinfo
-  PATHS
-    /usr/lib
-    /usr/local/lib
-    /opt/local/lib
-    /sw/lib
-    /opt/nec/ve/veos/lib64
-    ENV LIBRARY_PATH
-    ENV LD_LIBRARY_PATH)
-
-set(LIBOMPTARGET_DEP_VEO_INCLUDE_DIRS ${LIBOMPTARGET_DEP_VEO_INCLUDE_DIR})
-find_package_handle_standard_args(
-  LIBOMPTARGET_DEP_VEO
-  DEFAULT_MSG
-  LIBOMPTARGET_DEP_VEO_LIBRARIES
-  LIBOMPTARGET_DEP_VEOSINFO_LIBRARIES
-  LIBOMPTARGET_DEP_VEO_INCLUDE_DIRS)
-
-mark_as_advanced(
-  LIBOMPTARGET_DEP_VEO_FOUND
-  LIBOMPTARGET_DEP_VEO_INCLUDE_DIRS)
 
 set(OPENMP_PTHREAD_LIB ${LLVM_PTHREAD_LIB})

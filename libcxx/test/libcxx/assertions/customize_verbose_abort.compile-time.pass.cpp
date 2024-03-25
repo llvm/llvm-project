@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 // This compile-time customization requires cross-file macros, which doesn't work with modules.
-// UNSUPPORTED: modules-build
+// UNSUPPORTED: clang-modules-build
 
 // Make sure that we can customize the verbose termination function at compile-time by
 // defining _LIBCPP_VERBOSE_ABORT ourselves. Note that this does not have any
 // deployment target requirements.
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1 -D_LIBCPP_VERBOSE_ABORT(...)=my_abort(__VA_ARGS__)
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_VERBOSE_ABORT(...)=my_abort(__VA_ARGS__)
 
 #include <cstdlib>
 
@@ -22,6 +22,6 @@ void my_abort(char const*, ...) {
 }
 
 int main(int, char**) {
-  _LIBCPP_ASSERT(false, "message");
+  _LIBCPP_VERBOSE_ABORT("%s", "message");
   return EXIT_FAILURE;
 }

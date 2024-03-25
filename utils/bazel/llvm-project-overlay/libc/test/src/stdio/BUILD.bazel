@@ -1,0 +1,134 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc stdio.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "printf_parser_test",
+    srcs = ["printf_core/parser_test.cpp"],
+    libc_function_deps = [
+    ],
+    deps = [
+        "//libc:__support_arg_list",
+        "//libc:__support_cpp_bit",
+        "//libc:__support_cpp_string_view",
+        "//libc:printf_core_structs",
+        "//libc:printf_parser",
+        "//libc/test/UnitTest:printf_matcher",
+    ],
+)
+
+libc_test(
+    name = "printf_writer_test",
+    srcs = ["printf_core/writer_test.cpp"],
+    libc_function_deps = [
+    ],
+    deps = [
+        "//libc:__support_arg_list",
+        "//libc:__support_cpp_string_view",
+        "//libc:printf_core_structs",
+        "//libc:printf_writer",
+        "//libc:string_memory_utils",
+    ],
+)
+
+libc_test(
+    name = "printf_converter_test",
+    srcs = ["printf_core/converter_test.cpp"],
+    libc_function_deps = [
+    ],
+    deps = [
+        "//libc:__support_arg_list",
+        "//libc:__support_cpp_string_view",
+        "//libc:printf_converter",
+        "//libc:printf_core_structs",
+        "//libc:printf_writer",
+    ],
+)
+
+libc_test(
+    name = "sprintf_test",
+    srcs = ["sprintf_test.cpp"],
+    libc_function_deps = [
+        "//libc:sprintf",
+    ],
+    deps = [
+        "//libc:__support_fputil_fp_bits",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "snprintf_test",
+    srcs = ["snprintf_test.cpp"],
+    libc_function_deps = [
+        "//libc:snprintf",
+    ],
+)
+
+libc_test(
+    name = "printf_test",
+    srcs = ["printf_test.cpp"],
+    libc_function_deps = [
+        "//libc:printf",
+    ],
+)
+
+libc_test(
+    name = "fprintf_test",
+    srcs = ["fprintf_test.cpp"],
+    libc_function_deps = [
+        "//libc:fprintf",
+    ],
+)
+
+libc_test(
+    name = "vsprintf_test",
+    srcs = ["vsprintf_test.cpp"],
+    libc_function_deps = [
+        "//libc:vsprintf",
+    ],
+)
+
+libc_test(
+    name = "vsnprintf_test",
+    srcs = ["vsnprintf_test.cpp"],
+    libc_function_deps = [
+        "//libc:vsnprintf",
+    ],
+)
+
+libc_test(
+    name = "vprintf_test",
+    srcs = ["vprintf_test.cpp"],
+    libc_function_deps = [
+        "//libc:vprintf",
+    ],
+)
+
+libc_test(
+    name = "vfprintf_test",
+    srcs = ["vfprintf_test.cpp"],
+    libc_function_deps = [
+        "//libc:vfprintf",
+    ],
+)
+
+libc_test(
+    name = "remove_test",
+    srcs = ["remove_test.cpp"],
+    libc_function_deps = [
+        "//libc:remove",
+        "//libc:open",
+        "//libc:mkdirat",
+        "//libc:access",
+        "//libc:close",
+    ],
+)

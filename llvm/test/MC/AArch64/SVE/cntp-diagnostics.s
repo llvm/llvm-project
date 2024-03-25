@@ -1,7 +1,7 @@
 // RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+sve  2>&1 < %s| FileCheck %s
 
 cntp  sp
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: cntp  sp
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

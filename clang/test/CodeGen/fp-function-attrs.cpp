@@ -8,7 +8,7 @@ float test_default(float a, float b, float c) {
   return tmp;
 }
 
-// CHECK: define{{.*}} float @_Z12test_defaultfff(float noundef %a, float noundef %b, float noundef %c) [[FAST_ATTRS:#[0-9]+]]
+// CHECK: define{{.*}} float @_Z12test_defaultfff(float noundef nofpclass(nan inf) %a, float noundef nofpclass(nan inf) %b, float noundef nofpclass(nan inf) %c) [[FAST_ATTRS:#[0-9]+]]
 // CHECK: fadd fast float {{%.+}}, {{%.+}}
 // CHECK: fadd fast float {{%.+}}, {{%.+}}
 
@@ -22,7 +22,7 @@ float test_precise_on_pragma(float a, float b, float c) {
   return tmp;
 }
 
-// CHECK: define{{.*}} float @_Z22test_precise_on_pragmafff(float noundef %a, float noundef %b, float noundef %c) [[PRECISE_ATTRS:#[0-9]+]]
+// CHECK: define{{.*}} float @_Z22test_precise_on_pragmafff(float noundef nofpclass(nan inf) %a, float noundef nofpclass(nan inf) %b, float noundef nofpclass(nan inf) %c) [[PRECISE_ATTRS:#[0-9]+]]
 // CHECK: fadd float {{%.+}}, {{%.+}}
 // CHECK: fadd fast float {{%.+}}, {{%.+}}
 
@@ -36,7 +36,7 @@ float test_reassociate_off_pragma(float a, float b, float c) {
   return tmp;
 }
 
-// CHECK: define{{.*}} float @_Z27test_reassociate_off_pragmafff(float noundef %a, float noundef %b, float noundef %c) [[NO_UNSAFE_ATTRS:#[0-9]+]]
+// CHECK: define{{.*}} float @_Z27test_reassociate_off_pragmafff(float noundef nofpclass(nan inf) %a, float noundef nofpclass(nan inf) %b, float noundef nofpclass(nan inf) %c) [[NO_UNSAFE_ATTRS:#[0-9]+]]
 // CHECK: fadd nnan ninf nsz arcp contract afn float {{%.+}}, {{%.+}}
 // CHECK: fadd fast float {{%.+}}, {{%.+}}
 
@@ -49,7 +49,7 @@ float test_contract_on_pragma(float a, float b, float c) {
   return tmp;
 }
 
-// CHECK: define{{.*}} float @_Z23test_contract_on_pragmafff(float noundef %a, float noundef %b, float noundef %c) [[NO_UNSAFE_ATTRS:#[0-9]+]]
+// CHECK: define{{.*}} float @_Z23test_contract_on_pragmafff(float noundef nofpclass(nan inf) %a, float noundef nofpclass(nan inf) %b, float noundef nofpclass(nan inf) %c) [[NO_UNSAFE_ATTRS:#[0-9]+]]
 // CHECK: fmul fast float {{%.+}}, {{%.+}}
 // CHECK: fadd reassoc nnan ninf nsz arcp afn float {{%.+}}, {{%.+}}
 

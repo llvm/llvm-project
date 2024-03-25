@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// rdar: //6734520
 
 void tooManyArgs(void) __attribute__((unavailable("a", "b"))); // expected-error {{'unavailable' attribute takes no more than 1 argument}}
 
@@ -8,7 +7,7 @@ double dfoo(double)  __attribute__((__unavailable__("NO LONGER"))); // expected-
 
 void bar(void) __attribute__((__unavailable__)); // expected-note {{explicitly marked unavailable}}
 
-int quux(void) __attribute__((__unavailable__(12))); // expected-error {{'__unavailable__' attribute requires a string}}
+int quux(void) __attribute__((__unavailable__(12))); // expected-error {{expected string literal as argument of '__unavailable__' attribute}}
 
 #define ACCEPTABLE	"Use something else"
 int quux2(void) __attribute__((__unavailable__(ACCEPTABLE)));
@@ -24,7 +23,6 @@ void test_foo(void) {
 
 char test2[__has_feature(attribute_unavailable_with_message) ? 1 : -1];
 
-// rdar://9623855
 void unavail(void)  __attribute__((__unavailable__));
 void unavail(void) {
   // No complains inside an unavailable function.
@@ -34,7 +32,6 @@ void unavail(void) {
   double (*fp4)(double) = dfoo;
 }
 
-// rdar://10201690
 enum foo {
     a = 1,
     b __attribute__((deprecated())) = 2, // expected-note {{'b' has been explicitly marked deprecated here}}

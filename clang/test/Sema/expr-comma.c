@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify -std=c89 -Wno-sizeof-array-decay
-// rdar://6095180
 
 struct s { char c[17]; };
 extern struct s foo(void);

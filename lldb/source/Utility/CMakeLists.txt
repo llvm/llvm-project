@@ -23,11 +23,13 @@ if (NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB )
     list(APPEND LLDB_SYSTEM_LIBS atomic)
 endif()
 
-add_lldb_library(lldbUtility
+add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
+  AddressableBits.cpp
   ArchSpec.cpp
   Args.cpp
   Baton.cpp
   Broadcaster.cpp
+  Checksum.cpp
   CompletionRequest.cpp
   Connection.cpp
   ConstString.cpp
@@ -39,6 +41,7 @@ add_lldb_library(lldbUtility
   Environment.cpp
   Event.cpp
   FileSpec.cpp
+  FileSpecList.cpp
   GDBRemote.cpp
   IOObject.cpp
   LLDBAssert.cpp
@@ -73,6 +76,7 @@ add_lldb_library(lldbUtility
   VASprintf.cpp
   VMRange.cpp
   XcodeSDK.cpp
+  ZipFile.cpp
 
   LINK_LIBS
     ${LLDB_SYSTEM_LIBS}

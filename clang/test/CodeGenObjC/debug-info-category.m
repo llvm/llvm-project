@@ -37,10 +37,10 @@
 // CHECK: ![[STRUCT:.*]] = !DICompositeType(tag: DW_TAG_structure_type, name: "Foo"
 
 // Verify "not a definition" by showing spFlags doesn't have DISPFlagDefinition.
-// DWARF5: !DISubprogram(name: "-[Foo integer]", scope: ![[STRUCT]], {{.*}} spFlags: DISPFlagLocalToUnit,
-// DWARF5: !DISubprogram(name: "-[Foo integer:]", scope: ![[STRUCT]], {{.*}} spFlags: DISPFlagLocalToUnit,
-// DWARF5: !DISubprogram(name: "+[Foo(Bar) zero:]", scope: ![[STRUCT]], {{.*}} spFlags: DISPFlagLocalToUnit,
-// DWARF5: !DISubprogram(name: "-[Foo(Bar) add:]", scope: ![[STRUCT]], {{.*}} spFlags: DISPFlagLocalToUnit,
+// DWARF5: !DISubprogram(name: "-[Foo integer]", scope: ![[STRUCT]], {{.*}} spFlags: DISPFlagLocalToUnit)
+// DWARF5: !DISubprogram(name: "-[Foo integer:]", scope: ![[STRUCT]], {{.*}} spFlags: DISPFlagLocalToUnit)
+// DWARF5: !DISubprogram(name: "+[Foo(Bar) zero:]", scope: ![[STRUCT]], {{.*}} spFlags: DISPFlagLocalToUnit)
+// DWARF5: !DISubprogram(name: "-[Foo(Bar) add:]", scope: ![[STRUCT]], {{.*}} spFlags: DISPFlagLocalToUnit)
 
 // DWARF4-NOT: !DISubprogram(name: "-[Foo integer]", scope: ![[STRUCT]], {{.*}} spFlags: DISPFlagLocalToUnit,
 // DWARF4-NOT: !DISubprogram(name: "-[Foo integer:]", scope: ![[STRUCT]], {{.*}} spFlags: DISPFlagLocalToUnit,

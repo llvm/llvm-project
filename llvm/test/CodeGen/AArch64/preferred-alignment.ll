@@ -3,11 +3,11 @@
 ; Function Attrs: nounwind
 define i32 @foo() #0 {
 entry:
-  %c = alloca i8, align 1
+  %c = alloca i8
 ; CHECK:	add	x0, sp, #12
-  %s = alloca i16, align 2
+  %s = alloca i16
 ; CHECK-NEXT:	add	x1, sp, #8
-  %i = alloca i32, align 4
+  %i = alloca i32
 ; CHECK-NEXT:	add	x2, sp, #4
   %call = call i32 @bar(ptr %c, ptr %s, ptr %i)
   %0 = load i8, ptr %c, align 1

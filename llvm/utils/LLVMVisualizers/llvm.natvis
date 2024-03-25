@@ -68,48 +68,54 @@ For later versions of Visual Studio, no setup is required.
     </Expand>
   </Type>
 
-  <!-- PointerIntPair. In addition to the regular view, it is possible to view just the pointer or just the int
-    The same code is duplicated from the regular viewer to improve the performance of the common case -->
-  <Type Name="llvm::PointerIntPair&lt;*&gt;">
-    <DisplayString IncludeView="ptr">{($T1)(Value &amp; $T5::PointerBitMask)}</DisplayString>
-    <DisplayString IncludeView="int">{($T3)((Value &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)}</DisplayString>
-    <DisplayString>{$T5::IntMask}: {($T1)(Value &amp; $T5::PointerBitMask)} [{($T3)((Value &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)}]</DisplayString>
+  <Type Name="llvm::PunnedPointer">
+    <DisplayString>{($T1)*(intptr_t *)Data}</DisplayString>
+  </Type>
+
+  <!-- PointerIntPair. In addition to the regular view, it is possible to view
+       just the pointer or just the int. The same code is duplicated from the
+       regular viewer to improve the performance of the common case. Note, we
+       need to specify PointerIntPair<PointerUnion<*>, *> differently because
+       we need to "look through" the PointerUnion to display it. Otherwise, we
+       get errors about ambiguous conversion from uintptr_t to PointerUnion.-->
+  <Type Name="llvm::PointerIntPair&lt;llvm::PointerUnion&lt;*&gt;, *&gt;">
+    <!-- $T1 is the parameter pack of PointerUnion, $T3 is IntBits,
+         $T4 is IntType, $T5 is PtrTraits, and $T6 is Info. -->
+    <DisplayString IncludeView="ptr">{($T1)(*(intptr_t *)Value.Data &amp; $T6::PointerBitMask)}</DisplayString>
+    <DisplayString IncludeView="int">{($T4)((*(intptr_t *)Value.Data &gt;&gt; $T6::IntShift) &amp; $T6::IntMask)}</DisplayString>
+    <DisplayString>{$T6::IntMask}: {($T1)(*(intptr_t *)Value.Data &amp; $T6::PointerBitMask)} [{($T4)((*(intptr_t *)Value.Data &gt;&gt; $T6::IntShift) &amp; $T6::IntMask)}]</DisplayString>
     <Expand>
-      <Item Name="[ptr]">($T1)(Value &amp; $T5::PointerBitMask)</Item>
-      <Item Name="[int]">($T3)((Value &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)</Item>
+      <Item Name="[ptr]">($T1)(*(intptr_t *)Value.Data &amp; $T6::PointerBitMask)</Item>
+      <Item Name="[int]">($T4)((*(intptr_t *)Value.Data &gt;&gt; $T6::IntShift) &amp; $T6::IntMask)</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::PointerIntPair&lt;*&gt;">
+    <DisplayString IncludeView="ptr">{($T1)(*(intptr_t *)Value.Data &amp; $T5::PointerBitMask)}</DisplayString>
+    <DisplayString IncludeView="int">{($T3)((*(intptr_t *)Value.Data &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)}</DisplayString>
+    <DisplayString>{$T5::IntMask}: {($T1)(*(intptr_t *)Value.Data &amp; $T5::PointerBitMask)} [{($T3)((*(intptr_t *)Value.Data &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)}]</DisplayString>
+    <Expand>
+      <Item Name="[ptr]">($T1)(*(intptr_t *)Value.Data &amp; $T5::PointerBitMask)</Item>
+      <Item Name="[int]">($T3)((*(intptr_t *)Value.Data &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)</Item>
     </Expand>
   </Type>
   <!-- PointerUnion types -->
   <Type Name="llvm::pointer_union_detail::PointerUnionMembers&lt;*&gt;">
-    <DisplayString Optional="true" Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 0">
-      {($T4)(Val.Value &amp; $T2::InfoTy::PointerBitMask)}
+    <DisplayString Optional="true" Condition="((*(intptr_t *)Val.Value.Data&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 0">
+      {($T4)(*(intptr_t *)Val.Value.Data &amp; $T2::InfoTy::PointerBitMask)}
     </DisplayString>
-    <DisplayString Optional="true" Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 1">
-      {($T5)(Val.Value &amp; $T2::InfoTy::PointerBitMask)}
+    <DisplayString Optional="true" Condition="((*(intptr_t *)Val.Value.Data&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 1">
+      {($T5)(*(intptr_t *)Val.Value.Data &amp; $T2::InfoTy::PointerBitMask)}
     </DisplayString>
-    <DisplayString Optional="true" Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 2">
-      {($T6)(Val.Value &amp; $T2::InfoTy::PointerBitMask)}
-    </DisplayString>
-    <DisplayString Optional="true" Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 3">
-      {($T7)(Val.Value &amp; $T2::InfoTy::PointerBitMask)}
-    </DisplayString>
-    <DisplayString>Unexpected index in PointerUnion: {(Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask}</DisplayString>
+    <DisplayString>Unexpected index in PointerUnion: {(*(intptr_t *)Val.Value.Data&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask}</DisplayString>
     <Expand>
-      <Item Name="[Holds]" Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 0">"$T4",s8b</Item>
-      <Item Name="[Ptr]" Optional="true"  Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 0">
-        ($T4)(Val.Value &amp; $T2::InfoTy::PointerBitMask)
+      <Item Name="[Holds]" Condition="((*(intptr_t *)Val.Value.Data&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 0">"$T4",s8b</Item>
+      <Item Name="[Ptr]" Optional="true"  Condition="((*(intptr_t *)Val.Value.Data&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 0">
+        ($T4)(*(intptr_t *)Val.Value.Data &amp; $T2::InfoTy::PointerBitMask)
       </Item>
-      <Item Name="[Holds]" Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 1">"$T5",s8b</Item>
-      <Item Name="[Ptr]" Optional="true"  Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 1">
-        ($T5)(Val.Value &amp; $T2::InfoTy::PointerBitMask)
-      </Item>
-      <Item Name="[Holds]" Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 2">"$T6",s8b</Item>
-      <Item Name="[Ptr]" Optional="true"  Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 2">
-        ($T6)(Val.Value &amp; $T2::InfoTy::PointerBitMask)
-      </Item>
-      <Item Name="[Holds]" Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 3">"$T6",s8b</Item>
-      <Item Name="[Ptr]" Optional="true"  Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 3">
-        ($T7)(Val.Value &amp; $T2::InfoTy::PointerBitMask)
+      <Item Name="[Holds]" Condition="((*(intptr_t *)Val.Value.Data&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 1">"$T5",s8b</Item>
+      <Item Name="[Ptr]" Optional="true"  Condition="((*(intptr_t *)Val.Value.Data&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 1">
+        ($T5)(*(intptr_t *)Val.Value.Data &amp; $T2::InfoTy::PointerBitMask)
       </Item>
     </Expand>
   </Type>
@@ -175,11 +181,11 @@ For later versions of Visual Studio, no setup is required.
   </Type>
 
   <Type Name="llvm::StringMapEntry&lt;*&gt;">
-    <DisplayString Condition="StrLen == 0">empty</DisplayString>
-    <DisplayString Condition="StrLen != 0">({this+1,s8}, {second})</DisplayString>
+    <DisplayString Condition="keyLength == 0">empty</DisplayString>
+    <DisplayString Condition="keyLength != 0">({this+1,s8}, {second})</DisplayString>
     <Expand>
       <Item Name="[key]">this+1,s</Item>
-      <Item Name="[value]" Condition="StrLen != 0">second</Item>
+      <Item Name="[value]" Condition="keyLength != 0">second</Item>
     </Expand>
   </Type>
 

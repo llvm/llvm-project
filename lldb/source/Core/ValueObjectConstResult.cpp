@@ -216,10 +216,13 @@ std::optional<uint64_t> ValueObjectConstResult::GetByteSize() {
 
 void ValueObjectConstResult::SetByteSize(size_t size) { m_byte_size = size; }
 
-size_t ValueObjectConstResult::CalculateNumChildren(uint32_t max) {
+llvm::Expected<uint32_t>
+ValueObjectConstResult::CalculateNumChildren(uint32_t max) {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   auto children_count = GetCompilerType().GetNumChildren(true, &exe_ctx);
-  return children_count <= max ? children_count : max;
+  if (!children_count)
+    return children_count;
+  return *children_count <= max ? *children_count : max;
 }
 
 ConstString ValueObjectConstResult::GetTypeName() {
@@ -287,14 +290,14 @@ ValueObjectConstResult::GetDynamicValue(lldb::DynamicValueType use_dynamic) {
       if (process && process->IsPossibleDynamicValue(*this))
         m_dynamic_value = new ValueObjectDynamicValue(*this, use_dynamic);
     }
-    if (m_dynamic_value)
+    if (m_dynamic_value && m_dynamic_value->GetError().Success())
       return m_dynamic_value->GetSP();
   }
   return ValueObjectSP();
 }
 
 lldb::ValueObjectSP
-ValueObjectConstResult::Cast(const CompilerType &compiler_type) {
+ValueObjectConstResult::DoCast(const CompilerType &compiler_type) {
   return m_impl.Cast(compiler_type);
 }
 

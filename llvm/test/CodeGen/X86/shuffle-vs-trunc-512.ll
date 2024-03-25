@@ -34,7 +34,7 @@ define void @shuffle_v64i8_to_v32i8(ptr %L, ptr %S) nounwind {
 ; AVX512VL-FAST-ALL-NEXT:    vmovdqa 32(%rdi), %ymm1
 ; AVX512VL-FAST-ALL-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[u,u,u,u,u,u,u,u,0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u,16,18,20,22,24,26,28,30]
 ; AVX512VL-FAST-ALL-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u,16,18,20,22,24,26,28,30,u,u,u,u,u,u,u,u]
-; AVX512VL-FAST-ALL-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2,5,7]
+; AVX512VL-FAST-ALL-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [0,2,5,7]
 ; AVX512VL-FAST-ALL-NEXT:    vpermi2q %ymm1, %ymm0, %ymm2
 ; AVX512VL-FAST-ALL-NEXT:    vmovdqa %ymm2, (%rsi)
 ; AVX512VL-FAST-ALL-NEXT:    vzeroupper
@@ -382,7 +382,7 @@ define <4 x double> @PR34175(ptr %p) {
 ;
 ; AVX512BW-LABEL: PR34175:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm0 = <0,8,32,40,u,u,u,u,u,u,u,u,u,u,u,u>
+; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [0,8,32,40,0,8,32,40,0,8,32,40,0,8,32,40]
 ; AVX512BW-NEXT:    vmovdqu (%rdi), %ymm1
 ; AVX512BW-NEXT:    vmovdqu 32(%rdi), %ymm2
 ; AVX512BW-NEXT:    vpermt2w %zmm2, %zmm0, %zmm1
@@ -392,7 +392,7 @@ define <4 x double> @PR34175(ptr %p) {
 ;
 ; AVX512BWVL-LABEL: PR34175:
 ; AVX512BWVL:       # %bb.0:
-; AVX512BWVL-NEXT:    vmovdqa {{.*#+}} xmm0 = <0,8,16,24,u,u,u,u>
+; AVX512BWVL-NEXT:    vmovq {{.*#+}} xmm0 = [0,8,16,24,0,0,0,0]
 ; AVX512BWVL-NEXT:    vmovdqu (%rdi), %ymm1
 ; AVX512BWVL-NEXT:    vpermt2w 32(%rdi), %ymm0, %ymm1
 ; AVX512BWVL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
@@ -401,7 +401,7 @@ define <4 x double> @PR34175(ptr %p) {
 ;
 ; AVX512VBMI-LABEL: PR34175:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} ymm0 = <0,8,32,40,u,u,u,u,u,u,u,u,u,u,u,u>
+; AVX512VBMI-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [0,8,32,40,0,8,32,40,0,8,32,40,0,8,32,40]
 ; AVX512VBMI-NEXT:    vmovdqu (%rdi), %ymm1
 ; AVX512VBMI-NEXT:    vmovdqu 32(%rdi), %ymm2
 ; AVX512VBMI-NEXT:    vpermt2w %zmm2, %zmm0, %zmm1
@@ -411,7 +411,7 @@ define <4 x double> @PR34175(ptr %p) {
 ;
 ; AVX512VBMIVL-LABEL: PR34175:
 ; AVX512VBMIVL:       # %bb.0:
-; AVX512VBMIVL-NEXT:    vmovdqa {{.*#+}} xmm0 = <0,8,16,24,u,u,u,u>
+; AVX512VBMIVL-NEXT:    vmovq {{.*#+}} xmm0 = [0,8,16,24,0,0,0,0]
 ; AVX512VBMIVL-NEXT:    vmovdqu (%rdi), %ymm1
 ; AVX512VBMIVL-NEXT:    vpermt2w 32(%rdi), %ymm0, %ymm1
 ; AVX512VBMIVL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero

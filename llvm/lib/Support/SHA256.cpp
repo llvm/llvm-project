@@ -250,7 +250,7 @@ void SHA256::final(std::array<uint32_t, HASH_LENGTH / 4> &HashResult) {
   } else {
     // Swap byte order back
     for (int i = 0; i < 8; i++) {
-      HashResult[i] = sys::getSwappedBytes(InternalState.State[i]);
+      HashResult[i] = llvm::byteswap(InternalState.State[i]);
     }
   }
 }

@@ -24,23 +24,23 @@ def OpUsingAllOfThose : Op<Test_Dialect, "OpUsingAllOfThose"> {
 }
 
 // CHECK: static ::mlir::LogicalResult {{__mlir_ods_local_type_constraint.*}}(
-// CHECK:   if (!((type.isa<TopLevelTypeInterface>()))) {
+// CHECK:   if (!((::llvm::isa<TopLevelTypeInterface>(type)))) {
 // CHECK-NEXT:    return op->emitOpError(valueKind) << " #" << valueIndex
 // CHECK-NEXT:        << " must be TopLevelTypeInterface instance, but got " << type;
 
 // CHECK: static ::mlir::LogicalResult {{__mlir_ods_local_type_constraint.*}}(
-// CHECK:   if (!((type.isa<test::TypeInterfaceInNamespace>()))) {
+// CHECK:   if (!((::llvm::isa<test::TypeInterfaceInNamespace>(type)))) {
 // CHECK-NEXT:    return op->emitOpError(valueKind) << " #" << valueIndex
 // CHECK-NEXT:        << " must be TypeInterfaceInNamespace instance, but got " << type;
 
 // CHECK: static ::mlir::LogicalResult {{__mlir_ods_local_attr_constraint.*}}(
-// CHECK:   if (attr && !((attr.isa<TopLevelAttrInterface>()))) {
-// CHECK-NEXT:    return op->emitOpError("attribute '") << attrName
+// CHECK:   if (attr && !((::llvm::isa<TopLevelAttrInterface>(attr))))
+// CHECK-NEXT:     return emitError() << "attribute '" << attrName
 // CHECK-NEXT:        << "' failed to satisfy constraint: TopLevelAttrInterface instance";
 
 // CHECK: static ::mlir::LogicalResult {{__mlir_ods_local_attr_constraint.*}}(
-// CHECK:   if (attr && !((attr.isa<test::AttrInterfaceInNamespace>()))) {
-// CHECK-NEXT:    return op->emitOpError("attribute '") << attrName
+// CHECK:   if (attr && !((::llvm::isa<test::AttrInterfaceInNamespace>(attr))))
+// CHECK-NEXT:    return emitError() << "attribute '" << attrName
 // CHECK-NEXT:        << "' failed to satisfy constraint: AttrInterfaceInNamespace instance";
 
 // CHECK: TopLevelAttrInterface OpUsingAllOfThose::getAttr1()

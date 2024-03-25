@@ -8,8 +8,8 @@
 
 #include "src/stdlib/strtoull.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include "StrtolTest.h"
 
-STRTOL_TEST(Strtoull, __llvm_libc::strtoull)
+STRTOL_TEST(Strtoull, LIBC_NAMESPACE::strtoull)

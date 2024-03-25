@@ -37,9 +37,9 @@
 
 ; % clang -c vtable_use.cc vtable.cc -emit-llvm -S -fno-exceptions -arch x86_64 -mmacos-version-min=11 -O1
 
-; ...and then manually ading `, !type !8, type !9` based on `clang -S -emit-llvm -flto=thin` output,
+; ...and then manually adding `, !type !8, type !9` based on `clang -S -emit-llvm -flto=thin` output,
 ; because splitAndWriteThinLTOBitcode() in ThinLTOBitcodeWriter.cpp only splits bitcode
-; if type annotations are present. While at it, also removed unneccessary metadata.
+; if type annotations are present. While at it, also removed unnecessary metadata.
 ; (NB: The first comment creates vtable.ll while the latter generates vtable.s! vtable.s
 ; contains a few things opt complains about, so we can't use the output of that directly.)
 
@@ -57,14 +57,14 @@ target triple = "x86_64-apple-macosx11.0.0"
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind ssp willreturn memory(argmem: write) uwtable
 define void @_ZN1SC2Ev(ptr nocapture noundef nonnull writeonly align 8 dereferenceable(8) %this) unnamed_addr align 2 {
 entry:
-  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1S, i64 0, inrange i32 0, i64 2), ptr %this, align 8
+  store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV1S, i64 0, i32 0, i64 2), ptr %this, align 8
   ret void
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind ssp willreturn memory(argmem: write) uwtable
 define void @_ZN1SC1Ev(ptr nocapture noundef nonnull writeonly align 8 dereferenceable(8) %this) unnamed_addr align 2 {
 entry:
-  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1S, i64 0, inrange i32 0, i64 2), ptr %this, align 8
+  store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV1S, i64 0, i32 0, i64 2), ptr %this, align 8
   ret void
 }
 

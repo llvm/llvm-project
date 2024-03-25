@@ -242,6 +242,7 @@ constexpr int f(enable_shared_from_this<int>);
 
 // - every constructor involved in initializing non-static data members and base
 //   class sub-objects shall be a constexpr constructor.
+// This will no longer be the case once we support P2448R2
 struct ConstexprBaseMemberCtors : Literal {
   Literal l;
 
@@ -271,7 +272,7 @@ struct X {
 
 union XU1 { int a; constexpr XU1() = default; };
 #ifndef CXX2A
-// expected-error@-2{{not constexpr}}
+// expected-error@-2{{cannot be marked constexpr}}
 #endif
 union XU2 { int a = 1; constexpr XU2() = default; };
 
@@ -281,7 +282,7 @@ struct XU3 {
   };
   constexpr XU3() = default;
 #ifndef CXX2A
-  // expected-error@-2{{not constexpr}}
+  // expected-error@-2{{cannot be marked constexpr}}
 #endif
 };
 struct XU4 {
@@ -332,7 +333,7 @@ namespace CtorLookup {
     constexpr B(B&);
   };
   constexpr B::B(const B&) = default;
-  constexpr B::B(B&) = default; // expected-error {{not constexpr}}
+  constexpr B::B(B&) = default; // expected-error {{cannot be marked constexpr}}
 
   struct C {
     A a;
@@ -341,7 +342,7 @@ namespace CtorLookup {
     constexpr C(C&);
   };
   constexpr C::C(const C&) = default;
-  constexpr C::C(C&) = default; // expected-error {{not constexpr}}
+  constexpr C::C(C&) = default; // expected-error {{cannot be marked constexpr}}
 }
 
 namespace PR14503 {
@@ -359,7 +360,7 @@ namespace PR14503 {
   // The constructor is still 'constexpr' here, but the result is not intended
   // to be a constant expression. The standard is not clear on how this should
   // work.
-  constexpr V<int> v; // expected-error {{constant expression}} expected-note {{subobject of type 'int' is not initialized}}
+  constexpr V<int> v; // expected-error {{constant expression}} expected-note {{subobject 'y' is not initialized}}
 
   constexpr int k = V<int>().x; // FIXME: ok?
 }

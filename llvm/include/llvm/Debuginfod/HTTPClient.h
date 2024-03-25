@@ -15,6 +15,8 @@
 #ifndef LLVM_DEBUGINFOD_HTTPCLIENT_H
 #define LLVM_DEBUGINFOD_HTTPCLIENT_H
 
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 

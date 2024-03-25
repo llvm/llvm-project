@@ -6,6 +6,8 @@
 
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple i686-windows-gnu    -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O0 -o - %s -w | FileCheck -allow-deprecated-dag-overlap --check-prefix=GNU --check-prefix=G32 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-windows-gnu  -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O0 -o - %s -w | FileCheck -allow-deprecated-dag-overlap --check-prefix=GNU %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-scei-ps4  -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O0 -o - %s -w | FileCheck -allow-deprecated-dag-overlap --check-prefix=PS %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-sie-ps5  -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O0 -o - %s -w | FileCheck -allow-deprecated-dag-overlap --check-prefix=PS %s
 
 // Helper structs to make templates more expressive.
 struct ImplicitInst_Exported {};
@@ -980,18 +982,21 @@ struct __declspec(dllexport) DerivedFromTemplate : public ClassTemplate<int> {};
 USEMEMFUNC(DerivedFromTemplate, func)
 // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?func@?$ClassTemplate@H@@QAEXXZ"
 // G32-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN13ClassTemplateIiE4funcEv
+// PS-DAG:  define weak_odr dllexport void @_ZN13ClassTemplateIiE4funcEv
 
 // ExportedTemplate is explicitly exported.
 struct __declspec(dllexport) DerivedFromExportedTemplate : public ExportedClassTemplate<int> {};
 USEMEMFUNC(DerivedFromExportedTemplate, func)
 // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?func@?$ExportedClassTemplate@H@@QAEXXZ"
 // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN21ExportedClassTemplateIiE4funcEv
+// PS-DAG:  define weak_odr dllexport void @_ZN21ExportedClassTemplateIiE4funcEv
 
 // ImportedClassTemplate is explicitly imported.
 struct __declspec(dllexport) DerivedFromImportedTemplate : public ImportedClassTemplate<int> {};
 USEMEMFUNC(DerivedFromImportedTemplate, func)
 // M32-DAG: {{declare|define available_externally}} dllimport x86_thiscallcc void @"?func@?$ImportedClassTemplate@H@@QAEXXZ"
 // G32-DAG: declare dllimport x86_thiscallcc void @_ZN21ImportedClassTemplateIiE4funcEv
+// PS-DAG:  declare dllimport void @_ZN21ImportedClassTemplateIiE4funcEv
 
 // Base class already implicitly instantiated without dll attribute.
 struct DerivedFromTemplateD : public ClassTemplate<double> {};
@@ -999,6 +1004,7 @@ struct __declspec(dllexport) DerivedFromTemplateD2 : public ClassTemplate<double
 USEMEMFUNC(DerivedFromTemplateD2, func)
 // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?func@?$ClassTemplate@N@@QAEXXZ"
 // G32-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN13ClassTemplateIdE4funcEv
+// PS-DAG:  define weak_odr dllexport void @_ZN13ClassTemplateIdE4funcEv
 
 // MS: Base class already instantiated with different dll attribute.
 struct __declspec(dllimport) DerivedFromTemplateB : public ClassTemplate<bool> {};
@@ -1006,42 +1012,49 @@ struct __declspec(dllexport) DerivedFromTemplateB2 : public ClassTemplate<bool> 
 USEMEMFUNC(DerivedFromTemplateB2, func)
 // M32-DAG: {{declare|define available_externally}} dllimport x86_thiscallcc void @"?func@?$ClassTemplate@_N@@QAEXXZ"
 // G32-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN13ClassTemplateIbE4funcEv
+// PS-DAG:  declare dllimport void @_ZN13ClassTemplateIbE4funcEv
 
 // Base class already specialized without dll attribute.
 struct __declspec(dllexport) DerivedFromExplicitlySpecializedTemplate : public ExplicitlySpecializedTemplate<int> {};
 USEMEMFUNC(DerivedFromExplicitlySpecializedTemplate, func)
 // M32-DAG: define dso_local x86_thiscallcc void @"?func@?$ExplicitlySpecializedTemplate@H@@QAEXXZ"
 // G32-DAG: define dso_local x86_thiscallcc void @_ZN29ExplicitlySpecializedTemplateIiE4funcEv
+// PS-DAG:  define dso_local void @_ZN29ExplicitlySpecializedTemplateIiE4funcEv
 
 // Base class alredy specialized with export attribute.
 struct __declspec(dllexport) DerivedFromExplicitlyExportSpecializedTemplate : public ExplicitlyExportSpecializedTemplate<int> {};
 USEMEMFUNC(DerivedFromExplicitlyExportSpecializedTemplate, func)
 // M32-DAG: define dso_local dllexport x86_thiscallcc void @"?func@?$ExplicitlyExportSpecializedTemplate@H@@QAEXXZ"
 // G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN35ExplicitlyExportSpecializedTemplateIiE4funcEv
+// PS-DAG:  define dso_local dllexport void @_ZN35ExplicitlyExportSpecializedTemplateIiE4funcEv
 
 // Base class already specialized with import attribute.
 struct __declspec(dllexport) DerivedFromExplicitlyImportSpecializedTemplate : public ExplicitlyImportSpecializedTemplate<int> {};
 USEMEMFUNC(DerivedFromExplicitlyImportSpecializedTemplate, func)
 // M32-DAG: declare dllimport x86_thiscallcc void @"?func@?$ExplicitlyImportSpecializedTemplate@H@@QAEXXZ"
 // G32-DAG: declare dllimport x86_thiscallcc void @_ZN35ExplicitlyImportSpecializedTemplateIiE4funcEv
+// PS-DAG:  declare dllimport void @_ZN35ExplicitlyImportSpecializedTemplateIiE4funcEv
 
 // Base class already instantiated without dll attribute.
 struct __declspec(dllexport) DerivedFromExplicitlyInstantiatedTemplate : public ExplicitlyInstantiatedTemplate<int> {};
 USEMEMFUNC(DerivedFromExplicitlyInstantiatedTemplate, func)
 // M32-DAG: define weak_odr dso_local x86_thiscallcc void @"?func@?$ExplicitlyInstantiatedTemplate@H@@QAEXXZ"
 // G32-DAG: define weak_odr dso_local x86_thiscallcc void @_ZN30ExplicitlyInstantiatedTemplateIiE4funcEv
+// PS-DAG:  define weak_odr void @_ZN30ExplicitlyInstantiatedTemplateIiE4funcEv
 
 // Base class already instantiated with export attribute.
 struct __declspec(dllexport) DerivedFromExplicitlyExportInstantiatedTemplate : public ExplicitlyExportInstantiatedTemplate<int> {};
 USEMEMFUNC(DerivedFromExplicitlyExportInstantiatedTemplate, func)
 // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?func@?$ExplicitlyExportInstantiatedTemplate@H@@QAEXXZ"
 // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN36ExplicitlyExportInstantiatedTemplateIiE4funcEv
+// PS-DAG:  define weak_odr dllexport void @_ZN36ExplicitlyExportInstantiatedTemplateIiE4funcEv
 
 // Base class already instantiated with import attribute.
 struct __declspec(dllexport) DerivedFromExplicitlyImportInstantiatedTemplate : public ExplicitlyImportInstantiatedTemplate<int> {};
 USEMEMFUNC(DerivedFromExplicitlyImportInstantiatedTemplate, func)
 // M32-DAG: declare dllimport x86_thiscallcc void @"?func@?$ExplicitlyImportInstantiatedTemplate@H@@QAEXXZ"
 // G32-DAG: declare dllimport x86_thiscallcc void @_ZN36ExplicitlyImportInstantiatedTemplateIiE4funcEv
+// PS-DAG:  declare dllimport void @_ZN36ExplicitlyImportInstantiatedTemplateIiE4funcEv
 
 // MS: A dll attribute propagates through multiple levels of instantiation.
 template <typename T> struct TopClass { void func() {} };
@@ -1050,6 +1063,7 @@ struct __declspec(dllexport) BottomClass : public MiddleClass<int> { };
 USEMEMFUNC(BottomClass, func)
 // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?func@?$TopClass@H@@QAEXXZ"
 // G32-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN8TopClassIiE4funcEv
+// PS-DAG:  define weak_odr dllexport void @_ZN8TopClassIiE4funcEv
 
 template <typename T> struct ExplicitInstantiationDeclTemplateBase { void func() {} };
 extern template struct ExplicitInstantiationDeclTemplateBase<int>;
@@ -1057,6 +1071,7 @@ struct __declspec(dllexport) DerivedFromExplicitInstantiationDeclTemplateBase : 
 template struct ExplicitInstantiationDeclTemplateBase<int>;
 // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?func@?$ExplicitInstantiationDeclTemplateBase@H@@QAEXXZ"
 // G32-DAG: define weak_odr dso_local x86_thiscallcc void @_ZN37ExplicitInstantiationDeclTemplateBaseIiE4funcEv
+// PS-DAG:  define weak_odr dllexport void @_ZN37ExplicitInstantiationDeclTemplateBaseIiE4funcEv
 
 // PR26076
 struct LayerSelectionBound;

@@ -10,7 +10,6 @@
 #include "ObjCLanguageRuntime.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "lldb/Core/MappedHash.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ValueObject.h"
@@ -140,17 +139,10 @@ ObjCLanguageRuntime::LookupInCompleteClassCache(ConstString &name) {
     if (!module_sp)
       return TypeSP();
 
-    const bool exact_match = true;
-    const uint32_t max_matches = UINT32_MAX;
-    TypeList types;
-
-    llvm::DenseSet<SymbolFile *> searched_symbol_files;
-    module_sp->FindTypes(name, exact_match, max_matches, searched_symbol_files,
-                         types);
-
-    for (uint32_t i = 0; i < types.GetSize(); ++i) {
-      TypeSP type_sp(types.GetTypeAtIndex(i));
-
+    TypeQuery query(name.GetStringRef(), TypeQueryOptions::e_exact_match);
+    TypeResults results;
+    module_sp->FindTypes(query, results);
+    for (const TypeSP &type_sp : results.GetTypeMap().Types()) {
       if (TypeSystemClang::IsObjCObjectOrInterfaceType(
               type_sp->GetForwardCompilerType())) {
         if (TypePayloadClang(type_sp->GetPayload()).IsCompleteObjCClass()) {
@@ -233,6 +225,22 @@ ObjCLanguageRuntime::GetDescriptorIteratorPair(bool update_if_needed) {
   return std::pair<ObjCLanguageRuntime::ISAToDescriptorIterator,
                    ObjCLanguageRuntime::ISAToDescriptorIterator>(
       m_isa_to_descriptor.begin(), m_isa_to_descriptor.end());
+}
+
+void ObjCLanguageRuntime::ReadObjCLibraryIfNeeded(
+    const ModuleList &module_list) {
+  if (!HasReadObjCLibrary()) {
+    std::lock_guard<std::recursive_mutex> guard(module_list.GetMutex());
+
+    size_t num_modules = module_list.GetSize();
+    for (size_t i = 0; i < num_modules; i++) {
+      auto mod = module_list.GetModuleAtIndex(i);
+      if (IsModuleObjCLibrary(mod)) {
+        ReadObjCLibrary(mod);
+        break;
+      }
+    }
+  }
 }
 
 ObjCLanguageRuntime::ObjCISA

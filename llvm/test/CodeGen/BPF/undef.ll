@@ -40,7 +40,7 @@ define i32 @ebpf_filter(ptr nocapture readnone %ebpf_packet) #0 section "socket1
 ; CHECK: r1 = routing
 ; CHECK: call bpf_map_lookup_elem
 ; CHECK: exit
-  %key = alloca %struct.routing_key_2, align 1
+  %key = alloca %struct.routing_key_2, align 8
   store i8 5, ptr %key, align 1
   %1 = getelementptr inbounds %struct.routing_key_2, ptr %key, i64 0, i32 0, i64 1
   store i8 6, ptr %1, align 1

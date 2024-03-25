@@ -97,3 +97,12 @@ spirv.module Logical GLSL450 {
   // CHECK: spirv.GlobalVariable @var1 : !spirv.ptr<!spirv.struct<(i32 [0])>, PhysicalStorageBuffer>
   spirv.GlobalVariable @var1 : !spirv.ptr<!spirv.struct<(i32)>, PhysicalStorageBuffer>
 }
+
+// -----
+
+spirv.module Physical64 GLSL450 {
+  // expected-error @+2 {{failed to decorate (unsuported pointee type: '!spirv.struct<rec, (!spirv.ptr<!spirv.struct<rec>, StorageBuffer>)>')}}
+  // expected-error @+1 {{failed to legalize operation 'spirv.GlobalVariable'}}
+  spirv.GlobalVariable @recursive:
+    !spirv.ptr<!spirv.struct<rec, (!spirv.ptr<!spirv.struct<rec>, StorageBuffer>)>, StorageBuffer>
+}

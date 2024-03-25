@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 %s -std=c++20 -fsyntax-only -verify
 // RUN: %clang_cc1 %s -std=c++20 -fsyntax-only -verify -fno-recovery-ast
+// RUN: %clang_cc1 %s -std=c++20 -fsyntax-only -verify -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -std=c++20 -fsyntax-only -verify -fno-recovery-ast -fexperimental-new-constant-interpreter
+
 
 namespace NoCrash {
 struct ForwardDecl; // expected-note {{forward declaration of}}

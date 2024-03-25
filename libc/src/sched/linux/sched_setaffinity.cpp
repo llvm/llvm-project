@@ -10,22 +10,22 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/errno/libc_errno.h"
 
-#include <errno.h>
 #include <sched.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, sched_setaffinity,
                    (pid_t tid, size_t cpuset_size, const cpu_set_t *mask)) {
-  long ret =
-      __llvm_libc::syscall_impl(SYS_sched_setaffinity, tid, cpuset_size, mask);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_sched_setaffinity, tid,
+                                              cpuset_size, mask);
   if (ret < 0) {
-    errno = -ret;
+    libc_errno = -ret;
     return -1;
   }
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

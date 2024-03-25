@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin11 -emit-llvm  -fobjc-arc -o - %s | FileCheck %s
-// rdar://9744349
 
 typedef const struct __CFString * CFStringRef;
 
@@ -24,7 +23,6 @@ typedef const struct __CFString * CFStringRef;
 - (void) setP : (CFStringRef)arg {}
 @end
 
-// rdar://9544832
 CFStringRef SomeOtherFunc(void) __attribute__((cf_returns_retained));
 id MMM(void)
 {

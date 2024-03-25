@@ -64,7 +64,7 @@ inline bool checkForCallocOverflow(uptr Size, uptr N, uptr *Product) {
 // Returns true if the size passed to pvalloc overflows when rounded to the next
 // multiple of PageSize.
 inline bool checkForPvallocOverflow(uptr Size, uptr PageSize) {
-  return roundUpTo(Size, PageSize) < Size;
+  return roundUp(Size, PageSize) < Size;
 }
 
 } // namespace scudo

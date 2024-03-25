@@ -5,19 +5,27 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class TestPlatformProcessConnect(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfRemote
-    @expectedFailureAll(hostoslist=["windows"], triple='.*-android')
-    @skipIfDarwin # lldb-server not found correctly
-    @expectedFailureAll(oslist=["windows"]) # process modules not loaded
+    @expectedFailureAll(hostoslist=["windows"], triple=".*-android")
+    @skipIfDarwin  # lldb-server not found correctly
+    @expectedFailureAll(oslist=["windows"])  # process modules not loaded
+    # lldb-server platform times out waiting for the gdbserver port number to be
+    # written to the pipe, yet it seems the gdbserver already has written it.
+    @expectedFailureAll(
+        archs=["aarch64"],
+        oslist=["freebsd"],
+        bugnumber="https://github.com/llvm/llvm-project/issues/84327",
+    )
     @add_test_categories(["lldb-server"])
     def test_platform_process_connect(self):
         self.build()
 
         hostname = socket.getaddrinfo("localhost", 0, proto=socket.IPPROTO_TCP)[0][4][0]
-        listen_url = "[%s]:0"%hostname
+        listen_url = "[%s]:0" % hostname
 
         port_file = self.getBuildArtifact("port")
         commandline_args = [
@@ -28,10 +36,9 @@ class TestPlatformProcessConnect(TestBase):
             port_file,
             "--",
             self.getBuildArtifact("a.out"),
-            "foo"]
-        self.spawnSubprocess(
-            lldbgdbserverutils.get_lldb_server_exe(),
-            commandline_args)
+            "foo",
+        ]
+        self.spawnSubprocess(lldbgdbserverutils.get_lldb_server_exe(), commandline_args)
 
         socket_id = lldbutil.wait_for_file_on_target(self, port_file)
 

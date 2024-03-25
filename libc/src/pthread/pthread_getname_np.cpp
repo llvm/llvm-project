@@ -16,17 +16,17 @@
 #include <pthread.h>
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
-static_assert(sizeof(pthread_t) == sizeof(__llvm_libc::Thread),
+static_assert(sizeof(pthread_t) == sizeof(LIBC_NAMESPACE::Thread),
               "Mismatch between pthread_t and internal Thread.");
 
 LLVM_LIBC_FUNCTION(int, pthread_getname_np,
                    (pthread_t th, char *buf, size_t len)) {
-  auto *thread = reinterpret_cast<__llvm_libc::Thread *>(&th);
+  auto *thread = reinterpret_cast<LIBC_NAMESPACE::Thread *>(&th);
   cpp::span<char> name_buf(buf, len);
   cpp::StringStream name_stream(name_buf);
   return thread->get_name(name_stream);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

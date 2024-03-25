@@ -189,8 +189,7 @@ static inline bool CheckMachineFunction(const MachineFunction &MF,
   SourceMgr SM;
   SM.AddNewSourceBuffer(MemoryBuffer::getMemBuffer(CheckFileText, "CheckFile"),
                         SMLoc());
-  Regex PrefixRE = FC.buildCheckPrefixRegex();
-  if (FC.readCheckFile(SM, CheckFileText, PrefixRE))
+  if (FC.readCheckFile(SM, CheckFileText))
     return false;
 
   auto OutBuffer = OutputBuf->getBuffer();

@@ -452,10 +452,10 @@ define <vscale x 2 x double> @dupq_f64(<vscale x 2 x double> %a) {
 define <vscale x 16 x i8> @dupq_lane_i8(<vscale x 16 x i8> %a, i64 %idx) {
 ; CHECK-LABEL: dupq_lane_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x0
 ; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    and z1.d, z1.d, #0x1
+; CHECK-NEXT:    add x8, x0, x0
 ; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    and z1.d, z1.d, #0x1
 ; CHECK-NEXT:    add z1.d, z1.d, z2.d
 ; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
 ; CHECK-NEXT:    ret
@@ -467,10 +467,10 @@ define <vscale x 16 x i8> @dupq_lane_i8(<vscale x 16 x i8> %a, i64 %idx) {
 define <vscale x 8 x i16> @dupq_lane_i16(<vscale x 8 x i16> %a, i64 %idx) {
 ; CHECK-LABEL: dupq_lane_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x0
 ; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    and z1.d, z1.d, #0x1
+; CHECK-NEXT:    add x8, x0, x0
 ; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    and z1.d, z1.d, #0x1
 ; CHECK-NEXT:    add z1.d, z1.d, z2.d
 ; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
 ; CHECK-NEXT:    ret
@@ -482,10 +482,10 @@ define <vscale x 8 x i16> @dupq_lane_i16(<vscale x 8 x i16> %a, i64 %idx) {
 define <vscale x 4 x i32> @dupq_lane_i32(<vscale x 4 x i32> %a, i64 %idx) {
 ; CHECK-LABEL: dupq_lane_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x0
 ; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    and z1.d, z1.d, #0x1
+; CHECK-NEXT:    add x8, x0, x0
 ; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    and z1.d, z1.d, #0x1
 ; CHECK-NEXT:    add z1.d, z1.d, z2.d
 ; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
 ; CHECK-NEXT:    ret
@@ -497,10 +497,10 @@ define <vscale x 4 x i32> @dupq_lane_i32(<vscale x 4 x i32> %a, i64 %idx) {
 define <vscale x 2 x i64> @dupq_lane_i64(<vscale x 2 x i64> %a, i64 %idx) {
 ; CHECK-LABEL: dupq_lane_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x0
 ; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    and z1.d, z1.d, #0x1
+; CHECK-NEXT:    add x8, x0, x0
 ; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    and z1.d, z1.d, #0x1
 ; CHECK-NEXT:    add z1.d, z1.d, z2.d
 ; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
 ; CHECK-NEXT:    ret
@@ -512,10 +512,10 @@ define <vscale x 2 x i64> @dupq_lane_i64(<vscale x 2 x i64> %a, i64 %idx) {
 define <vscale x 8 x half> @dupq_lane_f16(<vscale x 8 x half> %a, i64 %idx) {
 ; CHECK-LABEL: dupq_lane_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x0
 ; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    and z1.d, z1.d, #0x1
+; CHECK-NEXT:    add x8, x0, x0
 ; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    and z1.d, z1.d, #0x1
 ; CHECK-NEXT:    add z1.d, z1.d, z2.d
 ; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
 ; CHECK-NEXT:    ret
@@ -527,10 +527,10 @@ define <vscale x 8 x half> @dupq_lane_f16(<vscale x 8 x half> %a, i64 %idx) {
 define <vscale x 8 x bfloat> @dupq_lane_bf16(<vscale x 8 x bfloat> %a, i64 %idx) #0 {
 ; CHECK-LABEL: dupq_lane_bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x0
 ; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    and z1.d, z1.d, #0x1
+; CHECK-NEXT:    add x8, x0, x0
 ; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    and z1.d, z1.d, #0x1
 ; CHECK-NEXT:    add z1.d, z1.d, z2.d
 ; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
 ; CHECK-NEXT:    ret
@@ -542,10 +542,10 @@ define <vscale x 8 x bfloat> @dupq_lane_bf16(<vscale x 8 x bfloat> %a, i64 %idx)
 define <vscale x 4 x float> @dupq_lane_f32(<vscale x 4 x float> %a, i64 %idx) {
 ; CHECK-LABEL: dupq_lane_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x0
 ; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    and z1.d, z1.d, #0x1
+; CHECK-NEXT:    add x8, x0, x0
 ; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    and z1.d, z1.d, #0x1
 ; CHECK-NEXT:    add z1.d, z1.d, z2.d
 ; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
 ; CHECK-NEXT:    ret
@@ -557,10 +557,10 @@ define <vscale x 4 x float> @dupq_lane_f32(<vscale x 4 x float> %a, i64 %idx) {
 define <vscale x 2 x double> @dupq_lane_f64(<vscale x 2 x double> %a, i64 %idx) {
 ; CHECK-LABEL: dupq_lane_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x0
 ; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    and z1.d, z1.d, #0x1
+; CHECK-NEXT:    add x8, x0, x0
 ; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    and z1.d, z1.d, #0x1
 ; CHECK-NEXT:    add z1.d, z1.d, z2.d
 ; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
 ; CHECK-NEXT:    ret

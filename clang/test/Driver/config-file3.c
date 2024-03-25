@@ -224,5 +224,5 @@
 
 //--- Tilde expansion in user configuration file directory
 //
-// RUN: HOME=%S/Inputs/config %clang --config-user-dir=~ -v 2>&1 | FileCheck %s -check-prefix CHECK-TILDE
+// RUN: HOME=%S/Inputs/config %clang -### --config-user-dir=~ -v 2>&1 | FileCheck %s --check-prefix=CHECK-TILDE
 // CHECK-TILDE: User configuration file directory: {{.*}}/Inputs/config

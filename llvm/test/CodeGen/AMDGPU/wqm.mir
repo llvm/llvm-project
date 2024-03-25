@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass si-wqm -o -  %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass si-wqm -o -  %s | FileCheck %s
 
 --- |
   define amdgpu_ps void @test_strict_wwm_scc() {

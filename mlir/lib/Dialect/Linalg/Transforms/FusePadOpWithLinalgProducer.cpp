@@ -62,10 +62,7 @@ struct FusePadOp : OpRewritePattern<tensor::PadOp> {
           padOp, "only supported for ops with all parallel iterator types");
     }
     ReifiedRankedShapedTypeDims resultShape;
-    ReifyRankedShapedTypeOpInterface reifyShapedTypeInterface =
-        dyn_cast<ReifyRankedShapedTypeOpInterface>(padOp.getOperation());
-    if (failed(reifyShapedTypeInterface.reifyResultShapes(rewriter,
-                                                          resultShape)) ||
+    if (failed(reifyResultShapes(rewriter, padOp, resultShape)) ||
         resultShape.size() != 1) {
       return rewriter.notifyMatchFailure(
           padOp, "failed to get shape of pad op result");
@@ -75,7 +72,7 @@ struct FusePadOp : OpRewritePattern<tensor::PadOp> {
 
     // Create the tensor of same size as output of the pad op.
     RankedTensorType padResultType = padOp.getResultType();
-    auto resultSizes = getAsOpFoldResult(resultShape[0]);
+    auto resultSizes = resultShape[0];
     auto emptyTensor = rewriter.create<tensor::EmptyOp>(
         loc, resultSizes, padResultType.getElementType());
 
@@ -89,12 +86,12 @@ struct FusePadOp : OpRewritePattern<tensor::PadOp> {
     // result of the generic op. The low pad values are the offsets, the size of
     // the source is the size of the slice.
     // TODO: This insert/extract could be potentially made a utility method.
-    unsigned resultNumber = source.cast<OpResult>().getResultNumber();
+    unsigned resultNumber = cast<OpResult>(source).getResultNumber();
     SmallVector<OpFoldResult> offsets = padOp.getMixedLowPad();
     SmallVector<OpFoldResult> sizes;
     sizes.reserve(offsets.size());
-    for (const auto &shape : llvm::enumerate(
-             source.getType().cast<RankedTensorType>().getShape())) {
+    for (const auto &shape :
+         llvm::enumerate(cast<RankedTensorType>(source.getType()).getShape())) {
       if (ShapedType::isDynamic(shape.value())) {
         sizes.push_back(
             rewriter.create<tensor::DimOp>(loc, source, shape.index())

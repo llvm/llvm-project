@@ -39,8 +39,6 @@ define double @test_FMADD_ASSOC1(double %A, double %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 3, 4
 ; CHECK-SPE-NEXT:    efdadd 4, 3, 5
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul double %A, %B         ; <double> [#uses=1]
@@ -77,8 +75,6 @@ define double @test_FMADD_ASSOC2(double %A, double %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 3, 4
 ; CHECK-SPE-NEXT:    efdadd 4, 5, 3
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul double %A, %B         ; <double> [#uses=1]
@@ -115,8 +111,6 @@ define double @test_FMSUB_ASSOC1(double %A, double %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 3, 4
 ; CHECK-SPE-NEXT:    efdsub 4, 3, 5
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul double %A, %B         ; <double> [#uses=1]
@@ -153,8 +147,6 @@ define double @test_FMSUB_ASSOC2(double %A, double %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 3, 4
 ; CHECK-SPE-NEXT:    efdsub 4, 5, 3
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul double %A, %B         ; <double> [#uses=1]
@@ -188,8 +180,6 @@ define double @test_FMADD_ASSOC_EXT1(float %A, float %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 5, 3
 ; CHECK-SPE-NEXT:    efdadd 4, 3, 4
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul float %A, %B         ; <float> [#uses=1]
@@ -223,8 +213,6 @@ define double @test_FMADD_ASSOC_EXT2(float %A, float %B, float %C,
 ; CHECK-SPE-NEXT:    efdcfs 3, 3
 ; CHECK-SPE-NEXT:    efdadd 4, 3, 4
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  float %D, double %E) {
   %F = fmul float %A, %B         ; <float> [#uses=1]
@@ -259,8 +247,6 @@ define double @test_FMADD_ASSOC_EXT3(float %A, float %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 5, 3
 ; CHECK-SPE-NEXT:    efdadd 4, 4, 3
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul float %A, %B          ; <float> [#uses=1]
@@ -294,8 +280,6 @@ define double @test_FMADD_ASSOC_EXT4(float %A, float %B, float %C,
 ; CHECK-SPE-NEXT:    efdcfs 3, 3
 ; CHECK-SPE-NEXT:    efdadd 4, 4, 3
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  float %D, double %E) {
   %F = fmul float %A, %B          ; <float> [#uses=1]
@@ -332,8 +316,6 @@ define double @test_FMSUB_ASSOC_EXT1(float %A, float %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 5, 3
 ; CHECK-SPE-NEXT:    efdsub 4, 3, 4
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul float %A, %B          ; <float> [#uses=1]
@@ -368,8 +350,6 @@ define double @test_FMSUB_ASSOC_EXT2(float %A, float %B, float %C,
 ; CHECK-SPE-NEXT:    efdcfs 3, 3
 ; CHECK-SPE-NEXT:    efdsub 4, 3, 4
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  float %D, double %E) {
   %F = fmul float %A, %B          ; <float> [#uses=1]
@@ -406,8 +386,6 @@ define double @test_FMSUB_ASSOC_EXT3(float %A, float %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 5, 3
 ; CHECK-SPE-NEXT:    efdsub 4, 4, 3
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul float %A, %B          ; <float> [#uses=1]
@@ -442,8 +420,6 @@ define double @test_FMSUB_ASSOC_EXT4(float %A, float %B, float %C,
 ; CHECK-SPE-NEXT:    efdcfs 3, 3
 ; CHECK-SPE-NEXT:    efdsub 4, 4, 3
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  float %D, double %E) {
   %F = fmul float %A, %B          ; <float> [#uses=1]
@@ -480,8 +456,6 @@ define double @test_reassoc_FMADD_ASSOC1(double %A, double %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 3, 4
 ; CHECK-SPE-NEXT:    efdadd 4, 3, 5
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul reassoc double %A, %B         ; <double> [#uses=1]
@@ -517,8 +491,6 @@ define double @test_reassoc_FMADD_ASSOC2(double %A, double %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 3, 4
 ; CHECK-SPE-NEXT:    efdadd 4, 5, 3
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul reassoc double %A, %B         ; <double> [#uses=1]
@@ -556,8 +528,6 @@ define double @test_reassoc_FMSUB_ASSOC1(double %A, double %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 3, 4
 ; CHECK-SPE-NEXT:    efdsub 4, 3, 5
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul reassoc double %A, %B         ; <double> [#uses=1]
@@ -593,8 +563,6 @@ define double @test_reassoc_FMSUB_ASSOC11(double %A, double %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 3, 4
 ; CHECK-SPE-NEXT:    efdsub 4, 3, 5
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul contract reassoc double %A, %B         ; <double> [#uses=1]
@@ -632,8 +600,6 @@ define double @test_reassoc_FMSUB_ASSOC2(double %A, double %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 3, 4
 ; CHECK-SPE-NEXT:    efdsub 4, 5, 3
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul reassoc double %A, %B         ; <double> [#uses=1]
@@ -670,8 +636,6 @@ define double @test_fast_FMSUB_ASSOC2(double %A, double %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 3, 4
 ; CHECK-SPE-NEXT:    efdsub 4, 5, 3
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul reassoc double %A, %B         ; <double> [#uses=1]
@@ -705,8 +669,6 @@ define double @test_reassoc_FMADD_ASSOC_EXT1(float %A, float %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 5, 3
 ; CHECK-SPE-NEXT:    efdadd 4, 3, 4
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul reassoc float %A, %B         ; <float> [#uses=1]
@@ -740,8 +702,6 @@ define double @test_reassoc_FMADD_ASSOC_EXT2(float %A, float %B, float %C,
 ; CHECK-SPE-NEXT:    efdcfs 3, 3
 ; CHECK-SPE-NEXT:    efdadd 4, 3, 4
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  float %D, double %E) {
   %F = fmul reassoc float %A, %B         ; <float> [#uses=1]
@@ -776,8 +736,6 @@ define double @test_reassoc_FMADD_ASSOC_EXT3(float %A, float %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 5, 3
 ; CHECK-SPE-NEXT:    efdadd 4, 4, 3
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul reassoc float %A, %B          ; <float> [#uses=1]
@@ -811,8 +769,6 @@ define double @test_reassoc_FMADD_ASSOC_EXT4(float %A, float %B, float %C,
 ; CHECK-SPE-NEXT:    efdcfs 3, 3
 ; CHECK-SPE-NEXT:    efdadd 4, 4, 3
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  float %D, double %E) {
   %F = fmul reassoc float %A, %B          ; <float> [#uses=1]
@@ -847,8 +803,6 @@ define double @test_reassoc_FMSUB_ASSOC_EXT1(float %A, float %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 5, 3
 ; CHECK-SPE-NEXT:    efdsub 4, 3, 4
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul reassoc float %A, %B          ; <float> [#uses=1]
@@ -882,8 +836,6 @@ define double @test_reassoc_FMSUB_ASSOC_EXT2(float %A, float %B, float %C,
 ; CHECK-SPE-NEXT:    efdcfs 3, 3
 ; CHECK-SPE-NEXT:    efdsub 4, 3, 4
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  float %D, double %E) {
   %F = fmul reassoc float %A, %B          ; <float> [#uses=1]
@@ -922,8 +874,6 @@ define double @test_reassoc_FMSUB_ASSOC_EXT3(float %A, float %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 5, 3
 ; CHECK-SPE-NEXT:    efdsub 4, 4, 3
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul reassoc float %A, %B          ; <float> [#uses=1]
@@ -960,8 +910,6 @@ define double @test_fast_FMSUB_ASSOC_EXT3(float %A, float %B, double %C,
 ; CHECK-SPE-NEXT:    efdadd 3, 5, 3
 ; CHECK-SPE-NEXT:    efdsub 4, 4, 3
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                              double %D, double %E) {
   %F = fmul reassoc float %A, %B
@@ -999,8 +947,6 @@ define double @test_reassoc_FMSUB_ASSOC_EXT4(float %A, float %B, float %C,
 ; CHECK-SPE-NEXT:    efdcfs 3, 3
 ; CHECK-SPE-NEXT:    efdsub 4, 4, 3
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                  float %D, double %E) {
   %F = fmul reassoc float %A, %B          ; <float> [#uses=1]
@@ -1034,8 +980,6 @@ define double @test_fast_FMSUB_ASSOC_EXT4(float %A, float %B, float %C,
 ; CHECK-SPE-NEXT:    efdcfs 3, 3
 ; CHECK-SPE-NEXT:    efdsub 4, 4, 3
 ; CHECK-SPE-NEXT:    evmergehi 3, 4, 4
-; CHECK-SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; CHECK-SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; CHECK-SPE-NEXT:    blr
                                           float %D, double %E) {
   %F = fmul reassoc float %A, %B

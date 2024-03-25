@@ -1,0 +1,240 @@
+## Check that printing line numbers isn't attempted for files like bitcode,
+## which have symbols but limited/no section or debug info.
+# RUN: llvm-nm --line-numbers %p/Inputs/test.IRobj-x86_64 | FileCheck %s --check-prefix=BITCODE --match-full-lines --implicit-check-not={{.}}
+# BITCODE:      ---------------- S _global_const
+# BITCODE-NEXT: ---------------- D _global_data
+# BITCODE-NEXT: ---------------- T _global_func
+# BITCODE-NEXT: ---------------- S _hidden_const
+# BITCODE-NEXT: ---------------- D _hidden_data
+# BITCODE-NEXT: ---------------- T _hidden_func
+# BITCODE-NEXT: ---------------- s _static_const
+# BITCODE-NEXT: ---------------- d _static_data
+# BITCODE-NEXT: ---------------- t _static_func
+
+## Check that various symbol types can use debug information if available to
+## print line numbers, and if unavailable, don't print anything erroneous. The
+## specific cases checked are given by the symbol names below. Other test cases
+## place requirements on the contents of the whole file, so they are kept out
+## of main.o.
+# RUN: rm -rf %t
+# RUN: split-file %s %t
+# RUN: llvm-mc -g --filetype=obj -triple=x86_64-pc-linux %t/main.s -o %t/main.o
+# RUN: llvm-nm -l %t/main.o | FileCheck %s --match-full-lines --implicit-check-not={{.}}
+# RUN: llvm-nm --line-numbers %t/main.o | FileCheck %s --match-full-lines --implicit-check-not={{.}}
+
+# CHECK:      0000000000001234 a absolute_symbol
+# CHECK-NEXT: 0000000000000000 d data_no_dwarf
+# CHECK-NEXT: 0000000000000000 T defined_global_function [[FILENAME:.*main.s]]:4
+# CHECK-NEXT: 0000000000000001 t defined_local_function [[FILENAME]]:7
+# CHECK-NEXT: 0000000000000000 t function_no_dwarf
+# CHECK-NEXT:                  U undef1 [[FILENAME]]:12
+# CHECK-NEXT:                  U undef2 [[FILENAME]]:14
+# CHECK-NEXT:                  U undef_no_reloc
+# CHECK-NEXT: 0000000000000002 t undefined_references [[FILENAME]]:12
+
+## Check that in the absence of DWARF in the whole object, no line number
+## information is printed.
+# RUN: llvm-mc --filetype=obj %t/main.s -triple=x86_64-pc-linux -o %t/no-dwarf.o
+# RUN: llvm-nm -l %t/no-dwarf.o | FileCheck %s --check-prefix=NO-DWARF --match-full-lines --implicit-check-not={{.}}
+
+# NO-DWARF:      0000000000001234 a absolute_symbol
+# NO-DWARF-NEXT: 0000000000000000 d data_no_dwarf
+# NO-DWARF-NEXT: 0000000000000000 T defined_global_function
+# NO-DWARF-NEXT: 0000000000000001 t defined_local_function
+# NO-DWARF-NEXT: 0000000000000000 t function_no_dwarf
+# NO-DWARF-NEXT:                  U undef1
+# NO-DWARF-NEXT:                  U undef2
+# NO-DWARF-NEXT:                  U undef_no_reloc
+# NO-DWARF-NEXT: 0000000000000002 t undefined_references
+
+## Check that printing line numbers for undefined values is not attempted in
+## the absence of any relocation section.
+# RUN: llvm-mc --filetype=obj %t/undef-no-reloc-sections.s -triple=x86_64-pc-linux -o %t/undef-no-reloc-sections.o
+# RUN: llvm-nm --line-numbers %t/undef-no-reloc-sections.o | FileCheck %s --check-prefix=UNDEF-NO-RELOC-SECTIONS --match-full-lines --implicit-check-not={{.}}
+
+# UNDEF-NO-RELOC-SECTIONS: U undef
+
+## Check that printing line numbers for undefined values does not include
+## relocations for non-text sections. This is broken out of main.s to ensure
+## that the data relocation for undef comes first.
+# RUN: llvm-mc -g --filetype=obj %t/undef-data-reloc.s -triple=x86_64-pc-linux -o %t/undef-data-reloc.o
+# RUN: llvm-nm --line-numbers %t/undef-data-reloc.o | FileCheck %s --check-prefix=UNDEF-DATA-RELOC --match-full-lines --implicit-check-not={{.}}
+
+# UNDEF-DATA-RELOC:      0000000000000000 r data_reloc
+# UNDEF-DATA-RELOC-NEXT:                  U undef
+
+## Check that line numbers can be printed for data definitions. These are broken
+## out of main.s since their DWARF cannot be generated with llvm-mc -g.
+# RUN: llvm-mc -g --filetype=obj %t/data-dwarf.s -triple=x86_64-pc-linux -o %t/data-dwarf.o
+# RUN: llvm-nm --line-numbers %t/data-dwarf.o | FileCheck %s --check-prefix=DATA-DWARF --match-full-lines --implicit-check-not={{.}}
+
+# DATA-DWARF: 0000000000000000 D defined_data /tmp{{\\|/}}tmp.c:1
+
+#--- main.s
+.text
+.globl defined_global_function
+defined_global_function:
+  ret
+
+defined_local_function:
+  ret
+
+absolute_symbol = 0x1234
+
+undefined_references:
+  nop
+  .long undef1
+  nop
+  .long undef2
+  ret
+
+# Note: llvm-mc -g produces no DWARF for data.
+.data
+data_no_dwarf:
+  .byte 0
+
+.globl undef_no_reloc
+
+# Note: llvm-mc -g does not produce DWARF for non-SHF_ALLOC sections.
+.section no_alloc_text,"x",@progbits
+function_no_dwarf:
+  ret
+
+#--- undef-no-reloc-sections.s
+.globl undef
+
+#--- undef-data-reloc.s
+.globl undef
+.rodata
+data_reloc:
+  .long undef
+
+#--- data-dwarf.s
+# char defined_data = 42
+	.text
+	.file	"tmp.c"
+	.file	0 "/tmp" "/tmp/tmp.c" md5 0x39602a53b15a32d6a622ca86936e88d7
+	.file	1 "tmp.c" md5 0x39602a53b15a32d6a622ca86936e88d7
+	.type	defined_data,@object            # @defined_data
+	.data
+	.globl	defined_data
+defined_data:
+	.byte	42                              # 0x2a
+	.size	defined_data, 1
+
+	.section	.debug_abbrev,"",@progbits
+	.byte	1                               # Abbreviation Code
+	.byte	17                              # DW_TAG_compile_unit
+	.byte	1                               # DW_CHILDREN_yes
+	.byte	37                              # DW_AT_producer
+	.byte	37                              # DW_FORM_strx1
+	.byte	19                              # DW_AT_language
+	.byte	5                               # DW_FORM_data2
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	114                             # DW_AT_str_offsets_base
+	.byte	23                              # DW_FORM_sec_offset
+	.byte	16                              # DW_AT_stmt_list
+	.byte	23                              # DW_FORM_sec_offset
+	.byte	27                              # DW_AT_comp_dir
+	.byte	37                              # DW_FORM_strx1
+	.byte	115                             # DW_AT_addr_base
+	.byte	23                              # DW_FORM_sec_offset
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	2                               # Abbreviation Code
+	.byte	52                              # DW_TAG_variable
+	.byte	0                               # DW_CHILDREN_no
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	73                              # DW_AT_type
+	.byte	19                              # DW_FORM_ref4
+	.byte	63                              # DW_AT_external
+	.byte	25                              # DW_FORM_flag_present
+	.byte	58                              # DW_AT_decl_file
+	.byte	11                              # DW_FORM_data1
+	.byte	59                              # DW_AT_decl_line
+	.byte	11                              # DW_FORM_data1
+	.byte	2                               # DW_AT_location
+	.byte	24                              # DW_FORM_exprloc
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	3                               # Abbreviation Code
+	.byte	36                              # DW_TAG_base_type
+	.byte	0                               # DW_CHILDREN_no
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	62                              # DW_AT_encoding
+	.byte	11                              # DW_FORM_data1
+	.byte	11                              # DW_AT_byte_size
+	.byte	11                              # DW_FORM_data1
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	0                               # EOM(3)
+	.section	.debug_info,"",@progbits
+.Lcu_begin0:
+	.long	.Ldebug_info_end0-.Ldebug_info_start0 # Length of Unit
+.Ldebug_info_start0:
+	.short	5                               # DWARF version number
+	.byte	1                               # DWARF Unit Type
+	.byte	8                               # Address Size (in bytes)
+	.long	.debug_abbrev                   # Offset Into Abbrev. Section
+	.byte	1                               # Abbrev [1] 0xc:0x22 DW_TAG_compile_unit
+	.byte	0                               # DW_AT_producer
+	.short	12                              # DW_AT_language
+	.byte	1                               # DW_AT_name
+	.long	.Lstr_offsets_base0             # DW_AT_str_offsets_base
+	.long	.Lline_table_start0             # DW_AT_stmt_list
+	.byte	2                               # DW_AT_comp_dir
+	.long	.Laddr_table_base0              # DW_AT_addr_base
+	.byte	2                               # Abbrev [2] 0x1e:0xb DW_TAG_variable
+	.byte	3                               # DW_AT_name
+	.long	41                              # DW_AT_type
+                                        # DW_AT_external
+	.byte	1                               # DW_AT_decl_file
+	.byte	1                               # DW_AT_decl_line
+	.byte	2                               # DW_AT_location
+	.byte	161
+	.byte	0
+	.byte	3                               # Abbrev [3] 0x29:0x4 DW_TAG_base_type
+	.byte	4                               # DW_AT_name
+	.byte	6                               # DW_AT_encoding
+	.byte	1                               # DW_AT_byte_size
+	.byte	0                               # End Of Children Mark
+.Ldebug_info_end0:
+	.section	.debug_str_offsets,"",@progbits
+	.long	24                              # Length of String Offsets Set
+	.short	5
+	.short	0
+.Lstr_offsets_base0:
+	.section	.debug_str,"MS",@progbits,1
+.Linfo_string0:
+	.asciz	"Debian clang version 14.0.6"   # string offset=0
+.Linfo_string1:
+	.asciz	"/tmp/tmp.c"                    # string offset=28
+.Linfo_string2:
+	.asciz	"/tmp"                          # string offset=39
+.Linfo_string3:
+	.asciz	"defined_data"                  # string offset=44
+.Linfo_string4:
+	.asciz	"char"                          # string offset=57
+	.section	.debug_str_offsets,"",@progbits
+	.long	.Linfo_string0
+	.long	.Linfo_string1
+	.long	.Linfo_string2
+	.long	.Linfo_string3
+	.long	.Linfo_string4
+	.section	.debug_addr,"",@progbits
+	.long	.Ldebug_addr_end0-.Ldebug_addr_start0 # Length of contribution
+.Ldebug_addr_start0:
+	.short	5                               # DWARF version number
+	.byte	8                               # Address size
+	.byte	0                               # Segment selector size
+.Laddr_table_base0:
+	.quad	defined_data
+.Ldebug_addr_end0:
+	.ident	"Debian clang version 14.0.6"
+	.section	".note.GNU-stack","",@progbits
+	.addrsig
+	.section	.debug_line,"",@progbits
+.Lline_table_start0:

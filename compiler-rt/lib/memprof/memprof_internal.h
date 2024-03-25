@@ -20,10 +20,6 @@
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 
-#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
-#error "The MemProfiler run-time should not be instrumented by MemProfiler"
-#endif
-
 // Build-time configuration options.
 
 // If set, memprof will intercept C++ exception api call(s).
@@ -61,7 +57,6 @@ void ReplaceSystemMalloc();
 
 // memprof_linux.cpp
 uptr FindDynamicShadowStart();
-void *MemprofDoesNotSupportStaticLinkage();
 
 // memprof_thread.cpp
 MemprofThread *CreateMainThread();
@@ -76,7 +71,6 @@ void *MemprofDlSymNext(const char *sym);
 
 extern int memprof_inited;
 extern int memprof_timestamp_inited;
-extern int memprof_init_done;
 // Used to avoid infinite recursion in __memprof_init().
 extern bool memprof_init_is_running;
 extern void (*death_callback)(void);

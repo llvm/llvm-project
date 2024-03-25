@@ -59,21 +59,41 @@ mlir::func::FuncOp fir::factory::getRealloc(fir::FirOpBuilder &builder) {
                                   reallocTy);
 }
 
+mlir::func::FuncOp
+fir::factory::getLlvmGetRounding(fir::FirOpBuilder &builder) {
+  auto int32Ty = builder.getIntegerType(32);
+  auto funcTy =
+      mlir::FunctionType::get(builder.getContext(), std::nullopt, {int32Ty});
+  return builder.addNamedFunction(builder.getUnknownLoc(), "llvm.get.rounding",
+                                  funcTy);
+}
+
+mlir::func::FuncOp
+fir::factory::getLlvmSetRounding(fir::FirOpBuilder &builder) {
+  auto int32Ty = builder.getIntegerType(32);
+  auto funcTy =
+      mlir::FunctionType::get(builder.getContext(), {int32Ty}, std::nullopt);
+  return builder.addNamedFunction(builder.getUnknownLoc(), "llvm.set.rounding",
+                                  funcTy);
+}
+
 mlir::func::FuncOp fir::factory::getLlvmStackSave(fir::FirOpBuilder &builder) {
+  // FIXME: This should query the target alloca address space
   auto ptrTy = builder.getRefType(builder.getIntegerType(8));
   auto funcTy =
       mlir::FunctionType::get(builder.getContext(), std::nullopt, {ptrTy});
-  return builder.addNamedFunction(builder.getUnknownLoc(), "llvm.stacksave",
+  return builder.addNamedFunction(builder.getUnknownLoc(), "llvm.stacksave.p0",
                                   funcTy);
 }
 
 mlir::func::FuncOp
 fir::factory::getLlvmStackRestore(fir::FirOpBuilder &builder) {
+  // FIXME: This should query the target alloca address space
   auto ptrTy = builder.getRefType(builder.getIntegerType(8));
   auto funcTy =
       mlir::FunctionType::get(builder.getContext(), {ptrTy}, std::nullopt);
-  return builder.addNamedFunction(builder.getUnknownLoc(), "llvm.stackrestore",
-                                  funcTy);
+  return builder.addNamedFunction(builder.getUnknownLoc(),
+                                  "llvm.stackrestore.p0", funcTy);
 }
 
 mlir::func::FuncOp
@@ -91,4 +111,53 @@ fir::factory::getLlvmAdjustTrampoline(fir::FirOpBuilder &builder) {
   auto funcTy = mlir::FunctionType::get(builder.getContext(), {ptrTy}, {ptrTy});
   return builder.addNamedFunction(builder.getUnknownLoc(),
                                   "llvm.adjust.trampoline", funcTy);
+}
+
+mlir::func::FuncOp fir::factory::getFeclearexcept(fir::FirOpBuilder &builder) {
+  auto int32Ty = builder.getIntegerType(32);
+  auto funcTy =
+      mlir::FunctionType::get(builder.getContext(), {int32Ty}, {int32Ty});
+  return builder.addNamedFunction(builder.getUnknownLoc(), "feclearexcept",
+                                  funcTy);
+}
+
+mlir::func::FuncOp
+fir::factory::getFedisableexcept(fir::FirOpBuilder &builder) {
+  auto int32Ty = builder.getIntegerType(32);
+  auto funcTy =
+      mlir::FunctionType::get(builder.getContext(), {int32Ty}, {int32Ty});
+  return builder.addNamedFunction(builder.getUnknownLoc(), "fedisableexcept",
+                                  funcTy);
+}
+
+mlir::func::FuncOp fir::factory::getFeenableexcept(fir::FirOpBuilder &builder) {
+  auto int32Ty = builder.getIntegerType(32);
+  auto funcTy =
+      mlir::FunctionType::get(builder.getContext(), {int32Ty}, {int32Ty});
+  return builder.addNamedFunction(builder.getUnknownLoc(), "feenableexcept",
+                                  funcTy);
+}
+
+mlir::func::FuncOp fir::factory::getFegetexcept(fir::FirOpBuilder &builder) {
+  auto int32Ty = builder.getIntegerType(32);
+  auto funcTy =
+      mlir::FunctionType::get(builder.getContext(), std::nullopt, {int32Ty});
+  return builder.addNamedFunction(builder.getUnknownLoc(), "fegetexcept",
+                                  funcTy);
+}
+
+mlir::func::FuncOp fir::factory::getFeraiseexcept(fir::FirOpBuilder &builder) {
+  auto int32Ty = builder.getIntegerType(32);
+  auto funcTy =
+      mlir::FunctionType::get(builder.getContext(), {int32Ty}, {int32Ty});
+  return builder.addNamedFunction(builder.getUnknownLoc(), "feraiseexcept",
+                                  funcTy);
+}
+
+mlir::func::FuncOp fir::factory::getFetestexcept(fir::FirOpBuilder &builder) {
+  auto int32Ty = builder.getIntegerType(32);
+  auto funcTy =
+      mlir::FunctionType::get(builder.getContext(), {int32Ty}, {int32Ty});
+  return builder.addNamedFunction(builder.getUnknownLoc(), "fetestexcept",
+                                  funcTy);
 }

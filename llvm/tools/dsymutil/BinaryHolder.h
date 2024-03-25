@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/MachOUniversal.h"
@@ -24,6 +23,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <mutex>
 
@@ -126,15 +126,18 @@ public:
   getObjectEntry(StringRef Filename, TimestampTy Timestamp = TimestampTy());
 
   void clear();
+  void eraseObjectEntry(StringRef Filename);
 
 private:
   /// Cache of static archives. Objects that are part of a static archive are
   /// stored under this object, rather than in the map below.
   StringMap<std::unique_ptr<ArchiveEntry>> ArchiveCache;
+  StringMap<uint32_t> ArchiveRefCounter;
   std::mutex ArchiveCacheMutex;
 
   /// Object entries for objects that are not in a static archive.
   StringMap<std::unique_ptr<ObjectEntry>> ObjectCache;
+  StringMap<uint32_t> ObjectRefCounter;
   std::mutex ObjectCacheMutex;
 
   /// Virtual File System instance.

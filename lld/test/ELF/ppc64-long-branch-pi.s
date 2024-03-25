@@ -9,24 +9,25 @@
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
-# RUN: ld.lld -shared -T %t.script %t.o -o %t.so
+## RELATIVE relocs relocating NOBITS .branch_lt do not cause --check-dynamic-relocations errors.
+# RUN: ld.lld -shared -T %t.script %t.o -o %t.so --apply-dynamic-relocs --check-dynamic-relocations
 # RUN: llvm-readelf -S %t.so | FileCheck --check-prefix=SEC-SHARED %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s
 
 # SEC-PIE:    Name       Type     Address          Off     Size   ES Flg Lk Inf Al
-# SEC-PIE:    .got       PROGBITS 0000000002002100 2012100 000008 00  WA  0   0  8
-# SEC-PIE:    .branch_lt NOBITS   0000000002002110 2012110 000020 00  WA  0   0  8
+# SEC-PIE:    .got       PROGBITS 0000000002002110 2012110 000008 00  WA  0   0  8
+# SEC-PIE:    .branch_lt NOBITS   0000000002002120 2012120 000020 00  WA  0   0  8
 
 # SEC-SHARED: Name       Type     Address          Off     Size   ES Flg Lk Inf Al
-# SEC-SHARED: .got       PROGBITS 00000000020020e0 20120e0 000008 00  WA  0   0  8
-# SEC-SHARED: .branch_lt NOBITS   00000000020020f0 20120f0 000020 00  WA  0   0  8
+# SEC-SHARED: .got       PROGBITS 00000000020020f0 20120f0 000008 00  WA  0   0  8
+# SEC-SHARED: .branch_lt NOBITS   0000000002002100 2012100 000020 00  WA  0   0  8
 
 # RELOC:      .rela.dyn {
-# RELOC-NEXT:   0x2002108 R_PPC64_RELATIVE - 0x2012100
-# RELOC-NEXT:   0x2002110 R_PPC64_RELATIVE - 0x2002000
-# RELOC-NEXT:   0x2002118 R_PPC64_RELATIVE - 0x2002008
-# RELOC-NEXT:   0x2002120 R_PPC64_RELATIVE - 0x200200C
-# RELOC-NEXT:   0x2002128 R_PPC64_RELATIVE - 0x2000
+# RELOC-NEXT:   0x2002118 R_PPC64_RELATIVE - 0x2012110
+# RELOC-NEXT:   0x2002120 R_PPC64_RELATIVE - 0x2002000
+# RELOC-NEXT:   0x2002128 R_PPC64_RELATIVE - 0x2002008
+# RELOC-NEXT:   0x2002130 R_PPC64_RELATIVE - 0x200200C
+# RELOC-NEXT:   0x2002138 R_PPC64_RELATIVE - 0x2000
 # RELOC-NEXT: }
 
 # CHECK:      <_start>:

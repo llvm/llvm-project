@@ -12,13 +12,18 @@
 #include <stdarg.h>
 
 #if defined(__Fuchsia__)
+#define ZXTEST_USE_STREAMABLE_MACROS
 #include <zxtest/zxtest.h>
-using Test = ::zxtest::Test;
-template <typename T> using TestWithParam = ::zxtest::TestWithParam<T>;
+namespace testing = zxtest;
+// zxtest defines a different ASSERT_DEATH, taking a lambda and an error message
+// if death didn't occur, versus gtest taking a statement and a string to search
+// for in the dying process. zxtest doesn't define an EXPECT_DEATH, so we use
+// that in the tests below (which works as intended for gtest), and we define
+// EXPECT_DEATH as a wrapper for zxtest's ASSERT_DEATH. Note that zxtest drops
+// the functionality for checking for a particular message in death.
+#define EXPECT_DEATH(X, Y) ASSERT_DEATH(([&] { X; }), "")
 #else
 #include "gtest/gtest.h"
-using Test = ::testing::Test;
-template <typename T> using TestWithParam = ::testing::TestWithParam<T>;
 #endif
 
 #include "gwp_asan/guarded_pool_allocator.h"
@@ -46,7 +51,9 @@ void DeallocateMemory(gwp_asan::GuardedPoolAllocator &GPA, void *Ptr);
 void DeallocateMemory2(gwp_asan::GuardedPoolAllocator &GPA, void *Ptr);
 void TouchMemory(void *Ptr);
 
-class DefaultGuardedPoolAllocator : public Test {
+void CheckOnlyOneGwpAsanCrash(const std::string &OutputBuffer);
+
+class DefaultGuardedPoolAllocator : public ::testing::Test {
 public:
   void SetUp() override {
     gwp_asan::options::Options Opts;
@@ -65,7 +72,7 @@ protected:
       MaxSimultaneousAllocations;
 };
 
-class CustomGuardedPoolAllocator : public Test {
+class CustomGuardedPoolAllocator : public ::testing::Test {
 public:
   void
   InitNumSlots(decltype(gwp_asan::options::Options::MaxSimultaneousAllocations)
@@ -89,7 +96,7 @@ protected:
 };
 
 class BacktraceGuardedPoolAllocator
-    : public TestWithParam</* Recoverable */ bool> {
+    : public ::testing::TestWithParam</* Recoverable */ bool> {
 public:
   void SetUp() override {
     gwp_asan::options::Options Opts;

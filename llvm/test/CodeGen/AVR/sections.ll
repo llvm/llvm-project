@@ -1,10 +1,10 @@
-; RUN: llc < %s -march=avr --mcpu=atxmega384d3 \
+; RUN: llc < %s -mtriple=avr --mcpu=atxmega384d3 \
 ; RUN:     | FileCheck --check-prefixes=CHECK,NOSECTIONS %s
-; RUN: llc -function-sections -data-sections < %s -march=avr --mcpu=atxmega384d3 \
+; RUN: llc -function-sections -data-sections < %s -mtriple=avr --mcpu=atxmega384d3 \
 ; RUN:     | FileCheck --check-prefixes=CHECK,SECTIONS %s
-; RUN: not llc -function-sections -data-sections < %s -march=avr --mcpu=at90s8515 2>&1 \
+; RUN: not llc -function-sections -data-sections < %s -mtriple=avr --mcpu=at90s8515 2>&1 \
 ; RUN:     | FileCheck --check-prefixes=CHECK-8515 %s
-; RUN: not llc -function-sections -data-sections < %s -march=avr --mcpu=attiny40 2>&1 \
+; RUN: not llc -function-sections -data-sections < %s -mtriple=avr --mcpu=attiny40 2>&1 \
 ; RUN:     | FileCheck --check-prefixes=CHECK-tiny40 %s
 
 ; Test that functions (in address space 1) are not considered .progmem data.

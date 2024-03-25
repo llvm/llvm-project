@@ -32,16 +32,16 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 @ref.0 = internal unnamed_addr constant double 2.300000e+01, align 8
-@vtable.1 = internal unnamed_addr constant { void (double*)*, i64, i64 } { void (double*)* @_ZN4core3ptr13drop_in_place17h2818a933abde117eE, i64 8, i64 8 }, align 8, !dbg !0
+@vtable.1 = internal unnamed_addr constant { ptr, i64, i64 } { ptr @_ZN4core3ptr13drop_in_place17h2818a933abde117eE, i64 8, i64 8 }, align 8, !dbg !0
 @__rustc_debug_gdb_scripts_section__ = linkonce_odr unnamed_addr constant [34 x i8] c"\01gdb_load_rust_pretty_printers.py\00", section ".debug_gdb_scripts", align 1
 
 ; core::ptr::drop_in_place
 ; Function Attrs: uwtable
-define internal void @_ZN4core3ptr13drop_in_place17h2818a933abde117eE(double*) unnamed_addr #0 !dbg !11 {
+define internal void @_ZN4core3ptr13drop_in_place17h2818a933abde117eE(ptr) unnamed_addr #0 !dbg !11 {
 start:
-  %arg0 = alloca double*
-  store double* %0, double** %arg0
-  call void @llvm.dbg.declare(metadata double** %arg0, metadata !20, metadata !22), !dbg !23
+  %arg0 = alloca ptr
+  store ptr %0, ptr %arg0
+  call void @llvm.dbg.declare(metadata ptr %arg0, metadata !20, metadata !22), !dbg !23
   ret void, !dbg !24
 }
 
@@ -49,30 +49,30 @@ start:
 ; Function Attrs: uwtable
 define internal void @_ZN2t24main17h6319e6ac7de3a097E() unnamed_addr #0 !dbg !25 {
 start:
-  %tu = alloca { i8*, void (i8*)** }
-  call void @llvm.dbg.declare(metadata { i8*, void (i8*)** }* %tu, metadata !29, metadata !22), !dbg !37
-  %0 = getelementptr inbounds { i8*, void (i8*)** }, { i8*, void (i8*)** }* %tu, i32 0, i32 0, !dbg !37
-  store i8* bitcast (double* @ref.0 to i8*), i8** %0, !dbg !37
-  %1 = getelementptr inbounds { i8*, void (i8*)** }, { i8*, void (i8*)** }* %tu, i32 0, i32 1, !dbg !37
-  store void (i8*)** bitcast ({ void (double*)*, i64, i64 }* @vtable.1 to void (i8*)**), void (i8*)*** %1, !dbg !37
+  %tu = alloca { ptr, ptr }
+  call void @llvm.dbg.declare(metadata ptr %tu, metadata !29, metadata !22), !dbg !37
+  %0 = getelementptr inbounds { ptr, ptr }, ptr %tu, i32 0, i32 0, !dbg !37
+  store ptr @ref.0, ptr %0, !dbg !37
+  %1 = getelementptr inbounds { ptr, ptr }, ptr %tu, i32 0, i32 1, !dbg !37
+  store ptr @vtable.1, ptr %1, !dbg !37
   ret void, !dbg !38
 }
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-define i32 @main(i32, i8**) unnamed_addr #2 {
+define i32 @main(i32, ptr) unnamed_addr #2 {
 top:
-  %2 = load volatile i8, i8* getelementptr inbounds ([34 x i8], [34 x i8]* @__rustc_debug_gdb_scripts_section__, i32 0, i32 0), align 1
+  %2 = load volatile i8, ptr @__rustc_debug_gdb_scripts_section__, align 1
   %3 = sext i32 %0 to i64
 ; call std::rt::lang_start
-  %4 = call i64 @_ZN3std2rt10lang_start17h2626caf1112a00beE(void ()* @_ZN2t24main17h6319e6ac7de3a097E, i64 %3, i8** %1)
+  %4 = call i64 @_ZN3std2rt10lang_start17h2626caf1112a00beE(ptr @_ZN2t24main17h6319e6ac7de3a097E, i64 %3, ptr %1)
   %5 = trunc i64 %4 to i32
   ret i32 %5
 }
 
 ; std::rt::lang_start
-declare i64 @_ZN3std2rt10lang_start17h2626caf1112a00beE(void ()*, i64, i8**) unnamed_addr #3
+declare i64 @_ZN3std2rt10lang_start17h2626caf1112a00beE(ptr, i64, ptr) unnamed_addr #3
 
 attributes #0 = { uwtable "frame-pointer"="all" "probe-stack"="__rust_probestack" }
 attributes #1 = { nounwind readnone }

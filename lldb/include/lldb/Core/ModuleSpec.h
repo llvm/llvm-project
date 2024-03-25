@@ -194,7 +194,7 @@ public:
       if (dumped_something)
         strm.PutCString(", ");
       strm.PutCString("uuid = ");
-      m_uuid.Dump(&strm);
+      m_uuid.Dump(strm);
       dumped_something = true;
     }
     if (m_object_name) {

@@ -35,7 +35,7 @@ define i64 @caller_i128_in_regs() nounwind {
 ; RV64I-NEXT:    li a0, 1
 ; RV64I-NEXT:    li a1, 2
 ; RV64I-NEXT:    li a2, 0
-; RV64I-NEXT:    call callee_i128_in_regs@plt
+; RV64I-NEXT:    call callee_i128_in_regs
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -93,7 +93,7 @@ define i32 @caller_many_scalars() nounwind {
 ; RV64I-NEXT:    li a7, 7
 ; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    li a4, 0
-; RV64I-NEXT:    call callee_many_scalars@plt
+; RV64I-NEXT:    call callee_many_scalars
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
@@ -140,12 +140,12 @@ define i64 @caller_large_scalars() nounwind {
 ; RV64I-NEXT:    sd a0, 0(sp)
 ; RV64I-NEXT:    sd zero, 56(sp)
 ; RV64I-NEXT:    sd zero, 48(sp)
-; RV64I-NEXT:    sd zero, 40(sp)
-; RV64I-NEXT:    li a2, 1
+; RV64I-NEXT:    li a0, 1
+; RV64I-NEXT:    sd a0, 32(sp)
 ; RV64I-NEXT:    addi a0, sp, 32
 ; RV64I-NEXT:    mv a1, sp
-; RV64I-NEXT:    sd a2, 32(sp)
-; RV64I-NEXT:    call callee_large_scalars@plt
+; RV64I-NEXT:    sd zero, 40(sp)
+; RV64I-NEXT:    call callee_large_scalars
 ; RV64I-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 80
 ; RV64I-NEXT:    ret
@@ -199,8 +199,8 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
 ; RV64I-NEXT:    sd a0, 16(sp)
 ; RV64I-NEXT:    sd zero, 72(sp)
 ; RV64I-NEXT:    sd zero, 64(sp)
-; RV64I-NEXT:    sd zero, 56(sp)
-; RV64I-NEXT:    li t0, 8
+; RV64I-NEXT:    li a0, 8
+; RV64I-NEXT:    sd a0, 48(sp)
 ; RV64I-NEXT:    li a0, 1
 ; RV64I-NEXT:    li a1, 2
 ; RV64I-NEXT:    li a2, 3
@@ -209,8 +209,8 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
 ; RV64I-NEXT:    li a5, 6
 ; RV64I-NEXT:    li a6, 7
 ; RV64I-NEXT:    addi a7, sp, 48
-; RV64I-NEXT:    sd t0, 48(sp)
-; RV64I-NEXT:    call callee_large_scalars_exhausted_regs@plt
+; RV64I-NEXT:    sd zero, 56(sp)
+; RV64I-NEXT:    call callee_large_scalars_exhausted_regs
 ; RV64I-NEXT:    ld ra, 88(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 96
 ; RV64I-NEXT:    ret
@@ -227,7 +227,7 @@ define i64 @caller_mixed_scalar_libcalls(i64 %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __floatditf@plt
+; RV64I-NEXT:    call __floatditf
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -261,7 +261,7 @@ define i64 @caller_small_coerced_struct() nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a0, 1
 ; RV64I-NEXT:    li a1, 2
-; RV64I-NEXT:    call callee_small_coerced_struct@plt
+; RV64I-NEXT:    call callee_small_coerced_struct
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -305,7 +305,7 @@ define i64 @caller_large_struct() nounwind {
 ; RV64I-NEXT:    sd a2, 24(sp)
 ; RV64I-NEXT:    sd a3, 32(sp)
 ; RV64I-NEXT:    addi a0, sp, 8
-; RV64I-NEXT:    call callee_large_struct@plt
+; RV64I-NEXT:    call callee_large_struct
 ; RV64I-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 80
 ; RV64I-NEXT:    ret
@@ -375,7 +375,7 @@ define void @caller_aligned_stack() nounwind {
 ; RV64I-NEXT:    li a7, 7
 ; RV64I-NEXT:    sd a6, 0(sp)
 ; RV64I-NEXT:    li a6, 0
-; RV64I-NEXT:    call callee_aligned_stack@plt
+; RV64I-NEXT:    call callee_aligned_stack
 ; RV64I-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 64
 ; RV64I-NEXT:    ret
@@ -400,7 +400,7 @@ define i64 @caller_small_scalar_ret() nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call callee_small_scalar_ret@plt
+; RV64I-NEXT:    call callee_small_scalar_ret
 ; RV64I-NEXT:    not a1, a1
 ; RV64I-NEXT:    xori a0, a0, -2
 ; RV64I-NEXT:    or a0, a0, a1
@@ -430,7 +430,7 @@ define i64 @caller_small_struct_ret() nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call callee_small_struct_ret@plt
+; RV64I-NEXT:    call callee_small_struct_ret
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -465,7 +465,7 @@ define void @caller_large_scalar_ret() nounwind {
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv a0, sp
-; RV64I-NEXT:    call callee_large_scalar_ret@plt
+; RV64I-NEXT:    call callee_large_scalar_ret
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
@@ -507,7 +507,7 @@ define i64 @caller_large_struct_ret() nounwind {
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    addi a0, sp, 8
-; RV64I-NEXT:    call callee_large_struct_ret@plt
+; RV64I-NEXT:    call callee_large_struct_ret
 ; RV64I-NEXT:    ld a0, 8(sp)
 ; RV64I-NEXT:    ld a1, 32(sp)
 ; RV64I-NEXT:    add a0, a0, a1

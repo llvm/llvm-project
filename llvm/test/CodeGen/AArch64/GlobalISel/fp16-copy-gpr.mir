@@ -4,10 +4,10 @@
 # PR36345
 --- |
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
-  target triple = "aarch64-arm-none-eabi"
+  target triple = "aarch64"
 
   ; Function Attrs: noinline nounwind optnone
-  define void @fp16_to_gpr([2 x half], [2 x half]* %addr) {
+  define void @fp16_to_gpr([2 x half], ptr %addr) {
     ret void
   }
 

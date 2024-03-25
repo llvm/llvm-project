@@ -124,14 +124,14 @@ int test() {
 // CHECK-NEXT: |         |-CallExpr [[ADDR_63:0x[a-z0-9]*]] <col:10, col:25> 'int'
 // CHECK-NEXT: |         | |-ImplicitCastExpr [[ADDR_64:0x[a-z0-9]*]] <col:10> 'int (*)(double)' <FunctionToPointerDecay>
 // CHECK-NEXT: |         | | `-DeclRefExpr [[ADDR_65:0x[a-z0-9]*]] <col:10> 'int (double)' {{.*}}Function [[ADDR_44]] 'also_after' 'int (double)'
-// CHECK-NEXT: |         | `-CXXFunctionalCastExpr [[ADDR_66:0x[a-z0-9]*]] <col:21, col:24> 'double':'double' functional cast to double <NoOp>
-// CHECK-NEXT: |         |   `-ImplicitCastExpr [[ADDR_67:0x[a-z0-9]*]] <col:23> 'double':'double' <IntegralToFloating> part_of_explicit_cast
+// CHECK-NEXT: |         | `-CXXFunctionalCastExpr [[ADDR_66:0x[a-z0-9]*]] <col:21, col:24> 'double' functional cast to double <NoOp>
+// CHECK-NEXT: |         |   `-ImplicitCastExpr [[ADDR_67:0x[a-z0-9]*]] <col:23> 'double' <IntegralToFloating> part_of_explicit_cast
 // CHECK-NEXT: |         |     `-IntegerLiteral [[ADDR_58]] <col:23> 'int' 0
 // CHECK-NEXT: |         `-CallExpr [[ADDR_68:0x[a-z0-9]*]] <line:16:1, line:39:25> 'int'
 // CHECK-NEXT: |           |-ImplicitCastExpr [[ADDR_69:0x[a-z0-9]*]] <line:16:1> 'int (*)(double)' <FunctionToPointerDecay>
 // CHECK-NEXT: |           | `-DeclRefExpr [[ADDR_25]] <col:1> 'int (double)' Function [[ADDR_26]] 'also_after[implementation={vendor(llvm)}]' 'int (double)'
-// CHECK-NEXT: |           `-CXXFunctionalCastExpr [[ADDR_66]] <line:39:21, col:24> 'double':'double' functional cast to double <NoOp>
-// CHECK-NEXT: |             `-ImplicitCastExpr [[ADDR_67]] <col:23> 'double':'double' <IntegralToFloating> part_of_explicit_cast
+// CHECK-NEXT: |           `-CXXFunctionalCastExpr [[ADDR_66]] <line:39:21, col:24> 'double' functional cast to double <NoOp>
+// CHECK-NEXT: |             `-ImplicitCastExpr [[ADDR_67]] <col:23> 'double' <IntegralToFloating> part_of_explicit_cast
 // CHECK-NEXT: |               `-IntegerLiteral [[ADDR_58]] <col:23> 'int' 0
 // CHECK-NEXT: |-TypedefDecl [[ADDR_70:0x[a-z0-9]*]] <line:42:1, col:18> col:14 referenced Ty 'int (*)({{.*}})'
 // CHECK-NEXT: | `-PointerType [[ADDR_71:0x[a-z0-9]*]] 'int (*)({{.*}})'

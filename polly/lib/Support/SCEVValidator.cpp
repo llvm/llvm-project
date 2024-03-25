@@ -134,6 +134,12 @@ public:
     return ValidatorResult(SCEVType::INT);
   }
 
+  ValidatorResult visitVScale(const SCEVVScale *VScale) {
+    // We do not support VScale constants.
+    LLVM_DEBUG(dbgs() << "INVALID: VScale is not supported");
+    return ValidatorResult(SCEVType::INVALID);
+  }
+
   ValidatorResult visitZeroExtendOrTruncateExpr(const SCEV *Expr,
                                                 const SCEV *Operand) {
     ValidatorResult Op = visit(Operand);

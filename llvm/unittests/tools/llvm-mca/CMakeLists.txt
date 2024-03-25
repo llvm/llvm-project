@@ -1,7 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   MC
   MCA
-  Object
   Support
   TargetParser
   )

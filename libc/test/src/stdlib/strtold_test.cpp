@@ -8,25 +8,26 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/UInt128.h"
+#include "src/errno/libc_errno.h"
 #include "src/stdlib/strtold.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
-#include <errno.h>
-#include <limits.h>
 #include <stddef.h>
 
-#if defined(LONG_DOUBLE_IS_DOUBLE)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
 #define SELECT_CONST(val, _, __) val
-#elif defined(SPECIAL_X86_LONG_DOUBLE)
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 #define SELECT_CONST(_, val, __) val
-#else
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
 #define SELECT_CONST(_, __, val) val
+#else
+#error "Unknown long double type"
 #endif
 
-class LlvmLibcStrToLDTest : public __llvm_libc::testing::Test {
+class LlvmLibcStrToLDTest : public LIBC_NAMESPACE::testing::Test {
 public:
-#if defined(LONG_DOUBLE_IS_DOUBLE)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
   void run_test(const char *inputString, const ptrdiff_t expectedStrLen,
                 const uint64_t expectedRawData, const int expectedErrno = 0)
 #else
@@ -74,24 +75,24 @@ public:
     //         +-- 15 Exponent Bits
     char *str_end = nullptr;
 
-    __llvm_libc::fputil::FPBits<long double> expected_fp =
-        __llvm_libc::fputil::FPBits<long double>(expectedRawData);
+    LIBC_NAMESPACE::fputil::FPBits<long double> expected_fp =
+        LIBC_NAMESPACE::fputil::FPBits<long double>(expectedRawData);
     const int expected_errno = expectedErrno;
 
-    errno = 0;
-    long double result = __llvm_libc::strtold(inputString, &str_end);
+    LIBC_NAMESPACE::libc_errno = 0;
+    long double result = LIBC_NAMESPACE::strtold(inputString, &str_end);
 
-    __llvm_libc::fputil::FPBits<long double> actual_fp =
-        __llvm_libc::fputil::FPBits<long double>();
-    actual_fp = __llvm_libc::fputil::FPBits<long double>(result);
+    LIBC_NAMESPACE::fputil::FPBits<long double> actual_fp =
+        LIBC_NAMESPACE::fputil::FPBits<long double>();
+    actual_fp = LIBC_NAMESPACE::fputil::FPBits<long double>(result);
 
     EXPECT_EQ(str_end - inputString, expectedStrLen);
 
-    EXPECT_EQ(actual_fp.bits, expected_fp.bits);
-    EXPECT_EQ(actual_fp.get_sign(), expected_fp.get_sign());
+    EXPECT_EQ(actual_fp.uintval(), expected_fp.uintval());
+    EXPECT_EQ(actual_fp.is_neg(), expected_fp.is_neg());
     EXPECT_EQ(actual_fp.get_exponent(), expected_fp.get_exponent());
     EXPECT_EQ(actual_fp.get_mantissa(), expected_fp.get_mantissa());
-    EXPECT_EQ(errno, expected_errno);
+    ASSERT_ERRNO_EQ(expected_errno);
   }
 };
 
@@ -145,6 +146,16 @@ TEST_F(LlvmLibcStrToLDTest, Float64SpecificFailures) {
                         (UInt128(0x403fc1f099) << 40) + UInt128(0x5e30464402),
                         (UInt128(0x403f83e132bc608c) << 64) +
                             UInt128(0x8803000000000000)));
+}
+
+TEST_F(LlvmLibcStrToLDTest, Float80SpecificFailures) {
+  run_test("7777777777777777777777777777777777777777777777777777777777777777777"
+           "777777777777777777777777777777777",
+           100,
+           SELECT_CONST(uint64_t(0x54ac729b8fcaf734),
+                        (UInt128(0x414ae394dc) << 40) + UInt128(0x7e57b9a0c2),
+                        (UInt128(0x414ac729b8fcaf73) << 64) +
+                            UInt128(0x4184a3d793224129)));
 }
 
 TEST_F(LlvmLibcStrToLDTest, MaxSizeNumbers) {

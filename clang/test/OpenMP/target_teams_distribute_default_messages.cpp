@@ -2,9 +2,9 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -DOMP51 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -DOMP50 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 -DOMP51 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -DOMP50 %s -Wuninitialized
 
 void foo();
 
@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
   #pragma omp target teams distribute default(none) // expected-note {{explicit data sharing attribute requested here}}
   for (int i=0; i<200; i++) ++argc; // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
 
-#ifndef OMP51
+#ifdef OMP50
 #pragma omp target teams distribute default(firstprivate) // expected-error {{data-sharing attribute 'firstprivate' in 'default' clause requires OpenMP version 5.1 or above}}
   for (int i = 0; i < 200; i++) {
     ++x;
@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
     ++x;
     ++y;
   }
-#endif
+#endif // OMP50
 
   return 0;
 }

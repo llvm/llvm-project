@@ -4,14 +4,14 @@
 define i64 @test1(ptr %a, ptr %b) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    ld 3, 0(3)
-; CHECK-NEXT:    ld 4, 0(4)
-; CHECK-NEXT:    mtvsrd 34, 3
-; CHECK-NEXT:    add 3, 3, 4
-; CHECK-NEXT:    mtvsrd 35, 4
+; CHECK-NEXT:    ld 5, 0(3)
+; CHECK-NEXT:    ld 6, 0(4)
+; CHECK-NEXT:    mtvsrd 34, 5
+; CHECK-NEXT:    mtvsrd 35, 6
+; CHECK-NEXT:    add 4, 5, 6
 ; CHECK-NEXT:    vavgsb 2, 2, 3
-; CHECK-NEXT:    stxsdx 34, 0, 5
+; CHECK-NEXT:    stxsdx 34, 0, 3
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %lhs = load i64, ptr %a, align 8
@@ -31,14 +31,14 @@ entry:
 define i64 @test2(ptr %a, ptr %b) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    ld 3, 0(3)
-; CHECK-NEXT:    ld 4, 0(4)
-; CHECK-NEXT:    mtvsrd 34, 3
-; CHECK-NEXT:    add 3, 3, 4
-; CHECK-NEXT:    mtvsrd 35, 4
+; CHECK-NEXT:    ld 5, 0(3)
+; CHECK-NEXT:    ld 6, 0(4)
+; CHECK-NEXT:    mtvsrd 34, 5
+; CHECK-NEXT:    mtvsrd 35, 6
+; CHECK-NEXT:    add 4, 5, 6
 ; CHECK-NEXT:    vadduhm 2, 2, 3
-; CHECK-NEXT:    stxsdx 34, 0, 5
+; CHECK-NEXT:    stxsdx 34, 0, 3
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %lhs = load i64, ptr %a, align 8
@@ -60,10 +60,10 @@ define signext i16 @vecop_uses(ptr %addr) {
 ; CHECK-LABEL: vecop_uses:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
-; CHECK-NEXT:    lxvd2x 1, 0, 3
 ; CHECK-NEXT:    lxvd2x 0, 3, 4
-; CHECK-NEXT:    xxswapd 35, 1
 ; CHECK-NEXT:    xxswapd 34, 0
+; CHECK-NEXT:    lxvd2x 0, 0, 3
+; CHECK-NEXT:    xxswapd 35, 0
 ; CHECK-NEXT:    vminsh 2, 3, 2
 ; CHECK-NEXT:    xxswapd 35, 34
 ; CHECK-NEXT:    vminsh 2, 2, 3
@@ -86,15 +86,15 @@ define signext i32 @vecop_uses2(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: vecop_uses2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    lxvd2x 1, 0, 4
 ; CHECK-NEXT:    xxswapd 34, 0
-; CHECK-NEXT:    xxswapd 35, 1
+; CHECK-NEXT:    lxvd2x 0, 0, 4
+; CHECK-NEXT:    xxswapd 35, 0
 ; CHECK-NEXT:    xxsldwi 0, 34, 34, 3
 ; CHECK-NEXT:    vmuluwm 2, 3, 2
 ; CHECK-NEXT:    mffprwz 3, 0
-; CHECK-NEXT:    xxswapd 0, 34
 ; CHECK-NEXT:    extsw 3, 3
-; CHECK-NEXT:    stxvd2x 0, 0, 5
+; CHECK-NEXT:    xxswapd 1, 34
+; CHECK-NEXT:    stxvd2x 1, 0, 5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load <4 x i32>, ptr %a, align 4
