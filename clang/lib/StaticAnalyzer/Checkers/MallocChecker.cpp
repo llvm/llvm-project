@@ -1443,7 +1443,7 @@ void MallocChecker::checkGMallocN0(const CallEvent &Call,
 static bool isFromStdNamespace(const CallEvent &Call) {
   const Decl *FD = Call.getDecl();
   assert(FD && "a CallDescription cannot match a call without a Decl");
-  return (FD->isInStdNamespace());
+  return FD->isInStdNamespace();
 }
 
 void MallocChecker::preGetdelim(const CallEvent &Call,
