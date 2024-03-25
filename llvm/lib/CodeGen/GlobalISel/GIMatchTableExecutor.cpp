@@ -70,6 +70,25 @@ bool GIMatchTableExecutor::isObviouslySafeToFold(MachineInstr &MI,
   if (MI.isConvergent() && MI.getParent() != IntoMI.getParent())
     return false;
 
-  return !MI.mayLoadOrStore() && !MI.mayRaiseFPException() &&
-         !MI.hasUnmodeledSideEffects() && MI.implicit_operands().empty();
+  auto IsSafe = [](const MachineInstr &MI) {
+    return !MI.mayRaiseFPException() && !MI.hasUnmodeledSideEffects() &&
+           MI.implicit_operands().empty();
+  };
+  auto IsSafeNoMem = [IsSafe](const MachineInstr &MI) {
+    return !MI.mayLoadOrStore() && IsSafe(MI);
+  };
+
+  // If source instruction uses memory, fold if no intermediate
+  // instructions use it.
+  if (MI.mayLoadOrStore() && IsSafe(MI) &&
+      MI.getParent() == IntoMI.getParent()) {
+    auto IntoIt = IntoMI.getIterator();
+    auto NextIt = std::next(MI.getIterator());
+    while (!NextIt.isEnd() && NextIt != IntoIt && IsSafeNoMem(*NextIt))
+      ++NextIt;
+    if (NextIt == IntoIt)
+      return true;
+  }
+
+  return IsSafeNoMem(MI);
 }
