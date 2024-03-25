@@ -292,7 +292,6 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   LIS->InsertMachineInstrInMaps(*SetExec);
   LIS->InsertMachineInstrInMaps(*NewBr);
 
-  LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
   MI.eraseFromParent();
 
   // FIXME: Is there a better way of adjusting the liveness? It shouldn't be
@@ -362,9 +361,6 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   RecomputeRegs.insert(SrcReg);
   RecomputeRegs.insert(DstReg);
   LIS->createAndComputeVirtRegInterval(SaveReg);
-
-  // Let this be recomputed.
-  LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
 }
 
 void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
@@ -932,8 +928,6 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
       case AMDGPU::SI_INIT_EXEC:
       case AMDGPU::SI_INIT_EXEC_FROM_INPUT:
         lowerInitExec(MBB, MI);
-        if (LIS)
-          LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
         Changed = true;
         break;
 
@@ -951,6 +945,11 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   optimizeEndCf();
 
   if (LIS) {
+    if (Changed) {
+      // These will need to be recomputed for insertions and removals.
+      LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
+      LIS->removeAllRegUnitsForPhysReg(AMDGPU::SCC);
+    }
     for (Register Reg : RecomputeRegs) {
       LIS->removeInterval(Reg);
       LIS->createAndComputeVirtRegInterval(Reg);
