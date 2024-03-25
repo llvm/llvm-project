@@ -145,7 +145,7 @@ define void @v4i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-NEXT:    sqadd v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    sshr v0.4h, v0.4h, #8
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    str s0, [x2]
 ; CHECK-NEXT:    ret
   %x = load <4 x i8>, ptr %px

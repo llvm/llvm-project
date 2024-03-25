@@ -20,6 +20,8 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Endian.h"
 
+#include "DefineExternalSectionStartAndEndSymbols.h"
+
 #define DEBUG_TYPE "jitlink"
 
 using namespace llvm;
@@ -610,6 +612,11 @@ void link_ELF_aarch64(std::unique_ptr<LinkGraph> G,
       Config.PrePrunePasses.push_back(std::move(MarkLive));
     else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
+
+    // Resolve any external section start / end symbols.
+    Config.PostAllocationPasses.push_back(
+        createDefineExternalSectionStartAndEndSymbolsPass(
+            identifyELFSectionStartAndEndSymbols));
 
     // Add an in-place GOT/TLS/Stubs build pass.
     Config.PostPrunePasses.push_back(buildTables_ELF_aarch64);

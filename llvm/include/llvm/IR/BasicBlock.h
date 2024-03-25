@@ -14,6 +14,7 @@
 #define LLVM_IR_BASICBLOCK_H
 
 #include "llvm-c/Types.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
@@ -21,7 +22,6 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Value.h"
 #include <cassert>
@@ -38,8 +38,8 @@ class LLVMContext;
 class Module;
 class PHINode;
 class ValueSymbolTable;
-class DPValue;
-class DPMarker;
+class DbgVariableRecord;
+class DbgMarker;
 
 /// LLVM Basic Block Representation
 ///
@@ -72,19 +72,19 @@ private:
   Function *Parent;
 
 public:
-  /// Attach a DPMarker to the given instruction. Enables the storage of any
+  /// Attach a DbgMarker to the given instruction. Enables the storage of any
   /// debug-info at this position in the program.
-  DPMarker *createMarker(Instruction *I);
-  DPMarker *createMarker(InstListType::iterator It);
+  DbgMarker *createMarker(Instruction *I);
+  DbgMarker *createMarker(InstListType::iterator It);
 
   /// Convert variable location debugging information stored in dbg.value
-  /// intrinsics into DPMarker / DPValue records. Deletes all dbg.values in
+  /// intrinsics into DbgMarkers / DbgRecords. Deletes all dbg.values in
   /// the process and sets IsNewDbgInfoFormat = true. Only takes effect if
   /// the UseNewDbgInfoFormat LLVM command line option is given.
   void convertToNewDbgValues();
 
-  /// Convert variable location debugging information stored in DPMarkers and
-  /// DPValues into the dbg.value intrinsic representation. Sets
+  /// Convert variable location debugging information stored in DbgMarkers and
+  /// DbgRecords into the dbg.value intrinsic representation. Sets
   /// IsNewDbgInfoFormat = false.
   void convertFromNewDbgValues();
 
@@ -93,52 +93,52 @@ public:
   /// if necessary.
   void setIsNewDbgInfoFormat(bool NewFlag);
 
-  /// Record that the collection of DPValues in \p M "trails" after the last
+  /// Record that the collection of DbgRecords in \p M "trails" after the last
   /// instruction of this block. These are equivalent to dbg.value intrinsics
   /// that exist at the end of a basic block with no terminator (a transient
   /// state that occurs regularly).
-  void setTrailingDPValues(DPMarker *M);
+  void setTrailingDbgRecords(DbgMarker *M);
 
-  /// Fetch the collection of DPValues that "trail" after the last instruction
-  /// of this block, see \ref setTrailingDPValues. If there are none, returns
+  /// Fetch the collection of DbgRecords that "trail" after the last instruction
+  /// of this block, see \ref setTrailingDbgRecords. If there are none, returns
   /// nullptr.
-  DPMarker *getTrailingDPValues();
+  DbgMarker *getTrailingDbgRecords();
 
-  /// Delete any trailing DPValues at the end of this block, see
-  /// \ref setTrailingDPValues.
-  void deleteTrailingDPValues();
+  /// Delete any trailing DbgRecords at the end of this block, see
+  /// \ref setTrailingDbgRecords.
+  void deleteTrailingDbgRecords();
 
   void dumpDbgValues() const;
 
-  /// Return the DPMarker for the position given by \p It, so that DPValues can
-  /// be inserted there. This will either be nullptr if not present, a DPMarker,
-  /// or TrailingDPValues if It is end().
-  DPMarker *getMarker(InstListType::iterator It);
+  /// Return the DbgMarker for the position given by \p It, so that DbgRecords
+  /// can be inserted there. This will either be nullptr if not present, a
+  /// DbgMarker, or TrailingDbgRecords if It is end().
+  DbgMarker *getMarker(InstListType::iterator It);
 
-  /// Return the DPMarker for the position that comes after \p I. \see
-  /// BasicBlock::getMarker, this can be nullptr, a DPMarker, or
-  /// TrailingDPValues if there is no next instruction.
-  DPMarker *getNextMarker(Instruction *I);
+  /// Return the DbgMarker for the position that comes after \p I. \see
+  /// BasicBlock::getMarker, this can be nullptr, a DbgMarker, or
+  /// TrailingDbgRecords if there is no next instruction.
+  DbgMarker *getNextMarker(Instruction *I);
 
-  /// Insert a DPValue into a block at the position given by \p I.
-  void insertDPValueAfter(DbgRecord *DPV, Instruction *I);
+  /// Insert a DbgRecord into a block at the position given by \p I.
+  void insertDbgRecordAfter(DbgRecord *DR, Instruction *I);
 
-  /// Insert a DPValue into a block at the position given by \p Here.
-  void insertDPValueBefore(DbgRecord *DPV, InstListType::iterator Here);
+  /// Insert a DbgRecord into a block at the position given by \p Here.
+  void insertDbgRecordBefore(DbgRecord *DR, InstListType::iterator Here);
 
-  /// Eject any debug-info trailing at the end of a block. DPValues can
+  /// Eject any debug-info trailing at the end of a block. DbgRecords can
   /// transiently be located "off the end" of a block if the blocks terminator
   /// is temporarily removed. Once a terminator is re-inserted this method will
-  /// move such DPValues back to the right place (ahead of the terminator).
-  void flushTerminatorDbgValues();
+  /// move such DbgRecords back to the right place (ahead of the terminator).
+  void flushTerminatorDbgRecords();
 
   /// In rare circumstances instructions can be speculatively removed from
   /// blocks, and then be re-inserted back into that position later. When this
   /// happens in RemoveDIs debug-info mode, some special patching-up needs to
   /// occur: inserting into the middle of a sequence of dbg.value intrinsics
-  /// does not have an equivalent with DPValues.
-  void reinsertInstInDPValues(Instruction *I,
-                              std::optional<DbgRecord::self_iterator> Pos);
+  /// does not have an equivalent with DbgRecords.
+  void reinsertInstInDbgRecords(Instruction *I,
+                                std::optional<DbgRecord::self_iterator> Pos);
 
 private:
   void setParent(Function *parent);
@@ -522,7 +522,7 @@ private:
                                  BasicBlock::iterator FromEndIt);
 
   /// Perform any debug-info specific maintenence for the given splice
-  /// activity. In the DPValue debug-info representation, debug-info is not
+  /// activity. In the DbgRecord debug-info representation, debug-info is not
   /// in instructions, and so it does not automatically move from one block
   /// to another.
   void spliceDebugInfo(BasicBlock::iterator ToIt, BasicBlock *FromBB,
@@ -773,6 +773,32 @@ BasicBlock::iterator skipDebugIntrinsics(BasicBlock::iterator It);
 /// implemented in the .cpp file to avoid circular header deps.
 inline void BasicBlock::validateInstrOrdering() const {}
 #endif
+
+// Specialize DenseMapInfo for iterators, so that ththey can be installed into
+// maps and sets. The iterator is made up of its node pointer, and the
+// debug-info "head" bit.
+template <> struct DenseMapInfo<BasicBlock::iterator> {
+  static inline BasicBlock::iterator getEmptyKey() {
+    return BasicBlock::iterator(nullptr);
+  }
+
+  static inline BasicBlock::iterator getTombstoneKey() {
+    BasicBlock::iterator It(nullptr);
+    It.setHeadBit(true);
+    return It;
+  }
+
+  static unsigned getHashValue(const BasicBlock::iterator &It) {
+    return DenseMapInfo<void *>::getHashValue(
+               reinterpret_cast<void *>(It.getNodePtr())) ^
+           It.getHeadBit();
+  }
+
+  static bool isEqual(const BasicBlock::iterator &LHS,
+                      const BasicBlock::iterator &RHS) {
+    return LHS == RHS && LHS.getHeadBit() == RHS.getHeadBit();
+  }
+};
 
 } // end namespace llvm
 

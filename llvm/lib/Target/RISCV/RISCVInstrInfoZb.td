@@ -424,13 +424,13 @@ def CLMULH : ALU_rr<0b0000101, 0b011, "clmulh", Commutable=1>,
 
 let Predicates = [HasStdExtZbb] in {
 def MIN  : ALU_rr<0b0000101, 0b100, "min", Commutable=1>,
-           Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+           Sched<[WriteIMinMax, ReadIMinMax, ReadIMinMax]>;
 def MINU : ALU_rr<0b0000101, 0b101, "minu", Commutable=1>,
-           Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+           Sched<[WriteIMinMax, ReadIMinMax, ReadIMinMax]>;
 def MAX  : ALU_rr<0b0000101, 0b110, "max", Commutable=1>,
-           Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+           Sched<[WriteIMinMax, ReadIMinMax, ReadIMinMax]>;
 def MAXU : ALU_rr<0b0000101, 0b111, "maxu", Commutable=1>,
-           Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+           Sched<[WriteIMinMax, ReadIMinMax, ReadIMinMax]>;
 } // Predicates = [HasStdExtZbb]
 
 let Predicates = [HasStdExtZbkb] in {
