@@ -6727,7 +6727,9 @@ bool AMDGPULegalizerInfo::legalizeTrapHsaQueuePtr(
 bool AMDGPULegalizerInfo::legalizeTrapHsa(MachineInstr &MI,
                                           MachineRegisterInfo &MRI,
                                           MachineIRBuilder &B) const {
-  if (ST.requiresSimulatedTrap()) {
+  // We need to simulate the 's_trap 2' instruction on targets that run in
+  // PRIV=1 (where it is treated as a nop).
+  if (ST.hasPrivEnabledBug()) {
     ST.getInstrInfo()->insertSimulatedTrap(MRI, B.getMBB(), MI,
                                            MI.getDebugLoc());
     MI.eraseFromParent();

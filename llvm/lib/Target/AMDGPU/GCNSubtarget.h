@@ -23,7 +23,6 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/TargetParser/TargetParser.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AMDGPUGenSubtargetInfo.inc"
@@ -224,6 +223,7 @@ protected:
   bool HasImageStoreD16Bug = false;
   bool HasImageGather4D16Bug = false;
   bool HasMSAALoadDstSelBug = false;
+  bool HasPrivEnabledBug = false;
   bool Has1_5xVGPRs = false;
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
@@ -442,13 +442,6 @@ public:
 
   TrapHandlerAbi getTrapHandlerAbi() const {
     return isAmdHsaOS() ? TrapHandlerAbi::AMDHSA : TrapHandlerAbi::NONE;
-  }
-
-  // True on hardware where 's_trap 2' is treated as a nop that must be
-  // simulated.
-  bool requiresSimulatedTrap() const {
-    AMDGPU::IsaVersion V = AMDGPU::getIsaVersion(getCPU());
-    return V.Major == 11 && V.Minor <= 3;
   }
 
   bool supportsGetDoorbellID() const {
@@ -1033,6 +1026,8 @@ public:
   bool hasMADIntraFwdBug() const { return HasMADIntraFwdBug; }
 
   bool hasMSAALoadDstSelBug() const { return HasMSAALoadDstSelBug; }
+
+  bool hasPrivEnabledBug() const { return HasPrivEnabledBug; }
 
   bool hasNSAEncoding() const { return HasNSAEncoding; }
 
