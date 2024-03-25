@@ -17941,9 +17941,11 @@ static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
+  if (N0.getOpcode() != ISD::AND)
+    return SDValue();
+
   SDValue N1 = N->getOperand(1);
-  if (!N->getFlags().hasDisjoint() &&
-      (N0.getOpcode() != ISD::AND || N1.getOpcode() != ISD::AND))
+  if (N1.getOpcode() != ISD::AND)
     return SDValue();
 
   // InstCombine does (not (neg a)) => (add a -1).
@@ -17993,31 +17995,29 @@ static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       BuildVectorSDNode *BVN0 = dyn_cast<BuildVectorSDNode>(N0->getOperand(i));
       BuildVectorSDNode *BVN1 = dyn_cast<BuildVectorSDNode>(N1->getOperand(j));
       APInt Val1, Val2;
-      if ((!BVN0 || !BVN1) &&
-          (!ISD::isConstantSplatVector(N0->getOperand(i).getNode(), Val1) ||
-           !ISD::isConstantSplatVector(N1->getOperand(j).getNode(), Val2)))
+
+      if (ISD::isConstantSplatVector(N0->getOperand(i).getNode(), Val1) &&
+          ISD::isConstantSplatVector(N1->getOperand(j).getNode(), Val2) &&
+          (BitMask & ~Val1.getZExtValue()) == Val2.getZExtValue()) {
+        return DAG.getNode(AArch64ISD::BSP, DL, VT, N0->getOperand(i),
+                           N0->getOperand(1 - i), N1->getOperand(1 - j));
+      }
+      if (!BVN0 || !BVN1)
         continue;
 
       bool FoundMatch = true;
-      if (BVN0) {
-        for (unsigned k = 0; k < VT.getVectorNumElements(); ++k) {
-          ConstantSDNode *CN0 = dyn_cast<ConstantSDNode>(BVN0->getOperand(k));
-          ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(BVN1->getOperand(k));
-          if (!CN0 || !CN1 ||
-              CN0->getZExtValue() != (BitMask & ~CN1->getZExtValue())) {
-            FoundMatch = false;
-            break;
-          }
+      for (unsigned k = 0; k < VT.getVectorNumElements(); ++k) {
+        ConstantSDNode *CN0 = dyn_cast<ConstantSDNode>(BVN0->getOperand(k));
+        ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(BVN1->getOperand(k));
+        if (!CN0 || !CN1 ||
+            CN0->getZExtValue() != (BitMask & ~CN1->getZExtValue())) {
+          FoundMatch = false;
+          break;
         }
-      } else {
-        FoundMatch = ((BitMask & ~Val1.getZExtValue()) == Val2.getZExtValue());
       }
-
-      if (FoundMatch) {
-        SDNode *Arg = (BVN0) ? BVN0 : N0->getOperand(i).getNode();
-        return DAG.getNode(AArch64ISD::BSP, DL, VT, SDValue(Arg, 0),
+      if (FoundMatch)
+        return DAG.getNode(AArch64ISD::BSP, DL, VT, N0->getOperand(i),
                            N0->getOperand(1 - i), N1->getOperand(1 - j));
-      }
     }
 
   return SDValue();
