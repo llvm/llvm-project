@@ -20,6 +20,7 @@ add_clang_library(clangInterpreter
   Interpreter.cpp
   InterpreterUtils.cpp
   Value.cpp
+  Wasm.cpp
 
   DEPENDS
   intrinsics_gen
