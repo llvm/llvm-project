@@ -66,6 +66,14 @@ struct _LIBCPP_TEMPLATE_VIS formatter<void*, _CharT> : public __formatter_pointe
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<const void*, _CharT> : public __formatter_pointer<_CharT> {};
 
+#  if _LIBCPP_STD_VER >= 23
+template <>
+inline constexpr bool enable_nonlocking_formatter_optimization<nullptr_t> = true;
+template <>
+inline constexpr bool enable_nonlocking_formatter_optimization<void*> = true;
+template <>
+inline constexpr bool enable_nonlocking_formatter_optimization<const void*> = true;
+#  endif //_LIBCPP_STD_VER >= 23
 #endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD

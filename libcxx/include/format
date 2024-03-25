@@ -126,6 +126,9 @@ namespace std {
   // [format.formatter], formatter
   template<class T, class charT = char> struct formatter;
 
+  template<class T>
+  constexpr bool enable_nonlocking_formatter_optimization = false;   // since C++23
+
   // [format.parse.ctx], class template basic_format_parse_context
   template<class charT> class basic_format_parse_context;
   using format_parse_context = basic_format_parse_context<char>;
@@ -133,7 +136,7 @@ namespace std {
 
   // [format.range], formatting of ranges
   // [format.range.fmtkind], variable template format_kind
-  enum class range_format {                                     // since C++23
+  enum class range_format {                                          // since C++23
     disabled,
     map,
     set,
@@ -143,20 +146,20 @@ namespace std {
   };
 
   template<class R>
-    constexpr unspecified format_kind = unspecified;            // since C++23
+    constexpr unspecified format_kind = unspecified;                 // since C++23
 
   template<ranges::input_range R>
       requires same_as<R, remove_cvref_t<R>>
-    constexpr range_format format_kind<R> = see below;          // since C++23
+    constexpr range_format format_kind<R> = see below;               // since C++23
 
   // [format.range.formatter], class template range_formatter
   template<class T, class charT = char>
     requires same_as<remove_cvref_t<T>, T> && formattable<T, charT>
-  class range_formatter;                                        // since C++23
+  class range_formatter;                                             // since C++23
 
   // [format.range.fmtdef], class template range-default-formatter
   template<range_format K, ranges::input_range R, class charT>
-    struct range-default-formatter;                             // exposition only, since C++23
+    struct range-default-formatter;                                  // exposition only, since C++23
 
   // [format.range.fmtmap], [format.range.fmtset], [format.range.fmtstr],
   // specializations for maps, sets, and strings
@@ -173,7 +176,7 @@ namespace std {
     see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg); // Deprecated in C++26
 
   // [format.arg.store], class template format-arg-store
-  template<class Context, class... Args> struct format-arg-store;      // exposition only
+  template<class Context, class... Args> struct format-arg-store;    // exposition only
 
   template<class Context = format_context, class... Args>
     format-arg-store<Context, Args...>
