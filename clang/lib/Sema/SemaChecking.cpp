@@ -7519,9 +7519,8 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     // If the call requires a streaming-mode change and has scalable vector
     // arguments or return values, then warn the user that the streaming and
     // non-streaming vector lengths may be different.
-    bool IsBuiltin = FD && FD->getBuiltinID();
     if (auto *CallerFD = dyn_cast<FunctionDecl>(CurContext)) {
-      if (!IsBuiltin && AnyScalableArgsOrRet) {
+      if ((!FD || !FD->getBuiltinID()) && AnyScalableArgsOrRet) {
         bool IsCalleeStreaming = ExtInfo.AArch64SMEAttributes &
                                  FunctionType::SME_PStateSMEnabledMask;
         bool IsCalleeStreamingCompatible =
