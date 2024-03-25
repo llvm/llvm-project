@@ -108,3 +108,10 @@ func.func @very_nested_type(%arg0: !fir.type<t0{t01:!fir.type<t01{t02:!fir.type<
 }
 // CHECK-LABEL: func.func @very_nested_type(
 // CHECK-SAME: !fir.type<t0UnboxProc{t01:!fir.type<t01UnboxProc{t02:!fir.type<t02UnboxProc{t3:!fir.type<t3UnboxProc{t4:!fir.type<t4UnboxProc{t5:!fir.type<t5UnboxProc{t6:!fir.type<t6UnboxProc{t7:!fir.type<t7UnboxProc{t8:!fir.type<t8UnboxProc{t9:!fir.type<t9UnboxProc{t10:!fir.type<t10UnboxProc{t11:!fir.type<t11UnboxProc{t12:!fir.type<t12UnboxProc{t13:!fir.type<t13UnboxProc{t14:!fir.type<t14UnboxProc{t15:!fir.type<t15UnboxProc{t16:!fir.type<t16UnboxProc{t17:!fir.type<t17UnboxProc{t18:!fir.type<t18UnboxProc{t19:!fir.type<t19UnboxProc{b:() -> ()}>}>}>}>}>}>}>}>}>}>}>}>}>}>}>}>}>}>}>}>)
+
+func.func @test_indirect_type_recursion() {
+    %0 = fir.zero_bits !fir.ptr<!fir.type<t001{x:!fir.ptr<!fir.type<t002{x:!fir.ptr<!fir.type<t001>>}>>,p:!fir.boxproc<() -> ()>}>>
+  return
+}
+// CHECK-LABEL: func.func @test_indirect_type_recursion(
+// CHECK: fir.zero_bits !fir.ptr<!fir.type<t001UnboxProc{x:!fir.ptr<!fir.type<t002UnboxProc{x:!fir.ptr<!fir.type<t001UnboxProc>>}>>,p:() -> ()}>>
