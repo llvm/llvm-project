@@ -11,15 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenDAGPatterns.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenSchedule.h"
-#include "CodeGenTarget.h"
-#include "PredicateExpander.h"
-#include "SequenceToOffsetTable.h"
-#include "SubtargetFeatureInfo.h"
+#include "Basic/SequenceToOffsetTable.h"
+#include "Common/CodeGenDAGPatterns.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenSchedule.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/PredicateExpander.h"
+#include "Common/SubtargetFeatureInfo.h"
+#include "Common/Types.h"
 #include "TableGenBackends.h"
-#include "Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
