@@ -1,0 +1,13 @@
+(library
+ (name llvm_executionengine)
+ (public_name llvm.executionengine)
+ (libraries llvm llvm.target ctypes.foreign)
+ (foreign_stubs
+  (language c)
+  (names executionengine_ocaml)
+  (extra_deps ../llvm/llvm_ocaml.h))
+ (c_library_flags (:include c_library_flags.sexp)))
+
+(rule
+ (targets c_library_flags.sexp)
+ (action (run ../discover.sh executionengine mcjit native)))

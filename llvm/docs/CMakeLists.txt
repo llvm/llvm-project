@@ -119,6 +119,7 @@ if (LLVM_ENABLE_SPHINX)
   endif()
 endif()
 
+if(FALSE)
 list(FIND LLVM_BINDINGS_LIST ocaml uses_ocaml)
 if( NOT uses_ocaml LESS 0 AND LLVM_ENABLE_OCAMLDOC )
   set(doc_targets
@@ -161,4 +162,5 @@ if( NOT uses_ocaml LESS 0 AND LLVM_ENABLE_OCAMLDOC )
       COMPONENT ocamldoc-html
       DESTINATION "${LLVM_INSTALL_OCAMLDOC_HTML_DIR}")
   endif()
+endif()
 endif()
