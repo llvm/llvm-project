@@ -1275,6 +1275,8 @@ static bool StopAtComponentPre(const Symbol &component) {
     return !IsPointer(component);
   } else if constexpr (componentKind == ComponentKind::PotentialAndPointer) {
     return true;
+  } else {
+    DIE("unexpected ComponentKind");
   }
 }
 
