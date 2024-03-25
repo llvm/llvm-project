@@ -2725,19 +2725,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   for (StringRef name : config->undefined)
     addUnusedUndefined(name)->referenced = true;
 
-  // Add all files to the symbol table. This will add almost all
-  // symbols that we need to the symbol table. This process might
-  // add files to the link, via autolinking, these files are always
-  // appended to the Files vector.
-  {
-    llvm::TimeTraceScope timeScope("Parse input files");
-    for (size_t i = 0; i < files.size(); ++i) {
-      llvm::TimeTraceScope timeScope("Parse input files", files[i]->getName());
-      doParseFile<ELFT>(files[i]);
-    }
-    if (armCmseImpLib)
-      parseArmCMSEImportLib(*armCmseImpLib);
-  }
+  parseFiles(files, armCmseImpLib);
 
   // Now that we have every file, we can decide if we will need a
   // dynamic symbol table.
