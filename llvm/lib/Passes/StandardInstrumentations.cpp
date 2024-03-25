@@ -2355,7 +2355,7 @@ StandardInstrumentations::StandardInstrumentations(
                        PrintChanged == ChangePrinter::ColourDiffVerbose ||
                            PrintChanged == ChangePrinter::ColourDiffQuiet),
       WebsiteChangeReporter(PrintChanged == ChangePrinter::DotCfgVerbose),
-      Verify(DebugLogging), VerifyEach(VerifyEach) {}
+      Verify(DebugLogging), YieldAfterPass(Context), VerifyEach(VerifyEach) {}
 
 PrintCrashIRInstrumentation *PrintCrashIRInstrumentation::CrashReporter =
     nullptr;
@@ -2415,6 +2415,16 @@ void PrintCrashIRInstrumentation::registerCallbacks(
       });
 }
 
+void YieldInstrumentation::registerCallbacks(
+    PassInstrumentationCallbacks &PIC) {
+  PIC.registerAfterPassCallback(
+      [this](StringRef P, Any IR, const PreservedAnalyses &PassPA) {
+        if (isIgnored(P))
+          return;
+        Context.yield();
+      });
+}
+
 void StandardInstrumentations::registerCallbacks(
     PassInstrumentationCallbacks &PIC, ModuleAnalysisManager *MAM) {
   PrintIR.registerCallbacks(PIC);
@@ -2432,6 +2442,7 @@ void StandardInstrumentations::registerCallbacks(
   PrintCrashIR.registerCallbacks(PIC);
   if (MAM)
     PreservedCFGChecker.registerCallbacks(PIC, *MAM);
+  YieldAfterPass.registerCallbacks(PIC);
 
   // TimeProfiling records the pass running time cost.
   // Its 'BeforePassCallback' can be appended at the tail of all the

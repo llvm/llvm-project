@@ -451,6 +451,15 @@ public:
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 };
 
+
+class YieldInstrumentation {
+  LLVMContext &Context;
+
+public:
+  YieldInstrumentation(LLVMContext &Context) : Context(Context) {}
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+};
+
 /// This class implements --time-trace functionality for new pass manager.
 /// It provides the pass-instrumentation callbacks that measure the pass
 /// execution time. They collect time tracing info by TimeProfiler.
@@ -580,6 +589,7 @@ class StandardInstrumentations {
   PrintCrashIRInstrumentation PrintCrashIR;
   IRChangedTester ChangeTester;
   VerifyInstrumentation Verify;
+  YieldInstrumentation YieldAfterPass;
 
   bool VerifyEach;
 
