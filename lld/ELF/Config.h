@@ -279,6 +279,7 @@ struct Config {
   bool relocatable;
   bool relrGlibc = false;
   bool relrPackDynRelocs = false;
+  bool relaxTbljal;
   llvm::DenseSet<llvm::StringRef> saveTempsArgs;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint32_t>, 0> shuffleSections;
   bool singleRoRx;

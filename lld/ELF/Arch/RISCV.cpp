@@ -38,6 +38,8 @@ public:
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
+  void writeTableJumpHeader(uint8_t *buf) const override;
+  void writeTableJumpEntry(uint8_t *buf, const uint64_t symbol) const override;
   RelType getDynRel(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -54,6 +56,7 @@ public:
 // of the psABI spec.
 #define INTERNAL_R_RISCV_GPREL_I 256
 #define INTERNAL_R_RISCV_GPREL_S 257
+#define INTERNAL_R_RISCV_TBJAL 258
 
 const uint64_t dtpOffset = 0x800;
 
@@ -253,6 +256,20 @@ void RISCV::writePlt(uint8_t *buf, const Symbol &sym,
   write32le(buf + 4, itype(config->is64 ? LD : LW, X_T3, X_T3, lo12(offset)));
   write32le(buf + 8, itype(JALR, X_T1, X_T3, 0));
   write32le(buf + 12, itype(ADDI, 0, 0, 0));
+}
+
+void RISCV::writeTableJumpHeader(uint8_t *buf) const {
+  if (config->is64)
+    write64le(buf, mainPart->dynamic->getVA());
+  else
+    write32le(buf, mainPart->dynamic->getVA());
+}
+
+void RISCV::writeTableJumpEntry(uint8_t *buf, const uint64_t address) const {
+  if (config->is64)
+    write64le(buf, address);
+  else
+    write32le(buf, address);
 }
 
 RelType RISCV::getDynRel(RelType type) const {
@@ -477,6 +494,9 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write32le(loc, insn);
     return;
   }
+
+  case INTERNAL_R_RISCV_TBJAL:
+    return;
 
   case R_RISCV_ADD8:
     *loc += val;
@@ -731,6 +751,30 @@ void elf::initSymbolAnchors() {
   }
 }
 
+static bool relaxTableJump(const InputSection &sec, size_t i, uint64_t loc,
+                           Relocation &r, uint32_t &remove) {
+  if (!in.riscvTableJumpSection || !in.riscvTableJumpSection->isFinalized)
+    return false;
+
+  const auto jalr = sec.contentMaybeDecompress().data()[r.offset + 4];
+  const uint8_t rd = extractBits(jalr, 11, 7);
+  int tblEntryIndex = -1;
+  if (rd == 0) {
+    tblEntryIndex = in.riscvTableJumpSection->getCMJTEntryIndex(r.sym);
+  } else if (rd == X_RA) {
+    tblEntryIndex = in.riscvTableJumpSection->getCMJALTEntryIndex(r.sym);
+  }
+
+  if (tblEntryIndex >= 0) {
+    sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_TBJAL;
+    sec.relaxAux->writes.push_back(0xA002 |
+                                   (tblEntryIndex << 2)); // cm.jt or cm.jalt
+    remove = 6;
+    return true;
+  }
+  return false;
+}
+
 // Relax R_RISCV_CALL/R_RISCV_CALL_PLT auipc+jalr to c.j, c.jal, or jal.
 static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
                       Relocation &r, uint32_t &remove) {
@@ -751,7 +795,7 @@ static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
     sec.relaxAux->relocTypes[i] = R_RISCV_RVC_JUMP;
     sec.relaxAux->writes.push_back(0x2001); // c.jal
     remove = 6;
-  } else if (isInt<21>(displace)) {
+  } else if (!relaxTableJump(sec, i, loc, r, remove) && isInt<21>(displace)) {
     sec.relaxAux->relocTypes[i] = R_RISCV_JAL;
     sec.relaxAux->writes.push_back(0x6f | rd << 7); // jal
     remove = 4;
@@ -858,6 +902,11 @@ static bool relax(InputSection &sec) {
     case R_RISCV_LO12_S:
       if (relaxable(relocs, i))
         relaxHi20Lo12(sec, i, loc, r, remove);
+      break;
+    case R_RISCV_JAL:
+      if (i + 1 != sec.relocations.size() &&
+          sec.relocations[i + 1].type == R_RISCV_RELAX)
+        relaxTableJump(sec, i, loc, r, remove);
       break;
     case R_RISCV_TLSDESC_HI20:
       // For TLSDESC=>LE, we can use the short form if hi20 is zero.
@@ -990,6 +1039,12 @@ void RISCV::finalizeRelax(int passes) const {
           case INTERNAL_R_RISCV_GPREL_I:
           case INTERNAL_R_RISCV_GPREL_S:
             break;
+          case INTERNAL_R_RISCV_TBJAL:
+            assert(config->relaxTbljal);
+            assert((aux.writes[writesIdx] & 0xfc03) == 0xA002);
+            skip = 2;
+            write16le(p, aux.writes[writesIdx++]);
+            break;
           case R_RISCV_RELAX:
             // Used by relaxTlsLe to indicate the relocation is ignored.
             break;
@@ -1000,6 +1055,8 @@ void RISCV::finalizeRelax(int passes) const {
           case R_RISCV_JAL:
             skip = 4;
             write32le(p, aux.writes[writesIdx++]);
+            break;
+          case R_RISCV_64:
             break;
           case R_RISCV_32:
             // Used by relaxTlsLe to write a uint32_t then suppress the handling
@@ -1233,4 +1290,216 @@ void elf::mergeRISCVAttributesSections() {
 TargetInfo *elf::getRISCVTargetInfo() {
   static RISCV target;
   return &target;
+}
+
+TableJumpSection::TableJumpSection()
+    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS,
+                       config->wordsize, ".riscv.jvt") {}
+
+void TableJumpSection::addCMJTEntryCandidate(const Symbol *symbol,
+                                             int csReduction) {
+  addEntry(symbol, CMJTEntryCandidates, csReduction);
+}
+
+int TableJumpSection::getCMJTEntryIndex(const Symbol *symbol) {
+  uint32_t index = getIndex(symbol, maxCMJTEntrySize, finalizedCMJTEntries);
+  return index < finalizedCMJTEntries.size() ? (int)(startCMJTEntryIdx + index)
+                                             : -1;
+}
+
+void TableJumpSection::addCMJALTEntryCandidate(const Symbol *symbol,
+                                               int csReduction) {
+  addEntry(symbol, CMJALTEntryCandidates, csReduction);
+}
+
+int TableJumpSection::getCMJALTEntryIndex(const Symbol *symbol) {
+  uint32_t index = getIndex(symbol, maxCMJALTEntrySize, finalizedCMJALTEntries);
+  return index < finalizedCMJALTEntries.size()
+             ? (int)(startCMJALTEntryIdx + index)
+             : -1;
+}
+
+void TableJumpSection::addEntry(
+    const Symbol *symbol, llvm::DenseMap<const Symbol *, int> &entriesList,
+    int csReduction) {
+  entriesList[symbol] += csReduction;
+}
+
+uint32_t TableJumpSection::getIndex(
+    const Symbol *symbol, uint32_t maxSize,
+    SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
+        &entriesList) {
+  // Find this symbol in the ordered list of entries if it exists.
+  assert(maxSize >= entriesList.size() &&
+         "Finalized vector of entries exceeds maximum");
+  auto idx = std::find_if(
+      entriesList.begin(), entriesList.end(),
+      [symbol](llvm::detail::DenseMapPair<const Symbol *, int> &e) {
+        return e.first == symbol;
+      });
+
+  if (idx == entriesList.end())
+    return entriesList.size();
+  return idx - entriesList.begin();
+}
+
+void TableJumpSection::scanTableJumpEntries(const InputSection &sec) const {
+  for (auto [i, r] : llvm::enumerate(sec.relocations)) {
+    Defined *definedSymbol = dyn_cast<Defined>(r.sym);
+    if (!definedSymbol)
+      continue;
+    if (i + 1 == sec.relocs().size() ||
+        sec.relocs()[i + 1].type != R_RISCV_RELAX)
+      continue;
+    switch (r.type) {
+    case R_RISCV_JAL:
+    case R_RISCV_CALL:
+    case R_RISCV_CALL_PLT: {
+      const auto jalr = sec.contentMaybeDecompress().data()[r.offset + 4];
+      const uint8_t rd = extractBits(jalr, 11, 7);
+
+      int csReduction = 6;
+      if (sec.relaxAux->relocTypes[i] == R_RISCV_RVC_JUMP)
+        continue;
+      else if (sec.relaxAux->relocTypes[i] == R_RISCV_JAL)
+        csReduction = 2;
+
+      if (rd == 0)
+        in.riscvTableJumpSection->addCMJTEntryCandidate(r.sym, csReduction);
+      else if (rd == X_RA)
+        in.riscvTableJumpSection->addCMJALTEntryCandidate(r.sym, csReduction);
+    }
+    }
+  }
+}
+
+void TableJumpSection::finalizeContents() {
+  if (isFinalized)
+    return;
+  isFinalized = true;
+
+  finalizedCMJTEntries = finalizeEntry(CMJTEntryCandidates, maxCMJTEntrySize);
+  CMJTEntryCandidates.clear();
+  int32_t CMJTSizeReduction = getSizeReduction();
+  finalizedCMJALTEntries =
+      finalizeEntry(CMJALTEntryCandidates, maxCMJALTEntrySize);
+  CMJALTEntryCandidates.clear();
+
+  if (finalizedCMJALTEntries.size() > 0 &&
+      getSizeReduction() < CMJTSizeReduction) {
+    // Stop relax to cm.jalt if there will be the code reduction of cm.jalt is
+    // smaller then the size of padding 0 for doing cm.jalt optmise
+    finalizedCMJALTEntries.clear();
+  }
+  // if table jump still got negative effect, give up.
+  if (getSizeReduction() <= 0) {
+    warn("Table Jump Relaxation didn't got any reduction for code size.");
+    finalizedCMJTEntries.clear();
+  }
+}
+
+// Sort the map in decreasing order of the amount of code reduction provided
+// by the entries. Drop any entries that can't fit in the map from the tail
+// end since they provide less code reduction. Drop any entries that cause
+// an increase in code size (i.e. the reduction from instruction conversion
+// does not cover the code size gain from adding a table entry).
+SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
+TableJumpSection::finalizeEntry(llvm::DenseMap<const Symbol *, int> EntryMap,
+                                uint32_t maxSize) {
+  auto cmp = [](const llvm::detail::DenseMapPair<const Symbol *, int> &p1,
+                const llvm::detail::DenseMapPair<const Symbol *, int> &p2) {
+    return p1.second > p2.second;
+  };
+
+  SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
+      tempEntryVector;
+  std::copy(EntryMap.begin(), EntryMap.end(),
+            std::back_inserter(tempEntryVector));
+  std::sort(tempEntryVector.begin(), tempEntryVector.end(), cmp);
+
+  auto finalizedVector = tempEntryVector;
+  if (tempEntryVector.size() >= maxSize)
+    finalizedVector =
+        SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>(
+            tempEntryVector.begin(), tempEntryVector.begin() + maxSize);
+
+  // Drop any items that have a negative effect (i.e. increase code size).
+  while (finalizedVector.size()) {
+    if (finalizedVector.rbegin()->second < config->wordsize)
+      finalizedVector.pop_back();
+    else
+      break;
+  }
+  return finalizedVector;
+}
+
+size_t TableJumpSection::getSize() const {
+  if (isFinalized) {
+    if (!finalizedCMJALTEntries.empty())
+      return (startCMJALTEntryIdx + finalizedCMJALTEntries.size()) *
+             config->wordsize;
+    return (startCMJTEntryIdx + finalizedCMJTEntries.size()) * config->wordsize;
+  } else {
+    if (!CMJALTEntryCandidates.empty())
+      return (startCMJALTEntryIdx + CMJALTEntryCandidates.size()) *
+             config->wordsize;
+    return (startCMJTEntryIdx + CMJTEntryCandidates.size()) * config->wordsize;
+  }
+}
+
+int32_t TableJumpSection::getSizeReduction() {
+  // The total reduction in code size is J + JA - JTS - JAE.
+  // Where:
+  // J = number of bytes saved for all the cm.jt instructions emitted
+  // JA = number of bytes saved for all the cm.jalt instructions emitted
+  // JTS = size of the part of the table for cm.jt jumps (i.e. 32 x wordsize)
+  // JAE = number of entries emitted for the cm.jalt jumps x wordsize
+
+  int32_t sizeReduction = -getSize();
+  for (auto entry : finalizedCMJTEntries) {
+    sizeReduction += entry.second;
+  }
+  for (auto entry : finalizedCMJALTEntries) {
+    sizeReduction += entry.second;
+  }
+  return sizeReduction;
+}
+
+void TableJumpSection::writeTo(uint8_t *buf) {
+  if (getSizeReduction() <= 0)
+    return;
+  target->writeTableJumpHeader(buf);
+  writeEntries(buf + startCMJTEntryIdx * config->wordsize,
+               finalizedCMJTEntries);
+  if (finalizedCMJALTEntries.size() > 0) {
+    padWords(buf + ((startCMJTEntryIdx + finalizedCMJTEntries.size()) *
+                    config->wordsize),
+             startCMJALTEntryIdx);
+    writeEntries(buf + (startCMJALTEntryIdx * config->wordsize),
+                 finalizedCMJALTEntries);
+  }
+}
+
+void TableJumpSection::padWords(uint8_t *buf, const uint8_t maxWordCount) {
+  for (size_t i = 0; i < maxWordCount; ++i) {
+    if (config->is64)
+      write64le(buf + i, 0);
+    else
+      write32le(buf + i, 0);
+  }
+}
+
+void TableJumpSection::writeEntries(
+    uint8_t *buf,
+    SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
+        &entriesList) {
+  for (const auto &entry : entriesList) {
+    assert(entry.second > 0);
+    // Use the symbol from in.symTab to ensure we have the final adjusted
+    // symbol.
+    if (!entry.first->isDefined())
+      continue;
+    target->writeTableJumpEntry(buf, entry.first->getVA());
+    buf += config->wordsize;
+  }
 }

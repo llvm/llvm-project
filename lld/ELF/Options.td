@@ -347,6 +347,9 @@ defm use_android_relr_tags: BB<"use-android-relr-tags",
     "Use SHT_ANDROID_RELR / DT_ANDROID_RELR* tags instead of SHT_RELR / DT_RELR*",
     "Use SHT_RELR / DT_RELR* tags (default)">;
 
+def relax_tbljal: FF<"relax-tbljal">,
+  HelpText<"Enable conversion of call instructions to table jump instruction from the Zcmt extension for frequently called functions (RISC-V only)">;
+
 def pic_veneer: F<"pic-veneer">,
   HelpText<"Always generate position independent thunks (veneers)">;
 
