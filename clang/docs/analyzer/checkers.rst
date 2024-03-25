@@ -340,6 +340,51 @@ cplusplus
 
 C++ Checkers.
 
+.. _cplusplus-ArrayDelete:
+
+cplusplus.ArrayDelete (C++)
+"""""""""""""""""""""""""""
+
+Reports destructions of arrays of polymorphic objects that are destructed as
+their base class. If the dynamic type of the array is different from its static
+type, calling `delete[]` is undefined.
+
+This checker corresponds to the SEI CERT rule `EXP51-CPP: Do not delete an array through a pointer of the incorrect type <https://wiki.sei.cmu.edu/confluence/display/cplusplus/EXP51-CPP.+Do+not+delete+an+array+through+a+pointer+of+the+incorrect+type>`_.
+
+.. code-block:: cpp
+
+ class Base {
+ public:
+   virtual ~Base() {}
+ };
+ class Derived : public Base {};
+
+ Base *create() {
+   Base *x = new Derived[10]; // note: Casting from 'Derived' to 'Base' here
+   return x;
+ }
+
+ void foo() {
+   Base *x = create();
+   delete[] x; // warn: Deleting an array of 'Derived' objects as their base class 'Base' is undefined
+ }
+
+**Limitations**
+
+The checker does not emit note tags when casting to and from reference types,
+even though the pointer values are tracked across references.
+
+.. code-block:: cpp
+
+ void foo() {
+   Derived *d = new Derived[10];
+   Derived &dref = *d;
+
+   Base &bref = static_cast<Base&>(dref); // no note
+   Base *b = &bref;
+   delete[] b; // warn: Deleting an array of 'Derived' objects as their base class 'Base' is undefined
+ }
+
 .. _cplusplus-InnerPointer:
 
 cplusplus.InnerPointer (C++)
@@ -2138,30 +2183,6 @@ Either the comparison is useless or there is division by zero.
 
 alpha.cplusplus
 ^^^^^^^^^^^^^^^
-
-.. _alpha-cplusplus-ArrayDelete:
-
-alpha.cplusplus.ArrayDelete (C++)
-"""""""""""""""""""""""""""""""""
-Reports destructions of arrays of polymorphic objects that are destructed as their base class.
-This checker corresponds to the CERT rule `EXP51-CPP: Do not delete an array through a pointer of the incorrect type <https://wiki.sei.cmu.edu/confluence/display/cplusplus/EXP51-CPP.+Do+not+delete+an+array+through+a+pointer+of+the+incorrect+type>`_.
-
-.. code-block:: cpp
-
- class Base {
-   virtual ~Base() {}
- };
- class Derived : public Base {}
-
- Base *create() {
-   Base *x = new Derived[10]; // note: Casting from 'Derived' to 'Base' here
-   return x;
- }
-
- void foo() {
-   Base *x = create();
-   delete[] x; // warn: Deleting an array of 'Derived' objects as their base class 'Base' is undefined
- }
 
 .. _alpha-cplusplus-DeleteWithNonVirtualDtor:
 
