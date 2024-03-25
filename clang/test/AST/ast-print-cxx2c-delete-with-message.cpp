@@ -3,7 +3,7 @@
 //
 // With serialization:
 // RUN: %clang_cc1 -emit-pch -o %t %s
-// RUN: %clang_cc1 -x c++ -include-pch %t -ast-print-all  /dev/null | FileCheck %s
+// RUN: %clang_cc1 -x c++ -include-pch %t -ast-print  /dev/null | FileCheck %s
 
 // CHECK: struct S {
 struct S {
