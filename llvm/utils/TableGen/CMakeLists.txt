@@ -75,10 +75,10 @@ add_tablegen(llvm-tblgen LLVM
   X86MnemonicTables.cpp
   X86ModRMFilters.cpp
   X86RecognizableInstr.cpp
+  $<TARGET_OBJECTS:obj.LLVMTableGenBasic>
   $<TARGET_OBJECTS:obj.LLVMTableGenCommon>
 
   DEPENDS
   intrinsics_gen # via llvm-min-tablegen
   )
-target_link_libraries(llvm-tblgen PRIVATE LLVMTableGenCommon)
 set_target_properties(llvm-tblgen PROPERTIES FOLDER "Tablegenning")

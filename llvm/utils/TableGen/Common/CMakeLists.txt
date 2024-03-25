@@ -39,7 +39,6 @@ add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
   vt_gen
   )
 set_target_properties(LLVMTableGenCommon PROPERTIES FOLDER "Tablegenning")
-target_link_libraries(LLVMTableGenCommon PUBLIC LLVMTableGenBasic)
 
 # Users may include its headers as "Common/*.h"
 target_include_directories(LLVMTableGenCommon
