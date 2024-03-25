@@ -1,30 +1,11 @@
 import os
 import shutil
 import tempfile
-import struct
 
 import lldb
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-
-
-def getUUID(aoutuuid):
-    """
-    Pull the 20 byte UUID out of the .note.gnu.build-id section that was dumped
-    to a file already, as part of the build.
-    """
-    with open(aoutuuid, "rb") as f:
-        data = f.read(36)
-        if len(data) != 36:
-            return None
-        header = struct.unpack_from("<4I", data)
-        if len(header) != 4:
-            return None
-        # 4 element 'prefix', 20 bytes of uuid, 3 byte long string: 'GNU':
-        if header[0] != 4 or header[1] != 20 or header[2] != 3 or header[3] != 0x554E47:
-            return None
-        return data[16:].hex()
 
 
 """
@@ -135,8 +116,8 @@ class DebugInfodTests(TestBase):
 
         self.build()
 
-        uuid = getUUID(self.getBuildArtifact("a.out.uuid"))
-        if !uuid:
+        uuid = self.getUUID("a.out")
+        if not uuid:
             self.fail("Could not get UUID for a.out")
             return
         self.main_source_file = lldb.SBFileSpec("main.c")
@@ -185,3 +166,13 @@ class DebugInfodTests(TestBase):
                 "settings insert-before plugin.symbol-locator.debuginfod.server-urls 0 file://%s"
                 % self.tmp_dir
             )
+
+    def getUUID(self, filename):
+        try:
+            target = self.dbg.CreateTarget(self.getBuildArtifact(filename))
+            module = target.GetModuleAtIndex(0)
+            uuid = module.GetUUIDString().replace("-", "").lower()
+            self.dbg.DeleteTarget(target)
+            return uuid if len(uuid) == 40 else None
+        except:
+            return None
