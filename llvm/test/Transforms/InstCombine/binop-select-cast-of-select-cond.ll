@@ -191,8 +191,8 @@ define i64 @multiuse_select_non_const(i1 %c, i64 %x, i64 %y) {
 ; CHECK-SAME: (i1 [[C:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i64 [[X]], i64 [[Y]]
 ; CHECK-NEXT:    call void @use(i64 [[SEL]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[X]], 1
-; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[C]], i64 [[TMP1]], i64 [[Y]]
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[C]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[SEL]], [[EXT]]
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
   %sel = select i1 %c, i64 %x, i64 %y
@@ -206,8 +206,8 @@ define i64 @multiuse_select_non_const_chain(i1 %c, i64 %x, i64 %y) {
 ; CHECK-LABEL: define i64 @multiuse_select_non_const_chain
 ; CHECK-SAME: (i1 [[C:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i64 [[X]], i64 [[Y]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[X]], 1
-; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[C]], i64 [[TMP1]], i64 [[Y]]
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[C]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[SEL]], [[EXT]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[SEL]], [[ADD]]
 ; CHECK-NEXT:    ret i64 [[MUL]]
 ;
@@ -223,7 +223,8 @@ define i64 @multiuse_select_one_constant_left(i1 %c, i64 %x) {
 ; CHECK-SAME: (i1 [[C:%.*]], i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i64 123, i64 [[X]]
 ; CHECK-NEXT:    call void @use(i64 [[SEL]])
-; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[C]], i64 124, i64 [[X]]
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[C]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[SEL]], [[EXT]]
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
   %sel = select i1 %c, i64 123, i64 %x
@@ -238,8 +239,8 @@ define i64 @multiuse_select_one_constant_right(i1 %c, i64 %x) {
 ; CHECK-SAME: (i1 [[C:%.*]], i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i64 [[X]], i64 123
 ; CHECK-NEXT:    call void @use(i64 [[SEL]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[X]], 1
-; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[C]], i64 [[TMP1]], i64 123
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[C]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[SEL]], [[EXT]]
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
   %sel = select i1 %c, i64 %x, i64 123
@@ -249,11 +250,15 @@ define i64 @multiuse_select_one_constant_right(i1 %c, i64 %x) {
   ret i64 %add
 }
 
+; FIXME could fold this
+
 define i64 @multiuse_select_one_constant_left_chain(i1 %c, i64 %x) {
 ; CHECK-LABEL: define i64 @multiuse_select_one_constant_left_chain
 ; CHECK-SAME: (i1 [[C:%.*]], i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], [[X]]
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[C]], i64 15006, i64 [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i64 123, i64 [[X]]
+; CHECK-NEXT:    [[EXT_NEG:%.*]] = sext i1 [[C]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[SEL]], [[EXT_NEG]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[SEL]], [[ADD]]
 ; CHECK-NEXT:    ret i64 [[MUL]]
 ;
   %sel = select i1 %c, i64 123, i64 %x
@@ -263,12 +268,15 @@ define i64 @multiuse_select_one_constant_left_chain(i1 %c, i64 %x) {
   ret i64 %mul
 }
 
+; FIXME could fold this
+
 define i64 @multiuse_select_one_constant_right_chain(i1 %c, i64 %x) {
 ; CHECK-LABEL: define i64 @multiuse_select_one_constant_right_chain
 ; CHECK-SAME: (i1 [[C:%.*]], i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[X]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], [[X]]
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[C]], i64 [[TMP2]], i64 15129
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i64 [[X]], i64 123
+; CHECK-NEXT:    [[EXT_NEG:%.*]] = sext i1 [[C]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[SEL]], [[EXT_NEG]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[SEL]], [[ADD]]
 ; CHECK-NEXT:    ret i64 [[MUL]]
 ;
   %sel = select i1 %c, i64 %x, i64 123
