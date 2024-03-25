@@ -1265,6 +1265,7 @@ public:
     default:
       return false;
     case VPInstruction::BranchOnCount:
+    case VPInstruction::CanonicalIVIncrementForPart:
       return true;
     };
     llvm_unreachable("switch should return");
