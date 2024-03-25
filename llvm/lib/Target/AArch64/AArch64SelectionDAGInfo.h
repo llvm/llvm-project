@@ -48,9 +48,10 @@ public:
                                   MachinePointerInfo DstPtrInfo,
                                   bool ZeroData) const override;
 
-  SDValue EmitSpecializedLibcall(SelectionDAG &DAG, const SDLoc &DL,
-                                 SDValue Chain, SDValue Dst, SDValue Src,
-                                 SDValue Size, RTLIB::Libcall LC) const;
+  SDValue EmitStreamingCompatibleMemLibCall(SelectionDAG &DAG, const SDLoc &DL,
+                                            SDValue Chain, SDValue Dst,
+                                            SDValue Src, SDValue Size,
+                                            RTLIB::Libcall LC) const;
 };
 }
 
