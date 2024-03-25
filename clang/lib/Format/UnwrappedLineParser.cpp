@@ -1674,7 +1674,7 @@ void UnwrappedLineParser::parseStructuralElement(
       nextToken();
       Line->Tokens.begin()->Tok->MustBreakBefore = true;
       FormatTok->setFinalizedType(TT_GotoLabelColon);
-      parseLabel(!Style.IndentGotoLabels);
+      parseLabel(Style.IndentGotoLabels != FormatStyle::GLI_None);
       if (HasLabel)
         *HasLabel = true;
       return;
