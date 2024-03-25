@@ -1700,31 +1700,16 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   case TargetOpcode::G_STRICT_FLDEXP:
     return narrowScalarFLDEXP(MI, TypeIdx, NarrowTy);
   case TargetOpcode::G_VSCALE: {
-    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    const APInt &Val = MI.getOperand(1).getCImm()->getValue();
-    unsigned TotalSize = Ty.getSizeInBits();
-    unsigned NarrowSize = NarrowTy.getSizeInBits();
-    int NumParts = TotalSize / NarrowSize;
+    Register Dst = MI.getOperand(0).getReg();
+    LLT Ty = MRI.getType(Dst);
+    LLT HalfTy = Ty.divide(2);
 
-    SmallVector<Register, 4> PartRegs;
-    for (int I = 0; I != NumParts; ++I) {
-      unsigned Offset = I * NarrowSize;
-      auto K =
-          MIRBuilder.buildVScale(NarrowTy, Val.lshr(Offset).trunc(NarrowSize));
-      PartRegs.push_back(K.getReg(0));
-    }
-    LLT LeftoverTy;
-    unsigned LeftoverBits = TotalSize - NumParts * NarrowSize;
-    SmallVector<Register, 1> LeftoverRegs;
-    if (LeftoverBits != 0) {
-      LeftoverTy = LLT::scalar(LeftoverBits);
-      auto K = MIRBuilder.buildVScale(
-          LeftoverTy, Val.lshr(NumParts * NarrowSize).trunc(LeftoverBits));
-      LeftoverRegs.push_back(K.getReg(0));
-    }
-
-    insertParts(MI.getOperand(0).getReg(), Ty, NarrowTy, PartRegs, LeftoverTy,
-                LeftoverRegs);
+    // Assume VSCALE(1) fits into a legal integer
+    const APInt One(HalfTy.getSizeInBits(), 1);
+    auto VScaleBase = MIRBuilder.buildVScale(HalfTy, One);
+    auto ZExt = MIRBuilder.buildZExt(Ty, VScaleBase);
+    auto C = MIRBuilder.buildConstant(Ty, *MI.getOperand(1).getCImm());
+    auto Res = MIRBuilder.buildMul(Dst, ZExt, C);
 
     MI.eraseFromParent();
     return Legalized;
