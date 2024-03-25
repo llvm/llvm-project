@@ -2519,7 +2519,7 @@ static void emitValidateOperandClass(AsmMatcherInfo &Info, raw_ostream &OS) {
   // Check for register operands, including sub-classes.
   OS << "  if (Operand.isReg()) {\n";
   OS << "    MatchClassKind OpKind;\n";
-  OS << "    switch (Operand.getReg()) {\n";
+  OS << "    switch (Operand.getReg().id()) {\n";
   OS << "    default: OpKind = InvalidMatchClass; break;\n";
   for (const auto &RC : Info.RegisterClasses)
     OS << "    case " << RC.first->getValueAsString("Namespace")

@@ -977,9 +977,9 @@ public:
     return Imm.IsRV64;
   }
 
-  unsigned getReg() const override {
+  MCRegister getReg() const override {
     assert(Kind == KindTy::Register && "Invalid type access!");
-    return Reg.RegNum.id();
+    return Reg.RegNum;
   }
 
   StringRef getSysReg() const {
