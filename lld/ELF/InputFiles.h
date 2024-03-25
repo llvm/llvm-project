@@ -49,7 +49,7 @@ std::optional<MemoryBufferRef> readFile(StringRef path);
 template <class ELFT> void doParseFile(InputFile *file);
 void parseFile(InputFile *file);
 
-void parseArmCMSEImportLib(InputFile *file);
+void parseArmCMSEImportLib(InputFile &file);
 
 // The root class of input files.
 class InputFile {
