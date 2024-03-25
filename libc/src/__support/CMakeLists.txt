@@ -188,6 +188,15 @@ add_header_library(
 )
 
 add_header_library(
+  fixedstack
+  HDRS
+    fixedstack.h
+  DEPENDS
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.atomic
+)
+
+add_header_library(
   char_vector
   HDRS
     char_vector.h
