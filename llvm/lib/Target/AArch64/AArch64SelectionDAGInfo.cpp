@@ -82,68 +82,64 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(AArch64ISD::NodeType SDOpcode,
   }
 }
 
-SDValue AArch64SelectionDAGInfo::EmitSpecializedLibcall(
+SDValue AArch64SelectionDAGInfo::EmitStreamingCompatibleMemLibCall(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, RTLIB::Libcall LC) const {
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
   const AArch64TargetLowering *TLI = STI.getTargetLowering();
-  TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry DstEntry;
   SDValue Symbol;
+  TargetLowering::ArgListEntry DstEntry;
   DstEntry.Ty = PointerType::getUnqual(*DAG.getContext());
   DstEntry.Node = Dst;
+  TargetLowering::ArgListTy Args;
   Args.push_back(DstEntry);
-  EVT Ty = TLI->getPointerTy(DAG.getDataLayout());
-  PointerType *RetTy;
-
-  if (!LowerToSMERoutines)
-    return SDValue();
+  EVT PointerVT = TLI->getPointerTy(DAG.getDataLayout());
 
   switch (LC) {
   case RTLIB::MEMCPY: {
     TargetLowering::ArgListEntry Entry;
     Entry.Ty = PointerType::getUnqual(*DAG.getContext());
-    Symbol = DAG.getExternalSymbol("__arm_sc_memcpy", Ty);
+    Symbol = DAG.getExternalSymbol("__arm_sc_memcpy", PointerVT);
     Entry.Node = Src;
     Args.push_back(Entry);
-    RetTy = PointerType::getUnqual(*DAG.getContext());
     break;
   }
   case RTLIB::MEMMOVE: {
     TargetLowering::ArgListEntry Entry;
     Entry.Ty = PointerType::getUnqual(*DAG.getContext());
-    Symbol = DAG.getExternalSymbol("__arm_sc_memmove", Ty);
+    Symbol = DAG.getExternalSymbol("__arm_sc_memmove", PointerVT);
     Entry.Node = Src;
     Args.push_back(Entry);
-    RetTy = PointerType::getUnqual(*DAG.getContext());
     break;
   }
   case RTLIB::MEMSET: {
     TargetLowering::ArgListEntry Entry;
     Entry.Ty = Type::getInt32Ty(*DAG.getContext());
-    Symbol = DAG.getExternalSymbol("__arm_sc_memset", Ty);
+    Symbol = DAG.getExternalSymbol("__arm_sc_memset", PointerVT);
     Src = DAG.getZExtOrTrunc(Src, DL, MVT::i32);
     Entry.Node = Src;
     Args.push_back(Entry);
-    RetTy = PointerType::getUnqual(*DAG.getContext());
     break;
   }
   default:
     return SDValue();
   }
+
   TargetLowering::ArgListEntry SizeEntry;
   SizeEntry.Node = Size;
-  SizeEntry.Ty = PointerType::getUnqual(*DAG.getContext());
+  SizeEntry.Ty = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
   Args.push_back(SizeEntry);
   assert(Symbol->getOpcode() == ISD::ExternalSymbol &&
          "Function name is not set");
+  if (!LowerToSMERoutines)
+    return SDValue();
 
   TargetLowering::CallLoweringInfo CLI(DAG);
+  PointerType *RetTy = PointerType::getUnqual(*DAG.getContext());
   CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
       TLI->getLibcallCallingConv(LC), RetTy, Symbol, std::move(Args));
-  std::pair<SDValue, SDValue> CallResult = TLI->LowerCallTo(CLI);
-  return (isa<PointerType>(RetTy) ? CallResult.second : CallResult.first);
+  return TLI->LowerCallTo(CLI).second;
 }
 
 SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemcpy(
@@ -159,8 +155,8 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemcpy(
 
   SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
   if (!Attrs.hasNonStreamingInterfaceAndBody())
-    return EmitSpecializedLibcall(DAG, DL, Chain, Dst, Src, Size,
-                                  RTLIB::MEMCPY);
+    return EmitStreamingCompatibleMemLibCall(DAG, DL, Chain, Dst, Src, Size,
+                                             RTLIB::MEMCPY);
   return SDValue();
 }
 
@@ -177,8 +173,8 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
 
   SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
   if (!Attrs.hasNonStreamingInterfaceAndBody())
-    return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
-                                  RTLIB::MEMSET);
+    return EmitStreamingCompatibleMemLibCall(DAG, dl, Chain, Dst, Src, Size,
+                                             RTLIB::MEMSET);
   return SDValue();
 }
 
@@ -195,8 +191,8 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemmove(
 
   SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
   if (!Attrs.hasNonStreamingInterfaceAndBody())
-    return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
-                                  RTLIB::MEMMOVE);
+    return EmitStreamingCompatibleMemLibCall(DAG, dl, Chain, Dst, Src, Size,
+                                             RTLIB::MEMMOVE);
   return SDValue();
 }
 
