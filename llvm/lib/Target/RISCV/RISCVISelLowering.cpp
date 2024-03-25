@@ -12936,11 +12936,11 @@ static SDValue combineBinOpOfZExt(SDNode *N, SelectionDAG &DAG,
   Src0 = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Src0), NarrowVT, Src0);
   Src1 = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Src1), NarrowVT, Src1);
 
-  // Src0 and Src1 are zero extended, so they're always +ve if signed.
+  // Src0 and Src1 are zero extended, so they're always positive if signed.
   //
-  // sub can produce a -ve from two +ve operands, so it needs sign
-  // extended. Other nodes produce a +ve from two +ve operands, so zero extend
-  // instead.
+  // sub can produce a negative from two positive operands, so it needs sign
+  // extended. Other nodes produce a positive from two negative operands, so
+  // zero extend instead.
   unsigned OuterExtend =
       N->getOpcode() == ISD::SUB ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
 
