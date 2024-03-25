@@ -638,6 +638,11 @@ CallStackId hashCallStack(ArrayRef<FrameId> CS);
 // Verify that each CallStackId is computed with hashCallStack.  This function
 // is intended to help transition from CallStack to CSId in
 // IndexedAllocationInfo.
+void verifyIndexedMemProfRecord(const IndexedMemProfRecord &Record);
+
+// Verify that each CallStackId is computed with hashCallStack.  This function
+// is intended to help transition from CallStack to CSId in
+// IndexedAllocationInfo.
 void verifyFunctionProfileData(
     const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord>
         &FunctionProfileData);
