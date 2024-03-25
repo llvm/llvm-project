@@ -237,37 +237,37 @@ def GENERIC_RV32 : RISCVGenericProcessorModel<"generic-rv32",
 def GENERIC_RV64 : RISCVGenericProcessorModel<"generic-rv64",
                                               [Feature64Bit]>;
 
-def GENERIC_RVI20U32 : RISCVGenericProcessorModel<"generic-rvi20u32",
+def GENERIC_RVI20U32 : RISCVGenericProcessorModel<"rvi20u32",
                                                   [Feature32Bit]>;
 
-def GENERIC_RVI20U64 : RISCVGenericProcessorModel<"generic-rvi20u64",
+def GENERIC_RVI20U64 : RISCVGenericProcessorModel<"rvi20u64",
                                                   [Feature64Bit]>;
 
-def GENERIC_RVA20U64 : RISCVGenericProcessorModel<"generic-rva20u64",
+def GENERIC_RVA20U64 : RISCVGenericProcessorModel<"rva20u64",
                                                   RVA20U64Features>;
 
-def GENERIC_RVA20S64 : RISCVGenericProcessorModel<"generic-rva20s64",
+def GENERIC_RVA20S64 : RISCVGenericProcessorModel<"rva20s64",
                                                   RVA20S64Features>;
 
-def GENERIC_RVA22U64 : RISCVGenericProcessorModel<"generic-rva22u64",
+def GENERIC_RVA22U64 : RISCVGenericProcessorModel<"rva22u64",
                                                   RVA22U64Features>;
 
-def GENERIC_RVA22S64 : RISCVGenericProcessorModel<"generic-rva22s64", 
+def GENERIC_RVA22S64 : RISCVGenericProcessorModel<"rva22s64", 
                                                   RVA22S64Features>;
 
-def GENERIC_RVA23U64 : RISCVGenericProcessorModel<"generic-rva23u64", 
+def GENERIC_RVA23U64 : RISCVGenericProcessorModel<"rva23u64", 
                                                   RVA23U64Features>;
 
-def GENERIC_RVA23S64 : RISCVGenericProcessorModel<"generic-rva23s64", 
+def GENERIC_RVA23S64 : RISCVGenericProcessorModel<"rva23s64", 
                                                   RVA23S64Features>;
 
-def GENERIC_RVB23U64 : RISCVGenericProcessorModel<"generic-rvb23u64",
+def GENERIC_RVB23U64 : RISCVGenericProcessorModel<"rvb23u64",
                                                   RVB23U64Features>;
 
-def GENERIC_RVB23S64 : RISCVGenericProcessorModel<"generic-rvb23s64",
+def GENERIC_RVB23S64 : RISCVGenericProcessorModel<"rvb23s64",
                                                   RVB23S64Features>;
 
-def GENERIC_RVM23U32 : RISCVGenericProcessorModel<"generic-rvm23u32",
+def GENERIC_RVM23U32 : RISCVGenericProcessorModel<"rvm23u32",
                                                   RVM23U32Features>;
 
 // Support generic for compatibility with other targets. The triple will be used
