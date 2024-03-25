@@ -120,7 +120,7 @@ struct __aliasing_iterator_wrapper {
 
 // This is required to avoid ADL instantiations on _BaseT
 template <class _BaseT, class _Alias>
-using __aliasing_iterator = __aliasing_iterator_wrapper<_BaseT, _Alias>::__iterator;
+using __aliasing_iterator = typename __aliasing_iterator_wrapper<_BaseT, _Alias>::__iterator;
 
 _LIBCPP_END_NAMESPACE_STD
 
