@@ -1069,9 +1069,6 @@ static const char *getImportFailureString(swift::serialization::Status status) {
   case swift::serialization::Status::NotInOSSA:
     return "The module file was not compiled with -enable-ossa-modules when it "
            "was required to do so.";
-  case swift::serialization::Status::NoncopyableGenericsMismatch:
-    return "The module file was compiled with a mismatching "
-           "-enable-experimental-feature NoncopyableGenerics setting.";
   case swift::serialization::Status::SDKMismatch:
     return "The module file was built with a different SDK version.";
   }
@@ -1266,7 +1263,6 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
       auto &langOpts = invocation.getLangOptions();
       info = swift::serialization::validateSerializedAST(
           buf, invocation.getSILOptions().EnableOSSAModules,
-          langOpts.hasFeature(swift::Feature::NoncopyableGenerics),
           /*requiredSDK*/ StringRef(), &extended_validation_info,
           /*dependencies*/ nullptr, &searchPaths);
       bool invalid_ast = info.status != swift::serialization::Status::Valid;
@@ -3486,8 +3482,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     std::make_unique<swift::ModuleInterfaceCheckerImpl>(*m_ast_context_ap,
       moduleCachePath, prebuiltModuleCachePath,
       swift::ModuleInterfaceLoaderOptions(),
-      swift::RequireOSSAModules_t(GetSILOptions()),
-      swift::RequireNoncopyableGenerics_t(GetLanguageOptions())));
+      swift::RequireOSSAModules_t(GetSILOptions())));
 
   // 2. Create and install the module interface loader.
   //
@@ -5653,7 +5648,6 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
 
     swift::ExistentialLayout layout = swift_can_type.getExistentialLayout();
     protocol_info.m_is_class_only = layout.requiresClass();
-    protocol_info.m_num_protocols = layout.getProtocols().size();
     protocol_info.m_is_objc = layout.isObjC();
     protocol_info.m_is_anyobject = layout.isAnyObject();
     protocol_info.m_is_errortype = layout.isErrorExistential();
@@ -5663,10 +5657,23 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
     }
 
     unsigned num_witness_tables = 0;
+    unsigned num_protocols = 0;
     for (auto protoDecl : layout.getProtocols()) {
+      // Ignore invertible protocols like Copyable entirely. They're marker
+      // protocols that are not mangled into generic signatures. Only their
+      // absence is mangled.
+      // FIXME: this should probably be filtering all marker protocols,
+      //  including Sendable, since marker protocols lack a witness table.
+      if (protoDecl->getInvertibleProtocolKind())
+        continue;
+
+      num_protocols++;
+
       if (!protoDecl->isObjC())
         num_witness_tables++;
     }
+
+    protocol_info.m_num_protocols = num_protocols;
 
     if (layout.isErrorExistential()) {
       // Error existential -- instance pointer only.
