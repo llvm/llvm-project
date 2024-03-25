@@ -347,9 +347,19 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
         // probabilities as if there are only 0-trip and 1-trip cases.
         ExitWeight0 = OrigLoopExitWeight - OrigLoopBackedgeWeight;
       }
+    } else {
+      if (OrigLoopExitWeight > OrigLoopBackedgeWeight) {
+        LLVM_DEBUG(
+            dbgs() << "WARNING: Bad loop back edge weight. Adjust it from "
+                   << OrigLoopBackedgeWeight << " to " << OrigLoopExitWeight
+                   << "\n");
+        OrigLoopBackedgeWeight = OrigLoopExitWeight;
+      }
     }
+    assert(OrigLoopExitWeight >= ExitWeight0 && "Bad branch weight");
     ExitWeight1 = OrigLoopExitWeight - ExitWeight0;
     EnterWeight = ExitWeight1;
+    assert(OrigLoopBackedgeWeight >= EnterWeight && "Bad branch weight");
     LoopBackWeight = OrigLoopBackedgeWeight - EnterWeight;
   } else if (OrigLoopExitWeight == 0) {
     if (OrigLoopBackedgeWeight == 0) {
