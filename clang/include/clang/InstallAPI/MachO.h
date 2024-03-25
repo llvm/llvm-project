@@ -40,7 +40,6 @@ using SymbolSet = llvm::MachO::SymbolSet;
 using SimpleSymbol = llvm::MachO::SimpleSymbol;
 using FileType = llvm::MachO::FileType;
 using PackedVersion = llvm::MachO::PackedVersion;
-using PathSeq = llvm::MachO::PathSeq;
 using Target = llvm::MachO::Target;
 using TargetList = llvm::MachO::TargetList;
 
