@@ -116,13 +116,12 @@ LIBC_INLINE constexpr Double<word> mul2(word a, word b) {
     const word step4 = b_hi * a_hi; // no overflow;
     word lo_digit = step1;
     word hi_digit = step4;
-    const word zero_carry = 0;
+    const word no_carry = 0;
     word carry;
-    const auto add_with_carry = LIBC_NAMESPACE::add_with_carry<word>;
-    lo_digit = add_with_carry(lo_digit, shiftl(step2), zero_carry, &carry);
-    hi_digit = add_with_carry(hi_digit, shiftr(step2), carry, nullptr);
-    lo_digit = add_with_carry(lo_digit, shiftl(step3), zero_carry, &carry);
-    hi_digit = add_with_carry(hi_digit, shiftr(step3), carry, nullptr);
+    lo_digit = add_with_carry<word>(lo_digit, shiftl(step2), no_carry, &carry);
+    hi_digit = add_with_carry<word>(hi_digit, shiftr(step2), carry);
+    lo_digit = add_with_carry<word>(lo_digit, shiftl(step3), no_carry, &carry);
+    hi_digit = add_with_carry<word>(hi_digit, shiftr(step3), carry);
     return Double<word>(lo_digit, hi_digit);
   }
 }
