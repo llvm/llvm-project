@@ -1142,7 +1142,8 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
   unsigned Imm = MI->getOperand(OpNo).getImm();
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
 
-  if (!AMDGPU::isLegalDPALU_DPPControl(STI, Imm) && AMDGPU::isDPALU_DPP(Desc)) {
+  if (!AMDGPU::isLegalDPALU_DPPControl(STI, MI->getOpcode(), Imm) &&
+      AMDGPU::isDPALU_DPP(Desc)) {
     O << " /* DP ALU dpp only supports "
       << (isGFX12(STI) ? "row_share" : "row_newbcast") << " */";
     return;

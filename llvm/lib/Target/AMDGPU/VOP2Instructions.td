@@ -1641,6 +1641,10 @@ multiclass VOP2e_Real_gfx12_gfx13<bits<6> op, string opName, string asmName> :
   VOP2e_Real<GFX12Gen, op, opName, asmName>,
   VOP2e_Real<GFX13Gen, op, opName, asmName>;
 
+multiclass VOP2_Real_FULL_gfx12_gfx13<bits<6> op> :
+  VOP2_Real_FULL<GFX12Gen, op>,
+  VOP2_Real_FULL<GFX13Gen, op>;
+
 multiclass VOP2_Real_FULL_with_name_gfx12_gfx13<
     bits<6> op, string opName, string asmName> :
   VOP2_Real_FULL_with_name<GFX12Gen, op, opName, asmName>,
@@ -1690,7 +1694,7 @@ let SubtargetPredicate = isGFX12Plus in {
 } // End SubtargetPredicate = isGFX12Plus
 
 let SubtargetPredicate = HasFmacF64Inst in
-defm V_FMAC_F64 : VOP2_Real_FULL<GFX12Gen, 0x17>;
+defm V_FMAC_F64 : VOP2_Real_FULL_gfx12_gfx13<0x17>;
 
 defm V_FMAMK_F64 : VOP2Only_Real_MADK64_gfx1210_gfx13<0x23>;
 defm V_FMAAK_F64 : VOP2Only_Real_MADK64_gfx1210_gfx13<0x24>;

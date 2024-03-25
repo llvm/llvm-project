@@ -566,6 +566,7 @@ bool isMAC(unsigned Opc) {
          Opc == AMDGPU::V_MAC_F16_e64_vi ||
          Opc == AMDGPU::V_FMAC_F64_e64_gfx90a ||
          Opc == AMDGPU::V_FMAC_F64_e64_gfx12 ||
+         Opc == AMDGPU::V_FMAC_F64_e64_gfx13 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx10 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx12 ||
@@ -3345,6 +3346,34 @@ bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
     return hasNamedOperand(Opcode, OpName::vaddr) &&
            hasNamedOperand(Opcode, OpName::saddr);
 
+  return false;
+}
+
+bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned Opcode,
+                             unsigned DC) {
+  if (isGFX13(ST)) {
+    return (Opcode != AMDGPU::V_ADD_F64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_ADD_F64_e64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_ADD_U64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_ADD_U64_e64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_FMAC_F64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_FMAC_F64_e64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_LSHLREV_B64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_LSHLREV_B64_e64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_MAX_NUM_F64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_MAX_NUM_F64_e64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_MIN_NUM_F64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_MIN_NUM_F64_e64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_MUL_F64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_MUL_F64_e64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_SUB_U64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_SUB_U64_e64_dpp_gfx13) ||
+           (DC >= DPP::ROW_SHARE_FIRST && DC <= DPP::ROW_SHARE_LAST);
+  }
+  if (isGFX12(ST))
+    return DC >= DPP::ROW_SHARE_FIRST && DC <= DPP::ROW_SHARE_LAST;
+  if (isGFX90A(ST))
+    return DC >= DPP::ROW_NEWBCAST_FIRST && DC <= DPP::ROW_NEWBCAST_LAST;
   return false;
 }
 
