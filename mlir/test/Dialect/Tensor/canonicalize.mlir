@@ -2370,13 +2370,14 @@ func.func @dim_of_reshape_undominated(%arg0: tensor<*xf32>, %arg1: tensor<?xinde
 
 // -----
 
-// Test case: tensor.dim(%tensor, %out_of_bound_index) is folded into ub.poison
+// Test case: This test fails to fold because the index of tensor.dim is out_of_bounds
 // CHECK-LABEL: func @dim_out_of_bounds(
-//       CHECK: %[[poison:.*]] = ub.poison
+//       CHECK: %[[IDX:.*]] = index.constant 28
 //  CHECK-NEXT: bufferization.alloc_tensor
+//  CHECK-NEXT: %[[DIM:.*]] = tensor.dim %{{.*}}, %[[IDX]]
 //  CHECK-NEXT: memref.alloc
 //  CHECK-NEXT: memref.cast
-//  CHECK-NEXT: affine.vector_load %{{.*}}[{{.*}}, {{.*}}, symbol(%[[poison]])]
+//  CHECK-NEXT: affine.vector_load %{{.*}}[{{.*}}, {{.*}}, symbol(%[[DIM]])]
 //  CHECK-NEXT: return
 func.func @dim_out_of_bounds() -> vector<7xi32> {
     %c1 = arith.constant 1 : index

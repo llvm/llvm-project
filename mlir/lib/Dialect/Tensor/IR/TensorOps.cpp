@@ -11,7 +11,6 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -46,8 +45,6 @@ Operation *TensorDialect::materializeConstant(OpBuilder &builder,
   if (complex::ConstantOp::isBuildableWith(value, type))
     return builder.create<complex::ConstantOp>(loc, type,
                                                llvm::cast<ArrayAttr>(value));
-  if (auto poison = dyn_cast<ub::PoisonAttr>(value))
-    return builder.create<ub::PoisonOp>(loc, type, poison);
   return nullptr;
 }
 
@@ -741,11 +738,11 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
   if (!tensorType)
     return {};
 
-  // Fold dim to poison if the index is out of bound. Poison represents
-  // undefined behavior.
+  // Out of bound indices produce undefined behavior but are still valid IR.
+  // Don't choke on them.
   int64_t indexVal = index.getInt();
   if (indexVal < 0 || indexVal >= tensorType.getRank())
-    return ub::PoisonAttr::get(getContext());
+    return {};
 
   // Fold if the shape extent along the given index is known.
   if (!tensorType.isDynamicDim(index.getInt())) {

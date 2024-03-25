@@ -13,9 +13,10 @@ func.func @dim_out_of_bounds(%m : memref<7x8xf32>) -> index {
 // -----
 
 // CHECK-LABEL: func @dim_out_of_bounds_2(
-//  CHECK-NEXT:   ub.poison
+//  CHECK-NEXT:   arith.constant
 //  CHECK-NEXT:   arith.constant
 //  CHECK-NEXT:   bufferization.alloc_tensor
+//  CHECK-NEXT:   tensor.dim
 //  CHECK-NEXT:   return
 func.func @dim_out_of_bounds_2(%idx1 : index, %idx2 : index) -> index {
   %idx = arith.constant 7 : index
