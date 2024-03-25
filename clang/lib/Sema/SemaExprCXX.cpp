@@ -3321,7 +3321,7 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
       if (Diagnose) {
         StringLiteral *Msg = Operator->getDeletedMessage();
         Diag(StartLoc, diag::err_deleted_function_use)
-          << !!Msg << (Msg ? Msg->getString() : StringRef());
+            << !!Msg << (Msg ? Msg->getString() : StringRef());
         NoteDeletedFunction(Operator);
       }
       return true;

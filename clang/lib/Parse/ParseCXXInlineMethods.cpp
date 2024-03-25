@@ -22,7 +22,8 @@ using namespace clang;
 
 /// Parse the optional ("message") part of a deleted-function-body.
 StringLiteral *Parser::ParseCXXDeletedFunctionMessage() {
-  if (!Tok.is(tok::l_paren)) return nullptr;
+  if (!Tok.is(tok::l_paren))
+    return nullptr;
   StringLiteral *Message = nullptr;
   BalancedDelimiterTracker BT{*this, tok::l_paren};
   BT.consumeOpen();
@@ -33,7 +34,7 @@ StringLiteral *Parser::ParseCXXDeletedFunctionMessage() {
       Message = Res.getAs<StringLiteral>();
   } else {
     Diag(Tok.getLocation(), diag::err_expected_string_literal)
-      << /*Source='in'*/ 0 << "'delete'";
+        << /*Source='in'*/ 0 << "'delete'";
     SkipUntil(tok::r_paren, StopAtSemi | StopBeforeMatch);
   }
 
@@ -91,7 +92,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
                       ? diag::warn_cxx98_compat_defaulted_deleted_function
                       : diag::ext_defaulted_deleted_function)
         << 1 /* deleted */;
-      StringLiteral* Message = ParseCXXDeletedFunctionMessage();
+      StringLiteral *Message = ParseCXXDeletedFunctionMessage();
       Actions.SetDeclDeleted(FnD, KWLoc, Message);
       Delete = true;
       if (auto *DeclAsFunction = dyn_cast<FunctionDecl>(FnD)) {

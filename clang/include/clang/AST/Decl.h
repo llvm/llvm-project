@@ -2489,7 +2489,7 @@ public:
   }
 
   void setDeletedAsWritten(bool D = true) { FunctionDeclBits.IsDeleted = D; }
-  void setDeletedWithMessage(StringLiteral* Message) {
+  void setDeletedWithMessage(StringLiteral *Message) {
     FunctionDeclBits.IsDeleted = true;
     DeletedMessage = Message;
   }

@@ -274,7 +274,7 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
       else {
         StringLiteral *Msg = FD->getDeletedMessage();
         Diag(Loc, diag::err_deleted_function_use)
-          << !!Msg << (Msg ? Msg->getString() : StringRef());
+            << !!Msg << (Msg ? Msg->getString() : StringRef());
       }
       NoteDeletedFunction(FD);
       return true;
