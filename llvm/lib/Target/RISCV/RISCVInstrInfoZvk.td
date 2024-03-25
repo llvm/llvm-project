@@ -67,7 +67,7 @@ class PALUVVNoVm<bits<6> funct6, RISCVVFormat opv, string opcodestr>
   let Inst{6-0} = OPC_OP_P.Value;
 }
 
-// op vd, vs2, imm, vm
+// op vd, vs2, imm
 class PALUVINoVm<bits<6> funct6, string opcodestr, Operand optype = simm5>
     : VALUVINoVm<funct6, opcodestr, optype> {
   let Inst{6-0} = OPC_OP_P.Value;
