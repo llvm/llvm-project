@@ -1229,6 +1229,49 @@ LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, T> mask_leading_ones() {
   return out;
 }
 
+// Specialization of count_zeros ('math_extras.h') for BigInt.
+template <typename T>
+[[nodiscard]]
+LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+count_zeros(T value) {
+  return cpp::popcount(~value);
+}
+
+// Specialization of first_leading_zero ('math_extras.h') for BigInt.
+template <typename T>
+[[nodiscard]]
+LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+first_leading_zero(T value) {
+  return value == cpp::numeric_limits<T>::max() ? 0
+                                                : cpp::countl_one(value) + 1;
+}
+
+// Specialization of first_leading_one ('math_extras.h') for BigInt.
+template <typename T>
+[[nodiscard]]
+LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+first_leading_one(T value) {
+  return first_leading_zero(~value);
+}
+
+// Specialization of first_trailing_zero ('math_extras.h') for BigInt.
+template <typename T>
+[[nodiscard]]
+LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+first_trailing_zero(T value) {
+  return value == cpp::numeric_limits<T>::max() ? 0
+                                                : cpp::countr_zero(~value) + 1;
+}
+
+// Specialization of first_trailing_one ('math_extras.h') for BigInt.
+template <typename T>
+[[nodiscard]]
+LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+first_trailing_one(T value) {
+  return value == cpp::numeric_limits<T>::max() ? 0
+                                                : cpp::countr_zero(value) + 1;
+}
+
 } // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_UINT_H
