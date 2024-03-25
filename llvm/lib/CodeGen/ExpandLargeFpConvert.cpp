@@ -176,8 +176,8 @@ static void expandFPToI(Instruction *FPToI) {
   Builder.SetInsertPoint(IfEnd);
   Value *Add1 = Builder.CreateAdd(
       And2, ConstantInt::getSigned(IntTy, -int64_t(ExponentBias + BitWidth)));
-  Value *Cmp3 =
-      Builder.CreateICmpULT(Add1, ConstantInt::getSigned(IntTy, -BitWidth));
+  Value *Cmp3 = Builder.CreateICmpULT(
+      Add1, ConstantInt::getSigned(IntTy, -int64_t(BitWidth)));
   Builder.CreateCondBr(Cmp3, IfThen5, IfEnd9);
 
   // if.then5:
