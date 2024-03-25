@@ -321,8 +321,15 @@ Error InlineAsm::verify(FunctionType *Ty, StringRef ConstStr) {
       return makeStringError("inline asm without outputs must return void");
     break;
   case 1:
-    if (Ty->getReturnType()->isStructTy())
-      return makeStringError("inline asm with one output cannot return struct");
+    if (Ty->getReturnType()->isStructTy()) {
+      // The return type may be a structure if the output operand is from RVV
+      // tuple types. If so the structure must be a structure with homogeneous
+      // scalable vector types.
+      if (!cast<StructType>(Ty->getReturnType())
+               ->containsHomogeneousScalableVectorTypes())
+        return makeStringError(
+            "inline asm with one output cannot return struct");
+    }
     break;
   default:
     StructType *STy = dyn_cast<StructType>(Ty->getReturnType());
