@@ -543,6 +543,7 @@ int main(int argc, char **argv) {
   cl::HideUnrelatedOptions(Cat);
   cl::ParseCommandLineOptions(argc, argv,
                               "llvm tool to verify use-list order\n");
+
   // Do not load bitcode into the new debug info format by default.
   if (LoadBitcodeIntoNewDbgInforFormat == cl::boolOrDefault::BOU_UNSET)
     LoadBitcodeIntoNewDbgInforFormat = cl::boolOrDefault::BOU_FALSE;
