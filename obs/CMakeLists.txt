@@ -1,3 +1,7 @@
+set(LLVM_LINK_COMPONENTS
+  Support
+  )
+  
 include(CMakeDependentOption)
 include(GNUInstallDirs)
 
@@ -11,5 +15,5 @@ list(INSERT CMAKE_MODULE_PATH 0
 include(CMakeParseArguments)
 include(AddOBS)
 
-
-add_subdirectory(obs-ir)
+include_directories(include/)
+add_obs_executable(obstest obs-ir/test.cpp parser/AST.cpp)
