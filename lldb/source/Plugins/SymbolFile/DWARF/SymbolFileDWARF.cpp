@@ -145,8 +145,10 @@ static PluginProperties &GetGlobalPluginProperties() {
 
 static const llvm::DWARFDebugLine::LineTable *
 ParseLLVMLineTable(DWARFContext &context, llvm::DWARFDebugLine &line,
-                   dw_offset_t line_offset, dw_offset_t unit_offset) {
+                   dw_offset_t line_offset, dw_offset_t unit_offset,
+                   StatsDuration &parse_time) {
   Log *log = GetLog(DWARFLog::DebugInfo);
+  ElapsedTime elapsed(parse_time);
 
   llvm::DWARFDataExtractor data = context.getOrLoadLineData().GetAsLLVMDWARF();
   llvm::DWARFContext &ctx = context.GetAsLLVM();
@@ -693,6 +695,7 @@ llvm::DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
   if (debug_abbrev_data.GetByteSize() == 0)
     return nullptr;
 
+  ElapsedTime elapsed(m_parse_time);
   auto abbr =
       std::make_unique<llvm::DWARFDebugAbbrev>(debug_abbrev_data.GetAsLLVM());
   llvm::Error error = abbr->parse();
@@ -1228,10 +1231,9 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
   if (offset == DW_INVALID_OFFSET)
     return false;
 
-  ElapsedTime elapsed(m_parse_time);
   llvm::DWARFDebugLine line;
-  const llvm::DWARFDebugLine::LineTable *line_table =
-      ParseLLVMLineTable(m_context, line, offset, dwarf_cu->GetOffset());
+  const llvm::DWARFDebugLine::LineTable *line_table = ParseLLVMLineTable(
+      m_context, line, offset, dwarf_cu->GetOffset(), m_parse_time);
 
   if (!line_table)
     return false;
