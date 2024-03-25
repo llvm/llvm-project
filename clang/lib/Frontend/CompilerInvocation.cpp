@@ -4290,7 +4290,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         if (Args.getLastArg(OPT_fnative_half_type)) {
           if (!(Opts.LangStd >= LangStandard::lang_hlsl2021 &&
                 T.getOSVersion() >= VersionTuple(6, 2)))
-            Diags.Report(diag::err_drv_hlsl_enable_16bit_types_option_invalid);
+            Diags.Report(diag::err_drv_dxc_enable_16bit_types_option_invalid);
         }
       } else if (T.isSPIRVLogical()) {
         if (!T.isVulkanOS() || T.getVulkanVersion() == VersionTuple(0)) {
@@ -4299,7 +4299,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         }
         if (Args.getLastArg(OPT_fnative_half_type)) {
           if (!(Opts.LangStd >= LangStandard::lang_hlsl2021))
-            Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
+            Diags.Report(
+                diag::err_drv_cc1_hlsl_spirv_fnative_half_type_option_invalid)
                 << VulkanEnv << T.getOSName() << T.str();
         }
       } else {
