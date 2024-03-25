@@ -1783,7 +1783,7 @@ let PPC970_Unit = 3, hasSideEffects = 0, mayRaiseFPException = 1,
     Uses = [RM] in {  // FPU Operations.
 defm FCFID  : XForm_26r<63, 846, (outs f8rc:$RST), (ins f8rc:$RB),
                         "fcfid", "$RST, $RB", IIC_FPGeneral,
-                        [(set f64:$RST, (PPCany_fcfid f64:$RB))]>, isPPC64;
+                        [(set f64:$RST, (PPCany_sint_to_fp f64:$RB))]>, isPPC64;
 defm FCTID  : XForm_26r<63, 814, (outs f8rc:$RST), (ins f8rc:$RB),
                         "fctid", "$RST, $RB", IIC_FPGeneral,
                         []>, isPPC64;
@@ -1792,23 +1792,23 @@ defm FCTIDU : XForm_26r<63, 942, (outs f8rc:$RST), (ins f8rc:$RB),
                         []>, isPPC64;
 defm FCTIDZ : XForm_26r<63, 815, (outs f8rc:$RST), (ins f8rc:$RB),
                         "fctidz", "$RST, $RB", IIC_FPGeneral,
-                        [(set f64:$RST, (PPCany_fctidz f64:$RB))]>, isPPC64;
+                        [(set f64:$RST, (PPCany_fp_to_i64 f64:$RB))]>, isPPC64;
 
 defm FCFIDU  : XForm_26r<63, 974, (outs f8rc:$RST), (ins f8rc:$RB),
                         "fcfidu", "$RST, $RB", IIC_FPGeneral,
-                        [(set f64:$RST, (PPCany_fcfidu f64:$RB))]>, isPPC64;
+                        [(set f64:$RST, (PPCany_uint_to_fp f64:$RB))]>, isPPC64;
 defm FCFIDS  : XForm_26r<59, 846, (outs f4rc:$RST), (ins f8rc:$RB),
                         "fcfids", "$RST, $RB", IIC_FPGeneral,
-                        [(set f32:$RST, (PPCany_fcfids f64:$RB))]>, isPPC64;
+                        [(set f32:$RST, (PPCany_sint_to_fp f64:$RB))]>, isPPC64;
 defm FCFIDUS : XForm_26r<59, 974, (outs f4rc:$RST), (ins f8rc:$RB),
                         "fcfidus", "$RST, $RB", IIC_FPGeneral,
-                        [(set f32:$RST, (PPCany_fcfidus f64:$RB))]>, isPPC64;
+                        [(set f32:$RST, (PPCany_uint_to_fp f64:$RB))]>, isPPC64;
 defm FCTIDUZ : XForm_26r<63, 943, (outs f8rc:$RST), (ins f8rc:$RB),
                         "fctiduz", "$RST, $RB", IIC_FPGeneral,
-                        [(set f64:$RST, (PPCany_fctiduz f64:$RB))]>, isPPC64;
+                        [(set f64:$RST, (PPCany_fp_to_u64 f64:$RB))]>, isPPC64;
 defm FCTIWUZ : XForm_26r<63, 143, (outs f8rc:$RST), (ins f8rc:$RB),
                         "fctiwuz", "$RST, $RB", IIC_FPGeneral,
-                        [(set f64:$RST, (PPCany_fctiwuz f64:$RB))]>, isPPC64;
+                        [(set f64:$RST, (PPCany_fp_to_u32 f64:$RB))]>, isPPC64;
 }
 
 // These instructions store a hash computed from the value of the link register

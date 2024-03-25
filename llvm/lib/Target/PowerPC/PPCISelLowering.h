@@ -56,27 +56,15 @@ namespace llvm {
     XSMAXC,
     XSMINC,
 
-    /// FCFID - The FCFID instruction, taking an f64 operand and producing
-    /// and f64 value containing the FP representation of the integer that
-    /// was temporarily in the f64 operand.
-    FCFID,
+    /// Inplace integer-to-float conversion.
+    SINT_TO_FP_INREG,
+    UINT_TO_FP_INREG,
 
-    /// Newer FCFID[US] integer-to-floating-point conversion instructions for
-    /// unsigned integers and single-precision outputs.
-    FCFIDU,
-    FCFIDS,
-    FCFIDUS,
-
-    /// FCTI[D,W]Z - The FCTIDZ and FCTIWZ instructions, taking an f32 or f64
-    /// operand, producing an f64 value containing the integer representation
-    /// of that FP value.
-    FCTIDZ,
-    FCTIWZ,
-
-    /// Newer FCTI[D,W]UZ floating-point-to-integer conversion instructions for
-    /// unsigned integers with round toward zero.
-    FCTIDUZ,
-    FCTIWUZ,
+    /// Inplace float-to-integer conversion.
+    FP_TO_I64_INREG,
+    FP_TO_I32_INREG,
+    FP_TO_U64_INREG,
+    FP_TO_U32_INREG,
 
     /// VEXTS, ByteWidth - takes an input in VSFRC and produces an output in
     /// VSFRC that is sign-extended from ByteWidth to a 64-byte integer.
@@ -487,16 +475,14 @@ namespace llvm {
     XXMFACC,
 
     // Constrained conversion from floating point to int
-    STRICT_FCTIDZ = ISD::FIRST_TARGET_STRICTFP_OPCODE,
-    STRICT_FCTIWZ,
-    STRICT_FCTIDUZ,
-    STRICT_FCTIWUZ,
+    STRICT_FP_TO_I64_INREG = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+    STRICT_FP_TO_I32_INREG,
+    STRICT_FP_TO_U64_INREG,
+    STRICT_FP_TO_U32_INREG,
 
     /// Constrained integer-to-floating-point conversion instructions.
-    STRICT_FCFID,
-    STRICT_FCFIDU,
-    STRICT_FCFIDS,
-    STRICT_FCFIDUS,
+    STRICT_SINT_TO_FP_INREG,
+    STRICT_UINT_TO_FP_INREG,
 
     /// Constrained floating point add in round-to-zero mode.
     STRICT_FADDRTZ,
