@@ -19,7 +19,8 @@
 namespace Fortran::runtime::io {
 
 template <typename CONTEXT, typename CHAR>
-bool EmitEncoded(CONTEXT &to, const CHAR *data, std::size_t chars) {
+RT_API_ATTRS bool EmitEncoded(
+    CONTEXT &to, const CHAR *data, std::size_t chars) {
   ConnectionState &connection{to.GetConnectionState()};
   if (connection.access == Access::Stream &&
       connection.internalIoCharKind == 0) {
@@ -74,7 +75,7 @@ bool EmitEncoded(CONTEXT &to, const CHAR *data, std::size_t chars) {
 }
 
 template <typename CONTEXT>
-bool EmitAscii(CONTEXT &to, const char *data, std::size_t chars) {
+RT_API_ATTRS bool EmitAscii(CONTEXT &to, const char *data, std::size_t chars) {
   ConnectionState &connection{to.GetConnectionState()};
   if (connection.internalIoCharKind <= 1 &&
       connection.access != Access::Stream) {
@@ -85,7 +86,7 @@ bool EmitAscii(CONTEXT &to, const char *data, std::size_t chars) {
 }
 
 template <typename CONTEXT>
-bool EmitRepeated(CONTEXT &to, char ch, std::size_t n) {
+RT_API_ATTRS bool EmitRepeated(CONTEXT &to, char ch, std::size_t n) {
   if (n <= 0) {
     return true;
   }
