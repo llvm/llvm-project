@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include <limits>
+#include <unordered_set>
 
 namespace llvm {
 
@@ -249,7 +250,8 @@ public:
                        Instruction *Addr, BasicBlock *ExitBlock) const;
 
     void severSplitPHINodesOfEntry(BasicBlock *&Header);
-    void severSplitPHINodesOfExits(const SmallPtrSetImpl<BasicBlock *> &Exits);
+    void
+    severSplitPHINodesOfExits(const std::unordered_set<BasicBlock *> &Exits);
     void splitReturnBlocks();
 
     Function *constructFunction(const ValueSet &inputs,
