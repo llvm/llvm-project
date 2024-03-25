@@ -14,6 +14,7 @@
 #include "SPIRVCommandLine.h"
 #include "llvm/ADT/StringRef.h"
 #include <map>
+#include <algorithm>
 
 #define DEBUG_TYPE "spirv-commandline"
 
@@ -58,6 +59,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
                                   std::set<SPIRV::Extension::Extension> &Vals) {
   llvm::SmallVector<llvm::StringRef, 10> Tokens;
   ArgValue.split(Tokens, ",", -1, false);
+  std::sort(Tokens.begin(), Tokens.end());
 
   std::set<SPIRV::Extension::Extension> EnabledExtensions;
 
@@ -70,7 +72,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
     }
 
     if (Token.empty() || (!Token.starts_with("+") && !Token.starts_with("-")))
-      return O.error("Invalid extension list format " + Token.str());
+      return O.error("Invalid extension list format: " + Token.str());
 
     llvm::StringRef ExtensionName = Token.substr(1);
     auto NameValuePair = SPIRVExtensionMap.find(ExtensionName.str());
@@ -78,10 +80,17 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
     if (NameValuePair == SPIRVExtensionMap.end())
       return O.error("Unknown SPIR-V extension: " + Token.str());
 
-    if (Token.starts_with("+"))
+    if (Token.starts_with("+")) {
       EnabledExtensions.insert(NameValuePair->second);
-    else if (EnabledExtensions.count(NameValuePair->second))
+    } else if (EnabledExtensions.count(NameValuePair->second)) {
+      if (std::find(Tokens.begin(), Tokens.end(), "+" + ExtensionName.str()) !=
+          Tokens.end())
+        return O.error(
+            "Extension cannot be allowed and disallowed at the same time: " +
+            ExtensionName.str());
+
       EnabledExtensions.erase(NameValuePair->second);
+    }
   }
 
   Vals = std::move(EnabledExtensions);
