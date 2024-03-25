@@ -1174,15 +1174,6 @@ float3 pow(float3, float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
 float4 pow(float4, float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double pow(double, double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double2 pow(double2, double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double3 pow(double3, double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double4 pow(double4, double4);
-
 //===----------------------------------------------------------------------===//
 // reversebits builtins
 //===----------------------------------------------------------------------===//
