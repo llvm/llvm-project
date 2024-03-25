@@ -13,8 +13,8 @@
 
 #include "SPIRVCommandLine.h"
 #include "llvm/ADT/StringRef.h"
-#include <map>
 #include <algorithm>
+#include <map>
 
 #define DEBUG_TYPE "spirv-commandline"
 
