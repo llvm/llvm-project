@@ -372,17 +372,14 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
 
     FPExceptionBehaviorAttr fpExceptionBehaviorAttr =
         $_fpExceptionBehavior_attr($fpExceptionBehavior);
-    if (!fpExceptionBehaviorAttr)
-      return failure();
+    assert(fpExceptionBehaviorAttr && "Expecting FP exception behavior");
     mlirAttrs.push_back(
         $_builder.getNamedAttr(
             $_qualCppClassName::getFPExceptionBehaviorAttrName(),
             fpExceptionBehaviorAttr)); }] #
     !cond(!gt(hasRoundingMode, 0) : [{
-    RoundingModeAttr roundingModeAttr =
-        $_roundingMode_attr($roundingmode);
-    if (!roundingModeAttr)
-      return failure();
+    RoundingModeAttr roundingModeAttr = $_roundingMode_attr($roundingmode);
+    assert(roundingModeAttr && "Expecting rounding mode");
     mlirAttrs.push_back(
         $_builder.getNamedAttr($_qualCppClassName::getRoundingModeAttrName(),
                                roundingModeAttr));
