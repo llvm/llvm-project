@@ -1670,7 +1670,9 @@ markDeclareTarget(mlir::Operation *op,
   declareTargetOp.setDeclareTarget(deviceType, captureClause);
 }
 
-// OpenMPDeclarativeConstruct visitors --------------------------------
+//===----------------------------------------------------------------------===//
+// OpenMPDeclarativeConstruct visitors
+//===----------------------------------------------------------------------===//
 
 static void
 genOMP(Fortran::lower::AbstractConverter &converter,
@@ -1758,7 +1760,9 @@ genOMP(Fortran::lower::AbstractConverter &converter,
       ompDeclConstruct.u);
 }
 
-// OpenMPConstruct visitors -------------------------------------------
+//===----------------------------------------------------------------------===//
+// OpenMPConstruct visitors
+//===----------------------------------------------------------------------===//
 
 static void
 genOMP(Fortran::lower::AbstractConverter &converter,
