@@ -110,25 +110,47 @@ AffineExpr ValueBoundsConstraintSet::getExpr(Value value,
   assertValidValueDim(value, dim);
 #endif // NDEBUG
 
+  // Check if the value/dim is statically known. In that case, an affine
+  // constant expression should be returned. This allows us to support
+  // multiplications with constants. (Multiplications of two columns in the
+  // constraint set is not supported.)
+  std::optional<int64_t> constSize = std::nullopt;
   auto shapedType = dyn_cast<ShapedType>(value.getType());
   if (shapedType) {
-    // Static dimension: return constant directly.
     if (shapedType.hasRank() && !shapedType.isDynamicDim(*dim))
-      return builder.getAffineConstantExpr(shapedType.getDimSize(*dim));
-  } else {
-    // Constant index value: return directly.
-    if (auto constInt = ::getConstantIntValue(value))
-      return builder.getAffineConstantExpr(*constInt);
+      constSize = shapedType.getDimSize(*dim);
+  } else if (auto constInt = ::getConstantIntValue(value)) {
+    constSize = *constInt;
   }
 
-  // Dynamic value: add to constraint set.
+  // If the value/dim is already mapped, return the corresponding expression
+  // directly.
   ValueDim valueDim = std::make_pair(value, dim.value_or(kIndexValue));
-  if (!valueDimToPosition.contains(valueDim))
-    (void)insert(value, dim);
-  int64_t pos = getPos(value, dim);
-  return pos < cstr.getNumDimVars()
-             ? builder.getAffineDimExpr(pos)
-             : builder.getAffineSymbolExpr(pos - cstr.getNumDimVars());
+  if (valueDimToPosition.contains(valueDim)) {
+    // If it is a constant, return an affine constant expression. Otherwise,
+    // return an affine expression that represents the respective column in the
+    // constraint set.
+    if (constSize)
+      return builder.getAffineConstantExpr(*constSize);
+    return getPosExpr(getPos(value, dim));
+  }
+
+  if (constSize) {
+    // Constant index value/dim: add column to the constraint set, add EQ bound
+    // and return an affine constant expression without pushing the newly added
+    // column to the worklist.
+    (void)insert(value, dim, /*isSymbol=*/true, /*addToWorklist=*/false);
+    if (shapedType)
+      bound(value)[*dim] == *constSize;
+    else
+      bound(value) == *constSize;
+    return builder.getAffineConstantExpr(*constSize);
+  }
+
+  // Dynamic value/dim: insert column to the constraint set and put it on the
+  // worklist. Return an affine expression that represents the newly inserted
+  // column in the constraint set.
+  return getPosExpr(insert(value, dim, /*isSymbol=*/true));
 }
 
 AffineExpr ValueBoundsConstraintSet::getExpr(OpFoldResult ofr) {
@@ -145,7 +167,7 @@ AffineExpr ValueBoundsConstraintSet::getExpr(int64_t constant) {
 
 int64_t ValueBoundsConstraintSet::insert(Value value,
                                          std::optional<int64_t> dim,
-                                         bool isSymbol) {
+                                         bool isSymbol, bool addToWorklist) {
 #ifndef NDEBUG
   assertValidValueDim(value, dim);
 #endif // NDEBUG
@@ -160,7 +182,12 @@ int64_t ValueBoundsConstraintSet::insert(Value value,
     if (positionToValueDim[i].has_value())
       valueDimToPosition[*positionToValueDim[i]] = i;
 
-  worklist.push(pos);
+  if (addToWorklist) {
+    LLVM_DEBUG(llvm::dbgs() << "Push to worklist: " << value
+                            << " (dim: " << dim.value_or(kIndexValue) << ")\n");
+    worklist.push(pos);
+  }
+
   return pos;
 }
 
@@ -188,6 +215,13 @@ int64_t ValueBoundsConstraintSet::getPos(Value value,
       valueDimToPosition.find(std::make_pair(value, dim.value_or(kIndexValue)));
   assert(it != valueDimToPosition.end() && "expected mapped entry");
   return it->second;
+}
+
+AffineExpr ValueBoundsConstraintSet::getPosExpr(int64_t pos) {
+  assert(pos >= 0 && pos < cstr.getNumDimAndSymbolVars() && "invalid position");
+  return pos < cstr.getNumDimVars()
+             ? builder.getAffineDimExpr(pos)
+             : builder.getAffineSymbolExpr(pos - cstr.getNumDimVars());
 }
 
 static Operation *getOwnerOfValue(Value value) {
