@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Workaround for missing __has_builtin in < GCC 10.
+#ifndef __has_builtin
+#define __has_builtin 0
+#endif
+
 #include "llvmlibc_rpc_server.h"
 
 #include "src/__support/RPC/rpc.h"
@@ -20,11 +25,6 @@
 #include <vector>
 
 using namespace LIBC_NAMESPACE;
-
-// Workaround for missing __has_builtin in < GCC 10.
-#ifndef __has_builtin
-#define __has_builtin 0
-#endif
 
 static_assert(sizeof(rpc_buffer_t) == sizeof(rpc::Buffer),
               "Buffer size mismatch");
