@@ -395,7 +395,7 @@ private:
 
   const CallDescriptionMap<CheckFn> PreFnMap{
       // NOTE: the following CallDescription also matches the C++ standard
-      // library function std::getdelim(); the callback will filter it out.
+      // library function std::getline(); the callback will filter it out.
       {{CDM::CLibrary, {"getline"}, 3}, &MallocChecker::preGetdelim},
       {{CDM::CLibrary, {"getdelim"}, 4}, &MallocChecker::preGetdelim},
   };
@@ -450,7 +450,7 @@ private:
       {{{"g_try_realloc_n"}, 3}, &MallocChecker::checkReallocN},
 
       // NOTE: the following CallDescription also matches the C++ standard
-      // library function std::getdelim(); the callback will filter it out.
+      // library function std::getline(); the callback will filter it out.
       {{CDM::CLibrary, {"getline"}, 3}, &MallocChecker::checkGetdelim},
       {{CDM::CLibrary, {"getdelim"}, 4}, &MallocChecker::checkGetdelim},
   };
