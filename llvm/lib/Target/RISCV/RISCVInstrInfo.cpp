@@ -346,12 +346,12 @@ void RISCVInstrInfo::copyPhysRegVector(MachineBasicBlock &MBB,
     const auto *FoundReg = llvm::find_if(Regs, [&](MCPhysReg Reg) {
       return TRI->getEncodingValue(Reg) == Encoding;
     });
-    // We should always be able to find one valid register.
+    // We should be always able to find one valid register.
     assert(FoundReg != Regs.end());
     return *FoundReg;
   };
   while (I != NumRegs) {
-    // For non-segment copying, we only do this one as the registers are always
+    // For non-segment copying, we only do this once as the registers are always
     // aligned.
     // For segment copying, we may do this several times. If the registers are
     // aligned to larger LMUL, we can eliminate some copyings.
