@@ -539,8 +539,10 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
           M->IsSystem ? SrcMgr::C_System_ModuleMap : SrcMgr::C_User_ModuleMap;
       FileID OriginalModuleMapFID = CI.getSourceManager().getOrCreateFileID(
           *OriginalModuleMap, FileCharacter);
-      CI.getPreprocessor().getHeaderSearchInfo().getModuleMap()
-        .setInferredModuleAllowedBy(M, OriginalModuleMapFID);
+      CI.getPreprocessor()
+          .getHeaderSearchInfo()
+          .getModuleMap()
+          .setInferredModuleAllowedBy(M, OriginalModuleMapFID);
     }
   }
 
