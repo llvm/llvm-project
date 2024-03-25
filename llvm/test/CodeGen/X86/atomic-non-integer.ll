@@ -131,7 +131,6 @@ define void @store_double(ptr %fptr, double %v) {
   ret void
 }
 
-
 define half @load_half(ptr %fptr) {
 ; X86-SSE1-LABEL: load_half:
 ; X86-SSE1:       # %bb.0:
