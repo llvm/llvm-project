@@ -18,6 +18,18 @@ class ScalarCoreVBitManipGprIntrinsic
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty],
                             [IntrNoMem, IntrSpeculatable]>;
 
+class ScalarCoreVAluGprIntrinsic
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty],
+                          [IntrNoMem, IntrSpeculatable]>;
+
+class ScalarCoreVAluGprGprIntrinsic
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+                          [IntrNoMem, IntrSpeculatable]>;
+
+class ScalarCoreVAluGprGprGprIntrinsic
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+                          [IntrNoMem, IntrSpeculatable]>;
+
 let TargetPrefix = "riscv" in {
   def int_riscv_cv_bitmanip_extract : ScalarCoreVBitManipGprGprIntrinsic;
   def int_riscv_cv_bitmanip_extractu : ScalarCoreVBitManipGprGprIntrinsic;
@@ -34,4 +46,20 @@ let TargetPrefix = "riscv" in {
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
                             [IntrNoMem, IntrWillReturn, IntrSpeculatable,
                             ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+
+  def int_riscv_cv_alu_exths : ScalarCoreVAluGprIntrinsic;
+  def int_riscv_cv_alu_exthz : ScalarCoreVAluGprIntrinsic;
+  def int_riscv_cv_alu_extbs : ScalarCoreVAluGprIntrinsic;
+  def int_riscv_cv_alu_extbz : ScalarCoreVAluGprIntrinsic;
+
+  def int_riscv_cv_alu_clip   : ScalarCoreVAluGprGprIntrinsic;
+  def int_riscv_cv_alu_clipu  : ScalarCoreVAluGprGprIntrinsic;
+  def int_riscv_cv_alu_addn   : ScalarCoreVAluGprGprGprIntrinsic;
+  def int_riscv_cv_alu_addun  : ScalarCoreVAluGprGprGprIntrinsic;
+  def int_riscv_cv_alu_addrn  : ScalarCoreVAluGprGprGprIntrinsic;
+  def int_riscv_cv_alu_addurn : ScalarCoreVAluGprGprGprIntrinsic;
+  def int_riscv_cv_alu_subn   : ScalarCoreVAluGprGprGprIntrinsic;
+  def int_riscv_cv_alu_subun  : ScalarCoreVAluGprGprGprIntrinsic;
+  def int_riscv_cv_alu_subrn  : ScalarCoreVAluGprGprGprIntrinsic;
+  def int_riscv_cv_alu_suburn : ScalarCoreVAluGprGprGprIntrinsic;
 } // TargetPrefix = "riscv"
