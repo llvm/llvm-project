@@ -18066,15 +18066,22 @@ llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
   return Arg;
 }
 
-Intrinsic::ID getDotProductIntrinsic(QualType QT) {
+Intrinsic::ID getDotProductIntrinsic(QualType QT, int elementCount) {
+  if (QT->hasFloatingRepresentation()) {
+    switch (elementCount) {
+    case 2:
+      return Intrinsic::dx_dot2;
+    case 3:
+      return Intrinsic::dx_dot3;
+    case 4:
+      return Intrinsic::dx_dot4;
+    }
+  }
   if (QT->hasSignedIntegerRepresentation())
     return Intrinsic::dx_sdot;
-  if (QT->hasUnsignedIntegerRepresentation())
-    return Intrinsic::dx_udot;
 
-  assert(QT->hasFloatingRepresentation());
-  return Intrinsic::dx_dot;
-  ;
+  assert(QT->hasUnsignedIntegerRepresentation());
+  return Intrinsic::dx_udot;
 }
 
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
@@ -18128,8 +18135,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     assert(T0->getScalarType() == T1->getScalarType() &&
            "Dot product of vectors need the same element types.");
 
-    [[maybe_unused]] auto *VecTy0 =
-        E->getArg(0)->getType()->getAs<VectorType>();
+    auto *VecTy0 = E->getArg(0)->getType()->getAs<VectorType>();
     [[maybe_unused]] auto *VecTy1 =
         E->getArg(1)->getType()->getAs<VectorType>();
     // A HLSLVectorTruncation should have happend
@@ -18138,7 +18144,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     return Builder.CreateIntrinsic(
         /*ReturnType=*/T0->getScalarType(),
-        getDotProductIntrinsic(E->getArg(0)->getType()),
+        getDotProductIntrinsic(E->getArg(0)->getType(),
+                               VecTy0->getNumElements()),
         ArrayRef<Value *>{Op0, Op1}, nullptr, "dx.dot");
   } break;
   case Builtin::BI__builtin_hlsl_lerp: {
