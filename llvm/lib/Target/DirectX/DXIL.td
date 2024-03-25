@@ -303,6 +303,15 @@ def IMad : DXILOpMapping<48, tertiary, int_dx_imad,
                          "Signed integer arithmetic multiply/add operation. imad(m,a,b) = m * a + b.">;
 def UMad : DXILOpMapping<49, tertiary, int_dx_umad,
                          "Unsigned integer arithmetic multiply/add operation. umad(m,a,b) = m * a + b.">;
+let OpTypes = !listconcat([llvm_halforfloat_ty], !listsplat(llvm_halforfloat_ty, 4)) in
+  def Dot2 : DXILOpMapping<54, dot2, int_dx_dot2,
+                           "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + a[n]*b[n] where n is between 0 and 1">;
+let OpTypes = !listconcat([llvm_halforfloat_ty], !listsplat(llvm_halforfloat_ty, 6)) in
+  def Dot3 : DXILOpMapping<55, dot3, int_dx_dot3,
+                           "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + a[n]*b[n] where n is between 0 and 2">;
+let OpTypes = !listconcat([llvm_halforfloat_ty], !listsplat(llvm_halforfloat_ty, 8)) in
+  def Dot4 : DXILOpMapping<56, dot4, int_dx_dot4,
+                           "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + a[n]*b[n] where n is between 0 and 3">;
 def ThreadId : DXILOpMapping<93, threadId, int_dx_thread_id,
                              "Reads the thread ID">;
 def GroupId  : DXILOpMapping<94, groupId, int_dx_group_id,
