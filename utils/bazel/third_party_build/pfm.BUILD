@@ -35,5 +35,5 @@ cc_library(
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    visibility = ["//visibility:private"],
+    visibility = ["//visibility:public"],
 )
