@@ -262,6 +262,7 @@ class SPIRVGeneralDuplicatesTracker {
   SPIRVDuplicatesTracker<GlobalVariable> GT;
   SPIRVDuplicatesTracker<Function> FT;
   SPIRVDuplicatesTracker<Argument> AT;
+  SPIRVDuplicatesTracker<MachineInstr> MT;
   SPIRVDuplicatesTracker<SPIRV::SpecialTypeDescriptor> ST;
 
   // NOTE: using MOs instead of regs to get rid of MF dependency to be able
@@ -306,6 +307,10 @@ public:
     AT.add(Arg, MF, R);
   }
 
+  void add(const MachineInstr *MI, const MachineFunction *MF, Register R) {
+    MT.add(MI, MF, R);
+  }
+
   void add(const SPIRV::SpecialTypeDescriptor &TD, const MachineFunction *MF,
            Register R) {
     ST.add(TD, MF, R);
@@ -335,6 +340,10 @@ public:
 
   Register find(const Argument *Arg, const MachineFunction *MF) {
     return AT.find(const_cast<Argument *>(Arg), MF);
+  }
+
+  Register find(const MachineInstr *MI, const MachineFunction *MF) {
+    return MT.find(const_cast<MachineInstr *>(MI), MF);
   }
 
   Register find(const SPIRV::SpecialTypeDescriptor &TD,
