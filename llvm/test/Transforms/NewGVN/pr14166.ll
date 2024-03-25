@@ -1,4 +1,3 @@
-; XFAIL: *
 ; RUN: opt -disable-basic-aa -passes=newgvn -S < %s | FileCheck %s
 ; NewGVN fails this due to missing load coercion
 target datalayout = "e-p:32:32:32"
