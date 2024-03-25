@@ -68,15 +68,25 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_clz(__uint128_t __x)
 }
 #endif // _LIBCPP_HAS_NO_INT128
 
+#if __has_builtin(__builtin_clzg)
+
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countl_zero(_Tp __t) _NOEXCEPT {
   static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__countl_zero requires an unsigned integer type");
   if (__t == 0)
     return numeric_limits<_Tp>::digits;
 
-#if __has_builtin(__builtin_clzg)
   return __builtin_clzg(__t) - (numeric_limits<unsigned>::digits - numeric_limits<_Tp>::digits);
-#else
+}
+
+#else // __has_builtin(__builtin_clzg)
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countl_zero(_Tp __t) _NOEXCEPT {
+  static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__countl_zero requires an unsigned integer type");
+  if (__t == 0)
+    return numeric_limits<_Tp>::digits;
+
   if (sizeof(_Tp) <= sizeof(unsigned int))
     return std::__libcpp_clz(static_cast<unsigned int>(__t)) -
            (numeric_limits<unsigned int>::digits - numeric_limits<_Tp>::digits);
@@ -98,8 +108,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countl_zero(_Tp __t) _
     }
     return __ret + __iter;
   }
-#endif // __has_builtin(__builtin_clzg)
 }
+
+#endif // __has_builtin(__builtin_clzg)
 
 #if _LIBCPP_STD_VER >= 20
 

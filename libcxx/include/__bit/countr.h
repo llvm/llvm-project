@@ -47,14 +47,23 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_ct
 #endif
 }
 
+#if __has_builtin(__builtin_ctzg)
+
 template <class _Tp>
 _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countr_zero(_Tp __t) _NOEXCEPT {
   if (__t == 0)
     return numeric_limits<_Tp>::digits;
 
-#if __has_builtin(__builtin_ctz)
   return __builtin_ctz(__t);
-#else
+}
+
+#else // __has_builtin(__builtin_ctzg)
+
+template <class _Tp>
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countr_zero(_Tp __t) _NOEXCEPT {
+  if (__t == 0)
+    return numeric_limits<_Tp>::digits;
+
   if (sizeof(_Tp) <= sizeof(unsigned int))
     return std::__libcpp_ctz(static_cast<unsigned int>(__t));
   else if (sizeof(_Tp) <= sizeof(unsigned long))
@@ -70,8 +79,9 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __coun
     }
     return __ret + std::__libcpp_ctz(static_cast<unsigned long long>(__t));
   }
-#endif // __has_builtin(__builtin_ctz)
 }
+
+#endif // __has_builtin(__builtin_ctzg)
 
 #if _LIBCPP_STD_VER >= 20
 
