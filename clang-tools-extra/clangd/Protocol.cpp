@@ -1483,18 +1483,9 @@ llvm::json::Value toJSON(const InlayHintKind &Kind) {
   llvm_unreachable("Unknown clang.clangd.InlayHintKind");
 }
 
-namespace {
-
-llvm::json::Array toJSON(const std::vector<InlayHintLabelPart> &Labels) {
-  return llvm::json::Array{
-      llvm::map_range(Labels, [](auto &Label) { return toJSON(Label); })};
-}
-
-} // namespace
-
 llvm::json::Value toJSON(const InlayHint &H) {
   llvm::json::Object Result{{"position", H.position},
-                            {"label", toJSON(H.label)},
+                            {"label", H.label},
                             {"paddingLeft", H.paddingLeft},
                             {"paddingRight", H.paddingRight}};
   auto K = toJSON(H.kind);
