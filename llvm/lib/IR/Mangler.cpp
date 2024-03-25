@@ -18,8 +18,10 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+
 using namespace llvm;
 
 namespace {
@@ -192,7 +194,7 @@ void Mangler::getNameWithPrefix(SmallVectorImpl<char> &OutName,
 
 // Check if the name needs quotes to be safe for the linker to interpret.
 static bool canBeUnquotedInDirective(char C) {
-  return isAlnum(C) || C == '_' || C == '@';
+  return isAlnum(C) || C == '_' || C == '@' || C == '#';
 }
 
 static bool canBeUnquotedInDirective(StringRef Name) {
@@ -232,6 +234,16 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
         OS << Flag;
     } else {
       Mangler.getNameWithPrefix(OS, GV, false);
+    }
+    if (TT.isWindowsArm64EC()) {
+      // Use EXPORTAS for mangled ARM64EC symbols.
+      // FIXME: During LTO, we're invoked prior to the EC lowering pass,
+      // so symbols are not yet mangled. Emitting the unmangled name
+      // typically functions correctly; the linker can resolve the export
+      // with the demangled alias.
+      if (std::optional<std::string> demangledName =
+              object::getArm64ECDemangledFunctionName(GV->getName()))
+        OS << ",EXPORTAS," << *demangledName;
     }
     if (NeedQuotes)
       OS << "\"";
