@@ -2942,7 +2942,7 @@ static bool isInternalTargetDeviceOp(Operation *op) {
 /// Given an OpenMP MLIR operation, create the corresponding LLVM IR
 /// (including OpenMP runtime calls).
 static LogicalResult
-convertCommonOperation(Operation *op, llvm::IRBuilderBase &builder,
+convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
                        LLVM::ModuleTranslation &moduleTranslation) {
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
@@ -3059,13 +3059,13 @@ convertCommonOperation(Operation *op, llvm::IRBuilderBase &builder,
 }
 
 static LogicalResult
-convertInternalTargetOp(Operation *op, llvm::IRBuilderBase &builder,
+convertTargetDeviceOp(Operation *op, llvm::IRBuilderBase &builder,
                         LLVM::ModuleTranslation &moduleTranslation) {
-  return convertCommonOperation(op, builder, moduleTranslation);
+  return convertHostOrTargetOperation(op, builder, moduleTranslation);
 }
 
 static LogicalResult
-convertTopLevelTargetOp(Operation *op, llvm::IRBuilderBase &builder,
+convertTargetOpsInNest(Operation *op, llvm::IRBuilderBase &builder,
                         LLVM::ModuleTranslation &moduleTranslation) {
   if (isa<omp::TargetOp>(op))
     return convertOmpTarget(*op, builder, moduleTranslation);
@@ -3201,13 +3201,13 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   if (ompBuilder->Config.isTargetDevice()) {
     if (isInternalTargetDeviceOp(op)) {
-      return convertInternalTargetOp(op, builder, moduleTranslation);
+      return convertTargetDeviceOp(op, builder, moduleTranslation);
     } else {
-      return convertTopLevelTargetOp(op, builder, moduleTranslation);
+      return convertTargetOpsInNest(op, builder, moduleTranslation);
     }
   }
 
-  return convertCommonOperation(op, builder, moduleTranslation);
+  return convertHostOrTargetOperation(op, builder, moduleTranslation);
 }
 
 void mlir::registerOpenMPDialectTranslation(DialectRegistry &registry) {
