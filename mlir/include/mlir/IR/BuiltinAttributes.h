@@ -755,6 +755,7 @@ public:
 extern template class DenseArrayAttrImpl<bool>;
 extern template class DenseArrayAttrImpl<int8_t>;
 extern template class DenseArrayAttrImpl<int16_t>;
+extern template class DenseArrayAttrImpl<uint32_t>;
 extern template class DenseArrayAttrImpl<int32_t>;
 extern template class DenseArrayAttrImpl<int64_t>;
 extern template class DenseArrayAttrImpl<float>;
@@ -765,6 +766,7 @@ extern template class DenseArrayAttrImpl<double>;
 using DenseBoolArrayAttr = detail::DenseArrayAttrImpl<bool>;
 using DenseI8ArrayAttr = detail::DenseArrayAttrImpl<int8_t>;
 using DenseI16ArrayAttr = detail::DenseArrayAttrImpl<int16_t>;
+using DenseUI32ArrayAttr = detail::DenseArrayAttrImpl<uint32_t>;
 using DenseI32ArrayAttr = detail::DenseArrayAttrImpl<int32_t>;
 using DenseI64ArrayAttr = detail::DenseArrayAttrImpl<int64_t>;
 using DenseF32ArrayAttr = detail::DenseArrayAttrImpl<float>;

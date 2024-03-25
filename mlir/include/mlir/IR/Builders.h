@@ -157,6 +157,7 @@ public:
   DenseBoolArrayAttr getDenseBoolArrayAttr(ArrayRef<bool> values);
   DenseI8ArrayAttr getDenseI8ArrayAttr(ArrayRef<int8_t> values);
   DenseI16ArrayAttr getDenseI16ArrayAttr(ArrayRef<int16_t> values);
+  DenseUI32ArrayAttr getDenseUI32ArrayAttr(ArrayRef<uint32_t> values);
   DenseI32ArrayAttr getDenseI32ArrayAttr(ArrayRef<int32_t> values);
   DenseI64ArrayAttr getDenseI64ArrayAttr(ArrayRef<int64_t> values);
   DenseF32ArrayAttr getDenseF32ArrayAttr(ArrayRef<float> values);

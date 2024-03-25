@@ -592,6 +592,8 @@ func.func @dense_array_attr() attributes {
                emptyi64attr = array<i64>,
 // CHECK-SAME: emptyi8attr = array<i8>,
                emptyi8attr = array<i8>,
+// CHECK-SAME: emptyui32attr = array<ui32>,
+               emptyui32attr = array<ui32>,
 // CHECK-SAME: f32attr = array<f32: 1.024000e+03, 4.530000e+02, -6.435000e+03>,
                f32attr = array<f32: 1024., 453., -6435.>,
 // CHECK-SAME: f64attr = array<f64: -1.420000e+02>,
@@ -605,7 +607,9 @@ func.func @dense_array_attr() attributes {
 // CHECK-SAME: i64attr = array<i64: -142>,
                i64attr = array<i64: -142>,
 // CHECK-SAME: i8attr = array<i8: 1, -2, 3>
-               i8attr = array<i8: 1, -2, 3>
+               i8attr = array<i8: 1, -2, 3>,
+// CHECK-SAME: ui32attr = array<ui32: 1024, 453, 6435>
+               ui32attr = array<ui32: 1024, 453, 6435>
  } {
 // CHECK:  test.dense_array_attr
   test.dense_array_attr
@@ -617,6 +621,8 @@ func.func @dense_array_attr() attributes {
                i16attr = [3, 5, -4, 10]
 // CHECK-SAME: i32attr = [1024, 453, -6435]
                i32attr = [1024, 453, -6435]
+// CHECK-SAME: ui32attr = [1024, 453, 6435]
+               ui32attr = [1024, 453, 6435]
 // CHECK-SAME: i64attr = [-142]
                i64attr = [-142]
 // CHECK-SAME: f32attr = [1.024000e+03, 4.530000e+02, -6.435000e+03]
@@ -655,6 +661,7 @@ func.func @testConfinedDenseArrayAttr() {
   "test.confined_dense_array_attr"() {
     i64attr = array<i64: 0, 2, 3>,
     i32attr = array<i32: 1>,
+    ui32attr = array<ui32: 10>,
     emptyattr = array<i16>
   } : () -> ()
   func.return
@@ -666,6 +673,7 @@ func.func @testConfinedDenseArrayAttrDuplicateValues() {
   // expected-error@+1{{'test.confined_dense_array_attr' op attribute 'i64attr' failed to satisfy constraint: i64 dense array attribute should be in increasing order}}
   "test.confined_dense_array_attr"() {
     emptyattr = array<i16>,
+    ui32attr = array<ui32: 3, 3>,
     i32attr = array<i32: 1, 1>,
     i64attr = array<i64: 0, 2, 2>
   } : () -> ()
@@ -678,6 +686,7 @@ func.func @testConfinedDenseArrayAttrDecreasingOrder() {
   // expected-error@+1{{'test.confined_dense_array_attr' op attribute 'i32attr' failed to satisfy constraint: i32 dense array attribute should be in non-decreasing order}}
   "test.confined_dense_array_attr"() {
     emptyattr = array<i16>,
+    ui32attr = array<ui32: 1, 2>,
     i32attr = array<i32: 1, 0>,
     i64attr = array<i64: 0, 2, 3>
   } : () -> ()
@@ -690,6 +699,7 @@ func.func @testConfinedStrictlyPositiveDenseArrayAttr() {
   "test.confined_strictly_positive_attr"() {
     i8attr = array<i8: 2, 3>,
     i16attr = array<i16: 20, 30>,
+    ui32attr = array<ui32: 1>,
     i32attr = array<i32: 1>,
     i64attr = array<i64: 1, 2, 3>,
     f32attr = array<f32: 1.1, 2.1>,
@@ -706,6 +716,7 @@ func.func @testConfinedStrictlyPositiveDenseArrayAttr() {
   "test.confined_strictly_positive_attr"() {
     i8attr = array<i8: 2, 3>,
     i16attr = array<i16: 20, 30>,
+    ui32attr = array<ui32: 1>,
     i32attr = array<i32: 1>,
     i64attr = array<i64: 0, 2, 3>,
     f32attr = array<f32: 1.1, 2.1>,

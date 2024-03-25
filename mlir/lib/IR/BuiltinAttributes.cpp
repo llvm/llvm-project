@@ -760,6 +760,9 @@ struct DenseArrayAttrUtil<int8_t> : public DenseArrayAttrIntUtil<8> {
 template <>
 struct DenseArrayAttrUtil<int16_t> : public DenseArrayAttrIntUtil<16> {};
 template <>
+struct DenseArrayAttrUtil<uint32_t>
+    : public DenseArrayAttrIntUtil<32, IntegerType::Unsigned> {};
+template <>
 struct DenseArrayAttrUtil<int32_t> : public DenseArrayAttrIntUtil<32> {};
 template <>
 struct DenseArrayAttrUtil<int64_t> : public DenseArrayAttrIntUtil<64> {};
@@ -875,6 +878,7 @@ namespace detail {
 template class DenseArrayAttrImpl<bool>;
 template class DenseArrayAttrImpl<int8_t>;
 template class DenseArrayAttrImpl<int16_t>;
+template class DenseArrayAttrImpl<uint32_t>;
 template class DenseArrayAttrImpl<int32_t>;
 template class DenseArrayAttrImpl<int64_t>;
 template class DenseArrayAttrImpl<float>;

@@ -300,6 +300,7 @@ def DenseArrayAttrOp : TEST_Op<"dense_array_attr"> {
     DenseI8ArrayAttr:$i8attr,
     DenseI16ArrayAttr:$i16attr,
     DenseI32ArrayAttr:$i32attr,
+    DenseUI32ArrayAttr:$ui32attr,
     DenseI64ArrayAttr:$i64attr,
     DenseF32ArrayAttr:$f32attr,
     DenseF64ArrayAttr:$f64attr,
@@ -307,7 +308,7 @@ def DenseArrayAttrOp : TEST_Op<"dense_array_attr"> {
   );
   let assemblyFormat = [{
    `i1attr` `=` $i1attr `i8attr` `=` $i8attr `i16attr` `=` $i16attr
-   `i32attr` `=` $i32attr `i64attr` `=` $i64attr  `f32attr` `=` $f32attr
+   `i32attr` `=` $i32attr `ui32attr` `=` $ui32attr `i64attr` `=` $i64attr  `f32attr` `=` $f32attr
    `f64attr` `=` $f64attr `emptyattr` `=` $emptyattr attr-dict
   }];
 }
@@ -320,6 +321,8 @@ def ConfinedDenseArrayAttrOp : TEST_Op<"confined_dense_array_attr"> {
   let arguments = (ins
       ConfinedAttr<DenseI16ArrayAttr,
                    [DenseArrayStrictlySorted<DenseI16ArrayAttr>]>:$emptyattr,
+      ConfinedAttr<DenseUI32ArrayAttr,
+                   [DenseArraySorted<DenseUI32ArrayAttr>]>:$ui32attr,
       ConfinedAttr<DenseI32ArrayAttr,
                    [DenseArraySorted<DenseI32ArrayAttr>]>:$i32attr,
       ConfinedAttr<DenseI64ArrayAttr,
@@ -334,6 +337,8 @@ def DenseArrayStrictlyPositiveAttrOp : TEST_Op<"confined_strictly_positive_attr"
                    [DenseArrayStrictlyPositive<DenseI8ArrayAttr>]>:$i8attr,
       ConfinedAttr<DenseI16ArrayAttr,
                    [DenseArrayStrictlyPositive<DenseI16ArrayAttr>]>:$i16attr,
+      ConfinedAttr<DenseUI32ArrayAttr,
+                   [DenseArrayStrictlyPositive<DenseUI32ArrayAttr>]>:$ui32attr,
       ConfinedAttr<DenseI32ArrayAttr,
                    [DenseArrayStrictlyPositive<DenseI32ArrayAttr>]>:$i32attr,
       ConfinedAttr<DenseI64ArrayAttr,
@@ -347,7 +352,7 @@ def DenseArrayStrictlyPositiveAttrOp : TEST_Op<"confined_strictly_positive_attr"
   );
 }
 
-// It does not make sense to have this constraint on a DenseBoolArrayAttr.
+// It does not make sense to have this constraint on a DenseBoolArrayAttr/DenseUI32ArrayAttr.
 // It is always true.
 def DenseArrayNonNegativeOp : TEST_Op<"confined_non_negative_attr"> {
   let arguments = (ins

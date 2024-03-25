@@ -180,6 +180,10 @@ DenseI32ArrayAttr Builder::getDenseI32ArrayAttr(ArrayRef<int32_t> values) {
   return DenseI32ArrayAttr::get(context, values);
 }
 
+DenseUI32ArrayAttr Builder::getDenseUI32ArrayAttr(ArrayRef<uint32_t> values) {
+  return DenseUI32ArrayAttr::get(context, values);
+}
+
 DenseI64ArrayAttr Builder::getDenseI64ArrayAttr(ArrayRef<int64_t> values) {
   return DenseI64ArrayAttr::get(context, values);
 }
