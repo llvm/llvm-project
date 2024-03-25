@@ -287,7 +287,7 @@ static APInt constructOperandMask(ArrayRef<int64_t> Indices) {
   if (Indices.empty())
     return OperandMask;
 
-  int64_t MaxIndex = *std::max_element(Indices.begin(), Indices.end());
+  int64_t MaxIndex = *llvm::max_element(Indices);
   assert(MaxIndex >= 0 && "Invalid negative indices in input!");
   OperandMask = OperandMask.zext(MaxIndex + 1);
   for (const int64_t Index : Indices) {

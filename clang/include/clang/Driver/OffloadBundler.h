@@ -17,6 +17,7 @@
 #ifndef LLVM_CLANG_DRIVER_OFFLOADBUNDLER_H
 #define LLVM_CLANG_DRIVER_OFFLOADBUNDLER_H
 
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
 #include <llvm/Support/MemoryBuffer.h>
@@ -36,6 +37,8 @@ public:
   bool HipOpenmpCompatible = false;
   bool Compress = false;
   bool Verbose = false;
+  llvm::compression::Format CompressionFormat;
+  int CompressionLevel;
 
   unsigned BundleAlignment = 1;
   unsigned HostInputIndex = ~0u;
@@ -116,7 +119,8 @@ private:
 
 public:
   static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-  compress(const llvm::MemoryBuffer &Input, bool Verbose = false);
+  compress(llvm::compression::Params P, const llvm::MemoryBuffer &Input,
+           bool Verbose = false);
   static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
   decompress(const llvm::MemoryBuffer &Input, bool Verbose = false);
 };

@@ -186,12 +186,61 @@ bool PPCSubtarget::enableSubRegLiveness() const {
 }
 
 bool PPCSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
+  if (isAIXABI()) {
+    if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV))
+      // On AIX the only symbols that aren't indirect are toc-data.
+      return !GVar->hasAttribute("toc-data");
+
+    return true;
+  }
+
   // Large code model always uses the TOC even for local symbols.
   if (TM.getCodeModel() == CodeModel::Large)
     return true;
-  if (TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
+
+  if (TM.shouldAssumeDSOLocal(GV))
     return false;
   return true;
+}
+
+CodeModel::Model PPCSubtarget::getCodeModel(const TargetMachine &TM,
+                                            const GlobalValue *GV) const {
+  // If there isn't an attribute to override the module code model
+  // this will be the effective code model.
+  CodeModel::Model ModuleModel = TM.getCodeModel();
+
+  // Initially support per global code model for AIX only.
+  if (!isAIXABI())
+    return ModuleModel;
+
+  // Only GlobalVariables carry an attribute which can override the module code
+  // model.
+  assert(GV && "Unexpected NULL GlobalValue");
+  const GlobalVariable *GlobalVar =
+      [](const GlobalValue *GV) -> const GlobalVariable * {
+    const GlobalVariable *Var = dyn_cast<GlobalVariable>(GV);
+    if (Var)
+      return Var;
+
+    const GlobalAlias *Alias = dyn_cast<GlobalAlias>(GV);
+    if (Alias)
+      return dyn_cast<GlobalVariable>(Alias->getAliaseeObject());
+
+    return nullptr;
+  }(GV);
+
+  if (!GlobalVar)
+    return ModuleModel;
+
+  std::optional<CodeModel::Model> MaybeCodeModel = GlobalVar->getCodeModel();
+  if (MaybeCodeModel) {
+    CodeModel::Model CM = *MaybeCodeModel;
+    assert((CM == CodeModel::Small || CM == CodeModel::Large) &&
+           "invalid code model for AIX");
+    return CM;
+  }
+
+  return ModuleModel;
 }
 
 bool PPCSubtarget::isELFv2ABI() const { return TM.isELFv2ABI(); }

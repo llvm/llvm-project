@@ -1,7 +1,7 @@
 ! RUN: bbc -emit-fir -hlfir=false -fopenmp -o - %s 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 
-!CHECK: omp.reduction.declare @[[MIN_DECLARE_F:.*]] : f32 init {
+!CHECK: omp.declare_reduction @[[MIN_DECLARE_F:.*]] : f32 init {
 !CHECK:   %[[MAXIMUM_VAL_F:.*]] = arith.constant 3.40282347E+38 : f32
 !CHECK:   omp.yield(%[[MAXIMUM_VAL_F]] : f32)
 !CHECK: combiner
@@ -9,7 +9,7 @@
 !CHECK:   %[[COMB_VAL_F:.*]] = arith.minimumf %[[ARG0_F]], %[[ARG1_F]] {{.*}}: f32
 !CHECK:   omp.yield(%[[COMB_VAL_F]] : f32)
 
-!CHECK: omp.reduction.declare @[[MIN_DECLARE_I:.*]] : i32 init {
+!CHECK: omp.declare_reduction @[[MIN_DECLARE_I:.*]] : i32 init {
 !CHECK:   %[[MAXIMUM_VAL_I:.*]] = arith.constant 2147483647 : i32
 !CHECK:   omp.yield(%[[MAXIMUM_VAL_I]] : i32)
 !CHECK: combiner

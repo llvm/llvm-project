@@ -1540,7 +1540,10 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
   llvm::BasicBlock *resume = Builder.GetInsertBlock();
 
   // Go back to the entry.
-  ++entry_ptr;
+  if (entry_ptr->getNextNonDebugInstruction())
+    entry_ptr = entry_ptr->getNextNonDebugInstruction()->getIterator();
+  else
+    entry_ptr = entry->end();
   Builder.SetInsertPoint(entry, entry_ptr);
 
   // Emit debug information for all the DeclRefExprs.

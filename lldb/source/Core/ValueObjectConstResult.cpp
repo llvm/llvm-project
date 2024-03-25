@@ -216,10 +216,13 @@ std::optional<uint64_t> ValueObjectConstResult::GetByteSize() {
 
 void ValueObjectConstResult::SetByteSize(size_t size) { m_byte_size = size; }
 
-uint32_t ValueObjectConstResult::CalculateNumChildren(uint32_t max) {
+llvm::Expected<uint32_t>
+ValueObjectConstResult::CalculateNumChildren(uint32_t max) {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   auto children_count = GetCompilerType().GetNumChildren(true, &exe_ctx);
-  return children_count <= max ? children_count : max;
+  if (!children_count)
+    return children_count;
+  return *children_count <= max ? *children_count : max;
 }
 
 ConstString ValueObjectConstResult::GetTypeName() {
