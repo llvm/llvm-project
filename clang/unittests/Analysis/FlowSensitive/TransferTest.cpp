@@ -17,6 +17,7 @@
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/LangStandard.h"
+#include "clang/Testing/TestAST.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Testing/Support/Error.h"
@@ -135,12 +136,32 @@ const Formula &getFormula(const ValueDecl &D, const Environment &Env) {
 }
 
 TEST(TransferTest, CNotSupported) {
-  std::string Code = R"(
-    void target() {}
-  )";
-  ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(
-                        Code, [](const auto &, auto &) {}, {BuiltinOptions{}},
-                        LangStandard::lang_c89),
+  TestInputs Inputs("void target() {}");
+  Inputs.Language = TestLanguage::Lang_C89;
+  clang::TestAST AST(Inputs);
+  const auto *Target =
+      cast<FunctionDecl>(test::findValueDecl(AST.context(), "target"));
+  ASSERT_THAT_ERROR(AdornedCFG::build(*Target).takeError(),
+                    llvm::FailedWithMessage("Can only analyze C++"));
+}
+
+TEST(TransferTest, ObjectiveCNotSupported) {
+  TestInputs Inputs("void target() {}");
+  Inputs.Language = TestLanguage::Lang_OBJC;
+  clang::TestAST AST(Inputs);
+  const auto *Target =
+      cast<FunctionDecl>(test::findValueDecl(AST.context(), "target"));
+  ASSERT_THAT_ERROR(AdornedCFG::build(*Target).takeError(),
+                    llvm::FailedWithMessage("Can only analyze C++"));
+}
+
+TEST(TransferTest, ObjectiveCXXNotSupported) {
+  TestInputs Inputs("void target() {}");
+  Inputs.Language = TestLanguage::Lang_OBJCXX;
+  clang::TestAST AST(Inputs);
+  const auto *Target =
+      cast<FunctionDecl>(test::findValueDecl(AST.context(), "target"));
+  ASSERT_THAT_ERROR(AdornedCFG::build(*Target).takeError(),
                     llvm::FailedWithMessage("Can only analyze C++"));
 }
 
