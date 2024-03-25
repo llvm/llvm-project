@@ -19,6 +19,7 @@
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Threading.h"
@@ -44,14 +45,23 @@ static bool HostSupportsJit() {
   return false;
 }
 
+// Some tests require a arm-registered-target
+static bool IsARMTargetRegistered() {
+  llvm::Triple TT;
+  TT.setArch(llvm::Triple::arm);
+  TT.setVendor(llvm::Triple::UnknownVendor);
+  TT.setOS(llvm::Triple::UnknownOS);
+
+  std::string UnusedErr;
+  return llvm::TargetRegistry::lookupTarget(TT.str(), UnusedErr);
+}
+
 struct LLVMInitRAII {
   LLVMInitRAII() {
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
-    LLVMInitializeARMTarget();
-    LLVMInitializeARMTargetInfo();
-    LLVMInitializeARMTargetMC();
-    LLVMInitializeARMAsmPrinter();
+    llvm::InitializeAllTargets();
+    llvm::InitializeAllTargetInfos();
+    llvm::InitializeAllTargetMCs();
+    llvm::InitializeAllAsmPrinters();
   }
   ~LLVMInitRAII() { llvm::llvm_shutdown(); }
 } LLVMInit;
@@ -190,6 +200,9 @@ TEST(InterpreterExtensionsTest, DISABLED_DefaultCrossJIT) {
 #else
 TEST(InterpreterExtensionsTest, DefaultCrossJIT) {
 #endif
+  if (!IsARMTargetRegistered())
+    GTEST_SKIP();
+
   IncrementalCompilerBuilder CB;
   CB.SetTargetTriple("armv6-none-eabi");
   auto CI = cantFail(CB.CreateCpp());
@@ -204,6 +217,9 @@ TEST(InterpreterExtensionsTest, DISABLED_CustomCrossJIT) {
 #else
 TEST(InterpreterExtensionsTest, CustomCrossJIT) {
 #endif
+  if (!IsARMTargetRegistered())
+    GTEST_SKIP();
+
   std::string TargetTriple = "armv6-none-eabi";
 
   IncrementalCompilerBuilder CB;
