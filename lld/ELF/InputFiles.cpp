@@ -288,7 +288,7 @@ static bool isCompatible(InputFile *file) {
   return false;
 }
 
-template <class ELFT> void elf::doParseFile(InputFile *file) {
+template <class ELFT> static void doParseFile(InputFile *file) {
   if (!isCompatible(file))
     return;
 
@@ -330,12 +330,24 @@ extern template void ObjFile<ELF32BE>::importCmseSymbols();
 extern template void ObjFile<ELF64LE>::importCmseSymbols();
 extern template void ObjFile<ELF64BE>::importCmseSymbols();
 
-template <class ELFT> static void doParseArmCMSEImportLib(InputFile &file) {
-  cast<ObjFile<ELFT>>(file).importCmseSymbols();
+template <class ELFT>
+static void doParseFiles(const std::vector<InputFile *> &files,
+                         InputFile *armCmseImpLib) {
+  // Add all files to the symbol table. This will add almost all symbols that we
+  // need to the symbol table. This process might add files to the link due to
+  // addDependentLibrary.
+  for (size_t i = 0; i < files.size(); ++i) {
+    llvm::TimeTraceScope timeScope("Parse input files", files[i]->getName());
+    doParseFile<ELFT>(files[i]);
+  }
+  if (armCmseImpLib)
+    cast<ObjFile<ELFT>>(*armCmseImpLib).importCmseSymbols();
 }
 
-void elf::parseArmCMSEImportLib(InputFile &file) {
-  invokeELFT(doParseArmCMSEImportLib, file);
+void elf::parseFiles(const std::vector<InputFile *> &files,
+                     InputFile *armCmseImpLib) {
+  llvm::TimeTraceScope timeScope("Parse input files");
+  invokeELFT(doParseFiles, files, armCmseImpLib);
 }
 
 // Concatenates arguments to construct a string representing an error location.
