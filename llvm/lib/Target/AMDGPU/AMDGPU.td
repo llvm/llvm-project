@@ -1589,7 +1589,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureHasRestrictedSOffset,
    FeatureVGPRSingleUseHintInsts,
    FeatureScalarDwordx3Loads,
-   FeatureDPPSrc1SGPR]>;
+   FeatureDPPSrc1SGPR,
+   Feature1_5xVGPRs]>;
 
 //===----------------------------------------------------------------------===//
 
