@@ -3161,8 +3161,10 @@ cc_library(
         ":Support",
         ":Target",
         ":config",
-        ":maybe_pfm",
-    ],
+    ] + select({
+        "@platforms//os:linux": [":maybe_pfm"],
+        "//conditions:default": [],
+    }),
 )
 
 ################################################################################
