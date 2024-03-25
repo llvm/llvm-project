@@ -256,10 +256,16 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
       return buildFConstant(DstOps[0], *Cst);
     break;
   }
-  case TargetOpcode::G_CTLZ: {
+  case TargetOpcode::G_CTLZ:
+  case TargetOpcode::G_CTTZ: {
     assert(SrcOps.size() == 1 && "Expected one source");
     assert(DstOps.size() == 1 && "Expected one dest");
-    auto MaybeCsts = ConstantFoldCTLZ(SrcOps[0].getReg(), *getMRI());
+    std::function<unsigned(APInt)> CB;
+    if (Opc == TargetOpcode::G_CTLZ)
+      CB = [](APInt V) -> unsigned { return V.countl_zero(); };
+    else
+      CB = [](APInt V) -> unsigned { return V.countTrailingZeros(); };
+    auto MaybeCsts = ConstantFoldCountZeros(SrcOps[0].getReg(), *getMRI(), CB);
     if (!MaybeCsts)
       break;
     if (MaybeCsts->size() == 1)
