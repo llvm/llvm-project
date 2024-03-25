@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-enable-noundef-analysis           -triple x86_64-apple-darwin -emit-llvm %s -o - 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DDYNAMIC -triple x86_64-apple-darwin -emit-llvm %s -o - 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis           -triple x86_64-apple-darwin -emit-llvm %s -o - 2>&1 | FileCheck --check-prefixes=CHECK,NON-DYNAMIC %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DDYNAMIC -triple x86_64-apple-darwin -emit-llvm %s -o - 2>&1 | FileCheck --check-prefixes=CHECK,DYNAMIC %s
 
 #ifndef DYNAMIC
 #define OBJECT_SIZE_BUILTIN __builtin_object_size
@@ -283,7 +283,8 @@ void test23(struct Test23Ty *p) {
 
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(&p->t[5], 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // NON-DYNAMIC: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // DYNAMIC:     store i32 -1
   gi = OBJECT_SIZE_BUILTIN(&p->t[5], 1);
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(&p->t[5], 2);
@@ -512,16 +513,20 @@ void test31(void) {
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(ds1[9].snd, 1);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // NON-DYNAMIC: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // DYNAMIC:     store i32 -1
   gi = OBJECT_SIZE_BUILTIN(&ss[9].snd[0], 1);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // NON-DYNAMIC: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // DYNAMIC:     store i32 -1
   gi = OBJECT_SIZE_BUILTIN(&ds1[9].snd[0], 1);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // NON-DYNAMIC: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // DYNAMIC:     store i32 -1
   gi = OBJECT_SIZE_BUILTIN(&ds0[9].snd[0], 1);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // NON-DYNAMIC: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // DYNAMIC:     store i32 -1
   gi = OBJECT_SIZE_BUILTIN(&dsv[9].snd[0], 1);
 }
 

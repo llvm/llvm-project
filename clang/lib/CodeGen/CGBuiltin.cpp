@@ -1083,6 +1083,25 @@ struct ObjectSizeVisitor
 
 } // end anonymous namespace
 
+/// Return the last FieldDecl in the struct.
+static const FieldDecl *getLastDecl(const RecordDecl *RD) {
+  const Decl *LastDecl = nullptr;
+  for (const Decl *D : RD->decls())
+    if (isa<FieldDecl>(D) || isa<RecordDecl>(D))
+      LastDecl = D;
+
+  if (const auto *LastRD = dyn_cast<RecordDecl>(LastDecl)) {
+    LastDecl = getLastDecl(LastRD);
+  } else if (const auto *LastFD = dyn_cast<FieldDecl>(LastDecl)) {
+    if (const RecordDecl *Rec = LastFD->getType()->getAsRecordDecl())
+      // The last FieldDecl is a structure. Look into that struct to find its
+      // last FieldDecl.
+      LastDecl = getLastDecl(Rec);
+  }
+
+  return dyn_cast_if_present<FieldDecl>(LastDecl);
+}
+
 /// tryToCalculateSubObjectSize - It may be possible to calculate the
 /// sub-object size of an array and skip the generation of the llvm.objectsize
 /// intrinsic. This avoids the complication in conveying the sub-object's
@@ -1151,22 +1170,16 @@ CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
   // information on its size, so return MAX_INT.
   if (const auto *ME = dyn_cast<MemberExpr>(ObjectBase)) {
     if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
-      if (const RecordDecl *RD = FD->getType()->getAsRecordDecl()) {
-        const RecordDecl *OuterRD = RD->getOuterLexicalRecordContext();
-        const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-            getLangOpts().getStrictFlexArraysLevel();
+      const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+          getLangOpts().getStrictFlexArraysLevel();
+      const RecordDecl *OuterRD =
+          FD->getParent()->getOuterLexicalRecordContext();
+      const FieldDecl *LastFD = getLastDecl(OuterRD);
 
-        if (OuterRD->hasFlexibleArrayMember()) {
-          const FieldDecl *LastFD = nullptr;
-          for (const FieldDecl *Field : OuterRD->fields())
-            LastFD = Field;
-
-          if (FD == LastFD && Decl::isFlexibleArrayMemberLike(
-                                  Ctx, FD, FD->getType(), StrictFlexArraysLevel,
-                                  /*IgnoreTemplateOrMacroSubstitution=*/true))
-            return nullptr;
-        }
-      }
+      if (LastFD == FD && Decl::isFlexibleArrayMemberLike(
+                              Ctx, FD, FD->getType(), StrictFlexArraysLevel,
+                              /*IgnoreTemplateOrMacroSubstitution=*/true))
+        return ConstantInt::get(ResType, -1, /*isSigned=*/true);
     }
   }
 
