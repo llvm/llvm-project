@@ -2,6 +2,8 @@
 
 GlobalStat Global;
 
+spdlog::logger &logger = *spdlog::default_logger();
+
 void requireTrue(bool condition, std::string message) {
     if (!condition) {
         throw std::runtime_error("requireTrue failed: " + message);

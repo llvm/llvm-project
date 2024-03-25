@@ -26,6 +26,8 @@
 
 #include "lib/json.hpp"
 
+#include "spdlog/spdlog.h"
+
 using json = nlohmann::json;
 using ordered_json = nlohmann::ordered_json;
 
@@ -43,6 +45,8 @@ typedef std::map<std::string, std::set<const FunctionInfo *>> fif;
 
 struct GlobalStat;
 extern GlobalStat Global;
+
+extern spdlog::logger &logger;
 
 /*****************************************************************
  * Utility functions

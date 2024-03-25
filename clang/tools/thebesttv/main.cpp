@@ -462,8 +462,10 @@ void printCloc(const std::vector<std::string> &allFiles) {
 }
 
 int main(int argc, const char **argv) {
+    spdlog::set_level(spdlog::level::debug);
+
     if (argc != 2) {
-        llvm::errs() << "Usage: " << argv[0] << " IR.json\n";
+        logger.error("Usage: {} IR.json", argv[0]);
         return 1;
     }
 
