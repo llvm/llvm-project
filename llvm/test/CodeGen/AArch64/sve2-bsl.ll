@@ -20,8 +20,9 @@ define void @bsl(ptr %ptr1, ptr %ptr2, ptr %ptr3) {
   ret void
 }
 
-define void @nobsl(ptr %ptr1, ptr %ptr2, ptr %ptr3) {
-; CHECK-LABEL: nobsl:
+; we are not expecting bsl instruction here.
+define void @no_bsl_fold(ptr %ptr1, ptr %ptr2, ptr %ptr3) {
+; CHECK-LABEL: no_bsl_fold:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
