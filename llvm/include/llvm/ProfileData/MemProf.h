@@ -22,6 +22,8 @@ enum IndexedVersion : uint64_t {
   Version0 = 0,
   // Version 1: Added a version field to the header.
   Version1 = 1,
+  // Version 2: Added a call stack table.  Under development.
+  Version2 = 2,
 };
 
 constexpr uint64_t MinimumSupportedVersion = Version0;
@@ -289,10 +291,20 @@ struct IndexedAllocationInfo {
       : CallStack(CS.begin(), CS.end()), CSId(CSId), Info(MB) {}
 
   // Returns the size in bytes when this allocation info struct is serialized.
-  size_t serializedSize() const {
-    return sizeof(uint64_t) + // The number of frames to serialize.
-           sizeof(FrameId) * CallStack.size() +    // The callstack frame ids.
-           PortableMemInfoBlock::serializedSize(); // The size of the payload.
+  size_t serializedSize(IndexedVersion Version = Version0) const {
+    size_t Size = 0;
+    if (Version <= Version1) {
+      // The number of frames to serialize.
+      Size += sizeof(uint64_t);
+      // The callstack frame ids.
+      Size += sizeof(FrameId) * CallStack.size();
+    } else {
+      // The CallStackId
+      Size += sizeof(CallStackId);
+    }
+    // The size of the payload.
+    Size += PortableMemInfoBlock::serializedSize();
+    return Size;
   }
 
   bool operator==(const IndexedAllocationInfo &Other) const {
@@ -306,6 +318,9 @@ struct IndexedAllocationInfo {
       if (Other.CallStack[J] != CallStack[J])
         return false;
     }
+
+    if (Other.CSId != CSId)
+      return false;
     return true;
   }
 
@@ -357,6 +372,9 @@ struct IndexedMemProfRecord {
   // inline location list may include additional entries, users should pick
   // the last entry in the list with the same function GUID.
   llvm::SmallVector<llvm::SmallVector<FrameId>> CallSites;
+  // Conceptually the same as above.  We are going to keep both CallSites and
+  // CallSiteIds while we are transitioning from CallSites to CallSitesIds.
+  llvm::SmallVector<CallStackId> CallSiteIds;
 
   void clear() {
     AllocSites.clear();
@@ -370,17 +388,22 @@ struct IndexedMemProfRecord {
     CallSites.append(Other.CallSites);
   }
 
-  size_t serializedSize() const {
+  size_t serializedSize(IndexedVersion Version = Version0) const {
     size_t Result = sizeof(GlobalValue::GUID);
     for (const IndexedAllocationInfo &N : AllocSites)
-      Result += N.serializedSize();
+      Result += N.serializedSize(Version);
 
     // The number of callsites we have information for.
     Result += sizeof(uint64_t);
-    for (const auto &Frames : CallSites) {
-      // The number of frame ids to serialize.
-      Result += sizeof(uint64_t);
-      Result += Frames.size() * sizeof(FrameId);
+    if (Version <= Version1) {
+      for (const auto &Frames : CallSites) {
+        // The number of frame ids to serialize.
+        Result += sizeof(uint64_t);
+        Result += Frames.size() * sizeof(FrameId);
+      }
+    } else {
+      // The CallStackId
+      Result += CallSiteIds.size() * sizeof(CallStackId);
     }
     return Result;
   }
@@ -401,16 +424,21 @@ struct IndexedMemProfRecord {
       if (CallSites[I] != Other.CallSites[I])
         return false;
     }
+
+    if (Other.CallSiteIds != CallSiteIds)
+      return false;
     return true;
   }
 
   // Serializes the memprof records in \p Records to the ostream \p OS based
   // on the schema provided in \p Schema.
-  void serialize(const MemProfSchema &Schema, raw_ostream &OS);
+  void serialize(const MemProfSchema &Schema, raw_ostream &OS,
+                 IndexedVersion Version = Version0);
 
   // Deserializes memprof records from the Buffer.
   static IndexedMemProfRecord deserialize(const MemProfSchema &Schema,
-                                          const unsigned char *Buffer);
+                                          const unsigned char *Buffer,
+                                          IndexedVersion Version = Version0);
 
   // Returns the GUID for the function name after canonicalization. For
   // memprof, we remove any .llvm suffix added by LTO. MemProfRecords are
