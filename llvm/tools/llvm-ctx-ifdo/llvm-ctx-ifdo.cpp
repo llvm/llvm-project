@@ -3,6 +3,7 @@
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -70,7 +71,7 @@ void writeContext(StringRef FirstPage, BitstreamWriter &Writer,
     Writer.EnterSubblock(100, 2);
     Writer.EmitRecord(Codes::Guid, SmallVector<uint64_t, 1>{N->Guid});
     if (Index)
-      Writer.EmitRecord(Codes::CalleeIndex, SmallVector<uint32_t, 1>{*Index});
+      p Writer.EmitRecord(Codes::CalleeIndex, SmallVector<uint32_t, 1>{*Index});
     //--- these go together to emit an array
     Writer.EmitCode(bitc::UNABBREV_RECORD);
     Writer.EmitVBR(Codes::Counters, 6);
@@ -100,8 +101,10 @@ int main(int argc, const char *argv[]) {
   SmallVector<char, 1 << 20> Buff;
   std::error_code EC;
   raw_fd_stream Out(OutputFile, EC);
-  if (EC)
+  if (EC) {
+    errs() << "Could not open output file: " << EC.message() << "\n";
     return 1;
+  }
   auto Input = MemoryBuffer::getFileOrSTDIN(InputFile);
   if (!Input)
     return 1;

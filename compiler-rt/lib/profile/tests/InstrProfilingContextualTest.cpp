@@ -26,6 +26,8 @@ TEST(ContextTest, Basic) {
   memset(&Root, 0, sizeof(ContextRoot));
   auto *Ctx = __llvm_instrprof_start_context(&Root, 1, 10, 4);
   EXPECT_NE(Ctx, nullptr);
+  EXPECT_NE(Root.CurrentMem, nullptr);
+  EXPECT_EQ(Root.FirstMemBlock, Root.CurrentMem);
   EXPECT_EQ(Ctx->size(), sizeof(ContextNode) + 10 * sizeof(uint64_t) +
                              4 * sizeof(ContextNode *));
   EXPECT_EQ(Ctx->counters_size(), 10U);

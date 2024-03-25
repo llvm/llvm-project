@@ -11,6 +11,7 @@
 
 #include "InstrProfiling.h"
 #include "sanitizer_common/sanitizer_mutex.h"
+#include "sanitizer_common/sanitizer_vector.h"
 
 namespace __profile {
 using GUID = uint64_t;
@@ -20,7 +21,7 @@ using GUID = uint64_t;
 class Arena final {
 public:
   static Arena *allocate(size_t Size, Arena *Prev = nullptr);
-  size_t size() const { return Size; }
+  uint64_t size() const { return Size; }
   char *tryAllocate(size_t S) {
     if (Pos + S > Size)
       return nullptr;
@@ -32,12 +33,12 @@ public:
   const char *pos() const { return start() + Pos; }
 
 private:
-  explicit Arena(size_t Size) : Size(Size) {}
+  explicit Arena(uint32_t Size) : Size(Size) {}
   char *start() { return reinterpret_cast<char *>(&this[1]); }
 
   Arena *Next = nullptr;
-  size_t Pos = 0;
-  const size_t Size;
+  uint64_t Pos = 0;
+  const uint64_t Size;
 };
 
 class ContextNode final {

@@ -64,34 +64,34 @@ constexpr size_t kPower = 20;
 constexpr size_t kBuffSize = 1 << kPower;
 
 size_t getArenaAllocSize(size_t Needed) {
-  if (Needed >= kPower)
+  if (Needed >= kBuffSize)
     return 2 * Needed;
-  return kPower;
+  return kBuffSize;
 }
 
 bool validate(const ContextRoot *Root) {
   __sanitizer::DenseMap<uint64_t, bool> ContextStartAddrs;
-  for (auto *Mem = Root->FirstMemBlock; Mem; Mem = Mem->next()) {
-    auto *Ctx = reinterpret_cast<ContextNode *>(Mem);
-    while (reinterpret_cast<char *>(Ctx) < Mem->pos()) {
+  for (const auto *Mem = Root->FirstMemBlock; Mem; Mem = Mem->next()) {
+    const auto *Pos = Mem->start();
+    while (Pos < Mem->pos()) {
+      const auto *Ctx = reinterpret_cast<const ContextNode *>(Pos);
       if (!ContextStartAddrs.insert({reinterpret_cast<uint64_t>(Ctx), true})
                .second)
         return false;
-      Ctx = reinterpret_cast<ContextNode *>(reinterpret_cast<char *>(Ctx) +
-                                            Ctx->size());
+      Pos += Ctx->size();
     }
   }
 
-  for (auto *Mem = Root->FirstMemBlock; Mem; Mem = Mem->next()) {
-    auto *Ctx = reinterpret_cast<ContextNode *>(Mem);
-    while (reinterpret_cast<char *>(Ctx) < Mem->pos()) {
+  for (const auto *Mem = Root->FirstMemBlock; Mem; Mem = Mem->next()) {
+    const auto *Pos = Mem->start();
+    while (Pos < Mem->pos()) {
+      const auto *Ctx = reinterpret_cast<const ContextNode *>(Pos);
       for (uint32_t I = 0; I < Ctx->callsites_size(); ++I)
         for (auto *Sub = Ctx->subContexts()[I]; Sub; Sub = Sub->next())
           if (!ContextStartAddrs.find(reinterpret_cast<uint64_t>(Sub)))
             return false;
 
-      Ctx = reinterpret_cast<ContextNode *>(reinterpret_cast<char *>(Ctx) +
-                                            Ctx->size());
+      Pos += Ctx->size();
     }
   }
   return true;
@@ -99,9 +99,11 @@ bool validate(const ContextRoot *Root) {
 } // namespace
 
 extern "C" {
+
 __thread char __Buffer[kBuffSize] = {0};
 
-#define TheNullContext markAsScratch(reinterpret_cast<ContextNode *>(__Buffer))
+#define TheScratchContext                                                      \
+  markAsScratch(reinterpret_cast<ContextNode *>(__Buffer))
 __thread void *volatile __llvm_instrprof_expected_callee[2] = {nullptr, nullptr};
 __thread ContextNode **volatile __llvm_instrprof_callsite[2] = {0, 0};
 
@@ -128,14 +130,15 @@ COMPILER_RT_VISIBILITY ContextNode *
 __llvm_instrprof_get_context(void *Callee, GUID Guid, uint32_t NrCounters,
                             uint32_t NrCallsites) {
   if (!__llvm_instrprof_current_context_root) {
-    return TheNullContext;
+    return TheScratchContext;
   }
   auto **CallsiteContext = consume(__llvm_instrprof_callsite[0]);
   if (!CallsiteContext || isScratch(*CallsiteContext))
-    return TheNullContext;
+    return TheScratchContext;
+
   auto *ExpectedCallee = consume(__llvm_instrprof_expected_callee[0]);
   if (ExpectedCallee != Callee)
-    return TheNullContext;
+    return TheScratchContext;
 
   auto *Callsite = *CallsiteContext;
   while (Callsite && Callsite->guid() != Guid) {
@@ -146,7 +149,7 @@ __llvm_instrprof_get_context(void *Callee, GUID Guid, uint32_t NrCounters,
                              Guid, CallsiteContext, NrCounters, NrCallsites);
   if (Ret->callsites_size() != NrCallsites || Ret->counters_size() != NrCounters)
     __sanitizer::Printf("[ctxprof] Returned ctx differs from what's asked: "
-                        "Context: %p, Asked: %zu %u %u, Got: %zu %u %u \n",
+                        "Context: %p, Asked: %lu %u %u, Got: %lu %u %u \n",
                         Ret, Guid, NrCallsites, NrCounters, Ret->guid(),
                         Ret->callsites_size(), Ret->counters_size());
   Ret->onEntry();
@@ -163,6 +166,7 @@ __llvm_instprof_setup_context(ContextRoot *Root, GUID Guid, uint32_t NrCounters,
     return;
   const auto Needed = ContextNode::getAllocSize(NrCounters, NrCallsites);
   auto *M = Arena::allocate(getArenaAllocSize(Needed));
+  Root->FirstMemBlock = M;
   Root->CurrentMem = M;
   Root->FirstNode =
       ContextNode::alloc(M->tryAllocate(Needed), Guid, NrCounters, NrCallsites);
@@ -181,7 +185,7 @@ COMPILER_RT_VISIBILITY ContextNode *__llvm_instrprof_start_context(
     return Root->FirstNode;
   }
   __llvm_instrprof_current_context_root = nullptr;
-  return TheNullContext;
+  return TheScratchContext;
 }
 
 COMPILER_RT_VISIBILITY void __llvm_instrprof_release_context(ContextRoot *Root)
@@ -192,7 +196,7 @@ COMPILER_RT_VISIBILITY void __llvm_instrprof_release_context(ContextRoot *Root)
   }
 }
 
-COMPILER_RT_VISIBILITY void __llvm_profile_reset_counters(void) {
+COMPILER_RT_VISIBILITY void __llvm_profile_reset_ctx_counters(void) {
   size_t NrMemUnits = 0;
   __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
       &AllContextsMutex);
@@ -237,19 +241,21 @@ int __llvm_ctx_profile_dump(const char* Filename) {
   for (int I = 0, E = AllContextRoots.Size(); I < E; ++I) {
     const auto *Root = AllContextRoots[I];
     for (const auto *Mem = Root->FirstMemBlock; Mem; Mem = Mem->next()) {
-      const uint64_t MemStartAddr =
+      const uint64_t ContextStartAddr =
           reinterpret_cast<const uint64_t>(Mem->start());
-      if (fwrite(reinterpret_cast<const char *>(&MemStartAddr),
+      if (fwrite(reinterpret_cast<const char *>(&ContextStartAddr),
                  sizeof(uint64_t), 1, F) != 1)
         return -1;
-      if (fwrite(reinterpret_cast<const char *>(&kBuffSize), sizeof(uint64_t),
-                 1, F) != 1)
+      const uint64_t Size = Mem->size();
+      if (fwrite(reinterpret_cast<const char *>(&Size), sizeof(uint64_t), 1,
+                 F) != 1)
         return -1;
-      if (fwrite(reinterpret_cast<const char *>(Mem), sizeof(char), kBuffSize,
-                 F) != kBuffSize)
+      if (fwrite(reinterpret_cast<const char *>(Mem->start()), sizeof(char),
+                 Size, F) != Size)
         return -1;
     }
   }
+  __sanitizer::Printf("[ctxprof] End Dump. Closing file.\n");
   return fclose(F);
 }
 }
