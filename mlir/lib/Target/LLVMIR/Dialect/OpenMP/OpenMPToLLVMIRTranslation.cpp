@@ -2943,7 +2943,7 @@ static bool isInternalTargetDeviceOp(Operation *op) {
 /// (including OpenMP runtime calls).
 static LogicalResult
 convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
-                       LLVM::ModuleTranslation &moduleTranslation) {
+                             LLVM::ModuleTranslation &moduleTranslation) {
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
@@ -3060,13 +3060,13 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
 
 static LogicalResult
 convertTargetDeviceOp(Operation *op, llvm::IRBuilderBase &builder,
-                        LLVM::ModuleTranslation &moduleTranslation) {
+                      LLVM::ModuleTranslation &moduleTranslation) {
   return convertHostOrTargetOperation(op, builder, moduleTranslation);
 }
 
 static LogicalResult
 convertTargetOpsInNest(Operation *op, llvm::IRBuilderBase &builder,
-                        LLVM::ModuleTranslation &moduleTranslation) {
+                       LLVM::ModuleTranslation &moduleTranslation) {
   if (isa<omp::TargetOp>(op))
     return convertOmpTarget(*op, builder, moduleTranslation);
   bool interrupted =
