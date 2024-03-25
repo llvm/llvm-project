@@ -338,9 +338,9 @@ def FeatureAIXLocalDynamicTLS :
                    "true", "Produce a faster local-dynamic TLS sequence for this "
                    "function for 64-bit AIX">;
 
-def FeatureAIXSharedLibraryTLSModelHeuristic :
-  SubtargetFeature<"aix-shared-library-tls-model-heuristic",
-                   "HasAIXShLibTLSModelHeuristic", "true",
+def FeatureAIXSharedLibTLSModelOpt :
+  SubtargetFeature<"aix-shared-lib-tls-model-opt",
+                   "HasAIXShLibTLSModelOpt", "true",
                    "Tune TLS model at function level in shared library loaded "
                    "with the main program (for 64-bit AIX only)">;
 

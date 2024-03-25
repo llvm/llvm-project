@@ -91,8 +91,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       IsISA3_1 = true;
     } else if (Feature == "+quadword-atomics") {
       HasQuadwordAtomics = true;
-    } else if (Feature == "+aix-shared-library-tls-model-heuristic") {
-      HasAIXShLibTLSModelHeuristic = true;
+    } else if (Feature == "+aix-shared-lib-tls-model-opt") {
+      HasAIXShLibTLSModelOpt = true;
     }
     // TODO: Finish this list and add an assert that we've handled them
     // all.
@@ -582,8 +582,8 @@ bool PPCTargetInfo::initFeatureMap(
   Features["aix-small-local-exec-tls"] = false;
   Features["aix-small-local-dynamic-tls"] = false;
 
-  // Turn off TLS model heuristic by default.
-  Features["aix-shared-library-tls-model-heuristic"] = false;
+  // Turn off TLS model opt by default.
+  Features["aix-shared-lib-tls-model-opt"] = false;
 
   Features["spe"] = llvm::StringSwitch<bool>(CPU)
                         .Case("8548", true)
@@ -727,8 +727,7 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("isa-v30-instructions", IsISA3_0)
       .Case("isa-v31-instructions", IsISA3_1)
       .Case("quadword-atomics", HasQuadwordAtomics)
-      .Case("aix-shared-library-tls-model-heuristic",
-            HasAIXShLibTLSModelHeuristic)
+      .Case("aix-shared-lib-tls-model-opt", HasAIXShLibTLSModelOpt)
       .Default(false);
 }
 

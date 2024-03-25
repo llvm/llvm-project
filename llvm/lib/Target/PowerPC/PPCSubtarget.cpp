@@ -142,8 +142,8 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
                          false);
   }
 
-  if (HasAIXShLibTLSModelHeuristic && (!TargetTriple.isOSAIX() || !IsPPC64))
-    report_fatal_error("The aix-shared-library-tls-model-heuristic attribute "
+  if (HasAIXShLibTLSModelOpt && (!TargetTriple.isOSAIX() || !IsPPC64))
+    report_fatal_error("The aix-shared-lib-tls-model-opt attribute "
                        "is only supported on AIX in 64-bit mode.\n",
                        false);
 }
