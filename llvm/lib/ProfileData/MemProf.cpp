@@ -53,6 +53,7 @@ IndexedMemProfRecord::deserialize(const MemProfSchema &Schema,
           endian::readNext<FrameId, llvm::endianness::little, unaligned>(Ptr);
       Node.CallStack.push_back(Id);
     }
+    Node.CSId = hashCallStack(Node.CallStack);
     Node.Info.deserialize(Schema, Ptr);
     Ptr += PortableMemInfoBlock::serializedSize();
     Record.AllocSites.push_back(Node);
@@ -130,15 +131,19 @@ CallStackId hashCallStack(ArrayRef<FrameId> CS) {
   return CSId;
 }
 
+void verifyIndexedMemProfRecord(const IndexedMemProfRecord &Record) {
+  for (const auto &AS : Record.AllocSites) {
+    assert(AS.CSId == hashCallStack(AS.CallStack));
+    (void)AS;
+  }
+}
+
 void verifyFunctionProfileData(
     const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord>
         &FunctionProfileData) {
   for (const auto &[GUID, Record] : FunctionProfileData) {
     (void)GUID;
-    for (const auto &AS : Record.AllocSites) {
-      assert(AS.CSId == hashCallStack(AS.CallStack));
-      (void)AS;
-    }
+    verifyIndexedMemProfRecord(Record);
   }
 }
 
