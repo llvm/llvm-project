@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify %s
+// RUN: %clang_cc1 -triple x86_64 -verify %s
 
 /* WG14 N696: yes
  * Standard pragmas - improved wording
