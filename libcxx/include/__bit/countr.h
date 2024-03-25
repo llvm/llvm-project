@@ -52,6 +52,9 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __coun
   if (__t == 0)
     return numeric_limits<_Tp>::digits;
 
+#if __has_builtin(__builtin_ctz)
+  return __builtin_ctz(__t);
+#else
   if (sizeof(_Tp) <= sizeof(unsigned int))
     return std::__libcpp_ctz(static_cast<unsigned int>(__t));
   else if (sizeof(_Tp) <= sizeof(unsigned long))
@@ -67,6 +70,7 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __coun
     }
     return __ret + std::__libcpp_ctz(static_cast<unsigned long long>(__t));
   }
+#endif // __has_builtin(__builtin_ctz)
 }
 
 #if _LIBCPP_STD_VER >= 20

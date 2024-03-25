@@ -51,6 +51,9 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_popcount(unsigned lo
 
 template <__libcpp_unsigned_integer _Tp>
 _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr int popcount(_Tp __t) noexcept {
+#  if __has_builtin(__builtin_popcount)
+  return __builtin_popcount(__t);
+#  else
   if (sizeof(_Tp) <= sizeof(unsigned int))
     return std::__libcpp_popcount(static_cast<unsigned int>(__t));
   else if (sizeof(_Tp) <= sizeof(unsigned long))
@@ -65,6 +68,7 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr int popcount(_Tp __t) noex
     }
     return __ret;
   }
+#  endif // __has_builtin(__builtin_popcount)
 }
 
 #endif // _LIBCPP_STD_VER >= 20

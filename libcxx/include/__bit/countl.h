@@ -74,6 +74,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countl_zero(_Tp __t) _
   if (__t == 0)
     return numeric_limits<_Tp>::digits;
 
+#if __has_builtin(__builtin_clzg)
+  return __builtin_clzg(__t) - (numeric_limits<unsigned>::digits - numeric_limits<_Tp>::digits);
+#else
   if (sizeof(_Tp) <= sizeof(unsigned int))
     return std::__libcpp_clz(static_cast<unsigned int>(__t)) -
            (numeric_limits<unsigned int>::digits - numeric_limits<_Tp>::digits);
@@ -95,6 +98,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countl_zero(_Tp __t) _
     }
     return __ret + __iter;
   }
+#endif // __has_builtin(__builtin_clzg)
 }
 
 #if _LIBCPP_STD_VER >= 20
