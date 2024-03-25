@@ -161,6 +161,9 @@ protected:
   /// Visit control flow operations and decide whether to call visitOperation
   /// to apply the transfer function
   void processOperation(mlir::Operation *op) override;
+
+private:
+  llvm::DenseSet<mlir::Operation *> visited;
 };
 
 /// Drives analysis to find candidate fir.allocmem operations which could be
@@ -333,6 +336,9 @@ std::optional<AllocationState> LatticePoint::get(mlir::Value val) const {
 void AllocationAnalysis::visitOperation(mlir::Operation *op,
                                         const LatticePoint &before,
                                         LatticePoint *after) {
+  if (!visited.insert(op).second)
+    return;
+
   LLVM_DEBUG(llvm::dbgs() << "StackArrays: Visiting operation: " << *op
                           << "\n");
   LLVM_DEBUG(llvm::dbgs() << "--Lattice in: " << before << "\n");
