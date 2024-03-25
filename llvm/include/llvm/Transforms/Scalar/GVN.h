@@ -314,6 +314,7 @@ private:
 
   // Helper functions of redundant load elimination
   bool processLoad(LoadInst *L);
+  bool splitAndprocessLoad(LoadInst *L);
   bool processNonLocalLoad(LoadInst *L);
   bool processAssumeIntrinsic(AssumeInst *II);
 

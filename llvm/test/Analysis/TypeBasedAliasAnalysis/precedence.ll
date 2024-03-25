@@ -21,13 +21,12 @@ entry:
   ret i32 %tmp3
 }
 
-; Test for PartialAlias aliasing. GVN doesn't yet eliminate the load
-; in the BasicAA case.
+; Test for PartialAlias aliasing.
 
 ; TBAA:    @offset
 ; TBAA:      ret i64 0
 ; BASICAA: @offset
-; BASICAA:   ret i64 %tmp3
+; BASICAA:   ret i64 256
 define i64 @offset(ptr %x) nounwind {
 entry:
   store i64 0, ptr %x, !tbaa !4
