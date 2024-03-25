@@ -19,10 +19,9 @@
 #define _LIBUNWIND_UNWIND_LEVEL1_EXTERNAL_LINKAGE 1
 
 #include <inttypes.h>
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 
 #include "cet_unwind.h"
