@@ -20,7 +20,7 @@ define i32 @pr70988() {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = icmp ult i64 1, [[UMAX]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT6:%.*]], [[PRED_LOAD_CONTINUE5:%.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE5:%.*]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[PRED_LOAD_CONTINUE5]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY1]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT7:%.*]], [[PRED_LOAD_CONTINUE5]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[PRED_LOAD_CONTINUE5]] ]
@@ -50,7 +50,6 @@ define i32 @pr70988() {
 ; CHECK-NEXT:    [[TMP17]] = select i1 [[ACTIVE_LANE_MASK]], i32 [[TMP15]], i32 [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP18]] = select i1 [[ACTIVE_LANE_MASK2]], i32 [[TMP16]], i32 [[VEC_PHI3]]
 ; CHECK-NEXT:    [[INDEX_NEXT:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[INDEX_NEXT6]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[INDEX_NEXT]], 1
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = icmp ult i64 [[INDEX_NEXT]], [[UMAX]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT7]] = icmp ult i64 [[TMP19]], [[UMAX]]
