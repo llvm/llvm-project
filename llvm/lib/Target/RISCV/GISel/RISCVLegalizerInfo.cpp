@@ -58,10 +58,12 @@ typeIsLegalIntOrFPVec(unsigned TypeIdx,
 static LegalityPredicate
 typeIsLegalBoolVec(unsigned TypeIdx, std::initializer_list<LLT> BoolVecTys,
                    const RISCVSubtarget &ST) {
-  LegalityPredicate HasV = [=, &ST](const LegalityQuery &Query) {
-    return ST.hasVInstructions();
+  LegalityPredicate P = [=, &ST](const LegalityQuery &Query) {
+    return ST.hasVInstructions() &&
+           (Query.Types[TypeIdx].getElementCount().getKnownMinValue() != 1 ||
+            ST.getELen() == 64);
   };
-  return all(typeInSet(TypeIdx, BoolVecTys), HasV);
+  return all(typeInSet(TypeIdx, BoolVecTys), P);
 }
 
 RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
