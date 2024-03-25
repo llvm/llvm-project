@@ -29,6 +29,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Assumptions.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Intrinsics.h"
@@ -2487,22 +2488,27 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
     // ResultTypeRequiresCast elements correspond to the first
     // ResultTypeRequiresCast.size() elements of RegResults.
     if ((i < ResultTypeRequiresCast.size()) && ResultTypeRequiresCast[i]) {
-      unsigned Size = CGF.getContext().getTypeSize(ResultRegQualTys[i]);
-      Address A = Dest.getAddress(CGF).withElementType(ResultRegTypes[i]);
-      if (CGF.getTargetHooks().isScalarizableAsmOperand(CGF, TruncTy)) {
-        Builder.CreateStore(Tmp, A);
-        continue;
-      }
+      if (ResultRegQualTys[i]->isRVVType() && Tmp->getType()->isStructTy()) {
+        Address A = Dest.getAddress(CGF).withElementType(ResultRegTypes[i]);
+        Dest = CGF.MakeAddrLValue(A, ResultRegQualTys[i]);
+      } else {
+        unsigned Size = CGF.getContext().getTypeSize(ResultRegQualTys[i]);
+        Address A = Dest.getAddress(CGF).withElementType(ResultRegTypes[i]);
+        if (CGF.getTargetHooks().isScalarizableAsmOperand(CGF, TruncTy)) {
+          Builder.CreateStore(Tmp, A);
+          continue;
+        }
 
-      QualType Ty =
-          CGF.getContext().getIntTypeForBitwidth(Size, /*Signed=*/false);
-      if (Ty.isNull()) {
-        const Expr *OutExpr = S.getOutputExpr(i);
-        CGM.getDiags().Report(OutExpr->getExprLoc(),
-                              diag::err_store_value_to_reg);
-        return;
+        QualType Ty =
+            CGF.getContext().getIntTypeForBitwidth(Size, /*Signed=*/false);
+        if (Ty.isNull()) {
+          const Expr *OutExpr = S.getOutputExpr(i);
+          CGM.getDiags().Report(OutExpr->getExprLoc(),
+                                diag::err_store_value_to_reg);
+          return;
+        }
+        Dest = CGF.MakeAddrLValue(A, Ty);
       }
-      Dest = CGF.MakeAddrLValue(A, Ty);
     }
     CGF.EmitStoreThroughLValue(RValue::get(Tmp), Dest);
   }
@@ -2648,7 +2654,9 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       ResultTruncRegTypes.push_back(Ty);
       ResultTypeRequiresCast.push_back(RequiresCast);
 
-      if (RequiresCast) {
+      // Allow RVV tuple type (aggregate of homogeneous scalable vector) to be
+      // pushed into return type of inline asm call.
+      if (RequiresCast && !(QTy->isRVVType() && Ty->isStructTy())) {
         unsigned Size = getContext().getTypeSize(QTy);
         Ty = llvm::IntegerType::get(getLLVMContext(), Size);
       }
@@ -2818,10 +2826,40 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
           std::max((uint64_t)LargestVectorWidth,
                    VT->getPrimitiveSizeInBits().getKnownMinValue());
 
-    ArgTypes.push_back(Arg->getType());
-    ArgElemTypes.push_back(ArgElemType);
-    Args.push_back(Arg);
-    Constraints += InputConstraint;
+    // Expand RVV tuple type input operands.
+    if (InputExpr->getType()->isRVVType() && Arg->getType()->isStructTy()) {
+      std::string ExpandedInputContraint;
+
+      auto *STy = cast<llvm::StructType>(Arg->getType());
+
+      assert(STy->containsHomogeneousScalableVectorTypes() &&
+             isa<llvm::ScalableVectorType>(STy->getElementType(0)) &&
+             "Only aggregate type of homogeneous scalable vectors is handled "
+             "here");
+
+      auto *VTy = cast<llvm::ScalableVectorType>(STy->getElementType(0));
+
+      for (unsigned Idx = 0, TupleSize = STy->getNumElements();
+           Idx != TupleSize; ++Idx) {
+        if (ExpandedInputContraint.size())
+          ExpandedInputContraint += ",";
+
+        ExpandedInputContraint += InputConstraint;
+        ArgTypes.push_back(VTy);
+        ArgElemTypes.push_back(ArgElemType);
+
+        llvm::Value *SubVec = Builder.CreateExtractValue(Arg, {Idx});
+
+        Args.push_back(SubVec);
+      }
+
+      Constraints += ExpandedInputContraint;
+    } else {
+      ArgTypes.push_back(Arg->getType());
+      ArgElemTypes.push_back(ArgElemType);
+      Args.push_back(Arg);
+      Constraints += InputConstraint;
+    }
   }
 
   // Append the "input" part of inout constraints.
