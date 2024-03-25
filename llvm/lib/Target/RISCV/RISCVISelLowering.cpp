@@ -12907,11 +12907,10 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
 // use a power of two for both inner and outer extend.)
 //
 // TODO: Extend this to other binary ops
-static SDValue combineBinOpOfZExt(SDNode *N, SelectionDAG &DAG,
-                                  const RISCVSubtarget &Subtarget) {
+static SDValue combineBinOpOfZExt(SDNode *N, SelectionDAG &DAG) {
 
   EVT VT = N->getValueType(0);
-  if (!VT.isVector() || !Subtarget.getTargetLowering()->isTypeLegal(VT))
+  if (!VT.isVector() || !DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
@@ -12924,7 +12923,7 @@ static SDValue combineBinOpOfZExt(SDNode *N, SelectionDAG &DAG,
   SDValue Src0 = N0.getOperand(0);
   SDValue Src1 = N1.getOperand(0);
   EVT SrcVT = Src0.getValueType();
-  if (!Subtarget.getTargetLowering()->isTypeLegal(SrcVT) ||
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(SrcVT) ||
       SrcVT != Src1.getValueType() || SrcVT.getScalarSizeInBits() < 8 ||
       SrcVT.getScalarSizeInBits() >= VT.getScalarSizeInBits() / 2)
     return SDValue();
@@ -12986,7 +12985,7 @@ static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
     return V;
-  if (SDValue V = combineBinOpOfZExt(N, DAG, Subtarget))
+  if (SDValue V = combineBinOpOfZExt(N, DAG))
     return V;
 
   // fold (add (select lhs, rhs, cc, 0, y), x) ->
@@ -13055,7 +13054,7 @@ static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  if (SDValue V = combineBinOpOfZExt(N, DAG, Subtarget))
+  if (SDValue V = combineBinOpOfZExt(N, DAG))
     return V;
 
   // fold (sub x, (select lhs, rhs, cc, 0, y)) ->
