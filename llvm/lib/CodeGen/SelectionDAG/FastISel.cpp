@@ -763,6 +763,14 @@ bool FastISel::selectPatchpoint(const CallInst *I) {
   bool HasDef = !I->getType()->isVoidTy();
   Value *Callee = I->getOperand(PatchPointOpers::TargetPos)->stripPointerCasts();
 
+  // Check if we can lower the return type when using anyregcc.
+  MVT ValueType;
+  if (IsAnyRegCC && HasDef) {
+    ValueType = TLI.getSimpleValueType(DL, I->getType(), /*AllowUnknown=*/true);
+    if (ValueType == MVT::Other)
+      return false;
+  }
+
   // Get the real number of arguments participating in the call <numArgs>
   assert(isa<ConstantInt>(I->getOperand(PatchPointOpers::NArgPos)) &&
          "Expected a constant integer.");
@@ -790,8 +798,7 @@ bool FastISel::selectPatchpoint(const CallInst *I) {
   // Add an explicit result reg if we use the anyreg calling convention.
   if (IsAnyRegCC && HasDef) {
     assert(CLI.NumResultRegs == 0 && "Unexpected result register.");
-    assert(I->getType()->isSingleValueType());
-    MVT ValueType = TLI.getSimpleValueType(DL, I->getType());
+    assert(ValueType.isValid());
     CLI.ResultReg = createResultReg(TLI.getRegClassFor(ValueType));
     CLI.NumResultRegs = 1;
     Ops.push_back(MachineOperand::CreateReg(CLI.ResultReg, /*isDef=*/true));

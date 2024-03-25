@@ -5662,8 +5662,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::experimental_patchpoint: {
-    Check(Call.getType()->isSingleValueType(),
-          "patchpoint result type is not a valid type for a register", Call);
+    if (Call.getCallingConv() == CallingConv::AnyReg) {
+      Check(Call.getType()->isSingleValueType(),
+            "patchpoint: invalid return type used with anyregcc", Call);
+    }
     break;
   }
   case Intrinsic::eh_exceptioncode:

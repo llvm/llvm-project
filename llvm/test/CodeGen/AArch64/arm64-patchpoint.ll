@@ -105,6 +105,32 @@ entry:
   ret i64 %result
 }
 
+; Test register allocation for a ptr result value of patchpoint.
+define ptr @generic_patchpoint_p0() {
+entry:
+; CHECK-LABEL: generic_patchpoint_p0:
+; CHECK:      Ltmp
+; CHECK-NEXT: nop
+; The return value is already in x0.
+; CHECK-NEXT: ldp
+; CHECK-NEXT: ret
+  %result = tail call ptr (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.p0(i64 5, i32 4, ptr null, i32 0)
+  ret ptr %result
+}
+
+; Test register allocation for a half result value of patchpoint.
+define half @generic_patchpoint_f16() {
+entry:
+; CHECK-LABEL: generic_patchpoint_f16:
+; CHECK:      Ltmp
+; CHECK-NEXT: nop
+; The return value is already in h0.
+; CHECK-NEXT: ldp
+; CHECK-NEXT: ret
+  %result = tail call half (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.f16(i64 5, i32 4, ptr null, i32 0)
+  ret half %result
+}
+
 ; Test register allocation for a float result value of patchpoint.
 define float @generic_patchpoint_f32() {
 entry:
@@ -131,9 +157,67 @@ entry:
   ret double %result
 }
 
+; Test register allocation for a <16 x i8> result value of patchpoint.
+define <16 x i8> @generic_patchpoint_v16i8() {
+entry:
+; CHECK-LABEL: generic_patchpoint_v16i8:
+; CHECK:      Ltmp
+; CHECK-NEXT: nop
+; The return value is already in v0.16b.
+; CHECK-NEXT: ldp
+; CHECK-NEXT: ret
+  %result = tail call <16 x i8> (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.v16i8(i64 5, i32 4, ptr null, i32 0)
+  ret <16 x i8> %result
+}
+
+; Test register allocation for a <4 x i32> result value of patchpoint.
+define <4 x i32> @generic_patchpoint_v4i32() {
+entry:
+; CHECK-LABEL: generic_patchpoint_v4i32:
+; CHECK:      Ltmp
+; CHECK-NEXT: nop
+; The return value is already in v0.4s.
+; CHECK-NEXT: ldp
+; CHECK-NEXT: ret
+  %result = tail call <4 x i32> (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.v4i32(i64 5, i32 4, ptr null, i32 0)
+  ret <4 x i32> %result
+}
+
+; Test register allocation for a <4 x float> result value of patchpoint.
+define <4 x float> @generic_patchpoint_v4f32() {
+entry:
+; CHECK-LABEL: generic_patchpoint_v4f32:
+; CHECK:      Ltmp
+; CHECK-NEXT: nop
+; The return value is already in v0.4s.
+; CHECK-NEXT: ldp
+; CHECK-NEXT: ret
+  %result = tail call <4 x float> (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.v4f32(i64 5, i32 4, ptr null, i32 0)
+  ret <4 x float> %result
+}
+
+; Test register allocation for a <2 x double> result value of patchpoint.
+define <2 x double> @generic_patchpoint_v2f64() {
+entry:
+; CHECK-LABEL: generic_patchpoint_v2f64:
+; CHECK:      Ltmp
+; CHECK-NEXT: nop
+; The return value is already in v0.2d.
+; CHECK-NEXT: ldp
+; CHECK-NEXT: ret
+  %result = tail call <2 x double> (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.v2f64(i64 5, i32 4, ptr null, i32 0)
+  ret <2 x double> %result
+}
+
 declare void @llvm.experimental.stackmap(i64, i32, ...)
 declare void @llvm.experimental.patchpoint.void(i64, i32, ptr, i32, ...)
 declare i32 @llvm.experimental.patchpoint.i32(i64, i32, ptr, i32, ...)
 declare i64 @llvm.experimental.patchpoint.i64(i64, i32, ptr, i32, ...)
+declare ptr @llvm.experimental.patchpoint.p0(i64, i32, ptr, i32, ...)
+declare half @llvm.experimental.patchpoint.f16(i64, i32, ptr, i32, ...)
 declare float @llvm.experimental.patchpoint.f32(i64, i32, ptr, i32, ...)
 declare double @llvm.experimental.patchpoint.f64(i64, i32, ptr, i32, ...)
+declare <16 x i8> @llvm.experimental.patchpoint.v16i8(i64, i32, ptr, i32, ...)
+declare <4 x i32> @llvm.experimental.patchpoint.v4i32(i64, i32, ptr, i32, ...)
+declare <4 x float> @llvm.experimental.patchpoint.v4f32(i64, i32, ptr, i32, ...)
+declare <2 x double> @llvm.experimental.patchpoint.v2f64(i64, i32, ptr, i32, ...)
