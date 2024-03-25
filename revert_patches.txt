@@ -16,3 +16,4 @@ Revert: breaks openmp aomp build
 dcbddc252501 [Libomptarget] Unify and simplify plugin CMake (#86191) 
 85af772f3b40 [Libomptarget][FIX] Fix unintentinally used PUBLIC interface  
 3f5e649ff64a [Libomptarget] Fix linking to LLVM dylib (#86397
+9f0321ccf118 [Libomptarget] Make plugins depend explicitly 
