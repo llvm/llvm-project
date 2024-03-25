@@ -463,3 +463,29 @@ void NewArrayInit() {
   // CHECK:       arraydestroy.done{{.*}}:                               ; preds = %arraydestroy.body, %if.then
   // CHECK-NEXT:    br label %return
 }
+
+void ArrayInitWithContinue() {
+  // CHECK-LABEL: @_Z21ArrayInitWithContinuev
+  // Verify that we start to emit the array destructor.
+  // CHECK: %arrayinit.endOfInit = alloca ptr, align 8
+  for (int i = 0; i < 1; ++i) {
+    Printy arr[2] = {"a", ({
+                       if (foo()) {
+                         continue;
+                       }
+                       "b";
+                     })};
+  }
+}
+
+coroutine ArrayInitWithCoReturn() {
+  // CHECK-LABEL: define dso_local void @_Z21ArrayInitWithCoReturnv
+  // Verify that we start to emit the array destructor.
+  // CHECK: %arrayinit.endOfInit = alloca ptr, align 8
+  Printy arr[2] = {"a", ({
+                      if (foo()) {
+                        co_return;
+                      }
+                      "b";
+                    })};
+}

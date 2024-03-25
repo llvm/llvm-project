@@ -26,6 +26,7 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
+#include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
@@ -2538,10 +2539,13 @@ bool Expr::mayBranchOut() const {
     // Coroutine suspensions.
     bool VisitCoawaitExpr(CoawaitExpr *) { return activate(); }
     bool VisitCoyieldExpr(CoyieldExpr *) { return activate(); }
+    bool VisitCoreturnStmt(CoreturnStmt *) { return activate(); }
     // Control flow in stmt-expressions.
     bool VisitBreakStmt(BreakStmt *) { return activate(); }
     bool VisitReturnStmt(ReturnStmt *) { return activate(); }
     bool VisitGotoStmt(GotoStmt *) { return activate(); }
+    bool VisitIndirectGotoStmt(IndirectGotoStmt *) { return activate(); }
+    bool VisitContinueStmt(ContinueStmt *) { return activate(); }
   };
   BranchDetector detector;
   detector.TraverseStmt(const_cast<Expr *>(this));
