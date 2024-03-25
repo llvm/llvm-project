@@ -2675,7 +2675,7 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
 
 bool AArch64InstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
     const TargetRegisterInfo *TRI) const {
   if (!LdSt.mayLoadOrStore())
     return false;
@@ -2687,10 +2687,7 @@ bool AArch64InstrInfo::getMemOperandsWithOffsetWidth(
     return false;
   // The maximum vscale is 16 under AArch64, return the maximal extent for the
   // vector.
-  Width = WidthN.isScalable()
-              ? WidthN.getKnownMinValue() * AArch64::SVEMaxBitsPerVector /
-                    AArch64::SVEBitsPerBlock
-              : WidthN.getKnownMinValue();
+  Width = LocationSize::precise(WidthN);
   BaseOps.push_back(BaseOp);
   return true;
 }
@@ -6110,12 +6107,12 @@ static bool getMaddPatterns(MachineInstr &Root,
     setFound(AArch64::MADDXrrr, 2, AArch64::XZR, MCP::MULADDX_OP2);
     break;
   case AArch64::SUBWrr:
-    setFound(AArch64::MADDWrrr, 1, AArch64::WZR, MCP::MULSUBW_OP1);
     setFound(AArch64::MADDWrrr, 2, AArch64::WZR, MCP::MULSUBW_OP2);
+    setFound(AArch64::MADDWrrr, 1, AArch64::WZR, MCP::MULSUBW_OP1);
     break;
   case AArch64::SUBXrr:
-    setFound(AArch64::MADDXrrr, 1, AArch64::XZR, MCP::MULSUBX_OP1);
     setFound(AArch64::MADDXrrr, 2, AArch64::XZR, MCP::MULSUBX_OP2);
+    setFound(AArch64::MADDXrrr, 1, AArch64::XZR, MCP::MULSUBX_OP1);
     break;
   case AArch64::ADDWri:
     setFound(AArch64::MADDWrrr, 1, AArch64::WZR, MCP::MULADDWI_OP1);

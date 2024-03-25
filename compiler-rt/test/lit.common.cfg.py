@@ -632,7 +632,7 @@ if config.host_os == "Linux":
 
         ver = LooseVersion(ver_string)
         any_glibc = False
-        for required in ["2.19", "2.27", "2.30", "2.33", "2.34", "2.37"]:
+        for required in ["2.19", "2.27", "2.30", "2.33", "2.34", "2.37", "2.38"]:
             if ver >= LooseVersion(required):
                 config.available_features.add("glibc-" + required)
                 any_glibc = True
@@ -737,22 +737,6 @@ if config.lto_supported:
 
 if config.have_rpc_xdr_h:
     config.available_features.add("sunrpc")
-
-# Ask llvm-config about assertion mode.
-try:
-    llvm_config_cmd = subprocess.Popen(
-        [os.path.join(config.llvm_tools_dir, "llvm-config"), "--assertion-mode"],
-        stdout=subprocess.PIPE,
-        env=config.environment,
-    )
-except OSError as e:
-    print("Could not launch llvm-config in " + config.llvm_tools_dir)
-    print("    Failed with error #{0}: {1}".format(e.errno, e.strerror))
-    exit(42)
-
-if re.search(r"ON", llvm_config_cmd.stdout.read().decode("ascii")):
-    config.available_features.add("asserts")
-llvm_config_cmd.wait()
 
 # Sanitizer tests tend to be flaky on Windows due to PR24554, so add some
 # retries. We don't do this on otther platforms because it's slower.
@@ -897,6 +881,10 @@ if config.use_lld and config.has_lld and not config.use_lto:
     extra_cflags += ["-fuse-ld=lld"]
 elif config.use_lld and (not config.has_lld):
     config.unsupported = True
+
+if config.host_os == "Darwin":
+    if getattr(config, "darwin_linker_version", None):
+        extra_cflags += ["-mlinker-version=" + config.darwin_linker_version]
 
 # Append any extra flags passed in lit_config
 append_target_cflags = lit_config.params.get("append_target_cflags", None)

@@ -311,12 +311,12 @@ struct VPTransformState {
   void set(VPValue *Def, Value *V, const VPIteration &Instance) {
     auto Iter = Data.PerPartScalars.insert({Def, {}});
     auto &PerPartVec = Iter.first->second;
-    while (PerPartVec.size() <= Instance.Part)
-      PerPartVec.emplace_back();
+    if (PerPartVec.size() <= Instance.Part)
+      PerPartVec.resize(Instance.Part + 1);
     auto &Scalars = PerPartVec[Instance.Part];
     unsigned CacheIdx = Instance.Lane.mapToCacheIndex(VF);
-    while (Scalars.size() <= CacheIdx)
-      Scalars.push_back(nullptr);
+    if (Scalars.size() <= CacheIdx)
+      Scalars.resize(CacheIdx + 1);
     assert(!Scalars[CacheIdx] && "should overwrite existing value");
     Scalars[CacheIdx] = V;
   }
@@ -1265,6 +1265,7 @@ public:
     default:
       return false;
     case VPInstruction::BranchOnCount:
+    case VPInstruction::CanonicalIVIncrementForPart:
       return true;
     };
     llvm_unreachable("switch should return");
@@ -2136,6 +2137,8 @@ public:
     assert(isPredicated() && "Trying to get the mask of a unpredicated recipe");
     return getOperand(getNumOperands() - 1);
   }
+
+  unsigned getOpcode() const { return getUnderlyingInstr()->getOpcode(); }
 };
 
 /// A recipe for generating conditional branches on the bits of a mask.
@@ -2870,10 +2873,6 @@ class VPlan {
   /// definitions are VPValues that hold a pointer to their underlying IR.
   SmallVector<VPValue *, 16> VPLiveInsToFree;
 
-  /// Indicates whether it is safe use the Value2VPValue mapping or if the
-  /// mapping cannot be used any longer, because it is stale.
-  bool Value2VPValueEnabled = true;
-
   /// Values used outside the plan.
   MapVector<PHINode *, VPLiveOut *> LiveOuts;
 
@@ -2952,10 +2951,6 @@ public:
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }
 
-  /// Mark the plan to indicate that using Value2VPValue is not safe any
-  /// longer, because it may be stale.
-  void disableValue2VPValue() { Value2VPValueEnabled = false; }
-
   void addVF(ElementCount VF) { VFs.insert(VF); }
 
   void setVF(ElementCount VF) {
@@ -2985,21 +2980,18 @@ public:
   void setName(const Twine &newName) { Name = newName.str(); }
 
   void addVPValue(Value *V, VPValue *VPV) {
-    assert((Value2VPValueEnabled || VPV->isLiveIn()) &&
-           "Value2VPValue mapping may be out of date!");
+    assert(VPV->isLiveIn() && "VPV must be a live-in.");
     assert(V && "Trying to add a null Value to VPlan");
     assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
     Value2VPValue[V] = VPV;
   }
 
-  /// Returns the VPValue for \p V. \p OverrideAllowed can be used to disable
-  ///   /// checking whether it is safe to query VPValues using IR Values.
-  VPValue *getVPValue(Value *V, bool OverrideAllowed = false) {
+  /// Returns the VPValue for \p V.
+  VPValue *getVPValue(Value *V) {
     assert(V && "Trying to get the VPValue of a null Value");
     assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
-    assert((Value2VPValueEnabled || OverrideAllowed ||
-            Value2VPValue[V]->isLiveIn()) &&
-           "Value2VPValue mapping may be out of date!");
+    assert(Value2VPValue[V]->isLiveIn() &&
+           "Only live-ins should be in mapping");
     return Value2VPValue[V];
   }
 
@@ -3029,16 +3021,6 @@ public:
   /// Dump the plan to stderr (for debugging).
   LLVM_DUMP_METHOD void dump() const;
 #endif
-
-  /// Returns a range mapping the values the range \p Operands to their
-  /// corresponding VPValues.
-  iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
-  mapToVPValues(User::op_range Operands) {
-    std::function<VPValue *(Value *)> Fn = [this](Value *Op) {
-      return getVPValueOrAddLiveIn(Op);
-    };
-    return map_range(Operands, Fn);
-  }
 
   /// Returns the VPRegionBlock of the vector loop.
   VPRegionBlock *getVectorLoopRegion() {

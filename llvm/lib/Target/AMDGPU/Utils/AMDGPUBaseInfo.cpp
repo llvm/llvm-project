@@ -11,6 +11,7 @@
 #include "AMDGPUAsmUtils.h"
 #include "AMDKernelCodeT.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
@@ -164,7 +165,7 @@ bool isHsaAbi(const MCSubtargetInfo &STI) {
 
 unsigned getAMDHSACodeObjectVersion(const Module &M) {
   if (auto Ver = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("amdgpu_code_object_version"))) {
+          M.getModuleFlag("amdhsa_code_object_version"))) {
     return (unsigned)Ver->getZExtValue() / 100;
   }
 
@@ -317,6 +318,7 @@ struct MUBUFInfo {
   bool has_srsrc;
   bool has_soffset;
   bool IsBufferInv;
+  bool tfe;
 };
 
 struct MTBUFInfo {
@@ -463,6 +465,11 @@ bool getMUBUFHasSoffset(unsigned Opc) {
 bool getMUBUFIsBufferInv(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
   return Info ? Info->IsBufferInv : false;
+}
+
+bool getMUBUFTfe(unsigned Opc) {
+  const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
+  return Info ? Info->tfe : false;
 }
 
 bool getSMEMIsBuffer(unsigned Opc) {
@@ -1060,10 +1067,15 @@ unsigned getNumExtraSGPRs(const MCSubtargetInfo *STI, bool VCCUsed,
                           STI->getFeatureBits().test(AMDGPU::FeatureXNACK));
 }
 
+static unsigned getGranulatedNumRegisterBlocks(unsigned NumRegs,
+                                               unsigned Granule) {
+  return divideCeil(std::max(1u, NumRegs), Granule);
+}
+
 unsigned getNumSGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs) {
-  NumSGPRs = alignTo(std::max(1u, NumSGPRs), getSGPREncodingGranule(STI));
   // SGPRBlocks is actual number of SGPR blocks minus 1.
-  return NumSGPRs / getSGPREncodingGranule(STI) - 1;
+  return getGranulatedNumRegisterBlocks(NumSGPRs, getSGPREncodingGranule(STI)) -
+         1;
 }
 
 unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
@@ -1075,7 +1087,7 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
       *EnableWavefrontSize32 :
       STI->getFeatureBits().test(FeatureWavefrontSize32);
 
-  if (STI->getFeatureBits().test(FeatureGFX11FullVGPRs))
+  if (STI->getFeatureBits().test(Feature1_5xVGPRs))
     return IsWave32 ? 24 : 12;
 
   if (hasGFX10_3Insts(*STI))
@@ -1102,7 +1114,7 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
   if (!isGFX10Plus(*STI))
     return 256;
   bool IsWave32 = STI->getFeatureBits().test(FeatureWavefrontSize32);
-  if (STI->getFeatureBits().test(FeatureGFX11FullVGPRs))
+  if (STI->getFeatureBits().test(Feature1_5xVGPRs))
     return IsWave32 ? 1536 : 768;
   return IsWave32 ? 1024 : 512;
 }
@@ -1158,14 +1170,19 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
   return std::min(MaxNumVGPRs, AddressableNumVGPRs);
 }
 
-unsigned getNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumVGPRs,
-                          std::optional<bool> EnableWavefrontSize32) {
-  NumVGPRs = alignTo(std::max(1u, NumVGPRs),
-                     getVGPREncodingGranule(STI, EnableWavefrontSize32));
-  // VGPRBlocks is actual number of VGPR blocks minus 1.
-  return NumVGPRs / getVGPREncodingGranule(STI, EnableWavefrontSize32) - 1;
+unsigned getEncodedNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumVGPRs,
+                                 std::optional<bool> EnableWavefrontSize32) {
+  return getGranulatedNumRegisterBlocks(
+             NumVGPRs, getVGPREncodingGranule(STI, EnableWavefrontSize32)) -
+         1;
 }
 
+unsigned getAllocatedNumVGPRBlocks(const MCSubtargetInfo *STI,
+                                   unsigned NumVGPRs,
+                                   std::optional<bool> EnableWavefrontSize32) {
+  return getGranulatedNumRegisterBlocks(
+      NumVGPRs, getVGPRAllocGranule(STI, EnableWavefrontSize32));
+}
 } // end namespace IsaInfo
 
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
@@ -1286,6 +1303,42 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
   }
 
   return Ints;
+}
+
+SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
+                                             unsigned Size) {
+  assert(Size > 2);
+  SmallVector<unsigned> Default(Size, 0);
+
+  Attribute A = F.getFnAttribute(Name);
+  if (!A.isStringAttribute())
+    return Default;
+
+  SmallVector<unsigned> Vals(Size, 0);
+
+  LLVMContext &Ctx = F.getContext();
+
+  StringRef S = A.getValueAsString();
+  unsigned i = 0;
+  for (; !S.empty() && i < Size; i++) {
+    std::pair<StringRef, StringRef> Strs = S.split(',');
+    unsigned IntVal;
+    if (Strs.first.trim().getAsInteger(0, IntVal)) {
+      Ctx.emitError("can't parse integer attribute " + Strs.first + " in " +
+                    Name);
+      return Default;
+    }
+    Vals[i] = IntVal;
+    S = Strs.second;
+  }
+
+  if (!S.empty() || i < Size) {
+    Ctx.emitError("attribute " + Name +
+                  " has incorrect number of integers; expected " +
+                  llvm::utostr(Size));
+    return Default;
+  }
+  return Vals;
 }
 
 unsigned getVmcntBitMask(const IsaVersion &Version) {
@@ -2647,12 +2700,8 @@ bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi) {
          Val == 0x3E22;   // 1.0 / (2.0 * pi)
 }
 
-bool isInlinableLiteralI16(int16_t Literal, bool HasInv2Pi) {
-  if (!HasInv2Pi)
-    return false;
-  if (isInlinableIntLiteral(Literal))
-    return true;
-  return Literal == static_cast<int16_t>(0x3e22f983);
+bool isInlinableLiteralI16(int32_t Literal, bool HasInv2Pi) {
+  return isInlinableLiteral32(Literal, HasInv2Pi);
 }
 
 bool isInlinableLiteralFP16(int16_t Literal, bool HasInv2Pi) {
@@ -3010,6 +3059,11 @@ bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
 
 bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
   return hasAny64BitVGPROperands(OpDesc);
+}
+
+unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
+  // Currently this is 128 for all subtargets
+  return 128;
 }
 
 } // namespace AMDGPU

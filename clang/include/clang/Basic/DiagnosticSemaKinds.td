@@ -855,10 +855,10 @@ def note_strncat_wrong_size : Note<
 def warn_assume_side_effects : Warning<
   "the argument to %0 has side effects that will be discarded">,
   InGroup<DiagGroup<"assume">>;
-def warn_assume_attribute_string_unknown : Warning<
+def warn_omp_assume_attribute_string_unknown : Warning<
   "unknown assumption string '%0'; attribute is potentially ignored">,
   InGroup<UnknownAssumption>;
-def warn_assume_attribute_string_unknown_suggested : Warning<
+def warn_omp_assume_attribute_string_unknown_suggested : Warning<
   "unknown assumption string '%0' may be misspelled; attribute is potentially "
   "ignored, did you mean '%1'?">,
   InGroup<MisspelledAssumption>;
@@ -910,6 +910,22 @@ def warn_fortify_scanf_overflow : Warning<
 
 def err_function_start_invalid_type: Error<
   "argument must be a function">;
+
+def err_ptrauth_disabled :
+  Error<"this target does not support pointer authentication">;
+def err_ptrauth_invalid_key :
+  Error<"%0 does not identify a valid pointer authentication key for "
+        "the current target">;
+def err_ptrauth_value_bad_type :
+  Error<"%select{signed value|extra discriminator|blended pointer|blended "
+        "integer}0 must have %select{pointer|integer|pointer or integer}1 "
+        "type; type here is %2">;
+def warn_ptrauth_sign_null_pointer :
+  Warning<"signing a null pointer will yield a non-null pointer">,
+  InGroup<PtrAuthNullPointers>;
+def warn_ptrauth_auth_null_pointer :
+  Warning<"authenticating a null pointer will almost certainly trap">,
+  InGroup<PtrAuthNullPointers>;
 
 /// main()
 // static main() is not an error in C, just in C++.
@@ -2515,10 +2531,11 @@ def err_deduced_class_template_compound_type : Error<
   "cannot %select{form pointer to|form reference to|form array of|"
   "form function returning|use parentheses when declaring variable with}0 "
   "deduced class template specialization type">;
-def err_deduced_non_class_template_specialization_type : Error<
+def err_deduced_non_class_or_alias_template_specialization_type : Error<
   "%select{<error>|function template|variable template|alias template|"
   "template template parameter|concept|template}0 %1 requires template "
-  "arguments; argument deduction only allowed for class templates">;
+  "arguments; argument deduction only allowed for class templates or alias "
+  "templates">;
 def err_deduced_class_template_ctor_ambiguous : Error<
   "ambiguous deduction for template arguments of %0">;
 def err_deduced_class_template_ctor_no_viable : Error<
@@ -2945,6 +2962,18 @@ def warn_private_extern : Warning<
   "private to the linkage unit and is deprecated">, InGroup<PrivateExtern>;
 def note_private_extern : Note<
   "use __attribute__((visibility(\"hidden\"))) attribute instead">;
+
+// C23 constexpr
+def err_c23_constexpr_not_variable : Error<
+  "'constexpr' can only be used in variable declarations">;
+def err_c23_constexpr_invalid_type : Error<
+  "constexpr variable cannot have type %0">;
+def err_c23_constexpr_init_not_representable : Error<
+  "constexpr initializer evaluates to %0 which is not exactly representable in type %1">;
+def err_c23_constexpr_init_type_mismatch : Error<
+  "constexpr initializer for type %0 is of type %1">;
+def err_c23_constexpr_pointer_not_null : Error<
+  "constexpr pointer initializer is not null">;
 
 // C++ Concepts
 def err_concept_decls_may_only_appear_in_global_namespace_scope : Error<
@@ -6170,6 +6199,10 @@ def ext_initializer_string_for_char_array_too_long : ExtWarn<
 def warn_missing_field_initializers : Warning<
   "missing field %0 initializer">,
   InGroup<MissingFieldInitializers>, DefaultIgnore;
+// The same warning, but another group is needed to disable it separately.
+def warn_missing_designated_field_initializers : Warning<
+  warn_missing_field_initializers.Summary>,
+  InGroup<MissingDesignatedFieldInitializers>, DefaultIgnore;
 def warn_braces_around_init : Warning<
   "braces around %select{scalar |}0initializer">,
   InGroup<DiagGroup<"braced-scalar-init">>;
@@ -6486,12 +6519,18 @@ def err_flexible_array_count_not_in_same_struct : Error<
   "'counted_by' field %0 isn't within the same struct as the flexible array">;
 def err_counted_by_attr_not_on_flexible_array_member : Error<
   "'counted_by' only applies to C99 flexible array members">;
-def err_counted_by_attr_refers_to_flexible_array : Error<
-  "'counted_by' cannot refer to the flexible array %0">;
+def err_counted_by_attr_refer_to_itself : Error<
+  "'counted_by' cannot refer to the flexible array member %0">;
 def err_counted_by_must_be_in_structure : Error<
   "field %0 in 'counted_by' not inside structure">;
-def err_flexible_array_counted_by_attr_field_not_integer : Error<
-  "field %0 in 'counted_by' must be a non-boolean integer type">;
+def err_counted_by_attr_argument_not_integer : Error<
+  "'counted_by' requires a non-boolean integer type argument">;
+def err_counted_by_attr_only_support_simple_decl_reference : Error<
+  "'counted_by' argument must be a simple declaration reference">;
+def err_counted_by_attr_in_union : Error<
+  "'counted_by' cannot be applied to a union member">;
+def err_counted_by_attr_refer_to_union : Error<
+  "'counted_by' argument cannot refer to a union member">;
 def note_flexible_array_counted_by_attr_field : Note<
   "field %0 declared here">;
 
@@ -8154,6 +8193,8 @@ let CategoryName = "Lambda Issue" in {
   def warn_cxx11_compat_generic_lambda : Warning<
     "generic lambdas are incompatible with C++11">,
     InGroup<CXXPre14Compat>, DefaultIgnore;
+  def err_lambda_explicit_spec : Error<
+    "lambda call operator should not be explicitly specialized or instantiated">;
 
   // C++17 '*this' captures.
   def warn_cxx14_compat_star_this_lambda_capture : Warning<
@@ -8183,6 +8224,11 @@ let CategoryName = "Lambda Issue" in {
   def warn_cxx17_compat_lambda_def_ctor_assign : Warning<
     "%select{default construction|assignment}0 of lambda is incompatible with "
     "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
+
+  // C++20 class template argument deduction for alias templates.
+  def warn_cxx17_compat_ctad_for_alias_templates : Warning<
+  "class template argument deduction for alias templates is incompatible with "
+  "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 }
 
 def err_return_in_captured_stmt : Error<
@@ -9012,7 +9058,7 @@ def warn_bad_function_cast : Warning<
   InGroup<BadFunctionCast>, DefaultIgnore;
 def warn_cast_function_type : Warning<
   "cast %diff{from $ to $ |}0,1converts to incompatible function type">,
-  InGroup<CastFunctionType>, DefaultIgnore;
+  InGroup<CastFunctionTypeMismatch>, DefaultIgnore;
 def warn_cast_function_type_strict : Warning<warn_cast_function_type.Summary>,
   InGroup<CastFunctionTypeStrict>, DefaultIgnore;
 def err_cast_pointer_to_non_pointer_int : Error<
@@ -9091,6 +9137,8 @@ def ext_cxx17_attr : Extension<
   "use of the %0 attribute is a C++17 extension">, InGroup<CXX17Attrs>;
 def ext_cxx20_attr : Extension<
   "use of the %0 attribute is a C++20 extension">, InGroup<CXX20Attrs>;
+def ext_cxx23_attr : Extension<
+  "use of the %0 attribute is a C++23 extension">, InGroup<CXX23Attrs>;
 
 def warn_unused_comparison : Warning<
   "%select{equality|inequality|relational|three-way}0 comparison result unused">,
@@ -9591,13 +9639,10 @@ def err_defaulted_copy_assign_not_ref : Error<
   "the parameter for an explicitly-defaulted copy assignment operator must be an "
   "lvalue reference type">;
 def err_incorrect_defaulted_constexpr : Error<
-  "defaulted definition of %sub{select_special_member_kind}0 "
-  "is not constexpr">;
+  "defaulted definition of %sub{select_special_member_kind}0 cannot be marked %select{constexpr|consteval}1 "
+  "before C++23">;
 def err_incorrect_defaulted_constexpr_with_vb: Error<
   "%sub{select_special_member_kind}0 cannot be 'constexpr' in a class with virtual base class">;
-def err_incorrect_defaulted_consteval : Error<
-  "defaulted declaration of %sub{select_special_member_kind}0 "
-  "cannot be consteval because implicit definition is not constexpr">;
 def warn_defaulted_method_deleted : Warning<
   "explicitly defaulted %sub{select_special_member_kind}0 is implicitly "
   "deleted">, InGroup<DefaultedFunctionDeleted>;
@@ -9708,21 +9753,12 @@ def note_defaulted_comparison_cannot_deduce_undeduced_auto : Note<
   "%select{|member|base class}0 %1 declared here">;
 def note_defaulted_comparison_cannot_deduce_callee : Note<
   "selected 'operator<=>' for %select{|member|base class}0 %1 declared here">;
-def ext_defaulted_comparison_constexpr_mismatch : Extension<
+def err_defaulted_comparison_constexpr_mismatch : Error<
   "defaulted definition of %select{%sub{select_defaulted_comparison_kind}1|"
-  "three-way comparison operator}0 that is "
-  "declared %select{constexpr|consteval}2 but"
-  "%select{|for which the corresponding implicit 'operator==' }0 "
-  "invokes a non-constexpr comparison function is a C++23 extension">,
-  InGroup<DiagGroup<"c++23-default-comp-relaxed-constexpr">>;
-def warn_cxx23_compat_defaulted_comparison_constexpr_mismatch : Warning<
-  "defaulted definition of %select{%sub{select_defaulted_comparison_kind}1|"
-  "three-way comparison operator}0 that is "
-  "declared %select{constexpr|consteval}2 but"
-  "%select{|for which the corresponding implicit 'operator==' }0 "
-  "invokes a non-constexpr comparison function is incompatible with C++ "
-  "standards before C++23">,
-  InGroup<CXXPre23Compat>, DefaultIgnore;
+  "three-way comparison operator}0 cannot be "
+  "declared %select{constexpr|consteval}2 because "
+  "%select{it|for which the corresponding implicit 'operator==' }0 "
+  "invokes a non-constexpr comparison function ">;
 def note_defaulted_comparison_not_constexpr : Note<
   "non-constexpr comparison function would be used to compare "
   "%select{|member %1|base class %1}0">;
@@ -9901,7 +9937,7 @@ def err_lifetimebound_ctor_dtor : Error<
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<
   "%select{address of|reference to}0 stack memory associated with "
-  "%select{local variable|parameter}2 %1 returned">,
+  "%select{local variable|parameter|compound literal}2 %1 returned">,
   InGroup<ReturnStackAddress>;
 def warn_ret_local_temp_addr_ref : Warning<
   "returning %select{address of|reference to}0 local temporary object">,
@@ -10157,6 +10193,9 @@ def err_fallthrough_attr_outside_switch : Error<
 def err_fallthrough_attr_invalid_placement : Error<
   "fallthrough annotation does not directly precede switch label">;
 
+def err_assume_attr_args : Error<
+  "attribute '%0' requires a single expression argument">;
+
 def warn_unreachable_default : Warning<
   "default label in switch which covers all enumeration values">,
   InGroup<CoveredSwitchDefault>, DefaultIgnore;
@@ -10231,14 +10270,14 @@ def warn_second_parameter_to_va_arg_never_compatible : Warning<
 
 def warn_return_missing_expr : Warning<
   "non-void %select{function|method}1 %0 should return a value">, DefaultError,
-  InGroup<ReturnType>;
+  InGroup<ReturnMismatch>;
 def ext_return_missing_expr : ExtWarn<
   "non-void %select{function|method}1 %0 should return a value">, DefaultError,
-  InGroup<ReturnType>;
+  InGroup<ReturnMismatch>;
 def ext_return_has_expr : ExtWarn<
   "%select{void function|void method|constructor|destructor}1 %0 "
   "should not return a value">,
-  DefaultError, InGroup<ReturnType>;
+  DefaultError, InGroup<ReturnMismatch>;
 def ext_return_has_void_expr : Extension<
   "void %select{function|method|block}1 %0 should not return void expression">;
 def err_return_init_list : Error<
@@ -11336,6 +11375,8 @@ def err_omp_device_type_mismatch : Error<
 def err_omp_wrong_device_function_call : Error<
   "function with 'device_type(%0)' is not available on %select{device|host}1">;
 def note_omp_marked_device_type_here : Note<"marked as 'device_type(%0)' here">;
+def err_omp_declare_target_has_local_vars : Error<
+  "local variable '%0' should not be used in 'declare target' directive; ">;
 def warn_omp_declare_target_after_first_use : Warning<
   "declaration marked as declare target after first use, it may lead to incorrect results">,
   InGroup<OpenMPTarget>;
@@ -11497,8 +11538,6 @@ def err_module_not_defined : Error<
 def err_module_redeclaration : Error<
   "translation unit contains multiple module declarations">;
 def note_prev_module_declaration : Note<"previous module declaration is here">;
-def err_module_declaration_missing : Error<
-  "missing 'export module' declaration in module interface unit">;
 def err_module_declaration_missing_after_global_module_introducer : Error<
   "missing 'module' declaration at end of global module fragment "
   "introduced here">;
@@ -11981,13 +12020,14 @@ def err_builtin_launder_invalid_arg : Error<
   "'__builtin_launder' is not allowed">;
 
 def err_builtin_invalid_arg_type: Error <
-  "%ordinal0 argument must be a "
-  "%select{vector, integer or floating point type|matrix|"
-  "pointer to a valid matrix element type|"
-  "signed integer or floating point type|vector type|"
-  "floating point type|"
-  "vector of integers|"
-  "type of unsigned integer}1 (was %2)">;
+  "%ordinal0 argument must be "
+  "%select{a vector, integer or floating point type|a matrix|"
+  "a pointer to a valid matrix element type|"
+  "a signed integer or floating point type|a vector type|"
+  "a floating point type|"
+  "a vector of integers|"
+  "an unsigned integer|"
+  "an 'int'}1 (was %2)">;
 
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;

@@ -36,6 +36,7 @@ include(SetPlatformToolchainTools)
 include(base-config-ix)
 include(CompilerRTUtils)
 include(CMakeDependentOption)
+include(GetDarwinLinkerVersion)
 
 option(COMPILER_RT_BUILD_BUILTINS "Build builtins" ON)
 mark_as_advanced(COMPILER_RT_BUILD_BUILTINS)
@@ -444,6 +445,15 @@ else()
   set(SANITIZER_USE_SYMBOLS FALSE)
 endif()
 
+# Get the linker version while configuring compiler-rt and explicitly pass it
+# in cflags during testing. This fixes the compiler/linker version mismatch
+# issue when running a clang built with a newer Xcode in an older Xcode
+set(COMPILER_RT_DARWIN_LINKER_VERSION)
+if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+  get_darwin_linker_version(COMPILER_RT_DARWIN_LINKER_VERSION)
+  message(STATUS "Host linker version: ${COMPILER_RT_DARWIN_LINKER_VERSION}")
+endif()
+
 # Build sanitizer runtimes with debug info.
 if(MSVC)
   # Use /Z7 instead of /Zi for the asan runtime. This avoids the LNK4099
@@ -502,7 +512,10 @@ append_list_if(MINGW -fms-extensions SANITIZER_COMMON_CFLAGS)
 #
 # Note that this type of issue was discovered with lsan, but can apply to other
 # sanitizers.
-append_list_if(COMPILER_RT_HAS_TRIVIAL_AUTO_INIT -ftrivial-auto-var-init=pattern SANITIZER_COMMON_CFLAGS)
+# Disable PowerPC because of https://github.com/llvm/llvm-project/issues/84654.
+if(NOT "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "powerpc")
+  append_list_if(COMPILER_RT_HAS_TRIVIAL_AUTO_INIT -ftrivial-auto-var-init=pattern SANITIZER_COMMON_CFLAGS)
+endif()
 
 # Set common link flags.
 # TODO: We should consider using the same model as libc++, that is use either

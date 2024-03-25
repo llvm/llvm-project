@@ -536,19 +536,29 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
     // between 0, 1 and -1.
     const APInt *OOpC;
     bool OOpIsAPInt = match(OOp, m_APInt(OOpC));
-    if (!isa<Constant>(OOp) ||
-        (OOpIsAPInt && isSelect01(C->getUniqueInteger(), *OOpC))) {
-      Value *NewSel = Builder.CreateSelect(SI.getCondition(), Swapped ? C : OOp,
-                                           Swapped ? OOp : C, "", &SI);
-      if (isa<FPMathOperator>(&SI))
-        cast<Instruction>(NewSel)->setFastMathFlags(FMF);
-      NewSel->takeName(TVI);
-      BinaryOperator *BO =
-          BinaryOperator::Create(TVI->getOpcode(), FalseVal, NewSel);
-      BO->copyIRFlags(TVI);
-      return BO;
-    }
-    return nullptr;
+    if (isa<Constant>(OOp) &&
+        (!OOpIsAPInt || !isSelect01(C->getUniqueInteger(), *OOpC)))
+      return nullptr;
+
+    // If the false value is a NaN then we have that the floating point math
+    // operation in the transformed code may not preserve the exact NaN
+    // bit-pattern -- e.g. `fadd sNaN, 0.0 -> qNaN`.
+    // This makes the transformation incorrect since the original program would
+    // have preserved the exact NaN bit-pattern.
+    // Avoid the folding if the false value might be a NaN.
+    if (isa<FPMathOperator>(&SI) &&
+        !computeKnownFPClass(FalseVal, FMF, fcNan, &SI).isKnownNeverNaN())
+      return nullptr;
+
+    Value *NewSel = Builder.CreateSelect(SI.getCondition(), Swapped ? C : OOp,
+                                         Swapped ? OOp : C, "", &SI);
+    if (isa<FPMathOperator>(&SI))
+      cast<Instruction>(NewSel)->setFastMathFlags(FMF);
+    NewSel->takeName(TVI);
+    BinaryOperator *BO =
+        BinaryOperator::Create(TVI->getOpcode(), FalseVal, NewSel);
+    BO->copyIRFlags(TVI);
+    return BO;
   };
 
   if (Instruction *R = TryFoldSelectIntoOp(SI, TrueVal, FalseVal, false))
@@ -1191,7 +1201,7 @@ static Value *canonicalizeSPF(ICmpInst &Cmp, Value *TrueVal, Value *FalseVal,
                           match(RHS, m_NSWNeg(m_Specific(LHS)));
     Constant *IntMinIsPoisonC =
         ConstantInt::get(Type::getInt1Ty(Cmp.getContext()), IntMinIsPoison);
-    Instruction *Abs =
+    Value *Abs =
         IC.Builder.CreateBinaryIntrinsic(Intrinsic::abs, LHS, IntMinIsPoisonC);
 
     if (SPF == SelectPatternFlavor::SPF_NABS)
@@ -1285,7 +1295,11 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
       isGuaranteedNotToBeUndefOrPoison(CmpRHS, SQ.AC, &Sel, &DT)) {
     if (Value *V = simplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, SQ,
                                           /* AllowRefinement */ true))
-      return replaceOperand(Sel, Swapped ? 2 : 1, V);
+      // Require either the replacement or the simplification result to be a
+      // constant to avoid infinite loops.
+      // FIXME: Make this check more precise.
+      if (isa<Constant>(CmpRHS) || isa<Constant>(V))
+        return replaceOperand(Sel, Swapped ? 2 : 1, V);
 
     // Even if TrueVal does not simplify, we can directly replace a use of
     // CmpLHS with CmpRHS, as long as the instruction is not used anywhere
@@ -1303,7 +1317,8 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
       isGuaranteedNotToBeUndefOrPoison(CmpLHS, SQ.AC, &Sel, &DT))
     if (Value *V = simplifyWithOpReplaced(TrueVal, CmpRHS, CmpLHS, SQ,
                                           /* AllowRefinement */ true))
-      return replaceOperand(Sel, Swapped ? 2 : 1, V);
+      if (isa<Constant>(CmpLHS) || isa<Constant>(V))
+        return replaceOperand(Sel, Swapped ? 2 : 1, V);
 
   auto *FalseInst = dyn_cast<Instruction>(FalseVal);
   if (!FalseInst)
@@ -2643,46 +2658,33 @@ static Value *foldSelectWithFrozenICmp(SelectInst &Sel, InstCombiner::BuilderTy 
   return nullptr;
 }
 
+/// Given that \p CondVal is known to be \p CondIsTrue, try to simplify \p SI.
+static Value *simplifyNestedSelectsUsingImpliedCond(SelectInst &SI,
+                                                    Value *CondVal,
+                                                    bool CondIsTrue,
+                                                    const DataLayout &DL) {
+  Value *InnerCondVal = SI.getCondition();
+  Value *InnerTrueVal = SI.getTrueValue();
+  Value *InnerFalseVal = SI.getFalseValue();
+  assert(CondVal->getType() == InnerCondVal->getType() &&
+         "The type of inner condition must match with the outer.");
+  if (auto Implied = isImpliedCondition(CondVal, InnerCondVal, DL, CondIsTrue))
+    return *Implied ? InnerTrueVal : InnerFalseVal;
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::foldAndOrOfSelectUsingImpliedCond(Value *Op,
                                                                  SelectInst &SI,
                                                                  bool IsAnd) {
-  Value *CondVal = SI.getCondition();
-  Value *A = SI.getTrueValue();
-  Value *B = SI.getFalseValue();
-
   assert(Op->getType()->isIntOrIntVectorTy(1) &&
          "Op must be either i1 or vector of i1.");
-
-  std::optional<bool> Res = isImpliedCondition(Op, CondVal, DL, IsAnd);
-  if (!Res)
+  if (SI.getCondition()->getType() != Op->getType())
     return nullptr;
-
-  Value *Zero = Constant::getNullValue(A->getType());
-  Value *One = Constant::getAllOnesValue(A->getType());
-
-  if (*Res == true) {
-    if (IsAnd)
-      // select op, (select cond, A, B), false => select op, A, false
-      // and    op, (select cond, A, B)        => select op, A, false
-      //   if op = true implies condval = true.
-      return SelectInst::Create(Op, A, Zero);
-    else
-      // select op, true, (select cond, A, B) => select op, true, A
-      // or     op, (select cond, A, B)       => select op, true, A
-      //   if op = false implies condval = true.
-      return SelectInst::Create(Op, One, A);
-  } else {
-    if (IsAnd)
-      // select op, (select cond, A, B), false => select op, B, false
-      // and    op, (select cond, A, B)        => select op, B, false
-      //   if op = true implies condval = false.
-      return SelectInst::Create(Op, B, Zero);
-    else
-      // select op, true, (select cond, A, B) => select op, true, B
-      // or     op, (select cond, A, B)       => select op, true, B
-      //   if op = false implies condval = false.
-      return SelectInst::Create(Op, One, B);
-  }
+  if (Value *V = simplifyNestedSelectsUsingImpliedCond(SI, Op, IsAnd, DL))
+    return SelectInst::Create(Op,
+                              IsAnd ? V : ConstantInt::getTrue(Op->getType()),
+                              IsAnd ? ConstantInt::getFalse(Op->getType()) : V);
+  return nullptr;
 }
 
 // Canonicalize select with fcmp to fabs(). -0.0 makes this tricky. We need
@@ -3137,11 +3139,6 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       replaceUse(*Y, FI);
       return replaceInstUsesWith(SI, Op1);
     }
-
-    if (auto *Op1SI = dyn_cast<SelectInst>(Op1))
-      if (auto *I = foldAndOrOfSelectUsingImpliedCond(CondVal, *Op1SI,
-                                                      /* IsAnd */ IsAnd))
-        return I;
 
     if (auto *ICmp0 = dyn_cast<ICmpInst>(CondVal))
       if (auto *ICmp1 = dyn_cast<ICmpInst>(Op1))
@@ -3643,12 +3640,12 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   if (SelectInst *TrueSI = dyn_cast<SelectInst>(TrueVal)) {
     if (TrueSI->getCondition()->getType() == CondVal->getType()) {
-      // select(C, select(C, a, b), c) -> select(C, a, c)
-      if (TrueSI->getCondition() == CondVal) {
-        if (SI.getTrueValue() == TrueSI->getTrueValue())
-          return nullptr;
-        return replaceOperand(SI, 1, TrueSI->getTrueValue());
-      }
+      // Fold nested selects if the inner condition can be implied by the outer
+      // condition.
+      if (Value *V = simplifyNestedSelectsUsingImpliedCond(
+              *TrueSI, CondVal, /*CondIsTrue=*/true, DL))
+        return replaceOperand(SI, 1, V);
+
       // select(C0, select(C1, a, b), b) -> select(C0&C1, a, b)
       // We choose this as normal form to enable folding on the And and
       // shortening paths for the values (this helps getUnderlyingObjects() for
@@ -3663,12 +3660,12 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   }
   if (SelectInst *FalseSI = dyn_cast<SelectInst>(FalseVal)) {
     if (FalseSI->getCondition()->getType() == CondVal->getType()) {
-      // select(C, a, select(C, b, c)) -> select(C, a, c)
-      if (FalseSI->getCondition() == CondVal) {
-        if (SI.getFalseValue() == FalseSI->getFalseValue())
-          return nullptr;
-        return replaceOperand(SI, 2, FalseSI->getFalseValue());
-      }
+      // Fold nested selects if the inner condition can be implied by the outer
+      // condition.
+      if (Value *V = simplifyNestedSelectsUsingImpliedCond(
+              *FalseSI, CondVal, /*CondIsTrue=*/false, DL))
+        return replaceOperand(SI, 2, V);
+
       // select(C0, a, select(C1, a, b)) -> select(C0|C1, a, b)
       if (FalseSI->getTrueValue() == TrueVal && FalseSI->hasOneUse()) {
         Value *Or = Builder.CreateLogicalOr(CondVal, FalseSI->getCondition());

@@ -997,6 +997,12 @@ public:
   APInt ushl_ov(const APInt &Amt, bool &Overflow) const;
   APInt ushl_ov(unsigned Amt, bool &Overflow) const;
 
+  /// Signed integer floor division operation.
+  ///
+  /// Rounds towards negative infinity, i.e. 5 / -2 = -3. Iff minimum value
+  /// divided by -1 set Overflow to true.
+  APInt sfloordiv_ov(const APInt &RHS, bool &Overflow) const;
+
   // Operations that saturate
   APInt sadd_sat(const APInt &RHS) const;
   APInt uadd_sat(const APInt &RHS) const;
@@ -1626,7 +1632,8 @@ public:
   /// SmallString. If Radix > 10, UpperCase determine the case of letter
   /// digits.
   void toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
-                bool formatAsCLiteral = false, bool UpperCase = true) const;
+                bool formatAsCLiteral = false, bool UpperCase = true,
+                bool InsertSeparators = false) const;
 
   /// Considers the APInt to be unsigned and converts it into a string in the
   /// radix given. The radix can be 2, 8, 10 16, or 36.
@@ -2187,10 +2194,27 @@ inline const APInt &umax(const APInt &A, const APInt &B) {
   return A.ugt(B) ? A : B;
 }
 
+/// Determine the absolute difference of two APInts considered to be signed.
+inline const APInt abds(const APInt &A, const APInt &B) {
+  return A.sge(B) ? (A - B) : (B - A);
+}
+
 /// Determine the absolute difference of two APInts considered to be unsigned.
-inline const APInt absdiff(const APInt &A, const APInt &B) {
+inline const APInt abdu(const APInt &A, const APInt &B) {
   return A.uge(B) ? (A - B) : (B - A);
 }
+
+/// Compute the floor of the signed average of C1 and C2
+APInt avgFloorS(const APInt &C1, const APInt &C2);
+
+/// Compute the floor of the unsigned average of C1 and C2
+APInt avgFloorU(const APInt &C1, const APInt &C2);
+
+/// Compute the ceil of the signed average of C1 and C2
+APInt avgCeilS(const APInt &C1, const APInt &C2);
+
+/// Compute the ceil of the unsigned average of C1 and C2
+APInt avgCeilU(const APInt &C1, const APInt &C2);
 
 /// Compute GCD of two unsigned APInt values.
 ///

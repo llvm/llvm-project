@@ -2359,6 +2359,20 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsFreeze) {
   EXPECT_EQ(Known.One.getZExtValue(), 0u);
 }
 
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsReturnedRangeConflict) {
+  parseAssembly(
+      "declare i16 @foo(i16 returned)\n"
+      "\n"
+      "define i16 @test() {\n"
+      "  %A = call i16 @foo(i16 4095), !range !{i16 32, i16 33}\n"
+      "  ret i16 %A\n"
+      "}\n");
+  // The call returns 32 according to range metadata, but 4095 according to the
+  // returned arg operand. Given the conflicting information we expect that the
+  // known bits information simply is cleared.
+  expectKnownBits(/*zero*/ 0u, /*one*/ 0u);
+}
+
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAddWithRange) {
   parseAssembly("define void @test(ptr %p) {\n"
                 "  %A = load i64, ptr %p, !range !{i64 64, i64 65536}\n"

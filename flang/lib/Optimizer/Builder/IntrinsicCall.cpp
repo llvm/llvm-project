@@ -177,6 +177,8 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"c_funloc", &I::genCFunLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"c_loc", &I::genCLoc, {{{"x", asBox}}}, /*isElemental=*/false},
+    {"c_ptr_eq", &I::genCPtrCompare<mlir::arith::CmpIPredicate::eq>},
+    {"c_ptr_ne", &I::genCPtrCompare<mlir::arith::CmpIPredicate::ne>},
     {"ceiling", &I::genCeiling},
     {"char", &I::genChar},
     {"cmplx",
@@ -567,6 +569,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"dim", asAddr, handleDynamicOptional},
        {"kind", asValue}}},
      /*isElemental=*/false},
+    {"sizeof",
+     &I::genSizeOf,
+     {{{"a", asBox}}},
+     /*isElemental=*/false},
     {"sleep", &I::genSleep, {{{"seconds", asValue}}}, /*isElemental=*/false},
     {"spacing", &I::genSpacing},
     {"spread",
@@ -689,22 +695,22 @@ prettyPrintIntrinsicName(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 // Generate a call to the Fortran runtime library providing
-// support for 128-bit float math via a third-party library.
-// If the compiler is built without FLANG_RUNTIME_F128_MATH_LIB,
-// this function will report an error.
+// support for 128-bit float math.
+// On 'LDBL_MANT_DIG == 113' targets the implementation
+// is provided by FortranRuntime, otherwise, it is done via
+// FortranFloat128Math library. In the latter case the compiler
+// has to be built with FLANG_RUNTIME_F128_MATH_LIB to guarantee
+// proper linking actions in the driver.
 static mlir::Value genLibF128Call(fir::FirOpBuilder &builder,
                                   mlir::Location loc,
                                   const MathOperation &mathOp,
                                   mlir::FunctionType libFuncType,
                                   llvm::ArrayRef<mlir::Value> args) {
-#ifndef FLANG_RUNTIME_F128_MATH_LIB
-  std::string message = prettyPrintIntrinsicName(
-      builder, loc, "compiler is built without support for '", mathOp.key, "'",
-      libFuncType);
-  fir::emitFatalError(loc, message, /*genCrashDiag=*/false);
-#else  // FLANG_RUNTIME_F128_MATH_LIB
+  // TODO: if we knew that the C 'long double' does not have 113-bit mantissa
+  // on the target, we could have asserted that FLANG_RUNTIME_F128_MATH_LIB
+  // must be specified. For now just always generate the call even
+  // if it will be unresolved.
   return genLibCall(builder, loc, mathOp, libFuncType, args);
-#endif // FLANG_RUNTIME_F128_MATH_LIB
 }
 
 mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -918,6 +924,8 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
 constexpr auto FuncTypeReal16Real16 = genFuncType<Ty::Real<16>, Ty::Real<16>>;
 constexpr auto FuncTypeReal16Real16Real16 =
     genFuncType<Ty::Real<16>, Ty::Real<16>, Ty::Real<16>>;
+constexpr auto FuncTypeReal16Real16Real16Real16 =
+    genFuncType<Ty::Real<16>, Ty::Real<16>, Ty::Real<16>, Ty::Real<16>>;
 constexpr auto FuncTypeReal16Integer4Real16 =
     genFuncType<Ty::Real<16>, Ty::Integer<4>, Ty::Real<16>>;
 constexpr auto FuncTypeInteger4Real16 =
@@ -926,6 +934,14 @@ constexpr auto FuncTypeInteger8Real16 =
     genFuncType<Ty::Integer<8>, Ty::Real<16>>;
 constexpr auto FuncTypeReal16Complex16 =
     genFuncType<Ty::Real<16>, Ty::Complex<16>>;
+constexpr auto FuncTypeComplex16Complex16 =
+    genFuncType<Ty::Complex<16>, Ty::Complex<16>>;
+constexpr auto FuncTypeComplex16Complex16Complex16 =
+    genFuncType<Ty::Complex<16>, Ty::Complex<16>, Ty::Complex<16>>;
+constexpr auto FuncTypeComplex16Complex16Integer4 =
+    genFuncType<Ty::Complex<16>, Ty::Complex<16>, Ty::Integer<4>>;
+constexpr auto FuncTypeComplex16Complex16Integer8 =
+    genFuncType<Ty::Complex<16>, Ty::Complex<16>, Ty::Integer<8>>;
 
 static constexpr MathOperation mathOperations[] = {
     {"abs", "fabsf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
@@ -944,6 +960,8 @@ static constexpr MathOperation mathOperations[] = {
     {"acos", RTNAME_STRING(AcosF128), FuncTypeReal16Real16, genLibF128Call},
     {"acos", "cacosf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
     {"acos", "cacos", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
+    {"acos", RTNAME_STRING(CAcosF128), FuncTypeComplex16Complex16,
+     genLibF128Call},
     {"acosh", "acoshf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
     {"acosh", "acosh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
     {"acosh", RTNAME_STRING(AcoshF128), FuncTypeReal16Real16, genLibF128Call},
@@ -951,6 +969,8 @@ static constexpr MathOperation mathOperations[] = {
      genLibCall},
     {"acosh", "cacosh", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
      genLibCall},
+    {"acosh", RTNAME_STRING(CAcoshF128), FuncTypeComplex16Complex16,
+     genLibF128Call},
     // llvm.trunc behaves the same way as libm's trunc.
     {"aint", "llvm.trunc.f32", genFuncType<Ty::Real<4>, Ty::Real<4>>,
      genLibCall},
@@ -972,6 +992,8 @@ static constexpr MathOperation mathOperations[] = {
     {"asin", RTNAME_STRING(AsinF128), FuncTypeReal16Real16, genLibF128Call},
     {"asin", "casinf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
     {"asin", "casin", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
+    {"asin", RTNAME_STRING(CAsinF128), FuncTypeComplex16Complex16,
+     genLibF128Call},
     {"asinh", "asinhf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
     {"asinh", "asinh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
     {"asinh", RTNAME_STRING(AsinhF128), FuncTypeReal16Real16, genLibF128Call},
@@ -979,6 +1001,8 @@ static constexpr MathOperation mathOperations[] = {
      genLibCall},
     {"asinh", "casinh", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
      genLibCall},
+    {"asinh", RTNAME_STRING(CAsinhF128), FuncTypeComplex16Complex16,
+     genLibF128Call},
     {"atan", "atanf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
      genMathOp<mlir::math::AtanOp>},
     {"atan", "atan", genFuncType<Ty::Real<8>, Ty::Real<8>>,
@@ -986,6 +1010,8 @@ static constexpr MathOperation mathOperations[] = {
     {"atan", RTNAME_STRING(AtanF128), FuncTypeReal16Real16, genLibF128Call},
     {"atan", "catanf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
     {"atan", "catan", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
+    {"atan", RTNAME_STRING(CAtanF128), FuncTypeComplex16Complex16,
+     genLibF128Call},
     {"atan2", "atan2f", genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
      genMathOp<mlir::math::Atan2Op>},
     {"atan2", "atan2", genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
@@ -999,6 +1025,8 @@ static constexpr MathOperation mathOperations[] = {
      genLibCall},
     {"atanh", "catanh", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
      genLibCall},
+    {"atanh", RTNAME_STRING(CAtanhF128), FuncTypeComplex16Complex16,
+     genLibF128Call},
     {"bessel_j0", "j0f", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
     {"bessel_j0", "j0", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
     {"bessel_j0", RTNAME_STRING(J0F128), FuncTypeReal16Real16, genLibF128Call},
@@ -1038,11 +1066,15 @@ static constexpr MathOperation mathOperations[] = {
      genComplexMathOp<mlir::complex::CosOp>},
     {"cos", "ccos", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::CosOp>},
+    {"cos", RTNAME_STRING(CCosF128), FuncTypeComplex16Complex16,
+     genLibF128Call},
     {"cosh", "coshf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
     {"cosh", "cosh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
     {"cosh", RTNAME_STRING(CoshF128), FuncTypeReal16Real16, genLibF128Call},
     {"cosh", "ccoshf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
     {"cosh", "ccosh", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
+    {"cosh", RTNAME_STRING(CCoshF128), FuncTypeComplex16Complex16,
+     genLibF128Call},
     {"divc",
      {},
      genFuncType<Ty::Complex<2>, Ty::Complex<2>, Ty::Complex<2>>,
@@ -1080,6 +1112,8 @@ static constexpr MathOperation mathOperations[] = {
      genComplexMathOp<mlir::complex::ExpOp>},
     {"exp", "cexp", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::ExpOp>},
+    {"exp", RTNAME_STRING(CExpF128), FuncTypeComplex16Complex16,
+     genLibF128Call},
     {"feclearexcept", "feclearexcept",
      genFuncType<Ty::Integer<4>, Ty::Integer<4>>, genLibCall},
     {"fedisableexcept", "fedisableexcept",
@@ -1113,6 +1147,8 @@ static constexpr MathOperation mathOperations[] = {
     {"fma", "llvm.fma.f64",
      genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
      genMathOp<mlir::math::FmaOp>},
+    {"fma", RTNAME_STRING(FmaF128), FuncTypeReal16Real16Real16Real16,
+     genLibF128Call},
     {"gamma", "tgammaf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
     {"gamma", "tgamma", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
     {"gamma", RTNAME_STRING(TgammaF128), FuncTypeReal16Real16, genLibF128Call},
@@ -1131,6 +1167,8 @@ static constexpr MathOperation mathOperations[] = {
      genComplexMathOp<mlir::complex::LogOp>},
     {"log", "clog", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::LogOp>},
+    {"log", RTNAME_STRING(CLogF128), FuncTypeComplex16Complex16,
+     genLibF128Call},
     {"log10", "log10f", genFuncType<Ty::Real<4>, Ty::Real<4>>,
      genMathOp<mlir::math::Log10Op>},
     {"log10", "log10", genFuncType<Ty::Real<8>, Ty::Real<8>>,
@@ -1178,6 +1216,8 @@ static constexpr MathOperation mathOperations[] = {
      genComplexMathOp<mlir::complex::PowOp>},
     {"pow", "cpow", genFuncType<Ty::Complex<8>, Ty::Complex<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::PowOp>},
+    {"pow", RTNAME_STRING(CPowF128), FuncTypeComplex16Complex16Complex16,
+     genLibF128Call},
     {"pow", RTNAME_STRING(FPow4i),
      genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Integer<4>>,
      genMathOp<mlir::math::FPowIOp>},
@@ -1200,10 +1240,14 @@ static constexpr MathOperation mathOperations[] = {
      genFuncType<Ty::Complex<4>, Ty::Complex<4>, Ty::Integer<4>>, genLibCall},
     {"pow", RTNAME_STRING(zpowi),
      genFuncType<Ty::Complex<8>, Ty::Complex<8>, Ty::Integer<4>>, genLibCall},
+    {"pow", RTNAME_STRING(cqpowi), FuncTypeComplex16Complex16Integer4,
+     genLibF128Call},
     {"pow", RTNAME_STRING(cpowk),
      genFuncType<Ty::Complex<4>, Ty::Complex<4>, Ty::Integer<8>>, genLibCall},
     {"pow", RTNAME_STRING(zpowk),
      genFuncType<Ty::Complex<8>, Ty::Complex<8>, Ty::Integer<8>>, genLibCall},
+    {"pow", RTNAME_STRING(cqpowk), FuncTypeComplex16Complex16Integer8,
+     genLibF128Call},
     {"sign", "copysignf", genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
      genMathOp<mlir::math::CopySignOp>},
     {"sign", "copysign", genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
@@ -1222,11 +1266,15 @@ static constexpr MathOperation mathOperations[] = {
      genComplexMathOp<mlir::complex::SinOp>},
     {"sin", "csin", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::SinOp>},
+    {"sin", RTNAME_STRING(CSinF128), FuncTypeComplex16Complex16,
+     genLibF128Call},
     {"sinh", "sinhf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
     {"sinh", "sinh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
     {"sinh", RTNAME_STRING(SinhF128), FuncTypeReal16Real16, genLibF128Call},
     {"sinh", "csinhf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
     {"sinh", "csinh", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
+    {"sinh", RTNAME_STRING(CSinhF128), FuncTypeComplex16Complex16,
+     genLibF128Call},
     {"sqrt", "sqrtf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
      genMathOp<mlir::math::SqrtOp>},
     {"sqrt", "sqrt", genFuncType<Ty::Real<8>, Ty::Real<8>>,
@@ -1236,6 +1284,8 @@ static constexpr MathOperation mathOperations[] = {
      genComplexMathOp<mlir::complex::SqrtOp>},
     {"sqrt", "csqrt", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::SqrtOp>},
+    {"sqrt", RTNAME_STRING(CSqrtF128), FuncTypeComplex16Complex16,
+     genLibF128Call},
     {"tan", "tanf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
      genMathOp<mlir::math::TanOp>},
     {"tan", "tan", genFuncType<Ty::Real<8>, Ty::Real<8>>,
@@ -1245,6 +1295,8 @@ static constexpr MathOperation mathOperations[] = {
      genComplexMathOp<mlir::complex::TanOp>},
     {"tan", "ctan", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::TanOp>},
+    {"tan", RTNAME_STRING(CTanF128), FuncTypeComplex16Complex16,
+     genLibF128Call},
     {"tanh", "tanhf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
      genMathOp<mlir::math::TanhOp>},
     {"tanh", "tanh", genFuncType<Ty::Real<8>, Ty::Real<8>>,
@@ -1254,6 +1306,8 @@ static constexpr MathOperation mathOperations[] = {
      genComplexMathOp<mlir::complex::TanhOp>},
     {"tanh", "ctanh", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::TanhOp>},
+    {"tanh", RTNAME_STRING(CTanhF128), FuncTypeComplex16Complex16,
+     genLibF128Call},
 };
 
 // This helper class computes a "distance" between two function types.
@@ -2745,6 +2799,23 @@ IntrinsicLibrary::genCLoc(mlir::Type resultType,
   return genCLocOrCFunLoc(builder, loc, resultType, args);
 }
 
+// C_PTR_EQ and C_PTR_NE
+template <mlir::arith::CmpIPredicate pred>
+fir::ExtendedValue
+IntrinsicLibrary::genCPtrCompare(mlir::Type resultType,
+                                 llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value cPtr1 = fir::getBase(args[0]);
+  mlir::Value cPtrVal1 =
+      fir::factory::genCPtrOrCFunptrValue(builder, loc, cPtr1);
+  mlir::Value cPtr2 = fir::getBase(args[1]);
+  mlir::Value cPtrVal2 =
+      fir::factory::genCPtrOrCFunptrValue(builder, loc, cPtr2);
+  mlir::Value cmp =
+      builder.create<mlir::arith::CmpIOp>(loc, pred, cPtrVal1, cPtrVal2);
+  return builder.createConvert(loc, resultType, cmp);
+}
+
 // CEILING
 mlir::Value IntrinsicLibrary::genCeiling(mlir::Type resultType,
                                          llvm::ArrayRef<mlir::Value> args) {
@@ -3812,7 +3883,7 @@ mlir::Value IntrinsicLibrary::genIeeeClass(mlir::Type resultType,
   int pos = 3 + highSignificandSize;
   mlir::Value index = builder.create<mlir::arith::AndIOp>(
       loc, builder.create<mlir::arith::ShRUIOp>(loc, intVal, signShift),
-      createIntegerConstant(1 << pos));
+      createIntegerConstant(1ULL << pos));
 
   // [e] exponent != 0
   mlir::Value exponent =
@@ -3824,7 +3895,7 @@ mlir::Value IntrinsicLibrary::genIeeeClass(mlir::Type resultType,
           loc,
           builder.create<mlir::arith::CmpIOp>(
               loc, mlir::arith::CmpIPredicate::ne, exponent, zero),
-          createIntegerConstant(1 << --pos), zero));
+          createIntegerConstant(1ULL << --pos), zero));
 
   // [m] exponent == 1..1 (max exponent)
   index = builder.create<mlir::arith::OrIOp>(
@@ -3833,7 +3904,7 @@ mlir::Value IntrinsicLibrary::genIeeeClass(mlir::Type resultType,
           loc,
           builder.create<mlir::arith::CmpIOp>(
               loc, mlir::arith::CmpIPredicate::eq, exponent, exponentMask),
-          createIntegerConstant(1 << --pos), zero));
+          createIntegerConstant(1ULL << --pos), zero));
 
   // [l] low-order significand != 0
   index = builder.create<mlir::arith::OrIOp>(
@@ -3845,7 +3916,7 @@ mlir::Value IntrinsicLibrary::genIeeeClass(mlir::Type resultType,
               builder.create<mlir::arith::AndIOp>(loc, intVal,
                                                   lowSignificandMask),
               zero),
-          createIntegerConstant(1 << --pos), zero));
+          createIntegerConstant(1ULL << --pos), zero));
 
   // [h] high-order significand (1 or 2 bits)
   index = builder.create<mlir::arith::OrIOp>(
@@ -5160,6 +5231,8 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
 // MODULO
 mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
                                         llvm::ArrayRef<mlir::Value> args) {
+  // TODO: we'd better generate a runtime call here, when runtime error
+  // checking is needed (to detect 0 divisor) or when precise math is requested.
   assert(args.size() == 2);
   // No floored modulo op in LLVM/MLIR yet. TODO: add one to MLIR.
   // In the meantime, use a simple inlined implementation based on truncated
@@ -5185,10 +5258,14 @@ mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
     return builder.create<mlir::arith::SelectOp>(loc, mustAddP, remPlusP,
                                                  remainder);
   }
-  // Real case
-  if (resultType == mlir::FloatType::getF128(builder.getContext()))
 
-    TODO(loc, "REAL(KIND=16): in MODULO intrinsic");
+  // F128 arith::RemFOp may be lowered to a runtime call that may be unsupported
+  // on the target, so generate a call to Fortran Runtime's ModuloReal16.
+  if (resultType == mlir::FloatType::getF128(builder.getContext()))
+    return builder.createConvert(
+        loc, resultType,
+        fir::runtime::genModulo(builder, loc, args[0], args[1]));
+
   auto remainder = builder.create<mlir::arith::RemFOp>(loc, args[0], args[1]);
   mlir::Value zero = builder.createRealZeroConstant(loc, remainder.getType());
   auto remainderIsNotZero = builder.create<mlir::arith::CmpFOp>(
@@ -5900,6 +5977,20 @@ IntrinsicLibrary::genSize(mlir::Type resultType,
         builder.create<fir::ResultOp>(loc, size);
       })
       .getResults()[0];
+}
+
+// SIZEOF
+fir::ExtendedValue
+IntrinsicLibrary::genSizeOf(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value box = fir::getBase(args[0]);
+  mlir::Value eleSize = builder.create<fir::BoxEleSizeOp>(loc, resultType, box);
+  if (!fir::isArray(args[0]))
+    return eleSize;
+  mlir::Value arraySize = builder.createConvert(
+      loc, resultType, fir::runtime::genSize(builder, loc, box));
+  return builder.create<mlir::arith::MulIOp>(loc, eleSize, arraySize);
 }
 
 // TAND

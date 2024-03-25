@@ -186,6 +186,8 @@ public:
 
   const Scalar<Result> &values() const { return values_; }
   ConstantSubscript LEN() const { return length_; }
+  bool wasHollerith() const { return wasHollerith_; }
+  void set_wasHollerith(bool yes = true) { wasHollerith_ = yes; }
 
   std::optional<Scalar<Result>> GetScalarValue() const {
     if (Rank() == 0) {
@@ -210,6 +212,7 @@ public:
 private:
   Scalar<Result> values_; // one contiguous string
   ConstantSubscript length_;
+  bool wasHollerith_{false};
 };
 
 class StructureConstructor;

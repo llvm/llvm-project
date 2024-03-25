@@ -217,6 +217,7 @@ set(files
   __algorithm/shift_right.h
   __algorithm/shuffle.h
   __algorithm/sift_down.h
+  __algorithm/simd_utils.h
   __algorithm/sort.h
   __algorithm/sort_heap.h
   __algorithm/stable_partition.h
@@ -380,7 +381,6 @@ set(files
   __format/format_context.h
   __format/format_error.h
   __format/format_functions.h
-  __format/format_fwd.h
   __format/format_parse_context.h
   __format/format_string.h
   __format/format_to_n_result.h
@@ -430,6 +430,7 @@ set(files
   __fwd/array.h
   __fwd/bit_reference.h
   __fwd/complex.h
+  __fwd/format.h
   __fwd/fstream.h
   __fwd/functional.h
   __fwd/ios.h
@@ -701,6 +702,7 @@ set(files
   __thread/thread.h
   __thread/timed_backoff_policy.h
   __tree
+  __tuple/find_index.h
   __tuple/make_tuple_types.h
   __tuple/pair_like.h
   __tuple/sfinae_helpers.h
@@ -754,10 +756,7 @@ set(files
   __type_traits/is_constant_evaluated.h
   __type_traits/is_constructible.h
   __type_traits/is_convertible.h
-  __type_traits/is_copy_assignable.h
-  __type_traits/is_copy_constructible.h
   __type_traits/is_core_convertible.h
-  __type_traits/is_default_constructible.h
   __type_traits/is_destructible.h
   __type_traits/is_empty.h
   __type_traits/is_enum.h
@@ -773,17 +772,10 @@ set(files
   __type_traits/is_member_function_pointer.h
   __type_traits/is_member_object_pointer.h
   __type_traits/is_member_pointer.h
-  __type_traits/is_move_assignable.h
-  __type_traits/is_move_constructible.h
   __type_traits/is_nothrow_assignable.h
   __type_traits/is_nothrow_constructible.h
   __type_traits/is_nothrow_convertible.h
-  __type_traits/is_nothrow_copy_assignable.h
-  __type_traits/is_nothrow_copy_constructible.h
-  __type_traits/is_nothrow_default_constructible.h
   __type_traits/is_nothrow_destructible.h
-  __type_traits/is_nothrow_move_assignable.h
-  __type_traits/is_nothrow_move_constructible.h
   __type_traits/is_null_pointer.h
   __type_traits/is_object.h
   __type_traits/is_pod.h
@@ -804,14 +796,9 @@ set(files
   __type_traits/is_trivial.h
   __type_traits/is_trivially_assignable.h
   __type_traits/is_trivially_constructible.h
-  __type_traits/is_trivially_copy_assignable.h
-  __type_traits/is_trivially_copy_constructible.h
   __type_traits/is_trivially_copyable.h
-  __type_traits/is_trivially_default_constructible.h
   __type_traits/is_trivially_destructible.h
   __type_traits/is_trivially_lexicographically_comparable.h
-  __type_traits/is_trivially_move_assignable.h
-  __type_traits/is_trivially_move_constructible.h
   __type_traits/is_trivially_relocatable.h
   __type_traits/is_unbounded_array.h
   __type_traits/is_union.h
@@ -968,6 +955,7 @@ set(files
   mdspan
   memory
   memory_resource
+  module.modulemap
   mutex
   new
   numbers
@@ -1021,18 +1009,10 @@ set(files
   wctype.h
   )
 
-foreach(feature LIBCXX_ENABLE_FILESYSTEM LIBCXX_ENABLE_LOCALIZATION LIBCXX_ENABLE_THREADS LIBCXX_ENABLE_WIDE_CHARACTERS)
-  if (NOT ${${feature}})
-    set(requires_${feature} "requires LIBCXX_CONFIGURED_WITHOUT_SUPPORT_FOR_THIS_HEADER")
-  endif()
-endforeach()
-
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
-configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap" @ONLY)
 configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" COPYONLY)
 
 set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
-                  "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap"
                   "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler")
 foreach(f ${files})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")

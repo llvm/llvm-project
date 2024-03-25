@@ -1141,7 +1141,7 @@ _mm_xor_si64(__m64 __m1, __m64 __m2)
 ///    [8 x i8] to determine if the element of the first vector is equal to the
 ///    corresponding element of the second vector.
 ///
-///    The comparison yields 0 for false, 0xFF for true.
+///    Each comparison returns 0 for false, 0xFF for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1163,7 +1163,7 @@ _mm_cmpeq_pi8(__m64 __m1, __m64 __m2)
 ///    [4 x i16] to determine if the element of the first vector is equal to the
 ///    corresponding element of the second vector.
 ///
-///    The comparison yields 0 for false, 0xFFFF for true.
+///    Each comparison returns 0 for false, 0xFFFF for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1185,7 +1185,7 @@ _mm_cmpeq_pi16(__m64 __m1, __m64 __m2)
 ///    [2 x i32] to determine if the element of the first vector is equal to the
 ///    corresponding element of the second vector.
 ///
-///    The comparison yields 0 for false, 0xFFFFFFFF for true.
+///    Each comparison returns 0 for false, 0xFFFFFFFF for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1207,7 +1207,7 @@ _mm_cmpeq_pi32(__m64 __m1, __m64 __m2)
 ///    [8 x i8] to determine if the element of the first vector is greater than
 ///    the corresponding element of the second vector.
 ///
-///    The comparison yields 0 for false, 0xFF for true.
+///    Each comparison returns 0 for false, 0xFF for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1229,7 +1229,7 @@ _mm_cmpgt_pi8(__m64 __m1, __m64 __m2)
 ///    [4 x i16] to determine if the element of the first vector is greater than
 ///    the corresponding element of the second vector.
 ///
-///    The comparison yields 0 for false, 0xFFFF for true.
+///    Each comparison returns 0 for false, 0xFFFF for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1251,7 +1251,7 @@ _mm_cmpgt_pi16(__m64 __m1, __m64 __m2)
 ///    [2 x i32] to determine if the element of the first vector is greater than
 ///    the corresponding element of the second vector.
 ///
-///    The comparison yields 0 for false, 0xFFFFFFFF for true.
+///    Each comparison returns 0 for false, 0xFFFFFFFF for true.
 ///
 /// \headerfile <x86intrin.h>
 ///

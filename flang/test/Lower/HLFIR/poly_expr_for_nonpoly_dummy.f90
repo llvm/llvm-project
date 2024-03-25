@@ -1,6 +1,6 @@
 ! Test passing polymorphic expression for non-polymorphic contiguous
 ! dummy argument:
-! RUN: bbc -emit-hlfir --polymorphic-type -o - -I nowhere %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - -I nowhere %s | FileCheck %s
 
 module types
   type t

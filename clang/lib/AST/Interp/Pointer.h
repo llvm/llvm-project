@@ -285,6 +285,11 @@ public:
   bool inPrimitiveArray() const { return getFieldDesc()->isPrimitiveArray(); }
   /// Checks if the structure is an array of unknown size.
   bool isUnknownSizeArray() const {
+    // If this points inside a dummy block, return true.
+    // FIXME: This might change in the future. If it does, we need
+    // to set the proper Ctor/Dtor functions for dummy Descriptors.
+    if (Base != 0 && Base != sizeof(InlineDescriptor) && isDummy())
+      return true;
     return getFieldDesc()->isUnknownSizeArray();
   }
   /// Checks if the pointer points to an array.
