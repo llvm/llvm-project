@@ -1262,7 +1262,7 @@ Error IndexedInstrProfReader::readHeader() {
         /*Payload=*/Start + FramePayloadOffset,
         /*Base=*/Start, memprof::FrameLookupTrait()));
 
-#if EXPENSIVE_CHECKS
+#ifdef EXPENSIVE_CHECKS
     // Go through all the records and verify that CSId has been correctly
     // populated.  Do this only under EXPENSIVE_CHECKS.  Otherwise, we
     // would defeat the purpose of OnDiskIterableChainedHashTable.
