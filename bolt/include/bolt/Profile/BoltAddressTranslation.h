@@ -150,6 +150,9 @@ private:
   /// Map a function to its basic blocks count
   std::unordered_map<uint64_t, size_t> NumBasicBlocksMap;
 
+  /// Map a function to its secondary entry points vector
+  std::unordered_map<uint64_t, std::vector<uint32_t>> SecondaryEntryPointsMap;
+
   /// Links outlined cold bocks to their original function
   std::map<uint64_t, uint64_t> ColdPartSource;
 
@@ -255,6 +258,11 @@ public:
   BBHashMapTy &getBBHashMap(uint64_t FuncOutputAddress) {
     return const_cast<BBHashMapTy &>(
         std::as_const(*this).getBBHashMap(FuncOutputAddress));
+  }
+
+  /// Returns the number of basic blocks in a function.
+  size_t getNumBasicBlocks(uint64_t OutputAddress) const {
+    return NumBasicBlocksMap.at(OutputAddress);
   }
 
 private:
