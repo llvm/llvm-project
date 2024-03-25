@@ -14,7 +14,7 @@ MONOREPO_ROOT=${PWD}
 
 mkdir ${BUILD}
 cmake -S ${MONOREPO_ROOT}/runtimes -B ${BUILD} \
-      -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
+      -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo \
       -DCMAKE_INSTALL_PREFIX="${INSTALL}"
 cmake --build ${BUILD} --target install-cxx-headers
