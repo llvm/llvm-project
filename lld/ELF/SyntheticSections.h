@@ -21,13 +21,17 @@
 #define LLD_ELF_SYNTHETIC_SECTIONS_H
 
 #include "Config.h"
+#include "DWARF.h"
 #include "InputSection.h"
 #include "Symbols.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Parallel.h"
@@ -787,6 +791,136 @@ public:
   RelroPaddingSection();
   size_t getSize() const override { return 0; }
   void writeTo(uint8_t *buf) override {}
+};
+
+class DebugNamesSection final : public SyntheticSection {
+  // N.B. Everything in this class assumes that we are using DWARF32.
+  // If we move to DWARF64, most of this data will need to be re-sized,
+  // and the code that handles or manipulates it will need to be updated
+  // accordingly.
+
+public:
+  DebugNamesSection();
+  template <typename ELFT> static DebugNamesSection *create();
+  void writeTo(uint8_t *buf) override;
+  size_t getSize() const override { return sectionSize; }
+  bool isNeeded() const override;
+
+  void addSections(SmallVector<InputSectionBase *, 0> sec_list) {
+    inputDebugNamesSections = sec_list;
+  }
+
+  template <class ELFT> void writeToImpl(uint8_t *buf);
+
+  template <class ELFT, class RelTy>
+  void getNameRelocsImpl(InputSection *sec, ArrayRef<RelTy> rels,
+                         llvm::DenseMap<uint32_t, uint32_t> &relocs);
+
+  template <class ELFT>
+  void getNameRelocs(InputSectionBase *base,
+                     llvm::DenseMap<uint32_t, uint32_t> &relocs);
+
+  template <class ELFT>
+  void endianWrite(uint8_t size, uint8_t *buf_start, uint32_t offset,
+                   uint32_t data);
+
+  struct Abbrev : public llvm::FoldingSetNode {
+    uint32_t code;
+    uint32_t tag;
+    SmallVector<llvm::DWARFDebugNames::AttributeEncoding, 2> attributes;
+
+    void Profile(llvm::FoldingSetNodeID &id) const;
+  };
+
+  struct AttrValueData {
+    uint32_t attrValue;
+    uint8_t attrSize;
+  };
+
+  struct IndexEntry {
+    uint32_t abbrevCode;
+    uint32_t poolOffset;
+    union {
+      int32_t parentOffset = -1;
+      IndexEntry *parentEntry;
+    };
+    SmallVector<AttrValueData, 3> attrValues;
+  };
+
+  struct NamedEntry {
+    const char *name;
+    uint32_t hashValue;
+    uint32_t stringOffsetOffset;
+    uint32_t entryOffset;
+    uint32_t relocatedEntryOffset;
+    // The index of the chunk that 'name' points into, for looking up
+    // relocation data for this string.
+    uint32_t chunkIdx;
+    SmallVector<std::unique_ptr<IndexEntry>, 0> indexEntries;
+  };
+
+  struct SectionOffsetLocs {
+    uint64_t stringOffsetsBase;
+    uint64_t entryOffsetsBase;
+    uint64_t entriesBase;
+  };
+
+  struct DebugNamesSectionData {
+    llvm::DWARFDebugNames::Header hdr;
+    llvm::DWARFDebugNames::DWARFDebugNamesOffsets locs;
+    SmallVector<uint32_t, 0> tuOffsets;
+    SmallVector<Abbrev, 0> abbrevTable;
+    std::unique_ptr<uint32_t[]> entryOffsets;
+    SmallVector<NamedEntry, 0> namedEntries;
+    uint16_t dwarfSize;
+    uint16_t hdrSize;
+  };
+
+  // Per-file data used, while reading in the data, to generate the merged
+  // section information.
+  struct DebugNamesInputChunk {
+    uint32_t baseCuOffsetIdx;
+    std::unique_ptr<llvm::DWARFDebugNames> debugNamesData;
+    std::unique_ptr<LLDDWARFSection> namesSection;
+    SmallVector<DebugNamesSectionData, 0> sectionsData;
+    SmallVector<uint32_t, 0> hashValues;
+    llvm::DenseMap<uint32_t, uint32_t> abbrevCodeMap;
+  };
+
+  // Per-file data needed for correctly writing out the .debug_names section.
+  struct DebugNamesOutputChunk {
+    // Pointer to .debug_info section for this chunk/file, used for
+    // calculating correct relocated CU offsets in the merged index.
+    InputSection *sec;
+    SmallVector<uint32_t, 0> compilationUnits;
+    SmallVector<uint32_t, 0> typeUnits;
+  };
+
+  void collectMergedCounts(MutableArrayRef<DebugNamesInputChunk> &inputChunks);
+  std::pair<uint8_t, llvm::dwarf::Form> getMergedCuSizeData();
+  void getMergedAbbrevTable(MutableArrayRef<DebugNamesInputChunk> &inputChunks);
+  void getMergedSymbols(MutableArrayRef<DebugNamesInputChunk> &inputChunks);
+  void computeUniqueHashes(MutableArrayRef<DebugNamesInputChunk> &inputChunks);
+  void generateBuckets();
+  void calculateEntriesSizeAndOffsets();
+  void updateParentIndexEntries();
+  uint64_t calculateMergedSectionSize();
+
+  llvm::BumpPtrAllocator Alloc;
+
+private:
+  size_t sectionSize;
+  uint32_t mergedTotalEntriesSize;
+  uint32_t numChunks;
+  llvm::DWARFDebugNames::DWARFDebugNamesOffsets mergedOffsets;
+  std::unique_ptr<DebugNamesOutputChunk[]> outputChunks;
+  // Pointers to the original .debug_names sections; used for find the correct'
+  // string relocation values when writing out the merged index.
+  SmallVector<InputSectionBase *, 0> inputDebugNamesSections;
+  llvm::DWARFDebugNames::Header mergedHdr;
+  SmallVector<Abbrev *, 0> mergedAbbrevTable;
+  SmallVector<NamedEntry, 0> mergedEntries;
+  SmallVector<SmallVector<NamedEntry *, 0>, 0> bucketList;
 };
 
 class GdbIndexSection final : public SyntheticSection {
