@@ -472,8 +472,12 @@ int main(int argc, const char **argv) {
     llvm::InitLLVM X(argc, argv);
 
     fs::path jsonPath = fs::absolute(argv[1]);
-    llvm::errs() << "Reading from json: " << jsonPath << "\n";
     std::ifstream ifs(jsonPath);
+    if (!ifs.is_open()) {
+        logger.error("Cannot open file {}", jsonPath);
+        return 1;
+    }
+    logger.info("Reading from input json: {}", jsonPath);
     ordered_json input = ordered_json::parse(ifs);
 
     Global.projectDirectory =

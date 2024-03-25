@@ -49,6 +49,18 @@ extern GlobalStat Global;
 extern spdlog::logger &logger;
 
 /*****************************************************************
+ * fmt::formatter for std::filesystem::path
+ *****************************************************************/
+
+template <>
+struct fmt::formatter<std::filesystem::path> : fmt::formatter<std::string> {
+    auto format(const std::filesystem::path &p, format_context &ctx) const
+        -> decltype(ctx.out()) {
+        return formatter<std::string>::format(p.string(), ctx);
+    }
+};
+
+/*****************************************************************
  * Utility functions
  *****************************************************************/
 
