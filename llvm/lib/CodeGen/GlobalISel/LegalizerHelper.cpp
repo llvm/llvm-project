@@ -3013,15 +3013,9 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_VSCALE: {
     MachineOperand &SrcMO = MI.getOperand(1);
     LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
-    unsigned ExtOpc = LI.getExtOpcodeForWideningConstant(
-        MRI.getType(MI.getOperand(0).getReg()));
-    assert((ExtOpc == TargetOpcode::G_ZEXT || ExtOpc == TargetOpcode::G_SEXT ||
-            ExtOpc == TargetOpcode::G_ANYEXT) &&
-           "Illegal Extend");
     const APInt &SrcVal = SrcMO.getCImm()->getValue();
-    const APInt &Val = (ExtOpc == TargetOpcode::G_SEXT)
-                           ? SrcVal.sext(WideTy.getSizeInBits())
-                           : SrcVal.zext(WideTy.getSizeInBits());
+    // The CImm is always a signed value
+    const APInt &Val = SrcVal.sext(WideTy.getSizeInBits());
     Observer.changingInstr(MI);
     SrcMO.setCImm(ConstantInt::get(Ctx, Val));
     widenScalarDst(MI, WideTy);
