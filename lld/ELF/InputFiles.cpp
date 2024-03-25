@@ -330,11 +330,11 @@ extern template void ObjFile<ELF32BE>::importCmseSymbols();
 extern template void ObjFile<ELF64LE>::importCmseSymbols();
 extern template void ObjFile<ELF64BE>::importCmseSymbols();
 
-template <class ELFT> static void doParseArmCMSEImportLib(InputFile *file) {
-  cast<ObjFile<ELFT>>(file)->importCmseSymbols();
+template <class ELFT> static void doParseArmCMSEImportLib(InputFile &file) {
+  cast<ObjFile<ELFT>>(file).importCmseSymbols();
 }
 
-void elf::parseArmCMSEImportLib(InputFile *file) {
+void elf::parseArmCMSEImportLib(InputFile &file) {
   invokeELFT(doParseArmCMSEImportLib, file);
 }
 
