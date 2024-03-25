@@ -493,4 +493,3 @@ func.func @unsupported_non_contiguous_dim_write(%value : vector<2x2xf32>,
 
 // CHECK-128B-LABEL: func @unsupported_non_contiguous_dim_write(
 //   CHECK-128B-NOT:   memref.collapse_shape
-
