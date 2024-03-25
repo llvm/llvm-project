@@ -483,14 +483,16 @@ void just_fine(void) {}
 
 __arm_locally_streaming
 __attribute__((target_version("sme2")))
-void just_fine_locally_streaming(void) {}
+void incompatible_locally_streaming(void) {}
+// expected-error@-1 {{attribute 'target_version' multiversioning cannot be combined with attribute '__arm_locally_streaming'}}
+// expected-cpp-error@-2 {{attribute 'target_version' multiversioning cannot be combined with attribute '__arm_locally_streaming'}}
 __attribute__((target_version("default")))
-void just_fine_locally_streaming(void) {}
+void incompatible_locally_streaming(void) {}
 
 
 void fmv_caller() {
     cannot_work_version();
     cannot_work_clones();
     just_fine();
-    just_fine_locally_streaming();
+    incompatible_locally_streaming();
 }
