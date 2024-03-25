@@ -26,8 +26,8 @@ inline void proc_yield(int cnt) {
 template<typename T>
 inline typename T::Type atomic_load(
     const volatile T *a, memory_order mo) {
-  DCHECK(mo & (memory_order_relaxed | memory_order_consume
-      | memory_order_acquire | memory_order_seq_cst));
+  DCHECK(mo == memory_order_relaxed || mo == memory_order_consume ||
+         mo == memory_order_acquire || mo == memory_order_seq_cst);
   DCHECK(!((uptr)a % sizeof(*a)));
   typename T::Type v;
 
@@ -71,8 +71,8 @@ inline typename T::Type atomic_load(
 
 template<typename T>
 inline void atomic_store(volatile T *a, typename T::Type v, memory_order mo) {
-  DCHECK(mo & (memory_order_relaxed | memory_order_release
-      | memory_order_seq_cst));
+  DCHECK(mo == memory_order_relaxed || mo == memory_order_release ||
+         mo == memory_order_seq_cst);
   DCHECK(!((uptr)a % sizeof(*a)));
 
   if (sizeof(*a) < 8 || sizeof(void*) == 8) {
