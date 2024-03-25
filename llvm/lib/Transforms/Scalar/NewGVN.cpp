@@ -3066,9 +3066,14 @@ void NewGVN::valueNumberMemoryPhi(MemoryPhi *MP) {
   // Sadly, we can't use std::equals since these are random access iterators.
   const auto *AllSameValue = *MappedBegin;
   ++MappedBegin;
-  bool AllEqual = std::all_of(
-      MappedBegin, MappedEnd,
-      [&AllSameValue](const MemoryAccess *V) { return V == AllSameValue; });
+  bool AllEqual;
+  if (MappedBegin == MappedEnd) {
+    AllEqual = false;
+  } else {
+    AllEqual = std::all_of(
+        MappedBegin, MappedEnd,
+        [&AllSameValue](const MemoryAccess *V) { return V == AllSameValue; });
+  }
 
   if (AllEqual)
     LLVM_DEBUG(dbgs() << "Memory Phi value numbered to " << *AllSameValue
