@@ -1264,6 +1264,42 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   if (!LHSIsSelect && !RHSIsSelect)
     return nullptr;
 
+  // Treat umax(x, y) as select(icmp(ugt, x, y), y, x), if it matches the other
+  // predicate in A.
+  auto TryMatchSelectFromMinMax =
+      [&](bool LHSIsSelect, Value *RHS, bool &RHSIsSelect, Value *A, Value *B,
+          Value *C, Value *&D, Value *&E, Value *&F) {
+        if (!LHSIsSelect || RHSIsSelect)
+          return;
+
+        Value *X;
+
+        // This is a special case for limit extremes - the general pattern
+        // require more careful handling for undef. These use EQ predicates with
+        // a limit value, as opposed to <= or >= predicates, and are apparently
+        // valid so long as the select has known non-equal operands or are the
+        // same Value.
+        CmpInst::Predicate Pred;
+        const APInt *C1, *C2;
+        if (match(RHS, m_MaxOrMin(m_Value(X), m_APInt(C2))) &&
+            match(A, m_c_ICmp(Pred, m_Specific(X), m_APInt(C1))) &&
+            Pred == ICmpInst::ICMP_EQ &&
+            ((C1->isZero() && *C2 == *C1 + 1 &&
+              match(RHS, m_UMax(m_Value(F), m_Value(E)))) ||
+             (C1->isMaxValue() && *C2 == *C1 - 1 &&
+              match(RHS, m_UMin(m_Value(F), m_Value(E)))) ||
+             (C1->isMinSignedValue() && *C2 == *C1 + 1 &&
+              match(RHS, m_SMax(m_Value(F), m_Value(E)))) ||
+             (C1->isMaxSignedValue() && *C2 == *C1 - 1 &&
+              match(RHS, m_SMin(m_Value(F), m_Value(E))))) &&
+            (isKnownNonEqual(B, E, DL) || B == E)) {
+          RHSIsSelect = true;
+          D = A;
+        }
+      };
+  TryMatchSelectFromMinMax(LHSIsSelect, RHS, RHSIsSelect, A, B, C, D, E, F);
+  TryMatchSelectFromMinMax(RHSIsSelect, LHS, LHSIsSelect, D, E, F, A, B, C);
+
   FastMathFlags FMF;
   BuilderTy::FastMathFlagGuard Guard(Builder);
   if (isa<FPMathOperator>(&I)) {
