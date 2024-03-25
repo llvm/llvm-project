@@ -155,7 +155,7 @@ bool llvm::MachO::isPrivateLibrary(StringRef Path, bool IsSymLink) {
 
 static StringLiteral RegexMetachars = "()^$|+.[]\\{}";
 
-Expected<Regex> llvm::MachO::createRegexFromGlob(StringRef Glob) {
+llvm::Expected<Regex> llvm::MachO::createRegexFromGlob(StringRef Glob) {
   SmallString<128> RegexString("^");
   unsigned NumWildcards = 0;
   for (unsigned i = 0; i < Glob.size(); ++i) {
@@ -191,7 +191,7 @@ Expected<Regex> llvm::MachO::createRegexFromGlob(StringRef Glob) {
   if (NumWildcards == 0)
     return make_error<StringError>("not a glob", inconvertibleErrorCode());
 
-  auto Rule = Regex(RegexString);
+  llvm::Regex Rule = Regex(RegexString);
   std::string Error;
   if (!Rule.isValid(Error))
     return make_error<StringError>(Error, inconvertibleErrorCode());
