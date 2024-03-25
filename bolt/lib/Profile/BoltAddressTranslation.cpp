@@ -577,5 +577,25 @@ void BoltAddressTranslation::saveMetadata(BinaryContext &BC) {
   }
 }
 
+std::unordered_map<uint32_t, std::vector<uint32_t>>
+BoltAddressTranslation::getBFBranches(uint64_t OutputAddress) const {
+  std::unordered_map<uint32_t, std::vector<uint32_t>> Branches;
+  auto FuncIt = Maps.find(OutputAddress);
+  assert(FuncIt != Maps.end());
+  std::vector<uint32_t> InputOffsets;
+  for (const auto &KV : FuncIt->second)
+    InputOffsets.emplace_back(KV.second);
+  // Sort with LSB BRANCHENTRY bit.
+  llvm::sort(InputOffsets);
+  uint32_t BBOffset{0};
+  for (uint32_t InOffset : InputOffsets) {
+    if (InOffset & BRANCHENTRY)
+      Branches[BBOffset].push_back(InOffset >> 1);
+    else
+      BBOffset = InOffset >> 1;
+  }
+  return Branches;
+}
+
 } // namespace bolt
 } // namespace llvm
