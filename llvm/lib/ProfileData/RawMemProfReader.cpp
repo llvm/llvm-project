@@ -447,6 +447,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     }
 
     CallStackId CSId = hashCallStack(Callstack);
+    CallStackIdToCallStack.insert({CSId, Callstack});
 
     // We attach the memprof record to each function bottom-up including the
     // first non-inline frame.
