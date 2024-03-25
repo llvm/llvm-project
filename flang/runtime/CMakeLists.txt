@@ -129,6 +129,7 @@ set(sources
   exceptions.cpp
   execute.cpp
   extensions.cpp
+  external-unit.cpp
   extrema.cpp
   file.cpp
   findloc.cpp
@@ -149,6 +150,7 @@ set(sources
   numeric.cpp
   pointer.cpp
   product.cpp
+  pseudo-unit.cpp
   ragged.cpp
   random.cpp
   reduction.cpp

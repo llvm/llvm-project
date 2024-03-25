@@ -104,7 +104,7 @@ entry:
 }
 
 ; CHECK-LABEL: call_double:
-; CHECK: larl  [[GENREG:[0-9]+]], @{{CPI[0-9]+_[0-9]+}}
+; CHECK: larl  [[GENREG:[0-9]+]], L#{{CPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT: ld  0, 0([[GENREG]])
 define double @call_double() {
 entry:
@@ -113,7 +113,7 @@ entry:
 }
 
 ; CHECK-LABEL: call_longdouble:
-; CHECK: larl  [[GENREG:[0-9]+]], @{{CPI[0-9]+_[0-9]+}}
+; CHECK: larl  [[GENREG:[0-9]+]], L#{{CPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT: ld  0, 0([[GENREG]])
 ; CHECK-NEXT: ld  2, 8([[GENREG]])
 define fp128 @call_longdouble() {
@@ -123,7 +123,7 @@ entry:
 }
 
 ; CHECK-LABEL: call_floats0
-; CHECK: larl  [[GENREG:[0-9]+]], @{{CPI[0-9]+_[0-9]+}}
+; CHECK: larl  [[GENREG:[0-9]+]], L#{{CPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT: ld  1, 0([[GENREG]])
 ; CHECK-NEXT: ld  3, 8([[GENREG]])
 ; CHECK: lxr 5, 0
@@ -146,7 +146,7 @@ entry:
 }
 
 ; CHECK-LABEL: pass_float:
-; CHECK: larl  1, @{{CPI[0-9]+_[0-9]+}}
+; CHECK: larl  1, L#{{CPI[0-9]+_[0-9]+}}
 ; CHECK: aeb 0, 0(1)
 define float @pass_float(float %arg) {
 entry:
@@ -155,7 +155,7 @@ entry:
 }
 
 ; CHECK-LABEL: pass_double:
-; CHECK: larl  1, @{{CPI[0-9]+_[0-9]+}}
+; CHECK: larl  1, L#{{CPI[0-9]+_[0-9]+}}
 ; CHECK: adb 0, 0(1)
 define double @pass_double(double %arg) {
 entry:
@@ -164,7 +164,7 @@ entry:
 }
 
 ; CHECK-LABEL: pass_longdouble
-; CHECK: larl  1, @{{CPI[0-9]+_[0-9]+}}
+; CHECK: larl  1, L#{{CPI[0-9]+_[0-9]+}}
 ; CHECK: lxdb  1, 0(1)
 ; CHECK: axbr  0, 1
 define fp128 @pass_longdouble(fp128 %arg) {
@@ -174,7 +174,7 @@ entry:
 }
 
 ; CHECK-LABEL: pass_floats0
-; CHECK: larl  1, @{{CPI[0-9]+_[0-9]+}}
+; CHECK: larl  1, L#{{CPI[0-9]+_[0-9]+}}
 ; CHECK: axbr  0, 4
 ; CHECK: axbr  1, 0
 ; CHECK: cxbr  1, 5

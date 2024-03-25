@@ -2025,6 +2025,202 @@ add_entrypoint_object(
     -O3
 )
 
+add_entrypoint_object(
+  fromfp
+  SRCS
+    fromfp.cpp
+  HDRS
+    ../fromfp.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fromfpf
+  SRCS
+    fromfpf.cpp
+  HDRS
+    ../fromfpf.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fromfpl
+  SRCS
+    fromfpl.cpp
+  HDRS
+    ../fromfpl.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fromfpf128
+  SRCS
+    fromfpf128.cpp
+  HDRS
+    ../fromfpf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fromfpx
+  SRCS
+    fromfpx.cpp
+  HDRS
+    ../fromfpx.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fromfpxf
+  SRCS
+    fromfpxf.cpp
+  HDRS
+    ../fromfpxf.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fromfpxl
+  SRCS
+    fromfpxl.cpp
+  HDRS
+    ../fromfpxl.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fromfpxf128
+  SRCS
+    fromfpxf128.cpp
+  HDRS
+    ../fromfpxf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  ufromfp
+  SRCS
+    ufromfp.cpp
+  HDRS
+    ../ufromfp.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  ufromfpf
+  SRCS
+    ufromfpf.cpp
+  HDRS
+    ../ufromfpf.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  ufromfpl
+  SRCS
+    ufromfpl.cpp
+  HDRS
+    ../ufromfpl.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  ufromfpf128
+  SRCS
+    ufromfpf128.cpp
+  HDRS
+    ../ufromfpf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  ufromfpx
+  SRCS
+    ufromfpx.cpp
+  HDRS
+    ../ufromfpx.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  ufromfpxf
+  SRCS
+    ufromfpxf.cpp
+  HDRS
+    ../ufromfpxf.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  ufromfpxl
+  SRCS
+    ufromfpxl.cpp
+  HDRS
+    ../ufromfpxl.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  ufromfpxf128
+  SRCS
+    ufromfpxf128.cpp
+  HDRS
+    ../ufromfpxf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer
+  COMPILE_OPTIONS
+    -O3
+)
+
 #TODO: Add errno include to the hyperbolic functions.
 add_object_library(
   explogxf
@@ -2155,16 +2351,9 @@ add_object_library(
   SRCS
     inv_trigf_utils.cpp
   DEPENDS
-    .math_utils
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.nearest_integer
-    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.common
-    libc.include.errno
-    libc.src.errno.errno
-    libc.include.math
 )
 
 add_entrypoint_object(
@@ -2211,8 +2400,11 @@ add_entrypoint_object(
     ../atanf.h
   DEPENDS
     .inv_trigf_utils
-    .math_utils
+    libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
   COMPILE_OPTIONS

@@ -496,10 +496,12 @@ private:
   // Need this to be 'static' so the data survives past the ObjcCategoryMerger
   // object, as the data will be read by the Writer when the final binary is
   // generated.
-  static SmallVector<SmallVector<uint8_t>> generatedSectionData;
+  static SmallVector<std::unique_ptr<SmallVector<uint8_t>>>
+      generatedSectionData;
 };
 
-SmallVector<SmallVector<uint8_t>> ObjcCategoryMerger::generatedSectionData;
+SmallVector<std::unique_ptr<SmallVector<uint8_t>>>
+    ObjcCategoryMerger::generatedSectionData;
 
 ObjcCategoryMerger::ObjcCategoryMerger(
     std::vector<ConcatInputSection *> &_allInputSections)
@@ -611,8 +613,8 @@ void ObjcCategoryMerger::collectCategoryWriterInfoFromCategory(
 void ObjcCategoryMerger::parseProtocolListInfo(const ConcatInputSection *isec,
                                                uint32_t secOffset,
                                                PointerListInfo &ptrList) {
-  if (!isec || (secOffset + target->wordSize > isec->data.size()))
-    assert("Tried to read pointer list beyond protocol section end");
+  assert((isec && (secOffset + target->wordSize <= isec->data.size())) &&
+         "Tried to read pointer list beyond protocol section end");
 
   const Reloc *reloc = isec->getRelocAt(secOffset);
   if (!reloc)
@@ -636,6 +638,8 @@ void ObjcCategoryMerger::parseProtocolListInfo(const ConcatInputSection *isec,
       /*extra null value*/ target->wordSize;
   assert(expectedListSize == ptrListSym->isec->data.size() &&
          "Protocol list does not match expected size");
+
+  // Suppress unsuded var warning
   (void)expectedListSize;
 
   uint32_t off = protocolListHeaderLayout.totalSize;
@@ -786,7 +790,7 @@ void ObjcCategoryMerger::emitAndLinkProtocolList(
       infoCategoryWriter.catPtrListInfo.align);
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
   listSec->live = true;
-  allInputSections.push_back(listSec);
+  addInputSection(listSec);
 
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
 
@@ -844,7 +848,7 @@ void ObjcCategoryMerger::emitAndLinkPointerList(
       infoCategoryWriter.catPtrListInfo.align);
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
   listSec->live = true;
-  allInputSections.push_back(listSec);
+  addInputSection(listSec);
 
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
 
@@ -885,7 +889,7 @@ ObjcCategoryMerger::emitCatListEntrySec(const std::string &forCateogryName,
                                bodyData, infoCategoryWriter.catListInfo.align);
   newCatList->parent = infoCategoryWriter.catListInfo.outputSection;
   newCatList->live = true;
-  allInputSections.push_back(newCatList);
+  addInputSection(newCatList);
 
   newCatList->parent = infoCategoryWriter.catListInfo.outputSection;
 
@@ -923,7 +927,7 @@ Defined *ObjcCategoryMerger::emitCategoryBody(const std::string &name,
                                bodyData, infoCategoryWriter.catBodyInfo.align);
   newBodySec->parent = infoCategoryWriter.catBodyInfo.outputSection;
   newBodySec->live = true;
-  allInputSections.push_back(newBodySec);
+  addInputSection(newBodySec);
 
   std::string symName =
       objc::symbol_names::category + baseClassName + "_$_(" + name + ")";
@@ -1034,6 +1038,8 @@ void ObjcCategoryMerger::mergeCategoriesIntoSingleCategory(
 
   Defined *newCatDef = emitCategory(extInfo);
   assert(newCatDef && "Failed to create a new category");
+
+  // Suppress unsuded var warning
   (void)newCatDef;
 
   for (auto &catInfo : categories)
@@ -1126,7 +1132,7 @@ void ObjcCategoryMerger::generateCatListForNonErasedCategories(
           infoCategoryWriter.catListInfo.align);
       listSec->parent = infoCategoryWriter.catListInfo.outputSection;
       listSec->live = true;
-      allInputSections.push_back(listSec);
+      addInputSection(listSec);
 
       std::string slotSymName = "<__objc_catlist slot for category ";
       slotSymName += nonErasedCatBody->getName();
@@ -1215,15 +1221,18 @@ void ObjcCategoryMerger::doCleanup() { generatedSectionData.clear(); }
 
 StringRef ObjcCategoryMerger::newStringData(const char *str) {
   uint32_t len = strlen(str);
-  auto &data = newSectionData(len + 1);
+  uint32_t bufSize = len + 1;
+  auto &data = newSectionData(bufSize);
   char *strData = reinterpret_cast<char *>(data.data());
-  strncpy(strData, str, len);
+  // Copy the string chars and null-terminator
+  memcpy(strData, str, bufSize);
   return StringRef(strData, len);
 }
 
 SmallVector<uint8_t> &ObjcCategoryMerger::newSectionData(uint32_t size) {
-  generatedSectionData.push_back(SmallVector<uint8_t>(size, 0));
-  return generatedSectionData.back();
+  generatedSectionData.push_back(
+      std::make_unique<SmallVector<uint8_t>>(size, 0));
+  return *generatedSectionData.back();
 }
 
 } // namespace
