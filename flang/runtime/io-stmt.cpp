@@ -227,7 +227,17 @@ ConnectionState &ExternalIoStatementBase::GetConnectionState() { return unit_; }
 int ExternalIoStatementBase::EndIoStatement() {
   CompleteOperation();
   auto result{IoStatementBase::EndIoStatement()};
+#if !defined(RT_USE_PSEUDO_FILE_UNIT)
   unit_.EndIoStatement(); // annihilates *this in unit_.u_
+#else
+  // Fetch the unit pointer before *this disappears.
+  ExternalFileUnit *unitPtr{&unit_};
+  // The pseudo file units are dynamically allocated
+  // and are not tracked in the unit map.
+  // They have to be destructed and deallocated here.
+  unitPtr->~ExternalFileUnit();
+  FreeMemory(unitPtr);
+#endif
   return result;
 }
 
