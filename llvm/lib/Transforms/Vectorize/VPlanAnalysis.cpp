@@ -45,6 +45,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return ResTy;
   }
   case VPInstruction::PtrAdd:
+    // Return the type based on the pointer argument (i.e. first operand).
     return inferScalarType(R->getOperand(0));
   default:
     break;

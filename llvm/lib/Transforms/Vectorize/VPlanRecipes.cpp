@@ -296,18 +296,9 @@ Value *VPInstruction::generatePerLane(VPTransformState &State,
                                       const VPIteration &Lane) {
   IRBuilderBase &Builder = State.Builder;
 
-  switch (getOpcode()) {
-  case VPInstruction::PtrAdd: {
-    auto *P = Builder.CreatePtrAdd(State.get(getOperand(0), Lane),
-                                   State.get(getOperand(1), Lane), Name);
-    return P;
-  }
-  default: {
-    Value *Res = generatePerPart(State, Lane.Part);
-    assert(!hasResult() || !Res->getType()->isVectorTy());
-    return Res;
-  }
-  }
+  assert(getOpcode() == VPInstruction::PtrAdd);
+  return Builder.CreatePtrAdd(State.get(getOperand(0), Lane),
+                              State.get(getOperand(1), Lane), Name);
 }
 
 Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
@@ -390,8 +381,7 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     Value *Step =
         createStepForVF(Builder, ScalarTC->getType(), State.VF, State.UF);
     Value *Sub = Builder.CreateSub(ScalarTC, Step);
-    Value *Cmp =
-        Builder.CreateICmp(CmpInst::Predicate::ICMP_UGT, ScalarTC, Step);
+    Value *Cmp = Builder.CreateICmp(CmpInst::Predicate::ICMP_UGT, ScalarTC, Step);
     Value *Zero = ConstantInt::get(ScalarTC->getType(), 0);
     return Builder.CreateSelect(Cmp, Sub, Zero);
   }
@@ -529,6 +519,10 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
     return ReducedPartRdx;
   }
+  case VPInstruction::PtrAdd:
+    assert(vputils::onlyFirstLaneUsed(this) &&
+           "can only generate first lane for PtrAdd");
+    return generatePerLane(State, VPIteration(Part, 0));
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -554,7 +548,7 @@ void VPInstruction::execute(VPTransformState &State) {
   if (hasFastMathFlags())
     State.Builder.setFastMathFlags(getFastMathFlags());
   State.Builder.SetCurrentDebugLocation(getDebugLoc());
-  bool OnlyGenerateFirstLane =
+  bool GeneratesPerFirstLaneOnly =
       canGenerateScalarForFirstLane() &&
       (vputils::onlyFirstLaneUsed(this) ||
        getOpcode() == VPInstruction::ComputeReductionResult);
@@ -569,17 +563,16 @@ void VPInstruction::execute(VPTransformState &State) {
       continue;
     }
 
-    Value *GeneratedValue = OnlyGenerateFirstLane
-                                ? generatePerLane(State, VPIteration(Part, 0))
-                                : generatePerPart(State, Part);
+    Value *GeneratedValue = generatePerPart(State, Part);
     if (!hasResult())
       continue;
     assert(GeneratedValue && "generateInstruction must produce a value");
-
-    State.set(this, GeneratedValue, Part, /*IsScalar*/ OnlyGenerateFirstLane);
-    assert((GeneratedValue->getType()->isVectorTy() == !OnlyGenerateFirstLane ||
+    assert((GeneratedValue->getType()->isVectorTy() ==
+                !GeneratesPerFirstLaneOnly ||
             State.VF.isScalar()) &&
            "scalar value but not only first lane defined");
+    State.set(this, GeneratedValue, Part,
+              /*IsScalar*/ GeneratesPerFirstLaneOnly);
   }
 }
 

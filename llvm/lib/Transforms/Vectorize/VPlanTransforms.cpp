@@ -548,11 +548,13 @@ static VPValue *createScalarIVSteps(VPlan &Plan,
 
 /// Legalize VPWidenPointerInductionRecipe, by replacing it with a PtrAdd
 /// (IndStart, ScalarIVSteps (0, Step)) if only its scalar values are used, as
-/// VPWidenPointerInductionRecipe cannot generate scalars. Also optimize
-/// VPWidenIntOrFpInductionRecipe, if any of its users needs scalar values, by
-/// providing them by building scalar steps off of the canonical scalar IV and
-/// update the original IV's users. This is an optional optimization to reduce
-/// the needs of vector extracts.
+/// VPWidenPointerInductionRecipe will generate vectors only. If some users
+/// require vectors while other require scalars, the scalar uses need to extract
+/// the scalars from the generated vectors (Note that this is different to how
+/// int/fp inductions are handled). Also optimize VPWidenIntOrFpInductionRecipe,
+/// if any of its users needs scalar values, by providing them scalar steps
+/// built on the canonical scalar IV and update the original IV's users. This is
+/// an optional optimization to reduce the needs of vector extracts.
 static void legalizeAndOptimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
   SmallVector<VPRecipeBase *> ToRemove;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
