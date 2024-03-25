@@ -407,6 +407,9 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
 
   if (Args.hasArg(OPT_compress))
     CmdArgs.push_back("-compress");
+  if (auto *Arg = Args.getLastArg(OPT_compression_level_eq))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-compression-level=") + Arg->getValue()));
 
   SmallVector<StringRef> Targets = {"-targets=host-x86_64-unknown-linux"};
   for (const auto &[File, Arch] : InputFiles)
@@ -559,6 +562,7 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   case Triple::aarch64_be:
   case Triple::ppc64:
   case Triple::ppc64le:
+  case Triple::systemz:
     return generic::clang(InputFiles, Args);
   default:
     return createStringError(inconvertibleErrorCode(),

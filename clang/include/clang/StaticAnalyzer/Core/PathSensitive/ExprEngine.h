@@ -85,7 +85,7 @@ class ExplodedNodeSet;
 class ExplodedNode;
 class IndirectGotoNodeBuilder;
 class MemRegion;
-struct NodeBuilderContext;
+class NodeBuilderContext;
 class NodeBuilderWithSinks;
 class ProgramState;
 class ProgramStateManager;

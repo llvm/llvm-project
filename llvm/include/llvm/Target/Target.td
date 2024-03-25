@@ -697,7 +697,20 @@ class Instruction : InstructionEncoding {
   // Scheduling information from TargetSchedule.td.
   list<SchedReadWrite> SchedRW;
 
-  string Constraints = "";  // OperandConstraint, e.g. $src = $dst.
+  /// Support for operand constraints. There are currently two kinds:
+  /// "$src = $dst"
+  ///   Ensures that the operands are allocated to the same register.
+  ///
+  /// "@earlyclobber $rd"
+  ///   Ensures that LLVM will not use the same register for any inputs (other
+  ///   than an input tied to this output).
+  ///
+  /// See also:
+  /// - MC/MCInstrDesc.h:OperandConstraint::{TIED_TO, EARLY_CLOBBER}.
+  /// - CodeGen/MachineOperand.h:MachineOperand::{TiedTo, IsEarlyClobber}.
+  /// - The LLVM IR specification: Section `Output constraints` in the
+  ///   discussion of inline assembly constraint strings.
+  string Constraints = "";
 
   /// DisableEncoding - List of operand names (e.g. "$op1,$op2") that should not
   /// be encoded into the output machineinstr.
@@ -947,8 +960,6 @@ class AsmOperandClass {
   /// instruction if it hasn't matched all the operands yet.  However, this
   /// error will be suppressed if all of the remaining unmatched operands are
   /// marked as IsOptional.
-  ///
-  /// Optional arguments must be at the end of the operand list.
   bit IsOptional = false;
 
   /// The name of the method on the target specific asm parser that returns the
@@ -1564,6 +1575,20 @@ class AsmParser {
   // method shall be called for all operands as opposed to only those
   // that have their own specified custom parsers.
   bit CallCustomParserForAllOperands = false;
+
+  // PreferSmallerInstructions - Should the assembly matcher prefer the smaller
+  // instructions.
+  // 
+  // This is useful for the ARM instructions set where smaller encodings must
+  // be preferentially selected.
+  //
+  // The preference order is: 
+  //    Instrution size (if this option is enabled, smallest first)
+  //    Number of Operands (least first), 
+  //    Operand Classes (lexicographically by operand), 
+  //    (Optional) Instruction id (see AsmMatcherEmitter.cpp for details), 
+  //    Number of required features (least first)
+  bit PreferSmallerInstructions = false;
 }
 def DefaultAsmParser : AsmParser;
 
@@ -1865,3 +1890,8 @@ include "llvm/Target/GlobalISel/SelectionDAGCompat.td"
 // Pull in the common support for Pfm Counters generation.
 //
 include "llvm/Target/TargetPfmCounters.td"
+
+//===----------------------------------------------------------------------===//
+// Pull in the common support for macro fusion.
+//
+include "llvm/Target/TargetMacroFusion.td"

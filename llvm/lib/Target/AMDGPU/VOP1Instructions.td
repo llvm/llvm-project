@@ -730,6 +730,7 @@ class VOP1_DPP<bits<8> op, VOP1_DPP_Pseudo ps, VOPProfile p = ps.Pfl, bit isDPP1
   let SchedRW = ps.SchedRW;
   let Uses = ps.Uses;
   let TRANS = ps.TRANS;
+  let SubtargetPredicate = ps.SubtargetPredicate;
   let OtherPredicates = ps.OtherPredicates;
 
   bits<8> vdst;
@@ -743,7 +744,6 @@ class VOP1_DPP16<bits<8> op, VOP1_DPP_Pseudo ps, int subtarget, VOPProfile p = p
     VOP1_DPP<op, ps, p, 1>,
     SIMCInstr <ps.PseudoInstr, subtarget> {
   let AssemblerPredicate = HasDPP16;
-  let SubtargetPredicate = HasDPP16;
 }
 
 class VOP1_DPP16_Gen<bits<8> op, VOP1_DPP_Pseudo ps, GFXGen Gen, VOPProfile p = ps.Pfl> :
@@ -758,6 +758,7 @@ class VOP1_DPP8<bits<8> op, VOP1_Pseudo ps, VOPProfile p = ps.Pfl> :
   let Defs = ps.Defs;
   let SchedRW = ps.SchedRW;
   let Uses = ps.Uses;
+  let SubtargetPredicate = ps.SubtargetPredicate;
   let OtherPredicates = ps.OtherPredicates;
 
   bits<8> vdst;

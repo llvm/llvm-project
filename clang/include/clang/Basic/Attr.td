@@ -1580,6 +1580,13 @@ def Unlikely : StmtAttr {
 }
 def : MutualExclusions<[Likely, Unlikely]>;
 
+def CXXAssume : StmtAttr {
+  let Spellings = [CXX11<"", "assume", 202207>];
+  let Subjects = SubjectList<[NullStmt], ErrorDiag, "empty statements">;
+  let Args = [ExprArgument<"Assumption">];
+  let Documentation = [CXXAssumeDocs];
+}
+
 def NoMerge : DeclOrStmtAttr {
   let Spellings = [Clang<"nomerge">];
   let Documentation = [NoMergeDocs];
@@ -2047,6 +2054,13 @@ def AMDGPUNumVGPR : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
+def AMDGPUMaxNumWorkGroups : InheritableAttr {
+  let Spellings = [Clang<"amdgpu_max_num_work_groups", 0>];
+  let Args = [ExprArgument<"MaxNumWorkGroupsX">, ExprArgument<"MaxNumWorkGroupsY", 1>, ExprArgument<"MaxNumWorkGroupsZ", 1>];
+  let Documentation = [AMDGPUMaxNumWorkGroupsDocs];
+  let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
+}
+
 def AMDGPUKernelCall : DeclOrTypeAttr {
   let Spellings = [Clang<"amdgpu_kernel">];
   let Documentation = [Undocumented];
@@ -2177,6 +2191,15 @@ def TypeNullableResult : TypeAttr {
 def TypeNullUnspecified : TypeAttr {
   let Spellings = [CustomKeyword<"_Null_unspecified">];
   let Documentation = [TypeNullUnspecifiedDocs];
+}
+
+def CountedBy : DeclOrTypeAttr {
+  let Spellings = [Clang<"counted_by">];
+  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel">];
+  let ParseArgumentsAsUnevaluated = 1;
+  let Documentation = [CountedByDocs];
+  let LangOpts = [COnly];
 }
 
 // This is a marker used to indicate that an __unsafe_unretained qualifier was
@@ -2920,7 +2943,7 @@ def Suppress : DeclOrStmtAttr {
 def SysVABI : DeclOrTypeAttr {
   let Spellings = [GCC<"sysv_abi">];
 //  let Subjects = [Function, ObjCMethod];
-  let Documentation = [Undocumented];
+  let Documentation = [SysVABIDocs];
 }
 
 def ThisCall : DeclOrTypeAttr {
@@ -4151,11 +4174,11 @@ def OMPDeclareVariant : InheritableAttr {
   }];
 }
 
-def Assumption : InheritableAttr {
-  let Spellings = [Clang<"assume">];
+def OMPAssume : InheritableAttr {
+  let Spellings = [Clang<"assume">, CXX11<"omp", "assume">];
   let Subjects = SubjectList<[Function, ObjCMethod]>;
   let InheritEvenIfAlreadyPresent = 1;
-  let Documentation = [AssumptionDocs];
+  let Documentation = [OMPAssumeDocs];
   let Args = [StringArgument<"Assumption">];
 }
 
@@ -4471,23 +4494,5 @@ def CodeAlign: StmtAttr {
   let AdditionalMembers = [{
     static constexpr int MinimumAlignment = 1;
     static constexpr int MaximumAlignment = 4096;
-  }];
-}
-
-def CountedBy : InheritableAttr {
-  let Spellings = [Clang<"counted_by">];
-  let Subjects = SubjectList<[Field]>;
-  let Args = [IdentifierArgument<"CountedByField">];
-  let Documentation = [CountedByDocs];
-  let LangOpts = [COnly];
-  // FIXME: This is ugly. Let using a DeclArgument would be nice, but a Decl
-  // isn't yet available due to the fact that we're still parsing the
-  // structure. Maybe that code could be changed sometime in the future.
-  code AdditionalMembers = [{
-    private:
-      SourceRange CountedByFieldLoc;
-    public:
-      SourceRange getCountedByFieldLoc() const { return CountedByFieldLoc; }
-      void setCountedByFieldLoc(SourceRange Loc) { CountedByFieldLoc = Loc; }
   }];
 }

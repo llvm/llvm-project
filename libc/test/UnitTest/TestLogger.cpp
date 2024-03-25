@@ -4,6 +4,7 @@
 #include "src/__support/OSUtil/io.h" // write_to_stderr
 #include "src/__support/UInt.h"      // is_big_int
 #include "src/__support/UInt128.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
 #include <stdint.h>
 
@@ -72,9 +73,9 @@ template TestLogger &TestLogger::operator<< <unsigned long>(unsigned long);
 template TestLogger &
     TestLogger::operator<< <unsigned long long>(unsigned long long);
 
-#ifdef __SIZEOF_INT128__
+#ifdef LIBC_TYPES_HAS_INT128
 template TestLogger &TestLogger::operator<< <__uint128_t>(__uint128_t);
-#endif
+#endif // LIBC_TYPES_HAS_INT128
 template TestLogger &TestLogger::operator<< <UInt<128>>(UInt<128>);
 template TestLogger &TestLogger::operator<< <UInt<192>>(UInt<192>);
 template TestLogger &TestLogger::operator<< <UInt<256>>(UInt<256>);

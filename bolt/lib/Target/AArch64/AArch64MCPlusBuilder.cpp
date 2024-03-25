@@ -1026,7 +1026,7 @@ public:
     return Code;
   }
 
-  bool createTailCall(MCInst &Inst, const MCSymbol *Target,
+  void createTailCall(MCInst &Inst, const MCSymbol *Target,
                       MCContext *Ctx) override {
     return createDirectCall(Inst, Target, Ctx, /*IsTailCall*/ true);
   }
@@ -1036,11 +1036,10 @@ public:
     createShortJmp(Seq, Target, Ctx, /*IsTailCall*/ true);
   }
 
-  bool createTrap(MCInst &Inst) const override {
+  void createTrap(MCInst &Inst) const override {
     Inst.clear();
     Inst.setOpcode(AArch64::BRK);
     Inst.addOperand(MCOperand::createImm(1));
-    return true;
   }
 
   bool convertJmpToTailCall(MCInst &Inst) override {
@@ -1068,16 +1067,15 @@ public:
            Inst.getOperand(0).getImm() == 0;
   }
 
-  bool createNoop(MCInst &Inst) const override {
+  void createNoop(MCInst &Inst) const override {
     Inst.setOpcode(AArch64::HINT);
     Inst.clear();
     Inst.addOperand(MCOperand::createImm(0));
-    return true;
   }
 
   bool mayStore(const MCInst &Inst) const override { return false; }
 
-  bool createDirectCall(MCInst &Inst, const MCSymbol *Target, MCContext *Ctx,
+  void createDirectCall(MCInst &Inst, const MCSymbol *Target, MCContext *Ctx,
                         bool IsTailCall) override {
     Inst.setOpcode(IsTailCall ? AArch64::B : AArch64::BL);
     Inst.clear();
@@ -1086,7 +1084,6 @@ public:
         *Ctx, 0)));
     if (IsTailCall)
       convertJmpToTailCall(Inst);
-    return true;
   }
 
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
@@ -1293,14 +1290,13 @@ public:
     return true;
   }
 
-  bool createUncondBranch(MCInst &Inst, const MCSymbol *TBB,
+  void createUncondBranch(MCInst &Inst, const MCSymbol *TBB,
                           MCContext *Ctx) const override {
     Inst.setOpcode(AArch64::B);
     Inst.clear();
     Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
         Inst, MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx),
         *Ctx, 0)));
-    return true;
   }
 
   bool shouldRecordCodeRelocation(uint64_t RelType) const override {
@@ -1353,14 +1349,13 @@ public:
     return StringRef("\0\0\0\0", 4);
   }
 
-  bool createReturn(MCInst &Inst) const override {
+  void createReturn(MCInst &Inst) const override {
     Inst.setOpcode(AArch64::RET);
     Inst.clear();
     Inst.addOperand(MCOperand::createReg(AArch64::LR));
-    return true;
   }
 
-  bool createStackPointerIncrement(
+  void createStackPointerIncrement(
       MCInst &Inst, int Size,
       bool NoFlagsClobber = false /*unused for AArch64*/) const override {
     Inst.setOpcode(AArch64::SUBXri);
@@ -1369,10 +1364,9 @@ public:
     Inst.addOperand(MCOperand::createReg(AArch64::SP));
     Inst.addOperand(MCOperand::createImm(Size));
     Inst.addOperand(MCOperand::createImm(0));
-    return true;
   }
 
-  bool createStackPointerDecrement(
+  void createStackPointerDecrement(
       MCInst &Inst, int Size,
       bool NoFlagsClobber = false /*unused for AArch64*/) const override {
     Inst.setOpcode(AArch64::ADDXri);
@@ -1381,12 +1375,12 @@ public:
     Inst.addOperand(MCOperand::createReg(AArch64::SP));
     Inst.addOperand(MCOperand::createImm(Size));
     Inst.addOperand(MCOperand::createImm(0));
-    return true;
   }
 
   void createIndirectBranch(MCInst &Inst, MCPhysReg MemBaseReg,
                             int64_t Disp) const {
     Inst.setOpcode(AArch64::BR);
+    Inst.clear();
     Inst.addOperand(MCOperand::createReg(MemBaseReg));
   }
 

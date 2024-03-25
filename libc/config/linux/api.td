@@ -76,7 +76,6 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
     SimpleMacroDef<"_IOFBF", "0">,
     SimpleMacroDef<"_IOLBF", "1">,
     SimpleMacroDef<"_IONBF", "2">,
-    SimpleMacroDef<"EOF", "-1">,
   ];
   let Types = ["size_t", "FILE", "cookie_io_functions_t"];
 }
@@ -118,7 +117,7 @@ def SchedAPI : PublicAPI<"sched.h"> {
 }
 
 def SysMManAPI : PublicAPI<"sys/mman.h"> {
-  let Types = ["off_t", "size_t"];
+  let Types = ["off_t", "size_t", "mode_t"];
 }
 
 def SignalAPI : PublicAPI<"signal.h"> {
