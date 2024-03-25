@@ -1699,36 +1699,6 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   case TargetOpcode::G_FLDEXP:
   case TargetOpcode::G_STRICT_FLDEXP:
     return narrowScalarFLDEXP(MI, TypeIdx, NarrowTy);
-  case TargetOpcode::G_VSCALE: {
-    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    const APInt &Val = MI.getOperand(1).getCImm()->getValue();
-    unsigned TotalSize = Ty.getSizeInBits();
-    unsigned NarrowSize = NarrowTy.getSizeInBits();
-    int NumParts = TotalSize / NarrowSize;
-
-    SmallVector<Register, 4> PartRegs;
-    for (int I = 0; I != NumParts; ++I) {
-      unsigned Offset = I * NarrowSize;
-      auto K =
-          MIRBuilder.buildVScale(NarrowTy, Val.lshr(Offset).trunc(NarrowSize));
-      PartRegs.push_back(K.getReg(0));
-    }
-    LLT LeftoverTy;
-    unsigned LeftoverBits = TotalSize - NumParts * NarrowSize;
-    SmallVector<Register, 1> LeftoverRegs;
-    if (LeftoverBits != 0) {
-      LeftoverTy = LLT::scalar(LeftoverBits);
-      auto K = MIRBuilder.buildVScale(
-          LeftoverTy, Val.lshr(NumParts * NarrowSize).trunc(LeftoverBits));
-      LeftoverRegs.push_back(K.getReg(0));
-    }
-
-    insertParts(MI.getOperand(0).getReg(), Ty, NarrowTy, PartRegs, LeftoverTy,
-                LeftoverRegs);
-
-    MI.eraseFromParent();
-    return Legalized;
-  }
   }
 }
 
@@ -2996,7 +2966,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_VECREDUCE_FMIN:
   case TargetOpcode::G_VECREDUCE_FMAX:
   case TargetOpcode::G_VECREDUCE_FMINIMUM:
-  case TargetOpcode::G_VECREDUCE_FMAXIMUM: {
+  case TargetOpcode::G_VECREDUCE_FMAXIMUM:
     if (TypeIdx != 0)
       return UnableToLegalize;
     Observer.changingInstr(MI);
@@ -3009,25 +2979,6 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
     Observer.changedInstr(MI);
     return Legalized;
-  }
-  case TargetOpcode::G_VSCALE: {
-    MachineOperand &SrcMO = MI.getOperand(1);
-    LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
-    unsigned ExtOpc = LI.getExtOpcodeForWideningConstant(
-        MRI.getType(MI.getOperand(0).getReg()));
-    assert((ExtOpc == TargetOpcode::G_ZEXT || ExtOpc == TargetOpcode::G_SEXT ||
-            ExtOpc == TargetOpcode::G_ANYEXT) &&
-           "Illegal Extend");
-    const APInt &SrcVal = SrcMO.getCImm()->getValue();
-    const APInt &Val = (ExtOpc == TargetOpcode::G_SEXT)
-                           ? SrcVal.sext(WideTy.getSizeInBits())
-                           : SrcVal.zext(WideTy.getSizeInBits());
-    Observer.changingInstr(MI);
-    SrcMO.setCImm(ConstantInt::get(Ctx, Val));
-    widenScalarDst(MI, WideTy);
-    Observer.changedInstr(MI);
-    return Legalized;
-  }
   }
 }
 
