@@ -12362,19 +12362,19 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
 
-    // When the argument is 0, the result of GCC builtins is undefined, whereas
-    // for Microsoft intrinsics, the result is the bit-width of the argument.
-    bool ZeroIsUndefined = BuiltinOp != Builtin::BI__lzcnt16 &&
-                           BuiltinOp != Builtin::BI__lzcnt &&
-                           BuiltinOp != Builtin::BI__lzcnt64;
-
     if (!Val) {
       if (BuiltinOp == Builtin::BI__builtin_clzg && E->getNumArgs() > 1) {
-        APSInt Fallback;
-        if (!EvaluateInteger(E->getArg(1), Fallback, Info))
+        if (!EvaluateInteger(E->getArg(1), Val, Info))
           return false;
-        return Success(Fallback, E);
+        return Success(Val, E);
       }
+
+      // When the argument is 0, the result of GCC builtins is undefined,
+      // whereas for Microsoft intrinsics, the result is the bit-width of the
+      // argument.
+      bool ZeroIsUndefined = BuiltinOp != Builtin::BI__lzcnt16 &&
+                             BuiltinOp != Builtin::BI__lzcnt &&
+                             BuiltinOp != Builtin::BI__lzcnt64;
 
       if (ZeroIsUndefined)
         return Error(E);
@@ -12428,10 +12428,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     if (!Val) {
       if (BuiltinOp == Builtin::BI__builtin_ctzg && E->getNumArgs() > 1) {
-        APSInt Fallback;
-        if (!EvaluateInteger(E->getArg(1), Fallback, Info))
+        if (!EvaluateInteger(E->getArg(1), Val, Info))
           return false;
-        return Success(Fallback, E);
+        return Success(Val, E);
       }
 
       return Error(E);
