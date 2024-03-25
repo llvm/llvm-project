@@ -20,6 +20,7 @@
 #endif
 
 #include "leading-zero-bit-count.h"
+#include "llvm/ADT/bit.h"
 #include <cstdint>
 #include <type_traits>
 
@@ -261,12 +262,10 @@ private:
     }
   }
   static constexpr std::uint64_t topBit{std::uint64_t{1} << 63};
-#if FLANG_LITTLE_ENDIAN
-  std::uint64_t low_{0}, high_{0};
-#elif FLANG_BIG_ENDIAN
+#if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && BYTE_ORDER == BIG_ENDIAN
   std::uint64_t high_{0}, low_{0};
 #else
-#error host endianness is not known
+  std::uint64_t low_{0}, high_{0};
 #endif
 };
 

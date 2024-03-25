@@ -18,6 +18,7 @@
 #include "flang/Common/restorer.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
+#include "llvm/ADT/bit.h"
 #include <cinttypes>
 #include <map>
 #include <set>
@@ -142,13 +143,8 @@ template <typename A> struct ValueWithRealFlags {
   RealFlags flags{};
 };
 
-#if FLANG_BIG_ENDIAN
-constexpr bool isHostLittleEndian{false};
-#elif FLANG_LITTLE_ENDIAN
-constexpr bool isHostLittleEndian{true};
-#else
-#error host endianness is not known
-#endif
+constexpr bool isHostLittleEndian =
+    (llvm::endianness::native == llvm::endianness::little);
 
 // HostUnsignedInt<BITS> finds the smallest native unsigned integer type
 // whose size is >= BITS.
