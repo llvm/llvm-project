@@ -61,6 +61,7 @@
 #include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <array>
 #include <cinttypes>
 #include <cstddef>
 #include <cstdint>
@@ -5119,7 +5120,7 @@ static bool printAArch64PAuthABICoreInfo(raw_ostream &OS, uint32_t DataSize,
   uint64_t Version =
       support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 8);
 
-  std::string PlatformDesc = [Platform]() {
+  const char *PlatformDesc = [Platform]() {
     switch (Platform) {
     case AARCH64_PAUTH_PLATFORM_INVALID:
       return "invalid";
@@ -5137,47 +5138,35 @@ static bool printAArch64PAuthABICoreInfo(raw_ostream &OS, uint32_t DataSize,
       return "";
     if (Version >= (1 << (AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST + 1)))
       return "unknown";
-    return std::string("") +
-           ((Version &
-             (1 << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INTRINSICS))
-                ? ""
-                : "!") +
-           "PointerAuthIntrinsics, " +
-           ((Version & (1 << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_CALLS))
-                ? ""
-                : "!") +
-           "PointerAuthCalls, " +
-           ((Version & (1 << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_RETURNS))
-                ? ""
-                : "!") +
-           "PointerAuthReturns, " +
-           ((Version &
-             (1 << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_AUTHTRAPS))
-                ? ""
-                : "!") +
-           "PointerAuthAuthTraps, " +
-           ((Version &
-             (1 << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRADDRDISCR))
-                ? ""
-                : "!") +
-           "PointerAuthVTPtrAddressDiscrimination, " +
-           ((Version &
-             (1 << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRTYPEDISCR))
-                ? ""
-                : "!") +
-           "PointerAuthVTPtrTypeDiscrimination, " +
-           ((Version &
-             (1 << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI))
-                ? ""
-                : "!") +
-           "PointerAuthInitFini";
+
+    std::array<StringRef, AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST + 1>
+        Flags;
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INTRINSICS] = "Intrinsics";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_CALLS] = "Calls";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_RETURNS] = "Returns";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_AUTHTRAPS] = "AuthTraps";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRADDRDISCR] =
+        "VTPtrAddressDiscrimination";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRTYPEDISCR] =
+        "VTPtrTypeDiscrimination";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI] = "InitFini";
+
     static_assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI ==
                       AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST,
                   "Update when new enum items are defined");
+
+    std::string Desc;
+    for (uint32_t I = 0; I < Flags.size(); ++I) {
+      if (!(Version & (1 << I)))
+        Desc += '!';
+      Desc += Twine("PointerAuth" + Flags[I] + ", ").str();
+    }
+    Desc.resize(Desc.size() - 2); // Trim last ", "
+    return Desc;
   }();
 
-  OS << format("platform 0x%x (%s), version 0x%x", Platform,
-               PlatformDesc.c_str(), Version);
+  OS << format("platform 0x%x (%s), version 0x%x", Platform, PlatformDesc,
+               Version);
   if (!VersionDesc.empty())
     OS << format(" (%s)", VersionDesc.c_str());
 
