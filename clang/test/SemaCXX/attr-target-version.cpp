@@ -9,7 +9,6 @@ void __attribute__((target_version("rcpc3"))) no_def(void);
 void __attribute__((target_version("mops"))) no_def(void);
 void __attribute__((target_version("rdma"))) no_def(void);
 
-// expected-error@+1 {{no matching function for call to 'no_def'}}
 void foo(void) { no_def(); }
 
 constexpr int __attribute__((target_version("sve2"))) diff_const(void) { return 1; }
@@ -41,6 +40,7 @@ inline int __attribute__((target_version("sme"))) diff_inline(void) { return 1; 
 int __attribute__((target_version("fp16"))) diff_inline(void) { return 2; }
 
 inline int __attribute__((target_version("sme"))) diff_inline1(void) { return 1; }
+//expected-error@+1 {{multiversioned function declaration has a different inline specification}}
 int __attribute__((target_version("default"))) diff_inline1(void) { return 2; }
 
 int __attribute__((target_version("fcma"))) diff_type1(void) { return 1; }
@@ -59,8 +59,7 @@ int __attribute__((target_version("sve2-sha3"))) diff_type3(void) noexcept(true)
 template <typename T> int __attribute__((target_version("default"))) temp(T) { return 1; }
 
 template <typename T> int __attribute__((target_version("simd"))) temp1(T) { return 1; }
-// expected-error@+1 {{attribute 'target_version' multiversioned functions do not yet support function templates}}
-template <typename T> int __attribute__((target_version("sha3"))) temp1(T) { return 2; }
+// expected-error@-1 {{attribute 'target_version' multiversioned functions do not yet support function templates}}
 
 extern "C" {
 int __attribute__((target_version("aes"))) extc(void) { return 1; }
@@ -70,17 +69,23 @@ int __attribute__((target_version("lse"))) extc(void) { return 1; }
 
 auto __attribute__((target_version("default"))) ret1(void) { return 1; }
 auto __attribute__((target_version("dpb"))) ret2(void) { return 1; }
+// expected-error@-1 {{attribute 'target_version' multiversioned functions do not yet support deduced return types}}
 auto __attribute__((target_version("dpb2"))) ret3(void) -> int { return 1; }
 
 class Cls {
   __attribute__((target_version("rng"))) Cls();
+  // expected-error@-1 {{attribute 'target_version' multiversioned functions do not yet support constructors}}
   __attribute__((target_version("sve-i8mm"))) ~Cls();
+  // expected-error@-1 {{attribute 'target_version' multiversioned functions do not yet support destructors}}
 
   Cls &__attribute__((target_version("f32mm"))) operator=(const Cls &) = default;
+  // expected-error@-1 {{attribute 'target_version' multiversioned functions do not yet support defaulted functions}}
   Cls &__attribute__((target_version("ssbs"))) operator=(Cls &&) = delete;
+  // expected-error@-1 {{attribute 'target_version' multiversioned functions do not yet support deleted functions}}
 
   virtual void __attribute__((target_version("default"))) vfunc();
   virtual void __attribute__((target_version("sm4"))) vfunc1();
+  // expected-error@-1 {{attribute 'target_version' multiversioned functions do not yet support virtual functions}}
 };
 
 __attribute__((target_version("sha3"))) void Decl();
