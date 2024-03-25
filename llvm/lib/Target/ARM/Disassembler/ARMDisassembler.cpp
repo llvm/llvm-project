@@ -1865,12 +1865,17 @@ static DecodeStatus DecodeCopMemInstruction(MCInst &Inst, unsigned Insn,
                                             const MCDisassembler *Decoder) {
   DecodeStatus S = MCDisassembler::Success;
 
+  unsigned P = fieldFromInstruction(Insn, 24, 1);
+  unsigned W = fieldFromInstruction(Insn, 21, 1);
   unsigned pred = fieldFromInstruction(Insn, 28, 4);
   unsigned CRd = fieldFromInstruction(Insn, 12, 4);
   unsigned coproc = fieldFromInstruction(Insn, 8, 4);
   unsigned imm = fieldFromInstruction(Insn, 0, 8);
   unsigned Rn = fieldFromInstruction(Insn, 16, 4);
   unsigned U = fieldFromInstruction(Insn, 23, 1);
+  // Pre-Indexed implies writeback to Rn
+  bool IsPreIndexed = (P == 1) && (W == 1);
+
   const FeatureBitset &featureBits =
     ((const MCDisassembler*)Decoder)->getSubtargetInfo().getFeatureBits();
 
@@ -1945,6 +1950,10 @@ static DecodeStatus DecodeCopMemInstruction(MCInst &Inst, unsigned Insn,
 
   if (featureBits[ARM::HasV8Ops] && (coproc != 14))
     return MCDisassembler::Fail;
+
+  if (IsPreIndexed)
+    // Dummy operand for Rn_wb.
+    Inst.addOperand(MCOperand::createImm(0));
 
   Inst.addOperand(MCOperand::createImm(coproc));
   Inst.addOperand(MCOperand::createImm(CRd));

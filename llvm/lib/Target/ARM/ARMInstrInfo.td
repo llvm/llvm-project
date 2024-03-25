@@ -5442,17 +5442,17 @@ def CDP2 : ABXI<0b1110, (outs), (ins p_imm:$cop, imm0_15:$opc1,
 }
 
 class ACI<dag oops, dag iops, string opc, string asm,
-            list<dag> pattern, IndexMode im = IndexModeNone,
+            list<dag> pattern, string cstrs = "", IndexMode im = IndexModeNone,
             AddrMode am = AddrModeNone>
   : I<oops, iops, am, 4, im, BrFrm, NoItinerary,
-      opc, asm, "", pattern> {
+      opc, asm, cstrs, pattern> {
   let Inst{27-25} = 0b110;
 }
 class ACInoP<dag oops, dag iops, string opc, string asm,
-          list<dag> pattern, IndexMode im = IndexModeNone,
+          list<dag> pattern, string constraints = "", IndexMode im = IndexModeNone,
           AddrMode am = AddrModeNone>
   : InoP<oops, iops, am, 4, im, BrFrm, NoItinerary,
-         opc, asm, "", pattern> {
+         opc, asm, constraints, pattern> {
   let Inst{31-28} = 0b1111;
   let Inst{27-25} = 0b110;
 }
@@ -5460,7 +5460,7 @@ class ACInoP<dag oops, dag iops, string opc, string asm,
 let DecoderNamespace = "CoProc" in {
 multiclass LdStCop<bit load, bit Dbit, string asm, list<dag> pattern> {
   def _OFFSET : ACI<(outs), (ins p_imm:$cop, c_imm:$CRd, addrmode5:$addr),
-                    asm, "\t$cop, $CRd, $addr", pattern, IndexModeNone,
+                    asm, "\t$cop, $CRd, $addr", pattern, "", IndexModeNone,
                     AddrMode5> {
     bits<13> addr;
     bits<4> cop;
@@ -5476,8 +5476,8 @@ multiclass LdStCop<bit load, bit Dbit, string asm, list<dag> pattern> {
     let Inst{7-0} = addr{7-0};
     let DecoderMethod = "DecodeCopMemInstruction";
   }
-  def _PRE : ACI<(outs), (ins p_imm:$cop, c_imm:$CRd, addrmode5_pre:$addr),
-                 asm, "\t$cop, $CRd, $addr!", [], IndexModePre> {
+  def _PRE : ACI<(outs GPR:$Rn_wb), (ins p_imm:$cop, c_imm:$CRd, addrmode5_pre:$addr),
+                 asm, "\t$cop, $CRd, $addr!", [], "$addr.base = $Rn_wb", IndexModePre> {
     bits<13> addr;
     bits<4> cop;
     bits<4> CRd;
@@ -5494,7 +5494,7 @@ multiclass LdStCop<bit load, bit Dbit, string asm, list<dag> pattern> {
   }
   def _POST: ACI<(outs), (ins p_imm:$cop, c_imm:$CRd, addr_offset_none:$addr,
                               postidx_imm8s4:$offset),
-                 asm, "\t$cop, $CRd, $addr, $offset", [], IndexModePost> {
+                 asm, "\t$cop, $CRd, $addr, $offset", [], "", IndexModePost> {
     bits<9> offset;
     bits<4> addr;
     bits<4> cop;
@@ -5532,7 +5532,7 @@ multiclass LdStCop<bit load, bit Dbit, string asm, list<dag> pattern> {
 }
 multiclass LdSt2Cop<bit load, bit Dbit, string asm, list<dag> pattern> {
   def _OFFSET : ACInoP<(outs), (ins p_imm:$cop, c_imm:$CRd, addrmode5:$addr),
-                       asm, "\t$cop, $CRd, $addr", pattern, IndexModeNone,
+                       asm, "\t$cop, $CRd, $addr", pattern, "", IndexModeNone,
                        AddrMode5> {
     bits<13> addr;
     bits<4> cop;
@@ -5548,8 +5548,8 @@ multiclass LdSt2Cop<bit load, bit Dbit, string asm, list<dag> pattern> {
     let Inst{7-0} = addr{7-0};
     let DecoderMethod = "DecodeCopMemInstruction";
   }
-  def _PRE : ACInoP<(outs), (ins p_imm:$cop, c_imm:$CRd, addrmode5_pre:$addr),
-                    asm, "\t$cop, $CRd, $addr!", [], IndexModePre> {
+  def _PRE : ACInoP<(outs GPR:$Rn_wb), (ins p_imm:$cop, c_imm:$CRd, addrmode5_pre:$addr),
+                    asm, "\t$cop, $CRd, $addr!", [], "$addr.base = $Rn_wb", IndexModePre> {
     bits<13> addr;
     bits<4> cop;
     bits<4> CRd;
@@ -5566,7 +5566,7 @@ multiclass LdSt2Cop<bit load, bit Dbit, string asm, list<dag> pattern> {
   }
   def _POST: ACInoP<(outs), (ins p_imm:$cop, c_imm:$CRd, addr_offset_none:$addr,
                                  postidx_imm8s4:$offset),
-                 asm, "\t$cop, $CRd, $addr, $offset", [], IndexModePost> {
+                 asm, "\t$cop, $CRd, $addr, $offset", [], "", IndexModePost> {
     bits<9> offset;
     bits<4> addr;
     bits<4> cop;
