@@ -1046,29 +1046,28 @@ defm offload_uniform_block : BoolFOption<"offload-uniform-block",
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Don't assume">,
   BothFlags<[], [ClangOption], " that kernels are launched with uniform block sizes (default true for CUDA/HIP and false otherwise)">>;
 
-def fcx_limited_range : Joined<["-"], "fcx-limited-range">,
-  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Basic algebraic expansions of complex arithmetic operations "
-           "involving are enabled.">;
-
-def fno_cx_limited_range : Joined<["-"], "fno-cx-limited-range">,
-  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Basic algebraic expansions of complex arithmetic operations "
-           "involving are disabled.">;
-
-def fcx_fortran_rules : Joined<["-"], "fcx-fortran-rules">,
-  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Range reduction is enabled for complex arithmetic operations.">;
-
-def fno_cx_fortran_rules : Joined<["-"], "fno-cx-fortran-rules">,
-  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Range reduction is disabled for complex arithmetic operations.">;
+def fcomplex_arithmetic_EQ : Joined<["-"], "fcomplex-arithmetic=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  Values<"full,improved,promoted,basic">, NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["CX_Full", "CX_Improved", "CX_Promoted", "CX_Basic"]>;
 
 def complex_range_EQ : Joined<["-"], "complex-range=">, Group<f_Group>,
   Visibility<[CC1Option]>,
-  Values<"full,limited,fortran">, NormalizedValuesScope<"LangOptions">,
-  NormalizedValues<["CX_Full", "CX_Limited", "CX_Fortran"]>,
+  Values<"full,improved,promoted,basic">, NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["CX_Full", "CX_Improved", "CX_Promoted", "CX_Basic"]>,
   MarshallingInfoEnum<LangOpts<"ComplexRange">, "CX_Full">;
+
+defm cx_limited_range: BoolOptionWithoutMarshalling<"f", "cx-limited-range",
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Basic algebraic expansions of "
+  "complex arithmetic operations involving are enabled.">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Basic algebraic expansions "
+  "of complex arithmetic operations involving are disabled.">>;
+
+defm cx_fortran_rules: BoolOptionWithoutMarshalling<"f", "cx-fortran-rules",
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Range reduction is enabled for "
+  "complex arithmetic operations.">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Range reduction is disabled "
+  "for complex arithmetic operations">>;
 
 // OpenCL-only Options
 def cl_opt_disable : Flag<["-"], "cl-opt-disable">, Group<opencl_Group>,
@@ -4106,30 +4105,14 @@ defm strict_return : BoolFOption<"strict-return",
             " of a non-void function as unreachable">,
   PosFlag<SetTrue>>;
 
-let Group = f_Group in {
-  let Visibility = [ClangOption,CC1Option] in {
-    def fptrauth_intrinsics : Flag<["-"], "fptrauth-intrinsics">,
-      HelpText<"Enable pointer authentication intrinsics">;
-    def fptrauth_calls : Flag<["-"], "fptrauth-calls">,
-      HelpText<"Enable signing and authentication of all indirect calls">;
-    def fptrauth_returns : Flag<["-"], "fptrauth-returns">,
-      HelpText<"Enable signing and authentication of return addresses">;
-    def fptrauth_auth_traps : Flag<["-"], "fptrauth-auth-traps">,
-      HelpText<"Enable traps on authentication failures">;
-    def fptrauth_vtable_pointer_address_discrimination : Flag<["-"], "fptrauth-vtable-pointer-address-discrimination">,
-      HelpText<"Enable address discrimination of vtable pointers">;
-    def fptrauth_vtable_pointer_type_discrimination : Flag<["-"], "fptrauth-vtable-pointer-type-discrimination">,
-      HelpText<"Enable type discrimination of vtable pointers">;
-    def fptrauth_init_fini : Flag<["-"], "fptrauth-init-fini">,
-      HelpText<"Enable signing of function pointers in init/fini arrays">;
-  }
-  def fno_ptrauth_intrinsics : Flag<["-"], "fno-ptrauth-intrinsics">;
-  def fno_ptrauth_calls : Flag<["-"], "fno-ptrauth-calls">;
-  def fno_ptrauth_returns : Flag<["-"], "fno-ptrauth-returns">;
-  def fno_ptrauth_auth_traps : Flag<["-"], "fno-ptrauth-auth-traps">;
-  def fno_ptrauth_vtable_pointer_address_discrimination : Flag<["-"], "fno-ptrauth-vtable-pointer-address-discrimination">;
-  def fno_ptrauth_vtable_pointer_type_discrimination : Flag<["-"], "fno-ptrauth-vtable-pointer-type-discrimination">;
-  def fno_ptrauth_init_fini : Flag<["-"], "fno-ptrauth-init-fini">;
+let Flags = [TargetSpecific] in {
+defm ptrauth_intrinsics : OptInCC1FFlag<"ptrauth-intrinsics", "Enable pointer authentication intrinsics">;
+defm ptrauth_calls : OptInCC1FFlag<"ptrauth-calls", "Enable signing and authentication of all indirect calls">;
+defm ptrauth_returns : OptInCC1FFlag<"ptrauth-returns", "Enable signing and authentication of return addresses">;
+defm ptrauth_auth_traps : OptInCC1FFlag<"ptrauth-auth-traps", "Enable traps on authentication failures">;
+defm ptrauth_vtable_pointer_address_discrimination : OptInCC1FFlag<"ptrauth-vtable-pointer-address-discrimination", "Enable address discrimination of vtable pointers">;
+defm ptrauth_vtable_pointer_type_discrimination : OptInCC1FFlag<"ptrauth-vtable-pointer-type-discrimination", "Enable type discrimination of vtable pointers">;
+defm ptrauth_init_fini : OptInCC1FFlag<"ptrauth-init-fini", "Enable signing of function pointers in init/fini arrays">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
@@ -6707,6 +6690,9 @@ def analyzer_opt_analyze_headers : Flag<["-"], "analyzer-opt-analyze-headers">,
 def analyzer_display_progress : Flag<["-"], "analyzer-display-progress">,
   HelpText<"Emit verbose output about the analyzer's progress">,
   MarshallingInfoFlag<AnalyzerOpts<"AnalyzerDisplayProgress">>;
+def analyzer_note_analysis_entry_points : Flag<["-"], "analyzer-note-analysis-entry-points">,
+  HelpText<"Add a note for each bug report to denote their analysis entry points">,
+  MarshallingInfoFlag<AnalyzerOpts<"AnalyzerNoteAnalysisEntryPoints">>;
 def analyze_function : Separate<["-"], "analyze-function">,
   HelpText<"Run analysis on specific function (for C++ include parameters in name)">,
   MarshallingInfoString<AnalyzerOpts<"AnalyzeSpecificFunction">>;
