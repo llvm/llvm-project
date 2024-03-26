@@ -416,7 +416,7 @@ void Environment::initialize() {
     assert(Parent != nullptr);
 
     if (Parent->isLambda()) {
-      for (auto Capture : Parent->captures()) {
+      for (const auto &Capture : Parent->captures()) {
         if (Capture.capturesVariable()) {
           const auto *VarDecl = Capture.getCapturedVar();
           assert(VarDecl != nullptr);
