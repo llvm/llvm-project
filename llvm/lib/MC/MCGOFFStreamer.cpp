@@ -87,7 +87,6 @@ bool MCGOFFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
 
 void MCGOFFStreamer::emitInstToData(const MCInst &Inst,
                                     const MCSubtargetInfo &STI) {
-  LLVM_DEBUG(dbgs() << "Entering " << __PRETTY_FUNCTION__ << "\n");
   LLVM_DEBUG(dbgs() << "Inst: " << Inst << "\n");
 
   MCAssembler &Assembler = getAssembler();

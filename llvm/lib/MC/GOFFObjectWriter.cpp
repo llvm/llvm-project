@@ -274,13 +274,15 @@ public:
            (BindingScope == GOFF::ESD_BSC_ImportExport);
   }
 
-  void setAlignment(Align A) {
+  static GOFF::ESDAlignment setGOFFAlignment(Align A) {
     // The GOFF alignment is encoded as log_2 value.
+    GOFF::ESDAlignment Alignment;
     uint8_t Log = Log2(A);
     if (Log <= GOFF::ESD_ALIGN_4Kpage)
       Alignment = static_cast<GOFF::ESDAlignment>(Log);
     else
       llvm_unreachable("Unsupported alignment");
+    return Alignment;
   }
 };
 
@@ -366,26 +368,35 @@ public:
   uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
 
 private:
-  GOFFSection *createGOFFSection(GOFFSymbol *Pptr, GOFFSymbol *Rptr,
-                                 GOFFSymbol *SD, const MCSectionGOFF *MC);
   GOFFSymbol createGOFFSymbol(StringRef Name, GOFF::ESDSymbolType Type,
                               uint32_t ParentEsdId);
   GOFFSymbol createSDSymbol(StringRef Name);
   GOFFSymbol createEDSymbol(StringRef Name, uint32_t ParentEsdId, GOFF::ESDAlignment Alignment = GOFF::ESD_ALIGN_Doubleword);
+  GOFFSymbol createEDSymbol(StringRef Name, uint32_t ParentEsdId, uint32_t SectionLength,
+                            GOFF::ESDExecutable Executable, bool ForceRent,
+                            GOFF::ESDAlignment Alignment = GOFF::ESD_ALIGN_Doubleword);
+  GOFFSymbol createEDSymbol(StringRef Name, uint32_t ParentEsdId, uint32_t SectionLength,
+                            GOFF::ESDExecutable Executable, GOFF::ESDBindingScope BindingScope,
+                            GOFF::ESDNameSpaceId NameSpaceId, GOFF::ESDBindingAlgorithm BindingAlgorithm,
+                            bool ReadOnly, GOFF::ESDTextStyle TextStyle, GOFF::ESDLoadingBehavior LoadBehavior,
+                            GOFF::ESDAlignment Alignment = GOFF::ESD_ALIGN_Doubleword);
   GOFFSymbol createLDSymbol(StringRef Name, uint32_t ParentEsdId);
   GOFFSymbol createERSymbol(StringRef Name, uint32_t ParentEsdId,
                             const MCSymbolGOFF *Source = nullptr);
   GOFFSymbol createPRSymbol(StringRef Name, uint32_t ParentEsdId);
-
+  GOFFSymbol createPRSymbol(StringRef Name, uint32_t ParentEsdId,
+                            GOFF::ESDNameSpaceId NameSpaceType,
+                            GOFF::ESDExecutable Executable,
+                            GOFF::ESDAlignment Alignment,
+                            GOFF::ESDBindingScope BindingScope,
+                            uint32_t SectionLength,
+                            GOFF::ESDLoadingBehavior LoadBehavior = GOFF::ESD_LB_Initial,
+                            GOFF::ESDLinkageType Linkage = GOFF::ESD_LT_XPLink);
   GOFFSymbol createWSASymbol(uint32_t ParentEsdId, bool ReserveQWords = false);
 
   // Define the root SD node as well as the symbols that make up the
   // ADA section.
   void defineRootSD(MCAssembler &Asm, const MCAsmLayout &Layout);
-
-  void defineSectionSymbols(const MCAssembler &Asm,
-                            const MCSectionGOFF &Section,
-                            const MCAsmLayout &Layout);
   void writeSymbolDefinedInModule(const MCSymbolGOFF &Symbol, MCAssembler &Asm,
                                   const MCAsmLayout &Layout);
   void writeSymbolDeclaredInModule(const MCSymbolGOFF &Symbol, MCAssembler &Asm,
@@ -410,6 +421,35 @@ GOFFSymbol GOFFObjectWriter::createEDSymbol(StringRef Name,
   GOFFSymbol ED =
       createGOFFSymbol(Name, GOFF::ESD_ST_ElementDefinition, ParentEsdId);
 
+  ED.Alignment = Alignment;
+  return ED;
+}
+
+GOFFSymbol GOFFObjectWriter::createEDSymbol(StringRef Name, uint32_t ParentEsdId, uint32_t SectionLength,
+                          GOFF::ESDExecutable Executable, bool ForceRent,
+                          GOFF::ESDAlignment Alignment) {
+  GOFFSymbol ED = createGOFFSymbol(Name, GOFF::ESD_ST_ElementDefinition, ParentEsdId);
+  ED.SectionLength = 0;
+  ED.Executable = Executable;
+  ED.ForceRent = ForceRent;
+  ED.Alignment = Alignment;
+  return ED;
+}
+
+GOFFSymbol GOFFObjectWriter::createEDSymbol(StringRef Name, uint32_t ParentEsdId, uint32_t SectionLength,
+                          GOFF::ESDExecutable Executable, GOFF::ESDBindingScope BindingScope,
+                          GOFF::ESDNameSpaceId NameSpaceId, GOFF::ESDBindingAlgorithm BindingAlgorithm,
+                          bool ReadOnly, GOFF::ESDTextStyle TextStyle, GOFF::ESDLoadingBehavior LoadBehavior,
+                          GOFF::ESDAlignment Alignment) {
+  GOFFSymbol ED = createGOFFSymbol(Name, GOFF::ESD_ST_ElementDefinition, ParentEsdId);                           
+  ED.SectionLength = 0;
+  ED.Executable = Executable;
+  ED.BindingScope = BindingScope;
+  ED.NameSpace = NameSpaceId;
+  ED.BindAlgorithm = BindingAlgorithm;
+  ED.ReadOnly = ReadOnly;
+  ED.TextStyle = TextStyle;
+  ED.LoadBehavior = LoadBehavior;
   ED.Alignment = Alignment;
   return ED;
 }
@@ -444,6 +484,26 @@ GOFFSymbol GOFFObjectWriter::createPRSymbol(StringRef Name,
                                             uint32_t ParentEsdId) {
   return createGOFFSymbol(Name, GOFF::ESD_ST_PartReference, ParentEsdId);
 }
+
+GOFFSymbol GOFFObjectWriter::createPRSymbol(StringRef Name, uint32_t ParentEsdId,
+                          GOFF::ESDNameSpaceId NameSpaceType,
+                          GOFF::ESDExecutable Executable,
+                          GOFF::ESDAlignment Alignment,
+                          GOFF::ESDBindingScope BindingScope,
+                          uint32_t SectionLength,
+                          GOFF::ESDLoadingBehavior LoadBehavior,
+                          GOFF::ESDLinkageType Linkage) {
+  GOFFSymbol PR = createGOFFSymbol(Name, GOFF::ESD_ST_PartReference, ParentEsdId);
+  PR.NameSpace = NameSpaceType;
+  PR.Executable = Executable;
+  PR.Alignment = Alignment;
+  PR.BindingScope = BindingScope;
+  PR.SectionLength = SectionLength;
+  PR.LoadBehavior = LoadBehavior;
+  PR.Linkage = Linkage;
+  return PR;
+}
+
 
 GOFFSymbol GOFFObjectWriter::createWSASymbol(uint32_t ParentEsdId,
                                              bool ReserveQwords) {
@@ -540,20 +600,12 @@ void GOFFObjectWriter::writeSymbolDefinedInModule(const MCSymbolGOFF &Symbol,
       SD.BindingScope = GOFF::ESD_BSC_Section;
 
     GOFFSymbol ED = createWSASymbol(SD.EsdId);
-    GOFFSymbol PR = createPRSymbol(SectionName, ED.EsdId);
+    uint32_t PRSectionLen = Layout.getSectionAddressSize(&Section) ? Layout.getSectionAddressSize(&Section) : 0;
+    GOFFSymbol PR = createPRSymbol(SectionName, ED.EsdId, GOFF::ESD_NS_Parts, GOFF::ESD_EXE_DATA,
+                                   GOFFSymbol::setGOFFAlignment(Symbol.getAlignment()), BindingScope, PRSectionLen);
     ED.Alignment =
         std::max(static_cast<GOFF::ESDAlignment>(Log2(Section.getAlign())),
                  GOFF::ESD_ALIGN_Quadword);
-
-    PR.Executable = GOFF::ESD_EXE_DATA;
-    PR.NameSpace = GOFF::ESD_NS_Parts;
-    PR.BindingScope = BindingScope;
-    PR.setAlignment(Symbol.getAlignment());
-    PR.SectionLength = Layout.getSectionAddressSize(&Section);
-
-    // As above, avoid zero-length sections for data.
-    if (!PR.SectionLength)
-      PR.SectionLength = 2;
 
     writeSymbol(SD, Layout);
     writeSymbol(ED, Layout);
@@ -589,13 +641,10 @@ void GOFFObjectWriter::writeSymbolDeclaredInModule(const MCSymbolGOFF &Symbol,
   }
   case GOFF::ESD_EXE_DATA: {
     GOFFSymbol ED = createWSASymbol(SD.EsdId);
-    ED.setAlignment(Symbol.getAlignment());
+    ED.Alignment = GOFFSymbol::setGOFFAlignment(Symbol.getAlignment());
     writeSymbol(ED, Layout);
-    GOFFSymbol PR = createPRSymbol(Symbol.getName(), ED.EsdId);
-    PR.BindingScope = GOFF::ESD_BSC_ImportExport;
-    PR.setAlignment(Symbol.getAlignment());
-    PR.NameSpace = GOFF::ESD_NS_Parts;
-    PR.SectionLength = 0;
+    GOFFSymbol PR = createPRSymbol(Symbol.getName(), ED.EsdId, GOFF::ESD_NS_Parts, GOFF::ESD_EXE_Unspecified,
+                                   GOFFSymbol::setGOFFAlignment(Symbol.getAlignment()), GOFF::ESD_BSC_ImportExport, 0);
     GSym = PR;
     GSymEsdId = PR.EsdId;
     break;
@@ -826,26 +875,16 @@ void GOFFObjectWriter::writeADAandCodeSectionSymbols(
 
   GOFFSymbol ADA;
   if (CsectNames.second.empty()) {
-    ADA = createPRSymbol(FileName.str().append("#S"), ADAED.EsdId);
-    ADA.BindingScope = GOFF::ESD_BSC_Section;
+    ADA = createPRSymbol(FileName.str().append("#S"), ADAED.EsdId, GOFF::ESD_NS_Parts, GOFF::ESD_EXE_DATA, GOFF::ESD_ALIGN_Quadword, GOFF::ESD_BSC_Section, std::max(getADASectionLength(Asm, Layout), 2u));
   } else {
-    ADA = createPRSymbol(CsectNames.second, ADAED.EsdId);
-    ADA.BindingScope = GOFF::ESD_BSC_Library;
+    ADA = createPRSymbol(CsectNames.second, ADAED.EsdId, GOFF::ESD_NS_Parts, GOFF::ESD_EXE_DATA, GOFF::ESD_ALIGN_Quadword, GOFF::ESD_BSC_Library, std::max(getADASectionLength(Asm, Layout), 2u));
   }
-  ADA.Executable = GOFF::ESD_EXE_DATA;
-  ADA.NameSpace = GOFF::ESD_NS_Parts;
-  ADA.Alignment = GOFF::ESD_ALIGN_Quadword;
-
-  ADA.SectionLength = std::max(getADASectionLength(Asm, Layout), 2u);
   writeSymbol(ADAED, Layout);
   writeSymbol(ADA, Layout);
   ADAPREsdId = ADA.EsdId;
 
   // Write ESD Records for Code Section
-  GOFFSymbol ED = createEDSymbol("C_CODE64", RootSD.EsdId);
-  ED.SectionLength = 0;
-  ED.Executable = GOFF::ESD_EXE_CODE;
-  ED.ForceRent = true;
+  GOFFSymbol ED = createEDSymbol("C_CODE64", RootSD.EsdId, 0, GOFF::ESD_EXE_CODE, true);
 
   for (const MCSection &MCSec : Asm) {
     SectionKind Kind = MCSec.getKind();
@@ -872,7 +911,6 @@ void GOFFObjectWriter::writeADAandCodeSectionSymbols(
 
 void GOFFObjectWriter::writeSectionSymbols(MCAssembler &Asm,
                                            const MCAsmLayout &Layout) {
-  bool IsOSLinkageType = false;
   for (MCSection &S : Asm) {
     auto &Section = cast<MCSectionGOFF>(S);
     SectionKind Kind = Section.getKind();
@@ -888,19 +926,14 @@ void GOFFObjectWriter::writeSectionSymbols(MCAssembler &Asm,
       GOFFSymbol SD = RootSD;
 
       const char *WSAClassName = "C_WSA64";
-      GOFFSymbol ED = createEDSymbol(WSAClassName, SD.EsdId);
-      if (IsOSLinkageType)
-        ED.LoadBehavior = GOFF::ESDLoadingBehavior::ESD_LB_Deferred;
-      ED.BindAlgorithm = GOFF::ESD_BA_Merge;
-      ED.Executable = GOFF::ESD_EXE_DATA;
-      ED.NameSpace = GOFF::ESD_NS_Parts;
-
-      GOFFSymbol PR = createPRSymbol(Section.getName(), ED.EsdId);
-      PR.Alignment = GOFF::ESD_ALIGN_Fullword;
-      PR.SectionLength = Layout.getSectionAddressSize(&Section);
-      PR.LoadBehavior = GOFF::ESD_LB_Deferred;
-      PR.NameSpace = GOFF::ESD_NS_Parts;
-      PR.BindingScope = GOFF::ESD_BSC_Section;
+      GOFFSymbol ED = createEDSymbol(WSAClassName, SD.EsdId, 0, GOFF::ESD_EXE_DATA,
+                                     GOFF::ESD_BSC_Unspecified, GOFF::ESD_NS_Parts,
+                                     GOFF::ESD_BA_Merge, /*ReadOnly*/false,
+                                     GOFF::ESD_TS_Unstructured, GOFF::ESD_LB_Initial);
+      GOFFSymbol PR = createPRSymbol(Section.getName(), ED.EsdId, GOFF::ESD_NS_Parts,
+                                     GOFF::ESD_EXE_Unspecified, GOFF::ESD_ALIGN_Fullword,
+                                     GOFF::ESD_BSC_Section, Layout.getSectionAddressSize(&Section),
+                                     GOFF::ESD_LB_Deferred);
 
       writeSymbol(ED, Layout);
       writeSymbol(PR, Layout);
@@ -911,22 +944,15 @@ void GOFFObjectWriter::writeSectionSymbols(MCAssembler &Asm,
       StringRef EDSectionName = "C_@@QPPA2";
       StringRef PRSectionName = ".&ppa2";
       GOFFSymbol SD = RootSD;
-      GOFFSymbol ED = createEDSymbol(EDSectionName, SD.EsdId);
-      GOFFSymbol PR = createPRSymbol(PRSectionName, ED.EsdId);
-
-      // Set namespace
-      ED.NameSpace = GOFF::ESD_NS_Parts;
-      ED.BindAlgorithm = GOFF::ESD_BA_Merge;
-      ED.Executable = GOFF::ESD_EXE_DATA;
-      ED.ReadOnly = true;
-
-      PR.SectionLength = Layout.getSectionAddressSize(&Section);
-      PR.NameSpace = GOFF::ESD_NS_Parts;
-      PR.BindingScope = GOFF::ESD_BSC_Section;
-      PR.Alignment = GOFF::ESD_ALIGN_Doubleword;
-      PR.Renamable = true;
-      PR.Linkage = GOFF::ESD_LT_OS;
-
+      GOFFSymbol ED = createEDSymbol(EDSectionName, SD.EsdId, 0, GOFF::ESD_EXE_DATA,
+                                     GOFF::ESD_BSC_Unspecified, GOFF::ESD_NS_Parts,
+                                     GOFF::ESD_BA_Merge, /*ReadOnly*/ true, GOFF::ESD_TS_Unstructured,
+                                     GOFF::ESD_LB_Initial);
+      Align A = Align(Layout.getSectionAddressSize(&Section));
+      GOFFSymbol PR = createPRSymbol(PRSectionName, ED.EsdId, GOFF::ESD_NS_Parts, GOFF::ESD_EXE_Unspecified,
+                                     GOFF::ESD_ALIGN_Doubleword, GOFF::ESD_BSC_Section, 
+                                     GOFFSymbol::setGOFFAlignment(A),
+                                     GOFF::ESD_LB_Initial, GOFF::ESD_LT_OS);
       writeSymbol(ED, Layout);
       writeSymbol(PR, Layout);
 
@@ -934,16 +960,10 @@ void GOFFObjectWriter::writeSectionSymbols(MCAssembler &Asm,
       SectionMap.insert(std::make_pair(&Section, GoffSec));
     } else if (Section.getName().equals("B_IDRL")) {
       GOFFSymbol SD = RootSD;
-      GOFFSymbol ED = createEDSymbol("B_IDRL", SD.EsdId);
-      ED.Executable = GOFF::ESD_EXE_Unspecified;
-      ED.BindingScope = GOFF::ESD_BSC_Module;
-      ED.NameSpace = GOFF::ESD_NS_NormalName;
-      ED.BindAlgorithm = GOFF::ESD_BA_Concatenate;
-      ED.ReadOnly = true;
-      ED.SectionLength = Layout.getSectionAddressSize(&Section);
-      ED.TextStyle = GOFF::ESD_TS_Structured;
-      ED.LoadBehavior = GOFF::ESD_LB_NoLoad;
-
+      GOFFSymbol ED = createEDSymbol("B_IDRL", SD.EsdId, Layout.getSectionAddressSize(&Section),
+                                     GOFF::ESD_EXE_Unspecified, GOFF::ESD_BSC_Module,
+                                     GOFF::ESD_NS_NormalName, GOFF::ESD_BA_Concatenate,
+                                     /*ReadOnly*/ true, GOFF::ESD_TS_Structured, GOFF::ESD_LB_NoLoad);
       writeSymbol(ED, Layout);
 
       GOFFSection GoffSec = GOFFSection(ED.EsdId, 0, 0);
