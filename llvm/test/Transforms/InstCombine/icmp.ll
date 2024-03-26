@@ -5051,7 +5051,6 @@ define i1 @or_positive_sgt_zero_multi_use(i8 %a) {
   ret i1 %cmp
 }
 
-
 define i1 @disjoint_or_sgt_1(i8 %a, i8 %b) {
 ; CHECK-LABEL: @disjoint_or_sgt_1(
 ; CHECK-NEXT:    [[B1:%.*]] = add nsw i8 [[B:%.*]], 2
@@ -5181,5 +5180,113 @@ entry:
   %add1 = add nuw i8 %b, -2
   %add2 = add i8 %a, -1
   %cmp = icmp eq i8 %add2, %add1
+  ret i1 %cmp
+}
+
+define i1 @icmp_ugt_sdiv_by_constant(i64 %x) {
+; CHECK-LABEL: @icmp_ugt_sdiv_by_constant(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sdiv = sdiv exact i64 %x, 24
+  %cmp = icmp ugt i64 %sdiv, 384307168202282325
+  ret i1 %cmp
+}
+
+define i1 @icmp_ult_sdiv_by_constant(i64 %x) {
+; CHECK-LABEL: @icmp_ult_sdiv_by_constant(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[X:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sdiv = sdiv exact i64 %x, 24
+  %cmp = icmp ult i64 %sdiv, 384307168202282326
+  ret i1 %cmp
+}
+
+; TODO: This should be simplified to icmp slt i64 %x, 0
+define i1 @icmp_ugt_ashr_by_constant(i64 %x) {
+; CHECK-LABEL: @icmp_ugt_ashr_by_constant(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X:%.*]], 9223372036854775804
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sdiv = ashr exact i64 %x, 2
+  %cmp = icmp ugt i64 %sdiv, 2305843009213693951
+  ret i1 %cmp
+}
+
+define i1 @icmp_ult_ashr_by_constant(i64 %x) {
+; CHECK-LABEL: @icmp_ult_ashr_by_constant(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[X:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sdiv = ashr exact i64 %x, 2
+  %cmp = icmp ult i64 %sdiv, 2305843009213693952
+  ret i1 %cmp
+}
+
+; Negative tests
+define i1 @icmp_ugt_sdiv_by_constant_without_exact(i64 %x) {
+; CHECK-LABEL: @icmp_ugt_sdiv_by_constant_without_exact(
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i64 [[X:%.*]], 24
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[SDIV]], 384307168202282325
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sdiv = sdiv i64 %x, 24
+  %cmp = icmp ugt i64 %sdiv, 384307168202282325
+  ret i1 %cmp
+}
+
+define i1 @icmp_ugt_udiv_by_constant(i64 %x) {
+; CHECK-LABEL: @icmp_ugt_udiv_by_constant(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X:%.*]], 9223372036854775800
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sdiv = udiv exact i64 %x, 24
+  %cmp = icmp ugt i64 %sdiv, 384307168202282325
+  ret i1 %cmp
+}
+
+define i1 @icmp_ne_sdiv_by_constant(i64 %x) {
+; CHECK-LABEL: @icmp_ne_sdiv_by_constant(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[X:%.*]], 9223372036854775800
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sdiv = sdiv exact i64 %x, 24
+  %cmp = icmp ne i64 %sdiv, 384307168202282325
+  ret i1 %cmp
+}
+
+define i1 @icmp_ugt_sdiv_by_constant_wrong_rhs(i64 %x) {
+; CHECK-LABEL: @icmp_ugt_sdiv_by_constant_wrong_rhs(
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv exact i64 [[X:%.*]], 24
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[SDIV]], 384307168202282324
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sdiv = sdiv exact i64 %x, 24
+  %cmp = icmp ugt i64 %sdiv, 384307168202282324
+  ret i1 %cmp
+}
+
+define i1 @icmp_ugt_sdiv_by_negative_constant(i64 %x) {
+; CHECK-LABEL: @icmp_ugt_sdiv_by_negative_constant(
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i64 [[X:%.*]], -24
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[SDIV]], -384307168202282326
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sdiv = sdiv i64 %x, -24
+  %cmp = icmp ugt i64 %sdiv, -384307168202282326
+  ret i1 %cmp
+}
+
+define i1 @icmp_ugt_sdiv_by_constant_multiuse(i64 %x) {
+; CHECK-LABEL: @icmp_ugt_sdiv_by_constant_multiuse(
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv exact i64 [[X:%.*]], 24
+; CHECK-NEXT:    call void @use_i64(i64 [[SDIV]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[SDIV]], 384307168202282325
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sdiv = sdiv exact i64 %x, 24
+  call void @use_i64(i64 %sdiv)
+  %cmp = icmp ugt i64 %sdiv, 384307168202282325
   ret i1 %cmp
 }
