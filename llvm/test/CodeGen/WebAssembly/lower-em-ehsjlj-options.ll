@@ -59,12 +59,12 @@ entry:
   %call = call i32 @setjmp(ptr %buf) #0
   call void @longjmp(ptr %buf, i32 1) #1
   unreachable
-; SJLJ: call saveSetjmp
+; SJLJ: call __wasm_setjmp
 ; SJLJ: i32.const emscripten_longjmp
 ; SJLJ-NOT: i32.const emscripten_longjmp_jmpbuf
 ; SJLJ: call invoke_vii
 ; SJLJ-NOT: call "__invoke_void_ptr_i32"
-; SJLJ: call testSetjmp
+; SJLJ: call __wasm_setjmp_test
 
 ; NONE: call setjmp
 ; NONE: call longjmp
