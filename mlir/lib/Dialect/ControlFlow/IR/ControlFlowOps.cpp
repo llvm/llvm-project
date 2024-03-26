@@ -70,11 +70,11 @@ void ControlFlowDialect::initialize() {
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.cpp.inc"
       >();
   addInterfaces<ControlFlowInlinerInterface>();
-  declarePromisedInterface<ControlFlowDialect, ConvertToLLVMPatternInterface>();
+  declarePromisedInterface<ConvertToLLVMPatternInterface, ControlFlowDialect>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface, BranchOp,
                             CondBranchOp>();
-  declarePromisedInterface<CondBranchOp,
-                           bufferization::BufferDeallocationOpInterface>();
+  declarePromisedInterface<bufferization::BufferDeallocationOpInterface, 
+                           CondBranchOp>();
 }
 
 //===----------------------------------------------------------------------===//
