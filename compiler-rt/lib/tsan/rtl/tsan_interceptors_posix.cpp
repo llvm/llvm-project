@@ -1340,7 +1340,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_destroy, void *m) {
 TSAN_INTERCEPTOR(int, pthread_mutex_lock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_lock, m);
   MutexPreLock(thr, pc, (uptr)m);
-  int res = REAL(pthread_mutex_lock)(m);
+  int res = BLOCK_REAL(pthread_mutex_lock)(m);
   if (res == errno_EOWNERDEAD)
     MutexRepair(thr, pc, (uptr)m);
   if (res == 0 || res == errno_EOWNERDEAD)
@@ -1385,7 +1385,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_clocklock, void *m,
                  __sanitizer_clockid_t clock, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_clocklock, m, clock, abstime);
   MutexPreLock(thr, pc, (uptr)m);
-  int res = REAL(pthread_mutex_clocklock)(m, clock, abstime);
+  int res = BLOCK_REAL(pthread_mutex_clocklock)(m, clock, abstime);
   if (res == errno_EOWNERDEAD)
     MutexRepair(thr, pc, (uptr)m);
   if (res == 0 || res == errno_EOWNERDEAD)
@@ -1403,7 +1403,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_clocklock, void *m,
 TSAN_INTERCEPTOR(int, __pthread_mutex_lock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(__pthread_mutex_lock, m);
   MutexPreLock(thr, pc, (uptr)m);
-  int res = REAL(__pthread_mutex_lock)(m);
+  int res = BLOCK_REAL(__pthread_mutex_lock)(m);
   if (res == errno_EOWNERDEAD)
     MutexRepair(thr, pc, (uptr)m);
   if (res == 0 || res == errno_EOWNERDEAD)
@@ -1446,7 +1446,7 @@ TSAN_INTERCEPTOR(int, pthread_spin_destroy, void *m) {
 TSAN_INTERCEPTOR(int, pthread_spin_lock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_spin_lock, m);
   MutexPreLock(thr, pc, (uptr)m);
-  int res = REAL(pthread_spin_lock)(m);
+  int res = BLOCK_REAL(pthread_spin_lock)(m);
   if (res == 0) {
     MutexPostLock(thr, pc, (uptr)m);
   }
@@ -1521,7 +1521,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_timedrdlock, void *m, void *abstime) {
 TSAN_INTERCEPTOR(int, pthread_rwlock_wrlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_wrlock, m);
   MutexPreLock(thr, pc, (uptr)m);
-  int res = REAL(pthread_rwlock_wrlock)(m);
+  int res = BLOCK_REAL(pthread_rwlock_wrlock)(m);
   if (res == 0) {
     MutexPostLock(thr, pc, (uptr)m);
   }
