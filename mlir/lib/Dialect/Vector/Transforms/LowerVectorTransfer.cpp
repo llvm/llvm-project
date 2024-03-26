@@ -205,12 +205,19 @@ struct TransferWritePermutationLowering
     // Generate new transfer_write operation.
     Value newVec = rewriter.create<vector::TransposeOp>(
         op.getLoc(), op.getVector(), indices);
+
+    auto vectorType = cast<VectorType>(newVec.getType());
+
+    if (vectorType.isScalable() && !*vectorType.getScalableDims().end()) {
+      rewriter.eraseOp(newVec.getDefiningOp());
+      return failure();
+    }
+
     auto newMap = AffineMap::getMinorIdentityMap(
         map.getNumDims(), map.getNumResults(), rewriter.getContext());
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
         op, newVec, op.getSource(), op.getIndices(), AffineMapAttr::get(newMap),
         op.getMask(), newInBoundsAttr);
-
     return success();
   }
 };
@@ -273,7 +280,7 @@ struct TransferWriteNonPermutationLowering
                                     missingInnerDim.size());
     // Mask: add unit dims at the end of the shape.
     Value newMask;
-    if (op.getMask())
+    if (op.getMask() && !op.getVectorType().isScalable())
       newMask = extendMaskRank(rewriter, op.getLoc(), op.getMask(),
                                missingInnerDim.size());
     exprs.append(map.getResults().begin(), map.getResults().end());
