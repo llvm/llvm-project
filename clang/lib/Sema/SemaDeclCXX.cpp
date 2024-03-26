@@ -16202,7 +16202,8 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, const RecordType *Record) {
 
   // Emit warning for non-trivial dtor in global scope (a real global,
   // class-static, function-static).
-  Diag(VD->getLocation(), diag::warn_exit_time_destructor);
+  if (!VD->hasAttr<AlwaysDestroyAttr>())
+    Diag(VD->getLocation(), diag::warn_exit_time_destructor);
 
   // TODO: this should be re-enabled for static locals by !CXAAtExit
   if (!VD->isStaticLocal())
