@@ -141,6 +141,19 @@ TEST(InjectorIRStrategyTest, InsertWMustTailCall) {
   mutateAndVerifyModule(Source, Mutator, 100);
 }
 
+TEST(InjectorIRStrategyTest, InsertWMustTailCallCast) {
+  StringRef Source = "\n\
+        define i1 @recursive() {    \n\
+        Entry:     \n\
+            %Ret = musttail call i1 @recursive() \n\
+            %Cast = bitcast i1 %Ret to i1 \n\
+            ret i1 %Cast \n\
+        }";
+  auto Mutator = createInjectorMutator();
+  ASSERT_TRUE(Mutator);
+  mutateAndVerifyModule(Source, Mutator, 100);
+}
+
 TEST(InjectorIRStrategyTest, InsertWTailCall) {
   StringRef Source = "\n\
         define i1 @recursive() {    \n\
