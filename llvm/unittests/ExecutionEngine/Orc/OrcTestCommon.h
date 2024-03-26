@@ -53,7 +53,8 @@ public:
 
 protected:
   std::shared_ptr<SymbolStringPool> SSP = std::make_shared<SymbolStringPool>();
-  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>(SSP)};
+  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>(),
+                      SSP};
   JITDylib &JD = ES.createBareJITDylib("JD");
   SymbolStringPtr Foo = ES.intern("foo");
   SymbolStringPtr Bar = ES.intern("bar");

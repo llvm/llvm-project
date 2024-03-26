@@ -37,7 +37,8 @@ public:
   }
 
 protected:
-  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
+  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>(),
+                      std::make_shared<SymbolStringPool>()};
   JITDylib &JD = ES.createBareJITDylib("main");
   ObjectLinkingLayer ObjLinkingLayer{
       ES, std::make_unique<InProcessMemoryManager>(4096)};
@@ -182,8 +183,7 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
   class TestEPC : public UnsupportedExecutorProcessControl {
   public:
     TestEPC()
-        : UnsupportedExecutorProcessControl(nullptr, nullptr,
-                                            "x86_64-apple-darwin") {}
+        : UnsupportedExecutorProcessControl(nullptr, "x86_64-apple-darwin") {}
 
     Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override {
       return ExecutorAddr::fromPtr((void *)nullptr);
@@ -209,7 +209,8 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
     }
   };
 
-  ExecutionSession ES{std::make_unique<TestEPC>()};
+  auto SSP = std::make_shared<SymbolStringPool>();
+  ExecutionSession ES{std::make_unique<TestEPC>(), SSP};
   JITDylib &JD = ES.createBareJITDylib("main");
   ObjectLinkingLayer ObjLinkingLayer{
       ES, std::make_unique<InProcessMemoryManager>(4096)};

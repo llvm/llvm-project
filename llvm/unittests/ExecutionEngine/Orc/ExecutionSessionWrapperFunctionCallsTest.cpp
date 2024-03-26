@@ -36,7 +36,8 @@ voidWrapper(const char *ArgData, size_t ArgSize) {
 }
 
 TEST(ExecutionSessionWrapperFunctionCalls, RunWrapperTemplate) {
-  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+  auto SSP = std::make_shared<SymbolStringPool>();
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()), SSP);
 
   int32_t Result;
   EXPECT_THAT_ERROR(ES.callSPSWrapper<int32_t(int32_t, int32_t)>(
@@ -47,7 +48,8 @@ TEST(ExecutionSessionWrapperFunctionCalls, RunWrapperTemplate) {
 }
 
 TEST(ExecutionSessionWrapperFunctionCalls, RunVoidWrapperAsyncTemplate) {
-  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+  auto SSP = std::make_shared<SymbolStringPool>();
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()), SSP);
 
   std::promise<MSVCPError> RP;
   ES.callSPSWrapperAsync<void()>(ExecutorAddr::fromPtr(voidWrapper),
@@ -60,7 +62,8 @@ TEST(ExecutionSessionWrapperFunctionCalls, RunVoidWrapperAsyncTemplate) {
 }
 
 TEST(ExecutionSessionWrapperFunctionCalls, RunNonVoidWrapperAsyncTemplate) {
-  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+  auto SSP = std::make_shared<SymbolStringPool>();
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()), SSP);
 
   std::promise<MSVCPExpected<int32_t>> RP;
   ES.callSPSWrapperAsync<int32_t(int32_t, int32_t)>(
@@ -80,7 +83,8 @@ TEST(ExecutionSessionWrapperFunctionCalls, RegisterAsyncHandlerAndRun) {
 
   constexpr ExecutorAddr AddAsyncTagAddr(0x01);
 
-  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+  auto SSP = std::make_shared<SymbolStringPool>();
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()), SSP);
   auto &JD = ES.createBareJITDylib("JD");
 
   auto AddAsyncTag = ES.intern("addAsync_tag");

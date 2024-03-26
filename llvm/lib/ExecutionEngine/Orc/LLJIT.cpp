@@ -936,12 +936,14 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
   assert(!(S.EPC && S.ES) && "EPC and ES should not both be set");
 
   if (S.EPC) {
-    ES = std::make_unique<ExecutionSession>(std::move(S.EPC));
-  } else if (S.ES)
+    auto SSP = std::make_shared<SymbolStringPool>();
+    ES = std::make_unique<ExecutionSession>(std::move(S.EPC), std::move(SSP));
+  } else if (S.ES) {
     ES = std::move(S.ES);
-  else {
+  } else {
     if (auto EPC = SelfExecutorProcessControl::Create()) {
-      ES = std::make_unique<ExecutionSession>(std::move(*EPC));
+      auto SSP = std::make_shared<SymbolStringPool>();
+      ES = std::make_unique<ExecutionSession>(std::move(*EPC), std::move(SSP));
     } else {
       Err = EPC.takeError();
       return;

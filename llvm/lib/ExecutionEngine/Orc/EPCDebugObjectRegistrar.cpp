@@ -30,8 +30,8 @@ Expected<std::unique_ptr<EPCDebugObjectRegistrar>> createJITLoaderGDBRegistrar(
 
   SymbolStringPtr RegisterFn =
       EPC.getTargetTriple().isOSBinFormatMachO()
-          ? EPC.intern("_llvm_orc_registerJITLoaderGDBWrapper")
-          : EPC.intern("llvm_orc_registerJITLoaderGDBWrapper");
+          ? ES.intern("_llvm_orc_registerJITLoaderGDBWrapper")
+          : ES.intern("llvm_orc_registerJITLoaderGDBWrapper");
 
   SymbolLookupSet RegistrationSymbols;
   RegistrationSymbols.add(RegisterFn);
