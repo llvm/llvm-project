@@ -14,10 +14,9 @@ extern "C" void __cxa_finalize(void *);
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(void, exit, (int status)) {
+[[noreturn]] LLVM_LIBC_FUNCTION(void, exit, (int status)) {
   __cxa_finalize(nullptr);
   quick_exit(status);
-  __builtin_unreachable();
 }
 
 } // namespace LIBC_NAMESPACE
