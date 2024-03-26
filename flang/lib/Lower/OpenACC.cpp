@@ -2425,8 +2425,7 @@ static Op createComputeOp(
   }
 
   if (combinedConstructs) {
-    computeOp.setCombinedAttr(mlir::acc::CombinedConstructsTypeAttr::get(
-        builder.getContext(), combinedConstructs.value()));
+    computeOp.setCombinedAttr(builder.getUnitAttr());
   }
 
   auto insPt = builder.saveInsertionPoint();
