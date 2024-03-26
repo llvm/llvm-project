@@ -3322,9 +3322,9 @@ llvm::DIType *CGDebugInfo::CreateType(const MemberPointerType *Ty,
   const FunctionProtoType *FPT =
       Ty->getPointeeType()->castAs<FunctionProtoType>();
   return DBuilder.createMemberPointerType(
-      getOrCreateInstanceMethodType(
-          CXXMethodDecl::getThisType(FPT, Ty->getMostRecentCXXRecordDecl()),
-          FPT, U),
+      getOrCreateInstanceMethodType(CXXMethodDecl::getThisTypeForMemberPtr(
+                                        FPT, Ty->getMostRecentCXXRecordDecl()),
+                                    FPT, U),
       ClassType, Size, /*Align=*/0, Flags);
 }
 

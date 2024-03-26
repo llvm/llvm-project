@@ -504,3 +504,39 @@ void runOnFunction() {
 }
 // CHECK-DAG: call {{.*}} @"??0?$L@V?$H@PAH@PR26029@@@PR26029@@QAE@XZ"
 }
+
+namespace CVRMemberFunctionQuals {
+struct S {
+  void a() const;
+  void b() volatile;
+  void c() __restrict;
+  void d() const volatile;
+  void e() const __restrict;
+  void f() volatile __restrict;
+  void g() const volatile __restrict;
+
+  void h();
+};
+
+// X64-DAG: define dso_local void @"?a@S@CVRMemberFunctionQuals@@QEBAXXZ"
+// X64-DAG: define dso_local void @"?b@S@CVRMemberFunctionQuals@@QECAXXZ"
+// X64-DAG: define dso_local void @"?c@S@CVRMemberFunctionQuals@@QEIAAXXZ"
+// X64-DAG: define dso_local void @"?d@S@CVRMemberFunctionQuals@@QEDAXXZ"
+// X64-DAG: define dso_local void @"?e@S@CVRMemberFunctionQuals@@QEIBAXXZ"
+// X64-DAG: define dso_local void @"?f@S@CVRMemberFunctionQuals@@QEICAXXZ"
+// X64-DAG: define dso_local void @"?g@S@CVRMemberFunctionQuals@@QEIDAXXZ"
+void S::a() const {}
+void S::b() volatile {}
+void S::c() __restrict {}
+void S::d() const volatile {}
+void S::e() const __restrict {}
+void S::f() volatile __restrict {}
+void S::g() const volatile __restrict {}
+
+// MSVC allows a mismatch in `__restrict`-qualification between a function
+// declaration and definition and includes the qualifier in the ABI only if
+// it is present in the declaration.
+//
+// X64-DAG: define dso_local void @"?h@S@CVRMemberFunctionQuals@@QEAAXXZ"
+void S::h() __restrict {}
+}

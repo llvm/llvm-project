@@ -5081,6 +5081,21 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   Function->setInnerLocStart(PatternDecl->getInnerLocStart());
   Function->setRangeEnd(PatternDecl->getEndLoc());
 
+  // Propagate '__restrict' properly.
+  if (auto MD = dyn_cast<CXXMethodDecl>(Function)) {
+    bool Restrict = cast<CXXMethodDecl>(PatternDecl)->isEffectivelyRestrict();
+    if (Restrict != MD->getMethodQualifiers().hasRestrict()) {
+      const auto *FPT = MD->getType()->getAs<FunctionProtoType>();
+      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+      if (Restrict)
+        EPI.TypeQuals.addRestrict();
+      else
+        EPI.TypeQuals.removeRestrict();
+      MD->setType(Context.getFunctionType(FPT->getReturnType(),
+                                          FPT->getParamTypes(), EPI));
+    }
+  }
+
   EnterExpressionEvaluationContext EvalContext(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
 

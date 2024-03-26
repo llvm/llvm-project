@@ -2208,12 +2208,19 @@ public:
     return getNumParams() - (isExplicitObjectMemberFunction() ? 1 : 0);
   }
 
-  static QualType getThisType(const FunctionProtoType *FPT,
-                              const CXXRecordDecl *Decl);
+  /// Get the type of the \c this pointer for the given method type to be used
+  /// in a MemberPointerType or similar.
+  static QualType getThisTypeForMemberPtr(const FunctionProtoType *FPT,
+                                          const CXXRecordDecl *Decl);
 
   Qualifiers getMethodQualifiers() const {
     return getType()->castAs<FunctionProtoType>()->getMethodQuals();
   }
+
+  /// Get whether this method should be considered '__restrict'-qualified,
+  /// irrespective of the presence or absence of '__restrict' on this
+  /// particular declaration.
+  bool isEffectivelyRestrict() const;
 
   /// Retrieve the ref-qualifier associated with this method.
   ///
