@@ -547,16 +547,16 @@ void TosaValidation::runOnOperation() {
     for (Value operand : op->getOperands()) {
       auto elementTy = getElementTypeOrSelf(operand);
       if (!isValidElementType(elementTy)) {
-        op->emitOpError() << "failed level check: element type " << elementTy
-                          << " is not legal";
+        op->emitOpError() << "is not profile-aligned: element type "
+                          << elementTy << " is not legal";
         return signalPassFailure();
       }
     }
     for (Type resultTy : op->getResultTypes()) {
       auto elementTy = getElementTypeOrSelf(resultTy);
       if (!isValidElementType(elementTy)) {
-        op->emitOpError() << "failed level check: element type " << elementTy
-                          << " is not legal";
+        op->emitOpError() << "is not profile-aligned: element type "
+                          << elementTy << " is not legal";
         return signalPassFailure();
       }
     }
