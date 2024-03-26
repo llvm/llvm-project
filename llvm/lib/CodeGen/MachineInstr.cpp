@@ -557,7 +557,8 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
 
   // Copy the nonneg flag.
   if (const PossiblyNonNegInst *PNI = dyn_cast<PossiblyNonNegInst>(&I))
-    MIFlags |= MachineInstr::MIFlag::NonNeg;
+    if (PNI->hasNonNeg())
+      MIFlags |= MachineInstr::MIFlag::NonNeg;
 
   // Copy the disjoint flag.
   if (const PossiblyDisjointInst *PD = dyn_cast<PossiblyDisjointInst>(&I))

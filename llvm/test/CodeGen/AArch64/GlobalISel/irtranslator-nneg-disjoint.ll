@@ -23,8 +23,8 @@ define i32 @call_not_nneg(i16 %a) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   %2:_(s32) = nneg G_ZEXT [[TRUNC]](s16)
-  ; CHECK-NEXT:   $w0 = COPY %2(s32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s16)
+  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
   %result = zext i16 %a to i32
