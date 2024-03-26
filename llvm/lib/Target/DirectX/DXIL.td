@@ -274,6 +274,9 @@ def Frac : DXILOpMapping<22, unary, int_dx_frac,
                          "Returns a fraction from 0 to 1 that represents the "
                          "decimal part of the input.",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def Log2 : DXILOpMapping<23, unary, int_log2,
+                         "Returns the base-2 logarithm of the specified value.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
 def Sqrt : DXILOpMapping<24, unary, int_sqrt,
                          "Returns the square root of the specified floating-point"
                          "value, per component.",
