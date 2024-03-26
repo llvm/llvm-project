@@ -1,4 +1,4 @@
-; A pre-commit test to show that value profiles associated with inovke are not updated.
+; A pre-commit test to show that value profiles associated with invoke are not updated.
 ; RUN: opt < %s -passes='require<profile-summary>,cgscc(inline)' -S | FileCheck %s
 
 declare i32 @__gxx_personality_v0(...)
@@ -39,7 +39,7 @@ lpad:
 !13 = !{i32 999000, i64 100, i32 1}
 !14 = !{i32 999999, i64 1, i32 2}
 !15 = !{!"function_entry_count", i64 1000}
-!16 = !{!"VP", i64 1000, i64 123, i64 600, i64 456, i64 400}
+!16 = !{!"branch_weights", i64 1000}
 !17 = !{!"function_entry_count", i32 1500}
 !18 = !{!"VP", i64 1500, i64 123, i64 900, i64 456, i64 600}
 

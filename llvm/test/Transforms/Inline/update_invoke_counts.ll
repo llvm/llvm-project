@@ -1,4 +1,4 @@
-; A pre-commit test to show that branch weight associated with inovke are not updated.
+; A pre-commit test to show that branch weight associated with invoke are not updated.
 ; RUN: opt < %s -passes='require<profile-summary>,cgscc(inline)' -S | FileCheck %s
 
 declare i32 @__gxx_personality_v0(...)
