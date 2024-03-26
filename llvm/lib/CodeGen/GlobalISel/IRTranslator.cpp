@@ -1562,9 +1562,14 @@ bool IRTranslator::translateCast(unsigned Opcode, const User &U,
   if (U.getType()->getScalarType()->isBFloatTy() ||
       U.getOperand(0)->getType()->getScalarType()->isBFloatTy())
     return false;
+
+  uint32_t Flags = 0;
+  if (const Instruction *I = dyn_cast<Instruction>(&U))
+    Flags = MachineInstr::copyFlagsFromInstruction(*I);
+
   Register Op = getOrCreateVReg(*U.getOperand(0));
   Register Res = getOrCreateVReg(U);
-  MIRBuilder.buildInstr(Opcode, {Res}, {Op});
+  MIRBuilder.buildInstr(Opcode, {Res}, {Op}, Flags);
   return true;
 }
 
