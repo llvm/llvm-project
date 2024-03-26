@@ -90,7 +90,7 @@ public:
   StringRef parentName;
 
   // Returns .drectve section(s) content if exist.
-  llvm::SmallVector<StringRef, 0>  getDrectves() { return directives; }
+  llvm::SmallVector<StringRef, 1>  getDrectves() { return directives; }
 
   COFFLinkerContext &ctx;
 
@@ -98,7 +98,7 @@ protected:
   InputFile(COFFLinkerContext &c, Kind k, MemoryBufferRef m, bool lazy = false)
       : mb(m), ctx(c), fileKind(k), lazy(lazy) {}
 
-  llvm::SmallVector<StringRef, 0> directives;
+  llvm::SmallVector<StringRef, 1> directives;
 
 private:
   const Kind fileKind;
