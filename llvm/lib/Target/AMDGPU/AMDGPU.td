@@ -1449,7 +1449,12 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureKernargPreload]>;
 
 def FeatureISAVersion9_5_Common : FeatureSet<
-  !listconcat(FeatureISAVersion9_4_Common.Features, [FeatureGFX950Insts, FeatureLocalMemorySize163840, FeaturePrngInst])>;
+  !listconcat(FeatureISAVersion9_4_Common.Features,
+  [FeatureGFX950Insts,
+   FeatureLocalMemorySize163840,
+   FeaturePrngInst,
+   FeatureBF16ConversionInsts,
+   FeatureBitOp3Insts])>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,

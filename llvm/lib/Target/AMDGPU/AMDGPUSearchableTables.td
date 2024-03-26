@@ -376,7 +376,8 @@ def : SourceOfDivergence<intr>;
 foreach intr = AMDGPUSWMMACIntrinsicsGFX1210 in
 def : SourceOfDivergence<intr>;
 
-def : SourceOfDivergence<int_amdgcn_global_load_tr>;
+def : SourceOfDivergence<int_amdgcn_global_load_tr_b64>;
+def : SourceOfDivergence<int_amdgcn_global_load_tr_b128>;
 def : SourceOfDivergence<int_amdgcn_global_load_tr4>;
 def : SourceOfDivergence<int_amdgcn_global_load_tr6>;
 def : SourceOfDivergence<int_amdgcn_ds_load_tr>;
