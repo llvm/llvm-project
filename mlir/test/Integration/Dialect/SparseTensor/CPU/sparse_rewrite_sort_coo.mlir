@@ -5,24 +5,24 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
 
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
 
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with  VLA vectorization.
@@ -64,7 +64,7 @@ module {
   }
 
   // The main driver.
-  func.func @entry() {
+  func.func @main() {
     %c0 = arith.constant 0 : i32
     %c1 = arith.constant 1 : i32
     %c2 = arith.constant 2 : i32
@@ -88,10 +88,10 @@ module {
     // Prepare a buffer for x0, x1, x2, y0 and a buffer for y1.
     %xys = memref.alloc() : memref<20xi32>
     %xy = memref.cast %xys : memref<20xi32> to memref<?xi32>
-    %x0 = memref.subview %xy[%i0][%i5][%i4] : memref<?xi32> to memref<?xi32, strided<[4], offset: ?>>
-    %x1 = memref.subview %xy[%i1][%i5][%i4] : memref<?xi32> to memref<?xi32, strided<[4], offset: ?>>
-    %x2 = memref.subview %xy[%i2][%i5][%i4] : memref<?xi32> to memref<?xi32, strided<[4], offset: ?>>
-    %y0 = memref.subview %xy[%i3][%i5][%i4] : memref<?xi32> to memref<?xi32, strided<[4], offset: ?>>
+    %x0 = memref.subview %xy[%i0][%i5][4] : memref<?xi32> to memref<?xi32, strided<[4], offset: ?>>
+    %x1 = memref.subview %xy[%i1][%i5][4] : memref<?xi32> to memref<?xi32, strided<[4], offset: ?>>
+    %x2 = memref.subview %xy[%i2][%i5][4] : memref<?xi32> to memref<?xi32, strided<[4], offset: ?>>
+    %y0 = memref.subview %xy[%i3][%i5][4] : memref<?xi32> to memref<?xi32, strided<[4], offset: ?>>
     %y1s = memref.alloc() : memref<7xi32>
     %y1 = memref.cast %y1s : memref<7xi32> to memref<?xi32>
 

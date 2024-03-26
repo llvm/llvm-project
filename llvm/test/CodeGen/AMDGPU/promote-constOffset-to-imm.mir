@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefix=GFX9 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefix=GFX9 %s
 
 # GFX9-LABEL: name: diffoporder_add
 # GFX9: %{{[0-9]+}}:vreg_64 = GLOBAL_LOAD_DWORDX2 %{{[0-9]+}}, -2048, 0

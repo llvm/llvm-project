@@ -29,7 +29,6 @@
 #include <ranges>
 
 #include "almost_satisfies_types.h"
-#include "boolean_testable.h"
 #include "test_iterators.h"
 
 // SFINAE tests.
@@ -62,7 +61,7 @@ static_assert(!HasSortHeapR<UncheckedRange<const int*>>); // Doesn't satisfy `so
 template <std::size_t N, class T, class Iter>
 constexpr void verify_sorted(const std::array<T, N>& sorted, Iter last, std::array<T, N> expected) {
   assert(sorted == expected);
-  assert(base(last) == sorted.data() + sorted.size());
+  assert(std::to_address(base(last)) == sorted.data() + sorted.size());
   assert(std::is_sorted(sorted.begin(), sorted.end()));
 }
 
@@ -131,14 +130,14 @@ constexpr bool test() {
       auto in = input;
       auto last = std::ranges::sort_heap(in.begin(), in.end(), comp);
       assert(in == expected);
-      assert(last == in.data() + in.size());
+      assert(last == in.end());
     }
 
     {
       auto in = input;
       auto last = std::ranges::sort_heap(in, comp);
       assert(in == expected);
-      assert(last == in.data() + in.size());
+      assert(last == in.end());
     }
   }
 
@@ -185,22 +184,6 @@ constexpr bool test() {
     {
       auto in = input;
       auto last = std::ranges::sort_heap(in, &A::comparator, &A::projection);
-      verify_sorted(in, last, expected);
-    }
-  }
-
-  { // The comparator can return any type that's convertible to `bool`.
-    const std::array input = {3, 1, 2};
-    std::array expected = {1, 2, 3};
-    {
-      auto in = input;
-      auto last = std::ranges::sort_heap(in.begin(), in.end(), [](int i, int j) { return BooleanTestable{i < j}; });
-      verify_sorted(in, last, expected);
-    }
-
-    {
-      auto in = input;
-      auto last = std::ranges::sort_heap(in, [](int i, int j) { return BooleanTestable{i < j}; });
       verify_sorted(in, last, expected);
     }
   }
@@ -255,6 +238,7 @@ void test_complexity() {
     const int debug_elements = std::min(100, n);
     // Multiplier 2 because of comp(a,b) comp(b, a) checks.
     const int debug_comparisons = 2 * (debug_elements + 1) * debug_elements;
+    (void)debug_comparisons;
     std::shuffle(first, last, g);
     std::make_heap(first, last, &MyInt::Comp);
     // The exact stats of our current implementation are recorded here.
@@ -262,9 +246,8 @@ void test_complexity() {
     std::ranges::sort_heap(first, last, &MyInt::Comp);
     LIBCPP_ASSERT(stats.copied == 0);
     LIBCPP_ASSERT(stats.moved <= 2 * n + n * logn);
-#if !_LIBCPP_ENABLE_DEBUG_MODE
+#if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
     LIBCPP_ASSERT(stats.compared <= n * logn);
-    (void)debug_comparisons;
 #else
     LIBCPP_ASSERT(stats.compared <= 2 * n * logn + debug_comparisons);
 #endif

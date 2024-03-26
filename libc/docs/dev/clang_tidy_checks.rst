@@ -2,6 +2,12 @@
 
 LLVM libc clang-tidy checks
 ===========================
+
+
+.. warning::
+  This page is severely out of date. Much of the information it contains may be
+  incorrect. Please only remove this warning once the page has been updated.
+
 These are the clang-tidy checks designed to help enforce implementation
 standards.
 The configuration file is ``src/.clang-tidy``.
@@ -69,7 +75,7 @@ a public header with non-namespaced functions like ``string.h`` is included.
 This check ensures any function call resolves to a function within the
 LIBC_NAMESPACE namespace.
 
-There are exceptions for the following functions: 
+There are exceptions for the following functions:
 ``__errno_location`` so that ``errno`` can be set;
 ``malloc``, ``calloc``, ``realloc``, ``aligned_alloc``, and ``free`` since they
 are always external and can be intercepted.

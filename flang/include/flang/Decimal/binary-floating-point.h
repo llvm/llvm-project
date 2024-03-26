@@ -143,7 +143,7 @@ public:
     if (IsNaN() || IsInfinite() || keepBits >= binaryPrecision) {
       return true;
     }
-    int lostBits{binaryPrecision - keepBits};
+    int lostBits{keepBits < binaryPrecision ? binaryPrecision - keepBits : 0};
     RawType lostMask{static_cast<RawType>((RawType{1} << lostBits) - 1)};
     if (RawType lost{static_cast<RawType>(raw_ & lostMask)}; lost != 0) {
       bool increase{false};

@@ -283,6 +283,13 @@ See :doc:`TableGen BackEnds <./BackEnds>` for a list of available
 backends, and see the :doc:`TableGen Backend Developer's Guide <./BackGuide>`
 for information on how to write and debug a new backend.
 
+Tools and Resources
+===================
+
+In addition to this documentation, a list of tools and resources for TableGen
+can be found in TableGen's
+`README <https://github.com/llvm/llvm-project/blob/main/llvm/utils/TableGen/README.md>`_.
+
 TableGen Deficiencies
 =====================
 

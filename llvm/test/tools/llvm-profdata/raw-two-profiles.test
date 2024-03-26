@@ -1,13 +1,21 @@
+// gnuwin32 printf does not work for this test because it will print \15 (CR)
+// whenever \12 (LF) is in the input string.
+UNSUPPORTED: system-windows
 RUN: printf '\201rforpl\377' > %t-foo.profraw
-RUN: printf '\10\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\12\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\10\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\4\0\2\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 
 RUN: printf '\254\275\030\333\114\302\370\134' >> %t-foo.profraw
@@ -15,21 +23,28 @@ RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 
 RUN: printf '\023\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\3\0foo\0\0\0' >> %t-foo.profraw
 
 RUN: printf '\201rforpl\377' > %t-bar.profraw
-RUN: printf '\10\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\12\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\2\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\10\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\6\0\1\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\6\0\2\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 
 RUN: printf '\067\265\035\031\112\165\023\344' >> %t-bar.profraw
@@ -37,7 +52,9 @@ RUN: printf '\02\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\6\0\1\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\02\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 
 RUN: printf '\067\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\101\0\0\0\0\0\0\0' >> %t-bar.profraw

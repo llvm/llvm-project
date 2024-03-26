@@ -74,10 +74,10 @@ private:
   MBBSectionID(SectionType T) : Type(T), Number(0) {}
 };
 
-// This structure represents the information for a basic block.
+// This structure represents the information for a basic block pertaining to
+// the basic block sections profile.
 struct UniqueBBID {
   unsigned BaseID;
-  // sections profile).
   unsigned CloneID;
 };
 
@@ -111,6 +111,10 @@ public:
 
     RegisterMaskPair(MCPhysReg PhysReg, LaneBitmask LaneMask)
         : PhysReg(PhysReg), LaneMask(LaneMask) {}
+
+    bool operator==(const RegisterMaskPair &other) const {
+      return PhysReg == other.PhysReg && LaneMask == other.LaneMask;
+    }
   };
 
 private:
@@ -472,6 +476,8 @@ public:
 
   /// Remove entry from the livein set and return iterator to the next.
   livein_iterator removeLiveIn(livein_iterator I);
+
+  std::vector<RegisterMaskPair> getLiveIns() const { return LiveIns; }
 
   class liveout_iterator {
   public:
@@ -846,8 +852,10 @@ public:
 
   /// Return the first instruction in MBB after I that is not a PHI, label or
   /// debug.  This is the correct point to insert copies at the beginning of a
-  /// basic block.
-  iterator SkipPHIsLabelsAndDebug(iterator I, bool SkipPseudoOp = true);
+  /// basic block. \p Reg is the register being used by a spill or defined for a
+  /// restore/split during register allocation.
+  iterator SkipPHIsLabelsAndDebug(iterator I, Register Reg = Register(),
+                                  bool SkipPseudoOp = true);
 
   /// Returns an iterator to the first terminator instruction of this basic
   /// block. If a terminator does not exist, it returns end().

@@ -103,8 +103,8 @@ template<typename T> class Foo : public T {};
       },
       "location": {
         "position": {
-          "character": 28,
-          "line": 1
+          "character": 27,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },

@@ -71,7 +71,9 @@ Expected<std::string> python::As<std::string>(Expected<PythonObject> &&obj) {
 }
 
 static bool python_is_finalizing() {
-#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 7
+#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 13) || (PY_MAJOR_VERSION > 3)
+  return Py_IsFinalizing();
+#elif PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 7
   return _Py_Finalizing != nullptr;
 #else
   return _Py_IsFinalizing();
@@ -659,6 +661,20 @@ bool PythonDictionary::Check(PyObject *py_obj) {
     return false;
 
   return PyDict_Check(py_obj);
+}
+
+bool PythonDictionary::HasKey(const llvm::Twine &key) const {
+  if (!IsValid())
+    return false;
+
+  PythonString key_object(key.isSingleStringRef() ? key.getSingleStringRef()
+                                                  : key.str());
+
+  if (int res = PyDict_Contains(m_py_obj, key_object.get()) > 0)
+    return res;
+
+  PyErr_Print();
+  return false;
 }
 
 uint32_t PythonDictionary::GetSize() const {

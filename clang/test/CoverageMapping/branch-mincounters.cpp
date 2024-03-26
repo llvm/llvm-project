@@ -2,6 +2,7 @@
 // logical operators on branch conditions for branch coverage.
 
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name branch-logical-mixed.cpp %s | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -fcoverage-mcdc -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name branch-logical-mixed.cpp %s | FileCheck %s
 
 
 // CHECK-LABEL: _Z5func1ii:

@@ -715,7 +715,7 @@ TEST(VPBasicBlockTest, print) {
   Plan.printDOT(OS);
 
   const char *ExpectedStr = R"(digraph VPlan {
-graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1"]
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nvp\<%1\> = original trip-count\n"]
 node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
@@ -1298,6 +1298,8 @@ struct VPDoubleValueDef : public VPRecipeBase {
     new VPValue(nullptr, this);
     new VPValue(nullptr, this);
   }
+
+  VPRecipeBase *clone() override { return nullptr; }
 
   void execute(struct VPTransformState &State) override {}
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

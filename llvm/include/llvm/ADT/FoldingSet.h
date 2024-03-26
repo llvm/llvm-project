@@ -16,7 +16,9 @@
 #ifndef LLVM_ADT_FOLDINGSET_H
 #define LLVM_ADT_FOLDINGSET_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
@@ -352,6 +354,12 @@ public:
   void AddInteger(unsigned long long I) {
     AddInteger(unsigned(I));
     AddInteger(unsigned(I >> 32));
+  }
+  void AddInteger(const APInt &Int) {
+    const auto *Parts = Int.getRawData();
+    for (int i = 0, N = Int.getNumWords(); i < N; ++i) {
+      AddInteger(Parts[i]);
+    }
   }
 
   void AddBoolean(bool B) { AddInteger(B ? 1U : 0U); }
@@ -832,7 +840,7 @@ struct FoldingSetTrait<std::pair<T1, T2>> {
 template <typename T>
 struct FoldingSetTrait<T, std::enable_if_t<std::is_enum<T>::value>> {
   static void Profile(const T &X, FoldingSetNodeID &ID) {
-    ID.AddInteger(static_cast<std::underlying_type_t<T>>(X));
+    ID.AddInteger(llvm::to_underlying(X));
   }
 };
 

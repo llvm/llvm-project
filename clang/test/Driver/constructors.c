@@ -76,10 +76,6 @@
 // RUN:   | FileCheck --check-prefix=CHECK-INIT-ARRAY %s
 
 // RUN: %clang -### %s -fsyntax-only 2>&1       \
-// RUN:     --target=i386-unknown-freebsd11 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-INIT-ARRAY %s
-//
-// RUN: %clang -### %s -fsyntax-only 2>&1       \
 // RUN:     --target=i386-unknown-freebsd \
 // RUN:   | FileCheck --check-prefix=CHECK-INIT-ARRAY %s
 //

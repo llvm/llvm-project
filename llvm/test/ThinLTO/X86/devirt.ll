@@ -100,7 +100,7 @@ target triple = "x86_64-grtev4-linux-gnu"
 @_ZTV1D = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr undef, ptr @_ZN1D1mEi] }, !type !3
 
 
-; CHECK-IR-LABEL: define i32 @test
+; CHECK-IR-LABEL: define {{(noundef )?}}i32 @test
 define i32 @test(ptr %obj, ptr %obj2, i32 %a) {
 entry:
   %vtable = load ptr, ptr %obj

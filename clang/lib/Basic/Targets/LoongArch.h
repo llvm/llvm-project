@@ -27,12 +27,16 @@ protected:
   std::string CPU;
   bool HasFeatureD;
   bool HasFeatureF;
+  bool HasFeatureLSX;
+  bool HasFeatureLASX;
 
 public:
   LoongArchTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple) {
     HasFeatureD = false;
     HasFeatureF = false;
+    HasFeatureLSX = false;
+    HasFeatureLASX = false;
     LongDoubleWidth = 128;
     LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::IEEEquad();

@@ -313,29 +313,51 @@ def : MnemonicAlias<"vstm", "vstmia">;
 //===----------------------------------------------------------------------===//
 //  Lazy load / store multiple Instructions
 //
-def VLLDM : AXSI4<(outs), (ins GPRnopc:$Rn, pred:$p), IndexModeNone,
-                  NoItinerary, "vlldm${p}\t$Rn", "", []>,
-            Requires<[HasV8MMainline, Has8MSecExt]> {
-    let Inst{24-23} = 0b00;
-    let Inst{22}    = 0;
-    let Inst{21}    = 1;
-    let Inst{20}    = 1;
-    let Inst{15-12} = 0;
-    let Inst{7-0}   = 0;
-    let mayLoad     = 1;
-    let Defs = [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, VPR, FPSCR, FPSCR_NZCV];
-}
+// VLLDM and VLSTM:
+// 2 encoding options:
+// T1 (bit 7 is 0):
+// T1 takes an optional dpr_reglist, must be '{d0-d15}' (exactly)
+// T1 require v8-M.Main, secure state, target with 16 D registers (or with no D registers - NOP)
+// T2 (bit 7 is 1):
+// T2 takes a mandatory dpr_reglist, must be '{d0-d31}' (exactly)
+// T2 require v8.1-M.Main, secure state, target with 16/32 D registers (or with no D registers - NOP)
+// (source: Arm v8-M ARM, DDI0553B.v ID16122022)
 
-def VLSTM : AXSI4<(outs), (ins GPRnopc:$Rn, pred:$p), IndexModeNone,
-                  NoItinerary, "vlstm${p}\t$Rn", "", []>,
+def VLLDM : AXSI4FR<"vlldm${p}\t$Rn, $regs", 0, 1>,
             Requires<[HasV8MMainline, Has8MSecExt]> {
-    let Inst{24-23} = 0b00;
-    let Inst{22}    = 0;
-    let Inst{21}    = 1;
-    let Inst{20}    = 0;
-    let Inst{15-12} = 0;
-    let Inst{7-0}   = 0;
-    let mayStore    = 1;
+    let Defs = [VPR, FPSCR, FPSCR_NZCV, D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15];
+    let DecoderMethod = "DecodeLazyLoadStoreMul";
+}
+// T1: assembly does not contains the register list.
+def : InstAlias<"vlldm${p}\t$Rn", (VLLDM GPRnopc:$Rn, pred:$p, 0)>,
+                Requires<[HasV8MMainline, Has8MSecExt]>;
+// T2: assembly must contains the register list.
+// The register list has no effect on the encoding, it is for assembly/disassembly purposes only.
+def VLLDM_T2 : AXSI4FR<"vlldm${p}\t$Rn, $regs", 1, 1>,
+            Requires<[HasV8_1MMainline, Has8MSecExt]> {
+    let Defs = [VPR, FPSCR, FPSCR_NZCV, D0,  D1,  D2,  D3,  D4,  D5,  D6,  D7,  D8,  D9,  D10, D11, D12, D13, D14, D15,
+                                        D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27, D28, D29, D30, D31];
+    let DecoderMethod = "DecodeLazyLoadStoreMul";
+}
+// T1: assembly contains the register list.
+// The register list has no effect on the encoding, it is for assembly/disassembly purposes only.
+def VLSTM : AXSI4FR<"vlstm${p}\t$Rn, $regs", 0, 0>,
+            Requires<[HasV8MMainline, Has8MSecExt]> {
+    let Defs = [VPR, FPSCR, FPSCR_NZCV];
+    let Uses = [VPR, FPSCR, FPSCR_NZCV, D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15];
+    let DecoderMethod = "DecodeLazyLoadStoreMul";
+}
+// T1: assembly does not contain the register list.
+def : InstAlias<"vlstm${p}\t$Rn", (VLSTM GPRnopc:$Rn, pred:$p, 0)>,
+                Requires<[HasV8MMainline, Has8MSecExt]>;
+// T2: assembly must contain the register list.
+// The register list has no effect on the encoding, it is for assembly/disassembly purposes only.
+def VLSTM_T2 : AXSI4FR<"vlstm${p}\t$Rn, $regs", 1, 0>,
+            Requires<[HasV8_1MMainline, Has8MSecExt]> {
+    let Defs = [VPR, FPSCR, FPSCR_NZCV];
+    let Uses = [VPR, FPSCR, FPSCR_NZCV, D0,  D1,  D2,  D3,  D4,  D5,  D6,  D7,  D8,  D9,  D10, D11, D12, D13, D14, D15,
+                                        D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27, D28, D29, D30, D31];
+    let DecoderMethod = "DecodeLazyLoadStoreMul";
 }
 
 def : InstAlias<"vpush${p} $r", (VSTMDDB_UPD SP, pred:$p, dpr_reglist:$r), 0>,
@@ -2669,6 +2691,13 @@ def : Pat<(f32 (vfp_f32f16imm:$imm)),
           (f32 (COPY_TO_REGCLASS (f16 (FCONSTH (vfp_f32f16imm_xform (f32 $imm)))), SPR))> {
   let Predicates = [HasFullFP16];
 }
+
+// Floating-point environment management.
+def : Pat<(get_fpenv), (VMRS)>;
+def : Pat<(set_fpenv GPRnopc:$Rt), (VMSR GPRnopc:$Rt)>;
+def : Pat<(reset_fpenv), (VMSR (MOVi 0))>, Requires<[IsARM]>;
+def : Pat<(reset_fpenv), (VMSR (tMOVi8 0))>, Requires<[IsThumb]>;
+def : Pat<(get_fpmode), (VMRS)>;
 
 //===----------------------------------------------------------------------===//
 // Assembler aliases.

@@ -28,6 +28,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 23
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -36,7 +39,7 @@ namespace ranges {
 namespace __ends_with {
 struct __fn {
   template <class _Iter1, class _Sent1, class _Iter2, class _Sent2, class _Pred, class _Proj1, class _Proj2>
-  static _LIBCPP_HIDE_FROM_ABI constexpr bool __ends_with_fn_impl_bidirectional(
+  _LIBCPP_HIDE_FROM_ABI static constexpr bool __ends_with_fn_impl_bidirectional(
       _Iter1 __first1,
       _Sent1 __last1,
       _Iter2 __first2,
@@ -53,7 +56,7 @@ struct __fn {
   }
 
   template <class _Iter1, class _Sent1, class _Iter2, class _Sent2, class _Pred, class _Proj1, class _Proj2>
-  static _LIBCPP_HIDE_FROM_ABI constexpr bool __ends_with_fn_impl(
+  _LIBCPP_HIDE_FROM_ABI static constexpr bool __ends_with_fn_impl(
       _Iter1 __first1,
       _Sent1 __last1,
       _Iter2 __first2,
@@ -62,7 +65,7 @@ struct __fn {
       _Proj1& __proj1,
       _Proj2& __proj2) {
     if constexpr (std::bidirectional_iterator<_Sent1> && std::bidirectional_iterator<_Sent2> &&
-                  (!std::random_access_iterator<_Sent1>)&&(!std::random_access_iterator<_Sent2>)) {
+                  (!std::random_access_iterator<_Sent1>) && (!std::random_access_iterator<_Sent2>)) {
       return __ends_with_fn_impl_bidirectional(__first1, __last1, __first2, __last2, __pred, __proj1, __proj2);
 
     } else {
@@ -192,5 +195,7 @@ inline constexpr auto ends_with = __ends_with::__fn{};
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 23
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_ENDS_WITH_H

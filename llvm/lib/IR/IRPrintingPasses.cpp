@@ -23,6 +23,11 @@
 
 using namespace llvm;
 
+cl::opt<bool> WriteNewDbgInfoFormat(
+    "write-experimental-debuginfo",
+    cl::desc("Write debug info in the new non-intrinsic format"),
+    cl::init(false));
+
 namespace {
 
 class PrintModulePassWrapper : public ModulePass {
@@ -39,6 +44,15 @@ public:
         ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {}
 
   bool runOnModule(Module &M) override {
+    // RemoveDIs: Regardless of the format we've processed this module in, use
+    // `WriteNewDbgInfoFormat` to determine which format we use to write it.
+    ScopedDbgInfoFormatSetter FormatSetter(M, WriteNewDbgInfoFormat);
+    // Remove intrinsic declarations when printing in the new format.
+    // TODO: Move this into Module::setIsNewDbgInfoFormat when we're ready to
+    // update test output.
+    if (WriteNewDbgInfoFormat)
+      M.removeDebugIntrinsicDeclarations();
+
     if (llvm::isFunctionInPrintList("*")) {
       if (!Banner.empty())
         OS << Banner << "\n";
@@ -55,6 +69,7 @@ public:
         }
       }
     }
+
     return false;
   }
 
@@ -77,6 +92,10 @@ public:
 
   // This pass just prints a banner followed by the function as it's processed.
   bool runOnFunction(Function &F) override {
+    // RemoveDIs: Regardless of the format we've processed this function in, use
+    // `WriteNewDbgInfoFormat` to determine which format we use to write it.
+    ScopedDbgInfoFormatSetter FormatSetter(F, WriteNewDbgInfoFormat);
+
     if (isFunctionInPrintList(F.getName())) {
       if (forcePrintModuleIR())
         OS << Banner << " (function: " << F.getName() << ")\n"
@@ -84,6 +103,7 @@ public:
       else
         OS << Banner << '\n' << static_cast<Value &>(F);
     }
+
     return false;
   }
 

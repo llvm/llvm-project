@@ -32,6 +32,9 @@ namespace orc {
 /// Render a SymbolStringPtr.
 raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPtr &Sym);
 
+/// Render a NonOwningSymbolStringPtr.
+raw_ostream &operator<<(raw_ostream &OS, NonOwningSymbolStringPtr Sym);
+
 /// Render a SymbolNameSet.
 raw_ostream &operator<<(raw_ostream &OS, const SymbolNameSet &Symbols);
 

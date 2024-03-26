@@ -1,16 +1,12 @@
 // RUN: mlir-opt %s \
-// RUN:   -transform-interpreter \
-// RUN:   -test-transform-dialect-erase-schedule \
+// RUN:   -transform-interpreter -test-transform-dialect-erase-schedule \
 // RUN:   -lower-vector-mask \
 // RUN:   -one-shot-bufferize="bufferize-function-boundaries" \
-// RUN:   -enable-arm-streaming="mode=locally enable-za" \
-// RUN:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
-// RUN:   -convert-vector-to-llvm="enable-arm-sme" -cse -canonicalize \
-// RUN:   -allocate-arm-sme-tiles -test-lower-to-llvm | \
+// RUN:   -test-lower-to-arm-sme -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=entry -entry-point-result=void \
 // RUN:   -march=aarch64 -mattr="+sve,+sme" \
-// RUN:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils | \
+// RUN:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%arm_sme_abi_shlib | \
 // RUN: FileCheck %s
 
 func.func @entry() {
@@ -20,12 +16,9 @@ func.func @entry() {
 
   %c123_f32 = arith.constant 123.0 : f32
 
-  %min_elts_s = arith.constant 4 : index
-  %vscale = vector.vscale
-
   // "svl" refers to the Streaming Vector Length and "svl_s" the number of
   // 32-bit elements in a vector of SVL bits.
-  %svl_s = arith.muli %min_elts_s, %vscale : index
+  %svl_s = arm_sme.streaming_vl <word>
 
   %tile_init = bufferization.alloc_tensor(%svl_s, %svl_s) : tensor<?x?xf32>
 
@@ -95,7 +88,7 @@ func.func @entry() {
   }
 
   // CHECK: SME: END OF TEST OUTPUT
-  vector.print str "SME: END OF TEST OUTPUT"
+  vector.print str "SME: END OF TEST OUTPUT\n"
 
   return
 }

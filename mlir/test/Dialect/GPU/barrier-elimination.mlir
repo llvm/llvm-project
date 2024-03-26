@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s --transform-interpreter | FileCheck %s
+// RUN: mlir-opt %s --gpu-eliminate-barriers | FileCheck %s
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {

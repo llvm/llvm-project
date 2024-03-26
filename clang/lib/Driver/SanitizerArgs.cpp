@@ -39,8 +39,6 @@ static const SanitizerMask NotAllowedWithTrap = SanitizerKind::Vptr;
 static const SanitizerMask NotAllowedWithMinimalRuntime = SanitizerKind::Vptr;
 static const SanitizerMask NotAllowedWithExecuteOnly =
     SanitizerKind::Function | SanitizerKind::KCFI;
-static const SanitizerMask RequiresPIE =
-    SanitizerKind::DataFlow | SanitizerKind::Scudo;
 static const SanitizerMask NeedsUnwindTables =
     SanitizerKind::Address | SanitizerKind::HWAddress | SanitizerKind::Thread |
     SanitizerKind::Memory | SanitizerKind::DataFlow;
@@ -192,7 +190,7 @@ static void addDefaultIgnorelists(const Driver &D, SanitizerMask Kinds,
     clang::SmallString<64> Path(D.ResourceDir);
     llvm::sys::path::append(Path, "share", BL.File);
     if (D.getVFS().exists(Path))
-      IgnorelistFiles.push_back(std::string(Path.str()));
+      IgnorelistFiles.push_back(std::string(Path));
     else if (BL.Mask == SanitizerKind::CFI && DiagnoseErrors)
       // If cfi_ignorelist.txt cannot be found in the resource dir, driver
       // should fail.
@@ -303,9 +301,7 @@ bool SanitizerArgs::needsCfiDiagRt() const {
          CfiCrossDso && !ImplicitCfiRuntime;
 }
 
-bool SanitizerArgs::requiresPIE() const {
-  return NeedPIE || (Sanitizers.Mask & RequiresPIE);
-}
+bool SanitizerArgs::requiresPIE() const { return NeedPIE; }
 
 bool SanitizerArgs::needsUnwindTables() const {
   return static_cast<bool>(Sanitizers.Mask & NeedsUnwindTables);
@@ -491,6 +487,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         Add &= ~NotAllowedWithExecuteOnly;
       if (CfiCrossDso)
         Add &= ~SanitizerKind::CFIMFCall;
+      // -fsanitize=undefined does not expand to signed-integer-overflow in
+      // -fwrapv (implied by -fno-strict-overflow) mode.
+      if (Add & SanitizerKind::UndefinedGroup) {
+        bool S = Args.hasFlagNoClaim(options::OPT_fno_strict_overflow,
+                                     options::OPT_fstrict_overflow, false);
+        if (Args.hasFlagNoClaim(options::OPT_fwrapv, options::OPT_fno_wrapv, S))
+          Add &= ~SanitizerKind::SignedIntegerOverflow;
+      }
       Add &= Supported;
 
       if (Add & SanitizerKind::Fuzzer)
@@ -699,8 +703,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     MsanParamRetval = Args.hasFlag(
         options::OPT_fsanitize_memory_param_retval,
         options::OPT_fno_sanitize_memory_param_retval, MsanParamRetval);
-    NeedPIE |= !(TC.getTriple().isOSLinux() &&
-                 TC.getTriple().getArch() == llvm::Triple::x86_64);
   } else if (AllAddedKinds & SanitizerKind::KernelMemory) {
     MsanUseAfterDtor = false;
     MsanParamRetval = Args.hasFlag(

@@ -102,6 +102,12 @@ enum class ICFLevel {
         // behavior.
 };
 
+enum class BuildIDHash {
+  None,
+  PDB,
+  Binary,
+};
+
 // Global configuration.
 struct Configuration {
   enum ManifestKind { Default, SideBySide, Embed, No };
@@ -124,9 +130,9 @@ struct Configuration {
   bool forceMultipleRes = false;
   bool forceUnresolved = false;
   bool debug = false;
-  bool debugDwarf = false;
+  bool includeDwarfChunks = false;
   bool debugGHashes = false;
-  bool debugSymtab = false;
+  bool writeSymtab = false;
   bool driver = false;
   bool driverUponly = false;
   bool driverWdm = false;
@@ -180,9 +186,9 @@ struct Configuration {
   // Used for /opt:lldltopartitions=N
   unsigned ltoPartitions = 1;
 
-  // Used for /opt:lldltocache=path
+  // Used for /lldltocache=path
   StringRef ltoCache;
-  // Used for /opt:lldltocachepolicy=policy
+  // Used for /lldltocachepolicy=policy
   llvm::CachePruningPolicy ltoCachePolicy;
 
   // Used for /opt:[no]ltodebugpassmanager
@@ -257,6 +263,9 @@ struct Configuration {
   // Used for /lto-pgo-warn-mismatch:
   bool ltoPGOWarnMismatch = true;
 
+  // Used for /lto-sample-profile:
+  llvm::StringRef ltoSampleProfileName;
+
   // Used for /call-graph-ordering-file:
   llvm::MapVector<std::pair<const SectionChunk *, const SectionChunk *>,
                   uint64_t>
@@ -287,6 +296,7 @@ struct Configuration {
   uint32_t timestamp = 0;
   uint32_t functionPadMin = 0;
   uint32_t timeTraceGranularity = 0;
+  uint16_t dependentLoadFlags = 0;
   bool dynamicBase = true;
   bool allowBind = true;
   bool cetCompat = false;
@@ -317,6 +327,7 @@ struct Configuration {
   bool writeCheckSum = false;
   EmitKind emit = EmitKind::Obj;
   bool allowDuplicateWeak = false;
+  BuildIDHash buildIDHash = BuildIDHash::None;
 };
 
 } // namespace lld::coff

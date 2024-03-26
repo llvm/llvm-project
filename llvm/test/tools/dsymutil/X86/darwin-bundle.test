@@ -11,10 +11,10 @@ RUN: FileCheck %s --input-file %t/dsymdest/basic.macho.x86_64.dSYM/Contents/Info
 RUN: dsymutil -oso-prepend-path=%p/.. %t/basic.macho.x86_64 -toolchain "toolchain&and'some<symbols" -o %t/dsymdest/basic.macho.x86_64.dSYM
 RUN: FileCheck %s --input-file %t/dsymdest/basic.macho.x86_64.dSYM/Contents/Info.plist --check-prefix=CHECK --check-prefix=TOOLCHAIN
 
-RUN: dsymutil --linker llvm -oso-prepend-path=%p/.. %t/basic.macho.x86_64 -o %t/dsymdest/basic.macho.x86_64.dSYM
+RUN: dsymutil --linker parallel -oso-prepend-path=%p/.. %t/basic.macho.x86_64 -o %t/dsymdest/basic.macho.x86_64.dSYM
 RUN: FileCheck %s --input-file %t/dsymdest/basic.macho.x86_64.dSYM/Contents/Info.plist
 
-RUN: dsymutil --linker llvm -oso-prepend-path=%p/.. %t/basic.macho.x86_64 -toolchain "toolchain&and'some<symbols" -o %t/dsymdest/basic.macho.x86_64.dSYM
+RUN: dsymutil --linker parallel -oso-prepend-path=%p/.. %t/basic.macho.x86_64 -toolchain "toolchain&and'some<symbols" -o %t/dsymdest/basic.macho.x86_64.dSYM
 RUN: FileCheck %s --input-file %t/dsymdest/basic.macho.x86_64.dSYM/Contents/Info.plist --check-prefix=CHECK --check-prefix=TOOLCHAIN
 
 

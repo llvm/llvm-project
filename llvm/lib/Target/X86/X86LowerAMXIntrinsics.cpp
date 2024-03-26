@@ -17,7 +17,6 @@
 //===----------------------------------------------------------------------===//
 //
 #include "X86.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -117,7 +116,7 @@ BasicBlock *X86LowerAMXIntrinsics::createLoop(BasicBlock *Preheader,
   BranchInst::Create(Body, Header);
   BranchInst::Create(Latch, Body);
   PHINode *IV =
-      PHINode::Create(I16Ty, 2, Name + ".iv", Header->getTerminator());
+      PHINode::Create(I16Ty, 2, Name + ".iv", Header->getTerminator()->getIterator());
   IV->addIncoming(ConstantInt::get(I16Ty, 0), Preheader);
 
   B.SetInsertPoint(Latch);
@@ -185,9 +184,7 @@ Value *X86LowerAMXIntrinsics::createTileLoadStoreLoops(
   Value *CurrentColZExt = B.CreateZExt(CurrentCol, Stride->getType());
   Value *Offset =
       B.CreateAdd(B.CreateMul(CurrentRowZExt, Stride), CurrentColZExt);
-  unsigned AS = cast<PointerType>(Ptr->getType())->getAddressSpace();
-  Value *EltBasePtr = B.CreatePointerCast(Ptr, PointerType::get(EltTy, AS));
-  Value *EltPtr = B.CreateGEP(EltTy, EltBasePtr, Offset);
+  Value *EltPtr = B.CreateGEP(EltTy, Ptr, Offset);
   Value *Idx = B.CreateAdd(B.CreateMul(CurrentRow, B.getInt16(16)), CurrentCol);
   if (IsTileLoad) {
     // tileload.scalarize.rows.header:

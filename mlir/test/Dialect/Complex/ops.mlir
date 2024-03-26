@@ -11,6 +11,9 @@ func.func @ops(%f: f32) {
   // CHECK: complex.constant [1.{{.*}} : f32, -1.{{.*}} : f32] : complex<f32>
   %cst_f32 = complex.constant [0.1 : f32, -1.0 : f32] : complex<f32>
 
+  // CHECK: complex.constant [true, false] : complex<i1>
+  %cst_i1 = complex.constant [1 : i1, 0 : i1] : complex<i1>
+
   // CHECK: %[[C:.*]] = complex.create %[[F]], %[[F]] : complex<f32>
   %complex = complex.create %f, %f : complex<f32>
 

@@ -1,6 +1,6 @@
 ! Test lowering of elemental calls with character argument
 ! without the VALUE attribute.
-! RUN: bbc -o - %s | FileCheck %s
+! RUN: bbc -hlfir=false -o - %s | FileCheck %s
 
 module char_elem
 

@@ -8,9 +8,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Shared/Environment.h"
+
 #include "Allocator.h"
 #include "Configuration.h"
-#include "Environment.h"
 #include "Mapping.h"
 #include "Synchronization.h"
 #include "Types.h"

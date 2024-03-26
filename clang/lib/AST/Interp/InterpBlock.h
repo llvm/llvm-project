@@ -98,6 +98,9 @@ public:
   /// Returns a view over the data.
   template <typename T>
   T &deref() { return *reinterpret_cast<T *>(data()); }
+  template <typename T> const T &deref() const {
+    return *reinterpret_cast<const T *>(data());
+  }
 
   /// Invokes the constructor.
   void invokeCtor() {

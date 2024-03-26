@@ -17,6 +17,9 @@
 #include "darwin/quick_exit.h"
 #elif defined(__linux__)
 #include "linux/quick_exit.h"
+#elif defined(__ELF__)
+// TODO: Ideally we would have LIBC_TARGET_OS_IS_BAREMETAL.
+#include "baremetal/quick_exit.h"
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_QUICK_EXIT_H

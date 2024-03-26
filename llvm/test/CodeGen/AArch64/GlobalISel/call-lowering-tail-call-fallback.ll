@@ -3,30 +3,26 @@
 
 declare void @func(i64, i64, i64, i64, i64, i128, i128)
 
-; FIXME: This is a miscompile.
 ; Make sure the check for whether a tail call is allowed does not affect the
 ; calling convention if it fails.
 ; The first i128 argument should be passed in registers, not on the stack.
 define void @pr70207(i128 %arg1, i128 %arg2) nounwind {
 ; CHECK-LABEL: pr70207:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #64
+; CHECK-NEXT:    mov x8, x2
 ; CHECK-NEXT:    mov x6, x0
-; CHECK-NEXT:    mov x8, x1
-; CHECK-NEXT:    mov x9, x2
-; CHECK-NEXT:    mov x10, x3
+; CHECK-NEXT:    mov x7, x1
+; CHECK-NEXT:    mov x9, x3
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    mov x2, xzr
 ; CHECK-NEXT:    mov x3, xzr
 ; CHECK-NEXT:    mov x4, xzr
-; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
-; CHECK-NEXT:    str x8, [sp]
-; CHECK-NEXT:    str x9, [sp, #16]
-; CHECK-NEXT:    str x10, [sp, #32]
+; CHECK-NEXT:    str x8, [sp, #-32]!
+; CHECK-NEXT:    stp x9, x30, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl func
-; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #64
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   tail call void @func(i64 0, i64 0, i64 0, i64 0, i64 0, i128 %arg1, i128 %arg2)
   ret void

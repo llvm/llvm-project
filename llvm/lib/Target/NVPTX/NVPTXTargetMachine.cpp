@@ -225,46 +225,10 @@ void NVPTXTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
   AAM.registerFunctionAnalysis<NVPTXAA>();
 }
 
-void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
-  PB.registerPipelineParsingCallback(
-      [](StringRef PassName, FunctionPassManager &PM,
-         ArrayRef<PassBuilder::PipelineElement>) {
-        if (PassName == "nvvm-reflect") {
-          PM.addPass(NVVMReflectPass());
-          return true;
-        }
-        if (PassName == "nvvm-intr-range") {
-          PM.addPass(NVVMIntrRangePass());
-          return true;
-        }
-        return false;
-      });
-
-  PB.registerAnalysisRegistrationCallback([](FunctionAnalysisManager &FAM) {
-    FAM.registerPass([&] { return NVPTXAA(); });
-  });
-
-  PB.registerParseAACallback([](StringRef AAName, AAManager &AAM) {
-    if (AAName == "nvptx-aa") {
-      AAM.registerFunctionAnalysis<NVPTXAA>();
-      return true;
-    }
-    return false;
-  });
-
-  PB.registerPipelineParsingCallback(
-      [](StringRef PassName, ModulePassManager &PM,
-         ArrayRef<PassBuilder::PipelineElement>) {
-        if (PassName == "nvptx-lower-ctor-dtor") {
-          PM.addPass(NVPTXCtorDtorLoweringPass());
-          return true;
-        }
-        if (PassName == "generic-to-nvvm") {
-          PM.addPass(GenericToNVVMPass());
-          return true;
-        }
-        return false;
-      });
+void NVPTXTargetMachine::registerPassBuilderCallbacks(
+    PassBuilder &PB, bool PopulateClassToPassNames) {
+#define GET_PASS_REGISTRY "NVPTXPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
 
   PB.registerPipelineStartEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
@@ -379,7 +343,7 @@ void NVPTXPassConfig::addIRPasses() {
     addStraightLineScalarOptimizationPasses();
   }
 
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
   addPass(createNVPTXCtorDtorLoweringLegacyPass());
 
   // === LSR and other generic IR passes ===

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/ObjectFile/Breakpad/BreakpadRecords.h"
+#include "lldb/lldb-defines.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Endian.h"
@@ -119,7 +120,7 @@ static UUID parseModuleId(llvm::Triple::OSType os, llvm::StringRef str) {
   uint32_t age;
   bool success = to_integer(age_str, age, 16);
   assert(success);
-  (void)success;
+  UNUSED_IF_ASSERT_DISABLED(success);
   data.age = age;
 
   // On non-windows, the age field should always be zero, so we don't include to

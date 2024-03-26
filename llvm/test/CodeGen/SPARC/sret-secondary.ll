@@ -2,7 +2,7 @@
 
 ; CHECK: sparc only supports sret on the first parameter
 
-define void @foo(i32 %a, i32* sret(i32) %out) {
-  store i32 %a, i32* %out
+define void @foo(i32 %a, ptr sret(i32) %out) {
+  store i32 %a, ptr %out
   ret void
 }

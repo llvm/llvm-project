@@ -80,6 +80,8 @@ static cl::opt<bool> PrintThinLTOIndexOnly(
     cl::desc("Only read thinlto index and print the index as LLVM assembly."),
     cl::init(false), cl::Hidden, cl::cat(DisCategory));
 
+extern cl::opt<bool> WriteNewDbgInfoFormat;
+
 namespace {
 
 static void printDebugLoc(const DebugLoc &DL, formatted_raw_ostream &OS) {
@@ -225,7 +227,7 @@ int main(int argc, char **argv) {
           FinalFilename = "-";
         } else {
           StringRef IFN = InputFilename;
-          FinalFilename = (IFN.endswith(".bc") ? IFN.drop_back(3) : IFN).str();
+          FinalFilename = (IFN.ends_with(".bc") ? IFN.drop_back(3) : IFN).str();
           if (N > 1)
             FinalFilename += std::string(".") + std::to_string(I);
           FinalFilename += ".ll";
@@ -249,8 +251,14 @@ int main(int argc, char **argv) {
 
       // All that llvm-dis does is write the assembly to a file.
       if (!DontPrint) {
-        if (M)
+        if (M) {
+          bool ChangeDbgFormat = M->IsNewDbgInfoFormat != WriteNewDbgInfoFormat;
+          if (ChangeDbgFormat)
+            M->setIsNewDbgInfoFormat(WriteNewDbgInfoFormat);
           M->print(Out->os(), Annotator.get(), PreserveAssemblyUseListOrder);
+          if (ChangeDbgFormat)
+            M->setIsNewDbgInfoFormat(!WriteNewDbgInfoFormat);
+        }
         if (Index)
           Index->print(Out->os());
       }

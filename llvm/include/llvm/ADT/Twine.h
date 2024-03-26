@@ -37,7 +37,7 @@ namespace llvm {
   /// A Twine is not intended for use directly and should not be stored, its
   /// implementation relies on the ability to store pointers to temporary stack
   /// objects which may be deallocated at the end of a statement. Twines should
-  /// only be used accepted as const references in arguments, when an API wishes
+  /// only be used as const references in arguments, when an API wishes
   /// to accept possibly-concatenated strings.
   ///
   /// Twines support a special 'null' value, which always concatenates to form

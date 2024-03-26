@@ -1,0 +1,11 @@
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-wavefrontsize64 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX12-ERR %s
+
+# GFX12-ERR: *** Bad machine code: VOP* instruction violates constant bus restriction ***
+# GFX12-ERR: $vgpr2, $vgpr3 = V_DUAL_CNDMASK_B32_e32_X_MUL_F32_e32_gfx12 $sgpr0, $vgpr0, $sgpr1, $vgpr1, implicit $exec, implicit $mode, implicit $vcc, implicit $vcc_lo
+---
+name: vopd_cndmask_2sgpr
+body:            |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
+    $vgpr2, $vgpr3 = V_DUAL_CNDMASK_B32_e32_X_MUL_F32_e32_gfx12 $sgpr0, $vgpr0, $sgpr1, $vgpr1, implicit $exec, implicit $mode, implicit $vcc, implicit $vcc_lo
+...

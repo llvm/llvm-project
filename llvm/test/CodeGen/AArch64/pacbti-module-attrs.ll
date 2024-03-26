@@ -1,4 +1,4 @@
-;; RUN: llc -mtriple=aarch64-eabi -mattr=+v8.5a %s -o - | FileCheck %s
+;; RUN: llc -mtriple=aarch64 -mattr=+v8.5a %s -o - | FileCheck %s
 
 declare i32 @g(i32) #5
 

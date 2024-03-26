@@ -15,6 +15,7 @@ add_flang_library(flangFrontend
 
   DEPENDS
   FIRDialect
+  FIROptCodeGenPassIncGen
   FIROptTransformsPassIncGen
   HLFIRDialect
   MLIRIR
@@ -52,6 +53,7 @@ add_flang_library(flangFrontend
   Support
   Target
   TargetParser
+  FrontendDriver
   FrontendOpenACC
   FrontendOpenMP
 

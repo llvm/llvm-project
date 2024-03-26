@@ -11,7 +11,7 @@
 
 #include <__assert>
 #include <__config>
-#include <__type_traits/is_nothrow_move_constructible.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__utility/exchange.h>
 #include <__utility/move.h>
 
@@ -115,7 +115,7 @@ struct __exception_guard_noexceptions {
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NODEBUG ~__exception_guard_noexceptions() {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__completed_, "__exception_guard not completed with exceptions disabled");
+    _LIBCPP_ASSERT_INTERNAL(__completed_, "__exception_guard not completed with exceptions disabled");
   }
 
 private:

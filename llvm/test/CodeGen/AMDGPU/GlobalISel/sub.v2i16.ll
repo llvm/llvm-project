@@ -147,22 +147,22 @@ define <2 x i16> @v_sub_v2i16_neg_inline_imm_splat(<2 x i16> %a) {
 ; GFX8-LABEL: v_sub_v2i16_neg_inline_imm_splat:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v2, 0xffffffc0
-; GFX8-NEXT:    v_subrev_u16_e32 v1, 0xffc0, v0
-; GFX8-NEXT:    v_sub_u16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX8-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0xffffffc0
+; GFX8-NEXT:    v_subrev_u16_e32 v2, 0xffc0, v0
+; GFX8-NEXT:    v_sub_u16_sdwa v0, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-NEXT:    v_or_b32_e32 v0, v2, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_sub_v2i16_neg_inline_imm_splat:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_pk_sub_i16 v0, v0, 0xffc0 op_sel_hi:[1,0]
+; GFX10-NEXT:    v_pk_sub_i16 v0, v0, 0xffc0ffc0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_sub_v2i16_neg_inline_imm_splat:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_pk_sub_i16 v0, v0, 0xffc0 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_sub_i16 v0, v0, 0xffc0ffc0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub <2 x i16> %a, <i16 -64, i16 -64>
   ret <2 x i16> %sub

@@ -10,5 +10,5 @@
 #include "mlir/CAPI/Registration.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 
-MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(AMDGPU, ml_program,
+MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(AMDGPU, amdgpu,
                                       mlir::amdgpu::AMDGPUDialect)

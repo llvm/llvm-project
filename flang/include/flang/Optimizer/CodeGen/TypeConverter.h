@@ -39,6 +39,10 @@ static constexpr unsigned kDimLowerBoundPos = 0;
 static constexpr unsigned kDimExtentPos = 1;
 static constexpr unsigned kDimStridePos = 2;
 
+namespace mlir {
+class DataLayout;
+}
+
 namespace fir {
 
 /// FIR type converter
@@ -46,7 +50,7 @@ namespace fir {
 class LLVMTypeConverter : public mlir::LLVMTypeConverter {
 public:
   LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
-                    bool forceUnifiedTBAATree);
+                    bool forceUnifiedTBAATree, const mlir::DataLayout &);
 
   // i32 is used here because LLVM wants i32 constants when indexing into struct
   // types. Indexing into other aggregate types is more flexible.
@@ -90,8 +94,8 @@ public:
   // to LLVM IR dialect here.
   //
   // fir.complex<T> | std.complex<T>    --> llvm<"{t,t}">
-  template <typename C> mlir::Type convertComplexType(C cmplx) const {
-    LLVM_DEBUG(llvm::dbgs() << "type convert: " << cmplx << '\n');
+  template <typename C>
+  mlir::Type convertComplexType(C cmplx) const {
     auto eleTy = cmplx.getElementType();
     return convertType(specifics->complexMemoryType(eleTy));
   }

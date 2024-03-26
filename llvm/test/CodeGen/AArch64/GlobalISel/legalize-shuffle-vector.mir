@@ -316,6 +316,17 @@ body:             |
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[DEF]](s32)
     ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[DEF]](s32)
     ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<4 x s32>) = G_SHUFFLE_VECTOR [[BUILD_VECTOR]](<4 x s32>), [[BUILD_VECTOR1]], shufflemask(0, 1, 5, 6)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[SHUF]](<4 x s32>), [[C]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[EVEC1:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[SHUF]](<4 x s32>), [[C1]](s64)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[EVEC2:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[SHUF]](<4 x s32>), [[C2]](s64)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+    ; CHECK-NEXT: [[EVEC3:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[SHUF]](<4 x s32>), [[C3]](s64)
+    ; CHECK-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[EVEC]](s32), [[EVEC1]](s32), [[EVEC2]](s32), [[EVEC3]](s32)
+    ; CHECK-NEXT: $q0 = COPY [[BUILD_VECTOR2]](<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(s32) = COPY $w2
@@ -437,12 +448,14 @@ body:             |
     ; CHECK-NEXT: [[EVEC3:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[SHUF]](<4 x s32>), [[C3]](s64)
     ; CHECK-NEXT: [[EVEC4:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[SHUF1]](<4 x s32>), [[C]](s64)
     ; CHECK-NEXT: [[EVEC5:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[SHUF1]](<4 x s32>), [[C1]](s64)
-    ; CHECK-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[EVEC]](s32), [[EVEC1]](s32), [[EVEC2]](s32), [[EVEC3]](s32)
-    ; CHECK-NEXT: [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[EVEC4]](s32), [[EVEC5]](s32)
-    ; CHECK-NEXT: G_STORE [[BUILD_VECTOR2]](<4 x s32>), [[COPY8]](p0) :: (store (<4 x s32>), align 32)
+    ; CHECK-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[EVEC]](s32), [[EVEC1]](s32)
+    ; CHECK-NEXT: [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[EVEC2]](s32), [[EVEC3]](s32)
+    ; CHECK-NEXT: [[BUILD_VECTOR4:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[EVEC4]](s32), [[EVEC5]](s32)
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s32>) = G_CONCAT_VECTORS [[BUILD_VECTOR2]](<2 x s32>), [[BUILD_VECTOR3]](<2 x s32>)
+    ; CHECK-NEXT: G_STORE [[CONCAT_VECTORS]](<4 x s32>), [[COPY8]](p0) :: (store (<4 x s32>), align 32)
     ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY8]], [[C4]](s64)
-    ; CHECK-NEXT: G_STORE [[BUILD_VECTOR3]](<2 x s32>), [[PTR_ADD]](p0) :: (store (<2 x s32>) into unknown-address + 16, align 16)
+    ; CHECK-NEXT: G_STORE [[BUILD_VECTOR4]](<2 x s32>), [[PTR_ADD]](p0) :: (store (<2 x s32>) into unknown-address + 16, align 16)
     ; CHECK-NEXT: RET_ReallyLR
     %3:_(s32) = COPY $s0
     %4:_(s32) = COPY $s1

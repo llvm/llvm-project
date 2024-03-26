@@ -23,11 +23,13 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
+using namespace llvm::object;
 
 extern cl::opt<bool> EnableAArch64ELFLocalDynamicTLSGeneration;
 
@@ -36,8 +38,11 @@ AArch64MCInstLower::AArch64MCInstLower(MCContext &ctx, AsmPrinter &printer)
 
 MCSymbol *
 AArch64MCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
-  const GlobalValue *GV = MO.getGlobal();
-  unsigned TargetFlags = MO.getTargetFlags();
+  return GetGlobalValueSymbol(MO.getGlobal(), MO.getTargetFlags());
+}
+
+MCSymbol *AArch64MCInstLower::GetGlobalValueSymbol(const GlobalValue *GV,
+                                                   unsigned TargetFlags) const {
   const Triple &TheTriple = Printer.TM.getTargetTriple();
   if (!TheTriple.isOSBinFormatCOFF())
     return Printer.getSymbolPreferLocal(*GV);
@@ -46,14 +51,54 @@ AArch64MCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
          "Windows is the only supported COFF target");
 
   bool IsIndirect =
-      (TargetFlags & (AArch64II::MO_DLLIMPORT | AArch64II::MO_DLLIMPORTAUX |
-                      AArch64II::MO_COFFSTUB));
-  if (!IsIndirect)
+      (TargetFlags & (AArch64II::MO_DLLIMPORT | AArch64II::MO_COFFSTUB));
+  if (!IsIndirect) {
+    // For ARM64EC, symbol lookup in the MSVC linker has limited awareness
+    // of ARM64EC mangling ("#"/"$$h"). So object files need to refer to both
+    // the mangled and unmangled names of ARM64EC symbols, even if they aren't
+    // actually used by any relocations. Emit the necessary references here.
+    if (!TheTriple.isWindowsArm64EC() || !isa<Function>(GV) ||
+        !GV->hasExternalLinkage())
+      return Printer.getSymbol(GV);
+
+    StringRef Name = Printer.getSymbol(GV)->getName();
+    // Don't mangle ARM64EC runtime functions.
+    static constexpr StringLiteral ExcludedFns[] = {
+        "__os_arm64x_check_icall_cfg", "__os_arm64x_dispatch_call_no_redirect",
+        "__os_arm64x_check_icall"};
+    if (is_contained(ExcludedFns, Name))
+      return Printer.getSymbol(GV);
+
+    if (std::optional<std::string> MangledName =
+            getArm64ECMangledFunctionName(Name.str())) {
+      MCSymbol *MangledSym = Ctx.getOrCreateSymbol(MangledName.value());
+      if (!cast<Function>(GV)->hasMetadata("arm64ec_hasguestexit")) {
+        Printer.OutStreamer->emitSymbolAttribute(Printer.getSymbol(GV),
+                                                 MCSA_WeakAntiDep);
+        Printer.OutStreamer->emitAssignment(
+            Printer.getSymbol(GV),
+            MCSymbolRefExpr::create(MangledSym, MCSymbolRefExpr::VK_WEAKREF,
+                                    Ctx));
+        Printer.OutStreamer->emitSymbolAttribute(MangledSym, MCSA_WeakAntiDep);
+        Printer.OutStreamer->emitAssignment(
+            MangledSym,
+            MCSymbolRefExpr::create(Printer.getSymbol(GV),
+                                    MCSymbolRefExpr::VK_WEAKREF, Ctx));
+      }
+
+      if (TargetFlags & AArch64II::MO_ARM64EC_CALLMANGLE)
+        return MangledSym;
+    }
+
     return Printer.getSymbol(GV);
+  }
 
   SmallString<128> Name;
 
-  if (TargetFlags & AArch64II::MO_DLLIMPORTAUX) {
+  if ((TargetFlags & AArch64II::MO_DLLIMPORT) &&
+      TheTriple.isWindowsArm64EC() &&
+      !(TargetFlags & AArch64II::MO_ARM64EC_CALLMANGLE) &&
+      isa<Function>(GV)) {
     // __imp_aux is specific to arm64EC; it represents the actual address of
     // an imported function without any thunks.
     //

@@ -432,7 +432,7 @@ TEST_F(MemoryBufferTest, mmapVolatileNoNull) {
   OwningBuffer MB = std::move(*MBOrError);
   EXPECT_EQ(MB->getBufferKind(), MemoryBuffer::MemoryBuffer_MMap);
   EXPECT_EQ(MB->getBufferSize(), std::size_t(FileWrites * 8));
-  EXPECT_TRUE(MB->getBuffer().startswith("01234567"));
+  EXPECT_TRUE(MB->getBuffer().starts_with("01234567"));
 }
 
 // Test that SmallVector without a null terminator gets one.

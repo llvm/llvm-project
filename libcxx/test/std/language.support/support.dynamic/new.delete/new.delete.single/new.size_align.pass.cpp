@@ -10,15 +10,12 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// We get availability markup errors when aligned allocation is missing
-// XFAIL: availability-aligned_allocation-missing
-
 // asan and msan will not call the new handler.
 // UNSUPPORTED: sanitizer-new-delete
 
 // Libc++ when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.
-// UNSUPPORTED: target={{.+}}-zos{{.*}}
+// XFAIL: target={{.+}}-zos{{.*}}
 
 #include <new>
 #include <cstddef>

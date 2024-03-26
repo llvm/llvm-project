@@ -8,6 +8,7 @@
 
 #include "llvm/Linker/IRMover.h"
 #include "LinkDiagnosticInfo.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -694,6 +695,7 @@ Function *IRLinker::copyFunctionProto(const Function *SF) {
                              SF->getAddressSpace(), SF->getName(), &DstM);
   F->copyAttributesFrom(SF);
   F->setAttributes(mapAttributeTypes(F->getContext(), F->getAttributes()));
+  F->IsNewDbgInfoFormat = SF->IsNewDbgInfoFormat;
   return F;
 }
 
@@ -989,8 +991,7 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
   // Replace any uses of the two global variables with uses of the new
   // global.
   if (DstGV) {
-    RAUWWorklist.push_back(
-        std::make_pair(DstGV, ConstantExpr::getBitCast(NG, DstGV->getType())));
+    RAUWWorklist.push_back(std::make_pair(DstGV, NG));
   }
 
   return Ret;
@@ -1135,6 +1136,7 @@ Error IRLinker::linkFunctionBody(Function &Dst, Function &Src) {
     Dst.setPrologueData(Src.getPrologueData());
   if (Src.hasPersonalityFn())
     Dst.setPersonalityFn(Src.getPersonalityFn());
+  assert(Src.IsNewDbgInfoFormat == Dst.IsNewDbgInfoFormat);
 
   // Copy over the metadata attachments without remapping.
   Dst.copyMetadata(&Src, 0);
@@ -1545,6 +1547,24 @@ Error IRLinker::run() {
     if (Error Err = SrcM->getMaterializer()->materializeMetadata())
       return Err;
 
+  // Convert source module to match dest for the duration of the link.
+  bool SrcModuleNewDbgFormat = SrcM->IsNewDbgInfoFormat;
+  if (DstM.IsNewDbgInfoFormat != SrcM->IsNewDbgInfoFormat) {
+    if (DstM.IsNewDbgInfoFormat)
+      SrcM->convertToNewDbgValues();
+    else
+      SrcM->convertFromNewDbgValues();
+  }
+  // Undo debug mode conversion afterwards.
+  auto Cleanup = make_scope_exit([&]() {
+    if (SrcModuleNewDbgFormat != SrcM->IsNewDbgInfoFormat) {
+      if (SrcModuleNewDbgFormat)
+        SrcM->convertToNewDbgValues();
+      else
+        SrcM->convertFromNewDbgValues();
+    }
+  });
+
   // Inherit the target data from the source module if the destination module
   // doesn't have one already.
   if (DstM.getDataLayout().isDefault())
@@ -1567,7 +1587,7 @@ Error IRLinker::run() {
     std::string ModuleId = SrcM->getModuleIdentifier();
     StringRef FileName = llvm::sys::path::filename(ModuleId);
     bool SrcIsLibDevice =
-        FileName.startswith("libdevice") && FileName.endswith(".10.bc");
+        FileName.starts_with("libdevice") && FileName.ends_with(".10.bc");
     bool SrcHasLibDeviceDL =
         (SrcM->getDataLayoutStr().empty() ||
          SrcM->getDataLayoutStr() == "e-i64:64-v16:16-v32:32-n16:32:64");

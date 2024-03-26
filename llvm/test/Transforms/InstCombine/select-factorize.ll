@@ -303,7 +303,7 @@ define i1 @and_logic_and_logic_or_not_one_use(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @and_logic_and_logic_or_not_one_use(
 ; CHECK-NEXT:    [[AC:%.*]] = and i1 [[A:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[BC:%.*]] = select i1 [[B:%.*]], i1 [[C]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[BC]], i1 true, i1 [[AC]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[B]], i1 [[C]], i1 [[AC]]
 ; CHECK-NEXT:    call void @use(i1 [[AC]])
 ; CHECK-NEXT:    call void @use(i1 [[BC]])
 ; CHECK-NEXT:    ret i1 [[OR]]
@@ -368,7 +368,7 @@ define i1 @and_and_logic_or_not_one_use(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @and_and_logic_or_not_one_use(
 ; CHECK-NEXT:    [[AC:%.*]] = and i1 [[A:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[BC:%.*]] = and i1 [[C]], [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[BC]], i1 true, i1 [[AC]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[B]], i1 [[C]], i1 [[AC]]
 ; CHECK-NEXT:    call void @use(i1 [[AC]])
 ; CHECK-NEXT:    call void @use(i1 [[BC]])
 ; CHECK-NEXT:    ret i1 [[OR]]
@@ -532,7 +532,7 @@ define i1 @logic_or_logic_and_not_one_use(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_or_logic_and_not_one_use(
 ; CHECK-NEXT:    [[AC:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[A:%.*]]
 ; CHECK-NEXT:    [[BC:%.*]] = select i1 [[B:%.*]], i1 true, i1 [[C]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[BC]], i1 [[AC]], i1 false
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[B]], i1 [[AC]], i1 [[C]]
 ; CHECK-NEXT:    call void @use(i1 [[AC]])
 ; CHECK-NEXT:    call void @use(i1 [[BC]])
 ; CHECK-NEXT:    ret i1 [[OR]]
@@ -681,7 +681,7 @@ define i1 @or_logic_or_logic_and_not_one_use(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @or_logic_or_logic_and_not_one_use(
 ; CHECK-NEXT:    [[AC:%.*]] = or i1 [[C:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[BC:%.*]] = select i1 [[B:%.*]], i1 true, i1 [[C]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[BC]], i1 [[AC]], i1 false
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[B]], i1 [[AC]], i1 [[C]]
 ; CHECK-NEXT:    call void @use(i1 [[AC]])
 ; CHECK-NEXT:    call void @use(i1 [[BC]])
 ; CHECK-NEXT:    ret i1 [[OR]]
@@ -746,7 +746,7 @@ define i1 @or_or_logic_and_not_one_use(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @or_or_logic_and_not_one_use(
 ; CHECK-NEXT:    [[AC:%.*]] = or i1 [[C:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[BC:%.*]] = or i1 [[B:%.*]], [[C]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[BC]], i1 [[AC]], i1 false
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[B]], i1 [[AC]], i1 [[C]]
 ; CHECK-NEXT:    call void @use(i1 [[AC]])
 ; CHECK-NEXT:    call void @use(i1 [[BC]])
 ; CHECK-NEXT:    ret i1 [[OR]]

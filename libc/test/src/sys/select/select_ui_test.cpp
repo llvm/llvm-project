@@ -18,7 +18,7 @@
 // Instead, one has to run it manually and press a key on the keyboard
 // to make the test succeed.
 TEST(LlvmLibcSelectTest, ReadStdinAfterSelect) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   constexpr int STDIN_FD = 0;
   fd_set set;
   FD_ZERO(&set);

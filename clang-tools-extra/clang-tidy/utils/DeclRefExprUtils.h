@@ -15,15 +15,6 @@
 
 namespace clang::tidy::utils::decl_ref_expr {
 
-/// Returns true if all ``DeclRefExpr`` to the variable within ``Stmt``
-/// do not modify it.
-///
-/// Returns ``true`` if only const methods or operators are called on the
-/// variable or the variable is a const reference or value argument to a
-/// ``callExpr()``.
-bool isOnlyUsedAsConst(const VarDecl &Var, const Stmt &Stmt,
-                       ASTContext &Context);
-
 /// Returns set of all ``DeclRefExprs`` to ``VarDecl`` within ``Stmt``.
 llvm::SmallPtrSet<const DeclRefExpr *, 16>
 allDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt, ASTContext &Context);
@@ -34,9 +25,31 @@ allDeclRefExprs(const VarDecl &VarDecl, const Decl &Decl, ASTContext &Context);
 
 /// Returns set of all ``DeclRefExprs`` to ``VarDecl`` within ``Stmt`` where
 /// ``VarDecl`` is guaranteed to be accessed in a const fashion.
+///
+/// If ``VarDecl`` is of pointer type, ``Indirections`` specifies the level
+/// of indirection of the object whose mutations we are tracking.
+///
+/// For example, given:
+///   ```
+///   int i;
+///   int* p;
+///   p = &i;  // (A)
+///   *p = 3;  // (B)
+///   ```
+///
+///   - `constReferenceDeclRefExprs(P, Stmt, Context, 0)` returns the reference
+//      to `p` in (B): the pointee is modified, but the pointer is not;
+///   - `constReferenceDeclRefExprs(P, Stmt, Context, 1)` returns the reference
+//      to `p` in (A): the pointee is modified, but the pointer is not;
 llvm::SmallPtrSet<const DeclRefExpr *, 16>
 constReferenceDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt,
-                           ASTContext &Context);
+                           ASTContext &Context, int Indirections);
+
+/// Returns true if all ``DeclRefExpr`` to the variable within ``Stmt``
+/// do not modify it.
+/// See `constReferenceDeclRefExprs` for the meaning of ``Indirections``.
+bool isOnlyUsedAsConst(const VarDecl &Var, const Stmt &Stmt,
+                       ASTContext &Context, int Indirections);
 
 /// Returns ``true`` if ``DeclRefExpr`` is the argument of a copy-constructor
 /// call expression within ``Decl``.

@@ -1,4 +1,6 @@
-!RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
+! REQUIRES: openmp_runtime
+
+!RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
 
 !CHECK-LABEL: func @_QPomp_task_simple() {
 subroutine omp_task_simple
@@ -41,34 +43,6 @@ subroutine omp_task_final(bar)
 end subroutine omp_task_final
 
 !===============================================================================
-! `untied` clause
-!===============================================================================
-
-!CHECK-LABEL: func @_QPomp_task_untied() {
-subroutine omp_task_untied()
-  !CHECK: omp.task untied {
-  !$omp task untied
-  !CHECK: fir.call @_QPfoo() {{.*}}: () -> ()
-  call foo()
-  !CHECK: omp.terminator
-  !$omp end task
-end subroutine omp_task_untied
-
-!===============================================================================
-! `mergeable` clause
-!===============================================================================
-
-!CHECK-LABEL: func @_QPomp_task_mergeable() {
-subroutine omp_task_mergeable()
-  !CHECK: omp.task mergeable {
-  !$omp task mergeable
-  !CHECK: fir.call @_QPfoo() {{.*}}: () -> ()
-  call foo()
-  !CHECK: omp.terminator
-  !$omp end task
-end subroutine omp_task_mergeable
-
-!===============================================================================
 ! `priority` clause
 !===============================================================================
 
@@ -91,7 +65,7 @@ end subroutine omp_task_priority
 subroutine task_allocate()
   use omp_lib
   integer :: x
-  !CHECK: omp.task allocate(%{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>) {
+  !CHECK: omp.task allocate(%{{.+}} : i64 -> %{{.+}} : !fir.ref<i32>) {
   !$omp task allocate(omp_high_bw_mem_alloc: x) private(x)
   !CHECK: arith.addi
   x = x + 12
@@ -245,8 +219,8 @@ subroutine task_multiple_clauses()
   integer :: x, y, z
   logical :: buzz
 
-  !CHECK: omp.task if(%{{.+}}) final(%{{.+}}) untied mergeable priority(%{{.+}}) allocate(%{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>) {
-  !$omp task if(buzz) final(buzz) untied mergeable priority(z) allocate(omp_high_bw_mem_alloc: x) private(x) firstprivate(y)
+  !CHECK: omp.task if(%{{.+}}) final(%{{.+}}) priority(%{{.+}}) allocate(%{{.+}} : i64 -> %{{.+}} : !fir.ref<i32>) {
+  !$omp task if(buzz) final(buzz) priority(z) allocate(omp_high_bw_mem_alloc: x) private(x) firstprivate(y)
 
   !CHECK: %[[x_priv:.+]] = fir.alloca i32
   !CHECK: %[[y_priv:.+]] = fir.alloca i32

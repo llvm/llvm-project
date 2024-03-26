@@ -238,9 +238,7 @@ public:
     AU.addRequired<LiveIntervals>();
     AU.addPreserved<SlotIndexes>();
     AU.addPreserved<LiveIntervals>();
-    AU.addRequired<MachineDominatorTree>();
     AU.addPreserved<MachineDominatorTree>();
-    AU.addRequired<MachinePostDominatorTree>();
     AU.addPreserved<MachinePostDominatorTree>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -555,7 +553,9 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
         }
         continue;
       } else if (Opcode == AMDGPU::LDS_PARAM_LOAD ||
-                 Opcode == AMDGPU::LDS_DIRECT_LOAD) {
+                 Opcode == AMDGPU::DS_PARAM_LOAD ||
+                 Opcode == AMDGPU::LDS_DIRECT_LOAD ||
+                 Opcode == AMDGPU::DS_DIRECT_LOAD) {
         // Mark these STRICTWQM, but only for the instruction, not its operands.
         // This avoid unnecessarily marking M0 as requiring WQM.
         InstrInfo &II = Instructions[&MI];
@@ -1320,7 +1320,8 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
   auto II = MBB.getFirstNonPHI(), IE = MBB.end();
   if (IsEntry) {
     // Skip the instruction that saves LiveMask
-    if (II != IE && II->getOpcode() == AMDGPU::COPY)
+    if (II != IE && II->getOpcode() == AMDGPU::COPY &&
+        II->getOperand(1).getReg() == TRI->getExec())
       ++II;
   }
 
@@ -1594,8 +1595,8 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
   LIS = &getAnalysis<LiveIntervals>();
-  MDT = &getAnalysis<MachineDominatorTree>();
-  PDT = &getAnalysis<MachinePostDominatorTree>();
+  MDT = getAnalysisIfAvailable<MachineDominatorTree>();
+  PDT = getAnalysisIfAvailable<MachinePostDominatorTree>();
 
   if (ST->isWave32()) {
     AndOpc = AMDGPU::S_AND_B32;

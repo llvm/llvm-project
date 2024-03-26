@@ -15,7 +15,6 @@
 #include "Delta.h"
 #include "TestRunner.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
@@ -31,7 +30,6 @@
 #include <cassert>
 #include <iterator>
 #include <utility>
-#include <vector>
 
 namespace llvm {
 class LLVMContext;

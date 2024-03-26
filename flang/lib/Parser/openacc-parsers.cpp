@@ -53,9 +53,15 @@ TYPE_PARSER(construct<AccSizeExpr>(scalarIntExpr) ||
     construct<AccSizeExpr>("*" >> construct<std::optional<ScalarIntExpr>>()))
 TYPE_PARSER(construct<AccSizeExprList>(nonemptyList(Parser<AccSizeExpr>{})))
 
-TYPE_PARSER(construct<AccDeviceTypeExpr>(scalarIntExpr) ||
-    construct<AccDeviceTypeExpr>(
-        "*" >> construct<std::optional<ScalarIntExpr>>()))
+TYPE_PARSER(sourced(construct<AccDeviceTypeExpr>(
+    first("*" >> pure(Fortran::common::OpenACCDeviceType::Star),
+        "DEFAULT" >> pure(Fortran::common::OpenACCDeviceType::Default),
+        "NVIDIA" >> pure(Fortran::common::OpenACCDeviceType::Nvidia),
+        "ACC_DEVICE_NVIDIA" >> pure(Fortran::common::OpenACCDeviceType::Nvidia),
+        "RADEON" >> pure(Fortran::common::OpenACCDeviceType::Radeon),
+        "HOST" >> pure(Fortran::common::OpenACCDeviceType::Host),
+        "MULTICORE" >> pure(Fortran::common::OpenACCDeviceType::Multicore)))))
+
 TYPE_PARSER(
     construct<AccDeviceTypeExprList>(nonemptyList(Parser<AccDeviceTypeExpr>{})))
 

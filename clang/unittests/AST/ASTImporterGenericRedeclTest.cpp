@@ -80,7 +80,6 @@ struct VariableTemplate {
   static constexpr auto *Definition =
       R"(
       template <class T> T X;
-      template <> int X<int>;
       )";
   // There is no matcher for varTemplateDecl so use a work-around.
   BindableMatcher<Decl> getPattern() {
@@ -118,16 +117,38 @@ struct ClassTemplateSpec {
   using DeclTy = ClassTemplateSpecializationDecl;
   static constexpr auto *Prototype =
       R"(
-    template <class T> class X;
-    template <> class X<int>;
-    )";
+      template <class T> class X;
+      template <> class X<int>;
+      )";
   static constexpr auto *Definition =
       R"(
-    template <class T> class X;
-    template <> class X<int> {};
-    )";
+      template <class T> class X;
+      template <> class X<int> {};
+      )";
   BindableMatcher<Decl> getPattern() {
     return classTemplateSpecializationDecl(hasName("X"), unless(isImplicit()));
+  }
+};
+
+const internal::VariadicDynCastAllOfMatcher<Decl, VarTemplateDecl>
+    varTemplateDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, VarTemplateSpecializationDecl>
+    varTemplateSpecializationDecl;
+
+struct VariableTemplateSpec {
+  using DeclTy = VarTemplateSpecializationDecl;
+  static constexpr auto *Prototype =
+      R"(
+      template <class T> extern T X;
+      template <> extern int X<int>;
+      )";
+  static constexpr auto *Definition =
+      R"(
+      template <class T> T X;
+      template <> int X<int>;
+      )";
+  BindableMatcher<Decl> getPattern() {
+    return varTemplateSpecializationDecl(hasName("X"), unless(isImplicit()));
   }
 };
 
@@ -451,6 +472,9 @@ ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(
     RedeclChain, ClassTemplateSpec, ,
     PrototypeShouldBeImportedAsAPrototypeWhenThereIsNoDefinition)
+ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(
+    RedeclChain, VariableTemplateSpec, ,
+    PrototypeShouldBeImportedAsAPrototypeWhenThereIsNoDefinition)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, Function, ,
                                         DefinitionShouldBeImportedAsADefinition)
@@ -470,6 +494,9 @@ ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, FunctionTemplateSpec, ,
                                         DefinitionShouldBeImportedAsADefinition)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, ClassTemplateSpec, ,
                                         DefinitionShouldBeImportedAsADefinition)
+ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(
+    RedeclChain, VariableTemplateSpec, ,
+    DefinitionShouldBeImportedAsADefinition)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, Function, ,
                                         ImportPrototypeAfterImportedPrototype)
@@ -489,6 +516,8 @@ ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, FunctionTemplateSpec, ,
                                         ImportPrototypeAfterImportedPrototype)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, ClassTemplateSpec, ,
                                         ImportPrototypeAfterImportedPrototype)
+ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, VariableTemplateSpec, ,
+                                         ImportPrototypeAfterImportedPrototype)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, Function, ,
                                         ImportDefinitionAfterImportedPrototype)
@@ -508,6 +537,8 @@ ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, FunctionTemplateSpec, ,
                                         ImportDefinitionAfterImportedPrototype)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, ClassTemplateSpec, ,
                                         ImportDefinitionAfterImportedPrototype)
+ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, VariableTemplateSpec, ,
+                                         ImportDefinitionAfterImportedPrototype)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, Function, ,
                                         ImportPrototypeAfterImportedDefinition)
@@ -527,6 +558,8 @@ ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, FunctionTemplateSpec, ,
                                         ImportPrototypeAfterImportedDefinition)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, ClassTemplateSpec, ,
                                         ImportPrototypeAfterImportedDefinition)
+ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, VariableTemplateSpec, ,
+                                         ImportPrototypeAfterImportedDefinition)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, Function, ,
                                         ImportPrototypes)
@@ -545,6 +578,8 @@ ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, ClassTemplateSpec, ,
                                         ImportPrototypes)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, FunctionTemplateSpec, ,
                                         ImportPrototypes)
+ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, VariableTemplateSpec, ,
+                                         ImportPrototypes)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, Function, ,
                                         ImportDefinitions)
@@ -563,6 +598,8 @@ ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, ClassTemplateSpec, ,
                                         ImportDefinitions)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, FunctionTemplateSpec, ,
                                         ImportDefinitions)
+ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, VariableTemplateSpec, ,
+                                         ImportDefinitions)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, Function, ,
                                         ImportDefinitionThenPrototype)
@@ -582,6 +619,8 @@ ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, FunctionTemplateSpec, ,
                                         ImportDefinitionThenPrototype)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, ClassTemplateSpec, ,
                                         ImportDefinitionThenPrototype)
+ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, VariableTemplateSpec, ,
+                                         ImportDefinitionThenPrototype)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, Function, ,
                                         ImportPrototypeThenDefinition)
@@ -601,6 +640,8 @@ ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, FunctionTemplateSpec, ,
                                         ImportPrototypeThenDefinition)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, ClassTemplateSpec, ,
                                         ImportPrototypeThenDefinition)
+ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, VariableTemplateSpec, ,
+                                         ImportPrototypeThenDefinition)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, Function, ,
                                         WholeRedeclChainIsImportedAtOnce)
@@ -612,6 +653,8 @@ ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, VariableTemplate, ,
                                         WholeRedeclChainIsImportedAtOnce)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, FunctionTemplateSpec, ,
                                         WholeRedeclChainIsImportedAtOnce)
+ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, VariableTemplateSpec, ,
+                                         WholeRedeclChainIsImportedAtOnce)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, Function, ,
                                         ImportPrototypeThenProtoAndDefinition)
@@ -623,6 +666,8 @@ ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, VariableTemplate, ,
                                         ImportPrototypeThenProtoAndDefinition)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, FunctionTemplateSpec, ,
                                         ImportPrototypeThenProtoAndDefinition)
+ASTIMPORTER_INSTANTIATE_TYPED_TEST_SUITE(RedeclChain, VariableTemplateSpec, ,
+                                         ImportPrototypeThenProtoAndDefinition)
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, RedeclChainFunction,
                         DefaultTestValuesForRunOptions);
@@ -642,6 +687,8 @@ INSTANTIATE_TEST_SUITE_P(ParameterizedTests, RedeclChainFunctionTemplateSpec,
                         DefaultTestValuesForRunOptions);
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, RedeclChainClassTemplateSpec,
                         DefaultTestValuesForRunOptions);
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, RedeclChainVariableTemplateSpec,
+                         DefaultTestValuesForRunOptions);
 
 } // end namespace ast_matchers
 } // end namespace clang

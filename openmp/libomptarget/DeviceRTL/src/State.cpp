@@ -8,14 +8,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "State.h"
+#include "Shared/Environment.h"
+
 #include "Allocator.h"
 #include "Configuration.h"
 #include "Debug.h"
-#include "Environment.h"
 #include "Interface.h"
 #include "LibC.h"
 #include "Mapping.h"
+#include "State.h"
 #include "Synchronization.h"
 #include "Types.h"
 #include "Utils.h"
@@ -35,6 +36,10 @@ using namespace ompx;
 
 /// The kernel environment passed to the init method by the compiler.
 static KernelEnvironmentTy *SHARED(KernelEnvironmentPtr);
+
+/// The kernel launch environment passed as argument to the kernel by the
+/// runtime.
+static KernelLaunchEnvironmentTy *SHARED(KernelLaunchEnvironmentPtr);
 
 ///}
 
@@ -238,17 +243,23 @@ int returnValIfLevelIsActive(int Level, int Val, int DefaultVal,
 
 } // namespace
 
-void state::init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment) {
+void state::init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
+                 KernelLaunchEnvironmentTy &KernelLaunchEnvironment) {
   SharedMemorySmartStack.init(IsSPMD);
   if (mapping::isInitialThreadInLevel0(IsSPMD)) {
     TeamState.init(IsSPMD);
     ThreadStates = nullptr;
     KernelEnvironmentPtr = &KernelEnvironment;
+    KernelLaunchEnvironmentPtr = &KernelLaunchEnvironment;
   }
 }
 
 KernelEnvironmentTy &state::getKernelEnvironment() {
   return *KernelEnvironmentPtr;
+}
+
+KernelLaunchEnvironmentTy &state::getKernelLaunchEnvironment() {
+  return *KernelLaunchEnvironmentPtr;
 }
 
 void state::enterDataEnvironment(IdentTy *Ident) {
@@ -415,6 +426,8 @@ int omp_get_num_teams(void) { return mapping::getNumberOfBlocksInKernel(); }
 int omp_get_team_num() { return mapping::getBlockIdInKernel(); }
 
 int omp_get_initial_device(void) { return -1; }
+
+int omp_is_initial_device(void) { return 0; }
 }
 
 extern "C" {

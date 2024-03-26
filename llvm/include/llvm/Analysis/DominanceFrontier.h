@@ -17,6 +17,7 @@
 #ifndef LLVM_ANALYSIS_DOMINANCEFRONTIER_H
 #define LLVM_ANALYSIS_DOMINANCEFRONTIER_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Config/llvm-config.h"
@@ -24,7 +25,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/GenericDomTree.h"
 #include <cassert>
-#include <map>
 #include <utility>
 
 namespace llvm {
@@ -42,7 +42,7 @@ public:
   // Dom set for a bb. Use SetVector to make iterating dom frontiers of a bb
   // deterministic.
   using DomSetType = SetVector<BlockT *>;
-  using DomSetMapType = std::map<BlockT *, DomSetType>; // Dom set map
+  using DomSetMapType = DenseMap<BlockT *, DomSetType>; // Dom set map
 
 protected:
   using BlockTraits = GraphTraits<BlockT *>;
@@ -101,8 +101,8 @@ public:
   /// return true;
   bool compareDomSet(DomSetType &DS1, const DomSetType &DS2) const;
 
-  /// compare - Return true if the other dominance frontier base matches
-  /// this dominance frontier base. Otherwise return false.
+  /// compare - Return false if the other dominance frontier base matches
+  /// this dominance frontier base. Otherwise return true.
   bool compare(DominanceFrontierBase &Other) const;
 
   /// print - Convert to human readable form
@@ -204,6 +204,8 @@ public:
   explicit DominanceFrontierPrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

@@ -14,7 +14,7 @@ using namespace mlir;
 using namespace mlir::amdgpu;
 
 FailureOr<Chipset> Chipset::parse(StringRef name) {
-  if (!name.startswith("gfx"))
+  if (!name.starts_with("gfx"))
     return failure();
   unsigned major = 0;
   unsigned minor = 0;

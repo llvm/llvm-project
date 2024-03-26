@@ -17,6 +17,6 @@ export A f();
 //--- UseStrict.cpp
 import M;
 void test() {
-  auto a = f(); // expected-error {{definition of 'A' must be imported from module 'M:impl' before it is required}} expected-error{{}}
+  auto a = f(); // expected-error {{definition of 'A' must be imported from module 'M' before it is required}} expected-error{{}}
                 // expected-note@* {{definition here is not reachable}} expected-note@* {{}}
 }

@@ -39,6 +39,8 @@ public:
       : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
+
   // TODO: Implement more hooks to provide TTI machinery for LoongArch.
 };
 

@@ -210,8 +210,8 @@ Error SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
       SymbolAddress = OpdExtractor->getAddress(&OpdOffset);
   }
   // Mach-O symbol table names have leading underscore, skip it.
-  if (Module->isMachO() && !SymbolName.empty() && SymbolName[0] == '_')
-    SymbolName = SymbolName.drop_front();
+  if (Module->isMachO())
+    SymbolName.consume_front("_");
 
   if (Obj.isELF() && ELFSymbolRef(Symbol).getBinding() != ELF::STB_LOCAL)
     ELFSymIdx = 0;
@@ -349,6 +349,21 @@ std::vector<DILocal> SymbolizableObjectFile::symbolizeFrame(
     ModuleOffset.SectionIndex =
         getModuleSectionIndexForAddress(ModuleOffset.Address);
   return DebugInfoContext->getLocalsForAddress(ModuleOffset);
+}
+
+std::vector<object::SectionedAddress>
+SymbolizableObjectFile::findSymbol(StringRef Symbol, uint64_t Offset) const {
+  std::vector<object::SectionedAddress> Result;
+  for (const SymbolDesc &Sym : Symbols) {
+    if (Sym.Name.equals(Symbol)) {
+      uint64_t Addr = Sym.Addr;
+      if (Offset < Sym.Size)
+        Addr += Offset;
+      object::SectionedAddress A{Addr, getModuleSectionIndexForAddress(Addr)};
+      Result.push_back(A);
+    }
+  }
+  return Result;
 }
 
 /// Search for the first occurence of specified Address in ObjectFile.

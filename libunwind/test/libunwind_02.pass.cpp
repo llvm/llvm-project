@@ -10,6 +10,9 @@
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan
 
+// This test fails on older llvm, when built with picolibc.
+// XFAIL: clang-16 && LIBCXX-PICOLIBC-FIXME
+
 #undef NDEBUG
 #include <assert.h>
 #include <stdlib.h>
@@ -18,7 +21,8 @@
 #define EXPECTED_NUM_FRAMES 50
 #define NUM_FRAMES_UPPER_BOUND 100
 
-_Unwind_Reason_Code callback(_Unwind_Context *context, void *cnt) {
+__attribute__((noinline)) _Unwind_Reason_Code callback(_Unwind_Context *context,
+                                                       void *cnt) {
   (void)context;
   int *i = (int *)cnt;
   ++*i;
@@ -28,7 +32,7 @@ _Unwind_Reason_Code callback(_Unwind_Context *context, void *cnt) {
   return _URC_NO_REASON;
 }
 
-void test_backtrace() {
+__attribute__((noinline)) void test_backtrace() {
   int n = 0;
   _Unwind_Backtrace(&callback, &n);
   if (n < EXPECTED_NUM_FRAMES) {
@@ -36,17 +40,34 @@ void test_backtrace() {
   }
 }
 
-int test(int i) {
+// These functions are effectively the same, but we have to be careful to avoid
+// unwanted optimizations that would mess with the number of frames we expect.
+// Surprisingly, slapping `noinline` is not sufficient -- we also have to avoid
+// writing the function in a way that the compiler can easily spot tail
+// recursion.
+__attribute__((noinline)) int test1(int i);
+__attribute__((noinline)) int test2(int i);
+
+__attribute__((noinline)) int test1(int i) {
   if (i == 0) {
     test_backtrace();
     return 0;
   } else {
-    return i + test(i - 1);
+    return i + test2(i - 1);
+  }
+}
+
+__attribute__((noinline)) int test2(int i) {
+  if (i == 0) {
+    test_backtrace();
+    return 0;
+  } else {
+    return i + test1(i - 1);
   }
 }
 
 int main(int, char**) {
-  int total = test(50);
+  int total = test1(50);
   assert(total == 1275);
   return 0;
 }

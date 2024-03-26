@@ -47,6 +47,10 @@ public:
                            CodeGen::CodeGenModule &M) const override;
   bool shouldEmitStaticExternCAliases() const override;
 
+  llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
+                                 llvm::PointerType *T,
+                                 QualType QT) const override;
+
   llvm::Type *getCUDADeviceBuiltinSurfaceDeviceType() const override {
     // On the device side, surface reference is represented as an object handle
     // in 64-bit integer.
@@ -284,6 +288,20 @@ void NVPTXTargetCodeGenInfo::addNVVMMetadata(llvm::GlobalValue *GV,
 
 bool NVPTXTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {
   return false;
+}
+
+llvm::Constant *
+NVPTXTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
+                                       llvm::PointerType *PT,
+                                       QualType QT) const {
+  auto &Ctx = CGM.getContext();
+  if (PT->getAddressSpace() != Ctx.getTargetAddressSpace(LangAS::opencl_local))
+    return llvm::ConstantPointerNull::get(PT);
+
+  auto NPT = llvm::PointerType::get(
+      PT->getContext(), Ctx.getTargetAddressSpace(LangAS::opencl_generic));
+  return llvm::ConstantExpr::getAddrSpaceCast(
+      llvm::ConstantPointerNull::get(NPT), PT);
 }
 }
 

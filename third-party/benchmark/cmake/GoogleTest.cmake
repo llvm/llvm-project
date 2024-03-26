@@ -29,14 +29,24 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
 include(${GOOGLETEST_PREFIX}/googletest-paths.cmake)
 
-# googletest doesn't seem to want to stay build warning clean so let's not hurt ourselves.
-add_compile_options(-w)
-
 # Add googletest directly to our build. This defines
 # the gtest and gtest_main targets.
 add_subdirectory(${GOOGLETEST_SOURCE_DIR}
                  ${GOOGLETEST_BINARY_DIR}
                  EXCLUDE_FROM_ALL)
+
+# googletest doesn't seem to want to stay build warning clean so let's not hurt ourselves.
+if (MSVC)
+  target_compile_options(gtest PRIVATE "/wd4244" "/wd4722")
+  target_compile_options(gtest_main PRIVATE "/wd4244" "/wd4722")
+  target_compile_options(gmock PRIVATE "/wd4244" "/wd4722")
+  target_compile_options(gmock_main PRIVATE "/wd4244" "/wd4722")
+else()
+  target_compile_options(gtest PRIVATE "-w")
+  target_compile_options(gtest_main PRIVATE "-w")
+  target_compile_options(gmock PRIVATE "-w")
+  target_compile_options(gmock_main PRIVATE "-w")
+endif()
 
 if(NOT DEFINED GTEST_COMPILE_COMMANDS)
     set(GTEST_COMPILE_COMMANDS ON)

@@ -62,6 +62,57 @@ multiclass LMULSEWWriteResMXSEW<string name, list<ProcResourceKind> resources,
     def : WriteRes<!cast<SchedWrite>(name # "_WorstCase"), resources>;
 }
 
+// Define a SchedAlias for the SchedWrite associated with (name, mx) whose
+// behavior is aliased to a Variant. The Variant has Latency predLad and
+// ReleaseAtCycles predCycles if the SchedPredicate Pred is true, otherwise has
+// Latency noPredLat and ReleaseAtCycles noPredCycles. The WorstCase SchedWrite
+// is created similiarly if IsWorstCase is true.
+multiclass LMULWriteResMXVariant<string name, SchedPredicateBase Pred,
+                                 list<ProcResourceKind> resources,
+                                 int predLat, list<int> predAcquireCycles,
+                                 list<int> predReleaseCycles, int noPredLat,
+                                 list<int> noPredAcquireCycles,
+                                 list<int> noPredReleaseCycles,
+                                 string mx, bit IsWorstCase> {
+  defvar nameMX = name # "_" # mx;
+
+  // Define the different behaviors
+  def nameMX # "_Pred" : SchedWriteRes<resources>{
+    let Latency = predLat;
+    let AcquireAtCycles = predAcquireCycles;
+    let ReleaseAtCycles = predReleaseCycles;
+  }
+  def nameMX # "_NoPred" : SchedWriteRes<resources> {
+    let Latency = noPredLat;
+    let AcquireAtCycles = noPredAcquireCycles;
+    let ReleaseAtCycles = noPredReleaseCycles;
+  }
+
+  // Define SchedVars
+  def nameMX # PredSchedVar
+      : SchedVar<Pred, [!cast<SchedWriteRes>(NAME # nameMX # "_Pred")]>;
+  def nameMX # NoPredSchedVar
+      : SchedVar<NoSchedPred, [!cast<SchedWriteRes>(NAME # nameMX #"_NoPred")]>;
+  // Allow multiclass to refer to SchedVars -- need to have NAME prefix.
+  defvar PredSchedVar = !cast<SchedVar>(NAME # nameMX # PredSchedVar);
+  defvar NoPredSchedVar = !cast<SchedVar>(NAME # nameMX # NoPredSchedVar);
+
+  // Tie behavior to predicate
+  def NAME # nameMX # "_Variant"
+      : SchedWriteVariant<[PredSchedVar, NoPredSchedVar]>;
+  def : SchedAlias<
+    !cast<SchedReadWrite>(nameMX),
+    !cast<SchedReadWrite>(NAME # nameMX # "_Variant")>;
+
+  if IsWorstCase then {
+    def NAME # name # "_WorstCase_Variant"
+      : SchedWriteVariant<[PredSchedVar, NoPredSchedVar]>;
+    def : SchedAlias<
+      !cast<SchedReadWrite>(name # "_WorstCase"),
+      !cast<SchedReadWrite>(NAME # name # "_WorstCase_Variant")>;
+  }
+}
+
 // Define multiclasses to define SchedWrite, SchedRead,  WriteRes, and
 // ReadAdvance for each (name, LMUL) pair and for each LMUL in each of the
 // SchedMxList variants above. Each multiclass is responsible for defining
@@ -145,7 +196,7 @@ multiclass LMULSEWReadAdvanceImpl<string name, int val, list<SchedWrite> writes 
 // by the ReadAdvance. For example:
 // ```
 //   defm "" : LMULReadAdvance<"ReadVIALUX", 1,
-//                             LMULSchedWriteList<["WriteVIMovVX"]>.value>;
+//                             LMULSchedWriteList<["WriteVMovSX"]>.value>;
 // ```
 class LMULSchedWriteListImpl<list<string> names, list<string> MxList> {
   list<SchedWrite> value = !foldl([]<SchedWrite>,
@@ -427,17 +478,17 @@ defm "" : LMULSchedWrites<"WriteVMFFSV">;
 // 15.6. Vector Set-only-First Mask Bit
 defm "" : LMULSchedWrites<"WriteVMSFSV">;
 // 15.8. Vector Iota Instruction
-defm "" : LMULSchedWrites<"WriteVMIotV">;
+defm "" : LMULSchedWrites<"WriteVIotaV">;
 // 15.9. Vector Element Index Instruction
-defm "" : LMULSchedWrites<"WriteVMIdxV">;
+defm "" : LMULSchedWrites<"WriteVIdxV">;
 
 // 16. Vector Permutation Instructions
 // 16.1. Integer Scalar Move Instructions
-def WriteVIMovVX : SchedWrite;
-def WriteVIMovXV : SchedWrite;
+def WriteVMovSX : SchedWrite;
+def WriteVMovXS : SchedWrite;
 // 16.2. Floating-Point Scalar Move Instructions
-def WriteVFMovVF : SchedWrite;
-def WriteVFMovFV : SchedWrite;
+def WriteVMovSF : SchedWrite;
+def WriteVMovFS : SchedWrite;
 // 16.3. Vector Slide Instructions
 defm "" : LMULSchedWrites<"WriteVISlideX">;
 defm "" : LMULSchedWrites<"WriteVISlideI">;
@@ -654,17 +705,17 @@ defm "" : LMULSchedReads<"ReadVMFFSV">;
 // 15.6. Vector Set-only-First Mask Bit
 defm "" : LMULSchedReads<"ReadVMSFSV">;
 // 15.8. Vector Iota Instruction
-defm "" : LMULSchedReads<"ReadVMIotV">;
+defm "" : LMULSchedReads<"ReadVIotaV">;
 
 // 16. Vector Permutation Instructions
 // 16.1. Integer Scalar Move Instructions
-def ReadVIMovVX : SchedRead;
-def ReadVIMovXV : SchedRead;
-def ReadVIMovXX : SchedRead;
+def ReadVMovXS : SchedRead;
+def ReadVMovSX_V : SchedRead;
+def ReadVMovSX_X : SchedRead;
 // 16.2. Floating-Point Scalar Move Instructions
-def ReadVFMovVF : SchedRead;
-def ReadVFMovFV : SchedRead;
-def ReadVFMovFX : SchedRead;
+def ReadVMovFS : SchedRead;
+def ReadVMovSF_V : SchedRead;
+def ReadVMovSF_F : SchedRead;
 // 16.3. Vector Slide Instructions
 defm "" : LMULSchedReads<"ReadVISlideV">;
 defm "" : LMULSchedReads<"ReadVISlideX">;
@@ -866,14 +917,14 @@ defm "" : LMULWriteRes<"WriteVMALUV", []>;
 defm "" : LMULWriteRes<"WriteVMPopV", []>;
 defm "" : LMULWriteRes<"WriteVMFFSV", []>;
 defm "" : LMULWriteRes<"WriteVMSFSV", []>;
-defm "" : LMULWriteRes<"WriteVMIotV", []>;
-defm "" : LMULWriteRes<"WriteVMIdxV", []>;
+defm "" : LMULWriteRes<"WriteVIotaV", []>;
+defm "" : LMULWriteRes<"WriteVIdxV", []>;
 
 // 16. Vector Permutation Instructions
-def : WriteRes<WriteVIMovVX, []>;
-def : WriteRes<WriteVIMovXV, []>;
-def : WriteRes<WriteVFMovVF, []>;
-def : WriteRes<WriteVFMovFV, []>;
+def : WriteRes<WriteVMovSX, []>;
+def : WriteRes<WriteVMovXS, []>;
+def : WriteRes<WriteVMovSF, []>;
+def : WriteRes<WriteVMovFS, []>;
 defm "" : LMULWriteRes<"WriteVISlideX", []>;
 defm "" : LMULWriteRes<"WriteVISlideI", []>;
 defm "" : LMULWriteRes<"WriteVISlide1X", []>;
@@ -1028,15 +1079,15 @@ defm "" : LMULReadAdvance<"ReadVMALUV", 0>;
 defm "" : LMULReadAdvance<"ReadVMPopV", 0>;
 defm "" : LMULReadAdvance<"ReadVMFFSV", 0>;
 defm "" : LMULReadAdvance<"ReadVMSFSV", 0>;
-defm "" : LMULReadAdvance<"ReadVMIotV", 0>;
+defm "" : LMULReadAdvance<"ReadVIotaV", 0>;
 
 // 16. Vector Permutation Instructions
-def : ReadAdvance<ReadVIMovVX, 0>;
-def : ReadAdvance<ReadVIMovXV, 0>;
-def : ReadAdvance<ReadVIMovXX, 0>;
-def : ReadAdvance<ReadVFMovVF, 0>;
-def : ReadAdvance<ReadVFMovFV, 0>;
-def : ReadAdvance<ReadVFMovFX, 0>;
+def : ReadAdvance<ReadVMovXS, 0>;
+def : ReadAdvance<ReadVMovSX_V, 0>;
+def : ReadAdvance<ReadVMovSX_X, 0>;
+def : ReadAdvance<ReadVMovFS, 0>;
+def : ReadAdvance<ReadVMovSF_V, 0>;
+def : ReadAdvance<ReadVMovSF_F, 0>;
 defm "" : LMULReadAdvance<"ReadVISlideV", 0>;
 defm "" : LMULReadAdvance<"ReadVISlideX", 0>;
 defm "" : LMULReadAdvance<"ReadVFSlideV", 0>;

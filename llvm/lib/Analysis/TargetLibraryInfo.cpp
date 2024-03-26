@@ -37,7 +37,9 @@ static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
                clEnumValN(TargetLibraryInfoImpl::SLEEFGNUABI, "sleefgnuabi",
                           "SIMD Library for Evaluating Elementary Functions"),
                clEnumValN(TargetLibraryInfoImpl::ArmPL, "ArmPL",
-                          "Arm Performance Libraries")));
+                          "Arm Performance Libraries"),
+               clEnumValN(TargetLibraryInfoImpl::AMDLIBM, "AMDLIBM",
+                          "AMD vector math library")));
 
 StringLiteral const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] =
     {
@@ -163,12 +165,6 @@ bool TargetLibraryInfoImpl::isCallingConvCCompatible(Function *F) {
 /// triple gets a sane set of defaults.
 static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
                        ArrayRef<StringLiteral> StandardNames) {
-  // Verify that the StandardNames array is in alphabetical order.
-  assert(
-      llvm::is_sorted(StandardNames,
-                      [](StringRef LHS, StringRef RHS) { return LHS < RHS; }) &&
-      "TargetLibraryInfoImpl function names must be sorted");
-
   // Set IO unlocked variants as unavailable
   // Set them as available per system below
   TLI.setUnavailable(LibFunc_getc_unlocked);
@@ -460,6 +456,11 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_uname);
     TLI.setUnavailable(LibFunc_unsetenv);
     TLI.setUnavailable(LibFunc_utimes);
+
+    // MinGW does have ldexpf, but it is a plain wrapper over regular ldexp.
+    // Therefore it's not beneficial to transform code to use it, i.e.
+    // just pretend that the function is not available.
+    TLI.setUnavailable(LibFunc_ldexpf);
   }
 
   // Pick just one set of new/delete variants.
@@ -546,6 +547,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   case Triple::IOS:
   case Triple::TvOS:
   case Triple::WatchOS:
+  case Triple::XROS:
     TLI.setUnavailable(LibFunc_exp10l);
     if (!T.isWatchOS() &&
         (T.isOSVersionLT(7, 0) || (T.isOSVersionLT(9, 0) && T.isX86()))) {
@@ -581,6 +583,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   case Triple::IOS:
   case Triple::TvOS:
   case Triple::WatchOS:
+  case Triple::XROS:
   case Triple::FreeBSD:
   case Triple::Linux:
     break;
@@ -597,6 +600,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   case Triple::IOS:
   case Triple::TvOS:
   case Triple::WatchOS:
+  case Triple::XROS:
   case Triple::FreeBSD:
   case Triple::Linux:
     break;
@@ -809,6 +813,9 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_cabs);
     TLI.setUnavailable(LibFunc_cabsf);
     TLI.setUnavailable(LibFunc_cabsl);
+    TLI.setUnavailable(LibFunc_erf);
+    TLI.setUnavailable(LibFunc_erff);
+    TLI.setUnavailable(LibFunc_erfl);
     TLI.setUnavailable(LibFunc_ffs);
     TLI.setUnavailable(LibFunc_flockfile);
     TLI.setUnavailable(LibFunc_fseeko);
@@ -1138,8 +1145,25 @@ bool TargetLibraryInfoImpl::getLibFunc(const Function &FDecl,
   const Module *M = FDecl.getParent();
   assert(M && "Expecting FDecl to be connected to a Module.");
 
-  return getLibFunc(FDecl.getName(), F) &&
-         isValidProtoForLibFunc(*FDecl.getFunctionType(), F, *M);
+  if (FDecl.LibFuncCache == Function::UnknownLibFunc)
+    if (!getLibFunc(FDecl.getName(), FDecl.LibFuncCache))
+      FDecl.LibFuncCache = NotLibFunc;
+
+  if (FDecl.LibFuncCache == NotLibFunc)
+    return false;
+
+  F = FDecl.LibFuncCache;
+  return isValidProtoForLibFunc(*FDecl.getFunctionType(), F, *M);
+}
+
+bool TargetLibraryInfoImpl::getLibFunc(unsigned int Opcode, Type *Ty,
+                                       LibFunc &F) const {
+  // Must be a frem instruction with float or double arguments.
+  if (Opcode != Instruction::FRem || (!Ty->isDoubleTy() && !Ty->isFloatTy()))
+    return false;
+
+  F = Ty->isDoubleTy() ? LibFunc_fmod : LibFunc_fmodf;
+  return true;
 }
 
 void TargetLibraryInfoImpl::disableAllFunctions() {
@@ -1257,6 +1281,16 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
       addVectorizableFunctions(VecFuncs);
       break;
     }
+    break;
+  }
+  case AMDLIBM: {
+    const VecDesc VecFuncs[] = {
+#define TLI_DEFINE_AMDLIBM_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
+  {SCAL, VEC, VF, MASK, VABI_PREFIX},
+#include "llvm/Analysis/VecFuncs.def"
+    };
+    addVectorizableFunctions(VecFuncs);
     break;
   }
   case NoLibrary:

@@ -48,15 +48,6 @@ COMMENT_EXPORT("??_V@YAXPAX@Z")                   // operator delete[]
 
 using namespace __asan;
 
-// FreeBSD prior v9.2 have wrong definition of 'size_t'.
-// http://svnweb.freebsd.org/base?view=revision&revision=232261
-#if SANITIZER_FREEBSD && SANITIZER_WORDSIZE == 32
-#include <sys/param.h>
-#if __FreeBSD_version <= 902001  // v9.2
-#define size_t unsigned
-#endif  // __FreeBSD_version
-#endif  // SANITIZER_FREEBSD && SANITIZER_WORDSIZE == 32
-
 // This code has issues on OSX.
 // See https://github.com/google/sanitizers/issues/131.
 

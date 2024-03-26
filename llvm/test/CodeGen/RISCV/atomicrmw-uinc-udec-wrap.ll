@@ -39,7 +39,7 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 3(sp)
 ; RV32I-NEXT:    beqz a0, .LBB0_1
 ; RV32I-NEXT:  # %bb.2: # %atomicrmw.end
@@ -113,7 +113,7 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 7(sp)
 ; RV64I-NEXT:    beqz a0, .LBB0_1
 ; RV64I-NEXT:  # %bb.2: # %atomicrmw.end
@@ -195,7 +195,7 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a3, 14(sp)
 ; RV32I-NEXT:    beqz a0, .LBB1_1
 ; RV32I-NEXT:  # %bb.2: # %atomicrmw.end
@@ -275,7 +275,7 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a3, 14(sp)
 ; RV64I-NEXT:    beqz a0, .LBB1_1
 ; RV64I-NEXT:  # %bb.2: # %atomicrmw.end
@@ -354,7 +354,7 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    beqz a0, .LBB2_1
 ; RV32I-NEXT:  # %bb.2: # %atomicrmw.end
@@ -372,10 +372,10 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; RV32IA-NEXT:    # =>This Loop Header: Depth=1
 ; RV32IA-NEXT:    # Child Loop BB2_3 Depth 2
 ; RV32IA-NEXT:    mv a3, a2
-; RV32IA-NEXT:    addi a2, a2, 1
-; RV32IA-NEXT:    sltu a4, a3, a1
-; RV32IA-NEXT:    neg a4, a4
-; RV32IA-NEXT:    and a4, a4, a2
+; RV32IA-NEXT:    addi a4, a2, 1
+; RV32IA-NEXT:    sltu a2, a2, a1
+; RV32IA-NEXT:    neg a2, a2
+; RV32IA-NEXT:    and a4, a2, a4
 ; RV32IA-NEXT:  .LBB2_3: # %atomicrmw.start
 ; RV32IA-NEXT:    # Parent Loop BB2_1 Depth=1
 ; RV32IA-NEXT:    # => This Inner Loop Header: Depth=2
@@ -414,7 +414,7 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 4(sp)
 ; RV64I-NEXT:    beqz a0, .LBB2_1
 ; RV64I-NEXT:  # %bb.2: # %atomicrmw.end
@@ -490,7 +490,7 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    li a5, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB3_5
@@ -545,7 +545,7 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; RV32IA-NEXT:    li a4, 5
 ; RV32IA-NEXT:    li a5, 5
 ; RV32IA-NEXT:    mv a0, s0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB3_5
@@ -589,7 +589,7 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    beqz a0, .LBB3_1
 ; RV64I-NEXT:  # %bb.2: # %atomicrmw.end
@@ -607,10 +607,10 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; RV64IA-NEXT:    # =>This Loop Header: Depth=1
 ; RV64IA-NEXT:    # Child Loop BB3_3 Depth 2
 ; RV64IA-NEXT:    mv a3, a2
-; RV64IA-NEXT:    addi a2, a2, 1
-; RV64IA-NEXT:    sltu a4, a3, a1
-; RV64IA-NEXT:    neg a4, a4
-; RV64IA-NEXT:    and a4, a4, a2
+; RV64IA-NEXT:    addi a4, a2, 1
+; RV64IA-NEXT:    sltu a2, a2, a1
+; RV64IA-NEXT:    neg a2, a2
+; RV64IA-NEXT:    and a4, a2, a4
 ; RV64IA-NEXT:  .LBB3_3: # %atomicrmw.start
 ; RV64IA-NEXT:    # Parent Loop BB3_1 Depth=1
 ; RV64IA-NEXT:    # => This Inner Loop Header: Depth=2
@@ -653,7 +653,7 @@ define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_1
 ; RV32I-NEXT:    lbu a3, 15(sp)
 ; RV32I-NEXT:    bnez a0, .LBB4_4
 ; RV32I-NEXT:  .LBB4_2: # %atomicrmw.start
@@ -749,7 +749,7 @@ define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_1
 ; RV64I-NEXT:    lbu a3, 15(sp)
 ; RV64I-NEXT:    bnez a0, .LBB4_4
 ; RV64I-NEXT:  .LBB4_2: # %atomicrmw.start
@@ -853,7 +853,7 @@ define i16 @atomicrmw_udec_wrap_i16(ptr %ptr, i16 %val) {
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_2
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB5_4
 ; RV32I-NEXT:  .LBB5_2: # %atomicrmw.start
@@ -955,7 +955,7 @@ define i16 @atomicrmw_udec_wrap_i16(ptr %ptr, i16 %val) {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_2
 ; RV64I-NEXT:    lh a1, 6(sp)
 ; RV64I-NEXT:    bnez a0, .LBB5_4
 ; RV64I-NEXT:  .LBB5_2: # %atomicrmw.start
@@ -1054,7 +1054,7 @@ define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_4
 ; RV32I-NEXT:    lw a3, 0(sp)
 ; RV32I-NEXT:    bnez a0, .LBB6_4
 ; RV32I-NEXT:  .LBB6_2: # %atomicrmw.start
@@ -1135,7 +1135,7 @@ define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_4
 ; RV64I-NEXT:    lw a3, 12(sp)
 ; RV64I-NEXT:    bnez a0, .LBB6_4
 ; RV64I-NEXT:  .LBB6_2: # %atomicrmw.start
@@ -1224,7 +1224,7 @@ define i64 @atomicrmw_udec_wrap_i64(ptr %ptr, i64 %val) {
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    li a5, 5
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32I-NEXT:    call __atomic_compare_exchange_8
 ; RV32I-NEXT:    lw a5, 12(sp)
 ; RV32I-NEXT:    lw a4, 8(sp)
 ; RV32I-NEXT:    bnez a0, .LBB7_7
@@ -1287,7 +1287,7 @@ define i64 @atomicrmw_udec_wrap_i64(ptr %ptr, i64 %val) {
 ; RV32IA-NEXT:    li a4, 5
 ; RV32IA-NEXT:    li a5, 5
 ; RV32IA-NEXT:    mv a0, s0
-; RV32IA-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32IA-NEXT:    call __atomic_compare_exchange_8
 ; RV32IA-NEXT:    lw a5, 12(sp)
 ; RV32IA-NEXT:    lw a4, 8(sp)
 ; RV32IA-NEXT:    bnez a0, .LBB7_7
@@ -1345,7 +1345,7 @@ define i64 @atomicrmw_udec_wrap_i64(ptr %ptr, i64 %val) {
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __atomic_compare_exchange_8@plt
+; RV64I-NEXT:    call __atomic_compare_exchange_8
 ; RV64I-NEXT:    ld a3, 0(sp)
 ; RV64I-NEXT:    bnez a0, .LBB7_4
 ; RV64I-NEXT:  .LBB7_2: # %atomicrmw.start

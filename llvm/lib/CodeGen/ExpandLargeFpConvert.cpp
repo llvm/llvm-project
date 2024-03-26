@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -374,7 +375,7 @@ static void expandIToFP(Instruction *IToFP) {
   Value *Sub2 = Builder.CreateSub(Builder.getIntN(BitWidthNew, BitWidth - 1),
                                   FloatWidth == 128 ? Call : Cast);
   Value *Cmp3 = Builder.CreateICmpSGT(
-      Sub2, Builder.getIntN(BitWidthNew, FPMantissaWidth + 1));
+      Sub1, Builder.getIntN(BitWidthNew, FPMantissaWidth + 1));
   Builder.CreateCondBr(Cmp3, IfThen4, IfElse);
 
   // if.then4:
@@ -652,6 +653,13 @@ public:
   }
 };
 } // namespace
+
+PreservedAnalyses ExpandLargeFpConvertPass::run(Function &F,
+                                                FunctionAnalysisManager &FAM) {
+  const TargetSubtargetInfo *STI = TM->getSubtargetImpl(F);
+  return runImpl(F, *STI->getTargetLowering()) ? PreservedAnalyses::none()
+                                               : PreservedAnalyses::all();
+}
 
 char ExpandLargeFpConvertLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ExpandLargeFpConvertLegacyPass, "expand-large-fp-convert",

@@ -23,7 +23,7 @@ namespace std {
   // [mdspan.layout], layout mapping
   struct layout_left;
   struct layout_right;
-  struct layout_stride; // not implemented yet
+  struct layout_stride;
 
   // [mdspan.accessor.default], class template default_accessor
   template<class ElementType>
@@ -334,11 +334,12 @@ namespace std {
     constexpr const mapping_type& mapping() const noexcept { return map_; }
     constexpr const accessor_type& accessor() const noexcept { return acc_; }
 
-    static constexpr bool is_always_unique()
+    // per LWG-4021 "mdspan::is_always_meow() should be noexcept"
+    static constexpr bool is_always_unique() noexcept
       { return mapping_type::is_always_unique(); }
-    static constexpr bool is_always_exhaustive()
+    static constexpr bool is_always_exhaustive() noexcept
       { return mapping_type::is_always_exhaustive(); }
-    static constexpr bool is_always_strided()
+    static constexpr bool is_always_strided() noexcept
       { return mapping_type::is_always_strided(); }
 
     constexpr bool is_unique() const

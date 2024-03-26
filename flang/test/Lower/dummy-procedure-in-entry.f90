@@ -1,7 +1,7 @@
 ! Test dummy procedures that are not an argument in every entry.
 ! This requires creating a mock value in the entries where it is
 ! not an argument.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 subroutine dummy_with_iface()
   interface

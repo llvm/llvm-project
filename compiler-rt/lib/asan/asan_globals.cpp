@@ -80,14 +80,17 @@ static bool IsAddressNearGlobal(uptr addr, const __asan_global &g) {
 }
 
 static void ReportGlobal(const Global &g, const char *prefix) {
+  DataInfo info;
+  bool symbolized = Symbolizer::GetOrInit()->SymbolizeData(g.beg, &info);
   Report(
-      "%s Global[%p]: beg=%p size=%zu/%zu name=%s module=%s dyn_init=%zu "
+      "%s Global[%p]: beg=%p size=%zu/%zu name=%s source=%s module=%s "
+      "dyn_init=%zu "
       "odr_indicator=%p\n",
       prefix, (void *)&g, (void *)g.beg, g.size, g.size_with_redzone, g.name,
-      g.module_name, g.has_dynamic_init, (void *)g.odr_indicator);
+      g.module_name, (symbolized ? info.module : "?"), g.has_dynamic_init,
+      (void *)g.odr_indicator);
 
-  DataInfo info;
-  if (Symbolizer::GetOrInit()->SymbolizeData(g.beg, &info) && info.line != 0) {
+  if (symbolized && info.line != 0) {
     Report("  location: name=%s, %d\n", info.file, static_cast<int>(info.line));
   } else if (g.gcc_location != 0) {
     // Fallback to Global::gcc_location
@@ -196,7 +199,7 @@ static inline bool UseODRIndicator(const Global *g) {
 // This function may be called more than once for every global
 // so we store the globals in a map.
 static void RegisterGlobal(const Global *g) {
-  CHECK(asan_inited);
+  CHECK(AsanInited());
   if (flags()->report_globals >= 2)
     ReportGlobal(*g, "Added");
   CHECK(flags()->report_globals);
@@ -237,7 +240,7 @@ static void RegisterGlobal(const Global *g) {
 }
 
 static void UnregisterGlobal(const Global *g) {
-  CHECK(asan_inited);
+  CHECK(AsanInited());
   if (flags()->report_globals >= 2)
     ReportGlobal(*g, "Removed");
   CHECK(flags()->report_globals);
@@ -297,7 +300,8 @@ void PrintGlobalNameIfASCII(InternalScopedString *str, const __asan_global &g) {
                (char *)g.beg);
 }
 
-void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g) {
+void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g,
+                         bool print_module_name) {
   DataInfo info;
   if (Symbolizer::GetOrInit()->SymbolizeData(g.beg, &info) && info.line != 0) {
     str->AppendF("%s:%d", info.file, static_cast<int>(info.line));
@@ -312,6 +316,8 @@ void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g) {
   } else {
     str->AppendF("%s", g.module_name);
   }
+  if (print_module_name && info.module)
+    str->AppendF(" in %s", info.module);
 }
 
 } // namespace __asan
@@ -427,7 +433,7 @@ void __asan_before_dynamic_init(const char *module_name) {
     return;
   bool strict_init_order = flags()->strict_init_order;
   CHECK(module_name);
-  CHECK(asan_inited);
+  CHECK(AsanInited());
   Lock lock(&mu_for_globals);
   if (flags()->report_globals >= 3)
     Printf("DynInitPoison module: %s\n", module_name);
@@ -451,7 +457,7 @@ void __asan_after_dynamic_init() {
       !CanPoisonMemory() ||
       !dynamic_init_globals)
     return;
-  CHECK(asan_inited);
+  CHECK(AsanInited());
   Lock lock(&mu_for_globals);
   // FIXME: Optionally report that we're unpoisoning globals from a module.
   for (uptr i = 0, n = dynamic_init_globals->size(); i < n; ++i) {

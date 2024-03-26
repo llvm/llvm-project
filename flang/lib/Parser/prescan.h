@@ -68,7 +68,9 @@ public:
   bool IsNextLinePreprocessorDirective() const;
   TokenSequence TokenizePreprocessorDirective();
   Provenance GetCurrentProvenance() const { return GetProvenance(at_); }
+
   const char *IsCompilerDirectiveSentinel(const char *, std::size_t) const;
+  const char *IsCompilerDirectiveSentinel(CharBlock) const;
 
   template <typename... A> Message &Say(A &&...a) {
     return messages_.Say(std::forward<A>(a)...);
@@ -157,7 +159,8 @@ private:
   void SkipToEndOfLine();
   bool MustSkipToEndOfLine() const;
   void NextChar();
-  void SkipToNextSignificantCharacter();
+  // True when input flowed to a continuation line
+  bool SkipToNextSignificantCharacter();
   void SkipCComments();
   void SkipSpaces();
   static const char *SkipWhiteSpace(const char *);
@@ -186,6 +189,8 @@ private:
       const char *) const;
   LineClassification ClassifyLine(const char *) const;
   void SourceFormChange(std::string &&);
+  bool CompilerDirectiveContinuation(TokenSequence &, const char *sentinel);
+  bool SourceLineContinuation(TokenSequence &);
 
   Messages &messages_;
   CookedSource &cooked_;
@@ -214,6 +219,7 @@ private:
   bool slashInCurrentStatement_{false};
   bool preventHollerith_{false}; // CHARACTER*4HIMOM not Hollerith
   bool inCharLiteral_{false};
+  bool continuationInCharLiteral_{false};
   bool inPreprocessorDirective_{false};
 
   // In some edge cases of compiler directive continuation lines, it

@@ -530,9 +530,8 @@ define i4 @ptr_N_unsigned_positive(ptr %src, ptr %lower, ptr %upper, i16 %N, i16
 ; CHECK-NEXT:    [[SRC_END:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i16 [[N:%.*]]
 ; CHECK-NEXT:    [[CMP_SRC_START:%.*]] = icmp ult ptr [[SRC]], [[LOWER:%.*]]
 ; CHECK-NEXT:    [[CMP_SRC_END:%.*]] = icmp uge ptr [[SRC_END]], [[UPPER:%.*]]
-; CHECK-NEXT:    [[N_NEG:%.*]] = icmp ult i16 [[N]], 0
 ; CHECK-NEXT:    [[OR_PRECOND_0:%.*]] = or i1 [[CMP_SRC_START]], [[CMP_SRC_END]]
-; CHECK-NEXT:    [[OR_PRECOND_1:%.*]] = or i1 [[OR_PRECOND_0]], [[N_NEG]]
+; CHECK-NEXT:    [[OR_PRECOND_1:%.*]] = or i1 [[OR_PRECOND_0]], false
 ; CHECK-NEXT:    br i1 [[OR_PRECOND_1]], label [[TRAP_BB:%.*]], label [[STEP_CHECK:%.*]]
 ; CHECK:       trap.bb:
 ; CHECK-NEXT:    ret i4 2

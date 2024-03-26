@@ -19,7 +19,8 @@
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformTypes.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
@@ -42,7 +43,6 @@ transform::MemrefToLLVMTypeConverterOp::getTypeConverter() {
       (getUseAlignedAlloc() ? LowerToLLVMOptions::AllocLowering::AlignedAlloc
                             : LowerToLLVMOptions::AllocLowering::Malloc);
   options.useGenericFunctions = getUseGenericFunctions();
-  options.useOpaquePointers = getUseOpaquePointers();
 
   if (getIndexBitwidth() != kDeriveIndexBitwidthFromDataLayout)
     options.overrideIndexBitwidth(getIndexBitwidth());

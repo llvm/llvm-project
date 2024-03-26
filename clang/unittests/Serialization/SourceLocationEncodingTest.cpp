@@ -25,8 +25,9 @@ void roundTrip(SourceLocation::UIntTy Loc,
                std::optional<uint64_t> ExpectedEncoded = std::nullopt) {
   uint64_t ActualEncoded =
       SourceLocationEncoding::encode(SourceLocation::getFromRawEncoding(Loc));
-  if (ExpectedEncoded)
+  if (ExpectedEncoded) {
     ASSERT_EQ(ActualEncoded, *ExpectedEncoded) << "Encoding " << Loc;
+  }
   SourceLocation::UIntTy DecodedEncoded =
       SourceLocationEncoding::decode(ActualEncoded).getRawEncoding();
   ASSERT_EQ(DecodedEncoded, Loc) << "Decoding " << ActualEncoded;
@@ -41,9 +42,10 @@ void roundTrip(std::vector<SourceLocation::UIntTy> Locs,
     for (auto L : Locs)
       ActualEncoded.push_back(SourceLocationEncoding::encode(
           SourceLocation::getFromRawEncoding(L), Seq));
-    if (!ExpectedEncoded.empty())
+    if (!ExpectedEncoded.empty()) {
       ASSERT_EQ(ActualEncoded, ExpectedEncoded)
           << "Encoding " << testing::PrintToString(Locs);
+    }
   }
   std::vector<SourceLocation::UIntTy> DecodedEncoded;
   {
@@ -70,7 +72,7 @@ TEST(SourceLocationEncoding, Individual) {
   roundTrip(Big);
   roundTrip(Big + 1);
   roundTrip(MacroBit | Big);
-  roundTrip(MacroBit | Big + 1);
+  roundTrip(MacroBit | (Big + 1));
 }
 
 TEST(SourceLocationEncoding, Sequence) {

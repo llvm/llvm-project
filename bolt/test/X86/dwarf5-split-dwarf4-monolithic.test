@@ -244,7 +244,7 @@
 # POSTCHECK-DWO-MAIN: DW_TAG_inlined_subroutine [12]
 # POSTCHECK-DWO-MAIN-NEXT: DW_AT_abstract_origin [DW_FORM_ref4]
 # POSTCHECK-DWO-MAIN-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x2) rangelist = 0x00000020
-# Encded as a pair. So it's offset from base address.
+# Encoded as a pair. So it's offset from base address.
 # POSTCHECK-DWO-MAIN-NEXT: [0x0000000000000003, 0x0000000000000007)
 # POSTCHECK-DWO-MAIN-NEXT: [0x0000000000000013, 0x0000000000000019))
 

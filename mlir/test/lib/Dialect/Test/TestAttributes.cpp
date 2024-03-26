@@ -82,7 +82,7 @@ Attribute TestI64ElementsAttr::parse(AsmParser &parser, Type type) {
 void TestI64ElementsAttr::print(AsmPrinter &printer) const {
   printer << "<[";
   llvm::interleaveComma(getElements(), printer);
-  printer << "] : " << getType() << ">";
+  printer << "]>";
 }
 
 LogicalResult
@@ -215,6 +215,30 @@ llvm::hash_code hash_value(const test::CopyCount &copyCount) {
   return llvm::hash_value(copyCount.value);
 }
 } // namespace test
+
+//===----------------------------------------------------------------------===//
+// TestConditionalAliasAttr
+//===----------------------------------------------------------------------===//
+
+/// Attempt to parse the conditionally-aliased string attribute as a keyword or
+/// string, else try to parse an alias.
+static ParseResult parseConditionalAlias(AsmParser &p, StringAttr &value) {
+  std::string str;
+  if (succeeded(p.parseOptionalKeywordOrString(&str))) {
+    value = StringAttr::get(p.getContext(), str);
+    return success();
+  }
+  return p.parseAttribute(value);
+}
+
+/// Print the string attribute as an alias if it has one, otherwise print it as
+/// a keyword if possible.
+static void printConditionalAlias(AsmPrinter &p, StringAttr value) {
+  if (succeeded(p.printAlias(value)))
+    return;
+  p.printKeywordOrString(value);
+}
+
 //===----------------------------------------------------------------------===//
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//

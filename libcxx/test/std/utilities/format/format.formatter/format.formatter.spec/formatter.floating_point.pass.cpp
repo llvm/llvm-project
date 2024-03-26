@@ -29,10 +29,12 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cctype>
 #include <cmath>
 #include <charconv>
 #include <concepts>
 #include <iterator>
+#include <memory>
 #include <string>
 #include <type_traits>
 
@@ -48,8 +50,9 @@ void test(std::basic_string_view<CharT> fmt, ArithmeticT arg, std::basic_string<
   std::formatter<ArithmeticT, CharT> formatter;
   static_assert(std::semiregular<decltype(formatter)>);
 
-  auto it = formatter.parse(parse_ctx);
-  assert(it == fmt.end() - offset);
+  std::same_as<typename std::basic_string_view<CharT>::iterator> auto it = formatter.parse(parse_ctx);
+  // std::to_address works around LWG3989 and MSVC STL's iterator debugging mechanism.
+  assert(std::to_address(it) == std::to_address(fmt.end()) - offset);
 
   std::basic_string<CharT> result;
   auto out = std::back_inserter(result);
@@ -61,7 +64,7 @@ void test(std::basic_string_view<CharT> fmt, ArithmeticT arg, std::basic_string<
 
   if (expected.empty()) {
     std::array<char, 128> buffer;
-    expected.append(buffer.begin(), std::to_chars(buffer.begin(), buffer.end(), arg).ptr);
+    expected.append(buffer.data(), std::to_chars(buffer.data(), buffer.data() + buffer.size(), arg).ptr);
   }
 
   assert(result == expected);
@@ -84,321 +87,401 @@ void test_termination_condition(StringT f, ArithmeticT arg, StringT expected = {
 
 template <class CharT, class ArithmeticT>
 void test_hex_lower_case_precision(ArithmeticT value) {
-  std::array<char, 25'000> buffer;
-  char* end = std::to_chars(buffer.begin(), buffer.end(), value, std::chars_format::hex, 20'000).ptr;
-  test_termination_condition(STR(".20000a}"), value, std::basic_string<CharT>{buffer.begin(), end});
+  {
+    std::array<char, 25'000> buffer;
+    char* end_ptr = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::hex, 20'000).ptr;
+    std::size_t size = end_ptr - buffer.data();
+    auto end = buffer.begin() + size;
+    test_termination_condition(STR(".20000a}"), value, std::basic_string<CharT>{buffer.begin(), end});
 
-  std::size_t size = buffer.end() - end;
-  std::fill_n(end, size, '#');
-  test_termination_condition(STR("#<25000.20000a}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - (size / 2), buffer.end());
-  test_termination_condition(STR("#^25000.20000a}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - ((size + 1) / 2), buffer.end());
-  test_termination_condition(STR("#>25000.20000a}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::fill_n(buffer.begin(), size, '0');
-  if (std::signbit(value)) {
-    buffer[0] = '-';
-    buffer[size] = '0';
+    std::size_t unused = buffer.end() - end;
+    std::fill_n(end, unused, '#');
+    test_termination_condition(STR("#<25000.20000a}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - (unused / 2), buffer.end());
+    test_termination_condition(STR("#^25000.20000a}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - ((unused + 1) / 2), buffer.end());
+    test_termination_condition(STR("#>25000.20000a}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::fill_n(buffer.begin(), unused, '0');
+    if (std::signbit(value)) {
+      buffer[0] = '-';
+      buffer[unused] = '0';
+    }
+    test_termination_condition(STR("025000.20000a}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
   }
-  test_termination_condition(STR("025000.20000a}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+
 #ifndef TEST_HAS_NO_LOCALIZATION
-  end = std::to_chars(buffer.begin(), buffer.end(), value, std::chars_format::hex, 20'000).ptr;
-  test_termination_condition(STR(".20000La}"), value, std::basic_string<CharT>{buffer.begin(), end});
+  {
+    std::array<char, 25'000> buffer;
+    char* end_ptr = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::hex, 20'000).ptr;
+    std::size_t size = end_ptr - buffer.data();
+    auto end = buffer.begin() + size;
+    test_termination_condition(STR(".20000La}"), value, std::basic_string<CharT>{buffer.begin(), end});
 
-  size = buffer.end() - end;
-  std::fill_n(end, size, '#');
-  test_termination_condition(STR("#<25000.20000La}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - (size / 2), buffer.end());
-  test_termination_condition(STR("#^25000.20000La}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - ((size + 1) / 2), buffer.end());
-  test_termination_condition(STR("#>25000.20000La}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::fill_n(buffer.begin(), size, '0');
-  if (std::signbit(value)) {
-    buffer[0] = '-';
-    buffer[size] = '0';
+    std::size_t unused = buffer.end() - end;
+    std::fill_n(end, unused, '#');
+    test_termination_condition(STR("#<25000.20000La}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - (unused / 2), buffer.end());
+    test_termination_condition(STR("#^25000.20000La}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - ((unused + 1) / 2), buffer.end());
+    test_termination_condition(STR("#>25000.20000La}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::fill_n(buffer.begin(), unused, '0');
+    if (std::signbit(value)) {
+      buffer[0] = '-';
+      buffer[unused] = '0';
+    }
+    test_termination_condition(STR("025000.20000La}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
   }
-  test_termination_condition(STR("025000.20000La}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
 #endif
 }
 
 template <class CharT, class ArithmeticT>
 void test_hex_upper_case_precision(ArithmeticT value) {
-  std::array<char, 25'000> buffer;
-  char* end = std::to_chars(buffer.begin(), buffer.end(), value, std::chars_format::hex, 20'000).ptr;
-  std::transform(buffer.begin(), end, buffer.begin(), [](char c) { return std::toupper(c); });
-  test_termination_condition(STR(".20000A}"), value, std::basic_string<CharT>{buffer.begin(), end});
+  {
+    std::array<char, 25'000> buffer;
+    char* end_ptr = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::hex, 20'000).ptr;
+    std::size_t size = end_ptr - buffer.data();
+    auto end = buffer.begin() + size;
+    std::transform(buffer.begin(), end, buffer.begin(), [](char c) { return std::toupper(c); });
+    test_termination_condition(STR(".20000A}"), value, std::basic_string<CharT>{buffer.begin(), end});
 
-  std::size_t size = buffer.end() - end;
-  std::fill_n(end, size, '#');
-  test_termination_condition(STR("#<25000.20000A}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - (size / 2), buffer.end());
-  test_termination_condition(STR("#^25000.20000A}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - ((size + 1) / 2), buffer.end());
-  test_termination_condition(STR("#>25000.20000A}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::fill_n(buffer.begin(), size, '0');
-  if (std::signbit(value)) {
-    buffer[0] = '-';
-    buffer[size] = '0';
+    std::size_t unused = buffer.end() - end;
+    std::fill_n(end, unused, '#');
+    test_termination_condition(STR("#<25000.20000A}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - (unused / 2), buffer.end());
+    test_termination_condition(STR("#^25000.20000A}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - ((unused + 1) / 2), buffer.end());
+    test_termination_condition(STR("#>25000.20000A}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::fill_n(buffer.begin(), unused, '0');
+    if (std::signbit(value)) {
+      buffer[0] = '-';
+      buffer[unused] = '0';
+    }
+    test_termination_condition(STR("025000.20000A}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
   }
-  test_termination_condition(STR("025000.20000A}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+
 #ifndef TEST_HAS_NO_LOCALIZATION
-  end = std::to_chars(buffer.begin(), buffer.end(), value, std::chars_format::hex, 20'000).ptr;
-  std::transform(buffer.begin(), end, buffer.begin(), [](char c) { return std::toupper(c); });
-  test_termination_condition(STR(".20000LA}"), value, std::basic_string<CharT>{buffer.begin(), end});
+  {
+    std::array<char, 25'000> buffer;
+    char* end_ptr = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::hex, 20'000).ptr;
+    std::size_t size = end_ptr - buffer.data();
+    auto end = buffer.begin() + size;
+    std::transform(buffer.begin(), end, buffer.begin(), [](char c) { return std::toupper(c); });
+    test_termination_condition(STR(".20000LA}"), value, std::basic_string<CharT>{buffer.begin(), end});
 
-  size = buffer.end() - end;
-  std::fill_n(end, size, '#');
-  test_termination_condition(STR("#<25000.20000LA}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - (size / 2), buffer.end());
-  test_termination_condition(STR("#^25000.20000LA}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - ((size + 1) / 2), buffer.end());
-  test_termination_condition(STR("#>25000.20000LA}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::fill_n(buffer.begin(), size, '0');
-  if (std::signbit(value)) {
-    buffer[0] = '-';
-    buffer[size] = '0';
+    std::size_t unused = buffer.end() - end;
+    std::fill_n(end, unused, '#');
+    test_termination_condition(STR("#<25000.20000LA}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - (unused / 2), buffer.end());
+    test_termination_condition(STR("#^25000.20000LA}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - ((unused + 1) / 2), buffer.end());
+    test_termination_condition(STR("#>25000.20000LA}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::fill_n(buffer.begin(), unused, '0');
+    if (std::signbit(value)) {
+      buffer[0] = '-';
+      buffer[unused] = '0';
+    }
+    test_termination_condition(STR("025000.20000LA}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
   }
-  test_termination_condition(STR("025000.20000LA}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
 #endif
 }
 
 template <class CharT, class ArithmeticT>
 void test_scientific_lower_case_precision(ArithmeticT value) {
-  std::array<char, 25'000> buffer;
-  char* end = std::to_chars(buffer.begin(), buffer.end(), value, std::chars_format::scientific, 20'000).ptr;
-  test_termination_condition(STR(".20000e}"), value, std::basic_string<CharT>{buffer.begin(), end});
+  {
+    std::array<char, 25'000> buffer;
+    char* end_ptr = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::scientific, 20'000).ptr;
+    std::size_t size = end_ptr - buffer.data();
+    auto end = buffer.begin() + size;
+    test_termination_condition(STR(".20000e}"), value, std::basic_string<CharT>{buffer.begin(), end});
 
-  std::size_t size = buffer.end() - end;
-  std::fill_n(end, size, '#');
-  test_termination_condition(STR("#<25000.20000e}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - (size / 2), buffer.end());
-  test_termination_condition(STR("#^25000.20000e}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - ((size + 1) / 2), buffer.end());
-  test_termination_condition(STR("#>25000.20000e}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::fill_n(buffer.begin(), size, '0');
-  if (std::signbit(value)) {
-    buffer[0] = '-';
-    buffer[size] = '0';
+    std::size_t unused = buffer.end() - end;
+    std::fill_n(end, unused, '#');
+    test_termination_condition(STR("#<25000.20000e}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - (unused / 2), buffer.end());
+    test_termination_condition(STR("#^25000.20000e}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - ((unused + 1) / 2), buffer.end());
+    test_termination_condition(STR("#>25000.20000e}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::fill_n(buffer.begin(), unused, '0');
+    if (std::signbit(value)) {
+      buffer[0] = '-';
+      buffer[unused] = '0';
+    }
+    test_termination_condition(STR("025000.20000e}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
   }
-  test_termination_condition(STR("025000.20000e}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+
 #ifndef TEST_HAS_NO_LOCALIZATION
-  end = std::to_chars(buffer.begin(), buffer.end(), value, std::chars_format::scientific, 20'000).ptr;
-  test_termination_condition(STR(".20000Le}"), value, std::basic_string<CharT>{buffer.begin(), end});
+  {
+    std::array<char, 25'000> buffer;
+    char* end_ptr = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::scientific, 20'000).ptr;
+    std::size_t size = end_ptr - buffer.data();
+    auto end = buffer.begin() + size;
+    test_termination_condition(STR(".20000Le}"), value, std::basic_string<CharT>{buffer.begin(), end});
 
-  size = buffer.end() - end;
-  std::fill_n(end, size, '#');
-  test_termination_condition(STR("#<25000.20000Le}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - (size / 2), buffer.end());
-  test_termination_condition(STR("#^25000.20000Le}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - ((size + 1) / 2), buffer.end());
-  test_termination_condition(STR("#>25000.20000Le}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::fill_n(buffer.begin(), size, '0');
-  if (std::signbit(value)) {
-    buffer[0] = '-';
-    buffer[size] = '0';
+    std::size_t unused = buffer.end() - end;
+    std::fill_n(end, unused, '#');
+    test_termination_condition(STR("#<25000.20000Le}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - (unused / 2), buffer.end());
+    test_termination_condition(STR("#^25000.20000Le}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - ((unused + 1) / 2), buffer.end());
+    test_termination_condition(STR("#>25000.20000Le}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::fill_n(buffer.begin(), unused, '0');
+    if (std::signbit(value)) {
+      buffer[0] = '-';
+      buffer[unused] = '0';
+    }
+    test_termination_condition(STR("025000.20000Le}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
   }
-  test_termination_condition(STR("025000.20000Le}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
 #endif
 }
 
 template <class CharT, class ArithmeticT>
 void test_scientific_upper_case_precision(ArithmeticT value) {
-  std::array<char, 25'000> buffer;
-  char* end = std::to_chars(buffer.begin(), buffer.end(), value, std::chars_format::scientific, 20'000).ptr;
-  std::transform(buffer.begin(), end, buffer.begin(), [](char c) { return std::toupper(c); });
-  test_termination_condition(STR(".20000E}"), value, std::basic_string<CharT>{buffer.begin(), end});
+  {
+    std::array<char, 25'000> buffer;
+    char* end_ptr = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::scientific, 20'000).ptr;
+    std::size_t size = end_ptr - buffer.data();
+    auto end = buffer.begin() + size;
+    std::transform(buffer.begin(), end, buffer.begin(), [](char c) { return std::toupper(c); });
+    test_termination_condition(STR(".20000E}"), value, std::basic_string<CharT>{buffer.begin(), end});
 
-  std::size_t size = buffer.end() - end;
-  std::fill_n(end, size, '#');
-  test_termination_condition(STR("#<25000.20000E}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - (size / 2), buffer.end());
-  test_termination_condition(STR("#^25000.20000E}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - ((size + 1) / 2), buffer.end());
-  test_termination_condition(STR("#>25000.20000E}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::fill_n(buffer.begin(), size, '0');
-  if (std::signbit(value)) {
-    buffer[0] = '-';
-    buffer[size] = '0';
+    std::size_t unused = buffer.end() - end;
+    std::fill_n(end, unused, '#');
+    test_termination_condition(STR("#<25000.20000E}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - (unused / 2), buffer.end());
+    test_termination_condition(STR("#^25000.20000E}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - ((unused + 1) / 2), buffer.end());
+    test_termination_condition(STR("#>25000.20000E}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::fill_n(buffer.begin(), unused, '0');
+    if (std::signbit(value)) {
+      buffer[0] = '-';
+      buffer[unused] = '0';
+    }
+    test_termination_condition(STR("025000.20000E}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
   }
-  test_termination_condition(STR("025000.20000E}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+
 #ifndef TEST_HAS_NO_LOCALIZATION
-  end = std::to_chars(buffer.begin(), buffer.end(), value, std::chars_format::scientific, 20'000).ptr;
-  std::transform(buffer.begin(), end, buffer.begin(), [](char c) { return std::toupper(c); });
-  test_termination_condition(STR(".20000LE}"), value, std::basic_string<CharT>{buffer.begin(), end});
+  {
+    std::array<char, 25'000> buffer;
+    char* end_ptr = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::scientific, 20'000).ptr;
+    std::size_t size = end_ptr - buffer.data();
+    auto end = buffer.begin() + size;
+    std::transform(buffer.begin(), end, buffer.begin(), [](char c) { return std::toupper(c); });
+    test_termination_condition(STR(".20000LE}"), value, std::basic_string<CharT>{buffer.begin(), end});
 
-  size = buffer.end() - end;
-  std::fill_n(end, size, '#');
-  test_termination_condition(STR("#<25000.20000LE}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - (size / 2), buffer.end());
-  test_termination_condition(STR("#^25000.20000LE}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - ((size + 1) / 2), buffer.end());
-  test_termination_condition(STR("#>25000.20000LE}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::fill_n(buffer.begin(), size, '0');
-  if (std::signbit(value)) {
-    buffer[0] = '-';
-    buffer[size] = '0';
+    std::size_t unused = buffer.end() - end;
+    std::fill_n(end, unused, '#');
+    test_termination_condition(STR("#<25000.20000LE}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - (unused / 2), buffer.end());
+    test_termination_condition(STR("#^25000.20000LE}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - ((unused + 1) / 2), buffer.end());
+    test_termination_condition(STR("#>25000.20000LE}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::fill_n(buffer.begin(), unused, '0');
+    if (std::signbit(value)) {
+      buffer[0] = '-';
+      buffer[unused] = '0';
+    }
+    test_termination_condition(STR("025000.20000LE}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
   }
-  test_termination_condition(STR("025000.20000LE}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
 #endif
 }
 
 template <class CharT, class ArithmeticT>
 void test_fixed_lower_case_precision(ArithmeticT value) {
-  std::array<char, 25'000> buffer;
-  char* end = std::to_chars(buffer.begin(), buffer.end(), value, std::chars_format::fixed, 20'000).ptr;
-  test_termination_condition(STR(".20000f}"), value, std::basic_string<CharT>{buffer.begin(), end});
+  {
+    std::array<char, 25'000> buffer;
+    char* end_ptr = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::fixed, 20'000).ptr;
+    std::size_t size = end_ptr - buffer.data();
+    auto end = buffer.begin() + size;
+    test_termination_condition(STR(".20000f}"), value, std::basic_string<CharT>{buffer.begin(), end});
 
-  std::size_t size = buffer.end() - end;
-  std::fill_n(end, size, '#');
-  test_termination_condition(STR("#<25000.20000f}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - (size / 2), buffer.end());
-  test_termination_condition(STR("#^25000.20000f}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - ((size + 1) / 2), buffer.end());
-  test_termination_condition(STR("#>25000.20000f}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::fill_n(buffer.begin(), size, '0');
-  if (std::signbit(value)) {
-    buffer[0] = '-';
-    buffer[size] = '0';
+    std::size_t unused = buffer.end() - end;
+    std::fill_n(end, unused, '#');
+    test_termination_condition(STR("#<25000.20000f}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - (unused / 2), buffer.end());
+    test_termination_condition(STR("#^25000.20000f}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - ((unused + 1) / 2), buffer.end());
+    test_termination_condition(STR("#>25000.20000f}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::fill_n(buffer.begin(), unused, '0');
+    if (std::signbit(value)) {
+      buffer[0] = '-';
+      buffer[unused] = '0';
+    }
+    test_termination_condition(STR("025000.20000f}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
   }
-  test_termination_condition(STR("025000.20000f}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+
 #ifndef TEST_HAS_NO_LOCALIZATION
-  end = std::to_chars(buffer.begin(), buffer.end(), value, std::chars_format::fixed, 20'000).ptr;
-  test_termination_condition(STR(".20000Lf}"), value, std::basic_string<CharT>{buffer.begin(), end});
+  {
+    std::array<char, 25'000> buffer;
+    char* end_ptr = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::fixed, 20'000).ptr;
+    std::size_t size = end_ptr - buffer.data();
+    auto end = buffer.begin() + size;
+    test_termination_condition(STR(".20000Lf}"), value, std::basic_string<CharT>{buffer.begin(), end});
 
-  size = buffer.end() - end;
-  std::fill_n(end, size, '#');
-  test_termination_condition(STR("#<25000.20000Lf}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - (size / 2), buffer.end());
-  test_termination_condition(STR("#^25000.20000Lf}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - ((size + 1) / 2), buffer.end());
-  test_termination_condition(STR("#>25000.20000Lf}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::fill_n(buffer.begin(), size, '0');
-  if (std::signbit(value)) {
-    buffer[0] = '-';
-    buffer[size] = '0';
+    std::size_t unused = buffer.end() - end;
+    std::fill_n(end, unused, '#');
+    test_termination_condition(STR("#<25000.20000Lf}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - (unused / 2), buffer.end());
+    test_termination_condition(STR("#^25000.20000Lf}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - ((unused + 1) / 2), buffer.end());
+    test_termination_condition(STR("#>25000.20000Lf}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::fill_n(buffer.begin(), unused, '0');
+    if (std::signbit(value)) {
+      buffer[0] = '-';
+      buffer[unused] = '0';
+    }
+    test_termination_condition(STR("025000.20000Lf}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
   }
-  test_termination_condition(STR("025000.20000Lf}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
 #endif
 }
 
 template <class CharT, class ArithmeticT>
 void test_fixed_upper_case_precision(ArithmeticT value) {
-  std::array<char, 25'000> buffer;
-  char* end = std::to_chars(buffer.begin(), buffer.end(), value, std::chars_format::fixed, 20'000).ptr;
-  std::transform(buffer.begin(), end, buffer.begin(), [](char c) { return std::toupper(c); });
-  test_termination_condition(STR(".20000F}"), value, std::basic_string<CharT>{buffer.begin(), end});
+  {
+    std::array<char, 25'000> buffer;
+    char* end_ptr = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::fixed, 20'000).ptr;
+    std::size_t size = end_ptr - buffer.data();
+    auto end = buffer.begin() + size;
+    std::transform(buffer.begin(), end, buffer.begin(), [](char c) { return std::toupper(c); });
+    test_termination_condition(STR(".20000F}"), value, std::basic_string<CharT>{buffer.begin(), end});
 
-  std::size_t size = buffer.end() - end;
-  std::fill_n(end, size, '#');
-  test_termination_condition(STR("#<25000.20000F}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - (size / 2), buffer.end());
-  test_termination_condition(STR("#^25000.20000F}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - ((size + 1) / 2), buffer.end());
-  test_termination_condition(STR("#>25000.20000F}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::fill_n(buffer.begin(), size, '0');
-  if (std::signbit(value)) {
-    buffer[0] = '-';
-    buffer[size] = '0';
+    std::size_t unused = buffer.end() - end;
+    std::fill_n(end, unused, '#');
+    test_termination_condition(STR("#<25000.20000F}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - (unused / 2), buffer.end());
+    test_termination_condition(STR("#^25000.20000F}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - ((unused + 1) / 2), buffer.end());
+    test_termination_condition(STR("#>25000.20000F}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::fill_n(buffer.begin(), unused, '0');
+    if (std::signbit(value)) {
+      buffer[0] = '-';
+      buffer[unused] = '0';
+    }
+    test_termination_condition(STR("025000.20000F}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
   }
-  test_termination_condition(STR("025000.20000F}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+
 #ifndef TEST_HAS_NO_LOCALIZATION
-  end = std::to_chars(buffer.begin(), buffer.end(), value, std::chars_format::fixed, 20'000).ptr;
-  std::transform(buffer.begin(), end, buffer.begin(), [](char c) { return std::toupper(c); });
-  test_termination_condition(STR(".20000LF}"), value, std::basic_string<CharT>{buffer.begin(), end});
+  {
+    std::array<char, 25'000> buffer;
+    char* end_ptr = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::fixed, 20'000).ptr;
+    std::size_t size = end_ptr - buffer.data();
+    auto end = buffer.begin() + size;
+    std::transform(buffer.begin(), end, buffer.begin(), [](char c) { return std::toupper(c); });
+    test_termination_condition(STR(".20000LF}"), value, std::basic_string<CharT>{buffer.begin(), end});
 
-  size = buffer.end() - end;
-  std::fill_n(end, size, '#');
-  test_termination_condition(STR("#<25000.20000LF}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - (size / 2), buffer.end());
-  test_termination_condition(STR("#^25000.20000LF}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - ((size + 1) / 2), buffer.end());
-  test_termination_condition(STR("#>25000.20000LF}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::fill_n(buffer.begin(), size, '0');
-  if (std::signbit(value)) {
-    buffer[0] = '-';
-    buffer[size] = '0';
+    std::size_t unused = buffer.end() - end;
+    std::fill_n(end, unused, '#');
+    test_termination_condition(STR("#<25000.20000LF}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - (unused / 2), buffer.end());
+    test_termination_condition(STR("#^25000.20000LF}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - ((unused + 1) / 2), buffer.end());
+    test_termination_condition(STR("#>25000.20000LF}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::fill_n(buffer.begin(), unused, '0');
+    if (std::signbit(value)) {
+      buffer[0] = '-';
+      buffer[unused] = '0';
+    }
+    test_termination_condition(STR("025000.20000LF}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
   }
-  test_termination_condition(STR("025000.20000LF}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
 #endif
 }
 
 template <class CharT, class ArithmeticT>
 void test_general_lower_case_precision(ArithmeticT value) {
-  std::array<char, 25'000> buffer;
-  char* end = std::to_chars(buffer.begin(), buffer.end(), value, std::chars_format::general, 20'000).ptr;
-  test_termination_condition(STR(".20000g}"), value, std::basic_string<CharT>{buffer.begin(), end});
+  {
+    std::array<char, 25'000> buffer;
+    char* end_ptr = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::general, 20'000).ptr;
+    std::size_t size = end_ptr - buffer.data();
+    auto end = buffer.begin() + size;
+    test_termination_condition(STR(".20000g}"), value, std::basic_string<CharT>{buffer.begin(), end});
 
-  std::size_t size = buffer.end() - end;
-  std::fill_n(end, size, '#');
-  test_termination_condition(STR("#<25000.20000g}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - (size / 2), buffer.end());
-  test_termination_condition(STR("#^25000.20000g}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - ((size + 1) / 2), buffer.end());
-  test_termination_condition(STR("#>25000.20000g}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::fill_n(buffer.begin(), size, '0');
-  if (std::signbit(value)) {
-    buffer[0] = '-';
-    buffer[size] = '0';
+    std::size_t unused = buffer.end() - end;
+    std::fill_n(end, unused, '#');
+    test_termination_condition(STR("#<25000.20000g}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - (unused / 2), buffer.end());
+    test_termination_condition(STR("#^25000.20000g}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - ((unused + 1) / 2), buffer.end());
+    test_termination_condition(STR("#>25000.20000g}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::fill_n(buffer.begin(), unused, '0');
+    if (std::signbit(value)) {
+      buffer[0] = '-';
+      buffer[unused] = '0';
+    }
+    test_termination_condition(STR("025000.20000g}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
   }
-  test_termination_condition(STR("025000.20000g}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+
 #ifndef TEST_HAS_NO_LOCALIZATION
-  end = std::to_chars(buffer.begin(), buffer.end(), value, std::chars_format::general, 20'000).ptr;
-  test_termination_condition(STR(".20000Lg}"), value, std::basic_string<CharT>{buffer.begin(), end});
+  {
+    std::array<char, 25'000> buffer;
+    char* end_ptr = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::general, 20'000).ptr;
+    std::size_t size = end_ptr - buffer.data();
+    auto end = buffer.begin() + size;
+    test_termination_condition(STR(".20000Lg}"), value, std::basic_string<CharT>{buffer.begin(), end});
 
-  size = buffer.end() - end;
-  std::fill_n(end, size, '#');
-  test_termination_condition(STR("#<25000.20000Lg}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - (size / 2), buffer.end());
-  test_termination_condition(STR("#^25000.20000Lg}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - ((size + 1) / 2), buffer.end());
-  test_termination_condition(STR("#>25000.20000Lg}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::fill_n(buffer.begin(), size, '0');
-  if (std::signbit(value)) {
-    buffer[0] = '-';
-    buffer[size] = '0';
+    std::size_t unused = buffer.end() - end;
+    std::fill_n(end, unused, '#');
+    test_termination_condition(STR("#<25000.20000Lg}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - (unused / 2), buffer.end());
+    test_termination_condition(STR("#^25000.20000Lg}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - ((unused + 1) / 2), buffer.end());
+    test_termination_condition(STR("#>25000.20000Lg}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::fill_n(buffer.begin(), unused, '0');
+    if (std::signbit(value)) {
+      buffer[0] = '-';
+      buffer[unused] = '0';
+    }
+    test_termination_condition(STR("025000.20000Lg}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
   }
-  test_termination_condition(STR("025000.20000Lg}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
 #endif
 }
 
 template <class CharT, class ArithmeticT>
 void test_general_upper_case_precision(ArithmeticT value) {
-  std::array<char, 25'000> buffer;
-  char* end = std::to_chars(buffer.begin(), buffer.end(), value, std::chars_format::general, 20'000).ptr;
-  std::transform(buffer.begin(), end, buffer.begin(), [](char c) { return std::toupper(c); });
-  test_termination_condition(STR(".20000G}"), value, std::basic_string<CharT>{buffer.begin(), end});
+  {
+    std::array<char, 25'000> buffer;
+    char* end_ptr = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::general, 20'000).ptr;
+    std::size_t size = end_ptr - buffer.data();
+    auto end = buffer.begin() + size;
+    std::transform(buffer.begin(), end, buffer.begin(), [](char c) { return std::toupper(c); });
+    test_termination_condition(STR(".20000G}"), value, std::basic_string<CharT>{buffer.begin(), end});
 
-  std::size_t size = buffer.end() - end;
-  std::fill_n(end, size, '#');
-  test_termination_condition(STR("#<25000.20000G}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - (size / 2), buffer.end());
-  test_termination_condition(STR("#^25000.20000G}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - ((size + 1) / 2), buffer.end());
-  test_termination_condition(STR("#>25000.20000G}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::fill_n(buffer.begin(), size, '0');
-  if (std::signbit(value)) {
-    buffer[0] = '-';
-    buffer[size] = '0';
+    std::size_t unused = buffer.end() - end;
+    std::fill_n(end, unused, '#');
+    test_termination_condition(STR("#<25000.20000G}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - (unused / 2), buffer.end());
+    test_termination_condition(STR("#^25000.20000G}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - ((unused + 1) / 2), buffer.end());
+    test_termination_condition(STR("#>25000.20000G}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::fill_n(buffer.begin(), unused, '0');
+    if (std::signbit(value)) {
+      buffer[0] = '-';
+      buffer[unused] = '0';
+    }
+    test_termination_condition(STR("025000.20000G}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
   }
-  test_termination_condition(STR("025000.20000G}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+
 #ifndef TEST_HAS_NO_LOCALIZATION
-  end = std::to_chars(buffer.begin(), buffer.end(), value, std::chars_format::general, 20'000).ptr;
-  std::transform(buffer.begin(), end, buffer.begin(), [](char c) { return std::toupper(c); });
-  test_termination_condition(STR(".20000LG}"), value, std::basic_string<CharT>{buffer.begin(), end});
+  {
+    std::array<char, 25'000> buffer;
+    char* end_ptr = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::general, 20'000).ptr;
+    std::size_t size = end_ptr - buffer.data();
+    auto end = buffer.begin() + size;
+    std::transform(buffer.begin(), end, buffer.begin(), [](char c) { return std::toupper(c); });
+    test_termination_condition(STR(".20000LG}"), value, std::basic_string<CharT>{buffer.begin(), end});
 
-  size = buffer.end() - end;
-  std::fill_n(end, size, '#');
-  test_termination_condition(STR("#<25000.20000LG}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - (size / 2), buffer.end());
-  test_termination_condition(STR("#^25000.20000LG}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::rotate(buffer.begin(), buffer.end() - ((size + 1) / 2), buffer.end());
-  test_termination_condition(STR("#>25000.20000LG}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
-  std::fill_n(buffer.begin(), size, '0');
-  if (std::signbit(value)) {
-    buffer[0] = '-';
-    buffer[size] = '0';
+    std::size_t unused = buffer.end() - end;
+    std::fill_n(end, unused, '#');
+    test_termination_condition(STR("#<25000.20000LG}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - (unused / 2), buffer.end());
+    test_termination_condition(STR("#^25000.20000LG}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::rotate(buffer.begin(), buffer.end() - ((unused + 1) / 2), buffer.end());
+    test_termination_condition(STR("#>25000.20000LG}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
+    std::fill_n(buffer.begin(), unused, '0');
+    if (std::signbit(value)) {
+      buffer[0] = '-';
+      buffer[unused] = '0';
+    }
+    test_termination_condition(STR("025000.20000LG}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
   }
-  test_termination_condition(STR("025000.20000LG}"), value, std::basic_string<CharT>{buffer.begin(), buffer.end()});
 #endif
 }
 

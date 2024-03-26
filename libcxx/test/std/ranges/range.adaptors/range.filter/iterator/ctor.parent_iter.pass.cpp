@@ -18,19 +18,19 @@
 #include "test_iterators.h"
 #include "../types.h"
 
-template <class Iterator, class Sentinel = sentinel_wrapper<Iterator>>
+template <class Iter, class Sent = sentinel_wrapper<Iter>>
 constexpr void test() {
-  using View = minimal_view<Iterator, Sentinel>;
+  using View = minimal_view<Iter, Sent>;
   using FilterView = std::ranges::filter_view<View, AlwaysTrue>;
   using FilterIterator = std::ranges::iterator_t<FilterView>;
 
   std::array<int, 10> array{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  View view(Iterator(array.begin()), Sentinel(Iterator(array.end())));
-  Iterator iter = view.begin();
+  View view(Iter(array.data()), Sent(Iter(array.data() + array.size())));
+  Iter iter = view.begin();
 
   FilterView filter_view(std::move(view), AlwaysTrue{});
   FilterIterator filter_iter(filter_view, std::move(iter));
-  assert(base(filter_iter.base()) == array.begin());
+  assert(base(filter_iter.base()) == array.data());
 }
 
 constexpr bool tests() {

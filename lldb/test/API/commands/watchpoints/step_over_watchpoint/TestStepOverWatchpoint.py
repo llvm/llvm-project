@@ -20,7 +20,7 @@ class TestStepOverWatchpoint(TestBase):
 
     @add_test_categories(["basic_process"])
     @expectedFailureAll(
-        oslist=["ios", "watchos", "tvos", "bridgeos", "macosx"],
+        macos_version=["<", "14.4"],
         archs=["aarch64", "arm"],
         bugnumber="<rdar://problem/106868647>",
     )
@@ -53,17 +53,17 @@ class TestStepOverWatchpoint(TestBase):
             lldb.eStopReasonWatchpoint,
             STOPPED_DUE_TO_WATCHPOINT,
         )
-        self.assertEquals(thread.GetStopDescription(20), "watchpoint 1")
+        self.assertEqual(thread.GetStopDescription(20), "watchpoint 1")
 
         process.Continue()
         self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-        self.assertEquals(thread.GetStopDescription(20), "step over")
+        self.assertEqual(thread.GetStopDescription(20), "step over")
 
         self.step_inst_for_watchpoint(1)
 
     @add_test_categories(["basic_process"])
     @expectedFailureAll(
-        oslist=["ios", "watchos", "tvos", "bridgeos", "macosx"],
+        macos_version=["<", "14.4"],
         archs=["aarch64", "arm"],
         bugnumber="<rdar://problem/106868647>",
     )
@@ -95,11 +95,11 @@ class TestStepOverWatchpoint(TestBase):
             lldb.eStopReasonWatchpoint,
             STOPPED_DUE_TO_WATCHPOINT,
         )
-        self.assertEquals(thread.GetStopDescription(20), "watchpoint 1")
+        self.assertEqual(thread.GetStopDescription(20), "watchpoint 1")
 
         process.Continue()
         self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-        self.assertEquals(thread.GetStopDescription(20), "step over")
+        self.assertEqual(thread.GetStopDescription(20), "step over")
 
         self.step_inst_for_watchpoint(1)
 
@@ -113,7 +113,7 @@ class TestStepOverWatchpoint(TestBase):
                 self.assertFalse(watchpoint_hit, "Watchpoint already hit.")
                 expected_stop_desc = "watchpoint %d" % wp_id
                 actual_stop_desc = self.thread().GetStopDescription(20)
-                self.assertEquals(
+                self.assertEqual(
                     actual_stop_desc, expected_stop_desc, "Watchpoint ID didn't match."
                 )
                 watchpoint_hit = True

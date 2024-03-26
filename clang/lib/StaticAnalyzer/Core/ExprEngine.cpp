@@ -1222,6 +1222,14 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
       PostInitializer PP(BMI, FieldLoc.getAsRegion(), stackFrame);
       evalBind(Tmp, Init, Pred, FieldLoc, InitVal, /*isInit=*/true, &PP);
     }
+  } else if (BMI->isBaseInitializer() && isa<InitListExpr>(Init)) {
+    // When the base class is initialized with an initialization list and the
+    // base class does not have a ctor, there will not be a CXXConstructExpr to
+    // initialize the base region. Hence, we need to make the bind for it.
+    SVal BaseLoc = getStoreManager().evalDerivedToBase(
+        thisVal, QualType(BMI->getBaseClass(), 0), BMI->isBaseVirtual());
+    SVal InitVal = State->getSVal(Init, stackFrame);
+    evalBind(Tmp, Init, Pred, BaseLoc, InitVal, /*isInit=*/true);
   } else {
     assert(BMI->isBaseInitializer() || BMI->isDelegatingInitializer());
     Tmp.insert(Pred);
@@ -1729,6 +1737,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::RecoveryExprClass:
     case Stmt::CXXNoexceptExprClass:
     case Stmt::PackExpansionExprClass:
+    case Stmt::PackIndexingExprClass:
     case Stmt::SubstNonTypeTemplateParmPackExprClass:
     case Stmt::FunctionParmPackExprClass:
     case Stmt::CoroutineBodyStmtClass:
@@ -1812,6 +1821,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPParallelGenericLoopDirectiveClass:
     case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
     case Stmt::CapturedStmtClass:
+    case Stmt::OpenACCComputeConstructClass:
     case Stmt::OMPUnrollDirectiveClass:
     case Stmt::OMPMetaDirectiveClass: {
       const ExplodedNode *node = Bldr.generateSink(S, Pred, Pred->getState());

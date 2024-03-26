@@ -16,7 +16,6 @@
 #ifndef LLVM_ADT_INTERVALTREE_H
 #define LLVM_ADT_INTERVALTREE_H
 
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Format.h"

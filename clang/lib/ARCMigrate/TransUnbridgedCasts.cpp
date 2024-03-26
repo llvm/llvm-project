@@ -146,7 +146,7 @@ private:
             ento::cocoa::isRefType(E->getSubExpr()->getType(), "CF",
                                    FD->getIdentifier()->getName())) {
           StringRef fname = FD->getIdentifier()->getName();
-          if (fname.endswith("Retain") || fname.contains("Create") ||
+          if (fname.ends_with("Retain") || fname.contains("Create") ||
               fname.contains("Copy")) {
             // Do not migrate to couple of bridge transfer casts which
             // cancel each other out. Leave it unchanged so error gets user

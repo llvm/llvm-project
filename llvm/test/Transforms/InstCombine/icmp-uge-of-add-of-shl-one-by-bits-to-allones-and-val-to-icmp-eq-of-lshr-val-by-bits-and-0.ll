@@ -184,7 +184,7 @@ define i1 @oneuse(i8 %val, i8 %bits) {
 
 define i1 @n0(i8 %val, i8 %bits) {
 ; CHECK-LABEL: @n0(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[BITS:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nsw i8 -1, [[BITS:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = add i8 [[T0]], -1
 ; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[T1]], [[VAL:%.*]]

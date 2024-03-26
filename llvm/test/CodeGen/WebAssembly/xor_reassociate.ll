@@ -17,7 +17,7 @@ define i32 @reassociate_xor(float %x, float %y) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    f32.const 0x1p-23
 ; CHECK-NEXT:    f32.gt
-; CHECK-NEXT:    i32.ne
+; CHECK-NEXT:    i32.xor
 ; CHECK-NEXT:    br_if 0 # 0: down to label0
 ; CHECK-NEXT:  # %bb.1: # %if.then.i
 ; CHECK-NEXT:    i32.const 0

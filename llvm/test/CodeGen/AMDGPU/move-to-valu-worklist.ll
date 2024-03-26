@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
 
 ; In moveToVALU(), move to vector ALU is performed, all instrs in
 ; the use chain will be visited. We do not want the same node to be 

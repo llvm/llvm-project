@@ -265,7 +265,8 @@ struct MCDwarfLineTableHeader {
   StringMap<unsigned> SourceIdMap;
   std::string CompilationDir;
   MCDwarfFile RootFile;
-  bool HasSource = false;
+  bool HasAnySource = false;
+
 private:
   bool HasAllMD5 = true;
   bool HasAnyMD5 = false;
@@ -305,7 +306,7 @@ public:
     RootFile.Checksum = Checksum;
     RootFile.Source = Source;
     trackMD5Usage(Checksum.has_value());
-    HasSource = Source.has_value();
+    HasAnySource |= Source.has_value();
   }
 
   void resetFileTable() {
@@ -313,7 +314,7 @@ public:
     MCDwarfFiles.clear();
     RootFile.Name.clear();
     resetMD5Usage();
-    HasSource = false;
+    HasAnySource = false;
   }
 
 private:
@@ -385,7 +386,7 @@ public:
     Header.RootFile.Checksum = Checksum;
     Header.RootFile.Source = Source;
     Header.trackMD5Usage(Checksum.has_value());
-    Header.HasSource = Source.has_value();
+    Header.HasAnySource |= Source.has_value();
   }
 
   void resetFileTable() { Header.resetFileTable(); }

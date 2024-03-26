@@ -54,10 +54,12 @@ def : WriteRes<WriteShiftReg, [SCR1_ALU]>;
 def : WriteRes<WriteIMul, [SCR1_MUL]>;
 def : WriteRes<WriteIMul32, [SCR1_MUL]>;
 
-// Integer division: latency 33, inverse throughput 33
+// Integer division/remainder: latency 33, inverse throughput 33
 let Latency = 33, ReleaseAtCycles = [33] in {
 def : WriteRes<WriteIDiv32, [SCR1_DIV]>;
 def : WriteRes<WriteIDiv, [SCR1_DIV]>;
+def : WriteRes<WriteIRem32, [SCR1_DIV]>;
+def : WriteRes<WriteIRem, [SCR1_DIV]>;
 }
 
 // Load/store instructions on SCR1 have latency 2 and inverse throughput 2
@@ -147,6 +149,8 @@ def : ReadAdvance<ReadShiftReg, 0>;
 def : ReadAdvance<ReadShiftReg32, 0>;
 def : ReadAdvance<ReadIDiv, 0>;
 def : ReadAdvance<ReadIDiv32, 0>;
+def : ReadAdvance<ReadIRem, 0>;
+def : ReadAdvance<ReadIRem32, 0>;
 def : ReadAdvance<ReadIMul, 0>;
 def : ReadAdvance<ReadIMul32, 0>;
 def : ReadAdvance<ReadAtomicWA, 0>;
@@ -199,6 +203,7 @@ def : ReadAdvance<ReadSFBALU, 0>;
 //===----------------------------------------------------------------------===//
 // Unsupported extensions
 defm : UnsupportedSchedV;
+defm : UnsupportedSchedZabha;
 defm : UnsupportedSchedZba;
 defm : UnsupportedSchedZbb;
 defm : UnsupportedSchedZbc;

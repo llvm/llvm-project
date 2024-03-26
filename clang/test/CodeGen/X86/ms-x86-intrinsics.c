@@ -145,7 +145,7 @@ unsigned __int64 test__shiftleft128(unsigned __int64 l, unsigned __int64 h,
                                     unsigned char d) {
   return __shiftleft128(l, h, d);
 }
-// CHECK-X64-LABEL: define dso_local i64 @test__shiftleft128(i64 noundef %l, i64 noundef %h, i8 noundef %d)
+// CHECK-X64-LABEL: define dso_local noundef i64 @test__shiftleft128(i64 noundef %l, i64 noundef %h, i8 noundef %d)
 // CHECK-X64: = zext i8 %{{.*}} to i64
 // CHECK-X64: = tail call i64 @llvm.fshl.i64(i64 %h, i64 %l, i64 %{{.*}})
 // CHECK-X64:  ret i64 %
@@ -154,7 +154,7 @@ unsigned __int64 test__shiftright128(unsigned __int64 l, unsigned __int64 h,
                                      unsigned char d) {
   return __shiftright128(l, h, d);
 }
-// CHECK-X64-LABEL: define dso_local i64 @test__shiftright128(i64 noundef %l, i64 noundef %h, i8 noundef %d)
+// CHECK-X64-LABEL: define dso_local noundef i64 @test__shiftright128(i64 noundef %l, i64 noundef %h, i8 noundef %d)
 // CHECK-X64: = zext i8 %{{.*}} to i64
 // CHECK-X64: = tail call i64 @llvm.fshr.i64(i64 %h, i64 %l, i64 %{{.*}})
 // CHECK-X64:  ret i64 %

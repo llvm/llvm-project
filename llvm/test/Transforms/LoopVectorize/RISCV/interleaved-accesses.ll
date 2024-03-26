@@ -248,6 +248,8 @@ define void @load_store_factor3_i64(ptr %p) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP19:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP19]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <vscale x 2 x i64> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul <vscale x 2 x i64> [[TMP5]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
@@ -276,8 +278,6 @@ define void @load_store_factor3_i64(ptr %p) {
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER2:%.*]] = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> [[TMP17]], i32 8, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i64> poison)
 ; CHECK-NEXT:    [[TMP18:%.*]] = add <vscale x 2 x i64> [[WIDE_MASKED_GATHER2]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 3, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    call void @llvm.masked.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> [[TMP18]], <vscale x 2 x ptr> [[TMP17]], i32 8, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
-; CHECK-NEXT:    [[TMP19:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP19]], 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP20]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -353,6 +353,8 @@ define void @load_store_factor8(ptr %p) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP34:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP35:%.*]] = mul i64 [[TMP34]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <vscale x 2 x i64> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul <vscale x 2 x i64> [[TMP5]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
@@ -406,8 +408,6 @@ define void @load_store_factor8(ptr %p) {
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER7:%.*]] = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> [[TMP32]], i32 8, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i64> poison)
 ; CHECK-NEXT:    [[TMP33:%.*]] = add <vscale x 2 x i64> [[WIDE_MASKED_GATHER7]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 8, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    call void @llvm.masked.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> [[TMP33]], <vscale x 2 x ptr> [[TMP32]], i32 8, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
-; CHECK-NEXT:    [[TMP34:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP35:%.*]] = mul i64 [[TMP34]], 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP35]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -553,8 +553,8 @@ define void @combine_load_factor2_i32(ptr noalias %p, ptr noalias %q) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[Q:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[Q]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP10]], i32 0
-; CHECK-NEXT:    store <8 x i32> [[TMP8]], ptr [[TMP12]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP10]], i32 8
+; CHECK-NEXT:    store <8 x i32> [[TMP8]], ptr [[TMP12]], align 4
 ; CHECK-NEXT:    store <8 x i32> [[TMP9]], ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
@@ -633,8 +633,8 @@ define void @combine_load_factor2_i64(ptr noalias %p, ptr noalias %q) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[Q:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[Q]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[TMP10]], i32 0
-; CHECK-NEXT:    store <4 x i64> [[TMP8]], ptr [[TMP12]], align 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP10]], i32 4
+; CHECK-NEXT:    store <4 x i64> [[TMP8]], ptr [[TMP12]], align 8
 ; CHECK-NEXT:    store <4 x i64> [[TMP9]], ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024

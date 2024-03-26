@@ -110,6 +110,18 @@
 #endif /* !defined(RT_CONST_VAR_ATTRS) */
 
 /*
+ * RT_VAR_ATTRS is marking non-const/constexpr module scope variables
+ * referenced by Flang runtime.
+ */
+#ifndef RT_VAR_ATTRS
+#if (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
+#define RT_VAR_ATTRS __device__
+#else
+#define RT_VAR_ATTRS
+#endif
+#endif /* !defined(RT_VAR_ATTRS) */
+
+/*
  * RT_DEVICE_COMPILATION is defined for any device compilation.
  * Note that it can only be used reliably with compilers that perform
  * separate host and device compilations.
@@ -120,5 +132,16 @@
 #else
 #undef RT_DEVICE_COMPILATION
 #endif
+
+#if defined(__CUDACC__)
+#define RT_DIAG_PUSH _Pragma("nv_diagnostic push")
+#define RT_DIAG_POP _Pragma("nv_diagnostic pop")
+#define RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN \
+  _Pragma("nv_diag_suppress 20011") _Pragma("nv_diag_suppress 20014")
+#else /* !defined(__CUDACC__) */
+#define RT_DIAG_PUSH
+#define RT_DIAG_POP
+#define RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
+#endif /* !defined(__CUDACC__) */
 
 #endif /* !FORTRAN_RUNTIME_API_ATTRS_H_ */

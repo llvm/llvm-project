@@ -156,26 +156,18 @@ define i32 @explicit_register_sp(i32 %a) nounwind {
 define i32 @explicit_register_x3(i32 %a) nounwind {
 ; RV32I-LABEL: explicit_register_x3:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw gp, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv gp, a0
 ; RV32I-NEXT:    #APP
 ; RV32I-NEXT:    addi a0, gp, 0
 ; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw gp, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x3:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd gp, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv gp, a0
 ; RV64I-NEXT:    #APP
 ; RV64I-NEXT:    addi a0, gp, 0
 ; RV64I-NEXT:    #NO_APP
-; RV64I-NEXT:    ld gp, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = tail call i32 asm "addi $0, $1, 0", "=r,{x3}"(i32 %a)
   ret i32 %1
@@ -185,26 +177,18 @@ define i32 @explicit_register_x3(i32 %a) nounwind {
 define i32 @explicit_register_gp(i32 %a) nounwind {
 ; RV32I-LABEL: explicit_register_gp:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw gp, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv gp, a0
 ; RV32I-NEXT:    #APP
 ; RV32I-NEXT:    addi a0, gp, 0
 ; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw gp, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_gp:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd gp, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv gp, a0
 ; RV64I-NEXT:    #APP
 ; RV64I-NEXT:    addi a0, gp, 0
 ; RV64I-NEXT:    #NO_APP
-; RV64I-NEXT:    ld gp, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = tail call i32 asm "addi $0, $1, 0", "=r,{gp}"(i32 %a)
   ret i32 %1
@@ -214,26 +198,18 @@ define i32 @explicit_register_gp(i32 %a) nounwind {
 define i32 @explicit_register_x4(i32 %a) nounwind {
 ; RV32I-LABEL: explicit_register_x4:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw tp, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv tp, a0
 ; RV32I-NEXT:    #APP
 ; RV32I-NEXT:    addi a0, tp, 0
 ; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw tp, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x4:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd tp, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv tp, a0
 ; RV64I-NEXT:    #APP
 ; RV64I-NEXT:    addi a0, tp, 0
 ; RV64I-NEXT:    #NO_APP
-; RV64I-NEXT:    ld tp, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = tail call i32 asm "addi $0, $1, 0", "=r,{x4}"(i32 %a)
   ret i32 %1
@@ -243,26 +219,18 @@ define i32 @explicit_register_x4(i32 %a) nounwind {
 define i32 @explicit_register_tp(i32 %a) nounwind {
 ; RV32I-LABEL: explicit_register_tp:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw tp, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv tp, a0
 ; RV32I-NEXT:    #APP
 ; RV32I-NEXT:    addi a0, tp, 0
 ; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw tp, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_tp:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd tp, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv tp, a0
 ; RV64I-NEXT:    #APP
 ; RV64I-NEXT:    addi a0, tp, 0
 ; RV64I-NEXT:    #NO_APP
-; RV64I-NEXT:    ld tp, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = tail call i32 asm "addi $0, $1, 0", "=r,{tp}"(i32 %a)
   ret i32 %1

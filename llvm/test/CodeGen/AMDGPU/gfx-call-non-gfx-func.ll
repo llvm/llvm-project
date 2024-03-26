@@ -119,7 +119,7 @@ define amdgpu_gfx void @gfx_func() {
 ; GISEL-NEXT:    v_writelane_b32 v40, s30, 26
 ; GISEL-NEXT:    s_mov_b32 s34, extern_c_func@abs32@lo
 ; GISEL-NEXT:    s_mov_b32 s35, extern_c_func@abs32@hi
-; GISEL-NEXT:    s_mov_b64 s[8:9], s[4:5]
+; GISEL-NEXT:    s_mov_b64 s[8:9], 0
 ; GISEL-NEXT:    s_addk_i32 s32, 0x400
 ; GISEL-NEXT:    v_writelane_b32 v40, s31, 27
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[34:35]

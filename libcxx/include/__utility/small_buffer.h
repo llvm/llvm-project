@@ -12,8 +12,8 @@
 #include <__config>
 #include <__memory/construct_at.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/is_trivially_destructible.h>
-#include <__type_traits/is_trivially_move_constructible.h>
 #include <__utility/exception_guard.h>
 #include <__utility/forward.h>
 #include <cstddef>
@@ -29,7 +29,7 @@
 // allow type-erasing classes like move_only_function to store small objects in a local buffer without requiring an
 // allocation.
 //
-// This small buffer class only allows storing  trivially relocatable objects inside the local storage to allow
+// This small buffer class only allows storing trivially relocatable objects inside the local storage to allow
 // __small_buffer to be trivially relocatable itself. Since the buffer doesn't know what's stored inside it, the user
 // has to manage the object's lifetime, in particular the destruction of the object.
 
@@ -62,7 +62,7 @@ public:
   }
 
   template <class _Stored>
-  _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE _LIBCPP_HIDE_FROM_ABI _Stored* __alloc() {
+  _LIBCPP_HIDE_FROM_ABI _Stored* __alloc() {
     if constexpr (__fits_in_buffer<_Stored>) {
       return std::launder(reinterpret_cast<_Stored*>(__buffer_));
     } else {
@@ -73,13 +73,13 @@ public:
   }
 
   template <class _Stored>
-  _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE _LIBCPP_HIDE_FROM_ABI void __dealloc() noexcept {
+  _LIBCPP_HIDE_FROM_ABI void __dealloc() noexcept {
     if constexpr (!__fits_in_buffer<_Stored>)
       ::operator delete[](*reinterpret_cast<void**>(__buffer_), sizeof(_Stored), align_val_t{alignof(_Stored)});
   }
 
   template <class _Stored, class... _Args>
-  _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE _LIBCPP_HIDE_FROM_ABI void __construct(_Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI void __construct(_Args&&... __args) {
     _Stored* __buffer = __alloc<_Stored>();
     auto __guard      = std::__make_exception_guard([&] { __dealloc<_Stored>(); });
     std::construct_at(__buffer, std::forward<_Args>(__args)...);

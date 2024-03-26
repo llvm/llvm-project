@@ -131,6 +131,7 @@ add_unittest(ClangdUnitTests ClangdTests
   tweaks/PopulateSwitchTests.cpp
   tweaks/RawStringLiteralTests.cpp
   tweaks/RemoveUsingNamespaceTests.cpp
+  tweaks/ScopifyEnumTests.cpp
   tweaks/ShowSelectionTreeTests.cpp
   tweaks/SpecialMembersTests.cpp
   tweaks/SwapIfBranchesTests.cpp
@@ -174,6 +175,7 @@ target_link_libraries(ClangdTests
   clangIncludeCleaner
   clangTesting
   clangTidy
+  clangTidyUtils
   clangdSupport
   )
 

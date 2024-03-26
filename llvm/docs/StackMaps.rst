@@ -514,4 +514,4 @@ Supported Architectures
 Support for StackMap generation and the related intrinsics requires
 some code for each backend.  Today, only a subset of LLVM's backends
 are supported.  The currently supported architectures are X86_64,
-PowerPC, Aarch64 and SystemZ.
+PowerPC, AArch64 and SystemZ.

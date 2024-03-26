@@ -11,7 +11,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorOr.h"
@@ -242,6 +242,8 @@ class EntryRef {
   /// The underlying cached entry.
   const CachedFileSystemEntry &Entry;
 
+  friend class DependencyScanningWorkerFilesystem;
+
 public:
   EntryRef(StringRef Name, const CachedFileSystemEntry &Entry)
       : Filename(Name), Entry(Entry) {}
@@ -280,8 +282,12 @@ public:
 /// This is not a thread safe VFS. A single instance is meant to be used only in
 /// one thread. Multiple instances are allowed to service multiple threads
 /// running in parallel.
-class DependencyScanningWorkerFilesystem : public llvm::vfs::ProxyFileSystem {
+class DependencyScanningWorkerFilesystem
+    : public llvm::RTTIExtends<DependencyScanningWorkerFilesystem,
+                               llvm::vfs::ProxyFileSystem> {
 public:
+  static const char ID;
+
   DependencyScanningWorkerFilesystem(
       DependencyScanningFilesystemSharedCache &SharedCache,
       IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
@@ -296,14 +302,15 @@ public:
   ///
   /// Attempts to use the local and shared caches first, then falls back to
   /// using the underlying filesystem.
-  llvm::ErrorOr<EntryRef>
-  getOrCreateFileSystemEntry(StringRef Filename,
-                             bool DisableDirectivesScanning = false);
+  llvm::ErrorOr<EntryRef> getOrCreateFileSystemEntry(StringRef Filename);
+
+  /// Ensure the directive tokens are populated for this file entry.
+  ///
+  /// Returns true if the directive tokens are populated for this file entry,
+  /// false if not (i.e. this entry is not a file or its scan fails).
+  bool ensureDirectiveTokensArePopulated(EntryRef Entry);
 
 private:
-  /// Check whether the file should be scanned for preprocessor directives.
-  bool shouldScanForDirectives(StringRef Filename);
-
   /// For a filename that's not yet associated with any entry in the caches,
   /// uses the underlying filesystem to either look up the entry based in the
   /// shared cache indexed by unique ID, or creates new entry from scratch.
@@ -312,11 +319,6 @@ private:
   llvm::ErrorOr<const CachedFileSystemEntry &>
   computeAndStoreResult(StringRef OriginalFilename,
                         StringRef FilenameForLookup);
-
-  /// Scan for preprocessor directives for the given entry if necessary and
-  /// returns a wrapper object with reference semantics.
-  EntryRef scanForDirectivesIfNecessary(const CachedFileSystemEntry &Entry,
-                                        StringRef Filename, bool Disable);
 
   /// Represents a filesystem entry that has been stat-ed (and potentially read)
   /// and that's about to be inserted into the cache as `CachedFileSystemEntry`.

@@ -142,7 +142,7 @@ declare void @use8(i8)
 
 define i1 @oneuse0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @oneuse0(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nsw i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
 ; CHECK-NEXT:    [[X_HIGHBITS:%.*]] = lshr i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[X_HIGHBITS]], 0
@@ -158,7 +158,7 @@ define i1 @oneuse0(i8 %x, i8 %y) {
 
 define i1 @oneuse1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @oneuse1(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nsw i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[T1]])
 ; CHECK-NEXT:    [[RET:%.*]] = icmp ult i8 [[T1]], [[X:%.*]]
@@ -174,7 +174,7 @@ define i1 @oneuse1(i8 %x, i8 %y) {
 
 define i1 @oneuse2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @oneuse2(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nsw i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    [[T2:%.*]] = and i8 [[T1]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T2]])
@@ -191,7 +191,7 @@ define i1 @oneuse2(i8 %x, i8 %y) {
 
 define i1 @oneuse3(i8 %x, i8 %y) {
 ; CHECK-LABEL: @oneuse3(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nsw i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[T1]])
@@ -209,7 +209,7 @@ define i1 @oneuse3(i8 %x, i8 %y) {
 
 define i1 @oneuse4(i8 %x, i8 %y) {
 ; CHECK-LABEL: @oneuse4(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nsw i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    [[T2:%.*]] = and i8 [[T1]], [[X:%.*]]
@@ -228,7 +228,7 @@ define i1 @oneuse4(i8 %x, i8 %y) {
 
 define i1 @oneuse5(i8 %x, i8 %y) {
 ; CHECK-LABEL: @oneuse5(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nsw i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[T1]])
@@ -253,7 +253,7 @@ define i1 @oneuse5(i8 %x, i8 %y) {
 
 define i1 @n0(i8 %x, i8 %y, i8 %notx) {
 ; CHECK-LABEL: @n0(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nsw i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    [[T2:%.*]] = and i8 [[T1]], [[X:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[T2]], [[NOTX:%.*]]
@@ -283,7 +283,7 @@ define i1 @n1(i8 %x, i8 %y) {
 
 define i1 @n2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @n2(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nsw i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], 1
 ; CHECK-NEXT:    [[T2:%.*]] = and i8 [[T1]], [[X:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[T2]], [[X]]

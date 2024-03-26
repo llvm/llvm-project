@@ -91,7 +91,7 @@ struct DropRedundantInsertSliceRankExpansion
                                 PatternRewriter &rewriter) const override {
     // Nothing to do if no dims are dropped.
     llvm::SmallBitVector droppedDims = extractSliceOp.getDroppedDims();
-    if (droppedDims.empty())
+    if (droppedDims.none())
       return failure();
 
     // Look for tensor.insert_slice op that has an inverse rank expansion.

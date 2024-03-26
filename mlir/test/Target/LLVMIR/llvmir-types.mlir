@@ -40,7 +40,7 @@ llvm.func @f_void_variadic(...)
 // CHECK: declare void @f_void_i32_i32_variadic(i32, i32, ...)
 llvm.func @f_void_i32_i32_variadic(i32, i32, ...)
 // CHECK: declare ptr @f_f_i32_i32()
-llvm.func @f_f_i32_i32() -> !llvm.ptr<func<i32 (i32)>>
+llvm.func @f_f_i32_i32() -> !llvm.ptr
 
 //
 // Integers.
@@ -65,22 +65,12 @@ llvm.func @return_i129() -> i129
 // Pointers.
 //
 
-// CHECK: declare ptr @return_pi8()
-llvm.func @return_pi8() -> !llvm.ptr<i8>
-// CHECK: declare ptr @return_pfloat()
-llvm.func @return_pfloat() -> !llvm.ptr<f32>
-// CHECK: declare ptr @return_ppi8()
-llvm.func @return_ppi8() -> !llvm.ptr<ptr<i8>>
-// CHECK: declare ptr @return_pppppi8()
-llvm.func @return_pppppi8() -> !llvm.ptr<ptr<ptr<ptr<ptr<i8>>>>>
-// CHECK: declare ptr @return_pi8_0()
-llvm.func @return_pi8_0() -> !llvm.ptr<i8, 0>
-// CHECK: declare ptr addrspace(1) @return_pi8_1()
-llvm.func @return_pi8_1() -> !llvm.ptr<i8, 1>
-// CHECK: declare ptr addrspace(42) @return_pi8_42()
-llvm.func @return_pi8_42() -> !llvm.ptr<i8, 42>
-// CHECK: declare ptr addrspace(9) @return_ppi8_42_9()
-llvm.func @return_ppi8_42_9() -> !llvm.ptr<ptr<i8, 42>, 9>
+// CHECK: declare ptr @return_p()
+llvm.func @return_p() -> !llvm.ptr
+// CHECK: declare ptr addrspace(1) @return_p_1()
+llvm.func @return_p_1() -> !llvm.ptr<1>
+// CHECK: declare ptr addrspace(42) @return_p_42()
+llvm.func @return_p_42() -> !llvm.ptr<42>
 
 //
 // Vectors.
@@ -97,7 +87,7 @@ llvm.func @return_vs_4_i32() -> !llvm.vec<?x4 x i32>
 // CHECK: declare <vscale x 8 x half> @return_vs_8_half()
 llvm.func @return_vs_8_half() -> !llvm.vec<?x8 x f16>
 // CHECK: declare <4 x ptr> @return_v_4_pi8()
-llvm.func @return_v_4_pi8() -> !llvm.vec<4xptr<i8>>
+llvm.func @return_v_4_pi8() -> !llvm.vec<4xptr>
 
 //
 // Arrays.
@@ -107,8 +97,8 @@ llvm.func @return_v_4_pi8() -> !llvm.vec<4xptr<i8>>
 llvm.func @return_a10_i32() -> !llvm.array<10 x i32>
 // CHECK: declare [8 x float] @return_a8_float()
 llvm.func @return_a8_float() -> !llvm.array<8 x f32>
-// CHECK: declare [10 x ptr addrspace(4)] @return_a10_pi32_4()
-llvm.func @return_a10_pi32_4() -> !llvm.array<10 x ptr<i32, 4>>
+// CHECK: declare [10 x ptr addrspace(4)] @return_a10_p_4()
+llvm.func @return_a10_p_4() -> !llvm.array<10 x ptr<4>>
 // CHECK: declare [10 x [4 x float]] @return_a10_a4_float()
 llvm.func @return_a10_a4_float() -> !llvm.array<10 x array<4 x f32>>
 
@@ -160,12 +150,9 @@ llvm.func @return_target_ext_params() -> !llvm.target<"target-params", i32, f64,
 // CHECK: %empty = type {}
 // CHECK: %opaque = type opaque
 // CHECK: %long = type { i32, { i32, i1 }, float, ptr }
-// CHECK: %self-recursive = type { ptr }
 // CHECK: %unpacked = type { i32 }
 // CHECK: %packed = type <{ i32 }>
 // CHECK: %"name with spaces and !^$@$#" = type <{ i32 }>
-// CHECK: %mutually-a = type { ptr }
-// CHECK: %mutually-b = type { ptr addrspace(3) }
 // CHECK: %struct-of-arrays = type { [10 x i32] }
 // CHECK: %array-of-structs = type { i32 }
 
@@ -174,9 +161,7 @@ llvm.func @return_s_empty() -> !llvm.struct<"empty", ()>
 // CHECK: declare %opaque
 llvm.func @return_s_opaque() -> !llvm.struct<"opaque", opaque>
 // CHECK: declare %long
-llvm.func @return_s_long() -> !llvm.struct<"long", (i32, struct<(i32, i1)>, f32, ptr<func<void ()>>)>
-// CHECK: declare %self-recursive
-llvm.func @return_s_self_recursive() -> !llvm.struct<"self-recursive", (ptr<struct<"self-recursive">>)>
+llvm.func @return_s_long() -> !llvm.struct<"long", (i32, struct<(i32, i1)>, f32, ptr)>
 // CHECK: declare %unpacked
 llvm.func @return_s_unpacked() -> !llvm.struct<"unpacked", (i32)>
 // CHECK: declare %packed
@@ -184,14 +169,7 @@ llvm.func @return_s_packed() -> !llvm.struct<"packed", packed (i32)>
 // CHECK: declare %"name with spaces and !^$@$#"
 llvm.func @return_s_symbols() -> !llvm.struct<"name with spaces and !^$@$#", packed (i32)>
 
-// CHECK: declare %mutually-a
-llvm.func @return_s_mutually_a() -> !llvm.struct<"mutually-a", (ptr<struct<"mutually-b", (ptr<struct<"mutually-a">, 3>)>>)>
-// CHECK: declare %mutually-b
-llvm.func @return_s_mutually_b() -> !llvm.struct<"mutually-b", (ptr<struct<"mutually-a", (ptr<struct<"mutually-b">>)>, 3>)>
-
 // CHECK: declare %struct-of-arrays
 llvm.func @return_s_struct_of_arrays() -> !llvm.struct<"struct-of-arrays", (array<10 x i32>)>
 // CHECK: declare [10 x %array-of-structs]
 llvm.func @return_s_array_of_structs() -> !llvm.array<10 x struct<"array-of-structs", (i32)>>
-// CHECK: declare ptr
-llvm.func @return_s_ptr_to_struct() -> !llvm.ptr<struct<"ptr-to-struct", (i8)>>

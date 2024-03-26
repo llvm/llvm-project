@@ -299,9 +299,8 @@ void MipsBranchExpansion::initMBBInfo() {
     MachineBasicBlock *MBB = MFp->getBlockNumbered(I);
 
     // Compute size of MBB.
-    for (MachineBasicBlock::instr_iterator MI = MBB->instr_begin();
-         MI != MBB->instr_end(); ++MI)
-      MBBInfos[I].Size += TII->getInstSizeInBytes(*MI);
+    for (MachineInstr &MI : MBB->instrs())
+      MBBInfos[I].Size += TII->getInstSizeInBytes(MI);
   }
 }
 

@@ -11,15 +11,15 @@
 
   @sched_dbg_value_crash.tmp6 = internal unnamed_addr addrspace(3) global [256 x [16 x i8]] undef, align 16
 
-  define amdgpu_kernel void @sched_dbg_value_crash(i8 addrspace(1)* nocapture readonly %arg, i32 addrspace(1)* nocapture readonly %arg1, %struct.widget.0 addrspace(1)* nocapture readonly %arg2, %struct.baz addrspace(1)* nocapture readonly %arg3, %struct.snork addrspace(1)* nocapture %arg4) local_unnamed_addr #2 {
+  define amdgpu_kernel void @sched_dbg_value_crash(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture readonly %arg1, ptr addrspace(1) nocapture readonly %arg2, ptr addrspace(1) nocapture readonly %arg3, ptr addrspace(1) nocapture %arg4) local_unnamed_addr #2 {
   bb:
-    %0 = getelementptr i32, i32 addrspace(1)* %arg1, i64 0, !amdgpu.uniform !3, !amdgpu.noclobber !3
+    %0 = getelementptr i32, ptr addrspace(1) %arg1, i64 0, !amdgpu.uniform !3, !amdgpu.noclobber !3
     %tmp5 = alloca %struct.wombat, align 16, addrspace(5)
-    %1 = call noalias nonnull dereferenceable(64) i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
-    %2 = bitcast i8 addrspace(4)* %1 to i32 addrspace(4)*
-    %3 = getelementptr inbounds i32, i32 addrspace(4)* %2, i64 1
-    %4 = bitcast i32 addrspace(4)* %3 to <2 x i32> addrspace(4)*, !amdgpu.uniform !3, !amdgpu.noclobber !3
-    %5 = load <2 x i32>, <2 x i32> addrspace(4)* %4, align 4, !invariant.load !3
+    %1 = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+    %2 = bitcast ptr addrspace(4) %1 to ptr addrspace(4)
+    %3 = getelementptr inbounds i32, ptr addrspace(4) %2, i64 1
+    %4 = bitcast ptr addrspace(4) %3 to ptr addrspace(4), !amdgpu.uniform !3, !amdgpu.noclobber !3
+    %5 = load <2 x i32>, ptr addrspace(4) %4, align 4, !invariant.load !3
     %6 = extractelement <2 x i32> %5, i32 0
     %7 = extractelement <2 x i32> %5, i32 1
     %8 = lshr i32 %6, 16
@@ -31,69 +31,69 @@
     %14 = mul nuw nsw i32 %10, %7
     %15 = add i32 %13, %14
     %16 = add i32 %15, %11
-    %17 = getelementptr inbounds [256 x [16 x i8]], [256 x [16 x i8]] addrspace(3)* @sched_dbg_value_crash.tmp6, i32 0, i32 %16
-    %tmp7 = load i64, i64 addrspace(4)* null, align 536870912
+    %17 = getelementptr inbounds [256 x [16 x i8]], ptr addrspace(3) @sched_dbg_value_crash.tmp6, i32 0, i32 %16
+    %tmp7 = load i64, ptr addrspace(4) null, align 536870912
     %tmp8 = tail call i32 @llvm.amdgcn.workitem.id.x() #3, !range !4
     %tmp9 = zext i32 %tmp8 to i64
     %tmp10 = add i64 %tmp7, %tmp9
     %tmp11 = shl i64 %tmp10, 32
     %tmp12 = ashr exact i64 %tmp11, 32
-    %tmp13 = getelementptr inbounds %struct.widget.0, %struct.widget.0 addrspace(1)* %arg2, i64 %tmp12, i32 1
-    %tmp14 = load i32, i32 addrspace(1)* %tmp13, align 4
-    %tmp15 = getelementptr inbounds %struct.baz, %struct.baz addrspace(1)* %arg3, i64 %tmp12, i32 1
-    %tmp16 = load <4 x float>, <4 x float> addrspace(1)* %tmp15, align 16
+    %tmp13 = getelementptr inbounds %struct.widget.0, ptr addrspace(1) %arg2, i64 %tmp12, i32 1
+    %tmp14 = load i32, ptr addrspace(1) %tmp13, align 4
+    %tmp15 = getelementptr inbounds %struct.baz, ptr addrspace(1) %arg3, i64 %tmp12, i32 1
+    %tmp16 = load <4 x float>, ptr addrspace(1) %tmp15, align 16
     %tmp17 = sext i32 %tmp14 to i64
-    %tmp18 = load i32, i32 addrspace(1)* %0, align 4
+    %tmp18 = load i32, ptr addrspace(1) %0, align 4
     %tmp19 = zext i32 %tmp18 to i64
     %tmp20 = shl nuw nsw i64 %tmp19, 2
-    %tmp21 = getelementptr inbounds i8, i8 addrspace(1)* %arg, i64 %tmp20
-    %tmp22 = bitcast i8 addrspace(1)* %tmp21 to %struct.wombat.1 addrspace(1)*
-    %tmp23 = bitcast %struct.wombat addrspace(5)* %tmp5 to i8 addrspace(5)*
-    call void @llvm.lifetime.start.p5i8(i64 144, i8 addrspace(5)* nonnull %tmp23) #3
-    %tmp24 = getelementptr inbounds %struct.wombat, %struct.wombat addrspace(5)* %tmp5, i32 0, i32 6
-    %tmp25 = getelementptr i32, i32 addrspace(1)* %arg1, i64 3, !amdgpu.uniform !3, !amdgpu.noclobber !3
-    %tmp26 = load i32, i32 addrspace(1)* %tmp25, align 4
+    %tmp21 = getelementptr inbounds i8, ptr addrspace(1) %arg, i64 %tmp20
+    %tmp22 = bitcast ptr addrspace(1) %tmp21 to ptr addrspace(1)
+    %tmp23 = bitcast ptr addrspace(5) %tmp5 to ptr addrspace(5)
+    call void @llvm.lifetime.start.p5(i64 144, ptr addrspace(5) nonnull %tmp23) #3
+    %tmp24 = getelementptr inbounds %struct.wombat, ptr addrspace(5) %tmp5, i32 0, i32 6
+    %tmp25 = getelementptr i32, ptr addrspace(1) %arg1, i64 3, !amdgpu.uniform !3, !amdgpu.noclobber !3
+    %tmp26 = load i32, ptr addrspace(1) %tmp25, align 4
     %tmp27 = zext i32 %tmp26 to i64
     %tmp28 = shl nuw nsw i64 %tmp27, 2
-    %tmp29 = getelementptr inbounds i8, i8 addrspace(1)* %arg, i64 %tmp28
-    %tmp30 = bitcast i8 addrspace(1)* %tmp29 to <2 x float> addrspace(1)*
-    %tmp31 = getelementptr inbounds %struct.wombat.1, %struct.wombat.1 addrspace(1)* %tmp22, i64 %tmp17, i32 2, i64 0
-    %18 = bitcast i32 addrspace(1)* %tmp31 to <3 x i32> addrspace(1)*
-    %19 = load <3 x i32>, <3 x i32> addrspace(1)* %18, align 4
+    %tmp29 = getelementptr inbounds i8, ptr addrspace(1) %arg, i64 %tmp28
+    %tmp30 = bitcast ptr addrspace(1) %tmp29 to ptr addrspace(1)
+    %tmp31 = getelementptr inbounds %struct.wombat.1, ptr addrspace(1) %tmp22, i64 %tmp17, i32 2, i64 0
+    %18 = bitcast ptr addrspace(1) %tmp31 to ptr addrspace(1)
+    %19 = load <3 x i32>, ptr addrspace(1) %18, align 4
     %tmp325 = extractelement <3 x i32> %19, i32 0
     %tmp386 = extractelement <3 x i32> %19, i32 1
     %tmp447 = extractelement <3 x i32> %19, i32 2
     %tmp33 = sext i32 %tmp325 to i64
-    %tmp34 = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %tmp30, i64 %tmp33
-    %tmp35 = load <2 x float>, <2 x float> addrspace(1)* %tmp34, align 8
+    %tmp34 = getelementptr inbounds <2 x float>, ptr addrspace(1) %tmp30, i64 %tmp33
+    %tmp35 = load <2 x float>, ptr addrspace(1) %tmp34, align 8
     %tmp36 = extractelement <2 x float> %tmp35, i32 1
     %tmp39 = sext i32 %tmp386 to i64
-    %tmp40 = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %tmp30, i64 %tmp39
-    %tmp41 = load <2 x float>, <2 x float> addrspace(1)* %tmp40, align 8
+    %tmp40 = getelementptr inbounds <2 x float>, ptr addrspace(1) %tmp30, i64 %tmp39
+    %tmp41 = load <2 x float>, ptr addrspace(1) %tmp40, align 8
     %tmp42 = extractelement <2 x float> %tmp41, i32 1
     %tmp45 = sext i32 %tmp447 to i64
-    %tmp46 = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %tmp30, i64 %tmp45
-    %tmp47 = load <2 x float>, <2 x float> addrspace(1)* %tmp46, align 8
+    %tmp46 = getelementptr inbounds <2 x float>, ptr addrspace(1) %tmp30, i64 %tmp45
+    %tmp47 = load <2 x float>, ptr addrspace(1) %tmp46, align 8
     %tmp48 = extractelement <2 x float> %tmp47, i32 1
-    %tmp49 = getelementptr i32, i32 addrspace(1)* %arg1, i64 1, !amdgpu.uniform !3, !amdgpu.noclobber !3
-    %tmp50 = load i32, i32 addrspace(1)* %tmp49, align 4
+    %tmp49 = getelementptr i32, ptr addrspace(1) %arg1, i64 1, !amdgpu.uniform !3, !amdgpu.noclobber !3
+    %tmp50 = load i32, ptr addrspace(1) %tmp49, align 4
     %tmp51 = zext i32 %tmp50 to i64
     %tmp52 = shl nuw nsw i64 %tmp51, 2
-    %tmp53 = getelementptr inbounds i8, i8 addrspace(1)* %arg, i64 %tmp52
-    %tmp54 = bitcast i8 addrspace(1)* %tmp53 to <4 x float> addrspace(1)*
-    %tmp55 = getelementptr inbounds %struct.wombat.1, %struct.wombat.1 addrspace(1)* %tmp22, i64 %tmp17, i32 0, i64 0
-    %20 = bitcast i32 addrspace(1)* %tmp55 to <2 x i32> addrspace(1)*
-    %21 = load <2 x i32>, <2 x i32> addrspace(1)* %20, align 4
+    %tmp53 = getelementptr inbounds i8, ptr addrspace(1) %arg, i64 %tmp52
+    %tmp54 = bitcast ptr addrspace(1) %tmp53 to ptr addrspace(1)
+    %tmp55 = getelementptr inbounds %struct.wombat.1, ptr addrspace(1) %tmp22, i64 %tmp17, i32 0, i64 0
+    %20 = bitcast ptr addrspace(1) %tmp55 to ptr addrspace(1)
+    %21 = load <2 x i32>, ptr addrspace(1) %20, align 4
     %tmp568 = extractelement <2 x i32> %21, i32 0
     %tmp639 = extractelement <2 x i32> %21, i32 1
     %tmp57 = sext i32 %tmp568 to i64
-    %tmp58 = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %tmp54, i64 %tmp57
-    %tmp59 = load <4 x float>, <4 x float> addrspace(1)* %tmp58, align 16
+    %tmp58 = getelementptr inbounds <4 x float>, ptr addrspace(1) %tmp54, i64 %tmp57
+    %tmp59 = load <4 x float>, ptr addrspace(1) %tmp58, align 16
     %tmp60 = extractelement <4 x float> %tmp59, i32 0
     %tmp61 = extractelement <4 x float> %tmp59, i32 1
     %tmp64 = sext i32 %tmp639 to i64
-    %tmp65 = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %tmp54, i64 %tmp64
-    %tmp66 = load <4 x float>, <4 x float> addrspace(1)* %tmp65, align 16
+    %tmp65 = getelementptr inbounds <4 x float>, ptr addrspace(1) %tmp54, i64 %tmp64
+    %tmp66 = load <4 x float>, ptr addrspace(1) %tmp65, align 16
     %tmp67 = extractelement <4 x float> %tmp16, i64 0
     %tmp69 = fsub fast float -0.000000e+00, %tmp67
     %tmp70 = fmul float %tmp67, 0.000000e+00
@@ -103,7 +103,7 @@
     %tmp74 = insertelement <4 x float> <float undef, float undef, float undef, float 0.000000e+00>, float %tmp69, i32 0
     %tmp75 = insertelement <4 x float> %tmp74, float %tmp71, i32 1
     %tmp76 = insertelement <4 x float> %tmp75, float %tmp73, i32 2
-    store <4 x float> %tmp76, <4 x float> addrspace(5)* %tmp24, align 16
+    store <4 x float> %tmp76, ptr addrspace(5) %tmp24, align 16
     %tmp77 = fsub float undef, %tmp60
     %tmp78 = fsub float undef, %tmp61
     %tmp79 = extractelement <4 x float> %tmp66, i32 2
@@ -128,27 +128,27 @@
     %fadd = fadd <2 x float> %fmul, undef
     %extractelement = extractelement <2 x float> %fadd, i64 1
     %tmp96 = fsub float %extractelement, %tmp95
-    %tmp97 = getelementptr inbounds %struct.wombat, %struct.wombat addrspace(5)* %tmp5, i32 0, i32 8, i32 1
-    call void @func(float %tmp96, i64 0, i16 addrspace(5)* nonnull %tmp97) #3
-    %tmp984 = bitcast [16 x i8] addrspace(3)* %17 to i8 addrspace(3)*
-    %tmp99 = getelementptr inbounds %struct.snork, %struct.snork addrspace(1)* %arg4, i64 %tmp12, i32 8, i32 1, i64 0
-    call void @llvm.memcpy.p1i8.p3i8.i64(i8 addrspace(1)* %tmp99, i8 addrspace(3)* %tmp984, i64 16, i32 16, i1 false)
-    call void @llvm.lifetime.end.p5i8(i64 144, i8 addrspace(5)* nonnull %tmp23) #3
+    %tmp97 = getelementptr inbounds %struct.wombat, ptr addrspace(5) %tmp5, i32 0, i32 8, i32 1
+    call void @func(float %tmp96, i64 0, ptr addrspace(5) nonnull %tmp97) #3
+    %tmp984 = bitcast ptr addrspace(3) %17 to ptr addrspace(3)
+    %tmp99 = getelementptr inbounds %struct.snork, ptr addrspace(1) %arg4, i64 %tmp12, i32 8, i32 1, i64 0
+    call void @llvm.memcpy.p1.p3.i64(ptr addrspace(1) %tmp99, ptr addrspace(3) %tmp984, i64 16, i32 16, i1 false)
+    call void @llvm.lifetime.end.p5(i64 144, ptr addrspace(5) nonnull %tmp23) #3
     ret void
   }
 
-  declare void @func(float, i64, i16 addrspace(5)*)
-  declare void @llvm.lifetime.start.p5i8(i64, i8 addrspace(5)* nocapture) #0
+  declare void @func(float, i64, ptr addrspace(5))
+  declare void @llvm.lifetime.start.p5(i64, ptr addrspace(5) nocapture) #0
   declare float @llvm.fmuladd.f32(float, float, float) #1
-  declare void @llvm.lifetime.end.p5i8(i64, i8 addrspace(5)* nocapture) #0
+  declare void @llvm.lifetime.end.p5(i64, ptr addrspace(5) nocapture) #0
   declare <2 x float> @llvm.fmuladd.v2f32(<2 x float>, <2 x float>, <2 x float>) #1
   declare i32 @llvm.amdgcn.workitem.id.x() #1
   declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-  declare i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #1
+  declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #1
   declare i32 @llvm.amdgcn.workitem.id.y() #1
   declare i32 @llvm.amdgcn.workitem.id.z() #1
-  declare void @llvm.memcpy.p1i8.p5i8.i64(i8 addrspace(1)* nocapture writeonly, i8 addrspace(5)* nocapture readonly, i64, i32, i1) #0
-  declare void @llvm.memcpy.p1i8.p3i8.i64(i8 addrspace(1)* nocapture writeonly, i8 addrspace(3)* nocapture readonly, i64, i32, i1) #0
+  declare void @llvm.memcpy.p1.p5.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i32, i1) #0
+  declare void @llvm.memcpy.p1.p3.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(3) nocapture readonly, i64, i32, i1) #0
 
   attributes #0 = { argmemonly nounwind }
   attributes #1 = { nounwind readnone speculatable }
@@ -181,6 +181,8 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$vgpr1', virtual-reg: '%1' }
@@ -203,9 +205,9 @@ body:             |
     %2:vgpr_32 = COPY $vgpr2
     %1:vgpr_32 = COPY $vgpr1
     %0:vgpr_32 = COPY $vgpr0
-    %5:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4, 0, 0 :: (non-temporal dereferenceable invariant load (s64) from `i64 addrspace(4)* undef`)
-    %6:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4, 8, 0 :: (non-temporal dereferenceable invariant load (s64) from `i64 addrspace(4)* undef`)
-    %7:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4, 16, 0 :: (non-temporal dereferenceable invariant load (s64) from `i64 addrspace(4)* undef`)
+    %5:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4, 0, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
+    %6:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4, 8, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
+    %7:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4, 16, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
     %8:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4, 24, 0
     %9:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4, 32, 0
     %10:sreg_64_xexec = S_LOAD_DWORDX2_IMM %3, 4, 0

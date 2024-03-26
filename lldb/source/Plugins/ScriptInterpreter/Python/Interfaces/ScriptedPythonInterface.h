@@ -32,6 +32,45 @@ public:
   ScriptedPythonInterface(ScriptInterpreterPythonImpl &interpreter);
   ~ScriptedPythonInterface() override = default;
 
+  enum class AbstractMethodCheckerCases {
+    eNotImplemented,
+    eNotAllocated,
+    eNotCallable,
+    eValid
+  };
+
+  llvm::Expected<std::map<llvm::StringLiteral, AbstractMethodCheckerCases>>
+  CheckAbstractMethodImplementation(
+      const python::PythonDictionary &class_dict) const {
+
+    using namespace python;
+
+    std::map<llvm::StringLiteral, AbstractMethodCheckerCases> checker;
+#define SET_ERROR_AND_CONTINUE(method_name, error)                             \
+  {                                                                            \
+    checker[method_name] = error;                                              \
+    continue;                                                                  \
+  }
+
+    for (const llvm::StringLiteral &method_name : GetAbstractMethods()) {
+      if (!class_dict.HasKey(method_name))
+        SET_ERROR_AND_CONTINUE(method_name,
+                               AbstractMethodCheckerCases::eNotImplemented)
+      auto callable_or_err = class_dict.GetItem(method_name);
+      if (!callable_or_err)
+        SET_ERROR_AND_CONTINUE(method_name,
+                               AbstractMethodCheckerCases::eNotAllocated)
+      if (!PythonCallable::Check(callable_or_err.get().get()))
+        SET_ERROR_AND_CONTINUE(method_name,
+                               AbstractMethodCheckerCases::eNotCallable)
+      checker[method_name] = AbstractMethodCheckerCases::eValid;
+    }
+
+#undef HANDLE_ERROR
+
+    return checker;
+  }
+
   template <typename... Args>
   llvm::Expected<StructuredData::GenericSP>
   CreatePluginObject(llvm::StringRef class_name,
@@ -39,20 +78,20 @@ public:
     using namespace python;
     using Locker = ScriptInterpreterPythonImpl::Locker;
 
+    auto create_error = [](std::string message) {
+      return llvm::createStringError(llvm::inconvertibleErrorCode(), message);
+    };
+
     bool has_class_name = !class_name.empty();
     bool has_interpreter_dict =
         !(llvm::StringRef(m_interpreter.GetDictionaryName()).empty());
     if (!has_class_name && !has_interpreter_dict && !script_obj) {
       if (!has_class_name)
-        return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                       "Missing script class name.");
+        return create_error("Missing script class name.");
       else if (!has_interpreter_dict)
-        return llvm::createStringError(
-            llvm::inconvertibleErrorCode(),
-            "Invalid script interpreter dictionary.");
+        return create_error("Invalid script interpreter dictionary.");
       else
-        return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                       "Missing scripting object.");
+        return create_error("Missing scripting object.");
     }
 
     Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
@@ -67,26 +106,23 @@ public:
       auto dict =
           PythonModule::MainModule().ResolveName<python::PythonDictionary>(
               m_interpreter.GetDictionaryName());
-      if (!dict.IsAllocated()) {
-        return llvm::createStringError(
-            llvm::inconvertibleErrorCode(),
-            "Could not find interpreter dictionary: %s",
-            m_interpreter.GetDictionaryName());
-      }
+      if (!dict.IsAllocated())
+        return create_error(
+            llvm::formatv("Could not find interpreter dictionary: %s",
+                          m_interpreter.GetDictionaryName()));
 
-      auto method =
+      auto init =
           PythonObject::ResolveNameWithDictionary<python::PythonCallable>(
               class_name, dict);
-      if (!method.IsAllocated())
-        return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                       "Could not find script class: %s",
-                                       class_name.data());
+      if (!init.IsAllocated())
+        return create_error(llvm::formatv("Could not find script class: %s",
+                                          class_name.data()));
 
       std::tuple<Args...> original_args = std::forward_as_tuple(args...);
       auto transformed_args = TransformArgs(original_args);
 
       std::string error_string;
-      llvm::Expected<PythonCallable::ArgInfo> arg_info = method.GetArgInfo();
+      llvm::Expected<PythonCallable::ArgInfo> arg_info = init.GetArgInfo();
       if (!arg_info) {
         llvm::handleAllErrors(
             arg_info.takeError(),
@@ -99,25 +135,87 @@ public:
       }
 
       llvm::Expected<PythonObject> expected_return_object =
-          llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                  "Resulting object is not initialized.");
+          create_error("Resulting object is not initialized.");
 
       std::apply(
-          [&method, &expected_return_object](auto &&...args) {
+          [&init, &expected_return_object](auto &&...args) {
             llvm::consumeError(expected_return_object.takeError());
-            expected_return_object = method(args...);
+            expected_return_object = init(args...);
           },
           transformed_args);
 
-      if (llvm::Error e = expected_return_object.takeError())
-        return std::move(e);
-      result = std::move(expected_return_object.get());
+      if (!expected_return_object)
+        return expected_return_object.takeError();
+      result = expected_return_object.get();
     }
 
     if (!result.IsValid())
-      return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
-          "Resulting object is not a valid Python Object.");
+      return create_error("Resulting object is not a valid Python Object.");
+    if (!result.HasAttribute("__class__"))
+      return create_error("Resulting object doesn't have '__class__' member.");
+
+    PythonObject obj_class = result.GetAttributeValue("__class__");
+    if (!obj_class.IsValid())
+      return create_error("Resulting class object is not a valid.");
+    if (!obj_class.HasAttribute("__name__"))
+      return create_error(
+          "Resulting object class doesn't have '__name__' member.");
+    PythonString obj_class_name =
+        obj_class.GetAttributeValue("__name__").AsType<PythonString>();
+
+    PythonObject object_class_mapping_proxy =
+        obj_class.GetAttributeValue("__dict__");
+    if (!obj_class.HasAttribute("__dict__"))
+      return create_error(
+          "Resulting object class doesn't have '__dict__' member.");
+
+    PythonCallable dict_converter = PythonModule::BuiltinsModule()
+                                        .ResolveName("dict")
+                                        .AsType<PythonCallable>();
+    if (!dict_converter.IsAllocated())
+      return create_error(
+          "Python 'builtins' module doesn't have 'dict' class.");
+
+    PythonDictionary object_class_dict =
+        dict_converter(object_class_mapping_proxy).AsType<PythonDictionary>();
+    if (!object_class_dict.IsAllocated())
+      return create_error("Coudn't create dictionary from resulting object "
+                          "class mapping proxy object.");
+
+    auto checker_or_err = CheckAbstractMethodImplementation(object_class_dict);
+    if (!checker_or_err)
+      return checker_or_err.takeError();
+
+    for (const auto &method_checker : *checker_or_err)
+      switch (method_checker.second) {
+      case AbstractMethodCheckerCases::eNotImplemented:
+        LLDB_LOG(GetLog(LLDBLog::Script),
+                 "Abstract method {0}.{1} not implemented.",
+                 obj_class_name.GetString(), method_checker.first);
+        break;
+      case AbstractMethodCheckerCases::eNotAllocated:
+        LLDB_LOG(GetLog(LLDBLog::Script),
+                 "Abstract method {0}.{1} not allocated.",
+                 obj_class_name.GetString(), method_checker.first);
+        break;
+      case AbstractMethodCheckerCases::eNotCallable:
+        LLDB_LOG(GetLog(LLDBLog::Script),
+                 "Abstract method {0}.{1} not callable.",
+                 obj_class_name.GetString(), method_checker.first);
+        break;
+      case AbstractMethodCheckerCases::eValid:
+        LLDB_LOG(GetLog(LLDBLog::Script),
+                 "Abstract method {0}.{1} implemented & valid.",
+                 obj_class_name.GetString(), method_checker.first);
+        break;
+      }
+
+    for (const auto &method_checker : *checker_or_err)
+      if (method_checker.second != AbstractMethodCheckerCases::eValid)
+        return create_error(
+            llvm::formatv("Abstract method {0}.{1} missing. Enable lldb "
+                          "script log for more details.",
+                          obj_class_name.GetString(), method_checker.first));
 
     m_object_instance_sp = StructuredData::GenericSP(
         new StructuredPythonObject(std::move(result)));

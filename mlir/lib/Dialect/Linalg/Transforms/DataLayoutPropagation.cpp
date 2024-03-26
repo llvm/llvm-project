@@ -76,10 +76,10 @@ getPackingInfoFromOperand(OpOperand *opOperand, linalg::GenericOp genericOp,
        llvm::zip_equal(llvm::seq<unsigned>(0, innerDimsPos.size()),
                        innerDimsPos, packOrUnPackOp.getMixedTiles())) {
     auto expr = exprs[innerDimPos];
-    if (!expr.template isa<AffineDimExpr>())
+    if (!isa<AffineDimExpr>(expr))
       return failure();
     int64_t domainDimPos =
-        exprs[innerDimPos].template cast<AffineDimExpr>().getPosition();
+        cast<AffineDimExpr>(exprs[innerDimPos]).getPosition();
     if (!isParallelIterator(iterators[domainDimPos]))
       return failure();
     packInfo.tiledDimsPos.push_back(domainDimPos);
@@ -99,7 +99,7 @@ getPackingInfoFromOperand(OpOperand *opOperand, linalg::GenericOp genericOp,
   auto areAllAffineDimExpr = [&](int dim) {
     for (AffineMap map : indexingMaps) {
       if (llvm::any_of(map.getResults(), [dim](AffineExpr expr) {
-            return expr.isFunctionOfDim(dim) && !expr.isa<AffineDimExpr>();
+            return expr.isFunctionOfDim(dim) && !isa<AffineDimExpr>(expr);
           })) {
         return false;
       }
@@ -126,7 +126,7 @@ getPackingInfoFromOperand(OpOperand *opOperand, linalg::GenericOp genericOp,
   SmallVector<int64_t> permutedOuterDims;
   for (auto [index, dim] : llvm::enumerate(packOrUnPackOp.getOuterDimsPerm())) {
     auto permutedExpr = indexingMap.getResult(dim);
-    if (auto dimExpr = permutedExpr.template dyn_cast<AffineDimExpr>()) {
+    if (auto dimExpr = dyn_cast<AffineDimExpr>(permutedExpr)) {
       permutedOuterDims.push_back(dimExpr.getPosition());
       continue;
     }
@@ -177,7 +177,7 @@ static SmallVector<int64_t> computeOuterDims(ArrayRef<int64_t> perm,
     // Here we rely on the assumption that the outer dims permutation
     // when propagating currently requires that non-affine dim expressions
     // are not permuted, thus allowing the identity assignment below.
-    if (auto dimExpr = expr.dyn_cast<AffineDimExpr>())
+    if (auto dimExpr = dyn_cast<AffineDimExpr>(expr))
       currentPositionTileLoops[dimExpr.getPosition()] = pos;
     else
       currentPositionTileLoops[pos] = pos;
@@ -238,7 +238,7 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
   // Step 1. Construct the information of packing data dimensions; append inner
   // dimensions to the indexing maps for the operand.
   for (auto [index, expr] : llvm::enumerate(exprs)) {
-    if (auto dimExpr = expr.dyn_cast<AffineDimExpr>()) {
+    if (auto dimExpr = dyn_cast<AffineDimExpr>(expr)) {
       int64_t dimPos = dimExpr.getPosition();
       domainDimToOperandDim[dimPos] = index;
       continue;
@@ -264,12 +264,12 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
     SmallVector<int64_t> inversedOuterPerm =
         invertPermutationVector(packInfo.outerDimsOnDomainPerm);
     for (auto i : llvm::seq<unsigned>(0, origIndexingMap.getNumResults())) {
-      if (auto dimExpr = exprs[i].dyn_cast<AffineDimExpr>()) {
+      if (auto dimExpr = dyn_cast<AffineDimExpr>(exprs[i])) {
         int64_t dimPos = dimExpr.getPosition();
         exprs[i] = b.getAffineDimExpr(inversedOuterPerm[dimPos]);
         continue;
       }
-      assert(exprs[i].isa<AffineConstantExpr>() &&
+      assert(isa<AffineConstantExpr>(exprs[i]) &&
              "Attempted to permute non-constant and non-affine dim expression");
     }
     // Step 2.2: Undo the transposition on `exprs` and propagate the
@@ -369,7 +369,7 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
 ///     } -> tensor<?x?x8x2xf32>
 static FailureOr<GenericOp>
 bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, tensor::PackOp packOp,
-                               ControlPropagationFn controlFn) {
+                               const ControlPropagationFn &controlFn) {
   auto genericOp = packOp.getSource().getDefiningOp<GenericOp>();
   if (!genericOp)
     return failure();
@@ -463,6 +463,88 @@ public:
     if (failed(genericOp))
       return failure();
     rewriter.replaceOp(packOp, genericOp->getResults());
+    return success();
+  }
+
+private:
+  ControlPropagationFn controlFn;
+};
+
+/// Propagate a tensor.pack operation up through a tensor.pad. The idea is to
+/// add as many zero padding dimensions in `high` and `low` based on the number
+/// of point loops.
+class BubbleUpPackThroughPadOp final : public OpRewritePattern<tensor::PackOp> {
+public:
+  BubbleUpPackThroughPadOp(MLIRContext *context, ControlPropagationFn fun)
+      : OpRewritePattern<tensor::PackOp>(context), controlFn(std::move(fun)) {}
+
+  LogicalResult matchAndRewrite(tensor::PackOp packOp,
+                                PatternRewriter &rewriter) const override {
+    auto padOp = packOp.getSource().getDefiningOp<tensor::PadOp>();
+    if (!padOp)
+      return failure();
+
+    // User controlled propagation function.
+    if (!controlFn(padOp))
+      return failure();
+
+    if (!padOp.getResult().hasOneUse())
+      return failure();
+
+    // TODO: Enable padding when the padding values are the same.
+    if (packOp.getPaddingValue())
+      return failure();
+
+    // Fail for non-constant padding values. The body of the pad could
+    // depend on the padding indices and/or properties of the padded
+    // tensor so for now we fail.
+    // TODO: Support non-constant padding values.
+    Value paddingVal = padOp.getConstantPaddingValue();
+    if (!paddingVal)
+      return failure();
+
+    if (!packOp.getDest().getDefiningOp<tensor::EmptyOp>())
+      return failure();
+
+    ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();
+    ArrayRef<int64_t> outerDimsPerm = packOp.getOuterDimsPerm();
+
+    // Bail out if one of the padded dimension is a tiled one.
+    llvm::SmallBitVector paddedDims = padOp.getPaddedDims();
+    llvm::SmallBitVector innerDims(paddedDims.size());
+    for (int64_t dim : innerDimsPos)
+      innerDims.flip(dim);
+    if (paddedDims.anyCommon(innerDims))
+      return failure();
+
+    Location loc = padOp->getLoc();
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(padOp);
+
+    auto empty = tensor::PackOp::createDestinationTensor(
+        rewriter, loc, padOp.getSource(), packOp.getMixedTiles(), innerDimsPos,
+        outerDimsPerm);
+    Value packedSource = rewriter.create<tensor::PackOp>(
+        loc, padOp.getSource(), empty, innerDimsPos, packOp.getMixedTiles(),
+        /*padding=*/std::nullopt, outerDimsPerm);
+
+    // If we have `outer_dims_perms` we need to adjust the padded dimensions.
+    SmallVector<OpFoldResult> lowPad = padOp.getMixedLowPad();
+    SmallVector<OpFoldResult> highPad = padOp.getMixedHighPad();
+    if (!outerDimsPerm.empty()) {
+      applyPermutationToVector<OpFoldResult>(lowPad, outerDimsPerm);
+      applyPermutationToVector<OpFoldResult>(highPad, outerDimsPerm);
+    }
+    // The tiled dimensions were verified to be unpadded above, so here we
+    // just append 0 for the inner tile dimensions.
+    size_t pointLoopsSize = innerDimsPos.size();
+    lowPad.append(pointLoopsSize, rewriter.getIndexAttr(0));
+    highPad.append(pointLoopsSize, rewriter.getIndexAttr(0));
+
+    auto newPadOp = rewriter.create<tensor::PadOp>(
+        loc, /*result=*/Type(), packedSource, lowPad, highPad, paddingVal,
+        padOp.getNofold());
+    rewriter.replaceOp(packOp, newPadOp.getResult());
     return success();
   }
 
@@ -690,7 +772,8 @@ private:
 void mlir::linalg::populateDataLayoutPropagationPatterns(
     RewritePatternSet &patterns,
     const ControlPropagationFn &controlPackUnPackPropagation) {
-  patterns.insert<BubbleUpPackOpThroughGenericOpPattern,
-                  PushDownUnPackOpThroughGenericOp, PushDownUnPackThroughPadOp>(
-      patterns.getContext(), controlPackUnPackPropagation);
+  patterns
+      .insert<BubbleUpPackOpThroughGenericOpPattern, BubbleUpPackThroughPadOp,
+              PushDownUnPackOpThroughGenericOp, PushDownUnPackThroughPadOp>(
+          patterns.getContext(), controlPackUnPackPropagation);
 }

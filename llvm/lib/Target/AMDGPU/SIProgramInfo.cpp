@@ -15,27 +15,48 @@
 //
 
 #include "SIProgramInfo.h"
+#include "GCNSubtarget.h"
 #include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
 
 using namespace llvm;
 
-uint64_t SIProgramInfo::getComputePGMRSrc1() const {
-  return S_00B848_VGPRS(VGPRBlocks) | S_00B848_SGPRS(SGPRBlocks) |
-         S_00B848_PRIORITY(Priority) | S_00B848_FLOAT_MODE(FloatMode) |
-         S_00B848_PRIV(Priv) | S_00B848_DX10_CLAMP(DX10Clamp) |
-         S_00B848_DEBUG_MODE(DebugMode) | S_00B848_IEEE_MODE(IEEEMode) |
-         S_00B848_WGP_MODE(WgpMode) | S_00B848_MEM_ORDERED(MemOrdered);
+uint64_t SIProgramInfo::getComputePGMRSrc1(const GCNSubtarget &ST) const {
+  uint64_t Reg = S_00B848_VGPRS(VGPRBlocks) | S_00B848_SGPRS(SGPRBlocks) |
+                 S_00B848_PRIORITY(Priority) | S_00B848_FLOAT_MODE(FloatMode) |
+                 S_00B848_PRIV(Priv) | S_00B848_DEBUG_MODE(DebugMode) |
+                 S_00B848_WGP_MODE(WgpMode) | S_00B848_MEM_ORDERED(MemOrdered);
+
+  if (ST.hasDX10ClampMode())
+    Reg |= S_00B848_DX10_CLAMP(DX10Clamp);
+
+  if (ST.hasIEEEMode())
+    Reg |= S_00B848_IEEE_MODE(IEEEMode);
+
+  if (ST.hasRrWGMode())
+    Reg |= S_00B848_RR_WG_MODE(RrWgMode);
+
+  return Reg;
 }
 
-uint64_t SIProgramInfo::getPGMRSrc1(CallingConv::ID CC) const {
+uint64_t SIProgramInfo::getPGMRSrc1(CallingConv::ID CC,
+                                    const GCNSubtarget &ST) const {
   if (AMDGPU::isCompute(CC)) {
-    return getComputePGMRSrc1();
+    return getComputePGMRSrc1(ST);
   }
   uint64_t Reg = S_00B848_VGPRS(VGPRBlocks) | S_00B848_SGPRS(SGPRBlocks) |
                  S_00B848_PRIORITY(Priority) | S_00B848_FLOAT_MODE(FloatMode) |
-                 S_00B848_PRIV(Priv) | S_00B848_DX10_CLAMP(DX10Clamp) |
-                 S_00B848_DEBUG_MODE(DebugMode) | S_00B848_IEEE_MODE(IEEEMode);
+                 S_00B848_PRIV(Priv) | S_00B848_DEBUG_MODE(DebugMode);
+
+  if (ST.hasDX10ClampMode())
+    Reg |= S_00B848_DX10_CLAMP(DX10Clamp);
+
+  if (ST.hasIEEEMode())
+    Reg |= S_00B848_IEEE_MODE(IEEEMode);
+
+  if (ST.hasRrWGMode())
+    Reg |= S_00B848_RR_WG_MODE(RrWgMode);
+
   switch (CC) {
   case CallingConv::AMDGPU_PS:
     Reg |= S_00B028_MEM_ORDERED(MemOrdered);

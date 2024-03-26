@@ -50,112 +50,6 @@ static bool areBitcastCompatible(DataLayout &layout, Type lhs, Type rhs) {
 }
 
 //===----------------------------------------------------------------------===//
-// AddFieldGetterToStructDirectUse
-//===----------------------------------------------------------------------===//
-
-/// Gets the type of the first subelement of `type` if `type` is destructurable,
-/// nullptr otherwise.
-static Type getFirstSubelementType(Type type) {
-  auto destructurable = dyn_cast<DestructurableTypeInterface>(type);
-  if (!destructurable)
-    return nullptr;
-
-  Type subelementType = destructurable.getTypeAtIndex(
-      IntegerAttr::get(IntegerType::get(type.getContext(), 32), 0));
-  if (subelementType)
-    return subelementType;
-
-  return nullptr;
-}
-
-/// Extracts a pointer to the first field of an `elemType` from the address
-/// pointer of the provided MemOp, and rewires the MemOp so it uses that pointer
-/// instead.
-template <class MemOp>
-static void insertFieldIndirection(MemOp op, PatternRewriter &rewriter,
-                                   Type elemType) {
-  PatternRewriter::InsertionGuard guard(rewriter);
-
-  rewriter.setInsertionPointAfterValue(op.getAddr());
-  SmallVector<GEPArg> firstTypeIndices{0, 0};
-
-  Value properPtr = rewriter.create<GEPOp>(
-      op->getLoc(), LLVM::LLVMPointerType::get(op.getContext()), elemType,
-      op.getAddr(), firstTypeIndices);
-
-  rewriter.updateRootInPlace(op,
-                             [&]() { op.getAddrMutable().assign(properPtr); });
-}
-
-template <>
-LogicalResult AddFieldGetterToStructDirectUse<LoadOp>::matchAndRewrite(
-    LoadOp load, PatternRewriter &rewriter) const {
-  PatternRewriter::InsertionGuard guard(rewriter);
-
-  // Load from typed pointers are not supported.
-  if (!load.getAddr().getType().isOpaque())
-    return failure();
-
-  Type inconsistentElementType =
-      isElementTypeInconsistent(load.getAddr(), load.getType());
-  if (!inconsistentElementType)
-    return failure();
-  Type firstType = getFirstSubelementType(inconsistentElementType);
-  if (!firstType)
-    return failure();
-  DataLayout layout = DataLayout::closest(load);
-  if (!areBitcastCompatible(layout, firstType, load.getResult().getType()))
-    return failure();
-
-  insertFieldIndirection<LoadOp>(load, rewriter, inconsistentElementType);
-
-  // If the load does not use the first type but a type that can be casted from
-  // it, add a bitcast and change the load type.
-  if (firstType != load.getResult().getType()) {
-    rewriter.setInsertionPointAfterValue(load.getResult());
-    BitcastOp bitcast = rewriter.create<BitcastOp>(
-        load->getLoc(), load.getResult().getType(), load.getResult());
-    rewriter.updateRootInPlace(load,
-                               [&]() { load.getResult().setType(firstType); });
-    rewriter.replaceAllUsesExcept(load.getResult(), bitcast.getResult(),
-                                  bitcast);
-  }
-
-  return success();
-}
-
-template <>
-LogicalResult AddFieldGetterToStructDirectUse<StoreOp>::matchAndRewrite(
-    StoreOp store, PatternRewriter &rewriter) const {
-  PatternRewriter::InsertionGuard guard(rewriter);
-
-  // Store to typed pointers are not supported.
-  if (!store.getAddr().getType().isOpaque())
-    return failure();
-
-  Type inconsistentElementType =
-      isElementTypeInconsistent(store.getAddr(), store.getValue().getType());
-  if (!inconsistentElementType)
-    return failure();
-  Type firstType = getFirstSubelementType(inconsistentElementType);
-  if (!firstType)
-    return failure();
-
-  DataLayout layout = DataLayout::closest(store);
-  // Check that the first field has the right type or can at least be bitcast
-  // to the right type.
-  if (!areBitcastCompatible(layout, firstType, store.getValue().getType()))
-    return failure();
-
-  insertFieldIndirection<StoreOp>(store, rewriter, inconsistentElementType);
-
-  rewriter.updateRootInPlace(
-      store, [&]() { store.getValueMutable().assign(store.getValue()); });
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // CanonicalizeAlignedGep
 //===----------------------------------------------------------------------===//
 
@@ -169,12 +63,15 @@ static std::optional<uint64_t> gepToByteOffset(DataLayout &layout, GEPOp gep) {
     IntegerAttr indexInt = llvm::dyn_cast_if_present<IntegerAttr>(index);
     if (!indexInt)
       return std::nullopt;
-    indices.push_back(indexInt.getInt());
+    int32_t gepIndex = indexInt.getInt();
+    if (gepIndex < 0)
+      return std::nullopt;
+    indices.push_back(static_cast<uint32_t>(gepIndex));
   }
 
-  uint64_t offset = indices[0] * layout.getTypeSize(gep.getSourceElementType());
+  uint64_t offset = indices[0] * layout.getTypeSize(gep.getElemType());
 
-  Type currentType = gep.getSourceElementType();
+  Type currentType = gep.getElemType();
   for (uint32_t index : llvm::drop_begin(indices)) {
     bool shouldCancel =
         TypeSwitch<Type, bool>(currentType)
@@ -493,7 +390,8 @@ static void splitVectorStore(const DataLayout &dataLayout, Location loc,
     // Other patterns will turn this into a type-consistent GEP.
     auto gepOp = rewriter.create<GEPOp>(
         loc, address.getType(), rewriter.getI8Type(), address,
-        ArrayRef<GEPArg>{storeOffset + index * elementSize});
+        ArrayRef<GEPArg>{
+            static_cast<int32_t>(storeOffset + index * elementSize)});
 
     rewriter.create<StoreOp>(loc, extractOp, gepOp);
   }
@@ -529,9 +427,9 @@ static void splitIntegerStore(const DataLayout &dataLayout, Location loc,
 
     // We create an `i8` indexed GEP here as that is the easiest (offset is
     // already known). Other patterns turn this into a type-consistent GEP.
-    auto gepOp =
-        rewriter.create<GEPOp>(loc, address.getType(), rewriter.getI8Type(),
-                               address, ArrayRef<GEPArg>{currentOffset});
+    auto gepOp = rewriter.create<GEPOp>(
+        loc, address.getType(), rewriter.getI8Type(), address,
+        ArrayRef<GEPArg>{static_cast<int32_t>(currentOffset)});
     rewriter.create<StoreOp>(loc, valueToStore, gepOp);
 
     // No need to care about padding here since we already checked previously
@@ -579,7 +477,7 @@ LogicalResult SplitStores::matchAndRewrite(StoreOp store,
         return failure();
 
       offset = *byteOffset;
-      typeHint = gepOp.getSourceElementType();
+      typeHint = gepOp.getElemType();
       address = gepOp.getBase();
     }
   }
@@ -635,8 +533,8 @@ LogicalResult BitcastStores::matchAndRewrite(StoreOp store,
 
   auto bitcastOp =
       rewriter.create<BitcastOp>(store.getLoc(), typeHint, store.getValue());
-  rewriter.updateRootInPlace(
-      store, [&] { store.getValueMutable().assign(bitcastOp); });
+  rewriter.modifyOpInPlace(store,
+                           [&] { store.getValueMutable().assign(bitcastOp); });
   return success();
 }
 
@@ -661,8 +559,7 @@ LogicalResult SplitGEP::matchAndRewrite(GEPOp gepOp,
 
   // Split of the first GEP using the first two indices.
   auto subGepOp = rewriter.create<GEPOp>(
-      gepOp.getLoc(), gepOp.getType(), gepOp.getSourceElementType(),
-      gepOp.getBase(),
+      gepOp.getLoc(), gepOp.getType(), gepOp.getElemType(), gepOp.getBase(),
       llvm::map_to_vector(llvm::make_range(indices.begin(), splitIter),
                           indexToGEPArg),
       gepOp.getInbounds());
@@ -689,9 +586,6 @@ struct LLVMTypeConsistencyPass
     : public LLVM::impl::LLVMTypeConsistencyBase<LLVMTypeConsistencyPass> {
   void runOnOperation() override {
     RewritePatternSet rewritePatterns(&getContext());
-    rewritePatterns.add<AddFieldGetterToStructDirectUse<LoadOp>>(&getContext());
-    rewritePatterns.add<AddFieldGetterToStructDirectUse<StoreOp>>(
-        &getContext());
     rewritePatterns.add<CanonicalizeAlignedGep>(&getContext());
     rewritePatterns.add<SplitStores>(&getContext(), maxVectorSplitSize);
     rewritePatterns.add<BitcastStores>(&getContext());

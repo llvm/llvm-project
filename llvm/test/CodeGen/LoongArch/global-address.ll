@@ -53,32 +53,32 @@ define void @foo() nounwind {
 ; LA64LARGENOPIC-LABEL: foo:
 ; LA64LARGENOPIC:       # %bb.0:
 ; LA64LARGENOPIC-NEXT:    pcalau12i $a0, %got_pc_hi20(G)
-; LA64LARGENOPIC-NEXT:    addi.d $a1, $zero, %got_pc_lo12(G)
-; LA64LARGENOPIC-NEXT:    lu32i.d $a1, %got64_pc_lo20(G)
-; LA64LARGENOPIC-NEXT:    lu52i.d $a1, $a1, %got64_pc_hi12(G)
-; LA64LARGENOPIC-NEXT:    ldx.d $a0, $a1, $a0
+; LA64LARGENOPIC-NEXT:    addi.d $t8, $zero, %got_pc_lo12(G)
+; LA64LARGENOPIC-NEXT:    lu32i.d $t8, %got64_pc_lo20(G)
+; LA64LARGENOPIC-NEXT:    lu52i.d $t8, $t8, %got64_pc_hi12(G)
+; LA64LARGENOPIC-NEXT:    ldx.d $a0, $t8, $a0
 ; LA64LARGENOPIC-NEXT:    ld.w $a0, $a0, 0
 ; LA64LARGENOPIC-NEXT:    pcalau12i $a0, %pc_hi20(g)
-; LA64LARGENOPIC-NEXT:    addi.d $a1, $zero, %pc_lo12(g)
-; LA64LARGENOPIC-NEXT:    lu32i.d $a1, %pc64_lo20(g)
-; LA64LARGENOPIC-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g)
-; LA64LARGENOPIC-NEXT:    add.d $a0, $a1, $a0
+; LA64LARGENOPIC-NEXT:    addi.d $t8, $zero, %pc_lo12(g)
+; LA64LARGENOPIC-NEXT:    lu32i.d $t8, %pc64_lo20(g)
+; LA64LARGENOPIC-NEXT:    lu52i.d $t8, $t8, %pc64_hi12(g)
+; LA64LARGENOPIC-NEXT:    add.d $a0, $t8, $a0
 ; LA64LARGENOPIC-NEXT:    ld.w $a0, $a0, 0
 ; LA64LARGENOPIC-NEXT:    ret
 ;
 ; LA64LARGEPIC-LABEL: foo:
 ; LA64LARGEPIC:       # %bb.0:
 ; LA64LARGEPIC-NEXT:    pcalau12i $a0, %got_pc_hi20(G)
-; LA64LARGEPIC-NEXT:    addi.d $a1, $zero, %got_pc_lo12(G)
-; LA64LARGEPIC-NEXT:    lu32i.d $a1, %got64_pc_lo20(G)
-; LA64LARGEPIC-NEXT:    lu52i.d $a1, $a1, %got64_pc_hi12(G)
-; LA64LARGEPIC-NEXT:    ldx.d $a0, $a1, $a0
+; LA64LARGEPIC-NEXT:    addi.d $t8, $zero, %got_pc_lo12(G)
+; LA64LARGEPIC-NEXT:    lu32i.d $t8, %got64_pc_lo20(G)
+; LA64LARGEPIC-NEXT:    lu52i.d $t8, $t8, %got64_pc_hi12(G)
+; LA64LARGEPIC-NEXT:    ldx.d $a0, $t8, $a0
 ; LA64LARGEPIC-NEXT:    ld.w $a0, $a0, 0
 ; LA64LARGEPIC-NEXT:    pcalau12i $a0, %pc_hi20(.Lg$local)
-; LA64LARGEPIC-NEXT:    addi.d $a1, $zero, %pc_lo12(.Lg$local)
-; LA64LARGEPIC-NEXT:    lu32i.d $a1, %pc64_lo20(.Lg$local)
-; LA64LARGEPIC-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(.Lg$local)
-; LA64LARGEPIC-NEXT:    add.d $a0, $a1, $a0
+; LA64LARGEPIC-NEXT:    addi.d $t8, $zero, %pc_lo12(.Lg$local)
+; LA64LARGEPIC-NEXT:    lu32i.d $t8, %pc64_lo20(.Lg$local)
+; LA64LARGEPIC-NEXT:    lu52i.d $t8, $t8, %pc64_hi12(.Lg$local)
+; LA64LARGEPIC-NEXT:    add.d $a0, $t8, $a0
 ; LA64LARGEPIC-NEXT:    ld.w $a0, $a0, 0
 ; LA64LARGEPIC-NEXT:    ret
   %V = load volatile i32, ptr @G

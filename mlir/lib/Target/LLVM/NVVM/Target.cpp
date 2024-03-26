@@ -13,6 +13,7 @@
 
 #include "mlir/Target/LLVM/NVVM/Target.h"
 
+#include "mlir/Config/mlir-config.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Target/LLVM/NVVM/Utils.h"
@@ -21,6 +22,7 @@
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -106,7 +108,7 @@ void SerializeGPUModuleBase::init() {
   static llvm::once_flag initializeBackendOnce;
   llvm::call_once(initializeBackendOnce, []() {
   // If the `NVPTX` LLVM target was built, initialize it.
-#if MLIR_CUDA_CONVERSIONS_ENABLED == 1
+#if LLVM_HAS_NVPTX_TARGET
     LLVMInitializeNVPTXTarget();
     LLVMInitializeNVPTXTargetInfo();
     LLVMInitializeNVPTXTargetMC();
@@ -148,16 +150,15 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs() {
 }
 
 std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
-SerializeGPUModuleBase::loadBitcodeFiles(llvm::Module &module,
-                                         llvm::TargetMachine &targetMachine) {
+SerializeGPUModuleBase::loadBitcodeFiles(llvm::Module &module) {
   SmallVector<std::unique_ptr<llvm::Module>> bcFiles;
-  if (failed(loadBitcodeFilesFromList(module.getContext(), targetMachine,
-                                      fileList, bcFiles, true)))
+  if (failed(loadBitcodeFilesFromList(module.getContext(), fileList, bcFiles,
+                                      true)))
     return std::nullopt;
   return std::move(bcFiles);
 }
 
-#if MLIR_CUDA_CONVERSIONS_ENABLED == 1
+#if MLIR_ENABLE_CUDA_CONVERSIONS
 namespace {
 class NVPTXSerializer : public SerializeGPUModuleBase {
 public:
@@ -175,8 +176,7 @@ public:
   compileToBinaryNVPTX(const std::string &ptxCode);
 
   std::optional<SmallVector<char, 0>>
-  moduleToObject(llvm::Module &llvmModule,
-                 llvm::TargetMachine &targetMachine) override;
+  moduleToObject(llvm::Module &llvmModule) override;
 
 private:
   using TmpFile = std::pair<llvm::SmallString<128>, llvm::FileRemover>;
@@ -223,7 +223,7 @@ std::optional<std::string> NVPTXSerializer::findTool(StringRef tool) {
   // 1. Check the toolkit path given in the command line.
   StringRef pathRef = targetOptions.getToolkitPath();
   SmallVector<char, 256> path;
-  if (pathRef.size()) {
+  if (!pathRef.empty()) {
     path.insert(path.begin(), pathRef.begin(), pathRef.end());
     llvm::sys::path::append(path, "bin", tool);
     if (llvm::sys::fs::can_execute(path))
@@ -238,7 +238,7 @@ std::optional<std::string> NVPTXSerializer::findTool(StringRef tool) {
   // 3. Check `getCUDAToolkitPath()`.
   pathRef = getCUDAToolkitPath();
   path.clear();
-  if (pathRef.size()) {
+  if (!pathRef.empty()) {
     path.insert(path.begin(), pathRef.begin(), pathRef.end());
     llvm::sys::path::append(path, "bin", tool);
     if (llvm::sys::fs::can_execute(path))
@@ -330,7 +330,7 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
        "--opt-level", optLevel});
 
   bool useFatbin32 = false;
-  for (auto cArg : cmdOpts.second) {
+  for (const auto *cArg : cmdOpts.second) {
     // All `cmdOpts` are for `ptxas` except `-32` which passes `-32` to
     // `fatbinary`, indicating a 32-bit target. By default a 64-bit target is
     // assumed.
@@ -413,7 +413,7 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
   LLVM_DEBUG({
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
         llvm::MemoryBuffer::getFile(logFile->first);
-    if (logBuffer && (*logBuffer)->getBuffer().size()) {
+    if (logBuffer && !(*logBuffer)->getBuffer().empty()) {
       llvm::dbgs() << "Output:\n" << (*logBuffer)->getBuffer() << "\n";
       llvm::dbgs().flush();
     }
@@ -432,7 +432,7 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
   return SmallVector<char, 0>(fatbin.begin(), fatbin.end());
 }
 
-#if MLIR_NVPTXCOMPILER_ENABLED == 1
+#if MLIR_ENABLE_NVPTXCOMPILER
 #include "nvPTXCompiler.h"
 
 #define RETURN_ON_NVPTXCOMPILER_ERROR(expr)                                    \
@@ -511,11 +511,10 @@ NVPTXSerializer::compileToBinaryNVPTX(const std::string &ptxCode) {
   RETURN_ON_NVPTXCOMPILER_ERROR(nvPTXCompilerDestroy(&compiler));
   return binary;
 }
-#endif // MLIR_NVPTXCOMPILER_ENABLED == 1
+#endif // MLIR_ENABLE_NVPTXCOMPILER
 
 std::optional<SmallVector<char, 0>>
-NVPTXSerializer::moduleToObject(llvm::Module &llvmModule,
-                                llvm::TargetMachine &targetMachine) {
+NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
   // Return LLVM IR if the compilation target is offload.
 #define DEBUG_TYPE "serialize-to-llvm"
   LLVM_DEBUG({
@@ -526,11 +525,18 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule,
   });
 #undef DEBUG_TYPE
   if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Offload)
-    return SerializeGPUModuleBase::moduleToObject(llvmModule, targetMachine);
+    return SerializeGPUModuleBase::moduleToObject(llvmModule);
 
   // Emit PTX code.
+  std::optional<llvm::TargetMachine *> targetMachine =
+      getOrCreateTargetMachine();
+  if (!targetMachine) {
+    getOperation().emitError() << "Target Machine unavailable for triple "
+                               << triple << ", can't optimize with LLVM\n";
+    return std::nullopt;
+  }
   std::optional<std::string> serializedISA =
-      translateToISA(llvmModule, targetMachine);
+      translateToISA(llvmModule, **targetMachine);
   if (!serializedISA) {
     getOperation().emitError() << "Failed translating the module to ISA.";
     return std::nullopt;
@@ -551,14 +557,14 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule,
     return SmallVector<char, 0>(bin.begin(), bin.end());
   }
 
-    // Compile to binary.
-#if MLIR_NVPTXCOMPILER_ENABLED == 1
+  // Compile to binary.
+#if MLIR_ENABLE_NVPTXCOMPILER
   return compileToBinaryNVPTX(*serializedISA);
 #else
   return compileToBinary(*serializedISA);
-#endif // MLIR_NVPTXCOMPILER_ENABLED == 1
+#endif // MLIR_ENABLE_NVPTXCOMPILER
 }
-#endif // MLIR_CUDA_CONVERSIONS_ENABLED == 1
+#endif // MLIR_ENABLE_CUDA_CONVERSIONS
 
 std::optional<SmallVector<char, 0>>
 NVVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
@@ -570,7 +576,7 @@ NVVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
     module->emitError("Module must be a GPU module.");
     return std::nullopt;
   }
-#if MLIR_CUDA_CONVERSIONS_ENABLED == 1
+#if MLIR_ENABLE_CUDA_CONVERSIONS
   NVPTXSerializer serializer(*module, cast<NVVMTargetAttr>(attribute), options);
   serializer.init();
   return serializer.run();
@@ -578,7 +584,7 @@ NVVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
   module->emitError(
       "The `NVPTX` target was not built. Please enable it when building LLVM.");
   return std::nullopt;
-#endif // MLIR_CUDA_CONVERSIONS_ENABLED == 1
+#endif // MLIR_ENABLE_CUDA_CONVERSIONS
 }
 
 Attribute

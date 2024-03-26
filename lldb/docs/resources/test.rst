@@ -17,8 +17,8 @@ The LLDB test suite consists of three different kinds of test:
   the output.
 * **API tests**: Integration tests that interact with the debugger through the
   SB API. These are written in Python and use LLDB's ``dotest.py`` testing
-  framework on top of Python's `unittest2
-  <https://docs.python.org/2/library/unittest.html>`_.
+  framework on top of Python's `unittest
+  <https://docs.python.org/3/library/unittest.html>`_.
 
 All three test suites use ``lit`` (`LLVM Integrated Tester
 <https://llvm.org/docs/CommandGuide/lit.html>`_ ) as the test driver. The test
@@ -94,7 +94,7 @@ programs from source, run them, and debug the processes.
 As mentioned before, ``dotest.py`` is LLDB's testing framework. The
 implementation is located under ``lldb/packages/Python/lldbsuite``. We have
 several extensions and custom test primitives on top of what's offered by
-`unittest2 <https://docs.python.org/2/library/unittest.html>`_. Those can be
+`unittest <https://docs.python.org/3/library/unittest.html>`_. Those can be
 found  in
 `lldbtest.py <https://github.com/llvm/llvm-project/blob/main/lldb/packages/Python/lldbsuite/test/lldbtest.py>`_.
 
@@ -146,7 +146,7 @@ the test should be run or not.
 
 ::
 
-  @expectedFailure(checking_function_name)
+  @skipTestIfFn(checking_function_name)
 
 In addition to providing a lot more flexibility when it comes to writing the
 test, the API test also allow for much more complex scenarios when it comes to
@@ -483,7 +483,7 @@ run as part of a test suite.
 
 ::
 
-   $ ./bin/llvm-lit -sv tools/lldb/test --filter <test>
+   $ ./bin/llvm-lit -sv <llvm-project-root>/lldb/test --filter <test>
 
 
 Because lit automatically scans a directory for tests, it's also possible to
@@ -491,7 +491,7 @@ pass a subdirectory to run a specific subset of the tests.
 
 ::
 
-   $ ./bin/llvm-lit -sv tools/lldb/test/Shell/Commands/CommandScriptImmediateOutput
+   $ ./bin/llvm-lit -sv <llvm-project-root>/lldb/test/Shell/Commands/CommandScriptImmediateOutput
 
 
 For the SB API tests it is possible to forward arguments to ``dotest.py`` by
@@ -499,7 +499,7 @@ passing ``--param`` to lit and setting a value for ``dotest-args``.
 
 ::
 
-   $ ./bin/llvm-lit -sv tools/lldb/test --param dotest-args='-C gcc'
+   $ ./bin/llvm-lit -sv <llvm-project-root>/lldb/test --param dotest-args='-C gcc'
 
 
 Below is an overview of running individual test in the unit and API test suites

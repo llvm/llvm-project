@@ -1,4 +1,4 @@
-; RUN: llvm-reduce --delta-passes=functions --test FileCheck --test-arg --check-prefixes=INTERESTING --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=functions --test FileCheck --test-arg --check-prefixes=INTERESTING --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefixes=RESULT --input-file=%t %s
 
 ; FIXME: This testcase exhibits nonsensical behavior. The first

@@ -34,8 +34,6 @@ using ModulePassManager = PassManager<Module>;
 
 class Function;
 class GlobalValue;
-class MachineFunctionPassManager;
-class MachineFunctionAnalysisManager;
 class MachineModuleInfoWrapperPass;
 class Mangler;
 class MCAsmInfo;
@@ -239,14 +237,17 @@ public:
   void setCodeModel(CodeModel::Model CM) { CMModel = CM; }
 
   void setLargeDataThreshold(uint64_t LDT) { LargeDataThreshold = LDT; }
-  bool isLargeData(const GlobalVariable *GV) const;
+  bool isLargeGlobalValue(const GlobalValue *GV) const;
 
   bool isPositionIndependent() const;
 
-  bool shouldAssumeDSOLocal(const Module &M, const GlobalValue *GV) const;
+  bool shouldAssumeDSOLocal(const GlobalValue *GV) const;
 
   /// Returns true if this target uses emulated TLS.
   bool useEmulatedTLS() const;
+
+  /// Returns true if this target uses TLS Descriptors.
+  bool useTLSDESC() const;
 
   /// Returns the TLS model which should be used for the given global variable.
   TLSModel::Model getTLSModel(const GlobalValue *GV) const;
@@ -362,7 +363,9 @@ public:
   virtual TargetTransformInfo getTargetTransformInfo(const Function &F) const;
 
   /// Allow the target to modify the pass pipeline.
-  virtual void registerPassBuilderCallbacks(PassBuilder &) {}
+  // TODO: Populate all pass names by using <Target>PassRegistry.def.
+  virtual void registerPassBuilderCallbacks(PassBuilder &,
+                                            bool PopulateClassToPassNames) {}
 
   /// Allow the target to register alias analyses with the AAManager for use
   /// with the new pass manager. Only affects the "default" AAManager.
@@ -450,19 +453,12 @@ public:
                       bool DisableVerify = true,
                       MachineModuleInfoWrapperPass *MMIWP = nullptr) override;
 
-  virtual Error buildCodeGenPipeline(ModulePassManager &,
-                                     MachineFunctionPassManager &,
-                                     MachineFunctionAnalysisManager &,
-                                     raw_pwrite_stream &, raw_pwrite_stream *,
-                                     CodeGenFileType, CGPassBuilderOption,
+  virtual Error buildCodeGenPipeline(ModulePassManager &, raw_pwrite_stream &,
+                                     raw_pwrite_stream *, CodeGenFileType,
+                                     const CGPassBuilderOption &,
                                      PassInstrumentationCallbacks *) {
     return make_error<StringError>("buildCodeGenPipeline is not overridden",
                                    inconvertibleErrorCode());
-  }
-
-  virtual std::pair<StringRef, bool> getPassNameFromLegacyName(StringRef) {
-    llvm_unreachable(
-        "getPassNameFromLegacyName parseMIRPipeline is not overridden");
   }
 
   /// Add passes to the specified pass manager to get machine code emitted with

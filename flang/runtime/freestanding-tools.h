@@ -37,6 +37,16 @@
 #define STD_MEMCMP_UNSUPPORTED 1
 #endif
 
+#if !defined(STD_REALLOC_UNSUPPORTED) && \
+    (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
+#define STD_REALLOC_UNSUPPORTED 1
+#endif
+
+#if !defined(STD_MEMCHR_UNSUPPORTED) && \
+    (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
+#define STD_MEMCHR_UNSUPPORTED 1
+#endif
+
 namespace Fortran::runtime {
 
 #if STD_FILL_N_UNSUPPORTED
@@ -116,6 +126,35 @@ static inline RT_API_ATTRS int memcmp(
 }
 #else // !STD_MEMCMP_UNSUPPORTED
 using std::memcmp;
+#endif // !STD_MEMCMP_UNSUPPORTED
+
+#if STD_REALLOC_UNSUPPORTED
+static inline RT_API_ATTRS void *realloc(void *ptr, std::size_t newByteSize) {
+  // Return nullptr and let the callers assert that.
+  // TODO: we can provide a straightforward implementation
+  // via malloc/memcpy/free.
+  return nullptr;
+}
+#else // !STD_REALLOC_UNSUPPORTED
+using std::realloc;
+#endif // !STD_REALLOC_UNSUPPORTED
+
+#if STD_MEMCHR_UNSUPPORTED
+// Provides alternative implementation for std::memchr(), if
+// it is not supported.
+static inline RT_API_ATTRS const void *memchr(
+    const void *ptr, int ch, std::size_t count) {
+  auto buf{reinterpret_cast<const unsigned char *>(ptr)};
+  auto c{static_cast<unsigned char>(ch)};
+  for (; count--; ++buf) {
+    if (*buf == c) {
+      return buf;
+    }
+  }
+  return nullptr;
+}
+#else // !STD_MEMCMP_UNSUPPORTED
+using std::memchr;
 #endif // !STD_MEMCMP_UNSUPPORTED
 
 } // namespace Fortran::runtime

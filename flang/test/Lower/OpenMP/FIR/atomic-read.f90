@@ -1,4 +1,6 @@
-! RUN: bbc --use-desc-for-alloc=false -fopenmp -emit-fir %s -o - | FileCheck %s
+! REQUIRES: openmp_runtime
+
+! RUN: bbc --use-desc-for-alloc=false -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! This test checks the lowering of atomic read
 

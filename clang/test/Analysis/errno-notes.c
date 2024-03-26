@@ -3,7 +3,7 @@
 // RUN:   -analyzer-checker=apiModeling.Errno \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-checker=debug.ErrnoTest \
-// RUN:   -analyzer-checker=alpha.unix.Errno \
+// RUN:   -analyzer-checker=unix.Errno \
 // RUN:   -DERRNO_VAR
 
 // RUN: %clang_analyze_cc1 -verify -analyzer-output text %s \
@@ -11,7 +11,7 @@
 // RUN:   -analyzer-checker=apiModeling.Errno \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-checker=debug.ErrnoTest \
-// RUN:   -analyzer-checker=alpha.unix.Errno \
+// RUN:   -analyzer-checker=unix.Errno \
 // RUN:   -DERRNO_FUNC
 
 #include "Inputs/errno_var.h"

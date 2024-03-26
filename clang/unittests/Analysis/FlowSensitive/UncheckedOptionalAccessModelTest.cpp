@@ -770,12 +770,17 @@ constexpr bool operator!=(const optional<T> &lhs, const optional<U> &rhs);
 
 template <typename T>
 constexpr bool operator==(const optional<T> &opt, nullopt_t);
+
+// C++20 and later do not define the following overloads because they are
+// provided by rewritten candidates instead.
+#if __cplusplus < 202002L
 template <typename T>
 constexpr bool operator==(nullopt_t, const optional<T> &opt);
 template <typename T>
 constexpr bool operator!=(const optional<T> &opt, nullopt_t);
 template <typename T>
 constexpr bool operator!=(nullopt_t, const optional<T> &opt);
+#endif  // __cplusplus < 202002L
 
 template <typename T, typename U>
 constexpr bool operator==(const optional<T> &opt, const U &value);
@@ -1289,6 +1294,15 @@ protected:
   template <typename FuncDeclMatcher>
   void ExpectDiagnosticsFor(std::string SourceCode,
                             FuncDeclMatcher FuncMatcher) {
+    // Run in C++17 and C++20 mode to cover differences in the AST between modes
+    // (e.g. C++20 can contain `CXXRewrittenBinaryOperator`).
+    for (const char *CxxMode : {"-std=c++17", "-std=c++20"})
+      ExpectDiagnosticsFor(SourceCode, FuncMatcher, CxxMode);
+  }
+
+  template <typename FuncDeclMatcher>
+  void ExpectDiagnosticsFor(std::string SourceCode, FuncDeclMatcher FuncMatcher,
+                            const char *CxxMode) {
     ReplaceAllOccurrences(SourceCode, "$ns", GetParam().NamespaceName);
     ReplaceAllOccurrences(SourceCode, "$optional", GetParam().TypeName);
 
@@ -1319,8 +1333,8 @@ protected:
     llvm::Error Error = checkDataflow<UncheckedOptionalAccessModel>(
         AnalysisInputs<UncheckedOptionalAccessModel>(
             SourceCode, std::move(FuncMatcher),
-            [](ASTContext &Ctx, Environment &) {
-              return UncheckedOptionalAccessModel(Ctx);
+            [](ASTContext &Ctx, Environment &Env) {
+              return UncheckedOptionalAccessModel(Ctx, Env);
             })
             .withPostVisitCFG(
                 [&Diagnostics,
@@ -1332,7 +1346,7 @@ protected:
                   llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
                 })
             .withASTBuildArgs(
-                {"-fsyntax-only", "-std=c++17", "-Wno-undefined-inline"})
+                {"-fsyntax-only", CxxMode, "-Wno-undefined-inline"})
             .withASTBuildVirtualMappedFiles(
                 tooling::FileContentMappings(Headers.begin(), Headers.end())),
         /*VerifyResults=*/[&Diagnostics](
@@ -3369,6 +3383,66 @@ TEST_P(UncheckedOptionalAccessTest, LambdaCaptureStateNotPropagated) {
     }
   )");
 }
+
+TEST_P(UncheckedOptionalAccessTest, ClassDerivedFromOptional) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Derived : public $ns::$optional<int> {};
+
+    void target(Derived opt) {
+      *opt;  // [[unsafe]]
+      if (opt.has_value())
+        *opt;
+
+      // The same thing, but with a pointer receiver.
+      Derived *popt = &opt;
+      **popt;  // [[unsafe]]
+      if (popt->has_value())
+        **popt;
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ClassTemplateDerivedFromOptional) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    template <class T>
+    struct Derived : public $ns::$optional<T> {};
+
+    void target(Derived<int> opt) {
+      *opt;  // [[unsafe]]
+      if (opt.has_value())
+        *opt;
+
+      // The same thing, but with a pointer receiver.
+      Derived<int> *popt = &opt;
+      **popt;  // [[unsafe]]
+      if (popt->has_value())
+        **popt;
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ClassDerivedPrivatelyFromOptional) {
+  // Classes that derive privately from optional can themselves still call
+  // member functions of optional. Check that we model the optional correctly
+  // in this situation.
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Derived : private $ns::$optional<int> {
+      void Method() {
+        **this;  // [[unsafe]]
+        if (this->has_value())
+          **this;
+      }
+    };
+  )",
+                       ast_matchers::hasName("Method"));
+}
+
 // FIXME: Add support for:
 // - constructors (copy, move)
 // - assignment operators (default, copy, move)

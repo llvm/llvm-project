@@ -89,9 +89,11 @@ public:
   GetRegisterInfo(llvm::StringRef reg_name) const;
 
   typedef std::vector<lldb_private::RegisterInfo> reg_collection;
-  llvm::iterator_range<reg_collection::const_iterator> registers() const {
-    return llvm::iterator_range<reg_collection::const_iterator>(m_regs);
-  }
+  typedef llvm::iterator_range<reg_collection::const_iterator>
+      reg_collection_const_range;
+  typedef llvm::iterator_range<reg_collection::iterator> reg_collection_range;
+
+  template <typename T> T registers() = delete;
 
   void ConfigureOffsets();
 
@@ -130,6 +132,18 @@ protected:
   bool m_finalized = false;
   bool m_is_reconfigurable = false;
 };
+
+template <>
+inline DynamicRegisterInfo::reg_collection_const_range
+DynamicRegisterInfo::registers() {
+  return reg_collection_const_range(m_regs);
+}
+
+template <>
+inline DynamicRegisterInfo::reg_collection_range
+DynamicRegisterInfo::registers() {
+  return reg_collection_range(m_regs);
+}
 
 void addSupplementaryRegister(std::vector<DynamicRegisterInfo::Register> &regs,
                               DynamicRegisterInfo::Register new_reg_info);

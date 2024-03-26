@@ -107,9 +107,7 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
 static bool refineInstruction(SCCPSolver &Solver,
                               const SmallPtrSetImpl<Value *> &InsertedValues,
                               Instruction &Inst) {
-  if (!isa<OverflowingBinaryOperator>(Inst))
-    return false;
-
+  bool Changed = false;
   auto GetRange = [&Solver, &InsertedValues](Value *Op) {
     if (auto *Const = dyn_cast<ConstantInt>(Op))
       return ConstantRange(Const->getValue());
@@ -120,23 +118,32 @@ static bool refineInstruction(SCCPSolver &Solver,
     return getConstantRange(Solver.getLatticeValueFor(Op), Op->getType(),
                             /*UndefAllowed=*/false);
   };
-  auto RangeA = GetRange(Inst.getOperand(0));
-  auto RangeB = GetRange(Inst.getOperand(1));
-  bool Changed = false;
-  if (!Inst.hasNoUnsignedWrap()) {
-    auto NUWRange = ConstantRange::makeGuaranteedNoWrapRegion(
-        Instruction::BinaryOps(Inst.getOpcode()), RangeB,
-        OverflowingBinaryOperator::NoUnsignedWrap);
-    if (NUWRange.contains(RangeA)) {
-      Inst.setHasNoUnsignedWrap();
-      Changed = true;
+
+  if (isa<OverflowingBinaryOperator>(Inst)) {
+    auto RangeA = GetRange(Inst.getOperand(0));
+    auto RangeB = GetRange(Inst.getOperand(1));
+    if (!Inst.hasNoUnsignedWrap()) {
+      auto NUWRange = ConstantRange::makeGuaranteedNoWrapRegion(
+          Instruction::BinaryOps(Inst.getOpcode()), RangeB,
+          OverflowingBinaryOperator::NoUnsignedWrap);
+      if (NUWRange.contains(RangeA)) {
+        Inst.setHasNoUnsignedWrap();
+        Changed = true;
+      }
     }
-  }
-  if (!Inst.hasNoSignedWrap()) {
-    auto NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(
-        Instruction::BinaryOps(Inst.getOpcode()), RangeB, OverflowingBinaryOperator::NoSignedWrap);
-    if (NSWRange.contains(RangeA)) {
-      Inst.setHasNoSignedWrap();
+    if (!Inst.hasNoSignedWrap()) {
+      auto NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(
+          Instruction::BinaryOps(Inst.getOpcode()), RangeB,
+          OverflowingBinaryOperator::NoSignedWrap);
+      if (NSWRange.contains(RangeA)) {
+        Inst.setHasNoSignedWrap();
+        Changed = true;
+      }
+    }
+  } else if (isa<ZExtInst>(Inst) && !Inst.hasNonNeg()) {
+    auto Range = GetRange(Inst.getOperand(0));
+    if (Range.isAllNonNegative()) {
+      Inst.setNonNeg();
       Changed = true;
     }
   }
@@ -170,7 +177,8 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     Value *Op0 = Inst.getOperand(0);
     if (InsertedValues.count(Op0) || !isNonNegative(Op0))
       return false;
-    NewInst = new ZExtInst(Op0, Inst.getType(), "", &Inst);
+    NewInst = new ZExtInst(Op0, Inst.getType(), "", Inst.getIterator());
+    NewInst->setNonNeg();
     break;
   }
   case Instruction::AShr: {
@@ -178,7 +186,8 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     Value *Op0 = Inst.getOperand(0);
     if (InsertedValues.count(Op0) || !isNonNegative(Op0))
       return false;
-    NewInst = BinaryOperator::CreateLShr(Op0, Inst.getOperand(1), "", &Inst);
+    NewInst = BinaryOperator::CreateLShr(Op0, Inst.getOperand(1), "", Inst.getIterator());
+    NewInst->setIsExact(Inst.isExact());
     break;
   }
   case Instruction::SDiv:
@@ -190,7 +199,9 @@ static bool replaceSignedInst(SCCPSolver &Solver,
       return false;
     auto NewOpcode = Inst.getOpcode() == Instruction::SDiv ? Instruction::UDiv
                                                            : Instruction::URem;
-    NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", &Inst);
+    NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", Inst.getIterator());
+    if (Inst.getOpcode() == Instruction::SDiv)
+      NewInst->setIsExact(Inst.isExact());
     break;
   }
   default:
@@ -299,6 +310,7 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
         new UnreachableInst(DefaultDest->getContext(), NewUnreachableBB);
       }
 
+      DefaultDest->removePredecessor(BB);
       SI->setDefaultDest(NewUnreachableBB);
       Updates.push_back({DominatorTree::Delete, BB, DefaultDest});
       Updates.push_back({DominatorTree::Insert, BB, NewUnreachableBB});
@@ -1052,14 +1064,17 @@ void SCCPInstVisitor::getFeasibleSuccessors(Instruction &TI,
     // is ready.
     if (SCValue.isConstantRange(/*UndefAllowed=*/false)) {
       const ConstantRange &Range = SCValue.getConstantRange();
+      unsigned ReachableCaseCount = 0;
       for (const auto &Case : SI->cases()) {
         const APInt &CaseValue = Case.getCaseValue()->getValue();
-        if (Range.contains(CaseValue))
+        if (Range.contains(CaseValue)) {
           Succs[Case.getSuccessorIndex()] = true;
+          ++ReachableCaseCount;
+        }
       }
 
-      // TODO: Determine whether default case is reachable.
-      Succs[SI->case_default()->getSuccessorIndex()] = true;
+      Succs[SI->case_default()->getSuccessorIndex()] =
+          Range.isSizeLargerThan(ReachableCaseCount);
       return;
     }
 
@@ -1471,7 +1486,13 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
   // Try to simplify to a constant range.
   ConstantRange A = getConstantRange(V1State, I.getType());
   ConstantRange B = getConstantRange(V2State, I.getType());
-  ConstantRange R = A.binaryOp(cast<BinaryOperator>(&I)->getOpcode(), B);
+
+  auto *BO = cast<BinaryOperator>(&I);
+  ConstantRange R = ConstantRange::getEmpty(I.getType()->getScalarSizeInBits());
+  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(BO))
+    R = A.overflowingBinaryOp(BO->getOpcode(), B, OBO->getNoWrapKind());
+  else
+    R = A.binaryOp(BO->getOpcode(), B);
   mergeInValue(&I, ValueLatticeElement::getRange(R));
 
   // TODO: Currently we do not exploit special values that produce something

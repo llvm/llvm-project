@@ -20,6 +20,7 @@ using ::llvm::DIInliningInfo;
 using ::llvm::DILineInfo;
 using ::llvm::DILineInfoSpecifier;
 using ::llvm::DILocal;
+using ::llvm::StringRef;
 using ::llvm::memprof::CallStackMap;
 using ::llvm::memprof::Frame;
 using ::llvm::memprof::FrameId;
@@ -51,6 +52,10 @@ public:
     llvm_unreachable("unused");
   }
   virtual std::vector<DILocal> symbolizeFrame(SectionedAddress) const {
+    llvm_unreachable("unused");
+  }
+  virtual std::vector<SectionedAddress> findSymbol(StringRef Symbol,
+                                                   uint64_t Offset) const {
     llvm_unreachable("unused");
   }
   virtual bool isWin32Module() const { llvm_unreachable("unused"); }
@@ -275,7 +280,8 @@ TEST(MemProf, RecordSerializationRoundTrip) {
   IndexedMemProfRecord Record;
   for (const auto &ACS : AllocCallStacks) {
     // Use the same info block for both allocation sites.
-    Record.AllocSites.emplace_back(ACS, Info);
+    Record.AllocSites.emplace_back(ACS, llvm::memprof::hashCallStack(ACS),
+                                   Info);
   }
   Record.CallSites.assign(CallSites);
 
@@ -371,7 +377,9 @@ TEST(MemProf, BaseMemProfReader) {
   Block.AllocCount = 1U, Block.TotalAccessDensity = 4,
   Block.TotalLifetime = 200001;
   std::array<FrameId, 2> CallStack{F1.hash(), F2.hash()};
-  FakeRecord.AllocSites.emplace_back(/*CS=*/CallStack, /*MB=*/Block);
+  FakeRecord.AllocSites.emplace_back(
+      /*CS=*/CallStack, /*CSId=*/llvm::memprof::hashCallStack(CallStack),
+      /*MB=*/Block);
   ProfData.insert({F1.hash(), FakeRecord});
 
   MemProfReader Reader(FrameIdMap, ProfData);

@@ -23,6 +23,7 @@ def HelloWorld {        // Hello
   string msg = "Hello world!";
 }
 ```
+[Try this example on Compiler Explorer.](https://godbolt.org/z/13xo1P5oz)
 
 The internalized records are passed on to various backends, which extract
 information from a subset of the records and generate one or more output files.
@@ -34,6 +35,7 @@ Resources for learning the language:
 * [TableGen Overview](https://llvm.org/docs/TableGen/index.html)
 * [Programmer's reference guide](https://llvm.org/docs/TableGen/ProgRef.html)
 * [Tutorial](jupyter/tablegen_tutorial_part_1.ipynb)
+* [Tools for Learning LLVM TableGen](https://blog.llvm.org/posts/2023-12-07-tools-for-learning-llvm-tablegen/)
 * [Lessons in TableGen](https://www.youtube.com/watch?v=45gmF77JFBY) (video),
   [slides](https://archive.fosdem.org/2019/schedule/event/llvm_tablegen/attachments/slides/3304/export/events/attachments/llvm_tablegen/slides/3304/tablegen.pdf)
 * [Improving Your TableGen Descriptions](https://www.youtube.com/watch?v=dIEVUlsiktQ)

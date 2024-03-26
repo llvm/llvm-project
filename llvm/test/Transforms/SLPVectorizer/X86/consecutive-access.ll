@@ -18,17 +18,17 @@ define void @foo_3double(i32 %u) #0 {
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[MUL]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2000 x double], ptr @A, i32 0, i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [2000 x double], ptr @B, i32 0, i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ARRAYIDX4]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[ADD24:%.*]] = add nsw i32 [[MUL]], 2
 ; CHECK-NEXT:    [[IDXPROM25:%.*]] = sext i32 [[ADD24]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [2000 x double], ptr @A, i32 0, i64 [[IDXPROM25]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load double, ptr [[ARRAYIDX26]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr [[ARRAYIDX26]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX30:%.*]] = getelementptr inbounds [2000 x double], ptr @B, i32 0, i64 [[IDXPROM25]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load double, ptr [[ARRAYIDX30]], align 8
-; CHECK-NEXT:    [[ADD31:%.*]] = fadd double [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr [[ARRAYIDX30]], align 8
+; CHECK-NEXT:    [[ADD31:%.*]] = fadd double [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    store double [[ADD31]], ptr [[ARRAYIDX26]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -75,10 +75,10 @@ define void @foo_2double(i32 %u) #0 {
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[MUL]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2000 x double], ptr @A, i32 0, i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [2000 x double], ptr @B, i32 0, i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ARRAYIDX4]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -114,10 +114,10 @@ define void @foo_4float(i32 %u) #0 {
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[MUL]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2000 x float], ptr @C, i32 0, i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [2000 x float], ptr @D, i32 0, i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[ARRAYIDX4]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[ARRAYIDX4]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -181,11 +181,11 @@ define i32 @foo_loop(ptr %A, i32 %n) #0 {
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[MUL]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> <double 7.000000e+00, double 7.000000e+00>, [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
-; CHECK-NEXT:    [[ADD6:%.*]] = fadd double [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> <double 7.000000e+00, double 7.000000e+00>, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i32 1
+; CHECK-NEXT:    [[ADD6:%.*]] = fadd double [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[ADD7]] = fadd double [[TMP1]], [[ADD6]]
 ; CHECK-NEXT:    store double [[ADD7]], ptr [[SUM]], align 8
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[TMP0]], 1
@@ -259,10 +259,10 @@ define void @foo_2double_non_power_of_2(i32 %u) #0 {
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[ADD6]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2000 x double], ptr @A, i32 0, i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [2000 x double], ptr @B, i32 0, i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ARRAYIDX4]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -300,10 +300,10 @@ define void @foo_2double_non_power_of_2_zext(i32 %u) #0 {
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[ADD6]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2000 x double], ptr @A, i32 0, i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [2000 x double], ptr @B, i32 0, i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ARRAYIDX4]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -355,11 +355,11 @@ define i32 @foo_loop_non_power_of_2(ptr %A, i32 %n) #0 {
 ; CHECK-NEXT:    [[ADD_5:%.*]] = add i32 [[MUL]], 5
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[ADD_5]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> <double 7.000000e+00, double 7.000000e+00>, [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
-; CHECK-NEXT:    [[ADD6:%.*]] = fadd double [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> <double 7.000000e+00, double 7.000000e+00>, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i32 1
+; CHECK-NEXT:    [[ADD6:%.*]] = fadd double [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[ADD7]] = fadd double [[TMP1]], [[ADD6]]
 ; CHECK-NEXT:    store double [[ADD7]], ptr [[SUM]], align 8
 ; CHECK-NEXT:    [[INC]] = add i32 [[TMP0]], 1
@@ -445,18 +445,18 @@ define double @bar(ptr nocapture readonly %a, i32 %n) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[CMP15:%.*]] = icmp eq i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP15]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x double> [ zeroinitializer, [[ENTRY:%.*]] ], [ [[TMP6:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x double> [ zeroinitializer, [[ENTRY:%.*]] ], [ [[TMP5:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP0]], i32 1
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret double [[MUL]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_018:%.*]] = phi i32 [ [[ADD5:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x double> [ [[TMP6]], [[FOR_BODY]] ], [ zeroinitializer, [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x double> [ [[TMP5]], [[FOR_BODY]] ], [ zeroinitializer, [[ENTRY]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[I_018]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[TMP6]] = fadd <2 x double> [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[TMP5]] = fadd <2 x double> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[ADD5]] = add i32 [[I_018]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD5]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP]]
@@ -479,7 +479,7 @@ for.body:                                         ; preds = %entry, %for.body
   %arrayidx = getelementptr inbounds double, ptr %a, i64 %idxprom
   %0 = load double, ptr %arrayidx, align 8
   %add = fadd double %x.016, %0
-  %add1 = or i32 %i.018, 1
+  %add1 = or disjoint i32 %i.018, 1
   %idxprom2 = zext i32 %add1 to i64
   %arrayidx3 = getelementptr inbounds double, ptr %a, i64 %idxprom2
   %1 = load double, ptr %arrayidx3, align 8

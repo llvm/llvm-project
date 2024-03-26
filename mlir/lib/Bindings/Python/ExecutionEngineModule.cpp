@@ -20,7 +20,7 @@ class PyExecutionEngine {
 public:
   PyExecutionEngine(MlirExecutionEngine executionEngine)
       : executionEngine(executionEngine) {}
-  PyExecutionEngine(PyExecutionEngine &&other)
+  PyExecutionEngine(PyExecutionEngine &&other) noexcept
       : executionEngine(other.executionEngine) {
     other.executionEngine.ptr = nullptr;
   }

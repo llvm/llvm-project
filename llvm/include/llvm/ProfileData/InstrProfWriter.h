@@ -21,7 +21,6 @@
 #include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <memory>
@@ -69,10 +68,18 @@ private:
   // Use raw pointer here for the incomplete type object.
   InstrProfRecordWriterTrait *InfoObj;
 
+  // Temporary support for writing the previous version of the format, to enable
+  // some forward compatibility. Currently this suppresses the writing of the
+  // new vtable names section and header fields.
+  // TODO: Consider enabling this with future version changes as well, to ease
+  // deployment of newer versions of llvm-profdata.
+  bool WritePrevVersion = false;
+
 public:
   InstrProfWriter(bool Sparse = false,
                   uint64_t TemporalProfTraceReservoirSize = 0,
-                  uint64_t MaxTemporalProfTraceLength = 0);
+                  uint64_t MaxTemporalProfTraceLength = 0,
+                  bool WritePrevVersion = false);
   ~InstrProfWriter();
 
   StringMap<ProfilingData> &getProfileData() { return FunctionData; }
@@ -168,6 +175,10 @@ public:
   }
 
   InstrProfKind getProfileKind() const { return ProfileKind; }
+
+  bool hasSingleByteCoverage() const {
+    return static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage);
+  }
 
   // Internal interface for testing purpose only.
   void setValueProfDataEndianness(llvm::endianness Endianness);

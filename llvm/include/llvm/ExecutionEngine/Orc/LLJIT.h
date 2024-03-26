@@ -254,7 +254,7 @@ protected:
 
   DataLayout DL;
   Triple TT;
-  std::unique_ptr<ThreadPool> CompileThreads;
+  std::unique_ptr<DefaultThreadPool> CompileThreads;
 
   std::unique_ptr<ObjectLayer> ObjLinkingLayer;
   std::unique_ptr<ObjectTransformLayer> ObjTransformLayer;
@@ -311,6 +311,8 @@ public:
 
   using PlatformSetupFunction = unique_function<Expected<JITDylibSP>(LLJIT &J)>;
 
+  using NotifyCreatedFunction = std::function<Error(LLJIT &)>;
+
   std::unique_ptr<ExecutorProcessControl> EPC;
   std::unique_ptr<ExecutionSession> ES;
   std::optional<JITTargetMachineBuilder> JTMB;
@@ -321,6 +323,7 @@ public:
   CompileFunctionCreator CreateCompileFunction;
   unique_function<Error(LLJIT &)> PrePlatformSetup;
   PlatformSetupFunction SetUpPlatform;
+  NotifyCreatedFunction NotifyCreated;
   unsigned NumCompileThreads = 0;
 
   /// Called prior to JIT class construcion to fix up defaults.
@@ -441,6 +444,16 @@ public:
     return impl();
   }
 
+  /// Set up a callback after successful construction of the JIT.
+  ///
+  /// This is useful to attach generators to JITDylibs or inject initial symbol
+  /// definitions.
+  SetterImpl &
+  setNotifyCreatedCallback(LLJITBuilderState::NotifyCreatedFunction Callback) {
+    impl().NotifyCreated = std::move(Callback);
+    return impl();
+  }
+
   /// Set the number of compile threads to use.
   ///
   /// If set to zero, compilation will be performed on the execution thread when
@@ -474,6 +487,11 @@ public:
     std::unique_ptr<JITType> J(new JITType(impl(), Err));
     if (Err)
       return std::move(Err);
+
+    if (impl().NotifyCreated)
+      if (Error Err = impl().NotifyCreated(*J))
+        return std::move(Err);
+
     return std::move(J);
   }
 
@@ -583,6 +601,19 @@ Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J);
 /// platforms, that we have no explicit support yet and that don't work well
 /// with the generic IR platform.
 Expected<JITDylibSP> setUpInactivePlatform(LLJIT &J);
+
+/// A Platform-support class that implements initialize / deinitialize by
+/// forwarding to ORC runtime dlopen / dlclose operations.
+class ORCPlatformSupport : public LLJIT::PlatformSupport {
+public:
+  ORCPlatformSupport(orc::LLJIT &J) : J(J) {}
+  Error initialize(orc::JITDylib &JD) override;
+  Error deinitialize(orc::JITDylib &JD) override;
+
+private:
+  orc::LLJIT &J;
+  DenseMap<orc::JITDylib *, orc::ExecutorAddr> DSOHandles;
+};
 
 } // End namespace orc
 } // End namespace llvm

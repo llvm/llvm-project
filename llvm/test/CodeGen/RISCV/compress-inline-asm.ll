@@ -12,4 +12,3 @@ define i32 @compress_test(i32 %a) {
   %2 = tail call i32 asm "add $0, $1, $2", "=r,r,r"(i32 %a, i32 %1)
   ret i32 %2
 }
-

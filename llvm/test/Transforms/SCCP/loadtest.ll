@@ -4,6 +4,8 @@
 ; RUN: opt < %s -data-layout="E-p:32:32" -passes=debugify,sccp -S | FileCheck %s
 ; RUN: opt < %s -data-layout="E-p:32:32" -passes=debugify,ipsccp -S | FileCheck %s
 
+; RUN: opt < %s -data-layout="E-p:32:32" -passes=debugify,ipsccp -S --try-experimental-debuginfo-iterators | FileCheck %s
+
 @X = constant i32 42		; <ptr> [#uses=1]
 @Y = constant [2 x { i32, float }] [ { i32, float } { i32 12, float 1.000000e+00 }, { i32, float } { i32 37, float 0x3FF3B2FEC0000000 } ]		; <ptr> [#uses=2]
 

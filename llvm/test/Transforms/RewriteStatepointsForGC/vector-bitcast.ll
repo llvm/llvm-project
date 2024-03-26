@@ -14,7 +14,7 @@ define i32 @test() gc "statepoint-example" {
 entry:
 ; CHECK-LABEL: entry
 ; CHECK: %bc = bitcast
-; CHECK: %[[p1:[A-Za-z0-9_]+]] = extractelement
+; CHECK: %[[p1:[A-Za-z0-9_.]+]] = extractelement
 ; CHECK: %[[p2:[A-Za-z0-9_]+]] = extractelement
 ; CHECK: llvm.experimental.gc.statepoint
 ; CHECK: %[[p2]].relocated = {{.+}} @llvm.experimental.gc.relocate

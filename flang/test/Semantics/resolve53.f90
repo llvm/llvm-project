@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! 15.4.3.4.5 Restrictions on generic declarations
 ! Specific procedures of generic interfaces must be distinguishable.
 
@@ -504,3 +504,21 @@ module m21
     class(*), allocatable :: x
   end subroutine
 end module
+
+! Example reduced from pFUnit
+module m22
+  !PORTABILITY: Generic 'generic' should not have specific procedures 'sub1' and 'sub2' as their interfaces are not distinguishable by the rules in the standard
+  interface generic
+    procedure sub1, sub2
+  end interface
+ contains
+  subroutine sub1(b, c)
+    class(*) b
+    integer, optional :: c
+  end
+  subroutine sub2(a, b, c)
+    real a
+    class(*) b
+    integer, optional :: c
+  end
+end

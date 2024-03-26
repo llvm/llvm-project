@@ -7,7 +7,7 @@
 define signext i8 @extractelt_nxv1i8_0(<vscale x 1 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv1i8_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x i8> %v, i32 0
@@ -39,7 +39,7 @@ define signext i8 @extractelt_nxv1i8_idx(<vscale x 1 x i8> %v, i32 zeroext %idx)
 define signext i8 @extractelt_nxv2i8_0(<vscale x 2 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv2i8_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 2 x i8> %v, i32 0
@@ -71,7 +71,7 @@ define signext i8 @extractelt_nxv2i8_idx(<vscale x 2 x i8> %v, i32 zeroext %idx)
 define signext i8 @extractelt_nxv4i8_0(<vscale x 4 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv4i8_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 4 x i8> %v, i32 0
@@ -231,7 +231,7 @@ define signext i8 @extractelt_nxv64i8_idx(<vscale x 64 x i8> %v, i32 zeroext %id
 define signext i16 @extractelt_nxv1i16_0(<vscale x 1 x i16> %v) {
 ; CHECK-LABEL: extractelt_nxv1i16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x i16> %v, i32 0
@@ -263,7 +263,7 @@ define signext i16 @extractelt_nxv1i16_idx(<vscale x 1 x i16> %v, i32 zeroext %i
 define signext i16 @extractelt_nxv2i16_0(<vscale x 2 x i16> %v) {
 ; CHECK-LABEL: extractelt_nxv2i16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 2 x i16> %v, i32 0
@@ -423,7 +423,7 @@ define signext i16 @extractelt_nxv32i16_idx(<vscale x 32 x i16> %v, i32 zeroext 
 define signext i32 @extractelt_nxv1i32_0(<vscale x 1 x i32> %v) {
 ; CHECK-LABEL: extractelt_nxv1i32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x i32> %v, i32 0
@@ -697,6 +697,27 @@ define i64 @extractelt_nxv8i64_imm(<vscale x 8 x i64> %v) {
   ret i64 %r
 }
 
+define i64 @extractelt_nxv8i64_2_exact_vlen(<vscale x 8 x i64> %v) vscale_range(2,2) {
+; CHECK-LABEL: extractelt_nxv8i64_2_exact_vlen:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; CHECK-NEXT:    vmv.x.s a0, v9
+; CHECK-NEXT:    ret
+  %r = extractelement <vscale x 8 x i64> %v, i32 2
+  ret i64 %r
+}
+
+define i64 @extractelt_nxv8i64_15_exact_vlen(<vscale x 8 x i64> %v) vscale_range(2,2) {
+; CHECK-LABEL: extractelt_nxv8i64_15_exact_vlen:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v15, 1
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %r = extractelement <vscale x 8 x i64> %v, i32 15
+  ret i64 %r
+}
+
 define i64 @extractelt_nxv8i64_idx(<vscale x 8 x i64> %v, i32 zeroext %idx) {
 ; CHECK-LABEL: extractelt_nxv8i64_idx:
 ; CHECK:       # %bb.0:
@@ -860,10 +881,10 @@ define i64 @extractelt_nxv16i64_neg1(<vscale x 16 x i64> %v) {
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    vs8r.v v16, (a3)
-; CHECK-NEXT:    bltu a2, a1, .LBB72_2
+; CHECK-NEXT:    bltu a2, a1, .LBB74_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:  .LBB72_2:
+; CHECK-NEXT:  .LBB74_2:
 ; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    ld a0, 0(a0)
@@ -893,10 +914,10 @@ define i64 @extractelt_nxv16i64_idx(<vscale x 16 x i64> %v, i32 zeroext %idx) {
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a2, a1, 1
 ; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    bltu a0, a2, .LBB74_2
+; CHECK-NEXT:    bltu a0, a2, .LBB76_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB74_2:
+; CHECK-NEXT:  .LBB76_2:
 ; CHECK-NEXT:    addi sp, sp, -80
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill

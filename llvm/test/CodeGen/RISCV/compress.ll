@@ -31,10 +31,10 @@
 
 define i32 @simple_arith(i32 %a, i32 %b) #0 {
 ; RV32IC-LABEL: <simple_arith>:
-; RV32IC:         addi a2, a0, 1
-; RV32IC-NEXT:    c.andi a2, 11
-; RV32IC-NEXT:    c.slli a2, 7
-; RV32IC-NEXT:    c.srai a1, 9
+; RV32IC:         addi a2, a0, 0x1
+; RV32IC-NEXT:    c.andi a2, 0xb
+; RV32IC-NEXT:    c.slli a2, 0x7
+; RV32IC-NEXT:    c.srai a1, 0x9
 ; RV32IC-NEXT:    sub a0, a1, a0
 ; RV32IC-NEXT:    c.add a0, a2
 ; RV32IC-NEXT:    c.jr ra
@@ -49,34 +49,34 @@ define i32 @simple_arith(i32 %a, i32 %b) #0 {
 
 define i32 @select(i32 %a, ptr %b) #0 {
 ; RV32IC-LABEL: <select>:
-; RV32IC:         c.lw a2, 0(a1)
+; RV32IC:         c.lw a2, 0x0(a1)
 ; RV32IC-NEXT:    c.beqz a2, 0x18
 ; RV32IC-NEXT:    c.mv a0, a2
-; RV32IC-NEXT:    c.lw a2, 0(a1)
+; RV32IC-NEXT:    c.lw a2, 0x0(a1)
 ; RV32IC-NEXT:    c.bnez a2, 0x1e
 ; RV32IC-NEXT:    c.mv a0, a2
-; RV32IC-NEXT:    c.lw a2, 0(a1)
+; RV32IC-NEXT:    c.lw a2, 0x0(a1)
 ; RV32IC-NEXT:    bltu a2, a0, 0x26
 ; RV32IC-NEXT:    c.mv a0, a2
-; RV32IC-NEXT:    c.lw a2, 0(a1)
+; RV32IC-NEXT:    c.lw a2, 0x0(a1)
 ; RV32IC-NEXT:    bgeu a0, a2, 0x2e
 ; RV32IC-NEXT:    c.mv a0, a2
-; RV32IC-NEXT:    c.lw a2, 0(a1)
+; RV32IC-NEXT:    c.lw a2, 0x0(a1)
 ; RV32IC-NEXT:    bltu a0, a2, 0x36
 ; RV32IC-NEXT:    c.mv a0, a2
-; RV32IC-NEXT:    c.lw a2, 0(a1)
+; RV32IC-NEXT:    c.lw a2, 0x0(a1)
 ; RV32IC-NEXT:    bgeu a2, a0, 0x3e
 ; RV32IC-NEXT:    c.mv a0, a2
-; RV32IC-NEXT:    c.lw a2, 0(a1)
+; RV32IC-NEXT:    c.lw a2, 0x0(a1)
 ; RV32IC-NEXT:    blt a2, a0, 0x46
 ; RV32IC-NEXT:    c.mv a0, a2
-; RV32IC-NEXT:    c.lw a2, 0(a1)
+; RV32IC-NEXT:    c.lw a2, 0x0(a1)
 ; RV32IC-NEXT:    bge a0, a2, 0x4e
 ; RV32IC-NEXT:    c.mv a0, a2
-; RV32IC-NEXT:    c.lw a2, 0(a1)
+; RV32IC-NEXT:    c.lw a2, 0x0(a1)
 ; RV32IC-NEXT:    blt a0, a2, 0x56
 ; RV32IC-NEXT:    c.mv a0, a2
-; RV32IC-NEXT:    c.lw a1, 0(a1)
+; RV32IC-NEXT:    c.lw a1, 0x0(a1)
 ; RV32IC-NEXT:    bge a1, a0, 0x5e
 ; RV32IC-NEXT:    c.mv a0, a1
 ; RV32IC-NEXT:    c.jr ra
@@ -125,52 +125,52 @@ define i32 @select(i32 %a, ptr %b) #0 {
 
 define i32 @pos_tiny() #0 {
 ; RV32IC-LABEL: <pos_tiny>:
-; RV32IC:         c.li a0, 18
+; RV32IC:         c.li a0, 0x12
 ; RV32IC-NEXT:    c.jr ra
   ret i32 18
 }
 
 define i32 @pos_i32() #0 {
 ; RV32IC-LABEL: <pos_i32>:
-; RV32IC:         lui a0, 423811
-; RV32IC-NEXT:    addi a0, a0, -1297
+; RV32IC:         lui a0, 0x67783
+; RV32IC-NEXT:    addi a0, a0, -0x511
 ; RV32IC-NEXT:    c.jr ra
   ret i32 1735928559
 }
 
 define i32 @pos_i32_half_compressible() #0 {
 ; RV32IC-LABEL: <pos_i32_half_compressible>:
-; RV32IC:         lui a0, 423810
-; RV32IC-NEXT:    c.addi  a0, 28
+; RV32IC:         lui a0, 0x67782
+; RV32IC-NEXT:    c.addi  a0, 0x1c
 ; RV32IC-NEXT:    c.jr    ra
   ret i32 1735925788
 }
 
 define i32 @neg_tiny() #0 {
 ; RV32IC-LABEL: <neg_tiny>:
-; RV32IC:       c.li a0, -19
+; RV32IC:       c.li a0, -0x13
 ; RV32IC-NEXT:  c.jr ra
   ret i32 -19
 }
 
 define i32 @neg_i32() #0 {
 ; RV32IC-LABEL: <neg_i32>:
-; RV32IC:       lui a0, 912092
-; RV32IC-NEXT:  addi a0, a0, -273
+; RV32IC:       lui a0, 0xdeadc
+; RV32IC-NEXT:  addi a0, a0, -0x111
 ; RV32IC-NEXT:  c.jr ra
   ret i32 -559038737
 }
 
 define i32 @pos_i32_hi20_only() #0 {
 ; RV32IC-LABEL: <pos_i32_hi20_only>:
-; RV32IC:       c.lui a0, 16
+; RV32IC:       c.lui a0, 0x10
 ; RV32IC-NEXT:  c.jr ra
   ret i32 65536
 }
 
 define i32 @neg_i32_hi20_only() #0 {
 ; RV32IC-LABEL: <neg_i32_hi20_only>:
-; RV32IC:       c.lui a0, 1048560
+; RV32IC:       c.lui a0, 0xffff0
 ; RV32IC-NEXT:  c.jr ra
   ret i32 -65536
 }

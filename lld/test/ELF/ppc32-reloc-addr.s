@@ -22,7 +22,7 @@
 .section .R_PPC_ADDR24,"ax",@progbits
   ba a
 # CHECK-LABEL: section .R_PPC_ADDR24:
-# CHECK: ba 4660
+# CHECK: ba 0x1234
 
 .section .R_PPC_ADDR32,"a",@progbits
   .long a

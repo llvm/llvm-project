@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
-#include <string>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AArch64GenSubtargetInfo.inc"
@@ -43,6 +42,7 @@ public:
     A64FX,
     Ampere1,
     Ampere1A,
+    Ampere1B,
     AppleA7,
     AppleA10,
     AppleA11,
@@ -51,11 +51,13 @@ public:
     AppleA14,
     AppleA15,
     AppleA16,
+    AppleA17,
     Carmel,
     CortexA35,
     CortexA53,
     CortexA55,
     CortexA510,
+    CortexA520,
     CortexA57,
     CortexA65,
     CortexA72,
@@ -64,14 +66,17 @@ public:
     CortexA76,
     CortexA77,
     CortexA78,
+    CortexA78AE,
     CortexA78C,
     CortexA710,
     CortexA715,
+    CortexA720,
     CortexR82,
     CortexX1,
     CortexX1C,
     CortexX2,
     CortexX3,
+    CortexX4,
     ExynosM3,
     Falkor,
     Kryo,
@@ -112,6 +117,7 @@ protected:
   Align PrefFunctionAlignment;
   Align PrefLoopAlignment;
   unsigned MaxBytesForLoopAlignment = 0;
+  unsigned MinimumJumpTableEntries = 4;
   unsigned MaxJumpTableSize = 0;
 
   // ReserveXRegister[i] - X#i is not available as a general purpose register.
@@ -153,10 +159,11 @@ private:
   /// subtarget initialization.
   AArch64Subtarget &initializeSubtargetDependencies(StringRef FS,
                                                     StringRef CPUString,
-                                                    StringRef TuneCPUString);
+                                                    StringRef TuneCPUString,
+                                                    bool HasMinSize);
 
   /// Initialize properties based on the selected processor family.
-  void initializeProperties();
+  void initializeProperties(bool HasMinSize);
 
 public:
   /// This constructor initializes the data members to match that
@@ -166,7 +173,8 @@ public:
                    unsigned MinSVEVectorSizeInBitsOverride = 0,
                    unsigned MaxSVEVectorSizeInBitsOverride = 0,
                    bool StreamingSVEMode = false,
-                   bool StreamingCompatibleSVEMode = false);
+                   bool StreamingCompatibleSVEMode = false,
+                   bool HasMinSize = false);
 
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
@@ -194,6 +202,9 @@ public:
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override { return usePostRAScheduler(); }
+
+  bool enableMachinePipeliner() const override;
+  bool useDFAforSMS() const override { return false; }
 
   /// Returns ARM processor family.
   /// Avoid this function! CPU specifics should be kept local to this class
@@ -274,6 +285,9 @@ public:
   }
 
   unsigned getMaximumJumpTableSize() const { return MaxJumpTableSize; }
+  unsigned getMinimumJumpTableEntries() const {
+    return MinimumJumpTableEntries;
+  }
 
   /// CPU has TBI (top byte of addresses is ignored during HW address
   /// translation) and OS enables it.
@@ -350,6 +364,7 @@ public:
     case CallingConv::C:
     case CallingConv::Fast:
     case CallingConv::Swift:
+    case CallingConv::SwiftTail:
       return isTargetWindows();
     case CallingConv::Win64:
       return true;
@@ -385,6 +400,7 @@ public:
   void mirFileLoaded(MachineFunction &MF) const override;
 
   bool hasSVEorSME() const { return hasSVE() || hasSME(); }
+  bool hasSVE2orSME() const { return hasSVE2() || hasSME(); }
 
   // Return the known range for the bit length of SVE data registers. A value
   // of 0 means nothing is known about that particular limit beyong what's
@@ -424,13 +440,13 @@ public:
 
   const char* getChkStkName() const {
     if (isWindowsArm64EC())
-      return "__chkstk_arm64ec";
+      return "#__chkstk_arm64ec";
     return "__chkstk";
   }
 
   const char* getSecurityCheckCookieName() const {
     if (isWindowsArm64EC())
-      return "__security_check_cookie_arm64ec";
+      return "#__security_check_cookie_arm64ec";
     return "__security_check_cookie";
   }
 

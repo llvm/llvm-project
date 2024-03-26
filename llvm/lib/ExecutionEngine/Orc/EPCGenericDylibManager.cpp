@@ -81,26 +81,38 @@ Expected<tpctypes::DylibHandle> EPCGenericDylibManager::open(StringRef Path,
   return H;
 }
 
-Expected<std::vector<ExecutorAddr>>
-EPCGenericDylibManager::lookup(tpctypes::DylibHandle H,
-                               const SymbolLookupSet &Lookup) {
-  Expected<std::vector<ExecutorAddr>> Result((std::vector<ExecutorAddr>()));
-  if (auto Err =
-          EPC.callSPSWrapper<rt::SPSSimpleExecutorDylibManagerLookupSignature>(
-              SAs.Lookup, Result, SAs.Instance, H, Lookup))
-    return std::move(Err);
-  return Result;
+void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
+                                         const SymbolLookupSet &Lookup,
+                                         SymbolLookupCompleteFn Complete) {
+  EPC.callSPSWrapperAsync<rt::SPSSimpleExecutorDylibManagerLookupSignature>(
+      SAs.Lookup,
+      [Complete = std::move(Complete)](
+          Error SerializationErr,
+          Expected<std::vector<ExecutorSymbolDef>> Result) mutable {
+        if (SerializationErr) {
+          cantFail(Result.takeError());
+          Complete(std::move(SerializationErr));
+        }
+        Complete(std::move(Result));
+      },
+      SAs.Instance, H, Lookup);
 }
 
-Expected<std::vector<ExecutorAddr>>
-EPCGenericDylibManager::lookup(tpctypes::DylibHandle H,
-                               const RemoteSymbolLookupSet &Lookup) {
-  Expected<std::vector<ExecutorAddr>> Result((std::vector<ExecutorAddr>()));
-  if (auto Err =
-          EPC.callSPSWrapper<rt::SPSSimpleExecutorDylibManagerLookupSignature>(
-              SAs.Lookup, Result, SAs.Instance, H, Lookup))
-    return std::move(Err);
-  return Result;
+void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
+                                         const RemoteSymbolLookupSet &Lookup,
+                                         SymbolLookupCompleteFn Complete) {
+  EPC.callSPSWrapperAsync<rt::SPSSimpleExecutorDylibManagerLookupSignature>(
+      SAs.Lookup,
+      [Complete = std::move(Complete)](
+          Error SerializationErr,
+          Expected<std::vector<ExecutorSymbolDef>> Result) mutable {
+        if (SerializationErr) {
+          cantFail(Result.takeError());
+          Complete(std::move(SerializationErr));
+        }
+        Complete(std::move(Result));
+      },
+      SAs.Instance, H, Lookup);
 }
 
 } // end namespace orc

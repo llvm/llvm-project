@@ -86,7 +86,7 @@ TEST(MDGeneratorTest, emitRecordMD) {
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
   I.Members.emplace_back(TypeInfo("int"), "X", AccessSpecifier::AS_private);
-  I.TagType = TagTypeKind::TTK_Class;
+  I.TagType = TagTypeKind::Class;
   I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
 

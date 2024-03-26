@@ -145,3 +145,12 @@ define <2 x float> @f14(<2 x float> %val1, <2 x float> %val2) {
   %ret = fsub <2 x float> %val1, %val2
   ret <2 x float> %ret
 }
+
+; Test a v1i128 subtraction.
+define <1 x i128> @f15(<1 x i128> %dummy, <1 x i128> %val1, <1 x i128> %val2) {
+; CHECK-LABEL: f15:
+; CHECK: vsq %v24, %v26, %v28
+; CHECK: br %r14
+  %ret = sub <1 x i128> %val1, %val2
+  ret <1 x i128> %ret
+}

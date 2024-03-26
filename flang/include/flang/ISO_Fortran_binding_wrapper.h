@@ -22,8 +22,18 @@
  */
 
 /* clang-format off */
+#include <stddef.h>
 #include "Runtime/api-attrs.h"
+#ifdef __cplusplus
+namespace Fortran {
+namespace ISO {
+#define FORTRAN_ISO_NAMESPACE_ ::Fortran::ISO
+#endif /* __cplusplus */
 #include "ISO_Fortran_binding.h"
+#ifdef __cplusplus
+} // namespace ISO
+} // namespace Fortran
+#endif /* __cplusplus */
 /* clang-format on */
 
 #endif /* FORTRAN_ISO_FORTRAN_BINDING_WRAPPER_H_ */

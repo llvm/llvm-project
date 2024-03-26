@@ -48,7 +48,7 @@ template <typename Derived, typename InsertedThunksTy>
 void ThunkInserter<Derived, InsertedThunksTy>::createThunkFunction(
     MachineModuleInfo &MMI, StringRef Name, bool Comdat,
     StringRef TargetAttrs) {
-  assert(Name.startswith(getDerived().getThunkPrefix()) &&
+  assert(Name.starts_with(getDerived().getThunkPrefix()) &&
          "Created a thunk with an unexpected prefix!");
 
   Module &M = const_cast<Module &>(*MMI.getModule());
@@ -94,7 +94,7 @@ template <typename Derived, typename InsertedThunksTy>
 bool ThunkInserter<Derived, InsertedThunksTy>::run(MachineModuleInfo &MMI,
                                                    MachineFunction &MF) {
   // If MF is not a thunk, check to see if we need to insert a thunk.
-  if (!MF.getName().startswith(getDerived().getThunkPrefix())) {
+  if (!MF.getName().starts_with(getDerived().getThunkPrefix())) {
     // Only add a thunk if one of the functions has the corresponding feature
     // enabled in its subtarget, and doesn't enable external thunks. The target
     // can use InsertedThunks to detect whether relevant thunks have already

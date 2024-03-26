@@ -50,7 +50,7 @@ constexpr void testValue(T t) {
 constexpr bool test() {
   // test tuple
   {
-    std::tuple<int, short, long> ts[] = {{1, 2, 3}, {4, 5, 6}};
+    std::tuple<int, short, long> ts[] = {{1, short{2}, 3}, {4, short{5}, 6}};
     testReference<0>(ts);
     testReference<1>(ts);
     testReference<2>(ts);
@@ -61,7 +61,7 @@ constexpr bool test() {
 
   // test pair
   {
-    std::pair<int, short> ps[] = {{1, 2}, {4, 5}};
+    std::pair<int, short> ps[] = {{1, short{2}}, {4, short{5}}};
     testReference<0>(ps);
     testReference<1>(ps);
     testValue<0>(ps[0]);

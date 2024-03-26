@@ -127,8 +127,12 @@ const char *__kmp_hw_get_catalog_string(kmp_hw_t type, bool plural) {
     return ((plural) ? KMP_I18N_STR(Threads) : KMP_I18N_STR(Thread));
   case KMP_HW_PROC_GROUP:
     return ((plural) ? KMP_I18N_STR(ProcGroups) : KMP_I18N_STR(ProcGroup));
+  case KMP_HW_UNKNOWN:
+  case KMP_HW_LAST:
+    return KMP_I18N_STR(Unknown);
   }
-  return KMP_I18N_STR(Unknown);
+  KMP_ASSERT2(false, "Unhandled kmp_hw_t enumeration");
+  KMP_BUILTIN_UNREACHABLE;
 }
 
 const char *__kmp_hw_get_keyword(kmp_hw_t type, bool plural) {
@@ -157,13 +161,18 @@ const char *__kmp_hw_get_keyword(kmp_hw_t type, bool plural) {
     return ((plural) ? "threads" : "thread");
   case KMP_HW_PROC_GROUP:
     return ((plural) ? "proc_groups" : "proc_group");
+  case KMP_HW_UNKNOWN:
+  case KMP_HW_LAST:
+    return ((plural) ? "unknowns" : "unknown");
   }
-  return ((plural) ? "unknowns" : "unknown");
+  KMP_ASSERT2(false, "Unhandled kmp_hw_t enumeration");
+  KMP_BUILTIN_UNREACHABLE;
 }
 
 const char *__kmp_hw_get_core_type_string(kmp_hw_core_type_t type) {
   switch (type) {
   case KMP_HW_CORE_TYPE_UNKNOWN:
+  case KMP_HW_MAX_NUM_CORE_TYPES:
     return "unknown";
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
   case KMP_HW_CORE_TYPE_ATOM:
@@ -172,7 +181,8 @@ const char *__kmp_hw_get_core_type_string(kmp_hw_core_type_t type) {
     return "Intel(R) Core(TM) processor";
 #endif
   }
-  return "unknown";
+  KMP_ASSERT2(false, "Unhandled kmp_hw_core_type_t enumeration");
+  KMP_BUILTIN_UNREACHABLE;
 }
 
 #if KMP_AFFINITY_SUPPORTED
@@ -317,6 +327,9 @@ void kmp_topology_t::_insert_windows_proc_groups() {
   KMP_CPU_FREE(mask);
   _insert_layer(KMP_HW_PROC_GROUP, ids);
   __kmp_free(ids);
+
+  // sort topology after adding proc groups
+  __kmp_topology->sort_ids();
 }
 #endif
 
@@ -1238,17 +1251,18 @@ bool kmp_topology_t::filter_hw_subset() {
   struct core_type_indexer {
     int operator()(const kmp_hw_thread_t &t) const {
       switch (t.attrs.get_core_type()) {
+      case KMP_HW_CORE_TYPE_UNKNOWN:
+      case KMP_HW_MAX_NUM_CORE_TYPES:
+        return 0;
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
       case KMP_HW_CORE_TYPE_ATOM:
         return 1;
       case KMP_HW_CORE_TYPE_CORE:
         return 2;
 #endif
-      case KMP_HW_CORE_TYPE_UNKNOWN:
-        return 0;
       }
-      KMP_ASSERT(0);
-      return 0;
+      KMP_ASSERT2(false, "Unhandled kmp_hw_thread_t enumeration");
+      KMP_BUILTIN_UNREACHABLE;
     }
   };
   struct core_eff_indexer {
@@ -1766,6 +1780,8 @@ static bool __kmp_affinity_create_hwloc_map(kmp_i18n_id_t *const msg_id) {
       __kmp_nThreadsPerCore = __kmp_hwloc_get_nobjs_under_obj(o, HWLOC_OBJ_PU);
     else
       __kmp_nThreadsPerCore = 1; // no CORE found
+    if (__kmp_nThreadsPerCore == 0)
+      __kmp_nThreadsPerCore = 1;
     __kmp_ncores = __kmp_xproc / __kmp_nThreadsPerCore;
     if (nCoresPerPkg == 0)
       nCoresPerPkg = 1; // to prevent possible division by 0
@@ -1818,14 +1834,8 @@ static bool __kmp_affinity_create_hwloc_map(kmp_i18n_id_t *const msg_id) {
 
   // Figure out the depth and types in the topology
   depth = 0;
-  pu = hwloc_get_pu_obj_by_os_index(tp, __kmp_affin_fullMask->begin());
-  KMP_ASSERT(pu);
-  obj = pu;
-  types[depth] = KMP_HW_THREAD;
-  hwloc_types[depth] = obj->type;
-  depth++;
-  while (obj != root && obj != NULL) {
-    obj = obj->parent;
+  obj = hwloc_get_pu_obj_by_os_index(tp, __kmp_affin_fullMask->begin());
+  while (obj && obj != root) {
 #if HWLOC_API_VERSION >= 0x00020000
     if (obj->memory_arity) {
       hwloc_obj_t memory;
@@ -1847,6 +1857,7 @@ static bool __kmp_affinity_create_hwloc_map(kmp_i18n_id_t *const msg_id) {
       hwloc_types[depth] = obj->type;
       depth++;
     }
+    obj = obj->parent;
   }
   KMP_ASSERT(depth > 0);
 
@@ -2817,7 +2828,9 @@ static void __kmp_dispatch_set_hierarchy_values() {
   __kmp_hier_max_units[kmp_hier_layer_e::LAYER_THREAD + 1] =
       nPackages * nCoresPerPkg * __kmp_nThreadsPerCore;
   __kmp_hier_max_units[kmp_hier_layer_e::LAYER_L1 + 1] = __kmp_ncores;
-#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_WINDOWS) &&   \
+#if KMP_ARCH_X86_64 &&                                                         \
+    (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||    \
+     KMP_OS_WINDOWS) &&                                                        \
     KMP_MIC_SUPPORTED
   if (__kmp_mic_type >= mic3)
     __kmp_hier_max_units[kmp_hier_layer_e::LAYER_L2 + 1] = __kmp_ncores / 2;
@@ -2832,7 +2845,9 @@ static void __kmp_dispatch_set_hierarchy_values() {
   __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_THREAD + 1] = 1;
   __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_L1 + 1] =
       __kmp_nThreadsPerCore;
-#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_WINDOWS) &&   \
+#if KMP_ARCH_X86_64 &&                                                         \
+    (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||    \
+     KMP_OS_WINDOWS) &&                                                        \
     KMP_MIC_SUPPORTED
   if (__kmp_mic_type >= mic3)
     __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_L2 + 1] =
@@ -2895,12 +2910,17 @@ static inline const char *__kmp_cpuinfo_get_envvar() {
 }
 
 // Parse /proc/cpuinfo (or an alternate file in the same format) to obtain the
-// affinity map.
+// affinity map. On AIX, the map is obtained through system SRAD (Scheduler
+// Resource Allocation Domain).
 static bool __kmp_affinity_create_cpuinfo_map(int *line,
                                               kmp_i18n_id_t *const msg_id) {
+  *msg_id = kmp_i18n_null;
+
+#if KMP_OS_AIX
+  unsigned num_records = __kmp_xproc;
+#else
   const char *filename = __kmp_cpuinfo_get_filename();
   const char *envvar = __kmp_cpuinfo_get_envvar();
-  *msg_id = kmp_i18n_null;
 
   if (__kmp_affinity.flags.verbose) {
     KMP_INFORM(AffParseFilename, "KMP_AFFINITY", filename);
@@ -2959,6 +2979,7 @@ static bool __kmp_affinity_create_cpuinfo_map(int *line,
     *msg_id = kmp_i18n_str_CantRewindCpuinfo;
     return false;
   }
+#endif // KMP_OS_AIX
 
   // Allocate the array of records to store the proc info in.  The dummy
   // element at the end makes the logic in filling them out easier to code.
@@ -2988,8 +3009,104 @@ static bool __kmp_affinity_create_cpuinfo_map(int *line,
     INIT_PROC_INFO(threadInfo[i]);
   }
 
+#if KMP_OS_AIX
+  int smt_threads;
+  lpar_info_format1_t cpuinfo;
+  unsigned num_avail = __kmp_xproc;
+
+  if (__kmp_affinity.flags.verbose)
+    KMP_INFORM(AffParseFilename, "KMP_AFFINITY", "system info for topology");
+
+  // Get the number of SMT threads per core.
+  int retval =
+      lpar_get_info(LPAR_INFO_FORMAT1, &cpuinfo, sizeof(lpar_info_format1_t));
+  if (!retval)
+    smt_threads = cpuinfo.smt_threads;
+  else {
+    CLEANUP_THREAD_INFO;
+    *msg_id = kmp_i18n_str_UnknownTopology;
+    return false;
+  }
+
+  // Allocate a resource set containing available system resourses.
+  rsethandle_t sys_rset = rs_alloc(RS_SYSTEM);
+  if (sys_rset == NULL) {
+    CLEANUP_THREAD_INFO;
+    *msg_id = kmp_i18n_str_UnknownTopology;
+    return false;
+  }
+  // Allocate a resource set for the SRAD info.
+  rsethandle_t srad = rs_alloc(RS_EMPTY);
+  if (srad == NULL) {
+    rs_free(sys_rset);
+    CLEANUP_THREAD_INFO;
+    *msg_id = kmp_i18n_str_UnknownTopology;
+    return false;
+  }
+
+  // Get the SRAD system detail level.
+  int sradsdl = rs_getinfo(NULL, R_SRADSDL, 0);
+  if (sradsdl < 0) {
+    rs_free(sys_rset);
+    rs_free(srad);
+    CLEANUP_THREAD_INFO;
+    *msg_id = kmp_i18n_str_UnknownTopology;
+    return false;
+  }
+  // Get the number of RADs at that SRAD SDL.
+  int num_rads = rs_numrads(sys_rset, sradsdl, 0);
+  if (num_rads < 0) {
+    rs_free(sys_rset);
+    rs_free(srad);
+    CLEANUP_THREAD_INFO;
+    *msg_id = kmp_i18n_str_UnknownTopology;
+    return false;
+  }
+
+  // Get the maximum number of procs that may be contained in a resource set.
+  int max_procs = rs_getinfo(NULL, R_MAXPROCS, 0);
+  if (max_procs < 0) {
+    rs_free(sys_rset);
+    rs_free(srad);
+    CLEANUP_THREAD_INFO;
+    *msg_id = kmp_i18n_str_UnknownTopology;
+    return false;
+  }
+
+  int cur_rad = 0;
+  int num_set = 0;
+  for (int srad_idx = 0; cur_rad < num_rads && srad_idx < VMI_MAXRADS;
+       ++srad_idx) {
+    // Check if the SRAD is available in the RSET.
+    if (rs_getrad(sys_rset, srad, sradsdl, srad_idx, 0) < 0)
+      continue;
+
+    for (int cpu = 0; cpu < max_procs; cpu++) {
+      // Set the info for the cpu if it is in the SRAD.
+      if (rs_op(RS_TESTRESOURCE, srad, NULL, R_PROCS, cpu)) {
+        threadInfo[cpu][osIdIndex] = cpu;
+        threadInfo[cpu][pkgIdIndex] = cur_rad;
+        threadInfo[cpu][coreIdIndex] = cpu / smt_threads;
+        ++num_set;
+        if (num_set >= num_avail) {
+          // Done if all available CPUs have been set.
+          break;
+        }
+      }
+    }
+    ++cur_rad;
+  }
+  rs_free(sys_rset);
+  rs_free(srad);
+
+  // The topology is already sorted.
+
+#else // !KMP_OS_AIX
   unsigned num_avail = 0;
   *line = 0;
+#if KMP_ARCH_S390X
+  bool reading_s390x_sys_info = true;
+#endif
   while (!feof(f)) {
     // Create an inner scoping level, so that all the goto targets at the end of
     // the loop appear in an outer scoping level. This avoids warnings about
@@ -3035,8 +3152,21 @@ static bool __kmp_affinity_create_cpuinfo_map(int *line,
       if (*buf == '\n' && *line == 2)
         continue;
 #endif
+#if KMP_ARCH_S390X
+      // s390x /proc/cpuinfo starts with a variable number of lines containing
+      // the overall system information. Skip them.
+      if (reading_s390x_sys_info) {
+        if (*buf == '\n')
+          reading_s390x_sys_info = false;
+        continue;
+      }
+#endif
 
+#if KMP_ARCH_S390X
+      char s1[] = "cpu number";
+#else
       char s1[] = "processor";
+#endif
       if (strncmp(buf, s1, sizeof(s1) - 1) == 0) {
         CHECK_LINE;
         char *p = strchr(buf + sizeof(s1) - 1, ':');
@@ -3061,6 +3191,23 @@ static bool __kmp_affinity_create_cpuinfo_map(int *line,
             "/sys/devices/system/cpu/cpu%u/topology/physical_package_id",
             threadInfo[num_avail][osIdIndex]);
         __kmp_read_from_file(path, "%u", &threadInfo[num_avail][pkgIdIndex]);
+
+#if KMP_ARCH_S390X
+        // Disambiguate physical_package_id.
+        unsigned book_id;
+        KMP_SNPRINTF(path, sizeof(path),
+                     "/sys/devices/system/cpu/cpu%u/topology/book_id",
+                     threadInfo[num_avail][osIdIndex]);
+        __kmp_read_from_file(path, "%u", &book_id);
+        threadInfo[num_avail][pkgIdIndex] |= (book_id << 8);
+
+        unsigned drawer_id;
+        KMP_SNPRINTF(path, sizeof(path),
+                     "/sys/devices/system/cpu/cpu%u/topology/drawer_id",
+                     threadInfo[num_avail][osIdIndex]);
+        __kmp_read_from_file(path, "%u", &drawer_id);
+        threadInfo[num_avail][pkgIdIndex] |= (drawer_id << 16);
+#endif
 
         KMP_SNPRINTF(path, sizeof(path),
                      "/sys/devices/system/cpu/cpu%u/topology/core_id",
@@ -3201,6 +3348,8 @@ static bool __kmp_affinity_create_cpuinfo_map(int *line,
   // Sort the threadInfo table by physical Id.
   qsort(threadInfo, num_avail, sizeof(*threadInfo),
         __kmp_affinity_cmp_ProcCpuInfo_phys_id);
+
+#endif // KMP_OS_AIX
 
   // The table is now sorted by pkgId / coreId / threadId, but we really don't
   // know the radix of any of the fields. pkgId's may be sparsely assigned among
@@ -4163,7 +4312,7 @@ static void __kmp_affinity_get_mask_topology_info(const kmp_affin_mask_t *mask,
 
   // Initiailze ids and attrs thread data
   for (int i = 0; i < KMP_HW_LAST; ++i)
-    ids[i] = kmp_hw_thread_t::UNKNOWN_ID;
+    ids.ids[i] = kmp_hw_thread_t::UNKNOWN_ID;
   attrs = KMP_AFFINITY_ATTRS_UNKNOWN;
 
   // Iterate through each os id within the mask and determine
@@ -4172,19 +4321,20 @@ static void __kmp_affinity_get_mask_topology_info(const kmp_affin_mask_t *mask,
   int depth = __kmp_topology->get_depth();
   KMP_CPU_SET_ITERATE(cpu, mask) {
     int osid_idx = __kmp_osid_to_hwthread_map[cpu];
+    ids.os_id = cpu;
     const kmp_hw_thread_t &hw_thread = __kmp_topology->at(osid_idx);
     for (int level = 0; level < depth; ++level) {
       kmp_hw_t type = __kmp_topology->get_type(level);
       int id = hw_thread.sub_ids[level];
-      if (ids[type] == kmp_hw_thread_t::UNKNOWN_ID || ids[type] == id) {
-        ids[type] = id;
+      if (ids.ids[type] == kmp_hw_thread_t::UNKNOWN_ID || ids.ids[type] == id) {
+        ids.ids[type] = id;
       } else {
         // This mask spans across multiple topology units, set it as such
         // and mark every level below as such as well.
-        ids[type] = kmp_hw_thread_t::MULTIPLE_ID;
+        ids.ids[type] = kmp_hw_thread_t::MULTIPLE_ID;
         for (; level < depth; ++level) {
           kmp_hw_t type = __kmp_topology->get_type(level);
-          ids[type] = kmp_hw_thread_t::MULTIPLE_ID;
+          ids.ids[type] = kmp_hw_thread_t::MULTIPLE_ID;
         }
       }
     }
@@ -4264,6 +4414,9 @@ static void __kmp_aux_affinity_initialize_other_data(kmp_affinity_t &affinity) {
   if (__kmp_topology && __kmp_topology->get_num_hw_threads()) {
     machine_hierarchy.init(__kmp_topology->get_num_hw_threads());
     __kmp_affinity_get_topology_info(affinity);
+#if KMP_WEIGHTED_ITERATIONS_SUPPORTED
+    __kmp_first_osid_with_ecore = __kmp_get_first_osid_with_ecore();
+#endif
   }
 }
 
@@ -4393,7 +4546,7 @@ static bool __kmp_aux_affinity_initialize_topology(kmp_affinity_t &affinity) {
     }
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
 
-#if KMP_OS_LINUX
+#if KMP_OS_LINUX || KMP_OS_AIX
     if (!success) {
       int line = 0;
       success = __kmp_affinity_create_cpuinfo_map(&line, &msg_id);
@@ -4789,7 +4942,12 @@ void __kmp_affinity_uninitialize(void) {
   }
   if (__kmp_affin_origMask != NULL) {
     if (KMP_AFFINITY_CAPABLE()) {
+#if KMP_OS_AIX
+      // Uninitialize by unbinding the thread.
+      bindprocessor(BINDTHREAD, thread_self(), PROCESSOR_CLASS_ANY);
+#else
       __kmp_set_system_affinity(__kmp_affin_origMask, FALSE);
+#endif
     }
     KMP_CPU_FREE(__kmp_affin_origMask);
     __kmp_affin_origMask = NULL;
@@ -4843,7 +5001,7 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
 
   // Set the thread topology information to default of unknown
   for (int id = 0; id < KMP_HW_LAST; ++id)
-    th->th.th_topology_ids[id] = kmp_hw_thread_t::UNKNOWN_ID;
+    th->th.th_topology_ids.ids[id] = kmp_hw_thread_t::UNKNOWN_ID;
   th->th.th_topology_attrs = KMP_AFFINITY_ATTRS_UNKNOWN;
 
   if (!KMP_AFFINITY_CAPABLE()) {
@@ -4963,7 +5121,10 @@ void __kmp_affinity_bind_init_mask(int gtid) {
     __kmp_set_system_affinity(th->th.th_affin_mask, FALSE);
   } else
 #endif
+#ifndef KMP_OS_AIX
+    // Do not set the full mask as the init mask on AIX.
     __kmp_set_system_affinity(th->th.th_affin_mask, TRUE);
+#endif
 }
 
 void __kmp_affinity_bind_place(int gtid) {
@@ -5076,7 +5237,7 @@ int __kmp_aux_set_affinity(void **mask) {
 int __kmp_aux_get_affinity(void **mask) {
   int gtid;
   int retval;
-#if KMP_OS_WINDOWS || KMP_DEBUG
+#if KMP_OS_WINDOWS || KMP_OS_AIX || KMP_DEBUG
   kmp_info_t *th;
 #endif
   if (!KMP_AFFINITY_CAPABLE()) {
@@ -5084,7 +5245,7 @@ int __kmp_aux_get_affinity(void **mask) {
   }
 
   gtid = __kmp_entry_gtid();
-#if KMP_OS_WINDOWS || KMP_DEBUG
+#if KMP_OS_WINDOWS || KMP_OS_AIX || KMP_DEBUG
   th = __kmp_threads[gtid];
 #else
   (void)gtid; // unused variable
@@ -5107,7 +5268,7 @@ int __kmp_aux_get_affinity(void **mask) {
     }
   }
 
-#if !KMP_OS_WINDOWS
+#if !KMP_OS_WINDOWS && !KMP_OS_AIX
 
   retval = __kmp_get_system_affinity((kmp_affin_mask_t *)(*mask), FALSE);
   KA_TRACE(
@@ -5127,7 +5288,7 @@ int __kmp_aux_get_affinity(void **mask) {
   KMP_CPU_COPY((kmp_affin_mask_t *)(*mask), th->th.th_affin_mask);
   return 0;
 
-#endif /* KMP_OS_WINDOWS */
+#endif /* !KMP_OS_WINDOWS && !KMP_OS_AIX */
 }
 
 int __kmp_aux_get_affinity_max_proc() {
@@ -5239,6 +5400,28 @@ int __kmp_aux_get_affinity_mask_proc(int proc, void **mask) {
 
   return KMP_CPU_ISSET(proc, (kmp_affin_mask_t *)(*mask));
 }
+
+#if KMP_WEIGHTED_ITERATIONS_SUPPORTED
+// Returns first os proc id with ATOM core
+int __kmp_get_first_osid_with_ecore(void) {
+  int low = 0;
+  int high = __kmp_topology->get_num_hw_threads() - 1;
+  int mid = 0;
+  while (high - low > 1) {
+    mid = (high + low) / 2;
+    if (__kmp_topology->at(mid).attrs.get_core_type() ==
+        KMP_HW_CORE_TYPE_CORE) {
+      low = mid + 1;
+    } else {
+      high = mid;
+    }
+  }
+  if (__kmp_topology->at(mid).attrs.get_core_type() == KMP_HW_CORE_TYPE_ATOM) {
+    return mid;
+  }
+  return -1;
+}
+#endif
 
 // Dynamic affinity settings - Affinity balanced
 void __kmp_balanced_affinity(kmp_info_t *th, int nthreads) {
@@ -5487,7 +5670,8 @@ void __kmp_balanced_affinity(kmp_info_t *th, int nthreads) {
   }
 }
 
-#if KMP_OS_LINUX || KMP_OS_FREEBSD
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||     \
+    KMP_OS_AIX
 // We don't need this entry for Windows because
 // there is GetProcessAffinityMask() api
 //
@@ -5522,7 +5706,11 @@ extern "C"
                 "set full mask for thread %d\n",
                 gtid));
   KMP_DEBUG_ASSERT(__kmp_affin_fullMask != NULL);
+#if KMP_OS_AIX
+  return bindprocessor(BINDTHREAD, thread_self(), PROCESSOR_CLASS_ANY);
+#else
   return __kmp_set_system_affinity(__kmp_affin_fullMask, FALSE);
+#endif
 }
 #endif
 

@@ -3777,7 +3777,7 @@ class BinarySI<string mnemonic, bits<8> opcode, SDPatternOperator operator,
                Operand imm, AddressingMode mode = bdaddr12only>
   : InstSI<opcode, (outs), (ins (mode $B1, $D1):$BD1, imm:$I2),
            mnemonic#"\t$BD1, $I2",
-           [(store (operator (load mode:$BD1), imm:$I2), mode:$BD1)]> {
+           [(store (operator (z_load mode:$BD1), imm:$I2), mode:$BD1)]> {
   let mayLoad = 1;
   let mayStore = 1;
 }
@@ -3786,7 +3786,7 @@ class BinarySIY<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                 Operand imm, AddressingMode mode = bdaddr20only>
   : InstSIY<opcode, (outs), (ins (mode $B1, $D1):$BD1, imm:$I2),
             mnemonic#"\t$BD1, $I2",
-            [(store (operator (load mode:$BD1), imm:$I2), mode:$BD1)]> {
+            [(store (operator (z_load mode:$BD1), imm:$I2), mode:$BD1)]> {
   let mayLoad = 1;
   let mayStore = 1;
 }
@@ -5036,18 +5036,6 @@ class BranchPreloadMII<string mnemonic, bits<8> opcode>
             (ins imm32zx4:$M1, brtarget12bpp:$RI2, brtarget24bpp:$RI3),
             mnemonic#"\t$M1, $RI2, $RI3", []>;
 
-// A floating-point load-and test operation.  Create both a normal unary
-// operation and one that acts as a comparison against zero.
-// Note that the comparison against zero operation is not available if we
-// have vector support, since load-and-test instructions will partially
-// clobber the target (vector) register.
-multiclass LoadAndTestRRE<string mnemonic, bits<16> opcode,
-                          RegisterOperand cls> {
-  def "" : UnaryRRE<mnemonic, opcode, null_frag, cls, cls>;
-  let isCodeGenOnly = 1, Predicates = [FeatureNoVector] in
-    def Compare : CompareRRE<mnemonic, opcode, null_frag, cls, cls>;
-}
-
 //===----------------------------------------------------------------------===//
 // Pseudo instructions
 //===----------------------------------------------------------------------===//
@@ -5326,30 +5314,6 @@ multiclass CondStores<RegisterOperand cls, SDPatternOperator store,
                               mode:$addr)]>;
   }
 }
-
-// OPERATOR is ATOMIC_SWAP or an ATOMIC_LOAD_* operation.  PAT and OPERAND
-// describe the second (non-memory) operand.
-class AtomicLoadBinary<SDPatternOperator operator, RegisterOperand cls,
-                       dag pat, DAGOperand operand>
-  : Pseudo<(outs cls:$dst), (ins bdaddr20only:$ptr, operand:$src2),
-           [(set cls:$dst, (operator bdaddr20only:$ptr, pat))]> {
-  let Defs = [CC];
-  let Has20BitOffset = 1;
-  let mayLoad = 1;
-  let mayStore = 1;
-  let usesCustomInserter = 1;
-  let hasNoSchedulingInfo = 1;
-}
-
-// Specializations of AtomicLoadWBinary.
-class AtomicLoadBinaryReg32<SDPatternOperator operator>
-  : AtomicLoadBinary<operator, GR32, (i32 GR32:$src2), GR32>;
-class AtomicLoadBinaryImm32<SDPatternOperator operator, ImmOpWithPattern imm>
-  : AtomicLoadBinary<operator, GR32, (i32 imm:$src2), imm>;
-class AtomicLoadBinaryReg64<SDPatternOperator operator>
-  : AtomicLoadBinary<operator, GR64, (i64 GR64:$src2), GR64>;
-class AtomicLoadBinaryImm64<SDPatternOperator operator, ImmOpWithPattern imm>
-  : AtomicLoadBinary<operator, GR64, (i64 imm:$src2), imm>;
 
 // OPERATOR is ATOMIC_SWAPW or an ATOMIC_LOADW_* operation.  PAT and OPERAND
 // describe the second (non-memory) operand.

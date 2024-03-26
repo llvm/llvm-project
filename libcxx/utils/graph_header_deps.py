@@ -8,7 +8,6 @@
 # ===----------------------------------------------------------------------===##
 
 import argparse
-import sys
 
 if __name__ == "__main__":
     """Converts a header dependency CSV file to Graphviz dot file.

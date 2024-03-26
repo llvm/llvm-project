@@ -470,7 +470,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   // Predefine macros and configure the preprocessor.
   InitializePreprocessor(*PP, PPOpts, getPCHContainerReader(),
-                         getFrontendOpts());
+                         getFrontendOpts(), getCodeGenOpts());
 
   // Initialize the header search object.  In CUDA compilations, we use the aux
   // triple (the host triple) to initialize our header search, since we need to
@@ -543,7 +543,7 @@ std::string CompilerInstance::getSpecificModuleCachePath(StringRef ModuleHash) {
   SmallString<256> SpecificModuleCache(getHeaderSearchOpts().ModuleCachePath);
   if (!SpecificModuleCache.empty() && !getHeaderSearchOpts().DisableModuleHash)
     llvm::sys::path::append(SpecificModuleCache, ModuleHash);
-  return std::string(SpecificModuleCache.str());
+  return std::string(SpecificModuleCache);
 }
 
 // ASTContext
@@ -747,10 +747,22 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
                                   CodeCompleteConsumer *CompletionConsumer) {
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
                          TUKind, CompletionConsumer));
+
+  // Set up API notes.
+  TheSema->APINotes.setSwiftVersion(getAPINotesOpts().SwiftVersion);
+
   // Attach the external sema source if there is any.
   if (ExternalSemaSrc) {
     TheSema->addExternalSource(ExternalSemaSrc.get());
     ExternalSemaSrc->InitializeSema(*TheSema);
+  }
+
+  // If we're building a module and are supposed to load API notes,
+  // notify the API notes manager.
+  if (auto *currentModule = getPreprocessor().getCurrentModule()) {
+    (void)TheSema->APINotes.loadCurrentModuleAPINotes(
+        currentModule, getLangOpts().APINotesModules,
+        getAPINotesOpts().ModuleSearchPaths);
   }
 }
 
@@ -1035,6 +1047,11 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   if (getFrontendOpts().ShowStats || !getFrontendOpts().StatsFile.empty())
     llvm::EnableStatistics(false);
 
+  // Sort vectors containing toc data and no toc data variables to facilitate
+  // binary search later.
+  llvm::sort(getCodeGenOpts().TocDataVarsUserSpecified);
+  llvm::sort(getCodeGenOpts().NoTocDataVars);
+
   for (const FrontendInputFile &FIF : getFrontendOpts().Inputs) {
     // Reset the ID tables if we are reusing the SourceManager and parsing
     // regular files.
@@ -1049,30 +1066,7 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
     }
   }
 
-  if (getDiagnosticOpts().ShowCarets) {
-    // We can have multiple diagnostics sharing one diagnostic client.
-    // Get the total number of warnings/errors from the client.
-    unsigned NumWarnings = getDiagnostics().getClient()->getNumWarnings();
-    unsigned NumErrors = getDiagnostics().getClient()->getNumErrors();
-
-    if (NumWarnings)
-      OS << NumWarnings << " warning" << (NumWarnings == 1 ? "" : "s");
-    if (NumWarnings && NumErrors)
-      OS << " and ";
-    if (NumErrors)
-      OS << NumErrors << " error" << (NumErrors == 1 ? "" : "s");
-    if (NumWarnings || NumErrors) {
-      OS << " generated";
-      if (getLangOpts().CUDA) {
-        if (!getLangOpts().CUDAIsDevice) {
-          OS << " when compiling for host";
-        } else {
-          OS << " when compiling for " << getTargetOpts().CPU;
-        }
-      }
-      OS << ".\n";
-    }
-  }
+  printDiagnosticStats();
 
   if (getFrontendOpts().ShowStats) {
     if (hasFileManager()) {
@@ -1098,6 +1092,36 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   }
 
   return !getDiagnostics().getClient()->getNumErrors();
+}
+
+void CompilerInstance::printDiagnosticStats() {
+  if (!getDiagnosticOpts().ShowCarets)
+    return;
+
+  raw_ostream &OS = getVerboseOutputStream();
+
+  // We can have multiple diagnostics sharing one diagnostic client.
+  // Get the total number of warnings/errors from the client.
+  unsigned NumWarnings = getDiagnostics().getClient()->getNumWarnings();
+  unsigned NumErrors = getDiagnostics().getClient()->getNumErrors();
+
+  if (NumWarnings)
+    OS << NumWarnings << " warning" << (NumWarnings == 1 ? "" : "s");
+  if (NumWarnings && NumErrors)
+    OS << " and ";
+  if (NumErrors)
+    OS << NumErrors << " error" << (NumErrors == 1 ? "" : "s");
+  if (NumWarnings || NumErrors) {
+    OS << " generated";
+    if (getLangOpts().CUDA) {
+      if (!getLangOpts().CUDAIsDevice) {
+        OS << " when compiling for host";
+      } else {
+        OS << " when compiling for " << getTargetOpts().CPU;
+      }
+    }
+    OS << ".\n";
+  }
 }
 
 void CompilerInstance::LoadRequestedPlugins() {
@@ -1572,6 +1596,14 @@ static void checkConfigMacro(Preprocessor &PP, StringRef ConfigMacro,
   }
 }
 
+static void checkConfigMacros(Preprocessor &PP, Module *M,
+                              SourceLocation ImportLoc) {
+  clang::Module *TopModule = M->getTopLevelModule();
+  for (const StringRef ConMacro : TopModule->ConfigMacros) {
+    checkConfigMacro(PP, ConMacro, M, ImportLoc);
+  }
+}
+
 /// Write a new timestamp file with the given path.
 static void writeTimestampFile(StringRef TimestampFile) {
   std::error_code EC;
@@ -1810,6 +1842,13 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
   Module *M =
       HS.lookupModule(ModuleName, ImportLoc, true, !IsInclusionDirective);
 
+  // Check for any configuration macros that have changed. This is done
+  // immediately before potentially building a module in case this module
+  // depends on having one of its configuration macros defined to successfully
+  // build. If this is not done the user will never see the warning.
+  if (M)
+    checkConfigMacros(getPreprocessor(), M, ImportLoc);
+
   // Select the source and filename for loading the named module.
   std::string ModuleFilename;
   ModuleSource Source =
@@ -1987,11 +2026,22 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   if (auto MaybeModule = MM.getCachedModuleLoad(*Path[0].first)) {
     // Use the cached result, which may be nullptr.
     Module = *MaybeModule;
+    // Config macros are already checked before building a module, but they need
+    // to be checked at each import location in case any of the config macros
+    // have a new value at the current `ImportLoc`.
+    if (Module)
+      checkConfigMacros(getPreprocessor(), Module, ImportLoc);
   } else if (ModuleName == getLangOpts().CurrentModule) {
     // This is the module we're building.
     Module = PP->getHeaderSearchInfo().lookupModule(
         ModuleName, ImportLoc, /*AllowSearch*/ true,
         /*AllowExtraModuleMapSearch*/ !IsInclusionDirective);
+
+    // Config macros do not need to be checked here for two reasons.
+    // * This will always be textual inclusion, and thus the config macros
+    //   actually do impact the content of the header.
+    // * `Preprocessor::HandleHeaderIncludeOrImport` will never call this
+    //   function as the `#include` or `#import` is textual.
 
     MM.cacheModuleLoad(*Path[0].first, Module);
   } else {
@@ -2127,18 +2177,11 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     TheASTReader->makeModuleVisible(Module, Visibility, ImportLoc);
   }
 
-  // Check for any configuration macros that have changed.
-  clang::Module *TopModule = Module->getTopLevelModule();
-  for (unsigned I = 0, N = TopModule->ConfigMacros.size(); I != N; ++I) {
-    checkConfigMacro(getPreprocessor(), TopModule->ConfigMacros[I],
-                     Module, ImportLoc);
-  }
-
   // Resolve any remaining module using export_as for this one.
   getPreprocessor()
       .getHeaderSearchInfo()
       .getModuleMap()
-      .resolveLinkAsDependencies(TopModule);
+      .resolveLinkAsDependencies(Module->getTopLevelModule());
 
   LastModuleImportLoc = ImportLoc;
   LastModuleImportResult = ModuleLoadResult(Module);
@@ -2192,7 +2235,7 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
   // Build the module, inheriting any modules that we've built locally.
   if (compileModuleImpl(*this, ImportLoc, ModuleName, Input, StringRef(),
                         ModuleFileName, PreBuildStep, PostBuildStep)) {
-    BuiltModules[std::string(ModuleName)] = std::string(ModuleFileName.str());
+    BuiltModules[std::string(ModuleName)] = std::string(ModuleFileName);
     llvm::sys::RemoveFileOnSignal(ModuleFileName);
   }
 }
@@ -2248,7 +2291,7 @@ GlobalModuleIndex *CompilerInstance::loadGlobalModuleIndex(
     for (ModuleMap::module_iterator I = MMap.module_begin(),
         E = MMap.module_end(); I != E; ++I) {
       Module *TheModule = I->second;
-      const FileEntry *Entry = TheModule->getASTFile();
+      OptionalFileEntryRef Entry = TheModule->getASTFile();
       if (!Entry) {
         SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
         Path.push_back(std::make_pair(

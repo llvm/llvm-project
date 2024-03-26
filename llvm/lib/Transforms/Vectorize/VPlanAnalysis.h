@@ -16,12 +16,9 @@ namespace llvm {
 class LLVMContext;
 class VPValue;
 class VPBlendRecipe;
-class VPInterleaveRecipe;
 class VPInstruction;
-class VPReductionPHIRecipe;
 class VPWidenRecipe;
 class VPWidenCallRecipe;
-class VPWidenCastRecipe;
 class VPWidenIntOrFpInductionRecipe;
 class VPWidenMemoryInstructionRecipe;
 struct VPWidenSelectRecipe;
@@ -38,6 +35,10 @@ class Type;
 /// of the previously inferred types.
 class VPTypeAnalysis {
   DenseMap<const VPValue *, Type *> CachedTypes;
+  /// Type of the canonical induction variable. Used for all VPValues without
+  /// any underlying IR value (like the vector trip count or the backedge-taken
+  /// count).
+  Type *CanonicalIVTy;
   LLVMContext &Ctx;
 
   Type *inferScalarTypeForRecipe(const VPBlendRecipe *R);
@@ -50,10 +51,14 @@ class VPTypeAnalysis {
   Type *inferScalarTypeForRecipe(const VPReplicateRecipe *R);
 
 public:
-  VPTypeAnalysis(LLVMContext &Ctx) : Ctx(Ctx) {}
+  VPTypeAnalysis(Type *CanonicalIVTy, LLVMContext &Ctx)
+      : CanonicalIVTy(CanonicalIVTy), Ctx(Ctx) {}
 
   /// Infer the type of \p V. Returns the scalar type of \p V.
   Type *inferScalarType(const VPValue *V);
+
+  /// Return the LLVMContext used by the analysis.
+  LLVMContext &getContext() { return Ctx; }
 };
 
 } // end namespace llvm

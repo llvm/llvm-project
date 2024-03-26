@@ -4,6 +4,7 @@ include "spec/stdc.td"
 include "spec/posix.td"
 include "spec/gpu_ext.td"
 include "spec/gnu_ext.td"
+include "spec/stdc_ext.td"
 include "spec/llvm_libc_ext.td"
 
 def AssertMacro : MacroDef<"assert"> {
@@ -62,7 +63,6 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
     SimpleMacroDef<"_IOFBF", "0">,
     SimpleMacroDef<"_IOLBF", "1">,
     SimpleMacroDef<"_IONBF", "2">,
-    SimpleMacroDef<"EOF", "-1">,
   ];
   let Types = ["size_t", "FILE"];
 }

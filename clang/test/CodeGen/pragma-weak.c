@@ -16,7 +16,7 @@
 // CHECK-DAG: @declfirstattr = weak{{.*}} alias void (), ptr @__declfirstattr
 // CHECK-DAG: @mix2 = weak{{.*}} alias void (), ptr @__mix2
 // CHECK-DAG: @a1 = weak{{.*}} alias void (), ptr @__a1
-// CHECK-DAG: @xxx = weak{{.*}} alias void (), ptr @__xxx
+// CHECK-DAG: @xxx = weak{{.*}} alias i32 (), ptr @__xxx
 // CHECK-DAG: @undecfunc_alias1 = weak{{.*}} alias void (), ptr @undecfunc
 // CHECK-DAG: @undecfunc_alias2 = weak{{.*}} alias void (), ptr @undecfunc
 // CHECK-DAG: @undecfunc_alias3 = weak{{.*}} alias void (), ptr @undecfunc
@@ -137,8 +137,8 @@ void __a1(void) {}
 // CHECK: define{{.*}} void @__a1() [[NI:#[0-9]+]]
 
 #pragma weak xxx = __xxx
-__attribute((pure,noinline,const)) void __xxx(void) { }
-// CHECK: void @__xxx() [[RN:#[0-9]+]]
+__attribute((noinline,const)) int __xxx(void) { return 0; }
+// CHECK: i32 @__xxx() [[RN:#[0-9]+]]
 
 ///////////// PR28611: Try multiple aliases of same undeclared symbol or alias
 #pragma weak undecfunc_alias1 = undecfunc

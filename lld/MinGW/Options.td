@@ -149,6 +149,7 @@ defm wrap: Eq<"wrap", "Use wrapper functions for symbol">,
      MetaVarName<"<symbol>">;
 
 
+// LLD specific options, for LTO, shared with the ELF backend
 def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
   HelpText<"Optimization level for LTO">;
 def lto_CGO: JJ<"lto-CGO">, MetaVarName<"<cgopt-level>">,
@@ -157,9 +158,21 @@ def lto_cs_profile_generate: FF<"lto-cs-profile-generate">,
   HelpText<"Perform context sensitive PGO instrumentation">;
 def lto_cs_profile_file: JJ<"lto-cs-profile-file=">,
   HelpText<"Context sensitive profile file path">;
+def lto_emit_asm: FF<"lto-emit-asm">,
+  HelpText<"Emit assembly code">;
+def lto_sample_profile: JJ<"lto-sample-profile=">,
+  HelpText<"Sample profile file path">;
 
+def thinlto_cache_dir: JJ<"thinlto-cache-dir=">,
+  HelpText<"Path to ThinLTO cached object file directory">;
+defm thinlto_cache_policy: EEq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;
+def thinlto_emit_imports_files: FF<"thinlto-emit-imports-files">;
+def thinlto_index_only: FF<"thinlto-index-only">;
+def thinlto_index_only_eq: JJ<"thinlto-index-only=">;
 def thinlto_jobs_eq: JJ<"thinlto-jobs=">,
   HelpText<"Number of ThinLTO jobs. Default to --threads=">;
+def thinlto_object_suffix_replace_eq: JJ<"thinlto-object-suffix-replace=">;
+def thinlto_prefix_replace_eq: JJ<"thinlto-prefix-replace=">;
 
 def plugin_opt_eq_minus: J<"plugin-opt=-">,
   HelpText<"Specify an LLVM option for compatibility with LLVMgold.so">;
@@ -172,6 +185,9 @@ def: J<"plugin-opt=cs-profile-path=">,
   Alias<lto_cs_profile_file>, HelpText<"Alias for --lto-cs-profile-file">;
 def plugin_opt_dwo_dir_eq: J<"plugin-opt=dwo_dir=">,
   HelpText<"Directory to store .dwo files when LTO and debug fission are used">;
+def plugin_opt_emit_asm: F<"plugin-opt=emit-asm">,
+  Alias<lto_emit_asm>, HelpText<"Alias for --lto-emit-asm">;
+def plugin_opt_emit_llvm: F<"plugin-opt=emit-llvm">;
 def: J<"plugin-opt=jobs=">, Alias<thinlto_jobs_eq>, HelpText<"Alias for --thinlto-jobs=">;
 def plugin_opt_mcpu_eq: J<"plugin-opt=mcpu=">;
 
@@ -186,8 +202,6 @@ def appcontainer: F<"appcontainer">, HelpText<"Set the appcontainer flag in the 
 defm delayload: Eq<"delayload", "DLL to load only on demand">;
 defm mllvm: EqNoHelp<"mllvm">;
 defm pdb: Eq<"pdb", "Output PDB debug info file, chosen implicitly if the argument is empty">;
-defm thinlto_cache_dir: EqLong<"thinlto-cache-dir",
-  "Path to ThinLTO cached object file directory">;
 defm Xlink : Eq<"Xlink", "Pass <arg> to the COFF linker">, MetaVarName<"<arg>">;
 defm guard_cf : B<"guard-cf", "Enable Control Flow Guard" ,
   "Do not enable Control Flow Guard (default)">;
@@ -196,6 +210,9 @@ defm guard_longjmp : B<"guard-longjmp",
   "Do not enable Control Flow Guard long jump hardening">;
 defm error_limit:
   EqLong<"error-limit", "Maximum number of errors to emit before stopping (0 = no limit)">;
+def build_id: J<"build-id=">, HelpText<"Generate build ID note (pass none to disable)">, 
+  MetaVarName<"<arg>">;
+def : F<"build-id">, Alias<build_id>, HelpText<"Alias for --build-id=">;
 
 // Alias
 def alias_Bdynamic_call_shared: Flag<["-"], "call_shared">, Alias<Bdynamic>;
@@ -213,7 +230,6 @@ def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 // Ignored options
 def: Joined<["-"], "O">;
 def: F<"as-needed">;
-def: F<"build-id">;
 def: F<"disable-auto-image-base">;
 def: F<"enable-auto-image-base">;
 def: F<"end-group">;

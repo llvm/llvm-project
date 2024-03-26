@@ -28,7 +28,7 @@ entry:
 define void @test2(ptr addrspace(1) %base) gc "statepoint-example" {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PTR_GEP1:%.*]] = getelementptr i32, ptr addrspace(1) [[BASE:%.*]], i64 30
+; CHECK-NEXT:    [[PTR_GEP1:%.*]] = getelementptr i8, ptr addrspace(1) [[BASE:%.*]], i64 120
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "gc-live"() ]
 ; CHECK-NEXT:    call void @use_obj32(ptr addrspace(1) [[PTR_GEP1]])
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN1:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "gc-live"() ]
@@ -91,7 +91,7 @@ define void @test4(i1 %cond) gc "statepoint-example" {
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[BASEPHI_BASE:%.*]] = phi ptr addrspace(1) [ [[BASE1]], [[HERE]] ], [ [[BASE2]], [[THERE]] ], !is_base_value !0
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "gc-live"() ]
-; CHECK-NEXT:    [[PTR_GEP_REMAT:%.*]] = getelementptr i32, ptr addrspace(1) [[BASEPHI_BASE]], i64 15
+; CHECK-NEXT:    [[PTR_GEP_REMAT:%.*]] = getelementptr i8, ptr addrspace(1) [[BASEPHI_BASE]], i64 60
 ; CHECK-NEXT:    call void @use_obj32(ptr addrspace(1) [[PTR_GEP_REMAT]])
 ; CHECK-NEXT:    ret void
 ;

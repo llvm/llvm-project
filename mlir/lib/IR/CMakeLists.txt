@@ -1,3 +1,9 @@
+if(MLIR_ENABLE_PDL_IN_PATTERNMATCH)
+  set(pdl_src
+    PDL/PDLPatternMatch.cpp
+  )
+endif()
+
 add_mlir_library(MLIRIR
   AffineExpr.cpp
   AffineMap.cpp
@@ -36,6 +42,7 @@ add_mlir_library(MLIRIR
   ValueRange.cpp
   Verifier.cpp
   Visitors.cpp
+  ${pdl_src}
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/IR
@@ -61,3 +68,4 @@ add_mlir_library(MLIRIR
   LINK_LIBS PUBLIC
   MLIRSupport
   )
+

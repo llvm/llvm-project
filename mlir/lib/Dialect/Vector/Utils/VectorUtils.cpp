@@ -87,14 +87,11 @@ mlir::vector::isTranspose2DSlice(vector::TransposeOp op) {
   if (srcGtOneDims.size() != 2)
     return failure();
 
-  SmallVector<int64_t> transp;
-  for (auto attr : op.getTransp())
-    transp.push_back(cast<IntegerAttr>(attr).getInt());
-
   // Check whether the two source vector dimensions that are greater than one
   // must be transposed with each other so that we can apply one of the 2-D
   // transpose pattens. Otherwise, these patterns are not applicable.
-  if (!areDimsTransposedIn2DSlice(srcGtOneDims[0], srcGtOneDims[1], transp))
+  if (!areDimsTransposedIn2DSlice(srcGtOneDims[0], srcGtOneDims[1],
+                                  op.getPermutation()))
     return failure();
 
   return std::pair<int, int>(srcGtOneDims[0], srcGtOneDims[1]);
@@ -251,4 +248,72 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
   // the vector type (but we would have to look at the compute and distinguish
   // between parallel, reduction and possibly other cases.
   return ratio.has_value();
+}
+
+bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
+  if (vectorType.isScalable())
+    return false;
+
+  ArrayRef<int64_t> vectorShape = vectorType.getShape();
+  auto vecRank = vectorType.getRank();
+
+  if (!trailingNDimsContiguous(memrefType, vecRank))
+    return false;
+
+  // Extract the trailing dims and strides of the input memref
+  auto memrefShape = memrefType.getShape().take_back(vecRank);
+
+  // Compare the dims of `vectorType` against `memrefType` (in reverse).
+  // In the most basic case, all dims will match.
+  auto firstNonMatchingDim =
+      std::mismatch(vectorShape.rbegin(), vectorShape.rend(),
+                    memrefShape.rbegin(), memrefShape.rend());
+  if (firstNonMatchingDim.first == vectorShape.rend())
+    return true;
+
+  // One non-matching dim is still fine, however the remaining leading dims of
+  // `vectorType` need to be 1.
+  SmallVector<int64_t> leadingDims(++firstNonMatchingDim.first,
+                                   vectorShape.rend());
+
+  return llvm::all_of(leadingDims, [](auto x) { return x == 1; });
+}
+
+std::optional<StaticTileOffsetRange>
+vector::createUnrollIterator(VectorType vType, int64_t targetRank) {
+  if (vType.getRank() <= targetRank)
+    return {};
+  // Attempt to unroll until targetRank or the first scalable dimension (which
+  // cannot be unrolled).
+  auto shapeToUnroll = vType.getShape().drop_back(targetRank);
+  auto scalableDimsToUnroll = vType.getScalableDims().drop_back(targetRank);
+  auto it =
+      std::find(scalableDimsToUnroll.begin(), scalableDimsToUnroll.end(), true);
+  auto firstScalableDim = it - scalableDimsToUnroll.begin();
+  if (firstScalableDim == 0)
+    return {};
+  // All scalable dimensions should be removed now.
+  scalableDimsToUnroll = scalableDimsToUnroll.slice(0, firstScalableDim);
+  assert(!llvm::is_contained(scalableDimsToUnroll, true) &&
+         "unexpected leading scalable dimension");
+  // Create an unroll iterator for leading dimensions.
+  shapeToUnroll = shapeToUnroll.slice(0, firstScalableDim);
+  return StaticTileOffsetRange(shapeToUnroll, /*unrollStep=*/1);
+}
+
+SmallVector<OpFoldResult> vector::getMixedSizesXfer(bool hasTensorSemantics,
+                                                    Operation *xfer,
+                                                    RewriterBase &rewriter) {
+  auto loc = xfer->getLoc();
+
+  Value base = TypeSwitch<Operation *, Value>(xfer)
+                   .Case<vector::TransferReadOp>(
+                       [&](auto readOp) { return readOp.getSource(); })
+                   .Case<vector::TransferWriteOp>(
+                       [&](auto writeOp) { return writeOp.getOperand(1); });
+
+  SmallVector<OpFoldResult> mixedSourceDims =
+      hasTensorSemantics ? tensor::getMixedSizes(rewriter, loc, base)
+                         : memref::getMixedSizes(rewriter, loc, base);
+  return mixedSourceDims;
 }

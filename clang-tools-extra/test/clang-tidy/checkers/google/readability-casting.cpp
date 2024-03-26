@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s google-readability-casting %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s google-readability-casting %t -- -- -fexceptions
 
 bool g() { return false; }
 
@@ -322,15 +322,8 @@ void conversions() {
 }
 
 template <class T>
-T functional_cast_template_used_by_class(float i) {
+T functional_cast_template(float i) {
   return T(i);
-}
-
-template <class T>
-T functional_cast_template_used_by_int(float i) {
-  return T(i);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: C-style casts are discouraged; use static_cast
-  // CHECK-FIXES: return static_cast<T>(i);
 }
 
 struct S2 {
@@ -356,8 +349,8 @@ void functional_casts() {
   auto s = S(str);
 
   // Functional casts in template functions
-  functional_cast_template_used_by_class<S2>(x);
-  functional_cast_template_used_by_int<int>(x);
+  functional_cast_template<S2>(x);
+  functional_cast_template<int>(x);
 
   // New expressions are not functional casts
   auto w = new int(x);
@@ -366,4 +359,6 @@ void functional_casts() {
   S2 t = T(x); // OK, constructor call
   S2 u = U(x); // NOK, it's a reinterpret_cast in disguise
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: C-style casts are discouraged; use static_cast/const_cast/reinterpret_cast
+
+  throw S2(5.0f);
 }

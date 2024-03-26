@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -triple=riscv64 -riscv-no-aliases -mattr=+e -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+e < %s \
-# RUN:     | llvm-objdump -M no-aliases -d -r - \
+# RUN:     | llvm-objdump --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM-AND-OBJ %s
 
 # This file provides a basic test for RV64E, checking that the expected

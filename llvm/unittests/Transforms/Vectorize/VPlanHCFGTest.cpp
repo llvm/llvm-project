@@ -21,15 +21,15 @@ class VPlanHCFGTest : public VPlanTestBase {};
 
 TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   const char *ModuleString =
-      "define void @f(i32* %A, i64 %N) {\n"
+      "define void @f(ptr %A, i64 %N) {\n"
       "entry:\n"
       "  br label %for.body\n"
       "for.body:\n"
       "  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]\n"
-      "  %arr.idx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv\n"
-      "  %l1 = load i32, i32* %arr.idx, align 4\n"
+      "  %arr.idx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv\n"
+      "  %l1 = load i32, ptr %arr.idx, align 4\n"
       "  %res = add i32 %l1, 10\n"
-      "  store i32 %res, i32* %arr.idx, align 4\n"
+      "  store i32 %res, ptr %arr.idx, align 4\n"
       "  %indvars.iv.next = add i64 %indvars.iv, 1\n"
       "  %exitcond = icmp ne i64 %indvars.iv.next, %N\n"
       "  br i1 %exitcond, label %for.body, label %for.end\n"
@@ -101,7 +101,7 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   raw_string_ostream OS(FullDump);
   Plan->printDOT(OS);
   const char *ExpectedStr = R"(digraph VPlan {
-graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1"]
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nvp\<%1\> = original trip-count\n"]
 node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
@@ -112,12 +112,12 @@ compound=true
   ]
   N1 [label =
     "vector.ph:\l" +
-    "Successor(s): for.body\l"
+    "Successor(s): vector loop\l"
   ]
   N1 -> N2 [ label="" lhead=cluster_N3]
   subgraph cluster_N3 {
     fontname=Courier
-    label="\<x1\> for.body"
+    label="\<x1\> vector loop"
     N2 [label =
       "vector.body:\l" +
       "  WIDEN-PHI ir\<%indvars.iv\> = phi ir\<0\>, ir\<%indvars.iv.next\>\l" +
@@ -133,7 +133,7 @@ compound=true
   }
   N2 -> N4 [ label="" ltail=cluster_N3]
   N4 [label =
-    "for.end:\l" +
+    "middle.block:\l" +
     "No successors\l"
   ]
 }
@@ -148,15 +148,15 @@ compound=true
 
 TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   const char *ModuleString =
-      "define void @f(i32* %A, i64 %N) {\n"
+      "define void @f(ptr %A, i64 %N) {\n"
       "entry:\n"
       "  br label %for.body\n"
       "for.body:\n"
       "  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]\n"
-      "  %arr.idx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv\n"
-      "  %l1 = load i32, i32* %arr.idx, align 4\n"
+      "  %arr.idx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv\n"
+      "  %l1 = load i32, ptr %arr.idx, align 4\n"
       "  %res = add i32 %l1, 10\n"
-      "  store i32 %res, i32* %arr.idx, align 4\n"
+      "  store i32 %res, ptr %arr.idx, align 4\n"
       "  %indvars.iv.next = add i64 %indvars.iv, 1\n"
       "  %exitcond = icmp ne i64 %indvars.iv.next, %N\n"
       "  br i1 %exitcond, label %for.body, label %for.end\n"

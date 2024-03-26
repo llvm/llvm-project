@@ -86,6 +86,25 @@ TEST(RecursiveASTVisitor, Concepts) {
   EXPECT_EQ(3, Visitor.ConceptRequirementsTraversed);
   EXPECT_EQ(1, Visitor.ConceptReferencesTraversed);
   EXPECT_EQ(1, Visitor.ConceptReferencesVisited);
+
+  Visitor = {};
+  llvm::StringRef Code =
+      R"cpp(
+template<typename T> concept True = false;
+template <typename F> struct Foo {};
+
+template <typename F>
+  requires requires { requires True<F>; }
+struct Foo<F> {};
+
+template <typename F> requires True<F>
+struct Foo<F>  {};
+  )cpp";
+  EXPECT_TRUE(Visitor.runOver(Code, ConceptVisitor::Lang_CXX2a));
+  // Check that the concept references from the partial specializations are
+  // visited.
+  EXPECT_EQ(2, Visitor.ConceptReferencesTraversed);
+  EXPECT_EQ(2, Visitor.ConceptReferencesVisited);
 }
 
 struct VisitDeclOnlyOnce : ExpectedLocationVisitor<VisitDeclOnlyOnce> {

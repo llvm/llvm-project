@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx908 -start-before=si-pre-emit-peephole %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -start-before=si-pre-emit-peephole %s -o - | FileCheck -check-prefix=GCN %s
 
 # Verify that the dedicated hazard recognizer pass is run after late peephole
 # optimizations. New hazards can be introduced if instructions are removed by

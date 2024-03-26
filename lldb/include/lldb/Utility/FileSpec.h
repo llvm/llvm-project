@@ -377,21 +377,6 @@ public:
   ///     The triple which is used to set the Path style.
   void SetFile(llvm::StringRef path, const llvm::Triple &triple);
 
-  bool IsResolved() const { return m_is_resolved; }
-
-  /// Set if the file path has been resolved or not.
-  ///
-  /// If you know a file path is already resolved and avoided passing a \b
-  /// true parameter for any functions that take a "bool resolve_path"
-  /// parameter, you can set the value manually using this call to make sure
-  /// we don't try and resolve it later, or try and resolve a path that has
-  /// already been resolved.
-  ///
-  /// \param[in] is_resolved
-  ///     A boolean value that will replace the current value that
-  ///     indicates if the paths in this object have been resolved.
-  void SetIsResolved(bool is_resolved) { m_is_resolved = is_resolved; }
-
   FileSpec CopyByAppendingPathComponent(llvm::StringRef component) const;
   FileSpec CopyByRemovingLastPathComponent() const;
 
@@ -426,10 +411,7 @@ protected:
 
   /// Called anytime m_directory or m_filename is changed to clear any cached
   /// state in this object.
-  void PathWasModified() {
-    m_is_resolved = false;
-    m_absolute = Absolute::Calculate;
-  }
+  void PathWasModified() { m_absolute = Absolute::Calculate; }
 
   enum class Absolute : uint8_t {
     Calculate,
@@ -442,9 +424,6 @@ protected:
 
   /// The unique'd filename path.
   ConstString m_filename;
-
-  /// True if this path has been resolved.
-  mutable bool m_is_resolved = false;
 
   /// Cache whether this path is absolute.
   mutable Absolute m_absolute = Absolute::Calculate;

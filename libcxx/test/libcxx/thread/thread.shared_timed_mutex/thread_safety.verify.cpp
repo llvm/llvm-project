@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11
 // UNSUPPORTED: no-threads
-// UNSUPPORTED: availability-shared_mutex-missing
 // REQUIRES: thread-safety
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS
 

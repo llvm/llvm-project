@@ -111,7 +111,7 @@ body:             |
     STRXui killed renamable $x1, %stack.1, 0, debug-location !8
     DBG_VALUE %stack.1, $noreg, !11, !DIExpression(DW_OP_constu, 16, DW_OP_plus, DW_OP_deref), debug-location !8
 
-    renamable $p2 = PTRUE_S 31, debug-location !DILocation(line: 4, column: 1, scope: !5)
+    renamable $p2 = PTRUE_S 31, implicit $vg, debug-location !DILocation(line: 4, column: 1, scope: !5)
     ST1W_IMM renamable $z0, renamable $p2, %stack.2, 0, debug-location !DILocation(line: 5, column: 1, scope: !5)
     DBG_VALUE %stack.2, $noreg, !12, !DIExpression(DW_OP_deref), debug-location !DILocation(line: 5, column: 1, scope: !5)
     ST1W_IMM renamable $z1, killed renamable $p2, %stack.3, 0, debug-location !DILocation(line: 6, column: 1, scope: !5)

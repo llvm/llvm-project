@@ -39,24 +39,24 @@ def TGTmul24_oneuse : PatFrag<
 }
 
 // SDAG: OPC_CheckOpcode, TARGET_VAL(ISD::INTRINSIC_W_CHAIN),
-// SDAG: OPC_CheckPredicate, 0, // Predicate_TGTmul24_oneuse
+// SDAG: OPC_CheckPredicate0, // Predicate_TGTmul24_oneuse
 
 // SDAG: OPC_CheckOpcode, TARGET_VAL(TargetISD::MUL24),
-// SDAG: OPC_CheckPredicate, 0, // Predicate_TGTmul24_oneuse
+// SDAG: OPC_CheckPredicate0, // Predicate_TGTmul24_oneuse
 
-// GISEL: GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS,
-// GISEL: GIM_CheckIntrinsicID, /*MI*/1, /*Op*/1, Intrinsic::tgt_mul24,
-// GISEL: GIM_CheckCxxInsnPredicate, /*MI*/1, /*FnId*/GICXXPred_MI_Predicate_TGTmul24_oneuse,
+// GISEL: GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS),
+// GISEL: GIM_CheckIntrinsicID, /*MI*/1, /*Op*/1, GIMT_Encode2(Intrinsic::tgt_mul24),
+// GISEL: GIM_CheckCxxInsnPredicate, /*MI*/1, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_TGTmul24_oneuse),
 
-// GISEL: GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS,
-// GISEL: GIM_CheckIntrinsicID, /*MI*/1, /*Op*/1, Intrinsic::tgt_mul24,
-// GISEL: GIM_CheckCxxInsnPredicate, /*MI*/1, /*FnId*/GICXXPred_MI_Predicate_TGTmul24_oneuse,
+// GISEL: GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS),
+// GISEL: GIM_CheckIntrinsicID, /*MI*/1, /*Op*/1, GIMT_Encode2(Intrinsic::tgt_mul24),
+// GISEL: GIM_CheckCxxInsnPredicate, /*MI*/1, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_TGTmul24_oneuse),
 
-// GISEL: GIM_CheckOpcode, /*MI*/1, MyTarget::G_TGT_MUL24,
-// GISEL: GIM_CheckCxxInsnPredicate, /*MI*/1, /*FnId*/GICXXPred_MI_Predicate_TGTmul24_oneuse,
+// GISEL: GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(MyTarget::G_TGT_MUL24),
+// GISEL: GIM_CheckCxxInsnPredicate, /*MI*/1, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_TGTmul24_oneuse),
 
-// GISEL: GIM_CheckOpcode, /*MI*/1, MyTarget::G_TGT_MUL24,
-// GISEL: GIM_CheckCxxInsnPredicate, /*MI*/1, /*FnId*/GICXXPred_MI_Predicate_TGTmul24_oneuse,
+// GISEL: GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(MyTarget::G_TGT_MUL24),
+// GISEL: GIM_CheckCxxInsnPredicate, /*MI*/1, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_TGTmul24_oneuse),
 def inst_mad24 : I<
   (outs GPR32:$dst),
   (ins GPR32:$src0, GPR32:$src1, GPR32:$src2),

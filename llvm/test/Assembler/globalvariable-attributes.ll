@@ -9,6 +9,11 @@
 @g7 = global i32 2, sanitize_address_dyninit, align 4
 @g8 = global i32 2, sanitize_memtag, align 4
 @g9 = global i32 2, no_sanitize_address, no_sanitize_hwaddress, sanitize_memtag, align 4
+@g10 = global i32 2, code_model "tiny"
+@g11 = global i32 2, code_model "small"
+@g12 = global i32 2, code_model "kernel"
+@g13 = global i32 2, code_model "medium"
+@g14 = global i32 2, code_model "large"
 
 attributes #0 = { "string" = "value" nobuiltin norecurse }
 
@@ -21,6 +26,11 @@ attributes #0 = { "string" = "value" nobuiltin norecurse }
 ; CHECK: @g7 = global i32 2, sanitize_address_dyninit, align 4
 ; CHECK: @g8 = global i32 2, sanitize_memtag, align 4
 ; CHECK: @g9 = global i32 2, no_sanitize_address, no_sanitize_hwaddress, sanitize_memtag, align 4
+; CHECK: @g10 = global i32 2, code_model "tiny"
+; CHECK: @g11 = global i32 2, code_model "small"
+; CHECK: @g12 = global i32 2, code_model "kernel"
+; CHECK: @g13 = global i32 2, code_model "medium"
+; CHECK: @g14 = global i32 2, code_model "large"
 
 ; CHECK: attributes #0 = { "key"="value" "key2"="value2" }
 ; CHECK: attributes #1 = { "key3"="value3" }

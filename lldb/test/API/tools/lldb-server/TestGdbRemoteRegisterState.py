@@ -38,7 +38,7 @@ class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
             for reg_info in reg_infos
             if self.is_bit_flippable_register(reg_info)
         ]
-        self.assertTrue(len(gpr_reg_infos) > 0)
+        self.assertGreater(len(gpr_reg_infos), 0)
 
         # Gather thread info.
         if with_suffix:
@@ -77,7 +77,7 @@ class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
                 successful_writes, failed_writes
             )
         )
-        self.assertTrue(successful_writes > 0)
+        self.assertGreater(successful_writes, 0)
 
         flipped_reg_values = self.read_register_values(
             gpr_reg_infos, endian, thread_id=thread_id

@@ -235,7 +235,7 @@ OptionalFileEntryRef ModuleMap::findHeader(
   llvm::sys::path::append(FullPathName, RelativePathName);
   auto NormalHdrFile = GetFile(FullPathName);
 
-  if (!NormalHdrFile && Directory->getName().endswith(".framework")) {
+  if (!NormalHdrFile && Directory->getName().ends_with(".framework")) {
     // The lack of 'framework' keyword in a module declaration it's a simple
     // mistake we can diagnose when the header exists within the proper
     // framework style path.
@@ -308,7 +308,7 @@ void ModuleMap::resolveHeader(Module *Mod,
         setUmbrellaHeaderAsWritten(Mod, *File, Header.FileName,
                                    RelativePathName.str());
     } else {
-      Module::Header H = {Header.FileName, std::string(RelativePathName.str()),
+      Module::Header H = {Header.FileName, std::string(RelativePathName),
                           *File};
       addHeader(Mod, H, headerKindToRole(Header.Kind));
     }
@@ -881,17 +881,17 @@ Module *ModuleMap::createGlobalModuleFragmentForModuleUnit(SourceLocation Loc,
   return Result;
 }
 
-Module *ModuleMap::createImplicitGlobalModuleFragmentForModuleUnit(
-    SourceLocation Loc, bool IsExported, Module *Parent) {
+Module *
+ModuleMap::createImplicitGlobalModuleFragmentForModuleUnit(SourceLocation Loc,
+                                                           Module *Parent) {
   assert(Parent && "We should only create an implicit global module fragment "
                    "in a module purview");
   // Note: Here the `IsExplicit` parameter refers to the semantics in clang
   // modules. All the non-explicit submodules in clang modules will be exported
   // too. Here we simplify the implementation by using the concept.
-  auto *Result = new Module(IsExported ? "<exported implicit global>"
-                                       : "<implicit global>",
-                            Loc, Parent, /*IsFramework*/ false,
-                            /*IsExplicit*/ !IsExported, NumCreatedModules++);
+  auto *Result =
+      new Module("<implicit global>", Loc, Parent, /*IsFramework=*/false,
+                 /*IsExplicit=*/false, NumCreatedModules++);
   Result->Kind = Module::ImplicitGlobalModuleFragment;
   return Result;
 }
@@ -984,7 +984,9 @@ static void inferFrameworkLink(Module *Mod) {
   assert(!Mod->isSubFramework() &&
          "Can only infer linking for top-level frameworks");
 
-  Mod->LinkLibraries.push_back(Module::LinkLibrary(Mod->Name,
+  StringRef FrameworkName(Mod->Name);
+  FrameworkName.consume_back("_Private");
+  Mod->LinkLibraries.push_back(Module::LinkLibrary(FrameworkName.str(),
                                                    /*IsFramework=*/true));
 }
 
@@ -1034,7 +1036,7 @@ Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
         if (inferred == InferredDirectories.end()) {
           // We haven't looked here before. Load a module map, if there is
           // one.
-          bool IsFrameworkDir = Parent.endswith(".framework");
+          bool IsFrameworkDir = Parent.ends_with(".framework");
           if (OptionalFileEntryRef ModMapFile =
                   HeaderInfo.lookupModuleMapFile(*ParentDir, IsFrameworkDir)) {
             parseModuleMapFile(*ModMapFile, Attrs.IsSystem, *ParentDir);
@@ -1067,9 +1069,7 @@ Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
     if (!canInfer)
       return nullptr;
   } else {
-    OptionalFileEntryRefDegradesToFileEntryPtr ModuleMapRef =
-        getModuleMapFileForUniquing(Parent);
-    ModuleMapFile = ModuleMapRef;
+    ModuleMapFile = getModuleMapFileForUniquing(Parent);
   }
 
   // Look for an umbrella header.
@@ -1127,7 +1127,7 @@ Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
            Dir = FS.dir_begin(SubframeworksDirName, EC),
            DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {
-    if (!StringRef(Dir->path()).endswith(".framework"))
+    if (!StringRef(Dir->path()).ends_with(".framework"))
       continue;
 
     if (auto SubframeworkDir = FileMgr.getOptionalDirectoryRef(Dir->path())) {
@@ -1339,7 +1339,7 @@ ModuleMap::canonicalizeModuleMapPath(SmallVectorImpl<char> &Path) {
   // Modules/ not Versions/A/Modules.
   if (llvm::sys::path::filename(Dir) == "Modules") {
     StringRef Parent = llvm::sys::path::parent_path(Dir);
-    if (Parent.endswith(".framework"))
+    if (Parent.ends_with(".framework"))
       Dir = Parent;
   }
 
@@ -1866,7 +1866,7 @@ void ModuleMapParser::diagnosePrivateModules(SourceLocation ExplicitLoc,
       continue;
 
     SmallString<128> FullName(ActiveModule->getFullModuleName());
-    if (!FullName.startswith(M->Name) && !FullName.endswith("Private"))
+    if (!FullName.starts_with(M->Name) && !FullName.ends_with("Private"))
       continue;
     SmallString<128> FixedPrivModDecl;
     SmallString<128> Canonical(M->Name);
@@ -2121,8 +2121,8 @@ void ModuleMapParser::parseModuleDecl() {
   ActiveModule->Directory = Directory;
 
   StringRef MapFileName(ModuleMapFile.getName());
-  if (MapFileName.endswith("module.private.modulemap") ||
-      MapFileName.endswith("module_private.map")) {
+  if (MapFileName.ends_with("module.private.modulemap") ||
+      MapFileName.ends_with("module_private.map")) {
     ActiveModule->ModuleMapIsPrivate = true;
   }
 
@@ -2498,9 +2498,12 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
   }
 
   bool NeedsFramework = false;
-  // Don't add the top level headers to the builtin modules if the builtin headers
-  // belong to the system modules.
-  if (!Map.LangOpts.BuiltinHeadersInSystemModules || ActiveModule->isSubModule() || !isBuiltInModuleName(ActiveModule->Name))
+  // Don't add headers to the builtin modules if the builtin headers belong to
+  // the system modules, with the exception of __stddef_max_align_t.h which
+  // always had its own module.
+  if (!Map.LangOpts.BuiltinHeadersInSystemModules ||
+      !isBuiltInModuleName(ActiveModule->getTopLevelModuleName()) ||
+      ActiveModule->fullModuleNameIs({"_Builtin_stddef", "max_align_t"}))
     Map.addUnresolvedHeader(ActiveModule, std::move(Header), NeedsFramework);
 
   if (NeedsFramework)
@@ -2509,9 +2512,9 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
       << FixItHint::CreateReplacement(CurrModuleDeclLoc, "framework module");
 }
 
-static int compareModuleHeaders(const Module::Header *A,
-                                const Module::Header *B) {
-  return A->NameAsWritten.compare(B->NameAsWritten);
+static bool compareModuleHeaders(const Module::Header &A,
+                                 const Module::Header &B) {
+  return A.NameAsWritten < B.NameAsWritten;
 }
 
 /// Parse an umbrella directory declaration.
@@ -2574,7 +2577,7 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
     }
 
     // Sort header paths so that the pcm doesn't depend on iteration order.
-    llvm::array_pod_sort(Headers.begin(), Headers.end(), compareModuleHeaders);
+    std::stable_sort(Headers.begin(), Headers.end(), compareModuleHeaders);
 
     for (auto &Header : Headers)
       Map.addHeader(ActiveModule, std::move(Header), ModuleMap::TextualHeader);

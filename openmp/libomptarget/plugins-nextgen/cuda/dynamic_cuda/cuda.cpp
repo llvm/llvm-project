@@ -13,9 +13,10 @@
 
 #include "llvm/Support/DynamicLibrary.h"
 
-#include "Debug.h"
+#include "Shared/Debug.h"
+
+#include "DLWrap.h"
 #include "cuda.h"
-#include "dlwrap.h"
 
 #include <memory>
 #include <string>
@@ -42,6 +43,7 @@ DLWRAP(cuLaunchKernel, 11)
 DLWRAP(cuMemAlloc, 2)
 DLWRAP(cuMemAllocHost, 2)
 DLWRAP(cuMemAllocManaged, 3)
+DLWRAP(cuMemAllocAsync, 3)
 
 DLWRAP(cuMemcpyDtoDAsync, 4)
 DLWRAP(cuMemcpyDtoH, 3)
@@ -51,6 +53,8 @@ DLWRAP(cuMemcpyHtoDAsync, 4)
 
 DLWRAP(cuMemFree, 1)
 DLWRAP(cuMemFreeHost, 1)
+DLWRAP(cuMemFreeAsync, 2)
+
 DLWRAP(cuModuleGetFunction, 3)
 DLWRAP(cuModuleGetGlobal, 4)
 
@@ -80,6 +84,16 @@ DLWRAP(cuEventSynchronize, 1)
 DLWRAP(cuEventDestroy, 1)
 
 DLWRAP_FINALIZE()
+
+DLWRAP(cuMemUnmap, 2)
+DLWRAP(cuMemRelease, 1)
+DLWRAP(cuMemAddressFree, 2)
+DLWRAP(cuMemGetInfo, 2)
+DLWRAP(cuMemAddressReserve, 5)
+DLWRAP(cuMemMap, 5)
+DLWRAP(cuMemCreate, 4)
+DLWRAP(cuMemSetAccess, 4)
+DLWRAP(cuMemGetAllocationGranularity, 3)
 
 #ifndef DYNAMIC_CUDA_PATH
 #define DYNAMIC_CUDA_PATH "libcuda.so"

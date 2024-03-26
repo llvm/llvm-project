@@ -26,12 +26,6 @@
 
 #include "test_macros.h"
 
-// The __int128 conversions to/from floating point crash on MinGW on x86_64.
-// This is fixed in Clang 14 by https://reviews.llvm.org/D110413.
-#if defined(__x86_64__) && defined(__MINGW32__) && defined(__clang_major__) && __clang_major__ < 14
- #define TEST_BUGGY_I128_FP
-#endif
-
 template <class T>
 T sqr(T x) {
     return x * x;
@@ -127,7 +121,7 @@ int main(int, char**)
     test_statistics<std::int8_t, std::minstd_rand0>();
     test_statistics<std::uint8_t, std::minstd_rand0>();
 
-#if !defined(TEST_HAS_NO_INT128) && !defined(TEST_BUGGY_I128_FP)
+#if !defined(TEST_HAS_NO_INT128)
     test_statistics<__int128_t, std::minstd_rand0>();
     test_statistics<__uint128_t, std::minstd_rand0>();
 

@@ -20,9 +20,7 @@
 define i32 @ctlz_and_other(i32 %n, ptr nocapture %a) {
 ; ALL-LABEL: @ctlz_and_other(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[C:%.*]] = icmp sgt i32 [[N:%.*]], 0
-; ALL-NEXT:    [[NEGN:%.*]] = sub nsw i32 0, [[N]]
-; ALL-NEXT:    [[ABS_N:%.*]] = select i1 [[C]], i32 [[N]], i32 [[NEGN]]
+; ALL-NEXT:    [[ABS_N:%.*]] = call i32 @llvm.abs.i32(i32 [[N:%.*]], i1 true)
 ; ALL-NEXT:    [[SHR8:%.*]] = lshr i32 [[ABS_N]], 1
 ; ALL-NEXT:    [[TOBOOL9:%.*]] = icmp eq i32 [[SHR8]], 0
 ; ALL-NEXT:    br i1 [[TOBOOL9]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
@@ -56,9 +54,7 @@ define i32 @ctlz_and_other(i32 %n, ptr nocapture %a) {
 ; ALL-NEXT:    ret i32 [[I_0_LCSSA]]
 ;
 entry:
-  %c = icmp sgt i32 %n, 0
-  %negn = sub nsw i32 0, %n
-  %abs_n = select i1 %c, i32 %n, i32 %negn
+  %abs_n = call i32 @llvm.abs.i32(i32 %n, i1 true)
   %shr8 = lshr i32 %abs_n, 1
   %tobool9 = icmp eq i32 %shr8, 0
   br i1 %tobool9, label %while.end, label %while.body.preheader
@@ -108,9 +104,7 @@ while.end:                                        ; preds = %while.end.loopexit,
 define i32 @ctlz_zero_check(i32 %n) {
 ; ALL-LABEL: @ctlz_zero_check(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[C:%.*]] = icmp sgt i32 [[N:%.*]], 0
-; ALL-NEXT:    [[NEGN:%.*]] = sub nsw i32 0, [[N]]
-; ALL-NEXT:    [[ABS_N:%.*]] = select i1 [[C]], i32 [[N]], i32 [[NEGN]]
+; ALL-NEXT:    [[ABS_N:%.*]] = call i32 @llvm.abs.i32(i32 [[N:%.*]], i1 true)
 ; ALL-NEXT:    [[TOBOOL4:%.*]] = icmp eq i32 [[ABS_N]], 0
 ; ALL-NEXT:    br i1 [[TOBOOL4]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; ALL:       while.body.preheader:
@@ -134,9 +128,7 @@ define i32 @ctlz_zero_check(i32 %n) {
 ; ALL-NEXT:    ret i32 [[I_0_LCSSA]]
 ;
 entry:
-  %c = icmp sgt i32 %n, 0
-  %negn = sub nsw i32 0, %n
-  %abs_n = select i1 %c, i32 %n, i32 %negn
+  %abs_n = call i32 @llvm.abs.i32(i32 %n, i1 true)
   %tobool4 = icmp eq i32 %abs_n, 0
   br i1 %tobool4, label %while.end, label %while.body.preheader
 
@@ -238,9 +230,7 @@ while.end:                                        ; preds = %while.end.loopexit,
 define i32 @ctlz(i32 %n) {
 ; ALL-LABEL: @ctlz(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[C:%.*]] = icmp sgt i32 [[N:%.*]], 0
-; ALL-NEXT:    [[NEGN:%.*]] = sub nsw i32 0, [[N]]
-; ALL-NEXT:    [[ABS_N:%.*]] = select i1 [[C]], i32 [[N]], i32 [[NEGN]]
+; ALL-NEXT:    [[ABS_N:%.*]] = call i32 @llvm.abs.i32(i32 [[N:%.*]], i1 true)
 ; ALL-NEXT:    [[TMP0:%.*]] = ashr i32 [[ABS_N]], 1
 ; ALL-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP0]], i1 false)
 ; ALL-NEXT:    [[TMP2:%.*]] = sub i32 32, [[TMP1]]
@@ -260,9 +250,7 @@ define i32 @ctlz(i32 %n) {
 ; ALL-NEXT:    ret i32 [[I_0_LCSSA]]
 ;
 entry:
-  %c = icmp sgt i32 %n, 0
-  %negn = sub nsw i32 0, %n
-  %abs_n = select i1 %c, i32 %n, i32 %negn
+  %abs_n = call i32 @llvm.abs.i32(i32 %n, i1 true)
   br label %while.cond
 
 while.cond:                                       ; preds = %while.cond, %entry
@@ -343,9 +331,7 @@ while.end:                                        ; preds = %while.cond
 define i32 @ctlz_add(i32 %n, i32 %i0) {
 ; ALL-LABEL: @ctlz_add(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[C:%.*]] = icmp sgt i32 [[N:%.*]], 0
-; ALL-NEXT:    [[NEGN:%.*]] = sub nsw i32 0, [[N]]
-; ALL-NEXT:    [[ABS_N:%.*]] = select i1 [[C]], i32 [[N]], i32 [[NEGN]]
+; ALL-NEXT:    [[ABS_N:%.*]] = call i32 @llvm.abs.i32(i32 [[N:%.*]], i1 true)
 ; ALL-NEXT:    [[TMP0:%.*]] = ashr i32 [[ABS_N]], 1
 ; ALL-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP0]], i1 false)
 ; ALL-NEXT:    [[TMP2:%.*]] = sub i32 32, [[TMP1]]
@@ -366,9 +352,7 @@ define i32 @ctlz_add(i32 %n, i32 %i0) {
 ; ALL-NEXT:    ret i32 [[I_0_LCSSA]]
 ;
 entry:
-  %c = icmp sgt i32 %n, 0
-  %negn = sub nsw i32 0, %n
-  %abs_n = select i1 %c, i32 %n, i32 %negn
+  %abs_n = call i32 @llvm.abs.i32(i32 %n, i1 true)
   br label %while.cond
 
 while.cond:                                       ; preds = %while.cond, %entry
@@ -452,10 +436,8 @@ while.end:                                        ; preds = %while.cond
 define i32 @ctlz_sext(i16 %in) {
 ; ALL-LABEL: @ctlz_sext(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[N:%.*]] = sext i16 [[IN:%.*]] to i32
-; ALL-NEXT:    [[C:%.*]] = icmp sgt i16 [[IN]], 0
-; ALL-NEXT:    [[NEGN:%.*]] = sub nsw i32 0, [[N]]
-; ALL-NEXT:    [[ABS_N:%.*]] = select i1 [[C]], i32 [[N]], i32 [[NEGN]]
+; ALL-NEXT:    [[ABS:%.*]] = call i16 @llvm.abs.i16(i16 [[IN:%.*]], i1 false)
+; ALL-NEXT:    [[ABS_N:%.*]] = zext i16 [[ABS]] to i32
 ; ALL-NEXT:    [[TMP0:%.*]] = ashr i32 [[ABS_N]], 1
 ; ALL-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP0]], i1 false)
 ; ALL-NEXT:    [[TMP2:%.*]] = sub i32 32, [[TMP1]]
@@ -475,10 +457,8 @@ define i32 @ctlz_sext(i16 %in) {
 ; ALL-NEXT:    ret i32 [[I_0_LCSSA]]
 ;
 entry:
-  %n = sext i16 %in to i32
-  %c = icmp sgt i16 %in, 0
-  %negn = sub nsw i32 0, %n
-  %abs_n = select i1 %c, i32 %n, i32 %negn
+  %abs = call i16 @llvm.abs.i16(i16 %in, i1 false)
+  %abs_n = zext i16 %abs to i32
   br label %while.cond
 
 while.cond:                                       ; preds = %while.cond, %entry
@@ -753,3 +733,6 @@ while.cond:                                       ; preds = %while.cond, %entry
 while.end:                                        ; preds = %while.cond
   ret i32 %i.0
 }
+
+declare i32 @llvm.abs.i32(i32, i1)
+declare i16 @llvm.abs.i16(i16, i1)

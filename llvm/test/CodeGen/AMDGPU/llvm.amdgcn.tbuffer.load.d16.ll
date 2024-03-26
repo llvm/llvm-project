@@ -1,6 +1,6 @@
-; RUN: llc -global-isel=0 < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs -show-mc-encoding | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=UNPACKED %s
-; RUN: llc -global-isel=0 < %s -march=amdgcn -mcpu=gfx810 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=PACKED %s
-; RUN: llc -global-isel=0 < %s -march=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=PACKED %s
+; RUN: llc -global-isel=0 < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs -show-mc-encoding | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=UNPACKED %s
+; RUN: llc -global-isel=0 < %s -mtriple=amdgcn -mcpu=gfx810 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=PACKED %s
+; RUN: llc -global-isel=0 < %s -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=PACKED %s
 
 ; GCN-LABEL: {{^}}tbuffer_load_d16_x:
 ; GCN: tbuffer_load_format_d16_x v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM]
