@@ -628,6 +628,9 @@ Error WasmObjectFile::parseLinkingSection(ReadContext &Ctx) {
     uint32_t Size = readVaruint32(Ctx);
     LLVM_DEBUG(dbgs() << "readSubsection type=" << int(Type) << " size=" << Size
                       << "\n");
+    if ((const uint8_t *)(Ctx.Ptr + Size) > OrigEnd)
+      return make_error<GenericBinaryError>("invalid segment size",
+                                            object_error::parse_failed);
     Ctx.End = Ctx.Ptr + Size;
     switch (Type) {
     case wasm::WASM_SYMBOL_TABLE:
