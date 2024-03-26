@@ -209,11 +209,78 @@ object in the Direct3D 12 API. The binary format is defined by the
 <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_root_signature_desc>`_
 or `D3D12_ROOT_SIGNATURE_DESC1 (for rootsig_1_1)
 <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_root_signature_desc1>`_ 
-structure in the Direct3D 12 API. (With the pointers translated to offsets.)
+structure in the Direct3D 12 API. (With the pointers translated to offsets.) 
 
-TODO: replace the following link with actual serialized format. 
-    DXC implementation of the serialization could be find `here
-    <https://github.com/microsoft/DirectXShaderCompiler/blob/main/lib/DxilRootSignature/DxilRootSignatureSerializer.cpp#L41>`_
+It will be look like this:
+
+.. code-block:: c++
+
+  struct DxilContainerRootDescriptor1 {
+    uint32_t ShaderRegister;
+    uint32_t RegisterSpace;
+    uint32_t Flags;
+  };
+
+  struct DxilContainerDescriptorRange {
+    uint32_t RangeType;
+    uint32_t NumDescriptors;
+    uint32_t BaseShaderRegister;
+    uint32_t RegisterSpace;
+    uint32_t OffsetInDescriptorsFromTableStart;
+  };
+
+  struct DxilContainerDescriptorRange1 {
+    uint32_t RangeType;
+    uint32_t NumDescriptors;
+    uint32_t BaseShaderRegister;
+    uint32_t RegisterSpace;
+    uint32_t Flags;
+    uint32_t OffsetInDescriptorsFromTableStart;
+  };
+
+  struct DxilContainerRootDescriptorTable {
+    uint32_t NumDescriptorRanges;
+    uint32_t DescriptorRangesOffset;
+  };
+
+  struct DxilContainerRootParameter {
+    uint32_t ParameterType;
+    uint32_t ShaderVisibility;
+    uint32_t PayloadOffset;
+  };
+
+  struct DxilContainerRootSignatureDesc {
+    uint32_t Version;
+    uint32_t NumParameters;
+    uint32_t RootParametersOffset;
+    uint32_t NumStaticSamplers;
+    uint32_t StaticSamplersOffset;
+    uint32_t Flags;
+  };
+
+
+The binary representation begins with a **DxilContainerRootSignatureDesc** 
+object. 
+
+The object will be followed by an array of 
+**DxilContainerRootParameter/Parameter1** objects located at 
+**DxilContainerRootSignatureDesc::RootParametersOffset**, which corresponds to 
+the size of **DxilContainerRootSignatureDesc**.
+
+Subsequently, there will be detailed object (**DxilRootConstants**, 
+**DxilContainerRootDescriptorTable**, or 
+**DxilRootDescriptor/DxilContainerRootDescriptor1**, depending on the parameter 
+type) for each **DxilContainerRootParameter** in the array. With 
+**DxilContainerRootParameter.PayloadOffset** pointing to the detailed object.
+
+In cases where the detailed object is a **DxilContainerRootDescriptorTable**, 
+it is succeeded by an array of 
+**DxilContainerDescriptorRange/DxilContainerDescriptorRange1** at 
+**DxilContainerRootDescriptorTable.DescriptorRangesOffset**.
+
+The binary representation is finalized with an array of 
+**DxilStaticSamplerDesc** at 
+**DxilContainerRootSignatureDesc::StaticSamplersOffset**.
 
 Implementation Details
 ======================
