@@ -181,6 +181,12 @@ public:
     return result;
   }
 
+  MPFRNumber atan2(const MPFRNumber &b) {
+    MPFRNumber result(*this);
+    mpfr_atan2(result.value, value, b.value, mpfr_rounding);
+    return result;
+  }
+
   MPFRNumber atanh() const {
     MPFRNumber result(*this);
     mpfr_atanh(result.value, value, mpfr_rounding);
@@ -623,6 +629,8 @@ binary_operation_one_output(Operation op, InputType x, InputType y,
   MPFRNumber inputX(x, precision, rounding);
   MPFRNumber inputY(y, precision, rounding);
   switch (op) {
+  case Operation::Atan2:
+    return inputX.atan2(inputY);
   case Operation::Fmod:
     return inputX.fmod(inputY);
   case Operation::Hypot:
