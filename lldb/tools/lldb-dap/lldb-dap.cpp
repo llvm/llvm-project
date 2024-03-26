@@ -3186,7 +3186,7 @@ void request_stepIn(const llvm::json::Object &request) {
   auto it = g_dap.step_in_targets.find(target_id);
   if (it != g_dap.step_in_targets.end())
     step_in_target = it->second;
-  
+
   const bool single_thread = GetBoolean(arguments, "singleThread", false);
   lldb::RunMode run_mode =
       single_thread ? lldb::eOnlyThisThread : lldb::eOnlyDuringStepping;
