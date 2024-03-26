@@ -12,11 +12,11 @@
 #include "indirection.h"
 #include "reference-counted.h"
 #include "reference.h"
+#include "variant.h"
 #include "visit.h"
 #include <memory>
 #include <optional>
 #include <type_traits>
-#include <variant>
 
 // Given a nest of variants, optionals, &/or pointers, Unwrap<>() isolates
 // a packaged value of a specific type if it is present and returns a pointer

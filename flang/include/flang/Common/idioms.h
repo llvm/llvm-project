@@ -24,6 +24,7 @@
 #endif
 
 #include "enum-class.h"
+#include "variant.h"
 #include "visit.h"
 #include <array>
 #include <functional>
@@ -33,7 +34,6 @@
 #include <string>
 #include <tuple>
 #include <type_traits>
-#include <variant>
 
 #if __GNUC__ == 7
 // Avoid a deduction bug in GNU 7.x headers by forcing the answer.

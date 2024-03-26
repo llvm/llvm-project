@@ -482,10 +482,7 @@ bool ExternalFileUnit::SetDirectRec(
 
 void ExternalFileUnit::EndIoStatement() {
   io_.reset();
-  RT_DIAG_PUSH
-  RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
   u_.emplace<std::monostate>();
-  RT_DIAG_POP
   lock_.Drop();
 }
 
@@ -752,10 +749,7 @@ std::int32_t ExternalFileUnit::ReadHeaderOrFooter(std::int64_t frameOffset) {
 
 void ChildIo::EndIoStatement() {
   io_.reset();
-  RT_DIAG_PUSH
-  RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
   u_.emplace<std::monostate>();
-  RT_DIAG_POP
 }
 
 Iostat ChildIo::CheckFormattingAndDirection(

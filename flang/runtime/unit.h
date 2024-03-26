@@ -25,7 +25,7 @@
 #include "flang/Runtime/memory.h"
 #include <cstdlib>
 #include <cstring>
-#include <variant>
+#include <flang/Common/variant.h>
 
 namespace Fortran::runtime::io {
 
@@ -152,10 +152,7 @@ public:
 #else
     lock_.Take();
 #endif
-    RT_DIAG_PUSH
-    RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
     A &state{u_.emplace<A>(std::forward<X>(xs)...)};
-    RT_DIAG_POP
     if constexpr (!std::is_same_v<A, OpenStatementState>) {
       state.mutableModes() = ConnectionState::modes;
     }
@@ -265,10 +262,7 @@ public:
 
   template <typename A, typename... X>
   RT_API_ATTRS IoStatementState &BeginIoStatement(X &&...xs) {
-    RT_DIAG_PUSH
-    RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
     A &state{u_.emplace<A>(std::forward<X>(xs)...)};
-    RT_DIAG_POP
     io_.emplace(state);
     return *io_;
   }
