@@ -1023,35 +1023,38 @@ define i16 @PR44545(i32 %t0, i32 %data) {
 }
 
 ; Make sure that SimplifyDemandedBits drops the nowrap flags
-define i16 @drop_nsw_trunc(i32 %x) {
+define i8 @drop_nsw_trunc(i16 %x, i16 %y) {
 ; CHECK-LABEL: @drop_nsw_trunc(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
-; CHECK-NEXT:    [[B:%.*]] = and i16 [[TMP1]], -2
-; CHECK-NEXT:    ret i16 [[B]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = trunc i16 [[AND2]] to i8
+; CHECK-NEXT:    ret i8 [[RES]]
 ;
-  %t = and i32 %x, -2
-  %b = trunc nsw i32 %t to i16
-  ret i16 %b
+  %and = and i16 %x, 255
+  %and2 = and i16 %and, %y
+  %res = trunc nsw i16 %and2 to i8
+  ret i8 %res
 }
 
-define i16 @drop_nuw_trunc(i32 %x) {
+define i8 @drop_nuw_trunc(i16 %x, i16 %y) {
 ; CHECK-LABEL: @drop_nuw_trunc(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
-; CHECK-NEXT:    [[B:%.*]] = and i16 [[TMP1]], 1
-; CHECK-NEXT:    ret i16 [[B]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = trunc i16 [[AND2]] to i8
+; CHECK-NEXT:    ret i8 [[B]]
 ;
-  %t = and i32 %x, 1
-  %b = trunc nuw i32 %t to i16
-  ret i16 %b
+  %and = and i16 %x, 255
+  %and2 = and i16 %and, %y
+  %res = trunc nuw i16 %and2 to i8
+  ret i8 %res
 }
 
-define i16 @drop_both_trunc(i32 %x) {
+define i8 @drop_both_trunc(i16 %x, i16 %y) {
 ; CHECK-LABEL: @drop_both_trunc(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
-; CHECK-NEXT:    [[B:%.*]] = and i16 [[TMP1]], -2
-; CHECK-NEXT:    ret i16 [[B]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = trunc i16 [[AND2]] to i8
+; CHECK-NEXT:    ret i8 [[RES]]
 ;
-  %t = and i32 %x, -2
-  %b = trunc nsw nuw i32 %t to i16
-  ret i16 %b
+  %and = and i16 %x, 255
+  %and2 = and i16 %and, %y
+  %res = trunc nuw nsw i16 %and2 to i8
+  ret i8 %res
 }
