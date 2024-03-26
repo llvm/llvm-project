@@ -253,10 +253,8 @@ multiclass VPseudoVALU_S_NoMask_Zvk {
   }
 }
 
-multiclass VPseudoVALU_V_S_NoMask_Zvk {
-  defm "" : VPseudoVALU_V_NoMask_Zvk;
-  defm "" : VPseudoVALU_S_NoMask_Zvk;
-}
+multiclass VPseudoVALU_V_S_NoMask_Zvk
+  : VPseudoVALU_V_NoMask_Zvk, VPseudoVALU_S_NoMask_Zvk;
 
 multiclass VPseudoVALU_VV_NoMask_Zvk {
   foreach m = MxListVF4 in {
