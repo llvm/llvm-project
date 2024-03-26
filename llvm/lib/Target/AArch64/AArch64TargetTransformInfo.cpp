@@ -944,53 +944,54 @@ instCombineSVENoActiveUnaryZero(InstCombiner &IC, IntrinsicInst &II) {
   if (match(II.getOperand(0), m_ZeroInt())) {
     Constant *Node;
     Type *RetTy = II.getType();
-    if (RetTy->isStructTy()){
-        auto StructT = cast<StructType>(RetTy);
-        auto VecT = StructT->getElementType(0);
-        SmallVector<llvm::Constant*, 4> ZerVec;
-        for (unsigned i = 0; i < StructT->getNumElements(); i++){
-          ZerVec.push_back(VecT->isFPOrFPVectorTy() ? ConstantFP::get(VecT, 0.0): 
-                              ConstantInt::get(VecT, 0));
-        }
-        Node = ConstantStruct::get(StructT, ZerVec);
-    }
-    else if (RetTy->isFPOrFPVectorTy())
+    if (RetTy->isStructTy()) {
+      auto StructT = cast<StructType>(RetTy);
+      auto VecT = StructT->getElementType(0);
+      SmallVector<llvm::Constant *, 4> ZerVec;
+      for (unsigned i = 0; i < StructT->getNumElements(); i++) {
+        ZerVec.push_back(VecT->isFPOrFPVectorTy() ? ConstantFP::get(VecT, 0.0)
+                                                  : ConstantInt::get(VecT, 0));
+      }
+      Node = ConstantStruct::get(StructT, ZerVec);
+    } else if (RetTy->isFPOrFPVectorTy())
       Node = ConstantFP::get(RetTy, 0.0);
-    else 
+    else
       Node = ConstantInt::get(II.getType(), 0);
-    
+
     IC.replaceInstUsesWith(II, Node);
     return IC.eraseInstFromFunction(II);
   }
   return std::nullopt;
 }
 
-//Erase unary operation where predicate has all inactive lanes
+// Erase unary operation where predicate has all inactive lanes
 static std::optional<Instruction *>
-instCombineSVENoActiveUnaryErase(InstCombiner &IC, IntrinsicInst &II, int PredPos) {
-    if (match(II.getOperand(PredPos), m_ZeroInt())) {
-      return IC.eraseInstFromFunction(II);
-    }
-    return std::nullopt;
+instCombineSVENoActiveUnaryErase(InstCombiner &IC, IntrinsicInst &II,
+                                 int PredPos) {
+  if (match(II.getOperand(PredPos), m_ZeroInt())) {
+    return IC.eraseInstFromFunction(II);
+  }
+  return std::nullopt;
 }
 
 // Simplify unary operation where predicate has all inactive lanes by replacing
 // instruction with given constant
 static std::optional<Instruction *>
-instCombineSVENoActiveUnaryConstant(InstCombiner &IC, IntrinsicInst &II, Constant *NewVal) {
-    if (match(II.getOperand(0), m_ZeroInt())) {
-      IC.replaceInstUsesWith(II, NewVal);
-      return IC.eraseInstFromFunction(II);
-    }
-    return std::nullopt;
+instCombineSVENoActiveUnaryConstant(InstCombiner &IC, IntrinsicInst &II,
+                                    Constant *NewVal) {
+  if (match(II.getOperand(0), m_ZeroInt())) {
+    IC.replaceInstUsesWith(II, NewVal);
+    return IC.eraseInstFromFunction(II);
+  }
+  return std::nullopt;
 }
 
-// Simplify unary operation where predicate has all inactive lanes or try to replace
-// with  _x form when all lanes are active
+// Simplify unary operation where predicate has all inactive lanes or try to
+// replace with  _x form when all lanes are active
 static std::optional<Instruction *>
 instCombineSVEAllOrNoActiveUnary(InstCombiner &IC, IntrinsicInst &II) {
-  if (isAllActivePredicate(II.getOperand(1))
-      && !isa<llvm::UndefValue>(II.getOperand(0))){
+  if (isAllActivePredicate(II.getOperand(1)) &&
+      !isa<llvm::UndefValue>(II.getOperand(0))) {
     Value *Undef = llvm::UndefValue::get(II.getType());
     return IC.replaceOperand(II, 0, Undef);
   }
@@ -1011,10 +1012,9 @@ static std::optional<Instruction *> instCombineSVESel(InstCombiner &IC,
 
 static std::optional<Instruction *> instCombineSVEDup(InstCombiner &IC,
                                                       IntrinsicInst &II) {
-  
+
   // Optimize when predicate is known all active or all inactive
-  if (auto II_NA =
-        instCombineSVEAllOrNoActiveUnary(IC, II))
+  if (auto II_NA = instCombineSVEAllOrNoActiveUnary(IC, II))
     return II_NA;
 
   IntrinsicInst *Pg = dyn_cast<IntrinsicInst>(II.getArgOperand(1));
@@ -1051,11 +1051,10 @@ static std::optional<Instruction *> instCombineSVEDupX(InstCombiner &IC,
 
 static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
                                                         IntrinsicInst &II) {
-  
-  //Replace by zero constant when all lanes are inactive
-  if (auto II_NA =
-          instCombineSVENoActiveUnaryZero(IC, II))
-      return II_NA;
+
+  // Replace by zero constant when all lanes are inactive
+  if (auto II_NA = instCombineSVENoActiveUnaryZero(IC, II))
+    return II_NA;
 
   LLVMContext &Ctx = II.getContext();
 
@@ -1242,9 +1241,8 @@ static std::optional<Instruction *> instCombineSVECondLast(InstCombiner &IC,
   Value *Vec = II.getArgOperand(2);
   Type *Ty = II.getType();
 
-  //If all lanes are inactive replace with operand
-  if (auto II_NA =
-          instCombineSVENoActiveUnaryReplace(IC, II, false))
+  // If all lanes are inactive replace with operand
+  if (auto II_NA = instCombineSVENoActiveUnaryReplace(IC, II, false))
     return II_NA;
 
   if (!Ty->isIntegerTy())
@@ -1427,9 +1425,8 @@ instCombineSVELD1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
   Value *PtrOp = II.getOperand(1);
   Type *VecTy = II.getType();
 
-  //Replace by zero constant when all lanes are inactive
-  if (auto II_NA =
-        instCombineSVENoActiveUnaryZero(IC, II))
+  // Replace by zero constant when all lanes are inactive
+  if (auto II_NA = instCombineSVENoActiveUnaryZero(IC, II))
     return II_NA;
 
   if (isAllActivePredicate(Pred)) {
@@ -1451,10 +1448,9 @@ instCombineSVEST1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
   Value *Pred = II.getOperand(1);
   Value *PtrOp = II.getOperand(2);
 
-  //Remove when all lanes are inactive
-  if (auto II_NA =
-          instCombineSVENoActiveUnaryErase(IC, II, 0))
-      return II_NA;
+  // Remove when all lanes are inactive
+  if (auto II_NA = instCombineSVENoActiveUnaryErase(IC, II, 0))
+    return II_NA;
 
   if (isAllActivePredicate(Pred)) {
     StoreInst *Store = IC.Builder.CreateStore(VecOp, PtrOp);
@@ -1754,10 +1750,9 @@ instCombineLD1GatherIndex(InstCombiner &IC, IntrinsicInst &II) {
   Type *Ty = II.getType();
   Value *PassThru = ConstantAggregateZero::get(Ty);
 
-  //Replace by zero constant when all lanes are inactive
-  if (auto II_NA =
-          instCombineSVENoActiveUnaryZero(IC, II))
-      return II_NA;
+  // Replace by zero constant when all lanes are inactive
+  if (auto II_NA = instCombineSVENoActiveUnaryZero(IC, II))
+    return II_NA;
 
   // Contiguous gather => masked load.
   // (sve.ld1.gather.index Mask BasePtr (sve.index IndexBase 1))
@@ -1789,10 +1784,9 @@ instCombineST1ScatterIndex(InstCombiner &IC, IntrinsicInst &II) {
   Value *Index = II.getOperand(3);
   Type *Ty = Val->getType();
 
-  //Remove when all lanes are inactive
-  if (auto II_NA =
-          instCombineSVENoActiveUnaryErase(IC, II, 0))
-      return II_NA;
+  // Remove when all lanes are inactive
+  if (auto II_NA = instCombineSVENoActiveUnaryErase(IC, II, 0))
+    return II_NA;
 
   // Contiguous scatter => masked store.
   // (sve.st1.scatter.index Value Mask BasePtr (sve.index IndexBase 1))
@@ -2167,22 +2161,22 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVENoActiveUnaryZero(IC, II);
   case Intrinsic::aarch64_sve_andqv:
   case Intrinsic::aarch64_sve_andv:
-    return instCombineSVENoActiveUnaryConstant(IC, II, 
-            ConstantInt::get(II.getType(), 1));
+    return instCombineSVENoActiveUnaryConstant(
+        IC, II, ConstantInt::get(II.getType(), 1));
   case Intrinsic::aarch64_sve_fmaxnmqv:
   case Intrinsic::aarch64_sve_fmaxnmv:
   case Intrinsic::aarch64_sve_fminnmqv:
   case Intrinsic::aarch64_sve_fminnmv:
-    return instCombineSVENoActiveUnaryConstant(IC, II,  
-            ConstantFP::getQNaN(II.getType()));
+    return instCombineSVENoActiveUnaryConstant(
+        IC, II, ConstantFP::getQNaN(II.getType()));
   case Intrinsic::aarch64_sve_fmaxqv:
   case Intrinsic::aarch64_sve_fmaxv:
-    return instCombineSVENoActiveUnaryConstant(IC, II, 
-            ConstantFP::getInfinity(II.getType(), true));
+    return instCombineSVENoActiveUnaryConstant(
+        IC, II, ConstantFP::getInfinity(II.getType(), true));
   case Intrinsic::aarch64_sve_fminqv:
   case Intrinsic::aarch64_sve_fminv:
-    return instCombineSVENoActiveUnaryConstant(IC, II, 
-            ConstantFP::getInfinity(II.getType()));
+    return instCombineSVENoActiveUnaryConstant(
+        IC, II, ConstantFP::getInfinity(II.getType()));
   case Intrinsic::aarch64_sve_prf:
   case Intrinsic::aarch64_sve_prfb_gather_scalar_offset:
   case Intrinsic::aarch64_sve_prfb_gather_sxtw_index:
@@ -2228,24 +2222,23 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_st4q:
     return instCombineSVENoActiveUnaryErase(IC, II, 4);
   case Intrinsic::aarch64_sve_smaxv:
-  case Intrinsic::aarch64_sve_smaxqv:
-  {
-    auto *MinSInt = ConstantInt::get(II.getType(), APInt::getSignedMinValue(
-                      II.getType()->getScalarSizeInBits()));
+  case Intrinsic::aarch64_sve_smaxqv: {
+    auto *MinSInt = ConstantInt::get(
+        II.getType(),
+        APInt::getSignedMinValue(II.getType()->getScalarSizeInBits()));
     return instCombineSVENoActiveUnaryConstant(IC, II, MinSInt);
   }
   case Intrinsic::aarch64_sve_sminv:
-  case Intrinsic::aarch64_sve_sminqv:
-  {
-    auto *MaxSInt = ConstantInt::get(II.getType(), APInt::getSignedMaxValue(
-                      II.getType()->getScalarSizeInBits()));
+  case Intrinsic::aarch64_sve_sminqv: {
+    auto *MaxSInt = ConstantInt::get(
+        II.getType(),
+        APInt::getSignedMaxValue(II.getType()->getScalarSizeInBits()));
     return instCombineSVENoActiveUnaryConstant(IC, II, MaxSInt);
   }
   case Intrinsic::aarch64_sve_uminv:
-  case Intrinsic::aarch64_sve_uminqv:
-  {
-    auto *MaxUInt = ConstantInt::get(II.getType(), APInt::getMaxValue(
-                      II.getType()->getScalarSizeInBits()));
+  case Intrinsic::aarch64_sve_uminqv: {
+    auto *MaxUInt = ConstantInt::get(
+        II.getType(), APInt::getMaxValue(II.getType()->getScalarSizeInBits()));
     return instCombineSVENoActiveUnaryConstant(IC, II, MaxUInt);
   }
   case Intrinsic::aarch64_neon_fmaxnm:
