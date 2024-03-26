@@ -3184,8 +3184,7 @@ public:
 /// Represents the canonical version of C arrays with a specified constant size.
 /// For example, the canonical type for 'int A[4 + 4*100]' is a
 /// ConstantArrayType where the element type is 'int' and the size is 404.
-class ConstantArrayType final
-    : public ArrayType {
+class ConstantArrayType final : public ArrayType {
   friend class ASTContext; // ASTContext creates these.
 
   struct ExternalSize {
@@ -3244,21 +3243,19 @@ public:
   /// Return true if the size is zero.
   bool isZeroSize() const {
     return ConstantArrayTypeBits.HasExternalSize ? SizePtr->Size.isZero()
-                                                   : 0 == Size;
+                                                 : 0 == Size;
   }
 
   /// Return the size zero-extended as a uint64_t.
   uint64_t getZExtSize() const {
-    return ConstantArrayTypeBits.HasExternalSize
-               ? SizePtr->Size.getZExtValue()
-               : Size;
+    return ConstantArrayTypeBits.HasExternalSize ? SizePtr->Size.getZExtValue()
+                                                 : Size;
   }
 
   /// Return the size sign-extended as a uint64_t.
   int64_t getSExtSize() const {
-    return ConstantArrayTypeBits.HasExternalSize
-               ? SizePtr->Size.getSExtValue()
-               : static_cast<int64_t>(Size);
+    return ConstantArrayTypeBits.HasExternalSize ? SizePtr->Size.getSExtValue()
+                                                 : static_cast<int64_t>(Size);
   }
 
   /// Return the size zero-extended to uint64_t or UINT64_MAX if the value is
@@ -3271,9 +3268,7 @@ public:
 
   /// Return a pointer to the size expression.
   const Expr *getSizeExpr() const {
-    return ConstantArrayTypeBits.HasExternalSize
-               ? SizePtr->SizeExpr
-               : nullptr;
+    return ConstantArrayTypeBits.HasExternalSize ? SizePtr->SizeExpr : nullptr;
   }
 
   bool isSugared() const { return false; }
@@ -3297,9 +3292,8 @@ public:
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
-                      QualType ET, uint64_t ArraySize,
-                      const Expr *SizeExpr, ArraySizeModifier SizeMod,
-                      unsigned TypeQuals);
+                      QualType ET, uint64_t ArraySize, const Expr *SizeExpr,
+                      ArraySizeModifier SizeMod, unsigned TypeQuals);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == ConstantArray;

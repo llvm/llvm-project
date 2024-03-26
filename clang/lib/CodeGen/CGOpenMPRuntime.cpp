@@ -7546,8 +7546,8 @@ private:
       // it.
       if (DimSizes.size() < Components.size() - 1) {
         if (CAT)
-          DimSizes.push_back(llvm::ConstantInt::get(
-              CGF.Int64Ty, CAT->getZExtSize()));
+          DimSizes.push_back(
+              llvm::ConstantInt::get(CGF.Int64Ty, CAT->getZExtSize()));
         else if (VAT)
           DimSizes.push_back(CGF.Builder.CreateIntCast(
               CGF.EmitScalarExpr(VAT->getSizeExpr()), CGF.Int64Ty,

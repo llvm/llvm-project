@@ -2187,8 +2187,8 @@ llvm::Value *CodeGenFunction::emitArrayLength(const ArrayType *origArrayType,
     dyn_cast<llvm::ArrayType>(addr.getElementType());
   while (llvmArrayType) {
     assert(isa<ConstantArrayType>(arrayType));
-    assert(cast<ConstantArrayType>(arrayType)->getZExtSize()
-             == llvmArrayType->getNumElements());
+    assert(cast<ConstantArrayType>(arrayType)->getZExtSize() ==
+           llvmArrayType->getNumElements());
 
     gepIndices.push_back(zero);
     countFromCLAs *= llvmArrayType->getNumElements();
@@ -2206,8 +2206,7 @@ llvm::Value *CodeGenFunction::emitArrayLength(const ArrayType *origArrayType,
     // as some other type (probably a packed struct). Compute the array
     // size, and just emit the 'begin' expression as a bitcast.
     while (arrayType) {
-      countFromCLAs *=
-          cast<ConstantArrayType>(arrayType)->getZExtSize();
+      countFromCLAs *= cast<ConstantArrayType>(arrayType)->getZExtSize();
       eltType = arrayType->getElementType();
       arrayType = getContext().getAsArrayType(eltType);
     }

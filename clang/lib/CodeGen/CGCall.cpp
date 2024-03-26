@@ -933,8 +933,8 @@ struct NoExpansion : TypeExpansion {
 static std::unique_ptr<TypeExpansion>
 getTypeExpansion(QualType Ty, const ASTContext &Context) {
   if (const ConstantArrayType *AT = Context.getAsConstantArrayType(Ty)) {
-    return std::make_unique<ConstantArrayExpansion>(
-        AT->getElementType(), AT->getZExtSize());
+    return std::make_unique<ConstantArrayExpansion>(AT->getElementType(),
+                                                    AT->getZExtSize());
   }
   if (const RecordType *RT = Ty->getAs<RecordType>()) {
     SmallVector<const CXXBaseSpecifier *, 1> Bases;

@@ -10996,8 +10996,7 @@ namespace {
         return Error(E);
       }
 
-      Result = APValue(APValue::UninitArray(), 0,
-                       CAT->getZExtSize());
+      Result = APValue(APValue::UninitArray(), 0, CAT->getZExtSize());
       if (!Result.hasArrayFiller())
         return true;
 
