@@ -121,19 +121,14 @@ MDNode *getValidBranchWeightMDNode(const Instruction &I) {
 }
 
 void extractFromBranchWeightMD32(const MDNode *ProfileData,
-                               SmallVectorImpl<uint32_t> &Weights) {
+                                 SmallVectorImpl<uint32_t> &Weights) {
   extractFromBranchWeightMD(ProfileData, Weights);
 }
 
 void extractFromBranchWeightMD64(const MDNode *ProfileData,
-                               SmallVectorImpl<uint64_t> &Weights) {
+                                 SmallVectorImpl<uint64_t> &Weights) {
   extractFromBranchWeightMD(ProfileData, Weights);
 }
-
-
-
-
-
 
 bool extractBranchWeights(const MDNode *ProfileData,
                           SmallVectorImpl<uint32_t> &Weights) {
