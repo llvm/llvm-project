@@ -10,7 +10,9 @@ from lldbsuite.test import lldbutil
 
 
 class TestDAP_stepInTargets(lldbdap_testcase.DAPTestCaseBase):
-    @skipIf(archs=no_match(["x86_64"]))  # ARM flow kind is not supported yet.
+    @skipIf(
+        archs=no_match(["x86_64"])
+    )  # InstructionControlFlowKind for ARM is not supported yet.
     def test_basic(self):
         """
         Tests the basic stepping in targets with directly calls.

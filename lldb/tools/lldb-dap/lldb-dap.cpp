@@ -3264,14 +3264,10 @@ void request_stepInTargets(const llvm::json::Object &request) {
   lldb::SBFrame frame = g_dap.GetLLDBFrame(*arguments);
   if (frame.IsValid()) {
     lldb::SBAddress pc_addr = frame.GetPCAddress();
-    lldb::addr_t line_end_addr = pc_addr.GetLineEntry()
-                                     .GetSameLineContiguousAddressRangeEnd(
-                                         /*include_inlined_functions=*/true)
-                                     .GetLoadAddress(g_dap.target);
-
-    int max_inst_count = line_end_addr - pc_addr.GetLoadAddress(g_dap.target);
-    lldb::SBInstructionList insts =
-        g_dap.target.ReadInstructions(pc_addr, max_inst_count);
+    lldb::SBAddress line_end_addr =
+        pc_addr.GetLineEntry().GetSameLineContiguousAddressRangeEnd(true);
+    lldb::SBInstructionList insts = g_dap.target.ReadInstructions(
+        pc_addr, line_end_addr, /*flavor_string=*/nullptr);
 
     if (!insts.IsValid()) {
       response["success"] = false;
@@ -3288,9 +3284,6 @@ void request_stepInTargets(const llvm::json::Object &request) {
         break;
 
       lldb::addr_t inst_addr = inst.GetAddress().GetLoadAddress(g_dap.target);
-      // line_end_addr is exclusive of the line range.
-      if (inst_addr >= line_end_addr)
-        break;
 
       // Note: currently only x86/x64 supports flow kind.
       lldb::InstructionControlFlowKind flow_kind =
@@ -3310,6 +3303,7 @@ void request_stepInTargets(const llvm::json::Object &request) {
         if (!call_target_load_addr.IsValid())
           continue;
 
+        // Step in targets only supports functions with debug info.
         lldb::SBSymbolContext sc = g_dap.target.ResolveSymbolContextForAddress(
             call_target_load_addr, lldb::eSymbolContextFunction);
 
