@@ -1532,9 +1532,9 @@ public:
 
     if (!ForceTailFoldingStyle.getNumOccurrences()) {
       ChosenTailFoldingStyle.first =
-        TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true);
+          TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true);
       ChosenTailFoldingStyle.second =
-        TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/false);
+          TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/false);
       return;
     }
 
