@@ -1,6 +1,12 @@
 ; Test that ASan runs with the new pass manager
 ; RUN: %clang_cc1 -triple x86_64-unknown-unknown -S -emit-llvm -o - -fsanitize=address %s | FileCheck %s
-; RUN: %clang_cc1 -triple x86_64-unknown-unknown -S -emit-llvm -o - -O1 -fsanitize=address %s | FileCheck %s
+; RUN: %clang_cc1 -triple x86_64-unknown-unknown -S -emit-llvm -o - -fsanitize=address -O1 %s | FileCheck %s
+
+; RUN: %clang_cc1 -triple x86_64-unknown-unknown -S -emit-llvm -o - -fsanitize=address -fprofile-instrument=llvm %s | FileCheck %s -check-prefixes=NOASAN
+; RUN: %clang_cc1 -triple x86_64-unknown-unknown -S -emit-llvm -o - -fsanitize=address -fprofile-instrument=llvm -O1 %s | FileCheck %s -check-prefixes=NOASAN
+
+; RUN: %clang_cc1 -triple x86_64-unknown-unknown -S -emit-llvm -o - -fsanitize=address -fprofile-instrument=clang %s | FileCheck %s
+; RUN: %clang_cc1 -triple x86_64-unknown-unknown -S -emit-llvm -o - -fsanitize=address -fprofile-instrument=clang -O1 %s | FileCheck %s
 
 ; CHECK-DAG: @llvm.global_ctors = {{.*}}@asan.module_ctor
 
@@ -20,3 +26,4 @@ entry:
 
 ; CHECK-DAG: __asan_version_mismatch_check_v8
 
+; NOASAN-NOT: __asan
