@@ -6007,12 +6007,15 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     // incorrect hoisting of the DBG_VALUE to the function entry).
     // Notice that we allow one dbg.value per IR level argument, to accommodate
     // for the situation with fragments above.
+    // If there is no node for the value being handled, we return true to skip
+    // the normal generation of debug info, as it would kill existing debug
+    // info for the parameter in case of duplicates.
     if (VariableIsFunctionInputArg) {
       unsigned ArgNo = Arg->getArgNo();
       if (ArgNo >= FuncInfo.DescribedArgs.size())
         FuncInfo.DescribedArgs.resize(ArgNo + 1, false);
       else if (!IsInPrologue && FuncInfo.DescribedArgs.test(ArgNo))
-        return false;
+        return !NodeMap[V].getNode();
       FuncInfo.DescribedArgs.set(ArgNo);
     }
   }
