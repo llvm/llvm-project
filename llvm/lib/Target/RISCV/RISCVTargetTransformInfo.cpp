@@ -898,12 +898,15 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                TTI::TargetCostKind CostKind,
                                                const Instruction *I) {
   bool IsVectorType = isa<VectorType>(Dst) && isa<VectorType>(Src);
+  if (!IsVectorType)
+    return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+
   bool IsTypeLegal = isTypeLegal(Src) && isTypeLegal(Dst) &&
                      (Src->getScalarSizeInBits() <= ST->getELen()) &&
                      (Dst->getScalarSizeInBits() <= ST->getELen());
 
   // FIXME: Need to compute legalizing cost for illegal types.
-  if (!IsVectorType || !IsTypeLegal)
+  if (!IsTypeLegal)
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
