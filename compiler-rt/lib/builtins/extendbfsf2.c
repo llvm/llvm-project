@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define SRC_BFLOAT
+#define SRC_BFLOAT16
 #define DST_SINGLE
 #include "fp_extend_impl.inc"
 

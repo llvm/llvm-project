@@ -226,7 +226,7 @@ public:
   /// first one wins.
   ///
   /// eval::Call
-  bool evalCall(const CallExpr *CE, CheckerContext &C) const { return true; }
+  bool evalCall(const CallEvent &Call, CheckerContext &C) const { return true; }
 
   /// Handles assumptions on symbolic values.
   ///
