@@ -216,8 +216,6 @@ public:
 
   virtual uint32_t GetPointerByteSize() = 0;
 
-  // TODO: are we allowed to insert virtual functions in the middle of the class
-  // interface and break ABI?
   virtual unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) = 0;
 
   virtual unsigned
@@ -290,8 +288,6 @@ public:
 
   virtual CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type);
 
-  // TODO: are we allowed to insert virtual functions in the middle of the class
-  // interface and break ABI?
   virtual CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
                                           unsigned key,
                                           bool isAddressDiscriminated,
