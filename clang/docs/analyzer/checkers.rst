@@ -809,32 +809,40 @@ optin.performance.Padding (C, C++, ObjC)
 Check for excessively padded structs.
 
 This checker detects structs with excessive padding, which can lead to wasted memory and decreased performance. Padding bytes are added by compilers to align data within the struct for performance optimization or memory alignment purposes. However, excessive padding can significantly increase the size of the struct without adding useful data, leading to inefficient memory usage, cache misses, and decreased performance.
+``AllowedPad`` is the threshold value of padding by which if padding(Internal Padding + Trailing Padding) within the struct exceeds the ``AllowedPad`` value, clang static analyzer will give a warning. The default value of ``AllowedPad`` is 24 bytes. To set this option from the command-line, pass the ``-analyze -analyzerchecker=optin.performance -analyzer-config optin.performance.Padding:AllowedPad=2`` option.
 
 .. code-block:: c
 
-   #include <stdio.h>
-   // #pragma pack(1) // Uncomment it to disable structure padding
-   struct TestStruct {
-       char data1;  // 1 byte
-       char data2;  // 1 byte
-       int data3;   // 4 bytes
-   };             // Total size: 6 bytes
-   
-   int main () {
-       struct TestStruct struct1;
-       printf("Structure size: %d",sizeof(struct1)); // Structure size: 8
-       return 0;
-   }
-   
-Total memory used is 8 bytes due to structure padding. In this case, padding is of 2 bytes. Padding is done to decrease the number of CPU cycles needed to access data members of the structure, it increases the performance of the processor but at the penalty of memory.
-Padding can be disabled by using the pragma directive.
-Padding can also be decreased by putting data members of the structure in descending order of their size.
+ #include <stdio.h>
+ // #pragma pack(1) // Uncomment it to disable structure padding
+ struct TestStruct {
+   char data1; // 1 byte
+   int data2; // 4 bytes
+   char data3; // 1 byte
+ }; // We expect it's size to be 6 bytes
+ int main () {
+   struct TestStruct struct1;
+   printf("Structure size: %d", sizeof(struct1)); // Structure size: 12
+   return 0;
+ }
+Warning will be given as padding is greater than ``AllowedPad``(value is 2).
+Total memory used is 12 bytes due to structure padding. In this case, padding is of 6 bytes. Padding is done to decrease the number of CPU cycles needed to access data members of the structure, improving the performance of the processor but at the penalty of memory usage.
+Padding can be disabled by using the pragma directive or decreased by ordering structure fields by decreasing size to achieve the best layout. An optimal struct of the above example looks like this:
 
-Reports are only generated if the excessive padding exceeds ``AllowedPad`` in bytes. AllowedPad is the threshold value of padding.
+.. code-block:: c
 
-AllowedPad Option:
-- Default Value: 24 bytes
-- Usage: ``AllowedPad=<value>``
+ #include <stdio.h>
+ struct TestStruct {
+   int data1; // 4 bytes
+   char data2; // 1 byte
+   char data3; // 1 byte
+ }; // We expect it's size to be 6 bytes
+ int main () {
+   struct TestStruct struct1;
+   printf("Structure size: %d", sizeof(struct1)); // Structure size: 8
+   return 0;
+ }
+After reordering total memory used is 8 bytes now, with trailing padding of 2 bytes. No warning will be generated.
 
 .. _optin-portability-UnixAPI:
 
