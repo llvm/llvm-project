@@ -54,7 +54,7 @@ static int64_t getRankOf(Value val) {
   auto type = val.getType();
   if (auto ty = llvm::dyn_cast<ShapedType>(type))
     return ty.getRank();
-  return (int64_t)0;
+  return 0;
 };
 
 static bool isReadHintOrNone(const CachePolicyAttr &attr) {
