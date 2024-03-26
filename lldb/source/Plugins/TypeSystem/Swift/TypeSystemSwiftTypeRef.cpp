@@ -190,7 +190,6 @@ GetMangledName(swift::Demangle::Demangler &dem,
   return mangleNode(global);
 }
 
-/// Find a Clang type by name in the modules in \p module_holder.
 TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name_ref) {
   llvm::SmallVector<CompilerContext, 2> decl_context;
   // Make up a decl context for non-nested types.
@@ -199,40 +198,40 @@ TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name_ref) {
   return LookupClangType(name_ref, decl_context);
 }
 
-/// Find a Clang type by name in the modules in \p module_holder.
-TypeSP TypeSystemSwiftTypeRef::LookupClangType(
-    StringRef name_ref, llvm::ArrayRef<CompilerContext> decl_context) {
-
+/// Look up one Clang type in a module.
+static TypeSP LookupClangType(Module &m,
+                              llvm::ArrayRef<CompilerContext> decl_context) {
   TypeQuery query(decl_context, TypeQueryOptions::e_find_one |
                                     TypeQueryOptions::e_module_search);
   query.SetLanguages(TypeSystemClang::GetSupportedLanguagesForTypes());
+  TypeResults results;
+  m.FindTypes(query, results);
+  return results.GetFirstType();
+}
 
-  auto lookup = [&](Module &M) -> TypeSP {
-    TypeResults results;
-    M.FindTypes(query, results);
-    return results.GetFirstType();
-  };
+TypeSP TypeSystemSwiftTypeRef::LookupClangType(
+    StringRef name_ref, llvm::ArrayRef<CompilerContext> decl_context) {
+  Module *m = GetModule();
+  if (!m)
+    return {};
+  return ::LookupClangType(const_cast<Module &>(*m), decl_context);
+}
 
+TypeSP TypeSystemSwiftTypeRefForExpressions::LookupClangType(
+    StringRef name_ref, llvm::ArrayRef<CompilerContext> decl_context) {
   // Check the cache first. Negative results are also cached.
   TypeSP result;
   ConstString name(name_ref);
   if (m_clang_type_cache.Lookup(name.AsCString(), result))
     return result;
   
-  if (auto *M = GetModule()) {
-    TypeSP result = lookup(*M);
-    // Cache it.
-    m_clang_type_cache.Insert(name.AsCString(), result);
-    return result;
-  }
-
   TargetSP target_sp = GetTargetWP().lock();
   if (!target_sp)
     return {};
-  target_sp->GetImages().ForEach([&](const ModuleSP &module) -> bool {
+  target_sp->GetImages().ForEach([&](const ModuleSP &m) -> bool {
     // Don't recursively call into LookupClangTypes() to avoid filling
     // hundreds of image caches with negative results.
-    result = lookup(const_cast<Module &>(*module));
+    result = ::LookupClangType(const_cast<Module &>(*m), decl_context);
     // Cache it in the expression context.
     if (result)
       m_clang_type_cache.Insert(name.AsCString(), result);

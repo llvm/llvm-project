@@ -383,9 +383,10 @@ public:
   lldb::TypeSP LookupClangType(llvm::StringRef name_ref);
 
   /// Search the debug info for a Clang type with the specified name and decl
-  /// context, and cache the result.
-  lldb::TypeSP LookupClangType(llvm::StringRef name_ref,
-                               llvm::ArrayRef<CompilerContext> decl_context);
+  /// context.
+  virtual lldb::TypeSP
+  LookupClangType(llvm::StringRef name_ref,
+                  llvm::ArrayRef<CompilerContext> decl_context);
 
   /// Attempts to convert a Clang type into a Swift type.
   /// For example, int is converted to Int32.
@@ -491,8 +492,6 @@ protected:
 
   /// All lldb::Type pointers produced by DWARFASTParser Swift go here.
   ThreadSafeDenseMap<const char *, lldb::TypeSP> m_swift_type_map;
-  /// Map ConstString Clang type identifiers to Clang types.
-  ThreadSafeDenseMap<const char *, lldb::TypeSP> m_clang_type_cache;
 };
 
 /// This one owns a SwiftASTContextForExpressions.
@@ -535,8 +534,13 @@ public:
   /// Forwards to SwiftASTContext.
   PersistentExpressionState *GetPersistentExpressionState() override;
   Status PerformCompileUnitImports(const SymbolContext &sc);
-  /// Returns how often ModulesDidLoad was called/
+  /// Returns how often ModulesDidLoad was called.
   unsigned GetGeneration() const { return m_generation; }
+  /// Performs a target-wide search.
+  lldb::TypeSP
+  LookupClangType(llvm::StringRef name_ref,
+                  llvm::ArrayRef<CompilerContext> decl_context) override;
+
 
   friend class SwiftASTContextForExpressions;
 protected:
@@ -553,6 +557,8 @@ protected:
   /// Perform all the implicit imports for the current frame.
   mutable std::unique_ptr<SymbolContext> m_initial_symbol_context_up;
   std::unique_ptr<SwiftPersistentExpressionState> m_persistent_state_up;
+  /// Map ConstString Clang type identifiers to Clang types.
+  ThreadSafeDenseMap<const char *, lldb::TypeSP> m_clang_type_cache;
 };
 
 } // namespace lldb_private
