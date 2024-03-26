@@ -41,9 +41,7 @@ protected:
     if (!M)
       report_fatal_error(os.str().c_str());
 
-    Function *F = M->getFunction("test");
-    if (F == nullptr)
-      report_fatal_error("Test must have a function named @test");
+    Function *F = M->getRequiredFunction("test");
 
     A = B = nullptr;
     for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
