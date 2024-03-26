@@ -536,7 +536,10 @@ public:
 // Considering comparisons from leaf and non-leaf nodes, we can estimate the
 // number of comparisons in a simple closed form :
 //   n + n / 2 - 1 = n * 3 / 2 - 1
-int64_t getExpectedNumberOfCompare(int NumCaseCluster) {
+int64_t getExpectedNumberOfCompare(int NumCaseCluster,
+                                   bool DefaultDestUndefined) {
+  // FIXME: The compare instruction count should be less than the branch count
+  // when default branch is undefined: https://llvm.godbolt.org/z/x6ETdfY79.
   return 3 * static_cast<int64_t>(NumCaseCluster) / 2 - 1;
 }
 
@@ -701,26 +704,31 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
 
   void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
                         bool DefaultDestUndefined) override {
-    if (!DefaultDestUndefined)
-      addCost(2 * InstrCost);
     // If suitable for a jump table, consider the cost for the table size and
     // branch to destination.
     // Maximum valid cost increased in this function.
     if (JumpTableSize) {
+      // Suppose a default branch includes one compare and one conditional
+      // branch if it's reachable.
+      if (!DefaultDestUndefined)
+        addCost(2 * InstrCost);
+      // Suppose a jump table requires one load and one jump instruction.
       int64_t JTCost =
-          static_cast<int64_t>(JumpTableSize) * InstrCost + 4 * InstrCost;
+          static_cast<int64_t>(JumpTableSize) * InstrCost + 2 * InstrCost;
       addCost(JTCost);
       return;
     }
 
     if (NumCaseCluster <= 3) {
       // Suppose a comparison includes one compare and one conditional branch.
-      addCost(NumCaseCluster * 2 * InstrCost);
+      // We can reduce a set of instructions if the default branch is
+      // undefined.
+      addCost((NumCaseCluster - DefaultDestUndefined) * 2 * InstrCost);
       return;
     }
 
     int64_t ExpectedNumberOfCompare =
-        getExpectedNumberOfCompare(NumCaseCluster);
+        getExpectedNumberOfCompare(NumCaseCluster, DefaultDestUndefined);
     int64_t SwitchCost = ExpectedNumberOfCompare * 2 * InstrCost;
 
     addCost(SwitchCost);
@@ -1152,7 +1160,7 @@ private:
   // FIXME: These constants are taken from the heuristic-based cost visitor.
   // These should be removed entirely in a later revision to avoid reliance on
   // heuristics in the ML inliner.
-  static constexpr int JTCostMultiplier = 4;
+  static constexpr int JTCostMultiplier = 2;
   static constexpr int CaseClusterCostMultiplier = 2;
   static constexpr int SwitchDefaultDestCostMultiplier = 2;
   static constexpr int SwitchCostMultiplier = 2;
@@ -1235,11 +1243,10 @@ private:
 
   void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
                         bool DefaultDestUndefined) override {
-    if (!DefaultDestUndefined)
-      increment(InlineCostFeatureIndex::switch_default_dest_penalty,
-                SwitchDefaultDestCostMultiplier * InstrCost);
-
     if (JumpTableSize) {
+      if (!DefaultDestUndefined)
+        increment(InlineCostFeatureIndex::switch_default_dest_penalty,
+                  SwitchDefaultDestCostMultiplier * InstrCost);
       int64_t JTCost = static_cast<int64_t>(JumpTableSize) * InstrCost +
                        JTCostMultiplier * InstrCost;
       increment(InlineCostFeatureIndex::jump_table_penalty, JTCost);
@@ -1248,12 +1255,13 @@ private:
 
     if (NumCaseCluster <= 3) {
       increment(InlineCostFeatureIndex::case_cluster_penalty,
-                NumCaseCluster * CaseClusterCostMultiplier * InstrCost);
+                (NumCaseCluster - DefaultDestUndefined) *
+                    CaseClusterCostMultiplier * InstrCost);
       return;
     }
 
     int64_t ExpectedNumberOfCompare =
-        getExpectedNumberOfCompare(NumCaseCluster);
+        getExpectedNumberOfCompare(NumCaseCluster, DefaultDestUndefined);
 
     int64_t SwitchCost =
         ExpectedNumberOfCompare * SwitchCostMultiplier * InstrCost;
