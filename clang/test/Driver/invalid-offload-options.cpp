@@ -27,4 +27,4 @@
 // RUN:   --offload=amdgcn-amd-amdhsa --offload-arch=gfx900 %s \
 // RUN: 2>&1 | FileCheck --check-prefix=OFFLOAD-ARCH-MIX %s
 
-// OFFLOAD-ARCH-MIX: error: option '--offload-arch' cannot be specified with '--offload'
+// OFFLOAD-ARCH-MIX: error: option '--offload' cannot be specified with '--offload-arch'

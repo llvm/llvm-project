@@ -65,11 +65,11 @@
 // ERR_SM20: error: GPU arch sm_20 {{.*}}
 // ERR_SM20-NOT: error: GPU arch sm_20
 
-// ERR_SM60: error: GPU arch sm_60 {{.*}}
-// ERR_SM60-NOT: error: GPU arch sm_60
-
 // ERR_SM61: error: GPU arch sm_61 {{.*}}
 // ERR_SM61-NOT: error: GPU arch sm_61
+
+// ERR_SM60: error: GPU arch sm_60 {{.*}}
+// ERR_SM60-NOT: error: GPU arch sm_60
 
 // UNKNOWN_VERSION: CUDA version is newer than the latest{{.*}} supported version
 // UNKNOWN_VERSION_CXX-NOT: unknown CUDA version

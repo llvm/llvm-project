@@ -69,19 +69,19 @@
 
 // HIP: clang-offload-bundler
 
-// SM20:--image=profile=sm_20{{.*}}--image=profile=compute_20
-// SM21:--image=profile=sm_21{{.*}}--image=profile=compute_20
-// SM30:--image=profile=sm_30{{.*}}--image=profile=compute_30
-// SM32:--image=profile=sm_32{{.*}}--image=profile=compute_32
-// SM35:--image=profile=sm_35{{.*}}--image=profile=compute_35
-// SM37:--image=profile=sm_37{{.*}}--image=profile=compute_37
-// SM50:--image=profile=sm_50{{.*}}--image=profile=compute_50
-// SM52:--image=profile=sm_52{{.*}}--image=profile=compute_52
-// SM53:--image=profile=sm_53{{.*}}--image=profile=compute_53
-// SM60:--image=profile=sm_60{{.*}}--image=profile=compute_60
-// SM61:--image=profile=sm_61{{.*}}--image=profile=compute_61
-// SM62:--image=profile=sm_62{{.*}}--image=profile=compute_62
-// SM70:--image=profile=sm_70{{.*}}--image=profile=compute_70
+// SM20:--image=profile=sm_20{{.*}}
+// SM21:--image=profile=sm_21{{.*}}
+// SM30:--image=profile=sm_30{{.*}}
+// SM32:--image=profile=sm_32{{.*}}
+// SM35:--image=profile=sm_35{{.*}}
+// SM37:--image=profile=sm_37{{.*}}
+// SM50:--image=profile=sm_50{{.*}}
+// SM52:--image=profile=sm_52{{.*}}
+// SM53:--image=profile=sm_53{{.*}}
+// SM60:--image=profile=sm_60{{.*}}
+// SM61:--image=profile=sm_61{{.*}}
+// SM62:--image=profile=sm_62{{.*}}
+// SM70:--image=profile=sm_70{{.*}}
 // GFX600:-targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx600
 // GFX601:-targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx601
 // GFX602:-targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx602

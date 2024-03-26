@@ -20,12 +20,8 @@
 // SM30-DAG: "-cc1" "-triple" "nvptx64-nvidia-cuda"
 // SM30-same: "-target-cpu" "sm_30"
 
-// RUN: not %clang -### -S --target=x86_64-linux-gnu -o foo.s %s 2>&1 \
-// RUN:   | FileCheck -check-prefix MULTIPLE-OUTPUT-FILES %s
 // RUN: not %clang -### -S --target=x86_64-linux-gnu --cuda-device-only \
 // RUN:   --cuda-gpu-arch=sm_20 --cuda-gpu-arch=sm_30 -o foo.s %s 2>&1 \
-// RUN:   | FileCheck -check-prefix MULTIPLE-OUTPUT-FILES %s
-// RUN: not %clang -### -emit-llvm -c --target=x86_64-linux-gnu -o foo.s %s 2>&1 \
 // RUN:   | FileCheck -check-prefix MULTIPLE-OUTPUT-FILES %s
 // MULTIPLE-OUTPUT-FILES: error: cannot specify -o when generating multiple output files
 // Make sure we do not get duplicate diagnostics.

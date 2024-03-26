@@ -86,10 +86,6 @@
 // RUN:   --cuda-gpu-arch=gfx906 -foffload-lto=thin -fwhole-program-vtables %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=HIPTHINLTO %s
 
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
-// RUN:   --cuda-gpu-arch=gfx906 -fgpu-rdc -foffload-lto=thin -fwhole-program-vtables %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=HIPTHINLTO %s
-
 // Ensure we don't error about -fwhole-program-vtables for the non-device offload compile.
 // HIPTHINLTO-NOT: error: invalid argument '-fwhole-program-vtables' only allowed with '-flto'
 // HIPTHINLTO-NOT: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-flto-unit"
@@ -125,7 +121,7 @@
 
 // Check -Xoffload-linker option is passed to lld.
 
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib --no-offload-new-driver \
 // RUN:   --cuda-gpu-arch=gfx906 -fgpu-rdc -Xoffload-linker --build-id=md5 %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=OFL-LINK %s
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \

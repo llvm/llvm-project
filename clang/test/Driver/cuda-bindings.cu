@@ -26,14 +26,14 @@
 // BIN-NOT: cuda-bindings-device-cuda-nvptx64
 // BIN: # "powerpc64le-ibm-linux-gnu" - "clang",{{.*}}  output:
 // BIN-NOT: cuda-bindings-device-cuda-nvptx64
-// BIN: # "powerpc64le-ibm-linux-gnu" - "GNU::Linker", inputs:{{.*}}, output: "a.out"
+// BIN: # "powerpc64le-ibm-linux-gnu" - "Offload::Linker", inputs:{{.*}}, output: "a.out"
 
 //
 // Test single gpu architecture up to the assemble phase.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings --cuda-gpu-arch=sm_30 %s -S 2>&1 \
 // RUN: | FileCheck -check-prefix=ASM %s
-// ASM-DAG: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "cuda-bindings-cuda-nvptx64-nvidia-cuda-sm_30.s"
+// ASM-DAG: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "[[BINDINGS:.+.s]]"
 // ASM-DAG: # "powerpc64le-ibm-linux-gnu" - "clang",{{.*}} output: "cuda-bindings.s"
 
 //
@@ -64,8 +64,8 @@
 // BIN2-NOT: cuda-bindings-device-cuda-nvptx64
 // BIN2: # "powerpc64le-ibm-linux-gnu" - "clang",{{.*}}  output:
 // BIN2-NOT: cuda-bindings-device-cuda-nvptx64
-// AOUT: # "powerpc64le-ibm-linux-gnu" - "GNU::Linker", inputs:{{.*}}, output: "a.out"
-// TOUT: # "powerpc64le-ibm-linux-gnu" - "GNU::Linker", inputs:{{.*}}, output: "{{.*}}/out"
+// AOUT: # "powerpc64le-ibm-linux-gnu" - "Offload::Linker", inputs:{{.*}}, output: "a.out"
+// TOUT: # "powerpc64le-ibm-linux-gnu" - "Offload::Linker", inputs:{{.*}}, output: "{{.*}}/out"
 
 // .. same, but with -fsyntax-only
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings -fsyntax-only \
@@ -81,9 +81,9 @@
 // RUN:        --offload-arch=sm_30,sm_35 %s -o %t/out 2>&1 \
 // RUN: | FileCheck -check-prefix=SYN %s
 // SYN-NOT: inputs:
-// SYN: # "powerpc64le-ibm-linux-gnu" - "clang", inputs: [{{.*}}], output: (nothing)
+//      SYN: # "nvptx64-nvidia-cuda" - "clang", inputs: [{{.*}}], output: (nothing)
 // SYN-NEXT: # "nvptx64-nvidia-cuda" - "clang", inputs: [{{.*}}], output: (nothing)
-// SYN-NEXT: # "nvptx64-nvidia-cuda" - "clang", inputs: [{{.*}}], output: (nothing)
+// SYN-NEXT: # "powerpc64le-ibm-linux-gnu" - "clang", inputs: [{{.*}}], output: (nothing)
 // SYN-NOT: inputs
 
 // .. and with --offload-new-driver
@@ -100,7 +100,7 @@
 // RUN:        --offload-arch=sm_30,sm_35 %s --offload-new-driver -o %t/out 2>&1 \
 // RUN: | FileCheck -check-prefix=NDSYN %s
 // NDSYN-NOT: inputs:
-// NDSYN: # "nvptx64-nvidia-cuda" - "clang", inputs: [{{.*}}], output: (nothing)
+//      NDSYN: # "nvptx64-nvidia-cuda" - "clang", inputs: [{{.*}}], output: (nothing)
 // NDSYN-NEXT: # "nvptx64-nvidia-cuda" - "clang", inputs: [{{.*}}], output: (nothing)
 // NDSYN-NEXT: # "powerpc64le-ibm-linux-gnu" - "clang", inputs: [{{.*}}], output: (nothing)
 // NDSYN-NOT: inputs:
@@ -112,8 +112,8 @@
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings \
 // RUN:        --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s -S 2>&1 \
 // RUN: | FileCheck -check-prefix=ASM2 %s
-// ASM2-DAG: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "cuda-bindings-cuda-nvptx64-nvidia-cuda-sm_30.s"
-// ASM2-DAG: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "cuda-bindings-cuda-nvptx64-nvidia-cuda-sm_35.s"
+// ASM2-DAG: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "[[SM30:.+.s]]"
+// ASM2-DAG: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "[[SM35:.+.s]]"
 // ASM2-DAG: # "powerpc64le-ibm-linux-gnu" - "clang",{{.*}} output: "cuda-bindings.s"
 
 //
@@ -128,7 +128,7 @@
 // RUN: | FileCheck -check-prefix=HBIN %s
 // HBIN: # "powerpc64le-ibm-linux-gnu" - "clang",{{.*}}  output:
 // HBIN-NOT: cuda-bindings-device-cuda-nvptx64
-// HBIN: # "powerpc64le-ibm-linux-gnu" - "GNU::Linker", inputs:{{.*}}, output: "a.out"
+// HBIN: # "powerpc64le-ibm-linux-gnu" - "Offload::Linker", inputs:{{.*}}, output: "a.out"
 
 //
 // Test one or more gpu architecture up to the assemble phase in host-only
@@ -166,7 +166,7 @@
 // Test two gpu architectures with complete compilation in device-only
 // compilation mode.
 //
-// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings \
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings --no-offload-new-driver \
 // RUN:        --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-device-only 2>&1 \
 // RUN: | FileCheck -check-prefix=DBIN2 %s
 // DBIN2: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output:
@@ -180,7 +180,7 @@
 // Test two gpu architectures up to the assemble phase in device-only
 // compilation mode.
 //
-// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings \
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings --no-offload-new-driver \
 // RUN:        --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-device-only -S 2>&1 \
 // RUN: | FileCheck -check-prefix=DASM2 %s
 // DASM2: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "cuda-bindings-cuda-nvptx64-nvidia-cuda-sm_30.s"
