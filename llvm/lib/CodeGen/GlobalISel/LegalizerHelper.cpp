@@ -1702,14 +1702,13 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   case TargetOpcode::G_VSCALE: {
     Register Dst = MI.getOperand(0).getReg();
     LLT Ty = MRI.getType(Dst);
-    LLT HalfTy = Ty.divide(2);
 
     // Assume VSCALE(1) fits into a legal integer
-    const APInt One(HalfTy.getSizeInBits(), 1);
-    auto VScaleBase = MIRBuilder.buildVScale(HalfTy, One);
+    const APInt One(NarrowTy.getSizeInBits(), 1);
+    auto VScaleBase = MIRBuilder.buildVScale(NarrowTy, One);
     auto ZExt = MIRBuilder.buildZExt(Ty, VScaleBase);
     auto C = MIRBuilder.buildConstant(Ty, *MI.getOperand(1).getCImm());
-    auto Res = MIRBuilder.buildMul(Dst, ZExt, C);
+    MIRBuilder.buildMul(Dst, ZExt, C);
 
     MI.eraseFromParent();
     return Legalized;
