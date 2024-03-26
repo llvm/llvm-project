@@ -19,7 +19,7 @@ static bool consumeNegativeIndicator(StringRef &GlobList) {
   return GlobList.consume_front("-");
 }
 
-// Extract the first glob from the comma-separated list of globs
+// Extracts the first glob from the comma-separated list of globs,
 // removes it and the trailing comma from the GlobList and
 // returns the extracted glob.
 static llvm::StringRef extractNextGlob(StringRef &GlobList) {

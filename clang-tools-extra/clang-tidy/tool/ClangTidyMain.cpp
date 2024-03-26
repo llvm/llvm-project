@@ -457,24 +457,21 @@ static bool verifyChecks(const StringSet<> &AllChecks, StringRef CheckGlob,
   GlobList Globs(CheckGlob);
   bool AnyInvalid = false;
   for (const auto &Item : Globs.getItems()) {
-    const llvm::Regex &Reg = Item.Regex;
-    const llvm::StringRef Text = Item.Text;
-    if (Text.starts_with("clang-diagnostic"))
+    if (Item.Text.starts_with("clang-diagnostic"))
       continue;
-    if (llvm::none_of(AllChecks.keys(), [&Reg](StringRef S) {
-          llvm::errs() << S << '\n';
-          return Reg.match(S);
+    if (llvm::none_of(AllChecks.keys(), [&Item](StringRef S) {
+          return Item.Regex.match(S);
         })) {
       AnyInvalid = true;
       if (Item.Text.contains('*'))
         llvm::WithColor::warning(llvm::errs(), Source)
-            << "check glob '" << Text << "' doesn't match any known check"
+            << "check glob '" << Item.Text << "' doesn't match any known check"
             << VerifyConfigWarningEnd;
       else {
         llvm::raw_ostream &Output =
             llvm::WithColor::warning(llvm::errs(), Source)
-            << "unknown check '" << Text << '\'';
-        llvm::StringRef Closest = closest(Text, AllChecks);
+            << "unknown check '" << Item.Text << '\'';
+        llvm::StringRef Closest = closest(Item.Text, AllChecks);
         if (!Closest.empty())
           Output << "; did you mean '" << Closest << '\'';
         Output << VerifyConfigWarningEnd;
