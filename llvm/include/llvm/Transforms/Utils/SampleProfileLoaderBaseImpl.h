@@ -129,12 +129,11 @@ public:
 
   bool profileIsValid(const Function &F, const FunctionSamples &Samples) const {
     const auto *Desc = getDesc(F);
-    assert(!(LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink && Desc &&
-             profileIsHashMismatched(*Desc, Samples) &&
-             !F.hasFnAttribute("profile-checksum-mismatch")) &&
-           "The profile's checksum is mismatched in post-link but the function "
-           "doesn't have 'profile-checksum-mismatch' attribute, which should "
-           "be set in pre-link.");
+    assert((LTOPhase != ThinOrFullLTOPhase::ThinLTOPostLink || !Desc ||
+            profileIsHashMismatched(*Desc, Samples) ==
+                F.hasFnAttribute("profile-checksum-mismatch")) &&
+           "In post-link, profile checksum matching state doesn't match "
+           "function 'profile-checksum-mismatch' attribute.");
     // The desc for import function is unavailable. Check the function attribute
     // for mismatch.
     return (!Desc && !F.hasFnAttribute("profile-checksum-mismatch")) ||
