@@ -175,9 +175,10 @@ static void expandFPToI(Instruction *FPToI) {
   // if.end:
   Builder.SetInsertPoint(IfEnd);
   Value *Add1 = Builder.CreateAdd(
-      And2, ConstantInt::getSigned(IntTy, -int64_t(ExponentBias + BitWidth)));
-  Value *Cmp3 =
-      Builder.CreateICmpULT(Add1, ConstantInt::getSigned(IntTy, -BitWidth));
+      And2, ConstantInt::getSigned(
+                IntTy, -static_cast<int64_t>(ExponentBias + BitWidth)));
+  Value *Cmp3 = Builder.CreateICmpULT(
+      Add1, ConstantInt::getSigned(IntTy, -static_cast<int64_t>(BitWidth)));
   Builder.CreateCondBr(Cmp3, IfThen5, IfEnd9);
 
   // if.then5:
@@ -203,8 +204,8 @@ static void expandFPToI(Instruction *FPToI) {
   // if.else:
   Builder.SetInsertPoint(IfElse);
   Value *Sub15 = Builder.CreateAdd(
-      And2,
-      ConstantInt::getSigned(IntTy, -(ExponentBias + FPMantissaWidth)));
+      And2, ConstantInt::getSigned(
+                IntTy, -static_cast<int64_t>(ExponentBias + FPMantissaWidth)));
   Value *Shl = Builder.CreateShl(Or, Sub15);
   Value *Mul16 = Builder.CreateMul(Shl, Sign);
   Builder.CreateBr(End);
