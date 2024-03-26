@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
-#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineMap.h"
@@ -66,17 +65,6 @@ public:
   LogicalResult matchAndRewrite(tensor::InsertSliceOp insertSliceOp,
                                 PatternRewriter &rewriter) const override;
 };
-
-/// Merge insert_slice operation with extract_slice operation.
-class InsertSliceOfExtractSliceFolder final
-    : public OpRewritePattern<tensor::InsertSliceOp> {
-public:
-  using OpRewritePattern<tensor::InsertSliceOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tensor::InsertSliceOp insertSliceOp,
-                                PatternRewriter &rewriter) const override;
-};
-
 } // namespace
 
 template <typename XferOp, typename ExtractOrInsertOp>
@@ -159,80 +147,6 @@ LogicalResult InsertSliceOfTransferWriteOpFolder::matchAndRewrite(
   return success();
 }
 
-/// Merge insert_slice operation with extract_slice operation.
-///
-/// This can be done when the insert_slice op purely expands ranks (adds unit
-/// dims) and the extrace_slice drops corresponding unit dims. For example:
-///
-/// %extracted_slice = tensor.extract_slice %in[0, 0] [1, 8] [1, 1]
-///     : tensor<2x8xf32> to tensor<8xf32>
-/// %inserted_slice = tensor.insert_slice %extracted_slice
-///     into %dest[0, 0] [1, 8] [1, 1]
-///     : tensor<8xf32> into tensor<1x8xf32>
-///
-/// can be folded into:
-///
-/// %extracted_slice = tensor.extract_slice %in[0, 0] [1, 8] [1, 1]
-///     : tensor<2x8xf32> to tensor<1x8xf32>
-LogicalResult InsertSliceOfExtractSliceFolder::matchAndRewrite(
-    tensor::InsertSliceOp insertSliceOp, PatternRewriter &rewriter) const {
-  auto extractSliceOp =
-      insertSliceOp.getSource().getDefiningOp<tensor::ExtractSliceOp>();
-  if (!extractSliceOp)
-    return failure();
-
-  // Can't fold if the extract_slice op has other users.
-  if (!extractSliceOp->hasOneUse())
-    return failure();
-
-  // Check if the insert_slice op purely expands ranks (add unit dims).
-  if (!isCastLikeInsertSliceOp(insertSliceOp))
-    return failure();
-
-  llvm::SmallBitVector extractDroppedDims = extractSliceOp.getDroppedDims();
-  llvm::SmallBitVector insertExpandedDims = insertSliceOp.getDroppedDims();
-  // Can't fold if the insert_slice op expands to more dims.
-  if (extractDroppedDims.size() < insertExpandedDims.size())
-    return failure();
-
-  // Try to match the dropped unit dims to the expanded unit dims. This is done
-  // by scanning the dims of extract_slice and find the left-most one can match
-  // the dim of insert_slice. If a match is found, advance the dim of
-  // insert_slice to match the next one.
-  unsigned insertDimPos = 0;
-  for (unsigned extractDimPos = 0; extractDimPos < extractDroppedDims.size();
-       ++extractDimPos) {
-    // Matched all expanded dims.
-    if (insertDimPos == insertExpandedDims.size())
-      break;
-
-    bool isDropped = extractDroppedDims[extractDimPos];
-    bool isExpanded = insertExpandedDims[insertDimPos];
-    // Match if both sides drop/keep the dim. Advance and match the next dim of
-    // insert_slice.
-    if (isDropped == isExpanded) {
-      insertDimPos += 1;
-    } else if (!isDropped && isExpanded) {
-      // Not enough dropped unit dims to match the expanded unit dims.
-      return failure();
-    }
-    // If the dim is dropped by extract_slice and not by insert_slice, look the
-    // next dim of extract_slice to see if it can match the current dim of
-    // insert_slice.
-  }
-  // Can't match some expanded dims.
-  if (insertDimPos != insertExpandedDims.size())
-    return failure();
-
-  rewriter.replaceOpWithNewOp<tensor::ExtractSliceOp>(
-      insertSliceOp, insertSliceOp.getType(), extractSliceOp.getSource(),
-      extractSliceOp.getMixedOffsets(), extractSliceOp.getMixedSizes(),
-      extractSliceOp.getMixedStrides());
-  rewriter.eraseOp(extractSliceOp);
-
-  return success();
-}
-
 template <typename OpTy>
 struct InsertSliceOfInsertSliceFolder : public OpRewritePattern<OpTy> {
   using OpRewritePattern<OpTy>::OpRewritePattern;
@@ -310,8 +224,8 @@ struct InsertSliceOfInsertSliceFolder : public OpRewritePattern<OpTy> {
 void tensor::populateFoldTensorSubsetOpPatterns(RewritePatternSet &patterns) {
   populateFoldTensorSubsetIntoVectorTransferPatterns(patterns);
   patterns.add<InsertSliceOfInsertSliceFolder<tensor::InsertSliceOp>,
-               InsertSliceOfInsertSliceFolder<tensor::ParallelInsertSliceOp>,
-               InsertSliceOfExtractSliceFolder>(patterns.getContext());
+               InsertSliceOfInsertSliceFolder<tensor::ParallelInsertSliceOp>>(
+      patterns.getContext());
 }
 
 void tensor::populateFoldTensorSubsetIntoVectorTransferPatterns(
