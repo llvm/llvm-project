@@ -69,17 +69,16 @@ static bool addParantheses(const BinaryOperator *BinOp,
 void MathMissingParenthesesCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binOp");
-  bool NeedToDiagnose = false;
   std::vector<clang::SourceRange> Insertions;
   const clang::SourceLocation StartLoc = BinOp->getBeginLoc();
 
   if (addParantheses(BinOp, nullptr, Insertions)) {
-    auto const &Diag = diag(
+    const auto &Diag = diag(
         StartLoc, "add parantheses to clarify the precedence of operations");
     for (const auto &Insertion : Insertions) {
       Diag << FixItHint::CreateInsertion(Insertion.getBegin(), "(");
       Diag << FixItHint::CreateInsertion(Insertion.getEnd(), ")");
-      Diag << SourceRange(Insertion.getBegin(), Insertion.getEnd());
+      Diag << Insertion;
     }
   }
 }

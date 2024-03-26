@@ -4,10 +4,10 @@ readability-math-missing-parentheses
 ====================================
 
 Check for missing parentheses in mathematical expressions that involve operators
-of different priorities. Parentheses in mathematical expressions clarify the order
+of different priorities. Parentheses in mathematical expressions clarifies the order
 of operations, especially with different-priority operators. Lengthy or multiline
 expressions can obscure this order, leading to coding errors. IDEs can aid clarity
-by highlighting parentheses. Explicitly using parentheses also clarify what the 
+by highlighting parentheses. Explicitly using parentheses also clarifies what the 
 developer had in mind when writing the expression. Ensuring their presence reduces
 ambiguity and errors, promoting clearer and more maintainable code.
 
