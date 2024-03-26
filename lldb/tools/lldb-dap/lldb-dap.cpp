@@ -3265,7 +3265,8 @@ void request_stepInTargets(const llvm::json::Object &request) {
   if (frame.IsValid()) {
     lldb::SBAddress pc_addr = frame.GetPCAddress();
     lldb::addr_t line_end_addr = pc_addr.GetLineEntry()
-                                     .GetSameLineContiguousAddressRangeEnd(true)
+                                     .GetSameLineContiguousAddressRangeEnd(
+                                         /*include_inlined_functions=*/true)
                                      .GetLoadAddress(g_dap.target);
 
     int max_inst_count = line_end_addr - pc_addr.GetLoadAddress(g_dap.target);

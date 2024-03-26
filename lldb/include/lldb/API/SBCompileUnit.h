@@ -11,7 +11,6 @@
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBFileSpec.h"
-#include <optional>
 
 namespace lldb {
 
@@ -30,10 +29,6 @@ public:
   bool IsValid() const;
 
   lldb::SBFileSpec GetFileSpec() const;
-
-  lldb::SBSymbolContextList
-  ResolveSymbolContext(const char *file, uint32_t line,
-                       std::optional<uint16_t> column = std::nullopt) const;
 
   uint32_t GetNumLineEntries() const;
 

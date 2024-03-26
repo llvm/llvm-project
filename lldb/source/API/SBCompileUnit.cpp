@@ -49,23 +49,6 @@ SBFileSpec SBCompileUnit::GetFileSpec() const {
   return file_spec;
 }
 
-lldb::SBSymbolContextList
-SBCompileUnit::ResolveSymbolContext(const char *file, uint32_t line,
-                                    std::optional<uint16_t> column) const {
-  LLDB_INSTRUMENT_VA(this, file, line);
-
-  lldb::SBSymbolContextList sc_list;
-  FileSpec file_spec(file);
-  SourceLocationSpec location_spec(file_spec, line, /*column=*/column,
-                                   /*check_inlines=*/true,
-                                   /*exact_match=*/true);
-
-  if (m_opaque_ptr)
-    m_opaque_ptr->ResolveSymbolContext(location_spec, eSymbolContextLineEntry,
-                                       *sc_list);
-  return sc_list;
-}
-
 uint32_t SBCompileUnit::GetNumLineEntries() const {
   LLDB_INSTRUMENT_VA(this);
 
