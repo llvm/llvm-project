@@ -393,7 +393,7 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
   let description = [{
     "create_tdesc" is similar to "create_nd_tdesc" in terms that it creates
     a Tensor Descriptor (TensorDescType) for a memory region. While "create_nd_tdesc"
-    is for creating continious subviews, "create_tdesc" is for creating non-continious
+    is for creating continuous subviews, "create_tdesc" is for creating non-continuous
     (scattered) subviews, allowing each work-item in a subgroup specifying their own offset.
     It accepts the following parameters:
 
