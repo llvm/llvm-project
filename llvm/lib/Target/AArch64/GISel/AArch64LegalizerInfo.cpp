@@ -611,7 +611,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                Query.Types[0].isVector() &&
                (Query.Types[1].getScalarSizeInBits() == 8 ||
                 Query.Types[1].getScalarSizeInBits() == 16);
-      });
+      })
+      .clampMinNumElements(1, s8, 8)
+      .clampMinNumElements(1, s16, 4);
 
   getActionDefinitionsBuilder(G_TRUNC)
       .legalFor({{v2s32, v2s64}, {v4s16, v4s32}, {v8s8, v8s16}})
@@ -630,7 +632,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       })
       .clampMinNumElements(0, s8, 8)
       .clampMinNumElements(0, s16, 4)
-      .clampMinNumElements(0, s32, 2)
       .alwaysLegal();
 
   getActionDefinitionsBuilder(G_SEXT_INREG)

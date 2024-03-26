@@ -5421,14 +5421,22 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_SITOFP:
   case TargetOpcode::G_UITOFP: {
-    if (TypeIdx != 0)
-      return UnableToLegalize;
     Observer.changingInstr(MI);
-    LLT SrcTy = LLT::fixed_vector(
-        MoreTy.getNumElements(),
-        MRI.getType(MI.getOperand(1).getReg()).getElementType());
-    moreElementsVectorSrc(MI, SrcTy, 1);
-    moreElementsVectorDst(MI, MoreTy, 0);
+    LLT SrcExtTy;
+    LLT DstExtTy;
+    if (TypeIdx == 0) {
+      DstExtTy = MoreTy;
+      SrcExtTy = LLT::fixed_vector(
+          MoreTy.getNumElements(),
+          MRI.getType(MI.getOperand(1).getReg()).getElementType());
+    } else {
+      DstExtTy = LLT::fixed_vector(
+          MoreTy.getNumElements(),
+          MRI.getType(MI.getOperand(0).getReg()).getElementType());
+      SrcExtTy = MoreTy;
+    }
+    moreElementsVectorSrc(MI, SrcExtTy, 1);
+    moreElementsVectorDst(MI, DstExtTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
   }
