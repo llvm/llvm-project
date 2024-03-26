@@ -59,7 +59,9 @@ public:
   static void destroy(FixedVector<T, CAPACITY> *store) { store->reset(); }
 
   using reverse_iterator = typename cpp::array<T, CAPACITY>::reverse_iterator;
-  LIBC_INLINE constexpr reverse_iterator rbegin() { return reverse_iterator{&store[item_count]}; }
+  LIBC_INLINE constexpr reverse_iterator rbegin() {
+    return reverse_iterator{&store[item_count]};
+  }
   LIBC_INLINE constexpr reverse_iterator rend() { return store.rend(); }
 };
 
