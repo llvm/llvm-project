@@ -1340,7 +1340,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_destroy, void *m) {
 TSAN_INTERCEPTOR(int, pthread_mutex_lock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_lock, m);
   MutexPreLock(thr, pc, (uptr)m);
-  int res = REAL(pthread_mutex_lock)(m);
+  int res = BLOCK_REAL(pthread_mutex_lock)(m);
   if (res == errno_EOWNERDEAD)
     MutexRepair(thr, pc, (uptr)m);
   if (res == 0 || res == errno_EOWNERDEAD)
@@ -1385,7 +1385,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_clocklock, void *m,
                  __sanitizer_clockid_t clock, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_clocklock, m, clock, abstime);
   MutexPreLock(thr, pc, (uptr)m);
-  int res = REAL(pthread_mutex_clocklock)(m, clock, abstime);
+  int res = BLOCK_REAL(pthread_mutex_clocklock)(m, clock, abstime);
   if (res == errno_EOWNERDEAD)
     MutexRepair(thr, pc, (uptr)m);
   if (res == 0 || res == errno_EOWNERDEAD)
@@ -1403,7 +1403,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_clocklock, void *m,
 TSAN_INTERCEPTOR(int, __pthread_mutex_lock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(__pthread_mutex_lock, m);
   MutexPreLock(thr, pc, (uptr)m);
-  int res = REAL(__pthread_mutex_lock)(m);
+  int res = BLOCK_REAL(__pthread_mutex_lock)(m);
   if (res == errno_EOWNERDEAD)
     MutexRepair(thr, pc, (uptr)m);
   if (res == 0 || res == errno_EOWNERDEAD)
@@ -1446,7 +1446,7 @@ TSAN_INTERCEPTOR(int, pthread_spin_destroy, void *m) {
 TSAN_INTERCEPTOR(int, pthread_spin_lock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_spin_lock, m);
   MutexPreLock(thr, pc, (uptr)m);
-  int res = REAL(pthread_spin_lock)(m);
+  int res = BLOCK_REAL(pthread_spin_lock)(m);
   if (res == 0) {
     MutexPostLock(thr, pc, (uptr)m);
   }
@@ -1521,7 +1521,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_timedrdlock, void *m, void *abstime) {
 TSAN_INTERCEPTOR(int, pthread_rwlock_wrlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_wrlock, m);
   MutexPreLock(thr, pc, (uptr)m);
-  int res = REAL(pthread_rwlock_wrlock)(m);
+  int res = BLOCK_REAL(pthread_rwlock_wrlock)(m);
   if (res == 0) {
     MutexPostLock(thr, pc, (uptr)m);
   }
@@ -2673,6 +2673,25 @@ static USED void syscall_fd_release(uptr pc, int fd) {
   FdRelease(thr, pc, fd);
 }
 
+static USED void sycall_blocking_start() {
+  DPrintf("sycall_blocking_start()\n");
+  ThreadState *thr = cur_thread();
+  EnterBlockingFunc(thr);
+  // When we are in a "blocking call", we process signals asynchronously
+  // (right when they arrive). In this context we do not expect to be
+  // executing any user/runtime code. The known interceptor sequence when
+  // this is not true is: pthread_join -> munmap(stack). It's fine
+  // to ignore munmap in this case -- we handle stack shadow separately.
+  thr->ignore_interceptors++;
+}
+
+static USED void sycall_blocking_end() {
+  DPrintf("sycall_blocking_end()\n");
+  ThreadState *thr = cur_thread();
+  thr->ignore_interceptors--;
+  atomic_store(&thr->in_blocking_func, 0, memory_order_relaxed);
+}
+
 static void syscall_pre_fork(uptr pc) { ForkBefore(cur_thread(), pc); }
 
 static void syscall_post_fork(uptr pc, int pid) {
@@ -2726,6 +2745,9 @@ static void syscall_post_fork(uptr pc, int pid) {
 
 #define COMMON_SYSCALL_POST_FORK(res) \
   syscall_post_fork(GET_CALLER_PC(), res)
+
+#define COMMON_SYSCALL_BLOCKING_START() sycall_blocking_start()
+#define COMMON_SYSCALL_BLOCKING_END() sycall_blocking_end()
 
 #include "sanitizer_common/sanitizer_common_syscalls.inc"
 #include "sanitizer_common/sanitizer_syscalls_netbsd.inc"

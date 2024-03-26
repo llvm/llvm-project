@@ -4,6 +4,7 @@
 
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("//mlir:tblgen.bzl", "td_library")
 load(":binary_alias.bzl", "binary_alias")
 load(":config.bzl", "llvm_config_defines")
 load(":enum_targets_gen.bzl", "enum_targets_gen")
@@ -154,6 +155,12 @@ exports_files([
     "include/llvm/Config/llvm-config.h.cmake",
     "include/llvm/Config/abi-breaking.h.cmake",
 ])
+
+td_library(
+    name = "OptParserTdFiles",
+    srcs = ["include/llvm/Option/OptParser.td"],
+    includes = ["include"],
+)
 
 cc_library(
     name = "config",
@@ -623,7 +630,7 @@ cc_library(
     srcs = [
         "utils/TableGen/Common/GlobalISel/CodeExpander.cpp",
     ],
-    hdrs = glob([
+    hdrs = [
         # We have to include these headers here as well as in the `hdrs` below
         # to allow the `.cpp` files to use file-relative-inclusion to find
         # them, even though consumers of this library use inclusion relative to
@@ -631,7 +638,7 @@ cc_library(
         # This mixture appears to be incompatible with header modules.
         "utils/TableGen/Common/GlobalISel/CodeExpander.h",
         "utils/TableGen/Common/GlobalISel/CodeExpansions.h",
-    ]),
+    ],
     copts = llvm_copts,
     features = ["-header_modules"],
     strip_include_prefix = "utils/TableGen",
@@ -665,10 +672,11 @@ cc_binary(
             # listed here. MC uses headers produced by tablegen, so it cannot be a
             # regular dependency.
             "include/llvm/MC/*.h",
-            "include/llvm/TargetParser/SubtargetFeature.h",
         ],
         exclude = ["utils/TableGen/Common/GlobalISel/CodeExpander.cpp"],
-    ),
+    ) + [
+        "include/llvm/TargetParser/SubtargetFeature.h",
+    ],
     copts = llvm_copts,
     includes = ["utils/TableGen"],
     stamp = 0,
@@ -3153,8 +3161,10 @@ cc_library(
         ":Support",
         ":Target",
         ":config",
-        ":maybe_pfm",
-    ],
+    ] + select({
+        "@platforms//os:linux": [":maybe_pfm"],
+        "//conditions:default": [],
+    }),
 )
 
 ################################################################################

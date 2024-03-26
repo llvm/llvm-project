@@ -2524,9 +2524,10 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     // sub (xor A, B), B  ; flip bits if negative and subtract -1 (add 1)
     // --> (A < 0) ? -A : A
     Value *IsNeg = Builder.CreateIsNeg(A);
-    // Copy the nuw/nsw flags from the sub to the negate.
-    Value *NegA = Builder.CreateNeg(A, "", I.hasNoUnsignedWrap(),
-                                    I.hasNoSignedWrap());
+    // Copy the nsw flags from the sub to the negate.
+    Value *NegA = I.hasNoUnsignedWrap()
+                      ? Constant::getNullValue(A->getType())
+                      : Builder.CreateNeg(A, "", I.hasNoSignedWrap());
     return SelectInst::Create(IsNeg, NegA, A);
   }
 
