@@ -1690,6 +1690,9 @@ protected:
     /// Whether we have a stored size expression.
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasExternalSize : 1;
+
+    LLVM_PREFERRED_TYPE(unsigned)
+    unsigned SizeWidth : 5;
   };
 
   class BuiltinTypeBitfields {
@@ -3191,24 +3194,20 @@ class ConstantArrayType final
     llvm::APInt Size; // Allows us to unique the type.
     const Expr *SizeExpr;
   };
-  struct InlineSize {
-    InlineSize(uint64_t TSz, uint64_t Sz) : ByteWidth(TSz), Size(Sz) {}
-    uint64_t ByteWidth : 4;
-    uint64_t Size : 60;
-  };
+
   union {
-    struct InlineSize I;
+    uint64_t Size;
     ExternalSize *SizePtr;
   };
 
   ConstantArrayType(QualType Et, QualType Can, uint64_t Width, uint64_t Sz,
                     ArraySizeModifier SM, unsigned TQ)
-      : ArrayType(ConstantArray, Et, Can, SM, TQ, nullptr), I(Width / 8, Sz) {
+      : ArrayType(ConstantArray, Et, Can, SM, TQ, nullptr), Size(Sz) {
     ConstantArrayTypeBits.HasExternalSize = false;
-    assert(Sz < 0x0FFFFFFFFFFFFFFF && "Size must fit in 60 bits");
+    ConstantArrayTypeBits.SizeWidth = Width / 8;
     // The in-structure size stores the size in bytes rather than bits so we
-    // drop the four least significant bits since they're always zero anyways.
-    assert(Width < 0xFF && "Type width must fit in 8 bits");
+    // drop the three least significant bits since they're always zero anyways.
+    assert(Width < 0xFF && "Type width in bits must be less than 8 bits");
   }
 
   ConstantArrayType(QualType Et, QualType Can, ExternalSize *SzPtr,
@@ -3216,6 +3215,7 @@ class ConstantArrayType final
       : ArrayType(ConstantArray, Et, Can, SM, TQ, SzPtr->SizeExpr),
         SizePtr(SzPtr) {
     ConstantArrayTypeBits.HasExternalSize = true;
+    ConstantArrayTypeBits.SizeWidth = 0;
 
     assert((SzPtr->SizeExpr == nullptr || !Can.isNull()) &&
            "canonical constant array should not have size expression");
@@ -3231,34 +3231,34 @@ public:
   llvm::APInt getSize() const {
     return ConstantArrayTypeBits.HasExternalSize
                ? SizePtr->Size
-               : llvm::APInt(I.ByteWidth * 8, I.Size);
+               : llvm::APInt(ConstantArrayTypeBits.SizeWidth * 8, Size);
   }
 
   /// Return the bit width of the size type.
   unsigned getSizeBitWidth() const {
     return ConstantArrayTypeBits.HasExternalSize
                ? SizePtr->Size.getBitWidth()
-               : static_cast<unsigned>(I.ByteWidth * 8);
+               : static_cast<unsigned>(ConstantArrayTypeBits.SizeWidth * 8);
   }
 
   /// Return true if the size is zero.
   bool isZeroSize() const {
     return ConstantArrayTypeBits.HasExternalSize ? SizePtr->Size.isZero()
-                                                   : 0 == I.Size;
+                                                   : 0 == Size;
   }
 
   /// Return the size zero-extended as a uint64_t.
   uint64_t getZExtSize() const {
     return ConstantArrayTypeBits.HasExternalSize
                ? SizePtr->Size.getZExtValue()
-               : I.Size;
+               : Size;
   }
 
-  /// Return the size zero-extended as a uint64_t.
+  /// Return the size sign-extended as a uint64_t.
   int64_t getSExtSize() const {
     return ConstantArrayTypeBits.HasExternalSize
                ? SizePtr->Size.getSExtValue()
-               : static_cast<int64_t>(I.Size);
+               : static_cast<int64_t>(Size);
   }
 
   /// Return the size zero-extended to uint64_t or UINT64_MAX if the value is
@@ -3266,7 +3266,7 @@ public:
   uint64_t getLimitedSize() const {
     return ConstantArrayTypeBits.HasExternalSize
                ? SizePtr->Size.getLimitedValue()
-               : I.Size;
+               : Size;
   }
 
   /// Return a pointer to the size expression.
