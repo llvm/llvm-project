@@ -365,15 +365,15 @@ TargetTransformInfo::instCombineIntrinsic(InstCombiner &IC,
 }
 
 std::optional<Value *> TargetTransformInfo::simplifyDemandedUseBitsIntrinsic(
-    InstCombiner &IC, IntrinsicInst &II, APInt DemandedMask, KnownBits &Known,
-    bool &KnownBitsComputed) const {
+    InstCombiner &IC, IntrinsicInst &II, const APInt &DemandedMask,
+    KnownBits &Known, bool &KnownBitsComputed) const {
   return TTIImpl->simplifyDemandedUseBitsIntrinsic(IC, II, DemandedMask, Known,
                                                    KnownBitsComputed);
 }
 
 std::optional<Value *> TargetTransformInfo::simplifyDemandedVectorEltsIntrinsic(
-    InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
-    APInt &UndefElts2, APInt &UndefElts3,
+    InstCombiner &IC, IntrinsicInst &II, const APInt &DemandedElts,
+    APInt &UndefElts, APInt &UndefElts2, APInt &UndefElts3,
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
         SimplifyAndSetOp) const {
   return TTIImpl->simplifyDemandedVectorEltsIntrinsic(

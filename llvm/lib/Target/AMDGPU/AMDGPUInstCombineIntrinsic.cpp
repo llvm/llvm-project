@@ -1370,8 +1370,8 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
 }
 
 std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
-    InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
-    APInt &UndefElts2, APInt &UndefElts3,
+    InstCombiner &IC, IntrinsicInst &II, const APInt &DemandedElts,
+    APInt &UndefElts, APInt &UndefElts2, APInt &UndefElts3,
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
         SimplifyAndSetOp) const {
   switch (II.getIntrinsicID()) {

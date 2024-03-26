@@ -2813,8 +2813,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 }
 
 std::optional<Value *> X86TTIImpl::simplifyDemandedUseBitsIntrinsic(
-    InstCombiner &IC, IntrinsicInst &II, APInt DemandedMask, KnownBits &Known,
-    bool &KnownBitsComputed) const {
+    InstCombiner &IC, IntrinsicInst &II, const APInt &DemandedMask,
+    KnownBits &Known, bool &KnownBitsComputed) const {
   switch (II.getIntrinsicID()) {
   default:
     break;
@@ -2853,8 +2853,8 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedUseBitsIntrinsic(
 }
 
 std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
-    InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
-    APInt &UndefElts2, APInt &UndefElts3,
+    InstCombiner &IC, IntrinsicInst &II, const APInt &DemandedElts,
+    APInt &UndefElts, APInt &UndefElts2, APInt &UndefElts3,
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
         simplifyAndSetOp) const {
   unsigned VWidth = cast<FixedVectorType>(II.getType())->getNumElements();
@@ -2862,7 +2862,7 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
   default:
     break;
   case Intrinsic::x86_xop_vfrcz_ss:
-  case Intrinsic::x86_xop_vfrcz_sd:
+  case Intrinsic::x86_xop_vfrcz_sd: {
     // The instructions for these intrinsics are speced to zero upper bits not
     // pass them through like other scalar intrinsics. So we shouldn't just
     // use Arg0 if DemandedElts[0] is clear like we do for other intrinsics.
@@ -2873,13 +2873,13 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     }
 
     // Only the lower element is used.
-    DemandedElts = 1;
-    simplifyAndSetOp(&II, 0, DemandedElts, UndefElts);
+    APInt OpDemandedElts(DemandedElts.getBitWidth(), 1);
+    simplifyAndSetOp(&II, 0, OpDemandedElts, UndefElts);
 
     // Only the lower element is undefined. The high elements are zero.
     UndefElts = UndefElts[0];
     break;
-
+  }
   // Unary scalar-as-vector operations that work column-wise.
   case Intrinsic::x86_sse_rcp_ss:
   case Intrinsic::x86_sse_rsqrt_ss:
@@ -2912,8 +2912,8 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     }
 
     // Only lower element is used for operand 1.
-    DemandedElts = 1;
-    simplifyAndSetOp(&II, 1, DemandedElts, UndefElts2);
+    APInt OpDemandedElts(DemandedElts.getBitWidth(), 1);
+    simplifyAndSetOp(&II, 1, OpDemandedElts, UndefElts2);
 
     // Lower element is undefined if both lower elements are undefined.
     // Consider things like undef&0.  The result is known zero, not undef.
@@ -2939,8 +2939,8 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     }
 
     // Only lower element is used for operand 1.
-    DemandedElts = 1;
-    simplifyAndSetOp(&II, 1, DemandedElts, UndefElts2);
+    APInt OpDemandedElts(DemandedElts.getBitWidth(), 1);
+    simplifyAndSetOp(&II, 1, OpDemandedElts, UndefElts2);
 
     // Take the high undef elements from operand 0 and take the lower element
     // from operand 1.
@@ -2963,7 +2963,7 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
   case Intrinsic::x86_avx512_mask_mul_sd_round:
   case Intrinsic::x86_avx512_mask_sub_sd_round:
   case Intrinsic::x86_avx512_mask_max_sd_round:
-  case Intrinsic::x86_avx512_mask_min_sd_round:
+  case Intrinsic::x86_avx512_mask_min_sd_round: {
     simplifyAndSetOp(&II, 0, DemandedElts, UndefElts);
 
     // If lowest element of a scalar op isn't used then use Arg0.
@@ -2973,16 +2973,16 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     }
 
     // Only lower element is used for operand 1 and 2.
-    DemandedElts = 1;
-    simplifyAndSetOp(&II, 1, DemandedElts, UndefElts2);
-    simplifyAndSetOp(&II, 2, DemandedElts, UndefElts3);
+    APInt OpDemandedElts(DemandedElts.getBitWidth(), 1);
+    simplifyAndSetOp(&II, 1, OpDemandedElts, UndefElts2);
+    simplifyAndSetOp(&II, 2, OpDemandedElts, UndefElts3);
 
     // Lower element is undefined if all three lower elements are undefined.
     // Consider things like undef&0.  The result is known zero, not undef.
     if (!UndefElts2[0] || !UndefElts3[0])
       UndefElts.clearBit(0);
     break;
-
+  }
   // TODO: Add fmaddsub support?
   case Intrinsic::x86_sse3_addsub_pd:
   case Intrinsic::x86_sse3_addsub_ps:

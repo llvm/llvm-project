@@ -253,7 +253,7 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 }
 
 std::optional<Value *> ARMTTIImpl::simplifyDemandedVectorEltsIntrinsic(
-    InstCombiner &IC, IntrinsicInst &II, APInt OrigDemandedElts,
+    InstCombiner &IC, IntrinsicInst &II, const APInt &OrigDemandedElts,
     APInt &UndefElts, APInt &UndefElts2, APInt &UndefElts3,
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
         SimplifyAndSetOp) const {

@@ -196,11 +196,11 @@ public:
                                                     IntrinsicInst &II) const;
   std::optional<Value *>
   simplifyDemandedUseBitsIntrinsic(InstCombiner &IC, IntrinsicInst &II,
-                                   APInt DemandedMask, KnownBits &Known,
+                                   const APInt &DemandedMask, KnownBits &Known,
                                    bool &KnownBitsComputed) const;
   std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(
-      InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
-      APInt &UndefElts2, APInt &UndefElts3,
+      InstCombiner &IC, IntrinsicInst &II, const APInt &DemandedElts,
+      APInt &UndefElts, APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) const;
 
