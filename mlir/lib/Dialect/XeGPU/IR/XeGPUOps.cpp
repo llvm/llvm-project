@@ -41,7 +41,7 @@ static std::string makeString(T array, bool breakline = false) {
   return buf;
 }
 
-static std::vector<int64_t> getShapeOf(Type type) {
+static SmallVector<int64_t> getShapeOf(Type type) {
   std::vector<int64_t> shape;
   if (auto ty = llvm::dyn_cast<ShapedType>(type))
     shape = ty.getShape().vec();
