@@ -992,7 +992,6 @@ public:
       return failure();
 
     Location loc = op.getLoc();
-    auto *converter = getTypeConverter<SPIRVTypeConverter>();
 
     Value replace;
     if (bitEnumContainsAll(op.getFastmath(), arith::FastMathFlags::nnan)) {
