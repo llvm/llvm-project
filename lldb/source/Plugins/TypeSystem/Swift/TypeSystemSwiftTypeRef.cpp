@@ -46,6 +46,7 @@
 
 #include <algorithm>
 #include <sstream>
+#include <type_traits>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -190,7 +191,6 @@ GetMangledName(swift::Demangle::Demangler &dem,
   return mangleNode(global);
 }
 
-/// Find a Clang type by name in the modules in \p module_holder.
 TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name_ref) {
   llvm::SmallVector<CompilerContext, 2> decl_context;
   // Make up a decl context for non-nested types.
@@ -199,45 +199,65 @@ TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name_ref) {
   return LookupClangType(name_ref, decl_context);
 }
 
-/// Find a Clang type by name in the modules in \p module_holder.
-TypeSP TypeSystemSwiftTypeRef::LookupClangType(
-    StringRef name_ref, llvm::ArrayRef<CompilerContext> decl_context) {
-
+/// Look up one Clang type in a module.
+static TypeSP LookupClangType(Module &m,
+                              llvm::ArrayRef<CompilerContext> decl_context) {
   TypeQuery query(decl_context, TypeQueryOptions::e_find_one |
                                     TypeQueryOptions::e_module_search);
   query.SetLanguages(TypeSystemClang::GetSupportedLanguagesForTypes());
+  TypeResults results;
+  m.FindTypes(query, results);
+  return results.GetFirstType();
+}
 
-  auto lookup = [&](Module &M) -> TypeSP {
-    TypeResults results;
-    M.FindTypes(query, results);
-    return results.GetFirstType();
-  };
+TypeSP TypeSystemSwiftTypeRef::LookupClangType(
+    StringRef name_ref, llvm::ArrayRef<CompilerContext> decl_context,
+    ExecutionContext *exe_ctx) {
+  Module *m = GetModule();
+  if (!m)
+    return {};
+  return ::LookupClangType(const_cast<Module &>(*m), decl_context);
+}
 
+TypeSP TypeSystemSwiftTypeRefForExpressions::LookupClangType(
+    StringRef name_ref, llvm::ArrayRef<CompilerContext> decl_context,
+    ExecutionContext *exe_ctx) {
   // Check the cache first. Negative results are also cached.
   TypeSP result;
   ConstString name(name_ref);
   if (m_clang_type_cache.Lookup(name.AsCString(), result))
     return result;
   
-  if (auto *M = GetModule()) {
-    TypeSP result = lookup(*M);
-    // Cache it.
-    m_clang_type_cache.Insert(name.AsCString(), result);
-    return result;
-  }
-
   TargetSP target_sp = GetTargetWP().lock();
   if (!target_sp)
     return {};
-  target_sp->GetImages().ForEach([&](const ModuleSP &module) -> bool {
+
+  ModuleSP cur_module;
+  if (exe_ctx)
+    if (StackFrame *frame = exe_ctx->GetFramePtr())
+      cur_module =
+          frame->GetSymbolContext(lldb::eSymbolContextModule).module_sp;
+
+  auto lookup = [&](const ModuleSP &m) -> bool {
+    // Already visited this.
+    if (m == cur_module)
+      return true;
+
     // Don't recursively call into LookupClangTypes() to avoid filling
     // hundreds of image caches with negative results.
-    result = lookup(const_cast<Module &>(*module));
+    result = ::LookupClangType(const_cast<Module &>(*m), decl_context);
     // Cache it in the expression context.
     if (result)
       m_clang_type_cache.Insert(name.AsCString(), result);
     return !result;
-  });
+  };
+
+  // Visit the current module first as a performance optimization heuristic.
+  if (cur_module)
+    if (!lookup(cur_module))
+      return result;
+
+  target_sp->GetImages().ForEach(lookup);
   return result;
 }
 
@@ -331,6 +351,8 @@ TypeSystemSwiftTypeRef::GetClangTypeNode(CompilerType clang_type,
       return optional;
     }
   }
+  if (clang_type.IsAnonymousType())
+    return nullptr;
   llvm::StringRef clang_name = clang_type.GetTypeName().GetStringRef();
 #define MAP_TYPE(C_TYPE_NAME, C_TYPE_KIND, C_TYPE_BITWIDTH, SWIFT_MODULE_NAME, \
                  SWIFT_TYPE_NAME, CAN_BE_MISSING, C_NAME_MAPPING)              \
@@ -383,6 +405,8 @@ TypeSystemSwiftTypeRef::GetClangTypeNode(CompilerType clang_type,
     auto *tuple = dem.createNode(Node::Kind::Tuple);
     NodePointer element_type = GetClangTypeNode(
         {clang_type.GetTypeSystem(), elem_type.getAsOpaquePtr()}, dem);
+    if (!element_type)
+      return nullptr;
     for (unsigned i = 0; i < size; ++i) {
       NodePointer tuple_element = dem.createNode(Node::Kind::TupleElement);
       NodePointer type = dem.createNode(Node::Kind::Type);
@@ -414,6 +438,8 @@ TypeSystemSwiftTypeRef::GetClangTypeNode(CompilerType clang_type,
       break;
 
     NodePointer element_type_node = GetClangTypeNode(element_type, dem);
+    if (!element_type_node)
+      return nullptr;
     llvm::SmallVector<NodePointer, 1> elements({element_type_node});
     return CreateBoundGenericStruct("SIMD" + std::to_string(size),
                                     swift::STDLIB_NAME, elements, dem);
@@ -819,8 +845,12 @@ TypeSystemSwiftTypeRef::GetCanonicalNode(swift::Demangle::Demangler &dem,
     case Node::Kind::BoundGenericTypeAlias:
     case Node::Kind::TypeAlias: {
       auto node_clangtype = ResolveTypeAlias(dem, node);
-      if (CompilerType clang_type = node_clangtype.second)
-        return GetClangTypeNode(clang_type, dem);
+      if (CompilerType clang_type = node_clangtype.second) {
+        if (auto result = GetClangTypeNode(clang_type, dem))
+          return result;
+        else
+          return node;
+      }
       if (node_clangtype.first)
         return node_clangtype.first;
       return node;
@@ -1491,6 +1521,7 @@ void TypeSystemSwiftTypeRef::NotifyAllTypeSystems(
 void TypeSystemSwiftTypeRefForExpressions::ModulesDidLoad(
     ModuleList &module_list) {
   ++m_generation;
+  m_clang_type_cache.Clear();
   NotifyAllTypeSystems([&](TypeSystemSP ts_sp) {
     if (auto swift_ast_ctx =
             llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(ts_sp.get()))
@@ -3182,8 +3213,11 @@ TypeSystemSwiftTypeRef::GetClangTypeTypeNode(swift::Demangle::Demangler &dem,
   assert(clang_type.GetTypeSystem().isa_and_nonnull<TypeSystemClang>() &&
          "expected a clang type");
   using namespace swift::Demangle;
+  NodePointer node = GetClangTypeNode(clang_type, dem);
+  if (!node)
+    return nullptr;
   NodePointer type = dem.createNode(Node::Kind::Type);
-  type->addChild(GetClangTypeNode(clang_type, dem), dem);
+  type->addChild(node, dem);
   return type;
 }
 
@@ -3360,6 +3394,8 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
         swift::Demangle::Demangler dem;
         swift::Demangle::NodePointer node =
             GetClangTypeTypeNode(dem, clang_child_type);
+        if (!node)
+          return {};
         switch (node->getChild(0)->getKind()) {
         case swift::Demangle::Node::Kind::Class:
           prefix = "ObjectiveC.";
@@ -3442,6 +3478,7 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
       ast_child_name = suffix.str();
     assert((llvm::StringRef(child_name).contains('.') ||
             llvm::StringRef(ast_child_name).contains('.') ||
+            llvm::StringRef(ast_child_name).starts_with("_") ||
             Equivalent(child_name, ast_child_name)));
     assert(ast_language_flags ||
            (Equivalent(std::optional<uint64_t>(child_byte_size),
@@ -4459,6 +4496,8 @@ TypeSystemSwiftTypeRef::GetTypedefedType(opaque_compiler_type_t type) {
     } else {
       NodePointer clang_node =
           GetClangTypeNode(std::get<CompilerType>(pair), dem);
+      if (!clang_node)
+        return {};
       type_node->addChild(clang_node, dem);
     }
     return RemangleAsType(dem, type_node);

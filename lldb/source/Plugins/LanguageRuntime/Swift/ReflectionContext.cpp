@@ -132,7 +132,7 @@ public:
     const swift::reflection::TypeRef *type_ref =
         GetTypeRefOrNull(dem, node, descriptor_finder);
     if (!type_ref)
-      LLDB_LOG(GetLog(LLDBLog::Types), "Could not find typeref for type: {0}",
+      LLDB_LOG(GetLog(LLDBLog::Types), "Could not find typeref for type {0}",
                mangled_type_name);
     return type_ref;
   }
@@ -197,8 +197,9 @@ public:
       std::stringstream ss;
       type_ref->dump(ss);
       LLDB_LOG(log,
-               "[TargetReflectionContext::getTypeInfo] Getting "
-               "type info for typeref:\n{0}", ss.str());
+               "[TargetReflectionContext[{0:x}]::getTypeInfo] Getting type "
+               "info for typeref {1}",
+               provider ? provider->getId() : 0, ss.str());
     }
 
     auto type_info = m_reflection_ctx.getTypeInfo(type_ref, provider);
@@ -207,7 +208,7 @@ public:
       type_ref->dump(ss);
       LLDB_LOG(log,
                "[TargetReflectionContext::getTypeInfo] Could not get "
-               "type info for typeref:\n{0}",
+               "type info for typeref {0}",
                ss.str());
     }
 
@@ -216,8 +217,8 @@ public:
       type_info->dump(ss);
       LLDB_LOG(log,
                "[TargetReflectionContext::getTypeInfo] Found "
-               "type info:\n{0}",
-                  ss.str());
+               "type info {0}",
+               ss.str());
     }
     return type_info;
   }
