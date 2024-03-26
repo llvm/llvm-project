@@ -68,9 +68,7 @@ define i1 @lshr_ctlz_undef_cmpeq_one_i64(i64 %in) {
 ; CHECK-GI-LABEL: lshr_ctlz_undef_cmpeq_one_i64:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    clz x8, x0
-; CHECK-GI-NEXT:    lsr x8, x8, #6
-; CHECK-GI-NEXT:    cmp x8, #1
-; CHECK-GI-NEXT:    cset w0, eq
+; CHECK-GI-NEXT:    lsr w0, w8, #6
 ; CHECK-GI-NEXT:    ret
   %ctlz = call i64 @llvm.ctlz.i64(i64 %in, i1 -1)
   %lshr = lshr i64 %ctlz, 6
