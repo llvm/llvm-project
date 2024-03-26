@@ -580,15 +580,17 @@ inline static bool getSpimm(unsigned RlistVal, unsigned &SpimmVal,
                             int64_t StackAdjustment, bool IsRV64, bool IsEABI) {
   if (RlistVal == RLISTENCODE::INVALID_RLIST)
     return false;
-  unsigned stackAdj = getStackAdjBase(RlistVal, IsRV64, IsEABI);
-  SpimmVal = (StackAdjustment - stackAdj) / 16;
+  unsigned StackAdjBase = getStackAdjBase(RlistVal, IsRV64, IsEABI);
+  StackAdjustment -= StackAdjBase;
+  if (StackAdjustment % 16 != 0)
+    return false;
+  SpimmVal = StackAdjustment / 16;
   if (SpimmVal > 3)
     return false;
   return true;
 }
 
 void printRlist(unsigned SlistEncode, raw_ostream &OS);
-void printSpimm(int64_t Spimm, raw_ostream &OS);
 } // namespace RISCVZC
 
 } // namespace llvm
