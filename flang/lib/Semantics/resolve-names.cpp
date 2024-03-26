@@ -955,7 +955,7 @@ public:
   void Post(const parser::TargetStmt &) { objectDeclAttr_ = std::nullopt; }
   void Post(const parser::DimensionStmt::Declaration &);
   void Post(const parser::CodimensionDecl &);
-  bool Pre(const parser::TypeDeclarationStmt &) { return BeginDecl(); }
+  bool Pre(const parser::TypeDeclarationStmt &);
   void Post(const parser::TypeDeclarationStmt &);
   void Post(const parser::IntegerTypeSpec &);
   void Post(const parser::IntrinsicTypeSpec::Real &);
@@ -1202,6 +1202,7 @@ private:
   bool MustBeScalar(const Symbol &symbol) const {
     return mustBeScalar_.find(symbol) != mustBeScalar_.end();
   }
+  void DeclareIntrinsic(const parser::Name &);
 };
 
 // Resolve construct entities and statement entities.
@@ -4550,6 +4551,20 @@ void DeclarationVisitor::CheckAccessibility(
   }
 }
 
+bool DeclarationVisitor::Pre(const parser::TypeDeclarationStmt &x) {
+  BeginDecl();
+  // If INTRINSIC appears as an attr-spec, handle it now as if the
+  // names had appeared on an INTRINSIC attribute statement beforehand.
+  for (const auto &attr : std::get<std::list<parser::AttrSpec>>(x.t)) {
+    if (std::holds_alternative<parser::Intrinsic>(attr.u)) {
+      for (const auto &decl : std::get<std::list<parser::EntityDecl>>(x.t)) {
+        DeclareIntrinsic(parser::GetFirstName(decl));
+      }
+      break;
+    }
+  }
+  return true;
+}
 void DeclarationVisitor::Post(const parser::TypeDeclarationStmt &) {
   EndDecl();
 }
@@ -4571,6 +4586,7 @@ bool DeclarationVisitor::Pre(const parser::Initialization &) {
 void DeclarationVisitor::Post(const parser::EntityDecl &x) {
   const auto &name{std::get<parser::ObjectName>(x.t)};
   Attrs attrs{attrs_ ? HandleSaveName(name.source, *attrs_) : Attrs{}};
+  attrs.set(Attr::INTRINSIC, false); // dealt with in Pre(TypeDeclarationStmt)
   Symbol &symbol{DeclareUnknownEntity(name, attrs)};
   symbol.ReplaceName(name.source);
   SetCUDADataAttr(name.source, symbol, cudaDataAttr());
@@ -4811,45 +4827,47 @@ bool DeclarationVisitor::Pre(const parser::IntentStmt &x) {
       HandleAttributeStmt(IntentSpecToAttr(intentSpec), names);
 }
 bool DeclarationVisitor::Pre(const parser::IntrinsicStmt &x) {
-  HandleAttributeStmt(Attr::INTRINSIC, x.v);
   for (const auto &name : x.v) {
-    if (!IsIntrinsic(name.source, std::nullopt)) {
-      Say(name.source, "'%s' is not a known intrinsic procedure"_err_en_US);
-    }
-    auto &symbol{DEREF(FindSymbol(name))};
-    if (symbol.has<GenericDetails>()) {
-      // Generic interface is extending intrinsic; ok
-    } else if (!ConvertToProcEntity(symbol)) {
-      SayWithDecl(
-          name, symbol, "INTRINSIC attribute not allowed on '%s'"_err_en_US);
-    } else if (symbol.attrs().test(Attr::EXTERNAL)) { // C840
+    DeclareIntrinsic(name);
+  }
+  return false;
+}
+void DeclarationVisitor::DeclareIntrinsic(const parser::Name &name) {
+  HandleAttributeStmt(Attr::INTRINSIC, name);
+  if (!IsIntrinsic(name.source, std::nullopt)) {
+    Say(name.source, "'%s' is not a known intrinsic procedure"_err_en_US);
+  }
+  auto &symbol{DEREF(FindSymbol(name))};
+  if (symbol.has<GenericDetails>()) {
+    // Generic interface is extending intrinsic; ok
+  } else if (!ConvertToProcEntity(symbol)) {
+    SayWithDecl(
+        name, symbol, "INTRINSIC attribute not allowed on '%s'"_err_en_US);
+  } else if (symbol.attrs().test(Attr::EXTERNAL)) { // C840
+    Say(symbol.name(),
+        "Symbol '%s' cannot have both EXTERNAL and INTRINSIC attributes"_err_en_US,
+        symbol.name());
+  } else {
+    if (symbol.GetType()) {
+      // These warnings are worded so that they should make sense in either
+      // order.
       Say(symbol.name(),
-          "Symbol '%s' cannot have both EXTERNAL and INTRINSIC attributes"_err_en_US,
-          symbol.name());
-    } else {
-      if (symbol.GetType()) {
-        // These warnings are worded so that they should make sense in either
-        // order.
-        Say(symbol.name(),
-            "Explicit type declaration ignored for intrinsic function '%s'"_warn_en_US,
-            symbol.name())
-            .Attach(name.source,
-                "INTRINSIC statement for explicitly-typed '%s'"_en_US,
-                name.source);
-      }
-      if (!symbol.test(Symbol::Flag::Function) &&
-          !symbol.test(Symbol::Flag::Subroutine)) {
-        if (context().intrinsics().IsIntrinsicFunction(
-                name.source.ToString())) {
-          symbol.set(Symbol::Flag::Function);
-        } else if (context().intrinsics().IsIntrinsicSubroutine(
-                       name.source.ToString())) {
-          symbol.set(Symbol::Flag::Subroutine);
-        }
+          "Explicit type declaration ignored for intrinsic function '%s'"_warn_en_US,
+          symbol.name())
+          .Attach(name.source,
+              "INTRINSIC statement for explicitly-typed '%s'"_en_US,
+              name.source);
+    }
+    if (!symbol.test(Symbol::Flag::Function) &&
+        !symbol.test(Symbol::Flag::Subroutine)) {
+      if (context().intrinsics().IsIntrinsicFunction(name.source.ToString())) {
+        symbol.set(Symbol::Flag::Function);
+      } else if (context().intrinsics().IsIntrinsicSubroutine(
+                     name.source.ToString())) {
+        symbol.set(Symbol::Flag::Subroutine);
       }
     }
   }
-  return false;
 }
 bool DeclarationVisitor::Pre(const parser::OptionalStmt &x) {
   return CheckNotInBlock("OPTIONAL") && // C1107
