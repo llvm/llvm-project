@@ -19,9 +19,7 @@ define dso_local arm_aapcscc i32 @i3c_dev_do_priv_xfers_locked(ptr noundef %dev,
 ; CHECK-NEXT:    cbz r4, .LBB0_5
 ; CHECK-NEXT:  @ %bb.2: @ %if.end
 ; CHECK-NEXT:    ldr r0, [r4]
-; CHECK-NEXT:    ldr r
-; CHECK-SAME-NOT      12
-; CHECK-SAME             , [r0]
+; CHECK-NEXT:    ldr r0, [r0]
 ; CHECK-NEXT:    cbz r0, .LBB0_4
 ; CHECK-NEXT:  @ %bb.3: @ %if.end5
 ; CHECK-NEXT:    mov r4, r0
@@ -30,8 +28,14 @@ define dso_local arm_aapcscc i32 @i3c_dev_do_priv_xfers_locked(ptr noundef %dev,
 ; CHECK-NEXT:    ldr r12, [sp], #4
 ; CHECK-NEXT:    pop.w {r4, lr}
 ; CHECK-NEXT:    aut r12, lr, sp
-; CHECK-NEXT:    bx r
-; CHECK-SAME-NOT     12
+; CHECK-NEXT:    bx r3
+; CHECK-NEXT:  .LBB0_4:
+; CHECK-NEXT:    mvn r0, #137
+; CHECK-NEXT:  .LBB0_5: @ %cleanup
+; CHECK-NEXT:    ldr r12, [sp], #4
+; CHECK-NEXT:    pop.w {r4, lr}
+; CHECK-NEXT:    aut r12, lr, sp
+; CHECK-NEXT:    bx lr
 entry:
   %0 = load ptr, ptr %dev, align 4, !tbaa !6
   %tobool = icmp ne ptr %0, null
@@ -57,13 +61,10 @@ cleanup:                                          ; preds = %if.end, %entry, %if
 
 attributes #0 = { minsize sspstrong "target-features"="+armv8.1-m.main" }
 
-!llvm.module.flags = !{!0, !1, !2, !3, !4}
+!llvm.module.flags = !{!2,!4}
 !llvm.ident = !{!5}
 
-!0 = !{i32 1, !"wchar_size", i32 4}
-!1 = !{i32 1, !"min_enum_size", i32 1}
 !2 = !{i32 8, !"branch-target-enforcement", i32 1}
-!3 = !{i32 8, !"guarded-control-stack", i32 1}
 !4 = !{i32 8, !"sign-return-address", i32 1}
 !5 = !{!"clang version 18.0.0git (git@github.com:llvm/llvm-project.git 2db9244b6f66a4fd4c937de7b33a5b6dda4a06a8)"}
 !6 = !{!7, !9, i64 0}
