@@ -143,6 +143,8 @@ public:
 
   raw_ostream(const raw_ostream &) = delete;
   void operator=(const raw_ostream &) = delete;
+  raw_ostream(raw_ostream &&) = default;
+  raw_ostream &operator=(raw_ostream &&) = default;
 
   virtual ~raw_ostream();
 
