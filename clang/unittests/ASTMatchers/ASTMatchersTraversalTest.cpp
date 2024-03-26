@@ -985,6 +985,38 @@ TEST(ForEachArgumentWithParam, HandlesBoundNodesForNonMatches) {
     std::make_unique<VerifyIdIsBoundTo<VarDecl>>("v", 4)));
 }
 
+TEST_P(ASTMatchersTest,
+       ForEachArgumentWithParamMatchesExplicitObjectParamOnOperatorCalls) {
+  if (!GetParam().isCXX23OrLater()) {
+    return;
+  }
+
+  auto DeclRef = declRefExpr(to(varDecl().bind("declOfArg"))).bind("arg");
+  auto SelfParam = parmVarDecl().bind("param");
+  StatementMatcher CallExpr =
+      callExpr(forEachArgumentWithParam(DeclRef, SelfParam));
+
+  StringRef S = R"cpp(
+  struct A {
+    int operator()(this const A &self);
+  };
+  A obj;
+  int global = obj();
+  )cpp";
+
+  auto Args = GetParam().getCommandLineArgs();
+  auto Filename = getFilenameForTesting(GetParam().Language);
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      S, CallExpr,
+      std::make_unique<VerifyIdIsBoundTo<ParmVarDecl>>("param", "self"), Args,
+      Filename));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      S, CallExpr,
+      std::make_unique<VerifyIdIsBoundTo<VarDecl>>("declOfArg", "obj"), Args,
+      Filename));
+}
+
 TEST(ForEachArgumentWithParamType, ReportsNoFalsePositives) {
   StatementMatcher ArgumentY =
       declRefExpr(to(varDecl(hasName("y")))).bind("arg");
@@ -1166,6 +1198,37 @@ TEST(ForEachArgumentWithParamType, MatchesVariadicFunctionPtrCalls) {
       S, CallExpr, std::make_unique<VerifyIdIsBoundTo<QualType>>("type")));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       S, CallExpr, std::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>("arg")));
+}
+
+TEST_P(ASTMatchersTest,
+       ForEachArgumentWithParamTypeMatchesExplicitObjectParamOnOperatorCalls) {
+  if (!GetParam().isCXX23OrLater()) {
+    return;
+  }
+
+  auto DeclRef = declRefExpr(to(varDecl().bind("declOfArg"))).bind("arg");
+  auto SelfTy = qualType(asString("const A &")).bind("selfType");
+  StatementMatcher CallExpr =
+      callExpr(forEachArgumentWithParamType(DeclRef, SelfTy));
+
+  StringRef S = R"cpp(
+  struct A {
+    int operator()(this const A &self);
+  };
+  A obj;
+  int global = obj();
+  )cpp";
+
+  auto Args = GetParam().getCommandLineArgs();
+  auto Filename = getFilenameForTesting(GetParam().Language);
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      S, CallExpr, std::make_unique<VerifyIdIsBoundTo<QualType>>("selfType"),
+      Args, Filename));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      S, CallExpr,
+      std::make_unique<VerifyIdIsBoundTo<VarDecl>>("declOfArg", "obj"), Args,
+      Filename));
 }
 
 TEST(QualType, hasCanonicalType) {

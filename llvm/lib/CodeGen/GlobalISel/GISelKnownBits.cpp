@@ -415,7 +415,8 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     if (DstTy.isVector())
       break;
     // Everything above the retrieved bits is zero
-    Known.Zero.setBitsFrom((*MI.memoperands_begin())->getSizeInBits());
+    Known.Zero.setBitsFrom(
+        (*MI.memoperands_begin())->getSizeInBits().getValue());
     break;
   }
   case TargetOpcode::G_ASHR: {
@@ -588,6 +589,17 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     }
     break;
   }
+  case TargetOpcode::G_CTLZ:
+  case TargetOpcode::G_CTLZ_ZERO_UNDEF: {
+    KnownBits SrcOpKnown;
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), SrcOpKnown, DemandedElts,
+                         Depth + 1);
+    // If we have a known 1, its position is our upper bound.
+    unsigned PossibleLZ = SrcOpKnown.countMaxLeadingZeros();
+    unsigned LowBits = llvm::bit_width(PossibleLZ);
+    Known.Zero.setBitsFrom(LowBits);
+    break;
+  }
   }
 
   assert(!Known.hasConflict() && "Bits known to be one AND zero?");
@@ -666,7 +678,7 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
 
     // e.g. i16->i32 = '17' bits known.
     const MachineMemOperand *MMO = *MI.memoperands_begin();
-    return TyBits - MMO->getSizeInBits() + 1;
+    return TyBits - MMO->getSizeInBits().getValue() + 1;
   }
   case TargetOpcode::G_ZEXTLOAD: {
     // FIXME: We need an in-memory type representation.
@@ -675,7 +687,7 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
 
     // e.g. i16->i32 = '16' bits known.
     const MachineMemOperand *MMO = *MI.memoperands_begin();
-    return TyBits - MMO->getSizeInBits();
+    return TyBits - MMO->getSizeInBits().getValue();
   }
   case TargetOpcode::G_TRUNC: {
     Register Src = MI.getOperand(1).getReg();

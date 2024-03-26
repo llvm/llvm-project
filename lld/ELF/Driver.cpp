@@ -650,7 +650,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     if (errorCount())
       return;
 
-    link(args);
+    invokeELFT(link, args);
   }
 
   if (config->timeTraceEnabled) {
@@ -1224,9 +1224,10 @@ static void readConfigs(opt::InputArgList &args) {
   config->checkSections =
       args.hasFlag(OPT_check_sections, OPT_no_check_sections, true);
   config->chroot = args.getLastArgValue(OPT_chroot);
-  config->compressDebugSections = getCompressionType(
-      args.getLastArgValue(OPT_compress_debug_sections, "none"),
-      "--compress-debug-sections");
+  if (auto *arg = args.getLastArg(OPT_compress_debug_sections)) {
+    config->compressDebugSections =
+        getCompressionType(arg->getValue(), "--compress-debug-sections");
+  }
   config->cref = args.hasArg(OPT_cref);
   config->optimizeBBJumps =
       args.hasFlag(OPT_optimize_bb_jumps, OPT_no_optimize_bb_jumps, false);
@@ -1347,6 +1348,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->printArchiveStats = args.getLastArgValue(OPT_print_archive_stats);
   config->printSymbolOrder =
       args.getLastArgValue(OPT_print_symbol_order);
+  config->rejectMismatch = !args.hasArg(OPT_no_warn_mismatch);
   config->relax = args.hasFlag(OPT_relax, OPT_no_relax, true);
   config->relaxGP = args.hasFlag(OPT_relax_gp, OPT_no_relax_gp, false);
   config->rpath = getRpath(args);
@@ -1513,6 +1515,23 @@ static void readConfigs(opt::InputArgList &args) {
         continue;
       }
       *reportArg.second = option.second;
+    }
+  }
+
+  for (opt::Arg *arg : args.filtered(OPT_compress_sections)) {
+    SmallVector<StringRef, 0> fields;
+    StringRef(arg->getValue()).split(fields, '=');
+    if (fields.size() != 2 || fields[1].empty()) {
+      error(arg->getSpelling() +
+            ": parse error, not 'section-glob=[none|zlib|zstd]'");
+      continue;
+    }
+    auto type = getCompressionType(fields[1], arg->getSpelling());
+    if (Expected<GlobPattern> pat = GlobPattern::create(fields[0])) {
+      config->compressSections.emplace_back(std::move(*pat), type);
+    } else {
+      error(arg->getSpelling() + ": " + toString(pat.takeError()));
+      continue;
     }
   }
 
@@ -1781,6 +1800,37 @@ static void setConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_toc_optimize, OPT_no_toc_optimize, m == EM_PPC64);
   config->pcRelOptimize =
       args.hasFlag(OPT_pcrel_optimize, OPT_no_pcrel_optimize, m == EM_PPC64);
+
+  if (!args.hasArg(OPT_hash_style)) {
+    if (config->emachine == EM_MIPS)
+      config->sysvHash = true;
+    else
+      config->sysvHash = config->gnuHash = true;
+  }
+
+  // Set default entry point and output file if not specified by command line or
+  // linker scripts.
+  config->warnMissingEntry =
+      (!config->entry.empty() || (!config->shared && !config->relocatable));
+  if (config->entry.empty() && !config->relocatable)
+    config->entry = config->emachine == EM_MIPS ? "__start" : "_start";
+  if (config->outputFile.empty())
+    config->outputFile = "a.out";
+
+  // Fail early if the output file or map file is not writable. If a user has a
+  // long link, e.g. due to a large LTO link, they do not wish to run it and
+  // find that it failed because there was a mistake in their command-line.
+  {
+    llvm::TimeTraceScope timeScope("Create output files");
+    if (auto e = tryCreateFile(config->outputFile))
+      error("cannot open output file " + config->outputFile + ": " +
+            e.message());
+    if (auto e = tryCreateFile(config->mapFile))
+      error("cannot open map file " + config->mapFile + ": " + e.message());
+    if (auto e = tryCreateFile(config->whyExtract))
+      error("cannot open --why-extract= file " + config->whyExtract + ": " +
+            e.message());
+  }
 }
 
 static bool isFormatBinary(StringRef s) {
@@ -2064,8 +2114,11 @@ static void handleUndefinedGlob(StringRef arg) {
 
 static void handleLibcall(StringRef name) {
   Symbol *sym = symtab.find(name);
-  if (sym && sym->isLazy() && isa<BitcodeFile>(sym->file))
+  if (sym && sym->isLazy() && isa<BitcodeFile>(sym->file)) {
+    if (!config->whyExtract.empty())
+      ctx.whyExtractRecords.emplace_back("<libcall>", sym->file, *sym);
     sym->extract();
+  }
 }
 
 static void writeArchiveStats() {
@@ -2302,9 +2355,9 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   Symbol *sym;
   const RelsOrRelas<ELFT> rels = s->template relsOrRelas<ELFT>();
   if (rels.areRelocsRel())
-    sym = &s->getFile<ELFT>()->getRelocTargetSym(rels.rels[0]);
+    sym = &s->file->getRelocTargetSym(rels.rels[0]);
   else
-    sym = &s->getFile<ELFT>()->getRelocTargetSym(rels.relas[0]);
+    sym = &s->file->getRelocTargetSym(rels.relas[0]);
   if (!isa<Defined>(sym) || !sym->includeInDynsym())
     return;
 
@@ -2341,12 +2394,6 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   Partition &newPart = partitions.back();
   newPart.name = partName;
   sym->partition = newPart.getNumber();
-}
-
-static Symbol *addUnusedUndefined(StringRef name,
-                                  uint8_t binding = STB_GLOBAL) {
-  return symtab.addSymbol(
-      Undefined{ctx.internalFile, name, binding, STV_DEFAULT, 0});
 }
 
 static void markBuffersAsDontNeed(bool skipLinkedOutput) {
@@ -2435,15 +2482,15 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
       continue;
 
     Symbol *wrap =
-        addUnusedUndefined(saver().save("__wrap_" + name), sym->binding);
+        symtab.addUnusedUndefined(saver().save("__wrap_" + name), sym->binding);
 
     // If __real_ is referenced, pull in the symbol if it is lazy. Do this after
     // processing __wrap_ as that may have referenced __real_.
     StringRef realName = saver().save("__real_" + name);
     if (symtab.find(realName))
-      addUnusedUndefined(name, sym->binding);
+      symtab.addUnusedUndefined(name, sym->binding);
 
-    Symbol *real = addUnusedUndefined(realName);
+    Symbol *real = symtab.addUnusedUndefined(realName);
     v.push_back({sym, real, wrap});
 
     // We want to tell LTO not to inline symbols to be overwritten
@@ -2661,45 +2708,8 @@ static void postParseObjectFile(ELFFileBase *file) {
 
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
-void LinkerDriver::link(opt::InputArgList &args) {
+template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   llvm::TimeTraceScope timeScope("Link", StringRef("LinkerDriver::Link"));
-  // If a --hash-style option was not given, set to a default value,
-  // which varies depending on the target.
-  if (!args.hasArg(OPT_hash_style)) {
-    if (config->emachine == EM_MIPS)
-      config->sysvHash = true;
-    else
-      config->sysvHash = config->gnuHash = true;
-  }
-
-  // Default output filename is "a.out" by the Unix tradition.
-  if (config->outputFile.empty())
-    config->outputFile = "a.out";
-
-  // Fail early if the output file or map file is not writable. If a user has a
-  // long link, e.g. due to a large LTO link, they do not wish to run it and
-  // find that it failed because there was a mistake in their command-line.
-  {
-    llvm::TimeTraceScope timeScope("Create output files");
-    if (auto e = tryCreateFile(config->outputFile))
-      error("cannot open output file " + config->outputFile + ": " +
-            e.message());
-    if (auto e = tryCreateFile(config->mapFile))
-      error("cannot open map file " + config->mapFile + ": " + e.message());
-    if (auto e = tryCreateFile(config->whyExtract))
-      error("cannot open --why-extract= file " + config->whyExtract + ": " +
-            e.message());
-  }
-  if (errorCount())
-    return;
-
-  // Use default entry point name if no name was given via the command
-  // line nor linker scripts. For some reason, MIPS entry point name is
-  // different from others.
-  config->warnMissingEntry =
-      (!config->entry.empty() || (!config->shared && !config->relocatable));
-  if (config->entry.empty() && !config->relocatable)
-    config->entry = (config->emachine == EM_MIPS) ? "__start" : "_start";
 
   // Handle --trace-symbol.
   for (auto *arg : args.filtered(OPT_trace_symbol))
@@ -2710,21 +2720,9 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
   // -u foo a.a b.so will extract a.a.
   for (StringRef name : config->undefined)
-    addUnusedUndefined(name)->referenced = true;
+    symtab.addUnusedUndefined(name)->referenced = true;
 
-  // Add all files to the symbol table. This will add almost all
-  // symbols that we need to the symbol table. This process might
-  // add files to the link, via autolinking, these files are always
-  // appended to the Files vector.
-  {
-    llvm::TimeTraceScope timeScope("Parse input files");
-    for (size_t i = 0; i < files.size(); ++i) {
-      llvm::TimeTraceScope timeScope("Parse input files", files[i]->getName());
-      parseFile(files[i]);
-    }
-    if (armCmseImpLib)
-      parseArmCMSEImportLib(*armCmseImpLib);
-  }
+  parseFiles(files, armCmseImpLib);
 
   // Now that we have every file, we can decide if we will need a
   // dynamic symbol table.
@@ -2735,13 +2733,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   config->hasDynSymTab =
       !ctx.sharedFiles.empty() || config->isPic || config->exportDynamic;
 
-  // Some symbols (such as __ehdr_start) are defined lazily only when there
-  // are undefined symbols for them, so we add these to trigger that logic.
-  for (StringRef name : script->referencedSymbols) {
-    Symbol *sym = addUnusedUndefined(name);
-    sym->isUsedInRegularObj = true;
-    sym->referenced = true;
-  }
+  script->addScriptReferencedSymbolsToSymTable();
 
   // Prevent LTO from removing any definition referenced by -u.
   for (StringRef name : config->undefined)
@@ -2854,7 +2846,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
 
   // Handle --lto-validate-all-vtables-have-type-infos.
   if (config->ltoValidateAllVtablesHaveTypeInfos)
-    invokeELFT(ltoValidateAllVtablesHaveTypeInfos, args);
+    ltoValidateAllVtablesHaveTypeInfos<ELFT>(args);
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
@@ -2862,7 +2854,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // With this the symbol table should be complete. After this, no new names
   // except a few linker-synthesized ones will be added to the symbol table.
   const size_t numObjsBeforeLTO = ctx.objectFiles.size();
-  invokeELFT(compileBitcodeFiles, skipLinkedOutput);
+  compileBitcodeFiles<ELFT>(skipLinkedOutput);
 
   // Symbol resolution finished. Report backward reference problems,
   // --print-archive-stats=, and --why-extract=.
@@ -2927,7 +2919,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
       llvm::erase_if(ctx.inputSections, [](InputSectionBase *s) {
         if (s->type != SHT_LLVM_SYMPART)
           return false;
-        invokeELFT(readSymbolPartitionSection, s);
+        readSymbolPartitionSection<ELFT>(s);
         return true;
       });
     }
@@ -2985,10 +2977,10 @@ void LinkerDriver::link(opt::InputArgList &args) {
     ctx.inputSections.push_back(createCommentSection());
 
   // Split SHF_MERGE and .eh_frame sections into pieces in preparation for garbage collection.
-  invokeELFT(splitSections,);
+  splitSections<ELFT>();
 
   // Garbage collection and removal of shared symbols from unused shared objects.
-  invokeELFT(markLive,);
+  markLive<ELFT>();
 
   // Make copies of any input sections that need to be copied into each
   // partition.
@@ -3001,7 +2993,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create synthesized sections such as .got and .plt. This is called before
   // processSectionCommands() so that they can be placed by SECTIONS commands.
-  invokeELFT(createSyntheticSections,);
+  createSyntheticSections<ELFT>();
 
   // Some input sections that are used for exception handling need to be moved
   // into synthetic sections. Do that now so that they aren't assigned to
@@ -3041,8 +3033,8 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // Two input sections with different output sections should not be folded.
   // ICF runs after processSectionCommands() so that we know the output sections.
   if (config->icf != ICFLevel::None) {
-    invokeELFT(findKeepUniqueSections, args);
-    invokeELFT(doIcf,);
+    findKeepUniqueSections<ELFT>(args);
+    doIcf<ELFT>();
   }
 
   // Read the callgraph now that we know what was gced or icfed
@@ -3050,9 +3042,9 @@ void LinkerDriver::link(opt::InputArgList &args) {
     if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
       if (std::optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
         readCallGraph(*buffer);
-    invokeELFT(readCallGraphsFromObjectFiles,);
+    readCallGraphsFromObjectFiles<ELFT>();
   }
 
   // Write the result to the file.
-  invokeELFT(writeResult,);
+  writeResult<ELFT>();
 }

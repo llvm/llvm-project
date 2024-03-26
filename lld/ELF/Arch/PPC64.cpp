@@ -286,7 +286,7 @@ static void writeSequence(MutableArrayRef<uint32_t> buf, const char *prefix,
   // The full section content has the extent of [begin, end). We drop unused
   // instructions and write [first,end).
   auto *sec = make<InputSection>(
-      nullptr, SHF_ALLOC, SHT_PROGBITS, 4,
+      ctx.internalFile, SHF_ALLOC, SHT_PROGBITS, 4,
       ArrayRef(reinterpret_cast<uint8_t *>(buf.data() + first),
                4 * (buf.size() - first)),
       ".text");
@@ -347,7 +347,7 @@ getRelaTocSymAndAddend(InputSectionBase *tocSec, uint64_t offset) {
   uint64_t index = std::min<uint64_t>(offset / 8, relas.size() - 1);
   for (;;) {
     if (relas[index].r_offset == offset) {
-      Symbol &sym = tocSec->getFile<ELFT>()->getRelocTargetSym(relas[index]);
+      Symbol &sym = tocSec->file->getRelocTargetSym(relas[index]);
       return {dyn_cast<Defined>(&sym), getAddend<ELFT>(relas[index])};
     }
     if (relas[index].r_offset < offset || index == 0)

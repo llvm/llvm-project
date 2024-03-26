@@ -22,11 +22,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenHwModes.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenTarget.h"
-#include "InfoByHwMode.h"
-#include "VarLenCodeEmitterGen.h"
+#include "Common/CodeGenHwModes.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/InfoByHwMode.h"
+#include "Common/VarLenCodeEmitterGen.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
@@ -434,10 +434,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
   ArrayRef<const CodeGenInstruction *> NumberedInstructions =
       Target.getInstructionsByEnumValue();
 
-  if (any_of(NumberedInstructions, [](const CodeGenInstruction *CGI) {
-        Record *R = CGI->TheDef;
-        return R->getValue("Inst") && isa<DagInit>(R->getValueInit("Inst"));
-      })) {
+  if (Target.hasVariableLengthEncodings()) {
     emitVarLenCodeEmitter(Records, o);
   } else {
     const CodeGenHwModes &HWM = Target.getHwModes();

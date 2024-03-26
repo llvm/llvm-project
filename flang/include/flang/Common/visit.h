@@ -17,31 +17,11 @@
 //
 // Define FLANG_USE_STD_VISIT to avoid this code and make common::visit() an
 // alias for ::std::visit().
-//
-//
-// With GCC 9.3.0 on a Haswell x86 Ubuntu system, doing out-of-tree builds:
-// Before:
-//  build:
-//   6948.53user 212.48system 27:32.92elapsed 433%CPU
-//     (0avgtext+0avgdata 6429568maxresident)k
-//   36181912inputs+8943720outputs (3613684major+97908699minor)pagefaults 0swaps
-//  execution of tests:
-//   205.99user 26.05system 1:08.87elapsed 336%CPU
-//     (0avgtext+0avgdata 2671452maxresident)k
-//   244432inputs+355464outputs (422major+8746468minor)pagefaults 0swaps
-// After:
-//  build:
-//   6651.91user 182.57system 25:15.73elapsed 450%CPU
-//     (0avgtext+0avgdata 6209296maxresident)k
-//   17413480inputs+6376360outputs (1567210major+93068230minor)pagefaults 0swaps
-//  execution of tests:
-//   201.42user 25.91system 1:04.68elapsed 351%CPU
-//     (0avgtext+0avgdata 2661424maxresident)k
-//   238840inputs+295912outputs (428major+8489300minor)pagefaults 0swaps
 
 #ifndef FORTRAN_COMMON_VISIT_H_
 #define FORTRAN_COMMON_VISIT_H_
 
+#include "flang/Common/api-attrs.h"
 #include <type_traits>
 #include <variant>
 
@@ -50,9 +30,24 @@ namespace log2visit {
 
 template <std::size_t LOW, std::size_t HIGH, typename RESULT, typename VISITOR,
     typename... VARIANT>
-inline RESULT Log2VisitHelper(
+inline RT_API_ATTRS RESULT Log2VisitHelper(
     VISITOR &&visitor, std::size_t which, VARIANT &&...u) {
-  if constexpr (LOW == HIGH) {
+  if constexpr (LOW + 7 >= HIGH) {
+    switch (which - LOW) {
+#define VISIT_CASE_N(N) \
+  case N: \
+    if constexpr (LOW + N <= HIGH) { \
+      return visitor(std::get<(LOW + N)>(std::forward<VARIANT>(u))...); \
+    }
+      VISIT_CASE_N(1)
+      VISIT_CASE_N(2)
+      VISIT_CASE_N(3)
+      VISIT_CASE_N(4)
+      VISIT_CASE_N(5)
+      VISIT_CASE_N(6)
+      VISIT_CASE_N(7)
+#undef VISIT_CASE_N
+    }
     return visitor(std::get<LOW>(std::forward<VARIANT>(u))...);
   } else {
     static constexpr std::size_t mid{(HIGH + LOW) / 2};
@@ -67,7 +62,7 @@ inline RESULT Log2VisitHelper(
 }
 
 template <typename VISITOR, typename... VARIANT>
-inline auto visit(VISITOR &&visitor, VARIANT &&...u)
+inline RT_API_ATTRS auto visit(VISITOR &&visitor, VARIANT &&...u)
     -> decltype(visitor(std::get<0>(std::forward<VARIANT>(u))...)) {
   using Result = decltype(visitor(std::get<0>(std::forward<VARIANT>(u))...));
   if constexpr (sizeof...(u) == 1) {

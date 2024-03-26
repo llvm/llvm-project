@@ -198,24 +198,21 @@ void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(InsertPos->getParent() &&
          "Insertion position not in any VPBasicBlock");
-  Parent = InsertPos->getParent();
-  Parent->getRecipeList().insert(InsertPos->getIterator(), this);
+  InsertPos->getParent()->insert(this, InsertPos->getIterator());
 }
 
 void VPRecipeBase::insertBefore(VPBasicBlock &BB,
                                 iplist<VPRecipeBase>::iterator I) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(I == BB.end() || I->getParent() == &BB);
-  Parent = &BB;
-  BB.getRecipeList().insert(I, this);
+  BB.insert(this, I);
 }
 
 void VPRecipeBase::insertAfter(VPRecipeBase *InsertPos) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(InsertPos->getParent() &&
          "Insertion position not in any VPBasicBlock");
-  Parent = InsertPos->getParent();
-  Parent->getRecipeList().insertAfter(InsertPos->getIterator(), this);
+  InsertPos->getParent()->insert(this, std::next(InsertPos->getIterator()));
 }
 
 void VPRecipeBase::removeFromParent() {
@@ -348,6 +345,9 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     return Builder.CreateVectorSplice(PartMinus1, V2, -1, Name);
   }
   case VPInstruction::CalculateTripCountMinusVF: {
+    if (Part != 0)
+      return State.get(this, 0, /*IsScalar*/ true);
+
     Value *ScalarTC = State.get(getOperand(0), {0, 0});
     Value *Step =
         createStepForVF(Builder, ScalarTC->getType(), State.VF, State.UF);

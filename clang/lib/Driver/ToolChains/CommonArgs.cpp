@@ -740,7 +740,8 @@ bool tools::isTLSDESCEnabled(const ToolChain &TC,
     SupportedArgument = V == "desc" || V == "trad";
     EnableTLSDESC = V == "desc";
   } else if (Triple.isX86()) {
-    SupportedArgument = V == "gnu";
+    SupportedArgument = V == "gnu" || V == "gnu2";
+    EnableTLSDESC = V == "gnu2";
   } else {
     Unsupported = true;
   }
@@ -1141,7 +1142,11 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
                     options::OPT_fno_rtlib_add_rpath, false))
     return;
 
-  for (const auto &CandidateRPath : TC.getArchSpecificLibPaths()) {
+  SmallVector<std::string> CandidateRPaths(TC.getArchSpecificLibPaths());
+  if (const auto CandidateRPath = TC.getStdlibPath())
+    CandidateRPaths.emplace_back(*CandidateRPath);
+
+  for (const auto &CandidateRPath : CandidateRPaths) {
     if (TC.getVFS().exists(CandidateRPath)) {
       CmdArgs.push_back("-rpath");
       CmdArgs.push_back(Args.MakeArgString(CandidateRPath));
@@ -2829,7 +2834,7 @@ void tools::addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
                                  llvm::opt::ArgStringList &CmdArgs) {
   if ((C.getActiveOffloadKinds() & Action::OFK_HIP) &&
       !Args.hasArg(options::OPT_nostdlib) &&
-      !Args.hasArg(options::OPT_no_hip_rt)) {
+      !Args.hasArg(options::OPT_no_hip_rt) && !Args.hasArg(options::OPT_r)) {
     TC.AddHIPRuntimeLibArgs(Args, CmdArgs);
   } else {
     // Claim "no HIP libraries" arguments if any
@@ -2862,4 +2867,16 @@ void tools::addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back("+outline-atomics");
   }
+}
+
+void tools::addOffloadCompressArgs(const llvm::opt::ArgList &TCArgs,
+                                   llvm::opt::ArgStringList &CmdArgs) {
+  if (TCArgs.hasFlag(options::OPT_offload_compress,
+                     options::OPT_no_offload_compress, false))
+    CmdArgs.push_back("-compress");
+  if (TCArgs.hasArg(options::OPT_v))
+    CmdArgs.push_back("-verbose");
+  if (auto *Arg = TCArgs.getLastArg(options::OPT_offload_compression_level_EQ))
+    CmdArgs.push_back(
+        TCArgs.MakeArgString(Twine("-compression-level=") + Arg->getValue()));
 }

@@ -20,7 +20,7 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
@@ -38,9 +38,9 @@ namespace clang {
 namespace dataflow {
 
 const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
-  auto BlockIt = CFCtx.getStmtToBlock().find(&ignoreCFGOmittedNodes(S));
-  assert(BlockIt != CFCtx.getStmtToBlock().end());
-  if (!CFCtx.isBlockReachable(*BlockIt->getSecond()))
+  auto BlockIt = ACFG.getStmtToBlock().find(&ignoreCFGOmittedNodes(S));
+  assert(BlockIt != ACFG.getStmtToBlock().end());
+  if (!ACFG.isBlockReachable(*BlockIt->getSecond()))
     return nullptr;
   if (BlockIt->getSecond()->getBlockID() == CurBlockID)
     return &CurState.Env;
@@ -450,6 +450,25 @@ public:
     Env.setStorageLocation(*S, *MemberLoc);
   }
 
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *S) {
+    const Expr *ArgExpr = S->getExpr();
+    assert(ArgExpr != nullptr);
+    propagateValueOrStorageLocation(*ArgExpr, *S, Env);
+
+    // If this is a prvalue of record type, we consider it to be an "original
+    // record constructor", which we always require to have a `RecordValue`.
+    // So make sure we have a value if we didn't propagate one above.
+    if (S->isPRValue() && S->getType()->isRecordType()) {
+      if (Env.getValue(*S) == nullptr) {
+        Value *Val = Env.createValue(S->getType());
+        // We're guaranteed to always be able to create a value for record
+        // types.
+        assert(Val != nullptr);
+        Env.setValue(*S, *Val);
+      }
+    }
+  }
+
   void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *S) {
     const Expr *InitExpr = S->getExpr();
     assert(InitExpr != nullptr);
@@ -523,15 +542,6 @@ public:
       auto *LocDst = Env.get<RecordStorageLocation>(*Arg0);
 
       if (LocSrc == nullptr || LocDst == nullptr)
-        return;
-
-      // The assignment operators are different from the type of the destination
-      // in this model (i.e. in one of their base classes). This must be very
-      // rare and we just bail.
-      if (Method->getFunctionObjectParameterType()
-              .getCanonicalType()
-              .getUnqualifiedType() !=
-          LocDst->getType().getCanonicalType().getUnqualifiedType())
         return;
 
       copyRecord(*LocSrc, *LocDst, Env);
@@ -836,27 +846,26 @@ private:
           Env.canDescend(Options.ContextSensitiveOpts->Depth, F)))
       return;
 
-    const ControlFlowContext *CFCtx =
-        Env.getDataflowAnalysisContext().getControlFlowContext(F);
-    if (!CFCtx)
+    const AdornedCFG *ACFG = Env.getDataflowAnalysisContext().getAdornedCFG(F);
+    if (!ACFG)
       return;
 
     // FIXME: We don't support context-sensitive analysis of recursion, so
     // we should return early here if `F` is the same as the `FunctionDecl`
     // holding `S` itself.
 
-    auto ExitBlock = CFCtx->getCFG().getExit().getBlockID();
+    auto ExitBlock = ACFG->getCFG().getExit().getBlockID();
 
     auto CalleeEnv = Env.pushCall(S);
 
     // FIXME: Use the same analysis as the caller for the callee. Note,
     // though, that doing so would require support for changing the analysis's
     // ASTContext.
-    auto Analysis = NoopAnalysis(CFCtx->getDecl().getASTContext(),
+    auto Analysis = NoopAnalysis(ACFG->getDecl().getASTContext(),
                                  DataflowAnalysisOptions{Options});
 
     auto BlockToOutputState =
-        dataflow::runDataflowAnalysis(*CFCtx, Analysis, CalleeEnv);
+        dataflow::runDataflowAnalysis(*ACFG, Analysis, CalleeEnv);
     assert(BlockToOutputState);
     assert(ExitBlock < BlockToOutputState->size());
 

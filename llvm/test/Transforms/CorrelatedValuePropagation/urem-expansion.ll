@@ -198,8 +198,9 @@ define i8 @variable.v4(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[CMP_Y_UPPER:%.*]] = icmp ule i8 [[Y]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_UPPER]])
 ; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i8 [[X]]
-; CHECK-NEXT:    [[REM_UREM:%.*]] = sub nuw i8 [[X_FROZEN]], [[Y]]
-; CHECK-NEXT:    [[REM_CMP:%.*]] = icmp ult i8 [[X_FROZEN]], [[Y]]
+; CHECK-NEXT:    [[Y_FROZEN:%.*]] = freeze i8 [[Y]]
+; CHECK-NEXT:    [[REM_UREM:%.*]] = sub nuw i8 [[X_FROZEN]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[REM_CMP:%.*]] = icmp ult i8 [[X_FROZEN]], [[Y_FROZEN]]
 ; CHECK-NEXT:    [[REM:%.*]] = select i1 [[REM_CMP]], i8 [[X_FROZEN]], i8 [[REM_UREM]]
 ; CHECK-NEXT:    ret i8 [[REM]]
 ;
@@ -217,8 +218,9 @@ define i8 @variable.v4.range(ptr %x.ptr, ptr %y.ptr) {
 ; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[X_PTR:%.*]], align 1, !range [[RNG0]]
 ; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[Y_PTR:%.*]], align 1, !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i8 [[X]]
-; CHECK-NEXT:    [[REM_UREM:%.*]] = sub nuw i8 [[X_FROZEN]], [[Y]]
-; CHECK-NEXT:    [[REM_CMP:%.*]] = icmp ult i8 [[X_FROZEN]], [[Y]]
+; CHECK-NEXT:    [[Y_FROZEN:%.*]] = freeze i8 [[Y]]
+; CHECK-NEXT:    [[REM_UREM:%.*]] = sub nuw i8 [[X_FROZEN]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[REM_CMP:%.*]] = icmp ult i8 [[X_FROZEN]], [[Y_FROZEN]]
 ; CHECK-NEXT:    [[REM:%.*]] = select i1 [[REM_CMP]], i8 [[X_FROZEN]], i8 [[REM_UREM]]
 ; CHECK-NEXT:    ret i8 [[REM]]
 ;
@@ -236,8 +238,9 @@ define i8 @variable.v5(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[CMP_Y_UPPER:%.*]] = icmp ule i8 [[Y]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_UPPER]])
 ; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i8 [[X]]
-; CHECK-NEXT:    [[REM_UREM:%.*]] = sub nuw i8 [[X_FROZEN]], [[Y]]
-; CHECK-NEXT:    [[REM_CMP:%.*]] = icmp ult i8 [[X_FROZEN]], [[Y]]
+; CHECK-NEXT:    [[Y_FROZEN:%.*]] = freeze i8 [[Y]]
+; CHECK-NEXT:    [[REM_UREM:%.*]] = sub nuw i8 [[X_FROZEN]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[REM_CMP:%.*]] = icmp ult i8 [[X_FROZEN]], [[Y_FROZEN]]
 ; CHECK-NEXT:    [[REM:%.*]] = select i1 [[REM_CMP]], i8 [[X_FROZEN]], i8 [[REM_UREM]]
 ; CHECK-NEXT:    ret i8 [[REM]]
 ;
@@ -259,8 +262,9 @@ define i8 @variable.v6(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[CMP_Y_UPPER:%.*]] = icmp ule i8 [[Y]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_UPPER]])
 ; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i8 [[X]]
-; CHECK-NEXT:    [[REM_UREM:%.*]] = sub nuw i8 [[X_FROZEN]], [[Y]]
-; CHECK-NEXT:    [[REM_CMP:%.*]] = icmp ult i8 [[X_FROZEN]], [[Y]]
+; CHECK-NEXT:    [[Y_FROZEN:%.*]] = freeze i8 [[Y]]
+; CHECK-NEXT:    [[REM_UREM:%.*]] = sub nuw i8 [[X_FROZEN]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[REM_CMP:%.*]] = icmp ult i8 [[X_FROZEN]], [[Y_FROZEN]]
 ; CHECK-NEXT:    [[REM:%.*]] = select i1 [[REM_CMP]], i8 [[X_FROZEN]], i8 [[REM_UREM]]
 ; CHECK-NEXT:    ret i8 [[REM]]
 ;

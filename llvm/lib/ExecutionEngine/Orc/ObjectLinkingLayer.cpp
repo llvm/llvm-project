@@ -720,14 +720,22 @@ Error ObjectLinkingLayer::notifyEmitted(MaterializationResponsibility &MR,
   for (auto &P : Plugins)
     Err = joinErrors(std::move(Err), P->notifyEmitted(MR));
 
-  if (Err)
+  if (Err) {
+    if (FA)
+      Err = joinErrors(std::move(Err), MemMgr.deallocate(std::move(FA)));
     return Err;
+  }
 
   if (!FA)
     return Error::success();
 
-  return MR.withResourceKeyDo(
+  Err = MR.withResourceKeyDo(
       [&](ResourceKey K) { Allocs[K].push_back(std::move(FA)); });
+
+  if (Err)
+    Err = joinErrors(std::move(Err), MemMgr.deallocate(std::move(FA)));
+
+  return Err;
 }
 
 Error ObjectLinkingLayer::handleRemoveResources(JITDylib &JD, ResourceKey K) {

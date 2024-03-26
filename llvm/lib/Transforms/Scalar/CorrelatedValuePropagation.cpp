@@ -805,9 +805,12 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
     Value *FrozenX = X;
     if (!isGuaranteedNotToBeUndef(X))
       FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
-    auto *AdjX = B.CreateNUWSub(FrozenX, Y, Instr->getName() + ".urem");
-    auto *Cmp =
-        B.CreateICmp(ICmpInst::ICMP_ULT, FrozenX, Y, Instr->getName() + ".cmp");
+    Value *FrozenY = Y;
+    if (!isGuaranteedNotToBeUndef(Y))
+      FrozenY = B.CreateFreeze(Y, Y->getName() + ".frozen");
+    auto *AdjX = B.CreateNUWSub(FrozenX, FrozenY, Instr->getName() + ".urem");
+    auto *Cmp = B.CreateICmp(ICmpInst::ICMP_ULT, FrozenX, FrozenY,
+                             Instr->getName() + ".cmp");
     ExpandedOp = B.CreateSelect(Cmp, FrozenX, AdjX);
   } else {
     auto *Cmp =

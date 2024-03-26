@@ -493,3 +493,55 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %cmp = icmp ult i32 %add, %length
   br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit
 }
+
+; Test that we can handle shl and disjoint or in getExtendedOperandRecurrence.
+define void @foo7(i32 %n, ptr %a, i32 %x) {
+; CHECK-LABEL: @foo7(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.lr.ph:
+; CHECK-NEXT:    [[ADD1:%.*]] = add nsw i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[ADD1]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[N]] to i64
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_LR_PH]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[TMP2]], 1
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    store i32 [[TMP4]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], [[TMP0]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
+;
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body.lr.ph, label %for.cond.cleanup
+
+for.body.lr.ph:                                   ; preds = %entry
+  %add1 = add nsw i32 %x, 2
+  br label %for.body
+
+for.cond.cleanup.loopexit:                        ; preds = %for.body
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+  ret void
+
+for.body:                                         ; preds = %for.body.lr.ph, %for.body
+  %i.07 = phi i32 [ 0, %for.body.lr.ph ], [ %add2, %for.body ]
+  %mul = shl nsw i32 %i.07, 1
+  %add = or disjoint i32 %mul, 1
+  %idxprom = sext i32 %add to i64
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %idxprom
+  store i32 %i.07, ptr %arrayidx, align 4
+  %add2 = add nsw i32 %add1, %i.07
+  %cmp = icmp slt i32 %add2, %n
+  br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit
+}

@@ -1480,8 +1480,8 @@ let hasSideEffects = 0 in {
 let isReMaterializable = 1 in {
 def ADDIStocHA8: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentry:$disp),
                        "#ADDIStocHA8", []>, isPPC64;
-def ADDItocL: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentry:$disp),
-                     "#ADDItocL", []>, isPPC64;
+def ADDItocL8: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentry:$disp),
+                     "#ADDItocL8", []>, isPPC64;
 }
 
 // Local Data Transform

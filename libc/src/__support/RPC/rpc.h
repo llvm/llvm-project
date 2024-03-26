@@ -310,7 +310,7 @@ private:
   LIBC_INLINE Port &operator=(Port &&) = default;
 
   friend struct Client;
-  template <uint32_t U> friend struct Server;
+  friend struct Server;
   friend class cpp::optional<Port<T>>;
 
 public:
@@ -369,7 +369,7 @@ static_assert(cpp::is_trivially_copyable<Client>::value &&
               "The client is not trivially copyable from the server");
 
 /// The RPC server used to respond to the client.
-template <uint32_t lane_size> struct Server {
+struct Server {
   LIBC_INLINE Server() = default;
   LIBC_INLINE Server(const Server &) = delete;
   LIBC_INLINE Server &operator=(const Server &) = delete;
@@ -379,10 +379,12 @@ template <uint32_t lane_size> struct Server {
       : process(port_count, buffer) {}
 
   using Port = rpc::Port<true>;
-  LIBC_INLINE cpp::optional<Port> try_open(uint32_t start = 0);
-  LIBC_INLINE Port open();
+  LIBC_INLINE cpp::optional<Port> try_open(uint32_t lane_size,
+                                           uint32_t start = 0);
+  LIBC_INLINE Port open(uint32_t lane_size);
 
-  LIBC_INLINE static uint64_t allocation_size(uint32_t port_count) {
+  LIBC_INLINE static uint64_t allocation_size(uint32_t lane_size,
+                                              uint32_t port_count) {
     return Process<true>::allocation_size(port_count, lane_size);
   }
 
@@ -556,10 +558,8 @@ template <uint16_t opcode>
 
 /// Attempts to open a port to use as the server. The server can only open a
 /// port if it has a pending receive operation
-template <uint32_t lane_size>
-[[clang::convergent]] LIBC_INLINE
-    cpp::optional<typename Server<lane_size>::Port>
-    Server<lane_size>::try_open(uint32_t start) {
+[[clang::convergent]] LIBC_INLINE cpp::optional<typename Server::Port>
+Server::try_open(uint32_t lane_size, uint32_t start) {
   // Perform a naive linear scan for a port that has a pending request.
   for (uint32_t index = start; index < process.port_count; ++index) {
     uint64_t lane_mask = gpu::get_lane_mask();
@@ -588,10 +588,9 @@ template <uint32_t lane_size>
   return cpp::nullopt;
 }
 
-template <uint32_t lane_size>
-LIBC_INLINE typename Server<lane_size>::Port Server<lane_size>::open() {
+LIBC_INLINE Server::Port Server::open(uint32_t lane_size) {
   for (;;) {
-    if (cpp::optional<Server::Port> p = try_open())
+    if (cpp::optional<Server::Port> p = try_open(lane_size))
       return cpp::move(p.value());
     sleep_briefly();
   }

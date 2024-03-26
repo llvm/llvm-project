@@ -122,6 +122,9 @@ bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
 bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
                                 const Pointer &Ptr, const APSInt &IntValue);
 
+/// Copy the contents of Src into Dest.
+bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest);
+
 /// Checks if the shift operation is legal.
 template <typename LT, typename RT>
 bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
@@ -165,7 +168,8 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
     const auto *Op = cast<BinaryOperator>(S.Current->getExpr(OpPC));
     S.FFDiag(Op, diag::note_expr_divide_by_zero)
         << Op->getRHS()->getSourceRange();
-    return false;
+    if constexpr (!std::is_same_v<T, Floating>)
+      return false;
   }
 
   if (LHS.isSigned() && LHS.isMin() && RHS.isNegative() && RHS.isMinusOne()) {
@@ -846,8 +850,7 @@ bool CMP3(InterpState &S, CodePtr OpPC, const ComparisonCategoryInfo *CmpInfo) {
       CmpInfo->getValueInfo(CmpInfo->makeWeakResult(CmpResult));
   assert(CmpValueInfo);
   assert(CmpValueInfo->hasValidIntValue());
-  const APSInt &IntValue = CmpValueInfo->getIntValue();
-  return SetThreeWayComparisonField(S, OpPC, P, IntValue);
+  return SetThreeWayComparisonField(S, OpPC, P, CmpValueInfo->getIntValue());
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -1488,6 +1491,16 @@ bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   return true;
 }
 
+inline bool Memcpy(InterpState &S, CodePtr OpPC) {
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  Pointer &Dest = S.Stk.peek<Pointer>();
+
+  if (!CheckLoad(S, OpPC, Src))
+    return false;
+
+  return DoMemcpy(S, OpPC, Src, Dest);
+}
+
 //===----------------------------------------------------------------------===//
 // AddOffset, SubOffset
 //===----------------------------------------------------------------------===//
@@ -1934,8 +1947,15 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (Ptr.isDummy())
-    return true;
+  if (!Ptr.isZero()) {
+    if (!CheckArray(S, OpPC, Ptr))
+      return false;
+
+    if (Ptr.isDummy()) {
+      S.Stk.push<Pointer>(Ptr);
+      return true;
+    }
+  }
 
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
     return false;
@@ -1948,9 +1968,14 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (Ptr.isDummy()) {
-    S.Stk.push<Pointer>(Ptr);
-    return true;
+  if (!Ptr.isZero()) {
+    if (!CheckArray(S, OpPC, Ptr))
+      return false;
+
+    if (Ptr.isDummy()) {
+      S.Stk.push<Pointer>(Ptr);
+      return true;
+    }
   }
 
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
@@ -2201,6 +2226,9 @@ inline bool Invalid(InterpState &S, CodePtr OpPC) {
       << S.Current->getRange(OpPC);
   return false;
 }
+
+/// Do nothing and just abort execution.
+inline bool Error(InterpState &S, CodePtr OpPC) { return false; }
 
 /// Same here, but only for casts.
 inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind) {
