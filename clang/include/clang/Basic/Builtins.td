@@ -678,7 +678,7 @@ def Clz : Builtin, BitShort_Int_Long_LongLongTemplate {
 
 def Clzg : Builtin {
   let Spellings = ["__builtin_clzg"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
   let Prototype = "int(...)";
 }
 
@@ -690,7 +690,7 @@ def Ctz : Builtin, BitShort_Int_Long_LongLongTemplate {
 
 def Ctzg : Builtin {
   let Spellings = ["__builtin_ctzg"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
   let Prototype = "int(...)";
 }
 

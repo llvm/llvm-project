@@ -12353,6 +12353,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_clzl:
   case Builtin::BI__builtin_clzll:
   case Builtin::BI__builtin_clzs:
+  case Builtin::BI__builtin_clzg:
   case Builtin::BI__lzcnt16: // Microsoft variants of count leading-zeroes
   case Builtin::BI__lzcnt:
   case Builtin::BI__lzcnt64: {
@@ -12360,14 +12361,23 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
 
-    // When the argument is 0, the result of GCC builtins is undefined, whereas
-    // for Microsoft intrinsics, the result is the bit-width of the argument.
-    bool ZeroIsUndefined = BuiltinOp != Builtin::BI__lzcnt16 &&
-                           BuiltinOp != Builtin::BI__lzcnt &&
-                           BuiltinOp != Builtin::BI__lzcnt64;
+    if (!Val) {
+      if (BuiltinOp == Builtin::BI__builtin_clzg && E->getNumArgs() > 1) {
+        if (!EvaluateInteger(E->getArg(1), Val, Info))
+          return false;
+        return Success(Val, E);
+      }
 
-    if (ZeroIsUndefined && !Val)
-      return Error(E);
+      // When the argument is 0, the result of GCC builtins is undefined,
+      // whereas for Microsoft intrinsics, the result is the bit-width of the
+      // argument.
+      bool ZeroIsUndefined = BuiltinOp != Builtin::BI__lzcnt16 &&
+                             BuiltinOp != Builtin::BI__lzcnt &&
+                             BuiltinOp != Builtin::BI__lzcnt64;
+
+      if (ZeroIsUndefined)
+        return Error(E);
+    }
 
     return Success(Val.countl_zero(), E);
   }
@@ -12409,12 +12419,21 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_ctz:
   case Builtin::BI__builtin_ctzl:
   case Builtin::BI__builtin_ctzll:
-  case Builtin::BI__builtin_ctzs: {
+  case Builtin::BI__builtin_ctzs:
+  case Builtin::BI__builtin_ctzg: {
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
-    if (!Val)
+
+    if (!Val) {
+      if (BuiltinOp == Builtin::BI__builtin_ctzg && E->getNumArgs() > 1) {
+        if (!EvaluateInteger(E->getArg(1), Val, Info))
+          return false;
+        return Success(Val, E);
+      }
+
       return Error(E);
+    }
 
     return Success(Val.countr_zero(), E);
   }
