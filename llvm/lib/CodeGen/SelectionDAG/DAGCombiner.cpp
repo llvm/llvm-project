@@ -3884,7 +3884,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   if (SDValue V = foldSubToAvg(N, DL))
     return V;
 
-  if (SDValue V = foldAddSubMasked1(false, N0, N1, DAG, SDLoc(N)))
+  if (SDValue V = foldAddSubMasked1(false, N0, N1, DAG, DL))
     return V;
 
   if (SDValue V = foldSubToUSubSat(VT, N, DL))
@@ -3949,7 +3949,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       if ((X0 == S0 && X1 == N1) || (X0 == N1 && X1 == S0))
         if (ConstantSDNode *C = isConstOrConstSplat(N1.getOperand(1)))
           if (C->getAPIntValue() == (BitWidth - 1))
-            return DAG.getNode(ISD::ABS, SDLoc(N), VT, S0);
+            return DAG.getNode(ISD::ABS, DL, VT, S0);
     }
   }
 
