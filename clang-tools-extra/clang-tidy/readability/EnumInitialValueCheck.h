@@ -20,13 +20,17 @@ namespace clang::tidy::readability {
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability/enum-initial-value.html
 class EnumInitialValueCheck : public ClangTidyCheck {
 public:
-  EnumInitialValueCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  EnumInitialValueCheck(StringRef Name, ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
+
+private:
+  const bool AllowExplicitZeroFirstInitialValue;
+  const bool AllowExplicitLinearInitialValues;
 };
 
 } // namespace clang::tidy::readability

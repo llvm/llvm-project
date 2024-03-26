@@ -43,3 +43,33 @@ In an enumeration, the following three cases are accepted.
     e1,
     e2 = 2,
   };
+
+Options
+-------
+
+.. option:: AllowExplicitZeroFirstInitialValue
+
+  If set to `false`, explicit initialized first enumerator is not allowed.
+  See examples below. Default is `true`.
+
+  .. code-block:: c++
+
+    enum A {
+      e0 = 0, // not allowed if AllowExplicitZeroFirstInitialValue is false
+      e1,
+      e2,
+    };
+
+
+.. option:: AllowExplicitLinearInitialValues
+
+  If set to `false`, linear initializations are not allowed.
+  See examples below. Default is `true`.
+
+  .. code-block:: c++
+
+    enum A {
+      e0 = 1, // not allowed if AllowExplicitLinearInitialValues is false
+      e1 = 2,
+      e2 = 3,
+    };
