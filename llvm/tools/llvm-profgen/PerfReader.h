@@ -603,6 +603,8 @@ public:
                          std::optional<uint32_t> PIDFilter);
   // Extract perf script type by peaking at the input
   static PerfContent checkPerfScriptType(StringRef FileName);
+  // Remove all temporary files.
+  static void removeTempFiles();
 
 protected:
   // The parsed MMap event
@@ -622,6 +624,8 @@ protected:
   // mapping between the binary name and its memory layout.
   static bool extractMMap2EventForBinary(ProfiledBinary *Binary, StringRef Line,
                                          MMapEvent &MMap);
+  // Mark temporary file for future clean up.
+  static void markTempFile(StringRef FileName);
   // Update base address based on mmap events
   void updateBinaryAddress(const MMapEvent &Event);
   // Parse mmap event and update binary address
@@ -662,6 +666,9 @@ protected:
   std::set<uint64_t> InvalidReturnAddresses;
   // PID for the process of interest
   std::optional<uint32_t> PIDFilter;
+
+  // Temporary files created by perf script command.
+  static SmallVector<std::string, 2> TempFiles;
 };
 
 /*

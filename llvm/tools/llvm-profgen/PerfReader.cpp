@@ -11,6 +11,7 @@
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/Signals.h"
 
 #define DEBUG_TYPE "perf-reader"
 
@@ -374,6 +375,9 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary,
                                           StringRef(PerfTraceFile), // Stdout
                                           StringRef(ErrorFile)};    // Stderr
   sys::ExecuteAndWait(PerfPath, ScriptMMapArgs, std::nullopt, Redirects);
+
+  PerfScriptReader::markTempFile(PerfTraceFile);
+  PerfScriptReader::markTempFile(ErrorFile);
 
   // Collect the PIDs
   TraceStream TraceIt(PerfTraceFile);
@@ -992,6 +996,11 @@ bool PerfScriptReader::extractMMap2EventForBinary(ProfiledBinary *Binary,
   return Binary->getName() == BinaryName;
 }
 
+void PerfScriptReader::markTempFile(StringRef FileName) {
+  sys::RemoveFileOnSignal(FileName);
+  TempFiles.push_back(FileName.str());
+}
+
 void PerfScriptReader::parseMMap2Event(TraceStream &TraceIt) {
   MMapEvent MMap;
   if (extractMMap2EventForBinary(Binary, TraceIt.getCurrentLine(), MMap))
@@ -1079,6 +1088,14 @@ PerfContent PerfScriptReader::checkPerfScriptType(StringRef FileName) {
 
   exitWithError("Invalid perf script input!");
   return PerfContent::UnknownContent;
+}
+
+void PerfScriptReader::removeTempFiles() {
+  for (StringRef FileName : TempFiles) {
+    sys::fs::remove(FileName);
+    sys::DontRemoveFileOnSignal(FileName);
+  }
+  TempFiles.clear();
 }
 
 void HybridPerfReader::generateUnsymbolizedProfile() {
@@ -1219,6 +1236,8 @@ void PerfScriptReader::parsePerfTraces() {
   if (SkipSymbolization)
     writeUnsymbolizedProfile(OutputFilename);
 }
+
+SmallVector<std::string, 2> PerfScriptReader::TempFiles;
 
 } // end namespace sampleprof
 } // end namespace llvm
