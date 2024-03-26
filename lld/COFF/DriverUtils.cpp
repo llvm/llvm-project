@@ -577,16 +577,15 @@ Export LinkerDriver::parseExport(StringRef arg) {
     if (y.contains(".")) {
       e.name = x;
       e.forwardTo = y;
-      return e;
+    } else {
+      e.extName = x;
+      e.name = y;
+      if (e.name.empty())
+        goto err;
     }
-
-    e.extName = x;
-    e.name = y;
-    if (e.name.empty())
-      goto err;
   }
 
-  // If "<name>=<internalname>[,@ordinal[,NONAME]][,DATA][,PRIVATE]"
+  // Optional parameters "[,@ordinal[,NONAME]][,DATA][,PRIVATE]"
   while (!rest.empty()) {
     StringRef tok;
     std::tie(tok, rest) = rest.split(",");
