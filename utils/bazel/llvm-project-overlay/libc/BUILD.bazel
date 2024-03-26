@@ -68,6 +68,7 @@ libc_support_library(
     name = "llvm_libc_macros_math_macros",
     hdrs = ["include/llvm-libc-macros/math-macros.h"],
     deps = [":llvm_libc_macros_limits_macros"],
+    defines = ["__FP_LOGBNAN_MIN"],
 )
 
 libc_support_library(
