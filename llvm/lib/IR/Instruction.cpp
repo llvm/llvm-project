@@ -1210,14 +1210,14 @@ Instruction *Instruction::cloneImpl() const {
 
 void Instruction::swapProfMetadata() {
   MDNode *ProfileData = getBranchWeightMDNode(*this);
-  if(!isBranchWeightMD(ProfileData))
+  if (!isBranchWeightMD(ProfileData))
     return;
 
   SmallVector<Metadata *, 4> Ops;
   unsigned int FirstIdx = getBranchWeightOffset(ProfileData);
   unsigned int SecondIdx = FirstIdx + 1;
   // If there are more weights past the second, we can't swap them
-  if(ProfileData->getNumOperands() > SecondIdx +1)
+  if (ProfileData->getNumOperands() > SecondIdx + 1)
     return;
   Ops.push_back(ProfileData->getOperand(0));
   if (hasExpectedProvenance(ProfileData)) {

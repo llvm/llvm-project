@@ -138,18 +138,19 @@ MDNode *getBranchWeightMDNode(const Instruction &I) {
 MDNode *getValidBranchWeightMDNode(const Instruction &I) {
   auto *ProfileData = getBranchWeightMDNode(I);
   auto Offset = getBranchWeightOffset(ProfileData);
-  if (ProfileData && ProfileData->getNumOperands() == Offset + I.getNumSuccessors())
+  if (ProfileData &&
+      ProfileData->getNumOperands() == Offset + I.getNumSuccessors())
     return ProfileData;
   return nullptr;
 }
 
 void extractFromBranchWeightMD32(const MDNode *ProfileData,
-                               SmallVectorImpl<uint32_t> &Weights) {
+                                 SmallVectorImpl<uint32_t> &Weights) {
   extractFromBranchWeightMD(ProfileData, Weights);
 }
 
 void extractFromBranchWeightMD64(const MDNode *ProfileData,
-                               SmallVectorImpl<uint64_t> &Weights) {
+                                 SmallVectorImpl<uint64_t> &Weights) {
   extractFromBranchWeightMD(ProfileData, Weights);
 }
 
