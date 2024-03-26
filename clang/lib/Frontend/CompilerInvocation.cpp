@@ -4284,13 +4284,17 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
           Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
               << ShaderModel << T.getOSName() << T.str();
         }
-        // validate that if fnative-half-type is given, that
-        // the language standard is at least hlsl2021, and that
-        // the target shader model is at least 6.2
+        // Validate that if fnative-half-type is given, that
+        // the language standard is at least hlsl2018, and that
+        // the target shader model is at least 6.2.
         if (Args.getLastArg(OPT_fnative_half_type)) {
-          if (!(Opts.LangStd >= LangStandard::lang_hlsl2021 &&
+          const LangStandard &Std =
+              LangStandard::getLangStandardForKind(Opts.LangStd);
+
+          if (!(Opts.LangStd >= LangStandard::lang_hlsl2018 &&
                 T.getOSVersion() >= VersionTuple(6, 2)))
-            Diags.Report(diag::err_drv_dxc_enable_16bit_types_option_invalid);
+            Diags.Report(diag::err_drv_dxc_enable_16bit_types_option_invalid)
+                << T.getOSVersion().getAsString() << Std.getName();
         }
       } else if (T.isSPIRVLogical()) {
         if (!T.isVulkanOS() || T.getVulkanVersion() == VersionTuple(0)) {
@@ -4298,10 +4302,12 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
               << VulkanEnv << T.getOSName() << T.str();
         }
         if (Args.getLastArg(OPT_fnative_half_type)) {
-          if (!(Opts.LangStd >= LangStandard::lang_hlsl2021))
+          const LangStandard &Std =
+              LangStandard::getLangStandardForKind(Opts.LangStd);
+          if (!(Opts.LangStd >= LangStandard::lang_hlsl2018))
             Diags.Report(
                 diag::err_drv_cc1_hlsl_spirv_fnative_half_type_option_invalid)
-                << VulkanEnv << T.getOSName() << T.str();
+                << Std.getName();
         }
       } else {
         llvm_unreachable("expected DXIL or SPIR-V target");
