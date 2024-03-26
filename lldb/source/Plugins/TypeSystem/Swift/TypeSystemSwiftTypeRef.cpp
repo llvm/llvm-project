@@ -1490,6 +1490,7 @@ void TypeSystemSwiftTypeRef::NotifyAllTypeSystems(
 void TypeSystemSwiftTypeRefForExpressions::ModulesDidLoad(
     ModuleList &module_list) {
   ++m_generation;
+  m_clang_type_cache.Clear();
   NotifyAllTypeSystems([&](TypeSystemSP ts_sp) {
     if (auto swift_ast_ctx =
             llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(ts_sp.get()))
