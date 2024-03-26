@@ -3,18 +3,18 @@
 #--- gnu-42-1.s
 
 .section ".note.gnu.property", "a"
-  .long 4           /* Name length is always 4 ("GNU") */
-  .long end - begin /* Data length */
-  .long 5           /* Type: NT_GNU_PROPERTY_TYPE_0 */
-  .asciz "GNU"      /* Name */
+  .long 4           // Name length is always 4 ("GNU")
+  .long end - begin // Data length
+  .long 5           // Type: NT_GNU_PROPERTY_TYPE_0
+  .asciz "GNU"      // Name
   .p2align 3
 begin:
-  /* PAuth ABI property note */
-  .long 0xc0000001  /* Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH */
-  .long 16          /* Data size */
-  .quad 42          /* PAuth ABI platform */
-  .quad 1           /* PAuth ABI version */
-  .p2align 3        /* Align to 8 byte for 64 bit */
+  # PAuth ABI property note
+  .long 0xc0000001  // Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH
+  .long 16          // Data size
+  .quad 42          // PAuth ABI platform
+  .quad 1           // PAuth ABI version
+  .p2align 3        // Align to 8 byte for 64 bit
 end:
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-42-1.s -o gnu-42-1.o
@@ -47,18 +47,18 @@ end:
 #--- gnu-0-0.s
 
 .section ".note.gnu.property", "a"
-  .long 4           /* Name length is always 4 ("GNU") */
-  .long end - begin /* Data length */
-  .long 5           /* Type: NT_GNU_PROPERTY_TYPE_0 */
-  .asciz "GNU"      /* Name */
+  .long 4           // Name length is always 4 ("GNU")
+  .long end - begin // Data length
+  .long 5           // Type: NT_GNU_PROPERTY_TYPE_0
+  .asciz "GNU"      // Name
   .p2align 3
 begin:
-  /* PAuth ABI property note */
-  .long 0xc0000001  /* Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH */
-  .long 16          /* Data size */
-  .quad 0           /* PAuth ABI platform */
-  .quad 0           /* PAuth ABI version */
-  .p2align 3        /* Align to 8 byte for 64 bit */
+  # PAuth ABI property note
+  .long 0xc0000001  // Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH
+  .long 16          // Data size
+  .quad 0           // PAuth ABI platform
+  .quad 0           // PAuth ABI version
+  .p2align 3        // Align to 8 byte for 64 bit
 end:
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-0-0.s -o gnu-0-0.o
@@ -70,18 +70,18 @@ end:
 #--- gnu-1-0.s
 
 .section ".note.gnu.property", "a"
-  .long 4           /* Name length is always 4 ("GNU") */
-  .long end - begin /* Data length */
-  .long 5           /* Type: NT_GNU_PROPERTY_TYPE_0 */
-  .asciz "GNU"      /* Name */
+  .long 4           // Name length is always 4 ("GNU")
+  .long end - begin // Data length
+  .long 5           // Type: NT_GNU_PROPERTY_TYPE_0
+  .asciz "GNU"      // Name
   .p2align 3
 begin:
-  /* PAuth ABI property note */
-  .long 0xc0000001  /* Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH */
-  .long 16          /* Data size */
-  .quad 1           /* PAuth ABI platform */
-  .quad 0           /* PAuth ABI version */
-  .p2align 3        /* Align to 8 byte for 64 bit */
+  # PAuth ABI property note
+  .long 0xc0000001  // Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH
+  .long 16          // Data size
+  .quad 1           // PAuth ABI platform
+  .quad 0           // PAuth ABI version
+  .p2align 3        // Align to 8 byte for 64 bit
 end:
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-1-0.s -o gnu-1-0.o
@@ -93,18 +93,18 @@ end:
 #--- gnu-0x10000002-85.s
 
 .section ".note.gnu.property", "a"
-  .long 4           /* Name length is always 4 ("GNU") */
-  .long end - begin /* Data length */
-  .long 5           /* Type: NT_GNU_PROPERTY_TYPE_0 */
-  .asciz "GNU"      /* Name */
+  .long 4           // Name length is always 4 ("GNU")
+  .long end - begin // Data length
+  .long 5           // Type: NT_GNU_PROPERTY_TYPE_0
+  .asciz "GNU"      // Name
   .p2align 3
 begin:
-  /* PAuth ABI property note */
-  .long 0xc0000001  /* Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH */
-  .long 16          /* Data size */
-  .quad 0x10000002  /* PAuth ABI platform */
-  .quad 85          /* PAuth ABI version */
-  .p2align 3        /* Align to 8 byte for 64 bit */
+  # PAuth ABI property note
+  .long 0xc0000001  // Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH
+  .long 16          // Data size
+  .quad 0x10000002  // PAuth ABI platform
+  .quad 85          // PAuth ABI version
+  .p2align 3        // Align to 8 byte for 64 bit
 end:
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-0x10000002-85.s -o gnu-0x10000002-85.o
@@ -118,18 +118,18 @@ end:
 #--- gnu-0x10000002-128.s
 
 .section ".note.gnu.property", "a"
-  .long 4           /* Name length is always 4 ("GNU") */
-  .long end - begin /* Data length */
-  .long 5           /* Type: NT_GNU_PROPERTY_TYPE_0 */
-  .asciz "GNU"      /* Name */
+  .long 4           // Name length is always 4 ("GNU")
+  .long end - begin // Data length
+  .long 5           // Type: NT_GNU_PROPERTY_TYPE_0
+  .asciz "GNU"      // Name
   .p2align 3
 begin:
-  /* PAuth ABI property note */
-  .long 0xc0000001  /* Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH */
-  .long 16          /* Data size */
-  .quad 0x10000002  /* PAuth ABI platform */
-  .quad 128         /* PAuth ABI version */
-  .p2align 3        /* Align to 8 byte for 64 bit */
+  # PAuth ABI property note
+  .long 0xc0000001  // Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH
+  .long 16          // Data size
+  .quad 0x10000002  // PAuth ABI platform
+  .quad 128         // PAuth ABI version
+  .p2align 3        // Align to 8 byte for 64 bit
 end:
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-0x10000002-128.s -o gnu-0x10000002-128.o
@@ -141,18 +141,18 @@ end:
 #--- gnu-short.s
 
 .section ".note.gnu.property", "a"
-  .long 4           /* Name length is always 4 ("GNU") */
-  .long end - begin /* Data length */
-  .long 5           /* Type: NT_GNU_PROPERTY_TYPE_0 */
-  .asciz "GNU"      /* Name */
+  .long 4           // Name length is always 4 ("GNU")
+  .long end - begin // Data length
+  .long 5           // Type: NT_GNU_PROPERTY_TYPE_0
+  .asciz "GNU"      // Name
   .p2align 3
 begin:
-  /* PAuth ABI property note */
-  .long 0xc0000001  /* Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH */
-  .long 12          /* Data size */
-  .quad 42          /* PAuth ABI platform */
-  .word 1           /* PAuth ABI version */
-  .p2align 3        /* Align to 8 byte for 64 bit */
+  # PAuth ABI property note
+  .long 0xc0000001  // Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH
+  .long 12          // Data size
+  .quad 42          // PAuth ABI platform
+  .word 1           // PAuth ABI version
+  .p2align 3        // Align to 8 byte for 64 bit
 end:
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-short.s -o gnu-short.o
@@ -187,19 +187,19 @@ end:
 #--- gnu-long.s
 
 .section ".note.gnu.property", "a"
-  .long 4           /* Name length is always 4 ("GNU") */
-  .long end - begin /* Data length */
-  .long 5           /* Type: NT_GNU_PROPERTY_TYPE_0 */
-  .asciz "GNU"      /* Name */
+  .long 4           // Name length is always 4 ("GNU")
+  .long end - begin // Data length
+  .long 5           // Type: NT_GNU_PROPERTY_TYPE_0
+  .asciz "GNU"      // Name
   .p2align 3
 begin:
-  /* PAuth ABI property note */
-  .long 0xc0000001  /* Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH */
-  .long 24          /* Data size */
-  .quad 42          /* PAuth ABI platform */
-  .quad 1           /* PAuth ABI version */
+  # PAuth ABI property note
+  .long 0xc0000001  // Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH
+  .long 24          // Data size
+  .quad 42          // PAuth ABI platform
+  .quad 1           // PAuth ABI version
   .quad 0x0123456789ABCDEF
-  .p2align 3        /* Align to 8 byte for 64 bit */
+  .p2align 3        // Align to 8 byte for 64 bit
 end:
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-long.s -o gnu-long.o
