@@ -5469,7 +5469,7 @@ def ElementwiseBuiltinAliasDocs : Documentation {
 This attribute is used in the implementation of the C intrinsics.
 It allows the C intrinsic functions to be declared using the names defined
 in target builtins, and still be recognized as clang builtins equivalent to the
-underlying name. It also declares that the given C intrinsic can accept 
+underlying name. It also declares that the given C intrinsic can accept
 vector arguments. For example, ``hlsl_intrinsics.h`` declares the function ``abs``
 with ``__attribute__((clang_elementwise_builtin_alias(__builtin_abs)))``.
 This ensures that both functions are recognized as that clang builtin,
