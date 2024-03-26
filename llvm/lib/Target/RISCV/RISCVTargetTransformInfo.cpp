@@ -964,6 +964,7 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     // Counts of narrow/widen instructions.
     return std::abs(PowDiff);
   }
+  return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 }
 
 unsigned RISCVTTIImpl::getEstimatedVLFor(VectorType *Ty) {
