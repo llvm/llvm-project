@@ -55,7 +55,8 @@ entry:
 define amdgpu_ps void @prefetch_data_sgpr_min_offset(ptr addrspace(4) inreg %ptr) {
 ; GFX12-LABEL: prefetch_data_sgpr_min_offset:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_prefetch_data s[0:1], -0x800000, null, 0
+; GFX12-NEXT:    s_sub_nc_u64 s[0:1], s[0:1], 0x800000
+; GFX12-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: prefetch_data_sgpr_min_offset:
@@ -217,7 +218,8 @@ entry:
 define amdgpu_ps void @prefetch_inst_sgpr_min_offset(ptr addrspace(4) inreg %ptr) {
 ; GFX12-LABEL: prefetch_inst_sgpr_min_offset:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_prefetch_inst s[0:1], -0x800000, null, 0
+; GFX12-NEXT:    s_sub_nc_u64 s[0:1], s[0:1], 0x800000
+; GFX12-NEXT:    s_prefetch_inst s[0:1], 0x0, null, 0
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: prefetch_inst_sgpr_min_offset:

@@ -4182,6 +4182,27 @@ AMDGPUInstructionSelector::selectVINTERPModsHi(MachineOperand &Root) const {
   }};
 }
 
+// Subtract the absolute value of the immediate offset from SBase and set the
+// immediate offset to 0.
+bool AMDGPUInstructionSelector::subtractOffsetFromBase(MachineInstr *MI,
+                                                       MachineBasicBlock *MBB,
+                                                       Register &Base,
+                                                       int64_t *Offset) const {
+  Register SubtractReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+  unsigned Opc;
+
+  if (Subtarget->hasScalarAddSub64())
+    Opc = AMDGPU::S_SUB_U64;
+  else
+    Opc = AMDGPU::S_SUB_U64_PSEUDO;
+
+  BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(Opc), SubtractReg)
+      .addReg(Base)
+      .addImm(std::abs(*Offset));
+  Base = SubtractReg;
+  *Offset = 0;
+  return true;
+}
 bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
                                                  Register &Base,
                                                  Register *SOffset,
@@ -4211,6 +4232,17 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
           Base = GEPI2.SgprParts[0];
           *SOffset = OffsetReg;
           *Offset = *EncodedImm;
+          if (*Offset >= 0 || !STI.hasSignedSMRDImmOffset())
+            return true;
+
+          // For unbuffered smem loads, it is illegal and undefined for the
+          // Immediate Offset to be negative if the resulting (Offset + (M0 or
+          // SOffset or zero) is negative. Handle the case where the Immediate
+          // Offset + SOffset is negative.
+          auto SKnown = KB->getKnownBits(*SOffset);
+          if (*Offset + SKnown.getMinValue().getSExtValue() < 0)
+            return subtractOffsetFromBase(MI, MBB, Base, Offset);
+
           return true;
         }
       }
@@ -4221,7 +4253,13 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
   if (Offset && GEPI.SgprParts.size() == 1 && EncodedImm) {
     Base = GEPI.SgprParts[0];
     *Offset = *EncodedImm;
-    return true;
+    if (*Offset >= 0 || !STI.hasSignedSMRDImmOffset())
+      return true;
+    // For unbuffered smem loads, it is illegal and undefined for the Immediate
+    // Offset to be negative if the resulting (Offset + (M0 or SOffset or zero)
+    // is negative. Handle the case where the Immediate Offset is negative and
+    // there is no SOffset.
+    return subtractOffsetFromBase(MI, MBB, Base, Offset);
   }
 
   // SGPR offset is unsigned.
