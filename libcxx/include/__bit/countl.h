@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// ToDo: __builtin_clzg is available since Clang 19 and GCC 14. When support for older versions is dropped, we can
+//  refactor this code to exclusively use __builtin_clzg.
+
 #ifndef _LIBCPP___BIT_COUNTL_H
 #define _LIBCPP___BIT_COUNTL_H
 
@@ -25,31 +28,22 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_clz(unsigned __x) _NOEXCEPT {
-#if __has_builtin(__builtin_clzg)
-  return __builtin_clzg(__x);
-#else
   return __builtin_clz(__x);
-#endif
 }
 
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_clz(unsigned long __x) _NOEXCEPT {
-#if __has_builtin(__builtin_clzg)
-  return __builtin_clzg(__x);
-#else
   return __builtin_clzl(__x);
-#endif
 }
 
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_clz(unsigned long long __x) _NOEXCEPT {
-#if __has_builtin(__builtin_clzg)
-  return __builtin_clzg(__x);
-#else
   return __builtin_clzll(__x);
-#endif
 }
 
 #ifndef _LIBCPP_HAS_NO_INT128
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_clz(__uint128_t __x) _NOEXCEPT {
+#  if __has_builtin(__builtin_clzg)
+  return __builtin_clzg(__x);
+#  else
   // The function is written in this form due to C++ constexpr limitations.
   // The algorithm:
   // - Test whether any bit in the high 64-bits is set
@@ -59,9 +53,6 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_clz(__uint128_t __x)
   // - Any bits set:
   //   - The number of leading zeros of the input is the number of leading
   //     zeros in the high 64-bits.
-#  if __has_builtin(__builtin_clzg)
-  return __builtin_clzg(__x);
-#  else
   return ((__x >> 64) == 0) ? (64 + __builtin_clzll(static_cast<unsigned long long>(__x)))
                             : __builtin_clzll(static_cast<unsigned long long>(__x >> 64));
 #  endif
@@ -76,7 +67,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countl_zero(_Tp __t) _
   if (__t == 0)
     return numeric_limits<_Tp>::digits;
 
-  return __builtin_clzg(__t) - (numeric_limits<unsigned>::digits - numeric_limits<_Tp>::digits);
+  return __builtin_clzg(__t);
 }
 
 #else // __has_builtin(__builtin_clzg)

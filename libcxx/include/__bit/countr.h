@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// ToDo: __builtin_ctzg is available since Clang 19 and GCC 14. When support for older versions is dropped, we can
+//  refactor this code to exclusively use __builtin_ctzg.
+
 #ifndef _LIBCPP___BIT_COUNTR_H
 #define _LIBCPP___BIT_COUNTR_H
 
@@ -24,27 +27,15 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_ctz(unsigned __x) _NOEXCEPT {
-#if __has_builtin(__builtin_ctzg)
-  return __builtin_ctzg(__x);
-#else
   return __builtin_ctz(__x);
-#endif
 }
 
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_ctz(unsigned long __x) _NOEXCEPT {
-#if __has_builtin(__builtin_ctzg)
-  return __builtin_ctzg(__x);
-#else
   return __builtin_ctzl(__x);
-#endif
 }
 
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_ctz(unsigned long long __x) _NOEXCEPT {
-#if __has_builtin(__builtin_ctzg)
-  return __builtin_ctzg(__x);
-#else
   return __builtin_ctzll(__x);
-#endif
 }
 
 #if __has_builtin(__builtin_ctzg)
