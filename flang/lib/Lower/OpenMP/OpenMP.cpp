@@ -13,6 +13,7 @@
 #include "flang/Lower/OpenMP.h"
 
 #include "ClauseProcessor.h"
+#include "Clauses.h"
 #include "DataSharingProcessor.h"
 #include "DirectivesCommon.h"
 #include "ReductionProcessor.h"
@@ -555,7 +556,7 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<const Fortran::semantics::Symbol *> reductionSymbols;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(clause::If::DirectiveNameModifier::Parallel, ifClauseOperand);
+  cp.processIf(llvm::omp::Directive::OMPD_parallel, ifClauseOperand);
   cp.processNumThreads(stmtCtx, numThreadsClauseOperand);
   cp.processProcBind(procBindKindAttr);
   cp.processDefault();
@@ -726,7 +727,7 @@ genTaskOp(Fortran::lower::AbstractConverter &converter,
       dependOperands;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(clause::If::DirectiveNameModifier::Task, ifClauseOperand);
+  cp.processIf(llvm::omp::Directive::OMPD_task, ifClauseOperand);
   cp.processAllocate(allocatorOperands, allocateOperands);
   cp.processDefault();
   cp.processFinal(stmtCtx, finalClauseOperand);
@@ -838,7 +839,7 @@ genTargetDataOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<const Fortran::semantics::Symbol *> useDeviceSymbols;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(clause::If::DirectiveNameModifier::TargetData, ifClauseOperand);
+  cp.processIf(llvm::omp::Directive::OMPD_target_data, ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processUseDevicePtr(devicePtrOperands, useDeviceTypes, useDeviceLocs,
                          useDeviceSymbols);
@@ -883,24 +884,20 @@ static OpTy genTargetEnterExitDataUpdateOp(
   llvm::SmallVector<mlir::Value> mapOperands, dependOperands;
   llvm::SmallVector<mlir::Attribute> dependTypeOperands;
 
-  clause::If::DirectiveNameModifier directiveName;
   // GCC 9.3.0 emits a (probably) bogus warning about an unused variable.
   [[maybe_unused]] llvm::omp::Directive directive;
   if constexpr (std::is_same_v<OpTy, mlir::omp::TargetEnterDataOp>) {
-    directiveName = clause::If::DirectiveNameModifier::TargetEnterData;
     directive = llvm::omp::Directive::OMPD_target_enter_data;
   } else if constexpr (std::is_same_v<OpTy, mlir::omp::TargetExitDataOp>) {
-    directiveName = clause::If::DirectiveNameModifier::TargetExitData;
     directive = llvm::omp::Directive::OMPD_target_exit_data;
   } else if constexpr (std::is_same_v<OpTy, mlir::omp::TargetUpdateOp>) {
-    directiveName = clause::If::DirectiveNameModifier::TargetUpdate;
     directive = llvm::omp::Directive::OMPD_target_update;
   } else {
     return nullptr;
   }
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(directiveName, ifClauseOperand);
+  cp.processIf(directive, ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processDepend(dependTypeOperands, dependOperands);
   cp.processNowait(nowaitAttr);
@@ -1092,7 +1089,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<const Fortran::semantics::Symbol *> mapSymbols;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(clause::If::DirectiveNameModifier::Target, ifClauseOperand);
+  cp.processIf(llvm::omp::Directive::OMPD_target, ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processThreadLimit(stmtCtx, threadLimitOperand);
   cp.processDepend(dependTypeOperands, dependOperands);
@@ -1218,7 +1215,7 @@ genTeamsOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(clause::If::DirectiveNameModifier::Teams, ifClauseOperand);
+  cp.processIf(llvm::omp::Directive::OMPD_teams, ifClauseOperand);
   cp.processAllocate(allocatorOperands, allocateOperands);
   cp.processDefault();
   cp.processNumTeams(stmtCtx, numTeamsClauseOperand);
@@ -1510,7 +1507,7 @@ createSimdLoop(Fortran::lower::AbstractConverter &converter,
   cp.processCollapse(loc, eval, lowerBound, upperBound, step, iv);
   cp.processScheduleChunk(stmtCtx, scheduleChunkClauseOperand);
   cp.processReduction(loc, reductionVars, reductionTypes, reductionDeclSymbols);
-  cp.processIf(clause::If::DirectiveNameModifier::Simd, ifClauseOperand);
+  cp.processIf(llvm::omp::Directive::OMPD_simd, ifClauseOperand);
   cp.processSimdlen(simdlenClauseOperand);
   cp.processSafelen(safelenClauseOperand);
   cp.processTODO<clause::Aligned, clause::Allocate, clause::Linear,
@@ -2360,8 +2357,11 @@ void Fortran::lower::genOpenMPReduction(
   for (const Clause &clause : clauses) {
     if (const auto &reductionClause =
             std::get_if<clause::Reduction>(&clause.u)) {
-      const auto &redOperator{
-          std::get<clause::ReductionOperator>(reductionClause->t)};
+      const auto &redOperatorList{
+          std::get<clause::Reduction::ReductionIdentifiers>(
+              reductionClause->t)};
+      assert(redOperatorList.size() == 1 && "Expecting single operator");
+      const auto &redOperator = redOperatorList.front();
       const auto &objects{std::get<ObjectList>(reductionClause->t)};
       if (const auto *reductionOp =
               std::get_if<clause::DefinedOperator>(&redOperator.u)) {
