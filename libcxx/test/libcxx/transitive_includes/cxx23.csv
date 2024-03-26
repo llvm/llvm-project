@@ -452,6 +452,7 @@ random vector
 random version
 ranges compare
 ranges cstddef
+ranges cstdint
 ranges cwchar
 ranges initializer_list
 ranges iterator
