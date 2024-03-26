@@ -496,8 +496,10 @@ void ReductionProcessor::addDeclareReduction(
         *reductionSymbols) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::omp::DeclareReductionOp decl;
-  const auto &redOperator{
-      std::get<omp::clause::ReductionOperator>(reduction.t)};
+  const auto &redOperatorList{
+      std::get<omp::clause::Reduction::ReductionIdentifiers>(reduction.t)};
+  assert(redOperatorList.size() == 1 && "Expecting single operator");
+  const auto &redOperator = redOperatorList.front();
   const auto &objectList{std::get<omp::ObjectList>(reduction.t)};
 
   if (!std::holds_alternative<omp::clause::DefinedOperator>(redOperator.u)) {
