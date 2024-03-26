@@ -1154,6 +1154,10 @@ public:
                                      bool ExitIfTrue, bool ControlsOnlyExit,
                                      bool AllowPredicates = false);
 
+  /// Compute the number of times the body of the specific loop will execute via
+  /// the memory access inside the loop body.
+  ExitLimit computeExitLimitFromMemAccess(const Loop *L);
+
   /// A predicate is said to be monotonically increasing if may go from being
   /// false to being true as the loop iterates, but never the other way
   /// around.  A predicate is said to be monotonically decreasing if may go
@@ -1805,6 +1809,9 @@ private:
                                          Value *ExitCond, bool ExitIfTrue,
                                          bool ControlsOnlyExit,
                                          bool AllowPredicates);
+  ExitLimit computeExitLimitFromMemAccessCached(ExitLimitCacheTy &Cache,
+                                                const Loop *L);
+  ExitLimit computeExitLimitFromMemAccessImpl(const Loop *L);
   std::optional<ScalarEvolution::ExitLimit> computeExitLimitFromCondFromBinOp(
       ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, bool ExitIfTrue,
       bool ControlsOnlyExit, bool AllowPredicates);
