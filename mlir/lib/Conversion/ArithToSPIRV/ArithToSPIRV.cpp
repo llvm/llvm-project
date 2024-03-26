@@ -995,7 +995,7 @@ public:
     auto *converter = getTypeConverter<SPIRVTypeConverter>();
 
     Value replace;
-    if (converter->getOptions().enableFastMathMode) {
+    if (bitEnumContainsAll(op.getFastmath(), arith::FastMathFlags::nnan)) {
       if (op.getPredicate() == arith::CmpFPredicate::ORD) {
         // Ordered comparsion checks if neither operand is NaN.
         replace = spirv::ConstantOp::getOne(op.getType(), loc, rewriter);
@@ -1122,7 +1122,7 @@ public:
     Value spirvOp =
         rewriter.create<SPIRVOp>(loc, dstType, adaptor.getOperands());
 
-    if (converter->getOptions().enableFastMathMode) {
+    if (bitEnumContainsAll(op.getFastmath(), arith::FastMathFlags::nnan)) {
       rewriter.replaceOp(op, spirvOp);
       return success();
     }
@@ -1177,7 +1177,7 @@ public:
         rewriter.create<SPIRVOp>(loc, dstType, adaptor.getOperands());
 
     if (!shouldInsertNanGuards<SPIRVOp>() ||
-        converter->getOptions().enableFastMathMode) {
+        bitEnumContainsAll(op.getFastmath(), arith::FastMathFlags::nnan)) {
       rewriter.replaceOp(op, spirvOp);
       return success();
     }
@@ -1286,7 +1286,6 @@ struct ConvertArithToSPIRVPass
 
     SPIRVConversionOptions options;
     options.emulateLT32BitScalarTypes = this->emulateLT32BitScalarTypes;
-    options.enableFastMathMode = this->enableFastMath;
     SPIRVTypeConverter typeConverter(targetAttr, options);
 
     // Use UnrealizedConversionCast as the bridge so that we don't need to pull
