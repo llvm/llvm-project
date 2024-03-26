@@ -509,7 +509,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   SHA2 = 0;
   AES = 0;
   DSP = 0;
-  Unaligned = 1;
+  HasUnalignedAccess = true;
   SoftFloat = false;
   // Note that SoftFloatABI is initialized in our constructor.
   HWDiv = 0;
@@ -576,7 +576,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
         return false;
       }
     } else if (Feature == "+strict-align") {
-      Unaligned = 0;
+      HasUnalignedAccess = false;
     } else if (Feature == "+fp16") {
       HW_FP |= HW_FP_HP;
     } else if (Feature == "+fullfp16") {
@@ -785,7 +785,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_ARCH_PROFILE", "'" + CPUProfile + "'");
 
   // ACLE 6.4.3 Unaligned access supported in hardware
-  if (Unaligned)
+  if (HasUnalignedAccess)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
 
   // ACLE 6.4.4 LDREX/STREX
