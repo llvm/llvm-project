@@ -68,6 +68,16 @@ public:
   std::unique_ptr<DebugBufferVector> releaseBuffer() {
     return std::move(FullTableBuffer);
   }
+  /// Adds a DIE that is referenced across CUs.
+  void addCrossCUDie(const DIE *Die) {
+    CrossCUDies.insert({Die->getOffset(), Die});
+  }
+  /// Returns true if the DIE can generate an entry for a cross cu reference.
+  /// This only checks TAGs of a DIE because when this is invoked DIE might not
+  /// be fully constructed.
+  bool canGenerateEntryWithCrossCUReference(
+      const DWARFUnit &Unit, const DIE &Die,
+      const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec);
 
 private:
   BinaryContext &BC;
@@ -128,6 +138,7 @@ private:
   llvm::DenseMap<uint64_t, uint32_t> CUOffsetsToPatch;
   // Contains a map of Entry ID to Entry relative offset.
   llvm::DenseMap<uint64_t, uint32_t> EntryRelativeOffsets;
+  llvm::DenseMap<uint64_t, const DIE *> CrossCUDies;
   /// Adds Unit to either CUList, LocalTUList or ForeignTUList.
   /// Input Unit being processed, and DWO ID if Unit is being processed comes
   /// from a DWO section.
