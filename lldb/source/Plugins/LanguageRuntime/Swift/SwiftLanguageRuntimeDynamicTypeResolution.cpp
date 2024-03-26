@@ -353,6 +353,7 @@ public:
     ExecutionContext exe_ctx;
     process.CalculateExecutionContext(exe_ctx);
     auto *exe_scope = exe_ctx.GetBestExecutionContextScope();
+    TypeSystemSwiftTypeRef &typesystem = *m_reader->get();
     // Build a TypeInfo for the Clang type.
     auto size = clang_type.GetByteSize(exe_scope);
     auto bit_align = clang_type.GetTypeBitAlign(exe_scope);
@@ -372,11 +373,14 @@ public:
               "[LLDBTypeInfoProvider] bitfield support is not yet implemented");
           continue;
         }
+        CompilerType swift_type =
+            typesystem.ConvertClangTypeToSwiftType(field_type);
+        auto *typeref = m_runtime.GetTypeRef(swift_type, &typesystem);
         swift::reflection::FieldInfo field_info = {
-            name, (unsigned)bit_offset_ptr / 8, 0, nullptr,
+            name, (unsigned)bit_offset_ptr / 8, 0, typeref,
             *GetOrCreateTypeInfo(field_type)};
         fields.push_back(field_info);
-      }
+        }
     }
     return m_runtime.emplaceClangTypeInfo(clang_type, size, bit_align, fields);
   }

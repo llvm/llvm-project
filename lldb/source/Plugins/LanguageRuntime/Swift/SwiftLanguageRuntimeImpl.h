@@ -197,6 +197,10 @@ public:
 
   bool IsABIStable();
 
+  /// Use the reflection context to build a TypeRef object.
+  const swift::reflection::TypeRef *
+  GetTypeRef(CompilerType type, TypeSystemSwiftTypeRef *module_holder);
+
   void DumpTyperef(CompilerType type, TypeSystemSwiftTypeRef *module_holder,
                    Stream *s);
 
@@ -211,10 +215,6 @@ protected:
                           std::function<void(unsigned, unsigned)> callback) {
     SwiftLanguageRuntime::ForEachGenericParameter(node, callback);
   }
-
-  /// Use the reflection context to build a TypeRef object.
-  const swift::reflection::TypeRef *
-  GetTypeRef(CompilerType type, TypeSystemSwiftTypeRef *module_holder);
 
   /// If \p instance points to a Swift object, retrieve its
   /// RecordTypeInfo and pass it to the callback \p fn. Repeat the

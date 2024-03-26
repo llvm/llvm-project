@@ -46,6 +46,7 @@
 
 #include <algorithm>
 #include <sstream>
+#include <type_traits>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -330,6 +331,8 @@ TypeSystemSwiftTypeRef::GetClangTypeNode(CompilerType clang_type,
       return optional;
     }
   }
+  if (clang_type.IsAnonymousType())
+    return nullptr;
   llvm::StringRef clang_name = clang_type.GetTypeName().GetStringRef();
 #define MAP_TYPE(C_TYPE_NAME, C_TYPE_KIND, C_TYPE_BITWIDTH, SWIFT_MODULE_NAME, \
                  SWIFT_TYPE_NAME, CAN_BE_MISSING, C_NAME_MAPPING)              \
@@ -382,6 +385,8 @@ TypeSystemSwiftTypeRef::GetClangTypeNode(CompilerType clang_type,
     auto *tuple = dem.createNode(Node::Kind::Tuple);
     NodePointer element_type = GetClangTypeNode(
         {clang_type.GetTypeSystem(), elem_type.getAsOpaquePtr()}, dem);
+    if (!element_type)
+      return nullptr;
     for (unsigned i = 0; i < size; ++i) {
       NodePointer tuple_element = dem.createNode(Node::Kind::TupleElement);
       NodePointer type = dem.createNode(Node::Kind::Type);
@@ -413,6 +418,8 @@ TypeSystemSwiftTypeRef::GetClangTypeNode(CompilerType clang_type,
       break;
 
     NodePointer element_type_node = GetClangTypeNode(element_type, dem);
+    if (!element_type_node)
+      return nullptr;
     llvm::SmallVector<NodePointer, 1> elements({element_type_node});
     return CreateBoundGenericStruct("SIMD" + std::to_string(size),
                                     swift::STDLIB_NAME, elements, dem);
@@ -818,8 +825,12 @@ TypeSystemSwiftTypeRef::GetCanonicalNode(swift::Demangle::Demangler &dem,
     case Node::Kind::BoundGenericTypeAlias:
     case Node::Kind::TypeAlias: {
       auto node_clangtype = ResolveTypeAlias(dem, node);
-      if (CompilerType clang_type = node_clangtype.second)
-        return GetClangTypeNode(clang_type, dem);
+      if (CompilerType clang_type = node_clangtype.second) {
+        if (auto result = GetClangTypeNode(clang_type, dem))
+          return result;
+        else
+          return node;
+      }
       if (node_clangtype.first)
         return node_clangtype.first;
       return node;
@@ -3182,8 +3193,11 @@ TypeSystemSwiftTypeRef::GetClangTypeTypeNode(swift::Demangle::Demangler &dem,
   assert(clang_type.GetTypeSystem().isa_and_nonnull<TypeSystemClang>() &&
          "expected a clang type");
   using namespace swift::Demangle;
+  NodePointer node = GetClangTypeNode(clang_type, dem);
+  if (!node)
+    return nullptr;
   NodePointer type = dem.createNode(Node::Kind::Type);
-  type->addChild(GetClangTypeNode(clang_type, dem), dem);
+  type->addChild(node, dem);
   return type;
 }
 
@@ -3360,6 +3374,8 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
         swift::Demangle::Demangler dem;
         swift::Demangle::NodePointer node =
             GetClangTypeTypeNode(dem, clang_child_type);
+        if (!node)
+          return {};
         switch (node->getChild(0)->getKind()) {
         case swift::Demangle::Node::Kind::Class:
           prefix = "ObjectiveC.";
@@ -3442,6 +3458,7 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
       ast_child_name = suffix.str();
     assert((llvm::StringRef(child_name).contains('.') ||
             llvm::StringRef(ast_child_name).contains('.') ||
+            llvm::StringRef(ast_child_name).starts_with("_") ||
             Equivalent(child_name, ast_child_name)));
     assert(ast_language_flags ||
            (Equivalent(std::optional<uint64_t>(child_byte_size),
@@ -4459,6 +4476,8 @@ TypeSystemSwiftTypeRef::GetTypedefedType(opaque_compiler_type_t type) {
     } else {
       NodePointer clang_node =
           GetClangTypeNode(std::get<CompilerType>(pair), dem);
+      if (!clang_node)
+        return {};
       type_node->addChild(clang_node, dem);
     }
     return RemangleAsType(dem, type_node);

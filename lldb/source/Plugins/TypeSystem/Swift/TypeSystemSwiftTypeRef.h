@@ -398,6 +398,7 @@ public:
 
   /// Lookup a type in the debug info.
   lldb::TypeSP FindTypeInModule(lldb::opaque_compiler_type_t type);
+
 protected:
   /// Helper that creates an AST type from \p type.
   void *ReconstructType(lldb::opaque_compiler_type_t type,
