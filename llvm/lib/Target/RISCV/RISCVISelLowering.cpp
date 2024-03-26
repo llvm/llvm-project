@@ -12944,32 +12944,50 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
 static SDValue combineBinOpOfZExt(SDNode *N, SelectionDAG &DAG) {
 
   EVT VT = N->getValueType(0);
-  if (!VT.isVector() || !DAG.getTargetLoweringInfo().isTypeLegal(VT))
+  if (!VT.isVector() || !DAG.getTargetLoweringInfo().isTypeLegal(VT) ||
+      VT.getScalarSizeInBits() <= 8)
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   if (N0.getOpcode() != ISD::ZERO_EXTEND || N1.getOpcode() != ISD::ZERO_EXTEND)
     return SDValue();
+  // TODO: Can relax these checks when we're not needing to insert a new extend
+  // on one side or the other..
   if (!N0.hasOneUse() || !N1.hasOneUse())
     return SDValue();
 
   SDValue Src0 = N0.getOperand(0);
   SDValue Src1 = N1.getOperand(0);
-  EVT SrcVT = Src0.getValueType();
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(SrcVT) ||
-      SrcVT != Src1.getValueType() || SrcVT.getScalarSizeInBits() < 8 ||
-      SrcVT.getScalarSizeInBits() >= VT.getScalarSizeInBits() / 2)
+  EVT Src0VT = Src0.getValueType();
+  EVT Src1VT = Src0.getValueType();
+
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(Src0VT) ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(Src1VT))
     return SDValue();
 
+  unsigned HalfBitWidth =  VT.getScalarSizeInBits() / 2;
+  if (Src0VT.getScalarSizeInBits() >= HalfBitWidth) {
+    KnownBits Known = DAG.computeKnownBits(Src0);
+    if (Known.countMinLeadingZeros() <= HalfBitWidth)
+      return SDValue();
+  }
+  if (Src1VT.getScalarSizeInBits() >= HalfBitWidth) {
+    KnownBits Known = DAG.computeKnownBits(Src0);
+    if (Known.countMinLeadingZeros() <= HalfBitWidth)
+      return SDValue();
+  }
+
   LLVMContext &C = *DAG.getContext();
-  EVT ElemVT = VT.getVectorElementType().getHalfSizedIntegerVT(C);
+  EVT ElemVT = EVT::getIntegerVT(C, HalfBitWidth);
   EVT NarrowVT = EVT::getVectorVT(C, ElemVT, VT.getVectorElementCount());
 
-  Src0 = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Src0), NarrowVT, Src0);
-  Src1 = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Src1), NarrowVT, Src1);
+  if (Src0VT != NarrowVT)
+    Src0 = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Src0), NarrowVT, Src0);
+  if (Src1VT != NarrowVT)
+    Src1 = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Src1), NarrowVT, Src1);
 
-  // Src0 and Src1 are zero extended, so they're always positive if signed.
+  // Src0 and Src1 are always positive if signed.
   //
   // sub can produce a negative from two positive operands, so it needs sign
   // extended. Other nodes produce a positive from two positive operands, so
