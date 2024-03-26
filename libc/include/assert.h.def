@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__llvm-libc-common.h>
+#include "__llvm-libc-common.h"
 
 // This file may be usefully included multiple times to change assert()'s
 // definition based on NDEBUG.

@@ -143,7 +143,7 @@ DATA_ARRAY_TEMPLATE = """
 /// - bits [0, 13] The size of the range, allowing 16384 elements.
 /// - bits [14, 31] The lower bound code point of the range. The upper bound of
 ///   the range is lower bound + size.
-inline constexpr uint32_t __entries[{size}] = {{
+_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[{size}] = {{
 {entries}}};
 
 /// The upper bound entry of EastAsianWidth.txt.
