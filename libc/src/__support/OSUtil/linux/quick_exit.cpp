@@ -6,13 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_QUICK_EXIT_H
-#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_QUICK_EXIT_H
-
-#include "syscall.h" // For internal syscall function.
-
 #include "src/__support/common.h"
-
+#include "syscall.h"     // For internal syscall function.
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE {
@@ -22,7 +17,7 @@ namespace LIBC_NAMESPACE {
 #ifdef LIBC_TARGET_ARCH_IS_X86
 __attribute__((no_stack_protector))
 #endif
-LIBC_INLINE void
+__attribute__((noreturn)) void
 quick_exit(int status) {
   for (;;) {
     LIBC_NAMESPACE::syscall_impl<long>(SYS_exit_group, status);
@@ -31,5 +26,3 @@ quick_exit(int status) {
 }
 
 } // namespace LIBC_NAMESPACE
-
-#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_QUICK_EXIT_H

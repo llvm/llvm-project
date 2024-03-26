@@ -6,16 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_BAREMETAL_QUICK_EXIT_H
-#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_BAREMETAL_QUICK_EXIT_H
+#include "src/__support/OSUtil/quick_exit.h"
+
+// This is intended to be provided by the vendor.
+[[noreturn]] extern "C" void __llvm_libc_quick_exit(int status);
 
 namespace LIBC_NAMESPACE {
 
-// This is intended to be provided by the vendor.
-extern "C" void __llvm_libc_quick_exit(int status);
-
-void quick_exit(int status) { __llvm_libc_quick_exit(status); }
+[[noreturn]] void quick_exit(int status) { __llvm_libc_quick_exit(status); }
 
 } // namespace LIBC_NAMESPACE
-
-#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_BAREMETAL_QUICK_EXIT_H
