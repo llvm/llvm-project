@@ -56,8 +56,8 @@ subroutine acc_kernels_loop
     a(i) = b(i)
   END DO
 
-! CHECK:      acc.kernels combined(kernels loop) {
-! CHECK:        acc.loop combined(kernels loop) private{{.*}} {
+! CHECK:      acc.kernels combined(loop) {
+! CHECK:        acc.loop combined(kernels) private{{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.terminator

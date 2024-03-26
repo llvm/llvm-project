@@ -58,8 +58,8 @@ subroutine acc_parallel_loop
     a(i) = b(i)
   END DO
 
-! CHECK:      acc.parallel combined(parallel loop) {
-! CHECK:        acc.loop combined(parallel loop) private{{.*}} {
+! CHECK:      acc.parallel combined(loop) {
+! CHECK:        acc.loop combined(parallel) private{{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield

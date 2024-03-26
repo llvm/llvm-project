@@ -77,8 +77,8 @@ subroutine acc_serial_loop
     a(i) = b(i)
   END DO
 
-! CHECK:      acc.serial combined(serial loop) {
-! CHECK:        acc.loop combined(serial loop) private{{.*}} {
+! CHECK:      acc.serial combined(loop) {
+! CHECK:        acc.loop combined(serial) private{{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
