@@ -2999,7 +2999,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
     const APInt &SrcVal = SrcMO.getCImm()->getValue();
     // The CImm is always a signed value
-    const APInt &Val = SrcVal.sext(WideTy.getSizeInBits());
+    const APInt Val = SrcVal.sext(WideTy.getSizeInBits());
     Observer.changingInstr(MI);
     SrcMO.setCImm(ConstantInt::get(Ctx, Val));
     widenScalarDst(MI, WideTy);
