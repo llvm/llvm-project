@@ -14092,12 +14092,14 @@ bool BoUpSLP::collectValuesToDemote(
       MaxDepthLevel = 1;
     if (IsProfitableToDemoteRoot)
       IsProfitableToDemote = true;
+    (void)IsPotentiallyTruncated(V, BitWidth);
     break;
   case Instruction::ZExt:
   case Instruction::SExt:
     if (!IsTruncRoot)
       MaxDepthLevel = 1;
     IsProfitableToDemote = true;
+    (void)IsPotentiallyTruncated(V, BitWidth);
     break;
 
   // We can demote certain binary operations if we can demote both of their
