@@ -8,11 +8,6 @@ entry:
   ret void;
 }
 
-define void @fakeresume2(ptr align 8)  {
-entry:
-  ret void;
-}
-
 define void @g() #0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
@@ -29,7 +24,7 @@ entry:
   ]
 await.ready:
   %save2 = call token @llvm.coro.save(ptr null)
-  call fastcc void @fakeresume2(ptr align 8 null)
+  call void @llvm.coro.await.suspend.handle(ptr null, ptr null, ptr @await_suspend_function)
 
   %suspend2 = call i8 @llvm.coro.suspend(token %save2, i1 false)
   switch i8 %suspend2, label %exit [
@@ -47,7 +42,9 @@ exit:
 
 ; Verify that in the resume part resume call is marked with musttail.
 ; CHECK-LABEL: @g.resume(
-; CHECK: musttail call fastcc void @fakeresume2(ptr align 8 null)
+; CHECK: call ptr @await_suspend_function
+; CHECK-NEXT: call ptr @llvm.coro.subfn.addr
+; CHECK-NEXT: musttail call fastcc void
 ; CHECK-NEXT: ret void
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1
@@ -61,6 +58,7 @@ declare ptr @llvm.coro.free(token, ptr nocapture readonly) #1
 declare i1 @llvm.coro.end(ptr, i1, token) #2
 declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #1
 declare ptr @malloc(i64)
+declare ptr @await_suspend_function(ptr %awaiter, ptr %hdl)
 
 attributes #0 = { presplitcoroutine }
 attributes #1 = { argmemonly nounwind readonly }

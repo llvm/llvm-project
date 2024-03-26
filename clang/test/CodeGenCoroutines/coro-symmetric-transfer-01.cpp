@@ -48,7 +48,7 @@ detached_task foo() {
 }
 
 // check that the lifetime of the coroutine handle used to obtain the address is contained within single basic block, and hence does not live across suspension points.
+// XXX: not sure this makes sense anymore?
 // CHECK-LABEL: final.suspend:
 // CHECK:         %{{.+}} = call token @llvm.coro.save(ptr null)
-// CHECK:         %[[HDL_TRANSFER:.+]] = call ptr @llvm.coro.await.suspend.handle
-// CHECK:         call void @llvm.coro.resume(ptr %[[HDL_TRANSFER]])
+// CHECK:         call void @llvm.coro.await.suspend.handle

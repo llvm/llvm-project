@@ -307,10 +307,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
     break;
   }
   case CoroutineSuspendExpr::SuspendReturnType::SuspendHandle: {
-    assert(SuspendRet->getType()->isPointerTy());
-
-    auto ResumeIntrinsic = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_resume);
-    Builder.CreateCall(ResumeIntrinsic, SuspendRet);
+    assert(SuspendRet->getType()->isVoidTy());
     break;
   }
   }
