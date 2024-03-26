@@ -105,7 +105,7 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
   if (match(&I, m_c_Mul(m_OneUse(m_Select(m_Value(Cond), m_One(), m_AllOnes())),
                         m_Value(OtherOp)))) {
     bool HasAnyNoWrap = I.hasNoSignedWrap() || I.hasNoUnsignedWrap();
-    Value *Neg = Builder.CreateNeg(OtherOp, "", false, HasAnyNoWrap);
+    Value *Neg = Builder.CreateNeg(OtherOp, "", HasAnyNoWrap);
     return Builder.CreateSelect(Cond, OtherOp, Neg);
   }
   // mul (select Cond, -1, 1), OtherOp --> select Cond, -OtherOp, OtherOp
@@ -113,7 +113,7 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
   if (match(&I, m_c_Mul(m_OneUse(m_Select(m_Value(Cond), m_AllOnes(), m_One())),
                         m_Value(OtherOp)))) {
     bool HasAnyNoWrap = I.hasNoSignedWrap() || I.hasNoUnsignedWrap();
-    Value *Neg = Builder.CreateNeg(OtherOp, "", false, HasAnyNoWrap);
+    Value *Neg = Builder.CreateNeg(OtherOp, "", HasAnyNoWrap);
     return Builder.CreateSelect(Cond, Neg, OtherOp);
   }
 
@@ -452,9 +452,8 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   // mul Y, (sext X) -> select X, -Y, 0
   if (match(&I, m_c_Mul(m_OneUse(m_SExt(m_Value(X))), m_Value(Y))) &&
       X->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(
-        X, Builder.CreateNeg(Y, "", /*HasNUW=*/false, I.hasNoSignedWrap()),
-        ConstantInt::getNullValue(Op0->getType()));
+    return SelectInst::Create(X, Builder.CreateNeg(Y, "", I.hasNoSignedWrap()),
+                              ConstantInt::getNullValue(Op0->getType()));
 
   Constant *ImmC;
   if (match(Op1, m_ImmConstant(ImmC))) {

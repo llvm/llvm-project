@@ -1046,8 +1046,7 @@ public:
   ///
   static Constant *getSizeOf(Type *Ty);
 
-  static Constant *getNeg(Constant *C, bool HasNUW = false,
-                          bool HasNSW = false);
+  static Constant *getNeg(Constant *C, bool HasNSW = false);
   static Constant *getNot(Constant *C);
   static Constant *getAdd(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
@@ -1068,8 +1067,7 @@ public:
   static Constant *getAddrSpaceCast(Constant *C, Type *Ty,
                                     bool OnlyIfReduced = false);
 
-  static Constant *getNSWNeg(Constant *C) { return getNeg(C, false, true); }
-  static Constant *getNUWNeg(Constant *C) { return getNeg(C, true, false); }
+  static Constant *getNSWNeg(Constant *C) { return getNeg(C, /*HasNSW=*/true); }
 
   static Constant *getNSWAdd(Constant *C1, Constant *C2) {
     return getAdd(C1, C2, false, true);

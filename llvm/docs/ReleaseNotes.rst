@@ -146,6 +146,8 @@ Changes to the C API
   * ``LLVMGetPrologueData``
   * ``LLVMSetPrologueData``
 
+* Deprecated ``LLVMConstNUWNeg`` and ``LLVMBuildNUWNeg``.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 

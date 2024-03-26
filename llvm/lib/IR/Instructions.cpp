@@ -3372,18 +3372,6 @@ BinaryOperator *BinaryOperator::CreateNSWNeg(Value *Op, const Twine &Name,
   return BinaryOperator::CreateNSWSub(Zero, Op, Name, InsertAtEnd);
 }
 
-BinaryOperator *BinaryOperator::CreateNUWNeg(Value *Op, const Twine &Name,
-                                             Instruction *InsertBefore) {
-  Value *Zero = ConstantInt::get(Op->getType(), 0);
-  return BinaryOperator::CreateNUWSub(Zero, Op, Name, InsertBefore);
-}
-
-BinaryOperator *BinaryOperator::CreateNUWNeg(Value *Op, const Twine &Name,
-                                             BasicBlock *InsertAtEnd) {
-  Value *Zero = ConstantInt::get(Op->getType(), 0);
-  return BinaryOperator::CreateNUWSub(Zero, Op, Name, InsertAtEnd);
-}
-
 BinaryOperator *BinaryOperator::CreateNot(Value *Op, const Twine &Name,
                                           BasicBlock::iterator InsertBefore) {
   Constant *C = Constant::getAllOnesValue(Op->getType());

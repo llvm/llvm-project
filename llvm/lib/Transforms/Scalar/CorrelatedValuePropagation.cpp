@@ -497,7 +497,7 @@ static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
   // Is X in [IntMin, 0]?  NOTE: INT_MIN is fine!
   if (Range.getSignedMax().isNonPositive()) {
     IRBuilder<> B(II);
-    Value *NegX = B.CreateNeg(X, II->getName(), /*HasNUW=*/false,
+    Value *NegX = B.CreateNeg(X, II->getName(),
                               /*HasNSW=*/IsIntMinPoison);
     ++NumAbs;
     II->replaceAllUsesWith(NegX);
