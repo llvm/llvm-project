@@ -1280,9 +1280,8 @@ TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
                     many(construct<CompilerDirective::NameValue>(
                         name, maybe(("="_tok || ":"_tok) >> digitString64))))) /
             endOfStmt ||
-        construct<CompilerDirective>(
-            SkipTo<'\n'>{} >> pure<CompilerDirective::Unrecognized>()) /
-            endOfStmt))
+        construct<CompilerDirective>(pure<CompilerDirective::Unrecognized>()) /
+            SkipTo<'\n'>{}))
 
 TYPE_PARSER(extension<LanguageFeature::CrayPointer>(
     "nonstandard usage: based POINTER"_port_en_US,
