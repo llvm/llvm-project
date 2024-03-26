@@ -2877,42 +2877,36 @@ bool DebugNamesSection::isNeeded() const { return numChunks > 0; }
 template <class ELFT>
 static void
 readCompileUnitOffsets(struct DebugNamesSection::DebugNamesSectionData &secData,
-                       DebugNamesSection::DebugNamesInputChunk &inputChunk,
                        DebugNamesSection::DebugNamesOutputChunk &outputChunk,
                        llvm::DWARFDataExtractor &namesExtractor) {
   uint64_t offset = secData.locs.CUsBase;
   uint64_t *offsetPtr = &offset;
   for (size_t i = 0; i < secData.hdr.CompUnitCount; ++i) {
     llvm::Error err = llvm::Error::success();
+    // This call to namesExtractor can't fail; if there were a problem with the
+    // input, it would have been caught in the call to NamesIndex::extract, in
+    // DebugNamesSection::create.
     uint32_t value = namesExtractor.getU32(offsetPtr, &err);
-    if (err)
-      errorOrWarn(toString(inputChunk.namesSection->sec) +
-                  ": error reading CU offsets: " + toString(std::move(err)));
-    else
-      outputChunk.compilationUnits.push_back(value);
+    llvm::cantFail(std::move(err));
+    outputChunk.compilationUnits.push_back(value);
   }
 }
 
 template <class ELFT>
 static void
 readEntryOffsets(struct DebugNamesSection::DebugNamesSectionData &secData,
-                 DebugNamesSection::DebugNamesInputChunk &chunk,
                  llvm::DWARFDataExtractor &namesExtractor) {
   secData.entryOffsets = std::make_unique<uint32_t[]>(secData.hdr.NameCount);
-  if (secData.locs.EntryOffsetsBase >= namesExtractor.getData().size())
-    errorOrWarn(toString(chunk.namesSection->sec) +
-                ": invalid entry offsets input");
-
   uint64_t offset = secData.locs.EntryOffsetsBase;
   uint64_t *offsetPtr = &offset;
   for (size_t i = 0; i < secData.hdr.NameCount; ++i) {
     llvm::Error err = llvm::Error::success();
+    // This call to namesExtractor can't fail; if there were a problem with the
+    // input, it would have been caught in the call to NamesIndex::extract, in
+    // DebugNamesSection::create.
     uint32_t value = namesExtractor.getU32(offsetPtr, &err);
-    if (err)
-      errorOrWarn(toString(chunk.namesSection->sec) +
-                  ": error reading entry offsets: " + toString(std::move(err)));
-    else
-      secData.entryOffsets.get()[i] = value;
+    llvm::cantFail(std::move(err));
+    secData.entryOffsets.get()[i] = value;
   }
 }
 
@@ -2930,11 +2924,17 @@ static void readAttributeValues(
     llvm::Error err = llvm::Error::success();
     DebugNamesSection::AttrValueData newAttr;
     uint32_t value;
+    if (attr.Index == DW_IDX_parent &&
+        attr.Form != DW_FORM_flag_present &&
+        attr.Form != DW_FORM_ref4)
+      errorOrWarn(toString(namesSection.sec) + ": invalid form for DW_IDX_parent");
     switch (attr.Form) {
     case DW_FORM_flag_present: {
       // Currently only DW_IDX_parent attributes (in .debug_names) can
       // have this form. This form does not have a real value (nothing is
       // emitted for it).
+      if (attr.Index != DW_IDX_parent)
+        errorOrWarn(toString(namesSection.sec) + ": invalid form for attribute");
       break;
     }
     case DW_FORM_data1:
@@ -3004,10 +3004,11 @@ static void readEntry(DebugNamesSection::NamedEntry &stringEntry,
     auto entry = std::make_unique<DebugNamesSection::IndexEntry>();
     entry->poolOffset = offset;
     llvm::Error err = llvm::Error::success();
+    // This call to namesExtractor can't fail; if there were a problem with the
+    // input, it would have been caught in the call to NamesIndex::extract, in
+    // DebugNamesSection::create.
     uint64_t ulebValue = namesExtractor.getULEB128(&offset, &err);
-    if (err)
-      errorOrWarn(toString(chunk.namesSection->sec) +
-                  ": error reading entry: " + toString(std::move(err)));
+    llvm::cantFail(std::move(err));
     entry->abbrevCode = static_cast<uint32_t>(ulebValue);
     const auto &abbrevs = ni.getAbbrevs();
     auto abbrevIt = abbrevs.find_as(entry->abbrevCode);
@@ -3016,7 +3017,9 @@ static void readEntry(DebugNamesSection::NamedEntry &stringEntry,
       readAttributeValues<ELFT>(entry->attrValues, chunk, offset, secData,
                                 entry->parentOffset, namesExtractor, abbrev);
       stringEntry.indexEntries.push_back(std::move(entry));
-    }
+    } else
+      errorOrWarn(toString(chunk.namesSection->sec) +
+                  ": invalid abbrev code in entry");
   }
   if (offset >= namesSection->Data.size())
     errorOrWarn(toString(chunk.namesSection->sec) +
@@ -3092,15 +3095,18 @@ static void collectDebugNamesSectionData(
   for (const auto &ni : *chunk.debugNamesData) {
     DebugNamesSection::DebugNamesSectionData secData;
     secData.hdr = ni.getHeader();
-    if (secData.hdr.Format != DwarfFormat::DWARF32)
+    if (secData.hdr.Format != DwarfFormat::DWARF32) {
       errorOrWarn(toString(chunk.namesSection->sec) + ": unsupported DWARF64");
+      // Don't try to continue; we can't parse DWARF64 at the moment.
+      return;
+    }
     secData.dwarfSize = dwarf::getDwarfOffsetByteSize(DwarfFormat::DWARF32);
     secData.hdrSize = computeDebugNamesHeaderSize();
     if (secData.hdr.Version != 5)
       errorOrWarn(toString(chunk.namesSection->sec) + ": unsupported version");
     secData.locs = findDebugNamesOffsets(secData.hdrSize, secData.hdr);
-    readCompileUnitOffsets<ELFT>(secData, chunk, outputChunk, namesExtractor);
-    readEntryOffsets<ELFT>(secData, chunk, namesExtractor);
+    readCompileUnitOffsets<ELFT>(secData, outputChunk, namesExtractor);
+    readEntryOffsets<ELFT>(secData, namesExtractor);
     readEntries<ELFT>(secData, chunk, namesExtractor, strExtractor, ni);
     chunk.sectionsData.push_back(std::move(secData));
   }
