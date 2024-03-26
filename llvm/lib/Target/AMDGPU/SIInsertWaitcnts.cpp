@@ -2305,12 +2305,12 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     }
 #endif
 
-    if (ST->isPreciseMemoryEnabled()) {
+    if (ST->isPreciseMemoryEnabled() && Inst.mayLoadOrStore()) {
       AMDGPU::Waitcnt Wait;
-      if (WCG == &WCGPreGFX12)
-        Wait = AMDGPU::Waitcnt(0, 0, 0, 0);
-      else
+      if (ST->hasExtendedWaitCounts())
         Wait = AMDGPU::Waitcnt(0, 0, 0, 0, 0, 0, 0);
+      else
+        Wait = AMDGPU::Waitcnt(0, 0, 0, 0);
 
       if (!Inst.mayStore())
         Wait.StoreCnt = ~0u;

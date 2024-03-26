@@ -34,7 +34,7 @@
 // NO-CUMODE: "-target-feature" "-cumode"
 
 // RUN: %clang -### -target amdgcn -mcpu=gfx1010 -mamdgpu-precise-memory-op %s 2>&1 | FileCheck --check-prefix=PREC-MEM %s
-// PREC-MEM: "-target-feature" "+amdgpu-precise-memory-op"
+// PREC-MEM: "-target-feature" "+precise-memory"
 
 // RUN: %clang -### -target amdgcn -mcpu=gfx1010 -mno-amdgpu-precise-memory-op %s 2>&1 | FileCheck --check-prefix=NO-PREC-MEM %s
-// NO-PREC-MEM: "-target-feature" "-amdgpu-precise-memory-op"
+// NO-PREC-MEM-NOT: {{".*precise-memory"}}
