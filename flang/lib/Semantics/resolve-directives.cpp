@@ -2021,6 +2021,11 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
         }
       }
     }
+
+    if (Symbol * found{currScope().FindSymbol(name.source)}) {
+      if (found->test(semantics::Symbol::Flag::OmpThreadprivate))
+        return;
+    }
     std::vector<Symbol *> defaultDSASymbols;
     for (int dirDepth{0}; dirDepth < (int)dirContext_.size(); ++dirDepth) {
       DirContext &dirContext = dirContext_[dirDepth];
