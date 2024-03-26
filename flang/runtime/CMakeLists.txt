@@ -174,6 +174,7 @@ set(sources
 option(FLANG_EXPERIMENTAL_CUDA_RUNTIME
   "Compile Fortran runtime as CUDA sources (experimental)" OFF
   )
+set(FLANG_LIBCUDACXX_PATH "" CACHE PATH "Path to libcu++ package installation")
 
 # List of files that are buildable for all devices.
 set(supported_files
@@ -260,6 +261,13 @@ if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
   set_source_files_properties(${supported_files} PROPERTIES COMPILE_OPTIONS
     "${CUDA_COMPILE_OPTIONS}"
     )
+
+  if (EXISTS "${FLANG_LIBCUDACXX_PATH}/include")
+    # When using libcudacxx headers files, we have to use them
+    # for all files of F18 runtime.
+    include_directories(AFTER ${FLANG_LIBCUDACXX_PATH}/include)
+    add_compile_definitions(RT_USE_LIBCUDACXX=1)
+  endif()
 endif()
 
 set(FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD "off" CACHE STRING
