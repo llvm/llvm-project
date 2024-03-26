@@ -27,7 +27,7 @@
 ## 
 ## Second location, variable pointed to by the register value plus eight.
 ##
-# DWARF-NEXT: DW_OP_breg7 RSP-8, DW_OP_deref, DW_OP_lit8, DW_OP_plus)
+# DWARF-NEXT: DW_OP_breg7 RSP-8, DW_OP_deref, DW_OP_plus_uconst 0x8)
 ##
 ## Spilt to stack: push stack location and deref the pointer onto the dwarf
 ## expr stack. Then add eight to it, and it points to the variable.
@@ -135,7 +135,7 @@ body:             |
     ; CHECK: DBG_VALUE $rdi,
     MOV64mr $rsp, 1, $noreg, -8, $noreg, $rdi :: (store (s64) into %stack.0)
     $rdi = MOV64ri 0
-    ; CHECK: DBG_VALUE $rsp, 0, ![[VARNUM]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_constu, 8, DW_OP_plus),
+    ; CHECK: DBG_VALUE $rsp, 0, ![[VARNUM]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_plus_uconst, 8),
 
     renamable $rax = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
     renamable $eax = MOV32rm killed renamable $rax, 1, $noreg, 0, $noreg, debug-location !24 :: (load (s32) from %ir.i1, !tbaa !25)

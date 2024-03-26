@@ -83,9 +83,9 @@
 # DWARF-NEXT: DW_OP_breg7 RSP-8
 # DWARF-NEXT: DW_OP_breg7 RSP-8, DW_OP_deref_size 0x1, DW_OP_stack_value
 ## scalar / stack value with various sizes.
-# DWARF-NEXT: DW_OP_breg7 RSP-8, DW_OP_deref_size 0x8, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value
-# DWARF-NEXT: DW_OP_breg7 RSP-8, DW_OP_deref, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value
-# DWARF-NEXT: DW_OP_breg7 RSP-8, DW_OP_deref_size 0x1, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value)
+# DWARF-NEXT: DW_OP_breg7 RSP-8, DW_OP_deref_size 0x8, DW_OP_plus_uconst 0x1, DW_OP_stack_value
+# DWARF-NEXT: DW_OP_breg7 RSP-8, DW_OP_deref, DW_OP_plus_uconst 0x1, DW_OP_stack_value
+# DWARF-NEXT: DW_OP_breg7 RSP-8, DW_OP_deref_size 0x1, DW_OP_plus_uconst 0x1, DW_OP_stack_value)
 # DWARF:      DW_AT_name ("flannel")
 
 # Variable with fragments.
@@ -96,9 +96,9 @@
 # DWARF-NEXT: DW_OP_breg7 RSP-8, DW_OP_piece 0x4
 # DWARF-NEXT: DW_OP_breg7 RSP-8, DW_OP_deref_size 0x1, DW_OP_stack_value, DW_OP_piece 0x4
 ## Scalar / stack value with various sizes.
-# DWARF-NEXT: DW_OP_breg7 RSP-8, DW_OP_deref_size 0x8, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value, DW_OP_piece 0x4
-# DWARF-NEXT: DW_OP_breg7 RSP-8, DW_OP_deref_size 0x4, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value, DW_OP_piece 0x4
-# DWARF-NEXT: DW_OP_breg7 RSP-8, DW_OP_deref_size 0x1, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value, DW_OP_piece 0x4)
+# DWARF-NEXT: DW_OP_breg7 RSP-8, DW_OP_deref_size 0x8, DW_OP_plus_uconst 0x1, DW_OP_stack_value, DW_OP_piece 0x4
+# DWARF-NEXT: DW_OP_breg7 RSP-8, DW_OP_deref_size 0x4, DW_OP_plus_uconst 0x1, DW_OP_stack_value, DW_OP_piece 0x4
+# DWARF-NEXT: DW_OP_breg7 RSP-8, DW_OP_deref_size 0x1, DW_OP_plus_uconst 0x1, DW_OP_stack_value, DW_OP_piece 0x4)
 # DWARF:      DW_AT_name ("shoes")
 
 --- |
@@ -308,7 +308,7 @@ body:             |
     $rax = MOV64ri 0, debug-location !7
     DBG_INSTR_REF !8, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 1, DW_OP_plus, DW_OP_stack_value), dbg-instr-ref(16, 0), debug-location !7
     ; CHECK:      DBG_VALUE_LIST ![[VARNUM]],
-    ; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 8, DW_OP_minus, DW_OP_deref_size, 8, DW_OP_constu, 1, DW_OP_plus, DW_OP_stack_value), $rsp
+    ; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 8, DW_OP_minus, DW_OP_deref_size, 8, DW_OP_plus_uconst, 1, DW_OP_stack_value), $rsp
     $eax = MOV32ri 0, debug-location !7
     DBG_VALUE $noreg, $noreg, !8, !DIExpression(), debug-location !7
     ; CHECK: DBG_VALUE $noreg, $noreg
@@ -319,7 +319,7 @@ body:             |
     $rax = MOV64ri 0, debug-location !7
     DBG_INSTR_REF !8, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 1, DW_OP_plus, DW_OP_stack_value), dbg-instr-ref(17, 0), debug-location !7
     ; CHECK:      DBG_VALUE_LIST ![[VARNUM]],
-    ; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_constu, 1, DW_OP_plus, DW_OP_stack_value), $rsp
+    ; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_plus_uconst, 1, DW_OP_stack_value), $rsp
     $eax = MOV32ri 0, debug-location !7
     DBG_VALUE $noreg, $noreg, !8, !DIExpression(), debug-location !7
     ; CHECK: DBG_VALUE $noreg, $noreg
@@ -330,7 +330,7 @@ body:             |
     $rax = MOV64ri 0, debug-location !7
     DBG_INSTR_REF !8, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 1, DW_OP_plus, DW_OP_stack_value), dbg-instr-ref(18, 0), debug-location !7
     ; CHECK:      DBG_VALUE_LIST ![[VARNUM]],
-    ; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 8, DW_OP_minus, DW_OP_deref_size, 1, DW_OP_constu, 1, DW_OP_plus, DW_OP_stack_value), $rsp
+    ; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 8, DW_OP_minus, DW_OP_deref_size, 1, DW_OP_plus_uconst, 1, DW_OP_stack_value), $rsp
     $eax = MOV32ri 0, debug-location !7
     DBG_VALUE $noreg, $noreg, !8, !DIExpression(), debug-location !7
     ; CHECK: DBG_VALUE $noreg, $noreg
@@ -341,7 +341,7 @@ body:             |
     $rax = MOV64ri 0, debug-location !7
     DBG_INSTR_REF !10, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 1, DW_OP_plus, DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 32), dbg-instr-ref(19, 0), debug-location !7
     ; CHECK:      DBG_VALUE_LIST ![[VARNUM2]],
-    ; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 8, DW_OP_minus, DW_OP_deref_size, 8, DW_OP_constu, 1, DW_OP_plus, DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 32), $rsp
+    ; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 8, DW_OP_minus, DW_OP_deref_size, 8, DW_OP_plus_uconst, 1, DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 32), $rsp
     $eax = MOV32ri 0, debug-location !7
     DBG_VALUE $noreg, $noreg, !10, !DIExpression(DW_OP_LLVM_fragment, 0, 32), debug-location !7
     ; CHECK: DBG_VALUE $noreg, $noreg
@@ -352,7 +352,7 @@ body:             |
     $rax = MOV64ri 0, debug-location !7
     DBG_INSTR_REF !10, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 1, DW_OP_plus, DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 32), dbg-instr-ref(20, 0), debug-location !7
     ; CHECK:      DBG_VALUE_LIST ![[VARNUM2]],
-    ; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 8, DW_OP_minus, DW_OP_deref_size, 4, DW_OP_constu, 1, DW_OP_plus, DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 32), $rsp
+    ; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 8, DW_OP_minus, DW_OP_deref_size, 4, DW_OP_plus_uconst, 1, DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 32), $rsp
     $eax = MOV32ri 0, debug-location !7
     DBG_VALUE $noreg, $noreg, !10, !DIExpression(DW_OP_LLVM_fragment, 0, 32), debug-location !7
     ; CHECK: DBG_VALUE $noreg, $noreg
@@ -363,7 +363,7 @@ body:             |
     $rax = MOV64ri 0, debug-location !7
     DBG_INSTR_REF !10, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 1, DW_OP_plus, DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 32), dbg-instr-ref(21, 0), debug-location !7
     ; CHECK:      DBG_VALUE_LIST ![[VARNUM2]],
-    ; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 8, DW_OP_minus, DW_OP_deref_size, 1, DW_OP_constu, 1, DW_OP_plus, DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 32), $rsp
+    ; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 8, DW_OP_minus, DW_OP_deref_size, 1, DW_OP_plus_uconst, 1, DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 32), $rsp
     $eax = MOV32ri 0, debug-location !7
     DBG_VALUE $noreg, $noreg, !10, !DIExpression(DW_OP_LLVM_fragment, 0, 32), debug-location !7
     ; CHECK: DBG_VALUE $noreg, $noreg
