@@ -73,7 +73,7 @@ TensorType inferReshapeExpandedType(TensorType inputType,
     // Calculate the product of all elements in 'newShape' except for the -1
     // placeholder, which we discard by negating the result.
     int64_t totalSizeNoPlaceholder = -std::accumulate(
-        newShape.begin(), newShape.end(), 1, std::multiplies());
+        newShape.begin(), newShape.end(), 1, std::multiplies<int64_t>());
 
     // If there is a 0 component in 'newShape', resolve the placeholder as 0.
     if (totalSizeNoPlaceholder == 0)
