@@ -49,7 +49,7 @@ void arith::ArithDialect::initialize() {
       >();
   addInterfaces<ArithInlinerInterface>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, ArithDialect>();
-  declarePromisedInterface<bufferization::BufferDeallocationOpInterface, 
+  declarePromisedInterface<bufferization::BufferDeallocationOpInterface,
                            SelectOp>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface, ConstantOp,
                             IndexCastOp, SelectOp>();
