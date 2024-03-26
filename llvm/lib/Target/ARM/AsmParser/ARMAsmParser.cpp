@@ -6865,8 +6865,9 @@ static void applyMnemonicAliases(StringRef &Mnemonic,
                                  const FeatureBitset &Features,
                                  unsigned VariantID);
 
-// The GNU assembler has aliases of ldrd and strd with the second register
-// omitted. We don't have a way to do that in tablegen, so fix it up here.
+// The GNU assembler has aliases of ldrd, strd, ldrexd, strexd, ldaexd, and
+// stlexd with the second register omitted. We don't have a way to do that in
+// tablegen, so fix it up here.
 //
 // We have to be careful to not emit an invalid Rt2 here, because the rest of
 // the assembly parser could then generate confusing diagnostics refering to
@@ -6876,13 +6877,19 @@ static void applyMnemonicAliases(StringRef &Mnemonic,
 void ARMAsmParser::fixupGNULDRDAlias(StringRef Mnemonic,
                                      OperandVector &Operands,
                                      unsigned MnemonicOpsEndInd) {
-  if (Mnemonic != "ldrd" && Mnemonic != "strd")
-    return;
-  if (Operands.size() < MnemonicOpsEndInd + 2)
+  if (Mnemonic != "ldrd" && Mnemonic != "strd" && Mnemonic != "ldrexd" &&
+      Mnemonic != "strexd" && Mnemonic != "ldaexd" && Mnemonic != "stlexd")
     return;
 
-  ARMOperand &Op2 = static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd]);
-  ARMOperand &Op3 = static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd + 1]);
+  unsigned IdX = Mnemonic == "strexd" || Mnemonic == "stlexd"
+                     ? MnemonicOpsEndInd + 1
+                     : MnemonicOpsEndInd;
+
+  if (Operands.size() < IdX + 2)
+    return;
+
+  ARMOperand &Op2 = static_cast<ARMOperand &>(*Operands[IdX]);
+  ARMOperand &Op3 = static_cast<ARMOperand &>(*Operands[IdX + 1]);
 
   if (!Op2.isReg())
     return;
@@ -6907,7 +6914,7 @@ void ARMAsmParser::fixupGNULDRDAlias(StringRef Mnemonic,
     return;
 
   Operands.insert(
-      Operands.begin() + MnemonicOpsEndInd + 1,
+      Operands.begin() + IdX + 1,
       ARMOperand::CreateReg(PairedReg, Op2.getStartLoc(), Op2.getEndLoc()));
 }
 
@@ -7336,6 +7343,9 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd]).isImm())
     removeCondCode(Operands, MnemonicOpsEndInd);
 
+  // GNU Assembler extension (compatibility).
+  fixupGNULDRDAlias(Mnemonic, Operands, MnemonicOpsEndInd);
+
   // Adjust operands of ldrexd/strexd to MCK_GPRPair.
   // ldrexd/strexd require even/odd GPR pair. To enforce this constraint,
   // a single GPRPair reg operand is used in the .td file to replace the two
@@ -7352,23 +7362,18 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     ARMOperand &Op2 = static_cast<ARMOperand &>(*Operands[Idx + 1]);
 
     const MCRegisterClass &MRC = MRI->getRegClass(ARM::GPRRegClassID);
-    bool IsGNUAlias = !(Op2.isReg() && MRC.contains(Op2.getReg()));
     // Adjust only if Op1 is a GPR.
     if (Op1.isReg() && MRC.contains(Op1.getReg())) {
       unsigned Reg1 = Op1.getReg();
       unsigned Rt = MRI->getEncodingValue(Reg1);
+      unsigned Reg2 = Op2.getReg();
+      unsigned Rt2 = MRI->getEncodingValue(Reg2);
+      // Rt2 must be Rt + 1.
+      if (Rt + 1 != Rt2)
+        return Error(Op2.getStartLoc(),
+                     IsLoad ? "destination operands must be sequential"
+                            : "source operands must be sequential");
 
-      // Check we are not in the GNU alias case with only one of the register
-      // pair specified
-      if (!IsGNUAlias) {
-        unsigned Reg2 = Op2.getReg();
-        unsigned Rt2 = MRI->getEncodingValue(Reg2);
-        // Rt2 must be Rt + 1.
-        if (Rt + 1 != Rt2)
-          return Error(Op2.getStartLoc(),
-                       IsLoad ? "destination operands must be sequential"
-                              : "source operands must be sequential");
-      }
       // Rt must be even
       if (Rt & 1)
         return Error(
@@ -7378,16 +7383,12 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
       unsigned NewReg = MRI->getMatchingSuperReg(
           Reg1, ARM::gsub_0, &(MRI->getRegClass(ARM::GPRPairRegClassID)));
+
       Operands[Idx] =
           ARMOperand::CreateReg(NewReg, Op1.getStartLoc(), Op2.getEndLoc());
-      // redundant operand only exists if not in GNU alias case
-      if (!IsGNUAlias)
-        Operands.erase(Operands.begin() + Idx + 1);
+      Operands.erase(Operands.begin() + Idx + 1);
     }
   }
-
-  // GNU Assembler extension (compatibility).
-  fixupGNULDRDAlias(Mnemonic, Operands, MnemonicOpsEndInd);
 
   // FIXME: As said above, this is all a pretty gross hack.  This instruction
   // does not fit with other "subs" and tblgen.
