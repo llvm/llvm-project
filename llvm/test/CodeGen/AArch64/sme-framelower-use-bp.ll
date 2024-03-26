@@ -35,8 +35,9 @@ define void @quux() #1 {
 ; CHECK-NEXT:    .cfi_offset w30, -88
 ; CHECK-NEXT:    .cfi_offset w29, -96
 ; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    mul x8, x8, x8
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    msub x9, x8, x8, x9
+; CHECK-NEXT:    sub x9, x9, x8
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    str x9, [x19, #384]
