@@ -5420,10 +5420,12 @@ The following builtin intrinsics can be used in constant expressions:
 * ``__builtin_clzl``
 * ``__builtin_clzll``
 * ``__builtin_clzs``
+* ``__builtin_clzg``
 * ``__builtin_ctz``
 * ``__builtin_ctzl``
 * ``__builtin_ctzll``
 * ``__builtin_ctzs``
+* ``__builtin_ctzg``
 * ``__builtin_ffs``
 * ``__builtin_ffsl``
 * ``__builtin_ffsll``
