@@ -1588,6 +1588,9 @@ static void CheckReduce(
       procChars->dummyArguments.size() != 2 || !procChars->functionResult) {
     messages.Say(
         "OPERATION= argument of REDUCE() must be a pure function of two data arguments"_err_en_US);
+  } else if (procChars->attrs.test(characteristics::Procedure::Attr::BindC)) {
+    messages.Say(
+        "A BIND(C) OPERATION= argument of REDUCE() is not supported"_err_en_US);
   } else if (!result || result->Rank() != 0) {
     messages.Say(
         "OPERATION= argument of REDUCE() must be a scalar function"_err_en_US);
