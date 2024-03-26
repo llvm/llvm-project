@@ -296,7 +296,8 @@ Value *VPInstruction::generatePerLane(VPTransformState &State,
                                       const VPIteration &Lane) {
   IRBuilderBase &Builder = State.Builder;
 
-  assert(getOpcode() == VPInstruction::PtrAdd);
+  assert(getOpcode() == VPInstruction::PtrAdd &&
+         "only PtrAdd opcodes are supported for now");
   return Builder.CreatePtrAdd(State.get(getOperand(0), Lane),
                               State.get(getOperand(1), Lane), Name);
 }
@@ -519,10 +520,13 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
     return ReducedPartRdx;
   }
-  case VPInstruction::PtrAdd:
+  case VPInstruction::PtrAdd: {
     assert(vputils::onlyFirstLaneUsed(this) &&
            "can only generate first lane for PtrAdd");
-    return generatePerLane(State, VPIteration(Part, 0));
+    Value *Ptr = State.get(getOperand(0), Part, /* IsScalar */ true);
+    Value *Addend = State.get(getOperand(1), Part, /* IsScalar */ true);
+    return Builder.CreatePtrAdd(Ptr, Addend, Name);
+  }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -557,8 +561,9 @@ void VPInstruction::execute(VPTransformState &State) {
     if (GeneratesPerAllLanes) {
       for (unsigned Lane = 0, NumLanes = State.VF.getKnownMinValue();
            Lane != NumLanes; ++Lane) {
-        Value *P = generatePerLane(State, VPIteration(Part, Lane));
-        State.set(this, P, VPIteration(Part, Lane));
+        Value *GeneratedValue = generatePerLane(State, VPIteration(Part, Lane));
+        assert(GeneratedValue && "generatePerLane must produce a value");
+        State.set(this, GeneratedValue, VPIteration(Part, Lane));
       }
       continue;
     }
@@ -566,7 +571,7 @@ void VPInstruction::execute(VPTransformState &State) {
     Value *GeneratedValue = generatePerPart(State, Part);
     if (!hasResult())
       continue;
-    assert(GeneratedValue && "generateInstruction must produce a value");
+    assert(GeneratedValue && "generatePerPart must produce a value");
     assert((GeneratedValue->getType()->isVectorTy() ==
                 !GeneratesPerFirstLaneOnly ||
             State.VF.isScalar()) &&
