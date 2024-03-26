@@ -99,7 +99,8 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
       collectOmpObjectListSymbol(firstPrivateClause->v, privatizedSymbols);
     } else if (const auto &lastPrivateClause =
                    std::get_if<omp::clause::Lastprivate>(&clause.u)) {
-      collectOmpObjectListSymbol(lastPrivateClause->v, privatizedSymbols);
+      const ObjectList &objects = std::get<ObjectList>(lastPrivateClause->t);
+      collectOmpObjectListSymbol(objects, privatizedSymbols);
       hasLastPrivateOp = true;
     } else if (std::get_if<omp::clause::Collapse>(&clause.u)) {
       hasCollapse = true;
@@ -286,12 +287,13 @@ void DataSharingProcessor::collectSymbols(
 }
 
 void DataSharingProcessor::collectDefaultSymbols() {
+  using DataSharingAttribute = omp::clause::Default::DataSharingAttribute;
   for (const omp::Clause &clause : clauses) {
     if (const auto *defaultClause =
             std::get_if<omp::clause::Default>(&clause.u)) {
-      if (defaultClause->v == omp::clause::Default::Type::Private)
+      if (defaultClause->v == DataSharingAttribute::Private)
         collectSymbols(Fortran::semantics::Symbol::Flag::OmpPrivate);
-      else if (defaultClause->v == omp::clause::Default::Type::Firstprivate)
+      else if (defaultClause->v == DataSharingAttribute::Firstprivate)
         collectSymbols(Fortran::semantics::Symbol::Flag::OmpFirstPrivate);
     }
   }
