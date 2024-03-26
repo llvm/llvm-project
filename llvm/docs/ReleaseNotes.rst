@@ -181,6 +181,11 @@ Changes to the LLVM tools
   for ELF input to skip the specified symbols when executing other options
   that can change a symbol's name, binding or visibility.
 
+* llvm-profgen now supports COFF+DWARF binaries. This enables Sample-based PGO
+  on Windows using Intel VTune's SEP. For details on usage, see the `end-user
+  documentation for SPGO
+  <https://clang.llvm.org/docs/UsersManual.html#using-sampling-profilers>`_.
+
 Changes to LLDB
 ---------------------------------
 
