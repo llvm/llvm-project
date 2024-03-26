@@ -160,6 +160,10 @@ static bool canGoAfterDWARF(const MCSectionMachO &MSec) {
     return true;
   if (SegName == "__LLVM" && SecName == "__cg_profile")
     return true;
+
+  if (SegName == "__LLVM_FAULTMAPS" && SecName == "__llvm_faultmaps")
+    return true;
+
   return false;
 }
 
