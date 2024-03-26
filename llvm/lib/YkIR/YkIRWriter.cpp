@@ -459,16 +459,17 @@ private:
       //
       // Note that in LLVM IR, the operands are ordered (despite the order they
       // appear in the language reference): cond, if-false, if-true. We
-      // re-order those during lowering to avoid confusion.
+      // use `getSuccessor()`, so as to re-order those during lowering to avoid
+      // confusion.
       //
       // num_operands:
       OutStreamer.emitInt32(3);
       // OPERAND 0: condition.
       serialiseOperand(I, VLMap, I->getOperand(0));
       // OPERAND 1: block to go to if true.
-      serialiseOperand(I, VLMap, I->getOperand(2));
+      serialiseOperand(I, VLMap, I->getSuccessor(0));
       // OPERAND 2: block to go to if false.
-      serialiseOperand(I, VLMap, I->getOperand(1));
+      serialiseOperand(I, VLMap, I->getSuccessor(1));
     }
     InstIdx++;
   }
@@ -618,13 +619,46 @@ private:
 
   void serialiseBlock(BasicBlock &BB, ValueLoweringMap &VLMap,
                       unsigned &BBIdx) {
+    // Keep the instruction skipping logic in one place.
+    auto ShouldSkipInstr = [](Instruction *I) {
+      // Skip non-semantic instrucitons for now.
+      //
+      // We may come back to them later if we need better debugging
+      // facilities, but for now they just clutter up our AOT module.
+      return I->isDebugOrPseudoInst();
+    };
+
+    // Count instructions.
+    //
+    // FIXME: I don't like this much:
+    //
+    //  - Assumes one LLVM instruction becomes exactly one Yk IR instruction.
+    //  - Requires a second loop to count ahead of time.
+    //
+    // Can we emit the instrucitons into a temp buffer and keep a running count
+    // of how many instructions we generated instead?
+    size_t NumInstrs = 0;
+    for (Instruction &I : BB) {
+      if (ShouldSkipInstr(&I)) {
+        continue;
+      }
+      NumInstrs++;
+    }
+
     // num_instrs:
-    OutStreamer.emitSizeT(BB.size());
+    OutStreamer.emitSizeT(NumInstrs);
     // instrs:
     unsigned InstIdx = 0;
     for (Instruction &I : BB) {
+      if (ShouldSkipInstr(&I)) {
+        continue;
+      }
       serialiseInst(&I, VLMap, BBIdx, InstIdx);
     }
+
+    // Check we emitted the number of instructions that we promised.
+    assert(InstIdx == NumInstrs);
+
     BBIdx++;
   }
 
