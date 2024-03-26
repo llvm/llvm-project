@@ -55,11 +55,6 @@ struct SPIRVConversionOptions {
   /// values will be packed into one 32-bit value to be memory efficient.
   bool emulateLT32BitScalarTypes{true};
 
-  /// Whether to enable fast math mode during conversion. If true, various
-  /// patterns would assume no NaN/infinity numbers as inputs, and thus there
-  /// will be no special guards emitted to check and handle such cases.
-  bool enableFastMathMode{false};
-
   /// Use 64-bit integers when converting index types.
   bool use64bitIndex{false};
 };

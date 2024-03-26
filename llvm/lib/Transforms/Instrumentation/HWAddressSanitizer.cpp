@@ -1104,6 +1104,8 @@ void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
     // FIXME: the interceptor is not as fast as real memset. Consider lowering
     // llvm.memset right here into either a sequence of stores, or a call to
     // hwasan_tag_memory.
+    // Mechanical proof of this address calculation can be found at:
+    // https://github.com/google/sanitizers/blob/master/hwaddress-sanitizer/prove_hwasanwrap.smt2
     if (ShadowSize)
       IRB.CreateMemSet(ShadowPtr, Tag, ShadowSize, Align(1));
     if (Size != AlignedSize) {
@@ -1220,8 +1222,11 @@ Value *HWAddressSanitizer::untagPointer(IRBuilder<> &IRB, Value *PtrLong) {
 }
 
 Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB) {
+  // Android provides a fixed TLS slot for sanitizers. See TLS_SLOT_SANITIZER
+  // in Bionic's libc/platform/bionic/tls_defines.h.
+  constexpr int SanitizerSlot = 6;
   if (TargetTriple.isAArch64() && TargetTriple.isAndroid())
-    return memtag::getAndroidSanitizerSlotPtr(IRB);
+    return memtag::getAndroidSlotPtr(IRB, SanitizerSlot);
   return ThreadPtrGlobal;
 }
 

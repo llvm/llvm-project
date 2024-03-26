@@ -13,6 +13,7 @@
 #include "flang/Lower/OpenMP.h"
 
 #include "ClauseProcessor.h"
+#include "Clauses.h"
 #include "DataSharingProcessor.h"
 #include "DirectivesCommon.h"
 #include "ReductionProcessor.h"
@@ -555,7 +556,7 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<const Fortran::semantics::Symbol *> reductionSymbols;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(clause::If::DirectiveNameModifier::Parallel, ifClauseOperand);
+  cp.processIf(llvm::omp::Directive::OMPD_parallel, ifClauseOperand);
   cp.processNumThreads(stmtCtx, numThreadsClauseOperand);
   cp.processProcBind(procBindKindAttr);
   cp.processDefault();
@@ -726,7 +727,7 @@ genTaskOp(Fortran::lower::AbstractConverter &converter,
       dependOperands;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(clause::If::DirectiveNameModifier::Task, ifClauseOperand);
+  cp.processIf(llvm::omp::Directive::OMPD_task, ifClauseOperand);
   cp.processAllocate(allocatorOperands, allocateOperands);
   cp.processDefault();
   cp.processFinal(stmtCtx, finalClauseOperand);
@@ -838,7 +839,7 @@ genTargetDataOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<const Fortran::semantics::Symbol *> useDeviceSymbols;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(clause::If::DirectiveNameModifier::TargetData, ifClauseOperand);
+  cp.processIf(llvm::omp::Directive::OMPD_target_data, ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processUseDevicePtr(devicePtrOperands, useDeviceTypes, useDeviceLocs,
                          useDeviceSymbols);
@@ -883,24 +884,20 @@ static OpTy genTargetEnterExitDataUpdateOp(
   llvm::SmallVector<mlir::Value> mapOperands, dependOperands;
   llvm::SmallVector<mlir::Attribute> dependTypeOperands;
 
-  clause::If::DirectiveNameModifier directiveName;
   // GCC 9.3.0 emits a (probably) bogus warning about an unused variable.
   [[maybe_unused]] llvm::omp::Directive directive;
   if constexpr (std::is_same_v<OpTy, mlir::omp::TargetEnterDataOp>) {
-    directiveName = clause::If::DirectiveNameModifier::TargetEnterData;
     directive = llvm::omp::Directive::OMPD_target_enter_data;
   } else if constexpr (std::is_same_v<OpTy, mlir::omp::TargetExitDataOp>) {
-    directiveName = clause::If::DirectiveNameModifier::TargetExitData;
     directive = llvm::omp::Directive::OMPD_target_exit_data;
   } else if constexpr (std::is_same_v<OpTy, mlir::omp::TargetUpdateOp>) {
-    directiveName = clause::If::DirectiveNameModifier::TargetUpdate;
     directive = llvm::omp::Directive::OMPD_target_update;
   } else {
     return nullptr;
   }
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(directiveName, ifClauseOperand);
+  cp.processIf(directive, ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processDepend(dependTypeOperands, dependOperands);
   cp.processNowait(nowaitAttr);
@@ -1092,7 +1089,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<const Fortran::semantics::Symbol *> mapSymbols;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(clause::If::DirectiveNameModifier::Target, ifClauseOperand);
+  cp.processIf(llvm::omp::Directive::OMPD_target, ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processThreadLimit(stmtCtx, threadLimitOperand);
   cp.processDepend(dependTypeOperands, dependOperands);
@@ -1218,7 +1215,7 @@ genTeamsOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(clause::If::DirectiveNameModifier::Teams, ifClauseOperand);
+  cp.processIf(llvm::omp::Directive::OMPD_teams, ifClauseOperand);
   cp.processAllocate(allocatorOperands, allocateOperands);
   cp.processDefault();
   cp.processNumTeams(stmtCtx, numTeamsClauseOperand);
@@ -1406,34 +1403,6 @@ genOmpFlush(Fortran::lower::AbstractConverter &converter,
       converter.getCurrentLocation(), operandRange);
 }
 
-static void
-genOMP(Fortran::lower::AbstractConverter &converter,
-       Fortran::lower::SymMap &symTable,
-       Fortran::semantics::SemanticsContext &semaCtx,
-       Fortran::lower::pft::Evaluation &eval,
-       const Fortran::parser::OpenMPStandaloneConstruct &standaloneConstruct) {
-  std::visit(
-      Fortran::common::visitors{
-          [&](const Fortran::parser::OpenMPSimpleStandaloneConstruct
-                  &simpleStandaloneConstruct) {
-            genOmpSimpleStandalone(converter, semaCtx, eval,
-                                   /*genNested=*/true,
-                                   simpleStandaloneConstruct);
-          },
-          [&](const Fortran::parser::OpenMPFlushConstruct &flushConstruct) {
-            genOmpFlush(converter, semaCtx, eval, flushConstruct);
-          },
-          [&](const Fortran::parser::OpenMPCancelConstruct &cancelConstruct) {
-            TODO(converter.getCurrentLocation(), "OpenMPCancelConstruct");
-          },
-          [&](const Fortran::parser::OpenMPCancellationPointConstruct
-                  &cancellationPointConstruct) {
-            TODO(converter.getCurrentLocation(), "OpenMPCancelConstruct");
-          },
-      },
-      standaloneConstruct.u);
-}
-
 static llvm::SmallVector<const Fortran::semantics::Symbol *>
 genLoopVars(mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
             mlir::Location &loc,
@@ -1538,7 +1507,7 @@ createSimdLoop(Fortran::lower::AbstractConverter &converter,
   cp.processCollapse(loc, eval, lowerBound, upperBound, step, iv);
   cp.processScheduleChunk(stmtCtx, scheduleChunkClauseOperand);
   cp.processReduction(loc, reductionVars, reductionTypes, reductionDeclSymbols);
-  cp.processIf(clause::If::DirectiveNameModifier::Simd, ifClauseOperand);
+  cp.processIf(llvm::omp::Directive::OMPD_simd, ifClauseOperand);
   cp.processSimdlen(simdlenClauseOperand);
   cp.processSafelen(safelenClauseOperand);
   cp.processTODO<clause::Aligned, clause::Allocate, clause::Linear,
@@ -1672,86 +1641,179 @@ static void createSimdWsloop(
                endClauseList, loc);
 }
 
+static void
+markDeclareTarget(mlir::Operation *op,
+                  Fortran::lower::AbstractConverter &converter,
+                  mlir::omp::DeclareTargetCaptureClause captureClause,
+                  mlir::omp::DeclareTargetDeviceType deviceType) {
+  // TODO: Add support for program local variables with declare target applied
+  auto declareTargetOp = llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(op);
+  if (!declareTargetOp)
+    fir::emitFatalError(
+        converter.getCurrentLocation(),
+        "Attempt to apply declare target on unsupported operation");
+
+  // The function or global already has a declare target applied to it, very
+  // likely through implicit capture (usage in another declare target
+  // function/subroutine). It should be marked as any if it has been assigned
+  // both host and nohost, else we skip, as there is no change
+  if (declareTargetOp.isDeclareTarget()) {
+    if (declareTargetOp.getDeclareTargetDeviceType() != deviceType)
+      declareTargetOp.setDeclareTarget(mlir::omp::DeclareTargetDeviceType::any,
+                                       captureClause);
+    return;
+  }
+
+  declareTargetOp.setDeclareTarget(deviceType, captureClause);
+}
+
+//===----------------------------------------------------------------------===//
+// OpenMPDeclarativeConstruct visitors
+//===----------------------------------------------------------------------===//
+
+static void
+genOMP(Fortran::lower::AbstractConverter &converter,
+       Fortran::lower::SymMap &symTable,
+       Fortran::semantics::SemanticsContext &semaCtx,
+       Fortran::lower::pft::Evaluation &eval,
+       const Fortran::parser::OpenMPDeclarativeAllocate &declarativeAllocate) {
+  TODO(converter.getCurrentLocation(), "OpenMPDeclarativeAllocate");
+}
+
 static void genOMP(Fortran::lower::AbstractConverter &converter,
                    Fortran::lower::SymMap &symTable,
                    Fortran::semantics::SemanticsContext &semaCtx,
                    Fortran::lower::pft::Evaluation &eval,
-                   const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
-  const auto &beginLoopDirective =
-      std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t);
-  const auto &loopOpClauseList =
-      std::get<Fortran::parser::OmpClauseList>(beginLoopDirective.t);
-  mlir::Location currentLocation =
-      converter.genLocation(beginLoopDirective.source);
-  const auto ompDirective =
-      std::get<Fortran::parser::OmpLoopDirective>(beginLoopDirective.t).v;
+                   const Fortran::parser::OpenMPDeclareReductionConstruct
+                       &declareReductionConstruct) {
+  TODO(converter.getCurrentLocation(), "OpenMPDeclareReductionConstruct");
+}
 
-  const auto *endClauseList = [&]() {
-    using RetTy = const Fortran::parser::OmpClauseList *;
-    if (auto &endLoopDirective =
-            std::get<std::optional<Fortran::parser::OmpEndLoopDirective>>(
-                loopConstruct.t)) {
-      return RetTy(
-          &std::get<Fortran::parser::OmpClauseList>((*endLoopDirective).t));
-    }
-    return RetTy();
-  }();
+static void genOMP(
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::SymMap &symTable,
+    Fortran::semantics::SemanticsContext &semaCtx,
+    Fortran::lower::pft::Evaluation &eval,
+    const Fortran::parser::OpenMPDeclareSimdConstruct &declareSimdConstruct) {
+  TODO(converter.getCurrentLocation(), "OpenMPDeclareSimdConstruct");
+}
 
-  bool validDirective = false;
-  if (llvm::omp::topTaskloopSet.test(ompDirective)) {
-    validDirective = true;
-    TODO(currentLocation, "Taskloop construct");
-  } else {
-    // Create omp.{target, teams, distribute, parallel} nested operations
-    if ((llvm::omp::allTargetSet & llvm::omp::loopConstructSet)
-            .test(ompDirective)) {
-      validDirective = true;
-      genTargetOp(converter, semaCtx, eval, /*genNested=*/false,
-                  currentLocation, loopOpClauseList, ompDirective,
-                  /*outerCombined=*/true);
-    }
-    if ((llvm::omp::allTeamsSet & llvm::omp::loopConstructSet)
-            .test(ompDirective)) {
-      validDirective = true;
-      genTeamsOp(converter, semaCtx, eval, /*genNested=*/false, currentLocation,
-                 loopOpClauseList,
-                 /*outerCombined=*/true);
-    }
-    if (llvm::omp::allDistributeSet.test(ompDirective)) {
-      validDirective = true;
-      TODO(currentLocation, "Distribute construct");
-    }
-    if ((llvm::omp::allParallelSet & llvm::omp::loopConstructSet)
-            .test(ompDirective)) {
-      validDirective = true;
-      genParallelOp(converter, symTable, semaCtx, eval, /*genNested=*/false,
-                    currentLocation, loopOpClauseList,
-                    /*outerCombined=*/true);
-    }
+static void genOMP(Fortran::lower::AbstractConverter &converter,
+                   Fortran::lower::SymMap &symTable,
+                   Fortran::semantics::SemanticsContext &semaCtx,
+                   Fortran::lower::pft::Evaluation &eval,
+                   const Fortran::parser::OpenMPDeclareTargetConstruct
+                       &declareTargetConstruct) {
+  llvm::SmallVector<DeclareTargetCapturePair> symbolAndClause;
+  mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
+  mlir::omp::DeclareTargetDeviceType deviceType = getDeclareTargetInfo(
+      converter, semaCtx, eval, declareTargetConstruct, symbolAndClause);
+
+  for (const DeclareTargetCapturePair &symClause : symbolAndClause) {
+    mlir::Operation *op = mod.lookupSymbol(converter.mangleName(
+        std::get<const Fortran::semantics::Symbol &>(symClause)));
+
+    // Some symbols are deferred until later in the module, these are handled
+    // upon finalization of the module for OpenMP inside of Bridge, so we simply
+    // skip for now.
+    if (!op)
+      continue;
+
+    markDeclareTarget(
+        op, converter,
+        std::get<mlir::omp::DeclareTargetCaptureClause>(symClause), deviceType);
   }
-  if ((llvm::omp::allDoSet | llvm::omp::allSimdSet).test(ompDirective))
-    validDirective = true;
+}
 
-  if (!validDirective) {
-    TODO(currentLocation, "Unhandled loop directive (" +
-                              llvm::omp::getOpenMPDirectiveName(ompDirective) +
-                              ")");
-  }
+static void
+genOMP(Fortran::lower::AbstractConverter &converter,
+       Fortran::lower::SymMap &symTable,
+       Fortran::semantics::SemanticsContext &semaCtx,
+       Fortran::lower::pft::Evaluation &eval,
+       const Fortran::parser::OpenMPRequiresConstruct &requiresConstruct) {
+  // Requires directives are gathered and processed in semantics and
+  // then combined in the lowering bridge before triggering codegen
+  // just once. Hence, there is no need to lower each individual
+  // occurrence here.
+}
 
-  if (llvm::omp::allDoSimdSet.test(ompDirective)) {
-    // 2.9.3.2 Workshare SIMD construct
-    createSimdWsloop(converter, semaCtx, eval, ompDirective, loopOpClauseList,
-                     endClauseList, currentLocation);
+static void genOMP(Fortran::lower::AbstractConverter &converter,
+                   Fortran::lower::SymMap &symTable,
+                   Fortran::semantics::SemanticsContext &semaCtx,
+                   Fortran::lower::pft::Evaluation &eval,
+                   const Fortran::parser::OpenMPThreadprivate &threadprivate) {
+  // The directive is lowered when instantiating the variable to
+  // support the case of threadprivate variable declared in module.
+}
 
-  } else if (llvm::omp::allSimdSet.test(ompDirective)) {
-    // 2.9.3.1 SIMD construct
-    createSimdLoop(converter, semaCtx, eval, ompDirective, loopOpClauseList,
-                   currentLocation);
-    genOpenMPReduction(converter, semaCtx, loopOpClauseList);
-  } else {
-    createWsloop(converter, semaCtx, eval, ompDirective, loopOpClauseList,
-                 endClauseList, currentLocation);
-  }
+static void
+genOMP(Fortran::lower::AbstractConverter &converter,
+       Fortran::lower::SymMap &symTable,
+       Fortran::semantics::SemanticsContext &semaCtx,
+       Fortran::lower::pft::Evaluation &eval,
+       const Fortran::parser::OpenMPDeclarativeConstruct &ompDeclConstruct) {
+  std::visit(
+      [&](auto &&s) { return genOMP(converter, symTable, semaCtx, eval, s); },
+      ompDeclConstruct.u);
+}
+
+//===----------------------------------------------------------------------===//
+// OpenMPConstruct visitors
+//===----------------------------------------------------------------------===//
+
+static void
+genOMP(Fortran::lower::AbstractConverter &converter,
+       Fortran::lower::SymMap &symTable,
+       Fortran::semantics::SemanticsContext &semaCtx,
+       Fortran::lower::pft::Evaluation &eval,
+       const Fortran::parser::OpenMPAllocatorsConstruct &allocsConstruct) {
+  TODO(converter.getCurrentLocation(), "OpenMPAllocatorsConstruct");
+}
+
+static void
+genOMP(Fortran::lower::AbstractConverter &converter,
+       Fortran::lower::SymMap &symTable,
+       Fortran::semantics::SemanticsContext &semaCtx,
+       Fortran::lower::pft::Evaluation &eval,
+       const Fortran::parser::OpenMPAtomicConstruct &atomicConstruct) {
+  std::visit(
+      Fortran::common::visitors{
+          [&](const Fortran::parser::OmpAtomicRead &atomicRead) {
+            mlir::Location loc = converter.genLocation(atomicRead.source);
+            Fortran::lower::genOmpAccAtomicRead<
+                Fortran::parser::OmpAtomicRead,
+                Fortran::parser::OmpAtomicClauseList>(converter, atomicRead,
+                                                      loc);
+          },
+          [&](const Fortran::parser::OmpAtomicWrite &atomicWrite) {
+            mlir::Location loc = converter.genLocation(atomicWrite.source);
+            Fortran::lower::genOmpAccAtomicWrite<
+                Fortran::parser::OmpAtomicWrite,
+                Fortran::parser::OmpAtomicClauseList>(converter, atomicWrite,
+                                                      loc);
+          },
+          [&](const Fortran::parser::OmpAtomic &atomicConstruct) {
+            mlir::Location loc = converter.genLocation(atomicConstruct.source);
+            Fortran::lower::genOmpAtomic<Fortran::parser::OmpAtomic,
+                                         Fortran::parser::OmpAtomicClauseList>(
+                converter, atomicConstruct, loc);
+          },
+          [&](const Fortran::parser::OmpAtomicUpdate &atomicUpdate) {
+            mlir::Location loc = converter.genLocation(atomicUpdate.source);
+            Fortran::lower::genOmpAccAtomicUpdate<
+                Fortran::parser::OmpAtomicUpdate,
+                Fortran::parser::OmpAtomicClauseList>(converter, atomicUpdate,
+                                                      loc);
+          },
+          [&](const Fortran::parser::OmpAtomicCapture &atomicCapture) {
+            mlir::Location loc = converter.genLocation(atomicCapture.source);
+            Fortran::lower::genOmpAccAtomicCapture<
+                Fortran::parser::OmpAtomicCapture,
+                Fortran::parser::OmpAtomicClauseList>(converter, atomicCapture,
+                                                      loc);
+          },
+      },
+      atomicConstruct.u);
 }
 
 static void
@@ -1939,6 +2001,107 @@ genOMP(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::SymMap &symTable,
        Fortran::semantics::SemanticsContext &semaCtx,
        Fortran::lower::pft::Evaluation &eval,
+       const Fortran::parser::OpenMPExecutableAllocate &execAllocConstruct) {
+  TODO(converter.getCurrentLocation(), "OpenMPExecutableAllocate");
+}
+
+static void genOMP(Fortran::lower::AbstractConverter &converter,
+                   Fortran::lower::SymMap &symTable,
+                   Fortran::semantics::SemanticsContext &semaCtx,
+                   Fortran::lower::pft::Evaluation &eval,
+                   const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
+  const auto &beginLoopDirective =
+      std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t);
+  const auto &loopOpClauseList =
+      std::get<Fortran::parser::OmpClauseList>(beginLoopDirective.t);
+  mlir::Location currentLocation =
+      converter.genLocation(beginLoopDirective.source);
+  const auto ompDirective =
+      std::get<Fortran::parser::OmpLoopDirective>(beginLoopDirective.t).v;
+
+  const auto *endClauseList = [&]() {
+    using RetTy = const Fortran::parser::OmpClauseList *;
+    if (auto &endLoopDirective =
+            std::get<std::optional<Fortran::parser::OmpEndLoopDirective>>(
+                loopConstruct.t)) {
+      return RetTy(
+          &std::get<Fortran::parser::OmpClauseList>((*endLoopDirective).t));
+    }
+    return RetTy();
+  }();
+
+  bool validDirective = false;
+  if (llvm::omp::topTaskloopSet.test(ompDirective)) {
+    validDirective = true;
+    TODO(currentLocation, "Taskloop construct");
+  } else {
+    // Create omp.{target, teams, distribute, parallel} nested operations
+    if ((llvm::omp::allTargetSet & llvm::omp::loopConstructSet)
+            .test(ompDirective)) {
+      validDirective = true;
+      genTargetOp(converter, semaCtx, eval, /*genNested=*/false,
+                  currentLocation, loopOpClauseList, ompDirective,
+                  /*outerCombined=*/true);
+    }
+    if ((llvm::omp::allTeamsSet & llvm::omp::loopConstructSet)
+            .test(ompDirective)) {
+      validDirective = true;
+      genTeamsOp(converter, semaCtx, eval, /*genNested=*/false, currentLocation,
+                 loopOpClauseList,
+                 /*outerCombined=*/true);
+    }
+    if (llvm::omp::allDistributeSet.test(ompDirective)) {
+      validDirective = true;
+      TODO(currentLocation, "Distribute construct");
+    }
+    if ((llvm::omp::allParallelSet & llvm::omp::loopConstructSet)
+            .test(ompDirective)) {
+      validDirective = true;
+      genParallelOp(converter, symTable, semaCtx, eval, /*genNested=*/false,
+                    currentLocation, loopOpClauseList,
+                    /*outerCombined=*/true);
+    }
+  }
+  if ((llvm::omp::allDoSet | llvm::omp::allSimdSet).test(ompDirective))
+    validDirective = true;
+
+  if (!validDirective) {
+    TODO(currentLocation, "Unhandled loop directive (" +
+                              llvm::omp::getOpenMPDirectiveName(ompDirective) +
+                              ")");
+  }
+
+  if (llvm::omp::allDoSimdSet.test(ompDirective)) {
+    // 2.9.3.2 Workshare SIMD construct
+    createSimdWsloop(converter, semaCtx, eval, ompDirective, loopOpClauseList,
+                     endClauseList, currentLocation);
+
+  } else if (llvm::omp::allSimdSet.test(ompDirective)) {
+    // 2.9.3.1 SIMD construct
+    createSimdLoop(converter, semaCtx, eval, ompDirective, loopOpClauseList,
+                   currentLocation);
+    genOpenMPReduction(converter, semaCtx, loopOpClauseList);
+  } else {
+    createWsloop(converter, semaCtx, eval, ompDirective, loopOpClauseList,
+                 endClauseList, currentLocation);
+  }
+}
+
+static void
+genOMP(Fortran::lower::AbstractConverter &converter,
+       Fortran::lower::SymMap &symTable,
+       Fortran::semantics::SemanticsContext &semaCtx,
+       Fortran::lower::pft::Evaluation &eval,
+       const Fortran::parser::OpenMPSectionConstruct &sectionConstruct) {
+  // SECTION constructs are handled as a part of SECTIONS.
+  llvm_unreachable("Unexpected standalone OMP SECTION");
+}
+
+static void
+genOMP(Fortran::lower::AbstractConverter &converter,
+       Fortran::lower::SymMap &symTable,
+       Fortran::semantics::SemanticsContext &semaCtx,
+       Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPSectionsConstruct &sectionsConstruct) {
   mlir::Location currentLocation = converter.getCurrentLocation();
   llvm::SmallVector<mlir::Value> allocateOperands, allocatorOperands;
@@ -1999,98 +2162,27 @@ genOMP(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::SymMap &symTable,
        Fortran::semantics::SemanticsContext &semaCtx,
        Fortran::lower::pft::Evaluation &eval,
-       const Fortran::parser::OpenMPAtomicConstruct &atomicConstruct) {
+       const Fortran::parser::OpenMPStandaloneConstruct &standaloneConstruct) {
   std::visit(
       Fortran::common::visitors{
-          [&](const Fortran::parser::OmpAtomicRead &atomicRead) {
-            mlir::Location loc = converter.genLocation(atomicRead.source);
-            Fortran::lower::genOmpAccAtomicRead<
-                Fortran::parser::OmpAtomicRead,
-                Fortran::parser::OmpAtomicClauseList>(converter, atomicRead,
-                                                      loc);
+          [&](const Fortran::parser::OpenMPSimpleStandaloneConstruct
+                  &simpleStandaloneConstruct) {
+            genOmpSimpleStandalone(converter, semaCtx, eval,
+                                   /*genNested=*/true,
+                                   simpleStandaloneConstruct);
           },
-          [&](const Fortran::parser::OmpAtomicWrite &atomicWrite) {
-            mlir::Location loc = converter.genLocation(atomicWrite.source);
-            Fortran::lower::genOmpAccAtomicWrite<
-                Fortran::parser::OmpAtomicWrite,
-                Fortran::parser::OmpAtomicClauseList>(converter, atomicWrite,
-                                                      loc);
+          [&](const Fortran::parser::OpenMPFlushConstruct &flushConstruct) {
+            genOmpFlush(converter, semaCtx, eval, flushConstruct);
           },
-          [&](const Fortran::parser::OmpAtomic &atomicConstruct) {
-            mlir::Location loc = converter.genLocation(atomicConstruct.source);
-            Fortran::lower::genOmpAtomic<Fortran::parser::OmpAtomic,
-                                         Fortran::parser::OmpAtomicClauseList>(
-                converter, atomicConstruct, loc);
+          [&](const Fortran::parser::OpenMPCancelConstruct &cancelConstruct) {
+            TODO(converter.getCurrentLocation(), "OpenMPCancelConstruct");
           },
-          [&](const Fortran::parser::OmpAtomicUpdate &atomicUpdate) {
-            mlir::Location loc = converter.genLocation(atomicUpdate.source);
-            Fortran::lower::genOmpAccAtomicUpdate<
-                Fortran::parser::OmpAtomicUpdate,
-                Fortran::parser::OmpAtomicClauseList>(converter, atomicUpdate,
-                                                      loc);
-          },
-          [&](const Fortran::parser::OmpAtomicCapture &atomicCapture) {
-            mlir::Location loc = converter.genLocation(atomicCapture.source);
-            Fortran::lower::genOmpAccAtomicCapture<
-                Fortran::parser::OmpAtomicCapture,
-                Fortran::parser::OmpAtomicClauseList>(converter, atomicCapture,
-                                                      loc);
+          [&](const Fortran::parser::OpenMPCancellationPointConstruct
+                  &cancellationPointConstruct) {
+            TODO(converter.getCurrentLocation(), "OpenMPCancelConstruct");
           },
       },
-      atomicConstruct.u);
-}
-
-static void
-markDeclareTarget(mlir::Operation *op,
-                  Fortran::lower::AbstractConverter &converter,
-                  mlir::omp::DeclareTargetCaptureClause captureClause,
-                  mlir::omp::DeclareTargetDeviceType deviceType) {
-  // TODO: Add support for program local variables with declare target applied
-  auto declareTargetOp = llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(op);
-  if (!declareTargetOp)
-    fir::emitFatalError(
-        converter.getCurrentLocation(),
-        "Attempt to apply declare target on unsupported operation");
-
-  // The function or global already has a declare target applied to it, very
-  // likely through implicit capture (usage in another declare target
-  // function/subroutine). It should be marked as any if it has been assigned
-  // both host and nohost, else we skip, as there is no change
-  if (declareTargetOp.isDeclareTarget()) {
-    if (declareTargetOp.getDeclareTargetDeviceType() != deviceType)
-      declareTargetOp.setDeclareTarget(mlir::omp::DeclareTargetDeviceType::any,
-                                       captureClause);
-    return;
-  }
-
-  declareTargetOp.setDeclareTarget(deviceType, captureClause);
-}
-
-static void genOMP(Fortran::lower::AbstractConverter &converter,
-                   Fortran::lower::SymMap &symTable,
-                   Fortran::semantics::SemanticsContext &semaCtx,
-                   Fortran::lower::pft::Evaluation &eval,
-                   const Fortran::parser::OpenMPDeclareTargetConstruct
-                       &declareTargetConstruct) {
-  llvm::SmallVector<DeclareTargetCapturePair> symbolAndClause;
-  mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
-  mlir::omp::DeclareTargetDeviceType deviceType = getDeclareTargetInfo(
-      converter, semaCtx, eval, declareTargetConstruct, symbolAndClause);
-
-  for (const DeclareTargetCapturePair &symClause : symbolAndClause) {
-    mlir::Operation *op = mod.lookupSymbol(converter.mangleName(
-        std::get<const Fortran::semantics::Symbol &>(symClause)));
-
-    // Some symbols are deferred until later in the module, these are handled
-    // upon finalization of the module for OpenMP inside of Bridge, so we simply
-    // skip for now.
-    if (!op)
-      continue;
-
-    markDeclareTarget(
-        op, converter,
-        std::get<mlir::omp::DeclareTargetCaptureClause>(symClause), deviceType);
-  }
+      standaloneConstruct.u);
 }
 
 static void genOMP(Fortran::lower::AbstractConverter &converter,
@@ -2099,86 +2191,8 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
                    Fortran::lower::pft::Evaluation &eval,
                    const Fortran::parser::OpenMPConstruct &ompConstruct) {
   std::visit(
-      Fortran::common::visitors{
-          [&](const Fortran::parser::OpenMPStandaloneConstruct
-                  &standaloneConstruct) {
-            genOMP(converter, symTable, semaCtx, eval, standaloneConstruct);
-          },
-          [&](const Fortran::parser::OpenMPSectionsConstruct
-                  &sectionsConstruct) {
-            genOMP(converter, symTable, semaCtx, eval, sectionsConstruct);
-          },
-          [&](const Fortran::parser::OpenMPSectionConstruct &sectionConstruct) {
-            // SECTION constructs are handled as a part of SECTIONS.
-            llvm_unreachable("Unexpected standalone OMP SECTION");
-          },
-          [&](const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
-            genOMP(converter, symTable, semaCtx, eval, loopConstruct);
-          },
-          [&](const Fortran::parser::OpenMPDeclarativeAllocate
-                  &execAllocConstruct) {
-            TODO(converter.getCurrentLocation(), "OpenMPDeclarativeAllocate");
-          },
-          [&](const Fortran::parser::OpenMPExecutableAllocate
-                  &execAllocConstruct) {
-            TODO(converter.getCurrentLocation(), "OpenMPExecutableAllocate");
-          },
-          [&](const Fortran::parser::OpenMPAllocatorsConstruct
-                  &allocsConstruct) {
-            TODO(converter.getCurrentLocation(), "OpenMPAllocatorsConstruct");
-          },
-          [&](const Fortran::parser::OpenMPBlockConstruct &blockConstruct) {
-            genOMP(converter, symTable, semaCtx, eval, blockConstruct);
-          },
-          [&](const Fortran::parser::OpenMPAtomicConstruct &atomicConstruct) {
-            genOMP(converter, symTable, semaCtx, eval, atomicConstruct);
-          },
-          [&](const Fortran::parser::OpenMPCriticalConstruct
-                  &criticalConstruct) {
-            genOMP(converter, symTable, semaCtx, eval, criticalConstruct);
-          },
-      },
+      [&](auto &&s) { return genOMP(converter, symTable, semaCtx, eval, s); },
       ompConstruct.u);
-}
-
-static void
-genOMP(Fortran::lower::AbstractConverter &converter,
-       Fortran::lower::SymMap &symTable,
-       Fortran::semantics::SemanticsContext &semaCtx,
-       Fortran::lower::pft::Evaluation &eval,
-       const Fortran::parser::OpenMPDeclarativeConstruct &ompDeclConstruct) {
-  std::visit(
-      Fortran::common::visitors{
-          [&](const Fortran::parser::OpenMPDeclarativeAllocate
-                  &declarativeAllocate) {
-            TODO(converter.getCurrentLocation(), "OpenMPDeclarativeAllocate");
-          },
-          [&](const Fortran::parser::OpenMPDeclareReductionConstruct
-                  &declareReductionConstruct) {
-            TODO(converter.getCurrentLocation(),
-                 "OpenMPDeclareReductionConstruct");
-          },
-          [&](const Fortran::parser::OpenMPDeclareSimdConstruct
-                  &declareSimdConstruct) {
-            TODO(converter.getCurrentLocation(), "OpenMPDeclareSimdConstruct");
-          },
-          [&](const Fortran::parser::OpenMPDeclareTargetConstruct
-                  &declareTargetConstruct) {
-            genOMP(converter, symTable, semaCtx, eval, declareTargetConstruct);
-          },
-          [&](const Fortran::parser::OpenMPRequiresConstruct
-                  &requiresConstruct) {
-            // Requires directives are gathered and processed in semantics and
-            // then combined in the lowering bridge before triggering codegen
-            // just once. Hence, there is no need to lower each individual
-            // occurrence here.
-          },
-          [&](const Fortran::parser::OpenMPThreadprivate &threadprivate) {
-            // The directive is lowered when instantiating the variable to
-            // support the case of threadprivate variable declared in module.
-          },
-      },
-      ompDeclConstruct.u);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2343,8 +2357,11 @@ void Fortran::lower::genOpenMPReduction(
   for (const Clause &clause : clauses) {
     if (const auto &reductionClause =
             std::get_if<clause::Reduction>(&clause.u)) {
-      const auto &redOperator{
-          std::get<clause::ReductionOperator>(reductionClause->t)};
+      const auto &redOperatorList{
+          std::get<clause::Reduction::ReductionIdentifiers>(
+              reductionClause->t)};
+      assert(redOperatorList.size() == 1 && "Expecting single operator");
+      const auto &redOperator = redOperatorList.front();
       const auto &objects{std::get<ObjectList>(reductionClause->t)};
       if (const auto *reductionOp =
               std::get_if<clause::DefinedOperator>(&redOperator.u)) {

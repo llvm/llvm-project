@@ -94,6 +94,14 @@ public:
     DT.add(Arg, MF, R);
   }
 
+  void add(const MachineInstr *MI, MachineFunction *MF, Register R) {
+    DT.add(MI, MF, R);
+  }
+
+  Register find(const MachineInstr *MI, MachineFunction *MF) {
+    return DT.find(MI, MF);
+  }
+
   Register find(const Constant *C, MachineFunction *MF) {
     return DT.find(C, MF);
   }
