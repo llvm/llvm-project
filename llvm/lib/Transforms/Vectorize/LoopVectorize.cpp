@@ -9111,42 +9111,11 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
          "Not a pointer induction according to InductionDescriptor!");
   assert(cast<PHINode>(getUnderlyingInstr())->getType()->isPointerTy() &&
          "Unexpected type.");
+  assert(!onlyScalarsGenerated(State.VF.isScalable()) &&
+         "Recipe should have been replaced");
 
   auto *IVR = getParent()->getPlan()->getCanonicalIV();
   PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, 0, /*IsScalar*/ true));
-
-  if (onlyScalarsGenerated(State.VF.isScalable())) {
-    // This is the normalized GEP that starts counting at zero.
-    Value *PtrInd = State.Builder.CreateSExtOrTrunc(
-        CanonicalIV, IndDesc.getStep()->getType());
-    // Determine the number of scalars we need to generate for each unroll
-    // iteration. If the instruction is uniform, we only need to generate the
-    // first lane. Otherwise, we generate all VF values.
-    bool IsUniform = vputils::onlyFirstLaneUsed(this);
-    assert((IsUniform || !State.VF.isScalable()) &&
-           "Cannot scalarize a scalable VF");
-    unsigned Lanes = IsUniform ? 1 : State.VF.getFixedValue();
-
-    for (unsigned Part = 0; Part < State.UF; ++Part) {
-      Value *PartStart =
-          createStepForVF(State.Builder, PtrInd->getType(), State.VF, Part);
-
-      for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
-        Value *Idx = State.Builder.CreateAdd(
-            PartStart, ConstantInt::get(PtrInd->getType(), Lane));
-        Value *GlobalIdx = State.Builder.CreateAdd(PtrInd, Idx);
-
-        Value *Step = State.get(getOperand(1), VPIteration(Part, Lane));
-        Value *SclrGep = emitTransformedIndex(
-            State.Builder, GlobalIdx, IndDesc.getStartValue(), Step,
-            IndDesc.getKind(), IndDesc.getInductionBinOp());
-        SclrGep->setName("next.gep");
-        State.set(this, SclrGep, VPIteration(Part, Lane));
-      }
-    }
-    return;
-  }
-
   Type *PhiType = IndDesc.getStep()->getType();
 
   // Build a pointer phi
