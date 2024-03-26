@@ -54,7 +54,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     The "create_nd_tdesc" operation creates a TensorDescType which represents
     a sub-view of a 2D memory region (It can be extended to support n-D memory
     region if needed in future). Elements in the subview continuous in each
-    dimention. It encodes the following important information for supporting
+    dimension. It encodes the following important information for supporting
     Intel hardware features:
 
     * source: an object representing (starting address/pointer of) a 2D memory region.
