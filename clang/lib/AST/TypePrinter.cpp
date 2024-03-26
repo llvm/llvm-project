@@ -2303,11 +2303,6 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     } else {
       if (!FirstArg)
         OS << Comma;
-      if (!Policy.SuppressTagKeyword &&
-          Argument.getKind() == TemplateArgument::Type &&
-          isa<TagType>(Argument.getAsType()))
-        OS << Argument.getAsType().getAsString();
-      else
         // Tries to print the argument with location info if exists.
         printArgument(Arg, Policy, ArgOS,
                       TemplateParameterList::shouldIncludeTypeForArgument(
