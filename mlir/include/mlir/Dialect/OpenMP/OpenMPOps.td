@@ -287,7 +287,8 @@ def ParallelOp : OpenMP_Op<"parallel", [
   let regions = (region AnyRegion:$region);
 
   let builders = [
-    OpBuilder<(ins CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
+    OpBuilder<(ins CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins CArg<"const ParallelClauseOps &">:$clauses)>
   ];
   let extraClassDeclaration = [{
     /// Returns the number of reduction variables.
@@ -361,6 +362,10 @@ def TeamsOp : OpenMP_Op<"teams", [
                        OptionalAttr<SymbolRefArrayAttr>:$reductions);
 
   let regions = (region AnyRegion:$region);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const TeamsClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = [{
     oilist(
@@ -451,6 +456,10 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments,
 
   let regions = (region SizedRegion<1>:$region);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const SectionsClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist( `reduction` `(`
               custom<ReductionVarList>(
@@ -494,6 +503,10 @@ def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
                        UnitAttr:$nowait);
 
   let regions = (region AnyRegion:$region);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const SingleClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = [{
     oilist(`allocate` `(`
@@ -601,6 +614,7 @@ def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     OpBuilder<(ins "ValueRange":$lowerBound, "ValueRange":$upperBound,
                "ValueRange":$step,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins CArg<"const WsloopClauseOps &">:$clauses)>
   ];
 
   let regions = (region AnyRegion:$region);
@@ -698,6 +712,11 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
      );
 
   let regions = (region AnyRegion:$region);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const SimdLoopClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist(`aligned` `(`
               custom<AlignedClause>($aligned_vars, type($aligned_vars),
@@ -780,6 +799,10 @@ def DistributeOp : OpenMP_Op<"distribute", [AttrSizedOperandSegments,
              OptionalAttr<OrderKindAttr>:$order_val);
 
   let regions = (region AnyRegion:$region);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const DistributeClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = [{
     oilist(`dist_schedule_static` $dist_schedule_static
@@ -883,6 +906,9 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
                        Variadic<AnyType>:$allocate_vars,
                        Variadic<AnyType>:$allocators_vars);
   let regions = (region AnyRegion:$region);
+  let builders = [
+    OpBuilder<(ins CArg<"const TaskClauseOps &">:$clauses)>
+  ];
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `)`
           |`final` `(` $final_expr `)`
@@ -1037,6 +1063,10 @@ def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
 
   let regions = (region AnyRegion:$region);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const TaskloopClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `)`
           |`final` `(` $final_expr `)`
@@ -1105,6 +1135,10 @@ def TaskgroupOp : OpenMP_Op<"taskgroup", [AttrSizedOperandSegments,
                        Variadic<AnyType>:$allocators_vars);
 
   let regions = (region AnyRegion:$region);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const TaskgroupClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = [{
     oilist(`task_reduction` `(`
@@ -1432,6 +1466,10 @@ def TargetDataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments,
 
   let regions = (region AnyRegion:$region);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const TargetDataClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
     | `device` `(` $device `:` type($device) `)`
@@ -1486,6 +1524,10 @@ def TargetEnterDataOp: OpenMP_Op<"target_enter_data",
                        UnitAttr:$nowait,
                        Variadic<AnyType>:$map_operands);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const TargetEnterExitUpdateDataClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
     | `device` `(` $device `:` type($device) `)`
@@ -1539,6 +1581,10 @@ def TargetExitDataOp: OpenMP_Op<"target_exit_data",
                        Variadic<OpenMP_PointerLikeType>:$depend_vars,
                        UnitAttr:$nowait,
                        Variadic<AnyType>:$map_operands);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const TargetEnterExitUpdateDataClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
@@ -1596,6 +1642,10 @@ def TargetUpdateOp: OpenMP_Op<"target_update", [AttrSizedOperandSegments,
                        UnitAttr:$nowait,
                        Variadic<OpenMP_PointerLikeType>:$map_operands);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const TargetEnterExitUpdateDataClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
     | `device` `(` $device `:` type($device) `)`
@@ -1649,6 +1699,10 @@ def TargetOp : OpenMP_Op<"target", [IsolatedFromAbove, MapClauseOwningOpInterfac
 
   let regions = (region AnyRegion:$region);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const TargetClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist( `if` `(` $if_expr `)`
     | `device` `(` $device `:` type($device) `)`
@@ -1692,6 +1746,10 @@ def CriticalDeclareOp : OpenMP_Op<"critical.declare", [Symbol]> {
 
   let arguments = (ins SymbolNameAttr:$sym_name,
                        DefaultValuedAttr<I64Attr, "0">:$hint_val);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const CriticalClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = [{
     $sym_name oilist(`hint` `(` custom<SynchronizationHint>($hint_val) `)`)
@@ -1773,6 +1831,10 @@ def OrderedOp : OpenMP_Op<"ordered"> {
              ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$num_loops_val,
              Variadic<AnyType>:$depend_vec_vars);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const OrderedOpClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     ( `depend_type` `` $depend_type_val^ )?
     ( `depend_vec` `(` $depend_vec_vars^ `:` type($depend_vec_vars) `)` )?
@@ -1797,6 +1859,10 @@ def OrderedRegionOp : OpenMP_Op<"ordered.region"> {
 
   let regions = (region AnyRegion:$region);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const OrderedRegionClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{ ( `simd` $simd^ )? $region attr-dict}];
   let hasVerifier = 1;
 }
@@ -1811,6 +1877,10 @@ def TaskwaitOp : OpenMP_Op<"taskwait"> {
     The taskwait construct specifies a wait on the completion of child tasks
     of the current task.
   }];
+
+  let builders = [
+    OpBuilder<(ins CArg<"const TaskwaitClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = "attr-dict";
 }
