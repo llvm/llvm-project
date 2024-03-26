@@ -12,6 +12,7 @@
 
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
@@ -8666,14 +8667,32 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
   if (VT.isVector() && !canExpandVectorCTPOP(*this, VT))
     return SDValue();
 
+  const auto &TLI = DAG.getTargetLoweringInfo();
+  const auto &TTI = TLI.getTargetMachine().getTargetTransformInfo(
+      DAG.getMachineFunction().getFunction());
+  Type *VTTy = VT.getScalarType().getTypeForEVT(*DAG.getContext());
+
   // This is the "best" algorithm from
   // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
-  SDValue Mask55 =
-      DAG.getConstant(APInt::getSplat(Len, APInt(8, 0x55)), dl, VT);
+  // 0x0F0F0F0F...
+  const APInt &Constant0F = APInt::getSplat(Len, APInt(8, 0x0F));
+  SDValue Mask0F = DAG.getConstant(Constant0F, dl, VT);
+  // 0x33333333... = (0x0F0F0F0F... ^ (0x0F0F0F0F... << 2))
+  const APInt &Constant33 = APInt::getSplat(Len, APInt(8, 0x33));
   SDValue Mask33 =
-      DAG.getConstant(APInt::getSplat(Len, APInt(8, 0x33)), dl, VT);
-  SDValue Mask0F =
-      DAG.getConstant(APInt::getSplat(Len, APInt(8, 0x0F)), dl, VT);
+      TTI.getIntImmCost(Constant33, VTTy, TargetTransformInfo::TCK_Latency) > 2
+          ? DAG.getNode(ISD::XOR, dl, VT, Mask0F,
+                        DAG.getNode(ISD::SHL, dl, VT, Mask0F,
+                                    DAG.getShiftAmountConstant(2, VT, dl)))
+          : DAG.getConstant(Constant33, dl, VT);
+  // 0x55555555... = (0x33333333... ^ (0x33333333... << 1))
+  const APInt &Constant55 = APInt::getSplat(Len, APInt(8, 0x55));
+  SDValue Mask55 =
+      TTI.getIntImmCost(Constant55, VTTy, TargetTransformInfo::TCK_Latency) > 2
+          ? DAG.getNode(ISD::XOR, dl, VT, Mask33,
+                        DAG.getNode(ISD::SHL, dl, VT, Mask33,
+                                    DAG.getShiftAmountConstant(1, VT, dl)))
+          : DAG.getConstant(Constant55, dl, VT);
 
   // v = v - ((v >> 1) & 0x55555555...)
   Op = DAG.getNode(ISD::SUB, dl, VT, Op,
@@ -8710,8 +8729,14 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
   }
 
   // v = (v * 0x01010101...) >> (Len - 8)
+  // 0x01010101... == (0x0F0F0F0F... & (0x0F0F0F0F... >> 3))
+  const APInt &Constant01 = APInt::getSplat(Len, APInt(8, 0x01));
   SDValue Mask01 =
-      DAG.getConstant(APInt::getSplat(Len, APInt(8, 0x01)), dl, VT);
+      TTI.getIntImmCost(Constant01, VTTy, TargetTransformInfo::TCK_Latency) > 2
+          ? DAG.getNode(ISD::AND, dl, VT, Mask0F,
+                        DAG.getNode(ISD::SRL, dl, VT, Mask0F,
+                                    DAG.getShiftAmountConstant(3, VT, dl)))
+          : DAG.getConstant(Constant01, dl, VT);
   return DAG.getNode(ISD::SRL, dl, VT,
                      DAG.getNode(ISD::MUL, dl, VT, Op, Mask01),
                      DAG.getConstant(Len - 8, dl, ShVT));
@@ -8731,14 +8756,36 @@ SDValue TargetLowering::expandVPCTPOP(SDNode *Node, SelectionDAG &DAG) const {
   if (!(Len <= 128 && Len % 8 == 0))
     return SDValue();
 
+  const auto &TLI = DAG.getTargetLoweringInfo();
+  const auto &TTI = TLI.getTargetMachine().getTargetTransformInfo(
+      DAG.getMachineFunction().getFunction());
+  Type *VTTy = VT.getScalarType().getTypeForEVT(*DAG.getContext());
+
   // This is same algorithm of expandCTPOP from
   // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
-  SDValue Mask55 =
-      DAG.getConstant(APInt::getSplat(Len, APInt(8, 0x55)), dl, VT);
+  // 0x0F0F0F0F...
+  const APInt &Constant0F = APInt::getSplat(Len, APInt(8, 0x0F));
+  SDValue Mask0F = DAG.getConstant(Constant0F, dl, VT);
+  // 0x33333333... = (0x0F0F0F0F... ^ (0x0F0F0F0F... << 2))
+  const APInt &Constant33 = APInt::getSplat(Len, APInt(8, 0x33));
   SDValue Mask33 =
-      DAG.getConstant(APInt::getSplat(Len, APInt(8, 0x33)), dl, VT);
-  SDValue Mask0F =
-      DAG.getConstant(APInt::getSplat(Len, APInt(8, 0x0F)), dl, VT);
+      TTI.getIntImmCost(Constant33, VTTy, TargetTransformInfo::TCK_Latency) > 2
+          ? DAG.getNode(ISD::VP_XOR, dl, VT, Mask0F,
+                        DAG.getNode(ISD::VP_SHL, dl, VT, Mask0F,
+                                    DAG.getShiftAmountConstant(2, VT, dl), Mask,
+                                    VL),
+                        Mask, VL)
+          : DAG.getConstant(Constant33, dl, VT);
+  // 0x55555555... = (0x33333333... ^ (0x33333333... << 1))
+  const APInt &Constant55 = APInt::getSplat(Len, APInt(8, 0x55));
+  SDValue Mask55 =
+      TTI.getIntImmCost(Constant55, VTTy, TargetTransformInfo::TCK_Latency) > 2
+          ? DAG.getNode(ISD::VP_XOR, dl, VT, Mask33,
+                        DAG.getNode(ISD::VP_SHL, dl, VT, Mask33,
+                                    DAG.getShiftAmountConstant(1, VT, dl), Mask,
+                                    VL),
+                        Mask, VL)
+          : DAG.getConstant(Constant55, dl, VT);
 
   SDValue Tmp1, Tmp2, Tmp3, Tmp4, Tmp5;
 
@@ -8767,8 +8814,16 @@ SDValue TargetLowering::expandVPCTPOP(SDNode *Node, SelectionDAG &DAG) const {
     return Op;
 
   // v = (v * 0x01010101...) >> (Len - 8)
+  // 0x01010101... == (0x0F0F0F0F... & (0x0F0F0F0F... >> 3))
+  const APInt &Constant01 = APInt::getSplat(Len, APInt(8, 0x01));
   SDValue Mask01 =
-      DAG.getConstant(APInt::getSplat(Len, APInt(8, 0x01)), dl, VT);
+      TTI.getIntImmCost(Constant01, VTTy, TargetTransformInfo::TCK_Latency) > 2
+          ? DAG.getNode(ISD::VP_AND, dl, VT, Mask0F,
+                        DAG.getNode(ISD::VP_LSHR, dl, VT, Mask0F,
+                                    DAG.getShiftAmountConstant(3, VT, dl), Mask,
+                                    VL),
+                        Mask, VL)
+          : DAG.getConstant(Constant01, dl, VT);
   return DAG.getNode(ISD::VP_LSHR, dl, VT,
                      DAG.getNode(ISD::VP_MUL, dl, VT, Op, Mask01, Mask, VL),
                      DAG.getConstant(Len - 8, dl, ShVT), Mask, VL);
