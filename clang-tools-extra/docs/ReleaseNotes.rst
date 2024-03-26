@@ -201,6 +201,9 @@ Changes in existing checks
   <clang-tidy/checks/google/global-names-in-headers>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
 
+- Improved :doc:`google-runtime-int <clang-tidy/checks/google/runtime-int>`
+  check performance through optimizations.
+
 - Improved :doc:`llvm-header-guard
   <clang-tidy/checks/llvm/header-guard>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
