@@ -86,9 +86,12 @@ template <> struct IRTraits<BasicBlock> {
 // SampleProfileProber.
 class PseudoProbeManager {
   DenseMap<uint64_t, PseudoProbeDescriptor> GUIDToProbeDescMap;
+  const ThinOrFullLTOPhase LTOPhase;
 
 public:
-  PseudoProbeManager(const Module &M) {
+  PseudoProbeManager(const Module &M,
+                     ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None)
+      : LTOPhase(LTOPhase) {
     if (NamedMDNode *FuncInfo =
             M.getNamedMetadata(PseudoProbeDescMetadataName)) {
       for (const auto *Operand : FuncInfo->operands()) {
@@ -126,6 +129,12 @@ public:
 
   bool profileIsValid(const Function &F, const FunctionSamples &Samples) const {
     const auto *Desc = getDesc(F);
+    assert(!(LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink && Desc &&
+             profileIsHashMismatched(*Desc, Samples) &&
+             !F.hasFnAttribute("profile-checksum-mismatch")) &&
+           "The profile's checksum is mismatched in post-link but the function "
+           "doesn't have 'profile-checksum-mismatch' attribute, which should "
+           "be set in pre-link.");
     // The desc for import function is unavailable. Check the function attribute
     // for mismatch.
     return (!Desc && !F.hasFnAttribute("profile-checksum-mismatch")) ||
