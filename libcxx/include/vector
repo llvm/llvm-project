@@ -356,6 +356,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__utility/pair.h>
 #include <__utility/swap.h>
 #include <climits>
+#include <contracts>
 #include <cstring>
 #include <iosfwd> // for forward declaration of vector
 #include <limits>
@@ -611,19 +612,19 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reference at(size_type __n) const;
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reference front() _NOEXCEPT {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "front() called on an empty vector");
+    __pre__(!empty(), "front() called on an empty vector");
     return *this->__begin_;
   }
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reference front() const _NOEXCEPT {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "front() called on an empty vector");
+    __pre__(!empty(), "front() called on an empty vector");
     return *this->__begin_;
   }
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reference back() _NOEXCEPT {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "back() called on an empty vector");
+    __pre__(!empty(), "back() called on an empty vector");
     return *(this->__end_ - 1);
   }
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reference back() const _NOEXCEPT {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "back() called on an empty vector");
+    __pre__(!empty(), "back() called on an empty vector");
     return *(this->__end_ - 1);
   }
 
@@ -1408,14 +1409,14 @@ vector<_Tp, _Allocator>::end() const _NOEXCEPT {
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::reference
 vector<_Tp, _Allocator>::operator[](size_type __n) _NOEXCEPT {
-  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < size(), "vector[] index out of bounds");
+  __pre__(__n < size(), "vector[] index out of bounds");
   return this->__begin_[__n];
 }
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::const_reference
 vector<_Tp, _Allocator>::operator[](size_type __n) const _NOEXCEPT {
-  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < size(), "vector[] index out of bounds");
+  __pre__(__n < size(), "vector[] index out of bounds");
   return this->__begin_[__n];
 }
 
@@ -1536,15 +1537,14 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 inline
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline void vector<_Tp, _Allocator>::pop_back() {
-  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "vector::pop_back called on an empty vector");
+  __pre__(!empty(), "vector::pop_back called on an empty vector");
   this->__destruct_at_end(this->__end_ - 1);
 }
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::erase(const_iterator __position) {
-  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-      __position != end(), "vector::erase(iterator) called with a non-dereferenceable iterator");
+  __pre__(__position != end(), "vector::erase(iterator) called with a non-dereferenceable iterator");
   difference_type __ps = __position - cbegin();
   pointer __p          = this->__begin_ + __ps;
   this->__destruct_at_end(std::move(__p + 1, this->__end_, __p));
@@ -1554,7 +1554,7 @@ vector<_Tp, _Allocator>::erase(const_iterator __position) {
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::erase(const_iterator __first, const_iterator __last) {
-  _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "vector::erase(first, last) called with invalid range");
+  __pre__(__first <= __last, "vector::erase(first, last) called with invalid range");
   pointer __p = this->__begin_ + (__first - begin());
   if (__first != __last) {
     this->__destruct_at_end(std::move(__p + (__last - __first), this->__end_, __p));
@@ -1786,8 +1786,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::swap(vector& __x)
     _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable<allocator_type>::value)
 #endif
 {
-  _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
-      __alloc_traits::propagate_on_container_swap::value || this->__alloc() == __x.__alloc(),
+  __pre__(__alloc_traits::propagate_on_container_swap::value || this->__alloc() == __x.__alloc(),
       "vector::swap: Either propagate_on_container_swap must be true"
       " or the allocators must compare equal");
   std::swap(this->__begin_, __x.__begin_);
@@ -2583,7 +2582,7 @@ template <class _Allocator>
 template <class _ForwardIterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
 vector<bool, _Allocator>::__assign_with_size(_ForwardIterator __first, _Sentinel __last, difference_type __ns) {
-  _LIBCPP_ASSERT_VALID_INPUT_RANGE(__ns >= 0, "invalid range specified");
+  __pre__(__ns >= 0, "invalid range specified");
 
   clear();
 
@@ -2741,7 +2740,7 @@ template <class _ForwardIterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<bool, _Allocator>::iterator
 vector<bool, _Allocator>::__insert_with_size(
     const_iterator __position, _ForwardIterator __first, _Sentinel __last, difference_type __n_signed) {
-  _LIBCPP_ASSERT_VALID_INPUT_RANGE(__n_signed >= 0, "invalid range specified");
+  __pre__(__n_signed >= 0, "invalid range specified");
   const size_type __n = static_cast<size_type>(__n_signed);
   iterator __r;
   size_type __c = capacity();

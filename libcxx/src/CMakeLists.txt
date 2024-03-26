@@ -8,6 +8,7 @@ set(LIBCXX_SOURCES
   call_once.cpp
   charconv.cpp
   chrono.cpp
+  contracts.cpp
   error_category.cpp
   exception.cpp
   filesystem/filesystem_clock.cpp
