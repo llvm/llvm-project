@@ -334,6 +334,54 @@ let Predicates = [In64BitMode] in {
   def IMUL32rmi_EVEX  : IMulOpMI_RF<Xi32, WriteIMul32Imm>, PL;
   def IMUL64rmi32_EVEX : IMulOpMI_RF<Xi64, WriteIMul64Imm>, PL;
 }
+
+// IMULZU instructions
+let Defs = [EFLAGS], ForceDisassemble = 1, OpEnc = EncEVEX, hasSideEffects = 0,
+  Predicates = [HasEGPR, In64BitMode] in {
+  let SchedRW = [WriteIMul16Imm] in {
+  def IMULZU16rri8 : BinOpRI8<0x6B, "imulzu", binop_ndd_args, Xi16, MRMSrcReg,
+                     (outs GR16:$dst)>, T_MAP4, PD, EVEX_B;
+  let Opcode = 0x6B, mayLoad = 1 in {
+  def IMULZU16rmi8 : BinOpMI8<"imulzu", binop_ndd_args, Xi16, MRMSrcMem,
+                     (outs GR16:$dst)>, T_MAP4, PD, EVEX_B;
+  }
+  def IMULZU16rri : BinOpRI<0x69, "imulzu", binop_ndd_args, Xi16, MRMSrcReg,
+                     (outs GR16:$dst), []>, T_MAP4, PD, EVEX_B;
+  let mayLoad = 1 in {
+  def IMULZU16rmi : BinOpMI<0x69, "imulzu", binop_ndd_args, Xi16, MRMSrcMem,
+                     (outs GR16:$dst), []>, T_MAP4, PD, EVEX_B;
+  }
+  }
+  let SchedRW = [WriteIMul32Imm] in {
+  def IMULZU32rri8 : BinOpRI8<0x6B, "imulzu", binop_ndd_args, Xi32, MRMSrcReg,
+                     (outs GR32:$dst)>, T_MAP4, PS, EVEX_B;
+  let Opcode = 0x6B, mayLoad = 1  in {
+  def IMULZU32rmi8 : BinOpMI8<"imulzu", binop_ndd_args, Xi32, MRMSrcMem,
+                     (outs GR32:$dst)>, T_MAP4, PS, EVEX_B;
+  }
+  def IMULZU32rri : BinOpRI<0x69, "imulzu", binop_ndd_args, Xi32, MRMSrcReg,
+                     (outs GR32:$dst), []>, T_MAP4, PS, EVEX_B;
+  let mayLoad = 1 in {
+  def IMULZU32rmi : BinOpMI<0x69, "imulzu", binop_ndd_args, Xi32, MRMSrcMem,
+                     (outs GR32:$dst), []>, T_MAP4, PS, EVEX_B;
+  }
+  }
+  let SchedRW = [WriteIMul64Imm] in {
+  def IMULZU64rri8 : BinOpRI8<0x6B, "imulzu", binop_ndd_args, Xi64, MRMSrcReg,
+                     (outs GR64:$dst)>, T_MAP4, PS, EVEX_B, REX_W;
+  let Opcode = 0x6B, mayLoad = 1  in {
+  def IMULZU64rmi8 : BinOpMI8<"imulzu", binop_ndd_args, Xi64, MRMSrcMem,
+                     (outs GR64:$dst)>, T_MAP4, PS, EVEX_B, REX_W;
+  }
+  def IMULZU64rri32 : BinOpRI<0x69, "imulzu", binop_ndd_args, Xi64, MRMSrcReg,
+                     (outs GR64:$dst), []>, T_MAP4, PS, EVEX_B, REX_W;
+  let mayLoad = 1 in {
+  def IMULZU64rmi32 : BinOpMI<0x69, "imulzu", binop_ndd_args, Xi64, MRMSrcMem,
+                     (outs GR64:$dst), []>, T_MAP4, PS, EVEX_B, REX_W;
+  }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // INC and DEC Instructions
 //
