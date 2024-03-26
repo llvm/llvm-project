@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-using %t -- -- -I %S/Inputs/use-using/
+// RUN: %check_clang_tidy %s modernize-use-using %t -- -- -fno-delayed-template-parsing -I %S/Inputs/use-using/
 
 typedef int Type;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
@@ -341,4 +341,45 @@ typedef int InExternCPP;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
 // CHECK-FIXES: using InExternCPP = int;
 
+}
+
+namespace ISSUE_72179
+{  
+  void foo()
+  {
+    typedef int a;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'using' instead of 'typedef' [modernize-use-using]
+    // CHECK-FIXES: using a = int;
+
+  }
+
+  void foo2()
+  {
+    typedef struct { int a; union { int b; }; } c;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'using' instead of 'typedef' [modernize-use-using]
+    // CHECK-FIXES: using c = struct { int a; union { int b; }; };
+  }
+
+  template <typename T>
+  void foo3()
+  {
+    typedef T b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'using' instead of 'typedef' [modernize-use-using]
+    // CHECK-FIXES: using b = T;
+  }
+
+  template <typename T>
+  class MyClass
+  {
+    void foo()
+    {
+      typedef MyClass c;
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use 'using' instead of 'typedef' [modernize-use-using]
+      // CHECK-FIXES: using c = MyClass;
+    }
+  };
+
+  const auto foo4 = [](int a){typedef int d;};
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-FIXES: const auto foo4 = [](int a){using d = int;};
 }
