@@ -287,7 +287,7 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
     return;
 
   SmallVector<uint32_t, 2> Weights;
-  extractFromBranchWeightMD(WeightMD, Weights);
+  extractFromBranchWeightMD32(WeightMD, Weights);
   if (Weights.size() != 2)
     return;
   uint32_t OrigLoopExitWeight = Weights[0];
@@ -380,13 +380,13 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
       SuccsSwapped ? LoopBackWeight : ExitWeight1,
       SuccsSwapped ? ExitWeight1 : LoopBackWeight,
   };
-  setBranchWeights(LoopBI, LoopBIWeights);
+  setBranchWeights(LoopBI, LoopBIWeights, /*IsExpected=*/false);
   if (HasConditionalPreHeader) {
     const uint32_t PreHeaderBIWeights[] = {
         SuccsSwapped ? EnterWeight : ExitWeight0,
         SuccsSwapped ? ExitWeight0 : EnterWeight,
     };
-    setBranchWeights(PreHeaderBI, PreHeaderBIWeights);
+    setBranchWeights(PreHeaderBI, PreHeaderBIWeights, /*IsExpected=*/false);
   }
 }
 
