@@ -5143,6 +5143,10 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   case UTT_IsFloatingPoint:
     return T->isFloatingType();
   case UTT_IsArray:
+    // zero-sized arrays aren't considered arrays in partial specializations,
+    // so __is_array shouldn't consider them arrays either.
+    if (const auto* CAT = C.getAsConstantArrayType(T))
+      return CAT->getSize() != 0;
     return T->isArrayType();
   case UTT_IsBoundedArray:
     if (!T->isVariableArrayType()) {
