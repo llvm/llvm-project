@@ -152,8 +152,8 @@ void verifyMisExpect(Instruction &I, ArrayRef<uint32_t> RealWeights,
       LikelyBranchWeight + (UnlikelyBranchWeight * NumUnlikelyTargets);
 
   // Failing this assert means that we have corrupted metadata.
-  assert((TotalBranchWeight >= LikelyBranchWeight) && (TotalBranchWeight > 0)
-               && "TotalBranchWeight is less than the Likely branch weight");
+  assert((TotalBranchWeight >= LikelyBranchWeight) && (TotalBranchWeight > 0) &&
+         "TotalBranchWeight is less than the Likely branch weight");
 
   // To determine our threshold value we need to obtain the branch probability
   // for the weights added by llvm.expect and use that proportion to calculate
@@ -185,7 +185,7 @@ void checkBackendInstrumentation(Instruction &I,
   // times, leading to an invalid assumption in our checking. Backend checks
   // should only operate on branch weights that carry the "!expected" field,
   // since they are guaranteed to be added by the LowerExpectIntrinsic pass.
-  if(!hasExpectedProvenance(I))
+  if (!hasExpectedProvenance(I))
     return;
   SmallVector<uint32_t> ExpectedWeights;
   if (!extractBranchWeights(I, ExpectedWeights))

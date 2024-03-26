@@ -46,7 +46,7 @@ MDNode *MDBuilder::createBranchWeights(ArrayRef<uint32_t> Weights,
   unsigned int Offset = IsExpected ? 2 : 1;
   SmallVector<Metadata *, 4> Vals(Weights.size() + Offset);
   Vals[0] = createString("branch_weights");
-  if(IsExpected)
+  if (IsExpected)
     Vals[1] = createString("expected");
 
   Type *Int32Ty = Type::getInt32Ty(Context);
