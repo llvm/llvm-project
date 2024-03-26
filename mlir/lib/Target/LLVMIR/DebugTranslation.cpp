@@ -116,8 +116,20 @@ static DINodeT *getDistinctOrUnique(bool isDistinct, Ts &&...args) {
   return DINodeT::get(std::forward<Ts>(args)...);
 }
 
+llvm::TempDICompositeType
+DebugTranslation::translateTemporaryImpl(DICompositeTypeAttr attr) {
+  return llvm::DICompositeType::getTemporary(
+      llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()), nullptr,
+      attr.getLine(), nullptr, nullptr, attr.getSizeInBits(),
+      attr.getAlignInBits(),
+      /*OffsetInBits=*/0,
+      /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
+      /*Elements=*/nullptr, /*RuntimeLang=*/0,
+      /*VTableHolder=*/nullptr);
+}
+
 llvm::DICompositeType *
-DebugTranslation::translateImplGetPlaceholder(DICompositeTypeAttr attr) {
+DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
   // TODO: Use distinct attributes to model this, once they have landed.
   // Depending on the tag, composite types must be distinct.
   bool isDistinct = false;
@@ -129,8 +141,10 @@ DebugTranslation::translateImplGetPlaceholder(DICompositeTypeAttr attr) {
     isDistinct = true;
   }
 
-  llvm::TempMDTuple placeholderElements =
-      llvm::MDNode::getTemporary(llvmCtx, std::nullopt);
+  SmallVector<llvm::Metadata *> elements;
+  for (DINodeAttr member : attr.getElements())
+    elements.push_back(translate(member));
+
   return getDistinctOrUnique<llvm::DICompositeType>(
       isDistinct, llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
       translate(attr.getFile()), attr.getLine(), translate(attr.getScope()),
@@ -138,23 +152,8 @@ DebugTranslation::translateImplGetPlaceholder(DICompositeTypeAttr attr) {
       attr.getAlignInBits(),
       /*OffsetInBits=*/0,
       /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
-      /*Elements=*/placeholderElements.get(), /*RuntimeLang=*/0,
-      /*VTableHolder=*/nullptr);
-}
-
-void DebugTranslation::translateImplFillPlaceholder(
-    DICompositeTypeAttr attr, llvm::DICompositeType *placeholder) {
-  SmallVector<llvm::Metadata *> elements;
-  for (DINodeAttr member : attr.getElements())
-    elements.push_back(translate(member));
-  placeholder->replaceElements(llvm::MDNode::get(llvmCtx, elements));
-}
-
-llvm::DICompositeType *
-DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
-  llvm::DICompositeType *placeholder = translateImplGetPlaceholder(attr);
-  translateImplFillPlaceholder(attr, placeholder);
-  return placeholder;
+      llvm::MDNode::get(llvmCtx, elements),
+      /*RuntimeLang=*/0, /*VTableHolder=*/nullptr);
 }
 
 llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
@@ -163,7 +162,8 @@ llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
       /*File=*/nullptr, /*Line=*/0,
       /*Scope=*/nullptr, translate(attr.getBaseType()), attr.getSizeInBits(),
       attr.getAlignInBits(), attr.getOffsetInBits(),
-      /*DWARFAddressSpace=*/std::nullopt, /*Flags=*/llvm::DINode::FlagZero);
+      /*DWARFAddressSpace=*/std::nullopt, /*PtrAuthData=*/std::nullopt,
+      /*Flags=*/llvm::DINode::FlagZero, translate(attr.getExtraData()));
 }
 
 llvm::DIFile *DebugTranslation::translateImpl(DIFileAttr attr) {
@@ -233,10 +233,13 @@ DebugTranslation::translateRecursive(DIRecursiveTypeAttrInterface attr) {
   llvm::DIType *result =
       TypeSwitch<DIRecursiveTypeAttrInterface, llvm::DIType *>(attr)
           .Case<DICompositeTypeAttr>([&](auto attr) {
-            auto *placeholder = translateImplGetPlaceholder(attr);
-            setRecursivePlaceholder(placeholder);
-            translateImplFillPlaceholder(attr, placeholder);
-            return placeholder;
+            auto temporary = translateTemporaryImpl(attr);
+            setRecursivePlaceholder(temporary.get());
+            // Must call `translateImpl` directly instead of `translate` to
+            // avoid handling the recursive interface again.
+            auto *concrete = translateImpl(attr);
+            temporary->replaceAllUsesWith(concrete);
+            return concrete;
           });
 
   assert(recursiveTypeMap.back().first == recursiveId &&

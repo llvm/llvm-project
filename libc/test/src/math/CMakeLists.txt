@@ -1518,6 +1518,8 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.generic.explogxf
+    libc.src.math.fabs
+    libc.src.math.fabsf
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1640,20 +1642,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.errno.errno
     libc.src.math.atanf
-    libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
-  inv_trigf_utils_test
-  NEED_MPFR
-  SUITE
-    libc-math-unittests
-  HDRS
-    in_float_range_test_helper.h
-  SRCS
-    inv_trigf_utils_test.cpp
-  DEPENDS
-    libc.src.math.generic.inv_trigf_utils
     libc.src.__support.FPUtil.fp_bits
 )
 

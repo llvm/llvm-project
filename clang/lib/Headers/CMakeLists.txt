@@ -254,8 +254,10 @@ set(x86_files
   )
 
 set(windows_only_files
+  intrin0.h
   intrin.h
   vadefs.h
+  yvals_core.h
 )
 
 set(utility_files

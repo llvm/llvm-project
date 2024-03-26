@@ -101,14 +101,17 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     Variadic<Index>: $offsets, 
     Variadic<Index>: $shape, 
     Variadic<Index>: $strides,
-    DenseI64ArrayAttr: $static_offsets
+    DenseI64ArrayAttr: $const_offsets,
+    OptionalAttr<DenseI64ArrayAttr>: $const_shape,
+    OptionalAttr<DenseI64ArrayAttr>: $const_strides
   );
   let results = (outs XeGPU_TensorDesc: $TensorDesc);
 
   let assemblyFormat = [{
     $source ``
-    custom<DynamicIndexList>($offsets, $static_offsets)
-    (`,` `[` $shape^ `]` `,` `[` $strides `]`)?
+    custom<DynamicIndexList>($offsets, $const_offsets)
+    (`,` custom<DynamicIndexList>($shape, $const_shape)^
+     `,` custom<DynamicIndexList>($strides, $const_strides))?
     attr-dict `:` type($source) `->` qualified(type($TensorDesc))
   }];
 
@@ -120,7 +123,8 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
 
     OpBuilder<(ins "Type": $tdesc, "TypedValue<IntegerType> ": $source, 
                    "llvm::ArrayRef<OpFoldResult>": $offsets,
-                   "ValueRange": $shape, "ValueRange": $stride)>
+                   "llvm::ArrayRef<OpFoldResult>": $shape, 
+                   "llvm::ArrayRef<OpFoldResult>": $strides)>
   ];
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
@@ -149,33 +153,43 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
       return getShape();
     }
 
-    /// wrapper for matching with OffsetSizeAndStrideOpInterface
-    /// If source is IntegerType and `shape` is filled, it will 
-    /// return an array of ShapedType::kDynamic representing dynamic 
-    /// shape encoded in the `shape` argument will be used. Presence
-    /// of `shape` overides static shape from source memref type.
-    SmallVector<int64_t> getStaticSizes() {
-      if (getSourceType().isa<IntegerType>() || getShape().size()) {
-        auto dims = getMixedOffsets().size();
-        return SmallVector<int64_t>(dims, ShapedType::kDynamic);
-      }
-      auto memrefType = getSourceType().dyn_cast<MemRefType>();
-      return SmallVector<int64_t>(memrefType.getShape());
+    ArrayRef<int64_t> getStaticOffsets(){
+      return getConstOffsets();
     }
 
     /// wrapper for matching with OffsetSizeAndStrideOpInterface
-    /// If source is IntegerType or `strides` is filled, it will 
-    /// return an array of ShapedType::kDynamic representing dynamic 
-    /// strides encoded in the `strides` argument will be used. Presence
-    /// of `strides` overides static strides from source memref type.
-    SmallVector<int64_t> getStaticStrides() {
-      if (getSourceType().isa<IntegerType>() || getStrides().size()) {
-        auto dims = getMixedOffsets().size();
-        return SmallVector<int64_t>(dims, ShapedType::kDynamic);
-      }
+    /// If source is IntegerType or `const_shape` is filled, 
+    /// it will return `const_shape`, such that mixes of `shape`
+    /// and `const_shape` will be used to represent the shape of 
+    /// source operand. They overide static shape from source memref type.
+    ArrayRef<int64_t> getStaticSizes() {
+      auto attr = getConstShapeAttr();
+      if (getSourceType().isa<IntegerType>() || attr)
+        return attr;
+      
       auto memrefType = getSourceType().dyn_cast<MemRefType>();
+      assert(memrefType && "Incorrect use of getStaticSizes");
+      return memrefType.getShape();
+    }
+
+    /// wrapper for matching with OffsetSizeAndStrideOpInterface
+    /// If source is IntegerType or `const_strides` is filled, it 
+    /// will return `const_strides`, such that mixes of `strides`
+    /// and `const_strides` will be used to represent the strides of 
+    /// source operand. They overide static strides from source memref type.
+    ArrayRef<int64_t> getStaticStrides() {
+      auto attr = getConstStridesAttr();
+      if (getSourceType().isa<IntegerType>() || attr)
+        return attr;
+      
+      auto memrefType = getSourceType().dyn_cast<MemRefType>();
+      assert(memrefType && "Incorrect use of getStaticStrides");
       auto [strides, offset] = getStridesAndOffset(memrefType);
-      return strides;
+      // reuse the storage of ConstStridesAttr since strides from 
+      // memref is not persistant
+      setConstStrides(strides);
+      attr = getConstStridesAttr();
+      return attr;
     }
 
     /// Return the expected rank of each of the`static_offsets`, 

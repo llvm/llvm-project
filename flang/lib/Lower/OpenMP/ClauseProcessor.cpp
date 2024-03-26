@@ -208,6 +208,25 @@ addUseDeviceClause(Fortran::lower::AbstractConverter &converter,
     useDeviceSymbols.push_back(object.id());
 }
 
+static void convertLoopBounds(Fortran::lower::AbstractConverter &converter,
+                              mlir::Location loc,
+                              llvm::SmallVectorImpl<mlir::Value> &lowerBound,
+                              llvm::SmallVectorImpl<mlir::Value> &upperBound,
+                              llvm::SmallVectorImpl<mlir::Value> &step,
+                              std::size_t loopVarTypeSize) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  // The types of lower bound, upper bound, and step are converted into the
+  // type of the loop variable if necessary.
+  mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
+  for (unsigned it = 0; it < (unsigned)lowerBound.size(); it++) {
+    lowerBound[it] =
+        firOpBuilder.createConvert(loc, loopVarType, lowerBound[it]);
+    upperBound[it] =
+        firOpBuilder.createConvert(loc, loopVarType, upperBound[it]);
+    step[it] = firOpBuilder.createConvert(loc, loopVarType, step[it]);
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // ClauseProcessor unique clauses
 //===----------------------------------------------------------------------===//
@@ -217,8 +236,7 @@ bool ClauseProcessor::processCollapse(
     llvm::SmallVectorImpl<mlir::Value> &lowerBound,
     llvm::SmallVectorImpl<mlir::Value> &upperBound,
     llvm::SmallVectorImpl<mlir::Value> &step,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &iv,
-    std::size_t &loopVarTypeSize) const {
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &iv) const {
   bool found = false;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
@@ -236,7 +254,7 @@ bool ClauseProcessor::processCollapse(
     found = true;
   }
 
-  loopVarTypeSize = 0;
+  std::size_t loopVarTypeSize = 0;
   do {
     Fortran::lower::pft::Evaluation *doLoop =
         &doConstructEval->getFirstNestedEvaluation();
@@ -266,6 +284,9 @@ bool ClauseProcessor::processCollapse(
     doConstructEval =
         &*std::next(doConstructEval->getNestedEvaluations().begin());
   } while (collapseValue > 0);
+
+  convertLoopBounds(converter, currentLocation, lowerBound, upperBound, step,
+                    loopVarTypeSize);
 
   return found;
 }
@@ -577,7 +598,7 @@ public:
   }
 
   // Returns the shape of array types.
-  const llvm::SmallVector<int64_t> &getShape() const { return shape; }
+  llvm::ArrayRef<int64_t> getShape() const { return shape; }
 
   // Is the type inside a box?
   bool isBox() const { return inBox; }
@@ -788,8 +809,8 @@ bool ClauseProcessor::processLink(
 mlir::omp::MapInfoOp
 createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::Value baseAddr, mlir::Value varPtrPtr, std::string name,
-                mlir::SmallVector<mlir::Value> bounds,
-                mlir::SmallVector<mlir::Value> members, uint64_t mapType,
+                llvm::ArrayRef<mlir::Value> bounds,
+                llvm::ArrayRef<mlir::Value> members, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
                 bool isVal) {
   if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>()) {
@@ -818,65 +839,61 @@ bool ClauseProcessor::processMap(
     llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSymbols)
     const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  return findRepeatableClause2<ClauseTy::Map>(
-      [&](const ClauseTy::Map *mapClause,
+  return findRepeatableClause<omp::clause::Map>(
+      [&](const omp::clause::Map &clause,
           const Fortran::parser::CharBlock &source) {
+        using Map = omp::clause::Map;
         mlir::Location clauseLocation = converter.genLocation(source);
-        const auto &oMapType =
-            std::get<std::optional<Fortran::parser::OmpMapType>>(
-                mapClause->v.t);
+        const auto &oMapType = std::get<std::optional<Map::MapType>>(clause.t);
         llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
         // If the map type is specified, then process it else Tofrom is the
         // default.
         if (oMapType) {
-          const Fortran::parser::OmpMapType::Type &mapType =
-              std::get<Fortran::parser::OmpMapType::Type>(oMapType->t);
+          const Map::MapType::Type &mapType =
+              std::get<Map::MapType::Type>(oMapType->t);
           switch (mapType) {
-          case Fortran::parser::OmpMapType::Type::To:
+          case Map::MapType::Type::To:
             mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
             break;
-          case Fortran::parser::OmpMapType::Type::From:
+          case Map::MapType::Type::From:
             mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
             break;
-          case Fortran::parser::OmpMapType::Type::Tofrom:
+          case Map::MapType::Type::Tofrom:
             mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
                            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
             break;
-          case Fortran::parser::OmpMapType::Type::Alloc:
-          case Fortran::parser::OmpMapType::Type::Release:
+          case Map::MapType::Type::Alloc:
+          case Map::MapType::Type::Release:
             // alloc and release is the default map_type for the Target Data
             // Ops, i.e. if no bits for map_type is supplied then alloc/release
             // is implicitly assumed based on the target directive. Default
             // value for Target Data and Enter Data is alloc and for Exit Data
             // it is release.
             break;
-          case Fortran::parser::OmpMapType::Type::Delete:
+          case Map::MapType::Type::Delete:
             mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
           }
 
-          if (std::get<std::optional<Fortran::parser::OmpMapType::Always>>(
-                  oMapType->t))
+          if (std::get<std::optional<Map::MapType::Always>>(oMapType->t))
             mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
         } else {
           mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
         }
 
-        for (const Fortran::parser::OmpObject &ompObject :
-             std::get<Fortran::parser::OmpObjectList>(mapClause->v.t).v) {
+        for (const omp::Object &object : std::get<omp::ObjectList>(clause.t)) {
           llvm::SmallVector<mlir::Value> bounds;
           std::stringstream asFortran;
 
           Fortran::lower::AddrAndBoundsInfo info =
               Fortran::lower::gatherDataOperandAddrAndBounds<
-                  Fortran::parser::OmpObject, mlir::omp::DataBoundsOp,
-                  mlir::omp::DataBoundsType>(
-                  converter, firOpBuilder, semaCtx, stmtCtx, ompObject,
-                  clauseLocation, asFortran, bounds, treatIndexAsSection);
+                  mlir::omp::MapBoundsOp, mlir::omp::MapBoundsType>(
+                  converter, firOpBuilder, semaCtx, stmtCtx, *object.id(),
+                  object.ref(), clauseLocation, asFortran, bounds,
+                  treatIndexAsSection);
 
-          auto origSymbol =
-              converter.getSymbolAddress(*getOmpObjectSymbol(ompObject));
+          auto origSymbol = converter.getSymbolAddress(*object.id());
           mlir::Value symAddr = info.addr;
           if (origSymbol && fir::isTypeWithDescriptor(origSymbol.getType()))
             symAddr = origSymbol;
@@ -899,23 +916,46 @@ bool ClauseProcessor::processMap(
             mapSymLocs->push_back(symAddr.getLoc());
 
           if (mapSymbols)
-            mapSymbols->push_back(getOmpObjectSymbol(ompObject));
+            mapSymbols->push_back(object.id());
         }
       });
 }
 
 bool ClauseProcessor::processReduction(
     mlir::Location currentLocation,
-    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
-    llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *reductionSymbols)
-    const {
+    llvm::SmallVectorImpl<mlir::Value> &outReductionVars,
+    llvm::SmallVectorImpl<mlir::Type> &outReductionTypes,
+    llvm::SmallVectorImpl<mlir::Attribute> &outReductionDeclSymbols,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+        *outReductionSymbols) const {
   return findRepeatableClause<omp::clause::Reduction>(
       [&](const omp::clause::Reduction &clause,
           const Fortran::parser::CharBlock &) {
+        // Use local lists of reductions to prevent variables from other
+        // already-processed reduction clauses from impacting this reduction.
+        // For example, the whole `reductionVars` array is queried to decide
+        // whether to do the reduction byref.
+        llvm::SmallVector<mlir::Value> reductionVars;
+        llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
+        llvm::SmallVector<const Fortran::semantics::Symbol *> reductionSymbols;
         ReductionProcessor rp;
-        rp.addReductionDecl(currentLocation, converter, clause, reductionVars,
-                            reductionDeclSymbols, reductionSymbols);
+        rp.addDeclareReduction(currentLocation, converter, clause,
+                               reductionVars, reductionDeclSymbols,
+                               outReductionSymbols ? &reductionSymbols
+                                                   : nullptr);
+
+        // Copy local lists into the output.
+        llvm::copy(reductionVars, std::back_inserter(outReductionVars));
+        llvm::copy(reductionDeclSymbols,
+                   std::back_inserter(outReductionDeclSymbols));
+        if (outReductionSymbols)
+          llvm::copy(reductionSymbols,
+                     std::back_inserter(*outReductionSymbols));
+
+        outReductionTypes.reserve(outReductionTypes.size() +
+                                  reductionVars.size());
+        llvm::transform(reductionVars, std::back_inserter(outReductionTypes),
+                        [](mlir::Value v) { return v.getType(); });
       });
 }
 

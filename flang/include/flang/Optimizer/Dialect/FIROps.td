@@ -2466,7 +2466,7 @@ def fir_CUDAKernelLaunch : fir_Op<"cuda_kernel_launch", [CallOpInterface,
   let assemblyFormat = [{
     $callee `<` `<` `<` $grid_x `,` $grid_y `,` $grid_z `,`$block_x `,`
         $block_y `,` $block_z ( `,` $bytes^ ( `,` $stream^ )? )? `>` `>` `>`
-        `` `(` ( $args^ `:` type($args) )? `)` attr-dict
+        `` `(` $args `)` ( `:` `(` type($args)^ `)` )? attr-dict
   }];
 
   let extraClassDeclaration = [{
@@ -3131,6 +3131,16 @@ def fir_BoxOffsetOp : fir_Op<"box_offset", [NoMemoryEffect]> {
 def fir_CUDAKernelOp : fir_Op<"cuda_kernel", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
 
+  let description = [{
+    Represent the CUDA Fortran kernel directive. The operation is a loop like
+    operation that represents the iteration range of the embedded loop nest.
+
+    When grid or block variadic operands are empty, a `*` only syntax was used
+    in the Fortran code.
+    If the `*` is mixed with values for either grid or block, these are
+    represented by a 0 constant value.
+  }];
+
   let arguments = (ins
     Variadic<I32>:$grid, // empty means `*`
     Variadic<I32>:$block, // empty means `*`
@@ -3153,6 +3163,31 @@ def fir_CUDAKernelOp : fir_Op<"cuda_kernel", [AttrSizedOperandSegments,
   }];
 
   let hasVerifier = 1;
+}
+
+def fir_CUDADataTransferOp : fir_Op<"cuda_data_transfer", []> {
+  let summary = "Represent a data transfer between host and device memory";
+
+  let description = [{
+    CUDA Fortran allows data transfer to be done via intrinsic assignment
+    between a host and a device variable. This operation is used to materialized
+    the data transfer between the lhs and rhs memory references.
+    The kind of transfer is specified in the attribute. 
+
+    ```
+      adev = a ! transfer host to device
+      a = adev ! transfer device to host
+      bdev = adev ! transfer device to device
+    ```
+  }];
+
+  let arguments = (ins Arg<AnyReferenceLike, "", [MemWrite]>:$src,
+                       Arg<AnyReferenceLike, "", [MemRead]>:$dst,
+                       fir_CUDADataTransferKindAttr:$transfer_kind);
+
+  let assemblyFormat = [{
+    $src `to` $dst attr-dict `:` type(operands)
+  }];
 }
 
 #endif

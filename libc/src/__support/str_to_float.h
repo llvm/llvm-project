@@ -513,7 +513,6 @@ clinger_fast_path(ExpandedFloat<T> init_num,
                   RoundDirection round = RoundDirection::Nearest) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
-  using Sign = fputil::Sign;
 
   StorageType mantissa = init_num.mantissa;
   int32_t exp10 = init_num.exponent;
@@ -1085,7 +1084,6 @@ template <class T>
 LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
-  using Sign = fputil::Sign;
 
   FPBits result = FPBits();
   bool seen_digit = false;
@@ -1223,7 +1221,7 @@ template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
   if (arg[index] == '\0')
     nan_mantissa = nan_mantissa_from_ncharseq<T>(cpp::string_view(arg, index));
 
-  result = FPBits::quiet_nan(fputil::Sign::POS, nan_mantissa);
+  result = FPBits::quiet_nan(Sign::POS, nan_mantissa);
   return {result.get_val(), 0, error};
 }
 

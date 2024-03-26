@@ -262,7 +262,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP27:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP21]], 0
 // CHECK1-NEXT:    [[TMP28:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP22]], 0
 // CHECK1-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK1-NEXT:    store i32 2, ptr [[TMP29]], align 4
+// CHECK1-NEXT:    store i32 3, ptr [[TMP29]], align 4
 // CHECK1-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK1-NEXT:    store i32 4, ptr [[TMP30]], align 4
 // CHECK1-NEXT:    [[TMP31:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -331,7 +331,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    [[ADD14:%.*]] = add nsw i32 [[TMP61]], 1
 // CHECK1-NEXT:    [[TMP62:%.*]] = zext i32 [[ADD14]] to i64
 // CHECK1-NEXT:    [[TMP63:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 0
-// CHECK1-NEXT:    store i32 2, ptr [[TMP63]], align 4
+// CHECK1-NEXT:    store i32 3, ptr [[TMP63]], align 4
 // CHECK1-NEXT:    [[TMP64:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 1
 // CHECK1-NEXT:    store i32 3, ptr [[TMP64]], align 4
 // CHECK1-NEXT:    [[TMP65:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 2
@@ -933,7 +933,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP27:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP21]], 0
 // CHECK3-NEXT:    [[TMP28:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP22]], 0
 // CHECK3-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK3-NEXT:    store i32 2, ptr [[TMP29]], align 4
+// CHECK3-NEXT:    store i32 3, ptr [[TMP29]], align 4
 // CHECK3-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK3-NEXT:    store i32 4, ptr [[TMP30]], align 4
 // CHECK3-NEXT:    [[TMP31:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -1002,7 +1002,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[ADD14:%.*]] = add nsw i32 [[TMP61]], 1
 // CHECK3-NEXT:    [[TMP62:%.*]] = zext i32 [[ADD14]] to i64
 // CHECK3-NEXT:    [[TMP63:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 0
-// CHECK3-NEXT:    store i32 2, ptr [[TMP63]], align 4
+// CHECK3-NEXT:    store i32 3, ptr [[TMP63]], align 4
 // CHECK3-NEXT:    [[TMP64:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 1
 // CHECK3-NEXT:    store i32 3, ptr [[TMP64]], align 4
 // CHECK3-NEXT:    [[TMP65:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 2
@@ -1853,7 +1853,7 @@ int main (int argc, char **argv) {
 // CHECK9-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP26]], 1
 // CHECK9-NEXT:    [[TMP27:%.*]] = zext i32 [[ADD]] to i64
 // CHECK9-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 2, ptr [[TMP28]], align 4
+// CHECK9-NEXT:    store i32 3, ptr [[TMP28]], align 4
 // CHECK9-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 4, ptr [[TMP29]], align 4
 // CHECK9-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -2222,7 +2222,7 @@ int main (int argc, char **argv) {
 // CHECK11-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP26]], 1
 // CHECK11-NEXT:    [[TMP27:%.*]] = zext i32 [[ADD]] to i64
 // CHECK11-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 2, ptr [[TMP28]], align 4
+// CHECK11-NEXT:    store i32 3, ptr [[TMP28]], align 4
 // CHECK11-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 4, ptr [[TMP29]], align 4
 // CHECK11-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -2718,7 +2718,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK17-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK17-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK17-NEXT:    store i32 2, ptr [[TMP10]], align 4
+// CHECK17-NEXT:    store i32 3, ptr [[TMP10]], align 4
 // CHECK17-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK17-NEXT:    store i32 2, ptr [[TMP11]], align 4
 // CHECK17-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -2986,7 +2986,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK19-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK19-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK19-NEXT:    store i32 2, ptr [[TMP10]], align 4
+// CHECK19-NEXT:    store i32 3, ptr [[TMP10]], align 4
 // CHECK19-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK19-NEXT:    store i32 2, ptr [[TMP11]], align 4
 // CHECK19-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -3412,7 +3412,7 @@ int main (int argc, char **argv) {
 // CHECK25-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP26]], 1
 // CHECK25-NEXT:    [[TMP27:%.*]] = zext i32 [[ADD]] to i64
 // CHECK25-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK25-NEXT:    store i32 2, ptr [[TMP28]], align 4
+// CHECK25-NEXT:    store i32 3, ptr [[TMP28]], align 4
 // CHECK25-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK25-NEXT:    store i32 4, ptr [[TMP29]], align 4
 // CHECK25-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -3759,7 +3759,7 @@ int main (int argc, char **argv) {
 // CHECK25-NEXT:    [[TMP17:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP15]], 0
 // CHECK25-NEXT:    [[TMP18:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP16]], 0
 // CHECK25-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK25-NEXT:    store i32 2, ptr [[TMP19]], align 4
+// CHECK25-NEXT:    store i32 3, ptr [[TMP19]], align 4
 // CHECK25-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK25-NEXT:    store i32 3, ptr [[TMP20]], align 4
 // CHECK25-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -4044,7 +4044,7 @@ int main (int argc, char **argv) {
 // CHECK27-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP26]], 1
 // CHECK27-NEXT:    [[TMP27:%.*]] = zext i32 [[ADD]] to i64
 // CHECK27-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK27-NEXT:    store i32 2, ptr [[TMP28]], align 4
+// CHECK27-NEXT:    store i32 3, ptr [[TMP28]], align 4
 // CHECK27-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK27-NEXT:    store i32 4, ptr [[TMP29]], align 4
 // CHECK27-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -4386,7 +4386,7 @@ int main (int argc, char **argv) {
 // CHECK27-NEXT:    [[TMP17:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP15]], 0
 // CHECK27-NEXT:    [[TMP18:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP16]], 0
 // CHECK27-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK27-NEXT:    store i32 2, ptr [[TMP19]], align 4
+// CHECK27-NEXT:    store i32 3, ptr [[TMP19]], align 4
 // CHECK27-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK27-NEXT:    store i32 3, ptr [[TMP20]], align 4
 // CHECK27-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2

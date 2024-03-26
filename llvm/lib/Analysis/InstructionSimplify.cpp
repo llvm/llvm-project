@@ -3736,15 +3736,10 @@ static std::optional<ConstantRange> getRange(Value *V,
     if (MDNode *MD = IIQ.getMetadata(I, LLVMContext::MD_range))
       return getConstantRangeFromMetadata(*MD);
 
-  Attribute Range;
-  if (const Argument *A = dyn_cast<Argument>(V)) {
-    Range = A->getAttribute(llvm::Attribute::Range);
-  } else if (const CallBase *CB = dyn_cast<CallBase>(V)) {
-    Range = CB->getRetAttr(llvm::Attribute::Range);
-  }
-
-  if (Range.isValid())
-    return Range.getRange();
+  if (const Argument *A = dyn_cast<Argument>(V))
+    return A->getRange();
+  else if (const CallBase *CB = dyn_cast<CallBase>(V))
+    return CB->getRange();
 
   return std::nullopt;
 }
@@ -5767,11 +5762,16 @@ static Value *simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
     if (FMF.noNaNs() && FMF.noSignedZeros())
       return ConstantFP::getZero(Op0->getType());
 
-    // +normal number * (-)0.0 --> (-)0.0
     KnownFPClass Known =
         computeKnownFPClass(Op0, FMF, fcInf | fcNan, /*Depth=*/0, Q);
-    if (Known.SignBit == false && Known.isKnownNever(fcInf | fcNan))
-      return Op1;
+    if (Known.isKnownNever(fcInf | fcNan)) {
+      // +normal number * (-)0.0 --> (-)0.0
+      if (Known.SignBit == false)
+        return Op1;
+      // -normal number * (-)0.0 --> -(-)0.0
+      if (Known.SignBit == true)
+        return foldConstant(Instruction::FNeg, Op1, Q);
+    }
   }
 
   // sqrt(X) * sqrt(X) --> X, if we can:
@@ -6115,7 +6115,8 @@ static Value *simplifyRelativeLoad(Constant *Ptr, Constant *Offset,
   if (OffsetInt.srem(4) != 0)
     return nullptr;
 
-  Constant *Loaded = ConstantFoldLoadFromConstPtr(Ptr, Int32Ty, OffsetInt, DL);
+  Constant *Loaded =
+      ConstantFoldLoadFromConstPtr(Ptr, Int32Ty, std::move(OffsetInt), DL);
   if (!Loaded)
     return nullptr;
 
@@ -6983,7 +6984,8 @@ Value *llvm::simplifyLoadInst(LoadInst *LI, Value *PtrOp,
   if (PtrOp == GV) {
     // Index size may have changed due to address space casts.
     Offset = Offset.sextOrTrunc(Q.DL.getIndexTypeSizeInBits(PtrOp->getType()));
-    return ConstantFoldLoadFromConstPtr(GV, LI->getType(), Offset, Q.DL);
+    return ConstantFoldLoadFromConstPtr(GV, LI->getType(), std::move(Offset),
+                                        Q.DL);
   }
 
   return nullptr;
