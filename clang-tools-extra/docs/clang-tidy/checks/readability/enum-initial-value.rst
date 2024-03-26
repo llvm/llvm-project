@@ -6,9 +6,8 @@ readability-enum-initial-value
 Detects explicit initialization of a part of enumerators in an enumeration, and
 relying on compiler to initialize the others.
 
-It causes readability issues and reduces the maintainability. When adding new
-enumerations, the developers need to be careful for potiential enumeration value
-conflicts.
+When adding new enumerations, inconsistent initial value will cause potential
+enumeration value conflicts.
 
 In an enumeration, the following three cases are accepted. 
 1. none of enumerators are explicit initialized.

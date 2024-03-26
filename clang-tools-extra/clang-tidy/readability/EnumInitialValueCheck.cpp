@@ -20,15 +20,17 @@ namespace clang::tidy::readability {
 
 namespace {
 
-AST_MATCHER(EnumDecl, isNoneEnumeratorsInitialized) {
-  return llvm::all_of(Node.enumerators(), [](EnumConstantDecl const *ECD) {
+bool isNoneEnumeratorsInitialized(const EnumDecl &Node) {
+  return llvm::all_of(Node.enumerators(), [](const EnumConstantDecl *ECD) {
     return ECD->getInitExpr() == nullptr;
   });
 }
 
-AST_MATCHER(EnumDecl, isOnlyFirstEnumeratorsInitialized) {
-  for (EnumConstantDecl const *ECD : Node.enumerators())
-    if (ECD == *Node.enumerator_begin()) {
+bool isOnlyFirstEnumeratorsInitialized(const EnumDecl &Node) {
+  bool IsFirst = true;
+  for (const EnumConstantDecl *ECD : Node.enumerators())
+    if (IsFirst) {
+      IsFirst = false;
       if (ECD->getInitExpr() == nullptr)
         return false;
     } else {
@@ -38,33 +40,35 @@ AST_MATCHER(EnumDecl, isOnlyFirstEnumeratorsInitialized) {
   return true;
 }
 
-AST_MATCHER(EnumDecl, isAllEnumeratorsInitialized) {
-  return llvm::all_of(Node.enumerators(), [](EnumConstantDecl const *ECD) {
+bool isAllEnumeratorsInitialized(const EnumDecl &Node) {
+  return llvm::all_of(Node.enumerators(), [](const EnumConstantDecl *ECD) {
     return ECD->getInitExpr() != nullptr;
   });
+}
+
+AST_MATCHER(EnumDecl, hasMeaningfulInitialValues) {
+  return isNoneEnumeratorsInitialized(Node) ||
+         isOnlyFirstEnumeratorsInitialized(Node) ||
+         isAllEnumeratorsInitialized(Node);
 }
 
 } // namespace
 
 void EnumInitialValueCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(enumDecl(unless(anyOf(isNoneEnumeratorsInitialized(),
-                                           isOnlyFirstEnumeratorsInitialized(),
-                                           isAllEnumeratorsInitialized())))
-                         .bind("enum"),
-                     this);
+  Finder->addMatcher(
+      enumDecl(unless(hasMeaningfulInitialValues())).bind("enum"), this);
 }
 
 void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("enum");
-  assert(Enum != nullptr);
   SourceLocation Loc = Enum->getBeginLoc();
   if (Loc.isInvalid() || Loc.isMacroID())
     return;
   DiagnosticBuilder Diag =
       diag(Loc, "inital values in enum %0 are not consistent, consider "
                 "explicit initialization first, all or none of enumerators")
-      << Enum->getName();
-  for (EnumConstantDecl const *ECD : Enum->enumerators())
+      << Enum;
+  for (const EnumConstantDecl *ECD : Enum->enumerators())
     if (ECD->getInitExpr() == nullptr) {
       SourceLocation ECDLoc = ECD->getEndLoc();
       if (ECDLoc.isInvalid() || ECDLoc.isMacroID())
