@@ -63,6 +63,10 @@ Deprecations and Removals
   the LLVM 19 release while also issuing a deprecation warning). See :ref:`the hardening documentation
   <using-hardening-modes>` for more details.
 
+- Support for the C++20 synchronization library (``<barrier>``, ``<latch>``, ``atomic::wait``, etc.) has been
+  removed in language modes prior to C++20. If you are using these features prior to C++20, you will need to
+  update to ``-std=c++20``.
+
 - The base template for ``std::char_traits`` has been removed in LLVM 19. If you are using ``std::char_traits`` with
   types other than ``char``, ``wchar_t``, ``char8_t``, ``char16_t``, ``char32_t`` or a custom character type for which you
   specialized ``std::char_traits``, your code will stop working. The Standard does not mandate that a base template is
