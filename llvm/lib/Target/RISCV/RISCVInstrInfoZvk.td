@@ -180,7 +180,7 @@ class ZvkMxSet<string vd_lmul> {
                                    !eq(vd_lmul, "MF8") : [V_MF8]);
 }
 
-class VPseudoUnaryNoMask_Zvk<DAGOperand RetClass, VReg OpClass> :
+class VPseudoBinaryNoMask_Zvk<DAGOperand RetClass, VReg OpClass> :
       Pseudo<(outs RetClass:$rd_wb),
         (ins RetClass:$rd, OpClass:$rs2, AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
         RISCVVPseudo {
@@ -194,9 +194,9 @@ class VPseudoUnaryNoMask_Zvk<DAGOperand RetClass, VReg OpClass> :
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-class VPseudoBinaryNoMask_Zvk<VReg RetClass,
-                              VReg Op1Class,
-                              DAGOperand Op2Class> :
+class VPseudoTernaryNoMask_Zvk<VReg RetClass,
+                               VReg Op1Class,
+                               DAGOperand Op2Class> :
         Pseudo<(outs RetClass:$rd_wb),
                (ins RetClass:$rd, Op1Class:$rs2, Op2Class:$rs1,
                     AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
@@ -211,24 +211,24 @@ class VPseudoBinaryNoMask_Zvk<VReg RetClass,
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-multiclass VPseudoBinaryNoMask_Zvk<VReg RetClass,
+multiclass VPseudoTernaryNoMask_Zvk<VReg RetClass,
                                    VReg Op1Class,
                                    DAGOperand Op2Class,
                                    LMULInfo MInfo> {
   let VLMul = MInfo.value in
-    def "_" # MInfo.MX : VPseudoBinaryNoMask_Zvk<RetClass, Op1Class, Op2Class>;
+    def "_" # MInfo.MX : VPseudoTernaryNoMask_Zvk<RetClass, Op1Class, Op2Class>;
 }
 
-multiclass VPseudoUnaryV_V_NoMask_Zvk<LMULInfo m> {
+multiclass VPseudoBinaryV_V_NoMask_Zvk<LMULInfo m> {
   let VLMul = m.value in {
-    def "_VV_" # m.MX : VPseudoUnaryNoMask_Zvk<m.vrclass, m.vrclass>;
+    def "_VV_" # m.MX : VPseudoBinaryNoMask_Zvk<m.vrclass, m.vrclass>;
   }
 }
 
-multiclass VPseudoUnaryV_S_NoMask_Zvk<LMULInfo m> {
+multiclass VPseudoBinaryV_S_NoMask_Zvk<LMULInfo m> {
   let VLMul = m.value in
     foreach vs2_lmul = ZvkMxSet<m.MX>.vs2_lmuls in
-      def "_VS_" # m.MX # "_" # vs2_lmul.MX : VPseudoUnaryNoMask_Zvk<m.vrclass, vs2_lmul.vrclass>;
+      def "_VS_" # m.MX # "_" # vs2_lmul.MX : VPseudoBinaryNoMask_Zvk<m.vrclass, vs2_lmul.vrclass>;
 }
 
 multiclass VPseudoVALU_V_NoMask_Zvk {
@@ -237,7 +237,7 @@ multiclass VPseudoVALU_V_NoMask_Zvk {
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm "" : VPseudoUnaryV_V_NoMask_Zvk<m>,
+    defm "" : VPseudoBinaryV_V_NoMask_Zvk<m>,
               Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
@@ -248,7 +248,7 @@ multiclass VPseudoVALU_S_NoMask_Zvk {
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm "" : VPseudoUnaryV_S_NoMask_Zvk<m>,
+    defm "" : VPseudoBinaryV_S_NoMask_Zvk<m>,
               Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
@@ -262,7 +262,7 @@ multiclass VPseudoVALU_VV_NoMask_Zvk {
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm _VV : VPseudoBinaryNoMask_Zvk<m.vrclass, m.vrclass, m.vrclass, m>,
+    defm _VV : VPseudoTernaryNoMask_Zvk<m.vrclass, m.vrclass, m.vrclass, m>,
                Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
@@ -273,7 +273,7 @@ multiclass VPseudoVALU_VI_NoMask_Zvk {
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm _VI : VPseudoBinaryNoMask_Zvk<m.vrclass, m.vrclass, uimm5, m>,
+    defm _VI : VPseudoTernaryNoMask_Zvk<m.vrclass, m.vrclass, uimm5, m>,
                Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
