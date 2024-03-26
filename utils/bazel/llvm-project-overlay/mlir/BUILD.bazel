@@ -3823,9 +3823,10 @@ cc_library(
     srcs = glob([
         "lib/Dialect/*.cpp",
     ]),
-    hdrs = glob([
-        "include/mlir/Dialect/*.h",
-    ]),
+    hdrs = glob(
+        include = ["include/mlir/Dialect/*.h"],
+        exclude = ["include/mlir/Dialect/CommonFolders.h"],
+    ),
     includes = ["include"],
     deps = [
         ":IR",
@@ -4534,6 +4535,7 @@ cc_library(
         ":ArithDialect",
         ":BufferizationInterfaces",
         ":CastInterfaces",
+        ":CommonFolders",
         ":ControlFlowInterfaces",
         ":Dialect",
         ":FuncDialect",
@@ -5336,9 +5338,7 @@ cc_library(
             "include/mlir/Dialect/LLVMIR/VCIX*.h",
             "include/mlir/Dialect/LLVMIR/*X86Vector*.h",
         ],
-    ) + [
-        "include/mlir/Transforms/Mem2Reg.h",
-    ],
+    ),
     includes = ["include"],
     deps = [
         ":CallOpInterfaces",
@@ -8636,16 +8636,25 @@ cc_library(
 )
 
 cc_library(
+    name = "ParseUtilities",
+    hdrs = ["include/mlir/Tools/ParseUtilities.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":Parser",
+    ],
+)
+
+cc_library(
     name = "TranslateLib",
     srcs = glob([
         "lib/Tools/mlir-translate/*.cpp",
-    ]) + [
-        "include/mlir/Tools/ParseUtilities.h",
-    ],
+    ]),
     hdrs = glob(["include/mlir/Tools/mlir-translate/*.h"]),
     includes = ["include"],
     deps = [
         ":IR",
+        ":ParseUtilities",
         ":Parser",
         ":Support",
         "//llvm:Support",
@@ -8655,6 +8664,7 @@ cc_library(
 cc_library(
     name = "ToLLVMIRTranslation",
     srcs = [
+        "lib/Target/LLVMIR/AttrKindDetail.h",
         "lib/Target/LLVMIR/DebugTranslation.cpp",
         "lib/Target/LLVMIR/DebugTranslation.h",
         "lib/Target/LLVMIR/LoopAnnotationTranslation.cpp",
@@ -8667,7 +8677,6 @@ cc_library(
         "include/mlir/Target/LLVMIR/LLVMTranslationInterface.h",
         "include/mlir/Target/LLVMIR/ModuleTranslation.h",
         "include/mlir/Target/LLVMIR/TypeToLLVM.h",
-        "lib/Target/LLVMIR/AttrKindDetail.h",
     ],
     includes = ["include"],
     deps = [
@@ -8988,9 +8997,11 @@ cc_library(
 cc_library(
     name = "FromLLVMIRTranslation",
     srcs = [
+        "lib/Target/LLVMIR/AttrKindDetail.h",
         "lib/Target/LLVMIR/DataLayoutImporter.cpp",
         "lib/Target/LLVMIR/DataLayoutImporter.h",
         "lib/Target/LLVMIR/DebugImporter.cpp",
+        "lib/Target/LLVMIR/DebugImporter.h",
         "lib/Target/LLVMIR/LoopAnnotationImporter.cpp",
         "lib/Target/LLVMIR/LoopAnnotationImporter.h",
         "lib/Target/LLVMIR/ModuleImport.cpp",
@@ -9001,8 +9012,6 @@ cc_library(
         "include/mlir/Target/LLVMIR/LLVMImportInterface.h",
         "include/mlir/Target/LLVMIR/ModuleImport.h",
         "include/mlir/Target/LLVMIR/TypeFromLLVM.h",
-        "lib/Target/LLVMIR/AttrKindDetail.h",
-        "lib/Target/LLVMIR/DebugImporter.h",
     ],
     includes = ["include"],
     deps = [
@@ -9109,10 +9118,7 @@ cc_library(
 
 cc_library(
     name = "MlirOptLib",
-    srcs = [
-        "include/mlir/Tools/ParseUtilities.h",
-        "lib/Tools/mlir-opt/MlirOptMain.cpp",
-    ],
+    srcs = ["lib/Tools/mlir-opt/MlirOptMain.cpp"],
     hdrs = ["include/mlir/Tools/mlir-opt/MlirOptMain.h"],
     includes = ["include"],
     deps = [
@@ -9121,6 +9127,7 @@ cc_library(
         ":Debug",
         ":IR",
         ":IRDLDialect",
+        ":ParseUtilities",
         ":Parser",
         ":Pass",
         ":PluginsLib",
@@ -9393,10 +9400,7 @@ cc_binary(
 cc_library(
     name = "MlirJitRunner",
     srcs = ["lib/ExecutionEngine/JitRunner.cpp"],
-    hdrs = [
-        "include/mlir/ExecutionEngine/JitRunner.h",
-        "include/mlir/Tools/ParseUtilities.h",
-    ],
+    hdrs = ["include/mlir/ExecutionEngine/JitRunner.h"],
     includes = ["include"],
     deps = [
         ":AllPassesAndDialects",
@@ -9407,6 +9411,7 @@ cc_library(
         ":LLVMToLLVMIRTranslation",
         ":OpenACCToLLVMIRTranslation",
         ":OpenMPToLLVMIRTranslation",
+        ":ParseUtilities",
         ":Parser",
         ":SCFToControlFlow",
         ":Support",
@@ -13786,13 +13791,11 @@ cc_library(
 cc_library(
     name = "MlirReduceLib",
     srcs = ["lib/Tools/mlir-reduce/MlirReduceMain.cpp"],
-    hdrs = [
-        "include/mlir/Tools/ParseUtilities.h",
-        "include/mlir/Tools/mlir-reduce/MlirReduceMain.h",
-    ],
+    hdrs = ["include/mlir/Tools/mlir-reduce/MlirReduceMain.h"],
     includes = ["include"],
     deps = [
         ":IR",
+        ":ParseUtilities",
         ":Parser",
         ":Pass",
         ":Reducer",
