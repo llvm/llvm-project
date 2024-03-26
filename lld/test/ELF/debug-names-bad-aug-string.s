@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t1.o
-# RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/debug-names-2.s -o %t2
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/debug-names-2.s -o %t2.o
 # RUN: ld.lld --debug-names %t1.o %t2.o -o %t
 
 # RUN: llvm-dwarfdump -debug-names %t | FileCheck %s --check-prefix=DWARF

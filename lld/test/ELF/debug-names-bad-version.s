@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t1.o
-# RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/debug-names-2.s -o %t2
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/debug-names-2.s -o %t2.o
 #
 # RUN: not ld.lld --debug-names %t1.o %t2.o -o /dev/null 2>&1 | FileCheck %s
 #
