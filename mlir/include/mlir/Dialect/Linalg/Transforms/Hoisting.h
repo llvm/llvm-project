@@ -43,6 +43,8 @@ namespace linalg {
 /// when used on distributed loops with memref semantics!
 void hoistRedundantVectorTransfers(Operation *root);
 
+void hoistRedundantVectorBroadcasts(Operation *root);
+
 } // namespace linalg
 } // namespace mlir
 
