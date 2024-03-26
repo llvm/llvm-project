@@ -55529,7 +55529,19 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       break;
     // Due to VADD, VSUB, VMUL can executed on more ports than VINSERT and
-    // their latency are short, so here we don't replace them.
+    // their latency are short, so here we don't replace them unless we won't
+    // introduce extra VINSERT.
+    case ISD::FADD:
+    case ISD::FSUB:
+    case ISD::FMUL:
+      if (!IsSplat && (IsConcatFree(VT, Ops, 0) || IsConcatFree(VT, Ops, 1)) &&
+          (VT.is256BitVector() ||
+           (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {
+        return DAG.getNode(Op0.getOpcode(), DL, VT,
+                           ConcatSubOperand(VT, Ops, 0),
+                           ConcatSubOperand(VT, Ops, 1));
+      }
+      break;
     case ISD::FDIV:
       if (!IsSplat && (VT.is256BitVector() ||
                        (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {
