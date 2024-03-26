@@ -1211,9 +1211,9 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
 
 /// Replaces (ICMP_ULE, WideCanonicalIV, backedge-taken-count) pattern using
 /// the given \p Idiom.
-static void replaceHeaderPredicateWithIdiom(
-    VPlan &Plan, VPValue &Idiom,
-    function_ref<bool(VPUser &, unsigned)> Cond = {}) {
+static void
+replaceHeaderPredicateWith(VPlan &Plan, VPValue &Idiom,
+                           function_ref<bool(VPUser &, unsigned)> Cond = {}) {
   auto *FoundWidenCanonicalIVUser =
       find_if(Plan.getCanonicalIV()->users(),
               [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); });
@@ -1277,7 +1277,7 @@ void VPlanTransforms::addActiveLaneMask(
   // Walk users of WideCanonicalIV and replace all compares of the form
   // (ICMP_ULE, WideCanonicalIV, backedge-taken-count) with an
   // active-lane-mask.
-  replaceHeaderPredicateWithIdiom(Plan, *LaneMask);
+  replaceHeaderPredicateWith(Plan, *LaneMask);
 }
 
 /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
@@ -1299,7 +1299,7 @@ void VPlanTransforms::addActiveLaneMask(
 ///                                               [ %NextEVLIV, %vector.body ]
 /// %VPEVL = EXPLICIT-VECTOR-LENGTH %EVLPhi, original TC
 /// ...
-/// %NextEVLIV = add i32 (cast to i32 %VPEVVL), %EVLPhi
+/// %NextEVLIV = add IVSize (cast i32 %VPEVVL to IVSize), %EVLPhi
 /// ...
 ///
 void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
@@ -1313,7 +1313,7 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
   Value *TrueMask =
       ConstantInt::getTrue(CanonicalIVPHI->getScalarType()->getContext());
   VPValue *VPTrueMask = Plan.getVPValueOrAddLiveIn(TrueMask);
-  replaceHeaderPredicateWithIdiom(Plan, *VPTrueMask, [](VPUser &U, unsigned) {
+  replaceHeaderPredicateWith(Plan, *VPTrueMask, [](VPUser &U, unsigned) {
     return isa<VPWidenMemoryInstructionRecipe>(U);
   });
   // Now create the ExplicitVectorLengthPhi recipe in the main loop.

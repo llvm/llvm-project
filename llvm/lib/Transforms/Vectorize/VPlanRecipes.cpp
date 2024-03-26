@@ -286,6 +286,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::PtrAdd:
+  case VPInstruction::ExplicitVectorLength:
     return true;
   default:
     return false;

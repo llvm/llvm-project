@@ -1524,53 +1524,55 @@ public:
   void setTailFoldingStyles(bool IsScalableVF, unsigned UserIC) {
     assert(!ChosenTailFoldingStyle.first && !ChosenTailFoldingStyle.second &&
            "Tail folding must not be selected yet.");
-    if (!Legal->prepareToFoldTailByMasking())
-      return;
-
-    if (ForceTailFoldingStyle.getNumOccurrences()) {
-      if (ForceTailFoldingStyle == TailFoldingStyle::DataWithEVL) {
-        // FIXME: use actual opcode/data type for analysis here.
-        // FIXME: Investigate opportunity for fixed vector factor.
-        bool EVLIsLegal =
-            IsScalableVF && UserIC <= 1 &&
-            TTI.hasActiveVectorLength(0, nullptr, Align()) &&
-            !EnableVPlanNativePath &&
-            // FIXME: implement support for max safe dependency distance.
-            Legal->isSafeForAnyVectorWidth() &&
-            // FIXME: remove this once reductions are supported.
-            Legal->getReductionVars().empty() &&
-            // FIXME: remove this once vp_reverse is supported.
-            none_of(WideningDecisions,
-                    [](const std::pair<std::pair<Instruction *, ElementCount>,
-                                       std::pair<InstWidening, InstructionCost>>
-                           &Data) {
-                      return Data.second.first == CM_Widen_Reverse;
-                    });
-        if (!EVLIsLegal) {
-          // If for some reason EVL mode is unsupported, fallback to
-          // DataWithoutLaneMask to try to vectorize the loop with folded tail
-          // in a generic way.
-          ChosenTailFoldingStyle.first = ChosenTailFoldingStyle.second =
-              TailFoldingStyle::DataWithoutLaneMask;
-          LLVM_DEBUG(
-              dbgs()
-              << "LV: Preference for VP intrinsics indicated. Will "
-                 "not try to generate VP Intrinsics "
-              << (UserIC > 1
-                      ? "since interleave count specified is greater than 1.\n"
-                      : "due to non-interleaving reasons.\n"));
-          return;
-        }
-      }
+    if (!Legal->prepareToFoldTailByMasking()) {
       ChosenTailFoldingStyle.first = ChosenTailFoldingStyle.second =
-          ForceTailFoldingStyle;
+          TailFoldingStyle::None;
       return;
     }
 
-    ChosenTailFoldingStyle.first =
+    if (!ForceTailFoldingStyle.getNumOccurrences()) {
+      ChosenTailFoldingStyle.first =
         TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true);
-    ChosenTailFoldingStyle.second =
+      ChosenTailFoldingStyle.second =
         TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/false);
+      return;
+    }
+
+    // Set styles when forced.
+    ChosenTailFoldingStyle.first = ChosenTailFoldingStyle.second =
+        ForceTailFoldingStyle;
+    if (ForceTailFoldingStyle != TailFoldingStyle::DataWithEVL)
+      return;
+    // Override forced styles if needed.
+    // FIXME: use actual opcode/data type for analysis here.
+    // FIXME: Investigate opportunity for fixed vector factor.
+    bool EVLIsLegal =
+        IsScalableVF && UserIC <= 1 &&
+        TTI.hasActiveVectorLength(0, nullptr, Align()) &&
+        !EnableVPlanNativePath &&
+        // FIXME: implement support for max safe dependency distance.
+        Legal->isSafeForAnyVectorWidth() &&
+        // FIXME: remove this once reductions are supported.
+        Legal->getReductionVars().empty() &&
+        // FIXME: remove this once vp_reverse is supported.
+        none_of(WideningDecisions,
+                [](const std::pair<std::pair<Instruction *, ElementCount>,
+                                   std::pair<InstWidening, InstructionCost>> &
+                       Data) { return Data.second.first == CM_Widen_Reverse; });
+    if (!EVLIsLegal) {
+      // If for some reason EVL mode is unsupported, fallback to
+      // DataWithoutLaneMask to try to vectorize the loop with folded tail
+      // in a generic way.
+      ChosenTailFoldingStyle.first = ChosenTailFoldingStyle.second =
+          TailFoldingStyle::DataWithoutLaneMask;
+      LLVM_DEBUG(
+          dbgs()
+          << "LV: Preference for VP intrinsics indicated. Will "
+             "not try to generate VP Intrinsics "
+          << (UserIC > 1
+                  ? "since interleave count specified is greater than 1.\n"
+                  : "due to non-interleaving reasons.\n"));
+    }
   }
 
   /// Returns true if all loop blocks should be masked to fold tail loop.
