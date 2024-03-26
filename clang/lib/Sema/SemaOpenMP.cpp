@@ -21284,7 +21284,7 @@ static bool checkArrayExpressionDoesNotReferToWholeSize(Sema &SemaRef,
   if (isa<ArraySubscriptExpr>(E) ||
       (OASE && OASE->getColonLocFirst().isInvalid())) {
     if (const auto *ATy = dyn_cast<ConstantArrayType>(BaseQTy.getTypePtr()))
-      return ATy->getSize().getSExtValue() != 1;
+      return ATy->getSExtSize() != 1;
     // Size can't be evaluated statically.
     return false;
   }
@@ -21325,7 +21325,7 @@ static bool checkArrayExpressionDoesNotReferToWholeSize(Sema &SemaRef,
     return false; // Can't get the integer value as a constant.
 
   llvm::APSInt ConstLength = Result.Val.getInt();
-  return CATy->getSize().getSExtValue() != ConstLength.getSExtValue();
+  return CATy->getSExtSize() != ConstLength.getSExtValue();
 }
 
 // Return true if it can be proven that the provided array expression (array
@@ -21350,7 +21350,7 @@ static bool checkArrayExpressionDoesNotReferToUnitySize(Sema &SemaRef,
   // is pointer.
   if (!Length) {
     if (const auto *ATy = dyn_cast<ConstantArrayType>(BaseQTy.getTypePtr()))
-      return ATy->getSize().getSExtValue() != 1;
+      return ATy->getSExtSize() != 1;
     // We cannot assume anything.
     return false;
   }

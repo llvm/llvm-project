@@ -933,8 +933,8 @@ struct NoExpansion : TypeExpansion {
 static std::unique_ptr<TypeExpansion>
 getTypeExpansion(QualType Ty, const ASTContext &Context) {
   if (const ConstantArrayType *AT = Context.getAsConstantArrayType(Ty)) {
-    return std::make_unique<ConstantArrayExpansion>(
-        AT->getElementType(), AT->getSize().getZExtValue());
+    return std::make_unique<ConstantArrayExpansion>(AT->getElementType(),
+                                                    AT->getZExtSize());
   }
   if (const RecordType *RT = Ty->getAs<RecordType>()) {
     SmallVector<const CXXBaseSpecifier *, 1> Bases;
@@ -3086,7 +3086,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
               llvm::Align Alignment =
                   CGM.getNaturalTypeAlignment(ETy).getAsAlign();
               AI->addAttrs(llvm::AttrBuilder(getLLVMContext()).addAlignmentAttr(Alignment));
-              uint64_t ArrSize = ArrTy->getSize().getZExtValue();
+              uint64_t ArrSize = ArrTy->getZExtSize();
               if (!ETy->isIncompleteType() && ETy->isConstantSizeType() &&
                   ArrSize) {
                 llvm::AttrBuilder Attrs(getLLVMContext());

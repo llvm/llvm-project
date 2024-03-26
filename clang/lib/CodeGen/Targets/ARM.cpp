@@ -671,7 +671,7 @@ bool ARMABIInfo::isIllegalVectorType(QualType Ty) const {
 /// Return true if a type contains any 16-bit floating point vectors
 bool ARMABIInfo::containsAnyFP16Vectors(QualType Ty) const {
   if (const ConstantArrayType *AT = getContext().getAsConstantArrayType(Ty)) {
-    uint64_t NElements = AT->getSize().getZExtValue();
+    uint64_t NElements = AT->getZExtSize();
     if (NElements == 0)
       return false;
     return containsAnyFP16Vectors(AT->getElementType());

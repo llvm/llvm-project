@@ -6281,7 +6281,7 @@ CodeGenModule::GetConstantArrayFromStringLiteral(const StringLiteral *E) {
     // Resize the string to the right size, which is indicated by its type.
     const ConstantArrayType *CAT = Context.getAsConstantArrayType(E->getType());
     assert(CAT && "String literal not of constant array type!");
-    Str.resize(CAT->getSize().getZExtValue());
+    Str.resize(CAT->getZExtSize());
     return llvm::ConstantDataArray::getString(VMContext, Str, false);
   }
 
