@@ -2208,6 +2208,20 @@ struct FormatStyle {
   /// \version 5
   BreakConstructorInitializersStyle BreakConstructorInitializers;
 
+  /// If ``true``, clang-format will always break before function definition
+  /// parameters.
+  /// \code
+  ///    true:
+  ///    void functionDefinition(
+  ///             int A, int B) {}
+  ///
+  ///    false:
+  ///    void functionDefinition(int A, int B) {}
+  ///
+  /// \endcode
+  /// \version 19
+  bool BreakFunctionDefinitionParameters;
+
   /// Break after each annotation on a field in Java files.
   /// \code{.java}
   ///    true:                                  false:
@@ -2217,11 +2231,6 @@ struct FormatStyle {
   /// \endcode
   /// \version 3.8
   bool BreakAfterJavaFieldAnnotations;
-
-  /// If ``true``, clang-format will always break before function definition
-  /// parameters
-  /// \version 19
-  bool BreakFunctionDefinitionParameters;
 
   /// Allow breaking string literals when formatting.
   ///

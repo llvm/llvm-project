@@ -3154,7 +3154,16 @@ the configuration (without a prefix: ``Auto``).
 
 **BreakFunctionDefinitionParameters** (``Boolean``) :versionbadge:`clang-format 19` :ref:`¶ <BreakFunctionDefinitionParameters>`
   If ``true``, clang-format will always break before function definition
-  parameters
+  parameters.
+
+  .. code-block:: c++
+
+     true:
+     void functionDefinition(
+              int A, int B) {}
+
+     false:
+     void functionDefinition(int A, int B) {}
 
 .. _BreakInheritanceList:
 

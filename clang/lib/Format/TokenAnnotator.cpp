@@ -5319,8 +5319,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return true;
 
   if (Style.BreakFunctionDefinitionParameters && Line.MightBeFunctionDecl &&
-      Line.mightBeFunctionDefinition() && Left.is(tok::l_paren) &&
-      Left.MightBeFunctionDeclParen && Left.ParameterCount > 0) {
+      Line.mightBeFunctionDefinition() && Left.MightBeFunctionDeclParen &&
+      Left.ParameterCount > 0) {
     return true;
   }
 

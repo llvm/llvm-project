@@ -7952,11 +7952,11 @@ TEST_F(FormatTest, AllowAllArgumentsOnNextLineDontAlign) {
 }
 
 TEST_F(FormatTest, BreakFunctionDefinitionParameters) {
-  FormatStyle Style = getLLVMStyleWithColumns(80);
+  FormatStyle Style = getLLVMStyle();
+  EXPECT_FALSE(Style.BreakFunctionDefinitionParameters);
   StringRef Input = "void functionDecl(paramA, paramB, paramC);\n"
                     "void emptyFunctionDefinition() {}\n"
                     "void functionDefinition(int A, int B, int C) {}";
-  Style.BreakFunctionDefinitionParameters = false;
   verifyFormat(StringRef("void functionDecl(paramA, paramB, paramC);\n"
                          "void emptyFunctionDefinition() {}\n"
                          "void functionDefinition(int A, int B, int C) {}"),
