@@ -52,6 +52,7 @@ private:
 
 public:
   static const endianness TargetEndianness = E;
+  static const endianness Endian = E;
   static const bool Is64Bits = Is64;
 
   using uint = std::conditional_t<Is64, uint64_t, uint32_t>;
