@@ -41,7 +41,7 @@ lpad:
 !15 = !{!"function_entry_count", i64 1000}
 !16 = !{!"branch_weights", i64 1000}
 !17 = !{!"function_entry_count", i32 1500}
-!18 = !{!"VP", i64 1500, i64 123, i64 900, i64 456, i64 600}
+!18 = !{!"VP", i32 0, i64 1500, i64 123, i64 900, i64 456, i64 600}
 
 ; CHECK-LABEL: @caller(
 ; CHECK:  invoke void %func(
@@ -51,4 +51,4 @@ lpad:
 ; CHECK:  invoke void %func(
 ; CHECK-NEXT: {{.*}} !prof ![[PROF]] 
 
-; CHECK: ![[PROF]] = !{!"VP", i64 1500, i64 123, i64 900, i64 456, i64 600}
+; CHECK: ![[PROF]] = !{!"VP", i32 0, i64 1500, i64 123, i64 900, i64 456, i64 600}
