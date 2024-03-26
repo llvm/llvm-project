@@ -847,6 +847,9 @@ bool RISCVRegisterInfo::getRegAllocationHints(
         tryAddHint(MO, MI.getOperand(0), NeedGPRC);
       }
     }
+    if (MI.isFusible())
+      if (OpIdx == 1 || (OpIdx == 2 && MI.isCommutable()))
+        tryAddHint(MO, MI.getOperand(0), false);
   }
 
   for (MCPhysReg OrderReg : Order)

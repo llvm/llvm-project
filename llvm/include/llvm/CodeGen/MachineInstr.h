@@ -115,6 +115,7 @@ public:
                              // this instruction.
     Unpredictable = 1 << 16, // Instruction with unpredictable condition.
     NoConvergent = 1 << 17,  // Call does not require convergence guarantees.
+    Fusible = 1 << 18,       // Instruction is the second of a fusible pair.
   };
 
 private:
@@ -1030,6 +1031,9 @@ public:
       return false;
     return hasProperty(MCID::Convergent, Type);
   }
+
+  /// Return true if this instruction is fusible.
+  bool isFusible() const { return getFlag(Fusible); }
 
   /// Returns true if the specified instruction has a delay slot
   /// which must be filled by the code generator.
