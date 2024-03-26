@@ -128,6 +128,14 @@ define <vscale x 4 x i1> @sve_signature_pred(<vscale x 4 x i1> %arg1, <vscale x 
   ret <vscale x 4 x i1> %arg2
 }
 
+; CHECK-LABEL: name: sve_signature_pred_2d
+; CHECK: [[RES:%[0-9]+]]:ppr = COPY $p1
+; CHECK: $p0 = COPY [[RES]]
+; CHECK: RET_ReallyLR implicit $p0
+define [1 x <vscale x 4 x i1>] @sve_signature_pred_2d([1 x <vscale x 4 x i1>] %arg1, [1 x <vscale x 4 x i1>] %arg2) nounwind {
+  ret [1 x <vscale x 4 x i1>] %arg2
+}
+
 ; CHECK-LABEL: name: sve_signature_vec_caller
 ; CHECK-DAG: [[ARG2:%[0-9]+]]:zpr = COPY $z1
 ; CHECK-DAG: [[ARG1:%[0-9]+]]:zpr = COPY $z0
@@ -154,6 +162,20 @@ define <vscale x 4 x i32> @sve_signature_vec_caller(<vscale x 4 x i32> %arg1, <v
 define <vscale x 4 x i1> @sve_signature_pred_caller(<vscale x 4 x i1> %arg1, <vscale x 4 x i1> %arg2) nounwind {
   %res = call <vscale x 4 x i1> @sve_signature_pred(<vscale x 4 x i1> %arg2, <vscale x 4 x i1> %arg1)
   ret <vscale x 4 x i1> %res
+}
+
+; CHECK-LABEL: name: sve_signature_pred_2d_caller
+; CHECK-DAG: [[ARG2:%[0-9]+]]:ppr = COPY $p1
+; CHECK-DAG: [[ARG1:%[0-9]+]]:ppr = COPY $p0
+; CHECK-DAG: $p0 = COPY [[ARG2]]
+; CHECK-DAG: $p1 = COPY [[ARG1]]
+; CHECK-NEXT: BL @sve_signature_pred_2d, csr_aarch64_sve_aapcs
+; CHECK: [[RES:%[0-9]+]]:ppr = COPY $p0
+; CHECK: $p0 = COPY [[RES]]
+; CHECK: RET_ReallyLR implicit $p0
+define [1 x <vscale x 4 x i1>] @sve_signature_pred_2d_caller([1 x <vscale x 4 x i1>] %arg1, [1 x <vscale x 4 x i1>] %arg2) nounwind {
+  %res = call [1 x <vscale x 4 x i1>] @sve_signature_pred_2d([1 x <vscale x 4 x i1>] %arg2, [1 x <vscale x 4 x i1>] %arg1)
+  ret [1 x <vscale x 4 x i1>] %res
 }
 
 ; Test that functions returning or taking SVE arguments use the correct
