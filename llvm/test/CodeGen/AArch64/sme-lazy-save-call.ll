@@ -13,14 +13,15 @@ define void @test_lazy_save_1_callee() nounwind "aarch64_inout_za" {
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    msub x9, x8, x8, x9
-; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    sub x10, x29, #16
-; CHECK-NEXT:    stur wzr, [x29, #-4]
+; CHECK-NEXT:    msub x8, x8, x8, x9
+; CHECK-NEXT:    mov sp, x8
+; CHECK-NEXT:    stur x8, [x29, #-16]
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    sub x9, x29, #16
 ; CHECK-NEXT:    sturh wzr, [x29, #-6]
-; CHECK-NEXT:    stur x9, [x29, #-16]
+; CHECK-NEXT:    stur wzr, [x29, #-4]
 ; CHECK-NEXT:    sturh w8, [x29, #-8]
-; CHECK-NEXT:    msr TPIDR2_EL0, x10
+; CHECK-NEXT:    msr TPIDR2_EL0, x9
 ; CHECK-NEXT:    bl private_za_callee
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
@@ -45,14 +46,15 @@ define void @test_lazy_save_2_callees() nounwind "aarch64_inout_za" {
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    rdsvl x19, #1
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    msub x8, x19, x19, x8
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    msub x8, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x8
+; CHECK-NEXT:    rdsvl x19, #1
 ; CHECK-NEXT:    sub x20, x29, #16
-; CHECK-NEXT:    stur wzr, [x29, #-4]
-; CHECK-NEXT:    sturh wzr, [x29, #-6]
 ; CHECK-NEXT:    stur x8, [x29, #-16]
+; CHECK-NEXT:    sturh wzr, [x29, #-6]
+; CHECK-NEXT:    stur wzr, [x29, #-4]
 ; CHECK-NEXT:    sturh w19, [x29, #-8]
 ; CHECK-NEXT:    msr TPIDR2_EL0, x20
 ; CHECK-NEXT:    bl private_za_callee
@@ -93,14 +95,15 @@ define float @test_lazy_save_expanded_intrinsic(float %a) nounwind "aarch64_inou
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    msub x9, x8, x8, x9
-; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    sub x10, x29, #16
-; CHECK-NEXT:    stur wzr, [x29, #-4]
+; CHECK-NEXT:    msub x8, x8, x8, x9
+; CHECK-NEXT:    mov sp, x8
+; CHECK-NEXT:    stur x8, [x29, #-16]
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    sub x9, x29, #16
 ; CHECK-NEXT:    sturh wzr, [x29, #-6]
-; CHECK-NEXT:    stur x9, [x29, #-16]
+; CHECK-NEXT:    stur wzr, [x29, #-4]
 ; CHECK-NEXT:    sturh w8, [x29, #-8]
-; CHECK-NEXT:    msr TPIDR2_EL0, x10
+; CHECK-NEXT:    msr TPIDR2_EL0, x9
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
@@ -131,14 +134,15 @@ define void @test_lazy_save_and_conditional_smstart() nounwind "aarch64_inout_za
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    msub x9, x8, x8, x9
-; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    sub x10, x29, #80
-; CHECK-NEXT:    stur wzr, [x29, #-68]
+; CHECK-NEXT:    msub x8, x8, x8, x9
+; CHECK-NEXT:    mov sp, x8
+; CHECK-NEXT:    stur x8, [x29, #-80]
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    sub x9, x29, #80
 ; CHECK-NEXT:    sturh wzr, [x29, #-70]
-; CHECK-NEXT:    stur x9, [x29, #-80]
+; CHECK-NEXT:    stur wzr, [x29, #-68]
 ; CHECK-NEXT:    sturh w8, [x29, #-72]
-; CHECK-NEXT:    msr TPIDR2_EL0, x10
+; CHECK-NEXT:    msr TPIDR2_EL0, x9
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
 ; CHECK-NEXT:    tbz w19, #0, .LBB3_2

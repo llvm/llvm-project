@@ -31,6 +31,10 @@ def AArch64_save_zt : SDNode<"AArch64ISD::SAVE_ZT", SDTypeProfile<0, 2,
 def AArch64CoalescerBarrier
     : SDNode<"AArch64ISD::COALESCER_BARRIER", SDTypeProfile<1, 1, []>, []>;
 
+let usesCustomInserter = 1, Defs = [SP], Uses = [SP] in {
+  def ExpandZABuffer : Pseudo<(outs), (ins), []>, Sched<[WriteI]> {}
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction naming conventions.
 //===----------------------------------------------------------------------===//
