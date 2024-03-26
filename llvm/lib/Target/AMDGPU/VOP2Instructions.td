@@ -1389,7 +1389,7 @@ class VOP2_DPP8_Gen<bits<6> op, VOP2_Pseudo ps, GFXGen Gen,
 }
 
 //===----------------------------------------------------------------------===//
-// GFX11, GFX12
+// GFX11, GFX12, GFX13
 //===----------------------------------------------------------------------===//
 
 //===------------------------------- VOP2 -------------------------------===//
@@ -1406,6 +1406,10 @@ multiclass VOP2Only_Real_MADK64<GFXGen Gen, bits<6> op> {
       let DecoderNamespace = Gen.DecoderNamespace;
   }
 }
+
+multiclass VOP2Only_Real_MADK64_gfx1210_gfx13<bits<6> op> :
+  VOP2Only_Real_MADK64<GFX12_10Gen, op>,
+  VOP2Only_Real_MADK64<GFX13Gen, op>;
 
 multiclass VOP2Only_Real_MADK_with_name<GFXGen Gen, bits<6> op, string asmName,
                                         string opName = NAME> {
@@ -1583,6 +1587,10 @@ multiclass VOP2_Real_FULL<GFXGen Gen, bits<6> op> :
   VOP2_Real_dpp<Gen, op>,
   VOP2_Real_dpp8<Gen, op>;
 
+multiclass VOP2_Real_FULL_gfx1210_gfx13<bits<6> op> :
+  VOP2_Real_FULL<GFX12_10Gen, op>,
+  VOP2_Real_FULL<GFX13Gen, op>;
+
 multiclass VOP2_Real_NO_VOP3_with_name<GFXGen Gen, bits<6> op, string opName,
                                        string asmName, bit isSingle = 0> {
   defm NAME : VOP2_Real_e32_with_name<Gen, op, opName, asmName, isSingle>,
@@ -1599,6 +1607,10 @@ multiclass VOP2_Real_FULL_with_name<GFXGen Gen, bits<6> op, string opName,
 
 multiclass VOP2_Real_NO_DPP<GFXGen Gen, bits<6> op> :
   VOP2_Real_e32<Gen, op>, VOP2_Real_e64<Gen, op>;
+
+multiclass VOP2_Real_NO_DPP_gfx1210_gfx13<bits<6> op> :
+  VOP2_Real_NO_DPP<GFX12_10Gen, op>,
+  VOP2_Real_NO_DPP<GFX13Gen, op>;
 
 multiclass VOP2_Real_NO_DPP_with_name<GFXGen Gen, bits<6> op, string opName,
                                       string asmName> {
@@ -1680,11 +1692,11 @@ let SubtargetPredicate = isGFX12Plus in {
 let SubtargetPredicate = HasFmacF64Inst in
 defm V_FMAC_F64 : VOP2_Real_FULL<GFX12Gen, 0x17>;
 
-defm V_FMAMK_F64 : VOP2Only_Real_MADK64<GFX12_10Gen, 0x23>;
-defm V_FMAAK_F64 : VOP2Only_Real_MADK64<GFX12_10Gen, 0x24>;
-defm V_ADD_U64 : VOP2_Real_FULL<GFX12_10Gen, 0x28>;
-defm V_SUB_U64 : VOP2_Real_FULL<GFX12_10Gen, 0x29>;
-defm V_MUL_U64 : VOP2_Real_NO_DPP<GFX12_10Gen, 0x2a>;
+defm V_FMAMK_F64 : VOP2Only_Real_MADK64_gfx1210_gfx13<0x23>;
+defm V_FMAAK_F64 : VOP2Only_Real_MADK64_gfx1210_gfx13<0x24>;
+defm V_ADD_U64 : VOP2_Real_FULL_gfx1210_gfx13<0x28>;
+defm V_SUB_U64 : VOP2_Real_FULL_gfx1210_gfx13<0x29>;
+defm V_MUL_U64 : VOP2_Real_NO_DPP_gfx1210_gfx13<0x2a>;
 
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12, GFX13.

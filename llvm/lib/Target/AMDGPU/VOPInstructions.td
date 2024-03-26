@@ -40,7 +40,7 @@ class GFXGen<Predicate pred, string dn, string suffix, int sub> {
 }
 
 def GFX13Gen             : GFXGen<isGFX13Only, "GFX13", "_gfx13", SIEncodingFamily.GFX13>;
-def GFX12_10Gen          : GFXGen<isGFX12_10Plus, "GFX12_10", "_gfx1210", SIEncodingFamily.GFX12_10>;
+def GFX12_10Gen          : GFXGen<isGFX12_10Only, "GFX12_10", "_gfx1210", SIEncodingFamily.GFX12_10>;
 def GFX12PlusNot12_10Gen : GFXGen<isGFX12PlusNot12_10, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
 def GFX12Gen             : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
 def GFX11Gen             : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
