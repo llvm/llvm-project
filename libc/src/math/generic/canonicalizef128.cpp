@@ -1,4 +1,4 @@
-//===---------- GPU implementation of a quick exit function -----*- C++ -*-===//
+//===-- Implementation of canonicalizef128 function------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_GPU_QUICK_EXIT_H
-#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_GPU_QUICK_EXIT_H
+#include "src/math/canonicalizef128.h"
+#include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
 
-void quick_exit(int status);
+LLVM_LIBC_FUNCTION(int, canonicalizef128, (float128 * cx, const float128 *x)) {
+  return fputil::canonicalize(*cx, *x);
+}
 
 } // namespace LIBC_NAMESPACE
-
-#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_GPU_QUICK_EXIT_H
