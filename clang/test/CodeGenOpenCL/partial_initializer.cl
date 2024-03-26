@@ -35,7 +35,8 @@ void f(void) {
   // CHECK: %[[compoundliteral1:.*]] = alloca <2 x i32>, align 8
   // CHECK: %[[V2:.*]] = alloca <4 x i32>, align 16
 
-  // CHECK: call void @llvm.memset.p0.i32(ptr align 4 %A, i8 0, i32 144, i1 false)
+  // CHECK: %[[v0:.*]] = getelementptr inbounds i8, ptr %A, i32 8
+  // CHECK: call void @llvm.memset.p0.i32(ptr align 4 %[[v0]], i8 0, i32 136, i1 false)
   // CHECK: %[[v2:.*]] = getelementptr inbounds [6 x [6 x float]], ptr %A, i32 0, i32 0
   // CHECK: %[[v3:.*]] = getelementptr inbounds [6 x float], ptr %[[v2]], i32 0, i32 0
   // CHECK: store float 1.000000e+00, ptr %[[v3]], align 4
