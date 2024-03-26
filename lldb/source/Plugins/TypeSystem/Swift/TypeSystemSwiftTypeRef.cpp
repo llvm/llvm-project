@@ -211,7 +211,8 @@ static TypeSP LookupClangType(Module &m,
 }
 
 TypeSP TypeSystemSwiftTypeRef::LookupClangType(
-    StringRef name_ref, llvm::ArrayRef<CompilerContext> decl_context) {
+    StringRef name_ref, llvm::ArrayRef<CompilerContext> decl_context,
+    ExecutionContext *exe_ctx) {
   Module *m = GetModule();
   if (!m)
     return {};
@@ -219,7 +220,8 @@ TypeSP TypeSystemSwiftTypeRef::LookupClangType(
 }
 
 TypeSP TypeSystemSwiftTypeRefForExpressions::LookupClangType(
-    StringRef name_ref, llvm::ArrayRef<CompilerContext> decl_context) {
+    StringRef name_ref, llvm::ArrayRef<CompilerContext> decl_context,
+    ExecutionContext *exe_ctx) {
   // Check the cache first. Negative results are also cached.
   TypeSP result;
   ConstString name(name_ref);
@@ -229,7 +231,18 @@ TypeSP TypeSystemSwiftTypeRefForExpressions::LookupClangType(
   TargetSP target_sp = GetTargetWP().lock();
   if (!target_sp)
     return {};
-  target_sp->GetImages().ForEach([&](const ModuleSP &m) -> bool {
+
+  ModuleSP cur_module;
+  if (exe_ctx)
+    if (StackFrame *frame = exe_ctx->GetFramePtr())
+      cur_module =
+          frame->GetSymbolContext(lldb::eSymbolContextModule).module_sp;
+
+  auto lookup = [&](const ModuleSP &m) -> bool {
+    // Already visited this.
+    if (m == cur_module)
+      return true;
+
     // Don't recursively call into LookupClangTypes() to avoid filling
     // hundreds of image caches with negative results.
     result = ::LookupClangType(const_cast<Module &>(*m), decl_context);
@@ -237,7 +250,14 @@ TypeSP TypeSystemSwiftTypeRefForExpressions::LookupClangType(
     if (result)
       m_clang_type_cache.Insert(name.AsCString(), result);
     return !result;
-  });
+  };
+
+  // Visit the current module first as a performance optimization heuristic.
+  if (cur_module)
+    if (!lookup(cur_module))
+      return result;
+
+  target_sp->GetImages().ForEach(lookup);
   return result;
 }
 

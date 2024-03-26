@@ -386,7 +386,8 @@ public:
   /// context.
   virtual lldb::TypeSP
   LookupClangType(llvm::StringRef name_ref,
-                  llvm::ArrayRef<CompilerContext> decl_context);
+                  llvm::ArrayRef<CompilerContext> decl_context,
+                  ExecutionContext *exe_ctx = nullptr);
 
   /// Attempts to convert a Clang type into a Swift type.
   /// For example, int is converted to Int32.
@@ -538,9 +539,11 @@ public:
   /// Returns how often ModulesDidLoad was called.
   unsigned GetGeneration() const { return m_generation; }
   /// Performs a target-wide search.
+  /// \param exe_ctx is a hint for where to look first.
   lldb::TypeSP
   LookupClangType(llvm::StringRef name_ref,
-                  llvm::ArrayRef<CompilerContext> decl_context) override;
+                  llvm::ArrayRef<CompilerContext> decl_context,
+                  ExecutionContext *exe_ctx) override;
 
 
   friend class SwiftASTContextForExpressions;
