@@ -264,8 +264,12 @@ LogicalResult StoreNdOp::verify() {
 // XeGPU_UpdateNDOffsetOp
 //===----------------------------------------------------------------------===//
 LogicalResult UpdateNdOffsetOp::verify() {
+  auto ty = getTensorDescType();
+  if (ty.getScattered())
+    return emitOpError("Expects a non-scattered TensorDesc.\n");
+
   // number of offsets specified must match the rank of the tensor descriptor
-  if (getTensorDescType().getRank() != (int64_t)getNumOffsets()) {
+  if (ty.getRank() != (int64_t)getNumOffsets()) {
     return emitOpError("Invalid number of offsets.");
   }
   return success();
@@ -289,20 +293,21 @@ LogicalResult CreateDescOp::verify() {
   auto tdescTy = getTensorDescType();
   auto chunkSize = getChunkSize();
 
-  if (getRankOf(getSource()) > 2)
+  if (getRankOf(getSource()) > 1)
     return emitOpError(
         "Expecting the source is a 1D memref or pointer (uint64_t).");
 
   if (!tdescTy.getScattered())
     return emitOpError("Expects a scattered TensorDesc.\n");
 
-  std::vector<int64_t> shape({(int64_t)getNumOffsets()});
+  SmallVector<int64_t> shape({(int64_t)getNumOffsets()});
   if (chunkSize != 1)
     shape.push_back(chunkSize);
 
-  auto tdescShape = tdescTy.getShape();
-  if (shape != tdescShape.vec())
-    return emitOpError("Expecting the size of offsets matchs TensorDesc[0].");
+  auto tdescShape = getShapeOf(tdescTy);
+  if (shape != tdescShape)
+    return emitOpError("Incorrect TensorDesc shape. ")
+           << "Expected is " << makeString(shape) << "\n";
 
   return success();
 }
