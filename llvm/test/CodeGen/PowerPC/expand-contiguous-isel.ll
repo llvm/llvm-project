@@ -14,8 +14,8 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; After that we have:
 ; updated: 1504B	%vreg83<def> = ISEL8 %vreg83, %vreg83, %vreg33:sub_eq
 
-; RUN: llc -verify-machineinstrs -O2 -ppc-asm-full-reg-names -mcpu=pwr7 -ppc-gen-isel=true < %s | FileCheck %s --check-prefix=CHECK-GEN-ISEL-TRUE
-; RUN: llc -verify-machineinstrs -O2 -ppc-asm-full-reg-names -mcpu=pwr7 -ppc-gen-isel=false < %s | FileCheck %s --implicit-check-not isel
+; RUN: llc -verify-machineinstrs -O2 -ppc-asm-full-reg-names -mcpu=pwr7 -mattr=+isel < %s | FileCheck %s --check-prefix=CHECK-GEN-ISEL-TRUE
+; RUN: llc -verify-machineinstrs -O2 -ppc-asm-full-reg-names -mcpu=pwr7 -mattr=-isel < %s | FileCheck %s --implicit-check-not isel
 
 @.str = private unnamed_addr constant [3 x i8] c"]]\00", align 1
 @.str.1 = private unnamed_addr constant [35 x i8] c"Index < Length && \22Invalid index!\22\00", align 1

@@ -3,7 +3,7 @@
 ; Note that only parts of the sequence are checked for here, to allow
 ; for minor code generation differences.
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-fpcvt < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-fpcvt -ppc-gen-isel=false < %s | FileCheck %s --check-prefix=CHECK-NO-ISEL
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-fpcvt -mattr=-isel < %s | FileCheck %s --check-prefix=CHECK-NO-ISEL
 ; Also check that with -enable-unsafe-fp-math we do not get that extra
 ; code sequence.  Simply verify that there is no "isel" present.
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-fpcvt -enable-unsafe-fp-math < %s | FileCheck %s -check-prefix=CHECK-UNSAFE

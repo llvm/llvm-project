@@ -2,7 +2,7 @@
 ; RUN: llc -ppc-gpr-icmps=all -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:     -verify-machineinstrs -mcpu=pwr7 < %s | FileCheck %s
 ; RUN: llc -ppc-gpr-icmps=all -mtriple=powerpc64-unknown-linux-gnu \
-; RUN:     -verify-machineinstrs -mcpu=pwr7 -ppc-gen-isel=false < %s | \
+; RUN:     -verify-machineinstrs -mcpu=pwr7 -mattr=-isel < %s | \
 ; RUN:     FileCheck --check-prefix=CHECK-NO-ISEL %s
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -O2 \
 ; RUN:     -ppc-asm-full-reg-names -mcpu=pwr10 -ppc-gpr-icmps=none < %s | \

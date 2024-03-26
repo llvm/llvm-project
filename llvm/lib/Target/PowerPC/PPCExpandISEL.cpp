@@ -32,7 +32,14 @@ STATISTIC(NumExpanded, "Number of ISEL instructions expanded");
 STATISTIC(NumRemoved, "Number of ISEL instructions removed");
 STATISTIC(NumFolded, "Number of ISEL instructions folded");
 
-extern cl::opt<bool> GenerateISEL;
+// If -ppc-gen-isel=false is set, we will disable generating the ISEL
+// instruction on all PPC targets. Otherwise, if the user set option
+// -misel or the platform supports ISEL by default, still generate the
+// ISEL instruction, else expand it.
+static cl::opt<bool>
+    GenerateISEL("ppc-gen-isel",
+                 cl::desc("Enable generating the ISEL instruction."),
+                 cl::init(true), cl::Hidden);
 
 namespace {
 class PPCExpandISEL : public MachineFunctionPass {
