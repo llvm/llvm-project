@@ -1102,6 +1102,11 @@ bool Decl::isInAnotherModuleUnit() const {
   return M != getASTContext().getCurrentNamedModule();
 }
 
+bool Decl::shouldSkipCheckingODR() const {
+  return getASTContext().getLangOpts().SkipODRCheckInGMF && getOwningModule() &&
+         getOwningModule()->isExplicitGlobalModule();
+}
+
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }
 static Decl::Kind getKind(const DeclContext *DC) { return DC->getDeclKind(); }
 
@@ -1352,6 +1357,7 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::ExternCContext:
   case Decl::LinkageSpec:
   case Decl::Export:
+  case Decl::TopLevelStmt:
   case Decl::Block:
   case Decl::Captured:
   case Decl::OMPDeclareReduction:

@@ -10,7 +10,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderVTune.h"
-#include "llvm/ExecutionEngine/Orc/Debugging/VTuneSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/Shared/VTuneSharedStructs.h"
+#include <map>
 
 #if LLVM_USE_INTEL_JITEVENTS
 #include "IntelJITEventsWrapper.h"
@@ -19,13 +20,18 @@
 using namespace llvm;
 using namespace llvm::orc;
 
-static std::unique_ptr<IntelJITEventsWrapper> Wrapper;
+namespace {
+class JITEventWrapper {
+public:
+  static std::unique_ptr<IntelJITEventsWrapper> Wrapper;
+};
+std::unique_ptr<IntelJITEventsWrapper> JITEventWrapper::Wrapper;
+} // namespace
 
 static Error registerJITLoaderVTuneRegisterImpl(const VTuneMethodBatch &MB) {
   const size_t StringsSize = MB.Strings.size();
 
-  for (size_t i = 0; i < MB.Methods.size(); ++i) {
-    VTuneMethodInfo MethodInfo = MB.Methods.at(i);
+  for (const auto &MethodInfo : MB.Methods) {
     iJIT_Method_Load MethodMessage;
     memset(&MethodMessage, 0, sizeof(iJIT_Method_Load));
 
@@ -69,8 +75,8 @@ static Error registerJITLoaderVTuneRegisterImpl(const VTuneMethodBatch &MB) {
       MethodMessage.line_number_size = LineInfo.size();
       MethodMessage.line_number_table = &*LineInfo.begin();
     }
-    Wrapper->iJIT_NotifyEvent(iJVM_EVENT_TYPE_METHOD_LOAD_FINISHED,
-                              &MethodMessage);
+    JITEventWrapper::Wrapper->iJIT_NotifyEvent(
+        iJVM_EVENT_TYPE_METHOD_LOAD_FINISHED, &MethodMessage);
   }
 
   return Error::success();
@@ -79,16 +85,17 @@ static Error registerJITLoaderVTuneRegisterImpl(const VTuneMethodBatch &MB) {
 static void registerJITLoaderVTuneUnregisterImpl(
     const std::vector<std::pair<uint64_t, uint64_t>> &UM) {
   for (auto &Method : UM) {
-    Wrapper->iJIT_NotifyEvent(iJVM_EVENT_TYPE_METHOD_UNLOAD_START,
-                              const_cast<unsigned long *>(&Method.first));
+    JITEventWrapper::Wrapper->iJIT_NotifyEvent(
+        iJVM_EVENT_TYPE_METHOD_UNLOAD_START,
+        const_cast<uint64_t *>(&Method.first));
   }
 }
 
 extern "C" llvm::orc::shared::CWrapperFunctionResult
 llvm_orc_registerVTuneImpl(const char *Data, uint64_t Size) {
   using namespace orc::shared;
-  if (!Wrapper)
-    Wrapper.reset(new IntelJITEventsWrapper);
+  if (!JITEventWrapper::Wrapper)
+    JITEventWrapper::Wrapper.reset(new IntelJITEventsWrapper);
 
   return WrapperFunction<SPSError(SPSVTuneMethodBatch)>::handle(
              Data, Size, registerJITLoaderVTuneRegisterImpl)
@@ -105,8 +112,8 @@ llvm_orc_unregisterVTuneImpl(const char *Data, uint64_t Size) {
 
 // For Testing: following code comes from llvm-jitlistener.cpp in llvm tools
 namespace {
-typedef std::vector<std::pair<std::string, unsigned int>> SourceLocations;
-typedef std::map<uint64_t, SourceLocations> NativeCodeMap;
+using SourceLocations = std::vector<std::pair<std::string, unsigned int>>;
+using NativeCodeMap = std::map<uint64_t, SourceLocations>;
 NativeCodeMap ReportedDebugFuncs;
 } // namespace
 
@@ -169,7 +176,7 @@ static unsigned int GetNewMethodID(void) {
 extern "C" llvm::orc::shared::CWrapperFunctionResult
 llvm_orc_test_registerVTuneImpl(const char *Data, uint64_t Size) {
   using namespace orc::shared;
-  Wrapper.reset(new IntelJITEventsWrapper(
+  JITEventWrapper::Wrapper.reset(new IntelJITEventsWrapper(
       NotifyEvent, NULL, NULL, IsProfilingActive, 0, 0, GetNewMethodID));
   return WrapperFunction<SPSError(SPSVTuneMethodBatch)>::handle(
              Data, Size, registerJITLoaderVTuneRegisterImpl)

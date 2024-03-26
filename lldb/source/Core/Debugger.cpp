@@ -104,7 +104,7 @@ static std::recursive_mutex *g_debugger_list_mutex_ptr =
     nullptr; // NOTE: intentional leak to avoid issues with C++ destructor chain
 static Debugger::DebuggerList *g_debugger_list_ptr =
     nullptr; // NOTE: intentional leak to avoid issues with C++ destructor chain
-static llvm::ThreadPool *g_thread_pool = nullptr;
+static llvm::DefaultThreadPool *g_thread_pool = nullptr;
 
 static constexpr OptionEnumValueElement g_show_disassembly_enum_values[] = {
     {
@@ -609,7 +609,7 @@ void Debugger::Initialize(LoadPluginCallbackType load_plugin_callback) {
          "Debugger::Initialize called more than once!");
   g_debugger_list_mutex_ptr = new std::recursive_mutex();
   g_debugger_list_ptr = new DebuggerList();
-  g_thread_pool = new llvm::ThreadPool(llvm::optimal_concurrency());
+  g_thread_pool = new llvm::DefaultThreadPool(llvm::optimal_concurrency());
   g_load_plugin_callback = load_plugin_callback;
 }
 
@@ -860,6 +860,9 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   m_collection_sp->AppendProperty(
       "symbols", "Symbol lookup and cache settings.", true,
       ModuleList::GetGlobalModuleListProperties().GetValueProperties());
+  m_collection_sp->AppendProperty(
+      LanguageProperties::GetSettingName(), "Language settings.", true,
+      Language::GetGlobalLanguageProperties().GetValueProperties());
   if (m_command_interpreter_up) {
     m_collection_sp->AppendProperty(
         "interpreter",

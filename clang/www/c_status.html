@@ -260,7 +260,7 @@ conformance.</p>
     <tr>
       <td>new block scopes for selection and iteration statements</td>
       <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>integer constant type rules</td>
@@ -315,7 +315,13 @@ conformance.</p>
     <tr>
       <td>additional predefined macro names</td>
       <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
+      <!-- It is unknown which paper brought in this change, which was listed in
+           the C99 front matter. After hunting around for what these changes are,
+           I found a mention in the C99 rationale document that implementers who
+           wish to add their own predefined macros must not start them with
+           __STDC_, which was a new restriction in C99. As best I can tell, that
+           is what this particular feature is about. -->
     </tr>
     <tr>
       <td>_Pragma preprocessing operator</td>
@@ -330,11 +336,11 @@ conformance.</p>
     </tr>
       <tr>
         <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n631.htm">N631</a></td>
-        <td class="unknown" align="center">Unknown</td>
+        <td class="full" align="center">Yes</td>
       </tr>
       <tr>
         <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n696.ps">N696</a></td>
-        <td class="unknown" align="center">Unknown</td>
+        <td class="full" align="center">Yes</td>
       </tr>
     <tr>
       <td>__func__ predefined identifier</td>
@@ -369,7 +375,7 @@ conformance.</p>
     <tr>
       <td>relaxed restrictions on portable header names</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n772.htm">N772</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>return without an expression not permitted in function that returns a value</td>
@@ -401,7 +407,7 @@ conformance.</p>
     <tr>
       <td>Clarification of expressions</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1282.pdf">N1282</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>Extending the lifetime of temporary objects (factored approach)</td>
@@ -411,7 +417,7 @@ conformance.</p>
     <tr>
       <td>Requiring signed char to have no padding bits</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1310.htm">N1310</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>Initializing static or external variables</td>
@@ -471,7 +477,7 @@ conformance.</p>
     <tr>
       <td>Constant expressions</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1365.htm">N1365</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Clang 16</td>
     </tr>
     <tr>
       <td>Contractions and expression evaluation methods</td>
@@ -784,7 +790,7 @@ conformance.</p>
     <tr>
       <td>Free positioning of labels inside compound statements</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2508.pdf">N2508</a></td>
-      <td class="unreleased" align="center">Clang 18</td>
+      <td class="full" align="center">Clang 18</td>
     </tr>
     <tr>
       <td>Clarification request for C17 example of undefined behavior</td>
@@ -1156,7 +1162,7 @@ conformance.</p>
     <tr>
       <td>Remove trigraphs??!</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2940.pdf">N2940</a></td>
-      <td class="unreleased" align="center">Clang 18</td>
+      <td class="full" align="center">Clang 18</td>
     </tr>
     <tr>
       <td>Improved normal enumerations</td>
@@ -1196,12 +1202,12 @@ conformance.</p>
     <tr>
       <td>Type inference for object declarations</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3007.htm">N3007</a></td>
-      <td class="unreleased" align="center">Clang 18</td>
+      <td class="full" align="center">Clang 18</td>
     </tr>
     <tr>
       <td>constexpr for object definitions</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3018.htm">N3018</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 19</td>
     </tr>
     <tr>
       <td>Introduce storage class specifiers for compound literals</td>

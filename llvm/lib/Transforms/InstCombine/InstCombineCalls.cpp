@@ -274,7 +274,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
         DbgAssign->replaceVariableLocationOp(FillC, FillVal);
     };
     for_each(at::getAssignmentMarkers(S), replaceOpForAssignmentMarkers);
-    for_each(at::getDPVAssignmentMarkers(S), replaceOpForAssignmentMarkers);
+    for_each(at::getDVRAssignmentMarkers(S), replaceOpForAssignmentMarkers);
 
     S->setAlignment(Alignment);
     if (isa<AtomicMemSetInst>(MI))
@@ -399,11 +399,14 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
   if (auto *SplatPtr = getSplatValue(II.getArgOperand(1))) {
     // scatter(splat(value), splat(ptr), non-zero-mask) -> store value, ptr
     if (auto *SplatValue = getSplatValue(II.getArgOperand(0))) {
-      Align Alignment = cast<ConstantInt>(II.getArgOperand(2))->getAlignValue();
-      StoreInst *S =
-          new StoreInst(SplatValue, SplatPtr, /*IsVolatile=*/false, Alignment);
-      S->copyMetadata(II);
-      return S;
+      if (maskContainsAllOneOrUndef(ConstMask)) {
+        Align Alignment =
+            cast<ConstantInt>(II.getArgOperand(2))->getAlignValue();
+        StoreInst *S = new StoreInst(SplatValue, SplatPtr, /*IsVolatile=*/false,
+                                     Alignment);
+        S->copyMetadata(II);
+        return S;
+      }
     }
     // scatter(vector, splat(ptr), splat(true)) -> store extract(vector,
     // lastlane), ptr
@@ -500,6 +503,11 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     assert(match(Op1, m_One()) && "Expected ctlz/cttz operand to be 0 or 1");
     return IC.replaceInstUsesWith(II, ConstantInt::getNullValue(II.getType()));
   }
+
+  // If ctlz/cttz is only used as a shift amount, set is_zero_poison to true.
+  if (II.hasOneUse() && match(Op1, m_Zero()) &&
+      match(II.user_back(), m_Shift(m_Value(), m_Specific(&II))))
+    return IC.replaceOperand(II, 1, IC.Builder.getTrue());
 
   Constant *C;
 
@@ -1787,7 +1795,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // We don't have a "nabs" intrinsic, so negate if needed based on the
       // max/min operation.
       if (IID == Intrinsic::smin || IID == Intrinsic::umax)
-        Abs = Builder.CreateNeg(Abs, "nabs", /* NUW */ false, IntMinIsPoison);
+        Abs = Builder.CreateNeg(Abs, "nabs", IntMinIsPoison);
       return replaceInstUsesWith(CI, Abs);
     }
 
@@ -2085,8 +2093,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Arg0 = II->getArgOperand(0);
     Value *Arg1 = II->getArgOperand(1);
     bool IsSigned = IID == Intrinsic::sadd_with_overflow;
-    bool HasNWAdd = IsSigned ? match(Arg0, m_NSWAdd(m_Value(X), m_APInt(C0)))
-                             : match(Arg0, m_NUWAdd(m_Value(X), m_APInt(C0)));
+    bool HasNWAdd = IsSigned
+                        ? match(Arg0, m_NSWAddLike(m_Value(X), m_APInt(C0)))
+                        : match(Arg0, m_NUWAddLike(m_Value(X), m_APInt(C0)));
     if (HasNWAdd && match(Arg1, m_APInt(C1))) {
       bool Overflow;
       APInt NewC =
@@ -2161,8 +2170,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
+    // usub_sat((sub nuw C, A), C1) -> usub_sat(usub_sat(C, C1), A)
+    // which after that:
+    // usub_sat((sub nuw C, A), C1) -> usub_sat(C - C1, A) if C1 u< C
+    // usub_sat((sub nuw C, A), C1) -> 0 otherwise
+    Constant *C, *C1;
+    Value *A;
+    if (IID == Intrinsic::usub_sat &&
+        match(Arg0, m_NUWSub(m_ImmConstant(C), m_Value(A))) &&
+        match(Arg1, m_ImmConstant(C1))) {
+      auto *NewC = Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, C, C1);
+      auto *NewSub =
+          Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, NewC, A);
+      return replaceInstUsesWith(*SI, NewSub);
+    }
+
     // ssub.sat(X, C) -> sadd.sat(X, -C) if C != MIN
-    Constant *C;
     if (IID == Intrinsic::ssub_sat && match(Arg1, m_Constant(C)) &&
         C->isNotMinSignedValue()) {
       Value *NegVal = ConstantExpr::getNeg(C);
@@ -2267,13 +2290,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         default:
           llvm_unreachable("unexpected intrinsic ID");
         }
-        Instruction *NewCall = Builder.CreateBinaryIntrinsic(
+        Value *V = Builder.CreateBinaryIntrinsic(
             IID, X, ConstantFP::get(Arg0->getType(), Res), II);
         // TODO: Conservatively intersecting FMF. If Res == C2, the transform
         //       was a simplification (so Arg0 and its original flags could
         //       propagate?)
-        NewCall->andIRFlags(M);
-        return replaceInstUsesWith(*II, NewCall);
+        if (auto *CI = dyn_cast<CallInst>(V))
+          CI->andIRFlags(M);
+        return replaceInstUsesWith(*II, V);
       }
     }
 
@@ -2449,6 +2473,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *X;
     if (match(Sign, m_Intrinsic<Intrinsic::copysign>(m_Value(), m_Value(X))))
       return replaceOperand(*II, 1, X);
+
+    // Clear sign-bit of constant magnitude:
+    // copysign -MagC, X --> copysign MagC, X
+    // TODO: Support constant folding for fabs
+    const APFloat *MagC;
+    if (match(Mag, m_APFloat(MagC)) && MagC->isNegative()) {
+      APFloat PosMagC = *MagC;
+      PosMagC.clearSign();
+      return replaceOperand(*II, 0, ConstantFP::get(Mag->getType(), PosMagC));
+    }
 
     // Peek through changes of magnitude's sign-bit. This call rewrites those:
     // copysign (fabs X), Sign --> copysign X, Sign
@@ -3137,28 +3171,30 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (match(BO0, m_VecReverse(m_Value(X)))) {
         // rev(binop rev(X), rev(Y)) --> binop X, Y
         if (match(BO1, m_VecReverse(m_Value(Y))))
-          return replaceInstUsesWith(CI,
-                                     BinaryOperator::CreateWithCopiedFlags(
-                                         OldBinOp->getOpcode(), X, Y, OldBinOp,
-                                         OldBinOp->getName(), II));
+          return replaceInstUsesWith(CI, BinaryOperator::CreateWithCopiedFlags(
+                                             OldBinOp->getOpcode(), X, Y,
+                                             OldBinOp, OldBinOp->getName(),
+                                             II->getIterator()));
         // rev(binop rev(X), BO1Splat) --> binop X, BO1Splat
         if (isSplatValue(BO1))
-          return replaceInstUsesWith(CI,
-                                     BinaryOperator::CreateWithCopiedFlags(
-                                         OldBinOp->getOpcode(), X, BO1,
-                                         OldBinOp, OldBinOp->getName(), II));
+          return replaceInstUsesWith(CI, BinaryOperator::CreateWithCopiedFlags(
+                                             OldBinOp->getOpcode(), X, BO1,
+                                             OldBinOp, OldBinOp->getName(),
+                                             II->getIterator()));
       }
       // rev(binop BO0Splat, rev(Y)) --> binop BO0Splat, Y
       if (match(BO1, m_VecReverse(m_Value(Y))) && isSplatValue(BO0))
-        return replaceInstUsesWith(CI, BinaryOperator::CreateWithCopiedFlags(
-                                           OldBinOp->getOpcode(), BO0, Y,
-                                           OldBinOp, OldBinOp->getName(), II));
+        return replaceInstUsesWith(CI,
+                                   BinaryOperator::CreateWithCopiedFlags(
+                                       OldBinOp->getOpcode(), BO0, Y, OldBinOp,
+                                       OldBinOp->getName(), II->getIterator()));
     }
     // rev(unop rev(X)) --> unop X
     if (match(Vec, m_OneUse(m_UnOp(m_VecReverse(m_Value(X)))))) {
       auto *OldUnOp = cast<UnaryOperator>(Vec);
       auto *NewUnOp = UnaryOperator::CreateWithCopiedFlags(
-          OldUnOp->getOpcode(), X, OldUnOp, OldUnOp->getName(), II);
+          OldUnOp->getOpcode(), X, OldUnOp, OldUnOp->getName(),
+          II->getIterator());
       return replaceInstUsesWith(CI, NewUnOp);
     }
     break;

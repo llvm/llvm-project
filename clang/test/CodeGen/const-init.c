@@ -216,3 +216,6 @@ int PR4517_x2 = PR4517_arrc[PR4517_idx];
 // CHECK: @PR4517_x = global i32 42, align 4
 // CHECK: @PR4517_idx = constant i32 1, align 4
 // CHECK: @PR4517_x2 = global i32 42, align 4
+
+// CHECK: @GH84784_inf = constant i8 1
+_Bool const GH84784_inf = (1.0/0.0);

@@ -924,8 +924,8 @@ void ModFileWriter::PutProcEntity(llvm::raw_ostream &os, const Symbol &symbol) {
       os, symbol,
       [&]() {
         os << "procedure(";
-        if (details.procInterface()) {
-          os << details.procInterface()->name();
+        if (details.rawProcInterface()) {
+          os << details.rawProcInterface()->name();
         } else if (details.type()) {
           PutType(os, *details.type());
         }
@@ -1242,7 +1242,7 @@ static void GetModuleDependences(
   std::size_t limit{content.size()};
   std::string_view str{content.data(), limit};
   for (std::size_t j{ModHeader::len};
-       str.substr(j, ModHeader::needLen) == ModHeader::need;) {
+       str.substr(j, ModHeader::needLen) == ModHeader::need; ++j) {
     j += 7;
     auto checkSum{ExtractCheckSum(str.substr(j, ModHeader::sumLen))};
     if (!checkSum) {
@@ -1260,8 +1260,8 @@ static void GetModuleDependences(
     for (; j < limit && str.at(j) != '\n'; ++j) {
     }
     if (j > start && j < limit && str.at(j) == '\n') {
-      dependences.AddDependence(
-          std::string{str.substr(start, j - start)}, intrinsic, *checkSum);
+      std::string depModName{str.substr(start, j - start)};
+      dependences.AddDependence(std::move(depModName), intrinsic, *checkSum);
     } else {
       break;
     }
@@ -1271,7 +1271,7 @@ static void GetModuleDependences(
 Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     Scope *ancestor, bool silent) {
   std::string ancestorName; // empty for module
-  Symbol *notAModule{nullptr};
+  const Symbol *notAModule{nullptr};
   bool fatalError{false};
   if (ancestor) {
     if (auto *scope{ancestor->FindSubmodule(name)}) {
@@ -1287,25 +1287,27 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     if (it != context_.globalScope().end()) {
       Scope *scope{it->second->scope()};
       if (scope->kind() == Scope::Kind::Module) {
-        if (requiredHash) {
-          if (const Symbol * foundModule{scope->symbol()}) {
-            if (const auto *module{foundModule->detailsIf<ModuleDetails>()};
-                module && module->moduleFileHash() &&
-                *requiredHash != *module->moduleFileHash()) {
-              Say(name, ancestorName,
-                  "Multiple versions of the module '%s' cannot be required by the same compilation"_err_en_US,
-                  name.ToString());
-              return nullptr;
+        for (const Symbol *found{scope->symbol()}; found;) {
+          if (const auto *module{found->detailsIf<ModuleDetails>()}) {
+            if (!requiredHash ||
+                *requiredHash ==
+                    module->moduleFileHash().value_or(*requiredHash)) {
+              return const_cast<Scope *>(found->scope());
             }
+            found = module->previous(); // same name, distinct hash
+          } else {
+            notAModule = found;
+            break;
           }
         }
-        return scope;
       } else {
         notAModule = scope->symbol();
-        // USE, NON_INTRINSIC global name isn't a module?
-        fatalError = isIntrinsic.has_value();
       }
     }
+  }
+  if (notAModule) {
+    // USE, NON_INTRINSIC global name isn't a module?
+    fatalError = isIntrinsic.has_value();
   }
   auto path{ModFileName(name, ancestorName, context_.moduleFileSuffix())};
   parser::Parsing parsing{context_.allCookedSources()};
@@ -1360,42 +1362,18 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
 
   // Look for the right module file if its hash is known
   if (requiredHash && !fatalError) {
-    std::vector<std::string> misses;
     for (const std::string &maybe :
         parser::LocateSourceFileAll(path, options.searchDirectories)) {
       if (const auto *srcFile{context_.allCookedSources().allSources().OpenPath(
               maybe, llvm::errs())}) {
-        if (auto checkSum{VerifyHeader(srcFile->content())}) {
-          if (*checkSum == *requiredHash) {
-            path = maybe;
-            if (!misses.empty()) {
-              auto &msg{context_.Say(name,
-                  "Module file for '%s' appears later in the module search path than conflicting modules with different checksums"_warn_en_US,
-                  name.ToString())};
-              for (const std::string &m : misses) {
-                msg.Attach(
-                    name, "Module file with a conflicting name: '%s'"_en_US, m);
-              }
-            }
-            misses.clear();
-            break;
-          } else {
-            misses.emplace_back(maybe);
-          }
+        if (auto checkSum{VerifyHeader(srcFile->content())};
+            checkSum && *checkSum == *requiredHash) {
+          path = maybe;
+          break;
         }
       }
     }
-    if (!misses.empty()) {
-      auto &msg{Say(name, ancestorName,
-          "Could not find a module file for '%s' in the module search path with the expected checksum"_err_en_US,
-          name.ToString())};
-      for (const std::string &m : misses) {
-        msg.Attach(name, "Module file with different checksum: '%s'"_en_US, m);
-      }
-      return nullptr;
-    }
   }
-
   const auto *sourceFile{fatalError ? nullptr : parsing.Prescan(path, options)};
   if (fatalError || parsing.messages().AnyFatalError()) {
     if (!silent) {
@@ -1451,11 +1429,24 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   Scope &topScope{isIntrinsic.value_or(false) ? context_.intrinsicModulesScope()
                                               : context_.globalScope()};
   Symbol *moduleSymbol{nullptr};
+  const Symbol *previousModuleSymbol{nullptr};
   if (!ancestor) { // module, not submodule
     parentScope = &topScope;
     auto pair{parentScope->try_emplace(name, UnknownDetails{})};
     if (!pair.second) {
-      return nullptr;
+      // There is already a global symbol or intrinsic module of the same name.
+      previousModuleSymbol = &*pair.first->second;
+      if (const auto *details{
+              previousModuleSymbol->detailsIf<ModuleDetails>()}) {
+        if (!details->moduleFileHash().has_value()) {
+          return nullptr;
+        }
+      } else {
+        return nullptr;
+      }
+      CHECK(parentScope->erase(name) != 0);
+      pair = parentScope->try_emplace(name, UnknownDetails{});
+      CHECK(pair.second);
     }
     moduleSymbol = &*pair.first->second;
     moduleSymbol->set(Symbol::Flag::ModFile);
@@ -1486,7 +1477,9 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   }
   if (moduleSymbol) {
     CHECK(moduleSymbol->test(Symbol::Flag::ModFile));
-    moduleSymbol->get<ModuleDetails>().set_moduleFileHash(checkSum.value());
+    auto &details{moduleSymbol->get<ModuleDetails>()};
+    details.set_moduleFileHash(checkSum.value());
+    details.set_previous(previousModuleSymbol);
     if (isIntrinsic.value_or(false)) {
       moduleSymbol->attrs().set(Attr::INTRINSIC);
     }
@@ -1622,8 +1615,8 @@ void SubprogramSymbolCollector::DoSymbol(
                       }
                     },
                     [this](const ProcEntityDetails &details) {
-                      if (details.procInterface()) {
-                        DoSymbol(*details.procInterface());
+                      if (details.rawProcInterface()) {
+                        DoSymbol(*details.rawProcInterface());
                       } else {
                         DoType(details.type());
                       }

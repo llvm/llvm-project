@@ -266,9 +266,14 @@ filesystem system_error
 filesystem type_traits
 filesystem version
 format array
+format cctype
+format clocale
 format cmath
 format cstddef
 format cstdint
+format cstdlib
+format cstring
+format cwchar
 format initializer_list
 format limits
 format locale
@@ -745,6 +750,7 @@ sstream cstddef
 sstream istream
 sstream ostream
 sstream string
+sstream string_view
 sstream type_traits
 sstream version
 stack compare

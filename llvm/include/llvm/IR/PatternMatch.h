@@ -68,6 +68,22 @@ template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
   return SubPattern;
 }
 
+template <typename SubPattern_t> struct AllowReassoc_match {
+  SubPattern_t SubPattern;
+
+  AllowReassoc_match(const SubPattern_t &SP) : SubPattern(SP) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    auto *I = dyn_cast<FPMathOperator>(V);
+    return I && I->hasAllowReassoc() && SubPattern.match(I);
+  }
+};
+
+template <typename T>
+inline AllowReassoc_match<T> m_AllowReassoc(const T &SubPattern) {
+  return SubPattern;
+}
+
 template <typename Class> struct class_match {
   template <typename ITy> bool match(ITy *V) { return isa<Class>(V); }
 };
@@ -564,6 +580,19 @@ inline api_pred_ty<is_negated_power2> m_NegatedPower2(const APInt *&V) {
   return V;
 }
 
+struct is_negated_power2_or_zero {
+  bool isValue(const APInt &C) { return !C || C.isNegatedPowerOf2(); }
+};
+/// Match a integer or vector negated power-of-2.
+/// For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<is_negated_power2_or_zero> m_NegatedPower2OrZero() {
+  return cst_pred_ty<is_negated_power2_or_zero>();
+}
+inline api_pred_ty<is_negated_power2_or_zero>
+m_NegatedPower2OrZero(const APInt *&V) {
+  return V;
+}
+
 struct is_power2_or_zero {
   bool isValue(const APInt &C) { return !C || C.isPowerOf2(); }
 };
@@ -594,6 +623,18 @@ inline cst_pred_ty<is_lowbit_mask> m_LowBitMask() {
   return cst_pred_ty<is_lowbit_mask>();
 }
 inline api_pred_ty<is_lowbit_mask> m_LowBitMask(const APInt *&V) { return V; }
+
+struct is_lowbit_mask_or_zero {
+  bool isValue(const APInt &C) { return !C || C.isMask(); }
+};
+/// Match an integer or vector with only the low bit(s) set.
+/// For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<is_lowbit_mask_or_zero> m_LowBitMaskOrZero() {
+  return cst_pred_ty<is_lowbit_mask_or_zero>();
+}
+inline api_pred_ty<is_lowbit_mask_or_zero> m_LowBitMaskOrZero(const APInt *&V) {
+  return V;
+}
 
 struct icmp_pred_with_threshold {
   ICmpInst::Predicate Pred;
@@ -843,9 +884,9 @@ struct bind_const_intval_ty {
 /// Match a specified integer value or vector of all elements of that
 /// value.
 template <bool AllowUndefs> struct specific_intval {
-  APInt Val;
+  const APInt &Val;
 
-  specific_intval(APInt V) : Val(std::move(V)) {}
+  specific_intval(const APInt &V) : Val(V) {}
 
   template <typename ITy> bool match(ITy *V) {
     const auto *CI = dyn_cast<ConstantInt>(V);
@@ -857,22 +898,37 @@ template <bool AllowUndefs> struct specific_intval {
   }
 };
 
+template <bool AllowUndefs> struct specific_intval64 {
+  uint64_t Val;
+
+  specific_intval64(uint64_t V) : Val(V) {}
+
+  template <typename ITy> bool match(ITy *V) {
+    const auto *CI = dyn_cast<ConstantInt>(V);
+    if (!CI && V->getType()->isVectorTy())
+      if (const auto *C = dyn_cast<Constant>(V))
+        CI = dyn_cast_or_null<ConstantInt>(C->getSplatValue(AllowUndefs));
+
+    return CI && CI->getValue() == Val;
+  }
+};
+
 /// Match a specific integer value or vector with all elements equal to
 /// the value.
-inline specific_intval<false> m_SpecificInt(APInt V) {
-  return specific_intval<false>(std::move(V));
+inline specific_intval<false> m_SpecificInt(const APInt &V) {
+  return specific_intval<false>(V);
 }
 
-inline specific_intval<false> m_SpecificInt(uint64_t V) {
-  return m_SpecificInt(APInt(64, V));
+inline specific_intval64<false> m_SpecificInt(uint64_t V) {
+  return specific_intval64<false>(V);
 }
 
-inline specific_intval<true> m_SpecificIntAllowUndef(APInt V) {
-  return specific_intval<true>(std::move(V));
+inline specific_intval<true> m_SpecificIntAllowUndef(const APInt &V) {
+  return specific_intval<true>(V);
 }
 
-inline specific_intval<true> m_SpecificIntAllowUndef(uint64_t V) {
-  return m_SpecificIntAllowUndef(APInt(64, V));
+inline specific_intval64<true> m_SpecificIntAllowUndef(uint64_t V) {
+  return specific_intval64<true>(V);
 }
 
 /// Match a ConstantInt and bind to its value.  This does not match
@@ -1276,6 +1332,26 @@ inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Add>,
                         DisjointOr_match<LHS, RHS>>
 m_AddLike(const LHS &L, const RHS &R) {
   return m_CombineOr(m_Add(L, R), m_DisjointOr(L, R));
+}
+
+/// Match either "add nsw" or "or disjoint"
+template <typename LHS, typename RHS>
+inline match_combine_or<
+    OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
+                              OverflowingBinaryOperator::NoSignedWrap>,
+    DisjointOr_match<LHS, RHS>>
+m_NSWAddLike(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_NSWAdd(L, R), m_DisjointOr(L, R));
+}
+
+/// Match either "add nuw" or "or disjoint"
+template <typename LHS, typename RHS>
+inline match_combine_or<
+    OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
+                              OverflowingBinaryOperator::NoUnsignedWrap>,
+    DisjointOr_match<LHS, RHS>>
+m_NUWAddLike(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_NUWAdd(L, R), m_DisjointOr(L, R));
 }
 
 //===----------------------------------------------------------------------===//

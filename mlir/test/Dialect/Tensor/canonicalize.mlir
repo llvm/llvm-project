@@ -1,5 +1,42 @@
 // RUN: mlir-opt %s -split-input-file -canonicalize="test-convergence" | FileCheck %s
 
+
+// CHECK-LABEL: expand_shape_identity_fold
+// CHECK-NEXT: return
+func.func @expand_shape_identity_fold(%arg0 : tensor<5xf32>) -> tensor<5xf32> {
+  %0 = tensor.expand_shape %arg0 [[0]] : tensor<5xf32> into tensor<5xf32>
+  return %0 : tensor<5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: expand_shape_rank0_identity_fold
+// CHECK-NEXT: return
+func.func @expand_shape_rank0_identity_fold(%arg0 : tensor<f32>) -> tensor<f32> {
+  %0 = tensor.expand_shape %arg0 [] : tensor<f32> into tensor<f32>
+  return %0 : tensor<f32>
+}
+
+// -----
+
+// CHECK-LABEL: collapse_shape_identity_fold
+// CHECK-NEXT: return
+func.func @collapse_shape_identity_fold(%arg0 : tensor<5x4xf32>) -> tensor<5x4xf32> {
+  %0 = tensor.collapse_shape %arg0 [[0], [1]] : tensor<5x4xf32> into tensor<5x4xf32>
+  return %0 : tensor<5x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: collapse_shape_rank0_identity_fold
+// CHECK-NEXT: return
+func.func @collapse_shape_rank0_identity_fold(%arg0 : tensor<f32>) -> tensor<f32> {
+  %0 = tensor.collapse_shape %arg0 [] : tensor<f32> into tensor<f32>
+  return %0 : tensor<f32>
+}
+
+// -----
+
 // CHECK-LABEL: @tensor_bitcast_chain_ok
 // CHECK-SAME: %[[IN:.*]]: tensor<2xi32>
 func.func @tensor_bitcast_chain_ok(%input: tensor<2xi32>) -> tensor<2xf32> {
@@ -2092,7 +2129,7 @@ func.func @unpack_pack(%t: tensor<128x128xf32>) -> tensor<128x128xf32> {
 
 // Chain: NC -> NCnc -> NCnc -> NC
 // CHECK: func.func @unpack_pack(
-// CHECK-SAME: %[[T:.+]]: tensor<128x128xf32>, 
+// CHECK-SAME: %[[T:.+]]: tensor<128x128xf32>,
 // CHECK: return %[[T]] : tensor<128x128xf32>
 func.func @unpack_pack(%t: tensor<128x128xf32>, %tile1: index, %tile2: index) -> tensor<128x128xf32> {
   %tensor_empty = tensor.empty(%tile1, %tile2) : tensor<16x16x?x?xf32>
@@ -2250,3 +2287,106 @@ func.func @infer_and_fold_pack_unpack_same_tiles(%t: tensor<10x20x4x4xf32>) -> t
 // CHECK-LABEL: func.func @infer_and_fold_pack_unpack_same_tiles
 // CHECK-SAME:    %[[SRC:[0-9a-zA-Z]+]]
 // CHECK:         return %[[SRC]]
+
+// -----
+
+// Test case: Folding of tensor.dim(tensor.reshape %v %shp, %idx) -> tensor.extract %shp[%idx]
+// CHECK-LABEL: func @dim_of_reshape(
+//  CHECK-SAME:     %[[MEM:[0-9a-z]+]]: tensor<*xf32>,
+//  CHECK-SAME:     %[[SHP:[0-9a-z]+]]: tensor<?xindex>
+//  CHECK-NEXT:   %[[IDX:.*]] = arith.constant 3
+//  CHECK-NEXT:   %[[DIM:.*]] = tensor.extract %[[SHP]][%[[IDX]]]
+//   CHECK-NOT:   tensor.store
+//   CHECK-NOT:   tensor.dim
+//   CHECK-NOT: tensor.reshape
+//       CHECK:   return %[[DIM]] : index
+func.func @dim_of_reshape(%arg0: tensor<*xf32>, %arg1: tensor<?xindex>)
+    -> index {
+  %c3 = arith.constant 3 : index
+  %0 = tensor.reshape %arg0(%arg1)
+      : (tensor<*xf32>, tensor<?xindex>) -> tensor<*xf32>
+  // Update the shape to test that the load ends up in the right place.
+  tensor.insert %c3 into %arg1[%c3] : tensor<?xindex>
+  %1 = tensor.dim %0, %c3 : tensor<*xf32>
+  return %1 : index
+}
+
+// -----
+
+// Test case: Folding of tensor.dim(tensor.reshape %v %shp, %idx) -> tensor.extract %shp[%idx]
+// CHECK-LABEL: func @dim_of_reshape_i32(
+//       CHECK:  tensor.extract
+//  CHECK-NEXT:  %[[CAST:.*]] = arith.index_cast
+//   CHECK-NOT:  tensor.dim
+//   CHECK-NOT:  tensor.reshape
+//       CHECK:  return %[[CAST]] : index
+func.func @dim_of_reshape_i32(%arg0: tensor<*xf32>, %arg1: tensor<?xi32>)
+    -> index {
+    %c3 = arith.constant 3 : index
+    %0 = tensor.reshape %arg0(%arg1)
+        : (tensor<*xf32>, tensor<?xi32>) -> tensor<*xf32>
+    %1 = tensor.dim %0, %c3 : tensor<*xf32>
+    return %1 : index
+}
+
+// -----
+
+// Test case: tensor.dim(tensor.reshape %v %shp, %idx) is folded into tensor.extract %shp[%idx]
+// CHECK-LABEL: func @dim_of_reshape_for(
+//       CHECK: scf.for
+//  CHECK-NEXT: tensor.extract
+//   CHECK-NOT: tensor.dim
+//   CHECK-NOT: tensor.reshape
+func.func @dim_of_reshape_for( %arg0: tensor<*xf32>, %arg1: tensor<?xindex>) -> index {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c4 = arith.constant 4 : index
+
+    %0 = tensor.reshape %arg0(%arg1) : (tensor<*xf32>, tensor<?xindex>) -> tensor<*xf32>
+
+    %1 = scf.for %arg2 = %c0 to %c4 step %c1 iter_args(%arg3 = %c1) -> (index) {
+      %2 = tensor.dim %0, %arg2 : tensor<*xf32>
+      %3 = arith.muli %arg3, %2 : index
+      scf.yield %3 : index
+    }
+    return %1 : index
+}
+
+// -----
+
+// Test case: tensor.dim(tensor.reshape %v %shp, %idx) is folded into tensor.extract %shp[%idx]
+// CHECK-LABEL: func @dim_of_reshape_undominated(
+//       CHECK: arith.muli
+//  CHECK-NEXT: tensor.extract
+//   CHECK-NOT: tensor.dim
+//   CHECK-NOT: tensor.reshape
+func.func @dim_of_reshape_undominated(%arg0: tensor<*xf32>, %arg1: tensor<?xindex>, %arg2: index) -> index {
+    %c4 = arith.constant 4 : index
+    %reshape = tensor.reshape %arg0(%arg1) : (tensor<*xf32>, tensor<?xindex>) -> tensor<*xf32>
+    %0 = arith.muli %arg2, %c4 : index
+    %dim = tensor.dim %reshape, %0 : tensor<*xf32>
+    return %dim : index
+  }
+
+// -----
+
+// Test case: This test fails to fold because the index of tensor.dim is out_of_bounds
+// CHECK-LABEL: func @dim_out_of_bounds(
+//       CHECK: %[[IDX:.*]] = index.constant 28
+//  CHECK-NEXT: bufferization.alloc_tensor
+//  CHECK-NEXT: %[[DIM:.*]] = tensor.dim %{{.*}}, %[[IDX]]
+//  CHECK-NEXT: memref.alloc
+//  CHECK-NEXT: memref.cast
+//  CHECK-NEXT: affine.vector_load %{{.*}}[{{.*}}, {{.*}}, symbol(%[[DIM]])]
+//  CHECK-NEXT: return
+func.func @dim_out_of_bounds() -> vector<7xi32> {
+    %c1 = arith.constant 1 : index
+    %idx28 = index.constant 28
+    %c29 = arith.constant 29 : index
+    %3 = bufferization.alloc_tensor(%c29) : tensor<?xi16>
+    %dim = tensor.dim %3, %idx28 : tensor<?xi16>
+    %alloc_21 = memref.alloc(%c29) : memref<?x26x2xi32>
+    %16 = affine.vector_load %alloc_21[%c1, %c1, %dim] : memref<?x26x2xi32>, vector<7xi32>
+    return %16 : vector<7xi32>
+}
+

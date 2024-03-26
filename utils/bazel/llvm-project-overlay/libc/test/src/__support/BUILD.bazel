@@ -13,7 +13,11 @@ licenses(["notice"])
 libc_test(
     name = "math_extras_test",
     srcs = ["math_extras_test.cpp"],
-    deps = ["//libc:__support_math_extras"],
+    deps = [
+        "//libc:__support_integer_literals",
+        "//libc:__support_math_extras",
+        "//libc:__support_uint128",
+    ],
 )
 
 # This test is currently disabled because of an issue in
@@ -60,6 +64,7 @@ libc_test(
     name = "integer_to_string_test",
     srcs = ["integer_to_string_test.cpp"],
     deps = [
+        "//libc:__support_cpp_limits",
         "//libc:__support_cpp_span",
         "//libc:__support_cpp_string_view",
         "//libc:__support_integer_literals",
@@ -82,7 +87,9 @@ libc_test(
     srcs = ["uint_test.cpp"],
     deps = [
         "//libc:__support_cpp_optional",
+        "//libc:__support_macros_properties_types",
         "//libc:__support_uint",
+        "//libc:llvm_libc_macros_math_macros",
     ],
 )
 
@@ -107,5 +114,6 @@ libc_test(
     srcs = ["integer_literals_test.cpp"],
     deps = [
         "//libc:__support_integer_literals",
+        "//libc:__support_macros_properties_types",
     ],
 )

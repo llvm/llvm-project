@@ -983,6 +983,8 @@ def Availability : InheritableAttr {
              .Case("watchos_app_extension", "watchOS (App Extension)")
              .Case("maccatalyst", "macCatalyst")
              .Case("maccatalyst_app_extension", "macCatalyst (App Extension)")
+             .Case("xros", "visionOS")
+             .Case("xros_app_extension", "visionOS (App Extension)")
              .Case("swift", "Swift")
              .Case("shadermodel", "HLSL ShaderModel")
              .Case("ohos", "OpenHarmony OS")
@@ -1000,6 +1002,8 @@ static llvm::StringRef getPlatformNameSourceSpelling(llvm::StringRef Platform) {
              .Case("watchos_app_extension", "watchOSApplicationExtension")
              .Case("maccatalyst", "macCatalyst")
              .Case("maccatalyst_app_extension", "macCatalystApplicationExtension")
+             .Case("xros", "visionOS")
+             .Case("xros_app_extension", "visionOSApplicationExtension")
              .Case("zos", "z/OS")
              .Case("shadermodel", "ShaderModel")
              .Default(Platform);
@@ -1016,6 +1020,10 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
              .Case("watchOSApplicationExtension", "watchos_app_extension")
              .Case("macCatalyst", "maccatalyst")
              .Case("macCatalystApplicationExtension", "maccatalyst_app_extension")
+             .Case("visionOS", "xros")
+             .Case("visionOSApplicationExtension", "xros_app_extension")
+             .Case("visionos", "xros")
+             .Case("visionos_app_extension", "xros_app_extension")
              .Case("ShaderModel", "shadermodel")
              .Default(Platform);
 } }];
@@ -1572,6 +1580,13 @@ def Unlikely : StmtAttr {
 }
 def : MutualExclusions<[Likely, Unlikely]>;
 
+def CXXAssume : StmtAttr {
+  let Spellings = [CXX11<"", "assume", 202207>];
+  let Subjects = SubjectList<[NullStmt], ErrorDiag, "empty statements">;
+  let Args = [ExprArgument<"Assumption">];
+  let Documentation = [CXXAssumeDocs];
+}
+
 def NoMerge : DeclOrStmtAttr {
   let Spellings = [Clang<"nomerge">];
   let Documentation = [NoMergeDocs];
@@ -2039,6 +2054,13 @@ def AMDGPUNumVGPR : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
+def AMDGPUMaxNumWorkGroups : InheritableAttr {
+  let Spellings = [Clang<"amdgpu_max_num_work_groups", 0>];
+  let Args = [ExprArgument<"MaxNumWorkGroupsX">, ExprArgument<"MaxNumWorkGroupsY", 1>, ExprArgument<"MaxNumWorkGroupsZ", 1>];
+  let Documentation = [AMDGPUMaxNumWorkGroupsDocs];
+  let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
+}
+
 def AMDGPUKernelCall : DeclOrTypeAttr {
   let Spellings = [Clang<"amdgpu_kernel">];
   let Documentation = [Undocumented];
@@ -2169,6 +2191,15 @@ def TypeNullableResult : TypeAttr {
 def TypeNullUnspecified : TypeAttr {
   let Spellings = [CustomKeyword<"_Null_unspecified">];
   let Documentation = [TypeNullUnspecifiedDocs];
+}
+
+def CountedBy : DeclOrTypeAttr {
+  let Spellings = [Clang<"counted_by">];
+  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel">];
+  let ParseArgumentsAsUnevaluated = 1;
+  let Documentation = [CountedByDocs];
+  let LangOpts = [COnly];
 }
 
 // This is a marker used to indicate that an __unsafe_unretained qualifier was
@@ -2912,7 +2943,7 @@ def Suppress : DeclOrStmtAttr {
 def SysVABI : DeclOrTypeAttr {
   let Spellings = [GCC<"sysv_abi">];
 //  let Subjects = [Function, ObjCMethod];
-  let Documentation = [Undocumented];
+  let Documentation = [SysVABIDocs];
 }
 
 def ThisCall : DeclOrTypeAttr {
@@ -3056,6 +3087,20 @@ def TargetClones : InheritableAttr {
   let AdditionalMembers = [{
     StringRef getFeatureStr(unsigned Index) const {
       return *(featuresStrs_begin() + Index);
+    }
+    bool isDefaultVersion(unsigned Index) const {
+      return getFeatureStr(Index) == "default";
+    }
+    void getFeatures(llvm::SmallVectorImpl<StringRef> &Out,
+                     unsigned Index) const {
+      if (isDefaultVersion(Index)) return;
+      StringRef Features = getFeatureStr(Index);
+      SmallVector<StringRef, 8> AttrFeatures;
+      Features.split(AttrFeatures, "+");
+      for (auto &Feature : AttrFeatures) {
+        Feature = Feature.trim();
+        Out.push_back(Feature);
+      }
     }
     // Given an index into the 'featuresStrs' sequence, compute a unique
     // ID to be used with function name mangling for the associated variant.
@@ -4143,11 +4188,11 @@ def OMPDeclareVariant : InheritableAttr {
   }];
 }
 
-def Assumption : InheritableAttr {
-  let Spellings = [Clang<"assume">];
+def OMPAssume : InheritableAttr {
+  let Spellings = [Clang<"assume">, CXX11<"omp", "assume">];
   let Subjects = SubjectList<[Function, ObjCMethod]>;
   let InheritEvenIfAlreadyPresent = 1;
-  let Documentation = [AssumptionDocs];
+  let Documentation = [OMPAssumeDocs];
   let Args = [StringArgument<"Assumption">];
 }
 
@@ -4463,23 +4508,5 @@ def CodeAlign: StmtAttr {
   let AdditionalMembers = [{
     static constexpr int MinimumAlignment = 1;
     static constexpr int MaximumAlignment = 4096;
-  }];
-}
-
-def CountedBy : InheritableAttr {
-  let Spellings = [Clang<"counted_by">];
-  let Subjects = SubjectList<[Field]>;
-  let Args = [IdentifierArgument<"CountedByField">];
-  let Documentation = [CountedByDocs];
-  let LangOpts = [COnly];
-  // FIXME: This is ugly. Let using a DeclArgument would be nice, but a Decl
-  // isn't yet available due to the fact that we're still parsing the
-  // structure. Maybe that code could be changed sometime in the future.
-  code AdditionalMembers = [{
-    private:
-      SourceRange CountedByFieldLoc;
-    public:
-      SourceRange getCountedByFieldLoc() const { return CountedByFieldLoc; }
-      void setCountedByFieldLoc(SourceRange Loc) { CountedByFieldLoc = Loc; }
   }];
 }

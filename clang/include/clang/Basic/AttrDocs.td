@@ -1996,6 +1996,34 @@ Here is an example:
   }];
 }
 
+def CXXAssumeDocs : Documentation {
+  let Category = DocCatStmt;
+  let Heading = "assume";
+  let Content = [{
+The ``assume`` attribute is used to indicate to the optimizer that a
+certain condition is assumed to be true at a certain point in the
+program. If this condition is violated at runtime, the behavior is
+undefined. ``assume`` can only be applied to a null statement.
+
+Different optimisers are likely to react differently to the presence of
+this attribute; in some cases, adding ``assume`` may affect performance
+negatively. It should be used with parsimony and care.
+
+Note that `clang::assume` is a different attribute. Always write ``assume``
+without a namespace if you intend to use the standard C++ attribute.
+
+Example:
+
+.. code-block:: c++
+
+  int f(int x, int y) {
+    [[assume(x == 27)]];
+    [[assume(x == y)]];
+    return y + 1; // May be optimised to `return 28`.
+  }
+  }];
+}
+
 def LikelihoodDocs : Documentation {
   let Category = DocCatStmt;
   let Heading = "likely and unlikely";
@@ -2710,6 +2738,33 @@ An error will be given if:
     attributes;
   - The AMDGPU target backend is unable to create machine code that can meet the
     request.
+  }];
+}
+
+def AMDGPUMaxNumWorkGroupsDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+This attribute specifies the max number of work groups when the kernel
+is dispatched.
+
+Clang supports the
+``__attribute__((amdgpu_max_num_work_groups(<x>, <y>, <z>)))`` or
+``[[clang::amdgpu_max_num_work_groups(<x>, <y>, <z>)]]`` attribute for the
+AMDGPU target. This attribute may be attached to HIP or OpenCL kernel function
+definitions and is an optimization hint.
+
+The ``<x>`` parameter specifies the maximum number of work groups in the x dimension.
+Similarly ``<y>`` and ``<z>`` are for the y and z dimensions respectively.
+Each of the three values must be greater than 0 when provided. The ``<x>`` parameter
+is required, while ``<y>`` and ``<z>`` are optional with default value of 1.
+
+If specified, the AMDGPU target backend might be able to produce better machine
+code.
+
+An error will be given if:
+  - Specified values violate subtarget specifications;
+  - Specified values are not compatible with values provided through other
+    attributes.
   }];
 }
 
@@ -4629,7 +4684,7 @@ For more information see
 }];
 }
 
-def AssumptionDocs : Documentation {
+def OMPAssumeDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "assume";
   let Content = [{
@@ -5082,10 +5137,11 @@ that does not. A single parameter may not have multiple ABI treatment
 attributes.
 
 Support for this feature is target-dependent, although it should be
-supported on every target that Swift supports. Query for this support
-with ``__has_attribute(swiftcall)``. This implies support for the
-``swift_context``, ``swift_error_result``, and ``swift_indirect_result``
-attributes.
+supported on every target that Swift supports. Query for this attribute
+with ``__has_attribute(swiftcall)``. Query if the target supports the
+calling convention with ``__has_extension(swiftcc)``. This implies
+support for the ``swift_context``, ``swift_error_result``, and
+``swift_indirect_result`` attributes.
   }];
 }
 
@@ -5132,6 +5188,10 @@ the following:
   semantically be performed after a guaranteed tail call, such as the
   non-trivial destruction of a local variable or temporary,
   then the program is ill-formed.
+
+Query for this attribute with ``__has_attribute(swiftasynccall)``. Query if
+the target supports the calling convention with
+``__has_extension(swiftasynccc)``.
   }];
 }
 
@@ -6009,6 +6069,9 @@ def AlwaysDestroyDocs : Documentation {
 The ``always_destroy`` attribute specifies that a variable with static or thread
 storage duration should have its exit-time destructor run. This attribute is the
 default unless clang was invoked with -fno-c++-static-destructors.
+
+If a variable is explicitly declared with this attribute, Clang will silence
+otherwise applicable ``-Wexit-time-destructors`` warnings.
   }];
 }
 

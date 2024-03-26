@@ -318,9 +318,9 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: c++
 
-    AlignConsecutiveMacros: AcrossEmptyLines
+    AlignConsecutiveAssignments: AcrossEmptyLines
 
-    AlignConsecutiveMacros:
+    AlignConsecutiveAssignments:
       Enabled: true
       AcrossEmptyLines: true
       AcrossComments: false
@@ -460,9 +460,9 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: c++
 
-    AlignConsecutiveMacros: AcrossEmptyLines
+    AlignConsecutiveBitFields: AcrossEmptyLines
 
-    AlignConsecutiveMacros:
+    AlignConsecutiveBitFields:
       Enabled: true
       AcrossEmptyLines: true
       AcrossComments: false
@@ -602,9 +602,9 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: c++
 
-    AlignConsecutiveMacros: AcrossEmptyLines
+    AlignConsecutiveDeclarations: AcrossEmptyLines
 
-    AlignConsecutiveMacros:
+    AlignConsecutiveDeclarations:
       Enabled: true
       AcrossEmptyLines: true
       AcrossComments: false
@@ -955,6 +955,151 @@ the configuration (without a prefix: ``Auto``).
       }
 
 
+.. _AlignConsecutiveTableGenBreakingDAGArgColons:
+
+**AlignConsecutiveTableGenBreakingDAGArgColons** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 19` :ref:`¶ <AlignConsecutiveTableGenBreakingDAGArgColons>`
+  Style of aligning consecutive TableGen DAGArg operator colons.
+  If enabled, align the colon inside DAGArg which have line break inside.
+  This works only when TableGenBreakInsideDAGArg is BreakElements or
+  BreakAll and the DAGArg is not excepted by
+  TableGenBreakingDAGArgOperators's effect.
+
+  .. code-block:: c++
+
+    let dagarg = (ins
+        a  :$src1,
+        aa :$src2,
+        aaa:$src3
+    )
+
+  Nested configuration flags:
+
+  Alignment options.
+
+  They can also be read as a whole for compatibility. The choices are:
+  - None
+  - Consecutive
+  - AcrossEmptyLines
+  - AcrossComments
+  - AcrossEmptyLinesAndComments
+
+  For example, to align across empty lines and not across comments, either
+  of these work.
+
+  .. code-block:: c++
+
+    AlignConsecutiveTableGenBreakingDAGArgColons: AcrossEmptyLines
+
+    AlignConsecutiveTableGenBreakingDAGArgColons:
+      Enabled: true
+      AcrossEmptyLines: true
+      AcrossComments: false
+
+  * ``bool Enabled`` Whether aligning is enabled.
+
+    .. code-block:: c++
+
+      #define SHORT_NAME       42
+      #define LONGER_NAME      0x007f
+      #define EVEN_LONGER_NAME (2)
+      #define foo(x)           (x * x)
+      #define bar(y, z)        (y + z)
+
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int aaaa : 1;
+      int b    : 12;
+      int ccc  : 8;
+
+      int         aaaa = 12;
+      float       b = 23;
+      std::string ccc;
+
+  * ``bool AcrossEmptyLines`` Whether to align across empty lines.
+
+    .. code-block:: c++
+
+      true:
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int d            = 3;
+
+      false:
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int d = 3;
+
+  * ``bool AcrossComments`` Whether to align across comments.
+
+    .. code-block:: c++
+
+      true:
+      int d    = 3;
+      /* A comment. */
+      double e = 4;
+
+      false:
+      int d = 3;
+      /* A comment. */
+      double e = 4;
+
+  * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
+    like ``+=`` are aligned along with ``=``.
+
+    .. code-block:: c++
+
+      true:
+      a   &= 2;
+      bbb  = 2;
+
+      false:
+      a &= 2;
+      bbb = 2;
+
+  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
+    aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int      (*f)();
+
+      false:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int (*f)();
+
+  * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
+    operators are left-padded to the same length as long ones in order to
+    put all assignment operators to the right of the left hand side.
+
+    .. code-block:: c++
+
+      true:
+      a   >>= 2;
+      bbb   = 2;
+
+      a     = 2;
+      bbb >>= 2;
+
+      false:
+      a >>= 2;
+      bbb = 2;
+
+      a     = 2;
+      bbb >>= 2;
+
+
 .. _AlignConsecutiveTableGenCondOperatorColons:
 
 **AlignConsecutiveTableGenCondOperatorColons** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 19` :ref:`¶ <AlignConsecutiveTableGenCondOperatorColons>`
@@ -983,9 +1128,9 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: c++
 
-    AlignConsecutiveMacros: AcrossEmptyLines
+    AlignConsecutiveTableGenCondOperatorColons: AcrossEmptyLines
 
-    AlignConsecutiveMacros:
+    AlignConsecutiveTableGenCondOperatorColons:
       Enabled: true
       AcrossEmptyLines: true
       AcrossComments: false
@@ -1123,9 +1268,9 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: c++
 
-    AlignConsecutiveMacros: AcrossEmptyLines
+    AlignConsecutiveTableGenDefinitionColons: AcrossEmptyLines
 
-    AlignConsecutiveMacros:
+    AlignConsecutiveTableGenDefinitionColons:
       Enabled: true
       AcrossEmptyLines: true
       AcrossComments: false
@@ -6157,6 +6302,70 @@ the configuration (without a prefix: ``Auto``).
 
 **TabWidth** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <TabWidth>`
   The number of columns used for tab stops.
+
+.. _TableGenBreakInsideDAGArg:
+
+**TableGenBreakInsideDAGArg** (``DAGArgStyle``) :versionbadge:`clang-format 19` :ref:`¶ <TableGenBreakInsideDAGArg>`
+  The styles of the line break inside the DAGArg in TableGen.
+
+  Possible values:
+
+  * ``DAS_DontBreak`` (in configuration: ``DontBreak``)
+    Never break inside DAGArg.
+
+    .. code-block:: c++
+
+      let DAGArgIns = (ins i32:$src1, i32:$src2);
+
+  * ``DAS_BreakElements`` (in configuration: ``BreakElements``)
+    Break inside DAGArg after each list element but for the last.
+    This aligns to the first element.
+
+    .. code-block:: c++
+
+      let DAGArgIns = (ins i32:$src1,
+                           i32:$src2);
+
+  * ``DAS_BreakAll`` (in configuration: ``BreakAll``)
+    Break inside DAGArg after the operator and the all elements.
+
+    .. code-block:: c++
+
+      let DAGArgIns = (ins
+          i32:$src1,
+          i32:$src2
+      );
+
+
+
+.. _TableGenBreakingDAGArgOperators:
+
+**TableGenBreakingDAGArgOperators** (``List of Strings``) :versionbadge:`clang-format 19` :ref:`¶ <TableGenBreakingDAGArgOperators>`
+  Works only when TableGenBreakInsideDAGArg is not DontBreak.
+  The string list needs to consist of identifiers in TableGen.
+  If any identifier is specified, this limits the line breaks by
+  TableGenBreakInsideDAGArg option only on DAGArg values beginning with
+  the specified identifiers.
+
+  For example the configuration,
+
+  .. code-block:: yaml
+
+    TableGenBreakInsideDAGArg: BreakAll
+    TableGenBreakingDAGArgOperators: ['ins', 'outs']
+
+  makes the line break only occurs inside DAGArgs beginning with the
+  specified identifiers 'ins' and 'outs'.
+
+
+  .. code-block:: c++
+
+    let DAGArgIns = (ins
+        i32:$src1,
+        i32:$src2
+    );
+    let DAGArgOtherID = (other i32:$other1, i32:$other2);
+    let DAGArgBang = (!cast<SomeType>("Some") i32:$src1, i32:$src2)
 
 .. _TypeNames:
 

@@ -58,14 +58,6 @@ if (current_toolchain == default_toolchain) {
     }
   }
 
-  write_cmake_config("write_modulemap") {
-    input = "module.modulemap.in"
-    output = "$libcxx_generated_include_dir/module.modulemap"
-
-    #no = "requires LIBCXX_CONFIGURED_WITHOUT_SUPPORT_FOR_THIS_HEADER"
-    values = []
-  }
-
   # This uses write_cmake_config() instead of a normal copy() rule because
   # copy() uses `sources`, and if there's more than one `sources` in a file,
   # sync_source_lists_from_cmake.py can't auto-sync changes.
@@ -295,6 +287,7 @@ if (current_toolchain == default_toolchain) {
       "__algorithm/shift_right.h",
       "__algorithm/shuffle.h",
       "__algorithm/sift_down.h",
+      "__algorithm/simd_utils.h",
       "__algorithm/sort.h",
       "__algorithm/sort_heap.h",
       "__algorithm/stable_partition.h",
@@ -458,7 +451,6 @@ if (current_toolchain == default_toolchain) {
       "__format/format_context.h",
       "__format/format_error.h",
       "__format/format_functions.h",
-      "__format/format_fwd.h",
       "__format/format_parse_context.h",
       "__format/format_string.h",
       "__format/format_to_n_result.h",
@@ -508,6 +500,7 @@ if (current_toolchain == default_toolchain) {
       "__fwd/array.h",
       "__fwd/bit_reference.h",
       "__fwd/complex.h",
+      "__fwd/format.h",
       "__fwd/fstream.h",
       "__fwd/functional.h",
       "__fwd/ios.h",
@@ -778,6 +771,7 @@ if (current_toolchain == default_toolchain) {
       "__thread/thread.h",
       "__thread/timed_backoff_policy.h",
       "__tree",
+      "__tuple/find_index.h",
       "__tuple/make_tuple_types.h",
       "__tuple/pair_like.h",
       "__tuple/sfinae_helpers.h",
@@ -831,10 +825,7 @@ if (current_toolchain == default_toolchain) {
       "__type_traits/is_constant_evaluated.h",
       "__type_traits/is_constructible.h",
       "__type_traits/is_convertible.h",
-      "__type_traits/is_copy_assignable.h",
-      "__type_traits/is_copy_constructible.h",
       "__type_traits/is_core_convertible.h",
-      "__type_traits/is_default_constructible.h",
       "__type_traits/is_destructible.h",
       "__type_traits/is_empty.h",
       "__type_traits/is_enum.h",
@@ -850,17 +841,10 @@ if (current_toolchain == default_toolchain) {
       "__type_traits/is_member_function_pointer.h",
       "__type_traits/is_member_object_pointer.h",
       "__type_traits/is_member_pointer.h",
-      "__type_traits/is_move_assignable.h",
-      "__type_traits/is_move_constructible.h",
       "__type_traits/is_nothrow_assignable.h",
       "__type_traits/is_nothrow_constructible.h",
       "__type_traits/is_nothrow_convertible.h",
-      "__type_traits/is_nothrow_copy_assignable.h",
-      "__type_traits/is_nothrow_copy_constructible.h",
-      "__type_traits/is_nothrow_default_constructible.h",
       "__type_traits/is_nothrow_destructible.h",
-      "__type_traits/is_nothrow_move_assignable.h",
-      "__type_traits/is_nothrow_move_constructible.h",
       "__type_traits/is_null_pointer.h",
       "__type_traits/is_object.h",
       "__type_traits/is_pod.h",
@@ -881,14 +865,9 @@ if (current_toolchain == default_toolchain) {
       "__type_traits/is_trivial.h",
       "__type_traits/is_trivially_assignable.h",
       "__type_traits/is_trivially_constructible.h",
-      "__type_traits/is_trivially_copy_assignable.h",
-      "__type_traits/is_trivially_copy_constructible.h",
       "__type_traits/is_trivially_copyable.h",
-      "__type_traits/is_trivially_default_constructible.h",
       "__type_traits/is_trivially_destructible.h",
       "__type_traits/is_trivially_lexicographically_comparable.h",
-      "__type_traits/is_trivially_move_assignable.h",
-      "__type_traits/is_trivially_move_constructible.h",
       "__type_traits/is_trivially_relocatable.h",
       "__type_traits/is_unbounded_array.h",
       "__type_traits/is_union.h",
@@ -1042,6 +1021,7 @@ if (current_toolchain == default_toolchain) {
       "mdspan",
       "memory",
       "memory_resource",
+      "module.modulemap",
       "mutex",
       "new",
       "numbers",
@@ -1097,7 +1077,6 @@ if (current_toolchain == default_toolchain) {
     deps = [
       ":write_assertion_handler",
       ":write_config_site",
-      ":write_modulemap",
     ]
     if (target_os != "mac" && target_os != "win") {
       # libcxx/cmake/Modules/HandleLibCXXABI.cmake sets

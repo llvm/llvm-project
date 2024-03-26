@@ -819,7 +819,7 @@ static Instruction *foldNoWrapAdd(BinaryOperator &Add,
   Value *X;
   const APInt *C1, *C2;
   if (match(Op1, m_APInt(C1)) &&
-      match(Op0, m_OneUse(m_ZExt(m_NUWAdd(m_Value(X), m_APInt(C2))))) &&
+      match(Op0, m_OneUse(m_ZExt(m_NUWAddLike(m_Value(X), m_APInt(C2))))) &&
       C1->isNegative() && C1->sge(-C2->sext(C1->getBitWidth()))) {
     Constant *NewC =
         ConstantInt::get(X->getType(), *C2 + C1->trunc(C2->getBitWidth()));
@@ -829,14 +829,16 @@ static Instruction *foldNoWrapAdd(BinaryOperator &Add,
   // More general combining of constants in the wide type.
   // (sext (X +nsw NarrowC)) + C --> (sext X) + (sext(NarrowC) + C)
   Constant *NarrowC;
-  if (match(Op0, m_OneUse(m_SExt(m_NSWAdd(m_Value(X), m_Constant(NarrowC)))))) {
+  if (match(Op0,
+            m_OneUse(m_SExt(m_NSWAddLike(m_Value(X), m_Constant(NarrowC)))))) {
     Value *WideC = Builder.CreateSExt(NarrowC, Ty);
     Value *NewC = Builder.CreateAdd(WideC, Op1C);
     Value *WideX = Builder.CreateSExt(X, Ty);
     return BinaryOperator::CreateAdd(WideX, NewC);
   }
   // (zext (X +nuw NarrowC)) + C --> (zext X) + (zext(NarrowC) + C)
-  if (match(Op0, m_OneUse(m_ZExt(m_NUWAdd(m_Value(X), m_Constant(NarrowC)))))) {
+  if (match(Op0,
+            m_OneUse(m_ZExt(m_NUWAddLike(m_Value(X), m_Constant(NarrowC)))))) {
     Value *WideC = Builder.CreateZExt(NarrowC, Ty);
     Value *NewC = Builder.CreateAdd(WideC, Op1C);
     Value *WideX = Builder.CreateZExt(X, Ty);
@@ -1867,64 +1869,10 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
 
   // Check for (fadd double (sitofp x), y), see if we can merge this into an
   // integer add followed by a promotion.
+  if (Instruction *R = foldFBinOpOfIntCasts(I))
+    return R;
+
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
-  if (SIToFPInst *LHSConv = dyn_cast<SIToFPInst>(LHS)) {
-    Value *LHSIntVal = LHSConv->getOperand(0);
-    Type *FPType = LHSConv->getType();
-
-    // TODO: This check is overly conservative. In many cases known bits
-    // analysis can tell us that the result of the addition has less significant
-    // bits than the integer type can hold.
-    auto IsValidPromotion = [](Type *FTy, Type *ITy) {
-      Type *FScalarTy = FTy->getScalarType();
-      Type *IScalarTy = ITy->getScalarType();
-
-      // Do we have enough bits in the significand to represent the result of
-      // the integer addition?
-      unsigned MaxRepresentableBits =
-          APFloat::semanticsPrecision(FScalarTy->getFltSemantics());
-      return IScalarTy->getIntegerBitWidth() <= MaxRepresentableBits;
-    };
-
-    // (fadd double (sitofp x), fpcst) --> (sitofp (add int x, intcst))
-    // ... if the constant fits in the integer value.  This is useful for things
-    // like (double)(x & 1234) + 4.0 -> (double)((X & 1234)+4) which no longer
-    // requires a constant pool load, and generally allows the add to be better
-    // instcombined.
-    if (ConstantFP *CFP = dyn_cast<ConstantFP>(RHS))
-      if (IsValidPromotion(FPType, LHSIntVal->getType())) {
-        Constant *CI = ConstantFoldCastOperand(Instruction::FPToSI, CFP,
-                                               LHSIntVal->getType(), DL);
-        if (LHSConv->hasOneUse() &&
-            ConstantFoldCastOperand(Instruction::SIToFP, CI, I.getType(), DL) ==
-                CFP &&
-            willNotOverflowSignedAdd(LHSIntVal, CI, I)) {
-          // Insert the new integer add.
-          Value *NewAdd = Builder.CreateNSWAdd(LHSIntVal, CI, "addconv");
-          return new SIToFPInst(NewAdd, I.getType());
-        }
-      }
-
-    // (fadd double (sitofp x), (sitofp y)) --> (sitofp (add int x, y))
-    if (SIToFPInst *RHSConv = dyn_cast<SIToFPInst>(RHS)) {
-      Value *RHSIntVal = RHSConv->getOperand(0);
-      // It's enough to check LHS types only because we require int types to
-      // be the same for this transform.
-      if (IsValidPromotion(FPType, LHSIntVal->getType())) {
-        // Only do this if x/y have the same type, if at least one of them has a
-        // single use (so we don't increase the number of int->fp conversions),
-        // and if the integer add will not overflow.
-        if (LHSIntVal->getType() == RHSIntVal->getType() &&
-            (LHSConv->hasOneUse() || RHSConv->hasOneUse()) &&
-            willNotOverflowSignedAdd(LHSIntVal, RHSIntVal, I)) {
-          // Insert the new integer add.
-          Value *NewAdd = Builder.CreateNSWAdd(LHSIntVal, RHSIntVal, "addconv");
-          return new SIToFPInst(NewAdd, I.getType());
-        }
-      }
-    }
-  }
-
   // Handle specials cases for FAdd with selects feeding the operation
   if (Value *V = SimplifySelectsFeedingBinaryOp(I, LHS, RHS))
     return replaceInstUsesWith(I, V);
@@ -2576,9 +2524,10 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     // sub (xor A, B), B  ; flip bits if negative and subtract -1 (add 1)
     // --> (A < 0) ? -A : A
     Value *IsNeg = Builder.CreateIsNeg(A);
-    // Copy the nuw/nsw flags from the sub to the negate.
-    Value *NegA = Builder.CreateNeg(A, "", I.hasNoUnsignedWrap(),
-                                    I.hasNoSignedWrap());
+    // Copy the nsw flags from the sub to the negate.
+    Value *NegA = I.hasNoUnsignedWrap()
+                      ? Constant::getNullValue(A->getType())
+                      : Builder.CreateNeg(A, "", I.hasNoSignedWrap());
     return SelectInst::Create(IsNeg, NegA, A);
   }
 
@@ -2846,6 +2795,9 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
 
   if (Instruction *X = foldFNegIntoConstant(I, DL))
     return X;
+
+  if (Instruction *R = foldFBinOpOfIntCasts(I))
+    return R;
 
   Value *X, *Y;
   Constant *C;

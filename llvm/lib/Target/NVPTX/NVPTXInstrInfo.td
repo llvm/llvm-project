@@ -838,7 +838,6 @@ defm ADD : I3<"add.s", add>;
 defm SUB : I3<"sub.s", sub>;
 
 def ADD16x2 : I16x2<"add.s", add>;
-def SUB16x2 : I16x2<"sub.s", sub>;
 
 // in32 and int64 addition and subtraction with carry-out.
 defm ADDCC : ADD_SUB_INT_CARRY<"add.cc", addc>;
@@ -3550,6 +3549,11 @@ let hasSideEffects = false in {
                              (ins Int64Regs:$s),
                              "{{ .reg .b32 tmp; mov.b64 {tmp, $high}, $s; }}",
                              []>;
+  def I64toI32L  : NVPTXInst<(outs Int32Regs:$low),
+                             (ins Int64Regs:$s),
+                             "{{ .reg .b32 tmp; mov.b64 {$low, tmp}, $s; }}",
+                             []>;
+
 }
 
 // Using partial vectorized move produces better SASS code for extraction of
@@ -3806,6 +3810,28 @@ def CALL_PROTOTYPE :
   NVPTXInst<(outs), (ins ProtoIdent:$ident),
             "$ident", [(CallPrototype (i32 texternalsym:$ident))]>;
 
+def SDTDynAllocaOp :
+  SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisInt<1>, SDTCisInt<2>]>;
+
+def dyn_alloca :
+  SDNode<"NVPTXISD::DYNAMIC_STACKALLOC", SDTDynAllocaOp,
+         [SDNPHasChain, SDNPSideEffect]>;
+
+def DYNAMIC_STACKALLOC32 :
+  NVPTXInst<(outs Int32Regs:$ptr),
+            (ins Int32Regs:$size, i32imm:$align),
+            "alloca.u32 \t$ptr, $size, $align;\n\t"
+            "cvta.local.u32 \t$ptr, $ptr;",
+            [(set (i32 Int32Regs:$ptr), (dyn_alloca Int32Regs:$size, (i32 timm:$align)))]>,
+            Requires<[hasPTX<73>, hasSM<52>]>;
+
+def DYNAMIC_STACKALLOC64 :
+  NVPTXInst<(outs Int64Regs:$ptr),
+            (ins Int64Regs:$size, i32imm:$align),
+            "alloca.u64 \t$ptr, $size, $align;\n\t"
+            "cvta.local.u64 \t$ptr, $ptr;",
+            [(set Int64Regs:$ptr, (dyn_alloca Int64Regs:$size, (i32 timm:$align)))]>,
+            Requires<[hasPTX<73>, hasSM<52>]>;
 
 include "NVPTXIntrinsics.td"
 
@@ -3817,3 +3843,17 @@ include "NVPTXIntrinsics.td"
 // - for sm_20, use pmpt (use vector scalar mov to get the pack and
 //   unpack). sm_20 supports native 32-bit register, but not native 16-bit
 // register.
+
+def : Pat <
+  (i32 (bswap i32:$a)),
+  (INT_NVVM_PRMT Int32Regs:$a, (i32 0), (i32 0x0123))>;
+
+def : Pat <
+  (v2i16 (bswap v2i16:$a)),
+  (INT_NVVM_PRMT Int32Regs:$a, (i32 0), (i32 0x2301))>;
+
+def : Pat <
+  (i64 (bswap i64:$a)),
+  (V2I32toI64
+    (INT_NVVM_PRMT (I64toI32H Int64Regs:$a), (i32 0), (i32 0x0123)),
+    (INT_NVVM_PRMT (I64toI32L Int64Regs:$a), (i32 0), (i32 0x0123)))>;

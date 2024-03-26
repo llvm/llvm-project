@@ -1032,19 +1032,18 @@ void LinkerDriver::parseModuleDefs(StringRef path) {
 
   for (COFFShortExport e1 : m.Exports) {
     Export e2;
-    // In simple cases, only Name is set. Renamed exports are parsed
-    // and set as "ExtName = Name". If Name has the form "OtherDll.Func",
-    // it shouldn't be a normal exported function but a forward to another
-    // DLL instead. This is supported by both MS and GNU linkers.
+    // Renamed exports are parsed and set as "ExtName = Name". If Name has
+    // the form "OtherDll.Func", it shouldn't be a normal exported
+    // function but a forward to another DLL instead. This is supported
+    // by both MS and GNU linkers.
     if (!e1.ExtName.empty() && e1.ExtName != e1.Name &&
         StringRef(e1.Name).contains('.')) {
       e2.name = saver().save(e1.ExtName);
       e2.forwardTo = saver().save(e1.Name);
-      ctx.config.exports.push_back(e2);
-      continue;
+    } else {
+      e2.name = saver().save(e1.Name);
+      e2.extName = saver().save(e1.ExtName);
     }
-    e2.name = saver().save(e1.Name);
-    e2.extName = saver().save(e1.ExtName);
     e2.aliasTarget = saver().save(e1.AliasTarget);
     e2.ordinal = e1.Ordinal;
     e2.noname = e1.Noname;
@@ -2028,6 +2027,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path);
   config->ltoCSProfileGenerate = args.hasArg(OPT_lto_cs_profile_generate);
   config->ltoCSProfileFile = args.getLastArgValue(OPT_lto_cs_profile_file);
+  config->ltoSampleProfileName = args.getLastArgValue(OPT_lto_sample_profile);
   // Handle miscellaneous boolean flags.
   config->ltoPGOWarnMismatch = args.hasFlag(OPT_lto_pgo_warn_mismatch,
                                             OPT_lto_pgo_warn_mismatch_no, true);

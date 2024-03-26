@@ -1528,6 +1528,12 @@ def int_umax : DefaultAttrsIntrinsic<
 def int_umin : DefaultAttrsIntrinsic<
     [llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>],
     [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+def int_scmp : DefaultAttrsIntrinsic<
+    [llvm_anyint_ty], [llvm_anyint_ty, LLVMMatchType<1>],
+    [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+def int_ucmp : DefaultAttrsIntrinsic<
+    [llvm_anyint_ty], [llvm_anyint_ty, LLVMMatchType<1>],
+    [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
 //===------------------------- Memory Use Markers -------------------------===//
 //
@@ -1584,11 +1590,11 @@ def int_experimental_patchpoint_void : Intrinsic<[],
                                                   llvm_ptr_ty, llvm_i32_ty,
                                                   llvm_vararg_ty],
                                                   [Throws]>;
-def int_experimental_patchpoint_i64 : Intrinsic<[llvm_i64_ty],
-                                                [llvm_i64_ty, llvm_i32_ty,
-                                                 llvm_ptr_ty, llvm_i32_ty,
-                                                 llvm_vararg_ty],
-                                                 [Throws]>;
+def int_experimental_patchpoint : Intrinsic<[llvm_any_ty],
+                                            [llvm_i64_ty, llvm_i32_ty,
+                                             llvm_ptr_ty, llvm_i32_ty,
+                                             llvm_vararg_ty],
+                                            [Throws]>;
 
 
 //===------------------------ Garbage Collection Intrinsics ---------------===//
@@ -1691,6 +1697,18 @@ def int_coro_done : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty],
 def int_coro_promise : Intrinsic<[llvm_ptr_ty],
                                  [llvm_ptr_ty, llvm_i32_ty, llvm_i1_ty],
                                  [IntrNoMem, NoCapture<ArgIndex<0>>]>;
+
+def int_coro_await_suspend_void : Intrinsic<[],
+                                       [llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
+                                       [Throws]>;
+
+def int_coro_await_suspend_bool : Intrinsic<[llvm_i1_ty],
+                                            [llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
+                                            [Throws]>;
+
+def int_coro_await_suspend_handle : Intrinsic<[llvm_ptr_ty],
+                                              [llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
+                                              [Throws]>;
 
 // Coroutine Lowering Intrinsics. Used internally by coroutine passes.
 

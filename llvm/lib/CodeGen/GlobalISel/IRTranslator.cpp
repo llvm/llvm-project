@@ -21,6 +21,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
@@ -213,8 +214,9 @@ ArrayRef<Register> IRTranslator::getOrCreateVRegs(const Value &Val) {
   auto *VRegs = VMap.getVRegs(Val);
   auto *Offsets = VMap.getOffsets(Val);
 
-  assert(Val.getType()->isSized() &&
-         "Don't know how to create an empty vreg");
+  if (!Val.getType()->isTokenTy())
+    assert(Val.getType()->isSized() &&
+           "Don't know how to create an empty vreg");
 
   SmallVector<LLT, 4> SplitTys;
   computeValueLLTs(*DL, *Val.getType(), SplitTys,
@@ -1361,9 +1363,8 @@ static bool isSwiftError(const Value *V) {
 
 bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
   const LoadInst &LI = cast<LoadInst>(U);
-
-  unsigned StoreSize = DL->getTypeStoreSize(LI.getType());
-  if (StoreSize == 0)
+  TypeSize StoreSize = DL->getTypeStoreSize(LI.getType());
+  if (StoreSize.isZero())
     return true;
 
   ArrayRef<Register> Regs = getOrCreateVRegs(LI);
@@ -1598,10 +1599,10 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   // We might need to splat the base pointer into a vector if the offsets
   // are vectors.
   if (WantSplatVector && !PtrTy.isVector()) {
-    BaseReg =
-        MIRBuilder
-            .buildSplatVector(LLT::fixed_vector(VectorWidth, PtrTy), BaseReg)
-            .getReg(0);
+    BaseReg = MIRBuilder
+                  .buildSplatBuildVector(LLT::fixed_vector(VectorWidth, PtrTy),
+                                         BaseReg)
+                  .getReg(0);
     PtrIRTy = FixedVectorType::get(PtrIRTy, VectorWidth);
     PtrTy = getLLTForType(*PtrIRTy, *DL);
     OffsetIRTy = DL->getIndexType(PtrIRTy);
@@ -1639,8 +1640,10 @@ bool IRTranslator::translateGetElementPtr(const User &U,
       LLT IdxTy = MRI->getType(IdxReg);
       if (IdxTy != OffsetTy) {
         if (!IdxTy.isVector() && WantSplatVector) {
-          IdxReg = MIRBuilder.buildSplatVector(
-            OffsetTy.changeElementType(IdxTy), IdxReg).getReg(0);
+          IdxReg = MIRBuilder
+                       .buildSplatBuildVector(OffsetTy.changeElementType(IdxTy),
+                                              IdxReg)
+                       .getReg(0);
         }
 
         IdxReg = MIRBuilder.buildSExtOrTrunc(OffsetTy, IdxReg).getReg(0);
@@ -1764,6 +1767,67 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
   if (Opcode != TargetOpcode::G_MEMSET)
     ICall.addMemOperand(MF->getMachineMemOperand(
         MachinePointerInfo(SrcPtr), LoadFlags, 1, SrcAlign, AAInfo));
+
+  return true;
+}
+
+bool IRTranslator::translateTrap(const CallInst &CI,
+                                 MachineIRBuilder &MIRBuilder,
+                                 unsigned Opcode) {
+  StringRef TrapFuncName =
+      CI.getAttributes().getFnAttr("trap-func-name").getValueAsString();
+  if (TrapFuncName.empty()) {
+    if (Opcode == TargetOpcode::G_UBSANTRAP) {
+      uint64_t Code = cast<ConstantInt>(CI.getOperand(0))->getZExtValue();
+      MIRBuilder.buildInstr(Opcode, {}, ArrayRef<llvm::SrcOp>{Code});
+    } else {
+      MIRBuilder.buildInstr(Opcode);
+    }
+    return true;
+  }
+
+  CallLowering::CallLoweringInfo Info;
+  if (Opcode == TargetOpcode::G_UBSANTRAP)
+    Info.OrigArgs.push_back({getOrCreateVRegs(*CI.getArgOperand(0)),
+                             CI.getArgOperand(0)->getType(), 0});
+
+  Info.Callee = MachineOperand::CreateES(TrapFuncName.data());
+  Info.CB = &CI;
+  Info.OrigRet = {Register(), Type::getVoidTy(CI.getContext()), 0};
+  return CLI->lowerCall(MIRBuilder, Info);
+}
+
+bool IRTranslator::translateVectorInterleave2Intrinsic(
+    const CallInst &CI, MachineIRBuilder &MIRBuilder) {
+  assert(CI.getIntrinsicID() == Intrinsic::experimental_vector_interleave2 &&
+         "This function can only be called on the interleave2 intrinsic!");
+  // Canonicalize interleave2 to G_SHUFFLE_VECTOR (similar to SelectionDAG).
+  Register Op0 = getOrCreateVReg(*CI.getOperand(0));
+  Register Op1 = getOrCreateVReg(*CI.getOperand(1));
+  Register Res = getOrCreateVReg(CI);
+
+  LLT OpTy = MRI->getType(Op0);
+  MIRBuilder.buildShuffleVector(Res, Op0, Op1,
+                                createInterleaveMask(OpTy.getNumElements(), 2));
+
+  return true;
+}
+
+bool IRTranslator::translateVectorDeinterleave2Intrinsic(
+    const CallInst &CI, MachineIRBuilder &MIRBuilder) {
+  assert(CI.getIntrinsicID() == Intrinsic::experimental_vector_deinterleave2 &&
+         "This function can only be called on the deinterleave2 intrinsic!");
+  // Canonicalize deinterleave2 to shuffles that extract sub-vectors (similar to
+  // SelectionDAG).
+  Register Op = getOrCreateVReg(*CI.getOperand(0));
+  auto Undef = MIRBuilder.buildUndef(MRI->getType(Op));
+  ArrayRef<Register> Res = getOrCreateVRegs(CI);
+
+  LLT ResTy = MRI->getType(Res[0]);
+  MIRBuilder.buildShuffleVector(Res[0], Op, Undef,
+                                createStrideMask(0, 2, ResTy.getNumElements()));
+  MIRBuilder.buildShuffleVector(Res[1], Op, Undef,
+                                createStrideMask(1, 2, ResTy.getNumElements()));
 
   return true;
 }
@@ -2031,6 +2095,36 @@ bool IRTranslator::translateIfEntryValueArgument(bool isDeclare, Value *Val,
     MF->setVariableDbgInfo(Var, Expr, *PhysReg, DL);
   } else {
     MIRBuilder.buildDirectDbgValue(*PhysReg, Var, Expr);
+  }
+
+  return true;
+}
+
+static unsigned getConvOpcode(Intrinsic::ID ID) {
+  switch (ID) {
+  default:
+    llvm_unreachable("Unexpected intrinsic");
+  case Intrinsic::experimental_convergence_anchor:
+    return TargetOpcode::CONVERGENCECTRL_ANCHOR;
+  case Intrinsic::experimental_convergence_entry:
+    return TargetOpcode::CONVERGENCECTRL_ENTRY;
+  case Intrinsic::experimental_convergence_loop:
+    return TargetOpcode::CONVERGENCECTRL_LOOP;
+  }
+}
+
+bool IRTranslator::translateConvergenceControlIntrinsic(
+    const CallInst &CI, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder) {
+  MachineInstrBuilder MIB = MIRBuilder.buildInstr(getConvOpcode(ID));
+  Register OutputReg = getOrCreateConvergenceTokenVReg(CI);
+  MIB.addDef(OutputReg);
+
+  if (ID == Intrinsic::experimental_convergence_loop) {
+    auto Bundle = CI.getOperandBundle(LLVMContext::OB_convergencectrl);
+    assert(Bundle && "Expected a convergence control token.");
+    Register InputReg =
+        getOrCreateConvergenceTokenVReg(*Bundle->Inputs[0].get());
+    MIB.addUse(InputReg);
   }
 
   return true;
@@ -2391,22 +2485,11 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::trap:
+    return translateTrap(CI, MIRBuilder, TargetOpcode::G_TRAP);
   case Intrinsic::debugtrap:
-  case Intrinsic::ubsantrap: {
-    StringRef TrapFuncName =
-        CI.getAttributes().getFnAttr("trap-func-name").getValueAsString();
-    if (TrapFuncName.empty())
-      break; // Use the default handling.
-    CallLowering::CallLoweringInfo Info;
-    if (ID == Intrinsic::ubsantrap) {
-      Info.OrigArgs.push_back({getOrCreateVRegs(*CI.getArgOperand(0)),
-                               CI.getArgOperand(0)->getType(), 0});
-    }
-    Info.Callee = MachineOperand::CreateES(TrapFuncName.data());
-    Info.CB = &CI;
-    Info.OrigRet = {Register(), Type::getVoidTy(CI.getContext()), 0};
-    return CLI->lowerCall(MIRBuilder, Info);
-  }
+    return translateTrap(CI, MIRBuilder, TargetOpcode::G_DEBUGTRAP);
+  case Intrinsic::ubsantrap:
+    return translateTrap(CI, MIRBuilder, TargetOpcode::G_UBSANTRAP);
   case Intrinsic::amdgcn_cs_chain:
     return translateCallBase(CI, MIRBuilder);
   case Intrinsic::fptrunc_round: {
@@ -2472,12 +2555,30 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 
     return true;
   }
+
+  case Intrinsic::experimental_vector_interleave2:
+  case Intrinsic::experimental_vector_deinterleave2: {
+    // Both intrinsics have at least one operand.
+    Value *Op0 = CI.getOperand(0);
+    LLT ResTy = getLLTForType(*Op0->getType(), MIRBuilder.getDataLayout());
+    if (!ResTy.isFixedVector())
+      return false;
+
+    if (CI.getIntrinsicID() == Intrinsic::experimental_vector_interleave2)
+      return translateVectorInterleave2Intrinsic(CI, MIRBuilder);
+
+    return translateVectorDeinterleave2Intrinsic(CI, MIRBuilder);
+  }
+
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)  \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"
     return translateConstrainedFPIntrinsic(cast<ConstrainedFPIntrinsic>(CI),
                                            MIRBuilder);
-
+  case Intrinsic::experimental_convergence_anchor:
+  case Intrinsic::experimental_convergence_entry:
+  case Intrinsic::experimental_convergence_loop:
+    return translateConvergenceControlIntrinsic(CI, ID, MIRBuilder);
   }
   return false;
 }
@@ -2528,12 +2629,18 @@ bool IRTranslator::translateCallBase(const CallBase &CB,
     }
   }
 
+  Register ConvergenceCtrlToken = 0;
+  if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_convergencectrl)) {
+    const auto &Token = *Bundle->Inputs[0].get();
+    ConvergenceCtrlToken = getOrCreateConvergenceTokenVReg(Token);
+  }
+
   // We don't set HasCalls on MFI here yet because call lowering may decide to
   // optimize into tail calls. Instead, we defer that to selection where a final
   // scan is done to check if any instructions are calls.
-  bool Success =
-      CLI->lowerCall(MIRBuilder, CB, Res, Args, SwiftErrorVReg,
-                     [&]() { return getOrCreateVReg(*CB.getCalledOperand()); });
+  bool Success = CLI->lowerCall(
+      MIRBuilder, CB, Res, Args, SwiftErrorVReg, ConvergenceCtrlToken,
+      [&]() { return getOrCreateVReg(*CB.getCalledOperand()); });
 
   // Check if we just inserted a tail call.
   if (Success) {
@@ -2645,6 +2752,14 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
       MPI = MachinePointerInfo(*Info.fallbackAddressSpace);
     MIB.addMemOperand(
         MF->getMachineMemOperand(MPI, Info.flags, MemTy, Alignment, CI.getAAMetadata()));
+  }
+
+  if (CI.isConvergent()) {
+    if (auto Bundle = CI.getOperandBundle(LLVMContext::OB_convergencectrl)) {
+      auto *Token = Bundle->Inputs[0].get();
+      Register TokenReg = getOrCreateVReg(*Token);
+      MIB.addUse(TokenReg, RegState::Implicit);
+    }
   }
 
   return true;
@@ -2947,7 +3062,7 @@ bool IRTranslator::translateUnreachable(const User &U, MachineIRBuilder &MIRBuil
     }
   }
 
-  MIRBuilder.buildIntrinsic(Intrinsic::trap, ArrayRef<Register>());
+  MIRBuilder.buildTrap();
   return true;
 }
 
@@ -2997,6 +3112,19 @@ bool IRTranslator::translateExtractElement(const User &U,
 
 bool IRTranslator::translateShuffleVector(const User &U,
                                           MachineIRBuilder &MIRBuilder) {
+  // A ShuffleVector that has operates on scalable vectors is a splat vector
+  // where the value of the splat vector is the 0th element of the first
+  // operand, since the index mask operand is the zeroinitializer (undef and
+  // poison are treated as zeroinitializer here).
+  if (U.getOperand(0)->getType()->isScalableTy()) {
+    Value *Op0 = U.getOperand(0);
+    auto SplatVal = MIRBuilder.buildExtractVectorElementConstant(
+        LLT::scalar(Op0->getType()->getScalarSizeInBits()),
+        getOrCreateVReg(*Op0), 0);
+    MIRBuilder.buildSplatVector(getOrCreateVReg(U), SplatVal);
+    return true;
+  }
+
   ArrayRef<int> Mask;
   if (auto *SVI = dyn_cast<ShuffleVectorInst>(&U))
     Mask = SVI->getShuffleMask();
@@ -3262,26 +3390,26 @@ void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,
 
 void IRTranslator::translateDbgInfo(const Instruction &Inst,
                                       MachineIRBuilder &MIRBuilder) {
-  for (DbgRecord &DR : Inst.getDbgValueRange()) {
-    if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
-      MIRBuilder.setDebugLoc(DPL->getDebugLoc());
-      assert(DPL->getLabel() && "Missing label");
-      assert(DPL->getLabel()->isValidLocationForIntrinsic(
+  for (DbgRecord &DR : Inst.getDbgRecordRange()) {
+    if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+      MIRBuilder.setDebugLoc(DLR->getDebugLoc());
+      assert(DLR->getLabel() && "Missing label");
+      assert(DLR->getLabel()->isValidLocationForIntrinsic(
                  MIRBuilder.getDebugLoc()) &&
              "Expected inlined-at fields to agree");
-      MIRBuilder.buildDbgLabel(DPL->getLabel());
+      MIRBuilder.buildDbgLabel(DLR->getLabel());
       continue;
     }
-    DPValue &DPV = cast<DPValue>(DR);
-    const DILocalVariable *Variable = DPV.getVariable();
-    const DIExpression *Expression = DPV.getExpression();
-    Value *V = DPV.getVariableLocationOp(0);
-    if (DPV.isDbgDeclare())
-      translateDbgDeclareRecord(V, DPV.hasArgList(), Variable,
-                         Expression, DPV.getDebugLoc(), MIRBuilder);
+    DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
+    const DILocalVariable *Variable = DVR.getVariable();
+    const DIExpression *Expression = DVR.getExpression();
+    Value *V = DVR.getVariableLocationOp(0);
+    if (DVR.isDbgDeclare())
+      translateDbgDeclareRecord(V, DVR.hasArgList(), Variable, Expression,
+                                DVR.getDebugLoc(), MIRBuilder);
     else
-      translateDbgValueRecord(V, DPV.hasArgList(), Variable,
-                         Expression, DPV.getDebugLoc(), MIRBuilder);
+      translateDbgValueRecord(V, DVR.hasArgList(), Variable, Expression,
+                              DVR.getDebugLoc(), MIRBuilder);
   }
 }
 

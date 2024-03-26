@@ -629,6 +629,10 @@ void Parser::ParseGNUAttributeArgs(
     ParseAttributeWithTypeArg(*AttrName, AttrNameLoc, Attrs, ScopeName,
                               ScopeLoc, Form);
     return;
+  } else if (AttrKind == ParsedAttr::AT_CountedBy) {
+    ParseBoundsAttribute(*AttrName, AttrNameLoc, Attrs, ScopeName, ScopeLoc,
+                         Form);
+    return;
   }
 
   // These may refer to the function arguments, but need to be parsed early to
@@ -1234,8 +1238,11 @@ void Parser::ParseAvailabilityAttribute(
   }
   IdentifierLoc *Platform = ParseIdentifierLoc();
   if (const IdentifierInfo *const Ident = Platform->Ident) {
+    // Disallow xrOS for availability attributes.
+    if (Ident->getName().contains("xrOS") || Ident->getName().contains("xros"))
+      Diag(Platform->Loc, diag::warn_availability_unknown_platform) << Ident;
     // Canonicalize platform name from "macosx" to "macos".
-    if (Ident->getName() == "macosx")
+    else if (Ident->getName() == "macosx")
       Platform->Ident = PP.getIdentifierInfo("macos");
     // Canonicalize platform name from "macosx_app_extension" to
     // "macos_app_extension".
@@ -3247,6 +3254,54 @@ void Parser::ParseAlignmentSpecifier(ParsedAttributes &Attrs,
   }
 }
 
+/// Bounds attributes (e.g., counted_by):
+///   AttrName '(' expression ')'
+void Parser::ParseBoundsAttribute(IdentifierInfo &AttrName,
+                                  SourceLocation AttrNameLoc,
+                                  ParsedAttributes &Attrs,
+                                  IdentifierInfo *ScopeName,
+                                  SourceLocation ScopeLoc,
+                                  ParsedAttr::Form Form) {
+  assert(Tok.is(tok::l_paren) && "Attribute arg list not starting with '('");
+
+  BalancedDelimiterTracker Parens(*this, tok::l_paren);
+  Parens.consumeOpen();
+
+  if (Tok.is(tok::r_paren)) {
+    Diag(Tok.getLocation(), diag::err_argument_required_after_attribute);
+    Parens.consumeClose();
+    return;
+  }
+
+  ArgsVector ArgExprs;
+  // Don't evaluate argument when the attribute is ignored.
+  using ExpressionKind =
+      Sema::ExpressionEvaluationContextRecord::ExpressionKind;
+  EnterExpressionEvaluationContext EC(
+      Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, nullptr,
+      ExpressionKind::EK_BoundsAttrArgument);
+
+  ExprResult ArgExpr(
+      Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression()));
+
+  if (ArgExpr.isInvalid()) {
+    Parens.skipToEnd();
+    return;
+  }
+
+  ArgExprs.push_back(ArgExpr.get());
+  Parens.consumeClose();
+
+  ASTContext &Ctx = Actions.getASTContext();
+
+  ArgExprs.push_back(IntegerLiteral::Create(
+      Ctx, llvm::APInt(Ctx.getTypeSize(Ctx.getSizeType()), 0),
+      Ctx.getSizeType(), SourceLocation()));
+
+  Attrs.addNew(&AttrName, SourceRange(AttrNameLoc, Parens.getCloseLocation()),
+               ScopeName, ScopeLoc, ArgExprs.data(), ArgExprs.size(), Form);
+}
+
 ExprResult Parser::ParseExtIntegerArgument() {
   assert(Tok.isOneOf(tok::kw__ExtInt, tok::kw__BitInt) &&
          "Not an extended int type");
@@ -4265,6 +4320,8 @@ void Parser::ParseDeclarationSpecifiers(
 
     // constexpr, consteval, constinit specifiers
     case tok::kw_constexpr:
+      if (getLangOpts().C23)
+        Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
       isInvalid = DS.SetConstexprSpec(ConstexprSpecKind::Constexpr, Loc,
                                       PrevSpec, DiagID);
       break;
@@ -4674,6 +4731,39 @@ void Parser::ParseDeclarationSpecifiers(
   }
 }
 
+static void DiagnoseCountAttributedTypeInUnnamedAnon(ParsingDeclSpec &DS,
+                                                     Parser &P) {
+
+  if (DS.getTypeSpecType() != DeclSpec::TST_struct)
+    return;
+
+  auto *RD = dyn_cast<RecordDecl>(DS.getRepAsDecl());
+  // We're only interested in unnamed, non-anonymous struct
+  if (!RD || !RD->getName().empty() || RD->isAnonymousStructOrUnion())
+    return;
+
+  for (auto *I : RD->decls()) {
+    auto *VD = dyn_cast<ValueDecl>(I);
+    if (!VD)
+      continue;
+
+    auto *CAT = VD->getType()->getAs<CountAttributedType>();
+    if (!CAT)
+      continue;
+
+    for (const auto &DD : CAT->dependent_decls()) {
+      if (!RD->containsDecl(DD.getDecl())) {
+        P.Diag(VD->getBeginLoc(),
+               diag::err_flexible_array_count_not_in_same_struct)
+            << DD.getDecl();
+        P.Diag(DD.getDecl()->getBeginLoc(),
+               diag::note_flexible_array_counted_by_attr_field)
+            << DD.getDecl();
+      }
+    }
+  }
+}
+
 /// ParseStructDeclaration - Parse a struct declaration without the terminating
 /// semicolon.
 ///
@@ -4753,6 +4843,11 @@ void Parser::ParseStructDeclaration(
       ParseDeclarator(DeclaratorInfo.D);
     } else
       DeclaratorInfo.D.SetIdentifier(nullptr, Tok.getLocation());
+
+    // Here, we now know that the unnamed struct is not an anonymous struct.
+    // Report an error if a counted_by attribute refers to a field in a
+    // different named struct.
+    DiagnoseCountAttributedTypeInUnnamedAnon(DS, *this);
 
     if (TryConsumeToken(tok::colon)) {
       ExprResult Res(ParseConstantExpression());
@@ -5676,24 +5771,32 @@ Parser::DeclGroupPtrTy Parser::ParseTopLevelStmtDecl() {
   // Parse a top-level-stmt.
   Parser::StmtVector Stmts;
   ParsedStmtContext SubStmtCtx = ParsedStmtContext();
-  Actions.PushFunctionScope();
+  ParseScope FnScope(this, Scope::FnScope | Scope::DeclScope |
+                               Scope::CompoundStmtScope);
+  TopLevelStmtDecl *TLSD = Actions.ActOnStartTopLevelStmtDecl(getCurScope());
   StmtResult R = ParseStatementOrDeclaration(Stmts, SubStmtCtx);
-  Actions.PopFunctionScopeInfo();
   if (!R.isUsable())
     return nullptr;
 
-  SmallVector<Decl *, 2> DeclsInGroup;
-  DeclsInGroup.push_back(Actions.ActOnTopLevelStmtDecl(R.get()));
+  Actions.ActOnFinishTopLevelStmtDecl(TLSD, R.get());
 
   if (Tok.is(tok::annot_repl_input_end) &&
       Tok.getAnnotationValue() != nullptr) {
     ConsumeAnnotationToken();
-    cast<TopLevelStmtDecl>(DeclsInGroup.back())->setSemiMissing();
+    TLSD->setSemiMissing();
   }
 
-  // Currently happens for things like  -fms-extensions and use `__if_exists`.
-  for (Stmt *S : Stmts)
-    DeclsInGroup.push_back(Actions.ActOnTopLevelStmtDecl(S));
+  SmallVector<Decl *, 2> DeclsInGroup;
+  DeclsInGroup.push_back(TLSD);
+
+  // Currently happens for things like -fms-extensions and use `__if_exists`.
+  for (Stmt *S : Stmts) {
+    // Here we should be safe as `__if_exists` and friends are not introducing
+    // new variables which need to live outside file scope.
+    TopLevelStmtDecl *D = Actions.ActOnStartTopLevelStmtDecl(getCurScope());
+    Actions.ActOnFinishTopLevelStmtDecl(D, S);
+    DeclsInGroup.push_back(D);
+  }
 
   return Actions.BuildDeclaratorGroup(DeclsInGroup);
 }

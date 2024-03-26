@@ -1,7 +1,9 @@
 // RUN: %clang --target=riscv32-unknown-elf -### %s -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv64-unknown-elf -### %s -fsyntax-only 2>&1 | FileCheck %s
-// RUN: %clang --target=riscv64-linux-android -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ANDROID,DEFAULT
-// RUN: %clang -mabi=lp64d --target=riscv64-linux-android -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ANDROID,DEFAULT
+// RUN: %clang --target=riscv64-linux-android -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ANDROID,DEFAULT,FAST-UNALIGNED-ACCESS
+// RUN: %clang -mabi=lp64d --target=riscv64-linux-android -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ANDROID,DEFAULT,FAST-UNALIGNED-ACCESS
+// RUN: %clang -mabi=lp64d --target=riscv64-linux-android -mstrict-align -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=NO-FAST-UNALIGNED-ACCESS
+
 
 // CHECK: fno-signed-char
 
@@ -33,8 +35,6 @@
 // NO-FORCE-SW-SCS: "-target-feature" "-forced-sw-shadow-stack"
 // DEFAULT-NOT: "-target-feature" "+forced-sw-shadow-stack"
 
-// RUN: %clang --target=riscv32-unknown-elf -### %s -munaligned-access 2>&1 | FileCheck %s -check-prefix=FAST-UNALIGNED-ACCESS
-// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-unaligned-access 2>&1 | FileCheck %s -check-prefix=NO-FAST-UNALIGNED-ACCESS
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mno-strict-align 2>&1 | FileCheck %s -check-prefix=FAST-UNALIGNED-ACCESS
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mstrict-align 2>&1 | FileCheck %s -check-prefix=NO-FAST-UNALIGNED-ACCESS
 

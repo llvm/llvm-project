@@ -285,6 +285,30 @@ Register InstrEmitter::getVR(SDValue Op,
   return I->second;
 }
 
+static bool isConvergenceCtrlMachineOp(SDValue Op) {
+  if (Op->isMachineOpcode()) {
+    switch (Op->getMachineOpcode()) {
+    case TargetOpcode::CONVERGENCECTRL_ANCHOR:
+    case TargetOpcode::CONVERGENCECTRL_ENTRY:
+    case TargetOpcode::CONVERGENCECTRL_LOOP:
+    case TargetOpcode::CONVERGENCECTRL_GLUE:
+      return true;
+    }
+    return false;
+  }
+
+  // We can reach here when CopyFromReg is encountered. But rather than making a
+  // special case for that, we just make sure we don't reach here in some
+  // surprising way.
+  switch (Op->getOpcode()) {
+  case ISD::CONVERGENCECTRL_ANCHOR:
+  case ISD::CONVERGENCECTRL_ENTRY:
+  case ISD::CONVERGENCECTRL_LOOP:
+  case ISD::CONVERGENCECTRL_GLUE:
+    llvm_unreachable("Convergence control should have been selected by now.");
+  }
+  return false;
+}
 
 /// AddRegisterOperand - Add the specified register as an operand to the
 /// specified machine instr. Insert register copies if the register is
@@ -346,9 +370,12 @@ InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB,
   // multiple uses.
   // Tied operands are never killed, so we need to check that. And that
   // means we need to determine the index of the operand.
-  bool isKill = Op.hasOneUse() &&
-                Op.getNode()->getOpcode() != ISD::CopyFromReg &&
-                !IsDebug &&
+  // Don't kill convergence control tokens. Initially they are only used in glue
+  // nodes, and the InstrEmitter later adds implicit uses on the users of the
+  // glue node. This can sometimes make it seem like there is only one use,
+  // which is the glue node itself.
+  bool isKill = Op.hasOneUse() && !isConvergenceCtrlMachineOp(Op) &&
+                Op.getNode()->getOpcode() != ISD::CopyFromReg && !IsDebug &&
                 !(IsClone || IsCloned);
   if (isKill) {
     unsigned Idx = MIB->getNumOperands();
@@ -1188,6 +1215,17 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
       if (MI->getOperand(Use).isReg())
         MI->tieOperands(Def++, Use);
       Use = StackMaps::getNextMetaArgIdx(MI, Use);
+    }
+  }
+
+  if (SDNode *GluedNode = Node->getGluedNode()) {
+    // FIXME: Possibly iterate over multiple glue nodes?
+    if (GluedNode->getOpcode() ==
+        ~(unsigned)TargetOpcode::CONVERGENCECTRL_GLUE) {
+      Register VReg = getVR(GluedNode->getOperand(0), VRBaseMap);
+      MachineOperand MO = MachineOperand::CreateReg(VReg, /*isDef=*/false,
+                                                    /*isImp=*/true);
+      MIB->addOperand(MO);
     }
   }
 

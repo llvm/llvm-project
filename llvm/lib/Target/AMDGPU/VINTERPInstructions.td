@@ -105,7 +105,7 @@ class VOP3_VINTERP_F16 <list<ValueType> ArgVT> : VOPProfile<ArgVT> {
 // VINTERP Pseudo Instructions
 //===----------------------------------------------------------------------===//
 
-let SubtargetPredicate = isGFX11Plus in {
+let SubtargetPredicate = HasVINTERPEncoding in {
 
 let Uses = [M0, EXEC, MODE] in {
 def V_INTERP_P10_F32_inreg : VINTERP_Pseudo <"v_interp_p10_f32", VOP3_VINTERP_F32>;
@@ -123,7 +123,7 @@ def V_INTERP_P2_RTZ_F16_F32_inreg :
   VINTERP_Pseudo <"v_interp_p2_rtz_f16_f32", VOP3_VINTERP_F16<[f16, f32, f32, f32]>>;
 } // Uses = [M0, EXEC]
 
-} // SubtargetPredicate = isGFX11Plus
+} // SubtargetPredicate = HasVINTERPEncoding.
 
 class VInterpF32Pat <SDPatternOperator op, Instruction inst> : GCNPat <
    (f32 (op

@@ -143,7 +143,7 @@ It also shows a convention that we follow in this document. When
 demonstrating instructions, we will follow an instruction with a comment
 that defines the type and name of value produced.
 
-.. _strings:
+.. _string_constants:
 
 String constants
 ----------------
@@ -908,7 +908,8 @@ Syntax::
 
 A function definition contains a list of basic blocks, forming the CFG (Control
 Flow Graph) for the function. Each basic block may optionally start with a label
-(giving the basic block a symbol table entry), contains a list of instructions,
+(giving the basic block a symbol table entry), contains a list of instructions
+and :ref:`debug records <debugrecords>`,
 and ends with a :ref:`terminator <terminators>` instruction (such as a branch or
 function return). If an explicit label name is not provided, a block is assigned
 an implicit numbered label, using the next value from the same counter as used
@@ -1633,6 +1634,22 @@ Currently, only the following parameter attributes are defined:
     memory, but all loads that are not preceded by a store will return poison.
 
     This attribute cannot be applied to return values.
+
+``range(<ty> <a>, <b>)``
+    This attribute expresses the possible range of the parameter or return value.
+    If the value is not in the specified range, it is converted to poison.
+    The arguments passed to ``range`` have the following properties:
+
+    -  The type must match the scalar type of the parameter or return value.
+    -  The pair ``a,b`` represents the range ``[a,b)``.
+    -  Both ``a`` and ``b`` are constants.
+    -  The range is allowed to wrap.
+    -  The range should not represent the full or empty set. That is, ``a!=b``.
+    
+    This attribute may only be applied to parameters or return values with integer 
+    or vector of integer types.
+    
+    For vector-typed parameters, the range is applied element-wise.
 
 .. _gc:
 
@@ -2554,7 +2571,7 @@ are grouped into a single :ref:`attribute group <attrgrp>`.
 ``sanitize_memtag``
     This attribute indicates that the global variable should have AArch64 memory
     tags (MTE) instrumentation applied to it. This attribute causes the
-    suppression of certain optimisations, like GlobalMerge, as well as ensuring
+    suppression of certain optimizations, like GlobalMerge, as well as ensuring
     extra directives are emitted in the assembly and extra bits of metadata are
     placed in the object file so that the linker can ensure the accesses are
     protected by MTE. This attribute is added by clang when
@@ -3621,7 +3638,7 @@ floating-point transformations.
 
 ``contract``
    Allow floating-point contraction (e.g. fusing a multiply followed by an
-   addition into a fused multiply-and-add). This does not enable reassociating
+   addition into a fused multiply-and-add). This does not enable reassociation
    to form arbitrary contractions. For example, ``(a*b) + (c*d) + e`` can not
    be transformed into ``(a*b) + ((c*d) + e)`` to create two fma operations.
 
@@ -7348,7 +7365,7 @@ matches the ``llvm.loop.parallel_accesses`` list.
 If all memory-accessing instructions in a loop have
 ``llvm.access.group`` metadata that each refer to one of the access
 groups of a loop's ``llvm.loop.parallel_accesses`` metadata, then the
-loop has no loop carried memory dependences and is considered to be a
+loop has no loop carried memory dependencies and is considered to be a
 parallel loop.
 
 Note that if not all memory access instructions belong to an access
@@ -8541,7 +8558,10 @@ The LLVM instruction set consists of several different classifications
 of instructions: :ref:`terminator instructions <terminators>`, :ref:`binary
 instructions <binaryops>`, :ref:`bitwise binary
 instructions <bitwiseops>`, :ref:`memory instructions <memoryops>`, and
-:ref:`other instructions <otherops>`.
+:ref:`other instructions <otherops>`. There are also :ref:`debug records
+<debugrecords>`, which are not instructions themselves but are printed
+interleaved with instructions to describe changes in the state of the program's
+debug information at each position in the program's execution.
 
 .. _terminators:
 
@@ -11029,9 +11049,10 @@ Syntax:
 
 ::
 
-      <result> = getelementptr <ty>, ptr <ptrval>{, [inrange] <ty> <idx>}*
-      <result> = getelementptr inbounds <ty>, ptr <ptrval>{, [inrange] <ty> <idx>}*
-      <result> = getelementptr <ty>, <N x ptr> <ptrval>, [inrange] <vector index type> <idx>
+      <result> = getelementptr <ty>, ptr <ptrval>{, <ty> <idx>}*
+      <result> = getelementptr inbounds <ty>, ptr <ptrval>{, <ty> <idx>}*
+      <result> = getelementptr inrange(S,E) <ty>, ptr <ptrval>{, <ty> <idx>}*
+      <result> = getelementptr <ty>, <N x ptr> <ptrval>, <vector index type> <idx>
 
 Overview:
 """""""""
@@ -11176,16 +11197,15 @@ These rules are based on the assumption that no allocated object may cross
 the unsigned address space boundary, and no allocated object may be larger
 than half the pointer index type space.
 
-If the ``inrange`` keyword is present before any index, loading from or
+If the ``inrange(Start, End)`` attribute is present, loading from or
 storing to any pointer derived from the ``getelementptr`` has undefined
-behavior if the load or store would access memory outside of the bounds of
-the element selected by the index marked as ``inrange``. The result of a
-pointer comparison or ``ptrtoint`` (including ``ptrtoint``-like operations
+behavior if the load or store would access memory outside the half-open range
+``[Start, End)`` from the ``getelementptr`` expression result. The result of
+a pointer comparison or ``ptrtoint`` (including ``ptrtoint``-like operations
 involving memory) involving a pointer derived from a ``getelementptr`` with
 the ``inrange`` keyword is undefined, with the exception of comparisons
-in the case where both operands are in the range of the element selected
-by the ``inrange`` keyword, inclusive of the address one past the end of
-that element. Note that the ``inrange`` keyword is currently only allowed
+in the case where both operands are in the closed range ``[Start, End]``.
+Note that the ``inrange`` keyword is currently only allowed
 in constant ``getelementptr`` expressions.
 
 The getelementptr instruction is often confusing. For some more insight
@@ -12695,6 +12715,29 @@ Example:
 
       %tok = cleanuppad within %cs []
 
+.. _debugrecords:
+
+Debug Records
+-----------------------
+
+Debug records appear interleaved with instructions, but are not instructions;
+they are used only to define debug information, and have no effect on generated
+code. They are distinguished from instructions by the use of a leading `#` and
+an extra level of indentation. As an example:
+
+.. code-block:: llvm
+
+  %inst1 = op1 %a, %b
+    #dbg_value(%inst1, !10, !DIExpression(), !11)
+  %inst2 = op2 %inst1, %c
+
+These debug records are an optional replacement for
+:ref:`debug intrinsics<dbg_intrinsics>`. Debug records will be output if the
+``--write-experimental-debuginfo`` flag is passed to LLVM; it is an error for both
+records and intrinsics to appear in the same module. More information about
+debug records can be found in the `LLVM Source Level Debugging
+<SourceLevelDebugging.html#format-common-intrinsics>`_ document.
+
 .. _intrinsics:
 
 Intrinsic Functions
@@ -13534,12 +13577,12 @@ Overview:
 """""""""
 
 The '``llvm.seh.try.begin``' and '``llvm.seh.try.end``' intrinsics mark
-the boundary of a _try region for Windows SEH Asynchrous Exception Handling.
+the boundary of a _try region for Windows SEH Asynchronous Exception Handling.
 
 Semantics:
 """"""""""
 
-When a C-function is compiled with Windows SEH Asynchrous Exception option,
+When a C-function is compiled with Windows SEH Asynchronous Exception option,
 -feh_asynch (aka MSVC -EHa), these two intrinsics are injected to mark _try
 boundary and to prevent potential exceptions from being moved across boundary.
 Any set of operations can then be confined to the region by reading their leaf
@@ -13560,7 +13603,7 @@ Overview:
 """""""""
 
 The '``llvm.seh.scope.begin``' and '``llvm.seh.scope.end``' intrinsics mark
-the boundary of a CPP object lifetime for Windows SEH Asynchrous Exception
+the boundary of a CPP object lifetime for Windows SEH Asynchronous Exception
 Handling (MSVC option -EHa).
 
 Semantics:
@@ -14531,6 +14574,63 @@ The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
 integer element type. The argument types must match each other, and the return
 type must match the argument type.
 
+.. _int_scmp:
+
+'``llvm.scmp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``@llvm.scmp`` on any
+integer bit width or any vector of integer elements.
+
+::
+
+      declare i2 @llvm.scmp.i2.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+Return ``-1`` if ``%a`` is signed less than ``%b``, ``0`` if they are equal, and 
+``1`` if ``%a`` is signed greater than ``%b``. Vector intrinsics operate on a per-element basis. 
+
+Arguments:
+""""""""""
+
+The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
+integer element type. The argument types must match each other, and the return
+type must be at least as wide as ``i2``, to hold the three possible return values.
+
+.. _int_ucmp:
+
+'``llvm.ucmp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``@llvm.ucmp`` on any
+integer bit width or any vector of integer elements.
+
+::
+
+      declare i2 @llvm.ucmp.i2.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+Return ``-1`` if ``%a`` is unsigned less than ``%b``, ``0`` if they are equal, and 
+``1`` if ``%a`` is unsigned greater than ``%b``. Vector intrinsics operate on a per-element basis. 
+
+Arguments:
+""""""""""
+
+The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
+integer element type. The argument types must match each other, and the return
+type must be at least as wide as ``i2``, to hold the three possible return values.
 
 .. _int_memcpy:
 
@@ -17613,7 +17713,7 @@ Examples
       %res = call i4 @llvm.udiv.fix.sat.i4(i4 8, i4 2, i32 2)  ; %res = 15 (2 / 0.5 = 4 => 3.75)
 
 
-Specialised Arithmetic Intrinsics
+Specialized Arithmetic Intrinsics
 ---------------------------------
 
 .. _i_intr_llvm_canonicalize:
@@ -17937,9 +18037,9 @@ The '``llvm.loop.decrement.reg.*``' intrinsics do an integer ``SUB`` of its
 two operands, which is not allowed to wrap. They return the remaining number of
 iterations still to be executed, and can be used together with a ``PHI``,
 ``ICMP`` and ``BR`` to control the number of loop iterations executed. Any
-optimisations are allowed to treat it is a ``SUB``, and it is supported by
+optimizations are allowed to treat it is a ``SUB``, and it is supported by
 SCEV, so it's the backends responsibility to handle cases where it may be
-optimised. These intrinsics are marked as ``IntrNoDuplicate`` to avoid
+optimized. These intrinsics are marked as ``IntrNoDuplicate`` to avoid
 optimizers duplicating these instructions.
 
 
@@ -18641,7 +18741,7 @@ Arguments:
 The first argument is the vector to be counted. This argument must be a vector
 with integer element type. The return type must also be an integer type which is
 wide enough to hold the maximum number of elements of the source vector. The
-behaviour of this intrinsic is undefined if the return type is not wide enough
+behavior of this intrinsic is undefined if the return type is not wide enough
 for the number of elements in the input vector.
 
 The second argument is a constant flag that indicates whether the intrinsic
@@ -21926,7 +22026,7 @@ and ``evl2`` are unsigned integers indicating the explicit vector lengths of
 ``vec1`` and ``vec2`` respectively.  ``imm``, ``evl1`` and ``evl2`` should
 respect the following constraints: ``-evl1 <= imm < evl1``, ``0 <= evl1 <= VL``
 and ``0 <= evl2 <= VL``, where ``VL`` is the runtime vector factor. If these
-constraints are not satisfied the intrinsic has undefined behaviour.
+constraints are not satisfied the intrinsic has undefined behavior.
 
 Semantics:
 """"""""""
@@ -24276,6 +24376,9 @@ Arguments:
 
 The first operand is the base pointer for the load. It has the same underlying type as the element of the returned vector. The second operand, mask, is a vector of boolean values with the same number of elements as the return type. The third is a pass-through value that is used to fill the masked-off lanes of the result. The return type and the type of the '``passthru``' operand have the same vector type.
 
+The :ref:`align <attr_align>` parameter attribute can be provided for the first
+operand. The pointer alignment defaults to 1.
+
 Semantics:
 """"""""""
 
@@ -24333,11 +24436,13 @@ Arguments:
 
 The first operand is the input vector, from which elements are collected and written to memory. The second operand is the base pointer for the store, it has the same underlying type as the element of the input vector operand. The third operand is the mask, a vector of boolean values. The mask and the input vector must have the same number of vector elements.
 
+The :ref:`align <attr_align>` parameter attribute can be provided for the second
+operand. The pointer alignment defaults to 1.
 
 Semantics:
 """"""""""
 
-The '``llvm.masked.compressstore``' intrinsic is designed for compressing data in memory. It allows to collect elements from possibly non-adjacent lanes of a vector and store them contiguously in memory in one IR operation. It is useful for targets that support compressing store operations and allows vectorizing loops with cross-iteration dependences like in the following example:
+The '``llvm.masked.compressstore``' intrinsic is designed for compressing data in memory. It allows to collect elements from possibly non-adjacent lanes of a vector and store them contiguously in memory in one IR operation. It is useful for targets that support compressing store operations and allows vectorizing loops with cross-iteration dependencies like in the following example:
 
 .. code-block:: c
 
@@ -26427,6 +26532,7 @@ similar to C library function 'fesetround', however this intrinsic does not
 return any value and uses platform-independent representation of IEEE rounding
 modes.
 
+.. _int_get_fpenv:
 
 '``llvm.get.fpenv``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -26450,6 +26556,7 @@ Semantics:
 The '``llvm.get.fpenv``' intrinsic reads the current floating-point environment
 and returns it as an integer value.
 
+.. _int_set_fpenv:
 
 '``llvm.set.fpenv``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -26477,7 +26584,7 @@ Semantics:
 
 The '``llvm.set.fpenv``' intrinsic sets the current floating-point environment
 to the state specified by the argument. The state may be previously obtained by a
-call to '``llvm.get.fpenv``' or synthesised in a platform-dependent way.
+call to '``llvm.get.fpenv``' or synthesized in a platform-dependent way.
 
 
 '``llvm.reset.fpenv``' Intrinsic
@@ -26819,6 +26926,8 @@ Arguments:
 
 The argument should be an MDTuple containing any number of MDStrings.
 
+.. _llvm.trap:
+
 '``llvm.trap``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -26845,6 +26954,8 @@ Semantics:
 This intrinsic is lowered to the target dependent trap instruction. If
 the target does not have a trap instruction, this intrinsic will be
 lowered to a call of the ``abort()`` function.
+
+.. _llvm.debugtrap:
 
 '``llvm.debugtrap``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -26873,6 +26984,8 @@ This intrinsic is lowered to code which is intended to cause an
 execution trap with the intention of requesting the attention of a
 debugger.
 
+.. _llvm.ubsantrap:
+
 '``llvm.ubsantrap``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -26900,7 +27013,7 @@ This intrinsic is lowered to code which is intended to cause an execution trap,
 embedding the argument into encoding of that trap somehow to discriminate
 crashes if possible.
 
-Equivalent to ``@llvm.trap`` for targets that do not support this behaviour.
+Equivalent to ``@llvm.trap`` for targets that do not support this behavior.
 
 '``llvm.stackprotector``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -27503,12 +27616,12 @@ in example below:
 .. code-block:: text
 
     %cond = call i1 @llvm.experimental.widenable.condition()
-    br i1 %cond, label %solution_1, label %solution_2
+    br i1 %cond, label %fast_path, label %slow_path
 
-  label %fast_path:
+  fast_path:
     ; Apply memory-consuming but fast solution for a task.
 
-  label %slow_path:
+  slow_path:
     ; Cheap in memory but slow solution.
 
 Whether the result of intrinsic's call is `true` or `false`,
@@ -27841,7 +27954,7 @@ Arguments:
 The first three arguments are the same as they are in the :ref:`@llvm.memcpy <int_memcpy>`
 intrinsic, with the added constraint that ``len`` is required to be a positive integer
 multiple of the ``element_size``. If ``len`` is not a positive integer multiple of
-``element_size``, then the behaviour of the intrinsic is undefined.
+``element_size``, then the behavior of the intrinsic is undefined.
 
 ``element_size`` must be a compile-time constant positive power of two no greater than
 target-specific atomic access size limit.
@@ -27917,7 +28030,7 @@ The first three arguments are the same as they are in the
 :ref:`@llvm.memmove <int_memmove>` intrinsic, with the added constraint that
 ``len`` is required to be a positive integer multiple of the ``element_size``.
 If ``len`` is not a positive integer multiple of ``element_size``, then the
-behaviour of the intrinsic is undefined.
+behavior of the intrinsic is undefined.
 
 ``element_size`` must be a compile-time constant positive power of two no
 greater than a target-specific atomic access size limit.
@@ -27996,7 +28109,7 @@ Arguments:
 The first three arguments are the same as they are in the :ref:`@llvm.memset <int_memset>`
 intrinsic, with the added constraint that ``len`` is required to be a positive integer
 multiple of the ``element_size``. If ``len`` is not a positive integer multiple of
-``element_size``, then the behaviour of the intrinsic is undefined.
+``element_size``, then the behavior of the intrinsic is undefined.
 
 ``element_size`` must be a compile-time constant positive power of two no greater than
 target-specific atomic access size limit.
