@@ -204,7 +204,7 @@ static void expandFPToI(Instruction *FPToI) {
   Builder.SetInsertPoint(IfElse);
   Value *Sub15 = Builder.CreateAdd(
       And2,
-      ConstantInt::getSigned(IntTy, -(ExponentBias + FPMantissaWidth)));
+      ConstantInt::getSigned(IntTy, -int64_t(ExponentBias + FPMantissaWidth)));
   Value *Shl = Builder.CreateShl(Or, Sub15);
   Value *Mul16 = Builder.CreateMul(Shl, Sign);
   Builder.CreateBr(End);
