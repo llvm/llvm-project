@@ -609,6 +609,10 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
 }
 
 uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) {
+  // Call 'finalizeSymtab' to make sure vectors are sorted for lower_bound.
+
+  // 'finalizeSymtab' runs 'llvm::sort' the first time it's called and sets
+  // 'Sorted' to true ; subsequent calls returns early if Sorted is true.
   finalizeSymtab();
 
   // Find the first address range of which end address is larger than `Addr`.
