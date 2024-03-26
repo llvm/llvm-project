@@ -45950,6 +45950,19 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  if (N->getOpcode() == ISD::VSELECT && LHS.getOpcode() == ISD::SRL &&
+      supportedVectorVarShift(VT, Subtarget, ISD::SRL)) {
+    APInt SV;
+    if (Cond.getOpcode() == ISD::SETCC && Cond.getOperand(0) == LHS.getOperand(1) &&
+        cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETULT &&
+        ISD::isConstantSplatVector(Cond.getOperand(1).getNode(), SV) &&
+        ISD::isConstantSplatVectorAllZeros(RHS.getNode()) &&
+        SV == VT.getScalarSizeInBits()) {
+      SDLoc DL(LHS);
+      return DAG.getNode(X86ISD::VSRLV, DL, LHS->getVTList(), LHS.getOperand(0), LHS.getOperand(1));
+    }
+  }
+
   // Early exit check
   if (!TLI.isTypeLegal(VT) || isSoftF16(VT, Subtarget))
     return SDValue();
@@ -47824,6 +47837,22 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue V = combineShiftToPMULH(N, DAG, Subtarget))
     return V;
+
+  if (N0.getOpcode() == ISD::VSELECT &&
+      supportedVectorVarShift(VT, Subtarget, ISD::SRL)) {
+    SDValue Cond = N0.getOperand(0);
+    SDValue N00 = N0.getOperand(1);
+    SDValue N01 = N0.getOperand(2);
+    APInt SV;
+    if (Cond.getOpcode() == ISD::SETCC && Cond.getOperand(0) == N1 &&
+        cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETULT &&
+        ISD::isConstantSplatVector(Cond.getOperand(1).getNode(), SV) &&
+        ISD::isConstantSplatVectorAllZeros(N01.getNode()) &&
+        SV == VT.getScalarSizeInBits()) {
+      SDLoc DL(N);
+      return DAG.getNode(X86ISD::VSRLV, DL, N->getVTList(), N00, N1);
+    }
+  }
 
   // Only do this on the last DAG combine as it can interfere with other
   // combines.
