@@ -2346,7 +2346,14 @@ void CheckHelper::CheckProcBinding(
         "Intrinsic procedure '%s' is not a specific intrinsic permitted for use in the definition of binding '%s'"_err_en_US,
         binding.symbol().name(), symbol.name());
   }
-  if (const Symbol *overridden{FindOverriddenBinding(symbol)}) {
+  bool isInaccessibleDeferred{false};
+  if (const Symbol *
+      overridden{FindOverriddenBinding(symbol, isInaccessibleDeferred)}) {
+    if (isInaccessibleDeferred) {
+      SayWithDeclaration(*overridden,
+          "Override of PRIVATE DEFERRED '%s' must appear in its module"_err_en_US,
+          symbol.name());
+    }
     if (overridden->attrs().test(Attr::NON_OVERRIDABLE)) {
       SayWithDeclaration(*overridden,
           "Override of NON_OVERRIDABLE '%s' is not permitted"_err_en_US,
