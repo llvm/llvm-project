@@ -9,11 +9,14 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_BASICOPERATIONS_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_BASICOPERATIONS_H
 
+#include "FEnvImpl.h"
 #include "FPBits.h"
 
 #include "FEnvImpl.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/UInt128.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 namespace LIBC_NAMESPACE {
 namespace fputil {
@@ -176,6 +179,66 @@ LIBC_INLINE T fdim(T x, T y) {
   }
 
   return (x > y ? x - y : 0);
+}
+
+template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
+LIBC_INLINE int canonicalize(T &cx, const T &x) {
+  FPBits<T> sx(x);
+  if constexpr (get_fp_type<T>() == FPType::X86_Binary80) {
+    // All the pseudo and unnormal numbers are not canonical.
+    // More precisely :
+    // Exponent   |       Significand      | Meaning
+    //            | Bits 63-62 | Bits 61-0 |
+    // All Ones   |     00     |    Zero   | Pseudo Infinity, Value = Infinty
+    // All Ones   |     00     |  Non-Zero | Pseudo NaN, Value = SNaN
+    // All Ones   |     01     | Anything  | Pseudo NaN, Value = SNaN
+    //            |   Bit 63   | Bits 62-0 |
+    // All zeroes |   One      | Anything  | Pseudo Denormal, Value =
+    //            |            |           | (−1)**s × m × 2**−16382
+    // All Other  |   Zero     | Anything  | Unnormal, Value =
+    //  Values    |            |           | (−1)**s × m × 2**−16382
+    bool bit63 = sx.get_implicit_bit();
+    UInt128 mantissa = sx.get_explicit_mantissa();
+    bool bit62 = ((mantissa & (1ULL << 62)) >> 62);
+    int exponent = sx.get_biased_exponent();
+    if (exponent == 0x7FFF) {
+      if (!bit63 && !bit62) {
+        if (mantissa == 0)
+          cx = FPBits<T>::inf(sx.sign()).get_val();
+        else {
+          cx = FPBits<T>::quiet_nan(sx.sign(), mantissa).get_val();
+          raise_except_if_required(FE_INVALID);
+          return 1;
+        }
+      } else if (!bit63 && bit62) {
+        cx = FPBits<T>::quiet_nan(sx.sign(), mantissa).get_val();
+        raise_except_if_required(FE_INVALID);
+        return 1;
+      } else if (LIBC_UNLIKELY(sx.is_signaling_nan())) {
+        cx = FPBits<T>::quiet_nan(sx.sign(), sx.get_explicit_mantissa())
+                 .get_val();
+        raise_except_if_required(FE_INVALID);
+        return 1;
+      } else
+        cx = x;
+    } else if (exponent == 0 && bit63)
+      cx = FPBits<T>::make_value(mantissa, 0).get_val();
+    else if (exponent != 0 && !bit63)
+      cx = FPBits<T>::make_value(mantissa, 0).get_val();
+    else if (LIBC_UNLIKELY(sx.is_signaling_nan())) {
+      cx =
+          FPBits<T>::quiet_nan(sx.sign(), sx.get_explicit_mantissa()).get_val();
+      raise_except_if_required(FE_INVALID);
+      return 1;
+    } else
+      cx = x;
+  } else if (LIBC_UNLIKELY(sx.is_signaling_nan())) {
+    cx = FPBits<T>::quiet_nan(sx.sign(), sx.get_explicit_mantissa()).get_val();
+    raise_except_if_required(FE_INVALID);
+    return 1;
+  } else
+    cx = x;
+  return 0;
 }
 
 } // namespace fputil
