@@ -12621,8 +12621,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           },
           Mask, &OpScalars, &AltScalars);
 
-      propagateIRFlags(V0, OpScalars);
-      propagateIRFlags(V1, AltScalars);
+      propagateIRFlags(V0, OpScalars, E->getMainOp(), !MinBWs.contains(E));
+      propagateIRFlags(V1, AltScalars, E->getAltOp(), !MinBWs.contains(E));
 
       Value *V = Builder.CreateShuffleVector(V0, V1, Mask);
       if (auto *I = dyn_cast<Instruction>(V)) {
