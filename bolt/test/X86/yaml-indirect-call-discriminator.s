@@ -44,7 +44,7 @@ main:
   testq   %rax, %rax
   jne     Lindcall
 Lcall:
-  call    secondary_entry
+  call    func
 # FDATA: 1 main #Lcall# 1 func 0 1 1
 Lindcall:
   callq   *%rax
