@@ -406,13 +406,28 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
       elements accessed for each offset, default is 1.
 
     Example 1. It assumes subgroup size is 4, and accesses a[0], a[16], a[32], a[64]
+    ```
     %a = memref.alloc() : memref<1024xf32>
     %1 = xegpu.create_tdesc %a[0, 16, 32, 64]: memref<1024xf32> -> TensorDesc<4xf32>
+    ```
 
     Example 2. It assumes subgroup size is 4, and each workitem access 8 elements.
                It will access totally 32 data elements: a[0:7], a[16:23], a[32:39], a[64:71]
+    ```
     %0 = memref.alloc() : memref<1024xf32>
     %1 = xegpu.create_tdesc %0[0, 16, 32, 64] {chunk_size = 8}: memref<1024xf32> -> TensorDesc<4x8xf32>
+    ```
+
+    Example 3. It is similar to Example 2, but there is some overlaps among workitems.
+               It accesses: a[0:7], a[4:11], a[8:15], a[12:19]
+    ```
+    %0 = memref.alloc() : memref<1024xf32>
+    %1 = xegpu.create_tdesc %0[0, 4, 8, 12] {chunk_size = 8}: memref<1024xf32> -> TensorDesc<4x8xf32>
+    ```
+
+
+
+
   }];
 
   let arguments = (ins XeGPU_BaseAddrType: $source,

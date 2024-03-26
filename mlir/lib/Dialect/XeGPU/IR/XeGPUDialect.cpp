@@ -107,11 +107,11 @@ void TensorDescType::print(::mlir::AsmPrinter &printer) const {
   printer << ">";
 }
 
-TensorDescType TensorDescType::get(mlir::MLIRContext *context,
-                                   llvm::ArrayRef<int64_t> shape,
+TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
                                    mlir::Type elementType, bool scattered,
                                    int array_length, MemoryScope memory_scope,
                                    bool boundary_check) {
+  auto context = elementType.getContext();
   auto attr = TensorDescAttr::get(context, memory_scope, array_length,
                                   boundary_check, scattered);
   return Base::get(context, shape, elementType, attr);
