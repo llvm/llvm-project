@@ -1,3 +1,7 @@
+// RUN: %clang -### -c --target=aarch64 %s 2>&1 | FileCheck %s --check-prefix NONE
+// NONE: "-cc1"
+// NONE-NOT: "-fptrauth-
+
 // RUN: %clang -### -c --target=aarch64 -fno-ptrauth-intrinsics -fptrauth-intrinsics %s 2>&1 | FileCheck %s --check-prefix=INTRIN
 // INTRIN: "-cc1"{{.*}} "-fptrauth-intrinsics"
 
