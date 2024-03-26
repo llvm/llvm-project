@@ -1416,7 +1416,8 @@ void PGOUseFunc::populateCoverage(IndexedInstrProfReader *PGOReader) {
     for (auto *Succ : successors(&BB))
       Weights.push_back((Coverage[Succ] || !Coverage[&BB]) ? 1 : 0);
     if (Weights.size() >= 2)
-      llvm::setBranchWeights(*BB.getTerminator(), Weights, /*IsExpected=*/false);
+      llvm::setBranchWeights(*BB.getTerminator(), Weights,
+                             /*IsExpected=*/false);
   }
 
   unsigned NumCorruptCoverage = 0;
