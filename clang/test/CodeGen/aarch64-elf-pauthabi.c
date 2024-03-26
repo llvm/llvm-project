@@ -1,5 +1,3 @@
-// REQUIRES: aarch64-registered-target
-
 // RUN: %clang --target=aarch64-linux -S -emit-llvm -o - \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
