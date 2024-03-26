@@ -2342,10 +2342,3 @@ define void @void_func_a16i32_inreg__noimplicit([16 x i32] inreg %arg0, ptr addr
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind noinline }
-
-
-
-
-
-
-

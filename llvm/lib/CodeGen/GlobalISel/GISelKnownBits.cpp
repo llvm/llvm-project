@@ -589,6 +589,17 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     }
     break;
   }
+  case TargetOpcode::G_CTLZ:
+  case TargetOpcode::G_CTLZ_ZERO_UNDEF: {
+    KnownBits SrcOpKnown;
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), SrcOpKnown, DemandedElts,
+                         Depth + 1);
+    // If we have a known 1, its position is our upper bound.
+    unsigned PossibleLZ = SrcOpKnown.countMaxLeadingZeros();
+    unsigned LowBits = llvm::bit_width(PossibleLZ);
+    Known.Zero.setBitsFrom(LowBits);
+    break;
+  }
   }
 
   assert(!Known.hasConflict() && "Bits known to be one AND zero?");

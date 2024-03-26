@@ -2114,8 +2114,11 @@ static void handleUndefinedGlob(StringRef arg) {
 
 static void handleLibcall(StringRef name) {
   Symbol *sym = symtab.find(name);
-  if (sym && sym->isLazy() && isa<BitcodeFile>(sym->file))
+  if (sym && sym->isLazy() && isa<BitcodeFile>(sym->file)) {
+    if (!config->whyExtract.empty())
+      ctx.whyExtractRecords.emplace_back("<libcall>", sym->file, *sym);
     sym->extract();
+  }
 }
 
 static void writeArchiveStats() {
