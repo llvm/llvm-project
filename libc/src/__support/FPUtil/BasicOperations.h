@@ -199,7 +199,7 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
     //  Values    |            |           | (−1)**s × m × 2**−16382
     bool bit63 = sx.get_implicit_bit();
     UInt128 mantissa = sx.get_explicit_mantissa();
-    bool bit62 = ((mantissa & (1ULL << 62)) >> 62);
+    bool bit62 = static_cast<bool>((mantissa & (1ULL << 62)) >> 62);
     int exponent = sx.get_biased_exponent();
     if (exponent == 0x7FFF) {
       if (!bit63 && !bit62) {
