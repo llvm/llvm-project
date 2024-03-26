@@ -213,7 +213,7 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
   // Get the length of the string as parsed.
   auto *ConstantArrayTy =
       cast<ConstantArrayType>(Str->getType()->getAsArrayTypeUnsafe());
-  uint64_t StrLength = ConstantArrayTy->getSize().getZExtValue();
+  uint64_t StrLength = ConstantArrayTy->getZExtSize();
 
   if (CheckC23ConstexprInit)
     if (const StringLiteral *SL = dyn_cast<StringLiteral>(Str->IgnoreParens()))
@@ -246,14 +246,13 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
     }
 
     // [dcl.init.string]p2
-    if (StrLength > CAT->getSize().getZExtValue())
+    if (StrLength > CAT->getZExtSize())
       S.Diag(Str->getBeginLoc(),
              diag::err_initializer_string_for_char_array_too_long)
-          << CAT->getSize().getZExtValue() << StrLength
-          << Str->getSourceRange();
+          << CAT->getZExtSize() << StrLength << Str->getSourceRange();
   } else {
     // C99 6.7.8p14.
-    if (StrLength-1 > CAT->getSize().getZExtValue())
+    if (StrLength - 1 > CAT->getZExtSize())
       S.Diag(Str->getBeginLoc(),
              diag::ext_initializer_string_for_char_array_too_long)
           << Str->getSourceRange();
@@ -879,7 +878,7 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
   if (const ArrayType *AType = SemaRef.Context.getAsArrayType(ILE->getType())) {
     ElementType = AType->getElementType();
     if (const auto *CAType = dyn_cast<ConstantArrayType>(AType))
-      NumElements = CAType->getSize().getZExtValue();
+      NumElements = CAType->getZExtSize();
     // For an array new with an unknown bound, ask for one additional element
     // in order to populate the array filler.
     if (Entity.isVariableLengthArrayNew())
@@ -1016,7 +1015,7 @@ int InitListChecker::numArrayElements(QualType DeclType) {
   int maxElements = 0x7FFFFFFF;
   if (const ConstantArrayType *CAT =
         SemaRef.Context.getAsConstantArrayType(DeclType)) {
-    maxElements = static_cast<int>(CAT->getSize().getZExtValue());
+    maxElements = static_cast<int>(CAT->getZExtSize());
   }
   return maxElements;
 }
@@ -3101,7 +3100,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
       // Get the length of the string.
       uint64_t StrLen = SL->getLength();
       if (cast<ConstantArrayType>(AT)->getSize().ult(StrLen))
-        StrLen = cast<ConstantArrayType>(AT)->getSize().getZExtValue();
+        StrLen = cast<ConstantArrayType>(AT)->getZExtSize();
       StructuredList->resizeInits(Context, StrLen);
 
       // Build a literal for each character in the string, and put them into
@@ -3124,7 +3123,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
       // Get the length of the string.
       uint64_t StrLen = Str.size();
       if (cast<ConstantArrayType>(AT)->getSize().ult(StrLen))
-        StrLen = cast<ConstantArrayType>(AT)->getSize().getZExtValue();
+        StrLen = cast<ConstantArrayType>(AT)->getZExtSize();
       StructuredList->resizeInits(Context, StrLen);
 
       // Build a literal for each character in the string, and put them into
@@ -3283,7 +3282,7 @@ InitListChecker::createInitListExpr(QualType CurrentObjectType,
   if (const ArrayType *AType
       = SemaRef.Context.getAsArrayType(CurrentObjectType)) {
     if (const ConstantArrayType *CAType = dyn_cast<ConstantArrayType>(AType)) {
-      NumElements = CAType->getSize().getZExtValue();
+      NumElements = CAType->getZExtSize();
       // Simple heuristic so that we don't allocate a very large
       // initializer with many empty entries at the end.
       if (NumElements > ExpectedNumInits)
@@ -5492,7 +5491,7 @@ static void TryOrBuildParenListInitialization(
     //   having k elements.
     if (const ConstantArrayType *CAT =
             S.getASTContext().getAsConstantArrayType(Entity.getType())) {
-      ArrayLength = CAT->getSize().getZExtValue();
+      ArrayLength = CAT->getZExtSize();
       ResultType = Entity.getType();
     } else if (const VariableArrayType *VAT =
                    S.getASTContext().getAsVariableArrayType(Entity.getType())) {
