@@ -761,7 +761,7 @@ InReduction make(const parser::OmpClause::InReduction &inp,
   auto &t0 = std::get<parser::OmpReductionOperator>(inp.v.t);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
   return InReduction{
-      {/*ReductionIdentifier=*/makeReductionOperator(t0, semaCtx),
+      {/*ReductionIdentifiers=*/{makeReductionOperator(t0, semaCtx)},
        /*List=*/makeList(t1, semaCtx)}};
 }
 
@@ -1007,9 +1007,10 @@ Reduction make(const parser::OmpClause::Reduction &inp,
   // inp.v -> parser::OmpReductionClause
   auto &t0 = std::get<parser::OmpReductionOperator>(inp.v.t);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
-  return Reduction{{/*ReductionIdentifier=*/makeReductionOperator(t0, semaCtx),
-                    /*ReductionModifier=*/std::nullopt,
-                    /*List=*/makeList(t1, semaCtx)}};
+  return Reduction{
+      {/*ReductionIdentifiers=*/{makeReductionOperator(t0, semaCtx)},
+       /*ReductionModifier=*/std::nullopt,
+       /*List=*/makeList(t1, semaCtx)}};
 }
 
 // Relaxed: empty
@@ -1126,7 +1127,7 @@ TaskReduction make(const parser::OmpClause::TaskReduction &inp,
   auto &t0 = std::get<parser::OmpReductionOperator>(inp.v.t);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
   return TaskReduction{
-      {/*ReductionIdentifier=*/makeReductionOperator(t0, semaCtx),
+      {/*ReductionIdentifiers=*/{makeReductionOperator(t0, semaCtx)},
        /*List=*/makeList(t1, semaCtx)}};
 }
 

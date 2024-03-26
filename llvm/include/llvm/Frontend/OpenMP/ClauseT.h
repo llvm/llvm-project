@@ -68,8 +68,8 @@
 // generate conversion function "Func : Other -> This" with
 //   CLAUSET_ENUM_CONVERT(
 //       Func, Other, This,
-//       CLAUSET_ENUM_MEMBER_CONVERM(o1, t1)      // <- No comma
-//       CLAUSET_ENUM_MEMBER_CONVERM(o2, t2)
+//       CLAUSET_ENUM_MEMBER_CONVERT(o1, t1)      // <- No comma
+//       CLAUSET_ENUM_MEMBER_CONVERT(o2, t2)
 //       ...
 //   )
 //
@@ -156,7 +156,7 @@ struct DefinedOperatorT {
     ObjectT<I, E> v;
   };
   ENUM(IntrinsicOperator, Power, Multiply, Divide, Add, Subtract, Concat, LT,
-       LE, EQ, NE, GE, GT, NOT, AND, OR, EQV, NEQV);
+       LE, EQ, NE, GE, GT, NOT, AND, OR, EQV, NEQV, Min, Max);
   using UnionTrait = std::true_type;
   std::variant<DefinedOpName, IntrinsicOperator> u;
 };
@@ -175,6 +175,14 @@ struct IteratorSpecifierT {
   std::tuple<OPT(TypeType), ObjectT<IdType, ExprType>, RangeT<ExprType>> t;
 };
 
+// Note:
+// For motion or map clauses the OpenMP spec allows a unique mapper modifier.
+// In practice, since these clauses apply to multiple objects, there can be
+// multiple effective mappers applicable to these objects (due to overloads,
+// etc.). Because of that store a list of mappers every time a mapper modifier
+// is allowed. If the mapper list contains a single element, it applies to
+// all objects in the clause, otherwise there should be as many mappers as
+// there are objects.
 template <typename I, typename E> //
 struct MapperT {
   using MapperIdentifier = ObjectT<I, E>;
@@ -202,6 +210,13 @@ struct ProcedureDesignatorT {
   ObjectT<I, E> v;
 };
 
+// Note:
+// For reduction clauses the OpenMP spec allows a unique reduction identifier.
+// For reasons analogous to those listed for the MapperT type, clauses that
+// according to the spec contain a reduction identifier will contain a list of
+// reduction identifiers. The same constraints apply: there is either a single
+// identifier that applies to all objects, or there are as many identifiers
+// as there are objects.
 template <typename I, typename E> //
 struct ReductionIdentifierT {
   using UnionTrait = std::true_type;
@@ -500,11 +515,12 @@ template <typename T, typename I, typename E> //
 struct FromT {
   using LocatorList = ObjectListT<I, E>;
   using Expectation = type::MotionExpectation;
-  using Mapper = type::MapperT<I, E>;
   using Iterator = type::IteratorT<T, I, E>;
+  // See note at the definition of the MapperT type.
+  using Mappers = ListT<type::MapperT<I, E>>; // Not a spec name
 
   using TupleTrait = std::true_type;
-  std::tuple<OPT(Expectation), OPT(Mapper), OPT(Iterator), LocatorList> t;
+  std::tuple<OPT(Expectation), OPT(Mappers), OPT(Iterator), LocatorList> t;
 };
 
 template <typename T, typename I, typename E> //
@@ -589,9 +605,11 @@ struct InitializerT {
 template <typename T, typename I, typename E> //
 struct InReductionT {
   using List = ObjectListT<I, E>;
-  using ReductionIdentifier = type::ReductionIdentifierT<I, E>;
+  // See note at the definition of the ReductionIdentifierT type.
+  // The name ReductionIdentifiers is not a spec name.
+  using ReductionIdentifiers = ListT<type::ReductionIdentifierT<I, E>>;
   using TupleTrait = std::true_type;
-  std::tuple<ReductionIdentifier, List> t;
+  std::tuple<ReductionIdentifiers, List> t;
 };
 
 template <typename T, typename I, typename E> //
@@ -635,13 +653,14 @@ template <typename T, typename I, typename E> //
 struct MapT {
   using LocatorList = ObjectListT<I, E>;
   ENUM(MapType, To, From, Tofrom, Alloc, Release, Delete);
-  ENUM(MapTypeModifier, Always, Close, Present);
-  using Mapper = type::MapperT<I, E>;
+  ENUM(MapTypeModifier, Always, Close, Present, OmpxHold);
+  // See note at the definition of the MapperT type.
+  using Mappers = ListT<type::MapperT<I, E>>; // Not a spec name
   using Iterator = type::IteratorT<T, I, E>;
   using MapTypeModifiers = ListT<MapTypeModifier>; // Not a spec name
 
   using TupleTrait = std::true_type;
-  std::tuple<OPT(MapType), OPT(MapTypeModifiers), OPT(Mapper), OPT(Iterator),
+  std::tuple<OPT(MapType), OPT(MapTypeModifiers), OPT(Mappers), OPT(Iterator),
              LocatorList>
       t;
 };
@@ -809,10 +828,12 @@ struct ReadT {
 template <typename T, typename I, typename E> //
 struct ReductionT {
   using List = ObjectListT<I, E>;
-  using ReductionIdentifier = type::ReductionIdentifierT<I, E>;
+  // See note at the definition of the ReductionIdentifierT type.
+  // The name ReductionIdentifiers is not a spec name.
+  using ReductionIdentifiers = ListT<type::ReductionIdentifierT<I, E>>;
   ENUM(ReductionModifier, Default, Inscan, Task);
   using TupleTrait = std::true_type;
-  std::tuple<ReductionIdentifier, OPT(ReductionModifier), List> t;
+  std::tuple<ReductionIdentifiers, OPT(ReductionModifier), List> t;
 };
 
 template <typename T, typename I, typename E> //
@@ -888,9 +909,11 @@ struct SizesT {
 template <typename T, typename I, typename E> //
 struct TaskReductionT {
   using List = ObjectListT<I, E>;
-  using ReductionIdentifier = type::ReductionIdentifierT<I, E>;
+  // See note at the definition of the ReductionIdentifierT type.
+  // The name ReductionIdentifiers is not a spec name.
+  using ReductionIdentifiers = ListT<type::ReductionIdentifierT<I, E>>;
   using TupleTrait = std::true_type;
-  std::tuple<ReductionIdentifier, List> t;
+  std::tuple<ReductionIdentifiers, List> t;
 };
 
 template <typename T, typename I, typename E> //
@@ -909,11 +932,12 @@ template <typename T, typename I, typename E> //
 struct ToT {
   using LocatorList = ObjectListT<I, E>;
   using Expectation = type::MotionExpectation;
-  using Mapper = type::MapperT<I, E>;
+  // See note at the definition of the MapperT type.
+  using Mappers = ListT<type::MapperT<I, E>>; // Not a spec name
   using Iterator = type::IteratorT<T, I, E>;
 
   using TupleTrait = std::true_type;
-  std::tuple<OPT(Expectation), OPT(Mapper), OPT(Iterator), LocatorList> t;
+  std::tuple<OPT(Expectation), OPT(Mappers), OPT(Iterator), LocatorList> t;
 };
 
 template <typename T, typename I, typename E> //

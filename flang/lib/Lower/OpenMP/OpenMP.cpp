@@ -2357,8 +2357,11 @@ void Fortran::lower::genOpenMPReduction(
   for (const Clause &clause : clauses) {
     if (const auto &reductionClause =
             std::get_if<clause::Reduction>(&clause.u)) {
-      const auto &redOperator{
-          std::get<clause::ReductionOperator>(reductionClause->t)};
+      const auto &redOperatorList{
+          std::get<clause::Reduction::ReductionIdentifiers>(
+              reductionClause->t)};
+      assert(redOperatorList.size() == 1 && "Expecting single operator");
+      const auto &redOperator = redOperatorList.front();
       const auto &objects{std::get<ObjectList>(reductionClause->t)};
       if (const auto *reductionOp =
               std::get_if<clause::DefinedOperator>(&redOperator.u)) {
