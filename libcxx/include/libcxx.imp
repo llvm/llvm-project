@@ -183,6 +183,7 @@
   { include: [ "<__algorithm/ranges_set_intersection.h>", "private", "<algorithm>", "public" ] },
   { include: [ "<__algorithm/ranges_set_symmetric_difference.h>", "private", "<algorithm>", "public" ] },
   { include: [ "<__algorithm/ranges_set_union.h>", "private", "<algorithm>", "public" ] },
+  { include: [ "<__algorithm/ranges_shift_left.h>", "private", "<algorithm>", "public" ] },
   { include: [ "<__algorithm/ranges_shuffle.h>", "private", "<algorithm>", "public" ] },
   { include: [ "<__algorithm/ranges_sort.h>", "private", "<algorithm>", "public" ] },
   { include: [ "<__algorithm/ranges_sort_heap.h>", "private", "<algorithm>", "public" ] },

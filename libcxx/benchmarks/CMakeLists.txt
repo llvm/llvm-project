@@ -193,6 +193,7 @@ set(BENCHMARK_TESTS
     algorithms/ranges_make_heap_then_sort_heap.bench.cpp
     algorithms/ranges_pop_heap.bench.cpp
     algorithms/ranges_push_heap.bench.cpp
+    algorithms/ranges_shift_left.bench.cpp
     algorithms/ranges_sort.bench.cpp
     algorithms/ranges_sort_heap.bench.cpp
     algorithms/ranges_stable_sort.bench.cpp

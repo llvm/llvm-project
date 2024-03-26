@@ -990,6 +990,7 @@ module std_private_algorithm_ranges_set_union                            [system
   export std_private_algorithm_in_in_out_result
   export std_private_functional_ranges_operations
 }
+module std_private_algorithm_ranges_shift_left                           [system] { header "__algorithm/ranges_shift_left.h" }
 module std_private_algorithm_ranges_shuffle                              [system] { header "__algorithm/ranges_shuffle.h" }
 module std_private_algorithm_ranges_sort                                 [system] {
   header "__algorithm/ranges_sort.h"

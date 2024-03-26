@@ -146,6 +146,9 @@ static_assert(test(std::ranges::set_difference, a, a, a));
 static_assert(test(std::ranges::set_intersection, a, a, a));
 static_assert(test(std::ranges::set_symmetric_difference, a, a, a));
 static_assert(test(std::ranges::set_union, a, a, a));
+#if TEST_STD_VER >= 23
+static_assert(test(std::ranges::shift_left, a, 42));
+#endif
 static_assert(test(std::ranges::shuffle, a, g));
 static_assert(test(std::ranges::sort, a));
 static_assert(test(std::ranges::sort_heap, a));

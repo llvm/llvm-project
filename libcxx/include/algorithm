@@ -843,6 +843,13 @@ namespace ranges {
             uniform_random_bit_generator<remove_reference_t<Gen>>
     O sample(R&& r, O out, range_difference_t<R> n, Gen&& g);                                       // since C++20
 
+  template<permutable I, sentinel_for<I> S>
+    constexpr subrange<I> ranges::shift_left(I first, S last, iter_difference_t<I> n);              // since C++23
+  
+  template<forward_range R>
+    requires permutable<iterator_t<R>>
+    constexpr borrowed_subrange_t<R> ranges::shift_left(R&& r, range_difference_t<R> n)             // since C++23
+
   template<random_access_iterator I, sentinel_for<I> S, class Gen>
     requires permutable<I> &&
             uniform_random_bit_generator<remove_reference_t<Gen>>
@@ -1959,6 +1966,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_set_intersection.h>
 #include <__algorithm/ranges_set_symmetric_difference.h>
 #include <__algorithm/ranges_set_union.h>
+#include <__algorithm/ranges_shift_left.h>
 #include <__algorithm/ranges_shuffle.h>
 #include <__algorithm/ranges_sort.h>
 #include <__algorithm/ranges_sort_heap.h>

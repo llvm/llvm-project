@@ -183,6 +183,7 @@ set(files
   __algorithm/ranges_set_intersection.h
   __algorithm/ranges_set_symmetric_difference.h
   __algorithm/ranges_set_union.h
+  __algorithm/ranges_shift_left.h
   __algorithm/ranges_shuffle.h
   __algorithm/ranges_sort.h
   __algorithm/ranges_sort_heap.h

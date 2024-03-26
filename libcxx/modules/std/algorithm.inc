@@ -353,9 +353,11 @@ export namespace std {
   // [alg.shift], shift
   using std::shift_left;
 
+#if _LIBCPP_STD_VER >= 23
   namespace ranges {
-    // using std::ranges::shift_left;
+    using std::ranges::shift_left;
   }
+#endif // _LIBCPP_STD_VER >= 23
 
   using std::shift_right;
 
