@@ -12860,9 +12860,22 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     // The positive stride case is the same as isKnownPositive(Stride) returning
     // true (original behavior of the function).
     //
-    if (PredicatedIV || !NoWrap || !loopIsFiniteByAssumption(L) ||
+    if (PredicatedIV || !loopIsFiniteByAssumption(L) ||
         !loopHasNoAbnormalExits(L))
       return getCouldNotCompute();
+
+    // Adding Stride equal to one Predicate when there is no wrap flags.
+    // It might enable strided access versioning in LAA and calculate BECount
+    // with Stride = 1.
+    if (!NoWrap) {
+      if (AllowPredicates) {
+        const auto *One =
+            static_cast<const SCEVConstant *>(getOne(Stride->getType()));
+        Predicates.insert(getEqualPredicate(Stride, One));
+        Stride = One;
+      } else
+        return getCouldNotCompute();
+    }
 
     if (!isKnownNonZero(Stride)) {
       // If we have a step of zero, and RHS isn't invariant in L, we don't know
