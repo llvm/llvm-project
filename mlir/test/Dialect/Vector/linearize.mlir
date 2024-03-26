@@ -81,9 +81,7 @@ func.func @test_partial_linearize(%arg0: vector<2x2xf32>, %arg1: vector<4x4xf32>
 
 // ALL-LABEL: test_index_no_linearize
 func.func @test_index_no_linearize(%arg0: vector<2x2xindex>, %arg1: vector<2x2xindex>) -> vector<2x2xindex> {
-    // DEFAULT: %[[ADD:.*]] = arith.addi {{.*}} : vector<2x2xindex>
-    // BW-128: %[[ADD:.*]] = arith.addi {{.*}} : vector<2x2xindex>
-    // BW-0: %[[ADD:.*]] = arith.addi {{.*}} : vector<2x2xindex>
+    // ALL: %[[ADD:.*]] = arith.addi {{.*}} : vector<2x2xindex>
     %0 = arith.addi %arg0, %arg1 : vector<2x2xindex>
     return %0 : vector<2x2xindex>
 }
@@ -94,9 +92,7 @@ func.func @test_index_no_linearize(%arg0: vector<2x2xindex>, %arg1: vector<2x2xi
 
 // ALL-LABEL: test_tensor_no_linearize
 func.func @test_tensor_no_linearize(%arg0: tensor<2x2xf32>, %arg1: tensor<2x2xf32>) -> (tensor<2x2xf32>, tensor<2x2xf32>) {
-    // DEFAULT: %[[MULF:.*]] = arith.mulf %arg0, %arg1 : tensor<2x2xf32>
-    // BW-128: %[[MULF:.*]] = arith.mulf %arg0, %arg1 : tensor<2x2xf32>
-    // BW-0: %[[MULF:.*]] = arith.mulf %arg0, %arg1 : tensor<2x2xf32>
+    // ALL: %[[MULF:.*]] = arith.mulf %arg0, %arg1 : tensor<2x2xf32>
     %0 = arith.mulf %arg0, %arg1 : tensor<2x2xf32>
 
     return %0, %arg0 : tensor<2x2xf32>, tensor<2x2xf32>
