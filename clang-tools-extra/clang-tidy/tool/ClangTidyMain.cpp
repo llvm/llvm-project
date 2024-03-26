@@ -459,9 +459,8 @@ static bool verifyChecks(const StringSet<> &AllChecks, StringRef CheckGlob,
   for (const auto &Item : Globs.getItems()) {
     if (Item.Text.starts_with("clang-diagnostic"))
       continue;
-    if (llvm::none_of(AllChecks.keys(), [&Item](StringRef S) {
-          return Item.Regex.match(S);
-        })) {
+    if (llvm::none_of(AllChecks.keys(),
+                      [&Item](StringRef S) { return Item.Regex.match(S); })) {
       AnyInvalid = true;
       if (Item.Text.contains('*'))
         llvm::WithColor::warning(llvm::errs(), Source)
