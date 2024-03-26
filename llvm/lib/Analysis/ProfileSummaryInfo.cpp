@@ -47,17 +47,17 @@ static cl::opt<double> PartialSampleProfileWorkingSetSizeScaleFactor(
 // any backend passes (IR level instrumentation, for example). This method
 // checks if the Summary is null and if so checks if the summary metadata is now
 // available in the module and parses it to get the Summary object.
-void ProfileSummaryInfo::refresh() {
-  if (hasProfileSummary())
-    return;
+ProfileSummaryInfo::ProfileSummaryInfo(const Module &M) : M(M) {
+  assert(!hasProfileSummary());
+
   // First try to get context sensitive ProfileSummary.
-  auto *SummaryMD = M->getProfileSummary(/* IsCS */ true);
+  auto *SummaryMD = M.getProfileSummary(/* IsCS */ true);
   if (SummaryMD)
     Summary.reset(ProfileSummary::getFromMD(SummaryMD));
 
   if (!hasProfileSummary()) {
     // This will actually return PSK_Instr or PSK_Sample summary.
-    SummaryMD = M->getProfileSummary(/* IsCS */ false);
+    SummaryMD = M.getProfileSummary(/* IsCS */ false);
     if (SummaryMD)
       Summary.reset(ProfileSummary::getFromMD(SummaryMD));
   }

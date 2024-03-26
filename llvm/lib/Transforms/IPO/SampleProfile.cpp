@@ -43,6 +43,7 @@
 #include "llvm/Analysis/ReplayInlineAdvisor.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -587,8 +588,7 @@ public:
                               : CSINLINE_DEBUG) {}
 
   bool doInitialization(Module &M, FunctionAnalysisManager *FAM = nullptr);
-  bool runOnModule(Module &M, ModuleAnalysisManager *AM,
-                   ProfileSummaryInfo *_PSI, LazyCallGraph &CG);
+  bool runOnModule(Module &M, ModuleAnalysisManager *AM, LazyCallGraph &CG);
 
 protected:
   bool runOnFunction(Function &F, ModuleAnalysisManager *AM);
@@ -2708,16 +2708,17 @@ void SampleProfileMatcher::distributeIRToProfileLocationMap() {
 }
 
 bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
-                                      ProfileSummaryInfo *_PSI,
                                       LazyCallGraph &CG) {
   GUIDToFuncNameMapper Mapper(M, *Reader, GUIDToFuncNameMap);
 
-  PSI = _PSI;
   if (M.getProfileSummary(/* IsCS */ false) == nullptr) {
     M.setProfileSummary(Reader->getSummary().getMD(M.getContext()),
                         ProfileSummary::PSK_Sample);
-    PSI->refresh();
+    PreservedAnalyses PA = PreservedAnalyses::all();
+    PA.abandon<ProfileSummaryAnalysis>();
+    AM->invalidate(M, PA);
   }
+  PSI = &AM->getResult<ProfileSummaryAnalysis>(M);
   // Compute the total number of samples collected in this profile.
   for (const auto &I : Reader->getProfiles())
     TotalCollectedSamples += I.second.getTotalSamples();
@@ -2893,9 +2894,8 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
   if (!SampleLoader.doInitialization(M, &FAM))
     return PreservedAnalyses::all();
 
-  ProfileSummaryInfo *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
   LazyCallGraph &CG = AM.getResult<LazyCallGraphAnalysis>(M);
-  if (!SampleLoader.runOnModule(M, &AM, PSI, CG))
+  if (!SampleLoader.runOnModule(M, &AM, CG))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

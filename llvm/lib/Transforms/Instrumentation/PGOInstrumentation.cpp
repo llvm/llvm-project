@@ -65,6 +65,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -1942,13 +1943,10 @@ static void verifyFuncBFI(PGOUseFunc &Func, LoopInfo &LI,
     });
 }
 
-static bool annotateAllFunctions(
-    Module &M, StringRef ProfileFileName, StringRef ProfileRemappingFileName,
-    vfs::FileSystem &FS,
-    function_ref<TargetLibraryInfo &(Function &)> LookupTLI,
-    function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
-    function_ref<BlockFrequencyInfo *(Function &)> LookupBFI,
-    ProfileSummaryInfo *PSI, bool IsCS) {
+static bool annotateAllFunctions(Module &M, ModuleAnalysisManager &MAM,
+                                 StringRef ProfileFileName,
+                                 StringRef ProfileRemappingFileName,
+                                 vfs::FileSystem &FS, bool IsCS) {
   LLVM_DEBUG(dbgs() << "Read in profile counters: ");
   auto &Ctx = M.getContext();
   // Read the counter array from file.
@@ -1991,7 +1989,11 @@ static bool annotateAllFunctions(
   M.setProfileSummary(PGOReader->getSummary(IsCS).getMD(M.getContext()),
                       IsCS ? ProfileSummary::PSK_CSInstr
                            : ProfileSummary::PSK_Instr);
-  PSI->refresh();
+
+  PreservedAnalyses PA = PreservedAnalyses::all();
+  PA.abandon<ProfileSummaryAnalysis>();
+  MAM.invalidate(M, PA);
+  auto &PSI = MAM.getResult<ProfileSummaryAnalysis>(M);
 
   std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;
   collectComdatMembers(M, ComdatMembers);
@@ -2004,19 +2006,21 @@ static bool annotateAllFunctions(
   if (PGOInstrumentEntry.getNumOccurrences() > 0)
     InstrumentFuncEntry = PGOInstrumentEntry;
   bool HasSingleByteCoverage = PGOReader->hasSingleByteCoverage();
+  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
   for (auto &F : M) {
     if (skipPGOUse(F))
       continue;
-    auto &TLI = LookupTLI(F);
-    auto *BPI = LookupBPI(F);
-    auto *BFI = LookupBFI(F);
+    auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
+    auto &BPI = FAM.getResult<BranchProbabilityAnalysis>(F);
+    auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
     if (!HasSingleByteCoverage) {
       // Split indirectbr critical edges here before computing the MST rather
       // than later in getInstrBB() to avoid invalidating it.
-      SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/false, BPI,
-                                   BFI);
+      SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/false, &BPI,
+                                   &BFI);
     }
-    PGOUseFunc Func(F, &M, TLI, ComdatMembers, BPI, BFI, PSI, IsCS,
+    PGOUseFunc Func(F, &M, TLI, ComdatMembers, &BPI, &BFI, &PSI, IsCS,
                     InstrumentFuncEntry, HasSingleByteCoverage);
     if (HasSingleByteCoverage) {
       Func.populateCoverage(PGOReader.get());
@@ -2094,8 +2098,8 @@ static bool annotateAllFunctions(
       // Verify BlockFrequency information.
       uint64_t HotCountThreshold = 0, ColdCountThreshold = 0;
       if (PGOVerifyHotBFI) {
-        HotCountThreshold = PSI->getOrCompHotCountThreshold();
-        ColdCountThreshold = PSI->getOrCompColdCountThreshold();
+        HotCountThreshold = PSI.getOrCompHotCountThreshold();
+        ColdCountThreshold = PSI.getOrCompColdCountThreshold();
       }
       verifyFuncBFI(Func, LI, NBPI, HotCountThreshold, ColdCountThreshold);
     }
@@ -2145,22 +2149,8 @@ PGOInstrumentationUse::PGOInstrumentationUse(
 
 PreservedAnalyses PGOInstrumentationUse::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
-
-  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  auto LookupTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
-    return FAM.getResult<TargetLibraryAnalysis>(F);
-  };
-  auto LookupBPI = [&FAM](Function &F) {
-    return &FAM.getResult<BranchProbabilityAnalysis>(F);
-  };
-  auto LookupBFI = [&FAM](Function &F) {
-    return &FAM.getResult<BlockFrequencyAnalysis>(F);
-  };
-
-  auto *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
-
-  if (!annotateAllFunctions(M, ProfileFileName, ProfileRemappingFileName, *FS,
-                            LookupTLI, LookupBPI, LookupBFI, PSI, IsCS))
+  if (!annotateAllFunctions(M, MAM, ProfileFileName, ProfileRemappingFileName,
+                            *FS, IsCS))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
