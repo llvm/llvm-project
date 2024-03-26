@@ -551,7 +551,7 @@ CodeGenFunction::EmitHostexecAllocAndExecFns(const CallExpr *E,
         Address SrcAddr = Address(Arg, Int8Ty, CharUnits::fromQuantity(1));
         Builder.CreateMemCpy(BufferPtrByteAddr, SrcAddr, varStrLength);
         // update BufferPtrByteAddr for next string memcpy
-        llvm::Value *PtrAsInt = BufferPtrByteAddr.getPointer();
+        llvm::Value *PtrAsInt = BufferPtrByteAddr.emitRawPointer(*this);
         BufferPtrByteAddr = Address(
             Builder.CreateGEP(Int8Ty,
 		    PtrAsInt, ArrayRef<llvm::Value*>(varStrLength)),
