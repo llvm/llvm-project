@@ -14251,6 +14251,7 @@ void BoUpSLP::computeMinimumValueSizes() {
   // resize to the final type.
   bool IsTruncRoot = false;
   bool IsProfitableToDemoteRoot = !IsStoreOrInsertElt;
+  SmallVector<unsigned> RootDemotes;
   if (NodeIdx != 0 &&
       VectorizableTree[NodeIdx]->State == TreeEntry::Vectorize &&
       (VectorizableTree[NodeIdx]->getOpcode() == Instruction::ZExt ||
@@ -14258,6 +14259,7 @@ void BoUpSLP::computeMinimumValueSizes() {
        VectorizableTree[NodeIdx]->getOpcode() == Instruction::Trunc)) {
     assert(IsStoreOrInsertElt && "Expected store/insertelement seeded graph.");
     IsTruncRoot = VectorizableTree[NodeIdx]->getOpcode() == Instruction::Trunc;
+    RootDemotes.push_back(NodeIdx);
     IsProfitableToDemoteRoot = true;
     ++NodeIdx;
   }
@@ -14394,6 +14396,7 @@ void BoUpSLP::computeMinimumValueSizes() {
   while (NodeIdx < VectorizableTree.size() &&
          VectorizableTree[NodeIdx]->State == TreeEntry::Vectorize &&
          VectorizableTree[NodeIdx]->getOpcode() == Instruction::Trunc) {
+    RootDemotes.push_back(NodeIdx);
     ++NodeIdx;
     IsTruncRoot = true;
   }
@@ -14409,14 +14412,22 @@ void BoUpSLP::computeMinimumValueSizes() {
     unsigned MaxBitWidth = ComputeMaxBitWidth(
         TreeRoot, VectorizableTree[NodeIdx]->getVectorFactor(), IsTopRoot,
         IsProfitableToDemoteRoot, Opcode, Limit, IsTruncRoot);
+    for (unsigned Idx : RootDemotes)
+      ToDemote.append(VectorizableTree[Idx]->Scalars.begin(),
+                      VectorizableTree[Idx]->Scalars.end());
+    RootDemotes.clear();
     IsTopRoot = false;
     IsProfitableToDemoteRoot = true;
 
     if (TruncNodes.empty()) {
       NodeIdx = VectorizableTree.size();
     } else {
-      NodeIdx = *TruncNodes.begin() + 1;
-      TruncNodes.erase(TruncNodes.begin());
+      unsigned NewIdx = 0;
+      do {
+        NewIdx = *TruncNodes.begin() + 1;
+        TruncNodes.erase(TruncNodes.begin());
+      } while (NewIdx <= NodeIdx && !TruncNodes.empty());
+      NodeIdx = NewIdx;
       IsTruncRoot = true;
     }
 
