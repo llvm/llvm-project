@@ -18560,7 +18560,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     }
     llvm::Type *LoadTy = ConvertType(E->getType());
     llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
-    llvm::Function *F = CGM.getIntrinsic(IID, {});
+    llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
     return Builder.CreateCall(F, {Addr});
   }
   case AMDGPU::BI__builtin_amdgcn_get_fpenv: {
