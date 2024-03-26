@@ -489,7 +489,9 @@ struct TestFlattenVectorTransferPatterns
   Option<unsigned> targetVectorBitwidth{
       *this, "target-vector-bitwidth",
       llvm::cl::desc(
-          "Minimum vector bitwidth to enable the flattening transformation"),
+          "Minimum vector bitwidth to enable the flattening transformation. "
+          "For scalable vectors this is the base size that's known at compile "
+          "time."),
       llvm::cl::init(std::numeric_limits<unsigned>::max())};
 
   void runOnOperation() override {

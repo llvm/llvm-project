@@ -49,6 +49,11 @@ struct LinearizeConstant final : OpConversionPattern<arith::ConstantOp> {
     Location loc = constOp.getLoc();
     auto resType =
         getTypeConverter()->convertType<VectorType>(constOp.getType());
+
+    if (resType.isScalable() && !isa<SplatElementsAttr>(constOp.getValue()))
+      return rewriter.notifyMatchFailure(
+          loc, "Cannot linearize a constant scalable vector that's not a splt");
+
     if (!resType)
       return rewriter.notifyMatchFailure(loc, "can't convert return type");
     if (!isLessThanTargetBitWidth(constOp, targetVectorBitWidth))
@@ -104,11 +109,11 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
     ConversionTarget &target, unsigned targetBitWidth) {
 
   typeConverter.addConversion([](VectorType type) -> std::optional<Type> {
-    // Ignore scalable vectors for now.
-    if (type.getRank() <= 1 || type.isScalable())
+    if (!isLinearizableVector(type))
       return type;
 
-    return VectorType::get(type.getNumElements(), type.getElementType());
+    return VectorType::get(type.getNumElements(), type.getElementType(),
+                           type.isScalable());
   });
 
   auto materializeCast = [](OpBuilder &builder, Type type, ValueRange inputs,
