@@ -253,6 +253,11 @@ Changes in existing checks
   mode by resolving symbolic links to header files. Fixed handling of Hungarian
   Prefix when configured to `LowerCase`.
 
+- Improved :doc:`readability-static-definition-in-anonymous-namespace
+  <clang-tidy/checks/readability/static-definition-in-anonymous-namespace>`
+  check by resolving fix-it overlaps in template code by disregarding implicit
+  instances.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
