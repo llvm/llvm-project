@@ -24,6 +24,8 @@ namespace clang {
 namespace clangd {
 namespace trace {
 
+Key<std::string> EventTracer::kRequestId;
+
 namespace {
 // The current implementation is naive: each thread writes to Out guarded by Mu.
 // Perhaps we should replace this by something that disturbs performance less.
@@ -159,6 +161,10 @@ private:
     Out.object([&] {
       Out.attribute("pid", 0);
       Out.attribute("ph", Phase);
+      const auto *id = Context::current().get(kRequestId);
+      if (id) {
+        Out.attribute("rid", *id);
+      }
       for (const auto &KV : Event)
         Out.attribute(KV.first, KV.second);
     });
