@@ -201,6 +201,9 @@ Changes in existing checks
   <clang-tidy/checks/google/global-names-in-headers>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
 
+- Improved :doc:`google-runtime-int <clang-tidy/checks/google/runtime-int>`
+  check performance through optimizations.
+
 - Improved :doc:`llvm-header-guard
   <clang-tidy/checks/llvm/header-guard>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
@@ -238,6 +241,9 @@ Changes in existing checks
   detecting more cases of constant access. In particular, pointers can be
   analyzed, se the check now handles the common patterns
   `const auto e = (*vector_ptr)[i]` and `const auto e = vector_ptr->at(i);`.
+
+- Improved :doc:`modernize-use-using <clang-tidy/checks/modernize/use-using>`
+  check by adding support for detection of typedefs declared on function level.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to provide
