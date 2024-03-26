@@ -72,12 +72,12 @@ define void @shl144sar2(ptr %p) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movswl (%eax), %ecx
-; CHECK-NEXT:    sarl $31, %ecx
+; CHECK-NEXT:    shll $14, %ecx
 ; CHECK-NEXT:    movl %ecx, 16(%eax)
-; CHECK-NEXT:    movl %ecx, 8(%eax)
-; CHECK-NEXT:    movl %ecx, 12(%eax)
-; CHECK-NEXT:    movl %ecx, 4(%eax)
-; CHECK-NEXT:    movl %ecx, (%eax)
+; CHECK-NEXT:    movl $0, 8(%eax)
+; CHECK-NEXT:    movl $0, 12(%eax)
+; CHECK-NEXT:    movl $0, 4(%eax)
+; CHECK-NEXT:    movl $0, (%eax)
 ; CHECK-NEXT:    retl
   %a = load i160, ptr %p
   %1 = shl i160 %a, 144
