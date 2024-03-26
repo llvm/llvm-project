@@ -101,6 +101,11 @@ Improvements to clang-tidy
   to filter source files from the compilation database, via a RegEx. In a
   similar fashion to what `-header-filter` does for header files.
 
+- Improved handling of `--driver-mode=`, now automatically deducing it from
+  the compiler name after `--`, or properly utilizing it when passed as an
+  extra argument during :program:`clang-tidy` invocation with explicit compiler
+  arguments.
+
 New checks
 ^^^^^^^^^^
 
