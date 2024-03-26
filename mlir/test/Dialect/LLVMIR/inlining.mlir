@@ -8,8 +8,8 @@
 func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
   %0 = llvm.mlir.constant(42 : i32) : i32
   %stack = llvm.intr.stacksave : !llvm.ptr
-  llvm.store %0, %ptr { alignment = 8 } : i32, !llvm.ptr
-  %1 = llvm.load %ptr { alignment = 8 } : !llvm.ptr -> i32
+  ptr.store %0, %ptr { alignment = 8 } : i32, !llvm.ptr
+  %1 = ptr.load %ptr { alignment = 8 } : !llvm.ptr -> i32
   llvm.intr.dbg.value #variable = %0 : i32
   llvm.intr.dbg.declare #variableAddr = %ptr : !llvm.ptr
   llvm.intr.dbg.label #label
@@ -20,8 +20,8 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
   "llvm.intr.memcpy"(%ptr, %ptr, %0) <{isVolatile = true}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   "llvm.intr.assume"(%true) : (i1) -> ()
   llvm.fence release
-  %2 = llvm.atomicrmw add %ptr, %0 monotonic : !llvm.ptr, i32
-  %3 = llvm.cmpxchg %ptr, %0, %1 acq_rel monotonic : !llvm.ptr, i32
+  %2 = ptr.atomicrmw add %ptr, %0 monotonic : !llvm.ptr, i32
+  %3, %4 = ptr.cmpxchg %ptr, %0, %1 acq_rel monotonic : !llvm.ptr, i32
   llvm.inline_asm has_side_effects "foo", "bar" : () -> ()
   llvm.cond_br %true, ^bb1, ^bb2
 ^bb1:
@@ -36,8 +36,8 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
 // CHECK-SAME: %[[PTR:[a-zA-Z0-9_]+]]
 // CHECK: %[[CST:.*]] = llvm.mlir.constant(42
 // CHECK: %[[STACK:.+]] = llvm.intr.stacksave
-// CHECK: llvm.store %[[CST]], %[[PTR]]
-// CHECK: %[[RES:.+]] = llvm.load %[[PTR]]
+// CHECK: ptr.store %[[CST]], %[[PTR]]
+// CHECK: %[[RES:.+]] = ptr.load %[[PTR]]
 // CHECK: llvm.intr.dbg.value #{{.+}} = %[[CST]]
 // CHECK: llvm.intr.dbg.declare #{{.+}} = %[[PTR]]
 // CHECK: llvm.intr.dbg.label #{{.+}}
@@ -46,8 +46,8 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
 // CHECK: "llvm.intr.memcpy"(%[[PTR]], %[[PTR]]
 // CHECK: "llvm.intr.assume"
 // CHECK: llvm.fence release
-// CHECK: llvm.atomicrmw add %[[PTR]], %[[CST]] monotonic
-// CHECK: llvm.cmpxchg %[[PTR]], %[[CST]], %[[RES]] acq_rel monotonic
+// CHECK: ptr.atomicrmw add %[[PTR]], %[[CST]] monotonic
+// CHECK: ptr.cmpxchg %[[PTR]], %[[CST]], %[[RES]] acq_rel monotonic
 // CHECK: llvm.inline_asm has_side_effects "foo", "bar"
 // CHECK: llvm.unreachable
 // CHECK: llvm.intr.stackrestore %[[STACK]]
@@ -208,14 +208,14 @@ llvm.func @caller() {
 llvm.func @static_alloca() -> f32 {
   %0 = llvm.mlir.constant(4 : i32) : i32
   %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
-  %2 = llvm.load %1 : !llvm.ptr -> f32
+  %2 = ptr.load %1 : !llvm.ptr -> f32
   llvm.return %2 : f32
 }
 
 llvm.func @dynamic_alloca(%size : i32) -> f32 {
   %0 = llvm.add %size, %size : i32
   %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
-  %2 = llvm.load %1 : !llvm.ptr -> f32
+  %2 = ptr.load %1 : !llvm.ptr -> f32
   llvm.return %2 : f32
 }
 
@@ -267,7 +267,7 @@ llvm.func @static_alloca_not_in_entry(%cond : i1) -> f32 {
   %3 = llvm.alloca %2 x f32 : (i32) -> !llvm.ptr
   llvm.br ^bb3(%3: !llvm.ptr)
 ^bb3(%ptr : !llvm.ptr):
-  %4 = llvm.load %ptr : !llvm.ptr -> f32
+  %4 = ptr.load %ptr : !llvm.ptr -> f32
   llvm.return %4 : f32
 }
 
@@ -288,7 +288,7 @@ llvm.func @static_alloca(%cond: i1) -> f32 {
   %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
   llvm.cond_br %cond, ^bb1, ^bb2
 ^bb1:
-  %2 = llvm.load %1 : !llvm.ptr -> f32
+  %2 = ptr.load %1 : !llvm.ptr -> f32
   llvm.return %2 : f32
 ^bb2:
   %3 = llvm.mlir.constant(3.14192 : f32) : f32
@@ -312,7 +312,7 @@ llvm.func @test_inline(%cond0 : i1, %cond1 : i1, %funcArg : f32) -> f32 {
   // Make sure the lifetime end intrinsic has been inserted at both former
   // return sites of the callee.
   // CHECK: ^[[BB2]]:
-  // CHECK-NEXT: llvm.load
+  // CHECK-NEXT: ptr.load
   // CHECK-NEXT: llvm.intr.lifetime.end 4, %[[PTR]]
   // CHECK: ^[[BB3]]:
   // CHECK-NEXT: llvm.intr.lifetime.end 4, %[[PTR]]
@@ -327,7 +327,7 @@ llvm.func @test_inline(%cond0 : i1, %cond1 : i1, %funcArg : f32) -> f32 {
 llvm.func @static_alloca() -> f32 {
   %0 = llvm.mlir.constant(4 : i32) : i32
   %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
-  %2 = llvm.load %1 : !llvm.ptr -> f32
+  %2 = ptr.load %1 : !llvm.ptr -> f32
   llvm.return %2 : f32
 }
 
@@ -341,7 +341,7 @@ llvm.func @test_inline(%cond0 : i1) {
   "test.one_region_op"() ({
     %0 = llvm.call @static_alloca() : () -> f32
     // CHECK-NEXT: llvm.intr.lifetime.start 4, %[[ALLOCA]]
-    // CHECK-NEXT: %[[RES:.+]] = llvm.load %[[ALLOCA]]
+    // CHECK-NEXT: %[[RES:.+]] = ptr.load %[[ALLOCA]]
     // CHECK-NEXT: llvm.intr.lifetime.end 4, %[[ALLOCA]]
     // CHECK-NEXT: test.region_yield %[[RES]]
     test.region_yield %0 : f32
@@ -375,7 +375,7 @@ llvm.func @alloca_with_lifetime(%cond: i1) -> f32 {
   %0 = llvm.mlir.constant(4 : i32) : i32
   %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
   llvm.intr.lifetime.start 4, %1 : !llvm.ptr
-  %2 = llvm.load %1 : !llvm.ptr -> f32
+  %2 = ptr.load %1 : !llvm.ptr -> f32
   llvm.intr.lifetime.end 4, %1 : !llvm.ptr
   %3 = llvm.fadd %2, %2 : f32
   llvm.return %3 : f32
@@ -392,7 +392,7 @@ llvm.func @test_inline(%cond0 : i1, %cond1 : i1, %funcArg : f32) -> f32 {
   // Make sure the original lifetime intrinsic has been preserved, rather than
   // inserting a new one with a larger scope.
   // CHECK: llvm.intr.lifetime.start 4, %[[PTR]]
-  // CHECK-NEXT: llvm.load %[[PTR]]
+  // CHECK-NEXT: ptr.load %[[PTR]]
   // CHECK-NEXT: llvm.intr.lifetime.end 4, %[[PTR]]
   // CHECK: llvm.fadd
   // CHECK-NOT: llvm.intr.lifetime.end
@@ -603,19 +603,19 @@ llvm.func @test_disallow_arg_attr(%ptr : !llvm.ptr) {
 
 // -----
 
-#callee = #llvm.access_group<id = distinct[0]<>>
-#caller = #llvm.access_group<id = distinct[1]<>>
+#callee = #ptr.access_group<id = distinct[0]<>>
+#caller = #ptr.access_group<id = distinct[1]<>>
 
 llvm.func @inlinee(%ptr : !llvm.ptr) -> i32 {
-  %0 = llvm.load %ptr { access_groups = [#callee] } : !llvm.ptr -> i32
+  %0 = ptr.load %ptr { access_groups = [#callee] } : !llvm.ptr -> i32
   llvm.return %0 : i32
 }
 
-// CHECK-DAG: #[[$CALLEE:.*]] = #llvm.access_group<id = {{.*}}>
-// CHECK-DAG: #[[$CALLER:.*]] = #llvm.access_group<id = {{.*}}>
+// CHECK-DAG: #[[$CALLEE:.*]] = #ptr.access_group<id = {{.*}}>
+// CHECK-DAG: #[[$CALLER:.*]] = #ptr.access_group<id = {{.*}}>
 
 // CHECK-LABEL: func @caller
-// CHECK: llvm.load
+// CHECK: ptr.load
 // CHECK-SAME: access_groups = [#[[$CALLEE]], #[[$CALLER]]]
 llvm.func @caller(%ptr : !llvm.ptr) -> i32 {
   %0 = llvm.call @inlinee(%ptr) { access_groups = [#caller] } : (!llvm.ptr) -> (i32)
@@ -624,24 +624,24 @@ llvm.func @caller(%ptr : !llvm.ptr) -> i32 {
 
 // -----
 
-#caller = #llvm.access_group<id = distinct[1]<>>
+#caller = #ptr.access_group<id = distinct[1]<>>
 
 llvm.func @inlinee(%ptr : !llvm.ptr) -> i32 {
-  %0 = llvm.load %ptr : !llvm.ptr -> i32
+  %0 = ptr.load %ptr : !llvm.ptr -> i32
   llvm.return %0 : i32
 }
 
-// CHECK-DAG: #[[$CALLER:.*]] = #llvm.access_group<id = {{.*}}>
+// CHECK-DAG: #[[$CALLER:.*]] = #ptr.access_group<id = {{.*}}>
 
 // CHECK-LABEL: func @caller
-// CHECK: llvm.load
+// CHECK: ptr.load
 // CHECK-SAME: access_groups = [#[[$CALLER]]]
-// CHECK: llvm.store
+// CHECK: ptr.store
 // CHECK-SAME: access_groups = [#[[$CALLER]]]
 llvm.func @caller(%ptr : !llvm.ptr) -> i32 {
   %c5 = llvm.mlir.constant(5 : i32) : i32
   %0 = llvm.call @inlinee(%ptr) { access_groups = [#caller] } : (!llvm.ptr) -> (i32)
-  llvm.store %c5, %ptr { access_groups = [#caller] } : i32, !llvm.ptr
+  ptr.store %c5, %ptr { access_groups = [#caller] } : i32, !llvm.ptr
   llvm.return %0 : i32
 }
 

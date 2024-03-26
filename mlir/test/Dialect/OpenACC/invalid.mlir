@@ -318,7 +318,7 @@ acc.private.recipe @privatization_i32 : !llvm.ptr init {
   %c1 = arith.constant 1 : i32
   %c0 = arith.constant 0 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  llvm.store %c0, %0 : i32, !llvm.ptr
+  ptr.store %c0, %0 : i32, !llvm.ptr
   acc.yield %0 : !llvm.ptr
 } destroy {
 ^bb0(%arg0 : f32):
@@ -349,7 +349,7 @@ acc.firstprivate.recipe @privatization_i32 : !llvm.ptr init {
   %c1 = arith.constant 1 : i32
   %c0 = arith.constant 0 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  llvm.store %c0, %0 : i32, !llvm.ptr
+  ptr.store %c0, %0 : i32, !llvm.ptr
   acc.yield %0 : !llvm.ptr
 } copy {
 }
@@ -362,7 +362,7 @@ acc.firstprivate.recipe @privatization_i32 : !llvm.ptr init {
   %c1 = arith.constant 1 : i32
   %c0 = arith.constant 0 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  llvm.store %c0, %0 : i32, !llvm.ptr
+  ptr.store %c0, %0 : i32, !llvm.ptr
   acc.yield %0 : !llvm.ptr
 } copy {
 ^bb0(%arg0 : f32):
@@ -377,7 +377,7 @@ acc.firstprivate.recipe @privatization_i32 : !llvm.ptr init {
   %c1 = arith.constant 1 : i32
   %c0 = arith.constant 0 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  llvm.store %c0, %0 : i32, !llvm.ptr
+  ptr.store %c0, %0 : i32, !llvm.ptr
   acc.yield %0 : !llvm.ptr
 } copy {
 ^bb0(%arg0 : f32, %arg1 : i32):
@@ -393,7 +393,7 @@ acc.firstprivate.recipe @privatization_i32 : i32 init {
   acc.yield %0 : i32
 } copy {
 ^bb0(%arg0 : i32, %arg1 : !llvm.ptr):
-  llvm.store %arg0, %arg1 : i32, !llvm.ptr
+  ptr.store %arg0, %arg1 : i32, !llvm.ptr
   acc.yield
 } destroy {
 ^bb0(%arg0 : f32):

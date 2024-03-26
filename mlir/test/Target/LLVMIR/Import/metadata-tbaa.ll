@@ -1,17 +1,17 @@
 ; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
 
-; CHECK-DAG: #[[R0:.*]] = #llvm.tbaa_root<id = "Simple C/C++ TBAA">
-; CHECK-DAG: #[[D0:.*]] = #llvm.tbaa_type_desc<id = "scalar type", members = {<#[[R0]], 0>}>
-; CHECK-DAG: #[[$T0:.*]] = #llvm.tbaa_tag<base_type = #[[D0]], access_type = #[[D0]], offset = 0>
-; CHECK-DAG: #[[R1:.*]] = #llvm.tbaa_root<id = "Other language TBAA">
-; CHECK-DAG: #[[D1:.*]] = #llvm.tbaa_type_desc<id = "other scalar type", members = {<#[[R1]], 0>}>
-; CHECK-DAG: #[[$T1:.*]] = #llvm.tbaa_tag<base_type = #[[D1]], access_type = #[[D1]], offset = 0>
+; CHECK-DAG: #[[R0:.*]] = #ptr.tbaa_root<id = "Simple C/C++ TBAA">
+; CHECK-DAG: #[[D0:.*]] = #ptr.tbaa_type_desc<id = "scalar type", members = {<#[[R0]], 0>}>
+; CHECK-DAG: #[[$T0:.*]] = #ptr.tbaa_tag<base_type = #[[D0]], access_type = #[[D0]], offset = 0>
+; CHECK-DAG: #[[R1:.*]] = #ptr.tbaa_root<id = "Other language TBAA">
+; CHECK-DAG: #[[D1:.*]] = #ptr.tbaa_type_desc<id = "other scalar type", members = {<#[[R1]], 0>}>
+; CHECK-DAG: #[[$T1:.*]] = #ptr.tbaa_tag<base_type = #[[D1]], access_type = #[[D1]], offset = 0>
 
 ; CHECK-LABEL: llvm.func @tbaa1
-; CHECK:         llvm.store %{{.*}}, %{{.*}} {
+; CHECK:         ptr.store %{{.*}}, %{{.*}} {
 ; CHECK-SAME:        tbaa = [#[[$T0]]]
 ; CHECK-SAME:    } : i8, !llvm.ptr
-; CHECK:         llvm.store %{{.*}}, %{{.*}} {
+; CHECK:         ptr.store %{{.*}}, %{{.*}} {
 ; CHECK-SAME:        tbaa = [#[[$T1]]]
 ; CHECK-SAME:    } : i8, !llvm.ptr
 define dso_local void @tbaa1(ptr %0, ptr %1) {
@@ -30,20 +30,20 @@ define dso_local void @tbaa1(ptr %0, ptr %1) {
 
 ; // -----
 
-; CHECK-DAG: #[[R0:.*]] = #llvm.tbaa_root<id = "Simple C/C++ TBAA">
-; CHECK-DAG: #[[$T0:.*]] = #llvm.tbaa_tag<base_type = #[[D2:.*]], access_type = #[[D1:.*]], offset = 8>
-; CHECK-DAG: #[[D1]] = #llvm.tbaa_type_desc<id = "long long", members = {<#[[D0:.*]], 0>}>
-; CHECK-DAG: #[[D0]] = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#[[R0]], 0>}>
-; CHECK-DAG: #[[D2]] = #llvm.tbaa_type_desc<id = "agg2_t", members = {<#[[D1]], 0>, <#[[D1]], 8>}>
-; CHECK-DAG: #[[$T1:.*]] = #llvm.tbaa_tag<base_type = #[[D4:.*]], access_type = #[[D3:.*]], offset = 0>
-; CHECK-DAG: #[[D3]] = #llvm.tbaa_type_desc<id = "int", members = {<#[[D0]], 0>}>
-; CHECK-DAG: #[[D4]] = #llvm.tbaa_type_desc<id = "agg1_t", members = {<#[[D3]], 0>, <#[[D3]], 4>}>
+; CHECK-DAG: #[[R0:.*]] = #ptr.tbaa_root<id = "Simple C/C++ TBAA">
+; CHECK-DAG: #[[$T0:.*]] = #ptr.tbaa_tag<base_type = #[[D2:.*]], access_type = #[[D1:.*]], offset = 8>
+; CHECK-DAG: #[[D1]] = #ptr.tbaa_type_desc<id = "long long", members = {<#[[D0:.*]], 0>}>
+; CHECK-DAG: #[[D0]] = #ptr.tbaa_type_desc<id = "omnipotent char", members = {<#[[R0]], 0>}>
+; CHECK-DAG: #[[D2]] = #ptr.tbaa_type_desc<id = "agg2_t", members = {<#[[D1]], 0>, <#[[D1]], 8>}>
+; CHECK-DAG: #[[$T1:.*]] = #ptr.tbaa_tag<base_type = #[[D4:.*]], access_type = #[[D3:.*]], offset = 0>
+; CHECK-DAG: #[[D3]] = #ptr.tbaa_type_desc<id = "int", members = {<#[[D0]], 0>}>
+; CHECK-DAG: #[[D4]] = #ptr.tbaa_type_desc<id = "agg1_t", members = {<#[[D3]], 0>, <#[[D3]], 4>}>
 
 ; CHECK-LABEL: llvm.func @tbaa2
-; CHECK:         llvm.load %{{.*}} {
+; CHECK:         ptr.load %{{.*}} {
 ; CHECK-SAME:        tbaa = [#[[$T0]]]
 ; CHECK-SAME:    } : !llvm.ptr -> i64
-; CHECK:         llvm.store %{{.*}}, %{{.*}} {
+; CHECK:         ptr.store %{{.*}}, %{{.*}} {
 ; CHECK-SAME:        tbaa = [#[[$T1]]]
 ; CHECK-SAME:    } : i32, !llvm.ptr
 %struct.agg2_t = type { i64, i64 }
@@ -71,13 +71,13 @@ define dso_local void @tbaa2(ptr %0, ptr %1) {
 
 ; CHECK-LABEL: llvm.func @supported_ops
 define void @supported_ops(ptr %arg1, float %arg2, i32 %arg3, i32 %arg4) {
-  ; CHECK: llvm.load {{.*}}tbaa =
+  ; CHECK: ptr.load {{.*}}tbaa =
   %1 = load i32, ptr %arg1, !tbaa !0
-  ; CHECK: llvm.store {{.*}}tbaa =
+  ; CHECK: ptr.store {{.*}}tbaa =
   store i32 %1, ptr %arg1, !tbaa !0
-  ; CHECK: llvm.atomicrmw {{.*}}tbaa =
+  ; CHECK: ptr.atomicrmw {{.*}}tbaa =
   %2 = atomicrmw fmax ptr %arg1, float %arg2 acquire, !tbaa !0
-  ; CHECK: llvm.cmpxchg {{.*}}tbaa =
+  ; CHECK: ptr.cmpxchg {{.*}}tbaa =
   %3 = cmpxchg ptr %arg1, i32 %arg3, i32 %arg4 monotonic seq_cst, !tbaa !0
   ; CHECK: "llvm.intr.memcpy"{{.*}}tbaa =
   call void @llvm.memcpy.p0.p0.i32(ptr %arg1, ptr %arg1, i32 4, i1 false), !tbaa !0
@@ -98,12 +98,12 @@ declare void @foo(ptr %arg1)
 
 ; // -----
 
-; CHECK: #llvm.tbaa_root
+; CHECK: #ptr.tbaa_root
 ; CHECK-NOT: <{{.*}}>
 ; CHECK: {{[[:space:]]}}
 
 define void @nameless_root(ptr %arg1) {
-  ; CHECK: llvm.load {{.*}}tbaa =
+  ; CHECK: ptr.load {{.*}}tbaa =
   %1 = load i32, ptr %arg1, !tbaa !0
   ret void
 }

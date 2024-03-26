@@ -24,7 +24,7 @@ module attributes {gpu.container_module} {
     %1 = llvm.mlir.zero : !llvm.ptr
     %2 = llvm.mlir.constant(1 : index) : i64
     %3 = llvm.getelementptr %1[%2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %4 = llvm.ptrtoint %3 : !llvm.ptr to i64
+    %4 = ptr.ptrtoint %3 : !llvm.ptr to i64
     %5 = llvm.mul %0, %4 : i64
     %6 = llvm.call @malloc(%5) : (i64) -> !llvm.ptr
     %8 = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
@@ -54,7 +54,7 @@ module attributes {gpu.container_module} {
     %5 = llvm.insertvalue %arg10, %4[4, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
     %6 = llvm.mlir.constant(1 : index) : i64
     %7 = llvm.alloca %6 x !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> : (i64) -> !llvm.ptr
-    llvm.store %5, %7 : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, !llvm.ptr
+    ptr.store %5, %7 : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, !llvm.ptr
     llvm.call @_mlir_ciface_vulkanLaunch(%arg0, %arg1, %arg2, %7) : (i64, i64, i64, !llvm.ptr) -> ()
     llvm.return
   }

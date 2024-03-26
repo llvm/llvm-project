@@ -15,7 +15,7 @@ llvm.func @memset() -> i32 {
   // CHECK: "llvm.intr.memset"(%[[ALLOCA]], %[[MEMSET_VALUE]], %[[MEMSET_LEN]]) <{isVolatile = false}>
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
-  %3 = llvm.load %2 : !llvm.ptr -> i32
+  %3 = ptr.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
 }
 
@@ -37,7 +37,7 @@ llvm.func @memset_partial() -> i32 {
   // CHECK: "llvm.intr.memset"(%[[ALLOCA]], %[[MEMSET_VALUE]], %[[MEMSET_LEN]]) <{isVolatile = false}>
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
-  %3 = llvm.load %2 : !llvm.ptr -> i32
+  %3 = ptr.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
 }
 
@@ -58,7 +58,7 @@ llvm.func @memset_full() -> i32 {
   // CHECK: "llvm.intr.memset"(%[[ALLOCA]], %[[MEMSET_VALUE]], %[[MEMSET_LEN]]) <{isVolatile = false}>
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
-  %3 = llvm.load %2 : !llvm.ptr -> i32
+  %3 = ptr.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
 }
 
@@ -78,7 +78,7 @@ llvm.func @memset_too_much() -> i32 {
   // CHECK: "llvm.intr.memset"(%[[ALLOCA]], %[[MEMSET_VALUE]], %[[MEMSET_LEN]]) <{isVolatile = false}>
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
-  %3 = llvm.load %2 : !llvm.ptr -> i32
+  %3 = ptr.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
 }
 
@@ -97,7 +97,7 @@ llvm.func @memset_no_volatile() -> i32 {
   // CHECK: "llvm.intr.memset"(%[[ALLOCA]], %[[MEMSET_VALUE]], %[[MEMSET_LEN]]) <{isVolatile = true}>
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = true}> : (!llvm.ptr, i8, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
-  %3 = llvm.load %2 : !llvm.ptr -> i32
+  %3 = ptr.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
 }
 
@@ -117,7 +117,7 @@ llvm.func @indirect_memset() -> i32 {
   %2 = llvm.getelementptr %1[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i32, i32)>
   // CHECK: "llvm.intr.memset"(%[[ALLOCA]], %[[MEMSET_VALUE]], %[[MEMSET_LEN]]) <{isVolatile = false}>
   "llvm.intr.memset"(%2, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
-  %3 = llvm.load %2 : !llvm.ptr -> i32
+  %3 = ptr.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
 }
 
@@ -138,7 +138,7 @@ llvm.func @invalid_indirect_memset() -> i32 {
   %2 = llvm.getelementptr %1[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i32, i32)>
   // CHECK: "llvm.intr.memset"(%[[GEP]], %[[MEMSET_VALUE]], %[[MEMSET_LEN]]) <{isVolatile = false}>
   "llvm.intr.memset"(%2, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
-  %3 = llvm.load %2 : !llvm.ptr -> i32
+  %3 = ptr.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
 }
 
@@ -165,9 +165,9 @@ llvm.func @memset_double_use() -> i32 {
   // CHECK-NOT: "llvm.intr.memset"
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
   %2 = llvm.getelementptr %1[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i32, f32)>
-  %3 = llvm.load %2 : !llvm.ptr -> i32
+  %3 = ptr.load %2 : !llvm.ptr -> i32
   %4 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i32, f32)>
-  %5 = llvm.load %4 : !llvm.ptr -> f32
+  %5 = ptr.load %4 : !llvm.ptr -> f32
   // We use this exotic bitcast to use the f32 easily. Semantics do not matter here.
   %6 = llvm.bitcast %5 : f32 to i32
   %7 = llvm.add %3, %6 : i32
@@ -196,9 +196,9 @@ llvm.func @memset_considers_alignment() -> i32 {
   // CHECK-NOT: "llvm.intr.memset"
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i8, i32, f32)>
-  %3 = llvm.load %2 : !llvm.ptr -> i32
+  %3 = ptr.load %2 : !llvm.ptr -> i32
   %4 = llvm.getelementptr %1[0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i8, i32, f32)>
-  %5 = llvm.load %4 : !llvm.ptr -> f32
+  %5 = ptr.load %4 : !llvm.ptr -> f32
   // We use this exotic bitcast to use the f32 easily. Semantics do not matter here.
   %6 = llvm.bitcast %5 : f32 to i32
   %7 = llvm.add %3, %6 : i32
@@ -228,9 +228,9 @@ llvm.func @memset_considers_packing() -> i32 {
   // CHECK-NOT: "llvm.intr.memset"
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", packed (i8, i32, f32)>
-  %3 = llvm.load %2 : !llvm.ptr -> i32
+  %3 = ptr.load %2 : !llvm.ptr -> i32
   %4 = llvm.getelementptr %1[0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", packed (i8, i32, f32)>
-  %5 = llvm.load %4 : !llvm.ptr -> f32
+  %5 = ptr.load %4 : !llvm.ptr -> f32
   // We use this exotic bitcast to use the f32 easily. Semantics do not matter here.
   %6 = llvm.bitcast %5 : f32 to i32
   %7 = llvm.add %3, %6 : i32
@@ -253,7 +253,7 @@ llvm.func @memcpy_dest(%other_array: !llvm.ptr) -> i32 {
   // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[SLOT_IN_OTHER]], %[[MEMCPY_LEN]]) <{isVolatile = false}>
   "llvm.intr.memcpy"(%1, %other_array, %memcpy_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
-  %3 = llvm.load %2 : !llvm.ptr -> i32
+  %3 = ptr.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
 }
 
@@ -285,7 +285,7 @@ llvm.func @memcpy_src(%other_array: !llvm.ptr) -> i32 {
   // CHECK: "llvm.intr.memcpy"(%[[SLOT_IN_OTHER]], %{{.*}}, %[[MEMCPY_LEN]]) <{isVolatile = false}>
   "llvm.intr.memcpy"(%other_array, %1, %memcpy_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
-  %3 = llvm.load %2 : !llvm.ptr -> i32
+  %3 = ptr.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
 }
 
@@ -310,7 +310,7 @@ llvm.func @memcpy_double() -> i32 {
   // CHECK-NOT: "llvm.intr.memcpy"
   "llvm.intr.memcpy"(%1, %2, %memcpy_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %3 = llvm.getelementptr %1[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<1 x i32>
-  %4 = llvm.load %3 : !llvm.ptr -> i32
+  %4 = ptr.load %3 : !llvm.ptr -> i32
   llvm.return %4 : i32
 }
 
@@ -328,7 +328,7 @@ llvm.func @memcpy_no_partial(%other_array: !llvm.ptr) -> i32 {
   // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[OTHER_ARRAY]], %[[MEMCPY_LEN]]) <{isVolatile = false}>
   "llvm.intr.memcpy"(%1, %other_array, %memcpy_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
-  %3 = llvm.load %2 : !llvm.ptr -> i32
+  %3 = ptr.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
 }
 
@@ -346,7 +346,7 @@ llvm.func @memcpy_no_volatile(%other_array: !llvm.ptr) -> i32 {
   // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[OTHER_ARRAY]], %[[MEMCPY_LEN]]) <{isVolatile = true}>
   "llvm.intr.memcpy"(%1, %other_array, %memcpy_len) <{isVolatile = true}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
-  %3 = llvm.load %2 : !llvm.ptr -> i32
+  %3 = ptr.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
 }
 
@@ -366,7 +366,7 @@ llvm.func @memmove_dest(%other_array: !llvm.ptr) -> i32 {
   // CHECK: "llvm.intr.memmove"(%[[ALLOCA]], %[[SLOT_IN_OTHER]], %[[MEMMOVE_LEN]]) <{isVolatile = false}>
   "llvm.intr.memmove"(%1, %other_array, %memmove_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
-  %3 = llvm.load %2 : !llvm.ptr -> i32
+  %3 = ptr.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
 }
 
@@ -397,7 +397,7 @@ llvm.func @memmove_src(%other_array: !llvm.ptr) -> i32 {
   // CHECK: "llvm.intr.memmove"(%[[SLOT_IN_OTHER]], %{{.*}}, %[[MEMMOVE_LEN]]) <{isVolatile = false}>
   "llvm.intr.memmove"(%other_array, %1, %memmove_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
-  %3 = llvm.load %2 : !llvm.ptr -> i32
+  %3 = ptr.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
 }
 
@@ -415,7 +415,7 @@ llvm.func @memcpy_inline_dest(%other_array: !llvm.ptr) -> i32 {
   // CHECK: "llvm.intr.memcpy.inline"(%[[ALLOCA]], %[[SLOT_IN_OTHER]]) <{isVolatile = false, len = 4 : i32}>
   "llvm.intr.memcpy.inline"(%1, %other_array) <{isVolatile = false, len = 40 : i32}> : (!llvm.ptr, !llvm.ptr) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
-  %3 = llvm.load %2 : !llvm.ptr -> i32
+  %3 = ptr.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
 }
 
@@ -442,6 +442,6 @@ llvm.func @memcpy_inline_src(%other_array: !llvm.ptr) -> i32 {
   // CHECK-DAG: "llvm.intr.memcpy.inline"(%[[SLOT_IN_OTHER]], %{{.*}}) <{isVolatile = false, len = 4 : i32}>
   "llvm.intr.memcpy.inline"(%other_array, %1) <{isVolatile = false, len = 16 : i32}> : (!llvm.ptr, !llvm.ptr) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
-  %3 = llvm.load %2 : !llvm.ptr -> i32
+  %3 = ptr.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
 }

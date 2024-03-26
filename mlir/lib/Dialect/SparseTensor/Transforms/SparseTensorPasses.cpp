@@ -210,9 +210,10 @@ struct SparseTensorConversionPass
     target.addLegalOp<complex::ConstantOp, complex::NotEqualOp, linalg::FillOp,
                       linalg::YieldOp, tensor::ExtractOp,
                       tensor::FromElementsOp>();
-    target.addLegalDialect<
-        arith::ArithDialect, bufferization::BufferizationDialect,
-        LLVM::LLVMDialect, memref::MemRefDialect, scf::SCFDialect>();
+    target.addLegalDialect<arith::ArithDialect,
+                           bufferization::BufferizationDialect, ptr::PtrDialect,
+                           LLVM::LLVMDialect, memref::MemRefDialect,
+                           scf::SCFDialect>();
 
     // Populate with rules and apply rewriting rules.
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,

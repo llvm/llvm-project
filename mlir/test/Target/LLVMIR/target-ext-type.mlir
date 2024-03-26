@@ -14,7 +14,7 @@ llvm.func @func2() -> !llvm.target<"spirv.Event"> {
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.mlir.poison : !llvm.target<"spirv.Event">
   %2 = llvm.alloca %0 x !llvm.target<"spirv.Event"> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  %3 = llvm.load %2 {alignment = 8 : i64} : !llvm.ptr -> !llvm.target<"spirv.Event">
+  %3 = ptr.load %2 {alignment = 8 : i64} : !llvm.ptr -> !llvm.target<"spirv.Event">
   llvm.return %1 : !llvm.target<"spirv.Event">
 }
 

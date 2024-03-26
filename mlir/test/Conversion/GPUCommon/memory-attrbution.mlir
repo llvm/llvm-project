@@ -36,11 +36,11 @@ gpu.module @kernel {
     // we emit some core instructions.
     // NVVM: llvm.extractvalue %[[descr6:.*]]
     // NVVM: llvm.getelementptr
-    // NVVM: llvm.store
+    // NVVM: ptr.store
 
     // ROCDL: llvm.extractvalue %[[descr6:.*]]
     // ROCDL: llvm.getelementptr
-    // ROCDL: llvm.store
+    // ROCDL: ptr.store
     %c0 = arith.constant 0 : index
     memref.store %arg0, %arg1[%c0] : memref<4xf32, #gpu.address_space<private>>
 
@@ -100,11 +100,11 @@ gpu.module @kernel {
     // we emit some core instructions.
     // NVVM: llvm.extractvalue %[[descr6:.*]]
     // NVVM: llvm.getelementptr
-    // NVVM: llvm.store
+    // NVVM: ptr.store
 
     // ROCDL: llvm.extractvalue %[[descr6:.*]]
     // ROCDL: llvm.getelementptr
-    // ROCDL: llvm.store
+    // ROCDL: ptr.store
     %c0 = arith.constant 0 : index
     memref.store %arg0, %arg1[%c0] : memref<4xf32, #gpu.address_space<workgroup>>
 

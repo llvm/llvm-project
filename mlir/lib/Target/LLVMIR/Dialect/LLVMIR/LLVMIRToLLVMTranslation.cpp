@@ -32,6 +32,27 @@ using namespace mlir::LLVM::detail;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsFromLLVM.inc"
 
+LLVM_ATTRIBUTE_UNUSED static ptr::AtomicOrdering
+convertAtomicOrderingFromLLVM(::llvm::AtomicOrdering value) {
+  switch (value) {
+  case ::llvm::AtomicOrdering::NotAtomic:
+    return AtomicOrdering::not_atomic;
+  case ::llvm::AtomicOrdering::Unordered:
+    return AtomicOrdering::unordered;
+  case ::llvm::AtomicOrdering::Monotonic:
+    return AtomicOrdering::monotonic;
+  case ::llvm::AtomicOrdering::Acquire:
+    return AtomicOrdering::acquire;
+  case ::llvm::AtomicOrdering::Release:
+    return AtomicOrdering::release;
+  case ::llvm::AtomicOrdering::AcquireRelease:
+    return AtomicOrdering::acq_rel;
+  case ::llvm::AtomicOrdering::SequentiallyConsistent:
+    return AtomicOrdering::seq_cst;
+  }
+  llvm_unreachable("unknown ::llvm::AtomicOrdering type");
+}
+
 /// Returns true if the LLVM IR intrinsic is convertible to an MLIR LLVM dialect
 /// intrinsic. Returns false otherwise.
 static bool isConvertibleIntrinsic(llvm::Intrinsic::ID id) {

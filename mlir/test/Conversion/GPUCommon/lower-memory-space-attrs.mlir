@@ -10,7 +10,7 @@ gpu.module @kernel {
 }
 
 // CHECK-LABEL:  llvm.func @private
-//      CHECK:  llvm.store
+//      CHECK:  ptr.store
 // ROCDL-SAME:   : f32, !llvm.ptr<5>
 //  NVVM-SAME:   : f32, !llvm.ptr
 
@@ -26,7 +26,7 @@ gpu.module @kernel {
 }
 
 // CHECK-LABEL:  llvm.func @workgroup
-//       CHECK:  llvm.store
+//       CHECK:  ptr.store
 //  CHECK-SAME:   : f32, !llvm.ptr<3>
 
 // -----
@@ -41,9 +41,9 @@ gpu.module @kernel {
 }
 
 // CHECK-LABEL:  llvm.func @nested_memref
-//       CHECK:  llvm.load
+//       CHECK:  ptr.load
 //  CHECK-SAME:   : !llvm.ptr<1>
-//       CHECK: [[value:%.+]] = llvm.load
+//       CHECK: [[value:%.+]] = ptr.load
 //  CHECK-SAME:   : !llvm.ptr<1> -> f32
 //       CHECK: llvm.return [[value]]
 
@@ -64,8 +64,8 @@ gpu.module @kernel {
 // NVVM: llvm.mlir.global internal @__dynamic_shmem__0() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<0 x i8>
 // CHECK-LABEL:  llvm.func @dynamic_shmem_with_vector
 // CHECK: llvm.mlir.addressof @__dynamic_shmem__0 : !llvm.ptr<3>
-// CHECK: llvm.load %{{.*}} {alignment = 4 : i64} : !llvm.ptr<3> -> vector<1xf32>
-// CHECK: llvm.store
+// CHECK: ptr.load %{{.*}} {alignment = 4 : i64} : !llvm.ptr<3> -> vector<1xf32>
+// CHECK: ptr.store
 
 // -----
 
@@ -80,6 +80,6 @@ gpu.module @kernel {
 }
 
 // CHECK-LABEL:  llvm.func @dynamic_shmem
-//       CHECK:  llvm.store
+//       CHECK:  ptr.store
 //  CHECK-SAME:   : f32, !llvm.ptr<3>
 

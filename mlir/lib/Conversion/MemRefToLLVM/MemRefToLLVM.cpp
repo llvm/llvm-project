@@ -449,17 +449,18 @@ struct GenericAtomicRMWOpLowering
     auto cmpxchg = rewriter.create<LLVM::AtomicCmpXchgOp>(
         loc, dataPtr, loopArgument, result, successOrdering, failureOrdering);
     // Extract the %new_loaded and %ok values from the pair.
-    Value newLoaded = rewriter.create<LLVM::ExtractValueOp>(loc, cmpxchg, 0);
-    Value ok = rewriter.create<LLVM::ExtractValueOp>(loc, cmpxchg, 1);
+    // Value newLoaded = rewriter.create<LLVM::ExtractValueOp>(loc, cmpxchg, 0);
+    // Value ok = rewriter.create<LLVM::ExtractValueOp>(loc, cmpxchg, 1);
 
     // Conditionally branch to the end or back to the loop depending on %ok.
-    rewriter.create<LLVM::CondBrOp>(loc, ok, endBlock, ArrayRef<Value>(),
-                                    loopBlock, newLoaded);
+    rewriter.create<LLVM::CondBrOp>(loc, cmpxchg.getStatus(), endBlock,
+                                    ArrayRef<Value>(), loopBlock,
+                                    cmpxchg.getRes());
 
     rewriter.setInsertionPointToEnd(endBlock);
 
     // The 'result' of the atomic_rmw op is the newly loaded value.
-    rewriter.replaceOp(atomicOp, {newLoaded});
+    rewriter.replaceOp(atomicOp, {cmpxchg.getRes()});
 
     return success();
   }

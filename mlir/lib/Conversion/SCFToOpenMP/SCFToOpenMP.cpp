@@ -507,7 +507,7 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
 static LogicalResult applyPatterns(ModuleOp module, unsigned numThreads) {
   ConversionTarget target(*module.getContext());
   target.addIllegalOp<scf::ReduceOp, scf::ReduceReturnOp, scf::ParallelOp>();
-  target.addLegalDialect<omp::OpenMPDialect, LLVM::LLVMDialect,
+  target.addLegalDialect<omp::OpenMPDialect, ptr::PtrDialect, LLVM::LLVMDialect,
                          memref::MemRefDialect>();
 
   RewritePatternSet patterns(module.getContext());

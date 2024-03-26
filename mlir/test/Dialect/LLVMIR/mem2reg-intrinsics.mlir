@@ -16,7 +16,7 @@ llvm.func @basic_memset(%memset_value: i8) -> i32 {
   // CHECK: %[[SHIFTED_16:.*]] = llvm.shl %[[VALUE_16]], %[[C16]]
   // CHECK: %[[VALUE_32:.*]] = llvm.or %[[VALUE_16]], %[[SHIFTED_16]]
   // CHECK-NOT: "llvm.intr.memset"
-  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
+  %2 = ptr.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
   // CHECK: llvm.return %[[VALUE_32]] : i32
   llvm.return %2 : i32
 }
@@ -30,7 +30,7 @@ llvm.func @basic_memset_constant() -> i32 {
   %memset_value = llvm.mlir.constant(42 : i8) : i8
   %memset_len = llvm.mlir.constant(4 : i32) : i32
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
-  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
+  %2 = ptr.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
   // CHECK: %[[C42:.*]] = llvm.mlir.constant(42 : i8) : i8
   // CHECK: %[[VALUE_42:.*]] = llvm.zext %[[C42]] : i8 to i32
   // CHECK: %[[C8:.*]] = llvm.mlir.constant(8 : i32) : i32
@@ -64,7 +64,7 @@ llvm.func @exotic_target_memset(%memset_value: i8) -> i40 {
   // CHECK: %[[SHIFTED_COMPL:.*]] = llvm.shl %[[VALUE_32]], %[[C32]]
   // CHECK: %[[VALUE_COMPL:.*]] = llvm.or %[[VALUE_32]], %[[SHIFTED_COMPL]]
   // CHECK-NOT: "llvm.intr.memset"
-  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i40
+  %2 = ptr.load %1 {alignment = 4 : i64} : !llvm.ptr -> i40
   // CHECK: llvm.return %[[VALUE_COMPL]] : i40
   llvm.return %2 : i40
 }
@@ -83,7 +83,7 @@ llvm.func @no_volatile_memset() -> i32 {
   %memset_len = llvm.mlir.constant(4 : i32) : i32
   // CHECK: "llvm.intr.memset"(%[[ALLOCA]], %[[MEMSET_VALUE]], %[[MEMSET_LEN]]) <{isVolatile = true}>
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = true}> : (!llvm.ptr, i8, i32) -> ()
-  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
+  %2 = ptr.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
   llvm.return %2 : i32
 }
 
@@ -101,7 +101,7 @@ llvm.func @no_partial_memset() -> i32 {
   %memset_len = llvm.mlir.constant(2 : i32) : i32
   // CHECK: "llvm.intr.memset"(%[[ALLOCA]], %[[MEMSET_VALUE]], %[[MEMSET_LEN]]) <{isVolatile = false}>
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
-  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
+  %2 = ptr.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
   llvm.return %2 : i32
 }
 
@@ -119,7 +119,7 @@ llvm.func @no_overflowing_memset() -> i32 {
   %memset_len = llvm.mlir.constant(6 : i32) : i32
   // CHECK: "llvm.intr.memset"(%[[ALLOCA]], %[[MEMSET_VALUE]], %[[MEMSET_LEN]]) <{isVolatile = false}>
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
-  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
+  %2 = ptr.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
   llvm.return %2 : i32
 }
 
@@ -137,7 +137,7 @@ llvm.func @only_byte_aligned_integers_memset() -> i10 {
   %memset_len = llvm.mlir.constant(2 : i32) : i32
   // CHECK: "llvm.intr.memset"(%[[ALLOCA]], %[[MEMSET_VALUE]], %[[MEMSET_LEN]]) <{isVolatile = false}>
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
-  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i10
+  %2 = ptr.load %1 {alignment = 4 : i64} : !llvm.ptr -> i10
   llvm.return %2 : i10
 }
 
@@ -152,9 +152,9 @@ llvm.func @basic_memcpy(%source: !llvm.ptr) -> i32 {
   %memcpy_len = llvm.mlir.constant(4 : i32) : i32
   "llvm.intr.memcpy"(%1, %source, %memcpy_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   // CHECK-NOT: "llvm.intr.memcpy"
-  // CHECK: %[[LOADED:.*]] = llvm.load %[[SOURCE]] : !llvm.ptr -> i32
+  // CHECK: %[[LOADED:.*]] = ptr.load %[[SOURCE]] : !llvm.ptr -> i32
   // CHECK-NOT: "llvm.intr.memcpy"
-  %2 = llvm.load %1 : !llvm.ptr -> i32
+  %2 = ptr.load %1 : !llvm.ptr -> i32
   // CHECK: llvm.return %[[LOADED]] : i32
   llvm.return %2 : i32
 }
@@ -171,13 +171,13 @@ llvm.func @basic_memcpy_dest(%destination: !llvm.ptr) -> i32 {
   %memcpy_len = llvm.mlir.constant(4 : i32) : i32
 
   %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
-  llvm.store %data, %1 : i32, !llvm.ptr
+  ptr.store %data, %1 : i32, !llvm.ptr
   "llvm.intr.memcpy"(%destination, %1, %memcpy_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   // CHECK-NOT: "llvm.intr.memcpy"
-  // CHECK: llvm.store %[[DATA]], %[[DESTINATION]] : i32, !llvm.ptr
+  // CHECK: ptr.store %[[DATA]], %[[DESTINATION]] : i32, !llvm.ptr
   // CHECK-NOT: "llvm.intr.memcpy"
 
-  %2 = llvm.load %1 : !llvm.ptr -> i32
+  %2 = ptr.load %1 : !llvm.ptr -> i32
   // CHECK: llvm.return %[[DATA]] : i32
   llvm.return %2 : i32
 }
@@ -194,10 +194,10 @@ llvm.func @double_memcpy() -> i32 {
 
   %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
   %2 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
-  llvm.store %data, %1 : i32, !llvm.ptr
+  ptr.store %data, %1 : i32, !llvm.ptr
   "llvm.intr.memcpy"(%2, %1, %memcpy_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 
-  %res = llvm.load %2 : !llvm.ptr -> i32
+  %res = ptr.load %2 : !llvm.ptr -> i32
   // CHECK: llvm.return %[[DATA]] : i32
   llvm.return %res : i32
 }
@@ -216,7 +216,7 @@ llvm.func @ignore_self_memcpy() -> i32 {
   // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[ALLOCA]]
   "llvm.intr.memcpy"(%1, %1, %memcpy_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 
-  %res = llvm.load %1 : !llvm.ptr -> i32
+  %res = ptr.load %1 : !llvm.ptr -> i32
   llvm.return %res : i32
 }
 
@@ -236,7 +236,7 @@ llvm.func @ignore_partial_memcpy(%source: !llvm.ptr) -> i32 {
   // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[SOURCE]], %[[MEMCPY_LEN]]) <{isVolatile = false}>
   "llvm.intr.memcpy"(%1, %source, %memcpy_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 
-  %res = llvm.load %1 : !llvm.ptr -> i32
+  %res = ptr.load %1 : !llvm.ptr -> i32
   llvm.return %res : i32
 }
 
@@ -256,7 +256,7 @@ llvm.func @ignore_volatile_memcpy(%source: !llvm.ptr) -> i32 {
   // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[SOURCE]], %[[MEMCPY_LEN]]) <{isVolatile = true}>
   "llvm.intr.memcpy"(%1, %source, %memcpy_len) <{isVolatile = true}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 
-  %res = llvm.load %1 : !llvm.ptr -> i32
+  %res = ptr.load %1 : !llvm.ptr -> i32
   llvm.return %res : i32
 }
 
@@ -271,9 +271,9 @@ llvm.func @basic_memmove(%source: !llvm.ptr) -> i32 {
   %memmove_len = llvm.mlir.constant(4 : i32) : i32
   "llvm.intr.memmove"(%1, %source, %memmove_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   // CHECK-NOT: "llvm.intr.memmove"
-  // CHECK: %[[LOADED:.*]] = llvm.load %[[SOURCE]] : !llvm.ptr -> i32
+  // CHECK: %[[LOADED:.*]] = ptr.load %[[SOURCE]] : !llvm.ptr -> i32
   // CHECK-NOT: "llvm.intr.memmove"
-  %2 = llvm.load %1 : !llvm.ptr -> i32
+  %2 = ptr.load %1 : !llvm.ptr -> i32
   // CHECK: llvm.return %[[LOADED]] : i32
   llvm.return %2 : i32
 }
@@ -288,9 +288,9 @@ llvm.func @basic_memcpy_inline(%source: !llvm.ptr) -> i32 {
   %is_volatile = llvm.mlir.constant(false) : i1
   "llvm.intr.memcpy.inline"(%1, %source) <{isVolatile = false, len = 4 : i32}> : (!llvm.ptr, !llvm.ptr) -> ()
   // CHECK-NOT: "llvm.intr.memcpy.inline"
-  // CHECK: %[[LOADED:.*]] = llvm.load %[[SOURCE]] : !llvm.ptr -> i32
+  // CHECK: %[[LOADED:.*]] = ptr.load %[[SOURCE]] : !llvm.ptr -> i32
   // CHECK-NOT: "llvm.intr.memcpy.inline"
-  %2 = llvm.load %1 : !llvm.ptr -> i32
+  %2 = ptr.load %1 : !llvm.ptr -> i32
   // CHECK: llvm.return %[[LOADED]] : i32
   llvm.return %2 : i32
 }

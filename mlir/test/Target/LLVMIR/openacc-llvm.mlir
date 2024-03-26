@@ -136,7 +136,7 @@ llvm.func @testdataop(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
   %1 = acc.create varPtr(%arg1 : !llvm.ptr) -> !llvm.ptr
   acc.data dataOperands(%0, %1 : !llvm.ptr, !llvm.ptr) {
     %9 = llvm.mlir.constant(2 : i32) : i32
-    llvm.store %9, %arg2 : i32, !llvm.ptr
+    ptr.store %9, %arg2 : i32, !llvm.ptr
     acc.terminator
   }
   acc.copyout accPtr(%0 : !llvm.ptr) to varPtr(%arg0 : !llvm.ptr)

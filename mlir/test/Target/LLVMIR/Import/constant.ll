@@ -86,7 +86,7 @@ define i64 @const_expr_with_duplicate() {
   ; CHECK-DAG:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global : !llvm.ptr
   ; CHECK-DAG:  %[[IDX:[0-9]+]] = llvm.mlir.constant(7 : i32) : i32
   ; CHECK-DAG:  %[[GEP:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr
-  ; CHECK-DAG:  %[[DUP:[0-9]+]] = llvm.ptrtoint %[[GEP]] : !llvm.ptr to i64
+  ; CHECK-DAG:  %[[DUP:[0-9]+]] = ptr.ptrtoint %[[GEP]] : !llvm.ptr to i64
 
   ; Verify the duplicate sub expression is converted only once.
   ; CHECK-DAG:  %[[SUM:[0-9]+]] = llvm.add %[[DUP]], %[[DUP]] : i64
@@ -106,7 +106,7 @@ define i64 @const_expr_with_aggregate() {
   ; CHECK-DAG:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global : !llvm.ptr
   ; CHECK-DAG:  %[[IDX1:[0-9]+]] = llvm.mlir.constant(7 : i32) : i32
   ; CHECK-DAG:  %[[GEP1:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX1]]] : (!llvm.ptr, i32) -> !llvm.ptr
-  ; CHECK-DAG:  %[[VAL2:[0-9]+]] = llvm.ptrtoint %[[GEP1]] : !llvm.ptr to i64
+  ; CHECK-DAG:  %[[VAL2:[0-9]+]] = ptr.ptrtoint %[[GEP1]] : !llvm.ptr to i64
 
   ; Fill the vector.
   ; CHECK-DAG:  %[[VEC1:[0-9]+]] = llvm.mlir.undef : vector<2xi64>
@@ -118,7 +118,7 @@ define i64 @const_expr_with_aggregate() {
 
   ; Compute the extract index.
   ; CHECK-DAG:  %[[GEP2:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX4]]] : (!llvm.ptr, i32) -> !llvm.ptr
-  ; CHECK-DAG:  %[[IDX5:[0-9]+]] = llvm.ptrtoint %[[GEP2]] : !llvm.ptr to i64
+  ; CHECK-DAG:  %[[IDX5:[0-9]+]] = ptr.ptrtoint %[[GEP2]] : !llvm.ptr to i64
 
   ; Extract the vector element.
   ; CHECK-DAG:  %[[ELEM:[0-9]+]] = llvm.extractelement %[[VEC3]][%[[IDX5]] : i64] : vector<2xi64>
@@ -137,9 +137,9 @@ define i64 @const_expr_with_aggregate() {
 define i32 @function_address_before_def() {
   %1 = alloca ptr
   ; CHECK:  %[[FUN:.*]] = llvm.mlir.addressof @callee : !llvm.ptr
-  ; CHECK:  llvm.store %[[FUN]], %[[PTR:.*]] : !llvm.ptr, !llvm.ptr
+  ; CHECK:  ptr.store %[[FUN]], %[[PTR:.*]] : !llvm.ptr, !llvm.ptr
   store ptr @callee, ptr %1
-  ; CHECK:  %[[INDIR:.*]] = llvm.load %[[PTR]] : !llvm.ptr -> !llvm.ptr
+  ; CHECK:  %[[INDIR:.*]] = ptr.load %[[PTR]] : !llvm.ptr -> !llvm.ptr
   %2 = load ptr, ptr %1
   ; CHECK:  llvm.call %[[INDIR]]() : !llvm.ptr, () -> i32
   %3 = call i32 %2()
@@ -155,9 +155,9 @@ define i32 @callee() {
 define i32 @function_address_after_def() {
   %1 = alloca ptr
   ; CHECK:  %[[FUN:.*]] = llvm.mlir.addressof @callee : !llvm.ptr
-  ; CHECK:  llvm.store %[[FUN]], %[[PTR:.*]] : !llvm.ptr, !llvm.ptr
+  ; CHECK:  ptr.store %[[FUN]], %[[PTR:.*]] : !llvm.ptr, !llvm.ptr
   store ptr @callee, ptr %1
-  ; CHECK:  %[[INDIR:.*]] = llvm.load %[[PTR]] : !llvm.ptr -> !llvm.ptr
+  ; CHECK:  %[[INDIR:.*]] = ptr.load %[[PTR]] : !llvm.ptr -> !llvm.ptr
   %2 = load ptr, ptr %1
   ; CHECK:  llvm.call %[[INDIR]]() : !llvm.ptr, () -> i32
   %3 = call i32 %2()
@@ -233,6 +233,6 @@ define i64 @const_exprs_with_duplicate() {
 
 ; CHECK-LABEL: @cyclic
 ; CHECK:  %[[ADDR:.+]] = llvm.mlir.addressof @cyclic
-; CHECK:  %[[VAL0:.+]] = llvm.ptrtoint %[[ADDR]]
+; CHECK:  %[[VAL0:.+]] = ptr.ptrtoint %[[ADDR]]
 ; CHECK:  %[[VAL1:.+]] = llvm.add %[[VAL0]], %[[VAL0]]
 ; CHECK:  llvm.return %[[VAL1]]

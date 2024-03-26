@@ -13,7 +13,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
       %2 = llvm.mul %arg2, %loop_ub overflow<nsw>  : i32
       %3 = llvm.add %arg1, %2 :i32
       %4 = llvm.getelementptr %arg0[%3] : (!llvm.ptr, i32) -> !llvm.ptr, i32
-      llvm.store %1, %4 : i32, !llvm.ptr
+      ptr.store %1, %4 : i32, !llvm.ptr
       omp.yield
     }
     llvm.return

@@ -8,6 +8,7 @@
 
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/Ptr/IR/PtrTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 
@@ -71,7 +72,7 @@ public:
               return llvm::Type::getMetadataTy(context);
             })
             .Case<LLVM::LLVMArrayType, IntegerType, LLVM::LLVMFunctionType,
-                  LLVM::LLVMPointerType, LLVM::LLVMStructType,
+                  LLVM::LLVMPointerType, ptr::PtrType, LLVM::LLVMStructType,
                   LLVM::LLVMFixedVectorType, LLVM::LLVMScalableVectorType,
                   VectorType, LLVM::LLVMTargetExtType>(
                 [this](auto type) { return this->translate(type); })
@@ -106,6 +107,11 @@ private:
 
   /// Translates the given pointer type.
   llvm::Type *translate(LLVM::LLVMPointerType type) {
+    return llvm::PointerType::get(context, type.getAddressSpace());
+  }
+
+  /// Translates the given pointer type.
+  llvm::Type *translate(ptr::PtrType type) {
     return llvm::PointerType::get(context, type.getAddressSpace());
   }
 

@@ -106,7 +106,7 @@ llvm.func @bar()
 // CHECK: ret void
 llvm.func @omp_teams_branching_shared(%condition: i1, %arg0: i32, %arg1: f32, %arg2: !llvm.ptr, %arg3: f128) {
     %allocated = llvm.call @my_alloca_fn(): () -> !llvm.ptr
-    %loaded = llvm.load %allocated : !llvm.ptr -> i32
+    %loaded = ptr.load %allocated : !llvm.ptr -> i32
     llvm.br ^codegenBlock
 ^codegenBlock:
     omp.teams {

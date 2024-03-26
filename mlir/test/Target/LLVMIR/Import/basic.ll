@@ -16,13 +16,13 @@ declare float @fe(i32)
 ; CHECK: %[[c42:[0-9]+]] = llvm.mlir.constant(42 : i32) : i32
 define internal dso_local i32 @f1(i64 %a) norecurse {
 entry:
-; CHECK: %{{[0-9]+}} = llvm.inttoptr %arg0 : i64 to !llvm.ptr
+; CHECK: %{{[0-9]+}} = ptr.inttoptr %arg0 : i64 to !llvm.ptr
   %aa = inttoptr i64 %a to ptr
 ; CHECK-DBG: llvm.mlir.addressof @global : !llvm.ptr loc(#[[UNKNOWN_LOC]])
 ; %[[addrof:[0-9]+]] = llvm.mlir.addressof @global : !llvm.ptr
 ; %[[addrof2:[0-9]+]] = llvm.mlir.addressof @global : !llvm.ptr
-; %{{[0-9]+}} = llvm.inttoptr %arg0 : i64 to !llvm.ptr
-; %{{[0-9]+}} = llvm.ptrtoint %[[addrof2]] : !llvm.ptr to i64
+; %{{[0-9]+}} = ptr.inttoptr %arg0 : i64 to !llvm.ptr
+; %{{[0-9]+}} = ptr.ptrtoint %[[addrof2]] : !llvm.ptr to i64
 ; %{{[0-9]+}} = llvm.getelementptr %[[addrof]][%3] : (!llvm.ptr, i32) -> !llvm.ptr
   %bb = ptrtoint ptr @global to i64
   %cc = getelementptr double, ptr @global, i32 3

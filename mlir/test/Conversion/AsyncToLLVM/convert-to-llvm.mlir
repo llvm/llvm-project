@@ -227,7 +227,7 @@ func.func @execute_and_return_f32() -> f32 {
   }
 
   // CHECK: %[[STORAGE:.*]] = call @mlirAsyncRuntimeGetValueStorage(%[[RET]]#1)
-  // CHECK: %[[LOADED:.*]] = llvm.load %[[STORAGE]] : !llvm.ptr -> f32
+  // CHECK: %[[LOADED:.*]] = ptr.load %[[STORAGE]] : !llvm.ptr -> f32
   %0 = async.await %result : !async.value<f32>
 
   return %0 : f32
@@ -246,7 +246,7 @@ func.func @execute_and_return_f32() -> f32 {
 // Emplace result value.
 // CHECK: %[[CST:.*]] = arith.constant 1.230000e+02 : f32
 // CHECK: %[[STORAGE:.*]] = call @mlirAsyncRuntimeGetValueStorage(%[[VALUE]])
-// CHECK: llvm.store %[[CST]], %[[STORAGE]] : f32, !llvm.ptr
+// CHECK: ptr.store %[[CST]], %[[STORAGE]] : f32, !llvm.ptr
 // CHECK: call @mlirAsyncRuntimeEmplaceValue(%[[VALUE]])
 
 // Emplace result token.
@@ -293,7 +293,7 @@ func.func @async_value_operands() {
 
 // Get the operand value storage, cast to f32 and add the value.
 // CHECK: %[[STORAGE:.*]] = call @mlirAsyncRuntimeGetValueStorage(%arg0)
-// CHECK: %[[LOADED:.*]] = llvm.load %[[STORAGE]] : !llvm.ptr -> f32
+// CHECK: %[[LOADED:.*]] = ptr.load %[[STORAGE]] : !llvm.ptr -> f32
 // CHECK: arith.addf %[[LOADED]], %[[LOADED]] : f32
 
 // Emplace result token.

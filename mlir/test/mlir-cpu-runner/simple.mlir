@@ -44,9 +44,9 @@ llvm.func @foo() -> f32 {
   %1 = llvm.mlir.constant(0 : index) : i64
   %2 = llvm.mlir.constant(1.234000e+03 : f32) : f32
   %3 = llvm.getelementptr %0[%1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  llvm.store %2, %3 : f32, !llvm.ptr
+  ptr.store %2, %3 : f32, !llvm.ptr
   %4 = llvm.getelementptr %0[%1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  %5 = llvm.load %4 : !llvm.ptr -> f32
+  %5 = ptr.load %4 : !llvm.ptr -> f32
   llvm.call @deallocation(%0) : (!llvm.ptr) -> ()
   llvm.return %5 : f32
 }

@@ -369,7 +369,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.dialect_to_llvm "memref"
     } with type_converter {
       transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
-    } {legal_dialects = ["func", "llvm"]} : !transform.any_op
+    } {legal_dialects = ["func", "ptr", "llvm"]} : !transform.any_op
     transform.yield
   }
 }

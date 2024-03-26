@@ -237,7 +237,7 @@ func.func @async_cp(
   // CHECK-DAG: %[[FI3:.*]] = llvm.mul %[[IDX1]], %[[S3]]  : i64
   // CHECK-DAG: %[[FI4:.*]] = llvm.add %[[FI3]], %[[IDX1]]  : i64
   // CHECK-DAG: %[[ADDRESSSRC:.*]] = llvm.getelementptr %[[BASESRC]][%[[FI4]]] : (!llvm.ptr, i64) -> !llvm.ptr
-  // CHECK-DAG: %[[CAST2:.*]] = llvm.addrspacecast %[[ADDRESSSRC]] : !llvm.ptr to !llvm.ptr<1>
+  // CHECK-DAG: %[[CAST2:.*]] = ptr.addrspacecast %[[ADDRESSSRC]] : !llvm.ptr to !llvm.ptr<1>
   // CHECK-DAG: nvvm.cp.async.shared.global %[[ADDRESSDST]], %[[CAST2]], 16, cache = ca
   %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 4 : memref<128x128xf32> to memref<3x16x128xf32, 3>
   // CHECK: nvvm.cp.async.commit.group
@@ -265,7 +265,7 @@ func.func @async_cp_i4(
   // CHECK-DAG: %[[FI2:.*]] = llvm.mul %[[IDX1]], %[[S2]]  : i64
   // CHECK-DAG: %[[FI3:.*]] = llvm.add %[[FI2]], %[[IDX1]]  : i64
   // CHECK-DAG: %[[ADDRESSSRC:.*]] = llvm.getelementptr %[[BASESRC]][%[[FI3]]] : (!llvm.ptr, i64) -> !llvm.ptr
-  // CHECK-DAG: %[[CAST2:.*]] = llvm.addrspacecast %[[ADDRESSSRC]] : !llvm.ptr to !llvm.ptr<1>
+  // CHECK-DAG: %[[CAST2:.*]] = ptr.addrspacecast %[[ADDRESSSRC]] : !llvm.ptr to !llvm.ptr<1>
   // CHECK-DAG: nvvm.cp.async.shared.global %[[ADDRESSDST]], %[[CAST2]], 16, cache = ca
   %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i], 32 : memref<128x64xi4> to memref<128x128xi4, 3>
   return %0 : !nvgpu.device.async.token
@@ -290,7 +290,7 @@ func.func @async_cp_zfill_f32_align4(
   // CHECK-DAG: %[[FI2:.*]] = llvm.mul %[[IDX1]], %[[S2]]  : i64
   // CHECK-DAG: %[[FI3:.*]] = llvm.add %[[FI2]], %[[IDX1]]  : i64
   // CHECK-DAG: %[[ADDRESSSRC:.*]] = llvm.getelementptr %[[BASESRC]][%[[FI3]]] : (!llvm.ptr, i64) -> !llvm.ptr
-  // CHECK-DAG: %[[CAST2:.*]] = llvm.addrspacecast %[[ADDRESSSRC]] : !llvm.ptr to !llvm.ptr<1>
+  // CHECK-DAG: %[[CAST2:.*]] = ptr.addrspacecast %[[ADDRESSSRC]] : !llvm.ptr to !llvm.ptr<1>
   // CHECK-DAG: %[[c1:.*]] = llvm.mlir.constant(3 : i32) : i32
   // CHECK-DAG: %[[c2:.*]] = llvm.mlir.constant(32 : i32) : i32
   // CHECK-DAG: %[[c3:.*]] = llvm.trunc %[[SRC1]] : i64 to i32  
@@ -325,7 +325,7 @@ func.func @async_cp_zfill_f32_align1(
   // CHECK-DAG: %[[FI2:.*]] = llvm.mul %[[IDX1]], %[[S2]]  : i64
   // CHECK-DAG: %[[FI3:.*]] = llvm.add %[[FI2]], %[[IDX1]]  : i64
   // CHECK-DAG: %[[ADDRESSSRC:.*]] = llvm.getelementptr %[[BASESRC]][%[[FI3]]] : (!llvm.ptr, i64) -> !llvm.ptr
-  // CHECK-DAG: %[[CAST2:.*]] = llvm.addrspacecast %[[ADDRESSSRC]] : !llvm.ptr to !llvm.ptr<1>
+  // CHECK-DAG: %[[CAST2:.*]] = ptr.addrspacecast %[[ADDRESSSRC]] : !llvm.ptr to !llvm.ptr<1>
   // CHECK-DAG: %[[c1:.*]] = llvm.mlir.constant(3 : i32) : i32
   // CHECK-DAG: %[[c2:.*]] = llvm.mlir.constant(32 : i32) : i32
   // CHECK-DAG: %[[c3:.*]] = llvm.trunc %[[SRC1]] : i64 to i32  
@@ -835,7 +835,7 @@ func.func @create_wgmma_descriptor(%tensorMap : !tensorMap) -> !nvgpu.warpgroup.
     // CHECK: %[[c64:.+]] =  llvm.mlir.constant(64 : i64) : i64
     // CHECK: %[[c1024:.+]] = llvm.mlir.constant(1024 : i64) : i64
     // CHECK: %[[S2:.+]] = llvm.extractvalue %[[S1]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)> 
-    // CHECK: %[[S3:.+]] = llvm.ptrtoint %[[S2]] : !llvm.ptr<3> to i64
+    // CHECK: %[[S3:.+]] = ptr.ptrtoint %[[S2]] : !llvm.ptr<3> to i64
     // CHECK: %[[S4:.+]] = llvm.mlir.constant(46 : i64) : i64
     // CHECK: %[[S5:.+]] = llvm.shl %[[S3]], %[[S4]]  : i64
     // CHECK: %[[S6:.+]] = llvm.mlir.constant(50 : i64) : i64
@@ -1331,7 +1331,7 @@ module attributes {transform.with_named_sequence} {
     } with type_converter {
       transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
         {use_opaque_pointers = true}
-    } {legal_dialects = ["arith", "func", "llvm", "memref", "nvvm", "vector", "scf"], partial_conversion} : !transform.any_op
+    } {legal_dialects = ["arith", "func", "ptr", "llvm", "memref", "nvvm", "vector", "scf"], partial_conversion} : !transform.any_op
     transform.yield
   }
 }
