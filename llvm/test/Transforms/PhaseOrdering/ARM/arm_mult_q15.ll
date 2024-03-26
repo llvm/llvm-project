@@ -49,7 +49,7 @@ define void @arm_mult_q15(ptr %pSrcA, ptr %pSrcB, ptr noalias %pDst, i32 %blockS
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_VEC]], [[BLOCKSIZE]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[WHILE_BODY_PREHEADER16]]
-; CHECK:       while.body.preheader16:
+; CHECK:       while.body.preheader18:
 ; CHECK-NEXT:    [[BLKCNT_06_PH:%.*]] = phi i32 [ [[BLOCKSIZE]], [[WHILE_BODY_PREHEADER]] ], [ [[IND_END]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[PSRCA_ADDR_05_PH:%.*]] = phi ptr [ [[PSRCA]], [[WHILE_BODY_PREHEADER]] ], [ [[IND_END7]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[PDST_ADDR_04_PH:%.*]] = phi ptr [ [[PDST]], [[WHILE_BODY_PREHEADER]] ], [ [[IND_END9]], [[MIDDLE_BLOCK]] ]

@@ -63,8 +63,8 @@ define void @g(ptr %dst.1, ptr %start, i64 %N) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 8
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[LCSSA_PTR_IV_1]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[NEXT_GEP]], i32 0
 ; CHECK-NEXT:    store <4 x double> zeroinitializer, ptr [[TMP5]], align 8
