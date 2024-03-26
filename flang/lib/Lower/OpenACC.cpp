@@ -2017,10 +2017,9 @@ static mlir::acc::LoopOp createLoopOp(
   if (!collapseDeviceTypes.empty())
     loopOp.setCollapseDeviceTypeAttr(builder.getArrayAttr(collapseDeviceTypes));
 
-  if (combinedConstructs) {
+  if (combinedConstructs)
     loopOp.setCombinedAttr(mlir::acc::CombinedConstructsTypeAttr::get(
         builder.getContext(), *combinedConstructs));
-  }
 
   return loopOp;
 }
@@ -2426,9 +2425,8 @@ static Op createComputeOp(
           mlir::ArrayAttr::get(builder.getContext(), firstPrivatizations));
   }
 
-  if (combinedConstructs) {
+  if (combinedConstructs)
     computeOp.setCombinedAttr(builder.getUnitAttr());
-  }
 
   auto insPt = builder.saveInsertionPoint();
   builder.setInsertionPointAfter(computeOp);
