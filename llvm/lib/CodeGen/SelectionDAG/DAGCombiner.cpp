@@ -13142,7 +13142,7 @@ static SDValue tryToFoldExtOfAtomicLoad(SelectionDAG &DAG,
   EVT MemoryVT = ALoad->getMemoryVT();
   if (!TLI.isAtomicLoadExtLegal(ExtLoadType, VT, MemoryVT))
     return {};
-  // Can't fold into atomic_load if it is already extending differently.
+  // Can't fold into ALoad if it is already extending differently.
   ISD::LoadExtType ALoadExtTy = ALoad->getExtensionType();
   if ((ALoadExtTy == ISD::ZEXTLOAD && ExtLoadType == ISD::SEXTLOAD) ||
       (ALoadExtTy == ISD::SEXTLOAD && ExtLoadType == ISD::ZEXTLOAD))
@@ -13150,7 +13150,7 @@ static SDValue tryToFoldExtOfAtomicLoad(SelectionDAG &DAG,
 
   EVT OrigVT = ALoad->getValueType(0);
   assert(OrigVT.getSizeInBits() < VT.getSizeInBits() && "VT should be wider.");
-  auto *NewALoad = dyn_cast<AtomicSDNode>(DAG.getAtomic(
+  auto *NewALoad = cast<AtomicSDNode>(DAG.getAtomic(
       ISD::ATOMIC_LOAD, SDLoc(ALoad), MemoryVT, VT, ALoad->getChain(),
       ALoad->getBasePtr(), ALoad->getMemOperand()));
   NewALoad->setExtensionType(ExtLoadType);
