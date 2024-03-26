@@ -18546,14 +18546,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID IID;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
-      IID = Intrinsic::amdgcn_global_load_tr_b64;
-      break;
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_v2i32:
       IID = Intrinsic::amdgcn_global_load_tr_b64;
       break;
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4i16:
-      IID = Intrinsic::amdgcn_global_load_tr_b128;
-      break;
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8i16:
       IID = Intrinsic::amdgcn_global_load_tr_b128;
       break;
