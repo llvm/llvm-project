@@ -104,6 +104,11 @@ SYMTAB-FWD-PRIV-NOT:  __imp_foo
 SYMTAB-FWD-PRIV-NEXT: exportfn3 in export.test.tmp-fwd-priv
 SYMTAB-FWD-PRIV-NOT:  foo
 
+# RUN: echo "EXPORTS foo=kernel32.foobar DATA PRIVATE" > %t-fwd-priv.def
+# RUN: lld-link /out:%t-fwd-priv-def.dll /dll %t.obj /def:%t-fwd-priv.def
+# RUN: llvm-objdump -p %t-fwd-priv-def.dll | FileCheck --check-prefix=FORWARDER %s
+# RUN: llvm-nm -M %t-fwd-priv-def.lib | FileCheck --check-prefix=SYMTAB-FWD-PRIV %s
+
 # RUN: lld-link /out:%t-fwd-ord.dll /dll %t.obj /export:foo=kernel32.foobar,@3,NONAME
 # RUN: llvm-objdump -p %t-fwd-ord.dll | FileCheck --check-prefix=FORWARDER-ORD %s
 # RUN: llvm-nm -M %t-fwd-ord.lib | FileCheck --check-prefix=SYMTAB-FWD %s
@@ -114,6 +119,11 @@ FORWARDER-ORD-NEXT:  Ordinal base: 3
 FORWARDER-ORD-NEXT:  Ordinal      RVA  Name
 FORWARDER-ORD-NEXT:        3           (forwarded to kernel32.foobar)
 FORWARDER-ORD-NEXT:        4   0x1010  exportfn3
+
+# RUN: echo "EXPORTS foo=kernel32.foobar @3 NONAME" > %t-fwd-ord.def
+# RUN: lld-link /out:%t-fwd-ord-def.dll /dll %t.obj /def:%t-fwd-ord.def
+# RUN: llvm-objdump -p %t-fwd-ord-def.dll | FileCheck --check-prefix=FORWARDER-ORD %s
+# RUN: llvm-nm -M %t-fwd-ord-def.lib | FileCheck --check-prefix=SYMTAB-FWD %s
 
 # RUN: lld-link /out:%t.dll /dll %t.obj /merge:.rdata=.text /export:exportfn1 /export:exportfn2
 # RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=MERGE --match-full-lines %s
