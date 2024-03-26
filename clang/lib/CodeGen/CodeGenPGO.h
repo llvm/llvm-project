@@ -113,14 +113,12 @@ public:
   void emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
                                  llvm::Value *StepV);
   void emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
-                                      Address MCDCCondBitmapAddr,
-                                      CodeGenFunction &CGF);
+                                      Address MCDCCondBitmapAddr);
   void emitMCDCParameters(CGBuilderTy &Builder);
   void emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S,
                                Address MCDCCondBitmapAddr);
   void emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
-                                Address MCDCCondBitmapAddr, llvm::Value *Val,
-                                CodeGenFunction &CGF);
+                                Address MCDCCondBitmapAddr, llvm::Value *Val);
 
   /// Return the region count for the counter at the given index.
   uint64_t getRegionCount(const Stmt *S) {

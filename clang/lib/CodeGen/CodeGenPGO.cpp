@@ -1239,8 +1239,7 @@ void CodeGenPGO::emitMCDCParameters(CGBuilderTy &Builder) {
 
 void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
                                                 const Expr *S,
-                                                Address MCDCCondBitmapAddr,
-                                                CodeGenFunction &CGF) {
+                                                Address MCDCCondBitmapAddr) {
   if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
     return;
 
@@ -1263,7 +1262,7 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
                           Builder.getInt64(FunctionHash),
                           Builder.getInt32(RegionMCDCState->BitmapBytes),
                           Builder.getInt32(MCDCTestVectorBitmapOffset),
-                          MCDCCondBitmapAddr.emitRawPointer(CGF)};
+                          MCDCCondBitmapAddr.getPointer()};
   Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_tvbitmap_update), Args);
 }
@@ -1284,8 +1283,7 @@ void CodeGenPGO::emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S,
 
 void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
                                           Address MCDCCondBitmapAddr,
-                                          llvm::Value *Val,
-                                          CodeGenFunction &CGF) {
+                                          llvm::Value *Val) {
   if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
     return;
 
@@ -1314,7 +1312,7 @@ void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
   llvm::Value *Args[5] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
                           Builder.getInt64(FunctionHash),
                           Builder.getInt32(Branch.ID),
-                          MCDCCondBitmapAddr.emitRawPointer(CGF), Val};
+                          MCDCCondBitmapAddr.getPointer(), Val};
   Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_condbitmap_update),
       Args);
