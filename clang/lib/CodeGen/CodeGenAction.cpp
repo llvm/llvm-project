@@ -58,7 +58,7 @@ using namespace llvm;
 #define DEBUG_TYPE "codegenaction"
 
 namespace llvm {
-extern cl::opt<bool> ClRelinkBuiltinBitcodePostop;
+extern cl::opt<bool> ClLinkBuiltinBitcodePostopt;
 }
 
 namespace clang {
@@ -359,7 +359,7 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
   }
 
   // Link each LinkModule into our module.
-  if (LinkInModules(getModule()))
+  if (!ClLinkBuiltinBitcodePostopt && LinkInModules(getModule()))
     return;
 
   for (auto &F : getModule()->functions()) {
@@ -1213,7 +1213,7 @@ void CodeGenAction::ExecuteAction() {
                          std::move(LinkModules), *VMContext, nullptr);
 
   // Link in each pending link module.
-  if (Result.LinkInModules(&*TheModule))
+  if (!ClLinkBuiltinBitcodePostopt && Result.LinkInModules(&*TheModule))
     return;
 
   // PR44896: Force DiscardValueNames as false. DiscardValueNames cannot be
