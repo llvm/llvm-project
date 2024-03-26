@@ -656,7 +656,7 @@ static bool EmitDesignatedInitUpdater(ConstantEmitter &Emitter,
   }
 
   unsigned NumElementsToUpdate =
-      FillC ? CAT->getSize().getZExtValue() : Updater->getNumInits();
+      FillC ? CAT->getZExtSize() : Updater->getNumInits();
   for (unsigned I = 0; I != NumElementsToUpdate; ++I, Offset += ElemSize) {
     Expr *Init = nullptr;
     if (I < Updater->getNumInits())
@@ -1249,7 +1249,7 @@ public:
     auto *CAT = CGM.getContext().getAsConstantArrayType(ILE->getType());
     assert(CAT && "can't emit array init for non-constant-bound array");
     unsigned NumInitElements = ILE->getNumInits();
-    unsigned NumElements = CAT->getSize().getZExtValue();
+    unsigned NumElements = CAT->getZExtSize();
 
     // Initialising an array requires us to automatically
     // initialise any elements that have not been initialised explicitly
@@ -1374,7 +1374,7 @@ public:
 
     // Resize the string to the right size, adding zeros at the end, or
     // truncating as needed.
-    Str.resize(CAT->getSize().getZExtValue(), '\0');
+    Str.resize(CAT->getZExtSize(), '\0');
     return llvm::ConstantDataArray::getString(VMContext, Str, false);
   }
 
@@ -2382,7 +2382,7 @@ llvm::Constant *CodeGenModule::EmitNullConstant(QualType T) {
 
     llvm::Constant *Element =
       ConstantEmitter::emitNullForMemory(*this, ElementTy);
-    unsigned NumElements = CAT->getSize().getZExtValue();
+    unsigned NumElements = CAT->getZExtSize();
     SmallVector<llvm::Constant *, 8> Array(NumElements, Element);
     return llvm::ConstantArray::get(ATy, Array);
   }
