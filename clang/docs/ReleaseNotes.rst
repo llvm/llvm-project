@@ -57,6 +57,12 @@ ABI Changes in This Version
   inline member function that contains a static local variable with a dynamic
   initializer is declared with ``__declspec(dllimport)``. (#GH83616).
 
+- Fixed Microsoft name mangling of lifetime extended temporary objects. This
+  change corrects missing back reference registrations that could result in
+  incorrect back reference indexes and suprising demangled name results. Since
+  MSVC uses a different mangling for these objects, compatibility is not affected.
+  (#GH85423).
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
@@ -198,7 +204,25 @@ Modified Compiler Flags
   ``-Wreturn-type``, and moved some of the diagnostics previously controlled by
   ``-Wreturn-type`` under this new flag. Fixes #GH72116.
 
-- Added ``-Wcast-function-type`` as a warning enabled by ``-Wextra``. #GH76872
+- Added ``-Wcast-function-type-mismatch`` under the ``-Wcast-function-type``
+  warning group. Moved the diagnostic previously controlled by
+  ``-Wcast-function-type`` to the new warning group and added
+  ``-Wcast-function-type-mismatch`` to ``-Wextra``. #GH76872
+
+  .. code-block:: c
+
+     int x(long);
+     typedef int (f2)(void*);
+     typedef int (f3)();
+
+     void func(void) {
+       // Diagnoses under -Wcast-function-type, -Wcast-function-type-mismatch,
+       // -Wcast-function-type-strict, -Wextra
+       f2 *b = (f2 *)x;
+       // Diagnoses under -Wcast-function-type, -Wcast-function-type-strict
+       f3 *c = (f3 *)x;
+     }
+
 
 Removed Compiler Flags
 -------------------------
@@ -419,6 +443,8 @@ Bug Fixes to C++ Support
 - Clang's __builtin_bit_cast will now produce a constant value for records with empty bases. See:
   (#GH82383)
 - Fix a crash when instantiating a lambda that captures ``this`` outside of its context. Fixes (#GH85343).
+- Fix an issue where a namespace alias could be defined using a qualified name (all name components
+  following the first `::` were ignored).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -502,6 +528,7 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 
 - ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
+- Profile names in ``-march`` option are now supported.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -558,6 +585,7 @@ Static Analyzer
 - Fixed crashing on loops if the loop variable was declared in switch blocks
   but not under any case blocks if ``unroll-loops=true`` analyzer config is
   set. (#GH68819)
+- Support C++23 static operator calls. (#GH84972)
 
 New features
 ^^^^^^^^^^^^
