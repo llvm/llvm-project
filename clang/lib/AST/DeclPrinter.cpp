@@ -875,7 +875,7 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     Out << " = 0";
   else if (D->isDeletedAsWritten()) {
     Out << " = delete";
-    if (const auto *M = D->getDeletedMessage()) {
+    if (const StringLiteral *M = D->getDeletedMessage()) {
       Out << "(";
       M->outputString(Out);
       Out << ")";
