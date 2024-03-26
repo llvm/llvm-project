@@ -18066,15 +18066,22 @@ llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
   return Arg;
 }
 
-Intrinsic::ID getDotProductIntrinsic(QualType QT) {
+Intrinsic::ID getDotProductIntrinsic(QualType QT, int elementCount) {
+  if (QT->hasFloatingRepresentation()) {
+    switch (elementCount) {
+    case 2:
+      return Intrinsic::dx_dot2;
+    case 3:
+      return Intrinsic::dx_dot3;
+    case 4:
+      return Intrinsic::dx_dot4;
+    }
+  }
   if (QT->hasSignedIntegerRepresentation())
     return Intrinsic::dx_sdot;
-  if (QT->hasUnsignedIntegerRepresentation())
-    return Intrinsic::dx_udot;
 
-  assert(QT->hasFloatingRepresentation());
-  return Intrinsic::dx_dot;
-  ;
+  assert(QT->hasUnsignedIntegerRepresentation());
+  return Intrinsic::dx_udot;
 }
 
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
@@ -18128,8 +18135,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     assert(T0->getScalarType() == T1->getScalarType() &&
            "Dot product of vectors need the same element types.");
 
-    [[maybe_unused]] auto *VecTy0 =
-        E->getArg(0)->getType()->getAs<VectorType>();
+    auto *VecTy0 = E->getArg(0)->getType()->getAs<VectorType>();
     [[maybe_unused]] auto *VecTy1 =
         E->getArg(1)->getType()->getAs<VectorType>();
     // A HLSLVectorTruncation should have happend
@@ -18138,7 +18144,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     return Builder.CreateIntrinsic(
         /*ReturnType=*/T0->getScalarType(),
-        getDotProductIntrinsic(E->getArg(0)->getType()),
+        getDotProductIntrinsic(E->getArg(0)->getType(),
+                               VecTy0->getNumElements()),
         ArrayRef<Value *>{Op0, Op1}, nullptr, "dx.dot");
   } break;
   case Builtin::BI__builtin_hlsl_lerp: {
@@ -18533,51 +18540,35 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   }
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_v2i32:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4bf16:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4f16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4i16:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8bf16:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8f16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8i16: {
 
+    Intrinsic::ID IID;
     llvm::Type *ArgTy;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
       ArgTy = llvm::Type::getInt32Ty(getLLVMContext());
+      IID = Intrinsic::amdgcn_global_load_tr_b64;
       break;
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_v2i32:
       ArgTy = llvm::FixedVectorType::get(
           llvm::Type::getInt32Ty(getLLVMContext()), 2);
-      break;
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4bf16:
-      ArgTy = llvm::FixedVectorType::get(
-          llvm::Type::getBFloatTy(getLLVMContext()), 4);
-      break;
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4f16:
-      ArgTy = llvm::FixedVectorType::get(
-          llvm::Type::getHalfTy(getLLVMContext()), 4);
+      IID = Intrinsic::amdgcn_global_load_tr_b64;
       break;
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4i16:
       ArgTy = llvm::FixedVectorType::get(
           llvm::Type::getInt16Ty(getLLVMContext()), 4);
-      break;
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8bf16:
-      ArgTy = llvm::FixedVectorType::get(
-          llvm::Type::getBFloatTy(getLLVMContext()), 8);
-      break;
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8f16:
-      ArgTy = llvm::FixedVectorType::get(
-          llvm::Type::getHalfTy(getLLVMContext()), 8);
+      IID = Intrinsic::amdgcn_global_load_tr_b128;
       break;
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8i16:
       ArgTy = llvm::FixedVectorType::get(
           llvm::Type::getInt16Ty(getLLVMContext()), 8);
+      IID = Intrinsic::amdgcn_global_load_tr_b128;
       break;
     }
 
     llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
-    llvm::Function *F =
-        CGM.getIntrinsic(Intrinsic::amdgcn_global_load_tr, {ArgTy});
+    llvm::Function *F = CGM.getIntrinsic(IID, {ArgTy});
     return Builder.CreateCall(F, {Addr});
   }
   case AMDGPU::BI__builtin_amdgcn_get_fpenv: {
