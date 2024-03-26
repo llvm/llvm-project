@@ -2520,10 +2520,10 @@ Constant *ConstantExpr::getShuffleVector(Constant *V1, Constant *V2,
   return pImpl->ExprConstants.getOrCreate(ShufTy, Key);
 }
 
-Constant *ConstantExpr::getNeg(Constant *C, bool HasNUW, bool HasNSW) {
+Constant *ConstantExpr::getNeg(Constant *C, bool HasNSW) {
   assert(C->getType()->isIntOrIntVectorTy() &&
          "Cannot NEG a nonintegral value!");
-  return getSub(ConstantInt::get(C->getType(), 0), C, HasNUW, HasNSW);
+  return getSub(ConstantInt::get(C->getType(), 0), C, /*HasNUW=*/false, HasNSW);
 }
 
 Constant *ConstantExpr::getNot(Constant *C) {
