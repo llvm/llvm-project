@@ -1,5 +1,7 @@
 ; RUN: llvm-as < %s 2>&1
 
+; FIXME: The verifer should reject the invalid !tbaa.struct nodes below.
+
 define void @test_overlapping_regions(ptr %a1) {
   %ld = load i8, ptr %a1, align 1, !tbaa.struct !0
   ret void
