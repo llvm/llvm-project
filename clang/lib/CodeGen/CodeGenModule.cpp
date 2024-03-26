@@ -3712,7 +3712,8 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     // Forward declarations are emitted lazily on first use.
     if (!FD->doesThisDeclarationHaveABody()) {
       if (!FD->doesDeclarationForceExternallyVisibleDefinition() &&
-          !FD->isTargetVersionMultiVersion())
+          (!FD->isMultiVersion() ||
+           !FD->getASTContext().getTargetInfo().getTriple().isAArch64()))
         return;
 
       StringRef MangledName = getMangledName(GD);
@@ -3994,10 +3995,11 @@ void CodeGenModule::EmitMultiVersionFunctionDefinition(GlobalDecl GD,
     auto *Spec = FD->getAttr<CPUSpecificAttr>();
     for (unsigned I = 0; I < Spec->cpus_size(); ++I)
       EmitGlobalFunctionDefinition(GD.getWithMultiVersionIndex(I), nullptr);
-  } else if (FD->isTargetClonesMultiVersion()) {
-    auto *Clone = FD->getAttr<TargetClonesAttr>();
-    for (unsigned I = 0; I < Clone->featuresStrs_size(); ++I)
-      if (Clone->isFirstOfVersion(I))
+  } else if (auto *TC = FD->getAttr<TargetClonesAttr>()) {
+    for (unsigned I = 0; I < TC->featuresStrs_size(); ++I)
+      // AArch64 favors the default target version over the clone if any.
+      if ((!TC->isDefaultVersion(I) || !getTarget().getTriple().isAArch64()) &&
+          TC->isFirstOfVersion(I))
         EmitGlobalFunctionDefinition(GD.getWithMultiVersionIndex(I), nullptr);
     // Ensure that the resolver function is also emitted.
     GetOrCreateMultiVersionResolver(GD);
@@ -4137,57 +4139,49 @@ void CodeGenModule::emitMultiVersionFunctions() {
     };
 
     bool HasDefaultDecl = !FD->isTargetVersionMultiVersion();
-    bool ShouldEmitResolver = !FD->isTargetVersionMultiVersion();
+    bool ShouldEmitResolver =
+        !getContext().getTargetInfo().getTriple().isAArch64();
     SmallVector<CodeGenFunction::MultiVersionResolverOption, 10> Options;
-    if (FD->isTargetMultiVersion()) {
-      getContext().forEachMultiversionedFunctionVersion(
-          FD, [&](const FunctionDecl *CurFD) {
-            llvm::SmallVector<StringRef, 8> Feats;
+
+    getContext().forEachMultiversionedFunctionVersion(
+        FD, [&](const FunctionDecl *CurFD) {
+          llvm::SmallVector<StringRef, 8> Feats;
+
+          if (const auto *TA = CurFD->getAttr<TargetAttr>()) {
+            TA->getAddedFeatures(Feats);
             llvm::Function *Func = createFunction(CurFD);
+            Options.emplace_back(Func, TA->getArchitecture(), Feats);
+          } else if (const auto *TVA = CurFD->getAttr<TargetVersionAttr>()) {
+            bool HasDefaultDef = TVA->isDefaultVersion() &&
+                                 CurFD->doesThisDeclarationHaveABody();
+            HasDefaultDecl |= TVA->isDefaultVersion();
+            ShouldEmitResolver |= (CurFD->isUsed() || HasDefaultDef);
+            TVA->getFeatures(Feats);
+            llvm::Function *Func = createFunction(CurFD);
+            Options.emplace_back(Func, /*Architecture*/ "", Feats);
+          } else if (const auto *TC = CurFD->getAttr<TargetClonesAttr>()) {
+            ShouldEmitResolver |= CurFD->doesThisDeclarationHaveABody();
+            for (unsigned I = 0; I < TC->featuresStrs_size(); ++I) {
+              if (!TC->isFirstOfVersion(I))
+                continue;
 
-            if (const auto *TA = CurFD->getAttr<TargetAttr>()) {
-              TA->getAddedFeatures(Feats);
-              Options.emplace_back(Func, TA->getArchitecture(), Feats);
-            } else if (const auto *TVA = CurFD->getAttr<TargetVersionAttr>()) {
-              bool HasDefaultDef = TVA->isDefaultVersion() &&
-                                   CurFD->doesThisDeclarationHaveABody();
-              HasDefaultDecl |= TVA->isDefaultVersion();
-              ShouldEmitResolver |= (CurFD->isUsed() || HasDefaultDef);
-              TVA->getFeatures(Feats);
-              Options.emplace_back(Func, /*Architecture*/ "", Feats);
-            } else
-              llvm_unreachable("unexpected MultiVersionKind");
-          });
-    } else if (const auto *TC = FD->getAttr<TargetClonesAttr>()) {
-      for (unsigned I = 0; I < TC->featuresStrs_size(); ++I) {
-        if (!TC->isFirstOfVersion(I))
-          continue;
-
-        llvm::Function *Func = createFunction(FD, I);
-        StringRef Version = TC->getFeatureStr(I);
-        StringRef Architecture;
-        llvm::SmallVector<StringRef, 1> Feature;
-
-        if (getTarget().getTriple().isAArch64()) {
-          if (Version != "default") {
-            llvm::SmallVector<StringRef, 8> VerFeats;
-            Version.split(VerFeats, "+");
-            for (auto &CurFeat : VerFeats)
-              Feature.push_back(CurFeat.trim());
-          }
-        } else {
-          if (Version.starts_with("arch="))
-            Architecture = Version.drop_front(sizeof("arch=") - 1);
-          else if (Version != "default")
-            Feature.push_back(Version);
-        }
-
-        Options.emplace_back(Func, Architecture, Feature);
-      }
-    } else {
-      assert(0 && "Expected a target or target_clones multiversion function");
-      continue;
-    }
+              llvm::Function *Func = createFunction(CurFD, I);
+              StringRef Architecture;
+              Feats.clear();
+              if (getTarget().getTriple().isAArch64())
+                TC->getFeatures(Feats, I);
+              else {
+                StringRef Version = TC->getFeatureStr(I);
+                if (Version.starts_with("arch="))
+                  Architecture = Version.drop_front(sizeof("arch=") - 1);
+                else if (Version != "default")
+                  Feats.push_back(Version);
+              }
+              Options.emplace_back(Func, Architecture, Feats);
+            }
+          } else
+            llvm_unreachable("unexpected MultiVersionKind");
+        });
 
     if (!ShouldEmitResolver)
       continue;
@@ -4378,7 +4372,7 @@ void CodeGenModule::AddDeferredMultiVersionResolverToEmit(GlobalDecl GD) {
   const auto *FD = cast<FunctionDecl>(GD.getDecl());
   assert(FD && "Not a FunctionDecl?");
 
-  if (FD->isTargetVersionMultiVersion()) {
+  if (FD->isTargetVersionMultiVersion() || FD->isTargetClonesMultiVersion()) {
     std::string MangledName =
         getMangledNameImpl(*this, GD, FD, /*OmitMultiVersionMangling=*/true);
     if (!DeferredResolversToEmit.insert(MangledName).second)
@@ -4489,7 +4483,8 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
 
     if (FD->isMultiVersion()) {
       UpdateMultiVersionNames(GD, FD, MangledName);
-      if (FD->isTargetVersionMultiVersion() && !FD->isUsed())
+      if (FD->getASTContext().getTargetInfo().getTriple().isAArch64() &&
+          !FD->isUsed())
         AddDeferredMultiVersionResolverToEmit(GD);
       else if (!IsForDefinition)
         return GetOrCreateMultiVersionResolver(GD);
