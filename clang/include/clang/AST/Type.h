@@ -3389,7 +3389,7 @@ protected:
                   ATy->getIndexTypeQualifiers().getAsOpaqueValue(), nullptr) {
     ConstantArrayTypeBits.HasExternalSize =
         ATy->ConstantArrayTypeBits.HasExternalSize;
-    if (ConstantArrayTypeBits.HasExternalSize) {
+    if (!ConstantArrayTypeBits.HasExternalSize) {
       ConstantArrayTypeBits.SizeWidth = ATy->ConstantArrayTypeBits.SizeWidth;
       Size = ATy->Size;
     } else
