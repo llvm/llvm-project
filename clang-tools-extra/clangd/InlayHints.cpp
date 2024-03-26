@@ -474,7 +474,7 @@ class TypeInlayHintLabelPartBuilder
 
 public:
 
-#ifndef NDEBUG
+#if 0
   ~TypeInlayHintLabelPartBuilder() {
     llvm::errs() << "TypeInlayHintLabelPartBuilder:\n";
     Current->dump();
@@ -532,7 +532,13 @@ public:
       } break;
       case NestedNameSpecifier::TypeSpec:
       case NestedNameSpecifier::TypeSpecWithTemplate:
+        CurrentTypeRAII Guard(
+            *this,
+            QualType(NNS->getAsType(),
+                     /*Quals=*/0), // Do we need cv-qualifiers on type specifiers?
+            ShouldAddLinksToTagTypes);
         Visit(NNS->getAsType());
+        LabelChunks.emplace_back("::");
         break;
       }
     }
@@ -1235,7 +1241,7 @@ private:
         Desugared, AST, TypeHintPolicy,
         /*ShouldAddLinksToTagTypes=*/T != Desugared, Chunks);
     Builder.Visit(Desugared.getTypePtr());
-    if (T != Desugared && shouldPrintTypeHint(Chunks)) {
+    if (T != Desugared && !shouldPrintTypeHint(Chunks)) {
       // If the desugared type is too long to display, fallback to the sugared
       // type.
       Chunks.clear();
