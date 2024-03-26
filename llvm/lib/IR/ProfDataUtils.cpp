@@ -65,6 +65,26 @@ bool isTargetMD(const MDNode *ProfData, const char *Name, unsigned MinOps) {
   return ProfDataName->getString().equals(Name);
 }
 
+template <typename T,
+          typename = typename std::enable_if<std::is_arithmetic_v<T>>>
+static void extractFromBranchWeightMD(const MDNode *ProfileData,
+                                      SmallVectorImpl<T> &Weights) {
+  assert(isBranchWeightMD(ProfileData) && "wrong metadata");
+
+  unsigned NOps = ProfileData->getNumOperands();
+  assert(WeightsIdx < NOps && "Weights Index must be less than NOps.");
+  Weights.resize(NOps - WeightsIdx);
+
+  for (unsigned Idx = WeightsIdx, E = NOps; Idx != E; ++Idx) {
+    ConstantInt *Weight =
+        mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(Idx));
+    assert(Weight && "Malformed branch_weight in MD_prof node");
+    assert(Weight->getValue().getActiveBits() <= 32 &&
+           "Too many bits for uint32_t");
+    Weights[Idx - WeightsIdx] = Weight->getZExtValue();
+  }
+}
+
 } // namespace
 
 namespace llvm {
@@ -100,23 +120,20 @@ MDNode *getValidBranchWeightMDNode(const Instruction &I) {
   return nullptr;
 }
 
-void extractFromBranchWeightMD(const MDNode *ProfileData,
+void extractFromBranchWeightMD32(const MDNode *ProfileData,
                                SmallVectorImpl<uint32_t> &Weights) {
-  assert(isBranchWeightMD(ProfileData) && "wrong metadata");
-
-  unsigned NOps = ProfileData->getNumOperands();
-  assert(WeightsIdx < NOps && "Weights Index must be less than NOps.");
-  Weights.resize(NOps - WeightsIdx);
-
-  for (unsigned Idx = WeightsIdx, E = NOps; Idx != E; ++Idx) {
-    ConstantInt *Weight =
-        mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(Idx));
-    assert(Weight && "Malformed branch_weight in MD_prof node");
-    assert(Weight->getValue().getActiveBits() <= 32 &&
-           "Too many bits for uint32_t");
-    Weights[Idx - WeightsIdx] = Weight->getZExtValue();
-  }
+  extractFromBranchWeightMD(ProfileData, Weights);
 }
+
+void extractFromBranchWeightMD64(const MDNode *ProfileData,
+                               SmallVectorImpl<uint64_t> &Weights) {
+  extractFromBranchWeightMD(ProfileData, Weights);
+}
+
+
+
+
+
 
 bool extractBranchWeights(const MDNode *ProfileData,
                           SmallVectorImpl<uint32_t> &Weights) {
