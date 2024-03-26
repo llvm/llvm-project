@@ -126,7 +126,6 @@ const int SIGFPE = 8;
 const int SIGSEGV = 11;
 const int SIGPIPE = 13;
 const int SIGTERM = 15;
-const int SIGPROF = 27;
 #if defined(__mips__) || SANITIZER_FREEBSD || SANITIZER_APPLE || SANITIZER_NETBSD
 const int SIGBUS = 10;
 const int SIGSYS = 12;
@@ -2169,8 +2168,7 @@ static bool is_sync_signal(ThreadSignalContext *sctx, int sig,
     return false;
 #endif
   return sig == SIGSEGV || sig == SIGBUS || sig == SIGILL || sig == SIGTRAP ||
-         sig == SIGABRT || sig == SIGFPE || sig == SIGPIPE || sig == SIGSYS ||
-         sig == SIGPROF;
+         sig == SIGABRT || sig == SIGFPE || sig == SIGPIPE || sig == SIGSYS;
 }
 
 void sighandler(int sig, __sanitizer_siginfo *info, void *ctx) {
