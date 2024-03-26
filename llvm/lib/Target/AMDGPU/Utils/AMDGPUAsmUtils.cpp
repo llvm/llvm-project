@@ -144,6 +144,9 @@ const CustomOperand<const MCSubtargetInfo &> Opr[] = {
   {{"HW_REG_SCRATCH_BASE_HI"},     ID_FLAT_SCR_HI,         isGFX12Plus},
   {{"HW_REG_SHADER_CYCLES_LO"},    ID_SHADER_CYCLES,       isGFX12Plus},
 
+  // Register numbers reused in GFX13+
+  {{"HW_REG_WAVE_GROUP_INFO"},     ID_WAVE_GROUP_INFO,     isGFX13Plus},
+
   // GFX940 specific registers
   {{"HW_REG_XCC_ID"},                 ID_XCC_ID,                 isGFX940},
   {{"HW_REG_SQ_PERF_SNAPSHOT_DATA"},  ID_SQ_PERF_SNAPSHOT_DATA,  isGFX940},

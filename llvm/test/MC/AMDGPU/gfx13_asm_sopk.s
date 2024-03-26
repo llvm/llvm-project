@@ -111,6 +111,66 @@ s_getreg_b32 null, 0
 s_getreg_b32 s0, 0x1234
 // GFX13: encoding: [0x34,0x12,0x00,0xb9]
 
+s_getreg_b32 s0, hwreg(HW_REG_MODE)
+// GFX13: encoding: [0x01,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_STATUS)
+// GFX13: encoding: [0x02,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_STATE_PRIV)
+// GFX13: encoding: [0x04,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_GPR_ALLOC)
+// GFX13: encoding: [0x05,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_LDS_ALLOC)
+// GFX13: encoding: [0x06,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_PERF_SNAPSHOT_DATA)
+// GFX13: encoding: [0x0a,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_PERF_SNAPSHOT_PC_LO)
+// GFX13: encoding: [0x0b,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_PERF_SNAPSHOT_PC_HI)
+// GFX13: encoding: [0x0c,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_PERF_SNAPSHOT_DATA1)
+// GFX13: encoding: [0x0f,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_PERF_SNAPSHOT_DATA2)
+// GFX13: encoding: [0x10,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_EXCP_FLAG_PRIV)
+// GFX13: encoding: [0x11,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_EXCP_FLAG_USER)
+// GFX13: encoding: [0x12,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_TRAP_CTRL)
+// GFX13: encoding: [0x13,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_SCRATCH_BASE_LO)
+// GFX13: encoding: [0x14,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_SCRATCH_BASE_HI)
+// GFX13: encoding: [0x15,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_HW_ID1)
+// GFX13: encoding: [0x17,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_HW_ID2)
+// GFX13: encoding: [0x18,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO)
+// GFX13: encoding: [0x1b,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_SHADER_CYCLES_LO)
+// GFX13: encoding: [0x1d,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_SHADER_CYCLES_HI)
+// GFX13: encoding: [0x1e,0xf8,0x00,0xb9]
+
 s_setreg_b32 0, s0
 // GFX13: encoding: [0x00,0x00,0x80,0xb9]
 
