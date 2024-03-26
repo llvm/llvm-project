@@ -39,6 +39,11 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   option(MLIR_RUN_ARM_SVE_TESTS "Run Arm SVE tests.")
   option(MLIR_RUN_ARM_SME_TESTS "Run Arm SME tests.")
 
+  # With no ArmSME hardware available today, we need to make sure that ArmSME
+  # e2e are only run when an emulator has been set.
+  if (MLIR_RUN_ARM_SME_TESTS AND ARM_EMULATOR_EXECUTABLE STREQUAL "")
+    message(FATAL_ERROR "MLIR_RUN_SME_TESTS requires an emuator, but ARM_EMULATOR_EXECUTABLE is not set")
+  endif()
 
   # The native target may not be enabled when cross compiling, raise an error.
   if(NOT MLIR_ENABLE_EXECUTION_ENGINE)
