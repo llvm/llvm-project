@@ -9238,8 +9238,11 @@ static void patchMatchingInput(const SDISelAsmOperandInfo &OpInfo,
   std::pair<unsigned, const TargetRegisterClass *> InputRC =
       TLI.getRegForInlineAsmConstraint(TRI, MatchingOpInfo.ConstraintCode,
                                        MatchingOpInfo.ConstraintVT);
-  if ((OpInfo.ConstraintVT.isInteger() !=
-       MatchingOpInfo.ConstraintVT.isInteger()) ||
+  const bool OutOpIsIntOrFP =
+      OpInfo.ConstraintVT.isInteger() || OpInfo.ConstraintVT.isFloatingPoint();
+  const bool InOpInfoIsIntOrFP = MatchingOpInfo.ConstraintVT.isInteger() ||
+                                 MatchingOpInfo.ConstraintVT.isFloatingPoint();
+  if ((OutOpIsIntOrFP != InOpInfoIsIntOrFP) ||
       (MatchRC.second != InputRC.second)) {
     // FIXME: error out in a more elegant fashion
     report_fatal_error("Unsupported asm: input constraint"
