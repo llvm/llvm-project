@@ -76,7 +76,8 @@ public:
   void emitInstruction(const MachineInstr *MI) override;
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &OS) override;
+                       const char *ExtraCode, raw_ostream &OS,
+                       std::string &ErrorMsg) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &OS) override;
 
@@ -261,9 +262,10 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
 }
 
 bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                      const char *ExtraCode, raw_ostream &OS) {
+                                      const char *ExtraCode, raw_ostream &OS,
+                                      std::string &ErrorMsg) {
   // First try the generic code, which knows about modifiers like 'c' and 'n'.
-  if (!AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS))
+  if (!AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS, ErrorMsg))
     return false;
 
   const MachineOperand &MO = MI->getOperand(OpNo);

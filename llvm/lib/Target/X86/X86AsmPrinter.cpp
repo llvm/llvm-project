@@ -695,7 +695,8 @@ static bool printAsmVRegister(const MachineOperand &MO, char Mode,
 /// PrintAsmOperand - Print out an operand for an inline asm expression.
 ///
 bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                    const char *ExtraCode, raw_ostream &O) {
+                                    const char *ExtraCode, raw_ostream &O,
+                                    std::string &ErrorMsg) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0]) {
     if (ExtraCode[1] != 0) return true; // Unknown modifier.
@@ -705,7 +706,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     switch (ExtraCode[0]) {
     default:
       // See if this is a generic print operand
-      return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
+      return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O, ErrorMsg);
     case 'a': // This is an address.  Currently only 'i' and 'r' are expected.
       switch (MO.getType()) {
       default:
@@ -794,6 +795,11 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
         return false;
       }
       O << '-';
+      break;
+    case 'H': 
+      ErrorMsg += " 'H' modifier used on an operand that is a non-offsetable"
+                  " memory reference.";
+      return true;
     }
   }
 

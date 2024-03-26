@@ -67,7 +67,8 @@ class TargetMachine;
 
     void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
     bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                         const char *ExtraCode, raw_ostream &OS) override;
+                         const char *ExtraCode, raw_ostream &OS,
+                         std::string &ErrorMsg) override;
     bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                                const char *ExtraCode, raw_ostream &OS) override;
     void emitStartOfAsmFile(Module &M) override;

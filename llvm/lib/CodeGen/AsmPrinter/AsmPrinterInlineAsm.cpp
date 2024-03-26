@@ -285,12 +285,12 @@ static void EmitInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
         // We may have a location metadata attached to the end of the
         // instruction, and at no point should see metadata at any
         // other point while processing. It's an error if so.
+        std::string ErrorMsg;
         if (OpNo >= MI->getNumOperands() || MI->getOperand(OpNo).isMetadata()) {
           Error = true;
         } else {
           const InlineAsm::Flag F(MI->getOperand(OpNo).getImm());
           ++OpNo; // Skip over the ID number.
-
           // FIXME: Shouldn't arch-independent output template handling go into
           // PrintAsmOperand?
           // Labels are target independent.
@@ -307,13 +307,14 @@ static void EmitInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
                 MI, OpNo, Modifier[0] ? Modifier : nullptr, OS);
           } else {
             Error = AP->PrintAsmOperand(MI, OpNo,
-                                        Modifier[0] ? Modifier : nullptr, OS);
+                                        Modifier[0] ? Modifier : nullptr, OS,
+                                        ErrorMsg);
           }
         }
         if (Error) {
           std::string msg;
           raw_string_ostream Msg(msg);
-          Msg << "invalid operand in inline asm: '" << AsmStr << "'";
+          Msg << "invalid operand in inline asm: '" << AsmStr << "'" <<ErrorMsg;
           MMI->getModule()->getContext().emitError(LocCookie, Msg.str());
         }
       }
@@ -466,7 +467,8 @@ void AsmPrinter::PrintSymbolOperand(const MachineOperand &MO, raw_ostream &OS) {
 /// override this to format as appropriate for machine specific ExtraCodes
 /// or when the arch-independent handling would be too complex otherwise.
 bool AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                 const char *ExtraCode, raw_ostream &O) {
+                                 const char *ExtraCode, raw_ostream &O,
+                                 std::string &ErrorMsg) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0]) {
     if (ExtraCode[1] != 0) return true; // Unknown modifier.

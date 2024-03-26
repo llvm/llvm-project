@@ -1235,9 +1235,10 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
 }
 
 bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                       const char *ExtraCode, raw_ostream &O) {
+                                       const char *ExtraCode, raw_ostream &O,
+                                       std::string &ErrorMsg) {
   // First try the generic code, which knows about modifiers like 'c' and 'n'.
-  if (!AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O))
+  if (!AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O, ErrorMsg))
     return false;
 
   if (ExtraCode && ExtraCode[0]) {

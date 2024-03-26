@@ -54,7 +54,8 @@ namespace {
     void printSrcMemOperand(const MachineInstr *MI, int OpNum,
                             raw_ostream &O);
     bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                         const char *ExtraCode, raw_ostream &O) override;
+                         const char *ExtraCode, raw_ostream &O, 
+                         std::string &ErrorMsg) override;
     bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                                const char *ExtraCode, raw_ostream &O) override;
     void emitInstruction(const MachineInstr *MI) override;
@@ -127,10 +128,11 @@ void MSP430AsmPrinter::printSrcMemOperand(const MachineInstr *MI, int OpNum,
 /// PrintAsmOperand - Print out an operand for an inline asm expression.
 ///
 bool MSP430AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                       const char *ExtraCode, raw_ostream &O) {
+                                       const char *ExtraCode, raw_ostream &O,
+                                       std::string &ErrorMsg) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0])
-    return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
+    return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O, ErrorMsg);
 
   printOperand(MI, OpNo, O);
   return false;

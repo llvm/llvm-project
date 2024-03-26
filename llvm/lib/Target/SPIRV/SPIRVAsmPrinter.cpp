@@ -54,7 +54,8 @@ public:
   StringRef getPassName() const override { return "SPIRV Assembly Printer"; }
   void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &O);
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &O) override;
+                       const char *ExtraCode, raw_ostream &O, 
+                       std::string &ErrorMsg) override;
 
   void outputMCInst(MCInst &Inst);
   void outputInstruction(const MachineInstr *MI);
@@ -218,7 +219,8 @@ void SPIRVAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
 }
 
 bool SPIRVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                      const char *ExtraCode, raw_ostream &O) {
+                                      const char *ExtraCode, raw_ostream &O,
+                                      std::string &ErrorMsg) {
   if (ExtraCode && ExtraCode[0])
     return true; // Invalid instruction - SPIR-V does not have special modifiers
 

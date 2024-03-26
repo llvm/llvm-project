@@ -107,7 +107,8 @@ public:
   void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
   void emitEndOfAsmFile(Module &M) override;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &OS) override;
+                       const char *ExtraCode, raw_ostream &OS,
+                       std::string &ErrorMsg) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &OS) override;
 
