@@ -9,13 +9,12 @@
 
 // Verify that -Wformat-signedness warnings are not reported with only -Wformat
 // (gcc compat).
-// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -std=c11 -fsyntax-only -Wformat -Werror %s
+// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -std=c11 -fsyntax-only -Wformat -verify=okay %s
 
 // Verify that -Wformat-signedness with -Wno-format are not reported (gcc compat).
-// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -std=c11 -fsyntax-only -Wformat-signedness -Wno-format -Werror %s
-// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -std=c11 -fsyntax-only -Wno-format -Wformat-signedness -Werror %s
-
-#include <limits.h>
+// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -std=c11 -fsyntax-only -Wformat-signedness -Wno-format -verify=okay %s
+// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -std=c11 -fsyntax-only -Wno-format -Wformat-signedness -verify=okay %s
+// okay-no-diagnostics
 
 int printf(const char *restrict format, ...);
 int scanf(const char * restrict, ...);
@@ -104,8 +103,8 @@ void test_printf_enum_unsigned(enum enum_unsigned x)
 
 enum enum_long {
     minus_one = -1,
-    int_val = INT_MAX,
-    unsigned_val = (unsigned)INT_MIN
+    int_val = __INT_MAX__, // INT_MAX
+    unsigned_val = (unsigned)(-__INT_MAX__ -1) // (unsigned)INT_MIN
 };
 
 void test_printf_enum_long(enum enum_long x)
@@ -116,7 +115,7 @@ void test_printf_enum_long(enum enum_long x)
 }
 
 enum enum_unsigned_long {
-    uint_max_plus = (unsigned long)UINT_MAX+1,
+    uint_max_plus = (unsigned long)(__INT_MAX__ *2U +1U)+1, // (unsigned long)UINT_MAX+1
 };
 
 void test_printf_enum_unsigned_long(enum enum_unsigned_long x)
