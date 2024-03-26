@@ -22,8 +22,6 @@
 
 #define TEST_REGULAR(x, y, expected) TEST_SPECIAL(x, y, expected, 0)
 
-#define LIBC_NAMESPACE __llvm_libc_19_0_0_git
-
 template <typename T>
 class CanonicalizeTest : public LIBC_NAMESPACE::testing::Test {
 
