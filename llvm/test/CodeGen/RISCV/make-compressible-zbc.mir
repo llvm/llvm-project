@@ -237,19 +237,19 @@ body:             |
     ; CHECK-LABEL: name: store_common_ptr_i8
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: renamable $x11 = ADDI $x0, 1
-    ; CHECK-NEXT: SB killed renamable $x11, renamable $x10, 0 :: (volatile store (s8) into %ir.p)
-    ; CHECK-NEXT: renamable $x11 = ADDI $x0, 3
-    ; CHECK-NEXT: SB killed renamable $x11, renamable $x10, 0 :: (volatile store (s8) into %ir.p)
-    ; CHECK-NEXT: renamable $x11 = ADDI $x0, 5
-    ; CHECK-NEXT: SB killed renamable $x11, killed renamable $x10, 0 :: (volatile store (s8) into %ir.p)
+    ; CHECK-NEXT: renamable $x16 = ADDI $x0, 1
+    ; CHECK-NEXT: SB killed renamable $x16, renamable $x10, 0 :: (volatile store (s8) into %ir.p)
+    ; CHECK-NEXT: renamable $x16 = ADDI $x0, 3
+    ; CHECK-NEXT: SB killed renamable $x16, renamable $x10, 0 :: (volatile store (s8) into %ir.p)
+    ; CHECK-NEXT: renamable $x16 = ADDI $x0, 5
+    ; CHECK-NEXT: SB killed renamable $x16, killed renamable $x10, 0 :: (volatile store (s8) into %ir.p)
     ; CHECK-NEXT: PseudoRET
-    renamable $x11 = ADDI $x0, 1
-    SB killed renamable $x11, renamable $x10, 0 :: (volatile store (s8) into %ir.p)
-    renamable $x11 = ADDI $x0, 3
-    SB killed renamable $x11, renamable $x10, 0 :: (volatile store (s8) into %ir.p)
-    renamable $x11 = ADDI $x0, 5
-    SB killed renamable $x11, killed renamable $x10, 0 :: (volatile store (s8) into %ir.p)
+    renamable $x16 = ADDI $x0, 1
+    SB killed renamable $x16, renamable $x10, 0 :: (volatile store (s8) into %ir.p)
+    renamable $x16 = ADDI $x0, 3
+    SB killed renamable $x16, renamable $x10, 0 :: (volatile store (s8) into %ir.p)
+    renamable $x16 = ADDI $x0, 5
+    SB killed renamable $x16, killed renamable $x10, 0 :: (volatile store (s8) into %ir.p)
     PseudoRET
 
 ...
@@ -263,19 +263,19 @@ body:             |
     ; CHECK-LABEL: name: store_common_ptr_i16
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: renamable $x11 = ADDI $x0, 1
-    ; CHECK-NEXT: SH killed renamable $x11, renamable $x10, 0 :: (volatile store (s16) into %ir.p)
-    ; CHECK-NEXT: renamable $x11 = ADDI $x0, 3
-    ; CHECK-NEXT: SH killed renamable $x11, renamable $x10, 0 :: (volatile store (s16) into %ir.p)
-    ; CHECK-NEXT: renamable $x11 = ADDI $x0, 5
-    ; CHECK-NEXT: SH killed renamable $x11, killed renamable $x10, 0 :: (volatile store (s16) into %ir.p)
+    ; CHECK-NEXT: renamable $x16 = ADDI $x0, 1
+    ; CHECK-NEXT: SH killed renamable $x16, renamable $x10, 0 :: (volatile store (s16) into %ir.p)
+    ; CHECK-NEXT: renamable $x16 = ADDI $x0, 3
+    ; CHECK-NEXT: SH killed renamable $x16, renamable $x10, 0 :: (volatile store (s16) into %ir.p)
+    ; CHECK-NEXT: renamable $x16 = ADDI $x0, 5
+    ; CHECK-NEXT: SH killed renamable $x16, killed renamable $x10, 0 :: (volatile store (s16) into %ir.p)
     ; CHECK-NEXT: PseudoRET
-    renamable $x11 = ADDI $x0, 1
-    SH killed renamable $x11, renamable $x10, 0 :: (volatile store (s16) into %ir.p)
-    renamable $x11 = ADDI $x0, 3
-    SH killed renamable $x11, renamable $x10, 0 :: (volatile store (s16) into %ir.p)
-    renamable $x11 = ADDI $x0, 5
-    SH killed renamable $x11, killed renamable $x10, 0 :: (volatile store (s16) into %ir.p)
+    renamable $x16 = ADDI $x0, 1
+    SH killed renamable $x16, renamable $x10, 0 :: (volatile store (s16) into %ir.p)
+    renamable $x16 = ADDI $x0, 3
+    SH killed renamable $x16, renamable $x10, 0 :: (volatile store (s16) into %ir.p)
+    renamable $x16 = ADDI $x0, 5
+    SH killed renamable $x16, killed renamable $x10, 0 :: (volatile store (s16) into %ir.p)
     PseudoRET
 
 ...
@@ -288,12 +288,13 @@ body:             |
     ; CHECK-LABEL: name: load_common_ptr_i8
     ; CHECK: liveins: $x16
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: dead $x10 = LB renamable $x16, 0 :: (volatile load (s8) from %ir.p)
-    ; CHECK-NEXT: dead $x10 = LB renamable $x16, 0 :: (volatile load (s8) from %ir.p)
-    ; CHECK-NEXT: dead $x10 = LBU killed renamable $x16, 0 :: (volatile load (s8) from %ir.p)
+    ; CHECK-NEXT: $x11 = ADDI $x16, 0
+    ; CHECK-NEXT: dead $x10 = LBU $x11, 0 :: (volatile load (s8) from %ir.p)
+    ; CHECK-NEXT: dead $x10 = LBU $x11, 0 :: (volatile load (s8) from %ir.p)
+    ; CHECK-NEXT: dead $x10 = LBU killed $x11, 0 :: (volatile load (s8) from %ir.p)
     ; CHECK-NEXT: PseudoRET
-    dead $x10 = LB renamable $x16, 0 :: (volatile load (s8) from %ir.p)
-    dead $x10 = LB renamable $x16, 0 :: (volatile load (s8) from %ir.p)
+    dead $x10 = LBU renamable $x16, 0 :: (volatile load (s8) from %ir.p)
+    dead $x10 = LBU renamable $x16, 0 :: (volatile load (s8) from %ir.p)
     dead $x10 = LBU killed renamable $x16, 0 :: (volatile load (s8) from %ir.p)
     PseudoRET
 
