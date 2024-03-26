@@ -610,7 +610,7 @@ public:
 struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Construct a device with its device id within the plugin, the number of
   /// devices in the plugin and the grid values for that kind of device.
-  GenericDeviceTy(int32_t DeviceId, int32_t NumDevices,
+  GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
                   const llvm::omp::GV &GridValues);
 
   /// Get the device identifier within the corresponding plugin. Notice that
@@ -860,6 +860,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Allocate and construct a kernel object.
   virtual Expected<GenericKernelTy &> constructKernel(const char *Name) = 0;
 
+  /// Reference to the underlying plugin that created this device.
+  GenericPluginTy &Plugin;
+
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
@@ -977,7 +980,8 @@ struct GenericPluginTy {
   virtual Error deinitImpl() = 0;
 
   /// Create a new device for the underlying plugin.
-  virtual GenericDeviceTy *createDevice(int32_t DeviceID,
+  virtual GenericDeviceTy *createDevice(GenericPluginTy &Plugin,
+                                        int32_t DeviceID,
                                         int32_t NumDevices) = 0;
 
   /// Create a new global handler for the underlying plugin.

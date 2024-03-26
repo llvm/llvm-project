@@ -438,7 +438,7 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
   // Retrieve kernel environment object for the kernel.
   GlobalTy KernelEnv(std::string(Name) + "_kernel_environment",
                      sizeof(KernelEnvironment), &KernelEnvironment);
-  GenericGlobalHandlerTy &GHandler = PluginTy::get().getGlobalHandler();
+  GenericGlobalHandlerTy &GHandler = GenericDevice.Plugin.getGlobalHandler();
   if (auto Err =
           GHandler.readGlobalFromImage(GenericDevice, *ImagePtr, KernelEnv)) {
     [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
@@ -710,9 +710,10 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
   return std::min(PreferredNumBlocks, GenericDevice.getBlockLimit());
 }
 
-GenericDeviceTy::GenericDeviceTy(int32_t DeviceId, int32_t NumDevices,
+GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
+                                 int32_t NumDevices,
                                  const llvm::omp::GV &OMPGridValues)
-    : MemoryManager(nullptr), OMP_TeamLimit("OMP_TEAM_LIMIT"),
+    : Plugin(Plugin), MemoryManager(nullptr), OMP_TeamLimit("OMP_TEAM_LIMIT"),
       OMP_NumTeams("OMP_NUM_TEAMS"),
       OMP_TeamsThreadLimit("OMP_TEAMS_THREAD_LIMIT"),
       OMPX_DebugKind("LIBOMPTARGET_DEVICE_RTL_DEBUG"),
@@ -1522,7 +1523,7 @@ Error GenericPluginTy::initDevice(int32_t DeviceId) {
   assert(!Devices[DeviceId] && "Device already initialized");
 
   // Create the device and save the reference.
-  GenericDeviceTy *Device = createDevice(DeviceId, NumDevices);
+  GenericDeviceTy *Device = createDevice(*this, DeviceId, NumDevices);
   assert(Device && "Invalid device");
 
   // Save the device reference into the list.
