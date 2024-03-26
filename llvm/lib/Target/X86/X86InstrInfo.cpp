@@ -5595,9 +5595,13 @@ static unsigned convertALUrr2ALUri(unsigned Opc) {
   case X86::FROM:                                                              \
     return X86::TO;
     FROM_TO(TEST64rr, TEST64ri32)
+    FROM_TO(CTEST64rr, CTEST64ri32)
     FROM_TO(CMP64rr, CMP64ri32)
+    FROM_TO(CCMP64rr, CCMP64ri32)
     FROM_TO(TEST32rr, TEST32ri)
+    FROM_TO(CTEST32rr, CTEST32ri)
     FROM_TO(CMP32rr, CMP32ri)
+    FROM_TO(CCMP32rr, CCMP32ri)
 #undef FROM_TO
   }
 }

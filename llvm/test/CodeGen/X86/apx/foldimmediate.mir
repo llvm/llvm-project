@@ -46,9 +46,9 @@ body: |
     ; CHECK-NEXT: NOOP implicit [[OR32ri]]
     ; CHECK-NEXT: [[XOR32ri:%[0-9]+]]:gr32 = XOR32ri [[COPY]], 81, implicit-def $eflags
     ; CHECK-NEXT: NOOP implicit [[XOR32ri]]
-    ; CHECK-NEXT: TEST32ri [[COPY]], 81, implicit-def $eflags
+    ; CHECK-NEXT: CTEST32ri [[COPY]], 81, 2, 10, implicit-def $eflags, implicit $eflags
     ; CHECK-NEXT: NOOP implicit $eflags
-    ; CHECK-NEXT: CMP32ri [[COPY]], 81, implicit-def $eflags
+    ; CHECK-NEXT: CCMP32ri [[COPY]], 81, 2, 10, implicit-def $eflags, implicit $eflags
     ; CHECK-NEXT: NOOP implicit $eflags
     ; CHECK-NEXT: [[ADC32ri:%[0-9]+]]:gr32 = ADC32ri [[COPY]], 81, implicit-def $eflags, implicit $eflags
     ; CHECK-NEXT: NOOP implicit [[ADC32ri]]
@@ -68,15 +68,15 @@ body: |
     ; CHECK-NEXT: NOOP implicit [[XOR64ri32_]]
     ; CHECK-NEXT: [[MOV32ri64_:%[0-9]+]]:gr64 = MOV32ri64 81
     ; CHECK-NEXT: NOOP implicit [[MOV32ri64_]]
-    ; CHECK-NEXT: TEST64ri32 [[COPY1]], 81, implicit-def $eflags
+    ; CHECK-NEXT: CTEST64ri32 [[COPY1]], 81, 2, 10, implicit-def $eflags, implicit $eflags
     ; CHECK-NEXT: NOOP implicit $eflags
     ; CHECK-NEXT: [[ADC64ri32_:%[0-9]+]]:gr64 = ADC64ri32 [[COPY1]], 81, implicit-def $eflags, implicit $eflags
     ; CHECK-NEXT: NOOP implicit [[ADC64ri32_]]
     ; CHECK-NEXT: [[SBB64ri32_:%[0-9]+]]:gr64 = SBB64ri32 [[COPY1]], 81, implicit-def $eflags, implicit $eflags
     ; CHECK-NEXT: NOOP implicit [[SBB64ri32_]]
-    ; CHECK-NEXT: CMP64ri32 [[COPY1]], 81, implicit-def $eflags
+    ; CHECK-NEXT: CCMP64ri32 [[COPY1]], 81, 2, 10, implicit-def $eflags, implicit $eflags
     ; CHECK-NEXT: NOOP implicit $eflags
-    ; CHECK-NEXT: CMP64rr [[SUBREG_TO_REG]], [[COPY1]], implicit-def $eflags
+    ; CHECK-NEXT: CCMP64ri32 [[SUBREG_TO_REG]], 81, 2, 10, implicit-def $eflags, implicit $eflags
     ; CHECK-NEXT: NOOP implicit $eflags
     %0 = MOV32ri 81
     %1 = COPY $edi
@@ -95,10 +95,10 @@ body: |
     %6 = XOR32rr %0, %1, implicit-def $eflags
     NOOP implicit %6
 
-    TEST32rr %0, %1, implicit-def $eflags
+    CTEST32rr %0, %1, 2, 10, implicit-def $eflags, implicit $eflags
     NOOP implicit $eflags
 
-    CMP32rr %1, %0, implicit-def $eflags
+    CCMP32rr %1, %0, 2, 10, implicit-def $eflags, implicit $eflags
     NOOP implicit $eflags
 
     %16 = ADC32rr %0, %1, implicit-def $eflags, implicit $eflags
@@ -127,7 +127,7 @@ body: |
     %14 = COPY %7
     NOOP implicit %14
 
-    TEST64rr %8, %7, implicit-def $eflags
+    CTEST64rr %8, %7, 2, 10, implicit-def $eflags, implicit $eflags
     NOOP implicit $eflags
 
     %15 = ADC64rr %8, %7, implicit-def $eflags, implicit $eflags
@@ -136,8 +136,8 @@ body: |
     %17 = SBB64rr %8, %7, implicit-def $eflags, implicit $eflags
     NOOP implicit %17
 
-    CMP64rr %8, %7, implicit-def $eflags
+    CCMP64rr %8, %7, 2, 10, implicit-def $eflags, implicit $eflags
     NOOP implicit $eflags
-    CMP64rr %7, %8, implicit-def $eflags
+    CCMP64rr %7, %8, 2, 10, implicit-def $eflags, implicit $eflags
     NOOP implicit $eflags
 ...
