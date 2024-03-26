@@ -48,12 +48,6 @@ target_include_directories(omptarget.rtl.amdgpu PRIVATE
 target_link_libraries(omptarget.rtl.amdgpu PRIVATE
                       -Wl,--whole-archive amdgcn_hostexec_services -Wl,--no-whole-archive)
 
-# Check for COMGr package , ASan requires COMGr with minimum version 2.4
-if(SANITIZER_AMDGPU)
-  target_compile_definitions(omptarget.rtl.amdgpu PRIVATE SANITIZER_AMDGPU=1)
-  find_package(amd_comgr QUIET 2.4.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
-endif()
-
 option(LIBOMPTARGET_FORCE_DLOPEN_LIBHSA "Build with dlopened libhsa" OFF)
 if(DEFINED HSA_RUNTIME AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBHSA)
   libomptarget_say("Building AMDGPU plugin linked against libhsa")

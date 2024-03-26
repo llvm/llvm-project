@@ -64,9 +64,6 @@ endif()
       target_link_libraries(amdgcn_hostexec_services ${HOSTEXEC_DEP_LIBRARIES})
    )
 
-   if(SANITIZER_AMDGPU)
-      add_definitions(-DSANITIZER_AMDGPU=1)
-   endif()
    add_compile_options($<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-UNDEBUG>)
    set_property(TARGET amdgcn_hostexec_services PROPERTY POSITION_INDEPENDENT_CODE ON)
 
