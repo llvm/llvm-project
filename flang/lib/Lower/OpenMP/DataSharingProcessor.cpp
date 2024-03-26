@@ -99,7 +99,8 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
       collectOmpObjectListSymbol(firstPrivateClause->v, privatizedSymbols);
     } else if (const auto &lastPrivateClause =
                    std::get_if<omp::clause::Lastprivate>(&clause.u)) {
-      collectOmpObjectListSymbol(lastPrivateClause->v, privatizedSymbols);
+      const ObjectList &objects = std::get<ObjectList>(lastPrivateClause->t);
+      collectOmpObjectListSymbol(objects, privatizedSymbols);
       hasLastPrivateOp = true;
     } else if (std::get_if<omp::clause::Collapse>(&clause.u)) {
       hasCollapse = true;
@@ -208,7 +209,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
           firOpBuilder.restoreInsertionPoint(unstructuredSectionsIP);
         }
       }
-    } else if (mlir::isa<mlir::omp::WsLoopOp>(op)) {
+    } else if (mlir::isa<mlir::omp::WsloopOp>(op)) {
       // Update the original variable just before exiting the worksharing
       // loop. Conversion as follows:
       //
@@ -237,8 +238,8 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
 
       mlir::Value iv = op->getRegion(0).front().getArguments()[0];
       mlir::Value ub =
-          mlir::dyn_cast<mlir::omp::WsLoopOp>(op).getUpperBound()[0];
-      mlir::Value step = mlir::dyn_cast<mlir::omp::WsLoopOp>(op).getStep()[0];
+          mlir::dyn_cast<mlir::omp::WsloopOp>(op).getUpperBound()[0];
+      mlir::Value step = mlir::dyn_cast<mlir::omp::WsloopOp>(op).getStep()[0];
 
       // v = iv + step
       // cmp = step < 0 ? v < ub : v > ub
@@ -286,12 +287,13 @@ void DataSharingProcessor::collectSymbols(
 }
 
 void DataSharingProcessor::collectDefaultSymbols() {
+  using DataSharingAttribute = omp::clause::Default::DataSharingAttribute;
   for (const omp::Clause &clause : clauses) {
     if (const auto *defaultClause =
             std::get_if<omp::clause::Default>(&clause.u)) {
-      if (defaultClause->v == omp::clause::Default::Type::Private)
+      if (defaultClause->v == DataSharingAttribute::Private)
         collectSymbols(Fortran::semantics::Symbol::Flag::OmpPrivate);
-      else if (defaultClause->v == omp::clause::Default::Type::Firstprivate)
+      else if (defaultClause->v == DataSharingAttribute::Firstprivate)
         collectSymbols(Fortran::semantics::Symbol::Flag::OmpFirstPrivate);
     }
   }

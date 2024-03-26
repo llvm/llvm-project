@@ -26,6 +26,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/OperandTraits.h"
@@ -1045,8 +1046,7 @@ public:
   ///
   static Constant *getSizeOf(Type *Ty);
 
-  static Constant *getNeg(Constant *C, bool HasNUW = false,
-                          bool HasNSW = false);
+  static Constant *getNeg(Constant *C, bool HasNSW = false);
   static Constant *getNot(Constant *C);
   static Constant *getAdd(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
@@ -1067,8 +1067,7 @@ public:
   static Constant *getAddrSpaceCast(Constant *C, Type *Ty,
                                     bool OnlyIfReduced = false);
 
-  static Constant *getNSWNeg(Constant *C) { return getNeg(C, false, true); }
-  static Constant *getNUWNeg(Constant *C) { return getNeg(C, true, false); }
+  static Constant *getNSWNeg(Constant *C) { return getNeg(C, /*HasNSW=*/true); }
 
   static Constant *getNSWAdd(Constant *C1, Constant *C2) {
     return getAdd(C1, C2, false, true);
@@ -1195,31 +1194,31 @@ public:
   /// Getelementptr form.  Value* is only accepted for convenience;
   /// all elements must be Constants.
   ///
-  /// \param InRangeIndex the inrange index if present or std::nullopt.
+  /// \param InRange the inrange range if present or std::nullopt.
   /// \param OnlyIfReducedTy see \a getWithOperands() docs.
   static Constant *
   getGetElementPtr(Type *Ty, Constant *C, ArrayRef<Constant *> IdxList,
                    bool InBounds = false,
-                   std::optional<unsigned> InRangeIndex = std::nullopt,
+                   std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr) {
     return getGetElementPtr(
         Ty, C, ArrayRef((Value *const *)IdxList.data(), IdxList.size()),
-        InBounds, InRangeIndex, OnlyIfReducedTy);
+        InBounds, InRange, OnlyIfReducedTy);
   }
   static Constant *
   getGetElementPtr(Type *Ty, Constant *C, Constant *Idx, bool InBounds = false,
-                   std::optional<unsigned> InRangeIndex = std::nullopt,
+                   std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr) {
     // This form of the function only exists to avoid ambiguous overload
     // warnings about whether to convert Idx to ArrayRef<Constant *> or
     // ArrayRef<Value *>.
-    return getGetElementPtr(Ty, C, cast<Value>(Idx), InBounds, InRangeIndex,
+    return getGetElementPtr(Ty, C, cast<Value>(Idx), InBounds, InRange,
                             OnlyIfReducedTy);
   }
   static Constant *
   getGetElementPtr(Type *Ty, Constant *C, ArrayRef<Value *> IdxList,
                    bool InBounds = false,
-                   std::optional<unsigned> InRangeIndex = std::nullopt,
+                   std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr);
 
   /// Create an "inbounds" getelementptr. See the documentation for the

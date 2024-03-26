@@ -63,6 +63,7 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -457,6 +458,7 @@ class ARMAsmParser : public MCTargetAsmParser {
   int tryParseRegister(bool AllowOutofBoundReg = false);
   bool tryParseRegisterWithWriteBack(OperandVector &);
   int tryParseShiftRegister(OperandVector &);
+  std::optional<ARM_AM::ShiftOpc> tryParseShiftToken();
   bool parseRegisterList(OperandVector &, bool EnforceOrder = true,
                          bool AllowRAAC = false,
                          bool AllowOutOfBoundReg = false);
@@ -647,12 +649,13 @@ class ARMAsmParser : public MCTargetAsmParser {
   ParseStatus parseProcIFlagsOperand(OperandVector &);
   ParseStatus parseMSRMaskOperand(OperandVector &);
   ParseStatus parseBankedRegOperand(OperandVector &);
-  ParseStatus parsePKHImm(OperandVector &O, StringRef Op, int Low, int High);
+  ParseStatus parsePKHImm(OperandVector &O, ARM_AM::ShiftOpc, int Low,
+                          int High);
   ParseStatus parsePKHLSLImm(OperandVector &O) {
-    return parsePKHImm(O, "lsl", 0, 31);
+    return parsePKHImm(O, ARM_AM::lsl, 0, 31);
   }
   ParseStatus parsePKHASRImm(OperandVector &O) {
-    return parsePKHImm(O, "asr", 1, 32);
+    return parsePKHImm(O, ARM_AM::asr, 1, 32);
   }
   ParseStatus parseSetEndImm(OperandVector &);
   ParseStatus parseShifterImm(OperandVector &);
@@ -999,7 +1002,7 @@ public:
     return StringRef(Tok.Data, Tok.Length);
   }
 
-  unsigned getReg() const override {
+  MCRegister getReg() const override {
     assert((Kind == k_Register || Kind == k_CCOut) && "Invalid access!");
     return Reg.RegNum;
   }
@@ -4228,6 +4231,23 @@ int ARMAsmParser::tryParseRegister(bool AllowOutOfBoundReg) {
   return RegNum;
 }
 
+std::optional<ARM_AM::ShiftOpc> ARMAsmParser::tryParseShiftToken() {
+  MCAsmParser &Parser = getParser();
+  const AsmToken &Tok = Parser.getTok();
+  if (Tok.isNot(AsmToken::Identifier))
+    return std::nullopt;
+
+  std::string lowerCase = Tok.getString().lower();
+  return StringSwitch<std::optional<ARM_AM::ShiftOpc>>(lowerCase)
+      .Case("asl", ARM_AM::lsl)
+      .Case("lsl", ARM_AM::lsl)
+      .Case("lsr", ARM_AM::lsr)
+      .Case("asr", ARM_AM::asr)
+      .Case("ror", ARM_AM::ror)
+      .Case("rrx", ARM_AM::rrx)
+      .Default(std::nullopt);
+}
+
 // Try to parse a shifter  (e.g., "lsl <amt>"). On success, return 0.
 // If a recoverable error occurs, return 1. If an irrecoverable error
 // occurs, return -1. An irrecoverable error is one where tokens have been
@@ -4236,22 +4256,11 @@ int ARMAsmParser::tryParseRegister(bool AllowOutOfBoundReg) {
 int ARMAsmParser::tryParseShiftRegister(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
-  const AsmToken &Tok = Parser.getTok();
-  if (Tok.isNot(AsmToken::Identifier))
-    return -1;
 
-  std::string lowerCase = Tok.getString().lower();
-  ARM_AM::ShiftOpc ShiftTy = StringSwitch<ARM_AM::ShiftOpc>(lowerCase)
-      .Case("asl", ARM_AM::lsl)
-      .Case("lsl", ARM_AM::lsl)
-      .Case("lsr", ARM_AM::lsr)
-      .Case("asr", ARM_AM::asr)
-      .Case("ror", ARM_AM::ror)
-      .Case("rrx", ARM_AM::rrx)
-      .Default(ARM_AM::no_shift);
-
-  if (ShiftTy == ARM_AM::no_shift)
+  auto ShiftTyOpt = tryParseShiftToken();
+  if (ShiftTyOpt == std::nullopt)
     return 1;
+  auto ShiftTy = ShiftTyOpt.value();
 
   Parser.Lex(); // Eat the operator.
 
@@ -5284,17 +5293,24 @@ ParseStatus ARMAsmParser::parseBankedRegOperand(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-ParseStatus ARMAsmParser::parsePKHImm(OperandVector &Operands, StringRef Op,
-                                      int Low, int High) {
+// FIXME: Unify the different methods for handling shift operators
+// and use TableGen matching mechanisms to do the validation rather than
+// separate parsing paths.
+ParseStatus ARMAsmParser::parsePKHImm(OperandVector &Operands,
+                                      ARM_AM::ShiftOpc Op, int Low, int High) {
   MCAsmParser &Parser = getParser();
-  const AsmToken &Tok = Parser.getTok();
-  if (Tok.isNot(AsmToken::Identifier))
-    return Error(Parser.getTok().getLoc(), Op + " operand expected.");
-  StringRef ShiftName = Tok.getString();
-  std::string LowerOp = Op.lower();
-  std::string UpperOp = Op.upper();
-  if (ShiftName != LowerOp && ShiftName != UpperOp)
-    return Error(Parser.getTok().getLoc(), Op + " operand expected.");
+  auto ShiftCodeOpt = tryParseShiftToken();
+
+  if (!ShiftCodeOpt.has_value())
+    return ParseStatus::NoMatch;
+  auto ShiftCode = ShiftCodeOpt.value();
+
+  // The wrong shift code has been provided. Can error here as has matched the
+  // correct operand in this case.
+  if (ShiftCode != Op)
+    return Error(Parser.getTok().getLoc(),
+                 ARM_AM::getShiftOpcStr(Op) + " operand expected.");
+
   Parser.Lex(); // Eat shift type token.
 
   // There must be a '#' and a shift amount.
@@ -6849,8 +6865,9 @@ static void applyMnemonicAliases(StringRef &Mnemonic,
                                  const FeatureBitset &Features,
                                  unsigned VariantID);
 
-// The GNU assembler has aliases of ldrd and strd with the second register
-// omitted. We don't have a way to do that in tablegen, so fix it up here.
+// The GNU assembler has aliases of ldrd, strd, ldrexd, strexd, ldaexd, and
+// stlexd with the second register omitted. We don't have a way to do that in
+// tablegen, so fix it up here.
 //
 // We have to be careful to not emit an invalid Rt2 here, because the rest of
 // the assembly parser could then generate confusing diagnostics refering to
@@ -6860,13 +6877,19 @@ static void applyMnemonicAliases(StringRef &Mnemonic,
 void ARMAsmParser::fixupGNULDRDAlias(StringRef Mnemonic,
                                      OperandVector &Operands,
                                      unsigned MnemonicOpsEndInd) {
-  if (Mnemonic != "ldrd" && Mnemonic != "strd")
-    return;
-  if (Operands.size() < MnemonicOpsEndInd + 2)
+  if (Mnemonic != "ldrd" && Mnemonic != "strd" && Mnemonic != "ldrexd" &&
+      Mnemonic != "strexd" && Mnemonic != "ldaexd" && Mnemonic != "stlexd")
     return;
 
-  ARMOperand &Op2 = static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd]);
-  ARMOperand &Op3 = static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd + 1]);
+  unsigned IdX = Mnemonic == "strexd" || Mnemonic == "stlexd"
+                     ? MnemonicOpsEndInd + 1
+                     : MnemonicOpsEndInd;
+
+  if (Operands.size() < IdX + 2)
+    return;
+
+  ARMOperand &Op2 = static_cast<ARMOperand &>(*Operands[IdX]);
+  ARMOperand &Op3 = static_cast<ARMOperand &>(*Operands[IdX + 1]);
 
   if (!Op2.isReg())
     return;
@@ -6891,7 +6914,7 @@ void ARMAsmParser::fixupGNULDRDAlias(StringRef Mnemonic,
     return;
 
   Operands.insert(
-      Operands.begin() + MnemonicOpsEndInd + 1,
+      Operands.begin() + IdX + 1,
       ARMOperand::CreateReg(PairedReg, Op2.getStartLoc(), Op2.getEndLoc()));
 }
 
@@ -7320,6 +7343,9 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd]).isImm())
     removeCondCode(Operands, MnemonicOpsEndInd);
 
+  // GNU Assembler extension (compatibility).
+  fixupGNULDRDAlias(Mnemonic, Operands, MnemonicOpsEndInd);
+
   // Adjust operands of ldrexd/strexd to MCK_GPRPair.
   // ldrexd/strexd require even/odd GPR pair. To enforce this constraint,
   // a single GPRPair reg operand is used in the .td file to replace the two
@@ -7327,39 +7353,42 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   // automatically
   // expressed as a GPRPair, so we have to manually merge them.
   // FIXME: We would really like to be able to tablegen'erate this.
-  if (!isThumb() && Operands.size() > MnemonicOpsEndInd + 1 &&
+  bool IsLoad = (Mnemonic == "ldrexd" || Mnemonic == "ldaexd");
+  if (!isThumb() && Operands.size() > MnemonicOpsEndInd + 1 + (!IsLoad) &&
       (Mnemonic == "ldrexd" || Mnemonic == "strexd" || Mnemonic == "ldaexd" ||
        Mnemonic == "stlexd")) {
-    bool isLoad = (Mnemonic == "ldrexd" || Mnemonic == "ldaexd");
-    unsigned Idx = isLoad ? MnemonicOpsEndInd : MnemonicOpsEndInd + 1;
+    unsigned Idx = IsLoad ? MnemonicOpsEndInd : MnemonicOpsEndInd + 1;
     ARMOperand &Op1 = static_cast<ARMOperand &>(*Operands[Idx]);
     ARMOperand &Op2 = static_cast<ARMOperand &>(*Operands[Idx + 1]);
 
     const MCRegisterClass &MRC = MRI->getRegClass(ARM::GPRRegClassID);
-    // Adjust only if Op1 and Op2 are GPRs.
-    if (Op1.isReg() && Op2.isReg() && MRC.contains(Op1.getReg()) &&
-        MRC.contains(Op2.getReg())) {
+    // Adjust only if Op1 is a GPR.
+    if (Op1.isReg() && MRC.contains(Op1.getReg())) {
       unsigned Reg1 = Op1.getReg();
-      unsigned Reg2 = Op2.getReg();
       unsigned Rt = MRI->getEncodingValue(Reg1);
+      unsigned Reg2 = Op2.getReg();
       unsigned Rt2 = MRI->getEncodingValue(Reg2);
-
-      // Rt2 must be Rt + 1 and Rt must be even.
-      if (Rt + 1 != Rt2 || (Rt & 1)) {
+      // Rt2 must be Rt + 1.
+      if (Rt + 1 != Rt2)
         return Error(Op2.getStartLoc(),
-                     isLoad ? "destination operands must be sequential"
+                     IsLoad ? "destination operands must be sequential"
                             : "source operands must be sequential");
-      }
+
+      // Rt must be even
+      if (Rt & 1)
+        return Error(
+            Op1.getStartLoc(),
+            IsLoad ? "destination operands must start start at an even register"
+                   : "source operands must start start at an even register");
+
       unsigned NewReg = MRI->getMatchingSuperReg(
           Reg1, ARM::gsub_0, &(MRI->getRegClass(ARM::GPRPairRegClassID)));
+
       Operands[Idx] =
           ARMOperand::CreateReg(NewReg, Op1.getStartLoc(), Op2.getEndLoc());
       Operands.erase(Operands.begin() + Idx + 1);
     }
   }
-
-  // GNU Assembler extension (compatibility).
-  fixupGNULDRDAlias(Mnemonic, Operands, MnemonicOpsEndInd);
 
   // FIXME: As said above, this is all a pretty gross hack.  This instruction
   // does not fit with other "subs" and tblgen.

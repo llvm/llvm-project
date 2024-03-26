@@ -286,6 +286,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::PackExpansion:
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
+    case Type::CountAttributed:
       CanPrefixQualifiers = false;
       break;
 
@@ -537,7 +538,7 @@ void TypePrinter::printConstantArrayAfter(const ConstantArrayType *T,
   if (T->getSizeModifier() == ArraySizeModifier::Static)
     OS << "static ";
 
-  OS << T->getSize().getZExtValue() << ']';
+  OS << T->getZExtSize() << ']';
   printAfter(T->getElementType(), OS);
 }
 
@@ -1728,6 +1729,36 @@ void TypePrinter::printPackExpansionAfter(const PackExpansionType *T,
   OS << "...";
 }
 
+static void printCountAttributedImpl(const CountAttributedType *T,
+                                     raw_ostream &OS,
+                                     const PrintingPolicy &Policy) {
+  if (T->isCountInBytes() && T->isOrNull())
+    OS << " __sized_by_or_null(";
+  else if (T->isCountInBytes())
+    OS << " __sized_by(";
+  else if (T->isOrNull())
+    OS << " __counted_by_or_null(";
+  else
+    OS << " __counted_by(";
+  if (T->getCountExpr())
+    T->getCountExpr()->printPretty(OS, nullptr, Policy);
+  OS << ')';
+}
+
+void TypePrinter::printCountAttributedBefore(const CountAttributedType *T,
+                                             raw_ostream &OS) {
+  printBefore(T->desugar(), OS);
+  if (!T->desugar()->isArrayType())
+    printCountAttributedImpl(T, OS, Policy);
+}
+
+void TypePrinter::printCountAttributedAfter(const CountAttributedType *T,
+                                            raw_ostream &OS) {
+  printAfter(T->desugar(), OS);
+  if (T->desugar()->isArrayType())
+    printCountAttributedImpl(T, OS, Policy);
+}
+
 void TypePrinter::printAttributedBefore(const AttributedType *T,
                                         raw_ostream &OS) {
   // FIXME: Generate this with TableGen.
@@ -1858,6 +1889,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     // AttributedType nodes for them.
     break;
 
+  case attr::CountedBy:
   case attr::LifetimeBound:
   case attr::TypeNonNull:
   case attr::TypeNullable:
@@ -2271,15 +2303,10 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     } else {
       if (!FirstArg)
         OS << Comma;
-      if (!Policy.SuppressTagKeyword &&
-          Argument.getKind() == TemplateArgument::Type &&
-          isa<TagType>(Argument.getAsType()))
-        OS << Argument.getAsType().getAsString();
-      else
-        // Tries to print the argument with location info if exists.
-        printArgument(Arg, Policy, ArgOS,
-                      TemplateParameterList::shouldIncludeTypeForArgument(
-                          Policy, TPL, ParmIndex));
+      // Tries to print the argument with location info if exists.
+      printArgument(Arg, Policy, ArgOS,
+                    TemplateParameterList::shouldIncludeTypeForArgument(
+                        Policy, TPL, ParmIndex));
     }
     StringRef ArgString = ArgOS.str();
 

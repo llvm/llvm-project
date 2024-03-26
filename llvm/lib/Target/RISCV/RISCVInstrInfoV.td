@@ -157,10 +157,8 @@ class SchedBinaryMC<string write, string read0, string read1,
 
 // For instructions with three operands.
 class SchedTernary<string write, string read0, string read1, string read2,
-                   string mx, int sew = 0, bit forceMasked = 0,
-                   bit forceMergeOpRead = 0>
-    : SchedNary<write, [read0, read1, read2], mx, sew, forceMasked,
-                forceMergeOpRead>;
+                   string mx, int sew = 0, bit forceMasked = 0>
+    : SchedNary<write, [read0, read1, read2], mx, sew, forceMasked>;
 class SchedTernaryMC<string write, string read0, string read1, string read2,
                      int sew = 0, bit forceMasked = 1>:
   SchedNary<write, [read0, read1, read2], "WorstCase", sew, forceMasked>;
@@ -577,7 +575,7 @@ multiclass VALU_IV_X<string opcodestr, bits<6> funct6> {
 }
 
 multiclass VALU_IV_I<string opcodestr, bits<6> funct6> {
-  def I  : VALUVI<funct6, opcodestr # ".vi", simm5>,
+  def I  : VALUVI<funct6, opcodestr # ".vi">,
            SchedUnaryMC<"WriteVIALUI", "ReadVIALUV">;
 }
 
@@ -663,7 +661,7 @@ multiclass VALUNoVm_IV_V_X<string opcodestr, bits<6> funct6> {
 
 multiclass VALUNoVm_IV_V_X_I<string opcodestr, bits<6> funct6>
    : VALUNoVm_IV_V_X<opcodestr, funct6> {
-  def I : VALUVINoVm<funct6, opcodestr # ".vi", simm5>,
+  def I : VALUVINoVm<funct6, opcodestr # ".vi">,
           SchedUnaryMC<"WriteVICALUI", "ReadVICALUV", forceMasked=0>;
 }
 
@@ -902,7 +900,7 @@ multiclass VCMP_IV_X<string opcodestr, bits<6> funct6> {
 }
 
 multiclass VCMP_IV_I<string opcodestr, bits<6> funct6> {
-  def I  : VALUVI<funct6, opcodestr # ".vi", simm5>,
+  def I  : VALUVI<funct6, opcodestr # ".vi">,
            SchedUnaryMC<"WriteVICmpI", "ReadVICmpV">;
 }
 
@@ -949,7 +947,7 @@ multiclass VSALU_IV_V_X<string opcodestr, bits<6> funct6> {
 
 multiclass VSALU_IV_V_X_I<string opcodestr, bits<6> funct6>
     : VSALU_IV_V_X<opcodestr, funct6> {
-  def I  : VALUVI<funct6, opcodestr # ".vi", simm5>,
+  def I  : VALUVI<funct6, opcodestr # ".vi">,
            SchedUnaryMC<"WriteVSALUI", "ReadVSALUV">;
 }
 

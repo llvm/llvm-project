@@ -108,6 +108,7 @@ Changes to the RISC-V Backend
 * The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 0.8.1 Pointer Masking extensions are supported.
 * The experimental Ssqosid extension is supported.
 * Zacas is no longer experimental.
+* Added the CSR names from the Resumable Non-Maskable Interrupts (Smrnmi) extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -145,6 +146,8 @@ Changes to the C API
   * ``LLVMGetPrologueData``
   * ``LLVMSetPrologueData``
 
+* Deprecated ``LLVMConstNUWNeg`` and ``LLVMBuildNUWNeg``.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -173,6 +176,15 @@ Changes to the LLVM tools
 * llvm-objcopy now supports ``--set-symbol-visibility`` and
   ``--set-symbols-visibility`` options for ELF input to change the
   visibility of symbols.
+
+* llvm-objcopy now supports ``--skip-symbol`` and ``--skip-symbols`` options
+  for ELF input to skip the specified symbols when executing other options
+  that can change a symbol's name, binding or visibility.
+
+* llvm-profgen now supports COFF+DWARF binaries. This enables Sample-based PGO
+  on Windows using Intel VTune's SEP. For details on usage, see the `end-user
+  documentation for SPGO
+  <https://clang.llvm.org/docs/UsersManual.html#using-sampling-profilers>`_.
 
 Changes to LLDB
 ---------------------------------

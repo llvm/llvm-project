@@ -1098,7 +1098,7 @@ static bool ProcessFormatStringLiteral(const Expr *FormatExpr,
     const ConstantArrayType *T =
         Context.getAsConstantArrayType(Format->getType());
     assert(T && "String literal not of constant array type!");
-    size_t TypeSize = T->getSize().getZExtValue();
+    size_t TypeSize = T->getZExtSize();
     // In case there's a null byte somewhere.
     StrLen = std::min(std::max(TypeSize, size_t(1)) - 1, FormatStrRef.find(0));
     return true;
@@ -2399,6 +2399,48 @@ static bool SemaBuiltinPopcountg(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
+/// Checks that __builtin_{clzg,ctzg} was called with a first argument, which is
+/// an unsigned integer, and an optional second argument, which is promoted to
+/// an 'int'.
+static bool SemaBuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
+  if (checkArgCountRange(S, TheCall, 1, 2))
+    return true;
+
+  ExprResult Arg0Res = S.DefaultLvalueConversion(TheCall->getArg(0));
+  if (Arg0Res.isInvalid())
+    return true;
+
+  Expr *Arg0 = Arg0Res.get();
+  TheCall->setArg(0, Arg0);
+
+  QualType Arg0Ty = Arg0->getType();
+
+  if (!Arg0Ty->isUnsignedIntegerType()) {
+    S.Diag(Arg0->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+        << 1 << /*unsigned integer ty*/ 7 << Arg0Ty;
+    return true;
+  }
+
+  if (TheCall->getNumArgs() > 1) {
+    ExprResult Arg1Res = S.UsualUnaryConversions(TheCall->getArg(1));
+    if (Arg1Res.isInvalid())
+      return true;
+
+    Expr *Arg1 = Arg1Res.get();
+    TheCall->setArg(1, Arg1);
+
+    QualType Arg1Ty = Arg1->getType();
+
+    if (!Arg1Ty->isSpecificBuiltinType(BuiltinType::Int)) {
+      S.Diag(Arg1->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << 2 << /*'int' ty*/ 8 << Arg1Ty;
+      return true;
+    }
+  }
+
+  return false;
+}
+
 ExprResult
 Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                                CallExpr *TheCall) {
@@ -3185,6 +3227,11 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_popcountg:
     if (SemaBuiltinPopcountg(*this, TheCall))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_clzg:
+  case Builtin::BI__builtin_ctzg:
+    if (SemaBuiltinCountZeroBitsGeneric(*this, TheCall))
       return ExprError();
     break;
   }
@@ -5577,6 +5624,21 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
             TheCall, /*CheckForFloatArgs*/
             TheCall->getArg(0)->getType()->hasFloatingRepresentation()))
       return true;
+    break;
+  }
+  // Note these are llvm builtins that we want to catch invalid intrinsic
+  // generation. Normal handling of these builitns will occur elsewhere.
+  case Builtin::BI__builtin_elementwise_cos:
+  case Builtin::BI__builtin_elementwise_sin:
+  case Builtin::BI__builtin_elementwise_log:
+  case Builtin::BI__builtin_elementwise_log2:
+  case Builtin::BI__builtin_elementwise_log10:
+  case Builtin::BI__builtin_elementwise_pow:
+  case Builtin::BI__builtin_elementwise_sqrt:
+  case Builtin::BI__builtin_elementwise_trunc: {
+    if (CheckFloatOrHalfRepresentations(this, TheCall))
+      return true;
+    break;
   }
   }
   return false;
@@ -9647,7 +9709,7 @@ bool Sema::SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
   // vector argument can be supported in all of them.
   if (ElementTy->isVectorType() && IsFPClass) {
     VectorResultTy = GetSignedVectorType(ElementTy);
-    ElementTy = ElementTy->getAs<VectorType>()->getElementType();
+    ElementTy = ElementTy->castAs<VectorType>()->getElementType();
   }
 
   // This operation requires a non-_Complex floating-point number.
@@ -12982,7 +13044,7 @@ static void CheckFormatString(
   const ConstantArrayType *T =
     S.Context.getAsConstantArrayType(FExpr->getType());
   assert(T && "String literal not of constant array type!");
-  size_t TypeSize = T->getSize().getZExtValue();
+  size_t TypeSize = T->getZExtSize();
   size_t StrLen = std::min(std::max(TypeSize, size_t(1)) - 1, StrRef.size());
   const unsigned numDataArgs = Args.size() - firstDataArg;
 
@@ -13042,7 +13104,7 @@ bool Sema::FormatStringHasSArg(const StringLiteral *FExpr) {
   // Account for cases where the string literal is truncated in a declaration.
   const ConstantArrayType *T = Context.getAsConstantArrayType(FExpr->getType());
   assert(T && "String literal not of constant array type!");
-  size_t TypeSize = T->getSize().getZExtValue();
+  size_t TypeSize = T->getZExtSize();
   size_t StrLen = std::min(std::max(TypeSize, size_t(1)) - 1, StrRef.size());
   return analyze_format_string::ParseFormatStringHasSArg(Str, Str + StrLen,
                                                          getLangOpts(),
@@ -14005,7 +14067,7 @@ static bool isConstantSizeArrayWithMoreThanOneElement(QualType Ty,
   // Only handle constant-sized or VLAs, but not flexible members.
   if (const ConstantArrayType *CAT = Context.getAsConstantArrayType(Ty)) {
     // Only issue the FIXIT for arrays of size > 1.
-    if (CAT->getSize().getSExtValue() <= 1)
+    if (CAT->getZExtSize() <= 1)
       return false;
   } else if (!Ty->isVariableArrayType()) {
     return false;
