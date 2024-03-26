@@ -5701,7 +5701,8 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
       UseMI.findRegisterUseOperandIdx(Reg) != 2)
     return false;
   // For CMP instructions the immediate can only be at index 1.
-  if ((NewOpc == X86::CMP64ri32 || NewOpc == X86::CMP32ri) &&
+  if (((NewOpc == X86::CMP64ri32 || NewOpc == X86::CMP32ri) ||
+       (NewOpc == X86::CCMP64ri32 || NewOpc == X86::CCMP32ri)) &&
       UseMI.findRegisterUseOperandIdx(Reg) != 1)
     return false;
 
@@ -5746,7 +5747,7 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
       unsigned Op1 = 1, Op2 = CommuteAnyOperandIndex;
       unsigned ImmOpNum = 2;
       if (!UseMI.getOperand(0).isDef()) {
-        Op1 = 0; // TEST, CMP
+        Op1 = 0; // TEST, CMP, CTEST, CCMP
         ImmOpNum = 1;
       }
       if (Opc == TargetOpcode::COPY)

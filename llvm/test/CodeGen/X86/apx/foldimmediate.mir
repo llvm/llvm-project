@@ -76,7 +76,7 @@ body: |
     ; CHECK-NEXT: NOOP implicit [[SBB64ri32_]]
     ; CHECK-NEXT: CCMP64ri32 [[COPY1]], 81, 2, 10, implicit-def $eflags, implicit $eflags
     ; CHECK-NEXT: NOOP implicit $eflags
-    ; CHECK-NEXT: CCMP64ri32 [[SUBREG_TO_REG]], 81, 2, 10, implicit-def $eflags, implicit $eflags
+    ; CHECK-NEXT: CCMP64rr [[SUBREG_TO_REG]], [[COPY1]], 2, 10, implicit-def $eflags, implicit $eflags
     ; CHECK-NEXT: NOOP implicit $eflags
     %0 = MOV32ri 81
     %1 = COPY $edi
