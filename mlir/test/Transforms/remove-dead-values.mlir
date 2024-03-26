@@ -357,3 +357,30 @@ func.func @kernel(%arg0: memref<18xf32>) {
 // CHECK: gpu.launch blocks
 // CHECK: memref.store
 // CHECK-NEXT: gpu.terminator
+
+// -----
+
+// Even though %arg0 is not used in func0,
+// we can't remove the parameter, as the function is public,
+// so `%true = arith.constant true` needs to be kept in func1 as well.
+//
+module {
+// CHECK:       func.func @func0(%arg0: i1, %arg1: i1) -> (i1, i1) {
+// CHECK-NEXT:    %true = arith.constant true
+// CHECK-NEXT:    return %arg1, %true : i1, i1
+// CHECK-NEXT:  }
+  func.func @func0(%arg0: i1, %arg1: i1) -> (i1, i1) {
+    %true = arith.constant true
+    return %arg1, %true : i1, i1
+  }
+// CHECK:       func.func @func1(%arg0: i1) -> (i1, i1) {
+// CHECK-NEXT:    %true = arith.constant true
+// CHECK-NEXT:    %0:2 = call @func0(%true, %arg0) : (i1, i1) -> (i1, i1)
+// CHECK-NEXT:    return %0#0, %0#1 : i1, i1
+// CHECK-NEXT:  }
+  func.func @func1(%arg0: i1) -> (i1, i1) {
+    %true = arith.constant true
+    %0:2 = call @func0(%true, %arg0) : (i1, i1) -> (i1, i1)
+    return %0#0, %0#1 : i1, i1
+  }
+}
