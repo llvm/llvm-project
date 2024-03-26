@@ -1015,7 +1015,7 @@ value llvm_dibuild_expression(value Builder, value Addr) {
 
 /* llmodule -> bool */
 value llvm_is_new_dbg_info_format(value Module) {
-  return Bool_val(LLVMIsNewDbgInfoFormat(Module_val(Module)));
+  return Val_bool(LLVMIsNewDbgInfoFormat(Module_val(Module)));
 }
 
 /* llmodule -> bool -> unit */

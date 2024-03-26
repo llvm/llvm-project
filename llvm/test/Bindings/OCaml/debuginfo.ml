@@ -40,6 +40,7 @@ let new_module () =
   let m = Llvm.create_module context module_name in
   let () = prepare_target m in
   let () = Llvm_debuginfo.set_is_new_dbg_info_format m true in
+  insist (Llvm_debuginfo.is_new_dbg_info_format m);
   m
 
 let test_get_module () =
