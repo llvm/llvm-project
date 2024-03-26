@@ -18,12 +18,18 @@
 #include <atomic>
 #include <cstring>
 #include <functional>
-#include <hsa.h>
-#include <hsa_ext_amd.h>
 #include <iostream>
 #include <list>
 #include <mutex>
 #include <thread>
+
+#if __has_include("hsa/hsa.h")
+#include "hsa/hsa.h"
+#include "hsa/hsa_ext_amd.h"
+#else
+#include "hsa.h"
+#include "hsa_ext_amd.h"
+#endif
 
 /// Defines how many GPUs are maximally supported on a system
 #define AMD_MAX_HSA_AGENTS 16

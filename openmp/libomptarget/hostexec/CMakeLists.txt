@@ -181,6 +181,7 @@ foreach(archname ${HOSTRPC_ARCHS})
       elseif(${archname} STREQUAL "nvptx")
          set(openmp_device_args 
 	      -I../../runtime/src  # to pickup omp.h, we may need a dependency
+        -I${CMAKE_CURRENT_SOURCE_DIR}/../DeviceRTL/include # pickup Platform.h
 	      -fopenmp -fopenmp-cuda-mode -mllvm -openmp-opt-disable 
 	      -std=c++17 -fvisibility=hidden 
 	      -fopenmp-targets=${triple} -Xopenmp-target=${triple} -march=${mcpu}

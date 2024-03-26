@@ -23,31 +23,12 @@ endif()
 
 libomptarget_say("Building CUDA NextGen offloading plugin.")
 
-set(LIBOMPTARGET_DLOPEN_LIBCUDA OFF)
-option(LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA "Build with dlopened libcuda" ${LIBOMPTARGET_DLOPEN_LIBCUDA})
+# Create the library and add the default arguments.
+add_target_library(omptarget.rtl.cuda CUDA)
 
-add_llvm_library(omptarget.rtl.cuda SHARED
-  src/rtl.cpp
+target_sources(omptarget.rtl.cuda PRIVATE src/rtl.cpp)
 
-  LINK_COMPONENTS
-  Support
-  Object
-
-  LINK_LIBS PRIVATE
-  OMPT
-  PluginCommon
-  ${OPENMP_PTHREAD_LIB}
-
-  NO_INSTALL_RPATH
-  BUILDTREE_ONLY
-)
-
-if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-  target_link_libraries(omptarget.rtl.cuda PRIVATE
-  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports,-z,defs")
-endif()
-
-
+option(LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA "Build with dlopened libcuda" OFF)
 if(LIBOMPTARGET_DEP_CUDA_FOUND AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA)
   libomptarget_say("Building CUDA plugin linked against libcuda")
   target_link_libraries(omptarget.rtl.cuda PRIVATE CUDA::cuda_driver)
@@ -56,13 +37,6 @@ else()
   target_include_directories(omptarget.rtl.cuda PRIVATE dynamic_cuda)
   target_sources(omptarget.rtl.cuda PRIVATE dynamic_cuda/cuda.cpp)
 endif()
-
-# Define debug prefix. TODO: This should be automatized in the Debug.h but it
-# requires changing the original plugins.
-target_compile_definitions(omptarget.rtl.cuda PRIVATE TARGET_NAME="CUDA")
-target_compile_definitions(omptarget.rtl.cuda PRIVATE DEBUG_PREFIX="TARGET CUDA RTL")
-
-target_include_directories(omptarget.rtl.cuda PRIVATE ${LIBOMPTARGET_INCLUDE_DIR})
 
 # Configure testing for the CUDA plugin. We will build tests if we could a
 # functional NVIDIA GPU on the system, or if manually specifies by the user.
@@ -83,9 +57,5 @@ install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}
 
 if(NOT DEFINED CMAKE_INSTALL_RPATH)
 set_target_properties(omptarget.rtl.cuda PROPERTIES
-  INSTALL_RPATH "$ORIGIN")
+  INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
 endif()
-
-set_target_properties(omptarget.rtl.amdgpu PROPERTIES
-  BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
-  CXX_VISIBILITY_PRESET protected)
