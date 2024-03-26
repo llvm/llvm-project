@@ -609,6 +609,9 @@ namespace {
                            SDValue &CC, bool MatchStrict = false) const;
     bool isOneUseSetCC(SDValue N) const;
 
+    SDValue foldAddToAvg(SDNode *N, const SDLoc &DL);
+    SDValue foldSubToAvg(SDNode *N, const SDLoc &DL);
+
     SDValue SimplifyNodeWithTwoResults(SDNode *N, unsigned LoOp,
                                          unsigned HiOp);
     SDValue CombineConsecutiveLoads(SDNode *N, EVT VT);
@@ -2529,19 +2532,23 @@ static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(IsAdd ? ISD::SUB : ISD::ADD, DL, VT, C1, LowBit);
 }
 
-// Attempt to form avgceilu(A, B) from (A | B) - ((A ^ B) >> 1)
-static SDValue combineFixedwidthToAVGCEILU(SDNode *N, SelectionDAG &DAG) {
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+// Attempt to form avgceil(A, B) from (A | B) - ((A ^ B) >> 1)
+SDValue DAGCombiner::foldSubToAvg(SDNode *N, const SDLoc &DL) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N0.getValueType();
-  SDLoc DL(N);
-  if (TLI.isOperationLegal(ISD::AVGCEILU, VT)) {
-    SDValue A, B;
-    if (sd_match(N, m_Sub(m_Or(m_Value(A), m_Value(B)),
-                          m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
-                                m_SpecificInt(1))))) {
-      return DAG.getNode(ISD::AVGCEILU, DL, VT, A, B);
-    }
+  SDValue A, B;
+
+  if (hasOperation(ISD::AVGCEILU, VT) &&
+      sd_match(N, m_Sub(m_Or(m_Value(A), m_Value(B)),
+                        m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
+                              m_SpecificInt(1))))) {
+    return DAG.getNode(ISD::AVGCEILU, DL, VT, A, B);
+  }
+  if (hasOperation(ISD::AVGCEILS, VT) &&
+      sd_match(N, m_Sub(m_Or(m_Value(A), m_Value(B)),
+                        m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)),
+                              m_SpecificInt(1))))) {
+    return DAG.getNode(ISD::AVGCEILS, DL, VT, A, B);
   }
   return SDValue();
 }
@@ -2837,20 +2844,25 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
   return SDValue();
 }
 
-// Attempt to form avgflooru(A, B) from (A & B) + ((A ^ B) >> 1)
-static SDValue combineFixedwidthToAVGFLOORU(SDNode *N, SelectionDAG &DAG) {
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+// Attempt to form avgfloor(A, B) from (A & B) + ((A ^ B) >> 1)
+SDValue DAGCombiner::foldAddToAvg(SDNode *N, const SDLoc &DL) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N0.getValueType();
-  SDLoc DL(N);
-  if (TLI.isOperationLegal(ISD::AVGFLOORU, VT)) {
-    SDValue A, B;
-    if (sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
-                          m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
-                                m_SpecificInt(1))))) {
-      return DAG.getNode(ISD::AVGFLOORU, DL, VT, A, B);
-    }
+  SDValue A, B;
+
+  if (hasOperation(ISD::AVGFLOORU, VT) &&
+      sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
+                        m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
+                              m_SpecificInt(1))))) {
+    return DAG.getNode(ISD::AVGFLOORU, DL, VT, A, B);
   }
+  if (hasOperation(ISD::AVGFLOORS, VT) &&
+      sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
+                        m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)),
+                              m_SpecificInt(1))))) {
+    return DAG.getNode(ISD::AVGFLOORS, DL, VT, A, B);
+  }
+
   return SDValue();
 }
 
@@ -2869,8 +2881,8 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   if (SDValue V = foldAddSubOfSignBit(N, DAG))
     return V;
 
-  // Try to match AVGFLOORU fixedwidth pattern
-  if (SDValue V = combineFixedwidthToAVGFLOORU(N, DAG))
+  // Try to match AVGFLOOR fixedwidth pattern
+  if (SDValue V = foldAddToAvg(N, DL))
     return V;
 
   // fold (a+b) -> (a|b) iff a and b share no bits.
@@ -3868,8 +3880,8 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   if (SDValue V = foldAddSubOfSignBit(N, DAG))
     return V;
 
-  // Try to match AVGCEILU fixedwidth pattern
-  if (SDValue V = combineFixedwidthToAVGCEILU(N, DAG))
+  // Try to match AVGCEIL fixedwidth pattern
+  if (SDValue V = foldSubToAvg(N, DL))
     return V;
 
   if (SDValue V = foldAddSubMasked1(false, N0, N1, DAG, SDLoc(N)))
@@ -24200,7 +24212,7 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
   // TODO: Use "BaseIndexOffset" to make this more effective.
   SDValue NewAddr = DAG.getMemBasePlusOffset(Ld->getBasePtr(), Offset, DL);
 
-  LocationSize StoreSize = MemoryLocation::getSizeOrUnknown(VT.getStoreSize());
+  LocationSize StoreSize = LocationSize::precise(VT.getStoreSize());
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO;
   if (Offset.isScalable()) {
@@ -26120,6 +26132,13 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
     }
   }
 
+  // Handle case where we've ended up inserting back into the source vector
+  // we extracted the subvector from.
+  // insert_subvector(N0, extract_subvector(N0, N2), N2) --> N0
+  if (N1.getOpcode() == ISD::EXTRACT_SUBVECTOR && N1.getOperand(0) == N0 &&
+      N1.getOperand(1) == N2)
+    return N0;
+
   // Simplify scalar inserts into an undef vector:
   // insert_subvector undef, (splat X), N2 -> splat X
   if (N0.isUndef() && N1.getOpcode() == ISD::SPLAT_VECTOR)
@@ -27845,14 +27864,10 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
                  : (LSN->getAddressingMode() == ISD::PRE_DEC)
                      ? -1 * C->getSExtValue()
                      : 0;
-      LocationSize Size =
-          MemoryLocation::getSizeOrUnknown(LSN->getMemoryVT().getStoreSize());
-      return {LSN->isVolatile(),
-              LSN->isAtomic(),
-              LSN->getBasePtr(),
-              Offset /*base offset*/,
-              Size,
-              LSN->getMemOperand()};
+      TypeSize Size = LSN->getMemoryVT().getStoreSize();
+      return {LSN->isVolatile(),           LSN->isAtomic(),
+              LSN->getBasePtr(),           Offset /*base offset*/,
+              LocationSize::precise(Size), LSN->getMemOperand()};
     }
     if (const auto *LN = cast<LifetimeSDNode>(N))
       return {false /*isVolatile*/,
@@ -27894,6 +27909,13 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
       return false;
   }
 
+  // If NumBytes is scalable and offset is not 0, conservatively return may
+  // alias
+  if ((MUC0.NumBytes.hasValue() && MUC0.NumBytes.isScalable() &&
+       MUC0.Offset != 0) ||
+      (MUC1.NumBytes.hasValue() && MUC1.NumBytes.isScalable() &&
+       MUC1.Offset != 0))
+    return true;
   // Try to prove that there is aliasing, or that there is no aliasing. Either
   // way, we can return now. If nothing can be proved, proceed with more tests.
   bool IsAlias;
@@ -27924,18 +27946,22 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
   Align OrigAlignment1 = MUC1.MMO->getBaseAlign();
   LocationSize Size0 = MUC0.NumBytes;
   LocationSize Size1 = MUC1.NumBytes;
+
   if (OrigAlignment0 == OrigAlignment1 && SrcValOffset0 != SrcValOffset1 &&
-      Size0.hasValue() && Size1.hasValue() && Size0 == Size1 &&
-      OrigAlignment0 > Size0.getValue() &&
-      SrcValOffset0 % Size0.getValue() == 0 &&
-      SrcValOffset1 % Size1.getValue() == 0) {
+      Size0.hasValue() && Size1.hasValue() && !Size0.isScalable() &&
+      !Size1.isScalable() && Size0 == Size1 &&
+      OrigAlignment0 > Size0.getValue().getKnownMinValue() &&
+      SrcValOffset0 % Size0.getValue().getKnownMinValue() == 0 &&
+      SrcValOffset1 % Size1.getValue().getKnownMinValue() == 0) {
     int64_t OffAlign0 = SrcValOffset0 % OrigAlignment0.value();
     int64_t OffAlign1 = SrcValOffset1 % OrigAlignment1.value();
 
     // There is no overlap between these relatively aligned accesses of
     // similar size. Return no alias.
-    if ((OffAlign0 + (int64_t)Size0.getValue()) <= OffAlign1 ||
-        (OffAlign1 + (int64_t)Size1.getValue()) <= OffAlign0)
+    if ((OffAlign0 + static_cast<int64_t>(
+                         Size0.getValue().getKnownMinValue())) <= OffAlign1 ||
+        (OffAlign1 + static_cast<int64_t>(
+                         Size1.getValue().getKnownMinValue())) <= OffAlign0)
       return false;
   }
 
@@ -27952,12 +27978,18 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
       Size0.hasValue() && Size1.hasValue()) {
     // Use alias analysis information.
     int64_t MinOffset = std::min(SrcValOffset0, SrcValOffset1);
-    int64_t Overlap0 = Size0.getValue() + SrcValOffset0 - MinOffset;
-    int64_t Overlap1 = Size1.getValue() + SrcValOffset1 - MinOffset;
+    int64_t Overlap0 =
+        Size0.getValue().getKnownMinValue() + SrcValOffset0 - MinOffset;
+    int64_t Overlap1 =
+        Size1.getValue().getKnownMinValue() + SrcValOffset1 - MinOffset;
+    LocationSize Loc0 =
+        Size0.isScalable() ? Size0 : LocationSize::precise(Overlap0);
+    LocationSize Loc1 =
+        Size1.isScalable() ? Size1 : LocationSize::precise(Overlap1);
     if (AA->isNoAlias(
-            MemoryLocation(MUC0.MMO->getValue(), Overlap0,
+            MemoryLocation(MUC0.MMO->getValue(), Loc0,
                            UseTBAA ? MUC0.MMO->getAAInfo() : AAMDNodes()),
-            MemoryLocation(MUC1.MMO->getValue(), Overlap1,
+            MemoryLocation(MUC1.MMO->getValue(), Loc1,
                            UseTBAA ? MUC1.MMO->getAAInfo() : AAMDNodes())))
       return false;
   }

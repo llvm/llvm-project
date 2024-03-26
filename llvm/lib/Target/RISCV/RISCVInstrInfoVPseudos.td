@@ -3372,22 +3372,6 @@ multiclass VPseudoVMAC_VV_VX_AAXA<string Constraint = ""> {
   }
 }
 
-multiclass VPseudoVMAC_VV_VF_AAXA<string Constraint = ""> {
-  foreach m = MxListF in {
-    defm "" : VPseudoTernaryV_VV_AAXA<m, Constraint>,
-              SchedTernary<"WriteVFMulAddV", "ReadVFMulAddV", "ReadVFMulAddV",
-                           "ReadVFMulAddV", m.MX>;
-  }
-
-  foreach f = FPList in {
-    foreach m = f.MxList in {
-      defm "" : VPseudoTernaryV_VF_AAXA<m, f, Constraint>,
-                SchedTernary<"WriteVFMulAddF", "ReadVFMulAddV", "ReadVFMulAddF",
-                             "ReadVFMulAddV", m.MX>;
-    }
-  }
-}
-
 multiclass VPseudoVMAC_VV_VF_AAXA_RM<string Constraint = ""> {
   foreach m = MxListF in {
     defm "" : VPseudoTernaryV_VV_AAXA_RM<m, Constraint>,

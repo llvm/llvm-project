@@ -57,6 +57,12 @@ ABI Changes in This Version
   inline member function that contains a static local variable with a dynamic
   initializer is declared with ``__declspec(dllimport)``. (#GH83616).
 
+- Fixed Microsoft name mangling of lifetime extended temporary objects. This
+  change corrects missing back reference registrations that could result in
+  incorrect back reference indexes and suprising demangled name results. Since
+  MSVC uses a different mangling for these objects, compatibility is not affected.
+  (#GH85423).
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
@@ -289,6 +295,10 @@ Improvements to Clang's diagnostics
 - Clang now correctly diagnoses no arguments to a variadic macro parameter as a C23/C++20 extension.
   Fixes #GH84495.
 
+- Clang no longer emits a ``-Wexit-time destructors`` warning on static variables explicitly
+  annotated with the ``clang::always_destroy`` attribute.
+  Fixes #GH68686, #GH86486
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -437,6 +447,8 @@ Bug Fixes to C++ Support
 - Clang's __builtin_bit_cast will now produce a constant value for records with empty bases. See:
   (#GH82383)
 - Fix a crash when instantiating a lambda that captures ``this`` outside of its context. Fixes (#GH85343).
+- Fix an issue where a namespace alias could be defined using a qualified name (all name components
+  following the first `::` were ignored).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -520,6 +532,7 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 
 - ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
+- Profile names in ``-march`` option are now supported.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
