@@ -1210,12 +1210,22 @@ Instruction *Instruction::cloneImpl() const {
 
 void Instruction::swapProfMetadata() {
   MDNode *ProfileData = getBranchWeightMDNode(*this);
-  if (!ProfileData || ProfileData->getNumOperands() != 3)
+  if(!isBranchWeightMD(ProfileData))
     return;
 
-  // The first operand is the name. Fetch them backwards and build a new one.
-  Metadata *Ops[] = {ProfileData->getOperand(0), ProfileData->getOperand(2),
-                     ProfileData->getOperand(1)};
+  SmallVector<Metadata *, 4> Ops;
+  unsigned int FirstIdx = getBranchWeightOffset(ProfileData);
+  unsigned int SecondIdx = FirstIdx + 1;
+  // If there are more weights past the second, we can't swap them
+  if(ProfileData->getNumOperands() > SecondIdx +1)
+    return;
+  Ops.push_back(ProfileData->getOperand(0));
+  if (hasExpectedProvenance(ProfileData)) {
+    Ops.push_back(ProfileData->getOperand(1));
+  }
+  // Switch the order of the weights
+  Ops.push_back(ProfileData->getOperand(SecondIdx));
+  Ops.push_back(ProfileData->getOperand(FirstIdx));
   setMetadata(LLVMContext::MD_prof,
               MDNode::get(ProfileData->getContext(), Ops));
 }
