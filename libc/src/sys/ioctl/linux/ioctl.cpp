@@ -20,11 +20,11 @@ namespace LIBC_NAMESPACE {
 // This function is currently linux only. It has to be refactored suitably if
 // madvise is to be supported on non-linux operating systems also.
 LLVM_LIBC_FUNCTION(int, ioctl, (int fd, unsigned long request, ...)) {
-  va_list ptrToMemory;
-  va_start(ptrToMemory, 1);
-  va_arg(ptrToMemory, void *) int ret =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_ioctl, fd, request, ptrToMemory);
-  va_end(ptrToMemory);
+  va_list ptr_to_memory;
+  va_start(ptr_to_memory, 1);
+  va_arg(ptr_to_memory, void *) int ret =
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_ioctl, fd, request, ptr_to_memory);
+  va_end(ptr_to_memory);
 
   // A negative return value indicates an error with the magnitude of the
   // value being the error code.
