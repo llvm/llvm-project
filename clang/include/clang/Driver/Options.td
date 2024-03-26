@@ -4140,8 +4140,6 @@ defm strict_return : BoolFOption<"strict-return",
 
 let Group = f_Group in {
   let Visibility = [ClangOption, CC1Option] in {
-    def fptrauth_intrinsics : Flag<["-"], "fptrauth-intrinsics">,
-      HelpText<"Enable pointer authentication intrinsics">;
     def fptrauth_calls : Flag<["-"], "fptrauth-calls">,
       HelpText<"Enable signing and authentication of all indirect calls">;
     def fptrauth_returns : Flag<["-"], "fptrauth-returns">,
@@ -4153,7 +4151,6 @@ let Group = f_Group in {
     def fptrauth_soft : Flag<["-"], "fptrauth-soft">,
       HelpText<"Enable software lowering of pointer authentication">;
   }
-  def fno_ptrauth_intrinsics : Flag<["-"], "fno-ptrauth-intrinsics">;
   def fno_ptrauth_calls : Flag<["-"], "fno-ptrauth-calls">;
   def fno_ptrauth_returns : Flag<["-"], "fno-ptrauth-returns">;
   def fno_ptrauth_indirect_gotos : Flag<["-"], "fno-ptrauth-indirect-gotos">;
@@ -4173,6 +4170,10 @@ let Group = f_Group in {
     HelpText<"Enable Pointer Authentication kernel ABI version">;
   def fno_ptrauth_kernel_abi_version : Flag<["-"], "fno-ptrauth-kernel-abi-version">,
     HelpText<"Disable Pointer Authentication kernel ABI versioning">;
+}
+
+let Flags = [TargetSpecific] in {
+defm ptrauth_intrinsics : OptInCC1FFlag<"ptrauth-intrinsics", "Enable pointer authentication intrinsics">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,

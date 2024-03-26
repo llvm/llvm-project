@@ -1783,6 +1783,9 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
   }
 
   AddUnalignedAccessWarning(CmdArgs);
+
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_intrinsics,
+                    options::OPT_fno_ptrauth_intrinsics);
 }
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
@@ -7437,10 +7440,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
 
   // -fno-common is the default, set -fcommon only when that flag is set.
   Args.addOptInFlag(CmdArgs, options::OPT_fcommon, options::OPT_fno_common);
-
-  if (Args.hasFlag(options::OPT_fptrauth_intrinsics,
-                   options::OPT_fno_ptrauth_intrinsics, false))
-    CmdArgs.push_back("-fptrauth-intrinsics");
 
   if (Args.hasFlag(options::OPT_fptrauth_calls,
                    options::OPT_fno_ptrauth_calls, false))
