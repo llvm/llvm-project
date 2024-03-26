@@ -8353,6 +8353,38 @@ SDValue SITargetLowering::lowerWaveID(SelectionDAG &DAG, SDValue Op) const {
                      DAG.getConstant(25, SL, VT), DAG.getConstant(5, SL, VT));
 }
 
+SDValue SITargetLowering::lowerWavegroupID(SelectionDAG &DAG,
+                                           SDValue Op) const {
+  // WavegroupID is taken from the low order bits of WaveIDInGroup which is in
+  // TTMP8[29:25].
+  if (!Subtarget->hasArchitectedSGPRs())
+    return {};
+  SDLoc SL(Op);
+  MVT VT = MVT::i32;
+  SDValue TTMP8 = DAG.getCopyFromReg(DAG.getEntryNode(), SL, AMDGPU::TTMP8, VT);
+  constexpr unsigned WavegroupCount = 4;
+  constexpr unsigned WavegroupCountBits = CTLog2<WavegroupCount>();
+  return DAG.getNode(AMDGPUISD::BFE_U32, SL, VT, TTMP8,
+                     DAG.getConstant(25, SL, VT),
+                     DAG.getConstant(WavegroupCountBits, SL, VT));
+}
+
+SDValue SITargetLowering::lowerWaveIDInWavegroup(SelectionDAG &DAG,
+                                                 SDValue Op) const {
+  // WaveIDInWavegroup is in GROUP_INFO[19:16]. GROUP_INFO only exists in
+  // GFX13+.
+  if (Subtarget->getGeneration() < AMDGPUSubtarget::GFX13)
+    return {};
+  SDLoc SL(Op);
+  using namespace AMDGPU::Hwreg;
+  return {
+      DAG.getMachineNode(
+          AMDGPU::S_GETREG_B32, SL, MVT::i32,
+          DAG.getTargetConstant(
+              HwregEncoding::encode(ID_WAVE_GROUP_INFO, 16, 4), SL, MVT::i32)),
+      0};
+}
+
 SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
                                           unsigned Dim,
                                           const ArgDescriptor &Arg) const {
@@ -8567,6 +8599,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                : DAG.getUNDEF(VT);
   case Intrinsic::amdgcn_wave_id:
     return lowerWaveID(DAG, Op);
+  case Intrinsic::amdgcn_wavegroup_id:
+    return lowerWavegroupID(DAG, Op);
+  case Intrinsic::amdgcn_wave_id_in_wavegroup:
+    return lowerWaveIDInWavegroup(DAG, Op);
   case Intrinsic::amdgcn_lds_kernel_id: {
     if (MFI->isEntryFunction())
       return getLDSKernelId(DAG, DL);

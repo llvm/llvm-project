@@ -7105,6 +7105,42 @@ bool AMDGPULegalizerInfo::legalizeWaveID(MachineInstr &MI,
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeWavegroupID(MachineInstr &MI,
+                                              MachineIRBuilder &B) const {
+  // WavegroupID is taken from the low order bits of WaveIDInGroup which is in
+  // TTMP8[29:25].
+  if (!ST.hasArchitectedSGPRs())
+    return false;
+  LLT S32 = LLT::scalar(32);
+  Register DstReg = MI.getOperand(0).getReg();
+  auto TTMP8 = B.buildCopy(S32, Register(AMDGPU::TTMP8));
+  auto LSB = B.buildConstant(S32, 25);
+  constexpr unsigned WavegroupCount = 4;
+  constexpr unsigned WavegroupCountBits = CTLog2<WavegroupCount>();
+  auto Width = B.buildConstant(S32, WavegroupCountBits);
+  B.buildUbfx(DstReg, TTMP8, LSB, Width);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeWaveIDInWavegroup(MachineInstr &MI,
+                                                    MachineIRBuilder &B) const {
+  // WaveIDInWavegroup is in GROUP_INFO[19:16]. GROUP_INFO only exists in
+  // GFX13+.
+  if (ST.getGeneration() < AMDGPUSubtarget::GFX13)
+    return false;
+  MachineRegisterInfo &MRI = *B.getMRI();
+  Register DstReg = MI.getOperand(0).getReg();
+  if (!MRI.getRegClassOrNull(DstReg))
+    MRI.setRegClass(DstReg, &AMDGPU::SReg_32RegClass);
+  using namespace AMDGPU::Hwreg;
+  B.buildInstr(AMDGPU::S_GETREG_B32)
+      .addDef(DstReg)
+      .addImm(HwregEncoding::encode(ID_WAVE_GROUP_INFO, 16, 4));
+  MI.eraseFromParent();
+  return true;
+}
+
 static constexpr unsigned FPEnvModeBitField =
     AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 23);
 
@@ -7305,6 +7341,10 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_FLAT_NUM_WORKGROUPS);
   case Intrinsic::amdgcn_wave_id:
     return legalizeWaveID(MI, B);
+  case Intrinsic::amdgcn_wavegroup_id:
+    return legalizeWavegroupID(MI, B);
+  case Intrinsic::amdgcn_wave_id_in_wavegroup:
+    return legalizeWaveIDInWavegroup(MI, B);
   case Intrinsic::amdgcn_lds_kernel_id:
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::LDS_KERNEL_ID);

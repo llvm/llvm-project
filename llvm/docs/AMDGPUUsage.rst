@@ -1354,6 +1354,13 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
    llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4      Emit `v_mfma_scale_f32_32x32x64_f8f6f4`
 
+   llvm.amdgcn.wavegroup.id                        In a wavegroup-enabled dispatch, return the 0-based ID of the
+                                                   wavegroup within the workgroup. Otherwise the return value is
+                                                   undefined.
+
+   llvm.amdgcn.wave.id.in.wavegroup                In a wavegroup-enabled dispatch, return the 0-based ID of the wave
+                                                   within the wavegroup. Otherwise the return value is undefined.
+
   ==============================================   ==========================================================
 
 .. TODO::
