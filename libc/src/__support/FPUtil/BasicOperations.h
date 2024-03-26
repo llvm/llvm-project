@@ -39,7 +39,7 @@ LIBC_INLINE T fmin(T x, T y) {
     // y has different signs and both are not NaNs, we return the number
     // with negative sign.
     return (bitx.is_neg()) ? x : y;
-  return (x < y ? x : y);
+  return x < y ? x : y;
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
@@ -55,7 +55,7 @@ LIBC_INLINE T fmax(T x, T y) {
     // y has different signs and both are not NaNs, we return the number
     // with positive sign.
     return (bitx.is_neg() ? y : x);
-  return (x > y ? x : y);
+  return x > y ? x : y;
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
