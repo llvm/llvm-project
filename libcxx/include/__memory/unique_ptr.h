@@ -471,7 +471,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void swap(unique_ptr& __u) _NOEXCEPT { __ptr_.swap(__u.__ptr_); }
 };
 
-template <class _Tp, class _Dp, __enable_if_t<__is_swappable<_Dp>::value, int> = 0>
+template <class _Tp, class _Dp, __enable_if_t<__is_swappable_v<_Dp>, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void
 swap(unique_ptr<_Tp, _Dp>& __x, unique_ptr<_Tp, _Dp>& __y) _NOEXCEPT {
   __x.swap(__y);

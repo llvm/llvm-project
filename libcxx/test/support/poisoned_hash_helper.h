@@ -145,7 +145,7 @@ TEST_CONSTEXPR_CXX20 void test_hash_enabled(InputKey const& key) {
 #if TEST_STD_VER > 14
   static_assert(std::is_swappable<Hash>::value, "");
 #elif defined(_LIBCPP_VERSION)
-  static_assert(std::__is_swappable<Hash>::value, "");
+  static_assert(std::__is_swappable_v<Hash>, "");
 #endif
 
   // Hashable requirements

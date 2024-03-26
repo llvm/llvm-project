@@ -928,13 +928,12 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void swap(__hash_table& __u)
 #if _LIBCPP_STD_VER <= 11
-      _NOEXCEPT_(__is_nothrow_swappable<hasher>::value&& __is_nothrow_swappable<key_equal>::value &&
+      _NOEXCEPT_(__is_nothrow_swappable_v<hasher>&& __is_nothrow_swappable_v<key_equal> &&
                  (!allocator_traits<__pointer_allocator>::propagate_on_container_swap::value ||
-                  __is_nothrow_swappable<__pointer_allocator>::value) &&
-                 (!__node_traits::propagate_on_container_swap::value ||
-                  __is_nothrow_swappable<__node_allocator>::value));
+                  __is_nothrow_swappable_v<__pointer_allocator>) &&
+                 (!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>));
 #else
-      _NOEXCEPT_(__is_nothrow_swappable<hasher>::value&& __is_nothrow_swappable<key_equal>::value);
+      _NOEXCEPT_(__is_nothrow_swappable_v<hasher>&& __is_nothrow_swappable_v<key_equal>);
 #endif
 
   _LIBCPP_HIDE_FROM_ABI size_type max_bucket_count() const _NOEXCEPT { return max_size(); }
@@ -1985,12 +1984,12 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__equal_range_multi(const _Key& __k) c
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 void __hash_table<_Tp, _Hash, _Equal, _Alloc>::swap(__hash_table& __u)
 #if _LIBCPP_STD_VER <= 11
-    _NOEXCEPT_(__is_nothrow_swappable<hasher>::value&& __is_nothrow_swappable<key_equal>::value &&
+    _NOEXCEPT_(__is_nothrow_swappable_v<hasher>&& __is_nothrow_swappable_v<key_equal> &&
                (!allocator_traits<__pointer_allocator>::propagate_on_container_swap::value ||
-                __is_nothrow_swappable<__pointer_allocator>::value) &&
-               (!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable<__node_allocator>::value))
+                __is_nothrow_swappable_v<__pointer_allocator>) &&
+               (!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>))
 #else
-    _NOEXCEPT_(__is_nothrow_swappable<hasher>::value&& __is_nothrow_swappable<key_equal>::value)
+    _NOEXCEPT_(__is_nothrow_swappable_v<hasher>&& __is_nothrow_swappable_v<key_equal>)
 #endif
 {
   _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(

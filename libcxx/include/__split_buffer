@@ -187,7 +187,7 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __destruct_at_end(pointer __new_last, true_type) _NOEXCEPT;
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void swap(__split_buffer& __x)
-      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable<__alloc_rr>::value);
+      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__alloc_rr>);
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __invariants() const;
 
@@ -409,7 +409,7 @@ __split_buffer<_Tp, _Allocator>::operator=(__split_buffer&& __c)
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::swap(__split_buffer& __x)
-    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable<__alloc_rr>::value) {
+    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__alloc_rr>) {
   std::swap(__first_, __x.__first_);
   std::swap(__begin_, __x.__begin_);
   std::swap(__end_, __x.__end_);
