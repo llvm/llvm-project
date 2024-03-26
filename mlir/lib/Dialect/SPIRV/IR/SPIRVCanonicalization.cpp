@@ -881,6 +881,90 @@ OpFoldResult spirv::INotEqualOp::fold(spirv::INotEqualOp::FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.SGreaterThan
+//===----------------------------------------------------------------------===//
+
+OpFoldResult
+spirv::SGreaterThanOp::fold(spirv::SGreaterThanOp::FoldAdaptor adaptor) {
+  // x == x -> false
+  if (getOperand1() == getOperand2()) {
+    auto falseAttr = BoolAttr::get(getContext(), false);
+    if (isa<IntegerType>(getType()))
+      return falseAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, falseAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a.sgt(b) ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.SGreaterThanEqual
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::SGreaterThanEqualOp::fold(
+    spirv::SGreaterThanEqualOp::FoldAdaptor adaptor) {
+  // x == x -> true
+  if (getOperand1() == getOperand2()) {
+    auto trueAttr = BoolAttr::get(getContext(), true);
+    if (isa<IntegerType>(getType()))
+      return trueAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, trueAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a.sge(b) ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.UGreaterThan
+//===----------------------------------------------------------------------===//
+
+OpFoldResult
+spirv::UGreaterThanOp::fold(spirv::UGreaterThanOp::FoldAdaptor adaptor) {
+  // x == x -> false
+  if (getOperand1() == getOperand2()) {
+    auto falseAttr = BoolAttr::get(getContext(), false);
+    if (isa<IntegerType>(getType()))
+      return falseAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, falseAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a.ugt(b) ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.UGreaterThanEqual
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::UGreaterThanEqualOp::fold(
+    spirv::UGreaterThanEqualOp::FoldAdaptor adaptor) {
+  // x == x -> true
+  if (getOperand1() == getOperand2()) {
+    auto trueAttr = BoolAttr::get(getContext(), true);
+    if (isa<IntegerType>(getType()))
+      return trueAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, trueAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a.uge(b) ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.SLessThan
 //===----------------------------------------------------------------------===//
 
