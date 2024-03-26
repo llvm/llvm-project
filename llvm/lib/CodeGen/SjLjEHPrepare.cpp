@@ -456,9 +456,20 @@ bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
   for (BasicBlock &BB : F) {
     if (&BB == &F.front())
       continue;
-    for (Instruction &I : BB)
-      if (I.mayThrow())
-        insertCallSiteStore(&I, -1);
+    for (Instruction &I : BB) {
+      // A value of -1 at a call site tells the personality function that
+      // this call isn't handled by the current function.
+      //   1. Calls of a function which has no nounwind are not handled
+      //      by the current function
+      //   2. ResumeInsts are converted to calls to _Unwind_SjLj_Resume
+      // Invoke instructions to the EH builtins need to be not marked -1.
+      if (CallInst *CI = dyn_cast<CallInst>(&I)) {
+        if (!CI->doesNotThrow())
+          insertCallSiteStore(CI, -1);
+      } else if (ResumeInst *RI = dyn_cast<ResumeInst>(&I)) {
+        insertCallSiteStore(RI, -1);
+      }
+    }
   }
 
   // Register the function context and make sure it's known to not throw
