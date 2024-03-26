@@ -21,9 +21,9 @@
 #include "flang/Common/visit.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
+#include <flang/Common/variant.h>
 #include <functional>
 #include <type_traits>
-#include <variant>
 
 namespace Fortran::runtime::io {
 
