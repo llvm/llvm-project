@@ -1721,13 +1721,11 @@ llvm::Metadata *ModuleTranslation::translateDebugInfo(LLVM::DINodeAttr attr) {
   return debugTranslation->translate(attr);
 }
 
-/// Translates the given LLVM rounding mode metadata.
 llvm::RoundingMode
 ModuleTranslation::translateRoundingMode(LLVM::RoundingMode rounding) {
   return convertRoundingModeToLLVM(rounding);
 }
 
-/// Translates the given LLVM FP exception behavior metadata.
 llvm::fp::ExceptionBehavior ModuleTranslation::translateFPExceptionBehavior(
     LLVM::FPExceptionBehavior exceptionBehavior) {
   return convertFPExceptionBehaviorToLLVM(exceptionBehavior);

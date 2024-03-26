@@ -1258,19 +1258,6 @@ LogicalResult ModuleImport::convertIntrinsicArguments(
   return success();
 }
 
-static FPExceptionBehaviorAttr
-metadataToFPExceptionBehavior(Builder &builder, llvm::Metadata *metadata) {
-  auto *mdstr = dyn_cast<llvm::MDString>(metadata);
-  if (!mdstr)
-    return {};
-  std::optional<llvm::fp::ExceptionBehavior> optLLVM =
-      llvm::convertStrToExceptionBehavior(mdstr->getString());
-  if (!optLLVM)
-    return {};
-  return builder.getAttr<FPExceptionBehaviorAttr>(
-      convertFPExceptionBehaviorFromLLVM(*optLLVM));
-}
-
 IntegerAttr ModuleImport::matchIntegerAttr(llvm::Value *value) {
   IntegerAttr integerAttr;
   FailureOr<Value> converted = convertValue(value);
@@ -1309,6 +1296,7 @@ ModuleImport::matchFPExceptionBehaviorAttr(llvm::Value *value) {
   auto *mdstr = cast<llvm::MDString>(metadata->getMetadata());
   std::optional<llvm::fp::ExceptionBehavior> optLLVM =
       llvm::convertStrToExceptionBehavior(mdstr->getString());
+  assert(optLLVM && "Expecting FP exception behavior");
   return builder.getAttr<FPExceptionBehaviorAttr>(
       convertFPExceptionBehaviorFromLLVM(*optLLVM));
 }
@@ -1318,6 +1306,7 @@ RoundingModeAttr ModuleImport::matchRoundingModeAttr(llvm::Value *value) {
   auto *mdstr = cast<llvm::MDString>(metadata->getMetadata());
   std::optional<llvm::RoundingMode> optLLVM =
       llvm::convertStrToRoundingMode(mdstr->getString());
+  assert(optLLVM && "Expecting rounding mode");
   return builder.getAttr<RoundingModeAttr>(
       convertRoundingModeFromLLVM(*optLLVM));
 }

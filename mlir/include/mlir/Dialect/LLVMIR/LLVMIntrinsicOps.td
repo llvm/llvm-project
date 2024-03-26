@@ -311,7 +311,7 @@ def LLVM_InvariantEndOp : LLVM_ZeroResultIntrOp<"invariant.end", [2],
       "qualified(type($ptr))";
 }
 
-// Constrained Floating-Point Intrinsics
+// Constrained Floating-Point Intrinsics.
 
 class LLVM_ConstrainedIntr<string mnem, int numArgs,
                            bit overloadedResult, list<int> overloadedOperands,
@@ -338,9 +338,9 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
       moduleTranslation.lookupValues(opInst.getOperands());
     SmallVector<llvm::Type *> overloadedTypes; }] #
     !cond(!gt(overloadedResult, 0) : [{
-    // Take into account overloaded result type
+    // Take into account overloaded result type.
     overloadedTypes.push_back($_resultType); }],
-    // No overloaded result type
+    // No overloaded result type.
           true : "") # [{
     llvm::transform(ArrayRef<unsigned>}] # overloadedOperandsCpp # [{,
                     std::back_inserter(overloadedTypes),
@@ -351,11 +351,11 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
         llvm::Intrinsic::experimental_constrained_}] #
     mnem # [{, overloadedTypes); }] #
     !cond(!gt(hasRoundingMode, 0) : [{
-    // Get rounding mode using interface
+    // Get rounding mode using interface.
     llvm::RoundingMode rounding =
         moduleTranslation.translateRoundingMode($roundingmode); }],
           true : [{
-    // No rounding mode
+    // No rounding mode.
     std::optional<llvm::RoundingMode> rounding; }]) # [{
     llvm::fp::ExceptionBehavior except =
       moduleTranslation.translateFPExceptionBehavior($fpExceptionBehavior);
@@ -372,14 +372,12 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
 
     FPExceptionBehaviorAttr fpExceptionBehaviorAttr =
         $_fpExceptionBehavior_attr($fpExceptionBehavior);
-    assert(fpExceptionBehaviorAttr && "Expecting FP exception behavior");
     mlirAttrs.push_back(
         $_builder.getNamedAttr(
             $_qualCppClassName::getFPExceptionBehaviorAttrName(),
             fpExceptionBehaviorAttr)); }] #
     !cond(!gt(hasRoundingMode, 0) : [{
     RoundingModeAttr roundingModeAttr = $_roundingMode_attr($roundingmode);
-    assert(roundingModeAttr && "Expecting rounding mode");
     mlirAttrs.push_back(
         $_builder.getNamedAttr($_qualCppClassName::getRoundingModeAttrName(),
                                roundingModeAttr));
