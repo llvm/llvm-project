@@ -38,7 +38,7 @@ LIBC_INLINE T fmin(T x, T y) {
     // To make sure that fmin(+0, -0) == -0 == fmin(-0, +0), whenever x and
     // y has different signs and both are not NaNs, we return the number
     // with negative sign.
-    return (bitx.is_neg()) ? x : y;
+    return bitx.is_neg() ? x : y;
   return x < y ? x : y;
 }
 
@@ -54,7 +54,7 @@ LIBC_INLINE T fmax(T x, T y) {
     // To make sure that fmax(+0, -0) == +0 == fmax(-0, +0), whenever x and
     // y has different signs and both are not NaNs, we return the number
     // with positive sign.
-    return (bitx.is_neg() ? y : x);
+    return bitx.is_neg() ? y : x;
   return x > y ? x : y;
 }
 
