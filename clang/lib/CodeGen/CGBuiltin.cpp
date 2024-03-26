@@ -3128,36 +3128,66 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_ctzs:
   case Builtin::BI__builtin_ctz:
   case Builtin::BI__builtin_ctzl:
-  case Builtin::BI__builtin_ctzll: {
-    Value *ArgValue = EmitCheckedArgForBuiltin(E->getArg(0), BCK_CTZPassedZero);
+  case Builtin::BI__builtin_ctzll:
+  case Builtin::BI__builtin_ctzg: {
+    bool HasFallback = BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_ctzg &&
+                       E->getNumArgs() > 1;
+
+    Value *ArgValue =
+        HasFallback ? EmitScalarExpr(E->getArg(0))
+                    : EmitCheckedArgForBuiltin(E->getArg(0), BCK_CTZPassedZero);
 
     llvm::Type *ArgType = ArgValue->getType();
     Function *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
 
     llvm::Type *ResultType = ConvertType(E->getType());
-    Value *ZeroUndef = Builder.getInt1(getTarget().isCLZForZeroUndef());
+    Value *ZeroUndef =
+        Builder.getInt1(HasFallback || getTarget().isCLZForZeroUndef());
     Value *Result = Builder.CreateCall(F, {ArgValue, ZeroUndef});
     if (Result->getType() != ResultType)
       Result = Builder.CreateIntCast(Result, ResultType, /*isSigned*/true,
                                      "cast");
-    return RValue::get(Result);
+    if (!HasFallback)
+      return RValue::get(Result);
+
+    Value *Zero = Constant::getNullValue(ArgType);
+    Value *IsZero = Builder.CreateICmpEQ(ArgValue, Zero, "iszero");
+    Value *FallbackValue = EmitScalarExpr(E->getArg(1));
+    Value *ResultOrFallback =
+        Builder.CreateSelect(IsZero, FallbackValue, Result, "ctzg");
+    return RValue::get(ResultOrFallback);
   }
   case Builtin::BI__builtin_clzs:
   case Builtin::BI__builtin_clz:
   case Builtin::BI__builtin_clzl:
-  case Builtin::BI__builtin_clzll: {
-    Value *ArgValue = EmitCheckedArgForBuiltin(E->getArg(0), BCK_CLZPassedZero);
+  case Builtin::BI__builtin_clzll:
+  case Builtin::BI__builtin_clzg: {
+    bool HasFallback = BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_clzg &&
+                       E->getNumArgs() > 1;
+
+    Value *ArgValue =
+        HasFallback ? EmitScalarExpr(E->getArg(0))
+                    : EmitCheckedArgForBuiltin(E->getArg(0), BCK_CLZPassedZero);
 
     llvm::Type *ArgType = ArgValue->getType();
     Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
 
     llvm::Type *ResultType = ConvertType(E->getType());
-    Value *ZeroUndef = Builder.getInt1(getTarget().isCLZForZeroUndef());
+    Value *ZeroUndef =
+        Builder.getInt1(HasFallback || getTarget().isCLZForZeroUndef());
     Value *Result = Builder.CreateCall(F, {ArgValue, ZeroUndef});
     if (Result->getType() != ResultType)
       Result = Builder.CreateIntCast(Result, ResultType, /*isSigned*/true,
                                      "cast");
-    return RValue::get(Result);
+    if (!HasFallback)
+      return RValue::get(Result);
+
+    Value *Zero = Constant::getNullValue(ArgType);
+    Value *IsZero = Builder.CreateICmpEQ(ArgValue, Zero, "iszero");
+    Value *FallbackValue = EmitScalarExpr(E->getArg(1));
+    Value *ResultOrFallback =
+        Builder.CreateSelect(IsZero, FallbackValue, Result, "clzg");
+    return RValue::get(ResultOrFallback);
   }
   case Builtin::BI__builtin_ffs:
   case Builtin::BI__builtin_ffsl:
@@ -18036,15 +18066,22 @@ llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
   return Arg;
 }
 
-Intrinsic::ID getDotProductIntrinsic(QualType QT) {
+Intrinsic::ID getDotProductIntrinsic(QualType QT, int elementCount) {
+  if (QT->hasFloatingRepresentation()) {
+    switch (elementCount) {
+    case 2:
+      return Intrinsic::dx_dot2;
+    case 3:
+      return Intrinsic::dx_dot3;
+    case 4:
+      return Intrinsic::dx_dot4;
+    }
+  }
   if (QT->hasSignedIntegerRepresentation())
     return Intrinsic::dx_sdot;
-  if (QT->hasUnsignedIntegerRepresentation())
-    return Intrinsic::dx_udot;
 
-  assert(QT->hasFloatingRepresentation());
-  return Intrinsic::dx_dot;
-  ;
+  assert(QT->hasUnsignedIntegerRepresentation());
+  return Intrinsic::dx_udot;
 }
 
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
@@ -18098,8 +18135,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     assert(T0->getScalarType() == T1->getScalarType() &&
            "Dot product of vectors need the same element types.");
 
-    [[maybe_unused]] auto *VecTy0 =
-        E->getArg(0)->getType()->getAs<VectorType>();
+    auto *VecTy0 = E->getArg(0)->getType()->getAs<VectorType>();
     [[maybe_unused]] auto *VecTy1 =
         E->getArg(1)->getType()->getAs<VectorType>();
     // A HLSLVectorTruncation should have happend
@@ -18108,7 +18144,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     return Builder.CreateIntrinsic(
         /*ReturnType=*/T0->getScalarType(),
-        getDotProductIntrinsic(E->getArg(0)->getType()),
+        getDotProductIntrinsic(E->getArg(0)->getType(),
+                               VecTy0->getNumElements()),
         ArrayRef<Value *>{Op0, Op1}, nullptr, "dx.dot");
   } break;
   case Builtin::BI__builtin_hlsl_lerp: {
@@ -18501,43 +18538,37 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {ArgTy});
     return Builder.CreateCall(F, {Addr, Val, ZeroI32, ZeroI32, ZeroI1});
   }
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr_i32:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr_v2i32:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr_v4f16:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr_v4i16:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr_v8f16:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr_v8i16: {
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_v2i32:
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4i16:
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8i16: {
 
+    Intrinsic::ID IID;
     llvm::Type *ArgTy;
     switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_i32:
+    case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
       ArgTy = llvm::Type::getInt32Ty(getLLVMContext());
+      IID = Intrinsic::amdgcn_global_load_tr_b64;
       break;
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_v2i32:
+    case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_v2i32:
       ArgTy = llvm::FixedVectorType::get(
           llvm::Type::getInt32Ty(getLLVMContext()), 2);
+      IID = Intrinsic::amdgcn_global_load_tr_b64;
       break;
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_v4f16:
-      ArgTy = llvm::FixedVectorType::get(
-          llvm::Type::getHalfTy(getLLVMContext()), 4);
-      break;
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_v4i16:
+    case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4i16:
       ArgTy = llvm::FixedVectorType::get(
           llvm::Type::getInt16Ty(getLLVMContext()), 4);
+      IID = Intrinsic::amdgcn_global_load_tr_b128;
       break;
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_v8f16:
-      ArgTy = llvm::FixedVectorType::get(
-          llvm::Type::getHalfTy(getLLVMContext()), 8);
-      break;
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_v8i16:
+    case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8i16:
       ArgTy = llvm::FixedVectorType::get(
           llvm::Type::getInt16Ty(getLLVMContext()), 8);
+      IID = Intrinsic::amdgcn_global_load_tr_b128;
       break;
     }
 
     llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
-    llvm::Function *F =
-        CGM.getIntrinsic(Intrinsic::amdgcn_global_load_tr, {ArgTy});
+    llvm::Function *F = CGM.getIntrinsic(IID, {ArgTy});
     return Builder.CreateCall(F, {Addr});
   }
   case AMDGPU::BI__builtin_amdgcn_get_fpenv: {

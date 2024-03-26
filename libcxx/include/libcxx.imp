@@ -217,6 +217,7 @@
   { include: [ "<__algorithm/shift_right.h>", "private", "<algorithm>", "public" ] },
   { include: [ "<__algorithm/shuffle.h>", "private", "<algorithm>", "public" ] },
   { include: [ "<__algorithm/sift_down.h>", "private", "<algorithm>", "public" ] },
+  { include: [ "<__algorithm/simd_utils.h>", "private", "<algorithm>", "public" ] },
   { include: [ "<__algorithm/sort.h>", "private", "<algorithm>", "public" ] },
   { include: [ "<__algorithm/sort_heap.h>", "private", "<algorithm>", "public" ] },
   { include: [ "<__algorithm/stable_partition.h>", "private", "<algorithm>", "public" ] },

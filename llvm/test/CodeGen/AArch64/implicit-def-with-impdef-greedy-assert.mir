@@ -4,6 +4,8 @@
 ---
 name:            widget
 tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
 jumpTable:
   kind:            label-difference32
   entries:
