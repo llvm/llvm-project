@@ -1798,8 +1798,9 @@ void llvm::SplitBlockAndInsertForEachLane(
   }
 }
 
-BranchInst *llvm::GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
-                                 BasicBlock *&IfFalse) {
+BranchInst *llvm::GetIfConditionFromMergePoint(BasicBlock *BB,
+                                               BasicBlock *&IfTrue,
+                                               BasicBlock *&IfFalse) {
   PHINode *SomePHI = dyn_cast<PHINode>(BB->begin());
   BasicBlock *Pred1 = nullptr;
   BasicBlock *Pred2 = nullptr;
@@ -1888,6 +1889,47 @@ BranchInst *llvm::GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
     IfFalse = Pred1;
   }
   return BI;
+}
+
+BasicBlock *llvm::GetIfConditionFromDom(BasicBlock *DomBB, BasicBlock *&IfTrue,
+                                        BasicBlock *&IfFalse) {
+  BranchInst *BI = cast<BranchInst>(DomBB->getTerminator());
+  BasicBlock *Succ1 = BI->getSuccessor(0);
+  BasicBlock *Succ2 = BI->getSuccessor(1);
+
+  if (!Succ1->getSinglePredecessor() || !Succ2->getSinglePredecessor() ||
+      Succ1 == Succ2 || Succ1 == DomBB || Succ2 == DomBB)
+    return nullptr;
+
+  if (Succ1->getSingleSuccessor() == Succ2) {
+    IfTrue = Succ1;
+    IfFalse = DomBB;
+    return Succ2;
+  }
+
+  if (Succ2->getSingleSuccessor() == Succ1) {
+    IfTrue = DomBB;
+    IfFalse = Succ2;
+    return Succ1;
+  }
+
+  // We can only handle branches.  Other control flow will be lowered to
+  // branches if possible anyway.
+  BranchInst *Succ1Br = dyn_cast<BranchInst>(Succ1->getTerminator());
+  BranchInst *Succ2Br = dyn_cast<BranchInst>(Succ2->getTerminator());
+  if (!Succ1Br || !Succ2Br)
+    return nullptr;
+
+  auto *CommonDest = Succ1->getSingleSuccessor();
+  if (CommonDest && CommonDest != DomBB &&
+      CommonDest == Succ2->getSingleSuccessor()) {
+    IfTrue = Succ1;
+    IfFalse = Succ2;
+    return CommonDest;
+  }
+
+  // There may be other cases, but we just handle the trivial ones now.
+  return nullptr;
 }
 
 // After creating a control flow hub, the operands of PHINodes in an outgoing
