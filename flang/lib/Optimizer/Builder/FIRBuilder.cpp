@@ -36,26 +36,39 @@ static llvm::cl::opt<std::size_t>
                                       "name"),
                        llvm::cl::init(32));
 
-mlir::func::FuncOp fir::FirOpBuilder::createFunction(mlir::Location loc,
-                                                     mlir::ModuleOp module,
-                                                     llvm::StringRef name,
-                                                     mlir::FunctionType ty) {
-  return fir::createFuncOp(loc, module, name, ty);
+mlir::func::FuncOp
+fir::FirOpBuilder::createFunction(mlir::Location loc, mlir::ModuleOp module,
+                                  llvm::StringRef name, mlir::FunctionType ty,
+                                  mlir::SymbolTable *symbolTable) {
+  return fir::createFuncOp(loc, module, name, ty, /*attrs*/ {}, symbolTable);
 }
 
-mlir::func::FuncOp fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
-                                                       llvm::StringRef name) {
+mlir::func::FuncOp
+fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp, llvm::StringRef name,
+                                    const mlir::SymbolTable *symbolTable) {
+  if (symbolTable)
+    if (auto func = symbolTable->lookup<mlir::func::FuncOp>(name))
+      return func;
   return modOp.lookupSymbol<mlir::func::FuncOp>(name);
 }
 
 mlir::func::FuncOp
 fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
-                                    mlir::SymbolRefAttr symbol) {
+                                    mlir::SymbolRefAttr symbol,
+                                    const mlir::SymbolTable *symbolTable) {
+  if (symbolTable)
+    if (auto func =
+            symbolTable->lookup<mlir::func::FuncOp>(symbol.getLeafReference()))
+      return func;
   return modOp.lookupSymbol<mlir::func::FuncOp>(symbol);
 }
 
-fir::GlobalOp fir::FirOpBuilder::getNamedGlobal(mlir::ModuleOp modOp,
-                                                llvm::StringRef name) {
+fir::GlobalOp
+fir::FirOpBuilder::getNamedGlobal(mlir::ModuleOp modOp, llvm::StringRef name,
+                                  const mlir::SymbolTable *symbolTable) {
+  if (symbolTable)
+    if (auto global = symbolTable->lookup<fir::GlobalOp>(name))
+      return global;
   return modOp.lookupSymbol<fir::GlobalOp>(name);
 }
 
@@ -279,10 +292,10 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::StringAttr linkage, mlir::Attribute value, bool isConst,
     bool isTarget, fir::CUDADataAttributeAttr cudaAttr) {
+  if (auto global = getNamedGlobal(name))
+    return global;
   auto module = getModule();
   auto insertPt = saveInsertionPoint();
-  if (auto glob = module.lookupSymbol<fir::GlobalOp>(name))
-    return glob;
   setInsertionPoint(module.getBody(), module.getBody()->end());
   llvm::SmallVector<mlir::NamedAttribute> attrs;
   if (cudaAttr) {
@@ -294,6 +307,8 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   auto glob = create<fir::GlobalOp>(loc, name, isConst, isTarget, type, value,
                                     linkage, attrs);
   restoreInsertionPoint(insertPt);
+  if (symbolTable)
+    symbolTable->insert(glob);
   return glob;
 }
 
@@ -301,10 +316,10 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name, bool isConst,
     bool isTarget, std::function<void(FirOpBuilder &)> bodyBuilder,
     mlir::StringAttr linkage, fir::CUDADataAttributeAttr cudaAttr) {
+  if (auto global = getNamedGlobal(name))
+    return global;
   auto module = getModule();
   auto insertPt = saveInsertionPoint();
-  if (auto glob = module.lookupSymbol<fir::GlobalOp>(name))
-    return glob;
   setInsertionPoint(module.getBody(), module.getBody()->end());
   auto glob = create<fir::GlobalOp>(loc, name, isConst, isTarget, type,
                                     mlir::Attribute{}, linkage);
@@ -314,6 +329,8 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   setInsertionPointToStart(&block);
   bodyBuilder(*this);
   restoreInsertionPoint(insertPt);
+  if (symbolTable)
+    symbolTable->insert(glob);
   return glob;
 }
 

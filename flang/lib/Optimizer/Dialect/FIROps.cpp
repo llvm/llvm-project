@@ -3677,10 +3677,14 @@ fir::parseSelector(mlir::OpAsmParser &parser, mlir::OperationState &result,
   return mlir::success();
 }
 
-mlir::func::FuncOp
-fir::createFuncOp(mlir::Location loc, mlir::ModuleOp module,
-                  llvm::StringRef name, mlir::FunctionType type,
-                  llvm::ArrayRef<mlir::NamedAttribute> attrs) {
+mlir::func::FuncOp fir::createFuncOp(mlir::Location loc, mlir::ModuleOp module,
+                                     llvm::StringRef name,
+                                     mlir::FunctionType type,
+                                     llvm::ArrayRef<mlir::NamedAttribute> attrs,
+                                     const mlir::SymbolTable *symbolTable) {
+  if (symbolTable)
+    if (auto f = symbolTable->lookup<mlir::func::FuncOp>(name))
+      return f;
   if (auto f = module.lookupSymbol<mlir::func::FuncOp>(name))
     return f;
   mlir::OpBuilder modBuilder(module.getBodyRegion());
@@ -3692,7 +3696,11 @@ fir::createFuncOp(mlir::Location loc, mlir::ModuleOp module,
 
 fir::GlobalOp fir::createGlobalOp(mlir::Location loc, mlir::ModuleOp module,
                                   llvm::StringRef name, mlir::Type type,
-                                  llvm::ArrayRef<mlir::NamedAttribute> attrs) {
+                                  llvm::ArrayRef<mlir::NamedAttribute> attrs,
+                                  const mlir::SymbolTable *symbolTable) {
+  if (symbolTable)
+    if (auto g = symbolTable->lookup<fir::GlobalOp>(name))
+      return g;
   if (auto g = module.lookupSymbol<fir::GlobalOp>(name))
     return g;
   mlir::OpBuilder modBuilder(module.getBodyRegion());
