@@ -166,6 +166,66 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  canonicalize_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    canonicalize_test.cpp
+  HDRS
+    CanonicalizeTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.canonicalize
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
+)
+
+add_fp_unittest(
+  canonicalizef_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    canonicalizef_test.cpp
+  HDRS
+    CanonicalizeTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.canonicalizef
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
+)
+
+add_fp_unittest(
+  canonicalizef128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    canonicalizef128_test.cpp
+  HDRS
+    CanonicalizeTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.canonicalizef128
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
+)
+
+add_fp_unittest(
+  canonicalizel_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    canonicalizel_test.cpp
+  HDRS
+    CanonicalizeTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.canonicalizel
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
+)
+
+add_fp_unittest(
   ceil_test
   SUITE
     libc-math-smoke-tests
