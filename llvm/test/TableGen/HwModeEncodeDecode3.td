@@ -160,15 +160,22 @@ def unrelated: Instruction {
 // DECODER-SUPPRESS-O2-DAG: Opcode: fooTypeEncA:baz
 // DECODER-SUPPRESS-O2-NOT: Opcode: bar
 
-// ENCODER-LABEL:   static const uint64_t InstBits_DefaultMode[] = {
+// For 'bar' and 'unrelated', we didn't assign any hwmodes for them,
+// they should keep the same in the following three tables.
+// For 'foo' we assigned three hwmodes(includes 'DefaultMode')
+// it's encodings should be different in the following three tables.
+// For 'baz' we only assigned ModeB for it, to avoid empty encoding
+// we assigned the encoding of ModeB to ModeA and DefaultMode(Even though
+// they will not be used).
+// ENCODER-LABEL:   static const uint64_t InstBits[] = {
 // ENCODER:         UINT64_C(2),        // bar
-// ENCODER:         UINT64_C(0),        // baz
+// ENCODER:         UINT64_C(12),       // baz
 // ENCODER:         UINT64_C(8),        // foo
 // ENCODER:         UINT64_C(2),        // unrelated
 
 // ENCODER-LABEL:   static const uint64_t InstBits_ModeA[] = {
 // ENCODER:         UINT64_C(2),        // bar
-// ENCODER:         UINT64_C(0),        // baz
+// ENCODER:         UINT64_C(12),       // baz
 // ENCODER:         UINT64_C(12),       // foo
 // ENCODER:         UINT64_C(2),        // unrelated
 
@@ -178,18 +185,53 @@ def unrelated: Instruction {
 // ENCODER:         UINT64_C(3),        // foo
 // ENCODER:         UINT64_C(2),        // unrelated
 
-// ENCODER:  unsigned HwMode = STI.getHwMode();
-// ENCODER:  switch (HwMode) {
-// ENCODER:  default: llvm_unreachable("Unknown hardware mode!"); break;
-// ENCODER:  case 0: InstBits = InstBits_DefaultMode; break;
-// ENCODER:  case 1: InstBits = InstBits_ModeA; break;
-// ENCODER:  case 2: InstBits = InstBits_ModeB; break;
-// ENCODER:  };
-
-// ENCODER:     case ::foo: {
-// ENCODER:      switch (HwMode) {
-// ENCODER:      default: llvm_unreachable("Unhandled HwMode");
-// ENCODER:      case 0: {
-// ENCODER:      case 1: {
-// ENCODER:      case 2: {
-
+// ENCODER-LABEL: case ::bar:
+// ENCODER-LABEL: case ::unrelated:
+// ENCODER-NOT: getHwMode
+// ENCODER-LABEL: case ::baz: {
+// ENCODER: unsigned HwMode = STI.getHwMode(MCSubtargetInfo::HwMode_EncodingInfo);
+// ENCODER: HwMode &= 2;
+// ENCODER: switch (HwMode) {
+// ENCODER: default: llvm_unreachable("Unknown hardware mode!"); break;
+// ENCODER: case 2: InstBitsByHw = InstBits_ModeB; break;
+// ENCODER: };
+// ENCODER: Value = InstBitsByHw[opcode];
+// ENCODER: switch (HwMode) {
+// ENCODER: default: llvm_unreachable("Unhandled HwMode");
+// ENCODER: case 2: {
+// ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
+// ENCODER: op &= UINT64_C(240);
+// ENCODER: Value |= op;
+// ENCODER: break;
+// ENCODER: }
+// ENCODER-LABEL: case ::foo: {
+// ENCODER: unsigned HwMode = STI.getHwMode(MCSubtargetInfo::HwMode_EncodingInfo);
+// ENCODER: HwMode &= 3;
+// ENCODER: switch (HwMode) {
+// ENCODER: default: llvm_unreachable("Unknown hardware mode!"); break;
+// ENCODER: case 0: InstBitsByHw = InstBits; break;
+// ENCODER: case 1: InstBitsByHw = InstBits_ModeA; break;
+// ENCODER: case 2: InstBitsByHw = InstBits_ModeB; break;
+// ENCODER: };
+// ENCODER: Value = InstBitsByHw[opcode];
+// ENCODER: switch (HwMode) {
+// ENCODER: default: llvm_unreachable("Unhandled HwMode");
+// ENCODER: case 0: {
+// ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
+// ENCODER: op &= UINT64_C(240);
+// ENCODER: Value |= op;
+// ENCODER: break;
+// ENCODER: }
+// ENCODER: case 1: {
+// ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
+// ENCODER: op &= UINT64_C(240);
+// ENCODER: Value |= op;
+// ENCODER: break;
+// ENCODER: }
+// ENCODER: case 2: {
+// ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
+// ENCODER: op &= UINT64_C(255);
+// ENCODER: op <<= 8;
+// ENCODER: Value |= op;
+// ENCODER: break;
+// ENCODER: }

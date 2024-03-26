@@ -240,7 +240,23 @@ public:
     return ProcFeatures;
   }
 
-  virtual unsigned getHwMode() const { return 0; }
+  /// HwMode ID will be stored as bits, allowing users to pull the specific
+  /// HwMode ID (like RegInfo HwMode ID) from the bits as needed. This enables
+  /// users to control multiple features with one hwmode (as previously) or use
+  /// different hwmodes to control different features.
+  enum HwModeType {
+    HwMode_Default,   // Return the smallest HwMode ID of current subtarget.
+    HwMode_ValueType, // Return the HwMode ID that controls the ValueType.
+    HwMode_RegInfo,   // Return the HwMode ID that controls the RegSizeInfo and
+                      // SubRegRange.
+    HwMode_EncodingInfo // Return the HwMode ID that controls the EncodingInfo.
+  };
+
+  virtual unsigned getHwModeSet() const { return 0; }
+
+  virtual unsigned getHwMode(enum HwModeType type = HwMode_Default) const {
+    return 0;
+  }
 
   /// Return the cache size in bytes for the given level of cache.
   /// Level is zero-based, so a value of zero means the first level of
