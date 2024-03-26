@@ -306,7 +306,11 @@ public:
     // True if this node was effectively removed from the graph, in which case
     // its context id set, caller edges, and callee edges should all be empty.
     bool isRemoved() const {
+      // Note that we can have non-empty context ids with empty caller and
+      // callee edges if the graph ends up with a single node.
       assert(!ContextIds.empty() ||
+             // Since the context ids were empty we should have empty callee and
+             // caller edges.
              (CalleeEdges.empty() && CallerEdges.empty()));
       return ContextIds.empty();
     }
@@ -2465,7 +2469,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones() {
   Visited.clear();
   for (auto &Entry : AllocationCallToContextNodeMap)
     recursivelyRemoveNoneTypeCalleeEdges(Entry.second, Visited);
-  check();
+  if (VerifyCCG)
+    check();
 }
 
 // helper function to check an AllocType is cold or notcold or both.
