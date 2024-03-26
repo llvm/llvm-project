@@ -86,7 +86,7 @@ inline void registerAllPasses() {
   registerShapePasses();
   spirv::registerSPIRVPasses();
   tensor::registerTensorPasses();
-  tosa::registerTosaOptPasses();
+  tosa::registerTosaPasses();
   transform::registerTransformPasses();
   vector::registerVectorPasses();
   arm_sme::registerArmSMEPasses();

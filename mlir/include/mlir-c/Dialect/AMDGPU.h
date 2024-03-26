@@ -22,4 +22,6 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(AMDGPU, amdgpu);
 }
 #endif
 
+#include "mlir/Dialect/AMDGPU/Transforms/Passes.capi.h.inc"
+
 #endif // MLIR_C_DIALECT_AMDGPU_H

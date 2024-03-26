@@ -1,4 +1,5 @@
-//===-- mlir-c/Dialect/NVGPU.h - C API for NVGPU dialect --*- C -*-===//
+//===-- mlir-c/Dialect/Bufferization.h - C API for Bufferization Dialect
+//--------*- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM
 // Exceptions.
@@ -7,8 +8,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_C_DIALECT_NVGPU_H
-#define MLIR_C_DIALECT_NVGPU_H
+#ifndef MLIR_C_DIALECT_BUFFERIZATION_H
+#define MLIR_C_DIALECT_BUFFERIZATION_H
 
 #include "mlir-c/IR.h"
 
@@ -16,12 +17,12 @@
 extern "C" {
 #endif
 
-MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(NVGPU, nvgpu);
+MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Bufferization, bufferization);
 
 #ifdef __cplusplus
 }
 #endif
 
-#include "mlir/Dialect/NVGPU/Transforms/Passes.capi.h.inc"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.capi.h.inc"
 
-#endif // MLIR_C_DIALECT_NVGPU_H
+#endif // MLIR_C_DIALECT_BUFFERIZATION_H
