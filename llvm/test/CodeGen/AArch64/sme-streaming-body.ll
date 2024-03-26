@@ -87,29 +87,27 @@ if.end:
 define <2 x i64> @locally_streaming_caller_no_callee(<2 x i64> %a) "aarch64_pstate_sm_body" nounwind {
 ; CHECK-LABEL: locally_streaming_caller_no_callee:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
-; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
-; CHECK-NEXT:    addsvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #80
+; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    index z0.d, #0, #1
-; CHECK-NEXT:    ldr z1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    add z0.d, z0.d, z1.d
 ; CHECK-NEXT:    add z0.d, z0.d, #41 // =0x29
-; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; CHECK-NEXT:    addsvl sp, sp, #1
-; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
-; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #80
 ; CHECK-NEXT:    ret
 
   %add = add <2 x i64> %a, <i64 41, i64 42>;
