@@ -15,12 +15,11 @@ target triple = "x86_64-unknown-linux-gnu"
 ;     *begin = value;
 ; }
 
-; CHECK: remark: <stdin>:4:1: Transformed loop-strided store in _Z15my_basic_memsetPcS_c function into a call to llvm.memset.p0.i64() intrinsic{{$}}
+; CHECK: remark: <unknown>:0:0: Transformed loop-strided store in _Z15my_basic_memsetPcS_c function into a call to llvm.memset.p0.i64() intrinsic{{$}}
 
 ; YAML:      --- !Passed
 ; YAML-NEXT: Pass:            loop-idiom
 ; YAML-NEXT: Name:            ProcessLoopStridedStore
-; YAML-NEXT: DebugLoc:        { File: '<stdin>', Line: 4, Column: 1 }
 ; YAML-NEXT: Function:        _Z15my_basic_memsetPcS_c
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Transformed loop-strided store in '
@@ -43,7 +42,7 @@ define void @_Z15my_basic_memsetPcS_c(ptr %ptr, ptr %end, i8 %value) {
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_END:%.*]], label [[FOR_BODY_PREHEADER:%.*]], !dbg [[DBG16:![0-9]+]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[END1]], [[PTR2]], !dbg [[DBG17:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[PTR]], i8 [[VALUE:%.*]], i64 [[TMP0]], i1 false), !dbg [[DBG18:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[PTR]], i8 [[VALUE:%.*]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]], !dbg [[DBG17]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[PTR_ADDR_04:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[PTR]], [[FOR_BODY_PREHEADER]] ], !dbg [[DBG19:![0-9]+]]

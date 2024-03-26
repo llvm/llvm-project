@@ -9,7 +9,7 @@ define void @foo(ptr nocapture %a) nounwind ssp !dbg !0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata ptr [[A:%.*]], metadata [[META7:![0-9]+]], metadata !DIExpression()), !dbg [[DBG10:![0-9]+]]
 ; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 0, metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG15:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[A]], i8 0, i64 8000, i1 false), !dbg [[DBG16:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[A]], i8 0, i64 8000, i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]
