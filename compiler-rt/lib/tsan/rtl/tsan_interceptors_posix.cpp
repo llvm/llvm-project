@@ -14,6 +14,7 @@
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_errno.h"
+#include "sanitizer_common/sanitizer_glibc_version.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
@@ -1613,47 +1614,40 @@ TSAN_INTERCEPTOR(int, __fxstat, int version, int fd, void *buf) {
     FdAccess(thr, pc, fd);
   return REAL(__fxstat)(version, fd, buf);
 }
-#define TSAN_MAYBE_INTERCEPT___FXSTAT TSAN_INTERCEPT(__fxstat)
-#else
-#define TSAN_MAYBE_INTERCEPT___FXSTAT
-#endif
 
-TSAN_INTERCEPTOR(int, fstat, int fd, void *buf) {
-#if SANITIZER_GLIBC
-  SCOPED_TSAN_INTERCEPTOR(__fxstat, 0, fd, buf);
-  if (fd > 0)
-    FdAccess(thr, pc, fd);
-  return REAL(__fxstat)(0, fd, buf);
-#else
-  SCOPED_TSAN_INTERCEPTOR(fstat, fd, buf);
-  if (fd > 0)
-    FdAccess(thr, pc, fd);
-  return REAL(fstat)(fd, buf);
-#endif
-}
-
-#if SANITIZER_GLIBC
 TSAN_INTERCEPTOR(int, __fxstat64, int version, int fd, void *buf) {
   SCOPED_TSAN_INTERCEPTOR(__fxstat64, version, fd, buf);
   if (fd > 0)
     FdAccess(thr, pc, fd);
   return REAL(__fxstat64)(version, fd, buf);
 }
-#define TSAN_MAYBE_INTERCEPT___FXSTAT64 TSAN_INTERCEPT(__fxstat64)
+#define TSAN_MAYBE_INTERCEPT___FXSTAT TSAN_INTERCEPT(__fxstat); TSAN_INTERCEPT(__fxstat64)
 #else
-#define TSAN_MAYBE_INTERCEPT___FXSTAT64
+#define TSAN_MAYBE_INTERCEPT___FXSTAT
 #endif
 
-#if SANITIZER_GLIBC
-TSAN_INTERCEPTOR(int, fstat64, int fd, void *buf) {
-  SCOPED_TSAN_INTERCEPTOR(__fxstat64, 0, fd, buf);
+#if !SANITIZER_GLIBC || __GLIBC_PREREQ(2, 33)
+TSAN_INTERCEPTOR(int, fstat, int fd, void *buf) {
+  SCOPED_TSAN_INTERCEPTOR(fstat, fd, buf);
   if (fd > 0)
     FdAccess(thr, pc, fd);
-  return REAL(__fxstat64)(0, fd, buf);
+  return REAL(fstat)(fd, buf);
 }
-#define TSAN_MAYBE_INTERCEPT_FSTAT64 TSAN_INTERCEPT(fstat64)
+#  define TSAN_MAYBE_INTERCEPT_FSTAT TSAN_INTERCEPT(fstat)
 #else
-#define TSAN_MAYBE_INTERCEPT_FSTAT64
+#  define TSAN_MAYBE_INTERCEPT_FSTAT
+#endif
+
+#if __GLIBC_PREREQ(2, 33)
+TSAN_INTERCEPTOR(int, fstat64, int fd, void *buf) {
+  SCOPED_TSAN_INTERCEPTOR(fstat64, fd, buf);
+  if (fd > 0)
+    FdAccess(thr, pc, fd);
+  return REAL(fstat64)(fd, buf);
+}
+#  define TSAN_MAYBE_INTERCEPT_FSTAT64 TSAN_INTERCEPT(fstat64)
+#else
+#  define TSAN_MAYBE_INTERCEPT_FSTAT64
 #endif
 
 TSAN_INTERCEPTOR(int, open, const char *name, int oflag, ...) {
@@ -2950,10 +2944,9 @@ void InitializeInterceptors() {
 
   TSAN_INTERCEPT(pthread_once);
 
-  TSAN_INTERCEPT(fstat);
   TSAN_MAYBE_INTERCEPT___FXSTAT;
+  TSAN_MAYBE_INTERCEPT_FSTAT;
   TSAN_MAYBE_INTERCEPT_FSTAT64;
-  TSAN_MAYBE_INTERCEPT___FXSTAT64;
   TSAN_INTERCEPT(open);
   TSAN_MAYBE_INTERCEPT_OPEN64;
   TSAN_INTERCEPT(creat);
