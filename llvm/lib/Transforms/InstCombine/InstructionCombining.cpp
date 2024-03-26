@@ -2317,6 +2317,54 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
   return SelectInst::Create(Cond, NewTrueC, NewFalseC, "", nullptr, Sel);
 }
 
+// Canonicalization:
+// gep T, (gep i8, base, C1), (Index +nsw C2) into
+// gep T, (gep i8, base, C1 + C2 * sizeof(T)), Index
+static Instruction *canonicalizeGEPOfConstGEPI8(GetElementPtrInst &GEP,
+                                                GEPOperator *Src,
+                                                InstCombinerImpl &IC) {
+  if (GEP.getNumIndices() != 1)
+    return nullptr;
+  auto &DL = IC.getDataLayout();
+  if (!Src->getSourceElementType()->isIntegerTy(8) ||
+      !Src->hasAllConstantIndices())
+    return nullptr;
+  Value *VarIndex;
+  const APInt *C2;
+  Type *PtrTy = Src->getType()->getScalarType();
+  unsigned IndexSizeInBits = DL.getIndexTypeSizeInBits(PtrTy);
+  if (!(GEP.getOperand(1)->getType()->getScalarSizeInBits() >=
+            IndexSizeInBits &&
+        match(GEP.getOperand(1), m_Add(m_Value(VarIndex), m_APInt(C2)))) &&
+      !match(GEP.getOperand(1),
+             m_SExtOrSelf(
+                 m_CombineOr(m_NSWAdd(m_Value(VarIndex), m_APInt(C2)),
+                             m_DisjointOr(m_Value(VarIndex), m_APInt(C2))))))
+    return nullptr;
+  Type *BaseType = GEP.getSourceElementType();
+  APInt C1(IndexSizeInBits, 0);
+  // Add the offset for Src (which is fully constant).
+  if (!Src->accumulateConstantOffset(DL, C1))
+    return nullptr;
+  APInt TypeSize(IndexSizeInBits, DL.getTypeAllocSize(BaseType));
+  bool Overflow = false;
+  APInt C3 = TypeSize.smul_ov(C2->sext(TypeSize.getBitWidth()), Overflow);
+  if (Overflow)
+    return nullptr;
+  APInt NewOffset = C1.sadd_ov(C3, Overflow);
+  if (Overflow)
+    return nullptr;
+  if (NewOffset.isZero() ||
+      (Src->hasOneUse() && GEP.getOperand(1)->hasOneUse())) {
+    Value *GEPConst =
+        IC.Builder.CreateGEP(IC.Builder.getInt8Ty(), Src->getPointerOperand(),
+                             IC.Builder.getInt(NewOffset));
+    return GetElementPtrInst::Create(BaseType, GEPConst, VarIndex);
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
                                              GEPOperator *Src) {
   // Combine Indices - If the source pointer to this getelementptr instruction
@@ -2324,6 +2372,9 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
   // indices of the two getelementptr instructions into a single instruction.
   if (!shouldMergeGEPs(*cast<GEPOperator>(&GEP), *Src))
     return nullptr;
+
+  if (auto *I = canonicalizeGEPOfConstGEPI8(GEP, Src, *this))
+    return I;
 
   // For constant GEPs, use a more general offset-based folding approach.
   Type *PtrTy = Src->getType()->getScalarType();
