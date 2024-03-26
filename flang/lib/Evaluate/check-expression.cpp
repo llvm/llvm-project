@@ -358,10 +358,14 @@ bool IsInitialProcedureTarget(const semantics::Symbol &symbol) {
   const auto &ultimate{symbol.GetUltimate()};
   return common::visit(
       common::visitors{
-          [](const semantics::SubprogramDetails &subp) {
-            return !subp.isDummy();
+          [&](const semantics::SubprogramDetails &subp) {
+            return !subp.isDummy() && !subp.stmtFunction() &&
+                symbol.owner().kind() != semantics::Scope::Kind::MainProgram &&
+                symbol.owner().kind() != semantics::Scope::Kind::Subprogram;
           },
-          [](const semantics::SubprogramNameDetails &) { return true; },
+          [](const semantics::SubprogramNameDetails &x) {
+            return x.kind() != semantics::SubprogramKind::Internal;
+          },
           [&](const semantics::ProcEntityDetails &proc) {
             return !semantics::IsPointer(ultimate) && !proc.isDummy();
           },
