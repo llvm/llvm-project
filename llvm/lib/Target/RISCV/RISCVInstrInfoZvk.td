@@ -68,7 +68,7 @@ class PALUVVNoVm<bits<6> funct6, RISCVVFormat opv, string opcodestr>
 }
 
 // op vd, vs2, imm
-class PALUVINoVm<bits<6> funct6, string opcodestr, Operand optype = simm5>
+class PALUVINoVm<bits<6> funct6, string opcodestr, Operand optype>
     : VALUVINoVm<funct6, opcodestr, optype> {
   let Inst{6-0} = OPC_OP_P.Value;
   let Inst{14-12} = OPMVV.Value;
@@ -84,14 +84,6 @@ multiclass VAES_MV_V_S<bits<6> funct6_vv, bits<6> funct6_vs, bits<5> vs1,
                          RISCVVFormat opv, string opcodestr> {
   def NAME # _VV : PALUVs2NoVm<funct6_vv, vs1, opv, opcodestr # ".vv">;
   def NAME # _VS : PALUVs2NoVm<funct6_vs, vs1, opv, opcodestr # ".vs">;
-}
-
-// vaeskf1.vi and vaeskf2.vi uses different opcode and format, we need
-// to customize one for them.
-class VAESKF_MV_I<bits<6> funct6, string opcodestr, Operand optype>
-    : VALUVINoVm<funct6, opcodestr, optype> {
-  let Inst{6-0} = OPC_OP_P.Value;
-  let Inst{14-12} = OPMVV.Value;
 }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
@@ -137,8 +129,8 @@ let Predicates = [HasStdExtZvkned], RVVConstraint = NoConstraint in {
   defm VAESDM     : VAES_MV_V_S<0b101000, 0b101001, 0b00000, OPMVV, "vaesdm">;
   defm VAESEF     : VAES_MV_V_S<0b101000, 0b101001, 0b00011, OPMVV, "vaesef">;
   defm VAESEM     : VAES_MV_V_S<0b101000, 0b101001, 0b00010, OPMVV, "vaesem">;
-  def  VAESKF1_VI : VAESKF_MV_I<0b100010, "vaeskf1.vi", uimm5>;
-  def  VAESKF2_VI : VAESKF_MV_I<0b101010, "vaeskf2.vi", uimm5>;
+  def  VAESKF1_VI : PALUVINoVm<0b100010, "vaeskf1.vi", uimm5>;
+  def  VAESKF2_VI : PALUVINoVm<0b101010, "vaeskf2.vi", uimm5>;
   def  VAESZ_VS   : PALUVs2NoVm<0b101001, 0b00111, OPMVV, "vaesz.vs">;
 } // Predicates = [HasStdExtZvkned]
 
