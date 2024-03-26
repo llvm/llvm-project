@@ -9709,7 +9709,7 @@ bool Sema::SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
   // vector argument can be supported in all of them.
   if (ElementTy->isVectorType() && IsFPClass) {
     VectorResultTy = GetSignedVectorType(ElementTy);
-    ElementTy = ElementTy->getAs<VectorType>()->getElementType();
+    ElementTy = ElementTy->castAs<VectorType>()->getElementType();
   }
 
   // This operation requires a non-_Complex floating-point number.
