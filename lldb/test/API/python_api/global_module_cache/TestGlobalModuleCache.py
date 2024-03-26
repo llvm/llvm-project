@@ -19,7 +19,7 @@ class GlobalModuleCacheTestCase(TestBase):
     def check_counter_var(self, thread, value):
         frame = thread.frames[0]
         var = frame.FindVariable("counter")
-        self.assertTrue(var.GetError().Success(), "Got counter variable")
+        self.assertSuccess(var.GetError(), "Didn't get counter variable")
         self.assertEqual(var.GetValueAsUnsigned(), value, "This was one-print")
 
     def copy_to_main(self, src, dst):
@@ -28,12 +28,13 @@ class GlobalModuleCacheTestCase(TestBase):
         time.sleep(2)
         try:
             # Make sure dst is writeable before trying to write to it.
-            subprocess.run(
-                ["chmod", "777", dst],
-                stdin=None,
-                capture_output=False,
-                encoding="utf-8",
-            )
+            if os.path.exists(dst):
+                subprocess.run(
+                    ["chmod", "777", dst],
+                    stdin=None,
+                    capture_output=False,
+                    encoding="utf-8",
+                )
             shutil.copy(src, dst)
         except:
             self.fail(f"Could not copy {src} to {dst}")
@@ -49,25 +50,42 @@ class GlobalModuleCacheTestCase(TestBase):
     def test_OneTargetOneDebugger(self):
         self.do_test(True, True)
 
-    # This behaves as implemented but that behavior is not desirable.
-    # This test tests for the desired behavior as an expected fail.
+
     @skipIfWindows
-    @expectedFailureAll
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_TwoTargetsOneDebugger(self):
         self.do_test(False, True)
 
+    @expectedFailureAll() # An external reference keeps modules alive
     @skipIfWindows
-    @expectedFailureAll
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
-    def test_OneTargetTwoDebuggers(self):
-        self.do_test(True, False)
+    def test_TwoTargetsOneDebuggerWithPin(self):
+        self.do_test(False, True, True)
 
-    def do_test(self, one_target, one_debugger):
+    @skipIfWindows
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    def test_TwoTargetsTwoDebuggers(self):
+        self.do_test(False, False)
+
+    @expectedFailureAll() # An external reference keeps modules alive
+    #@skipIfWindows
+    #@skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    def test_TwoTargetsTwoDebuggersWithPin(self):
+        self.do_test(False, False, True)
+        
+    def do_test(self, one_target, one_debugger, use_pinning_module=False):
         # Make sure that if we have one target, and we run, then
         # change the binary and rerun, the binary (and any .o files
         # if using dwarf in .o file debugging) get removed from the
         # shared module cache.  They are no longer reachable.
+        # If use_pinning_module is true, we make another SBModule that holds
+        # a reference to the a.out, and will keep it alive.
+        # At present, those tests fail.  But they show how easy it is to
+        # strand a module so it doesn't go away.  We really should add a
+        # Finalize to Modules so when lldb removes them from the
+        # shared module cache, we delete the expensive parts of the Module
+        # and mark it no longer Valid.  The we can test that that has
+        # happened.
         debug_style = self.getDebugInfo()
 
         # Before we do anything, clear the global module cache so we don't
@@ -89,16 +107,27 @@ class GlobalModuleCacheTestCase(TestBase):
             self, "return counter;", main_filespec
         )
 
+        self.pinning_module = None
+        if use_pinning_module:
+            self.pinning_module = target.FindModule(target.executable)
+            self.assertTrue(self.pinning_module.IsValid(), "Valid pinning module")
+            def cleanupPinningModule(self):
+                if self.pinning_module:
+                    self.pinning_module.Clear()
+                    self.pinning_module = None
+            self.addTearDownHook(cleanupPinningModule)
+                
         # Make sure we ran the version we intended here:
         self.check_counter_var(thread, 1)
         process.Kill()
 
         # Now copy two-print.c over main.c, rebuild, and rerun:
-        # os.unlink(target.GetExecutable().fullpath)
         self.copy_to_main(two_print_path, main_c_path)
 
         self.build(dictionary={"C_SOURCES": main_c_path, "EXE": "a.out"})
         error = lldb.SBError()
+
+        target2 = None
         if one_debugger:
             if one_target:
                 (_, process, thread, _) = lldbutil.run_to_breakpoint_do_run(
@@ -109,15 +138,19 @@ class GlobalModuleCacheTestCase(TestBase):
                     self, "return counter;", main_filespec
                 )
         else:
-            if one_target:
+            if not one_target:
                 new_debugger = lldb.SBDebugger().Create()
+                new_debugger.SetAsync(False)
                 self.old_debugger = self.dbg
                 self.dbg = new_debugger
 
                 def cleanupDebugger(self):
-                    lldb.SBDebugger.Destroy(self.dbg)
-                    self.dbg = self.old_debugger
-                    self.old_debugger = None
+                    if self.old_debugger != None:
+                        lldb.SBDebugger.Destroy(self.dbg)
+                        self.dbg = self.old_debugger
+                        self.old_debugger = None
+                        # The testsuite teardown asserts if we haven't deleted all
+                        # modules by the time we exit, so we have to clean this up.
 
                 self.addTearDownHook(cleanupDebugger)
                 (target2, process2, thread, bkpt) = lldbutil.run_to_source_breakpoint(
@@ -129,19 +162,36 @@ class GlobalModuleCacheTestCase(TestBase):
 
         # If we made two targets, destroy the first one, that should free up the
         # unreachable Modules:
-        if not one_target:
-            target.Clear()
 
-        num_a_dot_out_entries = 1
+        # The original debugger is the one that owns the first target:
+        if not one_target:
+            dbg = None
+            if one_debugger:
+                dbg = self.dbg
+            else:
+                dbg = self.old_debugger
+            dbg.HandleCommand(f"target delete {dbg.GetIndexOfTarget(target)}")
+
         # For dSYM's there will be two lines of output, one for the a.out and one
-        # for the dSYM.
+        # for the dSYM, and no .o entries:
+        num_a_dot_out_entries = 1
+        num_main_dot_o_entries = 1
         if debug_style == "dsym":
             num_a_dot_out_entries += 1
+            num_main_dot_o_entries -= 1
+
+        # We shouldn't need the process anymore, that target holds onto the old
+        # image list, so get rid of it now:
+        if target2 and target2.process.IsValid():
+            target2.process.Kill()
 
         error = self.check_image_list_result(num_a_dot_out_entries, 1)
         # Even if this fails, MemoryPressureDetected should fix this.
+        if self.TraceOn():
+            print("*** Calling MemoryPressureDetected")
         lldb.SBDebugger.MemoryPressureDetected()
-        error_after_mpd = self.check_image_list_result(num_a_dot_out_entries, 1)
+        error_after_mpd = self.check_image_list_result(num_a_dot_out_entries,
+                                                       num_main_dot_o_entries)
         fail_msg = ""
         if error != "":
             fail_msg = "Error before MPD: " + error
@@ -158,7 +208,7 @@ class GlobalModuleCacheTestCase(TestBase):
         # failing.
         image_cmd_result = lldb.SBCommandReturnObject()
         interp = self.dbg.GetCommandInterpreter()
-        interp.HandleCommand("image list -g", image_cmd_result)
+        interp.HandleCommand("image list -g -r -u -h -f -S", image_cmd_result)
         if self.TraceOn():
             print(f"Expected: a.out: {num_a_dot_out} main.o: {num_main_dot_o}")
             print(image_cmd_result)
