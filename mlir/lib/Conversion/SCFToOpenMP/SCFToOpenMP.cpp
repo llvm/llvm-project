@@ -460,9 +460,9 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
                     "trying to automatically infer number of threads\n";
 
         if (!cstStep.has_value())
-          return emitError(loc)
-                 << "Expected a forall with constant steps when trying to "
-                    "automatically infer number of threads\n";
+          return emitError(loc) << "Expected a parallel loop with constant "
+                                   "steps when trying to "
+                                   "automatically infer number of threads\n";
 
         inferredNumThreads =
             inferredNumThreads *
