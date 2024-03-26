@@ -205,7 +205,7 @@ public:
     Data.setPointer(Head);
   }
 
-  /// Return an array of all the decls that this list represents.
+  /// Return the list of all the decls.
   DeclContext::lookup_result getLookupResult() const {
     return DeclContext::lookup_result(Data.getPointer());
   }
