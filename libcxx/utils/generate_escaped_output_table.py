@@ -124,7 +124,7 @@ DATA_ARRAY_TEMPLATE = """
 /// - bits [0, 10] The size of the range, allowing 2048 elements.
 /// - bits [11, 31] The lower bound code point of the range. The upper bound of
 ///   the range is lower bound + size.
-inline constexpr uint32_t __entries[{size}] = {{
+_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[{size}] = {{
 {entries}}};
 
 /// At the end of the valid Unicode code points space a lot of code points are

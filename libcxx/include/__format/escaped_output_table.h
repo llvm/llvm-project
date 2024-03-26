@@ -110,7 +110,7 @@ namespace __escaped_output_table {
 /// - bits [0, 10] The size of the range, allowing 2048 elements.
 /// - bits [11, 31] The lower bound code point of the range. The upper bound of
 ///   the range is lower bound + size.
-inline constexpr uint32_t __entries[893] = {
+_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[893] = {
     0x00000020,
     0x0003f821,
     0x00056800,

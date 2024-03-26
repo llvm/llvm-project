@@ -775,3 +775,32 @@ define <3 x i32> @add3_i96(<3 x i32> %0, <3 x i32> %1) {
   %25 = insertelement <3 x i32> %24, i32 %20, i32 2
   ret <3 x i32> %25
 }
+
+define i8 @shl_fold_or_disjoint_cnt(i8 %x) {
+; CHECK-LABEL: @shl_fold_or_disjoint_cnt(
+; CHECK-NEXT:    [[R:%.*]] = shl i8 16, [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = or disjoint i8 %x, 3
+  %r = shl i8 2, %a
+  ret i8 %r
+}
+
+define <2 x i8> @ashr_fold_or_disjoint_cnt(<2 x i8> %x) {
+; CHECK-LABEL: @ashr_fold_or_disjoint_cnt(
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> <i8 0, i8 1>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a = or disjoint <2 x i8> %x, <i8 3, i8 1>
+  %r = ashr <2 x i8> <i8 2, i8 3>, %a
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @lshr_fold_or_disjoint_cnt_out_of_bounds(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_fold_or_disjoint_cnt_out_of_bounds(
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+;
+  %a = or disjoint <2 x i8> %x, <i8 3, i8 8>
+  %r = lshr <2 x i8> <i8 2, i8 3>, %a
+  ret <2 x i8> %r
+}

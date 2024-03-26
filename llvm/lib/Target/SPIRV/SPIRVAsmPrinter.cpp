@@ -103,22 +103,22 @@ void SPIRVAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (ModuleSectionsEmitted == false) {
     outputModuleSections();
     ModuleSectionsEmitted = true;
-  } else {
-    ST = static_cast<const SPIRVTargetMachine &>(TM).getSubtargetImpl();
-    uint32_t DecSPIRVVersion = ST->getSPIRVVersion();
-    uint32_t Major = DecSPIRVVersion / 10;
-    uint32_t Minor = DecSPIRVVersion - Major * 10;
-    // TODO: calculate Bound more carefully from maximum used register number,
-    // accounting for generated OpLabels and other related instructions if
-    // needed.
-    unsigned Bound = 2 * (ST->getBound() + 1);
-    bool FlagToRestore = OutStreamer->getUseAssemblerInfoForParsing();
-    OutStreamer->setUseAssemblerInfoForParsing(true);
-    if (MCAssembler *Asm = OutStreamer->getAssemblerPtr())
-      Asm->setBuildVersion(static_cast<MachO::PlatformType>(0), Major, Minor,
-                           Bound, VersionTuple(Major, Minor, 0, Bound));
-    OutStreamer->setUseAssemblerInfoForParsing(FlagToRestore);
   }
+
+  ST = static_cast<const SPIRVTargetMachine &>(TM).getSubtargetImpl();
+  uint32_t DecSPIRVVersion = ST->getSPIRVVersion();
+  uint32_t Major = DecSPIRVVersion / 10;
+  uint32_t Minor = DecSPIRVVersion - Major * 10;
+  // TODO: calculate Bound more carefully from maximum used register number,
+  // accounting for generated OpLabels and other related instructions if
+  // needed.
+  unsigned Bound = 2 * (ST->getBound() + 1);
+  bool FlagToRestore = OutStreamer->getUseAssemblerInfoForParsing();
+  OutStreamer->setUseAssemblerInfoForParsing(true);
+  if (MCAssembler *Asm = OutStreamer->getAssemblerPtr())
+    Asm->setBuildVersion(static_cast<MachO::PlatformType>(0), Major, Minor,
+                         Bound, VersionTuple(Major, Minor, 0, Bound));
+  OutStreamer->setUseAssemblerInfoForParsing(FlagToRestore);
 }
 
 void SPIRVAsmPrinter::emitFunctionHeader() {

@@ -223,7 +223,7 @@ protected:
   bool HasImageStoreD16Bug = false;
   bool HasImageGather4D16Bug = false;
   bool HasMSAALoadDstSelBug = false;
-  bool HasGFX11FullVGPRs = false;
+  bool Has1_5xVGPRs = false;
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
   bool HasVALUTransUseHazard = false;
@@ -1202,7 +1202,7 @@ public:
   /// target.
   bool hasNullExportTarget() const { return !GFX11Insts; }
 
-  bool hasGFX11FullVGPRs() const { return HasGFX11FullVGPRs; }
+  bool has1_5xVGPRs() const { return Has1_5xVGPRs; }
 
   bool hasVOPDInsts() const { return HasVOPDInsts; }
 

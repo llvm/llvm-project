@@ -67,7 +67,7 @@ class PALUVVNoVm<bits<6> funct6, RISCVVFormat opv, string opcodestr>
   let Inst{6-0} = OPC_OP_P.Value;
 }
 
-// op vd, vs2, imm, vm
+// op vd, vs2, imm
 class PALUVINoVm<bits<6> funct6, string opcodestr, Operand optype = simm5>
     : VALUVINoVm<funct6, opcodestr, optype> {
   let Inst{6-0} = OPC_OP_P.Value;
@@ -180,131 +180,122 @@ class ZvkMxSet<string vd_lmul> {
                                    !eq(vd_lmul, "MF8") : [V_MF8]);
 }
 
-class VPseudoUnaryNoMask_Zvk<DAGOperand RetClass, VReg OpClass, string Constraint = ""> :
-      Pseudo<(outs RetClass:$rd),
-        (ins RetClass:$merge, OpClass:$rs2, AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
+class VPseudoBinaryNoMask_Zvk<DAGOperand RetClass, VReg OpClass> :
+      Pseudo<(outs RetClass:$rd_wb),
+        (ins RetClass:$rd, OpClass:$rs2, AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
         RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
+  let Constraints = "$rd_wb = $rd";
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-class VPseudoBinaryNoMask_Zvk<VReg RetClass,
-                              VReg Op1Class,
-                              DAGOperand Op2Class,
-                              string Constraint> :
-        Pseudo<(outs RetClass:$rd),
-               (ins RetClass:$merge, Op1Class:$rs2, Op2Class:$rs1,
+class VPseudoTernaryNoMask_Zvk<VReg RetClass,
+                               VReg Op1Class,
+                               DAGOperand Op2Class> :
+        Pseudo<(outs RetClass:$rd_wb),
+               (ins RetClass:$rd, Op1Class:$rs2, Op2Class:$rs1,
                     AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
         RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
+  let Constraints = "$rd_wb = $rd";
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-multiclass VPseudoBinaryNoMask_Zvk<VReg RetClass,
+multiclass VPseudoTernaryNoMask_Zvk<VReg RetClass,
                                    VReg Op1Class,
                                    DAGOperand Op2Class,
-                                   LMULInfo MInfo,
-                                   string Constraint = ""> {
+                                   LMULInfo MInfo> {
   let VLMul = MInfo.value in
-    def "_" # MInfo.MX : VPseudoBinaryNoMask_Zvk<RetClass, Op1Class, Op2Class,
-                                                 Constraint>;
+    def "_" # MInfo.MX : VPseudoTernaryNoMask_Zvk<RetClass, Op1Class, Op2Class>;
 }
 
-multiclass VPseudoUnaryV_V_NoMask_Zvk<LMULInfo m, string Constraint = ""> {
+multiclass VPseudoBinaryV_V_NoMask_Zvk<LMULInfo m> {
   let VLMul = m.value in {
-    def "_VV_" # m.MX : VPseudoUnaryNoMask_Zvk<m.vrclass, m.vrclass, Constraint>;
+    def "_VV_" # m.MX : VPseudoBinaryNoMask_Zvk<m.vrclass, m.vrclass>;
   }
 }
 
-multiclass VPseudoUnaryV_S_NoMask_Zvk<LMULInfo m, string Constraint = ""> {
+multiclass VPseudoBinaryV_S_NoMask_Zvk<LMULInfo m> {
   let VLMul = m.value in
     foreach vs2_lmul = ZvkMxSet<m.MX>.vs2_lmuls in
-      def "_VS_" # m.MX # "_" # vs2_lmul.MX : VPseudoUnaryNoMask_Zvk<m.vrclass, vs2_lmul.vrclass, Constraint>;
+      def "_VS_" # m.MX # "_" # vs2_lmul.MX : VPseudoBinaryNoMask_Zvk<m.vrclass, vs2_lmul.vrclass>;
 }
 
-multiclass VPseudoVALU_V_NoMask_Zvk<string Constraint = ""> {
+multiclass VPseudoVALU_V_NoMask_Zvk {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm "" : VPseudoUnaryV_V_NoMask_Zvk<m, Constraint>,
+    defm "" : VPseudoBinaryV_V_NoMask_Zvk<m>,
               Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
 
-multiclass VPseudoVALU_S_NoMask_Zvk<string Constraint = ""> {
+multiclass VPseudoVALU_S_NoMask_Zvk {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm "" : VPseudoUnaryV_S_NoMask_Zvk<m, Constraint>,
+    defm "" : VPseudoBinaryV_S_NoMask_Zvk<m>,
               Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
 
-multiclass VPseudoVALU_V_S_NoMask_Zvk<string Constraint = ""> {
-  defm "" : VPseudoVALU_V_NoMask_Zvk<Constraint>;
-  defm "" : VPseudoVALU_S_NoMask_Zvk<Constraint>;
-}
+multiclass VPseudoVALU_V_S_NoMask_Zvk
+  : VPseudoVALU_V_NoMask_Zvk, VPseudoVALU_S_NoMask_Zvk;
 
-multiclass VPseudoVALU_VV_NoMask_Zvk<string Constraint = ""> {
+multiclass VPseudoVALU_VV_NoMask_Zvk {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm _VV : VPseudoBinaryNoMask_Zvk<m.vrclass, m.vrclass, m.vrclass, m,
-                                       Constraint>,
+    defm _VV : VPseudoTernaryNoMask_Zvk<m.vrclass, m.vrclass, m.vrclass, m>,
                Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
 
-multiclass VPseudoVALU_VI_NoMask_Zvk<Operand ImmType = simm5, string Constraint = ""> {
+multiclass VPseudoVALU_VI_NoMask_Zvk {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm _VI : VPseudoBinaryNoMask_Zvk<m.vrclass, m.vrclass, ImmType, m,
-                                       Constraint>,
+    defm _VI : VPseudoTernaryNoMask_Zvk<m.vrclass, m.vrclass, uimm5, m>,
                Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
 
-multiclass VPseudoVALU_VI_NoMaskTU_Zvk<Operand ImmType = uimm5, string Constraint = ""> {
+multiclass VPseudoVALU_VI_NoMaskTU_Zvk {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm _VI : VPseudoBinaryNoMask<m.vrclass, m.vrclass, ImmType, m,
-                                   Constraint>,
+    defm _VI : VPseudoBinaryNoMask<m.vrclass, m.vrclass, uimm5, m>,
                Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
 
-multiclass VPseudoVALU_VV_NoMaskTU_Zvk<string Constraint = ""> {
+multiclass VPseudoVALU_VV_NoMaskTU_Zvk {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm _VV : VPseudoBinaryNoMask<m.vrclass, m.vrclass, m.vrclass, m,
-                                   Constraint>,
+    defm _VV : VPseudoBinaryNoMask<m.vrclass, m.vrclass, m.vrclass, m>,
                Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
@@ -376,7 +367,7 @@ let Predicates = [HasStdExtZvkned] in {
   defm PseudoVAESEF  : VPseudoVALU_V_S_NoMask_Zvk;
   defm PseudoVAESEM  : VPseudoVALU_V_S_NoMask_Zvk;
   defm PseudoVAESKF1 : VPseudoVALU_VI_NoMaskTU_Zvk;
-  defm PseudoVAESKF2 : VPseudoVALU_VI_NoMask_Zvk<uimm5>;
+  defm PseudoVAESKF2 : VPseudoVALU_VI_NoMask_Zvk;
   defm PseudoVAESZ   : VPseudoVALU_S_NoMask_Zvk;
 } // Predicates = [HasStdExtZvkned]
 
@@ -392,7 +383,7 @@ let Predicates = [HasStdExtZvksed] in {
 } // Predicates = [HasStdExtZvksed]
 
 let Predicates = [HasStdExtZvksh] in {
-  defm PseudoVSM3C  : VPseudoVALU_VI_NoMask_Zvk<uimm5>;
+  defm PseudoVSM3C  : VPseudoVALU_VI_NoMask_Zvk;
   defm PseudoVSM3ME : VPseudoVALU_VV_NoMaskTU_Zvk;
 } // Predicates = [HasStdExtZvksh]
 
@@ -668,44 +659,44 @@ foreach vtiToWti = AllWidenableIntVectors in {
 //===----------------------------------------------------------------------===//
 
 class VPatUnaryNoMask_Zvk<string intrinsic_name,
-                      string inst,
-                      string kind,
-                      ValueType result_type,
-                      ValueType op2_type,
-                      int sew,
-                      LMULInfo vlmul,
-                      VReg result_reg_class,
-                      VReg op2_reg_class> :
+                          string inst,
+                          string kind,
+                          ValueType result_type,
+                          ValueType op2_type,
+                          int sew,
+                          LMULInfo vlmul,
+                          VReg result_reg_class,
+                          VReg op2_reg_class> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
-                   (result_type result_reg_class:$merge),
+                   (result_type result_reg_class:$rd),
                    (op2_type op2_reg_class:$rs2),
                    VLOpFrag, (XLenVT timm:$policy))),
                    (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX)
-                   (result_type result_reg_class:$merge),
+                   (result_type result_reg_class:$rd),
                    (op2_type op2_reg_class:$rs2),
                    GPR:$vl, sew, (XLenVT timm:$policy))>;
 
 class VPatUnaryNoMask_VS_Zvk<string intrinsic_name,
-                      string inst,
-                      string kind,
-                      ValueType result_type,
-                      ValueType op2_type,
-                      int sew,
-                      LMULInfo vlmul,
-                      LMULInfo vs2_lmul,
-                      VReg result_reg_class,
-                      VReg op2_reg_class> :
+                             string inst,
+                             string kind,
+                             ValueType result_type,
+                             ValueType op2_type,
+                             int sew,
+                             LMULInfo vlmul,
+                             LMULInfo vs2_lmul,
+                             VReg result_reg_class,
+                             VReg op2_reg_class> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
-                   (result_type result_reg_class:$merge),
+                   (result_type result_reg_class:$rd),
                    (op2_type op2_reg_class:$rs2),
                    VLOpFrag, (XLenVT timm:$policy))),
                    (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#"_"#vs2_lmul.MX)
-                   (result_type result_reg_class:$merge),
+                   (result_type result_reg_class:$rd),
                    (op2_type op2_reg_class:$rs2),
                    GPR:$vl, sew, (XLenVT timm:$policy))>;
 
 multiclass VPatUnaryV_V_NoMask_Zvk<string intrinsic, string instruction,
-                              list<VTypeInfo> vtilist> {
+                                   list<VTypeInfo> vtilist> {
   foreach vti = vtilist in
     def : VPatUnaryNoMask_Zvk<intrinsic # "_vv", instruction, "VV",
                           vti.Vector, vti.Vector, vti.Log2SEW,
@@ -713,7 +704,7 @@ multiclass VPatUnaryV_V_NoMask_Zvk<string intrinsic, string instruction,
 }
 
 multiclass VPatUnaryV_S_NoMaskVectorCrypto<string intrinsic, string instruction,
-                               list<VTypeInfo> vtilist> {
+                                           list<VTypeInfo> vtilist> {
   foreach vti = vtilist in
     foreach vti_vs2 = ZvkI32IntegerVectors<vti.LMul.MX>.vs2_types in
       def : VPatUnaryNoMask_VS_Zvk<intrinsic # "_vs", instruction, "VS",
@@ -722,13 +713,13 @@ multiclass VPatUnaryV_S_NoMaskVectorCrypto<string intrinsic, string instruction,
 }
 
 multiclass VPatUnaryV_V_S_NoMask_Zvk<string intrinsic, string instruction,
-                                list<VTypeInfo> vtilist> {
+                                     list<VTypeInfo> vtilist> {
   defm : VPatUnaryV_V_NoMask_Zvk<intrinsic, instruction, vtilist>;
   defm : VPatUnaryV_S_NoMaskVectorCrypto<intrinsic, instruction, vtilist>;
 }
 
 multiclass VPatBinaryV_VV_NoMask<string intrinsic, string instruction,
-                          list<VTypeInfo> vtilist> {
+                                 list<VTypeInfo> vtilist> {
   foreach vti = vtilist in
     def : VPatTernaryNoMaskWithPolicy<intrinsic, instruction, "VV",
                                       vti.Vector, vti.Vector, vti.Vector,
@@ -737,7 +728,8 @@ multiclass VPatBinaryV_VV_NoMask<string intrinsic, string instruction,
 }
 
 multiclass VPatBinaryV_VI_NoMask<string intrinsic, string instruction,
-                          list<VTypeInfo> vtilist, Operand imm_type = tuimm5> {
+                                 list<VTypeInfo> vtilist,
+                                 Operand imm_type = tuimm5> {
   foreach vti = vtilist in
     def : VPatTernaryNoMaskWithPolicy<intrinsic, instruction, "VI",
                                       vti.Vector, vti.Vector, XLenVT,
@@ -746,7 +738,8 @@ multiclass VPatBinaryV_VI_NoMask<string intrinsic, string instruction,
 }
 
 multiclass VPatBinaryV_VI_NoMaskTU<string intrinsic, string instruction,
-                          list<VTypeInfo> vtilist, Operand imm_type = tuimm5> {
+                                   list<VTypeInfo> vtilist,
+                                   Operand imm_type = tuimm5> {
   foreach vti = vtilist in
     def : VPatBinaryNoMaskTU<intrinsic, instruction # "_VI_" # vti.LMul.MX,
                              vti.Vector, vti.Vector, XLenVT, vti.Log2SEW,
@@ -754,7 +747,7 @@ multiclass VPatBinaryV_VI_NoMaskTU<string intrinsic, string instruction,
 }
 
 multiclass VPatBinaryV_VV_NoMaskTU<string intrinsic, string instruction,
-                          list<VTypeInfo> vtilist> {
+                                   list<VTypeInfo> vtilist> {
   foreach vti = vtilist in
     def : VPatBinaryNoMaskTU<intrinsic, instruction # "_VV_" # vti.LMul.MX,
                              vti.Vector, vti.Vector, vti.Vector, vti.Log2SEW,
@@ -812,13 +805,14 @@ multiclass VPatBinaryV_VI_VROL<string intrinsic, string instruction,
 }
 
 multiclass VPatBinaryV_VV_VX_VROL<string intrinsic, string instruction,
-				  string instruction2, list<VTypeInfo> vtilist>
+                                  string instruction2, list<VTypeInfo> vtilist>
     : VPatBinaryV_VV<intrinsic, instruction, vtilist>,
       VPatBinaryV_VX_VROTATE<intrinsic, instruction, vtilist>,
       VPatBinaryV_VI_VROL<intrinsic, instruction2, vtilist>;
 
 multiclass VPatBinaryV_VV_VX_VI_VROR<string intrinsic, string instruction,
-                                     list<VTypeInfo> vtilist, Operand ImmType = uimm6>
+                                     list<VTypeInfo> vtilist,
+                                     Operand ImmType = uimm6>
     : VPatBinaryV_VV<intrinsic, instruction, vtilist>,
       VPatBinaryV_VX_VROTATE<intrinsic, instruction, vtilist>,
       VPatBinaryV_VI<intrinsic, instruction, vtilist, ImmType>;

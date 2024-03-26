@@ -120,11 +120,8 @@ memref::AllocaOp::getDestructurableSlots() {
   if (!destructuredType)
     return {};
 
-  DenseMap<Attribute, Type> indexMap;
-  for (auto const &[index, type] : *destructuredType)
-    indexMap.insert({index, MemRefType::get({}, type)});
-
-  return {DestructurableMemorySlot{{getMemref(), memrefType}, indexMap}};
+  return {
+      DestructurableMemorySlot{{getMemref(), memrefType}, *destructuredType}};
 }
 
 DenseMap<Attribute, MemorySlot>
@@ -170,7 +167,8 @@ Value memref::LoadOp::getStored(const MemorySlot &slot,
 
 bool memref::LoadOp::canUsesBeRemoved(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
   if (blockingUses.size() != 1)
     return false;
   Value blockingUse = (*blockingUses.begin())->get();
@@ -210,7 +208,8 @@ static Attribute getAttributeIndexFromIndexOperands(MLIRContext *ctx,
 
 bool memref::LoadOp::canRewire(const DestructurableMemorySlot &slot,
                                SmallPtrSetImpl<Attribute> &usedIndices,
-                               SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
+                               SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+                               const DataLayout &dataLayout) {
   if (slot.ptr != getMemRef())
     return false;
   Attribute index = getAttributeIndexFromIndexOperands(
@@ -223,7 +222,8 @@ bool memref::LoadOp::canRewire(const DestructurableMemorySlot &slot,
 
 DeletionKind memref::LoadOp::rewire(const DestructurableMemorySlot &slot,
                                     DenseMap<Attribute, MemorySlot> &subslots,
-                                    RewriterBase &rewriter) {
+                                    RewriterBase &rewriter,
+                                    const DataLayout &dataLayout) {
   Attribute index = getAttributeIndexFromIndexOperands(
       getContext(), getIndices(), getMemRefType());
   const MemorySlot &memorySlot = subslots.at(index);
@@ -247,7 +247,8 @@ Value memref::StoreOp::getStored(const MemorySlot &slot,
 
 bool memref::StoreOp::canUsesBeRemoved(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
   if (blockingUses.size() != 1)
     return false;
   Value blockingUse = (*blockingUses.begin())->get();
@@ -263,7 +264,8 @@ DeletionKind memref::StoreOp::removeBlockingUses(
 
 bool memref::StoreOp::canRewire(const DestructurableMemorySlot &slot,
                                 SmallPtrSetImpl<Attribute> &usedIndices,
-                                SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
+                                SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+                                const DataLayout &dataLayout) {
   if (slot.ptr != getMemRef() || getValue() == slot.ptr)
     return false;
   Attribute index = getAttributeIndexFromIndexOperands(
@@ -276,7 +278,8 @@ bool memref::StoreOp::canRewire(const DestructurableMemorySlot &slot,
 
 DeletionKind memref::StoreOp::rewire(const DestructurableMemorySlot &slot,
                                      DenseMap<Attribute, MemorySlot> &subslots,
-                                     RewriterBase &rewriter) {
+                                     RewriterBase &rewriter,
+                                     const DataLayout &dataLayout) {
   Attribute index = getAttributeIndexFromIndexOperands(
       getContext(), getIndices(), getMemRefType());
   const MemorySlot &memorySlot = subslots.at(index);

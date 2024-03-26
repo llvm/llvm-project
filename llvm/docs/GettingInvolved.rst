@@ -323,6 +323,11 @@ The :doc:`CodeOfConduct` applies to all office hours.
     - Monthly, 4th Wednesday of the month at 9:30am PT, for 30 minutes.
     - `Google meet <https://meet.google.com/pdd-dibg-cwv>`__
     - English
+  * - Maksim Levental and Jeremy Kun
+    - MLIR newcomers and general discussion (`livestreamed <https://www.youtube.com/playlist?list=PLhxO86S3jsX2k7kOhZaV-qKWm8tNsUdAE>`__)
+    - Every two weeks, Fridays at 3:00pm US Pacific, for 90 minutes.
+    - Livestream chat or `Google meet <https://meet.google.com/wit-tvzc-dwc>`__
+    - English
   * - Rotating hosts
     - Getting Started, beginner questions, new contributors.
     - Every Tuesday at 2 PM ET (11 AM PT), for 30 minutes.

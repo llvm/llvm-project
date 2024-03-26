@@ -34,17 +34,17 @@ ARMAP-NEXT: test_NULL_THUNK_DATA in test.dll
 
 RUN: llvm-readobj test.lib | FileCheck -check-prefix=READOBJ %s
 
-READOBJ:      File: test.lib(test.dll)
+READOBJ:      File: test{{.*}}.lib(test.dll)
 READOBJ-NEXT: Format: COFF-ARM64{{$}}
 READOBJ-NEXT: Arch: aarch64
 READOBJ-NEXT: AddressSize: 64bit
 READOBJ-EMPTY:
-READOBJ-NEXT: File: test.lib(test.dll)
+READOBJ-NEXT: File: test{{.*}}.lib(test.dll)
 READOBJ-NEXT: Format: COFF-ARM64{{$}}
 READOBJ-NEXT: Arch: aarch64
 READOBJ-NEXT: AddressSize: 64bit
 READOBJ-EMPTY:
-READOBJ-NEXT: File: test.lib(test.dll)
+READOBJ-NEXT: File: test{{.*}}.lib(test.dll)
 READOBJ-NEXT: Format: COFF-ARM64{{$}}
 READOBJ-NEXT: Arch: aarch64
 READOBJ-NEXT: AddressSize: 64bit
@@ -95,6 +95,11 @@ READOBJ-NEXT: Type: data
 READOBJ-NEXT: Name type: name
 READOBJ-NEXT: Export name: dataexp
 READOBJ-NEXT: Symbol: __imp_dataexp
+
+Using -machine:arm64x gives the same output.
+RUN: llvm-lib -machine:arm64x -def:test.def -out:testx.lib
+RUN: llvm-nm --print-armap testx.lib | FileCheck -check-prefix=ARMAP %s
+RUN: llvm-readobj testx.lib | FileCheck -check-prefix=READOBJ %s
 
 Creating a new lib containing the existing lib:
 RUN: llvm-lib -machine:arm64ec test.lib -out:test2.lib
@@ -246,7 +251,9 @@ READOBJX-NEXT: Symbol: __imp_dataexp
 
 
 RUN: llvm-lib -machine:arm64ec -def:test.def -defArm64Native:test2.def -out:test2.lib
+RUN: llvm-lib -machine:arm64ec -def:test.def -defArm64Native:test2.def -out:test2x.lib
 RUN: llvm-nm --print-armap test2.lib | FileCheck -check-prefix=ARMAPX2 %s
+RUN: llvm-nm --print-armap test2x.lib | FileCheck -check-prefix=ARMAPX2 %s
 
 ARMAPX2:      Archive map
 ARMAPX2-NEXT: __IMPORT_DESCRIPTOR_test2 in test2.dll

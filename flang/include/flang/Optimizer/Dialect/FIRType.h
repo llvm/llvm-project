@@ -237,6 +237,9 @@ inline mlir::Type unwrapSequenceType(mlir::Type t) {
   return t;
 }
 
+/// Return the nested sequence type if any.
+mlir::Type extractSequenceType(mlir::Type ty);
+
 inline mlir::Type unwrapRefType(mlir::Type t) {
   if (auto eleTy = dyn_cast_ptrEleTy(t))
     return eleTy;

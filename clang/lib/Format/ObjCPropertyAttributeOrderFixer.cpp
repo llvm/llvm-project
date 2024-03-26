@@ -15,6 +15,8 @@
 
 #include "ObjCPropertyAttributeOrderFixer.h"
 
+#include <algorithm>
+
 namespace clang {
 namespace format {
 

@@ -41,8 +41,12 @@ static Value extendVectorRank(OpBuilder &builder, Location loc, Value vec,
   SmallVector<int64_t> newShape(addedRank, 1);
   newShape.append(originalVecType.getShape().begin(),
                   originalVecType.getShape().end());
-  VectorType newVecType =
-      VectorType::get(newShape, originalVecType.getElementType());
+
+  SmallVector<bool> newScalableDims(addedRank, false);
+  newScalableDims.append(originalVecType.getScalableDims().begin(),
+                         originalVecType.getScalableDims().end());
+  VectorType newVecType = VectorType::get(
+      newShape, originalVecType.getElementType(), newScalableDims);
   return builder.create<vector::BroadcastOp>(loc, newVecType, vec);
 }
 

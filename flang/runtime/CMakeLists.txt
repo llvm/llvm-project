@@ -129,6 +129,7 @@ set(sources
   exceptions.cpp
   execute.cpp
   extensions.cpp
+  external-unit.cpp
   extrema.cpp
   file.cpp
   findloc.cpp
@@ -149,6 +150,7 @@ set(sources
   numeric.cpp
   pointer.cpp
   product.cpp
+  pseudo-unit.cpp
   ragged.cpp
   random.cpp
   reduction.cpp
@@ -178,22 +180,38 @@ set(supported_files
   allocatable.cpp
   array-constructor.cpp
   assign.cpp
+  buffer.cpp
   character.cpp
+  connection.cpp
   copy.cpp
   derived-api.cpp
   derived.cpp
   descriptor.cpp
+  descriptor-io.cpp
   dot-product.cpp
+  edit-input.cpp
+  edit-output.cpp
+  environment.cpp
   extrema.cpp
+  external-unit.cpp
   findloc.cpp
+  format.cpp
   inquiry.cpp
+  internal-unit.cpp
+  io-api.cpp
+  io-error.cpp
+  io-stmt.cpp
+  iostat.cpp
   matmul-transpose.cpp
   matmul.cpp
   memory.cpp
   misc-intrinsic.cpp
+  namelist.cpp
+  non-tbp-dio.cpp
   numeric.cpp
   pointer.cpp
   product.cpp
+  pseudo-unit.cpp
   ragged.cpp
   stat.cpp
   sum.cpp
@@ -203,6 +221,8 @@ set(supported_files
   transformational.cpp
   type-code.cpp
   type-info.cpp
+  unit.cpp
+  utf.cpp
   )
 
 if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)

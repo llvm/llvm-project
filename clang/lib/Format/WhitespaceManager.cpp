@@ -12,6 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "WhitespaceManager.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include <algorithm>
 
 namespace clang {
 namespace format {
@@ -109,6 +112,7 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
   alignConsecutiveBitFields();
   alignConsecutiveAssignments();
   if (Style.isTableGen()) {
+    alignConsecutiveTableGenBreakingDAGArgColons();
     alignConsecutiveTableGenCondOperatorColons();
     alignConsecutiveTableGenDefinitions();
   }
@@ -978,6 +982,11 @@ void WhitespaceManager::alignConsecutiveShortCaseStatements() {
                              Changes);
 }
 
+void WhitespaceManager::alignConsecutiveTableGenBreakingDAGArgColons() {
+  alignConsecutiveColons(Style.AlignConsecutiveTableGenBreakingDAGArgColons,
+                         TT_TableGenDAGArgListColonToAlign);
+}
+
 void WhitespaceManager::alignConsecutiveTableGenCondOperatorColons() {
   alignConsecutiveColons(Style.AlignConsecutiveTableGenCondOperatorColons,
                          TT_TableGenCondOperatorColon);
@@ -1482,7 +1491,7 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
                                                                 : Cell);
         // Go to the next non-comment and ensure there is a break in front
         const auto *NextNonComment = C.Tok->getNextNonComment();
-        while (NextNonComment->is(tok::comma))
+        while (NextNonComment && NextNonComment->is(tok::comma))
           NextNonComment = NextNonComment->getNextNonComment();
         auto j = i;
         while (j < End && Changes[j].Tok != NextNonComment)

@@ -2676,7 +2676,7 @@ bool PPCFrameLowering::restoreCalleeSavedRegisters(
         Restored.set(Dst);
 
       } else {
-       // Default behavior for non-CR saves.
+        // Default behavior for non-CR saves.
         const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
 
         // Functions without NoUnwind need to preserve the order of elements in

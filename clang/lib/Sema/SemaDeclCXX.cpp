@@ -9738,7 +9738,8 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD, CXXSpecialMember CSM,
     return false;
   CXXRecordDecl *RD = MD->getParent();
   assert(!RD->isDependentType() && "do deletion after instantiation");
-  if (!LangOpts.CPlusPlus11 || RD->isInvalidDecl())
+  if (!LangOpts.CPlusPlus || (!LangOpts.CPlusPlus11 && !RD->isLambda()) ||
+      RD->isInvalidDecl())
     return false;
 
   // C++11 [expr.lambda.prim]p19:
@@ -16201,7 +16202,8 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, const RecordType *Record) {
 
   // Emit warning for non-trivial dtor in global scope (a real global,
   // class-static, function-static).
-  Diag(VD->getLocation(), diag::warn_exit_time_destructor);
+  if (!VD->hasAttr<AlwaysDestroyAttr>())
+    Diag(VD->getLocation(), diag::warn_exit_time_destructor);
 
   // TODO: this should be re-enabled for static locals by !CXAAtExit
   if (!VD->isStaticLocal())

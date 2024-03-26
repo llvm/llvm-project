@@ -299,36 +299,36 @@ void RISCVInstrInfo::copyPhysRegVector(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MBBI,
                                        const DebugLoc &DL, MCRegister DstReg,
                                        MCRegister SrcReg, bool KillSrc,
-                                       unsigned Opc, unsigned NF) const {
+                                       RISCVII::VLMUL LMul, unsigned NF) const {
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
-  RISCVII::VLMUL LMul;
+  unsigned Opc;
   unsigned SubRegIdx;
   unsigned VVOpc, VIOpc;
-  switch (Opc) {
+  switch (LMul) {
   default:
     llvm_unreachable("Impossible LMUL for vector register copy.");
-  case RISCV::VMV1R_V:
-    LMul = RISCVII::LMUL_1;
+  case RISCVII::LMUL_1:
+    Opc = RISCV::VMV1R_V;
     SubRegIdx = RISCV::sub_vrm1_0;
     VVOpc = RISCV::PseudoVMV_V_V_M1;
     VIOpc = RISCV::PseudoVMV_V_I_M1;
     break;
-  case RISCV::VMV2R_V:
-    LMul = RISCVII::LMUL_2;
+  case RISCVII::LMUL_2:
+    Opc = RISCV::VMV2R_V;
     SubRegIdx = RISCV::sub_vrm2_0;
     VVOpc = RISCV::PseudoVMV_V_V_M2;
     VIOpc = RISCV::PseudoVMV_V_I_M2;
     break;
-  case RISCV::VMV4R_V:
-    LMul = RISCVII::LMUL_4;
+  case RISCVII::LMUL_4:
+    Opc = RISCV::VMV4R_V;
     SubRegIdx = RISCV::sub_vrm4_0;
     VVOpc = RISCV::PseudoVMV_V_V_M4;
     VIOpc = RISCV::PseudoVMV_V_I_M4;
     break;
-  case RISCV::VMV8R_V:
+  case RISCVII::LMUL_8:
     assert(NF == 1);
-    LMul = RISCVII::LMUL_8;
+    Opc = RISCV::VMV8R_V;
     SubRegIdx = RISCV::sub_vrm1_0; // There is no sub_vrm8_0.
     VVOpc = RISCV::PseudoVMV_V_V_M8;
     VIOpc = RISCV::PseudoVMV_V_I_M8;
@@ -505,87 +505,87 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   // VR->VR copies.
   if (RISCV::VRRegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V);
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_1);
     return;
   }
 
   if (RISCV::VRM2RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV2R_V);
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_2);
     return;
   }
 
   if (RISCV::VRM4RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV4R_V);
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_4);
     return;
   }
 
   if (RISCV::VRM8RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV8R_V);
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_8);
     return;
   }
 
   if (RISCV::VRN2M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_1,
                       /*NF=*/2);
     return;
   }
 
   if (RISCV::VRN2M2RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV2R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_2,
                       /*NF=*/2);
     return;
   }
 
   if (RISCV::VRN2M4RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV4R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_4,
                       /*NF=*/2);
     return;
   }
 
   if (RISCV::VRN3M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_1,
                       /*NF=*/3);
     return;
   }
 
   if (RISCV::VRN3M2RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV2R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_2,
                       /*NF=*/3);
     return;
   }
 
   if (RISCV::VRN4M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_1,
                       /*NF=*/4);
     return;
   }
 
   if (RISCV::VRN4M2RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV2R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_2,
                       /*NF=*/4);
     return;
   }
 
   if (RISCV::VRN5M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_1,
                       /*NF=*/5);
     return;
   }
 
   if (RISCV::VRN6M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_1,
                       /*NF=*/6);
     return;
   }
 
   if (RISCV::VRN7M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_1,
                       /*NF=*/7);
     return;
   }
 
   if (RISCV::VRN8M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_1,
                       /*NF=*/8);
     return;
   }

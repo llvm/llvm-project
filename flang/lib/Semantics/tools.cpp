@@ -403,6 +403,18 @@ const Symbol &BypassGeneric(const Symbol &symbol) {
   return symbol;
 }
 
+const Symbol &GetCrayPointer(const Symbol &crayPointee) {
+  const Symbol *found{nullptr};
+  for (const auto &[pointee, pointer] :
+      crayPointee.GetUltimate().owner().crayPointers()) {
+    if (pointee == crayPointee.name()) {
+      found = &pointer.get();
+      break;
+    }
+  }
+  return DEREF(found);
+}
+
 bool ExprHasTypeCategory(
     const SomeExpr &expr, const common::TypeCategory &type) {
   auto dynamicType{expr.GetType()};

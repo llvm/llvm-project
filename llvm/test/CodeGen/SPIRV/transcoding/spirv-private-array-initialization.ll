@@ -1,6 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ;
-; CHECK-SPIRV-DAG: %[[#i8:]] = OpTypeInt 8 0
 ; CHECK-SPIRV-DAG: %[[#i32:]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG: %[[#one:]] = OpConstant %[[#i32]] 1
 ; CHECK-SPIRV-DAG: %[[#two:]] = OpConstant %[[#i32]] 2
@@ -13,7 +12,6 @@
 ; CHECK-SPIRV:     %[[#test_arr2:]] = OpVariable %[[#const_i32x3_ptr]] UniformConstant %[[#test_arr_init]]
 ; CHECK-SPIRV:     %[[#test_arr:]] = OpVariable %[[#const_i32x3_ptr]] UniformConstant %[[#test_arr_init]]
 
-; CHECK-SPIRV-DAG: %[[#const_i8_ptr:]] = OpTypePointer UniformConstant %[[#i8]]
 ; CHECK-SPIRV-DAG: %[[#i32x3_ptr:]] = OpTypePointer Function %[[#i32x3]]
 
 ; CHECK-SPIRV:     %[[#arr:]] = OpVariable %[[#i32x3_ptr]] Function

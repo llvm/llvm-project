@@ -479,7 +479,7 @@ AArch64TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
       return TTI::TCC_Free;
     break;
   case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
+  case Intrinsic::experimental_patchpoint:
     if ((Idx < 4) || (Imm.getBitWidth() <= 64 && isInt<64>(Imm.getSExtValue())))
       return TTI::TCC_Free;
     break;
@@ -1129,7 +1129,7 @@ static std::optional<Instruction *> instCombineSVELast(InstCombiner &IC,
       auto *NewRHS =
           IC.Builder.CreateIntrinsic(IntrinsicID, {Vec->getType()}, {Pg, RHS});
       auto *NewBinOp = BinaryOperator::CreateWithCopiedFlags(
-          OpC, NewLHS, NewRHS, OldBinOp, OldBinOp->getName(), &II);
+          OpC, NewLHS, NewRHS, OldBinOp, OldBinOp->getName(), II.getIterator());
       return IC.replaceInstUsesWith(II, NewBinOp);
     }
   }

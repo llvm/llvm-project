@@ -103,7 +103,7 @@ buildContainsExprConsumedInDifferentBlock(
   auto CheckChildExprs = [&Result, &StmtToBlock](const Stmt *S,
                                                  const CFGBlock *Block) {
     for (const Stmt *Child : S->children()) {
-      if (!isa<Expr>(Child))
+      if (!isa_and_nonnull<Expr>(Child))
         continue;
       const CFGBlock *ChildBlock = StmtToBlock.lookup(Child);
       if (ChildBlock != Block)
@@ -144,7 +144,7 @@ llvm::Expected<AdornedCFG> AdornedCFG::build(const Decl &D, Stmt &S,
 
   // The shape of certain elements of the AST can vary depending on the
   // language. We currently only support C++.
-  if (!C.getLangOpts().CPlusPlus)
+  if (!C.getLangOpts().CPlusPlus || C.getLangOpts().ObjC)
     return llvm::createStringError(
         std::make_error_code(std::errc::invalid_argument),
         "Can only analyze C++");

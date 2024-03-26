@@ -147,6 +147,16 @@ public:
     entries.push_back(Entry{filterFn, Entry::FilterType::ALLOW});
   }
 
+  /// Deny the given dialect.
+  ///
+  /// This function adds a DENY entry.
+  void denyDialect(StringRef dialectNamespace) {
+    Entry::FilterFn filterFn = [=](Operation *op) {
+      return op->getDialect()->getNamespace() == dialectNamespace;
+    };
+    entries.push_back(Entry{filterFn, Entry::FilterType::DENY});
+  }
+
   /// Allow the given ops.
   ///
   /// This function adds one or multiple ALLOW entries.
@@ -355,10 +365,6 @@ struct BufferizationOptions {
   // failure to determine memory space for a tensor type).
   DefaultMemorySpaceFn defaultMemorySpaceFn =
       [](TensorType t) -> std::optional<Attribute> { return Attribute(); };
-
-  /// Seed for the analysis fuzzer. If set to `0`, the fuzzer is deactivated.
-  /// Should be used only with `testAnalysisOnly = true`.
-  unsigned analysisFuzzerSeed = 0;
 
   /// If set to `true`, the analysis is skipped. A buffer is copied before every
   /// write. This flag cannot be used together with `testAnalysisOnly = true`.

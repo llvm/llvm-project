@@ -49,6 +49,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/HexagonAttributeParser.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MSP430AttributeParser.h"
 #include "llvm/Support/MSP430Attributes.h"
@@ -2824,6 +2825,11 @@ template <typename ELFT> void ELFDumper<ELFT>::printLoadName() {
 
 template <class ELFT> void ELFDumper<ELFT>::printArchSpecificInfo() {
   switch (Obj.getHeader().e_machine) {
+  case EM_HEXAGON:
+    printAttributes(ELF::SHT_HEXAGON_ATTRIBUTES,
+                    std::make_unique<HexagonAttributeParser>(&W),
+                    llvm::endianness::little);
+    break;
   case EM_ARM:
     if (Obj.isLE())
       printAttributes(ELF::SHT_ARM_ATTRIBUTES,

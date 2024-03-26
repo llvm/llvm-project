@@ -13,6 +13,7 @@
 // The various representations are distinguished by their binary precisions
 // (number of explicit significand bits and any implicit MSB in the fraction).
 
+#include "flang/Common/api-attrs.h"
 #include <cinttypes>
 
 namespace Fortran::common {
@@ -119,6 +120,7 @@ private:
   }
 
 public:
+  RT_OFFLOAD_VAR_GROUP_BEGIN
   static constexpr int binaryPrecision{BINARY_PRECISION};
   static constexpr int bits{BitsForBinaryPrecision(binaryPrecision)};
   static constexpr bool isImplicitMSB{binaryPrecision != 64 /*x87*/};
@@ -138,6 +140,7 @@ public:
 
   static constexpr int maxHexadecimalConversionDigits{
       MaxHexadecimalConversionDigits(binaryPrecision)};
+  RT_OFFLOAD_VAR_GROUP_END
 
   static_assert(binaryPrecision > 0);
   static_assert(exponentBits > 1);

@@ -434,6 +434,11 @@ std::pair<hlfir::Entity, mlir::Value>
 createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
                    hlfir::Entity mold);
 
+// TODO: this does not support polymorphic molds
+hlfir::Entity createStackTempFromMold(mlir::Location loc,
+                                      fir::FirOpBuilder &builder,
+                                      hlfir::Entity mold);
+
 hlfir::EntityWithAttributes convertCharacterKind(mlir::Location loc,
                                                  fir::FirOpBuilder &builder,
                                                  hlfir::Entity scalarChar,

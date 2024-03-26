@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Alignment.h"
 
 namespace llvm {
@@ -53,7 +54,7 @@ struct AllocaInfo {
   SmallVector<IntrinsicInst *, 2> LifetimeEnd;
   SmallVector<DbgVariableIntrinsic *, 2> DbgVariableIntrinsics;
   // Non-intrinsic records of variable locations.
-  SmallVector<DPValue *, 2> DbgVariableRecords;
+  SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
 };
 
 struct StackInfo {
@@ -79,6 +80,11 @@ private:
 uint64_t getAllocaSizeInBytes(const AllocaInst &AI);
 void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Align);
 bool isLifetimeIntrinsic(Value *V);
+
+Value *readRegister(IRBuilder<> &IRB, StringRef Name);
+Value *getFP(IRBuilder<> &IRB);
+Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB);
+Value *getAndroidSanitizerSlotPtr(IRBuilder<> &IRB);
 
 } // namespace memtag
 } // namespace llvm

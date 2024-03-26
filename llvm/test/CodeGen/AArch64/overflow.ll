@@ -64,21 +64,10 @@ entry:
 }
 
 define i32 @saddo.select.i64(i32 %v1, i32 %v2, i1 %v3, i64 %v4, i64 %v5) {
-; SDAG-LABEL: saddo.select.i64:
-; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    mov w0, w1
-; SDAG-NEXT:    ret
-;
-; GISEL-LABEL: saddo.select.i64:
-; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    mov w8, #13 // =0xd
-; GISEL-NEXT:    and x9, x3, #0xc
-; GISEL-NEXT:    and x8, x4, x8
-; GISEL-NEXT:    cmn x9, x8
-; GISEL-NEXT:    cset w8, vs
-; GISEL-NEXT:    tst w8, #0x1
-; GISEL-NEXT:    csel w0, w0, w1, ne
-; GISEL-NEXT:    ret
+; CHECK-LABEL: saddo.select.i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w0, w1
+; CHECK-NEXT:    ret
 entry:
   %lhs = and i64 %v4, 12
   %rhs = and i64 %v5, 13
@@ -89,22 +78,10 @@ entry:
 }
 
 define i32 @uaddo.select.i64(i32 %v1, i32 %v2, i1 %v3, i64 %v4, i64 %v5) {
-; SDAG-LABEL: uaddo.select.i64:
-; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    mov w0, w1
-; SDAG-NEXT:    ret
-;
-; GISEL-LABEL: uaddo.select.i64:
-; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    mov w8, #9 // =0x9
-; GISEL-NEXT:    mov w9, #10 // =0xa
-; GISEL-NEXT:    and x8, x3, x8
-; GISEL-NEXT:    and x9, x4, x9
-; GISEL-NEXT:    cmn x8, x9
-; GISEL-NEXT:    cset w8, hs
-; GISEL-NEXT:    tst w8, #0x1
-; GISEL-NEXT:    csel w0, w0, w1, ne
-; GISEL-NEXT:    ret
+; CHECK-LABEL: uaddo.select.i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w0, w1
+; CHECK-NEXT:    ret
 entry:
   %lhs = and i64 %v4, 9
   %rhs = and i64 %v5, 10

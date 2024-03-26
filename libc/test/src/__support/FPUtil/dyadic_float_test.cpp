@@ -15,7 +15,6 @@
 using Float128 = LIBC_NAMESPACE::fputil::DyadicFloat<128>;
 using Float192 = LIBC_NAMESPACE::fputil::DyadicFloat<192>;
 using Float256 = LIBC_NAMESPACE::fputil::DyadicFloat<256>;
-using Sign = LIBC_NAMESPACE::fputil::Sign;
 
 TEST(LlvmLibcDyadicFloatTest, BasicConversions) {
   Float128 x(Sign::POS, /*exponent*/ 0,

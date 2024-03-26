@@ -110,7 +110,7 @@ SECONDARY_REQUIRED_TEMPLATE_TYPE(CacheT)
 SECONDARY_CACHE_OPTIONAL(const u32, EntriesArraySize, 0)
 SECONDARY_CACHE_OPTIONAL(const u32, QuarantineSize, 0)
 SECONDARY_CACHE_OPTIONAL(const u32, DefaultMaxEntriesCount, 0)
-SECONDARY_CACHE_OPTIONAL(const u32, DefaultMaxEntrySize, 0)
+SECONDARY_CACHE_OPTIONAL(const uptr, DefaultMaxEntrySize, 0)
 SECONDARY_CACHE_OPTIONAL(const s32, MinReleaseToOsIntervalMs, INT32_MIN)
 SECONDARY_CACHE_OPTIONAL(const s32, MaxReleaseToOsIntervalMs, INT32_MAX)
 

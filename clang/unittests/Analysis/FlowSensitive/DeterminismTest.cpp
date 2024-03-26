@@ -30,7 +30,9 @@ namespace clang::dataflow {
 // flow-condition at function exit.
 std::string analyzeAndPrintExitCondition(llvm::StringRef Code) {
   DataflowAnalysisContext DACtx(std::make_unique<WatchedLiteralsSolver>());
-  clang::TestAST AST(Code);
+  TestInputs Inputs(Code);
+  Inputs.Language = TestLanguage::Lang_CXX17;
+  clang::TestAST AST(Inputs);
   const auto *Target =
       cast<FunctionDecl>(test::findValueDecl(AST.context(), "target"));
   Environment InitEnv(DACtx, *Target);

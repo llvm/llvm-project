@@ -13,12 +13,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "../../lib/Format/MatchFilePath.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
 #include "clang/Format/Format.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/Process.h"
 #include <fstream>
 
 using namespace llvm;
@@ -198,6 +204,11 @@ static cl::opt<bool>
 static cl::list<std::string> FileNames(cl::Positional,
                                        cl::desc("[@<file>] [<file> ...]"),
                                        cl::cat(ClangFormatCategory));
+
+static cl::opt<bool> FailOnIncompleteFormat(
+    "fail-on-incomplete-format",
+    cl::desc("If set, fail with exit code 1 on incomplete format."),
+    cl::init(false), cl::cat(ClangFormatCategory));
 
 namespace clang {
 namespace format {
@@ -393,7 +404,7 @@ class ClangFormatDiagConsumer : public DiagnosticConsumer {
 };
 
 // Returns true on error.
-static bool format(StringRef FileName) {
+static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   const bool IsSTDIN = FileName == "-";
   if (!OutputXML && Inplace && IsSTDIN) {
     errs() << "error: cannot use -i when reading from stdin.\n";
@@ -529,7 +540,7 @@ static bool format(StringRef FileName) {
       Rewrite.getEditBuffer(ID).write(outs());
     }
   }
-  return false;
+  return ErrorOnIncompleteFormat && !Status.FormatComplete;
 }
 
 } // namespace format
@@ -693,7 +704,7 @@ int main(int argc, const char **argv) {
   }
 
   if (FileNames.empty())
-    return clang::format::format("-");
+    return clang::format::format("-", FailOnIncompleteFormat);
 
   if (FileNames.size() > 1 &&
       (!Offsets.empty() || !Lengths.empty() || !LineRanges.empty())) {
@@ -711,7 +722,7 @@ int main(int argc, const char **argv) {
       errs() << "Formatting [" << FileNo++ << "/" << FileNames.size() << "] "
              << FileName << "\n";
     }
-    Error |= clang::format::format(FileName);
+    Error |= clang::format::format(FileName, FailOnIncompleteFormat);
   }
   return Error ? 1 : 0;
 }

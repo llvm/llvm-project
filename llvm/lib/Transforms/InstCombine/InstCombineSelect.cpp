@@ -536,19 +536,29 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
     // between 0, 1 and -1.
     const APInt *OOpC;
     bool OOpIsAPInt = match(OOp, m_APInt(OOpC));
-    if (!isa<Constant>(OOp) ||
-        (OOpIsAPInt && isSelect01(C->getUniqueInteger(), *OOpC))) {
-      Value *NewSel = Builder.CreateSelect(SI.getCondition(), Swapped ? C : OOp,
-                                           Swapped ? OOp : C, "", &SI);
-      if (isa<FPMathOperator>(&SI))
-        cast<Instruction>(NewSel)->setFastMathFlags(FMF);
-      NewSel->takeName(TVI);
-      BinaryOperator *BO =
-          BinaryOperator::Create(TVI->getOpcode(), FalseVal, NewSel);
-      BO->copyIRFlags(TVI);
-      return BO;
-    }
-    return nullptr;
+    if (isa<Constant>(OOp) &&
+        (!OOpIsAPInt || !isSelect01(C->getUniqueInteger(), *OOpC)))
+      return nullptr;
+
+    // If the false value is a NaN then we have that the floating point math
+    // operation in the transformed code may not preserve the exact NaN
+    // bit-pattern -- e.g. `fadd sNaN, 0.0 -> qNaN`.
+    // This makes the transformation incorrect since the original program would
+    // have preserved the exact NaN bit-pattern.
+    // Avoid the folding if the false value might be a NaN.
+    if (isa<FPMathOperator>(&SI) &&
+        !computeKnownFPClass(FalseVal, FMF, fcNan, &SI).isKnownNeverNaN())
+      return nullptr;
+
+    Value *NewSel = Builder.CreateSelect(SI.getCondition(), Swapped ? C : OOp,
+                                         Swapped ? OOp : C, "", &SI);
+    if (isa<FPMathOperator>(&SI))
+      cast<Instruction>(NewSel)->setFastMathFlags(FMF);
+    NewSel->takeName(TVI);
+    BinaryOperator *BO =
+        BinaryOperator::Create(TVI->getOpcode(), FalseVal, NewSel);
+    BO->copyIRFlags(TVI);
+    return BO;
   };
 
   if (Instruction *R = TryFoldSelectIntoOp(SI, TrueVal, FalseVal, false))

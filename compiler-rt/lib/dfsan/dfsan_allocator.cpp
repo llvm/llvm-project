@@ -37,6 +37,9 @@ struct DFsanMapUnmapCallback {
   void OnUnmap(uptr p, uptr size) const { dfsan_set_label(0, (void *)p, size); }
 };
 
+// Note: to ensure that the allocator is compatible with the application memory
+// layout (especially with high-entropy ASLR), kSpaceBeg and kSpaceSize must be
+// duplicated as MappingDesc::ALLOCATOR in dfsan_platform.h.
 #if defined(__aarch64__)
 const uptr kAllocatorSpace = 0xE00000000000ULL;
 #else

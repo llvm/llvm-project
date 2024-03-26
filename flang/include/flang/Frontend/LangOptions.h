@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_FLANG_FRONTEND_LANGOPTIONS_H
-#define LLVM_FLANG_FRONTEND_LANGOPTIONS_H
+#ifndef FORTRAN_FRONTEND_LANGOPTIONS_H
+#define FORTRAN_FRONTEND_LANGOPTIONS_H
 
 #include <string>
 
@@ -63,4 +63,4 @@ public:
 
 } // end namespace Fortran::frontend
 
-#endif
+#endif // FORTRAN_FRONTEND_LANGOPTIONS_H

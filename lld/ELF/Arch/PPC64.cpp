@@ -286,7 +286,7 @@ static void writeSequence(MutableArrayRef<uint32_t> buf, const char *prefix,
   // The full section content has the extent of [begin, end). We drop unused
   // instructions and write [first,end).
   auto *sec = make<InputSection>(
-      nullptr, SHF_ALLOC, SHT_PROGBITS, 4,
+      ctx.internalFile, SHF_ALLOC, SHT_PROGBITS, 4,
       ArrayRef(reinterpret_cast<uint8_t *>(buf.data() + first),
                4 * (buf.size() - first)),
       ".text");

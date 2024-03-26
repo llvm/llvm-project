@@ -19,6 +19,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -393,6 +394,13 @@ FPClassTest CallBase::getParamNoFPClass(unsigned i) const {
   if (const Function *F = getCalledFunction())
     Mask |= F->getAttributes().getParamNoFPClass(i);
   return Mask;
+}
+
+std::optional<ConstantRange> CallBase::getRange() const {
+  const Attribute RangeAttr = getRetAttr(llvm::Attribute::Range);
+  if (RangeAttr.isValid())
+    return RangeAttr.getRange();
+  return std::nullopt;
 }
 
 bool CallBase::isReturnNonNull() const {
@@ -3364,18 +3372,6 @@ BinaryOperator *BinaryOperator::CreateNSWNeg(Value *Op, const Twine &Name,
   return BinaryOperator::CreateNSWSub(Zero, Op, Name, InsertAtEnd);
 }
 
-BinaryOperator *BinaryOperator::CreateNUWNeg(Value *Op, const Twine &Name,
-                                             Instruction *InsertBefore) {
-  Value *Zero = ConstantInt::get(Op->getType(), 0);
-  return BinaryOperator::CreateNUWSub(Zero, Op, Name, InsertBefore);
-}
-
-BinaryOperator *BinaryOperator::CreateNUWNeg(Value *Op, const Twine &Name,
-                                             BasicBlock *InsertAtEnd) {
-  Value *Zero = ConstantInt::get(Op->getType(), 0);
-  return BinaryOperator::CreateNUWSub(Zero, Op, Name, InsertAtEnd);
-}
-
 BinaryOperator *BinaryOperator::CreateNot(Value *Op, const Twine &Name,
                                           BasicBlock::iterator InsertBefore) {
   Constant *C = Constant::getAllOnesValue(Op->getType());
@@ -4613,6 +4609,16 @@ CmpInst::Create(OtherOps Op, Predicate predicate, Value *S1, Value *S2,
   }
   return new FCmpInst(InsertAtEnd, CmpInst::Predicate(predicate),
                       S1, S2, Name);
+}
+
+CmpInst *CmpInst::CreateWithCopiedFlags(OtherOps Op, Predicate Pred, Value *S1,
+                                        Value *S2,
+                                        const Instruction *FlagsSource,
+                                        const Twine &Name,
+                                        Instruction *InsertBefore) {
+  CmpInst *Inst = Create(Op, Pred, S1, S2, Name, InsertBefore);
+  Inst->copyIRFlags(FlagsSource);
+  return Inst;
 }
 
 void CmpInst::swapOperands() {

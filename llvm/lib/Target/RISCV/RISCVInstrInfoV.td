@@ -157,10 +157,8 @@ class SchedBinaryMC<string write, string read0, string read1,
 
 // For instructions with three operands.
 class SchedTernary<string write, string read0, string read1, string read2,
-                   string mx, int sew = 0, bit forceMasked = 0,
-                   bit forceMergeOpRead = 0>
-    : SchedNary<write, [read0, read1, read2], mx, sew, forceMasked,
-                forceMergeOpRead>;
+                   string mx, int sew = 0, bit forceMasked = 0>
+    : SchedNary<write, [read0, read1, read2], mx, sew, forceMasked>;
 class SchedTernaryMC<string write, string read0, string read1, string read2,
                      int sew = 0, bit forceMasked = 1>:
   SchedNary<write, [read0, read1, read2], "WorstCase", sew, forceMasked>;

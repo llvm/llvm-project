@@ -256,6 +256,13 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.remove
 )
 
+add_entrypoint_object(
+  rename
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.rename
+)
+
 # These entrypoints have multiple potential implementations.
 add_stdio_entrypoint_object(feof)
 add_stdio_entrypoint_object(feof_unlocked)

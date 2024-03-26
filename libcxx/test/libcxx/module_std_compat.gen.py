@@ -16,11 +16,7 @@
 # to be one monolitic test. Since the test doesn't take very long it's
 # not a huge issue.
 
-# WARNING: Disabled at the bottom. Fix this test and remove the UNSUPPORTED line
-# TODO: Re-enable this test once we understand why it keeps timing out.
-
 # RUN: %{python} %s %{libcxx-dir}/utils
-# END.
 
 import sys
 
@@ -40,7 +36,6 @@ generator = module_test_generator(
 
 
 print("//--- module_std_compat.sh.cpp")
-print("// UNSUPPORTED: clang")
 generator.write_test(
     "std.compat",
     module_c_headers,

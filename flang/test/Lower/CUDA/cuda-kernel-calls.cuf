@@ -1,4 +1,5 @@
 ! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -fcuda %s -o - | fir-opt | FileCheck %s
 
 ! Test lowering of CUDA procedure calls.
 
@@ -46,7 +47,7 @@ contains
 ! CHECK: fir.cuda_kernel_launch @_QMtest_callPdev_kernel0<<<%c10{{.*}}, %c1{{.*}}, %c1{{.*}}, %c20{{.*}}, %c1{{.*}}, %c1{{.*}}, %c2{{.*}}, %c0{{.*}}>>>()
 
     call dev_kernel1<<<1, 32>>>(a)
-! CHECK: fir.cuda_kernel_launch @_QMtest_callPdev_kernel1<<<%c1{{.*}}, %c1{{.*}}, %c1{{.*}}, %c32{{.*}}, %c1{{.*}}, %c1{{.*}}>>>(%1#1 : !fir.ref<f32>)
+! CHECK: fir.cuda_kernel_launch @_QMtest_callPdev_kernel1<<<%c1{{.*}}, %c1{{.*}}, %c1{{.*}}, %c32{{.*}}, %c1{{.*}}, %c1{{.*}}>>>(%1#1) : (!fir.ref<f32>)
   end
 
 end

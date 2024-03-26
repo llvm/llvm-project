@@ -207,7 +207,7 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto to(_Args&&... __args)
   static_assert(
       !is_volatile_v<_Container>, "The target container cannot be volatile-qualified, please remove the volatile");
 
-  auto __to_func = []<input_range _Range, class... _Tail>(_Range&& __range, _Tail&&... __tail)
+  auto __to_func = []<input_range _Range, class... _Tail>(_Range&& __range, _Tail&&... __tail) static
     requires requires { //
       /**/ ranges::to<_Container>(std::forward<_Range>(__range), std::forward<_Tail>(__tail)...);
     }
@@ -223,7 +223,7 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto to(_Args&&... __args)
   // clang-format off
   auto __to_func = []<input_range _Range, class... _Tail,
                       class _DeducedExpr = typename _Deducer<_Container, _Range, _Tail...>::type>
-    (_Range&& __range, _Tail&& ... __tail)
+    (_Range&& __range, _Tail&& ... __tail) static
       requires requires { //
       /**/ ranges::to<_DeducedExpr>(std::forward<_Range>(__range), std::forward<_Tail>(__tail)...);
     }

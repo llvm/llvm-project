@@ -1,0 +1,29 @@
+add_custom_target(libc_sys_statvfs_unittests)
+
+add_libc_unittest(
+  statvfs_test
+  SUITE
+    libc_sys_statvfs_unittests
+  SRCS
+    statvfs_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.sys.statvfs.linux.statfs_utils
+    libc.src.sys.statvfs.statvfs
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  fstatvfs_test
+  SUITE
+    libc_sys_statvfs_unittests
+  SRCS
+    fstatvfs_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.sys.statvfs.linux.statfs_utils
+    libc.src.sys.statvfs.fstatvfs
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

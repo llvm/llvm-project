@@ -547,6 +547,10 @@ public:
 
 void AArch64TargetMachine::registerPassBuilderCallbacks(
     PassBuilder &PB, bool PopulateClassToPassNames) {
+
+#define GET_PASS_REGISTRY "AArch64PassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
+
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
         LPM.addPass(AArch64LoopIdiomTransformPass());
@@ -599,7 +603,7 @@ void AArch64PassConfig::addIRPasses() {
       addPass(createFalkorMarkStridedAccessesPass());
   }
 
-  if (TM->getOptLevel() == CodeGenOptLevel::Aggressive && EnableGEPOpt) {
+  if (EnableGEPOpt) {
     // Call SeparateConstOffsetFromGEP pass to extract constants within indices
     // and lower a GEP with multiple indices to either arithmetic operations or
     // multiple GEPs with single index.

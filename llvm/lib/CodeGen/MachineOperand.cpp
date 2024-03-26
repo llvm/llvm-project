@@ -1107,12 +1107,13 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags F,
                                      const MDNode *Ranges, SyncScope::ID SSID,
                                      AtomicOrdering Ordering,
                                      AtomicOrdering FailureOrdering)
-    : MachineMemOperand(ptrinfo, F,
-                        !TS.hasValue() || TS.isScalable()
-                            ? LLT()
-                            : LLT::scalar(8 * TS.getValue().getKnownMinValue()),
-                        BaseAlignment, AAInfo, Ranges, SSID, Ordering,
-                        FailureOrdering) {}
+    : MachineMemOperand(
+          ptrinfo, F,
+          !TS.hasValue() ? LLT()
+          : TS.isScalable()
+              ? LLT::scalable_vector(1, 8 * TS.getValue().getKnownMinValue())
+              : LLT::scalar(8 * TS.getValue().getKnownMinValue()),
+          BaseAlignment, AAInfo, Ranges, SSID, Ordering, FailureOrdering) {}
 
 void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
   // The Value and Offset may differ due to CSE. But the flags and size

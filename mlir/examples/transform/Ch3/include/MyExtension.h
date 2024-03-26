@@ -13,13 +13,16 @@
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 
 namespace mlir {
 class CallOpInterface;
 namespace func {
 class CallOp;
 } // namespace func
+namespace transform {
+class OperationType;
+} // namespace transform
 } // namespace mlir
 
 #define GET_TYPEDEF_CLASSES

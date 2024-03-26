@@ -3,8 +3,10 @@
 #include "llvm/IR/Function.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/HashBuilder.h"
 
 namespace llvm {
 namespace memprof {
@@ -51,6 +53,7 @@ IndexedMemProfRecord::deserialize(const MemProfSchema &Schema,
           endian::readNext<FrameId, llvm::endianness::little, unaligned>(Ptr);
       Node.CallStack.push_back(Id);
     }
+    Node.CSId = hashCallStack(Node.CallStack);
     Node.Info.deserialize(Schema, Ptr);
     Ptr += PortableMemInfoBlock::serializedSize();
     Record.AllocSites.push_back(Node);
@@ -115,6 +118,33 @@ Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer) {
   // Advace the buffer to one past the schema if we succeeded.
   Buffer = Ptr;
   return Result;
+}
+
+CallStackId hashCallStack(ArrayRef<FrameId> CS) {
+  llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
+      HashBuilder;
+  for (FrameId F : CS)
+    HashBuilder.add(F);
+  llvm::BLAKE3Result<8> Hash = HashBuilder.final();
+  CallStackId CSId;
+  std::memcpy(&CSId, Hash.data(), sizeof(Hash));
+  return CSId;
+}
+
+void verifyIndexedMemProfRecord(const IndexedMemProfRecord &Record) {
+  for (const auto &AS : Record.AllocSites) {
+    assert(AS.CSId == hashCallStack(AS.CallStack));
+    (void)AS;
+  }
+}
+
+void verifyFunctionProfileData(
+    const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord>
+        &FunctionProfileData) {
+  for (const auto &[GUID, Record] : FunctionProfileData) {
+    (void)GUID;
+    verifyIndexedMemProfRecord(Record);
+  }
 }
 
 } // namespace memprof

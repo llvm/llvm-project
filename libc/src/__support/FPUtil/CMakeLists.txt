@@ -35,6 +35,7 @@ add_header_library(
     libc.src.__support.macros.attributes
     libc.src.__support.macros.properties.types
     libc.src.__support.math_extras
+    libc.src.__support.sign
     libc.src.__support.uint128
 )
 
@@ -81,8 +82,11 @@ add_header_library(
     BasicOperations.h
   DEPENDS
     .fp_bits
+    .fenv_impl
     libc.src.__support.CPP.type_traits
+    libc.src.__support.uint128
     libc.src.__support.common
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(

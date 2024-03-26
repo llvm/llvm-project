@@ -136,7 +136,7 @@ define void @basic_type() !dbg !3 {
 
 ; CHECK: #[[INT:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int">
 ; CHECK: #[[PTR1:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT]]>
-; CHECK: #[[PTR2:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "mypointer", baseType = #[[INT]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4>
+; CHECK: #[[PTR2:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "mypointer", baseType = #[[INT]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4, extraData = #[[INT]]>
 ; CHECK: #llvm.di_subroutine_type<types = #[[PTR1]], #[[PTR2]]>
 
 define void @derived_type() !dbg !3 {
@@ -153,7 +153,7 @@ define void @derived_type() !dbg !3 {
 !5 = !{!7, !8}
 !6 = !DIBasicType(name: "int")
 !7 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6)
-!8 = !DIDerivedType(name: "mypointer", tag: DW_TAG_pointer_type, baseType: !6, size: 64, align: 32, offset: 4)
+!8 = !DIDerivedType(name: "mypointer", tag: DW_TAG_pointer_type, baseType: !6, size: 64, align: 32, offset: 4, extraData: !6)
 
 ; // -----
 
@@ -601,8 +601,9 @@ declare !dbg !1 void @declaration()
 
 ; CHECK: #di_subprogram = #llvm.di_subprogram<
 ; CHECK-NOT: id = distinct
+; CHECK-NOT: subprogramFlags =
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = !DISubprogram(name: "declaration", scope: !2, file: !2, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
+!1 = !DISubprogram(name: "declaration", scope: !2, file: !2, flags: DIFlagPrototyped, spFlags: 0)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")

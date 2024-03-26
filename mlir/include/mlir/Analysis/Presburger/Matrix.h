@@ -244,6 +244,9 @@ protected:
   SmallVector<T, 16> data;
 };
 
+extern template class Matrix<MPInt>;
+extern template class Matrix<Fraction>;
+
 // An inherited class for integer matrices, with no new data attributes.
 // This is only used for the matrix-related methods which apply only
 // to integers (hermite normal form computation and row normalisation).

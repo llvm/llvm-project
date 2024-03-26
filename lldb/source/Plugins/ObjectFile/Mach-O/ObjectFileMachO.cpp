@@ -905,6 +905,11 @@ ConstString ObjectFileMachO::GetSegmentNameDWARF() {
   return g_section_name;
 }
 
+ConstString ObjectFileMachO::GetSegmentNameLLVM_COV() {
+  static ConstString g_section_name("__LLVM_COV");
+  return g_section_name;
+}
+
 ConstString ObjectFileMachO::GetSectionNameEHFrame() {
   static ConstString g_section_name_eh_frame("__eh_frame");
   return g_section_name_eh_frame;
@@ -6145,6 +6150,13 @@ bool ObjectFileMachO::SectionIsLoadable(const Section *section) {
     return false;
   if (GetModule().get() != section->GetModule().get())
     return false;
+  // firmware style binaries with llvm gcov segment do
+  // not have that segment mapped into memory.
+  if (section->GetName() == GetSegmentNameLLVM_COV()) {
+    const Strata strata = GetStrata();
+    if (strata == eStrataKernel || strata == eStrataRawImage)
+      return false;
+  }
   // Be careful with __LINKEDIT and __DWARF segments
   if (section->GetName() == GetSegmentNameLINKEDIT() ||
       section->GetName() == GetSegmentNameDWARF()) {

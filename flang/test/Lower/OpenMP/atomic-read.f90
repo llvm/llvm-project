@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
 ! This test checks the lowering of atomic read

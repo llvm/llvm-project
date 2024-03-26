@@ -459,6 +459,24 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     argument is read/written and which returned values are aliasing/equivalent.
     For debugging purposes, such information can be printed with
     `test-analysis-only`.
+
+    The order in which ops are analyzed is important. The analysis is greedy and
+    ops that are analyzed earlier are more likely to bufferize in-place. The
+    heuristic can be set with `analysis-heuristic`. At the moment, the following
+    heuristics are available:
+
+    * `bottom-up` (default): Analyze ops from bottom to top.
+    * `top-down`: Analyze ops from top to bottom.
+    * `fuzzer`: Randomize the ordering of ops with `analysis-fuzzer-seed`.
+    * `bottom-up-from-terminators`: Traverse the reverse use-def chains of
+      tensor IR, starting from region branch terminators (bottom-up). Nested
+      regions are traversed before enclosing regions. Analyze the traversed ops
+      first, then analyze the remaining ops bottom-up. This heuristic is useful
+      for bufferizing loop constructs. One-Shot Bufferize currently supports
+      only such IR where yielded tensor values bufferize to equivalent region
+      iter_args, and first analyzing all ops on the path from the "yielding" op
+      to the beginning of the loop body makes it more likely for the region
+      iter_args and yielded values to bufferize to equivalent buffers.
   }];
   let options = [
     Option<"allowReturnAllocsFromLoops", "allow-return-allocs-from-loops",

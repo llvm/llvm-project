@@ -210,6 +210,7 @@ class MIMG <dag outs, string dns = "">
   : MIMG_Base <outs, dns> {
 
   let hasPostISelHook = 1;
+  let usesCustomInserter = 1;
 
   Instruction Opcode = !cast<Instruction>(NAME);
   MIMGBaseOpcode BaseOpcode;

@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
 ! OpenMP Version 5.2
 ! Inherited from 2.11.3 allocate directive

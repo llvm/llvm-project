@@ -33,15 +33,69 @@ using namespace llvm;
 
 static bool isIntrinsicExpansion(Function &F) {
   switch (F.getIntrinsicID()) {
+  case Intrinsic::abs:
   case Intrinsic::exp:
   case Intrinsic::dx_any:
   case Intrinsic::dx_clamp:
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_lerp:
   case Intrinsic::dx_rcp:
+  case Intrinsic::dx_sdot:
+  case Intrinsic::dx_udot:
     return true;
   }
   return false;
+}
+
+static bool expandAbs(CallInst *Orig) {
+  Value *X = Orig->getOperand(0);
+  IRBuilder<> Builder(Orig->getParent());
+  Builder.SetInsertPoint(Orig);
+  Type *Ty = X->getType();
+  Type *EltTy = Ty->getScalarType();
+  Constant *Zero = Ty->isVectorTy()
+                       ? ConstantVector::getSplat(
+                             ElementCount::getFixed(
+                                 cast<FixedVectorType>(Ty)->getNumElements()),
+                             ConstantInt::get(EltTy, 0))
+                       : ConstantInt::get(EltTy, 0);
+  auto *V = Builder.CreateSub(Zero, X);
+  auto *MaxCall =
+      Builder.CreateIntrinsic(Ty, Intrinsic::smax, {X, V}, nullptr, "dx.max");
+  Orig->replaceAllUsesWith(MaxCall);
+  Orig->eraseFromParent();
+  return true;
+}
+
+static bool expandIntegerDot(CallInst *Orig, Intrinsic::ID DotIntrinsic) {
+  assert(DotIntrinsic == Intrinsic::dx_sdot ||
+         DotIntrinsic == Intrinsic::dx_udot);
+  Intrinsic::ID MadIntrinsic = DotIntrinsic == Intrinsic::dx_sdot
+                                   ? Intrinsic::dx_imad
+                                   : Intrinsic::dx_umad;
+  Value *A = Orig->getOperand(0);
+  Value *B = Orig->getOperand(1);
+  Type *ATy = A->getType();
+  Type *BTy = B->getType();
+  assert(ATy->isVectorTy() && BTy->isVectorTy());
+
+  IRBuilder<> Builder(Orig->getParent());
+  Builder.SetInsertPoint(Orig);
+
+  auto *AVec = dyn_cast<FixedVectorType>(A->getType());
+  Value *Elt0 = Builder.CreateExtractElement(A, (uint64_t)0);
+  Value *Elt1 = Builder.CreateExtractElement(B, (uint64_t)0);
+  Value *Result = Builder.CreateMul(Elt0, Elt1);
+  for (unsigned I = 1; I < AVec->getNumElements(); I++) {
+    Elt0 = Builder.CreateExtractElement(A, I);
+    Elt1 = Builder.CreateExtractElement(B, I);
+    Result = Builder.CreateIntrinsic(Result->getType(), MadIntrinsic,
+                                     ArrayRef<Value *>{Elt0, Elt1, Result},
+                                     nullptr, "dx.mad");
+  }
+  Orig->replaceAllUsesWith(Result);
+  Orig->eraseFromParent();
+  return true;
 }
 
 static bool expandExpIntrinsic(CallInst *Orig) {
@@ -180,6 +234,8 @@ static bool expandClampIntrinsic(CallInst *Orig, Intrinsic::ID ClampIntrinsic) {
 
 static bool expandIntrinsic(Function &F, CallInst *Orig) {
   switch (F.getIntrinsicID()) {
+  case Intrinsic::abs:
+    return expandAbs(Orig);
   case Intrinsic::exp:
     return expandExpIntrinsic(Orig);
   case Intrinsic::dx_any:
@@ -191,6 +247,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     return expandLerpIntrinsic(Orig);
   case Intrinsic::dx_rcp:
     return expandRcpIntrinsic(Orig);
+  case Intrinsic::dx_sdot:
+  case Intrinsic::dx_udot:
+    return expandIntegerDot(Orig, F.getIntrinsicID());
   }
   return false;
 }

@@ -72,7 +72,7 @@ static cl::opt<bool> JTFootprintReductionFlag(
              "instructions at jump sites"),
     cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
+cl::opt<bool>
     KeepNops("keep-nops",
              cl::desc("keep no-op instructions. By default they are removed."),
              cl::Hidden, cl::cat(BoltOptCategory));

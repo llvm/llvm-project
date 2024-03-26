@@ -93,12 +93,19 @@ InlinerPass::InlinerPass(std::function<void(OpPassManager &)> defaultPipeline,
 // Return true if the inlining ratio does not exceed the threshold.
 static bool isProfitableToInline(const Inliner::ResolvedCall &resolvedCall,
                                  unsigned inliningThreshold) {
+  // Return early, ratio <= 0U will always be false.
+  if (inliningThreshold == 0U)
+    return false;
+  // Return early, ratio <= -1U will always be true.
+  if (inliningThreshold == -1U)
+    return true;
+
   Region *callerRegion = resolvedCall.sourceNode->getCallableRegion();
   Region *calleeRegion = resolvedCall.targetNode->getCallableRegion();
 
   // We should not get external nodes here, but just return true
   // for now to preserve the original behavior of the inliner pass.
-  if (!calleeRegion || !calleeRegion)
+  if (!callerRegion || !calleeRegion)
     return true;
 
   auto countOps = [](Region *region) {

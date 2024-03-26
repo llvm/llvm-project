@@ -1167,6 +1167,9 @@ void SampleProfileLoader::findExternalInlineCandidate(
   // For AutoFDO profile, retrieve candidate profiles by walking over
   // the nested inlinee profiles.
   if (!FunctionSamples::ProfileIsCS) {
+    // Set threshold to zero to honor pre-inliner decision.
+    if (UsePreInlinerDecision)
+      Threshold = 0;
     Samples->findInlinedFunctions(InlinedGUIDs, SymbolMap, Threshold);
     return;
   }

@@ -145,6 +145,26 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
         validatePtrTypes(STI, MRI, GR, MI,
                          GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg()), 0);
         break;
+      // ensure that LLVM IR bitwise instructions result in logical SPIR-V
+      // instructions when applied to bool type
+      case SPIRV::OpBitwiseOrS:
+      case SPIRV::OpBitwiseOrV:
+        if (GR.isScalarOrVectorOfType(MI.getOperand(1).getReg(),
+                                      SPIRV::OpTypeBool))
+          MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalOr));
+        break;
+      case SPIRV::OpBitwiseAndS:
+      case SPIRV::OpBitwiseAndV:
+        if (GR.isScalarOrVectorOfType(MI.getOperand(1).getReg(),
+                                      SPIRV::OpTypeBool))
+          MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalAnd));
+        break;
+      case SPIRV::OpBitwiseXorS:
+      case SPIRV::OpBitwiseXorV:
+        if (GR.isScalarOrVectorOfType(MI.getOperand(1).getReg(),
+                                      SPIRV::OpTypeBool))
+          MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalNotEqual));
+        break;
       }
     }
   }

@@ -1261,6 +1261,14 @@ Error IndexedInstrProfReader::readHeader() {
         /*Buckets=*/Start + FrameTableOffset,
         /*Payload=*/Start + FramePayloadOffset,
         /*Base=*/Start, memprof::FrameLookupTrait()));
+
+#ifdef EXPENSIVE_CHECKS
+    // Go through all the records and verify that CSId has been correctly
+    // populated.  Do this only under EXPENSIVE_CHECKS.  Otherwise, we
+    // would defeat the purpose of OnDiskIterableChainedHashTable.
+    for (const auto &Record : MemProfRecordTable->data())
+      verifyIndexedMemProfRecord(Record);
+#endif
   }
 
   // BinaryIdOffset field in the header is only valid when the format version

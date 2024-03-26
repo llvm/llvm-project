@@ -130,7 +130,8 @@ public:
     // shape is deferred and should not be loaded now to preserve
     // pointer/allocatable aspects.
     if (componentSym.Rank() == 0 ||
-        Fortran::semantics::IsAllocatableOrObjectPointer(&componentSym))
+        Fortran::semantics::IsAllocatableOrObjectPointer(&componentSym) ||
+        Fortran::semantics::IsProcedurePointer(&componentSym))
       return mlir::Value{};
 
     fir::FirOpBuilder &builder = getBuilder();
@@ -284,7 +285,7 @@ private:
         // value of the Cray pointer variable.
         fir::FirOpBuilder &builder = getBuilder();
         fir::FortranVariableOpInterface ptrVar =
-            gen(Fortran::lower::getCrayPointer(symbolRef));
+            gen(Fortran::semantics::GetCrayPointer(symbolRef));
         mlir::Value ptrAddr = ptrVar.getBase();
 
         // Reinterpret the reference to a Cray pointer so that
@@ -306,7 +307,14 @@ private:
       }
       return *varDef;
     }
+    llvm::errs() << *symbolRef << "\n";
     TODO(getLoc(), "lowering symbol to HLFIR");
+  }
+
+  fir::FortranVariableOpInterface
+  gen(const Fortran::semantics::Symbol &symbol) {
+    Fortran::evaluate::SymbolRef symref{symbol};
+    return gen(symref);
   }
 
   fir::FortranVariableOpInterface
@@ -1760,8 +1768,22 @@ private:
 
       if (attrs && bitEnumContainsAny(attrs.getFlags(),
                                       fir::FortranVariableFlagsEnum::pointer)) {
-        if (Fortran::semantics::IsProcedure(sym))
-          TODO(loc, "procedure pointer component in structure constructor");
+        if (Fortran::semantics::IsProcedure(sym)) {
+          // Procedure pointer components.
+          if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
+                  expr)) {
+            auto boxTy{
+                Fortran::lower::getUntypedBoxProcType(builder.getContext())};
+            hlfir::Entity rhs(
+                fir::factory::createNullBoxProc(builder, loc, boxTy));
+            builder.createStoreWithConvert(loc, rhs, lhs);
+            continue;
+          }
+          hlfir::Entity rhs(getBase(Fortran::lower::convertExprToAddress(
+              loc, converter, expr, symMap, stmtCtx)));
+          builder.createStoreWithConvert(loc, rhs, lhs);
+          continue;
+        }
         // Pointer component construction is just a copy of the box contents.
         fir::ExtendedValue lhsExv =
             hlfir::translateToExtendedValue(loc, builder, lhs);

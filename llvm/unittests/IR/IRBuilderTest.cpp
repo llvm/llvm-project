@@ -922,7 +922,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
     DILabel *Label =
         DIB.createLabel(BarScope, "badger", File, 1, /*AlwaysPreserve*/ false);
 
-    { /* dbg.label | DPLabel */
+    { /* dbg.label | DbgLabelRecord */
       // Insert before I and check order.
       ExpectOrder(DIB.insertLabel(Label, LabelLoc, I), I->getIterator());
 
@@ -931,7 +931,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
       // inserted into the block untill another instruction is added.
       DbgInstPtr LabelRecord = DIB.insertLabel(Label, LabelLoc, BB);
       // Specifically do not insert a terminator, to check this works. `I`
-      // should have absorbed the DPLabel in the new debug info mode.
+      // should have absorbed the DbgLabelRecord in the new debug info mode.
       I = Builder.CreateAlloca(Builder.getInt32Ty());
       ExpectOrder(LabelRecord, I->getIterator());
     }
@@ -944,7 +944,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
         DIB.createAutoVariable(BarSP, "X", File, 2, IntType, true);
     DILocalVariable *VarY =
         DIB.createAutoVariable(BarSP, "Y", File, 2, IntType, true);
-    { /* dbg.value | DPValue::Value */
+    { /* dbg.value | DbgVariableRecord::Value */
       ExpectOrder(DIB.insertDbgValueIntrinsic(I, VarX, DIB.createExpression(),
                                               VarLoc, I),
                   I->getIterator());
@@ -955,7 +955,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
       ExpectOrder(VarXValue, I->getIterator());
       EXPECT_EQ(BB->getTrailingDbgRecords(), nullptr);
     }
-    { /* dbg.declare | DPValue::Declare */
+    { /* dbg.declare | DbgVariableRecord::Declare */
       ExpectOrder(DIB.insertDeclare(I, VarY, DIB.createExpression(), VarLoc, I),
                   I->getIterator());
       // Check inserting at end of the block works as with labels.
@@ -965,7 +965,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
       ExpectOrder(VarYDeclare, I->getIterator());
       EXPECT_EQ(BB->getTrailingDbgRecords(), nullptr);
     }
-    { /* dbg.assign | DPValue::Assign */
+    { /* dbg.assign | DbgVariableRecord::Assign */
       I = Builder.CreateAlloca(Builder.getInt32Ty());
       I->setMetadata(LLVMContext::MD_DIAssignID, DIAssignID::getDistinct(Ctx));
       // DbgAssign interface is slightly different - it always inserts after the

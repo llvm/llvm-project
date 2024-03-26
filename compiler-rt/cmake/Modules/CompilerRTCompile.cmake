@@ -46,7 +46,7 @@ function(sanitizer_test_compile obj_list source arch)
   # Write out architecture-specific flags into TARGET_CFLAGS variable.
   get_target_flags_for_arch(${arch} TARGET_CFLAGS)
   set(COMPILE_DEPS ${TEST_COMPILE_DEPS})
-  if(NOT COMPILER_RT_STANDALONE_BUILD)
+  if(NOT COMPILER_RT_STANDALONE_BUILD OR COMPILER_RT_TEST_STANDALONE_BUILD_LIBS)
     list(APPEND COMPILE_DEPS ${TEST_DEPS})
   endif()
   clang_compile(${output_obj} ${source}

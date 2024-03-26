@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - 2>&1 | FileCheck %s
 ! RUN: bbc -fopenmp -emit-hlfir -o - %s 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -emit-fir -fopenmp %s -o - 2>&1 | FileCheck %s

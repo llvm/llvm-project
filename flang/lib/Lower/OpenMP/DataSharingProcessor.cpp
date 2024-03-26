@@ -208,7 +208,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
           firOpBuilder.restoreInsertionPoint(unstructuredSectionsIP);
         }
       }
-    } else if (mlir::isa<mlir::omp::WsLoopOp>(op)) {
+    } else if (mlir::isa<mlir::omp::WsloopOp>(op)) {
       // Update the original variable just before exiting the worksharing
       // loop. Conversion as follows:
       //
@@ -237,8 +237,8 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
 
       mlir::Value iv = op->getRegion(0).front().getArguments()[0];
       mlir::Value ub =
-          mlir::dyn_cast<mlir::omp::WsLoopOp>(op).getUpperBound()[0];
-      mlir::Value step = mlir::dyn_cast<mlir::omp::WsLoopOp>(op).getStep()[0];
+          mlir::dyn_cast<mlir::omp::WsloopOp>(op).getUpperBound()[0];
+      mlir::Value step = mlir::dyn_cast<mlir::omp::WsloopOp>(op).getStep()[0];
 
       // v = iv + step
       // cmp = step < 0 ? v < ub : v > ub

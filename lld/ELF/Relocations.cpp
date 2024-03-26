@@ -1480,7 +1480,10 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
 
   // Process TLS relocations, including TLS optimizations. Note that
   // R_TPREL and R_TPREL_NEG relocations are resolved in processAux.
-  if (sym.isTls()) {
+  //
+  // Some RISCV TLSDESC relocations reference a local NOTYPE symbol,
+  // but we need to process them in handleTlsRelocation.
+  if (sym.isTls() || oneof<R_TLSDESC_PC, R_TLSDESC_CALL>(expr)) {
     if (unsigned processed =
             handleTlsRelocation(type, sym, *sec, offset, addend, expr)) {
       i += processed - 1;
@@ -1617,12 +1620,8 @@ static bool handleNonPreemptibleIfunc(Symbol &sym, uint16_t flags) {
   //   relatively straightforward. We create a PLT entry in Iplt, which is
   //   usually at the end of .plt, which makes an indirect call using a
   //   matching GOT entry in igotPlt, which is usually at the end of .got.plt.
-  //   The GOT entry is relocated using an IRELATIVE relocation in relaIplt,
-  //   which is usually at the end of .rela.plt. Unlike most relocations in
-  //   .rela.plt, which may be evaluated lazily without -z now, dynamic
-  //   loaders evaluate IRELATIVE relocs eagerly, which means that for
-  //   IRELATIVE relocs only, GOT-generating relocations can point directly to
-  //   .got.plt without requiring a separate GOT entry.
+  //   The GOT entry is relocated using an IRELATIVE relocation in relaDyn,
+  //   which is usually at the end of .rela.dyn.
   //
   // - Despite the fact that an ifunc does not have a fixed value, compilers
   //   that are not passed -fPIC will assume that they do, and will emit
@@ -1662,7 +1661,7 @@ static bool handleNonPreemptibleIfunc(Symbol &sym, uint16_t flags) {
   // section/value fixed.
   auto *directSym = makeDefined(cast<Defined>(sym));
   directSym->allocateAux();
-  addPltEntry(*in.iplt, *in.igotPlt, *in.relaIplt, target->iRelativeRel,
+  addPltEntry(*in.iplt, *in.igotPlt, *mainPart->relaDyn, target->iRelativeRel,
               *directSym);
   sym.allocateAux();
   symAux.back().pltIdx = symAux[directSym->auxIdx].pltIdx;

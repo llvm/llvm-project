@@ -242,6 +242,21 @@ TEST(LEB128Test, DecodeInvalidSLEB128) {
 #undef EXPECT_INVALID_SLEB128
 }
 
+TEST(LEB128Test, DecodeAndInc) {
+#define EXPECT_LEB128(FUN, VALUE, SIZE)                                        \
+  do {                                                                         \
+    const uint8_t *V = reinterpret_cast<const uint8_t *>(VALUE), *P = V;       \
+    auto Expected = FUN(P), Actual = FUN##AndInc(P);                           \
+    EXPECT_EQ(Actual, Expected);                                               \
+    EXPECT_EQ(P - V, SIZE);                                                    \
+  } while (0)
+  EXPECT_LEB128(decodeULEB128, "\x7f", 1);
+  EXPECT_LEB128(decodeULEB128, "\x80\x01", 2);
+  EXPECT_LEB128(decodeSLEB128, "\x7f", 1);
+  EXPECT_LEB128(decodeSLEB128, "\x80\x01", 2);
+#undef EXPECT_LEB128
+}
+
 TEST(LEB128Test, SLEB128Size) {
   // Positive Value Testing Plan:
   // (1) 128 ^ n - 1 ........ need (n+1) bytes

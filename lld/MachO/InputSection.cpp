@@ -37,6 +37,44 @@ static_assert(sizeof(void *) != 8 ||
               "instances of it");
 
 std::vector<ConcatInputSection *> macho::inputSections;
+int macho::inputSectionsOrder = 0;
+
+// Call this function to add a new InputSection and have it routed to the
+// appropriate container. Depending on its type and current config, it will
+// either be added to 'inputSections' vector or to a synthetic section.
+void lld::macho::addInputSection(InputSection *inputSection) {
+  if (auto *isec = dyn_cast<ConcatInputSection>(inputSection)) {
+    if (isec->isCoalescedWeak())
+      return;
+    if (config->emitInitOffsets &&
+        sectionType(isec->getFlags()) == S_MOD_INIT_FUNC_POINTERS) {
+      in.initOffsets->addInput(isec);
+      return;
+    }
+    isec->outSecOff = inputSectionsOrder++;
+    auto *osec = ConcatOutputSection::getOrCreateForInput(isec);
+    isec->parent = osec;
+    inputSections.push_back(isec);
+  } else if (auto *isec = dyn_cast<CStringInputSection>(inputSection)) {
+    if (isec->getName() == section_names::objcMethname) {
+      if (in.objcMethnameSection->inputOrder == UnspecifiedInputOrder)
+        in.objcMethnameSection->inputOrder = inputSectionsOrder++;
+      in.objcMethnameSection->addInput(isec);
+    } else {
+      if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
+        in.cStringSection->inputOrder = inputSectionsOrder++;
+      in.cStringSection->addInput(isec);
+    }
+  } else if (auto *isec = dyn_cast<WordLiteralInputSection>(inputSection)) {
+    if (in.wordLiteralSection->inputOrder == UnspecifiedInputOrder)
+      in.wordLiteralSection->inputOrder = inputSectionsOrder++;
+    in.wordLiteralSection->addInput(isec);
+  } else {
+    llvm_unreachable("unexpected input section kind");
+  }
+
+  assert(inputSectionsOrder <= UnspecifiedInputOrder);
+}
 
 uint64_t InputSection::getFileSize() const {
   return isZeroFill(getFlags()) ? 0 : getSize();

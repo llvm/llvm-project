@@ -396,7 +396,38 @@ public:
     IncompleteOnly = 3,
   };
 
-  enum ComplexRangeKind { CX_Full, CX_Limited, CX_Fortran, CX_None };
+  /// Controls the various implementations for complex multiplication and
+  // division.
+  enum ComplexRangeKind {
+    /// Implementation of complex division and multiplication using a call to
+    ///  runtime library functions(generally the case, but the BE might
+    /// sometimes replace the library call if it knows enough about the
+    /// potential range of the inputs). Overflow and non-finite values are
+    /// handled by the library implementation. This is the default value.
+    CX_Full,
+
+    /// Implementation of complex division offering an improved handling
+    /// for overflow in intermediate calculations with no special handling for
+    /// NaN and infinite values.
+    CX_Improved,
+
+    /// Implementation of complex division using algebraic formulas at
+    /// higher precision. Overflow is handled. Non-finite values are handled in
+    /// some cases. If the target hardware does not have native support for a
+    /// higher precision data type, an implementation for the complex operation
+    /// will be used to provide improved guards against intermediate overflow,
+    /// but overflow and underflow may still occur in some cases. NaN and
+    /// infinite values are not handled.
+    CX_Promoted,
+
+    /// Implementation of complex division and multiplication using
+    /// algebraic formulas at source precision. No special handling to avoid
+    /// overflow. NaN and infinite values are not handled.
+    CX_Basic,
+
+    /// No range rule is enabled.
+    CX_None
+  };
 
   // Define simple language options (with no accessors).
 #define LANGOPT(Name, Bits, Default, Description) unsigned Name : Bits;

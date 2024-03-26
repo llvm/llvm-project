@@ -10,7 +10,6 @@
 #define _LIBCPP___TYPE_TRAITS_IS_NOTHROW_CONSTRUCTIBLE_H
 
 #include <__config>
-#include <__type_traits/add_const.h>
 #include <__type_traits/add_lvalue_reference.h>
 #include <__type_traits/add_rvalue_reference.h>
 #include <__type_traits/integral_constant.h>
@@ -74,15 +73,13 @@ inline constexpr bool is_nothrow_constructible_v = is_nothrow_constructible<_Tp,
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_copy_constructible
-    : public is_nothrow_constructible<_Tp, __add_lvalue_reference_t<typename add_const<_Tp>::type> > {};
+    : public is_nothrow_constructible<_Tp, __add_lvalue_reference_t<const _Tp> > {};
 
 #else // _LIBCPP_COMPILER_GCC
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_copy_constructible
-    : public integral_constant<
-          bool,
-          __is_nothrow_constructible(_Tp, typename add_lvalue_reference<typename add_const<_Tp>::type>::type)> {};
+    : public integral_constant< bool, __is_nothrow_constructible(_Tp, __add_lvalue_reference_t<const _Tp>)> {};
 
 #endif // _LIBCPP_COMPILER_GCC
 

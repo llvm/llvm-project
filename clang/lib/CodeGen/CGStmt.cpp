@@ -1341,10 +1341,8 @@ struct SaveRetExprRAII {
 };
 } // namespace
 
-/// If we have 'return f(...);', where both caller and callee are SwiftAsync,
-/// codegen it as 'tail call ...; ret void;'.
-static void makeTailCallIfSwiftAsync(const CallExpr *CE, CGBuilderTy &Builder,
-                                     const CGFunctionInfo *CurFnInfo) {
+/// Determine if the given call uses the swiftasync calling convention.
+static bool isSwiftAsyncCallee(const CallExpr *CE) {
   auto calleeQualType = CE->getCallee()->getType();
   const FunctionType *calleeType = nullptr;
   if (calleeQualType->isFunctionPointerType() ||
@@ -1359,18 +1357,12 @@ static void makeTailCallIfSwiftAsync(const CallExpr *CE, CGBuilderTy &Builder,
       // getMethodDecl() doesn't handle member pointers at the moment.
       calleeType = methodDecl->getType()->castAs<FunctionType>();
     } else {
-      return;
+      return false;
     }
   } else {
-    return;
+    return false;
   }
-  if (calleeType->getCallConv() == CallingConv::CC_SwiftAsync &&
-      (CurFnInfo->getASTCallingConvention() == CallingConv::CC_SwiftAsync)) {
-    auto CI = cast<llvm::CallInst>(&Builder.GetInsertBlock()->back());
-    CI->setTailCallKind(llvm::CallInst::TCK_MustTail);
-    Builder.CreateRetVoid();
-    Builder.ClearInsertionPoint();
-  }
+  return calleeType->getCallConv() == CallingConv::CC_SwiftAsync;
 }
 
 /// EmitReturnStmt - Note that due to GCC extensions, this can have an operand
@@ -1410,6 +1402,19 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
   RunCleanupsScope cleanupScope(*this);
   if (const auto *EWC = dyn_cast_or_null<ExprWithCleanups>(RV))
     RV = EWC->getSubExpr();
+
+  // If we're in a swiftasynccall function, and the return expression is a
+  // call to a swiftasynccall function, mark the call as the musttail call.
+  std::optional<llvm::SaveAndRestore<const CallExpr *>> SaveMustTail;
+  if (RV && CurFnInfo &&
+      CurFnInfo->getASTCallingConvention() == CallingConv::CC_SwiftAsync) {
+    if (auto CE = dyn_cast<CallExpr>(RV)) {
+      if (isSwiftAsyncCallee(CE)) {
+        SaveMustTail.emplace(MustTailCall, CE);
+      }
+    }
+  }
+
   // FIXME: Clean this up by using an LValue for ReturnTemp,
   // EmitStoreThroughLValue, and EmitAnyExpr.
   // Check if the NRVO candidate was not globalized in OpenMP mode.
@@ -1432,8 +1437,6 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
     // for side effects.
     if (RV) {
       EmitAnyExpr(RV);
-      if (auto *CE = dyn_cast<CallExpr>(RV))
-        makeTailCallIfSwiftAsync(CE, Builder, CurFnInfo);
     }
   } else if (!RV) {
     // Do nothing (return value is left uninitialized)

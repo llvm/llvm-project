@@ -14,9 +14,8 @@ binary onto the original binary.
 # Usage
 `--enable-bat` flag controls the generation of BAT section. Sampled profile
 needs to be passed along with the optimized binary containing BAT section to
-`perf2bolt` which reads BAT section and produces fdata profile for the original
-binary. Note that YAML profile generation is not supported since BAT doesn't
-contain the metadata for input functions.
+`perf2bolt` which reads BAT section and produces profile for the original
+binary.
 
 # Internals
 ## Section contents
@@ -43,21 +42,21 @@ and [BoltAddressTranslation.cpp](/bolt/lib/Profile/BoltAddressTranslation.cpp).
 ### Layout
 The general layout is as follows:
 ```
-Hot functions table header
-|------------------|
-|  Function entry  |
-| |--------------| |
-| | OutOff InOff | |
-| |--------------| |
-~~~~~~~~~~~~~~~~~~~~
+Hot functions table
+Cold functions table
 
-Cold functions table header
+Functions table:
 |------------------|
 |  Function entry  |
-| |--------------| |
-| | OutOff InOff | |
-| |--------------| |
-~~~~~~~~~~~~~~~~~~~~
+|                  |
+|     Address      |
+|   translation    |
+|      table       |
+|                  |
+| Secondary entry  |
+|      points      |
+|------------------|
+
 ```
 
 ### Functions table
@@ -75,28 +74,43 @@ internal offsets, and between hot and cold fragments, to better spread deltas
 and save space.
 
 Hot indices are delta encoded, implicitly starting at zero.
-| Entry  | Encoding | Description |
-| ------ | ------| ----------- |
-| `Address` | Continuous, Delta, ULEB128 | Function address in the output binary |
-| `HotIndex` | Delta, ULEB128 | Cold functions only: index of corresponding hot function in hot functions table |
-| `NumEntries` | ULEB128 | Number of address translation entries for a function |
-| `EqualElems` | ULEB128 | Hot functions only: number of equal offsets in the beginning of a function |
-| `BranchEntries` | Bitmask, `alignTo(EqualElems, 8)` bits | Hot functions only: if `EqualElems` is non-zero, bitmask denoting entries with `BRANCHENTRY` bit |
+| Entry  | Encoding | Description | Hot/Cold |
+| ------ | ------| ----------- | ------ |
+| `Address` | Continuous, Delta, ULEB128 | Function address in the output binary | Both |
+| `HotIndex` | Delta, ULEB128 | Index of corresponding hot function in hot functions table | Cold |
+| `FuncHash` | 8b | Function hash for input function | Hot |
+| `NumBlocks` | ULEB128 | Number of basic blocks in the original function | Hot |
+| `NumSecEntryPoints` | ULEB128 | Number of secondary entry points in the original function | Hot |
+| `NumEntries` | ULEB128 | Number of address translation entries for a function | Both |
+| `EqualElems` | ULEB128 | Number of equal offsets in the beginning of a function | Hot |
+| `BranchEntries` | Bitmask, `alignTo(EqualElems, 8)` bits | If `EqualElems` is non-zero, bitmask denoting entries with `BRANCHENTRY` bit | Hot |
 
-Function header is followed by `EqualElems` offsets (hot functions only) and
-`NumEntries-EqualElems` (`NumEntries` for cold functions) pairs of offsets for
-current function.
+Function header is followed by *Address Translation Table* with `NumEntries`
+total entries, and *Secondary Entry Points* table with `NumSecEntryPoints`
+entries (hot functions only).
 
 ### Address translation table
 Delta encoding means that only the difference with the previous corresponding
 entry is encoded. Input offsets implicitly start at zero.
-| Entry  | Encoding | Description |
-| ------ | ------| ----------- |
-| `OutputOffset` | Continuous, Delta, ULEB128 | Function offset in output binary |
-| `InputOffset` | Optional, Delta, SLEB128 | Function offset in input binary with `BRANCHENTRY` LSB bit |
+| Entry  | Encoding | Description | Branch/BB |
+| ------ | ------| ----------- | ------ |
+| `OutputOffset` | Continuous, Delta, ULEB128 | Function offset in output binary | Both |
+| `InputOffset` | Optional, Delta, SLEB128 | Function offset in input binary with `BRANCHENTRY` LSB bit | Both |
+| `BBHash` | Optional, 8b | Basic block hash in input binary | BB |
+| `BBIdx`  | Optional, Delta, ULEB128 | Basic block index in input binary | BB |
+
+For hot fragments, the table omits the first `EqualElems` input offsets
+where the input offset equals output offset.
 
 `BRANCHENTRY` bit denotes whether a given offset pair is a control flow source
 (branch or call instruction). If not set, it signifies a control flow target
 (basic block offset).
 `InputAddr` is omitted for equal offsets in input and output function. In this
 case, `BRANCHENTRY` bits are encoded separately in a `BranchEntries` bitvector.
+
+### Secondary Entry Points table
+The table is emitted for hot fragments only. It contains `NumSecEntryPoints`
+offsets denoting secondary entry points, delta encoded, implicitly starting at zero.
+| Entry | Encoding | Description |
+| ----- | -------- | ----------- |
+| `SecEntryPoint` | Delta, ULEB128 | Secondary entry point offset |

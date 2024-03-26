@@ -1,7 +1,7 @@
 ! RUN: bbc -emit-fir -hlfir=false -fopenmp --force-byref-reduction -o - %s 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -mmlir --force-byref-reduction -fopenmp -o - %s 2>&1 | FileCheck %s
 
-!CHECK: omp.reduction.declare @min_f_32_byref : !fir.ref<f32>
+!CHECK: omp.declare_reduction @min_byref_f32 : !fir.ref<f32>
 !CHECK-SAME: init {
 !CHECK:   %[[MAXIMUM_VAL:.*]] = arith.constant 3.40282347E+38 : f32
 !CHECK:   %[[REF:.*]] = fir.alloca f32
@@ -15,7 +15,7 @@
 !CHECK:   fir.store %[[RES]] to %[[ARG0]] : !fir.ref<f32>
 !CHECK:   omp.yield(%[[ARG0]] : !fir.ref<f32>)
 
-!CHECK-LABEL: omp.reduction.declare @min_i_32_byref : !fir.ref<i32>
+!CHECK-LABEL: omp.declare_reduction @min_byref_i32 : !fir.ref<i32>
 !CHECK-SAME: init {
 !CHECK:   %[[MAXIMUM_VAL:.*]] = arith.constant 2147483647 : i32
 !CHECK:   fir.store %[[MAXIMUM_VAL]] to %[[REF]] : !fir.ref<i32>
@@ -32,7 +32,7 @@
 !CHECK-SAME: %[[Y_BOX:.*]]: !fir.box<!fir.array<?xi32>>
 !CHECK:   %[[X_REF:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFreduction_min_intEx"}
 !CHECK:   omp.parallel
-!CHECK:     omp.wsloop byref reduction(@min_i_32_byref %[[X_REF]] -> %[[PRV:.+]] : !fir.ref<i32>) for
+!CHECK:     omp.wsloop byref reduction(@min_byref_i32 %[[X_REF]] -> %[[PRV:.+]] : !fir.ref<i32>) for
 !CHECK:       %[[LPRV:.+]] = fir.load %[[PRV]] : !fir.ref<i32>
 !CHECK:       %[[Y_I_REF:.*]] = fir.coordinate_of %[[Y_BOX]]
 !CHECK:       %[[Y_I:.*]] = fir.load %[[Y_I_REF]] : !fir.ref<i32>
@@ -46,7 +46,7 @@
 !CHECK-SAME: %[[Y_BOX:.*]]: !fir.box<!fir.array<?xf32>>
 !CHECK:   %[[X_REF:.*]] = fir.alloca f32 {bindc_name = "x", uniq_name = "_QFreduction_min_realEx"}
 !CHECK:   omp.parallel
-!CHECK:     omp.wsloop byref reduction(@min_f_32_byref %[[X_REF]] -> %[[PRV:.+]] : !fir.ref<f32>) for
+!CHECK:     omp.wsloop byref reduction(@min_byref_f32 %[[X_REF]] -> %[[PRV:.+]] : !fir.ref<f32>) for
 !CHECK:       %[[LPRV:.+]] = fir.load %[[PRV]] : !fir.ref<f32>
 !CHECK:       %[[Y_I_REF:.*]] = fir.coordinate_of %[[Y_BOX]]
 !CHECK:       %[[Y_I:.*]] = fir.load %[[Y_I_REF]] : !fir.ref<f32>

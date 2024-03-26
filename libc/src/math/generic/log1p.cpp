@@ -23,7 +23,7 @@ namespace LIBC_NAMESPACE {
 
 // 128-bit precision dyadic floating point numbers.
 using Float128 = typename fputil::DyadicFloat<128>;
-using Sign = fputil::Sign;
+
 using LIBC_NAMESPACE::operator""_u128;
 
 namespace {
@@ -877,7 +877,7 @@ LIBC_INLINE double log1p_accurate(int e_x, int index,
 
 LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   using FPBits_t = typename fputil::FPBits<double>;
-  using Sign = fputil::Sign;
+
   constexpr int EXP_BIAS = FPBits_t::EXP_BIAS;
   constexpr int FRACTION_LEN = FPBits_t::FRACTION_LEN;
   constexpr uint64_t FRACTION_MASK = FPBits_t::FRACTION_MASK;

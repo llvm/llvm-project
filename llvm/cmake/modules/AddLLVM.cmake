@@ -1637,7 +1637,7 @@ function(add_unittest test_suite test_name)
   # The runtime benefits of LTO don't outweight the compile time costs for tests.
   if(LLVM_ENABLE_LTO)
     if((UNIX OR MINGW) AND LINKER_IS_LLD)
-      if(LLVM_ENABLE_FATLTO)
+      if(LLVM_ENABLE_FATLTO AND NOT APPLE)
         # When using FatLTO, just use relocatable linking.
         set_property(TARGET ${test_name} APPEND_STRING PROPERTY
                       LINK_FLAGS " -Wl,--no-fat-lto-objects")
