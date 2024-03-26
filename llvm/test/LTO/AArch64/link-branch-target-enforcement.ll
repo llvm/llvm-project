@@ -2,7 +2,7 @@
 ; be mixed.
 ;
 ; RUN: llvm-as %s -o %t1.bc
-; RUN: llvm-as %p/Inputs/foo.ll -o %t2.bc
+; RUN: llvm-as %p/TestInputs/foo.ll -o %t2.bc
 ; RUN: llvm-lto -exported-symbol main \
 ; RUN:          -exported-symbol foo \
 ; RUN:          -filetype=obj \
@@ -30,8 +30,11 @@ entry:
 
 ; CHECK-NOT: linking module flags 'branch-target-enforcement': IDs have conflicting values in
 ; CHECK-DUMP: <main>:
+; CHECK-DUMP:      paciasp
+; CHECK-DUMP:      str
 ; CHECK-DUMP:      bl      0x8 <main+0x8>
 ; CHECK-DUMP: <foo>:
+; CHECK-DUMP:     pacibsp
 
 ; `main` doesn't support BTI while `foo` does, so in the binary
 ; we should see only PAC which is supported by both.

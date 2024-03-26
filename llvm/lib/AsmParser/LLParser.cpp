@@ -408,6 +408,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
 
   UpgradeModuleFlags(*M);
   UpgradeSectionAttributes(*M);
+  CopyModuleAttrToFunctions(*M);
 
   if (!Slots)
     return false;
