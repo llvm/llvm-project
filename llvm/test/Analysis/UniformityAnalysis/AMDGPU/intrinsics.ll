@@ -467,75 +467,35 @@ define amdgpu_ps void @swmmac_i32_16x16x256_iu4(<8 x i32> %A, <16 x i32> %B, <8 
   ret void
 }
 
-; CHECK: DIVERGENT: %tmp0 = call <2 x i32> @llvm.amdgcn.global.load.tr.v2i32(ptr addrspace(1) %gep)
+; CHECK: DIVERGENT: %tmp0 = call <2 x i32> @llvm.amdgcn.global.load.tr.b64.v2i32(ptr addrspace(1) %addr)
 define amdgpu_kernel void @global_load_tr_b64_v2i32(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
 bb:
-  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %tmp0 = call <2 x i32> @llvm.amdgcn.global.load.tr.v2i32(ptr addrspace(1) %gep)
+  %tmp0 = call <2 x i32> @llvm.amdgcn.global.load.tr.b64.v2i32(ptr addrspace(1) %addr)
   store <2 x i32> %tmp0, ptr addrspace(1) %out, align 8
   ret void
 }
 
-; CHECK: DIVERGENT: %tmp0 = call <8 x i16> @llvm.amdgcn.global.load.tr.v8i16(ptr addrspace(1) %gep)
+; CHECK: DIVERGENT: %tmp0 = call <8 x i16> @llvm.amdgcn.global.load.tr.b128.v8i16(ptr addrspace(1) %addr)
 define amdgpu_kernel void @global_load_tr_b128_v8i16(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
 bb:
-  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %tmp0 = call <8 x i16> @llvm.amdgcn.global.load.tr.v8i16(ptr addrspace(1) %gep)
+  %tmp0 = call <8 x i16> @llvm.amdgcn.global.load.tr.b128.v8i16(ptr addrspace(1) %addr)
   store <8 x i16> %tmp0, ptr addrspace(1) %out, align 16
   ret void
 }
 
-; CHECK: DIVERGENT: %tmp0 = call <8 x half> @llvm.amdgcn.global.load.tr.v8f16(ptr addrspace(1) %gep)
-define amdgpu_kernel void @global_load_tr_b128_v8f16(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
-bb:
-  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %tmp0 = call <8 x half> @llvm.amdgcn.global.load.tr.v8f16(ptr addrspace(1) %gep)
-  store <8 x half> %tmp0, ptr addrspace(1) %out, align 16
-  ret void
-}
-
-; CHECK: DIVERGENT: %tmp0 = call <8 x bfloat> @llvm.amdgcn.global.load.tr.v8bf16(ptr addrspace(1) %gep)
-define amdgpu_kernel void @global_load_tr_b128_v8bf16(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
-bb:
-  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %tmp0 = call <8 x bfloat> @llvm.amdgcn.global.load.tr.v8bf16(ptr addrspace(1) %gep)
-  store <8 x bfloat> %tmp0, ptr addrspace(1) %out, align 16
-  ret void
-}
-
-; CHECK: DIVERGENT: %tmp0 = call i32 @llvm.amdgcn.global.load.tr.i32(ptr addrspace(1) %gep)
+; CHECK: DIVERGENT: %tmp0 = call i32 @llvm.amdgcn.global.load.tr.b64.i32(ptr addrspace(1) %addr)
 define amdgpu_kernel void @global_load_tr_b64_i32(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
 bb:
-  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %tmp0 = call i32 @llvm.amdgcn.global.load.tr.i32(ptr addrspace(1) %gep)
+  %tmp0 = call i32 @llvm.amdgcn.global.load.tr.b64.i32(ptr addrspace(1) %addr)
   store i32 %tmp0, ptr addrspace(1) %out, align 4
   ret void
 }
 
-; CHECK: DIVERGENT: %tmp0 = call <4 x i16> @llvm.amdgcn.global.load.tr.v4i16(ptr addrspace(1) %gep)
-define amdgpu_kernel void @global_load_tr_b128_v4i16_(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
+; CHECK: DIVERGENT: %tmp0 = call <4 x i16> @llvm.amdgcn.global.load.tr.b128.v4i16(ptr addrspace(1) %addr)
+define amdgpu_kernel void @global_load_tr_b128_v4i16(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
 bb:
-  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %tmp0 = call <4 x i16> @llvm.amdgcn.global.load.tr.v4i16(ptr addrspace(1) %gep)
+  %tmp0 = call <4 x i16> @llvm.amdgcn.global.load.tr.b128.v4i16(ptr addrspace(1) %addr)
   store <4 x i16> %tmp0, ptr addrspace(1) %out, align 8
-  ret void
-}
-
-; CHECK: DIVERGENT: %tmp0 = call <4 x half> @llvm.amdgcn.global.load.tr.v4f16(ptr addrspace(1) %gep)
-define amdgpu_kernel void @global_load_tr_b128_v4f16(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
-bb:
-  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %tmp0 = call <4 x half> @llvm.amdgcn.global.load.tr.v4f16(ptr addrspace(1) %gep)
-  store <4 x half> %tmp0, ptr addrspace(1) %out, align 8
-  ret void
-}
-
-; CHECK: DIVERGENT: %tmp0 = call <4 x bfloat> @llvm.amdgcn.global.load.tr.v4bf16(ptr addrspace(1) %gep)
-define amdgpu_kernel void @global_load_tr_b128_v4bf16(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
-bb:
-  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %tmp0 = call <4 x bfloat> @llvm.amdgcn.global.load.tr.v4bf16(ptr addrspace(1) %gep)
-  store <4 x bfloat> %tmp0, ptr addrspace(1) %out, align 8
   ret void
 }
 
@@ -653,171 +613,6 @@ declare <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4(<8 x i32>, <8 x
 define amdgpu_kernel void @mfma_f32_scale_32x32x64_f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3, i32 %arg4, ptr addrspace(1) %out) {
   %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 immarg 0, i32 immarg 0, i32 immarg 0, i32 immarg 0, i32 %arg3, i32 immarg 0, i32 %arg4)
   store <16 x float> %result, ptr addrspace(1) %out
-  ret void
-}
-
-; CHECK: DIVERGENT: %tmp0 = call i32 @llvm.amdgcn.global.load.monitor.b32.i32(ptr addrspace(1) %gep, i32 1)
-define amdgpu_kernel void @global_load_monitor_b32(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
-bb:
-  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %tmp0 = call i32 @llvm.amdgcn.global.load.monitor.b32.i32(ptr addrspace(1) %gep, i32 1)
-  store i32 %tmp0, ptr addrspace(1) %out, align 4
-  ret void
-}
-
-; CHECK: DIVERGENT: %tmp0 = call <2 x i32> @llvm.amdgcn.global.load.monitor.b64.v2i32(ptr addrspace(1) %gep, i32 10)
-define amdgpu_kernel void @global_load_monitor_b64(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
-bb:
-  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %tmp0 = call <2 x i32> @llvm.amdgcn.global.load.monitor.b64.v2i32(ptr addrspace(1) %gep, i32 10)
-  store <2 x i32> %tmp0, ptr addrspace(1) %out, align 8
-  ret void
-}
-
-; CHECK: DIVERGENT: %tmp0 = call <4 x i32> @llvm.amdgcn.global.load.monitor.b128.v4i32(ptr addrspace(1) %gep, i32 22)
-define amdgpu_kernel void @global_load_monitor_b128(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
-bb:
-  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %tmp0 = call <4 x i32> @llvm.amdgcn.global.load.monitor.b128.v4i32(ptr addrspace(1) %gep, i32 22)
-  store <4 x i32> %tmp0, ptr addrspace(1) %out, align 16
-  ret void
-}
-
-; CHECK: DIVERGENT: %tmp0 = call i32 @llvm.amdgcn.flat.load.monitor.b32.i32(ptr %gep, i32 27)
-define amdgpu_kernel void @flat_load_monitor_b32(ptr %addr, ptr addrspace(1) %out) {
-bb:
-  %gep = getelementptr i64, ptr %addr, i32 4
-  %tmp0 = call i32 @llvm.amdgcn.flat.load.monitor.b32.i32(ptr %gep, i32 27)
-  store i32 %tmp0, ptr addrspace(1) %out, align 4
-  ret void
-}
-
-; CHECK: DIVERGENT: %tmp0 = call <2 x i32> @llvm.amdgcn.flat.load.monitor.b64.v2i32(ptr %gep, i32 1)
-define amdgpu_kernel void @flat_load_monitor_b64(ptr %addr, ptr addrspace(1) %out) {
-bb:
-  %gep = getelementptr i64, ptr %addr, i32 4
-  %tmp0 = call <2 x i32> @llvm.amdgcn.flat.load.monitor.b64.v2i32(ptr %gep, i32 1)
-  store <2 x i32> %tmp0, ptr addrspace(1) %out, align 8
-  ret void
-}
-
-; CHECK: DIVERGENT: %tmp0 = call <4 x i32> @llvm.amdgcn.flat.load.monitor.b128.v4i32(ptr %gep, i32 10)
-define amdgpu_kernel void @flat_load_monitor_b128(ptr %addr, ptr addrspace(1) %out) {
-bb:
-  %gep = getelementptr i64, ptr %addr, i32 4
-  %tmp0 = call <4 x i32> @llvm.amdgcn.flat.load.monitor.b128.v4i32(ptr %gep, i32 10)
-  store <4 x i32> %tmp0, ptr addrspace(1) %out, align 16
-  ret void
-}
-
-; CHECK: DIVERGENT: %tmp0 = call i32 @llvm.amdgcn.cluster.load.b32.i32(ptr addrspace(1) %gep, i32 %mask)
-define amdgpu_kernel void @cluster_load_b32(ptr addrspace(1) %addr, ptr addrspace(1) %out, i32 %mask) {
-bb:
-  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %tmp0 = call i32 @llvm.amdgcn.cluster.load.b32.i32(ptr addrspace(1) %gep, i32 %mask)
-  store i32 %tmp0, ptr addrspace(1) %out, align 4
-  ret void
-}
-
-; CHECK: DIVERGENT: %tmp0 = call <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32(ptr addrspace(1) %gep, i32 %mask)
-define amdgpu_kernel void @cluster_load_b64(ptr addrspace(1) %addr, ptr addrspace(1) %out, i32 %mask) {
-bb:
-  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %tmp0 = call <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32(ptr addrspace(1) %gep, i32 %mask)
-  store <2 x i32> %tmp0, ptr addrspace(1) %out, align 8
-  ret void
-}
-
-; CHECK: DIVERGENT: %tmp0 = call <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32(ptr addrspace(1) %gep, i32 %mask)
-define amdgpu_kernel void @cluster_load_b128(ptr addrspace(1) %addr, ptr addrspace(1) %out, i32 %mask) {
-bb:
-  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %tmp0 = call <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32(ptr addrspace(1) %gep, i32 %mask)
-  store <4 x i32> %tmp0, ptr addrspace(1) %out, align 16
-  ret void
-}
-
-; CHECK: DIVERGENT: call void @llvm.amdgcn.cluster.load.async.to.lds.b8(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0, i32 %mask)
-define amdgpu_kernel void @cluster_load_async_to_lds_b8(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 %mask) {
-bb:
-  call void @llvm.amdgcn.cluster.load.async.to.lds.b8(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0, i32 %mask)
-  ret void
-}
-
-; CHECK: DIVERGENT: call void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0, i32 %mask)
-define amdgpu_kernel void @cluster_load_async_to_lds_b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 %mask) {
-bb:
-  call void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0, i32 %mask)
-  ret void
-}
-
-; CHECK: DIVERGENT: call void @llvm.amdgcn.cluster.load.async.to.lds.b64(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0, i32 %mask)
-define amdgpu_kernel void @cluster_load_async_to_lds_b64(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 %mask) {
-bb:
-  call void @llvm.amdgcn.cluster.load.async.to.lds.b64(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0, i32 %mask)
-  ret void
-}
-
-; CHECK: DIVERGENT: call void @llvm.amdgcn.cluster.load.async.to.lds.b128(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0, i32 %mask)
-define amdgpu_kernel void @cluster_load_async_to_lds_b128(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 %mask) {
-bb:
-  call void @llvm.amdgcn.cluster.load.async.to.lds.b128(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0, i32 %mask)
-  ret void
-}
-
-; CHECK: DIVERGENT: call void @llvm.amdgcn.global.load.async.to.lds.b8(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
-define amdgpu_kernel void @global_load_async_to_lds_b8(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
-bb:
-  call void @llvm.amdgcn.global.load.async.to.lds.b8(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
-  ret void
-}
-
-; CHECK: DIVERGENT: call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
-define amdgpu_kernel void @global_load_async_to_lds_b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
-bb:
-  call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
-  ret void
-}
-
-; CHECK: DIVERGENT: call void @llvm.amdgcn.global.load.async.to.lds.b64(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
-define amdgpu_kernel void @global_load_async_to_lds_b64(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
-bb:
-  call void @llvm.amdgcn.global.load.async.to.lds.b64(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
-  ret void
-}
-
-; CHECK: DIVERGENT: call void @llvm.amdgcn.global.load.async.to.lds.b128(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
-define amdgpu_kernel void @global_load_async_to_lds_b128(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
-bb:
-  call void @llvm.amdgcn.global.load.async.to.lds.b128(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
-  ret void
-}
-
-; CHECK: DIVERGENT: call void @llvm.amdgcn.global.store.async.from.lds.b8(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
-define amdgpu_kernel void @global_store_async_from_lds_b8(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
-bb:
-  call void @llvm.amdgcn.global.store.async.from.lds.b8(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
-  ret void
-}
-
-; CHECK: DIVERGENT: call void @llvm.amdgcn.global.store.async.from.lds.b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
-define amdgpu_kernel void @global_store_async_from_lds_b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
-bb:
-  call void @llvm.amdgcn.global.store.async.from.lds.b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
-  ret void
-}
-
-; CHECK: DIVERGENT: call void @llvm.amdgcn.global.store.async.from.lds.b64(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
-define amdgpu_kernel void @global_store_async_from_lds_b64(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
-bb:
-  call void @llvm.amdgcn.global.store.async.from.lds.b64(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
-  ret void
-}
-
-; CHECK: DIVERGENT: call void @llvm.amdgcn.global.store.async.from.lds.b128(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
-define amdgpu_kernel void @global_store_async_from_lds_b128(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
-bb:
-  call void @llvm.amdgcn.global.store.async.from.lds.b128(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr, i32 0)
   ret void
 }
 
@@ -1062,14 +857,10 @@ declare <8 x half> @llvm.amdgcn.swmmac.f16.16x16x128.bf8.bf8.v8f16.v8i32.v16i32.
 declare <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x128.iu8.v8i32.v8i32.v16i32.i16(i1 immarg, <8 x i32>, i1 immarg, <16 x i32>, <8 x i32>, i16 %Index)
 declare <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x256.iu4.v8i32.v8i32.v16i32.i16(i1 immarg, <8 x i32>, i1 immarg, <16 x i32>, <8 x i32>, i16 %Index)
 
-declare <2 x i32> @llvm.amdgcn.global.load.tr.v2i32(ptr addrspace(1))
-declare <8 x i16> @llvm.amdgcn.global.load.tr.v8i16(ptr addrspace(1))
-declare <8 x half> @llvm.amdgcn.global.load.tr.v8f16(ptr addrspace(1))
-declare <8 x bfloat> @llvm.amdgcn.global.load.tr.v8bf16(ptr addrspace(1))
-declare i32 @llvm.amdgcn.global.load.tr.i32(ptr addrspace(1))
-declare <4 x i16> @llvm.amdgcn.global.load.tr.v4i16(ptr addrspace(1))
-declare <4 x half> @llvm.amdgcn.global.load.tr.v4f16(ptr addrspace(1))
-declare <4 x bfloat> @llvm.amdgcn.global.load.tr.v4bf16(ptr addrspace(1))
+declare <2 x i32> @llvm.amdgcn.global.load.tr.b64.v2i32(ptr addrspace(1))
+declare <8 x i16> @llvm.amdgcn.global.load.tr.b128.v8i16(ptr addrspace(1))
+declare i32 @llvm.amdgcn.global.load.tr.b64.i32(ptr addrspace(1))
+declare <4 x i16> @llvm.amdgcn.global.load.tr.b128.v4i16(ptr addrspace(1))
 declare <2 x i32> @llvm.amdgcn.global.load.tr4.v2i32(ptr addrspace(1))
 declare <3 x i32> @llvm.amdgcn.global.load.tr6.v3i32(ptr addrspace(1))
 declare <2 x i32> @llvm.amdgcn.ds.load.tr.v2i32(ptr addrspace(3))
@@ -1078,29 +869,6 @@ declare <3 x i32> @llvm.amdgcn.ds.load.tr6.v3i32(ptr addrspace(3))
 declare <8 x i16> @llvm.amdgcn.ds.load.tr.v8i16(ptr addrspace(3))
 declare <8 x half> @llvm.amdgcn.ds.load.tr.v8f16(ptr addrspace(3))
 declare <8 x bfloat> @llvm.amdgcn.ds.load.tr.v8bf16(ptr addrspace(3))
-
-declare i32 @llvm.amdgcn.global.load.monitor.b32.i32(ptr addrspace(1), i32)
-declare <2 x i32> @llvm.amdgcn.global.load.monitor.b64.v2i32(ptr addrspace(1), i32)
-declare <4 x i32> @llvm.amdgcn.global.load.monitor.b128.v4i32(ptr addrspace(1), i32)
-declare i32 @llvm.amdgcn.flat.load.monitor.b32.i32(ptr, i32)
-declare <2 x i32> @llvm.amdgcn.flat.load.monitor.b64.v2i32(ptr, i32)
-declare <4 x i32> @llvm.amdgcn.flat.load.monitor.b128.v4i32(ptr, i32)
-declare i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1), i32 %mask)
-declare <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32.p1(ptr addrspace(1), i32 %mask)
-declare <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32.p1(ptr addrspace(1), i32 %mask)
-
-declare void @llvm.amdgcn.cluster.load.async.to.lds.b8(ptr addrspace(1), ptr addrspace(3), i32, i32)
-declare void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1), ptr addrspace(3), i32, i32)
-declare void @llvm.amdgcn.cluster.load.async.to.lds.b64(ptr addrspace(1), ptr addrspace(3), i32, i32)
-declare void @llvm.amdgcn.cluster.load.async.to.lds.b128(ptr addrspace(1), ptr addrspace(3), i32, i32)
-declare void @llvm.amdgcn.global.load.async.to.lds.b8(ptr addrspace(1), ptr addrspace(3), i32)
-declare void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1), ptr addrspace(3), i32)
-declare void @llvm.amdgcn.global.load.async.to.lds.b64(ptr addrspace(1), ptr addrspace(3), i32)
-declare void @llvm.amdgcn.global.load.async.to.lds.b128(ptr addrspace(1), ptr addrspace(3), i32)
-declare void @llvm.amdgcn.global.store.async.from.lds.b8(ptr addrspace(1), ptr addrspace(3), i32)
-declare void @llvm.amdgcn.global.store.async.from.lds.b32(ptr addrspace(1), ptr addrspace(3), i32)
-declare void @llvm.amdgcn.global.store.async.from.lds.b64(ptr addrspace(1), ptr addrspace(3), i32)
-declare void @llvm.amdgcn.global.store.async.from.lds.b128(ptr addrspace(1), ptr addrspace(3), i32)
 
 declare i32 @llvm.amdgcn.permlane16.swap(i32, i32, i1 immarg, i1 immarg)
 declare i32 @llvm.amdgcn.permlane.bcast(i32, i32, i32, i32)

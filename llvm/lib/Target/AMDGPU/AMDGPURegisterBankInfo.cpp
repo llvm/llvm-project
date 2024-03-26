@@ -4525,21 +4525,21 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cvt_pk_bf8_f16:
     case Intrinsic::amdgcn_cvt_sr_fp8_f16:
     case Intrinsic::amdgcn_cvt_sr_bf8_f16:
-    case Intrinsic::amdgcn_cvt_scale_pk_f16_fp6:
-    case Intrinsic::amdgcn_cvt_scale_pk_bf16_fp6:
-    case Intrinsic::amdgcn_cvt_scale_pk_f16_bf6:
-    case Intrinsic::amdgcn_cvt_scale_pk_bf16_bf6:
-    case Intrinsic::amdgcn_cvt_scale_pk_f16_fp8:
-    case Intrinsic::amdgcn_cvt_scale_pk_bf16_fp8:
-    case Intrinsic::amdgcn_cvt_scale_pk_f16_bf8:
-    case Intrinsic::amdgcn_cvt_scale_pk_bf16_bf8:
-    case Intrinsic::amdgcn_cvt_scale_pk_f16_fp4:
-    case Intrinsic::amdgcn_cvt_scale_pk_bf16_fp4:
-    case Intrinsic::amdgcn_cvt_scale_pk_f32_fp6:
-    case Intrinsic::amdgcn_cvt_scale_pk_f32_bf6:
-    case Intrinsic::amdgcn_cvt_scale_pk_f32_fp8:
-    case Intrinsic::amdgcn_cvt_scale_pk_f32_bf8:
-    case Intrinsic::amdgcn_cvt_scale_pk_f32_fp4:
+    case Intrinsic::amdgcn_cvt_scale_pk16_f16_fp6:
+    case Intrinsic::amdgcn_cvt_scale_pk16_bf16_fp6:
+    case Intrinsic::amdgcn_cvt_scale_pk16_f16_bf6:
+    case Intrinsic::amdgcn_cvt_scale_pk16_bf16_bf6:
+    case Intrinsic::amdgcn_cvt_scale_pk4_f16_fp8:
+    case Intrinsic::amdgcn_cvt_scale_pk4_bf16_fp8:
+    case Intrinsic::amdgcn_cvt_scale_pk4_f16_bf8:
+    case Intrinsic::amdgcn_cvt_scale_pk4_bf16_bf8:
+    case Intrinsic::amdgcn_cvt_scale_pk8_f16_fp4:
+    case Intrinsic::amdgcn_cvt_scale_pk8_bf16_fp4:
+    case Intrinsic::amdgcn_cvt_scale_pk16_f32_fp6:
+    case Intrinsic::amdgcn_cvt_scale_pk16_f32_bf6:
+    case Intrinsic::amdgcn_cvt_scale_pk4_f32_fp8:
+    case Intrinsic::amdgcn_cvt_scale_pk4_f32_bf8:
+    case Intrinsic::amdgcn_cvt_scale_pk8_f32_fp4:
     case Intrinsic::amdgcn_cvt_sat_pk_i4_i8:
     case Intrinsic::amdgcn_cvt_sat_pk_u4_u8:
     case Intrinsic::amdgcn_fmed3:
@@ -5097,7 +5097,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16:
     case Intrinsic::amdgcn_atomic_cond_sub_u32:
     case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
-    case Intrinsic::amdgcn_global_load_tr:
+    case Intrinsic::amdgcn_global_load_tr_b64:
+    case Intrinsic::amdgcn_global_load_tr_b128:
     case Intrinsic::amdgcn_global_load_tr4:
     case Intrinsic::amdgcn_global_load_tr6:
     case Intrinsic::amdgcn_ds_load_tr:

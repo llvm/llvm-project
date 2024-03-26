@@ -190,55 +190,10 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI,
 }
 
 bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
-  const unsigned VOPOps[4] = { AMDGPU::OpName::src0, AMDGPU::OpName::src1,
-                               AMDGPU::OpName::src2, AMDGPU::OpName::vdst };
-  const unsigned VDSOps[4] = { AMDGPU::OpName::addr, AMDGPU::OpName::data0,
-                               AMDGPU::OpName::data1, AMDGPU::OpName::vdst };
-  const unsigned FLATOps[4] = { AMDGPU::OpName::vaddr, AMDGPU::OpName::vdata,
-                                AMDGPU::OpName::OPERAND_LAST,
-                                AMDGPU::OpName::vdst };
-  const unsigned BUFOps[4] = { AMDGPU::OpName::vaddr,
-                               AMDGPU::OpName::OPERAND_LAST,
-                               AMDGPU::OpName::OPERAND_LAST,
-                               AMDGPU::OpName::vdata };
+  auto Ops = AMDGPU::getVGPRLoweringOperandTables(MI.getDesc());
 
-  // For VOPD instructions MSB of a corresponding Y component operand VGPR
-  // address is supposed to match X operand, otherwise VOPD shall not be
-  // combined.
-  const unsigned VOPDOpsX[4] = { AMDGPU::OpName::src0X, AMDGPU::OpName::vsrc1X,
-                                 AMDGPU::OpName::vsrc2X,
-                                 AMDGPU::OpName::vdstX };
-  const unsigned VOPDOpsY[4] = { AMDGPU::OpName::src0Y, AMDGPU::OpName::vsrc1Y,
-                                 AMDGPU::OpName::vsrc2Y,
-                                 AMDGPU::OpName::vdstY };
-
-  unsigned TSFlags = MI.getDesc().TSFlags;
-
-  if (TSFlags &
-      (SIInstrFlags::VOP1 | SIInstrFlags::VOP2 | SIInstrFlags::VOP3 |
-       SIInstrFlags::VOP3P | SIInstrFlags::VOPC | SIInstrFlags::DPP)) {
-    // LD_SCALE operands ignore MSB.
-    if (MI.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32)
-      return false;
-    return runOnMachineInstr(MI, VOPOps);
-  }
-
-  if (TSFlags & SIInstrFlags::DS)
-    return runOnMachineInstr(MI, VDSOps);
-
-  if (TSFlags & SIInstrFlags::FLAT)
-    return runOnMachineInstr(MI, FLATOps);
-
-  if (TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF))
-    return runOnMachineInstr(MI, BUFOps);
-
-  if (AMDGPU::isVOPD(MI.getOpcode()))
-    return runOnMachineInstr(MI, VOPDOpsX, VOPDOpsY);
-
-  if (TSFlags & (SIInstrFlags::VIMAGE | SIInstrFlags::VSAMPLE |
-                 SIInstrFlags::MIMG | SIInstrFlags::EXP))
-    llvm_unreachable("Image and export VGPR lowering is not implemented and"
-                     " these instructions are not expected on gfx1210");
+  if (Ops.first)
+    return runOnMachineInstr(MI, Ops.first, Ops.second);
 
   assert(!TII->hasVGPRUses(MI) || MI.isMetaInstruction() || MI.isPseudo());
 

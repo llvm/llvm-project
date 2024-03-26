@@ -793,7 +793,7 @@ void StubHelperSection::setUp() {
 
   in.imageLoaderCache->parent =
       ConcatOutputSection::getOrCreateForInput(in.imageLoaderCache);
-  inputSections.push_back(in.imageLoaderCache);
+  addInputSection(in.imageLoaderCache);
   // Since this isn't in the symbol table or in any input file, the noDeadStrip
   // argument doesn't matter.
   dyldPrivate =
@@ -806,10 +806,9 @@ void StubHelperSection::setUp() {
   dyldPrivate->used = true;
 }
 
-ObjCSelRefsSection::ObjCSelRefsSection()
-    : SyntheticSection(segment_names::data, section_names::objcSelrefs) {}
-
-void ObjCSelRefsSection::initialize() {
+llvm::DenseMap<llvm::CachedHashStringRef, ConcatInputSection *>
+    ObjCSelRefsHelper::methnameToSelref;
+void ObjCSelRefsHelper::initialize() {
   // Do not fold selrefs without ICF.
   if (config->icfLevel == ICFLevel::none)
     return;
@@ -836,7 +835,9 @@ void ObjCSelRefsSection::initialize() {
   }
 }
 
-ConcatInputSection *ObjCSelRefsSection::makeSelRef(StringRef methname) {
+void ObjCSelRefsHelper::cleanup() { methnameToSelref.clear(); }
+
+ConcatInputSection *ObjCSelRefsHelper::makeSelRef(StringRef methname) {
   auto methnameOffset =
       in.objcMethnameSection->getStringOffset(methname).outSecOff;
 
@@ -855,13 +856,13 @@ ConcatInputSection *ObjCSelRefsSection::makeSelRef(StringRef methname) {
                                 /*addend=*/static_cast<int64_t>(methnameOffset),
                                 /*referent=*/in.objcMethnameSection->isec});
   objcSelref->parent = ConcatOutputSection::getOrCreateForInput(objcSelref);
-  inputSections.push_back(objcSelref);
+  addInputSection(objcSelref);
   objcSelref->isFinal = true;
   methnameToSelref[CachedHashStringRef(methname)] = objcSelref;
   return objcSelref;
 }
 
-ConcatInputSection *ObjCSelRefsSection::getSelRef(StringRef methname) {
+ConcatInputSection *ObjCSelRefsHelper::getSelRef(StringRef methname) {
   auto it = methnameToSelref.find(CachedHashStringRef(methname));
   if (it == methnameToSelref.end())
     return nullptr;
@@ -890,8 +891,8 @@ StringRef ObjCStubsSection::getMethname(Symbol *sym) {
 void ObjCStubsSection::addEntry(Symbol *sym) {
   StringRef methname = getMethname(sym);
   // We create a selref entry for each unique methname.
-  if (!in.objcSelRefs->getSelRef(methname))
-    in.objcSelRefs->makeSelRef(methname);
+  if (!ObjCSelRefsHelper::getSelRef(methname))
+    ObjCSelRefsHelper::makeSelRef(methname);
 
   auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
                       ? target->objcStubsFastSize
@@ -940,7 +941,7 @@ void ObjCStubsSection::writeTo(uint8_t *buf) const {
     Defined *sym = symbols[i];
 
     auto methname = getMethname(sym);
-    InputSection *selRef = in.objcSelRefs->getSelRef(methname);
+    InputSection *selRef = ObjCSelRefsHelper::getSelRef(methname);
     assert(selRef != nullptr && "no selref for methname");
     auto selrefAddr = selRef->getVA(0);
     target->writeObjCMsgSendStub(buf + stubOffset, sym, in.objcStubs->addr,

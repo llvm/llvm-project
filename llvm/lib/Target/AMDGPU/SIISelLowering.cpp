@@ -1437,7 +1437,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_ds_load_tr:
   case Intrinsic::amdgcn_global_load_tr6:
   case Intrinsic::amdgcn_global_load_tr4:
-  case Intrinsic::amdgcn_global_load_tr: {
+  case Intrinsic::amdgcn_global_load_tr_b64:
+  case Intrinsic::amdgcn_global_load_tr_b128: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
@@ -1613,7 +1614,8 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_global_load_monitor_b128:
   case Intrinsic::amdgcn_global_load_monitor_b32:
   case Intrinsic::amdgcn_global_load_monitor_b64:
-  case Intrinsic::amdgcn_global_load_tr:
+  case Intrinsic::amdgcn_global_load_tr_b64:
+  case Intrinsic::amdgcn_global_load_tr_b128:
   case Intrinsic::amdgcn_global_load_tr4:
   case Intrinsic::amdgcn_global_load_tr6:
   case Intrinsic::amdgcn_global_store_async_from_lds_b8:
@@ -3071,13 +3073,12 @@ SDValue SITargetLowering::LowerFormalArguments(
   } else if (!IsGraphics) {
     // For the fixed ABI, pass workitem IDs in the last argument register.
     allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
-  }
 
-  if (!IsEntryFunc) {
+    // FIXME: Sink this into allocateSpecialInputSGPRs
     if (!Subtarget->enableFlatScratch())
       CCInfo.AllocateReg(Info->getScratchRSrcReg());
-    if (!IsGraphics)
-      allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
+
+    allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
   }
 
   if (!IsKernel) {
@@ -4332,7 +4333,8 @@ SDValue SITargetLowering::lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   EVT DstVT = Op.getValueType();
 
   if (SrcVT.getScalarType() != MVT::bf16 ||
-      (Subtarget->hasBF16ConversionInsts() && DstVT == MVT::f32))
+      // TODO: Is v_cvt_f32_bf16 useful in any way?
+      (false && Subtarget->hasBF16ConversionInsts() && DstVT == MVT::f32))
     return Op;
 
   SDLoc SL(Op);
@@ -5120,8 +5122,8 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     if (Subtarget->hasScalarAddSub64()) {
       unsigned Opc = IsAdd ? AMDGPU::S_ADD_U64 : AMDGPU::S_SUB_U64;
       BuildMI(*BB, MI, DL, TII->get(Opc), Dest.getReg())
-          .addReg(Src0.getReg())
-          .addReg(Src1.getReg());
+        .add(Src0)
+        .add(Src1);
     } else {
       const SIRegisterInfo *TRI = ST.getRegisterInfo();
       const TargetRegisterClass *BoolRC = TRI->getBoolRC();
@@ -5683,6 +5685,11 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     return SplitBB;
   }
   default:
+    if (TII->isImage(MI) || TII->isMUBUF(MI)) {
+      if (!MI.mayStore())
+        AddMemOpInit(MI);
+      return BB;
+    }
     return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
   }
 }
@@ -15464,60 +15471,67 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
 // result register that will be written in the case of a memory access failure.
 // The required code is also added to tie this init code to the result of the
 // img instruction.
-void SITargetLowering::AddIMGInit(MachineInstr &MI) const {
+void SITargetLowering::AddMemOpInit(MachineInstr &MI) const {
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   MachineBasicBlock &MBB = *MI.getParent();
 
-  MachineOperand *TFE = TII->getNamedOperand(MI, AMDGPU::OpName::tfe);
-  MachineOperand *LWE = TII->getNamedOperand(MI, AMDGPU::OpName::lwe);
-  MachineOperand *D16 = TII->getNamedOperand(MI, AMDGPU::OpName::d16);
+  int DstIdx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdata);
+  unsigned InitIdx = 0;
 
-  if (!TFE && !LWE) // intersect_ray
+  if (TII->isImage(MI)) {
+    MachineOperand *TFE = TII->getNamedOperand(MI, AMDGPU::OpName::tfe);
+    MachineOperand *LWE = TII->getNamedOperand(MI, AMDGPU::OpName::lwe);
+    MachineOperand *D16 = TII->getNamedOperand(MI, AMDGPU::OpName::d16);
+
+    if (!TFE && !LWE) // intersect_ray
+      return;
+
+    unsigned TFEVal = TFE ? TFE->getImm() : 0;
+    unsigned LWEVal = LWE ? LWE->getImm() : 0;
+    unsigned D16Val = D16 ? D16->getImm() : 0;
+
+    if (!TFEVal && !LWEVal)
+      return;
+
+    // At least one of TFE or LWE are non-zero
+    // We have to insert a suitable initialization of the result value and
+    // tie this to the dest of the image instruction.
+
+    // Calculate which dword we have to initialize to 0.
+    MachineOperand *MO_Dmask = TII->getNamedOperand(MI, AMDGPU::OpName::dmask);
+
+    // check that dmask operand is found.
+    assert(MO_Dmask && "Expected dmask operand in instruction");
+
+    unsigned dmask = MO_Dmask->getImm();
+    // Determine the number of active lanes taking into account the
+    // Gather4 special case
+    unsigned ActiveLanes = TII->isGather4(MI) ? 4 : llvm::popcount(dmask);
+
+    bool Packed = !Subtarget->hasUnpackedD16VMem();
+
+    InitIdx = D16Val && Packed ? ((ActiveLanes + 1) >> 1) + 1 : ActiveLanes + 1;
+
+    // Abandon attempt if the dst size isn't large enough
+    // - this is in fact an error but this is picked up elsewhere and
+    // reported correctly.
+    uint32_t DstSize =
+        TRI.getRegSizeInBits(*TII->getOpRegClass(MI, DstIdx)) / 32;
+    if (DstSize < InitIdx)
+      return;
+  } else if (TII->isMUBUF(MI) && AMDGPU::getMUBUFTfe(MI.getOpcode())) {
+    InitIdx = TRI.getRegSizeInBits(*TII->getOpRegClass(MI, DstIdx)) / 32;
+  } else {
     return;
-
-  unsigned TFEVal = TFE ? TFE->getImm() : 0;
-  unsigned LWEVal = LWE ? LWE->getImm() : 0;
-  unsigned D16Val = D16 ? D16->getImm() : 0;
-
-  if (!TFEVal && !LWEVal)
-    return;
-
-  // At least one of TFE or LWE are non-zero
-  // We have to insert a suitable initialization of the result value and
-  // tie this to the dest of the image instruction.
+  }
 
   const DebugLoc &DL = MI.getDebugLoc();
 
-  int DstIdx =
-      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdata);
-
-  // Calculate which dword we have to initialize to 0.
-  MachineOperand *MO_Dmask = TII->getNamedOperand(MI, AMDGPU::OpName::dmask);
-
-  // check that dmask operand is found.
-  assert(MO_Dmask && "Expected dmask operand in instruction");
-
-  unsigned dmask = MO_Dmask->getImm();
-  // Determine the number of active lanes taking into account the
-  // Gather4 special case
-  unsigned ActiveLanes = TII->isGather4(MI) ? 4 : llvm::popcount(dmask);
-
-  bool Packed = !Subtarget->hasUnpackedD16VMem();
-
-  unsigned InitIdx =
-      D16Val && Packed ? ((ActiveLanes + 1) >> 1) + 1 : ActiveLanes + 1;
-
-  // Abandon attempt if the dst size isn't large enough
-  // - this is in fact an error but this is picked up elsewhere and
-  // reported correctly.
-  uint32_t DstSize = TRI.getRegSizeInBits(*TII->getOpRegClass(MI, DstIdx)) / 32;
-  if (DstSize < InitIdx)
-    return;
-
   // Create a register for the initialization value.
-  Register PrevDst = MRI.createVirtualRegister(TII->getOpRegClass(MI, DstIdx));
+  Register PrevDst = MRI.cloneVirtualRegister(MI.getOperand(DstIdx).getReg());
   unsigned NewDst = 0; // Final initialized value will be in here
 
   // If PRTStrictNull feature is enabled (the default) then initialize
@@ -15631,11 +15645,8 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     return;
   }
 
-  if (TII->isImage(MI)) {
-    if (!MI.mayStore())
-      AddIMGInit(MI);
+  if (TII->isImage(MI))
     TII->enforceOperandRCAlignment(MI, AMDGPU::OpName::vaddr);
-  }
 }
 
 static SDValue buildSMovImm32(SelectionDAG &DAG, const SDLoc &DL,

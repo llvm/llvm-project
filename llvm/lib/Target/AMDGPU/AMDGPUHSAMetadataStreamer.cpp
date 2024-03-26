@@ -697,6 +697,35 @@ void MetadataStreamerMsgPackV6::emitVersion() {
   getRootMetadata("amdhsa.version") = Version;
 }
 
+void MetadataStreamerMsgPackV6::emitKernelAttrs(const Function &Func,
+                                                msgpack::MapDocNode Kern) {
+  MetadataStreamerMsgPackV5::emitKernelAttrs(Func, Kern);
+
+  // .cluster_dims_*
+  {
+    auto Attr = Func.getFnAttribute("amdgpu-cluster-dims");
+    if (Attr.isValid()) {
+      auto AttrStr = Attr.getValueAsString();
+      SmallVector<StringRef, 3> ClusterDims;
+      AttrStr.split(ClusterDims, ',');
+      assert(ClusterDims.size() == 3 && "expect 3d value");
+
+      // TODO: We can't use getAsInteger for now because it doesn't use the
+      // length of a slice as end mark. Instead, it reads all the way to the end
+      // of a string.
+      auto ClusterDimsNode = HSAMetadataDoc->getArrayNode();
+      ClusterDimsNode.push_back(
+          Kern.getDocument()->getNode(std::stoi(ClusterDims[0].str())));
+      ClusterDimsNode.push_back(
+          Kern.getDocument()->getNode(std::stoi(ClusterDims[1].str())));
+      ClusterDimsNode.push_back(
+          Kern.getDocument()->getNode(std::stoi(ClusterDims[2].str())));
+
+      Kern[".cluster_dims"] = ClusterDimsNode;
+    }
+  }
+}
+
 } // end namespace HSAMD
 } // end namespace AMDGPU
 } // end namespace llvm

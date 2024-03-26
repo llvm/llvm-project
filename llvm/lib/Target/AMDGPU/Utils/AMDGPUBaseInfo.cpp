@@ -319,6 +319,7 @@ struct MUBUFInfo {
   bool has_srsrc;
   bool has_soffset;
   bool IsBufferInv;
+  bool tfe;
 };
 
 struct MTBUFInfo {
@@ -467,6 +468,11 @@ bool getMUBUFHasSoffset(unsigned Opc) {
 bool getMUBUFIsBufferInv(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
   return Info ? Info->IsBufferInv : false;
+}
+
+bool getMUBUFTfe(unsigned Opc) {
+  const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
+  return Info ? Info->tfe : false;
 }
 
 bool getSMEMIsBuffer(unsigned Opc) {
@@ -1214,7 +1220,7 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
       *EnableWavefrontSize32 :
       STI->getFeatureBits().test(FeatureWavefrontSize32);
 
-  if (STI->getFeatureBits().test(FeatureGFX11FullVGPRs))
+  if (STI->getFeatureBits().test(Feature1_5xVGPRs))
     return IsWave32 ? 24 : 12;
 
   if (hasGFX10_3Insts(*STI))
@@ -1244,7 +1250,7 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
   if (!isGFX10Plus(*STI))
     return 256;
   bool IsWave32 = STI->getFeatureBits().test(FeatureWavefrontSize32);
-  if (STI->getFeatureBits().test(FeatureGFX11FullVGPRs))
+  if (STI->getFeatureBits().test(Feature1_5xVGPRs))
     return IsWave32 ? 1536 : 768;
   return IsWave32 ? 1024 : 512;
 }
@@ -3253,6 +3259,76 @@ unsigned getVGPREncodingMSBs(MCPhysReg Reg, const MCRegisterInfo &MRI) {
   return Idx >> 8;
 }
 
+MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
+                          const MCRegisterInfo &MRI) {
+  unsigned Enc = MRI.getEncodingValue(Reg);
+  unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
+  if (Idx >= 0x100)
+    return AMDGPU::NoRegister;
+
+  const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
+  if (!RC)
+    return AMDGPU::NoRegister;
+  return RC->getRegister(Idx | (MSBs << 8));
+}
+
+std::pair<const unsigned *, const unsigned *>
+getVGPRLoweringOperandTables(const MCInstrDesc& Desc) {
+  static const unsigned VOPOps[4] = {AMDGPU::OpName::src0, AMDGPU::OpName::src1,
+                                     AMDGPU::OpName::src2,
+                                     AMDGPU::OpName::vdst};
+  static const unsigned VDSOps[4] = {
+      AMDGPU::OpName::addr, AMDGPU::OpName::data0, AMDGPU::OpName::data1,
+      AMDGPU::OpName::vdst};
+  static const unsigned FLATOps[4] = {
+      AMDGPU::OpName::vaddr, AMDGPU::OpName::vdata,
+      AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::vdst};
+  static const unsigned BUFOps[4] = {
+      AMDGPU::OpName::vaddr, AMDGPU::OpName::OPERAND_LAST,
+      AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::vdata};
+
+  // For VOPD instructions MSB of a corresponding Y component operand VGPR
+  // address is supposed to match X operand, otherwise VOPD shall not be
+  // combined.
+  static const unsigned VOPDOpsX[4] = {
+      AMDGPU::OpName::src0X, AMDGPU::OpName::vsrc1X, AMDGPU::OpName::vsrc2X,
+      AMDGPU::OpName::vdstX};
+  static const unsigned VOPDOpsY[4] = {
+      AMDGPU::OpName::src0Y, AMDGPU::OpName::vsrc1Y, AMDGPU::OpName::vsrc2Y,
+      AMDGPU::OpName::vdstY};
+
+  unsigned TSFlags = Desc.TSFlags;
+
+  if (TSFlags &
+      (SIInstrFlags::VOP1 | SIInstrFlags::VOP2 | SIInstrFlags::VOP3 |
+       SIInstrFlags::VOP3P | SIInstrFlags::VOPC | SIInstrFlags::DPP)) {
+    // LD_SCALE operands ignore MSB.
+    if (Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32 ||
+        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32_gfx1210)
+      return {};
+    return { VOPOps, nullptr };
+  }
+
+  if (TSFlags & SIInstrFlags::DS)
+    return { VDSOps, nullptr };
+
+  if (TSFlags & SIInstrFlags::FLAT)
+    return { FLATOps, nullptr };
+
+  if (TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF))
+    return { BUFOps, nullptr };
+
+  if (AMDGPU::isVOPD(Desc.getOpcode()))
+    return { VOPDOpsX, VOPDOpsY };
+
+  if (TSFlags & (SIInstrFlags::VIMAGE | SIInstrFlags::VSAMPLE |
+                 SIInstrFlags::MIMG | SIInstrFlags::EXP))
+    llvm_unreachable("Image and export VGPR lowering is not implemented and"
+                     " these instructions are not expected on gfx1210");
+
+  return {};
+}
+
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
   uint64_t TSFlags = MII.get(Opcode).TSFlags;
 
@@ -3298,14 +3374,14 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
   case AMDGPU::V_MAD_U32_e64_dpp:
   case AMDGPU::V_MAD_U32_e64_dpp_gfx1210:
     return true;
-  case AMDGPU::V_CVT_SCALE_PK_F16_BF8_e64_dpp:
-  case AMDGPU::V_CVT_SCALE_PK_F16_BF8_e64_dpp_gfx1210:
-  case AMDGPU::V_CVT_SCALE_PK_F16_FP8_e64_dpp:
-  case AMDGPU::V_CVT_SCALE_PK_F16_FP8_e64_dpp_gfx1210:
-  case AMDGPU::V_CVT_SCALE_PK_BF16_BF8_e64_dpp:
-  case AMDGPU::V_CVT_SCALE_PK_BF16_BF8_e64_dpp_gfx1210:
-  case AMDGPU::V_CVT_SCALE_PK_BF16_FP8_e64_dpp:
-  case AMDGPU::V_CVT_SCALE_PK_BF16_FP8_e64_dpp_gfx1210:
+  case AMDGPU::V_CVT_SCALE_PK4_F16_BF8_e64_dpp:
+  case AMDGPU::V_CVT_SCALE_PK4_F16_BF8_e64_dpp_gfx1210:
+  case AMDGPU::V_CVT_SCALE_PK4_F16_FP8_e64_dpp:
+  case AMDGPU::V_CVT_SCALE_PK4_F16_FP8_e64_dpp_gfx1210:
+  case AMDGPU::V_CVT_SCALE_PK4_BF16_BF8_e64_dpp:
+  case AMDGPU::V_CVT_SCALE_PK4_BF16_BF8_e64_dpp_gfx1210:
+  case AMDGPU::V_CVT_SCALE_PK4_BF16_FP8_e64_dpp:
+  case AMDGPU::V_CVT_SCALE_PK4_BF16_FP8_e64_dpp_gfx1210:
     return false;
   default:
     return hasAny64BitVGPROperands(OpDesc);

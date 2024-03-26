@@ -139,6 +139,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/assert-side-effect>` check by detecting side
   effect from calling a method with non-const reference parameters.
 
+- Improved :doc:`bugprone-inc-dec-in-conditions
+  <clang-tidy/checks/bugprone/inc-dec-in-conditions>` check to ignore code
+  within unevaluated contexts, such as ``decltype``.
+
 - Improved :doc:`bugprone-non-zero-enum-to-bool-conversion
   <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by
   eliminating false positives resulting from direct usage of bitwise operators
@@ -248,6 +252,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
   mode by resolving symbolic links to header files. Fixed handling of Hungarian
   Prefix when configured to `LowerCase`.
+
+- Improved :doc:`readability-static-definition-in-anonymous-namespace
+  <clang-tidy/checks/readability/static-definition-in-anonymous-namespace>`
+  check by resolving fix-it overlaps in template code by disregarding implicit
+  instances.
 
 Removed checks
 ^^^^^^^^^^^^^^

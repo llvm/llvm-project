@@ -532,6 +532,9 @@ LLVM_READONLY
 bool getMUBUFIsBufferInv(unsigned Opc);
 
 LLVM_READONLY
+bool getMUBUFTfe(unsigned Opc);
+
+LLVM_READONLY
 bool getSMEMIsBuffer(unsigned Opc);
 
 LLVM_READONLY
@@ -1624,6 +1627,16 @@ const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
 /// \returns the MODE bits which have to be set by the S_SET_VGPR_MSB for the
 /// physical register \p Reg.
 unsigned getVGPREncodingMSBs(MCPhysReg Reg, const MCRegisterInfo &MRI);
+
+/// If \p Reg is a low VGPR return a corresponding high VGPR with \p MSBs set.
+MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
+                          const MCRegisterInfo &MRI);
+
+// Returns a table for the opcode with a given \p Desc to map the VGPR MSB
+// set by the S_SET_VGPR_MSB to one of 4 sources. In case of VOPD returns 2
+// maps, one for X and one for Y component.
+std::pair<const unsigned *, const unsigned *>
+getVGPRLoweringOperandTables(const MCInstrDesc& Desc);
 
 /// \returns true if a memory instruction supports scale_offset modifier.
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);

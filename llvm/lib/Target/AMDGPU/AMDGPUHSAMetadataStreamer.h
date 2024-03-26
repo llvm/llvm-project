@@ -154,6 +154,8 @@ protected:
 public:
   MetadataStreamerMsgPackV6() = default;
   ~MetadataStreamerMsgPackV6() = default;
+
+  void emitKernelAttrs(const Function &Func, msgpack::MapDocNode Kern) override;
 };
 
 } // end namespace HSAMD
