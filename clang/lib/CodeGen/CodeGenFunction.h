@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CODEGEN_CODEGENFUNCTION_H
 
 #include "CGBuilder.h"
+#include "CGCleanup.h"
 #include "CGDebugInfo.h"
 #include "CGLoopInfo.h"
 #include "CGValue.h"
@@ -242,12 +243,13 @@ public:
   struct JumpDest {
     JumpDest() : Block(nullptr), Index(0) {}
     JumpDest(llvm::BasicBlock *Block, EHScopeStack::stable_iterator Depth,
-             unsigned Index)
-        : Block(Block), ScopeDepth(Depth), Index(Index) {}
+             EHScopeStack::stable_iterator EHDepth, unsigned Index)
+        : Block(Block), ScopeDepth(Depth), EHDepth(EHDepth), Index(Index) {}
 
     bool isValid() const { return Block != nullptr; }
     llvm::BasicBlock *getBlock() const { return Block; }
     EHScopeStack::stable_iterator getScopeDepth() const { return ScopeDepth; }
+    EHScopeStack::stable_iterator getEHDepth() const { return EHDepth; }
     unsigned getDestIndex() const { return Index; }
 
     // This should be used cautiously.
@@ -258,6 +260,8 @@ public:
   private:
     llvm::BasicBlock *Block;
     EHScopeStack::stable_iterator ScopeDepth;
+    EHScopeStack::stable_iterator EHDepth;
+
     unsigned Index;
   };
 
@@ -647,7 +651,40 @@ public:
   llvm::DenseMap<const VarDecl *, llvm::Value *> NRVOFlags;
 
   EHScopeStack EHStack;
-  llvm::SmallVector<char, 256> LifetimeExtendedCleanupStack;
+
+  using DeferredCleanupStack = llvm::SmallVector<char, 256>;
+
+  // Deferred cleanups for lifetime-extended temporaries. Such cleanups are
+  // deferred until the end of the full expression, after which these are added
+  // to the EHStack.
+  DeferredCleanupStack LifetimeExtendedCleanupStack;
+
+  // // Branch-in-expression cleanups include the cleanups which are not yet
+  // added
+  // // to the EHStack while building an expression.
+  // // Cleanups from this stack are only emitted when encountering a branch
+  // while
+  // // building an expression (eg: branches in stmt-expr or coroutine
+  // // suspensions).
+  // // Otherwise, these should be cleared the end of the expression and added
+  // // separately to the EHStack.
+  // DeferredCleanupStack BranchInExprCleanupStack;
+
+  // RAII for restoring BranchInExprCleanupStack.
+  // All cleanups added to this stack during its scope are simply deleted. These
+  // cleanups should be added to the EHStack only on emitting a branch.
+  // class RestoreBranchInExprRAII {
+  // public:
+  //   RestoreBranchInExprRAII(CodeGenFunction &CGF)
+  //       : CGF(CGF), OldSize(CGF.BranchInExprCleanupStack.size()) {}
+  //   ~RestoreBranchInExprRAII() {
+  //   CGF.BranchInExprCleanupStack.resize(OldSize); }
+
+  // private:
+  //   CodeGenFunction &CGF;
+  //   size_t OldSize;
+  // };
+
   llvm::SmallVector<const JumpDest *, 2> SEHTryEpilogueStack;
 
   llvm::Instruction *CurrentFuncletPad = nullptr;
@@ -667,8 +704,8 @@ public:
     }
   };
 
-  /// Header for data within LifetimeExtendedCleanupStack.
-  struct LifetimeExtendedCleanupHeader {
+  /// Header for data within deferred cleanup stacks.
+  struct DeferredCleanupHeader {
     /// The size of the following cleanup object.
     unsigned Size;
     /// The kind of cleanup to push.
@@ -800,6 +837,12 @@ public:
   /// we're currently inside a conditionally-evaluated expression.
   template <class T, class... As>
   void pushFullExprCleanup(CleanupKind kind, As... A) {
+    if (kind & BranchInExprCleanup) {
+      // Defer BranchInExprCleanup as a NormalCleanup (emitted only if we see
+      // a branch). Do not add these to the EHStack as they should be added
+      // separately with a different CleanupKind.
+      return;
+    }
     // If we're not in a conditional branch, or if none of the
     // arguments requires saving, then use the unconditional cleanup.
     if (!isInConditionalBranch())
@@ -811,7 +854,10 @@ public:
 
     typedef EHScopeStack::ConditionalCleanup<T, As...> CleanupType;
     EHStack.pushCleanupTuple<CleanupType>(kind, Saved);
-    initFullExprCleanup();
+    EHCleanupScope *TopCleanup = nullptr;
+    if (EHStack.begin()->getKind() == EHScope::Kind::Cleanup)
+      TopCleanup = &cast<EHCleanupScope>(*EHStack.begin());
+    initFullExprCleanupWithFlag(createCleanupActiveFlag(TopCleanup));
   }
 
   /// Queue a cleanup to be pushed after finishing the current full-expression,
@@ -819,8 +865,8 @@ public:
   template <class T, class... As>
   void pushCleanupAfterFullExpr(CleanupKind Kind, As... A) {
     if (!isInConditionalBranch())
-      return pushCleanupAfterFullExprWithActiveFlag<T>(Kind, Address::invalid(),
-                                                       A...);
+      return pushDeferredCleanup<T>(LifetimeExtendedCleanupStack, Kind,
+                                    Address::invalid(), A...);
 
     Address ActiveFlag = createCleanupActiveFlag();
     assert(!DominatingValue<Address>::needsSaving(ActiveFlag) &&
@@ -830,24 +876,23 @@ public:
     SavedTuple Saved{saveValueInCond(A)...};
 
     typedef EHScopeStack::ConditionalCleanup<T, As...> CleanupType;
-    pushCleanupAfterFullExprWithActiveFlag<CleanupType>(Kind, ActiveFlag, Saved);
+    pushDeferredCleanup<CleanupType>(LifetimeExtendedCleanupStack, Kind,
+                                     ActiveFlag, Saved);
   }
 
   template <class T, class... As>
-  void pushCleanupAfterFullExprWithActiveFlag(CleanupKind Kind,
-                                              Address ActiveFlag, As... A) {
-    LifetimeExtendedCleanupHeader Header = {sizeof(T), Kind,
-                                            ActiveFlag.isValid()};
+  void pushDeferredCleanup(DeferredCleanupStack &Cleanups, CleanupKind Kind,
+                           Address ActiveFlag, As... A) {
+    DeferredCleanupHeader Header = {sizeof(T), Kind, ActiveFlag.isValid()};
 
-    size_t OldSize = LifetimeExtendedCleanupStack.size();
-    LifetimeExtendedCleanupStack.resize(
-        LifetimeExtendedCleanupStack.size() + sizeof(Header) + Header.Size +
-        (Header.IsConditional ? sizeof(ActiveFlag) : 0));
+    size_t OldSize = Cleanups.size();
+    Cleanups.resize(Cleanups.size() + sizeof(Header) + Header.Size +
+                    (Header.IsConditional ? sizeof(ActiveFlag) : 0));
 
     static_assert(sizeof(Header) % alignof(T) == 0,
                   "Cleanup will be allocated on misaligned address");
-    char *Buffer = &LifetimeExtendedCleanupStack[OldSize];
-    new (Buffer) LifetimeExtendedCleanupHeader(Header);
+    char *Buffer = &Cleanups[OldSize];
+    new (Buffer) DeferredCleanupHeader(Header);
     new (Buffer + sizeof(Header)) T(A...);
     if (Header.IsConditional)
       new (Buffer + sizeof(Header) + sizeof(T)) Address(ActiveFlag);
@@ -860,7 +905,9 @@ public:
   }
 
   void initFullExprCleanupWithFlag(Address ActiveFlag);
-  Address createCleanupActiveFlag();
+  // Also attaches the produced instructions to the cleanup auxillary
+  // instructions.
+  Address createCleanupActiveFlag(EHCleanupScope *TopCleanup = nullptr);
 
   /// PushDestructorCleanup - Push a cleanup to call the
   /// complete-object destructor of an object of the given type at the
@@ -918,8 +965,7 @@ public:
   public:
     /// Enter a new cleanup scope.
     explicit RunCleanupsScope(CodeGenFunction &CGF)
-      : PerformCleanup(true), CGF(CGF)
-    {
+        : PerformCleanup(true), CGF(CGF) {
       CleanupStackDepth = CGF.EHStack.stable_begin();
       LifetimeExtendedCleanupStackSize =
           CGF.LifetimeExtendedCleanupStack.size();
@@ -1166,6 +1212,12 @@ public:
   PopCleanupBlocks(EHScopeStack::stable_iterator OldCleanupStackSize,
                    std::initializer_list<llvm::Value **> ValuesToReload = {});
 
+  /// Adds deferred cleanups from the given position to the EHStack.
+  /// These could be lifetime-extended cleanups or branch-in-expr cleanups.
+  /// (does not remove the cleanups from the original stack).
+  void AddDeferredCleanups(DeferredCleanupStack &DeferredCleanupsStack,
+                           size_t OldSize);
+
   /// Takes the old cleanup stack size and emits the cleanup blocks
   /// that have been added, then adds all lifetime-extended cleanups from
   /// the given position to the stack.
@@ -1180,9 +1232,8 @@ public:
   /// target of a potentially scope-crossing jump; get a stable handle
   /// to which we can perform this jump later.
   JumpDest getJumpDestInCurrentScope(llvm::BasicBlock *Target) {
-    return JumpDest(Target,
-                    EHStack.getInnermostNormalCleanup(),
-                    NextCleanupDestIndex++);
+    return JumpDest(Target, EHStack.getInnermostNormalCleanup(),
+                    EHStack.getInnermostEHScope(), NextCleanupDestIndex++);
   }
 
   /// The given basic block lies in the current EH scope, but may be a
@@ -1196,7 +1247,7 @@ public:
   /// block through the normal cleanup handling code (if any) and then
   /// on to \arg Dest.
   void EmitBranchThroughCleanup(JumpDest Dest);
-
+  void EmitEHCleanupsForBranch(JumpDest Dest);
   /// isObviouslyBranchWithoutCleanups - Return true if a branch to the
   /// specified destination obviously has no cleanups to run.  'false' is always
   /// a conservatively correct answer for this method.
@@ -1243,11 +1294,13 @@ public:
   /// one branch or the other of a conditional expression.
   bool isInConditionalBranch() const { return OutermostConditional != nullptr; }
 
-  void setBeforeOutermostConditional(llvm::Value *value, Address addr) {
+  llvm::StoreInst *setBeforeOutermostConditional(llvm::Value *value,
+                                                 Address addr) {
     assert(isInConditionalBranch());
     llvm::BasicBlock *block = OutermostConditional->getStartingBlock();
-    auto store = new llvm::StoreInst(value, addr.getPointer(), &block->back());
+    auto *store = new llvm::StoreInst(value, addr.getPointer(), &block->back());
     store->setAlignment(addr.getAlignment().getAsAlign());
+    return store;
   }
 
   /// An RAII object to record that we're evaluating a statement

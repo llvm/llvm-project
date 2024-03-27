@@ -17,6 +17,7 @@
 #include "clang/AST/CharUnits.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/MathExtras.h"
 
 namespace clang {
@@ -51,6 +52,10 @@ public:
   llvm::Value *getPointer() const {
     assert(isValid());
     return PointerAndKnownNonNull.getPointer();
+  }
+
+  llvm::AllocaInst *getAllocaInst() const {
+    return llvm::dyn_cast<llvm::AllocaInst>(getPointer());
   }
 
   /// Return the type of the pointer value.

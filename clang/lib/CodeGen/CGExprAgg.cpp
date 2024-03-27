@@ -15,15 +15,20 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
+#include "EHScopeStack.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/StmtVisitor.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 using namespace clang;
@@ -555,24 +560,30 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   // For that, we'll need an EH cleanup.
   QualType::DestructionKind dtorKind = elementType.isDestructedType();
   Address endOfInit = Address::invalid();
+  EHCleanupScope *arrayCleanup = nullptr;
   EHScopeStack::stable_iterator cleanup;
   llvm::Instruction *cleanupDominator = nullptr;
-  if (CGF.needsEHCleanup(dtorKind)) {
+  if (dtorKind) {
     // In principle we could tell the cleanup where we are more
     // directly, but the control flow can get so varied here that it
     // would actually be quite complex.  Therefore we go through an
     // alloca.
-    endOfInit = CGF.CreateTempAlloca(begin->getType(), CGF.getPointerAlign(),
-                                     "arrayinit.endOfInit");
+    Address AllocaInst = Address::invalid();
+    endOfInit =
+        CGF.CreateTempAlloca(begin->getType(), CGF.getPointerAlign(),
+                             "arrayinit.endOfInit", nullptr, &AllocaInst);
     cleanupDominator = Builder.CreateStore(begin, endOfInit);
     CGF.pushIrregularPartialArrayCleanup(begin, endOfInit, elementType,
                                          elementAlign,
                                          CGF.getDestroyer(dtorKind));
     cleanup = CGF.EHStack.stable_begin();
-
-  // Otherwise, remember that we didn't need a cleanup.
-  } else {
-    dtorKind = QualType::DK_none;
+    arrayCleanup =
+        &cast<EHCleanupScope>(*CGF.EHStack.find(CGF.EHStack.stable_begin()));
+    arrayCleanup->AddAuxInst(AllocaInst.getAllocaInst());
+    if (auto *AddrSpaceCast =
+            llvm::dyn_cast<llvm::AddrSpaceCastInst>(endOfInit.getPointer()))
+      arrayCleanup->AddAuxInst(AddrSpaceCast);
+    arrayCleanup->AddAuxInst(cleanupDominator);
   }
 
   llvm::Value *one = llvm::ConstantInt::get(CGF.SizeTy, 1);
@@ -594,11 +605,11 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
       // Tell the cleanup that it needs to destroy up to this
       // element.  TODO: some of these stores can be trivially
       // observed to be unnecessary.
-      if (endOfInit.isValid()) Builder.CreateStore(element, endOfInit);
+      if (endOfInit.isValid())
+        arrayCleanup->AddAuxInst(Builder.CreateStore(element, endOfInit));
     }
-
-    LValue elementLV = CGF.MakeAddrLValue(
-        Address(element, llvmElementType, elementAlign), elementType);
+    Address address = Address(element, llvmElementType, elementAlign);
+    LValue elementLV = CGF.MakeAddrLValue(address, elementType);
     EmitInitializationToLValue(Args[i], elementLV);
   }
 
@@ -619,7 +630,8 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
     if (NumInitElements) {
       element = Builder.CreateInBoundsGEP(
           llvmElementType, element, one, "arrayinit.start");
-      if (endOfInit.isValid()) Builder.CreateStore(element, endOfInit);
+      if (endOfInit.isValid())
+        arrayCleanup->AddAuxInst(Builder.CreateStore(element, endOfInit));
     }
 
     // Compute the end of the array.
@@ -657,7 +669,8 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
         llvmElementType, currentElement, one, "arrayinit.next");
 
     // Tell the EH cleanup that we finished with the last element.
-    if (endOfInit.isValid()) Builder.CreateStore(nextElement, endOfInit);
+    if (endOfInit.isValid())
+      arrayCleanup->AddAuxInst(Builder.CreateStore(nextElement, endOfInit));
 
     // Leave the loop if we're done.
     llvm::Value *done = Builder.CreateICmpEQ(nextElement, end,
@@ -670,7 +683,8 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   }
 
   // Leave the partial-array cleanup if we entered one.
-  if (dtorKind) CGF.DeactivateCleanupBlock(cleanup, cleanupDominator);
+  if (cleanupDominator)
+    CGF.DeactivateCleanupBlock(cleanup, cleanupDominator);
 }
 
 //===----------------------------------------------------------------------===//
@@ -714,7 +728,7 @@ AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
     if (QualType::DestructionKind DtorKind = E->getType().isDestructedType())
       CGF.pushLifetimeExtendedDestroy(
           CGF.getCleanupKind(DtorKind), Slot.getAddress(), E->getType(),
-          CGF.getDestroyer(DtorKind), DtorKind & EHCleanup);
+          CGF.getDestroyer(DtorKind), CGF.getCleanupKind(DtorKind) & EHCleanup);
 }
 
 /// Attempt to look through various unimportant expressions to find a
@@ -1389,7 +1403,7 @@ AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
     if (QualType::DestructionKind DtorKind =
             CurField->getType().isDestructedType()) {
       assert(LV.isSimple());
-      if (CGF.needsEHCleanup(DtorKind)) {
+      if (DtorKind) {
         if (!CleanupDominator)
           CleanupDominator = CGF.Builder.CreateAlignedLoad(
               CGF.Int8Ty,
@@ -1802,21 +1816,19 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
     // Push a destructor if necessary.
     // FIXME: if we have an array of structures, all explicitly
     // initialized, we can end up pushing a linear number of cleanups.
-    bool pushedCleanup = false;
     if (QualType::DestructionKind dtorKind
           = field->getType().isDestructedType()) {
       assert(LV.isSimple());
-      if (CGF.needsEHCleanup(dtorKind)) {
+      if (dtorKind) {
         CGF.pushDestroy(EHCleanup, LV.getAddress(CGF), field->getType(),
                         CGF.getDestroyer(dtorKind), false);
         addCleanup(CGF.EHStack.stable_begin());
-        pushedCleanup = true;
       }
     }
 
     // If the GEP didn't get used because of a dead zero init or something
     // else, clean it up for -O0 builds and general tidiness.
-    if (!pushedCleanup && LV.isSimple())
+    if (!cleanupDominator && LV.isSimple())
       if (llvm::GetElementPtrInst *GEP =
               dyn_cast<llvm::GetElementPtrInst>(LV.getPointer(CGF)))
         if (GEP->use_empty())

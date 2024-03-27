@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Address.h"
 #include "CGBlocks.h"
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
@@ -19,6 +20,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
+#include "EHScopeStack.h"
 #include "PatternInit.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
@@ -32,9 +34,12 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include <optional>
@@ -2174,7 +2179,6 @@ CodeGenFunction::getDestroyer(QualType::DestructionKind kind) {
 void CodeGenFunction::pushEHDestroy(QualType::DestructionKind dtorKind,
                                     Address addr, QualType type) {
   assert(dtorKind && "cannot push destructor for trivial type");
-  assert(needsEHCleanup(dtorKind));
 
   pushDestroy(EHCleanup, addr, type, getDestroyer(dtorKind), true);
 }
@@ -2221,8 +2225,11 @@ void CodeGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
           static_cast<CleanupKind>(cleanupKind & ~NormalCleanup), addr, type,
           destroyer, useEHCleanupForArray);
 
-    return pushCleanupAfterFullExprWithActiveFlag<DestroyObject>(
-        cleanupKind, Address::invalid(), addr, type, destroyer, useEHCleanupForArray);
+    pushDestroy(BranchInExprCleanup, addr, type, destroyer,
+                useEHCleanupForArray);
+    return pushDeferredCleanup<DestroyObject>(
+        LifetimeExtendedCleanupStack, cleanupKind, Address::invalid(), addr,
+        type, destroyer, useEHCleanupForArray);
   }
 
   // Otherwise, we should only destroy the object if it's been initialized.
@@ -2244,9 +2251,9 @@ void CodeGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
     initFullExprCleanupWithFlag(ActiveFlag);
   }
 
-  pushCleanupAfterFullExprWithActiveFlag<ConditionalCleanupType>(
-      cleanupKind, ActiveFlag, SavedAddr, type, destroyer,
-      useEHCleanupForArray);
+  pushDeferredCleanup<ConditionalCleanupType>(
+      LifetimeExtendedCleanupStack, cleanupKind, ActiveFlag, SavedAddr, type,
+      destroyer, useEHCleanupForArray);
 }
 
 /// emitDestroy - Immediately perform the destruction of the given

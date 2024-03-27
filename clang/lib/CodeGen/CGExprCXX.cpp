@@ -16,9 +16,11 @@
 #include "CGObjCRuntime.h"
 #include "CodeGenFunction.h"
 #include "ConstantEmitter.h"
+#include "EHScopeStack.h"
 #include "TargetInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
 
 using namespace clang;
@@ -1004,6 +1006,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
 
   const Expr *Init = E->getInitializer();
   Address EndOfInit = Address::invalid();
+
+  EHCleanupScope *ArrayCleanup = nullptr;
   QualType::DestructionKind DtorKind = ElementType.isDestructedType();
   EHScopeStack::stable_iterator Cleanup;
   llvm::Instruction *CleanupDominator = nullptr;
@@ -1102,18 +1106,26 @@ void CodeGenFunction::EmitNewArrayInitializer(
     }
 
     // Enter a partial-destruction Cleanup if necessary.
-    if (needsEHCleanup(DtorKind)) {
+    if (DtorKind) {
       // In principle we could tell the Cleanup where we are more
       // directly, but the control flow can get so varied here that it
       // would actually be quite complex.  Therefore we go through an
       // alloca.
+      Address AllocaInst = Address::invalid();
       EndOfInit = CreateTempAlloca(BeginPtr.getType(), getPointerAlign(),
-                                   "array.init.end");
+                                   "array.init.end", nullptr, &AllocaInst);
       CleanupDominator = Builder.CreateStore(BeginPtr.getPointer(), EndOfInit);
       pushIrregularPartialArrayCleanup(BeginPtr.getPointer(), EndOfInit,
                                        ElementType, ElementAlign,
                                        getDestroyer(DtorKind));
       Cleanup = EHStack.stable_begin();
+      ArrayCleanup =
+          &cast<EHCleanupScope>(*EHStack.find(EHStack.stable_begin()));
+      ArrayCleanup->AddAuxInst(AllocaInst.getAllocaInst());
+      if (auto *AddrSpaceCast =
+              llvm::dyn_cast<llvm::AddrSpaceCastInst>(EndOfInit.getPointer()))
+        ArrayCleanup->AddAuxInst(AddrSpaceCast);
+      ArrayCleanup->AddAuxInst(CleanupDominator);
     }
 
     CharUnits StartAlign = CurPtr.getAlignment();
@@ -1123,7 +1135,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
       // element.  TODO: some of these stores can be trivially
       // observed to be unnecessary.
       if (EndOfInit.isValid()) {
-        Builder.CreateStore(CurPtr.getPointer(), EndOfInit);
+        ArrayCleanup->AddAuxInst(
+            Builder.CreateStore(CurPtr.getPointer(), EndOfInit));
       }
       // FIXME: If the last initializer is an incomplete initializer list for
       // an array, and we have an array filler, we can fold together the two
@@ -1186,7 +1199,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
     // FIXME: Share this cleanup with the constructor call emission rather than
     // having it create a cleanup of its own.
     if (EndOfInit.isValid())
-      Builder.CreateStore(CurPtr.getPointer(), EndOfInit);
+      ArrayCleanup->AddAuxInst(
+          Builder.CreateStore(CurPtr.getPointer(), EndOfInit));
 
     // Emit a constructor call loop to initialize the remaining elements.
     if (InitListElements)
@@ -1273,7 +1287,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
 
   // Store the new Cleanup position for irregular Cleanups.
   if (EndOfInit.isValid())
-    Builder.CreateStore(CurPtr.getPointer(), EndOfInit);
+    ArrayCleanup->AddAuxInst(
+        Builder.CreateStore(CurPtr.getPointer(), EndOfInit));
 
   // Enter a partial-destruction Cleanup if necessary.
   if (!CleanupDominator && needsEHCleanup(DtorKind)) {

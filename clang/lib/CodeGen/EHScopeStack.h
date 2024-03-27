@@ -85,6 +85,13 @@ enum CleanupKind : unsigned {
 
   NormalAndEHCleanup = EHCleanup | NormalCleanup,
 
+  // Denotes a deferred cleanup while building an expression. These cleanups are
+  // emitted on seeing a branch in an partially built expression (eg. branches
+  // in stmt-expr and coroutine suspensions).
+  // This cleanup type should not be used with other types. Cleanups of other
+  // types should be added separately to the EHStack.
+  BranchInExprCleanup = 0x4,
+
   LifetimeMarker = 0x8,
   NormalEHLifetimeMarker = LifetimeMarker | NormalAndEHCleanup,
 };

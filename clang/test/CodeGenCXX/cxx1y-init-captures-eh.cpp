@@ -50,9 +50,7 @@ void y() noexcept;
 
 // CHECK-LABEL: define{{.*}} void @_Z1hbb(
 void h(bool b1, bool b2) {
-  // CHECK: {{.*}} = alloca i1,
   // CHECK: %[[S_ISACTIVE:.*]] = alloca i1,
-  // CHECK: {{.*}} = alloca i1,
 
   // lambda init: s and t, branch on b1
   // CHECK: call void @_ZN1SC1Ev(
