@@ -896,9 +896,11 @@ BinaryCoverageReader::createCoverageReaderFromBuffer(
     StringRef Coverage, FuncRecordsStorage &&FuncRecords,
     std::unique_ptr<InstrProfSymtab> ProfileNames, uint8_t BytesInAddress,
     llvm::endianness Endian, StringRef CompilationDir) {
-  std::unique_ptr<BinaryCoverageReader> Reader(
-      new BinaryCoverageReader(std::move(FuncRecords)));
-  Reader->ProfileNames = std::move(ProfileNames);
+  if (ProfileNames == nullptr)
+    return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                        "Caller must provide ProfileNames");
+  std::unique_ptr<BinaryCoverageReader> Reader(new BinaryCoverageReader(
+      std::move(ProfileNames), std::move(FuncRecords)));
   InstrProfSymtab &ProfileNamesRef = *Reader->ProfileNames;
   StringRef FuncRecordsRef = Reader->FuncRecords->getBuffer();
   if (BytesInAddress == 4 && Endian == llvm::endianness::little) {

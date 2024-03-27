@@ -195,8 +195,9 @@ private:
   // D69471, which can split up function records into multiple sections on ELF.
   FuncRecordsStorage FuncRecords;
 
-  BinaryCoverageReader(FuncRecordsStorage &&FuncRecords)
-      : FuncRecords(std::move(FuncRecords)) {}
+  BinaryCoverageReader(std::unique_ptr<InstrProfSymtab> Symtab,
+                       FuncRecordsStorage &&FuncRecords)
+      : ProfileNames(std::move(Symtab)), FuncRecords(std::move(FuncRecords)) {}
 
 public:
   BinaryCoverageReader(const BinaryCoverageReader &) = delete;
