@@ -18722,55 +18722,40 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cluster_load_b128: {
 
     Intrinsic::ID IID;
-    llvm::Type *ResultTy;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b32:
-      ResultTy = llvm::Type::getInt32Ty(getLLVMContext());
       IID = Intrinsic::amdgcn_global_load_monitor_b32;
       break;
     case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b64:
-      ResultTy = llvm::FixedVectorType::get(
-          llvm::Type::getInt32Ty(getLLVMContext()), 2);
       IID = Intrinsic::amdgcn_global_load_monitor_b64;
       break;
     case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b128:
-      ResultTy = llvm::FixedVectorType::get(
-          llvm::Type::getInt32Ty(getLLVMContext()), 4);
       IID = Intrinsic::amdgcn_global_load_monitor_b128;
       break;
     case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b32:
-      ResultTy = llvm::Type::getInt32Ty(getLLVMContext());
       IID = Intrinsic::amdgcn_flat_load_monitor_b32;
       break;
     case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b64:
-      ResultTy = llvm::FixedVectorType::get(
-          llvm::Type::getInt32Ty(getLLVMContext()), 2);
       IID = Intrinsic::amdgcn_flat_load_monitor_b64;
       break;
     case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b128:
-      ResultTy = llvm::FixedVectorType::get(
-          llvm::Type::getInt32Ty(getLLVMContext()), 4);
       IID = Intrinsic::amdgcn_flat_load_monitor_b128;
       break;
     case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
-      ResultTy = llvm::Type::getInt32Ty(getLLVMContext());
       IID = Intrinsic::amdgcn_cluster_load_b32;
       break;
     case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
-      ResultTy = llvm::FixedVectorType::get(
-          llvm::Type::getInt32Ty(getLLVMContext()), 2);
       IID = Intrinsic::amdgcn_cluster_load_b64;
       break;
     case AMDGPU::BI__builtin_amdgcn_cluster_load_b128:
-      ResultTy = llvm::FixedVectorType::get(
-          llvm::Type::getInt32Ty(getLLVMContext()), 4);
       IID = Intrinsic::amdgcn_cluster_load_b128;
       break;
     }
 
+    llvm::Type *LoadTy = ConvertType(E->getType());
     llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
     llvm::Value *Val  = EmitScalarExpr(E->getArg(1));
-    llvm::Function *F = CGM.getIntrinsic(IID, {ResultTy});
+    llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
     return Builder.CreateCall(F, {Addr, Val});
   }
   case AMDGPU::BI__builtin_amdgcn_cluster_load_async_to_lds_b8:
