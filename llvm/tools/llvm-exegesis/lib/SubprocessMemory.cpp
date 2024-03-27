@@ -63,6 +63,10 @@ Error SubprocessMemory::addMemoryDefinition(
     SharedMemoryNames.push_back(SharedMemoryName);
     int SharedMemoryFD =
         shm_open(SharedMemoryName.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    if (SharedMemoryFD == -1)
+      return make_error<Failure>(
+          "Failed to create shared memory object for memory definition: " +
+          Twine(strerror(errno)));
     if (ftruncate(SharedMemoryFD, MemVal.SizeBytes) != 0) {
       return make_error<Failure>("Truncating a memory definiton failed: " +
                                  Twine(strerror(errno)));
@@ -100,7 +104,8 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
       shm_open(AuxiliaryMemoryName.c_str(), O_RDWR, S_IRUSR | S_IWUSR);
   if (AuxiliaryMemoryFileDescriptor == -1)
     return make_error<Failure>(
-        "Getting file descriptor for auxiliary memory failed");
+        "Getting file descriptor for auxiliary memory failed: " +
+        Twine(strerror(errno)));
   // set up memory value file descriptors
   int *AuxiliaryMemoryMapping =
       (int *)mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED,
