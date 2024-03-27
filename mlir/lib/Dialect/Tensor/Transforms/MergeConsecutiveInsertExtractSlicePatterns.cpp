@@ -159,51 +159,62 @@ struct DropRedundantRankExpansionOnInsertSliceOfExtractSlice final
                                 PatternRewriter &rewriter) const {
     auto extractSliceOp =
         insertSliceOp.getSource().getDefiningOp<tensor::ExtractSliceOp>();
-    if (!extractSliceOp)
-      return failure();
+    if (!extractSliceOp) {
+      return rewriter.notifyMatchFailure(insertSliceOp,
+                                         "source is not extract_slice");
+    }
 
     // Can't fold if the extract_slice op has other users.
-    if (!extractSliceOp->hasOneUse())
-      return failure();
+    if (!extractSliceOp->hasOneUse()) {
+      return rewriter.notifyMatchFailure(insertSliceOp,
+                                         "source has multi-uses");
+    }
 
     // Check if the insert_slice op purely expands ranks (add unit dims).
-    if (!isCastLikeInsertSliceOp(insertSliceOp))
-      return failure();
+    if (!isCastLikeInsertSliceOp(insertSliceOp)) {
+      return rewriter.notifyMatchFailure(insertSliceOp,
+                                         "insert_slice is not cast-like");
+    }
 
     llvm::SmallBitVector extractDroppedDims = extractSliceOp.getDroppedDims();
-    llvm::SmallBitVector insertExpandedDims = insertSliceOp.getDroppedDims();
+    llvm::SmallBitVector insertDroppedDims = insertSliceOp.getDroppedDims();
     // Can't fold if the insert_slice op expands to more dims.
-    if (extractDroppedDims.size() < insertExpandedDims.size())
-      return failure();
+    if (extractDroppedDims.size() < insertDroppedDims.size()) {
+      return rewriter.notifyMatchFailure(insertSliceOp,
+                                         "insert_slice expands more dims");
+    }
 
-    // Try to match the dropped unit dims to the expanded unit dims. This is
+    // Try to match the extract dropped dims to the insert dropped dims. This is
     // done by scanning the dims of extract_slice and find the left-most one can
     // match the dim of insert_slice. If a match is found, advance the dim of
     // insert_slice to match the next one.
     unsigned insertDimPos = 0;
     for (unsigned extractDimPos = 0; extractDimPos < extractDroppedDims.size();
          ++extractDimPos) {
-      // Matched all expanded dims.
-      if (insertDimPos == insertExpandedDims.size())
+      // Matched all dims.
+      if (insertDimPos == insertDroppedDims.size())
         break;
 
-      bool isDropped = extractDroppedDims[extractDimPos];
-      bool isExpanded = insertExpandedDims[insertDimPos];
+      bool isExtractDropped = extractDroppedDims[extractDimPos];
+      bool isInsertDropped = insertDroppedDims[insertDimPos];
       // Match if both sides drop/keep the dim. Advance and match the next dim
       // of insert_slice.
-      if (isDropped == isExpanded) {
+      if (isExtractDropped == isInsertDropped) {
         insertDimPos += 1;
-      } else if (!isDropped && isExpanded) {
-        // Not enough dropped unit dims to match the expanded unit dims.
-        return failure();
+      } else if (!isExtractDropped && isInsertDropped) {
+        // Not enough extract dropped dims to match the insert dropped dims.
+        return rewriter.notifyMatchFailure(insertSliceOp,
+                                           "insert_slice drops more unit dims");
       }
       // If the dim is dropped by extract_slice and not by insert_slice, look
       // the next dim of extract_slice to see if it can match the current dim of
       // insert_slice.
     }
-    // Can't match some expanded dims.
-    if (insertDimPos != insertExpandedDims.size())
-      return failure();
+    // Can't match some insert dims.
+    if (insertDimPos != insertDroppedDims.size()) {
+      return rewriter.notifyMatchFailure(insertSliceOp,
+                                         "insert_slice has unmatched dims");
+    }
 
     rewriter.replaceOpWithNewOp<tensor::ExtractSliceOp>(
         insertSliceOp, insertSliceOp.getType(), extractSliceOp.getSource(),
