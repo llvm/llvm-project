@@ -570,11 +570,10 @@ projectToInnerMostNonUnitDimsPos(ArrayRef<int64_t> dimsPos,
   for (auto pos : dimsPos) {
     // In the case all dims are unit, this will return the inner-most one.
     int64_t projectedPos = reassocIndices[pos].back();
-    for (auto it = reassocIndices[pos].rbegin();
-         it != reassocIndices[pos].rend(); ++it) {
-      int64_t dim = targetShape[*it];
+    for (auto i : llvm::reverse(reassocIndices[pos])) {
+      int64_t dim = targetShape[i];
       if (dim > 1 || ShapedType::isDynamic(dim)) {
-        projectedPos = *it;
+        projectedPos = i;
         break;
       }
     }
