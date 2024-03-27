@@ -247,6 +247,11 @@ round_using_current_rounding_mode(T x) {
 template <bool IsSigned, typename T>
 LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
 fromfp(T x, int rnd, unsigned int width) {
+  using StorageType = typename FPBits<T>::StorageType;
+
+  constexpr StorageType EXPLICIT_BIT =
+      FPBits<T>::SIG_MASK - FPBits<T>::FRACTION_MASK;
+
   if (width == 0U)
     return FPBits<T>::quiet_nan().get_val();
 
@@ -256,18 +261,38 @@ fromfp(T x, int rnd, unsigned int width) {
     // T can't hold a finite number >= 2.0 * 2^EXP_BIAS.
     if (width - 1 > FPBits<T>::EXP_BIAS)
       return rounded_value;
-    if (rounded_value < -T(1U << (width - 1U)))
+
+    StorageType range_exp = width - 1U + FPBits<T>::EXP_BIAS;
+    // rounded_value < -2^(width - 1)
+    T range_min =
+        FPBits<T>::create_value(Sign::NEG, range_exp, EXPLICIT_BIT).get_val();
+    if (rounded_value < range_min)
       return FPBits<T>::quiet_nan().get_val();
-    if (rounded_value > T((1U << (width - 1U)) - 1U))
+    // rounded_value > 2^(width - 1) - 1
+    T range_max =
+        FPBits<T>::create_value(Sign::POS, range_exp, EXPLICIT_BIT).get_val() -
+        T(1.0);
+    if (rounded_value > range_max)
       return FPBits<T>::quiet_nan().get_val();
+
     return rounded_value;
   }
 
   if (rounded_value < T(0.0))
     return FPBits<T>::quiet_nan().get_val();
+
   // T can't hold a finite number >= 2.0 * 2^EXP_BIAS.
-  if (width <= FPBits<T>::EXP_BIAS && rounded_value > T(1U << width) - 1U)
+  if (width > FPBits<T>::EXP_BIAS)
+    return rounded_value;
+
+  StorageType range_exp = width + FPBits<T>::EXP_BIAS;
+  // rounded_value > 2^width - 1
+  T range_max =
+      FPBits<T>::create_value(Sign::POS, range_exp, EXPLICIT_BIT).get_val() -
+      T(1.0);
+  if (rounded_value > range_max)
     return FPBits<T>::quiet_nan().get_val();
+
   return rounded_value;
 }
 
