@@ -13,6 +13,16 @@ template <class T> typename remove_reference<T>::type &&move(T &&t);
 }
 }
 
+namespace mystd {
+inline namespace baz {
+template <class T> struct remove_reference { typedef T type; };
+template <class T> struct remove_reference<T&> { typedef T type; };
+template <class T> struct remove_reference<T&&> { typedef T type; };
+
+template <class T> [[clang::behaves_like_std("move")]] typename remove_reference<T>::type &&move(T &&t);
+}
+}
+
 // test1 and test2 should not warn until after implementation of DR1579.
 struct A {};
 struct B : public A {};
@@ -86,6 +96,21 @@ D test5(D d) {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:21-[[@LINE-4]]:22}:""
 }
 
+D test6(D d) {
+  return d;
+  // Verify the implicit move from the AST dump
+  // CHECK-AST: ReturnStmt{{.*}}line:[[@LINE-2]]
+  // CHECK-AST-NEXT: CXXConstructExpr{{.*}}D{{.*}}void (D &&)
+  // CHECK-AST-NEXT: ImplicitCastExpr
+  // CHECK-AST-NEXT: DeclRefExpr{{.*}}ParmVar{{.*}}'d'
+
+  return mystd::move(d);
+  // expected-warning@-1{{redundant move in return statement}}
+  // expected-note@-2{{remove std::move call here}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:22}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:23-[[@LINE-4]]:24}:""
+}
+
 namespace templates {
   struct A {};
   struct B { B(A); };
@@ -104,13 +129,27 @@ namespace templates {
     test1<B>(A());
   }
 
-  // T1 and T2 may not be the same, the warning may not always apply.
-  template <typename T1, typename T2>
-  T1 test2(T2 t) {
-    return std::move(t);
+  // Warn once here since the type is not dependent.
+  template <typename T>
+  A test2(A a) {
+    return mystd::move(a);
+    // expected-warning@-1{{redundant move in return statement}}
+    // expected-note@-2{{remove std::move call here}}
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:24}:""
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:25-[[@LINE-4]]:26}:""
   }
   void run_test2() {
-    test2<A, A>(A());
-    test2<B, A>(A());
+    test2<A>(A());
+    test2<B>(A());
+  }
+
+  // T1 and T2 may not be the same, the warning may not always apply.
+  template <typename T1, typename T2>
+  T1 test3(T2 t) {
+    return std::move(t);
+  }
+  void run_test3() {
+    test3<A, A>(A());
+    test3<B, A>(A());
   }
 }

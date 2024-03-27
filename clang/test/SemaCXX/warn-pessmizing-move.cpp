@@ -13,6 +13,16 @@ template <class T> typename remove_reference<T>::type &&move(T &&t);
 }
 }
 
+namespace mystd {
+inline namespace bar {
+template <class T> struct remove_reference { typedef T type; };
+template <class T> struct remove_reference<T&> { typedef T type; };
+template <class T> struct remove_reference<T&&> { typedef T type; };
+
+template <class T> [[clang::behaves_like_std("move")]] typename remove_reference<T>::type &&move(T &&t);
+}
+}
+
 struct A {
 #ifdef USER_DEFINED
   A() {}
@@ -37,6 +47,18 @@ A test1(A a1) {
   // expected-note@-2{{remove std::move call}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:20}:""
   // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:22-[[@LINE-4]]:23}:""
+}
+
+A test1_mystd(A a1) {
+  A a2;
+  return a1;
+  return a2;
+  return mystd::move(a1);
+  return mystd::move(a2);
+  // expected-warning@-1{{prevents copy elision}}
+  // expected-note@-2{{remove std::move call}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:22}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:24-[[@LINE-4]]:25}:""
 }
 
 B test2(A a1, B b1) {
