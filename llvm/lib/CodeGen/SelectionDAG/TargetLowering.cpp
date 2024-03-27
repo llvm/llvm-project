@@ -8681,17 +8681,21 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
   const APInt &Constant33 = APInt::getSplat(Len, APInt(8, 0x33));
   SDValue Mask33 =
       TTI.getIntImmCost(Constant33, VTTy, TargetTransformInfo::TCK_Latency) > 2
-          ? DAG.getNode(ISD::XOR, dl, VT, Mask0F,
-                        DAG.getNode(ISD::SHL, dl, VT, Mask0F,
-                                    DAG.getShiftAmountConstant(2, VT, dl)))
+          ? DAG.getNode(
+                ISD::XOR, dl, VT, Mask0F,
+                DAG.getNode(ISD::SHL, dl, VT, Mask0F,
+                            DAG.getConstant(2, dl, VT, /*isTarget=*/false,
+                                            /*isOpaque=*/true)))
           : DAG.getConstant(Constant33, dl, VT);
   // 0x55555555... = (0x33333333... ^ (0x33333333... << 1))
   const APInt &Constant55 = APInt::getSplat(Len, APInt(8, 0x55));
   SDValue Mask55 =
       TTI.getIntImmCost(Constant55, VTTy, TargetTransformInfo::TCK_Latency) > 2
-          ? DAG.getNode(ISD::XOR, dl, VT, Mask33,
-                        DAG.getNode(ISD::SHL, dl, VT, Mask33,
-                                    DAG.getShiftAmountConstant(1, VT, dl)))
+          ? DAG.getNode(
+                ISD::XOR, dl, VT, Mask33,
+                DAG.getNode(ISD::SHL, dl, VT, Mask33,
+                            DAG.getConstant(1, dl, VT, /*isTarget=*/false,
+                                            /*isOpaque=*/true)))
           : DAG.getConstant(Constant55, dl, VT);
 
   // v = v - ((v >> 1) & 0x55555555...)
@@ -8733,9 +8737,11 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
   const APInt &Constant01 = APInt::getSplat(Len, APInt(8, 0x01));
   SDValue Mask01 =
       TTI.getIntImmCost(Constant01, VTTy, TargetTransformInfo::TCK_Latency) > 2
-          ? DAG.getNode(ISD::AND, dl, VT, Mask0F,
-                        DAG.getNode(ISD::SRL, dl, VT, Mask0F,
-                                    DAG.getShiftAmountConstant(3, VT, dl)))
+          ? DAG.getNode(
+                ISD::AND, dl, VT, Mask0F,
+                DAG.getNode(ISD::SRL, dl, VT, Mask0F,
+                            DAG.getConstant(3, dl, VT, /*isTarget=*/false,
+                                            /*isOpaque=*/true)))
           : DAG.getConstant(Constant01, dl, VT);
   return DAG.getNode(ISD::SRL, dl, VT,
                      DAG.getNode(ISD::MUL, dl, VT, Op, Mask01),
@@ -8770,21 +8776,25 @@ SDValue TargetLowering::expandVPCTPOP(SDNode *Node, SelectionDAG &DAG) const {
   const APInt &Constant33 = APInt::getSplat(Len, APInt(8, 0x33));
   SDValue Mask33 =
       TTI.getIntImmCost(Constant33, VTTy, TargetTransformInfo::TCK_Latency) > 2
-          ? DAG.getNode(ISD::VP_XOR, dl, VT, Mask0F,
-                        DAG.getNode(ISD::VP_SHL, dl, VT, Mask0F,
-                                    DAG.getShiftAmountConstant(2, VT, dl), Mask,
-                                    VL),
-                        Mask, VL)
+          ? DAG.getNode(
+                ISD::VP_XOR, dl, VT, Mask0F,
+                DAG.getNode(ISD::VP_SHL, dl, VT, Mask0F,
+                            DAG.getConstant(2, dl, VT, /*isTarget=*/false,
+                                            /*isOpaque=*/true),
+                            Mask, VL),
+                Mask, VL)
           : DAG.getConstant(Constant33, dl, VT);
   // 0x55555555... = (0x33333333... ^ (0x33333333... << 1))
   const APInt &Constant55 = APInt::getSplat(Len, APInt(8, 0x55));
   SDValue Mask55 =
       TTI.getIntImmCost(Constant55, VTTy, TargetTransformInfo::TCK_Latency) > 2
-          ? DAG.getNode(ISD::VP_XOR, dl, VT, Mask33,
-                        DAG.getNode(ISD::VP_SHL, dl, VT, Mask33,
-                                    DAG.getShiftAmountConstant(1, VT, dl), Mask,
-                                    VL),
-                        Mask, VL)
+          ? DAG.getNode(
+                ISD::VP_XOR, dl, VT, Mask33,
+                DAG.getNode(ISD::VP_SHL, dl, VT, Mask33,
+                            DAG.getConstant(1, dl, VT, /*isTarget=*/false,
+                                            /*isOpaque=*/true),
+                            Mask, VL),
+                Mask, VL)
           : DAG.getConstant(Constant55, dl, VT);
 
   SDValue Tmp1, Tmp2, Tmp3, Tmp4, Tmp5;
@@ -8818,11 +8828,13 @@ SDValue TargetLowering::expandVPCTPOP(SDNode *Node, SelectionDAG &DAG) const {
   const APInt &Constant01 = APInt::getSplat(Len, APInt(8, 0x01));
   SDValue Mask01 =
       TTI.getIntImmCost(Constant01, VTTy, TargetTransformInfo::TCK_Latency) > 2
-          ? DAG.getNode(ISD::VP_AND, dl, VT, Mask0F,
-                        DAG.getNode(ISD::VP_LSHR, dl, VT, Mask0F,
-                                    DAG.getShiftAmountConstant(3, VT, dl), Mask,
-                                    VL),
-                        Mask, VL)
+          ? DAG.getNode(
+                ISD::VP_AND, dl, VT, Mask0F,
+                DAG.getNode(ISD::VP_LSHR, dl, VT, Mask0F,
+                            DAG.getConstant(3, dl, VT, /*isTarget=*/false,
+                                            /*isOpaque=*/true),
+                            Mask, VL),
+                Mask, VL)
           : DAG.getConstant(Constant01, dl, VT);
   return DAG.getNode(ISD::VP_LSHR, dl, VT,
                      DAG.getNode(ISD::VP_MUL, dl, VT, Op, Mask01, Mask, VL),

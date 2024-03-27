@@ -191,26 +191,25 @@ define i64 @zpop_i32_i64(i32 %x) {
 ;
 ; SLOW-LABEL: zpop_i32_i64:
 ; SLOW:       # %bb.0:
-; SLOW-NEXT:    rlwinm 5, 3, 31, 1, 0
-; SLOW-NEXT:    lis 4, 13107
-; SLOW-NEXT:    andis. 6, 5, 21845
-; SLOW-NEXT:    andi. 5, 5, 21845
-; SLOW-NEXT:    ori 4, 4, 13107
-; SLOW-NEXT:    or 5, 5, 6
-; SLOW-NEXT:    clrldi 3, 3, 32
-; SLOW-NEXT:    rldimi 4, 4, 32, 0
-; SLOW-NEXT:    sub 3, 3, 5
-; SLOW-NEXT:    and 5, 3, 4
-; SLOW-NEXT:    rotldi 3, 3, 62
-; SLOW-NEXT:    and 3, 3, 4
-; SLOW-NEXT:    add 3, 5, 3
 ; SLOW-NEXT:    lis 4, 3855
-; SLOW-NEXT:    rldicl 5, 3, 60, 4
 ; SLOW-NEXT:    ori 4, 4, 3855
-; SLOW-NEXT:    add 3, 3, 5
-; SLOW-NEXT:    lis 5, 257
 ; SLOW-NEXT:    rldimi 4, 4, 32, 0
+; SLOW-NEXT:    clrldi 5, 3, 32
+; SLOW-NEXT:    rlwinm 3, 3, 31, 1, 31
+; SLOW-NEXT:    sldi 6, 4, 2
+; SLOW-NEXT:    xor 6, 6, 4
+; SLOW-NEXT:    sldi 7, 6, 1
+; SLOW-NEXT:    xor 7, 6, 7
+; SLOW-NEXT:    and 3, 3, 7
+; SLOW-NEXT:    sub 3, 5, 3
+; SLOW-NEXT:    and 5, 3, 6
+; SLOW-NEXT:    rldicl 3, 3, 62, 2
+; SLOW-NEXT:    and 3, 3, 6
+; SLOW-NEXT:    add 3, 5, 3
+; SLOW-NEXT:    lis 5, 257
+; SLOW-NEXT:    rldicl 6, 3, 60, 4
 ; SLOW-NEXT:    ori 5, 5, 257
+; SLOW-NEXT:    add 3, 3, 6
 ; SLOW-NEXT:    and 3, 3, 4
 ; SLOW-NEXT:    rldimi 5, 5, 32, 0
 ; SLOW-NEXT:    mulld 3, 3, 5

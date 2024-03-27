@@ -280,29 +280,27 @@ declare i64 @llvm.ctpop.i64(i64);
 define signext i64 @fooct(i64 signext %a, i64 signext %b, ptr nocapture %c) #0 {
 ; CHECK-LABEL: fooct:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lis 6, 21845
+; CHECK-NEXT:    lis 6, 3855
 ; CHECK-NEXT:    sub 7, 3, 4
-; CHECK-NEXT:    ori 6, 6, 21845
-; CHECK-NEXT:    lis 9, 13107
-; CHECK-NEXT:    rotldi 8, 7, 63
+; CHECK-NEXT:    ori 6, 6, 3855
 ; CHECK-NEXT:    rldimi 6, 6, 32, 0
-; CHECK-NEXT:    and 6, 8, 6
-; CHECK-NEXT:    ori 8, 9, 13107
-; CHECK-NEXT:    sub 6, 7, 6
-; CHECK-NEXT:    rldimi 8, 8, 32, 0
-; CHECK-NEXT:    lis 9, 257
-; CHECK-NEXT:    rotldi 7, 6, 62
-; CHECK-NEXT:    and 6, 6, 8
-; CHECK-NEXT:    ori 9, 9, 257
+; CHECK-NEXT:    rldicl 10, 7, 63, 1
+; CHECK-NEXT:    sldi 8, 6, 2
+; CHECK-NEXT:    xor 8, 8, 6
+; CHECK-NEXT:    sldi 9, 8, 1
+; CHECK-NEXT:    xor 9, 8, 9
+; CHECK-NEXT:    and 9, 10, 9
+; CHECK-NEXT:    sub 7, 7, 9
+; CHECK-NEXT:    rldicl 9, 7, 62, 2
 ; CHECK-NEXT:    and 7, 7, 8
-; CHECK-NEXT:    lis 8, 3855
-; CHECK-NEXT:    add 6, 6, 7
-; CHECK-NEXT:    ori 7, 8, 3855
-; CHECK-NEXT:    rldicl 8, 6, 60, 4
-; CHECK-NEXT:    rldimi 7, 7, 32, 0
+; CHECK-NEXT:    and 8, 9, 8
+; CHECK-NEXT:    lis 9, 257
+; CHECK-NEXT:    add 7, 7, 8
+; CHECK-NEXT:    ori 9, 9, 257
+; CHECK-NEXT:    rldicl 8, 7, 60, 4
 ; CHECK-NEXT:    rldimi 9, 9, 32, 0
-; CHECK-NEXT:    add 6, 6, 8
-; CHECK-NEXT:    and 6, 6, 7
+; CHECK-NEXT:    add 7, 7, 8
+; CHECK-NEXT:    and 6, 7, 6
 ; CHECK-NEXT:    mulld 6, 6, 9
 ; CHECK-NEXT:    rldicl. 6, 6, 8, 56
 ; CHECK-NEXT:    iselgt 3, 3, 4
@@ -311,29 +309,27 @@ define signext i64 @fooct(i64 signext %a, i64 signext %b, ptr nocapture %c) #0 {
 ;
 ; CHECK-NO-ISEL-LABEL: fooct:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
-; CHECK-NO-ISEL-NEXT:    lis 6, 21845
+; CHECK-NO-ISEL-NEXT:    lis 6, 3855
 ; CHECK-NO-ISEL-NEXT:    sub 7, 3, 4
-; CHECK-NO-ISEL-NEXT:    ori 6, 6, 21845
-; CHECK-NO-ISEL-NEXT:    lis 9, 13107
-; CHECK-NO-ISEL-NEXT:    rotldi 8, 7, 63
+; CHECK-NO-ISEL-NEXT:    ori 6, 6, 3855
 ; CHECK-NO-ISEL-NEXT:    rldimi 6, 6, 32, 0
-; CHECK-NO-ISEL-NEXT:    and 6, 8, 6
-; CHECK-NO-ISEL-NEXT:    ori 8, 9, 13107
-; CHECK-NO-ISEL-NEXT:    sub 6, 7, 6
-; CHECK-NO-ISEL-NEXT:    rldimi 8, 8, 32, 0
-; CHECK-NO-ISEL-NEXT:    lis 9, 257
-; CHECK-NO-ISEL-NEXT:    rotldi 7, 6, 62
-; CHECK-NO-ISEL-NEXT:    and 6, 6, 8
-; CHECK-NO-ISEL-NEXT:    ori 9, 9, 257
+; CHECK-NO-ISEL-NEXT:    rldicl 10, 7, 63, 1
+; CHECK-NO-ISEL-NEXT:    sldi 8, 6, 2
+; CHECK-NO-ISEL-NEXT:    xor 8, 8, 6
+; CHECK-NO-ISEL-NEXT:    sldi 9, 8, 1
+; CHECK-NO-ISEL-NEXT:    xor 9, 8, 9
+; CHECK-NO-ISEL-NEXT:    and 9, 10, 9
+; CHECK-NO-ISEL-NEXT:    sub 7, 7, 9
+; CHECK-NO-ISEL-NEXT:    rldicl 9, 7, 62, 2
 ; CHECK-NO-ISEL-NEXT:    and 7, 7, 8
-; CHECK-NO-ISEL-NEXT:    lis 8, 3855
-; CHECK-NO-ISEL-NEXT:    add 6, 6, 7
-; CHECK-NO-ISEL-NEXT:    ori 7, 8, 3855
-; CHECK-NO-ISEL-NEXT:    rldicl 8, 6, 60, 4
-; CHECK-NO-ISEL-NEXT:    rldimi 7, 7, 32, 0
+; CHECK-NO-ISEL-NEXT:    and 8, 9, 8
+; CHECK-NO-ISEL-NEXT:    lis 9, 257
+; CHECK-NO-ISEL-NEXT:    add 7, 7, 8
+; CHECK-NO-ISEL-NEXT:    ori 9, 9, 257
+; CHECK-NO-ISEL-NEXT:    rldicl 8, 7, 60, 4
 ; CHECK-NO-ISEL-NEXT:    rldimi 9, 9, 32, 0
-; CHECK-NO-ISEL-NEXT:    add 6, 6, 8
-; CHECK-NO-ISEL-NEXT:    and 6, 6, 7
+; CHECK-NO-ISEL-NEXT:    add 7, 7, 8
+; CHECK-NO-ISEL-NEXT:    and 6, 7, 6
 ; CHECK-NO-ISEL-NEXT:    mulld 6, 6, 9
 ; CHECK-NO-ISEL-NEXT:    rldicl. 6, 6, 8, 56
 ; CHECK-NO-ISEL-NEXT:    bc 12, 1, .LBB10_2
