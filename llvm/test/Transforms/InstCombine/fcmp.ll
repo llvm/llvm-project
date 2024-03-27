@@ -1815,122 +1815,122 @@ define i1 @fcmp_une_fsub_const(float %x, float %y) {
   ret i1 %cmp
 }
 
-define <8 x i1> @fcmp_vec_uge_fast_fsub_const(<8 x float> %x, <8 x float> %y) {
-; CHECK-LABEL: @fcmp_vec_uge_fast_fsub_const(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge <8 x float> [[X:%.*]], [[Y:%.*]]
+define <8 x i1> @fcmp_vec_uge_fsub_const_fmf(<8 x float> %x, <8 x float> %y) {
+; CHECK-LABEL: @fcmp_vec_uge_fsub_const_fmf(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast uge <8 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <8 x i1> [[CMP]]
 ;
   %fs = fsub fast <8 x float> %x, %y
-  %cmp = fcmp uge <8 x float> %fs, zeroinitializer
+  %cmp = fcmp fast uge <8 x float> %fs, zeroinitializer
   ret <8 x i1> %cmp
 }
 
-define <8 x i1> @fcmp_vec_ule_fast_fsub_const(<8 x float> %x, <8 x float> %y) {
-; CHECK-LABEL: @fcmp_vec_ule_fast_fsub_const(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule <8 x float> [[X:%.*]], [[Y:%.*]]
+define <8 x i1> @fcmp_vec_ule_fsub_const_fmf(<8 x float> %x, <8 x float> %y) {
+; CHECK-LABEL: @fcmp_vec_ule_fsub_const_fmf(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast ule <8 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <8 x i1> [[CMP]]
 ;
   %fs = fsub fast <8 x float> %x, %y
-  %cmp = fcmp ule <8 x float> %fs, zeroinitializer
+  %cmp = fcmp fast ule <8 x float> %fs, zeroinitializer
   ret <8 x i1> %cmp
 }
 
-define <8 x i1> @fcmp_vec_ueq_fast_fsub_const(<8 x float> %x, <8 x float> %y) {
-; CHECK-LABEL: @fcmp_vec_ueq_fast_fsub_const(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq <8 x float> [[X:%.*]], [[Y:%.*]]
+define <8 x i1> @fcmp_vec_ueq_fsub_const_fmf(<8 x float> %x, <8 x float> %y) {
+; CHECK-LABEL: @fcmp_vec_ueq_fsub_const_fmf(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast ueq <8 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <8 x i1> [[CMP]]
 ;
   %fs = fsub fast <8 x float> %x, %y
-  %cmp = fcmp ueq <8 x float> %fs, zeroinitializer
+  %cmp = fcmp fast ueq <8 x float> %fs, zeroinitializer
   ret <8 x i1> %cmp
 }
 
-define <8 x i1> @fcmp_vec_oge_fast_fsub_const(<8 x float> %x, <8 x float> %y) {
-; CHECK-LABEL: @fcmp_vec_oge_fast_fsub_const(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge <8 x float> [[X:%.*]], [[Y:%.*]]
+define <8 x i1> @fcmp_vec_oge_fsub_const_fmf(<8 x float> %x, <8 x float> %y) {
+; CHECK-LABEL: @fcmp_vec_oge_fsub_const_fmf(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast oge <8 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <8 x i1> [[CMP]]
 ;
   %fs = fsub fast <8 x float> %x, %y
-  %cmp = fcmp oge <8 x float> %fs, zeroinitializer
+  %cmp = fcmp fast oge <8 x float> %fs, zeroinitializer
   ret <8 x i1> %cmp
 }
 
-define <8 x i1> @fcmp_vec_ole_fast_fsub_const(<8 x float> %x, <8 x float> %y) {
-; CHECK-LABEL: @fcmp_vec_ole_fast_fsub_const(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole <8 x float> [[X:%.*]], [[Y:%.*]]
+define <8 x i1> @fcmp_vec_ole_fsub_const_fmf(<8 x float> %x, <8 x float> %y) {
+; CHECK-LABEL: @fcmp_vec_ole_fsub_const_fmf(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast ole <8 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <8 x i1> [[CMP]]
 ;
   %fs = fsub fast <8 x float> %x, %y
-  %cmp = fcmp ole <8 x float> %fs, zeroinitializer
+  %cmp = fcmp fast ole <8 x float> %fs, zeroinitializer
   ret <8 x i1> %cmp
 }
 
-define <8 x i1> @fcmp_vec_oeq_fast_fsub_const(<8 x float> %x, <8 x float> %y) {
-; CHECK-LABEL: @fcmp_vec_oeq_fast_fsub_const(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <8 x float> [[X:%.*]], [[Y:%.*]]
+define <8 x i1> @fcmp_vec_oeq_fsub_const_fmf(<8 x float> %x, <8 x float> %y) {
+; CHECK-LABEL: @fcmp_vec_oeq_fsub_const_fmf(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast oeq <8 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <8 x i1> [[CMP]]
 ;
   %fs = fsub fast <8 x float> %x, %y
-  %cmp = fcmp oeq <8 x float> %fs, zeroinitializer
+  %cmp = fcmp fast oeq <8 x float> %fs, zeroinitializer
   ret <8 x i1> %cmp
 }
 
-define <8 x i1> @fcmp_vec_ogt_fast_fsub_const(<8 x float> %x, <8 x float> %y) {
-; CHECK-LABEL: @fcmp_vec_ogt_fast_fsub_const(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt <8 x float> [[X:%.*]], [[Y:%.*]]
+define <8 x i1> @fcmp_vec_ogt_fsub_const_fmf(<8 x float> %x, <8 x float> %y) {
+; CHECK-LABEL: @fcmp_vec_ogt_fsub_const_fmf(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast ogt <8 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <8 x i1> [[CMP]]
 ;
   %fs = fsub fast <8 x float> %x, %y
-  %cmp = fcmp ogt <8 x float> %fs, zeroinitializer
+  %cmp = fcmp fast ogt <8 x float> %fs, zeroinitializer
   ret <8 x i1> %cmp
 }
 
-define <8 x i1> @fcmp_vec_olt_fast_fsub_const(<8 x float> %x, <8 x float> %y) {
-; CHECK-LABEL: @fcmp_vec_olt_fast_fsub_const(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <8 x float> [[X:%.*]], [[Y:%.*]]
+define <8 x i1> @fcmp_vec_olt_fsub_const_fmf(<8 x float> %x, <8 x float> %y) {
+; CHECK-LABEL: @fcmp_vec_olt_fsub_const_fmf(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast olt <8 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <8 x i1> [[CMP]]
 ;
   %fs = fsub fast <8 x float> %x, %y
-  %cmp = fcmp olt <8 x float> %fs, zeroinitializer
+  %cmp = fcmp fast olt <8 x float> %fs, zeroinitializer
   ret <8 x i1> %cmp
 }
 
-define <8 x i1> @fcmp_vec_one_fast_fsub_const(<8 x float> %x, <8 x float> %y) {
-; CHECK-LABEL: @fcmp_vec_one_fast_fsub_const(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one <8 x float> [[X:%.*]], [[Y:%.*]]
+define <8 x i1> @fcmp_vec_one_fsub_const_fmf(<8 x float> %x, <8 x float> %y) {
+; CHECK-LABEL: @fcmp_vec_one_fsub_const_fmf(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast one <8 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <8 x i1> [[CMP]]
 ;
   %fs = fsub fast <8 x float> %x, %y
-  %cmp = fcmp one <8 x float> %fs, zeroinitializer
+  %cmp = fcmp fast one <8 x float> %fs, zeroinitializer
   ret <8 x i1> %cmp
 }
 
-define <8 x i1> @fcmp_vec_ugt_fast_fsub_const(<8 x float> %x, <8 x float> %y) {
-; CHECK-LABEL: @fcmp_vec_ugt_fast_fsub_const(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt <8 x float> [[X:%.*]], [[Y:%.*]]
+define <8 x i1> @fcmp_vec_ugt_fsub_const_fmf(<8 x float> %x, <8 x float> %y) {
+; CHECK-LABEL: @fcmp_vec_ugt_fsub_const_fmf(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast ugt <8 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <8 x i1> [[CMP]]
 ;
   %fs = fsub fast <8 x float> %x, %y
-  %cmp = fcmp ugt <8 x float> %fs, zeroinitializer
+  %cmp = fcmp fast ugt <8 x float> %fs, zeroinitializer
   ret <8 x i1> %cmp
 }
 
-define <8 x i1> @fcmp_vec_ult_fast_fsub_const(<8 x float> %x, <8 x float> %y) {
-; CHECK-LABEL: @fcmp_vec_ult_fast_fsub_const(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult <8 x float> [[X:%.*]], [[Y:%.*]]
+define <8 x i1> @fcmp_vec_ult_fsub_const_fmf(<8 x float> %x, <8 x float> %y) {
+; CHECK-LABEL: @fcmp_vec_ult_fsub_const_fmf(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast ult <8 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <8 x i1> [[CMP]]
 ;
   %fs = fsub fast <8 x float> %x, %y
-  %cmp = fcmp ult <8 x float> %fs, zeroinitializer
+  %cmp = fcmp fast ult <8 x float> %fs, zeroinitializer
   ret <8 x i1> %cmp
 }
 
-define <8 x i1> @fcmp_vec_une_fast_fsub_const(<8 x float> %x, <8 x float> %y) {
-; CHECK-LABEL: @fcmp_vec_une_fast_fsub_const(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <8 x float> [[X:%.*]], [[Y:%.*]]
+define <8 x i1> @fcmp_vec_une_fsub_const_fmf(<8 x float> %x, <8 x float> %y) {
+; CHECK-LABEL: @fcmp_vec_une_fsub_const_fmf(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast une <8 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <8 x i1> [[CMP]]
 ;
   %fs = fsub fast <8 x float> %x, %y
-  %cmp = fcmp une <8 x float> %fs, zeroinitializer
+  %cmp = fcmp fast une <8 x float> %fs, zeroinitializer
   ret <8 x i1> %cmp
 }

@@ -8103,7 +8103,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       case FCmpInst::FCMP_ULE:
         if (match(RHSC, m_AnyZeroFP()) &&
             match(LHSI, m_FSub(m_Value(X), m_Value(Y))))
-          return new FCmpInst(Pred, X, Y);
+          return new FCmpInst(Pred, X, Y, "", &I);
         break;
       }
       break;
