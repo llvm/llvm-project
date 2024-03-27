@@ -1,4 +1,4 @@
-; A pre-commit test to show that branch weight associated with invoke are not updated.
+; A pre-commit test to show that branch weights and value profiles associated with invoke are not updated.
 ; RUN: opt < %s -passes='require<profile-summary>,cgscc(inline)' -S | FileCheck %s
 
 declare i32 @__gxx_personality_v0(...)
@@ -11,16 +11,20 @@ define void @caller(ptr %func) personality ptr @__gxx_personality_v0 !prof !15 {
 declare void @inner_callee(ptr %func)
 
 define void @callee(ptr %func) personality ptr @__gxx_personality_v0 !prof !17 {
-  invoke void @inner_callee(ptr %func)
-          to label %ret unwind label %lpad, !prof !18
+  invoke void %func()
+          to label %next unwind label %lpad, !prof !18
 
-ret:
-  ret void
+next:
+  invoke void @inner_callee(ptr %func)
+          to label %ret unwind label %lpad, !prof !19
 
 lpad:
   %exn = landingpad {ptr, i32}
           cleanup
   unreachable
+
+ret:
+  ret void
 }
 
 !llvm.module.flags = !{!1}
@@ -39,16 +43,22 @@ lpad:
 !13 = !{i32 999000, i64 100, i32 1}
 !14 = !{i32 999999, i64 1, i32 2}
 !15 = !{!"function_entry_count", i64 1000}
-!16 = !{!"branch_weights", i32 1000}
+!16 = !{!"branch_weights", i64 1000}
 !17 = !{!"function_entry_count", i32 1500}
-!18 = !{!"branch_weights", i32 1500}
+!18 = !{!"VP", i32 0, i64 1500, i64 123, i64 900, i64 456, i64 600}
+!19 = !{!"branch_weights", i32 1500}
 
 ; CHECK-LABEL: @caller(
+; CHECK:  invoke void %func(
+; CHECK-NEXT: {{.*}} !prof ![[PROF1:[0-9]+]]
 ; CHECK:  invoke void @inner_callee(
-; CHECK-NEXT: {{.*}} !prof ![[PROF:[0-9]+]]
+; CHECK-NEXT: {{.*}} !prof ![[PROF2:[0-9]+]]
 
 ; CHECK-LABL: @callee(
+; CHECK:  invoke void %func(
+; CHECK-NEXT: {{.*}} !prof ![[PROF1]] 
 ; CHECK:  invoke void @inner_callee(
-; CHECK-NEXT: {{.*}} !prof ![[PROF]]
+; CHECK-NEXT: {{.*}} !prof ![[PROF2]]
 
-; CHECK: ![[PROF]] = !{!"branch_weights", i32 1500}
+; CHECK: ![[PROF1]] = !{!"VP", i32 0, i64 1500, i64 123, i64 900, i64 456, i64 600}
+; CHECK: ![[PROF2]] = !{!"branch_weights", i32 1500}
