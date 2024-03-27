@@ -9600,11 +9600,11 @@ static uint64_t getRVVTypeSize(ASTContext &Context, const BuiltinType *Ty) {
 
   ASTContext::BuiltinVectorTypeInfo Info = Context.getBuiltinVectorTypeInfo(Ty);
 
-  unsigned EltSize = Context.getTypeSize(Info.ElementType);
+  uint64_t EltSize = Context.getTypeSize(Info.ElementType);
   if (Info.ElementType == Context.BoolTy)
     EltSize = 1;
 
-  unsigned MinElts = Info.EC.getKnownMinValue();
+  uint64_t MinElts = Info.EC.getKnownMinValue();
   return VScale->first * MinElts * EltSize;
 }
 
