@@ -1662,9 +1662,10 @@ static bool handleNonPreemptibleIfunc(Symbol &sym, uint16_t flags) {
   //
   // Prior to Android V, there was a bug that caused RELR relocations to be
   // applied after packed relocations. This meant that resolvers referenced
-  // IRELATIVE relocations in the packed relocation section could not read
-  // globals with RELR relocations. Work around this by placing IRELATIVE in
-  // .rela.plt when --pack-relative-relocs=android+relr is enabled.
+  // IRELATIVE relocations in the packed relocation section would read
+  // unrelocated globals with RELR relocations when
+  // --pack-relative-relocs=android+relr is enabled. Work around this by placing
+  // IRELATIVE in .rela.plt.
   auto *directSym = makeDefined(cast<Defined>(sym));
   directSym->allocateAux();
   auto &dyn = config->androidPackDynRelocs ? *in.relaPlt : *mainPart->relaDyn;
