@@ -169,6 +169,15 @@ LIBC_INLINE constexpr auto operator""_u256(const char *x) {
   return internal::parse_with_prefix<UInt<256>>(x);
 }
 
+template <typename T> LIBC_INLINE constexpr T parse_bigint(const char *x) {
+  if (x[0] == '-' || x[0] == '+') {
+    auto positive = internal::parse_with_prefix<T>(x + 1);
+    return x[0] == '-' ? -positive : positive;
+  } else {
+    return internal::parse_with_prefix<T>(x);
+  }
+}
+
 } // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_INTEGER_LITERALS_H
