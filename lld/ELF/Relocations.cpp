@@ -1661,7 +1661,7 @@ static bool handleNonPreemptibleIfunc(Symbol &sym, uint16_t flags) {
   // section/value fixed.
   //
   // Prior to Android V, there was a bug that caused RELR relocations to be
-  // applied after packed relocations. This meant that resolvers referenced
+  // applied after packed relocations. This meant that resolvers referenced by
   // IRELATIVE relocations in the packed relocation section would read
   // unrelocated globals with RELR relocations when
   // --pack-relative-relocs=android+relr is enabled. Work around this by placing

@@ -1,9 +1,9 @@
 # REQUIRES: aarch64
 ## Prior to Android V, there was a bug that caused RELR relocations to be
-## applied after packed relocations. This meant that resolvers referenced
-## IRELATIVE relocations in the packed relocation section would read
-## unrelocated globals when --pack-relative-relocs=android+relr is enabled.
-## Work around this by placing IRELATIVE in .rela.plt.
+## applied after packed relocations. This meant that resolvers referenced by
+## IRELATIVE relocations in the packed relocation section would read unrelocated
+## globals when --pack-relative-relocs=android+relr is enabled. Work around this
+## by placing IRELATIVE in .rela.plt.
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-android a.s -o a.o
