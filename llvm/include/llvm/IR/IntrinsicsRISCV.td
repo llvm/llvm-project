@@ -74,6 +74,21 @@ let TargetPrefix = "riscv" in {
 
 } // TargetPrefix = "riscv"
 
+let TargetPrefix = "riscv" in {
+  // Zicsr
+  def int_riscv_csrr :
+    DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty],
+                          [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+  def int_riscv_csrr64 :
+    DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty],
+                          [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+  def int_riscv_csrw :
+    DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_i32_ty],
+                          [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+  def int_riscv_csrw64 :
+    DefaultAttrsIntrinsic<[], [llvm_i64_ty, llvm_i64_ty],
+                          [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+} // TargetPrefix = "riscv"
 //===----------------------------------------------------------------------===//
 // Bitmanip (Bit Manipulation) Extension
 

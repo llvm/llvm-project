@@ -20,6 +20,12 @@ class RISCVBuiltin<string prototype, string features = ""> : TargetBuiltin {
 
 let Attributes = [NoThrow, Const] in {
 //===----------------------------------------------------------------------===//
+// Zicsr extension.
+//===----------------------------------------------------------------------===//
+def csrr : RISCVBuiltin<"unsigned long int(unsigned long int)", "zicsr">;
+def csrw :
+  RISCVBuiltin<"void(unsigned long int, unsigned long int)", "zicsr">;
+//===----------------------------------------------------------------------===//
 // Zbb extension.
 //===----------------------------------------------------------------------===//
 def orc_b_32 : RISCVBuiltin<"unsigned int(unsigned int)", "zbb">;
