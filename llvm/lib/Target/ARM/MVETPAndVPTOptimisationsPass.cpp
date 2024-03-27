@@ -958,6 +958,7 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
 
     unsigned NotImm = ~Imm & 0xffff;
     if (LastVPTReg != 0 && LastVPTReg != VPR && LastVPTImm == Imm) {
+      MRI->clearKillFlags(LastVPTReg);
       Instr.getOperand(PIdx + 1).setReg(LastVPTReg);
       if (MRI->use_empty(VPR)) {
         DeadInstructions.insert(Copy);
