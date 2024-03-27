@@ -3362,6 +3362,29 @@ unsigned AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF) {
   return ST->getMaxInterleaveFactor();
 }
 
+static bool isPartOfIfThenElseDiamond(const BasicBlock *BB) {
+  if (!BB)
+    return false;
+  auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
+  if (!BI || !BI->isConditional())
+    return false;
+
+  BasicBlock *Succ0 = BI->getSuccessor(0);
+  BasicBlock *Succ1 = BI->getSuccessor(1);
+
+  if (!Succ0->getSinglePredecessor())
+    return false;
+  if (!Succ1->getSinglePredecessor())
+    return false;
+
+  BasicBlock *Succ0Succ = Succ0->getSingleSuccessor();
+  BasicBlock *Succ1Succ = Succ1->getSingleSuccessor();
+  // Ignore triangles.
+  if (!Succ0Succ || !Succ1Succ || Succ0Succ != Succ1Succ)
+    return false;
+  return true;
+}
+
 // For Falkor, we want to avoid having too many strided loads in a loop since
 // that can exhaust the HW prefetcher resources.  We adjust the unroller
 // MaxCount preference below to attempt to ensure unrolling doesn't create too
@@ -3372,9 +3395,10 @@ getFalkorUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   enum { MaxStridedLoads = 7 };
   auto countStridedLoads = [](Loop *L, ScalarEvolution &SE) {
     int StridedLoads = 0;
-    // FIXME? We could make this more precise by looking at the CFG and
-    // e.g. not counting loads in each side of an if-then-else diamond.
     for (const auto BB : L->blocks()) {
+      // Skip blocks that are part of an if-then-else diamond
+      if (isPartOfIfThenElseDiamond(BB))
+        continue;
       for (auto &I : *BB) {
         LoadInst *LMemI = dyn_cast<LoadInst>(&I);
         if (!LMemI)
