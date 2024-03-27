@@ -52,49 +52,54 @@ static void applyNullability(Sema &S, Decl *D, NullabilityKind Nullability,
   if (!Metadata.IsActive)
     return;
 
-  auto IsModified = [&](Decl *D, QualType QT,
-                        NullabilityKind Nullability) -> bool {
+  auto GetModified =
+      [&](Decl *D, QualType QT,
+          NullabilityKind Nullability) -> std::optional<QualType> {
     QualType Original = QT;
     S.CheckImplicitNullabilityTypeSpecifier(QT, Nullability, D->getLocation(),
                                             isa<ParmVarDecl>(D),
                                             /*OverrideExisting=*/true);
-    return QT.getTypePtr() != Original.getTypePtr();
+    return (QT.getTypePtr() != Original.getTypePtr()) ? std::optional(QT)
+                                                      : std::nullopt;
   };
 
   if (auto Function = dyn_cast<FunctionDecl>(D)) {
-    if (IsModified(D, Function->getReturnType(), Nullability)) {
-      QualType FnType = Function->getType();
-      Function->setType(FnType);
+    if (auto Modified =
+            GetModified(D, Function->getReturnType(), Nullability)) {
+      const FunctionType *FnType = Function->getType()->castAs<FunctionType>();
+      if (const FunctionProtoType *proto = dyn_cast<FunctionProtoType>(FnType))
+        Function->setType(S.Context.getFunctionType(
+            *Modified, proto->getParamTypes(), proto->getExtProtoInfo()));
+      else
+        Function->setType(
+            S.Context.getFunctionNoProtoType(*Modified, FnType->getExtInfo()));
     }
   } else if (auto Method = dyn_cast<ObjCMethodDecl>(D)) {
-    QualType Type = Method->getReturnType();
-    if (IsModified(D, Type, Nullability)) {
-      Method->setReturnType(Type);
+    if (auto Modified = GetModified(D, Method->getReturnType(), Nullability)) {
+      Method->setReturnType(*Modified);
 
       // Make it a context-sensitive keyword if we can.
-      if (!isIndirectPointerType(Type))
+      if (!isIndirectPointerType(*Modified))
         Method->setObjCDeclQualifier(Decl::ObjCDeclQualifier(
             Method->getObjCDeclQualifier() | Decl::OBJC_TQ_CSNullability));
     }
   } else if (auto Value = dyn_cast<ValueDecl>(D)) {
-    QualType Type = Value->getType();
-    if (IsModified(D, Type, Nullability)) {
-      Value->setType(Type);
+    if (auto Modified = GetModified(D, Value->getType(), Nullability)) {
+      Value->setType(*Modified);
 
       // Make it a context-sensitive keyword if we can.
       if (auto Parm = dyn_cast<ParmVarDecl>(D)) {
-        if (Parm->isObjCMethodParameter() && !isIndirectPointerType(Type))
+        if (Parm->isObjCMethodParameter() && !isIndirectPointerType(*Modified))
           Parm->setObjCDeclQualifier(Decl::ObjCDeclQualifier(
               Parm->getObjCDeclQualifier() | Decl::OBJC_TQ_CSNullability));
       }
     }
   } else if (auto Property = dyn_cast<ObjCPropertyDecl>(D)) {
-    QualType Type = Property->getType();
-    if (IsModified(D, Type, Nullability)) {
-      Property->setType(Type, Property->getTypeSourceInfo());
+    if (auto Modified = GetModified(D, Property->getType(), Nullability)) {
+      Property->setType(*Modified, Property->getTypeSourceInfo());
 
       // Make it a property attribute if we can.
-      if (!isIndirectPointerType(Type))
+      if (!isIndirectPointerType(*Modified))
         Property->setPropertyAttributes(
             ObjCPropertyAttribute::kind_null_resettable);
     }
