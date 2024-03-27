@@ -4306,8 +4306,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
               LangStandard::getLangStandardForKind(Opts.LangStd);
           if (!(Opts.LangStd >= LangStandard::lang_hlsl2018))
             Diags.Report(diag::err_drv_hlsl_16bit_types_unsupported)
-                << "-fnative-half-type" << false << Std.getName()
-                << T.getOSVersion().getAsString();
+                << "-fnative-half-type" << false << Std.getName();
         }
       } else {
         llvm_unreachable("expected DXIL or SPIR-V target");
