@@ -34,7 +34,8 @@ module attributes {transform.with_named_sequence} {
     transform.print %baz {name = "No verify", assume_verified} : !transform.any_op
 
     // CHECK{LITERAL}: [[[ IR printer: Local scope ]]]
-    // CHECK-NEXT:      "test.baz"() ({...}) : () -> ()
+    // CHECK-NEXT:      "test.baz"() ({
+    // CHECK-NEXT:        "test.bar"() : () -> ()
     transform.print %baz {name = "Local scope", use_local_scope} : !transform.any_op
 
     // CHECK{LITERAL}: [[[ IR printer: No region ]]]

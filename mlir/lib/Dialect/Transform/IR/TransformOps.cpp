@@ -2639,7 +2639,7 @@ transform::PrintOp::apply(transform::TransformRewriter &rewriter,
     if (getAssumeVerified().value_or(false))
       printFlags.assumeVerified();
     if (getUseLocalScope().value_or(false))
-      printFlags.skipRegions();
+      printFlags.useLocalScope();
     if (getSkipRegions().value_or(false))
       printFlags.skipRegions();
 
