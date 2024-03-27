@@ -134,10 +134,12 @@ define protected amdgpu_kernel void @nand(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; CHECK-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; CHECK-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    s_cbranch_execnz .LBB5_1
+; CHECK-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; CHECK-NEXT:    s_or_b64 s[8:9], s[4:5], exec
+; CHECK-NEXT:    s_and_b64 s[10:11], s[6:7], -1
+; CHECK-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
+; CHECK-NEXT:    s_cbranch_scc1 .LBB5_1
 ; CHECK-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s2
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s3
 ; CHECK-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], v0, 12, v[2:3]
@@ -435,10 +437,12 @@ define protected amdgpu_kernel void @fadd(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; CHECK-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; CHECK-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    s_cbranch_execnz .LBB18_1
+; CHECK-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; CHECK-NEXT:    s_or_b64 s[8:9], s[4:5], exec
+; CHECK-NEXT:    s_and_b64 s[10:11], s[6:7], -1
+; CHECK-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
+; CHECK-NEXT:    s_cbranch_scc1 .LBB18_1
 ; CHECK-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    v_cvt_u32_f32_e32 v2, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s2
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s3
@@ -472,10 +476,12 @@ define protected amdgpu_kernel void @fsub(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; CHECK-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; CHECK-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    s_cbranch_execnz .LBB19_1
+; CHECK-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; CHECK-NEXT:    s_or_b64 s[8:9], s[4:5], exec
+; CHECK-NEXT:    s_and_b64 s[10:11], s[6:7], -1
+; CHECK-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
+; CHECK-NEXT:    s_cbranch_scc1 .LBB19_1
 ; CHECK-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    v_cvt_u32_f32_e32 v2, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s2
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s3

@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}test1:

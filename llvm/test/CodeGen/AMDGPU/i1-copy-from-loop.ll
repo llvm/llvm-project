@@ -18,8 +18,11 @@ define amdgpu_ps void @i1_copy_from_loop(ptr addrspace(8) inreg %rsrc, i32 %tid)
 ; SI-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
 ; SI-NEXT:    s_and_b64 s[10:11], s[10:11], exec
 ; SI-NEXT:    s_or_b64 s[6:7], s[6:7], s[10:11]
-; SI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; SI-NEXT:    s_cbranch_execz .LBB0_7
+; SI-NEXT:    s_xor_b64 s[10:11], s[4:5], exec
+; SI-NEXT:    s_or_b64 s[12:13], s[4:5], exec
+; SI-NEXT:    s_and_b64 s[16:17], s[10:11], -1
+; SI-NEXT:    s_cselect_b64 exec, s[10:11], s[12:13]
+; SI-NEXT:    s_cbranch_scc0 .LBB0_6
 ; SI-NEXT:  .LBB0_3: ; %for.body
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_cmp_lt_u32 s14, 4
@@ -31,26 +34,30 @@ define amdgpu_ps void @i1_copy_from_loop(ptr addrspace(8) inreg %rsrc, i32 %tid)
 ; SI-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; SI-NEXT:    v_mov_b32_e32 v1, s14
 ; SI-NEXT:    buffer_load_dword v1, v[0:1], s[0:3], 0 idxen offen
-; SI-NEXT:    s_mov_b64 s[10:11], -1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cmp_le_f32_e32 vcc, 0, v1
+; SI-NEXT:    s_mov_b64 s[10:11], -1
+; SI-NEXT:    s_and_b64 s[16:17], vcc, exec
+; SI-NEXT:    s_xor_b64 s[12:13], s[16:17], exec
+; SI-NEXT:    s_and_b64 s[8:9], s[16:17], -1
 ; SI-NEXT:    s_mov_b64 s[8:9], -1
-; SI-NEXT:    s_and_saveexec_b64 s[12:13], vcc
+; SI-NEXT:    s_cmov_b64 exec, s[16:17]
+; SI-NEXT:    s_cbranch_scc0 .LBB0_2
 ; SI-NEXT:  ; %bb.5: ; %end.loop
 ; SI-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; SI-NEXT:    s_add_i32 s14, s14, 1
 ; SI-NEXT:    s_xor_b64 s[8:9], exec, -1
-; SI-NEXT:  ; %bb.6: ; %Flow1
-; SI-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; SI-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; SI-NEXT:    s_branch .LBB0_2
-; SI-NEXT:  .LBB0_7: ; %for.end
-; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
-; SI-NEXT:    s_and_saveexec_b64 s[0:1], s[6:7]
-; SI-NEXT:    s_cbranch_execz .LBB0_9
-; SI-NEXT:  ; %bb.8: ; %if
+; SI-NEXT:  .LBB0_6: ; %for.end
+; SI-NEXT:    s_and_b64 s[0:1], s[6:7], exec
+; SI-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; SI-NEXT:    s_and_b64 s[2:3], s[0:1], -1
+; SI-NEXT:    s_cmov_b64 exec, s[0:1]
+; SI-NEXT:    s_cbranch_scc0 .LBB0_8
+; SI-NEXT:  ; %bb.7: ; %if
 ; SI-NEXT:    exp mrt0 v0, v0, v0, v0 done vm
-; SI-NEXT:  .LBB0_9: ; %end
+; SI-NEXT:  .LBB0_8: ; %end
 ; SI-NEXT:    s_endpgm
 entry:
   br label %for.body

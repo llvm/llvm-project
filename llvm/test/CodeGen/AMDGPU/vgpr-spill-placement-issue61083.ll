@@ -24,28 +24,30 @@ define amdgpu_kernel void @__omp_offloading_16_dd2df_main_l9()  {
 ; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    ; implicit-def: $sgpr4
 ; CHECK-NEXT:    s_mov_b32 s4, 0
-; CHECK-NEXT:    v_cmp_eq_u32_e64 s[6:7], v2, s4
-; CHECK-NEXT:    s_mov_b32 s4, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], v2, s4
+; CHECK-NEXT:    s_mov_b32 s6, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s6
 ; CHECK-NEXT:    ds_write_b8 v1, v2
-; CHECK-NEXT:    s_mov_b64 s[4:5], exec
-; CHECK-NEXT:    v_writelane_b32 v0, s4, 0
-; CHECK-NEXT:    v_writelane_b32 v0, s5, 1
+; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; CHECK-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; CHECK-NEXT:    v_writelane_b32 v0, s6, 0
+; CHECK-NEXT:    v_writelane_b32 v0, s7, 1
 ; CHECK-NEXT:    s_or_saveexec_b64 s[8:9], -1
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[8:9]
-; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], s[6:7]
-; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    s_cbranch_execz .LBB0_2
-; CHECK-NEXT:  ; %bb.1: ; %bb193
-; CHECK-NEXT:  .LBB0_2: ; %bb194
+; CHECK-NEXT:    s_and_b64 s[6:7], s[4:5], -1
+; CHECK-NEXT:    s_cmov_b64 exec, s[4:5]
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
+; CHECK-NEXT:    s_branch .LBB0_2
+; CHECK-NEXT:  .LBB0_1: ; %bb193
 ; CHECK-NEXT:    s_or_saveexec_b64 s[8:9], -1
-; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], 0 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], 0 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[8:9]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_readlane_b32 s4, v1, 0
-; CHECK-NEXT:    v_readlane_b32 s5, v1, 1
+; CHECK-NEXT:    v_readlane_b32 s4, v0, 0
+; CHECK-NEXT:    v_readlane_b32 s5, v0, 1
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
+; CHECK-NEXT:  .LBB0_2: ; %bb194
 ; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)

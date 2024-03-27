@@ -26,6 +26,7 @@ define amdgpu_ps float @else1(i32 %z, float %v) #0 {
   ; SI-NEXT:   successors: %bb.4(0x80000000)
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, killed [[PHI1]], 0, [[PHI1]], 0, 0, implicit $mode, implicit $exec
+  ; SI-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.4
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.3.else:
@@ -36,7 +37,6 @@ define amdgpu_ps float @else1(i32 %z, float %v) #0 {
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.4.end:
   ; SI-NEXT:   [[PHI2:%[0-9]+]]:vgpr_32 = PHI [[PHI]], %bb.1, [[V_ADD_F32_e64_]], %bb.2
-  ; SI-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   $vgpr0 = COPY killed [[PHI2]]
   ; SI-NEXT:   SI_RETURN_TO_EPILOG killed $vgpr0
 main_body:
@@ -82,6 +82,7 @@ define amdgpu_ps float @else2(i32 %z, float %v) #0 {
   ; SI-NEXT:   successors: %bb.4(0x80000000)
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, killed [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+  ; SI-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.4
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.3.else:
@@ -93,7 +94,6 @@ define amdgpu_ps float @else2(i32 %z, float %v) #0 {
   ; SI-NEXT: bb.4.end:
   ; SI-NEXT:   [[PHI2:%[0-9]+]]:vgpr_32 = PHI [[PHI1]], %bb.1, [[V_ADD_F32_e64_]], %bb.2
   ; SI-NEXT:   [[PHI3:%[0-9]+]]:vgpr_32 = PHI [[PHI]], %bb.1, [[V_ADD_F32_e64_]], %bb.2
-  ; SI-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   [[V_ADD_F32_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, killed [[PHI2]], 0, killed [[PHI3]], 0, 0, implicit $mode, implicit $exec
   ; SI-NEXT:   $vgpr0 = COPY killed [[V_ADD_F32_e64_1]]
   ; SI-NEXT:   SI_RETURN_TO_EPILOG killed $vgpr0
@@ -152,6 +152,7 @@ define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   [[V_MUL_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F32_e64 0, [[PHI]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
   ; SI-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 1, killed [[PHI4]], 0, implicit $exec
+  ; SI-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.5
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.4.else:
@@ -166,7 +167,6 @@ define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   [[PHI5:%[0-9]+]]:vgpr_32 = PHI [[PHI3]], %bb.2, [[V_MUL_F32_e64_]], %bb.3
   ; SI-NEXT:   [[PHI6:%[0-9]+]]:vgpr_32 = PHI [[PHI2]], %bb.2, [[V_ADD_U32_e64_]], %bb.3
-  ; SI-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 1, [[PHI6]], 0, implicit $exec
   ; SI-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 killed [[PHI]], 1, implicit-def dead $scc
   ; SI-NEXT:   S_CMP_LT_I32 [[S_ADD_I32_]], [[COPY1]], implicit-def $scc
@@ -275,6 +275,7 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_fun
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   $exec_lo = S_MOV_B32 killed [[S_MOV_B32_]]
   ; SI-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY killed [[COPY7]]
+  ; SI-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.10
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.6.else:
@@ -316,7 +317,6 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_fun
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.10.end:
   ; SI-NEXT:   [[PHI8:%[0-9]+]]:vgpr_32 = PHI [[PHI]], %bb.1, [[COPY8]], %bb.5
-  ; SI-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   $vgpr0 = COPY killed [[PHI8]]
   ; SI-NEXT:   SI_RETURN_TO_EPILOG killed $vgpr0
 main_body:
@@ -396,6 +396,7 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %e
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   $exec_lo = S_MOV_B32 killed [[S_MOV_B32_]]
   ; SI-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY killed [[COPY7]]
+  ; SI-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.10
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.6.else:
@@ -436,7 +437,6 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %e
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.10.end:
   ; SI-NEXT:   [[PHI5:%[0-9]+]]:vgpr_32 = PHI [[PHI]], %bb.1, [[COPY8]], %bb.5
-  ; SI-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, killed [[PHI5]], 0, killed [[COPY4]], 0, 0, implicit $mode, implicit $exec
   ; SI-NEXT:   $vgpr0 = COPY killed [[V_ADD_F32_e64_]]
   ; SI-NEXT:   SI_RETURN_TO_EPILOG killed $vgpr0
@@ -480,6 +480,7 @@ define amdgpu_kernel void @livevariables_update_missed_block(ptr addrspace(1) %s
   ; SI-NEXT:   [[GLOBAL_LOAD_UBYTE:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE killed [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load (s8) from %ir.i10, addrspace 1)
   ; SI-NEXT:   [[V_MOV_B:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
   ; SI-NEXT:   GLOBAL_STORE_BYTE killed [[V_MOV_B]], killed [[GLOBAL_LOAD_UBYTE]], 0, 0, implicit $exec :: (store (s8) into `ptr addrspace(1) null`, addrspace 1)
+  ; SI-NEXT:   SI_END_CF killed %6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.7
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.2.if.then9:
@@ -515,7 +516,6 @@ define amdgpu_kernel void @livevariables_update_missed_block(ptr addrspace(1) %s
   ; SI-NEXT:   S_BRANCH %bb.5
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.7.UnifiedReturnBlock:
-  ; SI-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_ENDPGM 0
 entry:
   %i2 = tail call i32 @llvm.amdgcn.workitem.id.x()

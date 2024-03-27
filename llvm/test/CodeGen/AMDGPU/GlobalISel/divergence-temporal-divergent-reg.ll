@@ -14,10 +14,12 @@ define void @temporal_divergent_i32(float %val, ptr %addr) {
 ; GFX10-NEXT:    v_cvt_f32_u32_e32 v4, v3
 ; GFX10-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v4, v0
 ; GFX10-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
-; GFX10-NEXT:    s_cbranch_execnz .LBB0_1
+; GFX10-NEXT:    s_xor_b32 s5, s4, exec_lo
+; GFX10-NEXT:    s_or_b32 s6, s4, exec_lo
+; GFX10-NEXT:    s_and_b32 s7, s5, -1
+; GFX10-NEXT:    s_cselect_b32 exec_lo, s5, s6
+; GFX10-NEXT:    s_cbranch_scc1 .LBB0_1
 ; GFX10-NEXT:  ; %bb.2: ; %exit
-; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    flat_store_dword v[1:2], v3
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]

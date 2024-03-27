@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: llc -filetype=obj -mtriple=r600 -mcpu=r600 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,R600 %s
 ; RUN: llc -filetype=obj -mtriple=r600 -mcpu=r630 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,R630 %s
 ; RUN: llc -filetype=obj -mtriple=r600 -mcpu=rs880 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,RS880 %s

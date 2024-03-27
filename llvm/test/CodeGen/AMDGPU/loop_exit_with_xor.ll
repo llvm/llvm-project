@@ -10,30 +10,34 @@ define void @needs_and(i32 %arg) {
 ; GCN-LABEL: needs_and:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s10, 1
-; GCN-NEXT:    s_mov_b64 s[6:7], 0
+; GCN-NEXT:    s_mov_b32 s8, 1
+; GCN-NEXT:    s_mov_b64 s[4:5], 0
 ; GCN-NEXT:    s_branch .LBB0_2
 ; GCN-NEXT:  .LBB0_1: ; %endif
 ; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; GCN-NEXT:    s_or_b64 exec, exec, s[8:9]
-; GCN-NEXT:    s_and_b64 s[4:5], exec, vcc
-; GCN-NEXT:    s_or_b64 s[6:7], s[4:5], s[6:7]
-; GCN-NEXT:    s_add_i32 s10, s10, 1
-; GCN-NEXT:    s_andn2_b64 exec, exec, s[6:7]
-; GCN-NEXT:    s_cbranch_execz .LBB0_4
+; GCN-NEXT:    s_and_b64 s[6:7], exec, vcc
+; GCN-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
+; GCN-NEXT:    s_add_i32 s8, s8, 1
+; GCN-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GCN-NEXT:    s_or_b64 s[10:11], s[4:5], exec
+; GCN-NEXT:    s_and_b64 s[12:13], s[6:7], -1
+; GCN-NEXT:    s_cselect_b64 exec, s[6:7], s[10:11]
+; GCN-NEXT:    s_cbranch_scc0 .LBB0_4
 ; GCN-NEXT:  .LBB0_2: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    v_cmp_gt_u32_e64 s[4:5], s10, v0
-; GCN-NEXT:    v_cmp_le_u32_e32 vcc, s10, v0
-; GCN-NEXT:    s_and_saveexec_b64 s[8:9], s[4:5]
-; GCN-NEXT:    s_cbranch_execz .LBB0_1
+; GCN-NEXT:    v_cmp_gt_u32_e32 vcc, s8, v0
+; GCN-NEXT:    s_and_b64 s[10:11], vcc, exec
+; GCN-NEXT:    s_xor_b64 s[6:7], s[10:11], exec
+; GCN-NEXT:    s_and_b64 s[12:13], s[10:11], -1
+; GCN-NEXT:    v_cmp_le_u32_e32 vcc, s8, v0
+; GCN-NEXT:    s_cmov_b64 exec, s[10:11]
+; GCN-NEXT:    s_cbranch_scc0 .LBB0_1
 ; GCN-NEXT:  ; %bb.3: ; %then
 ; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], s4
+; GCN-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN-NEXT:    s_branch .LBB0_1
 ; GCN-NEXT:  .LBB0_4: ; %loopexit
-; GCN-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -71,11 +75,13 @@ define void @doesnt_need_and(i32 %arg) {
 ; GCN-NEXT:    s_add_i32 s6, s6, 1
 ; GCN-NEXT:    v_cmp_le_u32_e32 vcc, s6, v0
 ; GCN-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GCN-NEXT:    s_xor_b64 s[8:9], s[4:5], exec
+; GCN-NEXT:    s_or_b64 s[10:11], s[4:5], exec
+; GCN-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], s4
-; GCN-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; GCN-NEXT:    s_cbranch_execnz .LBB1_1
+; GCN-NEXT:    s_cselect_b64 exec, s[8:9], s[10:11]
+; GCN-NEXT:    s_cbranch_scc1 .LBB1_1
 ; GCN-NEXT:  ; %bb.2: ; %loopexit
-; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -107,23 +113,28 @@ define void @break_cond_is_arg(i32 %arg, i1 %breakcond) {
 ; GCN-NEXT:    s_branch .LBB2_2
 ; GCN-NEXT:  .LBB2_1: ; %endif
 ; GCN-NEXT:    ; in Loop: Header=BB2_2 Depth=1
-; GCN-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GCN-NEXT:    s_and_b64 s[8:9], exec, s[4:5]
 ; GCN-NEXT:    s_or_b64 s[6:7], s[8:9], s[6:7]
 ; GCN-NEXT:    s_add_i32 s10, s10, 1
-; GCN-NEXT:    s_andn2_b64 exec, exec, s[6:7]
-; GCN-NEXT:    s_cbranch_execz .LBB2_4
+; GCN-NEXT:    s_xor_b64 s[8:9], s[6:7], exec
+; GCN-NEXT:    s_or_b64 s[12:13], s[6:7], exec
+; GCN-NEXT:    s_and_b64 s[14:15], s[8:9], -1
+; GCN-NEXT:    s_cselect_b64 exec, s[8:9], s[12:13]
+; GCN-NEXT:    s_cbranch_scc0 .LBB2_4
 ; GCN-NEXT:  .LBB2_2: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    v_cmp_gt_u32_e32 vcc, s10, v0
-; GCN-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; GCN-NEXT:    s_cbranch_execz .LBB2_1
+; GCN-NEXT:    s_and_b64 s[12:13], vcc, exec
+; GCN-NEXT:    s_xor_b64 s[8:9], s[12:13], exec
+; GCN-NEXT:    s_and_b64 s[14:15], s[12:13], -1
+; GCN-NEXT:    s_cmov_b64 exec, s[12:13]
+; GCN-NEXT:    s_cbranch_scc0 .LBB2_1
 ; GCN-NEXT:  ; %bb.3: ; %then
 ; GCN-NEXT:    ; in Loop: Header=BB2_2 Depth=1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], s4
+; GCN-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GCN-NEXT:    s_branch .LBB2_1
 ; GCN-NEXT:  .LBB2_4: ; %loopexit
-; GCN-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:

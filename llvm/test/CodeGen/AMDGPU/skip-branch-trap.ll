@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: llc -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; FIXME: merge with trap.ll

@@ -8,13 +8,16 @@ define void @wombat(i1 %cond, ptr addrspace(5) %addr) {
 ; CHECK-NEXT:    buffer_load_ubyte v2, v1, s[0:3], 0 offen
 ; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; CHECK-NEXT:    s_cbranch_execz .LBB0_2
+; CHECK-NEXT:    s_and_b64 s[6:7], vcc, exec
+; CHECK-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
+; CHECK-NEXT:    s_and_b64 s[8:9], s[6:7], -1
+; CHECK-NEXT:    s_cmov_b64 exec, s[6:7]
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %then
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
-; CHECK-NEXT:  .LBB0_2: ; %end
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
+; CHECK-NEXT:  .LBB0_2: ; %end
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_byte v2, v1, s[0:3], 0 offen
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)

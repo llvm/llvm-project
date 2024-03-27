@@ -205,14 +205,14 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX90A_GFX940-NEXT: {{  $}}
   ; GFX90A_GFX940-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX90A_GFX940-NEXT:   GLOBAL_ATOMIC_ADD_F32_SADDR [[V_MOV_B32_e32_]], [[STRICT_WWM]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
+  ; GFX90A_GFX940-NEXT:   SI_END_CF [[SI_IF1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX90A_GFX940-NEXT: {{  $}}
   ; GFX90A_GFX940-NEXT: bb.4.Flow:
   ; GFX90A_GFX940-NEXT:   successors: %bb.5(0x80000000)
   ; GFX90A_GFX940-NEXT: {{  $}}
-  ; GFX90A_GFX940-NEXT:   SI_END_CF [[SI_IF1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX90A_GFX940-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX90A_GFX940-NEXT: {{  $}}
   ; GFX90A_GFX940-NEXT: bb.5 (%ir-block.37):
-  ; GFX90A_GFX940-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX90A_GFX940-NEXT:   S_ENDPGM 0
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, float %data syncscope("wavefront") monotonic
   ret void

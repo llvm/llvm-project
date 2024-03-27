@@ -21,42 +21,37 @@ body:             |
   ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 0, killed [[COPY]], implicit $exec
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_MOV_B32_e32_]]
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY killed [[V_MOV_B32_e32_]]
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
-  ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY3]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_XOR_B64_:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_]], [[COPY3]], implicit-def dead $scc
-  ; CHECK-NEXT:   $exec = S_MOV_B64_term killed [[S_AND_B64_]]
+  ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[V_CMP_EQ_U32_e64_]], $exec, implicit-def $scc
+  ; CHECK-NEXT:   [[S_XOR_B64_:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_]], $exec, implicit-def $scc
+  ; CHECK-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_AND_B64_]], -1, implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_CMOV_B64 [[S_AND_B64_]], implicit $scc
   ; CHECK-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term killed [[S_XOR_B64_]], implicit $exec
-  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
-  ; CHECK-NEXT:   S_BRANCH %bb.2
+  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
+  ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_64_xexec = COPY killed [[S_MOV_B64_term]]
-  ; CHECK-NEXT:   $exec = S_OR_B64_term $exec, killed [[COPY4]], implicit-def $scc
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY killed [[COPY1]]
-  ; CHECK-NEXT:   [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = nsw V_ADD_U32_e32 1, killed [[COPY5]], implicit $exec
+  ; CHECK-NEXT:   dead [[COPY3:%[0-9]+]]:sreg_64_xexec = COPY killed [[S_MOV_B64_term]]
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY killed [[COPY1]]
+  ; CHECK-NEXT:   [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = nsw V_ADD_U32_e32 1, killed [[COPY4]], implicit $exec
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY killed [[V_ADD_U32_e32_]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY killed [[COPY2]]
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORD undef %10:vreg_64, [[COPY6]], 0, 0, implicit $exec :: (volatile store (s32), addrspace 1)
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY killed [[COPY6]]
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY7]]
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY killed [[COPY7]]
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
-  ; CHECK-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY8]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_XOR_B64_1:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_1]], [[COPY8]], implicit-def dead $scc
-  ; CHECK-NEXT:   $exec = S_MOV_B64_term killed [[S_AND_B64_1]]
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY killed [[COPY2]]
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORD undef %10:vreg_64, [[COPY5]], 0, 0, implicit $exec :: (volatile store (s32), addrspace 1)
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY killed [[COPY5]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY killed [[COPY6]]
+  ; CHECK-NEXT:   [[S_AND_B64_2:%[0-9]+]]:sreg_64 = S_AND_B64 [[V_CMP_EQ_U32_e64_]], $exec, implicit-def $scc
+  ; CHECK-NEXT:   [[S_XOR_B64_1:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_2]], $exec, implicit-def $scc
+  ; CHECK-NEXT:   [[S_AND_B64_3:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_AND_B64_2]], -1, implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_CMOV_B64 [[S_AND_B64_2]], implicit $scc
   ; CHECK-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term killed [[S_XOR_B64_1]], implicit $exec
-  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
-  ; CHECK-NEXT:   S_BRANCH %bb.2
+  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
+  ; CHECK-NEXT:   S_BRANCH %bb.1
   bb.0:
     successors: %bb.2(0x40000000), %bb.1(0x40000000)
     liveins: $vgpr0
@@ -72,7 +67,6 @@ body:             |
 
     %4:sreg_64_xexec = PHI %5, %bb.2, %3, %bb.0
     %6:vgpr_32 = PHI %7, %bb.2, %1, %bb.0
-    SI_END_CF killed %4, implicit-def $exec, implicit-def dead $scc, implicit $exec
     %8:vgpr_32 = nsw V_ADD_U32_e32 1, killed %6, implicit $exec
 
   bb.2:
@@ -102,48 +96,43 @@ body:             |
   ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 0, killed [[COPY]], implicit $exec
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_MOV_B32_e32_]]
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY killed [[V_MOV_B32_e32_]]
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
-  ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY3]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_XOR_B64_:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_]], [[COPY3]], implicit-def dead $scc
-  ; CHECK-NEXT:   $exec = S_MOV_B64_term killed [[S_AND_B64_]]
+  ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[V_CMP_EQ_U32_e64_]], $exec, implicit-def $scc
+  ; CHECK-NEXT:   [[S_XOR_B64_:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_]], $exec, implicit-def $scc
+  ; CHECK-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_AND_B64_]], -1, implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_CMOV_B64 [[S_AND_B64_]], implicit $scc
   ; CHECK-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term killed [[S_XOR_B64_]], implicit $exec
-  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
-  ; CHECK-NEXT:   S_BRANCH %bb.3
+  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.3, implicit $scc
+  ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY killed [[COPY1]]
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sreg_64_xexec = COPY killed [[S_MOV_B64_term]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY killed [[COPY1]]
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_64_xexec = COPY killed [[S_MOV_B64_term]]
+  ; CHECK-NEXT:   $exec = S_OR_B64_term $exec, [[COPY4]], implicit-def $scc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_64_xexec = COPY killed [[COPY5]]
-  ; CHECK-NEXT:   $exec = S_OR_B64_term $exec, killed [[COPY6]], implicit-def $scc
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = nsw V_ADD_U32_e32 1, killed [[COPY4]], implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = nsw V_ADD_U32_e32 1, killed [[COPY3]], implicit $exec
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY killed [[V_ADD_U32_e32_]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY killed [[COPY2]]
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORD undef %11:vreg_64, [[COPY7]], 0, 0, implicit $exec :: (volatile store (s32), addrspace 1)
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY killed [[COPY7]]
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY8]]
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY killed [[COPY8]]
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
-  ; CHECK-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY9]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_XOR_B64_1:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_1]], [[COPY9]], implicit-def dead $scc
-  ; CHECK-NEXT:   $exec = S_MOV_B64_term killed [[S_AND_B64_1]]
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY killed [[COPY2]]
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORD undef %10:vreg_64, [[COPY5]], 0, 0, implicit $exec :: (volatile store (s32), addrspace 1)
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY killed [[COPY5]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY killed [[COPY6]]
+  ; CHECK-NEXT:   [[S_AND_B64_2:%[0-9]+]]:sreg_64 = S_AND_B64 [[V_CMP_EQ_U32_e64_]], $exec, implicit-def $scc
+  ; CHECK-NEXT:   [[S_XOR_B64_1:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_2]], $exec, implicit-def $scc
+  ; CHECK-NEXT:   [[S_AND_B64_3:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_AND_B64_2]], -1, implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_CMOV_B64 [[S_AND_B64_2]], implicit $scc
   ; CHECK-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term killed [[S_XOR_B64_1]], implicit $exec
-  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
-  ; CHECK-NEXT:   S_BRANCH %bb.3
+  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.3, implicit $scc
+  ; CHECK-NEXT:   S_BRANCH %bb.1
   bb.0:
     successors: %bb.3(0x40000000), %bb.1(0x40000000)
     liveins: $vgpr0
@@ -159,13 +148,12 @@ body:             |
 
     %4:sreg_64_xexec = PHI %5, %bb.3, %3, %bb.0
     %6:vgpr_32 = PHI %7, %bb.3, %1, %bb.0
+    SI_END_CF killed %4, implicit-def $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
     successors: %bb.3(0x80000000)
 
-    %8:sreg_64_xexec = COPY %4
-    SI_END_CF killed %8, implicit-def $exec, implicit-def dead $scc, implicit $exec
     %9:vgpr_32 = nsw V_ADD_U32_e32 1, killed %6, implicit $exec
 
   bb.3:
@@ -195,44 +183,40 @@ body:             |
   ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 0, killed [[COPY]], implicit $exec
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_MOV_B32_e32_]]
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY killed [[V_MOV_B32_e32_]]
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
-  ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY3]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_XOR_B64_:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_]], [[COPY3]], implicit-def dead $scc
-  ; CHECK-NEXT:   $exec = S_MOV_B64_term killed [[S_AND_B64_]]
+  ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[V_CMP_EQ_U32_e64_]], $exec, implicit-def $scc
+  ; CHECK-NEXT:   [[S_XOR_B64_:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_]], $exec, implicit-def $scc
+  ; CHECK-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_AND_B64_]], -1, implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_CMOV_B64 [[S_AND_B64_]], implicit $scc
   ; CHECK-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term killed [[S_XOR_B64_]], implicit $exec
-  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
-  ; CHECK-NEXT:   S_BRANCH %bb.2
+  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
+  ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_64_xexec = COPY killed [[S_MOV_B64_term]]
-  ; CHECK-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 1
-  ; CHECK-NEXT:   $exec = S_OR_B64_term $exec, killed [[COPY4]], implicit-def $scc
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_64_xexec = COPY killed [[S_MOV_B64_term]]
+  ; CHECK-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 1
   ; CHECK-NEXT:   S_NOP 0, implicit killed [[S_MOV_B64_]]
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY killed [[COPY1]]
-  ; CHECK-NEXT:   [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = nsw V_ADD_U32_e32 1, killed [[COPY5]], implicit $exec
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY killed [[COPY1]]
+  ; CHECK-NEXT:   [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = nsw V_ADD_U32_e32 1, killed [[COPY4]], implicit $exec
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY killed [[V_ADD_U32_e32_]]
+  ; CHECK-NEXT:   $exec = S_OR_B64_term $exec, [[COPY3]], implicit-def $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY killed [[COPY2]]
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORD undef %11:vreg_64, [[COPY6]], 0, 0, implicit $exec :: (volatile store (s32), addrspace 1)
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY killed [[COPY6]]
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY7]]
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY killed [[COPY7]]
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
-  ; CHECK-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY8]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_XOR_B64_1:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_1]], [[COPY8]], implicit-def dead $scc
-  ; CHECK-NEXT:   $exec = S_MOV_B64_term killed [[S_AND_B64_1]]
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY killed [[COPY2]]
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORD undef %11:vreg_64, [[COPY5]], 0, 0, implicit $exec :: (volatile store (s32), addrspace 1)
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY killed [[COPY5]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY killed [[COPY6]]
+  ; CHECK-NEXT:   [[S_AND_B64_2:%[0-9]+]]:sreg_64 = S_AND_B64 [[V_CMP_EQ_U32_e64_]], $exec, implicit-def $scc
+  ; CHECK-NEXT:   [[S_XOR_B64_1:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_2]], $exec, implicit-def $scc
+  ; CHECK-NEXT:   [[S_AND_B64_3:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_AND_B64_2]], -1, implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_CMOV_B64 [[S_AND_B64_2]], implicit $scc
   ; CHECK-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term killed [[S_XOR_B64_1]], implicit $exec
-  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
-  ; CHECK-NEXT:   S_BRANCH %bb.2
+  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
+  ; CHECK-NEXT:   S_BRANCH %bb.1
   bb.0:
     liveins: $vgpr0
 
@@ -246,9 +230,9 @@ body:             |
     %4:sreg_64_xexec = PHI %5, %bb.2, %3, %bb.0
     %6:vgpr_32 = PHI %7, %bb.2, %1, %bb.0
     %8:sreg_64 = S_MOV_B64 1
-    SI_END_CF killed %4, implicit-def $exec, implicit-def dead $scc, implicit $exec
     S_NOP 0, implicit killed %8
     %9:vgpr_32 = nsw V_ADD_U32_e32 1, killed %6, implicit $exec
+    SI_END_CF killed %4, implicit-def $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
     successors: %bb.2(0x40000000), %bb.1(0x40000000)

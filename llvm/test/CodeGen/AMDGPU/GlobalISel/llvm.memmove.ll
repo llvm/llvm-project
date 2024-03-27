@@ -8,9 +8,11 @@ define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src
 ; LOOP-LABEL: memmove_p1i8:
 ; LOOP:       ; %bb.0:
 ; LOOP-NEXT:    v_cmp_ge_u64_e32 vcc, v[2:3], v[0:1]
-; LOOP-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; LOOP-NEXT:    s_xor_b64 s[4:5], exec, s[0:1]
-; LOOP-NEXT:    s_cbranch_execz .LBB0_3
+; LOOP-NEXT:    s_and_b64 s[0:1], vcc, exec
+; LOOP-NEXT:    s_xor_b64 s[4:5], s[0:1], exec
+; LOOP-NEXT:    s_and_b64 s[2:3], s[0:1], -1
+; LOOP-NEXT:    s_cmov_b64 exec, s[0:1]
+; LOOP-NEXT:    s_cbranch_scc0 .LBB0_3
 ; LOOP-NEXT:  ; %bb.1: ; %copy_forward
 ; LOOP-NEXT:    s_mov_b64 s[6:7], 0
 ; LOOP-NEXT:    s_mov_b32 s2, 0
@@ -33,8 +35,10 @@ define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src
 ; LOOP-NEXT:    buffer_store_byte v8, v[6:7], s[0:3], 0 addr64
 ; LOOP-NEXT:    s_cbranch_vccnz .LBB0_2
 ; LOOP-NEXT:  .LBB0_3: ; %Flow17
-; LOOP-NEXT:    s_andn2_saveexec_b64 s[0:1], s[4:5]
-; LOOP-NEXT:    s_cbranch_execz .LBB0_6
+; LOOP-NEXT:    s_xor_b64 s[0:1], s[4:5], exec
+; LOOP-NEXT:    s_and_b64 s[0:1], s[4:5], -1
+; LOOP-NEXT:    s_cmov_b64 exec, s[4:5]
+; LOOP-NEXT:    s_cbranch_scc0 .LBB0_6
 ; LOOP-NEXT:  ; %bb.4: ; %copy_backwards
 ; LOOP-NEXT:    v_add_i32_e32 v0, vcc, 3, v0
 ; LOOP-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc

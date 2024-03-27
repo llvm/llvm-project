@@ -219,71 +219,87 @@ define void @func_non_entry_block_static_alloca_align4(ptr addrspace(1) %out, i3
 ; MUBUF-LABEL: func_non_entry_block_static_alloca_align4:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; MUBUF-NEXT:    s_mov_b32 s7, s33
-; MUBUF-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
+; MUBUF-NEXT:    s_mov_b32 s12, s33
 ; MUBUF-NEXT:    s_mov_b32 s33, s32
 ; MUBUF-NEXT:    s_addk_i32 s32, 0x400
-; MUBUF-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; MUBUF-NEXT:    s_cbranch_execz .LBB2_3
+; MUBUF-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
+; MUBUF-NEXT:    s_and_b64 s[6:7], vcc, exec
+; MUBUF-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
+; MUBUF-NEXT:    s_and_b64 s[8:9], s[6:7], -1
+; MUBUF-NEXT:    s_cmov_b64 exec, s[6:7]
+; MUBUF-NEXT:    s_cbranch_scc0 .LBB2_4
 ; MUBUF-NEXT:  ; %bb.1: ; %bb.0
 ; MUBUF-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v3
-; MUBUF-NEXT:    s_and_b64 exec, exec, vcc
-; MUBUF-NEXT:    s_cbranch_execz .LBB2_3
+; MUBUF-NEXT:    s_and_b64 s[8:9], vcc, exec
+; MUBUF-NEXT:    s_xor_b64 s[6:7], s[8:9], exec
+; MUBUF-NEXT:    s_and_b64 s[10:11], s[8:9], -1
+; MUBUF-NEXT:    s_cmov_b64 exec, s[8:9]
+; MUBUF-NEXT:    s_cbranch_scc0 .LBB2_3
 ; MUBUF-NEXT:  ; %bb.2: ; %bb.1
-; MUBUF-NEXT:    s_add_i32 s6, s32, 0x1000
+; MUBUF-NEXT:    s_add_i32 s8, s32, 0x1000
 ; MUBUF-NEXT:    v_mov_b32_e32 v2, 0
-; MUBUF-NEXT:    v_mov_b32_e32 v3, s6
+; MUBUF-NEXT:    v_mov_b32_e32 v3, s8
 ; MUBUF-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen
 ; MUBUF-NEXT:    v_mov_b32_e32 v2, 1
 ; MUBUF-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen offset:4
-; MUBUF-NEXT:    v_lshl_add_u32 v2, v4, 2, s6
+; MUBUF-NEXT:    v_lshl_add_u32 v2, v4, 2, s8
 ; MUBUF-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
 ; MUBUF-NEXT:    v_and_b32_e32 v3, 0x3ff, v31
-; MUBUF-NEXT:    s_mov_b32 s32, s6
+; MUBUF-NEXT:    s_mov_b32 s32, s8
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_add_u32_e32 v2, v2, v3
 ; MUBUF-NEXT:    global_store_dword v[0:1], v2, off
-; MUBUF-NEXT:  .LBB2_3: ; %bb.2
+; MUBUF-NEXT:    s_or_b64 exec, exec, s[6:7]
+; MUBUF-NEXT:  .LBB2_3: ; %Flow
 ; MUBUF-NEXT:    s_or_b64 exec, exec, s[4:5]
+; MUBUF-NEXT:  .LBB2_4: ; %bb.2
 ; MUBUF-NEXT:    v_mov_b32_e32 v0, 0
 ; MUBUF-NEXT:    global_store_dword v[0:1], v0, off
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    s_addk_i32 s32, 0xfc00
-; MUBUF-NEXT:    s_mov_b32 s33, s7
+; MUBUF-NEXT:    s_mov_b32 s33, s12
 ; MUBUF-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; FLATSCR-LABEL: func_non_entry_block_static_alloca_align4:
 ; FLATSCR:       ; %bb.0: ; %entry
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FLATSCR-NEXT:    s_mov_b32 s3, s33
-; FLATSCR-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
+; FLATSCR-NEXT:    s_mov_b32 s8, s33
 ; FLATSCR-NEXT:    s_mov_b32 s33, s32
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, 16
-; FLATSCR-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; FLATSCR-NEXT:    s_cbranch_execz .LBB2_3
+; FLATSCR-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
+; FLATSCR-NEXT:    s_and_b64 s[2:3], vcc, exec
+; FLATSCR-NEXT:    s_xor_b64 s[0:1], s[2:3], exec
+; FLATSCR-NEXT:    s_and_b64 s[4:5], s[2:3], -1
+; FLATSCR-NEXT:    s_cmov_b64 exec, s[2:3]
+; FLATSCR-NEXT:    s_cbranch_scc0 .LBB2_4
 ; FLATSCR-NEXT:  ; %bb.1: ; %bb.0
 ; FLATSCR-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v3
-; FLATSCR-NEXT:    s_and_b64 exec, exec, vcc
-; FLATSCR-NEXT:    s_cbranch_execz .LBB2_3
+; FLATSCR-NEXT:    s_and_b64 s[4:5], vcc, exec
+; FLATSCR-NEXT:    s_xor_b64 s[2:3], s[4:5], exec
+; FLATSCR-NEXT:    s_and_b64 s[6:7], s[4:5], -1
+; FLATSCR-NEXT:    s_cmov_b64 exec, s[4:5]
+; FLATSCR-NEXT:    s_cbranch_scc0 .LBB2_3
 ; FLATSCR-NEXT:  ; %bb.2: ; %bb.1
-; FLATSCR-NEXT:    s_add_i32 s2, s32, 0x1000
+; FLATSCR-NEXT:    s_add_i32 s4, s32, 0x1000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v3, 1
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[2:3], s2
-; FLATSCR-NEXT:    v_lshl_add_u32 v2, v4, 2, s2
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[2:3], s4
+; FLATSCR-NEXT:    v_lshl_add_u32 v2, v4, 2, s4
 ; FLATSCR-NEXT:    scratch_load_dword v2, v2, off
 ; FLATSCR-NEXT:    v_and_b32_e32 v3, 0x3ff, v31
-; FLATSCR-NEXT:    s_mov_b32 s32, s2
+; FLATSCR-NEXT:    s_mov_b32 s32, s4
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    v_add_u32_e32 v2, v2, v3
 ; FLATSCR-NEXT:    global_store_dword v[0:1], v2, off
-; FLATSCR-NEXT:  .LBB2_3: ; %bb.2
+; FLATSCR-NEXT:    s_or_b64 exec, exec, s[2:3]
+; FLATSCR-NEXT:  .LBB2_3: ; %Flow
 ; FLATSCR-NEXT:    s_or_b64 exec, exec, s[0:1]
+; FLATSCR-NEXT:  .LBB2_4: ; %bb.2
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 0
 ; FLATSCR-NEXT:    global_store_dword v[0:1], v0, off
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, -16
-; FLATSCR-NEXT:    s_mov_b32 s33, s3
+; FLATSCR-NEXT:    s_mov_b32 s33, s8
 ; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 
 entry:
@@ -316,13 +332,16 @@ define void @func_non_entry_block_static_alloca_align64(ptr addrspace(1) %out, i
 ; MUBUF-LABEL: func_non_entry_block_static_alloca_align64:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; MUBUF-NEXT:    s_mov_b32 s7, s33
+; MUBUF-NEXT:    s_mov_b32 s10, s33
 ; MUBUF-NEXT:    s_add_i32 s33, s32, 0xfc0
-; MUBUF-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; MUBUF-NEXT:    s_and_b32 s33, s33, 0xfffff000
 ; MUBUF-NEXT:    s_addk_i32 s32, 0x2000
-; MUBUF-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; MUBUF-NEXT:    s_cbranch_execz .LBB3_2
+; MUBUF-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
+; MUBUF-NEXT:    s_and_b64 s[6:7], vcc, exec
+; MUBUF-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
+; MUBUF-NEXT:    s_and_b64 s[8:9], s[6:7], -1
+; MUBUF-NEXT:    s_cmov_b64 exec, s[6:7]
+; MUBUF-NEXT:    s_cbranch_scc0 .LBB3_2
 ; MUBUF-NEXT:  ; %bb.1: ; %bb.0
 ; MUBUF-NEXT:    s_add_i32 s6, s32, 0x1000
 ; MUBUF-NEXT:    s_and_b32 s6, s6, 0xfffff000
@@ -338,25 +357,28 @@ define void @func_non_entry_block_static_alloca_align64(ptr addrspace(1) %out, i
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_add_u32_e32 v2, v2, v3
 ; MUBUF-NEXT:    global_store_dword v[0:1], v2, off
-; MUBUF-NEXT:  .LBB3_2: ; %bb.1
 ; MUBUF-NEXT:    s_or_b64 exec, exec, s[4:5]
+; MUBUF-NEXT:  .LBB3_2: ; %bb.1
 ; MUBUF-NEXT:    v_mov_b32_e32 v0, 0
 ; MUBUF-NEXT:    global_store_dword v[0:1], v0, off
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    s_addk_i32 s32, 0xe000
-; MUBUF-NEXT:    s_mov_b32 s33, s7
+; MUBUF-NEXT:    s_mov_b32 s33, s10
 ; MUBUF-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; FLATSCR-LABEL: func_non_entry_block_static_alloca_align64:
 ; FLATSCR:       ; %bb.0: ; %entry
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FLATSCR-NEXT:    s_mov_b32 s3, s33
+; FLATSCR-NEXT:    s_mov_b32 s6, s33
 ; FLATSCR-NEXT:    s_add_i32 s33, s32, 63
-; FLATSCR-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; FLATSCR-NEXT:    s_andn2_b32 s33, s33, 63
 ; FLATSCR-NEXT:    s_addk_i32 s32, 0x80
-; FLATSCR-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; FLATSCR-NEXT:    s_cbranch_execz .LBB3_2
+; FLATSCR-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
+; FLATSCR-NEXT:    s_and_b64 s[2:3], vcc, exec
+; FLATSCR-NEXT:    s_xor_b64 s[0:1], s[2:3], exec
+; FLATSCR-NEXT:    s_and_b64 s[4:5], s[2:3], -1
+; FLATSCR-NEXT:    s_cmov_b64 exec, s[2:3]
+; FLATSCR-NEXT:    s_cbranch_scc0 .LBB3_2
 ; FLATSCR-NEXT:  ; %bb.1: ; %bb.0
 ; FLATSCR-NEXT:    s_add_i32 s2, s32, 0x1000
 ; FLATSCR-NEXT:    s_and_b32 s2, s2, 0xfffff000
@@ -370,13 +392,13 @@ define void @func_non_entry_block_static_alloca_align64(ptr addrspace(1) %out, i
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    v_add_u32_e32 v2, v2, v3
 ; FLATSCR-NEXT:    global_store_dword v[0:1], v2, off
-; FLATSCR-NEXT:  .LBB3_2: ; %bb.1
 ; FLATSCR-NEXT:    s_or_b64 exec, exec, s[0:1]
+; FLATSCR-NEXT:  .LBB3_2: ; %bb.1
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 0
 ; FLATSCR-NEXT:    global_store_dword v[0:1], v0, off
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_addk_i32 s32, 0xff80
-; FLATSCR-NEXT:    s_mov_b32 s33, s3
+; FLATSCR-NEXT:    s_mov_b32 s33, s6
 ; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cond = icmp eq i32 %arg.cond, 0
@@ -406,3 +428,7 @@ attributes #1 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amd
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; ASSUME1024: {{.*}}
+; DEFAULTSIZE: {{.*}}
+; DEFAULTSIZE-V5: {{.*}}

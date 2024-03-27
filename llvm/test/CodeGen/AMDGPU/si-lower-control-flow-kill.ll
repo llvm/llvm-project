@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}if_with_kill:

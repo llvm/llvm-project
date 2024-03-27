@@ -198,14 +198,14 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX908-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY %1
   ; GFX908-NEXT:   GLOBAL_ATOMIC_ADD_F32_SADDR killed [[V_MOV_B32_e32_1]], [[COPY8]], [[COPY3]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
+  ; GFX908-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3.Flow:
   ; GFX908-NEXT:   successors: %bb.4(0x80000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX908-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.4 (%ir-block.37):
-  ; GFX908-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX908-NEXT:   S_ENDPGM 0
   ;
   ; GFX90A_GFX940-LABEL: name: global_atomic_fadd_f32_saddr_no_rtn_atomicrmw
@@ -260,14 +260,14 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX90A_GFX940-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX90A_GFX940-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY %1
   ; GFX90A_GFX940-NEXT:   GLOBAL_ATOMIC_ADD_F32_SADDR killed [[V_MOV_B32_e32_1]], [[COPY8]], [[COPY3]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
+  ; GFX90A_GFX940-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A_GFX940-NEXT: {{  $}}
   ; GFX90A_GFX940-NEXT: bb.3.Flow:
   ; GFX90A_GFX940-NEXT:   successors: %bb.4(0x80000000)
   ; GFX90A_GFX940-NEXT: {{  $}}
-  ; GFX90A_GFX940-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX90A_GFX940-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A_GFX940-NEXT: {{  $}}
   ; GFX90A_GFX940-NEXT: bb.4 (%ir-block.37):
-  ; GFX90A_GFX940-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A_GFX940-NEXT:   S_ENDPGM 0
   ;
   ; GFX11_GFX12-LABEL: name: global_atomic_fadd_f32_saddr_no_rtn_atomicrmw
@@ -314,14 +314,14 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX11_GFX12-NEXT: {{  $}}
   ; GFX11_GFX12-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11_GFX12-NEXT:   GLOBAL_ATOMIC_ADD_F32_SADDR killed [[V_MOV_B32_e32_1]], %1, [[COPY3]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
+  ; GFX11_GFX12-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX11_GFX12-NEXT: {{  $}}
   ; GFX11_GFX12-NEXT: bb.3.Flow:
   ; GFX11_GFX12-NEXT:   successors: %bb.4(0x80000000)
   ; GFX11_GFX12-NEXT: {{  $}}
-  ; GFX11_GFX12-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX11_GFX12-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX11_GFX12-NEXT: {{  $}}
   ; GFX11_GFX12-NEXT: bb.4 (%ir-block.30):
-  ; GFX11_GFX12-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX11_GFX12-NEXT:   S_ENDPGM 0
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, float %data syncscope("wavefront") monotonic
   ret void

@@ -40,7 +40,6 @@ body: |
   ; CHECK-NEXT:   S_BRANCH %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   SI_END_CF %9, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_ENDPGM 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
@@ -53,6 +52,7 @@ body: |
   ; CHECK-NEXT:   [[S_ANDN2_B32_1:%[0-9]+]]:sreg_32 = S_ANDN2_B32 [[S_OR_B32_1]], $exec_lo, implicit-def $scc
   ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[V_CMP_NE_U32_e64_]], $exec_lo, implicit-def $scc
   ; CHECK-NEXT:   [[S_OR_B32_2:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_ANDN2_B32_1]], [[S_AND_B32_]], implicit-def $scc
+  ; CHECK-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   successors: %bb.6(0x04000000), %bb.2(0x7c000000)
@@ -60,7 +60,6 @@ body: |
   ; CHECK-NEXT:   [[PHI6:%[0-9]+]]:sreg_32 = PHI [[S_OR_B32_1]], %bb.2, [[S_OR_B32_2]], %bb.4
   ; CHECK-NEXT:   [[PHI7:%[0-9]+]]:sreg_32 = PHI [[S_OR_B32_]], %bb.2, [[COPY4]], %bb.4
   ; CHECK-NEXT:   [[PHI8:%[0-9]+]]:vgpr_32 = PHI [[COPY3]], %bb.2, [[V_ADD_U32_e64_]], %bb.4
-  ; CHECK-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_32 = SI_IF_BREAK [[PHI6]], [[PHI4]], implicit-def dead $scc
   ; CHECK-NEXT:   SI_LOOP [[SI_IF_BREAK]], %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.6
@@ -69,7 +68,6 @@ body: |
   ; CHECK-NEXT:   successors: %bb.3(0x04000000), %bb.1(0x7c000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI9:%[0-9]+]]:vgpr_32 = PHI [[PHI8]], %bb.5
-  ; CHECK-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[SI_IF_BREAK1:%[0-9]+]]:sreg_32 = SI_IF_BREAK [[PHI7]], [[PHI]], implicit-def dead $scc
   ; CHECK-NEXT:   SI_LOOP [[SI_IF_BREAK1]], %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.3
@@ -107,7 +105,6 @@ body: |
     S_BRANCH %bb.4
 
   bb.3:
-    SI_END_CF %12, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
   bb.4:
@@ -120,6 +117,7 @@ body: |
     %49:sreg_32 = S_ANDN2_B32 %45, $exec_lo, implicit-def $scc
     %50:sreg_32 = S_AND_B32 %30, $exec_lo, implicit-def $scc
     %46:sreg_32 = S_OR_B32 %49, %50, implicit-def $scc
+    SI_END_CF %4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.5:
     successors: %bb.6(0x04000000), %bb.2(0x7c000000)
@@ -127,7 +125,6 @@ body: |
     %10:sreg_32 = PHI %45, %bb.2, %46, %bb.4
     %8:sreg_32 = PHI %39, %bb.2, %40, %bb.4
     %9:vgpr_32 = PHI %36, %bb.2, %6, %bb.4
-    SI_END_CF %4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     %11:sreg_32 = SI_IF_BREAK %10, %2, implicit-def dead $scc
     %12:sreg_32 = SI_IF_BREAK %8, %0, implicit-def dead $scc
     SI_LOOP %11, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
@@ -137,7 +134,6 @@ body: |
     successors: %bb.3(0x04000000), %bb.1(0x7c000000)
 
     %13:vgpr_32 = PHI %9, %bb.5
-    SI_END_CF %11, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     SI_LOOP %12, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.3
 ...

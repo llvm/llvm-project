@@ -100,75 +100,71 @@ else:                                             ; preds = %else.if.cond
 define amdgpu_ps { <4 x float> } @test_return_to_epilog_with_optimized_kill(float %val) #0 {
   ; GCN-LABEL: name: test_return_to_epilog_with_optimized_kill
   ; GCN: bb.0 (%ir-block.0):
-  ; GCN-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
+  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GCN-NEXT:   liveins: $vgpr0
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   renamable $vgpr1 = nofpexcept V_RCP_F32_e32 $vgpr0, implicit $mode, implicit $exec
   ; GCN-NEXT:   $sgpr0_sgpr1 = S_MOV_B64 $exec
   ; GCN-NEXT:   nofpexcept V_CMP_NGT_F32_e32 0, killed $vgpr1, implicit-def $vcc, implicit $mode, implicit $exec
-  ; GCN-NEXT:   $sgpr2_sgpr3 = S_AND_SAVEEXEC_B64 killed $vcc, implicit-def $exec, implicit-def $scc, implicit $exec
-  ; GCN-NEXT:   renamable $sgpr2_sgpr3 = S_XOR_B64 $exec, killed renamable $sgpr2_sgpr3, implicit-def dead $scc
-  ; GCN-NEXT:   S_CBRANCH_EXECNZ %bb.3, implicit $exec
+  ; GCN-NEXT:   renamable $sgpr4_sgpr5 = S_AND_B64 killed renamable $vcc, $exec, implicit-def $scc
+  ; GCN-NEXT:   renamable $sgpr2_sgpr3 = S_XOR_B64 renamable $sgpr4_sgpr5, $exec, implicit-def $scc
+  ; GCN-NEXT:   dead renamable $sgpr6_sgpr7 = S_AND_B64 renamable $sgpr4_sgpr5, -1, implicit-def $scc
+  ; GCN-NEXT:   $exec = S_CMOV_B64 killed renamable $sgpr4_sgpr5, implicit $scc
+  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.3, implicit killed $scc
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.1.Flow1:
-  ; GCN-NEXT:   successors: %bb.6(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $sgpr2_sgpr3 = S_ANDN2_SAVEEXEC_B64 killed $sgpr2_sgpr3, implicit-def $exec, implicit-def $scc, implicit $exec
-  ; GCN-NEXT:   S_CBRANCH_EXECNZ %bb.6, implicit $exec
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.2.end:
-  ; GCN-NEXT:   successors: %bb.9(0x80000000)
-  ; GCN-NEXT:   liveins: $sgpr2_sgpr3
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr2_sgpr3, implicit-def $scc
-  ; GCN-NEXT:   S_BRANCH %bb.9
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.3.flow.preheader:
-  ; GCN-NEXT:   successors: %bb.4(0x80000000)
+  ; GCN-NEXT: bb.1.flow.preheader:
+  ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1, $sgpr2_sgpr3
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   nofpexcept V_CMP_NGT_F32_e32 0, killed $vgpr0, implicit-def $vcc, implicit $mode, implicit $exec
   ; GCN-NEXT:   renamable $sgpr4_sgpr5 = S_MOV_B64 0
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.4.flow:
-  ; GCN-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
+  ; GCN-NEXT: bb.2.flow:
+  ; GCN-NEXT:   successors: %bb.3(0x04000000), %bb.2(0x7c000000)
   ; GCN-NEXT:   liveins: $vcc, $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   renamable $sgpr6_sgpr7 = S_AND_B64 $exec, renamable $vcc, implicit-def $scc
   ; GCN-NEXT:   renamable $sgpr4_sgpr5 = S_OR_B64 killed renamable $sgpr6_sgpr7, killed renamable $sgpr4_sgpr5, implicit-def $scc
-  ; GCN-NEXT:   $exec = S_ANDN2_B64 $exec, renamable $sgpr4_sgpr5, implicit-def $scc
-  ; GCN-NEXT:   S_CBRANCH_EXECNZ %bb.4, implicit $exec
+  ; GCN-NEXT:   renamable $sgpr6_sgpr7 = S_XOR_B64 renamable $sgpr4_sgpr5, $exec, implicit-def $scc
+  ; GCN-NEXT:   renamable $sgpr8_sgpr9 = S_OR_B64 renamable $sgpr4_sgpr5, $exec, implicit-def $scc
+  ; GCN-NEXT:   dead renamable $sgpr10_sgpr11 = S_AND_B64 renamable $sgpr6_sgpr7, -1, implicit-def $scc
+  ; GCN-NEXT:   $exec = S_CSELECT_B64 killed renamable $sgpr6_sgpr7, killed renamable $sgpr8_sgpr9, implicit $scc
+  ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.5.Flow:
-  ; GCN-NEXT:   successors: %bb.6(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def $scc
-  ; GCN-NEXT:   $sgpr2_sgpr3 = S_ANDN2_SAVEEXEC_B64 killed $sgpr2_sgpr3, implicit-def $exec, implicit-def $scc, implicit $exec
-  ; GCN-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.6.kill0:
-  ; GCN-NEXT:   successors: %bb.7(0x40000000), %bb.8(0x40000000)
+  ; GCN-NEXT: bb.3.Flow1:
+  ; GCN-NEXT:   successors: %bb.4(0x40000000), %bb.6(0x40000000)
   ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   dead renamable $sgpr0_sgpr1 = S_ANDN2_B64 killed renamable $sgpr0_sgpr1, $exec, implicit-def $scc
-  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.8, implicit $scc
+  ; GCN-NEXT:   renamable $sgpr4_sgpr5 = S_XOR_B64 renamable $sgpr2_sgpr3, $exec, implicit-def $scc
+  ; GCN-NEXT:   dead renamable $sgpr6_sgpr7 = S_AND_B64 renamable $sgpr2_sgpr3, -1, implicit-def $scc
+  ; GCN-NEXT:   $exec = S_CMOV_B64 killed renamable $sgpr2_sgpr3, implicit $scc
+  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.6, implicit killed $scc
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.7.kill0:
-  ; GCN-NEXT:   successors: %bb.9(0x80000000)
-  ; GCN-NEXT:   liveins: $sgpr2_sgpr3, $scc
+  ; GCN-NEXT: bb.4.kill0:
+  ; GCN-NEXT:   successors: %bb.5(0x40000000), %bb.7(0x40000000)
+  ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $sgpr4_sgpr5
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   dead renamable $sgpr0_sgpr1 = S_ANDN2_B64 killed renamable $sgpr0_sgpr1, $exec, implicit-def $scc
+  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.7, implicit $scc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.5.kill0:
+  ; GCN-NEXT:   successors: %bb.6(0x80000000)
+  ; GCN-NEXT:   liveins: $sgpr4_sgpr5, $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $exec = S_MOV_B64 0
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr2_sgpr3, implicit-def $scc
-  ; GCN-NEXT:   S_BRANCH %bb.9
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def $scc
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.8:
+  ; GCN-NEXT: bb.6.end:
+  ; GCN-NEXT:   successors: %bb.8(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_BRANCH %bb.8
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.7:
   ; GCN-NEXT:   $exec = S_MOV_B64 0
   ; GCN-NEXT:   EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.9:
+  ; GCN-NEXT: bb.8:
   %.i0 = fdiv reassoc nnan nsz arcp contract afn float 1.000000e+00, %val
   %cmp0 = fcmp olt float %.i0, 0.000000e+00
   br i1 %cmp0, label %kill0, label %flow

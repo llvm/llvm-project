@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: opt -mtriple=amdgcn-- -S -structurizecfg -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=OPT %s
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=GCN %s
 

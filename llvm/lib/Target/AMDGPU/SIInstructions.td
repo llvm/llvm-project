@@ -475,8 +475,6 @@ def SI_LOOP : CFPseudoInstSI <
   let IsNeverUniform = 1;
 }
 
-} // End isTerminator = 1
-
 def SI_END_CF : CFPseudoInstSI <
   (outs), (ins SReg_1:$saved), [], 1, 1> {
   let Size = 4;
@@ -487,6 +485,8 @@ def SI_END_CF : CFPseudoInstSI <
   let mayLoad = 1; // FIXME: Should not need memory flags
   let mayStore = 1;
 }
+
+} // End isTerminator = 1
 
 def SI_IF_BREAK : CFPseudoInstSI <
   (outs SReg_1:$dst), (ins SReg_1:$vcc, SReg_1:$src), []> {

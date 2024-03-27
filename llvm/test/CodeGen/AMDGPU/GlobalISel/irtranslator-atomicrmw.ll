@@ -41,8 +41,6 @@ define float @test_atomicrmw_fsub(ptr addrspace(3) %addr) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.atomicrmw.end:
   ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:_(s32) = G_PHI [[ATOMIC_CMPXCHG_WITH_SUCCESS]](s32), %bb.2
-  ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:_(s64) = G_PHI [[INTRINSIC]](s64), %bb.2
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[PHI3]](s64)
   ; CHECK-NEXT:   $vgpr0 = COPY [[PHI2]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %oldval = atomicrmw fsub ptr addrspace(3) %addr, float 1.0 seq_cst

@@ -17,10 +17,12 @@ define i32 @atomic_nand_i32_lds(ptr addrspace(3) %ptr) nounwind {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
 ; GCN-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GCN-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; GCN-NEXT:    s_cbranch_execnz .LBB0_1
+; GCN-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GCN-NEXT:    s_or_b64 s[8:9], s[4:5], exec
+; GCN-NEXT:    s_and_b64 s[10:11], s[6:7], -1
+; GCN-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
+; GCN-NEXT:    s_cbranch_scc1 .LBB0_1
 ; GCN-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw nand ptr addrspace(3) %ptr, i32 4 seq_cst
@@ -44,10 +46,12 @@ define i32 @atomic_nand_i32_global(ptr addrspace(1) %ptr) nounwind {
 ; GCN-NEXT:    buffer_wbinvl1_vol
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; GCN-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GCN-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; GCN-NEXT:    s_cbranch_execnz .LBB1_1
+; GCN-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GCN-NEXT:    s_or_b64 s[8:9], s[4:5], exec
+; GCN-NEXT:    s_and_b64 s[10:11], s[6:7], -1
+; GCN-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
+; GCN-NEXT:    s_cbranch_scc1 .LBB1_1
 ; GCN-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw nand ptr addrspace(1) %ptr, i32 4 seq_cst
@@ -71,10 +75,12 @@ define i32 @atomic_nand_i32_flat(ptr %ptr) nounwind {
 ; GCN-NEXT:    buffer_wbinvl1_vol
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; GCN-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GCN-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; GCN-NEXT:    s_cbranch_execnz .LBB2_1
+; GCN-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GCN-NEXT:    s_or_b64 s[8:9], s[4:5], exec
+; GCN-NEXT:    s_and_b64 s[10:11], s[6:7], -1
+; GCN-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
+; GCN-NEXT:    s_cbranch_scc1 .LBB2_1
 ; GCN-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw nand ptr %ptr, i32 4 seq_cst

@@ -2380,16 +2380,19 @@ define void @v_fneg_copytoreg_f32(ptr addrspace(1) %out, float %a, float %b, flo
 ; SI-NEXT:    v_lshlrev_b32_e32 v6, 2, v6
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, v0, v6
 ; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; SI-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
-; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; SI-NEXT:    s_cbranch_execz .LBB118_2
+; SI-NEXT:    s_and_b64 s[6:7], vcc, exec
+; SI-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
+; SI-NEXT:    s_and_b64 s[8:9], s[6:7], -1
+; SI-NEXT:    v_mul_f32_e32 v2, v2, v3
+; SI-NEXT:    s_cmov_b64 exec, s[6:7]
+; SI-NEXT:    s_cbranch_scc0 .LBB118_2
 ; SI-NEXT:  ; %bb.1: ; %if
 ; SI-NEXT:    v_mul_f32_e64 v3, -v2, v4
 ; SI-NEXT:    flat_store_dword v[0:1], v3
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:  .LBB118_2: ; %endif
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
+; SI-NEXT:  .LBB118_2: ; %endif
 ; SI-NEXT:    flat_store_dword v[0:1], v2
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -2401,16 +2404,19 @@ define void @v_fneg_copytoreg_f32(ptr addrspace(1) %out, float %a, float %b, flo
 ; VI-NEXT:    v_lshlrev_b32_e32 v6, 2, v6
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v6
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
-; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; VI-NEXT:    s_cbranch_execz .LBB118_2
+; VI-NEXT:    s_and_b64 s[6:7], vcc, exec
+; VI-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
+; VI-NEXT:    s_and_b64 s[8:9], s[6:7], -1
+; VI-NEXT:    v_mul_f32_e32 v2, v2, v3
+; VI-NEXT:    s_cmov_b64 exec, s[6:7]
+; VI-NEXT:    s_cbranch_scc0 .LBB118_2
 ; VI-NEXT:  ; %bb.1: ; %if
 ; VI-NEXT:    v_mul_f32_e64 v3, -v2, v4
 ; VI-NEXT:    flat_store_dword v[0:1], v3
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:  .LBB118_2: ; %endif
 ; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
+; VI-NEXT:  .LBB118_2: ; %endif
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]

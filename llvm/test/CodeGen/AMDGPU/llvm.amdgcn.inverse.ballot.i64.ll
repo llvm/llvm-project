@@ -210,13 +210,17 @@ endif:
 define amdgpu_cs void @inverse_ballot_branch(i64 inreg %s0_1, i64 inreg %s2, ptr addrspace(1) %out) {
 ; GISEL-LABEL: inverse_ballot_branch:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    s_xor_b64 s[4:5], s[2:3], -1
-; GISEL-NEXT:    s_and_saveexec_b64 s[2:3], s[4:5]
+; GISEL-NEXT:    s_xor_b64 s[2:3], s[2:3], -1
+; GISEL-NEXT:    s_and_b64 s[4:5], s[2:3], exec
+; GISEL-NEXT:    s_xor_b64 s[2:3], s[4:5], exec
+; GISEL-NEXT:    s_and_b64 s[6:7], s[4:5], -1
+; GISEL-NEXT:    s_cmov_b64 exec, s[4:5]
+; GISEL-NEXT:    s_cbranch_scc0 .LBB6_2
 ; GISEL-NEXT:  ; %bb.1: ; %if
 ; GISEL-NEXT:    s_add_u32 s0, s0, 1
 ; GISEL-NEXT:    s_addc_u32 s1, s1, 0
-; GISEL-NEXT:  ; %bb.2: ; %endif
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GISEL-NEXT:  .LBB6_2: ; %endif
 ; GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GISEL-NEXT:    global_store_b64 v[0:1], v[2:3], off
@@ -226,17 +230,21 @@ define amdgpu_cs void @inverse_ballot_branch(i64 inreg %s0_1, i64 inreg %s2, ptr
 ;
 ; SDAG-LABEL: inverse_ballot_branch:
 ; SDAG:       ; %bb.0: ; %entry
+; SDAG-NEXT:    s_xor_b64 s[2:3], s[2:3], -1
 ; SDAG-NEXT:    v_mov_b32_e32 v3, s1
 ; SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; SDAG-NEXT:    s_xor_b64 s[4:5], s[2:3], -1
-; SDAG-NEXT:    s_and_saveexec_b64 s[2:3], s[4:5]
+; SDAG-NEXT:    s_and_b64 s[4:5], s[2:3], exec
+; SDAG-NEXT:    s_xor_b64 s[2:3], s[4:5], exec
+; SDAG-NEXT:    s_and_b64 s[6:7], s[4:5], -1
+; SDAG-NEXT:    s_cmov_b64 exec, s[4:5]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB6_2
 ; SDAG-NEXT:  ; %bb.1: ; %if
 ; SDAG-NEXT:    s_add_u32 s0, s0, 1
 ; SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v3, s1
 ; SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; SDAG-NEXT:  ; %bb.2: ; %endif
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[2:3]
+; SDAG-NEXT:  .LBB6_2: ; %endif
 ; SDAG-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

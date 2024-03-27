@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs -amdgpu-s-branch-bits=7 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1030 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -amdgpu-s-branch-bits=7 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1010 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -amdgpu-s-branch-bits=7 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1030 %s

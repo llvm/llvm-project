@@ -13,31 +13,43 @@ define amdgpu_ps void @main(i32 %arg) {
 ; GFX10-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX10-NEXT:    s_mov_b32 s4, 0
 ; GFX10-NEXT:    s_mov_b32 s2, 0
-; GFX10-NEXT:    s_branch .LBB0_2
-; GFX10-NEXT:  .LBB0_1: ; in Loop: Header=BB0_2 Depth=1
+; GFX10-NEXT:    s_branch .LBB0_3
+; GFX10-NEXT:  .LBB0_1: ; %Flow
+; GFX10-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
+; GFX10-NEXT:  .LBB0_2: ; in Loop: Header=BB0_3 Depth=1
 ; GFX10-NEXT:    s_and_b32 s0, exec_lo, vcc_lo
 ; GFX10-NEXT:    s_or_b32 s2, s0, s2
-; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
-; GFX10-NEXT:    s_cbranch_execz .LBB0_5
-; GFX10-NEXT:  .LBB0_2: ; %bb4
+; GFX10-NEXT:    s_xor_b32 s0, s2, exec_lo
+; GFX10-NEXT:    s_or_b32 s3, s2, exec_lo
+; GFX10-NEXT:    s_and_b32 s5, s0, -1
+; GFX10-NEXT:    s_cselect_b32 exec_lo, s0, s3
+; GFX10-NEXT:    s_cbranch_scc0 .LBB0_6
+; GFX10-NEXT:  .LBB0_3: ; %bb4
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    s_and_saveexec_b32 s3, s1
-; GFX10-NEXT:    s_cbranch_execz .LBB0_1
-; GFX10-NEXT:  ; %bb.3: ; in Loop: Header=BB0_2 Depth=1
+; GFX10-NEXT:    s_and_b32 s0, s1, exec_lo
+; GFX10-NEXT:    s_xor_b32 s3, s0, exec_lo
+; GFX10-NEXT:    s_and_b32 s5, s0, -1
+; GFX10-NEXT:    s_cmov_b32 exec_lo, s0
+; GFX10-NEXT:    s_cbranch_scc0 .LBB0_2
+; GFX10-NEXT:  ; %bb.4: ; in Loop: Header=BB0_3 Depth=1
 ; GFX10-NEXT:    v_mbcnt_lo_u32_b32 v1, exec_lo, 0
 ; GFX10-NEXT:    v_cmp_eq_u32_e64 s0, 0, v1
-; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s0
-; GFX10-NEXT:    s_cbranch_execz .LBB0_1
-; GFX10-NEXT:  ; %bb.4: ; in Loop: Header=BB0_2 Depth=1
+; GFX10-NEXT:    s_and_b32 s5, s0, exec_lo
+; GFX10-NEXT:    s_xor_b32 s0, s5, exec_lo
+; GFX10-NEXT:    s_and_b32 s6, s5, -1
+; GFX10-NEXT:    s_cmov_b32 exec_lo, s5
+; GFX10-NEXT:    s_cbranch_scc0 .LBB0_1
+; GFX10-NEXT:  ; %bb.5: ; in Loop: Header=BB0_3 Depth=1
 ; GFX10-NEXT:    s_mov_b32 s5, s4
 ; GFX10-NEXT:    s_mov_b32 s6, s4
 ; GFX10-NEXT:    s_mov_b32 s7, s4
 ; GFX10-NEXT:    buffer_atomic_and v0, off, s[4:7], 0
+; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-NEXT:    s_branch .LBB0_1
-; GFX10-NEXT:  .LBB0_5: ; %bb8
-; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; GFX10-NEXT:  .LBB0_6: ; %bb8
 ; GFX10-NEXT:    s_mov_b32 s0, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0

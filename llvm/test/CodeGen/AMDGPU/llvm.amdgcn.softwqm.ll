@@ -176,14 +176,18 @@ define amdgpu_ps float @test_control_flow_0(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; CHECK-LABEL: test_control_flow_0:
 ; CHECK:       ; %bb.0: ; %main_body
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
-; CHECK-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; CHECK-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
-; CHECK-NEXT:    s_cbranch_execz .LBB6_2
+; CHECK-NEXT:    s_and_b64 s[2:3], vcc, exec
+; CHECK-NEXT:    s_xor_b64 s[0:1], s[2:3], exec
+; CHECK-NEXT:    s_and_b64 s[4:5], s[2:3], -1
+; CHECK-NEXT:    s_cmov_b64 exec, s[2:3]
+; CHECK-NEXT:    s_cbranch_scc0 .LBB6_2
 ; CHECK-NEXT:  ; %bb.1: ; %ELSE
 ; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 idxen
 ; CHECK-NEXT:  .LBB6_2: ; %Flow
-; CHECK-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
-; CHECK-NEXT:    s_cbranch_execz .LBB6_4
+; CHECK-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_and_b64 s[4:5], s[0:1], -1
+; CHECK-NEXT:    s_cmov_b64 exec, s[0:1]
+; CHECK-NEXT:    s_cbranch_scc0 .LBB6_4
 ; CHECK-NEXT:  ; %bb.3: ; %IF
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s12
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s13
@@ -192,8 +196,8 @@ define amdgpu_ps float @test_control_flow_0(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_add_f32_e32 v2, v0, v1
 ; CHECK-NEXT:    ; kill: def $vgpr2 killed $vgpr2 killed $exec
+; CHECK-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; CHECK-NEXT:  .LBB6_4: ; %END
-; CHECK-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v2
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
@@ -225,9 +229,11 @@ define amdgpu_ps float @test_control_flow_1(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; CHECK-NEXT:    s_mov_b64 s[14:15], exec
 ; CHECK-NEXT:    s_wqm_b64 exec, exec
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
-; CHECK-NEXT:    s_and_saveexec_b64 s[16:17], vcc
-; CHECK-NEXT:    s_xor_b64 s[16:17], exec, s[16:17]
-; CHECK-NEXT:    s_cbranch_execz .LBB7_2
+; CHECK-NEXT:    s_and_b64 s[18:19], vcc, exec
+; CHECK-NEXT:    s_xor_b64 s[16:17], s[18:19], exec
+; CHECK-NEXT:    s_and_b64 s[20:21], s[18:19], -1
+; CHECK-NEXT:    s_cmov_b64 exec, s[18:19]
+; CHECK-NEXT:    s_cbranch_scc0 .LBB7_2
 ; CHECK-NEXT:  ; %bb.1: ; %ELSE
 ; CHECK-NEXT:    image_sample v1, v0, s[0:7], s[8:11] dmask:0x1
 ; CHECK-NEXT:    s_and_saveexec_b64 s[18:19], s[14:15]
@@ -237,8 +243,10 @@ define amdgpu_ps float @test_control_flow_1(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 idxen
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
 ; CHECK-NEXT:  .LBB7_2: ; %Flow
-; CHECK-NEXT:    s_andn2_saveexec_b64 s[0:1], s[16:17]
-; CHECK-NEXT:    s_cbranch_execz .LBB7_4
+; CHECK-NEXT:    s_xor_b64 s[0:1], s[16:17], exec
+; CHECK-NEXT:    s_and_b64 s[2:3], s[16:17], -1
+; CHECK-NEXT:    s_cmov_b64 exec, s[16:17]
+; CHECK-NEXT:    s_cbranch_scc0 .LBB7_4
 ; CHECK-NEXT:  ; %bb.3: ; %IF
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s12
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s13
@@ -247,8 +255,8 @@ define amdgpu_ps float @test_control_flow_1(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_add_f32_e32 v2, v0, v1
 ; CHECK-NEXT:    ; kill: def $vgpr2 killed $vgpr2 killed $exec
-; CHECK-NEXT:  .LBB7_4: ; %END
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[0:1]
+; CHECK-NEXT:  .LBB7_4: ; %END
 ; CHECK-NEXT:    s_and_b64 exec, exec, s[14:15]
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v2
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)

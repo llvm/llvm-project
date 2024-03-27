@@ -8,14 +8,17 @@ define i32 @divergent_if_swap_brtarget_order0(i32 %value) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; CHECK-NEXT:    s_and_b64 s[6:7], vcc, exec
+; CHECK-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
+; CHECK-NEXT:    s_and_b64 s[8:9], s[6:7], -1
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; CHECK-NEXT:    s_cbranch_execz .LBB0_2
+; CHECK-NEXT:    s_cmov_b64 exec, s[6:7]
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %if.true
 ; CHECK-NEXT:    global_load_dword v0, v[0:1], off glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:  .LBB0_2: ; %endif
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
+; CHECK-NEXT:  .LBB0_2: ; %endif
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %c = icmp ne i32 %value, 0
@@ -35,14 +38,17 @@ define i32 @divergent_if_swap_brtarget_order1(i32 %value) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; CHECK-NEXT:    s_and_b64 s[6:7], vcc, exec
+; CHECK-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
+; CHECK-NEXT:    s_and_b64 s[8:9], s[6:7], -1
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; CHECK-NEXT:    s_cbranch_execz .LBB1_2
+; CHECK-NEXT:    s_cmov_b64 exec, s[6:7]
+; CHECK-NEXT:    s_cbranch_scc0 .LBB1_2
 ; CHECK-NEXT:  ; %bb.1: ; %if.true
 ; CHECK-NEXT:    global_load_dword v0, v[0:1], off glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:  .LBB1_2: ; %endif
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
+; CHECK-NEXT:  .LBB1_2: ; %endif
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %c = icmp ne i32 %value, 0
@@ -64,14 +70,17 @@ define i32 @divergent_if_nonboolean_condition0(i32 %value) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; CHECK-NEXT:    s_and_b64 s[6:7], vcc, exec
+; CHECK-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
+; CHECK-NEXT:    s_and_b64 s[8:9], s[6:7], -1
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; CHECK-NEXT:    s_cbranch_execz .LBB2_2
+; CHECK-NEXT:    s_cmov_b64 exec, s[6:7]
+; CHECK-NEXT:    s_cbranch_scc0 .LBB2_2
 ; CHECK-NEXT:  ; %bb.1: ; %if.true
 ; CHECK-NEXT:    global_load_dword v0, v[0:1], off glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:  .LBB2_2: ; %endif
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
+; CHECK-NEXT:  .LBB2_2: ; %endif
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %c = trunc i32 %value to i1
@@ -95,14 +104,17 @@ define i32 @divergent_if_nonboolean_condition1(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; CHECK-NEXT:    s_and_b64 s[6:7], vcc, exec
+; CHECK-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
+; CHECK-NEXT:    s_and_b64 s[8:9], s[6:7], -1
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; CHECK-NEXT:    s_cbranch_execz .LBB3_2
+; CHECK-NEXT:    s_cmov_b64 exec, s[6:7]
+; CHECK-NEXT:    s_cbranch_scc0 .LBB3_2
 ; CHECK-NEXT:  ; %bb.1: ; %if.true
 ; CHECK-NEXT:    global_load_dword v0, v[0:1], off glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:  .LBB3_2: ; %endif
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
+; CHECK-NEXT:  .LBB3_2: ; %endif
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %value = load i32, ptr addrspace(1) %ptr
@@ -212,8 +224,11 @@ define amdgpu_kernel void @break_loop(i32 %arg) {
 ; CHECK-NEXT:    ; in Loop: Header=BB5_3 Depth=1
 ; CHECK-NEXT:    s_and_b64 s[4:5], exec, s[2:3]
 ; CHECK-NEXT:    s_or_b64 s[0:1], s[4:5], s[0:1]
-; CHECK-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; CHECK-NEXT:    s_cbranch_execz .LBB5_5
+; CHECK-NEXT:    s_xor_b64 s[4:5], s[0:1], exec
+; CHECK-NEXT:    s_or_b64 s[6:7], s[0:1], exec
+; CHECK-NEXT:    s_and_b64 s[8:9], s[4:5], -1
+; CHECK-NEXT:    s_cselect_b64 exec, s[4:5], s[6:7]
+; CHECK-NEXT:    s_cbranch_scc0 .LBB5_5
 ; CHECK-NEXT:  .LBB5_3: ; %bb1
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_add_u32_e32 v1, 1, v1

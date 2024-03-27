@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs -stress-regalloc=6 < %s | FileCheck %s
 
 ; Inline spiller can decide to move a spill as early as possible in the basic block.

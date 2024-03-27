@@ -20,10 +20,14 @@ define i32 @test(i32 %val, i32 %cond) {
 ; GCN-NEXT:    s_or_saveexec_b32 s4, -1
 ; GCN-NEXT:    v_mov_b32_dpp v2, v3 row_xmask:1 row_mask:0xf bank_mask:0xf
 ; GCN-NEXT:    s_mov_b32 exec_lo, s4
-; GCN-NEXT:    v_mov_b32_e32 v5, 0
-; GCN-NEXT:    v_mov_b32_e32 v4, v2
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
-; GCN-NEXT:    s_and_saveexec_b32 s4, vcc_lo
+; GCN-NEXT:    v_mov_b32_e32 v4, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, v2
+; GCN-NEXT:    s_and_b32 s5, vcc_lo, exec_lo
+; GCN-NEXT:    s_xor_b32 s4, s5, exec_lo
+; GCN-NEXT:    s_and_b32 s6, s5, -1
+; GCN-NEXT:    s_cmov_b32 exec_lo, s5
+; GCN-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %if
 ; GCN-NEXT:    s_or_saveexec_b32 s5, -1
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
@@ -35,10 +39,10 @@ define i32 @test(i32 %val, i32 %cond) {
 ; GCN-NEXT:    s_or_saveexec_b32 s5, -1
 ; GCN-NEXT:    v_mov_b32_dpp v2, v3 row_xmask:1 row_mask:0xf bank_mask:0xf
 ; GCN-NEXT:    s_mov_b32 exec_lo, s5
-; GCN-NEXT:    v_mov_b32_e32 v5, v2
-; GCN-NEXT:  ; %bb.2: ; %end
+; GCN-NEXT:    v_mov_b32_e32 v4, v2
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s4
-; GCN-NEXT:    v_add_nc_u32_e32 v0, v4, v5
+; GCN-NEXT:  .LBB0_2: ; %end
+; GCN-NEXT:    v_add_nc_u32_e32 v0, v1, v4
 ; GCN-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GCN-NEXT:    s_clause 0x1
 ; GCN-NEXT:    buffer_load_dword v2, off, s[0:3], s32

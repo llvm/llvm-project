@@ -210,23 +210,23 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; GFX11-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY %2
   ; GFX11-NEXT:   [[GLOBAL_ATOMIC_ADD_F32_SADDR_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_ADD_F32_SADDR_RTN killed [[V_MOV_B32_e32_1]], [[COPY5]], [[COPY3]], 0, 1, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
+  ; GFX11-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX11-NEXT:   S_BRANCH %bb.4
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.3.Flow:
   ; GFX11-NEXT:   successors: %bb.5(0x80000000)
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[DEF]], %bb.0, %7, %bb.4
-  ; GFX11-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX11-NEXT:   S_BRANCH %bb.5
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.4 (%ir-block.39):
   ; GFX11-NEXT:   successors: %bb.3(0x80000000)
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[DEF1]], %bb.1, [[GLOBAL_ATOMIC_ADD_F32_SADDR_RTN]], %bb.2
-  ; GFX11-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[PHI1]], implicit $exec
   ; GFX11-NEXT:   early-clobber %44:vgpr_32 = STRICT_WWM [[V_WRITELANE_B32_]], implicit $exec
   ; GFX11-NEXT:   [[V_ADD_F32_e64_5:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, killed [[V_READFIRSTLANE_B32_]], 0, killed %44, 0, 0, implicit $mode, implicit $exec
+  ; GFX11-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX11-NEXT:   S_BRANCH %bb.3
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.5 (%ir-block.47):

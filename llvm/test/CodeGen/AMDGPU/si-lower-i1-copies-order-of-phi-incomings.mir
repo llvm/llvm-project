@@ -42,7 +42,7 @@ body: |
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:sreg_32 = PHI [[DEF5]], %bb.0, %20, %bb.3
-  ; GCN-NEXT:   [[PHI1:%[0-9]+]]:sreg_32 = PHI [[COPY6]], %bb.0, %37, %bb.3
+  ; GCN-NEXT:   [[PHI1:%[0-9]+]]:sreg_32 = PHI [[COPY6]], %bb.0, %39, %bb.3
   ; GCN-NEXT:   [[PHI2:%[0-9]+]]:sreg_32 = PHI [[S_MOV_B32_1]], %bb.0, %16, %bb.3
   ; GCN-NEXT:   [[PHI3:%[0-9]+]]:vreg_64 = PHI [[COPY5]], %bb.0, %18, %bb.3
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[PHI1]]
@@ -66,16 +66,18 @@ body: |
   ; GCN-NEXT:   successors: %bb.4(0x04000000), %bb.1(0x7c000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[PHI4:%[0-9]+]]:sreg_32 = PHI [[S_OR_B32_]], %bb.1, [[S_OR_B32_1]], %bb.2
-  ; GCN-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 4
   ; GCN-NEXT:   [[V_ADD_U:%[0-9]+]]:vreg_64 = V_ADD_U64_PSEUDO [[PHI3]], killed [[S_MOV_B64_]], implicit-def dead $vcc_lo, implicit $exec
   ; GCN-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; GCN-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = nsw S_ADD_I32 [[PHI2]], killed [[S_MOV_B32_3]], implicit-def dead $scc
   ; GCN-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 9
+  ; GCN-NEXT:   S_CMP_GT_I32 [[S_ADD_I32_]], killed [[S_MOV_B32_4]], implicit-def $scc
+  ; GCN-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
   ; GCN-NEXT:   [[S_ANDN2_B32_2:%[0-9]+]]:sreg_32 = S_ANDN2_B32 [[PHI1]], $exec_lo, implicit-def $scc
   ; GCN-NEXT:   [[S_AND_B32_2:%[0-9]+]]:sreg_32 = S_AND_B32 [[PHI4]], $exec_lo, implicit-def $scc
   ; GCN-NEXT:   [[S_OR_B32_2:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_ANDN2_B32_2]], [[S_AND_B32_2]], implicit-def $scc
-  ; GCN-NEXT:   S_CMP_GT_I32 [[S_ADD_I32_]], killed [[S_MOV_B32_4]], implicit-def $scc
+  ; GCN-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   [[S_AND_B32_term:%[0-9]+]]:sreg_32 = S_AND_B32_term [[S_CSELECT_B32_]], 1, implicit-def $scc
   ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit $scc
   ; GCN-NEXT:   S_BRANCH %bb.4
   ; GCN-NEXT: {{  $}}
@@ -129,13 +131,15 @@ body: |
     successors: %bb.4(0x04000000), %bb.1(0x7c000000)
 
     %20:vreg_1 = PHI %26, %bb.2, %19, %bb.1    ;%20:vreg_1 = PHI %19, %bb.1, %26, %bb.2 - this is original phi created by SDAG
-    SI_END_CF %22, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     %27:sreg_64 = S_MOV_B64 4
     %18:vreg_64 = V_ADD_U64_PSEUDO %17, killed %27, implicit-def dead $vcc, implicit $exec
     %28:sreg_32 = S_MOV_B32 1
     %16:sreg_32 = nsw S_ADD_I32 %15, killed %28, implicit-def dead $scc
     %29:sreg_32 = S_MOV_B32 9
     S_CMP_GT_I32 %16, killed %29, implicit-def $scc
+    %36:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    SI_END_CF %22, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %37:sreg_32 = S_AND_B32_term %36:sreg_32, 1, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit $scc
     S_BRANCH %bb.4
 

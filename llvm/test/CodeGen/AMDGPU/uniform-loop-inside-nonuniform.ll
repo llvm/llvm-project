@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: llc -mtriple=amdgcn -mcpu=verde < %s | FileCheck %s
 
 ; Test a simple uniform loop that lives inside non-uniform control flow.

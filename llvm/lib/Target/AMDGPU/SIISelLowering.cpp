@@ -15740,6 +15740,91 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
     }
   }
 
+  // ISel inserts copy to regs for the successor PHIs
+  // at the BB end. We need to move the SI_END_CF right before the branch.
+  // Even we don't have to move SI_END_CF we need to take care of the
+  // S_CBRANCH_SCC0/1 as SI_END_CF overwrites SCC
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      if (MI.getOpcode() == AMDGPU::SI_END_CF) {
+        MachineBasicBlock::iterator I(MI);
+        MachineBasicBlock::iterator Next = std::next(I);
+        bool NeedToMove = false;
+        while (Next != MBB.end() && !Next->isBranch()) {
+          NeedToMove = true;
+          Next++;
+        }
+
+        // Lets take care of SCC users as S_END_CF defines SCC
+        bool NeedPreserveSCC =
+            Next != MBB.end() && Next->readsRegister(AMDGPU::SCC);
+        MachineBasicBlock::iterator SCCDefUse(Next);
+        // This loop will be never taken as we always have S_CBRANCH_SCC1/0 at
+        // the end of the block.
+        while (!NeedPreserveSCC && SCCDefUse != MBB.end()) {
+          if (SCCDefUse->definesRegister(AMDGPU::SCC))
+            // This should never happen - SCC def after the branch reading SCC
+            break;
+          if (SCCDefUse->readsRegister(AMDGPU::SCC)) {
+            NeedPreserveSCC = true;
+            break;
+          }
+          SCCDefUse++;
+        }
+        if (NeedPreserveSCC) {
+          MachineBasicBlock::reverse_iterator BackSeeker(Next);
+          while (BackSeeker != MBB.rend()) {
+            if (BackSeeker != MI && BackSeeker->definesRegister(AMDGPU::SCC))
+              break;
+            BackSeeker++;
+          }
+          // we need this to makes some artificial MIR tests happy
+          bool NeedSetSCCUndef = false;
+          if (BackSeeker == MBB.rend()) {
+            // We have reached the begin of the block but haven't seen the SCC
+            // def Given that the MIR is correct, we either have SCC live in
+            // or SCCUser SCC operand is undef. In fact, we don't need to emit
+            // the instructions that preserve thje SCC if the use is Undef. We
+            // do this just because the MIR looks weird otherwise.
+            MachineOperand *SCCUseOp =
+                SCCDefUse->findRegisterUseOperand(AMDGPU::SCC, false, TRI);
+            assert(SCCUseOp);
+            bool IsSCCLiveIn = MBB.isLiveIn(AMDGPU::SCC);
+            bool IsUseUndef = SCCUseOp->isUndef();
+            NeedSetSCCUndef = (!IsSCCLiveIn && IsUseUndef);
+          }
+          MachineBasicBlock::iterator InsPt(BackSeeker);
+          Register SavedSCC =
+              MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+          MachineInstr *SaveSCC =
+              BuildMI(MBB, InsPt, InsPt->getDebugLoc(),
+                      TII->get(AMDGPU::S_CSELECT_B32), SavedSCC)
+                  .addImm(1)
+                  .addImm(0);
+          if (NeedSetSCCUndef) {
+
+            MachineOperand *SCCOp =
+                SaveSCC->findRegisterUseOperand(AMDGPU::SCC, false, TRI);
+            if (SCCOp)
+              SCCOp->setIsUndef();
+          }
+          Register Tmp =
+              MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+          Next = BuildMI(MBB, Next, Next->getDebugLoc(),
+                         TII->get(AMDGPU::S_AND_B32_term), Tmp)
+                     .addReg(SavedSCC)
+                     .addImm(1);
+        }
+
+        if (NeedToMove) {
+          MBB.splice(Next, &MBB, &MI);
+        }
+
+        break;
+      }
+    }
+  }
+
   // FIXME: This is a hack to fixup AGPR classes to use the properly aligned
   // classes if required. Ideally the register class constraints would differ
   // per-subtarget, but there's no easy way to achieve that right now. This is

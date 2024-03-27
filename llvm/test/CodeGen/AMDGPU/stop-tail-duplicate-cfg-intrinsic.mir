@@ -26,10 +26,10 @@ body: |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
   ; CHECK-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[PHI]], [[COPY2]], 0, implicit $exec
+  ; CHECK-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
@@ -56,10 +56,10 @@ body: |
     S_BRANCH %bb.4
 
   bb.3:
-    SI_END_CF %8:sreg_64_xexec, implicit-def $exec, implicit-def $scc, implicit $exec
     %13:sreg_32 = S_MOV_B32 1
     %15:vgpr_32 = COPY %13:sreg_32
     %10:vgpr_32, dead %20:sreg_64_xexec = V_ADD_CO_U32_e64 %6:vgpr_32, %15:vgpr_32, 0, implicit $exec
+    SI_END_CF %8:sreg_64_xexec, implicit-def $exec, implicit-def $scc, implicit $exec
 
   bb.4:
     %11:vgpr_32 = PHI %10:vgpr_32, %bb.3, %6:vgpr_32, %bb.2

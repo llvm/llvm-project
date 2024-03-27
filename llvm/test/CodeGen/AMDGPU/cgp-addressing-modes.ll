@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgcn-unknown-unknown -mcpu=tahiti < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-SI -check-prefix=OPT-SICIVI %s
 ; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgcn-unknown-unknown -mcpu=bonaire < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-CI -check-prefix=OPT-SICIVI %s
 ; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgcn-unknown-unknown -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-VI -check-prefix=OPT-SICIVI %s

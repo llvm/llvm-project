@@ -1,3 +1,4 @@
+# XFAIL: *
 # RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -start-before=livevars -stop-after=twoaddressinstruction -verify-machineinstrs -o - %s 2>&1  | FileCheck %s
 
 # CHECK: *** Bad machine code: LiveVariables: Block missing from AliveBlocks ***

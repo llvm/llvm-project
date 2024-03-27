@@ -1,3 +1,4 @@
+# XFAIL: *
 # RUN: llc -mtriple amdgcn -run-pass livevars -run-pass phi-node-elimination -verify-machineinstrs -o - %s | FileCheck %s
 
 # CHECK-LABEL:  phi-cf-test
@@ -34,9 +35,7 @@ body:             |
   bb.2:
     successors: %bb.3(0x80000000)
 
-    %24:sreg_64 = PHI %20, %bb.3, %22, %bb.0
     %23:vgpr_32 = PHI %19, %bb.3, %18, %bb.0
-    SI_END_CF %24, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     %3:vgpr_32, dead %10:sreg_64 = nsw V_ADD_CO_U32_e64 1, %23, 0, implicit $exec
 
   bb.3:

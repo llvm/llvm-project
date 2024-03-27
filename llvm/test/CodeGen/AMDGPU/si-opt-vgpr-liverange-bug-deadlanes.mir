@@ -55,10 +55,10 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE killed [[PHI1]], %subreg.sub0, [[PHI1]], %subreg.sub1, [[PHI1]], %subreg.sub2, undef %6:vgpr_32, %subreg.sub3
+  ; CHECK-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:vreg_128 = PHI [[PHI]], %bb.2, [[REG_SEQUENCE1]], %bb.3
-  ; CHECK-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   dead [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE killed [[PHI2]].sub2, %subreg.sub0, [[PHI2]].sub2, %subreg.sub1, [[PHI2]].sub2, %subreg.sub2, undef [[BUFFER_LOAD_DWORD_OFFEN]], %subreg.sub3
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
@@ -88,10 +88,10 @@ body:             |
     successors: %bb.8(0x80000000)
 
     %12:vreg_128 = REG_SEQUENCE %3, %subreg.sub0, %3, %subreg.sub1, killed %3, %subreg.sub2, undef %7, %subreg.sub3
+    SI_END_CF killed %11, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.8:
     %13:vreg_128 = PHI %10, %bb.6, %12, %bb.7
-    SI_END_CF killed %11, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     %5:vreg_128 = REG_SEQUENCE %13.sub2, %subreg.sub0, %13.sub2, %subreg.sub1, killed %13.sub2, %subreg.sub2, undef %3, %subreg.sub3
     S_ENDPGM 0
 ...

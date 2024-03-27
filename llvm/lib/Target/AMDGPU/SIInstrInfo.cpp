@@ -3102,6 +3102,7 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
       break;
     case AMDGPU::SI_IF:
     case AMDGPU::SI_ELSE:
+    case AMDGPU::SI_END_CF:
     case AMDGPU::SI_KILL_I1_TERMINATOR:
     case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
       // FIXME: It's messy that these need to be considered here at all.

@@ -680,11 +680,14 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) {
 ; GCN-NEXT:    s_mov_b64 s[34:35], s[10:11]
 ; GCN-NEXT:    s_mov_b64 s[36:37], s[8:9]
 ; GCN-NEXT:    s_mov_b64 s[38:39], s[6:7]
-; GCN-NEXT:    s_mov_b64 s[40:41], s[4:5]
 ; GCN-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
-; GCN-NEXT:    s_and_saveexec_b64 s[46:47], vcc
-; GCN-NEXT:    s_cbranch_execz .LBB5_4
+; GCN-NEXT:    s_and_b64 s[6:7], vcc, exec
+; GCN-NEXT:    s_xor_b64 s[46:47], s[6:7], exec
+; GCN-NEXT:    s_and_b64 s[8:9], s[6:7], -1
+; GCN-NEXT:    s_mov_b64 s[40:41], s[4:5]
+; GCN-NEXT:    s_cmov_b64 exec, s[6:7]
+; GCN-NEXT:    s_cbranch_scc0 .LBB5_4
 ; GCN-NEXT:  ; %bb.1: ; %bb1
 ; GCN-NEXT:    s_mov_b64 s[48:49], exec
 ; GCN-NEXT:  .LBB5_2: ; =>This Inner Loop Header: Depth=1
@@ -707,8 +710,8 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) {
 ; GCN-NEXT:    s_cbranch_execnz .LBB5_2
 ; GCN-NEXT:  ; %bb.3:
 ; GCN-NEXT:    s_mov_b64 exec, s[48:49]
-; GCN-NEXT:  .LBB5_4: ; %bb2
 ; GCN-NEXT:    s_or_b64 exec, exec, s[46:47]
+; GCN-NEXT:  .LBB5_4: ; %bb2
 ; GCN-NEXT:    v_readlane_b32 s51, v40, 19
 ; GCN-NEXT:    v_readlane_b32 s50, v40, 18
 ; GCN-NEXT:    v_readlane_b32 s49, v40, 17
@@ -778,8 +781,11 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) {
 ; GISEL-NEXT:    s_mov_b64 s[40:41], s[4:5]
 ; GISEL-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
-; GISEL-NEXT:    s_and_saveexec_b64 s[46:47], vcc
-; GISEL-NEXT:    s_cbranch_execz .LBB5_4
+; GISEL-NEXT:    s_and_b64 s[4:5], vcc, exec
+; GISEL-NEXT:    s_xor_b64 s[46:47], s[4:5], exec
+; GISEL-NEXT:    s_and_b64 s[6:7], s[4:5], -1
+; GISEL-NEXT:    s_cmov_b64 exec, s[4:5]
+; GISEL-NEXT:    s_cbranch_scc0 .LBB5_4
 ; GISEL-NEXT:  ; %bb.1: ; %bb1
 ; GISEL-NEXT:    s_mov_b64 s[48:49], exec
 ; GISEL-NEXT:  .LBB5_2: ; =>This Inner Loop Header: Depth=1
@@ -802,8 +808,8 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) {
 ; GISEL-NEXT:    s_cbranch_execnz .LBB5_2
 ; GISEL-NEXT:  ; %bb.3:
 ; GISEL-NEXT:    s_mov_b64 exec, s[48:49]
-; GISEL-NEXT:  .LBB5_4: ; %bb2
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[46:47]
+; GISEL-NEXT:  .LBB5_4: ; %bb2
 ; GISEL-NEXT:    v_readlane_b32 s51, v40, 19
 ; GISEL-NEXT:    v_readlane_b32 s50, v40, 18
 ; GISEL-NEXT:    v_readlane_b32 s49, v40, 17

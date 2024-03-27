@@ -306,42 +306,26 @@ bool SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
 
 /// Close the last opened control flow
 bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
-  llvm::Loop *L = LI->getLoopFor(BB);
 
   assert(Stack.back().first == BB);
 
-  if (L && L->getHeader() == BB) {
-    // We can't insert an EndCF call into a loop header, because it will
-    // get executed on every iteration of the loop, when it should be
-    // executed only once before the loop.
-    SmallVector <BasicBlock *, 8> Latches;
-    L->getLoopLatches(Latches);
-
-    SmallVector<BasicBlock *, 2> Preds;
-    for (BasicBlock *Pred : predecessors(BB)) {
-      if (!is_contained(Latches, Pred))
-        Preds.push_back(Pred);
-    }
-
-    BB = SplitBlockPredecessors(BB, Preds, "endcf.split", DT, LI, nullptr,
-                                false);
-  }
-
   Value *Exec = popSaved();
-  BasicBlock::iterator FirstInsertionPt = BB->getFirstInsertionPt();
-  if (!isa<UndefValue>(Exec) && !isa<UnreachableInst>(FirstInsertionPt)) {
-    Instruction *ExecDef = cast<Instruction>(Exec);
-    BasicBlock *DefBB = ExecDef->getParent();
-    if (!DT->dominates(DefBB, BB)) {
-      // Split edge to make Def dominate Use
-      FirstInsertionPt = SplitEdge(DefBB, BB, DT, LI)->getFirstInsertionPt();
+  Instruction *ExecDef = dyn_cast<Instruction>(Exec);
+  BasicBlock *DefBB = ExecDef->getParent();
+  for (auto Pred : predecessors(BB)) {
+    llvm::Loop *L = LI->getLoopFor(Pred);
+    bool IsLoopLatch = false;
+    if (L) {
+      SmallVector<BasicBlock *, 4> LL;
+      L->getLoopLatches(LL);
+      IsLoopLatch = std::find_if(LL.begin(), LL.end(), [Pred](BasicBlock *B) {
+                      return B == Pred;
+                    }) != LL.end();
     }
-    IRBuilder<> IRB(FirstInsertionPt->getParent(), FirstInsertionPt);
-    // TODO: StructurizeCFG 'Flow' blocks have debug locations from the
-    // condition, for now just avoid copying these DebugLocs so that stepping
-    // out of the then/else block in a debugger doesn't step to the condition.
-    IRB.SetCurrentDebugLocation(DebugLoc());
-    IRB.CreateCall(EndCf, {Exec});
+    if (Pred != DefBB && DT->dominates(DefBB, Pred) && !IsLoopLatch) {
+      BasicBlock::iterator InsPt(Pred->getTerminator());
+      IRBuilder<>(Pred, InsPt).CreateCall(EndCf, {Exec});
+    }
   }
 
   return true;
