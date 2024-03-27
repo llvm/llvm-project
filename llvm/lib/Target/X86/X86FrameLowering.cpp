@@ -380,9 +380,9 @@ MachineInstrBuilder X86FrameLowering::BuildStackAdjustment(
   return MI;
 }
 
-int64_t X86FrameLowering::mergeSPUpdates(MachineBasicBlock &MBB,
-                                         MachineBasicBlock::iterator &MBBI,
-                                         bool doMergeWithPrevious) const {
+int X86FrameLowering::mergeSPUpdates(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator &MBBI,
+                                     bool doMergeWithPrevious) const {
   if ((doMergeWithPrevious && MBBI == MBB.begin()) ||
       (!doMergeWithPrevious && MBBI == MBB.end()))
     return 0;
@@ -405,7 +405,7 @@ int64_t X86FrameLowering::mergeSPUpdates(MachineBasicBlock &MBB,
     PI = std::prev(PI);
 
   unsigned Opc = PI->getOpcode();
-  int64_t Offset = 0;
+  int Offset = 0;
 
   if ((Opc == X86::ADD64ri32 || Opc == X86::ADD32ri) &&
       PI->getOperand(0).getReg() == StackPtr) {
@@ -473,7 +473,7 @@ void X86FrameLowering::emitCalleeSavedFrameMovesFullCFA(
                                : FramePtr;
   unsigned DwarfReg = MRI->getDwarfRegNum(MachineFramePtr, true);
   // Offset = space for return address + size of the frame pointer itself.
-  int64_t Offset = (Is64Bit ? 8 : 4) + (Uses64BitFramePtr ? 8 : 4);
+  unsigned Offset = (Is64Bit ? 8 : 4) + (Uses64BitFramePtr ? 8 : 4);
   BuildCFI(MBB, MBBI, DebugLoc{},
            MCCFIInstruction::createOffset(nullptr, DwarfReg, -Offset));
   emitCalleeSavedFrameMoves(MBB, MBBI, DebugLoc{}, true);
@@ -1881,7 +1881,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
 
   // For EH funclets, only allocate enough space for outgoing calls. Save the
   // NumBytes value that we would've used for the parent frame.
-  uint64_t ParentFrameNumBytes = NumBytes;
+  unsigned ParentFrameNumBytes = NumBytes;
   if (IsFunclet)
     NumBytes = getWinEHFuncletFrameSize(MF);
 
@@ -2430,7 +2430,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   if (HasFP) {
     if (X86FI->hasSwiftAsyncContext()) {
       // Discard the context.
-      int64_t Offset = 16 + mergeSPUpdates(MBB, MBBI, true);
+      int Offset = 16 + mergeSPUpdates(MBB, MBBI, true);
       emitSPUpdate(MBB, MBBI, DL, Offset, /*InEpilogue*/ true);
     }
     // Pop EBP.
@@ -2562,7 +2562,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (!HasFP && NeedsDwarfCFI) {
     MBBI = FirstCSPop;
-    int64_t Offset = -(int64_t)CSSize - SlotSize;
+    int64_t Offset = -CSSize - SlotSize;
     // Mark callee-saved pop instruction.
     // Define the current CFA rule to use the provided offset.
     while (MBBI != MBB.end()) {
@@ -2591,7 +2591,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (Terminator == MBB.end() || !isTailCallOpcode(Terminator->getOpcode())) {
     // Add the return addr area delta back since we are not tail calling.
-    int64_t Offset = -1 * X86FI->getTCReturnAddrDelta();
+    int Offset = -1 * X86FI->getTCReturnAddrDelta();
     assert(Offset >= 0 && "TCDelta should never be positive");
     if (Offset) {
       // Check for possible merge with preceding ADD instruction.
@@ -2625,7 +2625,7 @@ StackOffset X86FrameLowering::getFrameIndexReference(const MachineFunction &MF,
   // object.
   // We need to factor in additional offsets applied during the prologue to the
   // frame, base, and stack pointer depending on which is used.
-  int64_t Offset = MFI.getObjectOffset(FI) - getOffsetOfLocalArea();
+  int Offset = MFI.getObjectOffset(FI) - getOffsetOfLocalArea();
   const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   unsigned CSSize = X86FI->getCalleeSavedFrameSize();
   uint64_t StackSize = MFI.getStackSize();
@@ -3919,7 +3919,7 @@ MachineBasicBlock::iterator X86FrameLowering::restoreWin32EHStackPointers(
   // FIXME: Don't set FrameSetup flag in catchret case.
 
   int FI = FuncInfo.EHRegNodeFrameIndex;
-  int64_t EHRegSize = MFI.getObjectSize(FI);
+  int EHRegSize = MFI.getObjectSize(FI);
 
   if (RestoreSP) {
     // MOV32rm -EHRegSize(%ebp), %esp
@@ -3929,8 +3929,8 @@ MachineBasicBlock::iterator X86FrameLowering::restoreWin32EHStackPointers(
   }
 
   Register UsedReg;
-  int64_t EHRegOffset = getFrameIndexReference(MF, FI, UsedReg).getFixed();
-  int64_t EndOffset = -EHRegOffset - EHRegSize;
+  int EHRegOffset = getFrameIndexReference(MF, FI, UsedReg).getFixed();
+  int EndOffset = -EHRegOffset - EHRegSize;
   FuncInfo.EHRegNodeEndOffset = EndOffset;
 
   if (UsedReg == FramePtr) {
@@ -3951,7 +3951,7 @@ MachineBasicBlock::iterator X86FrameLowering::restoreWin32EHStackPointers(
         .setMIFlag(MachineInstr::FrameSetup);
     // MOV32rm SavedEBPOffset(%esi), %ebp
     assert(X86FI->getHasSEHFramePtrSave());
-    int64_t Offset =
+    int Offset =
         getFrameIndexReference(MF, X86FI->getSEHFramePtrSaveIndex(), UsedReg)
             .getFixed();
     assert(UsedReg == BasePtr);

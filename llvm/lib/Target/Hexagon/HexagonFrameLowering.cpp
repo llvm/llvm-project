@@ -1660,7 +1660,7 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
   using SpillSlot = TargetFrameLowering::SpillSlot;
 
   unsigned NumFixed;
-  int64_t MinOffset = 0; // CS offsets are negative.
+  int MinOffset = 0;  // CS offsets are negative.
   const SpillSlot *FixedSlots = getCalleeSavedSpillSlots(NumFixed);
   for (const SpillSlot *S = FixedSlots; S != FixedSlots+NumFixed; ++S) {
     if (!SRegs[S->Reg])
@@ -1679,7 +1679,7 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
     Register R = x;
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(R);
     unsigned Size = TRI->getSpillSize(*RC);
-    int64_t Off = MinOffset - Size;
+    int Off = MinOffset - Size;
     Align Alignment = std::min(TRI->getSpillAlign(*RC), getStackAlign());
     Off &= -Alignment.value();
     int FI = MFI.CreateFixedSpillStackObject(Size, Off);

@@ -1165,7 +1165,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
         if (STI.splitFramePushPop(MF)) {
           unsigned DwarfReg = MRI->getDwarfRegNum(
               Reg == ARM::R12 ? ARM::RA_AUTH_CODE : Reg, true);
-          uint64_t Offset = MFI.getObjectOffset(FI);
+          unsigned Offset = MFI.getObjectOffset(FI);
           unsigned CFIIndex = MF.addFrameInst(
               MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));
           BuildMI(MBB, Pos, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
@@ -1187,7 +1187,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
       if ((Reg >= ARM::D0 && Reg <= ARM::D31) &&
           (Reg < ARM::D8 || Reg >= ARM::D8 + AFI->getNumAlignedDPRCS2Regs())) {
         unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
-        uint64_t Offset = MFI.getObjectOffset(FI);
+        unsigned Offset = MFI.getObjectOffset(FI);
         unsigned CFIIndex = MF.addFrameInst(
             MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));
         BuildMI(MBB, Pos, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
