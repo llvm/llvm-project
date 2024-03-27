@@ -860,8 +860,8 @@ fields is usually a better solution.
  };
  static_assert(sizeof(Optimal) == 4*8+5+3);
 
- // no-warning: Enforcing bitpacked representation.
- // Access times will have signifficant overhead. Prefer reordering the fields instead.
+ // no-warning: Bit packing representation is also accepted by this checker, but
+ // it can significantly increase access times, so prefer reordering the fields.
  #pragma pack(1)
  struct BitPacked {
    char c1;
