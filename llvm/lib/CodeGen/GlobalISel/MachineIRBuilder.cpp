@@ -1160,7 +1160,7 @@ void MachineIRBuilder::validateSelectOp(const LLT ResTy, const LLT TstTy,
   else
     assert((TstTy.isScalar() ||
             (TstTy.isVector() &&
-             TstTy.getNumElements() == Op0Ty.getNumElements())) &&
+             TstTy.getElementCount() == Op0Ty.getElementCount())) &&
            "type mismatch");
 #endif
 }
