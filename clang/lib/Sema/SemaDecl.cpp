@@ -8962,8 +8962,13 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     }
   }
 
-  if (T->isRVVSizelessBuiltinType())
-    checkRVVTypeSupport(T, NewVD->getLocation(), cast<Decl>(CurContext));
+  if (T->isRVVSizelessBuiltinType() && isa<FunctionDecl>(CurContext)) {
+    const FunctionDecl *FD = cast<FunctionDecl>(CurContext);
+    llvm::StringMap<bool> CallerFeatureMap;
+    Context.getFunctionFeatureMap(CallerFeatureMap, FD);
+    checkRVVTypeSupport(T, NewVD->getLocation(), cast<Decl>(CurContext),
+                        CallerFeatureMap);
+  }
 }
 
 /// Perform semantic checking on a newly-created variable
