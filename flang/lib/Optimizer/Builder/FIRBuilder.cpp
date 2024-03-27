@@ -47,8 +47,13 @@ mlir::func::FuncOp
 fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp, llvm::StringRef name,
                                     const mlir::SymbolTable *symbolTable) {
   if (symbolTable)
-    if (auto func = symbolTable->lookup<mlir::func::FuncOp>(name))
+    if (auto func = symbolTable->lookup<mlir::func::FuncOp>(name)) {
+#ifdef EXPENSIVE_CHECKS
+      assert(func == modOp.lookupSymbol<mlir::func::FuncOp>(name) &&
+             "symbolTable and module out of sync");
+#endif
       return func;
+    }
   return modOp.lookupSymbol<mlir::func::FuncOp>(name);
 }
 
@@ -57,9 +62,14 @@ fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
                                     mlir::SymbolRefAttr symbol,
                                     const mlir::SymbolTable *symbolTable) {
   if (symbolTable)
-    if (auto func =
-            symbolTable->lookup<mlir::func::FuncOp>(symbol.getLeafReference()))
+    if (auto func = symbolTable->lookup<mlir::func::FuncOp>(
+            symbol.getLeafReference())) {
+#ifdef EXPENSIVE_CHECKS
+      assert(func == modOp.lookupSymbol<mlir::func::FuncOp>(symbol) &&
+             "symbolTable and module out of sync");
+#endif
       return func;
+    }
   return modOp.lookupSymbol<mlir::func::FuncOp>(symbol);
 }
 
@@ -67,8 +77,13 @@ fir::GlobalOp
 fir::FirOpBuilder::getNamedGlobal(mlir::ModuleOp modOp, llvm::StringRef name,
                                   const mlir::SymbolTable *symbolTable) {
   if (symbolTable)
-    if (auto global = symbolTable->lookup<fir::GlobalOp>(name))
+    if (auto global = symbolTable->lookup<fir::GlobalOp>(name)) {
+#ifdef EXPENSIVE_CHECKS
+      assert(global == modOp.lookupSymbol<fir::GlobalOp>(name) &&
+             "symbolTable and module out of sync");
+#endif
       return global;
+    }
   return modOp.lookupSymbol<fir::GlobalOp>(name);
 }
 

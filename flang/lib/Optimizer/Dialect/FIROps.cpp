@@ -3683,8 +3683,13 @@ mlir::func::FuncOp fir::createFuncOp(mlir::Location loc, mlir::ModuleOp module,
                                      llvm::ArrayRef<mlir::NamedAttribute> attrs,
                                      const mlir::SymbolTable *symbolTable) {
   if (symbolTable)
-    if (auto f = symbolTable->lookup<mlir::func::FuncOp>(name))
+    if (auto f = symbolTable->lookup<mlir::func::FuncOp>(name)) {
+#ifdef EXPENSIVE_CHECKS
+      assert(f == module.lookupSymbol<mlir::func::FuncOp>(name) &&
+             "symbolTable and module out of sync");
+#endif
       return f;
+    }
   if (auto f = module.lookupSymbol<mlir::func::FuncOp>(name))
     return f;
   mlir::OpBuilder modBuilder(module.getBodyRegion());
@@ -3699,8 +3704,13 @@ fir::GlobalOp fir::createGlobalOp(mlir::Location loc, mlir::ModuleOp module,
                                   llvm::ArrayRef<mlir::NamedAttribute> attrs,
                                   const mlir::SymbolTable *symbolTable) {
   if (symbolTable)
-    if (auto g = symbolTable->lookup<fir::GlobalOp>(name))
+    if (auto g = symbolTable->lookup<fir::GlobalOp>(name)) {
+#ifdef EXPENSIVE_CHECKS
+      assert(g == module.lookupSymbol<fir::GlobalOp>(name) &&
+             "symbolTable and module out of sync");
+#endif
       return g;
+    }
   if (auto g = module.lookupSymbol<fir::GlobalOp>(name))
     return g;
   mlir::OpBuilder modBuilder(module.getBodyRegion());
