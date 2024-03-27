@@ -1068,13 +1068,12 @@ public:
   /// \param Loc Location of the reference to threadprivate var.
   /// \return Address of the threadprivate variable for the current thread.
   virtual Address getAddrOfThreadPrivate(CodeGenFunction &CGF,
-                                         const VarDecl *VD,
-                                         Address VDAddr,
+                                         const VarDecl *VD, Address VDAddr,
                                          SourceLocation Loc);
 
   /// Returns the address of the variable marked as declare target with link
   /// clause OR as declare target with to clause and unified memory.
-  virtual Address getAddrOfDeclareTargetVar(const VarDecl *VD);
+  virtual ConstantAddress getAddrOfDeclareTargetVar(const VarDecl *VD);
 
   /// Emit a code for initialization of threadprivate variable. It emits
   /// a call to runtime library which adds initial value to the newly created
