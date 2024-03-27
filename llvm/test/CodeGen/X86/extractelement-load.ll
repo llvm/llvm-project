@@ -76,11 +76,9 @@ bb:
 define i64 @t4(ptr %a) {
 ; X86-SSE2-LABEL: t4:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movdqa (%eax), %xmm0
-; X86-SSE2-NEXT:    movd %xmm0, %eax
-; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X86-SSE2-NEXT:    movd %xmm0, %edx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    movl (%ecx), %eax
+; X86-SSE2-NEXT:    movl 4(%ecx), %edx
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-LABEL: t4:
@@ -289,24 +287,15 @@ define i32 @PR85419(ptr %p0) {
 ; X86-SSE2-NEXT:  .LBB8_2:
 ; X86-SSE2-NEXT:    retl
 ;
-; X64-SSSE3-LABEL: PR85419:
-; X64-SSSE3:       # %bb.0:
-; X64-SSSE3-NEXT:    xorl %ecx, %ecx
-; X64-SSSE3-NEXT:    cmpq $0, (%rdi)
-; X64-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = mem[2,3,2,3]
-; X64-SSSE3-NEXT:    movd %xmm0, %eax
-; X64-SSSE3-NEXT:    cmovel %ecx, %eax
-; X64-SSSE3-NEXT:    retq
-;
-; X64-AVX-LABEL: PR85419:
-; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    xorl %eax, %eax
-; X64-AVX-NEXT:    cmpq $0, (%rdi)
-; X64-AVX-NEXT:    je .LBB8_2
-; X64-AVX-NEXT:  # %bb.1:
-; X64-AVX-NEXT:    movl 8(%rdi), %eax
-; X64-AVX-NEXT:  .LBB8_2:
-; X64-AVX-NEXT:    retq
+; X64-LABEL: PR85419:
+; X64:       # %bb.0:
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpq $0, (%rdi)
+; X64-NEXT:    je .LBB8_2
+; X64-NEXT:  # %bb.1:
+; X64-NEXT:    movl 8(%rdi), %eax
+; X64-NEXT:  .LBB8_2:
+; X64-NEXT:    retq
   %load = load <2 x i64>, ptr %p0, align 16
   %vecext.i = extractelement <2 x i64> %load, i64 0
   %cmp = icmp eq i64 %vecext.i, 0
