@@ -18,6 +18,7 @@
 #include "local_cache.h"
 #include "mem_map.h"
 #include "memtag.h"
+#include "mutex.h"
 #include "options.h"
 #include "quarantine.h"
 #include "report.h"
@@ -1547,6 +1548,8 @@ private:
   }
 
   void initRingBufferMaybe() {
+    static HybridMutex RingBufferLock;
+    ScopedLock L(RingBufferLock);
     if (getRingBuffer() != nullptr)
       return;
 
@@ -1598,19 +1601,14 @@ private:
     RB->StackDepotSize = StackDepotSize;
     RB->RawStackDepotMap = DepotMap;
 
-    // If multiple threads try to initialize at the same time, let one thread
-    // win and throw away the work done in the other threads. Since this
-    // path is only meant for debugging, a race that results in work being
-    // discarded should not matter.
-    uptr EmptyPtr = 0;
-    if (!atomic_compare_exchange_strong(&RingBufferAddress, &EmptyPtr,
-                                        reinterpret_cast<uptr>(RB),
-                                        memory_order_acquire)) {
-      unmapRingBuffer(RB);
-    }
+    atomic_store(&RingBufferAddress, reinterpret_cast<uptr>(RB),
+                 memory_order_release);
   }
 
-  void unmapRingBuffer(AllocationRingBuffer *RB) {
+  void unmapRingBuffer() {
+    AllocationRingBuffer *RB = getRingBuffer();
+    if (RB == nullptr)
+      return;
     // N.B. because RawStackDepotMap is part of RawRingBufferMap, the order
     // is very important.
     RB->RawStackDepotMap.unmap(RB->RawStackDepotMap.getBase(),
@@ -1621,13 +1619,6 @@ private:
     MemMapT RawRingBufferMap = RB->RawRingBufferMap;
     RawRingBufferMap.unmap(RawRingBufferMap.getBase(),
                            RawRingBufferMap.getCapacity());
-  }
-
-  void unmapRingBuffer() {
-    AllocationRingBuffer *RB = getRingBuffer();
-    if (RB == nullptr)
-      return;
-    unmapRingBuffer(RB);
     atomic_store(&RingBufferAddress, 0, memory_order_release);
   }
 

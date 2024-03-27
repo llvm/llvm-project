@@ -871,82 +871,82 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferDefaultDisabled) {
   // The RingBuffer is not initialized until tracking is enabled for the
   // first time.
   auto *Allocator = this->Allocator.get();
-  ASSERT_EQ(0u, Allocator->getRingBufferSize());
-  ASSERT_EQ(nullptr, Allocator->getRingBufferAddress());
+  EXPECT_EQ(0u, Allocator->getRingBufferSize());
+  EXPECT_EQ(nullptr, Allocator->getRingBufferAddress());
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferInitOnce) {
   auto *Allocator = this->Allocator.get();
   Allocator->setTrackAllocationStacks(true);
 
-  auto Size = Allocator->getRingBufferSize();
-  ASSERT_GT(Size, 0u);
-  auto *Addr = Allocator->getRingBufferAddress();
-  EXPECT_NE(nullptr, Addr);
+  auto RingBufferSize = Allocator->getRingBufferSize();
+  ASSERT_GT(RingBufferSize, 0u);
+  auto *RingBufferAddress = Allocator->getRingBufferAddress();
+  EXPECT_NE(nullptr, RingBufferAddress);
 
   // Enable tracking again to verify that the initialization only happens once.
   Allocator->setTrackAllocationStacks(true);
-  ASSERT_EQ(Size, Allocator->getRingBufferSize());
-  EXPECT_EQ(Addr, Allocator->getRingBufferAddress());
+  ASSERT_EQ(RingBufferSize, Allocator->getRingBufferSize());
+  EXPECT_EQ(RingBufferAddress, Allocator->getRingBufferAddress());
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferSize) {
   auto *Allocator = this->Allocator.get();
   Allocator->setTrackAllocationStacks(true);
 
-  auto Size = Allocator->getRingBufferSize();
-  ASSERT_GT(Size, 0u);
-  EXPECT_EQ(Allocator->getRingBufferAddress()[Size - 1], '\0');
+  auto RingBufferSize = Allocator->getRingBufferSize();
+  ASSERT_GT(RingBufferSize, 0u);
+  EXPECT_EQ(Allocator->getRingBufferAddress()[RingBufferSize - 1], '\0');
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferAddress) {
   auto *Allocator = this->Allocator.get();
   Allocator->setTrackAllocationStacks(true);
 
-  auto *Addr = Allocator->getRingBufferAddress();
-  EXPECT_NE(Addr, nullptr);
-  EXPECT_EQ(Addr, Allocator->getRingBufferAddress());
+  auto *RingBufferAddress = Allocator->getRingBufferAddress();
+  EXPECT_NE(RingBufferAddress, nullptr);
+  EXPECT_EQ(RingBufferAddress, Allocator->getRingBufferAddress());
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotDefaultDisabled) {
   // The StackDepot is not initialized until tracking is enabled for the
   // first time.
   auto *Allocator = this->Allocator.get();
-  ASSERT_EQ(0u, Allocator->getStackDepotSize());
-  ASSERT_EQ(nullptr, Allocator->getStackDepotAddress());
+  EXPECT_EQ(0u, Allocator->getStackDepotSize());
+  EXPECT_EQ(nullptr, Allocator->getStackDepotAddress());
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotInitOnce) {
   auto *Allocator = this->Allocator.get();
   Allocator->setTrackAllocationStacks(true);
 
-  auto Size = Allocator->getStackDepotSize();
-  ASSERT_GT(Size, 0u);
-  auto *Addr = Allocator->getStackDepotAddress();
-  EXPECT_NE(nullptr, Addr);
+  auto StackDepotSize = Allocator->getStackDepotSize();
+  EXPECT_GT(StackDepotSize, 0u);
+  auto *StackDepotAddress = Allocator->getStackDepotAddress();
+  EXPECT_NE(nullptr, StackDepotAddress);
 
   // Enable tracking again to verify that the initialization only happens once.
   Allocator->setTrackAllocationStacks(true);
-  ASSERT_EQ(Size, Allocator->getStackDepotSize());
-  EXPECT_EQ(Addr, Allocator->getStackDepotAddress());
+  EXPECT_EQ(StackDepotSize, Allocator->getStackDepotSize());
+  EXPECT_EQ(StackDepotAddress, Allocator->getStackDepotAddress());
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotSize) {
   auto *Allocator = this->Allocator.get();
   Allocator->setTrackAllocationStacks(true);
 
-  auto Size = Allocator->getStackDepotSize();
-  ASSERT_GT(Size, 0u);
-  EXPECT_EQ(Allocator->getStackDepotAddress()[Size - 1], '\0');
+  auto StackDepotSize = Allocator->getStackDepotSize();
+  EXPECT_GT(StackDepotSize, 0u);
+  EXPECT_EQ(Allocator->getStackDepotAddress()[StackDepotSize - 1], '\0');
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotAddress) {
   auto *Allocator = this->Allocator.get();
   Allocator->setTrackAllocationStacks(true);
 
-  auto *Addr = Allocator->getStackDepotAddress();
-  EXPECT_NE(Addr, nullptr);
-  EXPECT_EQ(Addr, Allocator->getStackDepotAddress());
+  auto *StackDepotAddress = Allocator->getStackDepotAddress();
+  EXPECT_NE(StackDepotAddress, nullptr);
+  EXPECT_EQ(StackDepotAddress, Allocator->getStackDepotAddress());
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepot) {
