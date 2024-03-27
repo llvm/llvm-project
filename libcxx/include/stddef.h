@@ -7,18 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__need_ptrdiff_t) || defined(__need_size_t) || defined(__need_wchar_t) || defined(__need_NULL) ||          \
-    defined(__need_wint_t)
-
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    pragma GCC system_header
-#  endif
-
-#  include_next <stddef.h>
-
-#elif !defined(_LIBCPP_STDDEF_H)
-#  define _LIBCPP_STDDEF_H
-
 /*
     stddef.h synopsis
 
@@ -36,14 +24,17 @@ Types:
 
 */
 
-#  include <__config>
+#include <__config>
+
+// Note: This include is outside of header guards because we sometimes get included multiple times
+//       with different defines and the underlying <stddef.h> will know how to deal with that.
+#include_next <stddef.h>
+
+#ifndef _LIBCPP_STDDEF_H
+#  define _LIBCPP_STDDEF_H
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
-#  endif
-
-#  if __has_include_next(<stddef.h>)
-#    include_next <stddef.h>
 #  endif
 
 #  ifdef __cplusplus
