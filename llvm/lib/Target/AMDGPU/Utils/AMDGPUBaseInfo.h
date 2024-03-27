@@ -34,10 +34,6 @@ class StringRef;
 class Triple;
 class raw_ostream;
 
-namespace amdhsa {
-struct kernel_descriptor_t;
-}
-
 namespace AMDGPU {
 
 struct IsaVersion;
@@ -854,9 +850,6 @@ unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc);
 
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
                                const MCSubtargetInfo *STI);
-
-amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
-    const MCSubtargetInfo *STI);
 
 bool isGroupSegment(const GlobalValue *GV);
 bool isGlobalSegment(const GlobalValue *GV);
