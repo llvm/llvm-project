@@ -67,6 +67,16 @@ class PALUVVNoVm<bits<6> funct6, RISCVVFormat opv, string opcodestr>
   let Inst{6-0} = OPC_OP_P.Value;
 }
 
+// op vd, vs2, vs1
+class PALUVVNoVmTernary<bits<6> funct6, RISCVVFormat opv, string opcodestr>
+    : RVInstVV<funct6, opv, (outs VR:$vd_wb),
+               (ins VR:$vd, VR:$vs2, VR:$vs1),
+               opcodestr, "$vd, $vs2, $vs1"> {
+  let Constraints = "$vd = $vd_wb";
+  let vm = 1;
+  let Inst{6-0} = OPC_OP_P.Value;
+}
+
 // op vd, vs2, imm
 class PALUVINoVm<bits<6> funct6, string opcodestr, Operand optype>
     : VALUVINoVm<funct6, opcodestr, optype> {
@@ -74,18 +84,34 @@ class PALUVINoVm<bits<6> funct6, string opcodestr, Operand optype>
   let Inst{14-12} = OPMVV.Value;
 }
 
-// op vd, vs2 (use vs1 as instruction encoding)
-class PALUVs2NoVm<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, string opcodestr>
-    : VALUVs2NoVm<funct6, vs1, opv, opcodestr> {
+// op vd, vs2, imm where vd is also a source regardless of tail policy
+class PALUVINoVmBinary<bits<6> funct6, string opcodestr, Operand optype>
+    : RVInstIVI<funct6, (outs VR:$vd_wb),
+                (ins VR:$vd, VR:$vs2, optype:$imm),
+                opcodestr, "$vd, $vs2, $imm"> {
+  let Constraints = "$vd = $vd_wb";
+  let vm = 1;
+  let Inst{6-0} = OPC_OP_P.Value;
+  let Inst{14-12} = OPMVV.Value;
+}
+
+// op vd, vs2 (use vs1 as instruction encoding) where vd is also a source
+// regardless of tail policy
+class PALUVs2NoVmBinary<bits<6> funct6, bits<5> vs1, RISCVVFormat opv,
+                        string opcodestr>
+    : RVInstV<funct6, vs1, opv, (outs VR:$vd_wb), (ins VR:$vd, VR:$vs2),
+              opcodestr, "$vd, $vs2"> {
+  let Constraints = "$vd = $vd_wb";
+  let vm = 1;
   let Inst{6-0} = OPC_OP_P.Value;
 }
 
 multiclass VAES_MV_V_S<bits<6> funct6_vv, bits<6> funct6_vs, bits<5> vs1,
                          RISCVVFormat opv, string opcodestr> {
   let RVVConstraint = NoConstraint in
-  def NAME # _VV : PALUVs2NoVm<funct6_vv, vs1, opv, opcodestr # ".vv">;
+  def NAME # _VV : PALUVs2NoVmBinary<funct6_vv, vs1, opv, opcodestr # ".vv">;
   let RVVConstraint = VS2Constraint in
-  def NAME # _VS : PALUVs2NoVm<funct6_vs, vs1, opv, opcodestr # ".vs">;
+  def NAME # _VS : PALUVs2NoVmBinary<funct6_vs, vs1, opv, opcodestr # ".vs">;
 }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
@@ -116,14 +142,14 @@ let Predicates = [HasStdExtZvkb] in {
 } // Predicates = [HasStdExtZvkb]
 
 let Predicates = [HasStdExtZvkg], RVVConstraint = NoConstraint in {
-  def VGHSH_VV : PALUVVNoVm<0b101100, OPMVV, "vghsh.vv">;
-  def VGMUL_VV : PALUVs2NoVm<0b101000, 0b10001, OPMVV, "vgmul.vv">;
+  def VGHSH_VV : PALUVVNoVmTernary<0b101100, OPMVV, "vghsh.vv">;
+  def VGMUL_VV : PALUVs2NoVmBinary<0b101000, 0b10001, OPMVV, "vgmul.vv">;
 } // Predicates = [HasStdExtZvkg]
 
 let Predicates = [HasStdExtZvknhaOrZvknhb], RVVConstraint = Sha2Constraint in {
-  def VSHA2CH_VV : PALUVVNoVm<0b101110, OPMVV, "vsha2ch.vv">;
-  def VSHA2CL_VV : PALUVVNoVm<0b101111, OPMVV, "vsha2cl.vv">;
-  def VSHA2MS_VV : PALUVVNoVm<0b101101, OPMVV, "vsha2ms.vv">;
+  def VSHA2CH_VV : PALUVVNoVmTernary<0b101110, OPMVV, "vsha2ch.vv">;
+  def VSHA2CL_VV : PALUVVNoVmTernary<0b101111, OPMVV, "vsha2cl.vv">;
+  def VSHA2MS_VV : PALUVVNoVmTernary<0b101101, OPMVV, "vsha2ms.vv">;
 } // Predicates = [HasStdExtZvknhaOrZvknhb]
 
 let Predicates = [HasStdExtZvkned]in {
@@ -132,9 +158,9 @@ let Predicates = [HasStdExtZvkned]in {
   defm VAESEF     : VAES_MV_V_S<0b101000, 0b101001, 0b00011, OPMVV, "vaesef">;
   defm VAESEM     : VAES_MV_V_S<0b101000, 0b101001, 0b00010, OPMVV, "vaesem">;
   def  VAESKF1_VI : PALUVINoVm<0b100010, "vaeskf1.vi", uimm5>;
-  def  VAESKF2_VI : PALUVINoVm<0b101010, "vaeskf2.vi", uimm5>;
+  def  VAESKF2_VI : PALUVINoVmBinary<0b101010, "vaeskf2.vi", uimm5>;
   let RVVConstraint = VS2Constraint in
-  def  VAESZ_VS   : PALUVs2NoVm<0b101001, 0b00111, OPMVV, "vaesz.vs">;
+  def  VAESZ_VS   : PALUVs2NoVmBinary<0b101001, 0b00111, OPMVV, "vaesz.vs">;
 } // Predicates = [HasStdExtZvkned]
 
 let Predicates = [HasStdExtZvksed] in {
@@ -144,7 +170,7 @@ let Predicates = [HasStdExtZvksed] in {
 } // Predicates = [HasStdExtZvksed]
 
 let Predicates = [HasStdExtZvksh], RVVConstraint = VS2Constraint in {
-  def VSM3C_VI  : PALUVINoVm<0b101011, "vsm3c.vi", uimm5>;
+  def VSM3C_VI  : PALUVINoVmBinary<0b101011, "vsm3c.vi", uimm5>;
   def VSM3ME_VV : PALUVVNoVm<0b100000, OPMVV, "vsm3me.vv">;
 } // Predicates = [HasStdExtZvksh]
 
