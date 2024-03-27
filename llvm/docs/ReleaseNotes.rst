@@ -76,6 +76,7 @@ Changes to the AMDGPU Backend
 
 Changes to the ARM Backend
 --------------------------
+* FEAT_F32MM is no longer activated by default when using `+sve` on v8.6-A or greater. The feature is still available and can be used by adding `+f32mm` to the command line options.
 
 Changes to the AVR Backend
 --------------------------
