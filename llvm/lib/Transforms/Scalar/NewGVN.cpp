@@ -1727,8 +1727,7 @@ bool NewGVN::isCycleFree(const Instruction *I) const {
 
 // Evaluate PHI nodes symbolically and create an expression result.
 const Expression *
-NewGVN::performSymbolicPHIEvaluation(ArrayRef<ValPair> PHIOps,
-                                     Instruction *I,
+NewGVN::performSymbolicPHIEvaluation(ArrayRef<ValPair> PHIOps, Instruction *I,
                                      BasicBlock *PHIBlock) const {
   // True if one of the incoming phi edges is a backedge.
   bool HasBackedge = false;
@@ -3253,7 +3252,6 @@ void NewGVN::verifyMemoryCongruency() const {
         return ReachableEdges.count(
                    {FirstMP->getIncomingBlock(U), FirstMP->getBlock()}) &&
                isa<MemoryDef>(U);
-
       };
       // All arguments should in the same class, ignoring unreachable arguments
       auto FilteredPhiArgs =
@@ -3737,48 +3735,6 @@ void NewGVN::replaceInstruction(Instruction *I, Value *V) {
   markInstructionForDeletion(I);
 }
 
-namespace {
-
-// This is a stack that contains both the value and dfs info of where
-// that value is valid.
-class ValueDFSStack {
-public:
-  Value *back() const { return ValueStack.back(); }
-  std::pair<int, int> dfs_back() const { return DFSStack.back(); }
-
-  void push_back(Value *V, int DFSIn, int DFSOut) {
-    ValueStack.emplace_back(V);
-    DFSStack.emplace_back(DFSIn, DFSOut);
-  }
-
-  bool empty() const { return DFSStack.empty(); }
-
-  bool isInScope(int DFSIn, int DFSOut) const {
-    if (empty())
-      return false;
-    return DFSIn >= DFSStack.back().first && DFSOut <= DFSStack.back().second;
-  }
-
-  void popUntilDFSScope(int DFSIn, int DFSOut) {
-
-    // These two should always be in sync at this point.
-    assert(ValueStack.size() == DFSStack.size() &&
-           "Mismatch between ValueStack and DFSStack");
-    while (
-        !DFSStack.empty() &&
-        !(DFSIn >= DFSStack.back().first && DFSOut <= DFSStack.back().second)) {
-      DFSStack.pop_back();
-      ValueStack.pop_back();
-    }
-  }
-
-private:
-  SmallVector<Value *, 8> ValueStack;
-  SmallVector<std::pair<int, int>, 8> DFSStack;
-};
-
-} // end anonymous namespace
-
 // Given an expression, get the congruence class for it.
 CongruenceClass *NewGVN::getClassForExpression(const Expression *E) const {
   if (auto *VE = dyn_cast<VariableExpression>(E))
@@ -3941,11 +3897,8 @@ bool NewGVN::eliminateInstructions(Function &F) {
     } else {
       // If this is a singleton, we can skip it.
       if (CC->size() != 1 || RealToTemp.count(Leader)) {
-        // This is a stack because equality replacement/etc may place
-        // constants in the middle of the member list, and we want to use
-        // those constant values in preference to the current leader, over
-        // the scope of those constants.
-        ValueDFSStack EliminationStack;
+        Value *Leader = nullptr;
+        int LeaderDFSIn, LeaderDFSOut;
 
         // Convert the members to DFS ordered sets and then merge them.
         SmallVector<ValueDFS, 8> DFSOrderedSet;
@@ -3979,41 +3932,31 @@ bool NewGVN::eliminateInstructions(Function &F) {
             NumGVNPHIOfOpsEliminations++;
           }
 
-          if (EliminationStack.empty()) {
-            LLVM_DEBUG(dbgs() << "Elimination Stack is empty\n");
+          if (!Leader) {
+            LLVM_DEBUG(dbgs() << "No current dominating leader\n");
           } else {
-            LLVM_DEBUG(dbgs() << "Elimination Stack Top DFS numbers are ("
-                              << EliminationStack.dfs_back().first << ","
-                              << EliminationStack.dfs_back().second << ")\n");
+            LLVM_DEBUG(dbgs() << "Dominating leader DFS numbers are ("
+                              << LeaderDFSIn << "," << LeaderDFSOut << ")\n");
           }
 
           LLVM_DEBUG(dbgs() << "Current DFS numbers are (" << MemberDFSIn << ","
                             << MemberDFSOut << ")\n");
-          // First, we see if we are out of scope or empty.  If so,
-          // and there equivalences, we try to replace the top of
-          // stack with equivalences (if it's on the stack, it must
-          // not have been eliminated yet).
-          // Then we synchronize to our current scope, by
-          // popping until we are back within a DFS scope that
-          // dominates the current member.
-          // Then, what happens depends on a few factors
-          // If the stack is now empty, we need to push
-          // If we have a constant or a local equivalence we want to
-          // start using, we also push.
-          // Otherwise, we walk along, processing members who are
-          // dominated by this scope, and eliminate them.
-          bool ShouldPush = Def && EliminationStack.empty();
-          bool OutOfScope =
-              !EliminationStack.isInScope(MemberDFSIn, MemberDFSOut);
-
-          if (OutOfScope || ShouldPush) {
-            // Sync to our current scope.
-            EliminationStack.popUntilDFSScope(MemberDFSIn, MemberDFSOut);
-            bool ShouldPush = Def && EliminationStack.empty();
-            if (ShouldPush) {
-              EliminationStack.push_back(Def, MemberDFSIn, MemberDFSOut);
-            }
+          // If the instruction we are trying to eliminate isn't dominated by
+          // the current leader then we
+          // know that there are no more instructions dominated by our current
+          // leader, this is because we are processing in DFS order.
+          // Therefore the instruction does not have a dominating leader
+          // and can't be replaced. However this instruction might be a
+          // dominating leader for some other instructions so we set it as our
+          // dominating leader.
+          if (!Leader || MemberDFSIn < LeaderDFSIn ||
+              LeaderDFSOut < MemberDFSOut) {
+            Leader = Def;
+            LeaderDFSIn = MemberDFSIn;
+            LeaderDFSOut = MemberDFSOut;
           }
+
+          assert(Leader && "Should have a leader");
 
           // Skip the Def's, we only want to eliminate on their uses.  But mark
           // dominated defs as dead.
@@ -4031,16 +3974,13 @@ bool NewGVN::eliminateInstructions(Function &F) {
             // stored values here. If the stored value is really dead, it will
             // still be marked for deletion when we process it in its own class.
             auto *DefI = dyn_cast<Instruction>(Def);
-            if (!EliminationStack.empty() && DefI && !FromStore) {
-              Value *DominatingLeader = EliminationStack.back();
-              if (DominatingLeader != Def) {
-                // Even if the instruction is removed, we still need to update
-                // flags/metadata due to downstreams users of the leader.
-                if (!match(DefI, m_Intrinsic<Intrinsic::ssa_copy>()))
-                  patchReplacementInstruction(DefI, DominatingLeader);
+            if (Leader != Def && DefI && !FromStore) {
+              // Even if the instruction is removed, we still need to update
+              // flags/metadata due to downstreams users of the leader.
+              if (!match(DefI, m_Intrinsic<Intrinsic::ssa_copy>()))
+                patchReplacementInstruction(DefI, Leader);
 
-                markInstructionForDeletion(DefI);
-              }
+              markInstructionForDeletion(DefI);
             }
             continue;
           }
@@ -4064,39 +4004,31 @@ bool NewGVN::eliminateInstructions(Function &F) {
             }
           }
 
-          // If we get to this point, and the stack is empty we must have a use
-          // with nothing we can use to eliminate this use, so just skip it.
-          if (EliminationStack.empty())
-            continue;
-
-          Value *DominatingLeader = EliminationStack.back();
-
-          auto *II = dyn_cast<IntrinsicInst>(DominatingLeader);
+          auto *II = dyn_cast<IntrinsicInst>(Leader);
           bool isSSACopy = II && II->getIntrinsicID() == Intrinsic::ssa_copy;
           if (isSSACopy)
-            DominatingLeader = II->getOperand(0);
+            Leader = II->getOperand(0);
 
           // Don't replace our existing users with ourselves.
-          if (U->get() == DominatingLeader)
+          if (U->get() == Leader)
             continue;
-          LLVM_DEBUG(dbgs()
-                     << "Found replacement " << *DominatingLeader << " for "
-                     << *U->get() << " in " << *(U->getUser()) << "\n");
+          LLVM_DEBUG(dbgs() << "Found replacement " << *Leader << " for "
+                            << *U->get() << " in " << *(U->getUser()) << "\n");
 
           // If we replaced something in an instruction, handle the patching of
           // metadata.  Skip this if we are replacing predicateinfo with its
           // original operand, as we already know we can just drop it.
           auto *ReplacedInst = cast<Instruction>(U->get());
           auto *PI = PredInfo->getPredicateInfoFor(ReplacedInst);
-          if (!PI || DominatingLeader != PI->OriginalOp)
-            patchReplacementInstruction(ReplacedInst, DominatingLeader);
-          U->set(DominatingLeader);
+          if (!PI || Leader != PI->OriginalOp)
+            patchReplacementInstruction(ReplacedInst, Leader);
+          U->set(Leader);
           // This is now a use of the dominating leader, which means if the
           // dominating leader was dead, it's now live!
-          auto &LeaderUseCount = UseCounts[DominatingLeader];
+          auto &LeaderUseCount = UseCounts[Leader];
           // It's about to be alive again.
-          if (LeaderUseCount == 0 && isa<Instruction>(DominatingLeader))
-            ProbablyDead.erase(cast<Instruction>(DominatingLeader));
+          if (LeaderUseCount == 0 && isa<Instruction>(Leader))
+            ProbablyDead.erase(cast<Instruction>(Leader));
           // For copy instructions, we use their operand as a leader,
           // which means we remove a user of the copy and it may become dead.
           if (isSSACopy) {
@@ -4131,27 +4063,30 @@ bool NewGVN::eliminateInstructions(Function &F) {
     if (CC->getStoreCount() > 0) {
       convertClassToLoadsAndStores(*CC, PossibleDeadStores);
       llvm::sort(PossibleDeadStores);
-      ValueDFSStack EliminationStack;
+
+      Value *Leader = nullptr;
+      int LeaderDFSIn, LeaderDFSOut;
       for (auto &VD : PossibleDeadStores) {
         int MemberDFSIn = VD.DFSIn;
         int MemberDFSOut = VD.DFSOut;
-        Instruction *Member = cast<Instruction>(VD.Def.getPointer());
-        if (EliminationStack.empty() ||
-            !EliminationStack.isInScope(MemberDFSIn, MemberDFSOut)) {
-          // Sync to our current scope.
-          EliminationStack.popUntilDFSScope(MemberDFSIn, MemberDFSOut);
-          if (EliminationStack.empty()) {
-            EliminationStack.push_back(Member, MemberDFSIn, MemberDFSOut);
-            continue;
-          }
+        Value *Def = VD.Def.getPointer();
+        Instruction *Member = cast<Instruction>(Def);
+
+        if (!Leader || MemberDFSIn < LeaderDFSIn ||
+            LeaderDFSOut < MemberDFSOut) {
+          Leader = Def;
+          LeaderDFSIn = MemberDFSIn;
+          LeaderDFSOut = MemberDFSOut;
+          continue;
         }
         // We already did load elimination, so nothing to do here.
         if (isa<LoadInst>(Member))
           continue;
-        assert(!EliminationStack.empty());
-        Instruction *Leader = cast<Instruction>(EliminationStack.back());
-        (void)Leader;
-        assert(DT->dominates(Leader->getParent(), Member->getParent()));
+        assert(Leader && "Should have a leader");
+
+        Instruction *ILeader = cast<Instruction>(Leader);
+        (void)ILeader;
+        assert(DT->dominates(ILeader->getParent(), Member->getParent()));
         // Member is dominater by Leader, and thus dead
         LLVM_DEBUG(dbgs() << "Marking dead store " << *Member
                           << " that is dominated by " << *Leader << "\n");
