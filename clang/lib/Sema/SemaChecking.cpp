@@ -5541,6 +5541,14 @@ bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall) {
                                   checkDoubleVector);
 }
 
+bool CheckUnsignedIntRepresentation(Sema *S, CallExpr *TheCall) {
+  auto checkAllUnsignedTypes = [](clang::QualType PassedType) -> bool {
+    return !PassedType->hasUnsignedIntegerRepresentation();
+  };
+  return CheckArgsTypesAreCorrect(S, TheCall, S->Context.UnsignedIntTy,
+                                  checkAllUnsignedTypes);
+}
+
 void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
                                 QualType ReturnType) {
   auto *VecTyA = TheCall->getArg(0)->getType()->getAs<VectorType>();
@@ -5628,6 +5636,11 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   // Note these are llvm builtins that we want to catch invalid intrinsic
   // generation. Normal handling of these builitns will occur elsewhere.
+  case Builtin::BI__builtin_elementwise_bitreverse: {
+    if (CheckUnsignedIntRepresentation(this, TheCall))
+      return true;
+    break;
+  }
   case Builtin::BI__builtin_elementwise_cos:
   case Builtin::BI__builtin_elementwise_sin:
   case Builtin::BI__builtin_elementwise_log:
