@@ -220,6 +220,24 @@ getFoldingRanges(const std::string &Code, bool LineFoldingOnly) {
   auto EndPosition = [&](const pseudo::Token &T) {
     return offsetToPosition(Code, EndOffset(T));
   };
+
+  // Preprocessor directives
+  auto PPRanges = pseudo::pairDirectiveRanges(DirectiveStructure, OrigStream);
+  for (const auto &R : PPRanges) {
+    auto BTok = OrigStream.tokens()[R.Begin];
+    auto ETok = OrigStream.tokens()[R.End];
+    if (ETok.Kind == tok::eof)
+      continue;
+    if (BTok.Line >= ETok.Line)
+      continue;
+
+    Position Start = EndPosition(BTok);
+    Position End = StartPosition(ETok);
+    if (LineFoldingOnly)
+      End.line--;
+    AddFoldingRange(Start, End, FoldingRange::REGION_KIND);
+  }
+
   auto Tokens = ParseableStream.tokens();
   // Brackets.
   for (const auto &Tok : Tokens) {
