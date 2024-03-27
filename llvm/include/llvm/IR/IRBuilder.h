@@ -221,6 +221,12 @@ public:
     AddOrRemoveMetadataToCopy(LLVMContext::MD_dbg, L.getAsMDNode());
   }
 
+  /// Set nosanitize metadata.
+  void SetNoSanitizeMetadata() {
+    AddOrRemoveMetadataToCopy(llvm::LLVMContext::MD_nosanitize,
+                              llvm::MDNode::get(getContext(), std::nullopt));
+  }
+
   /// Collect metadata with IDs \p MetadataKinds from \p Src which should be
   /// added to all created instructions. Entries present in MedataDataToCopy but
   /// not on \p Src will be dropped from MetadataToCopy.
