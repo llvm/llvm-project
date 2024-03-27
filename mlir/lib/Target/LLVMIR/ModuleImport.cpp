@@ -130,10 +130,10 @@ static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
   ArrayRef<llvm::Value *> llvmOperands(operands);
 
   // Convert all instructions that provide an MLIR builder.
-#include "mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc"
   if (importIface.isConvertibleInstruction(inst->getOpcode()))
     return importIface.convertInstruction(odsBuilder, inst, llvmOperands,
                                           moduleImport);
+#include "mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc"
   return failure();
 }
 
