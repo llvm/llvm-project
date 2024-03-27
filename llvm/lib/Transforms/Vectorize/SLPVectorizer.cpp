@@ -11926,7 +11926,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         Builder.SetCurrentDebugLocation(PH->getDebugLoc());
         Value *Vec = vectorizeOperand(E, I, /*PostponedPHIs=*/true);
         if (VecTy != Vec->getType()) {
-          assert((getOperandEntry(E, I)->State == TreeEntry::NeedToGather ||
+          assert((It != MinBWs.end() ||
+                  getOperandEntry(E, I)->State == TreeEntry::NeedToGather ||
                   MinBWs.contains(getOperandEntry(E, I))) &&
                  "Expected item in MinBWs.");
           Vec = Builder.CreateIntCast(Vec, VecTy, GetOperandSignedness(I));
@@ -14092,12 +14093,14 @@ bool BoUpSLP::collectValuesToDemote(
       MaxDepthLevel = 1;
     if (IsProfitableToDemoteRoot)
       IsProfitableToDemote = true;
+    (void)IsPotentiallyTruncated(V, BitWidth);
     break;
   case Instruction::ZExt:
   case Instruction::SExt:
     if (!IsTruncRoot)
       MaxDepthLevel = 1;
     IsProfitableToDemote = true;
+    (void)IsPotentiallyTruncated(V, BitWidth);
     break;
 
   // We can demote certain binary operations if we can demote both of their

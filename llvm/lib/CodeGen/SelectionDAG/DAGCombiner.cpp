@@ -2493,7 +2493,8 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
   return SelectOp;
 }
 
-static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, SelectionDAG &DAG) {
+static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, const SDLoc &DL,
+                                         SelectionDAG &DAG) {
   assert((N->getOpcode() == ISD::ADD || N->getOpcode() == ISD::SUB) &&
          "Expecting add or sub");
 
@@ -2525,7 +2526,6 @@ static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, SelectionDAG &DAG) {
   // add (zext i1 (seteq (X & 1), 0)), C --> sub C+1, (zext (X & 1))
   // sub C, (zext i1 (seteq (X & 1), 0)) --> add C-1, (zext (X & 1))
   EVT VT = C.getValueType();
-  SDLoc DL(N);
   SDValue LowBit = DAG.getZExtOrTrunc(SetCC.getOperand(0), DL, VT);
   SDValue C1 = IsAdd ? DAG.getConstant(CN->getAPIntValue() + 1, DL, VT) :
                        DAG.getConstant(CN->getAPIntValue() - 1, DL, VT);
@@ -2555,7 +2555,8 @@ SDValue DAGCombiner::foldSubToAvg(SDNode *N, const SDLoc &DL) {
 
 /// Try to fold a 'not' shifted sign-bit with add/sub with constant operand into
 /// a shift and add with a different constant.
-static SDValue foldAddSubOfSignBit(SDNode *N, SelectionDAG &DAG) {
+static SDValue foldAddSubOfSignBit(SDNode *N, const SDLoc &DL,
+                                   SelectionDAG &DAG) {
   assert((N->getOpcode() == ISD::ADD || N->getOpcode() == ISD::SUB) &&
          "Expecting add or sub");
 
@@ -2583,7 +2584,6 @@ static SDValue foldAddSubOfSignBit(SDNode *N, SelectionDAG &DAG) {
   // Eliminate the 'not' by adjusting the shift and add/sub constant:
   // add (srl (not X), 31), C --> add (sra X, 31), (C + 1)
   // sub C, (srl (not X), 31) --> add (srl X, 31), (C - 1)
-  SDLoc DL(N);
   if (SDValue NewC = DAG.FoldConstantArithmetic(
           IsAdd ? ISD::ADD : ISD::SUB, DL, VT,
           {ConstantOp, DAG.getConstant(1, DL, VT)})) {
@@ -2875,10 +2875,10 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   if (SDValue Combined = visitADDLike(N))
     return Combined;
 
-  if (SDValue V = foldAddSubBoolOfMaskedVal(N, DAG))
+  if (SDValue V = foldAddSubBoolOfMaskedVal(N, DL, DAG))
     return V;
 
-  if (SDValue V = foldAddSubOfSignBit(N, DAG))
+  if (SDValue V = foldAddSubOfSignBit(N, DL, DAG))
     return V;
 
   // Try to match AVGFLOOR fixedwidth pattern
@@ -3874,17 +3874,17 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   if (N1.isUndef())
     return N1;
 
-  if (SDValue V = foldAddSubBoolOfMaskedVal(N, DAG))
+  if (SDValue V = foldAddSubBoolOfMaskedVal(N, DL, DAG))
     return V;
 
-  if (SDValue V = foldAddSubOfSignBit(N, DAG))
+  if (SDValue V = foldAddSubOfSignBit(N, DL, DAG))
     return V;
 
   // Try to match AVGCEIL fixedwidth pattern
   if (SDValue V = foldSubToAvg(N, DL))
     return V;
 
-  if (SDValue V = foldAddSubMasked1(false, N0, N1, DAG, SDLoc(N)))
+  if (SDValue V = foldAddSubMasked1(false, N0, N1, DAG, DL))
     return V;
 
   if (SDValue V = foldSubToUSubSat(VT, N, DL))
@@ -3949,7 +3949,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       if ((X0 == S0 && X1 == N1) || (X0 == N1 && X1 == S0))
         if (ConstantSDNode *C = isConstOrConstSplat(N1.getOperand(1)))
           if (C->getAPIntValue() == (BitWidth - 1))
-            return DAG.getNode(ISD::ABS, SDLoc(N), VT, S0);
+            return DAG.getNode(ISD::ABS, DL, VT, S0);
     }
   }
 
