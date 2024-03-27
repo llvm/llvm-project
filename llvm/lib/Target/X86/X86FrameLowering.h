@@ -137,8 +137,9 @@ public:
   /// it is an ADD/SUB/LEA instruction it is deleted argument and the
   /// stack adjustment is returned as a positive value for ADD/LEA and
   /// a negative for SUB.
-  int mergeSPUpdates(MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
-                     bool doMergeWithPrevious) const;
+  int64_t mergeSPUpdates(MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator &MBBI,
+                         bool doMergeWithPrevious) const;
 
   /// Emit a series of instructions to increment / decrement the stack
   /// pointer by a constant value.

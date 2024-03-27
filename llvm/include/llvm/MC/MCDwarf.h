@@ -508,7 +508,7 @@ private:
   MCSymbol *Label;
   unsigned Register;
   union {
-    int Offset;
+    int64_t Offset;
     unsigned Register2;
   };
   unsigned AddressSpace = ~0u;
@@ -516,7 +516,7 @@ private:
   std::vector<char> Values;
   std::string Comment;
 
-  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int O, SMLoc Loc,
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int64_t O, SMLoc Loc,
                    StringRef V = "", StringRef Comment = "")
       : Operation(Op), Label(L), Register(R), Offset(O), Loc(Loc),
         Values(V.begin(), V.end()), Comment(Comment) {
@@ -528,7 +528,7 @@ private:
     assert(Op == OpRegister);
   }
 
-  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int O, unsigned AS,
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int64_t O, unsigned AS,
                    SMLoc Loc)
       : Operation(Op), Label(L), Register(R), Offset(O), AddressSpace(AS),
         Loc(Loc) {
@@ -538,8 +538,8 @@ private:
 public:
   /// .cfi_def_cfa defines a rule for computing CFA as: take address from
   /// Register and add Offset to it.
-  static MCCFIInstruction cfiDefCfa(MCSymbol *L, unsigned Register, int Offset,
-                                    SMLoc Loc = {}) {
+  static MCCFIInstruction cfiDefCfa(MCSymbol *L, unsigned Register,
+                                    int64_t Offset, SMLoc Loc = {}) {
     return MCCFIInstruction(OpDefCfa, L, Register, Offset, Loc);
   }
 
@@ -547,13 +547,13 @@ public:
   /// on Register will be used instead of the old one. Offset remains the same.
   static MCCFIInstruction createDefCfaRegister(MCSymbol *L, unsigned Register,
                                                SMLoc Loc = {}) {
-    return MCCFIInstruction(OpDefCfaRegister, L, Register, 0, Loc);
+    return MCCFIInstruction(OpDefCfaRegister, L, Register, INT64_C(0), Loc);
   }
 
   /// .cfi_def_cfa_offset modifies a rule for computing CFA. Register
   /// remains the same, but offset is new. Note that it is the absolute offset
   /// that will be added to a defined register to the compute CFA address.
-  static MCCFIInstruction cfiDefCfaOffset(MCSymbol *L, int Offset,
+  static MCCFIInstruction cfiDefCfaOffset(MCSymbol *L, int64_t Offset,
                                           SMLoc Loc = {}) {
     return MCCFIInstruction(OpDefCfaOffset, L, 0, Offset, Loc);
   }
@@ -561,7 +561,7 @@ public:
   /// .cfi_adjust_cfa_offset Same as .cfi_def_cfa_offset, but
   /// Offset is a relative value that is added/subtracted from the previous
   /// offset.
-  static MCCFIInstruction createAdjustCfaOffset(MCSymbol *L, int Adjustment,
+  static MCCFIInstruction createAdjustCfaOffset(MCSymbol *L, int64_t Adjustment,
                                                 SMLoc Loc = {}) {
     return MCCFIInstruction(OpAdjustCfaOffset, L, 0, Adjustment, Loc);
   }
@@ -581,7 +581,7 @@ public:
   /// .cfi_offset Previous value of Register is saved at offset Offset
   /// from CFA.
   static MCCFIInstruction createOffset(MCSymbol *L, unsigned Register,
-                                       int Offset, SMLoc Loc = {}) {
+                                       int64_t Offset, SMLoc Loc = {}) {
     return MCCFIInstruction(OpOffset, L, Register, Offset, Loc);
   }
 
@@ -589,7 +589,7 @@ public:
   /// Offset from the current CFA register. This is transformed to .cfi_offset
   /// using the known displacement of the CFA register from the CFA.
   static MCCFIInstruction createRelOffset(MCSymbol *L, unsigned Register,
-                                          int Offset, SMLoc Loc = {}) {
+                                          int64_t Offset, SMLoc Loc = {}) {
     return MCCFIInstruction(OpRelOffset, L, Register, Offset, Loc);
   }
 
@@ -602,12 +602,12 @@ public:
 
   /// .cfi_window_save SPARC register window is saved.
   static MCCFIInstruction createWindowSave(MCSymbol *L, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpWindowSave, L, 0, 0, Loc);
+    return MCCFIInstruction(OpWindowSave, L, 0, INT64_C(0), Loc);
   }
 
   /// .cfi_negate_ra_state AArch64 negate RA state.
   static MCCFIInstruction createNegateRAState(MCSymbol *L, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpNegateRAState, L, 0, 0, Loc);
+    return MCCFIInstruction(OpNegateRAState, L, 0, INT64_C(0), Loc);
   }
 
   /// .cfi_restore says that the rule for Register is now the same as it
@@ -615,31 +615,31 @@ public:
   /// by .cfi_startproc were executed.
   static MCCFIInstruction createRestore(MCSymbol *L, unsigned Register,
                                         SMLoc Loc = {}) {
-    return MCCFIInstruction(OpRestore, L, Register, 0, Loc);
+    return MCCFIInstruction(OpRestore, L, Register, INT64_C(0), Loc);
   }
 
   /// .cfi_undefined From now on the previous value of Register can't be
   /// restored anymore.
   static MCCFIInstruction createUndefined(MCSymbol *L, unsigned Register,
                                           SMLoc Loc = {}) {
-    return MCCFIInstruction(OpUndefined, L, Register, 0, Loc);
+    return MCCFIInstruction(OpUndefined, L, Register, INT64_C(0), Loc);
   }
 
   /// .cfi_same_value Current value of Register is the same as in the
   /// previous frame. I.e., no restoration is needed.
   static MCCFIInstruction createSameValue(MCSymbol *L, unsigned Register,
                                           SMLoc Loc = {}) {
-    return MCCFIInstruction(OpSameValue, L, Register, 0, Loc);
+    return MCCFIInstruction(OpSameValue, L, Register, INT64_C(0), Loc);
   }
 
   /// .cfi_remember_state Save all current rules for all registers.
   static MCCFIInstruction createRememberState(MCSymbol *L, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpRememberState, L, 0, 0, Loc);
+    return MCCFIInstruction(OpRememberState, L, 0, INT64_C(0), Loc);
   }
 
   /// .cfi_restore_state Restore the previously saved state.
   static MCCFIInstruction createRestoreState(MCSymbol *L, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpRestoreState, L, 0, 0, Loc);
+    return MCCFIInstruction(OpRestoreState, L, 0, INT64_C(0), Loc);
   }
 
   /// .cfi_escape Allows the user to add arbitrary bytes to the unwind
@@ -650,7 +650,7 @@ public:
   }
 
   /// A special wrapper for .cfi_escape that indicates GNU_ARGS_SIZE
-  static MCCFIInstruction createGnuArgsSize(MCSymbol *L, int Size,
+  static MCCFIInstruction createGnuArgsSize(MCSymbol *L, int64_t Size,
                                             SMLoc Loc = {}) {
     return MCCFIInstruction(OpGnuArgsSize, L, 0, Size, Loc);
   }
@@ -677,7 +677,7 @@ public:
     return AddressSpace;
   }
 
-  int getOffset() const {
+  int64_t getOffset() const {
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRelOffset || Operation == OpDefCfaOffset ||
            Operation == OpAdjustCfaOffset || Operation == OpGnuArgsSize ||
@@ -705,7 +705,7 @@ struct MCDwarfFrameInfo {
   unsigned CurrentCfaRegister = 0;
   unsigned PersonalityEncoding = 0;
   unsigned LsdaEncoding = 0;
-  uint32_t CompactUnwindEncoding = 0;
+  uint64_t CompactUnwindEncoding = 0;
   bool IsSignalFrame = false;
   bool IsSimple = false;
   unsigned RAReg = static_cast<unsigned>(INT_MAX);
