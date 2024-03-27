@@ -10,6 +10,12 @@
 /// This file declares the MCSectionGOFF class, which contains all of the
 /// necessary machine code sections for the GOFF file format.
 ///
+/// GOFF doesn't truly have sections in the way object file formats on unix
+/// such as ELF does, so MCSectionGOFF (more or less) represents a Class in GOFF.
+/// A GOFF Class is defined by a tuple of ESD symbols; specifically a SD symbol,
+/// an ED symbol, and PR or LD symbols. One of these symbols (PR or ED) must be
+/// the owner of a TXT record, which contains the actual contents of this Class.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_MC_MCSECTIONGOFF_H
@@ -36,23 +42,38 @@ class MCSectionGOFF final : public MCSection {
   /// reside within the Code CSECT.
   PPA2Offset,
 
-  /// B_IDRL - What is this section again?
+  /// B_IDRL - 
   B_IDRL,
 
   /// Other - All other sections.
   Other,
   };
+
 private:
   MCSection *Parent;
   const MCExpr *SubsectionId;
   GOFFSectionType Type;
+  GOFF::ESDTextStyle TextStyle = GOFF::ESD_TS_ByteOriented;
+  GOFF::ESDLoadingBehavior LoadBehavior = GOFF::ESD_LB_Initial;
 
   friend class MCContext;
   MCSectionGOFF(StringRef Name, SectionKind K, MCSection *P, const MCExpr *Sub)
       : MCSection(SV_GOFF, Name, K, nullptr), Parent(P), SubsectionId(Sub), Type(Other) {}
 
+  MCSectionGOFF(StringRef Name, SectionKind K, MCSection *P, const MCExpr *Sub, GOFF::ESDTextStyle TextStyle, GOFF::ESDLoadingBehavior LoadBehavior)
+      : MCSection(SV_GOFF, Name, K, nullptr), Parent(P), SubsectionId(Sub), Type(Other), 
+        TextStyle(TextStyle), LoadBehavior(LoadBehavior) {}
+
   MCSectionGOFF(StringRef Name, SectionKind K, MCSection *P, const MCExpr *Sub, GOFFSectionType Type)
-      : MCSection(SV_GOFF, Name, K, nullptr), Parent(P), SubsectionId(Sub), Type(Type) {}
+      : MCSection(SV_GOFF, Name, K, nullptr), Parent(P), SubsectionId(Sub), Type(Type) {
+        if (Type == GOFFSectionType::PPA2Offset) {
+          TextStyle = GOFF::ESD_TS_ByteOriented;
+        }
+        else if (Type == GOFFSectionType::B_IDRL) {
+          TextStyle = GOFF::ESD_TS_Structured;
+          LoadBehavior = GOFF::ESD_LB_NoLoad;
+        }
+      }
 
 public:
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
