@@ -270,6 +270,16 @@ Options::processAndFilterOutInstallAPIOptions(ArrayRef<const char *> Args) {
                                  OPT_exclude_project_header))
     return {};
 
+  // Handle umbrella headers.
+  if (const Arg *A = ParsedArgs.getLastArg(OPT_public_umbrella_header))
+    DriverOpts.PublicUmbrellaHeader = A->getValue();
+
+  if (const Arg *A = ParsedArgs.getLastArg(OPT_private_umbrella_header))
+    DriverOpts.PrivateUmbrellaHeader = A->getValue();
+
+  if (const Arg *A = ParsedArgs.getLastArg(OPT_project_umbrella_header))
+    DriverOpts.ProjectUmbrellaHeader = A->getValue();
+
   /// Any unclaimed arguments should be forwarded to the clang driver.
   std::vector<const char *> ClangDriverArgs(ParsedArgs.size());
   for (const Arg *A : ParsedArgs) {
@@ -323,6 +333,15 @@ Options::Options(DiagnosticsEngine &Diag, FileManager *FM,
   }
 }
 
+static const Regex Rule("(.+)/(.+)\\.framework/");
+static StringRef getFrameworkNameFromInstallName(StringRef InstallName) {
+  SmallVector<StringRef, 3> Match;
+  Rule.match(InstallName, &Match);
+  if (Match.empty())
+    return "";
+  return Match.back();
+}
+
 InstallAPIContext Options::createContext() {
   InstallAPIContext Ctx;
   Ctx.FM = FM;
@@ -338,6 +357,11 @@ InstallAPIContext Options::createContext() {
   Ctx.FT = DriverOpts.OutFT;
   Ctx.OutputLoc = DriverOpts.OutputPath;
   Ctx.LangMode = FEOpts.LangMode;
+
+  // Attempt to find umbrella headers by capturing framework name.
+  StringRef FrameworkName;
+  if (!LinkerOpts.IsDylib)
+    FrameworkName = getFrameworkNameFromInstallName(LinkerOpts.InstallName);
 
   // Process inputs.
   for (const std::string &ListPath : DriverOpts.FileLists) {
@@ -357,8 +381,7 @@ InstallAPIContext Options::createContext() {
     assert(Type != HeaderType::Unknown && "Missing header type.");
     for (const StringRef Path : Headers) {
       if (!FM->getOptionalFileRef(Path)) {
-        Diags->Report(diag::err_no_such_header_file)
-            << Path << (unsigned)Type - 1;
+        Diags->Report(diag::err_no_such_header_file) << Path << (unsigned)Type;
         return false;
       }
       SmallString<PATH_MAX> FullPath(Path);
@@ -382,6 +405,7 @@ InstallAPIContext Options::createContext() {
   std::vector<std::unique_ptr<HeaderGlob>> ExcludedHeaderGlobs;
   std::set<FileEntryRef> ExcludedHeaderFiles;
   auto ParseGlobs = [&](const PathSeq &Paths, HeaderType Type) {
+    assert(Type != HeaderType::Unknown && "Missing header type.");
     for (const StringRef Path : Paths) {
       auto Glob = HeaderGlob::create(Path, Type);
       if (Glob)
@@ -423,6 +447,57 @@ InstallAPIContext Options::createContext() {
   for (const auto &Glob : ExcludedHeaderGlobs)
     if (!Glob->didMatch())
       Diags->Report(diag::warn_glob_did_not_match) << Glob->str();
+
+  // Mark any explicit or inferred umbrella headers. If one exists, move
+  // that to the beginning of the input headers.
+  auto MarkandMoveUmbrellaInHeaders = [&](llvm::Regex &Regex,
+                                          HeaderType Type) -> bool {
+    auto It = find_if(Ctx.InputHeaders, [&Regex, Type](const HeaderFile &H) {
+      return (H.getType() == Type) && Regex.match(H.getPath());
+    });
+
+    if (It == Ctx.InputHeaders.end())
+      return false;
+    It->setUmbrellaHeader();
+
+    // Because there can be an umbrella header per header type,
+    // find the first non umbrella header to swap position with.
+    auto BeginPos = find_if(Ctx.InputHeaders, [](const HeaderFile &H) {
+      return !H.isUmbrellaHeader();
+    });
+    if (BeginPos != Ctx.InputHeaders.end() && BeginPos < It)
+      std::swap(*BeginPos, *It);
+    return true;
+  };
+
+  auto FindUmbrellaHeader = [&](StringRef HeaderPath, HeaderType Type) -> bool {
+    assert(Type != HeaderType::Unknown && "Missing header type.");
+    if (!HeaderPath.empty()) {
+      auto EscapedString = Regex::escape(HeaderPath);
+      Regex UmbrellaRegex(EscapedString);
+      if (!MarkandMoveUmbrellaInHeaders(UmbrellaRegex, Type)) {
+        Diags->Report(diag::err_no_such_umbrella_header_file)
+            << HeaderPath << (unsigned)Type;
+        return false;
+      }
+    } else if (!FrameworkName.empty() && (Type != HeaderType::Project)) {
+      auto UmbrellaName = "/" + Regex::escape(FrameworkName);
+      if (Type == HeaderType::Public)
+        UmbrellaName += "\\.h";
+      else
+        UmbrellaName += "[_]?Private\\.h";
+      Regex UmbrellaRegex(UmbrellaName);
+      MarkandMoveUmbrellaInHeaders(UmbrellaRegex, Type);
+    }
+    return true;
+  };
+  if (!FindUmbrellaHeader(DriverOpts.PublicUmbrellaHeader,
+                          HeaderType::Public) ||
+      !FindUmbrellaHeader(DriverOpts.PrivateUmbrellaHeader,
+                          HeaderType::Private) ||
+      !FindUmbrellaHeader(DriverOpts.ProjectUmbrellaHeader,
+                          HeaderType::Project))
+    return Ctx;
 
   // Parse binary dylib and initialize verifier.
   if (DriverOpts.DylibToVerify.empty()) {

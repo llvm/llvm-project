@@ -24,8 +24,6 @@
 
 namespace clang::installapi {
 enum class HeaderType {
-  /// Unset or unknown type.
-  Unknown,
   /// Represents declarations accessible to all clients.
   Public,
   /// Represents declarations accessible to a disclosed set of clients.
@@ -33,6 +31,8 @@ enum class HeaderType {
   /// Represents declarations only accessible as implementation details to the
   /// input library.
   Project,
+  /// Unset or unknown type.
+  Unknown,
 };
 
 inline StringRef getName(const HeaderType T) {
@@ -62,6 +62,8 @@ class HeaderFile {
   bool Excluded{false};
   /// Add header file to processing.
   bool Extra{false};
+  /// Specify that header file is the umbrella header for library.
+  bool Umbrella{false};
 
 public:
   HeaderFile() = delete;
@@ -79,17 +81,21 @@ public:
 
   void setExtra(bool V = true) { Extra = V; }
   void setExcluded(bool V = true) { Excluded = V; }
+  void setUmbrellaHeader(bool V = true) { Umbrella = V; }
   bool isExtra() const { return Extra; }
   bool isExcluded() const { return Excluded; }
+  bool isUmbrellaHeader() const { return Umbrella; }
 
   bool useIncludeName() const {
     return Type != HeaderType::Project && !IncludeName.empty();
   }
 
   bool operator==(const HeaderFile &Other) const {
-    return std::tie(Type, FullPath, IncludeName, Language, Excluded, Extra) ==
-           std::tie(Other.Type, Other.FullPath, Other.IncludeName,
-                    Other.Language, Other.Excluded, Other.Extra);
+    return std::tie(Type, FullPath, IncludeName, Language, Excluded, Extra,
+                    Umbrella) == std::tie(Other.Type, Other.FullPath,
+                                          Other.IncludeName, Other.Language,
+                                          Other.Excluded, Other.Extra,
+                                          Other.Umbrella);
   }
 };
 
