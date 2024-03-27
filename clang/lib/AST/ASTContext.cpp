@@ -449,8 +449,17 @@ const RawComment *ASTContext::getRawCommentForAnyRedecl(
     if (LastCheckedRedecl) {
       if (LastCheckedRedecl == Redecl) {
         LastCheckedRedecl = nullptr;
+        continue;
       }
-      continue;
+      if (auto F = llvm::dyn_cast<FunctionDecl>(Redecl)) {
+        if (!F->isThisDeclarationADefinition())
+          continue;
+      } else if (auto M = llvm::dyn_cast<CXXMethodDecl>(Redecl)) {
+        if (!M->isThisDeclarationADefinition())
+          continue;
+      } else {
+        continue;
+      }
     }
     const RawComment *RedeclComment = getRawCommentForDeclNoCache(Redecl);
     if (RedeclComment) {

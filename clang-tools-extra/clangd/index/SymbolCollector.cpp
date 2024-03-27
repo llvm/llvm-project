@@ -1025,15 +1025,17 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
       *ASTCtx, *PP, CodeCompletionContext::CCC_Symbol, *CompletionAllocator,
       *CompletionTUInfo,
       /*IncludeBriefComments*/ false);
-  std::string Documentation =
-      formatDocumentation(*CCS, getDocComment(Ctx, SymbolCompletion,
-                                              /*CommentsFromHeaders=*/true));
+  std::string DocComment = getDocComment(Ctx, SymbolCompletion,
+                                         /*CommentsFromHeaders=*/true);
+  std::string Documentation = formatDocumentation(*CCS, DocComment);
   if (!(S.Flags & Symbol::IndexedForCodeCompletion)) {
     if (Opts.StoreAllDocumentation)
       S.Documentation = Documentation;
     Symbols.insert(S);
     return Symbols.find(S.ID);
   }
+  if (!DocComment.empty())
+    S.Flags |= Symbol::HasDocComment;
   S.Documentation = Documentation;
   std::string Signature;
   std::string SnippetSuffix;
@@ -1074,6 +1076,27 @@ void SymbolCollector::addDefinition(const NamedDecl &ND,
   Symbol S = DeclSym;
   // FIXME: use the result to filter out symbols.
   S.Definition = *DefLoc;
+
+  std::string DocComment;
+  std::string Documentation;
+  if (!(S.Flags & Symbol::HasDocComment) &&
+      (llvm::isa<FunctionDecl>(ND) || llvm::isa<CXXMethodDecl>(ND))) {
+    CodeCompletionResult SymbolCompletion(&getTemplateOrThis(ND), 0);
+    const auto *CCS = SymbolCompletion.CreateCodeCompletionString(
+        *ASTCtx, *PP, CodeCompletionContext::CCC_Symbol, *CompletionAllocator,
+        *CompletionTUInfo,
+        /*IncludeBriefComments*/ false);
+    DocComment = getDocComment(ND.getASTContext(), SymbolCompletion,
+                               /*CommentsFromHeaders=*/true);
+    if (!S.Documentation.empty())
+      Documentation = S.Documentation.str() + '\n' + DocComment;
+    else
+      Documentation = formatDocumentation(*CCS, DocComment);
+    if (!DocComment.empty())
+      S.Flags |= Symbol::HasDocComment;
+    S.Documentation = Documentation;
+  }
+
   Symbols.insert(S);
 }
 
