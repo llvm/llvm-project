@@ -582,10 +582,11 @@ static void legalizeAndOptimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       auto *Recipe =
           new VPInstruction(VPInstruction::PtrAdd,
                             {PtrIV->getStartValue(), Steps->getVPSingleValue()},
-                            PtrIV->getDebugLoc(), "next.gep");
+                            PtrIV->getDebugLoc());
 
       Recipe->insertAfter(Steps);
       PtrIV->replaceAllUsesWith(Recipe);
+      Recipe->setName("next.gep");
       continue;
     }
 
