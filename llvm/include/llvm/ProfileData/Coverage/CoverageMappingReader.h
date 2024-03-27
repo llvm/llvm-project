@@ -184,7 +184,7 @@ public:
 private:
   std::vector<std::string> Filenames;
   std::vector<ProfileMappingRecord> MappingRecords;
-  InstrProfSymtab ProfileNames;
+  std::unique_ptr<InstrProfSymtab> ProfileNames;
   size_t CurrentRecord = 0;
   std::vector<StringRef> FunctionsFilenames;
   std::vector<CounterExpression> Expressions;
@@ -211,7 +211,7 @@ public:
   static Expected<std::unique_ptr<BinaryCoverageReader>>
   createCoverageReaderFromBuffer(StringRef Coverage,
                                  FuncRecordsStorage &&FuncRecords,
-                                 InstrProfSymtab &&ProfileNames,
+                                 std::unique_ptr<InstrProfSymtab> ProfileNames,
                                  uint8_t BytesInAddress,
                                  llvm::endianness Endian,
                                  StringRef CompilationDir = "");

@@ -471,6 +471,15 @@ private:
 public:
   InstrProfSymtab() = default;
 
+  // Not copyable or movable.
+  // Consider std::unique_ptr for move.
+  // InstrProfSymtab has a few containers as class members, so consider
+  // std::shared_ptr for read-only copy.
+  InstrProfSymtab(const InstrProfSymtab &) = delete;
+  InstrProfSymtab &operator=(const InstrProfSymtab &) = delete;
+  InstrProfSymtab(InstrProfSymtab &&) = delete;
+  InstrProfSymtab &operator=(InstrProfSymtab &&) = delete;
+
   /// Create InstrProfSymtab from an object file section which
   /// contains function PGO names. When section may contain raw
   /// string data or string data in compressed form. This method
