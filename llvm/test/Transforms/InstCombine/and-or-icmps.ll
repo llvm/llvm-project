@@ -3042,10 +3042,8 @@ define i32 @icmp_slt_0_or_icmp_add_1_sge_100_i32_fail(i32 %x) {
 define i1 @logical_and_icmps1(i32 %a, i1 %other_cond) {
 ; CHECK-LABEL: @logical_and_icmps1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[RET1:%.*]] = select i1 [[RET:%.*]], i1 [[CMP2]], i1 false
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i32 [[A]], 10086
-; CHECK-NEXT:    [[RET2:%.*]] = select i1 [[RET1]], i1 [[CMP3]], i1 false
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[A:%.*]], 10086
+; CHECK-NEXT:    [[RET2:%.*]] = select i1 [[RET1:%.*]], i1 [[CMP3]], i1 false
 ; CHECK-NEXT:    ret i1 [[RET2]]
 ;
 entry:
@@ -3059,11 +3057,7 @@ entry:
 define i1 @logical_and_icmps2(i32 %a, i1 %other_cond) {
 ; CHECK-LABEL: @logical_and_icmps2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[LOGICAL_AND:%.*]] = select i1 [[OTHER_COND:%.*]], i1 [[CMP1]], i1 false
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[A]], 10086
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[LOGICAL_AND]], i1 [[CMP2]], i1 false
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp1 = icmp slt i32 %a, -1
@@ -3076,10 +3070,8 @@ entry:
 define <4 x i1> @logical_and_icmps_vec1(<4 x i32> %a, <4 x i1> %other_cond) {
 ; CHECK-LABEL: @logical_and_icmps_vec1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt <4 x i32> [[A:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[RET1:%.*]] = select <4 x i1> [[RET:%.*]], <4 x i1> [[CMP2]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt <4 x i32> [[A]], <i32 10086, i32 10086, i32 10086, i32 10086>
-; CHECK-NEXT:    [[RET2:%.*]] = select <4 x i1> [[RET1]], <4 x i1> [[CMP3]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult <4 x i32> [[A:%.*]], <i32 10086, i32 10086, i32 10086, i32 10086>
+; CHECK-NEXT:    [[RET2:%.*]] = select <4 x i1> [[RET1:%.*]], <4 x i1> [[CMP3]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[RET2]]
 ;
 entry:

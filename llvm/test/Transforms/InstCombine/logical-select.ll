@@ -1309,8 +1309,8 @@ define i1 @reduce_logical_and1(i1 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[B:%.*]], 6
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[C:%.*]], [[B]]
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[A:%.*]], i1 [[CMP1]], i1 false
-; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[AND1]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[CMP1]], [[CMP]]
+; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[A:%.*]], i1 [[TMP0]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND2]]
 ;
 bb:
@@ -1324,9 +1324,9 @@ bb:
 define i1 @reduce_logical_and2(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @reduce_logical_and2(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[C:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[AND1:%.*]], i1 [[CMP]], i1 false
-; CHECK-NEXT:    [[AND3:%.*]] = select i1 [[AND2]], i1 [[B]], i1 false
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[C:%.*]], true
+; CHECK-NEXT:    [[B:%.*]] = and i1 [[TMP0]], [[B1:%.*]]
+; CHECK-NEXT:    [[AND3:%.*]] = select i1 [[AND2:%.*]], i1 [[B]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND3]]
 ;
 bb:
@@ -1341,8 +1341,8 @@ define i1 @reduce_logical_and3(i1 %a, i32 %b, i32 noundef %c) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[B:%.*]], 6
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[C:%.*]], [[B]]
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[A:%.*]], i1 [[CMP]], i1 false
-; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[AND1]], i1 [[CMP1]], i1 false
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[A:%.*]], i1 [[TMP0]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND2]]
 ;
 bb:
@@ -1358,8 +1358,8 @@ define i1 @reduce_logical_or1(i1 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[B:%.*]], 6
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[C:%.*]], [[B]]
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[CMP1]]
-; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[AND1]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[CMP1]], [[CMP]]
+; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[TMP0]]
 ; CHECK-NEXT:    ret i1 [[AND2]]
 ;
 bb:
@@ -1373,9 +1373,8 @@ bb:
 define i1 @reduce_logical_or2(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @reduce_logical_or2(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[C:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[AND1:%.*]], i1 true, i1 [[CMP]]
-; CHECK-NEXT:    [[AND3:%.*]] = select i1 [[AND2]], i1 true, i1 [[B]]
+; CHECK-NEXT:    [[B:%.*]] = or i1 [[C:%.*]], [[B1:%.*]]
+; CHECK-NEXT:    [[AND3:%.*]] = select i1 [[AND2:%.*]], i1 true, i1 [[B]]
 ; CHECK-NEXT:    ret i1 [[AND3]]
 ;
 bb:
@@ -1390,8 +1389,8 @@ define i1 @reduce_logical_or3(i1 %a, i32 %b, i32 noundef %c) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[B:%.*]], 6
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[C:%.*]], [[B]]
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[CMP]]
-; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[AND1]], i1 true, i1 [[CMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[TMP0]]
 ; CHECK-NEXT:    ret i1 [[AND2]]
 ;
 bb:
