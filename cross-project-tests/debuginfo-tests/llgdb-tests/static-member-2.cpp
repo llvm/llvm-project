@@ -4,19 +4,19 @@
 // XFAIL: gdb-clang-incompatibility
 
 // DEBUGGER: delete breakpoints
-// DEBUGGER: break static-member.cpp:33
+// DEBUGGER: break static-member-2.cpp:36
 // DEBUGGER: r
 // DEBUGGER: ptype C
 // CHECK:      {{struct|class}} C {
-// CHECK:      static const int a;
+// CHECK:      static const int a
 // CHECK-NEXT: static int b;
 // CHECK-NEXT: static int c;
-// CHECK-NEXT: int d;
+// CHECK:      int d;
 // CHECK-NEXT: }
 // DEBUGGER: p C::a
-// CHECK: ${{[0-9]}} = 4
+// CHECK:  4
 // DEBUGGER: p C::c
-// CHECK: ${{[0-9]}} = 15
+// CHECK: 15
 
 // PR14471, PR14734
 

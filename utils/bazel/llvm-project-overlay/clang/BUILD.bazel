@@ -62,6 +62,7 @@ gentbl(
         "CrossTU",
         "Driver",
         "Frontend",
+        "InstallAPI",
         "Lex",
         "Parse",
         "Refactoring",
@@ -613,7 +614,6 @@ cc_library(
         "include/clang/Basic/Version.inc",
     ] + glob([
         "lib/Basic/*.cpp",
-        "lib/Basic/*.c",
         "lib/Basic/*.h",
         "lib/Basic/Targets/*.cpp",
         "lib/Basic/Targets/*.h",
@@ -1041,7 +1041,6 @@ cc_library(
         "lib/Analysis/FlowSensitive/Models/*.cpp",
         "lib/Analysis/FlowSensitive/*.cpp",
         "lib/Analysis/*.cpp",
-        "lib/Analysis/*.h",
     ]) + [
         ":analysis_htmllogger_gen",
     ],
@@ -1179,10 +1178,8 @@ gentbl(
 
 cc_library(
     name = "parse",
-    srcs = [
-    ] + glob([
+    srcs = glob([
         "lib/Parse/*.cpp",
-        "lib/Parse/*.h",
     ]),
     hdrs = [
         "include/clang/Parse/AttrParserStringSwitches.inc",
@@ -1206,7 +1203,6 @@ cc_library(
     name = "ast_matchers",
     srcs = glob([
         "lib/ASTMatchers/*.cpp",
-        "lib/ASTMatchers/*.h",
     ]),
     hdrs = glob(["include/clang/ASTMatchers/*.h"]),
     includes = ["include"],
@@ -1240,7 +1236,6 @@ cc_library(
     name = "rewrite",
     srcs = glob([
         "lib/Rewrite/*.cpp",
-        "lib/Rewrite/*.h",
     ]),
     hdrs = glob(["include/clang/Rewrite/Core/*.h"]),
     includes = ["include"],
@@ -1274,7 +1269,6 @@ cc_library(
     name = "tooling_core",
     srcs = glob([
         "lib/Tooling/Core/*.cpp",
-        "lib/Tooling/Core/*.h",
     ]),
     hdrs = glob(["include/clang/Tooling/Core/*.h"]),
     includes = ["include"],
@@ -1339,11 +1333,9 @@ cc_library(
     name = "tooling_refactoring",
     srcs = glob([
         "lib/Tooling/Refactoring/**/*.cpp",
-        "lib/Tooling/Refactoring/**/*.h",
     ]),
     hdrs = glob([
         "include/clang/Tooling/Refactoring/**/*.h",
-        "include/clang/Tooling/Refactoring/**/*.def",
     ]),
     deps = [
         ":ast",
@@ -1592,9 +1584,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Driver/*.cpp",
-            "lib/Driver/*.h",
-            "lib/Driver/Arch/*.cpp",
-            "lib/Driver/Arch/*.h",
             "lib/Driver/ToolChains/*.cpp",
             "lib/Driver/ToolChains/*.h",
             "lib/Driver/ToolChains/Arch/*.cpp",
@@ -1832,9 +1821,6 @@ cc_library(
     copts = ["$(STACK_FRAME_UNLIMITED)"],
     data = [":builtin_headers_gen"],
     includes = ["include"],
-    textual_hdrs = glob([
-        "include/clang/Frontend/*.def",
-    ]),
     deps = [
         ":apinotes",
         ":ast",
@@ -1871,7 +1857,6 @@ cc_library(
     name = "frontend_rewrite",
     srcs = glob([
         "lib/Frontend/Rewrite/*.cpp",
-        "lib/Frontend/Rewrite/*.h",
     ]),
     hdrs = glob(["include/clang/Rewrite/Frontend/*.h"]),
     includes = ["include"],
@@ -2068,6 +2053,7 @@ cc_library(
         ":frontend",
         ":support",
         "//llvm:Core",
+        "//llvm:Demangle",
         "//llvm:Support",
         "//llvm:TextAPI",
     ],
@@ -2114,7 +2100,6 @@ cc_library(
     name = "frontend_tool",
     srcs = glob([
         "lib/FrontendTool/*.cpp",
-        "lib/FrontendTool/*.h",
     ]),
     hdrs = glob(["include/clang/FrontendTool/*.h"]),
     includes = ["include"],
@@ -2318,7 +2303,6 @@ cc_binary(
     testonly = 1,
     srcs = glob([
         "tools/clang-import-test/*.cpp",
-        "tools/clang-import-test/*.h",
     ]),
     stamp = 0,
     deps = [
@@ -2348,7 +2332,6 @@ cc_library(
     name = "clang-driver",
     srcs = glob([
         "tools/driver/*.cpp",
-        "tools/driver/*.h",
     ]) + ["clang-driver.cpp"],
     copts = [
         # Disable stack frame size checks in the driver because
@@ -2405,6 +2388,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":basic",
+        ":diagnostic_defs_gen",
         ":frontend",
         ":lex",
         ":sema",
@@ -2665,7 +2649,6 @@ cc_library(
     name = "extract_api",
     srcs = glob([
         "lib/ExtractAPI/**/*.cpp",
-        "lib/ExtractAPI/**/*.h",
     ]),
     hdrs = glob(["include/clang/ExtractAPI/**/*.h"]),
     includes = ["include"],

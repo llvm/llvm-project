@@ -692,11 +692,15 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
   // A lambda conversion operator has the same constraints as the call operator
   // and constraints checking relies on whether we are in a lambda call operator
   // (and may refer to its parameters), so check the call operator instead.
+  // Note that the declarations outside of the lambda should also be
+  // considered. Turning on the 'ForOverloadResolution' flag results in the
+  // LocalInstantiationScope not looking into its parents, but we can still
+  // access Decls from the parents while building a lambda RAII scope later.
   if (const auto *MD = dyn_cast<CXXConversionDecl>(FD);
       MD && isLambdaConversionOperator(const_cast<CXXConversionDecl *>(MD)))
     return CheckFunctionConstraints(MD->getParent()->getLambdaCallOperator(),
                                     Satisfaction, UsageLoc,
-                                    ForOverloadResolution);
+                                    /*ShouldAddDeclsFromParentScope=*/true);
 
   DeclContext *CtxToSave = const_cast<FunctionDecl *>(FD);
 
@@ -1265,10 +1269,18 @@ substituteParameterMappings(Sema &S, NormalizedConstraint &N,
                     : SourceLocation()));
     Atomic.ParameterMapping.emplace(TempArgs,  OccurringIndices.count());
   }
+  SourceLocation InstLocBegin =
+      ArgsAsWritten->arguments().empty()
+          ? ArgsAsWritten->getLAngleLoc()
+          : ArgsAsWritten->arguments().front().getSourceRange().getBegin();
+  SourceLocation InstLocEnd =
+      ArgsAsWritten->arguments().empty()
+          ? ArgsAsWritten->getRAngleLoc()
+          : ArgsAsWritten->arguments().front().getSourceRange().getEnd();
   Sema::InstantiatingTemplate Inst(
-      S, ArgsAsWritten->arguments().front().getSourceRange().getBegin(),
+      S, InstLocBegin,
       Sema::InstantiatingTemplate::ParameterMappingSubstitution{}, Concept,
-      ArgsAsWritten->arguments().front().getSourceRange());
+      {InstLocBegin, InstLocEnd});
   if (S.SubstTemplateArguments(*Atomic.ParameterMapping, MLTAL, SubstArgs))
     return true;
 

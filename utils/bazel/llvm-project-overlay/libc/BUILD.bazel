@@ -62,7 +62,47 @@ config_setting(
     flag_values = {":mpfr": "system"},
 )
 
-############################## Support libraries #############################
+################################# Include Files ################################
+
+libc_support_library(
+    name = "llvm_libc_macros_math_macros",
+    hdrs = ["include/llvm-libc-macros/math-macros.h"],
+    deps = [":llvm_libc_macros_limits_macros"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_limits_macros",
+    hdrs = ["include/llvm-libc-macros/limits-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_float_macros",
+    hdrs = ["include/llvm-libc-macros/float-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_stdint_macros",
+    hdrs = ["include/llvm-libc-macros/stdint-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_stdfix_macros",
+    hdrs = ["include/llvm-libc-macros/stdfix-macros.h"],
+    deps = [":llvm_libc_macros_float_macros"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_float128",
+    hdrs = ["include/llvm-libc-types/float128.h"],
+    deps = [":llvm_libc_macros_float_macros"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_fcntl_macros",
+    hdrs = ["include/llvm-libc-macros/linux/fcntl-macros.h"],
+)
+
+############################### Support libraries ##############################
 
 libc_support_library(
     name = "__support_macros_properties_architectures",
@@ -152,9 +192,19 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_cpp_iterator",
+    hdrs = ["src/__support/CPP/iterator.h"],
+    deps = [
+        ":__support_cpp_type_traits",
+        ":__support_macros_attributes",
+    ],
+)
+
+libc_support_library(
     name = "__support_cpp_array",
     hdrs = ["src/__support/CPP/array.h"],
     deps = [
+        ":__support_cpp_iterator",
         ":__support_macros_attributes",
     ],
 )
@@ -166,7 +216,6 @@ libc_support_library(
         ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
-        ":__support_macros_config",
         ":__support_macros_sanitizer",
     ],
 )
@@ -294,6 +343,7 @@ libc_support_library(
         "src/__support/CPP/type_traits/is_base_of.h",
         "src/__support/CPP/type_traits/is_class.h",
         "src/__support/CPP/type_traits/is_const.h",
+        "src/__support/CPP/type_traits/is_constant_evaluated.h",
         "src/__support/CPP/type_traits/is_convertible.h",
         "src/__support/CPP/type_traits/is_destructible.h",
         "src/__support/CPP/type_traits/is_enum.h",
@@ -332,7 +382,6 @@ libc_support_library(
     ],
     deps = [
         ":__support_macros_attributes",
-        ":__support_macros_config",
         ":__support_macros_properties_types",
         ":llvm_libc_macros_stdfix_macros",
     ],
@@ -457,9 +506,18 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_sign",
+    hdrs = ["src/__support/sign.h"],
+    deps = [
+        ":__support_macros_attributes",
+    ],
+)
+
+libc_support_library(
     name = "__support_uint128",
     hdrs = ["src/__support/UInt128.h"],
     deps = [
+        ":__support_macros_attributes",
         ":__support_macros_properties_types",
         ":__support_uint",
     ],
@@ -528,6 +586,7 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_ctype_utils",
         ":__support_str_to_num_result",
+        ":__support_uint128",
         ":errno",
     ],
 )
@@ -563,7 +622,10 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_type_traits",
+        ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
+        ":__support_macros_optimization",
+        ":__support_uint128",
     ],
 )
 
@@ -595,10 +657,10 @@ libc_support_library(
     name = "__support_math_extras",
     hdrs = ["src/__support/math_extras.h"],
     deps = [
+        ":__support_cpp_bit",
         ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
-        ":__support_macros_config",
     ],
 )
 
@@ -669,6 +731,7 @@ libc_support_library(
         ":__support_macros_properties_architectures",
         ":__support_macros_sanitizer",
         ":errno",
+        ":llvm_libc_macros_math_macros",
     ],
 )
 
@@ -691,6 +754,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_properties_types",
         ":__support_math_extras",
+        ":__support_sign",
         ":__support_uint128",
     ],
 )
@@ -726,7 +790,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_fputil_manipulation_functions",
     hdrs = ["src/__support/FPUtil/ManipulationFunctions.h"],
-    textual_hdrs = ["src/__support/FPUtil/x86_64/NextAfterLongDouble.h"],
+    textual_hdrs = [
+        "src/__support/FPUtil/x86_64/NextAfterLongDouble.h",
+        "src/__support/FPUtil/x86_64/NextUpDownLongDouble.h",
+    ],
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
@@ -738,6 +805,7 @@ libc_support_library(
         ":__support_fputil_normal_float",
         ":__support_macros_optimization",
         ":__support_uint128",
+        ":llvm_libc_macros_math_macros",
     ],
 )
 
@@ -751,6 +819,7 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
         ":__support_macros_attributes",
+        ":llvm_libc_macros_math_macros",
     ],
 )
 
@@ -930,10 +999,7 @@ libc_support_library(
 libc_support_library(
     name = "__support_osutil_quick_exit",
     hdrs = ["src/__support/OSUtil/quick_exit.h"],
-    textual_hdrs = [
-        "src/__support/OSUtil/linux/quick_exit.h",
-        #TODO: add support for GPU quick_exit (isn't just in a header.)
-    ],
+    srcs = ["src/__support/OSUtil/linux/quick_exit.cpp"],
     deps = [
         ":__support_osutil_syscall",
     ],
@@ -977,33 +1043,6 @@ libc_support_library(
         ":__support_cpp_atomic",
         ":__support_osutil_syscall",
     ],
-)
-
-libc_support_library(
-    name = "llvm_libc_macros_limits_macros",
-    hdrs = ["include/llvm-libc-macros/limits-macros.h"],
-)
-
-libc_support_library(
-    name = "llvm_libc_macros_float_macros",
-    hdrs = ["include/llvm-libc-macros/float-macros.h"],
-)
-
-libc_support_library(
-    name = "llvm_libc_macros_stdint_macros",
-    hdrs = ["include/llvm-libc-macros/stdint-macros.h"],
-)
-
-libc_support_library(
-    name = "llvm_libc_macros_stdfix_macros",
-    hdrs = ["include/llvm-libc-macros/stdfix-macros.h"],
-    deps = [":llvm_libc_macros_float_macros"],
-)
-
-libc_support_library(
-    name = "llvm_libc_types_float128",
-    hdrs = ["include/llvm-libc-types/float128.h"],
-    deps = [":llvm_libc_macros_float_macros"],
 )
 
 ############################### errno targets ################################
@@ -1172,6 +1211,7 @@ libc_support_library(
         "__support_cpp_type_traits",
         ":__support_common",
         ":errno",
+        ":llvm_libc_macros_math_macros",
     ],
 )
 
@@ -1233,13 +1273,9 @@ libc_support_library(
     hdrs = ["src/math/generic/inv_trigf_utils.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil_fenv_impl",
         ":__support_fputil_fma",
-        ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
-        ":math_utils",
     ],
 )
 
@@ -2279,7 +2315,6 @@ libc_support_library(
         ":__support_cpp_cstddef",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
-        ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_macros_properties_architectures",
         ":__support_macros_properties_cpu_features",
@@ -3226,6 +3261,18 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+    ],
+)
+
+libc_function(
+    name = "rename",
+    srcs = ["src/stdio/linux/rename.cpp"],
+    hdrs = ["src/stdio/rename.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":llvm_libc_macros_fcntl_macros",
     ],
 )
 

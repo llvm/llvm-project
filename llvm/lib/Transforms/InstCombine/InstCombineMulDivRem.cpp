@@ -105,7 +105,7 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
   if (match(&I, m_c_Mul(m_OneUse(m_Select(m_Value(Cond), m_One(), m_AllOnes())),
                         m_Value(OtherOp)))) {
     bool HasAnyNoWrap = I.hasNoSignedWrap() || I.hasNoUnsignedWrap();
-    Value *Neg = Builder.CreateNeg(OtherOp, "", false, HasAnyNoWrap);
+    Value *Neg = Builder.CreateNeg(OtherOp, "", HasAnyNoWrap);
     return Builder.CreateSelect(Cond, OtherOp, Neg);
   }
   // mul (select Cond, -1, 1), OtherOp --> select Cond, -OtherOp, OtherOp
@@ -113,7 +113,7 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
   if (match(&I, m_c_Mul(m_OneUse(m_Select(m_Value(Cond), m_AllOnes(), m_One())),
                         m_Value(OtherOp)))) {
     bool HasAnyNoWrap = I.hasNoSignedWrap() || I.hasNoUnsignedWrap();
-    Value *Neg = Builder.CreateNeg(OtherOp, "", false, HasAnyNoWrap);
+    Value *Neg = Builder.CreateNeg(OtherOp, "", HasAnyNoWrap);
     return Builder.CreateSelect(Cond, Neg, OtherOp);
   }
 
@@ -448,6 +448,13 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(X, Op0, ConstantInt::getNullValue(Ty));
 
+  // mul (sext X), Y -> select X, -Y, 0
+  // mul Y, (sext X) -> select X, -Y, 0
+  if (match(&I, m_c_Mul(m_OneUse(m_SExt(m_Value(X))), m_Value(Y))) &&
+      X->getType()->isIntOrIntVectorTy(1))
+    return SelectInst::Create(X, Builder.CreateNeg(Y, "", I.hasNoSignedWrap()),
+                              ConstantInt::getNullValue(Op0->getType()));
+
   Constant *ImmC;
   if (match(Op1, m_ImmConstant(ImmC))) {
     // (sext bool X) * C --> X ? -C : 0
@@ -571,6 +578,54 @@ Instruction *InstCombinerImpl::foldFPSignBitOps(BinaryOperator &I) {
   return nullptr;
 }
 
+Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
+  auto createPowiExpr = [](BinaryOperator &I, InstCombinerImpl &IC, Value *X,
+                           Value *Y, Value *Z) {
+    InstCombiner::BuilderTy &Builder = IC.Builder;
+    Value *YZ = Builder.CreateAdd(Y, Z);
+    auto *NewPow = Builder.CreateIntrinsic(
+        Intrinsic::powi, {X->getType(), YZ->getType()}, {X, YZ}, &I);
+    return IC.replaceInstUsesWith(I, NewPow);
+  };
+
+  Value *X, *Y, *Z;
+
+  // powi(X, Y) * X --> powi(X, Y+1)
+  // X * powi(X, Y) --> powi(X, Y+1)
+  if (match(&I, m_c_FMul(m_OneUse(m_AllowReassoc(m_Intrinsic<Intrinsic::powi>(
+                             m_Value(X), m_Value(Y)))),
+                         m_Deferred(X)))) {
+    Constant *One = ConstantInt::get(Y->getType(), 1);
+    if (willNotOverflowSignedAdd(Y, One, I))
+      return createPowiExpr(I, *this, X, Y, One);
+  }
+
+  // powi(x, y) * powi(x, z) -> powi(x, y + z)
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+  if (I.isOnlyUserOfAnyOperand() &&
+      match(Op0, m_AllowReassoc(
+                     m_Intrinsic<Intrinsic::powi>(m_Value(X), m_Value(Y)))) &&
+      match(Op1, m_AllowReassoc(m_Intrinsic<Intrinsic::powi>(m_Specific(X),
+                                                             m_Value(Z)))) &&
+      Y->getType() == Z->getType())
+    return createPowiExpr(I, *this, X, Y, Z);
+
+  // powi(X, Y) / X --> powi(X, Y-1)
+  // This is legal when (Y - 1) can't wraparound, in which case reassoc and nnan
+  // are required.
+  // TODO: Multi-use may be also better off creating Powi(x,y-1)
+  if (I.hasAllowReassoc() && I.hasNoNaNs() &&
+      match(Op0, m_OneUse(m_AllowReassoc(m_Intrinsic<Intrinsic::powi>(
+                     m_Specific(Op1), m_Value(Y))))) &&
+      willNotOverflowSignedSub(Y, ConstantInt::get(Y->getType(), 1), I)) {
+    Constant *NegOne = ConstantInt::getAllOnesValue(Y->getType());
+    return createPowiExpr(I, *this, Op1, Y, NegOne);
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0);
   Value *Op1 = I.getOperand(1);
@@ -683,6 +738,9 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
     return replaceInstUsesWith(I, Pow);
   }
 
+  if (Instruction *FoldedPowi = foldPowiReassoc(I))
+    return FoldedPowi;
+
   if (I.isOnlyUserOfAnyOperand()) {
     // pow(X, Y) * pow(X, Z) -> pow(X, Y + Z)
     if (match(Op0, m_Intrinsic<Intrinsic::pow>(m_Value(X), m_Value(Y))) &&
@@ -696,16 +754,6 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
         match(Op1, m_Intrinsic<Intrinsic::pow>(m_Value(Z), m_Specific(Y)))) {
       auto *XZ = Builder.CreateFMulFMF(X, Z, &I);
       auto *NewPow = Builder.CreateBinaryIntrinsic(Intrinsic::pow, XZ, Y, &I);
-      return replaceInstUsesWith(I, NewPow);
-    }
-
-    // powi(x, y) * powi(x, z) -> powi(x, y + z)
-    if (match(Op0, m_Intrinsic<Intrinsic::powi>(m_Value(X), m_Value(Y))) &&
-        match(Op1, m_Intrinsic<Intrinsic::powi>(m_Specific(X), m_Value(Z))) &&
-        Y->getType() == Z->getType()) {
-      auto *YZ = Builder.CreateAdd(Y, Z);
-      auto *NewPow = Builder.CreateIntrinsic(
-          Intrinsic::powi, {X->getType(), YZ->getType()}, {X, YZ}, &I);
       return replaceInstUsesWith(I, NewPow);
     }
 
@@ -777,8 +825,19 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
   if (match(Op1, m_SpecificFP(-1.0)))
     return UnaryOperator::CreateFNegFMF(Op0, &I);
 
-  // With no-nans: X * 0.0 --> copysign(0.0, X)
-  if (I.hasNoNaNs() && match(Op1, m_PosZeroFP())) {
+  // With no-nans/no-infs:
+  // X * 0.0 --> copysign(0.0, X)
+  // X * -0.0 --> copysign(0.0, -X)
+  const APFloat *FPC;
+  if (match(Op1, m_APFloatAllowUndef(FPC)) && FPC->isZero() &&
+      ((I.hasNoInfs() &&
+        isKnownNeverNaN(Op0, /*Depth=*/0, SQ.getWithInstruction(&I))) ||
+       isKnownNeverNaN(&I, /*Depth=*/0, SQ.getWithInstruction(&I)))) {
+    if (FPC->isNegative())
+      Op0 = Builder.CreateFNegFMF(Op0, &I);
+    Op1 = Constant::replaceUndefsWith(
+        cast<Constant>(Op1),
+        ConstantFP::get(Op1->getType()->getScalarType(), *FPC));
     CallInst *CopySign = Builder.CreateIntrinsic(Intrinsic::copysign,
                                                  {I.getType()}, {Op1, Op0}, &I);
     return replaceInstUsesWith(I, CopySign);
@@ -1123,14 +1182,14 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
     // We need a multiple of the divisor for a signed add constant, but
     // unsigned is fine with any constant pair.
     if (IsSigned &&
-        match(Op0, m_NSWAdd(m_NSWMul(m_Value(X), m_SpecificInt(*C2)),
-                            m_APInt(C1))) &&
+        match(Op0, m_NSWAddLike(m_NSWMul(m_Value(X), m_SpecificInt(*C2)),
+                                m_APInt(C1))) &&
         isMultiple(*C1, *C2, Quotient, IsSigned)) {
       return BinaryOperator::CreateNSWAdd(X, ConstantInt::get(Ty, Quotient));
     }
     if (!IsSigned &&
-        match(Op0, m_NUWAdd(m_NUWMul(m_Value(X), m_SpecificInt(*C2)),
-                            m_APInt(C1)))) {
+        match(Op0, m_NUWAddLike(m_NUWMul(m_Value(X), m_SpecificInt(*C2)),
+                                m_APInt(C1)))) {
       return BinaryOperator::CreateNUWAdd(X,
                                           ConstantInt::get(Ty, C1->udiv(*C2)));
     }
@@ -1857,20 +1916,8 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
     return replaceInstUsesWith(I, Pow);
   }
 
-  // powi(X, Y) / X --> powi(X, Y-1)
-  // This is legal when (Y - 1) can't wraparound, in which case reassoc and nnan
-  // are required.
-  // TODO: Multi-use may be also better off creating Powi(x,y-1)
-  if (I.hasAllowReassoc() && I.hasNoNaNs() &&
-      match(Op0, m_OneUse(m_Intrinsic<Intrinsic::powi>(m_Specific(Op1),
-                                                       m_Value(Y)))) &&
-      willNotOverflowSignedSub(Y, ConstantInt::get(Y->getType(), 1), I)) {
-    Constant *NegOne = ConstantInt::getAllOnesValue(Y->getType());
-    Value *Y1 = Builder.CreateAdd(Y, NegOne);
-    Type *Types[] = {Op1->getType(), Y1->getType()};
-    Value *Pow = Builder.CreateIntrinsic(Intrinsic::powi, Types, {Op1, Y1}, &I);
-    return replaceInstUsesWith(I, Pow);
-  }
+  if (Instruction *FoldedPowi = foldPowiReassoc(I))
+    return FoldedPowi;
 
   return nullptr;
 }

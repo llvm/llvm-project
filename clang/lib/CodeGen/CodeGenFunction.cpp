@@ -1361,6 +1361,8 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   FunctionArgList Args;
   QualType ResTy = BuildFunctionArgList(GD, Args);
 
+  CGM.getTargetCodeGenInfo().checkFunctionABI(CGM, FD);
+
   if (FD->isInlineBuiltinDeclaration()) {
     // When generating code for a builtin with an inline declaration, use a
     // mangled name to hold the actual body, while keeping an external
@@ -2187,8 +2189,8 @@ llvm::Value *CodeGenFunction::emitArrayLength(const ArrayType *origArrayType,
     dyn_cast<llvm::ArrayType>(addr.getElementType());
   while (llvmArrayType) {
     assert(isa<ConstantArrayType>(arrayType));
-    assert(cast<ConstantArrayType>(arrayType)->getSize().getZExtValue()
-             == llvmArrayType->getNumElements());
+    assert(cast<ConstantArrayType>(arrayType)->getZExtSize() ==
+           llvmArrayType->getNumElements());
 
     gepIndices.push_back(zero);
     countFromCLAs *= llvmArrayType->getNumElements();
@@ -2206,8 +2208,7 @@ llvm::Value *CodeGenFunction::emitArrayLength(const ArrayType *origArrayType,
     // as some other type (probably a packed struct). Compute the array
     // size, and just emit the 'begin' expression as a bitcast.
     while (arrayType) {
-      countFromCLAs *=
-          cast<ConstantArrayType>(arrayType)->getSize().getZExtValue();
+      countFromCLAs *= cast<ConstantArrayType>(arrayType)->getZExtSize();
       eltType = arrayType->getElementType();
       arrayType = getContext().getAsArrayType(eltType);
     }
@@ -2407,6 +2408,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::BTFTagAttributed:
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
+    case Type::CountAttributed:
       // Keep walking after single level desugaring.
       type = type.getSingleStepDesugaredType(getContext());
       break;

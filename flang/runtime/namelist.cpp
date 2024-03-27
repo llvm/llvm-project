@@ -31,9 +31,12 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
   io.CheckFormattedStmtType<Direction::Output>("OutputNamelist");
   io.mutableModes().inNamelist = true;
   ConnectionState &connection{io.GetConnectionState()};
+  // The following lambda definition violates the conding style,
+  // but cuda-11.8 nvcc hits an internal error with the brace initialization.
+
   // Internal function to advance records and convert case
-  const auto EmitUpperCase{[&](const char *prefix, std::size_t prefixLen,
-                               const char *str, char suffix) -> bool {
+  const auto EmitUpperCase = [&](const char *prefix, std::size_t prefixLen,
+                                 const char *str, char suffix) -> bool {
     if ((connection.NeedAdvance(prefixLen) &&
             !(io.AdvanceRecord() && EmitAscii(io, " ", 1))) ||
         !EmitAscii(io, prefix, prefixLen) ||
@@ -49,7 +52,7 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
       }
     }
     return suffix == ' ' || EmitAscii(io, &suffix, 1);
-  }};
+  };
   // &GROUP
   if (!EmitUpperCase(" &", 2, group.groupName, ' ')) {
     return false;
@@ -116,10 +119,11 @@ static bool GetLowerCaseName(
   return false;
 }
 
-static std::optional<SubscriptValue> GetSubscriptValue(IoStatementState &io) {
-  std::optional<SubscriptValue> value;
+static Fortran::common::optional<SubscriptValue> GetSubscriptValue(
+    IoStatementState &io) {
+  Fortran::common::optional<SubscriptValue> value;
   std::size_t byteCount{0};
-  std::optional<char32_t> ch{io.GetCurrentChar(byteCount)};
+  Fortran::common::optional<char32_t> ch{io.GetCurrentChar(byteCount)};
   bool negate{ch && *ch == '-'};
   if ((ch && *ch == '+') || negate) {
     io.HandleRelativePosition(byteCount);
@@ -136,7 +140,7 @@ static std::optional<SubscriptValue> GetSubscriptValue(IoStatementState &io) {
   if (overflow) {
     io.GetIoErrorHandler().SignalError(
         "NAMELIST input subscript value overflow");
-    return std::nullopt;
+    return Fortran::common::nullopt;
   }
   if (negate) {
     if (value) {
@@ -158,7 +162,7 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
   std::size_t contiguousStride{source.ElementBytes()};
   bool ok{true};
   std::size_t byteCount{0};
-  std::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
+  Fortran::common::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
   char32_t comma{GetComma(io)};
   for (; ch && *ch != ')'; ++j) {
     SubscriptValue dimLower{0}, dimUpper{0}, dimStride{0};
@@ -282,9 +286,9 @@ static bool HandleSubstring(
   SubscriptValue chars{static_cast<SubscriptValue>(desc.ElementBytes()) / kind};
   // Allow for blanks in substring bounds; they're nonstandard, but not
   // ambiguous within the parentheses.
-  std::optional<SubscriptValue> lower, upper;
+  Fortran::common::optional<SubscriptValue> lower, upper;
   std::size_t byteCount{0};
-  std::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
+  Fortran::common::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
   if (ch) {
     if (*ch == ':') {
       lower = 1;
@@ -293,7 +297,7 @@ static bool HandleSubstring(
       ch = io.GetNextNonBlank(byteCount);
     }
   }
-  if (ch && ch == ':') {
+  if (ch && *ch == ':') {
     io.HandleRelativePosition(byteCount);
     ch = io.GetNextNonBlank(byteCount);
     if (ch) {
@@ -346,7 +350,8 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
           // If base and component are both arrays, the component name
           // must be followed by subscripts; process them now.
           std::size_t byteCount{0};
-          if (std::optional<char32_t> next{io.GetNextNonBlank(byteCount)};
+          if (Fortran::common::optional<char32_t> next{
+                  io.GetNextNonBlank(byteCount)};
               next && *next == '(') {
             io.HandleRelativePosition(byteCount); // skip over '('
             StaticDescriptor<maxRank, true, 16> staticDesc;
@@ -435,7 +440,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   RUNTIME_CHECK(handler, listInput != nullptr);
   // Find this namelist group's header in the input
   io.BeginReadingRecord();
-  std::optional<char32_t> next;
+  Fortran::common::optional<char32_t> next;
   char name[nameBufferSize];
   RUNTIME_CHECK(handler, group.groupName != nullptr);
   char32_t comma{GetComma(io)};
@@ -585,6 +590,8 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   return true;
 }
 
+RT_OFFLOAD_API_GROUP_BEGIN
+
 bool IsNamelistNameOrSlash(IoStatementState &io) {
   if (auto *listInput{
           io.get_if<ListDirectedStatementState<Direction::Input>>()}) {
@@ -608,5 +615,7 @@ bool IsNamelistNameOrSlash(IoStatementState &io) {
   }
   return false;
 }
+
+RT_OFFLOAD_API_GROUP_END
 
 } // namespace Fortran::runtime::io

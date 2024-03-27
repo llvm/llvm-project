@@ -48,15 +48,14 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
       VPRecipeBase *NewRecipe = nullptr;
       if (auto *VPPhi = dyn_cast<VPWidenPHIRecipe>(&Ingredient)) {
         auto *Phi = cast<PHINode>(VPPhi->getUnderlyingValue());
-        if (const auto *II = GetIntOrFpInductionDescriptor(Phi)) {
-          VPValue *Start = Plan->getVPValueOrAddLiveIn(II->getStartValue());
-          VPValue *Step =
-              vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
-          NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, *II);
-        } else {
-          Plan->addVPValue(Phi, VPPhi);
+        const auto *II = GetIntOrFpInductionDescriptor(Phi);
+        if (!II)
           continue;
-        }
+
+        VPValue *Start = Plan->getVPValueOrAddLiveIn(II->getStartValue());
+        VPValue *Step =
+            vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
+        NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, *II);
       } else {
         assert(isa<VPInstruction>(&Ingredient) &&
                "only VPInstructions expected here");
@@ -156,8 +155,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
     if (NeedsDuplicating) {
       if (ScalarVFOnly)
         continue;
-      Instruction *I = cast<Instruction>(
-          cast<VPReplicateRecipe>(SinkCandidate)->getUnderlyingValue());
+      Instruction *I = SinkCandidate->getUnderlyingInstr();
       auto *Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true);
       // TODO: add ".cloned" suffix to name of Clone's VPValue.
 
@@ -500,15 +498,18 @@ static void removeDeadRecipes(VPlan &Plan) {
   }
 }
 
-static VPValue *createScalarIVSteps(VPlan &Plan, const InductionDescriptor &ID,
+static VPValue *createScalarIVSteps(VPlan &Plan,
+                                    InductionDescriptor::InductionKind Kind,
+                                    Instruction::BinaryOps InductionOpcode,
+                                    FPMathOperator *FPBinOp,
                                     ScalarEvolution &SE, Instruction *TruncI,
                                     VPValue *StartV, VPValue *Step,
                                     VPBasicBlock::iterator IP) {
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
   VPSingleDefRecipe *BaseIV = CanonicalIV;
-  if (!CanonicalIV->isCanonical(ID.getKind(), StartV, Step)) {
-    BaseIV = new VPDerivedIVRecipe(ID, StartV, CanonicalIV, Step);
+  if (!CanonicalIV->isCanonical(Kind, StartV, Step)) {
+    BaseIV = new VPDerivedIVRecipe(Kind, FPBinOp, StartV, CanonicalIV, Step);
     HeaderVPBB->insert(BaseIV, IP);
   }
 
@@ -538,21 +539,56 @@ static VPValue *createScalarIVSteps(VPlan &Plan, const InductionDescriptor &ID,
     VecPreheader->appendRecipe(Step->getDefiningRecipe());
   }
 
-  VPScalarIVStepsRecipe *Steps = new VPScalarIVStepsRecipe(ID, BaseIV, Step);
+  VPScalarIVStepsRecipe *Steps = new VPScalarIVStepsRecipe(
+      BaseIV, Step, InductionOpcode,
+      FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags());
   HeaderVPBB->insert(Steps, IP);
   return Steps;
 }
 
-/// If any user of a VPWidenIntOrFpInductionRecipe needs scalar values,
-/// provide them by building scalar steps off of the canonical scalar IV and
-/// update the original IV's users. This is an optional optimization to reduce
-/// the needs of vector extracts.
-static void optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
+/// Legalize VPWidenPointerInductionRecipe, by replacing it with a PtrAdd
+/// (IndStart, ScalarIVSteps (0, Step)) if only its scalar values are used, as
+/// VPWidenPointerInductionRecipe will generate vectors only. If some users
+/// require vectors while other require scalars, the scalar uses need to extract
+/// the scalars from the generated vectors (Note that this is different to how
+/// int/fp inductions are handled). Also optimize VPWidenIntOrFpInductionRecipe,
+/// if any of its users needs scalar values, by providing them scalar steps
+/// built on the canonical scalar IV and update the original IV's users. This is
+/// an optional optimization to reduce the needs of vector extracts.
+static void legalizeAndOptimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
   SmallVector<VPRecipeBase *> ToRemove;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   bool HasOnlyVectorVFs = !Plan.hasVF(ElementCount::getFixed(1));
   VPBasicBlock::iterator InsertPt = HeaderVPBB->getFirstNonPhi();
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
+    // Replace wide pointer inductions which have only their scalars used by
+    // PtrAdd(IndStart, ScalarIVSteps (0, Step)).
+    if (auto *PtrIV = dyn_cast<VPWidenPointerInductionRecipe>(&Phi)) {
+      if (!PtrIV->onlyScalarsGenerated(Plan.hasScalableVF()))
+        continue;
+
+      const InductionDescriptor &ID = PtrIV->getInductionDescriptor();
+      VPValue *StartV = Plan.getVPValueOrAddLiveIn(
+          ConstantInt::get(ID.getStep()->getType(), 0));
+      VPValue *StepV = PtrIV->getOperand(1);
+      VPRecipeBase *Steps =
+          createScalarIVSteps(Plan, InductionDescriptor::IK_IntInduction,
+                              Instruction::Add, nullptr, SE, nullptr, StartV,
+                              StepV, InsertPt)
+              ->getDefiningRecipe();
+
+      auto *Recipe =
+          new VPInstruction(VPInstruction::PtrAdd,
+                            {PtrIV->getStartValue(), Steps->getVPSingleValue()},
+                            PtrIV->getDebugLoc(), "next.gep");
+
+      Recipe->insertAfter(Steps);
+      PtrIV->replaceAllUsesWith(Recipe);
+      continue;
+    }
+
+    // Replace widened induction with scalar steps for users that only use
+    // scalars.
     auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
     if (!WideIV)
       continue;
@@ -562,9 +598,11 @@ static void optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       continue;
 
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-    VPValue *Steps = createScalarIVSteps(Plan, ID, SE, WideIV->getTruncInst(),
-                                         WideIV->getStartValue(),
-                                         WideIV->getStepValue(), InsertPt);
+    VPValue *Steps = createScalarIVSteps(
+        Plan, ID.getKind(), ID.getInductionOpcode(),
+        dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()), SE,
+        WideIV->getTruncInst(), WideIV->getStartValue(), WideIV->getStepValue(),
+        InsertPt);
 
     // Update scalar users of IV to use Step instead.
     if (!HasOnlyVectorVFs)
@@ -815,27 +853,6 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
   }
 }
 
-/// Returns true is \p V is constant one.
-static bool isConstantOne(VPValue *V) {
-  if (!V->isLiveIn())
-    return false;
-  auto *C = dyn_cast<ConstantInt>(V->getLiveInIRValue());
-  return C && C->isOne();
-}
-
-/// Returns the llvm::Instruction opcode for \p R.
-static unsigned getOpcodeForRecipe(VPRecipeBase &R) {
-  if (auto *WidenR = dyn_cast<VPWidenRecipe>(&R))
-    return WidenR->getUnderlyingInstr()->getOpcode();
-  if (auto *WidenC = dyn_cast<VPWidenCastRecipe>(&R))
-    return WidenC->getOpcode();
-  if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R))
-    return RepR->getUnderlyingInstr()->getOpcode();
-  if (auto *VPI = dyn_cast<VPInstruction>(&R))
-    return VPI->getOpcode();
-  return 0;
-}
-
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   // Try to remove redundant blend recipes.
@@ -849,24 +866,9 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  switch (getOpcodeForRecipe(R)) {
-  case Instruction::Mul: {
-    VPValue *A = R.getOperand(0);
-    VPValue *B = R.getOperand(1);
-    if (isConstantOne(A))
-      return R.getVPSingleValue()->replaceAllUsesWith(B);
-    if (isConstantOne(B))
-      return R.getVPSingleValue()->replaceAllUsesWith(A);
-    break;
-  }
-  case Instruction::Trunc: {
-    VPRecipeBase *Ext = R.getOperand(0)->getDefiningRecipe();
-    if (!Ext)
-      break;
-    unsigned ExtOpcode = getOpcodeForRecipe(*Ext);
-    if (ExtOpcode != Instruction::ZExt && ExtOpcode != Instruction::SExt)
-      break;
-    VPValue *A = Ext->getOperand(0);
+  using namespace llvm::VPlanPatternMatch;
+  VPValue *A;
+  if (match(&R, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
     VPValue *Trunc = R.getVPSingleValue();
     Type *TruncTy = TypeInfo.inferScalarType(Trunc);
     Type *ATy = TypeInfo.inferScalarType(A);
@@ -875,8 +877,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     } else {
       // Don't replace a scalarizing recipe with a widened cast.
       if (isa<VPReplicateRecipe>(&R))
-        break;
+        return;
       if (ATy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
+
+        unsigned ExtOpcode = match(R.getOperand(0), m_SExt(m_VPValue()))
+                                 ? Instruction::SExt
+                                 : Instruction::ZExt;
         auto *VPC =
             new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A, TruncTy);
         VPC->insertBefore(&R);
@@ -902,11 +908,11 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         assert(TypeInfo.inferScalarType(VPV) == TypeInfo2.inferScalarType(VPV));
     }
 #endif
-    break;
   }
-  default:
-    break;
-  }
+
+  if (match(&R, m_CombineOr(m_Mul(m_VPValue(A), m_SpecificInt(1)),
+                            m_Mul(m_SpecificInt(1), m_VPValue(A)))))
+    return R.getVPSingleValue()->replaceAllUsesWith(A);
 }
 
 /// Try to simplify the recipes in \p Plan.
@@ -1059,7 +1065,7 @@ void VPlanTransforms::optimize(VPlan &Plan, ScalarEvolution &SE) {
   removeRedundantInductionCasts(Plan);
 
   simplifyRecipes(Plan, SE.getContext());
-  optimizeInductions(Plan, SE);
+  legalizeAndOptimizeInductions(Plan, SE);
   removeDeadRecipes(Plan);
 
   createAndOptimizeReplicateRegions(Plan);
@@ -1192,10 +1198,10 @@ void VPlanTransforms::addActiveLaneMask(
     LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(
         Plan, DataAndControlFlowWithoutRuntimeCheck);
   } else {
-    LaneMask = new VPInstruction(VPInstruction::ActiveLaneMask,
-                                 {WideCanonicalIV, Plan.getTripCount()},
-                                 nullptr, "active.lane.mask");
-    LaneMask->insertAfter(WideCanonicalIV);
+    VPBuilder B = VPBuilder::getToInsertAfter(WideCanonicalIV);
+    LaneMask = B.createNaryOp(VPInstruction::ActiveLaneMask,
+                              {WideCanonicalIV, Plan.getTripCount()}, nullptr,
+                              "active.lane.mask");
   }
 
   // Walk users of WideCanonicalIV and replace all compares of the form
