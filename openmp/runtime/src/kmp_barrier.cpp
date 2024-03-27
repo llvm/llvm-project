@@ -2043,7 +2043,7 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
                 TRUE);
         __kmp_task_team_wait(this_thr, team USE_ITT_BUILD_ARG(itt_sync_obj));
         __kmp_task_team_setup(this_thr, team, 0);
-
+        __kmp_task_team_sync(this_thr, team);
 #if USE_ITT_BUILD
         if (__itt_sync_create_ptr || KMP_ITT_DEBUG)
           __kmp_itt_barrier_finished(gtid, itt_sync_obj);
