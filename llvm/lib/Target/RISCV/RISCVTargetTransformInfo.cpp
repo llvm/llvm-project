@@ -909,33 +909,23 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   if (!IsTypeLegal)
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
-  std::pair<InstructionCost, MVT> DstLT = getTypeLegalizationCost(Dst);
-
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
+  // FIXME: Need to consider vsetvli and lmul.
   int PowDiff = (int)Log2_32(Dst->getScalarSizeInBits()) -
                 (int)Log2_32(Src->getScalarSizeInBits());
   switch (ISD) {
   case ISD::SIGN_EXTEND:
-  case ISD::ZERO_EXTEND: {
-    const unsigned SrcEltSize = Src->getScalarSizeInBits();
-    if (SrcEltSize == 1) {
+  case ISD::ZERO_EXTEND:
+    if (Src->getScalarSizeInBits() == 1) {
       // We do not use vsext/vzext to extend from mask vector.
       // Instead we use the following instructions to extend from mask vector:
       // vmv.v.i v8, 0
       // vmerge.vim v8, v8, -1, v0
-      return getRISCVInstructionCost({RISCV::VMV_V_I, RISCV::VMERGE_VIM},
-                                     DstLT.second, CostKind);
+      return 2;
     }
-    if (PowDiff > 3)
-      return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
-    unsigned SExtOp[] = {RISCV::VSEXT_VF2, RISCV::VSEXT_VF4, RISCV::VSEXT_VF8};
-    unsigned ZExtOp[] = {RISCV::VZEXT_VF2, RISCV::VZEXT_VF4, RISCV::VZEXT_VF8};
-    unsigned Op =
-        (ISD == ISD::SIGN_EXTEND) ? SExtOp[PowDiff - 1] : ZExtOp[PowDiff - 1];
-    return getRISCVInstructionCost(Op, DstLT.second, CostKind);
-  }
+    return 1;
   case ISD::TRUNCATE:
     if (Dst->getScalarSizeInBits() == 1) {
       // We do not use several vncvt to truncate to mask vector. So we could
