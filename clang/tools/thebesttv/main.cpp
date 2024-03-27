@@ -372,6 +372,33 @@ void dumpICFGNode(int u, ordered_json &jPath) {
     }
 }
 
+/**
+ * 删除路径中连续重复的 stmt
+ */
+void deduplicateLocations(ordered_json &locations) {
+    std::set<std::string> interestedFields = {
+        "type", "file", "beginLine", "beginColumn", "endLine", "endColumn"};
+
+    ordered_json result, lastEntry;
+    for (const auto &j : locations) {
+        if (j["type"] != "stmt") {
+            result.push_back(j);
+            lastEntry.clear();
+            continue;
+        }
+
+        if (allFieldsMatch(j, lastEntry, interestedFields)) {
+            logger.warn("Skipping duplicated stmt in path (most likely due to "
+                        "macro expansion)");
+            continue;
+        }
+
+        result.push_back(j);
+        lastEntry = j;
+    }
+    locations = result;
+}
+
 void saveAsJson(const std::set<std::vector<int>> &results,
                 const std::string &type, ordered_json &jResults) {
     std::vector<std::vector<int>> sortedResults(results.begin(), results.end());
@@ -384,12 +411,14 @@ void saveAsJson(const std::set<std::vector<int>> &results,
     for (const auto &path : sortedResults) {
         if (cnt++ > 10)
             break;
-        ordered_json jPath;
+        ordered_json jPath, locations;
         jPath["type"] = type;
         jPath["nodes"] = path;
         for (int x : path) {
-            dumpICFGNode(x, jPath["locations"]);
+            dumpICFGNode(x, locations);
         }
+        deduplicateLocations(locations);
+        jPath["locations"] = locations;
         jResults.push_back(jPath);
     }
 }

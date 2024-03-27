@@ -153,4 +153,12 @@ SourceLocation getEndOfMacroExpansion(SourceLocation loc, ASTContext &Context);
  */
 void printSourceWithinRange(ASTContext &Context, SourceRange range);
 
+/**
+ * 判断两个 json 在给定的 `fields` 中，是否完全相同。
+ *
+ * 注意，即使两个 json 都没有某个 field `f`，也会返回 false。
+ */
+bool allFieldsMatch(const json &x, const json &y,
+                    const std::set<std::string> &fields);
+
 #endif

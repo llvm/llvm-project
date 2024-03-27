@@ -157,3 +157,12 @@ void printSourceWithinRange(ASTContext &Context, SourceRange range) {
         llvm::errs() << "> " << StringRep << "\n";
     }
 }
+
+bool allFieldsMatch(const json &x, const json &y,
+                    const std::set<std::string> &fields) {
+    for (auto &f : fields) {
+        if (!x.contains(f) || !y.contains(f) || x[f] != y[f])
+            return false;
+    }
+    return true;
+}

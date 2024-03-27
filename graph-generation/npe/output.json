@@ -84,36 +84,6 @@
                 {
                     "type": "stmt",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
-                    "beginLine": 22,
-                    "beginColumn": 5,
-                    "endLine": 22,
-                    "endColumn": 21,
-                    "content": "ASSIGN_NULL(ptr)",
-                    "stmtKind": "MemberExpr"
-                },
-                {
-                    "type": "stmt",
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
-                    "beginLine": 22,
-                    "beginColumn": 5,
-                    "endLine": 22,
-                    "endColumn": 21,
-                    "content": "ASSIGN_NULL(ptr)",
-                    "stmtKind": "BinaryOperator"
-                },
-                {
-                    "type": "stmt",
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
-                    "beginLine": 22,
-                    "beginColumn": 5,
-                    "endLine": 22,
-                    "endColumn": 21,
-                    "content": "ASSIGN_NULL(ptr)",
-                    "stmtKind": "ImplicitCastExpr"
-                },
-                {
-                    "type": "stmt",
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
                     "beginLine": 23,
                     "beginColumn": 5,
                     "endLine": 23,
