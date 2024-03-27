@@ -1482,8 +1482,8 @@ void kmp_handle_upper_triangle_matrix(
                                     original_bounds_nest[0].ub0_u64);
   kmp_uint64 outer_lb0 = kmp_fix_iv(original_bounds_nest[0].loop_iv_type,
                                     original_bounds_nest[0].lb0_u64);
-  kmp_uint64 inner_ub0 = kmp_fix_iv(original_bounds_nest[1].loop_iv_type,
-                                    original_bounds_nest[1].ub0_u64);
+  [[maybe_unused]] kmp_uint64 inner_ub0 = kmp_fix_iv(
+      original_bounds_nest[1].loop_iv_type, original_bounds_nest[1].ub0_u64);
   // calculate the chunk's lower and upper bounds
   // the total number of iterations in the loop is the sum of the arithmetic
   // progression from the outer lower to outer upper bound (inclusive since the
