@@ -1,11 +1,10 @@
 #-- input file: debug-names-2.cpp
 ## Generated with:
-##
 ## - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='debug-names-test' \
 ##     -S debug-names-2.cpp -o debug-names-2.s
-##
+
 ## debug-names-2.cpp contents:
-##
+
 ## struct t1 { };
 ## int main() {
 ##   t1 v1;
@@ -46,46 +45,6 @@ main:                                   # @main
 	.byte	1                               # DWARF Unit Type
 	.byte	8                               # Address Size (in bytes)
 	.long	.debug_abbrev                   # Offset Into Abbrev. Section
-	.byte	1                               # Abbrev [1] 0xc:0x3d DW_TAG_compile_unit
-	.byte	0                               # DW_AT_producer
-	.short	33                              # DW_AT_language
-	.byte	1                               # DW_AT_name
-	.long	.Lstr_offsets_base0             # DW_AT_str_offsets_base
-	.long	.Lline_table_start0             # DW_AT_stmt_list
-	.byte	2                               # DW_AT_comp_dir
-	.byte	0                               # DW_AT_low_pc
-	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
-	.long	.Laddr_table_base0              # DW_AT_addr_base
-	.byte	2                               # Abbrev [2] 0x23:0x1b DW_TAG_subprogram
-	.byte	0                               # DW_AT_low_pc
-	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
-	.byte	1                               # DW_AT_frame_base
-	.byte	86
-	.byte	3                               # DW_AT_name
-	.byte	0                               # DW_AT_decl_file
-	.byte	2                               # DW_AT_decl_line
-	.long	62                              # DW_AT_type
-                                        # DW_AT_external
-	.byte	3                               # Abbrev [3] 0x32:0xb DW_TAG_variable
-	.byte	2                               # DW_AT_location
-	.byte	145
-	.byte	127
-	.byte	5                               # DW_AT_name
-	.byte	0                               # DW_AT_decl_file
-	.byte	3                               # DW_AT_decl_line
-	.long	66                              # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	4                               # Abbrev [4] 0x3e:0x4 DW_TAG_base_type
-	.byte	4                               # DW_AT_name
-	.byte	5                               # DW_AT_encoding
-	.byte	4                               # DW_AT_byte_size
-	.byte	5                               # Abbrev [5] 0x42:0x6 DW_TAG_structure_type
-	.byte	5                               # DW_AT_calling_convention
-	.byte	6                               # DW_AT_name
-	.byte	1                               # DW_AT_byte_size
-	.byte	0                               # DW_AT_decl_file
-	.byte	1                               # DW_AT_decl_line
-	.byte	0                               # End Of Children Mark
 .Ldebug_info_end0:
 	.section	.debug_str_offsets,"",@progbits
 	.long	32                              # Length of String Offsets Set
