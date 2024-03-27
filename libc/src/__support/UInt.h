@@ -321,9 +321,16 @@ DECLARE_COUNTBIT(countl_one, N - i - 1)  // iterating backward
 
 template <size_t Bits, bool Signed, typename WordType = uint64_t>
 struct BigInt {
+private:
   static_assert(cpp::is_integral_v<WordType> && cpp::is_unsigned_v<WordType>,
                 "WordType must be unsigned integer.");
 
+  struct Division {
+    BigInt quotient;
+    BigInt remainder;
+  };
+
+public:
   using word_type = WordType;
   using unsigned_type = BigInt<Bits, false, word_type>;
   using signed_type = BigInt<Bits, true, word_type>;
@@ -559,57 +566,17 @@ struct BigInt {
   // That is by truncating the fractionnal part
   // https://stackoverflow.com/a/3602857
   LIBC_INLINE constexpr cpp::optional<BigInt> div(const BigInt &divider) {
-    auto &dividend = *this;
-    if constexpr (SIGNED) {
-      // Signed Multiword Division
-      // 1. Negate the dividend it it is negative, and similarly for the
-      // divisor.
-      // 2. Convert the divident and divisor to unsigned representation.
-      // 3. Use unsigned multiword division algorithm.
-      // 4. Convert the quotient and remainder to signed representation.
-      // 5. Negate the quotient if the dividend and divisor had opposite signs.
-      // 6. Negate the remainder if the dividend was negative.
-      const bool dividend_is_neg = dividend.is_neg();
-      const bool divider_is_neg = divider.is_neg();
-      unsigned_type udividend(dividend);
-      unsigned_type udivider(divider);
-      if (dividend_is_neg)
-        udividend.negate();
-      if (divider_is_neg)
-        udivider.negate();
-      auto maybe_remainder = udividend.div(udivider);
-      if (!maybe_remainder)
-        return cpp::nullopt;
-      unsigned_type remainder = *maybe_remainder;
-      if (dividend_is_neg != divider_is_neg)
-        udividend.negate(); // this is the quotient
-      dividend = signed_type(udividend);
-      if (dividend_is_neg)
-        remainder.negate();
-      return signed_type(remainder);
-    } else {
-      BigInt remainder;
-      if (divider.is_zero())
-        return cpp::nullopt;
-      if (divider == 1)
-        return remainder;
-      BigInt quotient;
-      if (dividend >= divider) {
-        BigInt subtractor = divider;
-        int cur_bit = multiword::countl_zero(subtractor.val) -
-                      multiword::countl_zero(dividend.val);
-        subtractor <<= cur_bit;
-        for (; cur_bit >= 0 && dividend > 0; --cur_bit, subtractor >>= 1) {
-          if (dividend < subtractor)
-            continue;
-          dividend -= subtractor;
-          quotient.set_bit(cur_bit);
-        }
-      }
-      remainder = dividend;
-      dividend = quotient;
-      return remainder;
-    }
+    if (divider.is_zero())
+      return cpp::nullopt;
+    if (divider == 1)
+      return BigInt::zero();
+    Division result;
+    if constexpr (SIGNED)
+      result = divide_signed(*this, divider);
+    else
+      result = divide_unsigned(*this, divider);
+    *this = result.quotient;
+    return result.remainder;
   }
 
   // Efficiently perform BigInt / (x * 2^e), where x is a half-word-size
@@ -872,7 +839,7 @@ struct BigInt {
 
 private:
   LIBC_INLINE friend constexpr int cmp(const BigInt &lhs, const BigInt &rhs) {
-    const auto compare = [](WordType a, WordType b) {
+    constexpr auto compare = [](WordType a, WordType b) {
       return a == b ? 0 : a > b ? 1 : -1;
     };
     if constexpr (Signed) {
@@ -927,6 +894,56 @@ private:
   LIBC_INLINE constexpr void set_bit(size_t i) {
     const size_t word_index = i / WORD_SIZE;
     val[word_index] |= WordType(1) << (i % WORD_SIZE);
+  }
+
+  LIBC_INLINE constexpr static Division divide_unsigned(const BigInt &dividend,
+                                                        const BigInt &divider) {
+    BigInt remainder = dividend;
+    BigInt quotient;
+    if (remainder >= divider) {
+      BigInt subtractor = divider;
+      int cur_bit = multiword::countl_zero(subtractor.val) -
+                    multiword::countl_zero(remainder.val);
+      subtractor <<= cur_bit;
+      for (; cur_bit >= 0 && remainder > 0; --cur_bit, subtractor >>= 1) {
+        if (remainder < subtractor)
+          continue;
+        remainder -= subtractor;
+        quotient.set_bit(cur_bit);
+      }
+    }
+    return Division{quotient, remainder};
+  }
+
+  LIBC_INLINE constexpr static Division divide_signed(const BigInt &dividend,
+                                                      const BigInt &divider) {
+    // Special case because it is not possible to negate the min value of a
+    // signed integer.
+    if (dividend == min() && divider == min())
+      return Division{one(), zero()};
+    // 1. Convert the dividend and divisor to unsigned representation.
+    unsigned_type udividend(dividend);
+    unsigned_type udivider(divider);
+    // 2. Negate the dividend if it's negative, and similarly for the divisor.
+    const bool dividend_is_neg = dividend.is_neg();
+    const bool divider_is_neg = divider.is_neg();
+    if (dividend_is_neg)
+      udividend.negate();
+    if (divider_is_neg)
+      udivider.negate();
+    // 3. Use unsigned multiword division algorithm.
+    const auto unsigned_result = divide_unsigned(udividend, udivider);
+    // 4. Convert the quotient and remainder to signed representation.
+    Division result;
+    result.quotient = signed_type(unsigned_result.quotient);
+    result.remainder = signed_type(unsigned_result.remainder);
+    // 5. Negate the quotient if the dividend and divisor had opposite signs.
+    if (dividend_is_neg != divider_is_neg)
+      result.quotient.negate();
+    // 6. Negate the remainder if the dividend was negative.
+    if (dividend_is_neg)
+      result.remainder.negate();
+    return result;
   }
 
   friend signed_type;
