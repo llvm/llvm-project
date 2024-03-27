@@ -99,8 +99,9 @@ class formatted_raw_ostream : public raw_ostream {
   }
 
   void PreDisableScan() {
-    assert(!DisableScan && PartialUTF8Char.empty());
+    assert(!DisableScan);
     ComputePosition(getBufferStart(), GetNumBytesInBuffer());
+    assert(PartialUTF8Char.empty());
     DisableScan = true;
   }
 
