@@ -110,6 +110,8 @@ public:
 
   bool hasBFloat16Type() const override { return true; }
 
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
+
   bool useFP16ConversionIntrinsics() const override {
     return false;
   }
