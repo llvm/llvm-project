@@ -403,7 +403,12 @@ def _getLocaleFlagsAction(cfg, locale, alts, members):
               }
 
               for (size_t i = 0; i < len; ++i) {
-                printf("\\u%%04x", dst[i]);
+                if (dst[i] >= 0x7F) {
+                  printf("\\u%%04x", dst[i]);
+                } else {
+                  // c++03 does not allow basic ascii-range characters in UCNs
+                  printf("%%c", (char)dst[i]);
+                }
               }
               printf("\n");
               delete[] dst;
