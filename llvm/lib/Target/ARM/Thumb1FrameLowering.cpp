@@ -612,11 +612,11 @@ bool Thumb1FrameLowering::needPopSpecialFixUp(const MachineFunction &MF) const {
 
 static void findTemporariesForLR(const BitVector &GPRsNoLRSP,
                                  const BitVector &PopFriendly,
-                                 const LivePhysRegs &UsedRegs, unsigned &PopReg,
+                                 const LiveRegUnits &UsedRegs, unsigned &PopReg,
                                  unsigned &TmpReg, MachineRegisterInfo &MRI) {
   PopReg = TmpReg = 0;
   for (auto Reg : GPRsNoLRSP.set_bits()) {
-    if (UsedRegs.available(MRI, Reg)) {
+    if (UsedRegs.available(Reg)) {
       // Remember the first pop-friendly register and exit.
       if (PopFriendly.test(Reg)) {
         PopReg = Reg;
@@ -684,7 +684,7 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
   // Look for a temporary register to use.
   // First, compute the liveness information.
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
-  LivePhysRegs UsedRegs(TRI);
+  LiveRegUnits UsedRegs(TRI);
   UsedRegs.addLiveOuts(MBB);
   // The semantic of pristines changed recently and now,
   // the callee-saved registers that are touched in the function
@@ -710,11 +710,6 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
   unsigned TemporaryReg = 0;
   BitVector PopFriendly =
       TRI.getAllocatableSet(MF, TRI.getRegClass(ARM::tGPRRegClassID));
-  // R7 may be used as a frame pointer, hence marked as not generally
-  // allocatable, however there's no reason to not use it as a temporary for
-  // restoring LR.
-  if (STI.getFramePointerReg() == ARM::R7)
-    PopFriendly.set(ARM::R7);
 
   assert(PopFriendly.any() && "No allocatable pop-friendly register?!");
   // Rebuild the GPRs from the high registers because they are removed
