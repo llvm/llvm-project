@@ -4290,11 +4290,11 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         if (Args.getLastArg(OPT_fnative_half_type)) {
           const LangStandard &Std =
               LangStandard::getLangStandardForKind(Opts.LangStd);
-
           if (!(Opts.LangStd >= LangStandard::lang_hlsl2018 &&
                 T.getOSVersion() >= VersionTuple(6, 2)))
-            Diags.Report(diag::err_drv_dxc_enable_16bit_types_option_invalid)
-                << T.getOSVersion().getAsString() << Std.getName();
+            Diags.Report(diag::err_drv_hlsl_16bit_types_unsupported)
+                << "-enable-16bit-types" << true << Std.getName()
+                << T.getOSVersion().getAsString();
         }
       } else if (T.isSPIRVLogical()) {
         if (!T.isVulkanOS() || T.getVulkanVersion() == VersionTuple(0)) {
@@ -4305,9 +4305,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
           const LangStandard &Std =
               LangStandard::getLangStandardForKind(Opts.LangStd);
           if (!(Opts.LangStd >= LangStandard::lang_hlsl2018))
-            Diags.Report(
-                diag::err_drv_cc1_hlsl_spirv_fnative_half_type_option_invalid)
-                << Std.getName();
+            Diags.Report(diag::err_drv_hlsl_16bit_types_unsupported)
+                << "-fnative-half-type" << false << Std.getName()
+                << T.getOSVersion().getAsString();
         }
       } else {
         llvm_unreachable("expected DXIL or SPIR-V target");
