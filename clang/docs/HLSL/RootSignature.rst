@@ -391,7 +391,7 @@ The struct type will be look like this:
 
 The metadata will be look like this:
 
-.. code-block:: llvm
+.. code-block::
 
   !1 = !{ data for static sampler } ; Save informations for single static 
                                     ; sampler
