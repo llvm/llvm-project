@@ -1149,19 +1149,6 @@ float4 pow(float4, float4);
 #ifdef __HLSL_ENABLE_16_BIT
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int16_t reversebits(int16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int16_t2 reversebits(int16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int16_t3 reversebits(int16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int16_t4 reversebits(int16_t4);
-
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint16_t reversebits(uint16_t);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
@@ -1175,15 +1162,6 @@ uint16_t4 reversebits(uint16_t4);
 #endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int reversebits(int);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int2 reversebits(int2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int3 reversebits(int3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int4 reversebits(int4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint reversebits(uint);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint2 reversebits(uint2);
@@ -1191,15 +1169,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint3 reversebits(uint3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint4 reversebits(uint4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int64_t reversebits(int64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int64_t2 reversebits(int64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int64_t3 reversebits(int64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int64_t4 reversebits(int64_t4);
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint64_t reversebits(uint64_t);
