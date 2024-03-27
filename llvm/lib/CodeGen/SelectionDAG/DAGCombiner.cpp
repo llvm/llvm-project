@@ -609,6 +609,9 @@ namespace {
                            SDValue &CC, bool MatchStrict = false) const;
     bool isOneUseSetCC(SDValue N) const;
 
+    SDValue foldAddToAvg(SDNode *N, const SDLoc &DL);
+    SDValue foldSubToAvg(SDNode *N, const SDLoc &DL);
+
     SDValue SimplifyNodeWithTwoResults(SDNode *N, unsigned LoOp,
                                          unsigned HiOp);
     SDValue CombineConsecutiveLoads(SDNode *N, EVT VT);
@@ -2490,7 +2493,8 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
   return SelectOp;
 }
 
-static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, SelectionDAG &DAG) {
+static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, const SDLoc &DL,
+                                         SelectionDAG &DAG) {
   assert((N->getOpcode() == ISD::ADD || N->getOpcode() == ISD::SUB) &&
          "Expecting add or sub");
 
@@ -2522,7 +2526,6 @@ static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, SelectionDAG &DAG) {
   // add (zext i1 (seteq (X & 1), 0)), C --> sub C+1, (zext (X & 1))
   // sub C, (zext i1 (seteq (X & 1), 0)) --> add C-1, (zext (X & 1))
   EVT VT = C.getValueType();
-  SDLoc DL(N);
   SDValue LowBit = DAG.getZExtOrTrunc(SetCC.getOperand(0), DL, VT);
   SDValue C1 = IsAdd ? DAG.getConstant(CN->getAPIntValue() + 1, DL, VT) :
                        DAG.getConstant(CN->getAPIntValue() - 1, DL, VT);
@@ -2530,26 +2533,22 @@ static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, SelectionDAG &DAG) {
 }
 
 // Attempt to form avgceil(A, B) from (A | B) - ((A ^ B) >> 1)
-static SDValue combineFixedwidthToAVGCEIL(SDNode *N, SelectionDAG &DAG) {
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+SDValue DAGCombiner::foldSubToAvg(SDNode *N, const SDLoc &DL) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N0.getValueType();
-  SDLoc DL(N);
   SDValue A, B;
 
-  if (TLI.isOperationLegal(ISD::AVGCEILU, VT)) {
-    if (sd_match(N, m_Sub(m_Or(m_Value(A), m_Value(B)),
-                          m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
-                                m_SpecificInt(1))))) {
-      return DAG.getNode(ISD::AVGCEILU, DL, VT, A, B);
-    }
+  if (hasOperation(ISD::AVGCEILU, VT) &&
+      sd_match(N, m_Sub(m_Or(m_Value(A), m_Value(B)),
+                        m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
+                              m_SpecificInt(1))))) {
+    return DAG.getNode(ISD::AVGCEILU, DL, VT, A, B);
   }
-  if (TLI.isOperationLegal(ISD::AVGCEILS, VT)) {
-    if (sd_match(N, m_Sub(m_Or(m_Value(A), m_Value(B)),
-                          m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)),
-                                m_SpecificInt(1))))) {
-      return DAG.getNode(ISD::AVGCEILS, DL, VT, A, B);
-    }
+  if (hasOperation(ISD::AVGCEILS, VT) &&
+      sd_match(N, m_Sub(m_Or(m_Value(A), m_Value(B)),
+                        m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)),
+                              m_SpecificInt(1))))) {
+    return DAG.getNode(ISD::AVGCEILS, DL, VT, A, B);
   }
   return SDValue();
 }
@@ -2846,26 +2845,22 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
 }
 
 // Attempt to form avgfloor(A, B) from (A & B) + ((A ^ B) >> 1)
-static SDValue combineFixedwidthToAVGFLOOR(SDNode *N, SelectionDAG &DAG) {
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+SDValue DAGCombiner::foldAddToAvg(SDNode *N, const SDLoc &DL) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N0.getValueType();
-  SDLoc DL(N);
   SDValue A, B;
 
-  if (TLI.isOperationLegal(ISD::AVGFLOORU, VT)) {
-    if (sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
-                          m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
-                                m_SpecificInt(1))))) {
-      return DAG.getNode(ISD::AVGFLOORU, DL, VT, A, B);
-    }
+  if (hasOperation(ISD::AVGFLOORU, VT) &&
+      sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
+                        m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
+                              m_SpecificInt(1))))) {
+    return DAG.getNode(ISD::AVGFLOORU, DL, VT, A, B);
   }
-  if (TLI.isOperationLegal(ISD::AVGFLOORS, VT)) {
-    if (sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
-                          m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)),
-                                m_SpecificInt(1))))) {
-      return DAG.getNode(ISD::AVGFLOORS, DL, VT, A, B);
-    }
+  if (hasOperation(ISD::AVGFLOORS, VT) &&
+      sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
+                        m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)),
+                              m_SpecificInt(1))))) {
+    return DAG.getNode(ISD::AVGFLOORS, DL, VT, A, B);
   }
 
   return SDValue();
@@ -2880,14 +2875,14 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   if (SDValue Combined = visitADDLike(N))
     return Combined;
 
-  if (SDValue V = foldAddSubBoolOfMaskedVal(N, DAG))
+  if (SDValue V = foldAddSubBoolOfMaskedVal(N, DL, DAG))
     return V;
 
   if (SDValue V = foldAddSubOfSignBit(N, DAG))
     return V;
 
   // Try to match AVGFLOOR fixedwidth pattern
-  if (SDValue V = combineFixedwidthToAVGFLOOR(N, DAG))
+  if (SDValue V = foldAddToAvg(N, DL))
     return V;
 
   // fold (a+b) -> (a|b) iff a and b share no bits.
@@ -3879,14 +3874,14 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   if (N1.isUndef())
     return N1;
 
-  if (SDValue V = foldAddSubBoolOfMaskedVal(N, DAG))
+  if (SDValue V = foldAddSubBoolOfMaskedVal(N, DL, DAG))
     return V;
 
   if (SDValue V = foldAddSubOfSignBit(N, DAG))
     return V;
 
   // Try to match AVGCEIL fixedwidth pattern
-  if (SDValue V = combineFixedwidthToAVGCEIL(N, DAG))
+  if (SDValue V = foldSubToAvg(N, DL))
     return V;
 
   if (SDValue V = foldAddSubMasked1(false, N0, N1, DAG, SDLoc(N)))

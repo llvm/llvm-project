@@ -1467,7 +1467,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
   bool EmitDebugInfo = DI && CGM.getCodeGenOpts().hasReducedDebugInfo();
 
   Address address = Address::invalid();
-  RawAddress AllocaAddr = RawAddress::invalid();
+  Address AllocaAddr = Address::invalid();
   Address OpenMPLocalAddr = Address::invalid();
   if (CGM.getLangOpts().OpenMPIRBuilder)
     OpenMPLocalAddr = OMPBuilderCBHelpers::getAddressOfLocalVariable(*this, &D);
@@ -1530,10 +1530,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       // return slot, so that we can elide the copy when returning this
       // variable (C++0x [class.copy]p34).
       address = ReturnValue;
-      AllocaAddr =
-          RawAddress(ReturnValue.emitRawPointer(*this),
-                     ReturnValue.getElementType(), ReturnValue.getAlignment());
-      ;
+      AllocaAddr = ReturnValue;
 
       if (const RecordType *RecordTy = Ty->getAs<RecordType>()) {
         const auto *RD = RecordTy->getDecl();
@@ -1544,7 +1541,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
           // to this variable. Set it to zero to indicate that NRVO was not
           // applied.
           llvm::Value *Zero = Builder.getFalse();
-          RawAddress NRVOFlag =
+          Address NRVOFlag =
               CreateTempAlloca(Zero->getType(), CharUnits::One(), "nrvo");
           EnsureInsertPoint();
           Builder.CreateStore(Zero, NRVOFlag);
@@ -1691,16 +1688,14 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
              getLangOpts().OpenMP &&
                  "Expected either an alloca, sret+byval NRVO parameter, or "
                  "OpenMP runtime allocation.");
-      RawAddress rawAddress = RawAddress(address.emitRawPointer(*this),
-                     address.getElementType(), address.getAlignment());
-      DebugAddr = AllocaAddr.isValid() ? AllocaAddr : rawAddress;
+      DebugAddr = AllocaAddr.isValid() ? AllocaAddr : address;
     }
-    (void)DI->EmitDeclareOfAutoVariable(&D, DebugAddr.emitRawPointer(*this), Builder,
+    (void)DI->EmitDeclareOfAutoVariable(&D, DebugAddr.getPointer(), Builder,
                                         UsePointerValue);
   }
 
   if (D.hasAttr<AnnotateAttr>() && HaveInsertPoint())
-    EmitVarAnnotations(&D, address.emitRawPointer(*this));
+    EmitVarAnnotations(&D, address.getPointer());
 
   // Make sure we call @llvm.lifetime.end.
   if (emission.useLifetimeMarkers())
@@ -1873,13 +1868,12 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
     llvm::Value *BaseSizeInChars =
         llvm::ConstantInt::get(IntPtrTy, EltSize.getQuantity());
     Address Begin = Loc.withElementType(Int8Ty);
-    llvm::Value *End = Builder.CreateInBoundsGEP(Begin.getElementType(),
-                                                 Begin.emitRawPointer(*this),
-                                                 SizeVal, "vla.end");
+    llvm::Value *End = Builder.CreateInBoundsGEP(
+        Begin.getElementType(), Begin.getPointer(), SizeVal, "vla.end");
     llvm::BasicBlock *OriginBB = Builder.GetInsertBlock();
     EmitBlock(LoopBB);
     llvm::PHINode *Cur = Builder.CreatePHI(Begin.getType(), 2, "vla.cur");
-    Cur->addIncoming(Begin.emitRawPointer(*this), OriginBB);
+    Cur->addIncoming(Begin.getPointer(), OriginBB);
     CharUnits CurAlign = Loc.getAlignment().alignmentOfArrayElement(EltSize);
     auto *I =
         Builder.CreateMemCpy(Address(Cur, Int8Ty, CurAlign),
@@ -2306,7 +2300,7 @@ void CodeGenFunction::emitDestroy(Address addr, QualType type,
     checkZeroLength = false;
   }
 
-  llvm::Value *begin = addr.emitRawPointer(*this);
+  llvm::Value *begin = addr.getPointer();
   llvm::Value *end =
       Builder.CreateInBoundsGEP(addr.getElementType(), begin, length);
   emitArrayDestroy(begin, end, type, elementAlign, destroyer,
@@ -2566,7 +2560,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   }
 
   Address DeclPtr = Address::invalid();
-  RawAddress DebugPtr = Address::invalid();
+  Address DebugPtr = Address::invalid();
   bool DoStore = false;
   bool IsScalar = hasScalarEvaluationKind(Ty);
   bool UseIndirectDebugAddress = false;
@@ -2582,8 +2576,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     // Indirect argument is in alloca address space, which may be different
     // from the default address space.
     auto AllocaAS = CGM.getASTAllocaAddressSpace();
-    auto *V = DeclPtr.emitRawPointer(*this);
-    DebugPtr = RawAddress(V, DeclPtr.getElementType(), DeclPtr.getAlignment());
+    auto *V = DeclPtr.getPointer();
 
     // For truly ABI indirect arguments -- those that are not `byval` -- store
     // the address of the argument on the stack to preserve debug information.
@@ -2592,7 +2585,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       UseIndirectDebugAddress = !ArgInfo.getIndirectByVal();
     if (UseIndirectDebugAddress) {
       auto PtrTy = getContext().getPointerType(Ty);
-      RawAddress StackHomedPtr =
+      Address StackHomedPtr =
           CreateMemTemp(PtrTy, getContext().getTypeAlignInChars(PtrTy),
                         D.getName() + ".indirect_addr", &DebugPtr);
       EmitStoreOfScalar(V, StackHomedPtr, /* Volatile */ false, PtrTy);
@@ -2722,7 +2715,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   }
 
   if (D.hasAttr<AnnotateAttr>())
-    EmitVarAnnotations(&D, DeclPtr.emitRawPointer(*this));
+    EmitVarAnnotations(&D, DeclPtr.getPointer());
 
   // We can only check return value nullability if all arguments to the
   // function satisfy their nullability preconditions. This makes it necessary

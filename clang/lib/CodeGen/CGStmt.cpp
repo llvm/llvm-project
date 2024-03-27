@@ -481,7 +481,7 @@ void CodeGenFunction::EmitXteamRedSum(const ForStmt *FStmt,
     Address OrigRedVarAddr = EmitLValue(DRE).getAddress(*this);
     // Pass in OrigRedVarAddr.getPointer to kmpc_xteam_sum
     RT.getXteamRedSum(*this, Builder.CreateLoad(RVI.RedVarAddr),
-                      OrigRedVarAddr.emitRawPointer(*this), DTeamVals, DTeamsDonePtr,
+                      OrigRedVarAddr.getPointer(), DTeamVals, DTeamsDonePtr,
                       ThreadStartIdx, NumTeams, BlockSize, IsFast);
   }
 }
@@ -2850,7 +2850,7 @@ std::pair<llvm::Value*, llvm::Type *> CodeGenFunction::EmitAsmInputLValue(
 
   Address Addr = InputValue.getAddress(*this);
   ConstraintStr += '*';
-  return {InputValue.getPointer(*this), Addr.getElementType()};
+  return {Addr.getPointer(), Addr.getElementType()};
 }
 
 std::pair<llvm::Value *, llvm::Type *>
@@ -3257,7 +3257,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
       ArgTypes.push_back(DestAddr.getType());
       ArgElemTypes.push_back(DestAddr.getElementType());
-      Args.push_back(DestAddr.emitRawPointer(*this));
+      Args.push_back(DestAddr.getPointer());
       Constraints += "=*";
       Constraints += OutputConstraint;
       ReadOnly = ReadNone = false;
@@ -3632,8 +3632,8 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
   CapturedStmtInfo->setContextValue(Builder.CreateLoad(DeclPtr));
 
   // Initialize variable-length arrays.
-  LValue Base = MakeNaturalAlignRawAddrLValue(
-      CapturedStmtInfo->getContextValue(), Ctx.getTagDeclType(RD));
+  LValue Base = MakeNaturalAlignAddrLValue(CapturedStmtInfo->getContextValue(),
+                                           Ctx.getTagDeclType(RD));
   for (auto *FD : RD->fields()) {
     if (FD->hasCapturedVLAType()) {
       auto *ExprArg =

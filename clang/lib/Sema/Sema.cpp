@@ -2219,7 +2219,7 @@ static void checkEscapingByref(VarDecl *VD, Sema &S) {
   // block copy/destroy functions. Resolve it here.
   if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
     if (CXXDestructorDecl *DD = RD->getDestructor()) {
-      auto *FPT = DD->getType()->getAs<FunctionProtoType>();
+      auto *FPT = DD->getType()->castAs<FunctionProtoType>();
       S.ResolveExceptionSpec(Loc, FPT);
     }
 }
