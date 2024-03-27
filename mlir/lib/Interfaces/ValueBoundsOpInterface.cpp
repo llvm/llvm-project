@@ -715,6 +715,35 @@ ValueBoundsConstraintSet::areEquivalentSlices(MLIRContext *ctx,
   return true;
 }
 
+void ValueBoundsConstraintSet::dump() const {
+  llvm::errs() << "==========\nColumns:\n";
+  llvm::errs() << "(column\tdim\tvalue)\n";
+  for (auto [index, valueDim] : llvm::enumerate(positionToValueDim)) {
+    llvm::errs() << " " << index << "\t";
+    if (valueDim) {
+      if (valueDim->second == kIndexValue) {
+        llvm::errs() << "n/a\t";
+      } else {
+        llvm::errs() << valueDim->second << "\t";
+      }
+      llvm::errs() << getOwnerOfValue(valueDim->first)->getName() << " ";
+      if (OpResult result = dyn_cast<OpResult>(valueDim->first)) {
+        llvm::errs() << "(result " << result.getResultNumber() << ")";
+      } else {
+        llvm::errs() << "(bbarg "
+                     << cast<BlockArgument>(valueDim->first).getArgNumber()
+                     << ")";
+      }
+      llvm::errs() << "\n";
+    } else {
+      llvm::errs() << "n/a\tn/a\n";
+    }
+  }
+  llvm::errs() << "\nConstraint set:\n";
+  cstr.dump();
+  llvm::errs() << "==========\n";
+}
+
 ValueBoundsConstraintSet::BoundBuilder &
 ValueBoundsConstraintSet::BoundBuilder::operator[](int64_t dim) {
   assert(!this->dim.has_value() && "dim was already set");
