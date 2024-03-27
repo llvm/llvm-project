@@ -792,7 +792,7 @@ public:
   void writeTo(uint8_t *buf) override {}
 };
 
-class DebugNamesSection final : public SyntheticSection {
+template <class ELFT> class DebugNamesSection final : public SyntheticSection {
   // N.B. Everything in this class assumes that we are using DWARF32.
   // If we move to DWARF64, most of this data will need to be re-sized,
   // and the code that handles or manipulates it will need to be updated
@@ -800,28 +800,17 @@ class DebugNamesSection final : public SyntheticSection {
 
 public:
   DebugNamesSection();
-  template <typename ELFT> static DebugNamesSection *create();
+  static DebugNamesSection *create();
   void writeTo(uint8_t *buf) override;
   size_t getSize() const override { return sectionSize; }
   bool isNeeded() const override;
 
-  void addSections(SmallVector<InputSectionBase *, 0> sec_list) {
-    inputDebugNamesSections = sec_list;
-  }
-
-  template <class ELFT> void writeToImpl(uint8_t *buf);
-
-  template <class ELFT, class RelTy>
+  template <class RelTy>
   void getNameRelocsImpl(InputSection *sec, ArrayRef<RelTy> rels,
                          llvm::DenseMap<uint32_t, uint32_t> &relocs);
 
-  template <class ELFT>
   void getNameRelocs(InputSectionBase *base,
                      llvm::DenseMap<uint32_t, uint32_t> &relocs);
-
-  template <class ELFT>
-  void endianWrite(uint8_t size, uint8_t *buf_start, uint32_t offset,
-                   uint32_t data);
 
   struct Abbrev : public llvm::FoldingSetNode {
     uint32_t code;

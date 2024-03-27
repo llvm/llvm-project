@@ -1,188 +1,188 @@
-# REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t1.o
-# RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/debug-names-parent-idx-2.s -o %t2.o
-# RUN: ld.lld --debug-names %t1.o %t2.o -o %t
+// Generated with:
 
-# RUN: llvm-dwarfdump -debug-names %t | FileCheck %s --check-prefix=DWARF
+// - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='parent-idx-test' \
+//     -S debug-names-parent-idx.cpp -o debug-names-parent-idx.s
 
-# DWARF:      .debug_names contents:
-# DWARF:      Name Index @ 0x0 {
-# DWARF-NEXT:   Header {
-# DWARF-NEXT:     Length: 0x15C
-# DWARF-NEXT:     Format: DWARF32
-# DWARF-NEXT:     Version: 5
-# DWARF-NEXT:     CU count: 2
-# DWARF-NEXT:     Local TU count: 0
-# DWARF-NEXT:     Foreign TU count: 0
-# DWARF-NEXT:     Bucket count: 9
-# DWARF-NEXT:     Name count: 9
-# DWARF-NEXT:     Abbreviations table size: 0x33
-# DWARF-NEXT:     Augmentation: 'LLVM0700'
-# DWARF:        Compilation Unit offsets [
-# DWARF-NEXT:     CU[0]: 0x00000000
-# DWARF-NEXT:     CU[1]: 0x000000cc
-# DWARF:        Abbreviations [
-# DWARF-NEXT:     Abbreviation 0x1 {
-# DWARF-NEXT:       Tag: DW_TAG_base_type
-# DWARF-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
-# DWARF-NEXT:       DW_IDX_parent: DW_FORM_flag_present
-# DWARF-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
-# DWARF:          Abbreviation 0x2 {
-# DWARF-NEXT:       Tag: DW_TAG_subprogram
-# DWARF-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
-# DWARF-NEXT:       DW_IDX_parent: DW_FORM_flag_present
-# DWARF-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
-# DWARF:          Abbreviation 0x3 {
-# DWARF-NEXT:       Tag: DW_TAG_structure_type
-# DWARF-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
-# DWARF-NEXT:       DW_IDX_parent: DW_FORM_flag_present
-# DWARF-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
-# DWARF:          Abbreviation 0x4 {
-# DWARF-NEXT:       Tag: DW_TAG_subprogram
-# DWARF-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
-# DWARF-NEXT:       DW_IDX_parent: DW_FORM_ref4
-# DWARF-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
-# DWARF:          Abbreviation 0x5 {
-# DWARF-NEXT:       Tag: DW_TAG_namespace
-# DWARF-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
-# DWARF-NEXT:       DW_IDX_parent: DW_FORM_flag_present
-# DWARF-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
-# DWARF:            String: 0x00000093 "bar"
-# DWARF-NEXT:       Entry @ 0xf7 {
-# DWARF-NEXT:         Abbrev: 0x2
-# DWARF-NEXT:         Tag: DW_TAG_subprogram
-# DWARF-NEXT:         DW_IDX_die_offset: 0x00000023
-# DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
-# DWARF-NEXT:         DW_IDX_compile_unit: 0x00
-# DWARF:            String: 0x000000a9 "int"
-# DWARF-NEXT:       Entry @ 0xfe {
-# DWARF-NEXT:         Abbrev: 0x1
-# DWARF-NEXT:         Tag: DW_TAG_base_type
-# DWARF-NEXT:         DW_IDX_die_offset: 0x0000008d
-# DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
-# DWARF-NEXT:         DW_IDX_compile_unit: 0x00
-# DWARF-NEXT:       }
-# DWARF-NEXT:       Entry @ 0x104 {
-# DWARF-NEXT:         Abbrev: 0x1
-# DWARF-NEXT:         Tag: DW_TAG_base_type
-# DWARF-NEXT:         DW_IDX_die_offset: 0x00000023
-# DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
-# DWARF-NEXT:         DW_IDX_compile_unit: 0x01
-# DWARF:            String: 0x000000ad "foo"
-# DWARF-NEXT:       Entry @ 0x10b {
-# DWARF-NEXT:         Abbrev: 0x3
-# DWARF-NEXT:         Tag: DW_TAG_structure_type
-# DWARF-NEXT:         DW_IDX_die_offset: 0x00000096
-# DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
-# DWARF-NEXT:         DW_IDX_compile_unit: 0x00
-# DWARF-NEXT:       }
-# DWARF-NEXT:       Entry @ 0x111 {
-# DWARF-NEXT:         Abbrev: 0x2
-# DWARF-NEXT:         Tag: DW_TAG_subprogram
-# DWARF-NEXT:         DW_IDX_die_offset: 0x00000027
-# DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
-# DWARF-NEXT:         DW_IDX_compile_unit: 0x01
-# DWARF-NEXT:       }
-# DWARF-NEXT:       Entry @ 0x117 {
-# DWARF-NEXT:         Abbrev: 0x4
-# DWARF-NEXT:         Tag: DW_TAG_subprogram
-# DWARF-NEXT:         DW_IDX_die_offset: 0x00000045
-# DWARF-NEXT:         DW_IDX_parent: Entry @ 0x128
-# DWARF-NEXT:         DW_IDX_compile_unit: 0x01
-# DWARF-NEXT:       }
-# DWARF-NEXT:       Entry @ 0x121 {
-# DWARF-NEXT:         Abbrev: 0x3
-# DWARF-NEXT:         Tag: DW_TAG_structure_type
-# DWARF-NEXT:         DW_IDX_die_offset: 0x00000056
-# DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
-# DWARF-NEXT:         DW_IDX_compile_unit: 0x01
-# DWARF:            String: 0x00000196 "parent_test"
-# DWARF-NEXT:       Entry @ 0x128 {
-# DWARF-NEXT:         Abbrev: 0x5
-# DWARF-NEXT:         Tag: DW_TAG_namespace
-# DWARF-NEXT:         DW_IDX_die_offset: 0x00000043
-# DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
-# DWARF-NEXT:         DW_IDX_compile_unit: 0x01
-# DWARF:            String: 0x00000097 "_Z3barR3fooi"
-# DWARF-NEXT:       Entry @ 0x12f {
-# DWARF-NEXT:         Abbrev: 0x2
-# DWARF-NEXT:         Tag: DW_TAG_subprogram
-# DWARF-NEXT:         DW_IDX_die_offset: 0x00000023
-# DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
-# DWARF-NEXT:         DW_IDX_compile_unit: 0x00
-# DWARF:            String: 0x000000a4 "main"
-# DWARF-NEXT:       Entry @ 0x136 {
-# DWARF-NEXT:         Abbrev: 0x2
-# DWARF-NEXT:         Tag: DW_TAG_subprogram
-# DWARF-NEXT:         DW_IDX_die_offset: 0x00000046
-# DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
-# DWARF-NEXT:         DW_IDX_compile_unit: 0x00
-# DWARF:            String: 0x000000b5 "char"
-# DWARF-NEXT:       Entry @ 0x13d {
-# DWARF-NEXT:         Abbrev: 0x1
-# DWARF-NEXT:         Tag: DW_TAG_base_type
-# DWARF-NEXT:         DW_IDX_die_offset: 0x000000b8
-# DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
-# DWARF-NEXT:         DW_IDX_compile_unit: 0x00
-# DWARF-NEXT:       }
-# DWARF-NEXT:       Entry @ 0x143 {
-# DWARF-NEXT:         Abbrev: 0x1
-# DWARF-NEXT:         Tag: DW_TAG_base_type
-# DWARF-NEXT:         DW_IDX_die_offset: 0x00000078
-# DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
-# DWARF-NEXT:         DW_IDX_compile_unit: 0x01
-# DWARF:            String: 0x000001a2 "_ZN11parent_test3fooEv"
-# DWARF-NEXT:       Entry @ 0x14a {
-# DWARF-NEXT:         Abbrev: 0x4
-# DWARF-NEXT:         Tag: DW_TAG_subprogram
-# DWARF-NEXT:         DW_IDX_die_offset: 0x00000045
-# DWARF-NEXT:         DW_IDX_parent: Entry @ 0x128
-# DWARF-NEXT:         DW_IDX_compile_unit: 0x01
-# DWARF:            String: 0x0000018e "_Z3foov"
-# DWARF-NEXT:       Entry @ 0x155 {
-# DWARF-NEXT:         Abbrev: 0x2
-# DWARF-NEXT:         Tag: DW_TAG_subprogram
-# DWARF-NEXT:         DW_IDX_die_offset: 0x00000027
-# DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
-# DWARF-NEXT:         DW_IDX_compile_unit: 0x01
-	
-#-- input file: debug-names-parent-idx.cpp
-## Generated with:
-##
-## - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='parent-idx-test' \
-##     -S debug-names-parent-idx.cpp -o debug-names-parent-idx.s
-##
-## foo.h contents:
-##
-## int foo();
-##
-## struct foo {
-##   int x;
-##   char y;
-##   struct foo *foo_ptr;
-## };
-##
-## namespace parent_test {
-##   int foo();
-## }
-##
-##  debug-names-parent-idx.cpp contents:
-##
-## #include "foo.h"
-## void bar (struct foo &foo, int junk) {
-##   foo.x = foo.x * junk;
-## }
-## int main (int argc, char** argv) {
-##   struct foo my_struct;
-##   my_struct.x = 10;
-##   my_struct.y = 'q';
-##   my_struct.foo_ptr = nullptr;
-##   int junk = foo();
-##   bar(my_struct, junk);
-##   int junk2 = parent_test::foo();
-##   return 0;
-## }
-##
+// foo.h contents:
+
+// int foo();
+
+// struct foo {
+//   int x;
+//   char y;
+//   struct foo *foo_ptr;
+// };
+
+// namespace parent_test {
+//   int foo();
+// }
+
+//  debug-names-parent-idx.cpp contents:
+
+// #include "foo.h"
+// void bar (struct foo &foo, int junk) {
+//   foo.x = foo.x * junk;
+// }
+// int main (int argc, char** argv) {
+//   struct foo my_struct;
+//   my_struct.x = 10;
+//   my_struct.y = 'q';
+//   my_struct.foo_ptr = nullptr;
+//   int junk = foo();
+//   bar(my_struct, junk);
+//   int junk2 = parent_test::foo();
+//   return 0;
+// }
+
+// REQUIRES: x86
+// RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t1.o
+// RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/debug-names-parent-idx-2.s -o %t2.o
+// RUN: ld.lld --debug-names %t1.o %t2.o -o %t
+
+// RUN: llvm-dwarfdump -debug-names %t \
+// RUN:    | FileCheck -DFILE=%t1.o -DFILE=%t2.o %s --check-prefix=DWARF
+
+// DWARF:      .debug_names contents:
+// DWARF:      Name Index @ 0x0 {
+// DWARF-NEXT:   Header {
+// DWARF-NEXT:     Length: 0x15C
+// DWARF-NEXT:     Format: DWARF32
+// DWARF-NEXT:     Version: 5
+// DWARF-NEXT:     CU count: 2
+// DWARF-NEXT:     Local TU count: 0
+// DWARF-NEXT:     Foreign TU count: 0
+// DWARF-NEXT:     Bucket count: 9
+// DWARF-NEXT:     Name count: 9
+// DWARF-NEXT:     Abbreviations table size: 0x33
+// DWARF-NEXT:     Augmentation: 'LLVM0700'
+// DWARF:        Compilation Unit offsets [
+// DWARF-NEXT:     CU[0]: 0x00000000
+// DWARF-NEXT:     CU[1]: 0x0000000c
+// DWARF:        Abbreviations [
+// DWARF-NEXT:     Abbreviation 0x1 {
+// DWARF-NEXT:       Tag: DW_TAG_base_type
+// DWARF-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+// DWARF-NEXT:       DW_IDX_parent: DW_FORM_flag_present
+// DWARF-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
+// DWARF:          Abbreviation 0x2 {
+// DWARF-NEXT:       Tag: DW_TAG_subprogram
+// DWARF-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+// DWARF-NEXT:       DW_IDX_parent: DW_FORM_flag_present
+// DWARF-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
+// DWARF:          Abbreviation 0x3 {
+// DWARF-NEXT:       Tag: DW_TAG_structure_type
+// DWARF-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+// DWARF-NEXT:       DW_IDX_parent: DW_FORM_flag_present
+// DWARF-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
+// DWARF:          Abbreviation 0x4 {
+// DWARF-NEXT:       Tag: DW_TAG_subprogram
+// DWARF-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+// DWARF-NEXT:       DW_IDX_parent: DW_FORM_ref4
+// DWARF-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
+// DWARF:          Abbreviation 0x5 {
+// DWARF-NEXT:       Tag: DW_TAG_namespace
+// DWARF-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+// DWARF-NEXT:       DW_IDX_parent: DW_FORM_flag_present
+// DWARF-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
+// DWARF:            String: 0x00000093 "bar"
+// DWARF-NEXT:       Entry @ 0xf7 {
+// DWARF-NEXT:         Abbrev: 0x2
+// DWARF-NEXT:         Tag: DW_TAG_subprogram
+// DWARF-NEXT:         DW_IDX_die_offset: 0x00000023
+// DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
+// DWARF-NEXT:         DW_IDX_compile_unit: 0x00
+// DWARF:            String: 0x000000a9 "int"
+// DWARF-NEXT:       Entry @ 0xfe {
+// DWARF-NEXT:         Abbrev: 0x1
+// DWARF-NEXT:         Tag: DW_TAG_base_type
+// DWARF-NEXT:         DW_IDX_die_offset: 0x0000008d
+// DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
+// DWARF-NEXT:         DW_IDX_compile_unit: 0x00
+// DWARF-NEXT:       }
+// DWARF-NEXT:       Entry @ 0x104 {
+// DWARF-NEXT:         Abbrev: 0x1
+// DWARF-NEXT:         Tag: DW_TAG_base_type
+// DWARF-NEXT:         DW_IDX_die_offset: 0x00000023
+// DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
+// DWARF-NEXT:         DW_IDX_compile_unit: 0x01
+// DWARF:            String: 0x000000ad "foo"
+// DWARF-NEXT:       Entry @ 0x10b {
+// DWARF-NEXT:         Abbrev: 0x3
+// DWARF-NEXT:         Tag: DW_TAG_structure_type
+// DWARF-NEXT:         DW_IDX_die_offset: 0x00000096
+// DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
+// DWARF-NEXT:         DW_IDX_compile_unit: 0x00
+// DWARF-NEXT:       }
+// DWARF-NEXT:       Entry @ 0x111 {
+// DWARF-NEXT:         Abbrev: 0x2
+// DWARF-NEXT:         Tag: DW_TAG_subprogram
+// DWARF-NEXT:         DW_IDX_die_offset: 0x00000027
+// DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
+// DWARF-NEXT:         DW_IDX_compile_unit: 0x01
+// DWARF-NEXT:       }
+// DWARF-NEXT:       Entry @ 0x117 {
+// DWARF-NEXT:         Abbrev: 0x4
+// DWARF-NEXT:         Tag: DW_TAG_subprogram
+// DWARF-NEXT:         DW_IDX_die_offset: 0x00000045
+// DWARF-NEXT:         DW_IDX_parent: Entry @ 0x128
+// DWARF-NEXT:         DW_IDX_compile_unit: 0x01
+// DWARF-NEXT:       }
+// DWARF-NEXT:       Entry @ 0x121 {
+// DWARF-NEXT:         Abbrev: 0x3
+// DWARF-NEXT:         Tag: DW_TAG_structure_type
+// DWARF-NEXT:         DW_IDX_die_offset: 0x00000056
+// DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
+// DWARF-NEXT:         DW_IDX_compile_unit: 0x01
+// DWARF:            String: 0x00000196 "parent_test"
+// DWARF-NEXT:       Entry @ 0x128 {
+// DWARF-NEXT:         Abbrev: 0x5
+// DWARF-NEXT:         Tag: DW_TAG_namespace
+// DWARF-NEXT:         DW_IDX_die_offset: 0x00000043
+// DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
+// DWARF-NEXT:         DW_IDX_compile_unit: 0x01
+// DWARF:            String: 0x00000097 "_Z3barR3fooi"
+// DWARF-NEXT:       Entry @ 0x12f {
+// DWARF-NEXT:         Abbrev: 0x2
+// DWARF-NEXT:         Tag: DW_TAG_subprogram
+// DWARF-NEXT:         DW_IDX_die_offset: 0x00000023
+// DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
+// DWARF-NEXT:         DW_IDX_compile_unit: 0x00
+// DWARF:            String: 0x000000a4 "main"
+// DWARF-NEXT:       Entry @ 0x136 {
+// DWARF-NEXT:         Abbrev: 0x2
+// DWARF-NEXT:         Tag: DW_TAG_subprogram
+// DWARF-NEXT:         DW_IDX_die_offset: 0x00000046
+// DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
+// DWARF-NEXT:         DW_IDX_compile_unit: 0x00
+// DWARF:            String: 0x000000b5 "char"
+// DWARF-NEXT:       Entry @ 0x13d {
+// DWARF-NEXT:         Abbrev: 0x1
+// DWARF-NEXT:         Tag: DW_TAG_base_type
+// DWARF-NEXT:         DW_IDX_die_offset: 0x000000b8
+// DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
+// DWARF-NEXT:         DW_IDX_compile_unit: 0x00
+// DWARF-NEXT:       }
+// DWARF-NEXT:       Entry @ 0x143 {
+// DWARF-NEXT:         Abbrev: 0x1
+// DWARF-NEXT:         Tag: DW_TAG_base_type
+// DWARF-NEXT:         DW_IDX_die_offset: 0x00000078
+// DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
+// DWARF-NEXT:         DW_IDX_compile_unit: 0x01
+// DWARF:            String: 0x000001a2 "_ZN11parent_test3fooEv"
+// DWARF-NEXT:       Entry @ 0x14a {
+// DWARF-NEXT:         Abbrev: 0x4
+// DWARF-NEXT:         Tag: DW_TAG_subprogram
+// DWARF-NEXT:         DW_IDX_die_offset: 0x00000045
+// DWARF-NEXT:         DW_IDX_parent: Entry @ 0x128
+// DWARF-NEXT:         DW_IDX_compile_unit: 0x01
+// DWARF:            String: 0x0000018e "_Z3foov"
+// DWARF-NEXT:       Entry @ 0x155 {
+// DWARF-NEXT:         Abbrev: 0x2
+// DWARF-NEXT:         Tag: DW_TAG_subprogram
+// DWARF-NEXT:         DW_IDX_die_offset: 0x00000027
+// DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
+// DWARF-NEXT:         DW_IDX_compile_unit: 0x01
+
 	.text
 	.globl	_Z3barR3fooi                    # -- Begin function _Z3barR3fooi
 	.p2align	4, 0x90
@@ -261,136 +261,6 @@ main:                                   # @main
 	.byte	1                               # DWARF Unit Type
 	.byte	8                               # Address Size (in bytes)
 	.long	.debug_abbrev                   # Offset Into Abbrev. Section
-	.byte	1                               # Abbrev [1] 0xc:0xc0 DW_TAG_compile_unit
-	.byte	0                               # DW_AT_producer
-	.short	33                              # DW_AT_language
-	.byte	1                               # DW_AT_name
-	.long	.Lstr_offsets_base0             # DW_AT_str_offsets_base
-	.long	.Lline_table_start0             # DW_AT_stmt_list
-	.byte	2                               # DW_AT_comp_dir
-	.byte	0                               # DW_AT_low_pc
-	.long	.Lfunc_end1-.Lfunc_begin0       # DW_AT_high_pc
-	.long	.Laddr_table_base0              # DW_AT_addr_base
-	.byte	2                               # Abbrev [2] 0x23:0x23 DW_TAG_subprogram
-	.byte	0                               # DW_AT_low_pc
-	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
-	.byte	1                               # DW_AT_frame_base
-	.byte	86
-	.byte	3                               # DW_AT_linkage_name
-	.byte	4                               # DW_AT_name
-	.byte	0                               # DW_AT_decl_file
-	.byte	3                               # DW_AT_decl_line
-                                        # DW_AT_external
-	.byte	3                               # Abbrev [3] 0x2f:0xb DW_TAG_formal_parameter
-	.byte	2                               # DW_AT_location
-	.byte	145
-	.byte	120
-	.byte	7                               # DW_AT_name
-	.byte	0                               # DW_AT_decl_file
-	.byte	3                               # DW_AT_decl_line
-	.long	145                             # DW_AT_type
-	.byte	3                               # Abbrev [3] 0x3a:0xb DW_TAG_formal_parameter
-	.byte	2                               # DW_AT_location
-	.byte	145
-	.byte	116
-	.byte	12                              # DW_AT_name
-	.byte	0                               # DW_AT_decl_file
-	.byte	3                               # DW_AT_decl_line
-	.long	141                             # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	4                               # Abbrev [4] 0x46:0x47 DW_TAG_subprogram
-	.byte	1                               # DW_AT_low_pc
-	.long	.Lfunc_end1-.Lfunc_begin1       # DW_AT_high_pc
-	.byte	1                               # DW_AT_frame_base
-	.byte	86
-	.byte	5                               # DW_AT_name
-	.byte	0                               # DW_AT_decl_file
-	.byte	7                               # DW_AT_decl_line
-	.long	141                             # DW_AT_type
-                                        # DW_AT_external
-	.byte	3                               # Abbrev [3] 0x55:0xb DW_TAG_formal_parameter
-	.byte	2                               # DW_AT_location
-	.byte	145
-	.byte	120
-	.byte	13                              # DW_AT_name
-	.byte	0                               # DW_AT_decl_file
-	.byte	7                               # DW_AT_decl_line
-	.long	141                             # DW_AT_type
-	.byte	3                               # Abbrev [3] 0x60:0xb DW_TAG_formal_parameter
-	.byte	2                               # DW_AT_location
-	.byte	145
-	.byte	112
-	.byte	14                              # DW_AT_name
-	.byte	0                               # DW_AT_decl_file
-	.byte	7                               # DW_AT_decl_line
-	.long	193                             # DW_AT_type
-	.byte	5                               # Abbrev [5] 0x6b:0xb DW_TAG_variable
-	.byte	2                               # DW_AT_location
-	.byte	145
-	.byte	96
-	.byte	15                              # DW_AT_name
-	.byte	0                               # DW_AT_decl_file
-	.byte	9                               # DW_AT_decl_line
-	.long	150                             # DW_AT_type
-	.byte	5                               # Abbrev [5] 0x76:0xb DW_TAG_variable
-	.byte	2                               # DW_AT_location
-	.byte	145
-	.byte	92
-	.byte	12                              # DW_AT_name
-	.byte	0                               # DW_AT_decl_file
-	.byte	14                              # DW_AT_decl_line
-	.long	141                             # DW_AT_type
-	.byte	5                               # Abbrev [5] 0x81:0xb DW_TAG_variable
-	.byte	2                               # DW_AT_location
-	.byte	145
-	.byte	88
-	.byte	16                              # DW_AT_name
-	.byte	0                               # DW_AT_decl_file
-	.byte	16                              # DW_AT_decl_line
-	.long	141                             # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	6                               # Abbrev [6] 0x8d:0x4 DW_TAG_base_type
-	.byte	6                               # DW_AT_name
-	.byte	5                               # DW_AT_encoding
-	.byte	4                               # DW_AT_byte_size
-	.byte	7                               # Abbrev [7] 0x91:0x5 DW_TAG_reference_type
-	.long	150                             # DW_AT_type
-	.byte	8                               # Abbrev [8] 0x96:0x22 DW_TAG_structure_type
-	.byte	5                               # DW_AT_calling_convention
-	.byte	7                               # DW_AT_name
-	.byte	16                              # DW_AT_byte_size
-	.byte	1                               # DW_AT_decl_file
-	.byte	4                               # DW_AT_decl_line
-	.byte	9                               # Abbrev [9] 0x9c:0x9 DW_TAG_member
-	.byte	8                               # DW_AT_name
-	.long	141                             # DW_AT_type
-	.byte	1                               # DW_AT_decl_file
-	.byte	5                               # DW_AT_decl_line
-	.byte	0                               # DW_AT_data_member_location
-	.byte	9                               # Abbrev [9] 0xa5:0x9 DW_TAG_member
-	.byte	9                               # DW_AT_name
-	.long	184                             # DW_AT_type
-	.byte	1                               # DW_AT_decl_file
-	.byte	6                               # DW_AT_decl_line
-	.byte	4                               # DW_AT_data_member_location
-	.byte	9                               # Abbrev [9] 0xae:0x9 DW_TAG_member
-	.byte	11                              # DW_AT_name
-	.long	188                             # DW_AT_type
-	.byte	1                               # DW_AT_decl_file
-	.byte	7                               # DW_AT_decl_line
-	.byte	8                               # DW_AT_data_member_location
-	.byte	0                               # End Of Children Mark
-	.byte	6                               # Abbrev [6] 0xb8:0x4 DW_TAG_base_type
-	.byte	10                              # DW_AT_name
-	.byte	6                               # DW_AT_encoding
-	.byte	1                               # DW_AT_byte_size
-	.byte	10                              # Abbrev [10] 0xbc:0x5 DW_TAG_pointer_type
-	.long	150                             # DW_AT_type
-	.byte	10                              # Abbrev [10] 0xc1:0x5 DW_TAG_pointer_type
-	.long	198                             # DW_AT_type
-	.byte	10                              # Abbrev [10] 0xc6:0x5 DW_TAG_pointer_type
-	.long	184                             # DW_AT_type
-	.byte	0                               # End Of Children Mark
 .Ldebug_info_end0:
 	.section	.debug_str_offsets,"",@progbits
 	.long	72                              # Length of String Offsets Set
