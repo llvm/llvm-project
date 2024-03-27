@@ -4252,6 +4252,7 @@ SDValue SystemZTargetLowering::lowerXALUO(SDValue Op,
   if (N->getValueType(0) == MVT::i128) {
     unsigned BaseOp = 0;
     unsigned FlagOp = 0;
+    bool IsBorrow = false;
     switch (Op.getOpcode()) {
     default: llvm_unreachable("Unknown instruction!");
     case ISD::UADDO:
@@ -4261,6 +4262,7 @@ SDValue SystemZTargetLowering::lowerXALUO(SDValue Op,
     case ISD::USUBO:
       BaseOp = ISD::SUB;
       FlagOp = SystemZISD::VSCBI;
+      IsBorrow = true;
       break;
     }
     SDValue Result = DAG.getNode(BaseOp, DL, MVT::i128, LHS, RHS);
@@ -4268,6 +4270,9 @@ SDValue SystemZTargetLowering::lowerXALUO(SDValue Op,
     Flag = DAG.getNode(ISD::AssertZext, DL, MVT::i128, Flag,
                        DAG.getValueType(MVT::i1));
     Flag = DAG.getZExtOrTrunc(Flag, DL, N->getValueType(1));
+    if (IsBorrow)
+      Flag = DAG.getNode(ISD::XOR, DL, Flag.getValueType(),
+                         Flag, DAG.getConstant(1, DL, Flag.getValueType()));
     return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Result, Flag);
   }
 
@@ -4340,6 +4345,7 @@ SDValue SystemZTargetLowering::lowerUADDSUBO_CARRY(SDValue Op,
   if (VT == MVT::i128) {
     unsigned BaseOp = 0;
     unsigned FlagOp = 0;
+    bool IsBorrow = false;
     switch (Op.getOpcode()) {
     default: llvm_unreachable("Unknown instruction!");
     case ISD::UADDO_CARRY:
@@ -4349,14 +4355,21 @@ SDValue SystemZTargetLowering::lowerUADDSUBO_CARRY(SDValue Op,
     case ISD::USUBO_CARRY:
       BaseOp = SystemZISD::VSBI;
       FlagOp = SystemZISD::VSBCBI;
+      IsBorrow = true;
       break;
     }
+    if (IsBorrow)
+      Carry = DAG.getNode(ISD::XOR, DL, Carry.getValueType(),
+                          Carry, DAG.getConstant(1, DL, Carry.getValueType()));
     Carry = DAG.getZExtOrTrunc(Carry, DL, MVT::i128);
     SDValue Result = DAG.getNode(BaseOp, DL, MVT::i128, LHS, RHS, Carry);
     SDValue Flag = DAG.getNode(FlagOp, DL, MVT::i128, LHS, RHS, Carry);
     Flag = DAG.getNode(ISD::AssertZext, DL, MVT::i128, Flag,
                        DAG.getValueType(MVT::i1));
     Flag = DAG.getZExtOrTrunc(Flag, DL, N->getValueType(1));
+    if (IsBorrow)
+      Flag = DAG.getNode(ISD::XOR, DL, Flag.getValueType(),
+                         Flag, DAG.getConstant(1, DL, Flag.getValueType()));
     return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Result, Flag);
   }
 
@@ -6609,6 +6622,27 @@ SDValue SystemZTargetLowering::combineZERO_EXTEND(
         DCI.CombineTo(N0.getNode(), TruncSelect);
       }
       return NewSelect;
+    }
+  }
+  // Convert (zext (xor (trunc X), C)) into (xor (trunc X), C') if the size
+  // of the result is smaller than the size of X and all the truncated bits
+  // of X are already zero.
+  if (N0.getOpcode() == ISD::XOR &&
+      N0.hasOneUse() && N0.getOperand(0).hasOneUse() &&
+      N0.getOperand(0).getOpcode() == ISD::TRUNCATE &&
+      N0.getOperand(1).getOpcode() == ISD::Constant) {
+    SDValue X = N0.getOperand(0).getOperand(0);
+    if (VT.isScalarInteger() && VT.getSizeInBits() < X.getValueSizeInBits()) {
+      KnownBits Known = DAG.computeKnownBits(X);
+      APInt TruncatedBits = APInt::getBitsSet(X.getValueSizeInBits(),
+                                              N0.getValueSizeInBits(),
+                                              VT.getSizeInBits());
+      if (TruncatedBits.isSubsetOf(Known.Zero)) {
+        X = DAG.getNode(ISD::TRUNCATE, SDLoc(X), VT, X);
+        APInt Mask = N0.getConstantOperandAPInt(1).zext(VT.getSizeInBits());
+        return DAG.getNode(ISD::XOR, SDLoc(N0), VT,
+                           X, DAG.getConstant(Mask, SDLoc(N0), VT));
+      }
     }
   }
   return SDValue();
