@@ -27,6 +27,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/GOFFObjectFile.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/Wasm.h"
@@ -350,6 +351,9 @@ createDumper(const ObjectFile &Obj, ScopedPrinter &Writer) {
 
   if (const MachOObjectFile *MachOObj = dyn_cast<MachOObjectFile>(&Obj))
     return createMachODumper(*MachOObj, Writer);
+
+  if (const GOFFObjectFile *GOFFObj = dyn_cast<GOFFObjectFile>(&Obj))
+    return createGOFFDumper(*GOFFObj, Writer);
 
   if (const WasmObjectFile *WasmObj = dyn_cast<WasmObjectFile>(&Obj))
     return createWasmDumper(*WasmObj, Writer);

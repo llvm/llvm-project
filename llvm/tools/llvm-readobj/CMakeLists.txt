@@ -18,6 +18,7 @@ add_llvm_tool(llvm-readobj
   COFFDumper.cpp
   COFFImportDumper.cpp
   ELFDumper.cpp
+  GOFFDumper.cpp
   llvm-readobj.cpp
   MachODumper.cpp
   ObjDumper.cpp
