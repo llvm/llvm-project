@@ -32,11 +32,11 @@
 # CHECK-CFG:      callq secondary_entry # Offset: [[#]] # Count: 1
 # CHECK-CFG:      callq *%rax # Offset: [[#]] # CallProfile: 1 (1 misses) :
 # CHECK-CFG-NEXT:     { secondary_entry: 1 (1 misses) }
-# CHECK-CFG: }
 
 .globl func
 .type	func, @function
 func:
+# FDATA: 0 [unknown] 0 1 func 0 1 0
   .cfi_startproc
   pushq   %rbp
   movq    %rsp, %rbp
