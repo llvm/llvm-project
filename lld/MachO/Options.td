@@ -1284,6 +1284,12 @@ def fixup_chains_section : Flag<["-"], "fixup_chains_section">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
+def objc_relative_method_lists : Flag<["-"], "objc_relative_method_lists">,
+    HelpText<"Emit relative method lists (more compact representation)">,
+    Group<grp_undocumented>;
+def no_objc_relative_method_lists : Flag<["-"], "no_objc_relative_method_lists">,
+    HelpText<"Don't emit relative method lists (use traditional representation)">,
+    Group<grp_undocumented>;
 def flto_codegen_only : Flag<["-"], "flto-codegen-only">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
