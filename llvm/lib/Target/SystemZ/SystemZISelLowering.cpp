@@ -8181,17 +8181,17 @@ SystemZTargetLowering::emitAdjCallStack(MachineInstr &MI,
   auto *TFL = Subtarget.getFrameLowering<SystemZFrameLowering>();
   assert(TFL->hasReservedCallFrame(MF) &&
          "ADJSTACKDOWN and ADJSTACKUP should be no-ops");
-  // Do the work of MachineFrameInfo::computeMaxCallFrameSize() early and
-  // remove these nodes. Given that these nodes start out as a glued sequence
-  // it seems best to handle them here after instruction selection and
-  // scheduling.
+  // Get the MaxCallFrameSize value and clear the NumBytes value to not
+  // confuse the verifier. Keep them around as scheduling barriers around
+  // call arguments even though they serve no further purpose as the call
+  // frame is statically reserved in the prolog.
   uint32_t NumBytes = MI.getOperand(0).getImm();
   if (NumBytes > MFI.getMaxCallFrameSize())
     MFI.setMaxCallFrameSize(NumBytes);
+  // Set AdjustsStack as this is *not* mapped as a frame instruction.
   MFI.setAdjustsStack(true);
 
-  // TODO: MI should be erased. For now, keep it around as it seems to help
-  // eliminate COPYs around calls slightly in general (fix MachineScheduler?).
+  // TODO: Fix machine scheduler and erase MI instead?
   MI.getOperand(0).setImm(0);
 
   return BB;
