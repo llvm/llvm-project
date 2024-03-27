@@ -3208,8 +3208,8 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
 
 // Assert that the list structure fits and aligns within
 // the double task team pointer
-KMP_BUILD_ASSERT(sizeof(kmp_task_team_t * [2]) == sizeof(kmp_task_team_list_t));
-KMP_BUILD_ASSERT(alignof(kmp_task_team_t * [2]) ==
+KMP_BUILD_ASSERT(sizeof(kmp_task_team_t *[2]) == sizeof(kmp_task_team_list_t));
+KMP_BUILD_ASSERT(alignof(kmp_task_team_t *[2]) ==
                  alignof(kmp_task_team_list_t));
 
 union KMP_ALIGN_CACHE kmp_team {

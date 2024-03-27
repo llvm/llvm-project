@@ -21,34 +21,34 @@
 #define NTIMES 5
 
 // Regular single increment task
-void task_inc_a(int* a) {
-  #pragma omp task
+void task_inc_a(int *a) {
+#pragma omp task
   {
-    #pragma omp atomic
+#pragma omp atomic
     (*a)++;
   }
 }
 
 // Splitting increment task that binary splits the incrementing task
 void task_inc_split_a(int *a, int low, int high) {
-  #pragma omp task firstprivate(low, high)
+#pragma omp task firstprivate(low, high)
   {
     if (low == high) {
-      #pragma omp atomic
+#pragma omp atomic
       (*a)++;
     } else if (low < high) {
       int mid = (high - low) / 2 + low;
       task_inc_split_a(a, low, mid);
-      task_inc_split_a(a, mid+1, high);
+      task_inc_split_a(a, mid + 1, high);
     }
   }
 }
 
 // Detached tasks force serial regions to create task teams
 void task_inc_a_detached(int *a, omp_event_handle_t handle) {
-  #pragma omp task detach(handle)
+#pragma omp task detach(handle)
   {
-    #pragma omp atomic
+#pragma omp atomic
     (*a)++;
     omp_fulfill_event(handle);
   }
@@ -56,8 +56,9 @@ void task_inc_a_detached(int *a, omp_event_handle_t handle) {
 
 void check_a(int *a, int expected) {
   if (*a != expected) {
-    fprintf(stderr, "FAIL: a = %d instead of expected = %d. Compile with "
-                    "-DVERBOSE for more verbose output.\n",
+    fprintf(stderr,
+            "FAIL: a = %d instead of expected = %d. Compile with "
+            "-DVERBOSE for more verbose output.\n",
             *a, expected);
     exit(EXIT_FAILURE);
   }
@@ -69,35 +70,33 @@ void test_tasks(omp_event_handle_t *handles, int expected, int *a) {
 
   task_inc_a(a);
 
-  #pragma omp barrier
+#pragma omp barrier
   check_a(a, expected);
-  #pragma omp barrier
+#pragma omp barrier
   check_a(a, expected);
-  #pragma omp barrier
+#pragma omp barrier
 
   task_inc_a_detached(a, handles[tid]);
 
-  #pragma omp barrier
+#pragma omp barrier
   check_a(a, 2 * expected);
-  #pragma omp barrier
+#pragma omp barrier
   task_inc_a(a);
-  #pragma omp barrier
+#pragma omp barrier
   check_a(a, 3 * expected);
 }
 
 // Testing single level of parallelism with increment tasks
 void test_base(int nthreads) {
 #ifdef VERBOSE
-  #pragma omp master
+#pragma omp master
   printf("    test_base(%d)\n", nthreads);
 #endif
   int a = 0;
   omp_event_handle_t *handles;
   handles = (omp_event_handle_t *)malloc(sizeof(omp_event_handle_t) * nthreads);
-  #pragma omp parallel num_threads(nthreads) shared(a)
-  {
-    test_tasks(handles, nthreads, &a);
-  }
+#pragma omp parallel num_threads(nthreads) shared(a)
+  { test_tasks(handles, nthreads, &a); }
   free(handles);
 }
 
@@ -106,13 +105,11 @@ void test_base(int nthreads) {
 // second = nthreads of nested parallel
 void test_nest(int first, int second) {
 #ifdef VERBOSE
-  #pragma omp master
+#pragma omp master
   printf("   test_nest(%d, %d)\n", first, second);
 #endif
-  #pragma omp parallel num_threads(first)
-  {
-    test_base(second);
-  }
+#pragma omp parallel num_threads(first)
+  { test_base(second); }
 }
 
 // Testing 2-level nested parallels with increment tasks
@@ -121,13 +118,11 @@ void test_nest(int first, int second) {
 // third = nthreads of second nested parallel
 void test_nest2(int first, int second, int third) {
 #ifdef VERBOSE
-  #pragma omp master
+#pragma omp master
   printf("  test_nest2(%d, %d, %d)\n", first, second, third);
 #endif
-  #pragma omp parallel num_threads(first)
-  {
-    test_nest(second, third);
-  }
+#pragma omp parallel num_threads(first)
+  { test_nest(second, third); }
 }
 
 // Testing 3-level nested parallels with increment tasks
@@ -137,13 +132,11 @@ void test_nest2(int first, int second, int third) {
 // fourth = nthreads of third nested parallel
 void test_nest3(int first, int second, int third, int fourth) {
 #ifdef VERBOSE
-  #pragma omp master
+#pragma omp master
   printf(" test_nest3(%d, %d, %d, %d)\n", first, second, third, fourth);
 #endif
-  #pragma omp parallel num_threads(first)
-  {
-    test_nest2(second, third, fourth);
-  }
+#pragma omp parallel num_threads(first)
+  { test_nest2(second, third, fourth); }
 }
 
 // Testing 4-level nested parallels with increment tasks
@@ -154,13 +147,12 @@ void test_nest3(int first, int second, int third, int fourth) {
 // fifth = nthreads of fourth nested parallel
 void test_nest4(int first, int second, int third, int fourth, int fifth) {
 #ifdef VERBOSE
-  #pragma omp master
-  printf("test_nest4(%d, %d, %d, %d, %d)\n", first, second, third, fourth, fifth);
+#pragma omp master
+  printf("test_nest4(%d, %d, %d, %d, %d)\n", first, second, third, fourth,
+         fifth);
 #endif
-  #pragma omp parallel num_threads(first)
-  {
-    test_nest3(second, third, fourth, fifth);
-  }
+#pragma omp parallel num_threads(first)
+  { test_nest3(second, third, fourth, fifth); }
 }
 
 // Single thread starts a binary splitting "increment" task
@@ -168,39 +160,37 @@ void test_nest4(int first, int second, int third, int fourth, int fifth) {
 void test_tasks_split(omp_event_handle_t *handles, int expected, int *a) {
   int tid = omp_get_thread_num();
 
-  #pragma omp single
+#pragma omp single
   task_inc_split_a(a, 1, expected); // task team A
 
-  #pragma omp barrier
+#pragma omp barrier
   check_a(a, expected);
-  #pragma omp barrier
+#pragma omp barrier
   check_a(a, expected);
-  #pragma omp barrier
+#pragma omp barrier
 
   task_inc_a_detached(a, handles[tid]); // task team B
 
-  #pragma omp barrier
+#pragma omp barrier
   check_a(a, 2 * expected);
-  #pragma omp barrier
-  #pragma omp single
+#pragma omp barrier
+#pragma omp single
   task_inc_split_a(a, 1, expected); // task team B
-  #pragma omp barrier
+#pragma omp barrier
   check_a(a, 3 * expected);
 }
 
 // Testing single level of parallelism with splitting incrementing tasks
 void test_base_split(int nthreads) {
 #ifdef VERBOSE
-  #pragma omp master
+#pragma omp master
   printf("  test_base_split(%d)\n", nthreads);
 #endif
   int a = 0;
   omp_event_handle_t *handles;
   handles = (omp_event_handle_t *)malloc(sizeof(omp_event_handle_t) * nthreads);
-  #pragma omp parallel num_threads(nthreads) shared(a)
-  {
-    test_tasks_split(handles, nthreads, &a);
-  }
+#pragma omp parallel num_threads(nthreads) shared(a)
+  { test_tasks_split(handles, nthreads, &a); }
   free(handles);
 }
 
@@ -209,13 +199,11 @@ void test_base_split(int nthreads) {
 // second = nthreads of nested parallel
 void test_nest_split(int first, int second) {
 #ifdef VERBOSE
-  #pragma omp master
+#pragma omp master
   printf(" test_nest_split(%d, %d)\n", first, second);
 #endif
-  #pragma omp parallel num_threads(first)
-  {
-    test_base_split(second);
-  }
+#pragma omp parallel num_threads(first)
+  { test_base_split(second); }
 }
 
 // Testing doubly nested parallels with splitting tasks
@@ -224,13 +212,11 @@ void test_nest_split(int first, int second) {
 // third = nthreads of second nested parallel
 void test_nest2_split(int first, int second, int third) {
 #ifdef VERBOSE
-  #pragma omp master
+#pragma omp master
   printf("test_nest2_split(%d, %d, %d)\n", first, second, third);
 #endif
-  #pragma omp parallel num_threads(first)
-  {
-    test_nest_split(second, third);
-  }
+#pragma omp parallel num_threads(first)
+  { test_nest_split(second, third); }
 }
 
 template <typename... Args>
