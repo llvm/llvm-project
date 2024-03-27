@@ -1,13 +1,12 @@
 // DEFINE: %{compile} =  mlir-opt %s \
 // DEFINE:    -transform-interpreter -test-transform-dialect-erase-schedule \
-// DEFINE:    -one-shot-bufferize="bufferize-function-boundaries" -test-lower-to-llvm -o %t -o %t
+// DEFINE:    -one-shot-bufferize="bufferize-function-boundaries" \
+// DEFINE:    -buffer-deallocation-pipeline  -cse -canonicalize -convert-vector-to-scf -test-lower-to-llvm
 // DEFINE: %{entry_point} = main
-// DEFINE: %{run} = mlir-cpu-runner %t -e %{entry_point} -entry-point-result=void \
+// DEFINE: %{run} = mlir-cpu-runner -e %{entry_point} -entry-point-result=void \
 // DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
 
-// RUN: %{compile}
-
-// RUN: %{run} | FileCheck %s
+// RUN: %{compile} | %{run} | FileCheck %s
 
 /// End-to-end test for computing matrix-multiplication using linalg.mmt4d. In
 /// particular, demonstrates how the following MLIR sequence (implemented in @mmt4d):
@@ -81,7 +80,6 @@ func.func @matmul(%A: tensor<7x16xi32>, %B: tensor<16x13xi32>, %C: tensor<7x13xi
 func.func @mmt4d(%A: tensor<7x16xi32>, %B: tensor<16x13xi32>, %C: tensor<7x13xi32>) -> tensor<7x13xi32> {
   %zero = arith.constant 0 : i32
 
-  %cst = arith.constant 0 : i32
   %A_pack_empty = tensor.empty() : tensor<2x16x8x1xi32>
   %B_pack_empty = tensor.empty() : tensor<2x16x8x1xi32>
   %C_pack_empty = tensor.empty() : tensor<2x2x8x8xi32>
