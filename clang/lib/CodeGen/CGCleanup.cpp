@@ -904,17 +904,22 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
                  (HasFixups && !HasEnclosingCleanups)) {
 
         llvm::BasicBlock *Default =
-          (BranchThroughDest ? BranchThroughDest : getUnreachableBlock());
-
-        // TODO: base this on the number of branch-afters and fixups
-        const unsigned SwitchCapacity = 10;
+            (BranchThroughDest ? BranchThroughDest : getUnreachableBlock());
 
         // pass the abnormal exit flag to Fn (SEH cleanup)
         cleanupFlags.setHasExitSwitch();
 
-        llvm::LoadInst *Load =
-          createLoadInstBefore(getNormalCleanupDestSlot(), "cleanup.dest",
-                               nullptr);
+        llvm::LoadInst *Load = createLoadInstBefore(getNormalCleanupDestSlot(),
+                                                    "cleanup.dest", nullptr);
+
+        unsigned numBranchAfters = Scope.getNumBranchAfters();
+        unsigned numFixups = (HasFixups && !HasEnclosingCleanups)
+                                 ? EHStack.getNumBranchFixups() - FixupDepth
+                                 : 0;
+
+        // Compute Switch Capacity based on number of branch-afters and fixups.
+        const unsigned SwitchCapacity = numBranchAfters + numFixups;
+
         llvm::SwitchInst *Switch =
           llvm::SwitchInst::Create(Load, Default, SwitchCapacity);
 
