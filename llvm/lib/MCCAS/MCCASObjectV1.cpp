@@ -465,9 +465,9 @@ Expected<uint64_t> materializeAbbrevFromTagImpl(MCCASReader &Reader,
     auto LoadedTopRef = loadDIETopLevel(TopRef);
     if (!LoadedTopRef)
       return LoadedTopRef.takeError();
-    Size +=
-        reconstructAbbrevSection(Reader.OS, LoadedTopRef->AbbrevEntries,
-                                 MaxDIEAbbrevCount, Reader.getAddressSize());
+    Size += reconstructAbbrevSection(
+        Reader.OS, LoadedTopRef->AbbrevEntries, MaxDIEAbbrevCount,
+        Reader.getEndian() == endianness::little, Reader.getAddressSize());
   }
 
   // FIXME: Currently, one DIELevelTopRef corresponds to one Compile Unit, but
@@ -507,7 +507,8 @@ static Error materializeDebugInfoOpt(MCCASReader &Reader,
                           StringRef FormData, bool) {
     if (Form == dwarf::Form::DW_FORM_ref4_cas ||
         Form == dwarf::Form::DW_FORM_strp_cas) {
-      DataExtractor Extractor(FormData, true, Reader.getAddressSize());
+      DataExtractor Extractor(FormData, Reader.isLittleEndian(),
+                              Reader.getAddressSize());
       DataExtractor::Cursor Cursor(0);
       uint64_t Data64 = Extractor.getULEB128(Cursor);
       if (!Cursor)
@@ -531,7 +532,8 @@ static Error materializeDebugInfoOpt(MCCASReader &Reader,
 
     if (auto E = visitDebugInfo(TotAbbrevEntries, std::move(MaybeTopRef),
                                 HeaderCallback, StartTagCallback, AttrCallback,
-                                EndTagCallback, Reader.getAddressSize()))
+                                EndTagCallback, Reader.isLittleEndian(),
+                                Reader.getAddressSize()))
       return E;
   }
   return Error::success();
@@ -1960,9 +1962,9 @@ public:
 /// Helper class to convert DIEs into CAS objects.
 struct DIEToCASConverter {
   DIEToCASConverter(ArrayRef<char> DebugInfoData, MCCASBuilder &CASBuilder,
-                    uint8_t AddressSize)
+                    bool IsLittleEndian, uint8_t AddressSize)
       : DebugInfoData(DebugInfoData), CASBuilder(CASBuilder),
-        AddressSize(AddressSize) {}
+        IsLittleEndian(IsLittleEndian), AddressSize(AddressSize) {}
 
   /// Converts a DIE into three types of CAS objects:
   /// 1. A tree of DIEDataRefs, containing data expected to deduplicate.
@@ -1977,6 +1979,7 @@ struct DIEToCASConverter {
 private:
   ArrayRef<char> DebugInfoData;
   MCCASBuilder &CASBuilder;
+  bool IsLittleEndian;
   uint8_t AddressSize;
 
   Error convertInNewDIEBlock(
@@ -2038,7 +2041,7 @@ Error InMemoryCASDWARFObject::partitionCUData(ArrayRef<char> DebugInfoData,
     HeaderData = DebugInfoData.take_front(Dwarf4HeaderSize32Bit);
   }
   Expected<DIETopLevelRef> Converted =
-      DIEToCASConverter(DebugInfoData, Builder, AddressSize)
+      DIEToCASConverter(DebugInfoData, Builder, IsLittleEndian, AddressSize)
           .convert(CUDie, HeaderData, AbbrevWriter);
   if (!Converted)
     return Converted.takeError();
@@ -2986,7 +2989,7 @@ static bool shouldCreateSeparateBlockFor(DWARFDie &DIE) {
 static void writeDIEAttrs(DWARFDie &DIE, ArrayRef<char> DebugInfoData,
                           DIEDataWriter &DIEWriter,
                           DistinctDataWriter &DistinctWriter,
-                          uint8_t AddressSize) {
+                          bool IsLittleEndian, uint8_t AddressSize) {
   for (const DWARFAttribute &AttrValue : DIE.attributes()) {
     dwarf::Attribute Attr = AttrValue.Attr;
     dwarf::Form Form = AttrValue.Value.getForm();
@@ -2996,7 +2999,8 @@ static void writeDIEAttrs(DWARFDie &DIE, ArrayRef<char> DebugInfoData,
                             ? static_cast<DataWriter &>(DistinctWriter)
                             : DIEWriter;
     if (Form == dwarf::Form::DW_FORM_ref4 || Form == dwarf::Form::DW_FORM_strp)
-      convertFourByteFormDataToULEB(FormData, WriterToUse, AddressSize);
+      convertFourByteFormDataToULEB(FormData, WriterToUse, IsLittleEndian,
+                                    AddressSize);
     else
       WriterToUse.writeData(FormData);
   }
@@ -3026,7 +3030,8 @@ Error DIEToCASConverter::convertImpl(
     return MaybeAbbrevIndex.takeError();
 
   DistinctWriter.writeULEB128(encodeAbbrevIndex(*MaybeAbbrevIndex));
-  writeDIEAttrs(DIE, DebugInfoData, DIEWriter, DistinctWriter, AddressSize);
+  writeDIEAttrs(DIE, DebugInfoData, DIEWriter, DistinctWriter, IsLittleEndian,
+                AddressSize);
 
   for (DWARFDie Child = DIE.getFirstChild(); Child;
        Child = Child.getSibling()) {
@@ -3206,10 +3211,11 @@ static Expected<uint64_t> readAbbrevIdx(DataExtractor &Extractor,
 
 static AbbrevEntryReader getAbbrevEntryReader(ArrayRef<StringRef> AbbrevEntries,
                                               unsigned AbbrevIdx,
+                                              bool IsLittleEndian,
                                               uint8_t AddressSize) {
   StringRef AbbrevData =
       AbbrevEntries[decodeAbbrevIndexAsAbbrevSetIdx(AbbrevIdx)];
-  return AbbrevEntryReader(AbbrevData, AddressSize);
+  return AbbrevEntryReader(AbbrevData, IsLittleEndian, AddressSize);
 }
 
 static std::optional<uint8_t> getNonULEBFormSize(dwarf::Form Form,
@@ -3289,7 +3295,8 @@ Error DIEVisitor::materializeAbbrevDIE(unsigned AbbrevIdx) {
                         dwarf::DwarfFormat::DWARF32};
 
   AbbrevEntryReader AbbrevReader = getAbbrevEntryReader(
-      AbbrevEntries, AbbrevIdx, DistinctExtractor.getAddressSize());
+      AbbrevEntries, AbbrevIdx, DistinctExtractor.isLittleEndian(),
+      DistinctExtractor.getAddressSize());
   Expected<dwarf::Tag> MaybeTag = AbbrevReader.readTag();
   if (!MaybeTag)
     return MaybeTag.takeError();
@@ -3327,7 +3334,8 @@ static void popStack(DataExtractor &Extractor, DataExtractor::Cursor &Cursor,
                      std::stack<std::pair<StringRef, unsigned>> &StackOfNodes,
                      uint8_t AddressSize) {
   auto DataAndOffset = StackOfNodes.top();
-  Extractor = DataExtractor(DataAndOffset.first, true, AddressSize);
+  Extractor = DataExtractor(DataAndOffset.first, Extractor.isLittleEndian(),
+                            AddressSize);
   Data = DataAndOffset.first;
   Cursor.seek(DataAndOffset.second);
   StackOfNodes.pop();
@@ -3343,7 +3351,8 @@ Error DIEVisitor::visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack) {
   std::stack<std::pair<StringRef, unsigned>> StackOfNodes;
   auto Data = DIEChildrenStack.empty() ? StringRef()
                                        : DIEChildrenStack.front().getData();
-  DataExtractor Extractor(Data, true, DistinctExtractor.getAddressSize());
+  DataExtractor Extractor(Data, DistinctExtractor.isLittleEndian(),
+                          DistinctExtractor.getAddressSize());
   DataExtractor::Cursor Cursor(0);
 
   while (!DistinctExtractor.eof(DistinctCursor)) {
@@ -3373,7 +3382,8 @@ Error DIEVisitor::visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack) {
       DIEChildrenStack = DIEChildrenStack.drop_front();
       Data = DIEChildrenStack.front().getData();
       NewBlockCallback(DIEChildrenStack.front().getID().toString());
-      Extractor = DataExtractor(Data, true, DistinctExtractor.getAddressSize());
+      Extractor = DataExtractor(Data, DistinctExtractor.isLittleEndian(),
+                                DistinctExtractor.getAddressSize());
       Cursor.seek(0);
       continue;
     }
@@ -3433,8 +3443,8 @@ Error mccasformats::v1::visitDebugInfo(
     std::function<void(dwarf::Tag, uint64_t)> StartTagCallback,
     std::function<void(dwarf::Attribute, dwarf::Form, StringRef, bool)>
         AttrCallback,
-    std::function<void(bool)> EndTagCallback, uint8_t AddressSize,
-    std::function<void(StringRef)> NewBlockCallback) {
+    std::function<void(bool)> EndTagCallback, bool IsLittleEndian,
+    uint8_t AddressSize, std::function<void(StringRef)> NewBlockCallback) {
 
   Expected<LoadedDIETopLevel> LoadedTopRef =
       loadDIETopLevel(std::move(MaybeTopLevelRef));
@@ -3452,7 +3462,7 @@ Error mccasformats::v1::visitDebugInfo(
     return E;
   DistinctData = toStringRef(OutBuff);
 #endif
-  DataExtractor DistinctExtractor(DistinctData, true, AddressSize);
+  DataExtractor DistinctExtractor(DistinctData, IsLittleEndian, AddressSize);
   DataExtractor::Cursor DistinctCursor(0);
 
   auto Size = getSizeFromDwarfHeader(DistinctExtractor, DistinctCursor);

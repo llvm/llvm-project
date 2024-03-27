@@ -124,7 +124,7 @@ Error MCCASPrinter::printMCObject(MCObjectProxy MCObj, CASDWARFObject &Obj,
 }
 
 Error printDIE(DIETopLevelRef TopRef, raw_ostream &OS, int Indent,
-               SmallVector<StringRef, 0> &TotAbbrevEntries,
+               SmallVector<StringRef, 0> &TotAbbrevEntries, bool IsLittleEndian,
                uint8_t AddressSize) {
   auto HeaderCallback = [&](StringRef HeaderData) {
     OS.indent(Indent) << "Header = " << '[';
@@ -153,7 +153,7 @@ Error printDIE(DIETopLevelRef TopRef, raw_ostream &OS, int Indent,
   };
   return visitDebugInfo(TotAbbrevEntries, TopRef, HeaderCallback,
                         StartTagCallback, AttrCallback, EndTagCallback,
-                        AddressSize, NewBlockCallback);
+                        IsLittleEndian, AddressSize, NewBlockCallback);
 }
 
 Error MCCASPrinter::printSimpleNested(MCObjectProxy Ref, CASDWARFObject &Obj,
@@ -184,7 +184,7 @@ Error MCCASPrinter::printSimpleNested(MCObjectProxy Ref, CASDWARFObject &Obj,
             return E;
           if (auto TopRef = DIETopLevelRef::Cast(*MCObj))
             return printDIE(*TopRef, OS, Indent, TotAbbrevEntries,
-                            Obj.getAddressSize());
+                            Obj.isLittleEndian(), Obj.getAddressSize());
           return Error::success();
         }))
       return E;

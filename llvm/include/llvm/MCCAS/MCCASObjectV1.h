@@ -630,6 +630,8 @@ public:
     return Target.isLittleEndian() ? endianness::little : endianness::big;
   }
 
+  bool isLittleEndian() { return Target.isLittleEndian(); }
+
   Expected<MCObjectProxy> getObjectProxy(cas::ObjectRef ID) {
     auto Node = MCObjectProxy::get(Schema, Schema.CAS.getProxy(ID));
     if (!Node)
@@ -742,7 +744,8 @@ Error visitDebugInfo(
     std::function<void(dwarf::Tag, uint64_t)> StartTagCallback,
     std::function<void(dwarf::Attribute, dwarf::Form, StringRef, bool)>
         AttrCallback,
-    std::function<void(bool)> EndTagCallback, uint8_t AddressSize,
+    std::function<void(bool)> EndTagCallback, bool IsLittleEndian,
+    uint8_t AddressSize,
     std::function<void(StringRef)> NewBlockCallback = [](StringRef) {});
 
 } // namespace v1
