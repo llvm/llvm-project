@@ -2094,7 +2094,7 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
       Module::Header H = {std::string(key.Filename), "", *FE};
       ModMap.addHeader(Mod, H, HeaderRole, /*Imported=*/true);
     }
-    HFI.isModuleHeader |= ModuleMap::isModular(HeaderRole);
+    HFI.mergeModuleMembership(HeaderRole);
   }
 
   // This HeaderFileInfo was externally loaded.

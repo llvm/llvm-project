@@ -78,11 +78,19 @@ struct HeaderFileInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned External : 1;
 
-  /// Whether this header is part of a module.
+  /// Whether this header is part of and built with a module
+  /// (`isTextualModuleHeader` will be `false`).
   LLVM_PREFERRED_TYPE(bool)
   unsigned isModuleHeader : 1;
 
-  /// Whether this header is part of the module that we are building.
+  /// Whether this header is a textual header in a module (`isModuleHeader` will
+  /// be `false`).
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned isTextualModuleHeader : 1;
+
+  /// Whether this header is part of the module that we are building
+  /// (independent of `isModuleHeader` and `isTextualModuleHeader`, they can
+  /// both be `false`).
   LLVM_PREFERRED_TYPE(bool)
   unsigned isCompilingModuleHeader : 1;
 
@@ -128,13 +136,20 @@ struct HeaderFileInfo {
 
   HeaderFileInfo()
       : isImport(false), isPragmaOnce(false), DirInfo(SrcMgr::C_User),
-        External(false), isModuleHeader(false), isCompilingModuleHeader(false),
-        Resolved(false), IndexHeaderMapHeader(false), IsValid(false)  {}
+        External(false), isModuleHeader(false), isTextualModuleHeader(false),
+        isCompilingModuleHeader(false), Resolved(false),
+        IndexHeaderMapHeader(false), IsValid(false) {}
 
   /// Retrieve the controlling macro for this header file, if
   /// any.
   const IdentifierInfo *
   getControllingMacro(ExternalPreprocessorSource *External);
+
+  /// Update the module membership bits based on the header role.
+  ///
+  /// isModuleHeader will potentially be set, but not cleared.
+  /// isTextualModuleHeader will be set or cleared based on the role update.
+  void mergeModuleMembership(ModuleMap::ModuleHeaderRole Role);
 };
 
 /// An external source of header file information, which may supply
@@ -522,6 +537,9 @@ public:
   ///
   /// \return false if \#including the file will have no effect or true
   /// if we should include it.
+  ///
+  /// \param M The module to which `File` belongs (this should usually be the
+  /// SuggestedModule returned by LookupFile/LookupSubframeworkHeader)
   bool ShouldEnterIncludeFile(Preprocessor &PP, FileEntryRef File,
                               bool isImport, bool ModulesEnabled, Module *M,
                               bool &IsFirstIncludeOfFile);
