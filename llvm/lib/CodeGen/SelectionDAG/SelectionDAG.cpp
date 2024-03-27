@@ -4129,8 +4129,12 @@ SelectionDAG::computeOverflowForSignedAdd(SDValue N0, SDValue N1) const {
   if (ComputeNumSignBits(N0) > 1 && ComputeNumSignBits(N1) > 1)
     return OFK_Never;
 
-  // TODO: Add ConstantRange::signedAddMayOverflow handling.
-  return OFK_Sometime;
+  // Fallback to ConstantRange::signedAddMayOverflow handling.
+  KnownBits N0Known = computeKnownBits(N0);
+  KnownBits N1Known = computeKnownBits(N1);
+  ConstantRange N0Range = ConstantRange::fromKnownBits(N0Known, true);
+  ConstantRange N1Range = ConstantRange::fromKnownBits(N1Known, true);
+  return mapOverflowResult(N0Range.signedAddMayOverflow(N1Range));
 }
 
 SelectionDAG::OverflowKind
