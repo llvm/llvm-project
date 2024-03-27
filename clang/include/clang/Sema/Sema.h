@@ -2245,6 +2245,7 @@ private:
 
   bool SemaBuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall);
   bool SemaBuiltinVAStartARMMicrosoft(CallExpr *Call);
+  bool SemaBuiltinPrintf(FunctionDecl *FDecl, CallExpr *TheCall);
   bool SemaBuiltinUnorderedCompare(CallExpr *TheCall, unsigned BuiltinID);
   bool SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
                                    unsigned BuiltinID);

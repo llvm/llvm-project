@@ -2816,14 +2816,14 @@ def StrLen : LibBuiltin<"string.h"> {
 // FIXME: This list is incomplete.
 def Printf : LibBuiltin<"stdio.h"> {
   let Spellings = ["printf"];
-  let Attributes = [PrintfFormat<0>];
+  let Attributes = [PrintfFormat<0>, CustomTypeChecking];
   let Prototype = "int(char const*, ...)";
 }
 
 // FIXME: The builtin and library function should have the same signature.
 def BuiltinPrintf : Builtin {
   let Spellings = ["__builtin_printf"];
-  let Attributes = [NoThrow, PrintfFormat<0>, FunctionWithBuiltinPrefix];
+  let Attributes = [NoThrow, PrintfFormat<0>, FunctionWithBuiltinPrefix, CustomTypeChecking];
   let Prototype = "int(char const* restrict, ...)";
 }
 
