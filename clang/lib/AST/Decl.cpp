@@ -2841,7 +2841,7 @@ bool VarDecl::hasFlexibleArrayInit(const ASTContext &Ctx) const {
   auto InitTy = Ctx.getAsConstantArrayType(FlexibleInit->getType());
   if (!InitTy)
     return false;
-  return InitTy->getSize() != 0;
+  return !InitTy->isZeroSize();
 }
 
 CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
