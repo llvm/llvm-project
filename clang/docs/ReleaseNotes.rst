@@ -304,6 +304,9 @@ Improvements to Clang's diagnostics
   annotated with the ``clang::always_destroy`` attribute.
   Fixes #GH68686, #GH86486
 
+- ``-Wmicrosoft``, ``-Wgnu``, or ``-pedantic`` is now required to diagnose C99
+  flexible array members in a union or alone in a struct. Fixes GH#84565.
+
 Improvements to Clang's time-trace
 ----------------------------------
 

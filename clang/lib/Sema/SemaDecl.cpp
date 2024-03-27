@@ -19429,15 +19429,11 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         } else if (Record->isUnion())
           DiagID = getLangOpts().MicrosoftExt
                        ? diag::ext_flexible_array_union_ms
-                       : getLangOpts().CPlusPlus
-                             ? diag::ext_flexible_array_union_gnu
-                             : diag::err_flexible_array_union;
+                       : diag::ext_flexible_array_union_gnu;
         else if (NumNamedMembers < 1)
           DiagID = getLangOpts().MicrosoftExt
                        ? diag::ext_flexible_array_empty_aggregate_ms
-                       : getLangOpts().CPlusPlus
-                             ? diag::ext_flexible_array_empty_aggregate_gnu
-                             : diag::err_flexible_array_empty_aggregate;
+                       : diag::ext_flexible_array_empty_aggregate_gnu;
 
         if (DiagID)
           Diag(FD->getLocation(), DiagID)
