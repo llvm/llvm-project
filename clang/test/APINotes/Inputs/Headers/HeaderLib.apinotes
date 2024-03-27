@@ -1,0 +1,37 @@
+Name: HeaderLib
+SwiftInferImportAsMember: true
+Functions:
+  - Name: custom_realloc
+    NullabilityOfRet: N
+    Nullability: [ N, S ]
+  - Name: unavailable_function
+    Availability: none
+    AvailabilityMsg: "I beg you not to use this"
+  - Name: do_something_with_pointers
+    NullabilityOfRet: O
+    Nullability: [ N, O ]
+  - Name: do_something_with_arrays
+    Parameters:
+      - Position: 0
+        Nullability: N
+      - Position: 1
+        Nullability: N
+  - Name: take_pointer_and_int
+    Parameters:
+      - Position: 0
+        Nullability: N
+        NoEscape: true
+      - Position: 1
+        NoEscape: true
+Globals:
+  - Name: global_int
+    Nullability: N
+  - Name: unavailable_global_int
+    Availability: none
+Tags:
+  - Name: unavailable_struct
+    Availability: none
+
+Typedefs:
+  - Name: unavailable_typedef
+    Availability: none
