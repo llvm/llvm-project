@@ -141,7 +141,7 @@ TEST(ScudoStringsTest, CapacityIncreaseFails) {
 
   // Test requires that the default length is at least 6 characters.
   scudo::uptr MaxSize = Str.capacity();
-  EXPECT_LE(6, MaxSize);
+  EXPECT_LE(6u, MaxSize);
 
   for (size_t i = 0; i < MaxSize - 5; i++) {
     Str.append("B");
