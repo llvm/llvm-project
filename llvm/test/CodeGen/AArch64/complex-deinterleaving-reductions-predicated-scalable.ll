@@ -14,31 +14,29 @@ target triple = "aarch64"
 define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_v2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w9, #100 // =0x64
+; CHECK-NEXT:    mov w8, #100 // =0x64
 ; CHECK-NEXT:    mov z1.d, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    whilelo p1.d, xzr, x9
-; CHECK-NEXT:    cntd x10
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    rdvl x11, #2
-; CHECK-NEXT:    mov x12, x10
+; CHECK-NEXT:    whilelo p1.d, xzr, x8
+; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    rdvl x10, #2
+; CHECK-NEXT:    mov x11, x9
 ; CHECK-NEXT:    zip2 z0.d, z1.d, z1.d
 ; CHECK-NEXT:    zip1 z1.d, z1.d, z1.d
 ; CHECK-NEXT:  .LBB0_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    zip2 p3.d, p1.d, p1.d
-; CHECK-NEXT:    add x13, x0, x8
-; CHECK-NEXT:    add x14, x1, x8
-; CHECK-NEXT:    zip1 p2.d, p1.d, p1.d
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    mov z7.d, z0.d
-; CHECK-NEXT:    whilelo p1.d, x12, x9
-; CHECK-NEXT:    add x8, x8, x11
-; CHECK-NEXT:    add x12, x12, x10
-; CHECK-NEXT:    ld1d { z2.d }, p3/z, [x13, #1, mul vl]
-; CHECK-NEXT:    ld1d { z4.d }, p3/z, [x14, #1, mul vl]
-; CHECK-NEXT:    ld1d { z3.d }, p2/z, [x13]
-; CHECK-NEXT:    ld1d { z5.d }, p2/z, [x14]
+; CHECK-NEXT:    zip1 p2.d, p1.d, p1.d
+; CHECK-NEXT:    whilelo p1.d, x11, x8
+; CHECK-NEXT:    add x11, x11, x9
+; CHECK-NEXT:    ld1d { z2.d }, p3/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1d { z4.d }, p3/z, [x1, #1, mul vl]
+; CHECK-NEXT:    ld1d { z3.d }, p2/z, [x0]
+; CHECK-NEXT:    ld1d { z5.d }, p2/z, [x1]
+; CHECK-NEXT:    add x1, x1, x10
+; CHECK-NEXT:    add x0, x0, x10
 ; CHECK-NEXT:    fcmla z7.d, p0/m, z4.d, z2.d, #0
 ; CHECK-NEXT:    fcmla z6.d, p0/m, z5.d, z3.d, #0
 ; CHECK-NEXT:    fcmla z7.d, p0/m, z4.d, z2.d, #90
@@ -115,32 +113,30 @@ define %"class.std::complex" @complex_mul_predicated_v2f64(ptr %a, ptr %b, ptr %
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov z1.d, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    cntd x10
-; CHECK-NEXT:    neg x11, x10
-; CHECK-NEXT:    mov w12, #100 // =0x64
+; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    neg x10, x9
+; CHECK-NEXT:    mov w11, #100 // =0x64
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    mov x9, xzr
-; CHECK-NEXT:    and x11, x11, x12
-; CHECK-NEXT:    rdvl x12, #2
+; CHECK-NEXT:    and x10, x10, x11
+; CHECK-NEXT:    rdvl x11, #2
 ; CHECK-NEXT:    zip2 z0.d, z1.d, z1.d
 ; CHECK-NEXT:    zip1 z1.d, z1.d, z1.d
 ; CHECK-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld1w { z2.d }, p0/z, [x2, x9, lsl #2]
-; CHECK-NEXT:    add x13, x0, x8
-; CHECK-NEXT:    add x14, x1, x8
+; CHECK-NEXT:    ld1w { z2.d }, p0/z, [x2, x8, lsl #2]
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    mov z7.d, z0.d
-; CHECK-NEXT:    add x9, x9, x10
-; CHECK-NEXT:    add x8, x8, x12
+; CHECK-NEXT:    add x8, x8, x9
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
-; CHECK-NEXT:    cmp x11, x9
+; CHECK-NEXT:    cmp x10, x8
 ; CHECK-NEXT:    zip2 p2.d, p1.d, p1.d
 ; CHECK-NEXT:    zip1 p1.d, p1.d, p1.d
-; CHECK-NEXT:    ld1d { z2.d }, p2/z, [x13, #1, mul vl]
-; CHECK-NEXT:    ld1d { z4.d }, p2/z, [x14, #1, mul vl]
-; CHECK-NEXT:    ld1d { z3.d }, p1/z, [x13]
-; CHECK-NEXT:    ld1d { z5.d }, p1/z, [x14]
+; CHECK-NEXT:    ld1d { z2.d }, p2/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1d { z4.d }, p2/z, [x1, #1, mul vl]
+; CHECK-NEXT:    ld1d { z3.d }, p1/z, [x0]
+; CHECK-NEXT:    ld1d { z5.d }, p1/z, [x1]
+; CHECK-NEXT:    add x1, x1, x11
+; CHECK-NEXT:    add x0, x0, x11
 ; CHECK-NEXT:    fcmla z7.d, p0/m, z4.d, z2.d, #0
 ; CHECK-NEXT:    fcmla z6.d, p0/m, z5.d, z3.d, #0
 ; CHECK-NEXT:    fcmla z7.d, p0/m, z4.d, z2.d, #90
@@ -217,33 +213,33 @@ exit.block:                                     ; preds = %vector.body
 define %"class.std::complex" @complex_mul_predicated_x2_v2f64(ptr %a, ptr %b, ptr %cond) {
 ; CHECK-LABEL: complex_mul_predicated_x2_v2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w10, #100 // =0x64
+; CHECK-NEXT:    mov w8, #100 // =0x64
 ; CHECK-NEXT:    mov z1.d, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    whilelo p1.d, xzr, x10
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    mov x9, xzr
-; CHECK-NEXT:    cntd x11
-; CHECK-NEXT:    rdvl x12, #2
+; CHECK-NEXT:    whilelo p1.d, xzr, x8
+; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    rdvl x10, #2
+; CHECK-NEXT:    cnth x11
+; CHECK-NEXT:    mov x12, x9
 ; CHECK-NEXT:    zip2 z0.d, z1.d, z1.d
 ; CHECK-NEXT:    zip1 z1.d, z1.d, z1.d
 ; CHECK-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld1w { z2.d }, p1/z, [x2, x9, lsl #2]
-; CHECK-NEXT:    add x13, x0, x8
-; CHECK-NEXT:    add x14, x1, x8
+; CHECK-NEXT:    ld1w { z2.d }, p1/z, [x2]
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    mov z7.d, z0.d
-; CHECK-NEXT:    add x9, x9, x11
-; CHECK-NEXT:    add x8, x8, x12
+; CHECK-NEXT:    add x2, x2, x11
 ; CHECK-NEXT:    cmpne p1.d, p1/z, z2.d, #0
 ; CHECK-NEXT:    zip2 p3.d, p1.d, p1.d
 ; CHECK-NEXT:    zip1 p2.d, p1.d, p1.d
-; CHECK-NEXT:    whilelo p1.d, x9, x10
-; CHECK-NEXT:    ld1d { z2.d }, p3/z, [x13, #1, mul vl]
-; CHECK-NEXT:    ld1d { z4.d }, p3/z, [x14, #1, mul vl]
-; CHECK-NEXT:    ld1d { z3.d }, p2/z, [x13]
-; CHECK-NEXT:    ld1d { z5.d }, p2/z, [x14]
+; CHECK-NEXT:    whilelo p1.d, x12, x8
+; CHECK-NEXT:    add x12, x12, x9
+; CHECK-NEXT:    ld1d { z2.d }, p3/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1d { z4.d }, p3/z, [x1, #1, mul vl]
+; CHECK-NEXT:    ld1d { z3.d }, p2/z, [x0]
+; CHECK-NEXT:    ld1d { z5.d }, p2/z, [x1]
+; CHECK-NEXT:    add x1, x1, x10
+; CHECK-NEXT:    add x0, x0, x10
 ; CHECK-NEXT:    fcmla z7.d, p0/m, z4.d, z2.d, #0
 ; CHECK-NEXT:    fcmla z6.d, p0/m, z5.d, z3.d, #0
 ; CHECK-NEXT:    fcmla z7.d, p0/m, z4.d, z2.d, #90
