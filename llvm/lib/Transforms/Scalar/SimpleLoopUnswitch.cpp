@@ -133,6 +133,7 @@ static cl::opt<unsigned> InjectInvariantConditionHotnesThreshold(
                          "not-taken 1/<this option> times or less."),
     cl::init(16));
 
+AnalysisKey ShouldRunExtraSimpleLoopUnswitch::Key;
 namespace {
 struct CompareDesc {
   BranchInst *Term;

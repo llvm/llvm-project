@@ -15,6 +15,8 @@
 #ifndef LLVM_TRANSFORMS_UTILS_SIMPLIFYINDVAR_H
 #define LLVM_TRANSFORMS_UTILS_SIMPLIFYINDVAR_H
 
+#include <utility>
+
 namespace llvm {
 
 class Type;
@@ -47,10 +49,12 @@ public:
 
 /// simplifyUsersOfIV - Simplify instructions that use this induction variable
 /// by using ScalarEvolution to analyze the IV's recurrence.
-bool simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE, DominatorTree *DT,
-                       LoopInfo *LI, const TargetTransformInfo *TTI,
-                       SmallVectorImpl<WeakTrackingVH> &Dead,
-                       SCEVExpander &Rewriter, IVVisitor *V = nullptr);
+std::pair<bool, bool> simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE,
+                                        DominatorTree *DT, LoopInfo *LI,
+                                        const TargetTransformInfo *TTI,
+                                        SmallVectorImpl<WeakTrackingVH> &Dead,
+                                        SCEVExpander &Rewriter,
+                                        IVVisitor *V = nullptr);
 
 /// SimplifyLoopIVs - Simplify users of induction variables within this
 /// loop. This does not actually change or add IVs.
