@@ -3567,6 +3567,7 @@ cc_library(
         ":GPUCommonTransforms",
         ":GPUCompilationAttrInterfacesIncGen",
         ":GPUDialect",
+        ":GPUToGPURuntimeTransforms",
         ":IR",
         ":LLVMCommonConversion",
         ":LinalgDialect",
@@ -5603,6 +5604,7 @@ cc_library(
         ":FuncToLLVM",
         ":GPUCommonTransforms",
         ":GPUDialect",
+        ":GPUToGPURuntimeTransforms",
         ":GPUToNVVMTransforms",
         ":GPUTransforms",
         ":IndexToLLVM",
@@ -5727,6 +5729,7 @@ cc_library(
         ":FuncDialect",
         ":GPUCommonTransforms",
         ":GPUDialect",
+        ":GPUToGPURuntimeTransforms",
         ":GPUToNVVMTransforms",
         ":GPUTransformOpsIncGen",
         ":GPUTransforms",
@@ -5774,11 +5777,7 @@ td_library(
 
 cc_library(
     name = "GPUCommonTransforms",
-    srcs = [
-        "lib/Conversion/GPUCommon/GPUOpsLowering.cpp",
-    ],
     hdrs = [
-        "include/mlir/Conversion/GPUCommon/GPUCommonPass.h",
         "lib/Conversion/GPUCommon/GPUOpsLowering.h",
         "lib/Conversion/GPUCommon/IndexIntrinsicsOpLowering.h",
         "lib/Conversion/GPUCommon/OpToFuncCallLowering.h",
@@ -5832,6 +5831,7 @@ cc_library(
         ":FuncToLLVM",
         ":GPUCommonTransforms",
         ":GPUDialect",
+        ":GPUToGPURuntimeTransforms",
         ":GPUToNVVMGen",
         ":GPUTransforms",
         ":IR",
@@ -5958,6 +5958,7 @@ cc_library(
         ":FuncToLLVM",
         ":GPUCommonTransforms",
         ":GPUDialect",
+        ":GPUToGPURuntimeTransforms",
         ":GPUToROCDLTGen",
         ":GPUTransforms",
         ":IR",
@@ -6001,6 +6002,7 @@ cc_library(
 cc_library(
     name = "GPUToGPURuntimeTransforms",
     srcs = [
+        "lib/Conversion/GPUCommon/GPUOpsLowering.cpp",
         "lib/Conversion/GPUCommon/GPUToLLVMConversion.cpp",
     ],
     hdrs = ["include/mlir/Conversion/GPUCommon/GPUCommonPass.h"],
@@ -6014,6 +6016,7 @@ cc_library(
         ":ConvertToLLVM",
         ":ConvertToLLVMInterface",
         ":FuncToLLVM",
+        ":GPUCommonTransforms",
         ":GPUDialect",
         ":GPUTransforms",
         ":IR",
