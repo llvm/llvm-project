@@ -8,6 +8,7 @@
 
 #include "SubprocessMemory.h"
 #include "Error.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cerrno>
@@ -45,12 +46,13 @@ Error SubprocessMemory::initializeSubprocessMemory(pid_t ProcessID) {
     return make_error<Failure>(
         "Failed to create shared memory object for auxiliary memory: " +
         Twine(strerror(errno)));
+  auto AuxiliaryMemoryFDClose =
+      make_scope_exit([AuxiliaryMemoryFD]() { close(AuxiliaryMemoryFD); });
   if (ftruncate(AuxiliaryMemoryFD, AuxiliaryMemorySize) != 0) {
     return make_error<Failure>("Truncating the auxiliary memory failed: " +
                                Twine(strerror(errno)));
   }
   SharedMemoryNames.push_back(AuxiliaryMemoryName);
-  close(AuxiliaryMemoryFD);
   return Error::success();
 }
 
@@ -64,6 +66,8 @@ Error SubprocessMemory::addMemoryDefinition(
     SharedMemoryNames.push_back(SharedMemoryName);
     int SharedMemoryFD =
         shm_open(SharedMemoryName.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    auto SharedMemoryFDClose =
+        make_scope_exit([SharedMemoryFD]() { close(SharedMemoryFD); });
     if (ftruncate(SharedMemoryFD, MemVal.SizeBytes) != 0) {
       return make_error<Failure>("Truncating a memory definiton failed: " +
                                  Twine(strerror(errno)));
@@ -88,8 +92,6 @@ Error SubprocessMemory::addMemoryDefinition(
           "Unmapping a memory definition in the parent failed: " +
           Twine(strerror(errno)));
     }
-
-    close(SharedMemoryFD);
   }
   return Error::success();
 }
