@@ -11,7 +11,7 @@ typedef struct { struct {} a; } empty;
 // CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_EMPTY]], align 1
 // CHECK-NEXT:    store i32 [[Z:%.*]], ptr [[Z_ADDR]], align 4
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr [[LIST]], i64 0, i64 0
-// CHECK-NEXT:    call void @llvm.va_start(ptr [[ARRAYDECAY]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[ARRAYDECAY]])
 // CHECK-NEXT:    [[ARRAYDECAY1:%.*]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr [[LIST]], i64 0, i64 0
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[RETVAL]], ptr align 1 [[TMP]], i64 1, i1 false)
 // CHECK-NEXT:    ret void
@@ -34,7 +34,7 @@ typedef struct {
 // CHECK-NEXT:    [[LIST:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
 // CHECK-NEXT:    store i32 [[Z:%.*]], ptr [[Z_ADDR]], align 4
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr [[LIST]], i64 0, i64 0
-// CHECK-NEXT:    call void @llvm.va_start(ptr [[ARRAYDECAY]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[ARRAYDECAY]])
 // CHECK-NEXT:    [[ARRAYDECAY1:%.*]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr [[LIST]], i64 0, i64 0
 // CHECK-NEXT:    [[FP_OFFSET_P:%.*]] = getelementptr inbounds [[STRUCT___VA_LIST_TAG:%.*]], ptr [[ARRAYDECAY1]], i32 0, i32 1
 // CHECK-NEXT:    [[FP_OFFSET:%.*]] = load i32, ptr [[FP_OFFSET_P]], align 4
