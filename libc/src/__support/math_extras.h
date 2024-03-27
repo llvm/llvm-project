@@ -51,21 +51,12 @@ mask_leading_zeros() {
   return mask_trailing_ones<T, CHAR_BIT * sizeof(T) - count>();
 }
 
-#define RETURN_IF_BUILTIN(TYPE, BUILTIN, ...)                                  \
-  if constexpr (cpp::is_same_v<T, TYPE> && LIBC_HAS_BUILTIN(BUILTIN))          \
-    return BUILTIN(__VA_ARGS__);
-
 // Returns whether 'a + b' overflows.
 // The result is stored in 'res' it not 'nullptr', dropped otherwise.
 // We keep the pass by pointer interface for consistency with the intrinsic.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr bool add_overflow(T a, T b, T *res) {
-  RETURN_IF_BUILTIN(T, __builtin_add_overflow, a, b, res)
-  if (res)
-    *res = a + b;
-  // https://stackoverflow.com/a/1514309
-  return (b > 0 && a > (cpp::numeric_limits<T>::max() - b)) ||
-         (b < 0 && a < (cpp::numeric_limits<T>::min() - b));
+  return __builtin_add_overflow(a, b, res);
 }
 
 // Returns whether 'a - b' overflows.
@@ -73,13 +64,12 @@ template <typename T>
 // We keep the pass by pointer interface for consistency with the intrinsic.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr bool sub_overflow(T a, T b, T *res) {
-  RETURN_IF_BUILTIN(T, __builtin_sub_overflow, a, b, res)
-  if (res)
-    *res = a - b;
-  // https://stackoverflow.com/a/1514309
-  return (b < 0 && a > (cpp::numeric_limits<T>::max() + b)) ||
-         (b > 0 && a < (cpp::numeric_limits<T>::min() + b));
+  return __builtin_sub_overflow(a, b, res);
 }
+
+#define RETURN_IF(TYPE, BUILTIN)                                               \
+  if constexpr (cpp::is_same_v<T, TYPE>)                                       \
+    return BUILTIN(a, b, carry_in, carry_out);
 
 // Returns the result of 'a + b' taking into account 'carry_in'.
 // The carry out is stored in 'carry_out' it not 'nullptr', dropped otherwise.
@@ -88,13 +78,17 @@ template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
 add_with_carry(T a, T b, T carry_in, T *carry_out = nullptr) {
   if constexpr (!cpp::is_constant_evaluated()) {
-    RETURN_IF_BUILTIN(unsigned char, __builtin_addcb, a, b, carry_in, carry_out)
-    RETURN_IF_BUILTIN(unsigned short, __builtin_addcs, a, b, carry_in,
-                      carry_out)
-    RETURN_IF_BUILTIN(unsigned int, __builtin_addc, a, b, carry_in, carry_out)
-    RETURN_IF_BUILTIN(unsigned long, __builtin_addcl, a, b, carry_in, carry_out)
-    RETURN_IF_BUILTIN(unsigned long long, __builtin_addcll, a, b, carry_in,
-                      carry_out)
+#if __has_builtin(__builtin_addcb)
+    RETURN_IF(unsigned char, __builtin_addcb)
+#elif __has_builtin(__builtin_addcs)
+    RETURN_IF(unsigned short, __builtin_addcs)
+#elif __has_builtin(__builtin_addc)
+    RETURN_IF(unsigned int, __builtin_addc)
+#elif __has_builtin(__builtin_addcl)
+    RETURN_IF(unsigned long, __builtin_addcl)
+#elif __has_builtin(__builtin_addcll)
+    RETURN_IF(unsigned long long, __builtin_addcll)
+#endif
   }
   T sum;
   T carry1 = add_overflow(a, b, &sum);
@@ -111,13 +105,17 @@ template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
 sub_with_borrow(T a, T b, T carry_in, T *carry_out = nullptr) {
   if constexpr (!cpp::is_constant_evaluated()) {
-    RETURN_IF_BUILTIN(unsigned char, __builtin_subcb, a, b, carry_in, carry_out)
-    RETURN_IF_BUILTIN(unsigned short, __builtin_subcs, a, b, carry_in,
-                      carry_out)
-    RETURN_IF_BUILTIN(unsigned int, __builtin_subc, a, b, carry_in, carry_out)
-    RETURN_IF_BUILTIN(unsigned long, __builtin_subcl, a, b, carry_in, carry_out)
-    RETURN_IF_BUILTIN(unsigned long long, __builtin_subcll, a, b, carry_in,
-                      carry_out)
+#if __has_builtin(__builtin_subcb)
+    RETURN_IF(unsigned char, __builtin_subcb)
+#elif __has_builtin(__builtin_subcs)
+    RETURN_IF(unsigned short, __builtin_subcs)
+#elif __has_builtin(__builtin_subc)
+    RETURN_IF(unsigned int, __builtin_subc)
+#elif __has_builtin(__builtin_subcl)
+    RETURN_IF(unsigned long, __builtin_subcl)
+#elif __has_builtin(__builtin_subcll)
+    RETURN_IF(unsigned long long, __builtin_subcll)
+#endif
   }
   T sub;
   T carry1 = sub_overflow(a, b, &sub);
