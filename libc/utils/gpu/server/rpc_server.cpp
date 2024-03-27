@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Workaround for missing __has_builtin in < GCC 10.
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+
 #include "llvmlibc_rpc_server.h"
 
 #include "src/__support/RPC/rpc.h"

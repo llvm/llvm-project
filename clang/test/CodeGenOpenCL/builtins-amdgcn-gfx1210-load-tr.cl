@@ -5,95 +5,85 @@
 typedef int    v2i   __attribute__((ext_vector_type(2)));
 typedef int    v3i   __attribute__((ext_vector_type(3)));
 typedef int    v4i   __attribute__((ext_vector_type(4)));
-typedef half   v8h   __attribute__((ext_vector_type(8)));
 typedef short  v8s   __attribute__((ext_vector_type(8)));
 
-// CHECK-GFX1210-LABEL: @test_amdgcn_global_load_tr_v2i32(
+// CHECK-GFX1210-LABEL: @test_amdgcn_global_load_tr4_b64_v2i32(
+// CHECK-GFX1210-NEXT:  entry:
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.global.load.tr4.b64.v2i32(ptr addrspace(1) [[INPTR:%.*]])
+// CHECK-GFX1210-NEXT:    ret <2 x i32> [[TMP0]]
+//
+v2i test_amdgcn_global_load_tr4_b64_v2i32(global v2i* inptr)
+{
+  return __builtin_amdgcn_global_load_tr4_b64_v2i32(inptr);
+}
+
+// CHECK-GFX1210-LABEL: @test_amdgcn_global_load_tr8_b64_v2i32(
 // CHECK-GFX1210-NEXT:  entry:
 // CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.global.load.tr.b64.v2i32(ptr addrspace(1) [[INPTR:%.*]])
 // CHECK-GFX1210-NEXT:    ret <2 x i32> [[TMP0]]
 //
-v2i test_amdgcn_global_load_tr_v2i32(global v2i* inptr)
+v2i test_amdgcn_global_load_tr8_b64_v2i32(global v2i* inptr)
 {
-  return __builtin_amdgcn_global_load_tr_b64_v2i32(inptr);
+  return __builtin_amdgcn_global_load_tr8_b64_v2i32(inptr);
 }
 
-// CHECK-GFX1210-LABEL: @test_amdgcn_global_load_tr4_v2i32(
+// CHECK-GFX1210-LABEL: @test_amdgcn_global_load_tr6_b96_v3i32(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.global.load.tr4.v2i32(ptr addrspace(1) [[INPTR:%.*]])
-// CHECK-GFX1210-NEXT:    ret <2 x i32> [[TMP0]]
-//
-v2i test_amdgcn_global_load_tr4_v2i32(global v2i* inptr)
-{
-  return __builtin_amdgcn_global_load_tr4_v2i32(inptr);
-}
-
-// CHECK-GFX1210-LABEL: @test_amdgcn_global_load_tr6_v3i32(
-// CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <3 x i32> @llvm.amdgcn.global.load.tr6.v3i32(ptr addrspace(1) [[INPTR:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <3 x i32> @llvm.amdgcn.global.load.tr6.b96.v3i32(ptr addrspace(1) [[INPTR:%.*]])
 // CHECK-GFX1210-NEXT:    ret <3 x i32> [[TMP0]]
 //
-v3i test_amdgcn_global_load_tr6_v3i32(global v3i* inptr)
+v3i test_amdgcn_global_load_tr6_b96_v3i32(global v3i* inptr)
 {
-  return __builtin_amdgcn_global_load_tr6_v3i32(inptr);
+  return __builtin_amdgcn_global_load_tr6_b96_v3i32(inptr);
 }
 
-// CHECK-GFX1210-LABEL: @test_amdgcn_global_load_tr_v8i16(
+// CHECK-GFX1210-LABEL: @test_amdgcn_global_load_tr16_b128_v8i16(
 // CHECK-GFX1210-NEXT:  entry:
 // CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.amdgcn.global.load.tr.b128.v8i16(ptr addrspace(1) [[INPTR:%.*]])
 // CHECK-GFX1210-NEXT:    ret <8 x i16> [[TMP0]]
 //
-v8s test_amdgcn_global_load_tr_v8i16(global v8s* inptr)
+v8s test_amdgcn_global_load_tr16_b128_v8i16(global v8s* inptr)
 {
-  return __builtin_amdgcn_global_load_tr_b128_v8i16(inptr);
+  return __builtin_amdgcn_global_load_tr16_b128_v8i16(inptr);
 }
 
-// CHECK-GFX1210-LABEL: @test_amdgcn_ds_load_tr_v2i32(
+
+// CHECK-GFX1210-LABEL: @test_amdgcn_ds_load_tr4_b64_v2i32(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.ds.load.tr.v2i32(ptr addrspace(3) [[INPTR:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.ds.load.tr4.b64.v2i32(ptr addrspace(3) [[INPTR:%.*]])
 // CHECK-GFX1210-NEXT:    ret <2 x i32> [[TMP0]]
 //
-v2i test_amdgcn_ds_load_tr_v2i32(local v2i* inptr)
+v2i test_amdgcn_ds_load_tr4_b64_v2i32(local v2i* inptr)
 {
-  return __builtin_amdgcn_ds_load_tr_v2i32(inptr);
+  return __builtin_amdgcn_ds_load_tr4_b64_v2i32(inptr);
 }
 
-// CHECK-GFX1210-LABEL: @test_amdgcn_ds_load_tr4_v2i32(
+// CHECK-GFX1210-LABEL: @test_amdgcn_ds_load_tr8_b64_v2i32(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.ds.load.tr4.v2i32(ptr addrspace(3) [[INPTR:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.ds.load.tr8.b64.v2i32(ptr addrspace(3) [[INPTR:%.*]])
 // CHECK-GFX1210-NEXT:    ret <2 x i32> [[TMP0]]
 //
-v2i test_amdgcn_ds_load_tr4_v2i32(local v2i* inptr)
+v2i test_amdgcn_ds_load_tr8_b64_v2i32(local v2i* inptr)
 {
-  return __builtin_amdgcn_ds_load_tr4_v2i32(inptr);
+  return __builtin_amdgcn_ds_load_tr8_b64_v2i32(inptr);
 }
 
-// CHECK-GFX1210-LABEL: @test_amdgcn_ds_load_tr6_v3i32(
+// CHECK-GFX1210-LABEL: @test_amdgcn_ds_load_tr6_b96_v3i32(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <3 x i32> @llvm.amdgcn.ds.load.tr6.v3i32(ptr addrspace(3) [[INPTR:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <3 x i32> @llvm.amdgcn.ds.load.tr6.b96.v3i32(ptr addrspace(3) [[INPTR:%.*]])
 // CHECK-GFX1210-NEXT:    ret <3 x i32> [[TMP0]]
 //
-v3i test_amdgcn_ds_load_tr6_v3i32(local v3i* inptr)
+v3i test_amdgcn_ds_load_tr6_b96_v3i32(local v3i* inptr)
 {
-  return __builtin_amdgcn_ds_load_tr6_v3i32(inptr);
+  return __builtin_amdgcn_ds_load_tr6_b96_v3i32(inptr);
 }
 
-// CHECK-GFX1210-LABEL: @test_amdgcn_ds_load_tr_v8i16(
+// CHECK-GFX1210-LABEL: @test_amdgcn_ds_load_tr16_b128_v8i16(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.amdgcn.ds.load.tr.v8i16(ptr addrspace(3) [[INPTR:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.amdgcn.ds.load.tr16.b128.v8i16(ptr addrspace(3) [[INPTR:%.*]])
 // CHECK-GFX1210-NEXT:    ret <8 x i16> [[TMP0]]
 //
-v8s test_amdgcn_ds_load_tr_v8i16(local v8s* inptr)
+v8s test_amdgcn_ds_load_tr16_b128_v8i16(local v8s* inptr)
 {
-  return __builtin_amdgcn_ds_load_tr_v8i16(inptr);
-}
-
-// CHECK-GFX1210-LABEL: @test_amdgcn_ds_load_tr_v8f16(
-// CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.ds.load.tr.v8f16(ptr addrspace(3) [[INPTR:%.*]])
-// CHECK-GFX1210-NEXT:    ret <8 x half> [[TMP0]]
-//
-v8h test_amdgcn_ds_load_tr_v8f16(local v8h* inptr)
-{
-  return __builtin_amdgcn_ds_load_tr_v8f16(inptr);
+  return __builtin_amdgcn_ds_load_tr16_b128_v8i16(inptr);
 }

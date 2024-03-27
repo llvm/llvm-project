@@ -5099,11 +5099,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
     case Intrinsic::amdgcn_global_load_tr_b64:
     case Intrinsic::amdgcn_global_load_tr_b128:
-    case Intrinsic::amdgcn_global_load_tr4:
-    case Intrinsic::amdgcn_global_load_tr6:
-    case Intrinsic::amdgcn_ds_load_tr:
-    case Intrinsic::amdgcn_ds_load_tr4:
-    case Intrinsic::amdgcn_ds_load_tr6:
+    case Intrinsic::amdgcn_global_load_tr4_b64:
+    case Intrinsic::amdgcn_global_load_tr6_b96:
+    case Intrinsic::amdgcn_ds_load_tr8_b64:
+    case Intrinsic::amdgcn_ds_load_tr16_b128:
+    case Intrinsic::amdgcn_ds_load_tr4_b64:
+    case Intrinsic::amdgcn_ds_load_tr6_b96:
     case Intrinsic::amdgcn_flat_load_monitor_b32:
     case Intrinsic::amdgcn_flat_load_monitor_b64:
     case Intrinsic::amdgcn_flat_load_monitor_b128:
