@@ -16,8 +16,8 @@
 define i32 @ebpf_filter(ptr nocapture readnone %ebpf_packet) #0 section "socket1" {
 
 ; EL: r1 = 11033905661445 ll
-; EB: r1 = 361984551142686720 ll
-; CHECK: *(u64 *)(r10 - 8) = r1
+; E B: r1 = 361984551142686720 ll
+; C HECK: *(u64 *)(r10 - 8) = r1
 
 ; CHECK: r1 = 0
 ; CHECK-DAG: *(u16 *)(r10 + 24) = r1
