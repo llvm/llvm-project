@@ -86,8 +86,8 @@ bool SPIRVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 // when there is a type mismatch between results and operand types.
 static void validatePtrTypes(const SPIRVSubtarget &STI,
                              MachineRegisterInfo *MRI, SPIRVGlobalRegistry &GR,
-                             MachineInstr &I, unsigned OpIdx, SPIRVType *ResType,
-                             const Type *ResTy = nullptr) {
+                             MachineInstr &I, unsigned OpIdx,
+                             SPIRVType *ResType, const Type *ResTy = nullptr) {
   Register OpReg = I.getOperand(OpIdx).getReg();
   SPIRVType *TypeInst = MRI->getVRegDef(OpReg);
   SPIRVType *OpType = GR.getSPIRVTypeForVReg(
@@ -163,7 +163,8 @@ void validateFunCallMachineDef(const SPIRVSubtarget &STI,
       // Switch GR context to the call site instead of the (default) definition
       // side
       GR.setCurrentFunc(*FunCall.getParent()->getParent());
-      validatePtrTypes(STI, CallMRI, GR, FunCall, OpIdx, DefElemType, DefElemTy);
+      validatePtrTypes(STI, CallMRI, GR, FunCall, OpIdx, DefElemType,
+                       DefElemTy);
       GR.setCurrentFunc(*FunDef->getParent()->getParent());
     }
   }
