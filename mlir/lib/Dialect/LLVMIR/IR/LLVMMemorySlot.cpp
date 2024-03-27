@@ -166,13 +166,6 @@ bool LLVM::StoreOp::canUsesBeRemoved(
 DeletionKind LLVM::StoreOp::removeBlockingUses(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
     RewriterBase &rewriter, Value reachingDefinition) {
-  // `canUsesBeRemoved` checked this blocking use must be the stored slot
-  // pointer.
-  for (Operation *user : slot.ptr.getUsers())
-    if (auto declareOp = dyn_cast<LLVM::DbgDeclareOp>(user))
-      rewriter.create<LLVM::DbgValueOp>(declareOp->getLoc(), getValue(),
-                                        declareOp.getVarInfo(),
-                                        declareOp.getLocationExpr());
   return DeletionKind::Delete;
 }
 
@@ -403,6 +396,18 @@ DeletionKind LLVM::DbgValueOp::removeBlockingUses(
       rewriter.create<UndefOp>(getValue().getLoc(), getValue().getType());
   rewriter.modifyOpInPlace(*this, [&] { getValueMutable().assign(undef); });
   return DeletionKind::Keep;
+}
+
+bool LLVM::DbgDeclareOp::requiresVisitingMutatedDefs() { return true; }
+
+void LLVM::DbgDeclareOp::visitMutatedDefs(
+    ArrayRef<std::pair<Operation *, Value>> definitions,
+    RewriterBase &rewriter) {
+  for (auto [op, value] : definitions) {
+    rewriter.setInsertionPointAfter(op);
+    rewriter.create<LLVM::DbgValueOp>(getLoc(), value, getVarInfo(),
+                                      getLocationExpr());
+  }
 }
 
 //===----------------------------------------------------------------------===//
