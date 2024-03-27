@@ -1,0 +1,48 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
+; RUN: cp -r %S/Inputs/Umbrella/Umbrella.framework %t/Frameworks/
+
+// Check base filename matches.
+; RUN: clang-installapi --target=arm64-apple-macosx13 \
+; RUN: -install_name /System/Library/Frameworks/Umbrella.framework/Versions/A/Umbrella \
+; RUN: -ObjC -F%t/Frameworks/ %t/inputs.json \
+; RUN: --public-umbrella-header=SpecialUmbrella.h \
+; RUN: --private-umbrella-header=SpecialPrivateUmbrella.h \
+; RUN: -o %t/output.tbd 2>&1 | FileCheck -allow-empty %s
+
+// Try missing umbrella header argument.
+; RUN: not clang-installapi --target=arm64-apple-macosx13 \
+; RUN: -install_name /System/Library/Frameworks/Umbrella.framework/Versions/A/Umbrella \
+; RUN: -ObjC -F%t/Frameworks/ %t/inputs.json \
+; RUN: --public-umbrella-header=Ignore.h \
+; RUN: -o %t/output.tbd 2>&1 | FileCheck %s -check-prefix=ERR
+
+; ERR: error: public umbrella header file not found in input: 'Ignore.h'
+
+; CHECK-NOT: error
+; CHECK-NOT: warning
+
+;--- Frameworks/Umbrella.framework/Headers/Ignore.h
+#error "This header should be ignored"
+
+;--- inputs.json.in
+{
+  "headers": [ {
+    "path" : "DSTROOT/Frameworks/Umbrella.framework/Headers/AAA.h",
+    "type" : "public"
+  }, 
+  {
+    "path" : "DSTROOT/Frameworks/Umbrella.framework/Headers/SpecialUmbrella.h",
+    "type" : "public"
+  },
+  {
+    "path" : "DSTROOT/Frameworks/Umbrella.framework/PrivateHeaders/AAA_Private.h",
+    "type" : "private"
+  },
+  {
+    "path" : "DSTROOT/Frameworks/Umbrella.framework/PrivateHeaders/SpecialPrivateUmbrella.h",
+    "type" : "private"
+  }],
+  "version": "3"
+}
