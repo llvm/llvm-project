@@ -117,21 +117,27 @@ public:
     SmallerBlockReleasePageDelta =
         PagesInGroup * (1 + MinSizeClass / 16U) / 100;
 
+    u32 Seed;
+    const u64 Time = getMonotonicTimeFast();
+    if (!getRandom(reinterpret_cast<void *>(&Seed), sizeof(Seed)))
+      Seed = static_cast<u32>(Time ^ (reinterpret_cast<uptr>(&Seed) >> 12));
+
+    for (uptr I = 0; I < NumClasses; I++)
+      getRegionInfo(I)->RandState = getRandomU32(&Seed);
+
     if (Config::getPreserveAllRegions()) {
       ReservedMemoryT ReservedMemory = {};
       // Reserve the space required for the Primary.
       CHECK(ReservedMemory.create(/*Addr=*/0U, RegionSize * NumClasses,
                                   "scudo:primary_reserve"));
       const uptr PrimaryBase = ReservedMemory.getBase();
-      const bool EnableRandomOffset =
-          Config::getPreserveAllRegions() && Config::getEnableRandomOffset();
 
       for (uptr I = 0; I < NumClasses; I++) {
         MemMapT RegionMemMap = ReservedMemory.dispatch(
             PrimaryBase + (I << RegionSizeLog), RegionSize);
         RegionInfo *Region = getRegionInfo(I);
 
-        initRegion(Region, I, RegionMemMap, EnableRandomOffset);
+        initRegion(Region, I, RegionMemMap, Config::getEnableRandomOffset());
       }
       shuffle(RegionInfoArray, NumClasses, &getRegionInfo(0)->RandState);
     }
@@ -593,24 +599,21 @@ private:
     return BlockSize > PageSize;
   }
 
-  void initRegion(RegionInfo *Region, uptr ClassId, MemMapT MemMap,
-                  bool EnableRandomOffset) REQUIRES(Region->MMLock) {
+  ALWAYS_INLINE void initRegion(RegionInfo *Region, uptr ClassId,
+                                MemMapT MemMap, bool EnableRandomOffset)
+      REQUIRES(Region->MMLock) {
     DCHECK(!Region->MemMapInfo.MemMap.isAllocated());
     DCHECK(MemMap.isAllocated());
 
     const uptr PageSize = getPageSizeCached();
-    const uptr RegionBase = MemMap.getBase();
 
     Region->MemMapInfo.MemMap = MemMap;
 
-    u32 Seed;
-    const u64 Time = getMonotonicTimeFast();
-    if (!getRandom(reinterpret_cast<void *>(&Seed), sizeof(Seed)))
-      Seed = static_cast<u32>(Time ^ (RegionBase >> 12));
-
-    Region->RegionBeg = RegionBase;
-    if (EnableRandomOffset)
-      Region->RegionBeg += (getRandomModN(&Seed, 16) + 1) * PageSize;
+    Region->RegionBeg = MemMap.getBase();
+    if (EnableRandomOffset) {
+      Region->RegionBeg +=
+          (getRandomModN(&Region->RandState, 16) + 1) * PageSize;
+    }
 
     // Releasing small blocks is expensive, set a higher threshold to avoid
     // frequent page releases.
@@ -618,8 +621,6 @@ private:
       Region->TryReleaseThreshold = PageSize * SmallerBlockReleasePageDelta;
     else
       Region->TryReleaseThreshold = PageSize;
-
-    Region->ReleaseInfo.LastReleaseAtNs = Time;
   }
 
   void pushBatchClassBlocks(RegionInfo *Region, CompactPtrT *Array, u32 Size)
@@ -1023,7 +1024,7 @@ private:
       initRegion(Region, ClassId,
                  ReservedMemory.dispatch(ReservedMemory.getBase(),
                                          ReservedMemory.getCapacity()),
-                 /*EnableRandomOffset*/ false);
+                 /*EnableRandomOffset=*/false);
     }
 
     DCHECK(Region->MemMapInfo.MemMap.isAllocated());
