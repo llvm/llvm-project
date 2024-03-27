@@ -92,10 +92,12 @@ static void test_values() {
     assert(stream_fr_FR_locale<CharT>(1'000.123456s) == SV("1 000,1235s"));
 #endif
   } else {
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     assert(stream_fr_FR_locale<CharT>(-1'000'000s) == L"-1" FR_THOU_SEP "000" FR_THOU_SEP "000s");
     assert(stream_fr_FR_locale<CharT>(1'000'000s) == L"1" FR_THOU_SEP "000" FR_THOU_SEP "000s");
     assert(stream_fr_FR_locale<CharT>(-1'000.123456s) == L"-1" FR_THOU_SEP "000" FR_DEC_POINT "1235s");
     assert(stream_fr_FR_locale<CharT>(1'000.123456s) == L"1" FR_THOU_SEP "000" FR_DEC_POINT "1235s");
+#endif
   }
 
   assert(stream_ja_JP_locale<CharT>(-1'000'000s) == SV("-1,000,000s"));
