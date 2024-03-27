@@ -51,7 +51,7 @@ public:
                   Fortran::semantics::SemanticsContext &semaCtx,
                   const Fortran::parser::OmpClauseList &clauses)
       : converter(converter), semaCtx(semaCtx),
-        clauses(makeList(clauses, semaCtx)) {}
+        clauses(makeClauses(clauses, semaCtx)) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
   bool processCollapse(

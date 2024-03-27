@@ -347,7 +347,7 @@ Aligned make(const parser::OmpClause::Aligned &inp,
 
   return Aligned{{
       /*Alignment=*/maybeApply(makeExprFn(semaCtx), t1),
-      /*List=*/makeList(t0, semaCtx),
+      /*List=*/makeObjects(t0, semaCtx),
   }};
 }
 
@@ -362,7 +362,7 @@ Allocate make(const parser::OmpClause::Allocate &inp,
     return Allocate{{/*AllocatorSimpleModifier=*/std::nullopt,
                      /*AllocatorComplexModifier=*/std::nullopt,
                      /*AlignModifier=*/std::nullopt,
-                     /*List=*/makeList(t1, semaCtx)}};
+                     /*List=*/makeObjects(t1, semaCtx)}};
   }
 
   using Tuple = decltype(Allocate::t);
@@ -374,7 +374,7 @@ Allocate make(const parser::OmpClause::Allocate &inp,
             return {/*AllocatorSimpleModifier=*/makeExpr(v.v, semaCtx),
                     /*AllocatorComplexModifier=*/std::nullopt,
                     /*AlignModifier=*/std::nullopt,
-                    /*List=*/makeList(t1, semaCtx)};
+                    /*List=*/makeObjects(t1, semaCtx)};
           },
           // complex-modifier + align-modifier
           [&](const wrapped::AllocateModifier::ComplexModifier &v) -> Tuple {
@@ -384,14 +384,14 @@ Allocate make(const parser::OmpClause::Allocate &inp,
                 /*AllocatorSimpleModifier=*/std::nullopt,
                 /*AllocatorComplexModifier=*/Allocator{makeExpr(s0.v, semaCtx)},
                 /*AlignModifier=*/Align{makeExpr(s1.v, semaCtx)},
-                /*List=*/makeList(t1, semaCtx)};
+                /*List=*/makeObjects(t1, semaCtx)};
           },
           // align-modifier
           [&](const wrapped::AllocateModifier::Align &v) -> Tuple {
             return {/*AllocatorSimpleModifier=*/std::nullopt,
                     /*AllocatorComplexModifier=*/std::nullopt,
                     /*AlignModifier=*/Align{makeExpr(v.v, semaCtx)},
-                    /*List=*/makeList(t1, semaCtx)};
+                    /*List=*/makeObjects(t1, semaCtx)};
           },
       },
       t0->u)};
@@ -450,13 +450,13 @@ Collapse make(const parser::OmpClause::Collapse &inp,
 Copyin make(const parser::OmpClause::Copyin &inp,
             semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpObjectList
-  return Copyin{/*List=*/makeList(inp.v, semaCtx)};
+  return Copyin{/*List=*/makeObjects(inp.v, semaCtx)};
 }
 
 Copyprivate make(const parser::OmpClause::Copyprivate &inp,
                  semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpObjectList
-  return Copyprivate{/*List=*/makeList(inp.v, semaCtx)};
+  return Copyprivate{/*List=*/makeObjects(inp.v, semaCtx)};
 }
 
 Default make(const parser::OmpClause::Default &inp,
@@ -641,7 +641,7 @@ Doacross make(const parser::OmpClause::Doacross &inp,
 Enter make(const parser::OmpClause::Enter &inp,
            semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpObjectList
-  return Enter{makeList(/*List=*/inp.v, semaCtx)};
+  return Enter{makeObjects(/*List=*/inp.v, semaCtx)};
 }
 
 Exclusive make(const parser::OmpClause::Exclusive &inp,
@@ -671,7 +671,7 @@ Final make(const parser::OmpClause::Final &inp,
 Firstprivate make(const parser::OmpClause::Firstprivate &inp,
                   semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpObjectList
-  return Firstprivate{/*List=*/makeList(inp.v, semaCtx)};
+  return Firstprivate{/*List=*/makeObjects(inp.v, semaCtx)};
 }
 
 // Flush: empty
@@ -681,7 +681,7 @@ From make(const parser::OmpClause::From &inp,
   // inp.v -> parser::OmpObjectList
   return From{{/*Expectation=*/std::nullopt, /*Mapper=*/std::nullopt,
                /*Iterator=*/std::nullopt,
-               /*LocatorList=*/makeList(inp.v, semaCtx)}};
+               /*LocatorList=*/makeObjects(inp.v, semaCtx)}};
 }
 
 // Full: empty
@@ -696,7 +696,7 @@ Grainsize make(const parser::OmpClause::Grainsize &inp,
 HasDeviceAddr make(const parser::OmpClause::HasDeviceAddr &inp,
                    semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpObjectList
-  return HasDeviceAddr{/*List=*/makeList(inp.v, semaCtx)};
+  return HasDeviceAddr{/*List=*/makeObjects(inp.v, semaCtx)};
 }
 
 Hint make(const parser::OmpClause::Hint &inp,
@@ -762,20 +762,20 @@ InReduction make(const parser::OmpClause::InReduction &inp,
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
   return InReduction{
       {/*ReductionIdentifiers=*/{makeReductionOperator(t0, semaCtx)},
-       /*List=*/makeList(t1, semaCtx)}};
+       /*List=*/makeObjects(t1, semaCtx)}};
 }
 
 IsDevicePtr make(const parser::OmpClause::IsDevicePtr &inp,
                  semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpObjectList
-  return IsDevicePtr{/*List=*/makeList(inp.v, semaCtx)};
+  return IsDevicePtr{/*List=*/makeObjects(inp.v, semaCtx)};
 }
 
 Lastprivate make(const parser::OmpClause::Lastprivate &inp,
                  semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpObjectList
   return Lastprivate{{/*LastprivateModifier=*/std::nullopt,
-                      /*List=*/makeList(inp.v, semaCtx)}};
+                      /*List=*/makeObjects(inp.v, semaCtx)}};
 }
 
 Linear make(const parser::OmpClause::Linear &inp,
@@ -817,7 +817,7 @@ Linear make(const parser::OmpClause::Linear &inp,
 Link make(const parser::OmpClause::Link &inp,
           semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpObjectList
-  return Link{/*List=*/makeList(inp.v, semaCtx)};
+  return Link{/*List=*/makeObjects(inp.v, semaCtx)};
 }
 
 Map make(const parser::OmpClause::Map &inp,
@@ -844,7 +844,7 @@ Map make(const parser::OmpClause::Map &inp,
   if (!t0) {
     return Map{{/*MapType=*/std::nullopt, /*MapTypeModifiers=*/std::nullopt,
                 /*Mapper=*/std::nullopt, /*Iterator=*/std::nullopt,
-                /*LocatorList=*/makeList(t1, semaCtx)}};
+                /*LocatorList=*/makeObjects(t1, semaCtx)}};
   }
 
   auto &s0 = std::get<std::optional<parser::OmpMapType::Always>>(t0->t);
@@ -857,7 +857,7 @@ Map make(const parser::OmpClause::Map &inp,
   return Map{{/*MapType=*/convert1(s1),
               /*MapTypeModifiers=*/maybeList,
               /*Mapper=*/std::nullopt, /*Iterator=*/std::nullopt,
-              /*LocatorList=*/makeList(t1, semaCtx)}};
+              /*LocatorList=*/makeObjects(t1, semaCtx)}};
 }
 
 // Match: incomplete
@@ -980,7 +980,7 @@ Priority make(const parser::OmpClause::Priority &inp,
 Private make(const parser::OmpClause::Private &inp,
              semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpObjectList
-  return Private{/*List=*/makeList(inp.v, semaCtx)};
+  return Private{/*List=*/makeObjects(inp.v, semaCtx)};
 }
 
 ProcBind make(const parser::OmpClause::ProcBind &inp,
@@ -1010,7 +1010,7 @@ Reduction make(const parser::OmpClause::Reduction &inp,
   return Reduction{
       {/*ReductionIdentifiers=*/{makeReductionOperator(t0, semaCtx)},
        /*ReductionModifier=*/std::nullopt,
-       /*List=*/makeList(t1, semaCtx)}};
+       /*List=*/makeObjects(t1, semaCtx)}};
 }
 
 // Relaxed: empty
@@ -1104,7 +1104,7 @@ Severity make(const parser::OmpClause::Severity &inp,
 Shared make(const parser::OmpClause::Shared &inp,
             semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpObjectList
-  return Shared{/*List=*/makeList(inp.v, semaCtx)};
+  return Shared{/*List=*/makeObjects(inp.v, semaCtx)};
 }
 
 // Simd: empty
@@ -1128,7 +1128,7 @@ TaskReduction make(const parser::OmpClause::TaskReduction &inp,
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
   return TaskReduction{
       {/*ReductionIdentifiers=*/{makeReductionOperator(t0, semaCtx)},
-       /*List=*/makeList(t1, semaCtx)}};
+       /*List=*/makeObjects(t1, semaCtx)}};
 }
 
 ThreadLimit make(const parser::OmpClause::ThreadLimit &inp,
@@ -1145,7 +1145,7 @@ To make(const parser::OmpClause::To &inp,
   // inp.v -> parser::OmpObjectList
   return To{{/*Expectation=*/std::nullopt, /*Mapper=*/std::nullopt,
              /*Iterator=*/std::nullopt,
-             /*LocatorList=*/makeList(inp.v, semaCtx)}};
+             /*LocatorList=*/makeObjects(inp.v, semaCtx)}};
 }
 
 // UnifiedAddress: empty
@@ -1175,13 +1175,13 @@ Use make(const parser::OmpClause::Use &inp,
 UseDeviceAddr make(const parser::OmpClause::UseDeviceAddr &inp,
                    semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpObjectList
-  return UseDeviceAddr{/*List=*/makeList(inp.v, semaCtx)};
+  return UseDeviceAddr{/*List=*/makeObjects(inp.v, semaCtx)};
 }
 
 UseDevicePtr make(const parser::OmpClause::UseDevicePtr &inp,
                   semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpObjectList
-  return UseDevicePtr{/*List=*/makeList(inp.v, semaCtx)};
+  return UseDevicePtr{/*List=*/makeObjects(inp.v, semaCtx)};
 }
 
 UsesAllocators make(const parser::OmpClause::UsesAllocators &inp,
@@ -1205,8 +1205,8 @@ Clause makeClause(const Fortran::parser::OmpClause &cls,
       cls.u);
 }
 
-List<Clause> makeList(const parser::OmpClauseList &clauses,
-                      semantics::SemanticsContext &semaCtx) {
+List<Clause> makeClauses(const parser::OmpClauseList &clauses,
+                         semantics::SemanticsContext &semaCtx) {
   return makeList(clauses.v, [&](const parser::OmpClause &s) {
     return makeClause(s, semaCtx);
   });
