@@ -30,15 +30,14 @@
 using namespace mlir;
 using namespace test;
 
-namespace {
-inline ArrayRef<unsigned> getSupportedInstructionsImpl() {
+static ArrayRef<unsigned> getSupportedInstructionsImpl() {
   static unsigned instructions[] = {llvm::Instruction::Load};
   return instructions;
 }
 
-LogicalResult convertLoad(OpBuilder &builder, llvm::Instruction *inst,
-                          ArrayRef<llvm::Value *> llvmOperands,
-                          LLVM::ModuleImport &moduleImport) {
+static LogicalResult convertLoad(OpBuilder &builder, llvm::Instruction *inst,
+                                 ArrayRef<llvm::Value *> llvmOperands,
+                                 LLVM::ModuleImport &moduleImport) {
   FailureOr<Value> addr = moduleImport.convertValue(llvmOperands[0]);
   if (failed(addr))
     return failure();
@@ -53,6 +52,7 @@ LogicalResult convertLoad(OpBuilder &builder, llvm::Instruction *inst,
   return success();
 }
 
+namespace {
 class TestDialectLLVMImportDialectInterface
     : public LLVMImportDialectInterface {
 public:
