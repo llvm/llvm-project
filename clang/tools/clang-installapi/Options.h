@@ -31,6 +31,15 @@ struct DriverOptions {
   /// \brief Path to input file lists (JSON).
   llvm::MachO::PathSeq FileLists;
 
+  /// \brief Path to public umbrella header.
+  std::string PublicUmbrellaHeader;
+
+  /// \brief Path to private umbrella header.
+  std::string PrivateUmbrellaHeader;
+
+  /// \brief Path to project umbrella header.
+  std::string ProjectUmbrellaHeader;
+
   /// \brief Paths of extra public headers.
   PathSeq ExtraPublicHeaders;
 
