@@ -2920,8 +2920,7 @@ static void readAttributeValues(
     Error err = Error::success();
     typename DebugNamesSection<ELFT>::AttrValueData newAttr;
     uint32_t value;
-    if (attr.Index == DW_IDX_parent &&
-        attr.Form != DW_FORM_flag_present &&
+    if (attr.Index == DW_IDX_parent && attr.Form != DW_FORM_flag_present &&
         attr.Form != DW_FORM_ref4)
       errorOrWarn(toString(namesSection.sec) +
                   Twine(": invalid form for DW_IDX_parent"));
