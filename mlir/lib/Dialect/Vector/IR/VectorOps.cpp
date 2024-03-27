@@ -382,8 +382,8 @@ void VectorDialect::initialize() {
                             YieldOp>();
   declarePromisedInterfaces<SubsetOpInterface, TransferReadOp,
                             TransferWriteOp>();
-  declarePromisedInterface<TransferReadOp, SubsetExtractionOpInterface>();
-  declarePromisedInterface<TransferWriteOp, SubsetInsertionOpInterface>();
+  declarePromisedInterface<SubsetExtractionOpInterface, TransferReadOp>();
+  declarePromisedInterface<SubsetInsertionOpInterface, TransferWriteOp>();
 }
 
 /// Materialize a single constant operation from a given attribute value with
