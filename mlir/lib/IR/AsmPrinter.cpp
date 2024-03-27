@@ -13,6 +13,7 @@
 
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/AsmInterfaces.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -2257,7 +2258,8 @@ LogicalResult AsmPrinter::Impl::printAlias(Attribute attr) {
     llvm::raw_string_ostream attrNameStr(attrName);
     Impl subPrinter(attrNameStr, state);
     DialectAsmPrinter printer(subPrinter);
-    iface->printDialectAlias(printer, attr);
+    if (failed(iface->printDialectAlias(printer, attr)))
+      return failure();
   }
   printDialectSymbol(os, "#", iface->getDialect()->getNamespace(), attrName);
   return success();
@@ -2276,7 +2278,8 @@ LogicalResult AsmPrinter::Impl::printAlias(Type type) {
     llvm::raw_string_ostream typeNameStr(typeName);
     Impl subPrinter(typeNameStr, state);
     DialectAsmPrinter printer(subPrinter);
-    iface->printDialectAlias(printer, type);
+    if (failed(iface->printDialectAlias(printer, type)))
+      return failure();
   }
   printDialectSymbol(os, "!", iface->getDialect()->getNamespace(), typeName);
   return success();
@@ -2787,7 +2790,9 @@ void AsmPrinter::Impl::printNamedAttribute(NamedAttribute attr) {
 }
 
 void AsmPrinter::Impl::printDialectAttribute(Attribute attr) {
-  auto &dialect = attr.getDialect();
+  Dialect *dialect = &attr.getDialect();
+  if (auto iface = dyn_cast<AttrAsmAliasAttrInterface>(attr))
+    dialect = iface.getAliasDialect();
 
   // Ask the dialect to serialize the attribute to a string.
   std::string attrName;
@@ -2795,13 +2800,15 @@ void AsmPrinter::Impl::printDialectAttribute(Attribute attr) {
     llvm::raw_string_ostream attrNameStr(attrName);
     Impl subPrinter(attrNameStr, state);
     DialectAsmPrinter printer(subPrinter);
-    dialect.printAttribute(attr, printer);
+    dialect->printAttribute(attr, printer);
   }
-  printDialectSymbol(os, "#", dialect.getNamespace(), attrName);
+  printDialectSymbol(os, "#", dialect->getNamespace(), attrName);
 }
 
 void AsmPrinter::Impl::printDialectType(Type type) {
-  auto &dialect = type.getDialect();
+  Dialect *dialect = &type.getDialect();
+  if (auto iface = dyn_cast<TypeAsmAliasTypeInterface>(type))
+    dialect = iface.getAliasDialect();
 
   // Ask the dialect to serialize the type to a string.
   std::string typeName;
@@ -2809,9 +2816,9 @@ void AsmPrinter::Impl::printDialectType(Type type) {
     llvm::raw_string_ostream typeNameStr(typeName);
     Impl subPrinter(typeNameStr, state);
     DialectAsmPrinter printer(subPrinter);
-    dialect.printType(type, printer);
+    dialect->printType(type, printer);
   }
-  printDialectSymbol(os, "!", dialect.getNamespace(), typeName);
+  printDialectSymbol(os, "!", dialect->getNamespace(), typeName);
 }
 
 void AsmPrinter::Impl::printEscapedString(StringRef str) {

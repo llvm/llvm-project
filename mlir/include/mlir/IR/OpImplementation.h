@@ -1744,15 +1744,15 @@ public:
                                           Type &type) const {
     return failure();
   }
-  /// Hooks for printing a dialect alias.
-  virtual void printDialectAlias(DialectAsmPrinter &printer,
-                                 Attribute attr) const {
-    llvm_unreachable("Dialect must implement `printDialectAlias` when defining "
-                     "dialect aliases");
+  /// Hooks for printing a dialect alias. The method returns success if the
+  /// dialect has an alias for the symbol, otherwise it must return failure.
+  virtual LogicalResult printDialectAlias(DialectAsmPrinter &printer,
+                                          Attribute attr) const {
+    return failure();
   }
-  virtual void printDialectAlias(DialectAsmPrinter &printer, Type type) const {
-    llvm_unreachable("Dialect must implement `printDialectAlias` when defining "
-                     "dialect aliases");
+  virtual LogicalResult printDialectAlias(DialectAsmPrinter &printer,
+                                          Type type) const {
+    return failure();
   }
 
   //===--------------------------------------------------------------------===//

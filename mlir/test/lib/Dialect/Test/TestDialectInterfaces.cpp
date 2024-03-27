@@ -205,14 +205,16 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
     return AliasResult::FinalAlias;
   }
 
-  void printDialectAlias(DialectAsmPrinter &printer,
-                         Attribute attr) const override {
+  LogicalResult printDialectAlias(DialectAsmPrinter &printer,
+                                  Attribute attr) const override {
     if (StringAttr strAttr = dyn_cast<StringAttr>(attr)) {
       // Drop "test_dialect_alias:" from the front of the string
       StringRef value = strAttr.getValue();
       value.consume_front("test_dialect_alias:");
       printer << "test_string<\"" << value << "\">";
+      return success();
     }
+    return failure();
   }
 
   LogicalResult parseDialectAlias(DialectAsmParser &parser, Attribute &attr,
@@ -272,7 +274,8 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
     return AliasResult::NoAlias;
   }
 
-  void printDialectAlias(DialectAsmPrinter &printer, Type type) const override {
+  LogicalResult printDialectAlias(DialectAsmPrinter &printer,
+                                  Type type) const override {
     if (auto tensorTy = dyn_cast<TensorType>(type);
         tensorTy && isa<TestIntegerType>(tensorTy.getElementType()) &&
         tensorTy.hasRank()) {
@@ -280,7 +283,9 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
       ArrayRef<int64_t> shape = tensorTy.getShape();
       if (shape.size() == 1 && shape[0] == 3)
         printer << "tensor_int3" << "<" << tensorTy.getElementType() << ">";
+      return success();
     }
+    return failure();
   }
 
   LogicalResult parseDialectAlias(DialectAsmParser &parser,
