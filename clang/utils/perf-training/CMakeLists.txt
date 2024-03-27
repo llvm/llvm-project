@@ -12,14 +12,49 @@ if(LLVM_BUILD_INSTRUMENTED)
     ${CMAKE_CURRENT_BINARY_DIR}/pgo-data/lit.site.cfg
     )
 
-  add_lit_testsuite(generate-profraw "Generating clang PGO data"
+  # Dependencies of generate-profraw-* targets
+  add_custom_target(generate-profraw-deps
+    DEPENDS clang clear-profraw ${CLANG_PGO_TRAINING_DEPS})
+  add_lit_testsuite(generate-profraw-intree "Generating clang PGO data"
     ${CMAKE_CURRENT_BINARY_DIR}/pgo-data/
     EXCLUDE_FROM_CHECK_ALL
-    DEPENDS clang clear-profraw ${CLANG_PGO_TRAINING_DEPS}
+    DEPENDS generate-profraw-deps
     )
+  add_custom_target(generate-profraw DEPENDS generate-profraw-intree)
+  if (CLANG_PGO_TRAINING_DATA_SOURCE_DIR)
+    llvm_ExternalProject_Add(generate-profraw-external ${CLANG_PGO_TRAINING_DATA_SOURCE_DIR}
+            USE_TOOLCHAIN EXLUDE_FROM_ALL NO_INSTALL
+            DEPENDS generate-profraw-deps)
+    add_dependencies(generate-profraw generate-profraw-external)
+  endif()
+
+  add_custom_target(generate-profdata-deps)
+  string(TOUPPER "${LLVM_BUILD_INSTRUMENTED}" LLVM_BUILD_INSTRUMENTED)
+  if (LLVM_BUILD_INSTRUMENTED STREQUAL "CSSPGO")
+    set(PROFDATA_SAMPLE "--sample")
+    if(NOT LLVM_PROFGEN)
+      find_program(LLVM_PROFGEN llvm-profgen)
+    endif()
+
+    if(NOT LLVM_PROFGEN)
+      message(STATUS "To enable converting CSSPGO samples LLVM_PROFGEN has to point to llvm-profgen")
+    endif()
+
+    # Convert perf profiles into profraw
+    add_custom_target(convert-perf-profraw
+      COMMAND "${Python3_EXECUTABLE}"
+      ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py perf2prof ${LLVM_PROFGEN}
+      $<TARGET_FILE:clang> ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_BINARY_DIR}/profiles/
+      COMMENT "Converting perf profiles into profraw"
+      DEPENDS generate-profraw)
+    add_dependencies(generate-profdata-deps convert-perf-profraw)
+  else()
+    add_dependencies(generate-profdata-deps generate-profraw)
+  endif()
 
   add_custom_target(clear-profraw
     COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py clean ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_BINARY_DIR}/profiles/ profraw
+    COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py clean ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_BINARY_DIR}/profiles/ perf.data
     COMMENT "Clearing old profraw data")
 
   if(NOT LLVM_PROFDATA)
@@ -30,14 +65,12 @@ if(LLVM_BUILD_INSTRUMENTED)
     message(STATUS "To enable merging PGO data LLVM_PROFDATA has to point to llvm-profdata")
   else()
     add_custom_target(generate-profdata
-      COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py merge ${LLVM_PROFDATA} ${CMAKE_CURRENT_BINARY_DIR}/clang.profdata ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_BINARY_DIR}/profiles/
+      COMMAND "${Python3_EXECUTABLE}"
+      ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py merge ${LLVM_PROFDATA}
+      ${CMAKE_CURRENT_BINARY_DIR}/clang.profdata ${CMAKE_CURRENT_BINARY_DIR}
+      ${CMAKE_BINARY_DIR}/profiles/ ${PROFDATA_SAMPLE}
       COMMENT "Merging profdata"
-      DEPENDS generate-profraw)
-    if (CLANG_PGO_TRAINING_DATA_SOURCE_DIR)
-      llvm_ExternalProject_Add(generate-profraw-external ${CLANG_PGO_TRAINING_DATA_SOURCE_DIR}
-              USE_TOOLCHAIN EXLUDE_FROM_ALL NO_INSTALL DEPENDS generate-profraw)
-      add_dependencies(generate-profdata generate-profraw-external)
-    endif()
+      DEPENDS generate-profdata-deps)
   endif()
 endif()
 

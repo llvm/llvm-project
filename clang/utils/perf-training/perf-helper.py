@@ -43,14 +43,22 @@ def clean(args):
 
 
 def merge(args):
-    if len(args) < 3:
-        print(
-            "Usage: %s merge <llvm-profdata> <output> <paths>\n" % __file__
-            + "\tMerges all profraw files from path into output."
-        )
-        return 1
-    cmd = [args[0], "merge", "-o", args[1]]
-    for path in args[2:]:
+    parser = argparse.ArgumentParser(
+        prog="perf-helper merge",
+        description="Merges all profraw files from path(s) into output",
+    )
+    parser.add_argument("profdata", help="Path to llvm-profdata tool")
+    parser.add_argument("output", help="Output filename")
+    parser.add_argument(
+        "paths", nargs="+", help="Folder(s) containing input profraw files"
+    )
+    parser.add_argument("--sample", action="store_true", help="Sample profile")
+    opts = parser.parse_args(args)
+
+    cmd = [opts.profdata, "merge", "-o", opts.output]
+    if opts.sample:
+        cmd += ["--sample"]
+    for path in opts.paths:
         cmd.extend(findFilesWithExtension(path, "profraw"))
     subprocess.check_call(cmd)
     return 0
@@ -71,10 +79,15 @@ def merge_fdata(args):
 
 def perf(args):
     parser = argparse.ArgumentParser(
-        prog="perf-helper perf", description="perf wrapper for BOLT profile collection"
+        prog="perf-helper perf",
+        description="perf wrapper for BOLT/CSSPGO profile collection",
     )
     parser.add_argument(
         "--lbr", action="store_true", help="Use perf with branch stacks"
+    )
+    parser.add_argument("--call-graph", action="store_true", help="Collect call graph")
+    parser.add_argument(
+        "--event", help="PMU event name, defaults to cycles:u", default="cycles:u"
     )
     parser.add_argument("cmd", nargs=argparse.REMAINDER, help="")
 
@@ -84,12 +97,14 @@ def perf(args):
     perf_args = [
         "perf",
         "record",
-        "--event=cycles:u",
+        f"--event={opts.event}",
         "--freq=max",
         "--output=%d.perf.data" % os.getpid(),
     ]
     if opts.lbr:
         perf_args += ["--branch-filter=any,u"]
+    if opts.call_graph:
+        perf_args += ["-g", "--call-graph=fp"]
     perf_args.extend(cmd)
 
     start_time = time.time()
@@ -122,6 +137,26 @@ def perf2bolt(args):
     p2b_args += ["-p"]
     for filename in findFilesWithExtension(opts.path, "perf.data"):
         subprocess.check_call(p2b_args + [filename, "-o", filename + ".fdata"])
+    return 0
+
+
+def perf2prof(args):
+    parser = argparse.ArgumentParser(
+        prog="perf-helper perf2prof",
+        description="perf to CSSPGO prof conversion wrapper",
+    )
+    parser.add_argument("profgen", help="Path to llvm-profgen binary")
+    parser.add_argument("binary", help="Input binary")
+    parser.add_argument("paths", nargs="+", help="Path containing perf.data files")
+    opts = parser.parse_args(args)
+
+    profgen_args = [opts.profgen, f"--binary={opts.binary}"]
+    for path in opts.paths:
+        for filename in findFilesWithExtension(path, "perf.data"):
+            subprocess.check_call(
+                profgen_args
+                + [f"--perfdata={filename}", f"--output={filename}.profraw"]
+            )
     return 0
 
 
@@ -567,6 +602,7 @@ commands = {
     "merge-fdata": merge_fdata,
     "perf": perf,
     "perf2bolt": perf2bolt,
+    "perf2prof": perf2prof,
 }
 
 
