@@ -11,7 +11,6 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
-#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/rounding_mode.h"
@@ -83,6 +82,77 @@ constexpr fputil::DoubleDouble COEFFS[9] = {
   r.hi = t1 + t2;
   r.lo = a - r.hi;
   return r;
+}
+
+// Compute atan( num_d / den_d ) in double-double precision.
+//   num_d      = min(|x|, |y|)
+//   den_d      = max(|x|, |y|)
+//   q_d        = num_d / den_d
+//   idx, k_d   = round( 2^4 * num_d / den_d )
+//   final_sign = sign of the final result
+//   const_term = the constant term in the final expression.
+LIBC_INLINE float atan2f_double_double(double num_d, double den_d, double q_d,
+                                       int idx, double k_d, double final_sign,
+                                       const fputil::DoubleDouble &const_term) {
+  fputil::DoubleDouble q;
+  double num_r, den_r;
+
+  if (idx != 0) {
+    // The following range reduction is accurate even without fma for
+    //   1/16 <= n/d <= 1.
+    // atan(n/d) - atan(idx/16) = atan((n/d - idx/16) / (1 + (n/d) * (idx/16)))
+    //                          = atan((n - d*(idx/16)) / (d + n*idx/16))
+    k_d *= 0x1.0p-4;
+    num_r = fputil::multiply_add(k_d, -den_d, num_d); // Exact
+    den_r = fputil::multiply_add(k_d, num_d, den_d);  // Exact
+    q.hi = num_r / den_r;
+  } else {
+    // For 0 < n/d < 1/16, we just need to calculate the lower part of their
+    // quotient.
+    q.hi = q_d;
+    num_r = num_d;
+    den_r = den_d;
+  }
+#ifdef LIBC_TARGET_CPU_HAS_FMA
+  q.lo = fputil::multiply_add(q.hi, -den_r, num_r) / den_r;
+#else
+  // Compute `(num_r - q.hi * den_r) / den_r` accurately without FMA
+  // instructions.
+  fputil::DoubleDouble q_hi_dd = split_d(q.hi);
+  double t1 = fputil::multiply_add(q_hi_dd.hi, -den_r, num_r); // Exact
+  double t2 = fputil::multiply_add(q_hi_dd.lo, -den_r, t1);
+  q.lo = t2 / den_r;
+#endif // LIBC_TARGET_CPU_HAS_FMA
+
+  // Taylor polynomial, evaluating using Horner's scheme:
+  //   P = x - x^3/3 + x^5/5 -x^7/7 + x^9/9 - x^11/11 + x^13/13 - x^15/15
+  //       + x^17/17
+  //     = x*(1 + x^2*(-1/3 + x^2*(1/5 + x^2*(-1/7 + x^2*(1/9 + x^2*
+  //          *(-1/11 + x^2*(1/13 + x^2*(-1/15 + x^2 * 1/17))))))))
+  fputil::DoubleDouble q2 = fputil::quick_mult(q, q);
+  fputil::DoubleDouble p_dd =
+      fputil::polyeval(q2, COEFFS[0], COEFFS[1], COEFFS[2], COEFFS[3],
+                       COEFFS[4], COEFFS[5], COEFFS[6], COEFFS[7], COEFFS[8]);
+  fputil::DoubleDouble r_dd =
+      fputil::add(const_term, fputil::multiply_add(q, p_dd, ATAN_I[idx]));
+  r_dd.hi *= final_sign;
+  r_dd.lo *= final_sign;
+
+  // Make sure the sum is normalized:
+  fputil::DoubleDouble rr = fputil::exact_add(r_dd.hi, r_dd.lo);
+  // Round to odd.
+  uint64_t rr_bits = cpp::bit_cast<uint64_t>(rr.hi);
+  if (LIBC_UNLIKELY(((rr_bits & 0xfff'ffff) == 0) && (rr.lo != 0.0))) {
+    Sign hi_sign = fputil::FPBits<double>(rr.hi).sign();
+    Sign lo_sign = fputil::FPBits<double>(rr.lo).sign();
+    if (hi_sign == lo_sign) {
+      ++rr_bits;
+    } else if ((rr_bits & fputil::FPBits<double>::FRACTION_MASK) > 0) {
+      --rr_bits;
+    }
+  }
+
+  return static_cast<float>(cpp::bit_cast<double>(rr_bits));
 }
 
 } // anonymous namespace
@@ -168,7 +238,6 @@ LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
   uint32_t y_abs = y_bits.uintval();
   uint32_t max_abs = x_abs > y_abs ? x_abs : y_abs;
   uint32_t min_abs = x_abs <= y_abs ? x_abs : y_abs;
-  bool recip = x_abs < y_abs;
 
   if (LIBC_UNLIKELY(max_abs >= 0x7f80'0000U || min_abs == 0U)) {
     if (x_bits.is_nan() || y_bits.is_nan())
@@ -195,15 +264,15 @@ LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
     return static_cast<float>(r);
   }
 
+  bool recip = x_abs < y_abs;
   double final_sign = IS_NEG[(x_sign != y_sign) != recip];
   fputil::DoubleDouble const_term = CONST_ADJ[x_sign][y_sign][recip];
   double num_d = static_cast<double>(FPBits(min_abs).get_val());
   double den_d = static_cast<double>(FPBits(max_abs).get_val());
   double q_d = num_d / den_d;
-  int idx;
 
   double k_d = fputil::nearest_integer(q_d * 0x1.0p4f);
-  idx = static_cast<int>(k_d);
+  int idx = static_cast<int>(k_d);
   q_d = fputil::multiply_add(k_d, -0x1.0p-4, q_d);
 
   double p, r;
@@ -239,59 +308,8 @@ LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
   if (LIBC_LIKELY(r_bits > LOWER_ERR && r_bits < UPPER_ERR))
     return static_cast<float>(r);
 
-  // Use double-double.
-  fputil::DoubleDouble q;
-  double num_r, den_r;
-
-  if (idx != 0) {
-    // The following range reduction is accurate even without fma for
-    //   1/16 <= n/d <= 1.
-    // atan(n/d) - atan(idx/16) = atan((n/d - idx/16) / (1 + (n/d) * (idx/16)))
-    //                          = atan((n - d*(idx/16)) / (d + n*idx/16))
-    k_d *= 0x1.0p-4;
-    num_r = fputil::multiply_add(k_d, -den_d, num_d); // Exact
-    den_r = fputil::multiply_add(k_d, num_d, den_d);  // Exact
-    q.hi = num_r / den_r;
-  } else {
-    // For 0 < n/d < 1/16, we just need to calculate the lower part of their
-    // quotient.
-    q.hi = q_d;
-    num_r = num_d;
-    den_r = den_d;
-  }
-#ifdef LIBC_TARGET_CPU_HAS_FMA
-  q.lo = fputil::multiply_add(q.hi, -den_r, num_r) / den_r;
-#else
-  fputil::DoubleDouble q_hi_dd = split_d(q.hi);
-  double t1 = fputil::multiply_add(q_hi_dd.hi, -den_r, num_r); // Exact
-  double t2 = fputil::multiply_add(q_hi_dd.lo, -den_r, t1);
-  q.lo = t2 / den_r;
-#endif // LIBC_TARGET_CPU_HAS_FMA
-
-  fputil::DoubleDouble q2 = fputil::quick_mult(q, q);
-  fputil::DoubleDouble p_dd =
-      fputil::polyeval(q2, COEFFS[0], COEFFS[1], COEFFS[2], COEFFS[3],
-                       COEFFS[4], COEFFS[5], COEFFS[6], COEFFS[7], COEFFS[8]);
-  fputil::DoubleDouble r_dd =
-      fputil::add(const_term, fputil::multiply_add(q, p_dd, ATAN_I[idx]));
-  r_dd.hi *= final_sign;
-  r_dd.lo *= final_sign;
-
-  // Make sure the sum is normalized:
-  fputil::DoubleDouble rr = fputil::exact_add(r_dd.hi, r_dd.lo);
-  // Round to odd.
-  uint64_t rr_bits = cpp::bit_cast<uint64_t>(rr.hi);
-  if (LIBC_UNLIKELY(((rr_bits & 0xfff'ffff) == 0) && (rr.lo != 0.0))) {
-    Sign hi_sign = fputil::FPBits<double>(rr.hi).sign();
-    Sign lo_sign = fputil::FPBits<double>(rr.lo).sign();
-    if (hi_sign == lo_sign) {
-      ++rr_bits;
-    } else if ((rr_bits & fputil::FPBits<double>::FRACTION_MASK) > 0) {
-      --rr_bits;
-    }
-  }
-
-  return static_cast<float>(cpp::bit_cast<double>(rr_bits));
+  return atan2f_double_double(num_d, den_d, q_d, idx, k_d, final_sign,
+                              const_term);
 }
 
 } // namespace LIBC_NAMESPACE

@@ -62,13 +62,13 @@ TEST_F(LlvmLibcAtan2fTest, InFloatRange) {
 
   auto test = [&](mpfr::RoundingMode rounding_mode) {
     mpfr::ForceRoundingMode __r(rounding_mode);
-    if (!__r.success)
+    if (!__r.sutotal_countess)
       return;
 
     uint64_t fails = 0;
-    uint64_t count = 0;
-    uint64_t cc = 0;
-    float mx, my, mr = 0.0;
+    uint64_t finite_count = 0;
+    uint64_t total_count = 0;
+    float failed_x, failed_y, failed_r = 0.0;
     double tol = 0.5;
 
     for (uint32_t i = 0, v = X_START; i <= X_COUNT; ++i, v += X_STEP) {
@@ -83,11 +83,11 @@ TEST_F(LlvmLibcAtan2fTest, InFloatRange) {
 
         LIBC_NAMESPACE::libc_errno = 0;
         float result = LIBC_NAMESPACE::atan2f(x, y);
-        ++cc;
+        ++total_count;
         if (isnan(result) || isinf(result))
           continue;
 
-        ++count;
+        ++finite_count;
         mpfr::BinaryInput<float> inputs{x, y};
 
         if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Atan2, inputs,
@@ -95,9 +95,9 @@ TEST_F(LlvmLibcAtan2fTest, InFloatRange) {
           ++fails;
           while (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(
               mpfr::Operation::Atan2, inputs, result, tol, rounding_mode)) {
-            mx = x;
-            my = y;
-            mr = result;
+            failed_x = x;
+            failed_y = y;
+            failed_r = result;
 
             if (tol > 1000.0)
               break;
@@ -107,14 +107,15 @@ TEST_F(LlvmLibcAtan2fTest, InFloatRange) {
         }
       }
     }
-    if (fails || (count < cc)) {
-      tlog << " Atan2f failed: " << fails << "/" << count << "/" << cc
-           << " tests.\n"
+    if (fails || (finite_count < total_count)) {
+      tlog << " Atan2f failed: " << fails << "/" << finite_count << "/"
+           << total_count << " tests.\n"
            << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
     }
     if (fails) {
-      mpfr::BinaryInput<float> inputs{mx, my};
-      EXPECT_MPFR_MATCH(mpfr::Operation::Atan2, inputs, mr, 0.5, rounding_mode);
+      mpfr::BinaryInput<float> inputs{failed_x, failed_y};
+      EXPECT_MPFR_MATCH(mpfr::Operation::Atan2, inputs, failed_r, 0.5,
+                        rounding_mode);
     }
   };
 

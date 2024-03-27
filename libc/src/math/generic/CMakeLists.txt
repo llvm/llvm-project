@@ -2864,7 +2864,6 @@ add_entrypoint_object(
     -O3
   DEPENDS
     .inv_trigf_utils
-    libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
