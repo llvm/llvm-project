@@ -232,7 +232,7 @@ void createRegisterFunction(Module &M, GlobalVariable *BinDesc,
   // Construct function body
   IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
 
-  // Register the destructors with 'atexit', This is expected by the CUDA
+  // Register the destructors with 'atexit'. This is expected by the CUDA
   // runtime and ensures that we clean up before dynamic objects are destroyed.
   // This needs to be done before the runtime is called and registers its own.
   Builder.CreateCall(AtExit, UnregFunc);
