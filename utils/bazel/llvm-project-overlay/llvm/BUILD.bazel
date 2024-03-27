@@ -292,6 +292,10 @@ cc_library(
             "-ldl",
             "-lm",
         ],
+        "@platforms//os:macos": [
+            "-pthread",
+            "-ldl",
+        ],
         "//conditions:default": [
             "-pthread",
             "-ldl",
