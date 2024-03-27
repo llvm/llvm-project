@@ -811,6 +811,13 @@ MachineInstrBuilder MachineIRBuilder::buildVScale(const DstOp &Res,
   return VScale;
 }
 
+MachineInstrBuilder MachineIRBuilder::buildVScale(const DstOp &Res,
+                                                  const APInt &MinElts) {
+  ConstantInt *CI =
+      ConstantInt::get(getMF().getFunction().getContext(), MinElts);
+  return buildVScale(Res, *CI);
+}
+
 static unsigned getIntrinsicOpcode(bool HasSideEffects, bool IsConvergent) {
   if (HasSideEffects && IsConvergent)
     return TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS;
@@ -1153,7 +1160,7 @@ void MachineIRBuilder::validateSelectOp(const LLT ResTy, const LLT TstTy,
   else
     assert((TstTy.isScalar() ||
             (TstTy.isVector() &&
-             TstTy.getNumElements() == Op0Ty.getNumElements())) &&
+             TstTy.getElementCount() == Op0Ty.getElementCount())) &&
            "type mismatch");
 #endif
 }

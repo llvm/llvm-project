@@ -5016,7 +5016,7 @@ void Verifier::visitInstruction(Instruction &I) {
                 F->getIntrinsicID() == Intrinsic::coro_await_suspend_handle ||
                 F->getIntrinsicID() ==
                     Intrinsic::experimental_patchpoint_void ||
-                F->getIntrinsicID() == Intrinsic::experimental_patchpoint_i64 ||
+                F->getIntrinsicID() == Intrinsic::experimental_patchpoint ||
                 F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint ||
                 F->getIntrinsicID() == Intrinsic::wasm_rethrow ||
                 IsAttachedCallOperand(F, CBI, i),
@@ -5095,6 +5095,9 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa))
     TBAAVerifyHelper.visitTBAAMetadata(I, TBAA);
+
+  if (MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa_struct))
+    TBAAVerifyHelper.visitTBAAStructMetadata(I, TBAA);
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_noalias))
     visitAliasScopeListMetadata(MD);
@@ -5658,6 +5661,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             "gc.relocate: relocated value must be a gc pointer", Call);
       Check(isGCPtr(DerivedType),
             "gc.relocate: relocated value must be a gc pointer", Call);
+    }
+    break;
+  }
+  case Intrinsic::experimental_patchpoint: {
+    if (Call.getCallingConv() == CallingConv::AnyReg) {
+      Check(Call.getType()->isSingleValueType(),
+            "patchpoint: invalid return type used with anyregcc", Call);
     }
     break;
   }
@@ -7409,6 +7419,35 @@ bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {
 
   CheckTBAA(SeenAccessTypeInPath, "Did not see access type in access path!", &I,
             MD);
+  return true;
+}
+
+bool TBAAVerifier::visitTBAAStructMetadata(Instruction &I, const MDNode *MD) {
+  CheckTBAA(MD->getNumOperands() % 3 == 0,
+            "tbaa.struct operands must occur in groups of three", &I, MD);
+
+  // Each group of three operands must consist of two integers and a
+  // tbaa node. Moreover, the regions described by the offset and size
+  // operands must be non-overlapping.
+  std::optional<APInt> NextFree;
+  for (unsigned int Idx = 0; Idx < MD->getNumOperands(); Idx += 3) {
+    auto *OffsetCI =
+        mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(Idx));
+    CheckTBAA(OffsetCI, "Offset must be a constant integer", &I, MD);
+
+    auto *SizeCI =
+        mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(Idx + 1));
+    CheckTBAA(SizeCI, "Size must be a constant integer", &I, MD);
+
+    MDNode *TBAA = dyn_cast_or_null<MDNode>(MD->getOperand(Idx + 2));
+    CheckTBAA(TBAA, "TBAA tag missing", &I, MD);
+    visitTBAAMetadata(I, TBAA);
+
+    bool NonOverlapping = !NextFree || NextFree->ule(OffsetCI->getValue());
+    CheckTBAA(NonOverlapping, "Overlapping tbaa.struct regions", &I, MD);
+
+    NextFree = OffsetCI->getValue() + SizeCI->getValue();
+  }
   return true;
 }
 

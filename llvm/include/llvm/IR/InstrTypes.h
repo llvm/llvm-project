@@ -476,12 +476,6 @@ public:
                                       Instruction *InsertBefore = nullptr);
   static BinaryOperator *CreateNSWNeg(Value *Op, const Twine &Name,
                                       BasicBlock *InsertAtEnd);
-  static BinaryOperator *CreateNUWNeg(Value *Op, const Twine &Name,
-                                      BasicBlock::iterator InsertBefore);
-  static BinaryOperator *CreateNUWNeg(Value *Op, const Twine &Name = "",
-                                      Instruction *InsertBefore = nullptr);
-  static BinaryOperator *CreateNUWNeg(Value *Op, const Twine &Name,
-                                      BasicBlock *InsertAtEnd);
   static BinaryOperator *CreateNot(Value *Op, const Twine &Name,
                                    BasicBlock::iterator InsertBefore);
   static BinaryOperator *CreateNot(Value *Op, const Twine &Name = "",
@@ -1057,6 +1051,17 @@ public:
   /// Create a CmpInst
   static CmpInst *Create(OtherOps Op, Predicate predicate, Value *S1,
                          Value *S2, const Twine &Name, BasicBlock *InsertAtEnd);
+
+  /// Construct a compare instruction, given the opcode, the predicate,
+  /// the two operands and the instruction to copy the flags from. Optionally
+  /// (if InstBefore is specified) insert the instruction into a BasicBlock
+  /// right before the specified instruction. The specified Instruction is
+  /// allowed to be a dereferenced end iterator. Create a CmpInst
+  static CmpInst *CreateWithCopiedFlags(OtherOps Op, Predicate Pred, Value *S1,
+                                        Value *S2,
+                                        const Instruction *FlagsSource,
+                                        const Twine &Name = "",
+                                        Instruction *InsertBefore = nullptr);
 
   /// Get the opcode casted to the right type
   OtherOps getOpcode() const {
