@@ -657,8 +657,22 @@ MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
     return Iter->second;
 
   StringRef CachedName = Iter->first;
-  MCSectionGOFF *GOFFSection = new (GOFFAllocator.Allocate())
-      MCSectionGOFF(CachedName, Kind, Parent, SubsectionId);
+  MCSectionGOFF *GOFFSection;
+  if (Kind.isText())
+    GOFFSection = new (GOFFAllocator.Allocate())
+        MCSectionGOFF(CachedName, Kind, Parent, SubsectionId, MCSectionGOFF::Code);
+  else if (Section.equals(".ada"))
+    GOFFSection = new (GOFFAllocator.Allocate())
+        MCSectionGOFF(CachedName, Kind, Parent, SubsectionId, MCSectionGOFF::Static);
+  else if (Section.equals(".ppa2list"))
+    GOFFSection = new (GOFFAllocator.Allocate())
+        MCSectionGOFF(CachedName, Kind, Parent, SubsectionId, MCSectionGOFF::PPA2Offset);
+  else if (Section.equals(".B_IDRL"))
+    GOFFSection = new (GOFFAllocator.Allocate())
+        MCSectionGOFF(CachedName, Kind, Parent, SubsectionId, MCSectionGOFF::B_IDRL);
+  else
+    GOFFSection = new (GOFFAllocator.Allocate())
+        MCSectionGOFF(CachedName, Kind, Parent, SubsectionId);
   Iter->second = GOFFSection;
 
   return GOFFSection;
