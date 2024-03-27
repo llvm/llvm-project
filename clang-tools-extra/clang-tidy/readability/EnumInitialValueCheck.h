@@ -13,8 +13,8 @@
 
 namespace clang::tidy::readability {
 
-/// Detects explicit initialization of a part of enumerators in an enumeration,
-/// and relying on compiler to initialize the others.
+/// Enforces consistent style for enumerators' initialization, covering three
+/// styles: none, first only, or all initialized explicitly.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability/enum-initial-value.html
@@ -30,7 +30,7 @@ public:
 
 private:
   const bool AllowExplicitZeroFirstInitialValue;
-  const bool AllowExplicitLinearInitialValues;
+  const bool AllowExplicitSequentialInitialValues;
 };
 
 } // namespace clang::tidy::readability

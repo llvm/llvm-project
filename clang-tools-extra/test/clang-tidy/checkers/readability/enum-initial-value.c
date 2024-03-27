@@ -2,7 +2,7 @@
 // RUN: %check_clang_tidy -check-suffix=ENABLE %s readability-enum-initial-value %t -- \
 // RUN:     -config='{CheckOptions: { \
 // RUN:         readability-enum-initial-value.AllowExplicitZeroFirstInitialValue: false, \
-// RUN:         readability-enum-initial-value.AllowExplicitLinearInitialValues: false, \
+// RUN:         readability-enum-initial-value.AllowExplicitSequentialInitialValues: false, \
 // RUN:     }}'
 
 enum EError {
@@ -55,7 +55,7 @@ enum EMacro2 {
 
 enum EnumZeroFirstInitialValue {
   EnumZeroFirstInitialValue_0 = 0,
-  // CHECK-MESSAGES-ENABLE: :[[@LINE-1]]:3: warning: zero fist initial value in 'EnumZeroFirstInitialValue' can be ignored
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-1]]:3: warning: zero initial value for the first enumerator in 'EnumZeroFirstInitialValue' can be disregarded
   // CHECK-FIXES-ENABLE: EnumZeroFirstInitialValue_0 ,
   EnumZeroFirstInitialValue_1,
   EnumZeroFirstInitialValue_2,
@@ -63,18 +63,18 @@ enum EnumZeroFirstInitialValue {
 
 enum EnumZeroFirstInitialValueWithComment {
   EnumZeroFirstInitialValueWithComment_0 = /* == */ 0,
-  // CHECK-MESSAGES-ENABLE: :[[@LINE-1]]:3: warning: zero fist initial value in 'EnumZeroFirstInitialValueWithComment' can be ignored
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-1]]:3: warning: zero initial value for the first enumerator in 'EnumZeroFirstInitialValueWithComment' can be disregarded
   // CHECK-FIXES-ENABLE: EnumZeroFirstInitialValueWithComment_0 /* == */ ,
   EnumZeroFirstInitialValueWithComment_1,
   EnumZeroFirstInitialValueWithComment_2,
 };
 
-enum EnumLinearInitialValue {
-  // CHECK-MESSAGES-ENABLE: :[[@LINE-1]]:1: warning: linear initial value in 'EnumLinearInitialValue' can be ignored
-  EnumLinearInitialValue_0 = 2,
-  // CHECK-FIXES-ENABLE: EnumLinearInitialValue_0 = 2,
-  EnumLinearInitialValue_1 = 3,
-  // CHECK-FIXES-ENABLE: EnumLinearInitialValue_1 ,
-  EnumLinearInitialValue_2 = 4,
-  // CHECK-FIXES-ENABLE: EnumLinearInitialValue_2 ,
+enum EnumSequentialInitialValue {
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-1]]:1: warning: sequential initial value in 'EnumSequentialInitialValue' can be ignored
+  EnumSequentialInitialValue_0 = 2,
+  // CHECK-FIXES-ENABLE: EnumSequentialInitialValue_0 = 2,
+  EnumSequentialInitialValue_1 = 3,
+  // CHECK-FIXES-ENABLE: EnumSequentialInitialValue_1 ,
+  EnumSequentialInitialValue_2 = 4,
+  // CHECK-FIXES-ENABLE: EnumSequentialInitialValue_2 ,
 };

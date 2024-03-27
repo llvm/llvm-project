@@ -3,8 +3,8 @@
 readability-enum-initial-value
 ==============================
 
-Detects explicit initialization of a part of enumerators in an enumeration, and
-relying on compiler to initialize the others.
+Enforces consistent style for enumerators' initialization, covering three
+styles: none, first only, or all initialized explicitly.
 
 When adding new enumerations, inconsistent initial value will cause potential
 enumeration value conflicts.
@@ -49,7 +49,7 @@ Options
 
 .. option:: AllowExplicitZeroFirstInitialValue
 
-  If set to `false`, explicit initialized first enumerator is not allowed.
+  If set to `false`, the first enumerator must not be explicitly initialized.
   See examples below. Default is `true`.
 
   .. code-block:: c++
@@ -61,15 +61,15 @@ Options
     };
 
 
-.. option:: AllowExplicitLinearInitialValues
+.. option:: AllowExplicitSequentialInitialValues
 
-  If set to `false`, linear initializations are not allowed.
+  If set to `false`, sequential initializations are not allowed.
   See examples below. Default is `true`.
 
   .. code-block:: c++
 
     enum A {
-      e0 = 1, // not allowed if AllowExplicitLinearInitialValues is false
+      e0 = 1, // not allowed if AllowExplicitSequentialInitialValues is false
       e1 = 2,
       e2 = 3,
     };

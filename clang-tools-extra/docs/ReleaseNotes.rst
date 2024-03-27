@@ -126,8 +126,8 @@ New checks
 - New :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check.
 
-  Detects explicit initialization of a part of enumerators in an enumeration, and
-  relying on compiler to initialize the others.
+  Enforces consistent style for enumerators' initialization, covering three
+  styles: none, first only, or all initialized explicitly.
 
 - New :doc:`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check.

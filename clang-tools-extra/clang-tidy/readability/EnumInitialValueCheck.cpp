@@ -20,44 +20,24 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-EnumInitialValueCheck::EnumInitialValueCheck(StringRef Name,
-                                             ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      AllowExplicitZeroFirstInitialValue(
-          Options.get("AllowExplicitZeroFirstInitialValue", true)),
-      AllowExplicitLinearInitialValues(
-          Options.get("AllowExplicitLinearInitialValues", true)) {}
-
-void EnumInitialValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "AllowExplicitZeroFirstInitialValue",
-                AllowExplicitZeroFirstInitialValue);
-  Options.store(Opts, "AllowExplicitLinearInitialValues",
-                AllowExplicitLinearInitialValues);
-}
-
-namespace {
-
-bool isNoneEnumeratorsInitialized(const EnumDecl &Node) {
+static bool isNoneEnumeratorsInitialized(const EnumDecl &Node) {
   return llvm::all_of(Node.enumerators(), [](const EnumConstantDecl *ECD) {
     return ECD->getInitExpr() == nullptr;
   });
 }
 
-bool isOnlyFirstEnumeratorsInitialized(const EnumDecl &Node) {
+static bool isOnlyFirstEnumeratorInitialized(const EnumDecl &Node) {
   bool IsFirst = true;
-  for (const EnumConstantDecl *ECD : Node.enumerators())
-    if (IsFirst) {
-      IsFirst = false;
-      if (ECD->getInitExpr() == nullptr)
-        return false;
-    } else {
-      if (ECD->getInitExpr() != nullptr)
-        return false;
-    }
+  for (const EnumConstantDecl *ECD : Node.enumerators()) {
+    if ((IsFirst && ECD->getInitExpr() == nullptr) ||
+        (!IsFirst && ECD->getInitExpr() != nullptr))
+      return false;
+    IsFirst = false;
+  }
   return !IsFirst;
 }
 
-bool isAllEnumeratorsInitialized(const EnumDecl &Node) {
+static bool areAllEnumeratorsInitialized(const EnumDecl &Node) {
   return llvm::all_of(Node.enumerators(), [](const EnumConstantDecl *ECD) {
     return ECD->getInitExpr() != nullptr;
   });
@@ -65,66 +45,11 @@ bool isAllEnumeratorsInitialized(const EnumDecl &Node) {
 
 /// Check if \p Enumerator is initialized with a (potentially negated) \c
 /// IntegerLiteral.
-bool isInitializedByLiteral(const EnumConstantDecl *Enumerator) {
+static bool isInitializedByLiteral(const EnumConstantDecl *Enumerator) {
   const Expr *const Init = Enumerator->getInitExpr();
   if (!Init)
     return false;
   return Init->isIntegerConstantExpr(Enumerator->getASTContext());
-}
-
-AST_MATCHER(EnumDecl, hasConsistentInitialValues) {
-  return isNoneEnumeratorsInitialized(Node) ||
-         isOnlyFirstEnumeratorsInitialized(Node) ||
-         isAllEnumeratorsInitialized(Node);
-}
-
-AST_MATCHER(EnumDecl, hasZeroFirstInitialValue) {
-  if (Node.enumerators().empty())
-    return false;
-  const EnumConstantDecl *ECD = *Node.enumerators().begin();
-  return isOnlyFirstEnumeratorsInitialized(Node) &&
-         isInitializedByLiteral(ECD) && ECD->getInitVal().isZero();
-}
-
-/// Excludes bitfields because enumerators initialized with the result of a
-/// bitwise operator on enumeration values or any other expr that is not a
-/// potentially negative integer literal.
-/// Enumerations where it is not directly clear if they are used with
-/// bitmask, evident when enumerators are only initialized with (potentially
-/// negative) integer literals, are ignored. This is also the case when all
-/// enumerators are powers of two (e.g., 0, 1, 2).
-AST_MATCHER(EnumDecl, hasLinearInitialValues) {
-  if (Node.enumerators().empty())
-    return false;
-  const EnumConstantDecl *const FirstEnumerator = *Node.enumerator_begin();
-  llvm::APSInt PrevValue = FirstEnumerator->getInitVal();
-  if (!isInitializedByLiteral(FirstEnumerator))
-    return false;
-  bool AllEnumeratorsArePowersOfTwo = true;
-  for (const EnumConstantDecl *Enumerator :
-       llvm::drop_begin(Node.enumerators())) {
-    const llvm::APSInt NewValue = Enumerator->getInitVal();
-    if (NewValue != ++PrevValue)
-      return false;
-    if (!isInitializedByLiteral(Enumerator))
-      return false;
-    PrevValue = NewValue;
-    AllEnumeratorsArePowersOfTwo &= NewValue.isPowerOf2();
-  }
-  return !AllEnumeratorsArePowersOfTwo;
-}
-
-} // namespace
-
-void EnumInitialValueCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      enumDecl(unless(hasConsistentInitialValues())).bind("inconsistent"),
-      this);
-  if (!AllowExplicitZeroFirstInitialValue)
-    Finder->addMatcher(enumDecl(hasZeroFirstInitialValue()).bind("zero_first"),
-                       this);
-  if (!AllowExplicitLinearInitialValues)
-    Finder->addMatcher(enumDecl(hasLinearInitialValues()).bind("linear"), this);
 }
 
 static void cleanInitialValue(DiagnosticBuilder &Diag,
@@ -147,14 +72,94 @@ static void cleanInitialValue(DiagnosticBuilder &Diag,
   return;
 }
 
+namespace {
+
+AST_MATCHER(EnumDecl, isMacro) {
+  SourceLocation Loc = Node.getBeginLoc();
+  return Loc.isMacroID();
+}
+
+AST_MATCHER(EnumDecl, hasConsistentInitialValues) {
+  return isNoneEnumeratorsInitialized(Node) ||
+         isOnlyFirstEnumeratorInitialized(Node) ||
+         areAllEnumeratorsInitialized(Node);
+}
+
+AST_MATCHER(EnumDecl, hasZeroInitialValueForFirstEnumerator) {
+  EnumDecl::enumerator_range Enumerators = Node.enumerators();
+  if (Enumerators.empty())
+    return false;
+  const EnumConstantDecl *ECD = *Enumerators.begin();
+  return isOnlyFirstEnumeratorInitialized(Node) &&
+         isInitializedByLiteral(ECD) && ECD->getInitVal().isZero();
+}
+
+/// Excludes bitfields because enumerators initialized with the result of a
+/// bitwise operator on enumeration values or any other expr that is not a
+/// potentially negative integer literal.
+/// Enumerations where it is not directly clear if they are used with
+/// bitmask, evident when enumerators are only initialized with (potentially
+/// negative) integer literals, are ignored. This is also the case when all
+/// enumerators are powers of two (e.g., 0, 1, 2).
+AST_MATCHER(EnumDecl, hasSequentialInitialValues) {
+  EnumDecl::enumerator_range Enumerators = Node.enumerators();
+  if (Enumerators.empty())
+    return false;
+  const EnumConstantDecl *const FirstEnumerator = *Node.enumerator_begin();
+  llvm::APSInt PrevValue = FirstEnumerator->getInitVal();
+  if (!isInitializedByLiteral(FirstEnumerator))
+    return false;
+  bool AllEnumeratorsArePowersOfTwo = true;
+  for (const EnumConstantDecl *Enumerator : llvm::drop_begin(Enumerators)) {
+    const llvm::APSInt NewValue = Enumerator->getInitVal();
+    if (NewValue != ++PrevValue)
+      return false;
+    if (!isInitializedByLiteral(Enumerator))
+      return false;
+    PrevValue = NewValue;
+    AllEnumeratorsArePowersOfTwo &= NewValue.isPowerOf2();
+  }
+  return !AllEnumeratorsArePowersOfTwo;
+}
+
+} // namespace
+
+EnumInitialValueCheck::EnumInitialValueCheck(StringRef Name,
+                                             ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      AllowExplicitZeroFirstInitialValue(
+          Options.get("AllowExplicitZeroFirstInitialValue", true)),
+      AllowExplicitSequentialInitialValues(
+          Options.get("AllowExplicitSequentialInitialValues", true)) {}
+
+void EnumInitialValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AllowExplicitZeroFirstInitialValue",
+                AllowExplicitZeroFirstInitialValue);
+  Options.store(Opts, "AllowExplicitSequentialInitialValues",
+                AllowExplicitSequentialInitialValues);
+}
+
+void EnumInitialValueCheck::registerMatchers(MatchFinder *Finder) {
+  Finder->addMatcher(
+      enumDecl(unless(isMacro()), unless(hasConsistentInitialValues()))
+          .bind("inconsistent"),
+      this);
+  if (!AllowExplicitZeroFirstInitialValue)
+    Finder->addMatcher(
+        enumDecl(hasZeroInitialValueForFirstEnumerator()).bind("zero_first"),
+        this);
+  if (!AllowExplicitSequentialInitialValues)
+    Finder->addMatcher(enumDecl(unless(isMacro()), hasSequentialInitialValues())
+                           .bind("sequential"),
+                       this);
+}
+
 void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("inconsistent")) {
-    SourceLocation Loc = Enum->getBeginLoc();
-    if (Loc.isInvalid() || Loc.isMacroID())
-      return;
     DiagnosticBuilder Diag =
-        diag(Loc, "inital values in enum %0 are not consistent, consider "
-                  "explicit initialization first, all or none of enumerators")
+        diag(Enum->getBeginLoc(),
+             "inital values in enum %0 are not consistent, consider "
+             "explicit initialization first, all or none of enumerators")
         << Enum;
     for (const EnumConstantDecl *ECD : Enum->enumerators())
       if (ECD->getInitExpr() == nullptr) {
@@ -168,22 +173,23 @@ void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
       }
     return;
   }
+
   if (const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("zero_first")) {
-    const EnumConstantDecl *ECD = *Enum->enumerators().begin();
+    const EnumConstantDecl *ECD = *Enum->enumerator_begin();
     SourceLocation Loc = ECD->getLocation();
     if (Loc.isInvalid() || Loc.isMacroID())
       return;
-    DiagnosticBuilder Diag =
-        diag(Loc, "zero fist initial value in %0 can be ignored") << Enum;
+    DiagnosticBuilder Diag = diag(Loc, "zero initial value for the first "
+                                       "enumerator in %0 can be disregarded")
+                             << Enum;
     cleanInitialValue(Diag, ECD, *Result.SourceManager, getLangOpts());
     return;
   }
-  if (const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("linear")) {
-    SourceLocation Loc = Enum->getBeginLoc();
-    if (Loc.isInvalid() || Loc.isMacroID())
-      return;
+  if (const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("sequential")) {
     DiagnosticBuilder Diag =
-        diag(Loc, "linear initial value in %0 can be ignored") << Enum;
+        diag(Enum->getBeginLoc(),
+             "sequential initial value in %0 can be ignored")
+        << Enum;
     for (const EnumConstantDecl *ECD : llvm::drop_begin(Enum->enumerators()))
       cleanInitialValue(Diag, ECD, *Result.SourceManager, getLangOpts());
     return;
