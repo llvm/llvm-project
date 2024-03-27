@@ -119,13 +119,13 @@ bool CheckerContext::isHardenedVariantOf(const FunctionDecl *FD,
   if (!II)
     return false;
 
-  StringRef FName = II->getName();
-  std::string ChkName = "__" + std::string(Name) + "_chk";
+  auto CompletelyMatchesParts = [II](auto... Parts) -> bool {
+    StringRef FName = II->getName();
+    return (FName.consume_front(Parts) && ...) && FName.empty();
+  };
 
-  // This is using `equals()` instead of more lenient prefix/suffix/substring
-  // checks because we don't want to say that e.g. `__builtin___vsprintf_chk()`
-  // is a hardened variant of `sprintf()`.
-  return FName.equals(ChkName) || FName.equals("__builtin_" + ChkName);
+  return CompletelyMatchesParts("__", Name, "_chk") ||
+         CompletelyMatchesParts("__builtin_", "__", Name, "_chk");
 }
 
 StringRef CheckerContext::getMacroNameOrSpelling(SourceLocation &Loc) {
