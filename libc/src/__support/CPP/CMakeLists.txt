@@ -18,7 +18,6 @@ add_header_library(
     .limits
     .type_traits
     libc.src.__support.macros.attributes
-    libc.src.__support.macros.config
     libc.src.__support.macros.sanitizer
 )
 
@@ -157,7 +156,6 @@ add_header_library(
   DEPENDS
     libc.include.llvm-libc-macros.stdfix_macros
     libc.src.__support.macros.attributes
-    libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
 )
 
