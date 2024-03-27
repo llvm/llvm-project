@@ -808,41 +808,83 @@ optin.performance.Padding (C, C++, ObjC)
 """"""""""""""""""""""""""""""""""""""""
 Check for excessively padded structs.
 
-This checker detects structs with excessive padding, which can lead to wasted memory and decreased performance. Padding bytes are added by compilers to align data within the struct for performance optimization or memory alignment purposes. However, excessive padding can significantly increase the size of the struct without adding useful data, leading to inefficient memory usage, cache misses, and decreased performance.
-``AllowedPad`` is the threshold value of padding by which if padding(Internal Padding + Trailing Padding) within the struct exceeds the ``AllowedPad`` value, clang static analyzer will give a warning. The default value of ``AllowedPad`` is 24 bytes. To set this option from the command-line, pass the ``-analyze -analyzerchecker=optin.performance -analyzer-config optin.performance.Padding:AllowedPad=2`` option.
+This checker detects structs with excessive padding, which can lead to wasted
+memory thus decreased performance by reducing the effectiveness of the
+processor cache. Padding bytes are added by compilers to align data accesses
+as some processors require data to be aligned to certain boundaries. On others,
+unaligned data access are possible, but impose significantly larger latencies.
 
-.. code-block:: c
+To avoid padding bytes, the fields of a struct should be ordered by decreasing
+by alignment. Usually, its easier to think of the ``sizeof`` of the fields, and
+ordering the fields by ``sizeof`` would usually also lead to the same optimal
+layout.
 
- #include <stdio.h>
- // #pragma pack(1) // Uncomment it to disable structure padding
- struct TestStruct {
-   char data1; // 1 byte
-   int data2; // 4 bytes
-   char data3; // 1 byte
- }; // We expect it's size to be 6 bytes
- int main () {
-   struct TestStruct struct1;
-   printf("Structure size: %d", sizeof(struct1)); // Structure size: 12
-   return 0;
- }
-Warning will be given as padding is greater than ``AllowedPad``(value is 2).
-Total memory used is 12 bytes due to structure padding. In this case, padding is of 6 bytes. Padding is done to decrease the number of CPU cycles needed to access data members of the structure, improving the performance of the processor but at the penalty of memory usage.
-Padding can be disabled by using the pragma directive or decreased by ordering structure fields by decreasing size to achieve the best layout. An optimal struct of the above example looks like this:
+In rare cases, one can use the ``#pragma pack(1)`` directive to enforce a packed
+layout too, but it is discouraged and the reordering of fields should be
+preferred.
 
-.. code-block:: c
+.. code-block:: cpp
 
- #include <stdio.h>
- struct TestStruct {
-   int data1; // 4 bytes
-   char data2; // 1 byte
-   char data3; // 1 byte
- }; // We expect it's size to be 6 bytes
- int main () {
-   struct TestStruct struct1;
-   printf("Structure size: %d", sizeof(struct1)); // Structure size: 8
-   return 0;
- }
-After reordering total memory used is 8 bytes now, with trailing padding of 2 bytes. No warning will be generated.
+ // warn: Excessive padding in 'struct NonOptimal' (35 padding bytes, where 3 is optimal)
+ struct NonOptimal {
+   char c1;
+   // 7 bytes of padding
+   std::int64_t big1; // 8 bytes
+   char c2;
+   // 7 bytes of padding
+   std::int64_t big2; // 8 bytes
+   char c3;
+   // 7 bytes of padding
+   std::int64_t big3; // 8 bytes
+   char c4;
+   // 7 bytes of padding
+   std::int64_t big4; // 8 bytes
+   char c5;
+   // 7 bytes of padding
+ };
+ static_assert(sizeof(NonOptimal) == 4*8+5+5*7);
+
+ // no-warning: The fields are nicely aligned to have the minimal amount of padding bytes.
+ struct Optimal {
+   std::int64_t big1; // 8 bytes
+   std::int64_t big2; // 8 bytes
+   std::int64_t big3; // 8 bytes
+   std::int64_t big4; // 8 bytes
+   char c1;
+   char c2;
+   char c3;
+   char c4;
+   char c5;
+   // 3 bytes of padding
+ };
+ static_assert(sizeof(Optimal) == 4*8+5+3);
+
+ // no-warning: Enforcing bitpacked representation.
+ // Access times will have signifficant overhead. Prefer reordering the fields instead.
+ #pragma pack(1)
+ struct BitPacked {
+   char c1;
+   std::int64_t big1; // 8 bytes
+   char c2;
+   std::int64_t big2; // 8 bytes
+   char c3;
+   std::int64_t big3; // 8 bytes
+   char c4;
+   std::int64_t big4; // 8 bytes
+   char c5;
+ };
+ static_assert(sizeof(BitPacked) == 4*8+5);
+
+The ``AllowedPad`` option can be used to specify a threshold for the number
+padding bytes raising the warning. If the number of padding bytes of the struct
+and the optimal number of padding bytes differ by more than the threshold value,
+a warning will be raised.
+
+By default, the ``AllowedPad`` threshold is 24 bytes.
+
+To override this threshold to e.g. 4 bytes, use the
+``-analyzer-config optin.performance.Padding:AllowedPad=4`` option.
+
 
 .. _optin-portability-UnixAPI:
 
