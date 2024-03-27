@@ -1328,7 +1328,7 @@ public:
 
   /// Implementation of algorithm to generate the compact unwind encoding
   /// for the CFI instructions.
-  uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
+  uint32_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
                                          const MCContext *Ctxt) const override {
     ArrayRef<MCCFIInstruction> Instrs = FI->Instructions;
     if (Instrs.empty()) return 0;
@@ -1343,13 +1343,13 @@ public:
     bool HasFP = false;
 
     // Encode that we are using EBP/RBP as the frame pointer.
-    uint64_t CompactUnwindEncoding = 0;
+    uint32_t CompactUnwindEncoding = 0;
 
     unsigned SubtractInstrIdx = Is64Bit ? 3 : 2;
     unsigned InstrOffset = 0;
     unsigned StackAdjust = 0;
-    uint64_t StackSize = 0;
-    int64_t MinAbsOffset = std::numeric_limits<int64_t>::max();
+    unsigned StackSize = 0;
+    int MinAbsOffset = std::numeric_limits<int>::max();
 
     for (const MCCFIInstruction &Inst : Instrs) {
       switch (Inst.getOperation()) {
@@ -1376,7 +1376,7 @@ public:
         memset(SavedRegs, 0, sizeof(SavedRegs));
         StackAdjust = 0;
         SavedRegIdx = 0;
-        MinAbsOffset = std::numeric_limits<int64_t>::max();
+        MinAbsOffset = std::numeric_limits<int>::max();
         InstrOffset += MoveInstrSize;
         break;
       }
@@ -1419,8 +1419,7 @@ public:
         unsigned Reg = *MRI.getLLVMRegNum(Inst.getRegister(), true);
         SavedRegs[SavedRegIdx++] = Reg;
         StackAdjust += OffsetSize;
-        MinAbsOffset =
-            std::min<int64_t>(MinAbsOffset, std::abs(Inst.getOffset()));
+        MinAbsOffset = std::min(MinAbsOffset, abs(Inst.getOffset()));
         InstrOffset += PushInstrSize(Reg);
         break;
       }
