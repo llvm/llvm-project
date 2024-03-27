@@ -18,4 +18,4 @@ class TestCastIntToAnonymousEnum(TestBase):
             self, "// break here", lldb.SBFileSpec("main.cpp", False)
         )
 
-        self.expect_expr("(flow_e)0", result_type="flow_e", result_value="A")
+        self.expect_expr("(flow_e)0", result_type="flow_e", result_value="A(0)")
