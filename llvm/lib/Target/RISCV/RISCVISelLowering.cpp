@@ -12733,7 +12733,7 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
 
 // Optimize (add (shl x, c0), (shl y, c1)) ->
 //          (SLLI (SH*ADD x, y), c0), if c1-c0 equals to [1|2|3].
-static SDValue transformAddShlImm(SDValue N0, SDValue N1, SDLoc DL,
+static SDValue transformAddShlImm(SDValue N0, SDValue N1, const SDLoc &DL,
                                   SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
 
@@ -12770,7 +12770,7 @@ static SDValue transformAddShlImm(SDValue N0, SDValue N1, SDLoc DL,
 }
 
 // Generalized form of above which looks through one level of add
-// reassociation for oppurtunities.
+// reassociation for opportunities.
 static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
   // Perform this optimization only in the zba extension.
