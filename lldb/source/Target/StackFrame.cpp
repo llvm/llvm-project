@@ -1807,7 +1807,6 @@ void StackFrame::DumpUsingSettingsFormat(Stream *strm, bool show_unique,
     return;
 
   ExecutionContext exe_ctx(shared_from_this());
-  StreamString s;
 
   const FormatEntity::Entry *frame_format = nullptr;
   Target *target = exe_ctx.GetTargetPtr();
