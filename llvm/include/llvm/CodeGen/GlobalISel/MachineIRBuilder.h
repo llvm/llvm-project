@@ -1333,9 +1333,9 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder
-  buildAtomicCmpXchgWithSuccess(Register OldValRes, Register SuccessRes,
-                                Register Addr, Register CmpVal, Register NewVal,
-                                MachineMemOperand &MMO);
+  buildAtomicCmpXchgWithSuccess(const DstOp &OldValRes, const DstOp &SuccessRes,
+                                const SrcOp &Addr, const SrcOp &CmpVal,
+                                const SrcOp &NewVal, MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMIC_CMPXCHG Addr, CmpVal, NewVal,
   /// MMO`.
@@ -1351,8 +1351,9 @@ public:
   ///      registers of the same type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicCmpXchg(Register OldValRes, Register Addr,
-                                         Register CmpVal, Register NewVal,
+  MachineInstrBuilder buildAtomicCmpXchg(const DstOp &OldValRes,
+                                         const SrcOp &Addr, const SrcOp &CmpVal,
+                                         const SrcOp &NewVal,
                                          MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_<Opcode> Addr, Val, MMO`.
