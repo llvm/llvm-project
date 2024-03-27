@@ -766,7 +766,9 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     ExitInfo &Info = Pair.second;
     for (unsigned i = 0, e = Info.ExitingBlocks.size(); i != e; ++i) {
       // The branch destination.
-      unsigned j = (i + 1) % e;
+      unsigned j = i + 1;
+      if (j == e)
+        j = 0;
       bool IsLatch = Pair.first == LatchBlock;
       std::optional<bool> KnownWillExit = WillExit(Info, i, j, IsLatch);
       if (!KnownWillExit) {

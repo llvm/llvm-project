@@ -84,9 +84,9 @@ static std::tuple<double, double, double>
 convertToHSV(const std::tuple<uint8_t, uint8_t, uint8_t> &Color) {
   double Scaled[3] = {std::get<0>(Color) / 255.0, std::get<1>(Color) / 255.0,
                       std::get<2>(Color) / 255.0};
-  int Min = 0;
-  int Max = 0;
-  for (int i = 1; i < 3; ++i) {
+  unsigned Min = 0;
+  unsigned Max = 0;
+  for (unsigned i = 1; i < 3; ++i) {
     if (Scaled[i] < Scaled[Min])
       Min = i;
     if (Scaled[i] > Scaled[Max])

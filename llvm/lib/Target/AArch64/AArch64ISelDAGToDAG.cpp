@@ -3380,7 +3380,7 @@ static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
   // Several of these combinations may match, so check with BiggerPattern=false
   // first since that will produce better results by matching more instructions
   // and/or inserting fewer extra instructions.
-  for (int I = 0; I < 4; ++I) {
+  for (unsigned I = 0; I < 4; ++I) {
 
     SDValue Dst, Src;
     unsigned ImmR, ImmS;
