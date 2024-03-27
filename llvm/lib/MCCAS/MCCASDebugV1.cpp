@@ -233,16 +233,16 @@ bool mccasformats::v1::doesntDedup(dwarf::Form Form, dwarf::Attribute Attr) {
   return llvm::is_contained(it->second, Attr);
 }
 
-uint64_t
-mccasformats::v1::convertFourByteFormDataToULEB(ArrayRef<char> FormData,
-                                                DataWriter &Writer) {
+uint64_t mccasformats::v1::convertFourByteFormDataToULEB(
+    ArrayRef<char> FormData, DataWriter &Writer, uint8_t AddressSize) {
   assert(FormData.size() == 4);
-  auto Reader =
-      BinaryStreamReader(toStringRef(FormData), endianness::little);
+  StringRef FormDataStringRef = StringRef(FormData.begin(), FormData.size());
+  DataExtractor Extractor(FormDataStringRef, true, AddressSize);
+  DataExtractor::Cursor Cursor(0);
 
-  uint32_t IntegerData;
-  if (auto Err = Reader.readInteger(IntegerData))
-    handleAllErrors(std::move(Err)); // this should never fail
+  uint32_t IntegerData = Extractor.getU32(Cursor);
+  if (!Cursor)
+    handleAllErrors(Cursor.takeError()); // this should never fail
   Writer.writeULEB128(IntegerData);
   return getULEB128Size(IntegerData);
 }
@@ -271,39 +271,41 @@ void AbbrevEntryWriter::writeAbbrevEntry(DWARFDie DIE) {
 }
 
 Expected<dwarf::Tag> AbbrevEntryReader::readTag() {
-  uint64_t TagAsInt;
-  if (auto E = DataStream.readULEB128(TagAsInt))
-    return std::move(E);
+  uint64_t TagAsInt = Extractor.getULEB128(Cursor);
+  if (!Cursor)
+    return Cursor.takeError();
   return static_cast<dwarf::Tag>(TagAsInt);
 }
 
 Expected<bool> AbbrevEntryReader::readHasChildren() {
-  char HasChildren;
-  if (auto E = DataStream.readInteger(HasChildren))
-    return std::move(E);
+  char HasChildren = Extractor.getU8(Cursor);
+  if (!Cursor)
+    return Cursor.takeError();
   return HasChildren;
 }
 
 Expected<dwarf::Attribute> AbbrevEntryReader::readAttr() {
-  if (DataStream.bytesRemaining() == 0)
+  if (Extractor.eof(Cursor))
     return static_cast<dwarf::Attribute>(getEndOfAttributesMarker());
-  uint64_t AttrAsInt;
-  if (auto E = DataStream.readULEB128(AttrAsInt))
-    return std::move(E);
+  uint64_t AttrAsInt = Extractor.getULEB128(Cursor);
+  if (!Cursor)
+    return Cursor.takeError();
   return static_cast<dwarf::Attribute>(AttrAsInt);
 }
 
-static Expected<int64_t> handleImplicitConst(BinaryStreamReader &Reader) {
-  int64_t ImplicitVal;
-  if (auto E = Reader.readSLEB128(ImplicitVal))
-    return E;
+static Expected<int64_t> handleImplicitConst(DataExtractor &Extractor,
+                                             DataExtractor::Cursor &Cursor) {
+  int64_t ImplicitVal = Extractor.getSLEB128(Cursor);
+
+  if (!Cursor)
+    return Cursor.takeError();
   return ImplicitVal;
 }
 
 Expected<dwarf::Form> AbbrevEntryReader::readForm() {
-  uint64_t FormAsInt;
-  if (auto E = DataStream.readULEB128(FormAsInt))
-    return std::move(E);
+  uint64_t FormAsInt = Extractor.getULEB128(Cursor);
+  if (!Cursor)
+    return Cursor.takeError();
   auto Form = static_cast<dwarf::Form>(FormAsInt);
 
   // Dwarf 5: Section 7.4:
@@ -314,17 +316,16 @@ Expected<dwarf::Form> AbbrevEntryReader::readForm() {
 
   // Advance reader to beyond the implicit_const value, to read Forms correctly.
   if (Form == dwarf::Form::DW_FORM_implicit_const) {
-    auto ImplicitVal = handleImplicitConst(DataStream);
+    auto ImplicitVal = handleImplicitConst(Extractor, Cursor);
     if (!ImplicitVal)
       return ImplicitVal.takeError();
   }
   return Form;
 }
 
-uint64_t
-mccasformats::v1::reconstructAbbrevSection(raw_ostream &OS,
-                                           ArrayRef<StringRef> AbbrevEntries,
-                                           uint64_t &MaxDIEAbbrevCount) {
+uint64_t mccasformats::v1::reconstructAbbrevSection(
+    raw_ostream &OS, ArrayRef<StringRef> AbbrevEntries,
+    uint64_t &MaxDIEAbbrevCount, uint8_t AddressSize) {
   uint64_t WrittenSize = 0;
   for (auto EntryData : AbbrevEntries) {
     // Dwarf 5: Section 7.5.3:
@@ -332,27 +333,28 @@ mccasformats::v1::reconstructAbbrevSection(raw_ostream &OS,
     // abbreviation code itself. [...] The abbreviation code 0 is reserved for
     // null debugging information entries.
     WrittenSize += encodeULEB128(MaxDIEAbbrevCount, OS);
-    BinaryStreamReader Reader(EntryData, endianness::little);
+    DataExtractor Extractor(EntryData, true, AddressSize);
+    DataExtractor::Cursor Cursor(0);
     // [uleb(Tag), has_children]
-    uint64_t TagAsInt;
-    uint8_t HasChildren;
-    if (auto Err = Reader.readULEB128(TagAsInt))
-      handleAllErrors(std::move(Err));
-    if (auto Err = Reader.readInteger(HasChildren))
-      handleAllErrors(std::move(Err));
+    uint64_t TagAsInt = Extractor.getULEB128(Cursor);
+    if (!Cursor)
+      handleAllErrors(Cursor.takeError());
+    uint8_t HasChildren = Extractor.getU8(Cursor);
+    if (!Cursor)
+      handleAllErrors(Cursor.takeError());
     WrittenSize += encodeULEB128(TagAsInt, OS);
     OS << HasChildren;
     WrittenSize += 1;
     assert(HasChildren == 0 || HasChildren == 1);
 
     // [uleb(Attr), uleb(Form)]*
-    while (!Reader.empty()) {
-      uint64_t AttrAsInt;
-      uint64_t FormAsInt;
-      if (auto Err = Reader.readULEB128(AttrAsInt))
-        handleAllErrors(std::move(Err));
-      if (auto Err = Reader.readULEB128(FormAsInt))
-        handleAllErrors(std::move(Err));
+    while (!Extractor.eof(Cursor)) {
+      uint64_t AttrAsInt = Extractor.getULEB128(Cursor);
+      if (!Cursor)
+        handleAllErrors(Cursor.takeError());
+      uint64_t FormAsInt = Extractor.getULEB128(Cursor);
+      if (!Cursor)
+        handleAllErrors(Cursor.takeError());
 
       WrittenSize += encodeULEB128(AttrAsInt, OS);
 
@@ -370,7 +372,7 @@ mccasformats::v1::reconstructAbbrevSection(raw_ostream &OS,
       // This number is used as the value of the attribute with the
       // aformentioned form and nothing is stored in the .debug_info section.
       if (Form == dwarf::Form::DW_FORM_implicit_const) {
-        auto ImplicitVal = handleImplicitConst(Reader);
+        auto ImplicitVal = handleImplicitConst(Extractor, Cursor);
         if (!ImplicitVal)
           handleAllErrors(ImplicitVal.takeError());
         WrittenSize += encodeSLEB128(*ImplicitVal, OS);
