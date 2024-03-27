@@ -543,6 +543,9 @@ template <class ELFT> void elf::createSyntheticSections() {
   if (config->gdbIndex)
     add(*GdbIndexSection::create<ELFT>());
 
+  if (config->debugNames)
+    add(*DebugNamesSection<ELFT>::create());
+
   // We always need to add rel[a].plt to output if it has entries.
   // Even for static linking it can contain R_[*]_IRELATIVE relocations.
   in.relaPlt = std::make_unique<RelocationSection<ELFT>>(
