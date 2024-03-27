@@ -2957,11 +2957,13 @@ def int_amdgcn_wave_id :
 
 // i32 @llvm.amdgcn.wavegroup.id()
 def int_amdgcn_wavegroup_id :
-  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
+  ClangBuiltin<"__builtin_amdgcn_wavegroup_id">;
 
 // i32 @llvm.amdgcn.wave.id.in.wavegroup()
 def int_amdgcn_wave_id_in_wavegroup :
-  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
+  ClangBuiltin<"__builtin_amdgcn_wave_id_in_wavegroup">;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.

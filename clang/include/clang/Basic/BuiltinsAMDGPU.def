@@ -669,5 +669,12 @@ TARGET_BUILTIN(__builtin_amdgcn_swmmac_f16_16x16x128_bf8_bf8, "V8hV8iV16iV8hs", 
 TARGET_BUILTIN(__builtin_amdgcn_swmmac_i32_16x16x128_iu8, "V8iIbV8iIbV16iV8is", "nc", "gfx12-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_swmmac_i32_16x16x256_iu4, "V8iIbV8iIbV16iV8is", "nc", "gfx12-insts,wavefrontsize32")
 
+//===----------------------------------------------------------------------===//
+// GFX13+ only builtins.
+//===----------------------------------------------------------------------===//
+
+BUILTIN(__builtin_amdgcn_wavegroup_id, "Ui", "nc")
+TARGET_BUILTIN(__builtin_amdgcn_wave_id_in_wavegroup, "Ui", "nc", "gfx13-insts")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN
