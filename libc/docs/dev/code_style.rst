@@ -55,7 +55,7 @@ We define two kinds of macros:
    * ``src/__support/macros/config.h`` - Important compiler and platform
      features. Such macros can be used to produce portable code by
      parameterizing compilation based on the presence or lack of a given
-     feature. e.g., ``LIBC_HAS_BUILTIN``
+     feature. e.g., ``LIBC_HAS_FEATURE``
    * ``src/__support/macros/attributes.h`` - Attributes for functions, types,
      and variables. e.g., ``LIBC_UNUSED``
    * ``src/__support/macros/optimization.h`` - Portable macros for performance
