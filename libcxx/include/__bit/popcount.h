@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ToDo: __builtin_popcountg is available since Clang 19 and GCC 14. When support for older versions is dropped, we can
+// TODO: __builtin_popcountg is available since Clang 19 and GCC 14. When support for older versions is dropped, we can
 //  refactor this code to exclusively use __builtin_popcountg.
 
 #ifndef _LIBCPP___BIT_POPCOUNT_H

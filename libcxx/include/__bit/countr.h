@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ToDo: __builtin_ctzg is available since Clang 19 and GCC 14. When support for older versions is dropped, we can
+// TODO: __builtin_ctzg is available since Clang 19 and GCC 14. When support for older versions is dropped, we can
 //  refactor this code to exclusively use __builtin_ctzg.
 
 #ifndef _LIBCPP___BIT_COUNTR_H
@@ -45,7 +45,7 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __coun
   if (__t == 0)
     return numeric_limits<_Tp>::digits;
 
-  return __builtin_ctz(__t);
+  return __builtin_ctzg(__t);
 }
 
 #else // __has_builtin(__builtin_ctzg)

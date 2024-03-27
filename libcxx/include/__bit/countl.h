@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ToDo: __builtin_clzg is available since Clang 19 and GCC 14. When support for older versions is dropped, we can
+// TODO: __builtin_clzg is available since Clang 19 and GCC 14. When support for older versions is dropped, we can
 //  refactor this code to exclusively use __builtin_clzg.
 
 #ifndef _LIBCPP___BIT_COUNTL_H

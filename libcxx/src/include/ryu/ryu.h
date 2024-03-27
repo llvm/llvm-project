@@ -43,7 +43,6 @@
 // Avoid formatting to keep the changes with the original code minimal.
 // clang-format off
 
-#include <__bit/countr.h>
 #include <__charconv/chars_format.h>
 #include <__charconv/to_chars_result.h>
 #include <__config>
