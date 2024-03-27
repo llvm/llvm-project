@@ -1699,6 +1699,20 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   case TargetOpcode::G_FLDEXP:
   case TargetOpcode::G_STRICT_FLDEXP:
     return narrowScalarFLDEXP(MI, TypeIdx, NarrowTy);
+  case TargetOpcode::G_VSCALE: {
+    Register Dst = MI.getOperand(0).getReg();
+    LLT Ty = MRI.getType(Dst);
+
+    // Assume VSCALE(1) fits into a legal integer
+    const APInt One(NarrowTy.getSizeInBits(), 1);
+    auto VScaleBase = MIRBuilder.buildVScale(NarrowTy, One);
+    auto ZExt = MIRBuilder.buildZExt(Ty, VScaleBase);
+    auto C = MIRBuilder.buildConstant(Ty, *MI.getOperand(1).getCImm());
+    MIRBuilder.buildMul(Dst, ZExt, C);
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
   }
 }
 
@@ -2966,7 +2980,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_VECREDUCE_FMIN:
   case TargetOpcode::G_VECREDUCE_FMAX:
   case TargetOpcode::G_VECREDUCE_FMINIMUM:
-  case TargetOpcode::G_VECREDUCE_FMAXIMUM:
+  case TargetOpcode::G_VECREDUCE_FMAXIMUM: {
     if (TypeIdx != 0)
       return UnableToLegalize;
     Observer.changingInstr(MI);
@@ -2979,6 +2993,19 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
     Observer.changedInstr(MI);
     return Legalized;
+  }
+  case TargetOpcode::G_VSCALE: {
+    MachineOperand &SrcMO = MI.getOperand(1);
+    LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
+    const APInt &SrcVal = SrcMO.getCImm()->getValue();
+    // The CImm is always a signed value
+    const APInt Val = SrcVal.sext(WideTy.getSizeInBits());
+    Observer.changingInstr(MI);
+    SrcMO.setCImm(ConstantInt::get(Ctx, Val));
+    widenScalarDst(MI, WideTy);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   }
 }
 
