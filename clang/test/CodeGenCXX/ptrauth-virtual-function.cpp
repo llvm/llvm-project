@@ -6,7 +6,7 @@
 // CHECK: %[[CLASS_B1:.*]] = type { ptr }
 
 // CHECK: @_ZTV2B1 = unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI2B1, ptr @_ZN2B12m0Ev.ptrauth] }, align 8
-// CHECK: @_ZTV2B1.ptrauth = private constant { ptr, i32, i64, i64 } { ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV2B1, i32 0, inrange i32 0, i32 2), i32 2, i64 0, i64 0 }, section "llvm.ptrauth"
+// CHECK: @_ZTV2B1.ptrauth = private constant { ptr, i32, i64, i64 } { ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV2B1, i32 0, i32 0, i32 2), i32 2, i64 0, i64 0 }, section "llvm.ptrauth"
 // CHECK: @g_B1 = global %[[CLASS_B1]] { ptr @_ZTV2B1.ptrauth }
 
 // CHECK: @_ZTV2B0 = unnamed_addr constant { [7 x ptr] } { [7 x ptr] [{{.*}} ptr @_ZN2B02m0Ev.ptrauth, ptr @_ZN2B02m1Ev.ptrauth, ptr @_ZN2B02m2Ev.ptrauth, ptr @_ZN2B0D1Ev.ptrauth, ptr @_ZN2B0D0Ev.ptrauth] }
@@ -543,27 +543,27 @@ void materializeConstructors() {
 
 // CHECK-LABEL: define linkonce_odr noundef ptr @_ZN2B0C2Ev(
 // CHECK: %[[THIS:.*]] = load ptr, ptr %
-// CHECK: %[[T0:[0-9]+]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV2B0, i32 0, inrange i32 0, i32 2) to i64), i32 2, i64 0)
+// CHECK: %[[T0:[0-9]+]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr inbounds inrange(-16, 40) ({ [7 x ptr] }, ptr @_ZTV2B0, i32 0, i32 0, i32 2) to i64), i32 2, i64 0)
 // CHECK: %[[SIGNED_VTADDR:[0-9]+]] = inttoptr i64 %[[T0]] to ptr
 // CHECK: store ptr %[[SIGNED_VTADDR]], ptr %[[THIS]]
 
 // CHECK-LABEL: define linkonce_odr noundef ptr @_ZN2D0C2Ev(
-// CHECK: %[[T0:[0-9]+]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr inbounds ({ [9 x ptr] }, ptr @_ZTV2D0, i32 0, inrange i32 0, i32 2) to i64), i32 2, i64 0)
+// CHECK: %[[T0:[0-9]+]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr inbounds inrange(-16, 56) ({ [9 x ptr] }, ptr @_ZTV2D0, i32 0, i32 0, i32 2) to i64), i32 2, i64 0)
 // CHECK: %[[SIGNED_VTADDR:[0-9]+]] = inttoptr i64 %[[T0]] to ptr
 // CHECK: store ptr %[[SIGNED_VTADDR]], ptr %[[THIS]]
 
 // CHECK-LABEL: define linkonce_odr noundef ptr @_ZN2D1C2Ev(
-// CHECK: %[[T0:[0-9]+]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr inbounds ({ [8 x ptr] }, ptr @_ZTV2D1, i32 0, inrange i32 0, i32 2) to i64), i32 2, i64 0)
+// CHECK: %[[T0:[0-9]+]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr inbounds inrange(-16, 48) ({ [8 x ptr] }, ptr @_ZTV2D1, i32 0, i32 0, i32 2) to i64), i32 2, i64 0)
 // CHECK: %[[SIGNED_VTADDR:[0-9]+]] = inttoptr i64 %[[T0]] to ptr
 // CHECK: store ptr %[[SIGNED_VTADDR]], ptr %[[THIS]]
 
 // CHECK-LABEL: define linkonce_odr noundef ptr @_ZN2D2C2Ev(
 // CHECK: %[[SLOT0:.*]] = load ptr, ptr
-// CHECK: %[[SIGN_VTADDR0:[0-9]+]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr inbounds ({ [9 x ptr], [8 x ptr] }, ptr @_ZTV2D2, i32 0, inrange i32 0, i32 2) to i64), i32 2, i64 0)
+// CHECK: %[[SIGN_VTADDR0:[0-9]+]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr inbounds inrange(-16, 56) ({ [9 x ptr], [8 x ptr] }, ptr @_ZTV2D2, i32 0, i32 0, i32 2) to i64), i32 2, i64 0)
 // CHECK: %[[T1:[0-9]+]] = inttoptr i64 %[[SIGN_VTADDR0]] to ptr
 // CHECK: store ptr %[[T1]], ptr %[[SLOT0]]
 // CHECK: %[[T3:[a-z0-9.]+]] = getelementptr inbounds i8, ptr %[[SLOT0]], i64 16
-// CHECK: %[[SIGN_VTADDR1:[0-9]+]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr inbounds ({ [9 x ptr], [8 x ptr] }, ptr @_ZTV2D2, i32 0, inrange i32 1, i32 2) to i64), i32 2, i64 0)
+// CHECK: %[[SIGN_VTADDR1:[0-9]+]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr inbounds inrange(-16, 48) ({ [9 x ptr], [8 x ptr] }, ptr @_ZTV2D2, i32 0, i32 1, i32 2) to i64), i32 2, i64 0)
 // CHECK: %[[T5:[0-9]+]] = inttoptr i64 %[[SIGN_VTADDR1]] to ptr
 // CHECK: store ptr %[[T5]], ptr %[[T3]]
 
