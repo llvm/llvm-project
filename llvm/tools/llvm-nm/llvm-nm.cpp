@@ -254,16 +254,17 @@ struct NMSymbol {
     return true;
   }
 
-  bool shouldPrint() const {
+  bool shouldPrint(bool OnlyExported) const {
     bool Undefined = SymFlags & SymbolRef::SF_Undefined;
     bool Global = SymFlags & SymbolRef::SF_Global;
     bool Weak = SymFlags & SymbolRef::SF_Weak;
+    bool Export = SymFlags & SymbolRef::SF_Exported;
     bool FormatSpecific = SymFlags & SymbolRef::SF_FormatSpecific;
     if ((!Undefined && UndefinedOnly) || (Undefined && DefinedOnly) ||
         (!Global && ExternalOnly) || (Weak && NoWeakSymbols) ||
         (FormatSpecific && !(SpecialSyms || DebugSyms)))
       return false;
-    return true;
+    return OnlyExported ? Export : true;
   }
 };
 
@@ -777,7 +778,7 @@ static void printSymbolList(SymbolicFile &Obj,
   }
 
   for (const NMSymbol &S : SymbolList) {
-    if (!S.shouldPrint())
+    if (!S.shouldPrint(/*OnlyExported=*/false))
       continue;
 
     std::string Name = S.Name;
@@ -1768,8 +1769,10 @@ static void getXCOFFExports(XCOFFObjectFile *XCOFFObj,
       else if ((SymType & XCOFF::VISIBILITY_MASK) == XCOFF::SYM_V_EXPORTED)
         S.Visibility = "export";
     }
-    if (S.initializeFlags(*XCOFFObj))
+    if (S.initializeFlags(*XCOFFObj)) {
+      S.SymFlags |= SymbolRef::SF_Exported;
       SymbolList.push_back(S);
+    }
   }
 }
 
@@ -1882,8 +1885,33 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
             (SymbolVersions[I].IsVerDef ? "@@" : "@") + SymbolVersions[I].Name;
 
       S.Sym = Sym;
-      if (S.initializeFlags(Obj))
+      if (S.initializeFlags(Obj)) {
+        // Set SF_Exported for IR symbols so it can be used for deciding
+        // which symbols should be output for --export-symbols.
+        if (const IRObjectFile *IRObj = dyn_cast<IRObjectFile>(&Obj)) {
+
+          // SF_Exported is not currently set for bitcode symbols
+          // so we are free to use it here. This assert checks that
+          // that assumption remains valid.
+          assert(!(S.SymFlags & BasicSymbolRef::SF_Exported));
+
+          Triple TT = Triple(IRObj->getTargetTriple());
+          if (TT.isOSBinFormatELF()) {
+            // A defintition is potentially exportable if its non-local, and its
+            // visibility is either DEFAULT or PROTECTED. All other symbols are
+            // not exported.
+            bool defined = !(S.SymFlags & BasicSymbolRef::SF_Undefined);
+            bool global = S.SymFlags & BasicSymbolRef::SF_Global;
+            bool dynamic = !(S.SymFlags & BasicSymbolRef::SF_Hidden);
+            if (defined && global && dynamic)
+              S.SymFlags |= BasicSymbolRef::SF_Exported;
+          } else
+            // Behaviour implemented for XCOFF and other file formats
+            // is that --export-symbols prints all IR symbols.
+            S.SymFlags |= BasicSymbolRef::SF_Exported;
+        }
         SymbolList.push_back(S);
+      }
     }
   }
 
@@ -2392,8 +2420,9 @@ exportSymbolNamesFromFiles(const std::vector<std::string> &InputFilenames) {
   }
 
   // Delete symbols which should not be printed from SymolList.
-  llvm::erase_if(SymbolList,
-                 [](const NMSymbol &s) { return !s.shouldPrint(); });
+  llvm::erase_if(SymbolList, [](const NMSymbol &s) {
+    return !s.shouldPrint(/*OnlyExported=*/true);
+  });
   sortSymbolList(SymbolList);
   SymbolList.erase(std::unique(SymbolList.begin(), SymbolList.end()),
                    SymbolList.end());
