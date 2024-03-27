@@ -124,9 +124,7 @@ struct __atomic_wait_backoff_impl {
       if (__update_monitor_val_and_poll(__contention_address, __monitor_val))
         return true;
       std::__libcpp_atomic_wait(__contention_address, __monitor_val);
-    } else if (__elapsed > chrono::microseconds(4))
-      __libcpp_thread_yield();
-    else {
+    } else {
     } // poll
     return false;
   }
