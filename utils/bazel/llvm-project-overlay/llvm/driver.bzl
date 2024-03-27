@@ -122,6 +122,9 @@ def _generate_driver_tools_def_impl(ctx):
     label_to_name = {Label(v).name: k for k, v in _TOOLS.items()}
 
     # Reverse sort by the *main* tool name, but keep aliases together.
+    # This is consistent with how tools/llvm-driver/CMakeLists.txt does it,
+    # and this makes sure that more specific tools are checked first.
+    # For example, "clang-scan-deps" should not match "clang".
     tools = [label_to_name[tool.label.name] for tool in ctx.attr.driver_tools]
     tool_alias_pairs = []
     for tool_name in reversed(tools):
