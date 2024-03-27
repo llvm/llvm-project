@@ -3547,7 +3547,7 @@ MCSymbol *BinaryFunction::getSymbolForEntryID(uint64_t EntryID) {
   if (!isMultiEntry())
     return nullptr;
 
-  uint64_t NumEntries = 0;
+  uint64_t NumEntries = 1;
   if (hasCFG()) {
     for (BinaryBasicBlock *BB : BasicBlocks) {
       MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(*BB);
@@ -3580,7 +3580,7 @@ uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
       return 0;
 
   // Check all secondary entries available as either basic blocks or lables.
-  uint64_t NumEntries = 0;
+  uint64_t NumEntries = 1;
   for (const BinaryBasicBlock *BB : BasicBlocks) {
     MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(*BB);
     if (!EntrySymbol)
@@ -3589,7 +3589,7 @@ uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
       return NumEntries;
     ++NumEntries;
   }
-  NumEntries = 0;
+  NumEntries = 1;
   for (const std::pair<const uint32_t, MCSymbol *> &KV : Labels) {
     MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(KV.second);
     if (!EntrySymbol)
