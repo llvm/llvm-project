@@ -43999,18 +43999,18 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
 // integer, that requires a potentially expensive XMM -> GPR transfer.
 // Additionally, if we can convert to a scalar integer load, that will likely
 // be folded into a subsequent integer op.
+// Note: SrcVec might not have a VecVT type, but it must be the same size.
 // Note: Unlike the related fold for this in DAGCombiner, this is not limited
 //       to a single-use of the loaded vector. For the reasons above, we
 //       expect this to be profitable even if it creates an extra load.
 static SDValue
-combineExtractFromVectorLoad(SDNode *N, SDValue InputVector, uint64_t Idx,
+combineExtractFromVectorLoad(SDNode *N, EVT VecVT, SDValue SrcVec, uint64_t Idx,
                              const SDLoc &dl, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI) {
   assert(N->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
          "Only EXTRACT_VECTOR_ELT supported so far");
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  EVT SrcVT = InputVector.getValueType();
   EVT VT = N->getValueType(0);
 
   bool LikelyUsedAsVector = any_of(N->uses(), [](SDNode *Use) {
@@ -44019,12 +44019,13 @@ combineExtractFromVectorLoad(SDNode *N, SDValue InputVector, uint64_t Idx,
            Use->getOpcode() == ISD::SCALAR_TO_VECTOR;
   });
 
-  auto *LoadVec = dyn_cast<LoadSDNode>(InputVector);
+  auto *LoadVec = dyn_cast<LoadSDNode>(SrcVec);
   if (LoadVec && ISD::isNormalLoad(LoadVec) && VT.isInteger() &&
-      SrcVT.getVectorElementType() == VT && DCI.isAfterLegalizeDAG() &&
-      !LikelyUsedAsVector && LoadVec->isSimple()) {
+      VecVT.getVectorElementType() == VT &&
+      VecVT.getSizeInBits() == SrcVec.getValueSizeInBits() &&
+      DCI.isAfterLegalizeDAG() && !LikelyUsedAsVector && LoadVec->isSimple()) {
     SDValue NewPtr = TLI.getVectorElementPointer(
-        DAG, LoadVec->getBasePtr(), SrcVT, DAG.getVectorIdxConstant(Idx, dl));
+        DAG, LoadVec->getBasePtr(), VecVT, DAG.getVectorIdxConstant(Idx, dl));
     unsigned PtrOff = VT.getSizeInBits() * Idx / 8;
     MachinePointerInfo MPI = LoadVec->getPointerInfo().getWithOffset(PtrOff);
     Align Alignment = commonAlignment(LoadVec->getAlign(), PtrOff);
@@ -44234,10 +44235,9 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = GetLegalExtract(SrcOp, ExtractVT, ExtractIdx))
     return DAG.getZExtOrTrunc(V, dl, VT);
 
-  if (N->getOpcode() == ISD::EXTRACT_VECTOR_ELT && ExtractVT == SrcVT &&
-      SrcOp.getValueType() == SrcVT)
-    if (SDValue V =
-            combineExtractFromVectorLoad(N, SrcOp, ExtractIdx, dl, DAG, DCI))
+  if (N->getOpcode() == ISD::EXTRACT_VECTOR_ELT && ExtractVT == SrcVT)
+    if (SDValue V = combineExtractFromVectorLoad(
+            N, SrcVT, peekThroughBitcasts(SrcOp), ExtractIdx, dl, DAG, DCI))
       return V;
 
   return SDValue();
@@ -44651,7 +44651,8 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
 
   if (CIdx)
     if (SDValue V = combineExtractFromVectorLoad(
-            N, InputVector, CIdx->getZExtValue(), dl, DAG, DCI))
+            N, InputVector.getValueType(), InputVector, CIdx->getZExtValue(),
+            dl, DAG, DCI))
       return V;
 
   // Attempt to extract a i1 element by using MOVMSK to extract the signbits
