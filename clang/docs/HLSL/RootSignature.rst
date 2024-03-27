@@ -22,7 +22,7 @@ possible to attach a root signature string to a particular shader via the
 RootSignature attribute (in the following example, using the MyRS1 entry 
 point):
 
-.. code-block:: c++
+.. code-block:: hlsl
 
     #define RS "RootFlags( ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | " \ 
               "DENY_VERTEX_SHADER_ROOT_ACCESS), " \ 
@@ -44,7 +44,7 @@ point):
     [RootSignature(RS)]
     float4 main(float4 coord : COORD) : SV_Target
     {
-    …
+    "…"
     }
 
 The compiler will create and verify the root signature blob for the shader and 
@@ -54,7 +54,7 @@ The other mechanism is to create a standalone root signature blob, perhaps to
 reuse it with a large set of shaders, saving space. The name of the define 
 string is specified via the usual -E argument. For example:
 
-.. code-block:: c++
+.. code-block:: sh
 
   dxc.exe -T rootsig_1_1 MyRS1.hlsl -E MyRS1 -Fo MyRS1.fxo
 
@@ -64,7 +64,7 @@ line, e.g, -D MyRS1=”…”.
 Root Signature Grammar
 ======================
 
-.. code-block:: c++
+.. code-block:: peg
 
     RootSignature : (RootElement(,RootElement)?)?
 
@@ -363,7 +363,7 @@ a simple struct to collect all the information in the root signature string.
     };
 
 
-.. code-block:: c++
+.. code-block::
 
     def HLSLEntryRootSignature: HLSLRootSignatureAttr {
       let Spellings = [GNU<"RootSignature">];
@@ -380,7 +380,7 @@ into a global variable with struct type to express the layout and metadata to
 save things like static sampler, root flags, space and NumDescriptors in LLVM IR. 
 The struct type will be look like this:
 
-.. code-block:: c++
+.. code-block:: llvm
 
   %struct.TABLE0 = type { target("dx.rs.desc"),
                           target("dx.rs.sampler")}
@@ -391,7 +391,7 @@ The struct type will be look like this:
 
 The metadata will be look like this:
 
-.. code-block:: c++
+.. code-block:: llvm
 
   !1 = !{ data for static sampler } ; Save informations for single static 
                                     ; sampler
