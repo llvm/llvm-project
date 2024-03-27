@@ -1455,6 +1455,9 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
   // First store the whole vector.
   SDValue Ch = DAG.getStore(DAG.getEntryNode(), dl, Vec, StackPtr, PtrInfo);
 
+  // Freeze the index so we don't poison the clamping code we're about to emit.
+  Idx = DAG.getFreeze(Idx);
+
   // Then store the inserted part.
   if (PartVT.isVector()) {
     SDValue SubStackPtr =

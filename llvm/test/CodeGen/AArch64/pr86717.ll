@@ -10,10 +10,10 @@ define <16 x i8> @f(i32 %0) {
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    sub w8, w8, w0
-; CHECK-NEXT:    mov w10, #3 // =0x3
-; CHECK-NEXT:    orr x8, x9, x8
+; CHECK-NEXT:    bfxil x9, x8, #0, #4
+; CHECK-NEXT:    mov w8, #3 // =0x3
 ; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    strb w10, [x8]
+; CHECK-NEXT:    strb w8, [x9]
 ; CHECK-NEXT:    ldr q0, [sp], #16
 ; CHECK-NEXT:    ret
   %2 = sub nuw i32 1, %0
