@@ -232,6 +232,9 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
     InterfaceMethod<[{
         Checks whether the operation requires visiting the mutated
         definitions by a store operation.
+        If this method returns true, the operation will be visited using the
+        `visitMutatedDefs` method after the main mutation stage finishes
+        (i.e., after all ops have been processed with `removeBlockingUses`).
       }], "bool", "requiresVisitingMutatedDefs", (ins), [{}],
       [{ return false; }]
     >,
