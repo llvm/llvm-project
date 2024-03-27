@@ -200,10 +200,18 @@ body:             |
     ; CHECK-NEXT: $v21 = VMV1R_V $v14
     ; CHECK-NEXT: $v22 = VMV1R_V $v15
     ; CHECK-NEXT: $v23 = VMV1R_V $v16
+    ; CHECK-NEXT: $v22 = VMV1R_V $v21
+    ; CHECK-NEXT: $v21 = VMV1R_V $v20
+    ; CHECK-NEXT: $v20 = VMV1R_V $v19
+    ; CHECK-NEXT: $v19 = VMV1R_V $v18
+    ; CHECK-NEXT: $v18 = VMV1R_V $v17
+    ; CHECK-NEXT: $v17 = VMV1R_V $v16
+    ; CHECK-NEXT: $v16 = VMV1R_V $v15
     $v3_v4_v5_v6_v7_v8_v9 = COPY $v10_v11_v12_v13_v14_v15_v16
     $v4_v5_v6_v7_v8_v9_v10 = COPY $v10_v11_v12_v13_v14_v15_v16
     $v16_v17_v18_v19_v20_v21_v22 = COPY $v10_v11_v12_v13_v14_v15_v16
     $v17_v18_v19_v20_v21_v22_v23 = COPY $v10_v11_v12_v13_v14_v15_v16
+    $v16_v17_v18_v19_v20_v21_v22 = COPY $v15_v16_v17_v18_v19_v20_v21
 ...
 ---
 name: copy_zvlsseg_N8

@@ -312,7 +312,8 @@ void RISCVInstrInfo::copyPhysRegVector(MachineBasicBlock &MBB,
   bool ReversedCopy =
       forwardCopyWillClobberTuple(DstEncoding, SrcEncoding, NumRegs);
   if (ReversedCopy) {
-    // If there exists overlapping, we should copy the registers reversely.
+    // If the src and dest overlap when copying a tuple, we need to copy the
+    // registers in reverse.
     SrcEncoding += NumRegs - LMulVal;
     DstEncoding += NumRegs - LMulVal;
   }
