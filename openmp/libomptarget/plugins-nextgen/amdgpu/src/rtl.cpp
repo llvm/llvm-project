@@ -2486,6 +2486,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_NoMapChecks("OMPX_DISABLE_MAPS", true),
         OMPX_StrictSanityChecks("OMPX_STRICT_SANITY_CHECKS", false),
         OMPX_SyncCopyBack("LIBOMPTARGET_SYNC_COPY_BACK", true),
+        OMPX_APUPrefaultMemcopy("LIBOMPTARGET_APU_PREFAULT_MEMCOPY", "true"),
+        OMPX_APUPrefaultMemcopySize("LIBOMPTARGET_APU_PREFAULT_MEMCOPY_SIZE",
+                                    2 * 1024 * 1024), // 2MB
         AMDGPUStreamManager(*this, Agent), AMDGPUEventManager(*this),
         AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice) {}
 
@@ -3060,6 +3063,15 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     AMDGPUStreamTy *Stream = nullptr;
     void *PinnedPtr = nullptr;
 
+    // Prefault GPU page table in XNACK-Enabled case, on APUs,
+    // under the assumption that explicitly allocated memory
+    // will be fully accessed and that on-the-fly individual page faults
+    // perform worse than whole memory faulting.
+    if (OMPX_APUPrefaultMemcopy && Size >= OMPX_APUPrefaultMemcopySize &&
+        IsAPU && IsXnackEnabled)
+      if (auto Err = prepopulatePageTableImpl(const_cast<void *>(HstPtr), Size))
+        return Err;
+
     // Use one-step asynchronous operation when host memory is already pinned.
     if (void *PinnedPtr =
             PinnedAllocs.getDeviceAccessiblePtrFromPinnedBuffer(HstPtr)) {
@@ -3276,8 +3288,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   Error prepopulatePageTableImpl(void *ptr, int64_t size) override final {
-    // Instruct ROCr that the [ptr, ptr+size-1] pages are
-    // coarse grain
+    // Instruct runtimes that the [ptr, ptr+size-1] pages will be accessed by
+    // devices but should not be migrated (only perform page faults, if needed).
     hsa_amd_svm_attribute_pair_t tt;
     tt.attribute = HSA_AMD_SVM_ATTRIB_AGENT_ACCESSIBLE_IN_PLACE;
     tt.value = Agent.handle;
@@ -3927,11 +3939,21 @@ private:
   /// currently always without map checks.
   BoolEnvar OMPX_NoMapChecks;
 
-  // Makes warnings turn into fatal errors
+  /// Makes warnings turn into fatal errors
   BoolEnvar OMPX_StrictSanityChecks;
 
-  // Variable to hold synchronous copy back
+  /// Variable to hold synchronous copy back
   BoolEnvar OMPX_SyncCopyBack;
+
+  /// On APUs, this env var indicates whether memory copy
+  /// should be preceded by pre-faulting of host memory,
+  /// to prevent page faults during the copy.
+  BoolEnvar OMPX_APUPrefaultMemcopy;
+
+  /// On APUs, when prefaulting host memory before a copy,
+  /// this env var controls the size after which prefaulting
+  /// is applied.
+  UInt32Envar OMPX_APUPrefaultMemcopySize;
 
   /// Stream manager for AMDGPU streams.
   AMDGPUStreamManagerTy AMDGPUStreamManager;
@@ -3981,9 +4003,6 @@ private:
 
   /// Is the plugin associated with an APU?
   bool IsAPU = false;
-
-  // replaced by IsAPU
-  //  bool IsEquippedWithMI300A = false;
 
   // Is the device an MI300X?
   bool IsEquippedWithMI300X = false;
