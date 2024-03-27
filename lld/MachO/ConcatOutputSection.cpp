@@ -323,7 +323,7 @@ void TextOutputSection::finalize() {
       thunkInfo.isec =
           makeSyntheticInputSection(isec->getSegName(), isec->getName());
       thunkInfo.isec->parent = this;
-      assert(thunkInfo.isec->live == true);
+      assert(thunkInfo.isec->live);
 
       StringRef thunkName = saver().save(funcSym->getName() + ".thunk." +
                                          std::to_string(thunkInfo.sequence++));
