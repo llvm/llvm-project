@@ -1095,7 +1095,8 @@ static bool isStandardNewDelete(const FunctionDecl *FD) {
   // If the header for operator delete is not included, it's still defined
   // in an invalid source location. Check to make sure we don't crash.
   return !L.isValid() ||
-         FD->getASTContext().getSourceManager().isInSystemHeader(L);
+         (!FD->hasBody() && // FIXME: Still a false alarm after CTU inlining.
+          FD->getASTContext().getSourceManager().isInSystemHeader(L));
 }
 
 //===----------------------------------------------------------------------===//
