@@ -18,7 +18,8 @@ For no-split-dwarf scenarios, there are 2 variations:
 """
 
 
-@skipUnlessPlatform(["linux", "freebsd"])
+# It looks like Linux-AArch64 doesn't support build-id's on the LLDB builtbots
+@skipIf(oslist=no_match(["linux"]), archs=no_match(["i386", "x86_64"]))
 class DebugInfodTests(TestBase):
     # No need to try every flavor of debug inf.
     NO_DEBUG_INFO_TESTCASE = True
