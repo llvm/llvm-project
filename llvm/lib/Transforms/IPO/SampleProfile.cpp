@@ -2411,10 +2411,10 @@ void SampleProfileMatcher::runOnFunction(const Function &F) {
   if (ReportProfileStaleness || PersistProfileStaleness)
     recordCallsiteMatchStates(F, IRAnchors, ProfileAnchors, nullptr);
 
-  // Run profile matching for checksum mismatched profile, currently only
-  // support for pseudo-probe.
-  if (SalvageStaleProfile && FunctionSamples::ProfileIsProbeBased &&
-      !ProbeManager->profileIsValid(F, *FSFlattened)) {
+  // For probe-based profiles, run matching only when the current profile is not
+  // valid.
+  if (SalvageStaleProfile && (!FunctionSamples::ProfileIsProbeBased ||
+                              !ProbeManager->profileIsValid(F, *FSFlattened))) {
     // The matching result will be saved to IRToProfileLocationMap, create a new
     // map for each function.
     auto &IRToProfileLocationMap = getIRToProfileLocationMap(F);
