@@ -102,30 +102,31 @@ public:
   LogicalResult initializeImport() {
     for (const LLVMImportDialectInterface &iface : *this) {
       // Verify the supported intrinsics have not been mapped before.
-      const auto *it =
+      const auto *intrinsicIt =
           llvm::find_if(iface.getSupportedIntrinsics(), [&](unsigned id) {
             return intrinsicToDialect.count(id);
           });
-      if (it != iface.getSupportedIntrinsics().end()) {
+      if (intrinsicIt != iface.getSupportedIntrinsics().end()) {
         return emitError(
             UnknownLoc::get(iface.getContext()),
-            llvm::formatv("expected unique conversion for intrinsic ({0}), but "
-                          "got conflicting {1} and {2} conversions",
-                          *it, iface.getDialect()->getNamespace(),
-                          intrinsicToDialect.lookup(*it)->getNamespace()));
+            llvm::formatv(
+                "expected unique conversion for intrinsic ({0}), but "
+                "got conflicting {1} and {2} conversions",
+                *intrinsicIt, iface.getDialect()->getNamespace(),
+                intrinsicToDialect.lookup(*intrinsicIt)->getNamespace()));
       }
-      const auto *instIt =
+      const auto *instructionIt =
           llvm::find_if(iface.getSupportedInstructions(), [&](unsigned id) {
             return instructionToDialect.count(id);
           });
-      if (instIt != iface.getSupportedInstructions().end()) {
+      if (instructionIt != iface.getSupportedInstructions().end()) {
         return emitError(
             UnknownLoc::get(iface.getContext()),
             llvm::formatv(
                 "expected unique conversion for instruction ({0}), but "
                 "got conflicting {1} and {2} conversions",
-                *it, iface.getDialect()->getNamespace(),
-                instructionToDialect.lookup(*it)
+                *intrinsicIt, iface.getDialect()->getNamespace(),
+                instructionToDialect.lookup(*intrinsicIt)
                     ->getDialect()
                     ->getNamespace()));
       }

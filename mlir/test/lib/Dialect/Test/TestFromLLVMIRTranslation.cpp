@@ -41,8 +41,6 @@ static LogicalResult convertLoad(OpBuilder &builder, llvm::Instruction *inst,
   FailureOr<Value> addr = moduleImport.convertValue(llvmOperands[0]);
   if (failed(addr))
     return failure();
-  auto *loadInst = cast<llvm::LoadInst>(inst);
-  unsigned alignment = loadInst->getAlign().value();
   // Create the LoadOp
   Value loadOp = builder.create<LLVM::LoadOp>(
       moduleImport.translateLoc(inst->getDebugLoc()),
