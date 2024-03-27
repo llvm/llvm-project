@@ -259,13 +259,15 @@ void SILowerControlFlow::emitLoop(MachineInstr &MI) {
   Register MaskLoop = MRI->createVirtualRegister(BoolRC);
   Register MaskExit = MRI->createVirtualRegister(BoolRC);
   Register AndZero = MRI->createVirtualRegister(BoolRC);
-  MachineInstr *CondLoop = BuildMI(MBB, &MI, DL, TII->get(XorOpc), MaskLoop)
-                                   .addReg(Cond)
-                                   .addReg(Exec);
+
+  MachineInstr *CondLoop =
+      BuildMI(MBB, &MI, DL, TII->get(Andn2TermOpc), MaskLoop)
+          .addReg(Exec)
+          .addReg(Cond);
 
   MachineInstr *ExitExec = BuildMI(MBB, &MI, DL, TII->get(OrOpc), MaskExit)
-  .addReg(Cond)
-  .addReg(Exec);
+                               .addReg(Cond)
+                               .addReg(Exec);
 
   MachineInstr *IfZeroMask = BuildMI(MBB, &MI, DL, TII->get(AndOpc), AndZero)
                                  .addReg(MaskLoop)
