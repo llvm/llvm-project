@@ -791,8 +791,7 @@ bool HWAddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
       return true;
   }
 
-  GlobalVariable *G = dyn_cast<GlobalVariable>(getUnderlyingObject(Ptr));
-  if (G) {
+  if (isa<GlobalVariable>(getUnderlyingObject(Ptr))) {
     if (!InstrumentGlobals)
       return true;
     // TODO: Optimize inbound global accesses, like Asan `instrumentMop`.
