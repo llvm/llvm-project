@@ -12,8 +12,8 @@
 
 def global_ptr_ty : LLVMQualPointerType<1>;
 
-class AMDGPUReadPreloadRegisterIntrinsic
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
+class AMDGPUReadPreloadRegisterIntrinsic<LLVMType type>
+  : DefaultAttrsIntrinsic<[type], [], [IntrNoMem, IntrSpeculatable]>;
 
 class AMDGPUReadPreloadRegisterIntrinsicNamed<string name>
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>, ClangBuiltin<name>;
@@ -27,10 +27,10 @@ class AMDGPURsrcIntrinsic<int rsrcarg, bit isimage = false> {
 
 let TargetPrefix = "r600" in {
 
-multiclass AMDGPUReadPreloadRegisterIntrinsic_xyz {
-  def _x : AMDGPUReadPreloadRegisterIntrinsic;
-  def _y : AMDGPUReadPreloadRegisterIntrinsic;
-  def _z : AMDGPUReadPreloadRegisterIntrinsic;
+multiclass AMDGPUReadPreloadRegisterIntrinsic_xyz<LLVMType type> {
+  def _x : AMDGPUReadPreloadRegisterIntrinsic<type>;
+  def _y : AMDGPUReadPreloadRegisterIntrinsic<type>;
+  def _z : AMDGPUReadPreloadRegisterIntrinsic<type>;
 }
 
 multiclass AMDGPUReadPreloadRegisterIntrinsic_xyz_named<string prefix> {
@@ -46,8 +46,8 @@ defm int_r600_read_ngroups : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
 defm int_r600_read_tgid : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
                           <"__builtin_r600_read_tgid">;
 
-defm int_r600_read_local_size : AMDGPUReadPreloadRegisterIntrinsic_xyz;
-defm int_r600_read_tidig : AMDGPUReadPreloadRegisterIntrinsic_xyz;
+defm int_r600_read_local_size : AMDGPUReadPreloadRegisterIntrinsic_xyz<llvm_i32_ty>;
+defm int_r600_read_tidig : AMDGPUReadPreloadRegisterIntrinsic_xyz<llvm_i32_ty>;
 
 def int_r600_group_barrier : ClangBuiltin<"__builtin_r600_group_barrier">,
   Intrinsic<[], [], [IntrConvergent, IntrWillReturn]>;
@@ -138,9 +138,16 @@ let TargetPrefix = "amdgcn" in {
 // ABI Special Intrinsics
 //===----------------------------------------------------------------------===//
 
-defm int_amdgcn_workitem_id : AMDGPUReadPreloadRegisterIntrinsic_xyz;
+defm int_amdgcn_workitem_id : AMDGPUReadPreloadRegisterIntrinsic_xyz<llvm_i32_ty>;
 defm int_amdgcn_workgroup_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
                                <"__builtin_amdgcn_workgroup_id">;
+
+// This intrinsic is used to track the user SGPRs that hold implicit kernel
+// arguments. The i32 argument for this intrinsic represents the offset in
+// bytes from the value pointed to by the implicitarg pointer.
+def int_amdgcn_preload_implicitarg :
+  DefaultAttrsIntrinsic<[llvm_any_ty], [llvm_i32_ty],
+  [IntrNoMem, IntrSpeculatable]>;
 
 def int_amdgcn_dispatch_ptr :
   DefaultAttrsIntrinsic<[LLVMQualPointerType<4>], [],

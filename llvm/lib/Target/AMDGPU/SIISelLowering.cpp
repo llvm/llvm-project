@@ -2466,8 +2466,8 @@ void SITargetLowering::allocateHSAUserSGPRs(CCState &CCInfo,
   // these from the dispatch pointer.
 }
 
-// Allocate pre-loaded kernel arguemtns. Arguments to be preloading must be
-// sequential starting from the first argument.
+// Allocate pre-loaded kernel arguments. Preloaded arguments must be
+// sequential and preloading must also start from the first argument.
 void SITargetLowering::allocatePreloadKernArgSGPRs(
     CCState &CCInfo, SmallVectorImpl<CCValAssign> &ArgLocs,
     const SmallVectorImpl<ISD::InputArg> &Ins, MachineFunction &MF,
@@ -2478,6 +2478,7 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
   GCNUserSGPRUsageInfo &SGPRInfo = Info.getUserSGPRInfo();
   bool InPreloadSequence = true;
   unsigned InIdx = 0;
+  const Align KernelArgBaseAlign = Align(16);
   for (auto &Arg : F.args()) {
     if (!InPreloadSequence || !Arg.hasInRegAttr())
       break;
@@ -2494,7 +2495,6 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
          InIdx++) {
       assert(ArgLocs[ArgIdx].isMemLoc());
       auto &ArgLoc = ArgLocs[InIdx];
-      const Align KernelArgBaseAlign = Align(16);
       unsigned ArgOffset = ArgLoc.getLocMemOffset();
       Align Alignment = commonAlignment(KernelArgBaseAlign, ArgOffset);
       unsigned NumAllocSGPRs =
@@ -2531,6 +2531,97 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
       }
 
       LastExplicitArgOffset = NumAllocSGPRs * 4 + ArgOffset;
+    }
+  }
+
+  if (Info.hasPreloadImplicitArgs()) {
+    unsigned ImplicitArgsBaseOffset = 0;
+    // Find the offset of the first implicit argument.
+    for (auto &Arg : MF.getFunction().args()) {
+      Type *Ty;
+      MaybeAlign Align;
+      if (Arg.hasByRefAttr()) {
+        Ty = Arg.getParamByRefType();
+        Align = Arg.getParamAlign();
+      } else {
+        Ty = Arg.getType();
+        Align = MF.getDataLayout().getABITypeAlign(Ty);
+      }
+      auto Size = MF.getDataLayout().getTypeAllocSize(Ty);
+      ImplicitArgsBaseOffset = alignTo(ImplicitArgsBaseOffset, *Align);
+      ImplicitArgsBaseOffset += Size;
+    }
+    ImplicitArgsBaseOffset = alignTo(
+        ImplicitArgsBaseOffset, Subtarget->getAlignmentForImplicitArgPtr());
+    unsigned ImplicitArgBaseSGPROffset = alignTo(ImplicitArgsBaseOffset, 4) / 4;
+    assert(ImplicitArgBaseSGPROffset <
+           AMDGPU::getMaxNumUserSGPRs(MF.getSubtarget()));
+
+    // Search for implicitarg preload intrinsics.
+    // FIXME: Should we use metadata to track the used implicitarg offsets?
+    SmallVector<unsigned, 4> ImplicitArgPreloadIntrins;
+    for (auto &BB : F) {
+      for (auto &Inst : BB) {
+        if (auto *CI = dyn_cast<CallInst>(&Inst)) {
+          if (CI->getIntrinsicID() == Intrinsic::amdgcn_preload_implicitarg) {
+            unsigned Offset =
+                cast<ConstantInt>(CI->getArgOperand(0))->getZExtValue();
+            ImplicitArgPreloadIntrins.push_back(Offset);
+          }
+        }
+      }
+    }
+
+    // Sort ImplicitArgPreloadIntrins by offset.
+    std::sort(ImplicitArgPreloadIntrins.begin(),
+              ImplicitArgPreloadIntrins.end());
+
+    // Allocate padding user SGPRs up to the beginning of the implicit
+    // arguments.
+    Info.allocateUserSGPRs(
+        ImplicitArgBaseSGPROffset +
+        (Info.getUserSGPRInfo().getNumUsedUserSGPRs() -
+         Info.getUserSGPRInfo().getNumKernargPreloadSGPRs()));
+
+    // Finally allocate SGPRs for preloaded implicit arguments.
+    unsigned AllocatedSGPRs = ImplicitArgBaseSGPROffset;
+    unsigned LastArgIdx = 0;
+    for (auto ImplicitArgOffset : ImplicitArgPreloadIntrins) {
+      // Offset from start of kernel args.
+      unsigned ArgOffset = ImplicitArgsBaseOffset + ImplicitArgOffset;
+      // The offset serves as a unique index to track the regsiter that the
+      // implicit argument is loaded to. Not expecting duplicate loads with the
+      // same offset.
+      unsigned ImplicitArgIdx = F.arg_size() + ImplicitArgOffset;
+      // FIXME: Is it valid to have multiple loads with the same offset
+      // relative to the implicitarg pointer?
+      assert(!Info.getArgInfo().PreloadKernArgs.count(ArgOffset));
+      Align Alignment = commonAlignment(KernelArgBaseAlign, ArgOffset);
+      unsigned Padding = alignTo(ArgOffset, 4) / 4 - AllocatedSGPRs;
+      if (Padding == 0 && Alignment < 4) {
+        // Argument is preloaded into the previous SGPR.
+        auto &KernargPreloadInfo =
+            Info.getArgInfo().PreloadKernArgs[ImplicitArgIdx];
+        KernargPreloadInfo.Regs.push_back(
+            Info.getArgInfo().PreloadKernArgs[LastArgIdx].Regs[0]);
+        KernargPreloadInfo.ByteOffset = 2;
+        continue;
+      }
+
+      if (Alignment < 4)
+        Padding -= 1;
+
+      // Byte offset for data in preload SGPRs.
+      unsigned ByteOffset = alignTo(ArgOffset, 4) - ArgOffset;
+      SmallVectorImpl<MCRegister> *PreloadRegs =
+          Info.addPreloadedKernArg(TRI, &AMDGPU::SReg_32RegClass, 1,
+                                   ImplicitArgIdx, Padding, ByteOffset);
+      Register Reg = (*PreloadRegs)[0];
+      assert(Reg);
+      MF.addLiveIn(Reg, &AMDGPU::SReg_32RegClass);
+      CCInfo.AllocateReg(Reg);
+      AllocatedSGPRs += Padding + 1;
+      LastArgIdx = ImplicitArgIdx;
     }
   }
 }
@@ -8452,6 +8543,37 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_addrspacecast_nonnull:
     return lowerADDRSPACECAST(Op, DAG);
+  case Intrinsic::amdgcn_preload_implicitarg: {
+    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+    MachineRegisterInfo &MRI = MF.getRegInfo();
+    assert(ST.hasKernargPreload());
+    SDLoc DL(Op);
+    unsigned ImplictArgIdx =
+        Op.getConstantOperandVal(1) + MF.getFunction().arg_size();
+
+    auto &ArgInfo =
+        MFI->getArgInfo().PreloadKernArgs.find(ImplictArgIdx)->getSecond();
+    Register Reg = ArgInfo.Regs[0];
+    unsigned ByteOffset = ArgInfo.ByteOffset;
+    Register VReg = MRI.getLiveInVirtReg(Reg);
+    SDValue Preload =
+        DAG.getCopyFromReg(DAG.getEntryNode(), DL, VReg, MVT::i32);
+    auto VT = Op.getSimpleValueType();
+    assert(VT == MVT::i32 || VT == MVT::i16);
+    if (VT == MVT::i16) {
+      if (ByteOffset == 0) {
+        Preload = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Preload);
+      } else {
+        SDValue ShiftAmt = DAG.getConstant(16, DL, MVT::i32);
+        SDValue Extract =
+            DAG.getNode(ISD::SRL, DL, MVT::i32, Preload, ShiftAmt);
+
+        Preload = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Extract);
+      }
+    }
+
+    return Preload;
+  }
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))

@@ -95,6 +95,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ArgDescriptor &Arg) {
 struct KernArgPreloadDescriptor : public ArgDescriptor {
   KernArgPreloadDescriptor() {}
   SmallVector<MCRegister> Regs;
+  unsigned ByteOffset;
 };
 
 struct AMDGPUFunctionArgInfo {

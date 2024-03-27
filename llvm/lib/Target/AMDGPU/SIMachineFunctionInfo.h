@@ -461,6 +461,9 @@ private:
   // user arguments. This is an offset from the KernargSegmentPtr.
   bool ImplicitArgPtr : 1;
 
+  // Flag is true if a kernel preloads any implicit arguments.
+  bool PreloadImplicitArgs : 1;
+
   bool MayNeedAGPRs : 1;
 
   // The hard-wired high half of the address of the global information table
@@ -743,8 +746,11 @@ public:
   Register addLDSKernelId();
   SmallVectorImpl<MCRegister> *
   addPreloadedKernArg(const SIRegisterInfo &TRI, const TargetRegisterClass *RC,
-                      unsigned AllocSizeDWord, int KernArgIdx,
-                      int PaddingSGPRs);
+                      unsigned AllocSizeDWord, int KernArgIdx, int PaddingSGPRs,
+                      unsigned Offset = 0);
+
+  /// Reserve up to \p Number of user SGPRs.
+  bool allocateUserSGPRs(unsigned Number);
 
   /// Increment user SGPRs used for padding the argument list only.
   Register addReservedUserSGPR() {
@@ -838,6 +844,10 @@ public:
 
   bool hasImplicitArgPtr() const {
     return ImplicitArgPtr;
+  }
+
+  bool hasPreloadImplicitArgs() const {
+    return PreloadImplicitArgs;
   }
 
   AMDGPUFunctionArgInfo &getArgInfo() {

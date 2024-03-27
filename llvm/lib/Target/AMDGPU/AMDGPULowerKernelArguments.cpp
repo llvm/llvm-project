@@ -13,11 +13,14 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Target/TargetMachine.h"
+#include <algorithm>
 
 #define DEBUG_TYPE "amdgpu-lower-kernel-arguments"
 
@@ -32,8 +35,6 @@ private:
   unsigned NumFreeUserSGPRs;
 
 public:
-  SmallVector<llvm::Metadata *, 8> KernelArgMetadata;
-
   PreloadKernelArgInfo(Function &F, const GCNSubtarget &ST) : F(F), ST(ST) {
     setInitialFreeUserSGPRsCount();
   }
@@ -63,6 +64,86 @@ public:
 
     NumFreeUserSGPRs -= (NumPreloadSGPRs + PaddingSGPRs);
     return true;
+  }
+
+  // Try to allocate SGPRs to preload implicit kernel arguments.
+  void tryAllocImplicitArgPreloadSGPRs(unsigned ImplicitArgsBaseOffset,
+                                       IRBuilder<> &Builder) {
+    IntrinsicInst *ImplicitArgPtr = nullptr;
+    for (Function::iterator B = F.begin(), BE = F.end(); B != BE; ++B) {
+      for (BasicBlock::iterator I = B->begin(), IE = B->end(); I != IE; ++I) {
+        if (IntrinsicInst *CI = dyn_cast<IntrinsicInst>(I))
+          if (CI->getIntrinsicID() == Intrinsic::amdgcn_implicitarg_ptr) {
+            ImplicitArgPtr = CI;
+            break;
+          }
+      }
+    }
+
+    if (!ImplicitArgPtr)
+      return;
+
+    const DataLayout &DL = F.getParent()->getDataLayout();
+    // Pair is the load and the load offset.
+    SmallVector<std::pair<LoadInst *, unsigned>, 4> ImplicitArgLoads;
+    for (auto *U : ImplicitArgPtr->users()) {
+      if (!U->hasOneUse())
+        continue;
+
+      int64_t Offset = 0;
+      auto *Load = dyn_cast<LoadInst>(U); // Load from ImplicitArgPtr?
+      if (!Load) {
+        if (GetPointerBaseWithConstantOffset(U, Offset, DL) != ImplicitArgPtr)
+          continue;
+        Load = dyn_cast<LoadInst>(*U->user_begin()); // Load from GEP?
+      }
+
+      if (!Load || !Load->isSimple())
+        continue;
+
+      // FIXME: Expand to handle 64-bit implicit args and large merged loads.
+      if (Load->getType() != Builder.getInt16Ty() &&
+          Load->getType() != Builder.getInt32Ty())
+        continue;
+
+      ImplicitArgLoads.push_back(std::make_pair(Load, Offset));
+    }
+
+    if (ImplicitArgLoads.empty())
+      return;
+
+    // Allocate loads in order of offset. We need to be sure that the implicit
+    // argument can actually be prelaoded.
+    std::sort(ImplicitArgLoads.begin(), ImplicitArgLoads.end(),
+              [](const std::pair<LoadInst *, unsigned> &A,
+                 const std::pair<LoadInst *, unsigned> &B) {
+                return A.second < B.second;
+              });
+
+    unsigned LastExplicitArgOffset = ImplicitArgsBaseOffset;
+    bool HasPreloadImplicitArgs = false;
+    for (const auto &Load : ImplicitArgLoads) {
+      LoadInst *LoadInst = Load.first;
+      Type *LoadType = LoadInst->getType();
+      auto LoadOffset = Load.second;
+      unsigned LoadSize = DL.getTypeStoreSize(LoadType);
+      // If we fail to preload any implicit argument we know we don't have SGPRs
+      // to preload any subsequent ones with larger offsets.
+      if (!tryAllocPreloadSGPRs(LoadSize, LoadOffset + ImplicitArgsBaseOffset,
+                                LastExplicitArgOffset))
+        break;
+
+      HasPreloadImplicitArgs = true;
+      LastExplicitArgOffset = LoadOffset + LoadSize;
+      llvm::Value *LoadOffsetValue =
+          llvm::ConstantInt::get(Builder.getInt32Ty(), LoadOffset);
+      CallInst *PreloadIntrin = Builder.CreateIntrinsic(
+          Intrinsic::amdgcn_preload_implicitarg, {LoadType}, {LoadOffsetValue});
+      LoadInst->replaceAllUsesWith(PreloadIntrin);
+    }
+
+    if (HasPreloadImplicitArgs)
+      F.addFnAttr("amdgpu-preload-implicitargs");
   }
 };
 
@@ -281,6 +362,15 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
 
   KernArgSegment->addRetAttr(
       Attribute::getWithAlignment(Ctx, std::max(KernArgBaseAlign, MaxAlign)));
+
+  if (InPreloadSequence) {
+    // Alignment for first implicit arg is 4 from hidden_block_count_x.
+    const unsigned FirstImplicitArgAlignment = 4;
+    uint64_t ImplicitArgsBaseOffset =
+        alignTo(ExplicitArgOffset, Align(FirstImplicitArgAlignment)) +
+        BaseOffset;
+    PreloadInfo.tryAllocImplicitArgPreloadSGPRs(ImplicitArgsBaseOffset, Builder);
+  }
 
   return true;
 }
