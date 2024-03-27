@@ -224,7 +224,7 @@ APINotesManager::getCurrentModuleAPINotes(Module *M, bool LookInModule,
   llvm::SmallVector<FileEntryRef, 2> APINotes;
 
   // First, look relative to the module itself.
-  if (LookInModule) {
+  if (LookInModule && M->Directory) {
     // Local function to try loading an API notes file in the given directory.
     auto tryAPINotes = [&](DirectoryEntryRef Dir, bool WantPublic) {
       if (auto File = findAPINotesFile(Dir, ModuleName, WantPublic)) {

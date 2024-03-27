@@ -127,6 +127,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
+    case VPInstruction::PtrAdd:
       return false;
     default:
       return true;
@@ -198,24 +199,21 @@ void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(InsertPos->getParent() &&
          "Insertion position not in any VPBasicBlock");
-  Parent = InsertPos->getParent();
-  Parent->getRecipeList().insert(InsertPos->getIterator(), this);
+  InsertPos->getParent()->insert(this, InsertPos->getIterator());
 }
 
 void VPRecipeBase::insertBefore(VPBasicBlock &BB,
                                 iplist<VPRecipeBase>::iterator I) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(I == BB.end() || I->getParent() == &BB);
-  Parent = &BB;
-  BB.getRecipeList().insert(I, this);
+  BB.insert(this, I);
 }
 
 void VPRecipeBase::insertAfter(VPRecipeBase *InsertPos) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(InsertPos->getParent() &&
          "Insertion position not in any VPBasicBlock");
-  Parent = InsertPos->getParent();
-  Parent->getRecipeList().insertAfter(InsertPos->getIterator(), this);
+  InsertPos->getParent()->insert(this, std::next(InsertPos->getIterator()));
 }
 
 void VPRecipeBase::removeFromParent() {
@@ -273,10 +271,39 @@ VPInstruction::VPInstruction(unsigned Opcode,
   assert(isFPMathOp() && "this op can't take fast-math flags");
 }
 
-Value *VPInstruction::generateInstruction(VPTransformState &State,
-                                          unsigned Part) {
+bool VPInstruction::doesGeneratePerAllLanes() const {
+  return Opcode == VPInstruction::PtrAdd && !vputils::onlyFirstLaneUsed(this);
+}
+
+bool VPInstruction::canGenerateScalarForFirstLane() const {
+  if (Instruction::isBinaryOp(getOpcode()))
+    return true;
+
+  switch (Opcode) {
+  case VPInstruction::BranchOnCond:
+  case VPInstruction::BranchOnCount:
+  case VPInstruction::CalculateTripCountMinusVF:
+  case VPInstruction::CanonicalIVIncrementForPart:
+  case VPInstruction::ComputeReductionResult:
+  case VPInstruction::PtrAdd:
+    return true;
+  default:
+    return false;
+  }
+}
+
+Value *VPInstruction::generatePerLane(VPTransformState &State,
+                                      const VPIteration &Lane) {
   IRBuilderBase &Builder = State.Builder;
-  Builder.SetCurrentDebugLocation(getDebugLoc());
+
+  assert(getOpcode() == VPInstruction::PtrAdd &&
+         "only PtrAdd opcodes are supported for now");
+  return Builder.CreatePtrAdd(State.get(getOperand(0), Lane),
+                              State.get(getOperand(1), Lane), Name);
+}
+
+Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
+  IRBuilderBase &Builder = State.Builder;
 
   if (Instruction::isBinaryOp(getOpcode())) {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
@@ -314,6 +341,12 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     // Get the original loop tripcount.
     Value *ScalarTC = State.get(getOperand(1), VPIteration(Part, 0));
 
+    // If this part of the active lane mask is scalar, generate the CMP directly
+    // to avoid unnecessary extracts.
+    if (State.VF.isScalar())
+      return Builder.CreateCmp(CmpInst::Predicate::ICMP_ULT, VIVElem0, ScalarTC,
+                               Name);
+
     auto *Int1Ty = Type::getInt1Ty(Builder.getContext());
     auto *PredTy = VectorType::get(Int1Ty, State.VF);
     return Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
@@ -342,6 +375,9 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     return Builder.CreateVectorSplice(PartMinus1, V2, -1, Name);
   }
   case VPInstruction::CalculateTripCountMinusVF: {
+    if (Part != 0)
+      return State.get(this, 0, /*IsScalar*/ true);
+
     Value *ScalarTC = State.get(getOperand(0), {0, 0});
     Value *Step =
         createStepForVF(Builder, ScalarTC->getType(), State.VF, State.UF);
@@ -484,6 +520,13 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
 
     return ReducedPartRdx;
   }
+  case VPInstruction::PtrAdd: {
+    assert(vputils::onlyFirstLaneUsed(this) &&
+           "can only generate first lane for PtrAdd");
+    Value *Ptr = State.get(getOperand(0), Part, /* IsScalar */ true);
+    Value *Addend = State.get(getOperand(1), Part, /* IsScalar */ true);
+    return Builder.CreatePtrAdd(Ptr, Addend, Name);
+  }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -508,17 +551,33 @@ void VPInstruction::execute(VPTransformState &State) {
          "Recipe not a FPMathOp but has fast-math flags?");
   if (hasFastMathFlags())
     State.Builder.setFastMathFlags(getFastMathFlags());
+  State.Builder.SetCurrentDebugLocation(getDebugLoc());
+  bool GeneratesPerFirstLaneOnly =
+      canGenerateScalarForFirstLane() &&
+      (vputils::onlyFirstLaneUsed(this) ||
+       getOpcode() == VPInstruction::ComputeReductionResult);
+  bool GeneratesPerAllLanes = doesGeneratePerAllLanes();
   for (unsigned Part = 0; Part < State.UF; ++Part) {
-    Value *GeneratedValue = generateInstruction(State, Part);
+    if (GeneratesPerAllLanes) {
+      for (unsigned Lane = 0, NumLanes = State.VF.getKnownMinValue();
+           Lane != NumLanes; ++Lane) {
+        Value *GeneratedValue = generatePerLane(State, VPIteration(Part, Lane));
+        assert(GeneratedValue && "generatePerLane must produce a value");
+        State.set(this, GeneratedValue, VPIteration(Part, Lane));
+      }
+      continue;
+    }
+
+    Value *GeneratedValue = generatePerPart(State, Part);
     if (!hasResult())
       continue;
-    assert(GeneratedValue && "generateInstruction must produce a value");
-
-    bool IsVector = GeneratedValue->getType()->isVectorTy();
-    State.set(this, GeneratedValue, Part, !IsVector);
-    assert((IsVector || getOpcode() == VPInstruction::ComputeReductionResult ||
-            State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
-           "scalar value but not only first lane used");
+    assert(GeneratedValue && "generatePerPart must produce a value");
+    assert((GeneratedValue->getType()->isVectorTy() ==
+                !GeneratesPerFirstLaneOnly ||
+            State.VF.isScalar()) &&
+           "scalar value but not only first lane defined");
+    State.set(this, GeneratedValue, Part,
+              /*IsScalar*/ GeneratesPerFirstLaneOnly);
   }
 }
 
@@ -531,6 +590,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   default:
     return false;
   case Instruction::ICmp:
+  case VPInstruction::PtrAdd:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
   case VPInstruction::ActiveLaneMask:
@@ -587,6 +647,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";
+    break;
+  case VPInstruction::PtrAdd:
+    O << "ptradd";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());

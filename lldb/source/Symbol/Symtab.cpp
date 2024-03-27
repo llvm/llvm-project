@@ -125,7 +125,7 @@ void Symtab::Dump(Stream *s, Target *target, SortOrder sort_order,
 
       std::multimap<llvm::StringRef, const Symbol *> name_map;
       for (const Symbol &symbol : m_symbols)
-        name_map.emplace(llvm::StringRef(symbol.GetName()), &symbol);
+        name_map.emplace(symbol.GetName().GetStringRef(), &symbol);
 
       for (const auto &name_to_symbol : name_map) {
         const Symbol *symbol = name_to_symbol.second;
@@ -142,10 +142,11 @@ void Symtab::Dump(Stream *s, Target *target, SortOrder sort_order,
       for (const Symbol &symbol : m_symbols)
         size_map.emplace(symbol.GetByteSize(), &symbol);
 
+      size_t idx = 0;
       for (const auto &size_to_symbol : size_map) {
         const Symbol *symbol = size_to_symbol.second;
         s->Indent();
-        symbol->Dump(s, target, symbol - &m_symbols[0], name_preference);
+        symbol->Dump(s, target, idx++, name_preference);
       }
     } break;
 

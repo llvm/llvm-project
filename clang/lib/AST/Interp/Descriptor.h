@@ -112,6 +112,10 @@ public:
   const Record *const ElemRecord = nullptr;
   /// Descriptor of the array element.
   const Descriptor *const ElemDesc = nullptr;
+  /// The primitive type this descriptor was created for,
+  /// or the primitive element type in case this is
+  /// a primitive array.
+  const std::optional<PrimType> PrimT = std::nullopt;
   /// Flag indicating if the block is mutable.
   const bool IsConst = false;
   /// Flag indicating if a field is mutable.
@@ -152,7 +156,11 @@ public:
   Descriptor(const DeclTy &D, const Record *R, MetadataSize MD, bool IsConst,
              bool IsTemporary, bool IsMutable);
 
-  Descriptor(const DeclTy &D, MetadataSize MD);
+  /// Allocates a dummy descriptor.
+  Descriptor(const DeclTy &D);
+
+  /// Allocates a dummy array descriptor.
+  Descriptor(const DeclTy &D, UnknownSize);
 
   QualType getType() const;
   QualType getElemQualType() const;
@@ -181,6 +189,11 @@ public:
   unsigned getSize() const {
     assert(!isUnknownSizeArray() && "Array of unknown size");
     return Size;
+  }
+
+  PrimType getPrimType() const {
+    assert(isPrimitiveArray() || isPrimitive());
+    return *PrimT;
   }
 
   /// Returns the allocated size, including metadata.

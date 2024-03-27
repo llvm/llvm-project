@@ -8,6 +8,7 @@
 
 #include "clang/InstallAPI/Frontend.h"
 #include "clang/AST/Availability.h"
+#include "clang/InstallAPI/FrontendRecords.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -15,28 +16,61 @@ using namespace llvm;
 using namespace llvm::MachO;
 
 namespace clang::installapi {
-
-GlobalRecord *FrontendRecordsSlice::addGlobal(
+std::pair<GlobalRecord *, FrontendAttrs *> FrontendRecordsSlice::addGlobal(
     StringRef Name, RecordLinkage Linkage, GlobalRecord::Kind GV,
     const clang::AvailabilityInfo Avail, const Decl *D, const HeaderType Access,
-    SymbolFlags Flags) {
+    SymbolFlags Flags, bool Inlined) {
 
-  auto *GR = llvm::MachO::RecordsSlice::addGlobal(Name, Linkage, GV, Flags);
-  FrontendRecords.insert({GR, FrontendAttrs{Avail, D, Access}});
-  return GR;
+  GlobalRecord *GR =
+      llvm::MachO::RecordsSlice::addGlobal(Name, Linkage, GV, Flags, Inlined);
+  auto Result = FrontendRecords.insert({GR, FrontendAttrs{Avail, D, Access}});
+  return {GR, &(Result.first->second)};
 }
 
-ObjCInterfaceRecord *FrontendRecordsSlice::addObjCInterface(
-    StringRef Name, RecordLinkage Linkage, const clang::AvailabilityInfo Avail,
-    const Decl *D, HeaderType Access, bool IsEHType) {
+std::pair<ObjCInterfaceRecord *, FrontendAttrs *>
+FrontendRecordsSlice::addObjCInterface(StringRef Name, RecordLinkage Linkage,
+                                       const clang::AvailabilityInfo Avail,
+                                       const Decl *D, HeaderType Access,
+                                       bool IsEHType) {
   ObjCIFSymbolKind SymType =
       ObjCIFSymbolKind::Class | ObjCIFSymbolKind::MetaClass;
   if (IsEHType)
     SymType |= ObjCIFSymbolKind::EHType;
-  auto *ObjCR =
+
+  ObjCInterfaceRecord *ObjCR =
       llvm::MachO::RecordsSlice::addObjCInterface(Name, Linkage, SymType);
-  FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
-  return ObjCR;
+  auto Result =
+      FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+  return {ObjCR, &(Result.first->second)};
+}
+
+std::pair<ObjCCategoryRecord *, FrontendAttrs *>
+FrontendRecordsSlice::addObjCCategory(StringRef ClassToExtend,
+                                      StringRef CategoryName,
+                                      const clang::AvailabilityInfo Avail,
+                                      const Decl *D, HeaderType Access) {
+  ObjCCategoryRecord *ObjCR =
+      llvm::MachO::RecordsSlice::addObjCCategory(ClassToExtend, CategoryName);
+  auto Result =
+      FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+  return {ObjCR, &(Result.first->second)};
+}
+
+std::pair<ObjCIVarRecord *, FrontendAttrs *> FrontendRecordsSlice::addObjCIVar(
+    ObjCContainerRecord *Container, StringRef IvarName, RecordLinkage Linkage,
+    const clang::AvailabilityInfo Avail, const Decl *D, HeaderType Access,
+    const clang::ObjCIvarDecl::AccessControl AC) {
+  // If the decl otherwise would have been exported, check their access control.
+  // Ivar's linkage is also determined by this.
+  if ((Linkage == RecordLinkage::Exported) &&
+      ((AC == ObjCIvarDecl::Private) || (AC == ObjCIvarDecl::Package)))
+    Linkage = RecordLinkage::Internal;
+  ObjCIVarRecord *ObjCR =
+      llvm::MachO::RecordsSlice::addObjCIVar(Container, IvarName, Linkage);
+  auto Result =
+      FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+
+  return {ObjCR, &(Result.first->second)};
 }
 
 std::optional<HeaderType>
@@ -104,6 +138,8 @@ std::unique_ptr<MemoryBuffer> createInputBuffer(InstallAPIContext &Ctx) {
   SmallString<4096> Contents;
   raw_svector_ostream OS(Contents);
   for (const HeaderFile &H : Ctx.InputHeaders) {
+    if (H.isExcluded())
+      continue;
     if (H.getType() != Ctx.Type)
       continue;
     if (Ctx.LangMode == Language::C || Ctx.LangMode == Language::CXX)
@@ -111,9 +147,9 @@ std::unique_ptr<MemoryBuffer> createInputBuffer(InstallAPIContext &Ctx) {
     else
       OS << "#import ";
     if (H.useIncludeName())
-      OS << "<" << H.getIncludeName() << ">";
+      OS << "<" << H.getIncludeName() << ">\n";
     else
-      OS << "\"" << H.getPath() << "\"";
+      OS << "\"" << H.getPath() << "\"\n";
 
     Ctx.addKnownHeader(H);
   }

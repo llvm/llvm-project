@@ -34,6 +34,7 @@ class SPIRVGlobalRegistry {
   DenseMap<const MachineFunction *, DenseMap<Register, SPIRVType *>>
       VRegToTypeMap;
 
+  // Map LLVM Type* to <MF, Reg>
   SPIRVGeneralDuplicatesTracker DT;
 
   DenseMap<SPIRVType *, const Type *> SPIRVToLLVMType;
@@ -54,6 +55,9 @@ class SPIRVGlobalRegistry {
 
   // Number of bits pointers and size_t integers require.
   const unsigned PointerSize;
+
+  // Holds the maximum ID we have in the module.
+  unsigned Bound;
 
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVType *createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
@@ -90,6 +94,14 @@ public:
     DT.add(Arg, MF, R);
   }
 
+  void add(const MachineInstr *MI, MachineFunction *MF, Register R) {
+    DT.add(MI, MF, R);
+  }
+
+  Register find(const MachineInstr *MI, MachineFunction *MF) {
+    return DT.find(MI, MF);
+  }
+
   Register find(const Constant *C, MachineFunction *MF) {
     return DT.find(C, MF);
   }
@@ -106,6 +118,9 @@ public:
                       MachineModuleInfo *MMI = nullptr) {
     DT.buildDepsGraph(Graph, MMI);
   }
+
+  void setBound(unsigned V) { Bound = V; }
+  unsigned getBound() { return Bound; }
 
   // Map a machine operand that represents a use of a function via function
   // pointer to a machine operand that represents the function definition.
@@ -165,6 +180,9 @@ public:
     return Res->second;
   }
 
+  // Return a pointee's type op code, or 0 otherwise.
+  unsigned getPointeeTypeOp(Register PtrReg);
+
   // Either generate a new OpTypeXXX instruction or return an existing one
   // corresponding to the given string containing the name of the builtin type.
   // Return nullptr if unable to recognize SPIRV type name from `TypeStr`.
@@ -197,8 +215,23 @@ public:
   // opcode (e.g. OpTypeBool, or OpTypeVector %x 4, where %x is OpTypeBool).
   bool isScalarOrVectorOfType(Register VReg, unsigned TypeOpcode) const;
 
-  // For vectors or scalars of ints/floats, return the scalar type's bitwidth.
+  // Return number of elements in a vector if the argument is associated with
+  // a vector type. Return 1 for a scalar type, and 0 for a missing type.
+  unsigned getScalarOrVectorComponentCount(Register VReg) const;
+  unsigned getScalarOrVectorComponentCount(SPIRVType *Type) const;
+
+  // For vectors or scalars of booleans, integers and floats, return the scalar
+  // type's bitwidth. Otherwise calls llvm_unreachable().
   unsigned getScalarOrVectorBitWidth(const SPIRVType *Type) const;
+
+  // For vectors or scalars of integers and floats, return total bitwidth of the
+  // argument. Otherwise returns 0.
+  unsigned getNumScalarOrVectorTotalBitWidth(const SPIRVType *Type) const;
+
+  // Returns either pointer to integer type, that may be a type of vector
+  // elements or an original type, or nullptr if the argument is niether
+  // an integer scalar, nor an integer vector
+  const SPIRVType *retrieveScalarOrVectorIntType(const SPIRVType *Type) const;
 
   // For integer vectors or scalars, return whether the integers are signed.
   bool isScalarOrVectorSigned(const SPIRVType *Type) const;
@@ -208,6 +241,11 @@ public:
 
   // Return the number of bits SPIR-V pointers and size_t variables require.
   unsigned getPointerSize() const { return PointerSize; }
+
+  // Returns true if two types are defined and are compatible in a sense of
+  // OpBitcast instruction
+  bool isBitcastCompatible(const SPIRVType *Type1,
+                           const SPIRVType *Type2) const;
 
 private:
   SPIRVType *getOpTypeBool(MachineIRBuilder &MIRBuilder);

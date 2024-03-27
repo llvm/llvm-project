@@ -326,7 +326,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
     auto Const = buildInstr(TargetOpcode::G_CONSTANT)
     .addDef(getMRI()->createGenericVirtualRegister(EltTy))
     .addCImm(&Val);
-    return buildSplatVector(Res, Const);
+    return buildSplatBuildVector(Res, Const);
   }
 
   auto Const = buildInstr(TargetOpcode::G_CONSTANT);
@@ -363,7 +363,7 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
     .addDef(getMRI()->createGenericVirtualRegister(EltTy))
     .addFPImm(&Val);
 
-    return buildSplatVector(Res, Const);
+    return buildSplatBuildVector(Res, Const);
   }
 
   auto Const = buildInstr(TargetOpcode::G_FCONSTANT);
@@ -711,8 +711,8 @@ MachineIRBuilder::buildBuildVectorConstant(const DstOp &Res,
   return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildSplatVector(const DstOp &Res,
-                                                       const SrcOp &Src) {
+MachineInstrBuilder MachineIRBuilder::buildSplatBuildVector(const DstOp &Res,
+                                                            const SrcOp &Src) {
   SmallVector<SrcOp, 8> TmpVec(Res.getLLTTy(*getMRI()).getNumElements(), Src);
   return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
 }
@@ -740,6 +740,13 @@ MachineInstrBuilder MachineIRBuilder::buildShuffleSplat(const DstOp &Res,
   auto InsElt = buildInsertVectorElement(DstTy, UndefVec, Src, Zero);
   SmallVector<int, 16> ZeroMask(DstTy.getNumElements());
   return buildShuffleVector(DstTy, InsElt, UndefVec, ZeroMask);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildSplatVector(const DstOp &Res,
+                                                       const SrcOp &Src) {
+  assert(Src.getLLTTy(*getMRI()) == Res.getLLTTy(*getMRI()).getElementType() &&
+         "Expected Src to match Dst elt ty");
+  return buildInstr(TargetOpcode::G_SPLAT_VECTOR, Res, Src);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildShuffleVector(const DstOp &Res,
@@ -784,6 +791,31 @@ MachineInstrBuilder MachineIRBuilder::buildInsert(const DstOp &Res,
   }
 
   return buildInstr(TargetOpcode::G_INSERT, Res, {Src, Op, uint64_t(Index)});
+}
+
+MachineInstrBuilder MachineIRBuilder::buildVScale(const DstOp &Res,
+                                                  unsigned MinElts) {
+
+  auto IntN = IntegerType::get(getMF().getFunction().getContext(),
+                               Res.getLLTTy(*getMRI()).getScalarSizeInBits());
+  ConstantInt *CI = ConstantInt::get(IntN, MinElts);
+  return buildVScale(Res, *CI);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildVScale(const DstOp &Res,
+                                                  const ConstantInt &MinElts) {
+  auto VScale = buildInstr(TargetOpcode::G_VSCALE);
+  VScale->setDebugLoc(DebugLoc());
+  Res.addDefToMIB(*getMRI(), VScale);
+  VScale.addCImm(&MinElts);
+  return VScale;
+}
+
+MachineInstrBuilder MachineIRBuilder::buildVScale(const DstOp &Res,
+                                                  const APInt &MinElts) {
+  ConstantInt *CI =
+      ConstantInt::get(getMF().getFunction().getContext(), MinElts);
+  return buildVScale(Res, *CI);
 }
 
 static unsigned getIntrinsicOpcode(bool HasSideEffects, bool IsConvergent) {
@@ -868,6 +900,21 @@ MachineIRBuilder::buildSelect(const DstOp &Res, const SrcOp &Tst,
                               std::optional<unsigned> Flags) {
 
   return buildInstr(TargetOpcode::G_SELECT, {Res}, {Tst, Op0, Op1}, Flags);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildInsertSubvector(const DstOp &Res,
+                                                           const SrcOp &Src0,
+                                                           const SrcOp &Src1,
+                                                           unsigned Idx) {
+  return buildInstr(TargetOpcode::G_INSERT_SUBVECTOR, Res,
+                    {Src0, Src1, uint64_t(Idx)});
+}
+
+MachineInstrBuilder MachineIRBuilder::buildExtractSubvector(const DstOp &Res,
+                                                            const SrcOp &Src,
+                                                            unsigned Idx) {
+  return buildInstr(TargetOpcode::G_INSERT_SUBVECTOR, Res,
+                    {Src, uint64_t(Idx)});
 }
 
 MachineInstrBuilder
@@ -1113,7 +1160,7 @@ void MachineIRBuilder::validateSelectOp(const LLT ResTy, const LLT TstTy,
   else
     assert((TstTy.isScalar() ||
             (TstTy.isVector() &&
-             TstTy.getNumElements() == Op0Ty.getNumElements())) &&
+             TstTy.getElementCount() == Op0Ty.getElementCount())) &&
            "type mismatch");
 #endif
 }

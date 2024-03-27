@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/integer_literals.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::operator""_u8;
@@ -66,7 +67,7 @@ TEST(LlvmLibcIntegerLiteralTest, u64) {
 }
 
 TEST(LlvmLibcIntegerLiteralTest, u128) {
-#if defined(__SIZEOF_INT128__)
+#ifdef LIBC_TYPES_HAS_INT128
   const __uint128_t ZERO = 0;
   const __uint128_t U8_MAX = UINT8_MAX;
   const __uint128_t U16_MAX = UINT16_MAX;
@@ -80,7 +81,7 @@ TEST(LlvmLibcIntegerLiteralTest, u128) {
   const UInt128 U32_MAX = UINT32_MAX;
   const UInt128 U64_MAX = UINT64_MAX;
   const UInt128 U128_MAX = (U64_MAX << 64) | U64_MAX;
-#endif
+#endif // LIBC_TYPES_HAS_INT128
   EXPECT_EQ(ZERO, 0_u128);
   EXPECT_EQ(U8_MAX, 255_u128);
   EXPECT_EQ(U8_MAX, 0xFF_u128);
@@ -104,7 +105,7 @@ TEST(LlvmLibcIntegerLiteralTest, u128) {
 }
 
 TEST(LlvmLibcIntegerLiteralTest, u256) {
-  using UInt256 = LIBC_NAMESPACE::cpp::UInt<256>;
+  using UInt256 = LIBC_NAMESPACE::UInt<256>;
   const UInt256 ZERO = 0;
   const UInt256 U8_MAX = UINT8_MAX;
   const UInt256 U16_MAX = UINT16_MAX;

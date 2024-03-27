@@ -13,10 +13,9 @@
 #include "FPBits.h"
 #include "rounding_mode.h"
 
+#include "include/llvm-libc-macros/math-macros.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
-
-#include <math.h>
 
 namespace LIBC_NAMESPACE {
 namespace fputil {
@@ -141,8 +140,9 @@ LIBC_INLINE T round(T x) {
   }
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T round_using_current_rounding_mode(T x) {
+template <typename T>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
+round_using_specific_rounding_mode(T x, int rnd) {
   using StorageType = typename FPBits<T>::StorageType;
   FPBits<T> bits(x);
 
@@ -152,7 +152,6 @@ LIBC_INLINE T round_using_current_rounding_mode(T x) {
 
   bool is_neg = bits.is_neg();
   int exponent = bits.get_exponent();
-  int rounding_mode = quick_get_round();
 
   // If the exponent is greater than the most negative mantissa
   // exponent, then x is already an integer.
@@ -160,20 +159,23 @@ LIBC_INLINE T round_using_current_rounding_mode(T x) {
     return x;
 
   if (exponent <= -1) {
-    switch (rounding_mode) {
-    case FE_DOWNWARD:
+    switch (rnd) {
+    case FP_INT_DOWNWARD:
       return is_neg ? T(-1.0) : T(0.0);
-    case FE_UPWARD:
+    case FP_INT_UPWARD:
       return is_neg ? T(-0.0) : T(1.0);
-    case FE_TOWARDZERO:
+    case FP_INT_TOWARDZERO:
       return is_neg ? T(-0.0) : T(0.0);
-    case FE_TONEAREST:
+    case FP_INT_TONEARESTFROMZERO:
+      if (exponent < -1)
+        return is_neg ? T(-0.0) : T(0.0); // abs(x) < 0.5
+      return is_neg ? T(-1.0) : T(1.0);   // abs(x) >= 0.5
+    case FP_INT_TONEAREST:
+    default:
       if (exponent <= -2 || bits.get_mantissa() == 0)
         return is_neg ? T(-0.0) : T(0.0); // abs(x) <= 0.5
       else
         return is_neg ? T(-1.0) : T(1.0); // abs(x) > 0.5
-    default:
-      __builtin_unreachable();
     }
   }
 
@@ -195,14 +197,19 @@ LIBC_INLINE T round_using_current_rounding_mode(T x) {
   StorageType trunc_is_odd =
       new_bits.get_mantissa() & (StorageType(1) << trim_size);
 
-  switch (rounding_mode) {
-  case FE_DOWNWARD:
+  switch (rnd) {
+  case FP_INT_DOWNWARD:
     return is_neg ? trunc_value - T(1.0) : trunc_value;
-  case FE_UPWARD:
+  case FP_INT_UPWARD:
     return is_neg ? trunc_value : trunc_value + T(1.0);
-  case FE_TOWARDZERO:
+  case FP_INT_TOWARDZERO:
     return trunc_value;
-  case FE_TONEAREST:
+  case FP_INT_TONEARESTFROMZERO:
+    if (trim_value >= half_value)
+      return is_neg ? trunc_value - T(1.0) : trunc_value + T(1.0);
+    return trunc_value;
+  case FP_INT_TONEAREST:
+  default:
     if (trim_value > half_value) {
       return is_neg ? trunc_value - T(1.0) : trunc_value + T(1.0);
     } else if (trim_value == half_value) {
@@ -215,9 +222,65 @@ LIBC_INLINE T round_using_current_rounding_mode(T x) {
     } else {
       return trunc_value;
     }
+  }
+}
+
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
+round_using_current_rounding_mode(T x) {
+  int rounding_mode = quick_get_round();
+
+  switch (rounding_mode) {
+  case FE_DOWNWARD:
+    return round_using_specific_rounding_mode(x, FP_INT_DOWNWARD);
+  case FE_UPWARD:
+    return round_using_specific_rounding_mode(x, FP_INT_UPWARD);
+  case FE_TOWARDZERO:
+    return round_using_specific_rounding_mode(x, FP_INT_TOWARDZERO);
+  case FE_TONEAREST:
+    return round_using_specific_rounding_mode(x, FP_INT_TONEAREST);
   default:
     __builtin_unreachable();
   }
+}
+
+template <bool IsSigned, typename T>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
+fromfp(T x, int rnd, unsigned int width) {
+  if (width == 0U)
+    return FPBits<T>::quiet_nan().get_val();
+
+  T rounded_value = round_using_specific_rounding_mode(x, rnd);
+
+  if constexpr (IsSigned) {
+    // T can't hold a finite number >= 2.0 * 2^EXP_BIAS.
+    if (width - 1 > FPBits<T>::EXP_BIAS)
+      return rounded_value;
+    if (rounded_value < -T(1U << (width - 1U)))
+      return FPBits<T>::quiet_nan().get_val();
+    if (rounded_value > T((1U << (width - 1U)) - 1U))
+      return FPBits<T>::quiet_nan().get_val();
+    return rounded_value;
+  }
+
+  if (rounded_value < T(0.0))
+    return FPBits<T>::quiet_nan().get_val();
+  // T can't hold a finite number >= 2.0 * 2^EXP_BIAS.
+  if (width <= FPBits<T>::EXP_BIAS && rounded_value > T(1U << width) - 1U)
+    return FPBits<T>::quiet_nan().get_val();
+  return rounded_value;
+}
+
+template <bool IsSigned, typename T>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
+fromfpx(T x, int rnd, unsigned int width) {
+  T rounded_value = fromfp<IsSigned>(x, rnd, width);
+  FPBits<T> bits(rounded_value);
+
+  if (!bits.is_nan() && rounded_value != x)
+    raise_except_if_required(FE_INEXACT);
+
+  return rounded_value;
 }
 
 namespace internal {

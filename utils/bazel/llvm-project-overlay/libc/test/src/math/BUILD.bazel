@@ -178,6 +178,7 @@ libc_support_library(
     deps = [
         "//libc:__support_fputil_basic_operations",
         "//libc:__support_fputil_fp_bits",
+        "//libc:llvm_libc_macros_math_macros",
         "//libc/test/UnitTest:LibcUnitTest",
         "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
@@ -296,6 +297,7 @@ libc_support_library(
         "//libc:__support_cpp_limits",
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_manipulation_functions",
+        "//libc:llvm_libc_macros_math_macros",
         "//libc/test/UnitTest:LibcUnitTest",
     ],
 )
@@ -322,6 +324,7 @@ libc_support_library(
         "//libc:__support_fputil_basic_operations",
         "//libc:__support_fputil_fenv_impl",
         "//libc:__support_fputil_fp_bits",
+        "//libc:llvm_libc_macros_math_macros",
         "//libc/test/UnitTest:LibcUnitTest",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
@@ -349,6 +352,7 @@ libc_support_library(
         "//libc:__support_cpp_limits",
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_normal_float",
+        "//libc:llvm_libc_macros_math_macros",
         "//libc/test/UnitTest:LibcUnitTest",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
@@ -375,6 +379,7 @@ libc_support_library(
     deps = [
         "//libc:__support_fputil_fenv_impl",
         "//libc:__support_fputil_fp_bits",
+        "//libc:llvm_libc_macros_math_macros",
         "//libc/test/UnitTest:LibcUnitTest",
         "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
@@ -411,6 +416,7 @@ libc_support_library(
     deps = [
         "//libc:__support_fputil_fenv_impl",
         "//libc:__support_fputil_fp_bits",
+        "//libc:llvm_libc_macros_math_macros",
         "//libc/test/UnitTest:LibcUnitTest",
         "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
@@ -522,6 +528,7 @@ libc_support_library(
         "//libc:__support_cpp_type_traits",
         "//libc:__support_fputil_basic_operations",
         "//libc:__support_fputil_fp_bits",
+        "//libc:llvm_libc_macros_math_macros",
         "//libc/test/UnitTest:LibcUnitTest",
         "//libc/test/UnitTest:fp_test_helpers",
     ],

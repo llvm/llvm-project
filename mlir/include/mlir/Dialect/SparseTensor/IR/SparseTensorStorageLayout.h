@@ -42,7 +42,10 @@ namespace sparse_tensor {
 ///
 ///   struct sparse_tensor.storage_specifier {
 ///     array<rank x int> lvlSizes    ; sizes/cardinalities for each level
-///     array<n x int> memSizes;      ; sizes/lengths for each data memref
+///     // TODO: memSizes need to be expanded to array<[batch] x n x int> to
+///     // support different sizes for different batches. At the moment, we
+///     // assume that every batch occupies the same memory size.
+///     array<n x int> memSizes       ; sizes/lengths for each data memref
 ///   }
 /// };
 ///

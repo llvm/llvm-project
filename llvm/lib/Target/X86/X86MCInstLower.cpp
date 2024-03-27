@@ -519,10 +519,8 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
 void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
                                  const MachineInstr &MI) {
   NoAutoPaddingScope NoPadScope(*OutStreamer);
-  bool Is64Bits = MI.getOpcode() != X86::TLS_addr32 &&
-                  MI.getOpcode() != X86::TLS_base_addr32;
-  bool Is64BitsLP64 = MI.getOpcode() == X86::TLS_addr64 ||
-                      MI.getOpcode() == X86::TLS_base_addr64;
+  bool Is64Bits = getSubtarget().is64Bit();
+  bool Is64BitsLP64 = getSubtarget().isTarget64BitLP64();
   MCContext &Ctx = OutStreamer->getContext();
 
   MCSymbolRefExpr::VariantKind SRVK;
@@ -539,6 +537,10 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
   case X86::TLS_base_addrX32:
     SRVK = MCSymbolRefExpr::VK_TLSLD;
     break;
+  case X86::TLS_desc32:
+  case X86::TLS_desc64:
+    SRVK = MCSymbolRefExpr::VK_TLSDESC;
+    break;
   default:
     llvm_unreachable("unexpected opcode");
   }
@@ -546,15 +548,34 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
   const MCSymbolRefExpr *Sym = MCSymbolRefExpr::create(
       MCInstLowering.GetSymbolFromOperand(MI.getOperand(3)), SRVK, Ctx);
 
-  // As of binutils 2.32, ld has a bogus TLS relaxation error when the GD/LD
+  // Before binutils 2.41, ld has a bogus TLS relaxation error when the GD/LD
   // code sequence using R_X86_64_GOTPCREL (instead of R_X86_64_GOTPCRELX) is
   // attempted to be relaxed to IE/LE (binutils PR24784). Work around the bug by
   // only using GOT when GOTPCRELX is enabled.
-  // TODO Delete the workaround when GOTPCRELX becomes commonplace.
+  // TODO Delete the workaround when rustc no longer relies on the hack
   bool UseGot = MMI->getModule()->getRtLibUseGOT() &&
-                Ctx.getAsmInfo()->canRelaxRelocations();
+                Ctx.getTargetOptions()->X86RelaxRelocations;
 
-  if (Is64Bits) {
+  if (SRVK == MCSymbolRefExpr::VK_TLSDESC) {
+    const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(
+        MCInstLowering.GetSymbolFromOperand(MI.getOperand(3)),
+        MCSymbolRefExpr::VK_TLSCALL, Ctx);
+    EmitAndCountInstruction(
+        MCInstBuilder(Is64BitsLP64 ? X86::LEA64r : X86::LEA32r)
+            .addReg(Is64BitsLP64 ? X86::RAX : X86::EAX)
+            .addReg(Is64Bits ? X86::RIP : X86::EBX)
+            .addImm(1)
+            .addReg(0)
+            .addExpr(Sym)
+            .addReg(0));
+    EmitAndCountInstruction(
+        MCInstBuilder(Is64Bits ? X86::CALL64m : X86::CALL32m)
+            .addReg(Is64BitsLP64 ? X86::RAX : X86::EAX)
+            .addImm(1)
+            .addReg(0)
+            .addExpr(Expr)
+            .addReg(0));
+  } else if (Is64Bits) {
     bool NeedsPadding = SRVK == MCSymbolRefExpr::VK_TLSGD;
     if (NeedsPadding && Is64BitsLP64)
       EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
@@ -2164,6 +2185,8 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::TLS_base_addr32:
   case X86::TLS_base_addr64:
   case X86::TLS_base_addrX32:
+  case X86::TLS_desc32:
+  case X86::TLS_desc64:
     return LowerTlsAddr(MCInstLowering, *MI);
 
   case X86::MOVPC32r: {

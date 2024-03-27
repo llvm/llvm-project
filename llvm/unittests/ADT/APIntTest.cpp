@@ -14,6 +14,8 @@
 #include "llvm/Support/Alignment.h"
 #include "gtest/gtest.h"
 #include <array>
+#include <climits>
+#include <limits>
 #include <optional>
 
 using namespace llvm;
@@ -1379,6 +1381,23 @@ TEST(APIntTest, toString) {
   EXPECT_EQ(std::string(S), "0");
   S.clear();
 
+  // with separators
+  APInt(64, 140).toString(S, 2, false, true, false, true);
+  EXPECT_EQ(std::string(S), "0b1000'1100");
+  S.clear();
+  APInt(64, 1024).toString(S, 8, false, true, false, true);
+  EXPECT_EQ(std::string(S), "02'000");
+  S.clear();
+  APInt(64, 1000000).toString(S, 10, false, true, false, true);
+  EXPECT_EQ(std::string(S), "1'000'000");
+  S.clear();
+  APInt(64, 1000000).toString(S, 16, false, true, true, true);
+  EXPECT_EQ(std::string(S), "0xF'4240");
+  S.clear();
+  APInt(64, 1'000'000'000).toString(S, 36, false, false, false, true);
+  EXPECT_EQ(std::string(S), "gj'dgxs");
+  S.clear();
+
   isSigned = false;
   APInt(8, 255, isSigned).toString(S, 2, isSigned, true);
   EXPECT_EQ(std::string(S), "0b11111111");
@@ -1414,6 +1433,24 @@ TEST(APIntTest, toString) {
   S.clear();
   APInt(8, 255, isSigned).toString(S, 36, isSigned, false);
   EXPECT_EQ(std::string(S), "-1");
+  S.clear();
+
+  // negative with separators
+  APInt(64, -140, isSigned).toString(S, 2, isSigned, true, false, true);
+  EXPECT_EQ(std::string(S), "-0b1000'1100");
+  S.clear();
+  APInt(64, -1024, isSigned).toString(S, 8, isSigned, true, false, true);
+  EXPECT_EQ(std::string(S), "-02'000");
+  S.clear();
+  APInt(64, -1000000, isSigned).toString(S, 10, isSigned, true, false, true);
+  EXPECT_EQ(std::string(S), "-1'000'000");
+  S.clear();
+  APInt(64, -1000000, isSigned).toString(S, 16, isSigned, true, true, true);
+  EXPECT_EQ(std::string(S), "-0xF'4240");
+  S.clear();
+  APInt(64, -1'000'000'000, isSigned)
+      .toString(S, 36, isSigned, false, false, true);
+  EXPECT_EQ(std::string(S), "-gj'dgxs");
   S.clear();
 }
 
@@ -2497,38 +2534,72 @@ TEST(APIntTest, clearLowBits) {
   EXPECT_EQ(16u, i32hi16.popcount());
 }
 
-TEST(APIntTest, AbsDiff) {
-  using APIntOps::absdiff;
+TEST(APIntTest, abds) {
+  using APIntOps::abds;
 
   APInt MaxU1(1, 1, false);
   APInt MinU1(1, 0, false);
-  EXPECT_EQ(1u, absdiff(MaxU1, MinU1).getZExtValue());
-  EXPECT_EQ(1u, absdiff(MinU1, MaxU1).getZExtValue());
+  EXPECT_EQ(1u, abds(MaxU1, MinU1).getZExtValue());
+  EXPECT_EQ(1u, abds(MinU1, MaxU1).getZExtValue());
 
   APInt MaxU4(4, 15, false);
   APInt MinU4(4, 0, false);
-  EXPECT_EQ(15u, absdiff(MaxU4, MinU4).getZExtValue());
-  EXPECT_EQ(15u, absdiff(MinU4, MaxU4).getZExtValue());
+  EXPECT_EQ(1, abds(MaxU4, MinU4).getSExtValue());
+  EXPECT_EQ(1, abds(MinU4, MaxU4).getSExtValue());
 
   APInt MaxS8(8, 127, true);
   APInt MinS8(8, -128, true);
-  EXPECT_EQ(1u, absdiff(MaxS8, MinS8).getZExtValue());
-  EXPECT_EQ(1u, absdiff(MinS8, MaxS8).getZExtValue());
+  EXPECT_EQ(-1, abds(MaxS8, MinS8).getSExtValue());
+  EXPECT_EQ(-1, abds(MinS8, MaxS8).getSExtValue());
 
   APInt MaxU16(16, 65535, false);
   APInt MinU16(16, 0, false);
-  EXPECT_EQ(65535u, absdiff(MaxU16, MinU16).getZExtValue());
-  EXPECT_EQ(65535u, absdiff(MinU16, MaxU16).getZExtValue());
+  EXPECT_EQ(1, abds(MaxU16, MinU16).getSExtValue());
+  EXPECT_EQ(1, abds(MinU16, MaxU16).getSExtValue());
 
   APInt MaxS16(16, 32767, true);
   APInt MinS16(16, -32768, true);
   APInt ZeroS16(16, 0, true);
-  EXPECT_EQ(1u, absdiff(MaxS16, MinS16).getZExtValue());
-  EXPECT_EQ(1u, absdiff(MinS16, MaxS16).getZExtValue());
-  EXPECT_EQ(32768u, absdiff(ZeroS16, MinS16));
-  EXPECT_EQ(32768u, absdiff(MinS16, ZeroS16));
-  EXPECT_EQ(32767u, absdiff(ZeroS16, MaxS16));
-  EXPECT_EQ(32767u, absdiff(MaxS16, ZeroS16));
+  EXPECT_EQ(-1, abds(MaxS16, MinS16).getSExtValue());
+  EXPECT_EQ(-1, abds(MinS16, MaxS16).getSExtValue());
+  EXPECT_EQ(32768u, abds(ZeroS16, MinS16));
+  EXPECT_EQ(32768u, abds(MinS16, ZeroS16));
+  EXPECT_EQ(32767u, abds(ZeroS16, MaxS16));
+  EXPECT_EQ(32767u, abds(MaxS16, ZeroS16));
+}
+
+TEST(APIntTest, abdu) {
+  using APIntOps::abdu;
+
+  APInt MaxU1(1, 1, false);
+  APInt MinU1(1, 0, false);
+  EXPECT_EQ(1u, abdu(MaxU1, MinU1).getZExtValue());
+  EXPECT_EQ(1u, abdu(MinU1, MaxU1).getZExtValue());
+
+  APInt MaxU4(4, 15, false);
+  APInt MinU4(4, 0, false);
+  EXPECT_EQ(15u, abdu(MaxU4, MinU4).getZExtValue());
+  EXPECT_EQ(15u, abdu(MinU4, MaxU4).getZExtValue());
+
+  APInt MaxS8(8, 127, true);
+  APInt MinS8(8, -128, true);
+  EXPECT_EQ(1u, abdu(MaxS8, MinS8).getZExtValue());
+  EXPECT_EQ(1u, abdu(MinS8, MaxS8).getZExtValue());
+
+  APInt MaxU16(16, 65535, false);
+  APInt MinU16(16, 0, false);
+  EXPECT_EQ(65535u, abdu(MaxU16, MinU16).getZExtValue());
+  EXPECT_EQ(65535u, abdu(MinU16, MaxU16).getZExtValue());
+
+  APInt MaxS16(16, 32767, true);
+  APInt MinS16(16, -32768, true);
+  APInt ZeroS16(16, 0, true);
+  EXPECT_EQ(1u, abdu(MaxS16, MinS16).getZExtValue());
+  EXPECT_EQ(1u, abdu(MinS16, MaxS16).getZExtValue());
+  EXPECT_EQ(32768u, abdu(ZeroS16, MinS16));
+  EXPECT_EQ(32768u, abdu(MinS16, ZeroS16));
+  EXPECT_EQ(32767u, abdu(ZeroS16, MaxS16));
+  EXPECT_EQ(32767u, abdu(MaxS16, ZeroS16));
 }
 
 TEST(APIntTest, GCD) {
@@ -2842,6 +2913,91 @@ TEST(APIntTest, RoundingSDiv) {
   }
 }
 
+TEST(APIntTest, Average) {
+  APInt A0(32, 0);
+  APInt A2(32, 2);
+  APInt A100(32, 100);
+  APInt A101(32, 101);
+  APInt A200(32, 200, false);
+  APInt ApUMax = APInt::getMaxValue(32);
+
+  EXPECT_EQ(APInt(32, 150), APIntOps::avgFloorU(A100, A200));
+  EXPECT_EQ(APIntOps::RoundingUDiv(A100 + A200, A2, APInt::Rounding::DOWN),
+            APIntOps::avgFloorU(A100, A200));
+  EXPECT_EQ(APIntOps::RoundingUDiv(A100 + A200, A2, APInt::Rounding::UP),
+            APIntOps::avgCeilU(A100, A200));
+  EXPECT_EQ(APIntOps::RoundingUDiv(A100 + A101, A2, APInt::Rounding::DOWN),
+            APIntOps::avgFloorU(A100, A101));
+  EXPECT_EQ(APIntOps::RoundingUDiv(A100 + A101, A2, APInt::Rounding::UP),
+            APIntOps::avgCeilU(A100, A101));
+  EXPECT_EQ(A0, APIntOps::avgFloorU(A0, A0));
+  EXPECT_EQ(A0, APIntOps::avgCeilU(A0, A0));
+  EXPECT_EQ(ApUMax, APIntOps::avgFloorU(ApUMax, ApUMax));
+  EXPECT_EQ(ApUMax, APIntOps::avgCeilU(ApUMax, ApUMax));
+  EXPECT_EQ(APIntOps::RoundingUDiv(ApUMax, A2, APInt::Rounding::DOWN),
+            APIntOps::avgFloorU(A0, ApUMax));
+  EXPECT_EQ(APIntOps::RoundingUDiv(ApUMax, A2, APInt::Rounding::UP),
+            APIntOps::avgCeilU(A0, ApUMax));
+
+  APInt Ap100(32, +100);
+  APInt Ap101(32, +101);
+  APInt Ap200(32, +200);
+  APInt Am1(32, -1);
+  APInt Am100(32, -100);
+  APInt Am101(32, -101);
+  APInt Am200(32, -200);
+  APInt AmSMin = APInt::getSignedMinValue(32);
+  APInt ApSMax = APInt::getSignedMaxValue(32);
+
+  EXPECT_EQ(APInt(32, +150), APIntOps::avgFloorS(Ap100, Ap200));
+  EXPECT_EQ(APIntOps::RoundingSDiv(Ap100 + Ap200, A2, APInt::Rounding::DOWN),
+            APIntOps::avgFloorS(Ap100, Ap200));
+  EXPECT_EQ(APIntOps::RoundingSDiv(Ap100 + Ap200, A2, APInt::Rounding::UP),
+            APIntOps::avgCeilS(Ap100, Ap200));
+
+  EXPECT_EQ(APInt(32, -150), APIntOps::avgFloorS(Am100, Am200));
+  EXPECT_EQ(APIntOps::RoundingSDiv(Am100 + Am200, A2, APInt::Rounding::DOWN),
+            APIntOps::avgFloorS(Am100, Am200));
+  EXPECT_EQ(APIntOps::RoundingSDiv(Am100 + Am200, A2, APInt::Rounding::UP),
+            APIntOps::avgCeilS(Am100, Am200));
+
+  EXPECT_EQ(APInt(32, +100), APIntOps::avgFloorS(Ap100, Ap101));
+  EXPECT_EQ(APIntOps::RoundingSDiv(Ap100 + Ap101, A2, APInt::Rounding::DOWN),
+            APIntOps::avgFloorS(Ap100, Ap101));
+  EXPECT_EQ(APInt(32, +101), APIntOps::avgCeilS(Ap100, Ap101));
+  EXPECT_EQ(APIntOps::RoundingSDiv(Ap100 + Ap101, A2, APInt::Rounding::UP),
+            APIntOps::avgCeilS(Ap100, Ap101));
+
+  EXPECT_EQ(APInt(32, -101), APIntOps::avgFloorS(Am100, Am101));
+  EXPECT_EQ(APIntOps::RoundingSDiv(Am100 + Am101, A2, APInt::Rounding::DOWN),
+            APIntOps::avgFloorS(Am100, Am101));
+  EXPECT_EQ(APInt(32, -100), APIntOps::avgCeilS(Am100, Am101));
+  EXPECT_EQ(APIntOps::RoundingSDiv(Am100 + Am101, A2, APInt::Rounding::UP),
+            APIntOps::avgCeilS(Am100, Am101));
+
+  EXPECT_EQ(AmSMin, APIntOps::avgFloorS(AmSMin, AmSMin));
+  EXPECT_EQ(AmSMin, APIntOps::avgCeilS(AmSMin, AmSMin));
+
+  EXPECT_EQ(APIntOps::RoundingSDiv(AmSMin, A2, APInt::Rounding::DOWN),
+            APIntOps::avgFloorS(A0, AmSMin));
+  EXPECT_EQ(APIntOps::RoundingSDiv(AmSMin, A2, APInt::Rounding::UP),
+            APIntOps::avgCeilS(A0, AmSMin));
+
+  EXPECT_EQ(A0, APIntOps::avgFloorS(A0, A0));
+  EXPECT_EQ(A0, APIntOps::avgCeilS(A0, A0));
+
+  EXPECT_EQ(Am1, APIntOps::avgFloorS(AmSMin, ApSMax));
+  EXPECT_EQ(A0, APIntOps::avgCeilS(AmSMin, ApSMax));
+
+  EXPECT_EQ(APIntOps::RoundingSDiv(ApSMax, A2, APInt::Rounding::DOWN),
+            APIntOps::avgFloorS(A0, ApSMax));
+  EXPECT_EQ(APIntOps::RoundingSDiv(ApSMax, A2, APInt::Rounding::UP),
+            APIntOps::avgCeilS(A0, ApSMax));
+
+  EXPECT_EQ(ApSMax, APIntOps::avgFloorS(ApSMax, ApSMax));
+  EXPECT_EQ(ApSMax, APIntOps::avgCeilS(ApSMax, ApSMax));
+}
+
 TEST(APIntTest, umul_ov) {
   const std::pair<uint64_t, uint64_t> Overflows[] = {
       {0x8000000000000000, 2},
@@ -2891,6 +3047,69 @@ TEST(APIntTest, smul_ov) {
         EXPECT_EQ(Wide.trunc(Bits), Narrow);
         EXPECT_EQ(Narrow.sext(2 * Bits) != Wide, Overflow);
       }
+}
+
+TEST(APIntTest, sfloordiv_ov) {
+  // int16 test overflow
+  {
+    using IntTy = int16_t;
+    APInt divisor(8 * sizeof(IntTy), std::numeric_limits<IntTy>::lowest(),
+                  true);
+    APInt dividend(8 * sizeof(IntTy), IntTy(-1), true);
+    bool Overflow = false;
+    (void)divisor.sfloordiv_ov(dividend, Overflow);
+    EXPECT_TRUE(Overflow);
+  }
+  // int32 test overflow
+  {
+    using IntTy = int32_t;
+    APInt divisor(8 * sizeof(IntTy), std::numeric_limits<IntTy>::lowest(),
+                  true);
+    APInt dividend(8 * sizeof(IntTy), IntTy(-1), true);
+    bool Overflow = false;
+    (void)divisor.sfloordiv_ov(dividend, Overflow);
+    EXPECT_TRUE(Overflow);
+  }
+  // int64 test overflow
+  {
+    using IntTy = int64_t;
+    APInt divisor(8 * sizeof(IntTy), std::numeric_limits<IntTy>::lowest(),
+                  true);
+    APInt dividend(8 * sizeof(IntTy), IntTy(-1), true);
+    bool Overflow = false;
+    (void)divisor.sfloordiv_ov(dividend, Overflow);
+    EXPECT_TRUE(Overflow);
+  }
+  // test all of int8
+  {
+    bool Overflow = false;
+    for (int i = -128; i < 128; ++i) {
+      for (int j = -128; j < 128; ++j) {
+        if (j == 0)
+          continue;
+
+        int8_t a = static_cast<int8_t>(i);
+        int8_t b = static_cast<int8_t>(j);
+
+        APInt divisor(8, a, true);
+        APInt dividend(8, b, true);
+        APInt quotient = divisor.sfloordiv_ov(dividend, Overflow);
+
+        if (i == -128 && j == -1) {
+          EXPECT_TRUE(Overflow);
+          continue;
+        }
+
+        if (((i >= 0 && j > 0) || (i <= 0 && j < 0)) ||
+            (i % j == 0)) // if quotient >= 0 and remain == 0 floordiv
+                          // equivalent to div
+          EXPECT_EQ(quotient.getSExtValue(), a / b);
+        else
+          EXPECT_EQ(quotient.getSExtValue(), a / b - 1);
+        EXPECT_FALSE(Overflow);
+      }
+    }
+  }
 }
 
 TEST(APIntTest, SolveQuadraticEquationWrap) {

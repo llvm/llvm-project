@@ -133,14 +133,14 @@ body:             |
   ; CHECK:   JMP_1 %bb.1
   ; CHECK: bb.1.if:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   [[VCMPSSZrr:%[0-9]+]]:vk1 = VCMPSSZrr [[COPY3]], [[COPY2]], 0
-  ; CHECK:   [[COPY9:%[0-9]+]]:vk32 = COPY [[VCMPSSZrr]]
+  ; CHECK:   [[VCMPSSZrri:%[0-9]+]]:vk1 = VCMPSSZrri [[COPY3]], [[COPY2]], 0
+  ; CHECK:   [[COPY9:%[0-9]+]]:vk32 = COPY [[VCMPSSZrri]]
   ; CHECK:   [[COPY10:%[0-9]+]]:vk8 = COPY [[COPY9]]
   ; CHECK:   JMP_1 %bb.3
   ; CHECK: bb.2.else:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   [[VCMPSSZrr1:%[0-9]+]]:vk1 = VCMPSSZrr [[COPY1]], [[COPY]], 0
-  ; CHECK:   [[COPY11:%[0-9]+]]:vk32 = COPY [[VCMPSSZrr1]]
+  ; CHECK:   [[VCMPSSZrri1:%[0-9]+]]:vk1 = VCMPSSZrri [[COPY1]], [[COPY]], 0
+  ; CHECK:   [[COPY11:%[0-9]+]]:vk32 = COPY [[VCMPSSZrri1]]
   ; CHECK:   [[COPY12:%[0-9]+]]:vk8 = COPY [[COPY11]]
   ; CHECK: bb.3.exit:
   ; CHECK:   [[PHI:%[0-9]+]]:vk8 = PHI [[COPY12]], %bb.2, [[COPY10]], %bb.1
@@ -173,7 +173,7 @@ body:             |
   bb.1.if:
     successors: %bb.3(0x80000000)
 
-    %14 = VCMPSSZrr %7, %8, 0, implicit $mxcsr
+    %14 = VCMPSSZrri %7, %8, 0, implicit $mxcsr
 
     ; check that cross domain copies are replaced with same domain copies.
 
@@ -183,7 +183,7 @@ body:             |
 
   bb.2.else:
     successors: %bb.3(0x80000000)
-    %12 = VCMPSSZrr %9, %10, 0, implicit $mxcsr
+    %12 = VCMPSSZrri %9, %10, 0, implicit $mxcsr
 
     ; check that cross domain copies are replaced with same domain copies.
 

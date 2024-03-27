@@ -68,3 +68,64 @@ template<A> struct X {};
 X<1> x;
 #endif
 }
+
+namespace dr2445 { // dr2445: 19
+#if __cplusplus >= 202002L
+  template <typename> constexpr bool F = false;
+  template <typename T> struct A { };
+
+  template <typename T, typename U>
+  bool operator==(T, A<U *>);
+
+  template <typename T, typename U>
+  bool operator!=(A<T>, U) {
+   static_assert(F<T>, "Isn't this less specialized?");
+   return false;
+  }
+
+  bool f(A<int> ax, A<int *> ay) { return ay != ax; }
+
+  template<class T> concept AlwaysTrue=true;
+  template <class T> struct B {
+    template <AlwaysTrue U>
+    bool operator==(const B<U>&)const;
+  };
+
+
+  template <typename U>
+  bool operator==(const B<int>&,const B<U>&) {
+   static_assert(F<int>, "Isn't this less specialized?");
+   return false;
+  }
+
+  bool g(B<int> bx, B<int *> by) { return bx == by; }
+
+  struct C{
+    template<AlwaysTrue T>
+    int operator+(T){return 0;}
+    template<class T>
+    void operator-(T){}
+  };
+  template<class T>
+  void operator+(C&&,T){}
+  template<AlwaysTrue T>
+  int operator-(C&&,T){return 0;}
+
+  void t(int* iptr){
+    int x1 = C{} + iptr;
+    int x2 = C{} - iptr;
+  }
+
+  struct D{
+    template<AlwaysTrue T>
+    int operator+(T) volatile {return 1;}
+  };
+
+  template<class T>
+  void operator+(volatile D&,T) {}
+
+  int foo(volatile D& d){
+    return d + 1;
+  }
+#endif
+}

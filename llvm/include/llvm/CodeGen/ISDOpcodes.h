@@ -1390,8 +1390,8 @@ enum NodeType {
   CONVERGENCECTRL_ANCHOR,
   CONVERGENCECTRL_ENTRY,
   CONVERGENCECTRL_LOOP,
-  // This does not correspond to any convergence control intrinsic. It used to
-  // glue a convergence control token to a convergent operation in the DAG,
+  // This does not correspond to any convergence control intrinsic. It is used
+  // to glue a convergence control token to a convergent operation in the DAG,
   // which is later translated to an implicit use in the MIR.
   CONVERGENCECTRL_GLUE,
 
