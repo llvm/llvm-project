@@ -480,8 +480,8 @@ public:
     llvm_unreachable("unsupported type conversion function");
   }
 
-  void yieldOutputs(ValueRange values) {
-    OpBuilder builder = getBuilder();
+  void yieldOutputs(OpBuilder builder, ValueRange values) {
+    builder.setInsertionPointToEnd(&block);
     Location loc = builder.getUnknownLoc();
     builder.create<YieldOp>(loc, values);
   }
