@@ -188,6 +188,17 @@ static bool profDataReferencedByCode(const Module &M) {
   return enablesValueProfiling(M);
 }
 
+class InstrIRBuilder : public IRBuilder<> {
+public:
+  explicit InstrIRBuilder(Instruction *IP) : IRBuilder<>(IP) {
+    SetNoSanitizeMetadata();
+  }
+
+  explicit InstrIRBuilder(BasicBlock *BB) : IRBuilder<>(BB) {
+    SetNoSanitizeMetadata();
+  }
+};
+
 class InstrLowerer final {
 public:
   InstrLowerer(Module &M, const InstrProfOptions &Options,
@@ -370,7 +381,7 @@ public:
       Value *LiveInValue = SSA.GetValueInMiddleOfBlock(ExitBlock);
       Value *Addr = cast<StoreInst>(Store)->getPointerOperand();
       Type *Ty = LiveInValue->getType();
-      IRBuilder<> Builder(InsertPos);
+      InstrIRBuilder Builder(InsertPos);
       if (auto *AddrInst = dyn_cast_or_null<IntToPtrInst>(Addr)) {
         // If isRuntimeCounterRelocationEnabled() is true then the address of
         // the store instruction is computed with two instructions in
@@ -842,7 +853,7 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   for (uint32_t Kind = IPVK_First; Kind < ValueKind; ++Kind)
     Index += It->second.NumValueSites[Kind];
 
-  IRBuilder<> Builder(Ind);
+  InstrIRBuilder Builder(Ind);
   bool IsMemOpSize = (Ind->getValueKind()->getZExtValue() ==
                       llvm::InstrProfValueKind::IPVK_MemOPSize);
   CallInst *Call = nullptr;
@@ -872,7 +883,7 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
 
 Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
   auto *Counters = getOrCreateRegionCounters(I);
-  IRBuilder<> Builder(I);
+  InstrIRBuilder Builder(I);
 
   if (isa<InstrProfTimestampInst>(I))
     Counters->setAlignment(Align(8));
@@ -887,7 +898,7 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
   Function *Fn = I->getParent()->getParent();
   LoadInst *&BiasLI = FunctionToProfileBiasMap[Fn];
   if (!BiasLI) {
-    IRBuilder<> EntryBuilder(&Fn->getEntryBlock().front());
+    InstrIRBuilder EntryBuilder(&Fn->getEntryBlock().front());
     auto *Bias = M.getGlobalVariable(getInstrProfCounterBiasVarName());
     if (!Bias) {
       // Compiler must define this variable when runtime counter relocation
@@ -897,6 +908,7 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
           M, Int64Ty, false, GlobalValue::LinkOnceODRLinkage,
           Constant::getNullValue(Int64Ty), getInstrProfCounterBiasVarName());
       Bias->setVisibility(GlobalVariable::HiddenVisibility);
+      Bias->setNoSanitizeMetadata();
       // A definition that's weak (linkonce_odr) without being in a COMDAT
       // section wouldn't lead to link errors, but it would lead to a dead
       // data word from every TU but one. Putting it in COMDAT ensures there
@@ -912,7 +924,7 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
 
 Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
   auto *Bitmaps = getOrCreateRegionBitmaps(I);
-  IRBuilder<> Builder(I);
+  InstrIRBuilder Builder(I);
 
   auto *Addr = Builder.CreateConstInBoundsGEP2_32(
       Bitmaps->getValueType(), Bitmaps, 0, I->getBitmapIndex()->getZExtValue());
@@ -931,7 +943,7 @@ Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
 
 void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
   auto *Addr = getCounterAddress(CoverInstruction);
-  IRBuilder<> Builder(CoverInstruction);
+  InstrIRBuilder Builder(CoverInstruction);
   // We store zero to represent that this block is covered.
   Builder.CreateStore(Builder.getInt8(0), Addr);
   CoverInstruction->eraseFromParent();
@@ -943,7 +955,7 @@ void InstrLowerer::lowerTimestamp(
          "timestamp probes are always the first probe for a function");
   auto &Ctx = M.getContext();
   auto *TimestampAddr = getCounterAddress(TimestampInstruction);
-  IRBuilder<> Builder(TimestampInstruction);
+  InstrIRBuilder Builder(TimestampInstruction);
   auto *CalleeTy =
       FunctionType::get(Type::getVoidTy(Ctx), TimestampAddr->getType(), false);
   auto Callee = M.getOrInsertFunction(
@@ -955,7 +967,7 @@ void InstrLowerer::lowerTimestamp(
 void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
   auto *Addr = getCounterAddress(Inc);
 
-  IRBuilder<> Builder(Inc);
+  InstrIRBuilder Builder(Inc);
   if (Options.Atomic || AtomicCounterUpdateAll ||
       (Inc->getIndex()->isZeroValue() && AtomicFirstCounter)) {
     Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
@@ -990,7 +1002,7 @@ void InstrLowerer::lowerCoverageData(GlobalVariable *CoverageNamesVar) {
 
 void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
     InstrProfMCDCTVBitmapUpdate *Update) {
-  IRBuilder<> Builder(Update);
+  InstrIRBuilder Builder(Update);
   auto *Int8Ty = Type::getInt8Ty(M.getContext());
   auto *Int32Ty = Type::getInt32Ty(M.getContext());
   auto *MCDCCondBitmapAddr = Update->getMCDCCondBitmapAddr();
@@ -1034,7 +1046,7 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
 
 void InstrLowerer::lowerMCDCCondBitmapUpdate(
     InstrProfMCDCCondBitmapUpdate *Update) {
-  IRBuilder<> Builder(Update);
+  InstrIRBuilder Builder(Update);
   auto *Int32Ty = Type::getInt32Ty(M.getContext());
   auto *MCDCCondBitmapAddr = Update->getMCDCCondBitmapAddr();
 
@@ -1300,6 +1312,7 @@ InstrLowerer::createRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc,
   auto GV = new GlobalVariable(M, BitmapTy, false, Linkage,
                                Constant::getNullValue(BitmapTy), Name);
   GV->setAlignment(Align(1));
+  GV->setNoSanitizeMetadata();
   return GV;
 }
 
@@ -1340,6 +1353,7 @@ InstrLowerer::createRegionCounters(InstrProfCntrInstBase *Inc, StringRef Name,
                             Constant::getNullValue(CounterTy), Name);
     GV->setAlignment(Align(8));
   }
+  GV->setNoSanitizeMetadata();
   return GV;
 }
 
@@ -1454,6 +1468,7 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     ValuesVar->setSection(
         getInstrProfSectionName(IPSK_vals, TT.getObjectFormat()));
     ValuesVar->setAlignment(Align(8));
+    ValuesVar->setNoSanitizeMetadata();
     maybeSetComdat(ValuesVar, Fn, CntsVarName);
     ValuesPtrExpr = ValuesVar;
   }
@@ -1532,6 +1547,7 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   Data->setSection(
       getInstrProfSectionName(DataSectionKind, TT.getObjectFormat()));
   Data->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
+  Data->setNoSanitizeMetadata();
   maybeSetComdat(Data, Fn, CntsVarName);
 
   PD.DataVar = Data;
@@ -1592,6 +1608,7 @@ void InstrLowerer::emitVNodes() {
   VNodesVar->setSection(
       getInstrProfSectionName(IPSK_vnodes, TT.getObjectFormat()));
   VNodesVar->setAlignment(M.getDataLayout().getABITypeAlign(VNodesTy));
+  VNodesVar->setNoSanitizeMetadata();
   // VNodesVar is used by runtime but not referenced via relocation by other
   // sections. Conservatively make it linker retained.
   UsedVars.push_back(VNodesVar);
@@ -1625,6 +1642,7 @@ void InstrLowerer::emitNameData() {
   // linker from inserting padding before the start of the names section or
   // between names entries.
   NamesVar->setAlignment(Align(1));
+  NamesVar->setNoSanitizeMetadata();
   // NamesVar is used by runtime but not referenced via relocation by other
   // sections. Conservatively make it linker retained.
   UsedVars.push_back(NamesVar);
@@ -1653,7 +1671,7 @@ void InstrLowerer::emitRegistration() {
       Function::Create(RuntimeRegisterTy, GlobalVariable::ExternalLinkage,
                        getInstrProfRegFuncName(), M);
 
-  IRBuilder<> IRB(BasicBlock::Create(M.getContext(), "", RegisterF));
+  InstrIRBuilder IRB(BasicBlock::Create(M.getContext(), "", RegisterF));
   for (Value *Data : CompilerUsedVars)
     if (!isa<Function>(Data))
       IRB.CreateCall(RuntimeRegisterF, Data);
@@ -1690,6 +1708,7 @@ bool InstrLowerer::emitRuntimeHook() {
       new GlobalVariable(M, Int32Ty, false, GlobalValue::ExternalLinkage,
                          nullptr, getInstrProfRuntimeHookVarName());
   Var->setVisibility(GlobalValue::HiddenVisibility);
+  Var->setNoSanitizeMetadata();
 
   if (TT.isOSBinFormatELF() && !TT.isPS()) {
     // Mark the user variable as used so that it isn't stripped out.
@@ -1706,7 +1725,7 @@ bool InstrLowerer::emitRuntimeHook() {
     if (TT.supportsCOMDAT())
       User->setComdat(M.getOrInsertComdat(User->getName()));
 
-    IRBuilder<> IRB(BasicBlock::Create(M.getContext(), "", User));
+    InstrIRBuilder IRB(BasicBlock::Create(M.getContext(), "", User));
     auto *Load = IRB.CreateLoad(Int32Ty, Var);
     IRB.CreateRet(Load);
 
@@ -1760,7 +1779,7 @@ void InstrLowerer::emitInitialization() {
     F->addFnAttr(Attribute::NoRedZone);
 
   // Add the basic block and the necessary calls.
-  IRBuilder<> IRB(BasicBlock::Create(M.getContext(), "", F));
+  InstrIRBuilder IRB(BasicBlock::Create(M.getContext(), "", F));
   IRB.CreateCall(RegisterF, {});
   IRB.CreateRetVoid();
 
