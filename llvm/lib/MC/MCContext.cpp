@@ -646,9 +646,28 @@ MCContext::getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
                                       : std::nullopt;
 }
 
+MCSectionGOFF *MCContext::getGOFFLSDASection(StringRef Section, SectionKind Kind) {
+  // Do the lookup. If we don't have a hit, return a new section.
+  auto IterBool =
+      GOFFUniquingMap.insert(std::make_pair(Section.str(), nullptr));
+  auto Iter = IterBool.first;
+  if (!IterBool.second)
+    return Iter->second;
+
+  StringRef CachedName = Iter->first;
+  MCSectionGOFF *GOFFSection;
+  GOFFSection = new (GOFFAllocator.Allocate())
+      MCSectionGOFF(CachedName, Kind, nullptr, nullptr, GOFF::ESD_TS_Unstructured, GOFF::ESD_LB_Deferred, true);
+  Iter->second = GOFFSection;
+  return GOFFSection;
+}
+
 MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
                                          MCSection *Parent,
-                                         const MCExpr *SubsectionId) {
+                                         const MCExpr *SubsectionId,
+                                         GOFF::GOFFSectionType SectionType,
+                                         GOFF::ESDTextStyle TextStyle,
+                                         GOFF::ESDLoadingBehavior LoadBehavior) {
   // Do the lookup. If we don't have a hit, return a new section.
   auto IterBool =
       GOFFUniquingMap.insert(std::make_pair(Section.str(), nullptr));
@@ -660,16 +679,16 @@ MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
   MCSectionGOFF *GOFFSection;
   if (Kind.isText())
     GOFFSection = new (GOFFAllocator.Allocate())
-        MCSectionGOFF(CachedName, Kind, Parent, SubsectionId, MCSectionGOFF::Code);
+        MCSectionGOFF(CachedName, Kind, Parent, SubsectionId, GOFF::GOFFSectionType::Code);
   else if (Section.equals(".ada"))
     GOFFSection = new (GOFFAllocator.Allocate())
-        MCSectionGOFF(CachedName, Kind, Parent, SubsectionId, MCSectionGOFF::Static);
+        MCSectionGOFF(CachedName, Kind, Parent, SubsectionId, GOFF::GOFFSectionType::Static);
   else if (Section.equals(".ppa2list"))
     GOFFSection = new (GOFFAllocator.Allocate())
-        MCSectionGOFF(CachedName, Kind, Parent, SubsectionId, MCSectionGOFF::PPA2Offset);
-  else if (Section.equals(".B_IDRL"))
+        MCSectionGOFF(CachedName, Kind, Parent, SubsectionId, GOFF::GOFFSectionType::PPA2Offset);
+  else if (Section.equals("B_IDRL"))
     GOFFSection = new (GOFFAllocator.Allocate())
-        MCSectionGOFF(CachedName, Kind, Parent, SubsectionId, MCSectionGOFF::B_IDRL);
+        MCSectionGOFF(CachedName, Kind, Parent, SubsectionId, GOFF::GOFFSectionType::B_IDRL);
   else
     GOFFSection = new (GOFFAllocator.Allocate())
         MCSectionGOFF(CachedName, Kind, Parent, SubsectionId);

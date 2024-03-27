@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCDwarf.h"
@@ -622,9 +623,14 @@ public:
                                                    unsigned Flags,
                                                    unsigned EntrySize);
 
+  MCSectionGOFF *getGOFFLSDASection(StringRef Section, SectionKind Kind);
+
   MCSectionGOFF *getGOFFSection(StringRef Section, SectionKind Kind,
                                 MCSection *Parent = nullptr,
-                                const MCExpr *SubsectionId = nullptr);
+                                const MCExpr *SubsectionId = nullptr,
+                                GOFF::GOFFSectionType SectionType = GOFF::Other,
+                                GOFF::ESDTextStyle TextStyle = GOFF::ESD_TS_ByteOriented,
+                                GOFF::ESDLoadingBehavior LoadBehavior = GOFF::ESD_LB_Initial);
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
                                 SectionKind Kind, StringRef COMDATSymName,

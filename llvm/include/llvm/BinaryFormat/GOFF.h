@@ -173,6 +173,26 @@ enum SubsectionKind : uint8_t {
   SK_PPA1 = 2,
   SK_PPA2 = 4,
 };
+
+// \brief Type of sections (properly - classes or modules) in the object file.
+enum GOFFSectionType : uint8_t {
+  /// Code - This section belongs to the the Code CSECT.
+  Code,
+
+  /// Static - This section belongs to the Static CSECT.
+  Static,
+
+  /// PPA2Offset - This section contains the offset to the PPA2.
+  /// Note: This is NOT the PPA2 section itself, which should
+  /// reside within the Code CSECT.
+  PPA2Offset,
+
+  /// B_IDRL - 
+  B_IDRL,
+
+  /// Other - All other sections.
+  Other,
+};  
 } // end namespace GOFF
 
 } // end namespace llvm
