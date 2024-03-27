@@ -820,8 +820,9 @@ ordering the fields by ``sizeof`` would usually also lead to the same optimal
 layout.
 
 In rare cases, one can use the ``#pragma pack(1)`` directive to enforce a packed
-layout too, but it is discouraged and the reordering of fields should be
-preferred.
+layout too, but it can significantly increase the access times, so reordering the
+fields is usually a better solution.
+
 
 .. code-block:: cpp
 
