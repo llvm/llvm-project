@@ -21,6 +21,9 @@ using namespace llvm;
 using namespace sampleprof;
 
 namespace llvm {
+
+class CleanupInstaller;
+
 namespace sampleprof {
 
 // Stream based trace line iterator
@@ -603,8 +606,11 @@ public:
                          std::optional<uint32_t> PIDFilter);
   // Extract perf script type by peaking at the input
   static PerfContent checkPerfScriptType(StringRef FileName);
-  // Remove all temporary files.
-  static void removeTempFiles();
+
+  // Cleanup installers for temporary files created by perf script command.
+  // Those files will be automatically removed when running destructor or
+  // receiving signals.
+  static SmallVector<CleanupInstaller, 2> TempFileCleanups;
 
 protected:
   // The parsed MMap event
@@ -624,8 +630,6 @@ protected:
   // mapping between the binary name and its memory layout.
   static bool extractMMap2EventForBinary(ProfiledBinary *Binary, StringRef Line,
                                          MMapEvent &MMap);
-  // Mark temporary file for future clean up.
-  static void markTempFile(StringRef FileName);
   // Update base address based on mmap events
   void updateBinaryAddress(const MMapEvent &Event);
   // Parse mmap event and update binary address
@@ -666,9 +670,6 @@ protected:
   std::set<uint64_t> InvalidReturnAddresses;
   // PID for the process of interest
   std::optional<uint32_t> PIDFilter;
-
-  // Temporary files created by perf script command.
-  static SmallVector<std::string, 2> TempFiles;
 };
 
 /*

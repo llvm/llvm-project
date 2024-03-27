@@ -189,7 +189,5 @@ int main(int argc, const char *argv[]) {
     Generator->write();
   }
 
-  PerfScriptReader::removeTempFiles();
-
   return EXIT_SUCCESS;
 }
