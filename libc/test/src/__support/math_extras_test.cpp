@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/UInt128.h" // UInt128
+#include "src/__support/UInt128.h" // UInt<128>
 #include "src/__support/integer_literals.h"
 #include "src/__support/math_extras.h"
 #include "test/UnitTest/Test.h"
@@ -19,7 +19,7 @@ using UnsignedTypesNoBigInt = testing::TypeList<
     __uint128_t,
 #endif // LIBC_TYPES_HAS_INT128
     unsigned char, unsigned short, unsigned int, unsigned long,
-    unsigned long long>;
+    unsigned long long, UInt<128>>;
 
 TEST(LlvmLibcBlockMathExtrasTest, mask_trailing_ones) {
   EXPECT_EQ(0_u8, (mask_leading_ones<uint8_t, 0>()));

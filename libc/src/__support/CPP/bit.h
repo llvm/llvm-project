@@ -242,6 +242,14 @@ LIBC_INLINE constexpr To bit_or_static_cast(const From &from) {
 /// Count number of 1's aka population count or Hamming weight.
 ///
 /// Only unsigned integral types are allowed.
+// clang-19+, gcc-14+
+#if __has_builtin(__builtin_popcountg)
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+popcount(T value) {
+  return __builtin_popcountg(value);
+}
+#else // !__has_builtin(__builtin_popcountg)
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 popcount(T value) {
@@ -261,7 +269,7 @@ ADD_SPECIALIZATION(unsigned short, __builtin_popcount)
 ADD_SPECIALIZATION(unsigned, __builtin_popcount)
 ADD_SPECIALIZATION(unsigned long, __builtin_popcountl)
 ADD_SPECIALIZATION(unsigned long long, __builtin_popcountll)
-// TODO: 128b specializations?
+#endif // __builtin_popcountg
 #undef ADD_SPECIALIZATION
 
 } // namespace LIBC_NAMESPACE::cpp
