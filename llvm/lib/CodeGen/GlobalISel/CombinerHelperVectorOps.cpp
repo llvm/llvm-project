@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -98,78 +99,176 @@ bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
     return true;
   }
 
-  // Fold extractVectorElement(freeze(FV), Index) ->
-  //     freeze(extractVectorElement(FV, Index))
-  if (auto *Freeze = dyn_cast<GFreeze>(VectorMI)) {
-    if (MRI.hasOneNonDBGUse(Freeze->getReg(0)) &&
-        isLegalOrBeforeLegalizer({TargetOpcode::G_FREEZE, {DstTy}})) {
-      // For G_FREEZE, the input and the output types are identical.
-      // Moving the freeze from the Vector into the front of the extract
-      // preserves the freeze semantics. We check above that
-      // the Index register is not undef.
-      // Furthermore, the Vector register
-      // becomes easier to analyze. A build vector
-      // could have been hidden behind the freeze.
-      MatchInfo = [=](MachineIRBuilder &B) {
-        auto Extract =
-            B.buildExtractVectorElement(DstTy, Freeze->getSourceReg(), Index);
-        B.buildFreeze(Dst, Extract);
-      };
-      return true;
-    }
-  }
+  return false;
+}
 
-  // Fold extractVectorElement(insertVectorElement(_, Value, Index), Index) ->
-  // Value
-  if (auto *Insert = dyn_cast<GInsertVectorElement>(VectorMI)) {
-    if (Insert->getIndexReg() == Index) {
-      // There is no one-use check. We have to keep the insert.
-      // We only check for equality of the Index registers.
-      // The combine is independent of their constness.
-      // We try to insert Value and then immediately extract
-      // it from the same Index.
-      MatchInfo = [=](MachineIRBuilder &B) {
-        B.buildCopy(Dst, Insert->getElementReg());
-      };
-      return true;
-    }
-  }
+bool CombinerHelper::matchExtractVectorElementWithDifferentIndices(
+    const MachineOperand &MO, BuildFnTy &MatchInfo) {
+  MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
+  GExtractVectorElement *Extract = cast<GExtractVectorElement>(Root);
 
-  // Fold extractVectorElement(insertVectorElement(Vector, _, C1), C2),
-  // where C1 != C2
-  // -> extractVectorElement(Vector, C2)
-  if (IndexC) {
-    if (auto *Insert = dyn_cast<GInsertVectorElement>(VectorMI)) {
-      std::optional<ValueAndVReg> MaybeIndex =
-          getIConstantVRegValWithLookThrough(Insert->getIndexReg(), MRI);
-      if (MaybeIndex && MaybeIndex->Value != *IndexC) {
-        // There is no one-use check. We have to keep the insert.
-        // When both Index registers are constants and not equal,
-        // we can look into the Vector register of the insert.
-        MatchInfo = [=](MachineIRBuilder &B) {
-          B.buildExtractVectorElement(Dst, Insert->getVectorReg(), Index);
-        };
-        return true;
-      }
-    }
-  }
+  //
+  //  %idx1:_(s64) = G_CONSTANT i64 1
+  //  %idx2:_(s64) = G_CONSTANT i64 2
+  //  %insert:_(<2 x s32>) = G_INSERT_VECTOR_ELT_ELT %bv(<2 x s32>),
+  //  %value(s32), %idx2(s64) %extract:_(s32) = G_EXTRACT_VECTOR_ELT %insert(<2
+  //  x s32>), %idx1(s64)
+  //
+  //  -->
+  //
+  //  %insert:_(<2 x s32>) = G_INSERT_VECTOR_ELT_ELT %bv(<2 x s32>),
+  //  %value(s32), %idx2(s64) %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x
+  //  s32>), %idx1(s64)
+  //
+  //
 
-  // Fold extractVectorElement(BuildVector(.., V, ...), IndexOfV) -> V
-  if (IndexC) {
-    if (auto *Build = dyn_cast<GBuildVector>(VectorMI)) {
-      EVT Ty(getMVTForLLT(VectorTy));
-      if (MRI.hasOneNonDBGUse(Build->getReg(0)) ||
-          getTargetLowering().aggressivelyPreferBuildVectorSources(Ty)) {
-        // There is a one-use check. There are more combines on build vectors.
-        // If the Index is constant, then we can extract the element from the
-        // given offset.
-        MatchInfo = [=](MachineIRBuilder &B) {
-          B.buildCopy(Dst, Build->getSourceReg(IndexC->getLimitedValue()));
-        };
-        return true;
-      }
-    }
+  Register Index = Extract->getIndexReg();
+
+  // We try to get the value of the Index register.
+  std::optional<ValueAndVReg> MaybeIndex =
+      getIConstantVRegValWithLookThrough(Index, MRI);
+  std::optional<APInt> IndexC = std::nullopt;
+
+  if (!MaybeIndex)
+    return false;
+  else
+    IndexC = MaybeIndex->Value;
+
+  Register Vector = Extract->getVectorReg();
+
+  GInsertVectorElement *Insert =
+      getOpcodeDef<GInsertVectorElement>(Vector, MRI);
+  if (!Insert)
+    return false;
+
+  Register Dst = Extract->getReg(0);
+
+  std::optional<ValueAndVReg> MaybeInsertIndex =
+      getIConstantVRegValWithLookThrough(Insert->getIndexReg(), MRI);
+
+  if (MaybeInsertIndex && MaybeInsertIndex->Value != *IndexC) {
+    // There is no one-use check. We have to keep the insert. When both Index
+    // registers are constants and not equal, we can look into the Vector
+    // register of the insert.
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildExtractVectorElement(Dst, Insert->getVectorReg(), Index);
+    };
+    return true;
   }
 
   return false;
+}
+
+bool CombinerHelper::matchExtractVectorElementWithFreeze(
+    const MachineOperand &MO, BuildFnTy &MatchInfo) {
+  MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
+  GExtractVectorElement *Extract = cast<GExtractVectorElement>(Root);
+
+  Register Vector = Extract->getVectorReg();
+
+  //
+  //  %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
+  //  %freeze:_(<2 x s32>) = G_FREEZE %bv(<2 x s32>)
+  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %opaque(s64)
+  //
+  //  -->
+  //
+  //  %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
+  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %opaque(s64)
+  //  %freeze:_(s32) = G_FREEZE %extract(s32)
+  //
+  //
+
+  // For G_FREEZE, the input and the output types are identical. Moving the
+  // freeze from the Vector into the front of the extract preserves the freeze
+  // semantics. The result is still freeze'd. Furthermore, the Vector register
+  // becomes easier to analyze. A build vector could have been hidden behind the
+  // freeze.
+
+  // We expect a freeze on the Vector register.
+  GFreeze *Freeze = getOpcodeDef<GFreeze>(Vector, MRI);
+  if (!Freeze)
+    return false;
+
+  Register Dst = Extract->getReg(0);
+  LLT DstTy = MRI.getType(Dst);
+
+  // We first have to check for one-use and legality of the freeze.
+  // The type of the extractVectorElement did not change.
+  if (!MRI.hasOneNonDBGUse(Freeze->getReg(0)) ||
+      !isLegalOrBeforeLegalizer({TargetOpcode::G_FREEZE, {DstTy}}))
+    return false;
+
+  Register Index = Extract->getIndexReg();
+
+  // We move the freeze from the Vector register in front of the
+  // extractVectorElement.
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto Extract =
+        B.buildExtractVectorElement(DstTy, Freeze->getSourceReg(), Index);
+    B.buildFreeze(Dst, Extract);
+  };
+
+  return true;
+}
+
+bool CombinerHelper::matchExtractVectorElementWithBuildVector(
+    const MachineOperand &MO, BuildFnTy &MatchInfo) {
+  MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
+  GExtractVectorElement *Extract = cast<GExtractVectorElement>(Root);
+
+  //
+  //  %zero:_(s64) = G_CONSTANT i64 0
+  //  %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
+  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %zero(s64)
+  //
+  //  -->
+  //
+  //  %extract:_(32) = COPY %arg1(s32)
+  //
+  //
+  //
+  //  %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
+  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %opaque(s64)
+  //
+  //  -->
+  //
+  //  %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
+  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %opaque(s64)
+  //
+
+  Register Vector = Extract->getVectorReg();
+
+  // We expect a buildVector on the Vector register.
+  GBuildVector *Build = getOpcodeDef<GBuildVector>(Vector, MRI);
+  if (!Build)
+    return false;
+
+  LLT VectorTy = MRI.getType(Vector);
+
+  // There is a one-use check. There are more combines on build vectors.
+  EVT Ty(getMVTForLLT(VectorTy));
+  if (!MRI.hasOneNonDBGUse(Build->getReg(0)) ||
+      !getTargetLowering().aggressivelyPreferBuildVectorSources(Ty))
+    return false;
+
+  Register Index = Extract->getIndexReg();
+
+  // If the Index is constant, then we can extract the element from the given
+  // offset.
+  std::optional<ValueAndVReg> MaybeIndex =
+      getIConstantVRegValWithLookThrough(Index, MRI);
+  if (!MaybeIndex)
+    return false;
+
+  // We now know that there is a buildVector def'd on the Vector register and
+  // the index is const. The combine will succeed.
+
+  Register Dst = Extract->getReg(0);
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    B.buildCopy(Dst, Build->getSourceReg(MaybeIndex->Value.getLimitedValue()));
+  };
+
+  return true;
 }
