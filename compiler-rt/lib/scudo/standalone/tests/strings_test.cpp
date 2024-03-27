@@ -136,7 +136,7 @@ TEST(ScudoStringsTest, CapacityIncreaseFails) {
 
   rlimit Limit = {};
   EXPECT_EQ(0, getrlimit(RLIMIT_AS, &Limit));
-  rlimit EmptyLimit = {.rlim_max = Limit.rlim_max};
+  rlimit EmptyLimit = {.rlim_cur = 0, .rlim_max = Limit.rlim_max};
   EXPECT_EQ(0, setrlimit(RLIMIT_AS, &EmptyLimit));
 
   // Test requires that the default length is at least 6 characters.
