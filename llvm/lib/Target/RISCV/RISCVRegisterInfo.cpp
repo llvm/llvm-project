@@ -71,6 +71,9 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
                              : CSR_Interrupt_SaveList;
   }
 
+  bool HasVectorCSR =
+      MF->getFunction().getCallingConv() == CallingConv::RISCV_VectorCall;
+
   switch (Subtarget.getTargetABI()) {
   default:
     llvm_unreachable("Unrecognized ABI");
@@ -79,12 +82,18 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_ILP32E_LP64E_SaveList;
   case RISCVABI::ABI_ILP32:
   case RISCVABI::ABI_LP64:
+    if (HasVectorCSR)
+      return CSR_ILP32_LP64_V_SaveList;
     return CSR_ILP32_LP64_SaveList;
   case RISCVABI::ABI_ILP32F:
   case RISCVABI::ABI_LP64F:
+    if (HasVectorCSR)
+      return CSR_ILP32F_LP64F_V_SaveList;
     return CSR_ILP32F_LP64F_SaveList;
   case RISCVABI::ABI_ILP32D:
   case RISCVABI::ABI_LP64D:
+    if (HasVectorCSR)
+      return CSR_ILP32D_LP64D_V_SaveList;
     return CSR_ILP32D_LP64D_SaveList;
   }
 }
@@ -665,12 +674,18 @@ RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
     return CSR_ILP32E_LP64E_RegMask;
   case RISCVABI::ABI_ILP32:
   case RISCVABI::ABI_LP64:
+    if (CC == CallingConv::RISCV_VectorCall)
+      return CSR_ILP32_LP64_V_RegMask;
     return CSR_ILP32_LP64_RegMask;
   case RISCVABI::ABI_ILP32F:
   case RISCVABI::ABI_LP64F:
+    if (CC == CallingConv::RISCV_VectorCall)
+      return CSR_ILP32F_LP64F_V_RegMask;
     return CSR_ILP32F_LP64F_RegMask;
   case RISCVABI::ABI_ILP32D:
   case RISCVABI::ABI_LP64D:
+    if (CC == CallingConv::RISCV_VectorCall)
+      return CSR_ILP32D_LP64D_V_RegMask;
     return CSR_ILP32D_LP64D_RegMask;
   }
 }
