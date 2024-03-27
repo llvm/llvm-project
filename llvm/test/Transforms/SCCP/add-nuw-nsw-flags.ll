@@ -240,3 +240,32 @@ then:
 else:
   ret i16 0
 }
+
+define i1 @test_add_nuw_sub(i32 %a) {
+; CHECK-LABEL: @test_add_nuw_sub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A:%.*]], 10000
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[ADD]], -5000
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %add = add nuw i32 %a, 10000
+  %sub = add i32 %add, -5000
+  %cond = icmp ult i32 %sub, 5000
+  ret i1 %cond
+}
+
+define i1 @test_add_nsw_sub(i32 %a) {
+; CHECK-LABEL: @test_add_nsw_sub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A:%.*]], 10000
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[ADD]], -5000
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[SUB]], 5000
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+entry:
+  %add = add nsw i32 %a, 10000
+  %sub = add i32 %add, -5000
+  %cond = icmp ult i32 %sub, 5000
+  ret i1 %cond
+}

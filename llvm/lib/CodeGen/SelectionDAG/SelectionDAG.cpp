@@ -2031,7 +2031,8 @@ SDValue SelectionDAG::getStepVector(const SDLoc &DL, EVT ResVT) {
   return getStepVector(DL, ResVT, One);
 }
 
-SDValue SelectionDAG::getStepVector(const SDLoc &DL, EVT ResVT, APInt StepVal) {
+SDValue SelectionDAG::getStepVector(const SDLoc &DL, EVT ResVT,
+                                    const APInt &StepVal) {
   assert(ResVT.getScalarSizeInBits() == StepVal.getBitWidth());
   if (ResVT.isScalableVector())
     return getNode(
@@ -4070,6 +4071,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     if (Op.getResNo() == 0) {
       if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
         Known.Zero.setBitsFrom(MemBits);
+      else if (Op->getOpcode() == ISD::ATOMIC_LOAD &&
+               cast<AtomicSDNode>(Op)->getExtensionType() == ISD::ZEXTLOAD)
+        Known.Zero.setBitsFrom(MemBits);
     }
     break;
   }
@@ -4875,6 +4879,13 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
         return VTBits - Tmp + 1;
       if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
         return VTBits - Tmp;
+      if (Op->getOpcode() == ISD::ATOMIC_LOAD) {
+        ISD::LoadExtType ETy = cast<AtomicSDNode>(Op)->getExtensionType();
+        if (ETy == ISD::SEXTLOAD)
+          return VTBits - Tmp + 1;
+        if (ETy == ISD::ZEXTLOAD)
+          return VTBits - Tmp;
+      }
     }
     break;
   }
@@ -5032,8 +5043,9 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
 
   // If Op can't create undef/poison and none of its operands are undef/poison
   // then Op is never undef/poison.
-  // NOTE: TargetNodes should handle this in themselves in
-  // isGuaranteedNotToBeUndefOrPoisonForTargetNode.
+  // NOTE: TargetNodes can handle this in themselves in
+  // isGuaranteedNotToBeUndefOrPoisonForTargetNode or let
+  // TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode handle it.
   return !canCreateUndefOrPoison(Op, PoisonOnly, /*ConsiderFlags*/ true,
                                  Depth) &&
          all_of(Op->ops(), [&](SDValue V) {
@@ -5350,10 +5362,44 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
     return isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
            isKnownNeverZero(Op.getOperand(0), Depth + 1);
 
-    // TODO for smin/smax: If either operand is known negative/positive
+    // For smin/smax: If either operand is known negative/positive
     // respectively we don't need the other to be known at all.
-  case ISD::SMAX:
-  case ISD::SMIN:
+  case ISD::SMAX: {
+    KnownBits Op1 = computeKnownBits(Op.getOperand(1), Depth + 1);
+    if (Op1.isStrictlyPositive())
+      return true;
+
+    KnownBits Op0 = computeKnownBits(Op.getOperand(0), Depth + 1);
+    if (Op0.isStrictlyPositive())
+      return true;
+
+    if (Op1.isNonZero() && Op0.isNonZero())
+      return true;
+
+    if (KnownBits::smax(Op0, Op1).isNonZero())
+      return true;
+
+    return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
+           isKnownNeverZero(Op.getOperand(0), Depth + 1);
+  }
+  case ISD::SMIN: {
+    KnownBits Op1 = computeKnownBits(Op.getOperand(1), Depth + 1);
+    if (Op1.isNegative())
+      return true;
+
+    KnownBits Op0 = computeKnownBits(Op.getOperand(0), Depth + 1);
+    if (Op0.isNegative())
+      return true;
+
+    if (Op1.isNonZero() && Op0.isNonZero())
+      return true;
+
+    if (KnownBits::smin(Op0, Op1).isNonZero())
+      return true;
+
+    return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
+           isKnownNeverZero(Op.getOperand(0), Depth + 1);
+  }
   case ISD::UMIN:
     return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
            isKnownNeverZero(Op.getOperand(0), Depth + 1);
@@ -6039,30 +6085,14 @@ static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
     APInt C2Ext = C2.zext(FullWidth);
     return (C1Ext * C2Ext).extractBits(C1.getBitWidth(), C1.getBitWidth());
   }
-  case ISD::AVGFLOORS: {
-    unsigned FullWidth = C1.getBitWidth() + 1;
-    APInt C1Ext = C1.sext(FullWidth);
-    APInt C2Ext = C2.sext(FullWidth);
-    return (C1Ext + C2Ext).extractBits(C1.getBitWidth(), 1);
-  }
-  case ISD::AVGFLOORU: {
-    unsigned FullWidth = C1.getBitWidth() + 1;
-    APInt C1Ext = C1.zext(FullWidth);
-    APInt C2Ext = C2.zext(FullWidth);
-    return (C1Ext + C2Ext).extractBits(C1.getBitWidth(), 1);
-  }
-  case ISD::AVGCEILS: {
-    unsigned FullWidth = C1.getBitWidth() + 1;
-    APInt C1Ext = C1.sext(FullWidth);
-    APInt C2Ext = C2.sext(FullWidth);
-    return (C1Ext + C2Ext + 1).extractBits(C1.getBitWidth(), 1);
-  }
-  case ISD::AVGCEILU: {
-    unsigned FullWidth = C1.getBitWidth() + 1;
-    APInt C1Ext = C1.zext(FullWidth);
-    APInt C2Ext = C2.zext(FullWidth);
-    return (C1Ext + C2Ext + 1).extractBits(C1.getBitWidth(), 1);
-  }
+  case ISD::AVGFLOORS:
+    return APIntOps::avgFloorS(C1, C2);
+  case ISD::AVGFLOORU:
+    return APIntOps::avgFloorU(C1, C2);
+  case ISD::AVGCEILS:
+    return APIntOps::avgCeilS(C1, C2);
+  case ISD::AVGCEILU:
+    return APIntOps::avgCeilU(C1, C2);
   case ISD::ABDS:
     return APIntOps::abds(C1, C2);
   case ISD::ABDU:
@@ -8408,11 +8438,10 @@ SDValue SelectionDAG::getMergeValues(ArrayRef<SDValue> Ops, const SDLoc &dl) {
 SDValue SelectionDAG::getMemIntrinsicNode(
     unsigned Opcode, const SDLoc &dl, SDVTList VTList, ArrayRef<SDValue> Ops,
     EVT MemVT, MachinePointerInfo PtrInfo, Align Alignment,
-    MachineMemOperand::Flags Flags, uint64_t Size, const AAMDNodes &AAInfo) {
-  if (!Size && MemVT.isScalableVector())
-    Size = MemoryLocation::UnknownSize;
-  else if (!Size)
-    Size = MemVT.getStoreSize();
+    MachineMemOperand::Flags Flags, LocationSize Size,
+    const AAMDNodes &AAInfo) {
+  if (Size.hasValue() && !Size.getValue())
+    Size = LocationSize::precise(MemVT.getStoreSize());
 
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO =
@@ -8574,7 +8603,7 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
   if (PtrInfo.V.isNull())
     PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr, Offset);
 
-  uint64_t Size = MemoryLocation::getSizeOrUnknown(MemVT.getStoreSize());
+  LocationSize Size = LocationSize::precise(MemVT.getStoreSize());
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(PtrInfo, MMOFlags, Size,
                                                    Alignment, AAInfo, Ranges);
@@ -8695,8 +8724,7 @@ SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
     PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr);
 
   MachineFunction &MF = getMachineFunction();
-  uint64_t Size =
-      MemoryLocation::getSizeOrUnknown(Val.getValueType().getStoreSize());
+  LocationSize Size = LocationSize::precise(Val.getValueType().getStoreSize());
   MachineMemOperand *MMO =
       MF.getMachineMemOperand(PtrInfo, MMOFlags, Size, Alignment, AAInfo);
   return getStore(Chain, dl, Val, Ptr, MMO);
@@ -8749,8 +8777,8 @@ SDValue SelectionDAG::getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
 
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      PtrInfo, MMOFlags, MemoryLocation::getSizeOrUnknown(SVT.getStoreSize()),
-      Alignment, AAInfo);
+      PtrInfo, MMOFlags, LocationSize::precise(SVT.getStoreSize()), Alignment,
+      AAInfo);
   return getTruncStore(Chain, dl, Val, Ptr, SVT, MMO);
 }
 
@@ -8844,7 +8872,7 @@ SDValue SelectionDAG::getLoadVP(
   if (PtrInfo.V.isNull())
     PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr, Offset);
 
-  uint64_t Size = MemoryLocation::getSizeOrUnknown(MemVT.getStoreSize());
+  LocationSize Size = LocationSize::precise(MemVT.getStoreSize());
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(PtrInfo, MMOFlags, Size,
                                                    Alignment, AAInfo, Ranges);
@@ -8997,8 +9025,8 @@ SDValue SelectionDAG::getTruncStoreVP(SDValue Chain, const SDLoc &dl,
 
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      PtrInfo, MMOFlags, MemoryLocation::getSizeOrUnknown(SVT.getStoreSize()),
-      Alignment, AAInfo);
+      PtrInfo, MMOFlags, LocationSize::precise(SVT.getStoreSize()), Alignment,
+      AAInfo);
   return getTruncStoreVP(Chain, dl, Val, Ptr, Mask, EVL, SVT, MMO,
                          IsCompressing);
 }
@@ -9599,6 +9627,10 @@ SDValue SelectionDAG::simplifyShift(SDValue X, SDValue Y) {
   };
   if (ISD::matchUnaryPredicate(Y, isShiftTooBig, true))
     return getUNDEF(X.getValueType());
+
+  // shift i1/vXi1 X, Y --> X (any non-zero shift amount is undefined).
+  if (X.getValueType().getScalarType() == MVT::i1)
+    return X;
 
   return SDValue();
 }
@@ -11733,9 +11765,10 @@ MemSDNode::MemSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl,
   // We check here that the size of the memory operand fits within the size of
   // the MMO. This is because the MMO might indicate only a possible address
   // range instead of specifying the affected memory addresses precisely.
-  // TODO: Make MachineMemOperands aware of scalable vectors.
-  assert(memvt.getStoreSize().getKnownMinValue() <= MMO->getSize() &&
-         "Size mismatch!");
+  assert(
+      (!MMO->getType().isValid() ||
+       TypeSize::isKnownLE(memvt.getStoreSize(), MMO->getSize().getValue())) &&
+      "Size mismatch!");
 }
 
 /// Profile - Gather unique data for the node.

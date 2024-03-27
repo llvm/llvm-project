@@ -90,6 +90,7 @@ macro(add_scudo_unittest testname)
 endmacro()
 
 set(SCUDO_UNIT_TEST_SOURCES
+  allocator_config_test.cpp
   atomic_test.cpp
   bytemap_test.cpp
   checksum_test.cpp

@@ -233,6 +233,7 @@ struct CommonConfig {
   NameMatcher UnneededSymbolsToRemove;
   NameMatcher SymbolsToWeaken;
   NameMatcher SymbolsToKeepGlobal;
+  NameMatcher SymbolsToSkip;
 
   // Map options
   StringMap<SectionRename> SectionsToRename;
@@ -262,7 +263,7 @@ struct CommonConfig {
 
   DebugCompressionType CompressionType = DebugCompressionType::None;
 
-  llvm::SmallVector<std::pair<NameMatcher, llvm::DebugCompressionType>, 0>
+  SmallVector<std::pair<NameMatcher, llvm::DebugCompressionType>, 0>
       compressSections;
 };
 

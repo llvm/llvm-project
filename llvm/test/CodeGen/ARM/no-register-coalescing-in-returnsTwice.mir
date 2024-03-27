@@ -86,6 +86,8 @@
 ---
 name:            main
 exposesReturnsTwice: true
+frameInfo:
+  adjustsStack:    true
 stack:
   - { id: 0, name: P0, size: 80, alignment: 8, local-offset: -80 }
   - { id: 1, name: jb1, size: 160, alignment: 8, local-offset: -240 }

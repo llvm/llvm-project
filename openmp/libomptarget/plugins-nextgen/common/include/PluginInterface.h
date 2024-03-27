@@ -289,7 +289,7 @@ struct GenericKernelTy {
 
   /// Return a device pointer to a new kernel launch environment.
   Expected<KernelLaunchEnvironmentTy *>
-  getKernelLaunchEnvironment(GenericDeviceTy &GenericDevice,
+  getKernelLaunchEnvironment(GenericDeviceTy &GenericDevice, uint32_t Version,
                              AsyncInfoWrapperTy &AsyncInfo) const;
 
   /// Indicate whether an execution mode is valid.
@@ -610,7 +610,7 @@ public:
 struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Construct a device with its device id within the plugin, the number of
   /// devices in the plugin and the grid values for that kind of device.
-  GenericDeviceTy(int32_t DeviceId, int32_t NumDevices,
+  GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
                   const llvm::omp::GV &GridValues);
 
   /// Get the device identifier within the corresponding plugin. Notice that
@@ -860,6 +860,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Allocate and construct a kernel object.
   virtual Expected<GenericKernelTy &> constructKernel(const char *Name) = 0;
 
+  /// Reference to the underlying plugin that created this device.
+  GenericPluginTy &Plugin;
+
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
@@ -976,6 +979,14 @@ struct GenericPluginTy {
   Error deinit();
   virtual Error deinitImpl() = 0;
 
+  /// Create a new device for the underlying plugin.
+  virtual GenericDeviceTy *createDevice(GenericPluginTy &Plugin,
+                                        int32_t DeviceID,
+                                        int32_t NumDevices) = 0;
+
+  /// Create a new global handler for the underlying plugin.
+  virtual GenericGlobalHandlerTy *createGlobalHandler() = 0;
+
   /// Get the reference to the device with a certain device id.
   GenericDeviceTy &getDevice(int32_t DeviceId) {
     assert(isValidDeviceId(DeviceId) && "Invalid device id");
@@ -1085,29 +1096,53 @@ private:
   RPCServerTy *RPCServer;
 };
 
+namespace Plugin {
+/// Create a success error. This is the same as calling Error::success(), but
+/// it is recommended to use this one for consistency with Plugin::error() and
+/// Plugin::check().
+static Error success() { return Error::success(); }
+
+/// Create a string error.
+template <typename... ArgsTy>
+static Error error(const char *ErrFmt, ArgsTy... Args) {
+  return createStringError(inconvertibleErrorCode(), ErrFmt, Args...);
+}
+
+/// Check the plugin-specific error code and return an error or success
+/// accordingly. In case of an error, create a string error with the error
+/// description. The ErrFmt should follow the format:
+///     "Error in <function name>[<optional info>]: %s"
+/// The last format specifier "%s" is mandatory and will be used to place the
+/// error code's description. Notice this function should be only called from
+/// the plugin-specific code.
+/// TODO: Refactor this, must be defined individually by each plugin.
+template <typename... ArgsTy>
+static Error check(int32_t ErrorCode, const char *ErrFmt, ArgsTy... Args);
+} // namespace Plugin
+
 /// Class for simplifying the getter operation of the plugin. Anywhere on the
 /// code, the current plugin can be retrieved by Plugin::get(). The class also
 /// declares functions to create plugin-specific object instances. The check(),
 /// createPlugin(), createDevice() and createGlobalHandler() functions should be
 /// defined by each plugin implementation.
-class Plugin {
+class PluginTy {
   // Reference to the plugin instance.
   static GenericPluginTy *SpecificPlugin;
 
-  Plugin() {
+  PluginTy() {
     if (auto Err = init())
       REPORT("Failed to initialize plugin: %s\n",
              toString(std::move(Err)).data());
   }
 
-  ~Plugin() {
+  ~PluginTy() {
     if (auto Err = deinit())
       REPORT("Failed to deinitialize plugin: %s\n",
              toString(std::move(Err)).data());
   }
 
-  Plugin(const Plugin &) = delete;
-  void operator=(const Plugin &) = delete;
+  PluginTy(const PluginTy &) = delete;
+  void operator=(const PluginTy &) = delete;
 
   /// Create and intialize the plugin instance.
   static Error init() {
@@ -1158,7 +1193,7 @@ public:
     // This static variable will initialize the underlying plugin instance in
     // case there was no previous explicit initialization. The initialization is
     // thread safe.
-    static Plugin Plugin;
+    static PluginTy Plugin;
 
     assert(SpecificPlugin && "Plugin is not active");
     return *SpecificPlugin;
@@ -1170,35 +1205,8 @@ public:
   /// Indicate whether the plugin is active.
   static bool isActive() { return SpecificPlugin != nullptr; }
 
-  /// Create a success error. This is the same as calling Error::success(), but
-  /// it is recommended to use this one for consistency with Plugin::error() and
-  /// Plugin::check().
-  static Error success() { return Error::success(); }
-
-  /// Create a string error.
-  template <typename... ArgsTy>
-  static Error error(const char *ErrFmt, ArgsTy... Args) {
-    return createStringError(inconvertibleErrorCode(), ErrFmt, Args...);
-  }
-
-  /// Check the plugin-specific error code and return an error or success
-  /// accordingly. In case of an error, create a string error with the error
-  /// description. The ErrFmt should follow the format:
-  ///     "Error in <function name>[<optional info>]: %s"
-  /// The last format specifier "%s" is mandatory and will be used to place the
-  /// error code's description. Notice this function should be only called from
-  /// the plugin-specific code.
-  template <typename... ArgsTy>
-  static Error check(int32_t ErrorCode, const char *ErrFmt, ArgsTy... Args);
-
   /// Create a plugin instance.
   static GenericPluginTy *createPlugin();
-
-  /// Create a plugin-specific device.
-  static GenericDeviceTy *createDevice(int32_t DeviceId, int32_t NumDevices);
-
-  /// Create a plugin-specific global handler.
-  static GenericGlobalHandlerTy *createGlobalHandler();
 };
 
 /// Auxiliary interface class for GenericDeviceResourceManagerTy. This class
@@ -1393,7 +1401,7 @@ protected:
 };
 
 /// A static check on whether or not we support RPC in libomptarget.
-const bool libomptargetSupportsRPC();
+bool libomptargetSupportsRPC();
 
 } // namespace plugin
 } // namespace target

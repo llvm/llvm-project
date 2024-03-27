@@ -10,6 +10,8 @@
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -69,6 +71,10 @@ void ControlFlowDialect::initialize() {
       >();
   addInterfaces<ControlFlowInlinerInterface>();
   declarePromisedInterface<ControlFlowDialect, ConvertToLLVMPatternInterface>();
+  declarePromisedInterfaces<bufferization::BufferizableOpInterface, BranchOp,
+                            CondBranchOp>();
+  declarePromisedInterface<CondBranchOp,
+                           bufferization::BufferDeallocationOpInterface>();
 }
 
 //===----------------------------------------------------------------------===//

@@ -263,6 +263,7 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
   # -no_warn_duplicate_libraries, but only in versions of the linker that
   # support that flag.
   if(NOT LLVM_USE_LINKER AND ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    include(CheckLinkerFlag)
     check_linker_flag(C "-Wl,-no_warn_duplicate_libraries" LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES)
   else()
     set(LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES OFF CACHE INTERNAL "")
@@ -1636,8 +1637,14 @@ function(add_unittest test_suite test_name)
   # The runtime benefits of LTO don't outweight the compile time costs for tests.
   if(LLVM_ENABLE_LTO)
     if((UNIX OR MINGW) AND LINKER_IS_LLD)
-      set_property(TARGET ${test_name} APPEND_STRING PROPERTY
-                    LINK_FLAGS " -Wl,--lto-O0")
+      if(LLVM_ENABLE_FATLTO AND NOT APPLE)
+        # When using FatLTO, just use relocatable linking.
+        set_property(TARGET ${test_name} APPEND_STRING PROPERTY
+                      LINK_FLAGS " -Wl,--no-fat-lto-objects")
+      else()
+        set_property(TARGET ${test_name} APPEND_STRING PROPERTY
+                      LINK_FLAGS " -Wl,--lto-O0")
+      endif()
     elseif(LINKER_IS_LLD_LINK)
       set_property(TARGET ${test_name} APPEND_STRING PROPERTY
                     LINK_FLAGS " /opt:lldlto=0")
@@ -2089,7 +2096,7 @@ function(add_lit_testsuites project directory)
 endfunction()
 
 function(llvm_install_library_symlink name dest type)
-  cmake_parse_arguments(ARG "" "COMPONENT;SOVERSION" "" ${ARGN})
+  cmake_parse_arguments(ARG "FULL_DEST" "COMPONENT" "" ${ARGN})
   foreach(path ${CMAKE_MODULE_PATH})
     if(EXISTS ${path}/LLVMInstallSymlink.cmake)
       set(INSTALL_SYMLINK ${path}/LLVMInstallSymlink.cmake)
@@ -2103,8 +2110,8 @@ function(llvm_install_library_symlink name dest type)
   endif()
 
   set(full_name ${CMAKE_${type}_LIBRARY_PREFIX}${name}${CMAKE_${type}_LIBRARY_SUFFIX})
-  if (ARG_SOVERSION)
-    set(full_dest ${CMAKE_${type}_LIBRARY_PREFIX}${dest}${CMAKE_${type}_LIBRARY_SUFFIX}.${ARG_SOVERSION})
+  if (ARG_FULL_DEST)
+    set(full_dest ${dest})
   else()
     set(full_dest ${CMAKE_${type}_LIBRARY_PREFIX}${dest}${CMAKE_${type}_LIBRARY_SUFFIX})
   endif()

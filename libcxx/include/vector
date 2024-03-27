@@ -346,7 +346,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__split_buffer>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_constructible.h>
-#include <__type_traits/is_nothrow_move_assignable.h>
+#include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/noexcept_move_assign_container.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/exception_guard.h>
@@ -2990,6 +2990,7 @@ _LIBCPP_POP_MACROS
 #  include <concepts>
 #  include <cstdlib>
 #  include <locale>
+#  include <tuple>
 #  include <type_traits>
 #  include <typeinfo>
 #  include <utility>

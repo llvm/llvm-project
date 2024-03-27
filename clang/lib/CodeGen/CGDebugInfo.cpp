@@ -3239,7 +3239,7 @@ llvm::DIType *CGDebugInfo::CreateType(const ArrayType *Ty, llvm::DIFile *Unit) {
     //   };
     int64_t Count = -1; // Count == -1 is an unbounded array.
     if (const auto *CAT = dyn_cast<ConstantArrayType>(Ty))
-      Count = CAT->getSize().getZExtValue();
+      Count = CAT->getZExtSize();
     else if (const auto *VAT = dyn_cast<VariableArrayType>(Ty)) {
       if (Expr *Size = VAT->getSizeExpr()) {
         Expr::EvalResult Result;
@@ -3463,6 +3463,9 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
     case Type::BTFTagAttributed:
       T = cast<BTFTagAttributedType>(T)->getWrappedType();
       break;
+    case Type::CountAttributed:
+      T = cast<CountAttributedType>(T)->desugar();
+      break;
     case Type::Elaborated:
       T = cast<ElaboratedType>(T)->getNamedType();
       break;
@@ -3658,6 +3661,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::TemplateSpecialization:
     return CreateType(cast<TemplateSpecializationType>(Ty), Unit);
 
+  case Type::CountAttributed:
   case Type::Auto:
   case Type::Attributed:
   case Type::BTFTagAttributed:

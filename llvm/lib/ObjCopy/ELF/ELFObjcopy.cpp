@@ -225,6 +225,8 @@ Error Object::compressOrDecompressSections(const CommonConfig &Config) {
     for (auto &[Matcher, T] : Config.compressSections)
       if (Matcher.matches(Sec.Name))
         CType = T;
+    // Handle --compress-debug-sections and --decompress-debug-sections, which
+    // apply to non-ALLOC debug sections.
     if (!(Sec.Flags & SHF_ALLOC) && StringRef(Sec.Name).starts_with(".debug")) {
       if (Config.CompressionType != DebugCompressionType::None)
         CType = Config.CompressionType;
@@ -307,6 +309,9 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
     return Error::success();
 
   Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
+    if (Config.SymbolsToSkip.matches(Sym.Name))
+      return;
+
     // Common and undefined symbols don't make sense as local symbols, and can
     // even cause crashes if we localize those, so skip them.
     if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&

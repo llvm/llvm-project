@@ -2367,3 +2367,26 @@ func.func @dim_of_reshape_undominated(%arg0: tensor<*xf32>, %arg1: tensor<?xinde
     %dim = tensor.dim %reshape, %0 : tensor<*xf32>
     return %dim : index
   }
+
+// -----
+
+// Test case: This test fails to fold because the index of tensor.dim is out_of_bounds
+// CHECK-LABEL: func @dim_out_of_bounds(
+//       CHECK: %[[IDX:.*]] = index.constant 28
+//  CHECK-NEXT: bufferization.alloc_tensor
+//  CHECK-NEXT: %[[DIM:.*]] = tensor.dim %{{.*}}, %[[IDX]]
+//  CHECK-NEXT: memref.alloc
+//  CHECK-NEXT: memref.cast
+//  CHECK-NEXT: affine.vector_load %{{.*}}[{{.*}}, {{.*}}, symbol(%[[DIM]])]
+//  CHECK-NEXT: return
+func.func @dim_out_of_bounds() -> vector<7xi32> {
+    %c1 = arith.constant 1 : index
+    %idx28 = index.constant 28
+    %c29 = arith.constant 29 : index
+    %3 = bufferization.alloc_tensor(%c29) : tensor<?xi16>
+    %dim = tensor.dim %3, %idx28 : tensor<?xi16>
+    %alloc_21 = memref.alloc(%c29) : memref<?x26x2xi32>
+    %16 = affine.vector_load %alloc_21[%c1, %c1, %dim] : memref<?x26x2xi32>, vector<7xi32>
+    return %16 : vector<7xi32>
+}
+

@@ -4,8 +4,8 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --decompress-debug-sections %t %t.de
 # RUN: llvm-readelf -S %t.de | FileCheck %s
-# RUN: llvm-objcopy --compress-sections '*nonalloc=none' --compress-sections .debugx=none %t %t.de
-# RUN: llvm-readelf -S %t.de | FileCheck %s
+# RUN: llvm-objcopy --compress-sections '*nonalloc=none' --compress-sections .debugx=none %t %t.1.de
+# RUN: cmp %t.de %t.1.de
 
 # CHECK:        Name              Type            Address          Off      Size     ES Flg Lk Inf Al
 # CHECK:        .debug_alloc      PROGBITS        0000000000000000 [[#%x,]] [[#%x,]] 00  AC  0   0  0

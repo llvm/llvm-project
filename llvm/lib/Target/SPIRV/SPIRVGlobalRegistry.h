@@ -56,6 +56,9 @@ class SPIRVGlobalRegistry {
   // Number of bits pointers and size_t integers require.
   const unsigned PointerSize;
 
+  // Holds the maximum ID we have in the module.
+  unsigned Bound;
+
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVType *createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
                              SPIRV::AccessQualifier::AccessQualifier AQ =
@@ -91,6 +94,14 @@ public:
     DT.add(Arg, MF, R);
   }
 
+  void add(const MachineInstr *MI, MachineFunction *MF, Register R) {
+    DT.add(MI, MF, R);
+  }
+
+  Register find(const MachineInstr *MI, MachineFunction *MF) {
+    return DT.find(MI, MF);
+  }
+
   Register find(const Constant *C, MachineFunction *MF) {
     return DT.find(C, MF);
   }
@@ -107,6 +118,9 @@ public:
                       MachineModuleInfo *MMI = nullptr) {
     DT.buildDepsGraph(Graph, MMI);
   }
+
+  void setBound(unsigned V) { Bound = V; }
+  unsigned getBound() { return Bound; }
 
   // Map a machine operand that represents a use of a function via function
   // pointer to a machine operand that represents the function definition.
@@ -165,6 +179,9 @@ public:
     assert(Res != SPIRVToLLVMType.end());
     return Res->second;
   }
+
+  // Return a pointee's type op code, or 0 otherwise.
+  unsigned getPointeeTypeOp(Register PtrReg);
 
   // Either generate a new OpTypeXXX instruction or return an existing one
   // corresponding to the given string containing the name of the builtin type.
