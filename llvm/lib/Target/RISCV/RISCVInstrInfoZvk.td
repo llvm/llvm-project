@@ -82,7 +82,9 @@ class PALUVs2NoVm<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, string opcodest
 
 multiclass VAES_MV_V_S<bits<6> funct6_vv, bits<6> funct6_vs, bits<5> vs1,
                          RISCVVFormat opv, string opcodestr> {
+  let RVVConstraint = NoConstraint in
   def NAME # _VV : PALUVs2NoVm<funct6_vv, vs1, opv, opcodestr # ".vv">;
+  let RVVConstraint = VS2Constraint in
   def NAME # _VS : PALUVs2NoVm<funct6_vs, vs1, opv, opcodestr # ".vs">;
 }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
@@ -118,28 +120,30 @@ let Predicates = [HasStdExtZvkg], RVVConstraint = NoConstraint in {
   def VGMUL_VV : PALUVs2NoVm<0b101000, 0b10001, OPMVV, "vgmul.vv">;
 } // Predicates = [HasStdExtZvkg]
 
-let Predicates = [HasStdExtZvknhaOrZvknhb], RVVConstraint = NoConstraint in {
+let Predicates = [HasStdExtZvknhaOrZvknhb], RVVConstraint = Sha2Constraint in {
   def VSHA2CH_VV : PALUVVNoVm<0b101110, OPMVV, "vsha2ch.vv">;
   def VSHA2CL_VV : PALUVVNoVm<0b101111, OPMVV, "vsha2cl.vv">;
   def VSHA2MS_VV : PALUVVNoVm<0b101101, OPMVV, "vsha2ms.vv">;
 } // Predicates = [HasStdExtZvknhaOrZvknhb]
 
-let Predicates = [HasStdExtZvkned], RVVConstraint = NoConstraint in {
+let Predicates = [HasStdExtZvkned]in {
   defm VAESDF     : VAES_MV_V_S<0b101000, 0b101001, 0b00001, OPMVV, "vaesdf">;
   defm VAESDM     : VAES_MV_V_S<0b101000, 0b101001, 0b00000, OPMVV, "vaesdm">;
   defm VAESEF     : VAES_MV_V_S<0b101000, 0b101001, 0b00011, OPMVV, "vaesef">;
   defm VAESEM     : VAES_MV_V_S<0b101000, 0b101001, 0b00010, OPMVV, "vaesem">;
   def  VAESKF1_VI : PALUVINoVm<0b100010, "vaeskf1.vi", uimm5>;
   def  VAESKF2_VI : PALUVINoVm<0b101010, "vaeskf2.vi", uimm5>;
+  let RVVConstraint = VS2Constraint in
   def  VAESZ_VS   : PALUVs2NoVm<0b101001, 0b00111, OPMVV, "vaesz.vs">;
 } // Predicates = [HasStdExtZvkned]
 
-let Predicates = [HasStdExtZvksed], RVVConstraint = NoConstraint in {
+let Predicates = [HasStdExtZvksed] in {
+  let RVVConstraint = NoConstraint in
   def  VSM4K_VI : PALUVINoVm<0b100001, "vsm4k.vi", uimm5>;
   defm VSM4R    : VAES_MV_V_S<0b101000, 0b101001, 0b10000, OPMVV, "vsm4r">;
 } // Predicates = [HasStdExtZvksed]
 
-let Predicates = [HasStdExtZvksh], RVVConstraint = NoConstraint in {
+let Predicates = [HasStdExtZvksh], RVVConstraint = VS2Constraint in {
   def VSM3C_VI  : PALUVINoVm<0b101011, "vsm3c.vi", uimm5>;
   def VSM3ME_VV : PALUVVNoVm<0b100000, OPMVV, "vsm3me.vv">;
 } // Predicates = [HasStdExtZvksh]

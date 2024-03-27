@@ -909,23 +909,33 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   if (!IsTypeLegal)
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
+  std::pair<InstructionCost, MVT> DstLT = getTypeLegalizationCost(Dst);
+
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
-  // FIXME: Need to consider vsetvli and lmul.
   int PowDiff = (int)Log2_32(Dst->getScalarSizeInBits()) -
                 (int)Log2_32(Src->getScalarSizeInBits());
   switch (ISD) {
   case ISD::SIGN_EXTEND:
-  case ISD::ZERO_EXTEND:
-    if (Src->getScalarSizeInBits() == 1) {
+  case ISD::ZERO_EXTEND: {
+    const unsigned SrcEltSize = Src->getScalarSizeInBits();
+    if (SrcEltSize == 1) {
       // We do not use vsext/vzext to extend from mask vector.
       // Instead we use the following instructions to extend from mask vector:
       // vmv.v.i v8, 0
       // vmerge.vim v8, v8, -1, v0
-      return 2;
+      return getRISCVInstructionCost({RISCV::VMV_V_I, RISCV::VMERGE_VIM},
+                                     DstLT.second, CostKind);
     }
-    return 1;
+    if ((PowDiff < 1) || (PowDiff > 3))
+      return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+    unsigned SExtOp[] = {RISCV::VSEXT_VF2, RISCV::VSEXT_VF4, RISCV::VSEXT_VF8};
+    unsigned ZExtOp[] = {RISCV::VZEXT_VF2, RISCV::VZEXT_VF4, RISCV::VZEXT_VF8};
+    unsigned Op =
+        (ISD == ISD::SIGN_EXTEND) ? SExtOp[PowDiff - 1] : ZExtOp[PowDiff - 1];
+    return getRISCVInstructionCost(Op, DstLT.second, CostKind);
+  }
   case ISD::TRUNCATE:
     if (Dst->getScalarSizeInBits() == 1) {
       // We do not use several vncvt to truncate to mask vector. So we could
@@ -1675,4 +1685,18 @@ bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy, Align Alignment) {
   if (!isLegalMaskedLoadStore(DataTy, Alignment))
     return false;
   return true;
+}
+
+bool RISCVTTIImpl::areInlineCompatible(const Function *Caller,
+                                       const Function *Callee) const {
+  const TargetMachine &TM = getTLI()->getTargetMachine();
+
+  const FeatureBitset &CallerBits =
+      TM.getSubtargetImpl(*Caller)->getFeatureBits();
+  const FeatureBitset &CalleeBits =
+      TM.getSubtargetImpl(*Callee)->getFeatureBits();
+
+  // Inline a callee if its target-features are a subset of the callers
+  // target-features.
+  return (CallerBits & CalleeBits) == CalleeBits;
 }
