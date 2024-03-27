@@ -1418,7 +1418,12 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
         StoreBasePtr, *StoreAlign, LoadBasePtr, *LoadAlign, NumBytes, StoreSize,
         AATags.TBAA, AATags.TBAAStruct, AATags.Scope, AATags.NoAlias);
   }
-  NewCall->setDebugLoc(TheStore->getDebugLoc());
+  
+  // As the `NewCall` is created in the preheader, it is out of the loop.
+  // The `TheStore` is in the loop body, so set the debug location of the
+  // `TheStore` to the `NewCall` will make debugging confusing.
+  // As a result, we need to drop the debug location of the `NewCall`.
+  NewCall->dropLocation();
 
   if (MSSAU) {
     MemoryAccess *NewMemAcc = MSSAU->createMemoryAccessInBB(
@@ -1434,7 +1439,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
 
   ORE.emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "ProcessLoopStoreOfLoopLoad",
-                              NewCall->getDebugLoc(), Preheader)
+                              TheStore->getDebugLoc(), Preheader)
            << "Formed a call to "
            << ore::NV("NewFunction", NewCall->getCalledFunction())
            << "() intrinsic from " << ore::NV("Inst", InstRemark)
