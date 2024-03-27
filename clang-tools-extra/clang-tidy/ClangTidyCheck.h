@@ -408,21 +408,42 @@ public:
     /// Stores an option with the check-local name \p LocalName with
     /// integer value \p Value to \p Options.
     template <typename T>
-    std::enable_if_t<std::is_integral_v<T>>
+    std::enable_if_t<std::is_integral_v<T> && std::is_signed<T>::value>
     store(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
           T Value) const {
       storeInt(Options, LocalName, Value);
     }
 
     /// Stores an option with the check-local name \p LocalName with
+    /// unsigned integer value \p Value to \p Options.
+    template <typename T>
+    std::enable_if_t<std::is_unsigned<T>::value>
+    store(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
+          T Value) const {
+      storeUnsigned(Options, LocalName, Value);
+    }
+
+    /// Stores an option with the check-local name \p LocalName with
     /// integer value \p Value to \p Options. If the value is empty
     /// stores ``
     template <typename T>
-    std::enable_if_t<std::is_integral_v<T>>
+    std::enable_if_t<std::is_integral_v<T> && std::is_signed<T>::value>
     store(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
           std::optional<T> Value) const {
       if (Value)
         storeInt(Options, LocalName, *Value);
+      else
+        store(Options, LocalName, "none");
+    }
+
+    /// Stores an option with the check-local name \p LocalName with
+    /// unsigned integer value \p Value to \p Options.
+    template <typename T>
+    std::enable_if_t<std::is_unsigned<T>::value>
+    store(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
+          std::optional<T> Value) const {
+      if (Value)
+        storeUnsigned(Options, LocalName, *Value);
       else
         store(Options, LocalName, "none");
     }
@@ -470,6 +491,8 @@ public:
     void storeInt(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
                   int64_t Value) const;
 
+    void storeUnsigned(ClangTidyOptions::OptionMap &Options,
+                       StringRef LocalName, int64_t Value) const;
 
     std::string NamePrefix;
     const ClangTidyOptions::OptionMap &CheckOptions;
