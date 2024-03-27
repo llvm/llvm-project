@@ -905,6 +905,15 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
     }
   }
 
+  // (X * 0.0) * constant => X * 0.0
+  if (match(Op0, m_FMul(m_Value(X), m_AnyZeroFP())) &&
+      match(Op1, m_Constant())) {
+    Instruction *FI = cast<Instruction>(Op0);
+    replaceOperand(*FI, 0, Op1);
+    replaceOperand(I, 1, Op0);
+    return replaceOperand(I, 0, X);
+  }
+
   // Simplify FMUL recurrences starting with 0.0 to 0.0 if nnan and nsz are set.
   // Given a phi node with entry value as 0 and it used in fmul operation,
   // we can replace fmul with 0 safely and eleminate loop operation.

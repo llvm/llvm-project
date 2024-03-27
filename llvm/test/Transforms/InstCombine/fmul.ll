@@ -1407,3 +1407,63 @@ entry:
   %ret = fmul <3 x float> %a, <float -0.0, float 0.0, float poison>
   ret <3 x float> %ret
 }
+
+define <2 x float> @mul_pos_zero_neg_value_vec(<2 x float> %a) {
+; CHECK-LABEL: @mul_pos_zero_neg_value_vec(
+; CHECK-NEXT:    [[F2:%.*]] = fmul <2 x float> [[A:%.*]], <float -0.000000e+00, float -0.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[F2]]
+;
+  %f1 = fmul <2 x float> %a, <float 0.000000, float 0.000000>
+  %f2 = fmul <2 x float> %f1, <float -1.000000, float -1.000000>
+  ret <2 x float> %f2
+}
+
+define <2 x float> @mul_pos_zero_mixed_neg_value_vec(<2 x float> %a) {
+; CHECK-LABEL: @mul_pos_zero_mixed_neg_value_vec(
+; CHECK-NEXT:    [[F2:%.*]] = fmul <2 x float> [[A:%.*]], <float 0.000000e+00, float -0.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[F2]]
+;
+  %f1 = fmul <2 x float> %a, <float 0.000000, float 0.000000>
+  %f2 = fmul <2 x float> %f1, <float 1.000000, float -1.000000>
+  ret <2 x float> %f2
+}
+
+define <2 x float> @mul_neg_zero_mixed_value_vec(<2 x float> %a) {
+; CHECK-LABEL: @mul_neg_zero_mixed_value_vec(
+; CHECK-NEXT:    [[F2:%.*]] = fmul <2 x float> [[A:%.*]], <float -0.000000e+00, float -0.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[F2]]
+;
+  %f1 = fmul <2 x float> %a, <float -0.000000, float 0.000000>
+  %f2 = fmul <2 x float> %f1, <float 1.000000, float -1.000000>
+  ret <2 x float> %f2
+}
+
+define float @mul_pos_zero_neg_value(float %a) {
+; CHECK-LABEL: @mul_pos_zero_neg_value(
+; CHECK-NEXT:    [[F2:%.*]] = fmul float [[A:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[F2]]
+;
+  %f1 = fmul float %a, 0.000000
+  %f2 = fmul float %f1, -1.000000
+  ret float %f2
+}
+
+define float @mul_neg_zero_pos_value(float %a) {
+; CHECK-LABEL: @mul_neg_zero_pos_value(
+; CHECK-NEXT:    [[F1:%.*]] = fmul float [[A:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[F1]]
+;
+  %f1 = fmul float %a, -0.000000
+  %f2 = fmul float %f1, 1.000000
+  ret float %f2
+}
+
+define float @mul_neg_zero_neg_value(float %a) {
+; CHECK-LABEL: @mul_neg_zero_neg_value(
+; CHECK-NEXT:    [[F2:%.*]] = fmul float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret float [[F2]]
+;
+  %f1 = fmul float %a, -0.000000
+  %f2 = fmul float %f1, -1.000000
+  ret float %f2
+}
