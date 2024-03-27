@@ -893,7 +893,7 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
   // Determine base register and offset.
-  int64_t FIOffset;
+  int FIOffset;
   Register BasePtr;
   if (MI.isReturn()) {
     assert((!hasStackRealignment(MF) ||
@@ -946,11 +946,9 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (MI.getOperand(FIOperandNum+3).isImm()) {
     // Offset is a 32-bit integer.
     int Imm = (int)(MI.getOperand(FIOperandNum + 3).getImm());
-    int64_t Offset = FIOffset + Imm;
-    if (!Is64Bit) {
-      assert(isInt<32>((long long)FIOffset + Imm) &&
-             "Requesting 64-bit offset in 32-bit immediate!");
-    }
+    int Offset = FIOffset + Imm;
+    assert((!Is64Bit || isInt<32>((long long)FIOffset + Imm)) &&
+           "Requesting 64-bit offset in 32-bit immediate!");
     if (Offset != 0 || !tryOptimizeLEAtoMOV(II))
       MI.getOperand(FIOperandNum + 3).ChangeToImmediate(Offset);
   } else {
