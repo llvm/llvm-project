@@ -30,11 +30,11 @@ public:
 
   void print(raw_ostream &OS) const override {
     if (Def.isSubClassOf("GICombineRule"))
-      OS << "Parsing GICombineRule '" << Def.getName() << "'";
+      OS << "Parsing GICombineRule '" << Def.getName() << '\'';
     else if (Def.isSubClassOf(PatFrag::ClassName))
-      OS << "Parsing " << PatFrag::ClassName << " '" << Def.getName() << "'";
+      OS << "Parsing " << PatFrag::ClassName << " '" << Def.getName() << '\'';
     else
-      OS << "Parsing '" << Def.getName() << "'";
+      OS << "Parsing '" << Def.getName() << '\'';
     OS << '\n';
   }
 };
@@ -83,7 +83,7 @@ bool PatternParser::parsePatternList(
     }
 
     PrintError(DiagLoc,
-               "Failed to parse pattern: '" + Arg->getAsString() + "'");
+               "Failed to parse pattern: '" + Arg->getAsString() + '\'');
     return false;
   }
 
@@ -202,7 +202,7 @@ bool PatternParser::parseInstructionPatternOperand(InstructionPattern &IP,
                "cannot parse operand '" + OpInit->getAsUnquotedString() + "' ");
     if (OpName)
       PrintNote(DiagLoc,
-                "operand name is '" + OpName->getAsUnquotedString() + "'");
+                "operand name is '" + OpName->getAsUnquotedString() + '\'');
     return false;
   };
 
@@ -221,7 +221,7 @@ bool PatternParser::parseInstructionPatternOperand(InstructionPattern &IP,
     const Record *TyDef = DagOp->getOperatorAsDef(DiagLoc);
     auto ImmTy = PatternType::get(DiagLoc, TyDef,
                                   "cannot parse immediate '" +
-                                      DagOp->getAsUnquotedString() + "'");
+                                      DagOp->getAsUnquotedString() + '\'');
     if (!ImmTy)
       return false;
 
@@ -244,7 +244,7 @@ bool PatternParser::parseInstructionPatternOperand(InstructionPattern &IP,
   if (auto *DefI = dyn_cast<DefInit>(OpInit)) {
     if (!OpName) {
       PrintError(DiagLoc, "expected an operand name after '" +
-                              OpInit->getAsString() + "'");
+                              OpInit->getAsString() + '\'');
       return false;
     }
     const Record *Def = DefI->getDef();
@@ -421,7 +421,7 @@ bool PatternParser::parsePatFragParamList(
     else {
       PrintError(
           DiagLoc,
-          "'" + NameStr +
+          '\'' + NameStr +
               "' operand type was expected to be 'root', 'gi_imm' or 'gi_mo'");
       return false;
     }
