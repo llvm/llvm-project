@@ -860,11 +860,8 @@ void VPlan::execute(VPTransformState *State) {
         Phi = cast<PHINode>(State->get(R.getVPSingleValue(), 0));
       } else {
         auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
-        // TODO: Split off the case that all users of a pointer phi are scalar
-        // from the VPWidenPointerInductionRecipe.
-        if (WidenPhi->onlyScalarsGenerated(State->VF.isScalable()))
-          continue;
-
+        assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
+               "recipe generating only scalars should have been replaced");
         auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi, 0));
         Phi = cast<PHINode>(GEP->getPointerOperand());
       }
