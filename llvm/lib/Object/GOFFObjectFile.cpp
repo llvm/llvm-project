@@ -168,11 +168,6 @@ GOFFObjectFile::GOFFObjectFile(MemoryBufferRef Object, Error &Err)
       LLVM_DEBUG(dbgs() << "  --  ESD " << EsdId << "\n");
       break;
     }
-    case GOFF::RT_TXT:
-      // Save TXT records.
-      TextPtrs.emplace_back(I);
-      LLVM_DEBUG(dbgs() << "  --  TXT\n");
-      break;
     case GOFF::RT_END:
       LLVM_DEBUG(dbgs() << "  --  END (GOFF record type) unhandled\n");
       break;
@@ -367,13 +362,6 @@ GOFFObjectFile::getSymbolSection(DataRefImpl Symb) const {
                            "symbol with ESD id " + std::to_string(Symb.d.a) +
                                " refers to invalid section with ESD id " +
                                std::to_string(SymEdId));
-}
-
-uint64_t GOFFObjectFile::getSymbolSize(DataRefImpl Symb) const {
-  const uint8_t *Record = getSymbolEsdRecord(Symb);
-  uint32_t Length;
-  ESDRecord::getLength(Record, Length);
-  return Length;
 }
 
 const uint8_t *GOFFObjectFile::getSectionEdEsdRecord(DataRefImpl &Sec) const {
@@ -634,13 +622,6 @@ Error ESDRecord::getData(const uint8_t *Record,
                          SmallString<256> &CompleteData) {
   uint16_t DataSize = getNameLength(Record);
   return getContinuousData(Record, DataSize, 72, CompleteData);
-}
-
-Error TXTRecord::getData(const uint8_t *Record,
-                         SmallString<256> &CompleteData) {
-  uint16_t Length;
-  getDataLength(Record, Length);
-  return getContinuousData(Record, Length, 24, CompleteData);
 }
 
 Error ENDRecord::getData(const uint8_t *Record,
