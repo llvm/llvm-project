@@ -193,6 +193,11 @@ Non-comprehensive list of changes in this release
 
 - Lambda expressions are now accepted in C++03 mode as an extension.
 
+- Added ``__builtin_clzg`` and ``__builtin_ctzg`` as type-generic alternatives
+  to ``__builtin_clz{,s,l,ll}`` and ``__builtin_ctz{,s,l,ll}`` respectively,
+  with support for any unsigned integer type. Like the previous builtins, these
+  new builtins are constexpr and may be used in constant expressions.
+
 New Compiler Flags
 ------------------
 
@@ -610,6 +615,10 @@ Sanitizers
   ``-fsanitize=undefined`` or ``-fsanitize=integer`` enabled may want to
   manually disable potentially noisy signed integer overflow checks with
   ``-fno-sanitize=signed-integer-overflow``
+
+- ``-fsanitize=cfi -fsanitize-cfi-cross-dso`` (cross-DSO CFI instrumentation)
+  now generates the ``__cfi_check`` function with proper target-specific
+  attributes, for example allowing unwind table generation.
 
 Python Binding Changes
 ----------------------

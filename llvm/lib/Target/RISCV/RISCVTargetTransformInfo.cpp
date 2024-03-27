@@ -898,12 +898,15 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                TTI::TargetCostKind CostKind,
                                                const Instruction *I) {
   bool IsVectorType = isa<VectorType>(Dst) && isa<VectorType>(Src);
+  if (!IsVectorType)
+    return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+
   bool IsTypeLegal = isTypeLegal(Src) && isTypeLegal(Dst) &&
                      (Src->getScalarSizeInBits() <= ST->getELen()) &&
                      (Dst->getScalarSizeInBits() <= ST->getELen());
 
   // FIXME: Need to compute legalizing cost for illegal types.
-  if (!IsVectorType || !IsTypeLegal)
+  if (!IsTypeLegal)
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -1672,4 +1675,18 @@ bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy, Align Alignment) {
   if (!isLegalMaskedLoadStore(DataTy, Alignment))
     return false;
   return true;
+}
+
+bool RISCVTTIImpl::areInlineCompatible(const Function *Caller,
+                                       const Function *Callee) const {
+  const TargetMachine &TM = getTLI()->getTargetMachine();
+
+  const FeatureBitset &CallerBits =
+      TM.getSubtargetImpl(*Caller)->getFeatureBits();
+  const FeatureBitset &CalleeBits =
+      TM.getSubtargetImpl(*Callee)->getFeatureBits();
+
+  // Inline a callee if its target-features are a subset of the callers
+  // target-features.
+  return (CallerBits & CalleeBits) == CalleeBits;
 }
