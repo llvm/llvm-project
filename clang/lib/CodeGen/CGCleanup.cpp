@@ -323,7 +323,8 @@ void EHScopeStack::Cleanup::anchor() {}
 
 static void createStoreInstBefore(llvm::Value *value, Address addr,
                                   llvm::Instruction *beforeInst) {
-  auto store = new llvm::StoreInst(value, addr.getPointer(), beforeInst);
+  auto store =
+      new llvm::StoreInst(value, addr.getPointer(), beforeInst->getIterator());
   store->setAlignment(addr.getAlignment().getAsAlign());
 }
 
@@ -331,7 +332,7 @@ static llvm::LoadInst *createLoadInstBefore(Address addr, const Twine &name,
                                             llvm::Instruction *beforeInst) {
   return new llvm::LoadInst(addr.getElementType(), addr.getPointer(), name,
                             false, addr.getAlignment().getAsAlign(),
-                            beforeInst);
+                            beforeInst->getIterator());
 }
 
 /// All the branch fixups on the EH stack have propagated out past the
@@ -639,7 +640,8 @@ static void destroyOptimisticNormalEntry(CodeGenFunction &CGF,
     llvm::SwitchInst *si = cast<llvm::SwitchInst>(use.getUser());
     if (si->getNumCases() == 1 && si->getDefaultDest() == unreachableBB) {
       // Replace the switch with a branch.
-      llvm::BranchInst::Create(si->case_begin()->getCaseSuccessor(), si);
+      llvm::BranchInst::Create(si->case_begin()->getCaseSuccessor(),
+                               si->getIterator());
 
       // The switch operand is a load from the cleanup-dest alloca.
       llvm::LoadInst *condition = cast<llvm::LoadInst>(si->getCondition());

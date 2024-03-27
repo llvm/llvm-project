@@ -483,9 +483,9 @@ static void replaceManagedVar(llvm::GlobalVariable *Var,
     }
     if (auto *I = dyn_cast<llvm::Instruction>(U)) {
       llvm::Value *OldV = Var;
-      llvm::Instruction *NewV =
-          new llvm::LoadInst(Var->getType(), ManagedVar, "ld.managed", false,
-                             llvm::Align(Var->getAlignment()), I);
+      llvm::Instruction *NewV = new llvm::LoadInst(
+          Var->getType(), ManagedVar, "ld.managed", false,
+          llvm::Align(Var->getAlignment()), I->getIterator());
       WorkItem.pop_back();
       // Replace constant expressions directly or indirectly using the managed
       // variable with instructions.

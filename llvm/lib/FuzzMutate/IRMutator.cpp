@@ -389,7 +389,7 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   auto BuilderFunc = [FTy, F, isRetVoid](ArrayRef<Value *> Srcs,
                                          Instruction *Inst) {
     StringRef Name = isRetVoid ? nullptr : "C";
-    CallInst *Call = CallInst::Create(FTy, F, Srcs, Name, Inst);
+    CallInst *Call = CallInst::Create(FTy, F, Srcs, Name, Inst->getIterator());
     // Don't return this call inst if it return void as it can't be sinked.
     return isRetVoid ? nullptr : Call;
   };
@@ -542,7 +542,8 @@ void InsertPHIStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   if (&BB == &BB.getParent()->getEntryBlock())
     return;
   Type *Ty = IB.randomType();
-  PHINode *PHI = PHINode::Create(Ty, llvm::pred_size(&BB), "", &BB.front());
+  PHINode *PHI =
+      PHINode::Create(Ty, llvm::pred_size(&BB), "", BB.getFirstInsertionPt());
 
   // Use a map to make sure the same incoming basic block has the same value.
   DenseMap<BasicBlock *, Value *> IncomingValues;

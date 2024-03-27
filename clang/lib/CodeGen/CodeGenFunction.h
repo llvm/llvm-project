@@ -1246,7 +1246,8 @@ public:
   void setBeforeOutermostConditional(llvm::Value *value, Address addr) {
     assert(isInConditionalBranch());
     llvm::BasicBlock *block = OutermostConditional->getStartingBlock();
-    auto store = new llvm::StoreInst(value, addr.getPointer(), &block->back());
+    auto store = new llvm::StoreInst(value, addr.getPointer(),
+                                     block->back().getIterator());
     store->setAlignment(addr.getAlignment().getAsAlign());
   }
 

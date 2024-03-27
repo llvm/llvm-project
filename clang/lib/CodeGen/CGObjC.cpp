@@ -2398,7 +2398,8 @@ static llvm::Value *emitOptimizedARCReturnCall(llvm::Value *value,
     llvm::OperandBundleDef OB("clang.arc.attachedcall", bundleArgs);
     auto *oldCall = cast<llvm::CallBase>(value);
     llvm::CallBase *newCall = llvm::CallBase::addOperandBundle(
-        oldCall, llvm::LLVMContext::OB_clang_arc_attachedcall, OB, oldCall);
+        oldCall, llvm::LLVMContext::OB_clang_arc_attachedcall, OB,
+        oldCall->getIterator());
     newCall->copyMetadata(*oldCall);
     oldCall->replaceAllUsesWith(newCall);
     oldCall->eraseFromParent();
