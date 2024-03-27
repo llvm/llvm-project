@@ -852,6 +852,26 @@ public:
   flag_type get_ptr_type() { return flag32; }
 };
 
+class kmp_flag_i32_lt {
+protected:
+  std::atomic<kmp_int32> *loc;
+  kmp_int32 checker;
+
+public:
+  kmp_flag_i32_lt(std::atomic<kmp_int32> *p, kmp_int32 c)
+      : loc(p), checker(c) {}
+
+  int execute_tasks(kmp_info_t *this_thr, kmp_int32 gtid, int final_spin,
+                    int *thread_finished USE_ITT_BUILD_ARG(void *itt_sync_obj),
+                    kmp_int32 is_constrained) {
+    return __kmp_execute_tasks_i32_lt(
+        this_thr, gtid, this, final_spin,
+        thread_finished USE_ITT_BUILD_ARG(itt_sync_obj), is_constrained);
+  }
+
+  bool done_check() { return loc->load() <= checker; }
+};
+
 template <bool Cancellable, bool Sleepable>
 class kmp_flag_64 : public kmp_flag_native<kmp_uint64, flag64, Sleepable> {
 public:

@@ -279,6 +279,7 @@ template <bool C = false, bool S = true> class kmp_flag_32;
 template <bool C = false, bool S = true> class kmp_flag_64;
 template <bool C = false, bool S = true> class kmp_atomic_flag_64;
 class kmp_flag_oncore;
+class kmp_flag_i32_lt;
 
 #ifdef __cplusplus
 extern "C" {
@@ -2423,7 +2424,21 @@ typedef enum kmp_tasking_mode {
 extern kmp_tasking_mode_t
     __kmp_tasking_mode; /* determines how/when to execute tasks */
 extern int __kmp_task_stealing_constraint;
-extern int __kmp_enable_task_throttling;
+
+extern kmp_int32 __kmp_enable_task_throttling;
+#if KMP_TASK_THROTTLING_GLOBAL
+extern kmp_int32 __kmp_enable_task_throttling_global;
+#endif /* KMP_TASK_THROTTLING_GLOBAL */
+extern kmp_int32 __kmp_enable_task_throttling_ready_per_thread;
+extern kmp_int32 __kmp_enable_task_throttling_children;
+
+#if KMP_TASK_THROTTLING_GLOBAL
+extern std::atomic<kmp_int32> __kmp_n_tasks_in_flight;
+extern kmp_int32 __kmp_task_maximum_global;
+#endif /* KMP_TASK_THROTTLING_GLOBAL */
+extern kmp_int32 __kmp_task_maximum_ready_per_thread;
+extern kmp_int32 __kmp_task_maximum_children;
+
 extern kmp_int32 __kmp_default_device; // Set via OMP_DEFAULT_DEVICE if
 // specified, defaults to 0 otherwise
 // Set via OMP_MAX_TASK_PRIORITY if specified, defaults to 0 otherwise
@@ -4651,6 +4666,14 @@ int __kmp_atomic_execute_tasks_64(kmp_info_t *thread, kmp_int32 gtid,
                                   kmp_int32 is_constrained);
 int __kmp_execute_tasks_oncore(kmp_info_t *thread, kmp_int32 gtid,
                                kmp_flag_oncore *flag, int final_spin,
+                               int *thread_finished,
+#if USE_ITT_BUILD
+                               void *itt_sync_obj,
+#endif /* USE_ITT_BUILD */
+                               kmp_int32 is_constrained);
+
+int __kmp_execute_tasks_i32_lt(kmp_info_t *thread, kmp_int32 gtid,
+                               kmp_flag_i32_lt *flag, int final_spin,
                                int *thread_finished,
 #if USE_ITT_BUILD
                                void *itt_sync_obj,
