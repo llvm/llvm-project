@@ -12,7 +12,7 @@
 ; vXf64
 ;
 
-define void @store_v1f64_v1i64(<1 x i64> %trigger, ptr %addr, <1 x double> %val) {
+define void @store_v1f64_v1i64(<1 x i64> %trigger, ptr %addr, <1 x double> %val) nounwind {
 ; SSE-LABEL: store_v1f64_v1i64:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    testq %rdi, %rdi
@@ -46,7 +46,7 @@ define void @store_v1f64_v1i64(<1 x i64> %trigger, ptr %addr, <1 x double> %val)
   ret void
 }
 
-define void @store_v2f64_v2i64(<2 x i64> %trigger, ptr %addr, <2 x double> %val) {
+define void @store_v2f64_v2i64(<2 x i64> %trigger, ptr %addr, <2 x double> %val) nounwind {
 ; SSE-LABEL: store_v2f64_v2i64:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    movmskpd %xmm0, %eax
@@ -106,7 +106,7 @@ define void @store_v2f64_v2i64(<2 x i64> %trigger, ptr %addr, <2 x double> %val)
   ret void
 }
 
-define void @store_v4f64_v4i64(<4 x i64> %trigger, ptr %addr, <4 x double> %val) {
+define void @store_v4f64_v4i64(<4 x i64> %trigger, ptr %addr, <4 x double> %val) nounwind {
 ; SSE2-LABEL: store_v4f64_v4i64:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
@@ -222,7 +222,7 @@ define void @store_v4f64_v4i64(<4 x i64> %trigger, ptr %addr, <4 x double> %val)
 ; vXf32
 ;
 
-define void @store_v2f32_v2i32(<2 x i32> %trigger, ptr %addr, <2 x float> %val) {
+define void @store_v2f32_v2i32(<2 x i32> %trigger, ptr %addr, <2 x float> %val) nounwind {
 ; SSE2-LABEL: store_v2f32_v2i32:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
@@ -314,7 +314,7 @@ define void @store_v2f32_v2i32(<2 x i32> %trigger, ptr %addr, <2 x float> %val) 
   ret void
 }
 
-define void @store_v4f32_v4i32(<4 x float> %x, ptr %ptr, <4 x float> %y, <4 x i32> %mask) {
+define void @store_v4f32_v4i32(<4 x float> %x, ptr %ptr, <4 x float> %y, <4 x i32> %mask) nounwind {
 ; SSE2-LABEL: store_v4f32_v4i32:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movmskps %xmm2, %eax
@@ -425,7 +425,7 @@ define void @store_v4f32_v4i32(<4 x float> %x, ptr %ptr, <4 x float> %y, <4 x i3
   ret void
 }
 
-define void @store_v8f32_v8i32(<8 x float> %x, ptr %ptr, <8 x float> %y, <8 x i32> %mask) {
+define void @store_v8f32_v8i32(<8 x float> %x, ptr %ptr, <8 x float> %y, <8 x i32> %mask) nounwind {
 ; SSE2-LABEL: store_v8f32_v8i32:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    packssdw %xmm5, %xmm4
@@ -605,7 +605,7 @@ define void @store_v8f32_v8i32(<8 x float> %x, ptr %ptr, <8 x float> %y, <8 x i3
   ret void
 }
 
-define void @store_v16f32_v16i32(<16 x float> %x, ptr %ptr, <16 x float> %y, <16 x i32> %mask) {
+define void @store_v16f32_v16i32(<16 x float> %x, ptr %ptr, <16 x float> %y, <16 x i32> %mask) nounwind {
 ; SSE2-LABEL: store_v16f32_v16i32:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm4
@@ -914,7 +914,7 @@ define void @store_v16f32_v16i32(<16 x float> %x, ptr %ptr, <16 x float> %y, <16
 ; vXi64
 ;
 
-define void @store_v2i64_v2i64(<2 x i64> %trigger, ptr %addr, <2 x i64> %val) {
+define void @store_v2i64_v2i64(<2 x i64> %trigger, ptr %addr, <2 x i64> %val) nounwind {
 ; SSE2-LABEL: store_v2i64_v2i64:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movmskpd %xmm0, %eax
@@ -998,7 +998,7 @@ define void @store_v2i64_v2i64(<2 x i64> %trigger, ptr %addr, <2 x i64> %val) {
   ret void
 }
 
-define void @store_v4i64_v4i64(<4 x i64> %trigger, ptr %addr, <4 x i64> %val) {
+define void @store_v4i64_v4i64(<4 x i64> %trigger, ptr %addr, <4 x i64> %val) nounwind {
 ; SSE2-LABEL: store_v4i64_v4i64:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
@@ -1122,7 +1122,7 @@ define void @store_v4i64_v4i64(<4 x i64> %trigger, ptr %addr, <4 x i64> %val) {
 ; vXi32
 ;
 
-define void @store_v1i32_v1i32(<1 x i32> %trigger, ptr %addr, <1 x i32> %val) {
+define void @store_v1i32_v1i32(<1 x i32> %trigger, ptr %addr, <1 x i32> %val) nounwind {
 ; SSE-LABEL: store_v1i32_v1i32:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    testl %edi, %edi
@@ -1156,7 +1156,7 @@ define void @store_v1i32_v1i32(<1 x i32> %trigger, ptr %addr, <1 x i32> %val) {
   ret void
 }
 
-define void @store_v2i32_v2i32(<2 x i32> %trigger, ptr %addr, <2 x i32> %val) {
+define void @store_v2i32_v2i32(<2 x i32> %trigger, ptr %addr, <2 x i32> %val) nounwind {
 ; SSE2-LABEL: store_v2i32_v2i32:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
@@ -1256,7 +1256,7 @@ define void @store_v2i32_v2i32(<2 x i32> %trigger, ptr %addr, <2 x i32> %val) {
   ret void
 }
 
-define void @store_v4i32_v4i32(<4 x i32> %trigger, ptr %addr, <4 x i32> %val) {
+define void @store_v4i32_v4i32(<4 x i32> %trigger, ptr %addr, <4 x i32> %val) nounwind {
 ; SSE2-LABEL: store_v4i32_v4i32:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
@@ -1370,7 +1370,7 @@ define void @store_v4i32_v4i32(<4 x i32> %trigger, ptr %addr, <4 x i32> %val) {
   ret void
 }
 
-define void @store_v8i32_v8i32(<8 x i32> %trigger, ptr %addr, <8 x i32> %val) {
+define void @store_v8i32_v8i32(<8 x i32> %trigger, ptr %addr, <8 x i32> %val) nounwind {
 ; SSE2-LABEL: store_v8i32_v8i32:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm4, %xmm4
@@ -1560,7 +1560,7 @@ define void @store_v8i32_v8i32(<8 x i32> %trigger, ptr %addr, <8 x i32> %val) {
 ; vXi16
 ;
 
-define void @store_v8i16_v8i16(<8 x i16> %trigger, ptr %addr, <8 x i16> %val) {
+define void @store_v8i16_v8i16(<8 x i16> %trigger, ptr %addr, <8 x i16> %val) nounwind {
 ; SSE2-LABEL: store_v8i16_v8i16:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
@@ -1907,7 +1907,7 @@ define void @store_v8i16_v8i16(<8 x i16> %trigger, ptr %addr, <8 x i16> %val) {
   ret void
 }
 
-define void @store_v16i16_v16i16(<16 x i16> %trigger, ptr %addr, <16 x i16> %val) {
+define void @store_v16i16_v16i16(<16 x i16> %trigger, ptr %addr, <16 x i16> %val) nounwind {
 ; SSE2-LABEL: store_v16i16_v16i16:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm4, %xmm4
@@ -2676,7 +2676,7 @@ define void @store_v16i16_v16i16(<16 x i16> %trigger, ptr %addr, <16 x i16> %val
 ; vXi8
 ;
 
-define void @store_v16i8_v16i8(<16 x i8> %trigger, ptr %addr, <16 x i8> %val) {
+define void @store_v16i8_v16i8(<16 x i8> %trigger, ptr %addr, <16 x i8> %val) nounwind {
 ; SSE2-LABEL: store_v16i8_v16i8:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
@@ -3273,7 +3273,7 @@ define void @store_v16i8_v16i8(<16 x i8> %trigger, ptr %addr, <16 x i8> %val) {
   ret void
 }
 
-define void @store_v32i8_v32i8(<32 x i8> %trigger, ptr %addr, <32 x i8> %val) {
+define void @store_v32i8_v32i8(<32 x i8> %trigger, ptr %addr, <32 x i8> %val) nounwind {
 ; SSE2-LABEL: store_v32i8_v32i8:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm4, %xmm4
@@ -4670,7 +4670,7 @@ define void @store_v32i8_v32i8(<32 x i8> %trigger, ptr %addr, <32 x i8> %val) {
 
 ;;; Stores with Constant Masks
 
-define void @mstore_constmask_v4i32_v4i32(<4 x i32> %trigger, ptr %addr, <4 x i32> %val) {
+define void @mstore_constmask_v4i32_v4i32(<4 x i32> %trigger, ptr %addr, <4 x i32> %val) nounwind {
 ; SSE-LABEL: mstore_constmask_v4i32_v4i32:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    movups %xmm1, (%rdi)
@@ -4693,7 +4693,7 @@ define void @mstore_constmask_v4i32_v4i32(<4 x i32> %trigger, ptr %addr, <4 x i3
 
 ; Make sure we are able to detect all ones constant mask after type legalization
 ; to avoid masked stores.
-define void @mstore_constmask_allones_split(<16 x i64> %trigger, ptr %addr, <16 x i64> %val) {
+define void @mstore_constmask_allones_split(<16 x i64> %trigger, ptr %addr, <16 x i64> %val) nounwind {
 ; SSE2-LABEL: mstore_constmask_allones_split:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm0
@@ -4810,7 +4810,7 @@ define void @mstore_constmask_allones_split(<16 x i64> %trigger, ptr %addr, <16 
 
 ;  When only one element of the mask is set, reduce to a scalar store.
 
-define void @one_mask_bit_set1(ptr %addr, <4 x i32> %val) {
+define void @one_mask_bit_set1(ptr %addr, <4 x i32> %val) nounwind {
 ; SSE-LABEL: one_mask_bit_set1:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    movss %xmm0, (%rdi)
@@ -4832,7 +4832,7 @@ define void @one_mask_bit_set1(ptr %addr, <4 x i32> %val) {
 
 ; Choose a different element to show that the correct address offset is produced.
 
-define void @one_mask_bit_set2(ptr %addr, <4 x float> %val) {
+define void @one_mask_bit_set2(ptr %addr, <4 x float> %val) nounwind {
 ; SSE2-LABEL: one_mask_bit_set2:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
@@ -4860,7 +4860,7 @@ define void @one_mask_bit_set2(ptr %addr, <4 x float> %val) {
 
 ; Choose a different scalar type and a high element of a 256-bit vector because AVX doesn't support those evenly.
 
-define void @one_mask_bit_set3(ptr %addr, <4 x i64> %val) {
+define void @one_mask_bit_set3(ptr %addr, <4 x i64> %val) nounwind {
 ; SSE-LABEL: one_mask_bit_set3:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    movlps %xmm1, 16(%rdi)
@@ -4886,7 +4886,7 @@ define void @one_mask_bit_set3(ptr %addr, <4 x i64> %val) {
 
 ; Choose a different scalar type and a high element of a 256-bit vector because AVX doesn't support those evenly.
 
-define void @one_mask_bit_set4(ptr %addr, <4 x double> %val) {
+define void @one_mask_bit_set4(ptr %addr, <4 x double> %val) nounwind {
 ; SSE-LABEL: one_mask_bit_set4:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    movhps %xmm1, 24(%rdi)
@@ -4912,7 +4912,7 @@ define void @one_mask_bit_set4(ptr %addr, <4 x double> %val) {
 
 ; Try a 512-bit vector to make sure AVX doesn't die and AVX512 works as expected.
 
-define void @one_mask_bit_set5(ptr %addr, <8 x double> %val) {
+define void @one_mask_bit_set5(ptr %addr, <8 x double> %val) nounwind {
 ; SSE-LABEL: one_mask_bit_set5:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    movlps %xmm3, 48(%rdi)
@@ -4944,7 +4944,7 @@ define void @one_mask_bit_set5(ptr %addr, <8 x double> %val) {
 }
 
 ; Try one elt in each half of a vector that needs to split
-define void @one_mask_bit_set6(ptr %addr, <16 x i64> %val) {
+define void @one_mask_bit_set6(ptr %addr, <16 x i64> %val) nounwind {
 ; SSE2-LABEL: one_mask_bit_set6:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movlps %xmm3, 48(%rdi)
@@ -4999,7 +4999,7 @@ define void @one_mask_bit_set6(ptr %addr, <16 x i64> %val) {
   ret void
 }
 
-define void @top_bits_unset_stack() {
+define void @top_bits_unset_stack() nounwind {
 ; SSE-LABEL: top_bits_unset_stack:
 ; SSE:       ## %bb.0: ## %entry
 ; SSE-NEXT:    xorps %xmm0, %xmm0
@@ -5047,7 +5047,6 @@ define void @top_bits_unset_stack() {
 ; X86-AVX512-LABEL: top_bits_unset_stack:
 ; X86-AVX512:       ## %bb.0: ## %entry
 ; X86-AVX512-NEXT:    subl $76, %esp
-; X86-AVX512-NEXT:    .cfi_def_cfa_offset 80
 ; X86-AVX512-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
 ; X86-AVX512-NEXT:    movb $63, %al
 ; X86-AVX512-NEXT:    kmovd %eax, %k1
@@ -5064,7 +5063,7 @@ entry:
 
 ; SimplifyDemandedBits eliminates an ashr here.
 
-define void @masked_store_bool_mask_demand_trunc_sext(<4 x double> %x, ptr %p, <4 x i32> %masksrc) {
+define void @masked_store_bool_mask_demand_trunc_sext(<4 x double> %x, ptr %p, <4 x i32> %masksrc) nounwind {
 ; SSE-LABEL: masked_store_bool_mask_demand_trunc_sext:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    pslld $31, %xmm2
@@ -5160,7 +5159,7 @@ define void @masked_store_bool_mask_demand_trunc_sext(<4 x double> %x, ptr %p, <
 
 ; PR26697
 
-define void @one_mask_bit_set1_variable(ptr %addr, <4 x float> %val, <4 x i32> %mask) {
+define void @one_mask_bit_set1_variable(ptr %addr, <4 x float> %val, <4 x i32> %mask) nounwind {
 ; SSE2-LABEL: one_mask_bit_set1_variable:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movmskps %xmm1, %eax
@@ -5267,7 +5266,7 @@ define void @one_mask_bit_set1_variable(ptr %addr, <4 x float> %val, <4 x i32> %
 ; This needs to be widened to v4i32.
 ; This used to assert in type legalization. PR38436
 ; FIXME: The codegen for AVX512 should use KSHIFT to zero the upper bits of the mask.
-define void @widen_masked_store(<3 x i32> %v, ptr %p, <3 x i1> %mask) {
+define void @widen_masked_store(<3 x i32> %v, ptr %p, <3 x i1> %mask) nounwind {
 ; SSE2-LABEL: widen_masked_store:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    andb $1, %sil
@@ -5448,7 +5447,7 @@ define void @widen_masked_store(<3 x i32> %v, ptr %p, <3 x i1> %mask) {
   ret void
 }
 
-define void @zero_mask(ptr %addr, <2 x double> %val) {
+define void @zero_mask(ptr %addr, <2 x double> %val) nounwind {
 ; SSE-LABEL: zero_mask:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    retq
@@ -5464,7 +5463,7 @@ define void @zero_mask(ptr %addr, <2 x double> %val) {
   ret void
 }
 
-define void @PR11210(<4 x float> %x, ptr %ptr, <4 x float> %y, <2 x i64> %mask) {
+define void @PR11210(<4 x float> %x, ptr %ptr, <4 x float> %y, <2 x i64> %mask) nounwind {
 ; SSE2-LABEL: PR11210:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movmskps %xmm2, %eax
@@ -5638,7 +5637,7 @@ define void @PR11210(<4 x float> %x, ptr %ptr, <4 x float> %y, <2 x i64> %mask) 
   ret void
 }
 
-define void @store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts(ptr %trigger.ptr, ptr %val.ptr, ptr %dst) {
+define void @store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts(ptr %trigger.ptr, ptr %val.ptr, ptr %dst) nounwind {
 ; SSE2-LABEL: store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm6
@@ -5874,23 +5873,11 @@ define void @store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts(ptr %trigge
 ; SSE4-LABEL: store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts:
 ; SSE4:       ## %bb.0:
 ; SSE4-NEXT:    pushq %rbp
-; SSE4-NEXT:    .cfi_def_cfa_offset 16
 ; SSE4-NEXT:    pushq %r15
-; SSE4-NEXT:    .cfi_def_cfa_offset 24
 ; SSE4-NEXT:    pushq %r14
-; SSE4-NEXT:    .cfi_def_cfa_offset 32
 ; SSE4-NEXT:    pushq %r13
-; SSE4-NEXT:    .cfi_def_cfa_offset 40
 ; SSE4-NEXT:    pushq %r12
-; SSE4-NEXT:    .cfi_def_cfa_offset 48
 ; SSE4-NEXT:    pushq %rbx
-; SSE4-NEXT:    .cfi_def_cfa_offset 56
-; SSE4-NEXT:    .cfi_offset %rbx, -56
-; SSE4-NEXT:    .cfi_offset %r12, -48
-; SSE4-NEXT:    .cfi_offset %r13, -40
-; SSE4-NEXT:    .cfi_offset %r14, -32
-; SSE4-NEXT:    .cfi_offset %r15, -24
-; SSE4-NEXT:    .cfi_offset %rbp, -16
 ; SSE4-NEXT:    movdqa (%rdi), %xmm1
 ; SSE4-NEXT:    movdqa 32(%rdi), %xmm2
 ; SSE4-NEXT:    movdqa 64(%rdi), %xmm0
@@ -6266,7 +6253,7 @@ define void @store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts(ptr %trigge
 }
 
 ; From https://reviews.llvm.org/rGf8d9097168b7#1165311
-define void @undefshuffle(<8 x i1> %i0, ptr %src, ptr %dst) #0 {
+define void @undefshuffle(<8 x i1> %i0, ptr %src, ptr %dst) nounwind {
 ; SSE2-LABEL: undefshuffle:
 ; SSE2:       ## %bb.0: ## %else
 ; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
