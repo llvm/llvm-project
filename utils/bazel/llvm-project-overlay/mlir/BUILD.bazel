@@ -326,16 +326,15 @@ cc_library(
         "lib/IR/*.h",
         "lib/IR/PDL/*.cpp",
         "lib/Bytecode/Writer/*.h",
+        "include/mlir/Bytecode/*.h",
     ]) + [
         "include/mlir/IR/PDLPatternMatch.h.inc",
         "include/mlir/Interfaces/CallInterfaces.h",
         "include/mlir/Interfaces/DataLayoutInterfaces.h",
         "include/mlir/Interfaces/SideEffectInterfaces.h",
-        "lib/Bytecode/BytecodeOpInterface.cpp",
     ],
     hdrs = glob([
         "include/mlir/IR/*.h",
-        "include/mlir/Bytecode/*.h",
     ]) + [
         "include/mlir/Interfaces/FoldInterfaces.h",
     ],
@@ -3123,6 +3122,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":BufferizationInterfaces",
+        ":BytecodeOpInterface",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
@@ -3567,6 +3567,7 @@ cc_library(
         ":GPUCommonTransforms",
         ":GPUCompilationAttrInterfacesIncGen",
         ":GPUDialect",
+        ":GPUToGPURuntimeTransforms",
         ":IR",
         ":LLVMCommonConversion",
         ":LinalgDialect",
@@ -3755,6 +3756,7 @@ cc_library(
     hdrs = ["include/mlir/Dialect/XeGPU/IR/XeGPU.h"],
     includes = ["include"],
     deps = [
+        ":BytecodeOpInterface",
         ":DialectUtils",
         ":IR",
         ":ShapedOpInterfaces",
@@ -4700,6 +4702,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":BufferizationInterfaces",
+        ":BytecodeOpInterface",
         ":CommonFolders",
         ":ControlFlowInterfaces",
         ":ControlFlowOpsIncGen",
@@ -5222,13 +5225,11 @@ cc_library(
     srcs = glob([
         "lib/Bytecode/Reader/*.cpp",
     ]),
-    hdrs = glob([
-        "include/mlir/Bytecode/*.h",
-    ]),
+    hdrs = ["include/mlir/Bytecode/BytecodeReader.h"],
     includes = ["include"],
     deps = [
         ":AsmParser",
-        ":BytecodeOpInterfaceIncGen",
+        ":BytecodeOpInterface",
         ":IR",
         ":Support",
         "//llvm:Support",
@@ -5241,12 +5242,10 @@ cc_library(
         "lib/Bytecode/Writer/*.cpp",
         "lib/Bytecode/Writer/*.h",
     ]),
-    hdrs = glob([
-        "include/mlir/Bytecode/*.h",
-    ]),
+    hdrs = ["include/mlir/Bytecode/BytecodeWriter.h"],
     includes = ["include"],
     deps = [
-        ":BytecodeOpInterfaceIncGen",
+        ":BytecodeOpInterface",
         ":IR",
         ":Support",
         "//llvm:Support",
@@ -5605,6 +5604,7 @@ cc_library(
         ":FuncToLLVM",
         ":GPUCommonTransforms",
         ":GPUDialect",
+        ":GPUToGPURuntimeTransforms",
         ":GPUToNVVMTransforms",
         ":GPUTransforms",
         ":IndexToLLVM",
@@ -5729,6 +5729,7 @@ cc_library(
         ":FuncDialect",
         ":GPUCommonTransforms",
         ":GPUDialect",
+        ":GPUToGPURuntimeTransforms",
         ":GPUToNVVMTransforms",
         ":GPUTransformOpsIncGen",
         ":GPUTransforms",
@@ -5776,11 +5777,7 @@ td_library(
 
 cc_library(
     name = "GPUCommonTransforms",
-    srcs = [
-        "lib/Conversion/GPUCommon/GPUOpsLowering.cpp",
-    ],
     hdrs = [
-        "include/mlir/Conversion/GPUCommon/GPUCommonPass.h",
         "lib/Conversion/GPUCommon/GPUOpsLowering.h",
         "lib/Conversion/GPUCommon/IndexIntrinsicsOpLowering.h",
         "lib/Conversion/GPUCommon/OpToFuncCallLowering.h",
@@ -5834,6 +5831,7 @@ cc_library(
         ":FuncToLLVM",
         ":GPUCommonTransforms",
         ":GPUDialect",
+        ":GPUToGPURuntimeTransforms",
         ":GPUToNVVMGen",
         ":GPUTransforms",
         ":IR",
@@ -5960,6 +5958,7 @@ cc_library(
         ":FuncToLLVM",
         ":GPUCommonTransforms",
         ":GPUDialect",
+        ":GPUToGPURuntimeTransforms",
         ":GPUToROCDLTGen",
         ":GPUTransforms",
         ":IR",
@@ -6003,6 +6002,7 @@ cc_library(
 cc_library(
     name = "GPUToGPURuntimeTransforms",
     srcs = [
+        "lib/Conversion/GPUCommon/GPUOpsLowering.cpp",
         "lib/Conversion/GPUCommon/GPUToLLVMConversion.cpp",
     ],
     hdrs = ["include/mlir/Conversion/GPUCommon/GPUCommonPass.h"],
@@ -6016,6 +6016,7 @@ cc_library(
         ":ConvertToLLVM",
         ":ConvertToLLVMInterface",
         ":FuncToLLVM",
+        ":GPUCommonTransforms",
         ":GPUDialect",
         ":GPUTransforms",
         ":IR",
@@ -6608,6 +6609,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":BytecodeOpInterface",
         ":IR",
         ":InferTypeOpInterface",
         ":PDLOpsIncGen",
@@ -7308,6 +7310,7 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":BufferizationInterfaces",
+        ":BytecodeOpInterface",
         ":CastInterfaces",
         ":ComplexDialect",
         ":ControlFlowInterfaces",
@@ -8434,6 +8437,23 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Bytecode/BytecodeOpInterface.td",
     deps = [":BytecodeOpInterfaceTdFiles"],
+)
+
+cc_library(
+    name = "BytecodeOpInterface",
+    srcs = ["lib/Bytecode/BytecodeOpInterface.cpp"],
+    hdrs = [
+        "include/mlir/Bytecode/BytecodeImplementation.h",
+        "include/mlir/Bytecode/BytecodeOpInterface.h",
+        "include/mlir/Bytecode/Encoding.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":BytecodeOpInterfaceIncGen",
+        ":IR",
+        ":Support",
+        "//llvm:Support",
+    ],
 )
 
 gentbl_cc_library(
@@ -10386,6 +10406,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":BytecodeOpInterface",
         ":FuncDialect",
         ":IR",
         ":InferTypeOpInterface",
@@ -10970,6 +10991,7 @@ cc_library(
         ":AsmParser",
         ":BufferizationDialect",
         ":BufferizationInterfaces",
+        ":BytecodeOpInterface",
         ":ComplexDialect",
         ":ControlFlowInterfaces",
         ":CopyOpInterface",
@@ -12356,6 +12378,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":BytecodeOpInterface",
         ":ComplexAttributesIncGen",
         ":ComplexBaseIncGen",
         ":ComplexOpsIncGen",
@@ -12621,6 +12644,7 @@ cc_library(
         ":ArithOpsIncGen",
         ":ArithOpsInterfacesIncGen",
         ":BufferizationInterfaces",
+        ":BytecodeOpInterface",
         ":CallOpInterfaces",
         ":CastInterfaces",
         ":CommonFolders",
@@ -12791,6 +12815,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":BytecodeOpInterface",
         ":CommonFolders",
         ":ConvertToLLVMInterface",
         ":IR",
@@ -12935,6 +12960,7 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":BufferizationInterfaces",
+        ":BytecodeOpInterface",
         ":CallOpInterfaces",
         ":CastInterfaces",
         ":ComplexDialect",
@@ -13199,6 +13225,7 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/MLProgram/IR/*.h"]),
     includes = ["include"],
     deps = [
+        ":BytecodeOpInterface",
         ":CallOpInterfaces",
         ":ControlFlowInterfaces",
         ":FunctionInterfaces",
@@ -13595,6 +13622,7 @@ cc_library(
         ":BufferizationBaseIncGen",
         ":BufferizationInterfaces",
         ":BufferizationOpsIncGen",
+        ":BytecodeOpInterface",
         ":CallOpInterfaces",
         ":ControlFlowInterfaces",
         ":CopyOpInterface",

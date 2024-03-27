@@ -76,6 +76,7 @@ Changes to the AMDGPU Backend
 
 Changes to the ARM Backend
 --------------------------
+* FEAT_F32MM is no longer activated by default when using `+sve` on v8.6-A or greater. The feature is still available and can be used by adding `+f32mm` to the command line options.
 
 Changes to the AVR Backend
 --------------------------
@@ -180,6 +181,11 @@ Changes to the LLVM tools
 * llvm-objcopy now supports ``--skip-symbol`` and ``--skip-symbols`` options
   for ELF input to skip the specified symbols when executing other options
   that can change a symbol's name, binding or visibility.
+
+* llvm-profgen now supports COFF+DWARF binaries. This enables Sample-based PGO
+  on Windows using Intel VTune's SEP. For details on usage, see the `end-user
+  documentation for SPGO
+  <https://clang.llvm.org/docs/UsersManual.html#using-sampling-profilers>`_.
 
 Changes to LLDB
 ---------------------------------

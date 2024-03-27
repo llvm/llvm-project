@@ -12621,8 +12621,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           },
           Mask, &OpScalars, &AltScalars);
 
-      propagateIRFlags(V0, OpScalars);
-      propagateIRFlags(V1, AltScalars);
+      propagateIRFlags(V0, OpScalars, E->getMainOp(), !MinBWs.contains(E));
+      propagateIRFlags(V1, AltScalars, E->getAltOp(), !MinBWs.contains(E));
 
       Value *V = Builder.CreateShuffleVector(V0, V1, Mask);
       if (auto *I = dyn_cast<Instruction>(V)) {
@@ -14092,12 +14092,14 @@ bool BoUpSLP::collectValuesToDemote(
       MaxDepthLevel = 1;
     if (IsProfitableToDemoteRoot)
       IsProfitableToDemote = true;
+    (void)IsPotentiallyTruncated(V, BitWidth);
     break;
   case Instruction::ZExt:
   case Instruction::SExt:
     if (!IsTruncRoot)
       MaxDepthLevel = 1;
     IsProfitableToDemote = true;
+    (void)IsPotentiallyTruncated(V, BitWidth);
     break;
 
   // We can demote certain binary operations if we can demote both of their

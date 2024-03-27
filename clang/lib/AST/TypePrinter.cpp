@@ -538,7 +538,7 @@ void TypePrinter::printConstantArrayAfter(const ConstantArrayType *T,
   if (T->getSizeModifier() == ArraySizeModifier::Static)
     OS << "static ";
 
-  OS << T->getSize().getZExtValue() << ']';
+  OS << T->getZExtSize() << ']';
   printAfter(T->getElementType(), OS);
 }
 
@@ -2303,10 +2303,10 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     } else {
       if (!FirstArg)
         OS << Comma;
-        // Tries to print the argument with location info if exists.
-        printArgument(Arg, Policy, ArgOS,
-                      TemplateParameterList::shouldIncludeTypeForArgument(
-                          Policy, TPL, ParmIndex));
+      // Tries to print the argument with location info if exists.
+      printArgument(Arg, Policy, ArgOS,
+                    TemplateParameterList::shouldIncludeTypeForArgument(
+                        Policy, TPL, ParmIndex));
     }
     StringRef ArgString = ArgOS.str();
 

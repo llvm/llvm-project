@@ -6281,7 +6281,7 @@ CodeGenModule::GetConstantArrayFromStringLiteral(const StringLiteral *E) {
     // Resize the string to the right size, which is indicated by its type.
     const ConstantArrayType *CAT = Context.getAsConstantArrayType(E->getType());
     assert(CAT && "String literal not of constant array type!");
-    Str.resize(CAT->getSize().getZExtValue());
+    Str.resize(CAT->getZExtSize());
     return llvm::ConstantDataArray::getString(VMContext, Str, false);
   }
 
@@ -7267,7 +7267,7 @@ void CodeGenFunction::EmitDeclMetadata() {
 
   for (auto &I : LocalDeclMap) {
     const Decl *D = I.first;
-    llvm::Value *Addr = I.second.emitRawPointer(*this);
+    llvm::Value *Addr = I.second.getPointer();
     if (auto *Alloca = dyn_cast<llvm::AllocaInst>(Addr)) {
       llvm::Value *DAddr = GetPointerConstant(getLLVMContext(), D);
       Alloca->setMetadata(

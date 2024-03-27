@@ -575,7 +575,7 @@ multiclass VALU_IV_X<string opcodestr, bits<6> funct6> {
 }
 
 multiclass VALU_IV_I<string opcodestr, bits<6> funct6> {
-  def I  : VALUVI<funct6, opcodestr # ".vi", simm5>,
+  def I  : VALUVI<funct6, opcodestr # ".vi">,
            SchedUnaryMC<"WriteVIALUI", "ReadVIALUV">;
 }
 
@@ -661,7 +661,7 @@ multiclass VALUNoVm_IV_V_X<string opcodestr, bits<6> funct6> {
 
 multiclass VALUNoVm_IV_V_X_I<string opcodestr, bits<6> funct6>
    : VALUNoVm_IV_V_X<opcodestr, funct6> {
-  def I : VALUVINoVm<funct6, opcodestr # ".vi", simm5>,
+  def I : VALUVINoVm<funct6, opcodestr # ".vi">,
           SchedUnaryMC<"WriteVICALUI", "ReadVICALUV", forceMasked=0>;
 }
 
@@ -900,7 +900,7 @@ multiclass VCMP_IV_X<string opcodestr, bits<6> funct6> {
 }
 
 multiclass VCMP_IV_I<string opcodestr, bits<6> funct6> {
-  def I  : VALUVI<funct6, opcodestr # ".vi", simm5>,
+  def I  : VALUVI<funct6, opcodestr # ".vi">,
            SchedUnaryMC<"WriteVICmpI", "ReadVICmpV">;
 }
 
@@ -947,7 +947,7 @@ multiclass VSALU_IV_V_X<string opcodestr, bits<6> funct6> {
 
 multiclass VSALU_IV_V_X_I<string opcodestr, bits<6> funct6>
     : VSALU_IV_V_X<opcodestr, funct6> {
-  def I  : VALUVI<funct6, opcodestr # ".vi", simm5>,
+  def I  : VALUVI<funct6, opcodestr # ".vi">,
            SchedUnaryMC<"WriteVSALUI", "ReadVSALUV">;
 }
 
