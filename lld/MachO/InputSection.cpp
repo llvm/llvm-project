@@ -46,6 +46,14 @@ void lld::macho::addInputSection(InputSection *inputSection) {
   if (auto *isec = dyn_cast<ConcatInputSection>(inputSection)) {
     if (isec->isCoalescedWeak())
       return;
+    if (config->emitRelativeMethodLists &&
+        ObjCMethListSection::isMethodList(isec)) {
+      if (in.objcMethList->inputOrder == UnspecifiedInputOrder)
+        in.objcMethList->inputOrder = inputSectionsOrder++;
+      in.objcMethList->addInput(isec);
+      isec->parent = in.objcMethList;
+      return;
+    }
     if (config->emitInitOffsets &&
         sectionType(isec->getFlags()) == S_MOD_INIT_FUNC_POINTERS) {
       in.initOffsets->addInput(isec);
