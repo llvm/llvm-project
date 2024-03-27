@@ -4105,12 +4105,8 @@ defm strict_return : BoolFOption<"strict-return",
             " of a non-void function as unreachable">,
   PosFlag<SetTrue>>;
 
-let Group = f_Group in {
-  let Visibility = [ClangOption,CC1Option] in {
-    def fptrauth_intrinsics : Flag<["-"], "fptrauth-intrinsics">,
-      HelpText<"Enable pointer authentication intrinsics">;
-  }
-  def fno_ptrauth_intrinsics : Flag<["-"], "fno-ptrauth-intrinsics">;
+let Flags = [TargetSpecific] in {
+defm ptrauth_intrinsics : OptInCC1FFlag<"ptrauth-intrinsics", "Enable pointer authentication intrinsics">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
@@ -6688,6 +6684,9 @@ def analyzer_opt_analyze_headers : Flag<["-"], "analyzer-opt-analyze-headers">,
 def analyzer_display_progress : Flag<["-"], "analyzer-display-progress">,
   HelpText<"Emit verbose output about the analyzer's progress">,
   MarshallingInfoFlag<AnalyzerOpts<"AnalyzerDisplayProgress">>;
+def analyzer_note_analysis_entry_points : Flag<["-"], "analyzer-note-analysis-entry-points">,
+  HelpText<"Add a note for each bug report to denote their analysis entry points">,
+  MarshallingInfoFlag<AnalyzerOpts<"AnalyzerNoteAnalysisEntryPoints">>;
 def analyze_function : Separate<["-"], "analyze-function">,
   HelpText<"Run analysis on specific function (for C++ include parameters in name)">,
   MarshallingInfoString<AnalyzerOpts<"AnalyzeSpecificFunction">>;

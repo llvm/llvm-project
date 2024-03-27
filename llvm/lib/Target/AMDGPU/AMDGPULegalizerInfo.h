@@ -226,16 +226,16 @@ public:
 
   bool legalizeSBufferLoad(LegalizerHelper &Helper, MachineInstr &MI) const;
 
-  bool legalizeTrapIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
-                             MachineIRBuilder &B) const;
+  bool legalizeTrap(MachineInstr &MI, MachineRegisterInfo &MRI,
+                    MachineIRBuilder &B) const;
   bool legalizeTrapEndpgm(MachineInstr &MI, MachineRegisterInfo &MRI,
                           MachineIRBuilder &B) const;
   bool legalizeTrapHsaQueuePtr(MachineInstr &MI, MachineRegisterInfo &MRI,
                                MachineIRBuilder &B) const;
   bool legalizeTrapHsa(MachineInstr &MI, MachineRegisterInfo &MRI,
                        MachineIRBuilder &B) const;
-  bool legalizeDebugTrapIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
-                                  MachineIRBuilder &B) const;
+  bool legalizeDebugTrap(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &B) const;
 
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;

@@ -392,15 +392,6 @@ float3 cos(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
 float4 cos(float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-double cos(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-double2 cos(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-double3 cos(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-double4 cos(double4);
-
 //===----------------------------------------------------------------------===//
 // dot product builtins
 //===----------------------------------------------------------------------===//
@@ -737,15 +728,6 @@ float3 log(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
 float4 log(float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-double log(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-double2 log(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-double3 log(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-double4 log(double4);
-
 //===----------------------------------------------------------------------===//
 // log10 builtins
 //===----------------------------------------------------------------------===//
@@ -779,15 +761,6 @@ float3 log10(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
 float4 log10(float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-double log10(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-double2 log10(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-double3 log10(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-double4 log10(double4);
-
 //===----------------------------------------------------------------------===//
 // log2 builtins
 //===----------------------------------------------------------------------===//
@@ -820,15 +793,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
 float3 log2(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
 float4 log2(float4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-double log2(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-double2 log2(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-double3 log2(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-double4 log2(double4);
 
 //===----------------------------------------------------------------------===//
 // mad builtins
@@ -1174,15 +1138,6 @@ float3 pow(float3, float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
 float4 pow(float4, float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double pow(double, double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double2 pow(double2, double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double3 pow(double3, double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double4 pow(double4, double4);
-
 //===----------------------------------------------------------------------===//
 // reversebits builtins
 //===----------------------------------------------------------------------===//
@@ -1393,15 +1348,6 @@ float3 sin(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
 float4 sin(float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-double sin(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-double2 sin(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-double3 sin(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-double4 sin(double4);
-
 //===----------------------------------------------------------------------===//
 // sqrt builtins
 //===----------------------------------------------------------------------===//
@@ -1411,14 +1357,26 @@ double4 sin(double4);
 /// \param Val The input value.
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_sqrtf16)
-half sqrt(half In);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+half sqrt(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+half2 sqrt(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+half3 sqrt(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+half4 sqrt(half4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_sqrtf)
-float sqrt(float In);
-
-_HLSL_BUILTIN_ALIAS(__builtin_sqrt)
-double sqrt(double In);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+float sqrt(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+float2 sqrt(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+float3 sqrt(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+float4 sqrt(float4);
 
 //===----------------------------------------------------------------------===//
 // trunc builtins
@@ -1449,15 +1407,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
 float3 trunc(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
 float4 trunc(float4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-double trunc(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-double2 trunc(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-double3 trunc(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-double4 trunc(double4);
 
 //===----------------------------------------------------------------------===//
 // Wave* builtins

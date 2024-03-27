@@ -186,7 +186,9 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
       }
       case TargetOpcode::G_GLOBAL_VALUE: {
         MIB.setInsertPt(*MI->getParent(), MI);
-        Type *Ty = MI->getOperand(1).getGlobal()->getType();
+        const auto *Global = MI->getOperand(1).getGlobal();
+        auto *Ty = TypedPointerType::get(Global->getValueType(),
+                                         Global->getType()->getAddressSpace());
         SpirvTy = GR->getOrCreateSPIRVType(Ty, MIB);
         break;
       }
@@ -543,6 +545,7 @@ static void processSwitches(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       Register Dst = ICMP->getOperand(0).getReg();
       MachineOperand &PredOp = ICMP->getOperand(1);
       const auto CC = static_cast<CmpInst::Predicate>(PredOp.getPredicate());
+      (void)CC;
       assert((CC == CmpInst::ICMP_EQ || CC == CmpInst::ICMP_ULE) &&
              MRI.hasOneUse(Dst) && MRI.hasOneDef(CompareReg));
       uint64_t Value = getIConstVal(ICMP->getOperand(3).getReg(), &MRI);
