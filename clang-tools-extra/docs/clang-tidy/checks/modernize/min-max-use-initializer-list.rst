@@ -3,7 +3,7 @@
 modernize-min-max-use-initializer-list
 ======================================
 
-Replaces chained ``std::min`` and ``std::max`` calls with a initializer list where applicable.
+Replaces nested ``std::min`` and ``std::max`` calls with an initializer list where applicable.
 
 For instance, consider the following code:
 

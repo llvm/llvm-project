@@ -14,7 +14,7 @@
 
 namespace clang::tidy::modernize {
 
-/// Replaces chained ``std::min`` and ``std::max`` calls with a initializer list
+/// Replaces nested ``std::min`` and ``std::max`` calls with an initializer list
 /// where applicable.
 ///
 /// For example:
@@ -46,18 +46,7 @@ public:
   }
 
 private:
-  struct FindArgsResult {
-    const Expr *First;
-    const Expr *Last;
-    const Expr *Compare;
-    std::vector<const Expr *> Args;
-  };
   utils::IncludeInserter Inserter;
-  FindArgsResult findArgs(const ast_matchers::MatchFinder::MatchResult &Match,
-                          const CallExpr *Call);
-  std::string
-  generateReplacement(const ast_matchers::MatchFinder::MatchResult &Match,
-                      const CallExpr *TopCall, const FindArgsResult Result);
 };
 
 } // namespace clang::tidy::modernize
