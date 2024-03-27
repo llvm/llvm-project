@@ -82,6 +82,101 @@ static void printDepMatrix(CharMatrix &DepMatrix) {
 }
 #endif
 
+static bool isDirectionNegative(std::vector<Dependence::DVEntry> &DV) {
+  for (unsigned Level = 1; Level <= DV.size(); ++Level) {
+    unsigned char Direction = DV[Level - 1].Direction;
+    if (Direction == Dependence::DVEntry::EQ)
+      continue;
+    if (Direction == Dependence::DVEntry::GT ||
+        Direction == Dependence::DVEntry::GE)
+      return true;
+    return false;
+  }
+  return false;
+}
+
+static void dumpDirection(raw_ostream &OS,
+                          std::vector<Dependence::DVEntry> &DV) {
+  OS << " [";
+  for (unsigned II = 1; II <= DV.size(); ++II) {
+    unsigned Direction = DV[II - 1].Direction;
+    if (Direction == Dependence::DVEntry::ALL)
+      OS << "*";
+    else {
+      if (Direction & Dependence::DVEntry::LT)
+        OS << "<";
+      if (Direction & Dependence::DVEntry::EQ)
+        OS << "=";
+      if (Direction & Dependence::DVEntry::GT)
+        OS << ">";
+    }
+    if (II < DV.size())
+      OS << " ";
+  }
+  OS << "]\n";
+}
+
+// Get the Loops will affect Expr result.
+static void getAffectedLoop(const SCEV *Expr, SmallBitVector &Loops,
+                            ScalarEvolution *SE) {
+  const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Expr);
+  if (!AddRec)
+    return;
+
+  Loops.set(AddRec->getLoop()->getLoopDepth());
+  const SCEV *Start = AddRec->getStart();
+  const SCEV *Step = AddRec->getStepRecurrence(*SE);
+  getAffectedLoop(Start, Loops, SE);
+  getAffectedLoop(Step, Loops, SE);
+}
+
+// Update the Direction of undistributed loop to EQ.
+static void
+updateUndistributedLoopDirection(std::vector<Dependence::DVEntry> &DV,
+                                 ScalarEvolution *SE, Instruction *Src,
+                                 Instruction *Dst) {
+  SmallBitVector DistributedLoops(DV.size() + 1);
+  Value *SrcPtr = getLoadStorePointerOperand(Src);
+  Value *DstPtr = getLoadStorePointerOperand(Dst);
+  const SCEV *SrcSCEV = SE->getSCEV(SrcPtr);
+  const SCEV *DstSCEV = SE->getSCEV(DstPtr);
+  getAffectedLoop(SrcSCEV, DistributedLoops, SE);
+  getAffectedLoop(DstSCEV, DistributedLoops, SE);
+  for (unsigned II = 1; II <= DV.size(); ++II)
+    // Set the direction of the loop to EQ if the loop won't affect the
+    // SCEV of Src and Dst.
+    if (!DistributedLoops.test(II)) {
+      LLVM_DEBUG(dbgs() << "Set level " << II << " loop direction to =\n");
+      DV[II - 1].Direction = Dependence::DVEntry::EQ;
+    }
+}
+
+static bool normalize(std::vector<Dependence::DVEntry> &DV, ScalarEvolution *SE,
+                      Instruction *Src, Instruction *Dst) {
+  updateUndistributedLoopDirection(DV, SE, Src, Dst);
+
+  if (!isDirectionNegative(DV))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Before normalizing negative direction vectors:\n";
+             dumpDirection(dbgs(), DV););
+  for (unsigned Level = 1; Level <= DV.size(); ++Level) {
+    unsigned char Direction = DV[Level - 1].Direction;
+    // Reverse the direction vector, this means LT becomes GT
+    // and GT becomes LT.
+    unsigned char RevDirection = Direction & Dependence::DVEntry::EQ;
+    if (Direction & Dependence::DVEntry::LT)
+      RevDirection |= Dependence::DVEntry::GT;
+    if (Direction & Dependence::DVEntry::GT)
+      RevDirection |= Dependence::DVEntry::LT;
+    DV[Level - 1].Direction = RevDirection;
+  }
+
+  LLVM_DEBUG(dbgs() << "After normalizing negative direction vectors:\n";
+             dumpDirection(dbgs(), DV););
+  return true;
+}
+
 static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
                                      Loop *L, DependenceInfo *DI,
                                      ScalarEvolution *SE) {
@@ -123,23 +218,28 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
       // Track Output, Flow, and Anti dependencies.
       if (auto D = DI->depends(Src, Dst, true)) {
         assert(D->isOrdered() && "Expected an output, flow or anti dep.");
+
+        unsigned Levels = D->getLevels();
+        std::vector<Dependence::DVEntry> DV(Levels);
+        for (unsigned II = 1; II <= Levels; ++II)
+          DV[II - 1].Direction = D->getDirection(II);
         // If the direction vector is negative, normalize it to
         // make it non-negative.
-        if (D->normalize(SE))
+        if (normalize(DV, SE, Src, Dst))
           LLVM_DEBUG(dbgs() << "Negative dependence vector normalized.\n");
-        LLVM_DEBUG(StringRef DepType =
-                       D->isFlow() ? "flow" : D->isAnti() ? "anti" : "output";
+        LLVM_DEBUG(StringRef DepType = D->isFlow()   ? "flow"
+                                       : D->isAnti() ? "anti"
+                                                     : "output";
                    dbgs() << "Found " << DepType
                           << " dependency between Src and Dst\n"
                           << " Src:" << *Src << "\n Dst:" << *Dst << '\n');
-        unsigned Levels = D->getLevels();
         char Direction;
         for (unsigned II = 1; II <= Levels; ++II) {
           if (D->isScalar(II)) {
             Direction = 'S';
             Dep.push_back(Direction);
           } else {
-            unsigned Dir = D->getDirection(II);
+            unsigned Dir = DV[II - 1].Direction;
             if (Dir == Dependence::DVEntry::LT ||
                 Dir == Dependence::DVEntry::LE)
               Direction = '<';
