@@ -2586,6 +2586,32 @@ X86TargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
 //                           Other Lowering Hooks
 //===----------------------------------------------------------------------===//
 
+// Indicates we should prefer to use a non-temporal load for this load.
+// TODO: Should be merged with useNonTemporalLoad in X86ISelDAGToDAG.cpp
+static bool useNonTemporalLoad(LoadSDNode *N, const X86Subtarget &Subtarget) {
+  if (!N->isNonTemporal())
+    return false;
+
+  unsigned StoreSize = N->getMemoryVT().getStoreSize();
+
+  if (N->getAlign().value() < StoreSize)
+    return false;
+
+  switch (StoreSize) {
+  default:
+    llvm_unreachable("Unsupported store size");
+  case 4:
+  case 8:
+    return false;
+  case 16:
+    return Subtarget.hasSSE41();
+  case 32:
+    return Subtarget.hasAVX2();
+  case 64:
+    return Subtarget.hasAVX512();
+  }
+}
+
 bool X86::mayFoldLoad(SDValue Op, const X86Subtarget &Subtarget,
                       bool AssumeSingleUse) {
   if (!AssumeSingleUse && !Op.hasOneUse())
@@ -2599,8 +2625,9 @@ bool X86::mayFoldLoad(SDValue Op, const X86Subtarget &Subtarget,
       Ld->getValueSizeInBits(0) == 128 && Ld->getAlign() < Align(16))
     return false;
 
-  // TODO: If this is a non-temporal load and the target has an instruction
-  //       for it, it should not be folded. See "useNonTemporalLoad()".
+  // Don't fold non-temporal loads if we have an instruction for them.
+  if (useNonTemporalLoad(Ld, Subtarget))
+    return false;
 
   return true;
 }
