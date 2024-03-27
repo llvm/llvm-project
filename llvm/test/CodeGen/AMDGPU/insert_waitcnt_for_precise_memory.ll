@@ -1,12 +1,12 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=+precise-memory < %s | FileCheck %s -check-prefixes=GFX9
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -mattr=+precise-memory < %s | FileCheck %s -check-prefixes=GFX90A
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+precise-memory < %s | FileCheck %s -check-prefixes=GFX10
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global,+enable-flat-scratch,+precise-memory -amdgpu-use-divergent-register-indexing < %s | FileCheck --check-prefixes=GFX9-FLATSCR %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=+enable-flat-scratch,+precise-memory < %s | FileCheck --check-prefixes=GFX9-FLATSCR %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+precise-memory < %s | FileCheck %s -check-prefixes=GFX11
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+precise-memory < %s | FileCheck %s -check-prefixes=GFX12
 
 ; from atomicrmw-expand.ll
-; covers flat_load, flat_atomic
+; covers flat_load, flat_atomic (atomic with return)
 ;
 ; GFX90A-LABEL: syncscope_workgroup_nortn:
 ; GFX90A:  ; %bb.0:
@@ -48,7 +48,7 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) {
 }
 
 ; from atomicrmw-nand.ll
-; covers global_atomic, global_load
+; covers global_atomic (atomic with return), global_load
 ;
 ; GFX9-LABEL: atomic_nand_i32_global:
 ; GFX9:       ; %bb.0:
@@ -138,7 +138,7 @@ define i32 @atomic_nand_i32_global(ptr addrspace(1) %ptr) nounwind {
 }
 
 ; from bf16.ll
-; covers buffer_load, buffer_store, flat_load, flat_store, global_load, global_store
+; covers flat_load, flat_store, global_load, global_store
 ;
 ; GFX9-LABEL: test_load_store:
 ; GFX9:       ; %bb.0:
@@ -186,19 +186,60 @@ define void @test_load_store(ptr addrspace(1) %in, ptr addrspace(1) %out) {
   ret void
 }
 
-; from scratch-simple.ll
-; covers scratch_load, scratch_store
+; covers scratch_load, scratch_store, buffer_load, buffer_store
+; GFX9-LABEL: test_load_store_as5:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    buffer_load_ushort v0, v0, s[0:3], 0 offen
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    buffer_store_short v0, v1, s[0:3], 0 offen
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-FLATSCR-LABEL: {{^}}vs_main:
-; GFX9-FLATSCR:        scratch_store_dwordx4 off, v[{{[0-9:]+}}],
-; GFX9-FLATSCR-NEXT:   s_waitcnt vmcnt(0)
-; GFX9-FLATSCR:        scratch_load_dword {{v[0-9]+}}, {{v[0-9]+}}, off
-; GFX9-FLATSCR-NEXT:   s_waitcnt vmcnt(0)
-define amdgpu_vs float @vs_main(i32 %idx) {
-  %v1 = extractelement <81 x float> <float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float 0x3FE41CFEA0000000, float 0xBFE7A693C0000000, float 0xBFEA477C60000000, float 0xBFEBE5DC60000000, float 0xBFEC71C720000000, float 0xBFEBE5DC60000000, float 0xBFEA477C60000000, float 0xBFE7A693C0000000, float 0xBFE41CFEA0000000, float 0x3FDF9B13E0000000, float 0x3FDF9B1380000000, float 0x3FD5C53B80000000, float 0x3FD5C53B00000000, float 0x3FC6326AC0000000, float 0x3FC63269E0000000, float 0xBEE05CEB00000000, float 0xBEE086A320000000, float 0xBFC63269E0000000, float 0xBFC6326AC0000000, float 0xBFD5C53B80000000, float 0xBFD5C53B80000000, float 0xBFDF9B13E0000000, float 0xBFDF9B1460000000, float 0xBFE41CFE80000000, float 0x3FE7A693C0000000, float 0x3FEA477C20000000, float 0x3FEBE5DC40000000, float 0x3FEC71C6E0000000, float 0x3FEBE5DC40000000, float 0x3FEA477C20000000, float 0x3FE7A693C0000000, float 0xBFE41CFE80000000>, i32 %idx
-  %v2 = extractelement <81 x float> <float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float 0xBFE41CFEA0000000, float 0xBFDF9B13E0000000, float 0xBFD5C53B80000000, float 0xBFC6326AC0000000, float 0x3EE0789320000000, float 0x3FC6326AC0000000, float 0x3FD5C53B80000000, float 0x3FDF9B13E0000000, float 0x3FE41CFEA0000000, float 0xBFE7A693C0000000, float 0x3FE7A693C0000000, float 0xBFEA477C20000000, float 0x3FEA477C20000000, float 0xBFEBE5DC40000000, float 0x3FEBE5DC40000000, float 0xBFEC71C720000000, float 0x3FEC71C6E0000000, float 0xBFEBE5DC60000000, float 0x3FEBE5DC40000000, float 0xBFEA477C20000000, float 0x3FEA477C20000000, float 0xBFE7A693C0000000, float 0x3FE7A69380000000, float 0xBFE41CFEA0000000, float 0xBFDF9B13E0000000, float 0xBFD5C53B80000000, float 0xBFC6326AC0000000, float 0x3EE0789320000000, float 0x3FC6326AC0000000, float 0x3FD5C53B80000000, float 0x3FDF9B13E0000000, float 0x3FE41CFE80000000>, i32 %idx
-  %r = fadd float %v1, %v2
-  ret float %r
+; GFX9-FLATSCR-LABEL: test_load_store_as5:
+; GFX9-FLATSCR:       ; %bb.0:
+; GFX9-FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-FLATSCR-NEXT:    scratch_load_ushort v0, v0, off
+; GFX9-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLATSCR-NEXT:    scratch_store_short v1, v0, off
+; GFX9-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLATSCR-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: test_load_store_as5:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    buffer_load_ushort v0, v0, s[0:3], 0 offen
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_store_short v0, v1, s[0:3], 0 offen
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: test_load_store_as5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    scratch_load_u16 v0, v0, off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b16 v1, v0, off
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: test_load_store_as5:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    scratch_load_u16 v0, v0, off
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    scratch_store_b16 v1, v0, off
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+
+define void @test_load_store_as5(ptr addrspace(5) %in, ptr addrspace(5) %out) {
+  %val = load bfloat, ptr addrspace(5) %in
+  store bfloat %val, ptr addrspace(5) %out
+  ret void
 }
 
 ; from udiv.ll
@@ -274,7 +315,7 @@ main_body:
 }
 
 ; from atomic_load_add.ll
-; covers s_load, ds_add
+; covers s_load, ds_add (atomic without return)
 ; GFX9-LABEL: atomic_add_local:
 ; GFX9:       ; %bb.1:
 ; GFX9-NEXT:    s_load_dword s0, s[0:1], 0x24
@@ -314,7 +355,7 @@ define amdgpu_kernel void @atomic_add_local(ptr addrspace(3) %local) {
 declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add(i32, ptr addrspace(8), i32, i32, i32 immarg)
 
 ; from atomic_optimizations_buffer.ll
-; covers buffer_atomic
+; covers buffer_atomic (atomic with return)
 ; GFX9-LABEL: add_i32_constant:
 ; GFX9:       ; %bb.1:
 ; GFX9-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x34
@@ -424,7 +465,7 @@ main_body:
 declare i32 @llvm.amdgcn.image.atomic.swap.1d.i32.i32(i32, i32, <8 x i32>, i32, i32)
 
 ; from llvm.amdgcn.image.atomic.dim.ll
-; covers image_atomic
+; covers image_atomic (atomic with return)
 ; GFX90A-LABEL: {{^}}atomic_swap_1d:
 ; GFX90A: image_atomic_swap v0, v{{[02468]}}, s[0:7] dmask:0x1 unorm glc{{$}}
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
@@ -456,7 +497,7 @@ main_body:
 }
 
 ; from lds-bounds.ll
-; covers ds_write_b64
+; covers ds_write_b64 (atomic without return)
 @compute_lds = external addrspace(3) global [512 x i32], align 16
 ; GFX9-LABEL: {{^}}store_aligned:
 ; GFX9:      ds_write_b64
@@ -509,7 +550,7 @@ entry:
   %v.0 = load i32, ptr addrspace(3) %ptr, align 8
   %v.1 = load i32, ptr addrspace(3) %ptr.gep.1
 
-  %r.0 = insertelement <2 x i32> undef, i32 %v.0, i32 0
+  %r.0 = insertelement <2 x i32> poison, i32 %v.0, i32 0
   %r.1 = insertelement <2 x i32> %r.0, i32 %v.1, i32 1
   %bc = bitcast <2 x i32> %r.1 to <2 x float>
   ret <2 x float> %bc
@@ -569,7 +610,7 @@ entry:
   %v.0 = load i32, ptr addrspace(3) %ptr.a
   %v.1 = load i32, ptr addrspace(3) %ptr.b
 
-  %r.0 = insertelement <2 x i32> undef, i32 %v.0, i32 0
+  %r.0 = insertelement <2 x i32> poison, i32 %v.0, i32 0
   %r.1 = insertelement <2 x i32> %r.0, i32 %v.1, i32 1
   %bc = bitcast <2 x i32> %r.1 to <2 x float>
   ret <2 x float> %bc
