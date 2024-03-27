@@ -1766,7 +1766,7 @@ TypeInfoChars
 static getConstantArrayInfoInChars(const ASTContext &Context,
                                    const ConstantArrayType *CAT) {
   TypeInfoChars EltInfo = Context.getTypeInfoInChars(CAT->getElementType());
-  uint64_t Size = CAT->getSize().getZExtValue();
+  uint64_t Size = CAT->getZExtSize();
   assert((Size == 0 || static_cast<uint64_t>(EltInfo.Width.getQuantity()) <=
               (uint64_t)(-1)/Size) &&
          "Overflow in array type char size evaluation");
@@ -1910,7 +1910,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     // Model non-constant sized arrays as size zero, but track the alignment.
     uint64_t Size = 0;
     if (const auto *CAT = dyn_cast<ConstantArrayType>(T))
-      Size = CAT->getSize().getZExtValue();
+      Size = CAT->getZExtSize();
 
     TypeInfo EltInfo = getTypeInfo(cast<ArrayType>(T)->getElementType());
     assert((Size == 0 || EltInfo.Width <= (uint64_t)(-1) / Size) &&
@@ -3560,8 +3560,8 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
   ArySize = ArySize.zextOrTrunc(Target->getMaxPointerWidth());
 
   llvm::FoldingSetNodeID ID;
-  ConstantArrayType::Profile(ID, *this, EltTy, ArySize, SizeExpr, ASM,
-                             IndexTypeQuals);
+  ConstantArrayType::Profile(ID, *this, EltTy, ArySize.getZExtValue(), SizeExpr,
+                             ASM, IndexTypeQuals);
 
   void *InsertPos = nullptr;
   if (ConstantArrayType *ATP =
@@ -3585,11 +3585,8 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
     assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
   }
 
-  void *Mem = Allocate(
-      ConstantArrayType::totalSizeToAlloc<const Expr *>(SizeExpr ? 1 : 0),
-      alignof(ConstantArrayType));
-  auto *New = new (Mem)
-    ConstantArrayType(EltTy, Canon, ArySize, SizeExpr, ASM, IndexTypeQuals);
+  auto *New = ConstantArrayType::Create(*this, EltTy, Canon, ArySize, SizeExpr,
+                                        ASM, IndexTypeQuals);
   ConstantArrayTypes.InsertNode(New, InsertPos);
   Types.push_back(New);
   return QualType(New, 0);
@@ -7051,7 +7048,7 @@ uint64_t
 ASTContext::getConstantArrayElementCount(const ConstantArrayType *CA)  const {
   uint64_t ElementCount = 1;
   do {
-    ElementCount *= CA->getSize().getZExtValue();
+    ElementCount *= CA->getZExtSize();
     CA = dyn_cast_or_null<ConstantArrayType>(
       CA->getElementType()->getAsArrayTypeUnsafe());
   } while (CA);
@@ -8374,7 +8371,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
       S += '[';
 
       if (const auto *CAT = dyn_cast<ConstantArrayType>(AT))
-        S += llvm::utostr(CAT->getSize().getZExtValue());
+        S += llvm::utostr(CAT->getZExtSize());
       else {
         //Variable length arrays are encoded as a regular array with 0 elements.
         assert((isa<VariableArrayType>(AT) || isa<IncompleteArrayType>(AT)) &&
@@ -10808,7 +10805,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
   {
     const ConstantArrayType* LCAT = getAsConstantArrayType(LHS);
     const ConstantArrayType* RCAT = getAsConstantArrayType(RHS);
-    if (LCAT && RCAT && RCAT->getSize() != LCAT->getSize())
+    if (LCAT && RCAT && RCAT->getZExtSize() != LCAT->getZExtSize())
       return {};
 
     QualType LHSElem = getAsArrayType(LHS)->getElementType();
