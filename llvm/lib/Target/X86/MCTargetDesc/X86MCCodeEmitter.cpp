@@ -358,7 +358,8 @@ private:
   void emitImmediate(const MCOperand &Disp, SMLoc Loc, unsigned ImmSize,
                      MCFixupKind FixupKind, uint64_t StartByte,
                      SmallVectorImpl<char> &CB,
-                     SmallVectorImpl<MCFixup> &Fixups, int ImmOffset = 0) const;
+                     SmallVectorImpl<MCFixup> &Fixups,
+                     int64_t ImmOffset = 0) const;
 
   void emitRegModRMByte(const MCOperand &ModRMReg, unsigned RegOpcodeFld,
                         SmallVectorImpl<char> &CB) const;
@@ -412,7 +413,8 @@ static void emitConstant(uint64_t Val, unsigned Size,
 /// Determine if this immediate can fit in a disp8 or a compressed disp8 for
 /// EVEX instructions. \p will be set to the value to pass to the ImmOffset
 /// parameter of emitImmediate.
-static bool isDispOrCDisp8(uint64_t TSFlags, int Value, int &ImmOffset) {
+static bool isDispOrCDisp8(uint64_t TSFlags, int64_t Value,
+                           int64_t &ImmOffset) {
   bool HasEVEX = (TSFlags & X86II::EncodingMask) == X86II::EVEX;
 
   unsigned CD8_Scale =
@@ -425,7 +427,7 @@ static bool isDispOrCDisp8(uint64_t TSFlags, int Value, int &ImmOffset) {
   if (Value & (CD8_Scale - 1)) // Unaligned offset
     return false;
 
-  int CDisp8 = Value / static_cast<int>(CD8_Scale);
+  int64_t CDisp8 = Value / static_cast<int64_t>(CD8_Scale);
   if (!isInt<8>(CDisp8))
     return false;
 
@@ -518,7 +520,7 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
                                      uint64_t StartByte,
                                      SmallVectorImpl<char> &CB,
                                      SmallVectorImpl<MCFixup> &Fixups,
-                                     int ImmOffset) const {
+                                     int64_t ImmOffset) const {
   const MCExpr *Expr = nullptr;
   if (DispOp.isImm()) {
     // If this is a simple integer displacement that doesn't require a
@@ -799,7 +801,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
     // This also handles the 0 displacement for [EBP], [R13], [R21] or [R29]. We
     // can't use disp8 if the {disp32} pseudo prefix is present.
     if (Disp.isImm() && AllowDisp8) {
-      int ImmOffset = 0;
+      int64_t ImmOffset = 0;
       if (isDispOrCDisp8(TSFlags, Disp.getImm(), ImmOffset)) {
         emitByte(modRMByte(1, RegOpcodeField, BaseRegNo), CB);
         emitImmediate(Disp, MI.getLoc(), 1, FK_Data_1, StartByte, CB, Fixups,
@@ -826,7 +828,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
 
   bool ForceDisp32 = false;
   bool ForceDisp8 = false;
-  int ImmOffset = 0;
+  int64_t ImmOffset = 0;
   if (BaseReg == 0) {
     // If there is no base register, we emit the special case SIB byte with
     // MOD=0, BASE=5, to JUST get the index, scale, and displacement.
