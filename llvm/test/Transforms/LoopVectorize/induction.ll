@@ -348,11 +348,11 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IND:       vector.body:
 ; IND-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IND-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
-; IND-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr [[TMP5]], i64 [[OFFSET]]
+; IND-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; IND-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[OFFSET]]
 ; IND-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP6]], align 4, !alias.scope [[META4:![0-9]+]], !noalias [[META7:![0-9]+]]
-; IND-NEXT:    [[TMP7:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
-; IND-NEXT:    [[TMP8:%.*]] = getelementptr float, ptr [[TMP7]], i64 [[OFFSET2]]
+; IND-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; IND-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[OFFSET2]]
 ; IND-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x float>, ptr [[TMP8]], align 4, !alias.scope [[META7]]
 ; IND-NEXT:    [[TMP9:%.*]] = fmul fast <2 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD4]]
 ; IND-NEXT:    [[TMP10:%.*]] = fadd fast <2 x float> [[WIDE_LOAD]], [[TMP9]]
@@ -368,11 +368,11 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; IND-NEXT:    br label [[FOR_BODY:%.*]]
 ; IND:       for.body:
 ; IND-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; IND-NEXT:    [[TMP12:%.*]] = getelementptr float, ptr [[A]], i64 [[IV]]
-; IND-NEXT:    [[ARR_IDX:%.*]] = getelementptr float, ptr [[TMP12]], i64 [[OFFSET]]
+; IND-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; IND-NEXT:    [[ARR_IDX:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i64 [[OFFSET]]
 ; IND-NEXT:    [[L1:%.*]] = load float, ptr [[ARR_IDX]], align 4
-; IND-NEXT:    [[TMP13:%.*]] = getelementptr float, ptr [[A]], i64 [[IV]]
-; IND-NEXT:    [[ARR_IDX2:%.*]] = getelementptr float, ptr [[TMP13]], i64 [[OFFSET2]]
+; IND-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; IND-NEXT:    [[ARR_IDX2:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 [[OFFSET2]]
 ; IND-NEXT:    [[L2:%.*]] = load float, ptr [[ARR_IDX2]], align 4
 ; IND-NEXT:    [[M:%.*]] = fmul fast float [[L2]], [[B]]
 ; IND-NEXT:    [[AD:%.*]] = fadd fast float [[L1]], [[M]]
@@ -408,13 +408,13 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
 ; UNROLL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; UNROLL-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
-; UNROLL-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr [[TMP5]], i64 [[OFFSET]]
+; UNROLL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; UNROLL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[OFFSET]]
 ; UNROLL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 8
 ; UNROLL-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP6]], align 4, !alias.scope [[META4:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; UNROLL-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x float>, ptr [[TMP7]], align 4, !alias.scope [[META4]], !noalias [[META7]]
-; UNROLL-NEXT:    [[TMP8:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
-; UNROLL-NEXT:    [[TMP9:%.*]] = getelementptr float, ptr [[TMP8]], i64 [[OFFSET2]]
+; UNROLL-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; UNROLL-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 [[OFFSET2]]
 ; UNROLL-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 8
 ; UNROLL-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x float>, ptr [[TMP9]], align 4, !alias.scope [[META7]]
 ; UNROLL-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x float>, ptr [[TMP10]], align 4, !alias.scope [[META7]]
@@ -435,11 +435,11 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; UNROLL-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL:       for.body:
 ; UNROLL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; UNROLL-NEXT:    [[TMP16:%.*]] = getelementptr float, ptr [[A]], i64 [[IV]]
-; UNROLL-NEXT:    [[ARR_IDX:%.*]] = getelementptr float, ptr [[TMP16]], i64 [[OFFSET]]
+; UNROLL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; UNROLL-NEXT:    [[ARR_IDX:%.*]] = getelementptr inbounds float, ptr [[TMP16]], i64 [[OFFSET]]
 ; UNROLL-NEXT:    [[L1:%.*]] = load float, ptr [[ARR_IDX]], align 4
-; UNROLL-NEXT:    [[TMP17:%.*]] = getelementptr float, ptr [[A]], i64 [[IV]]
-; UNROLL-NEXT:    [[ARR_IDX2:%.*]] = getelementptr float, ptr [[TMP17]], i64 [[OFFSET2]]
+; UNROLL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; UNROLL-NEXT:    [[ARR_IDX2:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i64 [[OFFSET2]]
 ; UNROLL-NEXT:    [[L2:%.*]] = load float, ptr [[ARR_IDX2]], align 4
 ; UNROLL-NEXT:    [[M:%.*]] = fmul fast float [[L2]], [[B]]
 ; UNROLL-NEXT:    [[AD:%.*]] = fadd fast float [[L1]], [[M]]
@@ -551,13 +551,13 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INTERLEAVE:       vector.body:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; INTERLEAVE-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr [[TMP5]], i64 [[OFFSET]]
+; INTERLEAVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[OFFSET]]
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 16
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP6]], align 4, !alias.scope [[META4:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP7]], align 4, !alias.scope [[META4]], !noalias [[META7]]
-; INTERLEAVE-NEXT:    [[TMP8:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP9:%.*]] = getelementptr float, ptr [[TMP8]], i64 [[OFFSET2]]
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; INTERLEAVE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 [[OFFSET2]]
 ; INTERLEAVE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 16
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP9]], align 4, !alias.scope [[META7]]
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP10]], align 4, !alias.scope [[META7]]
@@ -578,11 +578,11 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; INTERLEAVE-NEXT:    br label [[FOR_BODY:%.*]]
 ; INTERLEAVE:       for.body:
 ; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; INTERLEAVE-NEXT:    [[TMP16:%.*]] = getelementptr float, ptr [[A]], i64 [[IV]]
-; INTERLEAVE-NEXT:    [[ARR_IDX:%.*]] = getelementptr float, ptr [[TMP16]], i64 [[OFFSET]]
+; INTERLEAVE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; INTERLEAVE-NEXT:    [[ARR_IDX:%.*]] = getelementptr inbounds float, ptr [[TMP16]], i64 [[OFFSET]]
 ; INTERLEAVE-NEXT:    [[L1:%.*]] = load float, ptr [[ARR_IDX]], align 4
-; INTERLEAVE-NEXT:    [[TMP17:%.*]] = getelementptr float, ptr [[A]], i64 [[IV]]
-; INTERLEAVE-NEXT:    [[ARR_IDX2:%.*]] = getelementptr float, ptr [[TMP17]], i64 [[OFFSET2]]
+; INTERLEAVE-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; INTERLEAVE-NEXT:    [[ARR_IDX2:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i64 [[OFFSET2]]
 ; INTERLEAVE-NEXT:    [[L2:%.*]] = load float, ptr [[ARR_IDX2]], align 4
 ; INTERLEAVE-NEXT:    [[M:%.*]] = fmul fast float [[L2]], [[B]]
 ; INTERLEAVE-NEXT:    [[AD:%.*]] = fadd fast float [[L1]], [[M]]

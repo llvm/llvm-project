@@ -1403,10 +1403,10 @@ define void @PR27626_5(ptr %a, i32 %x, i32 %y, i32 %z, i64 %n) #1 {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[A_I:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[A_I_MINUS_1:%.*]] = getelementptr i8, ptr [[TMP19]], i64 -4
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[A_I_MINUS_3:%.*]] = getelementptr i8, ptr [[TMP20]], i64 -12
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[A_I_MINUS_1:%.*]] = getelementptr inbounds i8, ptr [[TMP19]], i64 -4
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[A_I_MINUS_3:%.*]] = getelementptr inbounds i8, ptr [[TMP20]], i64 -12
 ; CHECK-NEXT:    store i32 [[X]], ptr [[A_I_MINUS_1]], align 4
 ; CHECK-NEXT:    store i32 [[Y]], ptr [[A_I_MINUS_3]], align 4
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[A_I]], align 4

@@ -23,8 +23,8 @@ define void @_Z4testPcl(ptr %out, i64 %size) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[OUT:%.*]], i64 [[I_0]]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[OUT]], i64 [[I_0]]
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[SIZE]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 [[I_0]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[SIZE]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[ARRAYIDX1]], align 1, !llvm.access.group [[ACC_GRP0:![0-9]+]]
 ; CHECK-NEXT:    store i16 [[TMP1]], ptr [[ARRAYIDX]], align 1, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    br label [[FOR_INC]]

@@ -845,12 +845,10 @@ bool ScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
       else
         SplitOps[J] = ScatterOps[J][I];
     }
-    Res[I] = Builder.CreateGEP(GEPI.getSourceElementType(), SplitOps[0],
-                               ArrayRef(SplitOps).drop_front(),
-                               GEPI.getName() + ".i" + Twine(I));
-    if (GEPI.isInBounds())
-      if (GetElementPtrInst *NewGEPI = dyn_cast<GetElementPtrInst>(Res[I]))
-        NewGEPI->setIsInBounds();
+    Res[I] =
+        Builder.CreateGEP(GEPI.getSourceElementType(), SplitOps[0],
+                          ArrayRef(SplitOps).drop_front(),
+                          GEPI.getName() + ".i" + Twine(I), GEPI.isInBounds());
   }
   gather(&GEPI, Res, *VS);
   return true;

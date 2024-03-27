@@ -1020,11 +1020,11 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
 
   // For trivial GEP chains, we can swap the indicies.
   auto NewSrc = Builder.CreateGEP(PtrGEPType, PtrGEP->getPointerOperand(),
-                                  SmallVector<Value *, 4>(GEP->indices()));
-  cast<GetElementPtrInst>(NewSrc)->setIsInBounds(IsChainInBounds);
+                                  SmallVector<Value *, 4>(GEP->indices()), "",
+                                  IsChainInBounds);
   auto NewGEP = Builder.CreateGEP(GEPType, NewSrc,
-                                  SmallVector<Value *, 4>(PtrGEP->indices()));
-  cast<GetElementPtrInst>(NewGEP)->setIsInBounds(IsChainInBounds);
+                                  SmallVector<Value *, 4>(PtrGEP->indices()),
+                                  "", IsChainInBounds);
   GEP->replaceAllUsesWith(NewGEP);
   RecursivelyDeleteTriviallyDeadInstructions(GEP);
   return true;

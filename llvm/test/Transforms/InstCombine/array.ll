@@ -6,8 +6,8 @@ define void @test(ptr %ptr, i32 %a, i32 %b) {
 ; CHECK-SAME: ptr [[PTR:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[A]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 40
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i64 [[TMP0]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 40
 ; CHECK-NEXT:    store i32 [[B]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -78,8 +78,8 @@ define void @test_zext_nneg(ptr %ptr, i32 %a, i32 %b) {
 ; CHECK-SAME: ptr [[PTR:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[A]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 40
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i64 [[TMP0]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 40
 ; CHECK-NEXT:    store i32 [[B]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    ret void
 ;

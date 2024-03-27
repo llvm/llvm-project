@@ -131,11 +131,11 @@ define void @test_runtime_check(ptr %a, float %b, i64 %offset, i64 %offset2, i64
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr [[TMP5]], i64 [[OFFSET]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[OFFSET]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP6]], align 4, !alias.scope [[META15:![0-9]+]], !noalias [[META18:![0-9]+]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr float, ptr [[TMP7]], i64 [[OFFSET2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[OFFSET2]]
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP8]], align 4, !alias.scope [[META18]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD4]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <4 x float> [[WIDE_LOAD]], [[TMP9]]
@@ -151,11 +151,11 @@ define void @test_runtime_check(ptr %a, float %b, i64 %offset, i64 %offset2, i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr float, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[ARR_IDX:%.*]] = getelementptr float, ptr [[TMP12]], i64 [[OFFSET]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[ARR_IDX:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i64 [[OFFSET]]
 ; CHECK-NEXT:    [[L1:%.*]] = load float, ptr [[ARR_IDX]], align 4
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr float, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[ARR_IDX2:%.*]] = getelementptr float, ptr [[TMP13]], i64 [[OFFSET2]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[ARR_IDX2:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 [[OFFSET2]]
 ; CHECK-NEXT:    [[L2:%.*]] = load float, ptr [[ARR_IDX2]], align 4
 ; CHECK-NEXT:    [[M:%.*]] = fmul fast float [[L2]], [[B]]
 ; CHECK-NEXT:    [[AD:%.*]] = fadd fast float [[L1]], [[M]]
@@ -225,17 +225,17 @@ define void @test_runtime_check2(ptr %a, float %b, i64 %offset, i64 %offset2, i6
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[A:%.*]], i64 [[IV]]
-; CHECK-NEXT:    [[ARR_IDX:%.*]] = getelementptr float, ptr [[TMP0]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[ARR_IDX:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i64 [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[L1:%.*]] = load float, ptr [[ARR_IDX]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[ARR_IDX2:%.*]] = getelementptr float, ptr [[TMP1]], i64 [[OFFSET2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[ARR_IDX2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i64 [[OFFSET2:%.*]]
 ; CHECK-NEXT:    [[L2:%.*]] = load float, ptr [[ARR_IDX2]], align 4
 ; CHECK-NEXT:    [[M:%.*]] = fmul fast float [[L2]], [[B:%.*]]
 ; CHECK-NEXT:    [[AD:%.*]] = fadd fast float [[L1]], [[M]]
 ; CHECK-NEXT:    store float [[AD]], ptr [[ARR_IDX]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[C:%.*]], i64 [[IV]]
-; CHECK-NEXT:    [[C_IDX:%.*]] = getelementptr i8, ptr [[TMP2]], i64 -4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[C:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[C_IDX:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 -4
 ; CHECK-NEXT:    [[LC:%.*]] = load float, ptr [[C_IDX]], align 4
 ; CHECK-NEXT:    [[VC:%.*]] = fadd float [[LC]], 1.000000e+00
 ; CHECK-NEXT:    [[C_IDX2:%.*]] = getelementptr inbounds float, ptr [[C]], i64 [[IV]]

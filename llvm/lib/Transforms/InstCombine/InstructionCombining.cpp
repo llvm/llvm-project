@@ -2895,6 +2895,12 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       // as:
       //   %newptr = getelementptr i32, ptr %ptr, i64 %idx1
       //   %newgep = getelementptr i32, ptr %newptr, i64 %idx2
+      if (GEP.isInBounds()) {
+        auto *NewPtr = Builder.CreateInBoundsGEP(GEP.getResultElementType(),
+                                                 GEP.getPointerOperand(), Idx1);
+        return GetElementPtrInst::CreateInBounds(GEP.getResultElementType(),
+                                                 NewPtr, Idx2);
+      }
       auto *NewPtr = Builder.CreateGEP(GEP.getResultElementType(),
                                        GEP.getPointerOperand(), Idx1);
       return GetElementPtrInst::Create(GEP.getResultElementType(), NewPtr,
@@ -2909,6 +2915,16 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       // as:
       // %newptr = getelementptr i32, ptr %ptr, i32 %idx1
       // %newgep = getelementptr i32, ptr %newptr, i32 idx2
+
+      if (GEP.isInBounds()) {
+        auto *NewPtr = Builder.CreateInBoundsGEP(
+            GEP.getResultElementType(), GEP.getPointerOperand(),
+            Builder.CreateSExt(Idx1, GEP.getOperand(1)->getType()));
+        return GetElementPtrInst::CreateInBounds(
+            GEP.getResultElementType(), NewPtr,
+            Builder.CreateSExt(C, GEP.getOperand(1)->getType()));
+      }
+
       auto *NewPtr = Builder.CreateGEP(
           GEP.getResultElementType(), GEP.getPointerOperand(),
           Builder.CreateSExt(Idx1, GEP.getOperand(1)->getType()));
