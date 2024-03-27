@@ -1,0 +1,31 @@
+module ExternCtx {
+  header "ExternCtx.h"
+}
+
+module HeaderLib {
+  header "HeaderLib.h"
+}
+
+module InstancetypeModule {
+  header "InstancetypeModule.h"
+}
+
+module BrokenTypes {
+  header "BrokenTypes.h"
+}
+
+module ModuleWithWrongCase {
+  header "ModuleWithWrongCase.h"
+}
+
+module ModuleWithWrongCasePrivate {
+  header "ModuleWithWrongCasePrivate.h"
+}
+
+module Namespaces {
+  header "Namespaces.h"
+}
+
+module SwiftImportAs {
+  header "SwiftImportAs.h"
+}

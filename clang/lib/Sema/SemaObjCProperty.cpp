@@ -638,14 +638,14 @@ ObjCPropertyDecl *Sema::CreatePropertyDecl(Scope *S,
     PDecl->setInvalidDecl();
   }
 
-  ProcessDeclAttributes(S, PDecl, FD.D);
-
   // Regardless of setter/getter attribute, we save the default getter/setter
   // selector names in anticipation of declaration of setter/getter methods.
   PDecl->setGetterName(GetterSel, GetterNameLoc);
   PDecl->setSetterName(SetterSel, SetterNameLoc);
   PDecl->setPropertyAttributesAsWritten(
                           makePropertyAttributesAsWritten(AttributesAsWritten));
+
+  ProcessDeclAttributes(S, PDecl, FD.D);
 
   if (Attributes & ObjCPropertyAttribute::kind_readonly)
     PDecl->setPropertyAttributes(ObjCPropertyAttribute::kind_readonly);
