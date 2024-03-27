@@ -241,14 +241,14 @@ define <2 x i64> @testDoubleword(<2 x i64> %a, i64 %b, i64 %idx) {
 ;
 ; AIX-P8-32-LABEL: testDoubleword:
 ; AIX-P8-32:       # %bb.0: # %entry
-; AIX-P8-32-NEXT:    add r6, r6, r6
 ; AIX-P8-32-NEXT:    addi r5, r1, -32
-; AIX-P8-32-NEXT:    rlwinm r7, r6, 2, 28, 29
+; AIX-P8-32-NEXT:    slwi r7, r6, 1
+; AIX-P8-32-NEXT:    rlwinm r6, r6, 3, 28, 28
 ; AIX-P8-32-NEXT:    stxvw4x v2, 0, r5
-; AIX-P8-32-NEXT:    stwx r3, r5, r7
+; AIX-P8-32-NEXT:    stwx r3, r5, r6
 ; AIX-P8-32-NEXT:    addi r3, r1, -16
 ; AIX-P8-32-NEXT:    lxvw4x vs0, 0, r5
-; AIX-P8-32-NEXT:    addi r5, r6, 1
+; AIX-P8-32-NEXT:    ori r5, r7, 1
 ; AIX-P8-32-NEXT:    rlwinm r5, r5, 2, 28, 29
 ; AIX-P8-32-NEXT:    stxvw4x vs0, 0, r3
 ; AIX-P8-32-NEXT:    stwx r4, r3, r5
