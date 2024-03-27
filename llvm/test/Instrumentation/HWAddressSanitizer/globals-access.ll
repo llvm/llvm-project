@@ -2,6 +2,8 @@
 ; RUN: opt < %s -S -passes=hwasan -mtriple=aarch64-linux-gnu -hwasan-globals=0 | FileCheck %s --check-prefixes=NOGLOB
 ; RUN: opt < %s -S -passes=hwasan -mtriple=aarch64-linux-gnu -hwasan-globals=1 | FileCheck %s
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
 @x = dso_local global i32 0, align 4
 
 ;.
