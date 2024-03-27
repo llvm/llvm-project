@@ -595,13 +595,13 @@ bool TargetRegisterInfo::getCoveringSubRegIndexes(
 unsigned TargetRegisterInfo::getSubRegIdxSize(unsigned Idx) const {
   assert(Idx && Idx < getNumSubRegIndices() &&
          "This is not a subregister index");
-  return SubRegIdxRanges[Idx].Size;
+  return SubRegIdxRanges[HwMode * getNumSubRegIndices() + Idx].Size;
 }
 
 unsigned TargetRegisterInfo::getSubRegIdxOffset(unsigned Idx) const {
   assert(Idx && Idx < getNumSubRegIndices() &&
          "This is not a subregister index");
-  return SubRegIdxRanges[Idx].Offset;
+  return SubRegIdxRanges[HwMode * getNumSubRegIndices() + Idx].Offset;
 }
 
 Register

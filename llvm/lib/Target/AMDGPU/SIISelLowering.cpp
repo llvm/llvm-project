@@ -1355,7 +1355,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                   MachineMemOperand::MOVolatile;
     return true;
   }
-  case Intrinsic::amdgcn_global_load_tr: {
+  case Intrinsic::amdgcn_global_load_tr_b64:
+  case Intrinsic::amdgcn_global_load_tr_b128: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
@@ -1462,7 +1463,8 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_global_atomic_fmin:
   case Intrinsic::amdgcn_global_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
-  case Intrinsic::amdgcn_global_load_tr:
+  case Intrinsic::amdgcn_global_load_tr_b64:
+  case Intrinsic::amdgcn_global_load_tr_b128:
     Ptr = II->getArgOperand(0);
     break;
   case Intrinsic::amdgcn_global_load_lds:
@@ -2857,13 +2859,12 @@ SDValue SITargetLowering::LowerFormalArguments(
   } else if (!IsGraphics) {
     // For the fixed ABI, pass workitem IDs in the last argument register.
     allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
-  }
 
-  if (!IsEntryFunc) {
+    // FIXME: Sink this into allocateSpecialInputSGPRs
     if (!Subtarget->enableFlatScratch())
       CCInfo.AllocateReg(Info->getScratchRSrcReg());
-    if (!IsGraphics)
-      allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
+
+    allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
   }
 
   if (!IsKernel) {

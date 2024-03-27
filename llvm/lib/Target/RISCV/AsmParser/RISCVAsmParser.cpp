@@ -213,7 +213,11 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseReglist(OperandVector &Operands);
   ParseStatus parseRegReg(OperandVector &Operands);
   ParseStatus parseRetval(OperandVector &Operands);
-  ParseStatus parseZcmpSpimm(OperandVector &Operands);
+  ParseStatus parseZcmpStackAdj(OperandVector &Operands,
+                                bool ExpectNegative = false);
+  ParseStatus parseZcmpNegStackAdj(OperandVector &Operands) {
+    return parseZcmpStackAdj(Operands, /*ExpectNegative*/ true);
+  }
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
@@ -1062,7 +1066,7 @@ public:
       break;
     case KindTy::Spimm:
       OS << "<Spimm: ";
-      RISCVZC::printSpimm(Spimm.Val, OS);
+      OS << Spimm.Val;
       OS << '>';
       break;
     case KindTy::RegReg:
@@ -1608,7 +1612,7 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         ErrorLoc,
         "operand must be {ra [, s0[-sN]]} or {x1 [, x8[-x9][, x18[-xN]]]}");
   }
-  case Match_InvalidSpimm: {
+  case Match_InvalidStackAdj: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(
         ErrorLoc,
@@ -2583,8 +2587,9 @@ ParseStatus RISCVAsmParser::parseReglist(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-ParseStatus RISCVAsmParser::parseZcmpSpimm(OperandVector &Operands) {
-  (void)parseOptionalToken(AsmToken::Minus);
+ParseStatus RISCVAsmParser::parseZcmpStackAdj(OperandVector &Operands,
+                                              bool ExpectNegative) {
+  bool Negative = parseOptionalToken(AsmToken::Minus);
 
   SMLoc S = getLoc();
   int64_t StackAdjustment = getLexer().getTok().getIntVal();
@@ -2592,7 +2597,8 @@ ParseStatus RISCVAsmParser::parseZcmpSpimm(OperandVector &Operands) {
   unsigned RlistVal = static_cast<RISCVOperand *>(Operands[1].get())->Rlist.Val;
 
   bool IsEABI = isRVE();
-  if (!RISCVZC::getSpimm(RlistVal, Spimm, StackAdjustment, isRV64(), IsEABI))
+  if (Negative != ExpectNegative ||
+      !RISCVZC::getSpimm(RlistVal, Spimm, StackAdjustment, isRV64(), IsEABI))
     return ParseStatus::NoMatch;
   Operands.push_back(RISCVOperand::createSpimm(Spimm << 4, S));
   getLexer().Lex();

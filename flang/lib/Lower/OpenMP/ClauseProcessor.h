@@ -51,7 +51,7 @@ public:
                   Fortran::semantics::SemanticsContext &semaCtx,
                   const Fortran::parser::OmpClauseList &clauses)
       : converter(converter), semaCtx(semaCtx),
-        clauses(makeList(clauses, semaCtx)) {}
+        clauses(makeClauses(clauses, semaCtx)) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
   bool processCollapse(
@@ -200,7 +200,8 @@ bool ClauseProcessor::processMotionClauses(
                 ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
                 : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
 
-        for (const omp::Object &object : clause.v) {
+        auto &objects = std::get<ObjectList>(clause.t);
+        for (const omp::Object &object : objects) {
           llvm::SmallVector<mlir::Value> bounds;
           std::stringstream asFortran;
           Fortran::lower::AddrAndBoundsInfo info =
