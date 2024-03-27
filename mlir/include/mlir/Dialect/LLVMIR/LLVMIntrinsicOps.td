@@ -611,19 +611,19 @@ def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
 // Variadic function intrinsics.
 //
 
-def LLVM_VaStartOp : LLVM_ZeroResultIntrOp<"vastart">,
+def LLVM_VaStartOp : LLVM_ZeroResultIntrOp<"vastart", [0]>,
                      Arguments<(ins LLVM_AnyPointer:$arg_list)> {
   let assemblyFormat = "$arg_list attr-dict `:` qualified(type($arg_list))";
   let summary = "Initializes `arg_list` for subsequent variadic argument extractions.";
 }
 
-def LLVM_VaCopyOp : LLVM_ZeroResultIntrOp<"vacopy">,
+def LLVM_VaCopyOp : LLVM_ZeroResultIntrOp<"vacopy", [0]>,
                     Arguments<(ins LLVM_AnyPointer:$dest_list, LLVM_AnyPointer:$src_list)> {
   let assemblyFormat = "$src_list `to` $dest_list attr-dict `:` type(operands)";
   let summary = "Copies the current argument position from `src_list` to `dest_list`.";
 }
 
-def LLVM_VaEndOp : LLVM_ZeroResultIntrOp<"vaend">,
+def LLVM_VaEndOp : LLVM_ZeroResultIntrOp<"vaend", [0]>,
                    Arguments<(ins LLVM_AnyPointer:$arg_list)> {
   let assemblyFormat = "$arg_list attr-dict `:` qualified(type($arg_list))";
   let summary = "Destroys `arg_list`, which has been initialized by `intr.vastart` or `intr.vacopy`.";

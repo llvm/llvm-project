@@ -599,11 +599,11 @@ define void @ushl_sat_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3) {
 ; CHECK-LABEL: llvm.func @va_intrinsics_test
 define void @va_intrinsics_test(ptr %0, ptr %1) {
 ; CHECK: llvm.intr.vastart %{{.*}}
-  call void @llvm.va_start(ptr %0)
+  call void @llvm.va_start.p0(ptr %0)
 ; CHECK: llvm.intr.vacopy %{{.*}} to %{{.*}}
-  call void @llvm.va_copy(ptr %1, ptr %0)
+  call void @llvm.va_copy.p0(ptr %1, ptr %0)
 ; CHECK: llvm.intr.vaend %{{.*}}
-  call void @llvm.va_end(ptr %0)
+  call void @llvm.va_end.p0(ptr %0)
   ret void
 }
 
@@ -1076,9 +1076,9 @@ declare ptr @llvm.stacksave.p0()
 declare ptr addrspace(1) @llvm.stacksave.p1()
 declare void @llvm.stackrestore.p0(ptr)
 declare void @llvm.stackrestore.p1(ptr addrspace(1))
-declare void @llvm.va_start(ptr)
-declare void @llvm.va_copy(ptr, ptr)
-declare void @llvm.va_end(ptr)
+declare void @llvm.va_start.p0(ptr)
+declare void @llvm.va_copy.p0(ptr, ptr)
+declare void @llvm.va_end.p0(ptr)
 declare <8 x i32> @llvm.vp.add.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 declare <8 x i32> @llvm.vp.sub.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 declare <8 x i32> @llvm.vp.mul.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
