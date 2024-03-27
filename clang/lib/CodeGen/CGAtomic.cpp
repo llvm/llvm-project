@@ -1404,9 +1404,9 @@ RValue AtomicInfo::convertAtomicTempToRValue(Address addr,
 }
 
 static bool shouldCastToInt(llvm::Type *ValTy, bool CmpXchg) {
-  // TODO: Also pass through non-ieee FP types.
-  bool KeepType = (ValTy->isIntegerTy() || ValTy->isPointerTy() ||
-                   (ValTy->isIEEELikeFPTy() && !CmpXchg));
+  bool KeepType =
+      (ValTy->isIntegerTy() || ValTy->isPointerTy() ||
+       (ValTy->isFloatingPointTy() && !ValTy->isX86_FP80Ty() && !CmpXchg));
   return !KeepType;
 }
 
