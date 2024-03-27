@@ -6,7 +6,6 @@ add_header_library(
     libc.include.fenv
     libc.include.math
     libc.src.__support.macros.attributes
-    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
