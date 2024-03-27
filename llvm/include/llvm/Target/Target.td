@@ -99,9 +99,9 @@ class SubRegIndex<int size, int offset = 0> {
   string Namespace = "";
 
   // The size/offset information, parameterized by a HW mode.
-  // If the HwModes provided for SubRegRanges does not the DefaultMode, the
-  // Size and Offset fields below will be used for the default. Otherwise, the
-  // Size and Offset fields are ignored.
+  // If the HwModes provided for SubRegRanges does not include the DefaultMode,
+  // the/ Size and Offset fields below will be used for the default. Otherwise,
+  // the Size and Offset fields are ignored.
   SubRegRangeByHwMode SubRegRanges;
 
   // Size - Size (in bits) of the sub-registers represented by this index.
