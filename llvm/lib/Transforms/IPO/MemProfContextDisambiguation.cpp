@@ -308,10 +308,10 @@ public:
     bool isRemoved() const {
       // Note that we can have non-empty context ids with empty caller and
       // callee edges if the graph ends up with a single node.
-      assert(!ContextIds.empty() ||
-             // Since the context ids were empty we should have empty callee and
-             // caller edges.
-             (CalleeEdges.empty() && CallerEdges.empty()));
+      if (ContextIds.empty())
+        assert(CalleeEdges.empty() && CallerEdges.empty() &&
+               "Context ids empty but at least one of callee and caller edges "
+               "were not!");
       return ContextIds.empty();
     }
 
