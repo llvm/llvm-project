@@ -896,13 +896,10 @@ void generateStringPrint(llvm::LLVMContext &context,
 ///        generated, and is used to hold the constant string. A value of
 ///        false indicates that the constant string will be stored on the
 ///        stack.
-void generateIntegerPrint(llvm::LLVMContext &context,
-                          llvm::Module &module,
+void generateIntegerPrint(llvm::LLVMContext &context, llvm::Module &module,
                           llvm::IRBuilder<> &builder,
-                          llvm::Function &printFunct,
-                          llvm::Value &toPrint,
-                          std::string format,
-                          bool useGlobal = true) {
+                          llvm::Function &printFunct, llvm::Value *toPrint,
+                          std::string format, bool useGlobal = true) {
   llvm::Constant *stringConstant =
     llvm::ConstantDataArray::getString(context, format);
   llvm::Value *stringVar;
@@ -924,9 +921,8 @@ void generateIntegerPrint(llvm::LLVMContext &context,
 
   llvm::Value *cast = builder.CreateBitCast(stringVar,
                                             builder.getPtrTy());
-  builder.CreateCall(&printFunct, {&toPrint, cast});
+  builder.CreateCall(&printFunct, {toPrint, cast});
 }
-
 
 /// Generates code to handle finally block type semantics: always runs
 /// regardless of whether a thrown exception is passing through or the
@@ -1297,13 +1293,14 @@ static llvm::Function *createCatchWrappedInvokeFunction(
   llvm::Value *typeInfoThrownType =
       builder.CreateStructGEP(ourTypeInfoType, typeInfoThrown, 0);
 
-  generateIntegerPrint(
-      context, module, builder, *toPrint32Int,
-      *(builder.CreateLoad(builder.getInt8Ty(), typeInfoThrownType)),
-      "Gen: Exception type <%d> received (stack unwound) "
-      " in " +
-          ourId + ".\n",
-      USE_GLOBAL_STR_CONSTS);
+  llvm::Value *ti8 =
+      builder.CreateLoad(builder.getInt8Ty(), typeInfoThrownType);
+  generateIntegerPrint(context, module, builder, *toPrint32Int,
+                       builder.CreateZExt(ti8, builder.getInt32Ty()),
+                       "Gen: Exception type <%d> received (stack unwound) "
+                       " in " +
+                           ourId + ".\n",
+                       USE_GLOBAL_STR_CONSTS);
 
   // Route to matched type info catch block or run cleanup finally block
   llvm::SwitchInst *switchToCatchBlock = builder.CreateSwitch(retTypeInfoIndex,
@@ -1314,8 +1311,7 @@ static llvm::Function *createCatchWrappedInvokeFunction(
 
   for (unsigned i = 1; i <= numExceptionsToCatch; ++i) {
     nextTypeToCatch = i - 1;
-    switchToCatchBlock->addCase(llvm::ConstantInt::get(
-                                   llvm::Type::getInt32Ty(context), i),
+    switchToCatchBlock->addCase(llvm::ConstantInt::get(builder.getInt32Ty(), i),
                                 catchBlocks[nextTypeToCatch]);
   }
 
@@ -1390,14 +1386,10 @@ createThrowExceptionFunction(llvm::Module &module, llvm::IRBuilder<> &builder,
   builder.SetInsertPoint(entryBlock);
 
   llvm::Function *toPrint32Int = module.getFunction("print32Int");
-  generateIntegerPrint(context,
-                       module,
-                       builder,
-                       *toPrint32Int,
-                       *exceptionType,
-                       "\nGen: About to throw exception type <%d> in " +
-                       ourId +
-                       ".\n",
+  generateIntegerPrint(context, module, builder, *toPrint32Int,
+                       builder.CreateZExt(exceptionType, builder.getInt32Ty()),
+                       "\nGen: About to throw exception type <%d> in " + ourId +
+                           ".\n",
                        USE_GLOBAL_STR_CONSTS);
 
   // Switches on runtime type info type value to determine whether or not
