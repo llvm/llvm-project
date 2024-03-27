@@ -486,3 +486,465 @@ define void @vstore_nx8i64(ptr %pa, <vscale x 8 x i64> %b) {
   ret void
 }
 
+define void @vstore_nx16i8_align1(ptr %pa, <vscale x 16 x i8> %b) {
+  ; RV32-LABEL: name: vstore_nx16i8_align1
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $x10, $v8m2
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $v8m2
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 1)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx16i8_align1
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $x10, $v8m2
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $v8m2
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 1)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 16 x i8> %b, ptr %pa, align 1
+  ret void
+}
+
+define void @vstore_nx16i8_align2(ptr %pa, <vscale x 16 x i8> %b) {
+  ; RV32-LABEL: name: vstore_nx16i8_align2
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $x10, $v8m2
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $v8m2
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 2)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx16i8_align2
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $x10, $v8m2
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $v8m2
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 2)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 16 x i8> %b, ptr %pa, align 2
+  ret void
+}
+
+define void @vstore_nx16i8_align16(ptr %pa, <vscale x 16 x i8> %b) {
+  ; RV32-LABEL: name: vstore_nx16i8_align16
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $x10, $v8m2
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $v8m2
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx16i8_align16
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $x10, $v8m2
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $v8m2
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 16 x i8> %b, ptr %pa, align 16
+  ret void
+}
+
+define void @vstore_nx16i8_align64(ptr %pa, <vscale x 16 x i8> %b) {
+  ; RV32-LABEL: name: vstore_nx16i8_align64
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $x10, $v8m2
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $v8m2
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 64)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx16i8_align64
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $x10, $v8m2
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $v8m2
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 64)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 16 x i8> %b, ptr %pa, align 64
+  ret void
+}
+
+define void @vstore_nx4i16_align1(ptr %pa, <vscale x 4 x i16> %b) {
+  ; RV32-LABEL: name: vstore_nx4i16_align1
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $v8, $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v8
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 1)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx4i16_align1
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $v8, $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v8
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 1)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 4 x i16> %b, ptr %pa, align 1
+  ret void
+}
+
+define void @vstore_nx4i16_align2(ptr %pa, <vscale x 4 x i16> %b) {
+  ; RV32-LABEL: name: vstore_nx4i16_align2
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $v8, $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v8
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 2)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx4i16_align2
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $v8, $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v8
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 2)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 4 x i16> %b, ptr %pa, align 2
+  ret void
+}
+
+define void @vstore_nx4i16_align4(ptr %pa, <vscale x 4 x i16> %b) {
+  ; RV32-LABEL: name: vstore_nx4i16_align4
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $v8, $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v8
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 4)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx4i16_align4
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $v8, $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v8
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 4)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 4 x i16> %b, ptr %pa, align 4
+  ret void
+}
+
+define void @vstore_nx4i16_align8(ptr %pa, <vscale x 4 x i16> %b) {
+  ; RV32-LABEL: name: vstore_nx4i16_align8
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $v8, $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v8
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx4i16_align8
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $v8, $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v8
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 4 x i16> %b, ptr %pa, align 8
+  ret void
+}
+
+define void @vstore_nx4i16_align16(ptr %pa, <vscale x 4 x i16> %b) {
+  ; RV32-LABEL: name: vstore_nx4i16_align16
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $v8, $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v8
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 16)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx4i16_align16
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $v8, $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v8
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 16)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 4 x i16> %b, ptr %pa, align 16
+  ret void
+}
+
+define void @vstore_nx2i32_align2(ptr %pa, <vscale x 2 x i32> %b) {
+  ; RV32-LABEL: name: vstore_nx2i32_align2
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $v8, $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v8
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 2)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx2i32_align2
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $v8, $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v8
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 2)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 2 x i32> %b, ptr %pa, align 2
+  ret void
+}
+
+define void @vstore_nx2i32_align4(ptr %pa, <vscale x 2 x i32> %b) {
+  ; RV32-LABEL: name: vstore_nx2i32_align4
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $v8, $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v8
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 4)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx2i32_align4
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $v8, $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v8
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 4)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 2 x i32> %b, ptr %pa, align 4
+  ret void
+}
+
+define void @vstore_nx2i32_align8(ptr %pa, <vscale x 2 x i32> %b) {
+  ; RV32-LABEL: name: vstore_nx2i32_align8
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $v8, $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v8
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx2i32_align8
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $v8, $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v8
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 2 x i32> %b, ptr %pa, align 8
+  ret void
+}
+
+define void @vstore_nx2i32_align16(ptr %pa, <vscale x 2 x i32> %b) {
+  ; RV32-LABEL: name: vstore_nx2i32_align16
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $v8, $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v8
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 16)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx2i32_align16
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $v8, $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v8
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 16)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 2 x i32> %b, ptr %pa, align 16
+  ret void
+}
+
+define void @vstore_nx2i32_align256(ptr %pa, <vscale x 2 x i32> %b) {
+  ; RV32-LABEL: name: vstore_nx2i32_align256
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $v8, $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v8
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 256)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx2i32_align256
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $v8, $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v8
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 256)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 2 x i32> %b, ptr %pa, align 256
+  ret void
+}
+
+define void @vstore_nx2i64_align4(ptr %pa, <vscale x 2 x i64> %b) {
+  ; RV32-LABEL: name: vstore_nx2i64_align4
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $x10, $v8m2
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $v8m2
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa, align 4)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx2i64_align4
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $x10, $v8m2
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $v8m2
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa, align 4)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 2 x i64> %b, ptr %pa, align 4
+  ret void
+}
+
+define void @vstore_nx2i64_align8(ptr %pa, <vscale x 2 x i64> %b) {
+  ; RV32-LABEL: name: vstore_nx2i64_align8
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $x10, $v8m2
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $v8m2
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa, align 8)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx2i64_align8
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $x10, $v8m2
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $v8m2
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa, align 8)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 2 x i64> %b, ptr %pa, align 8
+  ret void
+}
+
+define void @vstore_nx2i64_align16(ptr %pa, <vscale x 2 x i64> %b) {
+  ; RV32-LABEL: name: vstore_nx2i64_align16
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $x10, $v8m2
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $v8m2
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx2i64_align16
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $x10, $v8m2
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $v8m2
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 2 x i64> %b, ptr %pa, align 16
+  ret void
+}
+
+define void @vstore_nx2i64_align32(ptr %pa, <vscale x 2 x i64> %b) {
+  ; RV32-LABEL: name: vstore_nx2i64_align32
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $x10, $v8m2
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $v8m2
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa, align 32)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx2i64_align32
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $x10, $v8m2
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $v8m2
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa, align 32)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 2 x i64> %b, ptr %pa, align 32
+  ret void
+}
+
+define void @vstore_nx1ptr(ptr %pa, <vscale x 1 x ptr> %b) {
+  ; RV32-LABEL: name: vstore_nx1ptr
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $v8, $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 1 x p0>) = COPY $v8
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 1 x p0>), [[COPY]](p0) :: (store (<vscale x 1 x p0>) into %ir.pa)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx1ptr
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $v8, $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 1 x p0>) = COPY $v8
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 1 x p0>), [[COPY]](p0) :: (store (<vscale x 1 x p0>) into %ir.pa)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 1 x ptr> %b, ptr %pa
+  ret void
+}
+
+define void @vstore_nx2ptr(ptr %pa, <vscale x 2 x ptr> %b) {
+  ; RV32-LABEL: name: vstore_nx2ptr
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $v8, $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x p0>) = COPY $v8
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 2 x p0>), [[COPY]](p0) :: (store (<vscale x 2 x p0>) into %ir.pa)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx2ptr
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $x10, $v8m2
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x p0>) = COPY $v8m2
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 2 x p0>), [[COPY]](p0) :: (store (<vscale x 2 x p0>) into %ir.pa)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 2 x ptr> %b, ptr %pa
+  ret void
+}
+
+define void @vstore_nx8ptr(ptr %pa, <vscale x 8 x ptr> %b) {
+  ; RV32-LABEL: name: vstore_nx8ptr
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $x10, $v8m4
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 8 x p0>) = COPY $v8m4
+  ; RV32-NEXT:   G_STORE [[COPY1]](<vscale x 8 x p0>), [[COPY]](p0) :: (store (<vscale x 8 x p0>) into %ir.pa)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: vstore_nx8ptr
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $x10, $v8m8
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 8 x p0>) = COPY $v8m8
+  ; RV64-NEXT:   G_STORE [[COPY1]](<vscale x 8 x p0>), [[COPY]](p0) :: (store (<vscale x 8 x p0>) into %ir.pa)
+  ; RV64-NEXT:   PseudoRET
+  store <vscale x 8 x ptr> %b, ptr %pa
+  ret void
+}
+
