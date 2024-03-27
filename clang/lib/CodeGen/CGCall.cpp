@@ -5728,9 +5728,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (llvm::CallInst *Call = dyn_cast<llvm::CallInst>(CI)) {
     if (TargetDecl && TargetDecl->hasAttr<NotTailCalledAttr>())
       Call->setTailCallKind(llvm::CallInst::TCK_NoTail);
-    else if (CallInfo.getASTCallingConvention() == CC_SwiftAsync &&
-             CurFnInfo->getASTCallingConvention() == CC_SwiftAsync)
-      Call->setTailCallKind(llvm::CallInst::TCK_Tail);
     else if (IsMustTail)
       Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
   }
