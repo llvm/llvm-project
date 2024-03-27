@@ -72,6 +72,10 @@
 # RUN: not ld.lld -r -export-dynamic %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR12 %s
 # ERR12: -r and --export-dynamic may not be used together
 
+## Attempt to use -r and --debug-names together
+# RUN: not ld.lld -r --debug-names %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR13 %s
+# ERR13: -r and --debug-names may not be used together
+
 .globl _start
 _start:
   nop
