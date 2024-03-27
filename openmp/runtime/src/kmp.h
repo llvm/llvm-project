@@ -818,6 +818,7 @@ private:
 typedef KMPAffinity::Mask kmp_affin_mask_t;
 extern KMPAffinity *__kmp_affinity_dispatch;
 
+#ifndef KMP_OS_AIX
 class kmp_affinity_raii_t {
   kmp_affin_mask_t *mask;
   bool restored;
@@ -842,6 +843,7 @@ public:
   }
   ~kmp_affinity_raii_t() { restore(); }
 };
+#endif // !KMP_OS_AIX
 
 // Declare local char buffers with this size for printing debug and info
 // messages, using __kmp_affinity_print_mask().
@@ -3911,7 +3913,7 @@ extern void __kmp_balanced_affinity(kmp_info_t *th, int team_size);
 #if KMP_WEIGHTED_ITERATIONS_SUPPORTED
 extern int __kmp_get_first_osid_with_ecore(void);
 #endif
-#if KMP_OS_LINUX || KMP_OS_FREEBSD
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_AIX
 extern int kmp_set_thread_affinity_mask_initial(void);
 #endif
 static inline void __kmp_assign_root_init_mask() {
