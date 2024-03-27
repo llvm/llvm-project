@@ -255,7 +255,7 @@ bool InstallAPIVisitor::VisitFunctionDecl(const FunctionDecl *D) {
       return true;
 
     // Skip methods in CXX RecordDecls.
-    for (auto P : D->getASTContext().getParents(*M)) {
+    for (const DynTypedNode &P : D->getASTContext().getParents(*M)) {
       if (P.get<CXXRecordDecl>())
         return true;
     }
