@@ -59,6 +59,13 @@ class SPIRVGlobalRegistry {
   // Holds the maximum ID we have in the module.
   unsigned Bound;
 
+  // Maps values associated with untyped pointers into deduced element types of
+  // untyped pointers.
+  DenseMap<Value *, Type *> DeducedElTys;
+  // Maps composite values to deduced types where untyped pointers are replaced
+  // with typed ones
+  DenseMap<Value *, Type *> DeducedNestedTys;
+
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVType *createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
                              SPIRV::AccessQualifier::AccessQualifier AQ =
@@ -121,6 +128,39 @@ public:
 
   void setBound(unsigned V) { Bound = V; }
   unsigned getBound() { return Bound; }
+
+  // Deduced element types of untyped pointers and composites:
+  // - Add a record to the map of deduced element types.
+  void addDeducedElementType(Value *Val, Type *Ty) {
+    DeducedElTys[Val] = Ty;
+  }
+  // - Find a record in the map of deduced element types.
+  Type *findDeducedElementType(const Value *Val) {
+    auto It = DeducedElTys.find(Val);
+    return It == DeducedElTys.end() ? nullptr : It->second;
+  }
+  // - Add a record to the map of deduced composite types.
+  void addDeducedCompositeType(Value *Val, Type *Ty) {
+    DeducedNestedTys[Val] = Ty;
+  }
+  // - Find a record in the map of deduced composite types.
+  Type *findDeducedCompositeType(const Value *Val) {
+    auto It = DeducedNestedTys.find(Val);
+    return It == DeducedNestedTys.end() ? nullptr : It->second;
+  }
+  // - Find a type of the given Global value
+  Type *getDeducedGlobalValueType(const GlobalValue *Global) {
+    // we may know element type if it was deduced earlier
+    Type *ElementTy = findDeducedElementType(Global);
+    if (!ElementTy) {
+      // or we may know element type if it's associated with a composite
+      // value
+      if (Value *GlobalElem =
+              Global->getNumOperands() > 0 ? Global->getOperand(0) : nullptr)
+        ElementTy = findDeducedCompositeType(GlobalElem);
+    }
+    return ElementTy ? ElementTy : Global->getValueType();
+  }
 
   // Map a machine operand that represents a use of a function via function
   // pointer to a machine operand that represents the function definition.
