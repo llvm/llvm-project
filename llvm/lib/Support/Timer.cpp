@@ -472,21 +472,21 @@ const char *TimerGroup::printJSONValues(raw_ostream &OS, const char *delim) {
   for (const PrintRecord &R : TimersToPrint) {
     OS << delim;
     delim = ",\n";
-
     const TimeRecord &T = R.Time;
-    printJSONValue(OS, R, ".wall", T.getWallTime());
-    OS << delim;
-    printJSONValue(OS, R, ".user", T.getUserTime());
-    OS << delim;
-    printJSONValue(OS, R, ".sys", T.getSystemTime());
-    if (T.getMemUsed()) {
-      OS << delim;
-      printJSONValue(OS, R, ".mem", T.getMemUsed());
-    }
-    if (T.getInstructionsExecuted()) {
-      OS << delim;
-      printJSONValue(OS, R, ".instr", T.getInstructionsExecuted());
-    }
+    constexpr auto max_digits10 = std::numeric_limits<double>::max_digits10;
+    OS << "  \"check\": {\n";
+    OS << "    \"name\": \"" << Name << '.' << R.Name << "\""<< delim;
+    OS << "    \"wall\": " << format("%.*e", max_digits10 - 1, T.getWallTime())
+       << delim;
+    OS << "    \"user\": " << format("%.*e", max_digits10 - 1, T.getUserTime())
+       << delim;
+    OS << "    \"sys\": " << format("%.*e", max_digits10 - 1, T.getSystemTime())
+       << delim;
+    OS << "    \"mem\": " << format("%.*e", max_digits10 - 1, T.getMemUsed())
+       << delim;
+    OS << "    \"instr\": "
+       << format("%.*e", max_digits10 - 1, T.getInstructionsExecuted());
+    OS << "\n  }";
   }
   TimersToPrint.clear();
   return delim;
