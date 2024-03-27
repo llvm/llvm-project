@@ -11,14 +11,13 @@ define <8 x i32> @test_large_vec_vaarg(i32 %n, ...) {
 ; BE-NEXT:    addi 3, 3, 15
 ; BE-NEXT:    rldicr 3, 3, 0, 59
 ; BE-NEXT:    addi 4, 3, 16
+; BE-NEXT:    addi 5, 3, 31
 ; BE-NEXT:    std 4, -8(1)
-; BE-NEXT:    ld 4, -8(1)
+; BE-NEXT:    rldicr 4, 5, 0, 59
 ; BE-NEXT:    lvx 2, 0, 3
-; BE-NEXT:    addi 4, 4, 15
-; BE-NEXT:    rldicr 3, 4, 0, 59
-; BE-NEXT:    addi 4, 3, 16
-; BE-NEXT:    std 4, -8(1)
-; BE-NEXT:    lvx 3, 0, 3
+; BE-NEXT:    addi 3, 4, 16
+; BE-NEXT:    std 3, -8(1)
+; BE-NEXT:    lvx 3, 0, 4
 ; BE-NEXT:    blr
 ;
 ; LE-LABEL: test_large_vec_vaarg:
