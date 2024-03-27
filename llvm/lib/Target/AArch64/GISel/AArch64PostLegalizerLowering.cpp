@@ -588,7 +588,8 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
   auto ValAndVReg = getIConstantVRegValWithLookThrough(RHS, MRI);
   if (!ValAndVReg)
     return std::nullopt;
-  uint64_t C = ValAndVReg->Value.getZExtValue();
+  uint64_t OriginalC = ValAndVReg->Value.getZExtValue();
+  uint64_t C = OriginalC;
   if (isLegalArithImmed(C))
     return std::nullopt;
 
@@ -658,9 +659,12 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
   // predicate if it is.
   if (Size == 32)
     C = static_cast<uint32_t>(C);
-  if (!isLegalArithImmed(C))
-    return std::nullopt;
-  return {{C, P}};
+  if (isLegalArithImmed(C))
+    return {{C, P}};
+  if (AArch64_AM::isLogicalImmediate(C, Size) &&
+      !AArch64_AM::isLogicalImmediate(OriginalC, Size))
+    return {{C, P}};
+  return std::nullopt;
 }
 
 /// Determine whether or not it is possible to update the RHS and predicate of
