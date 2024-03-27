@@ -1029,7 +1029,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
       O << ".visible ";
     else
       O << ".extern ";
-  } else if (GVar->hasCommonLinkage() &&
+  } else if (STI.getPTXVersion() >= 50 && GVar->hasCommonLinkage() &&
              GVar->getAddressSpace() == ADDRESS_SPACE_GLOBAL) {
     O << ".common ";
   } else if (GVar->hasLinkOnceLinkage() || GVar->hasWeakLinkage() ||
