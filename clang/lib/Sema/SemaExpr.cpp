@@ -18951,7 +18951,7 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   //   constant evaluated
   bool NeededForConstantEvaluation =
       isPotentiallyConstantEvaluatedContext(*this) &&
-      isImplicitlyDefinableConstexprFunction(Func);
+      isImplicitlyDefinableConstexprFunction(Func) && !Func->isPureVirtual();
 
   // Determine whether we require a function definition to exist, per
   // C++11 [temp.inst]p3:
