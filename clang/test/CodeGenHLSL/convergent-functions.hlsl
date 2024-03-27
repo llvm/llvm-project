@@ -1,8 +1,9 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.4-library -emit-llvm -disable-llvm-passes -o - %s | FileCheck -check-prefixes=CHECK,CONVFUNC %s 
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.4-library -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple spirv-linux-vulkan-library -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
-// CHECK: attributes
-// NOCONVFUNC-NOT: convergent
-// CONVFUNC-SAME: convergent
-// CHECK-SAME: }
 void fn() {
 };
+
+// CHECK: define void {{.*}}fn{{.*}}()
+// CHECK-SAME: #[[Attr:[0-9]+]]
+// CHECK: attributes #[[Attr]] = { {{[^}]*}}convergent{{[^}]*}} }
