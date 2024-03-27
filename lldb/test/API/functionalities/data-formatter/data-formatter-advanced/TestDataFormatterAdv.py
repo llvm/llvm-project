@@ -104,7 +104,9 @@ class AdvDataFormatterTestCase(TestBase):
 
         self.runCmd("type summary clear")
 
-        self.runCmd('type summary add --summary-string "${var[0-1]}" -x "int\\[[0-9]\\]"')
+        self.runCmd(
+            'type summary add --summary-string "${var[0-1]}" -x "int\\[[0-9]\\]"'
+        )
 
         self.expect("frame variable int_array", substrs=["1,2"])
 

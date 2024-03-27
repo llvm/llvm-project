@@ -524,7 +524,9 @@ class AArch64LinuxMTEMemoryTagAccessTestCase(TestBase):
         # End of range is untagged
         self.expect(
             'memory read mte_buf+page_size-16 mte_buf+page_size+16 -f "x" -l 1 -s 16 --show-tags',
-            patterns=[r"0x[0-9A-Fa-f]+f0: 0x0+ \(tag: 0xf\)\n" "0x[0-9A-Fa-f]+00: 0x0+"],
+            patterns=[
+                r"0x[0-9A-Fa-f]+f0: 0x0+ \(tag: 0xf\)\n" "0x[0-9A-Fa-f]+00: 0x0+"
+            ],
         )
 
         # The smallest MTE range we can get is a single page so we just check
